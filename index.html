@@ -366,6 +366,9 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <button class="btn sec" onclick="verCharlas()">Guiones de las charlas</button>
   <button class="btn sec" onclick="ir('p-programa')">🗓️ Programa del mes</button>
 
+  <div class="sec-tit">🎓 Talleres</div>
+  <button class="btn sec" onclick="ir('p-talleres')">Talleres prácticos + constancia</button>
+
   <div class="sec-tit" id="sec-cuadrilla">🎟️ Tu cuadrilla</div>
   <button class="btn sec" id="b-gen" onclick="abrirGenerar()" style="display:none">Códigos para mi cuadrilla</button>
 
@@ -589,6 +592,33 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <button class="btn sec" onclick="pdfPrograma()">🧾 PDF del programa (tabla)</button>
   <button class="btn sec" onclick="compartirPrograma()">📤 Compartir como texto</button>
   <div class="pie">Se guarda en este celular, separado por obra. La obra sale de «Configurar envío de resultados».</div>
+</section>
+
+<section class="pantalla" id="p-talleres">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-inicio')">‹ Atrás</button><span>Talleres</span></div>
+  <h2>Talleres prácticos</h2>
+  <p class="sub">Lecciones que se HACEN, no que se leen. El trabajador practica el procedimiento y, al terminar, se lleva su constancia de participación en PDF.</p>
+  <div id="lista-talleres"></div>
+  <div class="pie">Herramienta de apoyo. La constancia acredita la participación en el taller práctico; no reemplaza la capacitación formal de la Ley 29783.</div>
+</section>
+
+<section class="pantalla" id="p-taller">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-talleres')">‹ Talleres</button><span id="tal-chip"></span></div>
+  <div id="tal-cuerpo"></div>
+</section>
+
+<section class="pantalla" id="p-taller-fin">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-talleres')">‹ Talleres</button><span>Constancia</span></div>
+  <h2 id="talfin-titulo">¡Taller completado!</h2>
+  <p class="sub">Pon los datos del trabajador para emitir su constancia de participación.</p>
+  <label>Nombre y apellido</label><input id="tal-nombre" placeholder="Juan Pérez">
+  <label>DNI</label><input id="tal-dni" inputmode="numeric" placeholder="70123456">
+  <label>Cargo</label><input id="tal-cargo" placeholder="Operario">
+  <label>Empresa (opcional)</label><input id="tal-empresa" placeholder="">
+  <label>Obra / proyecto (opcional)</label><input id="tal-obra" placeholder="">
+  <button class="btn" onclick="hacerDiplomaTaller()">🧾 Descargar la constancia (PDF)</button>
+  <button class="btn sec" onclick="ir('p-talleres')">Hacer otro taller</button>
+  <div id="tal-fin-msg" style="font-size:14px;margin-top:10px"></div>
 </section>
 
 <div class="hoja" id="hoja-dia">
@@ -1006,6 +1036,7 @@ var LITE  = {"SST-CON-02":[1,2,6,7],"SST-CON-13":[1,2,5,7],"SST-MIN-02":[1,2,4,7
 var HASHES = ["100e1848-b61b8938","106ad292-b663dce2","107d77a5-b673592f","115e1c62-b7058f8e","11602c6b-b7237289","124ed4a0-b7c14b18","12e6371a-b8369b68","13ced441-b8d052a5","13f57447-b909cf89","14e528ad-b9a885c1","15a53dbc-ba3dc30c","15eeac59-ba76ff1b","165a9d5e-baafbe64","17909c7a-bba05e56","1840a0bf-bc0deabb","185363de-bc38c014","1975a07b-bcfdb0d1","1ab86afc-bdf9d738","1af42577-be27b745","1d47fcdd-bfdb753f","2eb26336-cc8a4554","2f3a51d5-ccf49679","2fb1b5fb-cd513079","2fbc000f-cd58cd5d","2fe198dd-cd7713bf","313ee97d-ce6a4919","3144bc4d-ce6f19f7","31fdf5d1-ceff8d37","323343f9-cf0bed27","3367b110-cffd0af4","340166c4-d0744a7c","3560e416-d16a3606","360e34a4-d1f0cbaa","3686a5ea-d2321c78","368b8af9-d2525993","36dd41cd-d2763d9d","36ee1741-d29f7d95","370b3c7a-d2b5ceaa","370b4502-d2b5ddb2","37a8279e-d3138ecc","3849f191-d39177a3","38d95d7d-d3e4eb8b","38e4c399-d40a8c01","3a681e32-d51b7b44","3aae2336-d551e15e","3ab09160-d554c96e","3b50bd9e-d5b44b68","3b86f4e4-d5fba140","3c8e69c5-d6ac3149","3cc70cb0-d6d86c92","3d129125-d7136193","3d36cfec-d72f9cca","3f8d64d7-d8e5a045","3ff4f4d8-d9360c42","423c6c32-dac43d86","424113a0-dac733e4","42b8a8c7-db24e1c3","438ebd4d-dbcb6c3b","4494a8b3-dc7ba7af","44a9baba-dc8b512c","44dee6ea-dcd1c2a4","44e94baa-dcbd409e","45b64419-dd5c4833","46fa7991-de3d6975","48053bf7-df0ce587","482ae50b-df2a517d","486170f0-df54cb38","4870ccb8-df609dba","48952ebb-df7cf81b","495b2c85-dffae31d","49ab2896-e03994f6","4a48afe5-e0b3fed5","4a97891c-e0f1b76e","4aa42b33-e0fb4085","4b5e66eb-e18c8fcb","4b8a869b-e1ae6587","4b946940-e1b5b652","4be58831-e1d9232b","4bf6e1b2-e1e699a6","4bfa67a5-e1e9810b","4c006281-e20aa45b","4c09b68d-e2117eb1","4cb0b4f1-e2778cd7","4ccfa535-e28f6437","4cd26523-e291a479","4d3c4d2c-e2e3fc30","4e227ee7-e397ecb9","4e276f93-e39b1c81","50524a34-e5136d6c","5062f4a6-e5205866","509bf040-e54bf1aa","50ac2334-e558732e","51aa9dc8-e61f971a","52256866-e67f041e","527ebb24-e6c48384","528c8a93-e6b2dff9","528fb457-e6d1ac5f","53d39534-e7b19a7e","55319cbf-e8a569c3","55e69e18-e9325fa2","563136ac-e96d7c60","577da30c-ea6fca5a","58f11401-eb755257","591d6ea7-eb976393","5ada6925-ecd63f75","5c2c4ecf-edc0e809","5cf8715c-ee5f3290","5d2e976a-ee896174","5dd34e77-ef0aaa15","5e8fbf2b-ef80ae99","5eb6793b-efbb23bd","5f615b6c-f0238ade","606faaae-f0f5f494","6198ec78-f1c1a586","61df91c8-f1f89942","62f489f0-f2b45a50","63f2dd16-f37a7a62","640a6960-f38d1690","644ce9f8-f3c08f36","64d77767-f42c2979","653c0acf-f47af991","6563c569-f49a1aa7","67cf5910-f6438774","67d99f01-f6675773","67f46412-f6606f64","69b00ae8-f7b974da","69c2970a-f7c8daf0","6a324e20-f81f17bc","6a67beba-f84996d4","a934b67-b20ff31b","b83040a-b2cad452","c832d51-b3927cdd","c98596e-b3860668","cbdaf7c-b3a411f4","ce0c360-b3da9aa2","daaeabf-b45ce64b","e5f33bd-b4e94125","e8a5db1-b50a545d","fea77d5-b5ffd9c5","ffbc250-b60e2bdc"];
 var SECTORES = [{"id":"construccion","nombre":"Construcción","icono":"🏗️","pie":"Obra, edificación y montaje"},{"id":"mineria","nombre":"Minería","icono":"⛏️","pie":"Interior mina, tajo y planta concentradora"},{"id":"industria","nombre":"Industria","icono":"🏭","pie":"Planta de producción y manufactura"},{"id":"hidrocarburos","nombre":"Hidrocarburos","icono":"🛢️","pie":"Refinería, planta de proceso y almacenamiento"}];
 var FAMILIAS = {"primeros_auxilios":{"titulo":"Primeros auxilios","pregunta":"¿Qué emergencia estás atendiendo?","orden":1},"izaje":{"titulo":"Izaje de cargas","pregunta":"¿Con qué vas a izar?","orden":4},"altura":{"titulo":"Trabajos en altura","pregunta":"¿Cómo trabajas en altura?","orden":5},"caliente":{"titulo":"Trabajos en caliente","pregunta":"¿Qué trabajo en caliente vas a hacer?","orden":8},"fuego":{"titulo":"Uso de extintores","pregunta":"¿Qué se está quemando?","orden":9}};
+var TALLERES = [{"id":"ats","icono":"📋","nombre":"Llenado del ATS","sub":"Análisis de Trabajo Seguro · inicio de jornada","sector":"*","min":8,"intro":"El ATS se llena en obra, en cuadrilla, ANTES de empezar la tarea del día. Aquí practicas cómo llenarlo bien: identificar la tarea, sus peligros, el riesgo y las medidas.","pasos":[{"tipo":"orden","titulo":"El orden del ATS","instru":"Toca los pasos en el orden en que se llena un ATS.","items":["Describir la tarea del día","Identificar los peligros de cada paso","Evaluar el riesgo (probabilidad y severidad)","Definir las medidas de control","Indicar el EPP necesario","Firmar todo el equipo que hará la tarea"]},{"tipo":"elige","titulo":"¿Cuándo se llena?","pregunta":"¿En qué momento se llena el ATS?","ops":["Al final de la jornada, como reporte de lo que se hizo","Al inicio de la jornada, antes de empezar la tarea","Solo cuando ocurre un incidente","Una vez al mes, al inicio de la obra"],"correcta":1,"sustento":"El ATS es preventivo: se llena en campo, con la cuadrilla, antes de iniciar la tarea de ese día."},{"tipo":"marca","titulo":"Peligro, riesgo o medida","instru":"De esta lista, marca solo lo que es un PELIGRO (la fuente que puede dañar).","items":[{"t":"Trabajar al borde de una excavación","mal":true},{"t":"Colocar barandas y línea de vida","mal":false},{"t":"Herramienta eléctrica con cable pelado","mal":true},{"t":"Usar guantes dieléctricos","mal":false},{"t":"Piso con aceite derramado","mal":true}],"nota":"El peligro es la fuente (el borde, el cable pelado, el aceite). La medida es lo que haces para controlarlo."},{"tipo":"elige","titulo":"Cambió la tarea","pregunta":"A media jornada tu cuadrilla pasa a una tarea distinta a la del ATS. ¿Qué haces?","ops":["Sigues con el mismo ATS, total es el mismo día","Llenas un ATS nuevo para la tarea nueva","Lo anotas al reverso y sigues","Esperas al día siguiente"],"correcta":1,"sustento":"Cada tarea tiene sus propios peligros. Si la tarea cambia, se llena un ATS nuevo para esa tarea."}],"cierre":"Ya sabes llenar un ATS: tarea, peligros, riesgo, medidas, EPP y firmas — al inicio, y uno nuevo si la tarea cambia."},{"id":"iperc","icono":"🧩","nombre":"IPERC de línea base","sub":"Identificación de peligros a inicio de obra","sector":"construccion","min":8,"intro":"En construcción, el IPERC que se hace es el de LÍNEA BASE, a inicio de obra. Ojo: el IPERC continuo es de minería (D.S. 024-2016-EM), no de construcción.","pasos":[{"tipo":"elige","titulo":"¿Cuál usa construcción?","pregunta":"En una obra de construcción, ¿qué IPERC corresponde?","ops":["IPERC continuo, por cada guardia","IPERC de línea base, a inicio de obra","No se hace IPERC en construcción","Solo ATS, nunca IPERC"],"correcta":1,"sustento":"Construcción hace IPERC de línea base al inicio de la obra. El IPERC continuo es propio de la actividad minera (D.S. 024-2016-EM)."},{"tipo":"orden","titulo":"Los pasos del IPERC","instru":"Ordena los pasos para evaluar un riesgo en el IPERC.","items":["Identificar el peligro","Estimar la probabilidad de que ocurra","Estimar la severidad del daño","Determinar el nivel de riesgo","Aplicar la jerarquía de controles","Reevaluar el riesgo residual"]},{"tipo":"orden","titulo":"Jerarquía de controles","instru":"Ordena los controles del más eficaz (primero) al menos eficaz (último).","items":["Eliminación","Sustitución","Controles de ingeniería","Controles administrativos","Equipo de protección personal (EPP)"]},{"tipo":"elige","titulo":"El EPP","pregunta":"¿Qué lugar ocupa el EPP en la jerarquía de controles?","ops":["El primero: es lo más importante","El último: es la última barrera, no la primera","No es un control","Reemplaza a los demás controles"],"correcta":1,"sustento":"El EPP es la última barrera. Primero se elimina o controla el peligro en la fuente; el EPP protege a la persona cuando el riesgo no pudo eliminarse."}],"cierre":"IPERC de línea base a inicio de obra, jerarquía de controles con el EPP al final, y el continuo es de minería."},{"id":"residuos","icono":"♻️","nombre":"Segregación de residuos","sub":"Código de colores en obra","sector":"*","min":6,"intro":"Segregar bien es separar cada residuo en su recipiente. Practica el código de colores que se usa en obra (base NTP 900.058).","pasos":[{"tipo":"elige","titulo":"El trapo con aceite","pregunta":"Un trapo impregnado con aceite o solvente, ¿en qué tacho va?","ops":["Verde (aprovechable)","Negro (común)","Rojo (peligroso)","Marrón (orgánico)"],"correcta":2,"sustento":"Todo lo contaminado con hidrocarburos o químicos es residuo peligroso: va al tacho rojo."},{"tipo":"elige","titulo":"La botella de plástico","pregunta":"Una botella de plástico limpia, ¿dónde va?","ops":["Rojo (peligroso)","Amarillo / verde (reaprovechable)","Rojo, por si acaso","Se deja en el suelo"],"correcta":1,"sustento":"El plástico limpio es reaprovechable/reciclable. El rojo es solo para residuos peligrosos."},{"tipo":"marca","titulo":"Al tacho rojo","instru":"Marca lo que SÍ es residuo peligroso (tacho rojo).","items":[{"t":"Envase de pintura o solvente","mal":true},{"t":"Cartón limpio","mal":false},{"t":"Guantes impregnados de químico","mal":true},{"t":"Waipe / trapo con grasa","mal":true},{"t":"Restos de comida","mal":false}],"nota":"Peligroso = contaminado con químicos, hidrocarburos, pilas, aerosoles. Lo demás va a su color."}],"cierre":"Peligroso al rojo, reaprovechable a su color, y nada de mezclar. Segregar bien empieza en tu puesto."},{"id":"rotomartillo","icono":"🔩","nombre":"Uso del rotomartillo","sub":"Herramienta eléctrica manual","sector":"construccion","min":6,"intro":"El rotomartillo es útil pero castiga: proyecciones, atrapamiento y vibración. Practica el uso seguro paso a paso.","pasos":[{"tipo":"orden","titulo":"Antes y durante","instru":"Ordena el uso seguro del rotomartillo.","items":["Ponerte el EPP (lentes, guantes, protección auditiva, respirador si hay polvo)","Inspeccionar el equipo, el cable y la broca","Asegurar la pieza y tomar postura firme con las dos manos","Perforar con presión constante, sin forzar","Apagar y desconectar antes de dejarlo"]},{"tipo":"marca","titulo":"Lo que NO se hace","instru":"Marca las prácticas INSEGURAS.","items":[{"t":"Operar con una sola mano","mal":true},{"t":"Usar lentes de seguridad","mal":false},{"t":"Trabajar con la broca gastada o rajada","mal":true},{"t":"Desconectar jalando del cable","mal":true},{"t":"Revisar el cable antes de enchufar","mal":false}],"nota":"Dos manos, broca en buen estado, y se desconecta del enchufe, nunca jalando el cable."},{"tipo":"elige","titulo":"El polvo","pregunta":"Al perforar concreto se levanta mucho polvo de sílice. ¿Qué haces?","ops":["Nada, es normal","Uso respirador y, si se puede, perforación con agua o captación de polvo","Aguanto la respiración","Solo me alejo un poco"],"correcta":1,"sustento":"El polvo de sílice daña el pulmón (silicosis). Respirador adecuado y control del polvo en la fuente."}],"cierre":"EPP puesto, equipo inspeccionado, dos manos, control del polvo, y se desconecta del enchufe."},{"id":"andamio","icono":"🏗️","nombre":"Montaje de andamio","sub":"Armado, uso y desmontaje","sector":"construccion","min":8,"intro":"Un andamio mal armado es una caída esperando ocurrir. Practica el armado seguro y aprende a reconocer cuándo NO se debe subir.","pasos":[{"tipo":"orden","titulo":"El armado","instru":"Ordena el montaje seguro del andamio.","items":["Nivelar y apoyar la base sobre terreno firme","Armar los cuerpos y colocar los arriostres","Instalar la plataforma completa y sin huecos","Colocar barandas y rodapié","Instalar el acceso (escalera interna)","Inspeccionar y colocar la tarjeta de habilitación"]},{"tipo":"marca","titulo":"No subas si...","instru":"Marca las condiciones por las que NO se debe subir al andamio.","items":[{"t":"Le faltan arriostres","mal":true},{"t":"Tiene tarjeta verde de inspección vigente","mal":false},{"t":"La plataforma está incompleta","mal":true},{"t":"No tiene barandas","mal":true},{"t":"La base está nivelada y firme","mal":false}],"nota":"Sin arriostres, sin baranda o con plataforma incompleta: no se sube. La tarjeta verde habilita, la roja bloquea."},{"tipo":"elige","titulo":"La tarjeta","pregunta":"El andamio tiene tarjeta ROJA. ¿Qué significa?","ops":["Está listo para usar","No está habilitado: no se debe usar","Solo lo usa el capataz","Se puede usar con cuidado"],"correcta":1,"sustento":"Tarjeta roja = andamio NO habilitado (en armado, incompleto o observado). Solo se sube con tarjeta verde vigente."}],"cierre":"Base firme, arriostres, plataforma completa, barandas, acceso e inspección. Y solo se sube con tarjeta verde."}];
 var LS = {lic:'sstc_lic', cfg:'sstc_cfg', sec:'sstc_sector', prog:'sstc_prog'};
 var LS_SUP='sstc_sup', LS_EV='sstc_ev', LS_USA='sstc_usados', LS_MES='sstc_mes';
 var LS_ROL='sstc_rol';
@@ -1037,7 +1068,8 @@ function ir(p){
   cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';$(p).className='pantalla activa';window.scrollTo(0,0);
   if(p==='p-sector')pintarSectores(); if(p==='p-inicio')pintarInicio(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-programa')pintarPrograma();
   if(p==='p-eval')pintarEval(); if(p==='p-registro')cargarRegistro(); if(p==='p-generar')pintarGenerar();
-  if(p==='p-colab')pintarColab(); if(p==='p-charlas')pintarCharlas();}
+  if(p==='p-colab')pintarColab(); if(p==='p-charlas')pintarCharlas();
+  if(p==='p-talleres')pintarTalleres();}
 function leer(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function guardar(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function _norm(s){return (s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
@@ -2628,6 +2660,202 @@ function listoFirma(){
 
 // ---------------------------------------------------------------- PDF
 var PDF={doc:null, nombre:''};
+/* ================= TALLERES ================= */
+var TL = {taller:null, paso:0, dato:null, sel:null};
+function tallerDe(id){ for(var i=0;i<TALLERES.length;i++) if(TALLERES[i].id===id) return TALLERES[i]; return null; }
+function _baraja(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+
+function pintarTalleres(){
+  var c=$('lista-talleres'); c.innerHTML='';
+  TALLERES.forEach(function(t){
+    var b=document.createElement('button'); b.className='tarj vidrio';
+    var sec = t.sector==='*' ? 'Todos los sectores' : (sectorDe(t.sector)||{}).nombre || t.sector;
+    b.innerHTML='<b>'+t.icono+' '+esc(t.nombre)+'</b><small>'+esc(t.sub)+' · '+sec+' · '+t.pasos.length+' pasos</small>';
+    b.onclick=function(){ abrirTaller(t.id); };
+    c.appendChild(b);
+  });
+}
+function abrirTaller(id){
+  TL.taller=tallerDe(id); TL.paso=-1; TL.dato=null; TL.sel=null;
+  $('tal-chip').textContent=TL.taller.icono+' '+TL.taller.nombre;
+  ir('p-taller');
+  try{ if(typeof protegerCon==='function') protegerCon(etiquetaDueno()); }catch(e){}
+  tallerPintar();
+}
+function tallerBarra(){
+  var n=TL.taller.pasos.length, hecho=Math.max(0,TL.paso);
+  return '<div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);margin:2px 0 16px;overflow:hidden">'+
+    '<div style="height:100%;width:'+Math.round(hecho/n*100)+'%;background:var(--verde,#2f9e6f)"></div></div>';
+}
+function tallerPintar(){
+  var t=TL.taller, cont=$('tal-cuerpo');
+  if(TL.paso===-1){
+    cont.innerHTML='<h2>'+t.icono+' '+esc(t.nombre)+'</h2><p class="sub">'+esc(t.sub)+'</p>'+
+      '<div class="aviso">'+esc(t.intro)+'</div>'+
+      '<button class="btn" onclick="tallerVamos()">Empezar el taller ▸</button>';
+    return;
+  }
+  if(TL.paso>=t.pasos.length){
+    cont.innerHTML='<h2>✅ Terminaste</h2>'+tallerBarra()+
+      '<div class="aviso">'+esc(t.cierre)+'</div>'+
+      '<button class="btn" onclick="tallerAConstancia()">Emitir la constancia ▸</button>';
+    return;
+  }
+  var paso=t.pasos[TL.paso];
+  var h='<p class="sub" style="margin-bottom:2px">Paso '+(TL.paso+1)+' de '+t.pasos.length+'</p>'+tallerBarra()+
+        '<h2 style="margin-bottom:4px">'+esc(paso.titulo)+'</h2>';
+  if(paso.tipo==='elige'){
+    h+='<p style="margin:6px 0 12px">'+esc(paso.pregunta)+'</p><div id="tal-ops"></div>';
+    h+='<div id="tal-fb" style="margin-top:12px"></div>';
+    cont.innerHTML=h;
+    var box=$('tal-ops'); TL.sel=null;
+    paso.ops.forEach(function(op,i){
+      var b=document.createElement('button'); b.className='btn sec'; b.style.textAlign='left';
+      b.style.marginBottom='8px'; b.textContent=op; b.setAttribute('data-i',i);
+      b.onclick=function(){ tallerElige(i); }; box.appendChild(b);
+    });
+    return;
+  }
+  if(paso.tipo==='orden'){
+    h+='<p class="sub" style="margin-bottom:10px">'+esc(paso.instru)+'</p>';
+    h+='<div id="tal-elegidos" style="margin-bottom:10px"></div>';
+    h+='<div id="tal-pool"></div>';
+    h+='<div id="tal-fb" style="margin-top:12px"></div>';
+    cont.innerHTML=h;
+    TL.dato={orden:[], pool:_baraja(paso.items.map(function(x,i){return i;}))};
+    tallerOrdenPintar();
+    return;
+  }
+  if(paso.tipo==='marca'){
+    h+='<p class="sub" style="margin-bottom:10px">'+esc(paso.instru)+'</p><div id="tal-marca"></div>';
+    h+='<button class="btn" style="margin-top:12px" onclick="tallerMarcaComprobar()">Comprobar</button>';
+    h+='<div id="tal-fb" style="margin-top:12px"></div>';
+    cont.innerHTML=h;
+    TL.dato={sel:{}};
+    var box=$('tal-marca');
+    paso.items.forEach(function(it,i){
+      var b=document.createElement('button'); b.className='btn sec'; b.style.textAlign='left'; b.style.marginBottom='8px';
+      b.innerHTML='<span style="opacity:.5">☐</span>&nbsp; '+esc(it.t); b.setAttribute('data-i',i);
+      b.onclick=function(){ tallerMarcaToggle(i,b); }; box.appendChild(b);
+    });
+    return;
+  }
+}
+function tallerVamos(){ TL.paso=0; tallerPintar(); }
+function tallerElige(i){
+  var paso=TL.taller.pasos[TL.paso], fb=$('tal-fb');
+  var bts=$('tal-ops').querySelectorAll('button');
+  if(i===paso.correcta){
+    for(var k=0;k<bts.length;k++){ bts[k].disabled=true; }
+    bts[i].style.boxShadow='inset 0 0 0 2px #2f9e6f';
+    fb.innerHTML='<div class="aviso" style="border-left:3px solid #2f9e6f">✅ Correcto. '+esc(paso.sustento)+'</div>'+
+      '<button class="btn" onclick="tallerSiguiente()">Siguiente ▸</button>';
+  } else {
+    bts[i].style.boxShadow='inset 0 0 0 2px #d2564f'; bts[i].disabled=true;
+    fb.innerHTML='<div class="aviso" style="border-left:3px solid #d2564f">Esa no. Piensa en la práctica de campo y prueba otra.</div>';
+  }
+}
+function tallerOrdenPintar(){
+  var paso=TL.taller.pasos[TL.paso], d=TL.dato;
+  var el=$('tal-elegidos'), pool=$('tal-pool');
+  el.innerHTML=''; pool.innerHTML='';
+  d.orden.forEach(function(idx,pos){
+    var b=document.createElement('button'); b.className='btn sec'; b.style.textAlign='left'; b.style.marginBottom='6px';
+    b.innerHTML='<b>'+(pos+1)+'.</b> '+esc(paso.items[idx]); b.onclick=function(){ tallerOrdenQuita(pos); };
+    el.appendChild(b);
+  });
+  d.pool.forEach(function(idx){
+    var b=document.createElement('button'); b.className='btn'; b.style.textAlign='left'; b.style.marginBottom='6px';
+    b.textContent=paso.items[idx]; b.onclick=function(){ tallerOrdenPone(idx); };
+    pool.appendChild(b);
+  });
+  if(!d.pool.length) tallerOrdenComprobar();
+}
+function tallerOrdenPone(idx){ var d=TL.dato; d.orden.push(idx); d.pool=d.pool.filter(function(x){return x!==idx;}); tallerOrdenPintar(); }
+function tallerOrdenQuita(pos){ var d=TL.dato; var idx=d.orden.splice(pos,1)[0]; d.pool.push(idx); tallerOrdenPintar(); }
+function tallerOrdenComprobar(){
+  var d=TL.dato, fb=$('tal-fb');
+  var bien=d.orden.every(function(idx,pos){ return idx===pos; });
+  if(bien){
+    fb.innerHTML='<div class="aviso" style="border-left:3px solid #2f9e6f">✅ Ese es el orden correcto.</div>'+
+      '<button class="btn" onclick="tallerSiguiente()">Siguiente ▸</button>';
+  } else {
+    fb.innerHTML='<div class="aviso" style="border-left:3px solid #d2564f">El orden no es correcto todavía. Toca un paso para devolverlo y reacomoda.</div>';
+  }
+}
+function tallerMarcaToggle(i,b){
+  var d=TL.dato; d.sel[i]=!d.sel[i];
+  b.innerHTML='<span style="opacity:'+(d.sel[i]?'1':'.5')+'">'+(d.sel[i]?'☑':'☐')+'</span>&nbsp; '+esc(TL.taller.pasos[TL.paso].items[i].t);
+  b.style.boxShadow=d.sel[i]?'inset 0 0 0 2px #c99a3a':'';
+}
+function tallerMarcaComprobar(){
+  var paso=TL.taller.pasos[TL.paso], d=TL.dato, fb=$('tal-fb');
+  var bien=paso.items.every(function(it,i){ return !!d.sel[i]===!!it.mal; });
+  if(bien){
+    fb.innerHTML='<div class="aviso" style="border-left:3px solid #2f9e6f">✅ Bien marcado. '+esc(paso.nota||'')+'</div>'+
+      '<button class="btn" onclick="tallerSiguiente()">Siguiente ▸</button>';
+  } else {
+    fb.innerHTML='<div class="aviso" style="border-left:3px solid #d2564f">Revisa: falta marcar alguna o marcaste de más. '+esc(paso.nota||'')+'</div>';
+  }
+}
+function tallerSiguiente(){ TL.paso++; tallerPintar(); }
+function tallerAConstancia(){
+  var cfg=leer(LS.cfg,{}), sup=leer(LS_SUP,{});
+  $('talfin-titulo').textContent='¡'+TL.taller.nombre+' completado!';
+  $('tal-nombre').value=''; $('tal-dni').value=''; $('tal-cargo').value='';
+  $('tal-empresa').value=cfg.empresa||''; $('tal-obra').value=cfg.obra||'';
+  $('tal-fin-msg').textContent='';
+  ir('p-taller-fin');
+}
+function hacerDiplomaTaller(){
+  var nombre=($('tal-nombre').value||'').trim();
+  if(!nombre){ $('tal-fin-msg').style.color='#d2564f'; $('tal-fin-msg').textContent='Pon al menos el nombre del trabajador.'; return; }
+  try{
+    var t=TL.taller, cfg=leer(LS.cfg,{}), sup=leer(LS_SUP,{});
+    var dni=($('tal-dni').value||'').trim(), cargo=($('tal-cargo').value||'').trim();
+    var empresa=($('tal-empresa').value||'').trim(), obra=($('tal-obra').value||'').trim();
+    var fecha=hoyISO();
+    var folio='TL-'+_hh(nombre+t.id+fecha).slice(0,6).toUpperCase();
+    var doc=new jspdf.jsPDF({unit:'pt',format:'a4',orientation:'landscape'});
+    var W=841.89, H=595.28, M=54;
+    // marco
+    doc.setDrawColor(11,42,58); doc.setLineWidth(2.4); doc.rect(M-16,M-16,W-2*(M-16),H-2*(M-16));
+    doc.setDrawColor(201,154,58); doc.setLineWidth(1); doc.rect(M-10,M-10,W-2*(M-10),H-2*(M-10));
+    var y=M+34;
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(120,120,120);
+    doc.text('SST CAPACITA', W/2, y, {align:'center'}); y+=34;
+    doc.setFontSize(30); doc.setTextColor(11,42,58);
+    doc.text('CONSTANCIA DE PARTICIPACIÓN', W/2, y, {align:'center'}); y+=30;
+    doc.setFont('helvetica','normal'); doc.setFontSize(12); doc.setTextColor(90,90,90);
+    doc.text('Se deja constancia de que', W/2, y, {align:'center'}); y+=40;
+    doc.setFont('helvetica','bold'); doc.setFontSize(26); doc.setTextColor(20,20,20);
+    doc.text(nombre.toUpperCase(), W/2, y, {align:'center'}); y+=22;
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(90,90,90);
+    var sub=[]; if(dni) sub.push('DNI '+dni); if(cargo) sub.push(cargo); if(empresa) sub.push(empresa);
+    if(sub.length){ doc.text(sub.join('  ·  '), W/2, y, {align:'center'}); } y+=34;
+    doc.setFontSize(13); doc.setTextColor(60,60,60);
+    doc.text('participó y completó satisfactoriamente el taller práctico de', W/2, y, {align:'center'}); y+=30;
+    doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(11,42,58);
+    var tt=doc.splitTextToSize(t.icono?t.nombre:t.nombre, W-2*M);
+    doc.text(t.nombre.toUpperCase(), W/2, y, {align:'center'}); y+=26;
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(90,90,90);
+    doc.text(t.sub, W/2, y, {align:'center'}); y+=40;
+    // pie: fecha, obra, firma
+    var yL=H-M-24;
+    doc.setDrawColor(150,150,150); doc.setLineWidth(.7);
+    doc.line(M+40, yL, M+230, yL); doc.line(W-M-230, yL, W-M-40, yL);
+    doc.setFontSize(10); doc.setTextColor(70,70,70);
+    doc.text(fechaLarga(fecha)+(obra?'  ·  '+obra:''), M+40, yL+16);
+    doc.text((sup.nombre||cfg.cap||'Responsable SSOMA'), W-M-230, yL+16);
+    doc.setFontSize(8); doc.setTextColor(140,140,140);
+    doc.text('Fecha y obra', M+40, yL-6); doc.text('Responsable de la capacitación', W-M-230, yL-6);
+    doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text('Folio de verificación: '+folio+'  ·  Constancia de participación en taller práctico. No reemplaza la capacitación formal de la Ley 29783.', W/2, H-M+2, {align:'center'});
+    entregarPDF(doc, 'Constancia_'+t.id+'_'+nombre.replace(/[^A-Za-z0-9]/g,'')+'.pdf');
+    $('tal-fin-msg').style.color='#2f9e6f'; $('tal-fin-msg').textContent='Constancia generada (folio '+folio+'). Si no se descargó, revisa los permisos del navegador.';
+  }catch(e){ $('tal-fin-msg').style.color='#d2564f'; $('tal-fin-msg').textContent='No se pudo generar el PDF: '+e.message; }
+}
+
 function hacerPDF(){
   try{
     var t=TEMAS[S.tema], cfg=leer(LS.cfg,{});
