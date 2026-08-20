@@ -1139,6 +1139,10 @@ function abrirHoja(familia, ids){
 }
 function cerrarHoja(){ $('hoja').className='hoja'; }
 function arrancar(m){
+  /* «Solo yo» y «Presentar» muestran la respuesta correcta de corrido. En la
+     versión gratis no se abren ni escondiendo el botón ni llamando a la
+     función: la puerta se cierra acá, que es por donde pasan las dos. */
+  if(S.lite && m!=='evaluar'){ ir('p-codigo'); return; }
   S.modo=m; S.i=0; S.resp=[];
   S.orden=preguntasDe(S.tema);
   if(m==='evaluar'){ var f=$('d-fecha'); if(!f.value) f.value=hoyISO(); var cfg=leer(LS.cfg,{}); if(!$('d-obra').value) $('d-obra').value=cfg.obra||''; if(!$('d-eval').value) $('d-eval').value=cfg.cap||''; ir('p-datos'); return; }
@@ -1597,8 +1601,12 @@ function guardarRegistro(){
   if(!s.nombre){ alert('Escribe tu nombre: es el que va a salir como evaluador en la constancia de cada trabajador.'); return; }
   guardar(LS_SUP,s);
   var c=leer(LS.cfg,{}); c.cap=s.nombre; if(s.obra) c.obra=s.obra; guardar(LS.cfg,c);
-  alert('Guardado. Ya puedes generar códigos para tu cuadrilla.');
-  ir('p-generar');
+  alert('Guardado. Con estos datos van a salir los códigos de tu cuadrilla.');
+  /* al trabajo: charlas, capacitaciones, programa. Generar códigos es una
+     opción más del inicio, no el sitio donde te deja la app. */
+  var g=leer(LS.sec,null);
+  if(g && TEMAS && temasDelSectorExiste(g)){ S.sector=g; ir('p-inicio'); }
+  else { ir('p-sector'); }
 }
 function abrirGenerar(){
   if(!libre()){ ir('p-codigo'); return; }
@@ -1798,6 +1806,7 @@ function abrirDia(iso){
   }
   h+='</select><label>Tema de la charla</label>'+
      '<input id="dia-buscar" placeholder="Buscar por palabra…" oninput="pintarTemasDia()">'+
+     '<div id="dia-cuenta" style="font-size:12px;color:var(--gris);margin:-4px 0 8px"></div>'+
      '<div class="ch-chips" id="dia-cats"></div>'+
      '<div class="ch-caja-lista" id="dia-lista"></div>'+
      '<label>Responsable (nombre o cargo)</label><input id="dia-resp" placeholder="Capataz de turno" value="'+escA((c&&c.resp)||'')+'">'+
@@ -1850,11 +1859,13 @@ function pintarTemasDia(sel){
     var del=lista.filter(function(x){ return x.cat===cat; });
     if(del.length) cats.push({id:cat, n:del.length, k:CHARLA_CAT[cat]});
   });
-  if(!DIA_CAT || !cats.filter(function(x){return x.id===DIA_CAT;}).length){
+  if(DIA_CAT!=='*' && (!DIA_CAT || !cats.filter(function(x){return x.id===DIA_CAT;}).length)){
     var ya=DIA_SEL? charlaDe(parseInt(DIA_SEL,10)) : null;
     DIA_CAT = ya? ya.cat : (cats.length? cats[0].id : null);
   }
-  var hc='';
+  var total=lista.length;
+  var hc='<span class="ch-chip'+(!q && DIA_CAT==='*'?' on':'')+'" onclick="elegirCatDia(\'*\')">'+
+         '📋 Todas<i>'+total+'</i></span>';
   cats.forEach(function(x){
     hc+='<span class="ch-chip'+(!q && x.id===DIA_CAT?' on':'')+'" onclick="elegirCatDia(\''+x.id+'\')">'+
         x.k.emoji+' '+esc(x.k.nombre)+'<i>'+x.n+'</i></span>';
@@ -1865,12 +1876,17 @@ function pintarTemasDia(sel){
   // --- los títulos: los de la categoría elegida, o los que coincidan con la búsqueda
   var vistas = q
     ? lista.filter(function(x){ return _norm(x.titulo).indexOf(q)>-1 || _norm(x.acuerdo||'').indexOf(q)>-1; })
-    : lista.filter(function(x){ return x.cat===DIA_CAT; });
-  vistas.sort(function(a,b){ return a.n-b.n; });
+    : (DIA_CAT==='*' ? lista.slice() : lista.filter(function(x){ return x.cat===DIA_CAT; }));
+  vistas.sort(function(a,b){
+    if(DIA_CAT==='*' || q){
+      var oa=Object.keys(CHARLA_CAT).indexOf(a.cat), ob=Object.keys(CHARLA_CAT).indexOf(b.cat);
+      if(oa!==ob) return oa-ob;
+    }
+    return a.n-b.n; });
   var h='';
   vistas.forEach(function(x){
     var pie=[];
-    if(q) pie.push(CHARLA_CAT[x.cat].emoji+' '+CHARLA_CAT[x.cat].nombre);
+    if(q || DIA_CAT==='*') pie.push(CHARLA_CAT[x.cat].emoji+' '+CHARLA_CAT[x.cat].nombre);
     if(puestas[String(x.n)]) pie.push('ya está el '+puestas[String(x.n)]);
     if(!charlaAbierta(x.n)) pie.push('🔒 se abre con el código');
     h+='<button class="ch-op'+(String(x.n)===DIA_SEL?' on':'')+(puestas[String(x.n)]?' usada':'')+
@@ -1878,6 +1894,11 @@ function pintarTemasDia(sel){
        (pie.length? '<small>'+esc(pie.join(' · '))+'</small>':'')+'</button>';
   });
   $('dia-lista').innerHTML = h || '<span style="color:var(--gris);font-size:13.5px">Ninguna charla coincide. Borra la búsqueda para ver las categorías.</span>';
+  if($('dia-cuenta')){
+    $('dia-cuenta').textContent = q
+      ? (vistas.length+' de '+total+' coinciden con la búsqueda')
+      : ('Mostrando '+vistas.length+' de '+total+' charlas disponibles para '+sectorDe(sec).nombre.toLowerCase());
+  }
 }
 function leerDia(){
   var datos=progObra(), viejo=datos[PROG.dia]||{};
@@ -2387,6 +2408,7 @@ function presDesdeTema(){
   presAbrir(S.tema);
 }
 function presAbrir(id){
+  if(S.lite){ ir('p-codigo'); return; }
   if(!id || !TEMAS[id] || S.modo==='evaluar') return;
   if(preguntasDe(id).length===0){ ir('p-codigo'); return; }   // tema bloqueado: no hay con qué armarla
   PRES.tema=id;
