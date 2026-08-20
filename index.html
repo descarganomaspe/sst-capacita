@@ -141,6 +141,19 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .ch-lista{margin:0;padding-left:18px}
 .ch-lista li{font-size:14.5px;line-height:1.6;margin-bottom:7px}
 .ch-lista li:last-child{margin-bottom:0}
+/* --- códigos: la caja donde sale el enlace y el código corto --- */
+.cod-caja{margin:12px 0;padding:15px 16px;border-radius:16px;
+  border:1px solid rgba(214,178,92,.34);background:rgba(214,178,92,.07)}
+.cod-caja h3{margin:0 0 4px;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--oro)}
+.cod-grande{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:25px;font-weight:800;
+  letter-spacing:.13em;text-align:center;margin:9px 0 4px;color:var(--tinta);word-break:break-all}
+.cod-enlace{font-size:11.5px;color:var(--gris);word-break:break-all;line-height:1.5;margin:6px 0 0}
+.cod-pie{font-size:12.5px;color:var(--gris);margin:8px 0 0;line-height:1.55}
+.ev-dato{display:flex;justify-content:space-between;gap:12px;padding:7px 0;
+  border-bottom:1px solid rgba(255,255,255,.07);font-size:14px}
+.ev-dato:last-child{border-bottom:0}
+.ev-dato b{color:var(--gris);font-weight:600;flex:0 0 auto}
+.ev-dato span{text-align:right}
 .lienzo{width:100%;height:200px;background:#fff;border-radius:14px;touch-action:none;display:block;margin-bottom:12px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
 /* --- hoja flotante de variantes (mismo patron que el selector de subtemas) --- */
 .hoja{position:fixed;inset:0;z-index:50;display:none}
@@ -285,11 +298,12 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="marca">◆ SST CAPACITA</div>
   <h1>La evaluación, lista<br>antes de la charla.</h1>
   <p class="sub">Pregunta, respuesta, sustento normativo y un tip de campo. Para el supervisor SSOMA que no tiene tiempo de armarla.</p>
-  <div class="aviso" id="banda-lite">🎁 <b>Versión gratis:</b> 3 evaluaciones con 4 preguntas cada una y <b>3 charlas de 5 minutos</b>. Con el código se abren las 42 charlas y los temas completos.</div>
+  <div class="aviso" id="banda-lite">🎁 <b>Versión gratis:</b> 3 evaluaciones de muestra con 4 preguntas cada una y <b>3 charlas de 5 minutos</b>. Con el código se abren los 42 temas, las 78 charlas, el modo «solo yo» con las respuestas y los códigos para tu cuadrilla.</div>
   <button class="btn" onclick="ir('p-temas')">Elegir un tema ▸</button>
   <button class="btn sec" id="b-lic" onclick="ir('p-codigo')">Tengo un código</button>
   <button class="btn sec" onclick="verCharlas()">🗣️ Charlas SSOMA · 5 minutos</button>
   <button class="btn sec" onclick="ir('p-programa')">🗓️ Programa del mes</button>
+  <button class="btn sec" id="b-gen" onclick="abrirGenerar()" style="display:none">🎟️ Códigos para mi cuadrilla</button>
   <button class="btn sec" onclick="ir('p-config')">Configurar envío de resultados</button>
   <div class="pie">Herramienta de apoyo. No reemplaza la capacitación dictada por persona competente conforme a la Ley 29783.</div>
 </section>
@@ -304,7 +318,8 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <section class="pantalla" id="p-modo">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-temas')">‹ Temas</button><span id="modo-tema"></span></div>
   <h2>¿Cómo lo vas a usar?</h2>
-  <button class="tarj vidrio" onclick="arrancar('solo')"><b>👁️ Solo yo</b><small>Veo la respuesta, la explicación, la norma y el tip. Expongo con mi propio material.</small></button>
+  <div class="aviso" id="modo-aviso" style="display:none"></div>
+  <button class="tarj vidrio" id="tarj-solo" onclick="arrancar('solo')"><b>👁️ Solo yo</b><small>Veo la respuesta, la explicación, la norma y el tip. Expongo con mi propio material.</small></button>
   <button class="tarj vidrio" onclick="arrancar('evaluar')"><b>📝 Ser evaluado</b><small>El trabajador responde sin ver si acertó. Al final ve su resultado, firma y sale la constancia.</small></button>
   <button class="tarj vidrio" id="tarj-pres" onclick="presDesdeTema()"><b>📽️ Presentar la capacitación</b><small>Diapositivas a pantalla completa con el contenido de este tema. Solo para el expositor. Para las charlas de 5 minutos, entra a «Charlas SSOMA».</small></button>
 </section>
@@ -312,8 +327,9 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <section class="pantalla" id="p-datos">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-modo')">‹ Atrás</button><span>Datos del trabajador</span></div>
   <h2>¿Quién va a responder?</h2>
+  <div class="aviso" id="d-aviso" style="display:none"></div>
   <label>Nombre y apellidos</label><input id="d-nombre" placeholder="Juan Pérez Quispe">
-  <label>DNI (últimos 4 dígitos)</label><input id="d-dni" placeholder="4821" maxlength="8" inputmode="numeric">
+  <label>DNI o carné de extranjería</label><input id="d-dni" placeholder="45872103" maxlength="12">
   <label>Cargo</label><input id="d-cargo" placeholder="Operario">
   <label>Nombre del evaluador (quien capacita)</label><input id="d-eval" placeholder="Marcelo Lamas">
   <label>Obra / proyecto</label><input id="d-obra" placeholder="Proyecto Metro de Lima — Línea 2">
@@ -402,13 +418,75 @@ input,textarea{-webkit-user-select:text;user-select:text}
 
 <section class="pantalla" id="p-codigo">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-inicio')">‹ Atrás</button><span>Acceso completo</span></div>
-  <h2>Los temas completos</h2>
-  <p class="sub">Escribe el código que recibiste. Se escribe una sola vez y queda en este celular.</p>
+  <h2>Escribe tu código</h2>
+  <p class="sub">Sirve para los tres: el código de compra que abre todo, el que te pasó tu supervisor para una evaluación, y el del mes que abre las charlas. También puedes pegar el enlace completo que te llegó por WhatsApp.</p>
   <input id="inp-cod" placeholder="TU CÓDIGO" style="text-align:center;letter-spacing:.14em;text-transform:uppercase;font-weight:700">
   <div id="cod-msg" style="font-size:14px;margin-bottom:10px"></div>
   <button class="btn" onclick="activar()">Desbloquear</button>
 </section>
 
+
+<!-- ============ el que paga: se registra una vez ============ -->
+<section class="pantalla" id="p-registro">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-inicio')">‹ Atrás</button><span>Tus datos</span></div>
+  <h2>¿Quién capacita?</h2>
+  <p class="sub">Se escribe una vez. Después, cada código que generes para tu cuadrilla sale con estos datos ya puestos, y el trabajador solo llena su nombre y su documento.</p>
+  <label>Nombre y apellidos</label><input id="r-nombre" placeholder="Marcelo Lamas">
+  <label>DNI o carné de extranjería</label><input id="r-doc" placeholder="45872103">
+  <label>Cargo</label><input id="r-cargo" placeholder="Supervisor SSOMA">
+  <label>Empresa</label><input id="r-empresa" placeholder="Nombre de tu empresa">
+  <label>Obra o proyecto</label><input id="r-obra" placeholder="Proyecto Metro de Lima — Línea 2">
+  <label>Tu empresa en esta obra es</label>
+  <select id="r-vinculo">
+    <option value="Principal">Empresa principal</option>
+    <option value="Contratista">Contratista</option>
+    <option value="Subcontratista">Subcontratista</option>
+  </select>
+  <button class="btn" onclick="guardarRegistro()">Guardar ▸</button>
+  <div class="pie">Se queda en este celular. No se manda a ningún lado.</div>
+</section>
+
+<!-- ============ el que paga: fabrica los códigos ============ -->
+<section class="pantalla" id="p-generar">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-inicio')">‹ Atrás</button><span id="gen-quien"></span></div>
+  <h2>Códigos para tu cuadrilla</h2>
+  <p class="sub">Tus trabajadores no necesitan pagar ni ver el material completo. Les pasas un código y se les abre solo lo que les toca.</p>
+
+  <div class="caja vidrio">
+    <h3>📝 Código de evaluación</h3>
+    <label>Sector</label><select id="g-sector" onchange="pintarTemasGen()"></select>
+    <label>Tema a evaluar</label><select id="g-tema"></select>
+    <label>Fecha de la evaluación</label><input id="g-fecha" type="date">
+    <label>Vale hasta</label><input id="g-vence" type="date">
+    <label>Intentos por celular</label>
+    <select id="g-intentos">
+      <option value="1">1 — lo rinde una sola vez</option>
+      <option value="2">2 — por si alguien se equivoca de botón</option>
+    </select>
+    <button class="btn" onclick="generarEval()">Generar el código ▸</button>
+    <div id="g-salida-ev"></div>
+  </div>
+
+  <div class="caja vidrio">
+    <h3>🗓️ Código del mes · charlas</h3>
+    <p class="sub" style="margin:2px 0 10px">Abre las charlas de 5 minutos y les lleva el programa que armaste. Funciona hasta el último día del mes y lo puede usar toda la obra, sin límite de veces.</p>
+    <label>Mes</label><select id="g-mes"></select>
+    <button class="btn" onclick="generarMes()">Generar el código del mes ▸</button>
+    <div id="g-salida-mes"></div>
+  </div>
+  <div class="pie">Los códigos se arman en el celular, sin internet. Si cambias de celular tienes que volver a generarlos.</div>
+</section>
+
+<!-- ============ el trabajador: entra con el código y solo ve su prueba ============ -->
+<section class="pantalla" id="p-eval">
+  <div class="marca">◆ SST CAPACITA</div>
+  <h1 id="ev-titulo">Tu evaluación</h1>
+  <p class="sub" id="ev-sub">Te la mandó tu supervisor. Son preguntas de un solo tema.</p>
+  <div class="caja vidrio" id="ev-ficha"></div>
+  <div class="aviso" id="ev-aviso" style="display:none"></div>
+  <button class="btn" id="ev-btn" onclick="empezarEval()">Empezar la evaluación ▸</button>
+  <div class="pie">Herramienta de apoyo. No reemplaza la capacitación dictada por persona competente conforme a la Ley 29783.</div>
+</section>
 
 <section class="pantalla" id="p-charlas">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-inicio')">‹ Atrás</button><span>Charlas SSOMA</span></div>
@@ -438,7 +516,8 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="caja vidrio" id="prog-resumen"></div>
   <div class="caja vidrio" id="prog-lista"></div>
   <button class="btn" onclick="llenarMes()">✨ Llenar el mes</button>
-  <button class="btn sec" onclick="compartirPrograma()">📤 Compartir el programa</button>
+  <button class="btn sec" onclick="pdfPrograma()">🧾 PDF del programa (tabla)</button>
+  <button class="btn sec" onclick="compartirPrograma()">📤 Compartir como texto</button>
   <div class="pie">Se guarda en este celular, separado por obra. La obra sale de «Configurar envío de resultados».</div>
 </section>
 
@@ -858,13 +937,22 @@ var HASHES = ["11602c6b-b7237289","13ced441-b8d052a5","17909c7a-bba05e56","1840a
 var SECTORES = [{"id":"construccion","nombre":"Construcción","icono":"🏗️","pie":"Obra, edificación y montaje"},{"id":"mineria","nombre":"Minería","icono":"⛏️","pie":"Interior mina, tajo y planta concentradora"},{"id":"industria","nombre":"Industria","icono":"🏭","pie":"Planta de producción y manufactura"},{"id":"hidrocarburos","nombre":"Hidrocarburos","icono":"🛢️","pie":"Refinería, planta de proceso y almacenamiento"}];
 var FAMILIAS = {"primeros_auxilios":{"titulo":"Primeros auxilios","pregunta":"¿Qué emergencia estás atendiendo?","orden":1},"izaje":{"titulo":"Izaje de cargas","pregunta":"¿Con qué vas a izar?","orden":4},"altura":{"titulo":"Trabajos en altura","pregunta":"¿Cómo trabajas en altura?","orden":5},"caliente":{"titulo":"Trabajos en caliente","pregunta":"¿Qué trabajo en caliente vas a hacer?","orden":8},"fuego":{"titulo":"Uso de extintores","pregunta":"¿Qué se está quemando?","orden":9}};
 var LS = {lic:'sstc_lic', cfg:'sstc_cfg', sec:'sstc_sector', prog:'sstc_prog'};
+var LS_SUP='sstc_sup', LS_EV='sstc_ev', LS_USA='sstc_usados', LS_MES='sstc_mes';
 var S = {sector:null, tema:null, modo:null, i:0, orden:[], resp:[], lite:true, datos:{}};
+/* EV: cuando llega con el codigo del supervisor, la app queda encerrada en una
+   sola prueba. Mientras EV no sea null, no hay menu, ni temas, ni respuestas. */
+var EV = null;
 
 function $(i){return document.getElementById(i);}
 function hoyISO(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
 function fechaLarga(iso){ if(!iso) return ''; var p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
-function ir(p){cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';$(p).className='pantalla activa';window.scrollTo(0,0);
-  if(p==='p-sector')pintarSectores(); if(p==='p-inicio')pintarInicio(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-programa')pintarPrograma();}
+/* Un solo punto por donde pasan TODOS los cambios de pantalla: si esta puesto
+   el modo evaluado, de aqui no se sale. Es mas seguro que esconder botones. */
+var EV_OK={'p-eval':1,'p-datos':1,'p-juego':1,'p-final':1,'p-firma':1,'p-listo':1};
+function ir(p){if(EV && !EV_OK[p]) p='p-eval';
+  cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';$(p).className='pantalla activa';window.scrollTo(0,0);
+  if(p==='p-sector')pintarSectores(); if(p==='p-inicio')pintarInicio(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-programa')pintarPrograma();
+  if(p==='p-eval')pintarEval(); if(p==='p-registro')cargarRegistro(); if(p==='p-generar')pintarGenerar();}
 function leer(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function guardar(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function _norm(s){return (s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
@@ -909,7 +997,14 @@ function pintarSectores(){
 }
 function pintarInicio(){
   S.lite=!libre();
+  var m=mesVigente();
   $('banda-lite').style.display=S.lite?'':'none';
+  if(S.lite && m){
+    $('banda-lite').innerHTML='🗓️ <b>Código del mes activo</b> hasta el '+fechaLarga(m.v)+
+      ': tienes las '+CHARLAS.length+' charlas de 5 minutos y el programa de tu obra. '+
+      'Las evaluaciones siguen en versión de muestra.';
+  }
+  $('b-gen').style.display=libre()?'':'none';
   $('b-lic').textContent=S.lite?'Tengo un código':'✓ Acceso completo activo';
   var s=sectorDe(S.sector);
   $('chip-sector').textContent=s.icono+' '+s.nombre;
@@ -934,6 +1029,12 @@ function abrirTema(id){
   if(preguntasDe(id).length===0){ ir('p-codigo'); return; }
   S.tema=id; S.modo=null;
   $('modo-tema').textContent=t.variante? t.tema+' · '+t.variante : t.tema;
+  /* «Solo yo» y «Presentar» muestran la respuesta correcta de corrido. En la
+     version gratis no salen: si salieran, al evaluado le bastaria un toque. */
+  $('tarj-solo').style.display=S.lite?'none':'';
+  $('tarj-pres').style.display=S.lite?'none':'';
+  $('modo-aviso').style.display=S.lite?'':'none';
+  if(S.lite) $('modo-aviso').innerHTML='🔒 Ver las respuestas, la explicación y las diapositivas es del acceso completo. En la versión gratis solo se puede rendir la evaluación.';
   cerrarHoja(); ir('p-modo');
 }
 function pintarTemas(){
@@ -1043,6 +1144,7 @@ function salir(){ if(confirm('¿Salir de la evaluación? Se pierde lo respondido
 function final(){
   var t=TEMAS[S.tema];
   if(S.modo==='solo'){ finalSolo(t); return; }
+  if(EV) marcarRendida();
   var b=S.resp.filter(function(r){return r.ok;}).length, n=S.resp.length;
   var min=Math.ceil(n*0.7);
   $('f-tema').textContent=t.tema;
@@ -1137,10 +1239,301 @@ function guardarConfig(){
   alert('Guardado.'); ir('p-inicio');
 }
 function activar(){
-  var v=$('inp-cod').value, m=$('cod-msg');
-  if(HASHES.indexOf(_hh(v))>-1){ guardar(LS.lic,{ok:1,fecha:new Date().toISOString()}); S.lite=false;
-    m.style.color='var(--ok)'; m.textContent='Listo. Se abrieron los temas completos.'; setTimeout(function(){ir('p-inicio');},800); }
-  else { m.style.color='var(--mal)'; m.textContent='Ese código no es válido. Revísalo tal como te llegó.'; }
+  var v=($('inp-cod').value||'').trim(), m=$('cod-msg');
+  m.style.color='var(--mal)';
+  if(!v){ m.textContent='Escribe el código o pega el enlace que te llegó.'; return; }
+
+  // 1) el codigo de compra: abre todo
+  if(HASHES.indexOf(_hh(v))>-1){
+    guardar(LS.lic,{ok:1,fecha:new Date().toISOString()}); S.lite=false;
+    m.style.color='var(--ok)'; m.textContent='Listo. Se abrió todo.';
+    var sup=leer(LS_SUP,null);
+    setTimeout(function(){ ir(sup?'p-inicio':'p-registro'); },700);
+    return;
+  }
+  // 2) pegaron el enlace entero
+  var mk=v.match(/[?&]k=([A-Za-z0-9_-]+)/);
+  if(mk){ var e1=aplicarLlave(mk[1]); if(e1){ m.textContent=e1; } return; }
+  // 3) el codigo corto de 10
+  var c=leerCorto(v);
+  if(c){ var e2=aplicarCorto(c); if(e2){ m.textContent=e2; } return; }
+  m.textContent='Ese código no es válido. Revísalo tal como te llegó: se escribe igual, con el guion.';
+}
+
+
+// =================================================================
+//  ACCESOS  ·  los codigos que fabrica el supervisor
+//  Tres piezas: (a) el enlace, que lleva los datos adentro;
+//  (b) el codigo corto de 10, para dictarlo en obra; (c) el candado
+//  que deja al trabajador encerrado en su prueba.
+// =================================================================
+var A32='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // sin I, O, 0 ni 1: se confunden
+var DIA0=Date.UTC(2026,0,1);
+function temaIDs(){ return Object.keys(TEMAS).sort(); }
+function diasDe(iso){ var p=(iso||'').split('-');
+  if(p.length!==3) return 0;
+  return Math.round((Date.UTC(+p[0],+p[1]-1,+p[2])-DIA0)/86400000); }
+function isoDeDias(n){ var d=new Date(DIA0+n*86400000);
+  return d.getUTCFullYear()+'-'+dosD(d.getUTCMonth()+1)+'-'+dosD(d.getUTCDate()); }
+function _chk(s){ var h=_hh(s).split('-');
+  return ('0000000'+h[0]).slice(-8)+('0000000'+h[1]).slice(-8); }
+
+function codCorto(tipo,dato,vence){
+  var g=[tipo, Math.floor(dato/32)%32, dato%32,
+         Math.floor(vence/1024)%32, Math.floor(vence/32)%32, vence%32];
+  var num=parseInt(_chk('SSTC/'+tipo+'/'+dato+'/'+vence+'/llave').slice(0,5),16);
+  for(var i=0;i<4;i++){ g.push(num%32); num=Math.floor(num/32); }
+  var s=''; for(var j=0;j<10;j++) s+=A32.charAt(g[j]);
+  return s.slice(0,5)+'-'+s.slice(5);
+}
+function leerCorto(txt){
+  var s=_norm(txt); if(s.length!==10) return null;
+  var g=[]; for(var i=0;i<10;i++){ var k=A32.indexOf(s.charAt(i)); if(k<0) return null; g.push(k); }
+  var tipo=g[0], dato=g[1]*32+g[2], vence=g[3]*1024+g[4]*32+g[5];
+  if(tipo!==1 && tipo!==2) return null;
+  if(codCorto(tipo,dato,vence)!==s.slice(0,5)+'-'+s.slice(5)) return null;
+  return {tipo:tipo, dato:dato, v:isoDeDias(vence), corto:s.slice(0,5)+'-'+s.slice(5)};
+}
+
+function b64u(s){ return btoa(unescape(encodeURIComponent(s)))
+  .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function deb64u(s){ s=(s||'').replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length%4) s+='='; return decodeURIComponent(escape(atob(s))); }
+function baseURL(){
+  var u=location.origin+location.pathname;
+  if(u.indexOf('http')!==0) u='https://descarganomaspe.github.io/sst-capacita/';
+  return u.replace(/index\.html$/,'');
+}
+function enlaceDe(o){ return baseURL()+'?k='+b64u(JSON.stringify(o)); }
+
+/* Aplica lo que venga en el enlace. Devuelve null si salio bien, o el texto
+   del problema para mostrarselo a quien lo abrio. */
+function aplicarLlave(txt){
+  var o;
+  try{ o=JSON.parse(deb64u(txt)); }catch(e){ return 'El enlace llegó cortado. Pide que te lo manden de nuevo, completo.'; }
+  if(!o || !o.t) return 'Ese enlace no es de SST Capacita.';
+  /* La clave del intento NO incluye la fecha: si no, el mismo trabajador
+     rendia por el enlace y otra vez por el codigo corto. Tema + vencimiento
+     identifican la evaluacion, venga como venga. */
+  if(o.t==='E') return entrarEvaluacion(o, 'E'+(o.d||'')+(o.v||''));
+  if(o.t==='M') return entrarMes(o);
+  return 'Ese enlace no es de SST Capacita.';
+}
+function aplicarCorto(c){
+  if(c.tipo===1){
+    var ids=temaIDs();
+    if(c.dato>=ids.length) return 'Ese código es de un tema que esta versión de la app todavía no tiene. Actualízala desde el enlace.';
+    return entrarEvaluacion({t:'E', d:ids[c.dato], v:c.v, corto:1}, 'E'+ids[c.dato]+c.v);
+  }
+  return entrarMes({t:'M', v:c.v, corto:1});
+}
+
+// ------------------------------------------------- modo evaluado
+function entrarEvaluacion(o, clave){
+  if(!TEMAS[o.d]) return 'Ese código es de un tema que esta versión de la app todavía no tiene. Actualízala.';
+  if(hoyISO()>o.v) return 'Este código venció el '+fechaLarga(o.v)+'. Pídele uno nuevo a tu supervisor.';
+  var us=leer(LS_USA,{}), hechos=us[clave]||0, tope=parseInt(o['in'],10)||1;
+  if(hechos>=tope) return 'Ya rendiste esta evaluación en este celular'+(tope>1?' las '+tope+' veces permitidas':'')+'. Si necesitas rendirla otra vez, pídele a tu supervisor un código nuevo.';
+  o.clave=clave; o.hechos=hechos; o.tope=tope;
+  EV=o; guardar(LS_EV,o);
+  var tm=TEMAS[o.d];
+  S.tema=o.d; S.lite=false;
+  S.sector=o.s||(tm.sector!=='*'?tm.sector:(leer(LS.sec,null)||SECTORES[0].id));
+  /* si el supervisor dejo puesto a donde le llegan los resultados, se copia,
+     pero nunca se pisa lo que el dueño del celular ya tenia configurado */
+  if(o.ct && o.ct.v){ var cf=leer(LS.cfg,{});
+    if(!cf.via){ cf.via=o.ct.v; cf.destino=o.ct.d||''; guardar(LS.cfg,cf); } }
+  ir('p-eval'); return null;
+}
+function salirEval(){
+  if(!confirm('¿Salir de la evaluación? Vuelves a la app normal y pierdes lo respondido.')) return;
+  EV=null; try{ localStorage.removeItem(LS_EV); }catch(e){}
+  ir('p-inicio');
+}
+function pintarEval(){
+  if(!EV){ ir('p-inicio'); return; }
+  var t=TEMAS[EV.d];
+  $('ev-titulo').textContent=t.variante? t.tema+' · '+t.variante : t.tema;
+  $('ev-sub').textContent='Te la mandó tu supervisor. Son '+t.preguntas.length+
+    ' preguntas de este tema y nada más: no vas a ver las respuestas antes de responder.';
+  var f='';
+  function fila(k,v){ if(v) f+='<div class="ev-dato"><b>'+esc(k)+'</b><span>'+esc(v)+'</span></div>'; }
+  fila('Escenario', t.escenario);
+  fila('Evaluador', EV.ev);
+  fila('Obra o proyecto', EV.ob);
+  fila('Empresa', EV.em);
+  fila('Vínculo', EV.vi);
+  fila('Fecha', EV.fe? fechaLarga(EV.fe):'');
+  fila('Vale hasta', fechaLarga(EV.v));
+  fila('Intentos', EV.tope+' por celular'+(EV.hechos?' · ya usaste '+EV.hechos:''));
+  $('ev-ficha').innerHTML=f||'<span style="color:var(--gris)">Sin datos previos: los llenas tú en la pantalla siguiente.</span>';
+  var us=leer(LS_USA,{}), ya=us[EV.clave]||0;
+  if(ya>=EV.tope){
+    $('ev-aviso').style.display='';
+    $('ev-aviso').innerHTML='✅ Ya rendiste esta evaluación en este celular. Si necesitas darla otra vez, pídele a tu supervisor un código nuevo.';
+    $('ev-btn').style.display='none';
+    return;
+  }
+  $('ev-btn').style.display='';
+  if(EV.corto){
+    $('ev-aviso').style.display='';
+    $('ev-aviso').innerHTML='✍️ Entraste con el código corto, así que el nombre del evaluador, la obra y la fecha los tienes que escribir tú. Si te mandan el enlace, todo eso viene puesto.';
+  } else { $('ev-aviso').style.display='none'; }
+}
+function empezarEval(){
+  S.modo='evaluar'; S.i=0; S.resp=[]; S.orden=TEMAS[EV.d].preguntas;
+  $('d-aviso').style.display='';
+  $('d-aviso').innerHTML='Solo llena tu nombre, tu documento, tu cargo y tu empresa. Lo demás ya vino en el código de tu supervisor.';
+  $('d-eval').value=EV.ev||'';
+  $('d-obra').value=EV.ob||'';
+  $('d-empresa').value=EV.em||'';
+  $('d-fecha').value=EV.fe||hoyISO();
+  if(EV.vi) $('d-vinculo').value=EV.vi;
+  var fijo=!EV.corto;
+  ['d-eval','d-obra','d-fecha'].forEach(function(id){
+    $(id).readOnly=fijo; $(id).style.opacity=fijo?'.62':'';
+  });
+  ir('p-datos');
+}
+function marcarRendida(){
+  if(!EV) return;
+  var us=leer(LS_USA,{}); us[EV.clave]=(us[EV.clave]||0)+1; guardar(LS_USA,us);
+}
+
+// ------------------------------------------------- codigo del mes
+function mesVigente(){
+  var m=leer(LS_MES,null);
+  if(!m || !m.v) return null;
+  if(hoyISO()>m.v){ try{ localStorage.removeItem(LS_MES); }catch(e){} return null; }
+  return m;
+}
+function charlasAbiertas(){ return libre() || !!mesVigente(); }
+function entrarMes(o){
+  if(hoyISO()>o.v) return 'Ese código del mes venció el '+fechaLarga(o.v)+'. Pídele el del mes que corre.';
+  guardar(LS_MES,{v:o.v, ob:o.ob||'', ev:o.ev||''});
+  if(!S.sector) S.sector=leer(LS.sec,null)||SECTORES[0].id;
+  if(o.ob){ var cf=leer(LS.cfg,{}); if(!(cf.obra||'').trim()){ cf.obra=o.ob; guardar(LS.cfg,cf); } }
+  if(o.p && o.p.length){
+    var todo=leer(LS.prog,{}), obra=(o.ob||'').trim()||'Sin obra';
+    var d=todo[obra]||{};
+    o.p.forEach(function(r){
+      var iso=r[0];
+      if(d[iso] && d[iso].dictada) return;       // no pisar lo que ya marco el que dicta
+      d[iso]={tema:String(r[1]), sector:r[4]||null, resp:r[2]||'', hora:r[3]||'', dictada:(d[iso]&&d[iso].dictada)||null};
+    });
+    todo[obra]=d; guardar(LS.prog,todo);
+    var pr=o.p[0][0].split('-'); PROG.ano=+pr[0]; PROG.mes=+pr[1]-1;
+  }
+  var m0=$('cod-msg');
+  if(m0){ m0.style.color='var(--ok)';
+    m0.textContent='Listo. Charlas abiertas hasta el '+fechaLarga(o.v)+(o.p?' y programa cargado.':'.'); }
+  setTimeout(function(){ ir(o.p? 'p-programa':'p-charlas'); }, 700);
+  return null;
+}
+
+// ------------------------------------------------- registro del supervisor
+function cargarRegistro(){
+  var s=leer(LS_SUP,{}), c=leer(LS.cfg,{});
+  $('r-nombre').value=s.nombre||c.cap||'';
+  $('r-doc').value=s.doc||'';
+  $('r-cargo').value=s.cargo||'';
+  $('r-empresa').value=s.empresa||'';
+  $('r-obra').value=s.obra||c.obra||'';
+  if(s.vinculo) $('r-vinculo').value=s.vinculo;
+}
+function guardarRegistro(){
+  var s={nombre:$('r-nombre').value.trim(), doc:$('r-doc').value.trim(),
+         cargo:$('r-cargo').value.trim(), empresa:$('r-empresa').value.trim(),
+         obra:$('r-obra').value.trim(), vinculo:$('r-vinculo').value};
+  if(!s.nombre){ alert('Escribe tu nombre: es el que va a salir como evaluador en la constancia de cada trabajador.'); return; }
+  guardar(LS_SUP,s);
+  var c=leer(LS.cfg,{}); c.cap=s.nombre; if(s.obra) c.obra=s.obra; guardar(LS.cfg,c);
+  alert('Guardado. Ya puedes generar códigos para tu cuadrilla.');
+  ir('p-generar');
+}
+function abrirGenerar(){
+  if(!libre()){ ir('p-codigo'); return; }
+  if(!leer(LS_SUP,null)){ ir('p-registro'); return; }
+  ir('p-generar');
+}
+
+// ------------------------------------------------- generar los codigos
+function pintarGenerar(){
+  var s=leer(LS_SUP,{});
+  $('gen-quien').innerHTML='<span style="cursor:pointer" onclick="ir(\'p-registro\')">'+esc(s.nombre||'Sin registrar')+' ✎</span>';
+  var h='';
+  SECTORES.forEach(function(x){ h+='<option value="'+escA(x.id)+'"'+(x.id===S.sector?' selected':'')+'>'+esc(x.nombre)+'</option>'; });
+  $('g-sector').innerHTML=h;
+  pintarTemasGen();
+  if(!$('g-fecha').value) $('g-fecha').value=hoyISO();
+  if(!$('g-vence').value) $('g-vence').value=isoDeDias(diasDe(hoyISO())+7);
+  var hoy=new Date(), hm='';
+  for(var i=0;i<3;i++){
+    var d=new Date(hoy.getFullYear(), hoy.getMonth()+i, 1);
+    var val=d.getFullYear()+'-'+dosD(d.getMonth()+1);
+    hm+='<option value="'+val+'">'+MESES[d.getMonth()]+' '+d.getFullYear()+'</option>';
+  }
+  $('g-mes').innerHTML=hm;
+}
+function pintarTemasGen(){
+  var sec=$('g-sector').value, h='';
+  Object.keys(TEMAS).sort().forEach(function(id){
+    var t=TEMAS[id];
+    if(t.sector!==sec && t.sector!=='*') return;
+    h+='<option value="'+escA(id)+'">'+esc(nombreTema(id))+(t.sector==='*'?' (transversal)':'')+'</option>';
+  });
+  $('g-tema').innerHTML=h;
+}
+function cajaCodigo(titulo, corto, enlace, pie){
+  return '<div class="cod-caja" data-enlace="'+escA(enlace)+'"><h3>'+esc(titulo)+'</h3>'+
+    '<div class="cod-grande">'+esc(corto)+'</div>'+
+    '<p class="cod-pie">'+pie+'</p>'+
+    /* el enlace es larguisimo: se muestra cortado, pero se comparte entero */
+    '<p class="cod-enlace">'+esc(enlace.length>70? enlace.slice(0,70)+'…' : enlace)+'</p>'+
+    '<button class="btn" onclick="compartirCodigo('+JSON.stringify(enlace).replace(/"/g,'&quot;')+','+
+       JSON.stringify(corto).replace(/"/g,'&quot;')+','+JSON.stringify(titulo).replace(/"/g,'&quot;')+')">📤 Mandar por WhatsApp</button>'+
+    '<button class="btn sec" onclick="copiarTexto('+JSON.stringify(enlace).replace(/"/g,'&quot;')+')">Copiar solo el enlace</button></div>';
+}
+function compartirCodigo(enlace, corto, titulo){
+  var t=titulo+'\n\n'+enlace+'\n\nSi el enlace no te abre, entra a la app y escribe este código:  '+corto;
+  if(navigator.share){ navigator.share({title:titulo, text:t}).catch(function(){ copiarTexto(t); }); }
+  else { copiarTexto(t); }
+}
+function generarEval(){
+  var s=leer(LS_SUP,{}), id=$('g-tema').value;
+  if(!id){ alert('Elige el tema.'); return; }
+  var vence=$('g-vence').value||isoDeDias(diasDe(hoyISO())+7);
+  var fe=$('g-fecha').value||hoyISO();
+  var cf=leer(LS.cfg,{});
+  var o={t:'E', d:id, v:vence, s:$('g-sector').value, fe:fe,
+         ev:s.nombre||'', ob:s.obra||'', em:s.empresa||'', vi:s.vinculo||'',
+         'in':parseInt($('g-intentos').value,10)||1};
+  if(cf.via && cf.via!=='local' && cf.destino) o.ct={v:cf.via, d:cf.destino};
+  var ids=temaIDs(), corto=codCorto(1, ids.indexOf(id), diasDe(vence));
+  var pie='Un solo tema, en modo evaluado. Vale hasta el <b>'+fechaLarga(vence)+
+    '</b> · <b>'+o['in']+' intento'+(o['in']>1?'s':'')+' por celular</b>. Lo puede usar toda la cuadrilla: el límite es por celular, no por cantidad de gente.'+
+    '<br><br>El enlace ya lleva puestos el evaluador, la obra, la empresa y la fecha. El código corto abre la misma prueba, pero esos campos los llena el trabajador.';
+  $('g-salida-ev').innerHTML=cajaCodigo('Evaluación · '+nombreTema(id), corto, enlaceDe(o), pie);
+}
+function generarMes(){
+  var s=leer(LS_SUP,{}), ym=$('g-mes').value.split('-');
+  var ano=+ym[0], mes=+ym[1]-1;
+  var ultimo=isoDe(ano, mes, new Date(ano,mes+1,0).getDate());
+  var datos=progObra(), pref=ym[0]+'-'+ym[1], p=[];
+  Object.keys(datos).sort().forEach(function(iso){
+    if(iso.indexOf(pref)!==0) return;
+    var c=datos[iso];
+    p.push([iso, String(c.tema), c.resp||'', c.hora||'', c.sector||null]);
+  });
+  var o={t:'M', v:ultimo, ob:obraActual(), ev:s.nombre||''};
+  if(p.length) o.p=p;
+  var corto=codCorto(2, (ano-2026)*12+mes, diasDe(ultimo));
+  var pie='Abre las <b>'+CHARLAS.length+' charlas de 5 minutos</b> hasta el <b>'+fechaLarga(ultimo)+
+    '</b>, sin límite de veces y para todos los celulares que quieras.'+
+    (p.length? '<br><br>El enlace además les carga el programa de '+MESES[mes]+': <b>'+p.length+
+       ' charlas</b> con su día, su hora y su responsable. El código corto abre las charlas pero no lleva el programa.'
+     : '<br><br>⚠️ Todavía no hay charlas programadas en '+MESES[mes]+', así que el enlace no lleva programa. Arma el mes en «Programa del mes» y vuelve a generarlo.');
+  $('g-salida-mes').innerHTML=cajaCodigo('Charlas de '+MESES[mes]+' '+ano+' · '+obraActual(), corto, enlaceDe(o), pie);
 }
 
 
@@ -1254,7 +1647,7 @@ function pintarTemasDia(sel){
     var k=CHARLA_CAT[cat];
     h+='<optgroup label="'+escA(k.emoji+' '+k.nombre)+'">';
     del.sort(function(a,b){ return a.n-b.n; }).forEach(function(x){
-      var bloq=(S.lite && !x.gratis) ? ' 🔒' : '';
+      var bloq=(!charlasAbiertas() && !x.gratis) ? ' 🔒' : '';
       h+='<option value="'+escA(String(x.n))+'"'+(String(x.n)===String(sel)?' selected':'')+'>'+
          esc(x.titulo)+bloq+'</option>';
     });
@@ -1347,6 +1740,144 @@ function copiarViejo(t){
     document.body.removeChild(a); alert('Programa copiado. Pégalo donde quieras.');
   }catch(e){ alert(t); }
 }
+/* -----------------------------------------------------------------
+   El programa del mes en PDF: una tabla, con cabecera de color y una
+   fila por charla. Es lo que se manda al cliente o se pega en la
+   caseta; el texto plano de WhatsApp llegaba desordenado.
+   ----------------------------------------------------------------- */
+function entregarPDF(doc, nombre){
+  var blob=doc.output('blob'), f=null;
+  try{ f=new File([blob], nombre, {type:'application/pdf'}); }catch(e){}
+  if(f && navigator.canShare && navigator.canShare({files:[f]})){
+    navigator.share({files:[f], title:nombre}).catch(function(){ doc.save(nombre); });
+  } else { doc.save(nombre); }
+}
+function pdfPrograma(){
+  try{
+    var datos=progObra(), pref=PROG.ano+'-'+dosD(PROG.mes+1), hoy=hoyISO();
+    var filas=[], prog=0, dic=0, salt=0, asis=0;
+    Object.keys(datos).sort().forEach(function(iso){
+      if(iso.indexOf(pref)!==0) return;
+      var c=datos[iso], p=iso.split('-'), f=new Date(+p[0],+p[1]-1,+p[2]);
+      prog++;
+      var est, tipo;
+      if(c.dictada){ est='DICTADA'; tipo=1; dic++; asis+=(parseInt(c.dictada.asist,10)||0); }
+      else if(iso<hoy){ est='NO DICTADA'; tipo=2; salt++; }
+      else { est='PROGRAMADA'; tipo=0; }
+      filas.push({dia:DIAS[(f.getDay()+6)%7], fecha:p[2]+'/'+p[1]+'/'+p[0],
+        hora:c.hora||'--:--', charla:nombreCharla(c.tema), resp:c.resp||'por asignar',
+        est:est, tipo:tipo, asist:c.dictada?String(parseInt(c.dictada.asist,10)||0):'—'});
+    });
+    if(!prog){ alert('Este mes todavía no tiene charlas. Usa «Llenar el mes» o toca un día del calendario.'); return; }
+
+    var doc=new jspdf.jsPDF({unit:'pt', format:'a4', orientation:'landscape'});
+    var W=841.89, H=595.28, M=36, ANCHO=W-2*M;
+    var COL=[62,66,46,300,150,90,56];                       // suma 770
+    var TIT=['DÍA','FECHA','HORA','CHARLA DE 5 MINUTOS','RESPONSABLE','ESTADO','ASIST.'];
+    var TINTA=[11,42,58], ORO=[214,178,92];
+    var VERDE=[31,122,73], VBG=[226,242,231];
+    var ROJO=[178,49,54],  RBG=[250,229,229];
+    var AZUL=[42,90,114],  ABG=[233,240,245];
+    var y=0, pagina=0;
+
+    function cabecera(){
+      pagina++;
+      // banda superior
+      doc.setFillColor(TINTA[0],TINTA[1],TINTA[2]);
+      doc.rect(0,0,W,66,'F');
+      doc.setFillColor(ORO[0],ORO[1],ORO[2]);
+      doc.rect(0,66,W,3,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(255,255,255);
+      doc.text('PROGRAMA DE CHARLAS DE 5 MINUTOS', M, 30);
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(214,178,92);
+      doc.text(MESES[PROG.mes].toUpperCase()+' '+PROG.ano, M, 50);
+      doc.setTextColor(215,225,232); doc.setFontSize(9.5);
+      doc.text('Obra: '+obraActual(), M+140, 50);
+      var sup=leer(LS_SUP,{}), cfg=leer(LS.cfg,{});
+      var quien=(sup.nombre||cfg.cap||'');
+      if(quien) doc.text('Elaborado por: '+quien, W-M, 50, {align:'right'});
+      doc.setFontSize(8); doc.setTextColor(170,190,205);
+      doc.text('SST CAPACITA', W-M, 26, {align:'right'});
+      y=88;
+      filaCabecera();
+    }
+    function filaCabecera(){
+      doc.setFillColor(20,64,90); doc.rect(M,y,ANCHO,24,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+      var x=M;
+      for(var i=0;i<COL.length;i++){
+        doc.text(TIT[i], x+7, y+15);
+        x+=COL[i];
+        if(i<COL.length-1){ doc.setDrawColor(60,100,125); doc.setLineWidth(.5); doc.line(x,y+4,x,y+20); }
+      }
+      y+=24;
+    }
+    cabecera();
+
+    doc.setFont('helvetica','normal');
+    for(var i=0;i<filas.length;i++){
+      var f=filas[i];
+      doc.setFontSize(9);
+      var tCh=doc.splitTextToSize(f.charla, COL[3]-14);
+      var tRe=doc.splitTextToSize(f.resp,   COL[4]-14);
+      var alto=Math.max(22, 11.5*Math.max(tCh.length,tRe.length)+11);
+      if(y+alto>H-52){ doc.addPage(); cabecera(); doc.setFont('helvetica','normal'); }
+      // fondo cebra
+      if(i%2===1){ doc.setFillColor(241,245,248); doc.rect(M,y,ANCHO,alto,'F'); }
+      // franja de color del estado, al filo izquierdo
+      var col=(f.tipo===1?VERDE:(f.tipo===2?ROJO:AZUL));
+      doc.setFillColor(col[0],col[1],col[2]); doc.rect(M,y,3,alto,'F');
+      var x=M, base=y+14;
+      doc.setTextColor(35,45,55);
+      doc.setFont('helvetica','bold');  doc.setFontSize(9);   doc.text(f.dia,   x+9, base); x+=COL[0];
+      doc.setFont('helvetica','normal');doc.setFontSize(9);   doc.text(f.fecha, x+7, base); x+=COL[1];
+      doc.setFont('helvetica','bold');  doc.setFontSize(9);   doc.text(f.hora,  x+7, base); x+=COL[2];
+      doc.setFont('helvetica','normal');doc.setFontSize(9);   doc.text(tCh,     x+7, base); x+=COL[3];
+      doc.setTextColor(70,80,92);       doc.text(tRe,         x+7, base); x+=COL[4];
+      // chip de estado
+      var cbg=(f.tipo===1?VBG:(f.tipo===2?RBG:ABG));
+      doc.setFillColor(cbg[0],cbg[1],cbg[2]);
+      doc.roundedRect(x+6, y+5, COL[5]-14, 15, 4, 4, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.2);
+      doc.setTextColor(col[0],col[1],col[2]);
+      doc.text(f.est, x+6+(COL[5]-14)/2, y+15.5, {align:'center'});
+      x+=COL[5];
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(70,80,92);
+      doc.text(f.asist, x+COL[6]/2, base, {align:'center'});
+      // líneas de la reja
+      doc.setDrawColor(214,224,232); doc.setLineWidth(.5);
+      doc.line(M, y+alto, M+ANCHO, y+alto);
+      var xv=M;
+      for(var k=0;k<COL.length-1;k++){ xv+=COL[k]; doc.line(xv, y, xv, y+alto); }
+      doc.setDrawColor(214,224,232);
+      doc.line(M,y,M,y+alto); doc.line(M+ANCHO,y,M+ANCHO,y+alto);
+      y+=alto;
+    }
+
+    // --- resumen
+    if(y+46>H-52){ doc.addPage(); cabecera(); }
+    y+=14;
+    doc.setFillColor(240,244,247); doc.roundedRect(M,y,ANCHO,30,5,5,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(TINTA[0],TINTA[1],TINTA[2]);
+    doc.text('Programadas: '+prog+'     Dictadas: '+dic+'     Sin dictar a la fecha: '+salt+
+             '     Asistentes acumulados: '+asis, M+12, y+19);
+
+    // --- pie en todas las páginas
+    var tot=doc.getNumberOfPages();
+    for(var pg=1; pg<=tot; pg++){
+      doc.setPage(pg);
+      doc.setDrawColor(214,224,232); doc.setLineWidth(.5); doc.line(M,H-38,W-M,H-38);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(135,145,155);
+      doc.text('Generado con SST Capacita el '+new Date().toLocaleDateString('es-PE')+
+               '. Registro de charlas de 5 minutos; no reemplaza la capacitación dictada por persona competente (Ley 29783).', M, H-24);
+      doc.text('Página '+pg+' de '+tot, W-M, H-24, {align:'right'});
+    }
+
+    var slug=obraActual().normalize('NFD').replace(/[̀-ͯ]/g,'')
+             .replace(/[^A-Za-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'obra';
+    entregarPDF(doc, 'Programa-charlas_'+slug+'_'+MESES[PROG.mes]+'-'+PROG.ano+'.pdf');
+  }catch(e){ alert('No se pudo armar el PDF: '+e.message); }
+}
 function compartirPrograma(){
   var t=textoPrograma();
   if(navigator.share){
@@ -1380,14 +1911,14 @@ function verGuionDelDia(){
 }
 
 function pintarCharlas(){
-  var d=charlasDictadas(), h='', catActual='';
+  var d=charlasDictadas(), h='', catActual='', chl=!charlasAbiertas();
   var gen=CHARLAS.filter(function(c){ return !SEC_CAT[c.cat]; }).length;
   var esp=CHARLAS.length-gen;
   var libres=CHARLAS.filter(function(c){ return c.gratis; }).length;
   $('charlas-sub').innerHTML='<b>'+CHARLAS.length+' charlas</b> para dictar al pie de la obra: '+
     gen+' que valen en cualquier sector y '+esp+' propias del tuyo. '+
     '<b>No son las capacitaciones</b>: una charla no se evalúa, se dicta y termina en un acuerdo.'+
-    (S.lite? '<br><br>🎁 En la versión gratis tienes <b>'+libres+' charlas completas</b>. El código abre las '+CHARLAS.length+'.' : '');
+    (chl? '<br><br>🎁 En la versión gratis tienes <b>'+libres+' charlas completas</b>. El código abre las '+CHARLAS.length+'.' : '');
   var mio=S.sector||SECTORES[0].id;
   CHARLAS.filter(function(c){ return !SEC_CAT[c.cat] || c.cat===mio; }).sort(function(a,b){
     if(a.cat===b.cat) return a.n-b.n;
@@ -1398,7 +1929,7 @@ function pintarCharlas(){
       var k=CHARLA_CAT[c.cat]||{nombre:c.cat,emoji:'•'};
       h+='<div class="eti-cat">'+k.emoji+' '+esc(k.nombre)+'</div>';
     }
-    var ya=d[c.n], bloq=(S.lite && !c.gratis);
+    var ya=d[c.n], bloq=(chl && !c.gratis);
     h+='<button class="tarj vidrio'+(bloq?' bloq':'')+'" onclick="abrirCharla('+c.n+')">'+
        '<b>'+(bloq?'🔒 ':(ya?'✅ ':''))+esc(c.titulo)+'</b>'+
        '<small>'+(bloq?'Se abre con el código':esc(c.acuerdo))+'</small></button>';
@@ -1408,7 +1939,7 @@ function pintarCharlas(){
 
 function abrirCharla(n){
   var c=charlaDe(n); if(!c) return;
-  if(S.lite && !c.gratis){ ir('p-codigo'); return; }
+  if(!charlasAbiertas() && !c.gratis){ ir('p-codigo'); return; }
   CH_ACT=n;
   var k=CHARLA_CAT[c.cat]||{nombre:'',emoji:''};
   var d=charlasDictadas()[n];
@@ -1933,8 +2464,28 @@ function siguienteTrabajador(){
   cv.addEventListener('touchend',fup);
 })();
 
-// arranque: si ya eligió sector otra vez, se entra directo a su sector
+// arranque
 (function(){
+  // 1) ¿vino por un enlace con código adentro?
+  var mk=(location.search||'').match(/[?&]k=([A-Za-z0-9_%.~-]+)/);
+  if(mk){
+    var err=aplicarLlave(decodeURIComponent(mk[1]));
+    try{ history.replaceState(null,'',baseURL()); }catch(e){}
+    if(!err) return;
+    alert(err);
+  }
+  // 2) ¿quedó una evaluación a medias en este celular?
+  var e0=leer(LS_EV,null);
+  if(e0 && e0.d && TEMAS[e0.d] && hoyISO()<=e0.v){
+    var us=leer(LS_USA,{});
+    if((us[e0.clave]||0) < (e0.tope||1)){
+      EV=e0; S.tema=e0.d; S.lite=false;
+      S.sector=e0.s||(TEMAS[e0.d].sector!=='*'?TEMAS[e0.d].sector:SECTORES[0].id);
+      ir('p-eval'); return;
+    }
+  }
+  try{ localStorage.removeItem(LS_EV); }catch(e){}
+  // 3) lo de siempre
   var g=leer(LS.sec,null);
   if(g && TEMAS && temasDelSectorExiste(g)){ S.sector=g; ir('p-inicio'); }
   else { ir('p-sector'); }
