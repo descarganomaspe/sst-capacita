@@ -168,6 +168,16 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .ev-dato:last-child{border-bottom:0}
 .ev-dato b{color:var(--gris);font-weight:600;flex:0 0 auto}
 .ev-dato span{text-align:right}
+/* --- el inicio, por secciones: cada cosa con su título y su sitio --- */
+.sec-tit{font-family:system-ui,sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gris);margin:20px 2px 9px;display:flex;align-items:center;gap:9px}
+.sec-tit::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.09)}
+.estado-chip{display:block;width:100%;text-align:left;border-radius:13px;padding:11px 14px;margin:2px 0 2px;
+  font-family:system-ui,sans-serif;font-size:13.5px;line-height:1.5;cursor:pointer;border:0;color:var(--tinta)}
+.estado-chip.ok{background:rgba(47,191,113,.09);box-shadow:inset 0 0 0 1.2px rgba(47,191,113,.32);cursor:default}
+.estado-chip.lite{background:rgba(214,178,92,.09);box-shadow:inset 0 0 0 1.2px rgba(214,178,92,.38)}
+.fila-ajustes{display:flex;gap:8px}
+.fila-ajustes .btn{flex:1;font-size:13.5px;padding:12px 6px;margin-bottom:10px}
 .lienzo{width:100%;height:200px;background:#fff;border-radius:14px;touch-action:none;display:block;margin-bottom:12px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
 /* --- hoja flotante de variantes (mismo patron que el selector de subtemas) --- */
 .hoja{position:fixed;inset:0;z-index:50;display:none}
@@ -346,14 +356,24 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="marca">◆ SST CAPACITA</div>
   <h1>La evaluación, lista<br>antes de la charla.</h1>
   <p class="sub">Pregunta, respuesta, sustento normativo y un tip de campo. Para el supervisor SSOMA que no tiene tiempo de armarla.</p>
-  <div class="aviso" id="banda-lite">🎁 <b>Versión gratis:</b> 3 evaluaciones de muestra con 4 preguntas cada una y <b>3 charlas de 5 minutos</b>. Con el código se abren los 42 temas, las 78 charlas, el modo «solo yo» con las respuestas y los códigos para tu cuadrilla.</div>
+  <button class="estado-chip lite" id="b-lic" onclick="pedirCodigo('')">Tengo un código</button>
+  <div class="aviso" id="banda-lite" style="display:none"></div>
+
+  <div class="sec-tit">📋 Capacitaciones</div>
   <button class="btn" onclick="ir('p-temas')">Elegir un tema ▸</button>
-  <button class="btn sec" id="b-lic" onclick="pedirCodigo('')">Tengo un código</button>
-  <button class="btn sec" onclick="verCharlas()">🗣️ Charlas SSOMA · 5 minutos</button>
+
+  <div class="sec-tit">🗣️ Charlas de 5 minutos</div>
+  <button class="btn sec" onclick="verCharlas()">Guiones de las charlas</button>
   <button class="btn sec" onclick="ir('p-programa')">🗓️ Programa del mes</button>
-  <button class="btn sec" id="b-gen" onclick="abrirGenerar()" style="display:none">🎟️ Códigos para mi cuadrilla</button>
-  <button class="btn sec" onclick="ir('p-config')">Configurar envío de resultados</button>
-  <button class="btn sec" onclick="cambiarUsuario()">Cambiar de usuario</button>
+
+  <div class="sec-tit" id="sec-cuadrilla">🎟️ Tu cuadrilla</div>
+  <button class="btn sec" id="b-gen" onclick="abrirGenerar()" style="display:none">Códigos para mi cuadrilla</button>
+
+  <div class="sec-tit">⚙️ Ajustes</div>
+  <div class="fila-ajustes">
+    <button class="btn sec" onclick="ir('p-config')">Envío de resultados</button>
+    <button class="btn sec" onclick="cambiarUsuario()">Cambiar de usuario</button>
+  </div>
   <div class="pie">Herramienta de apoyo. No reemplaza la capacitación dictada por persona competente conforme a la Ley 29783.</div>
 </section>
 
@@ -1006,9 +1026,14 @@ var EV_OK={'p-eval':1,'p-datos':1,'p-juego':1,'p-final':1,'p-firma':1,'p-listo':
 /* al colaborador solo se le abren estas: nada de sectores, temas ni generar */
 var COL_OK={'p-rol':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos':1,'p-juego':1,
             'p-final':1,'p-firma':1,'p-listo':1,'p-charlas':1,'p-charla':1,'p-programa':1};
+var PANT_PROTEGIDA={'p-juego':1,'p-final':1,'p-firma':1,'p-listo':1,'p-charla':1};
 function ir(p){
   if(EV && !EV_OK[p]) p='p-eval';
   else if(ROL==='col' && !COL_OK[p]) p='p-colab';
+  if(!PANT_PROTEGIDA[p] && typeof desproteger==='function'){
+    var _pr=document.getElementById('pres');
+    if(!(_pr && _pr.className && _pr.className.indexOf('on')>-1)) desproteger();
+  }
   cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';$(p).className='pantalla activa';window.scrollTo(0,0);
   if(p==='p-sector')pintarSectores(); if(p==='p-inicio')pintarInicio(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-programa')pintarPrograma();
   if(p==='p-eval')pintarEval(); if(p==='p-registro')cargarRegistro(); if(p==='p-generar')pintarGenerar();
@@ -1057,15 +1082,21 @@ function pintarSectores(){
 }
 function pintarInicio(){
   S.lite=!libre();
-  var m=mesVigente();
-  $('banda-lite').style.display=S.lite?'':'none';
+  var m=mesVigente(), chip=$('b-lic');
+  if(!S.lite){
+    chip.className='estado-chip ok'; chip.disabled=true;
+    chip.innerHTML='✓ <b>Acceso completo activo</b> — los 42 temas, las 78 charlas y los códigos de tu cuadrilla.';
+  } else {
+    chip.className='estado-chip lite'; chip.disabled=false;
+    chip.innerHTML='🎁 <b>Versión de muestra</b> — 3 evaluaciones y 3 charlas. Toca aquí si ya tienes tu código.';
+  }
+  $('banda-lite').style.display=(S.lite&&m)?'':'none';
   if(S.lite && m){
     $('banda-lite').innerHTML='🗓️ <b>Código del mes activo</b> hasta el '+fechaLarga(m.v)+
-      ': tienes las '+CHARLAS.length+' charlas de 5 minutos y el programa de tu obra. '+
-      'Las evaluaciones siguen en versión de muestra.';
+      ': tienes el programa de tu obra y el guion de sus charlas.';
   }
   $('b-gen').style.display=libre()?'':'none';
-  $('b-lic').textContent=S.lite?'Tengo un código':'✓ Acceso completo activo';
+  var sc=$('sec-cuadrilla'); if(sc) sc.style.display=libre()?'':'none';
   var s=sectorDe(S.sector);
   $('chip-sector').textContent=s.icono+' '+s.nombre;
 }
@@ -1143,6 +1174,7 @@ function arrancar(m){
      versión gratis no se abren ni escondiendo el botón ni llamando a la
      función: la puerta se cierra acá, que es por donde pasan las dos. */
   if(S.lite && m!=='evaluar'){ ir('p-codigo'); return; }
+  if(m==='solo') protegerCon(etiquetaDueno());
   S.modo=m; S.i=0; S.resp=[];
   S.orden=preguntasDe(S.tema);
   if(m==='evaluar'){ var f=$('d-fecha'); if(!f.value) f.value=hoyISO(); var cfg=leer(LS.cfg,{}); if(!$('d-obra').value) $('d-obra').value=cfg.obra||''; if(!$('d-eval').value) $('d-eval').value=cfg.cap||''; ir('p-datos'); return; }
@@ -1157,6 +1189,7 @@ function empezarPreguntas(){
   if(S.datos.obra){ var cfg0=leer(LS.cfg,{}); cfg0.obra=S.datos.obra; guardar(LS.cfg,cfg0); }
   if(!S.datos.nombre){ alert('Escribe el nombre del trabajador.'); return; }
   if(!S.datos.evaluador){ alert('Escribe el nombre del evaluador: la constancia no vale sin él.'); return; }
+  S.salidas=0;
   protegerCon(S.datos.nombre+' · '+(S.datos.dni||'')+' · '+(S.datos.evaluador||''));
   ir('p-juego'); pintarPregunta();
 }
@@ -1252,6 +1285,12 @@ function finalSolo(t){
   $('b-pdf').style.display='none';
   ir('p-final');
 }
+/* cada vez que el celular se va a otra app en plena prueba, queda anotado */
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden && S && S.modo==='evaluar' &&
+     document.querySelector('#p-juego.activa')){ S.salidas=(S.salidas||0)+1; }
+});
+
 function textoConstancia(){
   var t=TEMAS[S.tema], cfg=leer(LS.cfg,{});
   var b=S.resp.filter(function(r){return r.ok;}).length, n=S.resp.length, min=Math.ceil(n*0.7);
@@ -1267,6 +1306,7 @@ function textoConstancia(){
     'Emitida: '+new Date().toLocaleString('es-PE')+'\n'+
     'Resultado: '+b+'/'+n+' — '+(b>=min?'APROBADO':'DESAPROBADO')+' (mínimo '+min+')\n'+
     'Detalle: '+det+'\nPreguntas falladas: '+falladas+'\n'+
+    'Salidas de la app durante la prueba: '+(S.salidas||0)+'\n'+
     'Código de verificación: '+cod+'\n\n'+
     'Firma del evaluado: ______________________';
 }
@@ -1607,6 +1647,12 @@ function guardarRegistro(){
   var g=leer(LS.sec,null);
   if(g && TEMAS && temasDelSectorExiste(g)){ S.sector=g; ir('p-inicio'); }
   else { ir('p-sector'); }
+}
+/* La marca de agua del CONTENIDO lleva el nombre del que pagó: si una captura
+   de las respuestas o de un guion circula, se sabe de qué cuenta salió. */
+function etiquetaDueno(){
+  var s=leer(LS_SUP,{}), c=leer(LS.cfg,{}), m=mesVigente()||{};
+  return (s.nombre||c.cap||m.ev||'SST Capacita');
 }
 function abrirGenerar(){
   if(!libre()){ ir('p-codigo'); return; }
@@ -2209,6 +2255,7 @@ function abrirCharla(n){
   var c=charlaDe(n); if(!c) return;
   if(!charlaAbierta(n)){ ir('p-codigo'); return; }
   CH_ACT=n;
+  protegerCon(etiquetaDueno());
   var k=CHARLA_CAT[c.cat]||{nombre:'',emoji:''};
   var d=charlasDictadas()[n];
   var h='';
@@ -2411,6 +2458,7 @@ function presAbrir(id){
   if(S.lite){ ir('p-codigo'); return; }
   if(!id || !TEMAS[id] || S.modo==='evaluar') return;
   if(preguntasDe(id).length===0){ ir('p-codigo'); return; }   // tema bloqueado: no hay con qué armarla
+  protegerCon(etiquetaDueno());
   PRES.tema=id;
   var d=presDiapos(id);
   PRES.n=d.length; PRES.i=0;
@@ -2608,7 +2656,9 @@ function hacerPDF(){
       ['Cargo', S.datos.cargo],
       ['Empresa', (S.datos.empresa||'—')+(S.datos.vinculo?' ('+S.datos.vinculo+')':'')],
       ['Obra / proyecto', S.datos.obra||cfg.obra],
-      ['Evaluador', S.datos.evaluador||cfg.cap]
+      ['Evaluador', S.datos.evaluador||cfg.cap],
+      ['Salidas de la app en la prueba', String(S.salidas||0)],
+      ['', '']
     ];
     doc.setTextColor(25,25,25);
     for(var i=0;i<datos.length;i+=2){
