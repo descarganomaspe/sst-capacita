@@ -369,6 +369,9 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="sec-tit">🎓 Talleres</div>
   <button class="btn sec" onclick="ir('p-talleres')">Talleres prácticos + constancia</button>
 
+  <div class="sec-tit">🏢 Mi empresa</div>
+  <button class="btn sec" onclick="ir('p-empresa')">Empresa, MSDS y consolidado <span id="emp-badge"></span></button>
+
   <div class="sec-tit" id="sec-cuadrilla">🎟️ Tu cuadrilla</div>
   <button class="btn sec" id="b-gen" onclick="abrirGenerar()" style="display:none">Códigos para mi cuadrilla</button>
 
@@ -619,6 +622,46 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <button class="btn" onclick="hacerDiplomaTaller()">🧾 Descargar la constancia (PDF)</button>
   <button class="btn sec" onclick="ir('p-talleres')">Hacer otro taller</button>
   <div id="tal-fin-msg" style="font-size:14px;margin-top:10px"></div>
+</section>
+
+<section class="pantalla" id="p-empresa">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-inicio')">‹ Atrás</button><span>Mi empresa</span></div>
+  <div id="empresa-cuerpo"></div>
+</section>
+
+<section class="pantalla" id="p-msds">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-empresa')">‹ Atrás</button><span id="msds-obra"></span></div>
+  <h2>📄 Hojas MSDS</h2>
+  <p class="sub">Las hojas de seguridad de los productos de tu obra. Se guardan en la nube y tu cuadrilla las ve con el código de la empresa.</p>
+  <button class="btn" onclick="ir('p-msds-nueva')">＋ Agregar una ficha</button>
+  <div id="lista-msds" style="margin-top:12px"></div>
+</section>
+
+<section class="pantalla" id="p-msds-nueva">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-msds')">‹ Atrás</button><span>Nueva ficha</span></div>
+  <h2>Agregar una hoja MSDS</h2>
+  <label>Producto</label><input id="m-producto" placeholder="Thinner acrílico">
+  <label>Proveedor / marca (opcional)</label><input id="m-proveedor" placeholder="Anypsa">
+  <label>Nota (opcional)</label><input id="m-nota" placeholder="Almacén 2, estante rojo">
+  <div class="sec-tit" style="margin-top:16px">La ficha</div>
+  <label>Subir archivo (PDF o foto)</label><input type="file" id="m-archivo" accept=".pdf,image/*">
+  <p class="sub" style="margin:8px 0">— o —</p>
+  <label>Pegar un enlace a la ficha</label><input id="m-url" placeholder="https://...">
+  <button class="btn" style="margin-top:14px" onclick="guardarMsds()">Guardar la ficha</button>
+  <div id="msds-msg" style="font-size:14px;margin-top:10px"></div>
+</section>
+
+<section class="pantalla" id="p-puntaje">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-empresa')">‹ Atrás</button><span>Seguridad del día</span></div>
+  <h2>🦺 ¿Cómo trabajó hoy?</h2>
+  <p class="sub">Marca cada punto: ✓ cumple, ✗ no cumple, — no aplica hoy. Lo que pongas «no aplica» no baja su nota. Toca para cambiar.</p>
+  <label>Trabajador</label><input id="pt-nombre" placeholder="Juan Pérez">
+  <div class="dos"><div><label>DNI (opcional)</label><input id="pt-dni" inputmode="numeric" placeholder="70123456"></div>
+  <div><label>Fecha</label><input id="pt-fecha" type="date"></div></div>
+  <div id="pt-criterios" style="margin-top:12px"></div>
+  <div id="pt-nota" style="text-align:center;font-size:15px;margin:12px 0"></div>
+  <button class="btn" onclick="guardarPuntaje()">Guardar la evaluación del día</button>
+  <div id="pt-msg" style="font-size:14px;margin-top:10px"></div>
 </section>
 
 <div class="hoja" id="hoja-dia">
@@ -1043,6 +1086,22 @@ var LS_ROL='sstc_rol';
 /* ROL: 'sup' = el que capacita (ve todo lo que compro). 'col' = el trabajador,
    que solo entra con el codigo que le pasan. Son dos apps distintas por dentro. */
 var ROL = null;
+
+// ---- Supabase (llave PUBLICA, segura para el cliente) ----
+var SB = { url:'https://gwjjkknuiumgysezeatz.supabase.co',
+           key:'sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx' };
+var LS_EMP='sstc_empresa';   // {codigo, id, nombre} de la obra/empresa activa
+function sbH(){ return {'apikey':SB.key,'Authorization':'Bearer '+SB.key,'Content-Type':'application/json'}; }
+function sbGet(path){ return fetch(SB.url+'/rest/v1/'+path,{headers:sbH()}).then(function(r){return r.ok?r.json():Promise.reject(r.status);}); }
+function sbPost(tabla,obj){ return fetch(SB.url+'/rest/v1/'+tabla,{method:'POST',headers:sbH(),body:JSON.stringify(obj)}).then(function(r){return r.ok?true:Promise.reject(r.status);}); }
+function sbRpc(fn,args){ return fetch(SB.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:sbH(),body:JSON.stringify(args||{})}).then(function(r){return r.ok?r.json():Promise.reject(r.status);}); }
+function sbDel(path){ return fetch(SB.url+'/rest/v1/'+path,{method:'DELETE',headers:sbH()}).then(function(r){return r.ok||Promise.reject(r.status);}); }
+function sbSubir(nombreArchivo, file){
+  return fetch(SB.url+'/storage/v1/object/msds/'+encodeURIComponent(nombreArchivo),{
+    method:'POST', headers:{'apikey':SB.key,'Authorization':'Bearer '+SB.key,'Content-Type':file.type||'application/octet-stream'}, body:file
+  }).then(function(r){ return r.ok ? (SB.url+'/storage/v1/object/public/msds/'+encodeURIComponent(nombreArchivo)) : Promise.reject(r.status); });
+}
+function empActiva(){ return leer(LS_EMP,null); }
 var S = {sector:null, tema:null, modo:null, i:0, orden:[], resp:[], lite:true, datos:{}};
 /* EV: cuando llega con el codigo del supervisor, la app queda encerrada en una
    sola prueba. Mientras EV no sea null, no hay menu, ni temas, ni respuestas. */
@@ -1069,7 +1128,8 @@ function ir(p){
   if(p==='p-sector')pintarSectores(); if(p==='p-inicio')pintarInicio(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-programa')pintarPrograma();
   if(p==='p-eval')pintarEval(); if(p==='p-registro')cargarRegistro(); if(p==='p-generar')pintarGenerar();
   if(p==='p-colab')pintarColab(); if(p==='p-charlas')pintarCharlas();
-  if(p==='p-talleres')pintarTalleres();}
+  if(p==='p-talleres')pintarTalleres();
+  if(p==='p-empresa')pintarEmpresa(); if(p==='p-msds')pintarMsds(); if(p==='p-puntaje')pintarPuntaje();}
 function leer(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function guardar(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function _norm(s){return (s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
@@ -2660,6 +2720,176 @@ function listoFirma(){
 
 // ---------------------------------------------------------------- PDF
 var PDF={doc:null, nombre:''};
+/* ================= PUNTAJE DE SEGURIDAD ================= */
+var PT_CRIT = [
+  {k:'epp', t:'Usó el EPP completo', apl:true},
+  {k:'ats', t:'Participó en el ATS / charla', apl:true},
+  {k:'orden', t:'Orden y limpieza en su área', apl:true},
+  {k:'senal', t:'Respetó la señalización', apl:true},
+  {k:'reporto', t:'Reportó un acto o condición insegura', apl:true},
+  {k:'altura', t:'Altura: usó arnés y línea de vida', apl:false},
+  {k:'maniobra', t:'Maniobra / izaje seguro', apl:false},
+  {k:'herram', t:'Uso correcto de la herramienta', apl:false}
+];
+var PT = {};   // k -> 1 (cumple) | 0 (no) | -1 (N/A)
+function pintarPuntaje(){
+  PT = {}; PT_CRIT.forEach(function(c){ PT[c.k] = c.apl ? 1 : -1; });
+  $('pt-nombre').value=''; $('pt-dni').value=''; $('pt-fecha').value=hoyISO(); $('pt-msg').textContent='';
+  pintarCriterios();
+}
+function pintarCriterios(){
+  var h='';
+  PT_CRIT.forEach(function(c){
+    var v=PT[c.k], et = v===1?'✓':(v===0?'✗':'—');
+    var col = v===1?'#2f9e6f':(v===0?'#d2564f':'#8a8a8a');
+    h+='<div class="tarj vidrio" style="display:flex;align-items:center;gap:12px" onclick="ptToca(\''+c.k+'\')">'+
+       '<span style="font-size:22px;font-weight:800;color:'+col+';min-width:26px;text-align:center">'+et+'</span>'+
+       '<span style="flex:1">'+esc(c.t)+'</span></div>';
+  });
+  $('pt-criterios').innerHTML=h;
+  ptNota();
+}
+function ptToca(k){ PT[k] = PT[k]===1 ? 0 : (PT[k]===0 ? -1 : 1); pintarCriterios(); }
+function ptCalcular(){
+  var apl=0, bien=0;
+  PT_CRIT.forEach(function(c){ if(PT[c.k]!==-1){ apl++; if(PT[c.k]===1) bien++; } });
+  return apl ? (bien/apl) : 0;
+}
+function ptNota(){
+  var apl=0; PT_CRIT.forEach(function(c){ if(PT[c.k]!==-1) apl++; });
+  var pr=ptCalcular();
+  $('pt-nota').innerHTML = apl ? ('Nota del día: <b style="color:'+(pr>=0.8?'#2f9e6f':(pr>=0.5?'#c99a3a':'#d2564f'))+'">'+Math.round(pr*100)+'%</b> <span class="sub">('+apl+' puntos que sí aplican hoy)</span>') : '<span class="sub">Todo marcado como «no aplica».</span>';
+}
+function guardarPuntaje(){
+  var nombre=($('pt-nombre').value||'').trim();
+  if(!nombre){ alert('¿A quién estás evaluando?'); return; }
+  var e=empActiva();
+  if(!e){ alert('Primero crea o entra a tu empresa (así se guarda y se consolida).'); ir('p-empresa'); return; }
+  var crit={}; PT_CRIT.forEach(function(c){ crit[c.k]=PT[c.k]; });
+  var pr=ptCalcular();
+  var msg=$('pt-msg'); msg.style.color='var(--gris)'; msg.textContent='Guardando…';
+  sbPost('sst_puntaje',{empresa:e.id, trabajador:nombre, dni:($('pt-dni').value||'').trim(), fecha:$('pt-fecha').value,
+    criterios:crit, promedio:pr, supervisor:(leer(LS_SUP,{}).nombre||'')})
+    .then(function(){ msg.style.color='#2f9e6f'; msg.textContent='Guardado. '+nombre+': '+Math.round(pr*100)+'% hoy.'; setTimeout(function(){ pintarPuntaje(); },900); })
+    .catch(function(err){ msg.style.color='#d2564f'; msg.textContent='No se pudo guardar ('+err+'). Revisa el internet.'; });
+}
+
+/* ================= EMPRESA / MSDS (nube) ================= */
+function codEmpresaNueva(){ var s=''; for(var i=0;i<7;i++){ if(i===3)s+='-'; s+=A32.charAt(Math.floor(Math.random()*A32.length)); } return s; }
+function pintarEmpresa(){
+  var e=empActiva(), c=$('empresa-cuerpo');
+  var eb=$('emp-badge'); if(eb) eb.textContent = e ? '· '+esc(e.nombre) : '';
+  if(e){
+    c.innerHTML='<h2>'+esc(e.nombre)+'</h2>'+
+      '<div class="aviso">Código de tu empresa: <b style="letter-spacing:.12em">'+esc(e.codigo)+'</b><br>Pásalo a tu cuadrilla: con él ven las hojas MSDS. Guárdalo, es la llave.</div>'+
+      '<button class="btn" onclick="compartirEmpresa()">📤 Compartir el código por WhatsApp</button>'+
+      '<div class="sec-tit" style="margin-top:18px">Lo de tu obra</div>'+
+      '<button class="btn sec" onclick="ir(\'p-msds\')">📄 Hojas MSDS</button>'+
+      '<button class="btn sec" onclick="ir(\'p-puntaje\')">🦺 Evaluar la seguridad del día</button>'+
+      '<button class="btn sec" onclick="verConsolidado()">📊 Consolidado (constancias y puntaje)</button>'+
+      '<button class="btn sec" onclick="salirEmpresa()" style="margin-top:14px">Cambiar de empresa</button>';
+    return;
+  }
+  c.innerHTML='<h2>Tu empresa u obra</h2>'+
+    '<p class="sub">Crea tu obra una vez. Sale un código que le pasas a tu cuadrilla, y con él comparten las hojas MSDS y se consolidan las constancias.</p>'+
+    '<label>Nombre de la empresa u obra</label><input id="e-nombre" placeholder="Constructora Andes · Obra Torre Lima">'+
+    '<button class="btn" onclick="crearEmpresa()">Crear mi empresa</button>'+
+    '<div class="sec-tit" style="margin-top:18px">¿Ya tienes el código?</div>'+
+    '<label>Código de la empresa</label><input id="e-codigo" placeholder="ABC-D23" style="text-transform:uppercase">'+
+    '<button class="btn sec" onclick="entrarEmpresa()">Entrar con el código</button>'+
+    '<div id="emp-msg" style="font-size:14px;margin-top:10px"></div>';
+}
+function crearEmpresa(){
+  var nombre=($('e-nombre').value||'').trim();
+  if(!nombre){ alert('Ponle nombre a tu empresa u obra.'); return; }
+  var cod=codEmpresaNueva();
+  $('emp-msg').textContent='Creando…';
+  sbPost('sst_empresa',{codigo:cod, nombre:nombre, tipo:'empresa'})
+    .then(function(){ return sbRpc('sst_resolver',{cod:cod}); })
+    .then(function(rows){ var e=rows[0]; guardar(LS_EMP,{codigo:cod, id:e.id, nombre:nombre}); pintarEmpresa(); })
+    .catch(function(err){ $('emp-msg').style.color='#d2564f'; $('emp-msg').textContent='No se pudo crear (¿sin internet?). Código '+err+'.'; });
+}
+function entrarEmpresa(){
+  var cod=_norm(($('e-codigo').value||'')); if(cod.length>=6){ cod=cod.slice(0,3)+'-'+cod.slice(3,6); }
+  if(!cod){ alert('Escribe el código.'); return; }
+  $('emp-msg').textContent='Buscando…';
+  sbRpc('sst_resolver',{cod:cod}).then(function(rows){
+    if(!rows.length){ $('emp-msg').style.color='#d2564f'; $('emp-msg').textContent='Ese código no existe. Revísalo.'; return; }
+    var e=rows[0]; guardar(LS_EMP,{codigo:cod, id:e.id, nombre:e.nombre}); pintarEmpresa();
+  }).catch(function(err){ $('emp-msg').style.color='#d2564f'; $('emp-msg').textContent='No se pudo buscar (¿sin internet?). '+err; });
+}
+function salirEmpresa(){ if(confirm('¿Salir de esta empresa? El código no se borra, puedes volver a entrar.')){ borrar(LS_EMP); pintarEmpresa(); } }
+function compartirEmpresa(){
+  var e=empActiva(); if(!e) return;
+  var t='Código de nuestra empresa en SST Capacita: '+e.codigo+'\nCon él ves las hojas MSDS de la obra.';
+  if(navigator.share){ navigator.share({text:t}).catch(function(){copiarTexto(t);}); } else copiarTexto(t);
+}
+function pintarMsds(){
+  var e=empActiva(); if(!e){ ir('p-empresa'); return; }
+  $('msds-obra').textContent=e.nombre;
+  var cont=$('lista-msds'); cont.innerHTML='<p class="sub">Cargando…</p>';
+  sbGet('sst_msds?empresa=eq.'+e.id+'&select=id,producto,proveedor,ficha_url,nota&order=producto').then(function(rows){
+    if(!rows.length){ cont.innerHTML='<p class="sub">Todavía no hay fichas. Agrega la primera.</p>'; return; }
+    var h='';
+    rows.forEach(function(m){
+      h+='<div class="tarj vidrio" style="display:block"><b>🧴 '+esc(m.producto)+'</b><small>'+(m.proveedor?esc(m.proveedor):'')+(m.nota?' · '+esc(m.nota):'')+'</small>'+
+         '<div style="display:flex;gap:8px;margin-top:8px">'+
+         (m.ficha_url?'<a class="btn sec" style="margin:0;text-align:center" target="_blank" rel="noopener" href="'+escA(m.ficha_url)+'">Abrir ficha</a>':'<span class="sub">sin archivo</span>')+
+         '<button class="btn sec" style="margin:0" onclick="borrarMsds(\''+m.id+'\')">Quitar</button></div></div>';
+    });
+    cont.innerHTML=h;
+  }).catch(function(err){ cont.innerHTML='<p class="sub">No se pudo cargar (¿sin internet?). '+err+'</p>'; });
+}
+function guardarMsds(){
+  var e=empActiva(); if(!e){ ir('p-empresa'); return; }
+  var prod=($('m-producto').value||'').trim();
+  if(!prod){ alert('¿De qué producto es la ficha?'); return; }
+  var proveedor=($('m-proveedor').value||'').trim(), nota=($('m-nota').value||'').trim();
+  var url=($('m-url').value||'').trim();
+  var f=$('m-archivo').files && $('m-archivo').files[0];
+  var msg=$('msds-msg'); msg.style.color='var(--gris)'; msg.textContent='Guardando…';
+  function grabar(fichaUrl){
+    return sbPost('sst_msds',{empresa:e.id, producto:prod, proveedor:proveedor, ficha_url:fichaUrl||null, nota:nota});
+  }
+  var paso;
+  if(f){
+    var nombre=e.id+'/'+Date.now()+'-'+f.name.replace(/[^A-Za-z0-9.\-_]/g,'_');
+    paso=sbSubir(nombre,f).then(grabar);
+  } else { paso=grabar(url); }
+  paso.then(function(){ msg.style.color='var(--verde,#2f9e6f)'; msg.textContent='Ficha guardada.'; setTimeout(function(){ ir('p-msds'); },500); })
+      .catch(function(err){ msg.style.color='#d2564f'; msg.textContent='No se pudo guardar ('+err+'). Revisa el internet o el tamaño del archivo.'; });
+}
+function borrarMsds(id){
+  if(!confirm('¿Quitar esta ficha?')) return;
+  sbDel('sst_msds?id=eq.'+id).then(function(){ pintarMsds(); }).catch(function(err){ alert('No se pudo quitar ('+err+').'); });
+}
+function verConsolidado(){
+  var e=empActiva(); if(!e) return;
+  var cont=$('empresa-cuerpo');
+  cont.innerHTML='<h2>📊 Consolidado</h2><p class="sub">'+esc(e.nombre)+'</p><div id="cons-cuerpo"><p class="sub">Cargando…</p></div>'+
+    '<button class="btn sec" onclick="pintarEmpresa()" style="margin-top:14px">‹ Volver</button>';
+  Promise.all([
+    sbGet('sst_constancia?empresa=eq.'+e.id+'&select=trabajador,tema,resultado,fecha&order=fecha.desc'),
+    sbGet('sst_puntaje?empresa=eq.'+e.id+'&select=trabajador,promedio,fecha')
+  ]).then(function(res){
+    var cons=res[0], punt=res[1];
+    var h='<div class="stats"><div class="stat"><b>'+cons.length+'</b><span>constancias</span></div>'+
+          '<div class="stat"><b>'+(new Set(cons.map(function(c){return c.trabajador;}))).size+'</b><span>trabajadores</span></div>'+
+          '<div class="stat"><b>'+punt.length+'</b><span>evaluados</span></div></div>';
+    // ranking de seguridad
+    var prom={}; punt.forEach(function(p){ (prom[p.trabajador]=prom[p.trabajador]||[]).push(+p.promedio||0); });
+    var rank=Object.keys(prom).map(function(n){ var a=prom[n]; return {n:n, p:a.reduce(function(x,y){return x+y;},0)/a.length}; }).sort(function(a,b){return b.p-a.p;});
+    if(rank.length){
+      h+='<div class="sec-tit" style="margin-top:16px">🏅 Los más seguros</div>';
+      rank.slice(0,8).forEach(function(r,i){ h+='<div class="tarj vidrio"><b>'+(i+1)+'. '+esc(r.n)+'</b><small>'+Math.round(r.p*100)+'% de seguridad</small></div>'; });
+    }
+    h+='<div class="sec-tit" style="margin-top:16px">Últimas constancias</div>';
+    if(!cons.length) h+='<p class="sub">Aún no hay constancias subidas.</p>';
+    cons.slice(0,20).forEach(function(c){ h+='<div class="tarj vidrio"><b>'+esc(c.trabajador)+'</b><small>'+esc(c.tema||'')+' · '+esc(c.resultado||'')+' · '+esc(c.fecha||'')+'</small></div>'; });
+    $('cons-cuerpo').innerHTML=h;
+  }).catch(function(err){ $('cons-cuerpo').innerHTML='<p class="sub">No se pudo cargar ('+err+').</p>'; });
+}
+
 /* ================= TALLERES ================= */
 var TL = {taller:null, paso:0, dato:null, sel:null};
 function tallerDe(id){ for(var i=0;i<TALLERES.length;i++) if(TALLERES[i].id===id) return TALLERES[i]; return null; }
@@ -2852,6 +3082,7 @@ function hacerDiplomaTaller(){
     doc.setFontSize(8); doc.setTextColor(150,150,150);
     doc.text('Folio de verificación: '+folio+'  ·  Constancia de participación en taller práctico. No reemplaza la capacitación formal de la Ley 29783.', W/2, H-M+2, {align:'center'});
     entregarPDF(doc, 'Constancia_'+t.id+'_'+nombre.replace(/[^A-Za-z0-9]/g,'')+'.pdf');
+    var _e=empActiva(); if(_e){ try{ sbPost('sst_constancia',{empresa:_e.id, trabajador:nombre, dni:dni, cargo:cargo, tipo:'taller', tema:t.nombre, resultado:'completado', folio:folio, fecha:fecha}); }catch(_x){} }
     $('tal-fin-msg').style.color='#2f9e6f'; $('tal-fin-msg').textContent='Constancia generada (folio '+folio+'). Si no se descargó, revisa los permisos del navegador.';
   }catch(e){ $('tal-fin-msg').style.color='#d2564f'; $('tal-fin-msg').textContent='No se pudo generar el PDF: '+e.message; }
 }
@@ -2982,6 +3213,9 @@ function hacerPDF(){
     PDF.doc=doc;
     PDF.nombre='SST_'+S.tema+'_'+slug+'_'+(S.datos.fecha||hoyISO())+'.pdf';
     $('listo-nombre').textContent=PDF.nombre;
+    var _e=empActiva();
+    if(_e){ try{ sbPost('sst_constancia',{empresa:_e.id, trabajador:S.datos.nombre, dni:S.datos.dni, cargo:S.datos.cargo,
+        tipo:'evaluacion', tema:(TEMAS[S.tema]&&TEMAS[S.tema].tema)||S.tema, resultado:(b>=min?'aprobado':'desaprobado'), folio:cod, fecha:(S.datos.fecha||hoyISO())}); }catch(_x){} }
     ir('p-listo');
   }catch(e){ alert('No se pudo generar el PDF: '+e.message); }
 }
