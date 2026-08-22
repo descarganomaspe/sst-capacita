@@ -190,6 +190,7 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .grupo-cab .fl{font-size:13px;color:var(--gris);transition:transform .2s ease}
 .grupo.abierto>.grupo-cab .fl{transform:rotate(180deg)}
 .grupo.abierto>.grupo-cab{box-shadow:inset 0 0 0 1.1px rgba(255,201,51,.34), 0 5px 20px rgba(0,0,0,.22)}
+.subgrupo{margin:6px 0 10px;padding-left:12px;border-left:2px solid rgba(224,168,28,.30)}
 .grupo-cont{display:none;padding:9px 4px 3px 10px;margin-left:6px;border-left:1.5px solid rgba(255,255,255,.10)}
 .grupo.abierto>.grupo-cont{display:block;animation:baja .18s ease}
 @keyframes baja{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
@@ -390,6 +391,40 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <button class="btn" onclick="entrarTrabEmpresa()">Continuar ▸</button>
 </section>
 
+<section class="pantalla" id="p-sup-tipo">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-rol')">‹ Atrás</button><span>Paso 2 de 3</span></div>
+  <div class="marca">◆ OBRASST</div>
+  <h1>¿Con quién<br>estás trabajando?</h1>
+  <p class="sub">No es lo mismo llevar la SST de una obra por tu cuenta que estar afiliado a una empresa. Elige cómo trabajas y la app te muestra solo lo tuyo.</p>
+  <button class="tarj vidrio" onclick="tipoSupervisor('emp')"><b>🏢 Estoy afiliado a una empresa</b><small>Tu empresa te dio un correo corporativo y un código. Entras y ves todo su sistema de gestión: políticas, IPERC, PETS, programas, informes y lo del comité.</small></button>
+  <button class="tarj vidrio" onclick="tipoSupervisor('sst')"><b>🦺 Soy supervisor SST por mi cuenta</b><small>Llevas la seguridad de una obra tú mismo. Tienes tus charlas, tu kardex, tus MSDS, tus informes SSOMA y tu estadística, todo sin internet.</small></button>
+  <div class="pie">Puedes cambiar después desde «Cambiar de usuario».</div>
+</section>
+
+<section class="pantalla" id="p-sup-emp">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-sup-tipo')">‹ Atrás</button><span>Entrar con tu empresa</span></div>
+  <div class="marca">◆ OBRASST</div>
+  <h1>Entra con tu<br>correo corporativo.</h1>
+  <p class="sub">Escribe el correo que te dio tu empresa y el código que ella creó. Con eso ves sus documentos, sus programas y sus informes, igual que si entraras como Empresa.</p>
+  <div class="caja vidrio" style="padding:15px">
+    <label class="sec-tit" style="margin:0 0 6px">Correo corporativo</label>
+    <input id="sup-correo" type="email" placeholder="nombre@tuempresa.com" autocomplete="email" spellcheck="false">
+    <label class="sec-tit" style="margin:12px 0 6px">Código de la empresa</label>
+    <input id="sup-cod" placeholder="ABC-DEF" autocomplete="off" spellcheck="false"
+      style="text-align:center;letter-spacing:.16em;text-transform:uppercase;font-weight:700">
+    <div id="sup-emp-msg" style="font-size:13.5px;margin:9px 0 0"></div>
+    <button class="btn" onclick="entrarSupEmpresa()" style="margin-top:11px">Entrar ▸</button>
+  </div>
+  <div class="pie">Si no tienes el código, pídeselo al que administra la SST en tu empresa.</div>
+</section>
+
+<section class="pantalla" id="p-estadistica">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-inicio')">‹ Atrás</button><span>Estadística</span></div>
+  <h2>Tu estadística</h2>
+  <p class="sub">Lo que llevas registrado en este celular. Se actualiza solo.</p>
+  <div id="est-cuerpo"></div>
+</section>
+
 <section class="pantalla" id="p-sector">
   <div class="marca">◆ OBRASST</div>
   <h1>Primero, ¿dónde<br>trabajas?</h1>
@@ -401,55 +436,16 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <section class="pantalla" id="p-inicio">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-sector')">‹ Sector</button><span id="chip-sector"></span></div>
   <div class="marca">◆ OBRASST</div>
-  <h1>La evaluación, lista<br>antes de la charla.</h1>
-  <p class="sub">Pregunta, respuesta, sustento normativo y un tip de campo. Para el supervisor SSOMA que no tiene tiempo de armarla.</p>
+  <h1 id="ini-tit">Toda tu SST<br>de obra, aquí.</h1>
+  <p class="sub" id="ini-sub">Charlas, kardex, MSDS, amonestaciones, reportes, informes SSOMA y estadística. Todo sin internet y todo queda firmado.</p>
   <button class="estado-chip lite" id="b-lic" onclick="pedirCodigo('')">Tengo un código</button>
   <div class="aviso" id="banda-lite" style="display:none"></div>
 
-  <div class="grupo abierto">
-    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">📋</span><span class="tx">Capacitaciones<small>Evaluaciones por tema, con constancia</small></span><span class="fl">▾</span></button>
-    <div class="grupo-cont">
-      <button class="btn" onclick="ir('p-temas')">Elegir un tema ▸</button>
-    </div>
-  </div>
-
-  <div class="grupo">
-    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🗣️</span><span class="tx">Charlas de 5 minutos<small>Guiones y programa del mes</small></span><span class="fl">▾</span></button>
-    <div class="grupo-cont">
-      <button class="btn sec" onclick="verCharlas()">Guiones de las charlas</button>
-      <button class="btn sec" onclick="ir('p-programa')">🗓️ Programa del mes</button>
-    </div>
-  </div>
-
-  <div class="grupo">
-    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🦺</span><span class="tx">Prevención en obra<small>Reportes, inspecciones, PETAR, credenciales…</small></span><span class="fl">▾</span></button>
-    <div class="grupo-cont">
-      <button class="btn sec" onclick="ir('p-reporte')">🚨 Reportar acto/condición insegura</button>
-      <button class="btn sec" onclick="ir('p-inspec')">✅ Inspecciones (checklist + foto)</button>
-      <button class="btn sec" onclick="ir('p-petar')">📋 Permisos de trabajo (PETAR)</button>
-      <button class="btn sec" onclick="ir('p-credencial')">🪪 Credenciales / QR de acceso</button>
-      <button class="btn sec" onclick="ir('p-record')">⏰ Recordatorios <span id="rec-badge"></span></button>
-      <button class="btn sec" onclick="ir('p-normas')">📚 Biblioteca de normas</button>
-    </div>
-  </div>
-
-  <div class="grupo">
-    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🎓</span><span class="tx">Talleres y empresa<small>Talleres prácticos, MSDS y consolidado</small></span><span class="fl">▾</span></button>
-    <div class="grupo-cont">
-      <button class="btn sec" onclick="ir('p-talleres')">🎓 Talleres prácticos + constancia</button>
-      <button class="btn sec" onclick="ir('p-empresa')">🏢 Empresa, MSDS y consolidado <span id="emp-badge"></span></button>
-    </div>
-  </div>
-
-  <div class="grupo" id="sec-cuadrilla">
-    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🎟️</span><span class="tx">Tu cuadrilla<small>Genera los códigos de tus trabajadores</small></span><span class="fl">▾</span></button>
-    <div class="grupo-cont">
-      <button class="btn sec" id="b-gen" onclick="abrirGenerar()">Códigos para mi cuadrilla</button>
-    </div>
-  </div>
+  <div id="ini-cuerpo"></div>
 
   <div class="sec-tit">⚙️ Ajustes</div>
   <div class="fila-ajustes">
+    <button class="btn sec" id="b-gen" onclick="abrirGenerar()">🎟️ Códigos para mi cuadrilla</button>
     <button class="btn sec" onclick="ir('p-config')">Envío de resultados</button>
     <button class="btn sec" onclick="cambiarUsuario()">Cambiar de usuario</button>
   </div>
@@ -3662,7 +3658,7 @@ function ir(p){
     if(!(_pr && _pr.className && _pr.className.indexOf('on')>-1)) desproteger();
   }
   cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';$(p).className='pantalla activa';window.scrollTo(0,0);
-  if(p==='p-sector')pintarSectores(); if(p==='p-inicio')pintarInicio(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-programa')pintarPrograma();
+  if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-programa')pintarPrograma();
   if(p==='p-eval')pintarEval(); if(p==='p-registro')cargarRegistro(); if(p==='p-generar')pintarGenerar();
   if(p==='p-colab')pintarColab(); if(p==='p-charlas')pintarCharlas();
   if(p==='p-talleres')pintarTalleres();
@@ -3729,7 +3725,7 @@ function pintarInicio(){
     $('banda-lite').innerHTML='🗓️ <b>Código del mes activo</b> hasta el '+fechaLarga(m.v)+
       ': tienes el programa de tu obra y el guion de sus charlas.';
   }
-  $('b-gen').style.display=libre()?'':'none';
+  var bg=$('b-gen'); if(bg) bg.style.display=libre()?'':'none';
   var sc=$('sec-cuadrilla'); if(sc) sc.style.display=libre()?'':'none';
   var s=sectorDe(S.sector);
   $('chip-sector').textContent=s.icono+' '+s.nombre;
@@ -4035,6 +4031,157 @@ function entrarCodigoTrab(){
 }
 
 
+
+// =================================================================
+//  EL MENU DEL SUPERVISOR SST
+//  Es exactamente el orden que pidio Marcelo. Cada hoja o abre una
+//  pantalla que ya existe, o abre la carpeta de documentos (la misma
+//  que usa Empresa, con su copia en la nube y su respaldo offline).
+// =================================================================
+var SUP_ESTRUCTURA = [
+  { g:'Charlas', ic:'🗣️', sub:'Lo que se dicta en obra', items:[
+      {accion:'charlas',      t:'Charlas de 5 minutos'},
+      {accion:'p-temas',      t:'Capacitaciones'},
+      {leaf:'campanas',       t:'Campañas'},
+      {leaf:'simulacros',     t:'Simulacros'},
+      {accion:'p-talleres',   t:'Talleres'},
+      {leaf:'difusiones',     t:'Difusiones'} ]},
+  { g:'Kardex', ic:'🗃️', sub:'Entrega de EPP y registros por trabajador', items:[
+      {leaf:'kardex', t:'Kardex del personal'} ]},
+  { g:'Hojas MSDS', ic:'🧪', sub:'Fichas de seguridad de los productos', items:[
+      {accion:'p-msds', t:'Hojas MSDS'} ]},
+  { g:'Amonestaciones', ic:'📄', sub:'Llamadas de atención y descargos', items:[
+      {leaf:'amonestaciones-sup', t:'Amonestaciones'} ]},
+  { g:'Reporte de acto/condición', ic:'🚨', sub:'Actos y condiciones inseguras, con foto', items:[
+      {accion:'p-reporte', t:'Reportar acto/condición'} ]},
+  { g:'Informe SSOMA', ic:'📊', sub:'Lo que se entrega cada semana y cada mes', items:[
+      {subg:'Reporte mensual', items:[
+        {leaf:'insp-antes-despues', t:'Inspección antes y después'},
+        {leaf:'registro-evaluaciones', t:'Registro de evaluaciones'} ]},
+      {subg:'Reporte semanal', items:[
+        {leaf:'hht-hhc', t:'HHT y HHC'} ]} ]},
+  { g:'Estatus del personal', ic:'👷', sub:'Quién está activo, de descanso o cesado', items:[
+      {leaf:'estatus-personal', t:'Estatus del personal'} ]},
+  { g:'QR', ic:'🪪', sub:'Credenciales y control de acceso a obra', items:[
+      {accion:'p-credencial', t:'Credenciales / QR de acceso'},
+      {accion:'p-verificar',  t:'Verificar una credencial'} ]},
+  { g:'Normas', ic:'📚', sub:'Ley 29783, DS 011-2019 y las demás', items:[
+      {accion:'p-normas', t:'Biblioteca de normas'} ]},
+  { g:'Comité o Subcomité SST', ic:'🤝', sub:'Actas, acuerdos y miembros', items:[
+      {leaf:'comite-sup',    t:'Comité de SST'},
+      {leaf:'subcomite-sup', t:'Subcomité de SST'} ]},
+  { g:'Estadística', ic:'📈', sub:'Lo que llevas registrado, en números', items:[
+      {accion:'p-estadistica', t:'Ver mi estadística'} ]}
+];
+
+/* Un solo motor dibuja el menu del supervisor y el de la empresa:
+   grupo -> (subgrupo) -> hoja. Se abre uno a la vez. */
+function supGrupoDom(g, gi){
+  var d=document.createElement('div'); d.className='grupo';
+  var cab=document.createElement('button'); cab.className='grupo-cab';
+  cab.innerHTML='<span class="ic">'+g.ic+'</span><span class="tx">'+esc(g.g)+
+                '<small>'+esc(g.sub||'')+'</small></span><span class="fl">▾</span>';
+  cab.onclick=function(){ toggleGrupo(cab); };
+  var cont=document.createElement('div'); cont.className='grupo-cont';
+  (g.items||[]).forEach(function(it){ cont.appendChild(supItemDom(it, g.g)); });
+  d.appendChild(cab); d.appendChild(cont);
+  return d;
+}
+function supItemDom(it, ruta){
+  if(it.subg){
+    var caja=document.createElement('div'); caja.className='subgrupo';
+    var t=document.createElement('div'); t.className='sec-tit'; t.style.margin='4px 0 6px';
+    t.textContent=it.subg; caja.appendChild(t);
+    (it.items||[]).forEach(function(h){ caja.appendChild(supItemDom(h, ruta+' · '+it.subg)); });
+    return caja;
+  }
+  var b=document.createElement('button'); b.className='btn sec'; b.textContent=it.t;
+  if(it.accion){
+    b.onclick=function(){
+      if(it.accion==='charlas'){ verCharlas(); return; }
+      ir(it.accion);
+    };
+  } else {
+    b.onclick=function(){ abrirDoc(it.leaf, it.t, ruta); };
+  }
+  return b;
+}
+function pintarMenuSup(){
+  var c=$('ini-cuerpo'); if(!c) return;
+  c.innerHTML='';
+  SUP_ESTRUCTURA.forEach(function(g,gi){ c.appendChild(supGrupoDom(g,gi)); });
+}
+
+/* ---- la estadistica: lo local sale al toque; lo de la obra, de la nube ---- */
+function pintarEstadistica(){
+  var c=$('est-cuerpo'); if(!c) return;
+  function cuenta(clave){ try{ var v=leer(clave,[]); return (v&&v.length)||0; }catch(e){ return 0; } }
+  function fila(ic,tx,val){
+    return '<div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.06)">'
+      + '<span style="font-size:22px">'+ic+'</span><span style="flex:1;font-size:15px">'+esc(tx)+'</span>'
+      + '<b style="font-size:22px;font-variant-numeric:tabular-nums">'+val+'</b></div>';
+  }
+  var locales = fila('🪪','Credenciales generadas', cuenta(LS_CRED))
+              + fila('📝','Evaluaciones enviadas',  cuenta(LS_EV))
+              + fila('🎟️','Códigos de cuadrilla',   cuenta(LS_USA));
+  var e=empActiva();
+  c.innerHTML = '<div class="sec-tit">En este celular</div>'
+    + '<div class="caja vidrio" style="padding:4px 0">'+locales+'</div>'
+    + '<div class="sec-tit" style="margin-top:18px">En la obra</div>'
+    + '<div class="caja vidrio" id="est-nube" style="padding:16px"><p class="sub" style="margin:0">'
+    + (e ? 'Cargando lo de '+esc(e.nombre)+'…'
+         : 'Entra con el código de tu obra para ver reportes, inspecciones y PETAR de todo el equipo.')
+    + '</p></div>';
+  if(!e) return;
+  var tablas=[['sst_reporte','🚨','Reportes de actos/condiciones'],
+              ['sst_inspeccion','✅','Inspecciones hechas'],
+              ['sst_petar','📋','PETAR emitidos'],
+              ['sst_constancia','🎓','Constancias emitidas']];
+  Promise.all(tablas.map(function(t){
+    return sbGet(t[0]+'?empresa=eq.'+e.id+'&select=id').then(function(r){ return r.length; }).catch(function(){ return null; });
+  })).then(function(res){
+    var h='', fallo=false;
+    tablas.forEach(function(t,i){
+      if(res[i]===null){ fallo=true; return; }
+      h+=fila(t[1],t[2],res[i]);
+    });
+    var caja=$('est-nube'); if(!caja) return;
+    if(!h){ caja.innerHTML='<p class="sub" style="margin:0">No se pudo leer la nube (¿sin internet?). Lo de este celular sí está arriba.</p>'; return; }
+    caja.style.padding='4px 0'; caja.innerHTML=h
+      + (fallo?'<p class="sub" style="padding:10px 16px;margin:0">Faltó cargar algo por la conexión.</p>':'');
+  });
+}
+
+/* ---- el supervisor elige: afiliado a una empresa, o por su cuenta ---- */
+var LS_SUPTIPO='sstc_sup_tipo';
+function tipoSupervisor(t){
+  guardar(LS_SUPTIPO, t);
+  if(t==='emp'){
+    var e=empActiva();
+    if(e){ ir('p-emp-home'); return; }
+    $('sup-emp-msg').textContent=''; ir('p-sup-emp'); return;
+  }
+  if(libre()){ arrancarSup(); return; }
+  $('ses-cod').value=''; $('ses-msg').textContent='';
+  ir('p-sesion');
+}
+function entrarSupEmpresa(){
+  var correo=($('sup-correo').value||'').trim();
+  var cod=_norm($('sup-cod').value||'');
+  var m=$('sup-emp-msg'); m.style.color='var(--mal)';
+  if(correo.indexOf('@')<1){ m.textContent='Escribe tu correo corporativo completo.'; return; }
+  if(cod.length!==6){ m.textContent='El código de la empresa son 6 letras o números, con el guion.'; return; }
+  var c=cod.slice(0,3)+'-'+cod.slice(3,6);
+  m.style.color='var(--gris)'; m.textContent='Verificando con tu empresa…';
+  sbRpc('sst_resolver',{cod:c}).then(function(rows){
+    if(!rows.length){ m.style.color='var(--mal)'; m.textContent='Ese código no existe. Pídeselo a quien administra la SST en tu empresa.'; return; }
+    var e=rows[0];
+    guardar(LS_EMP,{codigo:c, id:e.id, nombre:e.nombre, correo:correo});
+    m.style.color='var(--ok)'; m.textContent='Listo: '+e.nombre+'.';
+    setTimeout(function(){ ir('p-emp-home'); }, 600);
+  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo verificar (¿sin internet?). '+err; });
+}
+
 // =================================================================
 //  PERFILES  ·  supervisor o colaborador
 //  Es lo primero que se pregunta. De aqui sale todo lo demas: el
@@ -4049,9 +4196,8 @@ function elegirRol(r){
     if(e){ ir('p-emp-home'); } else { $('emp-entrar-msg').textContent=''; ir('p-emp-entrar'); }
     return;
   }
-  if(libre()){ arrancarSup(); return; }
-  $('ses-cod').value=''; $('ses-msg').textContent='';
-  ir('p-sesion');
+  /* supervisor: antes de nada, decir si trabaja con empresa o por su cuenta */
+  ir('p-sup-tipo');
 }
 function arrancarSup(){
   ROL='sup'; guardar(LS_ROL,'sup');
