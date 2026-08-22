@@ -499,6 +499,137 @@ input,textarea{-webkit-user-select:text;user-select:text}
   </div>
 </section>
 
+<section class="pantalla" id="p-semanal">
+  <div class="barra"><span>Reporte semanal</span></div>
+  <h2>Reporte semanal · HHT y HHC</h2>
+  <p class="sub">Anota cada día cuánto personal hubo y cuántas horas hombre se trabajaron. La app suma sola las HHT, las HHC y los índices.</p>
+  <div class="caja vidrio" style="padding:15px">
+    <label class="sec-tit" style="margin:0 0 6px">Semana</label>
+    <input id="sm-semana" type="week">
+    <button class="btn sec" onclick="ir('p-semanal-dia')" style="margin-top:11px">➕ Registrar un día</button>
+  </div>
+  <div id="sm-cuerpo"></div>
+</section>
+
+<section class="pantalla" id="p-semanal-dia">
+  <div class="barra"><span>Un día</span></div>
+  <h2>Día de trabajo</h2>
+  <div class="caja vidrio" style="padding:15px">
+    <label class="sec-tit" style="margin:0 0 6px">Fecha</label>
+    <input id="sd-fecha" type="date">
+    <div class="sec-tit" style="margin:16px 0 8px">👷 Obreros</div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">N° personal</label>
+        <input id="sd-ob-n" inputmode="numeric" value="0"></div>
+      <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Horas c/u</label>
+        <input id="sd-ob-h" inputmode="decimal" value="8.5"></div>
+    </div>
+    <div class="sec-tit" style="margin:16px 0 8px">👔 Staff / empleados</div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">N° personal</label>
+        <input id="sd-st-n" inputmode="numeric" value="0"></div>
+      <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Horas c/u</label>
+        <input id="sd-st-h" inputmode="decimal" value="8"></div>
+    </div>
+    <label class="sec-tit" style="margin:16px 0 6px">Horas hombre capacitación (HHC) del día</label>
+    <input id="sd-hhc" inputmode="decimal" value="0" placeholder="ej. 25 personas × 0.25 h = 6.25">
+    <div id="sd-msg" style="font-size:13.5px;margin:9px 0 0"></div>
+    <button class="btn" onclick="guardarDiaSemanal()" style="margin-top:11px">Guardar el día</button>
+  </div>
+</section>
+
+<section class="pantalla" id="p-amonestaciones">
+  <div class="barra"><span>Amonestaciones</span></div>
+  <h2>Amonestaciones</h2>
+  <p class="sub">Queda el hecho, la medida aplicada y las cuatro firmas. Las firmas pueden quedar pendientes y completarse después.</p>
+  <button class="btn" onclick="ir('p-amon-nueva')">➕ Nueva amonestación</button>
+  <div id="amon-lista"></div>
+</section>
+
+<section class="pantalla" id="p-amon-nueva">
+  <div class="barra"><span>Nueva amonestación</span></div>
+  <h2>Nueva amonestación</h2>
+  <div id="amon-previas"></div>
+  <div class="caja vidrio" style="padding:15px">
+    <div class="sec-tit" style="margin:0 0 8px">Trabajador amonestado</div>
+    <select id="a-trab"></select>
+    <div style="height:10px"></div>
+    <input id="a-t-nombre" placeholder="Nombres y apellidos">
+    <div style="height:8px"></div>
+    <div style="display:flex;gap:10px">
+      <input id="a-t-dni" inputmode="numeric" placeholder="DNI" style="flex:1">
+      <input id="a-t-puesto" placeholder="Puesto" style="flex:1">
+    </div>
+
+    <div class="sec-tit" style="margin:18px 0 8px">Quien amonesta</div>
+    <input id="a-q-nombre" placeholder="Nombres y apellidos">
+    <div style="height:8px"></div>
+    <div style="display:flex;gap:10px">
+      <input id="a-q-dni" inputmode="numeric" placeholder="DNI" style="flex:1">
+      <input id="a-q-puesto" placeholder="Puesto" style="flex:1">
+    </div>
+
+    <div class="sec-tit" style="margin:18px 0 8px">Qué pasó</div>
+    <textarea id="a-desc" rows="5" placeholder="Describe el hecho: qué, cuándo, dónde y qué riesgo generó."></textarea>
+    <label class="sec-tit" style="margin:12px 0 6px">Foto (opcional)</label>
+    <input id="a-foto" type="file" accept="image/*" capture="environment">
+    <div id="a-foto-vista" style="margin-top:8px"></div>
+
+    <div class="sec-tit" style="margin:18px 0 8px">Medida aplicada</div>
+    <select id="a-medida">
+      <option value="Amonestación verbal">Amonestación verbal</option>
+      <option value="Amonestación escrita">Amonestación escrita</option>
+      <option value="Suspensión 1 día">Suspensión 1 día</option>
+      <option value="Suspensión 3 días">Suspensión 3 días</option>
+      <option value="Suspensión 5 días">Suspensión 5 días</option>
+      <option value="Retiro de obra">Retiro de obra</option>
+    </select>
+    <div id="amon-msg" style="font-size:13.5px;margin:12px 0 0"></div>
+    <button class="btn" onclick="guardarAmonestacion()" style="margin-top:11px">Guardar · las firmas quedan pendientes</button>
+  </div>
+</section>
+
+<section class="pantalla" id="p-amon-ver">
+  <div class="barra"><span>Amonestación</span></div>
+  <div id="amon-det"></div>
+</section>
+
+<section class="pantalla" id="p-amon-firma">
+  <div class="barra"><span>Firmar</span></div>
+  <h2 id="af-tit">Firma</h2>
+  <p class="sub" id="af-sub">—</p>
+  <div class="caja vidrio" style="padding:15px">
+    <canvas id="af-lienzo" class="lienzo"></canvas>
+    <button class="btn sec" onclick="limpiarFirmaA()" style="margin-top:8px">Borrar</button>
+    <div id="af-msg" style="font-size:13.5px;margin:9px 0 0"></div>
+    <button class="btn" onclick="guardarFirmaAmon()" style="margin-top:11px">Guardar firma</button>
+  </div>
+</section>
+
+<section class="pantalla" id="p-empleador">
+  <div class="barra"><span>Datos de tu empresa</span></div>
+  <h2>Datos del empleador</h2>
+  <p class="sub">Es la cabecera que sale en todos los registros oficiales (kardex de EPP, amonestaciones y demás). Se escribe una sola vez.</p>
+  <div class="caja vidrio" style="padding:15px">
+    <label class="sec-tit" style="margin:0 0 6px">Razón social o denominación social</label>
+    <input id="em-razon" placeholder="PRAGA CONSTRUCTORES S.A.C." autocomplete="organization">
+    <label class="sec-tit" style="margin:12px 0 6px">RUC</label>
+    <input id="em-ruc" inputmode="numeric" maxlength="11" placeholder="20613920324">
+    <label class="sec-tit" style="margin:12px 0 6px">Domicilio <span style="font-weight:400;text-transform:none;letter-spacing:0">(dirección, distrito, provincia, departamento)</span></label>
+    <input id="em-dom" placeholder="Cal. Juan de la Fuente 378, Miraflores, Lima">
+    <label class="sec-tit" style="margin:12px 0 6px">Actividad económica</label>
+    <input id="em-act" placeholder="CONSTRUCCIÓN">
+    <label class="sec-tit" style="margin:12px 0 6px">N° de trabajadores en el centro laboral</label>
+    <input id="em-ntrab" inputmode="numeric" placeholder="se llena solo con tu personal">
+    <label class="sec-tit" style="margin:16px 0 6px">Logo de la empresa</label>
+    <p class="sub" style="margin:0 0 8px;font-size:12.5px">Reemplaza el logo de la esquina superior izquierda del formato. Cuadrado queda mejor.</p>
+    <input id="em-logo" type="file" accept="image/*">
+    <div id="em-logo-vista" style="margin-top:10px"></div>
+    <div id="em-msg" style="font-size:13.5px;margin:9px 0 0"></div>
+    <button class="btn" onclick="guardarEmpleador()" style="margin-top:11px">Guardar</button>
+  </div>
+</section>
+
 <section class="pantalla" id="p-kardex-export">
   <div class="barra"><span>Registro del mes</span></div>
   <h2>Registro de entrega de EPP</h2>
@@ -576,6 +707,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="sec-tit">⚙️ Ajustes</div>
   <div class="fila-ajustes">
     <button class="btn sec" id="b-gen" onclick="abrirGenerar()">🎟️ Códigos para mi cuadrilla</button>
+    <button class="btn sec" onclick="ir('p-empleador')">🏢 Datos de mi empresa</button>
     <button class="btn sec" onclick="ir('p-config')">Envío de resultados</button>
     <button class="btn sec" onclick="cambiarUsuario()">Cambiar de usuario</button>
   </div>
@@ -3828,7 +3960,10 @@ function _ir(p){
   if(p==='p-emp-home')pintarEmpHome(); if(p==='p-doc')pintarDoc();
   if(p==='p-trabajadores')pintarTrabajadores(); if(p==='p-trab-nuevo')prepTrabajador();
   if(p==='p-kardex')pintarKardex(); if(p==='p-kardex-nuevo')prepKardex();
-  if(p==='p-kardex-export')pintarKardexExport(); if(p==='p-estatus')pintarEstatus();
+  if(p==='p-kardex-export')pintarKardexExport(); if(p==='p-empleador')cargarEmpleador();
+  if(p==='p-semanal')pintarSemanal(); if(p==='p-semanal-dia')prepDiaSemanal();
+  if(p==='p-amonestaciones')pintarAmonestaciones(); if(p==='p-amon-nueva')prepAmonestacion();
+  if(p==='p-amon-ver')pintarAmonDetalle(); if(p==='p-amon-firma')prepFirmaAmon(); if(p==='p-estatus')pintarEstatus();
   if(p==='p-norma')pintarNorma();
   pintarBarraNav(p);}
 
@@ -4437,6 +4572,340 @@ function pintarNorma(){
 }
 
 
+
+
+// =================================================================
+//  REPORTE SEMANAL  ·  HHT y HHC, obreros y staff por separado
+//  HHT = personal x horas, dia por dia. La app suma y saca los
+//  indices que se piden en el informe.
+// =================================================================
+var LS_SEM='sstc_semanal';
+function semLocal(){ return leer(LS_SEM,[]) || []; }
+function semSet(a){ guardar(LS_SEM,a); }
+function semanaDe(iso){
+  /* semana ISO del año, para agrupar los días */
+  var d=new Date(iso+'T00:00:00');
+  var t=new Date(d.valueOf()); t.setDate(t.getDate()+3-((d.getDay()+6)%7));
+  var p1=new Date(t.getFullYear(),0,4);
+  var n=1+Math.round(((t-p1)/86400000-3+((p1.getDay()+6)%7))/7);
+  return t.getFullYear()+'-W'+('0'+n).slice(-2);
+}
+function prepDiaSemanal(){
+  var hoy=new Date();
+  if(!$('sd-fecha').value) $('sd-fecha').value=hoy.getFullYear()+'-'+('0'+(hoy.getMonth()+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2);
+  var nOb=trabsLocal().filter(function(t){return t.estatus==='activo';}).length;
+  if($('sd-ob-n').value==='0' && nOb) $('sd-ob-n').value=String(nOb);
+  $('sd-msg').textContent='';
+}
+function guardarDiaSemanal(){
+  var m=$('sd-msg'); m.style.color='var(--mal)';
+  var f=$('sd-fecha').value;
+  if(!f){ m.textContent='Elige la fecha del día.'; return; }
+  var d={ fecha:f, semana:semanaDe(f),
+    obN:parseInt($('sd-ob-n').value,10)||0, obH:parseFloat($('sd-ob-h').value)||0,
+    stN:parseInt($('sd-st-n').value,10)||0, stH:parseFloat($('sd-st-h').value)||0,
+    hhc:parseFloat($('sd-hhc').value)||0 };
+  if(!d.obN && !d.stN){ m.textContent='Pon al menos cuánto personal hubo ese día.'; return; }
+  var a=semLocal().filter(function(x){ return x.fecha!==f; });   // un registro por día
+  a.push(d); a.sort(function(x,y){ return x.fecha.localeCompare(y.fecha); });
+  semSet(a);
+  sbPost('sst_hht',{duenio:duenioId(), fecha:f, ob_n:d.obN, ob_h:d.obH, st_n:d.stN, st_h:d.stH, hhc:d.hhc}).catch(function(){});
+  m.style.color='var(--ok)'; m.textContent='Día guardado.';
+  setTimeout(function(){ ir('p-semanal'); },500);
+}
+function pintarSemanal(){
+  var sem=$('sm-semana').value, todos=semLocal();
+  if(!sem){
+    var hoy=new Date();
+    sem=semanaDe(hoy.getFullYear()+'-'+('0'+(hoy.getMonth()+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2));
+    $('sm-semana').value=sem;
+    $('sm-semana').onchange=function(){ pintarSemanal(); };
+  }
+  var dias=todos.filter(function(d){ return d.semana===sem; });
+  var c=$('sm-cuerpo');
+  if(!dias.length){ c.innerHTML='<p class="sub" style="margin-top:16px">No hay días registrados en esta semana. Toca «Registrar un día».</p>'; return; }
+  var obHHT=0, stHHT=0, hhc=0, obDia=0, stDia=0;
+  dias.forEach(function(d){
+    obHHT += d.obN*d.obH; stHHT += d.stN*d.stH; hhc += d.hhc||0;
+    obDia += d.obN; stDia += d.stN;
+  });
+  var hht=obHHT+stHHT;
+  function n2(x){ return (Math.round(x*100)/100).toLocaleString('es-PE'); }
+  var h='<div class="sec-tit" style="margin-top:18px">Resumen de la semana</div><div class="caja vidrio" style="padding:4px 0">';
+  [['👷 HHT obreros', n2(obHHT)+' h'],
+   ['👔 HHT staff',   n2(stHHT)+' h'],
+   ['Σ HHT total',    n2(hht)+' h'],
+   ['🎓 HHC (capacitación)', n2(hhc)+' h'],
+   ['% HHC sobre HHT', hht? n2(hhc/hht*100)+' %' : '—'],
+   ['Promedio obreros/día', dias.length? n2(obDia/dias.length):'—'],
+   ['Promedio staff/día',   dias.length? n2(stDia/dias.length):'—'],
+   ['Días registrados', String(dias.length)]
+  ].forEach(function(f){
+    h+='<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06)">'
+     + '<span style="flex:1;font-size:14.5px">'+esc(f[0])+'</span>'
+     + '<b style="font-size:17px;font-variant-numeric:tabular-nums">'+esc(f[1])+'</b></div>';
+  });
+  h+='</div>';
+  h+='<div class="sec-tit" style="margin-top:18px">Día por día</div>';
+  dias.forEach(function(d){
+    h+='<div class="tarj vidrio" style="display:block"><b>'+esc(d.fecha)+'</b>'+
+       '<small>Obreros '+d.obN+'×'+d.obH+'h = '+n2(d.obN*d.obH)+' · Staff '+d.stN+'×'+d.stH+'h = '+n2(d.stN*d.stH)+
+       (d.hhc?' · HHC '+n2(d.hhc)+'h':'')+'</small>'+
+       '<div style="display:flex;gap:8px;margin-top:9px"><button class="btn sec" style="margin:0" onclick="quitarDiaSem(\''+d.fecha+'\')">Quitar</button></div></div>';
+  });
+  h+='<button class="btn sec" style="margin-top:14px" onclick="copiarSemanal()">📋 Copiar el resumen</button>';
+  c.innerHTML=h;
+}
+function quitarDiaSem(f){
+  if(!confirm('¿Quitar el registro de ese día?')) return;
+  semSet(semLocal().filter(function(d){ return d.fecha!==f; })); pintarSemanal();
+}
+function copiarSemanal(){
+  var t=$('sm-cuerpo').innerText;
+  try{ navigator.clipboard.writeText(t); alert('Resumen copiado.'); }catch(e){ alert('Copia manualmente el resumen de arriba.'); }
+}
+
+// =================================================================
+//  AMONESTACIONES
+//  Las cuatro firmas quedan PENDIENTES y se completan cuando cada
+//  uno pueda: trabajador, jefe inmediato, jefe de produccion y SSOMA.
+// =================================================================
+var LS_AMON='sstc_amon';
+var AMON_FIRMAS=[['trabajador','Trabajador'],['jefe','Jefe inmediato'],
+                 ['produccion','Jefe de producción'],['ssoma','SSOMA']];
+function amonLocal(){ return leer(LS_AMON,[]) || []; }
+function amonSet(a){ guardar(LS_AMON,a); }
+function amonPorId(id){ var a=amonLocal(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; }
+function amonPendientes(a){
+  var n=0; AMON_FIRMAS.forEach(function(f){ if(!(a.firmas||{})[f[0]]) n++; }); return n;
+}
+var AMON_FOTO=null;
+function prepAmonestacion(){
+  AMON_FOTO=null;
+  var sel=$('a-trab'), tr=trabsLocal().filter(function(t){return t.estatus!=='cesado';});
+  sel.innerHTML='<option value="">— escribir a mano —</option>'+
+    tr.map(function(t){return '<option value="'+t.id+'">'+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</option>';}).join('');
+  sel.onchange=function(){
+    var t=trabPorId(this.value);
+    if(t){ $('a-t-nombre').value=t.nombre||''; $('a-t-dni').value=t.dni||''; $('a-t-puesto').value=t.puesto||''; }
+    pintarAmonPrevias();
+  };
+  ['a-t-nombre','a-t-dni','a-t-puesto','a-desc'].forEach(function(id){ $(id).value=''; });
+  var sup=leer(LS_SUP,{})||{};
+  $('a-q-nombre').value=sup.nombre||''; $('a-q-dni').value=sup.dni||''; $('a-q-puesto').value=sup.cargo||'Supervisor SSOMA';
+  $('a-foto-vista').innerHTML=''; $('amon-msg').textContent='';
+  $('a-t-nombre').oninput=function(){ pintarAmonPrevias(); };
+  var f=$('a-foto');
+  if(f && f.getAttribute('data-ok')!=='1'){
+    f.setAttribute('data-ok','1');
+    f.onchange=function(){
+      var file=this.files && this.files[0]; if(!file) return;
+      var fr=new FileReader();
+      fr.onload=function(){
+        var img=new Image();
+        img.onload=function(){
+          var max=900, r=Math.min(1,max/Math.max(img.width,img.height));
+          var cv=document.createElement('canvas'); cv.width=img.width*r; cv.height=img.height*r;
+          cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+          AMON_FOTO=cv.toDataURL('image/jpeg',0.8);
+          $('a-foto-vista').innerHTML='<img src="'+AMON_FOTO+'" style="width:100%;border-radius:12px">';
+        };
+        img.src=fr.result;
+      };
+      fr.readAsDataURL(file);
+    };
+  }
+  pintarAmonPrevias();
+}
+/* si al trabajador ya lo amonestaron antes, se avisa arriba */
+function pintarAmonPrevias(){
+  var c=$('amon-previas'); if(!c) return;
+  var dni=($('a-t-dni').value||'').trim(), nom=_norm($('a-t-nombre').value||'');
+  if(!dni && !nom){ c.innerHTML=''; return; }
+  var previas=amonLocal().filter(function(a){
+    return (dni && a.tDni===dni) || (nom && _norm(a.tNombre)===nom);
+  });
+  if(!previas.length){ c.innerHTML='<div class="aviso" style="margin-bottom:14px">✅ Sin amonestaciones previas registradas.</div>'; return; }
+  var h='<div class="aviso" style="margin-bottom:14px;border-color:rgba(224,87,79,.4)">⚠️ <b>Ya tiene '+previas.length+
+        ' amonestación'+(previas.length===1?'':'es')+':</b><br>';
+  previas.slice(0,5).forEach(function(a){ h+='· '+esc(a.fecha)+' — '+esc(a.medida)+'<br>'; });
+  if(previas.length>5) h+='· …y '+(previas.length-5)+' más<br>';
+  h+='</div>';
+  c.innerHTML=h;
+}
+function guardarAmonestacion(){
+  var m=$('amon-msg'); m.style.color='var(--mal)';
+  var tn=($('a-t-nombre').value||'').trim(), d=($('a-desc').value||'').trim();
+  if(tn.length<3){ m.textContent='Falta el nombre del trabajador.'; return; }
+  if(d.length<10){ m.textContent='Describe lo que pasó, aunque sea en dos líneas.'; return; }
+  var hoy=new Date();
+  var reg={ id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    fecha:hoy.getFullYear()+'-'+('0'+(hoy.getMonth()+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2),
+    tNombre:tn, tDni:($('a-t-dni').value||'').trim(), tPuesto:($('a-t-puesto').value||'').trim(),
+    qNombre:($('a-q-nombre').value||'').trim(), qDni:($('a-q-dni').value||'').trim(), qPuesto:($('a-q-puesto').value||'').trim(),
+    desc:d, medida:$('a-medida').value, foto:AMON_FOTO||null, firmas:{} };
+  var a=amonLocal(); a.unshift(reg); amonSet(a);
+  sbPost('sst_amonestacion',{duenio:duenioId(), ext:reg.id, fecha:reg.fecha,
+    t_nombre:reg.tNombre, t_dni:reg.tDni, t_puesto:reg.tPuesto,
+    q_nombre:reg.qNombre, q_dni:reg.qDni, q_puesto:reg.qPuesto,
+    descripcion:reg.desc, medida:reg.medida, foto:reg.foto}).catch(function(){});
+  m.style.color='var(--ok)'; m.textContent='Guardada. Faltan las 4 firmas.';
+  AMON_VER=reg.id;
+  setTimeout(function(){ ir('p-amon-ver'); },550);
+}
+function pintarAmonestaciones(){
+  var a=amonLocal(), c=$('amon-lista');
+  if(!a.length){ c.innerHTML='<p class="sub" style="margin-top:14px">Todavía no hay amonestaciones registradas.</p>'; return; }
+  var h='';
+  a.forEach(function(x){
+    var pend=amonPendientes(x);
+    h+='<button class="tarj vidrio" onclick="verAmon(\''+x.id+'\')"><b>'+esc(x.tNombre)+' — '+esc(x.medida)+'</b>'+
+       '<small>'+esc(x.fecha)+' · '+(pend? '✍️ faltan '+pend+' firma'+(pend===1?'':'s') : '✅ firmada completa')+'</small></button>';
+  });
+  c.innerHTML=h;
+}
+var AMON_VER=null;
+function verAmon(id){ AMON_VER=id; ir('p-amon-ver'); }
+function pintarAmonDetalle(){
+  var x=amonPorId(AMON_VER); if(!x){ ir('p-amonestaciones'); return; }
+  var h='<h2>'+esc(x.medida)+'</h2><p class="sub">'+esc(x.fecha)+'</p>';
+  h+='<div class="caja vidrio" style="padding:16px"><div class="sec-tit" style="margin:0 0 6px">Trabajador</div>'+
+     '<p style="margin:0 0 12px">'+esc(x.tNombre)+(x.tDni?' · DNI '+esc(x.tDni):'')+(x.tPuesto?' · '+esc(x.tPuesto):'')+'</p>'+
+     '<div class="sec-tit" style="margin:0 0 6px">Quien amonesta</div>'+
+     '<p style="margin:0 0 12px">'+esc(x.qNombre||'—')+(x.qDni?' · DNI '+esc(x.qDni):'')+(x.qPuesto?' · '+esc(x.qPuesto):'')+'</p>'+
+     '<div class="sec-tit" style="margin:0 0 6px">Qué pasó</div><p style="margin:0">'+esc(x.desc)+'</p></div>';
+  if(x.foto) h+='<img src="'+x.foto+'" style="width:100%;border-radius:14px;margin-top:14px">';
+  h+='<div class="sec-tit" style="margin-top:20px">Firmas</div>';
+  AMON_FIRMAS.forEach(function(f){
+    var dat=(x.firmas||{})[f[0]];
+    h+='<div class="tarj vidrio" style="display:block"><b>'+esc(f[1])+'</b>';
+    if(dat){ h+='<img src="'+dat+'" style="width:100%;max-width:230px;background:#fff;border-radius:10px;margin-top:8px">'+
+               '<small style="display:block;margin-top:6px;color:var(--ok)">✅ Firmado</small>'; }
+    else   { h+='<small style="display:block;margin-top:4px;color:#d68e1a">⏳ Pendiente</small>'+
+               '<button class="btn sec" style="margin:9px 0 0" onclick="firmarAmon(\''+x.id+'\',\''+f[0]+'\',\''+esc(f[1])+'\')">Firmar ahora</button>'; }
+    h+='</div>';
+  });
+  h+='<button class="btn sec" style="margin-top:14px" onclick="quitarAmon(\''+x.id+'\')">Quitar esta amonestación</button>';
+  $('amon-det').innerHTML=h;
+}
+function quitarAmon(id){
+  if(!confirm('¿Quitar esta amonestación?')) return;
+  amonSet(amonLocal().filter(function(a){ return a.id!==id; }));
+  sbDel('sst_amonestacion?duenio=eq.'+encodeURIComponent(duenioId())+'&ext=eq.'+encodeURIComponent(id)).catch(function(){});
+  ir('p-amonestaciones');
+}
+var AF_QUIEN=null, AF_ID=null, AF_CTX=null, AF_TRAZO=false, AF_HAY=false, AF_CV=null;
+function firmarAmon(id, quien, etiqueta){
+  AF_ID=id; AF_QUIEN=quien;
+  $('af-tit').textContent='Firma · '+etiqueta;
+  ir('p-amon-firma');
+}
+function prepFirmaAmon(){
+  var x=amonPorId(AF_ID);
+  $('af-sub').textContent = x ? (x.tNombre+' · '+x.medida+' · '+x.fecha) : '';
+  $('af-msg').textContent='';
+  var cv=$('af-lienzo'); if(!cv) return;
+  var r=cv.getBoundingClientRect(), e=window.devicePixelRatio||1;
+  cv.width=Math.max(1,Math.round(r.width*e)); cv.height=Math.max(1,Math.round(150*e)); cv.style.height='150px';
+  AF_CTX=cv.getContext('2d'); AF_CTX.setTransform(e,0,0,e,0,0);
+  AF_CTX.fillStyle='#fff'; AF_CTX.fillRect(0,0,r.width,150);
+  AF_CTX.strokeStyle='#0b2a36'; AF_CTX.lineWidth=2.2; AF_CTX.lineCap='round'; AF_CTX.lineJoin='round';
+  AF_HAY=false; AF_CV=cv;
+  if(cv.getAttribute('data-listo')==='1') return;
+  cv.setAttribute('data-listo','1');
+  function pos(ev){ var b=cv.getBoundingClientRect(); var t=(ev.touches&&ev.touches[0])||ev; return {x:t.clientX-b.left,y:t.clientY-b.top}; }
+  function ini(ev){ ev.preventDefault(); AF_TRAZO=true; var q=pos(ev); AF_CTX.beginPath(); AF_CTX.moveTo(q.x,q.y); }
+  function mov(ev){ if(!AF_TRAZO) return; ev.preventDefault(); var q=pos(ev); AF_CTX.lineTo(q.x,q.y); AF_CTX.stroke(); AF_HAY=true; }
+  function fin(){ AF_TRAZO=false; }
+  cv.addEventListener('mousedown',ini); cv.addEventListener('mousemove',mov); window.addEventListener('mouseup',fin);
+  cv.addEventListener('touchstart',ini,{passive:false}); cv.addEventListener('touchmove',mov,{passive:false}); cv.addEventListener('touchend',fin);
+}
+function limpiarFirmaA(){ prepFirmaAmon(); }
+function guardarFirmaAmon(){
+  var m=$('af-msg'); m.style.color='var(--mal)';
+  if(!AF_HAY){ m.textContent='Falta firmar.'; return; }
+  var a=amonLocal();
+  for(var i=0;i<a.length;i++) if(a[i].id===AF_ID){
+    a[i].firmas=a[i].firmas||{}; a[i].firmas[AF_QUIEN]=AF_CV.toDataURL('image/png');
+    amonSet(a);
+    sbPatch('sst_amonestacion?duenio=eq.'+encodeURIComponent(duenioId())+'&ext=eq.'+encodeURIComponent(AF_ID),
+            {firmas:a[i].firmas}).catch(function(){});
+    break;
+  }
+  m.style.color='var(--ok)'; m.textContent='Firma guardada.';
+  AMON_VER=AF_ID;
+  setTimeout(function(){ ir('p-amon-ver'); },500);
+}
+
+// =================================================================
+//  DATOS DEL EMPLEADOR  ·  la cabecera de todos los registros
+//  Se guardan una vez y salen en el kardex, en las amonestaciones y
+//  en el reporte semanal. El logo reemplaza al del formato original.
+// =================================================================
+var LS_EMPLEADOR='sstc_empleador';
+function empleador(){ return leer(LS_EMPLEADOR,{}) || {}; }
+function cargarEmpleador(){
+  var e=empleador();
+  $('em-razon').value=e.razon||''; $('em-ruc').value=e.ruc||'';
+  $('em-dom').value=e.dom||'';     $('em-act').value=e.act||'CONSTRUCCIÓN';
+  $('em-ntrab').value=e.ntrab||String(trabsLocal().filter(function(t){return t.estatus==='activo';}).length||'');
+  $('em-msg').textContent='';
+  pintarLogoVista(e.logo);
+  var inp=$('em-logo');
+  if(inp && inp.getAttribute('data-ok')!=='1'){
+    inp.setAttribute('data-ok','1');
+    inp.onchange=function(){
+      var f=this.files && this.files[0]; if(!f) return;
+      var m=$('em-msg'); m.style.color='var(--gris)'; m.textContent='Preparando el logo…';
+      var fr=new FileReader();
+      fr.onload=function(){
+        var img=new Image();
+        img.onload=function(){
+          /* el formato guarda el logo como JPEG de 312x312: se respeta
+             el tamaño para que no se deforme la celda combinada */
+          var cv=document.createElement('canvas'); cv.width=312; cv.height=312;
+          var g=cv.getContext('2d');
+          g.fillStyle='#fff'; g.fillRect(0,0,312,312);
+          var r=Math.min(312/img.width, 312/img.height);
+          var w=img.width*r, h=img.height*r;
+          g.drawImage(img,(312-w)/2,(312-h)/2,w,h);
+          var dat=cv.toDataURL('image/jpeg',0.92);
+          var e2=empleador(); e2.logo=dat; guardar(LS_EMPLEADOR,e2);
+          pintarLogoVista(dat);
+          m.style.color='var(--ok)'; m.textContent='Logo listo. No olvides Guardar.';
+        };
+        img.onerror=function(){ m.style.color='var(--mal)'; m.textContent='No se pudo leer esa imagen.'; };
+        img.src=fr.result;
+      };
+      fr.readAsDataURL(f);
+    };
+  }
+}
+function pintarLogoVista(dat){
+  var c=$('em-logo-vista'); if(!c) return;
+  c.innerHTML = dat
+    ? '<img src="'+dat+'" style="width:92px;height:92px;object-fit:contain;background:#fff;border-radius:10px;padding:5px">'+
+      '<button class="btn sec" style="margin:8px 0 0" onclick="quitarLogo()">Quitar logo</button>'
+    : '<p class="sub" style="margin:0">Sin logo propio: sale el del formato original.</p>';
+}
+function quitarLogo(){ var e=empleador(); delete e.logo; guardar(LS_EMPLEADOR,e); pintarLogoVista(null); }
+function guardarEmpleador(){
+  var e=empleador();
+  e.razon=($('em-razon').value||'').trim(); e.ruc=($('em-ruc').value||'').trim();
+  e.dom=($('em-dom').value||'').trim();     e.act=($('em-act').value||'').trim();
+  e.ntrab=($('em-ntrab').value||'').trim();
+  guardar(LS_EMPLEADOR,e);
+  var m=$('em-msg'); m.style.color='var(--ok)'; m.textContent='Guardado. Ya sale en todos tus registros.';
+}
+/* pasar el dataURL del logo a bytes crudos para meterlo en el .xlsx */
+function _logoBytes(){
+  var e=empleador();
+  if(!e.logo) return null;
+  var b64=String(e.logo).split('base64,')[1];
+  if(!b64) return null;
+  try{ return _b64aU8(b64); }catch(err){ return null; }
+}
+
 // =================================================================
 //  EXPORTAR EL KARDEX AL FORMATO SSOMAPCFO043
 //  El formato NO se toca: se lleva el archivo original adentro, se
@@ -4465,11 +4934,18 @@ function _b64aU8(b64){
 function _fecha2dos(){ return {t:((12<<11)|(0<<5)|0)>>>0, f:(((2026-1980)<<9)|(1<<5)|1)>>>0}; }
 
 /* --- armar el .xlsx --- */
-function _armarXlsx(hojaXml){
+function _armarXlsx(hojaXml, reemplazos){
   var enc=new TextEncoder();
   var entradas=[], dt=_fecha2dos();
+  reemplazos = reemplazos || {};
   KX_PARTES.forEach(function(p){
-    entradas.push({n:p.n, metodo:p.m, crc:p.c, cs:p.cs, us:p.us, datos:_b64aU8(p.d)});
+    var nuevo = reemplazos[p.n];
+    if(nuevo){
+      /* una parte cambiada va sin comprimir: no hace falta deflate */
+      entradas.push({n:p.n, metodo:0, crc:_crc32(nuevo), cs:nuevo.length, us:nuevo.length, datos:nuevo});
+    } else {
+      entradas.push({n:p.n, metodo:p.m, crc:p.c, cs:p.cs, us:p.us, datos:_b64aU8(p.d)});
+    }
   });
   var hb=enc.encode(hojaXml);
   entradas.push({n:'xl/worksheets/sheet1.xml', metodo:0, crc:_crc32(hb), cs:hb.length, us:hb.length, datos:hb});
@@ -4536,7 +5012,14 @@ function _ddmm(iso){
   return p.length===3 ? (p[2]+'/'+p[1]+'/'+p[0].slice(2)) : iso;
 }
 function hojaDeTrabajador(t, registros){
-  var x=KX_HOJA;
+  var x=KX_HOJA, emp=empleador();
+  /* filas 8 y 9: los datos del empleador, que antes venian fijos */
+  if(emp.razon) x=_ponCelda(x,'A8', emp.razon, false);
+  if(emp.ruc)   x=_ponCelda(x,'G8', emp.ruc,   false);
+  if(emp.dom)   x=_ponCelda(x,'J8', emp.dom,   false);
+  if(emp.act)   x=_ponCelda(x,'R8', emp.act,   false);
+  var nt = emp.ntrab || String(trabsLocal().filter(function(z){return z.estatus==='activo';}).length||'');
+  if(nt)        x=_ponCelda(x,'W8', nt, false);
   // fila 12: los datos del trabajador, tal como pide el formato
   x=_ponCelda(x,'A12', t.nombre||'', false);
   x=_ponCelda(x,'R12', t.puesto||'', false);
@@ -4580,7 +5063,9 @@ function exportarKardex(){
     if(!regs.length) return;
     regs.sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); });
     if(regs.length>60) regs=regs.slice(0,60);
-    var blob=_armarXlsx(hojaDeTrabajador(t, regs));
+    var logo=_logoBytes();
+    var rep = logo ? {'xl/media/image2.jpeg': logo} : null;
+    var blob=_armarXlsx(hojaDeTrabajador(t, regs), rep);
     var url=URL.createObjectURL(blob);
     var nombre='Entrega EPP - '+(t.nombre||'trabajador').replace(/[\\\/:*?"<>|]/g,'')+' - '+mes+'.xlsx';
     h+='<a class="btn sec" style="text-align:center;display:block;text-decoration:none" download="'+esc(nombre)+'" href="'+url+'">⬇️ '+esc(t.nombre)+' ('+regs.length+' entrega'+(regs.length===1?'':'s')+')</a>';
@@ -4615,8 +5100,8 @@ var SUP_ESTRUCTURA = [
       {accion:'p-kardex-export', t:'📄 Registro del mes (Excel)'} ]},
   { g:'Hojas MSDS', ic:'🧪', sub:'Fichas de seguridad de los productos', items:[
       {accion:'p-msds', t:'Hojas MSDS'} ]},
-  { g:'Amonestaciones', ic:'📄', sub:'Llamadas de atención y descargos', items:[
-      {leaf:'amonestaciones-sup', t:'Amonestaciones'} ]},
+  { g:'Amonestaciones', ic:'📄', sub:'Llamadas de atención, medida y 4 firmas', items:[
+      {accion:'p-amonestaciones', t:'Registrar y ver amonestaciones'} ]},
   { g:'Reporte de acto/condición', ic:'🚨', sub:'Actos y condiciones inseguras, con foto', items:[
       {accion:'p-reporte', t:'Reportar acto/condición'} ]},
   { g:'Informe SSOMA', ic:'📊', sub:'Lo que se entrega cada semana y cada mes', items:[
@@ -4624,7 +5109,7 @@ var SUP_ESTRUCTURA = [
         {leaf:'insp-antes-despues', t:'Inspección antes y después'},
         {leaf:'registro-evaluaciones', t:'Registro de evaluaciones'} ]},
       {subg:'Reporte semanal', items:[
-        {leaf:'hht-hhc', t:'HHT y HHC'} ]} ]},
+        {accion:'p-semanal', t:'HHT y HHC (obreros y staff)'} ]} ]},
   { g:'Estatus del personal', ic:'📋', sub:'Quién está activo, de descanso o cesado', items:[
       {accion:'p-estatus', t:'Ver estatus del personal'} ]},
   { g:'QR', ic:'🪪', sub:'Credenciales y control de acceso a obra', items:[
