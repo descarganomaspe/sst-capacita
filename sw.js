@@ -1,4 +1,4 @@
-var CACHE = 'sstc-v1';
+var CACHE = 'sstc-v2-cuentas';
 self.addEventListener('install', function(e){ self.skipWaiting(); });
 self.addEventListener('activate', function(e){
   e.waitUntil(caches.keys().then(function(ks){
