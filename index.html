@@ -4015,9 +4015,28 @@ function entrarConGoogle(){
   var vuelta = location.origin + location.pathname;
   location.href = SB.url + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(vuelta);
 }
-/* al volver de Google el token llega en el # de la direccion */
+/* al volver de Google el token llega en el # de la direccion. Si algo
+   fallo (proveedor a medio configurar, permiso rechazado), Google/Supabase
+   devuelven un error ahi mismo: se lo decimos en cristiano y no lo dejamos
+   mirando una pantalla en blanco. */
+var AVISO_GOOGLE='';
 function recogerTokenDeLaUrl(){
-  var h = location.hash || '';
+  var h = location.hash || '', q = location.search || '';
+  if(/[#&?]error/.test(h) || /[?&]error/.test(q)){
+    var todo = (h+'&'+q).replace(/^[#?]/,'');
+    var d={}; todo.split(/[&?#]/).forEach(function(par){
+      var i=par.indexOf('='); if(i>0) d[par.slice(0,i)]=decodeURIComponent((par.slice(i+1)||'').replace(/\+/g,' '));
+    });
+    var det = (d.error_description||d.error_code||d.error||'').toLowerCase();
+    AVISO_GOOGLE = /server_error|unable to exchange|invalid_client|client/.test(det)
+      ? 'El ingreso con Google todavía no está terminado de configurar. Entra con tu correo y contraseña; el botón de Google funcionará apenas se complete.'
+      : (/access_denied|cancel/.test(det)
+         ? 'Cancelaste el ingreso con Google. Puedes entrar con tu correo y contraseña.'
+         : 'No se pudo entrar con Google ('+(d.error_description||d.error||'error')+'). Entra con tu correo y contraseña.');
+    try{ history.replaceState(null,'',location.pathname); }catch(e){}
+    try{ localStorage.removeItem(LS_ROL); }catch(e){}
+    return false;
+  }
   if(h.indexOf('access_token=')<0) return false;
   var d={}; h.replace(/^#/,'').split('&').forEach(function(par){
     var i=par.indexOf('='); if(i>0) d[par.slice(0,i)]=decodeURIComponent(par.slice(i+1));
@@ -4178,7 +4197,7 @@ function _ir(p){
     p='p-cuenta';
     if(typeof prepCuenta==='function') prepCuenta();
     var _m=document.getElementById('cu-msg');
-    if(_m){ _m.style.color='var(--gris)'; _m.textContent='Entra a tu cuenta para ver la información de tu empresa.'; }
+    if(_m && !_m.textContent){ _m.style.color='var(--gris)'; _m.textContent='Entra a tu cuenta para ver la información de tu empresa.'; }
   }
   else if(ROL!=='col' && !SIN_CUENTA[p] && !SIN_EMPRESA[p] && !sesionAbierta()){
     p='p-mis-empresas';
@@ -7990,7 +8009,10 @@ function prepCuenta(modo){
   if($('cu-alt-tit')) $('cu-alt-tit').textContent = crear ? '¿Ya tienes cuenta?' : '¿Primera vez en OBRASST?';
   if($('cu-alt')) $('cu-alt').textContent = crear ? 'Entrar con mi cuenta' : 'Crear mi cuenta';
   if($('cu-clave')) $('cu-clave').setAttribute('autocomplete', crear?'new-password':'current-password');
-  if($('cu-msg')) $('cu-msg').textContent='';
+  if($('cu-msg')){
+    if(AVISO_GOOGLE){ $('cu-msg').style.color='var(--mal)'; $('cu-msg').textContent=AVISO_GOOGLE; AVISO_GOOGLE=''; }
+    else $('cu-msg').textContent='';
+  }
 }
 function cuentaCambiarModo(){ prepCuenta(CU_MODO==='crear'?'entrar':'crear'); }
 function mensajeAuth(e){
@@ -8736,6 +8758,7 @@ function siguienteTrabajador(){
   if(ROL==='col'){ ir('p-colab'); return; }
   /* 'sup' era el rol viejo: ahora todo el que gestiona entra como empresa */
   if(ROL==='sup'){ ROL='emp'; guardar(LS_ROL,'emp'); }
+  if(AVISO_GOOGLE && !hayCuenta()){ ROL='emp'; guardar(LS_ROL,'emp'); CU_MODO='entrar'; ir('p-cuenta'); return; }
   if(ROL==='emp'){
     if(!hayCuenta()){ prepCuenta('entrar'); ir('p-cuenta'); return; }
     if(sesionAbierta()){ ir('p-emp-home'); refrescarPlan(); return; }
