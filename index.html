@@ -605,6 +605,36 @@ input,textarea{-webkit-user-select:text;user-select:text}
   </div>
 </section>
 
+<section class="pantalla" id="p-carpeta">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="navSalir()">‹ Atrás</button><span id="carpeta-ruta"></span></div>
+  <h2 id="carpeta-tit">Carpeta</h2>
+  <div id="carpeta-cuerpo"></div>
+</section>
+
+<section class="pantalla" id="p-foto">
+  <div class="barra"><span>Foto</span></div>
+  <h2 id="foto-tit">Foto</h2>
+  <p class="sub">Sube la foto y ponle la fecha. Queda guardada con el resto del expediente.</p>
+  <div class="caja vidrio" style="padding:15px">
+    <label class="sec-tit" style="margin:0 0 6px">Fecha</label>
+    <input id="f-fecha" type="date">
+    <label class="sec-tit" style="margin:12px 0 6px">Nota (opcional)</label>
+    <input id="f-nota" placeholder="Cuadrilla de estructuras, 7:00 a.m.">
+    <label class="sec-tit" style="margin:12px 0 6px">Foto</label>
+    <input id="f-archivo" type="file" accept="image/*" capture="environment">
+    <div id="f-vista" style="margin-top:10px"></div>
+    <div id="foto-msg" style="font-size:13.5px;margin:9px 0 0"></div>
+    <button class="btn" onclick="guardarFoto()" style="margin-top:11px">Guardar foto</button>
+  </div>
+</section>
+
+<section class="pantalla" id="p-mensual">
+  <div class="barra"><span>Reporte mensual</span></div>
+  <h2>Reporte mensual</h2>
+  <p class="sub">El consolidado del mes: inspecciones antes y después, registro de evaluaciones y el resumen de HHT de las semanas.</p>
+  <div id="mensual-cuerpo"></div>
+</section>
+
 <section class="pantalla" id="p-empleador">
   <div class="barra"><span>Datos de tu empresa</span></div>
   <h2>Datos del empleador</h2>
@@ -3913,7 +3943,7 @@ var EMP_OK={'p-rol':1,'p-emp-entrar':1,'p-emp-crear':1,'p-emp-home':1,'p-doc':1,
             'p-trabajadores':1,'p-trab-nuevo':1,'p-estatus':1,
             'p-kardex':1,'p-kardex-nuevo':1,'p-kardex-export':1,'p-empleador':1,
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,
-            'p-semanal':1,'p-semanal-dia':1,'p-estadistica':1};
+            'p-semanal':1,'p-semanal-dia':1,'p-estadistica':1,'p-carpeta':1,'p-foto':1,'p-mensual':1};
 var PANT_PROTEGIDA={'p-juego':1,'p-final':1,'p-firma':1,'p-listo':1,'p-charla':1};
 /* ── navegación ────────────────────────────────────────────────────
    Un solo flujo. HIST guarda por dónde pasaste y «Atrás» deshace ese
@@ -3972,6 +4002,7 @@ function _ir(p){
   if(p==='p-trabajadores')pintarTrabajadores(); if(p==='p-trab-nuevo')prepTrabajador();
   if(p==='p-kardex')pintarKardex(); if(p==='p-kardex-nuevo')prepKardex();
   if(p==='p-kardex-export')pintarKardexExport(); if(p==='p-empleador')cargarEmpleador();
+  if(p==='p-carpeta')pintarCarpeta(); if(p==='p-foto')prepFoto(); if(p==='p-mensual')pintarMensual();
   if(p==='p-semanal')pintarSemanal(); if(p==='p-semanal-dia')prepDiaSemanal();
   if(p==='p-amonestaciones')pintarAmonestaciones(); if(p==='p-amon-nueva')prepAmonestacion();
   if(p==='p-amon-ver')pintarAmonDetalle(); if(p==='p-amon-firma')prepFirmaAmon(); if(p==='p-estatus')pintarEstatus();
@@ -4367,6 +4398,203 @@ function entrarCodigoTrab(){
 
 
 
+
+
+// =================================================================
+//  CARPETAS CON NIVELES  ·  año → mes → tema
+//  Sirve para el Informe de Medio Ambiente (año/mes) y para los
+//  Simulacros (año/mes/tema, y dentro plan e informe). Los "libres"
+//  son los que el usuario va creando (mapas, certificados nuevos).
+//  Las "fotos" son pausas activas y controles: foto + fecha.
+// =================================================================
+var MESES_N=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio',
+             'Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var LS_SUBC='sstc_subcarpetas';
+function subcLeer(){ return leer(LS_SUBC,{}) || {}; }
+function subcGuardar(x){ guardar(LS_SUBC,x); }
+function subcDe(clave){ var x=subcLeer(); return x[clave] || []; }
+function subcAgregar(clave, nombre){
+  var x=subcLeer(); if(!x[clave]) x[clave]=[];
+  if(x[clave].indexOf(nombre)===-1){ x[clave].push(nombre); subcGuardar(x); }
+}
+function subcQuitar(clave, nombre){
+  var x=subcLeer(); if(!x[clave]) return;
+  x[clave]=x[clave].filter(function(n){ return n!==nombre; }); subcGuardar(x);
+}
+function anioActual(){ return new Date().getFullYear(); }
+
+/* Navegación dentro de una carpeta con niveles */
+var NAV={base:null, titulo:'', ruta:[], porMes:false, porTema:false};
+function abrirAnio(base, titulo, opts){
+  NAV={base:base, titulo:titulo, ruta:[], porMes:!!(opts&&opts.porMes), porTema:!!(opts&&opts.porTema)};
+  ir('p-carpeta');
+}
+function abrirLibre(base, titulo){
+  NAV={base:base, titulo:titulo, ruta:[], libre:true};
+  ir('p-carpeta');
+}
+function navClave(){ return NAV.base + (NAV.ruta.length? '_'+NAV.ruta.join('_') : ''); }
+function navEntrar(x){ NAV.ruta.push(x); pintarCarpeta(); }
+function navSalir(){ if(NAV.ruta.length){ NAV.ruta.pop(); pintarCarpeta(); } else { irAtras(); } }
+/* ¿en qué nivel estamos y qué toca elegir aquí? */
+function navNivel(){
+  var n=NAV.ruta.length;
+  if(NAV.libre) return 'libre';
+  if(n===0) return 'anio';
+  if(n===1 && NAV.porMes) return 'mes';
+  if((n===1 && !NAV.porMes) || (n===2 && NAV.porMes)) return NAV.porTema ? 'tema' : 'hoja';
+  return 'hoja';
+}
+function pintarCarpeta(){
+  var c=$('carpeta-cuerpo'); if(!c) return;
+  var nivel=navNivel();
+  $('carpeta-tit').textContent = NAV.titulo;
+  $('carpeta-ruta').textContent = NAV.ruta.length ? NAV.ruta.join(' · ') : 'Elige para entrar';
+  var h='';
+  if(nivel==='hoja'){
+    /* aquí ya se cargan los documentos: reusamos la carpeta de siempre */
+    abrirDoc(navClave(), NAV.titulo+' · '+NAV.ruta.join(' · '), NAV.titulo);
+    return;
+  }
+  if(nivel==='anio'){
+    var a0=anioActual(), anios=[];
+    for(var i=a0+1;i>=a0-3;i--) anios.push(String(i));
+    subcDe(NAV.base+'_anios').forEach(function(x){ if(anios.indexOf(x)===-1) anios.push(x); });
+    h+='<div class="sec-tit">Año</div>';
+    anios.forEach(function(a){
+      h+='<button class="tarj vidrio" onclick="navEntrar(\''+a+'\')"><b>📁 '+esc(a)+'</b><small>Abrir el año</small></button>';
+    });
+  }
+  else if(nivel==='mes'){
+    h+='<div class="sec-tit">Mes de '+esc(NAV.ruta[0])+'</div>';
+    MESES_N.forEach(function(m){
+      h+='<button class="tarj vidrio" onclick="navEntrar(\''+m+'\')"><b>📁 '+m+'</b><small>Abrir el mes</small></button>';
+    });
+  }
+  else if(nivel==='tema'){
+    var base=['Simulacro Multipeligro','Simulacro contra amago de fuego',
+              'Simulacro de derrame de hidrocarburos','Simulacro de rescate',
+              'Simulacro de sismo','Simulacro de evacuación'];
+    var propios=subcDe(navClave()+'_temas');
+    var todos=base.concat(propios.filter(function(x){ return base.indexOf(x)===-1; }));
+    h+='<div class="sec-tit">Tipo de simulacro</div>';
+    todos.forEach(function(t){
+      h+='<button class="tarj vidrio" onclick="navEntrar(\''+esc(t).replace(/'/g,"&#39;")+'\')"><b>📁 '+esc(t)+'</b>'+
+         '<small>Plan de simulacro e informe de simulacro</small></button>';
+    });
+    h+='<button class="btn sec" onclick="nuevaSub(\''+navClave()+'_temas\',\'tipo de simulacro\')">➕ Agregar otro tipo</button>';
+  }
+  else if(nivel==='libre'){
+    var lista=subcDe(NAV.base);
+    h+='<div class="sec-tit">'+esc(NAV.titulo)+'</div>';
+    if(!lista.length) h+='<p class="sub">Todavía no agregaste ninguno. Toca el botón de abajo.</p>';
+    lista.forEach(function(n){
+      var seguro=esc(n).replace(/'/g,"&#39;");
+      h+='<div class="tarj vidrio" style="display:block"><b>📁 '+esc(n)+'</b>'+
+         '<div style="display:flex;gap:8px;margin-top:9px">'+
+         '<button class="btn sec" style="margin:0" onclick="abrirDoc(\''+NAV.base+'_'+_norm(n)+'\',\''+seguro+'\',\''+esc(NAV.titulo)+'\')">Abrir</button>'+
+         '<button class="btn sec" style="margin:0" onclick="quitarSub(\''+NAV.base+'\',\''+seguro+'\')">Quitar</button></div></div>';
+    });
+    h+='<button class="btn" onclick="nuevaSub(\''+NAV.base+'\',\''+esc(NAV.titulo)+'\')">➕ Agregar</button>';
+  }
+  c.innerHTML=h;
+}
+function nuevaSub(clave, queCosa){
+  var n=prompt('Nombre del nuevo '+queCosa+':');
+  if(!n) return;
+  n=n.trim(); if(!n) return;
+  subcAgregar(clave, n); pintarCarpeta();
+}
+function quitarSub(clave, nombre){
+  if(!confirm('¿Quitar «'+nombre+'»? Los documentos que tenga adentro se conservan.')) return;
+  subcQuitar(clave, nombre); pintarCarpeta();
+}
+
+// ---- FOTOS con fecha (pausas activas y controles ocupacionales) ----
+var FOTO_BASE=null, FOTO_TIT='';
+function abrirFoto(base, titulo){
+  FOTO_BASE=base; FOTO_TIT=titulo;
+  ir('p-foto');
+}
+function prepFoto(){
+  $('foto-tit').textContent = FOTO_TIT;
+  var d=new Date();
+  $('f-fecha').value=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+  $('f-nota').value=''; $('foto-msg').textContent=''; $('f-vista').innerHTML='';
+  FOTO_DATA=null;
+  var inp=$('f-archivo');
+  if(inp && inp.getAttribute('data-ok')!=='1'){
+    inp.setAttribute('data-ok','1');
+    inp.onchange=function(){
+      var f=this.files && this.files[0]; if(!f) return;
+      var fr=new FileReader();
+      fr.onload=function(){
+        var img=new Image();
+        img.onload=function(){
+          var max=1100, r=Math.min(1,max/Math.max(img.width,img.height));
+          var cv=document.createElement('canvas'); cv.width=img.width*r; cv.height=img.height*r;
+          cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+          FOTO_DATA=cv.toDataURL('image/jpeg',0.82);
+          $('f-vista').innerHTML='<img src="'+FOTO_DATA+'" style="width:100%;border-radius:12px">';
+        };
+        img.src=fr.result;
+      };
+      fr.readAsDataURL(f);
+    };
+  }
+}
+var FOTO_DATA=null;
+function guardarFoto(){
+  var m=$('foto-msg'); m.style.color='var(--mal)';
+  if(!FOTO_DATA){ m.textContent='Elige o toma la foto.'; return; }
+  var e=empActiva();
+  var nombre=(FOTO_TIT+' · '+$('f-fecha').value) + (($('f-nota').value||'').trim()? ' · '+$('f-nota').value.trim() : '');
+  if(!e){ m.textContent='No hay empresa activa.'; return; }
+  m.style.color='var(--gris)'; m.textContent='Guardando…';
+  sbPost('sst_doc',{empresa:e.id, hoja:FOTO_BASE, nombre:nombre, url:FOTO_DATA, nota:$('f-fecha').value})
+    .then(function(){ m.style.color='var(--ok)'; m.textContent='Foto guardada.';
+      setTimeout(function(){ abrirDoc(FOTO_BASE, FOTO_TIT, 'Salud Ocupacional'); },600); })
+    .catch(function(){ m.style.color='#d68e1a'; m.textContent='Sin internet: se guarda en el celular.';
+      var docs=docLocal(FOTO_BASE); docs.unshift({id:'l'+Date.now().toString(36), nombre:nombre, url:FOTO_DATA, nota:$('f-fecha').value});
+      docLocalSet(FOTO_BASE,docs);
+      setTimeout(function(){ abrirDoc(FOTO_BASE, FOTO_TIT, 'Salud Ocupacional'); },900); });
+}
+
+// =================================================================
+//  LA VERSION DE MUESTRA (LITE) DEL LADO DE GESTION
+//  Antes, con solo entrar con el codigo de la empresa se veia y se
+//  cargaba TODO. Ahora la muestra deja probar de verdad pero con
+//  tope: para usarla en obra hace falta el codigo de compra.
+// =================================================================
+var LITE_TOPES = { trabajador:3, kardex:5, amonestacion:1, semana:1, doc:2, credencial:2 };
+function topeLite(k){ return libre() ? Infinity : (LITE_TOPES[k] || 0); }
+function cupoLite(k, cuantosHay){ return libre() || cuantosHay < topeLite(k); }
+/* aviso uniforme cuando se llega al tope */
+function frenoLite(k, cuantosHay, queCosa){
+  if(cupoLite(k, cuantosHay)) return false;
+  var t=topeLite(k);
+  alert('Versión de muestra: llegas hasta '+t+' '+queCosa+'.\n\n'+
+        'Con tu código de compra se abre sin límite. Toca «Tengo un código de compra» en Ajustes.');
+  return true;
+}
+/* lo que la muestra no deja ni probar: es justo lo que se vende */
+function soloConCodigo(queCosa){
+  if(libre()) return false;
+  alert('«'+queCosa+'» es del acceso completo.\n\n'+
+        'En la versión de muestra puedes registrar y ver, pero no generar el documento oficial. '+
+        'Con tu código de compra se abre.');
+  return true;
+}
+/* la banda de arriba en el inicio de la empresa */
+function bandaLiteEmpresa(){
+  if(libre()) return '<div class="aviso" style="border-color:rgba(47,158,111,.35)">✓ <b>Acceso completo activo</b> — todo abierto, sin topes.</div>';
+  var T=LITE_TOPES;
+  return '<div class="aviso">🎁 <b>Versión de muestra</b> — puedes probarlo todo con tope: '+
+    T.trabajador+' trabajadores, '+T.kardex+' entregas de EPP, '+T.amonestacion+' amonestación, '+
+    T.semana+' semana de HHT y '+T.doc+' documentos por carpeta. Los Excel y Word oficiales salen con el código.'+
+    '<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="pedirCodigo(\'\')">Tengo un código de compra</button></div></div>';
+}
+
 // =================================================================
 //  TRABAJADORES  ·  el registro del que salen kardex, QR y estatus
 //  Cada supervisor tiene su propio "dueño": si esta afiliado a una
@@ -4448,7 +4676,10 @@ function guardarTrabajador(){
   m.style.color='var(--mal)';
   if(nombre.length<3){ m.textContent='Escribe el nombre completo del trabajador.'; return; }
   var a=trabsLocal(), t=TRAB_EDIT?trabPorId(TRAB_EDIT):null;
-  if(!t){ t={id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}; a.push(t); }
+  if(!t){
+    if(frenoLite('trabajador', a.length, 'trabajadores')) return;
+    t={id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}; a.push(t);
+  }
   t.nombre=nombre; t.dni=($('t-dni').value||'').trim(); t.puesto=($('t-puesto').value||'').trim();
   t.area=($('t-area').value||'').trim(); t.estatus=$('t-estatus').value; t.sync=0;
   trabsSet(a); TRAB_EDIT=null;
@@ -4527,6 +4758,7 @@ function guardarKardex(){
   if(!epp){ m.textContent='Escribe qué EPP se entregó.'; return; }
   if(!tid){ m.textContent='Registra primero a tu personal para poder elegir al trabajador.'; return; }
   if(!K_HAYFIRMA){ m.textContent='Falta la firma del trabajador.'; return; }
+  if(frenoLite('kardex', kardexLocal().length, 'entregas de EPP')) return;
   var t=trabPorId(tid);
   var reg={ id:'k'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
     trab:tid, trabNombre:t?t.nombre:'', epp:epp, tipo:$('k-tipo').value,
@@ -4617,6 +4849,8 @@ function guardarDiaSemanal(){
     stN:parseInt($('sd-st-n').value,10)||0, stH:parseFloat($('sd-st-h').value)||0,
     hhc:parseFloat($('sd-hhc').value)||0 };
   if(!d.obN && !d.stN){ m.textContent='Pon al menos cuánto personal hubo ese día.'; return; }
+  var semanas={}; semLocal().forEach(function(x){ semanas[x.semana]=1; });
+  if(!semanas[d.semana] && frenoLite('semana', Object.keys(semanas).length, 'semana')) return;
   var a=semLocal().filter(function(x){ return x.fecha!==f; });   // un registro por día
   a.push(d); a.sort(function(x,y){ return x.fecha.localeCompare(y.fecha); });
   semSet(a);
@@ -4624,6 +4858,30 @@ function guardarDiaSemanal(){
   m.style.color='var(--ok)'; m.textContent='Día guardado.';
   setTimeout(function(){ ir('p-semanal'); },500);
 }
+
+function pintarMensual(){
+  var c=$('mensual-cuerpo'); if(!c) return;
+  var d=new Date(), mes=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
+  var dias=semLocal().filter(function(x){ return (x.fecha||'').slice(0,7)===mes; });
+  var obH=0, stH=0, hhc=0, obN=0, stN=0;
+  dias.forEach(function(x){ obH+=x.obN*x.obH; stH+=x.stN*x.stH; hhc+=x.hhc||0; obN+=x.obN; stN+=x.stN; });
+  function n2(x){ return (Math.round(x*100)/100).toLocaleString('es-PE'); }
+  var h='<div class="sec-tit">Mes en curso · '+mes+'</div><div class="caja vidrio" style="padding:4px 0">';
+  [['👷 HHT obreros',n2(obH)+' h'],['👔 HHT empleados',n2(stH)+' h'],['Σ HHT total',n2(obH+stH)+' h'],
+   ['🎓 HHC',n2(hhc)+' h'],['Promedio obreros/día', dias.length? n2(obN/dias.length):'—'],
+   ['Promedio empleados/día', dias.length? n2(stN/dias.length):'—'],['Días registrados',String(dias.length)]
+  ].forEach(function(f){
+    h+='<div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06)">'+
+       '<span style="flex:1;font-size:14.5px">'+esc(f[0])+'</span><b style="font-size:17px">'+esc(f[1])+'</b></div>';
+  });
+  h+='</div>';
+  h+='<div class="sec-tit" style="margin-top:18px">Documentos del mes</div>';
+  h+='<button class="btn sec" onclick="abrirDoc(\'insp-antes-despues\',\'Inspección antes y después\',\'Reporte mensual\')">Inspección antes y después</button>';
+  h+='<button class="btn sec" onclick="abrirDoc(\'registro-evaluaciones\',\'Registro de evaluaciones\',\'Reporte mensual\')">Registro de evaluaciones</button>';
+  h+='<button class="btn" style="margin-top:12px" onclick="ir(\'p-semanal\')">Ver el detalle semanal ▸</button>';
+  c.innerHTML=h;
+}
+
 function pintarSemanal(){
   var sem=$('sm-semana').value, todos=semLocal();
   if(!sem){
@@ -4749,6 +5007,7 @@ function guardarAmonestacion(){
   var tn=($('a-t-nombre').value||'').trim(), d=($('a-desc').value||'').trim();
   if(tn.length<3){ m.textContent='Falta el nombre del trabajador.'; return; }
   if(d.length<10){ m.textContent='Describe lo que pasó, aunque sea en dos líneas.'; return; }
+  if(frenoLite('amonestacion', amonLocal().length, 'amonestación')) return;
   var hoy=new Date();
   var reg={ id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
     fecha:hoy.getFullYear()+'-'+('0'+(hoy.getMonth()+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2),
@@ -5062,6 +5321,7 @@ function pintarKardexExport(){
   $('kx-msg').textContent=''; $('kx-resultado').innerHTML='';
 }
 function exportarKardex(){
+  if(soloConCodigo('Generar el registro de EPP en Excel')) return;
   var mes=$('kx-mes').value, tid=$('kx-trab').value, m=$('kx-msg');
   m.style.color='var(--mal)';
   if(!mes){ m.textContent='Elige el mes.'; return; }
@@ -6755,6 +7015,7 @@ function prepCred(){
 }
 function generarCredencial(){
   var nombre=($('c-nombre').value||'').trim(); if(!nombre){ alert('Nombre del trabajador.'); return; }
+  if(frenoLite('credencial', leer(LS_CRED,[]).length, 'credenciales')) return;
   var e=empActiva()||{nombre:'—', codigo:''};
   var datos={n:nombre, d:($('c-dni').value||'').trim(), c:($('c-cargo').value||'').trim(), v:$('c-vence').value, o:e.nombre};
   var payload=b64u(JSON.stringify(datos));
@@ -6974,7 +7235,7 @@ function codEmpresaNueva(){ var s=''; for(var i=0;i<7;i++){ if(i===3)s+='-'; s+=
 //  (reportes, inspecciones, credenciales) sí viven en la nube por código.
 // =================================================================
 var EMP_ESTRUCTURA = [
-  { g:'Sistema Integrado', ic:'🗂️', sub:'Políticas, IPERC, PETS, comité y más', items:[
+  { g:'Sistema Integrado', ic:'🗂️', sub:'Políticas, IPERC, PETS, comité, certificados y mapas', items:[
       {leaf:'politicas', t:'Políticas'},
       {leaf:'risst', t:'RISST'},
       {leaf:'prog-anual', t:'Programa Anual SST 2026'},
@@ -6985,57 +7246,70 @@ var EMP_ESTRUCTURA = [
       {leaf:'pets', t:'PETS'},
       {leaf:'comite', t:'Comité de Seguridad y Salud en el Trabajo'},
       {leaf:'subcomite', t:'Subcomité de SST'},
-      {leaf:'estandares', t:'Estándares del cliente'} ]},
-  { g:'Sistema Informativo', ic:'📢', sub:'Charlas, amonestaciones, informes y SAR', items:[
-      {subg:'Charlas', items:[
-        {leaf:'cap-especificas', t:'Capacitaciones Específicas Programadas'},
-        {leaf:'charlas-mes', t:'Charlas de 5 minutos del mes'} ]},
-      {leaf:'amonestaciones', t:'Amonestaciones'},
-      {subg:'Informes', items:[
-        {leaf:'informe-semanal', t:'Informe semanal'},
-        {leaf:'informe-mensual', t:'Informe mensual'} ]},
-      {leaf:'reporte-sar', t:'Reporte SAR'} ]},
-  { g:'Medio Ambiente', ic:'🌱', sub:'Aspectos e impactos ambientales', items:[
-      {leaf:'medio-ambiente', t:'Documentos de Medio Ambiente'} ]},
-  { g:'Salud Ocupacional', ic:'🩺', sub:'Exámenes, monitoreos y programa', items:[
-      {leaf:'salud-ocupacional', t:'Documentos de Salud Ocupacional'} ]},
-  { g:'Respuesta Ante Emergencias', ic:'🧯', sub:'Plan y brigadas', items:[
-      {leaf:'plan-emergencia', t:'Plan de Respuesta ante Emergencia'} ]},
-  { g:'Charlas y capacitación', ic:'🗣️', sub:'Lo que se dicta en obra, con su constancia', items:[
+      {leaf:'estandares', t:'Estándares del cliente'},
+      {leaf:'campanas', t:'Campañas'},
+      {subg:'Certificados', items:[
+        {leaf:'cert-andamiero', t:'Certificados de andamieros'},
+        {leaf:'cert-rigger', t:'Certificado de Rigger'},
+        {leaf:'cert-operador', t:'Certificado de Operador'},
+        {leaf:'cert-izaje', t:'Certificado de aparejos de izaje'},
+        {leaf:'cert-extintores', t:'Certificado de extintores'},
+        {libre:'certificados', t:'➕ Agregar otro tipo de certificado'} ]},
+      {libre:'mapa-riesgos', t:'Mapa de Riesgos'} ]},
+
+  { g:'Sistema Informativo', ic:'📢', sub:'Charlas, capacitación, informes y registros de obra', items:[
       {accion:'charlas',      t:'Charlas de 5 minutos'},
-      {accion:'p-programa',   t:'🗓️ Programa de charlas del mes'},
+      {accion:'p-programa',   t:'Programa de charlas del mes'},
       {accion:'p-temas',      t:'Capacitaciones por tema'},
-      {accion:'p-generar',    t:'🎟️ Códigos para mi cuadrilla'},
-      {accion:'p-talleres',   t:'Talleres prácticos'},
-      {leaf:'campanas',       t:'Campañas'},
-      {leaf:'simulacros',     t:'Simulacros'},
-      {leaf:'difusiones',     t:'Difusiones'} ]},
-  { g:'Mi personal', ic:'👷', sub:'Los trabajadores a tu cargo', items:[
-      {accion:'p-trabajadores', t:'Registro de trabajadores'},
-      {accion:'p-estatus',      t:'Estatus del personal'} ]},
-  { g:'Kardex de EPP', ic:'🗃️', sub:'Qué EPP se entregó, a quién y con su firma', items:[
-      {accion:'p-kardex',        t:'Registrar y ver entregas'},
-      {accion:'p-kardex-export', t:'📄 Registro del mes (Excel)'} ]},
-  { g:'Amonestaciones', ic:'📄', sub:'Medida aplicada y las 4 firmas', items:[
-      {accion:'p-amonestaciones', t:'Registrar y ver amonestaciones'} ]},
-  { g:'Reporte semanal', ic:'📊', sub:'HHT y HHC, obreros y staff', items:[
-      {accion:'p-semanal', t:'HHT y HHC del periodo'} ]},
-  { g:'Normas y estadística', ic:'📚', sub:'Marco legal y tus números', items:[
-      {accion:'p-normas',      t:'Biblioteca de normas'},
-      {accion:'p-estadistica', t:'Mi estadística'} ]},
+      {accion:'p-semanal',    t:'Reporte semanal (HHT y HHC)'},
+      {accion:'p-mensual',    t:'Reporte mensual'},
+      {accion:'p-kardex',     t:'Kardex de EPP'},
+      {accion:'p-amonestaciones', t:'Amonestaciones'},
+      {accion:'p-trabajadores',   t:'Mi personal'} ]},
+
+  { g:'Medio Ambiente', ic:'🌱', sub:'PMA, residuos, informes por año y matriz', items:[
+      {leaf:'pma', t:'Plan de Manejo Ambiental (PMA)'},
+      {leaf:'rrss', t:'RRSS · Empresas Operadoras de Residuos Sólidos'},
+      {anio:'ma-informe', t:'Informe de Medio Ambiente', porMes:true},
+      {leaf:'ieaia', t:'Matriz IEAIA'} ]},
+
+  { g:'Salud Ocupacional', ic:'🩺', sub:'Programa, monitoreos, pausas activas y controles', items:[
+      {leaf:'so-programa', t:'Programa de Salud'},
+      {leaf:'so-covid', t:'Plan para la vigilancia, prevención y control de COVID-19'},
+      {leaf:'so-monitoreo', t:'Monitoreo Ocupacional'},
+      {leaf:'so-plan', t:'Plan de Salud Ocupacional'},
+      {subg:'Pausas activas', items:[
+        {foto:'pausas', t:'📸 Agregar foto de pausa activa'},
+        {leaf:'pausas', t:'Ver pausas activas'} ]},
+      {subg:'Controles ocupacionales', items:[
+        {foto:'controles', t:'📸 Agregar foto de control'},
+        {leaf:'controles', t:'Ver controles ocupacionales'} ]} ]},
+
+  { g:'Respuesta Ante Emergencias', ic:'🧯', sub:'Plan, mapas, simulacros, brigadistas y MSDS', items:[
+      {leaf:'plan-emergencia', t:'Plan de Respuesta ante Emergencia'},
+      {libre:'mapa-evacuacion', t:'Mapa de Evacuación'},
+      {anio:'simulacro', t:'Simulacros', porMes:true, porTema:true},
+      {leaf:'brigadistas', t:'Brigadistas'},
+      {leaf:'estacion-emergencia', t:'Estación de Emergencia'},
+      {leaf:'primeros-auxilios', t:'Manual de Primeros Auxilios'},
+      {leaf:'contactos-emergencia', t:'Contactos de emergencia del proyecto'},
+      {accion:'p-msds', t:'Hojas MSDS'} ]},
+
   { g:'Herramientas de obra', ic:'☁️', sub:'En la nube · con el código de la empresa', items:[
       {accion:'p-reporte', t:'🚨 Reportes de actos/condiciones'},
       {accion:'p-inspec', t:'✅ Inspecciones'},
-      {accion:'p-credencial', t:'🪪 Credenciales / QR de acceso'},
-      {accion:'p-empresa', t:'🧴 Hojas MSDS y consolidado'},
-      {accion:'p-puntaje', t:'🏅 Puntaje de los trabajadores'},
-      {accion:'p-normas', t:'📚 Biblioteca de normas'} ]}
+      {accion:'p-petar', t:'📋 PETAR'},
+      {accion:'p-credencial', t:'🪪 Credenciales / QR'},
+      {accion:'p-verificar', t:'🔍 Verificar credencial'},
+      {accion:'p-normas', t:'📚 Biblioteca de normas'},
+      {accion:'p-estadistica', t:'📈 Mi estadística'},
+      {accion:'p-record', t:'⏰ Recordatorios'} ]}
 ];
 function pintarEmpHome(){
   var e=empActiva();
   $('emp-home-tit').textContent = e ? e.nombre : 'Tu empresa';
   $('emp-home-sub').textContent = e ? ('Código: '+e.codigo+' · tu sistema de gestión SST, ordenado.') : 'Entra con tu código.';
-  var c=$('emp-home-cuerpo'); c.innerHTML='';
+  var c=$('emp-home-cuerpo'); c.innerHTML=bandaLiteEmpresa();
   EMP_ESTRUCTURA.forEach(function(g,gi){ c.appendChild(empGrupoDom(g,gi)); });
 }
 function empGrupoDom(g,gi){
@@ -7063,6 +7337,9 @@ function empItemDom(it,ruta){
       ir(it.accion);
     };
   }
+  else if(it.anio){ b.onclick=function(){ abrirAnio(it.anio, it.t, {porMes:it.porMes, porTema:it.porTema}); }; }
+  else if(it.libre){ b.onclick=function(){ abrirLibre(it.libre, it.t); }; }
+  else if(it.foto){ b.onclick=function(){ abrirFoto(it.foto, it.t.replace(/^📸\s*/,'')); }; }
   else { b.onclick=function(){ abrirDoc(it.leaf, it.t, ruta); }; }
   return b;
 }
@@ -7148,6 +7425,8 @@ function guardarDoc(){
   }
   function aLaNube(fileUrl){
     if(!e){ alCelular(fileUrl,'Guardado en este celular (no hay empresa activa).'); return; }
+    var yaHay = (document.querySelectorAll('#doc-lista .tarj')||[]).length;
+    if(frenoLite('doc', yaHay, 'documentos por carpeta')){ msg.textContent=''; return; }
     sbPost('sst_doc',{empresa:e.id, hoja:DOC_LEAF, nombre:nombre, url:fileUrl||url||null, nota:nota||null})
       .then(function(){ msg.style.color='#2f9e6f'; msg.textContent='Guardado y compartido con tu equipo.'; limpiar(); pintarDoc(); })
       .catch(function(){ alCelular(fileUrl); });
