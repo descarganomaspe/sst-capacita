@@ -1121,7 +1121,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <input id="cu-clave" type="password" autocomplete="current-password" placeholder="8 caracteres o más, con letras y números">
   <div id="cu-msg" style="font-size:14px;margin:8px 0"></div>
   <button class="btn" id="cu-btn" onclick="cuentaEnviar()">Entrar ▸</button>
-  <button class="btn sec" onclick="entrarConGoogle()">Continuar con Google</button>
+  <button class="btn sec" id="cu-google" style="display:none" onclick="entrarConGoogle()">Continuar con Google</button>
   <div class="sec-tit" style="margin-top:18px" id="cu-alt-tit">¿Primera vez en OBRASST?</div>
   <button class="btn sec" id="cu-alt" onclick="cuentaCambiarModo()">Crear mi cuenta</button>
   <div class="pie">La cuenta es tuya, no del celular: si cambias de equipo entras igual y tu información sigue ahí. Los trabajadores no necesitan cuenta: entran con el código de la obra.</div>
@@ -1140,6 +1140,31 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="fila-ajustes" style="margin-top:18px">
     <button class="btn sec" onclick="salirDeCuenta()">Cerrar mi cuenta · <span id="me-correo"></span></button>
   </div>
+</section>
+
+<!-- ========== RUC YA REGISTRADO: pedir acceso a quien la tiene ========== -->
+<section class="pantalla" id="p-acceso">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Pedir acceso</span></div>
+  <h2>🔐 Esa empresa ya está registrada</h2>
+  <div id="ac-quien"></div>
+  <p class="sub">Manda tu solicitud. Le llega a quien tiene la empresa y, si te acepta, entras sin que nadie vuelva a cargar nada.</p>
+  <label>Tu nombre y apellido</label>
+  <input id="ac-nombre" placeholder="Marcelo Lamas">
+  <label>Tu cargo</label>
+  <input id="ac-cargo" placeholder="Ingeniero SSOMA">
+  <label>Mensaje — opcional</label>
+  <input id="ac-mensaje" placeholder="Soy el nuevo prevencionista de la obra Torre Lima">
+  <div id="ac-msg" style="font-size:14px;margin:8px 0"></div>
+  <button class="btn" onclick="pedirAcceso()">Pedir acceso ▸</button>
+  <div id="ac-escala"></div>
+</section>
+
+<!-- ========== EL DUEÑO RESPONDE LAS SOLICITUDES ========== -->
+<section class="pantalla" id="p-solicitudes">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Solicitudes</span></div>
+  <h2>🙋 Quieren entrar a tu empresa</h2>
+  <p class="sub">Personas con cuenta que pidieron acceso. Si aceptas, entran como gestores y ven la documentación de la empresa.</p>
+  <div id="sol-lista"></div>
 </section>
 
 <!-- ================= EMPRESA: entrar con el código ================= -->
@@ -1182,6 +1207,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <button class="btn sec" onclick="compartirEmpCod()">Compartir el código</button>
     <button class="btn sec" onclick="ir('p-config')">Envío de resultados</button>
     <button class="btn sec" onclick="pedirCodigo('')">Mi plan / activar código</button>
+    <button class="btn sec" onclick="ir('p-solicitudes')">Solicitudes de acceso</button>
     <button class="btn sec" onclick="salirDeSesion()">Cambiar de empresa</button>
     <button class="btn sec" onclick="salirDeCuenta()">Cerrar mi cuenta</button>
   </div>
@@ -3920,7 +3946,7 @@ var LITE  = {"SST-CON-02":[1,2,6,7],"SST-CON-13":[1,2,5,7],"SST-MIN-02":[1,2,4,7
 /* La lista de códigos válidos ya NO viaja dentro de la app: cualquiera
    podía abrir el archivo y leerla. Ahora vive en el servidor (tabla
    sst_licencia, guardada en sha256) y se comprueba al activar. */
-function pareceLicencia(v){ return /^(SST|OBE)[A-Z0-9]{6}$/.test(_norm(v||'')); }
+function pareceLicencia(v){ return /^(SST|EQS|OBE)[A-Z0-9]{6}$/.test(_norm(v||'')); }
 var SECTORES = [{"id":"construccion","nombre":"Construcción","icono":"🏗️","pie":"Obra, edificación y montaje"},{"id":"mineria","nombre":"Minería","icono":"⛏️","pie":"Interior mina, tajo y planta concentradora"},{"id":"industria","nombre":"Industria","icono":"🏭","pie":"Planta de producción y manufactura"},{"id":"hidrocarburos","nombre":"Hidrocarburos","icono":"🛢️","pie":"Refinería, planta de proceso y almacenamiento"}];
 var FAMILIAS = {"primeros_auxilios":{"titulo":"Primeros auxilios","pregunta":"¿Qué emergencia estás atendiendo?","orden":1},"izaje":{"titulo":"Izaje de cargas","pregunta":"¿Con qué vas a izar?","orden":4},"altura":{"titulo":"Trabajos en altura","pregunta":"¿Cómo trabajas en altura?","orden":5},"caliente":{"titulo":"Trabajos en caliente","pregunta":"¿Qué trabajo en caliente vas a hacer?","orden":8},"fuego":{"titulo":"Uso de extintores","pregunta":"¿Qué se está quemando?","orden":9}};
 var TALLERES = [{"id":"ats","icono":"📋","nombre":"Llenado del ATS","sub":"Análisis de Trabajo Seguro · inicio de jornada","sector":"*","min":8,"intro":"El ATS se llena en obra, en cuadrilla, ANTES de empezar la tarea del día. Aquí practicas cómo llenarlo bien: identificar la tarea, sus peligros, el riesgo y las medidas.","pasos":[{"tipo":"orden","titulo":"El orden del ATS","instru":"Toca los pasos en el orden en que se llena un ATS.","items":["Describir la tarea del día","Identificar los peligros de cada paso","Evaluar el riesgo (probabilidad y severidad)","Definir las medidas de control","Indicar el EPP necesario","Firmar todo el equipo que hará la tarea"]},{"tipo":"elige","titulo":"¿Cuándo se llena?","pregunta":"¿En qué momento se llena el ATS?","ops":["Al final de la jornada, como reporte de lo que se hizo","Al inicio de la jornada, antes de empezar la tarea","Solo cuando ocurre un incidente","Una vez al mes, al inicio de la obra"],"correcta":1,"sustento":"El ATS es preventivo: se llena en campo, con la cuadrilla, antes de iniciar la tarea de ese día."},{"tipo":"marca","titulo":"Peligro, riesgo o medida","instru":"De esta lista, marca solo lo que es un PELIGRO (la fuente que puede dañar).","items":[{"t":"Trabajar al borde de una excavación","mal":true},{"t":"Colocar barandas y línea de vida","mal":false},{"t":"Herramienta eléctrica con cable pelado","mal":true},{"t":"Usar guantes dieléctricos","mal":false},{"t":"Piso con aceite derramado","mal":true}],"nota":"El peligro es la fuente (el borde, el cable pelado, el aceite). La medida es lo que haces para controlarlo."},{"tipo":"elige","titulo":"Cambió la tarea","pregunta":"A media jornada tu cuadrilla pasa a una tarea distinta a la del ATS. ¿Qué haces?","ops":["Sigues con el mismo ATS, total es el mismo día","Llenas un ATS nuevo para la tarea nueva","Lo anotas al reverso y sigues","Esperas al día siguiente"],"correcta":1,"sustento":"Cada tarea tiene sus propios peligros. Si la tarea cambia, se llena un ATS nuevo para esa tarea."}],"cierre":"Ya sabes llenar un ATS: tarea, peligros, riesgo, medidas, EPP y firmas — al inicio, y uno nuevo si la tarea cambia."},{"id":"iperc","icono":"🧩","nombre":"IPERC de línea base","sub":"Identificación de peligros a inicio de obra","sector":"construccion","min":8,"intro":"En construcción, el IPERC que se hace es el de LÍNEA BASE, a inicio de obra. Ojo: el IPERC continuo es de minería (D.S. 024-2016-EM), no de construcción.","pasos":[{"tipo":"elige","titulo":"¿Cuál usa construcción?","pregunta":"En una obra de construcción, ¿qué IPERC corresponde?","ops":["IPERC continuo, por cada guardia","IPERC de línea base, a inicio de obra","No se hace IPERC en construcción","Solo ATS, nunca IPERC"],"correcta":1,"sustento":"Construcción hace IPERC de línea base al inicio de la obra. El IPERC continuo es propio de la actividad minera (D.S. 024-2016-EM)."},{"tipo":"orden","titulo":"Los pasos del IPERC","instru":"Ordena los pasos para evaluar un riesgo en el IPERC.","items":["Identificar el peligro","Estimar la probabilidad de que ocurra","Estimar la severidad del daño","Determinar el nivel de riesgo","Aplicar la jerarquía de controles","Reevaluar el riesgo residual"]},{"tipo":"orden","titulo":"Jerarquía de controles","instru":"Ordena los controles del más eficaz (primero) al menos eficaz (último).","items":["Eliminación","Sustitución","Controles de ingeniería","Controles administrativos","Equipo de protección personal (EPP)"]},{"tipo":"elige","titulo":"El EPP","pregunta":"¿Qué lugar ocupa el EPP en la jerarquía de controles?","ops":["El primero: es lo más importante","El último: es la última barrera, no la primera","No es un control","Reemplaza a los demás controles"],"correcta":1,"sustento":"El EPP es la última barrera. Primero se elimina o controla el peligro en la fuente; el EPP protege a la persona cuando el riesgo no pudo eliminarse."}],"cierre":"IPERC de línea base a inicio de obra, jerarquía de controles con el EPP al final, y el continuo es de minería."},{"id":"residuos","icono":"♻️","nombre":"Segregación de residuos","sub":"Código de colores en obra","sector":"*","min":6,"intro":"Segregar bien es separar cada residuo en su recipiente. Practica el código de colores que se usa en obra (base NTP 900.058).","pasos":[{"tipo":"elige","titulo":"El trapo con aceite","pregunta":"Un trapo impregnado con aceite o solvente, ¿en qué tacho va?","ops":["Verde (aprovechable)","Negro (común)","Rojo (peligroso)","Marrón (orgánico)"],"correcta":2,"sustento":"Todo lo contaminado con hidrocarburos o químicos es residuo peligroso: va al tacho rojo."},{"tipo":"elige","titulo":"La botella de plástico","pregunta":"Una botella de plástico limpia, ¿dónde va?","ops":["Rojo (peligroso)","Amarillo / verde (reaprovechable)","Rojo, por si acaso","Se deja en el suelo"],"correcta":1,"sustento":"El plástico limpio es reaprovechable/reciclable. El rojo es solo para residuos peligrosos."},{"tipo":"marca","titulo":"Al tacho rojo","instru":"Marca lo que SÍ es residuo peligroso (tacho rojo).","items":[{"t":"Envase de pintura o solvente","mal":true},{"t":"Cartón limpio","mal":false},{"t":"Guantes impregnados de químico","mal":true},{"t":"Waipe / trapo con grasa","mal":true},{"t":"Restos de comida","mal":false}],"nota":"Peligroso = contaminado con químicos, hidrocarburos, pilas, aerosoles. Lo demás va a su color."}],"cierre":"Peligroso al rojo, reaprovechable a su color, y nada de mezclar. Segregar bien empieza en tu puesto."},{"id":"rotomartillo","icono":"🔩","nombre":"Uso del rotomartillo","sub":"Herramienta eléctrica manual","sector":"construccion","min":6,"intro":"El rotomartillo es útil pero castiga: proyecciones, atrapamiento y vibración. Practica el uso seguro paso a paso.","pasos":[{"tipo":"orden","titulo":"Antes y durante","instru":"Ordena el uso seguro del rotomartillo.","items":["Ponerte el EPP (lentes, guantes, protección auditiva, respirador si hay polvo)","Inspeccionar el equipo, el cable y la broca","Asegurar la pieza y tomar postura firme con las dos manos","Perforar con presión constante, sin forzar","Apagar y desconectar antes de dejarlo"]},{"tipo":"marca","titulo":"Lo que NO se hace","instru":"Marca las prácticas INSEGURAS.","items":[{"t":"Operar con una sola mano","mal":true},{"t":"Usar lentes de seguridad","mal":false},{"t":"Trabajar con la broca gastada o rajada","mal":true},{"t":"Desconectar jalando del cable","mal":true},{"t":"Revisar el cable antes de enchufar","mal":false}],"nota":"Dos manos, broca en buen estado, y se desconecta del enchufe, nunca jalando el cable."},{"tipo":"elige","titulo":"El polvo","pregunta":"Al perforar concreto se levanta mucho polvo de sílice. ¿Qué haces?","ops":["Nada, es normal","Uso respirador y, si se puede, perforación con agua o captación de polvo","Aguanto la respiración","Solo me alejo un poco"],"correcta":1,"sustento":"El polvo de sílice daña el pulmón (silicosis). Respirador adecuado y control del polvo en la fuente."}],"cierre":"EPP puesto, equipo inspeccionado, dos manos, control del polvo, y se desconecta del enchufe."},{"id":"andamio","icono":"🏗️","nombre":"Montaje de andamio","sub":"Armado, uso y desmontaje","sector":"construccion","min":8,"intro":"Un andamio mal armado es una caída esperando ocurrir. Practica el armado seguro y aprende a reconocer cuándo NO se debe subir.","pasos":[{"tipo":"orden","titulo":"El armado","instru":"Ordena el montaje seguro del andamio.","items":["Nivelar y apoyar la base sobre terreno firme","Armar los cuerpos y colocar los arriostres","Instalar la plataforma completa y sin huecos","Colocar barandas y rodapié","Instalar el acceso (escalera interna)","Inspeccionar y colocar la tarjeta de habilitación"]},{"tipo":"marca","titulo":"No subas si...","instru":"Marca las condiciones por las que NO se debe subir al andamio.","items":[{"t":"Le faltan arriostres","mal":true},{"t":"Tiene tarjeta verde de inspección vigente","mal":false},{"t":"La plataforma está incompleta","mal":true},{"t":"No tiene barandas","mal":true},{"t":"La base está nivelada y firme","mal":false}],"nota":"Sin arriostres, sin baranda o con plataforma incompleta: no se sube. La tarjeta verde habilita, la roja bloquea."},{"tipo":"elige","titulo":"La tarjeta","pregunta":"El andamio tiene tarjeta ROJA. ¿Qué significa?","ops":["Está listo para usar","No está habilitado: no se debe usar","Solo lo usa el capataz","Se puede usar con cuidado"],"correcta":1,"sustento":"Tarjeta roja = andamio NO habilitado (en armado, incompleto o observado). Solo se sube con tarjeta verde vigente."}],"cierre":"Base firme, arriostres, plataforma completa, barandas, acceso e inspección. Y solo se sube con tarjeta verde."}];
@@ -4072,7 +4098,7 @@ var COL_OK={'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos'
             'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1};
 /* la empresa: su inicio ordenado, las carpetas de documentos y las herramientas
    de obra que sí se comparten en la nube (reportes, inspecciones, credenciales, MSDS…) */
-var EMP_OK={'p-rol':1,'p-cuenta':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-emp-home':1,'p-doc':1,
+var EMP_OK={'p-rol':1,'p-cuenta':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-solicitudes':1,'p-emp-home':1,'p-doc':1,
             'p-reporte':1,'p-reporte-nuevo':1,'p-inspec':1,'p-inspec-nueva':1,
             'p-petar':1,'p-petar-nuevo':1,'p-credencial':1,'p-cred-nueva':1,'p-verificar':1,
             'p-empresa':1,'p-msds':1,'p-msds-nueva':1,'p-puntaje':1,'p-puntaje-nuevo':1,
@@ -4145,7 +4171,7 @@ function ir(p){
    El trabajador (ROL 'col') no pasa por ninguna de las dos: entra con
    el código de su obra y solo llega a sus pantallas. */
 var SIN_CUENTA={'p-rol':1,'p-cuenta':1};
-var SIN_EMPRESA={'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1};
+var SIN_EMPRESA={'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1};
 function _ir(p){
   if(EV && !EV_OK[p]) p='p-eval';
   else if(ROL!=='col' && !SIN_CUENTA[p] && !hayCuenta()){
@@ -4175,6 +4201,7 @@ function _ir(p){
   if(p==='p-normas')pintarNormas();
   if(p==='p-emp-home')pintarEmpHome(); if(p==='p-doc')pintarDoc();
   if(p==='p-mis-empresas')cargarMisEmpresas(); if(p==='p-cuenta')prepCuenta();
+  if(p==='p-solicitudes')cargarSolicitudes();
   if(p==='p-trabajadores')pintarTrabajadores(); if(p==='p-trab-nuevo')prepTrabajador();
   if(p==='p-kardex')pintarKardex(); if(p==='p-kardex-nuevo')prepKardex();
   if(p==='p-kardex-export')pintarKardexExport(); if(p==='p-empleador')cargarEmpleador();
@@ -4218,11 +4245,27 @@ function _hh(s){s=_norm(s);var h1=5381,h2=52711;for(var i=0;i<s.length;i++){var 
    queda amarrada a la empresa (tabla sst_licencia) y aqui solo guardamos
    la ultima respuesta para que la app siga funcionando sin internet. */
 var LS_PLAN='sstc_plan';
-function planLocal(){ var p=leer(LS_PLAN,null); return p&&p.plan ? p : {plan:'lite',tope_obras:1,tope_gestores:1,licencia:false}; }
-function libre(){ var p=planLocal().plan; return p==='supervisor' || p==='empresa'; }
-function planEsEmpresa(){ return planLocal().plan==='empresa'; }
-function nombreDelPlan(){ var p=planLocal().plan;
-  return p==='empresa' ? 'Empresa' : (p==='supervisor' ? 'Supervisor' : 'LITE'); }
+var TOPE_EQUIPO = 8;   // el plan Equipo SSOMA trae 8 gestores; los demas se pagan aparte
+function planLocal(){ var p=leer(LS_PLAN,null); return p&&p.plan ? p : {plan:'lite',tope_obras:1,tope_gestores:1}; }
+/* La licencia dura 30 dias y se renueva con otro codigo. La fecha viaja
+   guardada en el celular, asi que el tope se respeta aunque no haya senal. */
+function planVigente(){
+  var p=planLocal();
+  if(!p.plan || p.plan==='lite') return false;
+  if(p.vence && String(p.vence).slice(0,10) < hoyISO()) return false;
+  return true;
+}
+function diasParaVencer(){
+  var p=planLocal(); if(!p.vence) return null;
+  var a=new Date(String(p.vence).slice(0,10)+'T00:00:00'), b=new Date(hoyISO()+'T00:00:00');
+  return Math.round((a-b)/86400000);
+}
+function libre(){ return planVigente(); }
+function planEsEquipo(){ return planVigente() && planLocal().plan==='equipo'; }
+function nombreDelPlan(){
+  if(!planVigente()) return 'LITE';
+  return planLocal().plan==='equipo' ? 'Equipo SSOMA' : 'Supervisor SSOMA';
+}
 function refrescarPlan(){
   var e=empActiva();
   if(!e || !hayCuenta()) return Promise.resolve(planLocal());
@@ -4558,10 +4601,11 @@ function activar(){
       S.lite=false;
       return refrescarPlan().then(function(){
         m.style.color='var(--ok)';
-        m.textContent = (j.plan==='empresa')
-          ? 'Listo: plan Empresa activo. Ya puedes sumar a tu equipo con el código de la empresa.'
-          : 'Listo: plan Supervisor activo. Se abrió todo para ti.';
-        setTimeout(function(){ ir('p-emp-home'); },1000);
+        var hasta = j.vence ? ' Vence el '+fechaLarga(String(j.vence).slice(0,10))+'.' : '';
+        m.textContent = (j.plan==='equipo')
+          ? 'Listo: Equipo SSOMA activo, hasta '+TOPE_EQUIPO+' personas.'+hasta
+          : 'Listo: Supervisor SSOMA activo, todo abierto para ti.'+hasta;
+        setTimeout(function(){ ir('p-emp-home'); },1400);
       });
     }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo verificar (¿sin internet?). '+err; });
     return;
@@ -4799,13 +4843,23 @@ function soloConCodigo(queCosa){
 }
 /* la banda de arriba en el inicio de la empresa */
 function bandaLiteEmpresa(){
-  var pl=planLocal();
-  if(pl.plan==='empresa'){
-    return '<div class="aviso" style="border-color:rgba(47,158,111,.35)">✓ <b>Plan Empresa</b> — todo abierto, y tu equipo de gestión entra con el código de la empresa.</div>';
+  var pl=planLocal(), d=diasParaVencer();
+  var aviso = (d!==null && d<=7 && planVigente())
+    ? '<div style="margin-top:9px;color:var(--mal);font-weight:600">⏳ '+(d<=0?'Vence hoy.':'Te quedan '+d+' día'+(d===1?'':'s')+'.')+' Renueva con un código nuevo o vuelves a la versión de muestra.</div>'+
+      '<div style="margin-top:7px"><button class="btn sec" style="margin:0" onclick="pedirCodigo(\'\')">Renovar con un código</button></div>'
+    : '';
+  if(planEsEquipo()){
+    return '<div class="aviso" style="border-color:rgba(47,158,111,.35)">✓ <b>Equipo SSOMA</b> — todo abierto, y tu equipo entra con el código de la empresa (hasta '+TOPE_EQUIPO+' personas).'+
+      (pl.vence? '<br><span style="color:var(--gris)">Vence el '+fechaLarga(String(pl.vence).slice(0,10))+'.</span>':'')+aviso+'</div>';
   }
-  if(pl.plan==='supervisor'){
-    return '<div class="aviso" style="border-color:rgba(47,158,111,.35)">✓ <b>Plan Supervisor</b> — todo abierto para ti. Es de una sola persona: si tu equipo también tiene que entrar, hace falta el plan Empresa.'+
-      '<div style="margin-top:9px"><button class="btn sec" style="margin:0" onclick="pedirCodigo(\'\')">Tengo un código del plan Empresa</button></div></div>';
+  if(planVigente()){
+    return '<div class="aviso" style="border-color:rgba(47,158,111,.35)">✓ <b>Supervisor SSOMA</b> — todo abierto para ti. Es de una sola persona: si tu equipo también tiene que entrar, hace falta <b>Equipo SSOMA</b>.'+
+      (pl.vence? '<br><span style="color:var(--gris)">Vence el '+fechaLarga(String(pl.vence).slice(0,10))+'.</span>':'')+aviso+
+      '<div style="margin-top:9px"><button class="btn sec" style="margin:0" onclick="pedirCodigo(\'\')">Tengo un código de Equipo SSOMA</button></div></div>';
+  }
+  if(pl.plan && pl.plan!=='lite' && pl.vence){
+    return '<div class="aviso rojo" style="border-color:rgba(210,86,79,.5)">⏳ <b>Tu acceso venció</b> el '+fechaLarga(String(pl.vence).slice(0,10))+'. Tus documentos siguen ahí; volvieron los topes de la versión de muestra.'+
+      '<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="pedirCodigo(\'\')">Renovar con un código</button></div></div>';
   }
   var T=LITE_TOPES;
   return '<div class="aviso">🎁 <b>Versión de muestra</b> — puedes probarlo todo con tope: '+
@@ -7995,8 +8049,8 @@ function pintarMisEmpresas(){
     return;
   }
   c.innerHTML = MIS_EMP.map(function(e,i){
-    var pl = e.plan==='empresa' ? 'plan Empresa' : (e.plan==='supervisor' ? 'plan Supervisor' : 'versión LITE');
-    var eq = (e.plan==='empresa') ? (e.gestores||1)+' de '+(e.tope_gestores||99)+' gestores' : 'solo tú';
+    var pl = e.plan==='equipo' ? 'Equipo SSOMA' : (e.plan==='supervisor' ? 'Supervisor SSOMA' : 'versión LITE');
+    var eq = (e.plan==='equipo') ? (e.gestores||1)+' de '+(e.tope_gestores||TOPE_EQUIPO)+' gestores' : 'solo tú';
     return '<button class="btn sec" style="text-align:left;line-height:1.35" onclick="abrirEmpresaDeLaLista('+i+')">'+
       '<b>'+esc(e.nombre)+'</b><br><small style="opacity:.75">Código '+esc(e.codigo)+' · '+pl+' · '+eq+
       ' · '+(e.rol==='dueno'?'eres el dueño':'gestor')+'</small></button>';
@@ -8005,10 +8059,100 @@ function pintarMisEmpresas(){
 function abrirEmpresaDeLaLista(i){
   var e=MIS_EMP[i]; if(!e) return;
   abrirSesion(correoCuenta(), {codigo:e.codigo, id:e.id, nombre:e.nombre});
-  guardar(LS_PLAN,{plan:e.plan||'lite', tope_obras:1, tope_gestores:e.tope_gestores||1, licencia:(e.plan&&e.plan!=='lite')});
+  guardar(LS_PLAN,{plan:e.plan||'lite', vence:e.vence||null, tope_obras:1, tope_gestores:e.tope_gestores||1});
   ROL='emp'; guardar(LS_ROL,'emp'); HIST=[];
   refrescarPlan();
   ir('p-emp-home');
+}
+
+// =================================================================
+//  EL RUC HUERFANO
+//  Alguien probo la app con el RUC de su empresa, se fue, y nadie mas
+//  puede registrarla. Antes eso era el final del camino. Ahora se ve
+//  quien la tiene y hace cuanto que no entra, y se le pide acceso.
+// =================================================================
+var AC_RUC='', AC_COD='', AC_INFO=null;
+var SOPORTE='descarganomaspe@gmail.com';
+function prepAcceso(){
+  var c=$('ac-quien'), e=$('ac-escala');
+  if(c) c.innerHTML='<p class="sub">Buscando quién la tiene…</p>';
+  if(e) e.innerHTML='';
+  $('ac-msg').textContent='';
+  sbRpc('sst_quien_tiene',{p_ruc:AC_RUC||null, p_cod:AC_COD||null}).then(function(j){
+    AC_INFO=j;
+    if(!j || !j.existe){ if(c) c.innerHTML='<div class="aviso">No encontramos esa empresa.</div>'; return; }
+    if(j.soy_miembro){ if(c) c.innerHTML='<div class="aviso">Ya estás dentro de «'+esc(j.nombre)+'».</div>'; return; }
+    var d=j.dias_sin_entrar;
+    var cuando = (d===null||d===undefined) ? 'nunca ha vuelto a entrar'
+               : (d<=1 ? 'entró hoy' : 'no entra hace '+d+' día'+(d===1?'':'s'));
+    if(c) c.innerHTML='<div class="aviso"><b>'+esc(j.nombre)+'</b><br>'+
+      'La tiene <b>'+esc(j.dueno||'—')+'</b> · '+cuando+'.</div>';
+    if(j.abandonada && e){
+      e.innerHTML='<div class="aviso rojo" style="border-left-color:var(--mal)"><b>Parece abandonada.</b>'+
+        '<p style="margin:6px 0 0;font-size:15px">Quien la registró no entra hace tiempo. Manda igual tu solicitud, y si en unos días nadie responde, escríbenos a <b>'+SOPORTE+'</b> con el RUC y una constancia de que trabajas ahí: te la traspasamos con toda la documentación adentro.</p></div>';
+    }
+  }).catch(function(){ if(c) c.innerHTML='<div class="aviso">No se pudo consultar (¿sin internet?).</div>'; });
+}
+function pedirAcceso(){
+  var m=$('ac-msg'); m.style.color='var(--mal)';
+  if(!hayCuenta()){ ir('p-cuenta'); return; }
+  var nombre=($('ac-nombre').value||'').trim();
+  if(!nombre){ m.textContent='Escribe tu nombre para que sepan quién eres.'; return; }
+  m.style.color='var(--gris)'; m.textContent='Enviando…';
+  sbRpc('sst_pedir_acceso',{p_ruc:AC_RUC||null, p_cod:AC_COD||null, p_nombre:nombre,
+      p_cargo:($('ac-cargo').value||'').trim(), p_mensaje:($('ac-mensaje').value||'').trim()})
+   .then(function(j){
+     if(!j || !j.ok){ m.style.color='var(--mal)'; m.textContent = (j&&j.motivo==='no_existe')?'No encontramos esa empresa.':'No se pudo enviar.'; return; }
+     if(j.ya_eres_miembro){
+       abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.id, nombre:j.nombre});
+       ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; refrescarPlan(); ir('p-emp-home'); return;
+     }
+     m.style.color='var(--ok)';
+     m.innerHTML='✓ Solicitud enviada a <b>'+esc(j.dueno||'quien la tiene')+'</b>. Cuando te acepte, la empresa te aparecerá en «¿dónde vas a trabajar hoy?».';
+   }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo enviar (¿sin internet?). '+err; });
+}
+
+// ---- el dueño responde ----
+var SOLS=[];
+function cargarSolicitudes(){
+  var e=empActiva(), c=$('sol-lista'); if(!e||!c) return;
+  c.innerHTML='<p class="sub">Buscando…</p>';
+  sbRpc('sst_solicitudes',{p_emp:e.id}).then(function(rows){
+    SOLS=rows||[];
+    if(!SOLS.length){ c.innerHTML='<div class="aviso">No hay solicitudes pendientes.</div>'; return; }
+    c.innerHTML=SOLS.map(function(s,i){
+      return '<div class="aviso"><b>'+esc(s.nombre||s.correo||'—')+'</b>'+
+        (s.cargo?' · '+esc(s.cargo):'')+'<br><span style="color:var(--gris)">'+esc(s.correo||'')+'</span>'+
+        (s.mensaje?'<p style="margin:6px 0 0;font-size:15px">«'+esc(s.mensaje)+'»</p>':'')+
+        '<div style="display:flex;gap:8px;margin-top:10px">'+
+        '<button class="btn" style="margin:0" onclick="responderSolicitud('+i+',true)">Aceptar</button>'+
+        '<button class="btn sec" style="margin:0" onclick="responderSolicitud('+i+',false)">Rechazar</button></div></div>';
+    }).join('');
+  }).catch(function(){ c.innerHTML='<div class="aviso">No se pudo consultar (¿sin internet?).</div>'; });
+}
+function responderSolicitud(i, ok){
+  var s=SOLS[i]; if(!s) return;
+  if(!ok && !confirm('¿Rechazar a '+(s.nombre||s.correo)+'?')) return;
+  sbRpc('sst_responder_solicitud',{p_id:s.id, p_aceptar:!!ok}).then(function(j){
+    if(!j || !j.ok){
+      alert(j && j.motivo==='tope_gestores'
+        ? 'Ya tienes ocupados tus '+(j.tope||1)+' puestos. Para sumar a alguien más hace falta pagar un puesto extra.'
+        : 'No se pudo.');
+      return;
+    }
+    cargarSolicitudes();
+  }).catch(function(err){ alert('No se pudo ('+err+').'); });
+}
+
+// ---- ¿está encendido el login con Google? ----
+var GOOGLE_OK=false;
+function verProveedores(){
+  fetch(SB.url+'/auth/v1/settings',{headers:{'apikey':SB.key}})
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      GOOGLE_OK = !!(j && j.external && j.external.google);
+      var b=$('cu-google'); if(b) b.style.display = GOOGLE_OK ? '' : 'none';
+    }).catch(function(){});
 }
 
 // ---- entrar a una empresa con su código (quedo registrado como gestor) ----
@@ -8021,17 +8165,24 @@ function entrarEmpresaCorreo(){
   sbRpc('sst_unirme',{p_cod:cod}).then(function(j){
     if(!j || !j.ok){
       m.style.color='var(--mal)';
+      if(j && j.motivo==='tope_gestores'){
+        m.style.color='var(--mal)';
+        m.innerHTML = (j.plan==='equipo' || j.tope>1)
+          ? '«'+esc(j.empresa||'Esa empresa')+'» ya tiene sus <b>'+j.tope+'</b> gestores ocupados. Para sumar a alguien más, el dueño ('+esc(j.dueno||'—')+') tiene que pagar un puesto extra.'
+          : '«'+esc(j.empresa||'Esa empresa')+'» está en <b>Supervisor SSOMA</b>, que es de una sola persona. Para que entre tu equipo, el dueño ('+esc(j.dueno||'—')+') tiene que pasar a <b>Equipo SSOMA</b>.';
+        AC_COD=cod; AC_RUC='';
+        m.innerHTML += '<div style="margin-top:9px"><button class="btn sec" style="margin:0" onclick="ir(\'p-acceso\');prepAcceso()">Pedirle acceso de todos modos</button></div>';
+        return;
+      }
       m.textContent = (j&&j.motivo==='codigo_no_existe') ? 'Ese código no existe. Revísalo.'
-        : (j&&j.motivo==='tope_gestores')
-          ? '«'+esc(j.empresa||'Esa empresa')+'» está en el plan Supervisor, que es de una sola persona. Para que entre tu equipo, el dueño tiene que pasar al plan Empresa.'
         : (j&&j.motivo==='sin_sesion') ? 'Entra a tu cuenta primero.'
         : 'No se pudo entrar.';
       return;
     }
     abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.id, nombre:j.nombre});
-    guardar(LS_PLAN,{plan:j.plan||'lite', tope_obras:1, tope_gestores:1, licencia:(j.plan&&j.plan!=='lite')});
+    guardar(LS_PLAN,{plan:'lite', vence:null, tope_obras:1, tope_gestores:1});
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; MIS_EMP=[];
-    refrescarPlan();
+    refrescarPlan().then(function(){ if(typeof pintarEmpHome==='function') pintarEmpHome(); });
     ir('p-emp-home');
   }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo buscar (¿sin internet?). '+err; });
 }
@@ -8046,16 +8197,20 @@ function crearEmpresaCorreo(){
   m.style.color='var(--gris)'; m.textContent='Creando…';
   sbRpc('sst_crear_empresa',{p_nombre:nombre, p_ruc:ruc||null, p_plan:'lite'}).then(function(j){
     if(!j || !j.ok){
+      if(j && j.motivo==='ruc_ya_registrado'){
+        m.style.color='var(--gris)'; m.textContent='Esa empresa ya existe. Te llevo a pedir acceso…';
+        AC_RUC=ruc; AC_COD='';
+        setTimeout(function(){ ir('p-acceso'); prepAcceso(); }, 700);
+        return;
+      }
       m.style.color='var(--mal)';
-      m.textContent = (j&&j.motivo==='ruc_ya_registrado')
-          ? 'Ese RUC ya está registrado como «'+esc(j.empresa||'otra empresa')+'». Pídele el código a quien la creó y entra con él: así la documentación no queda partida en dos.'
-        : (j&&j.motivo==='ruc_invalido') ? 'El RUC tiene 11 dígitos.'
+      m.textContent = (j&&j.motivo==='ruc_invalido') ? 'El RUC tiene 11 dígitos.'
         : (j&&j.motivo==='sin_sesion') ? 'Entra a tu cuenta primero.'
         : 'No se pudo crear.';
       return;
     }
     abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.id, nombre:j.nombre});
-    guardar(LS_PLAN,{plan:'lite', tope_obras:1, tope_gestores:1, licencia:false});
+    guardar(LS_PLAN,{plan:'lite', vence:null, tope_obras:1, tope_gestores:1});
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; MIS_EMP=[];
     alert('Empresa creada.\nTu código es: '+j.codigo+'\nGuárdalo: con él entra tu equipo de gestión y con él entran tus trabajadores a las charlas.');
     ir('p-emp-home');
@@ -8548,6 +8703,7 @@ function siguienteTrabajador(){
 (function(){
   // 0) ¿vuelve de Google con el token en la dirección?
   try{ recogerTokenDeLaUrl(); }catch(e){}
+  try{ verProveedores(); }catch(e){}
   // 1) ¿vino por un enlace con código adentro?
   var mk=(location.search||'').match(/[?&]k=([A-Za-z0-9_%.~-]+)/);
   if(mk){
