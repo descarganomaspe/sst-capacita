@@ -8107,22 +8107,15 @@ function pintarEmpresa(){
 }
 function crearEmpresa(){
   var nombre=($('e-nombre').value||'').trim();
-  if(!nombre){ alert('Ponle nombre a tu empresa u obra.'); return; }
-  var cod=codEmpresaNueva();
-  $('emp-msg').textContent='Creando…';
-  sbPost('sst_empresa',{codigo:cod, nombre:nombre, tipo:'empresa'})
-    .then(function(){ return sbRpc('sst_resolver',{cod:cod}); })
-    .then(function(rows){ var e=rows[0]; abrirSesion(leer('sstc_emp_correo','')||'sin-correo', {codigo:cod, id:e.id, nombre:nombre}); pintarEmpresa(); })
-    .catch(function(err){ $('emp-msg').style.color='#d2564f'; $('emp-msg').textContent='No se pudo crear (¿sin internet?). Código '+err+'.'; });
+  /* la pantalla vieja de «mi empresa» ya no crea nada por su cuenta:
+     todo pasa por la cuenta y por el servidor, que es donde se controla. */
+  if(nombre && $('emp-nombre-in')) $('emp-nombre-in').value=nombre;
+  ir(hayCuenta() ? 'p-emp-crear' : 'p-cuenta');
 }
 function entrarEmpresa(){
-  var cod=_norm(($('e-codigo').value||'')); if(cod.length>=6){ cod=cod.slice(0,3)+'-'+cod.slice(3,6); }
-  if(!cod){ alert('Escribe el código.'); return; }
-  $('emp-msg').textContent='Buscando…';
-  sbRpc('sst_resolver',{cod:cod}).then(function(rows){
-    if(!rows.length){ $('emp-msg').style.color='#d2564f'; $('emp-msg').textContent='Ese código no existe. Revísalo.'; return; }
-    var e=rows[0]; guardar(LS_EMP,{codigo:cod, id:e.id, nombre:e.nombre}); pintarEmpresa();
-  }).catch(function(err){ $('emp-msg').style.color='#d2564f'; $('emp-msg').textContent='No se pudo buscar (¿sin internet?). '+err; });
+  var cod=($('e-codigo')?$('e-codigo').value:'')||'';
+  if(cod && $('emp-cod-in')) $('emp-cod-in').value=cod;
+  ir(hayCuenta() ? 'p-emp-entrar' : 'p-cuenta');
 }
 function salirEmpresa(){ if(confirm('¿Salir de esta empresa? El código no se borra, puedes volver a entrar.')){ borrar(LS_EMP); pintarEmpresa(); } }
 function compartirEmpresa(){
