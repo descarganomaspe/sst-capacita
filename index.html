@@ -1122,6 +1122,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div id="cu-msg" style="font-size:14px;margin:8px 0"></div>
   <button class="btn" id="cu-btn" onclick="cuentaEnviar()">Entrar ▸</button>
   <button class="btn sec" id="cu-google" style="display:none" onclick="entrarConGoogle()">Continuar con Google</button>
+  <button class="btn sec" id="cu-olvide" onclick="pedirRecuperacion()" style="margin-top:4px">¿Olvidaste tu contraseña?</button>
   <div class="sec-tit" style="margin-top:18px" id="cu-alt-tit">¿Primera vez en OBRASST?</div>
   <button class="btn sec" id="cu-alt" onclick="cuentaCambiarModo()">Crear mi cuenta</button>
   <div class="pie">La cuenta es tuya, no del celular: si cambias de equipo entras igual y tu información sigue ahí. Los trabajadores no necesitan cuenta: entran con el código de la obra.</div>
@@ -1140,6 +1141,19 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="fila-ajustes" style="margin-top:18px">
     <button class="btn sec" onclick="salirDeCuenta()">Cerrar mi cuenta · <span id="me-correo"></span></button>
   </div>
+</section>
+
+<!-- ========== CONTRASEÑA NUEVA (viene del correo de recuperación) ========== -->
+<section class="pantalla" id="p-clave-nueva">
+  <div class="marca">◆ OBRASST</div>
+  <h1>Pon tu<br>contraseña nueva.</h1>
+  <p class="sub">Entraste desde el enlace que te llegó al correo. Escribe la contraseña que vas a usar de ahora en adelante.</p>
+  <label>Contraseña nueva</label>
+  <input id="cn-clave" type="password" autocomplete="new-password" placeholder="8 caracteres o más, con letras y números">
+  <label>Repítela</label>
+  <input id="cn-clave2" type="password" autocomplete="new-password" placeholder="La misma">
+  <div id="cn-msg" style="font-size:14px;margin:8px 0"></div>
+  <button class="btn" onclick="guardarClaveNueva()">Guardar y entrar ▸</button>
 </section>
 
 <!-- ========== RUC YA REGISTRADO: pedir acceso a quien la tiene ========== -->
@@ -4019,7 +4033,7 @@ function entrarConGoogle(){
    fallo (proveedor a medio configurar, permiso rechazado), Google/Supabase
    devuelven un error ahi mismo: se lo decimos en cristiano y no lo dejamos
    mirando una pantalla en blanco. */
-var AVISO_GOOGLE='';
+var AVISO_GOOGLE='', RECUPERANDO=false;
 function recogerTokenDeLaUrl(){
   var h = location.hash || '', q = location.search || '';
   if(/[#&?]error/.test(h) || /[?&]error/.test(q)){
@@ -4042,6 +4056,7 @@ function recogerTokenDeLaUrl(){
     var i=par.indexOf('='); if(i>0) d[par.slice(0,i)]=decodeURIComponent(par.slice(i+1));
   });
   if(!d.access_token) return false;
+  if((d.type||'')==='recovery') RECUPERANDO = true;
   TOK = { access_token:d.access_token, refresh_token:d.refresh_token||'',
           expira: Date.now() + ((parseInt(d.expires_in,10)||3600)-60)*1000, correo:'', uid:'' };
   try{ localStorage.setItem(LS_TOK, JSON.stringify(TOK)); }catch(e){}
@@ -4117,7 +4132,7 @@ var COL_OK={'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos'
             'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1};
 /* la empresa: su inicio ordenado, las carpetas de documentos y las herramientas
    de obra que sí se comparten en la nube (reportes, inspecciones, credenciales, MSDS…) */
-var EMP_OK={'p-rol':1,'p-cuenta':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-solicitudes':1,'p-emp-home':1,'p-doc':1,
+var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
             'p-reporte':1,'p-reporte-nuevo':1,'p-inspec':1,'p-inspec-nueva':1,
             'p-petar':1,'p-petar-nuevo':1,'p-credencial':1,'p-cred-nueva':1,'p-verificar':1,
             'p-empresa':1,'p-msds':1,'p-msds-nueva':1,'p-puntaje':1,'p-puntaje-nuevo':1,
@@ -4189,9 +4204,15 @@ function ir(p){
    2) ¿eligió EMPRESA? con cuenta pero sin empresa, va a elegirla.
    El trabajador (ROL 'col') no pasa por ninguna de las dos: entra con
    el código de su obra y solo llega a sus pantallas. */
-var SIN_CUENTA={'p-rol':1,'p-cuenta':1};
+var SIN_CUENTA={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1};
 var SIN_EMPRESA={'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1};
 function _ir(p){
+  /* A los temas no se entra sin sector: antes se colaba con el primero de la
+     lista y el supervisor de minería veía preguntas de construcción. */
+  if((p==='p-temas' || p==='p-inicio') && typeof haySector==='function' && !haySector()){
+    SECTOR_VUELVE = (p==='p-inicio') ? 'p-inicio' : 'p-temas';
+    p='p-sector';
+  }
   if(EV && !EV_OK[p]) p='p-eval';
   else if(ROL!=='col' && !SIN_CUENTA[p] && !hayCuenta()){
     p='p-cuenta';
@@ -4318,7 +4339,16 @@ function sectorDe(id){ for(var i=0;i<SECTORES.length;i++) if(SECTORES[i].id===id
 // los del sector elegido MÁS los transversales, que salen en los cuatro
 function temasDelSector(){ return Object.keys(TEMAS).filter(function(id){
   return TEMAS[id].sector===S.sector || TEMAS[id].sector==='*'; }); }
-function elegirSector(id){ S.sector=id; guardar(LS.sec,id); ir('p-inicio'); }
+var SECTOR_VUELVE='';
+function elegirSector(id){
+  S.sector=id; guardar(LS.sec,id);
+  var d=SECTOR_VUELVE || 'p-inicio'; SECTOR_VUELVE='';
+  ir(d);
+}
+function haySector(){
+  var g=leer(LS.sec,null);
+  return !!(g && typeof temasDelSectorExiste==='function' && temasDelSectorExiste(g));
+}
 function pintarSectores(){
   var c=$('lista-sectores'); c.innerHTML='';
   SECTORES.forEach(function(s){
@@ -4345,8 +4375,8 @@ function pintarInicio(){
     $('banda-lite').innerHTML='🗓️ <b>Código del mes activo</b> hasta el '+fechaLarga(m.v)+
       ': tienes el programa de tu obra y el guion de sus charlas.';
   }
-  var bg=$('b-gen'); if(bg) bg.style.display=libre()?'':'none';
-  var sc=$('sec-cuadrilla'); if(sc) sc.style.display=libre()?'':'none';
+  var bg=$('b-gen'); if(bg) bg.style.display='';
+  var sc=$('sec-cuadrilla'); if(sc) sc.style.display='';
   var s=sectorDe(S.sector);
   $('chip-sector').textContent=s.icono+' '+s.nombre;
 }
@@ -4370,12 +4400,17 @@ function abrirTema(id){
   if(preguntasDe(id).length===0){ ir('p-codigo'); return; }
   S.tema=id; S.modo=null;
   $('modo-tema').textContent=t.variante? t.tema+' · '+t.variante : t.tema;
-  /* «Solo yo» y «Presentar» muestran la respuesta correcta de corrido. En la
-     version gratis no salen: si salieran, al evaluado le bastaria un toque. */
-  $('tarj-solo').style.display=S.lite?'none':'';
-  $('tarj-pres').style.display=S.lite?'none':'';
-  $('modo-aviso').style.display=S.lite?'':'none';
-  if(S.lite) $('modo-aviso').innerHTML='🔒 Ver las respuestas, la explicación y las diapositivas es del acceso completo. En la versión gratis solo se puede rendir la evaluación.';
+  /* Antes «Solo yo» y «Presentar» estaban cerrados en la muestra, por miedo a
+     que el evaluado viera las respuestas. Ese miedo ya no aplica: el
+     trabajador entra por su propia puerta y no llega ni a esta pantalla.
+     Asi que en la muestra se ve todo; lo unico con tope son los temas. */
+  $('tarj-solo').style.display='';
+  $('tarj-pres').style.display='';
+  var _na=$('modo-aviso');
+  if(S.lite){
+    _na.style.display='';
+    _na.innerHTML='🎁 <b>Versión de muestra</b> — este tema viene con '+preguntasDe(id).length+' de '+t.preguntas.length+' preguntas. Las respuestas, la explicación y las diapositivas están abiertas.';
+  } else { _na.style.display='none'; }
   cerrarHoja(); ir('p-modo');
 }
 function pintarTemas(){
@@ -4420,10 +4455,8 @@ function abrirHoja(familia, ids){
 }
 function cerrarHoja(){ $('hoja').className='hoja'; }
 function arrancar(m){
-  /* «Solo yo» y «Presentar» muestran la respuesta correcta de corrido. En la
-     versión gratis no se abren ni escondiendo el botón ni llamando a la
-     función: la puerta se cierra acá, que es por donde pasan las dos. */
-  if(S.lite && m!=='evaluar'){ ir('p-codigo'); return; }
+  /* La muestra ya no cierra «Solo yo» ni «Presentar»: lo que limita el LITE
+     es cuántos temas trae, no qué se puede ver de cada tema. */
   if(m==='solo') protegerCon(etiquetaDueno());
   S.modo=m; S.i=0; S.resp=[];
   S.orden=preguntasDe(S.tema);
@@ -6320,7 +6353,9 @@ function etiquetaDueno(){
   return (s.nombre||c.cap||m.ev||'OBRASST');
 }
 function abrirGenerar(){
-  if(!libre()){ ir('p-codigo'); return; }
+  /* Generar el código de la cuadrilla ya no pide comprar antes: en la muestra
+     se puede, con los temas que la muestra trae. Pedirle un código al que
+     justamente venía a GENERAR uno no tenía ningún sentido. */
   if(!leer(LS_SUP,null)){ ir('p-registro'); return; }
   ir('p-generar');
 }
@@ -6330,7 +6365,6 @@ function abrirGenerar(){
 /* Desde el tema abierto, saltar directo a generar SU codigo: el
    supervisor no tiene que volver a elegir sector ni tema a mano. */
 function codigoParaTema(){
-  if(!libre()){ ir('p-codigo'); return; }
   if(!leer(LS_SUP,null)){ ir('p-registro'); return; }
   ir('p-generar');
   setTimeout(function(){
@@ -7136,7 +7170,6 @@ function presDesdeTema(){
   presAbrir(S.tema);
 }
 function presAbrir(id){
-  if(S.lite){ ir('p-codigo'); return; }
   if(!id || !TEMAS[id] || S.modo==='evaluar') return;
   if(preguntasDe(id).length===0){ ir('p-codigo'); return; }   // tema bloqueado: no hay con qué armarla
   protegerCon(etiquetaDueno());
@@ -7861,7 +7894,8 @@ function pintarEmpHome(){
   EMP_ESTRUCTURA.forEach(function(g,gi){ c.appendChild(empGrupoDom(g,gi)); });
 }
 function empGrupoDom(g,gi){
-  var wrap=document.createElement('div'); wrap.className='grupo'+(gi===0?' abierto':'');
+  /* todas cerradas: la primera se abria sola y tapaba las otras cinco */
+  var wrap=document.createElement('div'); wrap.className='grupo';
   var cab=document.createElement('button'); cab.className='grupo-cab'; cab.onclick=function(){toggleGrupo(cab);};
   cab.innerHTML='<span class="ic">'+g.ic+'</span><span class="tx">'+esc(g.g)+(g.sub?'<small>'+esc(g.sub)+'</small>':'')+'</span><span class="fl">▾</span>';
   var cont=document.createElement('div'); cont.className='grupo-cont';
@@ -8039,6 +8073,49 @@ function cuentaEnviar(){
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[];
     cargarMisEmpresas(true);
   }).catch(function(err){ m.style.color='var(--mal)'; m.textContent=mensajeAuth(err); });
+}
+/* «Olvidé mi contraseña». No hace falta Google ni ningún servicio de pago:
+   la nube manda el correo con su propio servidor. Es de a pocos por hora, que
+   para recuperar una contraseña de vez en cuando alcanza y sobra. */
+function pedirRecuperacion(){
+  var correo=($('cu-correo').value||'').trim().toLowerCase();
+  var m=$('cu-msg'); m.style.color='var(--mal)';
+  if(correo.indexOf('@')<1 || correo.indexOf('.')<2){
+    m.textContent='Escribe arriba el correo de tu cuenta y vuelve a tocar aquí.'; return;
+  }
+  m.style.color='var(--gris)'; m.textContent='Mandando el correo…';
+  fetch(SB.url+'/auth/v1/recover',{method:'POST',
+    headers:{'apikey':SB.key,'Content-Type':'application/json'},
+    body: JSON.stringify({email:correo})})
+   .then(function(r){
+     m.style.color = r.ok ? 'var(--ok)' : 'var(--mal)';
+     m.innerHTML = r.ok
+       ? 'Listo. Te mandamos un enlace a <b>'+esc(correo)+'</b>. Ábrelo desde este mismo celular y pones tu contraseña nueva.<br><span style="color:var(--gris)">Si no llega en unos minutos, revisa el spam o escríbenos a '+SOPORTE+'.</span>'
+       : 'No se pudo mandar el correo ahora. Escríbenos a '+SOPORTE+' y te la reiniciamos a mano.';
+   })
+   .catch(function(){ m.style.color='var(--mal)';
+     m.textContent='No se pudo (¿sin internet?). Escríbenos a '+SOPORTE+' y te la reiniciamos a mano.'; });
+}
+function guardarClaveNueva(){
+  var a=$('cn-clave').value||'', b=$('cn-clave2').value||'';
+  var m=$('cn-msg'); m.style.color='var(--mal)';
+  if(a.length<8){ m.textContent='La contraseña necesita 8 caracteres o más.'; return; }
+  if(!(/[0-9]/.test(a) && /[a-zA-Z]/.test(a))){ m.textContent='La contraseña necesita letras y números.'; return; }
+  if(a!==b){ m.textContent='Las dos no coinciden.'; return; }
+  if(!hayCuenta()){ m.textContent='El enlace ya venció. Pide uno nuevo desde «¿Olvidaste tu contraseña?».';
+    setTimeout(function(){ ir('p-cuenta'); },1800); return; }
+  m.style.color='var(--gris)'; m.textContent='Guardando…';
+  fetch(SB.url+'/auth/v1/user',{method:'PUT', headers:sbH(), body:JSON.stringify({password:a})})
+   .then(function(r){ return r.json().then(function(j){ return r.ok?j:Promise.reject(j); }); })
+   .then(function(u){
+     if(u && u.email && TOK){ TOK.correo=u.email; TOK.uid=u.id||TOK.uid;
+       try{ localStorage.setItem(LS_TOK, JSON.stringify(TOK)); }catch(e){} }
+     RECUPERANDO=false;
+     m.style.color='var(--ok)'; m.textContent='Listo. Tu contraseña quedó cambiada.';
+     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[];
+     setTimeout(function(){ cargarMisEmpresas(true); },900);
+   })
+   .catch(function(e){ m.style.color='var(--mal)'; m.textContent=mensajeAuth(e); });
 }
 function salirDeCuenta(){
   if(!confirm('¿Cerrar tu cuenta en este celular?\nTus documentos quedan en la nube: vuelves a entrar con tu correo y ahí siguen.')) return;
@@ -8758,6 +8835,7 @@ function siguienteTrabajador(){
   if(ROL==='col'){ ir('p-colab'); return; }
   /* 'sup' era el rol viejo: ahora todo el que gestiona entra como empresa */
   if(ROL==='sup'){ ROL='emp'; guardar(LS_ROL,'emp'); }
+  if(RECUPERANDO){ ROL='emp'; guardar(LS_ROL,'emp'); ir('p-clave-nueva'); return; }
   if(AVISO_GOOGLE && !hayCuenta()){ ROL='emp'; guardar(LS_ROL,'emp'); CU_MODO='entrar'; ir('p-cuenta'); return; }
   if(ROL==='emp'){
     if(!hayCuenta()){ prepCuenta('entrar'); ir('p-cuenta'); return; }
