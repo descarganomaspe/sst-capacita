@@ -206,6 +206,26 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .grupo.abierto>.grupo-cab .fl{transform:rotate(180deg)}
 .grupo.abierto>.grupo-cab{box-shadow:inset 0 0 0 1.1px rgba(255,201,51,.34), 0 5px 20px rgba(0,0,0,.22)}
 .subgrupo{margin:6px 0 10px;padding-left:12px;border-left:2px solid rgba(224,168,28,.30)}
+/* ── ACCESOS RÁPIDOS ──────────────────────────────────────────────
+   Lo que se usa todos los días no puede estar a tres toques de
+   distancia dentro de una carpeta. Estos cuatro son los de diario:
+   el programa del mes, la capacitación, el kardex y el reporte. */
+.accesos{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 10px;margin:2px 0 14px;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+.accesos::-webkit-scrollbar{display:none}
+.acceso{flex:0 0 auto;width:78px;background:none;border:0;padding:0;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--tinta);font-family:inherit}
+.acceso .aro{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:26px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.13);
+  transition:transform .12s ease}
+.acceso:active .aro{transform:scale(.93)}
+.acceso .et{font-size:11px;line-height:1.25;text-align:center;color:var(--gris);letter-spacing:.01em}
+.acceso.a-oro   .aro{border-color:rgba(245,183,0,.55);background:rgba(245,183,0,.10)}
+.acceso.a-verde .aro{border-color:rgba(47,191,113,.55);background:rgba(47,191,113,.10)}
+.acceso.a-azul  .aro{border-color:rgba(120,190,230,.55);background:rgba(120,190,230,.10)}
+.acceso.a-rojo  .aro{border-color:rgba(229,72,77,.55);background:rgba(229,72,77,.10)}
+.accesos-tit{font-family:system-ui,sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gris);margin:2px 0 8px}
 .grupo-cont{display:none;padding:9px 4px 3px 10px;margin-left:6px;border-left:1.5px solid rgba(255,255,255,.10)}
 .grupo.abierto>.grupo-cont{display:block;animation:baja .18s ease}
 @keyframes baja{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
@@ -5989,9 +6009,33 @@ function supItemDom(it, ruta){
   }
   return b;
 }
+/* Los cuatro de todos los días. Cualquier otra cosa sigue estando en su
+   carpeta; esto solo evita el «abrir carpeta por carpeta» de lo repetitivo. */
+var ACCESOS_RAPIDOS = [
+  {ic:'🗓️', et:'Programa<br>de charlas', ir:'p-programa', color:'a-oro'},
+  {ic:'🎓', et:'Capacitación<br>por tema',  ir:'p-temas',    color:'a-verde'},
+  {ic:'🦺', et:'Registrar<br>kardex',       ir:'p-kardex',   color:'a-azul'},
+  {ic:'🚨', et:'Reportar acto<br>o condición', ir:'p-reporte', color:'a-rojo'}
+];
+function accesosRapidosDom(){
+  var caja=document.createElement('div');
+  var t=document.createElement('div'); t.className='accesos-tit'; t.textContent='Lo de todos los días';
+  caja.appendChild(t);
+  var fila=document.createElement('div'); fila.className='accesos';
+  ACCESOS_RAPIDOS.forEach(function(a){
+    var b=document.createElement('button'); b.className='acceso '+a.color; b.type='button';
+    b.setAttribute('aria-label', a.et.replace(/<br>/g,' '));
+    b.innerHTML='<span class="aro">'+a.ic+'</span><span class="et">'+a.et+'</span>';
+    b.onclick=function(){ ir(a.ir); };
+    fila.appendChild(b);
+  });
+  caja.appendChild(fila);
+  return caja;
+}
 function pintarMenuSup(){
   var c=$('ini-cuerpo'); if(!c) return;
   c.innerHTML='';
+  c.appendChild(accesosRapidosDom());
   SUP_ESTRUCTURA.forEach(function(g,gi){ c.appendChild(supGrupoDom(g,gi)); });
 }
 
