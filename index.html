@@ -7464,7 +7464,7 @@ function guardarConstancia(d){
   return sbRpc('sst_constancia_nueva',{p_cod:e.codigo, p_trabajador:d.trabajador, p_dni:d.dni,
     p_cargo:d.cargo, p_tipo:d.tipo, p_tema:d.tema, p_resultado:d.resultado, p_folio:d.folio, p_fecha:d.fecha});
 }
-function guardarReporte(d){
+function mandarReporteANube(d){
   var e=empDeTrabajo(); if(!e) return Promise.reject('sin_obra');
   if(hayCuenta() && sesionAbierta()){
     return sbPost('sst_reporte',{empresa:e.id, clase:d.clase, descripcion:d.descripcion, lugar:d.lugar,
@@ -7501,7 +7501,7 @@ function guardarReporte(){
   var msg=$('r-msg'); msg.style.color='var(--gris)'; msg.textContent='Enviando…';
   var f=$('r-foto').files && $('r-foto').files[0];
   function grabar(fotoUrl){
-    return guardarReporte({clase:$('r-clase').value, descripcion:desc, lugar:($('r-lugar').value||'').trim(),
+    return mandarReporteANube({clase:$('r-clase').value, descripcion:desc, lugar:($('r-lugar').value||'').trim(),
       foto_url:fotoUrl||null, anonimo:R_ANON, autor:R_ANON?null:(($('r-autor').value||'').trim()||null), fecha:hoyISO()});
   }
   (f? subirFoto('reportes',f).then(grabar) : grabar(null))
