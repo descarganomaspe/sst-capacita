@@ -191,8 +191,12 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
   font-family:system-ui,sans-serif;font-size:13.5px;line-height:1.5;cursor:pointer;border:0;color:var(--tinta)}
 .estado-chip.ok{background:rgba(47,191,113,.09);box-shadow:inset 0 0 0 1.2px rgba(47,191,113,.32);cursor:default}
 .estado-chip.lite{background:rgba(214,178,92,.09);box-shadow:inset 0 0 0 1.2px rgba(214,178,92,.38)}
-.fila-ajustes{display:flex;gap:8px}
-.fila-ajustes .btn{flex:1;font-size:13.5px;padding:12px 6px;margin-bottom:10px}
+.fila-ajustes{display:flex;gap:8px;flex-wrap:wrap}
+.fila-ajustes .btn{flex:1 1 45%;min-width:142px;font-size:13.5px;padding:12px 10px;margin-bottom:0}
+/* Cerrar sesión va aparte: no se busca entre los ajustes, se busca al final. */
+.salir-caja{margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.09)}
+.salir-caja .quien{font-size:12.5px;color:var(--gris);margin:0 0 9px;text-align:center}
+.salir-caja .btn{width:100%;margin:0;font-size:14.5px;padding:13px 10px}
 /* --- menús anidados: aprietas el título y salen sus opciones --- */
 .grupo{margin-bottom:11px}
 .grupo-cab{display:flex;align-items:center;gap:11px;width:100%;text-align:left;cursor:pointer;
@@ -1161,7 +1165,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <button class="btn sec" onclick="ir('p-emp-crear')">🏢 Crear mi empresa (sale un código)</button>
   <button class="btn sec" onclick="ir('p-emp-entrar')">🔑 Entrar con el código de mi empresa</button>
   <div class="fila-ajustes" style="margin-top:18px">
-    <button class="btn sec" onclick="salirDeCuenta()">Cerrar mi cuenta · <span id="me-correo"></span></button>
+    <button class="btn sec" onclick="salirDeCuenta()">🚪 Cerrar sesión · <span id="me-correo"></span></button>
   </div>
 </section>
 
@@ -1245,7 +1249,10 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <button class="btn sec" onclick="pedirCodigo('')">Mi plan / activar código</button>
     <button class="btn sec" onclick="ir('p-solicitudes')">Solicitudes de acceso</button>
     <button class="btn sec" onclick="salirDeSesion()">Cambiar de empresa</button>
-    <button class="btn sec" onclick="salirDeCuenta()">Cerrar mi cuenta</button>
+  </div>
+  <div class="salir-caja">
+    <p class="quien" id="emp-quien"></p>
+    <button class="btn sec" onclick="salirDeCuenta()">🚪 Cerrar sesión</button>
   </div>
   <div class="pie">Herramienta de apoyo. No reemplaza la capacitación dictada por persona competente conforme a la Ley 29783.</div>
 </section>
@@ -7939,7 +7946,13 @@ function pintarEmpHome(){
   $('emp-home-tit').textContent = e ? e.nombre : 'Tu empresa';
   $('emp-home-sub').textContent = e ? ('Código: '+e.codigo+' · tu sistema de gestión SST, ordenado.') : 'Entra con tu código.';
   var c=$('emp-home-cuerpo'); c.innerHTML=bandaLiteEmpresa();
+  /* Lo de todos los días, arriba de todo: es la casa donde de verdad
+     aterriza el usuario, no p-inicio. */
+  c.appendChild(accesosRapidosDom());
   EMP_ESTRUCTURA.forEach(function(g,gi){ c.appendChild(empGrupoDom(g,gi)); });
+  var q=$('emp-quien');
+  if(q){ var cor = (typeof TOK!=='undefined' && TOK && TOK.correo) ? TOK.correo : '';
+         q.textContent = cor ? ('Sesión de '+cor) : ''; }
 }
 function empGrupoDom(g,gi){
   /* todas cerradas: la primera se abria sola y tapaba las otras cinco */
@@ -8166,7 +8179,7 @@ function guardarClaveNueva(){
    .catch(function(e){ m.style.color='var(--mal)'; m.textContent=mensajeAuth(e); });
 }
 function salirDeCuenta(){
-  if(!confirm('¿Cerrar tu cuenta en este celular?\nTus documentos quedan en la nube: vuelves a entrar con tu correo y ahí siguen.')) return;
+  if(!confirm('¿Cerrar sesión en este celular?\n\nNo se borra nada: tus documentos y los de tu empresa quedan en la nube. Vuelves a entrar con tu correo y ahí siguen.')) return;
   borrarToken(); cerrarSesion(); borrar(LS_EMP);
   try{ localStorage.removeItem(LS_PLAN); localStorage.removeItem(LS_ROL); }catch(e){}
   ROL=null; HIST=[]; _ir('p-rol'); pintarRol();
