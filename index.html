@@ -457,6 +457,24 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
   color:#ff8f92;border-radius:20px;padding:1px 7px;font-size:9px;font-weight:800;letter-spacing:.04em;
   white-space:nowrap;text-transform:none;flex:none}
 
+
+/* ── los carteles QR de los documentos ── */
+.qrd-fila{display:flex;align-items:center;gap:13px;width:100%;text-align:left}
+.qrd-ic{font-size:26px;flex:none;line-height:1}
+.qrd-tx{flex:1;min-width:0}
+.qrd-tx b{display:block;font-size:15px;line-height:1.25}
+.qrd-tx small{display:block;color:var(--gris);font-size:12.5px;margin-top:2px}
+.qrd-est{flex:none;font-size:11.5px;font-weight:700;color:var(--gris);
+  border:1px solid rgba(143,169,184,.35);border-radius:20px;padding:4px 11px;white-space:nowrap}
+.qrd-est.ok{color:var(--ok);border-color:rgba(47,191,113,.45)}
+.cartel{background:#fff;color:#0B2A3A;border-radius:14px;padding:22px 18px 18px;text-align:center}
+.cartel .c-marca{font-size:12px;letter-spacing:.20em;font-weight:800;color:#8a6b00;margin-bottom:14px}
+.cartel .c-tit{font-size:23px;font-weight:800;line-height:1.2;margin-bottom:14px}
+.cartel img{width:210px;height:210px;display:block;margin:0 auto}
+.cartel .c-inst{margin-top:14px;font-size:16px;font-weight:700}
+.cartel .c-obra{margin-top:9px;font-size:13px;color:#4a6a7d;line-height:1.35}
+.cartel .c-cod{margin-top:3px;font-size:12.5px;font-weight:700;letter-spacing:.06em}
+
 /* ── la carpeta de asistencias ─────────────────────────────────────
    Fotos de hojas firmadas. Las miniaturas van en rejilla porque lo
    que se busca es «la del martes», y eso se reconoce de un vistazo
@@ -920,6 +938,30 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <div id="foto-msg" style="font-size:13.5px;margin:9px 0 0"></div>
     <button class="btn" onclick="guardarFoto()" style="margin-top:11px">Guardar foto</button>
   </div>
+</section>
+
+<section class="pantalla" id="p-qr-docs">
+  <div class="barra"><span>Carteles QR</span></div>
+  <h2>📌 Los QR de tu obra</h2>
+  <p class="sub">Pega el enlace de cada documento y la app te arma el cartel para imprimir. El QR apunta siempre al documento <b>vigente</b>: cuando lo actualices, el cartel que ya está pegado sigue funcionando.</p>
+  <div id="qrd-cuerpo"></div>
+</section>
+
+<section class="pantalla" id="p-qr-doc">
+  <div class="barra"><span>Cartel</span></div>
+  <h2 id="qr1-tit">Documento</h2>
+  <div class="caja vidrio" style="padding:15px">
+    <label class="sec-tit" style="margin:0 0 6px">Enlace del documento</label>
+    <input id="qr1-url" type="url" inputmode="url" placeholder="https://drive.google.com/file/d/…/view">
+    <p class="sub" style="margin:6px 0 0;font-size:12.5px">El de compartir de Drive, OneDrive o donde lo tengas. Ponlo en «cualquiera con el enlace puede ver», si no la cuadrilla no lo va a poder abrir.</p>
+    <label class="sec-tit" style="margin:12px 0 6px">Cómo se llama en el cartel</label>
+    <input id="qr1-titulo" maxlength="60" placeholder="RISST 2026">
+    <div id="qr1-msg" style="font-size:13.5px;margin:10px 0 0"></div>
+    <button class="btn" onclick="guardarQRDoc()" style="margin-top:11px">Armar el cartel</button>
+    <div id="qr1-uso" class="sub" style="margin-top:9px;font-size:12.5px"></div>
+  </div>
+  <div id="qr1-cartel" style="margin-top:16px"></div>
+  <button class="btn sec" onclick="quitarQRDoc()" style="margin-top:16px;color:var(--mal)">Quitar este documento</button>
 </section>
 <section class="pantalla" id="p-reporte-cerrar">
   <div class="barra"><span>Cerrar reporte</span></div>
@@ -4582,7 +4624,7 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,
             'p-semanal':1,'p-semanal-dia':1,'p-estadistica':1,'p-carpeta':1,'p-foto':1,'p-mensual':1,
             'p-escaneos':1,'p-escaneo-nuevo':1,'p-escaneo-ver':1,'p-escaneo-enviar':1,
-            'p-reporte-cerrar':1,'p-reporte-excel':1};
+            'p-reporte-cerrar':1,'p-reporte-excel':1,'p-qr-docs':1,'p-qr-doc':1};
 var PANT_PROTEGIDA={'p-juego':1,'p-final':1,'p-firma':1,'p-listo':1,'p-charla':1};
 /* ── navegación ────────────────────────────────────────────────────
    Un solo flujo. HIST guarda por dónde pasaste y «Atrás» deshace ese
@@ -4714,6 +4756,8 @@ function _ir(p){
   if(p==='p-escaneo-enviar')prepEnviarCarpeta();
   if(p==='p-reporte-cerrar')prepCerrarReporte();
   if(p==='p-reporte-excel')prepReporteExcel();
+  if(p==='p-qr-docs'){ pintarQRDocs(); cargarHojasQR().then(pintarQRDocs); }
+  if(p==='p-qr-doc')prepQRDoc();
   pintarBarraNav(p); pintarPieDePlan(p);}
 
 /* ── El pie del plan ──────────────────────────────────────────────
@@ -5458,6 +5502,208 @@ function guardarFoto(){
       setTimeout(function(){ abrirDoc(FOTO_BASE, FOTO_TIT, 'Salud Ocupacional'); },900); });
 }
 
+
+// =================================================================
+//  LOS QR DE LOS DOCUMENTOS DE LA OBRA
+//  El supervisor pega el enlace de su RISST (Drive, OneDrive, lo que
+//  sea) y la app le arma el cartel con el QR.
+//  El QR NO apunta a su Drive: apunta a una direccion nuestra que
+//  pregunta cual es el documento VIGENTE de esa obra. Asi, cuando le
+//  actualicen el reglamento, cambia el enlace aca y el cartel que ya
+//  esta pegado en la caseta sigue sirviendo. Con un QR directo al
+//  Drive habria que reimprimir y volver a pegar todo cada vez, y eso
+//  nadie lo hace dos veces.
+// =================================================================
+var BASE_QR = 'https://descarganomaspe.github.io/sst-capacita/d/';
+var HOJAS_QR = [
+  {k:'risst',      t:'Reglamento Interno de SST',  ic:'📕', llave:'qr_risst'},
+  {k:'pets',       t:'PETS',                       ic:'📘', llave:'qr_pets'},
+  {k:'iperc',      t:'Matriz IPERC',               ic:'📙', llave:'qr_iperc'},
+  {k:'msds',       t:'Hojas MSDS',                 ic:'🧪', llave:'qr_msds'},
+  {k:'plan',       t:'Plan anual de SST',          ic:'📗', llave:'qr_risst'},
+  {k:'mapa',       t:'Mapa de riesgos',            ic:'🗺️', llave:'qr_risst'},
+  {k:'emergencia', t:'Plan de emergencia',         ic:'🚨', llave:'qr_risst'}
+];
+var QR_HOJAS = null, QR_ACTUAL = null;
+
+function enlaceDelQR(hoja){
+  var e = empActiva();
+  return BASE_QR + '?o=' + encodeURIComponent((e && e.codigo) || '') + '&h=' + encodeURIComponent(hoja);
+}
+function cargarHojasQR(){
+  var e = empActiva();
+  if(!e || !hayCuenta()) return Promise.resolve([]);
+  return sbGet('sst_hoja_qr?empresa_id=eq.' + encodeURIComponent(e.id) +
+               '&select=hoja,titulo,url,escaneos,ultimo')
+    .then(function(a){ QR_HOJAS = a || []; return QR_HOJAS; })
+    .catch(function(){ return QR_HOJAS || []; });
+}
+function hojaQRde(k){
+  var r = null;
+  (QR_HOJAS || []).forEach(function(x){ if(x.hoja === k) r = x; });
+  return r;
+}
+function pintarQRDocs(){
+  var c = $('qrd-cuerpo'); if(!c) return;
+  var e = empActiva();
+  if(!e){ c.innerHTML = '<div class="aviso">Entra a tu obra para armar los carteles.</div>'; return; }
+  var h = '';
+  HOJAS_QR.forEach(function(H){
+    var d = hojaQRde(H.k), hay = !!(d && d.url);
+    var abierto = puede(H.llave);
+    h += '<button type="button" class="tarj vidrio qrd-fila" onclick="abrirQRDoc(\'' + H.k + '\')">' +
+         '<span class="qrd-ic">' + H.ic + '</span>' +
+         '<span class="qrd-tx"><b>' + esc(H.t) + '</b>' +
+         '<small>' + (hay ? ('✓ cartel listo' + (d.escaneos ? (' · ' + d.escaneos + ' escaneo' + (d.escaneos===1?'':'s')) : ' · sin escanear todavía'))
+                          : 'sin documento cargado') + '</small></span>' +
+         '<span class="qrd-est ' + (hay ? 'ok' : '') + '">' + (hay ? 'Ver el cartel' : (abierto ? 'Cargar' : '🔒')) + '</span>' +
+         '</button>';
+  });
+  c.innerHTML = h;
+}
+function abrirQRDoc(k){
+  var H = null; HOJAS_QR.forEach(function(x){ if(x.k === k) H = x; });
+  if(!H) return;
+  if(!puede(H.llave)){ soloConCodigo('El QR de «' + H.t + '»', H.llave); return; }
+  QR_ACTUAL = k;
+  ir('p-qr-doc');
+}
+function prepQRDoc(){
+  var H = null; HOJAS_QR.forEach(function(x){ if(x.k === QR_ACTUAL) H = x; });
+  if(!H){ ir('p-qr-docs'); return; }
+  var d = hojaQRde(H.k);
+  $('qr1-tit').textContent = H.ic + ' ' + H.t;
+  $('qr1-url').value = (d && d.url) || '';
+  $('qr1-titulo').value = (d && d.titulo) || H.t;
+  $('qr1-msg').textContent = '';
+  $('qr1-uso').textContent = (d && d.escaneos)
+    ? ('Lo han escaneado ' + d.escaneos + ' vez' + (d.escaneos===1?'':'es') +
+       (d.ultimo ? (' · la última, el ' + fechaLarga(String(d.ultimo).slice(0,10))) : ''))
+    : '';
+  pintarCartelQR(d && d.url);
+}
+function pintarCartelQR(hayUrl){
+  var c = $('qr1-cartel'); if(!c) return;
+  if(!hayUrl){
+    c.innerHTML = '<div class="aviso">Pega el enlace del documento y toca «Armar el cartel». ' +
+      'El QR va a apuntar siempre al documento vigente: si mañana lo actualizas, este mismo cartel sigue funcionando.</div>';
+    return;
+  }
+  var H = null; HOJAS_QR.forEach(function(x){ if(x.k === QR_ACTUAL) H = x; });
+  var e = empActiva() || {};
+  var enlace = enlaceDelQR(QR_ACTUAL);
+  var qr = qrcode(0, 'M'); qr.addData(enlace); qr.make();
+  var img = qr.createDataURL(7, 10);
+  var titulo = ($('qr1-titulo') && $('qr1-titulo').value.trim()) || (H ? H.t : 'Documento');
+  c.innerHTML =
+    '<div class="cartel" id="cartel-qr">' +
+      '<div class="c-marca">◆ OBRASST</div>' +
+      '<div class="c-tit">' + esc(titulo) + '</div>' +
+      '<img src="' + img + '" alt="Código QR del documento">' +
+      '<div class="c-inst">Apunta la cámara del celular</div>' +
+      '<div class="c-obra">' + esc(e.nombre || '') + '</div>' +
+      '<div class="c-cod">Obra ' + esc(e.codigo || '') + '</div>' +
+    '</div>' +
+    '<div class="esc-acc" style="margin-top:14px">' +
+      '<button class="btn" style="margin:0" onclick="bajarCartelQR()">🖨️ Bajar el cartel</button>' +
+      '<button class="btn sec" style="margin:0" onclick="compartirCartelQR()">📲 Compartirlo</button>' +
+    '</div>' +
+    '<p class="sub" style="margin:12px 0 0;font-size:12.5px">Imprímelo y pégalo en la caseta, el comedor y la puerta. ' +
+    'El enlace del QR es <b>' + esc(enlace) + '</b> — no es tu Drive, y por eso el cartel no se muere cuando cambies el documento.</p>';
+}
+function guardarQRDoc(){
+  var m = $('qr1-msg'); m.style.color = 'var(--mal)';
+  var url = ($('qr1-url').value || '').trim();
+  var tit = ($('qr1-titulo').value || '').trim();
+  var e = empActiva();
+  if(!e){ m.textContent = 'Primero entra a tu obra.'; return; }
+  if(!/^https?:\/\/.+\..+/.test(url)){
+    m.textContent = 'Ese enlace no se ve bien. Tiene que empezar con https:// y ser el enlace de compartir del documento.';
+    return;
+  }
+  m.style.color = 'var(--gris)'; m.textContent = 'Guardando…';
+  var fila = { empresa_id: e.id, hoja: QR_ACTUAL, titulo: tit || null, url: url, actualizado: new Date().toISOString() };
+  var existe = hojaQRde(QR_ACTUAL);
+  var accion = existe
+    ? sbPatch('sst_hoja_qr?empresa_id=eq.' + encodeURIComponent(e.id) + '&hoja=eq.' + encodeURIComponent(QR_ACTUAL),
+              { titulo: fila.titulo, url: fila.url, actualizado: fila.actualizado })
+    : sbPost('sst_hoja_qr', fila);
+  var aviso = existe ? 'Actualizado. El cartel que ya pegaste sigue sirviendo.' : 'Listo, el cartel ya funciona.';
+  accion.then(function(){ return cargarHojasQR(); })
+    .then(function(){
+      prepQRDoc();               /* esto limpia el mensaje… */
+      m = $('qr1-msg');          /* …así que se vuelve a poner después */
+      if(m){ m.style.color='var(--ok)'; m.textContent = aviso; }
+    })
+    .catch(function(err){ m.style.color = 'var(--mal)'; m.textContent = 'No se pudo guardar (' + err + '). Revisa el internet.'; });
+}
+function quitarQRDoc(){
+  var e = empActiva(); if(!e || !QR_ACTUAL) return;
+  if(!confirm('¿Quitar este documento?\n\nLos carteles que ya estén pegados van a dejar de abrirlo.')) return;
+  sbDel('sst_hoja_qr?empresa_id=eq.' + encodeURIComponent(e.id) + '&hoja=eq.' + encodeURIComponent(QR_ACTUAL))
+    .then(function(){ return cargarHojasQR(); })
+    .then(function(){ ir('p-qr-docs'); })
+    .catch(function(){ alert('No se pudo quitar.'); });
+}
+/* el cartel se baja como imagen, para imprimirlo tal cual */
+function cartelQRaLienzo(){
+  var cartel = $('cartel-qr'); if(!cartel) return null;
+  var img = cartel.querySelector('img'); if(!img) return null;
+  var W = 720, H = 1000;
+  var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  var x = cv.getContext('2d');
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#0B2A3A'; x.fillRect(0, 0, W, 96);
+  x.fillStyle = '#F5B700'; x.font = 'bold 26px system-ui,sans-serif'; x.textAlign = 'center';
+  x.fillText('◆ OBRASST', W/2, 58);
+  var H0 = null; HOJAS_QR.forEach(function(z){ if(z.k === QR_ACTUAL) H0 = z; });
+  var titulo = ($('qr1-titulo') && $('qr1-titulo').value.trim()) || (H0 ? H0.t : 'Documento');
+  x.fillStyle = '#0B2A3A'; x.font = 'bold 44px system-ui,sans-serif';
+  var lineas = _cortarTexto(x, titulo, W - 90);
+  var y = 176;
+  lineas.slice(0, 2).forEach(function(l){ x.fillText(l, W/2, y); y += 52; });
+  x.drawImage(img, (W - 420)/2, y + 14, 420, 420);
+  y += 420 + 78;
+  x.fillStyle = '#0B2A3A'; x.font = 'bold 34px system-ui,sans-serif';
+  x.fillText('Apunta la cámara del celular', W/2, y);
+  var e = empActiva() || {};
+  y += 52; x.fillStyle = '#4a6a7d'; x.font = '26px system-ui,sans-serif';
+  _cortarTexto(x, e.nombre || '', W - 90).slice(0, 2).forEach(function(l){ x.fillText(l, W/2, y); y += 34; });
+  y += 6; x.font = 'bold 24px system-ui,sans-serif'; x.fillStyle = '#0B2A3A';
+  x.fillText('Obra ' + (e.codigo || ''), W/2, y);
+  x.fillStyle = '#8FA9B8'; x.font = '18px system-ui,sans-serif';
+  x.fillText('Este código lleva siempre al documento vigente.', W/2, H - 34);
+  return cv;
+}
+function _cortarTexto(ctx, txt, ancho){
+  var pal = String(txt || '').split(/\s+/), lin = [], act = '';
+  pal.forEach(function(p){
+    var t = act ? (act + ' ' + p) : p;
+    if(ctx.measureText(t).width > ancho && act){ lin.push(act); act = p; } else { act = t; }
+  });
+  if(act) lin.push(act);
+  return lin;
+}
+function bajarCartelQR(){
+  var cv = cartelQRaLienzo(); if(!cv){ alert('Arma el cartel primero.'); return; }
+  cv.toBlob(function(bl){
+    var u = URL.createObjectURL(bl), a = document.createElement('a');
+    a.href = u; a.download = 'cartel-' + QR_ACTUAL + '.png';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); }, 1200);
+  }, 'image/png');
+}
+function compartirCartelQR(){
+  var cv = cartelQRaLienzo(); if(!cv){ alert('Arma el cartel primero.'); return; }
+  cv.toBlob(function(bl){
+    var f = null;
+    try{ f = new File([bl], 'cartel-' + QR_ACTUAL + '.png', {type:'image/png'}); }catch(e){}
+    var puedeArch = false;
+    try{ puedeArch = !!(f && navigator.canShare && navigator.canShare({files:[f]})); }catch(e){}
+    if(puedeArch){ navigator.share({files:[f], title:'Cartel QR · ' + nombreDeLaObra()}).catch(function(){}); return; }
+    bajarCartelQR();
+  }, 'image/png');
+}
 
 // =================================================================
 //  LA CARPETA DE ASISTENCIAS
@@ -7439,7 +7685,7 @@ var CATALOGO_ACCESOS = [
   {k:'personal',  ic:'👷', et:'Mi<br>personal',                ir:'p-trabajadores', color:'a-verde', desde:0, def:[0,1,2]},
   {k:'reporte',   ic:'🚨', et:'Reportar acto<br>o condición',  ir:'p-reporte',      color:'a-rojo',  desde:0, def:[0,1,2,3,4]},
   {k:'cuadrilla', ic:'🎟️', et:'Código de<br>cuadrilla',        ir:'p-generar',      color:'a-viol',  desde:0, def:[0,1]},
-  {k:'risst',     ic:'📕', et:'QR del<br>RISST',               fn:'abrirRisst',     color:'a-gris',  desde:1, def:[1,2]},
+  {k:'risst',     ic:'📌', et:'Carteles<br>QR',                fn:'abrirRisst',     color:'a-gris',  desde:1, def:[1,2]},
   {k:'temas',     ic:'🎓', et:'Capacitación<br>por tema',      ir:'p-temas',        color:'a-verde', desde:2, def:[2]},
   {k:'credencial',ic:'🪪', et:'Credenciales<br>y QR',          ir:'p-credencial',   color:'a-viol',  desde:3, def:[3,4]},
   {k:'amonesta',  ic:'⚠️', et:'Amonesta-<br>ciones',           ir:'p-amonestaciones',color:'a-gris', desde:3, def:[3]},
@@ -8094,9 +8340,8 @@ function invitaCarpetasDom(){
 }
 /* El RISST se abre como hoja de documento; el QR sale de ahi mismo. */
 function abrirRisst(){
-  if(!puede('qr_risst')){ soloConCodigo('El QR del RISST','qr_risst'); return; }
-  if(typeof abrirDoc==='function'){ abrirDoc('risst','RISST','Sistema Integrado'); return; }
-  ir('p-emp-home');
+  if(!puede('qr_risst')){ soloConCodigo('Los carteles QR de la obra','qr_risst'); return; }
+  ir('p-qr-docs');
 }
 function accesosRapidosDom(){
   var caja=document.createElement('div');
