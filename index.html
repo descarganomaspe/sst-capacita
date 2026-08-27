@@ -1055,7 +1055,12 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <label>Foto (opcional)</label><input type="file" id="r-foto" accept="image/*" capture="environment">
   <div class="tarj vidrio" style="margin-top:14px" onclick="rToggleAnon()"><b id="r-anon-et">🙈 Reportar sin mi nombre (anónimo)</b><small id="r-anon-sub">Nadie sabrá que fuiste tú. Así de simple. (No suma a tu puntaje.)</small></div>
   <div id="r-autor-wrap"><label>Tu nombre (si quieres crédito)</label><input id="r-autor" placeholder="Tu nombre"></div>
-  <button class="btn" onclick="guardarReporte()">Enviar el reporte</button>
+  <div id="r-sin-obra" class="aviso" style="display:none;margin:14px 0 4px">
+    Todavía no tienes el código de tu obra, así que esto no se puede guardar en la app.
+    Igual lo puedes mandar: se arma el reporte con su fecha y hora y lo compartes por WhatsApp
+    o por donde quieras. Cuando tengas el código, se guarda solo.
+  </div>
+  <button class="btn" id="r-enviar" onclick="reporteEnviar()">Enviar el reporte</button>
   <div id="r-msg" style="font-size:14px;margin-top:10px"></div>
 </section>
 
@@ -4204,19 +4209,36 @@ function inicioDelModo(){ return MODO_HOME[modoActivo()] || 'p-emp-home'; }
    siguiente salida es la portada de «¿quién eres?»: de ahí no se puede
    ir más atrás. La sesión NO se cierra: puedes mirar la portada y
    volver a entrar sin escribir nada. */
+/* ¿A esa pantalla se puede llegar de verdad, o el portero de _ir la va
+   a rebotar? Sin preguntar esto, «Atrás» desde «Entra a tu cuenta»
+   mandaba a p-emp-home, el portero devolvía a p-cuenta, y para el que
+   está mirando el botón simplemente no hacía nada. */
+function alcanzable(p){
+  if(!p) return false;
+  if(ROL==='col') return !!COL_OK[p];
+  if(!SIN_CUENTA[p] && !hayCuenta()) return false;
+  if(!SIN_CUENTA[p] && !SIN_EMPRESA[p] && !sesionAbierta()) return false;
+  return !!EMP_OK[p];
+}
 function irAtras(){
   var act=(document.querySelector('.pantalla.activa')||{}).id, prev=null;
   var casa=inicioDelModo();
   if(act===casa){ HIST=[]; _ir('p-rol'); return; }
-  while(HIST.length){ var c=HIST.pop(); if(c!==act && c!=='p-rol'){ prev=c; break; } }
-  _ir(prev || casa);
+  while(HIST.length){ var c=HIST.pop(); if(c!==act && c!=='p-rol' && alcanzable(c)){ prev=c; break; } }
+  var destino = prev || casa;
+  /* si el destino iba a rebotar —o nos deja donde ya estamos— la única
+     salida honesta es la portada de «¿quién eres?» */
+  if(!alcanzable(destino) || destino===act){ HIST=[]; destino='p-rol'; }
+  _ir(destino);
 }
 /* Inicio: te lleva al inicio de tu modo. Si ya estás ahí, a la portada. */
 function irHome(){
   var act=(document.querySelector('.pantalla.activa')||{}).id;
   var casa=inicioDelModo();
   HIST=[];
-  _ir(act===casa ? 'p-rol' : casa);
+  var destino = (act===casa) ? 'p-rol' : casa;
+  if(!alcanzable(destino) || destino===act) destino='p-rol';
+  _ir(destino);
 }
 /* pantallas donde no tiene sentido acumular historial */
 var NO_HIST={'p-rol':1,'p-eval':1,'p-juego':1,'p-firma':1,'p-final':1,'p-listo':1};
@@ -7488,6 +7510,48 @@ function prepReporte(){
   $('r-desc').value=''; $('r-lugar').value=''; $('r-autor').value=''; $('r-clase').value='condicion';
   if($('r-foto')) $('r-foto').value=''; $('r-msg').textContent='';
   rPintarAnon();
+  rPintarModo();
+}
+/* Sin código de obra el reporte no se puede guardar, pero sí mandar:
+   antes solo salía «primero entra a tu empresa» y el reporte se perdía. */
+function rPintarModo(){
+  var sinObra = !empActiva();
+  var caja=$('r-sin-obra'); if(caja) caja.style.display = sinObra ? '' : 'none';
+  var btn=$('r-enviar');
+  if(btn) btn.textContent = sinObra ? '📲 Mandarlo por WhatsApp u otra app' : 'Enviar el reporte';
+}
+function reporteEnviar(){ if(empActiva()) guardarReporte(); else compartirReporte(); }
+function textoDelReporte(){
+  var clase = $('r-clase').value==='acto' ? 'Acto inseguro' : 'Condición insegura';
+  var lugar = ($('r-lugar').value||'').trim();
+  var autor = R_ANON ? 'Anónimo' : ((($('r-autor').value||'').trim())||'—');
+  var d=new Date(), dd=function(n){ return ('0'+n).slice(-2); };
+  return '🚨 REPORTE DE SEGURIDAD\n'
+       + clase + (lugar ? ' · ' + lugar : '') + '\n\n'
+       + ($('r-desc').value||'').trim() + '\n\n'
+       + 'Reportado por: ' + autor + '\n'
+       + dd(d.getDate()) + '/' + dd(d.getMonth()+1) + '/' + d.getFullYear()
+       + ' · ' + dd(d.getHours()) + ':' + dd(d.getMinutes()) + '\n'
+       + '— armado con OBRASST';
+}
+function compartirReporte(){
+  var desc=($('r-desc').value||'').trim();
+  if(!desc){ alert('Describe lo que viste.'); return; }
+  var txt=textoDelReporte(), msg=$('r-msg');
+  var f=$('r-foto').files && $('r-foto').files[0];
+  if(navigator.share){
+    var datos={title:'Reporte de seguridad', text:txt};
+    try{ if(f && navigator.canShare && navigator.canShare({files:[f]})) datos.files=[f]; }catch(_e){}
+    navigator.share(datos).then(function(){
+      msg.style.color='#2f9e6f';
+      msg.textContent='Listo, lo mandaste. Con el código de tu obra además queda guardado.';
+    }).catch(function(){ /* cerró el menú de compartir: no es un error */ });
+    return;
+  }
+  window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+  msg.style.color='var(--gris)';
+  msg.textContent = f ? 'Se abrió WhatsApp con el reporte. La foto mándala aparte.'
+                      : 'Se abrió WhatsApp con el reporte.';
 }
 function rToggleAnon(){ R_ANON=!R_ANON; rPintarAnon(); }
 function rPintarAnon(){
