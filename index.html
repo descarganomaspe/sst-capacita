@@ -214,10 +214,10 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
    Lo que se usa todos los días no puede estar a tres toques de
    distancia dentro de una carpeta. Estos cuatro son los de diario:
    el programa del mes, la capacitación, el kardex y el reporte. */
-.accesos{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 10px;margin:2px 0 14px;
-  -webkit-overflow-scrolling:touch;scrollbar-width:none}
-.accesos::-webkit-scrollbar{display:none}
-.acceso{flex:0 0 auto;width:78px;background:none;border:0;padding:0;cursor:pointer;
+.accesos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 6px;
+  padding:2px 2px 10px;margin:2px 0 14px}
+@media(min-width:560px){.accesos{grid-template-columns:repeat(6,1fr)}}
+.acceso{width:100%;background:none;border:0;padding:0;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--tinta);font-family:inherit}
 .acceso .aro{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   font-size:26px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.13);
@@ -228,6 +228,32 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .acceso.a-verde .aro{border-color:rgba(47,191,113,.55);background:rgba(47,191,113,.10)}
 .acceso.a-azul  .aro{border-color:rgba(120,190,230,.55);background:rgba(120,190,230,.10)}
 .acceso.a-rojo  .aro{border-color:rgba(229,72,77,.55);background:rgba(229,72,77,.10)}
+.acceso.a-viol  .aro{border-color:rgba(154,123,200,.55);background:rgba(154,123,200,.10)}
+.acceso.a-gris  .aro{border-color:rgba(180,180,175,.5);background:rgba(180,180,175,.09)}
+/* ── el tablero del home ── */
+.tablero{margin:14px 0 18px;border:1px solid rgba(255,255,255,.10);border-radius:12px;overflow:hidden;
+  background:rgba(255,255,255,.035)}
+.tablero-barra{display:flex;flex-wrap:wrap;gap:7px;align-items:center;padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04)}
+.tb-filtro{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;padding:3px 9px;
+  border-radius:20px;border:1px solid rgba(255,255,255,.16);color:var(--gris)}
+.tb-filtro.on{background:var(--oro,#d9a441);border-color:transparent;color:#14140f;font-weight:700}
+.tb-plan{margin-left:auto;font-size:11.5px;font-weight:700;letter-spacing:.05em;color:var(--gris);
+  text-transform:uppercase}
+.tejas{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;
+  background:rgba(255,255,255,.08)}
+.teja{background:#12131a;border:0;padding:12px 13px 13px;text-align:left;cursor:pointer;
+  display:flex;flex-direction:column;gap:3px;color:inherit;font-family:inherit}
+.teja:active{background:rgba(255,255,255,.05)}
+.tj-et{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);line-height:1.3}
+.tj-val{font-size:29px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+.teja-txt .tj-val{font-size:14.5px;font-weight:600;line-height:1.3}
+.tj-pie{font-size:11.5px;color:var(--gris);line-height:1.4}
+.tb-barra{display:block;height:4px;border-radius:3px;background:rgba(255,255,255,.10);
+  overflow:hidden;margin-top:5px}
+.tb-barra i{display:block;height:100%;background:#2fbf71}
+.teja.alerta .tj-val{color:#e5484d}
+.teja.alerta .tb-barra i{background:#e5484d}
 .accesos-tit{font-family:system-ui,sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--gris);margin:2px 0 8px}
 .grupo-cont{display:none;padding:9px 4px 3px 10px;margin-left:6px;border-left:1.5px solid rgba(255,255,255,.10)}
@@ -4338,8 +4364,85 @@ function _hh(s){s=_norm(s);var h1=5381,h2=52711;for(var i=0;i<s.length;i++){var 
    queda amarrada a la empresa (tabla sst_licencia) y aqui solo guardamos
    la ultima respuesta para que la app siga funcionando sin internet. */
 var LS_PLAN='sstc_plan';
-var TOPE_EQUIPO = 8;   // el plan Equipo SSOMA trae 8 gestores; los demas se pagan aparte
-function planLocal(){ var p=leer(LS_PLAN,null); return p&&p.plan ? p : {plan:'lite',tope_obras:1,tope_gestores:1}; }
+var TOPE_EQUIPO = 8;   // compatibilidad con lo viejo
+
+/* ══════════════ LA ESCALERA DE PLANES ══════════════
+   Cinco peldanos. Cada uno resuelve un trabajo entero y el siguiente
+   aparece SOLO cuando el usuario se topa. Nadie ve el de 89.90 de frente.
+   Los topes de mes se reinician el dia 1; los de LITE son de por vida
+   para que el gratis siga siendo una prueba y no un plan.            */
+var PLANES = [
+  { id:'lite', nombre:'LITE', precio:0, orden:0,
+    tope:{ trabajador:5, kardex:3, reporte:3, doc:2, credencial:0, amonestacion:0, semana:0 },
+    porMes:{ kardex:false, reporte:false },
+    gestores:1, charlas:2, temas:0,
+    puede:{ cuadrilla:1 } },
+
+  { id:'prevencionista', nombre:'Prevencionista de Riesgo', precio:19.90, orden:1,
+    tope:{ trabajador:50, kardex:80, reporte:20, doc:20, credencial:0, amonestacion:0, semana:0 },
+    porMes:{ kardex:true, reporte:true },
+    gestores:1, charlas:-1, temas:3,
+    puede:{ cuadrilla:1, qr_risst:1 } },
+
+  { id:'supervisor', nombre:'Supervisor SST', precio:49.90, orden:2,
+    tope:{ trabajador:100, kardex:200, reporte:100, doc:60, credencial:0, amonestacion:0, semana:0 },
+    porMes:{ kardex:true, reporte:true },
+    gestores:1, charlas:-1, temas:-1,
+    puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1 } },
+
+  { id:'ssoma', nombre:'SSOMA', precio:89.90, orden:3,
+    tope:{ trabajador:250, kardex:400, reporte:200, doc:200, credencial:250, amonestacion:60, semana:12 },
+    porMes:{ kardex:true, reporte:true },
+    gestores:2, charlas:-1, temas:-1,
+    puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1, qr_msds:1, qr_credencial:1,
+            msds:1, amonestaciones:1, semanal:1, campanas:1, simulacros:1, constancias:1 } },
+
+  { id:'gestion', nombre:'Gestión SST', precio:199, orden:4,
+    tope:{ trabajador:-1, kardex:-1, reporte:-1, doc:-1, credencial:-1, amonestacion:-1, semana:-1 },
+    porMes:{ kardex:true, reporte:true },
+    gestores:4, charlas:-1, temas:-1,
+    puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1, qr_msds:1, qr_credencial:1,
+            msds:1, amonestaciones:1, semanal:1, campanas:1, simulacros:1, constancias:1,
+            carpetas:1 } }
+];
+/* los nombres viejos de licencia caen en el peldano equivalente */
+var PLAN_VIEJO = { supervisor:'supervisor', equipo:'ssoma' };
+
+function planDe(id){
+  for(var i=0;i<PLANES.length;i++) if(PLANES[i].id===id) return PLANES[i];
+  return PLANES[0];
+}
+function planLocal(){
+  var p=leer(LS_PLAN,null);
+  if(!p || !p.plan) return {plan:'lite',tope_obras:1,tope_gestores:1};
+  if(PLAN_VIEJO[p.plan]) p.plan=PLAN_VIEJO[p.plan];
+  return p;
+}
+/* El plan que de verdad rige hoy: si vencio, se cae a LITE. */
+function planActual(){
+  var p=planLocal();
+  if(!p.plan || p.plan==='lite') return planDe('lite');
+  if(p.vence && String(p.vence).slice(0,10) < hoyISO()) return planDe('lite');
+  return planDe(p.plan);
+}
+function planSiguiente(){
+  var a=planActual();
+  for(var i=0;i<PLANES.length;i++) if(PLANES[i].orden === a.orden+1) return PLANES[i];
+  return null;
+}
+/* El primer peldano que levanta este tope o abre esta llave.
+   Es lo unico que se le nombra al usuario: un salto, no un catalogo. */
+function planQueAbre(clave, esTope){
+  var a=planActual();
+  for(var i=0;i<PLANES.length;i++){
+    var P=PLANES[i];
+    if(P.orden <= a.orden) continue;
+    if(esTope){ var t=P.tope[clave]; if(t===-1 || t > (a.tope[clave]||0)) return P; }
+    else if(P.puede[clave]) return P;
+  }
+  return null;
+}
+function precioTexto(P){ return P.precio ? ('S/ '+P.precio.toFixed(2).replace('.00','')+' al mes') : 'gratis'; }
 /* La licencia dura 30 dias y se renueva con otro codigo. La fecha viaja
    guardada en el celular, asi que el tope se respeta aunque no haya senal. */
 function planVigente(){
@@ -4353,12 +4456,9 @@ function diasParaVencer(){
   var a=new Date(String(p.vence).slice(0,10)+'T00:00:00'), b=new Date(hoyISO()+'T00:00:00');
   return Math.round((a-b)/86400000);
 }
-function libre(){ return planVigente(); }
-function planEsEquipo(){ return planVigente() && planLocal().plan==='equipo'; }
-function nombreDelPlan(){
-  if(!planVigente()) return 'LITE';
-  return planLocal().plan==='equipo' ? 'Equipo SSOMA' : 'Supervisor SSOMA';
-}
+function libre(){ return planActual().orden > 0; }
+function planEsEquipo(){ return planActual().gestores > 1; }
+function nombreDelPlan(){ return planActual().nombre; }
 function refrescarPlan(){
   var e=empActiva();
   if(!e || !hayCuenta()) return Promise.resolve(planLocal());
@@ -4927,60 +5027,125 @@ function guardarFoto(){
 //  cargaba TODO. Ahora la muestra deja probar de verdad pero con
 //  tope: para usarla en obra hace falta el codigo de compra.
 // =================================================================
-var LITE_TOPES = { trabajador:3, kardex:5, amonestacion:1, semana:1, doc:2, credencial:2 };
-function topeLite(k){ return libre() ? Infinity : (LITE_TOPES[k] || 0); }
-function cupoLite(k, cuantosHay){ return libre() || cuantosHay < topeLite(k); }
-/* aviso uniforme cuando se llega al tope */
+var LITE_TOPES = { trabajador:5, kardex:3, amonestacion:0, semana:0, doc:2, credencial:0, reporte:3 };
+function topeLite(k){ var t=planActual().tope[k]; return (t===undefined||t===-1) ? Infinity : t; }
+/* ── El contador del mes ──────────────────────────────────────────
+   Lo que se cuenta por mes se guarda con la etiqueta del mes: al
+   cambiar de mes arranca de cero solo. Ojo: vive en el celular, asi
+   que hoy se puede resetear borrando datos. Antes de cobrar de verdad
+   esto tiene que subir al servidor. Queda anotado, no escondido.   */
+var LS_USO='sstc_uso_mes';
+function mesEtiqueta(){ return hoyISO().slice(0,7); }
+function usoMes(k){
+  var u=leer(LS_USO,{});
+  if(u._mes !== mesEtiqueta()) return 0;
+  return u[k]||0;
+}
+var LS_USO_TOT='sstc_uso_total';
+/* dos contadores: el del mes (se reinicia solo el dia 1) y el de por
+   vida, que es el que usan los topes de LITE. */
+function usoTotal(k){ var u=leer(LS_USO_TOT,{}); return u[k]||0; }
+function sumarUso(k, cuantos){
+  var n=(cuantos===undefined?1:cuantos);
+  var u=leer(LS_USO,{});
+  if(u._mes !== mesEtiqueta()) u={_mes:mesEtiqueta()};
+  u[k]=(u[k]||0)+n;
+  guardar(LS_USO,u);
+  var t=leer(LS_USO_TOT,{}); t[k]=(t[k]||0)+n; guardar(LS_USO_TOT,t);
+}
+function esPorMes(k){ return !!planActual().porMes[k]; }
+/* cuantos lleva usados: del mes si el tope es mensual, del total si no */
+function llevaUsados(k, cuantosHay){ return esPorMes(k) ? usoMes(k) : cuantosHay; }
+
+function cupoLite(k, cuantosHay){
+  var t=topeLite(k);
+  if(t===Infinity) return true;
+  return llevaUsados(k, cuantosHay) < t;
+}
+/* ── La pantalla de tope ──────────────────────────────────────────
+   Nombra UN SOLO plan: el primer peldano que levanta este tope.
+   Nunca el de arriba. Es el mecanismo entero de la escalera.      */
 function frenoLite(k, cuantosHay, queCosa){
   if(cupoLite(k, cuantosHay)) return false;
-  var t=topeLite(k);
-  alert('Versión de muestra: llegas hasta '+t+' '+queCosa+'.\n\n'+
-        'Con tu código de compra se abre sin límite. Toca «Tengo un código de compra» en Ajustes.');
+  var t=topeLite(k), P=planQueAbre(k, true), A=planActual();
+  var cuando = esPorMes(k) ? ' este mes' : '';
+  var msj = (t===0)
+    ? ('«'+queCosa.charAt(0).toUpperCase()+queCosa.slice(1)+'» no entra en tu plan '+A.nombre+'.')
+    : ('Llegaste a '+t+' '+queCosa+cuando+'. Es el tope del plan '+A.nombre+'.');
+  var sig=planSiguiente();
+  if(P && sig && P.orden === sig.orden){
+    var nt=P.tope[k];
+    msj += '\n\nCon el plan '+P.nombre+' '+(nt===-1 ? 'no hay tope' : ('son '+nt+(esPorMes(k)?' al mes':'')))+'.'
+         + '\n'+precioTexto(P)+'.';
+  } else if(sig){
+    msj += '\n\nTu siguiente paso es el plan '+sig.nombre+' ('+precioTexto(sig)+'), que trae '
+         + (GANA_EL_SIGUIENTE[sig.id]||'más cupo') + '.';
+  } else {
+    msj += '\n\nEscríbenos: tu obra necesita un plan a medida.';
+  }
+  alert(msj);
   return true;
 }
-/* lo que la muestra no deja ni probar: es justo lo que se vende */
-function soloConCodigo(queCosa){
-  if(libre()) return false;
-  alert('«'+queCosa+'» es del acceso completo.\n\n'+
-        'En la versión de muestra puedes registrar y ver, pero no generar el documento oficial. '+
-        'Con tu código de compra se abre.');
+/* Lo que gana el peldano siguiente, dicho en una linea. Es lo que se
+   muestra cuando lo que pediste vive mas arriba: nunca se le enseña a
+   nadie el precio de un plan que esta a dos saltos. */
+var GANA_EL_SIGUIENTE = {
+  prevencionista:'el programa de charlas completo, 80 kardex al mes, 50 trabajadores y el QR del RISST',
+  supervisor:'todo el programa de capacitaciones, 200 kardex al mes, 100 trabajadores y los QR de PETS e IPERC',
+  ssoma:'hojas MSDS, amonestaciones, reporte semanal de HHT, constancias y todos los QR',
+  gestion:'las seis carpetas del sistema de gestión y todo sin tope'
+};
+/* lo que no entra en el plan y no es cuestion de cantidad, sino de llave */
+function soloConCodigo(queCosa, llave){
+  if(!llave) llave='constancias';
+  if(planActual().puede[llave]) return false;
+  var A=planActual(), P=planQueAbre(llave, false), sig=planSiguiente();
+  var msj='«'+queCosa+'» no entra en tu plan '+A.nombre+'.';
+  if(P && sig && P.orden === sig.orden){
+    /* esta justo en el peldano de arriba: se nombra con su precio */
+    msj += '\n\nSe abre con el plan '+P.nombre+'.\n'+precioTexto(P)+'.';
+  } else if(sig){
+    /* vive mas arriba: se nombra el salto siguiente, no el de allá lejos */
+    msj += '\n\nTu siguiente paso es el plan '+sig.nombre+' ('+precioTexto(sig)+'), que trae '
+         + (GANA_EL_SIGUIENTE[sig.id]||'más cupo y más herramientas') + '.'
+         + '\n\n«'+queCosa+'» llega más arriba en la escalera.';
+  }
+  alert(msj);
   return true;
 }
+/* la puerta unica: toda accion con tope o con llave pasa por aca */
+function puede(clave){ return !!planActual().puede[clave]; }
 /* la banda de arriba en el inicio de la empresa */
 function bandaLiteEmpresa(){
-  var pl=planLocal(), d=diasParaVencer();
-  var aviso = (d!==null && d<=7 && planVigente())
-    ? '<div style="margin-top:9px;color:var(--mal);font-weight:600">⏳ '+(d<=0?'Vence hoy.':'Te quedan '+d+' día'+(d===1?'':'s')+'.')+' Renueva con un código nuevo o vuelves a la versión de muestra.</div>'+
-      '<div style="margin-top:7px"><button class="btn sec" style="margin:0" onclick="pedirCodigo(\'\')">Renovar con un código</button></div>'
-    : '';
-  if(planEsEquipo()){
-    return '<div class="aviso" style="border-color:rgba(47,158,111,.35)">✓ <b>Equipo SSOMA</b> — todo abierto, y tu equipo entra con el código de la empresa (hasta '+TOPE_EQUIPO+' personas).'+
-      (pl.vence? '<br><span style="color:var(--gris)">Vence el '+fechaLarga(String(pl.vence).slice(0,10))+'.</span>':'')+aviso+'</div>';
-  }
-  if(planVigente()){
-    return '<div class="aviso" style="border-color:rgba(47,158,111,.35)">✓ <b>Supervisor SSOMA</b> — todo abierto para ti. Es de una sola persona: si tu equipo también tiene que entrar, hace falta <b>Equipo SSOMA</b>.'+
-      (pl.vence? '<br><span style="color:var(--gris)">Vence el '+fechaLarga(String(pl.vence).slice(0,10))+'.</span>':'')+aviso+
-      '<div style="margin-top:9px"><button class="btn sec" style="margin:0" onclick="pedirCodigo(\'\')">Tengo un código de Equipo SSOMA</button></div></div>';
-  }
-  if(pl.plan && pl.plan!=='lite' && pl.vence){
-    return '<div class="aviso rojo" style="border-color:rgba(210,86,79,.5)">⏳ <b>Tu acceso venció</b> el '+fechaLarga(String(pl.vence).slice(0,10))+'. Tus documentos siguen ahí; volvieron los topes de la versión de muestra.'+
+  var A=planActual(), pl=planLocal(), d=diasParaVencer(), S=planSiguiente();
+  var vence = (pl.vence && A.orden>0)
+    ? '<br><span style="color:var(--gris)">Vence el '+fechaLarga(String(pl.vence).slice(0,10))+'.</span>' : '';
+  var porVencer = (d!==null && d<=7 && A.orden>0)
+    ? '<div style="margin-top:9px;color:var(--mal);font-weight:600">⏳ '+(d<=0?'Vence hoy.':'Te quedan '+d+' día'+(d===1?'':'s')+'.')+'</div>'+
+      '<div style="margin-top:7px"><button class="btn sec" style="margin:0" onclick="pedirCodigo(\'\')">Renovar con un código</button></div>' : '';
+
+  /* venció y volvió a LITE */
+  if(A.orden===0 && pl.plan && pl.plan!=='lite' && pl.vence){
+    return '<div class="aviso rojo" style="border-color:rgba(210,86,79,.5)">⏳ <b>Tu plan venció</b> el '+
+      fechaLarga(String(pl.vence).slice(0,10))+'. Tus documentos siguen ahí; volvieron los topes de la versión gratis.'+
       '<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="pedirCodigo(\'\')">Renovar con un código</button></div></div>';
   }
-  var T=LITE_TOPES;
-  return '<div class="aviso">🎁 <b>Versión de muestra</b> — puedes probarlo todo con tope: '+
-    T.trabajador+' trabajadores, '+T.kardex+' entregas de EPP, '+T.amonestacion+' amonestación, '+
-    T.semana+' semana de HHT y '+T.doc+' documentos por carpeta. Los Excel y Word oficiales salen con el código.'+
-    '<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="pedirCodigo(\'\')">Tengo un código de compra</button></div></div>';
+  /* la versión gratis */
+  if(A.orden===0){
+    var T=A.tope;
+    return '<div class="aviso">🎁 <b>Plan LITE</b> — gratis, para probarlo en tu cuadrilla: '+
+      T.trabajador+' trabajadores, '+T.kardex+' entregas de EPP, '+T.reporte+' reportes y '+A.charlas+' charlas.'+
+      (S? '<div style="margin-top:10px"><button class="btn" style="margin:0" onclick="pedirCodigo(\'\')">'+
+          'Pasar al plan '+esc(S.nombre)+' · '+precioTexto(S)+'</button></div>' : '')+'</div>';
+  }
+  /* un plan pagado: qué tienes, y cuál es el siguiente escalón */
+  var g = A.gestores>1 ? (' Entran hasta '+A.gestores+' gestores con el código de la empresa.') : ' Es de una sola persona.';
+  return '<div class="aviso" style="border-color:rgba(47,158,111,.35)">✓ <b>Plan '+esc(A.nombre)+'</b> — '+
+    precioTexto(A)+'.'+g+vence+porVencer+
+    (S? '<div style="margin-top:9px"><button class="btn sec" style="margin:0" onclick="pedirCodigo(\'\')">'+
+        'Tengo un código del plan '+esc(S.nombre)+'</button></div>' : '')+'</div>';
 }
 
-// =================================================================
-//  TRABAJADORES  ·  el registro del que salen kardex, QR y estatus
-//  Cada supervisor tiene su propio "dueño": si esta afiliado a una
-//  empresa, es el id de la empresa; si trabaja por su cuenta, un id
-//  propio que se genera una sola vez. Va a Supabase y ademas queda
-//  una copia en el celular para que funcione sin internet.
-// =================================================================
-var LS_TRAB='sstc_trab', LS_DUENIO='sstc_duenio', LS_KARDEX='sstc_kardex';
 function duenioId(){
   var e=empActiva();
   if(e && e.id) return e.id;
@@ -4991,6 +5156,14 @@ function duenioId(){
   }
   return d;
 }
+// =================================================================
+//  TRABAJADORES  ·  el registro del que salen kardex, QR y estatus
+//  Cada supervisor tiene su propio "dueño": si esta afiliado a una
+//  empresa, es el id de la empresa; si trabaja por su cuenta, un id
+//  propio que se genera una sola vez. Va a Supabase y ademas queda
+//  una copia en el celular para que funcione sin internet.
+// =================================================================
+var LS_TRAB='sstc_trab', LS_DUENIO='sstc_duenio', LS_KARDEX='sstc_kardex';
 function trabsLocal(){ return leer(LS_TRAB,[]) || []; }
 function trabsSet(a){ guardar(LS_TRAB,a); }
 function trabPorId(id){ var a=trabsLocal(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; }
@@ -5056,6 +5229,7 @@ function guardarTrabajador(){
   var a=trabsLocal(), t=TRAB_EDIT?trabPorId(TRAB_EDIT):null;
   if(!t){
     if(frenoLite('trabajador', a.length, 'trabajadores')) return;
+    sumarUso('trabajador');
     t={id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}; a.push(t);
   }
   t.nombre=nombre; t.dni=($('t-dni').value||'').trim(); t.puesto=($('t-puesto').value||'').trim();
@@ -5137,6 +5311,7 @@ function guardarKardex(){
   if(!tid){ m.textContent='Registra primero a tu personal para poder elegir al trabajador.'; return; }
   if(!K_HAYFIRMA){ m.textContent='Falta la firma del trabajador.'; return; }
   if(frenoLite('kardex', kardexLocal().length, 'entregas de EPP')) return;
+  sumarUso('kardex');
   var t=trabPorId(tid);
   var reg={ id:'k'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
     trab:tid, trabNombre:t?t.nombre:'', epp:epp, tipo:$('k-tipo').value,
@@ -5386,6 +5561,7 @@ function guardarAmonestacion(){
   if(tn.length<3){ m.textContent='Falta el nombre del trabajador.'; return; }
   if(d.length<10){ m.textContent='Describe lo que pasó, aunque sea en dos líneas.'; return; }
   if(frenoLite('amonestacion', amonLocal().length, 'amonestación')) return;
+  sumarUso('amonestacion');
   var hoy=new Date();
   var reg={ id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
     fecha:hoy.getFullYear()+'-'+('0'+(hoy.getMonth()+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2),
@@ -5582,7 +5758,7 @@ function _ponerFirmas(xml, rIds){
 }
 
 function generarPapeleta(a){
-  if(soloConCodigo('Generar la papeleta de notificación en Word')) return null;
+  if(soloConCodigo('Generar la papeleta de notificación en Word','amonestaciones')) return null;
   var emp = empleador();
   var doc = PAP_TEXTOS['word/document.xml'];
   var hdr = PAP_TEXTOS['word/header1.xml'];
@@ -5932,7 +6108,7 @@ function pintarKardexExport(){
   $('kx-msg').textContent=''; $('kx-resultado').innerHTML='';
 }
 function exportarKardex(){
-  if(soloConCodigo('Generar el registro de EPP en Excel')) return;
+  if(soloConCodigo('Generar el registro de EPP en Excel','constancias')) return;
   var mes=$('kx-mes').value, tid=$('kx-trab').value, m=$('kx-msg');
   m.style.color='var(--mal)';
   if(!mes){ m.textContent='Elige el mes.'; return; }
@@ -6040,22 +6216,150 @@ function supItemDom(it, ruta){
 }
 /* Los cuatro de todos los días. Cualquier otra cosa sigue estando en su
    carpeta; esto solo evita el «abrir carpeta por carpeta» de lo repetitivo. */
-var ACCESOS_RAPIDOS = [
-  {ic:'🗓️', et:'Programa<br>de charlas', ir:'p-programa', color:'a-oro'},
-  {ic:'🎓', et:'Capacitación<br>por tema',  ir:'p-temas',    color:'a-verde'},
-  {ic:'🦺', et:'Registrar<br>kardex',       ir:'p-kardex',   color:'a-azul'},
-  {ic:'🚨', et:'Reportar acto<br>o condición', ir:'p-reporte', color:'a-rojo'}
+/* ══════════════ LOS CÍRCULOS ══════════════
+   Catalogo completo. Cada uno dice desde que plan existe: si tu plan no
+   lo tiene, no aparece bloqueado — no aparece. Y de los que si tiene tu
+   plan, el usuario elige cuales quiere ver (Configuracion). Seis huecos,
+   dos filas de tres.                                                  */
+var CATALOGO_ACCESOS = [
+  {k:'charlas',   ic:'🗓️', et:'Programa<br>de charlas',       ir:'p-programa',     color:'a-oro',   desde:0, def:[0,1,2,3,4]},
+  {k:'kardex',    ic:'🦺', et:'Registrar<br>kardex',           ir:'p-kardex',       color:'a-azul',  desde:0, def:[0,1,2,3,4]},
+  {k:'personal',  ic:'👷', et:'Mi<br>personal',                ir:'p-trabajadores', color:'a-verde', desde:0, def:[0,1,2]},
+  {k:'reporte',   ic:'🚨', et:'Reportar acto<br>o condición',  ir:'p-reporte',      color:'a-rojo',  desde:0, def:[0,1,2,3,4]},
+  {k:'cuadrilla', ic:'🎟️', et:'Código de<br>cuadrilla',        ir:'p-generar',      color:'a-viol',  desde:0, def:[0,1]},
+  {k:'risst',     ic:'📕', et:'QR del<br>RISST',               fn:'abrirRisst',     color:'a-gris',  desde:1, def:[1,2]},
+  {k:'temas',     ic:'🎓', et:'Capacitación<br>por tema',      ir:'p-temas',        color:'a-verde', desde:2, def:[2]},
+  {k:'credencial',ic:'🪪', et:'Credenciales<br>y QR',          ir:'p-credencial',   color:'a-viol',  desde:3, def:[3,4]},
+  {k:'amonesta',  ic:'⚠️', et:'Amonesta-<br>ciones',           ir:'p-amonestaciones',color:'a-gris', desde:3, def:[3]},
+  {k:'semanal',   ic:'📈', et:'Reporte<br>semanal',            ir:'p-semanal',      color:'a-verde', desde:3, def:[3,4]},
+  {k:'inspec',    ic:'✅', et:'Inspec-<br>ciones',             ir:'p-inspec',       color:'a-gris',  desde:3, def:[4]}
 ];
+var LS_MIS_ACCESOS='sstc_mis_accesos';
+/* los que tu plan te deja tener */
+function accesosDelPlan(){
+  var o=planActual().orden;
+  return CATALOGO_ACCESOS.filter(function(a){ return a.desde <= o; });
+}
+/* los seis que se ven: los que elegiste, o los de fabrica de tu plan */
+function accesosVisibles(){
+  var o=planActual().orden, hay=accesosDelPlan();
+  var mios=leer(LS_MIS_ACCESOS,null);
+  if(mios && mios.length){
+    var elegidos=hay.filter(function(a){ return mios.indexOf(a.k)>-1; });
+    if(elegidos.length) return elegidos.slice(0,6);
+  }
+  var def=hay.filter(function(a){ return a.def.indexOf(o)>-1; });
+  return (def.length ? def : hay).slice(0,6);
+}
+/* compatibilidad: lo que habia antes */
+var ACCESOS_RAPIDOS = CATALOGO_ACCESOS;
+/* ══════════════ EL TABLERO ══════════════
+   Va pegado arriba del home, antes de los circulos. Crece con el plan:
+   tres tarjetas en LITE, hasta doce en Gestion SST. Cada tarjeta es un
+   boton: lleva a su lista. No es adorno, es el indice de la app.     */
+function _mesNombre(){
+  var M=['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+         'setiembre','octubre','noviembre','diciembre'];
+  return M[parseInt(hoyISO().slice(5,7),10)-1];
+}
+function _cuenta(clave){ try{ var v=leer(clave,[]); return (v&&v.length)||0; }catch(e){ return 0; } }
+function _charlaDeHoy(){
+  try{
+    if(typeof CHARLAS==='undefined' || !CHARLAS.length) return null;
+    var d=new Date(hoyISO()+'T00:00:00');
+    var dia=Math.floor((d - new Date(d.getFullYear(),0,0))/86400000);
+    return CHARLAS[dia % CHARLAS.length];
+  }catch(e){ return null; }
+}
+/* que tarjetas ve cada plan */
+function tejasDelPlan(){
+  var P=planActual(), o=P.orden, t=[];
+  var ch=_charlaDeHoy();
+  t.push({tipo:'texto', et:'Charla de hoy',
+          val: ch ? ch.titulo : 'Abre el programa del mes',
+          pie: ch ? ('Tema '+ch.n+' · '+ch.minutos+' min') : '', ir:'p-programa'});
+  t.push({et:'Trabajadores', val:_cuenta(LS_TRAB), tope:P.tope.trabajador, ir:'p-trabajadores'});
+  t.push({et:'Reportes de actos y condiciones', val: usoMes('reporte'),
+          tope:P.tope.reporte, mes:esPorMes('reporte'), ir:'p-reporte'});
+  if(o>=1){
+    t.push({et:'Kardex de EPP', val: esPorMes('kardex')?usoMes('kardex'):_cuenta(LS_KARDEX),
+            tope:P.tope.kardex, mes:esPorMes('kardex'), ir:'p-kardex'});
+    t.push({tipo:'texto', et:'Programa de charlas', val:'Ver el mes de '+_mesNombre(), ir:'p-programa'});
+  }
+  if(o>=2){
+    t.push({et:'Códigos de cuadrilla', val:_cuenta(LS_USA), ir:'p-generar'});
+    t.push({et:'Evaluaciones enviadas', val:_cuenta(LS_EV), ir:'p-registro'});
+  }
+  if(o>=3){
+    t.push({et:'Credenciales generadas', val:_cuenta(LS_CRED), tope:P.tope.credencial, ir:'p-credencial'});
+    t.push({et:'Amonestaciones', val:_cuenta(LS_AMON), tope:P.tope.amonestacion, ir:'p-amonestaciones'});
+    t.push({tipo:'texto', et:'Reporte semanal', val:'HHT y HHC del mes', ir:'p-semanal'});
+  }
+  if(o>=4){
+    t.push({tipo:'texto', et:'Inspecciones', val:'Ver las de la obra', ir:'p-inspec'});
+    t.push({tipo:'texto', et:'Documentos del sistema', val:'Las seis carpetas', ir:'p-emp-home'});
+  }
+  return t;
+}
+function tableroDom(){
+  var caja=document.createElement('div'); caja.className='tablero';
+  var barra=document.createElement('div'); barra.className='tablero-barra';
+  barra.innerHTML='<span class="tb-filtro on">'+hoyISO().slice(0,4)+'</span>'+
+                  '<span class="tb-filtro on">'+_mesNombre()+'</span>'+
+                  '<span class="tb-plan">'+esc(nombreDelPlan())+'</span>';
+  caja.appendChild(barra);
+  var rej=document.createElement('div'); rej.className='tejas';
+  tejasDelPlan().forEach(function(t){
+    var b=document.createElement('button'); b.type='button';
+    b.className='teja'+(t.tipo==='texto'?' teja-txt':'');
+    var pie=t.pie||'';
+    if(t.tope!==undefined && t.tope!==-1 && t.tipo!=='texto'){
+      pie='de '+t.tope+(t.mes?' este mes':'');
+      var pc=Math.min(100, Math.round((t.val/(t.tope||1))*100));
+      if(pc>=90) b.className+=' alerta';
+      pie += '<span class="tb-barra"><i style="width:'+pc+'%"></i></span>';
+    }
+    b.innerHTML='<span class="tj-et">'+esc(t.et)+'</span>'+
+                '<span class="tj-val">'+(t.tipo==='texto'?esc(String(t.val)):String(t.val))+'</span>'+
+                (pie?'<span class="tj-pie">'+pie+'</span>':'');
+    b.onclick=function(){ ir(t.ir); };
+    rej.appendChild(b);
+  });
+  caja.appendChild(rej);
+  return caja;
+}
+/* Lo que ve quien todavia no tiene Gestion SST donde irian las carpetas. */
+function invitaCarpetasDom(){
+  var d=document.createElement('div'); d.className='aviso'; d.style.marginTop='16px';
+  var P=planQueAbre('carpetas', false), S=planSiguiente();
+  var pie='';
+  if(P && S && P.orden===S.orden) pie='Se abren con el plan <b>'+esc(P.nombre)+'</b> · '+precioTexto(P)+'.';
+  else if(S) pie='Están más arriba en la escalera. Tu siguiente paso es el plan <b>'+esc(S.nombre)+'</b> · '+precioTexto(S)+'.';
+  d.innerHTML='<b>🗂️ Las carpetas del sistema</b><br>'+
+    '<span class="sub">Sistema Integrado, Sistema Informativo, Medio Ambiente, Salud Ocupacional, '+
+    'Respuesta ante Emergencias y Herramientas de obra.</span>'+
+    (pie? '<div style="margin-top:9px" class="sub">'+pie+'</div>' : '');
+  return d;
+}
+/* El RISST se abre como hoja de documento; el QR sale de ahi mismo. */
+function abrirRisst(){
+  if(!puede('qr_risst')){ soloConCodigo('El QR del RISST','qr_risst'); return; }
+  if(typeof abrirDoc==='function'){ abrirDoc('risst','RISST','Sistema Integrado'); return; }
+  ir('p-emp-home');
+}
 function accesosRapidosDom(){
   var caja=document.createElement('div');
   var t=document.createElement('div'); t.className='accesos-tit'; t.textContent='Lo de todos los días';
   caja.appendChild(t);
   var fila=document.createElement('div'); fila.className='accesos';
-  ACCESOS_RAPIDOS.forEach(function(a){
+  accesosVisibles().forEach(function(a){
     var b=document.createElement('button'); b.className='acceso '+a.color; b.type='button';
     b.setAttribute('aria-label', a.et.replace(/<br>/g,' '));
     b.innerHTML='<span class="aro">'+a.ic+'</span><span class="et">'+a.et+'</span>';
-    b.onclick=function(){ ir(a.ir); };
+    b.onclick=function(){
+      if(a.fn && typeof window[a.fn]==='function'){ window[a.fn](); return; }
+      ir(a.ir);
+    };
     fila.appendChild(b);
   });
   caja.appendChild(fila);
@@ -7562,6 +7866,8 @@ function guardarReporte(){
   var e=reqEmpresa(); if(!e) return;
   var desc=($('r-desc').value||'').trim();
   if(!desc){ alert('Describe lo que viste.'); return; }
+  if(frenoLite('reporte', usoTotal('reporte'), 'reportes')) return;
+  sumarUso('reporte');
   var msg=$('r-msg'); msg.style.color='var(--gris)'; msg.textContent='Enviando…';
   var f=$('r-foto').files && $('r-foto').files[0];
   function grabar(fotoUrl){
@@ -7716,6 +8022,7 @@ function prepCred(){
 function generarCredencial(){
   var nombre=($('c-nombre').value||'').trim(); if(!nombre){ alert('Nombre del trabajador.'); return; }
   if(frenoLite('credencial', leer(LS_CRED,[]).length, 'credenciales')) return;
+  sumarUso('credencial');
   var e=empActiva()||{nombre:'—', codigo:''};
   var datos={n:nombre, d:($('c-dni').value||'').trim(), c:($('c-cargo').value||'').trim(), v:$('c-vence').value, o:e.nombre};
   var payload=b64u(JSON.stringify(datos));
@@ -8008,12 +8315,20 @@ var EMP_ESTRUCTURA = [
 function pintarEmpHome(){
   var e=empActiva();
   $('emp-home-tit').textContent = e ? e.nombre : 'Tu empresa';
-  $('emp-home-sub').textContent = e ? ('Código: '+e.codigo+' · tu sistema de gestión SST, ordenado.') : 'Entra con tu código.';
+  $('emp-home-sub').textContent = e ? ('Código: '+e.codigo+' · '+nombreDelPlan()) : 'Entra con tu código.';
   var c=$('emp-home-cuerpo'); c.innerHTML=bandaLiteEmpresa();
+  /* El tablero primero: la data del mes sin abrir nada. */
+  c.appendChild(tableroDom());
   /* Lo de todos los días, arriba de todo: es la casa donde de verdad
      aterriza el usuario, no p-inicio. */
   c.appendChild(accesosRapidosDom());
-  EMP_ESTRUCTURA.forEach(function(g,gi){ c.appendChild(empGrupoDom(g,gi)); });
+  /* Las seis carpetas del sistema son del plan Gestión SST. En los
+     demás no salen bloqueadas: no salen. */
+  if(puede('carpetas')){
+    EMP_ESTRUCTURA.forEach(function(g,gi){ c.appendChild(empGrupoDom(g,gi)); });
+  } else {
+    c.appendChild(invitaCarpetasDom());
+  }
   var q=$('emp-quien');
   if(q){ var cor = (typeof TOK!=='undefined' && TOK && TOK.correo) ? TOK.correo : '';
          q.textContent = cor ? ('Sesión de '+cor) : ''; }
