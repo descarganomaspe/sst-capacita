@@ -230,30 +230,271 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .acceso.a-rojo  .aro{border-color:rgba(229,72,77,.55);background:rgba(229,72,77,.10)}
 .acceso.a-viol  .aro{border-color:rgba(154,123,200,.55);background:rgba(154,123,200,.10)}
 .acceso.a-gris  .aro{border-color:rgba(180,180,175,.5);background:rgba(180,180,175,.09)}
-/* ── el tablero del home ── */
-.tablero{margin:14px 0 18px;border:1px solid rgba(255,255,255,.10);border-radius:12px;overflow:hidden;
-  background:rgba(255,255,255,.035)}
-.tablero-barra{display:flex;flex-wrap:wrap;gap:7px;align-items:center;padding:10px 12px;
-  border-bottom:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04)}
-.tb-filtro{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;padding:3px 9px;
-  border-radius:20px;border:1px solid rgba(255,255,255,.16);color:var(--gris)}
-.tb-filtro.on{background:var(--oro,#d9a441);border-color:transparent;color:#14140f;font-weight:700}
-.tb-plan{margin-left:auto;font-size:11.5px;font-weight:700;letter-spacing:.05em;color:var(--gris);
-  text-transform:uppercase}
-.tejas{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;
-  background:rgba(255,255,255,.08)}
-.teja{background:#12131a;border:0;padding:12px 13px 13px;text-align:left;cursor:pointer;
-  display:flex;flex-direction:column;gap:3px;color:inherit;font-family:inherit}
-.teja:active{background:rgba(255,255,255,.05)}
-.tj-et{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);line-height:1.3}
-.tj-val{font-size:29px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
-.teja-txt .tj-val{font-size:14.5px;font-weight:600;line-height:1.3}
-.tj-pie{font-size:11.5px;color:var(--gris);line-height:1.4}
-.tb-barra{display:block;height:4px;border-radius:3px;background:rgba(255,255,255,.10);
-  overflow:hidden;margin-top:5px}
-.tb-barra i{display:block;height:100%;background:#2fbf71}
-.teja.alerta .tj-val{color:#e5484d}
-.teja.alerta .tb-barra i{background:#e5484d}
+/* ── el tablero de la obra ──────────────────────────────────────────
+   Un solo bloque, dividido en franjas: cabecera, anillo+charla, gráfico,
+   tarjetas y pendientes. Todo sobre el mismo azul de la app, subiendo
+   apenas el tono en cada franja para que se lea el orden sin gritar. */
+.tablero{margin:14px 0 18px;border:1px solid rgba(143,169,184,.20);border-radius:14px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(18,56,76,.85),rgba(18,56,76,.55))}
+.tablero-barra{display:flex;gap:8px;align-items:baseline;padding:11px 13px;
+  border-bottom:1px solid rgba(143,169,184,.16);background:rgba(11,42,58,.55)}
+.tb-obra{font-weight:700;font-size:14px;letter-spacing:.01em;color:var(--tinta);flex:0 1 auto;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tb-fecha,.tb-plan{flex:none}
+.tb-fecha{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--gris);
+  letter-spacing:.04em;text-transform:uppercase}
+.tb-plan{margin-left:auto;font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--gris);border:1px solid rgba(143,169,184,.35);border-radius:20px;padding:3px 10px;white-space:nowrap}
+.tb-plan.pago{color:#0B2A3A;background:var(--oro);border-color:transparent}
+
+/* franja alta: el anillo del cupo y la charla de hoy */
+.tb-alto{display:grid;grid-template-columns:1fr;gap:1px;background:rgba(143,169,184,.16)}
+@media(min-width:460px){.tb-alto{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}}
+.tb-cupo{display:flex;align-items:center;gap:13px;padding:14px 13px;background:rgba(11,42,58,.32);color:var(--tinta)}
+.anillo{width:74px;height:74px;flex:none;display:block}
+.tb-cupo-tx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.tb-cupo-tx b{font-size:15.5px;line-height:1.25}
+.tb-cupo-tx span{font-size:11.5px;color:var(--gris);line-height:1.35}
+.tb-cupo.apretado .tb-cupo-tx b{color:var(--mal)}
+.tb-libre{width:74px;height:74px;flex:none;display:flex;align-items:center;justify-content:center;
+  font-size:34px;font-weight:800;color:var(--ok);border:2.5px solid rgba(47,191,113,.35);border-radius:50%}
+.tb-charla{display:flex;flex-direction:column;gap:5px;padding:14px 13px;text-align:left;cursor:pointer;
+  background:rgba(11,42,58,.32);border:0;color:inherit;font-family:inherit;width:100%}
+.tb-charla:active{background:rgba(245,183,0,.09)}
+.tb-charla-t{font-size:15px;font-weight:600;line-height:1.3;color:var(--tinta)}
+.tb-mini{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);line-height:1.3}
+
+/* el gráfico de los seis meses */
+.tb-graf{padding:14px 13px 12px;border-top:1px solid rgba(143,169,184,.16)}
+.tb-graf-cab{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 9px;margin-bottom:11px}
+.tb-graf-tit{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--tinta);
+  font-weight:700;white-space:nowrap}
+.tb-graf-sub{margin-left:auto;font-size:11px;color:var(--gris);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tb-barras{display:flex;align-items:flex-end;gap:5px;height:104px}
+.tb-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;
+  background:none;border:0;padding:0;cursor:pointer;color:inherit;font-family:inherit}
+.tb-num{font-size:10.5px;color:var(--gris);font-variant-numeric:tabular-nums;line-height:1}
+.tb-vara{flex:1 1 auto;width:100%;display:flex;align-items:flex-end;
+  background:rgba(143,169,184,.055);border-radius:4px;overflow:hidden}
+.tb-vara i{display:block;width:100%;background:#7FA6BC;border-radius:4px;
+  transition:height .35s cubic-bezier(.3,.9,.4,1)}
+.tb-col.hoy .tb-vara i{background:var(--oro)}
+.tb-col.hoy .tb-num{color:var(--oro);font-weight:700}
+.tb-col:active .tb-vara i{filter:brightness(1.25)}
+.tb-mes{font-size:9.5px;letter-spacing:.08em;color:var(--gris);line-height:1}
+.tb-col.hoy .tb-mes{color:var(--tinta);font-weight:700}
+.tb-detalle{min-height:17px;margin-top:9px;font-size:11.5px;color:var(--gris);line-height:1.4}
+.tb-detalle b{color:var(--tinta);text-transform:capitalize}
+.tb-vacio{font-size:12.5px;color:var(--gris);line-height:1.5;padding:2px 0}
+
+/* las tarjetas */
+.tejas{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:1px;
+  background:rgba(143,169,184,.16);border-top:1px solid rgba(143,169,184,.16)}
+.teja{background:rgba(11,42,58,.42);border:0;padding:12px 13px 13px;text-align:left;cursor:pointer;
+  display:flex;flex-direction:column;gap:5px;color:inherit;font-family:inherit;min-width:0}
+.teja:active{background:rgba(245,183,0,.09)}
+.teja:last-child:nth-child(odd){grid-column:1/-1}
+.tj-cab{display:flex;align-items:flex-start;gap:6px;min-height:26px}
+.tj-ic{font-size:13px;line-height:1.25;flex:none;opacity:.85}
+.tj-et{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--gris);line-height:1.3}
+.tj-val{font-size:27px;font-weight:800;line-height:1.02;font-variant-numeric:tabular-nums;color:var(--tinta)}
+.teja-txt .tj-val{font-size:14px;font-weight:600;line-height:1.3}
+.tj-pie{font-size:11px;color:var(--gris);line-height:1.4}
+.tb-barra{display:block;height:3.5px;border-radius:3px;background:rgba(143,169,184,.18);
+  overflow:hidden;margin-top:6px}
+.tb-barra i{display:block;height:100%;background:var(--ok);border-radius:3px;
+  transition:width .35s cubic-bezier(.3,.9,.4,1)}
+.teja.ojo    .tb-barra i{background:var(--oro)}
+.teja.alerta .tb-barra i{background:var(--mal)}
+.teja.alerta .tj-val{color:var(--mal)}
+
+/* los pendientes de la obra */
+.tb-pend{padding:14px 13px 15px;border-top:1px solid rgba(143,169,184,.16);background:rgba(11,42,58,.22)}
+.pend-nuevo{display:flex;gap:7px;margin-bottom:10px}
+.pend-nuevo input{flex:1 1 auto;min-width:0;background:rgba(11,42,58,.6);color:var(--tinta);
+  border:1px solid rgba(143,169,184,.28);border-radius:9px;padding:10px 11px;font:inherit;font-size:13.5px}
+.pend-nuevo input::placeholder{color:rgba(143,169,184,.72)}
+.pend-nuevo input:focus{outline:2px solid var(--oro);outline-offset:1px;border-color:transparent}
+.pend-mas{flex:none;width:42px;border:0;border-radius:9px;background:var(--oro);color:#0B2A3A;
+  font-size:22px;font-weight:800;line-height:1;cursor:pointer;font-family:inherit}
+.pend-mas:active{filter:brightness(.9)}
+.pend-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
+.pend-it{display:flex;align-items:flex-start;gap:9px;padding:8px 2px;
+  border-top:1px solid rgba(143,169,184,.13)}
+.pend-it:first-child{border-top:0}
+.pend-chk{flex:none;width:21px;height:21px;margin-top:1px;border-radius:6px;cursor:pointer;
+  border:1.5px solid rgba(143,169,184,.45);background:transparent;color:var(--ok);
+  font-size:13px;font-weight:800;line-height:1;font-family:inherit;padding:0}
+.pend-it.ok .pend-chk{background:rgba(47,191,113,.16);border-color:var(--ok)}
+.pend-tx{flex:1 1 auto;min-width:0;font-size:13.5px;line-height:1.4;color:var(--tinta);word-break:break-word}
+.pend-tx small{color:var(--gris);font-size:11px}
+.pend-it.ok .pend-tx{color:var(--gris);text-decoration:line-through}
+.pend-x{flex:none;background:none;border:0;color:var(--gris);font-size:19px;line-height:1;
+  cursor:pointer;padding:0 3px;font-family:inherit}
+.pend-x:active{color:var(--mal)}
+@media(prefers-reduced-motion:reduce){
+  .tb-vara i,.tb-barra i{transition:none}
+}
+
+/* ── el filtro del tablero ── */
+.tb-filtros{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:7px;align-items:center;
+  padding:10px 12px;border-bottom:1px solid rgba(143,169,184,.16);background:rgba(11,42,58,.35)}
+@media(max-width:400px){.tb-filtros{grid-template-columns:auto minmax(0,1fr);}
+  .tb-filtros .tb-sector{grid-column:1/-1;margin-left:0;max-width:100%;text-align:left}}
+.tb-sel{width:100%;min-width:0;background:rgba(11,42,58,.75);color:var(--tinta);font:inherit;font-size:12.5px;
+  border:1px solid rgba(143,169,184,.3);border-radius:20px;padding:6px 28px 6px 12px;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--gris) 50%),linear-gradient(135deg,var(--gris) 50%,transparent 50%);
+  background-position:calc(100% - 15px) 51%,calc(100% - 10px) 51%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.tb-sel:focus{outline:2px solid var(--oro);outline-offset:1px}
+.tb-sector{background:rgba(245,183,0,.10);border:1px solid rgba(245,183,0,.4);
+  color:var(--oro);border-radius:20px;padding:6px 12px;font:inherit;font-size:12px;font-weight:700;
+  cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;justify-self:end}
+.tb-sector:active{background:rgba(245,183,0,.2)}
+
+/* ── los cuatro KPI ── */
+.tb-kpis{display:grid;grid-template-columns:1fr 1fr;gap:1px;
+  background:rgba(143,169,184,.16);border-top:1px solid rgba(143,169,184,.16)}
+.kpi{background:rgba(11,42,58,.42);border:0;padding:12px 13px 13px;text-align:left;cursor:pointer;
+  display:flex;flex-direction:column;gap:6px;color:inherit;font-family:inherit;min-width:0}
+.kpi:active{background:rgba(245,183,0,.09)}
+.kpi-et{display:flex;align-items:flex-start;gap:6px;font-size:9.5px;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--gris);line-height:1.3;min-height:24px}
+.kpi-ic{font-size:12px;flex:none;opacity:.85;line-height:1.2}
+.kpi-val{font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:var(--tinta)}
+.kpi-val i{font-size:15px;font-weight:700;font-style:normal;opacity:.6;margin-left:1px}
+.kpi-val.kpi-nd{font-size:24px;color:var(--gris);opacity:.7}
+.kpi-riel{display:block;height:4px;border-radius:3px;background:rgba(143,169,184,.18);overflow:hidden}
+.kpi-riel i{display:block;height:100%;border-radius:3px;background:var(--gris);
+  transition:width .4s cubic-bezier(.3,.9,.4,1)}
+.kpi.ok  .kpi-riel i{background:var(--ok)}
+.kpi.ojo .kpi-riel i{background:var(--oro)}
+.kpi.mal .kpi-riel i{background:var(--mal)}
+.kpi.mal .kpi-val{color:var(--mal)}
+.kpi.ojo .kpi-val{color:var(--oro)}
+.kpi-pie{font-size:10.5px;color:var(--gris);line-height:1.35}
+.kpi-vacio{cursor:default}
+.kpi-vacio .kpi-pie{opacity:.8}
+
+/* ── las donas ── */
+.tb-donas{display:grid;grid-template-columns:1fr;gap:1px;
+  background:rgba(143,169,184,.16);border-top:1px solid rgba(143,169,184,.16)}
+@media(min-width:520px){.tb-donas{grid-template-columns:1fr 1fr}}
+.tb-dona{background:rgba(11,42,58,.30);padding:14px 13px}
+.dona{width:82px;height:82px;flex:none;display:block;color:var(--tinta)}
+.dona-fila{display:flex;align-items:center;gap:14px}
+.dona-ley{list-style:none;margin:0;padding:0;flex:1 1 auto;min-width:0;
+  display:flex;flex-direction:column;gap:6px}
+.dona-ley li{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--gris);line-height:1.3}
+.dona-ley i{width:9px;height:9px;border-radius:3px;flex:none}
+.dona-ley span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dona-ley b{color:var(--tinta);font-variant-numeric:tabular-nums;font-size:12.5px}
+.dona-ley em{font-style:normal;opacity:.65;font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
+
+/* ── el ranking de lugares ── */
+.tb-ranking .rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.rank li{display:grid;grid-template-columns:minmax(0,1fr) 34% auto;align-items:center;gap:9px}
+.rank-t{font-size:12.5px;color:var(--tinta);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-r{display:block;height:7px;border-radius:4px;background:rgba(143,169,184,.14);overflow:hidden}
+.rank-r i{display:block;height:100%;border-radius:4px;background:var(--oro)}
+.rank li b{font-size:12.5px;color:var(--tinta);font-variant-numeric:tabular-nums;min-width:20px;text-align:right}
+
+.tb-detalle-fijo{padding:0 13px 12px;font-size:11.5px;color:var(--gris);line-height:1.4}
+.tb-detalle-fijo b{color:var(--tinta);text-transform:capitalize}
+@media(prefers-reduced-motion:reduce){ .kpi-riel i{transition:none} }
+
+/* ── el antes y el después del reporte ── */
+.rep-fotos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.rep-fotos figure{margin:0;border-radius:9px;overflow:hidden;background:rgba(11,42,58,.6);
+  border:1px solid rgba(143,169,184,.2)}
+.rep-fotos img{display:block;width:100%;height:120px;object-fit:cover}
+.rep-fotos figcaption{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gris);
+  padding:5px 7px;text-align:center}
+.rep-accion{margin-top:10px;padding:9px 11px;border-radius:9px;font-size:13px;line-height:1.45;
+  background:rgba(47,191,113,.10);border:1px solid rgba(47,191,113,.3);color:var(--tinta)}
+.rep-accion .sub{display:inline;font-size:12px}
+.rc-que{padding:11px 12px;border-radius:10px;background:rgba(11,42,58,.55);
+  border:1px solid rgba(143,169,184,.22);line-height:1.45;font-size:14px}
+.rc-antes,.rc-despues{margin-top:9px}
+.rc-antes img,.rc-despues img{display:block;width:100%;border-radius:9px;margin-top:5px}
+.rc-despues:empty{display:none}
+
+
+/* ── la seguridad del día y el trabajador del mes ── */
+.pt-fila{display:flex;align-items:center;gap:12px}
+.pt-marca{font-size:22px;font-weight:800;min-width:26px;text-align:center}
+.pt-tx{flex:1;line-height:1.35}
+.tdm{border:1px solid rgba(245,183,0,.42);border-radius:13px;padding:14px 14px 13px;margin:0 0 16px;
+  background:linear-gradient(180deg,rgba(245,183,0,.11),rgba(245,183,0,.03))}
+.tdm-cab{font-size:14.5px;line-height:1.45;color:var(--tinta)}
+.tdm-nom{color:var(--oro)}
+.tdm-t{letter-spacing:.06em;color:var(--oro)}
+.tdm-nota{margin-top:6px;font-size:12.5px;color:var(--gris)}
+.tdm-nota b{color:var(--tinta);font-size:17px;font-variant-numeric:tabular-nums}
+.tdm-podio{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:7px}
+.tdm-podio li{display:grid;grid-template-columns:18px minmax(0,1fr) 28% auto;align-items:center;gap:8px;
+  font-size:12.5px;color:var(--gris)}
+.tdm-podio li.uno{color:var(--tinta);font-weight:600}
+.tdm-pos{font-variant-numeric:tabular-nums;opacity:.6;text-align:center}
+.tdm-q{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tdm-r{display:block;height:6px;border-radius:4px;background:rgba(143,169,184,.16);overflow:hidden}
+.tdm-r i{display:block;height:100%;border-radius:4px;background:var(--gris)}
+.tdm-podio li.uno .tdm-r i{background:var(--oro)}
+.tdm-podio li b{font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+.tdm-pie{margin-top:11px;font-size:11.5px;color:var(--gris);line-height:1.45;opacity:.9}
+.tdm-vacio{background:rgba(11,42,58,.4);border-color:rgba(143,169,184,.22)}
+.tdm-vacio b{display:block;margin-bottom:5px;color:var(--tinta);font-size:13.5px}
+.tdm-vacio span{font-size:12.5px;color:var(--gris);line-height:1.5}
+
+
+/* ── el número rojo de lo que falta atender ── */
+.acceso .aro{position:relative}
+.aviso-num{position:absolute;top:-3px;right:-3px;min-width:20px;height:20px;padding:0 5px;
+  border-radius:11px;background:var(--mal);color:#fff;font-size:11px;font-weight:800;line-height:20px;
+  text-align:center;box-shadow:0 0 0 2px var(--fondo);font-variant-numeric:tabular-nums}
+.tj-chip{margin-left:auto;background:rgba(229,72,77,.16);border:1px solid rgba(229,72,77,.45);
+  color:#ff8f92;border-radius:20px;padding:1px 7px;font-size:9px;font-weight:800;letter-spacing:.04em;
+  white-space:nowrap;text-transform:none;flex:none}
+
+/* ── la carpeta de asistencias ─────────────────────────────────────
+   Fotos de hojas firmadas. Las miniaturas van en rejilla porque lo
+   que se busca es «la del martes», y eso se reconoce de un vistazo
+   antes que leyendo un nombre.                                     */
+.esc-acc{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:2px 0 14px}
+@media(max-width:380px){.esc-acc{grid-template-columns:1fr}}
+.esc-filtro{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 13px}
+.esc-modo{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.esc-m{background:rgba(11,42,58,.5);border:1px solid rgba(143,169,184,.3);color:var(--gris);
+  border-radius:20px;padding:6px 13px;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
+.esc-m.on{background:var(--oro);border-color:transparent;color:#0B2A3A;font-weight:700}
+.esc-vista{margin-top:11px;border-radius:11px;overflow:hidden;background:rgba(11,42,58,.5)}
+.esc-vista img{display:block;width:100%;height:auto}
+.esc-mes{display:flex;align-items:baseline;gap:9px;margin:16px 0 9px;font-size:11px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--gris);font-weight:700}
+.esc-mes span{margin-left:auto;font-size:11px;letter-spacing:0;font-variant-numeric:tabular-nums;
+  border:1px solid rgba(143,169,184,.3);border-radius:20px;padding:1px 8px;font-weight:600}
+.esc-rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
+.esc-card{display:flex;flex-direction:column;gap:5px;background:rgba(18,56,76,.55);cursor:pointer;
+  border:1px solid rgba(143,169,184,.18);border-radius:11px;padding:8px;text-align:left;
+  color:inherit;font-family:inherit;min-width:0}
+.esc-card:active{border-color:var(--oro)}
+.esc-mini{display:block;width:100%;aspect-ratio:3/4;border-radius:7px;background-size:cover;
+  background-position:top center;background-color:#e9edf0}
+.esc-mini.vacia{display:flex;align-items:center;justify-content:center;font-size:28px;
+  background-color:rgba(11,42,58,.6);color:var(--gris)}
+.esc-nom{font-size:12.5px;line-height:1.3;color:var(--tinta);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.esc-pie{font-size:10.5px;color:var(--gris);line-height:1.3}
+.esc-pie b{color:#d68e1a}
+
+/* el pie del plan: va al final de cada pantalla, callado */
+.pie-plan{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:26px 0 4px;padding:11px 13px;
+  border-top:1px solid rgba(143,169,184,.16);font-size:11.5px;color:var(--gris);line-height:1.4}
+.pie-plan .pp-n{font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--tinta);font-size:10.5px}
+.pie-plan .pp-b{margin-left:auto;background:none;border:1px solid rgba(245,183,0,.5);color:var(--oro);
+  border-radius:20px;padding:5px 12px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.pie-plan .pp-b:active{background:rgba(245,183,0,.12)}
 .accesos-tit{font-family:system-ui,sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--gris);margin:2px 0 8px}
 .grupo-cont{display:none;padding:9px 4px 3px 10px;margin-left:6px;border-left:1.5px solid rgba(255,255,255,.10)}
@@ -680,6 +921,138 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <button class="btn" onclick="guardarFoto()" style="margin-top:11px">Guardar foto</button>
   </div>
 </section>
+<section class="pantalla" id="p-reporte-cerrar">
+  <div class="barra"><span>Cerrar reporte</span></div>
+  <h2>Cerrar con evidencia</h2>
+  <p class="sub">Marcar «atendido» a secas no le sirve a nadie. Lo que se audita es la prueba de que se corrigió: qué se hizo y cómo quedó.</p>
+  <div class="caja vidrio" style="padding:15px">
+    <div id="rc-que" class="rc-que"></div>
+    <label class="sec-tit" style="margin:14px 0 6px">¿Qué se hizo?</label>
+    <textarea id="rc-accion" rows="3" maxlength="500" placeholder="Se instaló línea de vida y se paró el trabajo hasta habilitarla"></textarea>
+    <label class="sec-tit" style="margin:12px 0 6px">Foto del levantamiento (recomendada)</label>
+    <input id="rc-foto" type="file" accept="image/*" capture="environment">
+    <div id="rc-vista" class="rc-despues"></div>
+    <label class="sec-tit" style="margin:12px 0 6px">Fecha de cierre</label>
+    <input id="rc-fecha" type="date">
+    <div id="rc-msg" style="font-size:13.5px;margin:10px 0 0"></div>
+    <button class="btn" onclick="guardarCierreReporte()" style="margin-top:11px">Cerrar el reporte</button>
+  </div>
+</section>
+
+<section class="pantalla" id="p-reporte-excel">
+  <div class="barra"><span>Informe</span></div>
+  <h2>Informe de reportes en Excel</h2>
+  <p class="sub">Una fila por reporte, con sus columnas y las fotos metidas dentro de la celda: el antes y el después. Todas las filas miden lo mismo, así la hoja se puede ordenar y filtrar sin que se desarme.</p>
+  <div class="caja vidrio" style="padding:15px">
+    <label class="sec-tit" style="margin:0 0 6px">Qué incluyo</label>
+    <select id="rx-que">
+      <option value="mes">Un mes</option>
+      <option value="anio">Todo el año</option>
+      <option value="abiertos">Solo los abiertos</option>
+      <option value="todos">Todos, desde el inicio</option>
+    </select>
+    <label class="sec-tit" style="margin:12px 0 6px">Mes</label>
+    <input id="rx-mes" type="month">
+    <div id="rx-cuantos" class="sub" style="margin:9px 0 0"></div>
+    <div id="rx-msg" style="font-size:13.5px;margin:10px 0 0"></div>
+    <button class="btn" onclick="bajarReportesExcel()" style="margin-top:11px">📊 Bajar el Excel</button>
+    <p class="sub" style="margin:10px 0 0;font-size:12.5px">Columnas: N°, fecha, tipo, lugar, descripción, quién reportó, estado, fecha de cierre, qué se hizo, foto del hallazgo y foto del levantamiento.</p>
+  </div>
+</section>
+
+<section class="pantalla" id="p-escaneos">
+  <div class="barra"><span>Asistencias</span><span id="esc-cuantos"></span></div>
+  <h2>Registros de asistencia</h2>
+  <p class="sub">Escanea con la cámara la hoja firmada de cada charla. Queda guardada en la carpeta de la obra y desde aquí la mandas completa por WhatsApp o al correo.</p>
+  <div class="esc-acc">
+    <button class="btn" onclick="abrirEscaneoNuevo()" style="margin:0">📷 Escanear una hoja</button>
+    <button class="btn sec" onclick="ir('p-escaneo-enviar')" style="margin:0">📤 Enviar la carpeta</button>
+  </div>
+  <div id="esc-filtro" class="esc-filtro"></div>
+  <div id="esc-lista"></div>
+</section>
+
+<section class="pantalla" id="p-escaneo-nuevo">
+  <div class="barra"><span>Escanear</span></div>
+  <h2 id="esc-tit">Escanear registro</h2>
+  <p class="sub">Apoya la hoja en una superficie plana, con buena luz, y toma la foto de frente. La app la endereza el contraste para que se lea como un escaneo.</p>
+  <div class="caja vidrio" style="padding:15px">
+    <label class="sec-tit" style="margin:0 0 6px">Foto de la hoja</label>
+    <input id="esc-archivo" type="file" accept="image/*" capture="environment">
+    <div id="esc-vista" class="esc-vista"></div>
+    <div id="esc-modo" class="esc-modo" style="display:none">
+      <button type="button" class="esc-m on" data-m="scan" onclick="escModo('scan')">Escaneo</button>
+      <button type="button" class="esc-m" data-m="gris" onclick="escModo('gris')">Blanco y negro</button>
+      <button type="button" class="esc-m" data-m="orig" onclick="escModo('orig')">Foto original</button>
+      <button type="button" class="esc-m" data-m="girar" onclick="escGirar()">↻ Girar</button>
+    </div>
+    <label class="sec-tit" style="margin:14px 0 6px">Nombre del registro</label>
+    <input id="esc-nombre" maxlength="90" placeholder="Charla de trabajo en altura — cuadrilla 3">
+    <label class="sec-tit" style="margin:12px 0 6px">Fecha</label>
+    <input id="esc-fecha" type="date">
+    <label class="sec-tit" style="margin:12px 0 6px">¿De qué es? (opcional)</label>
+    <select id="esc-clase">
+      <option value="charla">Charla de 5 minutos</option>
+      <option value="capacitacion">Capacitación</option>
+      <option value="induccion">Inducción</option>
+      <option value="simulacro">Simulacro</option>
+      <option value="reunion">Reunión / comité</option>
+      <option value="otro">Otro</option>
+    </select>
+    <label class="sec-tit" style="margin:12px 0 6px">Cuántos firmaron (opcional)</label>
+    <input id="esc-firmas" type="number" min="0" max="500" inputmode="numeric" placeholder="12">
+    <div id="esc-msg" style="font-size:13.5px;margin:10px 0 0"></div>
+    <button class="btn" onclick="guardarEscaneo()" style="margin-top:11px">Guardar en la carpeta</button>
+  </div>
+</section>
+
+<section class="pantalla" id="p-escaneo-ver">
+  <div class="barra"><span>Registro</span></div>
+  <h2 id="escv-tit">Registro</h2>
+  <p class="sub" id="escv-sub"></p>
+  <div id="escv-img" class="esc-vista"></div>
+  <div class="esc-acc" style="margin-top:14px">
+    <button class="btn sec" onclick="escCompartirUno()" style="margin:0">📲 Mandar este</button>
+    <button class="btn sec" onclick="escRenombrar()" style="margin:0">✏️ Cambiar el nombre</button>
+  </div>
+  <button class="btn sec" onclick="escBorrar()" style="margin-top:10px;color:var(--mal)">Quitar de la carpeta</button>
+</section>
+
+<section class="pantalla" id="p-escaneo-enviar">
+  <div class="barra"><span>Enviar</span></div>
+  <h2>Enviar la carpeta</h2>
+  <p class="sub">Arma un PDF con los registros que elijas y mándalo por WhatsApp, correo o cualquier app del celular.</p>
+  <div class="caja vidrio" style="padding:15px">
+    <label class="sec-tit" style="margin:0 0 6px">Qué mando</label>
+    <select id="env-que">
+      <option value="mes">Los de este mes</option>
+      <option value="todo">Toda la carpeta</option>
+      <option value="charla">Solo las charlas de 5 minutos</option>
+      <option value="capacitacion">Solo las capacitaciones</option>
+    </select>
+    <div id="env-cuantos" class="sub" style="margin:9px 0 0"></div>
+    <label class="sec-tit" style="margin:14px 0 6px">A dónde</label>
+    <div class="esc-modo" style="display:flex">
+      <button type="button" class="esc-m on" data-v="wa"    onclick="envVia('wa')">WhatsApp</button>
+      <button type="button" class="esc-m"    data-v="mail"  onclick="envVia('mail')">Correo</button>
+      <button type="button" class="esc-m"    data-v="otra"  onclick="envVia('otra')">Otra app</button>
+    </div>
+    <div id="env-wa">
+      <label class="sec-tit" style="margin:14px 0 6px">Número de WhatsApp</label>
+      <input id="env-num" type="tel" inputmode="tel" maxlength="20" placeholder="999 888 777">
+      <p class="sub" style="margin:6px 0 0;font-size:12.5px">Si es de Perú basta con los 9 dígitos. De otro país, ponle el código delante (+56…).</p>
+    </div>
+    <div id="env-mail" style="display:none">
+      <label class="sec-tit" style="margin:14px 0 6px">Correo</label>
+      <input id="env-correo" type="email" inputmode="email" placeholder="residente@constructora.pe">
+    </div>
+    <label class="sec-tit" style="margin:12px 0 6px">Mensaje (opcional)</label>
+    <input id="env-nota" maxlength="140" placeholder="Registros de asistencia de la semana">
+    <div id="env-msg" style="font-size:13.5px;margin:10px 0 0"></div>
+    <button class="btn" onclick="enviarCarpeta()" style="margin-top:11px">Armar el PDF y enviar</button>
+  </div>
+</section>
+
 
 <section class="pantalla" id="p-mensual">
   <div class="barra"><span>Reporte mensual</span></div>
@@ -1057,6 +1430,8 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Seguridad del día</span></div>
   <h2>🦺 ¿Cómo trabajó hoy?</h2>
   <p class="sub">Marca cada punto: ✓ cumple, ✗ no cumple, — no aplica hoy. Lo que pongas «no aplica» no baja su nota. Toca para cambiar.</p>
+  <div id="pt-tdm"></div>
+  <div id="pt-elige"></div>
   <label>Trabajador</label><input id="pt-nombre" placeholder="Juan Pérez">
   <div class="dos"><div><label>DNI (opcional)</label><input id="pt-dni" inputmode="numeric" placeholder="70123456"></div>
   <div><label>Fecha</label><input id="pt-fecha" type="date"></div></div>
@@ -4161,7 +4536,8 @@ function abrirSesion(correo, emp){
   guardar(LS_EMP,{codigo:emp.codigo, id:emp.id, nombre:emp.nombre});
   guardar(LS_SESION,{correo:correo, emp:emp.id, cuando:hoyISO()});
 }
-function cerrarSesion(){ try{ localStorage.removeItem(LS_SESION); }catch(e){} }
+function cerrarSesion(){ try{ localStorage.removeItem(LS_SESION); }catch(e){} USO_NUBE=null;
+  try{ pararVigilanciaReportes(); ponerGlobito(0); }catch(e){} }
 /* el TRABAJADOR no abre sesion: solo guarda el codigo de su obra. Para
    mandar su constancia o su reporte necesitamos ese codigo. */
 function empDeTrabajo(){ return empActiva() || leer(LS_EMP,null); }
@@ -4189,7 +4565,7 @@ var EV_OK={'p-eval':1,'p-datos':1,'p-juego':1,'p-final':1,'p-firma':1,'p-listo':
    Se le suman las de reportar (código de obra + reporte con foto/anónimo). */
 var COL_OK={'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos':1,'p-juego':1,
             'p-final':1,'p-firma':1,'p-listo':1,'p-charlas':1,'p-charla':1,'p-programa':1,
-            'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1};
+            'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1,'p-sector':1};
 /* la empresa: su inicio ordenado, las carpetas de documentos y las herramientas
    de obra que sí se comparten en la nube (reportes, inspecciones, credenciales, MSDS…) */
 var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
@@ -4204,7 +4580,9 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             'p-trabajadores':1,'p-trab-nuevo':1,'p-estatus':1,
             'p-kardex':1,'p-kardex-nuevo':1,'p-kardex-export':1,'p-empleador':1,
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,
-            'p-semanal':1,'p-semanal-dia':1,'p-estadistica':1,'p-carpeta':1,'p-foto':1,'p-mensual':1};
+            'p-semanal':1,'p-semanal-dia':1,'p-estadistica':1,'p-carpeta':1,'p-foto':1,'p-mensual':1,
+            'p-escaneos':1,'p-escaneo-nuevo':1,'p-escaneo-ver':1,'p-escaneo-enviar':1,
+            'p-reporte-cerrar':1,'p-reporte-excel':1};
 var PANT_PROTEGIDA={'p-juego':1,'p-final':1,'p-firma':1,'p-listo':1,'p-charla':1};
 /* ── navegación ────────────────────────────────────────────────────
    Un solo flujo. HIST guarda por dónde pasaste y «Atrás» deshace ese
@@ -4282,7 +4660,7 @@ function ir(p){
    2) ¿eligió EMPRESA? con cuenta pero sin empresa, va a elegirla.
    El trabajador (ROL 'col') no pasa por ninguna de las dos: entra con
    el código de su obra y solo llega a sus pantallas. */
-var SIN_CUENTA={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1};
+var SIN_CUENTA={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-sector':1};
 var SIN_EMPRESA={'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1};
 function _ir(p){
   /* A los temas no se entra sin sector: antes se colaba con el primero de la
@@ -4313,7 +4691,8 @@ function _ir(p){
   if(p==='p-colab')pintarColab(); if(p==='p-charlas')pintarCharlas();
   if(p==='p-talleres')pintarTalleres();
   if(p==='p-empresa')pintarEmpresa(); if(p==='p-msds')pintarMsds(); if(p==='p-puntaje')pintarPuntaje();
-  if(p==='p-reporte')pintarReporte(); if(p==='p-reporte-nuevo')prepReporte();
+  if(p==='p-reporte'){ pintarReporte(); subirColaReportes().then(function(n){ if(n) pintarReporte(); }); }
+  if(p==='p-reporte-nuevo')prepReporte();
   if(p==='p-inspec')pintarInspec(); if(p==='p-petar')pintarPetar();
   if(p==='p-credencial')pintarCredLista(); if(p==='p-cred-nueva')prepCred(); if(p==='p-record')pintarRecord();
   if(p==='p-normas')pintarNormas();
@@ -4329,7 +4708,39 @@ function _ir(p){
   if(p==='p-amonestaciones')pintarAmonestaciones(); if(p==='p-amon-nueva')prepAmonestacion();
   if(p==='p-amon-ver')pintarAmonDetalle(); if(p==='p-amon-firma')prepFirmaAmon(); if(p==='p-estatus')pintarEstatus();
   if(p==='p-norma')pintarNorma();
-  pintarBarraNav(p);}
+  if(p==='p-escaneos'){ pintarEscaneos(); reintentarEscaneos().then(bajarEscaneos).then(pintarEscaneos); }
+  if(p==='p-escaneo-nuevo')prepEscaneo();
+  if(p==='p-escaneo-ver')pintarEscaneoVer();
+  if(p==='p-escaneo-enviar')prepEnviarCarpeta();
+  if(p==='p-reporte-cerrar')prepCerrarReporte();
+  if(p==='p-reporte-excel')prepReporteExcel();
+  pintarBarraNav(p); pintarPieDePlan(p);}
+
+/* ── El pie del plan ──────────────────────────────────────────────
+   El aviso del plan sale en todas las pantallas del gestor, pero
+   ABAJO, al último y callado: una línea con el plan que tienes y el
+   botón para subir. Arriba estorbaba; aquí acompaña.
+   No sale en el home (ahí va la banda completa), ni en las pantallas
+   del trabajador, ni mientras se está evaluando.                    */
+var SIN_PIE={'p-emp-home':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-eval':1,'p-juego':1,
+             'p-firma':1,'p-final':1,'p-listo':1,'p-datos':1,'p-colab':1,'p-acceso':1};
+function pintarPieDePlan(p){
+  var pant=document.getElementById(p); if(!pant) return;
+  /* si ya tenía uno, se quita: así nunca se duplica al volver */
+  for(var i=pant.children.length-1;i>=0;i--){
+    var h=pant.children[i];
+    if(h.className && String(h.className).indexOf('pie-plan')>-1) pant.removeChild(h);
+  }
+  if(SIN_PIE[p] || ROL==='col' || EV) return;
+  if(typeof hayCuenta==='function' && !hayCuenta()) return;
+  if(typeof sesionAbierta==='function' && !sesionAbierta()) return;
+  var A=planActual(), S=planSiguiente();
+  var d=document.createElement('div'); d.className='pie-plan';
+  var h='<span class="pp-n">Plan '+esc(A.nombre)+'</span><span>'+precioTexto(A)+'</span>';
+  if(S) h+='<button type="button" class="pp-b" onclick="pedirCodigo(\'\')">Subir a '+esc(S.nombre)+'</button>';
+  d.innerHTML=h;
+  pant.appendChild(d);
+}
 
 /* la barra de arriba: Atrás e Inicio, iguales en toda la app */
 function ligarBarraNav(){
@@ -4373,33 +4784,33 @@ var TOPE_EQUIPO = 8;   // compatibilidad con lo viejo
    para que el gratis siga siendo una prueba y no un plan.            */
 var PLANES = [
   { id:'lite', nombre:'LITE', precio:0, orden:0,
-    tope:{ trabajador:5, kardex:3, reporte:3, doc:2, credencial:0, amonestacion:0, semana:0 },
-    porMes:{ kardex:false, reporte:false },
+    tope:{ trabajador:5, kardex:3, reporte:3, doc:2, credencial:0, amonestacion:0, semana:0, escaneo:3 },
+    porMes:{ kardex:false, reporte:false, escaneo:false },
     gestores:1, charlas:2, temas:0,
     puede:{ cuadrilla:1 } },
 
   { id:'prevencionista', nombre:'Prevencionista de Riesgo', precio:19.90, orden:1,
-    tope:{ trabajador:50, kardex:80, reporte:20, doc:20, credencial:0, amonestacion:0, semana:0 },
-    porMes:{ kardex:true, reporte:true },
+    tope:{ trabajador:50, kardex:80, reporte:20, doc:20, credencial:0, amonestacion:0, semana:0, escaneo:30 },
+    porMes:{ kardex:true, reporte:true, escaneo:true },
     gestores:1, charlas:-1, temas:3,
     puede:{ cuadrilla:1, qr_risst:1 } },
 
   { id:'supervisor', nombre:'Supervisor SST', precio:49.90, orden:2,
-    tope:{ trabajador:100, kardex:200, reporte:100, doc:60, credencial:0, amonestacion:0, semana:0 },
-    porMes:{ kardex:true, reporte:true },
+    tope:{ trabajador:100, kardex:200, reporte:100, doc:60, credencial:0, amonestacion:0, semana:0, escaneo:80 },
+    porMes:{ kardex:true, reporte:true, escaneo:true },
     gestores:1, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1 } },
 
   { id:'ssoma', nombre:'SSOMA', precio:89.90, orden:3,
-    tope:{ trabajador:250, kardex:400, reporte:200, doc:200, credencial:250, amonestacion:60, semana:12 },
-    porMes:{ kardex:true, reporte:true },
+    tope:{ trabajador:250, kardex:400, reporte:200, doc:200, credencial:250, amonestacion:60, semana:12, escaneo:300 },
+    porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
     gestores:2, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1, qr_msds:1, qr_credencial:1,
             msds:1, amonestaciones:1, semanal:1, campanas:1, simulacros:1, constancias:1 } },
 
   { id:'gestion', nombre:'Gestión SST', precio:199, orden:4,
-    tope:{ trabajador:-1, kardex:-1, reporte:-1, doc:-1, credencial:-1, amonestacion:-1, semana:-1 },
-    porMes:{ kardex:true, reporte:true },
+    tope:{ trabajador:-1, kardex:-1, reporte:-1, doc:-1, credencial:-1, amonestacion:-1, semana:-1, escaneo:-1 },
+    porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
     gestores:4, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1, qr_msds:1, qr_credencial:1,
             msds:1, amonestaciones:1, semanal:1, campanas:1, simulacros:1, constancias:1,
@@ -4464,8 +4875,16 @@ function refrescarPlan(){
   if(!e || !hayCuenta()) return Promise.resolve(planLocal());
   return sbRpc('sst_mi_plan',{p_emp:e.id}).then(function(j){
     if(j && j.plan){ guardar(LS_PLAN,j); }
+    /* el contador viene del mismo viaje: plan y cupo siempre juntos */
+    try{ refrescarUso().then(function(){ repintarSiEsElTablero(); }); }catch(_e){}
     return planLocal();
-  }).catch(function(){ return planLocal(); });
+  }).catch(function(){ try{ refrescarUso(); }catch(_e){} return planLocal(); });
+}
+/* si el gestor esta parado en su tablero cuando llega el numero bueno
+   del servidor, se repinta solo: no hace falta que salga y entre. */
+function repintarSiEsElTablero(){
+  var act=document.querySelector('.pantalla.activa');
+  if(act && act.id==='p-emp-home' && typeof pintarEmpHome==='function') pintarEmpHome();
 }
 function esc(t){var d=document.createElement('div');d.textContent=t||'';return d.innerHTML;}
 // las explicaciones vienen con viñetas '• ' al inicio de línea: se pintan como lista
@@ -4496,7 +4915,25 @@ var SECTOR_VUELVE='';
 function elegirSector(id){
   S.sector=id; guardar(LS.sec,id);
   var d=SECTOR_VUELVE || 'p-inicio'; SECTOR_VUELVE='';
+  /* si el sector se preguntó al abrir la app, se sigue por donde iba */
+  if(d==='__arranque__'){ HIST=[]; try{ seguirElArranque(); }catch(e){ ir('p-rol'); } return; }
   ir(d);
+}
+/* el sector de hoy, en cristiano (lo usa el tablero y Ajustes) */
+function sectorNombre(){
+  var g=leer(LS.sec,null);
+  for(var i=0;i<SECTORES.length;i++) if(SECTORES[i].id===g) return SECTORES[i].nombre;
+  return '';
+}
+function sectorIcono(){
+  var g=leer(LS.sec,null);
+  for(var i=0;i<SECTORES.length;i++) if(SECTORES[i].id===g) return SECTORES[i].icono||'';
+  return '';
+}
+/* cambiarlo después: desde Ajustes o desde el tablero */
+function cambiarSector(vuelveA){
+  SECTOR_VUELVE = vuelveA || (document.querySelector('.pantalla.activa')||{}).id || 'p-emp-home';
+  ir('p-sector');
 }
 function haySector(){
   var g=leer(LS.sec,null);
@@ -5021,6 +5458,491 @@ function guardarFoto(){
       setTimeout(function(){ abrirDoc(FOTO_BASE, FOTO_TIT, 'Salud Ocupacional'); },900); });
 }
 
+
+// =================================================================
+//  LA CARPETA DE ASISTENCIAS
+//  El registro de asistencia sigue siendo papel: se firma a mano en la
+//  charla de 5 minutos. Lo que se pierde es DESPUES: la hoja se moja,
+//  se traspapela, y cuando viene la fiscalizacion no aparece.
+//  Aqui se le toma foto, la app le sube el contraste para que se lea
+//  como escaneo de verdad, se le pone nombre y queda en la carpeta de
+//  la obra. Cuando la piden, sale un PDF con todas y se manda a un
+//  numero de WhatsApp o a un correo.
+//  La imagen va a Storage (no a la base) y el indice a sst_doc, que ya
+//  es lo que comparte toda la cuadrilla con el mismo codigo.
+// =================================================================
+var LS_ESCANEO='sstc_escaneos';
+/* el nombre que va en el PDF: primero la empresa de la sesion, y solo
+   si no hay, lo que el supervisor escribio en su configuracion. Antes
+   salia «Sin obra» aunque el gestor tuviera su empresa abierta. */
+function nombreDeLaObra(){
+  var e=empActiva();
+  if(e && e.nombre) return e.nombre;
+  var o=(typeof obraActual==='function') ? obraActual() : '';
+  return (o && o!=='Sin obra') ? o : 'Obra';
+}
+var ESC_IMG=null;        // {orig:dataURL, ancho, alto}
+var ESC_LISTA_MODO='scan', ESC_GIRO=0, ESC_VER=null, ENV_VIA='wa';
+function escKey(){ var e=empActiva(); return LS_ESCANEO+'_'+((e&&e.codigo)||'x'); }
+function escLocal(){ return leer(escKey(),[]); }
+function escSet(a){ guardar(escKey(), a.slice(0,300)); }
+
+/* ---------- abrir el escaner ---------- */
+function abrirEscaneoNuevo(){
+  if(frenoLite('escaneo', usoTotal('escaneo'), 'registros escaneados')) return;
+  ir('p-escaneo-nuevo');
+}
+function prepEscaneo(){
+  ESC_IMG=null; ESC_LISTA_MODO='scan'; ESC_GIRO=0;
+  $('esc-nombre').value=''; $('esc-firmas').value=''; $('esc-msg').textContent='';
+  $('esc-vista').innerHTML=''; $('esc-modo').style.display='none';
+  $('esc-fecha').value=hoyISO();
+  var ch=_charlaDeHoy();
+  if(ch) $('esc-nombre').placeholder = ch.titulo+' — cuadrilla';
+  var inp=$('esc-archivo'); if(!inp) return;
+  inp.value='';
+  if(inp.getAttribute('data-ok')==='1') return;
+  inp.setAttribute('data-ok','1');
+  inp.onchange=function(){
+    var f=this.files && this.files[0]; if(!f) return;
+    $('esc-msg').style.color='var(--gris)'; $('esc-msg').textContent='Procesando la hoja…';
+    var fr=new FileReader();
+    fr.onload=function(){
+      var img=new Image();
+      img.onload=function(){
+        /* 1600 px de lado largo: se lee la firma y no pesa 8 MB */
+        var max=1600, r=Math.min(1, max/Math.max(img.width,img.height));
+        var cv=document.createElement('canvas');
+        cv.width=Math.round(img.width*r); cv.height=Math.round(img.height*r);
+        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+        ESC_IMG={ orig:cv.toDataURL('image/jpeg',0.9), ancho:cv.width, alto:cv.height };
+        $('esc-modo').style.display='flex';
+        $('esc-msg').textContent='';
+        pintarVistaEscaneo();
+      };
+      img.onerror=function(){ $('esc-msg').style.color='var(--mal)'; $('esc-msg').textContent='No se pudo leer esa imagen. Prueba con otra.'; };
+      img.src=fr.result;
+    };
+    fr.readAsDataURL(f);
+  };
+}
+function escModo(m){ ESC_LISTA_MODO=m; marcarModo(); pintarVistaEscaneo(); }
+function escGirar(){ ESC_GIRO=(ESC_GIRO+90)%360; pintarVistaEscaneo(); }
+function marcarModo(){
+  var b=document.querySelectorAll('#esc-modo .esc-m');
+  for(var i=0;i<b.length;i++){
+    var m=b[i].getAttribute('data-m');
+    if(m==='girar') continue;
+    b[i].className='esc-m'+(m===ESC_LISTA_MODO?' on':'');
+  }
+}
+/* ---------- el "escaneo": limpiar una foto de papel ----------------
+   Un umbral global no sirve: la foto del celular siempre trae sombra
+   de un lado, y al pasarla a blanco y negro medio registro se vuelve
+   una mancha negra. Lo que se hace aqui es OTRA cosa: se calcula el
+   color del papel EN CADA ZONA (un promedio de ventana grande) y cada
+   pixel se divide entre el papel que tiene debajo. La sombra se va
+   sola, porque afecta igual al papel que a la tinta; queda la tinta.
+   Es el mismo truco de los escaneres de verdad.                     */
+function _fondoLocal(gris, w, h, rad){
+  var W=w+1, I=new Uint32Array(W*(h+1)), x, y;
+  for(y=0;y<h;y++){
+    var fila=0, base=y*w, arr=(y+1)*W, ant=y*W;
+    for(x=0;x<w;x++){ fila+=gris[base+x]; I[arr+x+1]=I[ant+x+1]+fila; }
+  }
+  var out=new Uint8ClampedArray(w*h);
+  for(y=0;y<h;y++){
+    var y0=y-rad; if(y0<0) y0=0;
+    var y1=y+rad; if(y1>h-1) y1=h-1;
+    var fa=(y1+1)*W, fb=y0*W, alto=y1-y0+1, dst=y*w;
+    for(x=0;x<w;x++){
+      var x0=x-rad; if(x0<0) x0=0;
+      var x1=x+rad; if(x1>w-1) x1=w-1;
+      out[dst+x] = (I[fa+x1+1]-I[fb+x1+1]-I[fa+x0]+I[fb+x0]) / (alto*(x1-x0+1));
+    }
+  }
+  return out;
+}
+function procesarEscaneo(dataURL, modo, giro){
+  return new Promise(function(ok, mal){
+    var img=new Image();
+    img.onload=function(){
+      var w=img.width, h=img.height, cv=document.createElement('canvas'), cx;
+      var vertical = (giro===90 || giro===270);
+      cv.width = vertical? h : w; cv.height = vertical? w : h;
+      cx=cv.getContext('2d');
+      cx.save();
+      if(giro){ cx.translate(cv.width/2, cv.height/2); cx.rotate(giro*Math.PI/180); cx.translate(-w/2,-h/2); }
+      cx.drawImage(img,0,0);
+      cx.restore();
+      if(modo==='orig'){ ok(cv.toDataURL('image/jpeg',0.85)); return; }
+      try{
+        var W2=cv.width, H2=cv.height;
+        var d=cx.getImageData(0,0,W2,H2), p=d.data, n=W2*H2, i, j;
+        var gris=new Uint8ClampedArray(n);
+        for(i=0,j=0;i<n;i++,j+=4) gris[i]=(p[j]*0.299 + p[j+1]*0.587 + p[j+2]*0.114)|0;
+        /* la ventana tiene que ser bastante mas grande que una letra:
+           una decima parte del lado corto va bien de A4 a media hoja. */
+        var rad=Math.max(12, Math.round(Math.min(W2,H2)/10));
+        var fondo=_fondoLocal(gris, W2, H2, rad);
+        var duro=(modo==='gris');
+        for(i=0,j=0;i<n;i++,j+=4){
+          var f=fondo[i]; if(f<12) f=12;
+          var v=gris[i]/f;                 /* 1.0 = papel, <0.8 = tinta */
+          if(v>1) v=1;
+          if(duro){
+            v = (v<0.86) ? 0 : 1;
+          }else{
+            v = (v-0.45)/0.55;             /* estirar lo que va de tinta a papel */
+            if(v<0) v=0; if(v>1) v=1;
+            v = Math.pow(v, 0.82);         /* gamma suave: no se come el lapiz */
+          }
+          var q=(v*255)|0;
+          p[j]=p[j+1]=p[j+2]=q;
+        }
+        cx.putImageData(d,0,0);
+      }catch(e){ /* canvas manchado o memoria corta: se queda el original */ }
+      ok(cv.toDataURL('image/jpeg',0.85));
+    };
+    img.onerror=function(){ mal('imagen'); };
+    img.src=dataURL;
+  });
+}
+function pintarVistaEscaneo(){
+  if(!ESC_IMG) return;
+  var c=$('esc-vista');
+  procesarEscaneo(ESC_IMG.orig, ESC_LISTA_MODO, ESC_GIRO).then(function(url){
+    ESC_IMG.listo=url;
+    c.innerHTML='<img src="'+url+'" alt="Vista previa de la hoja escaneada">';
+  }).catch(function(){ c.innerHTML='<img src="'+ESC_IMG.orig+'" alt="Hoja">'; });
+}
+function _dataURLaFile(url, nombre){
+  var coma=url.indexOf(','), bin=atob(url.slice(coma+1)), n=bin.length, u=new Uint8Array(n);
+  while(n--) u[n]=bin.charCodeAt(n);
+  return new File([u], nombre, {type:'image/jpeg'});
+}
+function guardarEscaneo(){
+  var m=$('esc-msg'); m.style.color='var(--mal)';
+  if(!ESC_IMG || !ESC_IMG.listo){ m.textContent='Primero toma la foto de la hoja.'; return; }
+  var nom=($('esc-nombre').value||'').trim();
+  if(nom.length<3){ nom = ($('esc-nombre').placeholder||'Registro de asistencia'); }
+  if(frenoLite('escaneo', usoTotal('escaneo'), 'registros escaneados')) return;
+  var reg={ id:'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    nombre:nom, fecha:$('esc-fecha').value||hoyISO(), clase:$('esc-clase').value,
+    firmas:parseInt($('esc-firmas').value,10)||0, img:ESC_IMG.listo, url:'', sync:0 };
+  var a=escLocal(); a.unshift(reg); escSet(a);
+  sumarUso('escaneo');
+  m.style.color='var(--gris)'; m.textContent='Guardado. Subiéndolo a la carpeta de la obra…';
+  subirEscaneo(reg).then(function(){
+    m.style.color='var(--ok)'; m.textContent='Listo, quedó en la carpeta.';
+    setTimeout(function(){ ir('p-escaneos'); },500);
+  }).catch(function(){
+    m.style.color='#d68e1a'; m.textContent='Sin internet: quedó en el celular y se sube solo cuando vuelva la señal.';
+    setTimeout(function(){ ir('p-escaneos'); },900);
+  });
+}
+/* sube la imagen a Storage y deja el indice en sst_doc (lo ve la cuadrilla) */
+function subirEscaneo(reg){
+  var e=empActiva();
+  if(!e || !hayCuenta() || !reg || !reg.img) return Promise.reject('sin_cuenta');
+  /* si algo revienta al armar el archivo, tiene que salir como promesa
+     rechazada y no como excepcion: si no, la app se queda colgada en
+     «subiendo…» y el usuario no sabe que su hoja SI quedo guardada. */
+  var f;
+  try{ f=_dataURLaFile(reg.img, 'asistencia-'+reg.id+'.jpg'); }
+  catch(err){ return Promise.reject(err); }
+  var subida;
+  try{ subida=subirFoto('asistencias', f); }
+  catch(err2){ return Promise.reject(err2); }
+  return Promise.resolve(subida).then(function(url){
+    return sbPost('sst_doc',{ empresa:e.id, hoja:'asistencia', nombre:reg.nombre,
+                              url:url, nota:reg.fecha+'|'+reg.clase+'|'+(reg.firmas||0) })
+      .then(function(){
+        var a=escLocal();
+        for(var i=0;i<a.length;i++) if(a[i].id===reg.id){ a[i].url=url; a[i].sync=1; a[i].img=''; }
+        escSet(a);
+        return url;
+      });
+  });
+}
+/* lo que no se pudo subir, se reintenta al abrir la carpeta */
+function reintentarEscaneos(){
+  var a=escLocal(), pend=a.filter(function(x){ return !x.sync && x.img; });
+  if(!pend.length) return Promise.resolve(0);
+  var n=0;
+  return pend.reduce(function(cad, r){
+    return cad.then(function(){ return subirEscaneo(r).then(function(){ n++; }, function(){}); });
+  }, Promise.resolve()).then(function(){ return n; });
+}
+/* baja de la nube lo que subieron los demas del equipo */
+function bajarEscaneos(){
+  var e=empActiva();
+  if(!e || !hayCuenta()) return Promise.resolve(escLocal());
+  return sbGet('sst_doc?empresa=eq.'+encodeURIComponent(e.id)+'&hoja=eq.asistencia'+
+               '&select=id,nombre,url,nota&order=id.desc&limit=200')
+    .then(function(nube){
+      if(!nube || !nube.length) return escLocal();
+      var a=escLocal(), porUrl={};
+      a.forEach(function(x){ if(x.url) porUrl[x.url]=1; });
+      nube.forEach(function(x){
+        if(!x.url || porUrl[x.url]) return;
+        var t=String(x.nota||'').split('|');
+        a.push({ id:'n'+x.id, nombre:x.nombre||'Registro', fecha:t[0]||'', clase:t[1]||'charla',
+                 firmas:parseInt(t[2],10)||0, img:'', url:x.url, sync:1, nubeId:x.id });
+      });
+      a.sort(function(p,q){ return (q.fecha||'').localeCompare(p.fecha||''); });
+      escSet(a);
+      return a;
+    }).catch(function(){ return escLocal(); });
+}
+var ESC_FILTRO='todo';
+var ESC_CLASE_ET={ charla:'Charla de 5 min', capacitacion:'Capacitación', induccion:'Inducción',
+                   simulacro:'Simulacro', reunion:'Reunión', otro:'Otro' };
+function pintarEscaneos(){
+  var a=escLocal();
+  $('esc-cuantos').textContent = a.length ? (a.length+(a.length===1?' hoja':' hojas')) : '';
+  /* filtros por tipo, solo los que existen */
+  var hay={}; a.forEach(function(x){ hay[x.clase||'otro']=1; });
+  var fh='<button type="button" class="esc-m'+(ESC_FILTRO==='todo'?' on':'')+'" onclick="escFiltro(\'todo\')">Todas</button>';
+  for(var k in ESC_CLASE_ET){ if(hay[k]) fh+='<button type="button" class="esc-m'+(ESC_FILTRO===k?' on':'')+'" onclick="escFiltro(\''+k+'\')">'+ESC_CLASE_ET[k]+'</button>'; }
+  $('esc-filtro').innerHTML = a.length? fh : '';
+  var lista = (ESC_FILTRO==='todo') ? a : a.filter(function(x){ return (x.clase||'otro')===ESC_FILTRO; });
+  var c=$('esc-lista');
+  if(!lista.length){
+    c.innerHTML='<div class="aviso">La carpeta está vacía.<br><span class="sub">Toma la foto de la hoja firmada apenas termine la charla: es el minuto en que todavía la tienes en la mano.</span></div>';
+    return;
+  }
+  /* agrupadas por mes, que es como las pide la fiscalización */
+  var porMes={}, orden=[];
+  lista.forEach(function(x){
+    var ym=(x.fecha||'').slice(0,7)||'sin fecha';
+    if(!porMes[ym]){ porMes[ym]=[]; orden.push(ym); }
+    porMes[ym].push(x);
+  });
+  var h='';
+  orden.forEach(function(ym){
+    h+='<div class="esc-mes">'+esc(ym==='sin fecha'?'Sin fecha':_mesNombreDe(ym))+
+       '<span>'+porMes[ym].length+'</span></div><div class="esc-rejilla">';
+    porMes[ym].forEach(function(x){
+      var i=a.indexOf(x);
+      var src=x.img||x.url||'';
+      h+='<button type="button" class="esc-card" onclick="verEscaneo('+i+')">'+
+         (src? '<span class="esc-mini" style="background-image:url('+src+')"></span>'
+             : '<span class="esc-mini vacia">📄</span>')+
+         '<span class="esc-nom">'+esc(x.nombre)+'</span>'+
+         '<span class="esc-pie">'+esc(fechaLarga(x.fecha)||'')+
+         (x.firmas? ' · '+x.firmas+' firmas':'')+
+         (x.sync? '' : ' · <b>sin subir</b>')+'</span></button>';
+    });
+    h+='</div>';
+  });
+  c.innerHTML=h;
+}
+function escFiltro(k){ ESC_FILTRO=k; pintarEscaneos(); }
+function verEscaneo(i){ ESC_VER=i; ir('p-escaneo-ver'); }
+function pintarEscaneoVer(){
+  var a=escLocal(), x=a[ESC_VER];
+  if(!x){ ir('p-escaneos'); return; }
+  $('escv-tit').textContent=x.nombre;
+  $('escv-sub').textContent=(fechaLarga(x.fecha)||'')+' · '+(ESC_CLASE_ET[x.clase]||'Registro')+
+    (x.firmas? ' · '+x.firmas+' firmas' : '')+(x.sync? '' : ' · todavía sin subir');
+  var src=x.img||x.url||'';
+  $('escv-img').innerHTML = src? '<img src="'+src+'" alt="'+esc(x.nombre)+'">' : '<div class="aviso">La imagen no está en este celular.</div>';
+}
+function escRenombrar(){
+  var a=escLocal(), x=a[ESC_VER]; if(!x) return;
+  var n=prompt('¿Cómo quieres que se llame este registro?', x.nombre);
+  if(n===null) return;
+  n=String(n).trim(); if(n.length<3) return;
+  x.nombre=n; escSet(a);
+  if(x.nubeId && hayCuenta()) sbPatch('sst_doc?id=eq.'+encodeURIComponent(x.nubeId),{nombre:n}).catch(function(){});
+  pintarEscaneoVer();
+}
+function escBorrar(){
+  var a=escLocal(), x=a[ESC_VER]; if(!x) return;
+  if(!confirm('¿Quitar «'+x.nombre+'» de la carpeta? Si ya se subió, se borra también para el resto del equipo.')) return;
+  if(x.nubeId && hayCuenta()) sbDel('sst_doc?id=eq.'+encodeURIComponent(x.nubeId)).catch(function(){});
+  a.splice(ESC_VER,1); escSet(a); ir('p-escaneos');
+}
+function escCompartirUno(){
+  var a=escLocal(), x=a[ESC_VER]; if(!x) return;
+  var src=x.img||x.url;
+  if(!src){ alert('Esa imagen no está en este celular.'); return; }
+  var txt=x.nombre+'\n'+(fechaLarga(x.fecha)||'')+(x.firmas?(' · '+x.firmas+' firmas'):'')+'\n'+nombreDeLaObra();
+  if(src.indexOf('data:')===0 && navigator.canShare){
+    var f=_dataURLaFile(src,'asistencia.jpg');
+    try{ if(navigator.canShare({files:[f]})){ navigator.share({files:[f], title:x.nombre, text:txt}).catch(function(){}); return; } }catch(e){}
+  }
+  if(navigator.share){ navigator.share({title:x.nombre, text:txt, url:(src.indexOf('http')===0?src:undefined)}).catch(function(){}); return; }
+  window.open('https://wa.me/?text='+encodeURIComponent(txt+(src.indexOf('http')===0?('\n'+src):'')),'_blank');
+}
+
+/* ---------- ENVIAR LA CARPETA ---------- */
+function envVia(v){
+  ENV_VIA=v;
+  var b=document.querySelectorAll('#p-escaneo-enviar .esc-m');
+  for(var i=0;i<b.length;i++){ var d=b[i].getAttribute('data-v'); if(d) b[i].className='esc-m'+(d===v?' on':''); }
+  $('env-wa').style.display   = (v==='wa')  ? '' : 'none';
+  $('env-mail').style.display = (v==='mail')? '' : 'none';
+}
+function prepEnviarCarpeta(){
+  ENV_VIA='wa'; envVia('wa');
+  $('env-msg').textContent=''; $('env-nota').value='';
+  var s=$('env-que'); if(s && !s.getAttribute('data-ok')){ s.setAttribute('data-ok','1'); s.onchange=envContar; }
+  envContar();
+}
+function envSeleccion(){
+  var a=escLocal(), q=$('env-que').value, ym=mesEtiqueta();
+  if(q==='mes')  return a.filter(function(x){ return (x.fecha||'').slice(0,7)===ym; });
+  if(q==='todo') return a.slice(0);
+  return a.filter(function(x){ return (x.clase||'otro')===q; });
+}
+function envContar(){
+  var n=envSeleccion().length;
+  $('env-cuantos').textContent = n ? (n+(n===1?' registro seleccionado':' registros seleccionados')) : 'No hay registros para esa selección.';
+}
+function _telPeru(t){
+  var d=String(t||'').replace(/[^0-9+]/g,'');
+  if(d.indexOf('+')===0) return d.replace(/\+/g,'');
+  if(d.length===9) return '51'+d;
+  return d;
+}
+function enviarCarpeta(){
+  var m=$('env-msg'); m.style.color='var(--mal)';
+  var sel=envSeleccion();
+  if(!sel.length){ m.textContent='No hay registros para esa selección.'; return; }
+  if(ENV_VIA==='wa'){
+    var t=_telPeru($('env-num').value);
+    if(t.length<9){ m.textContent='Escribe el número de WhatsApp.'; return; }
+  }
+  if(ENV_VIA==='mail'){
+    var co=($('env-correo').value||'').trim();
+    if(co.indexOf('@')<1){ m.textContent='Escribe el correo.'; return; }
+  }
+  m.style.color='var(--gris)'; m.textContent='Armando el PDF con '+sel.length+' registro'+(sel.length===1?'':'s')+'…';
+  pdfDeAsistencias(sel).then(function(doc){
+    var nombre='Asistencias_'+(nombreDeLaObra()||'obra').replace(/[^A-Za-z0-9]+/g,'-')+'_'+hoyISO()+'.pdf';
+    var nota=($('env-nota').value||'').trim();
+    var txt=(nota? nota+'\n' : '')+'Registros de asistencia · '+nombreDeLaObra()+'\n'+
+            sel.length+' hoja'+(sel.length===1?'':'s')+' · generado el '+fechaLarga(hoyISO())+' con OBRASST';
+    entregarAsistencias(doc, nombre, txt);
+    var faltan=doc._faltaron||0;
+    m.style.color = faltan? '#d68e1a' : 'var(--ok)';
+    m.textContent = faltan
+      ? ('Listo, pero '+faltan+' hoja'+(faltan===1?'':'s')+' no se pudo bajar de la nube y salió sin imagen. Conéctate y vuelve a armarlo.')
+      : 'Listo. Elige WhatsApp o el correo en el menú que abrió el celular.';
+  }).catch(function(e){
+    m.style.color='var(--mal)'; m.textContent='No se pudo armar el PDF: '+(e&&e.message||e);
+  });
+}
+/* el PDF: una hoja por registro, con su nombre, fecha y la obra al pie */
+function pdfDeAsistencias(sel){
+  return new Promise(function(ok, mal){
+    try{
+      var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
+      var W=595.28, H=841.89, M=34;
+      var hechos=0, faltaron=0;
+      function portada(){
+        doc.setFillColor(11,42,58); doc.rect(0,0,W,120,'F');
+        doc.setTextColor(245,183,0); doc.setFont('helvetica','bold'); doc.setFontSize(10);
+        doc.text('OBRASST · REGISTROS DE ASISTENCIA', M, 44);
+        doc.setTextColor(255,255,255); doc.setFontSize(20);
+        doc.text(doc.splitTextToSize(nombreDeLaObra()||'Obra', W-2*M), M, 72);
+        doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(200,215,225);
+        doc.text(sel.length+' registro'+(sel.length===1?'':'s')+' · generado el '+fechaLarga(hoyISO()), M, 100);
+        var y=160;
+        doc.setTextColor(40,40,40); doc.setFontSize(11); doc.setFont('helvetica','bold');
+        doc.text('Contenido', M, y); y+=8;
+        doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+        sel.slice(0,40).forEach(function(x,i){
+          y+=15; if(y>H-60) return;
+          doc.setTextColor(120,120,120); doc.text(String(i+1)+'.', M, y);
+          doc.setTextColor(40,40,40);
+          doc.text(doc.splitTextToSize(x.nombre+'   ('+(fechaLarga(x.fecha)||'sin fecha')+
+                   (x.firmas?(' · '+x.firmas+' firmas'):'')+')', W-2*M-22), M+20, y);
+        });
+        if(sel.length>40){ y+=17; doc.setTextColor(120,120,120); doc.text('…y '+(sel.length-40)+' más.', M+20, y); }
+        doc.setFontSize(7.5); doc.setTextColor(140,140,140);
+        doc.text(doc.splitTextToSize('Registro de capacitación conforme al Art. 35 de la Ley 29783. Lo conserva el empleador, responsable del tratamiento de los datos personales (Ley 29733 · D.S. 016-2024-JUS).', W-2*M), M, H-42);
+      }
+      portada();
+      var i=0;
+      function siguiente(){
+        if(i>=sel.length){ doc._faltaron=faltaron; ok(doc); return; }
+        var x=sel[i++], src=x.img || x.url || '';
+        doc.addPage();
+        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(11,42,58);
+        doc.text(doc.splitTextToSize(x.nombre, W-2*M), M, 46);
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120,120,120);
+        doc.text((fechaLarga(x.fecha)||'sin fecha')+'   ·   '+(ESC_CLASE_ET[x.clase]||'Registro')+
+                 (x.firmas?('   ·   '+x.firmas+' firmas'):''), M, 62);
+        doc.setDrawColor(220,220,220); doc.line(M,70,W-M,70);
+        doc.setFontSize(7.5); doc.setTextColor(150,150,150);
+        doc.text((nombreDeLaObra()||'')+'  ·  hoja '+(i)+' de '+sel.length, M, H-22);
+        if(!src){
+          doc.setFontSize(10); doc.setTextColor(90,90,90);
+          doc.text(doc.splitTextToSize('La imagen de esta hoja no está en este celular ni tiene enlace.', W-2*M), M, 110);
+          faltaron++; hechos++; siguiente(); return;
+        }
+        /* la imagen puede estar en el celular (data:) o solo en la nube.
+           Si está en la nube se baja aquí mismo: el PDF tiene que llevar
+           la hoja, no un enlace que nadie va a abrir. */
+        var img=new Image();
+        if(src.indexOf('data:')!==0) img.crossOrigin='anonymous';
+        img.onload=function(){
+          var dispW=W-2*M, dispH=H-110-40;
+          var r=Math.min(dispW/img.width, dispH/img.height);
+          var w=img.width*r, h=img.height*r;
+          var puesta=false;
+          try{ doc.addImage(img,'JPEG', M+(dispW-w)/2, 86, w, h); puesta=true; }
+          catch(e){ try{ doc.addImage(src,'JPEG', M+(dispW-w)/2, 86, w, h); puesta=true; }catch(e2){} }
+          if(!puesta){ faltaron++;
+            doc.setFontSize(10); doc.setTextColor(90,90,90);
+            doc.text(doc.splitTextToSize('La imagen está en la nube de la obra: '+(x.url||''), W-2*M), M, 110); }
+          hechos++; siguiente();
+        };
+        img.onerror=function(){
+          faltaron++;
+          doc.setFontSize(10); doc.setTextColor(90,90,90);
+          doc.text(doc.splitTextToSize('No se pudo bajar la imagen (¿sin internet?). Está guardada en la obra: '+(x.url||''), W-2*M), M, 110);
+          hechos++; siguiente();
+        };
+        img.src=src;
+      }
+      siguiente();
+    }catch(e){ mal(e); }
+  });
+}
+/* manda el PDF: si el celular sabe compartir archivos, va el archivo;
+   si no, se descarga y se abre WhatsApp o el correo con el mensaje. */
+function entregarAsistencias(doc, nombre, txt){
+  var blob=doc.output('blob'), f=null;
+  try{ f=new File([blob], nombre, {type:'application/pdf'}); }catch(e){}
+  var puedeArchivo=false;
+  try{ puedeArchivo = !!(f && navigator.canShare && navigator.canShare({files:[f]})); }catch(e){}
+  if(ENV_VIA==='otra' || (puedeArchivo && ENV_VIA!=='mail')){
+    if(puedeArchivo){ navigator.share({files:[f], title:nombre, text:txt}).catch(function(){ doc.save(nombre); }); return; }
+    doc.save(nombre); return;
+  }
+  /* WhatsApp a un número: el archivo se descarga y se adjunta en el chat
+     (ningún navegador puede adjuntarlo solo; se dice claro, no se finge) */
+  if(ENV_VIA==='wa'){
+    doc.save(nombre);
+    var t=_telPeru($('env-num').value);
+    window.open('https://wa.me/'+t+'?text='+encodeURIComponent(txt+'\n\n(Te adjunto el PDF que se acaba de descargar: '+nombre+')'),'_blank');
+    return;
+  }
+  if(ENV_VIA==='mail'){
+    doc.save(nombre);
+    var co=($('env-correo').value||'').trim();
+    var asunto='Registros de asistencia · '+(nombreDeLaObra()||'obra');
+    window.open('mailto:'+encodeURIComponent(co)+'?subject='+encodeURIComponent(asunto)+
+                '&body='+encodeURIComponent(txt+'\n\nAdjunta el PDF que se acaba de descargar: '+nombre),'_blank');
+    return;
+  }
+  doc.save(nombre);
+}
+
 // =================================================================
 //  LA VERSION DE MUESTRA (LITE) DEL LADO DE GESTION
 //  Antes, con solo entrar con el codigo de la empresa se veia y se
@@ -5029,29 +5951,84 @@ function guardarFoto(){
 // =================================================================
 var LITE_TOPES = { trabajador:5, kardex:3, amonestacion:0, semana:0, doc:2, credencial:0, reporte:3 };
 function topeLite(k){ var t=planActual().tope[k]; return (t===undefined||t===-1) ? Infinity : t; }
-/* ── El contador del mes ──────────────────────────────────────────
-   Lo que se cuenta por mes se guarda con la etiqueta del mes: al
-   cambiar de mes arranca de cero solo. Ojo: vive en el celular, asi
-   que hoy se puede resetear borrando datos. Antes de cobrar de verdad
-   esto tiene que subir al servidor. Queda anotado, no escondido.   */
-var LS_USO='sstc_uso_mes';
+/* ── El contador de uso ───────────────────────────────────────────
+   AHORA VIVE EN EL SERVIDOR. El celular guarda una copia para que la
+   app responda al toque y para poder seguir trabajando sin senal, pero
+   la copia NO decide: apenas hay internet la nube corrige el numero.
+   Borrar los datos de la app ya no regala cupo.
+
+   Son dos contadores: el del MES (se reinicia solo el dia 1) y el de
+   POR VIDA, que es el que usan los topes de LITE.
+   Del lado de Supabase esto es sst_uso + sst_plan_tope, y las funciones
+   sst_uso_leer / sst_uso_sumar / sst_uso_piso (ver 02-contador.sql).  */
+var LS_USO='sstc_uso_mes';        // copia del mes, en el celular
+var LS_USO_TOT='sstc_uso_total';  // copia del acumulado, en el celular
+var USO_NUBE=null;                // lo ultimo que dijo el servidor
+var USO_DEBE=false;               // hay sumas que el servidor todavia no sabe
 function mesEtiqueta(){ return hoyISO().slice(0,7); }
-function usoMes(k){
-  var u=leer(LS_USO,{});
-  if(u._mes !== mesEtiqueta()) return 0;
-  return u[k]||0;
-}
-var LS_USO_TOT='sstc_uso_total';
-/* dos contadores: el del mes (se reinicia solo el dia 1) y el de por
-   vida, que es el que usan los topes de LITE. */
-function usoTotal(k){ var u=leer(LS_USO_TOT,{}); return u[k]||0; }
+
+/* lo que dice el celular */
+function usoMesLocal(k){ var u=leer(LS_USO,{}); return (u._mes===mesEtiqueta()) ? (u[k]||0) : 0; }
+function usoTotalLocal(k){ var u=leer(LS_USO_TOT,{}); return u[k]||0; }
+/* lo que dice la nube (0 si todavia no contesto) */
+function usoMesNube(k){ return (USO_NUBE && USO_NUBE.mes===mesEtiqueta() && USO_NUBE.m) ? (USO_NUBE.m[k]||0) : 0; }
+function usoTotalNube(k){ return (USO_NUBE && USO_NUBE.t) ? (USO_NUBE.t[k]||0) : 0; }
+/* manda el mas alto de los dos: asi borrar el celular no da cupo de
+   regalo, y trabajar sin senal tampoco te lo quita. */
+function usoMes(k){ return Math.max(usoMesLocal(k), usoMesNube(k)); }
+function usoTotal(k){ return Math.max(usoTotalLocal(k), usoTotalNube(k)); }
+
 function sumarUso(k, cuantos){
   var n=(cuantos===undefined?1:cuantos);
+  /* 1) el celular suma al toque, para que nadie se quede esperando */
   var u=leer(LS_USO,{});
   if(u._mes !== mesEtiqueta()) u={_mes:mesEtiqueta()};
   u[k]=(u[k]||0)+n;
   guardar(LS_USO,u);
   var t=leer(LS_USO_TOT,{}); t[k]=(t[k]||0)+n; guardar(LS_USO_TOT,t);
+  /* 2) y se lo avisamos al servidor, que es el que de verdad cuenta */
+  avisarUso(k,n);
+}
+function avisarUso(k,n){
+  var e=empActiva();
+  if(!e || !hayCuenta()){ USO_DEBE=true; return; }
+  sbRpc('sst_uso_sumar',{p_emp:e.id, p_clave:k, p_n:n}).then(function(j){
+    if(j && j.ok){ adoptarUso(k, j.m, j.t); USO_DEBE=false; }
+    else if(j && j.motivo==='tope'){ refrescarUso(); }   // el celular venia atrasado
+    else USO_DEBE=true;
+  }).catch(function(){ USO_DEBE=true; });
+}
+function adoptarUso(k, m, t){
+  if(!USO_NUBE || USO_NUBE.mes!==mesEtiqueta())
+    USO_NUBE={mes:mesEtiqueta(), m:{}, t:{}, tope:(USO_NUBE&&USO_NUBE.tope)||null};
+  if(typeof m==='number') USO_NUBE.m[k]=m;
+  if(typeof t==='number') USO_NUBE.t[k]=t;
+}
+/* los numeros que el celular puede mandar como piso: solo enteros */
+function usoSoloNumeros(o){
+  var r={}; for(var k in o){ if(k.charAt(0)==='_') continue;
+    var v=o[k]; if(typeof v==='number' && v>0 && v<1000000) r[k]=Math.round(v); }
+  return r;
+}
+/* Trae el contador del servidor. Si el celular sumo cosas que la nube
+   todavia no sabe, primero las sube como PISO (solo suben, nunca bajan)
+   y de vuelta recibe el numero bueno. */
+function refrescarUso(){
+  var e=empActiva();
+  if(!e || !hayCuenta()) return Promise.resolve(null);
+  var u=leer(LS_USO,{}), mio={ m:(u._mes===mesEtiqueta()?usoSoloNumeros(u):{}), t:usoSoloNumeros(leer(LS_USO_TOT,{})) };
+  var hayQueSubir = USO_DEBE || Object.keys(mio.m).length || Object.keys(mio.t).length;
+  var pide = hayQueSubir ? sbRpc('sst_uso_piso',{p_emp:e.id, p_datos:mio})
+                         : sbRpc('sst_uso_leer',{p_emp:e.id});
+  return pide.then(function(j){
+    if(!j || !j.ok) return null;
+    USO_NUBE={ mes:j.mes, m:j.m||{}, t:j.t||{}, tope:j.tope||null, plan:j.plan };
+    USO_DEBE=false;
+    /* el celular se pone al dia con lo que dice el servidor */
+    var nm={_mes:j.mes}; for(var a in USO_NUBE.m) nm[a]=USO_NUBE.m[a]; guardar(LS_USO,nm);
+    var nt={};           for(var b in USO_NUBE.t) nt[b]=USO_NUBE.t[b]; guardar(LS_USO_TOT,nt);
+    return USO_NUBE;
+  }).catch(function(){ return null; });
 }
 function esPorMes(k){ return !!planActual().porMes[k]; }
 /* cuantos lleva usados: del mes si el tope es mensual, del total si no */
@@ -5090,7 +6067,7 @@ function frenoLite(k, cuantosHay, queCosa){
    muestra cuando lo que pediste vive mas arriba: nunca se le enseña a
    nadie el precio de un plan que esta a dos saltos. */
 var GANA_EL_SIGUIENTE = {
-  prevencionista:'el programa de charlas completo, 80 kardex al mes, 50 trabajadores y el QR del RISST',
+  prevencionista:'el programa de charlas completo, 80 kardex al mes, 30 asistencias escaneadas al mes, 50 trabajadores y el QR del RISST',
   supervisor:'todo el programa de capacitaciones, 200 kardex al mes, 100 trabajadores y los QR de PETS e IPERC',
   ssoma:'hojas MSDS, amonestaciones, reporte semanal de HHT, constancias y todos los QR',
   gestion:'las seis carpetas del sistema de gestión y todo sin tope'
@@ -5186,17 +6163,38 @@ function pintarTrabajadores(){
   }
   sincronizarTrabajadores();
 }
-/* lo que este sin subir, se sube; y se baja lo que otros hayan cargado */
+/* lo que este sin subir, se sube; y se baja lo que otros hayan cargado.
+   OJO, esto tenia dos errores caros y por eso queda explicado:
+   1) subia UN POST POR TRABAJADOR, todos a la vez. Con 250 trabajadores
+      del plan SSOMA eran 250 peticiones simultaneas: Supabase corta y la
+      mitad se pierde. Ahora va en tandas de 100 en UN solo POST (PostgREST
+      acepta un arreglo).
+   2) marcaba t.sync=1 sobre objetos de UNA copia del arreglo, y despues
+      guardaba OTRA copia recien leida — asi que la marca se perdia y todo
+      se volvia a subir cada vez que se abria la pantalla. Ahora se marca
+      sobre el arreglo que de verdad se guarda.                          */
+var SINCRO_TRAB=false;
 function sincronizarTrabajadores(){
+  if(SINCRO_TRAB) return Promise.resolve();
   var d=duenioId();
-  var pend=trabsLocal().filter(function(t){ return !t.sync; });
-  var subir=pend.map(function(t){
-    return sbPost('sst_trabajador',{duenio:d, ext:t.id, nombre:t.nombre, dni:t.dni||null,
-      puesto:t.puesto||null, area:t.area||null, estatus:t.estatus||'activo'})
-      .then(function(){ t.sync=1; }).catch(function(){});
-  });
-  Promise.all(subir).then(function(){
-    if(pend.length) trabsSet(trabsLocal());
+  var todos=trabsLocal();
+  var pend=todos.filter(function(t){ return !t.sync; });
+  SINCRO_TRAB=true;
+  var tandas=[];
+  for(var i=0;i<pend.length;i+=100) tandas.push(pend.slice(i,i+100));
+  var subida = tandas.reduce(function(cad, tanda){
+    return cad.then(function(){
+      var cuerpo=tanda.map(function(t){
+        return {duenio:d, ext:t.id, nombre:t.nombre, dni:t.dni||null,
+                puesto:t.puesto||null, area:t.area||null, estatus:t.estatus||'activo'};
+      });
+      return sbPost('sst_trabajador', cuerpo).then(function(){
+        tanda.forEach(function(t){ t.sync=1; });     /* sobre el arreglo que se guarda */
+      }, function(){ /* sin señal: se quedan sin marcar y se reintenta luego */ });
+    });
+  }, Promise.resolve());
+  return subida.then(function(){
+    if(pend.length) trabsSet(todos);
     return sbGet('sst_trabajador?duenio=eq.'+encodeURIComponent(d)+'&select=ext,nombre,dni,puesto,area,estatus');
   }).then(function(rows){
     if(!rows || !rows.length) return;
@@ -5210,7 +6208,8 @@ function sincronizarTrabajadores(){
       cambio=true;
     });
     if(cambio){ trabsSet(a); var c=$('trab-lista'); if(c && (document.querySelector('.pantalla.activa')||{}).id==='p-trabajadores') pintarTrabajadores(); }
-  }).catch(function(){});
+    SINCRO_TRAB=false;
+  }).catch(function(){ SINCRO_TRAB=false; });
 }
 var TRAB_EDIT=null;
 function prepTrabajador(){
@@ -6006,6 +7005,219 @@ function _armarXlsx(hojaXml, reemplazos){
 }
 
 /* el mismo armador de zip, para el .docx de la papeleta */
+// =================================================================
+//  EL INFORME MENSUAL DE REPORTES, EN EXCEL DE VERDAD
+//  Una fila por reporte, columnas fijas, y las fotos METIDAS en la
+//  celda (no un enlace). Todas las filas miden lo mismo aunque no
+//  tengan foto: asi la hoja se puede ordenar, filtrar y pegar en un
+//  informe sin que se desarme.
+//  El .xlsx es un ZIP de XML; se arma a mano con _zipDe, igual que el
+//  formato de kardex. Sin librerias: pesa cero y funciona sin internet.
+// =================================================================
+var REP_COLS = [
+  {t:'N°',                     w:5,  k:function(r,i){ return String(i+1); }},
+  {t:'Fecha',                  w:11, k:function(r){ return fechaLarga(r.fecha)||''; }},
+  {t:'Tipo',                   w:12, k:function(r){ return r.clase==='acto'?'Acto inseguro':'Condición insegura'; }},
+  {t:'Lugar',                  w:22, k:function(r){ return r.lugar||''; }},
+  {t:'Descripción del hallazgo',w:46, k:function(r){ return r.descripcion||''; }},
+  {t:'Reportado por',          w:20, k:function(r){ return r.anonimo? 'Anónimo' : (r.autor||'—'); }},
+  {t:'Estado',                 w:12, k:function(r){ return r.estado==='atendido'?'Cerrado':'Abierto'; }},
+  {t:'Fecha de cierre',        w:13, k:function(r){ return fechaLarga(r.cerrado)||''; }},
+  {t:'Qué se hizo',            w:34, k:function(r){ return r.accion||''; }},
+  {t:'Foto del hallazgo',      w:30, foto:'foto_url'},
+  {t:'Foto del levantamiento', w:30, foto:'foto_cierre'}
+];
+var REP_ALTO = 108;          /* puntos: entra una foto de ~145 px de alto */
+var REP_FOTO_PX = 420;       /* lado largo al que se reescala cada foto  */
+
+function _colLetra(n){       /* 0 → A, 25 → Z, 26 → AA */
+  var s=''; n=n+1;
+  while(n>0){ var r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); }
+  return s;
+}
+/* baja la foto (de la nube o del celular) y la deja en jpeg chiquito */
+function _fotoParaExcel(src){
+  return new Promise(function(ok){
+    if(!src){ ok(null); return; }
+    var img=new Image();
+    if(String(src).indexOf('data:')!==0) img.crossOrigin='anonymous';
+    img.onload=function(){
+      try{
+        var r=Math.min(1, REP_FOTO_PX/Math.max(img.width,img.height));
+        var cv=document.createElement('canvas');
+        cv.width=Math.max(1,Math.round(img.width*r)); cv.height=Math.max(1,Math.round(img.height*r));
+        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+        var du=cv.toDataURL('image/jpeg',0.72);
+        ok({ bytes:_b64aU8(du.split(',')[1]), ancho:cv.width, alto:cv.height });
+      }catch(e){ ok(null); }
+    };
+    img.onerror=function(){ ok(null); };
+    img.src=src;
+  });
+}
+/* EMU: la unidad interna de Office. 1 px = 9525 EMU, 1 punto = 12700. */
+function _cajaFoto(col){
+  var px = Math.round(REP_COLS[col].w*7+5);
+  return { cx: px*9525, cy: Math.round(REP_ALTO*12700) };
+}
+
+function exportarReportesExcel(filas, nombreArchivo){
+  var enc=new TextEncoder();
+  /* 1) juntar todas las fotos primero: son lo único que tarda */
+  var pedidos=[];
+  filas.forEach(function(r){
+    pedidos.push(_fotoParaExcel(r.foto_url||''));
+    pedidos.push(_fotoParaExcel(r.foto_cierre||''));
+  });
+  return Promise.all(pedidos).then(function(fotos){
+    var medios=[], anclas=[], rels=[], nImg=0;
+
+    /* 2) la hoja */
+    var cols='<cols>';
+    REP_COLS.forEach(function(c,i){ cols+='<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+c.w+'" customWidth="1"/>'; });
+    cols+='</cols>';
+
+    var xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '+
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+      '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'+
+      '<sheetViews><sheetView showGridLines="0" tabSelected="1" workbookViewId="0">'+
+      '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'+
+      '<sheetFormatPr defaultRowHeight="15"/>'+cols+'<sheetData>';
+
+    /* cabecera */
+    xml+='<row r="1" ht="30" customHeight="1" s="1" customFormat="1">';
+    REP_COLS.forEach(function(c,i){
+      xml+='<c r="'+_colLetra(i)+'1" s="1" t="inlineStr"><is><t>'+_xmlEsc(c.t)+'</t></is></c>';
+    });
+    xml+='</row>';
+
+    /* una fila por reporte, TODAS del mismo alto */
+    filas.forEach(function(r,fi){
+      var fila=fi+2;
+      xml+='<row r="'+fila+'" ht="'+REP_ALTO+'" customHeight="1">';
+      REP_COLS.forEach(function(c,i){
+        var ref=_colLetra(i)+fila;
+        if(c.foto){
+          xml+='<c r="'+ref+'" s="3"/>';
+          var f=fotos[fi*2 + (c.foto==='foto_url'?0:1)];
+          if(f){
+            nImg++;
+            medios.push({n:'xl/media/imagen'+nImg+'.jpeg', datos:f.bytes});
+            rels.push('<Relationship Id="rId'+nImg+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/imagen'+nImg+'.jpeg"/>');
+            var caja=_cajaFoto(i), esc2=Math.min(caja.cx/(f.ancho*9525), caja.cy/(f.alto*9525))*0.92;
+            var cx=Math.round(f.ancho*9525*esc2), cy=Math.round(f.alto*9525*esc2);
+            anclas.push('<xdr:oneCellAnchor><xdr:from><xdr:col>'+i+'</xdr:col><xdr:colOff>'+
+              Math.round((caja.cx-cx)/2)+'</xdr:colOff><xdr:row>'+(fila-1)+'</xdr:row><xdr:rowOff>'+
+              Math.round((caja.cy-cy)/2)+'</xdr:rowOff></xdr:from>'+
+              '<xdr:ext cx="'+cx+'" cy="'+cy+'"/>'+
+              '<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="'+nImg+'" name="Foto '+nImg+'"/><xdr:cNvPicPr/></xdr:nvPicPr>'+
+              '<xdr:blipFill><a:blip xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '+
+              'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId'+nImg+'"/>'+
+              '<a:stretch xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:fillRect/></a:stretch></xdr:blipFill>'+
+              '<xdr:spPr><a:xfrm xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:off x="0" y="0"/>'+
+              '<a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm>'+
+              '<a:prstGeom xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>'+
+              '</xdr:pic><xdr:clientData/></xdr:oneCellAnchor>');
+          }
+        } else {
+          var v=c.k(r,fi)||'';
+          var estilo = (i===4 || i===8) ? '2' : '3';   /* descripción: texto largo, se ajusta */
+          xml+= v ? ('<c r="'+ref+'" s="'+estilo+'" t="inlineStr"><is><t xml:space="preserve">'+_xmlEsc(v)+'</t></is></c>')
+                  : ('<c r="'+ref+'" s="'+estilo+'"/>');
+        }
+      });
+      xml+='</row>';
+    });
+    xml+='</sheetData><autoFilter ref="A1:'+_colLetra(REP_COLS.length-1)+'1"/>'+
+      '<pageMargins left="0.3" right="0.3" top="0.4" bottom="0.4" header="0.3" footer="0.3"/>'+
+      '<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>'+
+      (anclas.length? '<drawing r:id="rIdDib"/>' : '')+
+      '</worksheet>';
+
+    /* 3) las piezas fijas del libro */
+    var estilos='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+      '<fonts count="3">'+
+      '<font><sz val="10"/><name val="Calibri"/></font>'+
+      '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>'+
+      '<font><sz val="9"/><name val="Calibri"/></font>'+
+      '</fonts>'+
+      '<fills count="3"><fill><patternFill patternType="none"/></fill>'+
+      '<fill><patternFill patternType="gray125"/></fill>'+
+      '<fill><patternFill patternType="solid"><fgColor rgb="FF0B2A3A"/><bgColor indexed="64"/></patternFill></fill></fills>'+
+      '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>'+
+      '<border><left style="thin"><color rgb="FFD8DEE3"/></left><right style="thin"><color rgb="FFD8DEE3"/></right>'+
+      '<top style="thin"><color rgb="FFD8DEE3"/></top><bottom style="thin"><color rgb="FFD8DEE3"/></bottom><diagonal/></border></borders>'+
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'+
+      '<cellXfs count="4">'+
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'+
+      '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'+
+      '<xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'+
+      '<xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'+
+      '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+
+    var libro='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '+
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+      '<sheets><sheet name="Reportes" sheetId="1" r:id="rId1"/></sheets></workbook>';
+
+    var libroRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'+
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'+
+      '</Relationships>';
+
+    var raizRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'+
+      '</Relationships>';
+
+    var tipos='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+      '<Default Extension="xml" ContentType="application/xml"/>'+
+      '<Default Extension="jpeg" ContentType="image/jpeg"/>'+
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+
+      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'+
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+
+      (anclas.length? '<Override PartName="/xl/drawings/dibujo1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>' : '')+
+      '</Types>';
+
+    var partes=[
+      {n:'[Content_Types].xml', d:tipos},
+      {n:'_rels/.rels',         d:raizRels},
+      {n:'xl/workbook.xml',     d:libro},
+      {n:'xl/_rels/workbook.xml.rels', d:libroRels},
+      {n:'xl/styles.xml',       d:estilos},
+      {n:'xl/worksheets/sheet1.xml', d:xml}
+    ];
+    if(anclas.length){
+      partes.push({n:'xl/worksheets/_rels/sheet1.xml.rels',
+        d:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+          '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+          '<Relationship Id="rIdDib" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/dibujo1.xml"/>'+
+          '</Relationships>'});
+      partes.push({n:'xl/drawings/dibujo1.xml',
+        d:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+          '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" '+
+          'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'+anclas.join('')+'</xdr:wsDr>'});
+      partes.push({n:'xl/drawings/_rels/dibujo1.xml.rels',
+        d:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+          '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+rels.join('')+'</Relationships>'});
+    }
+
+    var entradas=partes.map(function(p){
+      var b=enc.encode(p.d);
+      return {n:p.n, metodo:0, crc:_crc32(b), cs:b.length, us:b.length, datos:b};
+    });
+    medios.forEach(function(m){
+      entradas.push({n:m.n, metodo:0, crc:_crc32(m.datos), cs:m.datos.length, us:m.datos.length, datos:m.datos});
+    });
+    return _zipDe(entradas, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  });
+}
+
 function _zipDe(entradas, tipoMime){
   var enc=new TextEncoder(), dt=_fecha2dos();
   var trozos=[], off=0, central=[];
@@ -6232,7 +7444,8 @@ var CATALOGO_ACCESOS = [
   {k:'credencial',ic:'🪪', et:'Credenciales<br>y QR',          ir:'p-credencial',   color:'a-viol',  desde:3, def:[3,4]},
   {k:'amonesta',  ic:'⚠️', et:'Amonesta-<br>ciones',           ir:'p-amonestaciones',color:'a-gris', desde:3, def:[3]},
   {k:'semanal',   ic:'📈', et:'Reporte<br>semanal',            ir:'p-semanal',      color:'a-verde', desde:3, def:[3,4]},
-  {k:'inspec',    ic:'✅', et:'Inspec-<br>ciones',             ir:'p-inspec',       color:'a-gris',  desde:3, def:[4]}
+  {k:'inspec',    ic:'✅', et:'Inspec-<br>ciones',             ir:'p-inspec',       color:'a-gris',  desde:3, def:[4]},
+  {k:'asisten',   ic:'📷', et:'Escanear<br>asistencia',        ir:'p-escaneos',     color:'a-azul',  desde:0, def:[0,1,2,3,4]}
 ];
 var LS_MIS_ACCESOS='sstc_mis_accesos';
 /* los que tu plan te deja tener */
@@ -6253,16 +7466,25 @@ function accesosVisibles(){
 }
 /* compatibilidad: lo que habia antes */
 var ACCESOS_RAPIDOS = CATALOGO_ACCESOS;
-/* ══════════════ EL TABLERO ══════════════
-   Va pegado arriba del home, antes de los circulos. Crece con el plan:
-   tres tarjetas en LITE, hasta doce en Gestion SST. Cada tarjeta es un
-   boton: lleva a su lista. No es adorno, es el indice de la app.     */
-function _mesNombre(){
-  var M=['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
-         'setiembre','octubre','noviembre','diciembre'];
-  return M[parseInt(hoyISO().slice(5,7),10)-1];
+/* ══════════════ EL TABLERO DE LA OBRA ══════════════
+   Es lo primero que ve quien gestiona. Tiene que contestar cuatro
+   preguntas sin que toque nada: ¿cómo voy?, ¿qué toca hoy?, ¿qué se
+   está moviendo?, ¿qué me falta? Por eso el orden es: filtro, KPIs,
+   gráficos, tarjetas y pendientes.
+   Los números NO son de adorno: cada uno sale de algo que la app de
+   verdad guarda — constancias, reportes, kardex, el programa del mes.
+   Si no hay dato, se dice que no hay dato; no se inventa un cero.  */
+var MESES_ES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+              'setiembre','octubre','noviembre','diciembre'];
+var MESES_3=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SET','OCT','NOV','DIC'];
+function _mesNombre(){ return MESES_ES[parseInt(hoyISO().slice(5,7),10)-1]; }
+function _mesCorto(ym){ var i=parseInt(String(ym).slice(5,7),10)-1; return MESES_3[i]||''; }
+function _mesNombreDe(ym){
+  var i=parseInt(String(ym).slice(5,7),10)-1;
+  return (MESES_ES[i]||'')+' '+String(ym).slice(0,4);
 }
 function _cuenta(clave){ try{ var v=leer(clave,[]); return (v&&v.length)||0; }catch(e){ return 0; } }
+function _cuentaLlaves(clave){ try{ var v=leer(clave,{}); return Object.keys(v||{}).length; }catch(e){ return 0; } }
 function _charlaDeHoy(){
   try{
     if(typeof CHARLAS==='undefined' || !CHARLAS.length) return null;
@@ -6271,63 +7493,592 @@ function _charlaDeHoy(){
     return CHARLAS[dia % CHARLAS.length];
   }catch(e){ return null; }
 }
-/* que tarjetas ve cada plan */
+
+/* ---------- EL FILTRO: año y mes de verdad ---------- */
+var TAB_FILTRO={ anio:null, mes:null };   /* mes null = todo el año */
+function filtroAnio(){ return TAB_FILTRO.anio || parseInt(hoyISO().slice(0,4),10); }
+function filtroMes(){ return TAB_FILTRO.mes; }   /* 1..12 ó null */
+function filtroYM(){ var m=filtroMes(); return m? (filtroAnio()+'-'+('0'+m).slice(-2)) : null; }
+function filtroEtiqueta(){
+  var m=filtroMes();
+  return m ? (MESES_ES[m-1]+' '+filtroAnio()) : ('todo '+filtroAnio());
+}
+function dentroDelFiltro(iso){
+  if(!iso) return false;
+  var f=String(iso).slice(0,10);
+  if(f.slice(0,4) !== String(filtroAnio())) return false;
+  var m=filtroMes();
+  return m ? (parseInt(f.slice(5,7),10)===m) : true;
+}
+function ponerFiltro(anio, mes){
+  TAB_FILTRO.anio=anio; TAB_FILTRO.mes=mes;
+  refrescarTableroDom();
+}
+function filtroDom(){
+  var d=document.createElement('div'); d.className='tb-filtros';
+  var hoyA=parseInt(hoyISO().slice(0,4),10), a=filtroAnio(), m=filtroMes();
+  var anios=[]; for(var y=hoyA; y>=hoyA-2; y--) anios.push(y);
+  var h='<select class="tb-sel tb-sel-corto" id="tb-anio" aria-label="Año">';
+  anios.forEach(function(y){ h+='<option value="'+y+'"'+(y===a?' selected':'')+'>'+y+'</option>'; });
+  h+='</select><select class="tb-sel" id="tb-mes" aria-label="Mes">';
+  h+='<option value="0"'+(m?'':' selected')+'>Todo el año</option>';
+  for(var i=1;i<=12;i++) h+='<option value="'+i+'"'+(m===i?' selected':'')+'>'+MESES_ES[i-1].charAt(0).toUpperCase()+MESES_ES[i-1].slice(1)+'</option>';
+  h+='</select>';
+  var sec=sectorNombre();
+  h+='<button type="button" class="tb-sector" onclick="cambiarSector(\'p-emp-home\')" title="Cambiar de sector">'+
+     (sectorIcono()||'📍')+' '+esc(sec||'Elegir sector')+'</button>';
+  d.innerHTML=h;
+  var sa=d.querySelector('#tb-anio'), sm=d.querySelector('#tb-mes');
+  sa.onchange=function(){ ponerFiltro(parseInt(this.value,10), filtroMes()); };
+  sm.onchange=function(){ var v=parseInt(this.value,10); ponerFiltro(filtroAnio(), v||null); };
+  return d;
+}
+
+/* ---------- LO QUE TRAE EL SERVIDOR ---------- */
+var TAB_HIST=null;        /* [{mes,total,detalle}] */
+var TAB_CONS=null;        /* constancias: [{trabajador,tema,resultado,fecha}] */
+var TAB_REP=null;         /* reportes:    [{clase,estado,lugar,fecha,anonimo}] */
+var TAB_PIDIENDO=false, TAB_CARGADO=false;
+function cargarDatosTablero(forzar){
+  var e=empActiva();
+  if(!e || !hayCuenta()) return Promise.resolve(false);
+  if(TAB_PIDIENDO || (TAB_CARGADO && !forzar)) return Promise.resolve(TAB_CARGADO);
+  TAB_PIDIENDO=true;
+  var nada=function(){ return []; };
+  return Promise.all([
+    sbRpc('sst_uso_historia',{p_emp:e.id, p_meses:12}).catch(function(){ return null; }),
+    sbGet('sst_constancia?empresa=eq.'+encodeURIComponent(e.id)+
+          '&select=trabajador,dni,tema,resultado,fecha&order=fecha.desc&limit=800').catch(nada),
+    sbGet('sst_reporte?empresa=eq.'+encodeURIComponent(e.id)+
+          '&select=clase,estado,lugar,fecha,anonimo&order=fecha.desc&limit=500').catch(nada)
+  ]).then(function(r){
+    TAB_PIDIENDO=false; TAB_CARGADO=true;
+    if(r[0] && r[0].ok && r[0].meses) TAB_HIST=r[0].meses;
+    TAB_CONS=r[1]||[]; TAB_REP=r[2]||[];
+    return true;
+  }).catch(function(){ TAB_PIDIENDO=false; return false; });
+}
+/* compatibilidad con lo de antes */
+function cargarHistoriaTablero(){ return cargarDatosTablero(); }
+
+/* ---------- LOS KPI ----------
+   Cuatro. Más de cuatro y ninguno se lee. Son los que un fiscalizador
+   te pregunta primero, en el mismo orden en que te los pregunta.   */
+function _norml(t){
+  return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+}
+function kpiCobertura(){
+  /* % de TU personal registrado con al menos una constancia dentro del
+     filtro. Es EL indicador: "¿tu gente está capacitada?".
+     Ojo: se cruza contra la lista de trabajadores, no contra todas las
+     constancias. Si no, una constancia de un subcontratista de paso te
+     dejaba el indicador en 120% y el número dejaba de significar algo. */
+  var plana=trabsLocal? trabsLocal() : leer(LS_TRAB,[]);
+  var total=(plana||[]).filter(function(t){ return t.estatus!=='cesado'; }).length;
+  if(!total) return {val:null, motivo:'Registra a tu personal para medir la cobertura.'};
+  if(!TAB_CONS) return {val:null, motivo:'Cargando…'};
+  var conDni={}, conNom={};
+  TAB_CONS.forEach(function(c){
+    if(!dentroDelFiltro(c.fecha)) return;
+    var d=String(c.dni||'').replace(/[^0-9]/g,'');
+    if(d) conDni[d]=1;
+    var nn=_norml(c.trabajador); if(nn) conNom[nn]=1;
+  });
+  var n=0;
+  (plana||[]).forEach(function(t){
+    if(t.estatus==='cesado') return;
+    var d=String(t.dni||'').replace(/[^0-9]/g,'');
+    if((d && conDni[d]) || conNom[_norml(t.nombre)]) n++;
+  });
+  return { val:Math.round(n/total*100), pie:n+' de '+total+' capacitados' };
+}
+function kpiReportesAtendidos(){
+  if(!TAB_REP) return {val:null, motivo:'Cargando…'};
+  var de=TAB_REP.filter(function(r){ return dentroDelFiltro(r.fecha); });
+  if(!de.length) return {val:null, motivo:'Sin reportes en '+filtroEtiqueta()+'.'};
+  var ok=de.filter(function(r){ return r.estado==='atendido'; }).length;
+  return { val:Math.round(ok/de.length*100), pie:ok+' de '+de.length+' cerrados',
+           alerta:(de.length-ok) };
+}
+function kpiCharlasDictadas(){
+  /* del programa del mes, cuántas se dictaron de verdad */
+  try{
+    var datos=progObra(), pref=filtroYM();
+    var prog=0, dic=0, hoy=hoyISO();
+    Object.keys(datos).forEach(function(iso){
+      if(pref ? (iso.indexOf(pref)!==0) : (iso.slice(0,4)!==String(filtroAnio()))) return;
+      if(iso>hoy) return;                       /* lo que aún no toca no cuenta en contra */
+      prog++; if(datos[iso] && datos[iso].dictada) dic++;
+    });
+    if(!prog) return {val:null, motivo:'Arma el programa del mes para medirlo.'};
+    return { val:Math.round(dic/prog*100), pie:dic+' de '+prog+' dictadas' };
+  }catch(e){ return {val:null, motivo:'Sin programa cargado.'}; }
+}
+function kpiIndiceReporte(){
+  /* reportes por cada 10 trabajadores: mide si la cuadrilla reporta o
+     se calla. Un índice bajo NO es buena noticia, y eso se dice. */
+  var trab=_cuenta(LS_TRAB);
+  if(!TAB_REP) return {val:null, motivo:'Cargando…'};
+  var de=TAB_REP.filter(function(r){ return dentroDelFiltro(r.fecha); }).length;
+  if(!trab) return {crudo:de, pie:'reportes en '+filtroEtiqueta()};
+  var idx=(de/trab*10);
+  return { crudo:(Math.round(idx*10)/10), pie:'por cada 10 trabajadores',
+           bajo:(idx<1) };
+}
+function kpisDom(){
+  var caja=document.createElement('div'); caja.className='tb-kpis';
+  var lista=[
+    {et:'Cobertura de capacitación', d:kpiCobertura(),        ic:'🎓', ir:'p-temas',   bueno:'alto'},
+    {et:'Reportes cerrados',         d:kpiReportesAtendidos(),ic:'⚠️', ir:'p-reporte', bueno:'alto'},
+    {et:'Charlas dictadas',          d:kpiCharlasDictadas(),  ic:'🗓️', ir:'p-programa',bueno:'alto'},
+    {et:'Índice de reporte',         d:kpiIndiceReporte(),    ic:'📣', ir:'p-reporte', bueno:'crudo'}
+  ];
+  lista.forEach(function(k){
+    var b=document.createElement('button'); b.type='button'; b.className='kpi';
+    var d=k.d, cuerpo;
+    if(d.val===null || d.val===undefined){
+      if(d.crudo===undefined){
+        cuerpo='<span class="kpi-val kpi-nd">—</span><span class="kpi-pie">'+esc(d.motivo||'sin dato')+'</span>';
+        b.className+=' kpi-vacio';
+      }else{
+        cuerpo='<span class="kpi-val">'+d.crudo+'</span><span class="kpi-pie">'+esc(d.pie||'')+'</span>';
+        if(d.bajo) b.className+=' ojo';
+      }
+    }else{
+      var tono = d.val>=80 ? 'ok' : (d.val>=50 ? 'ojo' : 'mal');
+      b.className+=' '+tono;
+      cuerpo='<span class="kpi-val">'+d.val+'<i>%</i></span>'+
+             '<span class="kpi-riel"><i style="width:'+Math.min(100,d.val)+'%"></i></span>'+
+             '<span class="kpi-pie">'+esc(d.pie||'')+'</span>';
+    }
+    b.innerHTML='<span class="kpi-et"><span class="kpi-ic">'+k.ic+'</span>'+esc(k.et)+'</span>'+cuerpo;
+    b.onclick=function(){ ir(k.ir); };
+    caja.appendChild(b);
+  });
+  return caja;
+}
+
+/* ---------- LA DONA ----------
+   Un pastel con hueco. Se dibuja con un solo círculo por porción y
+   stroke-dasharray: sin librería, sin imágenes, y se ve nítido en
+   cualquier pantalla porque es vectorial.                          */
+function donaSvg(partes, centroNum, centroPie){
+  var r=30, c=2*Math.PI*r, total=0, i;
+  for(i=0;i<partes.length;i++) total+=partes[i].n;
+  if(!total) return '';
+  var acum=0, aros='';
+  for(i=0;i<partes.length;i++){
+    var largo=(partes[i].n/total)*c;
+    aros+='<circle cx="40" cy="40" r="'+r+'" fill="none" stroke="'+partes[i].color+'" stroke-width="13"'+
+          ' stroke-dasharray="'+largo.toFixed(2)+' '+(c-largo).toFixed(2)+'"'+
+          ' stroke-dashoffset="'+(-acum).toFixed(2)+'" transform="rotate(-90 40 40)"><title>'+
+          esc(partes[i].et)+': '+partes[i].n+'</title></circle>';
+    acum+=largo;
+  }
+  return '<svg viewBox="0 0 80 80" class="dona" role="img" aria-label="'+
+    esc(partes.map(function(p){return p.et+' '+p.n;}).join(', '))+'">'+aros+
+    '<text x="40" y="39" text-anchor="middle" font-size="17" font-weight="800" fill="currentColor"'+
+    ' font-family="ui-monospace,Menlo,Consolas,monospace">'+esc(String(centroNum))+'</text>'+
+    '<text x="40" y="51" text-anchor="middle" font-size="7.5" fill="currentColor" opacity=".65"'+
+    ' letter-spacing=".08em">'+esc(String(centroPie||'').toUpperCase())+'</text></svg>';
+}
+function donaConLeyenda(titulo, partes, centroNum, centroPie, vacio){
+  var total=0; partes.forEach(function(p){ total+=p.n; });
+  var h='<div class="tb-graf-cab"><span class="tb-graf-tit">'+esc(titulo)+'</span></div>';
+  if(!total) return h+'<div class="tb-vacio">'+esc(vacio)+'</div>';
+  h+='<div class="dona-fila">'+donaSvg(partes, centroNum, centroPie)+'<ul class="dona-ley">';
+  partes.forEach(function(p){
+    if(!p.n) return;
+    h+='<li><i style="background:'+p.color+'"></i><span>'+esc(p.et)+'</span><b>'+p.n+'</b>'+
+       '<em>'+Math.round(p.n/total*100)+'%</em></li>';
+  });
+  return h+'</ul></div>';
+}
+function donasDom(){
+  var caja=document.createElement('div'); caja.className='tb-donas';
+
+  /* 1) los reportes: qué se reportó y qué se cerró */
+  var izq=document.createElement('div'); izq.className='tb-dona';
+  var rep=(TAB_REP||[]).filter(function(r){ return dentroDelFiltro(r.fecha); });
+  var atend=rep.filter(function(r){ return r.estado==='atendido'; }).length;
+  izq.innerHTML = donaConLeyenda('Reportes · '+filtroEtiqueta(),
+    [{et:'Cerrados', n:atend, color:'#2FBF71'},
+     {et:'Abiertos', n:rep.length-atend, color:'#E5484D'}],
+    rep.length, 'reportes',
+    'Nadie reportó nada en '+filtroEtiqueta()+'. Ojo: eso casi nunca quiere decir que no hubo nada que reportar.');
+  caja.appendChild(izq);
+
+  /* 2) las evaluaciones: aprobados y desaprobados */
+  var der=document.createElement('div'); der.className='tb-dona';
+  var cons=(TAB_CONS||[]).filter(function(c){ return dentroDelFiltro(c.fecha); });
+  var ap=cons.filter(function(c){ return (c.resultado||'')==='aprobado'; }).length;
+  var des=cons.filter(function(c){ return (c.resultado||'')==='desaprobado'; }).length;
+  var otras=cons.length-ap-des;
+  der.innerHTML = donaConLeyenda('Capacitación · '+filtroEtiqueta(),
+    [{et:'Aprobados', n:ap, color:'#2FBF71'},
+     {et:'Desaprobados', n:des, color:'#E5484D'},
+     {et:'Constancias sin nota', n:otras, color:'#7FA6BC'}],
+    cons.length, 'constancias',
+    'Sin constancias en '+filtroEtiqueta()+'. Cada evaluación que rinde tu gente deja una aquí.');
+  caja.appendChild(der);
+  return caja;
+}
+
+/* ---------- BARRAS HORIZONTALES: dónde se está reportando ---------- */
+function dondeSeReportaDom(){
+  var caja=document.createElement('div'); caja.className='tb-graf tb-ranking';
+  var rep=(TAB_REP||[]).filter(function(r){ return dentroDelFiltro(r.fecha) && (r.lugar||'').trim(); });
+  var h='<div class="tb-graf-cab"><span class="tb-graf-tit">Dónde se reporta</span>'+
+        '<span class="tb-graf-sub">'+filtroEtiqueta()+'</span></div>';
+  if(!rep.length){
+    caja.innerHTML=h+'<div class="tb-vacio">Todavía sin lugares. Cuando la cuadrilla reporte diciendo dónde, aquí sale el ranking de los puntos calientes de la obra.</div>';
+    return caja;
+  }
+  var por={};
+  rep.forEach(function(r){ var l=(r.lugar||'').trim(); por[l]=(por[l]||0)+1; });
+  var filas=Object.keys(por).map(function(l){ return {l:l, n:por[l]}; })
+                 .sort(function(a,b){ return b.n-a.n; }).slice(0,5);
+  var max=filas[0].n;
+  h+='<ul class="rank">';
+  filas.forEach(function(f){
+    h+='<li><span class="rank-t">'+esc(f.l)+'</span>'+
+       '<span class="rank-r"><i style="width:'+Math.round(f.n/max*100)+'%"></i></span>'+
+       '<b>'+f.n+'</b></li>';
+  });
+  caja.innerHTML=h+'</ul>';
+  return caja;
+}
+
+/* ---------- EL ANILLO DEL CUPO ---------- */
+var CUPO_NOMBRE={ trabajador:'trabajadores', kardex:'entregas de EPP', reporte:'reportes',
+                  doc:'documentos', credencial:'credenciales', amonestacion:'amonestaciones',
+                  escaneo:'asistencias escaneadas' };
+var CUPO_LISTA=['trabajador','kardex','reporte','credencial','amonestacion','escaneo'];
+function _usadosDe(k){
+  if(esPorMes(k)) return usoMes(k);
+  if(k==='trabajador') return Math.max(usoTotal(k), _cuenta(LS_TRAB));
+  if(k==='kardex')     return Math.max(usoTotal(k), _cuenta(LS_KARDEX));
+  if(k==='credencial') return Math.max(usoTotal(k), _cuenta(LS_CRED));
+  if(k==='amonestacion')return Math.max(usoTotal(k), _cuenta(LS_AMON));
+  return usoTotal(k);
+}
+function cupoMasApretado(){
+  var P=planActual(), peor=null;
+  CUPO_LISTA.forEach(function(k){
+    var t=P.tope[k];
+    if(t===undefined || t===-1 || t===0) return;
+    var usa=_usadosDe(k), pc=usa/t;
+    if(!peor || pc>peor.pc) peor={k:k, usa:usa, tope:t, pc:pc, mes:esPorMes(k)};
+  });
+  return peor;
+}
+function anilloSvg(pc, color){
+  var r=33, c=2*Math.PI*r, largo=Math.max(0,Math.min(1,pc))*c;
+  return '<svg viewBox="0 0 80 80" class="anillo" role="img" aria-label="'+Math.min(100,Math.round(pc*100))+' por ciento del cupo usado">'+
+    '<circle cx="40" cy="40" r="'+r+'" fill="none" stroke="rgba(255,255,255,.11)" stroke-width="6.5"/>'+
+    '<circle cx="40" cy="40" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="6.5" stroke-linecap="round"'+
+    ' stroke-dasharray="'+largo.toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 40 40)"/>'+
+    '<text x="40" y="45.5" text-anchor="middle" font-size="19" font-weight="800" fill="currentColor"'+
+    ' font-family="ui-monospace,Menlo,Consolas,monospace">'+Math.min(100,Math.round(pc*100))+'%</text></svg>';
+}
+function cabeceraTableroDom(){
+  var fila=document.createElement('div'); fila.className='tb-alto';
+  var P=planActual(), c=cupoMasApretado();
+  var izq=document.createElement('div'); izq.className='tb-cupo';
+  if(!c){
+    izq.innerHTML='<div class="tb-libre">∞</div>'+
+      '<div class="tb-cupo-tx"><b>Sin topes</b><span>Plan '+esc(P.nombre)+'</span></div>';
+  }else{
+    var color = c.pc>=0.9 ? 'var(--mal)' : (c.pc>=0.65 ? 'var(--oro)' : 'var(--ok)');
+    var queda = Math.max(0, c.tope-c.usa);
+    izq.innerHTML = anilloSvg(c.pc, color)+
+      '<div class="tb-cupo-tx"><b>'+queda+' '+esc(CUPO_NOMBRE[c.k]||c.k)+'</b>'+
+      '<span>te quedan'+(c.mes?' este mes':'')+' · '+c.usa+' de '+c.tope+'</span></div>';
+    if(c.pc>=0.9) izq.className+=' apretado';
+  }
+  fila.appendChild(izq);
+  var ch=_charlaDeHoy();
+  var der=document.createElement('button'); der.type='button'; der.className='tb-charla';
+  der.innerHTML='<span class="tb-mini">Charla de hoy · 5 min</span>'+
+    '<span class="tb-charla-t">'+esc(ch? ch.titulo : 'Abre el programa del mes')+'</span>'+
+    (ch? '<span class="tb-mini">Tema '+ch.n+' · '+ch.minutos+' min · '+esc(ch.cat||'')+'</span>' : '');
+  der.onclick=function(){ ir('p-programa'); };
+  fila.appendChild(der);
+  return fila;
+}
+
+/* ---------- BARRAS POR MES ---------- */
+function graficoMesesDom(){
+  var caja=document.createElement('div'); caja.className='tb-graf';
+  var todo=TAB_HIST||[];
+  var d=todo.filter(function(x){ return String(x.mes).slice(0,4)===String(filtroAnio()); });
+  if(!d.length) d=todo.slice(-6);
+  if(!d.length){
+    caja.innerHTML='<div class="tb-graf-cab"><span class="tb-graf-tit">Movimiento de la obra</span></div>'+
+      '<div class="tb-vacio">Todavía no hay historia que mostrar. En cuanto registres entregas de EPP, reportes o documentos, aquí sale mes por mes.</div>';
+    return caja;
+  }
+  if(d.length>12) d=d.slice(-12);
+  var max=1; d.forEach(function(x){ if((x.total||0)>max) max=x.total; });
+  var suma=0; d.forEach(function(x){ suma+=(x.total||0); });
+  var ym=filtroYM(), hoyYM=mesEtiqueta();
+  var h='<div class="tb-graf-cab"><span class="tb-graf-tit">Movimiento de la obra</span>'+
+        '<span class="tb-graf-sub">'+suma+' registros · '+filtroAnio()+'</span></div><div class="tb-barras">';
+  d.forEach(function(x){
+    var alto=Math.max(3, Math.round(((x.total||0)/max)*100));
+    var marcado = ym ? (x.mes===ym) : (x.mes===hoyYM);
+    h+='<button type="button" class="tb-col'+(marcado?' hoy':'')+'" data-mes="'+esc(x.mes)+'">'+
+       '<span class="tb-num">'+(x.total||0)+'</span>'+
+       '<span class="tb-vara"><i style="height:'+alto+'%"></i></span>'+
+       '<span class="tb-mes">'+_mesCorto(x.mes)+'</span></button>';
+  });
+  h+='</div><div class="tb-detalle" id="tb-detalle"></div>';
+  caja.innerHTML=h;
+  var cols=caja.querySelectorAll('.tb-col');
+  for(var i=0;i<cols.length;i++){
+    (function(b){ b.onclick=function(){
+      var mm=parseInt(b.getAttribute('data-mes').slice(5,7),10);
+      ponerFiltro(parseInt(b.getAttribute('data-mes').slice(0,4),10), mm);
+    }; })(cols[i]);
+  }
+  return caja;
+}
+var TB_ETIQUETA={ trabajador:'trabajadores', kardex:'entregas de EPP', reporte:'reportes',
+                  doc:'documentos', credencial:'credenciales', amonestacion:'amonestaciones',
+                  semana:'reportes semanales', escaneo:'asistencias escaneadas' };
+function detalleDelMesDom(){
+  var d=document.createElement('div'); d.className='tb-detalle-fijo';
+  var ym=filtroYM(); if(!ym || !TAB_HIST) return d;
+  var fila=null; TAB_HIST.forEach(function(x){ if(x.mes===ym) fila=x; });
+  if(!fila) return d;
+  var det=fila.detalle||{}, partes=[];
+  for(var k in det){ if(det[k]>0) partes.push(det[k]+' '+(TB_ETIQUETA[k]||k)); }
+  d.innerHTML = partes.length ? ('<b>'+_mesNombreDe(ym)+'</b> · '+esc(partes.join(' · ')))
+                              : ('<b>'+_mesNombreDe(ym)+'</b> · sin movimiento registrado');
+  return d;
+}
+
+/* ---------- LAS TARJETAS ----------
+   El índice de la app. Crecen con el plan, y NUNCA desaparece una que
+   ya tenga datos adentro: bajar de plan no puede esconderte tu propia
+   historia (ver esSoloLectura). */
 function tejasDelPlan(){
   var P=planActual(), o=P.orden, t=[];
-  var ch=_charlaDeHoy();
-  t.push({tipo:'texto', et:'Charla de hoy',
-          val: ch ? ch.titulo : 'Abre el programa del mes',
-          pie: ch ? ('Tema '+ch.n+' · '+ch.minutos+' min') : '', ir:'p-programa'});
-  t.push({et:'Trabajadores', val:_cuenta(LS_TRAB), tope:P.tope.trabajador, ir:'p-trabajadores'});
+  t.push({et:'Trabajadores', val:_cuenta(LS_TRAB), tope:P.tope.trabajador, ir:'p-trabajadores', ic:'👷'});
   t.push({et:'Reportes de actos y condiciones', val: usoMes('reporte'),
-          tope:P.tope.reporte, mes:esPorMes('reporte'), ir:'p-reporte'});
-  if(o>=1){
+          tope:P.tope.reporte, mes:esPorMes('reporte'), ir:'p-reporte', ic:'⚠️',
+          alerta:(REP_ABIERTOS>0 ? (REP_ABIERTOS+' sin atender') : '')});
+  t.push({tipo:'texto', et:'Programa de charlas', val:'Ver el mes de '+_mesNombre(), ir:'p-programa', ic:'🗓️'});
+  if(o>=1 || hayHistoriaDe('kardex')){
     t.push({et:'Kardex de EPP', val: esPorMes('kardex')?usoMes('kardex'):_cuenta(LS_KARDEX),
-            tope:P.tope.kardex, mes:esPorMes('kardex'), ir:'p-kardex'});
-    t.push({tipo:'texto', et:'Programa de charlas', val:'Ver el mes de '+_mesNombre(), ir:'p-programa'});
+            tope:P.tope.kardex, mes:esPorMes('kardex'), ir:'p-kardex', ic:'🦺'});
   }
-  if(o>=2){
-    t.push({et:'Códigos de cuadrilla', val:_cuenta(LS_USA), ir:'p-generar'});
-    t.push({et:'Evaluaciones enviadas', val:_cuenta(LS_EV), ir:'p-registro'});
+  if(o>=1 || hayHistoriaDe('asisten')){
+    t.push({et:'Asistencias escaneadas', val:hayHistoriaDe('asisten'), tope:P.tope.escaneo,
+            mes:esPorMes('escaneo'), ir:'p-escaneos', ic:'📄'});
   }
-  if(o>=3){
-    t.push({et:'Credenciales generadas', val:_cuenta(LS_CRED), tope:P.tope.credencial, ir:'p-credencial'});
-    t.push({et:'Amonestaciones', val:_cuenta(LS_AMON), tope:P.tope.amonestacion, ir:'p-amonestaciones'});
-    t.push({tipo:'texto', et:'Reporte semanal', val:'HHT y HHC del mes', ir:'p-semanal'});
+  if(o>=2 || hayHistoriaDe('cuadrilla')){
+    t.push({et:'Códigos de cuadrilla', val:_cuentaLlaves(LS_USA), ir:'p-generar', ic:'🔑'});
   }
+  if(o>=2) t.push({et:'Constancias emitidas', val:(TAB_CONS? TAB_CONS.filter(function(c){return dentroDelFiltro(c.fecha);}).length : 0),
+                   ir:'p-temas', ic:'🎓'});
+  if(o>=3 || hayHistoriaDe('credencial')){
+    t.push({et:'Credenciales generadas', val:_cuenta(LS_CRED), tope:P.tope.credencial, ir:'p-credencial', ic:'🪪'});
+  }
+  if(o>=3 || hayHistoriaDe('amonesta')){
+    t.push({et:'Amonestaciones', val:_cuenta(LS_AMON), tope:P.tope.amonestacion, ir:'p-amonestaciones', ic:'📕'});
+  }
+  if(o>=3) t.push({tipo:'texto', et:'Reporte semanal', val:'HHT y HHC del mes', ir:'p-semanal', ic:'📈'});
   if(o>=4){
-    t.push({tipo:'texto', et:'Inspecciones', val:'Ver las de la obra', ir:'p-inspec'});
-    t.push({tipo:'texto', et:'Documentos del sistema', val:'Las seis carpetas', ir:'p-emp-home'});
+    t.push({tipo:'texto', et:'Inspecciones', val:'Ver las de la obra', ir:'p-inspec', ic:'🔎'});
+    t.push({tipo:'texto', et:'Documentos del sistema', val:'Las seis carpetas', ir:'p-emp-home', ic:'🗂️'});
   }
   return t;
 }
-function tableroDom(){
-  var caja=document.createElement('div'); caja.className='tablero';
-  var barra=document.createElement('div'); barra.className='tablero-barra';
-  barra.innerHTML='<span class="tb-filtro on">'+hoyISO().slice(0,4)+'</span>'+
-                  '<span class="tb-filtro on">'+_mesNombre()+'</span>'+
-                  '<span class="tb-plan">'+esc(nombreDelPlan())+'</span>';
-  caja.appendChild(barra);
+function tejasDom(){
   var rej=document.createElement('div'); rej.className='tejas';
   tejasDelPlan().forEach(function(t){
     var b=document.createElement('button'); b.type='button';
     b.className='teja'+(t.tipo==='texto'?' teja-txt':'');
     var pie=t.pie||'';
     if(t.tope!==undefined && t.tope!==-1 && t.tipo!=='texto'){
-      pie='de '+t.tope+(t.mes?' este mes':'');
       var pc=Math.min(100, Math.round((t.val/(t.tope||1))*100));
-      if(pc>=90) b.className+=' alerta';
-      pie += '<span class="tb-barra"><i style="width:'+pc+'%"></i></span>';
+      pie='de '+t.tope+(t.mes?' este mes':'')+
+          '<span class="tb-barra"><i style="width:'+pc+'%"></i></span>';
+      if(pc>=90) b.className+=' alerta'; else if(pc>=65) b.className+=' ojo';
     }
-    b.innerHTML='<span class="tj-et">'+esc(t.et)+'</span>'+
+    b.innerHTML='<span class="tj-cab"><span class="tj-ic">'+t.ic+'</span><span class="tj-et">'+esc(t.et)+'</span>'+
+                (t.alerta? '<span class="tj-chip">'+esc(t.alerta)+'</span>' : '')+'</span>'+
                 '<span class="tj-val">'+(t.tipo==='texto'?esc(String(t.val)):String(t.val))+'</span>'+
                 (pie?'<span class="tj-pie">'+pie+'</span>':'');
     b.onclick=function(){ ir(t.ir); };
     rej.appendChild(b);
   });
-  caja.appendChild(rej);
+  return rej;
+}
+
+/* ---------- PENDIENTES ---------- */
+var LS_PEND='sstc_pendientes';
+function pendKey(){ var e=empActiva(); return LS_PEND+'_'+((e&&e.codigo)||'x'); }
+function pendLocal(){ return leer(pendKey(),[]); }
+function pendSet(a){ guardar(pendKey(), a.slice(0,60)); }
+function cargarPendientes(){
+  var e=empActiva();
+  if(!e || !hayCuenta()) return Promise.resolve(pendLocal());
+  return sbGet('sst_pendiente?empresa_id=eq.'+encodeURIComponent(e.id)+
+               '&select=id,texto,hecho,vence,autor,creado&order=hecho.asc,creado.desc&limit=40')
+    .then(function(a){
+      if(!a || !a.length) return pendLocal();
+      pendSet(a.map(function(x){ return {id:x.id, texto:x.texto, hecho:!!x.hecho, autor:x.autor||'', nube:1}; }));
+      return pendLocal();
+    }).catch(function(){ return pendLocal(); });
+}
+function pendientesDom(){
+  var caja=document.createElement('div'); caja.className='tb-pend';
+  var a=pendLocal(), abiertos=a.filter(function(x){ return !x.hecho; }).length;
+  var h='<div class="tb-graf-cab"><span class="tb-graf-tit">📌 Pendientes de la obra</span>'+
+        '<span class="tb-graf-sub">'+(abiertos? abiertos+' sin hacer' : 'todo al día')+'</span></div>';
+  h+='<div class="pend-nuevo"><input id="pend-txt" type="text" maxlength="140" '+
+     'placeholder="Anota lo que falta: revisar arneses, charla del viernes…" '+
+     'onkeydown="if(event.key===\'Enter\'){pendAgregar();}">'+
+     '<button type="button" class="pend-mas" onclick="pendAgregar()" aria-label="Anotar">+</button></div>';
+  if(!a.length){
+    h+='<div class="tb-vacio">Sin pendientes anotados. Lo que escribas aquí lo ve toda tu cuadrilla con el mismo código de obra.</div>';
+  }else{
+    h+='<ul class="pend-lista">';
+    a.slice(0,12).forEach(function(x,i){
+      h+='<li class="pend-it'+(x.hecho?' ok':'')+'">'+
+         '<button type="button" class="pend-chk" onclick="pendMarcar('+i+')" aria-label="Marcar">'+(x.hecho?'✓':'')+'</button>'+
+         '<span class="pend-tx">'+esc(x.texto)+(x.autor?'<small> · '+esc(x.autor)+'</small>':'')+'</span>'+
+         '<button type="button" class="pend-x" onclick="pendBorrar('+i+')" aria-label="Quitar">×</button></li>';
+    });
+    h+='</ul>';
+    if(a.length>12) h+='<div class="tb-vacio">…y '+(a.length-12)+' más.</div>';
+  }
+  caja.innerHTML=h;
   return caja;
 }
+function pendAgregar(){
+  var i=$('pend-txt'); if(!i) return;
+  var tx=(i.value||'').trim(); if(tx.length<3){ i.focus(); return; }
+  var e=empActiva(), quien=(correoCuenta()||'').split('@')[0];
+  var a=pendLocal(); a.unshift({id:'l'+Date.now().toString(36), texto:tx, hecho:false, autor:quien, nube:0});
+  pendSet(a); i.value='';
+  if(e && hayCuenta()){
+    sbPost('sst_pendiente',{empresa_id:e.id, texto:tx, autor:quien})
+      .then(function(){ cargarPendientes().then(refrescarTableroDom); })
+      .catch(function(){});
+  }
+  refrescarTableroDom();
+}
+function pendMarcar(i){
+  var a=pendLocal(), x=a[i]; if(!x) return;
+  x.hecho=!x.hecho; pendSet(a);
+  if(x.nube && hayCuenta()) sbPatch('sst_pendiente?id=eq.'+encodeURIComponent(x.id),{hecho:x.hecho}).catch(function(){});
+  refrescarTableroDom();
+}
+function pendBorrar(i){
+  var a=pendLocal(), x=a[i]; if(!x) return;
+  a.splice(i,1); pendSet(a);
+  if(x.nube && hayCuenta()) sbDel('sst_pendiente?id=eq.'+encodeURIComponent(x.id)).catch(function(){});
+  refrescarTableroDom();
+}
+function refrescarTableroDom(){
+  var viejo=document.querySelector('.tablero'); if(!viejo) return;
+  var nuevo=tableroDom();
+  viejo.parentNode.replaceChild(nuevo, viejo);
+}
+
+/* ---------- EL TABLERO COMPLETO ---------- */
+function tableroDom(){
+  var caja=document.createElement('div'); caja.className='tablero';
+  var e=empActiva(), P=planActual();
+  var barra=document.createElement('div'); barra.className='tablero-barra';
+  barra.innerHTML='<span class="tb-obra">'+esc((e&&e.nombre)||'Tu obra')+'</span>'+
+                  '<span class="tb-plan'+(P.orden>0?' pago':'')+'">'+esc(P.nombre)+'</span>';
+  caja.appendChild(barra);
+  caja.appendChild(filtroDom());
+  caja.appendChild(cabeceraTableroDom());
+  caja.appendChild(kpisDom());
+  caja.appendChild(graficoMesesDom());
+  caja.appendChild(detalleDelMesDom());
+  caja.appendChild(donasDom());
+  caja.appendChild(dondeSeReportaDom());
+  caja.appendChild(tejasDom());
+  caja.appendChild(pendientesDom());
+  return caja;
+}
+
+/* ══════════════ LA DATA VIEJA NO SE PIERDE ══════════════
+   Si bajas de plan, o se te vence, los topes vuelven. Pero lo que ya
+   registraste sigue siendo tuyo — y sigue siendo tu obligación legal
+   conservarlo (Art. 35 de la 29783: los registros se guardan aunque
+   el trabajador se vaya y aunque la obra termine).
+   Por eso un módulo del que ya tienes historia NO desaparece cuando
+   bajas de plan: se queda en modo LECTURA. Se ve, se exporta, se
+   manda. Lo único que se bloquea es agregar uno nuevo.
+   Ocultarlo sería, de hecho, borrárselo al usuario.               */
+var HISTORIA = {
+  credencial:   function(){ return _cuenta(LS_CRED); },
+  amonesta:     function(){ return _cuenta(LS_AMON); },
+  asisten:      function(){ try{ return escLocal().length; }catch(e){ return 0; } },
+  cuadrilla:    function(){ try{ var u=leer(LS_USA,{}); return Object.keys(u).length; }catch(e){ return 0; } },
+  personal:     function(){ return _cuenta(LS_TRAB); },
+  kardex:       function(){ return _cuenta(LS_KARDEX); },
+  semanal:      function(){ try{ return Object.keys(leer(LS_SEM,{})||{}).length; }catch(e){ return 0; } },
+  semanalOk:    function(){ try{ return Object.keys(leer(LS_SEM,{})||{}).length; }catch(e){ return 0; } }
+};
+function hayHistoriaDe(k){
+  try{ var f=HISTORIA[k]; return f? (f()||0) : 0; }catch(e){ return 0; }
+}
+/* ¿este módulo está en modo lectura? (tu plan ya no lo trae, pero tú
+   ya tienes cosas adentro de cuando sí lo traía) */
+function esSoloLectura(k, llave){
+  if(llave && puede(llave)) return false;
+  var A=planActual(), cat=null;
+  for(var i=0;i<CATALOGO_ACCESOS.length;i++) if(CATALOGO_ACCESOS[i].k===k) cat=CATALOGO_ACCESOS[i];
+  var alcanza = cat ? (cat.desde <= A.orden) : true;
+  if(llave) alcanza = alcanza && puede(llave);
+  return !alcanza && hayHistoriaDe(k) > 0;
+}
+/* el cartel que se pinta arriba de un módulo en modo lectura */
+function bandaSoloLectura(k, comoSeLlama){
+  var n=hayHistoriaDe(k), P=planQueAbre2(k), S=planSiguiente();
+  var h='<div class="aviso" style="border-color:rgba(245,183,0,.45)">🔒 <b>'+esc(comoSeLlama)+' — solo lectura</b><br>'+
+    '<span class="sub">Tienes '+n+' registro'+(n===1?'':'s')+' de cuando tenías un plan superior. '+
+    'No se borró nada: puedes verlos, exportarlos y mandarlos. Para registrar uno nuevo hace falta subir de plan.</span>';
+  if(S) h+='<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="pedirCodigo(\'\')">Subir al plan '+esc(S.nombre)+' · '+precioTexto(S)+'</button></div>';
+  return h+'</div>';
+}
+/* el primer plan que vuelve a abrir este acceso */
+function planQueAbre2(k){
+  var cat=null;
+  for(var i=0;i<CATALOGO_ACCESOS.length;i++) if(CATALOGO_ACCESOS[i].k===k) cat=CATALOGO_ACCESOS[i];
+  if(!cat) return null;
+  for(var j=0;j<PLANES.length;j++) if(PLANES[j].orden >= cat.desde) return PLANES[j];
+  return null;
+}
+/* pone el cartel arriba de una pantalla y apaga sus botones de agregar */
+function marcarSoloLectura(idPantalla, k, comoSeLlama, idsBotones){
+  var pant=document.getElementById(idPantalla); if(!pant) return false;
+  var viejo=null;
+  for(var i=0;i<pant.children.length;i++) if(pant.children[i].getAttribute &&
+      pant.children[i].getAttribute('data-lectura')==='1') viejo=pant.children[i];
+  var lectura = esSoloLectura(k);
+  if(!lectura){ if(viejo) viejo.parentNode.removeChild(viejo); return false; }
+  if(!viejo){
+    viejo=document.createElement('div'); viejo.setAttribute('data-lectura','1');
+    var ref=pant.querySelector('h2') || pant.firstElementChild;
+    if(ref && ref.nextSibling) pant.insertBefore(viejo, ref.nextSibling); else pant.appendChild(viejo);
+  }
+  viejo.innerHTML=bandaSoloLectura(k, comoSeLlama);
+  (idsBotones||[]).forEach(function(id){
+    var b=document.getElementById(id);
+    if(b){ b.disabled=true; b.style.opacity='.45'; b.title='Necesitas subir de plan'; }
+  });
+  return true;
+}
+
 /* Lo que ve quien todavia no tiene Gestion SST donde irian las carpetas. */
 function invitaCarpetasDom(){
   var d=document.createElement('div'); d.className='aviso'; d.style.marginTop='16px';
@@ -7724,57 +9475,167 @@ function listoFirma(){
 // ---------------------------------------------------------------- PDF
 var PDF={doc:null, nombre:''};
 /* ================= PUNTAJE DE SEGURIDAD ================= */
-var PT_CRIT = [
-  {k:'epp', t:'Usó el EPP completo', apl:true},
-  {k:'ats', t:'Participó en el ATS / charla', apl:true},
-  {k:'orden', t:'Orden y limpieza en su área', apl:true},
-  {k:'senal', t:'Respetó la señalización', apl:true},
-  {k:'reporto', t:'Reportó un acto o condición insegura', apl:true},
-  {k:'altura', t:'Altura: usó arnés y línea de vida', apl:false},
-  {k:'maniobra', t:'Maniobra / izaje seguro', apl:false},
-  {k:'herram', t:'Uso correcto de la herramienta', apl:false}
+/* ══════════════ LA SEGURIDAD DEL DÍA ══════════════
+   Una nota corta por trabajador, todos los días. Sirve para dos cosas:
+   ver quién trabaja seguro de verdad, y tener con qué premiar — porque
+   en obra el reconocimiento mueve más que el memorándum.
+   Cuántos puntos se marcan depende del plan: en LITE son 3, para que
+   se pruebe sin volverse tarea; en los planes pagados son 5.        */
+var PT_BASE = [
+  {k:'epp',     t:'Usó el EPP completo y en buen estado'},
+  {k:'ats',     t:'Participó en el ATS o la charla de 5 minutos'},
+  {k:'orden',   t:'Orden y limpieza en su área'},
+  {k:'senal',   t:'Respetó la señalización, bloqueos y permisos'},
+  {k:'reporto', t:'Reportó un acto o una condición insegura'}
 ];
+function ptCriterios(){ return PT_BASE.slice(0, libre()? 5 : 3); }
 var PT = {};   // k -> 1 (cumple) | 0 (no) | -1 (N/A)
 function pintarPuntaje(){
-  PT = {}; PT_CRIT.forEach(function(c){ PT[c.k] = c.apl ? 1 : -1; });
+  PT = {}; ptCriterios().forEach(function(c){ PT[c.k]=1; });
   $('pt-nombre').value=''; $('pt-dni').value=''; $('pt-fecha').value=hoyISO(); $('pt-msg').textContent='';
+  ptListaTrabajadores();
   pintarCriterios();
+  cargarPuntajesDelMes().then(pintarTrabajadorDelMes);
+}
+/* si ya tienes tu personal registrado, se elige de la lista */
+function ptListaTrabajadores(){
+  var caja=$('pt-elige'); if(!caja) return;
+  var a=(typeof trabsLocal==='function'? trabsLocal():[]).filter(function(t){ return t.estatus!=='cesado'; });
+  if(!a.length){ caja.innerHTML=''; return; }
+  caja.innerHTML='<label>Elegir de mi personal</label><select id="pt-desde">'+
+    '<option value="">— escribir a mano —</option>'+
+    a.map(function(t){ return '<option value="'+esc(t.id)+'">'+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</option>'; }).join('')+
+    '</select>';
+  $('pt-desde').onchange=function(){
+    var t=trabPorId(this.value); if(!t) return;
+    $('pt-nombre').value=t.nombre||''; $('pt-dni').value=t.dni||'';
+  };
 }
 function pintarCriterios(){
   var h='';
-  PT_CRIT.forEach(function(c){
+  ptCriterios().forEach(function(c){
     var v=PT[c.k], et = v===1?'✓':(v===0?'✗':'—');
-    var col = v===1?'#2f9e6f':(v===0?'#d2564f':'#8a8a8a');
-    h+='<div class="tarj vidrio" style="display:flex;align-items:center;gap:12px" onclick="ptToca(\''+c.k+'\')">'+
-       '<span style="font-size:22px;font-weight:800;color:'+col+';min-width:26px;text-align:center">'+et+'</span>'+
-       '<span style="flex:1">'+esc(c.t)+'</span></div>';
+    var col = v===1?'var(--ok)':(v===0?'var(--mal)':'#8a8a8a');
+    h+='<div class="tarj vidrio pt-fila" onclick="ptToca(\''+c.k+'\')">'+
+       '<span class="pt-marca" style="color:'+col+'">'+et+'</span>'+
+       '<span class="pt-tx">'+esc(c.t)+'</span></div>';
   });
+  if(!libre()){
+    var S=planSiguiente();
+    h+='<div class="aviso" style="margin-top:10px;font-size:13px">En el plan LITE se evalúan <b>3 puntos</b>. '+
+       (S? ('Desde el plan <b>'+esc(S.nombre)+'</b> son 5, y entran la señalización y el reporte de actos inseguros.') : '')+'</div>';
+  }
   $('pt-criterios').innerHTML=h;
   ptNota();
 }
 function ptToca(k){ PT[k] = PT[k]===1 ? 0 : (PT[k]===0 ? -1 : 1); pintarCriterios(); }
 function ptCalcular(){
   var apl=0, bien=0;
-  PT_CRIT.forEach(function(c){ if(PT[c.k]!==-1){ apl++; if(PT[c.k]===1) bien++; } });
+  ptCriterios().forEach(function(c){ if(PT[c.k]!==-1){ apl++; if(PT[c.k]===1) bien++; } });
   return apl ? (bien/apl) : 0;
 }
 function ptNota(){
-  var apl=0; PT_CRIT.forEach(function(c){ if(PT[c.k]!==-1) apl++; });
+  var apl=0; ptCriterios().forEach(function(c){ if(PT[c.k]!==-1) apl++; });
   var pr=ptCalcular();
-  $('pt-nota').innerHTML = apl ? ('Nota del día: <b style="color:'+(pr>=0.8?'#2f9e6f':(pr>=0.5?'#c99a3a':'#d2564f'))+'">'+Math.round(pr*100)+'%</b> <span class="sub">('+apl+' puntos que sí aplican hoy)</span>') : '<span class="sub">Todo marcado como «no aplica».</span>';
+  $('pt-nota').innerHTML = apl
+    ? ('Nota del día: <b style="color:'+(pr>=0.8?'var(--ok)':(pr>=0.5?'var(--oro)':'var(--mal)'))+'">'+
+       Math.round(pr*100)+'%</b> <span class="sub">('+apl+' punto'+(apl===1?'':'s')+' que sí aplican hoy)</span>')
+    : '<span class="sub">Todo marcado como «no aplica»: así no hay nota.</span>';
 }
 function guardarPuntaje(){
   var nombre=($('pt-nombre').value||'').trim();
   if(!nombre){ alert('¿A quién estás evaluando?'); return; }
   var e=empActiva();
   if(!e){ alert('Primero crea o entra a tu empresa (así se guarda y se consolida).'); ir('p-empresa'); return; }
-  var crit={}; PT_CRIT.forEach(function(c){ crit[c.k]=PT[c.k]; });
+  var crit={}; ptCriterios().forEach(function(c){ crit[c.k]=PT[c.k]; });
   var pr=ptCalcular();
   var msg=$('pt-msg'); msg.style.color='var(--gris)'; msg.textContent='Guardando…';
   sbPost('sst_puntaje',{empresa:e.id, trabajador:nombre, dni:($('pt-dni').value||'').trim(), fecha:$('pt-fecha').value,
     criterios:crit, promedio:pr, supervisor:(leer(LS_SUP,{}).nombre||'')})
-    .then(function(){ msg.style.color='#2f9e6f'; msg.textContent='Guardado. '+nombre+': '+Math.round(pr*100)+'% hoy.'; setTimeout(function(){ pintarPuntaje(); },900); })
-    .catch(function(err){ msg.style.color='#d2564f'; msg.textContent='No se pudo guardar ('+err+'). Revisa el internet.'; });
+    .then(function(){
+      msg.style.color='var(--ok)'; msg.textContent='Guardado. '+nombre+': '+Math.round(pr*100)+'% hoy.';
+      PUNT_MES=null;
+      cargarPuntajesDelMes(true).then(pintarTrabajadorDelMes);
+      setTimeout(function(){ var n=$('pt-nombre'); if(n) n.value=''; PT={}; ptCriterios().forEach(function(c){PT[c.k]=1;}); pintarCriterios(); },900);
+    })
+    .catch(function(err){ msg.style.color='var(--mal)'; msg.textContent='No se pudo guardar ('+err+'). Revisa el internet.'; });
+}
+
+/* ── EL TRABAJADOR DEL MES ────────────────────────────────────────
+   Se calcula con los puntajes del mes en curso. Para entrar en la
+   carrera hacen falta al menos 3 días evaluados: si no, el que tuvo
+   un solo día bueno le gana al que trabajó seguro todo el mes, y el
+   premio deja de significar algo (y la gente se da cuenta).       */
+var PUNT_MES=null, PUNT_PIDE=false;
+function cargarPuntajesDelMes(forzar){
+  var e=empActiva();
+  if(!e || !hayCuenta()) return Promise.resolve(null);
+  if(PUNT_PIDE) return Promise.resolve(PUNT_MES);
+  if(PUNT_MES && !forzar) return Promise.resolve(PUNT_MES);
+  PUNT_PIDE=true;
+  var ini=mesEtiqueta()+'-01';
+  return sbGet('sst_puntaje?empresa=eq.'+encodeURIComponent(e.id)+
+               '&fecha=gte.'+ini+'&select=trabajador,dni,promedio,fecha&order=fecha.desc&limit=800')
+    .then(function(a){ PUNT_PIDE=false; PUNT_MES=a||[]; return PUNT_MES; })
+    .catch(function(){ PUNT_PIDE=false; return null; });
+}
+var PT_MINIMO_DIAS = 3;
+function rankingDelMes(){
+  if(!PUNT_MES || !PUNT_MES.length) return [];
+  var por={};
+  PUNT_MES.forEach(function(p){
+    var nom=(p.trabajador||'').trim(); if(!nom) return;
+    var llave=(String(p.dni||'').replace(/[^0-9]/g,'')) || _norml(nom);
+    if(!por[llave]) por[llave]={nombre:nom, dias:0, suma:0, dni:p.dni||''};
+    por[llave].dias++; por[llave].suma += (parseFloat(p.promedio)||0);
+  });
+  var lista=[];
+  for(var k in por){ var x=por[k]; x.prom=x.suma/x.dias; lista.push(x); }
+  lista.sort(function(a,b){
+    if(b.prom!==a.prom) return b.prom-a.prom;
+    return b.dias-a.dias;                       /* a igual nota, gana quien tiene más días */
+  });
+  return lista;
+}
+function pintarTrabajadorDelMes(){
+  var c=$('pt-tdm'); if(!c) return;
+  var lista=rankingDelMes();
+  var mes=MESES_ES[parseInt(hoyISO().slice(5,7),10)-1];
+  if(!lista.length){
+    c.innerHTML='<div class="tdm tdm-vacio"><b>🏆 Trabajador del mes</b>'+
+      '<span>Todavía nadie tiene nota este mes. Evalúa a tu gente unos días y aquí sale quién va ganando.</span></div>';
+    return;
+  }
+  var listos=lista.filter(function(x){ return x.dias>=PT_MINIMO_DIAS; });
+  var hoy=new Date(hoyISO()+'T00:00:00');
+  var ultimo=new Date(hoy.getFullYear(), hoy.getMonth()+1, 0).getDate();
+  var cerrado = hoy.getDate() >= ultimo;
+  if(!listos.length){
+    var mejor=lista[0];
+    c.innerHTML='<div class="tdm tdm-vacio"><b>🏆 Trabajador del mes</b>'+
+      '<span>Van '+lista.length+' evaluado'+(lista.length===1?'':'s')+' en '+mes+
+      '. Hacen falta al menos '+PT_MINIMO_DIAS+' días evaluados para entrar en la carrera — '+
+      'así el premio se lo lleva quien trabaja seguro todo el mes, no quien tuvo un día bueno.</span></div>';
+    return;
+  }
+  var g=listos[0];
+  var frase = cerrado
+    ? ('<b class="tdm-nom">'+esc(g.nombre)+'</b> es el <b class="tdm-t">TRABAJADOR DEL MES</b> de '+mes+'.')
+    : ('Parece que <b class="tdm-nom">'+esc(g.nombre)+'</b> será el próximo <b class="tdm-t">TRABAJADOR DEL MES</b>.');
+  var h='<div class="tdm"><div class="tdm-cab">🏆 '+frase+'</div>'+
+        '<div class="tdm-nota"><b>'+Math.round(g.prom*100)+'%</b> en '+g.dias+' día'+(g.dias===1?'':'s')+' evaluado'+(g.dias===1?'':'s')+'</div>';
+  if(listos.length>1){
+    h+='<ol class="tdm-podio">';
+    listos.slice(0,5).forEach(function(x,i){
+      h+='<li'+(i===0?' class="uno"':'')+'><span class="tdm-pos">'+(i+1)+'</span>'+
+         '<span class="tdm-q">'+esc(x.nombre)+'</span>'+
+         '<span class="tdm-r"><i style="width:'+Math.round(x.prom*100)+'%"></i></span>'+
+         '<b>'+Math.round(x.prom*100)+'%</b></li>';
+    });
+    h+='</ol>';
+  }
+  h+='<div class="tdm-pie">Cuélgalo en la caseta. El reconocimiento mueve más que el memorándum, y le sale gratis a la obra.</div>';
+  c.innerHTML=h+'</div>';
 }
 
 /* ================= PREVENCIÓN ================= */
@@ -7816,15 +9677,21 @@ function prepReporte(){
   rPintarAnon();
   rPintarModo();
 }
-/* Sin código de obra el reporte no se puede guardar, pero sí mandar:
-   antes solo salía «primero entra a tu empresa» y el reporte se perdía. */
+/* ¿A DONDE VA EL REPORTE?
+   Esto estaba MAL y por eso el reporte del trabajador nunca llegaba:
+   se preguntaba por empActiva(), que exige SESION ABIERTA. El trabajador
+   no tiene cuenta ni abre sesion — entra con el codigo de su obra y ya.
+   Asi que siempre caia en «mandalo por WhatsApp» y el supervisor no veia
+   nada en su celular. Lo que hay que preguntar es empDeTrabajo(): ese si
+   devuelve la obra tanto para el gestor con sesion como para el trabajador
+   con solo el codigo. Queda anotado porque fue un error caro.          */
 function rPintarModo(){
-  var sinObra = !empActiva();
+  var sinObra = !empDeTrabajo();
   var caja=$('r-sin-obra'); if(caja) caja.style.display = sinObra ? '' : 'none';
   var btn=$('r-enviar');
   if(btn) btn.textContent = sinObra ? '📲 Mandarlo por WhatsApp u otra app' : 'Enviar el reporte';
 }
-function reporteEnviar(){ if(empActiva()) guardarReporte(); else compartirReporte(); }
+function reporteEnviar(){ if(empDeTrabajo()) guardarReporte(); else compartirReporte(); }
 function textoDelReporte(){
   var clase = $('r-clase').value==='acto' ? 'Acto inseguro' : 'Condición insegura';
   var lugar = ($('r-lugar').value||'').trim();
@@ -7863,42 +9730,419 @@ function rPintarAnon(){
   $('r-autor-wrap').style.display = R_ANON?'none':'';
 }
 function guardarReporte(){
-  var e=reqEmpresa(); if(!e) return;
+  var e=empDeTrabajo();
+  if(!e){ compartirReporte(); return; }
   var desc=($('r-desc').value||'').trim();
   if(!desc){ alert('Describe lo que viste.'); return; }
-  if(frenoLite('reporte', usoTotal('reporte'), 'reportes')) return;
-  sumarUso('reporte');
+  /* el tope solo aplica al que gestiona: al trabajador que ve un peligro
+     nunca se le cierra la puerta por un plan. */
+  if(sesionAbierta() && frenoLite('reporte', usoTotal('reporte'), 'reportes')) return;
+  if(sesionAbierta()) sumarUso('reporte');
   var msg=$('r-msg'); msg.style.color='var(--gris)'; msg.textContent='Enviando…';
   var f=$('r-foto').files && $('r-foto').files[0];
-  function grabar(fotoUrl){
-    return mandarReporteANube({clase:$('r-clase').value, descripcion:desc, lugar:($('r-lugar').value||'').trim(),
-      foto_url:fotoUrl||null, anonimo:R_ANON, autor:R_ANON?null:(($('r-autor').value||'').trim()||null), fecha:hoyISO()});
+  var datos={clase:$('r-clase').value, descripcion:desc, lugar:($('r-lugar').value||'').trim(),
+             anonimo:R_ANON, autor:R_ANON?null:(($('r-autor').value||'').trim()||null), fecha:hoyISO()};
+  function grabar(fotoUrl){ datos.foto_url=fotoUrl||null; return mandarReporteANube(datos); }
+  (f? subirFoto('reportes',f).then(grabar, function(){ return grabar(null); }) : grabar(null))
+    .then(function(){
+      var avisado=avisarDelReporte(datos);
+      msg.style.color='#2f9e6f';
+      msg.textContent = avisado
+        ? 'Listo. Quedó guardado en la obra y se abrió el aviso al supervisor.'
+        : '¡Gracias! Tu reporte quedó guardado en la obra; el supervisor lo ve en su app.';
+      setTimeout(function(){ ir(sesionAbierta()? 'p-reporte' : 'p-colab'); },1100);
+    })
+    .catch(function(err){
+      /* si la nube no responde el reporte NO se tira a la basura:
+         se guarda en el celular y se sube en cuanto haya senal. */
+      colaReporte(datos);
+      msg.style.color='#d68e1a';
+      msg.textContent='Sin internet: tu reporte quedó guardado en el celular y se sube solo cuando vuelva la señal.';
+      setTimeout(function(){ ir(sesionAbierta()? 'p-reporte' : 'p-colab'); },1400);
+    });
+}
+/* ── LA COLA DE REPORTES SIN SEÑAL ────────────────────────────────
+   En obra hay sótanos, túneles y cerros sin línea. Un reporte que se
+   pierde por eso es justo el que más importaba. */
+var LS_REP_COLA='sstc_rep_cola';
+function colaReporte(d){
+  var a=leer(LS_REP_COLA,[]); a.push({d:d, cod:(empDeTrabajo()||{}).codigo||'', cuando:Date.now()});
+  guardar(LS_REP_COLA, a.slice(-40));
+}
+function subirColaReportes(){
+  var a=leer(LS_REP_COLA,[]);
+  if(!a.length) return Promise.resolve(0);
+  var quedan=[], subidos=0;
+  return a.reduce(function(cad, it){
+    return cad.then(function(){
+      return mandarReporteANube(it.d).then(function(){ subidos++; }, function(){ quedan.push(it); });
+    });
+  }, Promise.resolve()).then(function(){ guardar(LS_REP_COLA, quedan); return subidos; });
+}
+/* ── EL AVISO AL SUPERVISOR ───────────────────────────────────────
+   El registro ya quedó guardado arriba; esto es para que le SUENE el
+   celular y no dependa de acordarse de abrir la pantalla.
+   Regla dura: si el reporte es ANÓNIMO no se manda por WhatsApp. El
+   número del que reporta quedaría a la vista del jefe y se acabó el
+   anonimato. Eso no se negocia por comodidad.                       */
+function avisarDelReporte(d){
+  if(d.anonimo) return false;
+  var cfg=cfgAvisos();
+  if(!cfg.wsp && !cfg.correo) return false;
+  var txt=textoDelReporte();
+  try{
+    if(cfg.wsp){
+      window.open('https://wa.me/'+telInternacional(cfg.wsp)+'?text='+encodeURIComponent(txt),'_blank');
+      return true;
+    }
+    window.open('mailto:'+encodeURIComponent(cfg.correo)+
+      '?subject='+encodeURIComponent('Reporte de seguridad · '+nombreDeLaObra())+
+      '&body='+encodeURIComponent(txt),'_blank');
+    return true;
+  }catch(e){ return false; }
+}
+/* a dónde avisa esta obra (se configura una vez en «Datos de mi empresa») */
+var LS_AVISOS='sstc_avisos';
+function avisosKey(){ var e=empDeTrabajo(); return LS_AVISOS+'_'+((e&&e.codigo)||'x'); }
+function cfgAvisos(){ var c=leer(avisosKey(),{}); return {wsp:c.wsp||'', correo:c.correo||''}; }
+function guardarAvisos(wsp, correo){ guardar(avisosKey(),{wsp:(wsp||'').trim(), correo:(correo||'').trim()}); }
+/* el permiso del sistema para las notificaciones. Se pide con un botón
+   y no de sopetón al abrir la app: pedirlo sin contexto es la forma más
+   rápida de que le den «bloquear» para siempre. */
+function activarAvisosDelCelular(){
+  var m=$('av-msg'); if(!m) return;
+  pedirPermisoAvisos().then(function(r){
+    if(r==='granted'){
+      m.style.color='var(--ok)';
+      m.textContent='Listo. Mientras tengas la app abierta te avisamos apenas entre un reporte, y el número sale sobre el ícono.';
+      arrancarVigilanciaReportes();
+      avisarEnPantalla('Avisos activados','Aquí te van a llegar los reportes nuevos de '+nombreDeLaObra()+'.');
+    } else if(r==='denied'){
+      m.style.color='#d68e1a';
+      m.textContent='El celular tiene bloqueadas las notificaciones de esta página. Se activan desde los ajustes del navegador. Mientras tanto, el número rojo del tablero y el WhatsApp siguen funcionando.';
+    } else {
+      m.style.color='var(--gris)';
+      m.textContent='Este celular no maneja notificaciones. El número rojo del tablero y el aviso por WhatsApp sí funcionan.';
+    }
+  });
+}
+function guardarAvisosUI(){
+  var w=($('av-wsp')||{}).value||'', c=($('av-correo')||{}).value||'', m=$('av-msg');
+  if(!m) return;
+  if(c && c.indexOf('@')<1){ m.style.color='var(--mal)'; m.textContent='Ese correo no se ve bien.'; return; }
+  var soloNum=String(w).replace(/[^0-9]/g,'');
+  if(w && soloNum.length<9){ m.style.color='var(--mal)'; m.textContent='El número de WhatsApp necesita al menos 9 dígitos.'; return; }
+  guardarAvisos(w,c);
+  m.style.color='var(--ok)';
+  m.textContent = (w||c) ? 'Listo. Los reportes con nombre te van a llegar ahí.' : 'Sin aviso configurado: los reportes solo se ven en la app.';
+}
+function telInternacional(t){
+  var d=String(t||'').replace(/[^0-9+]/g,'');
+  if(d.charAt(0)==='+') return d.slice(1).replace(/\+/g,'');
+  if(d.length===9) return '51'+d;      /* Perú */
+  return d;
+}
+/* ── CERRAR UN REPORTE: qué se hizo y la foto del después ──────────
+   Marcar «atendido» a secas no le sirve a nadie. Lo que una auditoría
+   pide es la EVIDENCIA de que la condición se corrigió: encontraron
+   la basura, aquí está la foto de cómo quedó. Por eso cerrar un
+   reporte pide dos cosas — qué se hizo y la foto del levantamiento —
+   y la foto es opcional pero se pide siempre.                       */
+var REP_CIERRA=null, REP_FOTO_CIERRE=null;
+function atenderReporte(id){
+  REP_CIERRA=id; REP_FOTO_CIERRE=null;
+  ir('p-reporte-cerrar');
+}
+function prepCerrarReporte(){
+  REP_FOTO_CIERRE=null;
+  $('rc-accion').value=''; $('rc-msg').textContent=''; $('rc-vista').innerHTML='';
+  $('rc-fecha').value=hoyISO();
+  var r=null;
+  (REP_LISTA||[]).forEach(function(x){ if(x.id===REP_CIERRA) r=x; });
+  $('rc-que').innerHTML = r
+    ? ('<b>'+(r.clase==='acto'?'👤 Acto inseguro':'⚠️ Condición insegura')+'</b><br>'+
+       '<span class="sub">'+esc(r.descripcion||'')+'</span>'+
+       (r.lugar? '<br><span class="sub">📍 '+esc(r.lugar)+'</span>':'')+
+       (r.foto_url? '<div class="rc-antes"><span class="tb-mini">Así lo encontraron</span>'+
+        '<img src="'+escA(r.foto_url)+'" alt="Foto del hallazgo"></div>':''))
+    : '<span class="sub">Reporte seleccionado.</span>';
+  var inp=$('rc-foto'); if(!inp) return;
+  inp.value='';
+  if(inp.getAttribute('data-ok')==='1') return;
+  inp.setAttribute('data-ok','1');
+  inp.onchange=function(){
+    var f=this.files && this.files[0]; if(!f) return;
+    var fr=new FileReader();
+    fr.onload=function(){
+      var img=new Image();
+      img.onload=function(){
+        var max=1200, r2=Math.min(1,max/Math.max(img.width,img.height));
+        var cv=document.createElement('canvas');
+        cv.width=Math.round(img.width*r2); cv.height=Math.round(img.height*r2);
+        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+        REP_FOTO_CIERRE=cv.toDataURL('image/jpeg',0.82);
+        $('rc-vista').innerHTML='<span class="tb-mini">Así quedó</span><img src="'+REP_FOTO_CIERRE+'" alt="Foto del levantamiento">';
+      };
+      img.src=fr.result;
+    };
+    fr.readAsDataURL(f);
+  };
+}
+function guardarCierreReporte(){
+  var m=$('rc-msg'); m.style.color='var(--mal)';
+  var acc=($('rc-accion').value||'').trim();
+  if(acc.length<5){ m.textContent='Escribe qué se hizo, aunque sea en una línea. Es lo que se audita.'; return; }
+  if(!REP_CIERRA){ ir('p-reporte'); return; }
+  m.style.color='var(--gris)'; m.textContent='Guardando…';
+  var quien=(correoCuenta()||'').split('@')[0];
+  function grabar(url){
+    var d={ estado:'atendido', accion:acc, cerrado:$('rc-fecha').value||hoyISO(), cerrado_por:quien };
+    if(url) d.foto_cierre=url;
+    return sbPatch('sst_reporte?id=eq.'+encodeURIComponent(REP_CIERRA), d);
   }
-  (f? subirFoto('reportes',f).then(grabar) : grabar(null))
-    .then(function(){ msg.style.color='#2f9e6f'; msg.textContent='¡Gracias! Tu reporte le llegó al supervisor.'; setTimeout(function(){ ir('p-reporte'); },800); })
-    .catch(function(err){ msg.style.color='#d2564f'; msg.textContent='No se pudo enviar ('+err+'). Revisa el internet.'; });
+  var subida = REP_FOTO_CIERRE
+    ? subirFoto('reportes', _dataURLaFile(REP_FOTO_CIERRE,'cierre-'+Date.now()+'.jpg')).then(grabar, function(){ return grabar(null); })
+    : grabar(null);
+  subida.then(function(){
+    m.style.color='var(--ok)'; m.textContent='Cerrado. Queda la evidencia del levantamiento.';
+    setTimeout(function(){ ir('p-reporte'); },700);
+  }).catch(function(e){
+    m.style.color='var(--mal)'; m.textContent='No se pudo guardar ('+e+'). Revisa el internet.';
+  });
+}
+
+/* ══════════════ EL AVISO DE REPORTE NUEVO ══════════════
+   Tres capas, de la más segura a la más vistosa:
+   1) EL NÚMERO EN ROJO en el tablero y en el círculo. Siempre funciona,
+      no pide permiso a nadie y es lo primero que se ve al abrir.
+   2) EL GLOBITO del ícono (Badging API): si la app está instalada, el
+      número sale sobre el ícono en la pantalla de inicio, como el
+      WhatsApp. Android sí; iPhone todavía no.
+   3) LA NOTIFICACIÓN del sistema, mientras la app esté abierta o
+      recién cerrada.
+   Lo que NO se puede hacer sin un servidor propio de push es avisar
+   con el celular apagado y la app cerrada hace horas. Eso queda dicho
+   y por eso además se manda el WhatsApp al supervisor: hoy ESE es el
+   aviso que de verdad despierta a alguien.                          */
+var LS_REP_VISTOS='sstc_rep_vistos';
+var AVISO_TIMER=null, AVISO_PIDIENDO=false;
+function repVistosKey(){ var e=empActiva(); return LS_REP_VISTOS+'_'+((e&&e.codigo)||'x'); }
+function repVistos(){ return leer(repVistosKey(),{n:0, ids:[]}); }
+function repVistosSet(v){ guardar(repVistosKey(), {n:v.n||0, ids:(v.ids||[]).slice(0,200)}); }
+
+function ponerGlobito(n){
+  try{
+    if(n>0 && navigator.setAppBadge) navigator.setAppBadge(n);
+    else if(navigator.clearAppBadge) navigator.clearAppBadge();
+  }catch(e){}
+}
+function pedirPermisoAvisos(){
+  try{
+    if(!('Notification' in window)) return Promise.resolve('no_hay');
+    if(Notification.permission==='granted') return Promise.resolve('granted');
+    if(Notification.permission==='denied')  return Promise.resolve('denied');
+    return Notification.requestPermission();
+  }catch(e){ return Promise.resolve('no_hay'); }
+}
+function avisarEnPantalla(titulo, cuerpo){
+  try{
+    if(!('Notification' in window) || Notification.permission!=='granted') return false;
+    var n=new Notification(titulo,{ body:cuerpo, icon:'icono-192.png', badge:'icono-192.png', tag:'obrasst-reporte' });
+    n.onclick=function(){ try{ window.focus(); }catch(e){} ir('p-reporte'); n.close(); };
+    return true;
+  }catch(e){ return false; }
+}
+/* pregunta a la nube cuántos reportes abiertos hay y avisa por lo nuevo */
+function revisarReportesNuevos(silencioso){
+  var e=empActiva();
+  if(!e || !hayCuenta() || AVISO_PIDIENDO) return Promise.resolve(0);
+  AVISO_PIDIENDO=true;
+  return sbGet('sst_reporte?empresa=eq.'+encodeURIComponent(e.id)+
+               '&estado=neq.atendido&select=id,clase,descripcion,lugar,fecha&order=creado.desc&limit=60')
+    .then(function(a){
+      AVISO_PIDIENDO=false;
+      a=a||[];
+      var v=repVistos(), viejos={}, nuevos=[];
+      (v.ids||[]).forEach(function(id){ viejos[id]=1; });
+      a.forEach(function(r){ if(!viejos[r.id]) nuevos.push(r); });
+      REP_ABIERTOS=a.length;
+      ponerGlobito(a.length);
+      pintarAvisoReportes();
+      /* la primera vez solo se toma nota: no se avisa de 20 reportes viejos */
+      if(!v.ids || !v.ids.length){
+        repVistosSet({n:a.length, ids:a.map(function(r){return r.id;})});
+        return 0;
+      }
+      if(nuevos.length && !silencioso){
+        var uno=nuevos[0];
+        avisarEnPantalla(
+          nuevos.length===1 ? 'Reporte nuevo en la obra' : (nuevos.length+' reportes nuevos en la obra'),
+          (uno.clase==='acto'?'Acto inseguro':'Condición insegura')+
+          (uno.lugar? ' · '+uno.lugar : '')+'\n'+String(uno.descripcion||'').slice(0,110));
+      }
+      repVistosSet({n:a.length, ids:a.map(function(r){return r.id;})});
+      return nuevos.length;
+    }).catch(function(){ AVISO_PIDIENDO=false; return 0; });
+}
+var REP_ABIERTOS=0;
+/* pinta el número rojo donde el ojo ya está mirando */
+function pintarAvisoReportes(){
+  var n=REP_ABIERTOS;
+  /* en el círculo de «Reportar acto o condición» */
+  var aros=document.querySelectorAll('.acceso');
+  for(var i=0;i<aros.length;i++){
+    var b=aros[i], et=(b.textContent||'');
+    var viejo=b.querySelector('.aviso-num');
+    if(/Reportar/.test(et) && n>0){
+      if(!viejo){
+        var s=document.createElement('span'); s.className='aviso-num';
+        var aro=b.querySelector('.aro'); if(aro) aro.appendChild(s); else b.appendChild(s);
+        viejo=s;
+      }
+      viejo.textContent = n>99 ? '99+' : String(n);
+    } else if(viejo){ viejo.parentNode.removeChild(viejo); }
+  }
+}
+/* mientras la app esté abierta, se revisa cada 3 minutos */
+function arrancarVigilanciaReportes(){
+  if(AVISO_TIMER) return;
+  revisarReportesNuevos(true);
+  AVISO_TIMER=setInterval(function(){
+    if(document.hidden) return;
+    revisarReportesNuevos(false);
+  }, 180000);
+  try{
+    document.addEventListener('visibilitychange', function(){
+      if(!document.hidden) revisarReportesNuevos(false);
+    });
+  }catch(e){}
+}
+function pararVigilanciaReportes(){ if(AVISO_TIMER){ clearInterval(AVISO_TIMER); AVISO_TIMER=null; } }
+
+/* ── LA LISTA DE REPORTES ────────────────────────────────────────── */
+var REP_LISTA=[];
+function reportesAbiertos(){
+  var n=0; (REP_LISTA||[]).forEach(function(r){ if(r.estado!=='atendido') n++; });
+  return n;
 }
 function pintarReporte(){
   var e=empActiva(), c=$('reporte-cuerpo');
   c.innerHTML='<h2>🚨 Reportes de la obra</h2>'+
     '<button class="btn" onclick="ir(\'p-reporte-nuevo\')">＋ Reportar algo inseguro</button>'+
-    (e?'<div id="rep-lista" style="margin-top:14px"><p class="sub">Cargando…</p></div>':'<p class="sub" style="margin-top:12px">Entra a tu empresa para ver y hacer reportes.</p>');
+    (e?'<div class="esc-acc" style="margin-top:10px">'+
+        '<button class="btn sec" style="margin:0" onclick="ir(\'p-reporte-excel\')">📊 Informe en Excel</button>'+
+        '<button class="btn sec" style="margin:0" onclick="filtrarReportes()" id="rep-filtro-btn">Ver: abiertos</button>'+
+       '</div><div id="rep-lista" style="margin-top:14px"><p class="sub">Cargando…</p></div>'
+      :'<p class="sub" style="margin-top:12px">Entra a tu empresa para ver y hacer reportes.</p>');
   if(!e) return;
-  sbGet('sst_reporte?empresa=eq.'+e.id+'&select=id,clase,descripcion,lugar,foto_url,anonimo,autor,estado,fecha&order=creado.desc').then(function(rows){
-    var h='';
-    rows.forEach(function(r){
-      var col=r.estado==='atendido'?'#2f9e6f':'#d68e1a';
-      h+='<div class="tarj vidrio" style="display:block;border-left:3px solid '+col+'"><b>'+(r.clase==='acto'?'👤 Acto':'⚠️ Condición')+' · '+esc(r.lugar||'sin lugar')+'</b>'+
-         '<small>'+esc(r.descripcion)+'</small>'+
-         '<div class="sub" style="margin-top:4px">'+(r.anonimo?'Anónimo':esc(r.autor||'—'))+' · '+esc(r.fecha||'')+' · '+(r.estado==='atendido'?'✓ atendido':'abierto')+'</div>'+
-         '<div style="display:flex;gap:8px;margin-top:8px">'+
-         (r.foto_url?'<a class="btn sec" style="margin:0;text-align:center" target="_blank" rel="noopener" href="'+escA(r.foto_url)+'">Ver foto</a>':'')+
-         (r.estado!=='atendido'?'<button class="btn sec" style="margin:0" onclick="atenderReporte(\''+r.id+'\')">Marcar atendido</button>':'')+'</div></div>';
+  sbGet('sst_reporte?empresa=eq.'+encodeURIComponent(e.id)+
+        '&select=id,clase,descripcion,lugar,foto_url,foto_cierre,accion,cerrado,cerrado_por,anonimo,autor,estado,fecha'+
+        '&order=creado.desc&limit=500')
+    .then(function(rows){ REP_LISTA=rows||[]; pintarListaReportes(); })
+    .catch(function(err){
+      var c2=$('rep-lista');
+      if(c2) c2.innerHTML='<p class="sub">No se pudo cargar ('+err+'). Revisa el internet.</p>';
     });
-    $('rep-lista').innerHTML=h||'<p class="sub">Sin reportes todavía. Que la cuadrilla reporte lo que vea.</p>';
-  }).catch(function(err){ $('rep-lista').innerHTML='<p class="sub">No se pudo cargar ('+err+').</p>'; });
 }
-function atenderReporte(id){ sbPatch('sst_reporte?id=eq.'+id,{estado:'atendido'}).then(function(){ pintarReporte(); }).catch(function(err){ alert('No se pudo ('+err+').'); }); }
+var REP_VER='abiertos';
+function filtrarReportes(){
+  REP_VER = (REP_VER==='abiertos') ? 'todos' : (REP_VER==='todos' ? 'cerrados' : 'abiertos');
+  pintarListaReportes();
+}
+function pintarListaReportes(){
+  var c=$('rep-lista'); if(!c) return;
+  var b=$('rep-filtro-btn');
+  if(b) b.textContent='Ver: '+REP_VER;
+  var lista=REP_LISTA.filter(function(r){
+    if(REP_VER==='abiertos') return r.estado!=='atendido';
+    if(REP_VER==='cerrados') return r.estado==='atendido';
+    return true;
+  });
+  if(!lista.length){
+    c.innerHTML = REP_LISTA.length
+      ? '<p class="sub">No hay reportes '+REP_VER+'.</p>'
+      : '<p class="sub">Sin reportes todavía. Pásale el código de la obra a tu cuadrilla: desde su celular reportan lo que ven y te cae acá.</p>';
+    return;
+  }
+  var h='';
+  lista.forEach(function(r){
+    var cerrado = r.estado==='atendido';
+    var col = cerrado ? '#2f9e6f' : '#d68e1a';
+    h+='<div class="tarj vidrio rep-card" style="display:block;border-left:3px solid '+col+'">'+
+       '<b>'+(r.clase==='acto'?'👤 Acto inseguro':'⚠️ Condición insegura')+' · '+esc(r.lugar||'sin lugar')+'</b>'+
+       '<small>'+esc(r.descripcion)+'</small>'+
+       '<div class="sub" style="margin-top:4px">'+(r.anonimo?'🙈 Anónimo':esc(r.autor||'—'))+' · '+
+       esc(fechaLarga(r.fecha)||r.fecha||'')+' · '+(cerrado?'✓ cerrado':'abierto')+'</div>';
+    /* el antes y el después, uno al lado del otro */
+    if(r.foto_url || r.foto_cierre){
+      h+='<div class="rep-fotos">';
+      if(r.foto_url)   h+='<figure><img src="'+escA(r.foto_url)+'" alt="Foto del hallazgo"><figcaption>Antes</figcaption></figure>';
+      if(r.foto_cierre)h+='<figure><img src="'+escA(r.foto_cierre)+'" alt="Foto del levantamiento"><figcaption>Después</figcaption></figure>';
+      h+='</div>';
+    }
+    if(cerrado && r.accion){
+      h+='<div class="rep-accion">✅ <b>Se hizo:</b> '+esc(r.accion)+
+         (r.cerrado? ' <span class="sub">('+esc(fechaLarga(r.cerrado))+(r.cerrado_por?' · '+esc(r.cerrado_por):'')+')</span>':'')+'</div>';
+    }
+    if(!cerrado){
+      h+='<div style="margin-top:9px"><button class="btn sec" style="margin:0" onclick="atenderReporte(\''+r.id+'\')">Cerrar con evidencia</button></div>';
+    }
+    h+='</div>';
+  });
+  c.innerHTML=h;
+}
+
+/* ── EL INFORME EN EXCEL ──────────────────────────────────────────── */
+function prepReporteExcel(){
+  var s=$('rx-mes');
+  if(s && !s.value) s.value=mesEtiqueta();
+  $('rx-msg').textContent='';
+  rxContar();
+  if(s && !s.getAttribute('data-ok')){ s.setAttribute('data-ok','1'); s.onchange=rxContar; }
+  var q=$('rx-que'); if(q && !q.getAttribute('data-ok')){ q.setAttribute('data-ok','1'); q.onchange=rxContar; }
+}
+function rxSeleccion(){
+  var que=($('rx-que')||{}).value||'mes', mes=($('rx-mes')||{}).value||mesEtiqueta();
+  return (REP_LISTA||[]).filter(function(r){
+    if(que==='mes')      return String(r.fecha||'').slice(0,7)===mes;
+    if(que==='abiertos') return r.estado!=='atendido';
+    if(que==='anio')     return String(r.fecha||'').slice(0,4)===mes.slice(0,4);
+    return true;
+  });
+}
+function rxContar(){
+  var n=rxSeleccion().length, con=rxSeleccion().filter(function(r){return r.foto_url||r.foto_cierre;}).length;
+  var c=$('rx-cuantos'); if(!c) return;
+  c.textContent = n ? (n+' reporte'+(n===1?'':'s')+' · '+con+' con foto') : 'No hay reportes en esa selección.';
+  var m=$('rx-mes'); if(m) m.style.display = (($('rx-que')||{}).value==='todos') ? 'none' : '';
+}
+function bajarReportesExcel(){
+  var m=$('rx-msg'); m.style.color='var(--mal)';
+  var sel=rxSeleccion();
+  if(!sel.length){ m.textContent='No hay reportes en esa selección.'; return; }
+  if(soloConCodigo('El informe de reportes en Excel','constancias')) return;
+  m.style.color='var(--gris)';
+  m.textContent='Armando el Excel con '+sel.length+' fila'+(sel.length===1?'':'s')+'… (las fotos tardan un poco)';
+  var nombre='Reportes_'+(nombreDeLaObra()||'obra').replace(/[^A-Za-z0-9]+/g,'-')+'_'+
+             (($('rx-que')||{}).value==='todos'?'completo':(($('rx-mes')||{}).value||hoyISO()))+'.xlsx';
+  exportarReportesExcel(sel, nombre).then(function(blob){
+    var f=null;
+    try{ f=new File([blob], nombre, {type:blob.type}); }catch(e){}
+    var puede=false;
+    try{ puede = !!(f && navigator.canShare && navigator.canShare({files:[f]})); }catch(e){}
+    if(puede){
+      navigator.share({files:[f], title:nombre}).catch(function(){ bajarBlob(blob,nombre); });
+    } else { bajarBlob(blob,nombre); }
+    m.style.color='var(--ok)'; m.textContent='Listo: '+nombre;
+  }).catch(function(e){
+    m.style.color='var(--mal)'; m.textContent='No se pudo armar el Excel: '+(e&&e.message||e);
+  });
+}
+function bajarBlob(blob, nombre){
+  var u=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=u; a.download=nombre; document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); },1500);
+}
 
 /* ---- Inspecciones ---- */
 var INSP_TIPOS = [
@@ -8316,11 +10560,11 @@ function pintarEmpHome(){
   var e=empActiva();
   $('emp-home-tit').textContent = e ? e.nombre : 'Tu empresa';
   $('emp-home-sub').textContent = e ? ('Código: '+e.codigo+' · '+nombreDelPlan()) : 'Entra con tu código.';
-  var c=$('emp-home-cuerpo'); c.innerHTML=bandaLiteEmpresa();
+  var c=$('emp-home-cuerpo'); c.innerHTML='';
   /* El tablero primero: la data del mes sin abrir nada. */
   c.appendChild(tableroDom());
-  /* Lo de todos los días, arriba de todo: es la casa donde de verdad
-     aterriza el usuario, no p-inicio. */
+  /* Lo de todos los días: es la casa donde de verdad aterriza el
+     usuario, no p-inicio. */
   c.appendChild(accesosRapidosDom());
   /* Las seis carpetas del sistema son del plan Gestión SST. En los
      demás no salen bloqueadas: no salen. */
@@ -8329,6 +10573,18 @@ function pintarEmpHome(){
   } else {
     c.appendChild(invitaCarpetasDom());
   }
+  /* La banda del plan va AL FINAL, no arriba: lo primero que se ve al
+     entrar tiene que ser la obra, no el aviso de cuánto cuesta. */
+  var banda=document.createElement('div'); banda.innerHTML=bandaLiteEmpresa();
+  banda.style.marginTop='22px';
+  c.appendChild(banda);
+  /* el número rojo de reportes sin atender, donde el ojo ya mira */
+  try{ arrancarVigilanciaReportes(); pintarAvisoReportes(); }catch(_a){}
+  /* el tablero se termina de llenar con lo que diga el servidor */
+  cargarHistoriaTablero().then(function(){ cargarPendientes().then(function(){
+    var pa=document.getElementById('p-emp-home');
+    if(pa && pa.className.indexOf('activa')>-1) refrescarTableroDom();
+  }); });
   var q=$('emp-quien');
   if(q){ var cor = (typeof TOK!=='undefined' && TOK && TOK.correo) ? TOK.correo : '';
          q.textContent = cor ? ('Sesión de '+cor) : ''; }
@@ -8787,7 +11043,18 @@ function pintarEmpresa(){
       '<button class="btn sec" onclick="ir(\'p-msds\')">📄 Hojas MSDS</button>'+
       '<button class="btn sec" onclick="ir(\'p-puntaje\')">🦺 Evaluar la seguridad del día</button>'+
       '<button class="btn sec" onclick="verConsolidado()">📊 Consolidado (constancias y puntaje)</button>'+
-      '<button class="btn sec" onclick="salirEmpresa()" style="margin-top:14px">Cambiar de empresa</button>';
+      /* a donde te avisan cuando alguien reporta algo inseguro */
+      '<div class="sec-tit" style="margin-top:20px">Avisos de reportes</div>'+
+      '<p class="sub" style="margin:0 0 10px">Cuando un trabajador reporte un acto o una condición, además de quedar guardado en la obra se te abre el aviso aquí. Llena uno de los dos.</p>'+
+      '<label>WhatsApp del supervisor</label>'+
+      '<input id="av-wsp" type="tel" inputmode="tel" maxlength="20" placeholder="999 888 777" value="'+escA(cfgAvisos().wsp)+'">'+
+      '<label style="margin-top:10px">o correo de la obra</label>'+
+      '<input id="av-correo" type="email" inputmode="email" placeholder="seguridad@constructora.pe" value="'+escA(cfgAvisos().correo)+'">'+
+      '<div id="av-msg" style="font-size:13.5px;margin:9px 0 0"></div>'+
+      '<button class="btn sec" onclick="guardarAvisosUI()">Guardar los avisos</button>'+
+      '<button class="btn sec" onclick="activarAvisosDelCelular()" id="av-perm">🔔 Avisarme en este celular</button>'+
+      '<div class="aviso" style="margin-top:12px;font-size:13px">🙈 <b>Los reportes anónimos no se avisan por WhatsApp.</b> El número del que reporta quedaría a la vista y se acabaría el anonimato. Esos los ves en tu lista de reportes, dentro de la app.</div>'+
+      '<button class="btn sec" onclick="salirEmpresa()" style="margin-top:16px">Cambiar de empresa</button>';
     return;
   }
   c.innerHTML='<h2>Tu empresa u obra</h2>'+
@@ -9270,7 +11537,22 @@ function siguienteTrabajador(){
     }
   }
   try{ localStorage.removeItem(LS_EV); }catch(e){}
-  // 3) según quién dijo ser la última vez
+  /* 2b) ¿DÓNDE TRABAJA? Va adelante de todo, una sola vez.
+     Las preguntas, las charlas y hasta los ejemplos cambian según el
+     sector: un espacio confinado en una cisterna de obra no es lo
+     mismo que en un tanque de crudo. Si no se pregunta al principio,
+     el usuario termina viendo contenido de otro rubro y piensa que la
+     app está mal hecha. Se pregunta una vez y no se vuelve a molestar;
+     se cambia desde Ajustes. */
+  if(!haySector()){
+    SECTOR_VUELVE='__arranque__';
+    _ir('p-sector'); pintarSectores();
+    return;
+  }
+  seguirElArranque();
+})();
+/* lo que hace la app una vez que ya sabe en qué sector estás */
+function seguirElArranque(){
   ROL=leer(LS_ROL,null);
   if(ROL==='col'){ ir('p-colab'); return; }
   /* 'sup' era el rol viejo: ahora todo el que gestiona entra como empresa */
@@ -9283,7 +11565,7 @@ function siguienteTrabajador(){
     cargarMisEmpresas(true); return;
   }
   ir('p-rol'); pintarRol();
-})();
+}
 function temasDelSectorExiste(id){
   for(var k in TEMAS) if(TEMAS[k].sector===id) return true;
   return false;
