@@ -97,7 +97,17 @@
     headers:{ 'apikey':SB.key, 'Authorization':'Bearer '+SB.key, 'Content-Type':'application/json' },
     body: JSON.stringify({ p_cod: cod, p_hoja: hoja })
   })
-  .then(function(r){ return r.json(); })
+  .then(function(r){
+    /* para quien lo esta montando: si la funcion todavia no existe en la
+       base, PostgREST contesta 404. Se anota en la consola con nombre y
+       apellido; al trabajador se le sigue diciendo algo en cristiano. */
+    if(r.status === 404){
+      try{ console.warn('OBRASST · falta correr el SQL: la funcion sst_hoja_publica no existe todavia en Supabase.'); }catch(e){}
+    } else if(!r.ok){
+      try{ console.warn('OBRASST · el servidor contesto ' + r.status); }catch(e){}
+    }
+    return r.json();
+  })
   .then(function(j){
     if(j && j.ok && j.url){
       $('l-tit').textContent = j.titulo || nombreHoja;
