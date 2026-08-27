@@ -10289,7 +10289,12 @@ function pintarReporte(){
       if(c2) c2.innerHTML='<p class="sub">No se pudo cargar ('+err+'). Revisa el internet.</p>';
     });
 }
-var REP_VER='abiertos';
+/* Arranca mostrando TODO. Esto ya se rompio una vez: la lista arrancaba
+   filtrada en «abiertos», el unico reporte de la obra estaba atendido, y la
+   pantalla salia vacia como si la app no jaladera. Filtrar es una decision
+   del que mira, no del programa. */
+var REP_VER='todos';
+function verTodosLosReportes(){ REP_VER='todos'; pintarListaReportes(); }
 function filtrarReportes(){
   REP_VER = (REP_VER==='abiertos') ? 'todos' : (REP_VER==='todos' ? 'cerrados' : 'abiertos');
   pintarListaReportes();
@@ -10304,9 +10309,17 @@ function pintarListaReportes(){
     return true;
   });
   if(!lista.length){
-    c.innerHTML = REP_LISTA.length
-      ? '<p class="sub">No hay reportes '+REP_VER+'.</p>'
-      : '<p class="sub">Sin reportes todavía. Pásale el código de la obra a tu cuadrilla: desde su celular reportan lo que ven y te cae acá.</p>';
+    if(REP_LISTA.length){
+      /* hay reportes, los escondio el filtro: se dice y se ofrece el botón */
+      var ab=REP_LISTA.filter(function(r){ return r.estado!=='atendido'; }).length;
+      var ce=REP_LISTA.length-ab;
+      c.innerHTML='<div class="aviso">No hay reportes <b>'+esc(REP_VER)+'</b>, pero la obra sí tiene '+
+        REP_LISTA.length+' reporte'+(REP_LISTA.length===1?'':'s')+' ('+ab+' abierto'+(ab===1?'':'s')+
+        ' · '+ce+' cerrado'+(ce===1?'':'s')+').'+
+        '<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="verTodosLosReportes()">Ver todos</button></div></div>';
+    } else {
+      c.innerHTML='<p class="sub">Sin reportes todavía. Pásale el código de la obra a tu cuadrilla: desde su celular reportan lo que ven y te cae acá.</p>';
+    }
     return;
   }
   var h='';
@@ -10316,7 +10329,8 @@ function pintarListaReportes(){
     h+='<div class="tarj vidrio rep-card" style="display:block;border-left:3px solid '+col+'">'+
        '<b>'+(r.clase==='acto'?'👤 Acto inseguro':'⚠️ Condición insegura')+' · '+esc(r.lugar||'sin lugar')+'</b>'+
        '<small>'+esc(r.descripcion)+'</small>'+
-       '<div class="sub" style="margin-top:4px">'+(r.anonimo?'🙈 Anónimo':esc(r.autor||'—'))+' · '+
+       '<div class="sub" style="margin-top:4px">'+
+       (r.anonimo ? '🙈 Anónimo' : esc(r.autor || 'sin nombre'))+' · '+
        esc(fechaLarga(r.fecha)||r.fecha||'')+' · '+(cerrado?'✓ cerrado':'abierto')+'</div>';
     /* el antes y el después, uno al lado del otro */
     if(r.foto_url || r.foto_cierre){
