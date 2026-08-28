@@ -492,7 +492,30 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
   letter-spacing:.12em;text-transform:uppercase;color:var(--gris);font-weight:700}
 .esc-mes span{margin-left:auto;font-size:11px;letter-spacing:0;font-variant-numeric:tabular-nums;
   border:1px solid rgba(143,169,184,.3);border-radius:20px;padding:1px 8px;font-weight:600}
+.kx-top{background:rgba(18,56,76,.55);border:1px solid rgba(255,255,255,.10);
+  border-radius:12px;padding:13px;margin-top:16px}
+.kx-fila{display:flex;align-items:flex-start;gap:9px;margin-top:11px;font-size:14px}
+.kx-fila .n{flex:none;width:22px;color:var(--gris);font-size:12px;text-align:right;line-height:20px}
+.kx-fila .et{flex:1;min-width:0;line-height:1.25}
+.kx-fila .et small{display:block;color:var(--gris);font-size:11.5px;margin-top:2px}
+.kx-fila .barra2{flex:none;width:70px;height:9px;margin-top:6px;border-radius:5px;background:rgba(255,255,255,.10);overflow:hidden}
+.kx-fila .barra2 i{display:block;height:100%;background:var(--ok)}
+.kx-fila .num{flex:none;width:40px;text-align:right;font-variant-numeric:tabular-nums;color:#cfe0ea;line-height:20px}
 .esc-rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
+.esc-card{position:relative}
+.esc-tic{position:absolute;top:7px;left:7px;width:26px;height:26px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.85);background:rgba(6,24,34,.60);color:#fff;
+  font-size:15px;line-height:22px;text-align:center;font-weight:700}
+.esc-card.marcada{outline:3px solid var(--ok);outline-offset:-1px}
+.esc-card.marcada .esc-tic{background:var(--ok);border-color:var(--ok)}
+.esc-selbar{background:rgba(18,56,76,.75);border:1px solid rgba(255,255,255,.10);
+  border-radius:12px;padding:11px;margin:0 0 12px}
+.esc-selbar .fila2{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.esc-selbar .fila2 button{flex:1 1 40%;margin:0;min-width:120px}
+.esc-mover{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.esc-mover button{margin:0;font-size:13.5px;padding:7px 11px;border-radius:20px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#e8eef2}
+.esc-mover button:hover{background:rgba(255,255,255,.16)}
 .esc-card{display:flex;flex-direction:column;gap:5px;background:rgba(18,56,76,.55);cursor:pointer;
   border:1px solid rgba(143,169,184,.18);border-radius:11px;padding:8px;text-align:left;
   color:inherit;font-family:inherit;min-width:0}
@@ -766,6 +789,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <p class="sub">Lo que se le entregó a cada trabajador: equipo, fecha, cantidad y su firma. A fin de mes sale el registro por trabajador en el formato de siempre.</p>
   <button class="btn" onclick="ir('p-kardex-nuevo')">➕ Registrar entrega de EPP</button>
   <button class="btn sec" onclick="ir('p-kardex-export')">📄 Generar registro del mes (Excel o PDF)</button>
+  <div id="kardex-top"></div>
   <div class="sec-tit" style="margin-top:18px">Últimas entregas</div>
   <div id="kardex-lista"></div>
 </section>
@@ -802,6 +826,11 @@ input,textarea{-webkit-user-select:text;user-select:text}
         </select>
       </div>
     </div>
+    <label class="sec-tit" style="margin:14px 0 6px">Foto de la entrega (opcional)</label>
+    <p class="sub" style="margin:0 0 7px;font-size:12.5px">Lo que se está llevando, en la mano. Es la prueba de que salió.</p>
+    <input id="k-foto" type="file" accept="image/*" capture="environment" style="display:none">
+    <button class="btn sec" onclick="document.getElementById('k-foto').click()" style="margin:0">📷 Tomar la foto</button>
+    <div id="k-foto-vista" style="margin-top:9px"></div>
     <label class="sec-tit" style="margin:14px 0 6px">Firma del trabajador</label>
     <canvas id="k-lienzo" class="lienzo"></canvas>
     <button class="btn sec" onclick="limpiarFirmaK()" style="margin-top:8px">Borrar firma</button>
@@ -1005,13 +1034,14 @@ input,textarea{-webkit-user-select:text;user-select:text}
 </section>
 
 <section class="pantalla" id="p-escaneos">
-  <div class="barra"><span>Asistencias</span><span id="esc-cuantos"></span></div>
-  <h2>Registros de asistencia</h2>
-  <p class="sub">Escanea con la cámara la hoja firmada de cada charla. Queda guardada en la carpeta de la obra y desde aquí la mandas completa por WhatsApp o al correo.</p>
+  <div class="barra"><span>Documentos</span><span id="esc-cuantos"></span></div>
+  <h2>Documentos escaneados</h2>
+  <p class="sub">Cualquier hoja de la obra: asistencias, reportes de liderazgo, inspecciones, permisos, ATS, actas. La escaneas, le pones qué tipo es y sale en PDF cuando la mandes.</p>
   <div class="esc-acc">
     <button class="btn" onclick="abrirEscaneoNuevo()" style="margin:0">📷 Escanear una hoja</button>
     <button class="btn sec" onclick="ir('p-escaneo-enviar')" style="margin:0">📤 Enviar la carpeta</button>
   </div>
+  <div id="esc-barra-sel"></div>
   <div id="esc-filtro" class="esc-filtro"></div>
   <div id="esc-lista"></div>
 </section>
@@ -1039,8 +1069,14 @@ input,textarea{-webkit-user-select:text;user-select:text}
       <option value="charla">Charla de 5 minutos</option>
       <option value="capacitacion">Capacitación</option>
       <option value="induccion">Inducción</option>
+      <option value="liderazgo">Reporte de liderazgo</option>
+      <option value="inspeccion">Inspección</option>
+      <option value="permiso">Permiso de trabajo</option>
+      <option value="ats">ATS</option>
+      <option value="epp">Entrega de EPP</option>
       <option value="simulacro">Simulacro</option>
       <option value="reunion">Reunión / comité</option>
+      <option value="acta">Acta</option>
       <option value="otro">Otro</option>
     </select>
     <label class="sec-tit" style="margin:12px 0 6px">Cuántos firmaron (opcional)</label>
@@ -1059,7 +1095,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <button class="btn sec" id="escv-compartir" onclick="escCompartirUno()" style="margin:0">📲 Mandar este</button>
     <button class="btn sec" onclick="escRenombrar()" style="margin:0">✏️ Cambiar el nombre</button>
   </div>
-  <button class="btn sec" onclick="escBorrar()" style="margin-top:10px;color:var(--mal)">Quitar de la carpeta</button>
+  <button class="btn sec" onclick="escBorrar()" style="margin-top:10px;color:var(--mal)">🗑️ Eliminar esta hoja</button>
 </section>
 
 <section class="pantalla" id="p-escaneo-enviar">
@@ -1091,7 +1127,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
       <input id="env-correo" type="email" inputmode="email" placeholder="residente@constructora.pe">
     </div>
     <label class="sec-tit" style="margin:12px 0 6px">Mensaje (opcional)</label>
-    <input id="env-nota" maxlength="140" placeholder="Registros de asistencia de la semana">
+    <input id="env-nota" maxlength="140" placeholder="Documentos de la semana">
     <div id="env-msg" style="font-size:13.5px;margin:10px 0 0"></div>
     <button class="btn" onclick="enviarCarpeta()" style="margin-top:11px">Armar el PDF y enviar</button>
   </div>
@@ -1131,6 +1167,9 @@ input,textarea{-webkit-user-select:text;user-select:text}
     </div>
     <label class="sec-tit" style="margin:12px 0 6px">Fecha del formato</label>
     <input id="em-ffecha" placeholder="28/04/2026">
+    <label class="sec-tit" style="margin:14px 0 6px">Código del registro de EPP (kardex)</label>
+    <input id="em-ckardex" placeholder="SSOMA-FR-015">
+    <p class="sub" style="margin:6px 0 0;font-size:12.5px">El que usa tu cliente para este formato. Se guarda una vez y sale en cada registro de entrega que generes.</p>
     <label class="sec-tit" style="margin:16px 0 6px">Logo de la empresa</label>
     <p class="sub" style="margin:0 0 8px;font-size:12.5px">Reemplaza el logo de la esquina superior izquierda del formato. Cuadrado queda mejor.</p>
     <input id="em-logo" type="file" accept="image/*">
@@ -4758,7 +4797,7 @@ function _ir(p){
   if(p==='p-mis-empresas')cargarMisEmpresas(); if(p==='p-cuenta')prepCuenta();
   if(p==='p-solicitudes')cargarSolicitudes();
   if(p==='p-trabajadores')pintarTrabajadores(); if(p==='p-trab-nuevo')prepTrabajador();
-  if(p==='p-kardex')pintarKardex(); if(p==='p-kardex-nuevo')prepKardex();
+  if(p==='p-kardex')pintarKardex(); if(p==='p-kardex-nuevo'){ prepKardex(); prepFotoKardex(); }
   if(p==='p-kardex-export')pintarKardexExport(); if(p==='p-empleador')cargarEmpleador();
   if(p==='p-rol')pintarRol(); if(p==='p-carpeta')pintarCarpeta(); if(p==='p-foto')prepFoto(); if(p==='p-mensual')pintarMensual();
   if(p==='p-semanal')pintarSemanal(); if(p==='p-semanal-dia')prepDiaSemanal();
@@ -5958,7 +5997,9 @@ function bajarEscaneos(){
 }
 var ESC_FILTRO='todo';
 var ESC_CLASE_ET={ charla:'Charla de 5 min', capacitacion:'Capacitación', induccion:'Inducción',
-                   simulacro:'Simulacro', reunion:'Reunión', otro:'Otro' };
+                   liderazgo:'Reporte de liderazgo', inspeccion:'Inspección', permiso:'Permiso de trabajo',
+                   ats:'ATS', epp:'Entrega de EPP', simulacro:'Simulacro', reunion:'Reunión',
+                   acta:'Acta', otro:'Otro' };
 function pintarEscaneos(){
   var a=escLocal();
   $('esc-cuantos').textContent = a.length ? (a.length+(a.length===1?' hoja':' hojas')) : '';
@@ -5967,6 +6008,7 @@ function pintarEscaneos(){
   var fh='<button type="button" class="esc-m'+(ESC_FILTRO==='todo'?' on':'')+'" onclick="escFiltro(\'todo\')">Todas</button>';
   for(var k in ESC_CLASE_ET){ if(hay[k]) fh+='<button type="button" class="esc-m'+(ESC_FILTRO===k?' on':'')+'" onclick="escFiltro(\''+k+'\')">'+ESC_CLASE_ET[k]+'</button>'; }
   $('esc-filtro').innerHTML = a.length? fh : '';
+  pintarBarraSeleccion(a);
   var lista = (ESC_FILTRO==='todo') ? a : a.filter(function(x){ return (x.clase||'otro')===ESC_FILTRO; });
   var c=$('esc-lista');
   if(!lista.length){
@@ -5987,17 +6029,142 @@ function pintarEscaneos(){
     porMes[ym].forEach(function(x){
       var i=a.indexOf(x);
       var src=x.img||x.url||'';
-      h+='<button type="button" class="esc-card" onclick="verEscaneo('+i+')">'+
+      var mar = ESC_MODO_SEL && ESC_SEL[x.id];
+      h+='<button type="button" class="esc-card'+(mar?' marcada':'')+'" onclick="'+
+         (ESC_MODO_SEL ? 'escMarcar(\''+x.id+'\')' : 'verEscaneo('+i+')')+'">'+
          (src? '<span class="esc-mini" style="background-image:url('+src+')"></span>'
              : '<span class="esc-mini vacia">📄</span>')+
+         (ESC_MODO_SEL? '<span class="esc-tic">'+(mar?'✓':'')+'</span>' : '')+
          '<span class="esc-nom">'+esc(x.nombre)+'</span>'+
-         '<span class="esc-pie">'+esc(fechaLarga(x.fecha)||'')+
+         '<span class="esc-pie">'+esc(ESC_CLASE_ET[x.clase]||'Documento')+' · '+esc(fechaLarga(x.fecha)||'')+
          (x.firmas? ' · '+x.firmas+' firmas':'')+
          (x.sync? '' : ' · <b>sin subir</b>')+'</span></button>';
     });
     h+='</div>';
   });
   c.innerHTML=h;
+}
+/* ── ELEGIR VARIAS HOJAS: MOVERLAS DE TIPO O BOTARLAS ──────────────
+   Marcelo lo pidio con la imagen exacta: «como si estuviera
+   seleccionando fotos y decidiendo a donde van». Se toca «Elegir»,
+   se marcan las que sean, y desde ahi se mueven de tipo, se mandan
+   en PDF o se eliminan. Sin entrar una por una. */
+var ESC_MODO_SEL=false, ESC_SEL={};
+function escModoSel(v){
+  ESC_MODO_SEL = (v===undefined) ? !ESC_MODO_SEL : !!v;
+  if(!ESC_MODO_SEL) ESC_SEL={};
+  pintarEscaneos();
+}
+function escMarcar(id){
+  if(ESC_SEL[id]) delete ESC_SEL[id]; else ESC_SEL[id]=1;
+  pintarEscaneos();
+}
+function escVisibles(){
+  var a=escLocal();
+  return (ESC_FILTRO==='todo') ? a : a.filter(function(x){ return (x.clase||'otro')===ESC_FILTRO; });
+}
+function escMarcadas(){
+  return escLocal().filter(function(x){ return ESC_SEL[x.id]; });
+}
+function escTodas(){
+  var v=escVisibles(), faltan=v.some(function(x){ return !ESC_SEL[x.id]; });
+  ESC_SEL={};
+  if(faltan) v.forEach(function(x){ ESC_SEL[x.id]=1; });
+  pintarEscaneos();
+}
+function pintarBarraSeleccion(a){
+  var c=$('esc-barra-sel'); if(!c) return;
+  if(!a.length){ c.innerHTML=''; return; }
+  if(!ESC_MODO_SEL){
+    c.innerHTML='<div class="esc-acc" style="margin:0 0 12px">'+
+      '<button class="btn sec" style="margin:0" onclick="escModoSel(true)">☑️ Elegir varias</button></div>';
+    return;
+  }
+  var n=escMarcadas().length, vis=escVisibles().length;
+  var h='<div class="esc-selbar"><b>'+n+' de '+vis+' elegida'+(n===1?'':'s')+'</b>'+
+        '<div class="fila2">'+
+          '<button class="btn sec" onclick="escTodas()">Todas / ninguna</button>'+
+          '<button class="btn sec" onclick="escModoSel(false)">Salir</button>'+
+        '</div>';
+  if(n){
+    h+='<div class="sec-tit" style="margin:13px 0 0">Moverlas a</div><div class="esc-mover">';
+    for(var k in ESC_CLASE_ET) h+='<button type="button" onclick="escMoverA(\''+k+'\')">'+ESC_CLASE_ET[k]+'</button>';
+    h+='</div>'+
+       '<div class="fila2">'+
+         '<button class="btn" onclick="escMandarMarcadas()">📄 Mandar en PDF</button>'+
+         '<button class="btn sec" style="color:var(--mal)" onclick="escBorrarMarcadas()">🗑️ Eliminar ('+n+')</button>'+
+       '</div>'+
+       '<p class="sub" id="esc-sel-msg" style="margin:9px 0 0"></p>';
+  }
+  c.innerHTML=h+'</div>';
+}
+function escMoverA(clase){
+  var m=escMarcadas(); if(!m.length) return;
+  var a=escLocal(), ids={};
+  m.forEach(function(x){ ids[x.id]=1; });
+  a.forEach(function(x){ if(ids[x.id]) x.clase=clase; });
+  escSet(a);
+  /* si la hoja ya esta en la nube, alla el tipo vive dentro de «nota»:
+     fecha|clase|firmas. Se actualiza para que el resto del equipo la
+     vea donde corresponde y no solo en este celular. */
+  m.forEach(function(x){
+    if(x.nubeId && hayCuenta()){
+      sbPatch('sst_doc?id=eq.'+encodeURIComponent(x.nubeId),
+              {nota:(x.fecha||'')+'|'+clase+'|'+(x.firmas||0)}).catch(function(){});
+    }
+  });
+  ESC_SEL={}; pintarEscaneos();
+}
+function escMandarMarcadas(){
+  var m=escMarcadas(); if(!m.length) return;
+  var msg=$('esc-sel-msg');
+  if(msg){ msg.style.color='var(--gris)'; msg.textContent='Armando '+m.length+' PDF…'; }
+  var items=m.map(function(x){
+    return {nombre:x.nombre, src:(x.img||x.url||''), pie:''};
+  });
+  entregarComoPDF(items, {via:'otra', texto:'Documentos de la obra · '+(nombreDeLaObra()||'')},
+                  _nombreSano('Documentos - '+(nombreDeLaObra()||'obra')))
+    .then(function(r){
+      if(msg){ msg.style.color='var(--ok)';
+        msg.textContent = (r && r.cuantos===1) ? 'Listo: PDF armado.'
+                        : ('Listo: '+m.length+' PDF comprimidos.'); }
+    })
+    .catch(function(e){ if(msg){ msg.style.color='var(--mal)'; msg.textContent='No se pudo: '+(e&&e.message||e); } });
+}
+/* borrar de verdad: primero la nube, y solo lo que el servidor confirme
+   se saca de la pantalla. Si se hace al reves, la hoja desaparece de
+   este celular y sigue viva para el resto de la obra. */
+function _borrarEscaneosDe(lista){
+  var pasos = lista.map(function(x){
+    if(!x.nubeId || !hayCuenta()) return Promise.resolve(x.id);
+    return sbDelVerificado('sst_doc?id=eq.'+encodeURIComponent(x.nubeId))
+             .then(function(){ return x.id; });
+  });
+  return Promise.all(pasos.map(function(p){ return p.then(function(v){return {ok:1,id:v};},
+                                                          function(e){return {ok:0,e:e};}); }))
+    .then(function(res){
+      var ok={}, malos=0;
+      res.forEach(function(r){ if(r.ok) ok[r.id]=1; else malos++; });
+      var a=escLocal().filter(function(x){ return !ok[x.id]; });
+      escSet(a);
+      return {borradas:Object.keys(ok).length, fallaron:malos};
+    });
+}
+function escBorrarMarcadas(){
+  var m=escMarcadas(); if(!m.length) return;
+  if(!confirm('¿Eliminar '+m.length+' hoja'+(m.length===1?'':'s')+'?\n\nSe borra también para el resto de la obra y no se puede deshacer.')) return;
+  var msg=$('esc-sel-msg');
+  if(msg){ msg.style.color='var(--gris)'; msg.textContent='Eliminando…'; }
+  _borrarEscaneosDe(m).then(function(r){
+    ESC_SEL={};
+    pintarEscaneos();
+    var m2=$('esc-sel-msg');
+    if(m2){
+      if(r.fallaron){ m2.style.color='var(--mal)';
+        m2.textContent='Se eliminaron '+r.borradas+'. '+r.fallaron+' no se pudieron: revisa el internet.'; }
+      else { m2.style.color='var(--ok)'; m2.textContent='Listo: '+r.borradas+' eliminada'+(r.borradas===1?'':'s')+'.'; }
+    }
+  });
 }
 function escFiltro(k){ ESC_FILTRO=k; pintarEscaneos(); }
 function verEscaneo(i){ ESC_VER=i; ir('p-escaneo-ver'); }
@@ -6021,9 +6188,12 @@ function escRenombrar(){
 }
 function escBorrar(){
   var a=escLocal(), x=a[ESC_VER]; if(!x) return;
-  if(!confirm('¿Quitar «'+x.nombre+'» de la carpeta? Si ya se subió, se borra también para el resto del equipo.')) return;
-  if(x.nubeId && hayCuenta()) sbDel('sst_doc?id=eq.'+encodeURIComponent(x.nubeId)).catch(function(){});
-  a.splice(ESC_VER,1); escSet(a); ir('p-escaneos');
+  if(!confirm('¿Eliminar «'+x.nombre+'»? Se borra también para el resto del equipo y no se puede deshacer.')) return;
+  /* con acuse: si el servidor no borro nada, no se le miente al usuario */
+  _borrarEscaneosDe([x]).then(function(r){
+    if(r.fallaron){ alert('No se pudo eliminar: el servidor no confirmó el borrado. Revisa el internet, y si sigue igual falta el permiso de borrado en la base.'); return; }
+    ir('p-escaneos');
+  });
 }
 function escCompartirUno(){
   var a=escLocal(), x=a[ESC_VER]; if(!x) return;
@@ -6087,17 +6257,17 @@ function enviarCarpeta(){
   m.textContent = unaSola ? 'Armando el PDF…'
                           : ('Armando '+sel.length+' PDF y comprimiéndolos en un ZIP…');
   var nota=($('env-nota').value||'').trim();
-  var txt=(nota? nota+'\n' : '')+'Registros de asistencia · '+nombreDeLaObra()+'\n'+
+  var txt=(nota? nota+'\n' : '')+'Documentos de la obra · '+nombreDeLaObra()+'\n'+
           sel.length+' hoja'+(sel.length===1?'':'s')+' · generado el '+fechaLarga(hoyISO())+' con OBRASST';
   var como={via:(ENV_VIA==='wa'?'wa':(ENV_VIA==='mail'?'mail':'otra')),
             destino:(ENV_VIA==='wa'? _telPeru($('env-num').value) : (ENV_VIA==='mail'? ($('env-correo').value||'').trim() : '')),
-            texto:txt, asunto:'Registros de asistencia · '+(nombreDeLaObra()||'obra')};
+            texto:txt, asunto:'Documentos de la obra · '+(nombreDeLaObra()||'obra')};
   var items=sel.map(function(x){
     return {nombre:x.nombre,
             src:(x.img||x.url||''),
             pie:(fechaLarga(x.fecha)||'sin fecha')+(x.firmas?('   ·   '+x.firmas+' firmas'):'')};
   });
-  var base='Asistencias '+(nombreDeLaObra()||'obra');
+  var base='Documentos '+(nombreDeLaObra()||'obra');
   entregarComoPDF(items, como, base).then(function(r){
     m.style.color='var(--ok)';
     m.textContent = (r.cuantos===1)
@@ -6207,7 +6377,7 @@ function entregarAsistencias(doc, nombre, txt){
   if(ENV_VIA==='mail'){
     doc.save(nombre);
     var co=($('env-correo').value||'').trim();
-    var asunto='Registros de asistencia · '+(nombreDeLaObra()||'obra');
+    var asunto='Documentos de la obra · '+(nombreDeLaObra()||'obra');
     window.open('mailto:'+encodeURIComponent(co)+'?subject='+encodeURIComponent(asunto)+
                 '&body='+encodeURIComponent(txt+'\n\nAdjunta el PDF que se acaba de descargar: '+nombre),'_blank');
     return;
@@ -6575,6 +6745,36 @@ function prepararLienzoK(){
   cv.addEventListener('touchend',fin);
 }
 function limpiarFirmaK(){ prepararLienzoK(); }
+/* La foto de la entrega. No es obligatoria, pero cuando el trabajador
+   dice «a mi no me dieron nada» esta foto cierra la discusion. Se
+   achica a 900 px: no tiene sentido guardar 4 MB de un guante. */
+var K_FOTO='';
+function prepFotoKardex(){
+  K_FOTO=''; var v=$('k-foto-vista'); if(v) v.innerHTML='';
+  var inp=$('k-foto'); if(!inp) return;
+  inp.value='';
+  if(inp.getAttribute('data-ok')==='1') return;
+  inp.setAttribute('data-ok','1');
+  inp.onchange=function(){
+    var f=this.files && this.files[0]; if(!f) return;
+    var fr=new FileReader();
+    fr.onload=function(){
+      var im=new Image();
+      im.onload=function(){
+        var r=Math.min(1, 900/Math.max(im.width, im.height));
+        var cv=document.createElement('canvas');
+        cv.width=Math.round(im.width*r); cv.height=Math.round(im.height*r);
+        cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+        K_FOTO=cv.toDataURL('image/jpeg',0.78);
+        var v2=$('k-foto-vista');
+        if(v2) v2.innerHTML='<img src="'+K_FOTO+'" style="max-width:100%;border-radius:10px">'+
+          '<button class="btn sec" style="margin-top:8px" onclick="K_FOTO=\'\';document.getElementById(\'k-foto-vista\').innerHTML=\'\';">Quitar la foto</button>';
+      };
+      im.src=fr.result;
+    };
+    fr.readAsDataURL(f);
+  };
+}
 function guardarKardex(){
   var m=$('kardex-msg'); m.style.color='var(--mal)';
   var epp=($('k-epp').value||'').trim(), tid=$('k-trab').value;
@@ -6587,15 +6787,80 @@ function guardarKardex(){
   var reg={ id:'k'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
     trab:tid, trabNombre:t?t.nombre:'', epp:epp, tipo:$('k-tipo').value,
     fecha:$('k-fecha').value, cant:parseInt($('k-cant').value,10)||1,
-    unidad:$('k-unidad').value, firma:K_LIENZO.toDataURL('image/png'), sync:0 };
+    unidad:$('k-unidad').value, firma:K_LIENZO.toDataURL('image/png'),
+    foto:(K_FOTO||''), sync:0 };
   var a=kardexLocal(); a.unshift(reg); kardexSet(a);
-  sbPost('sst_kardex',{duenio:duenioId(), ext:reg.id, trabajador:tid, trab_nombre:reg.trabNombre,
-    epp:epp, tipo:reg.tipo, fecha:reg.fecha, cantidad:reg.cant, unidad:reg.unidad, firma:reg.firma})
-    .then(function(){ reg.sync=1; kardexSet(kardexLocal()); }).catch(function(){});
+  var _fila={duenio:duenioId(), ext:reg.id, trabajador:tid, trab_nombre:reg.trabNombre,
+    epp:epp, tipo:reg.tipo, fecha:reg.fecha, cantidad:reg.cant, unidad:reg.unidad, firma:reg.firma};
+  /* La foto es columna nueva. Si la base todavia no la tiene, PostgREST
+     responde 400 y ANTES eso se tragaba en silencio: la entrega no subia
+     y nadie se enteraba. Ahora, si falla con foto, se reintenta sin ella:
+     mejor la entrega arriba sin foto que la entrega perdida. */
+  var _conFoto = reg.foto ? Object.assign({}, _fila, {foto:reg.foto}) : _fila;
+  sbPost('sst_kardex', _conFoto)
+    .then(function(){ reg.sync=1; kardexSet(kardexLocal()); })
+    .catch(function(){
+      if(!reg.foto) return;
+      return sbPost('sst_kardex', _fila)
+        .then(function(){ reg.sync=1; kardexSet(kardexLocal()); })
+        .catch(function(){});
+    });
   m.style.color='var(--ok)'; m.textContent='Entrega registrada.';
   setTimeout(function(){ ir('p-kardex'); },550);
 }
+/* ── QUÉ EPP SE ESTÁ YENDO ─────────────────────────────────────────
+   No es un adorno: es lo que se usa para comprar. Si el 40% de las
+   entregas del mes son guantes por «pérdida», ahí hay algo que ver
+   antes de seguir firmando órdenes de compra. Se cuenta por unidades
+   entregadas, no por veces, porque tres pares pesan más que uno. */
+function topEpp(desde){
+  var cuenta={}, motivos={}, total=0;
+  kardexLocal().forEach(function(k){
+    if(desde && (k.fecha||'') < desde) return;
+    var n=(k.epp||'').trim(); if(!n) return;
+    var key=n.toLowerCase();
+    if(!cuenta[key]) cuenta[key]={et:n, u:0, veces:0, N:0, C:0, P:0};
+    var c=parseInt(k.cant,10)||1;
+    cuenta[key].u += c; cuenta[key].veces++;
+    cuenta[key][k.tipo||'N'] = (cuenta[key][k.tipo||'N']||0) + c;
+    total += c;
+  });
+  var a=[]; for(var k2 in cuenta) a.push(cuenta[k2]);
+  a.sort(function(p,q){ return q.u - p.u; });
+  return {lista:a, total:total};
+}
+var KX_TOP_MES=true;
+function kxTopCambiar(){ KX_TOP_MES=!KX_TOP_MES; pintarTopEpp(); }
+function pintarTopEpp(){
+  var c=$('kardex-top'); if(!c) return;
+  var desde = KX_TOP_MES ? (mesEtiqueta()+'-01') : '';
+  var r=topEpp(desde);
+  if(!r.lista.length){
+    c.innerHTML = kardexLocal().length
+      ? '<div class="kx-top"><div class="sec-tit" style="margin:0">Lo que más sale</div>'+
+        '<p class="sub" style="margin:8px 0 0">Sin entregas en '+(KX_TOP_MES?'este mes':'el registro')+'. '+
+        '<button class="btn sec" style="margin-top:9px" onclick="kxTopCambiar()">Ver '+(KX_TOP_MES?'todo el histórico':'solo este mes')+'</button></p></div>'
+      : '';
+    return;
+  }
+  var top=r.lista.slice(0,6), max=top[0].u||1;
+  var h='<div class="kx-top"><div class="sec-tit" style="margin:0">Lo que más sale · '+
+        (KX_TOP_MES?'este mes':'desde el inicio')+'</div>'+
+        '<p class="sub" style="margin:6px 0 0;font-size:12.5px">'+r.total+' unidades entregadas en '+
+        r.lista.length+' tipo'+(r.lista.length===1?'':'s')+' de EPP.</p>';
+  top.forEach(function(x,i){
+    var mot=[]; if(x.C) mot.push(x.C+' por cambio'); if(x.P) mot.push(x.P+' por pérdida');
+    h+='<div class="kx-fila"><span class="n">'+(i+1)+'</span>'+
+       '<span class="et">'+esc(x.et)+(mot.length?'<small>'+esc(mot.join(' · '))+'</small>':'')+'</span>'+
+       '<span class="barra2"><i style="width:'+Math.round(100*x.u/max)+'%"></i></span>'+
+       '<span class="num">'+x.u+'</span></div>';
+  });
+  h+='<button class="btn sec" style="margin-top:12px" onclick="kxTopCambiar()">Ver '+
+     (KX_TOP_MES?'todo el histórico':'solo este mes')+'</button></div>';
+  c.innerHTML=h;
+}
 function pintarKardex(){
+  pintarTopEpp();
   var a=kardexLocal(), c=$('kardex-lista');
   if(!a.length){ c.innerHTML='<p class="sub">Todavía no hay entregas registradas.</p>'; return; }
   var h='';
@@ -7141,6 +7406,7 @@ function cargarEmpleador(){
   $('em-ntrab').value=e.ntrab||String(trabsLocal().filter(function(t){return t.estatus==='activo';}).length||'');
   $('em-proyecto').value=e.proyecto||''; $('em-fcod').value=e.formatoCod||'';
   $('em-frev').value=e.formatoRev||''; $('em-ffecha').value=e.formatoFecha||'';
+  $('em-ckardex').value=e.codKardex||'';
   $('em-msg').textContent='';
   pintarLogoVista(e.logo);
   var inp=$('em-logo');
@@ -7190,6 +7456,7 @@ function guardarEmpleador(){
   e.formatoCod=($('em-fcod').value||'').trim();
   e.formatoRev=($('em-frev').value||'').trim();
   e.formatoFecha=($('em-ffecha').value||'').trim();
+  e.codKardex=($('em-ckardex').value||'').trim();
   guardar(LS_EMPLEADOR,e);
   var m=$('em-msg'); m.style.color='var(--ok)'; m.textContent='Guardado. Ya sale en todos tus registros.';
 }
@@ -7617,7 +7884,7 @@ function _pdfDeKardex(t, regs, mes){
     doc.text('REGISTRO DE ENTREGA DE EQUIPOS DE', W/2, 56, {align:'center'});
     doc.text('PROTECCIÓN PERSONAL', W/2, 71, {align:'center'});
     doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(90,90,90);
-    doc.text('Código: '+(emp.formatoCod||'SSOMAPCFO043'), W-M-110, 50);
+    doc.text('Código: '+(emp.codKardex||emp.formatoCod||'SSOMAPCFO043'), W-M-110, 50);
     doc.text('Versión: '+(emp.formatoRev||'01'),           W-M-110, 63);
     doc.text('Fecha: '+(emp.formatoFecha||_ddmm(hoyISO())),W-M-110, 76);
     y=104;
@@ -7657,7 +7924,7 @@ function _pdfDeKardex(t, regs, mes){
   y+=12;
 
   /* la tabla de entregas */
-  var cols=[['N°',.06],['TIPO',.09],['EQUIPO DE PROTECCIÓN PERSONAL',.51],['FECHA',.15],['CANTIDAD',.19]];
+  var cols=[['N°',.05],['TIPO',.07],['EQUIPO DE PROTECCIÓN PERSONAL',.37],['FECHA',.11],['CANT.',.10],['FIRMA',.17],['FOTO',.13]];
   var ancho=W-2*M;
   function tituloTabla(){
     doc.setFillColor(11,42,58); doc.rect(M, y, ancho, 18, 'F');
@@ -7670,12 +7937,15 @@ function _pdfDeKardex(t, regs, mes){
   doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
   var yTabla=y-18, altoTabla=18;
   regs.forEach(function(r, i){
-    var vals=[String(i+1), (r.tipo||'N'), (r.epp||''), _ddmm(r.fecha), (r.cant||1)+' '+(r.unidad||'UND')];
+    var vals=[String(i+1), (r.tipo||'N'), (r.epp||''), _ddmm(r.fecha), (r.cant||1)+' '+(r.unidad||'UND'), '', ''];
     /* el equipo puede tener nombre largo (un arnes con doble linea de vida
        y absorbedor no entra en una linea): la fila crece, no se recorta */
     var partido=vals.map(function(v,j){ return doc.splitTextToSize(String(v), ancho*cols[j][1]-8).slice(0,2); });
     var lineas=Math.max.apply(null, partido.map(function(t){ return t.length; }));
-    var alto=Math.max(17, 6+lineas*11);
+    /* la fila tiene que dar para la firma: el trabajador firma CADA cosa
+       que se lleva, no una vez al pie de la hoja. Eso era lo que pedia
+       Marcelo y es lo que hace que el registro sirva como descargo. */
+    var alto=Math.max(38, 6+lineas*11);
     if(y+alto > H-150){
       doc.setDrawColor(150,150,150); doc.setLineWidth(.6); doc.rect(M, yTabla, ancho, altoTabla);
       doc.addPage(); cabecera(); y=104; tituloTabla(); yTabla=y-18; altoTabla=18;
@@ -7690,6 +7960,22 @@ function _pdfDeKardex(t, regs, mes){
       tx.forEach(function(t,k){ doc.text(t, M+acum+5, y+13+k*11); });
       acum+=ancho*cols[j][1];
     });
+    /* la firma y la foto, dentro de la misma fila */
+    var xFirma = M + ancho*(cols[0][1]+cols[1][1]+cols[2][1]+cols[3][1]+cols[4][1]);
+    var wFirma = ancho*cols[5][1], wFoto = ancho*cols[6][1];
+    if(r.firma){
+      try{ doc.addImage(r.firma, 'PNG', xFirma+3, y+3, wFirma-6, alto-6, undefined, 'FAST'); }catch(e){}
+    } else {
+      doc.setDrawColor(180,180,180); doc.setLineWidth(.5);
+      doc.line(xFirma+6, y+alto-9, xFirma+wFirma-6, y+alto-9);
+    }
+    if(r.foto){
+      try{ doc.addImage(r.foto, 'JPEG', xFirma+wFirma+3, y+3, wFoto-6, alto-6, undefined, 'FAST'); }catch(e){}
+    }
+    doc.setDrawColor(215,215,215); doc.setLineWidth(.5);
+    doc.line(xFirma, y, xFirma, y+alto);
+    doc.line(xFirma+wFirma, y, xFirma+wFirma, y+alto);
+    doc.setTextColor(30,30,30);
     y+=alto; altoTabla+=alto;
   });
   doc.setDrawColor(150,150,150); doc.setLineWidth(.6);
@@ -7702,10 +7988,11 @@ function _pdfDeKardex(t, regs, mes){
   /* la firma va abajo, donde se firma en papel */
   y = Math.max(y+52, H-118);
   doc.setDrawColor(140,140,140); doc.setLineWidth(.7);
-  doc.line(M+18, y, M+218, y); doc.line(W-M-218, y, W-M-18, y);
+  doc.line(W-M-218, y, W-M-18, y);
   doc.setFontSize(8); doc.setTextColor(80,80,80);
-  doc.text('Firma del trabajador', M+18, y+13);
   doc.text('Responsable SSOMA', W-M-218, y+13);
+  doc.setFontSize(7.5); doc.setTextColor(120,120,120);
+  doc.text('Cada línea lleva la firma del trabajador en el momento de la entrega.', M+18, y+13);
   doc.setFontSize(7); doc.setTextColor(155,155,155);
   doc.text('El trabajador declara haber recibido los equipos detallados y conocer su uso, cuidado y reposición.', M, H-46);
   doc.text('Generado con OBRASST el '+fechaLarga(hoyISO()), M, H-32);
@@ -7877,7 +8164,7 @@ var CATALOGO_ACCESOS = [
   {k:'amonesta',  ic:'⚠️', et:'Amonesta-<br>ciones',           ir:'p-amonestaciones',color:'a-gris', desde:3, def:[3]},
   {k:'semanal',   ic:'📈', et:'Reporte<br>semanal',            ir:'p-semanal',      color:'a-verde', desde:3, def:[3,4]},
   {k:'inspec',    ic:'✅', et:'Inspec-<br>ciones',             ir:'p-inspec',       color:'a-gris',  desde:3, def:[4]},
-  {k:'asisten',   ic:'📷', et:'Escanear<br>asistencia',        ir:'p-escaneos',     color:'a-azul',  desde:0, def:[0,1,2,3,4]}
+  {k:'asisten',   ic:'📷', et:'Escanear<br>documento',         ir:'p-escaneos',     color:'a-azul',  desde:0, def:[0,1,2,3,4]}
 ];
 var LS_MIS_ACCESOS='sstc_mis_accesos';
 /* los que tu plan te deja tener */
@@ -10829,37 +11116,43 @@ function _nombreSano(t){
 
 /* ---- UNA IMAGEN (del celular o de la nube) DENTRO DE UN PDF ---- */
 function _pdfDeUnaImagen(item){
-  /* item: {nombre, fecha, pie, src}  ->  Promise<Blob> */
+  /* item: {nombre, fecha, pie, src}  ->  Promise<Blob>
+
+     La hoja escaneada y NADA MAS. Antes esto metia la foto dentro de un
+     A4 vertical con titulo arriba, fecha, una linea y un pie: una hoja
+     escaneada en horizontal terminaba del tamano de un sello, rodeada de
+     texto que nadie pidio. Marcelo lo dijo claro: el celular ya recorta
+     la hoja, lo unico que falta es volverla PDF.
+     Asi que la pagina se hace del tamano de la imagen (lado largo el de
+     un A4) y la imagen la cubre de borde a borde. Sale del porte de la
+     hoja, se imprime bien, y no lleva nada encima ni debajo. */
   return new Promise(function(ok, mal){
     try{
-      var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
-      var W=595.28, H=841.89, M=34;
-      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(11,42,58);
-      doc.text(doc.splitTextToSize(item.nombre||'Documento', W-2*M), M, 46);
-      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120,120,120);
-      doc.text(item.pie||'', M, 62);
-      doc.setDrawColor(220,220,220); doc.line(M,70,W-M,70);
-      doc.setFontSize(7.5); doc.setTextColor(150,150,150);
-      doc.text((nombreDeLaObra()||'')+'  ·  OBRASST', M, H-22);
+      var LARGO=841.89, CORTO=595.28;
       var src=item.src||'';
       if(!src){
-        doc.setFontSize(10); doc.setTextColor(90,90,90);
-        doc.text(doc.splitTextToSize('La imagen de este documento no esta en este celular.', W-2*M), M, 110);
-        ok(doc.output('blob')); return;
+        var d0=new jspdf.jsPDF({unit:'pt', format:'a4'});
+        d0.setFontSize(11); d0.setTextColor(90,90,90);
+        d0.text(d0.splitTextToSize('La imagen de este documento no esta en este celular.', CORTO-68), 34, 60);
+        ok(d0.output('blob')); return;
       }
       var img=new Image();
       if(src.indexOf('data:')!==0) img.crossOrigin='anonymous';
       img.onload=function(){
-        var dw=W-2*M, dh=H-110-40;
-        var r=Math.min(dw/img.width, dh/img.height), w=img.width*r, h=img.height*r;
-        try{ doc.addImage(img,'JPEG', M+(dw-w)/2, 86, w, h); }
-        catch(e){ try{ doc.addImage(src,'JPEG', M+(dw-w)/2, 86, w, h); }catch(e2){} }
+        var iw=img.width||1, ih=img.height||1, W, H;
+        if(iw >= ih){ W=LARGO; H=LARGO*ih/iw; if(H>CORTO){ H=CORTO; W=CORTO*iw/ih; } }
+        else        { H=LARGO; W=LARGO*iw/ih; if(W>CORTO){ W=CORTO; H=CORTO*ih/iw; } }
+        var doc=new jspdf.jsPDF({unit:'pt', format:[W,H],
+                                 orientation: (W>=H) ? 'landscape' : 'portrait'});
+        try{ doc.addImage(img,'JPEG', 0, 0, W, H); }
+        catch(e){ try{ doc.addImage(src,'JPEG', 0, 0, W, H); }catch(e2){} }
         ok(doc.output('blob'));
       };
       img.onerror=function(){
-        doc.setFontSize(10); doc.setTextColor(90,90,90);
-        doc.text(doc.splitTextToSize('No se pudo bajar la imagen (sin internet). Vuelve a intentarlo con senal.', W-2*M), M, 110);
-        ok(doc.output('blob'));
+        var d1=new jspdf.jsPDF({unit:'pt', format:'a4'});
+        d1.setFontSize(11); d1.setTextColor(90,90,90);
+        d1.text(d1.splitTextToSize('No se pudo bajar la imagen (sin internet). Vuelve a intentarlo con senal.', CORTO-68), 34, 60);
+        ok(d1.output('blob'));
       };
       img.src=src;
     }catch(e){ mal(e); }
