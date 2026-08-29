@@ -5126,7 +5126,7 @@ function abrirSesion(correo, emp){
   guardar(LS_EMP,{codigo:emp.codigo, id:emp.id, nombre:emp.nombre});
   guardar(LS_SESION,{correo:correo, emp:emp.id, cuando:hoyISO()});
 }
-function cerrarSesion(){ try{ localStorage.removeItem(LS_SESION); }catch(e){} USO_NUBE=null;
+function cerrarSesion(){ try{ localStorage.removeItem(LS_SESION); }catch(e){} USO_NUBE=null; USO_REAL=null; USO_REAL_CUANDO=0;
   try{ pararVigilanciaReportes(); ponerGlobito(0); }catch(e){} }
 /* el TRABAJADOR no abre sesion: solo guarda el codigo de su obra. Para
    mandar su constancia o su reporte necesitamos ese codigo. */
@@ -5351,7 +5351,7 @@ function _ir(p){
     if(!(_pr && _pr.className && _pr.className.indexOf('on')>-1)) desproteger();
   }
   cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';$(p).className='pantalla activa';window.scrollTo(0,0);
-  if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-apariencia')pintarApariencia(); if(p==='p-programa')pintarPrograma(); if(p==='p-trab-ficha')pintarFichaTrab(); if(p==='p-planes')pintarPlanes();
+  if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-apariencia')pintarApariencia(); if(PANT_CON_TOPE[p]){ try{ quizaRefrescarUsoReal(); }catch(_u){} } if(p==='p-programa')pintarPrograma(); if(p==='p-trab-ficha')pintarFichaTrab(); if(p==='p-planes')pintarPlanes();
   if(p==='p-eval')pintarEval(); if(p==='p-registro')cargarRegistro(); if(p==='p-generar')pintarGenerar();
   if(p==='p-colab')pintarColab(); if(p==='p-charlas')pintarCharlas();
   if(p==='p-talleres')pintarTalleres();
@@ -5753,6 +5753,7 @@ function refrescarPlan(){
     if(j && j.plan){ guardar(LS_PLAN,j); }
     /* el contador viene del mismo viaje: plan y cupo siempre juntos */
     try{ refrescarUso().then(function(){ repintarSiEsElTablero(); }); }catch(_e){}
+    try{ refrescarUsoReal().then(function(){ repintarSiEsElTablero(); }); }catch(_e2){}
     quizaLaPruebaGratis(j);
     try{ sincronizarConElEquipo(); }catch(_s){}
     return planLocal();
@@ -6624,7 +6625,7 @@ function escSet(a){ guardar(escKey(), a.slice(0,300)); }
 
 /* ---------- abrir el escaner ---------- */
 function abrirEscaneoNuevo(){
-  if(frenoLite('escaneo', usoTotal('escaneo'), 'registros escaneados')) return;
+  if(frenoLite('escaneo', usadosTotal('escaneo', escLocal().length), 'registros escaneados')) return;
   ir('p-escaneo-nuevo');
 }
 function prepEscaneo(){
@@ -6752,7 +6753,7 @@ function guardarEscaneo(){
   if(!ESC_IMG || !ESC_IMG.listo){ m.textContent='Primero toma la foto de la hoja.'; return; }
   var nom=($('esc-nombre').value||'').trim();
   if(nom.length<3){ nom = ($('esc-nombre').placeholder||'Registro de asistencia'); }
-  if(frenoLite('escaneo', usoTotal('escaneo'), 'registros escaneados')) return;
+  if(frenoLite('escaneo', usadosTotal('escaneo', escLocal().length), 'registros escaneados')) return;
   var reg={ id:'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
     nombre:nom, fecha:$('esc-fecha').value||hoyISO(), clase:$('esc-clase').value,
     firmas:parseInt($('esc-firmas').value,10)||0, img:ESC_IMG.listo, url:'', sync:0 };
@@ -7300,9 +7301,71 @@ function refrescarUso(){
     return USO_NUBE;
   }).catch(function(){ return null; });
 }
+/* ══ CUÁNTO LLEVA LA EMPRESA (no este celular) ═════════════════════
+   Aquí estaba el agujero más caro que quedaba. El tope del plan se
+   medía contra lo que tenía guardado ESTE celular: dos supervisores de
+   la misma obra se llevaban cada uno el tope completo, y el que
+   reinstalaba la app recuperaba el cupo entero. El plan se regalaba
+   sin que nadie lo notara.
+
+   El contador que ya existía (`sst_uso`) tampoco sirve como juez: solo
+   sabe SUMAR. Nunca resta lo que se borra, así que con el tiempo se va
+   por encima de la realidad y le come cupo al que sí pagó. Comprobado
+   en la base: decía 2 reportes donde había 1.
+
+   Así que se pregunta lo único que no se discute: **cuántas filas tiene
+   la empresa ahora mismo**. Eso hace `sst_uso_real(p_emp)` en el
+   servidor, en una sola vuelta, y baja cuando borras.
+   Por debajo de ese número queda siempre lo que este celular tenga sin
+   subir: sin señal el tope no se afloja.                            */
+var USO_REAL=null;          /* lo último que dijo el servidor */
+var USO_REAL_CUANDO=0;      /* para no preguntarlo a cada rato */
+function usoRealTotal(k){
+  return (USO_REAL && USO_REAL.t && typeof USO_REAL.t[k]==='number') ? USO_REAL.t[k] : null;
+}
+function usoRealMes(k){
+  return (USO_REAL && USO_REAL.mes===mesEtiqueta() && USO_REAL.m && typeof USO_REAL.m[k]==='number')
+    ? USO_REAL.m[k] : null;
+}
+function usoRealDoc(hoja){
+  return (USO_REAL && USO_REAL.doc && typeof USO_REAL.doc[hoja]==='number') ? USO_REAL.doc[hoja] : null;
+}
+function usadosTotal(k, piso){
+  piso = (typeof piso==='number' && piso>0) ? piso : 0;
+  var real=usoRealTotal(k);
+  if(real!==null) return Math.max(real, piso);
+  return Math.max(usoTotal(k), piso);
+}
+function usadosMes(k){
+  var real=usoRealMes(k);
+  if(real!==null) return Math.max(real, usoMesLocal(k));
+  return usoMes(k);
+}
+function refrescarUsoReal(){
+  var e=empActiva();
+  if(!e || !hayCuenta()) return Promise.resolve(null);
+  return sbRpc('sst_uso_real',{p_emp:e.id}).then(function(j){
+    if(j && j.ok){ USO_REAL=j; USO_REAL_CUANDO=Date.now(); }
+    return USO_REAL;
+  }).catch(function(){ return null; });   /* sin señal se sigue con lo local */
+}
+/* se refresca al entrar a las pantallas donde se crean cosas, y no más
+   de una vez cada 45 segundos: es una sola consulta, pero es de la obra */
+function quizaRefrescarUsoReal(){
+  if(Date.now() - USO_REAL_CUANDO < 45000) return;
+  USO_REAL_CUANDO = Date.now();     /* se marca antes: evita dos vuelos juntos */
+  refrescarUsoReal();
+}
+var PANT_CON_TOPE={'p-trabajadores':1,'p-trab-nuevo':1,'p-kardex':1,'p-kardex-nuevo':1,
+  'p-credencial':1,'p-cred-nueva':1,'p-amonestaciones':1,'p-amon-nueva':1,
+  'p-escaneos':1,'p-escaneo-nuevo':1,'p-reporte':1,'p-reporte-nuevo':1,
+  'p-semanal':1,'p-semanal-dia':1,'p-doc':1,'p-emp-home':1,'p-planes':1,'p-estatus':1};
+
 function esPorMes(k){ return !!planActual().porMes[k]; }
 /* cuantos lleva usados: del mes si el tope es mensual, del total si no */
-function llevaUsados(k, cuantosHay){ return esPorMes(k) ? usoMes(k) : cuantosHay; }
+function llevaUsados(k, cuantosHay){
+  return esPorMes(k) ? usadosMes(k) : usadosTotal(k, cuantosHay);
+}
 
 function cupoLite(k, cuantosHay){
   var t=topeLite(k);
@@ -7737,7 +7800,9 @@ function guardarTrabajador(){
   if(nombre.length<3){ m.textContent='Escribe el nombre completo del trabajador.'; return; }
   var a=trabsLocal(), t=TRAB_EDIT?trabPorId(TRAB_EDIT):null;
   if(!t){
-    if(frenoLite('trabajador', a.length, 'trabajadores')) return;
+    /* el cesado no ocupa cupo, ni acá ni en el servidor */
+    var vivos=a.filter(function(x){ return (x.estatus||'activo')!=='cesado'; }).length;
+    if(frenoLite('trabajador', usadosTotal('trabajador', vivos), 'trabajadores')) return;
     sumarUso('trabajador');
     t={id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}; a.push(t);
   }
@@ -7890,7 +7955,7 @@ function guardarKardex(){
   if(!lineas.length){ m.textContent='Escribe qué EPP se entregó.'; return; }
   if(!tid){ m.textContent='Registra primero a tu personal para poder elegir al trabajador.'; return; }
   if(!K_HAYFIRMA){ m.textContent='Falta la firma del trabajador.'; return; }
-  if(frenoLite('kardex', kardexLocal().length + lineas.length - 1, 'entregas de EPP')) return;
+  if(frenoLite('kardex', usadosTotal('kardex', kardexLocal().length) + lineas.length - 1, 'entregas de EPP')) return;
 
   var t=trabPorId(tid);
   var firma=K_LIENZO.toDataURL('image/png');
@@ -8145,7 +8210,7 @@ function guardarDiaSemanal(){
     hhc:parseFloat($('sd-hhc').value)||0 };
   if(!d.obN && !d.stN){ m.textContent='Pon al menos cuánto personal hubo ese día.'; return; }
   var semanas={}; semLocal().forEach(function(x){ semanas[x.semana]=1; });
-  if(!semanas[d.semana] && frenoLite('semana', Object.keys(semanas).length, 'semana')) return;
+  if(!semanas[d.semana] && frenoLite('semana', usadosTotal('semana', Object.keys(semanas).length), 'semana')) return;
   var a=semLocal().filter(function(x){ return x.fecha!==f; });   // un registro por día
   a.push(d); a.sort(function(x,y){ return x.fecha.localeCompare(y.fecha); });
   semSet(a);
@@ -8291,7 +8356,7 @@ function guardarAmonestacion(){
   var tn=($('a-t-nombre').value||'').trim(), d=($('a-desc').value||'').trim();
   if(tn.length<3){ m.textContent='Falta el nombre del trabajador.'; return; }
   if(d.length<10){ m.textContent='Describe lo que pasó, aunque sea en dos líneas.'; return; }
-  if(frenoLite('amonestacion', amonLocal().length, 'amonestación')) return;
+  if(frenoLite('amonestacion', usadosTotal('amonestacion', amonLocal().length), 'amonestación')) return;
   sumarUso('amonestacion');
   var hoy=new Date();
   var reg={ id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
@@ -9676,13 +9741,15 @@ var CUPO_NOMBRE={ trabajador:'trabajadores', kardex:'entregas de EPP', reporte:'
                   doc:'documentos', credencial:'credenciales', amonestacion:'amonestaciones',
                   escaneo:'asistencias escaneadas' };
 var CUPO_LISTA=['trabajador','kardex','reporte','credencial','amonestacion','escaneo'];
+/* el anillo enseña el cupo de la EMPRESA: si son dos supervisores, el
+   número es el de los dos juntos, que es contra el que corre el tope */
 function _usadosDe(k){
-  if(esPorMes(k)) return usoMes(k);
-  if(k==='trabajador') return Math.max(usoTotal(k), _cuenta(LS_TRAB));
-  if(k==='kardex')     return Math.max(usoTotal(k), _cuenta(LS_KARDEX));
-  if(k==='credencial') return Math.max(usoTotal(k), _cuenta(LS_CRED));
-  if(k==='amonestacion')return Math.max(usoTotal(k), _cuenta(LS_AMON));
-  return usoTotal(k);
+  if(esPorMes(k)) return usadosMes(k);
+  if(k==='trabajador') return usadosTotal(k, _cuenta(LS_TRAB));
+  if(k==='kardex')     return usadosTotal(k, _cuenta(LS_KARDEX));
+  if(k==='credencial') return usadosTotal(k, _cuenta(LS_CRED));
+  if(k==='amonestacion')return usadosTotal(k, _cuenta(LS_AMON));
+  return usadosTotal(k, 0);
 }
 function cupoMasApretado(){
   var P=planActual(), peor=null;
@@ -9786,18 +9853,19 @@ function detalleDelMesDom(){
    historia (ver esSoloLectura). */
 function tejasDelPlan(){
   var P=planActual(), o=P.orden, t=[];
-  t.push({et:'Trabajadores', val:_cuenta(LS_TRAB), tope:P.tope.trabajador, ir:'p-trabajadores', ic:'👷'});
+  t.push({et:'Trabajadores', val:usadosTotal('trabajador', _cuenta(LS_TRAB)), tope:P.tope.trabajador, ir:'p-trabajadores', ic:'👷'});
   t.push({et:'Reportes de actos y condiciones', val: usoMes('reporte'),
           tope:P.tope.reporte, mes:esPorMes('reporte'), ir:'p-reporte', ic:'⚠️',
           alerta:(REP_ABIERTOS>0 ? (REP_ABIERTOS+' sin atender') : '')});
   t.push({tipo:'texto', et:'Programa de charlas', val:'Ver el mes de '+_mesNombre(), ir:'p-programa', ic:'🗓️'});
   if(o>=1 || hayHistoriaDe('kardex')){
-    t.push({et:'Kardex de EPP', val: esPorMes('kardex')?usoMes('kardex'):_cuenta(LS_KARDEX),
+    t.push({et:'Kardex de EPP', val: esPorMes('kardex')?usadosMes('kardex'):usadosTotal('kardex',_cuenta(LS_KARDEX)),
             tope:P.tope.kardex, mes:esPorMes('kardex'), ir:'p-kardex', ic:'🦺'});
   }
   if(o>=1 || hayHistoriaDe('asisten')){
-    t.push({et:'Asistencias escaneadas', val:hayHistoriaDe('asisten'), tope:P.tope.escaneo,
-            mes:esPorMes('escaneo'), ir:'p-escaneos', ic:'📄'});
+    t.push({et:'Asistencias escaneadas',
+            val: esPorMes('escaneo')?usadosMes('escaneo'):usadosTotal('escaneo', hayHistoriaDe('asisten')),
+            tope:P.tope.escaneo, mes:esPorMes('escaneo'), ir:'p-escaneos', ic:'📄'});
   }
   if(o>=2 || hayHistoriaDe('cuadrilla')){
     t.push({et:'Códigos de cuadrilla', val:_cuentaLlaves(LS_USA), ir:'p-generar', ic:'🔑'});
@@ -9805,10 +9873,10 @@ function tejasDelPlan(){
   if(o>=2) t.push({et:'Constancias emitidas', val:(TAB_CONS? TAB_CONS.filter(function(c){return dentroDelFiltro(c.fecha);}).length : 0),
                    ir:'p-temas', ic:'🎓'});
   if(o>=3 || hayHistoriaDe('credencial')){
-    t.push({et:'Credenciales generadas', val:_cuenta(LS_CRED), tope:P.tope.credencial, ir:'p-credencial', ic:'🪪'});
+    t.push({et:'Credenciales generadas', val:usadosTotal('credencial',_cuenta(LS_CRED)), tope:P.tope.credencial, ir:'p-credencial', ic:'🪪'});
   }
   if(o>=3 || hayHistoriaDe('amonesta')){
-    t.push({et:'Amonestaciones', val:_cuenta(LS_AMON), tope:P.tope.amonestacion, ir:'p-amonestaciones', ic:'📕'});
+    t.push({et:'Amonestaciones', val: esPorMes('amonestacion')?usadosMes('amonestacion'):usadosTotal('amonestacion',_cuenta(LS_AMON)), tope:P.tope.amonestacion, ir:'p-amonestaciones', ic:'📕'});
   }
   if(o>=3) t.push({tipo:'texto', et:'Reporte semanal', val:'HHT y HHC del mes', ir:'p-semanal', ic:'📈'});
   if(o>=4){
@@ -11805,7 +11873,7 @@ function guardarReporte(){
   if(!desc){ aviso('Falta la descripción','Cuenta en una línea qué fue lo que viste.','✏️'); return; }
   /* el tope solo aplica al que gestiona: al trabajador que ve un peligro
      nunca se le cierra la puerta por un plan. */
-  if(sesionAbierta() && frenoLite('reporte', usoTotal('reporte'), 'reportes')) return;
+  if(sesionAbierta() && frenoLite('reporte', usadosTotal('reporte', 0), 'reportes')) return;
   if(sesionAbierta()) sumarUso('reporte');
   var msg=$('r-msg'); msg.style.color='var(--gris)'; msg.textContent='Enviando…';
   /* la foto sube YA reducida: en obra el internet es el cuello de
@@ -13033,7 +13101,7 @@ function tarjetaCredHTML(cod){
 }
 function generarCredencial(){
   var nombre=($('c-nombre').value||'').trim(); if(!nombre){ aviso('Falta el nombre','Escribe el nombre del trabajador para generar su credencial.','✏️'); return; }
-  if(frenoLite('credencial', leer(LS_CRED,[]).length, 'credenciales')) return;
+  if(frenoLite('credencial', usadosTotal('credencial', leer(LS_CRED,[]).length), 'credenciales')) return;
   sumarUso('credencial');
   var e=empActiva()||{nombre:'—', codigo:''};
   var datos={n:nombre, d:($('c-dni').value||'').trim(), c:($('c-cargo').value||'').trim(), v:$('c-vence').value, o:e.nombre};
@@ -13546,7 +13614,10 @@ function guardarDoc(){
   }
   function aLaNube(fileUrl){
     if(!e){ alCelular(fileUrl,'Guardado en este celular (no hay empresa activa).'); return; }
-    var yaHay = (document.querySelectorAll('#doc-lista .tarj')||[]).length;
+    /* esta lista ya viene de la nube, así que cuenta a toda la empresa;
+       el número del servidor queda de piso por si no alcanzó a cargar */
+    var yaHay = Math.max((document.querySelectorAll('#doc-lista .tarj')||[]).length,
+                         usoRealDoc(DOC_LEAF)||0);
     if(frenoLite('doc', yaHay, 'documentos por carpeta')){ msg.textContent=''; return; }
     sbPost('sst_doc',{empresa:e.id, hoja:DOC_LEAF, nombre:nombre, url:fileUrl||url||null, nota:nota||null})
       .then(function(){ msg.style.color='#2f9e6f'; msg.textContent='Guardado y compartido con tu equipo.'; limpiar(); pintarDoc(); })
