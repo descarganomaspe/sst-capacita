@@ -4788,7 +4788,12 @@ try{ TOK = JSON.parse(localStorage.getItem(LS_TOK)||'null'); }catch(e){ TOK=null
 function hayCuenta(){ return !!(TOK && TOK.access_token); }
 function correoCuenta(){ return (TOK && TOK.correo) || ''; }
 function sbH(){
-  var t = hayCuenta() ? TOK.access_token : SB.key;
+  /* Se lee TOK directo, no a traves de hayCuenta(). Parece lo mismo y no
+     lo es: si el token vence y refrescarToken() falla, borrarToken() deja
+     TOK en null. Cualquier peticion que ya habia pasado el control de
+     «hay cuenta» y llegaba aqui despues reventaba con «Cannot read
+     properties of null». En obra eso se veia como la app colgada. */
+  var t = (TOK && TOK.access_token) ? TOK.access_token : SB.key;
   return {'apikey':SB.key,'Authorization':'Bearer '+t,'Content-Type':'application/json'};
 }
 function guardarToken(j){
@@ -5240,6 +5245,146 @@ function diasParaVencer(){
 function libre(){ return planActual().orden > 0; }
 function planEsEquipo(){ return planActual().gestores > 1; }
 function nombreDelPlan(){ return planActual().nombre; }
+/* ── LA PRUEBA SE PIDE DESDE UN SOLO SITIO ────────────────────────
+   Primera versión de esto: la prueba se pedía al CREAR la empresa y al
+   ELEGIRLA de la lista. Y no aparecía nunca, porque el que ya tiene su
+   empresa abierta no pasa por ninguna de las dos: la app arranca, ve la
+   sesión guardada y entra derecho al tablero.
+   Lección: no enganchar algo así a una pantalla, sino al único punto
+   por donde pasan TODOS los caminos. Ese punto es refrescarPlan(), que
+   corre cada vez que la app sabe en qué empresa estás.
+   Se pide una sola vez por empresa y por celular; si el servidor dice
+   que ya la usó o que ya paga, no se vuelve a preguntar nunca. Si falla
+   por señal, se reintenta la próxima vez.                            */
+/* ══════════════ LO QUE ES «UN DOCUMENTO» TAMBIEN SE COMPARTE ══════
+   Las charlas dictadas, el programa del mes y las credenciales no son
+   una fila por cosa: son un objeto entero que la app arma y lee de un
+   golpe. Vivian SOLO en el celular, asi que el segundo supervisor no
+   veia el programa del mes y, si el primero desinstalaba, se perdia.
+   Van a sst_estado (empresa, clave, valor jsonb). Y no se pisan: se
+   FUSIONAN. Regla de la fusion, pensada para obra:
+     · la union de las dos partes, por clave
+     · si los dos tienen la misma clave, gana «lo mas hecho»: una
+       charla marcada como dictada le gana a la misma sin marcar.
+   Asi el que estuvo sin senal no le borra el trabajo al que si tenia,
+   ni al reves.                                                      */
+function estadoBajar(clave){
+  var e=empActiva();
+  if(!e || !e.id || !hayCuenta()) return Promise.resolve(null);
+  return sbGet('sst_estado?empresa=eq.'+encodeURIComponent(e.id)+
+               '&clave=eq.'+encodeURIComponent(clave)+'&select=valor')
+    .then(function(rows){ return (rows && rows[0]) ? rows[0].valor : null; })
+    .catch(function(){ return null; });
+}
+function estadoSubir(clave, valor){
+  var e=empActiva();
+  if(!e || !e.id || !hayCuenta()) return Promise.resolve(false);
+  var h=sbH(); h['Prefer']='resolution=merge-duplicates';
+  return fetch(SB.url+'/rest/v1/sst_estado',{ method:'POST', headers:h,
+      body: JSON.stringify({empresa:e.id, clave:clave, valor:valor,
+                            actualizado:new Date().toISOString(),
+                            quien:(correoCuenta()||'').slice(0,80)}) })
+    .then(function(r){ return r.ok; })
+    .catch(function(){ return false; });
+}
+/* «lo mas hecho gana»: sirve igual para las charlas dictadas (donde el
+   valor es la marca de dictada) y para el programa (donde el dia con
+   .dictada le gana al dia sin marcar). */
+function _masHecho(a, b){
+  if(a && !b) return a;
+  if(b && !a) return b;
+  var da = a && (a.dictada || a.iso || a.txt);
+  var db = b && (b.dictada || b.iso || b.txt);
+  if(da && !db) return a;
+  if(db && !da) return b;
+  return a;   /* empate: se respeta lo que ya tenia este celular */
+}
+function fusionarObjetos(mio, ajeno){
+  var out={}, k;
+  ajeno = ajeno || {};
+  mio   = mio   || {};
+  for(k in ajeno) if(Object.prototype.hasOwnProperty.call(ajeno,k)) out[k]=ajeno[k];
+  for(k in mio)   if(Object.prototype.hasOwnProperty.call(mio,k))   out[k]=_masHecho(mio[k], out[k]);
+  return out;
+}
+/* Sincroniza un objeto: baja, fusiona, guarda y vuelve a subir lo
+   fusionado (para que el otro celular reciba tambien lo mio). */
+function sincronizarObjeto(clave, leerLocal, guardarLocal, alTerminar){
+  return estadoBajar(clave).then(function(ajeno){
+    var mio=leerLocal()||{};
+    if(ajeno===null){ return estadoSubir(clave, mio).then(function(){ return mio; }); }
+    var junto=fusionarObjetos(mio, ajeno);
+    guardarLocal(junto);
+    return estadoSubir(clave, junto).then(function(){ return junto; });
+  }).then(function(r){ if(alTerminar) alTerminar(r); return r; })
+    .catch(function(){ return leerLocal()||{}; });
+}
+/* Las credenciales son una LISTA, no un objeto: se fusionan por código,
+   que es lo único que las identifica de verdad. */
+function sincronizarCredenciales(){
+  return estadoBajar('credenciales').then(function(ajena){
+    var mia=leer(LS_CRED,[])||[];
+    if(!Array.isArray(ajena)) return estadoSubir('credenciales', mia).then(function(){ return mia; });
+    var vistos={}, junta=[];
+    mia.concat(ajena).forEach(function(c){
+      var k=String(c && c.cod || '');
+      if(!k || vistos[k]) return;
+      vistos[k]=1; junta.push(c);
+    });
+    junta = junta.slice(0,300);
+    guardar(LS_CRED, junta);
+    return estadoSubir('credenciales', junta).then(function(){ return junta; });
+  }).catch(function(){ return leer(LS_CRED,[])||[]; });
+}
+/* Todo junto, para llamarlo desde un solo sitio al entrar a la empresa. */
+var SINCRO_EQUIPO=false;
+function sincronizarConElEquipo(){
+  if(SINCRO_EQUIPO || !hayCuenta() || !empActiva()) return Promise.resolve();
+  SINCRO_EQUIPO=true;
+  return Promise.all([
+    sincronizarObjeto('charlas_dictadas',
+      function(){ return leer(LS_CH,{})||{}; },
+      function(o){ guardar(LS_CH,o); }),
+    sincronizarObjeto('programa_'+obraActual(),
+      function(){ return progObra()||{}; },
+      function(o){ progEscribir(o); },
+      function(){ var act=document.querySelector('.pantalla.activa');
+                  if(act && act.id==='p-programa'){ try{ pintarPrograma(); }catch(_e){} } }),
+    sincronizarCredenciales(),
+    bajarKardex()
+  ]).then(function(){ SINCRO_EQUIPO=false; })
+    .catch(function(){ SINCRO_EQUIPO=false; });
+}
+var LS_PRUEBA_PED='sstc_prueba_pedida';
+function pruebaYaResuelta(empId){
+  try{ return (leer(LS_PRUEBA_PED,{})||{})[empId]===true; }catch(_e){ return false; }
+}
+function marcarPruebaResuelta(empId){
+  try{ var o=leer(LS_PRUEBA_PED,{})||{}; o[empId]=true; guardar(LS_PRUEBA_PED,o); }catch(_e){}
+}
+function quizaLaPruebaGratis(j){
+  var e=empActiva();
+  if(!e || !e.id || !hayCuenta()) return;
+  if(pruebaYaResuelta(e.id)) return;
+  /* solo si de verdad está en LITE y sin fecha: al que ya paga no se le toca */
+  var plan=(j && j.plan) || 'lite';
+  if(plan !== 'lite') { marcarPruebaResuelta(e.id); return; }
+  if(j && j.vence)    { marcarPruebaResuelta(e.id); return; }
+  sbRpc('sst_prueba_gratis',{p_emp:e.id}).then(function(r){
+    if(r && r.ok){
+      marcarPruebaResuelta(e.id);
+      guardar(LS_PLAN,{plan:r.plan, vence:r.vence||null, tope_obras:1, tope_gestores:r.tope_gestores||2});
+      try{ repintarSiEsElTablero(); }catch(_x){}
+      alert('🎁 Te activamos tu prueba gratis.\n\nTienes el plan SSOMA completo por '+
+            (r.dias||30)+' días, hasta el '+fechaLarga(String(r.vence).slice(0,10))+'.'+
+            '\n\nNo pagas nada ahora y no hay cobro automático. Al terminar, la app vuelve '+
+            'a la versión de muestra y tus documentos NO se borran.');
+    }else if(r && (r.motivo==='ya_la_usaste' || r.motivo==='ya_tiene_plan' || r.motivo==='no_eres_dueno')){
+      /* respuestas definitivas: no tiene sentido volver a preguntar */
+      marcarPruebaResuelta(e.id);
+    }
+  }).catch(function(){ /* sin señal: se reintenta la próxima vez */ });
+}
 function refrescarPlan(){
   var e=empActiva();
   if(!e || !hayCuenta()) return Promise.resolve(planLocal());
@@ -5247,6 +5392,8 @@ function refrescarPlan(){
     if(j && j.plan){ guardar(LS_PLAN,j); }
     /* el contador viene del mismo viaje: plan y cupo siempre juntos */
     try{ refrescarUso().then(function(){ repintarSiEsElTablero(); }); }catch(_e){}
+    quizaLaPruebaGratis(j);
+    try{ sincronizarConElEquipo(); }catch(_s){}
     return planLocal();
   }).catch(function(){ try{ refrescarUso(); }catch(_e){} return planLocal(); });
 }
@@ -12749,13 +12896,8 @@ function abrirEmpresaDeLaLista(i){
      activar la prueba gratis. Sirve para los que se registraron ANTES de
      que esto existiera: no tienen que hacer nada ni pedir nada. El
      servidor decide y solo la da una vez por persona. */
-  if((e.plan||'lite')==='lite' && !e.vence && e.rol==='dueno'){
-    pedirPruebaGratis({id:e.id}, function(pr){
-      if(pr && pr.ok){ MIS_EMP=[]; alert('🎁 Te activamos tu prueba gratis.'+avisoDePrueba(pr).replace(/^\n\n🎁[^:]*:/,'')); }
-      refrescarPlan(); ir('p-emp-home');
-    });
-    return;
-  }
+  /* la prueba ya no se pide aquí: la pide refrescarPlan(), que corre
+     por todos los caminos y no solo cuando se elige de la lista */
   refrescarPlan();
   ir('p-emp-home');
 }
