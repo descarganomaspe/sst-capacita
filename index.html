@@ -214,6 +214,43 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
    Lo que se usa todos los días no puede estar a tres toques de
    distancia dentro de una carpeta. Estos cuatro son los de diario:
    el programa del mes, la capacitación, el kardex y el reporte. */
+/* ── EL AVISO FLOTANTE ────────────────────────────────────────────
+   alert() del navegador saca el nombre del dominio arriba
+   («descarganomaspe.github.io dice…»), y eso en una app que se cobra
+   se lee a taller, no a producto. Esto es lo mismo pero dentro de la
+   app: fondo propio, texto corto y un solo botón. */
+/* la comparación de planes */
+.plan-t{border:1.5px solid rgba(143,169,184,.20);border-radius:16px;padding:16px;margin-bottom:11px;
+  background:rgba(255,255,255,.03)}
+.plan-t.tuyo{border-color:rgba(47,158,111,.6);background:rgba(47,158,111,.08)}
+.plan-t.sig{border-color:rgba(245,183,0,.55);background:rgba(245,183,0,.07)}
+.plan-t .cab{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.plan-t .nom{font-size:17.5px;font-weight:700;color:var(--tinta)}
+.plan-t .pre{margin-left:auto;font-size:21px;font-weight:800;color:var(--oro);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.plan-t .pre small{font-size:12px;font-weight:500;color:var(--gris)}
+.plan-t .chip{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  border-radius:999px;padding:3px 9px;white-space:nowrap}
+.plan-t .chip.a{background:rgba(47,158,111,.9);color:#04231a}
+.plan-t .chip.b{background:var(--oro);color:#0B2A3A}
+.plan-t ul{list-style:none;margin:11px 0 0;padding:0}
+.plan-t li{font-size:14px;color:#BDD3DE;line-height:1.45;padding-left:19px;position:relative;margin-bottom:5px}
+.plan-t li:before{content:'✓';position:absolute;left:0;color:var(--ok);font-weight:700}
+.plan-t li.no{color:var(--gris)}
+.plan-t li.no:before{content:'·';color:var(--gris)}
+.avisof{position:fixed;inset:0;z-index:2400;display:none;align-items:center;
+  justify-content:center;padding:22px;background:rgba(4,14,20,.72);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.avisof.abierto{display:flex}
+.avisof .caja{width:100%;max-width:340px;background:linear-gradient(180deg,#123a4e,#0d2c3c);
+  border:1.5px solid rgba(245,183,0,.45);border-radius:20px;padding:22px 20px 18px;
+  box-shadow:0 26px 60px rgba(0,0,0,.6);text-align:center;
+  animation:avisoEntra .22s ease}
+@keyframes avisoEntra{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.avisof .ic{font-size:34px;line-height:1}
+.avisof h3{font-size:19px;color:#fff;margin:10px 0 6px;line-height:1.25}
+.avisof p{font-size:14.5px;color:#BDD3DE;line-height:1.45;margin:0}
+.avisof .btn{margin-top:16px}
 .accesos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 6px;
   padding:2px 2px 10px;margin:2px 0 14px}
 @media(min-width:560px){.accesos{grid-template-columns:repeat(6,1fr)}}
@@ -812,6 +849,13 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <p class="sub">Los que están a tu cargo. De aquí salen el kardex, las credenciales QR y el estatus del personal, así no vuelves a escribir el mismo nombre.</p>
   <button class="btn" onclick="ir('p-trab-nuevo')">➕ Agregar trabajador</button>
   <div id="trab-lista"></div>
+</section>
+
+<section class="pantalla" id="p-planes">
+  <div class="barra"><span>Planes</span></div>
+  <h2>Los planes</h2>
+  <p class="sub">Cada peldaño resuelve un trabajo entero. Se paga por mes y no hay cobro automático: si no renuevas, la app vuelve a la versión de muestra y <b>tus documentos no se borran</b>.</p>
+  <div id="planes-cuerpo"></div>
 </section>
 
 <section class="pantalla" id="p-trab-ficha">
@@ -2030,6 +2074,15 @@ input,textarea{-webkit-user-select:text;user-select:text}
     </div>
   </div>
 </section>
+
+<div class="avisof" id="avisof">
+  <div class="caja">
+    <div class="ic" id="avisof-ic">🎁</div>
+    <h3 id="avisof-tit"></h3>
+    <p id="avisof-txt"></p>
+    <button class="btn" onclick="cerrarAviso()" id="avisof-btn">Aceptar</button>
+  </div>
+</div>
 
 <div class="hoja" id="hoja-rep">
   <div class="velo" onclick="cerrarDetalleReporte()"></div>
@@ -4945,7 +4998,7 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             'p-temas':1,'p-modo':1,'p-juego':1,'p-eval':1,'p-datos':1,'p-final':1,
             'p-firma':1,'p-listo':1,'p-generar':1,'p-registro':1,'p-talleres':1,
             'p-taller':1,'p-taller-fin':1,'p-codigo':1,'p-sesion':1,'p-config':1,
-            'p-trabajadores':1,'p-trab-nuevo':1,'p-trab-ficha':1,'p-estatus':1,
+            'p-trabajadores':1,'p-trab-nuevo':1,'p-trab-ficha':1,'p-planes':1,'p-estatus':1,
             'p-kardex':1,'p-kardex-nuevo':1,'p-kardex-export':1,'p-empleador':1,
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,
             'p-semanal':1,'p-semanal-dia':1,'p-estadistica':1,'p-carpeta':1,'p-foto':1,'p-mensual':1,
@@ -5059,7 +5112,7 @@ function _ir(p){
     if(!(_pr && _pr.className && _pr.className.indexOf('on')>-1)) desproteger();
   }
   cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';$(p).className='pantalla activa';window.scrollTo(0,0);
-  if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-programa')pintarPrograma(); if(p==='p-trab-ficha')pintarFichaTrab();
+  if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-programa')pintarPrograma(); if(p==='p-trab-ficha')pintarFichaTrab(); if(p==='p-planes')pintarPlanes();
   if(p==='p-eval')pintarEval(); if(p==='p-registro')cargarRegistro(); if(p==='p-generar')pintarGenerar();
   if(p==='p-colab')pintarColab(); if(p==='p-charlas')pintarCharlas();
   if(p==='p-talleres')pintarTalleres();
@@ -5355,6 +5408,22 @@ function sincronizarConElEquipo(){
   ]).then(function(){ SINCRO_EQUIPO=false; })
     .catch(function(){ SINCRO_EQUIPO=false; });
 }
+/* Aviso propio, en vez de alert(). Texto corto y un botón: si hace
+   falta un párrafo para explicarlo, el problema no es el aviso. */
+var _AVISO_LUEGO=null;
+function aviso(titulo, texto, icono, alCerrar){
+  var c=$('avisof'); if(!c){ alert(titulo+'\n\n'+texto); if(alCerrar) alCerrar(); return; }
+  $('avisof-ic').textContent = icono || '✅';
+  $('avisof-tit').textContent = titulo || '';
+  $('avisof-txt').textContent = texto || '';
+  _AVISO_LUEGO = alCerrar || null;
+  c.className='avisof abierto';
+}
+function cerrarAviso(){
+  var c=$('avisof'); if(c) c.className='avisof';
+  var f=_AVISO_LUEGO; _AVISO_LUEGO=null;
+  if(f) try{ f(); }catch(_e){}
+}
 var LS_PRUEBA_PED='sstc_prueba_pedida';
 function pruebaYaResuelta(empId){
   try{ return (leer(LS_PRUEBA_PED,{})||{})[empId]===true; }catch(_e){ return false; }
@@ -5375,10 +5444,9 @@ function quizaLaPruebaGratis(j){
       marcarPruebaResuelta(e.id);
       guardar(LS_PLAN,{plan:r.plan, vence:r.vence||null, tope_obras:1, tope_gestores:r.tope_gestores||2});
       try{ repintarSiEsElTablero(); }catch(_x){}
-      alert('🎁 Te activamos tu prueba gratis.\n\nTienes el plan SSOMA completo por '+
-            (r.dias||30)+' días, hasta el '+fechaLarga(String(r.vence).slice(0,10))+'.'+
-            '\n\nNo pagas nada ahora y no hay cobro automático. Al terminar, la app vuelve '+
-            'a la versión de muestra y tus documentos NO se borran.');
+      aviso('Tu mes gratis está activo',
+            'Plan SSOMA completo hasta el '+fechaLarga(String(r.vence).slice(0,10))+
+            '. Sin cobro automático.', '🎁');
     }else if(r && (r.motivo==='ya_la_usaste' || r.motivo==='ya_tiene_plan' || r.motivo==='no_eres_dueno')){
       /* respuestas definitivas: no tiene sentido volver a preguntar */
       marcarPruebaResuelta(e.id);
@@ -6974,7 +7042,11 @@ function bandaLiteEmpresa(){
       '<div style="margin-top:7px"><button class="btn sec" style="margin:0" onclick="pedirCodigo(\'\')">Renovar con un código</button></div>' : '';
 
   /* venció y volvió a LITE */
-  if(A.orden===0 && pl.plan && pl.plan!=='lite' && pl.vence){
+  /* Ojo: NO se puede preguntar «¿el plan guardado es distinto de lite?».
+     El servidor YA devuelve 'lite' cuando la fecha pasó, así que esa
+     condición no se cumplía nunca y el aviso de vencimiento no salía.
+     Lo que delata a un plan vencido es la FECHA, no el nombre. */
+  if(pl.vence && String(pl.vence).slice(0,10) < hoyISO()){
     return '<div class="aviso rojo" style="border-color:rgba(210,86,79,.5)">⏳ <b>Tu plan venció</b> el '+
       fechaLarga(String(pl.vence).slice(0,10))+'. Tus documentos siguen ahí; volvieron los topes de la versión gratis.'+
       '<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="pedirCodigo(\'\')">Renovar con un código</button></div></div>';
@@ -6995,6 +7067,94 @@ function bandaLiteEmpresa(){
         'Tengo un código del plan '+esc(S.nombre)+'</button></div>' : '')+'</div>';
 }
 
+/* Una sola línea, sin globo de venta. Lo único que se avisa fuerte es
+   lo que corre prisa: que está por vencer o que ya venció. */
+function lineaDelPlan(){
+  var A=planActual(), pl=planLocal(), d=diasParaVencer();
+  var boton='<button class="btn sec" style="margin:0" onclick="ir(\'p-planes\');pintarPlanes()">Ver planes y cambiar</button>';
+
+  /* Ojo: NO se puede preguntar «¿el plan guardado es distinto de lite?».
+     El servidor YA devuelve 'lite' cuando la fecha pasó, así que esa
+     condición no se cumplía nunca y el aviso de vencimiento no salía.
+     Lo que delata a un plan vencido es la FECHA, no el nombre. */
+  if(pl.vence && String(pl.vence).slice(0,10) < hoyISO()){
+    return '<div class="aviso rojo" style="border-color:rgba(210,86,79,.5)">⏳ <b>Tu plan venció</b> el '+
+      fechaLarga(String(pl.vence).slice(0,10))+'. Tus documentos siguen ahí; volvieron los topes de la versión gratis.'+
+      '<div style="margin-top:9px">'+boton+'</div></div>';
+  }
+  if(d!==null && d<=7 && A.orden>0){
+    return '<div class="aviso" style="border-color:rgba(214,142,26,.55)">⏳ <b>'+
+      (d<=0?'Tu plan vence hoy.':'Te quedan '+d+' día'+(d===1?'':'s')+' de plan '+esc(A.nombre)+'.')+'</b>'+
+      '<div style="margin-top:9px">'+boton+'</div></div>';
+  }
+  var hasta = (pl.vence && A.orden>0) ? ' · hasta el '+fechaLarga(String(pl.vence).slice(0,10)) : '';
+  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;'+
+         'padding:13px 15px;border:1px solid rgba(143,169,184,.20);border-radius:14px;'+
+         'background:rgba(255,255,255,.03)">'+
+         '<span style="font-size:14px;color:var(--gris)">Plan <b style="color:var(--tinta)">'+esc(A.nombre)+'</b>'+hasta+'</span>'+
+         '<span style="margin-left:auto">'+boton+'</span></div>';
+}
+/* ══════════════ LA PANTALLA DE PLANES ════════════════════════════
+   Los puntos NO están escritos a mano: salen de PLANES, que es lo que
+   de verdad manda en la app. Si mañana cambia un tope, esta pantalla
+   cambia sola. Una lista escrita aparte se desincroniza el primer día
+   y termina prometiendo algo que la app no da.                      */
+function _puntosDelPlan(P){
+  var t=P.tope, l=[];
+  function n(v, uno, muchos, porMes){
+    if(v===-1) return 'Sin tope de '+muchos;
+    if(!v) return null;
+    return v+' '+(v===1?uno:muchos)+(porMes&&P.porMes[porMes]?' al mes':'');
+  }
+  l.push(n(t.trabajador,'trabajador','trabajadores'));
+  l.push(n(t.kardex,'entrega de EPP','entregas de EPP','kardex'));
+  l.push(n(t.reporte,'reporte','reportes','reporte'));
+  l.push(n(t.escaneo,'documento escaneado','documentos escaneados','escaneo'));
+  l.push(P.charlas===-1 ? 'Todas las charlas de 5 minutos' : (P.charlas? P.charlas+' charlas de 5 minutos':null));
+  l.push(P.temas===-1 ? 'Las 42 capacitaciones, con constancia firmada'
+        : (P.temas? P.temas+' capacitaciones con constancia':null));
+  l.push(P.gestores>1 ? ('Hasta '+P.gestores+' personas en la gestión') : 'Una sola persona');
+  var llaves=[['qr_risst','QR del RISST'],['qr_pets','QR de PETS'],['qr_iperc','QR de IPERC'],
+              ['msds','Hojas MSDS'],['amonestaciones','Amonestaciones'],
+              ['credencial','Credenciales con QR'],['qr_credencial','Credenciales con QR'],
+              ['semanal','Informe semanal de HHT'],['simulacros','Simulacros'],
+              ['campanas','Campañas'],['constancias','Constancias'],
+              ['carpetas','Las seis carpetas del sistema de gestión']];
+  var puestas={};
+  llaves.forEach(function(p){
+    if(P.puede[p[0]] && !puestas[p[1]]){ puestas[p[1]]=1; l.push(p[1]); }
+  });
+  return l.filter(Boolean);
+}
+function pintarPlanes(){
+  var c=$('planes-cuerpo'); if(!c) return;
+  var A=planActual(), pl=planLocal();
+  var h='';
+  if(pl.vence && A.orden>0){
+    h+='<div class="aviso" style="margin-bottom:14px">Tu plan <b>'+esc(A.nombre)+'</b> vale hasta el '+
+       fechaLarga(String(pl.vence).slice(0,10))+'. Si renuevas antes, los días se suman.</div>';
+  }
+  PLANES.forEach(function(P){
+    var esMio = (P.orden===A.orden);
+    var esSig = (P.orden===A.orden+1);
+    var chip = esMio ? '<span class="chip a">Tu plan</span>'
+             : (esSig ? '<span class="chip b">El siguiente</span>' : '');
+    h+='<div class="plan-t'+(esMio?' tuyo':(esSig?' sig':''))+'">'+
+       '<div class="cab"><span class="nom">'+esc(P.nombre)+'</span>'+chip+
+       '<span class="pre">'+(P.precio? 'S/ '+num2(P.precio)+'<small> / mes</small>' : 'Gratis')+'</span></div>'+
+       '<ul>'+_puntosDelPlan(P).map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>';
+    if(!esMio && P.orden>0){
+      h+='<button class="btn sec" style="margin:12px 0 0" onclick="pedirCodigo(\'\')">'+
+         (P.orden>A.orden ? 'Tengo un código de '+esc(P.nombre) : 'Cambiar a '+esc(P.nombre))+'</button>';
+    }
+    h+='</div>';
+  });
+  h+='<p class="sub" style="margin-top:14px">Los códigos se compran en '+
+     '<b>descarganomaspe.github.io</b> y se activan aquí mismo. Cada uno dura un mes.</p>';
+  c.innerHTML=h;
+}
+/* S/ 19.90, no S/ 19.9: en un precio el centavo se escribe. */
+function num2(v){ return (v % 1 === 0) ? String(v) : v.toFixed(2); }
 function duenioId(){
   var e=empActiva();
   if(e && e.id) return e.id;
@@ -8852,19 +9012,28 @@ function supItemDom(it, ruta){
    lo tiene, no aparece bloqueado — no aparece. Y de los que si tiene tu
    plan, el usuario elige cuales quiere ver (Configuracion). Seis huecos,
    dos filas de tres.                                                  */
+/* El orden NO es decorativo: primero lo que se hace todos los días al
+   pie de la obra, después lo de la gente, después lo que se entrega
+   cada semana o cada mes. Así el pulgar encuentra lo de siempre sin
+   leer, y lo de fin de mes no estorba a las siete de la mañana.
+   «grupo» ordena; «desde» dice a partir de qué plan existe. */
 var CATALOGO_ACCESOS = [
-  {k:'charlas',   ic:'🗓️', et:'Programa<br>de charlas',       ir:'p-programa',     color:'a-oro',   desde:0, def:[0,1,2,3,4]},
-  {k:'kardex',    ic:'🦺', et:'Registrar<br>kardex',           ir:'p-kardex',       color:'a-azul',  desde:0, def:[0,1,2,3,4]},
-  {k:'personal',  ic:'👷', et:'Mi<br>personal',                ir:'p-trabajadores', color:'a-verde', desde:0, def:[0,1,2]},
-  {k:'reporte',   ic:'🚨', et:'Reportar acto<br>o condición',  ir:'p-reporte',      color:'a-rojo',  desde:0, def:[0,1,2,3,4]},
-  {k:'cuadrilla', ic:'🎟️', et:'Código de<br>cuadrilla',        ir:'p-generar',      color:'a-viol',  desde:0, def:[0,1]},
-  {k:'risst',     ic:'📌', et:'Carteles<br>QR',                fn:'abrirRisst',     color:'a-gris',  desde:1, def:[1,2]},
-  {k:'temas',     ic:'🎓', et:'Capacitación<br>por tema',      ir:'p-temas',        color:'a-verde', desde:2, def:[2]},
-  {k:'credencial',ic:'🪪', et:'Credenciales<br>y QR',          ir:'p-credencial',   color:'a-viol',  desde:3, def:[3,4]},
-  {k:'amonesta',  ic:'⚠️', et:'Amonesta-<br>ciones',           ir:'p-amonestaciones',color:'a-gris', desde:3, def:[3]},
-  {k:'semanal',   ic:'📈', et:'Reporte<br>semanal',            ir:'p-semanal',      color:'a-verde', desde:3, def:[3,4]},
-  {k:'inspec',    ic:'✅', et:'Inspec-<br>ciones',             ir:'p-inspec',       color:'a-gris',  desde:3, def:[4]},
-  {k:'asisten',   ic:'📷', et:'Escanear<br>documento',         ir:'p-escaneos',     color:'a-azul',  desde:0, def:[0,1,2,3,4]}
+  /* ── 1. lo de todos los días ── */
+  {k:'charlas',   ic:'🗓️', et:'Programa<br>de charlas',       ir:'p-programa',      color:'a-oro',   desde:0, grupo:1},
+  {k:'temas',     ic:'🎓', et:'Capacitación<br>por tema',      ir:'p-temas',         color:'a-verde', desde:0, grupo:1},
+  {k:'kardex',    ic:'🦺', et:'Registrar<br>kardex',           ir:'p-kardex',        color:'a-azul',  desde:0, grupo:1},
+  {k:'reporte',   ic:'🚨', et:'Reportar acto<br>o condición',  ir:'p-reporte',       color:'a-rojo',  desde:0, grupo:1},
+  {k:'asisten',   ic:'📷', et:'Escanear<br>documento',         ir:'p-escaneos',      color:'a-azul',  desde:0, grupo:1},
+  /* ── 2. la gente ── */
+  {k:'personal',  ic:'👷', et:'Mi<br>personal',                ir:'p-trabajadores',  color:'a-verde', desde:0, grupo:2},
+  {k:'cuadrilla', ic:'🎟️', et:'Código de<br>cuadrilla',        ir:'p-generar',       color:'a-viol',  desde:0, grupo:2},
+  {k:'credencial',ic:'🪪', et:'Credenciales<br>y QR',          ir:'p-credencial',    color:'a-viol',  desde:3, grupo:2},
+  {k:'amonesta',  ic:'⚠️', et:'Amonesta-<br>ciones',           ir:'p-amonestaciones',color:'a-gris',  desde:3, grupo:2},
+  /* ── 3. lo que se entrega ── */
+  {k:'inspec',    ic:'✅', et:'Inspec-<br>ciones',             ir:'p-inspec',        color:'a-gris',  desde:3, grupo:3},
+  {k:'semanal',   ic:'📈', et:'Reporte<br>semanal',            ir:'p-semanal',       color:'a-verde', desde:3, grupo:3},
+  {k:'msds',      ic:'🧴', et:'Hojas<br>MSDS',                 ir:'p-msds',          color:'a-azul',  desde:3, grupo:3},
+  {k:'risst',     ic:'📌', et:'Carteles<br>QR',                fn:'abrirRisst',      color:'a-gris',  desde:1, grupo:3}
 ];
 var LS_MIS_ACCESOS='sstc_mis_accesos';
 /* los que tu plan te deja tener */
@@ -8872,16 +9041,16 @@ function accesosDelPlan(){
   var o=planActual().orden;
   return CATALOGO_ACCESOS.filter(function(a){ return a.desde <= o; });
 }
-/* los seis que se ven: los que elegiste, o los de fabrica de tu plan */
+/* TODOS los del plan, en orden. Antes se cortaba en seis, y el corte se
+   comía justo «Capacitación por tema» en SSOMA: el que paga 89 soles no
+   veía en la portada lo que la app hace desde el primer día. Si el plan
+   te lo da, sale. Los círculos son chicos y caben; esconder lo que ya
+   pagaste para «no cargar la pantalla» es peor que la pantalla cargada. */
 function accesosVisibles(){
-  var o=planActual().orden, hay=accesosDelPlan();
-  var mios=leer(LS_MIS_ACCESOS,null);
-  if(mios && mios.length){
-    var elegidos=hay.filter(function(a){ return mios.indexOf(a.k)>-1; });
-    if(elegidos.length) return elegidos.slice(0,6);
-  }
-  var def=hay.filter(function(a){ return a.def.indexOf(o)>-1; });
-  return (def.length ? def : hay).slice(0,6);
+  return accesosDelPlan().slice().sort(function(a,b){
+    if(a.grupo!==b.grupo) return a.grupo-b.grupo;
+    return 0;
+  });
 }
 /* compatibilidad: lo que habia antes */
 var ACCESOS_RAPIDOS = CATALOGO_ACCESOS;
@@ -12598,12 +12767,13 @@ function pintarEmpHome(){
      demás no salen bloqueadas: no salen. */
   if(puede('carpetas')){
     EMP_ESTRUCTURA.forEach(function(g,gi){ c.appendChild(empGrupoDom(g,gi)); });
-  } else {
-    c.appendChild(invitaCarpetasDom());
   }
-  /* La banda del plan va AL FINAL, no arriba: lo primero que se ve al
-     entrar tiene que ser la obra, no el aviso de cuánto cuesta. */
-  var banda=document.createElement('div'); banda.innerHTML=bandaLiteEmpresa();
+  /* Antes aquí abajo había dos globos: uno vendiendo las carpetas y otro
+     con el detalle del plan. Dos avisos de precio en la casa de alguien
+     que ya pagó. Ahora va UNA línea discreta con lo único que de verdad
+     importa a diario —qué plan tienes y hasta cuándo— y la comparación
+     completa vive en su propia pantalla, para el día que quiera verla. */
+  var banda=document.createElement('div'); banda.innerHTML=lineaDelPlan();
   banda.style.marginTop='22px';
   c.appendChild(banda);
   /* el número rojo de reportes sin atender, donde el ojo ya mira */
