@@ -16,7 +16,95 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="application-name" content="OBRASST">
 <style>
-:root{--fondo:#0B2A3A;--panel:#12384C;--oro:#F5B700;--tinta:#EAF2F6;--gris:#8FA9B8;--ok:#2FBF71;--mal:#E5484D}
+:root{--fondo:#0B2A3A;--panel:#12384C;--oro:#F5B700;--tinta:#EAF2F6;--gris:#8FA9B8;--ok:#2FBF71;--mal:#E5484D;
+  /* --w es el "velo": el color con el que se aclaran cajas, bordes y campos.
+     En obra (oscuro) es blanco; en papel (claro) es casi negro, y el mismo
+     velo que aclaraba pasa a oscurecer. Un solo numero cambia toda la app. */
+  --w:255,255,255}
+
+/* ══ APARIENCIA ═══════════════════════════════════════════════════
+   Tres modos. El de siempre (obra), uno de papel para leer con sol, y
+   uno de alto contraste para el que ya no ve bien la pantalla chica.
+   Se elige en Ajustes ▸ Apariencia y se guarda en el celular. */
+html.t-claro{--w:16,26,34;--fondo:#FFFFFF;--panel:#FFFFFF;--oro:#8A6100;
+  --tinta:#0D1620;--gris:#4C5D6A;--ok:#127A47;--mal:#B72F2B}
+html.t-claro body{background:#FFFFFF}
+html.t-claro #fondo,html.t-claro #haz,html.t-claro #tinte{display:none}
+html.t-claro .vidrio{background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:0 1px 2px rgba(16,26,34,.07), 0 0 0 1px rgba(16,26,34,.11)}
+html.t-claro .vidrio::before{display:none}
+html.t-claro .tarj:hover{box-shadow:0 2px 10px rgba(16,26,34,.12), 0 0 0 1.4px rgba(138,97,0,.45)}
+html.t-claro input,html.t-claro select,html.t-claro textarea{background:#fff;border-color:rgba(16,26,34,.24)}
+html.t-claro .btn.sec{background:#fff;box-shadow:inset 0 0 0 1.3px rgba(16,26,34,.24)}
+html.t-claro .hoja{background:#fff;box-shadow:0 -10px 40px rgba(16,26,34,.22)}
+html.t-claro .caja.lg-doc{background:#fff}
+html.t-claro .kx-top,html.t-claro .esc-selbar,html.t-claro .caja.vidrio{background:#fff}
+html.t-claro .calc-caja{background:#fff;border-color:rgba(16,26,34,.18)}
+html.t-claro .calc-x,html.t-claro .calc-tec button,html.t-claro #pres-bar button{color:var(--tinta)}
+html.t-claro .esc-mover button{color:var(--tinta)}
+html.t-claro .esc-p{border-color:rgba(16,26,34,.7);background:rgba(255,255,255,.7);color:var(--tinta)}
+html.t-claro .avisof{background:rgba(16,26,34,.34)}
+html.t-claro .avisof .caja{background:#fff}
+/* alto contraste: papel, pero sin medias tintas */
+html.t-alto{--w:0,0,0;--fondo:#FFFFFF;--panel:#FFFFFF;--oro:#6E4C00;
+  --tinta:#000000;--gris:#333333;--ok:#0B6B3A;--mal:#A11B17}
+html.t-alto body{background:#FFFFFF}
+html.t-alto #fondo,html.t-alto #haz,html.t-alto #tinte{display:none}
+html.t-alto .vidrio{background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:0 0 0 2px #000}
+html.t-alto .vidrio::before{display:none}
+html.t-alto input,html.t-alto select,html.t-alto textarea{background:#fff;border:2px solid #000}
+html.t-alto .btn.sec{background:#fff;box-shadow:inset 0 0 0 2px #000}
+html.t-alto .hoja,html.t-alto .caja.lg-doc,html.t-alto .kx-top,
+html.t-alto .esc-selbar,html.t-alto .caja.vidrio,html.t-alto .avisof .caja{background:#fff}
+html.t-alto .calc-caja{background:#fff}
+html.t-alto .calc-x,html.t-alto .calc-tec button,html.t-alto #pres-bar button,
+html.t-alto .esc-mover button{color:#000}
+html.t-alto .sub,html.t-alto .tarj small,html.t-alto label{color:#333}
+/* Textos que venían clavados en blanco o gris claro sobre azul: en los
+   temas de papel hay que devolverlos al color del tema o se pierden
+   contra el fondo blanco. Es exactamente lo que pasaba en «Privacidad
+   y condiciones»: letra blanca sobre hoja blanca. */
+html.t-claro .lg-hero b,html.t-claro .lg-card b,html.t-claro .lg-doc h3,html.t-claro .lg-doc b,html.t-claro .avisof h3,html.t-claro .lg-check a,html.t-claro .lg-doc .ley{color:var(--tinta)}
+html.t-claro .lg-hero p,html.t-claro .lg-doc p,html.t-claro .lg-doc li,html.t-claro .lg-tabla td,html.t-claro .lg-no li,html.t-claro .lg-check span,html.t-claro .plan-t li,html.t-claro .avisof p,html.t-claro .kx-fila .num,html.t-claro .cartel .c-obra,html.t-claro #pres,html.t-claro #pres .pres-sub,html.t-claro .esc-m{color:var(--tinta)}
+html.t-claro .lg-card small,html.t-claro .lg-card .fl,html.t-claro .lg-tabla th,html.t-claro .lg-fecha,html.t-claro .calc-exp,html.t-claro .calc-tec button.fn,html.t-claro .calc-pie{color:var(--gris)}
+html.t-claro .lg-hero,html.t-claro .lg-card,html.t-claro .lg-card:hover,html.t-claro .lg-no,html.t-claro .lg-check,html.t-claro #pres,html.t-claro .esc-m{background:#F3F6F8;border-color:rgba(16,26,34,.14)}
+html.t-claro .lg-no li span{color:var(--ok)}
+html.t-claro .cartel{background:#fff;color:#0B2A3A}
+html.t-claro .lg-check a{text-decoration:underline}
+html.t-alto .lg-hero b,html.t-alto .lg-card b,html.t-alto .lg-doc h3,html.t-alto .lg-doc b,html.t-alto .avisof h3,html.t-alto .lg-check a,html.t-alto .lg-doc .ley{color:#000}
+html.t-alto .lg-hero p,html.t-alto .lg-doc p,html.t-alto .lg-doc li,html.t-alto .lg-tabla td,html.t-alto .lg-no li,html.t-alto .lg-check span,html.t-alto .plan-t li,html.t-alto .avisof p,html.t-alto .kx-fila .num,html.t-alto .cartel .c-obra,html.t-alto #pres,html.t-alto #pres .pres-sub,html.t-alto .esc-m{color:#000}
+html.t-alto .lg-card small,html.t-alto .lg-card .fl,html.t-alto .lg-tabla th,html.t-alto .lg-fecha,html.t-alto .calc-exp,html.t-alto .calc-tec button.fn,html.t-alto .calc-pie{color:#333}
+html.t-alto .lg-hero,html.t-alto .lg-card,html.t-alto .lg-card:hover,html.t-alto .lg-no,html.t-alto .lg-check,html.t-alto #pres,html.t-alto .esc-m{background:#FFFFFF;border-color:#000}
+html.t-alto .lg-no li span{color:var(--ok)}
+html.t-alto .cartel{background:#fff;color:#0B2A3A}
+html.t-alto .lg-check a{text-decoration:underline}
+/* la barra flotante de arriba también cambia de tema */
+html.t-claro .navbar{background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(255,255,255,0))}
+html.t-claro .nav-b{color:var(--tinta);-webkit-backdrop-filter:none;backdrop-filter:none;
+  background:#fff;border:1px solid rgba(16,26,34,.20)}
+html.t-claro .nav-donde{color:var(--gris)}
+html.t-alto .navbar{background:#fff}
+html.t-alto .nav-b{color:#000;-webkit-backdrop-filter:none;backdrop-filter:none;
+  background:#fff;border:2px solid #000}
+html.t-alto .nav-donde{color:#333}
+/* sin fondo animado: el video y el haz se apagan (y el celular respira) */
+html.sin-fondo #haz{display:none}
+html.sin-fondo #fondo video{display:none}
+html.sin-fondo .vidrio{-webkit-backdrop-filter:none;backdrop-filter:none}
+/* letra mas grande: escala toda la pantalla, no solo el texto */
+html.f-g{zoom:1.12}
+/* la lista de opciones de apariencia */
+.ap-op{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+  background:rgba(var(--w),.045);border:1px solid rgba(var(--w),.13);border-radius:14px;
+  padding:13px 14px;margin-bottom:9px;color:var(--tinta);font:inherit}
+.ap-op .tic{flex:0 0 22px;height:22px;border-radius:999px;border:1.5px solid rgba(var(--w),.28);
+  display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800}
+.ap-op.on{border-color:var(--oro);box-shadow:0 0 0 1px var(--oro)}
+.ap-op.on .tic{background:var(--oro);border-color:var(--oro);color:#1a1206}
+.ap-op .tx b{display:block;font-size:15px}
+.ap-op .tx small{display:block;color:var(--gris);font-size:12.5px;line-height:1.4;margin-top:2px}
+html.f-xg{zoom:1.26}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{min-height:100%}
 body{background:#071C27;color:var(--tinta);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.5;position:relative;overflow-x:hidden}
@@ -36,12 +124,12 @@ body{background:#071C27;color:var(--tinta);font-family:system-ui,-apple-system,'
 @media (prefers-reduced-motion:reduce){#haz{animation:none}}
 .wrap{max-width:560px;margin:0 auto;padding:18px 16px 40px;position:relative;z-index:1}
 /* --- vidrio: el mismo truco de Talentos, en tono profesional --- */
-.vidrio{position:relative;background:rgba(255,255,255,.045);
+.vidrio{position:relative;background:rgba(var(--w),.045);
   -webkit-backdrop-filter:blur(14px) saturate(120%);backdrop-filter:blur(14px) saturate(120%);
-  border:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.16), 0 10px 30px rgba(0,0,0,.28)}
+  border:none;box-shadow:inset 0 1px 0 rgba(var(--w),.16), 0 10px 30px rgba(0,0,0,.28)}
 .vidrio::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1.2px;pointer-events:none;
-  background:linear-gradient(180deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.10) 26%,
-             rgba(255,255,255,0) 52%, rgba(245,183,0,.16) 100%);
+  background:linear-gradient(180deg, rgba(var(--w),.34) 0%, rgba(var(--w),.10) 26%,
+             rgba(var(--w),0) 52%, rgba(245,183,0,.16) 100%);
   -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite:xor;mask-composite:exclude}
 .pantalla{display:none}.pantalla.activa{display:block}
@@ -53,12 +141,12 @@ h2{font-size:19px;margin-bottom:10px}
 body.calc-abierta #p-juego{padding-bottom:340px}
 body.calc-abierta #enunciado{box-shadow:0 0 0 1.5px rgba(230,168,45,.45)}
 #calc{position:fixed;left:50%;bottom:0;transform:translate(-50%,110%);width:min(420px,100%);
-  z-index:61;background:#0f1720;border:1px solid rgba(255,255,255,.13);
+  z-index:61;background:#0f1720;border:1px solid rgba(var(--w),.13);
   border-radius:20px 20px 0 0;padding:11px 13px 14px;
   transition:transform .28s cubic-bezier(.16,1,.3,1);box-shadow:0 -18px 50px rgba(0,0,0,.6)}
 #calc.abierta{transform:translate(-50%,0)}
 .calc-cab{display:flex;align-items:center;justify-content:space-between;font-size:14px;margin-bottom:10px}
-.calc-x{background:rgba(255,255,255,.09);border:0;color:#fff;border-radius:999px;
+.calc-x{background:rgba(var(--w),.09);border:0;color:#fff;border-radius:999px;
   width:30px;height:30px;font-size:14px;cursor:pointer}
 .calc-exp{min-height:20px;text-align:right;font-size:14px;color:#9fb0c0;
   font-family:ui-monospace,Menlo,monospace;word-break:break-all}
@@ -66,8 +154,8 @@ body.calc-abierta #enunciado{box-shadow:0 0 0 1.5px rgba(230,168,45,.45)}
   font-family:ui-monospace,Menlo,monospace;letter-spacing:-.02em;word-break:break-all}
 .calc-tec{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .calc-tec button{height:44px;border:0;border-radius:12px;font-size:18px;font-weight:600;
-  background:rgba(255,255,255,.07);color:#fff;cursor:pointer;transition:background .12s}
-.calc-tec button:active{background:rgba(255,255,255,.2)}
+  background:rgba(var(--w),.07);color:#fff;cursor:pointer;transition:background .12s}
+.calc-tec button:active{background:rgba(var(--w),.2)}
 .calc-tec button.op{background:rgba(230,168,45,.16);color:#f0c26a}
 .calc-tec button.eq{background:linear-gradient(to bottom,#2f7d4f,#1d5a37)}
 .calc-tec button.fn{font-size:15px;color:#9fb0c0}
@@ -78,23 +166,23 @@ body.calc-abierta #enunciado{box-shadow:0 0 0 1.5px rgba(230,168,45,.45)}
   background:linear-gradient(180deg,rgba(6,20,28,.86),rgba(6,20,28,0));
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .nav-b{-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
-  background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.24);
+  background:rgba(var(--w),.13);border:1px solid rgba(var(--w),.24);
   border-radius:999px;color:#EAF2F6;font:inherit;font-size:14px;font-weight:700;
   padding:10px 16px;cursor:pointer;line-height:1;pointer-events:auto;
   touch-action:manipulation;-webkit-user-select:none;user-select:none}
-.nav-b:active{background:rgba(255,255,255,.24);transform:scale(.96)}
+.nav-b:active{background:rgba(var(--w),.24);transform:scale(.96)}
 .nav-donde{margin-left:auto;font-size:12px;color:rgba(234,242,246,.62);
   letter-spacing:.06em;text-transform:uppercase;font-weight:700}
-body.connav .env{padding-top:64px}
-body.connav .pantalla{padding-top:6px}
+body.connav .wrap{padding-top:66px}
+body.connav .pantalla{padding-top:2px}
 .tarj{border-radius:16px;padding:15px;margin-bottom:11px;cursor:pointer;display:block;width:100%;text-align:left;color:inherit;font:inherit;transition:transform .18s ease, box-shadow .18s ease}
 .tarj:active{transform:scale(.985)}
-.tarj:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 14px 34px rgba(0,0,0,.34), 0 0 0 1px rgba(245,183,0,.14)}
+.tarj:hover{box-shadow:inset 0 1px 0 rgba(var(--w),.22), 0 14px 34px rgba(0,0,0,.34), 0 0 0 1px rgba(245,183,0,.14)}
 .tarj b{display:block;font-size:16px;margin-bottom:3px}
 .tarj small{color:var(--gris);font-size:13px}
 .tarj.bloq{opacity:.55}
 .btn{display:block;width:100%;padding:15px;border:none;border-radius:14px;font:inherit;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;background:linear-gradient(180deg,#FFC933,#F5B700);color:#08222F;box-shadow:0 8px 26px rgba(245,183,0,.26)}
-.btn.sec{background:rgba(255,255,255,.05);border:none;color:var(--tinta);box-shadow:inset 0 0 0 1.2px rgba(255,255,255,.16)}
+.btn.sec{background:rgba(var(--w),.05);border:none;color:var(--tinta);box-shadow:inset 0 0 0 1.2px rgba(var(--w),.16)}
 .btn:disabled{opacity:.45}
 .op{display:block;width:100%;text-align:left;border-radius:14px;padding:14px 15px;margin-bottom:9px;font:inherit;font-size:15px;color:inherit;cursor:pointer;transition:box-shadow .2s ease, transform .15s ease}
 .op:active{transform:scale(.99)}
@@ -109,15 +197,15 @@ body.connav .pantalla{padding-top:6px}
 .tip h3{color:var(--ok)}
 .esc{background:rgba(245,183,0,.07);border-left:3px solid var(--oro);border-radius:10px;padding:11px 13px;font-size:14px;margin-bottom:14px}
 .barra{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--gris);margin-bottom:12px}
-.prog{height:5px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden;margin-bottom:16px}
+.prog{height:5px;background:rgba(var(--w),.12);border-radius:99px;overflow:hidden;margin-bottom:16px}
 .prog i{display:block;height:100%;background:var(--oro);transition:width .3s}
 .aviso{background:rgba(245,183,0,.10);border:1px solid rgba(245,183,0,.28);border-radius:12px;padding:12px;font-size:13.5px;margin-bottom:14px}
 .nota{font-size:36px;font-weight:800;color:var(--oro)}
-.fila{display:flex;gap:9px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.10);font-size:14px}
+.fila{display:flex;gap:9px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(var(--w),.10);font-size:14px}
 .fila:last-child{border:none}
 .pin{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0}
 .pin.ok{background:var(--ok);color:#04220f}.pin.mal{background:var(--mal);color:#fff}
-input,select,textarea{width:100%;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.16);border-radius:10px;padding:12px;color:var(--tinta);font:inherit;font-size:15px;margin-bottom:10px}
+input,select,textarea{width:100%;background:rgba(var(--w),.05);border:1.5px solid rgba(var(--w),.16);border-radius:10px;padding:12px;color:var(--tinta);font:inherit;font-size:15px;margin-bottom:10px}
 label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .pie{color:var(--gris);font-size:12px;text-align:center;margin-top:22px;line-height:1.6}
 
@@ -129,7 +217,7 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .ch-cab .eti{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--oro);font-weight:700}
 .ch-cab h1{font-size:25px;line-height:1.18;margin:8px 0 0}
 .ch-bloque{border-radius:14px;padding:16px 18px;margin-bottom:11px;
-  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09)}
+  background:rgba(var(--w),.045);border:1px solid rgba(var(--w),.09)}
 .ch-tit{font-size:11px;letter-spacing:.09em;text-transform:uppercase;
   color:var(--gris);font-weight:700;margin-bottom:8px}
 .ch-bloque p{margin:0;font-size:15px;line-height:1.65}
@@ -145,8 +233,8 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
   font-size:12px;font-weight:800;margin-top:2px}
 .ch-norma{font-size:12.5px;color:var(--gris);text-align:center;margin:14px 0 6px}
 .ch-ejemplo{background:rgba(90,160,255,.07);border-color:rgba(90,160,255,.28)}
-.ch-prep{margin:14px 0 4px;border-radius:14px;border:1px solid rgba(255,255,255,.1);
-         background:rgba(255,255,255,.03);overflow:hidden}
+.ch-prep{margin:14px 0 4px;border-radius:14px;border:1px solid rgba(var(--w),.1);
+         background:rgba(var(--w),.03);overflow:hidden}
 .ch-prep>summary{cursor:pointer;list-style:none;padding:13px 16px;font-size:13px;font-weight:600;
          color:var(--gris)}
 .ch-prep>summary::-webkit-details-marker{display:none}
@@ -159,11 +247,11 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 /* --- elegir la charla del día: primero la categoría, después el título --- */
 .ch-chips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 11px}
 .ch-chip{padding:7px 11px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1;
-  border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.04);color:var(--gris);cursor:pointer}
+  border:1px solid rgba(var(--w),.13);background:rgba(var(--w),.04);color:var(--gris);cursor:pointer}
 .ch-chip.on{background:rgba(214,178,92,.16);border-color:rgba(214,178,92,.55);color:var(--oro)}
 .ch-chip i{font-style:normal;opacity:.6;margin-left:5px;font-weight:700}
 .ch-op{display:block;width:100%;text-align:left;padding:10px 13px;margin-bottom:6px;border-radius:12px;
-  border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);color:var(--tinta);
+  border:1px solid rgba(var(--w),.09);background:rgba(var(--w),.03);color:var(--tinta);
   font-size:14.5px;line-height:1.35;cursor:pointer;font-family:inherit}
 .ch-op.on{border-color:rgba(214,178,92,.6);background:rgba(214,178,92,.13)}
 .ch-op small{display:block;color:var(--gris);font-size:11.5px;margin-top:4px;line-height:1.35}
@@ -179,14 +267,14 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .cod-enlace{font-size:11.5px;color:var(--gris);word-break:break-all;line-height:1.5;margin:6px 0 0}
 .cod-pie{font-size:12.5px;color:var(--gris);margin:8px 0 0;line-height:1.55}
 .ev-dato{display:flex;justify-content:space-between;gap:12px;padding:7px 0;
-  border-bottom:1px solid rgba(255,255,255,.07);font-size:14px}
+  border-bottom:1px solid rgba(var(--w),.07);font-size:14px}
 .ev-dato:last-child{border-bottom:0}
 .ev-dato b{color:var(--gris);font-weight:600;flex:0 0 auto}
 .ev-dato span{text-align:right}
 /* --- el inicio, por secciones: cada cosa con su título y su sitio --- */
 .sec-tit{font-family:system-ui,sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--gris);margin:20px 2px 9px;display:flex;align-items:center;gap:9px}
-.sec-tit::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.09)}
+.sec-tit::after{content:'';flex:1;height:1px;background:rgba(var(--w),.09)}
 .estado-chip{display:block;width:100%;text-align:left;border-radius:13px;padding:11px 14px;margin:2px 0 2px;
   font-family:system-ui,sans-serif;font-size:13.5px;line-height:1.5;cursor:pointer;border:0;color:var(--tinta)}
 .estado-chip.ok{background:rgba(47,191,113,.09);box-shadow:inset 0 0 0 1.2px rgba(47,191,113,.32);cursor:default}
@@ -194,15 +282,15 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .fila-ajustes{display:flex;gap:8px;flex-wrap:wrap}
 .fila-ajustes .btn{flex:1 1 45%;min-width:142px;font-size:13.5px;padding:12px 10px;margin-bottom:0}
 /* Cerrar sesión va aparte: no se busca entre los ajustes, se busca al final. */
-.salir-caja{margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.09)}
+.salir-caja{margin-top:16px;padding-top:14px;border-top:1px solid rgba(var(--w),.09)}
 .salir-caja .quien{font-size:12.5px;color:var(--gris);margin:0 0 9px;text-align:center}
 .salir-caja .btn{width:100%;margin:0;font-size:14.5px;padding:13px 10px}
 /* --- menús anidados: aprietas el título y salen sus opciones --- */
 .grupo{margin-bottom:11px}
 .grupo-cab{display:flex;align-items:center;gap:11px;width:100%;text-align:left;cursor:pointer;
   font:inherit;color:var(--tinta);border:0;border-radius:15px;padding:15px 16px;
-  background:rgba(255,255,255,.05);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);
-  box-shadow:inset 0 0 0 1.1px rgba(255,255,255,.10), 0 5px 20px rgba(0,0,0,.22)}
+  background:rgba(var(--w),.05);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);
+  box-shadow:inset 0 0 0 1.1px rgba(var(--w),.10), 0 5px 20px rgba(0,0,0,.22)}
 .grupo-cab .ic{font-size:19px;line-height:1}
 .grupo-cab .tx{flex:1;font-weight:700;font-size:15.5px}
 .grupo-cab .tx small{display:block;font-weight:400;font-size:12px;color:var(--gris);margin-top:1px;letter-spacing:0;text-transform:none}
@@ -221,7 +309,7 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
    app: fondo propio, texto corto y un solo botón. */
 /* la comparación de planes */
 .plan-t{border:1.5px solid rgba(143,169,184,.20);border-radius:16px;padding:16px;margin-bottom:11px;
-  background:rgba(255,255,255,.03)}
+  background:rgba(var(--w),.03)}
 .plan-t.tuyo{border-color:rgba(47,158,111,.6);background:rgba(47,158,111,.08)}
 .plan-t.sig{border-color:rgba(245,183,0,.55);background:rgba(245,183,0,.07)}
 .plan-t .cab{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
@@ -248,16 +336,53 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
   animation:avisoEntra .22s ease}
 @keyframes avisoEntra{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
 .avisof .ic{font-size:34px;line-height:1}
-.avisof h3{font-size:19px;color:#fff;margin:10px 0 6px;line-height:1.25}
+.avisof h3{font-size:19px;color:#fff;margin:10px 0 6px;line-height:1.25;
+  text-transform:none;letter-spacing:0;font-weight:700}
 .avisof p{font-size:14.5px;color:#BDD3DE;line-height:1.45;margin:0}
-.avisof .btn{margin-top:16px}
+/* la cámara ocupa toda la pantalla: en obra se enfoca con guantes */
+.cam{position:fixed;inset:0;z-index:2500;display:none;background:#000}
+.cam.abierta{display:block}
+.cam video{width:100%;height:100%;object-fit:cover;background:#000}
+.cam-arriba{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;
+  justify-content:space-between;gap:10px;padding:14px 14px 22px;color:#fff;font-size:15px;
+  background:linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,0))}
+.cam-x{width:42px;height:42px;border-radius:999px;border:0;background:rgba(0,0,0,.42);
+  color:#fff;font-size:17px;cursor:pointer;font-family:inherit}
+.cam-abajo{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;
+  justify-content:space-between;padding:20px 26px 34px;
+  background:linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0))}
+.cam-disparo{width:74px;height:74px;border-radius:999px;border:5px solid #fff;
+  background:rgba(255,255,255,.28);cursor:pointer}
+.cam-disparo:active{transform:scale(.93);background:#fff}
+.cam-gal{width:48px;height:48px;border-radius:14px;border:0;background:rgba(0,0,0,.42);
+  color:#fff;font-size:21px;cursor:pointer}
+.cam-msg{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+  text-align:center;color:#fff;font-size:15px;padding:0 30px;text-shadow:0 1px 6px #000}
+.cam-guia{position:absolute;inset:12% 7%;border:2px dashed rgba(255,255,255,.5);
+  border-radius:12px;display:none;pointer-events:none}
+.cam.doc .cam-guia{display:block}
+.tostada{position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);
+  z-index:2600;background:rgba(10,26,36,.94);color:#fff;font-size:14px;
+  padding:11px 18px;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.4);
+  opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;
+  max-width:88vw;text-align:center}
+.tostada.vista{opacity:1;transform:translate(-50%,0)}
+html.t-claro .tostada,html.t-alto .tostada{background:#0D1620;color:#fff}
+/* dos cosas que van juntas, una al lado de la otra. La clase se usaba
+   en seis sitios y NUNCA se había escrito su regla: los pares salían
+   uno debajo del otro, ocupando el doble de pantalla. */
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:end}
+.dos>.btn{margin:0}
+@media(max-width:340px){.dos{grid-template-columns:1fr}}
+.avisof-bots{display:flex;gap:9px;margin-top:16px}
+.avisof-bots .btn{margin:0;flex:1}
 .accesos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 6px;
   padding:2px 2px 10px;margin:2px 0 14px}
 @media(min-width:560px){.accesos{grid-template-columns:repeat(6,1fr)}}
 .acceso{width:100%;background:none;border:0;padding:0;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--tinta);font-family:inherit}
 .acceso .aro{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:26px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.13);
+  font-size:26px;background:rgba(var(--w),.05);border:1.5px solid rgba(var(--w),.13);
   transition:transform .12s ease}
 .acceso:active .aro{transform:scale(.93)}
 .acceso .et{font-size:11px;line-height:1.25;text-align:center;color:var(--gris);letter-spacing:.01em}
@@ -552,7 +677,7 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .lg-hero b{display:block;font-size:19px;line-height:1.25;color:#fff;margin-bottom:7px}
 .lg-hero p{font-size:14.5px;line-height:1.45;color:#c8d8e2;margin:0}
 .lg-card{display:flex;gap:13px;align-items:flex-start;width:100%;text-align:left;
-  background:rgba(18,56,76,.55);border:1px solid rgba(255,255,255,.10);border-radius:14px;
+  background:rgba(18,56,76,.55);border:1px solid rgba(var(--w),.10);border-radius:14px;
   padding:15px;margin-bottom:10px;cursor:pointer;color:inherit;font:inherit}
 .lg-card:hover{background:rgba(18,56,76,.78)}
 .lg-card .ic{flex:none;width:40px;height:40px;border-radius:11px;background:rgba(245,183,0,.14);
@@ -569,51 +694,51 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 /* el documento va sobre fondo casi solido: la foto de obra detras del
    texto queda bonita en el inicio, pero encima de un parrafo legal
    cansa la vista y da aire de letra chica escondida */
-.caja.lg-doc{background:rgba(9,30,42,.93);border-color:rgba(255,255,255,.13)}
+.caja.lg-doc{background:rgba(9,30,42,.93);border-color:rgba(var(--w),.13)}
 .lg-doc h3{font-family:inherit;font-size:16.5px;color:#fff;margin:20px 0 6px}
 .lg-doc h3:first-child{margin-top:4px}
 .lg-doc p{font-size:14.5px;line-height:1.55;color:#c3d3de;margin:0 0 9px}
 .lg-doc ul{margin:0 0 10px;padding-left:19px}
 .lg-doc li{font-size:14.5px;line-height:1.5;color:#c3d3de;margin-bottom:5px}
 .lg-doc b{color:#fff}
-.lg-doc .ley{display:inline-block;background:rgba(255,255,255,.08);border-radius:6px;
+.lg-doc .ley{display:inline-block;background:rgba(var(--w),.08);border-radius:6px;
   padding:1px 7px;font-size:12.5px;color:#f5d68a;margin:0 2px}
 .lg-tabla{width:100%;border-collapse:collapse;margin:4px 0 12px;font-size:13.5px}
 .lg-tabla th{text-align:left;color:#8fa5b3;font-weight:700;font-size:11.5px;letter-spacing:.06em;
-  text-transform:uppercase;padding:0 8px 7px 0;border-bottom:1px solid rgba(255,255,255,.12)}
-.lg-tabla td{padding:9px 8px 9px 0;border-bottom:1px solid rgba(255,255,255,.07);
+  text-transform:uppercase;padding:0 8px 7px 0;border-bottom:1px solid rgba(var(--w),.12)}
+.lg-tabla td{padding:9px 8px 9px 0;border-bottom:1px solid rgba(var(--w),.07);
   color:#c3d3de;vertical-align:top;line-height:1.4}
 .lg-fecha{font-size:12.5px;color:#7f95a4;margin-top:18px;padding-top:12px;
-  border-top:1px solid rgba(255,255,255,.10)}
+  border-top:1px solid rgba(var(--w),.10)}
 .lg-check{display:flex;gap:11px;align-items:flex-start;background:rgba(18,56,76,.55);
-  border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:14px;margin-top:11px;cursor:pointer}
+  border:1px solid rgba(var(--w),.12);border-radius:13px;padding:14px;margin-top:11px;cursor:pointer}
 .lg-check input{flex:none;width:22px;height:22px;margin:1px 0 0;accent-color:#f5b700}
 .lg-check span{font-size:14.5px;line-height:1.45;color:#d6e3eb}
 .lg-check a{color:#f5c542;text-decoration:underline}
-.kx-top{background:rgba(18,56,76,.55);border:1px solid rgba(255,255,255,.10);
+.kx-top{background:rgba(18,56,76,.55);border:1px solid rgba(var(--w),.10);
   border-radius:12px;padding:13px;margin-top:16px}
 .kx-fila{display:flex;align-items:flex-start;gap:9px;margin-top:11px;font-size:14px}
 .kx-fila .n{flex:none;width:22px;color:var(--gris);font-size:12px;text-align:right;line-height:20px}
 .kx-fila .et{flex:1;min-width:0;line-height:1.25}
 .kx-fila .et small{display:block;color:var(--gris);font-size:11.5px;margin-top:2px}
-.kx-fila .barra2{flex:none;width:70px;height:9px;margin-top:6px;border-radius:5px;background:rgba(255,255,255,.10);overflow:hidden}
+.kx-fila .barra2{flex:none;width:70px;height:9px;margin-top:6px;border-radius:5px;background:rgba(var(--w),.10);overflow:hidden}
 .kx-fila .barra2 i{display:block;height:100%;background:var(--ok)}
 .kx-fila .num{flex:none;width:40px;text-align:right;font-variant-numeric:tabular-nums;color:#cfe0ea;line-height:20px}
 .esc-rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
 .esc-card{position:relative}
 .esc-tic{position:absolute;top:7px;left:7px;width:26px;height:26px;border-radius:50%;
-  border:2px solid rgba(255,255,255,.85);background:rgba(6,24,34,.60);color:#fff;
+  border:2px solid rgba(var(--w),.85);background:rgba(6,24,34,.60);color:#fff;
   font-size:15px;line-height:22px;text-align:center;font-weight:700}
 .esc-card.marcada{outline:3px solid var(--ok);outline-offset:-1px}
 .esc-card.marcada .esc-tic{background:var(--ok);border-color:var(--ok)}
-.esc-selbar{background:rgba(18,56,76,.75);border:1px solid rgba(255,255,255,.10);
+.esc-selbar{background:rgba(18,56,76,.75);border:1px solid rgba(var(--w),.10);
   border-radius:12px;padding:11px;margin:0 0 12px}
 .esc-selbar .fila2{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
 .esc-selbar .fila2 button{flex:1 1 40%;margin:0;min-width:120px}
 .esc-mover{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
 .esc-mover button{margin:0;font-size:13.5px;padding:7px 11px;border-radius:20px;
-  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#e8eef2}
-.esc-mover button:hover{background:rgba(255,255,255,.16)}
+  background:rgba(var(--w),.08);border:1px solid rgba(var(--w),.18);color:#e8eef2}
+.esc-mover button:hover{background:rgba(var(--w),.16)}
 .esc-card{display:flex;flex-direction:column;gap:5px;background:rgba(18,56,76,.55);cursor:pointer;
   border:1px solid rgba(143,169,184,.18);border-radius:11px;padding:8px;text-align:left;
   color:inherit;font-family:inherit;min-width:0}
@@ -636,7 +761,7 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .pie-plan .pp-b:active{background:rgba(245,183,0,.12)}
 .accesos-tit{font-family:system-ui,sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--gris);margin:2px 0 8px}
-.grupo-cont{display:none;padding:9px 4px 3px 10px;margin-left:6px;border-left:1.5px solid rgba(255,255,255,.10)}
+.grupo-cont{display:none;padding:9px 4px 3px 10px;margin-left:6px;border-left:1.5px solid rgba(var(--w),.10)}
 .grupo.abierto>.grupo-cont{display:block;animation:baja .18s ease}
 @keyframes baja{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .grupo-cont .btn.sec{font-size:14.5px;padding:13px 14px}
@@ -655,21 +780,21 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .hoja .panel{position:absolute;left:0;right:0;bottom:0;max-height:82vh;overflow-y:auto;
   max-width:560px;margin:0 auto;padding:16px 16px 26px;border-radius:22px 22px 0 0;
   background:rgba(12,44,60,.92);-webkit-backdrop-filter:blur(18px) saturate(120%);backdrop-filter:blur(18px) saturate(120%);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 -14px 40px rgba(0,0,0,.5);
+  box-shadow:inset 0 1px 0 rgba(var(--w),.18), 0 -14px 40px rgba(0,0,0,.5);
   animation:sube .22s ease-out}
 @keyframes sube{from{transform:translateY(22px);opacity:.4}to{transform:translateY(0);opacity:1}}
-.hoja .tirador{width:42px;height:4px;border-radius:3px;background:rgba(255,255,255,.28);margin:0 auto 14px}
+.hoja .tirador{width:42px;height:4px;border-radius:3px;background:rgba(var(--w),.28);margin:0 auto 14px}
 @media (prefers-reduced-motion:reduce){.hoja .panel{animation:none}}
 
 /* ================= programa de charlas ================= */
 .cal-cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cal-cab b{font-size:17px}
-.cal-nav{background:rgba(255,255,255,.07);border:0;color:var(--tinta);border-radius:10px;
+.cal-nav{background:rgba(var(--w),.07);border:0;color:var(--tinta);border-radius:10px;
   width:40px;height:38px;font-size:18px;cursor:pointer;font-family:inherit}
 .cal-sem{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:11px;color:var(--gris);
   text-align:center;margin-bottom:4px}
 .cal-rej{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px}
-.cal-d{min-height:44px;border-radius:10px;border:0;background:rgba(255,255,255,.05);color:var(--tinta);
+.cal-d{min-height:44px;border-radius:10px;border:0;background:rgba(var(--w),.05);color:var(--tinta);
   font:inherit;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:1px;cursor:pointer;padding:3px 1px;line-height:1.1}
 .cal-d.vacio{background:transparent;pointer-events:none}
@@ -678,12 +803,12 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 .cal-d.dic{background:rgba(47,191,113,.18)}
 .cal-d i{font-style:normal;font-size:10px;line-height:1}
 .prog-fila{display:flex;gap:9px;align-items:flex-start;padding:8px 0;
-  border-bottom:1px solid rgba(255,255,255,.10);font-size:13.5px}
+  border-bottom:1px solid rgba(var(--w),.10);font-size:13.5px}
 .prog-fila:last-child{border:none}
 .prog-fila .d{flex:0 0 42px;font-weight:800;color:var(--oro);font-size:12.5px}
 .prog-fila small{display:block;color:var(--gris);font-size:12px}
 .prog-num{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.prog-num span{background:rgba(255,255,255,.06);border-radius:9px;padding:6px 9px;font-size:12.5px}
+.prog-num span{background:rgba(var(--w),.06);border-radius:9px;padding:6px 9px;font-size:12.5px}
 .prog-num b{color:var(--oro)}
 
 /* ================= presentacion (solo expositor) ================= */
@@ -705,7 +830,7 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
 #pres-bar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:7px;align-items:center;
   justify-content:center;padding:11px 10px calc(11px + env(safe-area-inset-bottom));
   background:linear-gradient(to top,rgba(3,14,20,.94),rgba(3,14,20,0))}
-#pres-bar button{background:rgba(255,255,255,.10);border:0;color:#fff;border-radius:999px;
+#pres-bar button{background:rgba(var(--w),.10);border:0;color:#fff;border-radius:999px;
   min-width:48px;height:46px;font-size:17px;font-family:inherit;cursor:pointer}
 #pres-bar button.oro{background:rgba(245,183,0,.20);color:var(--oro)}
 #pres-cont{font-size:16px;font-weight:800;color:var(--oro);min-width:68px;text-align:center}
@@ -772,6 +897,16 @@ input,textarea{-webkit-user-select:text;user-select:text}
 #inst-chip.on{display:block}
 
 </style>
+<script>
+/* apariencia: se aplica antes del primer pixel, sin esperar al resto del JS */
+(function(){try{
+  var a=JSON.parse(localStorage.getItem('sstc_apariencia')||'{}')||{}, h=document.documentElement, c=[];
+  if(a.tema==='claro') c.push('t-claro'); else if(a.tema==='alto') c.push('t-alto');
+  if(a.fondo===0 || a.fondo===false || a.fondo==='0') c.push('sin-fondo');
+  if(a.letra==='g') c.push('f-g'); else if(a.letra==='xg') c.push('f-xg');
+  h.className=c.join(' ');
+}catch(e){}})();
+</script>
 </head>
 <body>
 <div id="fondo"><video id="video" autoplay muted loop playsinline preload="auto" poster="fondo.jpg" onerror="this.remove()" onloadeddata="document.getElementById('haz').style.opacity=.35"><source src="fondo.mp4" type="video/mp4"></video></div>
@@ -946,8 +1081,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
 
     <label class="sec-tit" style="margin:14px 0 6px">Foto de la entrega (opcional)</label>
     <p class="sub" style="margin:0 0 7px;font-size:12.5px">Lo que se está llevando, en la mano. Es la prueba de que salió.</p>
-    <input id="k-foto" type="file" accept="image/*" capture="environment" style="display:none">
-    <button class="btn sec" onclick="document.getElementById('k-foto').click()" style="margin:0">📷 Tomar la foto</button>
+    <button class="btn sec" onclick="fotoKardex()" style="margin:0">📷 Tomar la foto</button>
     <div id="k-foto-vista" style="margin-top:9px"></div>
     <label class="sec-tit" style="margin:14px 0 6px">Firma del trabajador</label>
     <canvas id="k-lienzo" class="lienzo"></canvas>
@@ -1030,7 +1164,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <div class="sec-tit" style="margin:18px 0 8px">Qué pasó</div>
     <textarea id="a-desc" rows="5" placeholder="Describe el hecho: qué, cuándo, dónde y qué riesgo generó."></textarea>
     <label class="sec-tit" style="margin:12px 0 6px">Foto (opcional)</label>
-    <input id="a-foto" type="file" accept="image/*" capture="environment">
+    <button class="btn sec" onclick="fotoAmon()" style="margin:0">📷 Tomar la foto</button>
     <div id="a-foto-vista" style="margin-top:8px"></div>
 
     <div class="sec-tit" style="margin:18px 0 8px">Medida aplicada</div>
@@ -1080,7 +1214,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <label class="sec-tit" style="margin:12px 0 6px">Nota (opcional)</label>
     <input id="f-nota" placeholder="Cuadrilla de estructuras, 7:00 a.m.">
     <label class="sec-tit" style="margin:12px 0 6px">Foto</label>
-    <input id="f-archivo" type="file" accept="image/*" capture="environment">
+    <button class="btn sec" onclick="fotoConFecha()" style="margin:0">📷 Tomar la foto</button>
     <div id="f-vista" style="margin-top:10px"></div>
     <div id="foto-msg" style="font-size:13.5px;margin:9px 0 0"></div>
     <button class="btn" onclick="guardarFoto()" style="margin-top:11px">Guardar foto</button>
@@ -1119,7 +1253,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <label class="sec-tit" style="margin:14px 0 6px">¿Qué se hizo?</label>
     <textarea id="rc-accion" rows="3" maxlength="500" placeholder="Se instaló línea de vida y se paró el trabajo hasta habilitarla"></textarea>
     <label class="sec-tit" style="margin:12px 0 6px">Foto del levantamiento (recomendada)</label>
-    <input id="rc-foto" type="file" accept="image/*" capture="environment">
+    <button class="btn sec" onclick="fotoCierre()" style="margin:0">📷 Tomar la foto</button>
     <div id="rc-vista" class="rc-despues"></div>
     <label class="sec-tit" style="margin:12px 0 6px">Fecha de cierre</label>
     <input id="rc-fecha" type="date">
@@ -1170,7 +1304,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <p class="sub">Apoya la hoja en una superficie plana, con buena luz, y toma la foto de frente. La app la endereza el contraste para que se lea como un escaneo.</p>
   <div class="caja vidrio" style="padding:15px">
     <label class="sec-tit" style="margin:0 0 6px">Foto de la hoja</label>
-    <input id="esc-archivo" type="file" accept="image/*" capture="environment">
+    <button class="btn sec" onclick="fotoEscaneo()" style="margin:0">📷 Tomar la foto de la hoja</button>
     <div id="esc-vista" class="esc-vista"></div>
     <div id="esc-modo" class="esc-modo" style="display:none">
       <button type="button" class="esc-m on" data-m="scan" onclick="escModo('scan')">Escaneo</button>
@@ -1355,6 +1489,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <button class="btn sec" id="b-gen" onclick="abrirGenerar()">🎟️ Códigos para mi cuadrilla</button>
     <button class="btn sec" onclick="ir('p-empleador')">🏢 Datos de mi empresa</button>
     <button class="btn sec" onclick="ir('p-config')">Envío de resultados</button>
+    <button class="btn sec" onclick="ir('p-apariencia')">🎨 Apariencia</button>
     <button class="btn sec" onclick="ir('p-legal')">🔒 Privacidad y condiciones</button>
     <button class="btn sec" onclick="cambiarUsuario()">Cambiar de usuario</button>
   </div>
@@ -1640,6 +1775,14 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <p class="sub" style="margin-top:12px;font-size:12.5px">Puedes volver a leer todo esto cuando quieras, desde Ajustes ▸ Privacidad y condiciones.</p>
 </section>
 
+<!-- ===== APARIENCIA ===== -->
+<section class="pantalla" id="p-apariencia">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">&lsaquo; Atr&aacute;s</button><span>Apariencia</span></div>
+  <h2>&#127912; C&oacute;mo quieres ver la app</h2>
+  <p class="sub">Se guarda en este celular y se aplica al instante. No cambia nada de tus datos.</p>
+  <div id="ap-cuerpo"></div>
+</section>
+
 <section class="pantalla" id="p-config">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Envío de resultados</span></div>
   <h2>¿A dónde te llegan las pruebas?</h2>
@@ -1845,7 +1988,9 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <label>¿Qué es?</label><select id="r-clase"><option value="condicion">Condición insegura (algo del lugar/equipo)</option><option value="acto">Acto inseguro (algo que alguien hizo)</option></select>
   <label>Descríbelo</label><textarea id="r-desc" placeholder="Andamio sin barandas en el 3er piso"></textarea>
   <label>¿Dónde?</label><input id="r-lugar" placeholder="Sector B, nivel 3">
-  <label>Foto (opcional)</label><input type="file" id="r-foto" accept="image/*" capture="environment">
+  <label>Foto (opcional)</label>
+  <button class="btn sec" onclick="fotoReporte()" style="margin:0 0 10px">📷 Tomar la foto</button>
+  <div id="r-foto-vista"></div>
   <div class="tarj vidrio" style="margin-top:14px" onclick="rToggleAnon()"><b id="r-anon-et">🙈 Reportar sin mi nombre (anónimo)</b><small id="r-anon-sub">Nadie sabrá que fuiste tú. Así de simple. (No suma a tu puntaje.)</small></div>
   <div id="r-autor-wrap"><label>Tu nombre (si quieres crédito)</label><input id="r-autor" placeholder="Tu nombre"></div>
   <div id="r-sin-obra" class="aviso" style="display:none;margin:14px 0 4px">
@@ -1867,7 +2012,9 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <h2 id="insp-h">Inspección</h2>
   <div id="insp-items"></div>
   <label>Observaciones</label><textarea id="i-obs" placeholder="Lo que encontraste"></textarea>
-  <label>Foto (opcional)</label><input type="file" id="i-foto" accept="image/*" capture="environment">
+  <label>Foto (opcional)</label>
+  <button class="btn sec" onclick="fotoInspec()" style="margin:0 0 10px">📷 Tomar la foto</button>
+  <div id="i-foto-vista"></div>
   <label>Inspector</label><input id="i-inspector" placeholder="Tu nombre">
   <button class="btn" onclick="guardarInspeccion()">Guardar la inspección</button>
   <div id="i-msg" style="font-size:14px;margin-top:10px"></div>
@@ -2045,6 +2192,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <button class="btn sec" onclick="ir('p-empleador')">🏢 Datos de mi empresa</button>
     <button class="btn sec" onclick="compartirEmpCod()">Compartir el código</button>
     <button class="btn sec" onclick="ir('p-config')">Envío de resultados</button>
+    <button class="btn sec" onclick="ir('p-apariencia')">🎨 Apariencia</button>
     <button class="btn sec" onclick="pedirCodigo('')">Mi plan / activar código</button>
     <button class="btn sec" onclick="ir('p-solicitudes')">Solicitudes de acceso</button>
     <button class="btn sec" onclick="salirDeSesion()">Cambiar de empresa</button>
@@ -2075,12 +2223,34 @@ input,textarea{-webkit-user-select:text;user-select:text}
   </div>
 </section>
 
+<!-- cámara propia: se abre dentro de la app, no la del celular -->
+<div class="cam" id="cam">
+  <video id="cam-v" playsinline muted autoplay></video>
+  <div class="cam-arriba">
+    <button type="button" class="cam-x" onclick="cerrarCamara()">✕</button>
+    <span id="cam-tit">Tomar foto</span>
+    <button type="button" class="cam-x" onclick="voltearCamara()">🔄</button>
+  </div>
+  <div class="cam-guia" id="cam-guia"></div>
+  <div class="cam-msg" id="cam-msg"></div>
+  <div class="cam-abajo">
+    <button type="button" class="cam-gal" onclick="camDesdeGaleria()" title="Elegir de la galería">🖼️</button>
+    <button type="button" class="cam-disparo" id="cam-disparo" onclick="dispararCamara()"></button>
+    <span style="width:48px"></span>
+  </div>
+</div>
+<input type="file" id="cam-file" accept="image/*" style="display:none">
+
 <div class="avisof" id="avisof">
   <div class="caja">
     <div class="ic" id="avisof-ic">🎁</div>
     <h3 id="avisof-tit"></h3>
     <p id="avisof-txt"></p>
-    <button class="btn" onclick="cerrarAviso()" id="avisof-btn">Aceptar</button>
+    <input id="avisof-inp" style="display:none;margin-top:14px;text-align:center">
+    <div class="avisof-bots">
+      <button class="btn sec" onclick="cerrarAviso(false)" id="avisof-no" style="display:none">Cancelar</button>
+      <button class="btn" onclick="cerrarAviso(true)" id="avisof-si">Aceptar</button>
+    </div>
   </div>
 </div>
 
@@ -4964,11 +5134,12 @@ function empDeTrabajo(){ return empActiva() || leer(LS_EMP,null); }
 /* Salir de la EMPRESA no es lo mismo que cerrar la CUENTA: lo primero te
    devuelve a elegir obra, lo segundo te saca de la app en este celular. */
 function salirDeSesion(){
-  if(!confirm('¿Salir de esta empresa?\nTu cuenta sigue abierta: puedes entrar a otra obra o volver a esta cuando quieras.')) return;
-  cerrarSesion(); HIST=[]; MIS_EMP=[];
-  try{ localStorage.removeItem(LS_PLAN); }catch(e){}
-  ROL='emp'; guardar(LS_ROL,'emp');
-  _ir('p-mis-empresas'); cargarMisEmpresas();
+  confirmar('¿Salir de esta empresa?', 'Tu cuenta sigue abierta: puedes entrar a otra obra o volver a esta cuando quieras.', function(){
+    cerrarSesion(); HIST=[]; MIS_EMP=[];
+    try{ localStorage.removeItem(LS_PLAN); }catch(e){}
+    ROL='emp'; guardar(LS_ROL,'emp');
+    _ir('p-mis-empresas'); cargarMisEmpresas();
+  }, {si:'Sí, salir', no:'Quedarme', icono:'🏢'});
 }
 var S = {sector:null, tema:null, modo:null, i:0, orden:[], resp:[], lite:true, datos:{}};
 /* EV: cuando llega con el codigo del supervisor, la app queda encerrada en una
@@ -4983,7 +5154,7 @@ function fechaLarga(iso){ if(!iso) return ''; var p=iso.split('-'); return p[2]+
 var EV_OK={'p-eval':1,'p-datos':1,'p-juego':1,'p-final':1,'p-firma':1,'p-listo':1};
 /* al trabajador solo se le abren estas: nada de sectores, temas ni generar.
    Se le suman las de reportar (código de obra + reporte con foto/anónimo). */
-var COL_OK={'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos':1,'p-juego':1,
+var COL_OK={'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos':1,'p-juego':1,'p-apariencia':1,
             'p-final':1,'p-firma':1,'p-listo':1,'p-charlas':1,'p-charla':1,'p-programa':1,
             'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1,'p-sector':1,
             'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1};
@@ -4997,7 +5168,7 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             /* lo que venía del supervisor y ahora vive dentro de la empresa */
             'p-temas':1,'p-modo':1,'p-juego':1,'p-eval':1,'p-datos':1,'p-final':1,
             'p-firma':1,'p-listo':1,'p-generar':1,'p-registro':1,'p-talleres':1,
-            'p-taller':1,'p-taller-fin':1,'p-codigo':1,'p-sesion':1,'p-config':1,
+            'p-taller':1,'p-taller-fin':1,'p-codigo':1,'p-sesion':1,'p-config':1,'p-apariencia':1,
             'p-trabajadores':1,'p-trab-nuevo':1,'p-trab-ficha':1,'p-planes':1,'p-estatus':1,
             'p-kardex':1,'p-kardex-nuevo':1,'p-kardex-export':1,'p-empleador':1,
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,
@@ -5066,6 +5237,74 @@ function irHome(){
   if(!alcanzable(destino) || destino===act) destino='p-rol';
   _ir(destino);
 }
+/* ══ EL GESTO DE ATRÁS DEL CELULAR ═════════════════════════════════
+   En Android (y en el iPhone) se vuelve atrás deslizando el dedo desde
+   el borde de la pantalla. Ese gesto es el «atrás» del sistema, y el
+   sistema solo sabe de páginas del navegador. Como la app entera es una
+   sola página que cambia de sección por dentro, el sistema no tenía
+   nada que desandar: el gesto salía de la app de golpe, con la obra a
+   medio registrar.
+
+   El truco es dejar SIEMPRE un paso de sobra en la pila del navegador.
+   Cuando el usuario hace el gesto, ese paso se consume, nos avisan con
+   'popstate', nosotros hacemos el atrás de verdad (cerrar el cuadro
+   abierto, o retroceder de pantalla) y volvemos a poner el paso de
+   sobra. Así el gesto nunca se lleva la app por delante.
+
+   Para salir sí hay salida: en el inicio, dos veces seguidas.        */
+var _SALIR_AVISADO=0, _SALIENDO=false;
+function _pasoDeSobra(){
+  try{ history.pushState({sstc:'app'}, ''); }catch(e){}
+}
+function _hayAlgoAbierto(){
+  var m=$('cam');
+  if(m && m.className.indexOf('abierta')>-1){ cerrarCamara(); return true; }
+  var c=$('avisof');
+  if(c && c.className.indexOf('abierto')>-1){ cerrarAviso(false); return true; }
+  var h=$('hoja-rep');
+  if(h && h.className.indexOf('abierta')>-1){ cerrarDetalleReporte(); return true; }
+  var j=$('hoja');
+  if(j && j.className.indexOf('abierta')>-1){ cerrarHoja(); return true; }
+  var k=$('calc');
+  if(k && k.className.indexOf('abierta')>-1){ cerrarCalc(); return true; }
+  return false;
+}
+/* un avisito de dos segundos abajo, sin botones: para cosas que no
+   merecen un cuadro y que igual hay que decir */
+function tostada(txt){
+  var t=$('tostada');
+  if(!t){
+    t=document.createElement('div'); t.id='tostada'; t.className='tostada';
+    document.body.appendChild(t);
+  }
+  t.textContent=txt;
+  t.className='tostada vista';
+  clearTimeout(t._q);
+  t._q=setTimeout(function(){ t.className='tostada'; }, 2200);
+}
+function _atrasDelSistema(){
+  if(_SALIENDO) return;               /* ya nos estamos yendo: no reponer nada */
+  if(_hayAlgoAbierto()){ _pasoDeSobra(); return; }
+  var act=(document.querySelector('.pantalla.activa')||{}).id;
+  var casa=inicioDelModo();
+  /* en el inicio (o en la portada) el atrás sí puede salir: pero se
+     avisa una vez, porque salir sin querer con la obra abierta enoja */
+  if(act===casa || act==='p-rol'){
+    if(Date.now()-_SALIR_AVISADO < 2600){ _SALIENDO=true; try{ history.back(); }catch(e){} return; }
+    _SALIR_AVISADO=Date.now();
+    tostada('Desliza otra vez para salir de la app');
+    _pasoDeSobra();
+    return;
+  }
+  _SALIR_AVISADO=0;
+  try{ irAtras(); }catch(e){ try{ _ir(casa); }catch(_x){} }
+  _pasoDeSobra();
+}
+window.addEventListener('popstate', _atrasDelSistema);
+/* el paso de sobra se pone al arrancar y no se saca nunca */
+try{ history.replaceState({sstc:'base'}, ''); }catch(e){}
+_pasoDeSobra();
+
 /* pantallas donde no tiene sentido acumular historial */
 var NO_HIST={'p-rol':1,'p-eval':1,'p-juego':1,'p-firma':1,'p-final':1,'p-listo':1};
 function ir(p){
@@ -5082,7 +5321,7 @@ function ir(p){
    2) ¿eligió EMPRESA? con cuenta pero sin empresa, va a elegirla.
    El trabajador (ROL 'col') no pasa por ninguna de las dos: entra con
    el código de su obra y solo llega a sus pantallas. */
-var SIN_CUENTA={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-sector':1,
+var SIN_CUENTA={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-sector':1,'p-apariencia':1,
   /* lo legal se lee SIEMPRE, con cuenta o sin ella: si para leer la
      politica de privacidad hay que crearse una cuenta, la politica no
      sirve — y Google Play tampoco la acepta asi. */
@@ -5112,7 +5351,7 @@ function _ir(p){
     if(!(_pr && _pr.className && _pr.className.indexOf('on')>-1)) desproteger();
   }
   cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';$(p).className='pantalla activa';window.scrollTo(0,0);
-  if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-programa')pintarPrograma(); if(p==='p-trab-ficha')pintarFichaTrab(); if(p==='p-planes')pintarPlanes();
+  if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-apariencia')pintarApariencia(); if(p==='p-programa')pintarPrograma(); if(p==='p-trab-ficha')pintarFichaTrab(); if(p==='p-planes')pintarPlanes();
   if(p==='p-eval')pintarEval(); if(p==='p-registro')cargarRegistro(); if(p==='p-generar')pintarGenerar();
   if(p==='p-colab')pintarColab(); if(p==='p-charlas')pintarCharlas();
   if(p==='p-talleres')pintarTalleres();
@@ -5187,7 +5426,7 @@ function pintarBarraNav(p){
   var n=document.getElementById('navbar'); if(!n) return;
   var esconder = (p==='p-rol') || EV || (p==='p-juego') || (p==='p-firma');
   n.style.display = esconder ? 'none' : 'flex';
-  try{ document.body.className = esconder ? '' : 'connav'; }catch(e){}
+  try{ document.body.classList[esconder?'remove':'add']('connav'); }catch(e){}
   var h=document.getElementById('nav-home');
   if(h){
     var m=modoActivo();
@@ -5230,6 +5469,7 @@ var PLANES = [
     puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1 } },
 
   { id:'ssoma', nombre:'SSOMA', precio:89, orden:3,   /* 89 y no 89.90: es lo que cobra el checkout de Mercado Pago que ya funciona */
+    compra:'sst-capacita',                            /* el único con checkout armado: los demás se activan con código */
     tope:{ trabajador:250, kardex:400, reporte:200, doc:200, credencial:250, amonestacion:60, semana:12, escaneo:300 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
     gestores:2, charlas:-1, temas:-1,
@@ -5408,22 +5648,75 @@ function sincronizarConElEquipo(){
   ]).then(function(){ SINCRO_EQUIPO=false; })
     .catch(function(){ SINCRO_EQUIPO=false; });
 }
-/* Aviso propio, en vez de alert(). Texto corto y un botón: si hace
-   falta un párrafo para explicarlo, el problema no es el aviso. */
-var _AVISO_LUEGO=null;
-function aviso(titulo, texto, icono, alCerrar){
-  var c=$('avisof'); if(!c){ alert(titulo+'\n\n'+texto); if(alCerrar) alCerrar(); return; }
+/* ══ AVISOS DE LA PROPIA OBRA ══════════════════════════════════════
+   Los cuadros del navegador (alert, confirm, prompt) salen con el
+   nombre del servidor arriba: «descarganomaspe.github.io dice…». Eso
+   se ve como una página web con problemas, no como una herramienta de
+   obra. Además, en la app instalada bloquean todo hasta que alguien
+   toca Aceptar, y si el celular se traba ahí no hay vuelta.
+
+   Estas tres los reemplazan a los tres, con la misma cara de la app:
+     aviso(titulo, texto, icono, alCerrar)          → un botón
+     confirmar(titulo, texto, alSi, opciones)       → dos botones
+     preguntar(titulo, texto, valor, alOk)          → con campo
+   Si por lo que sea el cuadro no existe (pantalla a medio cargar), se
+   cae al del navegador para no dejar al usuario sin respuesta.      */
+var _AVISO_LUEGO=null, _AVISO_NO=null, _AVISO_INP=false;
+function _avisoBase(titulo, texto, icono, textoSi, textoNo, conCampo, valor){
+  var c=$('avisof'); if(!c) return false;
   $('avisof-ic').textContent = icono || '✅';
   $('avisof-tit').textContent = titulo || '';
   $('avisof-txt').textContent = texto || '';
-  _AVISO_LUEGO = alCerrar || null;
+  $('avisof-txt').style.display = texto ? '' : 'none';
+  var inp=$('avisof-inp');
+  _AVISO_INP = !!conCampo;
+  inp.style.display = conCampo ? '' : 'none';
+  inp.value = conCampo ? (valor||'') : '';
+  $('avisof-si').textContent = textoSi || 'Aceptar';
+  var no=$('avisof-no');
+  if(textoNo){ no.style.display=''; no.textContent=textoNo; } else { no.style.display='none'; }
   c.className='avisof abierto';
+  if(conCampo) setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(_e){} }, 60);
+  return true;
 }
-function cerrarAviso(){
+function aviso(titulo, texto, icono, alCerrar){
+  _AVISO_LUEGO = alCerrar || null; _AVISO_NO = null;
+  if(!_avisoBase(titulo, texto, icono, 'Aceptar', '', false, '')){
+    alert((titulo||'')+(texto?'\n\n'+texto:''));
+    var f=_AVISO_LUEGO; _AVISO_LUEGO=null; if(f) try{ f(); }catch(_e){}
+  }
+}
+function confirmar(titulo, texto, alSi, op){
+  op=op||{};
+  _AVISO_LUEGO = alSi || null; _AVISO_NO = op.alNo || null;
+  if(!_avisoBase(titulo, texto, op.icono||'❓', op.si||'Sí, hacerlo', op.no||'Cancelar', false, '')){
+    if(confirm((titulo||'')+(texto?'\n\n'+texto:''))){ if(alSi) alSi(); }
+    else if(op.alNo) op.alNo();
+    _AVISO_LUEGO=null; _AVISO_NO=null;
+  }
+}
+function preguntar(titulo, texto, valor, alOk, icono){
+  _AVISO_LUEGO = alOk || null; _AVISO_NO = null;
+  if(!_avisoBase(titulo, texto, icono||'✏️', 'Guardar', 'Cancelar', true, valor)){
+    var v=prompt((titulo||'')+(texto?'\n\n'+texto:''), valor||'');
+    var f=_AVISO_LUEGO; _AVISO_LUEGO=null;
+    if(v!==null && f) try{ f(v); }catch(_e){}
+  }
+}
+function cerrarAviso(ok){
   var c=$('avisof'); if(c) c.className='avisof';
-  var f=_AVISO_LUEGO; _AVISO_LUEGO=null;
-  if(f) try{ f(); }catch(_e){}
+  var val = _AVISO_INP ? ($('avisof-inp')||{}).value : undefined;
+  var f=_AVISO_LUEGO, g=_AVISO_NO;
+  _AVISO_LUEGO=null; _AVISO_NO=null; _AVISO_INP=false;
+  if(ok===false){ if(g) try{ g(); }catch(_e){} return; }
+  if(f) try{ f(val); }catch(_e){}
 }
+/* Enter acepta, Escape cancela: en el celular con teclado y en escritorio */
+document.addEventListener('keydown', function(ev){
+  var c=$('avisof'); if(!c || c.className.indexOf('abierto')<0) return;
+  if(ev.key==='Enter'){ ev.preventDefault(); cerrarAviso(true); }
+  else if(ev.key==='Escape'){ ev.preventDefault(); cerrarAviso($('avisof-no').style.display==='none'); }
+});
 var LS_PRUEBA_PED='sstc_prueba_pedida';
 function pruebaYaResuelta(empId){
   try{ return (leer(LS_PRUEBA_PED,{})||{})[empId]===true; }catch(_e){ return false; }
@@ -5645,8 +5938,8 @@ function empezarPreguntas(){
            vinculo:$('d-vinculo').value, fecha:$('d-fecha').value||hoyISO()};
   if(S.datos.evaluador){ var cfgE=leer(LS.cfg,{}); cfgE.cap=S.datos.evaluador; guardar(LS.cfg,cfgE); }
   if(S.datos.obra){ var cfg0=leer(LS.cfg,{}); cfg0.obra=S.datos.obra; guardar(LS.cfg,cfg0); }
-  if(!S.datos.nombre){ alert('Escribe el nombre del trabajador.'); return; }
-  if(!S.datos.evaluador){ alert('Escribe el nombre del evaluador: la constancia no vale sin él.'); return; }
+  if(!S.datos.nombre){ aviso('Falta el nombre','Escribe el nombre del trabajador.','✏️'); return; }
+  if(!S.datos.evaluador){ aviso('Falta el evaluador','La constancia no vale sin el nombre de quien evalúa.','✏️'); return; }
   S.salidas=0;
   protegerCon(S.datos.nombre+' · '+(S.datos.dni||'')+' · '+(S.datos.evaluador||''));
   ir('p-juego'); pintarPregunta();
@@ -5694,7 +5987,7 @@ function accion(){
   S.i++;
   if(S.i>=S.orden.length){ final(); } else { pintarPregunta(); }
 }
-function salir(){ if(confirm('¿Salir de la evaluación? Se pierde lo respondido.')) ir('p-inicio'); }
+function salir(){ confirmar('¿Salir de la evaluación?','Se pierde lo respondido.', function(){ ir('p-inicio'); }, {si:'Sí, salir', no:'Seguir', icono:'📝'}); }
 
 function final(){
   var t=TEMAS[S.tema];
@@ -5773,7 +6066,7 @@ function enviar(){
   var asunto='Evaluación SST — '+TEMAS[S.tema].tema+' — '+(S.datos.nombre||'');
   if(cfg.via==='correo'){ location.href='mailto:'+encodeURIComponent(cfg.destino)+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(txt); }
   else if(cfg.via==='whatsapp'){ window.open('https://wa.me/'+_norm(cfg.destino)+'?text='+encodeURIComponent(txt),'_blank'); }
-  else if(cfg.via==='drive'){ alert('Guarda la constancia como PDF (botón de abajo) y súbela a la carpeta.\n\n'+cfg.destino); window.open(cfg.destino,'_blank'); }
+  else if(cfg.via==='drive'){ aviso('Súbela a tu carpeta de Drive','Guarda la constancia como PDF con el botón de abajo y súbela a '+cfg.destino,'☁️', function(){ window.open(cfg.destino,'_blank'); }); }
 }
 function pintarConfig(){
   var v=$('c-via').value, c=$('c-campo'), cfg=leer(LS.cfg,{});
@@ -5789,6 +6082,61 @@ function pintarConfig(){
     local:'Nada sale del celular. El trabajador te muestra el código de verificación y tú lo anotas. Para obra sin señal.'};
   $('c-consejo').innerHTML='💡 '+consejos[v];
 }
+/* ══ APARIENCIA ═══════════════════════════════════════════════════
+   Tres cosas y nada más: el tema, el fondo animado y el tamaño de la
+   letra. Se guardan en el celular (no viajan a la nube: no son datos
+   de nadie) y se aplican en el acto, sin recargar.                  */
+var LS_APAR='sstc_apariencia';
+function apariencia(){
+  var a=leer(LS_APAR,null);
+  if(!a || typeof a!=='object') a={};
+  return { tema:a.tema||'obra', fondo:(a.fondo===0||a.fondo===false||a.fondo==='0')?0:1, letra:a.letra||'n' };
+}
+function aplicarApariencia(){
+  var a=apariencia(), h=document.documentElement, c=[];
+  if(a.tema==='claro') c.push('t-claro'); else if(a.tema==='alto') c.push('t-alto');
+  if(!a.fondo) c.push('sin-fondo');
+  if(a.letra==='g') c.push('f-g'); else if(a.letra==='xg') c.push('f-xg');
+  h.className=c.join(' ');
+  /* la barra de arriba del celular tiene que ir del mismo color que la app;
+     si no, en tema papel queda una franja azul flotando arriba */
+  try{
+    var m=document.querySelector('meta[name="theme-color"]');
+    if(m) m.setAttribute('content', a.tema==='obra' ? '#0B2A3A' : '#FFFFFF');
+  }catch(_e){}
+  /* el video de fondo consume batería: si está apagado, que no siga corriendo */
+  try{
+    var v=$('video');
+    if(v){ if(a.fondo){ if(v.paused) v.play().catch(function(){}); } else { v.pause(); } }
+  }catch(_e2){}
+}
+function ponerApariencia(campo, valor){
+  var a=apariencia(); a[campo]=valor; guardar(LS_APAR,a);
+  aplicarApariencia(); pintarApariencia();
+}
+function _apOp(campo, valor, titulo, detalle, actual){
+  var on = (String(actual)===String(valor));
+  return '<button class="ap-op'+(on?' on':'')+'" onclick="ponerApariencia(\''+campo+'\',\''+valor+'\')">'+
+         '<span class="tic">'+(on?'✓':'')+'</span>'+
+         '<span class="tx"><b>'+titulo+'</b><small>'+detalle+'</small></span></button>';
+}
+function pintarApariencia(){
+  var c=$('ap-cuerpo'); if(!c) return;
+  var a=apariencia();
+  c.innerHTML=
+    '<div class="sec-tit">Tema</div>'+
+    _apOp('tema','obra','Obra (oscuro)','El de siempre. Descansa la vista de noche y en interiores.',a.tema)+
+    _apOp('tema','claro','Papel (claro)','Fondo blanco y letra oscura. Para leer con sol encima.',a.tema)+
+    _apOp('tema','alto','Alto contraste','Blanco y negro puro, bordes marcados. Lo más legible que hay.',a.tema)+
+    '<div class="sec-tit">Fondo</div>'+
+    _apOp('fondo','1','Con fondo','Video y degradado. Se ve mejor.',a.fondo)+
+    _apOp('fondo','0','Sin fondo','Liso, sin video ni desenfoque. Va más rápido y gasta menos batería.',a.fondo)+
+    '<div class="sec-tit">Tamaño de la letra</div>'+
+    _apOp('letra','n','Normal','',a.letra)+
+    _apOp('letra','g','Grande','Todo un 12% más grande.',a.letra)+
+    _apOp('letra','xg','Muy grande','Un 26% más grande. Para leer con guantes y a un brazo.',a.letra)+
+    '<button class="btn sec" style="margin-top:18px" onclick="ponerApariencia(\'tema\',\'obra\');ponerApariencia(\'fondo\',\'1\');ponerApariencia(\'letra\',\'n\')">Dejar como venía</button>';
+}
 function cargarConfig(){
   var cfg=leer(LS.cfg,{});
   if(cfg.via) $('c-via').value=cfg.via;
@@ -5798,7 +6146,7 @@ function cargarConfig(){
 function guardarConfig(){
   var d=$('c-dest');
   guardar(LS.cfg,{via:$('c-via').value, destino:d?d.value.trim():'', cap:$('c-cap').value.trim(), obra:$('c-obra').value.trim()});
-  alert('Guardado.'); ir('p-inicio');
+  aviso('Guardado','Ya quedó configurado en este celular.','✅', function(){ ir('p-inicio'); });
 }
 function activar(){
   var v=($('inp-cod').value||'').trim(), m=$('cod-msg');
@@ -5994,14 +6342,15 @@ function pintarCarpeta(){
   c.innerHTML=h;
 }
 function nuevaSub(clave, queCosa){
-  var n=prompt('Nombre del nuevo '+queCosa+':');
-  if(!n) return;
-  n=n.trim(); if(!n) return;
-  subcAgregar(clave, n); pintarCarpeta();
+  preguntar('Nuevo '+queCosa, '¿Cómo se va a llamar?', '', function(n){
+    n=String(n||'').trim(); if(!n) return;
+    subcAgregar(clave, n); pintarCarpeta();
+  }, '🗂️');
 }
 function quitarSub(clave, nombre){
-  if(!confirm('¿Quitar «'+nombre+'»? Los documentos que tenga adentro se conservan.')) return;
-  subcQuitar(clave, nombre); pintarCarpeta();
+  confirmar('¿Quitar «'+nombre+'»?', 'Los documentos que tenga adentro se conservan.', function(){
+    subcQuitar(clave, nombre); pintarCarpeta();
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'🗂️'});
 }
 
 // ---- FOTOS con fecha (pausas activas y controles ocupacionales) ----
@@ -6016,26 +6365,13 @@ function prepFoto(){
   $('f-fecha').value=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
   $('f-nota').value=''; $('foto-msg').textContent=''; $('f-vista').innerHTML='';
   FOTO_DATA=null;
-  var inp=$('f-archivo');
-  if(inp && inp.getAttribute('data-ok')!=='1'){
-    inp.setAttribute('data-ok','1');
-    inp.onchange=function(){
-      var f=this.files && this.files[0]; if(!f) return;
-      var fr=new FileReader();
-      fr.onload=function(){
-        var img=new Image();
-        img.onload=function(){
-          var max=1100, r=Math.min(1,max/Math.max(img.width,img.height));
-          var cv=document.createElement('canvas'); cv.width=img.width*r; cv.height=img.height*r;
-          cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-          FOTO_DATA=cv.toDataURL('image/jpeg',0.82);
-          $('f-vista').innerHTML='<img src="'+FOTO_DATA+'" style="width:100%;border-radius:12px">';
-        };
-        img.src=fr.result;
-      };
-      fr.readAsDataURL(f);
-    };
-  }
+}
+function fotoConFecha(){
+  tomarFoto({max:1100, calidad:0.82, titulo:FOTO_TIT||'Foto'}).then(function(du){
+    if(!du) return;
+    FOTO_DATA=du;
+    $('f-vista').innerHTML='<img src="'+FOTO_DATA+'" style="width:100%;border-radius:12px">';
+  });
 }
 var FOTO_DATA=null;
 function guardarFoto(){
@@ -6191,11 +6527,12 @@ function guardarQRDoc(){
 }
 function quitarQRDoc(){
   var e = empActiva(); if(!e || !QR_ACTUAL) return;
-  if(!confirm('¿Quitar este documento?\n\nLos carteles que ya estén pegados van a dejar de abrirlo.')) return;
-  sbDel('sst_hoja_qr?empresa_id=eq.' + encodeURIComponent(e.id) + '&hoja=eq.' + encodeURIComponent(QR_ACTUAL))
-    .then(function(){ return cargarHojasQR(); })
-    .then(function(){ ir('p-qr-docs'); })
-    .catch(function(){ alert('No se pudo quitar.'); });
+  confirmar('¿Quitar este documento?', 'Los carteles que ya estén pegados van a dejar de abrirlo.', function(){
+    sbDel('sst_hoja_qr?empresa_id=eq.' + encodeURIComponent(e.id) + '&hoja=eq.' + encodeURIComponent(QR_ACTUAL))
+      .then(function(){ return cargarHojasQR(); })
+      .then(function(){ ir('p-qr-docs'); })
+      .catch(function(){ aviso('No se pudo quitar','Revisa tu internet e inténtalo otra vez.','📡'); });
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'📌'});
 }
 /* el cartel se baja como imagen, para imprimirlo tal cual */
 function cartelQRaLienzo(){
@@ -6237,7 +6574,7 @@ function _cortarTexto(ctx, txt, ancho){
   return lin;
 }
 function bajarCartelQR(){
-  var cv = cartelQRaLienzo(); if(!cv){ alert('Arma el cartel primero.'); return; }
+  var cv = cartelQRaLienzo(); if(!cv){ aviso('Falta el cartel','Arma primero el cartel de arriba.','📌'); return; }
   cv.toBlob(function(bl){
     var u = URL.createObjectURL(bl), a = document.createElement('a');
     a.href = u; a.download = 'cartel-' + QR_ACTUAL + '.png';
@@ -6246,7 +6583,7 @@ function bajarCartelQR(){
   }, 'image/png');
 }
 function compartirCartelQR(){
-  var cv = cartelQRaLienzo(); if(!cv){ alert('Arma el cartel primero.'); return; }
+  var cv = cartelQRaLienzo(); if(!cv){ aviso('Falta el cartel','Arma primero el cartel de arriba.','📌'); return; }
   cv.toBlob(function(bl){
     var f = null;
     try{ f = new File([bl], 'cartel-' + QR_ACTUAL + '.png', {type:'image/png'}); }catch(e){}
@@ -6297,32 +6634,23 @@ function prepEscaneo(){
   $('esc-fecha').value=hoyISO();
   var ch=_charlaDeHoy();
   if(ch) $('esc-nombre').placeholder = ch.titulo+' — cuadrilla';
-  var inp=$('esc-archivo'); if(!inp) return;
-  inp.value='';
-  if(inp.getAttribute('data-ok')==='1') return;
-  inp.setAttribute('data-ok','1');
-  inp.onchange=function(){
-    var f=this.files && this.files[0]; if(!f) return;
+}
+/* la hoja de firmas pide más resolución: 1600 px de lado largo, que es
+   donde una firma todavía se lee y el archivo no llega a los 8 MB */
+function fotoEscaneo(){
+  tomarFoto({max:1600, calidad:0.9, titulo:'Foto de la hoja', doc:true}).then(function(du){
+    if(!du) return;
     $('esc-msg').style.color='var(--gris)'; $('esc-msg').textContent='Procesando la hoja…';
-    var fr=new FileReader();
-    fr.onload=function(){
-      var img=new Image();
-      img.onload=function(){
-        /* 1600 px de lado largo: se lee la firma y no pesa 8 MB */
-        var max=1600, r=Math.min(1, max/Math.max(img.width,img.height));
-        var cv=document.createElement('canvas');
-        cv.width=Math.round(img.width*r); cv.height=Math.round(img.height*r);
-        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-        ESC_IMG={ orig:cv.toDataURL('image/jpeg',0.9), ancho:cv.width, alto:cv.height };
-        $('esc-modo').style.display='flex';
-        $('esc-msg').textContent='';
-        pintarVistaEscaneo();
-      };
-      img.onerror=function(){ $('esc-msg').style.color='var(--mal)'; $('esc-msg').textContent='No se pudo leer esa imagen. Prueba con otra.'; };
-      img.src=fr.result;
+    var im=new Image();
+    im.onload=function(){
+      ESC_IMG={ orig:du, ancho:im.width, alto:im.height };
+      $('esc-modo').style.display='flex';
+      $('esc-msg').textContent='';
+      pintarVistaEscaneo();
     };
-    fr.readAsDataURL(f);
-  };
+    im.onerror=function(){ $('esc-msg').style.color='var(--mal)'; $('esc-msg').textContent='No se pudo leer esa imagen. Prueba con otra.'; };
+    im.src=du;
+  });
 }
 function escModo(m){ ESC_LISTA_MODO=m; marcarModo(); pintarVistaEscaneo(); }
 function escGirar(){ ESC_GIRO=(ESC_GIRO+90)%360; pintarVistaEscaneo(); }
@@ -6650,19 +6978,20 @@ function _borrarEscaneosDe(lista){
 }
 function escBorrarMarcadas(){
   var m=escMarcadas(); if(!m.length) return;
-  if(!confirm('¿Eliminar '+m.length+' hoja'+(m.length===1?'':'s')+'?\n\nSe borra también para el resto de la obra y no se puede deshacer.')) return;
-  var msg=$('esc-sel-msg');
-  if(msg){ msg.style.color='var(--gris)'; msg.textContent='Eliminando…'; }
-  _borrarEscaneosDe(m).then(function(r){
-    ESC_SEL={};
-    pintarEscaneos();
-    var m2=$('esc-sel-msg');
-    if(m2){
-      if(r.fallaron){ m2.style.color='var(--mal)';
-        m2.textContent='Se eliminaron '+r.borradas+'. '+r.fallaron+' no se pudieron: revisa el internet.'; }
-      else { m2.style.color='var(--ok)'; m2.textContent='Listo: '+r.borradas+' eliminada'+(r.borradas===1?'':'s')+'.'; }
-    }
-  });
+  confirmar('¿Eliminar '+m.length+' hoja'+(m.length===1?'':'s')+'?', 'Se borra también para el resto de la obra y no se puede deshacer.', function(){
+    var msg=$('esc-sel-msg');
+    if(msg){ msg.style.color='var(--gris)'; msg.textContent='Eliminando…'; }
+    _borrarEscaneosDe(m).then(function(r){
+      ESC_SEL={};
+      pintarEscaneos();
+      var m2=$('esc-sel-msg');
+      if(m2){
+        if(r.fallaron){ m2.style.color='var(--mal)';
+          m2.textContent='Se eliminaron '+r.borradas+'. '+r.fallaron+' no se pudieron: revisa el internet.'; }
+        else { m2.style.color='var(--ok)'; m2.textContent='Listo: '+r.borradas+' eliminada'+(r.borradas===1?'':'s')+'.'; }
+      }
+    });
+  }, {si:'Sí, eliminar', no:'Cancelar', icono:'🗑️'});
 }
 function escFiltro(k){ ESC_FILTRO=k; pintarEscaneos(); }
 function verEscaneo(i){ ESC_VER=i; ir('p-escaneo-ver'); }
@@ -6677,26 +7006,27 @@ function pintarEscaneoVer(){
 }
 function escRenombrar(){
   var a=escLocal(), x=a[ESC_VER]; if(!x) return;
-  var n=prompt('¿Cómo quieres que se llame este registro?', x.nombre);
-  if(n===null) return;
-  n=String(n).trim(); if(n.length<3) return;
-  x.nombre=n; escSet(a);
-  if(x.nubeId && hayCuenta()) sbPatch('sst_doc?id=eq.'+encodeURIComponent(x.nubeId),{nombre:n}).catch(function(){});
-  pintarEscaneoVer();
+  preguntar('Nombre del registro', 'Con este nombre lo va a ver todo el equipo.', x.nombre, function(n){
+    n=String(n||'').trim(); if(n.length<3) return;
+    x.nombre=n; escSet(a);
+    if(x.nubeId && hayCuenta()) sbPatch('sst_doc?id=eq.'+encodeURIComponent(x.nubeId),{nombre:n}).catch(function(){});
+    pintarEscaneoVer();
+  }, '✏️');
 }
 function escBorrar(){
   var a=escLocal(), x=a[ESC_VER]; if(!x) return;
-  if(!confirm('¿Eliminar «'+x.nombre+'»? Se borra también para el resto del equipo y no se puede deshacer.')) return;
-  /* con acuse: si el servidor no borro nada, no se le miente al usuario */
-  _borrarEscaneosDe([x]).then(function(r){
-    if(r.fallaron){ alert('No se pudo eliminar: el servidor no confirmó el borrado. Revisa el internet, y si sigue igual falta el permiso de borrado en la base.'); return; }
-    ir('p-escaneos');
-  });
+  confirmar('¿Eliminar «'+x.nombre+'»?', 'Se borra también para el resto del equipo y no se puede deshacer.', function(){
+    /* con acuse: si el servidor no borro nada, no se le miente al usuario */
+    _borrarEscaneosDe([x]).then(function(r){
+      if(r.fallaron){ aviso('No se eliminó','El servidor no confirmó el borrado. Revisa tu internet e inténtalo de nuevo.','📡'); return; }
+      ir('p-escaneos');
+    });
+  }, {si:'Sí, eliminar', no:'Cancelar', icono:'🗑️'});
 }
 function escCompartirUno(){
   var a=escLocal(), x=a[ESC_VER]; if(!x) return;
   var src=x.img||x.url;
-  if(!src){ alert('Esa imagen no está en este celular ni en la nube.'); return; }
+  if(!src){ aviso('Sin imagen','Esa hoja no está en este celular ni en la nube.','🖼️'); return; }
   /* Antes esto mandaba el ENLACE de la imagen cuando estaba en la nube.
      Ya no: va el PDF con la hoja adentro, que es lo que sirve. */
   var pie=(fechaLarga(x.fecha)||'sin fecha')+(x.firmas?('   ·   '+x.firmas+' firmas'):'');
@@ -6705,7 +7035,7 @@ function escCompartirUno(){
   if(b){ b.disabled=true; b.textContent='Armando el PDF…'; }
   entregarComoPDF([{nombre:x.nombre, src:src, pie:pie}], {via:'otra', texto:txt}, _nombreSano(x.nombre))
     .then(function(){ if(b){ b.disabled=false; b.textContent=antes; } })
-    .catch(function(e){ if(b){ b.disabled=false; b.textContent=antes; } alert('No se pudo armar el PDF: '+(e&&e.message||e)); });
+    .catch(function(e){ if(b){ b.disabled=false; b.textContent=antes; } aviso('No se pudo armar el PDF', String(e&&e.message||e), '📄'); });
 }
 
 /* ---------- ENVIAR LA CARPETA ---------- */
@@ -7000,7 +7330,7 @@ function frenoLite(k, cuantosHay, queCosa){
   } else {
     msj += '\n\nEscríbenos: tu obra necesita un plan a medida.';
   }
-  alert(msj);
+  aviso('Llegaste al tope de tu plan', msj, '📊');
   return true;
 }
 /* Lo que gana el peldano siguiente, dicho en una linea. Es lo que se
@@ -7027,7 +7357,7 @@ function soloConCodigo(queCosa, llave){
          + (GANA_EL_SIGUIENTE[sig.id]||'más cupo y más herramientas') + '.'
          + '\n\n«'+queCosa+'» llega más arriba en la escalera.';
   }
-  alert(msj);
+  aviso('No está en tu plan', msj, '🔒');
   return true;
 }
 /* la puerta unica: toda accion con tope o con llave pasa por aca */
@@ -7090,7 +7420,7 @@ function lineaDelPlan(){
   var hasta = (pl.vence && A.orden>0) ? ' · hasta el '+fechaLarga(String(pl.vence).slice(0,10)) : '';
   return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;'+
          'padding:13px 15px;border:1px solid rgba(143,169,184,.20);border-radius:14px;'+
-         'background:rgba(255,255,255,.03)">'+
+         'background:rgba(var(--w),.03)">'+
          '<span style="font-size:14px;color:var(--gris)">Plan <b style="color:var(--tinta)">'+esc(A.nombre)+'</b>'+hasta+'</span>'+
          '<span style="margin-left:auto">'+boton+'</span></div>';
 }
@@ -7144,14 +7474,42 @@ function pintarPlanes(){
        '<span class="pre">'+(P.precio? 'S/ '+num2(P.precio)+'<small> / mes</small>' : 'Gratis')+'</span></div>'+
        '<ul>'+_puntosDelPlan(P).map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>';
     if(!esMio && P.orden>0){
-      h+='<button class="btn sec" style="margin:12px 0 0" onclick="pedirCodigo(\'\')">'+
-         (P.orden>A.orden ? 'Tengo un código de '+esc(P.nombre) : 'Cambiar a '+esc(P.nombre))+'</button>';
+      /* Se paga DENTRO de la app. El instalador de Android no viene de
+         Google Play — se baja de la propia web — así que aquí no rige
+         la regla de Play que obliga a cobrar por su caja. El checkout se
+         abre en una ventana del sistema y al volver el código se pega
+         abajo. Ojo: si algún día esto entra a Play, este botón hay que
+         cambiarlo por el cobro de Google. */
+      if(P.compra){
+        h+='<button class="btn" style="margin:12px 0 0" onclick="comprarPlan(\''+P.compra+'\',\''+esc(P.nombre)+'\')">'+
+           'Pagar S/ '+num2(P.precio)+' con Mercado Pago</button>';
+      }
+      h+='<button class="btn sec" style="margin:9px 0 0" onclick="pedirCodigo(\'\')">'+
+         (P.orden>A.orden ? 'Ya tengo un código de '+esc(P.nombre) : 'Cambiar a '+esc(P.nombre))+'</button>';
+      if(!P.compra){
+        h+='<p class="sub" style="margin:8px 0 0;font-size:12.5px">Este plan se activa con código. Escríbenos y te lo pasamos.</p>';
+      }
     }
     h+='</div>';
   });
-  h+='<p class="sub" style="margin-top:14px">Los códigos se compran en '+
-     '<b>descarganomaspe.github.io</b> y se activan aquí mismo. Cada uno dura un mes.</p>';
+  h+='<p class="sub" style="margin-top:14px">Cada código dura un mes. Si renuevas antes de que venza, los días se suman.</p>';
   c.innerHTML=h;
+}
+/* ── PAGAR SIN SALIR DE LA APP ─────────────────────────────────────
+   El enlace va a nuestra propia función del servidor, que arma la
+   preferencia con el monto correcto y redirige al checkout. Se abre en
+   una ventana aparte a propósito: si el pago se hiciera encima de la
+   app, al volver se perdería lo que estuviera a medio escribir.       */
+var PAGO_URL='https://gwjjkknuiumgysezeatz.supabase.co/functions/v1/pago?ir=';
+function comprarPlan(slug, nombre){
+  aviso('Vas a pagar el plan '+nombre,
+        'Se abre Mercado Pago. Cuando termines, vuelve aquí y escribe el código que te sale en pantalla: el plan se activa al instante.',
+        '💳', function(){
+    try{ window.open(PAGO_URL+encodeURIComponent(slug), '_blank'); }
+    catch(e){ location.href = PAGO_URL+encodeURIComponent(slug); }
+    /* al volver, lo primero que ve es dónde pegar el código */
+    setTimeout(function(){ try{ pedirCodigo(''); }catch(_e){} }, 1200);
+  });
 }
 /* S/ 19.90, no S/ 19.9: en un precio el centavo se escribe. */
 function num2(v){ return (v % 1 === 0) ? String(v) : v.toFixed(2); }
@@ -7390,10 +7748,11 @@ function guardarTrabajador(){
   setTimeout(function(){ ir('p-trabajadores'); },500);
 }
 function quitarTrabajador(id){
-  if(!confirm('¿Quitar a este trabajador de tu registro? Su kardex se conserva.')) return;
-  trabsSet(trabsLocal().filter(function(t){ return t.id!==id; }));
-  sbDel('sst_trabajador?duenio=eq.'+encodeURIComponent(duenioId())+'&ext=eq.'+encodeURIComponent(id)).catch(function(){});
-  pintarTrabajadores();
+  confirmar('¿Quitar a este trabajador?', 'Sale de tu registro. Su kardex de EPP se conserva.', function(){
+    trabsSet(trabsLocal().filter(function(t){ return t.id!==id; }));
+    sbDel('sst_trabajador?duenio=eq.'+encodeURIComponent(duenioId())+'&ext=eq.'+encodeURIComponent(id)).catch(function(){});
+    pintarTrabajadores();
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'👷'});
 }
 function pintarEstatus(){
   var a=trabsLocal(), c=$('estatus-cuerpo');
@@ -7464,29 +7823,15 @@ function limpiarFirmaK(){ prepararLienzoK(); }
 var K_FOTO='';
 function prepFotoKardex(){
   K_FOTO=''; var v=$('k-foto-vista'); if(v) v.innerHTML='';
-  var inp=$('k-foto'); if(!inp) return;
-  inp.value='';
-  if(inp.getAttribute('data-ok')==='1') return;
-  inp.setAttribute('data-ok','1');
-  inp.onchange=function(){
-    var f=this.files && this.files[0]; if(!f) return;
-    var fr=new FileReader();
-    fr.onload=function(){
-      var im=new Image();
-      im.onload=function(){
-        var r=Math.min(1, 900/Math.max(im.width, im.height));
-        var cv=document.createElement('canvas');
-        cv.width=Math.round(im.width*r); cv.height=Math.round(im.height*r);
-        cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
-        K_FOTO=cv.toDataURL('image/jpeg',0.78);
-        var v2=$('k-foto-vista');
-        if(v2) v2.innerHTML='<img src="'+K_FOTO+'" style="max-width:100%;border-radius:10px">'+
-          '<button class="btn sec" style="margin-top:8px" onclick="K_FOTO=\'\';document.getElementById(\'k-foto-vista\').innerHTML=\'\';">Quitar la foto</button>';
-      };
-      im.src=fr.result;
-    };
-    fr.readAsDataURL(f);
-  };
+}
+function fotoKardex(){
+  tomarFoto({max:900, calidad:0.78, titulo:'Foto de la entrega'}).then(function(du){
+    if(!du) return;
+    K_FOTO=du;
+    var v=$('k-foto-vista');
+    if(v) v.innerHTML='<img src="'+K_FOTO+'" style="max-width:100%;border-radius:10px">'+
+      '<button class="btn sec" style="margin-top:8px" onclick="K_FOTO=\'\';document.getElementById(\'k-foto-vista\').innerHTML=\'\';">Quitar la foto</button>';
+  });
 }
 /* ══════════════ UNA ENTREGA, UNA FIRMA ══════════════════════════
    En obra nadie entrega el casco, hace firmar, entrega los guantes,
@@ -7734,10 +8079,11 @@ function pintarKardex(){
   c.innerHTML=h;
 }
 function quitarKardex(id){
-  if(!confirm('¿Quitar esta entrega del kardex?')) return;
-  kardexSet(kardexLocal().filter(function(k){ return k.id!==id; }));
-  sbDel('sst_kardex?duenio=eq.'+encodeURIComponent(duenioId())+'&ext=eq.'+encodeURIComponent(id)).catch(function(){});
-  pintarKardex();
+  confirmar('¿Quitar esta entrega del kardex?', 'Se borra el registro de ese EPP.', function(){
+    kardexSet(kardexLocal().filter(function(k){ return k.id!==id; }));
+    sbDel('sst_kardex?duenio=eq.'+encodeURIComponent(duenioId())+'&ext=eq.'+encodeURIComponent(id)).catch(function(){});
+    pintarKardex();
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'🦺'});
 }
 
 // =================================================================
@@ -7820,7 +8166,7 @@ function pintarMensual(){
    ['🎓 HHC',n2(hhc)+' h'],['Promedio obreros/día', dias.length? n2(obN/dias.length):'—'],
    ['Promedio empleados/día', dias.length? n2(stN/dias.length):'—'],['Días registrados',String(dias.length)]
   ].forEach(function(f){
-    h+='<div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06)">'+
+    h+='<div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(var(--w),.06)">'+
        '<span style="flex:1;font-size:14.5px">'+esc(f[0])+'</span><b style="font-size:17px">'+esc(f[1])+'</b></div>';
   });
   h+='</div>';
@@ -7859,7 +8205,7 @@ function pintarSemanal(){
    ['Promedio staff/día',   dias.length? n2(stDia/dias.length):'—'],
    ['Días registrados', String(dias.length)]
   ].forEach(function(f){
-    h+='<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06)">'
+    h+='<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(var(--w),.06)">'
      + '<span style="flex:1;font-size:14.5px">'+esc(f[0])+'</span>'
      + '<b style="font-size:17px;font-variant-numeric:tabular-nums">'+esc(f[1])+'</b></div>';
   });
@@ -7875,12 +8221,13 @@ function pintarSemanal(){
   c.innerHTML=h;
 }
 function quitarDiaSem(f){
-  if(!confirm('¿Quitar el registro de ese día?')) return;
-  semSet(semLocal().filter(function(d){ return d.fecha!==f; })); pintarSemanal();
+  confirmar('¿Quitar el registro de ese día?', '', function(){
+    semSet(semLocal().filter(function(d){ return d.fecha!==f; })); pintarSemanal();
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'📅'});
 }
 function copiarSemanal(){
   var t=$('sm-cuerpo').innerText;
-  try{ navigator.clipboard.writeText(t); alert('Resumen copiado.'); }catch(e){ alert('Copia manualmente el resumen de arriba.'); }
+  try{ navigator.clipboard.writeText(t); aviso('Resumen copiado','Ya lo puedes pegar donde quieras.','📋'); }catch(e){ aviso('Cópialo a mano','Selecciona el resumen de arriba y cópialo.','📋'); }
 }
 
 // =================================================================
@@ -7898,6 +8245,14 @@ function amonPendientes(a){
   var n=0; AMON_FIRMAS.forEach(function(f){ if(!(a.firmas||{})[f[0]]) n++; }); return n;
 }
 var AMON_FOTO=null;
+function fotoAmon(){
+  tomarFoto({max:900, calidad:0.8, titulo:'Foto del hecho'}).then(function(du){
+    if(!du) return;
+    AMON_FOTO=du;
+    $('a-foto-vista').innerHTML='<img src="'+du+'" style="width:100%;border-radius:12px">'+
+      '<button class="btn sec" style="margin-top:8px" onclick="AMON_FOTO=null;document.getElementById(\'a-foto-vista\').innerHTML=\'\';">Quitar la foto</button>';
+  });
+}
 function prepAmonestacion(){
   AMON_FOTO=null;
   var sel=$('a-trab'), tr=trabsLocal().filter(function(t){return t.estatus!=='cesado';});
@@ -7913,26 +8268,6 @@ function prepAmonestacion(){
   $('a-q-nombre').value=sup.nombre||''; $('a-q-dni').value=sup.dni||''; $('a-q-puesto').value=sup.cargo||'Supervisor SSOMA';
   $('a-foto-vista').innerHTML=''; $('amon-msg').textContent='';
   $('a-t-nombre').oninput=function(){ pintarAmonPrevias(); };
-  var f=$('a-foto');
-  if(f && f.getAttribute('data-ok')!=='1'){
-    f.setAttribute('data-ok','1');
-    f.onchange=function(){
-      var file=this.files && this.files[0]; if(!file) return;
-      var fr=new FileReader();
-      fr.onload=function(){
-        var img=new Image();
-        img.onload=function(){
-          var max=900, r=Math.min(1,max/Math.max(img.width,img.height));
-          var cv=document.createElement('canvas'); cv.width=img.width*r; cv.height=img.height*r;
-          cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-          AMON_FOTO=cv.toDataURL('image/jpeg',0.8);
-          $('a-foto-vista').innerHTML='<img src="'+AMON_FOTO+'" style="width:100%;border-radius:12px">';
-        };
-        img.src=fr.result;
-      };
-      fr.readAsDataURL(file);
-    };
-  }
   pintarAmonPrevias();
 }
 /* si al trabajador ya lo amonestaron antes, se avisa arriba */
@@ -8011,10 +8346,11 @@ function pintarAmonDetalle(){
   $('amon-det').innerHTML=h;
 }
 function quitarAmon(id){
-  if(!confirm('¿Quitar esta amonestación?')) return;
-  amonSet(amonLocal().filter(function(a){ return a.id!==id; }));
-  sbDel('sst_amonestacion?duenio=eq.'+encodeURIComponent(duenioId())+'&ext=eq.'+encodeURIComponent(id)).catch(function(){});
-  ir('p-amonestaciones');
+  confirmar('¿Quitar esta amonestación?', 'Se borra de este celular y de la nube.', function(){
+    amonSet(amonLocal().filter(function(a){ return a.id!==id; }));
+    sbDel('sst_amonestacion?duenio=eq.'+encodeURIComponent(duenioId())+'&ext=eq.'+encodeURIComponent(id)).catch(function(){});
+    ir('p-amonestaciones');
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'⚠️'});
 }
 var AF_QUIEN=null, AF_ID=null, AF_CTX=null, AF_TRAZO=false, AF_HAY=false, AF_CV=null;
 function firmarAmon(id, quien, etiqueta){
@@ -8275,12 +8611,11 @@ function cargarEmpleador(){
     inp.onchange=function(){
       var f=this.files && this.files[0]; if(!f) return;
       var m=$('em-msg'); m.style.color='var(--gris)'; m.textContent='Preparando el logo…';
-      var fr=new FileReader();
-      fr.onload=function(){
+      /* primero se encoge con el camino rápido y recién ahí se centra en
+         el cuadrado de 312x312 que pide el formato de Excel */
+      fotoDeArchivo(f, 312, 0.92).then(function(du){
         var img=new Image();
         img.onload=function(){
-          /* el formato guarda el logo como JPEG de 312x312: se respeta
-             el tamaño para que no se deforme la celda combinada */
           var cv=document.createElement('canvas'); cv.width=312; cv.height=312;
           var g=cv.getContext('2d');
           g.fillStyle='#fff'; g.fillRect(0,0,312,312);
@@ -8293,9 +8628,8 @@ function cargarEmpleador(){
           m.style.color='var(--ok)'; m.textContent='Logo listo. No olvides Guardar.';
         };
         img.onerror=function(){ m.style.color='var(--mal)'; m.textContent='No se pudo leer esa imagen.'; };
-        img.src=fr.result;
-      };
-      fr.readAsDataURL(f);
+        img.src=du;
+      }).catch(function(){ m.style.color='var(--mal)'; m.textContent='No se pudo leer esa imagen.'; });
     };
   }
 }
@@ -9363,7 +9697,7 @@ function cupoMasApretado(){
 function anilloSvg(pc, color){
   var r=33, c=2*Math.PI*r, largo=Math.max(0,Math.min(1,pc))*c;
   return '<svg viewBox="0 0 80 80" class="anillo" role="img" aria-label="'+Math.min(100,Math.round(pc*100))+' por ciento del cupo usado">'+
-    '<circle cx="40" cy="40" r="'+r+'" fill="none" stroke="rgba(255,255,255,.11)" stroke-width="6.5"/>'+
+    '<circle cx="40" cy="40" r="'+r+'" fill="none" stroke="currentColor" stroke-opacity=".13" stroke-width="6.5"/>'+
     '<circle cx="40" cy="40" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="6.5" stroke-linecap="round"'+
     ' stroke-dasharray="'+largo.toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 40 40)"/>'+
     '<text x="40" y="45.5" text-anchor="middle" font-size="19" font-weight="800" fill="currentColor"'+
@@ -9750,7 +10084,7 @@ function pintarEstadistica(){
   var c=$('est-cuerpo'); if(!c) return;
   function cuenta(clave){ try{ var v=leer(clave,[]); return (v&&v.length)||0; }catch(e){ return 0; } }
   function fila(ic,tx,val){
-    return '<div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.06)">'
+    return '<div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid rgba(var(--w),.06)">'
       + '<span style="font-size:22px">'+ic+'</span><span style="flex:1;font-size:15px">'+esc(tx)+'</span>'
       + '<b style="font-size:22px;font-variant-numeric:tabular-nums">'+val+'</b></div>';
   }
@@ -9972,9 +10306,10 @@ function entrarEvaluacion(o, clave){
   ir('p-eval'); return null;
 }
 function salirEval(){
-  if(!confirm('¿Salir de la evaluación? Vuelves a la app normal y pierdes lo respondido.')) return;
-  EV=null; try{ localStorage.removeItem(LS_EV); }catch(e){}
-  ir('p-inicio');
+  confirmar('¿Salir de la evaluación?', 'Vuelves a la app normal y se pierde lo respondido.', function(){
+    EV=null; try{ localStorage.removeItem(LS_EV); }catch(e){}
+    ir('p-inicio');
+  }, {si:'Sí, salir', no:'Seguir respondiendo', icono:'📝'});
 }
 function pintarEval(){
   if(!EV){ ir('p-inicio'); return; }
@@ -10090,10 +10425,10 @@ function guardarRegistro(){
   var s={nombre:$('r-nombre').value.trim(), doc:$('r-doc').value.trim(),
          cargo:$('r-cargo').value.trim(), empresa:$('r-empresa').value.trim(),
          obra:$('r-obra').value.trim(), vinculo:$('r-vinculo').value};
-  if(!s.nombre){ alert('Escribe tu nombre: es el que va a salir como evaluador en la constancia de cada trabajador.'); return; }
+  if(!s.nombre){ aviso('Falta tu nombre','Es el que sale como evaluador en la constancia de cada trabajador.','✏️'); return; }
   guardar(LS_SUP,s);
   var c=leer(LS.cfg,{}); c.cap=s.nombre; if(s.obra) c.obra=s.obra; guardar(LS.cfg,c);
-  alert('Guardado. Con estos datos van a salir los códigos de tu cuadrilla.');
+  aviso('Guardado','Con estos datos van a salir los códigos de tu cuadrilla.','✅');
   /* al trabajo: charlas, capacitaciones, programa. Generar códigos es una
      opción más del inicio, no el sitio donde te deja la app. */
   var g=leer(LS.sec,null);
@@ -10174,7 +10509,7 @@ function compartirCodigo(enlace, corto, titulo){
 }
 function generarEval(){
   var s=leer(LS_SUP,{}), id=$('g-tema').value;
-  if(!id){ alert('Elige el tema.'); return; }
+  if(!id){ aviso('Falta el tema','Elige de qué tema es el código.','🎓'); return; }
   var vence=$('g-vence').value||isoDeDias(diasDe(hoyISO())+7);
   var fe=$('g-fecha').value||hoyISO();
   var cf=leer(LS.cfg,{});
@@ -10515,9 +10850,10 @@ function leerDia(){
 }
 function guardarDia(){
   if(!DIA_SEL){
-    alert(DIA_TIPO==='capacitacion'
-      ? 'Elige primero la capacitación: toca una familia y después el título.'
-      : 'Elige primero la charla: toca una categoría y después el título.');
+    aviso(DIA_TIPO==='capacitacion' ? 'Falta la capacitación' : 'Falta la charla',
+      DIA_TIPO==='capacitacion'
+        ? 'Toca una familia y después el título.'
+        : 'Toca una categoría y después el título.', '📅');
     return;
   }
   var datos=progObra(); datos[PROG.dia]=leerDia(); progEscribir(datos);
@@ -10534,34 +10870,35 @@ function marcarDictada(){
   cerrarDia(); pintarPrograma();
 }
 function quitarDia(){
-  if(!confirm('¿Quitar lo que hay programado ese día?')) return;
-  var datos=progObra(); delete datos[PROG.dia]; progEscribir(datos);
-  cerrarDia(); pintarPrograma();
+  confirmar('¿Quitar lo programado ese día?', '', function(){
+    var datos=progObra(); delete datos[PROG.dia]; progEscribir(datos);
+    cerrarDia(); pintarPrograma();
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'📅'});
 }
 // ------------------------------------------------------- llenar el mes
 function llenarMes(){
   var sec=S.sector||SECTORES[0].id, nom=sectorDe(sec).nombre;
-  if(!confirm('Se reparten las charlas de 5 minutos de '+nom+' en los días de lunes a sábado de '+
-              MESES[PROG.mes]+'. Los días que ya tienen charla no se tocan. ¿Seguir?')) return;
-  var pool=CHARLAS.filter(function(x){ return !SEC_CAT[x.cat] || x.cat===sec; })
-                  .map(function(x){ return String(x.n); });
-  if(!pool.length){ alert('Ese sector no tiene charlas.'); return; }
-  var datos=progObra(), pref=PROG.ano+'-'+dosD(PROG.mes+1), libres=pool.slice();
-  Object.keys(datos).forEach(function(iso){
-    if(iso.indexOf(pref)!==0) return;
-    var j=libres.indexOf(datos[iso].tema); if(j>-1) libres.splice(j,1);
-  });
-  var cfg=leer(LS.cfg,{}), ndias=new Date(PROG.ano,PROG.mes+1,0).getDate(), puestas=0;
-  for(var d=1;d<=ndias;d++){
-    if(new Date(PROG.ano,PROG.mes,d).getDay()===0) continue;   // domingo no
-    var iso=isoDe(PROG.ano,PROG.mes,d);
-    if(datos[iso]) continue;
-    if(!libres.length) libres=pool.slice();                    // agotados: se vuelve a empezar
-    datos[iso]={tema:libres.shift(), tipo:'charla', sector:sec, resp:(cfg.cap||''), hora:'07:00', dictada:null};
-    puestas++;
-  }
-  progEscribir(datos); pintarPrograma();
-  alert(puestas+' charlas programadas en '+MESES[PROG.mes]+'.');
+  confirmar('¿Llenar el mes?', 'Se reparten las charlas de 5 minutos de '+nom+' de lunes a sábado de '+MESES[PROG.mes]+'. Los días que ya tienen charla no se tocan.', function(){
+    var pool=CHARLAS.filter(function(x){ return !SEC_CAT[x.cat] || x.cat===sec; })
+                    .map(function(x){ return String(x.n); });
+    if(!pool.length){ aviso('Sin charlas','Ese sector todavía no tiene charlas cargadas.','🗓️'); return; }
+    var datos=progObra(), pref=PROG.ano+'-'+dosD(PROG.mes+1), libres=pool.slice();
+    Object.keys(datos).forEach(function(iso){
+      if(iso.indexOf(pref)!==0) return;
+      var j=libres.indexOf(datos[iso].tema); if(j>-1) libres.splice(j,1);
+    });
+    var cfg=leer(LS.cfg,{}), ndias=new Date(PROG.ano,PROG.mes+1,0).getDate(), puestas=0;
+    for(var d=1;d<=ndias;d++){
+      if(new Date(PROG.ano,PROG.mes,d).getDay()===0) continue;   // domingo no
+      var iso=isoDe(PROG.ano,PROG.mes,d);
+      if(datos[iso]) continue;
+      if(!libres.length) libres=pool.slice();                    // agotados: se vuelve a empezar
+      datos[iso]={tema:libres.shift(), tipo:'charla', sector:sec, resp:(cfg.cap||''), hora:'07:00', dictada:null};
+      puestas++;
+    }
+    progEscribir(datos); pintarPrograma();
+    aviso('Mes programado', puestas+' charlas quedaron programadas en '+MESES[PROG.mes]+'.', '🗓️');
+  }, {si:'Sí, llenar', no:'Cancelar', icono:'🗓️'});
 }
 // ------------------------------------------------------- compartir
 function textoPrograma(){
@@ -10585,7 +10922,7 @@ function textoPrograma(){
   return t;
 }
 function copiarTexto(t){
-  var ok=function(){ alert('Programa copiado. Pégalo donde quieras.'); };
+  var ok=function(){ aviso('Programa copiado','Ya lo puedes pegar donde quieras.','📋'); };
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(t).then(ok, function(){ copiarViejo(t); });
   } else { copiarViejo(t); }
@@ -10595,8 +10932,8 @@ function copiarViejo(t){
     var a=document.createElement('textarea');
     a.value=t; a.style.position='fixed'; a.style.opacity='0';
     document.body.appendChild(a); a.select(); document.execCommand('copy');
-    document.body.removeChild(a); alert('Programa copiado. Pégalo donde quieras.');
-  }catch(e){ alert(t); }
+    document.body.removeChild(a); aviso('Programa copiado','Ya lo puedes pegar donde quieras.','📋');
+  }catch(e){ aviso('Programa del mes', t, '🗓️'); }
 }
 /* -----------------------------------------------------------------
    El programa del mes en PDF: una tabla, con cabecera de color y una
@@ -10626,7 +10963,7 @@ function pdfPrograma(){
         hora:c.hora||'--:--', charla:nombreCharla(c.tema), resp:c.resp||'por asignar',
         est:est, tipo:tipo, asist:c.dictada?String(parseInt(c.dictada.asist,10)||0):'—'});
     });
-    if(!prog){ alert('Este mes todavía no tiene charlas. Usa «Llenar el mes» o toca un día del calendario.'); return; }
+    if(!prog){ aviso('Mes vacío','Este mes todavía no tiene charlas. Usa «Llenar el mes» o toca un día del calendario.','🗓️'); return; }
 
     var doc=new jspdf.jsPDF({unit:'pt', format:'a4', orientation:'landscape'});
     var W=841.89, H=595.28, M=36, ANCHO=W-2*M;
@@ -10734,7 +11071,7 @@ function pdfPrograma(){
     var slug=obraActual().normalize('NFD').replace(/[̀-ͯ]/g,'')
              .replace(/[^A-Za-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'obra';
     entregarPDF(doc, 'Programa-charlas_'+slug+'_'+MESES[PROG.mes]+'-'+PROG.ano+'.pdf');
-  }catch(e){ alert('No se pudo armar el PDF: '+e.message); }
+  }catch(e){ aviso('No se pudo armar el PDF', String(e.message||e), '📄'); }
 }
 function compartirPrograma(){
   var t=textoPrograma();
@@ -10878,7 +11215,7 @@ function charlaDictada(){
   d[CH_ACT]={iso:a.toISOString(),
              txt:dosD(a.getDate())+'/'+dosD(a.getMonth()+1)+'/'+a.getFullYear()};
   guardar(LS_CH,d);
-  alert('Charla marcada como dictada.');
+  aviso('Listo','La charla quedó marcada como dictada.','✅');
   verCharlas();
 }
 
@@ -11267,9 +11604,9 @@ function ptNota(){
 }
 function guardarPuntaje(){
   var nombre=($('pt-nombre').value||'').trim();
-  if(!nombre){ alert('¿A quién estás evaluando?'); return; }
+  if(!nombre){ aviso('Falta el nombre','¿A quién estás evaluando?','✏️'); return; }
   var e=empActiva();
-  if(!e){ alert('Primero crea o entra a tu empresa (así se guarda y se consolida).'); ir('p-empresa'); return; }
+  if(!e){ aviso('Falta tu empresa','Crea o entra a tu empresa para que esto se guarde y se consolide.','🏢', function(){ ir('p-empresa'); }); return; }
   var crit={}; ptCriterios().forEach(function(c){ crit[c.k]=PT[c.k]; });
   var pr=ptCalcular();
   var msg=$('pt-msg'); msg.style.color='var(--gris)'; msg.textContent='Guardando…';
@@ -11389,14 +11726,23 @@ function subirFoto(carpeta, file){
   var nombre=(e?e.id:'x')+'/'+carpeta+'/'+Date.now()+'-'+(file.name||'foto.jpg').replace(/[^A-Za-z0-9.\-_]/g,'_');
   return sbSubir(nombre, file);
 }
-function reqEmpresa(){ var e=empActiva(); if(!e){ alert('Primero crea o entra a tu empresa (Mi empresa). Ahí sale el código.'); ir('p-empresa'); return null; } return e; }
+function reqEmpresa(){ var e=empActiva(); if(!e){ aviso('Falta tu empresa','Entra a «Mi empresa»: ahí sale el código.','🏢', function(){ ir('p-empresa'); }); return null; } return e; }
 
 /* ---- Reportes inseguros ---- */
 var R_ANON=false;
+var REP_FOTO=null;
+function fotoReporte(){
+  tomarFoto({max:1200, calidad:0.82, titulo:'Foto de lo que viste'}).then(function(du){
+    if(!du) return;
+    REP_FOTO=du;
+    $('r-foto-vista').innerHTML='<img src="'+du+'" style="width:100%;border-radius:12px;margin-bottom:10px">'+
+      '<button class="btn sec" style="margin:0 0 10px" onclick="REP_FOTO=null;document.getElementById(\'r-foto-vista\').innerHTML=\'\';">Quitar la foto</button>';
+  });
+}
 function prepReporte(){
-  R_ANON=false;
+  R_ANON=false; REP_FOTO=null;
   $('r-desc').value=''; $('r-lugar').value=''; $('r-autor').value=''; $('r-clase').value='condicion';
-  if($('r-foto')) $('r-foto').value=''; $('r-msg').textContent='';
+  if($('r-foto-vista')) $('r-foto-vista').innerHTML=''; $('r-msg').textContent='';
   rPintarAnon();
   rPintarModo();
 }
@@ -11430,9 +11776,9 @@ function textoDelReporte(){
 }
 function compartirReporte(){
   var desc=($('r-desc').value||'').trim();
-  if(!desc){ alert('Describe lo que viste.'); return; }
+  if(!desc){ aviso('Falta la descripción','Cuenta en una línea qué fue lo que viste.','✏️'); return; }
   var txt=textoDelReporte(), msg=$('r-msg');
-  var f=$('r-foto').files && $('r-foto').files[0];
+  var f=REP_FOTO ? _dataURLaArchivo(REP_FOTO,'reporte.jpg') : null;
   if(navigator.share){
     var datos={title:'Reporte de seguridad', text:txt};
     try{ if(f && navigator.canShare && navigator.canShare({files:[f]})) datos.files=[f]; }catch(_e){}
@@ -11456,13 +11802,15 @@ function guardarReporte(){
   var e=empDeTrabajo();
   if(!e){ compartirReporte(); return; }
   var desc=($('r-desc').value||'').trim();
-  if(!desc){ alert('Describe lo que viste.'); return; }
+  if(!desc){ aviso('Falta la descripción','Cuenta en una línea qué fue lo que viste.','✏️'); return; }
   /* el tope solo aplica al que gestiona: al trabajador que ve un peligro
      nunca se le cierra la puerta por un plan. */
   if(sesionAbierta() && frenoLite('reporte', usoTotal('reporte'), 'reportes')) return;
   if(sesionAbierta()) sumarUso('reporte');
   var msg=$('r-msg'); msg.style.color='var(--gris)'; msg.textContent='Enviando…';
-  var f=$('r-foto').files && $('r-foto').files[0];
+  /* la foto sube YA reducida: en obra el internet es el cuello de
+     botella, no el celular. Antes se mandaban los 8 MB del original. */
+  var f=REP_FOTO ? _dataURLaArchivo(REP_FOTO,'reporte.jpg') : null;
   var datos={clase:$('r-clase').value, descripcion:desc, lugar:($('r-lugar').value||'').trim(),
              anonimo:R_ANON, autor:R_ANON?null:(($('r-autor').value||'').trim()||null), fecha:hoyISO()};
   function grabar(fotoUrl){ datos.foto_url=fotoUrl||null; return mandarReporteANube(datos); }
@@ -11589,27 +11937,13 @@ function prepCerrarReporte(){
        (r.foto_url? '<div class="rc-antes"><span class="tb-mini">Así lo encontraron</span>'+
         '<img src="'+escA(r.foto_url)+'" alt="Foto del hallazgo"></div>':''))
     : '<span class="sub">Reporte seleccionado.</span>';
-  var inp=$('rc-foto'); if(!inp) return;
-  inp.value='';
-  if(inp.getAttribute('data-ok')==='1') return;
-  inp.setAttribute('data-ok','1');
-  inp.onchange=function(){
-    var f=this.files && this.files[0]; if(!f) return;
-    var fr=new FileReader();
-    fr.onload=function(){
-      var img=new Image();
-      img.onload=function(){
-        var max=1200, r2=Math.min(1,max/Math.max(img.width,img.height));
-        var cv=document.createElement('canvas');
-        cv.width=Math.round(img.width*r2); cv.height=Math.round(img.height*r2);
-        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-        REP_FOTO_CIERRE=cv.toDataURL('image/jpeg',0.82);
-        $('rc-vista').innerHTML='<span class="tb-mini">Así quedó</span><img src="'+REP_FOTO_CIERRE+'" alt="Foto del levantamiento">';
-      };
-      img.src=fr.result;
-    };
-    fr.readAsDataURL(f);
-  };
+}
+function fotoCierre(){
+  tomarFoto({max:1200, calidad:0.82, titulo:'Foto del levantamiento'}).then(function(du){
+    if(!du) return;
+    REP_FOTO_CIERRE=du;
+    $('rc-vista').innerHTML='<span class="tb-mini">Así quedó</span><img src="'+REP_FOTO_CIERRE+'" alt="Foto del levantamiento">';
+  });
 }
 function guardarCierreReporte(){
   var m=$('rc-msg'); m.style.color='var(--mal)';
@@ -12003,14 +12337,15 @@ function guardarReporteEditado(id){
 }
 function borrarUnReporte(id){
   var r=reportePorId(id); if(!r) return;
-  if(!confirm('¿Eliminar este reporte?\n\n«'+(r.descripcion||'').slice(0,90)+'»\n\nSe borra para toda la obra y no se puede deshacer.')) return;
-  var m=$('repd-msg'); if(m){ m.style.color='var(--gris)'; m.textContent='Eliminando…'; }
-  sbDelVerificado('sst_reporte?id=eq.'+encodeURIComponent(id)).then(function(){
-    REP_LISTA=(REP_LISTA||[]).filter(function(x){ return String(x.id)!==String(id); });
-    cerrarDetalleReporte(); pintarListaReportes();
-  }).catch(function(e){
-    if(m){ m.style.color='var(--mal)'; m.textContent='No se eliminó: '+e+'.'; }
-  });
+  confirmar('¿Eliminar este reporte?', '«'+(r.descripcion||'').slice(0,90)+'». Se borra para toda la obra y no se puede deshacer.', function(){
+    var m=$('repd-msg'); if(m){ m.style.color='var(--gris)'; m.textContent='Eliminando…'; }
+    sbDelVerificado('sst_reporte?id=eq.'+encodeURIComponent(id)).then(function(){
+      REP_LISTA=(REP_LISTA||[]).filter(function(x){ return String(x.id)!==String(id); });
+      cerrarDetalleReporte(); pintarListaReportes();
+    }).catch(function(e){
+      if(m){ m.style.color='var(--mal)'; m.textContent='No se eliminó: '+e+'.'; }
+    });
+  }, {si:'Sí, eliminar', no:'Cancelar', icono:'🗑️'});
 }
 function compartirUnReportePDF(id){
   var r=reportePorId(id); if(!r) return;
@@ -12329,7 +12664,9 @@ function abrirInspec(k){
   $('insp-h').textContent=t.n; $('insp-tit').textContent='Inspección';
   var h=''; t.items.forEach(function(it,i){ INSP.estado[i]=1;
     h+='<div class="tarj vidrio" style="display:flex;align-items:center;gap:12px" onclick="inspToca('+i+')"><span id="insp-i'+i+'" style="font-size:22px;font-weight:800;color:#2f9e6f;min-width:26px;text-align:center">✓</span><span style="flex:1">'+esc(it)+'</span></div>'; });
-  $('insp-items').innerHTML=h; $('i-obs').value=''; if($('i-foto'))$('i-foto').value=''; $('i-inspector').value=(leer(LS_SUP,{}).nombre||''); $('i-msg').textContent='';
+  $('insp-items').innerHTML=h; $('i-obs').value=''; INSP_FOTO=null;
+  if($('i-foto-vista'))$('i-foto-vista').innerHTML='';
+  $('i-inspector').value=(leer(LS_SUP,{}).nombre||''); $('i-msg').textContent='';
   ir('p-inspec-nueva');
 }
 function inspToca(i){ INSP.estado[i]=INSP.estado[i]===1?0:1; var el=$('insp-i'+i); el.textContent=INSP.estado[i]?'✓':'✗'; el.style.color=INSP.estado[i]?'#2f9e6f':'#d2564f'; }
@@ -12339,7 +12676,7 @@ function guardarInspeccion(){
   var items=t.items.map(function(it,i){ return {t:it, ok:INSP.estado[i]===1}; });
   var conforme=items.every(function(x){return x.ok;});
   var msg=$('i-msg'); msg.style.color='var(--gris)'; msg.textContent='Guardando…';
-  var f=$('i-foto').files && $('i-foto').files[0];
+  var f=INSP_FOTO ? _dataURLaArchivo(INSP_FOTO,'inspeccion.jpg') : null;
   function grabar(fotoUrl){
     return sbPost('sst_inspeccion',{empresa:e.id, tipo:t.n, items:items, observacion:($('i-obs').value||'').trim(), foto_url:fotoUrl||null,
       inspector:($('i-inspector').value||'').trim(), resultado:conforme?'conforme':'observado', fecha:hoyISO()});
@@ -12347,6 +12684,16 @@ function guardarInspeccion(){
   (f? subirFoto('inspecciones',f).then(grabar) : grabar(null))
     .then(function(){ msg.style.color='#2f9e6f'; msg.textContent='Inspección guardada ('+(conforme?'conforme':'con observaciones')+').'; setTimeout(function(){ ir('p-inspec'); },800); })
     .catch(function(err){ msg.style.color='#d2564f'; msg.textContent='No se pudo guardar ('+err+').'; });
+}
+
+var INSP_FOTO=null;
+function fotoInspec(){
+  tomarFoto({max:1200, calidad:0.82, titulo:'Foto de la inspección'}).then(function(du){
+    if(!du) return;
+    INSP_FOTO=du;
+    $('i-foto-vista').innerHTML='<img src="'+du+'" style="width:100%;border-radius:12px;margin-bottom:10px">'+
+      '<button class="btn sec" style="margin:0 0 10px" onclick="INSP_FOTO=null;document.getElementById(\'i-foto-vista\').innerHTML=\'\';">Quitar la foto</button>';
+  });
 }
 
 /* ---- PETAR ---- */
@@ -12389,8 +12736,18 @@ function guardarPetar(){
   var e=reqEmpresa(); if(!e) return;
   var t=PETAR_TIPOS.filter(function(x){return x.k===PET.tipo;})[0];
   var todos=t.ctrl.every(function(x,i){return PET.ctrl[i];});
-  if(!todos){ if(!confirm('Faltan controles por marcar. ¿Emitir el permiso igual? (No recomendado)')) return; }
-  var desc=($('pt-desc').value||'').trim(); if(!desc){ alert('Describe el trabajo.'); return; }
+  var desc=($('pt-desc').value||'').trim();
+  if(!desc){ aviso('Falta la descripción','Escribe qué trabajo se va a hacer.','✏️'); return; }
+  /* el permiso sin controles marcados se puede emitir, pero no en silencio */
+  if(!todos){
+    confirmar('Faltan controles por marcar','Un PETAR sin todos sus controles no es recomendable. ¿Lo emites igual?',
+      function(){ _emitirPetar(t, desc); }, {si:'Emitir igual', no:'Volver a revisar', icono:'📋'});
+    return;
+  }
+  _emitirPetar(t, desc);
+}
+function _emitirPetar(t, desc){
+  var e=reqEmpresa(); if(!e) return;
   var medidas=t.ctrl.map(function(ct,i){ return {t:ct, ok:!!PET.ctrl[i]}; });
   var folio='PT-'+_hh(desc+PET.tipo+hoyISO()).slice(0,6).toUpperCase();
   var msg=$('pet-msg'); msg.style.color='var(--gris)'; msg.textContent='Emitiendo…';
@@ -12398,6 +12755,220 @@ function guardarPetar(){
     responsable:($('pt-resp').value||'').trim(), desde:$('pt-desde').value, hasta:$('pt-hasta').value, folio:folio, fecha:hoyISO()})
     .then(function(){ msg.style.color='#2f9e6f'; msg.textContent='Permiso emitido. Folio '+folio+'.'; setTimeout(function(){ ir('p-petar'); },900); })
     .catch(function(err){ msg.style.color='#d2564f'; msg.textContent='No se pudo ('+err+').'; });
+}
+
+/* ══ LA FOTO, RÁPIDO ═══════════════════════════════════════════════
+   Cómo se hacía antes, y por qué se sentía lenta:
+     1. el celular abría SU cámara y sacaba una foto de 12 megapíxeles
+        (4 a 8 MB), con toda la ceremonia de entrar y salir de otra app;
+     2. FileReader la pasaba a texto base64 — un 33% más grande todavía;
+     3. una <img> volvía a decodificar ese texto, en el mismo hilo que
+        dibuja la pantalla, así que la app quedaba tiesa;
+     4. toDataURL la volvía a codificar, otra vez en el mismo hilo.
+   Cuatro conversiones del tamaño completo para terminar guardando una
+   imagen de 1100 px. En un celular de obra eso son varios segundos con
+   la pantalla congelada, y el que la usa piensa que se colgó.
+
+   Ahora: la cámara es NUESTRA (se dispara en el acto, sin salir de la
+   app y pidiéndole al sensor 1920 px en vez de 12 MP), y cuando la foto
+   viene de la galería se decodifica y se encoge con createImageBitmap,
+   que trabaja fuera del hilo de la pantalla. La calidad final es la
+   misma: lo que se guardaba antes también era un JPEG de ese tamaño. */
+function _lienzoAdataURL(cv, calidad){
+  return new Promise(function(ok){
+    if(!cv.toBlob){ ok(cv.toDataURL('image/jpeg', calidad)); return; }
+    cv.toBlob(function(b){
+      if(!b){ ok(cv.toDataURL('image/jpeg', calidad)); return; }
+      var fr=new FileReader();
+      fr.onload=function(){ ok(fr.result); };
+      fr.onerror=function(){ ok(cv.toDataURL('image/jpeg', calidad)); };
+      fr.readAsDataURL(b);   /* ya es un archivo chico: esto vuela */
+    }, 'image/jpeg', calidad);
+  });
+}
+function _dibujarYcerrar(fuente, w, h, calidad){
+  var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  var g=cv.getContext('2d');
+  try{ g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high'; }catch(_e){}
+  g.drawImage(fuente,0,0,w,h);
+  return _lienzoAdataURL(cv, calidad);
+}
+function _fotoLenta(f, max, calidad){
+  /* el camino de siempre, por si el navegador es viejo. Ni siquiera acá
+     se usa base64 para la imagen grande: un objectURL es instantáneo. */
+  return new Promise(function(ok, mal){
+    var url=null;
+    try{ url=URL.createObjectURL(f); }catch(e){}
+    var img=new Image();
+    img.onload=function(){
+      var r=Math.min(1, max/Math.max(img.width, img.height));
+      var w=Math.max(1,Math.round(img.width*r)), h=Math.max(1,Math.round(img.height*r));
+      _dibujarYcerrar(img, w, h, calidad).then(function(du){
+        if(url) try{ URL.revokeObjectURL(url); }catch(e){}
+        ok(du);
+      }, mal);
+    };
+    img.onerror=function(){ if(url) try{ URL.revokeObjectURL(url); }catch(e){} mal('no se pudo leer la imagen'); };
+    if(url) img.src=url; else { var fr=new FileReader(); fr.onload=function(){ img.src=fr.result; }; fr.readAsDataURL(f); }
+  });
+}
+/* El tamaño de la foto se lee de la CABECERA del archivo, sin decodificarla.
+   Son unos pocos kilobytes: el JPEG lo dice en su marcador SOF y el PNG en
+   su bloque IHDR. Saberlo antes vale mucho, porque permite pedirle al
+   decodificador que entregue la imagen YA reducida — que es cuatro veces
+   más rápido que decodificar 12 megapíxeles y encogerlos después. */
+function _medirImagen(f){
+  return new Promise(function(ok){
+    if(!f.slice || !f.slice(0,4).arrayBuffer){ ok(null); return; }
+    f.slice(0, 131072).arrayBuffer().then(function(ab){
+      var d=new DataView(ab), n=d.byteLength;
+      try{
+        /* PNG */
+        if(n>24 && d.getUint32(0)===0x89504E47){ ok({w:d.getUint32(16), h:d.getUint32(20)}); return; }
+        /* JPEG */
+        if(n>4 && d.getUint16(0)===0xFFD8){
+          var i=2;
+          while(i+4 < n){
+            if(d.getUint8(i)!==0xFF){ i++; continue; }
+            var m=d.getUint8(i+1);
+            if(m===0xD8 || m===0x01 || (m>=0xD0 && m<=0xD7)){ i+=2; continue; }
+            var largo=d.getUint16(i+2);
+            var esSOF = (m>=0xC0&&m<=0xC3)||(m>=0xC5&&m<=0xC7)||(m>=0xC9&&m<=0xCB)||(m>=0xCD&&m<=0xCF);
+            if(esSOF && i+9<n){ ok({h:d.getUint16(i+5), w:d.getUint16(i+7)}); return; }
+            i += 2 + largo;
+          }
+        }
+      }catch(_e){}
+      ok(null);
+    }).catch(function(){ ok(null); });
+  });
+}
+function fotoDeArchivo(f, max, calidad){
+  max=max||1100; calidad=calidad||0.82;
+  return new Promise(function(ok, mal){
+    if(!f){ mal('sin archivo'); return; }
+    if(!window.createImageBitmap){ _fotoLenta(f, max, calidad).then(ok, mal); return; }
+    var listo=function(bm){
+      _dibujarYcerrar(bm, bm.width, bm.height, calidad).then(function(du){
+        try{ bm.close && bm.close(); }catch(_e){}
+        ok(du);
+      }, mal);
+    };
+    /* camino largo: decodificar entero y encoger con el lienzo. Se usa
+       cuando no se pudo leer la cabecera o si el navegador no acepta
+       las opciones de reducción. */
+    var porLasLargas=function(){
+      createImageBitmap(f, {imageOrientation:'from-image'}).then(function(bm){
+        var r=Math.min(1, max/Math.max(bm.width, bm.height));
+        var w=Math.max(1,Math.round(bm.width*r)), h=Math.max(1,Math.round(bm.height*r));
+        _dibujarYcerrar(bm, w, h, calidad).then(function(du){
+          try{ bm.close(); }catch(_e){}
+          ok(du);
+        }, mal);
+      }).catch(function(){ _fotoLenta(f, max, calidad).then(ok, mal); });
+    };
+    _medirImagen(f).then(function(m){
+      if(!m || !m.w || !m.h){ porLasLargas(); return; }
+      var r=Math.min(1, max/Math.max(m.w, m.h));
+      if(r>=1){ porLasLargas(); return; }   /* ya es chica: no se agranda */
+      var w=Math.max(1,Math.round(m.w*r)), h=Math.max(1,Math.round(m.h*r));
+      createImageBitmap(f, {resizeWidth:w, resizeHeight:h, resizeQuality:'high',
+                            imageOrientation:'from-image'})
+        .then(function(bm){
+          /* una foto de celular puede venir tumbada por el EXIF: si el
+             navegador la endereza, el ancho y el alto salen cambiados.
+             Se comprueba y, si hace falta, se corrige de una pasada. */
+          if(Math.abs(bm.width-w)>2 || Math.abs(bm.height-h)>2){
+            var r2=Math.min(1, max/Math.max(bm.width, bm.height));
+            var w2=Math.max(1,Math.round(bm.width*r2)), h2=Math.max(1,Math.round(bm.height*r2));
+            _dibujarYcerrar(bm, w2, h2, calidad).then(function(du){
+              try{ bm.close(); }catch(_e){} ok(du);
+            }, mal);
+            return;
+          }
+          listo(bm);
+        })
+        .catch(porLasLargas);
+    });
+  });
+}
+/* un dataURL vuelve a ser archivo para poder subirlo a la nube */
+function _dataURLaArchivo(du, nombre){
+  var pt=String(du).split(','), bin=atob(pt[1]);
+  var u=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+  var tipo=(pt[0].match(/:(.*?);/)||[])[1]||'image/jpeg';
+  try{ return new File([u], nombre||'foto.jpg', {type:tipo}); }
+  catch(e){ var b=new Blob([u],{type:tipo}); b.name=nombre||'foto.jpg'; return b; }
+}
+
+/* ── la cámara de la app ── */
+var CAM={stream:null, resolver:null, op:null, cara:'environment'};
+function tomarFoto(op){
+  op=op||{}; op.max=op.max||1100; op.calidad=op.calidad||0.82;
+  return new Promise(function(ok){
+    CAM.resolver=ok; CAM.op=op;
+    var md=navigator.mediaDevices;
+    if(!md || !md.getUserMedia){ camDesdeGaleria(); return; }
+    $('cam-tit').textContent = op.titulo || 'Tomar foto';
+    $('cam-msg').textContent = 'Encendiendo la cámara…';
+    $('cam').className = 'cam abierta' + (op.doc?' doc':'');
+    _encenderCamara();
+  });
+}
+function _encenderCamara(){
+  var op=CAM.op||{};
+  _apagarCamara();
+  navigator.mediaDevices.getUserMedia({audio:false, video:{
+    facingMode:{ideal:CAM.cara},
+    width:{ideal: op.doc?2560:1920}, height:{ideal: op.doc?1440:1080}
+  }}).then(function(st){
+    CAM.stream=st;
+    var v=$('cam-v'); v.srcObject=st;
+    var pl=v.play(); if(pl && pl.catch) pl.catch(function(){});
+    $('cam-msg').textContent='';
+  }).catch(function(){
+    $('cam-msg').textContent='No se pudo abrir la cámara. Toca 🖼️ para elegir la foto de la galería.';
+  });
+}
+function voltearCamara(){ CAM.cara = (CAM.cara==='environment') ? 'user' : 'environment'; _encenderCamara(); }
+function _apagarCamara(){
+  try{ if(CAM.stream){ CAM.stream.getTracks().forEach(function(t){ t.stop(); }); } }catch(e){}
+  CAM.stream=null;
+  try{ var v=$('cam-v'); if(v) v.srcObject=null; }catch(e){}
+}
+function cerrarCamara(){
+  _apagarCamara();
+  var c=$('cam'); if(c) c.className='cam';
+  var f=CAM.resolver; CAM.resolver=null;
+  if(f) try{ f(null); }catch(e){}
+}
+function dispararCamara(){
+  var v=$('cam-v'), op=CAM.op||{};
+  if(!v || !v.videoWidth){ $('cam-msg').textContent='La cámara todavía no está lista.'; return; }
+  var max=op.max||1100;
+  var r=Math.min(1, max/Math.max(v.videoWidth, v.videoHeight));
+  var w=Math.max(1,Math.round(v.videoWidth*r)), h=Math.max(1,Math.round(v.videoHeight*r));
+  _dibujarYcerrar(v, w, h, op.calidad||0.82).then(function(du){ _entregarFoto(du); });
+}
+function camDesdeGaleria(){
+  var inp=$('cam-file'); if(!inp) return;
+  inp.value='';
+  inp.onchange=function(){
+    var f=this.files && this.files[0]; if(!f) return;
+    var op=CAM.op||{};
+    $('cam-msg').textContent='Preparando la foto…';
+    fotoDeArchivo(f, op.max||1100, op.calidad||0.82)
+      .then(_entregarFoto)
+      .catch(function(){ $('cam-msg').textContent='No se pudo leer esa imagen.'; });
+  };
+  inp.click();
+}
+function _entregarFoto(du){
+  _apagarCamara();
+  var c=$('cam'); if(c) c.className='cam';
+  var f=CAM.resolver; CAM.resolver=null;
+  if(f) try{ f(du); }catch(e){}
 }
 
 /* ---- Credencial / QR ---- */
@@ -12426,31 +12997,105 @@ function prepCred(){
     $('c-nombre').value=t.nombre||''; $('c-dni').value=t.dni||''; $('c-cargo').value=t.puesto||'';
   };
 }
+/* El carné se dibuja SIEMPRE con esta función, tanto al crearlo como al
+   volver a abrirlo desde la lista. Antes el QR se pintaba suelto dentro de
+   generarCredencial y vivía solo mientras no salieras de esa pantalla: al
+   volver, la credencial seguía guardada pero el QR ya no existía en ningún
+   lado y no había forma de mostrarlo otra vez. Todo lo que hace falta para
+   redibujarlo está dentro del propio código (`cod`), así que se puede
+   reconstruir cuantas veces quieras, incluso sin internet. */
+function credDatos(cod){
+  try{
+    var resto=String(cod).slice('OBRASST-CRED:'.length), payload=resto.split('.')[0];
+    return JSON.parse(decodeURIComponent(escape(atob(payload.replace(/-/g,'+').replace(/_/g,'/')))));
+  }catch(e){ return null; }
+}
+function credQR(cod){
+  var qr=qrcode(0,'M'); qr.addData(cod); qr.make();
+  return qr.createDataURL(6,8);
+}
+function tarjetaCredHTML(cod){
+  var d=credDatos(cod);
+  if(!d) return '<p class="sub">No se pudo leer esa credencial.</p>';
+  var img=credQR(cod);
+  var vigente = !d.v || d.v>=hoyISO();
+  return '<div class="tarj vidrio" style="text-align:center;display:block">'+
+    '<div class="marca" style="justify-content:center">◆ OBRASST · CREDENCIAL</div>'+
+    '<img src="'+img+'" alt="QR" style="width:180px;height:180px;margin:8px auto;display:block;background:#fff;padding:8px;border-radius:10px">'+
+    '<b style="font-size:18px">'+esc(d.n||'')+'</b><br><small class="sub">'+esc(d.c||'')+(d.d?' · DNI '+esc(d.d):'')+'</small><br>'+
+    '<small class="sub">'+esc(d.o||'')+' · habilitado hasta '+esc(d.v||'—')+'</small>'+
+    (vigente?'':'<div class="aviso" style="margin-top:10px;border-left:3px solid var(--mal)">Esta credencial ya venció. Genera una nueva con fecha vigente.</div>')+
+    '</div>'+
+    '<div class="dos" style="margin-top:12px">'+
+      '<button class="btn" style="margin:0" onclick="descargarCred(\''+img+'\',\''+esc(d.n||'trabajador').replace(/'/g,"")+'\')">Descargar el carné</button>'+
+      '<button class="btn sec" style="margin:0" onclick="compartirCred(\''+img+'\',\''+esc(d.n||'trabajador').replace(/'/g,"")+'\')">Compartir</button>'+
+    '</div>';
+}
 function generarCredencial(){
-  var nombre=($('c-nombre').value||'').trim(); if(!nombre){ alert('Nombre del trabajador.'); return; }
+  var nombre=($('c-nombre').value||'').trim(); if(!nombre){ aviso('Falta el nombre','Escribe el nombre del trabajador para generar su credencial.','✏️'); return; }
   if(frenoLite('credencial', leer(LS_CRED,[]).length, 'credenciales')) return;
   sumarUso('credencial');
   var e=empActiva()||{nombre:'—', codigo:''};
   var datos={n:nombre, d:($('c-dni').value||'').trim(), c:($('c-cargo').value||'').trim(), v:$('c-vence').value, o:e.nombre};
   var payload=b64u(JSON.stringify(datos));
   var cod='OBRASST-CRED:'+payload+'.'+credFirma(payload);
-  // guardar en lista local
-  var lista=leer(LS_CRED,[]); lista.unshift({n:nombre, d:datos.d, v:datos.v, cod:cod}); guardar(LS_CRED, lista.slice(0,50));
-  // QR
-  var qr=qrcode(0,'M'); qr.addData(cod); qr.make();
-  var img=qr.createDataURL(6,8);
-  $('cred-tarjeta').innerHTML='<div class="tarj vidrio" style="text-align:center;border:1px solid var(--linea)">'+
-    '<div class="marca" style="justify-content:center">◆ OBRASST · CREDENCIAL</div>'+
-    '<img src="'+img+'" alt="QR" style="width:180px;height:180px;margin:8px auto;display:block;background:#fff;padding:8px;border-radius:10px">'+
-    '<b style="font-size:18px">'+esc(nombre)+'</b><br><small class="sub">'+esc(datos.c||'')+(datos.d?' · DNI '+esc(datos.d):'')+'</small><br>'+
-    '<small class="sub">'+esc(e.nombre||'')+' · habilitado hasta '+esc(datos.v||'—')+'</small></div>'+
-    '<button class="btn" style="margin-top:12px" onclick="descargarCred(\''+img+'\',\''+esc(nombre)+'\')">Descargar el carné</button>';
+  /* se guarda con fecha: así la lista se puede ordenar y se sabe cuál es la
+     última que hiciste aunque el nombre se repita */
+  var lista=leer(LS_CRED,[]);
+  lista.unshift({n:nombre, d:datos.d, v:datos.v, cod:cod, hecho:new Date().toISOString()});
+  guardar(LS_CRED, lista.slice(0,200));
+  try{ sincronizarCredenciales(); }catch(_s){}
+  $('cred-tarjeta').innerHTML = tarjetaCredHTML(cod)+
+    '<p class="sub" style="margin-top:10px">Queda guardada. Puedes volver a verla cuando quieras en <b>Credenciales</b>.</p>'+
+    '<button class="btn sec" style="margin-top:4px" onclick="ir(\'p-credencial\')">Ver todas mis credenciales</button>';
 }
-function descargarCred(img, nombre){ try{ var a=document.createElement('a'); a.href=img; a.download='credencial-'+nombre.replace(/[^A-Za-z0-9]/g,'')+'.gif'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }catch(e){} }
+function descargarCred(img, nombre){ try{ var a=document.createElement('a'); a.href=img; a.download='credencial-'+String(nombre).replace(/[^A-Za-z0-9]/g,'')+'.gif'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }catch(e){} }
+/* compartir por WhatsApp: en obra el carné se manda al celular del trabajador,
+   no se imprime. Si el celular no sabe compartir archivos, se descarga. */
+function compartirCred(img, nombre){
+  try{
+    if(navigator.share && navigator.canShare){
+      var bin=atob(String(img).split(',')[1]), u=new Uint8Array(bin.length);
+      for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+      var f=new File([u], 'credencial-'+String(nombre).replace(/[^A-Za-z0-9]/g,'')+'.gif', {type:'image/gif'});
+      if(navigator.canShare({files:[f]})){ navigator.share({files:[f], title:'Credencial '+nombre}).catch(function(){}); return; }
+    }
+  }catch(e){}
+  descargarCred(img, nombre);
+}
+var CRED_VIENDO=null;
+function verCred(i){
+  var lista=leer(LS_CRED,[]), x=lista[i];
+  CRED_VIENDO = (CRED_VIENDO===i) ? null : i;
+  pintarCredLista();
+  if(CRED_VIENDO!==null){ var c=$('cred-uno-'+i); if(c && c.scrollIntoView) try{ c.scrollIntoView({behavior:'smooth', block:'center'}); }catch(_e){} }
+}
+function borrarCred(i){
+  confirmar('¿Quitar esta credencial?','Se borra de la lista de este celular. El carné que ya entregaste sigue funcionando hasta su fecha.', function(){
+    var lista=leer(LS_CRED,[]); lista.splice(i,1); guardar(LS_CRED,lista);
+    CRED_VIENDO=null; pintarCredLista();
+    try{ sincronizarCredenciales(); }catch(_s){}
+  });
+}
 function pintarCredLista(){
   var lista=leer(LS_CRED,[]);
-  var h=''; lista.forEach(function(x){ h+='<div class="tarj vidrio"><b>'+esc(x.n)+'</b><small>DNI '+esc(x.d||'—')+' · hasta '+esc(x.v||'—')+'</small></div>'; });
-  $('cred-lista').innerHTML= lista.length? ('<div class="sec-tit">Credenciales de este celular</div>'+h) : '<p class="sub">Aún no generas ninguna.</p>';
+  if(!lista.length){ $('cred-lista').innerHTML='<p class="sub">Aún no generas ninguna. Toca «Generar credencial».</p>'; return; }
+  var h='';
+  lista.forEach(function(x,i){
+    var vig = !x.v || x.v>=hoyISO();
+    var abierto = (CRED_VIENDO===i);
+    h+='<div class="tarj vidrio" id="cred-uno-'+i+'" style="display:block;border-left:3px solid '+(vig?'var(--ok)':'var(--mal)')+'">'+
+       '<b>'+esc(x.n||'')+'</b><small>DNI '+esc(x.d||'—')+' · '+(vig?'vigente hasta ':'venció el ')+esc(x.v||'—')+
+       (x.delEquipo?' · del equipo':'')+'</small>'+
+       '<div class="dos" style="margin-top:9px">'+
+         '<button class="btn sec" style="margin:0" onclick="verCred('+i+')">'+(abierto?'Ocultar el QR':'🪪 Ver el QR')+'</button>'+
+         '<button class="btn sec" style="margin:0" onclick="borrarCred('+i+')">Quitar</button>'+
+       '</div>'+
+       (abierto ? '<div style="margin-top:12px">'+tarjetaCredHTML(x.cod)+'</div>' : '')+
+       '</div>';
+  });
+  $('cred-lista').innerHTML='<div class="sec-tit">Credenciales generadas ('+lista.length+')</div>'+
+    '<p class="sub" style="margin:-4px 0 10px">Toca «Ver el QR» para volver a mostrarlo, descargarlo o mandárselo al trabajador.</p>'+h;
 }
 function verificarCred(){
   var cod=($('v-cod').value||'').trim(); var out=$('v-resultado');
@@ -12481,9 +13126,9 @@ function pintarRecord(){
 }
 function agregarRecordatorio(){
   var e=reqEmpresa(); if(!e) return;
-  var t=($('rec-tit').value||'').trim(); if(!t){ alert('¿Qué quieres recordar?'); return; }
+  var t=($('rec-tit').value||'').trim(); if(!t){ aviso('Falta el título','¿Qué quieres que la app te recuerde?','⏰'); return; }
   sbPost('sst_recordatorio',{empresa:e.id, titulo:t, vence:$('rec-vence').value||null, tipo:$('rec-tipo').value})
-    .then(function(){ pintarRecord(); }).catch(function(err){ alert('No se pudo ('+err+').'); });
+    .then(function(){ pintarRecord(); }).catch(function(err){ aviso('No se pudo', String(err), '📡'); });
 }
 function cargarRecord(){
   var e=empActiva();
@@ -12501,7 +13146,7 @@ function cargarRecord(){
     $('rec-lista').innerHTML=h||'<p class="sub">Sin recordatorios. Agrega el primero arriba.</p>';
   }).catch(function(err){ if($('rec-lista'))$('rec-lista').innerHTML='<p class="sub">No se pudo cargar ('+err+').</p>'; });
 }
-function borrarRecord(id){ sbDel('sst_recordatorio?id=eq.'+id).then(function(){ cargarRecord(); }).catch(function(err){ alert('No se pudo ('+err+').'); }); }
+function borrarRecord(id){ sbDel('sst_recordatorio?id=eq.'+id).then(function(){ cargarRecord(); }).catch(function(err){ aviso('No se pudo', String(err), '📡'); }); }
 
 /* ---- Biblioteca de normas ---- */
 var NORMAS = [
@@ -12729,11 +13374,11 @@ var EMP_ESTRUCTURA = [
 var LS_YO='sstc_yo';
 function miNombre(){ try{ return (leer(LS_YO,{})||{}).nombre || ''; }catch(_e){ return ''; } }
 function ponerMiNombre(){
-  var v=prompt('¿Cómo te llamas? Solo se usa para saludarte, se queda en este celular.', miNombre()||'');
-  if(v===null) return;
-  v=(v||'').trim().slice(0,40);
-  guardar(LS_YO,{nombre:v});
-  pintarSaludo();
+  preguntar('¿Cómo te llamas?', 'Solo se usa para saludarte. Se queda en este celular.', miNombre()||'', function(v){
+    v=String(v||'').trim().slice(0,40);
+    guardar(LS_YO,{nombre:v});
+    pintarSaludo();
+  }, '👋');
 }
 function franjaDelDia(){
   var h=new Date().getHours();
@@ -12884,7 +13529,7 @@ function subirPendientes(e, locales){
 function guardarDoc(){
   if(!DOC_LEAF) return;
   var nombre=($('doc-nombre').value||'').trim();
-  if(!nombre){ alert('Ponle un título al documento.'); return; }
+  if(!nombre){ aviso('Falta el título','Ponle un nombre al documento.','✏️'); return; }
   var url=($('doc-url').value||'').trim(), nota=($('doc-nota').value||'').trim();
   var f=$('doc-archivo').files && $('doc-archivo').files[0];
   var msg=$('doc-msg'), e=empActiva();
@@ -12913,12 +13558,13 @@ function guardarDoc(){
   } else { aLaNube(''); }
 }
 function quitarDoc(id, esLocal){
-  if(!confirm('¿Quitar este documento de la carpeta?')) return;
-  if(esLocal || String(id).charAt(0)==='l'){
-    docLocalSet(DOC_LEAF, docLocal(DOC_LEAF).filter(function(d){return d.id!==id;}));
-    pintarDoc(); return;
-  }
-  sbDel('sst_doc?id=eq.'+id).then(pintarDoc).catch(function(err){ alert('No se pudo quitar (¿sin internet?). '+err); });
+  confirmar('¿Quitar este documento de la carpeta?', '', function(){
+    if(esLocal || String(id).charAt(0)==='l'){
+      docLocalSet(DOC_LEAF, docLocal(DOC_LEAF).filter(function(d){return d.id!==id;}));
+      pintarDoc(); return;
+    }
+    sbDel('sst_doc?id=eq.'+id).then(pintarDoc).catch(function(err){ aviso('No se pudo quitar','Revisa tu internet. '+err,'📡'); });
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'📄'});
 }
 function volverDeDoc(){ ir('p-emp-home'); }
 
@@ -13012,10 +13658,11 @@ function guardarClaveNueva(){
    .catch(function(e){ m.style.color='var(--mal)'; m.textContent=mensajeAuth(e); });
 }
 function salirDeCuenta(){
-  if(!confirm('¿Cerrar sesión en este celular?\n\nNo se borra nada: tus documentos y los de tu empresa quedan en la nube. Vuelves a entrar con tu correo y ahí siguen.')) return;
-  borrarToken(); cerrarSesion(); borrar(LS_EMP);
-  try{ localStorage.removeItem(LS_PLAN); localStorage.removeItem(LS_ROL); }catch(e){}
-  ROL=null; HIST=[]; _ir('p-rol'); pintarRol();
+  confirmar('¿Cerrar sesión en este celular?', 'No se borra nada: tus documentos y los de tu empresa quedan en la nube. Vuelves a entrar con tu correo y ahí siguen.', function(){
+    borrarToken(); cerrarSesion(); borrar(LS_EMP);
+    try{ localStorage.removeItem(LS_PLAN); localStorage.removeItem(LS_ROL); }catch(e){}
+    ROL=null; HIST=[]; _ir('p-rol'); pintarRol();
+  }, {si:'Sí, cerrar sesión', no:'Quedarme', icono:'🚪'});
 }
 
 // ---- ¿en qué empresa trabajo hoy? ----
@@ -13139,16 +13786,25 @@ function cargarSolicitudes(){
 }
 function responderSolicitud(i, ok){
   var s=SOLS[i]; if(!s) return;
-  if(!ok && !confirm('¿Rechazar a '+(s.nombre||s.correo)+'?')) return;
+  if(!ok){
+    confirmar('¿Rechazar a '+(s.nombre||s.correo)+'?','No va a poder ver la información de la obra.',
+      function(){ _responderSolicitudYa(i,false); }, {si:'Sí, rechazar', no:'Cancelar', icono:'🙅'});
+    return;
+  }
+  _responderSolicitudYa(i,true);
+}
+function _responderSolicitudYa(i, ok){
+  var s=SOLS[i]; if(!s) return;
   sbRpc('sst_responder_solicitud',{p_id:s.id, p_aceptar:!!ok}).then(function(j){
     if(!j || !j.ok){
-      alert(j && j.motivo==='tope_gestores'
-        ? 'Ya tienes ocupados tus '+(j.tope||1)+' puestos. Para sumar a alguien más hace falta pagar un puesto extra.'
-        : 'No se pudo.');
+      aviso(j && j.motivo==='tope_gestores' ? 'Sin puestos libres' : 'No se pudo',
+        j && j.motivo==='tope_gestores'
+          ? 'Ya tienes ocupados tus '+(j.tope||1)+' puestos de gestión. Para sumar a alguien más hace falta un plan con más puestos.'
+          : 'Inténtalo otra vez en un momento.', j && j.motivo==='tope_gestores' ? '👥' : '📡');
       return;
     }
     cargarSolicitudes();
-  }).catch(function(err){ alert('No se pudo ('+err+').'); });
+  }).catch(function(err){ aviso('No se pudo', String(err), '📡'); });
 }
 
 // ---- ¿está encendido el login con Google? ----
@@ -13245,10 +13901,8 @@ function crearEmpresaCorreo(){
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; MIS_EMP=[];
     m.style.color='var(--gris)'; m.textContent='Empresa creada. Activando tu prueba gratis…';
     pedirPruebaGratis({id:j.id}, function(pr){
-      alert('Empresa creada.\nTu código es: '+j.codigo+
-            '\nGuárdalo: con él entra tu equipo de gestión y con él entran tus trabajadores a las charlas.'+
-            avisoDePrueba(pr));
-      ir('p-emp-home');
+      aviso('Empresa creada','Tu código es '+j.codigo+'. Guárdalo: con él entra tu equipo de gestión y con él entran tus trabajadores a las charlas.'+
+            avisoDePrueba(pr), '🏢', function(){ ir('p-emp-home'); });
     });
   }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo crear (¿sin internet?). '+err; });
 }
@@ -13319,7 +13973,7 @@ function entrarEmpresa(){
   if(cod && $('emp-cod-in')) $('emp-cod-in').value=cod;
   ir(hayCuenta() ? 'p-emp-entrar' : 'p-cuenta');
 }
-function salirEmpresa(){ if(confirm('¿Salir de esta empresa? El código no se borra, puedes volver a entrar.')){ borrar(LS_EMP); pintarEmpresa(); } }
+function salirEmpresa(){ confirmar('¿Salir de esta empresa?','El código no se borra: puedes volver a entrar cuando quieras.', function(){ borrar(LS_EMP); pintarEmpresa(); }, {si:'Sí, salir', no:'Quedarme', icono:'🏢'}); }
 function compartirEmpresa(){
   var e=empActiva(); if(!e) return;
   var t='Código de nuestra empresa en OBRASST: '+e.codigo+'\nCon él ves las hojas MSDS de la obra.';
@@ -13344,7 +13998,7 @@ function pintarMsds(){
 function guardarMsds(){
   var e=empActiva(); if(!e){ ir('p-empresa'); return; }
   var prod=($('m-producto').value||'').trim();
-  if(!prod){ alert('¿De qué producto es la ficha?'); return; }
+  if(!prod){ aviso('Falta el producto','¿De qué producto es la ficha MSDS?','🧴'); return; }
   var proveedor=($('m-proveedor').value||'').trim(), nota=($('m-nota').value||'').trim();
   var url=($('m-url').value||'').trim();
   var f=$('m-archivo').files && $('m-archivo').files[0];
@@ -13361,8 +14015,9 @@ function guardarMsds(){
       .catch(function(err){ msg.style.color='#d2564f'; msg.textContent='No se pudo guardar ('+err+'). Revisa el internet o el tamaño del archivo.'; });
 }
 function borrarMsds(id){
-  if(!confirm('¿Quitar esta ficha?')) return;
-  sbDel('sst_msds?id=eq.'+id).then(function(){ pintarMsds(); }).catch(function(err){ alert('No se pudo quitar ('+err+').'); });
+  confirmar('¿Quitar esta ficha MSDS?', '', function(){
+    sbDel('sst_msds?id=eq.'+id).then(function(){ pintarMsds(); }).catch(function(err){ aviso('No se pudo quitar', String(err), '📡'); });
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'🧴'});
 }
 function verConsolidado(){
   var e=empActiva(); if(!e) return;
@@ -13415,7 +14070,7 @@ function abrirTaller(id){
 }
 function tallerBarra(){
   var n=TL.taller.pasos.length, hecho=Math.max(0,TL.paso);
-  return '<div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);margin:2px 0 16px;overflow:hidden">'+
+  return '<div style="height:6px;border-radius:4px;background:rgba(var(--w),.12);margin:2px 0 16px;overflow:hidden">'+
     '<div style="height:100%;width:'+Math.round(hecho/n*100)+'%;background:var(--verde,#2f9e6f)"></div></div>';
 }
 function tallerPintar(){
@@ -13718,7 +14373,7 @@ function hacerPDF(){
         tipo:'evaluacion', tema:(TEMAS[S.tema]&&TEMAS[S.tema].tema)||S.tema,
         resultado:(b>=min?'aprobado':'desaprobado'), folio:cod, fecha:(S.datos.fecha||hoyISO())}); }catch(_x){}
     ir('p-listo');
-  }catch(e){ alert('No se pudo generar el PDF: '+e.message); }
+  }catch(e){ aviso('No se pudo generar el PDF', String(e.message||e), '📄'); }
 }
 function descargarPDF(){ if(PDF.doc) PDF.doc.save(PDF.nombre); }
 function compartirPDF(){
@@ -13751,6 +14406,9 @@ function siguienteTrabajador(){
   // 0) ¿vuelve de Google con el token en la dirección?
   try{ recogerTokenDeLaUrl(); }catch(e){}
   try{ verProveedores(); }catch(e){}
+  /* la apariencia elegida: ya la puso el script de arriba, pero aca se
+     vuelve a aplicar para pausar el video y ajustar la barra del celular */
+  try{ aplicarApariencia(); }catch(e){}
   /* 0) ¿vienen por el enlace publico de la politica? Eso se abre solo,
         sin cuenta, sin sector y sin consentimiento: es una pagina para leer. */
   try{ if(legalPorURL()) return; }catch(e){}
@@ -13760,7 +14418,7 @@ function siguienteTrabajador(){
     var err=aplicarLlave(decodeURIComponent(mk[1]));
     try{ history.replaceState(null,'',baseURL()); }catch(e){}
     if(!err) return;
-    alert(err);
+    aviso('Ese enlace no sirve', String(err), '🔗');
   }
   // 1b) si llegan desde la web con ?inicio=1, siempre a la portada
   try{
@@ -13891,8 +14549,14 @@ function bajarMisDatos(){
   }
 }
 function borrarEsteCelular(){
-  if(!confirm('¿Borrar TODO lo que la app guarda en este celular?\n\nLa nube no se toca: lo que ya se subió lo sigue viendo el resto del equipo.\n\nBaja tus datos antes si los quieres conservar.')) return;
-  if(!confirm('Última confirmación. Esto no se puede deshacer en este celular.')) return;
+  confirmar('¿Borrar TODO lo de este celular?',
+    'La nube no se toca: lo que ya se subió lo sigue viendo el resto del equipo. Baja tus datos antes si los quieres conservar.',
+    function(){
+      confirmar('Última confirmación','Esto no se puede deshacer en este celular.',
+        _borrarEsteCelularYa, {si:'Sí, borrar todo', no:'No, cancelar', icono:'⚠️'});
+    }, {si:'Continuar', no:'Cancelar', icono:'🧹'});
+}
+function _borrarEsteCelularYa(){
   try{
     var borrar=[];
     for(var i=0;i<localStorage.length;i++){
@@ -13901,8 +14565,9 @@ function borrarEsteCelular(){
     }
     borrar.forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} });
   }catch(e){}
-  alert('Listo. La app queda como recién instalada.');
-  try{ location.replace(baseURL()); }catch(e){ location.reload(); }
+  aviso('Listo','La app queda como recién instalada.','🧹', function(){
+    try{ location.replace(baseURL()); }catch(e){ location.reload(); }
+  });
 }
 function pedirBorradoCuenta(){
   var quien = (TOK && TOK.correo) ? TOK.correo : '(escribe tu correo de la cuenta)';
@@ -13912,10 +14577,11 @@ function pedirBorradoCuenta(){
             'Empresa / obra: '+obra+'\n\n'+
             'Entiendo que los registros que la ley obliga a conservar (5, 10 o 20 años según el tipo) '+
             'se mantienen hasta que venza ese plazo.';
-  if(!confirm('Se abrirá tu correo con el pedido ya escrito, dirigido a descarganomaspe@gmail.com.\n\n¿Seguimos?')) return;
-  var url='mailto:descarganomaspe@gmail.com?subject='+encodeURIComponent('Borrar mi cuenta de OBRASST')+
-          '&body='+encodeURIComponent(txt);
-  try{ window.open(url,'_blank'); }catch(e){ location.href=url; }
+  confirmar('Se abrirá tu correo','Con el pedido ya escrito, dirigido a descarganomaspe@gmail.com.', function(){
+    var url='mailto:descarganomaspe@gmail.com?subject='+encodeURIComponent('Borrar mi cuenta de OBRASST')+
+            '&body='+encodeURIComponent(txt);
+    try{ window.open(url,'_blank'); }catch(e){ location.href=url; }
+  }, {si:'Seguir', no:'Cancelar', icono:'✉️'});
 }
 
 /* lo que hace la app una vez que ya sabe en qué sector estás */
