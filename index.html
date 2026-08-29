@@ -234,10 +234,24 @@ label{display:block;font-size:13px;color:var(--gris);margin-bottom:5px}
    Un solo bloque, dividido en franjas: cabecera, anillo+charla, gráfico,
    tarjetas y pendientes. Todo sobre el mismo azul de la app, subiendo
    apenas el tono en cada franja para que se lea el orden sin gritar. */
+.saludo{margin:2px 0 -2px;font-size:15.5px;color:var(--gris);line-height:1.35}
+.saludo b{color:var(--tinta);font-weight:700}
+.saludo .lapiz{background:none;border:0;color:var(--gris);font-size:13px;padding:0 0 0 5px;cursor:pointer}
+.saludo .pon{background:none;border:0;color:var(--cel);font:inherit;padding:0;cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px}
 .tablero{margin:14px 0 18px;border:1px solid rgba(143,169,184,.20);border-radius:14px;overflow:hidden;
   background:linear-gradient(180deg,rgba(18,56,76,.85),rgba(18,56,76,.55))}
-.tablero-barra{display:flex;gap:8px;align-items:baseline;padding:11px 13px;
-  border-bottom:1px solid rgba(143,169,184,.16);background:rgba(11,42,58,.55)}
+.tablero-barra{display:flex;gap:8px;align-items:center;padding:11px 13px;width:100%;
+  border:0;border-bottom:1px solid rgba(143,169,184,.16);background:rgba(11,42,58,.55);
+  color:inherit;font:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tablero-barra:active{background:rgba(11,42,58,.8)}
+/* la flecha dice, sin leer nada, si al tocar se abre o se cierra */
+.tb-fl{flex:none;margin-left:8px;font-size:15px;line-height:1;color:var(--gris);
+  transition:transform .18s ease}
+.tablero.plegado .tb-fl{transform:rotate(-180deg)}
+.tablero.plegado .tablero-barra{border-bottom:0}
+.tb-cuerpo{overflow:hidden}
+.tablero.plegado .tb-cuerpo{display:none}
 .tb-obra{font-weight:700;font-size:14px;letter-spacing:.01em;color:var(--tinta);flex:0 1 auto;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .tb-fecha,.tb-plan{flex:none}
@@ -1965,6 +1979,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <!-- ================= EMPRESA: inicio ordenado (menús anidados) ================= -->
 <section class="pantalla" id="p-emp-home">
   <div class="marca">◆ OBRASST</div>
+  <div id="emp-saludo" class="saludo"></div>
   <h1 id="emp-home-tit">Tu empresa</h1>
   <p class="sub" id="emp-home-sub"></p>
   <div id="emp-home-cuerpo"></div>
@@ -5143,7 +5158,7 @@ var PLANES = [
     gestores:1, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1 } },
 
-  { id:'ssoma', nombre:'SSOMA', precio:89.90, orden:3,
+  { id:'ssoma', nombre:'SSOMA', precio:89, orden:3,   /* 89 y no 89.90: es lo que cobra el checkout de Mercado Pago que ya funciona */
     tope:{ trabajador:250, kardex:400, reporte:200, doc:200, credencial:250, amonestacion:60, semana:12, escaneo:300 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
     gestores:2, charlas:-1, temas:-1,
@@ -8969,22 +8984,57 @@ function refrescarTableroDom(){
 }
 
 /* ---------- EL TABLERO COMPLETO ---------- */
+/* ── EL TABLERO SE PLIEGA ─────────────────────────────────────────
+   El tablero es lindo la primera vez y estorba la número cincuenta:
+   el que ya sabe cómo va su obra entra a REGISTRAR, y tenía que
+   bajar media pantalla para llegar a los cuatro accesos de siempre.
+   Ahora la barra de arriba (el nombre de la obra y el plan) es un
+   botón: se toca y todo el tablero se esconde, los accesos suben.
+   Se recuerda cómo lo dejaste, por celular, así que el que lo cierra
+   una vez no lo vuelve a ver más.                                 */
+var LS_TAB_PLEGADO='sstc_tablero_plegado';
+function tableroPlegado(){ try{ return leer(LS_TAB_PLEGADO,false)===true; }catch(_e){ return false; } }
+function plegarTablero(){
+  var caja=document.querySelector('.tablero'); if(!caja) return;
+  var ahora = caja.className.indexOf('plegado')===-1;
+  guardar(LS_TAB_PLEGADO, ahora);
+  pintarPliegueTablero(caja, ahora);
+  /* si lo abre, que no se quede el tablero a medias fuera de pantalla */
+  if(!ahora){ try{ caja.scrollIntoView({block:'start', behavior:'smooth'}); }catch(_e){} }
+}
+function pintarPliegueTablero(caja, plegado){
+  caja.className = 'tablero' + (plegado ? ' plegado' : '');
+  var b=caja.querySelector('.tablero-barra');
+  if(b){
+    b.setAttribute('aria-expanded', plegado?'false':'true');
+    b.setAttribute('title', plegado?'Mostrar el tablero':'Esconder el tablero');
+  }
+  var fl=caja.querySelector('.tb-fl'); if(fl) fl.textContent='▲';
+}
 function tableroDom(){
-  var caja=document.createElement('div'); caja.className='tablero';
+  var plegado = tableroPlegado();
+  var caja=document.createElement('div'); caja.className='tablero'+(plegado?' plegado':'');
   var e=empActiva(), P=planActual();
-  var barra=document.createElement('div'); barra.className='tablero-barra';
+  var barra=document.createElement('button'); barra.type='button'; barra.className='tablero-barra';
+  barra.onclick=plegarTablero;
   barra.innerHTML='<span class="tb-obra">'+esc((e&&e.nombre)||'Tu obra')+'</span>'+
-                  '<span class="tb-plan'+(P.orden>0?' pago':'')+'">'+esc(P.nombre)+'</span>';
+                  '<span class="tb-plan'+(P.orden>0?' pago':'')+'">'+esc(P.nombre)+'</span>'+
+                  '<span class="tb-fl">▲</span>';
   caja.appendChild(barra);
-  caja.appendChild(filtroDom());
-  caja.appendChild(cabeceraTableroDom());
-  caja.appendChild(kpisDom());
-  caja.appendChild(graficoMesesDom());
-  caja.appendChild(detalleDelMesDom());
-  caja.appendChild(donasDom());
-  caja.appendChild(dondeSeReportaDom());
-  caja.appendChild(tejasDom());
-  caja.appendChild(pendientesDom());
+  /* todo lo que se esconde va dentro de un solo envoltorio: así se
+     pliega de una y no hay que acordarse de tocar cada pieza. */
+  var cuerpo=document.createElement('div'); cuerpo.className='tb-cuerpo';
+  cuerpo.appendChild(filtroDom());
+  cuerpo.appendChild(cabeceraTableroDom());
+  cuerpo.appendChild(kpisDom());
+  cuerpo.appendChild(graficoMesesDom());
+  cuerpo.appendChild(detalleDelMesDom());
+  cuerpo.appendChild(donasDom());
+  cuerpo.appendChild(dondeSeReportaDom());
+  cuerpo.appendChild(tejasDom());
+  cuerpo.appendChild(pendientesDom());
+  caja.appendChild(cuerpo);
+  pintarPliegueTablero(caja, plegado);
   return caja;
 }
 
@@ -11006,6 +11056,9 @@ function reportesAbiertos(){
 function pintarReporte(){
   var e=empActiva(), c=$('reporte-cuerpo');
   c.innerHTML='<h2>🚨 Reportes de la obra</h2>'+
+    (e? '<p class="sub" style="margin:-4px 0 10px">Estás en <b>'+esc(e.nombre)+'</b> ('+esc(e.codigo)+').'+
+        ((MIS_EMP&&MIS_EMP.length>1)? ' <a href="#" onclick="ir(\'p-mis-empresas\');return false" style="color:var(--cel)">Cambiar de empresa</a>':'')+
+        '</p>' : '')+
     '<button class="btn" onclick="ir(\'p-reporte-nuevo\')">＋ Reportar algo inseguro</button>'+
     (e?'<div class="esc-acc" style="margin-top:10px">'+
         '<button class="btn sec" style="margin:0" onclick="ir(\'p-reporte-excel\')">📊 Informe en Excel</button>'+
@@ -11054,7 +11107,18 @@ function pintarListaReportes(){
         ' · '+ce+' cerrado'+(ce===1?'':'s')+').'+
         '<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="verTodosLosReportes()">Ver todos</button></div></div>';
     } else {
-      c.innerHTML='<p class="sub">Sin reportes todavía. Pásale el código de la obra a tu cuadrilla: desde su celular reportan lo que ven y te cae acá.</p>';
+      /* «No hay reportes» asusta cuando SI hiciste uno. Casi siempre es
+         que estas parado en otra de tus empresas. Se dice cual, y se
+         ofrece la puerta para cambiar, en vez de dejarlo pensando que
+         se le borro todo. */
+      var _e=empActiva();
+      c.innerHTML='<p class="sub">Sin reportes todavía en <b>'+esc((_e&&_e.nombre)||'esta empresa')+'</b>. '+
+        'Pásale el código de la obra a tu cuadrilla: desde su celular reportan lo que ven y te cae acá.</p>'+
+        ((MIS_EMP&&MIS_EMP.length>1)
+          ? '<div class="aviso" style="margin-top:10px">¿Hiciste el reporte en otra obra? Tienes '+MIS_EMP.length+
+            ' empresas. Los reportes no se borran nunca: viven en la nube de la empresa donde los hiciste.'+
+            '<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="ir(\'p-mis-empresas\')">Ver mis empresas</button></div></div>'
+          : '');
     }
     return;
   }
@@ -11146,7 +11210,9 @@ function verDetalleReporte(id){
   var a='';
   if(!cerrado) a+='<button class="btn" style="margin:0 0 8px" onclick="cerrarDetalleReporte();atenderReporte(\''+r.id+'\')">✅ Cerrar con evidencia</button>';
   a+='<div class="esc-acc">'+
+     '<button class="btn sec" style="margin:0" onclick="editarReporte(\''+r.id+'\')">✏️ Corregir</button>'+
      '<button class="btn sec" style="margin:0" onclick="compartirUnReportePDF(\''+r.id+'\')">📄 Mandar en PDF</button>'+
+     '</div><div class="esc-acc" style="margin-top:8px">'+
      '<button class="btn sec" style="margin:0;color:var(--mal)" onclick="borrarUnReporte(\''+r.id+'\')">🗑️ Eliminar</button>'+
      '</div><p class="sub" id="repd-msg" style="margin-top:8px"></p>';
   $('repd-acc').innerHTML=a;
@@ -11174,6 +11240,70 @@ function sbDelVerificado(path){
       return Promise.reject('el servidor no borró nada: falta el permiso de borrado en la base');
     }
     return true;
+  });
+}
+/* ── CORREGIR UN REPORTE ──────────────────────────────────────────
+   Se escribe con una mano, en obra, con el celular a medio ver. Salen
+   erratas y sale el lugar mal puesto. Hasta ahora la unica salida era
+   borrarlo y volver a escribirlo entero, y con eso se perdia la fecha
+   y la foto. Ahora se corrige lo que se escribio: que es, que pasó y
+   donde. Lo que NO se toca es quien lo reportó ni la fecha: eso es el
+   registro, y un registro que se puede reescribir entero no sirve de
+   registro.                                                         */
+function editarReporte(id){
+  var r=reportePorId(id); if(!r) return;
+  var cuerpo=$('repd-cuerpo'); if(!cuerpo) return;
+  cuerpo.innerHTML =
+    '<label>¿Qué es?</label>'+
+    '<select id="red-clase">'+
+      '<option value="condicion"'+(r.clase!=='acto'?' selected':'')+'>Condición insegura (algo del lugar/equipo)</option>'+
+      '<option value="acto"'+(r.clase==='acto'?' selected':'')+'>Acto inseguro (algo que alguien hizo)</option>'+
+    '</select>'+
+    '<label>Descríbelo</label>'+
+    '<textarea id="red-desc" placeholder="Andamio sin barandas en el 3er piso">'+esc(r.descripcion||'')+'</textarea>'+
+    '<label>¿Dónde?</label>'+
+    '<input id="red-lugar" placeholder="Sector B, nivel 3" value="'+escA(r.lugar||'')+'">'+
+    '<p class="sub" style="margin-top:8px">La fecha ('+esc(fechaLarga(r.fecha)||r.fecha||'')+') y quién lo reportó '+
+    '('+(r.anonimo?'anónimo':esc(r.autor||'sin nombre'))+') no se cambian: eso es lo que hace que valga como registro.</p>';
+  $('repd-acc').innerHTML =
+    '<button class="btn" style="margin:0 0 8px" onclick="guardarReporteEditado(\''+r.id+'\')">Guardar los cambios</button>'+
+    '<button class="btn sec" style="margin:0" onclick="verDetalleReporte(\''+r.id+'\')">Dejarlo como estaba</button>'+
+    '<p class="sub" id="repd-msg" style="margin-top:8px"></p>';
+}
+/* Guardar con acuse de recibo, igual que el borrado: con RLS el
+   servidor puede responder «todo bien» y no haber cambiado nada. Si
+   vuelve la fila cambiada, se cambio de verdad. */
+function guardarReporteEditado(id){
+  var desc=($('red-desc').value||'').trim();
+  var m=$('repd-msg');
+  if(!desc){ if(m){ m.style.color='var(--mal)'; m.textContent='La descripción no puede quedar vacía.'; } return; }
+  var cambios={ clase:$('red-clase').value,
+                descripcion:desc,
+                lugar:($('red-lugar').value||'').trim()||null };
+  if(m){ m.style.color='var(--gris)'; m.textContent='Guardando…'; }
+  var h=sbH(); h['Prefer']='return=representation';
+  fetch(SB.url+'/rest/v1/sst_reporte?id=eq.'+encodeURIComponent(id),
+        {method:'PATCH', headers:h, body:JSON.stringify(cambios)})
+  .then(function(r){
+    if(!r.ok) return Promise.reject('el servidor respondió '+r.status);
+    return r.json().catch(function(){ return null; });
+  })
+  .then(function(filas){
+    if(Array.isArray(filas) && filas.length===0){
+      return Promise.reject('el servidor no guardó nada: falta el permiso de edición en la base');
+    }
+    var f=(Array.isArray(filas)&&filas[0])||cambios;
+    /* se refresca la copia que tiene la app en memoria, para que la
+       lista y el PDF salgan ya con lo corregido y no con lo viejo */
+    (REP_LISTA||[]).forEach(function(x){
+      if(String(x.id)===String(id)){ x.clase=f.clase; x.descripcion=f.descripcion; x.lugar=f.lugar; }
+    });
+    pintarListaReportes();
+    verDetalleReporte(id);
+    var m2=$('repd-msg'); if(m2){ m2.style.color='var(--ok)'; m2.textContent='Corregido.'; }
+  })
+  .catch(function(e){
+    var m2=$('repd-msg'); if(m2){ m2.style.color='var(--mal)'; m2.textContent='No se pudo guardar: '+e+'.'; }
   });
 }
 function borrarUnReporte(id){
@@ -11894,8 +12024,42 @@ var EMP_ESTRUCTURA = [
       {accion:'p-estadistica', t:'📈 Mi estadística'},
       {accion:'p-record', t:'⏰ Recordatorios'} ]}
 ];
+/* ── EL SALUDO ────────────────────────────────────────────────────
+   Una app de gestión no tiene por qué sonar a formulario. El que abre
+   esto a las seis de la mañana en la puerta de la obra es una persona
+   con nombre, y le cuesta nada que se lo digan. Si todavía no lo
+   sabemos NO se inventa nada a partir del correo: se le pregunta una
+   vez, con un botón, y queda guardado en su celular. Nunca sale de
+   ahí ni viaja a la nube: es para saludar, no es un dato de nadie.  */
+var LS_YO='sstc_yo';
+function miNombre(){ try{ return (leer(LS_YO,{})||{}).nombre || ''; }catch(_e){ return ''; } }
+function ponerMiNombre(){
+  var v=prompt('¿Cómo te llamas? Solo se usa para saludarte, se queda en este celular.', miNombre()||'');
+  if(v===null) return;
+  v=(v||'').trim().slice(0,40);
+  guardar(LS_YO,{nombre:v});
+  pintarSaludo();
+}
+function franjaDelDia(){
+  var h=new Date().getHours();
+  if(h<12) return 'Buenos días';
+  if(h<19) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+function pintarSaludo(){
+  var c=$('emp-saludo'); if(!c) return;
+  var nom=miNombre();
+  if(nom){
+    c.innerHTML = franjaDelDia()+', <b>'+esc(nom)+'</b>. ¿Qué tenemos para hoy?'+
+                  '<button class="lapiz" onclick="ponerMiNombre()" title="Cambiar mi nombre">✏️</button>';
+  }else{
+    c.innerHTML = 'Hola 👋 ¿Qué tenemos para hoy? '+
+                  '<button class="pon" onclick="ponerMiNombre()">Dime tu nombre</button>';
+  }
+}
 function pintarEmpHome(){
   var e=empActiva();
+  pintarSaludo();
   $('emp-home-tit').textContent = e ? e.nombre : 'Tu empresa';
   $('emp-home-sub').textContent = e ? ('Código: '+e.codigo+' · '+nombreDelPlan()) : 'Entra con tu código.';
   var c=$('emp-home-cuerpo'); c.innerHTML='';
@@ -12182,10 +12346,18 @@ function pintarMisEmpresas(){
     return;
   }
   c.innerHTML = MIS_EMP.map(function(e,i){
-    var pl = e.plan==='equipo' ? 'Equipo SSOMA' : (e.plan==='supervisor' ? 'Supervisor SSOMA' : 'versión LITE');
-    var eq = (e.plan==='equipo') ? (e.gestores||1)+' de '+(e.tope_gestores||TOPE_EQUIPO)+' gestores' : 'solo tú';
+    /* Antes esta linea decia «versión LITE» para todo lo que no fuera
+       supervisor o equipo: un SSOMA recien pagado se veia como LITE y
+       parecia que el plan no habia cambiado. Ahora el nombre sale de la
+       misma escalera que manda en el resto de la app. */
+    var vencido = e.vence && String(e.vence).slice(0,10) < hoyISO();
+    var idp = vencido ? 'lite' : (PLAN_VIEJO[e.plan] || e.plan || 'lite');
+    var pl  = planDe(idp).nombre;
+    var eq  = (planDe(idp).gestores>1) ? (e.gestores||1)+' de '+(e.tope_gestores||planDe(idp).gestores)+' gestores' : 'solo tú';
+    var cad = vencido ? ' · <span style="color:var(--mal)">venció el '+fechaLarga(String(e.vence).slice(0,10))+'</span>'
+            : (e.vence ? ' · hasta el '+fechaLarga(String(e.vence).slice(0,10)) : '');
     return '<button class="btn sec" style="text-align:left;line-height:1.35" onclick="abrirEmpresaDeLaLista('+i+')">'+
-      '<b>'+esc(e.nombre)+'</b><br><small style="opacity:.75">Código '+esc(e.codigo)+' · '+pl+' · '+eq+
+      '<b>'+esc(e.nombre)+'</b><br><small style="opacity:.75">Código '+esc(e.codigo)+' · '+esc(pl)+' · '+eq+cad+
       ' · '+(e.rol==='dueno'?'eres el dueño':'gestor')+'</small></button>';
   }).join('');
 }
@@ -12194,6 +12366,17 @@ function abrirEmpresaDeLaLista(i){
   abrirSesion(correoCuenta(), {codigo:e.codigo, id:e.id, nombre:e.nombre});
   guardar(LS_PLAN,{plan:e.plan||'lite', vence:e.vence||null, tope_obras:1, tope_gestores:e.tope_gestores||1});
   ROL='emp'; guardar(LS_ROL,'emp'); HIST=[];
+  /* si la empresa sigue en LITE y nunca tuvo fecha, se prueba una vez a
+     activar la prueba gratis. Sirve para los que se registraron ANTES de
+     que esto existiera: no tienen que hacer nada ni pedir nada. El
+     servidor decide y solo la da una vez por persona. */
+  if((e.plan||'lite')==='lite' && !e.vence && e.rol==='dueno'){
+    pedirPruebaGratis({id:e.id}, function(pr){
+      if(pr && pr.ok){ MIS_EMP=[]; alert('🎁 Te activamos tu prueba gratis.'+avisoDePrueba(pr).replace(/^\n\n🎁[^:]*:/,'')); }
+      refrescarPlan(); ir('p-emp-home');
+    });
+    return;
+  }
   refrescarPlan();
   ir('p-emp-home');
 }
@@ -12320,6 +12503,30 @@ function entrarEmpresaCorreo(){
   }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo buscar (¿sin internet?). '+err; });
 }
 // ---- crear la empresa (el servidor genera el código y me deja como dueño) ----
+/* ── LA PRUEBA DE 30 DIAS, SIN PEDIRLE NADA A NADIE ───────────────
+   Antes habia que escribirle a Marcelo para que te mandara un codigo
+   de prueba. Eso es una puerta cerrada: el que llega un domingo a las
+   11 de la noche no espera hasta el lunes, se va. Ahora la prueba se
+   activa sola en el servidor, una por persona, y aqui solo se avisa.
+   Si falla (sin senal, por ejemplo) no pasa nada: la empresa queda en
+   LITE y se vuelve a intentar la proxima vez que entre.            */
+function pedirPruebaGratis(emp, alTerminar){
+  if(!emp || !emp.id || !hayCuenta()){ if(alTerminar) alTerminar(null); return; }
+  sbRpc('sst_prueba_gratis',{p_emp:emp.id}).then(function(j){
+    if(j && j.ok){
+      guardar(LS_PLAN,{plan:j.plan, vence:j.vence||null, tope_obras:1, tope_gestores:j.tope_gestores||2});
+      try{ refrescarPlan(); }catch(_e){}
+    }
+    if(alTerminar) alTerminar(j||null);
+  }).catch(function(){ if(alTerminar) alTerminar(null); });
+}
+function avisoDePrueba(j){
+  if(!j || !j.ok) return '';
+  return '\n\n🎁 Y te activamos la PRUEBA GRATIS: tienes el plan SSOMA completo por '+
+         (j.dias||30)+' días, hasta el '+fechaLarga(String(j.vence).slice(0,10))+'.'+
+         '\nNo pagas nada ahora y no hay cobro automático. Al terminar, la app vuelve '+
+         'a la versión de muestra y tus documentos NO se borran.';
+}
 function crearEmpresaCorreo(){
   var nombre=($('emp-nombre-in').value||'').trim();
   var ruc=($('emp-ruc-in')?($('emp-ruc-in').value||''):'').replace(/[^0-9]/g,'');
@@ -12345,8 +12552,13 @@ function crearEmpresaCorreo(){
     abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.id, nombre:j.nombre});
     guardar(LS_PLAN,{plan:'lite', vence:null, tope_obras:1, tope_gestores:1});
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; MIS_EMP=[];
-    alert('Empresa creada.\nTu código es: '+j.codigo+'\nGuárdalo: con él entra tu equipo de gestión y con él entran tus trabajadores a las charlas.');
-    ir('p-emp-home');
+    m.style.color='var(--gris)'; m.textContent='Empresa creada. Activando tu prueba gratis…';
+    pedirPruebaGratis({id:j.id}, function(pr){
+      alert('Empresa creada.\nTu código es: '+j.codigo+
+            '\nGuárdalo: con él entra tu equipo de gestión y con él entran tus trabajadores a las charlas.'+
+            avisoDePrueba(pr));
+      ir('p-emp-home');
+    });
   }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo crear (¿sin internet?). '+err; });
 }
 function compartirEmpCod(){
