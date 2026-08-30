@@ -371,6 +371,14 @@ html.t-claro .tostada,html.t-alto .tostada{background:#0D1620;color:#fff}
 /* dos cosas que van juntas, una al lado de la otra. La clase se usaba
    en seis sitios y NUNCA se había escrito su regla: los pares salían
    uno debajo del otro, ocupando el doble de pantalla. */
+/* El compromiso se lee dentro de un recuadro con scroll propio: hasta que no
+   llega al fondo, el boton de firmar no aparece. */
+.difu-caja{max-height:280px;overflow-y:auto;background:rgba(var(--w),.05);
+  border:1px solid rgba(var(--w),.12);border-radius:14px;padding:15px 16px;
+  font-size:14px;line-height:1.6;-webkit-overflow-scrolling:touch}
+.difu-caja p{margin:0 0 11px}
+.difu-caja ul{margin:0 0 11px;padding-left:20px}
+.difu-caja li{margin-bottom:7px}
 .chips-hab{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 14px}
 .chip-hab{border:1px solid rgba(var(--w),.18);background:rgba(var(--w),.04);color:var(--gris);
   border-radius:999px;padding:8px 12px;font-size:12.5px;font-weight:600;cursor:pointer;
@@ -983,6 +991,10 @@ input,textarea{-webkit-user-select:text;user-select:text}
 
   <button class="tarj vidrio" onclick="pedirCodigo('ev')"><b>📝 Capacitación · tengo el código</b><small>Se abre la evaluación que te asignaron, con tus datos ya puestos. Al terminar sale tu nota, qué fallaste y la constancia en PDF.</small></button>
   <button class="tarj vidrio" onclick="pedirCodigo('mes')"><b>🗣️ Charla de 5 minutos · tengo el código del mes</b><small>Se abre el programa de charlas de tu obra: qué charla toca cada día, a qué hora, quién la dicta, y el guion para dictarla.</small></button>
+  <button class="tarj vidrio" onclick="ir('p-noticias')"><b>📰 Noticias de mi obra</b><small>Lo que la obra necesita que sepas: cambios de acceso, campañas, lo que se aprendió de un accidente.</small></button>
+
+  <button class="tarj vidrio" onclick="irAObra()"><b>🏗️ Mi obra · documentos que me tienen que difundir</b><small>Con el código de tu obra ves el RISST, el IPERC de tu puesto, los PETS, el plan de emergencias, quién es tu comité y quiénes son los brigadistas. Al leerlos dejas tu constancia y te la llevas en PDF.</small></button>
+
   <button class="tarj vidrio" onclick="reportarTrab()"><b>🚨 Reportar acto o condición insegura</b><small>Viste algo peligroso en la obra. Repórtalo con foto — puedes hacerlo sin dar tu nombre. Le llega directo al supervisor.</small></button>
   <div id="colab-estado"></div>
   <button class="btn sec" onclick="cambiarUsuario()" style="margin-top:16px">Cambiar de usuario</button>
@@ -2148,6 +2160,24 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <label>Código del QR</label><textarea id="v-cod" placeholder="OBRASST-CRED:..."></textarea>
   <button class="btn" onclick="verificarCred()">Verificar</button>
   <div id="v-resultado" style="margin-top:16px"></div>
+</section>
+
+<section class="pantalla" id="p-noticias">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Noticias</span></div>
+  <div id="noti-cuerpo"></div>
+</section>
+
+<section class="pantalla" id="p-obra">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Mi obra</span></div>
+  <div id="obra-cuerpo"></div>
+</section>
+<section class="pantalla" id="p-difusion">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-obra')">‹ Atrás</button><span id="difu-tit"></span></div>
+  <div id="difu-cuerpo"></div>
+</section>
+<section class="pantalla" id="p-difusiones">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Constancias</span></div>
+  <div id="difusiones-cuerpo"></div>
 </section>
 
 <section class="pantalla" id="p-lista">
@@ -5270,7 +5300,8 @@ var EV_OK={'p-eval':1,'p-datos':1,'p-juego':1,'p-final':1,'p-firma':1,'p-listo':
 var COL_OK={'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos':1,'p-juego':1,'p-apariencia':1,
             'p-final':1,'p-firma':1,'p-listo':1,'p-charlas':1,'p-charla':1,'p-programa':1,
             'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1,'p-sector':1,
-            'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1};
+            'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,
+            'p-obra':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1};
 /* la empresa: su inicio ordenado, las carpetas de documentos y las herramientas
    de obra que sí se comparten en la nube (reportes, inspecciones, credenciales, MSDS…) */
 var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
@@ -5291,7 +5322,8 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             'p-semanal':1,'p-semanal-dia':1,'p-estadistica':1,'p-carpeta':1,'p-foto':1,'p-mensual':1,
             'p-escaneos':1,'p-escaneo-nuevo':1,'p-escaneo-ver':1,'p-escaneo-enviar':1,
             'p-reporte-cerrar':1,'p-reporte-excel':1,'p-qr-docs':1,'p-qr-doc':1,
-            'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1};
+            'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,
+            'p-obra':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1};
 var PANT_PROTEGIDA={'p-juego':1,'p-final':1,'p-firma':1,'p-listo':1,'p-charla':1};
 /* ── navegación ────────────────────────────────────────────────────
    Un solo flujo. HIST guarda por dónde pasaste y «Atrás» deshace ese
@@ -5484,6 +5516,8 @@ function _ir(p){
   if(p==='p-inspec-hallaz')pintarHallaz(); if(p==='p-inspec-hechas')pintarInspecHechas();
   if(p==='p-brigada')pintarBrigada();
   if(p==='p-lista')pintarLista(); if(p==='p-listas')pintarListas();
+  if(p==='p-obra')pintarObra(); if(p==='p-difusiones')pintarDifusiones();
+  if(p==='p-noticias')pintarNoticias();
   if(p==='p-credencial')pintarCredLista(); if(p==='p-cred-nueva')prepCred(); if(p==='p-record')pintarRecord();
   if(p==='p-normas')pintarNormas();
   if(p==='p-emp-home')pintarEmpHome(); if(p==='p-doc')pintarDoc();
@@ -14349,6 +14383,354 @@ function pdfDeLista(idx){
   entregarPDF(doc, _nombreSano('Asistencia - '+(r.tema||'charla')+' - '+r.fecha)+'.pdf');
 }
 
+
+/* ---- Mi obra: lo que el trabajador puede ver con el codigo de la empresa ----
+   La ley obliga a DIFUNDIR el RISST, el IPERC, los PETS y los planes, y a
+   guardar la constancia de que se difundieron (Ley 29783 art. 35 lit. c y
+   D.S. 005-2012-TR art. 30). En la practica eso se hace pasando una hoja de
+   firmas que nadie leyo. Aca el trabajador tiene que abrir el documento,
+   bajar hasta el final del compromiso y recien ahi se le habilita el boton:
+   no prueba que leyo, pero prueba mucho mas que una firma en una hoja. */
+var LS_DIFU='sstc_difusiones';
+var PORTAL_HOJAS = [
+  {h:'risst',            n:'RISST',                      ic:'📕', d:'Reglamento interno de seguridad y salud'},
+  {h:'iperc',            n:'IPERC',                      ic:'⚠️', d:'Peligros y riesgos de tu puesto'},
+  {h:'pets',             n:'PETS',                       ic:'📋', d:'Procedimientos de trabajo seguro'},
+  {h:'politicas',        n:'Política de SST',            ic:'📜', d:'El compromiso que firmó la empresa'},
+  {h:'plan-emergencia',  n:'Plan de emergencias',        ic:'🚨', d:'Qué hacer y a dónde ir'},
+  {h:'mapa-riesgos',     n:'Mapa de riesgos',            ic:'🗺️', d:'Dónde están los peligros en la obra'},
+  {h:'comite',           n:'Comité de SST',              ic:'👷', d:'Quiénes te representan'},
+  {h:'organigrama',      n:'Organigrama',                ic:'🏢', d:'Quién es quién en la obra'},
+  {h:'brigadistas',      n:'Brigadistas',                ic:'🧯', d:'A quién buscar en una emergencia'},
+  {h:'contactos-emergencia', n:'Contactos de emergencia', ic:'📞', d:'Los números de la obra'}
+];
+var PORTAL={docs:{}, cargando:false};
+
+function irAObra(){
+  var e=empDeTrabajo();
+  if(!e || !e.id){ $('te-msg').textContent=''; $('te-codigo').value=''; PORTAL_VUELVE=1; ir('p-trab-empresa'); return; }
+  ir('p-obra');
+}
+var PORTAL_VUELVE=0;
+
+function pintarObra(){
+  var c=$('obra-cuerpo'); if(!c) return;
+  var e=empDeTrabajo();
+  if(!e || !e.id){ c.innerHTML='<h2>🏗️ Mi obra</h2><p class="sub">Escribe el código de tu obra para ver sus documentos.</p><button class="btn" onclick="ir(\'p-trab-empresa\')">Poner el código</button>'; return; }
+  var hechas=leer(LS_DIFU,[]);
+  var h='<h2>🏗️ Mi obra</h2><p class="sub">'+esc(e.nombre||'')+' · código '+esc(e.codigo||'')+'</p>';
+  h+='<div class="caja vidrio" style="padding:14px;margin-bottom:14px">'+
+     '<b>Lo que tienes derecho a ver</b>'+
+     '<p class="sub" style="margin:7px 0 0;line-height:1.55">La empresa está obligada a difundirte el RISST, el IPERC de tu puesto, los PETS y el plan de emergencias. Acá los tienes. Cuando termines de leer uno, dejas tu constancia y te la puedes llevar en PDF.</p></div>';
+  h+='<button class="tarj vidrio" onclick="ir(\'p-noticias\')"><b>📰 Noticias de la obra</b><small>Lo último que publicó tu obra</small></button>';
+  if(hechas.length){
+    h+='<button class="tarj vidrio" onclick="ir(\'p-difusiones\')"><b>✅ '+hechas.length+' constancia'+(hechas.length===1?'':'s')+' de difusión</b><small>Las que ya dejaste. Se pueden volver a descargar.</small></button>';
+  }
+  h+='<div class="sec-tit" style="margin-top:16px">Documentos de la obra</div>';
+  h+='<div id="obra-docs"><p class="sub">Cargando…</p></div>';
+  c.innerHTML=h;
+  cargarDocsObra(e);
+}
+function cargarDocsObra(e){
+  var hojas=PORTAL_HOJAS.map(function(x){ return '"'+x.h+'"'; }).join(',');
+  sbGet('sst_doc?empresa=eq.'+e.id+'&hoja=in.('+encodeURIComponent(hojas)+')&select=id,nombre,url,nota,hoja&order=creado.desc')
+    .then(function(rows){
+      PORTAL.docs={};
+      rows.forEach(function(d){ (PORTAL.docs[d.hoja]=PORTAL.docs[d.hoja]||[]).push(d); });
+      pintarDocsObra();
+    })
+    .catch(function(){
+      var d=$('obra-docs');
+      if(d) d.innerHTML='<div class="aviso">No se pudieron traer los documentos. Puede ser que no haya señal: prueba otra vez cuando tengas internet.</div>';
+    });
+}
+function pintarDocsObra(){
+  var c=$('obra-docs'); if(!c) return;
+  var hechas=leer(LS_DIFU,[]), h='', hay=0;
+  PORTAL_HOJAS.forEach(function(x){
+    var ds=PORTAL.docs[x.h]||[];
+    if(!ds.length) return;
+    hay++;
+    var ya=hechas.some(function(d){ return d.hoja===x.h; });
+    h+='<div class="tarj vidrio" style="display:block;border-left:3px solid '+(ya?'var(--ok)':'rgba(var(--w),.14)')+'">'+
+      '<b>'+x.ic+' '+esc(x.n)+(ya?' ✅':'')+'</b><small>'+esc(x.d)+' · '+ds.length+' documento'+(ds.length===1?'':'s')+'</small>'+
+      '<button class="btn sec" style="margin:9px 0 0" onclick="abrirDifusion(\''+escA(x.h)+'\')">'+(ya?'Verlo otra vez':'Leerlo y dejar constancia')+'</button>'+
+      '</div>';
+  });
+  c.innerHTML = hay? h : '<div class="caja vidrio" style="padding:16px"><b>Tu obra todavía no subió documentos.</b><p class="sub" style="margin:7px 0 0">Pídeselos a tu supervisor: el RISST y el IPERC te los tienen que entregar.</p></div>';
+}
+
+/* ---- La difusion: abrir, leer, y recien ahi firmar ---- */
+var DIFU={hoja:null, meta:null, docs:[], abrio:false, alFondo:false, desde:0, firma:null};
+var DIFU_ESPERA=20000;   /* 20 s: lo que toma leer aunque sea el compromiso */
+
+function abrirDifusion(hoja){
+  var x=null; PORTAL_HOJAS.forEach(function(y){ if(y.h===hoja) x=y; });
+  DIFU={hoja:hoja, meta:x, docs:PORTAL.docs[hoja]||[], abrio:false, alFondo:false, desde:0, firma:null};
+  $('difu-tit').textContent=x?x.n:'Documento';
+  pintarDifusion(); ir('p-difusion');
+}
+function pintarDifusion(){
+  var c=$('difu-cuerpo'); if(!c) return;
+  var e=empDeTrabajo()||{}, x=DIFU.meta||{};
+  var h='<h2>'+(x.ic||'📄')+' '+esc(x.n||'')+'</h2>';
+  h+='<p class="sub">'+esc(e.nombre||'')+' · '+esc(x.d||'')+'</p>';
+  h+='<div class="sec-tit">1. Abre el documento</div>';
+  DIFU.docs.forEach(function(d,i){
+    h+='<div class="tarj vidrio" style="display:block"><b>📄 '+esc(d.nombre||'Documento')+'</b>'+
+       (d.nota?'<small>'+esc(d.nota)+'</small>':'')+
+       (d.url? '<a class="btn sec" style="margin:9px 0 0;display:block;text-align:center" target="_blank" rel="noopener" href="'+escA(d.url)+'" onclick="difuAbrio()">Abrir el documento</a>'
+             : '<p class="sub" style="margin:8px 0 0">Este está solo como referencia: pídeselo impreso a tu supervisor.</p>')+
+       '</div>';
+  });
+  h+='<div class="sec-tit" style="margin-top:18px">2. Lee el compromiso hasta el final</div>';
+  h+='<div id="difu-caja" class="difu-caja">'+textoDifusion(x)+'<div id="difu-fondo" style="height:1px"></div></div>';
+  h+='<div id="difu-aviso" class="sub" style="margin:9px 0">Baja hasta el final del recuadro para poder continuar.</div>';
+  h+='<div id="difu-form" style="display:none">'+
+     '<div class="sec-tit" style="margin-top:14px">3. Deja tu constancia</div>'+
+     '<div class="dos"><div><label>Tu nombre</label><input id="difu-n" placeholder="Nombre y apellido"></div>'+
+     '<div><label>DNI</label><input id="difu-d" inputmode="numeric" placeholder="70123456"></div></div>'+
+     '<label>Cargo</label><input id="difu-c" placeholder="Operario">'+
+     '<label>Firma</label>'+
+     '<div style="border:1px solid rgba(var(--w),.18);border-radius:14px;overflow:hidden;background:#fff">'+
+       '<canvas id="difu-cv" style="display:block;touch-action:none"></canvas></div>'+
+     '<button class="btn sec" style="margin:9px 0 0" onclick="limpiarFirmaDifu()">Borrar y repetir</button>'+
+     '<div class="aviso" style="margin-top:12px;font-size:13px">Al firmar declaras que leíste el documento y que estás conforme. Si algo no lo entendiste, <b>no firmes todavía</b>: pregúntale a tu supervisor. Esto es tu derecho, no un trámite.</div>'+
+     '<button class="btn" onclick="guardarDifusion()">Leí todo y estoy conforme</button>'+
+     '<div id="difu-msg" style="font-size:14px;margin-top:10px"></div>'+
+     '</div>';
+  c.innerHTML=h;
+  DIFU.desde=Date.now();
+  vigilarFondo();
+}
+function textoDifusion(x){
+  return '<p><b>Declaración de difusión</b></p>'+
+   '<p>Con mi firma dejo constancia de que la empresa me entregó y me explicó el documento <b>'+esc(x.n||'')+'</b>, '+
+   'y de que tuve la oportunidad de leerlo y de preguntar lo que no entendí.</p>'+
+   '<p>Entiendo que este documento me obliga a mí también: no es solo un papel de la empresa. En particular entiendo que:</p>'+
+   '<ul>'+
+   '<li>Debo cumplir las normas, reglamentos e instrucciones de seguridad y salud de la obra.</li>'+
+   '<li>Debo usar correctamente los equipos de protección personal que me entregan, y cuidarlos.</li>'+
+   '<li>Debo informar de inmediato cualquier acto o condición insegura que vea, aunque no me afecte a mí.</li>'+
+   '<li>No debo operar equipos ni hacer trabajos para los que no estoy autorizado y capacitado.</li>'+
+   '<li>Tengo derecho a <b>negarme a un trabajo</b> cuando exista peligro inminente para mi vida o mi salud, sin que eso pueda ser usado en mi contra.</li>'+
+   '<li>Tengo derecho a que me informen de los riesgos de mi puesto y a participar en la elaboración del IPERC.</li>'+
+   '</ul>'+
+   '<p class="sub">Base legal: Ley 29783 (artículos 19, 35 y 79) y su reglamento, el D.S. 005-2012-TR (artículo 30).</p>'+
+   '<p><b>Si algo de este documento no te quedó claro, no firmes: pregunta primero.</b></p>';
+}
+function difuAbrio(){ DIFU.abrio=true; }
+function vigilarFondo(){
+  var caja=$('difu-caja'); if(!caja) return;
+  caja.onscroll=function(){
+    if(DIFU.alFondo) return;
+    if(caja.scrollTop + caja.clientHeight >= caja.scrollHeight - 24) llegoAlFondo();
+  };
+  /* Si el recuadro entra entero en la pantalla no hay scroll que hacer:
+     igual se espera el tiempo minimo, pero no se le pide algo imposible.
+     OJO: mientras la pantalla esta oculta el navegador mide 0, y con 0 la
+     comprobacion daria «no hay scroll» y se saltaria el candado. Por eso se
+     espera a que el recuadro tenga alto de verdad antes de decidir. */
+  var intentos=0;
+  (function medir(){
+    if(DIFU.alFondo) return;
+    var alto=caja.clientHeight;
+    if(alto>0){
+      if(caja.scrollHeight <= alto + 4) llegoAlFondo();
+      return;
+    }
+    if(++intentos<40) setTimeout(medir, 250);
+  })();
+}
+function llegoAlFondo(){
+  if(DIFU.alFondo) return;
+  DIFU.alFondo=true;
+  var falta=Math.max(0, DIFU_ESPERA-(Date.now()-DIFU.desde));
+  var av=$('difu-aviso');
+  if(falta>0){
+    var seg=Math.ceil(falta/1000);
+    var t=setInterval(function(){
+      seg--;
+      if(seg<=0){ clearInterval(t); mostrarFormDifu(); }
+      else if(av) av.textContent='Llegaste al final. Se habilita en '+seg+' segundo'+(seg===1?'':'s')+'.';
+    },1000);
+    if(av) av.textContent='Llegaste al final. Se habilita en '+seg+' segundos.';
+  } else mostrarFormDifu();
+}
+function mostrarFormDifu(){
+  var av=$('difu-aviso'), f=$('difu-form');
+  if(av) av.textContent='';
+  if(f) f.style.display='block';
+  prepLienzoDifu();
+}
+var FIRMADIFU={cv:null, ctx:null, trazos:[], pintando:false};
+function prepLienzoDifu(){
+  var cv=$('difu-cv'); if(!cv) return;
+  var ancho=cv.parentNode.clientWidth-2, alto=170, r=window.devicePixelRatio||1;
+  cv.style.width=ancho+'px'; cv.style.height=alto+'px';
+  cv.width=Math.round(ancho*r); cv.height=Math.round(alto*r);
+  var g=cv.getContext('2d'); g.scale(r,r);
+  g.fillStyle='#ffffff'; g.fillRect(0,0,ancho,alto);
+  g.strokeStyle='#101820'; g.lineWidth=2.4; g.lineCap='round'; g.lineJoin='round';
+  FIRMADIFU={cv:cv, ctx:g, trazos:[], pintando:false};
+  function pos(ev){ var b=cv.getBoundingClientRect(), t=(ev.touches&&ev.touches[0])||ev;
+    return [t.clientX-b.left, t.clientY-b.top]; }
+  cv.onmousedown=cv.ontouchstart=function(ev){ ev.preventDefault(); FIRMADIFU.pintando=true;
+    var p=pos(ev); FIRMADIFU.trazos.push([p]); g.beginPath(); g.moveTo(p[0],p[1]); };
+  cv.onmousemove=cv.ontouchmove=function(ev){ if(!FIRMADIFU.pintando) return; ev.preventDefault();
+    var p=pos(ev); FIRMADIFU.trazos[FIRMADIFU.trazos.length-1].push(p); g.lineTo(p[0],p[1]); g.stroke(); };
+  cv.onmouseup=cv.onmouseleave=cv.ontouchend=function(){ FIRMADIFU.pintando=false; };
+}
+function limpiarFirmaDifu(){ prepLienzoDifu(); }
+function guardarDifusion(){
+  var msg=$('difu-msg'); msg.style.color='var(--mal)';
+  var n=($('difu-n').value||'').trim(), d=($('difu-d').value||'').trim(), cg=($('difu-c').value||'').trim();
+  if(!n){ msg.textContent='Escribe tu nombre.'; return; }
+  var puntos=0; FIRMADIFU.trazos.forEach(function(t){ puntos+=t.length; });
+  if(puntos<12){ msg.textContent='Falta tu firma.'; return; }
+  if(!DIFU.abrio && DIFU.docs.some(function(x){ return x.url; })){
+    msg.textContent='Primero abre el documento: el botón está arriba.'; return;
+  }
+  var e=empDeTrabajo()||{}, x=DIFU.meta||{};
+  var reg={id:'d'+Date.now()+Math.random().toString(36).slice(2,5),
+    hoja:DIFU.hoja, doc:x.n||'', empresa:e.id||'', empresaNombre:e.nombre||'', codigo:e.codigo||'',
+    n:n, dni:d, cargo:cg, firma:FIRMADIFU.cv.toDataURL('image/png'),
+    fecha:hoyISO(), hora:new Date().toTimeString().slice(0,5),
+    leyendo:Math.round((Date.now()-DIFU.desde)/1000),
+    archivos:DIFU.docs.map(function(y){ return y.nombre||''; })};
+  var todas=leer(LS_DIFU,[]); todas.unshift(reg); guardar(LS_DIFU, todas.slice(0,80));
+  msg.style.color='var(--ok)'; msg.textContent='Constancia guardada.';
+  aviso('Constancia lista', 'Queda guardada en tu celular. Descárgala y mándasela a tu supervisor: esa es la prueba de que te difundieron el documento.', '✅', function(){
+    ir('p-difusiones'); pintarDifusiones();
+  });
+}
+function pintarDifusiones(){
+  var c=$('difusiones-cuerpo'); if(!c) return;
+  var todas=leer(LS_DIFU,[]);
+  var h='<h2>✅ Mis constancias de difusión</h2>';
+  if(!todas.length){ c.innerHTML=h+'<div class="caja vidrio" style="padding:18px;text-align:center">Todavía no dejaste ninguna.</div>'; return; }
+  h+='<p class="sub">Son tuyas. Guárdalas: si mañana pasa algo, prueban que te difundieron el documento.</p>';
+  todas.forEach(function(r,i){
+    h+='<div class="tarj vidrio" style="display:block;border-left:3px solid var(--ok)">'+
+      '<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gris)">'+esc(r.fecha)+' · '+esc(r.hora)+'</div>'+
+      '<b style="display:block;margin:5px 0">'+esc(r.doc)+'</b>'+
+      '<div style="font-size:13px;color:var(--gris)">'+esc(r.empresaNombre||'')+' · '+esc(r.n)+(r.dni?' · DNI '+esc(r.dni):'')+'</div>'+
+      '<button class="btn sec" style="margin:9px 0 0" onclick="pdfDeDifusion('+i+')">📄 Descargar la constancia</button>'+
+      '</div>';
+  });
+  c.innerHTML=h;
+}
+function pdfDeDifusion(idx){
+  var r=leer(LS_DIFU,[])[idx]; if(!r) return;
+  var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
+  var W=595.28, H=841.89, M=42, y=0;
+  doc.setFillColor(11,42,58); doc.rect(0,0,W,92,'F');
+  doc.setTextColor(245,183,0); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('OBRASST · CONSTANCIA DE DIFUSION', M, 32);
+  (function(){ var ls=[]; try{ ls=selloFormato('constancia'); }catch(_e){}
+    if(!ls.length) return;
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(190,205,215);
+    doc.text(ls.join('   ·   '), W-M, 32, {align:'right'}); })();
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text(doc.splitTextToSize(r.doc||'Documento', W-2*M)[0], M, 60);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(200,215,225);
+  doc.text((r.empresaNombre||'')+'   ·   '+(fechaLarga(r.fecha)||r.fecha)+'   '+(r.hora||''), M, 78);
+  y=132;
+  [['Trabajador', r.n], ['DNI', r.dni||'—'], ['Cargo', r.cargo||'—'],
+   ['Documento difundido', r.doc], ['Archivos', (r.archivos||[]).join(', ')||'—']].forEach(function(p){
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(130,130,130);
+    doc.text(String(p[0]).toUpperCase(), M, y); y+=13;
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(35,35,35);
+    var t=doc.splitTextToSize(String(p[1]||'—'), W-2*M); doc.text(t, M, y); y+=t.length*14+11;
+  });
+  y+=6;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(130,130,130);
+  doc.text('LO QUE DECLARA EL TRABAJADOR', M, y); y+=14;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(40,40,40);
+  var dec='Declaro que la empresa me entregó y me explicó el documento indicado, que tuve la oportunidad de leerlo y '
+        + 'de preguntar lo que no entendí, y que estoy conforme. Entiendo que debo cumplir las normas e instrucciones '
+        + 'de seguridad, usar correctamente el EPP, informar los actos y condiciones inseguras que vea, y no operar '
+        + 'equipos para los que no estoy autorizado. Entiendo también que tengo derecho a negarme a un trabajo cuando '
+        + 'exista peligro inminente para mi vida o mi salud, y a participar en la elaboración del IPERC de mi puesto.';
+  var td=doc.splitTextToSize(dec, W-2*M); doc.text(td, M, y); y+=td.length*13+8;
+  doc.setFontSize(8); doc.setTextColor(130,130,130);
+  doc.text('Base legal: Ley 29783 Art. 19, 35 y 79 · D.S. 005-2012-TR Art. 30', M, y); y+=22;
+  doc.setDrawColor(215,215,215); doc.rect(M, y, 210, 80);
+  try{ doc.addImage(r.firma,'PNG', M+6, y+6, 198, 68); }catch(e){}
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(120,120,120);
+  doc.text('Firma del trabajador', M, y+94);
+  doc.text('Constancia dejada el '+(fechaLarga(r.fecha)||r.fecha)+' a las '+(r.hora||''), M, y+108);
+  doc.setFontSize(7.5); doc.setTextColor(150,150,150);
+  doc.text('Generado con OBRASST el '+fechaLarga(hoyISO()), M, H-24);
+  entregarPDF(doc, _nombreSano('Constancia de difusion - '+(r.doc||'')+' - '+r.n)+'.pdf');
+}
+
+
+/* ---- Noticias de la obra ----
+   Va sobre la misma tabla de documentos (hoja «noticias»): el titulo es el
+   nombre, el cuerpo es la nota y el enlace es opcional. Asi el trabajador
+   las ve con el codigo de su obra, sin cuenta y sin tabla nueva. */
+var NOTI={lista:null, cargando:false};
+function pintarNoticias(){
+  var c=$('noti-cuerpo'); if(!c) return;
+  var e=empActiva(), esEmpresa=!!e;
+  var h='<h2>📰 Noticias de la obra</h2>';
+  h+='<p class="sub">Lo que la obra necesita que todos sepan: un cambio de horario, un accidente que hay que aprender, una campaña, una visita. Se ve con el código de la obra.</p>';
+  if(esEmpresa){
+    h+='<div class="caja vidrio" style="padding:15px;margin-bottom:14px">'+
+       '<label>Título</label><input id="noti-t" placeholder="Cambio de acceso peatonal desde el lunes">'+
+       '<label>La noticia</label><textarea id="noti-x" placeholder="Escríbelo como se lo dirías a la cuadrilla, corto y claro."></textarea>'+
+       '<label>Enlace (opcional)</label><input id="noti-u" placeholder="https://…">'+
+       '<button class="btn" style="margin-top:9px" onclick="publicarNoticia()">Publicar</button>'+
+       '<div id="noti-msg" style="font-size:13.5px;margin-top:8px"></div></div>';
+  }
+  h+='<div id="noti-lista"><p class="sub">Cargando…</p></div>';
+  c.innerHTML=h;
+  cargarNoticias();
+}
+function cargarNoticias(){
+  var e=empDeTrabajo();
+  if(!e || !e.id){ $('noti-lista').innerHTML='<p class="sub">Entra con el código de tu obra para ver sus noticias.</p>'; return; }
+  sbGet('sst_doc?empresa=eq.'+e.id+'&hoja=eq.noticias&select=id,nombre,url,nota,creado&order=creado.desc&limit=40')
+    .then(function(rows){ NOTI.lista=rows; pintarListaNoticias(); })
+    .catch(function(){ $('noti-lista').innerHTML='<div class="aviso">No se pudieron traer las noticias. Puede que no haya señal.</div>'; });
+}
+function pintarListaNoticias(){
+  var c=$('noti-lista'); if(!c) return;
+  var rows=NOTI.lista||[];
+  if(!rows.length){ c.innerHTML='<div class="caja vidrio" style="padding:16px"><b>Todavía no hay noticias.</b><p class="sub" style="margin:7px 0 0">Cuando la obra publique algo, sale acá.</p></div>'; return; }
+  var esEmpresa=!!empActiva(), h='';
+  rows.forEach(function(n){
+    var f=(n.creado||'').slice(0,10);
+    h+='<div class="tarj vidrio" style="display:block">'+
+      '<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gris)">'+esc(fechaLarga(f)||f)+'</div>'+
+      '<b style="display:block;margin:5px 0;line-height:1.3">'+esc(n.nombre||'')+'</b>'+
+      (n.nota?'<div style="font-size:14px;line-height:1.6;white-space:pre-wrap">'+esc(n.nota)+'</div>':'')+
+      (n.url?'<a class="btn sec" style="margin:9px 0 0;display:block;text-align:center" target="_blank" rel="noopener" href="'+escA(n.url)+'">Ver más</a>':'')+
+      (esEmpresa?'<button class="btn sec" style="margin:9px 0 0" onclick="quitarNoticia(\''+escA(n.id)+'\')">Quitar</button>':'')+
+      '</div>';
+  });
+  c.innerHTML=h;
+}
+function publicarNoticia(){
+  var e=reqEmpresa(); if(!e) return;
+  var t=($('noti-t').value||'').trim(), x=($('noti-x').value||'').trim(), u=($('noti-u').value||'').trim();
+  var msg=$('noti-msg'); msg.style.color='var(--mal)';
+  if(!t){ msg.textContent='Ponle un título.'; return; }
+  if(!x && !u){ msg.textContent='Escribe la noticia o pon un enlace.'; return; }
+  msg.style.color='var(--gris)'; msg.textContent='Publicando…';
+  sbPost('sst_doc',{empresa:e.id, hoja:'noticias', nombre:t, nota:x||null, url:u||null})
+    .then(function(){ msg.style.color='var(--ok)'; msg.textContent='Publicada. Ya la ve toda la obra.';
+      $('noti-t').value=''; $('noti-x').value=''; $('noti-u').value=''; cargarNoticias(); })
+    .catch(function(err){ msg.style.color='var(--mal)'; msg.textContent='No se pudo ('+err+').'; });
+}
+function quitarNoticia(id){
+  confirmar('¿Quitar esta noticia?','Deja de verse para toda la obra.', function(){
+    sbDel('sst_doc?id=eq.'+encodeURIComponent(id)).then(cargarNoticias)
+      .catch(function(err){ aviso('No se pudo', String(err), '📰'); });
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'📰'});
+}
+
 /* ---- Recordatorios ---- */
 function diasPara(iso){ if(!iso) return 9999; return Math.round((Date.UTC(+iso.slice(0,4),+iso.slice(5,7)-1,+iso.slice(8,10))-Date.UTC(+hoyISO().slice(0,4),+hoyISO().slice(5,7)-1,+hoyISO().slice(8,10)))/86400000); }
 function pintarRecord(){
@@ -15201,7 +15583,8 @@ function entrarTrabEmpresa(){
   m.style.color='var(--gris)'; m.textContent='Buscando…';
   sbRpc('sst_resolver',{cod:cod}).then(function(rows){
     if(!rows.length){ m.style.color='var(--mal)'; m.textContent='Ese código no existe. Pídeselo a tu supervisor o a la empresa.'; return; }
-    var e=rows[0]; guardar(LS_EMP,{codigo:cod, id:e.id, nombre:e.nombre}); ir('p-reporte-nuevo');
+    var e=rows[0]; guardar(LS_EMP,{codigo:cod, id:e.id, nombre:e.nombre});
+    if(PORTAL_VUELVE){ PORTAL_VUELVE=0; ir('p-obra'); } else ir('p-reporte-nuevo');
   }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo (¿sin internet?). '+err; });
 }
 function pintarEmpresa(){
