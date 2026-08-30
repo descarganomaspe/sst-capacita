@@ -15250,11 +15250,19 @@ function pdfDeDifusion(idx){
    nombre, el cuerpo es la nota y el enlace es opcional. Asi el trabajador
    las ve con el codigo de su obra, sin cuenta y sin tabla nueva. */
 var NOTI={lista:null, cargando:false};
+/* Publicar noticias es del supervisor o del gerente. El trabajador solo lee.
+   Antes se miraba solo si habia empresa abierta, y como la sesion del gestor
+   sigue viva al cambiar de puerta, al trabajador le salia el formulario. */
+function puedePublicarNoticias(){
+  return ROL!=='col' && !!empActiva();
+}
 function pintarNoticias(){
   var c=$('noti-cuerpo'); if(!c) return;
-  var e=empActiva(), esEmpresa=!!e;
+  var esEmpresa=puedePublicarNoticias();
   var h='<h2>📰 Noticias de la obra</h2>';
-  h+='<p class="sub">Lo que la obra necesita que todos sepan: un cambio de horario, un accidente que hay que aprender, una campaña, una visita. Se ve con el código de la obra.</p>';
+  h+='<p class="sub">'+(esEmpresa
+     ? 'Lo que la obra necesita que todos sepan: un cambio de horario, un accidente que hay que aprender, una campaña, una visita. Lo que publiques lo ve toda la obra con su código.'
+     : 'Lo que tu obra necesita que sepas. Las publica tu supervisor.')+'</p>';
   if(esEmpresa){
     h+='<div class="caja vidrio" style="padding:15px;margin-bottom:14px">'+
        '<label>Título</label><input id="noti-t" placeholder="Cambio de acceso peatonal desde el lunes">'+
@@ -15278,7 +15286,7 @@ function pintarListaNoticias(){
   var c=$('noti-lista'); if(!c) return;
   var rows=NOTI.lista||[];
   if(!rows.length){ c.innerHTML='<div class="caja vidrio" style="padding:16px"><b>Todavía no hay noticias.</b><p class="sub" style="margin:7px 0 0">Cuando la obra publique algo, sale acá.</p></div>'; return; }
-  var esEmpresa=!!empActiva(), h='';
+  var esEmpresa=puedePublicarNoticias(), h='';
   rows.forEach(function(n){
     var f=(n.creado||'').slice(0,10);
     h+='<div class="tarj vidrio" style="display:block">'+
@@ -15292,6 +15300,7 @@ function pintarListaNoticias(){
   c.innerHTML=h;
 }
 function publicarNoticia(){
+  if(!puedePublicarNoticias()){ aviso('Solo lectura','Las noticias las publica quien gestiona la SST de la obra. Tú puedes verlas.','📰'); return; }
   var e=reqEmpresa(); if(!e) return;
   var t=($('noti-t').value||'').trim(), x=($('noti-x').value||'').trim(), u=($('noti-u').value||'').trim();
   var msg=$('noti-msg'); msg.style.color='var(--mal)';
@@ -15304,6 +15313,7 @@ function publicarNoticia(){
     .catch(function(err){ msg.style.color='var(--mal)'; msg.textContent='No se pudo ('+err+').'; });
 }
 function quitarNoticia(id){
+  if(!puedePublicarNoticias()){ return; }
   confirmar('¿Quitar esta noticia?','Deja de verse para toda la obra.', function(){
     sbDel('sst_doc?id=eq.'+encodeURIComponent(id)).then(cargarNoticias)
       .catch(function(err){ aviso('No se pudo', String(err), '📰'); });
