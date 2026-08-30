@@ -6158,6 +6158,31 @@ function _apOp(campo, valor, titulo, detalle, actual){
          '<span class="tic">'+(on?'✓':'')+'</span>'+
          '<span class="tx"><b>'+titulo+'</b><small>'+detalle+'</small></span></button>';
 }
+/* ¿Esto es la app instalada o una pestaña del navegador disfrazada?
+   Se sabe sin preguntarle a nadie:
+   · el APK (envoltorio Android) abre la página desde el propio Android, y
+     eso deja la marca 'android-app://' en el referente;
+   · la app instalada desde la web corre en modo 'standalone';
+   · lo demás es el navegador de siempre.
+   Sirve para saber por qué sale —o no— la notificación de Chrome de
+   «presiona para copiar la URL», que solo aparece cuando por dentro
+   sigue siendo una pestaña. */
+function comoEstaCorriendo(){
+  try{
+    var ref=document.referrer||'';
+    if(ref.indexOf('android-app://')===0){
+      return '📱 <b>App instalada de Android</b> (el instalador APK), abierta desde '+
+             esc(ref.replace('android-app://','').split('/')[0])+'. Aquí no debería salir ninguna notificación de Chrome.';
+    }
+    var solo=false;
+    try{ solo = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone===true; }catch(_e){}
+    if(solo){
+      return '📲 <b>Instalada desde la página web</b> (acceso directo). Funciona igual, pero Android la sigue tratando como una pestaña: por eso Chrome deja arriba el aviso de «copiar la URL». '+
+             'Si quieres que desaparezca, desinstala este icono y baja el instalador de Android desde descarganomaspe.github.io.';
+    }
+    return '🌐 <b>En el navegador</b>, sin instalar. Para tenerla como app, entra a descarganomaspe.github.io desde el celular y baja el instalador de Android.';
+  }catch(e){ return 'No se pudo averiguar.'; }
+}
 function pintarApariencia(){
   var c=$('ap-cuerpo'); if(!c) return;
   var a=apariencia();
@@ -6173,7 +6198,9 @@ function pintarApariencia(){
     _apOp('letra','n','Normal','',a.letra)+
     _apOp('letra','g','Grande','Todo un 12% más grande.',a.letra)+
     _apOp('letra','xg','Muy grande','Un 26% más grande. Para leer con guantes y a un brazo.',a.letra)+
-    '<button class="btn sec" style="margin-top:18px" onclick="ponerApariencia(\'tema\',\'obra\');ponerApariencia(\'fondo\',\'1\');ponerApariencia(\'letra\',\'n\')">Dejar como venía</button>';
+    '<button class="btn sec" style="margin-top:18px" onclick="ponerApariencia(\'tema\',\'obra\');ponerApariencia(\'fondo\',\'1\');ponerApariencia(\'letra\',\'n\')">Dejar como venía</button>'+
+    '<div class="sec-tit" style="margin-top:22px">Cómo estás abriendo la app</div>'+
+    '<p class="sub" style="margin:0">'+comoEstaCorriendo()+'</p>';
 }
 function cargarConfig(){
   var cfg=leer(LS.cfg,{});
