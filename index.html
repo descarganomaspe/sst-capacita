@@ -2175,9 +2175,28 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <div><label>Inspector</label><input id="i-inspector" placeholder="Tu nombre"></div>
     <div><label>Cargo</label><input id="i-cargo" placeholder="Tu cargo"></div>
   </div>
+  <div class="sec-tit" style="margin-top:20px">Firmas</div>
+  <p class="sub" style="margin-top:-4px">Una inspección sin firma no es un registro. Van las dos: la de quien inspecciona y la de quien recibe en el área.</p>
+  <div id="insp-firmas"></div>
   <button class="btn" onclick="guardarInspeccion()">Guardar la inspección</button>
+  <button class="btn sec" onclick="guardarInspeccion(true)">📄 Guardar y exportar el PDF</button>
   <div id="i-msg" style="font-size:14px;margin-top:10px"></div>
 </section>
+<section class="pantalla" id="p-firma-insp">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-inspec-nueva')">‹ Atrás</button><span id="firmai-tit"></span></div>
+  <h2>Firma acá</h2>
+  <p class="sub" id="firmai-quien"></p>
+  <div style="border:1px solid rgba(var(--w),.18);border-radius:14px;overflow:hidden;background:#fff">
+    <canvas id="firmai-cv" style="display:block;touch-action:none"></canvas>
+  </div>
+  <p class="sub" id="firmai-nota" style="margin-top:10px"></p>
+  <div class="dos" style="margin-top:6px">
+    <button class="btn" style="margin:0" onclick="guardarFirmaInsp()">Guardar la firma</button>
+    <button class="btn sec" style="margin:0" onclick="limpiarFirmaInsp()">Borrar y repetir</button>
+  </div>
+  <div id="firmai-msg" style="font-size:14px;margin-top:10px"></div>
+</section>
+
 <section class="pantalla" id="p-inspec-hallaz">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Por levantar</span></div>
   <div id="hallaz-cuerpo"></div>
@@ -5411,7 +5430,7 @@ var COL_OK={'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos'
    de obra que sí se comparten en la nube (reportes, inspecciones, credenciales, MSDS…) */
 var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
             'p-reporte':1,'p-reporte-nuevo':1,'p-inspec':1,'p-inspec-nueva':1,
-            'p-inspec-hallaz':1,'p-inspec-levant':1,'p-inspec-hechas':1,
+            'p-inspec-hallaz':1,'p-inspec-levant':1,'p-inspec-hechas':1,'p-firma-insp':1,
             'p-brigada':1,
             'p-lista':1,'p-firma-lista':1,'p-listas':1,
             'p-petar':1,'p-petar-nuevo':1,'p-credencial':1,'p-cred-nueva':1,'p-verificar':1,
@@ -13469,6 +13488,8 @@ function abrirInspec(k){
   $('i-inspector').value=(leer(LS_SUP,{}).nombre||'');
   $('i-cargo').value=(leer(LS_SUP,{}).cargo||'');
   $('i-msg').textContent='';
+  INSP_FIRMAS={inspector:null, responsable:null, nombreResp:'', cargoResp:''};
+  pintarFirmasInsp();
   pintarCuerpoInspec();
   ir('p-inspec-nueva');
 }
@@ -13641,10 +13662,16 @@ function fotoObs(i, campo){
 }
 
 /* ── Guardar ─────────────────────────────────────────────────────────── */
-function guardarInspeccion(){
+function guardarInspeccion(exportar){
   var e=reqEmpresa(); if(!e) return;
   var t=INSP.t, modo=modoDe(t), msg=$('i-msg'), E=escalaDe(t);
   if(!($('i-inspector').value||'').trim()){ msg.style.color='var(--mal)'; msg.textContent='Pon tu nombre como inspector.'; return; }
+  /* La firma del inspector no es opcional: es lo que convierte esto en un
+     registro. La del responsable del area si puede faltar — a veces no esta
+     en el momento — pero entonces el PDF lo dice, en vez de disimularlo. */
+  if(!INSP_FIRMAS.inspector){ msg.style.color='var(--mal)'; msg.textContent='Falta tu firma como inspector. Baja hasta «Firmas».'; 
+    var ef=$('insp-firmas'); if(ef && ef.scrollIntoView) try{ ef.scrollIntoView({block:'center', behavior:'smooth'}); }catch(_e){}
+    return; }
 
   var puntos=[], hall=[];
 
@@ -13702,6 +13729,8 @@ function guardarInspeccion(){
     planeada:$('i-planeada').value,
     inspector:($('i-inspector').value||'').trim(), cargo:($('i-cargo').value||'').trim(),
     causa:($('i-causa').value||'').trim(), concl:($('i-concl').value||'').trim(),
+    firmaInspector:INSP_FIRMAS.inspector||null, firmaResp:INSP_FIRMAS.responsable||null,
+    nombreResp:(INSP_FIRMAS.nombreResp||'').trim(), cargoResp:(INSP_FIRMAS.cargoResp||'').trim(),
     unidades:(modo==='lista'||modo==='observaciones')?[]:INSP.unidades.map(function(u,ui){ return {etq:etiquetaUnidad(t,u,ui), campos:u.campos}; }),
     autoriza:INSP.autoriza,
     puntos:puntos, hallazgos:hall,
@@ -13714,6 +13743,11 @@ function guardarInspeccion(){
     var abiertas=hall.filter(function(x){ return x.estado!=='cerrado'; }).length;
     msg.textContent=ok? ('Inspección guardada'+(abiertas?' con '+abiertas+' observación'+(abiertas===1?'':'es')+' por levantar.':' — todo conforme.'))
                       : 'Guardada en el celular. Se subirá cuando haya señal.';
+    if(exportar){
+      msg.textContent='Armando el PDF…';
+      setTimeout(function(){ try{ pdfDeInspeccion(0); }catch(_e){} ir(abiertas?'p-inspec-hallaz':'p-inspec'); }, 500);
+      return;
+    }
     setTimeout(function(){ ir(abiertas?'p-inspec-hallaz':'p-inspec'); },1100);
   });
 }
@@ -13762,6 +13796,75 @@ function _resumenInspec(r){
   if(r.causa) l.push('Causa: '+r.causa);
   if(r.concl) l.push('Conclusiones: '+r.concl);
   return l.join('\n');
+}
+
+
+/* ── Firmas de la inspeccion ──────────────────────────────────────────
+   Una inspeccion sin firma no es un registro: es una nota. El formato de
+   obra lleva dos, y las dos importan por motivos distintos. La del
+   INSPECTOR dice quien vio lo que vio. La del RESPONSABLE DEL AREA dice
+   que se le comunico: sin esa, manana nadie se dio por enterado. */
+var FIRMAI={cv:null, ctx:null, trazos:[], pintando:false, quien:null};
+var INSP_FIRMAS={inspector:null, responsable:null, nombreResp:'', cargoResp:''};
+
+function abrirFirmaInsp(quien){
+  FIRMAI.quien=quien; FIRMAI.trazos=[];
+  $('firmai-tit').textContent = quien==='inspector' ? 'Firma del inspector' : 'Firma del responsable del área';
+  $('firmai-quien').textContent = quien==='inspector'
+    ? (($('i-inspector').value||'').trim() || 'Quien hizo la inspección')
+    : (INSP_FIRMAS.nombreResp || 'Quien recibe la inspección en el área');
+  $('firmai-nota').textContent = quien==='inspector'
+    ? 'Con tu firma queda constancia de que esta inspección la hiciste tú y de lo que encontraste.'
+    : 'Con esta firma el responsable del área deja constancia de que se le comunicaron los hallazgos. No es que esté de acuerdo: es que se enteró.';
+  ir('p-firma-insp');
+  setTimeout(prepLienzoInsp, 60);
+}
+function prepLienzoInsp(){
+  var cv=$('firmai-cv'); if(!cv) return;
+  var ancho=cv.parentNode.clientWidth-2, alto=180, r=window.devicePixelRatio||1;
+  cv.style.width=ancho+'px'; cv.style.height=alto+'px';
+  cv.width=Math.round(ancho*r); cv.height=Math.round(alto*r);
+  var g=cv.getContext('2d'); g.scale(r,r);
+  g.fillStyle='#ffffff'; g.fillRect(0,0,ancho,alto);
+  g.strokeStyle='#101820'; g.lineWidth=2.4; g.lineCap='round'; g.lineJoin='round';
+  FIRMAI.cv=cv; FIRMAI.ctx=g; FIRMAI.trazos=[]; FIRMAI.pintando=false;
+  function pos(ev){ var b=cv.getBoundingClientRect(), t=(ev.touches&&ev.touches[0])||ev;
+    return [t.clientX-b.left, t.clientY-b.top]; }
+  cv.onmousedown=cv.ontouchstart=function(ev){ ev.preventDefault(); FIRMAI.pintando=true;
+    var p=pos(ev); FIRMAI.trazos.push([p]); g.beginPath(); g.moveTo(p[0],p[1]); };
+  cv.onmousemove=cv.ontouchmove=function(ev){ if(!FIRMAI.pintando) return; ev.preventDefault();
+    var p=pos(ev); FIRMAI.trazos[FIRMAI.trazos.length-1].push(p); g.lineTo(p[0],p[1]); g.stroke(); };
+  cv.onmouseup=cv.onmouseleave=cv.ontouchend=function(){ FIRMAI.pintando=false; };
+  $('firmai-msg').textContent='';
+}
+function limpiarFirmaInsp(){ prepLienzoInsp(); }
+function guardarFirmaInsp(){
+  var puntos=0; FIRMAI.trazos.forEach(function(t){ puntos+=t.length; });
+  if(puntos<12){ $('firmai-msg').style.color='var(--mal)'; $('firmai-msg').textContent='Esa firma está vacía.'; return; }
+  INSP_FIRMAS[FIRMAI.quien]=FIRMAI.cv.toDataURL('image/png');
+  ir('p-inspec-nueva'); pintarFirmasInsp();
+}
+function quitarFirmaInsp(quien){ INSP_FIRMAS[quien]=null; pintarFirmasInsp(); }
+function pintarFirmasInsp(){
+  var c=$('insp-firmas'); if(!c) return;
+  function bloque(quien, titulo, pie){
+    var f=INSP_FIRMAS[quien];
+    return '<div class="uni-caja" style="margin-bottom:10px">'+
+      '<div class="uni-cab"><b>'+titulo+'</b>'+
+        (f?'<button type="button" class="btn sec" style="width:auto;margin:0;padding:6px 10px" onclick="quitarFirmaInsp(\''+quien+'\')">Repetir</button>':'')+
+      '</div>'+
+      (quien==='responsable'
+        ? '<div class="dos"><div><label>Nombre</label><input value="'+escA(INSP_FIRMAS.nombreResp)+'" oninput="INSP_FIRMAS.nombreResp=this.value" placeholder="Quién recibe"></div>'+
+          '<div><label>Cargo</label><input value="'+escA(INSP_FIRMAS.cargoResp)+'" oninput="INSP_FIRMAS.cargoResp=this.value" placeholder="Capataz, residente…"></div></div>'
+        : '')+
+      (f? '<img src="'+f+'" style="width:100%;max-height:120px;object-fit:contain;background:#fff;border-radius:10px;margin-top:9px">'
+        : '<button type="button" class="btn sec" style="margin:9px 0 0" onclick="abrirFirmaInsp(\''+quien+'\')">✍️ Firmar</button>')+
+      '<p class="sub" style="margin:8px 0 2px;font-size:12.5px">'+pie+'</p>'+
+      '</div>';
+  }
+  c.innerHTML =
+    bloque('inspector','Inspector','Quien hizo la inspección.')+
+    bloque('responsable','Responsable del área','Deja constancia de que se le comunicaron los hallazgos.');
 }
 
 /* ---- Hallazgos: el antes y el despues ---- */
@@ -13860,7 +13963,10 @@ function pdfDeInspeccion(idx){
   var r=inspecGuardadas()[idx]; if(!r){ aviso('No la encuentro','',' 🤔'); return; }
   var fotos=[];
   (r.hallazgos||[]).forEach(function(h){ fotos.push(h.fotoAntes||null); fotos.push(h.fotoDespues||null); });
+  var nf=fotos.length;
+  fotos.push(r.firmaInspector||null); fotos.push(r.firmaResp||null);
   Promise.all(fotos.map(function(u){ return u? _cargarImagen(u) : Promise.resolve(null); })).then(function(im){
+    var imFirmaInsp=im[nf], imFirmaResp=im[nf+1];
     var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
     var W=595.28, H=841.89, M=38, y=0;
     function pie(){
@@ -14009,12 +14115,35 @@ function pdfDeInspeccion(idx){
       var t=doc.splitTextToSize(String(p[1]||'—'), W-2*M);
       doc.text(t, M, y); y+=t.length*12+12;
     });
-    salto(66); y+=14;
-    doc.setDrawColor(170,170,170);
-    doc.line(M, y+34, M+190, y+34); doc.line(W-M-190, y+34, W-M, y+34);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(120,120,120);
-    doc.text('Inspeccion realizada por: '+(r.inspector||''), M, y+46);
-    doc.text('Responsable del area', W-M-190, y+46);
+  salto(150); y+=16;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(130,130,130);
+    doc.text('FIRMAS', M, y); y+=12;
+    var fw=(W-2*M-16)/2, fh=64;
+    function recuadroFirma(img, x, rot, nombre, cargo, falta){
+      doc.setDrawColor(200,200,200); doc.rect(x, y, fw, fh);
+      if(img){
+        var rr=Math.min((fw-10)/img.width, (fh-8)/img.height);
+        var w2=img.width*rr, h2=img.height*rr;
+        try{ doc.addImage(img,'PNG', x+(fw-w2)/2, y+(fh-h2)/2, w2, h2); }catch(e){}
+      } else {
+        doc.setFont('helvetica','italic'); doc.setFontSize(8.5); doc.setTextColor(170,170,170);
+        doc.text(falta||'sin firma', x+10, y+fh/2+3);
+      }
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(120,120,120);
+      doc.text(rot, x, y+fh+13);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,35,35);
+      doc.text(doc.splitTextToSize(nombre||'—', fw)[0], x, y+fh+26);
+      if(cargo){ doc.setFontSize(8); doc.setTextColor(130,130,130);
+        doc.text(doc.splitTextToSize(cargo, fw)[0], x, y+fh+37); }
+    }
+    recuadroFirma(imFirmaInsp, M, 'INSPECTOR', r.inspector||'', r.cargo||'');
+    recuadroFirma(imFirmaResp, M+fw+16, 'RESPONSABLE DEL AREA', r.nombreResp||'', r.cargoResp||'',
+                  'no firmo en el momento');
+    y += fh + 44;
+    if(!r.firmaResp){
+      doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(150,110,60);
+      doc.text('El responsable del area no firmo en el momento de la inspeccion.', M, y); y+=12;
+    }
     pie();
     entregarPDF(doc, _nombreSano('Inspeccion - '+r.nombre+' - '+r.fecha)+'.pdf');
   }).catch(function(e){ aviso('No se pudo armar el PDF', String(e), '📄'); });
