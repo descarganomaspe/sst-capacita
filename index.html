@@ -13789,9 +13789,13 @@ function pedirRecuperacion(){
     m.textContent='Escribe arriba el correo de tu cuenta y vuelve a tocar aquí.'; return;
   }
   m.style.color='var(--gris)'; m.textContent='Mandando el correo…';
+  /* SIN «redirect_to» el servidor usa la direccion general del proyecto,
+     que es la web de descargas: el que pedia recuperar su contraseña
+     terminaba en la pagina de instalar la app, sin campo donde escribir
+     la clave nueva. El enlace tiene que volver A LA APP. */
   fetch(SB.url+'/auth/v1/recover',{method:'POST',
     headers:{'apikey':SB.key,'Content-Type':'application/json'},
-    body: JSON.stringify({email:correo})})
+    body: JSON.stringify({email:correo, redirect_to: baseURL()})})
    .then(function(r){
      m.style.color = r.ok ? 'var(--ok)' : 'var(--mal)';
      m.innerHTML = r.ok
