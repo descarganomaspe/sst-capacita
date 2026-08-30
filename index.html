@@ -1775,6 +1775,14 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <p class="sub" style="margin-top:12px;font-size:12.5px">Puedes volver a leer todo esto cuando quieras, desde Ajustes ▸ Privacidad y condiciones.</p>
 </section>
 
+<!-- ===== CÓDIGOS DE LOS FORMATOS ===== -->
+<section class="pantalla" id="p-formatos">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">&lsaquo; Atr&aacute;s</button><span>C&oacute;digos de formato</span></div>
+  <h2>&#128203; C&oacute;digos de tus formatos</h2>
+  <p class="sub">Cada registro que emite la app lleva su c&oacute;digo y su revisi&oacute;n, como en el sistema de gesti&oacute;n de tu empresa. Se comparten con todo tu equipo.</p>
+  <div id="fmt-cuerpo"></div>
+</section>
+
 <!-- ===== APARIENCIA ===== -->
 <section class="pantalla" id="p-apariencia">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">&lsaquo; Atr&aacute;s</button><span>Apariencia</span></div>
@@ -2192,6 +2200,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <button class="btn sec" onclick="ir('p-empleador')">🏢 Datos de mi empresa</button>
     <button class="btn sec" onclick="compartirEmpCod()">Compartir el código</button>
     <button class="btn sec" onclick="ir('p-config')">Envío de resultados</button>
+    <button class="btn sec" onclick="ir('p-formatos')">📋 Códigos de formato</button>
     <button class="btn sec" onclick="ir('p-apariencia')">🎨 Apariencia</button>
     <button class="btn sec" onclick="pedirCodigo('')">Mi plan / activar código</button>
     <button class="btn sec" onclick="ir('p-solicitudes')">Solicitudes de acceso</button>
@@ -5168,7 +5177,7 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             /* lo que venía del supervisor y ahora vive dentro de la empresa */
             'p-temas':1,'p-modo':1,'p-juego':1,'p-eval':1,'p-datos':1,'p-final':1,
             'p-firma':1,'p-listo':1,'p-generar':1,'p-registro':1,'p-talleres':1,
-            'p-taller':1,'p-taller-fin':1,'p-codigo':1,'p-sesion':1,'p-config':1,'p-apariencia':1,
+            'p-taller':1,'p-taller-fin':1,'p-codigo':1,'p-sesion':1,'p-config':1,'p-apariencia':1,'p-formatos':1,
             'p-trabajadores':1,'p-trab-nuevo':1,'p-trab-ficha':1,'p-planes':1,'p-estatus':1,
             'p-kardex':1,'p-kardex-nuevo':1,'p-kardex-export':1,'p-empleador':1,
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,
@@ -5357,7 +5366,7 @@ function _ir(p){
     if(!(_pr && _pr.className && _pr.className.indexOf('on')>-1)) desproteger();
   }
   cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';$(p).className='pantalla activa';window.scrollTo(0,0);
-  if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-apariencia')pintarApariencia(); if(PANT_CON_TOPE[p]){ try{ quizaRefrescarUsoReal(); }catch(_u){} } if(p==='p-programa')pintarPrograma(); if(p==='p-trab-ficha')pintarFichaTrab(); if(p==='p-planes')pintarPlanes();
+  if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config')cargarConfig(); if(p==='p-apariencia')pintarApariencia(); if(p==='p-formatos')pintarFormatos(); if(PANT_CON_TOPE[p]){ try{ quizaRefrescarUsoReal(); }catch(_u){} } if(p==='p-programa')pintarPrograma(); if(p==='p-trab-ficha')pintarFichaTrab(); if(p==='p-planes')pintarPlanes();
   if(p==='p-eval')pintarEval(); if(p==='p-registro')cargarRegistro(); if(p==='p-generar')pintarGenerar();
   if(p==='p-colab')pintarColab(); if(p==='p-charlas')pintarCharlas();
   if(p==='p-talleres')pintarTalleres();
@@ -6120,6 +6129,130 @@ function pintarConfig(){
     local:'Nada sale del celular. El trabajador te muestra el código de verificación y tú lo anotas. Para obra sin señal.'};
   $('c-consejo').innerHTML='💡 '+consejos[v];
 }
+/* ══ LOS CÓDIGOS DE FORMATO ════════════════════════════════════════
+   Un registro de obra sin código no vale como documento del sistema de
+   gestión: lo primero que busca el auditor en la esquina es «Código» y
+   «Versión». Y no hay un código universal — cada empresa numera con su
+   propia clave (SSOMA-FR-001, HSE-REG-07, FO-ML-HSE-10…), así que esto
+   no se puede traer de fábrica: se configura una vez por empresa.
+
+   Vive en `sst_estado` y no en el celular, porque es del SISTEMA DE
+   GESTIÓN DE LA EMPRESA: si lo llevara cada teléfono, dos supervisores
+   emitirían el mismo registro con códigos distintos y el sistema se
+   cae solo.                                                          */
+var LS_FORMATOS='sstc_formatos';
+var CATALOGO_FORMATOS = [
+  {k:'constancia',  n:'Constancia de capacitación',      d:'La que firma el trabajador al terminar su evaluación.'},
+  {k:'kardex',      n:'Entrega de EPP (kardex)',         d:'El registro de qué EPP se entregó y a quién.'},
+  {k:'reporte',     n:'Reporte de actos y condiciones',  d:'Lo que se levanta desde el celular con foto.'},
+  {k:'amonestacion',n:'Amonestación',                    d:'Llamada de atención con medida y firmas.'},
+  {k:'inspeccion',  n:'Inspecciones',                    d:'Las listas de verificación de obra.'},
+  {k:'asistencia',  n:'Registro de asistencia',          d:'Las hojas firmadas que escaneas.'},
+  {k:'programa',    n:'Programa de charlas',             d:'El calendario del mes que se comparte.'},
+  {k:'credencial',  n:'Credencial de acceso',            d:'El carné con QR del trabajador.'},
+  {k:'semanal',     n:'Informe semanal (HHT/HHC)',       d:'Horas hombre trabajadas y capacitadas.'},
+  {k:'petar',       n:'Permiso de trabajo (PETAR)',      d:'El permiso escrito de alto riesgo.'},
+  {k:'msds',        n:'Registro de hojas MSDS',          d:'El listado de productos químicos de la obra.'}
+];
+function formatos(){
+  var o=leer(LS_FORMATOS,null);
+  if(!o || typeof o!=='object') o={};
+  if(!o.items || typeof o.items!=='object') o.items={};
+  return o;
+}
+/* Qué código lleva ESTE documento. Si la empresa todavía no configuró
+   nada, se cae con elegancia a lo que ya existía (el código único que
+   se guardaba en «Datos de mi empresa»), para que ningún registro que
+   hoy sale bien empiece a salir sin código. */
+function formatoDe(clave){
+  var o=formatos(), it=(o.items||{})[clave] || {};
+  var emp={};
+  try{ emp=empleador()||{}; }catch(_e){}
+  var viejo = (clave==='kardex') ? (emp.codKardex || emp.formatoCod) : emp.formatoCod;
+  return {
+    cod: it.cod || viejo || '',
+    rev: it.rev || emp.formatoRev || '00',
+    fecha: it.fecha || emp.formatoFecha || ''
+  };
+}
+/* la línea que va en la esquina de cada PDF */
+function selloFormato(clave){
+  var f=formatoDe(clave);
+  if(!f.cod) return [];
+  var l=['Código: '+f.cod, 'Versión: '+f.rev];
+  if(f.fecha) l.push('Fecha: '+fechaLarga(String(f.fecha).slice(0,10)));
+  return l;
+}
+function guardarFormatos(o){
+  guardar(LS_FORMATOS,o);
+  try{ estadoSubir('formatos', o); }catch(_e){}
+}
+function bajarFormatos(){
+  try{
+    return estadoBajar('formatos').then(function(ajeno){
+      if(ajeno && typeof ajeno==='object' && ajeno.items){ guardar(LS_FORMATOS, ajeno); }
+      return formatos();
+    }).catch(function(){ return formatos(); });
+  }catch(_e){ return Promise.resolve(formatos()); }
+}
+function ponerFormato(clave, campo, valor){
+  var o=formatos();
+  if(!o.items[clave]) o.items[clave]={};
+  o.items[clave][campo]=String(valor||'').trim();
+  guardarFormatos(o);
+}
+/* Numerar de un tirón: se escribe la clave de la empresa una vez y se
+   reparte correlativo. Cualquiera se puede corregir después a mano. */
+function numerarFormatos(){
+  var o=formatos(), pre=(o.prefijo||'').trim();
+  if(!pre){ aviso('Falta la clave','Escribe primero cómo numera tu empresa, por ejemplo SSOMA-FR.','📋'); return; }
+  confirmar('¿Numerar todos?','Se reparte '+pre+'-001, -002, … en orden. Lo que ya tengas escrito a mano se reemplaza.',
+    function(){
+      var i=0;
+      CATALOGO_FORMATOS.forEach(function(f){
+        i++;
+        if(!o.items[f.k]) o.items[f.k]={};
+        o.items[f.k].cod = pre+'-'+('00'+i).slice(-3);
+        if(!o.items[f.k].rev) o.items[f.k].rev='00';
+      });
+      guardarFormatos(o); _pintarFormatos();
+    }, {si:'Sí, numerar', no:'Cancelar', icono:'📋'});
+}
+function pintarFormatos(){
+  _pintarFormatos();
+  try{ bajarFormatos().then(function(){ if($('fmt-cuerpo')) _pintarFormatos(); }); }catch(_e){}
+}
+function _pintarFormatos(){
+  var c=$('fmt-cuerpo'); if(!c) return;
+  var o=formatos();
+  var h='<div class="caja vidrio" style="padding:15px">'+
+    '<label>¿Cómo numera tu empresa?</label>'+
+    '<input id="fmt-pre" placeholder="SSOMA-FR" value="'+esc(o.prefijo||'')+'" '+
+      'onchange="var o=formatos();o.prefijo=this.value.trim();guardarFormatos(o)">'+
+    '<p class="sub" style="margin:2px 0 10px;font-size:12.5px">Es la clave de tu sistema de gestión. '+
+    'Por ejemplo <b>SSOMA-FR</b>, <b>HSE-REG</b> o <b>FO-ML-HSE</b>.</p>'+
+    '<button class="btn sec" style="margin:0" onclick="numerarFormatos()">Numerar todos en orden</button></div>';
+  h+='<div class="sec-tit" style="margin-top:18px">Un código por formato</div>';
+  CATALOGO_FORMATOS.forEach(function(f){
+    var v=(o.items||{})[f.k]||{};
+    h+='<div class="tarj vidrio" style="display:block">'+
+       '<b>'+esc(f.n)+'</b><small>'+esc(f.d)+'</small>'+
+       '<div class="dos" style="margin-top:9px">'+
+         '<div><label>Código</label><input value="'+esc(v.cod||'')+'" placeholder="sin código" '+
+           'onchange="ponerFormato(\'' + f.k + '\',\'cod\',this.value)"></div>'+
+         '<div><label>Revisión</label><input value="'+esc(v.rev||'')+'" placeholder="00" '+
+           'onchange="ponerFormato(\'' + f.k + '\',\'rev\',this.value)"></div>'+
+       '</div>'+
+       '<label>Fecha de aprobación (opcional)</label>'+
+       '<input type="date" value="'+esc(v.fecha||'')+'" onchange="ponerFormato(\'' + f.k + '\',\'fecha\',this.value)">'+
+       '</div>';
+  });
+  h+='<p class="sub" style="margin-top:12px">Estos códigos salen impresos en cada registro que emite la app '+
+     'y los ve todo tu equipo, no solo este celular.</p>';
+  c.innerHTML=h;
+}
+
+
 /* ══ APARIENCIA ═══════════════════════════════════════════════════
    Tres cosas y nada más: el tema, el fondo animado y el tamaño de la
    letra. Se guardan en el celular (no viajan a la nube: no son datos
@@ -7181,6 +7314,10 @@ function pdfDeAsistencias(sel){
         doc.setFillColor(11,42,58); doc.rect(0,0,W,120,'F');
         doc.setTextColor(245,183,0); doc.setFont('helvetica','bold'); doc.setFontSize(10);
         doc.text('OBRASST · REGISTROS DE ASISTENCIA', M, 44);
+        (function(){ var ls=selloFormato('asistencia'); if(!ls.length) return;
+          doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(190,205,215);
+          doc.text(ls.join('   ·   '), W-M, 44, {align:'right'});
+          doc.setFont('helvetica','bold'); })();
         doc.setTextColor(255,255,255); doc.setFontSize(20);
         doc.text(doc.splitTextToSize(nombreDeLaObra()||'Obra', W-2*M), M, 72);
         doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(200,215,225);
@@ -9204,9 +9341,10 @@ function _pdfDeKardex(t, regs, mes){
     doc.text('REGISTRO DE ENTREGA DE EQUIPOS DE', W/2, 56, {align:'center'});
     doc.text('PROTECCIÓN PERSONAL', W/2, 71, {align:'center'});
     doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(90,90,90);
-    doc.text('Código: '+(emp.codKardex||emp.formatoCod||'SSOMAPCFO043'), W-M-110, 50);
-    doc.text('Versión: '+(emp.formatoRev||'01'),           W-M-110, 63);
-    doc.text('Fecha: '+(emp.formatoFecha||_ddmm(hoyISO())),W-M-110, 76);
+    var _f=formatoDe('kardex');
+    doc.text('Código: '+(_f.cod||'SSOMAPCFO043'),  W-M-110, 50);
+    doc.text('Versión: '+(_f.rev||'01'),           W-M-110, 63);
+    doc.text('Fecha: '+(_f.fecha? _ddmm(String(_f.fecha).slice(0,10)) : _ddmm(hoyISO())), W-M-110, 76);
     y=104;
   }
   /* una fila de datos con etiqueta arriba y valor abajo, en cajas */
@@ -11122,6 +11260,9 @@ function pdfPrograma(){
       if(quien) doc.text('Elaborado por: '+quien, W-M, 50, {align:'right'});
       doc.setFontSize(8); doc.setTextColor(170,190,205);
       doc.text('OBRASST', W-M, 26, {align:'right'});
+      (function(){ var ls=selloFormato('programa'); if(!ls.length) return;
+        doc.setFontSize(7.5);
+        doc.text(ls.join('   ·   '), W-M, 14, {align:'right'}); })();
       y=88;
       filaCabecera();
     }
@@ -12507,6 +12648,9 @@ function _pdfDeUnReporte(r){
     doc.setFillColor(11,42,58); doc.rect(0,0,W,92,'F');
     doc.setTextColor(245,183,0); doc.setFont('helvetica','bold'); doc.setFontSize(9);
     doc.text('OBRASST · REPORTE DE SEGURIDAD', M, 34);
+    (function(){ var ls=selloFormato('reporte'); if(!ls.length) return;
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(190,205,215);
+      doc.text(ls.join('   ·   '), W-M, 34, {align:'right'}); })();
     doc.setTextColor(255,255,255); doc.setFontSize(17);
     doc.text(r.clase==='acto'?'Acto inseguro':'Condición insegura', M, 60);
     doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(200,215,225);
@@ -14426,6 +14570,13 @@ function hacerPDF(){
     doc.text('CONSTANCIA DE EVALUACIÓN SST',M,y);
     doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(110,110,110);
     doc.text('Verificación: '+cod, W-M, y, {align:'right'});
+    /* el código del formato, como en cualquier registro del sistema */
+    (function(){
+      var ls=selloFormato('constancia'); if(!ls.length) return;
+      doc.setFontSize(7.5);
+      ls.forEach(function(t,i){ doc.text(t, W-M, y+11+i*9, {align:'right'}); });
+      doc.setFontSize(8.5);
+    })();
     y+=8; doc.setDrawColor(190,190,190); doc.setLineWidth(.8); doc.line(M,y,W-M,y); y+=16;
 
     // --- datos en DOS columnas ---
