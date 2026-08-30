@@ -5330,6 +5330,12 @@ var SIN_EMPRESA={'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':
 function _ir(p){
   /* A los temas no se entra sin sector: antes se colaba con el primero de la
      lista y el supervisor de minería veía preguntas de construcción. */
+  /* mismo criterio que el sector: a estas pantallas no se llega sin
+     tema elegido, porque adentro no habría nada que enseñar */
+  if((p==='p-modo' || p==='p-juego' || p==='p-datos' || p==='p-final') &&
+     typeof hayTema==='function' && !hayTema() && !EV){
+    p='p-temas';
+  }
   if((p==='p-temas' || p==='p-inicio') && typeof haySector==='function' && !haySector()){
     SECTOR_VUELVE = (p==='p-inicio') ? 'p-inicio' : 'p-temas';
     p='p-sector';
@@ -5457,19 +5463,21 @@ var PLANES = [
     puede:{ cuadrilla:1 } },
 
   { id:'prevencionista', nombre:'Prevencionista de Riesgo', precio:19.90, orden:1,
+    compra:'obrasst-prevencionista',
     tope:{ trabajador:50, kardex:80, reporte:20, doc:20, credencial:0, amonestacion:0, semana:0, escaneo:30 },
     porMes:{ kardex:true, reporte:true, escaneo:true },
     gestores:1, charlas:-1, temas:3,
     puede:{ cuadrilla:1, qr_risst:1 } },
 
   { id:'supervisor', nombre:'Supervisor SST', precio:49.90, orden:2,
+    compra:'obrasst-supervisor',
     tope:{ trabajador:100, kardex:200, reporte:100, doc:60, credencial:0, amonestacion:0, semana:0, escaneo:80 },
     porMes:{ kardex:true, reporte:true, escaneo:true },
     gestores:1, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1 } },
 
   { id:'ssoma', nombre:'SSOMA', precio:89, orden:3,   /* 89 y no 89.90: es lo que cobra el checkout de Mercado Pago que ya funciona */
-    compra:'sst-capacita',                            /* el único con checkout armado: los demás se activan con código */
+    compra:'sst-capacita',        /* cada plan tiene su propio surtido de códigos en el servidor */
     tope:{ trabajador:250, kardex:400, reporte:200, doc:200, credencial:250, amonestacion:60, semana:12, escaneo:300 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
     gestores:2, charlas:-1, temas:-1,
@@ -5477,6 +5485,7 @@ var PLANES = [
             msds:1, amonestaciones:1, semanal:1, campanas:1, simulacros:1, constancias:1 } },
 
   { id:'gestion', nombre:'Gestión SST', precio:199, orden:4,
+    compra:'obrasst-gestion',
     tope:{ trabajador:-1, kardex:-1, reporte:-1, doc:-1, credencial:-1, amonestacion:-1, semana:-1, escaneo:-1 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
     gestores:4, charlas:-1, temas:-1,
@@ -5923,7 +5932,28 @@ function abrirHoja(familia, ids){
   $('hoja').className='hoja abierta';
 }
 function cerrarHoja(){ $('hoja').className='hoja'; }
+/* ══ EL TEMA TIENE QUE ESTAR PUESTO ════════════════════════════════
+   Las pantallas de la evaluación (elegir modo, las preguntas, los datos
+   y el resultado) viven de `S.tema`, que está solo en memoria. Si se
+   llega a una de ellas sin tema —por el gesto de atrás, por un enlace,
+   o porque la app se recargó a medio camino— todo lo que se toque
+   revienta: `preguntasDe(null)` lee «preguntas» de undefined, `accion()`
+   lee «n» de una pregunta que no existe y `enviar()` lee «tema» de un
+   TEMA que no está. En el celular eso no se ve como un error: se ve
+   como que el botón no hace nada, que es peor.
+   Un solo portero, y de ahí no se pasa.                             */
+function hayTema(){
+  try{ return !!(S && S.tema && typeof TEMAS!=='undefined' && TEMAS[S.tema]); }
+  catch(_e){ return false; }
+}
+function exigirTema(){
+  if(hayTema()) return true;
+  aviso('Elige primero el tema','La evaluación necesita saber de qué tema es. Te llevo a la lista.','🎓',
+        function(){ try{ ir('p-temas'); }catch(_e){ try{ _ir('p-emp-home'); }catch(_x){} } });
+  return false;
+}
 function arrancar(m){
+  if(!exigirTema()) return;
   /* La muestra ya no cierra «Solo yo» ni «Presentar»: lo que limita el LITE
      es cuántos temas trae, no qué se puede ver de cada tema. */
   if(m==='solo') protegerCon(etiquetaDueno());
@@ -5933,6 +5963,7 @@ function arrancar(m){
   ir('p-juego'); pintarPregunta();
 }
 function empezarPreguntas(){
+  if(!exigirTema()) return;
   S.datos={nombre:$('d-nombre').value.trim(), dni:$('d-dni').value.trim(),
            cargo:$('d-cargo').value.trim(), empresa:$('d-empresa').value.trim(),
            obra:$('d-obra').value.trim(), evaluador:$('d-eval').value.trim(),
@@ -5946,6 +5977,7 @@ function empezarPreguntas(){
   ir('p-juego'); pintarPregunta();
 }
 function pintarPregunta(){
+  if(!hayTema() || !S.orden || !S.orden.length){ exigirTema(); return; }
   var q=S.orden[S.i], t=TEMAS[S.tema];
   $('cont').textContent='Pregunta '+(S.i+1)+' de '+S.orden.length;
   $('prog').style.width=((S.i)/S.orden.length*100)+'%';
@@ -5972,7 +6004,9 @@ function marcar(L){
   $('b-accion').disabled=false;
 }
 function accion(){
+  if(!hayTema() || !S.orden || !S.orden.length){ exigirTema(); return; }
   var q=S.orden[S.i];
+  if(!q){ S.i=0; pintarPregunta(); return; }
   if(S.modo==='solo' && $('b-accion').textContent==='Ver la respuesta'){
     var ops=document.querySelectorAll('#opciones .op');
     for(var i=0;i<ops.length;i++) if(ops[i].dataset.l===q.correcta) ops[i].className='op vidrio ok';
@@ -5991,6 +6025,7 @@ function accion(){
 function salir(){ confirmar('¿Salir de la evaluación?','Se pierde lo respondido.', function(){ ir('p-inicio'); }, {si:'Sí, salir', no:'Seguir', icono:'📝'}); }
 
 function final(){
+  if(!exigirTema()) return;
   var t=TEMAS[S.tema];
   if(S.modo==='solo'){ finalSolo(t); return; }
   if(EV) marcarRendida();
@@ -6044,6 +6079,7 @@ document.addEventListener('visibilitychange',function(){
 });
 
 function textoConstancia(){
+  if(!hayTema()) return '';
   var t=TEMAS[S.tema], cfg=leer(LS.cfg,{});
   var b=S.resp.filter(function(r){return r.ok;}).length, n=S.resp.length, min=Math.ceil(n*0.7);
   var det=S.resp.map(function(r,i){return (i+1)+(r.ok?'✓':'✗');}).join(' ');
@@ -6063,6 +6099,7 @@ function textoConstancia(){
     'Firma del evaluado: ______________________';
 }
 function enviar(){
+  if(!exigirTema()) return;
   var cfg=leer(LS.cfg,{}), txt=textoConstancia();
   var asunto='Evaluación SST — '+TEMAS[S.tema].tema+' — '+(S.datos.nombre||'');
   if(cfg.via==='correo'){ location.href='mailto:'+encodeURIComponent(cfg.destino)+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(txt); }
@@ -7549,9 +7586,6 @@ function pintarPlanes(){
       }
       h+='<button class="btn sec" style="margin:9px 0 0" onclick="pedirCodigo(\'\')">'+
          (P.orden>A.orden ? 'Ya tengo un código de '+esc(P.nombre) : 'Cambiar a '+esc(P.nombre))+'</button>';
-      if(!P.compra){
-        h+='<p class="sub" style="margin:8px 0 0;font-size:12.5px">Este plan se activa con código. Escríbenos y te lo pasamos.</p>';
-      }
     }
     h+='</div>';
   });
@@ -13642,8 +13676,9 @@ function volverDeDoc(){ ir('p-emp-home'); }
 // =================================================================
 //  LA CUENTA  ·  correo + contraseña contra Supabase Auth
 // =================================================================
-var CU_MODO='entrar';
+var CU_MODO='entrar', CU_CORREO_OK=false;
 function prepCuenta(modo){
+  CU_CORREO_OK=false;
   CU_MODO = modo || CU_MODO || 'entrar';
   var crear = (CU_MODO==='crear');
   if($('cu-tit')) $('cu-tit').innerHTML = crear ? 'Crea tu<br>cuenta.' : 'Entra a tu<br>cuenta.';
@@ -13659,7 +13694,7 @@ function prepCuenta(modo){
     else $('cu-msg').textContent='';
   }
 }
-function cuentaCambiarModo(){ prepCuenta(CU_MODO==='crear'?'entrar':'crear'); }
+function cuentaCambiarModo(){ CU_CORREO_OK=false; prepCuenta(CU_MODO==='crear'?'entrar':'crear'); }
 function mensajeAuth(e){
   var t = ((e && (e.error_code||e.error||''))+' '+(e && (e.msg||e.message||e.error_description||''))).toLowerCase();
   if(/already|exists|registered/.test(t)) return 'Ese correo ya tiene cuenta. Toca «Entrar con mi cuenta».';
@@ -13669,6 +13704,21 @@ function mensajeAuth(e){
   if(/rate|too many|over_/.test(t)) return 'Muchos intentos seguidos. Espera un minuto y vuelve a probar.';
   return 'No se pudo entrar' + (t.trim()? ' ('+t.trim().slice(0,60)+')' : ' (¿sin internet?)') + '.';
 }
+/* Los dominios que la gente escribe mal a diario. No se corrige solo —
+   eso enoja— pero se pregunta antes de crear la cuenta, porque un correo
+   equivocado significa que el día que olvides la contraseña no hay forma
+   de devolvértela y la información de tu obra se queda encerrada. */
+var DOMINIOS_TIPICOS = {
+  'gmial.com':'gmail.com','gmai.com':'gmail.com','gmail.co':'gmail.com',
+  'gmail.con':'gmail.com','gamil.com':'gmail.com','gmail.cm':'gmail.com',
+  'hotmial.com':'hotmail.com','hotmai.com':'hotmail.com','hotmail.con':'hotmail.com',
+  'hotmail.co':'hotmail.com','outlok.com':'outlook.com','outllok.com':'outlook.com',
+  'yaho.com':'yahoo.com','yahoo.con':'yahoo.com'
+};
+function quizaQuisoDecir(correo){
+  var d=(correo.split('@')[1]||'').toLowerCase();
+  return DOMINIOS_TIPICOS[d] ? correo.split('@')[0]+'@'+DOMINIOS_TIPICOS[d] : null;
+}
 function cuentaEnviar(){
   var correo=($('cu-correo').value||'').trim().toLowerCase();
   var clave=$('cu-clave').value||'';
@@ -13677,6 +13727,23 @@ function cuentaEnviar(){
   if(clave.length<8){ m.textContent='La contraseña necesita 8 caracteres o más.'; return; }
   if(CU_MODO==='crear' && !(/[0-9]/.test(clave) && /[a-zA-Z]/.test(clave))){
     m.textContent='La contraseña necesita letras y números.'; return; }
+  /* al CREAR la cuenta se pregunta una vez por el correo: es la única
+     llave para recuperar la contraseña, y hoy nadie la verifica */
+  if(CU_MODO==='crear' && !CU_CORREO_OK){
+    var sug=quizaQuisoDecir(correo);
+    if(sug){
+      confirmar('¿Quisiste decir '+sug+'?',
+        'Escribiste '+correo+'. Si el correo está mal, el día que olvides la contraseña no vamos a poder devolvértela.',
+        function(){ $('cu-correo').value=sug; CU_CORREO_OK=true; cuentaEnviar(); },
+        {si:'Sí, corregir', no:'No, está bien', icono:'✉️',
+         alNo:function(){ CU_CORREO_OK=true; cuentaEnviar(); }});
+      return;
+    }
+    confirmar('¿Este es tu correo?', correo+'\n\nCon él entras desde cualquier celular y con él se recupera la contraseña. Revísalo bien: no lo pedimos otra vez.',
+      function(){ CU_CORREO_OK=true; cuentaEnviar(); },
+      {si:'Sí, es correcto', no:'Corregirlo', icono:'✉️'});
+    return;
+  }
   m.style.color='var(--gris)'; m.textContent = (CU_MODO==='crear') ? 'Creando tu cuenta…' : 'Entrando…';
   var paso = (CU_MODO==='crear') ? crearCuenta(correo,clave) : entrarCuenta(correo,clave);
   paso.then(function(){
