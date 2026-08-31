@@ -16873,16 +16873,31 @@ function pintarEmpHome(){
   $('emp-home-sub').textContent = e ? ('Código: '+e.codigo+' · '+nombreDelPlan()) : 'Entra con tu código.';
   /* El panel del gestor solo tiene sentido con varios proyectos: si llevas
      una sola obra, el tablero de arriba ya te dice todo. */
-  var pn=$('emp-home-panel');
-  if(pn) pn.innerHTML = puedeSerLider()
-    ? '<button class="tarj vidrio" style="margin-top:16px;border-color:var(--oro)" onclick="ir(\'p-gestor\')">'+
-      '<b>🎖️ Torre de control</b>'+
-      '<small>Tus proyectos juntos: índices de accidentabilidad, inspecciones del mes, reportes abiertos, '+
-      'consumo de EPP y cómo va cada supervisor.</small></button>'
-    : (((MIS_EMP&&MIS_EMP.length>1) || planActual().gestores>2)
-      ? '<button class="tarj vidrio" style="margin-top:16px" onclick="ir(\'p-gestor\')"><b>📊 Panel del gestor</b>'+
-        '<small>Todos tus proyectos juntos: inspecciones del mes, reportes abiertos, consumo de EPP y cómo va cada obra.</small></button>'
-      : '');
+  /* La puerta que eligió tiene que cambiar algo; si no, es un adorno.
+     El mismo dueño entra como líder y ve la Torre, o entra como
+     supervisor y trabaja su obra sin ella. Y puede cambiarse aquí
+     mismo, porque en la mañana está en oficina y en la tarde en obra. */
+  var pn=$('emp-home-panel'), hp='';
+  if(puedeSerLider() && papelElegido()==='lider'){
+    hp = '<button class="tarj vidrio" style="margin-top:16px;border-color:var(--oro)" onclick="ir(\'p-gestor\')">'+
+         '<b>🎖️ Torre de control</b>'+
+         '<small>Tus proyectos juntos: índices de accidentabilidad, inspecciones del mes, reportes abiertos, '+
+         'consumo de EPP y cómo va cada supervisor.</small></button>'+
+         '<button class="btn sec" style="margin-top:9px" onclick="ponerPapel(\'sup\');pintarEmpHome()">'+
+         '🦺 Trabajar como supervisor en una obra</button>';
+  } else if(puedeSerLider()){
+    hp = '<button class="tarj vidrio" style="margin-top:16px;border-color:var(--oro)" onclick="ponerPapel(\'lider\');pintarEmpHome()">'+
+         '<b>🎖️ Entrar como líder</b>'+
+         '<small>Ahora estás trabajando como supervisor. Toca para abrir la Torre de control con todos tus proyectos.</small></button>';
+  } else if(MIS_EMP && MIS_EMP.length>1){
+    /* Antes esto también salía por «el plan tiene más de 2 gestores», que
+       era un atajo de cuando no existía el papel de líder. Con el papel ya
+       hecho, ese atajo le abría el panel multiproyecto a un supervisor que
+       no es líder. Ahora sale solo si de verdad está en más de una obra. */
+    hp = '<button class="tarj vidrio" style="margin-top:16px" onclick="ir(\'p-gestor\')"><b>📊 Panel del gestor</b>'+
+         '<small>Todos tus proyectos juntos: inspecciones del mes, reportes abiertos, consumo de EPP y cómo va cada obra.</small></button>';
+  }
+  if(pn) pn.innerHTML = hp;
   var c=$('emp-home-cuerpo'); c.innerHTML='';
   /* El tablero primero: la data del mes sin abrir nada. */
   c.appendChild(tableroDom());
