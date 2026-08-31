@@ -2244,7 +2244,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <label style="margin-top:12px">Foto (opcional)</label>
   <button class="btn sec" onclick="fotoReporte()" style="margin:0 0 10px">📷 Tomar la foto</button>
   <div id="r-foto-vista"></div>
-  <div class="tarj vidrio" style="margin-top:14px" onclick="rToggleAnon()"><b id="r-anon-et">🙈 Reportar sin mi nombre (anónimo)</b><small id="r-anon-sub">Nadie sabrá que fuiste tú. Así de simple. (No suma a tu puntaje.)</small></div>
+  <div class="tarj vidrio" style="margin-top:14px" onclick="rToggleAnon()"><b id="r-anon-et">🙈 Reportar sin mi nombre (anónimo)</b><small id="r-anon-sub">Nadie sabrá que fuiste tú. Así de simple. (No suma a tu racha: para sumarla habría que saber quién fuiste.)</small></div>
   <div id="r-autor-wrap"><label>Tu nombre (si quieres crédito)</label><input id="r-autor" placeholder="Tu nombre"></div>
   <div id="r-sin-obra" class="aviso" style="display:none;margin:14px 0 4px">
     Todavía no tienes el código de tu obra, así que esto no se puede guardar en la app.
@@ -5854,10 +5854,16 @@ function pintarBarraNav(p){
   n.style.display = esconder ? 'none' : 'flex';
   try{ document.body.classList[esconder?'remove':'add']('connav'); }catch(e){}
   var h=document.getElementById('nav-home');
-  if(h){
-    var m=modoActivo();
-    h.textContent = 'Inicio ⌂';
-  }
+  if(h) h.textContent = 'Inicio ⌂';
+  /* En la casa del trabajador los dos botones no tienen a dónde llevarlo:
+     un botón que no hace nada es peor que no tener botón. Se esconden, y
+     queda «Salir · cambiar de usuario» al final de la pantalla, que es
+     explícito. */
+  var enSuCasa = (modoActivo()==='col') && (typeof yo==='function') && !!yo() &&
+                 (p===inicioDelModo());
+  var a=document.getElementById('nav-atras');
+  if(a) a.style.display = enSuCasa ? 'none' : '';
+  if(h) h.style.display = enSuCasa ? 'none' : '';
 }
 function leer(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function guardar(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
@@ -13100,6 +13106,11 @@ function guardarReporte(){
   (f? subirFoto('reportes',f).then(grabar, function(){ return grabar(null); }) : grabar(null))
     .then(function(){
       var avisado=avisarDelReporte(datos);
+      /* el anónimo no suma: para sumar habría que saber quién fue, y eso
+         es justo lo que el anónimo promete que no se guarda */
+      try{
+        if(ROL==='col' && typeof yo==='function' && yo() && !datos.anonimo) sumarRacha();
+      }catch(_ra){}
       msg.style.color='#2f9e6f';
       msg.textContent = avisado
         ? 'Listo. Quedó guardado en la obra y se abrió el aviso al supervisor.'
@@ -15781,6 +15792,154 @@ function credencialMia(){
   }
   return null;
 }
+// =================================================================
+//  RACHA DE VIGILANCIA  ·  el trabajador que mira todos los días
+//  Un día = un aporte. La idea es del cliente y es buena, pero una
+//  racha atada a «mandar un reporte» tiene un incentivo torcido:
+//  el que no vio nada inventa algo para no perder su racha, y en
+//  dos semanas la obra tiene cuarenta «piso mojado» que tapan el
+//  reporte que sí importaba. Se paga con la moneda equivocada.
+//
+//  Por eso la racha cuenta PARTICIPACIÓN, no cantidad de reportes:
+//    · reportar algo inseguro          ← lo que más suma
+//    · confirmar la charla del día
+//    · marcar «revisé mi zona, sin novedad»
+//  Las tres cuestan lo mismo para la racha. Así el que no vio nada
+//  dice la verdad sin castigo, y el reporte vuelve a significar algo.
+//
+//  Reglas que pidió el cliente, tal cual:
+//    · un día seguido = un punto de racha
+//    · si falta UN día, gasta el comodín y no pierde nada
+//    · si falta DOS días seguidos, la racha vuelve a cero
+//  Y una que agrego porque en obra peruana el domingo no se trabaja:
+//  el domingo no suma ni rompe. Si no, todos perderían su racha
+//  cada lunes y el juego se cae solo.
+// =================================================================
+var LS_RACHA='sstc_racha';
+var RACHA_COMODIN_CADA = 30;   /* a los 30 días seguidos se repone el comodín */
+
+function rachaKey(){
+  var y=(typeof yo==='function') ? yo() : null;
+  return LS_RACHA+'_'+((y&&y.dni)||'x');
+}
+function racha(){
+  var r=leer(rachaKey(),null);
+  if(!r || typeof r!=='object') r={dias:0, ultimo:'', comodin:1, mejor:0, recuperada:0};
+  if(r.comodin===undefined) r.comodin=1;
+  return r;
+}
+function rachaSet(r){ guardar(rachaKey(), r); }
+
+/* los domingos no cuentan: ni suman ni rompen */
+function esDomingo(iso){ return new Date(iso+'T00:00:00').getDay()===0; }
+/* días de trabajo entre dos fechas, sin contar domingos */
+function diasHabilesEntre(desde, hasta){
+  if(!desde || !hasta || desde>=hasta) return 0;
+  var d=new Date(desde+'T00:00:00'), f=new Date(hasta+'T00:00:00'), n=0;
+  while(d<f){
+    d.setDate(d.getDate()+1);
+    var iso=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+    if(!esDomingo(iso)) n++;
+  }
+  return n;   /* 1 = fue ayer (hábil) · 2 = se saltó un día · 3+ = se saltó dos o más */
+}
+
+/* Suma el día de hoy. Devuelve qué pasó, para poder contarlo bien:
+   'ya'   ya había aportado hoy
+   'sigue' la racha creció
+   'salva' faltó un día y se gastó el comodín
+   'nueva' se perdió y arranca de cero          */
+function sumarRacha(fecha){
+  var hoy=fecha||hoyISO(), r=racha();
+  if(r.ultimo===hoy) return {q:'ya', r:r};
+  if(esDomingo(hoy)) return {q:'ya', r:r};      /* el domingo no suma */
+  var salto = r.ultimo ? diasHabilesEntre(r.ultimo, hoy) : 0;
+  var q;
+  if(!r.ultimo || r.dias===0){ r.dias=1; r.comodin=1; q='nueva'; }
+  else if(salto<=1){ r.dias++; q='sigue'; }
+  else if(salto===2 && r.comodin>0){ r.dias++; r.comodin=0; r.recuperada=(r.recuperada||0)+1; q='salva'; }
+  else { r.dias=1; r.comodin=1; q='nueva'; }
+  r.ultimo=hoy;
+  if(r.dias>(r.mejor||0)) r.mejor=r.dias;
+  /* el comodín se repone cada 30 días seguidos: no es uno para toda la vida */
+  if(r.dias>0 && r.dias%RACHA_COMODIN_CADA===0) r.comodin=1;
+  rachaSet(r);
+  return {q:q, r:r};
+}
+/* ¿sigue viva la racha hoy, sin haber aportado todavía? */
+function rachaViva(){
+  var r=racha(), hoy=hoyISO();
+  if(!r.ultimo || !r.dias) return false;
+  if(r.ultimo===hoy) return true;
+  var salto=diasHabilesEntre(r.ultimo, hoy);
+  return salto<=1 || (salto===2 && r.comodin>0);
+}
+var RACHA_HITOS=[[365,'Un año'],[180,'Medio año'],[90,'Un trimestre'],[30,'Un mes'],[7,'Una semana']];
+function hitoDeRacha(n){
+  for(var i=0;i<RACHA_HITOS.length;i++) if(n>=RACHA_HITOS[i][0]) return RACHA_HITOS[i][1];
+  return '';
+}
+function tarjetaRacha(){
+  var r=racha(), hoy=hoyISO(), aportoHoy=(r.ultimo===hoy), viva=rachaViva();
+  var n=viva?r.dias:0;
+  var hito=hitoDeRacha(n);
+  var col = n>=30 ? 'var(--ok)' : (n>=7 ? 'var(--oro)' : 'var(--cel)');
+  var h='<div class="caja vidrio" style="padding:14px 15px;margin-top:14px">';
+  h+='<div style="display:flex;align-items:center;gap:14px">';
+  h+='<div style="width:56px;height:56px;border-radius:14px;flex:none;display:flex;flex-direction:column;'+
+     'align-items:center;justify-content:center;background:rgba(var(--p),.14);border:1px solid rgba(var(--sep),.35)">'+
+     '<div style="font-size:21px;font-weight:700;line-height:1">'+n+'</div>'+
+     '<div style="font-size:8.5px;letter-spacing:.06em;opacity:.7;text-transform:uppercase">día'+(n===1?'':'s')+'</div></div>';
+  h+='<div style="flex:1;min-width:0">';
+  h+='<b style="font-size:14.5px">Tu racha de vigilancia</b>';
+  if(n===0){
+    h+='<div class="sub" style="font-size:12.5px;margin-top:2px">Empieza hoy: reporta algo, confirma tu charla o marca que revisaste tu zona.</div>';
+  } else if(aportoHoy){
+    h+='<div class="sub" style="font-size:12.5px;margin-top:2px">Hoy ya está'+(hito?' · '+hito:'')+
+       '. Vuelve mañana para que no se corte.</div>';
+  } else {
+    h+='<div class="sub" style="font-size:12.5px;margin-top:2px;color:var(--oro)">Todavía no aportas hoy. Haz una cosa y la racha sigue.</div>';
+  }
+  h+='</div></div>';
+  /* la fila de días: solo los hábiles de esta semana */
+  h+='<div style="display:flex;gap:5px;margin-top:12px">';
+  var d=new Date(hoy+'T00:00:00');
+  var semana=[];
+  for(var i=6;i>=0;i--){ var x=new Date(d); x.setDate(x.getDate()-i);
+    semana.push(x.getFullYear()+'-'+('0'+(x.getMonth()+1)).slice(-2)+'-'+('0'+x.getDate()).slice(-2)); }
+  var LET=['D','L','M','M','J','V','S'];
+  semana.forEach(function(iso){
+    var dom=esDomingo(iso);
+    var dentro = viva && r.ultimo && iso<=r.ultimo &&
+                 diasHabilesEntre(iso, r.ultimo) < r.dias;
+    var lleno = dentro && !dom;
+    h+='<div style="flex:1;text-align:center">'+
+       '<div style="height:6px;border-radius:3px;background:'+(dom?'rgba(var(--sep),.18)':(lleno?col:'rgba(var(--sep),.28)'))+'"></div>'+
+       '<div style="font-size:9px;opacity:.55;margin-top:3px">'+LET[new Date(iso+'T00:00:00').getDay()]+'</div></div>';
+  });
+  h+='</div>';
+  h+='<div style="display:flex;gap:14px;margin-top:11px;font-size:11.5px;opacity:.75;flex-wrap:wrap">'+
+     '<span>Mejor: <b>'+(r.mejor||0)+'</b></span>'+
+     '<span>Comodín: <b>'+(r.comodin>0?'disponible':'usado')+'</b></span>'+
+     '<span style="opacity:.7">El domingo no rompe la racha</span></div>';
+  if(!aportoHoy && viva){
+    h+='<button class="btn sec" style="margin-top:11px" onclick="revisarMiZona()">✓ Revisé mi zona, sin novedad</button>';
+  } else if(!aportoHoy){
+    h+='<button class="btn sec" style="margin-top:11px" onclick="revisarMiZona()">✓ Revisé mi zona, sin novedad</button>';
+  }
+  h+='</div>';
+  return h;
+}
+/* el aporte más barato del día, y el más honesto: decir que no vio nada */
+function revisarMiZona(){
+  var res=sumarRacha();
+  if(res.q==='ya'){ aviso('Ya está','Hoy ya aportaste. Nos vemos mañana.','✅'); }
+  else if(res.q==='salva'){ aviso('Racha salvada','Faltaste un día y se usó tu comodín. Tu racha sigue en '+res.r.dias+'.','🛡️'); }
+  else if(res.q==='sigue'){ aviso('Racha de '+res.r.dias+' días','Gracias por mirar. Mañana otra vez.','🔥'); }
+  else { aviso('Racha empezada','Día 1. Lo importante no es el número: es que alguien esté mirando.','🔥'); }
+  if(typeof pintarObra==='function') pintarObra();
+}
+
 function tarjetaQRTrab(){
   var mia=credencialMia();
   if(mia && mia.cod){
@@ -15825,6 +15984,7 @@ function pintarObra(){
   var h='<h2>🏗️ Mi obra</h2>';
   h+='<p class="sub">'+esc(e.nombre||'')+' · código '+esc(e.codigo||'')+'</p>';
   h+=tarjetaQRTrab();
+  h+=tarjetaRacha();
   h+='<div class="sec-tit" style="margin-top:20px">Lo que puedes hacer</div>';
   h+='<button class="tarj vidrio" onclick="ir(\'p-noticias\')"><b>📰 Noticias de la obra</b><small>Lo que la obra necesita que sepas</small></button>';
   h+='<button class="tarj vidrio" onclick="reportarDesdeObra()"><b>🚨 Reportar acto o condición insegura</b><small>Con foto. Puedes hacerlo sin dar tu nombre</small></button>';
@@ -16041,6 +16201,9 @@ function guardarDifusion(){
     leyendo:Math.round((Date.now()-DIFU.desde)/1000),
     archivos:DIFU.docs.map(function(y){ return y.nombre||''; })};
   var todas=leer(LS_DIFU,[]); todas.unshift(reg); guardar(LS_DIFU, todas.slice(0,80));
+  /* confirmar la charla del día también es aporte: el que se para cinco
+     minutos a escuchar está participando igual que el que reporta */
+  try{ if(ROL==='col' && typeof yo==='function' && yo()) sumarRacha(); }catch(_ra){}
   msg.style.color='var(--ok)'; msg.textContent='Constancia guardada.';
   aviso('Constancia lista', 'Queda guardada en tu celular. Descárgala y mándasela a tu supervisor: esa es la prueba de que te difundieron el documento.', '✅', function(){
     ir('p-difusiones'); pintarDifusiones();
