@@ -11160,21 +11160,36 @@ function puedeSerLider(){ return esPlanDeLider() && soyDuenoDeLaEmpresa(); }
 function elegirGestor(x){
   ponerPapel(x);
   ROL='emp'; guardar(LS_ROL,'emp'); HIST=[];
+  /* si ya sabemos que no puede ser lider, se lo explicamos aqui mismo */
+  if(x==='lider' && PLAN_SERVIDOR && !puedeSerLider()){ avisarNoEsLider(); return; }
   seguirComoGestor();
 }
-/* se llama al pintar el inicio del gestor. Solo frena cuando el plan ya
-   vino del servidor: si todavia no contesto, no echamos a nadie por una
-   respuesta que no llego. */
+/* La pantalla explica, no encierra.
+   Primera version: el aviso vivia dentro de pintarEmpHome, asi que
+   cualquier «Atras» o «Inicio» volvia al inicio, el inicio volvia a
+   revisar y lo mandaba de vuelta al aviso. El usuario quedaba preso en
+   un rebote sin salida. Ahora el papel se baja a supervisor en el mismo
+   momento de avisar: se le dice una vez lo que falta y desde ese
+   segundo todas las puertas funcionan. */
+function avisarNoEsLider(){
+  ponerPapel('sup');
+  ir('p-lider-no');
+}
+/* se llama al pintar el inicio del gestor, para el caso en que el plan
+   llega del servidor DESPUES de que ya entro. Si todavia no contesto,
+   no echamos a nadie por una respuesta que no llego. */
 function revisarPuertaLider(){
   if(papelElegido()!=='lider') return false;
   if(!PLAN_SERVIDOR) return false;
   if(puedeSerLider()) return false;
-  ir('p-lider-no');
+  avisarNoEsLider();
   return true;
 }
 function pintarLiderNo(){
   var c=$('lider-no-cuerpo'); if(!c) return;
   var e=empActiva(), h='';
+  var salida='<button class="btn" onclick="entrarComoSupervisor()" style="margin-top:14px">'+
+    'Seguir como supervisor SSOMA ▸</button>';
   if(esPlanDeLider()){
     /* la empresa si pago: lo que falta es que este correo sea el del dueño */
     h='<h2>Este panel es de quien activó el plan</h2>'+
@@ -11182,7 +11197,7 @@ function pintarLiderNo(){
       'Pero la Torre de control es de la persona que activó ese código, no de todo el que entra con él: '+
       'si no fuera así, cualquiera que se una vería los datos de todos los proyectos.</p>'+
       '<div class="aviso">Pídeselo a tu líder. Él puede <b>nombrarte segundo líder</b> desde su panel, '+
-      'y desde ese momento ves lo mismo que él.</div>';
+      'y desde ese momento ves lo mismo que él.</div>'+salida;
   } else {
     var P=planDe('gestion');
     h='<h2>La Torre de control viene con Gestión SST</h2>'+
@@ -11196,13 +11211,13 @@ function pintarLiderNo(){
       '<li>Delegar supervisores y ver cómo va cada uno</li>'+
       '<li>Consumo de EPP, cumplimiento del programa y obligaciones del mes</li>'+
       '<li>Exportar el consolidado en Excel o PDF</li></ul></div>'+
-      '<button class="btn" onclick="ir(\'p-planes\')" style="margin-top:14px">Ver los planes</button>';
+      salida+
+      '<button class="btn sec" onclick="ir(\'p-planes\')" style="margin-top:10px">Ver los planes</button>';
   }
-  h+='<button class="btn sec" onclick="entrarComoSupervisor()" style="margin-top:10px">Entrar como supervisor SSOMA</button>';
   c.innerHTML=h;
 }
 function entrarComoSupervisor(){
-  ponerPapel('sup'); HIST=[];
+  ponerPapel('sup');
   ir('p-emp-home');
 }
 
