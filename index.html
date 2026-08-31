@@ -2403,7 +2403,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
 </section>
 
 <section class="pantalla" id="p-obra">
-  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Mi obra</span></div>
+  <div class="barra"><span id="obra-barra">Mi obra</span></div>
   <div id="obra-cuerpo"></div>
 </section>
 <section class="pantalla" id="p-difusion">
@@ -5594,7 +5594,13 @@ function pintarRol(){
   }
   c.innerHTML='';
 }
-function inicioDelModo(){ return MODO_HOME[modoActivo()] || 'p-emp-home'; }
+/* La casa del trabajador cambia según si ya dejó sus datos: mientras no
+   los tenga es la ficha de entrada; en cuanto entra, su casa es «Mi obra»
+   y de ahí no se sale con «Atrás», solo cambiando de usuario. */
+function inicioDelModo(){
+  if(modoActivo()==='col') return (typeof yo==='function' && yo()) ? 'p-obra' : 'p-colab';
+  return MODO_HOME[modoActivo()] || 'p-emp-home';
+}
 /* Atrás deshace el camino. Si ya estás en el inicio de tu modo, la
    siguiente salida es la portada de «¿quién eres?»: de ahí no se puede
    ir más atrás. La sesión NO se cierra: puedes mirar la portada y
@@ -5613,6 +5619,9 @@ function alcanzable(p){
 function irAtras(){
   var act=(document.querySelector('.pantalla.activa')||{}).id, prev=null;
   var casa=inicioDelModo();
+  /* el trabajador que ya entró no se sale de su obra por equivocación:
+     el único camino afuera es «Cambiar de usuario», que es explícito */
+  if(act===casa && modoActivo()==='col' && typeof yo==='function' && yo()){ HIST=[]; return; }
   if(act===casa){ HIST=[]; _ir('p-rol'); return; }
   while(HIST.length){ var c=HIST.pop(); if(c!==act && c!=='p-rol' && alcanzable(c)){ prev=c; break; } }
   var destino = prev || casa;
@@ -5626,6 +5635,7 @@ function irHome(){
   var act=(document.querySelector('.pantalla.activa')||{}).id;
   var casa=inicioDelModo();
   HIST=[];
+  if(modoActivo()==='col' && typeof yo==='function' && yo()){ _ir(casa); return; }
   var destino = (act===casa) ? 'p-rol' : casa;
   if(!alcanzable(destino) || destino===act) destino='p-rol';
   _ir(destino);
@@ -6174,6 +6184,11 @@ function refrescarPlan(){
   if(!e || !hayCuenta()) return Promise.resolve(planLocal());
   return sbRpc('sst_mi_plan',{p_emp:e.id}).then(function(j){
     if(j && j.plan){ guardar(LS_PLAN,j); PLAN_SERVIDOR=true; }
+    /* el papel dentro de la empresa viaja en el mismo momento que el
+       plan: los dos deciden si se abre la Torre de control */
+    try{ refrescarSiSoyDueno().then(function(){
+      if(typeof repintarSiEsElTablero==='function') repintarSiEsElTablero();
+    }); }catch(_r){}
     /* el contador viene del mismo viaje: plan y cupo siempre juntos */
     try{ refrescarUso().then(function(){ repintarSiEsElTablero(); }); }catch(_e){}
     try{ refrescarUsoReal().then(function(){ repintarSiEsElTablero(); }); }catch(_e2){}
@@ -11153,16 +11168,61 @@ var PLAN_SERVIDOR=false;      /* ¿el plan que tenemos vino del servidor? */
 function papelElegido(){ return (leer(LS_PAPEL,'')==='lider') ? 'lider' : 'sup'; }
 function ponerPapel(x){ guardar(LS_PAPEL, x==='lider'?'lider':'sup'); }
 function esPlanDeLider(){ return planActual().id==='gestion'; }
+
+/* ── QUIÉN ES EL DUEÑO: PREGUNTARLO, NO RECORDARLO ────────────────
+   Primera version de esto: el papel de dueño se leia de la sesion
+   guardada en el celular. Fallaba de la peor manera posible con quien
+   ya tenia la app abierta desde antes: su sesion se habia escrito sin
+   ese campo, la app leia «undefined», concluia «no es el dueño» y le
+   cerraba la puerta al que acababa de pagar el plan.
+
+   Ahora el dueño se PREGUNTA al servidor (sst_mis_empresas) y la
+   respuesta se guarda en la sesion para el rato en que no haya señal.
+   Y sobre todo: mientras no haya una respuesta clara, NO SE BLOQUEA A
+   NADIE. Lo que de verdad protege los datos es la regla de la base;
+   esta pantalla solo evita confusiones, y una pantalla que evita
+   confusiones no puede dejar afuera al dueño. */
+var ROL_EMP_SERVIDOR = null;   /* 'dueno' | 'gestor' | null = sin respuesta */
+
+/* true = es el dueño · false = seguro que no · null = todavía no sabemos */
 function soyDuenoDeLaEmpresa(){
+  if(ROL_EMP_SERVIDOR==='dueno')  return true;
+  if(ROL_EMP_SERVIDOR==='gestor') return false;
   var x=leer(LS_SESION,null);
-  return !!(x && x.rol==='dueno');
+  if(x && x.rol==='dueno')  return true;
+  if(x && x.rol==='gestor') return false;
+  return null;                  /* sesión vieja, sin el dato: no sabemos */
 }
-function puedeSerLider(){ return esPlanDeLider() && soyDuenoDeLaEmpresa(); }
+function puedeSerLider(){
+  if(!esPlanDeLider()) return false;
+  return soyDuenoDeLaEmpresa()===true;
+}
+/* Le pregunta al servidor qué es esta cuenta en la empresa abierta y se
+   lo guarda. Se llama al entrar, así el que ya tenía la app abierta
+   desde antes se arregla solo la próxima vez que abre. */
+function refrescarSiSoyDueno(){
+  var e=empActiva();
+  if(!e || !hayCuenta()) return Promise.resolve(null);
+  return sbRpc('sst_mis_empresas',{}).then(function(rows){
+    MIS_EMP = rows||MIS_EMP;
+    var mia=null;
+    (rows||[]).forEach(function(x){ if(String(x.id)===String(e.id)) mia=x; });
+    if(!mia) return null;
+    ROL_EMP_SERVIDOR = (mia.rol==='dueno') ? 'dueno' : 'gestor';
+    var ses=leer(LS_SESION,null);
+    if(ses){ ses.rol=ROL_EMP_SERVIDOR; guardar(LS_SESION,ses); }
+    return ROL_EMP_SERVIDOR;
+  }).catch(function(){ return null; });
+}
 function elegirGestor(x){
   ponerPapel(x);
   ROL='emp'; guardar(LS_ROL,'emp'); HIST=[];
-  /* si ya sabemos que no puede ser lider, se lo explicamos aqui mismo */
-  if(x==='lider' && PLAN_SERVIDOR && !puedeSerLider()){ avisarNoEsLider(); return; }
+  /* solo se avisa cuando hay CERTEZA de que no le alcanza: o el plan no
+     es Gestión, o el servidor dijo que esta cuenta no es la dueña. */
+  if(x==='lider' && PLAN_SERVIDOR && esPlanDeLider() && soyDuenoDeLaEmpresa()===false){
+    avisarNoEsLider(); return;
+  }
+  if(x==='lider' && PLAN_SERVIDOR && !esPlanDeLider()){ avisarNoEsLider(); return; }
   seguirComoGestor();
 }
 /* La pantalla explica, no encierra.
@@ -11183,6 +11243,16 @@ function revisarPuertaLider(){
   if(papelElegido()!=='lider') return false;
   if(!PLAN_SERVIDOR) return false;
   if(puedeSerLider()) return false;
+  /* el plan alcanza pero todavía no sabemos si es el dueño: se le
+     pregunta al servidor y NO se le cierra la puerta mientras tanto */
+  if(esPlanDeLider() && soyDuenoDeLaEmpresa()===null){
+    refrescarSiSoyDueno().then(function(r){
+      if(r==='gestor' && papelElegido()==='lider') avisarNoEsLider();
+      else if(typeof pintarEmpHome==='function' &&
+              (document.querySelector('.pantalla.activa')||{}).id==='p-emp-home') pintarEmpHome();
+    });
+    return false;
+  }
   avisarNoEsLider();
   return true;
 }
@@ -12793,10 +12863,48 @@ function guardarConstancia(d){
   return sbRpc('sst_constancia_nueva',{p_cod:e.codigo, p_trabajador:d.trabajador, p_dni:d.dni,
     p_cargo:d.cargo, p_tipo:d.tipo, p_tema:d.tema, p_resultado:d.resultado, p_folio:d.folio, p_fecha:d.fecha});
 }
+
+/* ── LA COLUMNA QUE TODAVIA PUEDE NO EXISTIR ──────────────────────
+   Al agregar «actividad» al reporte, la lista se pidio con esa columna
+   dentro del select. Si la tabla del servidor no la tiene, PostgREST
+   NO devuelve las demas columnas: rechaza la consulta entera con un
+   400. Resultado: la pantalla salia vacia y parecia que los reportes
+   se habian borrado. No se borro nada; la pregunta estaba mal hecha.
+
+   Ahora se pregunta con la columna y, si la base dice que no, se
+   vuelve a preguntar sin ella y se recuerda para no repetir el viaje.
+   El dia que la columna se agregue, empieza a usarse sola.           */
+var REP_COL_ACTIVIDAD = null;   /* null = sin probar · true/false = ya sabemos */
+var REP_SEL_BASE = 'id,clase,descripcion,lugar,foto_url,foto_cierre,accion,cerrado,cerrado_por,anonimo,autor,estado,fecha';
+function traerReportes(empId, cola){
+  function pedir(conAct){
+    return sbGet('sst_reporte?empresa=eq.'+encodeURIComponent(empId)+
+                 '&select='+REP_SEL_BASE+(conAct?',actividad':'')+(cola||''));
+  }
+  if(REP_COL_ACTIVIDAD===false) return pedir(false);
+  return pedir(true).then(
+    function(r){ REP_COL_ACTIVIDAD=true; return r; },
+    function(){  REP_COL_ACTIVIDAD=false; return pedir(false); });
+}
+/* lo mismo al guardar: si la columna no esta, el reporte se sube igual
+   sin ella. Nunca se pierde un reporte por un campo nuevo. */
+function subirReporte(fila){
+  if(REP_COL_ACTIVIDAD===false || fila.actividad===undefined){
+    var limpio={}; for(var k in fila) if(k!=='actividad' || REP_COL_ACTIVIDAD===true) limpio[k]=fila[k];
+    return sbPost('sst_reporte', limpio);
+  }
+  return sbPost('sst_reporte', fila).catch(function(e){
+    REP_COL_ACTIVIDAD=false;
+    var f2={}; for(var k in fila) if(k!=='actividad') f2[k]=fila[k];
+    return sbPost('sst_reporte', f2);
+  });
+}
+
 function mandarReporteANube(d){
   var e=empDeTrabajo(); if(!e) return Promise.reject('sin_obra');
   if(hayCuenta() && sesionAbierta()){
-    return sbPost('sst_reporte',{empresa:e.id, clase:d.clase, descripcion:d.descripcion, lugar:d.lugar,
+    return subirReporte({empresa:e.id, clase:d.clase, descripcion:d.descripcion, lugar:d.lugar,
+      actividad:d.actividad||null,
       foto_url:d.foto_url, anonimo:d.anonimo, autor:d.autor, fecha:d.fecha});
   }
   return sbRpc('sst_reporte_nuevo',{p_cod:e.codigo, p_clase:d.clase, p_descripcion:d.descripcion,
@@ -13272,9 +13380,7 @@ function pintarReporte(){
        '<div id="rep-lista" style="margin-top:14px"><p class="sub">Cargando…</p></div>'
       :'<p class="sub" style="margin-top:12px">Entra a tu empresa para ver y hacer reportes.</p>');
   if(!e) return;
-  sbGet('sst_reporte?empresa=eq.'+encodeURIComponent(e.id)+
-        '&select=id,clase,descripcion,lugar,actividad,foto_url,foto_cierre,accion,cerrado,cerrado_por,anonimo,autor,estado,fecha'+
-        '&order=creado.desc&limit=500')
+  traerReportes(e.id, '&order=creado.desc&limit=500')
     .then(function(rows){ REP_LISTA=rows||[]; pintarListaReportes(); })
     .catch(function(err){
       var c2=$('rep-lista');
@@ -15613,8 +15719,12 @@ function pintarTrabEntrar(){
   h+='<div class="sec-tit" style="margin-top:18px">Tus datos</div>';
   h+='<div class="dos"><div><label>Nombres</label><input id="tw-n" placeholder="Juan Carlos" value="'+escA(y.n||'')+'"></div>'+
      '<div><label>Apellidos</label><input id="tw-a" placeholder="Pérez Quispe" value="'+escA(y.a||'')+'"></div></div>';
-  h+='<label>DNI</label><input id="tw-d" inputmode="numeric" maxlength="12" placeholder="70123456" value="'+escA(y.dni||'')+'">';
-  h+='<p class="sub" style="font-size:12.5px;margin-top:6px">El DNI es el que te identifica: con él la app sabe cuál QR mostrarte y a nombre de quién van tus constancias.</p>';
+  h+='<div class="dos"><div><label>Documento</label><select id="tw-td">'+
+     ['DNI','CE','PTP','Pasaporte'].map(function(t){
+       return '<option value="'+t+'"'+((y.td||'DNI')===t?' selected':'')+'>'+(t==='CE'?'Carné de extranjería':t)+'</option>';
+     }).join('')+'</select></div>'+
+     '<div><label>Número</label><input id="tw-d" maxlength="14" placeholder="70123456" value="'+escA(y.dni||'')+'"></div></div>';
+  h+='<p class="sub" style="font-size:12.5px;margin-top:6px">Tu documento es lo que te identifica: con él la app sabe cuál QR mostrarte y a nombre de quién van tus constancias. Si eres extranjero, elige carné de extranjería.</p>';
   h+='<label>Cargo (opcional)</label><input id="tw-c" placeholder="Operario" value="'+escA(y.c||'')+'">';
   h+='<div id="tw-msg" style="font-size:14px;margin:10px 0"></div>';
   h+='<button class="btn" onclick="entrarAMiObra()">Entrar a mi obra ▸</button>';
@@ -15629,12 +15739,18 @@ function pintarTrabEntrar(){
 function entrarAMiObra(){
   var cod=_norm(($('tw-cod').value||''));
   if(cod.length>=6) cod=cod.slice(0,3)+'-'+cod.slice(3,6);
-  var n=($('tw-n').value||'').trim(), a=($('tw-a').value||'').trim(), d=($('tw-d').value||'').trim().replace(/\D/g,'');
+  var n=($('tw-n').value||'').trim(), a=($('tw-a').value||'').trim();
+  var td=($('tw-td')&&$('tw-td').value)||'DNI';
+  /* el DNI son 8 digitos; el carne de extranjeria y el pasaporte llevan
+     letras, asi que solo al DNI se le quitan los caracteres raros */
+  var d=($('tw-d').value||'').trim();
+  d = (td==='DNI') ? d.replace(/\D/g,'') : d.toUpperCase().replace(/[^A-Z0-9]/g,'');
   var m=$('tw-msg'); m.style.color='var(--mal)';
   if(!cod){ m.textContent='Escribe el código de tu obra.'; return; }
   if(!n || !a){ m.textContent='Escribe tus nombres y apellidos.'; return; }
-  if(d.length<8){ m.textContent='El DNI tiene 8 dígitos.'; return; }
-  guardarYo({n:n, a:a, dni:d, c:($('tw-c').value||'').trim()});
+  if(td==='DNI' && d.length!==8){ m.textContent='El DNI son 8 dígitos, sin puntos ni guiones.'; return; }
+  if(td!=='DNI' && d.length<6){ m.textContent='Escribe el número de tu documento completo.'; return; }
+  guardarYo({n:n, a:a, dni:d, td:td, c:($('tw-c').value||'').trim()});
   m.style.color='var(--gris)'; m.textContent='Buscando tu obra…';
   sbRpc('sst_resolver',{cod:cod}).then(function(rows){
     if(!rows.length){ m.style.color='var(--mal)'; m.textContent='Ese código no existe. Pídeselo a tu supervisor.'; return; }
@@ -15691,6 +15807,17 @@ function tarjetaQRTrab(){
 }
 
 /* ── Mi obra ─────────────────────────────────────────────────────────── */
+/* Salir de la obra borra la sesión de ESTE celular, no los datos que ya
+   subió: sus constancias y sus reportes se quedan en la empresa. Se le
+   dice, porque si no la gente cree que pierde su historial. */
+function salirDeMiObra(){
+  confirmar('¿Salir de tu obra?',
+    'Se borran tus datos de este celular. Lo que ya mandaste —tus constancias, tus reportes— se queda guardado en la empresa.',
+    function(){
+      try{ localStorage.removeItem(LS_MITRAB); localStorage.removeItem(LS_ROL); }catch(e){}
+      ROL=null; HIST=[]; _ir('p-rol');
+    }, {si:'Sí, salir', no:'Quedarme', icono:'👋'});
+}
 function pintarObra(){
   var c=$('obra-cuerpo'); if(!c) return;
   var e=empDeTrabajo(), y=yo();
@@ -15709,6 +15836,10 @@ function pintarObra(){
     h+='<button class="tarj vidrio" onclick="ir(\'p-difusiones\')"><b>✅ Mis constancias de difusión</b><small>'+hechas.length+' guardada'+(hechas.length===1?'':'s')+'</small></button>';
   h+='<div class="pwa-banda"></div>';
   h+='<button class="btn sec" style="margin-top:18px" onclick="ir(\'p-trab-entrar\')">Cambiar de obra o de datos</button>';
+  /* La única puerta de salida, y dice exactamente lo que hace. Antes se
+     salía sin querer con «Atrás» y el trabajador terminaba en la portada
+     sin entender qué había tocado. */
+  h+='<button class="btn sec" style="margin-top:9px" onclick="salirDeMiObra()">Salir · cambiar de usuario</button>';
   c.innerHTML=h;
   try{ pintarInstalar(); }catch(_e){}
 }
@@ -16941,6 +17072,7 @@ function abrirEmpresaDeLaLista(i){
   abrirSesion(correoCuenta(), {codigo:e.codigo, id:e.id, nombre:e.nombre, rol:e.rol||''});
   guardar(LS_PLAN,{plan:e.plan||'lite', vence:e.vence||null, tope_obras:1, tope_gestores:e.tope_gestores||1});
   PLAN_SERVIDOR=true;   /* esta lista vino de sst_mis_empresas */
+  ROL_EMP_SERVIDOR = (e.rol==='dueno') ? 'dueno' : 'gestor';
   ROL='emp'; guardar(LS_ROL,'emp'); HIST=[];
   /* si la empresa sigue en LITE y nunca tuvo fecha, se prueba una vez a
      activar la prueba gratis. Sirve para los que se registraron ANTES de
@@ -17078,6 +17210,7 @@ function entrarEmpresaCorreo(){
     }
     /* el que entra con el codigo de otro es gestor, nunca dueño */
     abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.id, nombre:j.nombre, rol:'gestor'});
+    ROL_EMP_SERVIDOR='gestor';
     guardar(LS_PLAN,{plan:'lite', vence:null, tope_obras:1, tope_gestores:1});
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; MIS_EMP=[];
     refrescarPlan().then(function(){ if(typeof pintarEmpHome==='function') pintarEmpHome(); });
@@ -17151,6 +17284,7 @@ function crearEmpresaCorreo(){
       return;
     }
     abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.id, nombre:j.nombre, rol:'dueno'});
+    ROL_EMP_SERVIDOR='dueno';
     guardar(LS_PLAN,{plan:'lite', vence:null, tope_obras:1, tope_gestores:1});
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; MIS_EMP=[];
     m.style.color='var(--gris)'; m.textContent='Empresa creada. Activando tu prueba gratis…';
