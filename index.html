@@ -1537,7 +1537,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
 
     <div class="sec-tit" style="margin:18px 0 8px">El trabajador</div>
     <div id="ac-elige"></div>
-    <label>Nombre completo</label><input id="ac-nombre" placeholder="Juan Pérez Quispe">
+    <label>Nombre completo</label><input id="acn-nombre" placeholder="Juan Pérez Quispe">
     <div class="dos">
       <div><label>Documento</label>
         <select id="ac-tipodoc">
@@ -1958,7 +1958,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="marca">◆ RESULTADO</div>
   <h2 id="f-tema"></h2>
   <div class="caja vidrio" style="text-align:center">
-    <div class="nota" id="f-nota"></div>
+    <div class="nota" id="fin-nota"></div>
     <div id="f-veredicto" style="font-weight:700"></div>
     <div class="sub" style="margin:6px 0 0" id="f-quien"></div>
   </div>
@@ -2572,6 +2572,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
         <select class="tc-bt" id="tc-mes-sel" onchange="tcPonerMes(this.value)" aria-label="Mes de cierre"></select>
         <button class="tc-bt" onclick="tcExcel()" title="Descargar en Excel">↓<span class="lb"> Excel</span></button>
         <button class="tc-bt" onclick="tcPDF()" title="Imprimir o guardar en PDF">⎙<span class="lb"> PDF</span></button>
+        <button class="tc-bt" onclick="tcRefrescar()" title="Volver a pedir los datos">↻<span class="lb"> Actualizar</span></button>
         <button class="tc-bt" onclick="tcVer('cfg')" title="Cambiar las metas">⚙<span class="lb"> Qué medir</span></button>
         <span class="tc-yo" id="tc-yo"></span>
         <span class="tc-badge" id="tc-papel">LÍDER SSOMA</span>
@@ -2858,7 +2859,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="pwa-banda"></div>
     <button class="btn sec" onclick="ir('p-apariencia')">🎨 Apariencia</button>
     <button class="btn sec" onclick="pedirCodigo('')">Mi plan / activar código</button>
-    <button class="btn sec" onclick="ir('p-solicitudes')">Solicitudes de acceso</button>
+    <button class="btn sec" id="aj-solic" onclick="ir('p-solicitudes')">Solicitudes de acceso</button>
     <button class="btn sec" onclick="salirDeSesion()">Cambiar de empresa</button>
   </div>
   <div class="salir-caja">
@@ -5834,7 +5835,7 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             'p-brigada':1,
             'p-lista':1,'p-firma-lista':1,'p-listas':1,
             'p-petar':1,'p-petar-nuevo':1,'p-credencial':1,'p-cred-nueva':1,'p-verificar':1,
-            'p-empresa':1,'p-msds':1,'p-msds-nueva':1,'p-puntaje':1,'p-puntaje-nuevo':1,
+            'p-empresa':1,'p-msds':1,'p-msds-nueva':1,'p-puntaje':1,
             'p-programa':1,'p-charlas':1,'p-charla':1,'p-normas':1,'p-norma':1,'p-record':1,
             /* lo que venía del supervisor y ahora vive dentro de la empresa */
             'p-temas':1,'p-modo':1,'p-juego':1,'p-eval':1,'p-datos':1,'p-final':1,
@@ -6249,21 +6250,12 @@ function planQueAbre(clave, esTope){
   return null;
 }
 function precioTexto(P){ return P.precio ? ('S/ '+P.precio.toFixed(2).replace('.00','')+' al mes') : 'gratis'; }
-/* La licencia dura 30 dias y se renueva con otro codigo. La fecha viaja
-   guardada en el celular, asi que el tope se respeta aunque no haya senal. */
-function planVigente(){
-  var p=planLocal();
-  if(!p.plan || p.plan==='lite') return false;
-  if(p.vence && String(p.vence).slice(0,10) < hoyISO()) return false;
-  return true;
-}
 function diasParaVencer(){
   var p=planLocal(); if(!p.vence) return null;
   var a=new Date(String(p.vence).slice(0,10)+'T00:00:00'), b=new Date(hoyISO()+'T00:00:00');
   return Math.round((a-b)/86400000);
 }
 function libre(){ return planActual().orden > 0; }
-function planEsEquipo(){ return planActual().gestores > 1; }
 function nombreDelPlan(){ return planActual().nombre; }
 /* ── LA PRUEBA SE PIDE DESDE UN SOLO SITIO ────────────────────────
    Primera versión de esto: la prueba se pedía al CREAR la empresa y al
@@ -6584,7 +6576,7 @@ function pintarInicio(){
       ': tienes el programa de tu obra y el guion de sus charlas.';
   }
   var bg=$('b-gen'); if(bg) bg.style.display='';
-  var sc=$('sec-cuadrilla'); if(sc) sc.style.display='';
+  /* la sección de cuadrilla se quitó de la portada hace tiempo */
   var s=sectorDe(S.sector);
   $('chip-sector').textContent=s.icono+' '+s.nombre;
 }
@@ -6765,7 +6757,7 @@ function final(){
   var b=S.resp.filter(function(r){return r.ok;}).length, n=S.resp.length;
   var min=Math.ceil(n*0.7);
   $('f-tema').textContent=t.tema;
-  $('f-nota').textContent=b+' / '+n;
+  $('fin-nota').textContent=b+' / '+n;
   $('f-veredicto').textContent=(b>=min?'APROBADO':'DESAPROBADO')+' — mínimo '+min;
   $('f-veredicto').style.color=(b>=min?'var(--ok)':'var(--mal)');
   $('f-quien').textContent=(S.datos.nombre||'')+(S.datos.cargo?' · '+S.datos.cargo:'')+
@@ -6789,7 +6781,7 @@ function final(){
 }
 function finalSolo(t){
   $('f-tema').textContent=t.tema;
-  $('f-nota').textContent=S.orden.length;
+  $('fin-nota').textContent=S.orden.length;
   $('f-veredicto').textContent='preguntas repasadas';
   $('f-veredicto').style.color='var(--tinta)';
   $('f-quien').textContent='Modo «solo yo» — repaso, no evaluación. Aquí no hay nota.';
@@ -8050,117 +8042,6 @@ function enviarCarpeta(){
     m.style.color='var(--mal)'; m.textContent='No se pudo armar: '+(e&&e.message||e);
   });
 }
-/* el PDF: una hoja por registro, con su nombre, fecha y la obra al pie */
-function pdfDeAsistencias(sel){
-  return new Promise(function(ok, mal){
-    try{
-      var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
-      var W=595.28, H=841.89, M=34;
-      var hechos=0, faltaron=0;
-      function portada(){
-        doc.setFillColor(11,42,58); doc.rect(0,0,W,120,'F');
-        doc.setTextColor(245,183,0); doc.setFont('helvetica','bold'); doc.setFontSize(10);
-        doc.text('OBRASST · REGISTROS DE ASISTENCIA', M, 44);
-        (function(){ var ls=selloFormato('asistencia'); if(!ls.length) return;
-          doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(190,205,215);
-          doc.text(ls.join('   ·   '), W-M, 44, {align:'right'});
-          doc.setFont('helvetica','bold'); })();
-        doc.setTextColor(255,255,255); doc.setFontSize(20);
-        doc.text(doc.splitTextToSize(nombreDeLaObra()||'Obra', W-2*M), M, 72);
-        doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(200,215,225);
-        doc.text(sel.length+' registro'+(sel.length===1?'':'s')+' · generado el '+fechaLarga(hoyISO()), M, 100);
-        var y=160;
-        doc.setTextColor(40,40,40); doc.setFontSize(11); doc.setFont('helvetica','bold');
-        doc.text('Contenido', M, y); y+=8;
-        doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
-        sel.slice(0,40).forEach(function(x,i){
-          y+=15; if(y>H-60) return;
-          doc.setTextColor(120,120,120); doc.text(String(i+1)+'.', M, y);
-          doc.setTextColor(40,40,40);
-          doc.text(doc.splitTextToSize(x.nombre+'   ('+(fechaLarga(x.fecha)||'sin fecha')+
-                   (x.firmas?(' · '+x.firmas+' firmas'):'')+')', W-2*M-22), M+20, y);
-        });
-        if(sel.length>40){ y+=17; doc.setTextColor(120,120,120); doc.text('…y '+(sel.length-40)+' más.', M+20, y); }
-        doc.setFontSize(7.5); doc.setTextColor(140,140,140);
-        doc.text(doc.splitTextToSize('Registro de capacitación conforme al Art. 35 de la Ley 29783. Lo conserva el empleador, responsable del tratamiento de los datos personales (Ley 29733 · D.S. 016-2024-JUS).', W-2*M), M, H-42);
-      }
-      portada();
-      var i=0;
-      function siguiente(){
-        if(i>=sel.length){ doc._faltaron=faltaron; ok(doc); return; }
-        var x=sel[i++], src=x.img || x.url || '';
-        doc.addPage();
-        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(11,42,58);
-        doc.text(doc.splitTextToSize(x.nombre, W-2*M), M, 46);
-        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120,120,120);
-        doc.text((fechaLarga(x.fecha)||'sin fecha')+'   ·   '+(ESC_CLASE_ET[x.clase]||'Registro')+
-                 (x.firmas?('   ·   '+x.firmas+' firmas'):''), M, 62);
-        doc.setDrawColor(220,220,220); doc.line(M,70,W-M,70);
-        doc.setFontSize(7.5); doc.setTextColor(150,150,150);
-        doc.text((nombreDeLaObra()||'')+'  ·  hoja '+(i)+' de '+sel.length, M, H-22);
-        if(!src){
-          doc.setFontSize(10); doc.setTextColor(90,90,90);
-          doc.text(doc.splitTextToSize('La imagen de esta hoja no está en este celular ni tiene enlace.', W-2*M), M, 110);
-          faltaron++; hechos++; siguiente(); return;
-        }
-        /* la imagen puede estar en el celular (data:) o solo en la nube.
-           Si está en la nube se baja aquí mismo: el PDF tiene que llevar
-           la hoja, no un enlace que nadie va a abrir. */
-        var img=new Image();
-        if(src.indexOf('data:')!==0) img.crossOrigin='anonymous';
-        img.onload=function(){
-          var dispW=W-2*M, dispH=H-110-40;
-          var r=Math.min(dispW/img.width, dispH/img.height);
-          var w=img.width*r, h=img.height*r;
-          var puesta=false;
-          try{ doc.addImage(img,'JPEG', M+(dispW-w)/2, 86, w, h); puesta=true; }
-          catch(e){ try{ doc.addImage(src,'JPEG', M+(dispW-w)/2, 86, w, h); puesta=true; }catch(e2){} }
-          if(!puesta){ faltaron++;
-            doc.setFontSize(10); doc.setTextColor(90,90,90);
-            doc.text(doc.splitTextToSize('La imagen está en la nube de la obra: '+(x.url||''), W-2*M), M, 110); }
-          hechos++; siguiente();
-        };
-        img.onerror=function(){
-          faltaron++;
-          doc.setFontSize(10); doc.setTextColor(90,90,90);
-          doc.text(doc.splitTextToSize('No se pudo bajar la imagen (¿sin internet?). Está guardada en la obra: '+(x.url||''), W-2*M), M, 110);
-          hechos++; siguiente();
-        };
-        img.src=src;
-      }
-      siguiente();
-    }catch(e){ mal(e); }
-  });
-}
-/* manda el PDF: si el celular sabe compartir archivos, va el archivo;
-   si no, se descarga y se abre WhatsApp o el correo con el mensaje. */
-function entregarAsistencias(doc, nombre, txt){
-  var blob=doc.output('blob'), f=null;
-  try{ f=new File([blob], nombre, {type:'application/pdf'}); }catch(e){}
-  var puedeArchivo=false;
-  try{ puedeArchivo = !!(f && navigator.canShare && navigator.canShare({files:[f]})); }catch(e){}
-  if(ENV_VIA==='otra' || (puedeArchivo && ENV_VIA!=='mail')){
-    if(puedeArchivo){ navigator.share({files:[f], title:nombre, text:txt}).catch(function(){ doc.save(nombre); }); return; }
-    doc.save(nombre); return;
-  }
-  /* WhatsApp a un número: el archivo se descarga y se adjunta en el chat
-     (ningún navegador puede adjuntarlo solo; se dice claro, no se finge) */
-  if(ENV_VIA==='wa'){
-    doc.save(nombre);
-    var t=_telPeru($('env-num').value);
-    window.open('https://wa.me/'+t+'?text='+encodeURIComponent(txt+'\n\n(Te adjunto el PDF que se acaba de descargar: '+nombre+')'),'_blank');
-    return;
-  }
-  if(ENV_VIA==='mail'){
-    doc.save(nombre);
-    var co=($('env-correo').value||'').trim();
-    var asunto='Documentos de la obra · '+(nombreDeLaObra()||'obra');
-    window.open('mailto:'+encodeURIComponent(co)+'?subject='+encodeURIComponent(asunto)+
-                '&body='+encodeURIComponent(txt+'\n\nAdjunta el PDF que se acaba de descargar: '+nombre),'_blank');
-    return;
-  }
-  doc.save(nombre);
-}
 
 // =================================================================
 //  LA VERSION DE MUESTRA (LITE) DEL LADO DE GESTION
@@ -8373,41 +8254,6 @@ function soloConCodigo(queCosa, llave){
 }
 /* la puerta unica: toda accion con tope o con llave pasa por aca */
 function puede(clave){ return !!planActual().puede[clave]; }
-/* la banda de arriba en el inicio de la empresa */
-function bandaLiteEmpresa(){
-  var A=planActual(), pl=planLocal(), d=diasParaVencer(), S=planSiguiente();
-  var vence = (pl.vence && A.orden>0)
-    ? '<br><span style="color:var(--gris)">Vence el '+fechaLarga(String(pl.vence).slice(0,10))+'.</span>' : '';
-  var porVencer = (d!==null && d<=7 && A.orden>0)
-    ? '<div style="margin-top:9px;color:var(--mal);font-weight:600">⏳ '+(d<=0?'Vence hoy.':'Te quedan '+d+' día'+(d===1?'':'s')+'.')+'</div>'+
-      '<div style="margin-top:7px"><button class="btn sec" style="margin:0" onclick="pedirCodigo(\'\')">Renovar con un código</button></div>' : '';
-
-  /* venció y volvió a LITE */
-  /* Ojo: NO se puede preguntar «¿el plan guardado es distinto de lite?».
-     El servidor YA devuelve 'lite' cuando la fecha pasó, así que esa
-     condición no se cumplía nunca y el aviso de vencimiento no salía.
-     Lo que delata a un plan vencido es la FECHA, no el nombre. */
-  if(pl.vence && String(pl.vence).slice(0,10) < hoyISO()){
-    return '<div class="aviso rojo" style="border-color:rgba(210,86,79,.5)">⏳ <b>Tu plan venció</b> el '+
-      fechaLarga(String(pl.vence).slice(0,10))+'. Tus documentos siguen ahí; volvieron los topes de la versión gratis.'+
-      '<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="pedirCodigo(\'\')">Renovar con un código</button></div></div>';
-  }
-  /* la versión gratis */
-  if(A.orden===0){
-    var T=A.tope;
-    return '<div class="aviso">🎁 <b>Plan LITE</b> — gratis, para probarlo en tu cuadrilla: '+
-      T.trabajador+' trabajadores, '+T.kardex+' entregas de EPP, '+T.reporte+' reportes y '+A.charlas+' charlas.'+
-      (S? '<div style="margin-top:10px"><button class="btn" style="margin:0" onclick="pedirCodigo(\'\')">'+
-          'Pasar al plan '+esc(S.nombre)+' · '+precioTexto(S)+'</button></div>' : '')+'</div>';
-  }
-  /* un plan pagado: qué tienes, y cuál es el siguiente escalón */
-  var g = A.gestores>1 ? (' Entran hasta '+A.gestores+' gestores; si necesitas más, son S/ '+PUESTO_EXTRA+' al mes cada uno.')
-                       : ' Es de una sola persona.';
-  return '<div class="aviso" style="border-color:rgba(47,158,111,.35)">✓ <b>Plan '+esc(A.nombre)+'</b> — '+
-    precioTexto(A)+'.'+g+vence+porVencer+
-    (S? '<div style="margin-top:9px"><button class="btn sec" style="margin:0" onclick="pedirCodigo(\'\')">'+
-        'Tengo un código del plan '+esc(S.nombre)+'</button></div>' : '')+'</div>';
-}
 
 /* Una sola línea, sin globo de venta. Lo único que se avisa fuerte es
    lo que corre prisa: que está por vencer o que ya venció. */
@@ -9569,7 +9415,7 @@ function prepAccNuevo(){
   var d=new Date();
   $('ac-fecha').value=hoyISO();
   $('ac-hora').value=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
-  ['ac-nombre','ac-doc','ac-puesto','ac-lugar','ac-desc','ac-causas','ac-medidas','ac-resp','ac-plazo']
+  ['acn-nombre','ac-doc','ac-puesto','ac-lugar','ac-desc','ac-causas','ac-medidas','ac-resp','ac-plazo']
     .forEach(function(k){ if($(k)) $(k).value=''; });
   $('ac-dias').value='0'; $('ac-tipodoc').value='DNI';
   $('ac-parte').innerHTML=ACC_PARTES.map(function(x){ return '<option>'+esc(x)+'</option>'; }).join('');
@@ -9587,7 +9433,7 @@ function accListaTrabajadores(){
     '</select>';
   $('ac-desde').onchange=function(){
     var t=trabPorId(this.value); if(!t) return;
-    $('ac-nombre').value=t.nombre||''; $('ac-doc').value=t.dni||''; $('ac-puesto').value=t.puesto||t.cargo||'';
+    $('acn-nombre').value=t.nombre||''; $('ac-doc').value=t.dni||''; $('ac-puesto').value=t.puesto||t.cargo||'';
   };
 }
 function pintarAccClases(){
@@ -9617,7 +9463,7 @@ function fotoAcc(){
 }
 function guardarAccidente(){
   var m=$('acc-nuevo-msg'); m.style.color='var(--mal)';
-  var f=$('ac-fecha').value, nom=($('ac-nombre').value||'').trim(), d=($('ac-desc').value||'').trim();
+  var f=$('ac-fecha').value, nom=($('acn-nombre').value||'').trim(), d=($('ac-desc').value||'').trim();
   if(!f){ m.textContent='Falta la fecha del evento.'; return; }
   if(f>hoyISO()){ m.textContent='Esa fecha todavía no llega. Revísala.'; return; }
   if(ACC_SEL!=='casi' && nom.length<3){ m.textContent='Falta el nombre del trabajador.'; return; }
@@ -11323,15 +11169,6 @@ function esSoloLectura(k, llave){
   if(llave) alcanza = alcanza && puede(llave);
   return !alcanza && hayHistoriaDe(k) > 0;
 }
-/* el cartel que se pinta arriba de un módulo en modo lectura */
-function bandaSoloLectura(k, comoSeLlama){
-  var n=hayHistoriaDe(k), P=planQueAbre2(k), S=planSiguiente();
-  var h='<div class="aviso" style="border-color:rgba(245,183,0,.45)">🔒 <b>'+esc(comoSeLlama)+' — solo lectura</b><br>'+
-    '<span class="sub">Tienes '+n+' registro'+(n===1?'':'s')+' de cuando tenías un plan superior. '+
-    'No se borró nada: puedes verlos, exportarlos y mandarlos. Para registrar uno nuevo hace falta subir de plan.</span>';
-  if(S) h+='<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="pedirCodigo(\'\')">Subir al plan '+esc(S.nombre)+' · '+precioTexto(S)+'</button></div>';
-  return h+'</div>';
-}
 /* el primer plan que vuelve a abrir este acceso */
 function planQueAbre2(k){
   var cat=null;
@@ -11340,40 +11177,7 @@ function planQueAbre2(k){
   for(var j=0;j<PLANES.length;j++) if(PLANES[j].orden >= cat.desde) return PLANES[j];
   return null;
 }
-/* pone el cartel arriba de una pantalla y apaga sus botones de agregar */
-function marcarSoloLectura(idPantalla, k, comoSeLlama, idsBotones){
-  var pant=document.getElementById(idPantalla); if(!pant) return false;
-  var viejo=null;
-  for(var i=0;i<pant.children.length;i++) if(pant.children[i].getAttribute &&
-      pant.children[i].getAttribute('data-lectura')==='1') viejo=pant.children[i];
-  var lectura = esSoloLectura(k);
-  if(!lectura){ if(viejo) viejo.parentNode.removeChild(viejo); return false; }
-  if(!viejo){
-    viejo=document.createElement('div'); viejo.setAttribute('data-lectura','1');
-    var ref=pant.querySelector('h2') || pant.firstElementChild;
-    if(ref && ref.nextSibling) pant.insertBefore(viejo, ref.nextSibling); else pant.appendChild(viejo);
-  }
-  viejo.innerHTML=bandaSoloLectura(k, comoSeLlama);
-  (idsBotones||[]).forEach(function(id){
-    var b=document.getElementById(id);
-    if(b){ b.disabled=true; b.style.opacity='.45'; b.title='Necesitas subir de plan'; }
-  });
-  return true;
-}
 
-/* Lo que ve quien todavia no tiene Gestion SST donde irian las carpetas. */
-function invitaCarpetasDom(){
-  var d=document.createElement('div'); d.className='aviso'; d.style.marginTop='16px';
-  var P=planQueAbre('carpetas', false), S=planSiguiente();
-  var pie='';
-  if(P && S && P.orden===S.orden) pie='Se abren con el plan <b>'+esc(P.nombre)+'</b> · '+precioTexto(P)+'.';
-  else if(S) pie='Están más arriba en la escalera. Tu siguiente paso es el plan <b>'+esc(S.nombre)+'</b> · '+precioTexto(S)+'.';
-  d.innerHTML='<b>🗂️ Las carpetas del sistema</b><br>'+
-    '<span class="sub">Sistema Integrado, Sistema Informativo, Medio Ambiente, Salud Ocupacional, '+
-    'Respuesta ante Emergencias y Herramientas de obra.</span>'+
-    (pie? '<div style="margin-top:9px" class="sub">'+pie+'</div>' : '');
-  return d;
-}
 /* El RISST se abre como hoja de documento; el QR sale de ahi mismo. */
 function abrirRisst(){
   if(!puede('qr_risst')){ soloConCodigo('Los carteles QR de la obra','qr_risst'); return; }
@@ -11752,12 +11556,6 @@ function entrarEvaluacion(o, clave){
     if(!cf.via){ cf.via=o.ct.v; cf.destino=o.ct.d||''; guardar(LS.cfg,cf); } }
   ir('p-eval'); return null;
 }
-function salirEval(){
-  confirmar('¿Salir de la evaluación?', 'Vuelves a la app normal y se pierde lo respondido.', function(){
-    EV=null; try{ localStorage.removeItem(LS_EV); }catch(e){}
-    ir('p-inicio');
-  }, {si:'Sí, salir', no:'Seguir respondiendo', icono:'📝'});
-}
 function pintarEval(){
   if(!EV){ ir('p-inicio'); return; }
   var t=TEMAS[EV.d];
@@ -11825,11 +11623,6 @@ function charlaAbierta(n){
   if(ROL==='col') return false;              // el trabajador no tiene muestra gratis
   var c=charlaDe(n);
   return !!(c && c.gratis);
-}
-function charlasDelMes(){
-  var m=mesVigente();
-  if(!m || !m.ch) return [];
-  return m.ch.map(function(s){ return charlaDe(parseInt(s,10)); }).filter(Boolean);
 }
 function entrarMes(o){
   if(hoyISO()>o.v) return 'Ese código del mes venció el '+fechaLarga(o.v)+'. Pídele el del mes que corre.';
@@ -13019,11 +12812,11 @@ function ptListaTrabajadores(){
   var caja=$('pt-elige'); if(!caja) return;
   var a=(typeof trabsLocal==='function'? trabsLocal():[]).filter(function(t){ return t.estatus!=='cesado'; });
   if(!a.length){ caja.innerHTML=''; return; }
-  caja.innerHTML='<label>Elegir de mi personal</label><select id="pt-desde">'+
+  caja.innerHTML='<label>Elegir de mi personal</label><select id="pt-elige-sel">'+
     '<option value="">— escribir a mano —</option>'+
     a.map(function(t){ return '<option value="'+esc(t.id)+'">'+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</option>'; }).join('')+
     '</select>';
-  $('pt-desde').onchange=function(){
+  $('pt-elige-sel').onchange=function(){
     var t=trabPorId(this.value); if(!t) return;
     $('pt-nombre').value=t.nombre||''; $('pt-dni').value=t.dni||'';
   };
@@ -13673,10 +13466,6 @@ function pararVigilanciaReportes(){ if(AVISO_TIMER){ clearInterval(AVISO_TIMER);
 
 /* ── LA LISTA DE REPORTES ────────────────────────────────────────── */
 var REP_LISTA=[];
-function reportesAbiertos(){
-  var n=0; (REP_LISTA||[]).forEach(function(r){ if(r.estado!=='atendido') n++; });
-  return n;
-}
 function pintarReporte(){
   var e=empActiva(), c=$('reporte-cuerpo');
   c.innerHTML='<h2>🚨 Reportes de la obra</h2>'+
@@ -16670,14 +16459,8 @@ function inspeccionesDelMes(sector){
   return cat.i.filter(function(t){ return t.f==='mensual'; });
 }
 
-function irAlPanel(){
-  if(!hayCuenta()){ ir('p-cuenta'); return; }
-  ir('p-gestor');
-}
 /* El panel viejo —cuatro KPIs y una tabla en 560px— quedó reemplazado por
    la TORRE DE CONTROL. Esto es solo la puerta: la pantalla p-gestor la
-   pinta tcEntrar(). */
-function pintarGestor(){ tcEntrar(); }
 
 /* ---- Recordatorios ---- */
 function diasPara(iso){ if(!iso) return 9999; return Math.round((Date.UTC(+iso.slice(0,4),+iso.slice(5,7)-1,+iso.slice(8,10))-Date.UTC(+hoyISO().slice(0,4),+hoyISO().slice(5,7)-1,+hoyISO().slice(8,10)))/86400000); }
@@ -16702,7 +16485,7 @@ function cargarRecord(){
   sbGet('sst_recordatorio?empresa=eq.'+e.id+'&select=id,titulo,vence,tipo&order=vence.asc').then(function(rows){
     rows.sort(function(a,b){ return diasPara(a.vence)-diasPara(b.vence); });
     var venc=rows.filter(function(r){return diasPara(r.vence)<=15;}).length;
-    var rb=$('rec-badge'); if(rb) rb.textContent = venc? ('· '+venc+' por vencer'):'';
+    /* el globo de recordatorios ya no vive en la barra */
     var h='';
     rows.forEach(function(r){
       var d=diasPara(r.vence), col=d<0?'#d2564f':(d<=15?'#d68e1a':'#2f9e6f');
@@ -16852,8 +16635,6 @@ function pintarNormas(){
   $('lista-normas').innerHTML=h+'<p class="sub" style="margin-top:12px">Referencia rápida. Verifica siempre la versión vigente en El Peruano; las normas se modifican.</p>';
 }
 
-/* ================= EMPRESA / MSDS (nube) ================= */
-function codEmpresaNueva(){ var s=''; for(var i=0;i<7;i++){ if(i===3)s+='-'; s+=A32.charAt(Math.floor(Math.random()*A32.length)); } return s; }
 
 // =================================================================
 //  EMPRESA (rol 'emp') · el sistema de gestión, ordenado y anidado
@@ -16989,14 +16770,11 @@ function pintarEmpHome(){
      mismo, porque en la mañana está en oficina y en la tarde en obra. */
   var pn=$('emp-home-panel'), hp='';
   if(puedeSerLider() && papelElegido()==='lider'){
-    hp = '<button class="tarj vidrio" style="margin-top:16px;border-color:var(--oro)" onclick="ir(\'p-gestor\')">'+
-         '<b>🎖️ Torre de control</b>'+
-         '<small>Tus proyectos juntos: índices de accidentabilidad, inspecciones del mes, reportes abiertos, '+
-         'consumo de EPP y cómo va cada supervisor.</small></button>'+
-         '<button class="tarj vidrio" style="margin-top:9px" onclick="ir(\'p-invitar\')">'+
-         '<b>🤝 Nombrar supervisores</b>'+
-         '<small>Le generas a cada uno su código de invitación: va amarrado a su correo y a su documento, dice qué obra le encargaste y desde cuándo, y entra una sola vez.</small></button>'+
-         '<button class="btn sec" style="margin-top:9px" onclick="ponerPapel(\'sup\');pintarEmpHome()">'+
+    /* Los accesos del líder ya están arriba, en círculo. Repetirlos aquí
+       en tarjetas de tres líneas era decir dos veces lo mismo y empujar
+       los ajustes media pantalla más abajo. Queda solo la puerta que NO
+       está arriba: bajarse a trabajar una obra como supervisor. */
+    hp = '<button class="btn sec" style="margin-top:16px" onclick="ponerPapel(\'sup\');pintarEmpHome()">'+
          '🦺 Trabajar como supervisor en una obra</button>';
   } else if(puedeSerLider()){
     hp = '<button class="tarj vidrio" style="margin-top:16px;border-color:var(--oro)" onclick="ponerPapel(\'lider\');pintarEmpHome()">'+
@@ -17012,9 +16790,12 @@ function pintarEmpHome(){
   }
   if(pn) pn.innerHTML = hp;
   var c=$('emp-home-cuerpo'); c.innerHTML='';
-  /* El tablero primero: la data del mes sin abrir nada. */
-  c.appendChild(tableroDom());
-  if(puedeSerLider() && papelElegido()==='lider'){
+  var _esLider = puedeSerLider() && papelElegido()==='lider';
+  /* El tablero es de UNA obra: al supervisor le sirve, porque esa obra es
+     la suya. Al líder no —él lleva cuatro— y le tapaba media pantalla
+     antes de llegar a lo que sí tiene que decidir. Lo suyo es la Torre. */
+  if(!_esLider) c.appendChild(tableroDom());
+  if(_esLider){
     /* EL INICIO DEL LIDER. Lo que le sirve al supervisor —los accesos de
        todos los días y las seis carpetas abiertas— a él le estorba: no
        carga documentos, decide sobre cuatro obras. Primero lo que está
@@ -17058,7 +16839,7 @@ function pintarEmpHome(){
      de obra y lo ve entrando como supervisor, un botón más abajo. Que
      le salgan aquí solo le agrega dos cosas que nunca va a tocar. */
   var esLid = puedeSerLider() && papelElegido()==='lider';
-  ['aj-config','aj-formatos'].forEach(function(id){
+  ['aj-config','aj-formatos','aj-solic'].forEach(function(id){
     var el=$(id); if(el) el.style.display = esLid ? 'none' : '';
   });
   var q=$('emp-quien');
@@ -18007,8 +17788,6 @@ function tcCfgGuardar(){
     });
 }
 
-/* ── entrar y salir ─────────────────────────────────────────────── */
-function tcAbrir(){ ir('p-gestor'); }
 function tcSalir(){ try{ document.body.classList.remove('torre','sinrail'); }catch(e){} ir('p-emp-home'); }
 function tcRail(){ try{ document.body.classList.toggle('sinrail'); }catch(e){} }
 function tcEntrar(){
@@ -18069,7 +17848,6 @@ function tcRefrescar(){ TC.listo=false; TC.dat={}; TC.proy=[]; tcCargar(); }
 function tcSel(){ return TC.sel==='*' ? TC.proy : TC.proy.filter(function(p){ return p.id===TC.sel; }); }
 function tcD(id){ return TC.dat[id] || {acc:[],hht:[],insp:[],rep:[],kdx:[],cons:[],trab:[],amon:[],buenas:[],inv:[],docs:[]}; }
 function tcEnAnio(f){ return String(f||'').slice(0,4)===String(TC.anio); }
-function tcEnMes(f){ return String(f||'').slice(0,7)===(TC.mes||mesISO()); }
 function tcHHT(ps, mes){
   var t=0;
   ps.forEach(function(p){ tcD(p.id).hht.forEach(function(x){
@@ -19023,11 +18801,6 @@ function compartirEmpCod(){
   if(navigator.share){ navigator.share({text:t}).catch(function(){copiarTexto(t);}); } else copiarTexto(t);
 }
 
-// ---- trabajador: reportar (necesita el código de su obra) ----
-function reportarTrab(){
-  if(empActiva()){ ir('p-reporte-nuevo'); }
-  else { $('te-msg').textContent=''; $('te-codigo').value=''; ir('p-trab-empresa'); }
-}
 function entrarTrabEmpresa(){
   var cod=_norm(($('te-codigo').value||'')); if(cod.length>=6){ cod=cod.slice(0,3)+'-'+cod.slice(3,6); }
   var m=$('te-msg'); m.style.color='var(--mal)';
@@ -19041,7 +18814,7 @@ function entrarTrabEmpresa(){
 }
 function pintarEmpresa(){
   var e=empActiva(), c=$('empresa-cuerpo');
-  var eb=$('emp-badge'); if(eb) eb.textContent = e ? '· '+esc(e.nombre) : '';
+  /* el nombre de la empresa ya sale en el encabezado del inicio */
   if(e){
     c.innerHTML='<h2>'+esc(e.nombre)+'</h2>'+
       '<div class="aviso">Código de tu empresa: <b style="letter-spacing:.12em">'+esc(e.codigo)+'</b><br>Pásalo a tu cuadrilla: con él ven las hojas MSDS. Guárdalo, es la llave.</div>'+
@@ -19503,14 +19276,6 @@ function compartirPDF(){
     navigator.share({files:[f], title:PDF.nombre}).catch(function(){});
   } else { descargarPDF(); }
 }
-function siguienteTrabajador(){
-  // misma prueba, mismo tema, misma contrata: solo cambia la persona
-  S.resp=[]; S.i=0; S.datos.nombre=''; S.datos.dni=''; S.datos.cargo='';
-  $('d-nombre').value=''; $('d-dni').value=''; $('d-cargo').value='';
-  S.orden=preguntasDe(S.tema);
-  PDF.doc=null; FIRMA.trab=null; FIRMA.cap=null;
-  ir('p-datos');
-}
 (function(){
   var cv=$('lienzo'); if(!cv) return;
   cv.addEventListener('mousedown',fdown); cv.addEventListener('mousemove',fmove);
@@ -19706,7 +19471,14 @@ function pedirBorradoCuenta(){
 /* lo que hace la app una vez que ya sabe en qué sector estás */
 function seguirElArranque(){
   ROL=leer(LS_ROL,null);
-  if(ROL==='col'){ ir('p-colab'); return; }
+  if(ROL==='col'){
+    /* El trabajador que ya se registró vuelve A SU OBRA, no al formulario
+       de entrada. Antes la app lo devolvía a escribir otra vez su código y
+       su documento cada mañana; con guantes y a las 6 a.m. eso alcanza
+       para que deje de usarla. */
+    ir((typeof inicioDelModo==='function') ? inicioDelModo() : 'p-colab');
+    return;
+  }
   /* 'sup' era el rol viejo: ahora todo el que gestiona entra como empresa */
   if(ROL==='sup'){ ROL='emp'; guardar(LS_ROL,'emp'); }
   if(RECUPERANDO){ ROL='emp'; guardar(LS_ROL,'emp'); ir('p-clave-nueva'); return; }
