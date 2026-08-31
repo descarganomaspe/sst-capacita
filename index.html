@@ -2618,6 +2618,12 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <input id="inv-doc" placeholder="DNI o carné de extranjería" style="text-transform:uppercase">
   <label>Nombre y apellido — opcional</label>
   <input id="inv-nombre" placeholder="Miguel Aguirre">
+  <label>¿Qué va a ser en la empresa?</label>
+  <select id="inv-papel" onchange="pintarNotaPapel()">
+    <option value="gestor" selected>Supervisor SSOMA de una obra</option>
+    <option value="colider">Segundo líder — ve la Torre de control</option>
+  </select>
+  <p class="sub" id="inv-papel-nota" style="margin:6px 0 0;font-size:12.5px"></p>
   <div class="sec-tit" style="margin-top:18px">La delegación</div>
   <p class="sub" style="margin:-4px 0 8px;font-size:12.5px">Queda escrito qué obra le encargaste y desde cuándo. Es lo que se muestra después en tu lista y lo que ve un auditor cuando pregunta quién responde por esa obra.</p>
   <label>Proyecto u obra</label>
@@ -17510,9 +17516,19 @@ function invPuestos(){
 function prepInvitar(){
   var f=function(id,v){ var el=$(id); if(el) el.value=v; };
   f('inv-correo',''); f('inv-doc',''); f('inv-nombre',''); f('inv-proy','');
-  f('inv-desde',hoyISO()); f('inv-hasta',''); f('inv-dias','15');
+  f('inv-desde',hoyISO()); f('inv-hasta',''); f('inv-dias','15'); f('inv-papel','gestor');
+  pintarNotaPapel();
   var m=$('inv-msg'); if(m) m.textContent='';
   var h=$('inv-hecho'); if(h) h.innerHTML='';
+}
+/* La diferencia entre los dos papeles no es cosmética y hay que decirla
+   antes de generar el código, no después: el segundo líder ve TODOS los
+   proyectos y puede nombrar a otros; el supervisor solo su obra. */
+function pintarNotaPapel(){
+  var n=$('inv-papel-nota'), sel=$('inv-papel'); if(!n||!sel) return;
+  n.innerHTML = (sel.value==='colider')
+    ? 'Verá la Torre de control con <b>todos tus proyectos</b> y podrá nombrar supervisores, igual que tú. Dáselo solo a quien de verdad responde por la SSOMA de la empresa.'
+    : 'Trabajará en la obra que le encargues: reportes, inspecciones, kardex, capacitaciones. No verá el tablero de los otros proyectos.';
 }
 function pintarInvitar(){
   var e=empActiva(), c=$('inv-emp');
@@ -17534,8 +17550,10 @@ function generarInvitacion(){
   if(_norm(doc).length<6){ m.textContent='Falta su documento: DNI de 8 dígitos, o carné de extranjería.'; return; }
   if(hasta && desde && hasta<desde){ m.textContent='La fecha de término no puede ser antes que la de inicio.'; return; }
   m.style.color='var(--gris)'; m.textContent='Generando el código…';
+  var papel=($('inv-papel')&&$('inv-papel').value==='colider')?'colider':'gestor';
   sbRpc('sst_invitar',{p_emp:e.id, p_correo:correo, p_dni:doc, p_nombre:nom||null,
-                       p_proyecto:proy||null, p_desde:desde||null, p_hasta:hasta||null, p_dias:dias})
+                       p_proyecto:proy||null, p_desde:desde||null, p_hasta:hasta||null,
+                       p_dias:dias, p_papel:papel})
   .then(function(j){
     if(!j || !j.ok){
       m.style.color='var(--mal)';
@@ -17553,7 +17571,8 @@ function generarInvitacion(){
     }
     m.textContent='';
     var cod=invBonito(j.codigo);
-    var texto='Te invito a OBRASST como supervisor SSOMA de '+((empActiva()||{}).nombre||'nuestra empresa')+'.'+
+    var comoQue = (j.papel==='colider') ? 'como segundo líder SSOMA' : 'como supervisor SSOMA';
+    var texto='Te invito a OBRASST '+comoQue+' de '+((empActiva()||{}).nombre||'nuestra empresa')+'.'+
       '\n\n1) Entra a '+baseURL()+
       '\n2) Crea tu cuenta con este correo: '+correo+
       '\n3) En «Tengo un código de invitación» escribe: '+cod+
@@ -17563,7 +17582,8 @@ function generarInvitacion(){
       '<div class="caja vidrio" style="padding:16px;border-color:var(--oro)">'+
       '<b>Listo. Este es su código:</b>'+
       '<div style="font-size:29px;font-weight:800;letter-spacing:.10em;margin:10px 0;text-align:center">'+esc(cod)+'</div>'+
-      '<p class="sub" style="margin:0 0 10px">Para <b>'+esc(correo)+'</b>, con documento <b>'+esc(_norm(doc))+'</b>. Vence el '+fechaLarga(j.vence)+'.</p>'+
+      '<p class="sub" style="margin:0 0 10px">Para <b>'+esc(correo)+'</b>, con documento <b>'+esc(_norm(doc))+'</b>, '+
+        (j.papel==='colider'?'como <b>segundo líder</b>':'como <b>supervisor SSOMA</b>')+'. Vence el '+fechaLarga(j.vence)+'.</p>'+
       '<button class="btn" style="margin:0" onclick="invCompartir('+JSON.stringify(texto).replace(/"/g,'&quot;')+')">Mandárselo por WhatsApp</button>'+
       '<button class="btn sec" style="margin:8px 0 0" onclick="invCopiar('+JSON.stringify(texto).replace(/"/g,'&quot;')+')">Copiar las instrucciones</button>'+
       '</div>';
@@ -17589,7 +17609,7 @@ function cargarInvitaciones(){
   if(!e){ c.innerHTML=''; return; }
   c.innerHTML='<p class="sub">Cargando…</p>';
   sbGet('sst_invitacion?empresa_id=eq.'+encodeURIComponent(e.id)+
-        '&select=id,codigo,correo,dni,nombre,proyecto,desde,hasta,vence,creada,usada_en&order=creada.desc&limit=60')
+        '&select=id,codigo,correo,dni,nombre,papel,proyecto,desde,hasta,vence,creada,usada_en&order=creada.desc&limit=60')
   .then(function(rows){
     INVITS=rows||[];
     var P=invPuestos();
@@ -17603,6 +17623,7 @@ function cargarInvitaciones(){
              : '<span style="color:var(--adv,#fab219)">⏳ Sin usar</span>';
       return '<div class="caja vidrio" style="padding:14px;margin-bottom:9px">'+
         '<b>'+esc(i.nombre||i.correo)+'</b> · '+et+
+        (i.papel==='colider'?' <span style="color:var(--oro)">· segundo líder</span>':'')+
         '<p class="sub" style="margin:5px 0 0">'+esc(i.correo)+' · doc '+esc(i.dni||'—')+'</p>'+
         (i.proyecto?'<p class="sub" style="margin:3px 0 0">🏗️ '+esc(i.proyecto)+
            (i.desde?' · desde '+fechaLarga(i.desde):'')+(i.hasta?' hasta '+fechaLarga(i.hasta):'')+'</p>':'')+
@@ -17659,11 +17680,20 @@ function canjearInvitacion(){
       return;
     }
     m.style.color='var(--ok)'; m.textContent='Listo, ya estás dentro.';
-    abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.empresa, nombre:j.nombre, rol:'gestor'});
-    ROL_EMP_SERVIDOR='gestor'; ponerPapel('sup');
-    guardar(LS_PLAN,{plan:'lite', vence:null, tope_obras:1, tope_gestores:1});
+    abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.empresa, nombre:j.nombre,
+                                 rol:(j.papel==='colider'?'dueno':'gestor')});
+    var esColider = (j.papel==='colider');
+    ROL_EMP_SERVIDOR = esColider ? 'dueno' : 'gestor';
+    ponerPapel(esColider ? 'lider' : 'sup');
+    /* OJO: aquí NO se puede poner el plan en «lite» a la espera de que
+       refrescarPlan() traiga el de verdad. El servidor ya nos dijo cuál
+       es en la misma respuesta, y si lo pisamos con lite, el inicio se
+       pinta antes de que llegue la respuesta, ve un plan que no es de
+       líder y baja al segundo líder a supervisor de un manotazo. */
+    guardar(LS_PLAN,{plan:(j.plan||'lite'), vence:null, tope_obras:1, tope_gestores:1});
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; MIS_EMP=[];
-    var det = (j.proyecto? ('Te encargaron: '+j.proyecto) : 'Ya puedes trabajar en esta empresa.')+
+    var det = (esColider ? 'Entras como segundo líder: ves la Torre de control con todos los proyectos.'
+                        : (j.proyecto? ('Te encargaron: '+j.proyecto) : 'Ya puedes trabajar en esta empresa.'))+
               (j.desde? ('\nDesde el '+fechaLarga(String(j.desde).slice(0,10))) : '')+
               (j.hasta? (' hasta el '+fechaLarga(String(j.hasta).slice(0,10))) : '');
     refrescarPlan().then(function(){ if(typeof pintarEmpHome==='function') pintarEmpHome(); });
