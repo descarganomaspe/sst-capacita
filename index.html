@@ -1055,11 +1055,25 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="marca">◆ OBRASST</div>
   <h1>Antes de entrar,<br>¿quién eres?</h1>
   <p class="sub">Dos puertas: el que gestiona la seguridad de la obra, y el que trabaja en ella.</p>
-  <button class="tarj vidrio" onclick="elegirRol('emp')"><b>🏢 Gestiono la SST</b><small>Empresa, supervisor o ingeniero SSOMA. Ves y llevas todo: políticas, IPERC, PETS, comité, charlas, capacitaciones, kardex de EPP, amonestaciones, informes y reportes de obra. Entras con tu correo y el código de tu empresa.</small></button>
+  <button class="tarj vidrio" onclick="elegirRol('emp')"><b>🏢 Gestiono la SST</b><small>Líder o supervisor SSOMA. Entras con tu correo. Adentro eliges cuál de los dos eres.</small></button>
   <button class="tarj vidrio" onclick="elegirRol('col')"><b>🦺 Soy trabajador</b><small>Vas a rendir una evaluación, ver la charla del día o reportar algo inseguro. Entras con el código que te pasaron. No pagas nada.</small></button>
   <div id="rol-sesion"></div>
   <div id="pwa-banda" class="pwa-banda"></div>
   <div class="pie">Se puede cambiar después: en cualquier inicio hay «Cambiar de usuario».</div>
+</section>
+
+<section class="pantalla" id="p-gestion-quien">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Gestiono la SST</span></div>
+  <h1>¿Cuál de los dos eres?</h1>
+  <p class="sub">Los dos entran con su correo. La diferencia la pone el plan que tenga la empresa.</p>
+  <button class="tarj vidrio" onclick="elegirGestor('lider')"><b>🎖️ Soy el líder SSOMA</b><small>Ves tus proyectos juntos en un solo tablero, delegas supervisores, exportas el consolidado y decides qué se mide. Viene con el plan <b>Gestión SST</b>.</small></button>
+  <button class="tarj vidrio" onclick="elegirGestor('sup')"><b>🦺 Soy el supervisor SSOMA</b><small>Llevas tu obra: inspecciones, kardex de EPP, charlas, capacitaciones, reportes, amonestaciones y accidentes. Está en todos los planes.</small></button>
+  <div class="pie">Si te equivocas no pasa nada: se cambia desde Ajustes cuando quieras.</div>
+</section>
+
+<section class="pantalla" id="p-lider-no">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Panel del líder</span></div>
+  <div id="lider-no-cuerpo"></div>
 </section>
 
 <!-- ================= supervisor: iniciar sesión ================= -->
@@ -1325,6 +1339,92 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <div id="af-msg" style="font-size:13.5px;margin:9px 0 0"></div>
     <button class="btn" onclick="guardarFirmaAmon()" style="margin-top:11px">Guardar firma</button>
   </div>
+</section>
+
+<section class="pantalla" id="p-accidentes">
+  <div class="barra"><span>Accidentes e incidentes</span></div>
+  <h2>Registro de accidentes e incidentes</h2>
+  <p class="sub">Es uno de los registros que la ley te exige tener al día <span class="ley">D.S. 005-2012-TR art. 33</span>. De aquí salen los tres índices que van en el informe mensual, y la pirámide que dice si tu gente está reportando.</p>
+  <button class="btn" onclick="ir('p-acc-nuevo')">➕ Registrar un evento</button>
+  <div id="acc-indices"></div>
+  <div id="acc-piramide"></div>
+  <button class="btn sec" onclick="exportarAccidentesCSV()" id="acc-exportar">📊 Bajar el registro del año</button>
+  <div id="acc-msg" style="font-size:13.5px;margin:9px 0 0"></div>
+  <div id="acc-lista"></div>
+</section>
+
+<section class="pantalla" id="p-acc-nuevo">
+  <div class="barra"><span>Nuevo evento</span></div>
+  <h2>¿Qué pasó?</h2>
+  <p class="sub">Lo primero es clasificarlo bien: de esta sola decisión salen la pirámide y los índices. Toca el que corresponda.</p>
+  <div id="ac-clases"></div>
+
+  <div class="caja vidrio" style="padding:15px;margin-top:14px">
+    <div class="dos">
+      <div><label>Fecha</label><input id="ac-fecha" type="date"></div>
+      <div><label>Hora</label><input id="ac-hora" type="time"></div>
+    </div>
+
+    <div class="sec-tit" style="margin:18px 0 8px">El trabajador</div>
+    <div id="ac-elige"></div>
+    <label>Nombre completo</label><input id="ac-nombre" placeholder="Juan Pérez Quispe">
+    <div class="dos">
+      <div><label>Documento</label>
+        <select id="ac-tipodoc">
+          <option value="DNI">DNI</option>
+          <option value="CE">Carné de extranjería</option>
+          <option value="PTP">PTP</option>
+          <option value="PAS">Pasaporte</option>
+        </select></div>
+      <div><label>Número</label><input id="ac-doc" inputmode="numeric" placeholder="70123456"></div>
+    </div>
+    <label>Puesto</label><input id="ac-puesto" placeholder="Operario de encofrado">
+
+    <div class="sec-tit" style="margin:18px 0 8px">Dónde y cómo</div>
+    <label>Lugar exacto</label><input id="ac-lugar" placeholder="Sótano 2, eje C-4">
+    <label>Qué pasó</label>
+    <textarea id="ac-desc" rows="4" placeholder="Cuenta el hecho como si se lo explicaras a alguien que no estuvo: qué hacía, qué falló y qué le pasó."></textarea>
+    <div class="dos">
+      <div><label>Parte del cuerpo</label><select id="ac-parte"></select></div>
+      <div><label>Agente causante</label><select id="ac-agente"></select></div>
+    </div>
+
+    <div id="ac-caja-dias" style="display:none">
+      <label>Días de descanso médico</label>
+      <input id="ac-dias" inputmode="numeric" value="0">
+      <p class="sub" style="margin:6px 0 0;font-size:12.5px">Los que dice el certificado. Es el número que arma el índice de severidad, así que si todavía no lo tienes, pon 0 y corrígelo cuando llegue.</p>
+    </div>
+
+    <div class="sec-tit" style="margin:18px 0 8px">La investigación</div>
+    <label>Causas</label>
+    <textarea id="ac-causas" rows="3" placeholder="Por qué pasó: la causa inmediata y la de fondo. Ej.: no había punto de anclaje y el permiso de altura no se llenó."></textarea>
+    <label>Medidas correctivas</label>
+    <textarea id="ac-medidas" rows="3" placeholder="Qué se va a hacer para que no vuelva a pasar."></textarea>
+    <div class="dos">
+      <div><label>Responsable</label><input id="ac-resp" placeholder="Ing. residente"></div>
+      <div><label>Plazo</label><input id="ac-plazo" type="date"></div>
+    </div>
+
+    <div id="ac-caja-mtpe" style="display:none">
+      <div class="tarj vidrio" style="margin-top:14px" onclick="accToggleMtpe()">
+        <b id="ac-mtpe-et">☐ Ya se avisó al MTPE</b>
+        <small id="ac-mtpe-sub">Los accidentes mortales y los incidentes peligrosos se notifican al Ministerio de Trabajo dentro de las 24 horas. Marca cuando esté hecho.</small>
+      </div>
+    </div>
+
+    <label class="sec-tit" style="margin:16px 0 6px">Foto (opcional)</label>
+    <p class="sub" style="margin:0 0 7px;font-size:12.5px">Del lugar, no de la persona. Sirve para la investigación y para el expediente.</p>
+    <button class="btn sec" onclick="fotoAcc()" style="margin:0">📷 Tomar la foto</button>
+    <div id="ac-foto-vista" style="margin-top:9px"></div>
+
+    <div id="acc-nuevo-msg" style="font-size:13.5px;margin:12px 0 0"></div>
+    <button class="btn" onclick="guardarAccidente()" style="margin-top:11px">Guardar el registro</button>
+  </div>
+</section>
+
+<section class="pantalla" id="p-acc-ver">
+  <div class="barra"><span>Evento</span></div>
+  <div id="acc-ver-cuerpo"></div>
 </section>
 
 <section class="pantalla" id="p-carpeta">
@@ -5391,7 +5491,10 @@ function sesionAbierta(){ var x=leer(LS_SESION,null); return !!(x && x.correo &&
 function empActiva(){ return sesionAbierta() ? leer(LS_EMP,null) : null; }
 function abrirSesion(correo, emp){
   guardar(LS_EMP,{codigo:emp.codigo, id:emp.id, nombre:emp.nombre});
-  guardar(LS_SESION,{correo:correo, emp:emp.id, cuando:hoyISO()});
+  /* el rol viene del servidor ('dueno' o gestor) y es lo que decide si
+     esta persona puede abrir el panel del lider. No se elige en el
+     celular: se pregunta a la base. */
+  guardar(LS_SESION,{correo:correo, emp:emp.id, cuando:hoyISO(), rol:emp.rol||''});
 }
 function cerrarSesion(){ try{ localStorage.removeItem(LS_SESION); }catch(e){} USO_NUBE=null; USO_REAL=null; USO_REAL_CUANDO=0;
   try{ pararVigilanciaReportes(); ponerGlobito(0); }catch(e){} }
@@ -5443,6 +5546,8 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             'p-trabajadores':1,'p-trab-nuevo':1,'p-trab-ficha':1,'p-planes':1,'p-estatus':1,
             'p-kardex':1,'p-kardex-nuevo':1,'p-kardex-export':1,'p-empleador':1,
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,
+            'p-accidentes':1,'p-acc-nuevo':1,'p-acc-ver':1,
+            'p-gestion-quien':1,'p-lider-no':1,
             'p-semanal':1,'p-semanal-dia':1,'p-estadistica':1,'p-carpeta':1,'p-foto':1,'p-mensual':1,
             'p-escaneos':1,'p-escaneo-nuevo':1,'p-escaneo-ver':1,'p-escaneo-enviar':1,
             'p-reporte-cerrar':1,'p-reporte-excel':1,'p-qr-docs':1,'p-qr-doc':1,
@@ -5594,6 +5699,9 @@ function ir(p){
    El trabajador (ROL 'col') no pasa por ninguna de las dos: entra con
    el código de su obra y solo llega a sus pantallas. */
 var SIN_CUENTA={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-sector':1,'p-apariencia':1,
+  /* la puerta de gestion se elige ANTES de la cuenta: es lo que decide
+     que se le pide despues */
+  'p-gestion-quien':1,
   /* lo legal se lee SIEMPRE, con cuenta o sin ella: si para leer la
      politica de privacidad hay que crearse una cuenta, la politica no
      sirve — y Google Play tampoco la acepta asi. */
@@ -5658,6 +5766,8 @@ function _ir(p){
   if(p==='p-semanal')pintarSemanal(); if(p==='p-semanal-dia')prepDiaSemanal();
   if(p==='p-amonestaciones')pintarAmonestaciones(); if(p==='p-amon-nueva')prepAmonestacion();
   if(p==='p-amon-ver')pintarAmonDetalle(); if(p==='p-amon-firma')prepFirmaAmon(); if(p==='p-estatus')pintarEstatus();
+  if(p==='p-accidentes')pintarAccidentes(); if(p==='p-acc-nuevo')prepAccNuevo(); if(p==='p-acc-ver')pintarAccVer();
+  if(p==='p-lider-no')pintarLiderNo();
   if(p==='p-norma')pintarNorma();
   if(p==='p-escaneos'){ pintarEscaneos(); reintentarEscaneos().then(bajarEscaneos).then(pintarEscaneos); }
   if(p==='p-escaneo-nuevo')prepEscaneo();
@@ -5675,7 +5785,10 @@ function _ir(p){
    botón para subir. Arriba estorbaba; aquí acompaña.
    No sale en el home (ahí va la banda completa), ni en las pantallas
    del trabajador, ni mientras se está evaluando.                    */
+/* la pantalla que explica por que no puede entrar no lleva el pie del
+   plan: seria decirle dos veces lo mismo, y la segunda con precio */
 var SIN_PIE={'p-emp-home':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-eval':1,'p-juego':1,
+             'p-gestion-quien':1,'p-lider-no':1,
              'p-firma':1,'p-final':1,'p-listo':1,'p-datos':1,'p-colab':1,'p-acceso':1};
 function pintarPieDePlan(p){
   var pant=document.getElementById(p); if(!pant) return;
@@ -6039,7 +6152,7 @@ function refrescarPlan(){
   var e=empActiva();
   if(!e || !hayCuenta()) return Promise.resolve(planLocal());
   return sbRpc('sst_mi_plan',{p_emp:e.id}).then(function(j){
-    if(j && j.plan){ guardar(LS_PLAN,j); }
+    if(j && j.plan){ guardar(LS_PLAN,j); PLAN_SERVIDOR=true; }
     /* el contador viene del mismo viaje: plan y cupo siempre juntos */
     try{ refrescarUso().then(function(){ repintarSiEsElTablero(); }); }catch(_e){}
     try{ refrescarUsoReal().then(function(){ repintarSiEsElTablero(); }); }catch(_e2){}
@@ -8956,6 +9069,312 @@ function guardarFirmaAmon(){
 
 
 // =================================================================
+//  ACCIDENTES E INCIDENTES  ·  el registro que la ley pide
+//  D.S. 005-2012-TR art. 33: el registro de accidentes de trabajo,
+//  enfermedades ocupacionales e incidentes peligrosos es obligatorio.
+//  La app se lo venia exigiendo al cliente en la lista del Comite y
+//  no le daba donde llenarlo.
+//
+//  De la CLASE de cada evento sale todo lo demas: la piramide, el
+//  indice de frecuencia (solo incapacitantes y mortales), el de
+//  severidad (dias perdidos) y la racha de dias sin accidentes.
+//  Por eso clasificar es lo primero que se pregunta y no un campo
+//  perdido a mitad del formulario.
+//
+//  No tiene tope de plan. Un registro obligatorio por ley no se
+//  puede cobrar por unidad: si la obra tuvo 30 eventos, van los 30.
+// =================================================================
+var LS_ACC='sstc_accidentes';
+function accLocal(){ return leer(LS_ACC,[]) || []; }
+function accSet(a){ guardar(LS_ACC,a); }
+function accPorId(id){ var a=accLocal(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; }
+
+/* Los cinco escalones. 'piso' es la altura en la piramide (0 = la punta).
+   'cuenta' marca los que entran al indice de frecuencia. */
+var ACC_CLASES=[
+  {k:'casi',     n:'Casi accidente',          ic:'⚠️', piso:4, cuenta:false, dias:false,
+   d:'Por poco pasa algo. No hubo lesión ni daño, pero pudo haberlo.'},
+  {k:'primeros', n:'Primeros auxilios',       ic:'🩹', piso:3, cuenta:false, dias:false,
+   d:'Se atendió en obra y siguió trabajando el mismo día.'},
+  {k:'leve',     n:'Accidente leve',          ic:'🚑', piso:2, cuenta:false, dias:true,
+   d:'Necesitó atención médica y volvió sin descanso, o con descanso del mismo día.'},
+  {k:'incap',    n:'Accidente incapacitante', ic:'🏥', piso:1, cuenta:true,  dias:true,
+   d:'Con descanso médico. Es el que arma el índice de frecuencia.'},
+  {k:'mortal',   n:'Accidente mortal',        ic:'⚫', piso:0, cuenta:true,  dias:true,
+   d:'Aviso al MTPE dentro de 24 horas. Descanso de 6000 días por norma.'}
+];
+function accClase(k){ for(var i=0;i<ACC_CLASES.length;i++) if(ACC_CLASES[i].k===k) return ACC_CLASES[i]; return ACC_CLASES[0]; }
+function accEsAccidente(k){ return k==='leve' || k==='incap' || k==='mortal'; }
+
+var ACC_PARTES=['—','Cabeza','Ojos','Cara','Cuello','Hombro','Brazo','Codo','Antebrazo','Muñeca',
+  'Mano','Dedos de la mano','Tórax','Abdomen','Espalda','Columna','Cadera','Pierna','Rodilla',
+  'Tobillo','Pie','Dedos del pie','Varias partes','Órganos internos'];
+var ACC_AGENTES=['—','Caída a distinto nivel','Caída al mismo nivel','Caída de objetos',
+  'Golpe contra objeto','Atrapamiento','Corte o punzada','Contacto eléctrico','Quemadura',
+  'Sobreesfuerzo','Proyección de partículas','Sustancia química','Ruido','Vehículo o maquinaria',
+  'Herramienta manual','Derrumbe o desprendimiento','Explosión o incendio','Animal o insecto','Otro'];
+
+/* ── horas hombre: salen del reporte semanal, no se escriben aparte ── */
+function accHHT(anio){
+  var t=0;
+  (typeof semLocal==='function' ? semLocal() : []).forEach(function(x){
+    if(String(x.fecha||'').slice(0,4)!==String(anio)) return;
+    t += (x.obN||0)*(x.obH||0) + (x.stN||0)*(x.stH||0);
+  });
+  return t;
+}
+function accDelAnio(anio){
+  return accLocal().filter(function(x){ return String(x.fecha||'').slice(0,4)===String(anio); });
+}
+/* IF = incapacitantes x 1'000,000 / HHT
+   IS = dias perdidos x 1'000,000 / HHT
+   IA = IF x IS / 1000
+   Si no hay HHT devuelve null y la pantalla lo dice, en vez de
+   inventar un numero o mostrar un infinito. */
+function accIndices(anio){
+  var a=accDelAnio(anio), hht=accHHT(anio), n=0, dias=0;
+  a.forEach(function(x){
+    var c=accClase(x.clase);
+    if(c.cuenta) n++;
+    dias += parseInt(x.dias,10)||0;
+  });
+  var IF = hht ? n*1e6/hht : null;
+  var IS = hht ? dias*1e6/hht : null;
+  return {hht:hht, n:n, dias:dias, IF:IF, IS:IS, IA:(IF===null?null:IF*IS/1000), total:a.length};
+}
+function accDiasSin(){
+  var f='';
+  accLocal().forEach(function(x){
+    if(accEsAccidente(x.clase) && (x.fecha||'')>f) f=x.fecha||'';
+  });
+  if(!f) return null;
+  var d=Math.floor((new Date(hoyISO()+'T00:00:00') - new Date(f+'T00:00:00'))/86400000);
+  return d<0?0:d;
+}
+
+/* ── la lista ── */
+function pintarAccidentes(){
+  var anio=new Date().getFullYear();
+  pintarAccIndices(anio); pintarAccPiramide(anio);
+  var a=accLocal().slice().sort(function(x,y){ return (y.fecha||'').localeCompare(x.fecha||''); });
+  var c=$('acc-lista'); if(!c) return;
+  if(!a.length){
+    c.innerHTML='<div class="aviso" style="margin-top:16px">Todavía no hay ningún evento registrado. '+
+      'Ojalá siga así, pero el registro tiene que existir igual: un fiscalizador lo pide vacío y firmado, no lo pide inexistente.</div>';
+    return;
+  }
+  c.innerHTML='<div class="sec-tit" style="margin:20px 0 8px">Los '+a.length+' del año</div>'+
+    a.map(function(x){
+      var cl=accClase(x.clase);
+      return '<div class="tarj vidrio" onclick="verAccidente(\''+x.id+'\')">'+
+        '<b>'+cl.ic+' '+esc(cl.n)+(x.dias>0?' · '+x.dias+' días':'')+'</b>'+
+        '<small>'+esc(fechaLarga(x.fecha)||x.fecha||'')+' · '+esc(x.tNombre||'sin nombre')+
+        (x.lugar?' · '+esc(x.lugar):'')+'</small></div>';
+    }).join('');
+}
+function pintarAccIndices(anio){
+  var I=accIndices(anio), sin=accDiasSin();
+  var c=$('acc-indices'); if(!c) return;
+  function celda(et, val, pie){
+    return '<div style="flex:1;min-width:104px;padding:11px 12px;border-radius:10px;background:rgba(var(--p),.10);'+
+      'border:1px solid rgba(var(--sep),.30)">'+
+      '<div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.72">'+et+'</div>'+
+      '<div style="font-size:23px;font-weight:600;margin-top:3px">'+val+'</div>'+
+      '<div style="font-size:11px;opacity:.7;margin-top:2px">'+pie+'</div></div>';
+  }
+  if(I.hht===0){
+    c.innerHTML='<div class="aviso" style="margin-top:16px">Para sacar los índices falta el <b>reporte semanal</b>: '+
+      'de ahí salen las horas hombre, que son el divisor de los tres. '+
+      '<a onclick="ir(\'p-semanal\')" style="text-decoration:underline;cursor:pointer">Llenarlo ahora</a>.</div>';
+    return;
+  }
+  c.innerHTML='<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px">'+
+    celda('Frecuencia', I.IF.toFixed(2), I.n+' incapacitantes') +
+    celda('Severidad',  I.IS.toFixed(1), I.dias+' días perdidos') +
+    celda('Accidentab.', I.IA.toFixed(2), 'IF × IS ÷ 1000') +
+    celda('Sin accidentes', (sin===null?'—':sin), (sin===null?'ninguno registrado':'días')) +
+    '</div><p class="sub" style="margin:8px 0 0;font-size:12px">Sobre '+
+    Math.round(I.hht).toLocaleString('es-PE')+' horas hombre del '+anio+', tomadas del reporte semanal.</p>';
+}
+function pintarAccPiramide(anio){
+  var a=accDelAnio(anio), c=$('acc-piramide'); if(!c) return;
+  var cuenta={}; ACC_CLASES.forEach(function(x){ cuenta[x.k]=0; });
+  a.forEach(function(x){ if(cuenta[x.clase]!==undefined) cuenta[x.clase]++; });
+  var max=Math.max(1, Math.max.apply(null, ACC_CLASES.map(function(x){ return cuenta[x.k]; })));
+  if(!a.length){ c.innerHTML=''; return; }
+  var h='<div class="sec-tit" style="margin:20px 0 8px">Pirámide del año</div><div style="display:flex;flex-direction:column;gap:5px">';
+  ACC_CLASES.slice().sort(function(x,y){ return x.piso-y.piso; }).forEach(function(cl){
+    var v=cuenta[cl.k], w=Math.max(8, Math.round(Math.sqrt(v/max)*100));
+    h+='<div style="display:flex;align-items:center;gap:10px">'+
+       '<div style="flex:1;display:flex;justify-content:center">'+
+       '<div style="width:'+w+'%;height:26px;border-radius:4px;background:rgba(var(--p),'+(0.25+cl.piso*0.13)+');'+
+       'border:1px solid rgba(var(--sep),.35);display:flex;align-items:center;justify-content:center;'+
+       'font-size:12.5px;font-weight:600">'+v+'</div></div>'+
+       '<div style="width:142px;font-size:11.5px;opacity:.8">'+esc(cl.n)+'</div></div>';
+  });
+  h+='</div>';
+  var base=cuenta.casi, punta=cuenta.incap+cuenta.mortal;
+  h+='<p class="sub" style="margin:9px 0 0;font-size:12px">'+
+     (punta ? ('Por cada accidente incapacitante se reportaron '+Math.round(base/Math.max(punta,1))+' casi accidentes. '+
+               'Cuando esa proporción baja, revisa primero si la gente dejó de reportar.')
+            : 'Sin accidentes incapacitantes este año. La base ancha es lo que los evita: cuida que siga llenándose.')+
+     '</p>';
+  c.innerHTML=h;
+}
+
+/* ── el formulario ── */
+var ACC_SEL='casi', ACC_FOTO='', ACC_MTPE=false, ACC_VER=null;
+function prepAccNuevo(){
+  ACC_SEL='casi'; ACC_FOTO=''; ACC_MTPE=false;
+  var d=new Date();
+  $('ac-fecha').value=hoyISO();
+  $('ac-hora').value=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  ['ac-nombre','ac-doc','ac-puesto','ac-lugar','ac-desc','ac-causas','ac-medidas','ac-resp','ac-plazo']
+    .forEach(function(k){ if($(k)) $(k).value=''; });
+  $('ac-dias').value='0'; $('ac-tipodoc').value='DNI';
+  $('ac-parte').innerHTML=ACC_PARTES.map(function(x){ return '<option>'+esc(x)+'</option>'; }).join('');
+  $('ac-agente').innerHTML=ACC_AGENTES.map(function(x){ return '<option>'+esc(x)+'</option>'; }).join('');
+  $('ac-foto-vista').innerHTML=''; $('acc-nuevo-msg').textContent='';
+  accListaTrabajadores(); pintarAccClases();
+}
+function accListaTrabajadores(){
+  var caja=$('ac-elige'); if(!caja) return;
+  var a=(typeof trabsLocal==='function'? trabsLocal():[]).filter(function(t){ return t.estatus!=='cesado'; });
+  if(!a.length){ caja.innerHTML=''; return; }
+  caja.innerHTML='<label>Elegir de mi personal</label><select id="ac-desde">'+
+    '<option value="">— escribir a mano —</option>'+
+    a.map(function(t){ return '<option value="'+esc(t.id)+'">'+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</option>'; }).join('')+
+    '</select>';
+  $('ac-desde').onchange=function(){
+    var t=trabPorId(this.value); if(!t) return;
+    $('ac-nombre').value=t.nombre||''; $('ac-doc').value=t.dni||''; $('ac-puesto').value=t.puesto||t.cargo||'';
+  };
+}
+function pintarAccClases(){
+  $('ac-clases').innerHTML=ACC_CLASES.map(function(c){
+    var on=(c.k===ACC_SEL);
+    return '<div class="tarj vidrio" onclick="accElegirClase(\''+c.k+'\')" '+
+      'style="'+(on?'border-color:var(--oro);box-shadow:0 0 0 2px rgba(245,197,66,.28)':'')+'">'+
+      '<b>'+(on?'◉':'○')+' '+c.ic+' '+esc(c.n)+'</b><small>'+esc(c.d)+'</small></div>';
+  }).join('');
+  var c=accClase(ACC_SEL);
+  $('ac-caja-dias').style.display = c.dias ? '' : 'none';
+  $('ac-caja-mtpe').style.display = (ACC_SEL==='mortal') ? '' : 'none';
+  if(ACC_SEL==='mortal' && $('ac-dias').value==='0') $('ac-dias').value='6000';
+}
+function accElegirClase(k){ ACC_SEL=k; pintarAccClases(); }
+function accToggleMtpe(){
+  ACC_MTPE=!ACC_MTPE;
+  $('ac-mtpe-et').textContent=(ACC_MTPE?'☑':'☐')+' Ya se avisó al MTPE';
+}
+function fotoAcc(){
+  tomarFoto({max:900, calidad:0.8, titulo:'Foto del lugar'}).then(function(du){
+    if(!du) return;
+    ACC_FOTO=du;
+    $('ac-foto-vista').innerHTML='<img src="'+du+'" style="width:100%;border-radius:12px">'+
+      '<button class="btn sec" style="margin-top:8px" onclick="ACC_FOTO=\'\';document.getElementById(\'ac-foto-vista\').innerHTML=\'\';">Quitar la foto</button>';
+  });
+}
+function guardarAccidente(){
+  var m=$('acc-nuevo-msg'); m.style.color='var(--mal)';
+  var f=$('ac-fecha').value, nom=($('ac-nombre').value||'').trim(), d=($('ac-desc').value||'').trim();
+  if(!f){ m.textContent='Falta la fecha del evento.'; return; }
+  if(f>hoyISO()){ m.textContent='Esa fecha todavía no llega. Revísala.'; return; }
+  if(ACC_SEL!=='casi' && nom.length<3){ m.textContent='Falta el nombre del trabajador.'; return; }
+  if(d.length<15){ m.textContent='Cuenta qué pasó, aunque sea en dos líneas. Es lo que se lee en la investigación.'; return; }
+  var cl=accClase(ACC_SEL);
+  var dias = cl.dias ? (parseInt($('ac-dias').value,10)||0) : 0;
+  if(ACC_SEL==='incap' && dias<1){ m.textContent='Un accidente incapacitante lleva al menos 1 día de descanso. Si no hubo descanso, es un accidente leve.'; return; }
+  var reg={ id:'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    fecha:f, hora:$('ac-hora').value||'', clase:ACC_SEL,
+    tNombre:nom, tTipoDoc:$('ac-tipodoc').value, tDoc:($('ac-doc').value||'').trim(),
+    tPuesto:($('ac-puesto').value||'').trim(),
+    lugar:($('ac-lugar').value||'').trim(), desc:d,
+    parte:$('ac-parte').value, agente:$('ac-agente').value, dias:dias,
+    causas:($('ac-causas').value||'').trim(), medidas:($('ac-medidas').value||'').trim(),
+    resp:($('ac-resp').value||'').trim(), plazo:$('ac-plazo').value||'',
+    mtpe:(ACC_SEL==='mortal')?ACC_MTPE:false, foto:ACC_FOTO||null, sync:0 };
+  var a=accLocal(); a.unshift(reg); accSet(a);
+  var e=empActiva();
+  sbPost('sst_accidente',{duenio:duenioId(), empresa:(e&&e.id)||null, ext:reg.id,
+    fecha:reg.fecha, hora:reg.hora||null, clase:reg.clase,
+    t_nombre:reg.tNombre, t_tipodoc:reg.tTipoDoc, t_doc:reg.tDoc, t_puesto:reg.tPuesto,
+    lugar:reg.lugar, descripcion:reg.desc, parte:reg.parte, agente:reg.agente,
+    dias:reg.dias, causas:reg.causas, medidas:reg.medidas, responsable:reg.resp,
+    plazo:reg.plazo||null, mtpe:reg.mtpe}).catch(function(){});
+  m.style.color='var(--ok)';
+  m.textContent = (ACC_SEL==='mortal' && !ACC_MTPE)
+    ? 'Guardado. Recuerda: el aviso al MTPE es dentro de las 24 horas.'
+    : 'Guardado.';
+  setTimeout(function(){ ir('p-accidentes'); }, 700);
+}
+
+/* ── el detalle ── */
+function verAccidente(id){ ACC_VER=id; ir('p-acc-ver'); }
+function pintarAccVer(){
+  var x=accPorId(ACC_VER); if(!x){ ir('p-accidentes'); return; }
+  var cl=accClase(x.clase);
+  function fila(et,v){ return v ? '<tr><td style="opacity:.7;padding:5px 12px 5px 0;vertical-align:top;white-space:nowrap">'+et+'</td><td style="padding:5px 0">'+esc(v)+'</td></tr>' : ''; }
+  var h='<h2>'+cl.ic+' '+esc(cl.n)+'</h2>'+
+    '<p class="sub">'+esc(fechaLarga(x.fecha)||x.fecha)+(x.hora?' · '+esc(x.hora):'')+'</p>'+
+    '<div class="caja vidrio" style="padding:15px"><table style="width:100%;font-size:13.5px;border-collapse:collapse">'+
+    fila('Trabajador', x.tNombre)+
+    fila('Documento', x.tDoc ? (x.tTipoDoc+' '+x.tDoc) : '')+
+    fila('Puesto', x.tPuesto)+
+    fila('Lugar', x.lugar)+
+    fila('Parte del cuerpo', x.parte==='—'?'':x.parte)+
+    fila('Agente causante', x.agente==='—'?'':x.agente)+
+    (cl.dias ? fila('Días de descanso', String(x.dias||0)) : '')+
+    (x.clase==='mortal' ? fila('Aviso al MTPE', x.mtpe?'Hecho':'PENDIENTE — es dentro de 24 horas') : '')+
+    '</table>'+
+    '<div class="sec-tit" style="margin:16px 0 6px">Qué pasó</div><p style="font-size:13.5px;margin:0">'+esc(x.desc||'')+'</p>'+
+    (x.causas?'<div class="sec-tit" style="margin:16px 0 6px">Causas</div><p style="font-size:13.5px;margin:0">'+esc(x.causas)+'</p>':'')+
+    (x.medidas?'<div class="sec-tit" style="margin:16px 0 6px">Medidas correctivas</div><p style="font-size:13.5px;margin:0">'+esc(x.medidas)+
+       (x.resp?'<br><span style="opacity:.7">Responsable: '+esc(x.resp)+(x.plazo?' · plazo '+esc(x.plazo):'')+'</span>':'')+'</p>':'')+
+    (x.foto?'<img src="'+x.foto+'" style="max-width:100%;border-radius:10px;margin-top:14px">':'')+
+    '</div>'+
+    '<button class="btn sec" onclick="quitarAccidente(\''+x.id+'\')" style="margin-top:12px">🗑️ Quitar este registro</button>';
+  $('acc-ver-cuerpo').innerHTML=h;
+}
+function quitarAccidente(id){
+  confirmar('¿Quitar este registro?','Se borra de este celular. Ojo: es un registro que la ley obliga a conservar por 10 años.', function(){
+    accSet(accLocal().filter(function(x){ return x.id!==id; }));
+    ir('p-accidentes');
+  }, {si:'Sí, quitar', no:'Dejarlo', icono:'🗑️'});
+}
+
+/* ── bajar el registro del año ── */
+function exportarAccidentesCSV(){
+  var m=$('acc-msg'); m.style.color='var(--mal)';
+  var anio=new Date().getFullYear(), a=accDelAnio(anio);
+  if(!a.length){ m.textContent='Todavía no hay eventos que bajar.'; return; }
+  var cols=['Fecha','Hora','Clasificación','Trabajador','Tipo doc','Documento','Puesto','Lugar',
+            'Qué pasó','Parte del cuerpo','Agente causante','Días perdidos','Causas',
+            'Medidas correctivas','Responsable','Plazo','Aviso MTPE'];
+  function q(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
+  var lin=[cols.map(q).join(';')];
+  a.slice().sort(function(x,y){ return (x.fecha||'').localeCompare(y.fecha||''); }).forEach(function(x){
+    lin.push([x.fecha, x.hora, accClase(x.clase).n, x.tNombre, x.tTipoDoc, x.tDoc, x.tPuesto,
+      x.lugar, x.desc, x.parte, x.agente, x.dias, x.causas, x.medidas, x.resp, x.plazo,
+      (x.clase==='mortal' ? (x.mtpe?'Sí':'Pendiente') : 'No aplica')].map(q).join(';'));
+  });
+  var I=accIndices(anio);
+  lin.push('');
+  lin.push([q('Horas hombre trabajadas'), q(Math.round(I.hht))].join(';'));
+  lin.push([q('Índice de frecuencia'),   q(I.IF===null?'faltan las HHT':I.IF.toFixed(2))].join(';'));
+  lin.push([q('Índice de severidad'),    q(I.IS===null?'faltan las HHT':I.IS.toFixed(2))].join(';'));
+  lin.push([q('Índice de accidentabilidad'), q(I.IA===null?'faltan las HHT':I.IA.toFixed(2))].join(';'));
+  /* el BOM es lo que hace que Excel en español no rompa las tildes */
+  var blob=new Blob(['\uFEFF'+lin.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var nom=_nombreSano('Registro de accidentes '+(nombreDeLaObra()||'obra')+' '+anio)+'.csv';
+  m.style.color='var(--gris)'; m.textContent='Armando el archivo…';
+  entregarArchivos([{nombre:nom, blob:blob}],
+    {via:'otra', texto:'Registro de accidentes e incidentes '+anio+' · '+(nombreDeLaObra()||'')}, nom)
+    .then(function(r){ m.style.color='var(--ok)'; m.textContent = (r.modo==='compartido')?'Listo: archivo compartido.':'Listo: se bajó «'+r.nombre+'».'; })
+    .catch(function(e){ m.style.color='var(--mal)'; m.textContent='No se pudo: '+(e&&e.message||e); });
+}
+
+// =================================================================
 //  PAPELETA DE NOTIFICACIÓN  ·  formato SSOMA-PC-FO-053
 //  El .docx original viaja adentro y solo se rellenan sus celdas.
 //  Lo que es de la empresa (logo, código del formato, revisión,
@@ -9925,6 +10344,7 @@ var CATALOGO_ACCESOS = [
   {k:'amonesta',  ic:'⚠️', et:'Amonesta-<br>ciones',           ir:'p-amonestaciones',color:'a-gris',  desde:3, grupo:2},
   /* ── 3. lo que se entrega ── */
   {k:'inspec',    ic:'✅', et:'Inspec-<br>ciones',             ir:'p-inspec',        color:'a-gris',  desde:3, grupo:3},
+  {k:'accidente', ic:'🚑', et:'Accidentes<br>e incidentes',    ir:'p-accidentes',    color:'a-rojo',  desde:0, grupo:3},
   {k:'semanal',   ic:'📈', et:'Reporte<br>semanal',            ir:'p-semanal',       color:'a-verde', desde:3, grupo:3},
   {k:'msds',      ic:'🧴', et:'Hojas<br>MSDS',                 ir:'p-msds',          color:'a-azul',  desde:3, grupo:3},
   {k:'risst',     ic:'📌', et:'Carteles<br>QR',                fn:'abrirRisst',      color:'a-gris',  desde:1, grupo:3}
@@ -10718,11 +11138,83 @@ function entrarSupEmpresa(){
 //  supervisor entra a su cuenta y ve la app completa; el colaborador
 //  solo tiene dos puertas, y las dos necesitan un codigo.
 // =================================================================
+/* ── LA PUERTA DE GESTION: LIDER O SUPERVISOR ─────────────────────
+   Los dos entran con su correo. Lo que separa a uno del otro no es lo
+   que toque en la pantalla —eso vive en el celular y se falsea— sino
+   dos cosas que responde el servidor:
+     1. el plan de la empresa es «Gestión SST» (sst_mi_plan), y
+     2. esta persona es la dueña de esa empresa (sst_mis_empresas.rol),
+        que es la unica que pudo activar ese codigo.
+   Elegir «soy el lider» sin las dos no abre nada: lleva a una pantalla
+   que explica cual de las dos falta. */
+var LS_PAPEL='sstc_papel';
+var PLAN_SERVIDOR=false;      /* ¿el plan que tenemos vino del servidor? */
+function papelElegido(){ return (leer(LS_PAPEL,'')==='lider') ? 'lider' : 'sup'; }
+function ponerPapel(x){ guardar(LS_PAPEL, x==='lider'?'lider':'sup'); }
+function esPlanDeLider(){ return planActual().id==='gestion'; }
+function soyDuenoDeLaEmpresa(){
+  var x=leer(LS_SESION,null);
+  return !!(x && x.rol==='dueno');
+}
+function puedeSerLider(){ return esPlanDeLider() && soyDuenoDeLaEmpresa(); }
+function elegirGestor(x){
+  ponerPapel(x);
+  ROL='emp'; guardar(LS_ROL,'emp'); HIST=[];
+  seguirComoGestor();
+}
+/* se llama al pintar el inicio del gestor. Solo frena cuando el plan ya
+   vino del servidor: si todavia no contesto, no echamos a nadie por una
+   respuesta que no llego. */
+function revisarPuertaLider(){
+  if(papelElegido()!=='lider') return false;
+  if(!PLAN_SERVIDOR) return false;
+  if(puedeSerLider()) return false;
+  ir('p-lider-no');
+  return true;
+}
+function pintarLiderNo(){
+  var c=$('lider-no-cuerpo'); if(!c) return;
+  var e=empActiva(), h='';
+  if(esPlanDeLider()){
+    /* la empresa si pago: lo que falta es que este correo sea el del dueño */
+    h='<h2>Este panel es de quien activó el plan</h2>'+
+      '<p class="sub">«'+esc((e&&e.nombre)||'Tu empresa')+'» sí tiene el plan <b>Gestión SST</b>. '+
+      'Pero la Torre de control es de la persona que activó ese código, no de todo el que entra con él: '+
+      'si no fuera así, cualquiera que se una vería los datos de todos los proyectos.</p>'+
+      '<div class="aviso">Pídeselo a tu líder. Él puede <b>nombrarte segundo líder</b> desde su panel, '+
+      'y desde ese momento ves lo mismo que él.</div>';
+  } else {
+    var P=planDe('gestion');
+    h='<h2>La Torre de control viene con Gestión SST</h2>'+
+      '<p class="sub">Con tu plan actual —<b>'+esc(nombreDelPlan())+'</b>— llevas tu obra completa: '+
+      'inspecciones, kardex, charlas, reportes, amonestaciones y accidentes. Lo que no entra es ver '+
+      '<b>varios proyectos juntos</b> en un solo tablero.</p>'+
+      '<div class="caja vidrio" style="padding:15px;margin-top:14px">'+
+      '<b style="font-size:16px">'+esc(P.nombre)+' · S/ '+P.precio+' al mes</b>'+
+      '<ul style="margin:10px 0 0;padding-left:18px;font-size:13.5px;line-height:1.6">'+
+      '<li>Todos tus proyectos en un tablero, con los índices de accidentabilidad</li>'+
+      '<li>Delegar supervisores y ver cómo va cada uno</li>'+
+      '<li>Consumo de EPP, cumplimiento del programa y obligaciones del mes</li>'+
+      '<li>Exportar el consolidado en Excel o PDF</li></ul></div>'+
+      '<button class="btn" onclick="ir(\'p-planes\')" style="margin-top:14px">Ver los planes</button>';
+  }
+  h+='<button class="btn sec" onclick="entrarComoSupervisor()" style="margin-top:10px">Entrar como supervisor SSOMA</button>';
+  c.innerHTML=h;
+}
+function entrarComoSupervisor(){
+  ponerPapel('sup'); HIST=[];
+  ir('p-emp-home');
+}
+
 function elegirRol(r){
   ROL=r; guardar(LS_ROL,r);
   HIST=[];
   if(r==='col'){ ir('p-colab'); return; }
-  /* gestión de la SST: primero la cuenta, después la empresa */
+  /* gestión de la SST: primero se pregunta cuál de los dos es */
+  ir('p-gestion-quien');
+}
+/* el camino de siempre, ya con el papel elegido */
+function seguirComoGestor(){
   if(!hayCuenta()){ prepCuenta('entrar'); ir('p-cuenta'); return; }
   if(sesionAbierta()){ ir('p-emp-home'); refrescarPlan(); return; }
   cargarMisEmpresas(true);
@@ -10752,7 +11244,8 @@ function entrarSesion(){
 function entrarMuestra(){ arrancarSup(); }
 function cambiarUsuario(){
   /* no borra la licencia: solo vuelve a preguntar por que puerta se entra */
-  EV=null; try{ localStorage.removeItem(LS_EV); localStorage.removeItem(LS_ROL); }catch(e){}
+  EV=null; try{ localStorage.removeItem(LS_EV); localStorage.removeItem(LS_ROL);
+                localStorage.removeItem(LS_PAPEL); }catch(e){}
   ROL=null; ir('p-rol');
 }
 var COD_PIDE='';
@@ -15967,6 +16460,9 @@ function pintarSaludo(){
   }
 }
 function pintarEmpHome(){
+  /* si eligio «soy el lider» y el servidor dice que no lo es, no se le
+     pinta un panel a medias: se le explica cual de las dos cosas falta */
+  if(revisarPuertaLider()) return;
   var e=empActiva();
   pintarSaludo();
   $('emp-home-tit').textContent = e ? e.nombre : 'Tu empresa';
@@ -15974,10 +16470,15 @@ function pintarEmpHome(){
   /* El panel del gestor solo tiene sentido con varios proyectos: si llevas
      una sola obra, el tablero de arriba ya te dice todo. */
   var pn=$('emp-home-panel');
-  if(pn) pn.innerHTML = ((MIS_EMP&&MIS_EMP.length>1) || planActual().gestores>2)
-    ? '<button class="tarj vidrio" style="margin-top:16px" onclick="ir(\'p-gestor\')"><b>📊 Panel del gestor</b>'+
-      '<small>Todos tus proyectos juntos: inspecciones del mes, reportes abiertos, consumo de EPP y cómo va cada obra.</small></button>'
-    : '';
+  if(pn) pn.innerHTML = puedeSerLider()
+    ? '<button class="tarj vidrio" style="margin-top:16px;border-color:var(--oro)" onclick="ir(\'p-gestor\')">'+
+      '<b>🎖️ Torre de control</b>'+
+      '<small>Tus proyectos juntos: índices de accidentabilidad, inspecciones del mes, reportes abiertos, '+
+      'consumo de EPP y cómo va cada supervisor.</small></button>'
+    : (((MIS_EMP&&MIS_EMP.length>1) || planActual().gestores>2)
+      ? '<button class="tarj vidrio" style="margin-top:16px" onclick="ir(\'p-gestor\')"><b>📊 Panel del gestor</b>'+
+        '<small>Todos tus proyectos juntos: inspecciones del mes, reportes abiertos, consumo de EPP y cómo va cada obra.</small></button>'
+      : '');
   var c=$('emp-home-cuerpo'); c.innerHTML='';
   /* El tablero primero: la data del mes sin abrir nada. */
   c.appendChild(tableroDom());
@@ -16327,8 +16828,9 @@ function pintarMisEmpresas(){
 }
 function abrirEmpresaDeLaLista(i){
   var e=MIS_EMP[i]; if(!e) return;
-  abrirSesion(correoCuenta(), {codigo:e.codigo, id:e.id, nombre:e.nombre});
+  abrirSesion(correoCuenta(), {codigo:e.codigo, id:e.id, nombre:e.nombre, rol:e.rol||''});
   guardar(LS_PLAN,{plan:e.plan||'lite', vence:e.vence||null, tope_obras:1, tope_gestores:e.tope_gestores||1});
+  PLAN_SERVIDOR=true;   /* esta lista vino de sst_mis_empresas */
   ROL='emp'; guardar(LS_ROL,'emp'); HIST=[];
   /* si la empresa sigue en LITE y nunca tuvo fecha, se prueba una vez a
      activar la prueba gratis. Sirve para los que se registraron ANTES de
@@ -16463,7 +16965,8 @@ function entrarEmpresaCorreo(){
         : 'No se pudo entrar.';
       return;
     }
-    abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.id, nombre:j.nombre});
+    /* el que entra con el codigo de otro es gestor, nunca dueño */
+    abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.id, nombre:j.nombre, rol:'gestor'});
     guardar(LS_PLAN,{plan:'lite', vence:null, tope_obras:1, tope_gestores:1});
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; MIS_EMP=[];
     refrescarPlan().then(function(){ if(typeof pintarEmpHome==='function') pintarEmpHome(); });
@@ -16536,7 +17039,7 @@ function crearEmpresaCorreo(){
         : 'No se pudo crear.';
       return;
     }
-    abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.id, nombre:j.nombre});
+    abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.id, nombre:j.nombre, rol:'dueno'});
     guardar(LS_PLAN,{plan:'lite', vence:null, tope_obras:1, tope_gestores:1});
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; MIS_EMP=[];
     m.style.color='var(--gris)'; m.textContent='Empresa creada. Activando tu prueba gratis…';
