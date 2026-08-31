@@ -2214,6 +2214,18 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div id="pt-msg" style="font-size:14px;margin-top:10px"></div>
 </section>
 
+<section class="pantalla" id="p-actividades">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Actividades de alto riesgo</span></div>
+  <h2>Las actividades de tu obra</h2>
+  <p class="sub">Es la lista que sale cuando alguien reporta algo inseguro. Vienen las seis de alto riesgo que manda la norma; si tu proyecto no tiene alguna, quítala, y si tienes otra, agrégala. El trabajador solo elige de esta lista.</p>
+  <div id="act-lista"></div>
+  <label class="sec-tit" style="margin:18px 0 6px">Agregar una actividad</label>
+  <input id="act-nueva" placeholder="Trabajos con sustancias químicas">
+  <button class="btn sec" onclick="agregarActividad()" style="margin-top:10px">➕ Agregar</button>
+  <div id="act-msg" style="font-size:13.5px;margin:10px 0 0"></div>
+  <button class="btn sec" onclick="restaurarActividades()" style="margin-top:16px">↩︎ Volver a las seis de la norma</button>
+</section>
+
 <!-- ===== REPORTE inseguro ===== -->
 <section class="pantalla" id="p-reporte">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Reportes</span></div>
@@ -2226,7 +2238,10 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <label>¿Qué es?</label><select id="r-clase"><option value="condicion">Condición insegura (algo del lugar/equipo)</option><option value="acto">Acto inseguro (algo que alguien hizo)</option></select>
   <label>Descríbelo</label><textarea id="r-desc" placeholder="Andamio sin barandas en el 3er piso"></textarea>
   <label>¿Dónde?</label><input id="r-lugar" placeholder="Sector B, nivel 3">
-  <label>Foto (opcional)</label>
+  <label>¿Con qué actividad tiene que ver?</label>
+  <select id="r-actividad"></select>
+  <p class="sub" id="r-activ-nota" style="margin:6px 0 0;font-size:12.5px"></p>
+  <label style="margin-top:12px">Foto (opcional)</label>
   <button class="btn sec" onclick="fotoReporte()" style="margin:0 0 10px">📷 Tomar la foto</button>
   <div id="r-foto-vista"></div>
   <div class="tarj vidrio" style="margin-top:14px" onclick="rToggleAnon()"><b id="r-anon-et">🙈 Reportar sin mi nombre (anónimo)</b><small id="r-anon-sub">Nadie sabrá que fuiste tú. Así de simple. (No suma a tu puntaje.)</small></div>
@@ -5548,6 +5563,7 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,
             'p-accidentes':1,'p-acc-nuevo':1,'p-acc-ver':1,
             'p-gestion-quien':1,'p-lider-no':1,
+            'p-actividades':1,
             'p-semanal':1,'p-semanal-dia':1,'p-estadistica':1,'p-carpeta':1,'p-foto':1,'p-mensual':1,
             'p-escaneos':1,'p-escaneo-nuevo':1,'p-escaneo-ver':1,'p-escaneo-enviar':1,
             'p-reporte-cerrar':1,'p-reporte-excel':1,'p-qr-docs':1,'p-qr-doc':1,
@@ -5743,7 +5759,8 @@ function _ir(p){
   if(p==='p-talleres')pintarTalleres();
   if(p==='p-empresa')pintarEmpresa(); if(p==='p-msds')pintarMsds(); if(p==='p-puntaje')pintarPuntaje();
   if(p==='p-reporte'){ pintarReporte(); subirColaReportes().then(function(n){ if(n) pintarReporte(); }); }
-  if(p==='p-reporte-nuevo')prepReporte();
+  if(p==='p-reporte-nuevo'){ prepReporte(); pintarSelectActividad(); }
+  if(p==='p-actividades')pintarActividades();
   if(p==='p-inspec')pintarInspec(); if(p==='p-petar')pintarPetar();
   if(p==='p-inspec-hallaz')pintarHallaz(); if(p==='p-inspec-hechas')pintarInspecHechas();
   if(p==='p-brigada')pintarBrigada();
@@ -5850,30 +5867,30 @@ var TOPE_EQUIPO = 8;   // compatibilidad con lo viejo
    para que el gratis siga siendo una prueba y no un plan.            */
 var PLANES = [
   { id:'lite', nombre:'LITE', precio:0, orden:0,
-    tope:{ trabajador:5, kardex:3, reporte:3, doc:2, credencial:0, amonestacion:0, semana:0, escaneo:3 },
+    tope:{ trabajador:5, kardex:3, reporte:-1, doc:2, credencial:0, amonestacion:0, semana:0, escaneo:3 },
     porMes:{ kardex:false, reporte:false, escaneo:false },
     gestores:1, charlas:2, temas:0,
     puede:{ cuadrilla:1 } },
 
   { id:'prevencionista', nombre:'Prevencionista de Riesgo', precio:19.90, orden:1,
     compra:'obrasst-prevencionista',
-    tope:{ trabajador:50, kardex:80, reporte:20, doc:20, credencial:0, amonestacion:0, semana:0, escaneo:30 },
+    tope:{ trabajador:50, kardex:80, reporte:-1, doc:20, credencial:0, amonestacion:0, semana:0, escaneo:30 },
     porMes:{ kardex:true, reporte:true, escaneo:true },
     gestores:1, charlas:-1, temas:3,
     puede:{ cuadrilla:1, qr_risst:1 } },
 
   { id:'supervisor', nombre:'Supervisor SST', precio:49.90, orden:2,
     compra:'obrasst-supervisor',
-    tope:{ trabajador:100, kardex:200, reporte:100, doc:60, credencial:0, amonestacion:0, semana:0, escaneo:80 },
+    tope:{ trabajador:100, kardex:200, reporte:-1, doc:60, credencial:0, amonestacion:0, semana:0, escaneo:80 },
     porMes:{ kardex:true, reporte:true, escaneo:true },
-    gestores:1, charlas:-1, temas:-1,
+    gestores:2, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1 } },
 
   { id:'ssoma', nombre:'SSOMA', precio:89, orden:3,   /* 89 y no 89.90: es lo que cobra el checkout de Mercado Pago que ya funciona */
     compra:'sst-capacita',        /* cada plan tiene su propio surtido de códigos en el servidor */
-    tope:{ trabajador:250, kardex:400, reporte:200, doc:200, credencial:250, amonestacion:60, semana:12, escaneo:300 },
+    tope:{ trabajador:250, kardex:400, reporte:-1, doc:200, credencial:250, amonestacion:60, semana:12, escaneo:300 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
-    gestores:2, charlas:-1, temas:-1,
+    gestores:4, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1, qr_msds:1, qr_credencial:1,
             msds:1, amonestaciones:1, semanal:1, campanas:1, simulacros:1, constancias:1 } },
 
@@ -5881,12 +5898,16 @@ var PLANES = [
     compra:'obrasst-gestion',
     tope:{ trabajador:-1, kardex:-1, reporte:-1, doc:-1, credencial:-1, amonestacion:-1, semana:-1, escaneo:-1 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
-    gestores:4, charlas:-1, temas:-1,
+    gestores:10, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1, qr_msds:1, qr_credencial:1,
             msds:1, amonestaciones:1, semanal:1, campanas:1, simulacros:1, constancias:1,
             carpetas:1 } }
 ];
 /* los nombres viejos de licencia caen en el peldano equivalente */
+/* Cuando el equipo pasa del tope del plan no hay que subir de plan: se
+   paga un puesto suelto. Una empresa con 12 supervisores en Gestión no
+   necesita otro producto, necesita dos puestos más. */
+var PUESTO_EXTRA = 79;   /* soles al mes por cada gestor sobre el tope */
 var PLAN_VIEJO = { supervisor:'supervisor', equipo:'ssoma' };
 
 function planDe(id){
@@ -6796,7 +6817,7 @@ function activar(){
                         'vuelve a la versión de muestra y eliges el plan que te convenga.</small>';
         }else{
           m.innerHTML = 'Listo: <b>'+esc(pl.nombre)+'</b> activo.'+hasta+
-                        (pl.gestores>1 ? '<br><small>Puedes sumar hasta '+pl.gestores+' personas a la gestión.</small>' : '');
+                        (pl.gestores>1 ? '<br><small>Puedes sumar hasta '+pl.gestores+' personas a la gestión, y más por S/ '+PUESTO_EXTRA+' al mes cada una.</small>' : '');
         }
         setTimeout(function(){ ir('p-emp-home'); },1900);
       });
@@ -7830,7 +7851,7 @@ function entregarAsistencias(doc, nombre, txt){
 //  cargaba TODO. Ahora la muestra deja probar de verdad pero con
 //  tope: para usarla en obra hace falta el codigo de compra.
 // =================================================================
-var LITE_TOPES = { trabajador:5, kardex:3, amonestacion:0, semana:0, doc:2, credencial:0, reporte:3 };
+var LITE_TOPES = { trabajador:5, kardex:3, amonestacion:0, semana:0, doc:2, credencial:0, reporte:-1 };
 function topeLite(k){ var t=planActual().tope[k]; return (t===undefined||t===-1) ? Infinity : t; }
 /* ── El contador de uso ───────────────────────────────────────────
    AHORA VIVE EN EL SERVIDOR. El celular guarda una copia para que la
@@ -8063,7 +8084,8 @@ function bandaLiteEmpresa(){
           'Pasar al plan '+esc(S.nombre)+' · '+precioTexto(S)+'</button></div>' : '')+'</div>';
   }
   /* un plan pagado: qué tienes, y cuál es el siguiente escalón */
-  var g = A.gestores>1 ? (' Entran hasta '+A.gestores+' gestores con el código de la empresa.') : ' Es de una sola persona.';
+  var g = A.gestores>1 ? (' Entran hasta '+A.gestores+' gestores; si necesitas más, son S/ '+PUESTO_EXTRA+' al mes cada uno.')
+                       : ' Es de una sola persona.';
   return '<div class="aviso" style="border-color:rgba(47,158,111,.35)">✓ <b>Plan '+esc(A.nombre)+'</b> — '+
     precioTexto(A)+'.'+g+vence+porVencer+
     (S? '<div style="margin-top:9px"><button class="btn sec" style="margin:0" onclick="pedirCodigo(\'\')">'+
@@ -8116,7 +8138,8 @@ function _puntosDelPlan(P){
   l.push(P.charlas===-1 ? 'Todas las charlas de 5 minutos' : (P.charlas? P.charlas+' charlas de 5 minutos':null));
   l.push(P.temas===-1 ? 'Las 42 capacitaciones, con constancia firmada'
         : (P.temas? P.temas+' capacitaciones con constancia':null));
-  l.push(P.gestores>1 ? ('Hasta '+P.gestores+' personas en la gestión') : 'Una sola persona');
+  l.push(P.gestores>1 ? ('Hasta '+P.gestores+' personas en la gestión, y más por S/ '+PUESTO_EXTRA+' al mes cada una')
+                      : 'Una sola persona');
   var llaves=[['qr_risst','QR del RISST'],['qr_pets','QR de PETS'],['qr_iperc','QR de IPERC'],
               ['msds','Hojas MSDS'],['amonestaciones','Amonestaciones'],
               ['credencial','Credenciales con QR'],['qr_credencial','Credenciales con QR'],
@@ -9731,6 +9754,7 @@ var REP_COLS = [
   {t:'Tipo',                   w:12, k:function(r){ return r.clase==='acto'?'Acto inseguro':'Condición insegura'; }},
   {t:'Lugar',                  w:22, k:function(r){ return r.lugar||''; }},
   {t:'Descripción del hallazgo',w:46, k:function(r){ return r.descripcion||''; }},
+  {t:'Actividad',              w:22, k:function(r){ return r.actividad||'—'; }},
   {t:'Reportado por',          w:20, k:function(r){ return r.anonimo? 'Anónimo' : (r.autor||'—'); }},
   {t:'Estado',                 w:12, k:function(r){ return r.estado==='atendido'?'Cerrado':'Abierto'; }},
   {t:'Fecha de cierre',        w:13, k:function(r){ return fechaLarga(r.cerrado)||''; }},
@@ -11102,36 +11126,13 @@ function pintarEstadistica(){
   });
 }
 
-/* ---- el supervisor elige: afiliado a una empresa, o por su cuenta ---- */
-var LS_SUPTIPO='sstc_sup_tipo';
-function tipoSupervisor(t){
-  guardar(LS_SUPTIPO, t);
-  if(t==='emp'){
-    var e=empActiva();
-    if(e){ ir('p-emp-home'); return; }
-    $('sup-emp-msg').textContent=''; ir('p-sup-emp'); return;
-  }
-  if(libre()){ arrancarSup(); return; }
-  $('ses-cod').value=''; $('ses-msg').textContent='';
-  ir('p-sesion');
-}
-function entrarSupEmpresa(){
-  var correo=($('sup-correo').value||'').trim();
-  var cod=_norm($('sup-cod').value||'');
-  var m=$('sup-emp-msg'); m.style.color='var(--mal)';
-  if(correo.indexOf('@')<1){ m.textContent='Escribe tu correo corporativo completo.'; return; }
-  if(cod.length!==6){ m.textContent='El código de la empresa son 6 letras o números, con el guion.'; return; }
-  var c=cod.slice(0,3)+'-'+cod.slice(3,6);
-  m.style.color='var(--gris)'; m.textContent='Verificando con tu empresa…';
-  sbRpc('sst_resolver',{cod:c}).then(function(rows){
-    if(!rows.length){ m.style.color='var(--mal)'; m.textContent='Ese código no existe. Pídeselo a quien administra la SST en tu empresa.'; return; }
-    var e=rows[0];
-    guardar(LS_EMP,{codigo:c, id:e.id, nombre:e.nombre, correo:correo});
-    m.style.color='var(--ok)'; m.textContent='Listo: '+e.nombre+'.';
-    setTimeout(function(){ ir('p-emp-home'); }, 600);
-  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo verificar (¿sin internet?). '+err; });
-}
-
+/* Aquí vivían tipoSupervisor() y entrarSupEmpresa(), del flujo viejo en
+   que el supervisor elegía entre «afiliado a una empresa» y «por mi
+   cuenta». Ese camino lo reemplazaron «Mis empresas» y la puerta de
+   líder/supervisor. Las dos funciones apuntaban a una pantalla
+   (p-sup-emp) y a cuatro campos que ya no existen en el HTML: nadie las
+   llamaba, pero el día que un botón las llamara reventaban con «null».
+   Se quitan enteras. */
 // =================================================================
 //  PERFILES  ·  supervisor o colaborador
 //  Es lo primero que se pregunta. De aqui sale todo lo demas: el
@@ -12879,6 +12880,98 @@ function rPintarAnon(){
   $('r-anon-et').textContent = R_ANON?'✅ Anónimo (sin tu nombre)':'🙈 Reportar sin mi nombre (anónimo)';
   $('r-autor-wrap').style.display = R_ANON?'none':'';
 }
+
+// =================================================================
+//  ACTIVIDADES DE ALTO RIESGO  ·  con qué tiene que ver el reporte
+//  Saber que hay 40 condiciones inseguras no dice nada. Saber que 22
+//  de ellas salieron de trabajos en altura te dice dónde pararte
+//  mañana. Por eso el reporte pregunta la actividad.
+//
+//  Las seis de base son las que la norma peruana trata como trabajos
+//  de alto riesgo y que necesitan PETAR. La lista es EDITABLE: el
+//  líder o el supervisor la ajustan a su obra —una edificación no
+//  hace espacios confinados, una planta sí— y el trabajador solo
+//  elige de lo que ellos dejaron. Si ve algo que no encaja, usa
+//  «Otra» y le avisa al supervisor para que la agregue.
+//
+//  Se guarda por empresa, igual que la cabecera de los formatos y los
+//  códigos de registro. OJO: eso quiere decir que hoy vive en el
+//  celular del que la edita, no en el servidor.
+// =================================================================
+var ACTIV_BASE = ['Trabajo en altura','Trabajos en caliente','Izaje de cargas',
+                  'Trabajos eléctricos','Excavación y zanjas','Espacio confinado'];
+var ACTIV_OTRA = 'Otra / no aplica';
+var LS_ACTIV='sstc_actividades';
+function actividadesKey(){
+  var e=(typeof empDeTrabajo==='function') ? empDeTrabajo() : null;
+  return LS_ACTIV+'_'+((e&&e.codigo)||'x');
+}
+function actividades(){
+  var a=leer(actividadesKey(),null);
+  if(!a || !a.length) a=ACTIV_BASE.slice();
+  /* «Otra» siempre está y siempre al final: nadie se queda sin poder
+     reportar por no encontrar su actividad en la lista */
+  a=a.filter(function(x){ return x && x!==ACTIV_OTRA; });
+  a.push(ACTIV_OTRA);
+  return a;
+}
+function actividadesSet(a){
+  guardar(actividadesKey(), a.filter(function(x){ return x && x!==ACTIV_OTRA; }));
+}
+function puedeEditarActividades(){ return ROL!=='col' && !!empActiva(); }
+
+function pintarSelectActividad(){
+  var sel=$('r-actividad'); if(!sel) return;
+  sel.innerHTML = actividades().map(function(x){
+    return '<option value="'+esc(x)+'">'+esc(x)+'</option>';
+  }).join('');
+  var n=$('r-activ-nota'); if(!n) return;
+  n.innerHTML = puedeEditarActividades()
+    ? 'Esta lista es de tu obra. <a onclick="ir(\'p-actividades\')" style="text-decoration:underline;cursor:pointer">Agregar o quitar actividades</a>.'
+    : 'Si lo que viste no encaja en ninguna, elige «Otra» y dile a tu supervisor que la agregue.';
+}
+
+function pintarActividades(){
+  var c=$('act-lista'); if(!c) return;
+  var a=actividades().filter(function(x){ return x!==ACTIV_OTRA; });
+  if(!a.length){
+    c.innerHTML='<div class="aviso">No queda ninguna. Agrega al menos una o vuelve a las seis de la norma.</div>';
+  } else {
+    c.innerHTML=a.map(function(x,i){
+      return '<div class="tarj vidrio" style="display:flex;align-items:center;gap:10px">'+
+        '<span style="flex:1">'+esc(x)+'</span>'+
+        '<button class="btn sec" style="width:auto;padding:6px 11px;margin:0" onclick="quitarActividad('+i+')">Quitar</button>'+
+        '</div>';
+    }).join('');
+  }
+  var n=$('act-nueva'); if(n) n.value='';
+  var m=$('act-msg'); if(m) m.textContent='';
+}
+function agregarActividad(){
+  var m=$('act-msg'); m.style.color='var(--mal)';
+  var v=($('act-nueva').value||'').trim();
+  if(v.length<4){ m.textContent='Escribe el nombre de la actividad.'; return; }
+  var a=actividades().filter(function(x){ return x!==ACTIV_OTRA; });
+  var repe=a.some(function(x){ return x.toLowerCase()===v.toLowerCase(); });
+  if(repe){ m.textContent='Esa ya está en la lista.'; return; }
+  if(a.length>=20){ m.textContent='Veinte actividades es el tope. Si necesitas más, conviene revisar cómo las estás separando.'; return; }
+  a.push(v); actividadesSet(a);
+  pintarActividades();
+  m.style.color='var(--ok)'; m.textContent='Agregada.';
+}
+function quitarActividad(i){
+  var a=actividades().filter(function(x){ return x!==ACTIV_OTRA; });
+  var q=a[i]; if(!q) return;
+  confirmar('¿Quitar «'+q+'»?','Los reportes que ya la tienen no cambian: solo deja de salir en la lista.', function(){
+    a.splice(i,1); actividadesSet(a); pintarActividades();
+  }, {si:'Sí, quitar', no:'Dejarla', icono:'🗂️'});
+}
+function restaurarActividades(){
+  confirmar('¿Volver a las seis de la norma?','Se pierde lo que hayas agregado tú.', function(){
+    actividadesSet(ACTIV_BASE.slice()); pintarActividades();
+  }, {si:'Sí, restaurar', no:'Dejarlo así', icono:'↩︎'});
+}
+
 function guardarReporte(){
   var e=empDeTrabajo();
   if(!e){ compartirReporte(); return; }
@@ -12893,6 +12986,7 @@ function guardarReporte(){
      botella, no el celular. Antes se mandaban los 8 MB del original. */
   var f=REP_FOTO ? _dataURLaArchivo(REP_FOTO,'reporte.jpg') : null;
   var datos={clase:$('r-clase').value, descripcion:desc, lugar:($('r-lugar').value||'').trim(),
+             actividad:(($('r-actividad')&&$('r-actividad').value)||''),
              anonimo:R_ANON, autor:R_ANON?null:(($('r-autor').value||'').trim()||null), fecha:hoyISO()};
   function grabar(fotoUrl){ datos.foto_url=fotoUrl||null; return mandarReporteANube(datos); }
   (f? subirFoto('reportes',f).then(grabar, function(){ return grabar(null); }) : grabar(null))
@@ -13173,12 +13267,13 @@ function pintarReporte(){
     (e?'<div class="esc-acc" style="margin-top:10px">'+
         '<button class="btn sec" style="margin:0" onclick="ir(\'p-reporte-excel\')">📊 Informe en Excel</button>'+
         '<button class="btn sec" style="margin:0" onclick="filtrarReportes()" id="rep-filtro-btn">Ver: abiertos</button>'+
+        '<button class="btn sec" style="margin:0" onclick="ir(\'p-actividades\')">🗂️ Actividades</button>'+
        '</div><div id="rep-sede-cont" style="margin-top:10px"></div>'+
        '<div id="rep-lista" style="margin-top:14px"><p class="sub">Cargando…</p></div>'
       :'<p class="sub" style="margin-top:12px">Entra a tu empresa para ver y hacer reportes.</p>');
   if(!e) return;
   sbGet('sst_reporte?empresa=eq.'+encodeURIComponent(e.id)+
-        '&select=id,clase,descripcion,lugar,foto_url,foto_cierre,accion,cerrado,cerrado_por,anonimo,autor,estado,fecha'+
+        '&select=id,clase,descripcion,lugar,actividad,foto_url,foto_cierre,accion,cerrado,cerrado_por,anonimo,autor,estado,fecha'+
         '&order=creado.desc&limit=500')
     .then(function(rows){ REP_LISTA=rows||[]; pintarListaReportes(); })
     .catch(function(err){
@@ -16937,7 +17032,8 @@ function _responderSolicitudYa(i, ok){
     if(!j || !j.ok){
       aviso(j && j.motivo==='tope_gestores' ? 'Sin puestos libres' : 'No se pudo',
         j && j.motivo==='tope_gestores'
-          ? 'Ya tienes ocupados tus '+(j.tope||1)+' puestos de gestión. Para sumar a alguien más hace falta un plan con más puestos.'
+          ? 'Ya tienes ocupados tus '+(j.tope||1)+' puestos de gestión. Puedes sumar puestos sueltos por S/ '+PUESTO_EXTRA+
+            ' al mes cada uno, sin cambiar de plan.'
           : 'Inténtalo otra vez en un momento.', j && j.motivo==='tope_gestores' ? '👥' : '📡');
       return;
     }
@@ -16969,7 +17065,7 @@ function entrarEmpresaCorreo(){
       if(j && j.motivo==='tope_gestores'){
         m.style.color='var(--mal)';
         m.innerHTML = (j.plan==='equipo' || j.tope>1)
-          ? '«'+esc(j.empresa||'Esa empresa')+'» ya tiene sus <b>'+j.tope+'</b> gestores ocupados. Para sumar a alguien más, el dueño ('+esc(j.dueno||'—')+') tiene que pagar un puesto extra.'
+          ? '«'+esc(j.empresa||'Esa empresa')+'» ya tiene sus <b>'+j.tope+'</b> puestos de gestión ocupados. El dueño ('+esc(j.dueno||'—')+') puede sumar un puesto suelto por S/ '+PUESTO_EXTRA+' al mes.'
           : '«'+esc(j.empresa||'Esa empresa')+'» está en <b>Supervisor SSOMA</b>, que es de una sola persona. Para que entre tu equipo, el dueño ('+esc(j.dueno||'—')+') tiene que pasar a <b>Equipo SSOMA</b>.';
         AC_COD=cod; AC_RUC='';
         m.innerHTML += '<div style="margin-top:9px"><button class="btn sec" style="margin:0" onclick="ir(\'p-acceso\');prepAcceso()">Pedirle acceso de todos modos</button></div>';
