@@ -175,6 +175,17 @@ body{background:#071C27;color:var(--tinta);font-family:system-ui,-apple-system,'
 @keyframes respira{0%,100%{opacity:.55}50%{opacity:1}}
 @media (prefers-reduced-motion:reduce){#haz{animation:none}}
 .wrap{max-width:560px;margin:0 auto;padding:18px 16px 40px;position:relative;z-index:1}
+/* El líder pasa la mitad del día en una laptop. En el celular la app
+   vive en 560px porque eso es lo que hay; en un monitor esos 560px son
+   una columna flaca en medio de la nada. El modo ancho le devuelve el
+   espacio y acomoda sus tarjetas en dos columnas. No cambia nada de la
+   información: cambia cuánta cabe sin bajar el dedo. */
+body.ancho .wrap{max-width:1040px}
+@media(min-width:900px){
+  body.ancho .lider-rejilla{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+  body.ancho .lider-rejilla>*{margin:0}
+  body.ancho .kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
 /* --- vidrio: el mismo truco de Talentos, en tono profesional --- */
 .vidrio{position:relative;background:rgba(var(--w),.045);
   -webkit-backdrop-filter:blur(14px) saturate(120%);backdrop-filter:blur(14px) saturate(120%);
@@ -2487,6 +2498,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="sec-tit" style="margin-top:18px">Agregar</div>
   <button class="btn sec" onclick="ir('p-emp-crear')">🏢 Crear mi empresa (sale un código)</button>
   <button class="btn sec" onclick="ir('p-emp-entrar')">🔑 Entrar con el código de mi empresa</button>
+  <button class="btn sec" onclick="ir('p-invitacion')">🎟️ Tengo un código de invitación</button>
   <div class="fila-ajustes" style="margin-top:18px">
     <button class="btn sec" onclick="salirDeCuenta()">🚪 Cerrar sesión · <span id="me-correo"></span></button>
   </div>
@@ -2542,6 +2554,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <button class="btn" onclick="entrarEmpresaCorreo()">Entrar ▸</button>
   <div class="sec-tit" style="margin-top:18px">¿Primera vez?</div>
   <button class="btn sec" onclick="ir('p-emp-crear')">Crear la empresa y su código</button>
+  <button class="btn sec" onclick="ir('p-invitacion')">🎟️ Me invitaron: tengo un código INV</button>
   <div class="pie">El plan <b>Supervisor</b> es de una sola persona. Si tu equipo también tiene que entrar, la empresa necesita el plan <b>Empresa</b>.</div>
 </section>
 
@@ -2557,6 +2570,90 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div id="emp-crear-msg" style="font-size:14px;margin:8px 0"></div>
   <button class="btn" onclick="crearEmpresaCorreo()">Crear ▸</button>
   <div class="pie">Si el RUC ya está registrado, la app no crea una segunda empresa: te lleva a pedirle el código a quien la tiene. Así no terminan dos obras iguales con la documentación partida.</div>
+</section>
+
+<!-- ========== BUENAS PRACTICAS ========== -->
+<section class="pantalla" id="p-buenas">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Buenas prácticas</span></div>
+  <div id="buenas-cuerpo"></div>
+</section>
+
+<section class="pantalla" id="p-buena-nueva">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-buenas')">‹ Atrás</button><span>Nueva</span></div>
+  <h2>🌟 Anotar una buena práctica</h2>
+  <p class="sub">Lo que salió bien también se registra. Sirve para repetirlo en las otras obras, para la charla del lunes y para que el trabajador que lo hizo bien quede nombrado.</p>
+  <label>¿Qué se hizo bien?</label>
+  <input id="bu-titulo" maxlength="90" placeholder="Plataforma con barandas antes de subir a encofrar">
+  <label>Cuéntalo</label>
+  <textarea id="bu-desc" rows="4" placeholder="La cuadrilla armó la plataforma completa, con rodapié y línea de vida, antes de que nadie subiera. Nadie tuvo que improvisar arriba."></textarea>
+  <div class="dos">
+    <div><label>Fecha</label><input id="bu-fecha" type="date"></div>
+    <div><label>Lugar</label><input id="bu-lugar" placeholder="Torre B, piso 4"></div>
+  </div>
+  <label>Actividad</label>
+  <select id="bu-actividad"></select>
+  <label>¿Quién lo hizo?</label>
+  <input id="bu-autor" placeholder="Cuadrilla de encofrado — Juan Pérez">
+  <div style="margin-top:14px"><button class="btn sec" onclick="fotoBuena()">📷 Tomar o elegir una foto</button></div>
+  <div id="bu-foto-vista" style="margin-top:10px"></div>
+  <div id="buena-nueva-msg" style="font-size:14px;margin:10px 0"></div>
+  <button class="btn" onclick="guardarBuena()">Guardar ▸</button>
+</section>
+
+<section class="pantalla" id="p-buena-ver">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-buenas')">‹ Atrás</button><span>Buena práctica</span></div>
+  <div id="buena-ver-cuerpo"></div>
+</section>
+
+<!-- ========== EL LIDER NOMBRA A SUS SUPERVISORES ========== -->
+<section class="pantalla" id="p-invitar">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Invitaciones</span></div>
+  <h2>🎖️ Nombrar un supervisor</h2>
+  <p class="sub">El código que sale de aquí abre <b>una sola vez</b> y solo para esa persona: va amarrado a su correo, a su documento y al RUC de tu empresa. Si alguna de las tres no calza, no entra.</p>
+  <div class="aviso" id="inv-emp"></div>
+  <label>Correo con el que va a entrar</label>
+  <input id="inv-correo" type="email" inputmode="email" placeholder="supervisor@empresa.com">
+  <p class="sub" style="margin:5px 0 0;font-size:12.5px">Tiene que ser el mismo correo de su cuenta OBRASST, letra por letra.</p>
+  <label>Su documento</label>
+  <input id="inv-doc" placeholder="DNI o carné de extranjería" style="text-transform:uppercase">
+  <label>Nombre y apellido — opcional</label>
+  <input id="inv-nombre" placeholder="Miguel Aguirre">
+  <div class="sec-tit" style="margin-top:18px">La delegación</div>
+  <p class="sub" style="margin:-4px 0 8px;font-size:12.5px">Queda escrito qué obra le encargaste y desde cuándo. Es lo que se muestra después en tu lista y lo que ve un auditor cuando pregunta quién responde por esa obra.</p>
+  <label>Proyecto u obra</label>
+  <input id="inv-proy" placeholder="Obra Lurín — Etapa 2">
+  <div class="dos">
+    <div><label>Desde</label><input id="inv-desde" type="date"></div>
+    <div><label>Hasta — opcional</label><input id="inv-hasta" type="date"></div>
+  </div>
+  <label>El código vence en</label>
+  <select id="inv-dias">
+    <option value="7">7 días</option>
+    <option value="15" selected>15 días</option>
+    <option value="30">30 días</option>
+  </select>
+  <div id="inv-msg" style="font-size:14px;margin:10px 0"></div>
+  <button class="btn" onclick="generarInvitacion()">Generar el código ▸</button>
+  <div id="inv-hecho" style="margin-top:14px"></div>
+  <div class="sec-tit" style="margin-top:22px">Invitaciones que has mandado</div>
+  <div id="inv-lista"></div>
+  <div class="pie">Cada supervisor ocupa un puesto de gestión de tu plan. Si necesitas más de los que trae, se suman sueltos por S/ 79 al mes cada uno.</div>
+</section>
+
+<!-- ========== EL SUPERVISOR CANJEA SU INVITACION ========== -->
+<section class="pantalla" id="p-invitacion">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Invitación</span></div>
+  <div class="marca">◆ OBRASST</div>
+  <h1>Te invitaron<br>a una empresa.</h1>
+  <p class="sub">Escribe el código que te pasó tu líder y tu documento. La invitación es tuya y de nadie más: entra con el correo al que te la mandaron.</p>
+  <div class="aviso" id="canje-quien"></div>
+  <label>Código de invitación</label>
+  <input id="canje-cod" placeholder="INV-XXXXXX" style="text-transform:uppercase;letter-spacing:.12em;font-weight:700">
+  <label>Tu documento</label>
+  <input id="canje-doc" placeholder="DNI o carné de extranjería" style="text-transform:uppercase">
+  <div id="canje-msg" style="font-size:14px;margin:10px 0"></div>
+  <button class="btn" onclick="canjearInvitacion()">Entrar a la empresa ▸</button>
+  <div class="pie">¿No tienes invitación? También puedes <span onclick="ir('p-emp-entrar')" style="text-decoration:underline;cursor:pointer">entrar con el código de la empresa</span> y esperar a que te acepten.</div>
 </section>
 
 <!-- ================= EMPRESA: inicio ordenado (menús anidados) ================= -->
@@ -5563,7 +5660,8 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,
             'p-accidentes':1,'p-acc-nuevo':1,'p-acc-ver':1,
             'p-gestion-quien':1,'p-lider-no':1,
-            'p-actividades':1,
+            'p-actividades':1,'p-invitar':1,'p-invitacion':1,
+            'p-buenas':1,'p-buena-nueva':1,'p-buena-ver':1,
             'p-semanal':1,'p-semanal-dia':1,'p-estadistica':1,'p-carpeta':1,'p-foto':1,'p-mensual':1,
             'p-escaneos':1,'p-escaneo-nuevo':1,'p-escaneo-ver':1,'p-escaneo-enviar':1,
             'p-reporte-cerrar':1,'p-reporte-excel':1,'p-qr-docs':1,'p-qr-doc':1,
@@ -5732,7 +5830,7 @@ var SIN_CUENTA={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-sector':1,'p-aparien
      politica de privacidad hay que crearse una cuenta, la politica no
      sirve — y Google Play tampoco la acepta asi. */
   'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,'p-consentir':1};
-var SIN_EMPRESA={'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1};
+var SIN_EMPRESA={'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-invitacion':1};
 function _ir(p){
   /* A los temas no se entra sin sector: antes se colaba con el primero de la
      lista y el supervisor de minería veía preguntas de construcción. */
@@ -5795,6 +5893,9 @@ function _ir(p){
   if(p==='p-amon-ver')pintarAmonDetalle(); if(p==='p-amon-firma')prepFirmaAmon(); if(p==='p-estatus')pintarEstatus();
   if(p==='p-accidentes')pintarAccidentes(); if(p==='p-acc-nuevo')prepAccNuevo(); if(p==='p-acc-ver')pintarAccVer();
   if(p==='p-lider-no')pintarLiderNo();
+  if(p==='p-invitar'){ prepInvitar(); pintarInvitar(); } if(p==='p-invitacion')prepCanje();
+  if(p==='p-buenas'){ pintarBuenas(); subirBuenasPendientes().then(bajarBuenas).then(function(n){ if(n) pintarBuenas(); }); }
+  if(p==='p-buena-nueva')prepBuenaNueva(); if(p==='p-buena-ver')pintarBuenaVer();
   if(p==='p-norma')pintarNorma();
   if(p==='p-escaneos'){ pintarEscaneos(); reintentarEscaneos().then(bajarEscaneos).then(pintarEscaneos); }
   if(p==='p-escaneo-nuevo')prepEscaneo();
@@ -5815,7 +5916,7 @@ function _ir(p){
 /* la pantalla que explica por que no puede entrar no lleva el pie del
    plan: seria decirle dos veces lo mismo, y la segunda con precio */
 var SIN_PIE={'p-emp-home':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-eval':1,'p-juego':1,
-             'p-gestion-quien':1,'p-lider-no':1,
+             'p-gestion-quien':1,'p-lider-no':1,'p-invitacion':1,
              'p-firma':1,'p-final':1,'p-listo':1,'p-datos':1,'p-colab':1,'p-acceso':1};
 function pintarPieDePlan(p){
   var pant=document.getElementById(p); if(!pant) return;
@@ -6801,6 +6902,14 @@ function activar(){
   var v=($('inp-cod').value||'').trim(), m=$('cod-msg');
   m.style.color='var(--mal)';
   if(!v){ m.textContent='Escribe el código o pega el enlace que te llegó.'; return; }
+
+  /* 0) ¿es una invitación nominal? No es una licencia: no cambia el
+     plan de nadie, solo mete a esta persona en la empresa que la
+     invitó. Se atiende en su propia pantalla, donde además se le pide
+     el documento con el que la nombraron. */
+  if(typeof pareceInvitacion==='function' && pareceInvitacion(v)){
+    INV_COD_PRE=_norm(v); m.textContent=''; ir('p-invitacion'); return;
+  }
 
   /* 1) el código de compra. Ya NO se valida en el celular: la lista de
      códigos válidos vive en el servidor y el código queda amarrado a la
@@ -9340,7 +9449,7 @@ function guardarAccidente(){
     mtpe:(ACC_SEL==='mortal')?ACC_MTPE:false, foto:ACC_FOTO||null, sync:0 };
   var a=accLocal(); a.unshift(reg); accSet(a);
   var e=empActiva();
-  sbPost('sst_accidente',{duenio:duenioId(), empresa:(e&&e.id)||null, ext:reg.id,
+  sbPost('sst_accidente',{empresa:(e&&e.id)||null, ext:reg.id,
     fecha:reg.fecha, hora:reg.hora||null, clase:reg.clase,
     t_nombre:reg.tNombre, t_tipodoc:reg.tTipoDoc, t_doc:reg.tDoc, t_puesto:reg.tPuesto,
     lugar:reg.lugar, descripcion:reg.desc, parte:reg.parte, agente:reg.agente,
@@ -10390,6 +10499,7 @@ var CATALOGO_ACCESOS = [
   /* ── 3. lo que se entrega ── */
   {k:'inspec',    ic:'✅', et:'Inspec-<br>ciones',             ir:'p-inspec',        color:'a-gris',  desde:3, grupo:3},
   {k:'accidente', ic:'🚑', et:'Accidentes<br>e incidentes',    ir:'p-accidentes',    color:'a-rojo',  desde:0, grupo:3},
+  {k:'buenas',    ic:'🌟', et:'Buenas<br>prácticas',            ir:'p-buenas',        color:'a-verde', desde:0, grupo:3},
   {k:'semanal',   ic:'📈', et:'Reporte<br>semanal',            ir:'p-semanal',       color:'a-verde', desde:3, grupo:3},
   {k:'msds',      ic:'🧴', et:'Hojas<br>MSDS',                 ir:'p-msds',          color:'a-azul',  desde:3, grupo:3},
   {k:'risst',     ic:'📌', et:'Carteles<br>QR',                fn:'abrirRisst',      color:'a-gris',  desde:1, grupo:3}
@@ -11273,8 +11383,10 @@ function pintarLiderNo(){
       '<p class="sub">«'+esc((e&&e.nombre)||'Tu empresa')+'» sí tiene el plan <b>Gestión SST</b>. '+
       'Pero la Torre de control es de la persona que activó ese código, no de todo el que entra con él: '+
       'si no fuera así, cualquiera que se una vería los datos de todos los proyectos.</p>'+
-      '<div class="aviso">Pídeselo a tu líder. Él puede <b>nombrarte segundo líder</b> desde su panel, '+
-      'y desde ese momento ves lo mismo que él.</div>'+salida;
+      '<div class="aviso">Pídele a tu líder que te <b>nombre supervisor</b> desde su panel: te manda un '+
+      'código de invitación amarrado a tu correo y a tu documento, y con él entras a esta empresa '+
+      'con tu propia cuenta.</div>'+
+      '<button class="btn sec" onclick="ir(\'p-invitacion\')">🎟️ Ya tengo mi código de invitación</button>'+salida;
   } else {
     var P=planDe('gestion');
     h='<h2>La Torre de control viene con Gestión SST</h2>'+
@@ -16463,7 +16575,10 @@ function pintarGestor(){
       h+='<div class="caja vidrio" style="padding:15px;border-color:rgba(47,191,113,.4)"><b>Las inspecciones del mes están hechas.</b></div>';
     }
   }
-  h+='<button class="btn sec" style="margin-top:18px" onclick="GEST.proyectos=[];GEST.datos={};pintarGestor()">↻ Volver a calcular</button>';
+  if(typeof puedeSerLider==='function' && puedeSerLider()){
+    h+='<button class="btn sec" style="margin-top:18px" onclick="ir(\'p-invitar\')">🤝 Nombrar supervisores</button>';
+  }
+  h+='<button class="btn sec" style="margin-top:9px" onclick="GEST.proyectos=[];GEST.datos={};pintarGestor()">↻ Volver a calcular</button>';
   c.innerHTML=h;
 }
 
@@ -16883,6 +16998,9 @@ function pintarEmpHome(){
          '<b>🎖️ Torre de control</b>'+
          '<small>Tus proyectos juntos: índices de accidentabilidad, inspecciones del mes, reportes abiertos, '+
          'consumo de EPP y cómo va cada supervisor.</small></button>'+
+         '<button class="tarj vidrio" style="margin-top:9px" onclick="ir(\'p-invitar\')">'+
+         '<b>🤝 Nombrar supervisores</b>'+
+         '<small>Le generas a cada uno su código de invitación: va amarrado a su correo y a su documento, dice qué obra le encargaste y desde cuándo, y entra una sola vez.</small></button>'+
          '<button class="btn sec" style="margin-top:9px" onclick="ponerPapel(\'sup\');pintarEmpHome()">'+
          '🦺 Trabajar como supervisor en una obra</button>';
   } else if(puedeSerLider()){
@@ -16899,8 +17017,25 @@ function pintarEmpHome(){
   }
   if(pn) pn.innerHTML = hp;
   var c=$('emp-home-cuerpo'); c.innerHTML='';
+  try{ aplicarAncho(); }catch(_an){}
   /* El tablero primero: la data del mes sin abrir nada. */
   c.appendChild(tableroDom());
+  if(puedeSerLider() && papelElegido()==='lider'){
+    /* EL INICIO DEL LIDER. Lo que le sirve al supervisor —los accesos de
+       todos los días y las seis carpetas abiertas— a él le estorba: no
+       carga documentos, decide sobre cuatro obras. Primero lo que está
+       parado esperándolo, después sus bloques de líder, y las carpetas
+       al final, cerradas. */
+    c.appendChild(liderDecisionesDom());
+    c.appendChild(liderBloquesDom());
+    if(puede('carpetas')) c.appendChild(liderCarpetasDom());
+    if(lidPendVencido()){
+      liderCargarPendientes().then(function(){
+        var pa=document.getElementById('p-emp-home');
+        if(pa && pa.className.indexOf('activa')>-1 && puedeSerLider() && papelElegido()==='lider') pintarEmpHome();
+      });
+    }
+  } else {
   /* Lo de todos los días: es la casa donde de verdad aterriza el
      usuario, no p-inicio. */
   c.appendChild(accesosRapidosDom());
@@ -16908,6 +17043,7 @@ function pintarEmpHome(){
      demás no salen bloqueadas: no salen. */
   if(puede('carpetas')){
     EMP_ESTRUCTURA.forEach(function(g,gi){ c.appendChild(empGrupoDom(g,gi)); });
+  }
   }
   /* Antes aquí abajo había dos globos: uno vendiendo las carpetas y otro
      con el detalle del plan. Dos avisos de precio en la casa de alguien
@@ -17349,6 +17485,442 @@ function _responderSolicitudYa(i, ok){
     }
     cargarSolicitudes();
   }).catch(function(err){ aviso('No se pudo', String(err), '📡'); });
+}
+
+// =================================================================
+//  INVITACION NOMINAL  ·  el lider nombra a sus supervisores
+//  Un codigo de un solo uso amarrado a TRES cosas que no se pueden
+//  intercambiar: el correo de la persona, su documento y el RUC de la
+//  empresa. Si cualquiera de las tres no calza, el codigo no abre.
+//  Quien decide es el servidor (sst_invitar / sst_aceptar_invitacion);
+//  esta pantalla solo pregunta y explica lo que contesto.
+// =================================================================
+var INVITS=[];
+function pareceInvitacion(v){ return /^INV[A-Z0-9]{6}$/.test(_norm(v||'')); }
+function invBonito(c){ var s=_norm(c||''); return s.length===9 ? (s.slice(0,3)+'-'+s.slice(3)) : (c||''); }
+function invPuestos(){
+  /* cuantos puestos de gestion trae el plan y cuantos estan tomados */
+  var e=empActiva(), tope=0, usados=0;
+  try{ tope = planActual().gestores || 1; }catch(_p){ tope=1; }
+  (MIS_EMP||[]).forEach(function(x){ if(e && String(x.id)===String(e.id)) usados = x.gestores||1; });
+  if(!usados) usados=1;
+  (INVITS||[]).forEach(function(i){ if(!i.usada_en && i.vence>=hoyISO()) usados++; });
+  return {tope:tope, usados:usados};
+}
+function prepInvitar(){
+  var f=function(id,v){ var el=$(id); if(el) el.value=v; };
+  f('inv-correo',''); f('inv-doc',''); f('inv-nombre',''); f('inv-proy','');
+  f('inv-desde',hoyISO()); f('inv-hasta',''); f('inv-dias','15');
+  var m=$('inv-msg'); if(m) m.textContent='';
+  var h=$('inv-hecho'); if(h) h.innerHTML='';
+}
+function pintarInvitar(){
+  var e=empActiva(), c=$('inv-emp');
+  if(c) c.innerHTML = e ? ('🏢 Invitas a <b>'+esc(e.nombre)+'</b> ('+esc(e.codigo)+').') : 'Primero entra a tu empresa.';
+  cargarInvitaciones();
+}
+function generarInvitacion(){
+  var e=empActiva(), m=$('inv-msg'); m.style.color='var(--mal)';
+  if(!e){ m.textContent='Primero entra a tu empresa.'; return; }
+  var correo=($('inv-correo').value||'').trim().toLowerCase();
+  var doc   =($('inv-doc').value||'').trim();
+  var nom   =($('inv-nombre').value||'').trim();
+  var proy  =($('inv-proy').value||'').trim();
+  var desde =$('inv-desde').value||'';
+  var hasta =$('inv-hasta').value||'';
+  var dias  =parseInt($('inv-dias').value,10)||15;
+  if(correo.indexOf('@')<1 || correo.lastIndexOf('.')<correo.indexOf('@')){
+    m.textContent='Escribe el correo con el que esa persona va a entrar. Tiene que ser el mismo, letra por letra.'; return; }
+  if(_norm(doc).length<6){ m.textContent='Falta su documento: DNI de 8 dígitos, o carné de extranjería.'; return; }
+  if(hasta && desde && hasta<desde){ m.textContent='La fecha de término no puede ser antes que la de inicio.'; return; }
+  m.style.color='var(--gris)'; m.textContent='Generando el código…';
+  sbRpc('sst_invitar',{p_emp:e.id, p_correo:correo, p_dni:doc, p_nombre:nom||null,
+                       p_proyecto:proy||null, p_desde:desde||null, p_hasta:hasta||null, p_dias:dias})
+  .then(function(j){
+    if(!j || !j.ok){
+      m.style.color='var(--mal)';
+      var q=(j&&j.error)||'';
+      m.innerHTML =
+        q==='no_eres_dueno' ? 'Solo quien activó el plan puede nombrar supervisores.' :
+        q==='ruc_invalido'  ? 'Tu empresa no tiene un RUC de 11 dígitos registrado, y el código va amarrado a él. Créala de nuevo con su RUC o escríbenos para corregirlo.' :
+        q==='correo_invalido' ? 'Ese correo no se ve bien escrito. Revísalo.' :
+        q==='doc_invalido'  ? 'El documento es muy corto. El DNI son 8 dígitos.' :
+        q==='ya_invitado'   ? 'Ya le mandaste una invitación a ese correo y sigue sin usarse. Búscala abajo: puedes volver a pasársela o revocarla y hacer una nueva.' :
+        q==='tope_gestores' ? ('Tienes ocupados tus <b>'+(j.tope||1)+'</b> puestos de gestión. Puedes sumar puestos sueltos por S/ '+PUESTO_EXTRA+' al mes cada uno, sin cambiar de plan.') :
+        q==='sin_sesion'    ? 'Entra a tu cuenta primero.' :
+        'No se pudo generar el código.';
+      return;
+    }
+    m.textContent='';
+    var cod=invBonito(j.codigo);
+    var texto='Te invito a OBRASST como supervisor SSOMA de '+((empActiva()||{}).nombre||'nuestra empresa')+'.'+
+      '\n\n1) Entra a '+baseURL()+
+      '\n2) Crea tu cuenta con este correo: '+correo+
+      '\n3) En «Tengo un código de invitación» escribe: '+cod+
+      '\n   y tu documento: '+_norm(doc)+
+      '\n\nEl código vence el '+fechaLarga(j.vence)+' y entra una sola vez.';
+    $('inv-hecho').innerHTML =
+      '<div class="caja vidrio" style="padding:16px;border-color:var(--oro)">'+
+      '<b>Listo. Este es su código:</b>'+
+      '<div style="font-size:29px;font-weight:800;letter-spacing:.10em;margin:10px 0;text-align:center">'+esc(cod)+'</div>'+
+      '<p class="sub" style="margin:0 0 10px">Para <b>'+esc(correo)+'</b>, con documento <b>'+esc(_norm(doc))+'</b>. Vence el '+fechaLarga(j.vence)+'.</p>'+
+      '<button class="btn" style="margin:0" onclick="invCompartir('+JSON.stringify(texto).replace(/"/g,'&quot;')+')">Mandárselo por WhatsApp</button>'+
+      '<button class="btn sec" style="margin:8px 0 0" onclick="invCopiar('+JSON.stringify(texto).replace(/"/g,'&quot;')+')">Copiar las instrucciones</button>'+
+      '</div>';
+    /* se limpian los datos de la persona para poder invitar a la siguiente,
+       pero NO el recuadro con el código: es lo único que el líder tiene que
+       copiar, y borrárselo justo después de generarlo sería cruel. */
+    ['inv-correo','inv-doc','inv-nombre','inv-proy'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
+    cargarInvitaciones();
+  })
+  .catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo (¿sin internet?). '+err; });
+}
+function invCompartir(t){
+  if(navigator.share){ navigator.share({text:t}).catch(function(){}); return; }
+  location.href='https://wa.me/?text='+encodeURIComponent(t);
+}
+function invCopiar(t){
+  var ok=function(){ aviso('Copiado','Ya lo puedes pegar en el WhatsApp de tu supervisor.','📋'); };
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok,function(){ aviso('Invitación', t, '🎟️'); }); }
+  else aviso('Invitación', t, '🎟️');
+}
+function cargarInvitaciones(){
+  var e=empActiva(), c=$('inv-lista'); if(!c) return;
+  if(!e){ c.innerHTML=''; return; }
+  c.innerHTML='<p class="sub">Cargando…</p>';
+  sbGet('sst_invitacion?empresa_id=eq.'+encodeURIComponent(e.id)+
+        '&select=id,codigo,correo,dni,nombre,proyecto,desde,hasta,vence,creada,usada_en&order=creada.desc&limit=60')
+  .then(function(rows){
+    INVITS=rows||[];
+    var P=invPuestos();
+    var cab='<div class="aviso">👥 Puestos de gestión: <b>'+P.usados+'</b> de <b>'+P.tope+'</b> ocupados'+
+            (P.usados>=P.tope?' — ya no queda ninguno libre.':'.')+'</div>';
+    if(!INVITS.length){ c.innerHTML=cab+'<p class="sub">Todavía no has invitado a nadie.</p>'; return; }
+    c.innerHTML = cab + INVITS.map(function(i,k){
+      var usada=!!i.usada_en, vencida=(!usada && i.vence<hoyISO());
+      var et = usada ? '<span style="color:var(--ok)">✅ Ya entró</span>'
+             : vencida ? '<span style="color:var(--gris)">⌛ Venció</span>'
+             : '<span style="color:var(--adv,#fab219)">⏳ Sin usar</span>';
+      return '<div class="caja vidrio" style="padding:14px;margin-bottom:9px">'+
+        '<b>'+esc(i.nombre||i.correo)+'</b> · '+et+
+        '<p class="sub" style="margin:5px 0 0">'+esc(i.correo)+' · doc '+esc(i.dni||'—')+'</p>'+
+        (i.proyecto?'<p class="sub" style="margin:3px 0 0">🏗️ '+esc(i.proyecto)+
+           (i.desde?' · desde '+fechaLarga(i.desde):'')+(i.hasta?' hasta '+fechaLarga(i.hasta):'')+'</p>':'')+
+        '<p class="sub" style="margin:3px 0 0">Código <b>'+esc(invBonito(i.codigo))+'</b>'+
+           (usada?(' · usado el '+fechaLarga(String(i.usada_en).slice(0,10))):(' · vence el '+fechaLarga(i.vence)))+'</p>'+
+        (usada?'':'<button class="btn sec" style="margin:9px 0 0" onclick="revocarInvitacion('+k+')">Revocar este código</button>')+
+        '</div>';
+    }).join('');
+  })
+  .catch(function(){ c.innerHTML='<p class="sub">No se pudo cargar la lista (¿sin internet?).</p>'; });
+}
+function revocarInvitacion(k){
+  var i=INVITS[k]; if(!i) return;
+  confirmar('¿Revocar la invitación?','El código '+invBonito(i.codigo)+' deja de servir. '+
+    (i.nombre||i.correo)+' ya no podrá entrar con él, y el puesto de gestión queda libre.',
+    function(){
+      sbDel('sst_invitacion?id=eq.'+encodeURIComponent(i.id))
+        .then(function(){ cargarInvitaciones(); })
+        .catch(function(){ aviso('No se pudo','Inténtalo otra vez en un momento.','📡'); });
+    }, {si:'Sí, revocar', no:'Cancelar', icono:'🗑️'});
+}
+
+/* ── el otro lado: el supervisor canjea su invitación ───────────── */
+var INV_COD_PRE='';
+function prepCanje(){
+  var c=$('canje-cod'); if(c && INV_COD_PRE){ c.value=invBonito(INV_COD_PRE); INV_COD_PRE=''; }
+  var m=$('canje-msg'); if(m) m.textContent='';
+  var q=$('canje-quien');
+  if(q) q.innerHTML = hayCuenta()
+    ? ('📧 Vas a entrar con <b>'+esc(correoCuenta())+'</b>. Si te invitaron a otro correo, cierra sesión y entra con ese.')
+    : 'Primero entra a tu cuenta, con el mismo correo al que te llegó la invitación.';
+}
+function canjearInvitacion(){
+  var m=$('canje-msg'); m.style.color='var(--mal)';
+  if(!hayCuenta()){ m.textContent='Primero entra a tu cuenta.'; setTimeout(function(){ ir('p-cuenta'); },900); return; }
+  var cod=_norm($('canje-cod').value||''), doc=($('canje-doc').value||'').trim();
+  if(!pareceInvitacion(cod)){ m.textContent='Ese no es un código de invitación: son las letras INV y seis caracteres más.'; return; }
+  if(_norm(doc).length<6){ m.textContent='Escribe tu documento, el mismo que le diste a tu líder.'; return; }
+  m.style.color='var(--gris)'; m.textContent='Verificando…';
+  sbRpc('sst_aceptar_invitacion',{p_codigo:cod, p_dni:doc}).then(function(j){
+    if(!j || !j.ok){
+      m.style.color='var(--mal)';
+      var q=(j&&j.error)||'';
+      m.textContent =
+        q==='codigo_no_existe' ? 'Ese código no existe. Revísalo tal como te llegó, con el guion.' :
+        q==='codigo_usado'     ? 'Ese código ya se usó. Cada invitación entra una sola vez: pídele otra a tu líder.' :
+        q==='codigo_vencido'   ? 'Ese código venció. Pídele a tu líder que te genere uno nuevo.' :
+        q==='otro_correo'      ? 'Esa invitación es para otro correo. Entra con el correo al que te la mandaron, o pídele a tu líder que la haga con este.' :
+        q==='doc_no_coincide'  ? 'El documento no coincide con el que puso tu líder. Escríbelo igual, sin puntos ni guiones.' :
+        q==='ruc_cambio'       ? 'La empresa cambió de RUC después de la invitación. Pídele una nueva a tu líder.' :
+        q==='tope_gestores'    ? 'Esa empresa ya tiene todos sus puestos de gestión ocupados. Tu líder puede sumar un puesto por S/ '+PUESTO_EXTRA+' al mes.' :
+        q==='sin_sesion'       ? 'Entra a tu cuenta primero.' :
+        'No se pudo entrar.';
+      return;
+    }
+    m.style.color='var(--ok)'; m.textContent='Listo, ya estás dentro.';
+    abrirSesion(correoCuenta(), {codigo:j.codigo, id:j.empresa, nombre:j.nombre, rol:'gestor'});
+    ROL_EMP_SERVIDOR='gestor'; ponerPapel('sup');
+    guardar(LS_PLAN,{plan:'lite', vence:null, tope_obras:1, tope_gestores:1});
+    ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; MIS_EMP=[];
+    var det = (j.proyecto? ('Te encargaron: '+j.proyecto) : 'Ya puedes trabajar en esta empresa.')+
+              (j.desde? ('\nDesde el '+fechaLarga(String(j.desde).slice(0,10))) : '')+
+              (j.hasta? (' hasta el '+fechaLarga(String(j.hasta).slice(0,10))) : '');
+    refrescarPlan().then(function(){ if(typeof pintarEmpHome==='function') pintarEmpHome(); });
+    ir('p-emp-home');
+    aviso('Bienvenido a '+(j.nombre||'la empresa'), det, '🤝');
+  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo (¿sin internet?). '+err; });
+}
+
+// =================================================================
+//  BUENAS PRACTICAS  ·  lo que salio bien tambien se registra
+//  Un registro de SSOMA que solo anota lo malo entrena al equipo a
+//  esconder. Esto es la otra mitad: queda escrito quien lo hizo bien,
+//  en que obra y con que foto, y el lider lo ve junto con todo lo
+//  demas. Se guarda primero en el celular y se sube cuando hay señal.
+// =================================================================
+var LS_BUENA='sstc_buenas';
+var BUE_FOTO='', BUE_VER=null;
+function bueLocal(){ return leer(LS_BUENA,[]) || []; }
+function bueSet(a){ guardar(LS_BUENA,a); }
+function buePorId(id){ var a=bueLocal(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; }
+function prepBuenaNueva(){
+  BUE_FOTO='';
+  var v=function(id,x){ var el=$(id); if(el) el.value=x; };
+  v('bu-fecha',hoyISO()); v('bu-titulo',''); v('bu-desc',''); v('bu-lugar','');
+  v('bu-autor', (typeof miNombre==='function' && miNombre()) || '');
+  var f=$('bu-foto-vista'); if(f) f.innerHTML='';
+  var m=$('buena-nueva-msg'); if(m) m.textContent='';
+  var sel=$('bu-actividad');
+  if(sel) sel.innerHTML = actividades().map(function(x){ return '<option value="'+esc(x)+'">'+esc(x)+'</option>'; }).join('');
+}
+function fotoBuena(){
+  tomarFoto({max:900, calidad:0.8, titulo:'Foto de la buena práctica'}).then(function(du){
+    if(!du) return;
+    BUE_FOTO=du;
+    $('bu-foto-vista').innerHTML='<img src="'+du+'" style="width:100%;border-radius:12px">'+
+      '<button class="btn sec" style="margin-top:8px" onclick="BUE_FOTO=\'\';document.getElementById(\'bu-foto-vista\').innerHTML=\'\';">Quitar la foto</button>';
+  });
+}
+function guardarBuena(){
+  var m=$('buena-nueva-msg'); m.style.color='var(--mal)';
+  var t=($('bu-titulo').value||'').trim(), d=($('bu-desc').value||'').trim(), f=$('bu-fecha').value;
+  if(t.length<6){ m.textContent='Ponle un título: en una línea, qué se hizo bien.'; return; }
+  if(d.length<15){ m.textContent='Cuéntalo en dos líneas. Es lo que se lee después en la charla.'; return; }
+  if(f && f>hoyISO()){ m.textContent='Esa fecha todavía no llega. Revísala.'; return; }
+  var reg={ id:'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+            fecha:f||hoyISO(), titulo:t, desc:d, lugar:($('bu-lugar').value||'').trim(),
+            actividad:$('bu-actividad').value||'', autor:($('bu-autor').value||'').trim(),
+            foto:BUE_FOTO||null, sync:0 };
+  var a=bueLocal(); a.unshift(reg); bueSet(a);
+  subirBuena(reg);
+  m.style.color='var(--ok)'; m.textContent='Guardada.';
+  setTimeout(function(){ ir('p-buenas'); }, 600);
+}
+function subirBuena(reg){
+  var e=empActiva(); if(!e) return Promise.resolve(false);
+  return sbPost('sst_buena',{empresa:e.id, ext:reg.id, fecha:reg.fecha, titulo:reg.titulo,
+      descripcion:reg.desc, lugar:reg.lugar||null, actividad:reg.actividad||null,
+      autor:reg.autor||null})
+    .then(function(){ var a=bueLocal();
+      for(var i=0;i<a.length;i++) if(a[i].id===reg.id) a[i].sync=1;
+      bueSet(a); return true; })
+    .catch(function(){ return false; });
+}
+/* lo que quedó sin subir por falta de señal se sube solo al entrar */
+function subirBuenasPendientes(){
+  var a=bueLocal().filter(function(x){ return !x.sync; });
+  if(!a.length || !empActiva()) return Promise.resolve(0);
+  return Promise.all(a.map(subirBuena)).then(function(r){ return r.filter(Boolean).length; });
+}
+/* y lo que anotó otro supervisor de la misma empresa se baja */
+function bajarBuenas(){
+  var e=empActiva(); if(!e || !hayCuenta()) return Promise.resolve(0);
+  return sbGet('sst_buena?empresa=eq.'+encodeURIComponent(e.id)+
+               '&select=id,ext,fecha,titulo,descripcion,lugar,actividad,autor,destacada&order=fecha.desc&limit=200')
+    .then(function(rows){
+      var a=bueLocal(), tengo={}, nuevos=0;
+      a.forEach(function(x){ tengo[x.id]=1; });
+      (rows||[]).forEach(function(r){
+        var id=r.ext||('s'+r.id);
+        if(tengo[id]) return;
+        a.push({id:id, fecha:r.fecha, titulo:r.titulo, desc:r.descripcion||'', lugar:r.lugar||'',
+                actividad:r.actividad||'', autor:r.autor||'', foto:null, sync:1, deOtro:1,
+                destacada:!!r.destacada});
+        nuevos++;
+      });
+      if(nuevos){ a.sort(function(x,y){ return (y.fecha||'').localeCompare(x.fecha||''); }); bueSet(a); }
+      return nuevos;
+    }).catch(function(){ return 0; });
+}
+function pintarBuenas(){
+  var c=$('buenas-cuerpo'); if(!c) return;
+  var a=bueLocal();
+  var h='<h2>🌟 Buenas prácticas</h2>'+
+    '<p class="sub">Lo que salió bien en obra, anotado para repetirlo. Es lo que se cuenta en la charla del lunes y lo que un auditor pide cuando pregunta qué hace distinto tu empresa.</p>'+
+    '<button class="btn" onclick="ir(\'p-buena-nueva\')">🌟 Anotar una buena práctica</button>';
+  if(!a.length){
+    h+='<div class="caja vidrio" style="padding:18px;margin-top:14px"><b>Todavía no hay ninguna.</b>'+
+       '<p class="sub" style="margin:7px 0 0">Empieza por la de esta semana. No tiene que ser algo grande: '+
+       'una plataforma bien armada, una charla que sí se entendió, un trabajador que paró la tarea porque algo no estaba seguro.</p></div>';
+    c.innerHTML=h; return;
+  }
+  var porMes={};
+  a.forEach(function(x){ var k=String(x.fecha||'').slice(0,7); (porMes[k]=porMes[k]||[]).push(x); });
+  Object.keys(porMes).sort().reverse().forEach(function(k){
+    h+='<div class="sec-tit" style="margin-top:20px">'+esc(mesBonito(k))+' · '+porMes[k].length+'</div>';
+    porMes[k].forEach(function(x){
+      h+='<div class="caja vidrio" style="padding:14px;margin-bottom:9px;cursor:pointer" onclick="verBuena(\''+escA(x.id)+'\')">'+
+         '<b>🌟 '+esc(x.titulo)+'</b>'+
+         '<p class="sub" style="margin:5px 0 0">'+esc(fechaLarga(x.fecha)||x.fecha)+
+           (x.lugar?' · '+esc(x.lugar):'')+(x.actividad?' · '+esc(x.actividad):'')+'</p>'+
+         (x.autor?'<p class="sub" style="margin:3px 0 0">👏 '+esc(x.autor)+'</p>':'')+
+         (x.sync?'':'<p class="sub" style="margin:3px 0 0">· sin subir</p>')+
+         '</div>';
+    });
+  });
+  c.innerHTML=h;
+}
+function verBuena(id){ BUE_VER=id; ir('p-buena-ver'); }
+function pintarBuenaVer(){
+  var x=buePorId(BUE_VER); if(!x){ ir('p-buenas'); return; }
+  var c=$('buena-ver-cuerpo'); if(!c) return;
+  c.innerHTML='<h2>🌟 '+esc(x.titulo)+'</h2>'+
+    '<p class="sub">'+esc(fechaLarga(x.fecha)||x.fecha)+(x.lugar?' · '+esc(x.lugar):'')+'</p>'+
+    '<div class="caja vidrio" style="padding:15px"><p style="margin:0;white-space:pre-wrap">'+esc(x.desc||'')+'</p></div>'+
+    (x.actividad?'<div class="aviso" style="margin-top:12px">🏗️ '+esc(x.actividad)+'</div>':'')+
+    (x.autor?'<div class="aviso">👏 '+esc(x.autor)+'</div>':'')+
+    (x.foto?'<img src="'+x.foto+'" style="width:100%;border-radius:12px;margin-top:12px">':'')+
+    '<button class="btn sec" style="margin-top:18px" onclick="compartirBuena(\''+escA(x.id)+'\')">Compartirla con el equipo</button>'+
+    '<button class="btn sec" onclick="borrarBuena(\''+escA(x.id)+'\')">Quitarla</button>';
+}
+function compartirBuena(id){
+  var x=buePorId(id); if(!x) return;
+  var t='🌟 BUENA PRÁCTICA — '+((empActiva()||{}).nombre||'')+'\n'+
+        (fechaLarga(x.fecha)||x.fecha)+(x.lugar?' · '+x.lugar:'')+'\n\n'+
+        x.titulo+'\n'+x.desc+(x.autor?('\n\nLo hizo: '+x.autor):'');
+  if(navigator.share){ navigator.share({text:t}).catch(function(){}); return; }
+  location.href='https://wa.me/?text='+encodeURIComponent(t);
+}
+function borrarBuena(id){
+  confirmar('¿Quitar esta buena práctica?','Se borra de este celular. Si ya estaba subida, sigue en la nube para el resto del equipo.',
+    function(){ bueSet(bueLocal().filter(function(x){ return x.id!==id; })); ir('p-buenas'); },
+    {si:'Sí, quitar', no:'Cancelar', icono:'🗑️'});
+}
+
+// =================================================================
+//  EL INICIO DEL LIDER  ·  no abre carpetas, decide
+//  Al supervisor le sirve el inicio con las seis carpetas del sistema
+//  de gestion: es donde carga y busca sus documentos todo el dia. Al
+//  lider no: el pasa el dia en oficina mirando cuatro obras a la vez.
+//  Lo primero que tiene que ver es que hay parado esperandolo, en cual
+//  obra y con quien. Las carpetas siguen ahi, una linea mas abajo,
+//  para el dia que las necesite.
+// =================================================================
+var LS_ANCHO='sstc_ancho';
+function anchoActivo(){ return leer(LS_ANCHO,false)===true; }
+function aplicarAncho(){
+  try{
+    var b=document.body, c=(b.className||'').replace(/\bancho\b/g,'').replace(/\s+/g,' ').trim();
+    b.className = anchoActivo() ? (c+' ancho').trim() : c;
+  }catch(e){}
+}
+function alternarAncho(){
+  guardar(LS_ANCHO, !anchoActivo()); aplicarAncho();
+  if(typeof pintarEmpHome==='function') pintarEmpHome();
+}
+var LID_PEND={solicitudes:0, invitaciones:0, accidentes:0, cargado:false, cuando:0};
+/* Se vuelve a preguntar como mucho cada dos minutos. Sin este freno el
+   inicio se repinta al terminar la consulta, el repintado vuelve a
+   consultar y la app se queda dando vueltas sola. */
+function lidPendVencido(){ return !LID_PEND.cargado || (Date.now()-LID_PEND.cuando)>120000; }
+function liderCargarPendientes(){
+  var e=empActiva();
+  if(!e || !hayCuenta()) return Promise.resolve(LID_PEND);
+  return Promise.all([
+    sbRpc('sst_solicitudes',{p_emp:e.id}).catch(function(){ return []; }),
+    sbGet('sst_invitacion?empresa_id=eq.'+encodeURIComponent(e.id)+
+          '&usada_en=is.null&vence=gte.'+hoyISO()+'&select=id&limit=60').catch(function(){ return []; })
+  ]).then(function(r){
+    LID_PEND.solicitudes=(r[0]||[]).length;
+    LID_PEND.invitaciones=(r[1]||[]).length;
+    LID_PEND.accidentes = bueContarAccidentesSinCerrar();
+    LID_PEND.cargado=true; LID_PEND.cuando=Date.now();
+    return LID_PEND;
+  });
+}
+/* accidentes sin medidas correctivas escritas: la investigacion que
+   quedo a medias es exactamente lo que pide un fiscalizador */
+function bueContarAccidentesSinCerrar(){
+  if(typeof accLocal!=='function') return 0;
+  var n=0;
+  accLocal().forEach(function(x){ if(!String(x.medidas||'').trim()) n++; });
+  return n;
+}
+function lidTarj(ic, tit, sub, accion, tono){
+  return '<button class="tarj vidrio" style="margin-top:10px'+(tono?';border-color:'+tono:'')+'" onclick="'+accion+'">'+
+         '<b>'+ic+' '+esc(tit)+'</b><small>'+esc(sub)+'</small></button>';
+}
+function liderDecisionesDom(){
+  var d=document.createElement('div');
+  var n = (typeof REP_ABIERTOS==='number'?REP_ABIERTOS:0) + LID_PEND.solicitudes + LID_PEND.accidentes;
+  var h='<div class="sec-tit" style="margin-top:20px">Necesita tu decisión</div>';
+  if(!LID_PEND.cargado){
+    h+='<div class="caja vidrio" style="padding:15px"><p class="sub" style="margin:0">Revisando tus obras…</p></div>';
+    d.innerHTML=h; return d;
+  }
+  if(!n){
+    h+='<div class="caja vidrio" style="padding:15px;border-color:rgba(47,191,113,.4)">'+
+       '<b>Nada parado esperándote.</b><p class="sub" style="margin:6px 0 0">Ni reportes sin cerrar, ni solicitudes sin responder, ni investigaciones a medias.</p></div>';
+    d.innerHTML=h; return d;
+  }
+  h+='<div class="caja vidrio" style="padding:6px 0">';
+  function fila(ic,tx,val,pant){
+    return '<div onclick="ir(\''+pant+'\')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(var(--w),.06);cursor:pointer">'+
+      '<span style="font-size:20px">'+ic+'</span><span style="flex:1;font-size:14.5px">'+esc(tx)+'</span>'+
+      '<b style="font-size:20px;font-variant-numeric:tabular-nums;color:var(--mal)">'+val+'</b></div>';
+  }
+  if(typeof REP_ABIERTOS==='number' && REP_ABIERTOS>0) h+=fila('🚨','Reportes sin cerrar',REP_ABIERTOS,'p-reporte');
+  if(LID_PEND.accidentes)  h+=fila('🏥','Investigaciones sin medidas',LID_PEND.accidentes,'p-accidentes');
+  if(LID_PEND.solicitudes) h+=fila('🙋','Piden entrar a tu empresa',LID_PEND.solicitudes,'p-solicitudes');
+  h+='</div>';
+  d.innerHTML=h; return d;
+}
+function liderBloquesDom(){
+  var d=document.createElement('div');
+  var inv = LID_PEND.invitaciones
+    ? (LID_PEND.invitaciones+' invitación'+(LID_PEND.invitaciones===1?'':'es')+' sin usar. Cada supervisor entra con su código, amarrado a su correo y su documento.')
+    : 'Genera el código de cada supervisor: va amarrado a su correo y su documento, dice qué obra le encargaste y entra una sola vez.';
+  var h='<div class="sec-tit" style="margin-top:20px">Tu trabajo de líder</div><div class="lider-rejilla">'+
+    lidTarj('🗼','Torre de control','Tus proyectos juntos: índices de accidentabilidad, inspecciones del mes, reportes abiertos, consumo de EPP y cómo va cada supervisor.','ir(\'p-gestor\')','var(--oro)')+
+    lidTarj('🤝','Nombrar supervisores', inv, 'ir(\'p-invitar\')')+
+    lidTarj('🏥','Accidentes e índices','Registro del D.S. 005-2012-TR, pirámide de accidentabilidad e índices IF, IS e IA del año.','ir(\'p-accidentes\')')+
+    lidTarj('🌟','Buenas prácticas','Lo que salió bien en una obra, listo para repetirlo en las otras.','ir(\'p-buenas\')')+
+    lidTarj('📊','Semana y horas hombre','Las horas trabajadas de cada obra: sin ellas los índices no se pueden calcular.','ir(\'p-semanal\')')+
+    lidTarj('👷','Personal y credenciales','Quién está en cada obra, con su documento, y sus credenciales al día.','ir(\'p-trabajadores\')')+
+    '</div>';
+  h+='<button class="btn sec" style="margin-top:14px" onclick="alternarAncho()">'+
+     (anchoActivo()?'📱 Volver al tamaño de celular':'🖥️ Modo pantalla ancha (para la laptop)')+'</button>';
+  d.innerHTML=h; return d;
+}
+/* las seis carpetas siguen estando, pero cerradas: el líder las abre el
+   día que las necesita, y mientras tanto no le tapan la pantalla */
+function liderCarpetasDom(){
+  var wrap=document.createElement('div');
+  var b=document.createElement('button');
+  b.className='btn sec'; b.style.marginTop='18px'; b.type='button';
+  b.textContent='📁 Carpetas del sistema de gestión';
+  var cont=document.createElement('div'); cont.style.display='none';
+  b.onclick=function(){
+    if(cont.style.display==='none'){
+      if(!cont.childNodes.length && typeof EMP_ESTRUCTURA!=='undefined')
+        EMP_ESTRUCTURA.forEach(function(g,gi){ cont.appendChild(empGrupoDom(g,gi)); });
+      cont.style.display=''; b.textContent='📁 Ocultar las carpetas del sistema de gestión';
+    } else {
+      cont.style.display='none'; b.textContent='📁 Carpetas del sistema de gestión';
+    }
+  };
+  wrap.appendChild(b); wrap.appendChild(cont); return wrap;
 }
 
 // ---- ¿está encendido el login con Google? ----
