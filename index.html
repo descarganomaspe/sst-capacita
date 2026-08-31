@@ -1942,12 +1942,12 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div id="opciones"></div>
   <div id="revelado"></div>
   <button class="btn sec " id="b-calc" onclick="abrirCalc()" style="display:none">🧮 Calculadora</button>
-  <button class="btn" id="b-accion" onclick="accion()"></button>
+  <button class="btn" id="b-accion" onclick="accion()">Siguiente</button>
 </section>
 
 <div id="calc-velo" onclick="cerrarCalc()"></div>
 <div id="calc">
-  <div class="calc-cab"><b>🧮 Calculadora</b><button class="calc-x" onclick="cerrarCalc()">✕</button></div>
+  <div class="calc-cab"><b>🧮 Calculadora</b><button class="calc-x" aria-label="Cerrar la calculadora" onclick="cerrarCalc()">✕</button></div>
   <div class="calc-exp" id="calc-exp">&nbsp;</div>
   <div class="calc-res" id="calc-res">0</div>
   <div class="calc-tec" id="calc-tec"></div>
@@ -1965,7 +1965,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="caja vidrio" id="f-detalle"></div>
   <button class="btn " id="b-pdf" onclick="irFirma()">✍️ Firmar y generar el PDF</button>
   <button class="btn sec " id="b-enviar" onclick="enviar()">Enviar texto al supervisor</button>
-  <button class="btn sec " onclick="ir('p-inicio')">Volver al inicio</button>
+  <button class="btn sec " onclick="ir(inicioDelModo())">Volver al inicio</button>
 </section>
 
 <section class="pantalla" id="p-firma">
@@ -1984,7 +1984,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="caja vidrio"><b id="listo-nombre"></b><br><small style="color:var(--gris)">Con los datos, el resultado, el detalle pregunta por pregunta y las firmas adentro. Queda en este celular y se comparte por donde quieras.</small></div>
   <button class="btn" onclick="compartirPDF()">📤 Compartir (WhatsApp, correo…)</button>
   <button class="btn sec" onclick="descargarPDF()">⬇️ Guardar en el celular</button>
-  <button class="btn sec" onclick="ir('p-inicio')">Volver al inicio</button>
+  <button class="btn sec" onclick="ir(inicioDelModo())">Volver al inicio</button>
 </section>
 
 <section class="pantalla" id="p-legal">
@@ -2300,9 +2300,9 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <h2>Programa de charlas</h2>
   <p class="sub">Las charlas de cinco minutos del mes. Toca un día para asignarle un tema; toca uno ya pasado para marcarlo como dictado.</p>
   <div class="cal-cab">
-    <button class="cal-nav" onclick="mesMover(-1)">‹</button>
+    <button class="cal-nav" aria-label="Mes anterior" onclick="mesMover(-1)">‹</button>
     <b id="cal-mes"></b>
-    <button class="cal-nav" onclick="mesMover(1)">›</button>
+    <button class="cal-nav" aria-label="Mes siguiente" onclick="mesMover(1)">›</button>
   </div>
   <div class="cal-sem" id="cal-sem"></div>
   <div class="cal-rej" id="cal-rej"></div>
@@ -2892,15 +2892,15 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <div class="cam" id="cam">
   <video id="cam-v" playsinline muted autoplay></video>
   <div class="cam-arriba">
-    <button type="button" class="cam-x" onclick="cerrarCamara()">✕</button>
+    <button type="button" class="cam-x" aria-label="Cerrar la cámara" onclick="cerrarCamara()">✕</button>
     <span id="cam-tit">Tomar foto</span>
-    <button type="button" class="cam-x" onclick="voltearCamara()">🔄</button>
+    <button type="button" class="cam-x" aria-label="Voltear la cámara" onclick="voltearCamara()">🔄</button>
   </div>
   <div class="cam-guia" id="cam-guia"></div>
   <div class="cam-msg" id="cam-msg"></div>
   <div class="cam-abajo">
-    <button type="button" class="cam-gal" onclick="camDesdeGaleria()" title="Elegir de la galería">🖼️</button>
-    <button type="button" class="cam-disparo" id="cam-disparo" onclick="dispararCamara()"></button>
+    <button type="button" class="cam-gal" aria-label="Elegir de la galería" onclick="camDesdeGaleria()" title="Elegir de la galería">🖼️</button>
+    <button type="button" class="cam-disparo" id="cam-disparo" aria-label="Tomar la foto" onclick="dispararCamara()"></button>
     <span style="width:48px"></span>
   </div>
 </div>
@@ -2956,10 +2956,10 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <div id="pres" aria-hidden="true">
   <div id="pres-slides"></div>
   <div id="pres-bar" >
-    <button onclick="presSalir()" title="Salir">✕</button>
-    <button onclick="presIr(-1)" title="Anterior">‹</button>
+    <button aria-label="Salir de la presentación" onclick="presSalir()" title="Salir">✕</button>
+    <button aria-label="Lámina anterior" onclick="presIr(-1)" title="Anterior">‹</button>
     <span id="pres-cont">1 / 1</span>
-    <button onclick="presIr(1)" title="Siguiente">›</button>
+    <button aria-label="Lámina siguiente" onclick="presIr(1)" title="Siguiente">›</button>
   </div>
 </div>
 
@@ -5772,6 +5772,32 @@ function sbFetch(url, opt, reintento){
 }
 function sbGet(path){ return sbFetch(SB.url+'/rest/v1/'+path,{}).then(function(r){return r.ok?r.json():Promise.reject(r.status);}); }
 function sbPost(tabla,obj){ return sbFetch(SB.url+'/rest/v1/'+tabla,{method:'POST',body:JSON.stringify(obj)}).then(function(r){return r.ok?true:Promise.reject(r.status);}); }
+/* ── QUE LE DECIMOS AL QUE ESTA EN OBRA CUANDO ALGO FALLA ────────
+   sbGet/sbPost/sbRpc rechazan con el numero del estado HTTP, asi que
+   el mensaje que se veia era «No se pudo (¿sin internet?). 400».
+   Un 400 no le dice nada a un capataz, y el error crudo del navegador
+   a veces arrastra la direccion del servidor dentro — que despues
+   termina en la captura de pantalla que nos mandan por WhatsApp.
+   Aqui se traduce una sola vez, para toda la app. */
+function porQue(err){
+  var n = (typeof err==='number') ? err : parseInt(err,10);
+  if(!isNaN(n) && n>=100 && n<600){
+    if(n===401 || n===403) return 'Tu sesi\u00f3n venci\u00f3. Sal y vuelve a entrar a tu cuenta.';
+    if(n===404) return 'Eso ya no est\u00e1 en el servidor.';
+    if(n===409) return 'Ese registro ya existe.';
+    if(n===413) return 'El archivo pesa demasiado. Toma la foto de nuevo, m\u00e1s liviana.';
+    if(n===429) return 'Demasiados intentos seguidos. Espera un minuto.';
+    if(n>=500)  return 'El servidor no respondi\u00f3 bien. Vuelve a intentarlo en unos minutos.';
+    return 'El servidor rechaz\u00f3 los datos. Revisa lo que escribiste.';
+  }
+  var t=String((err && (err.message||err.error_description||err.msg)) || err || '');
+  if(!t || /Failed to fetch|NetworkError|Load failed|network|offline/i.test(t))
+    return 'Parece que no hay internet. Vuelve a intentarlo cuando tengas se\u00f1al.';
+  if(/timeout|abort/i.test(t)) return 'El servidor tard\u00f3 demasiado. Vuelve a intentarlo.';
+  if(/JWT|token/i.test(t))     return 'Tu sesi\u00f3n venci\u00f3. Sal y vuelve a entrar a tu cuenta.';
+  if(t.length>110)             return 'Vuelve a intentarlo en un momento.';
+  return t;
+}
 function sbRpc(fn,args){ return sbFetch(SB.url+'/rest/v1/rpc/'+fn,{method:'POST',body:JSON.stringify(args||{})}).then(function(r){return r.ok?r.json():Promise.reject(r.status);}); }
 function sbDel(path){ return sbFetch(SB.url+'/rest/v1/'+path,{method:'DELETE'}).then(function(r){return r.ok||Promise.reject(r.status);}); }
 function sbPatch(path,obj){ return sbFetch(SB.url+'/rest/v1/'+path,{method:'PATCH',body:JSON.stringify(obj)}).then(function(r){return r.ok||Promise.reject(r.status);}); }
@@ -5881,6 +5907,11 @@ function pintarRol(){
 /* La casa del trabajador cambia según si ya dejó sus datos: mientras no
    los tenga es la ficha de entrada; en cuanto entra, su casa es «Mi obra»
    y de ahí no se sale con «Atrás», solo cambiando de usuario. */
+/* «Volver al inicio» no puede ser una pantalla fija: el inicio del
+   trabajador es su obra y el del que gestiona es el tablero de su
+   empresa. Antes todos apuntaban a p-inicio (el inicio del rol viejo)
+   y el portero los rebotaba: el trabajador terminaba otra vez en el
+   formulario de entrada, escribiendo el codigo que ya habia escrito. */
 function inicioDelModo(){
   if(modoActivo()==='col') return (typeof yo==='function' && yo()) ? 'p-obra' : 'p-colab';
   return MODO_HOME[modoActivo()] || 'p-emp-home';
@@ -6747,7 +6778,7 @@ function accion(){
   S.i++;
   if(S.i>=S.orden.length){ final(); } else { pintarPregunta(); }
 }
-function salir(){ confirmar('¿Salir de la evaluación?','Se pierde lo respondido.', function(){ ir('p-inicio'); }, {si:'Sí, salir', no:'Seguir', icono:'📝'}); }
+function salir(){ confirmar('¿Salir de la evaluación?','Se pierde lo respondido.', function(){ ir(inicioDelModo()); }, {si:'Sí, salir', no:'Seguir', icono:'📝'}); }
 
 function final(){
   if(!exigirTema()) return;
@@ -7075,7 +7106,7 @@ function cargarConfig(){
 function guardarConfig(){
   var d=$('c-dest');
   guardar(LS.cfg,{via:$('c-via').value, destino:d?d.value.trim():'', cap:$('c-cap').value.trim(), obra:$('c-obra').value.trim()});
-  aviso('Guardado','Ya quedó configurado en este celular.','✅', function(){ ir('p-inicio'); });
+  aviso('Guardado','Ya quedó configurado en este celular.','✅', function(){ ir(inicioDelModo()); });
 }
 function activar(){
   var v=($('inp-cod').value||'').trim(), m=$('cod-msg');
@@ -7130,7 +7161,7 @@ function activar(){
         }
         setTimeout(function(){ ir('p-emp-home'); },1900);
       });
-    }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo verificar (¿sin internet?). '+err; });
+    }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo verificar. '+porQue(err); });
     return;
   }
   // 2) pegaron el enlace entero
@@ -7168,7 +7199,7 @@ function entrarCodigoTrab(){
       var e=rows[0]; guardar(LS_EMP,{codigo:cod, id:e.id, nombre:e.nombre});
       m.style.color='var(--ok)'; m.textContent='Listo: estás en '+e.nombre+'.';
       pintarColab();
-    }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo verificar (¿sin internet?). '+err; });
+    }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo verificar. '+porQue(err); });
     return;
   }
   m.textContent='Ese código no es válido. Revísalo tal como te llegó, con el guion.';
@@ -11419,7 +11450,7 @@ function arrancarSup(){
   ROL='sup'; guardar(LS_ROL,'sup');
   if(libre() && !leer(LS_SUP,null)){ ir('p-registro'); return; }
   var g=leer(LS.sec,null);
-  if(g && TEMAS && temasDelSectorExiste(g)){ S.sector=g; ir('p-inicio'); }
+  if(g && TEMAS && temasDelSectorExiste(g)){ S.sector=g; ir(inicioDelModo()); }
   else { ir('p-sector'); }
 }
 function entrarSesion(){
@@ -11557,7 +11588,7 @@ function entrarEvaluacion(o, clave){
   ir('p-eval'); return null;
 }
 function pintarEval(){
-  if(!EV){ ir('p-inicio'); return; }
+  if(!EV){ ir(inicioDelModo()); return; }
   var t=TEMAS[EV.d];
   $('ev-titulo').textContent=t.variante? t.tema+' · '+t.variante : t.tema;
   $('ev-sub').textContent='Te la mandó tu supervisor. Son '+t.preguntas.length+
@@ -11672,7 +11703,7 @@ function guardarRegistro(){
   /* al trabajo: charlas, capacitaciones, programa. Generar códigos es una
      opción más del inicio, no el sitio donde te deja la app. */
   var g=leer(LS.sec,null);
-  if(g && TEMAS && temasDelSectorExiste(g)){ S.sector=g; ir('p-inicio'); }
+  if(g && TEMAS && temasDelSectorExiste(g)){ S.sector=g; ir(inicioDelModo()); }
   else { ir('p-sector'); }
 }
 /* La marca de agua del CONTENIDO lleva el nombre del que pagó: si una captura
@@ -12868,7 +12899,7 @@ function guardarPuntaje(){
       cargarPuntajesDelMes(true).then(pintarTrabajadorDelMes);
       setTimeout(function(){ var n=$('pt-nombre'); if(n) n.value=''; PT={}; ptCriterios().forEach(function(c){PT[c.k]=1;}); pintarCriterios(); },900);
     })
-    .catch(function(err){ msg.style.color='var(--mal)'; msg.textContent='No se pudo guardar ('+err+'). Revisa el internet.'; });
+    .catch(function(err){ msg.style.color='var(--mal)'; msg.textContent='No se pudo guardar. '+porQue(err); });
 }
 
 /* ── EL TRABAJADOR DEL MES ────────────────────────────────────────
@@ -13485,7 +13516,7 @@ function pintarReporte(){
     .then(function(rows){ REP_LISTA=rows||[]; pintarListaReportes(); })
     .catch(function(err){
       var c2=$('rep-lista');
-      if(c2) c2.innerHTML='<p class="sub">No se pudo cargar ('+err+'). Revisa el internet.</p>';
+      if(c2) c2.innerHTML='<p class="sub">No se pudo cargar. '+esc(porQue(err))+'</p>';
     });
 }
 /* Arranca mostrando TODO. Esto ya se rompio una vez: la lista arrancaba
@@ -14337,7 +14368,7 @@ function htmlUnidad(ui, conCabecera){
   if(conCabecera){
     h+='<div class="uni-caja" id="uni-'+ui+'">';
     h+='<div class="uni-cab"><b>'+(modoDe(t)==='matriz'?'Trabajador ':'Unidad ')+(ui+1)+'</b>'+
-       (INSP.unidades.length>1?'<button type="button" class="btn sec" style="width:auto;margin:0;padding:6px 10px" onclick="quitarUnidad('+ui+')">✕</button>':'')+
+       (INSP.unidades.length>1?'<button type="button" class="btn sec" style="width:auto;margin:0;padding:6px 10px" aria-label="Quitar esta unidad" onclick="quitarUnidad('+ui+')">✕</button>':'')+
        '</div>';
     (t.c||[]).forEach(function(campo,ci){
       h+='<label>'+esc(campo)+'</label><input value="'+escA(u.campos[campo]||'')+'" '+
@@ -14431,7 +14462,7 @@ function htmlObservaciones(){
   INSP.obs.forEach(function(o,i){
     h+='<div class="uni-caja">'+
       '<div class="uni-cab"><b>Observación '+(i+1)+'</b>'+
-        (INSP.obs.length>1?'<button type="button" class="btn sec" style="width:auto;margin:0;padding:6px 10px" onclick="quitarObs('+i+')">✕</button>':'')+'</div>'+
+        (INSP.obs.length>1?'<button type="button" class="btn sec" style="width:auto;margin:0;padding:6px 10px" aria-label="Quitar esta observación" onclick="quitarObs('+i+')">✕</button>':'')+'</div>'+
       '<label>Descripción del acto o condición insegura</label>'+
       '<textarea oninput="INSP.obs['+i+'].desc=this.value" placeholder="Qué viste, dónde y por qué es peligroso">'+esc(o.desc||'')+'</textarea>'+
       '<label>Descripción de la causa</label>'+
@@ -14981,7 +15012,7 @@ function cargarPetar(){
   sbGet('sst_petar?empresa=eq.'+e.id+'&select=tipo,descripcion,responsable,desde,hasta,folio,fecha&order=creado.desc').then(function(rows){
     var h=''; rows.slice(0,15).forEach(function(p){ h+='<div class="tarj vidrio"><b>'+esc(p.tipo)+' · '+esc(p.folio||'')+'</b><small>'+esc(p.descripcion||'')+' · '+esc(p.responsable||'')+' · '+(p.desde||'')+'→'+(p.hasta||'')+'</small></div>'; });
     $('petar-lista').innerHTML=h||'<p class="sub">Ninguno emitido aún.</p>';
-  }).catch(function(err){ if($('petar-lista'))$('petar-lista').innerHTML='<p class="sub">No se pudo cargar ('+err+').</p>'; });
+  }).catch(function(err){ if($('petar-lista'))$('petar-lista').innerHTML='<p class="sub">No se pudo cargar. '+esc(porQue(err))+'</p>'; });
 }
 function abrirPetar(k){
   if(!reqEmpresa()) return;
@@ -15017,7 +15048,7 @@ function _emitirPetar(t, desc){
   sbPost('sst_petar',{empresa:e.id, tipo:t.n, descripcion:desc, ubicacion:($('pt-ubic').value||'').trim(), medidas:medidas,
     responsable:($('pt-resp').value||'').trim(), desde:$('pt-desde').value, hasta:$('pt-hasta').value, folio:folio, fecha:hoyISO()})
     .then(function(){ msg.style.color='#2f9e6f'; msg.textContent='Permiso emitido. Folio '+folio+'.'; setTimeout(function(){ ir('p-petar'); },900); })
-    .catch(function(err){ msg.style.color='#d2564f'; msg.textContent='No se pudo ('+err+').'; });
+    .catch(function(err){ msg.style.color='#d2564f'; msg.textContent='No se pudo. '+porQue(err); });
 }
 
 /* ══ LA FOTO, RÁPIDO ═══════════════════════════════════════════════
@@ -15556,7 +15587,7 @@ function pintarLista(){
         '<div style="display:flex;align-items:center;gap:10px">'+
           '<img src="'+p.firma+'" style="width:88px;height:44px;background:#fff;border-radius:8px;object-fit:contain">'+
           '<div style="flex:1"><b>'+esc(p.n)+'</b><small>'+(p.dni?'DNI '+esc(p.dni)+' · ':'')+esc(p.t)+'</small></div>'+
-          '<button class="btn sec" style="width:auto;margin:0;padding:7px 11px" onclick="quitarFirmante('+i+')">✕</button>'+
+          '<button class="btn sec" style="width:auto;margin:0;padding:7px 11px" aria-label="Quitar este firmante" onclick="quitarFirmante('+i+')">✕</button>'+
         '</div></div>';
     });
     h+='<button class="btn" style="margin-top:14px" onclick="cerrarLista()">Cerrar la lista y guardar</button>';
@@ -15857,7 +15888,7 @@ function entrarAMiObra(){
     if(!rows.length){ m.style.color='var(--mal)'; m.textContent='Ese código no existe. Pídeselo a tu supervisor.'; return; }
     var e=rows[0]; guardar(LS_EMP,{codigo:cod, id:e.id, nombre:e.nombre});
     m.textContent=''; ir('p-obra');
-  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo (¿sin internet?). '+err; });
+  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo. '+porQue(err); });
 }
 
 /* ── El QR del trabajador ─────────────────────────────────────────────
@@ -16044,15 +16075,24 @@ function tarjetaQRTrab(){
     '<div class="tarj vidrio" style="text-align:center;display:block">'+
     '<div class="marca" style="justify-content:center">◆ OBRASST · TRABAJADOR</div>'+
     '<img src="'+img+'" alt="QR" style="width:180px;height:180px;margin:8px auto;display:block;background:#fff;padding:8px;border-radius:10px">'+
-    '<b style="font-size:18px">'+esc((y.n+' '+y.a).trim())+'</b><br>'+
+    '<b style="font-size:18px">'+esc(nombreDeTrab(y))+'</b><br>'+
     '<small class="sub">DNI '+esc(y.dni)+(y.c?' · '+esc(y.c):'')+'</small><br>'+
     '<small class="sub">'+esc(e.nombre||'')+'</small>'+
     '<div class="aviso" style="margin-top:11px;font-size:12.5px;text-align:left">Este QR dice <b>quién eres y en qué obra estás</b>. No es una habilitación: para altura, andamios o espacios confinados tu empresa te tiene que dar la credencial.</div>'+
     '</div>'+
     '<div class="dos" style="margin-top:10px">'+
-      '<button class="btn sec" style="margin:0" onclick="descargarCred(\''+img+'\',\''+escA((y.n+' '+y.a).trim()).replace(/'/g,'')+'\')">Descargar</button>'+
+      '<button class="btn sec" style="margin:0" onclick="descargarCred(\''+img+'\',\''+escA(nombreDeTrab(y)).replace(/'/g,'')+'\')">Descargar</button>'+
       '<button class="btn sec" style="margin:0" onclick="ir(\'p-trab-entrar\')">Cambiar mis datos</button>'+
     '</div>';
+}
+
+/* Una ficha guardada por una versión vieja puede no traer «n» y «a».
+   Antes eso pintaba «undefined undefined» en la credencial que el
+   trabajador enseña en la puerta. Ahora se cae a lo que sí haya. */
+function nombreDeTrab(y){
+  if(!y) return '—';
+  var x=((y.n||'')+' '+(y.a||'')).trim();
+  return x || (y.nombre||'').trim() || '—';
 }
 
 /* ── Mi obra ─────────────────────────────────────────────────────────── */
@@ -16426,7 +16466,7 @@ function publicarNoticia(){
   sbPost('sst_doc',{empresa:e.id, hoja:'noticias', nombre:t, nota:x||null, url:u||null})
     .then(function(){ msg.style.color='var(--ok)'; msg.textContent='Publicada. Ya la ve toda la obra.';
       $('noti-t').value=''; $('noti-x').value=''; $('noti-u').value=''; cargarNoticias(); })
-    .catch(function(err){ msg.style.color='var(--mal)'; msg.textContent='No se pudo ('+err+').'; });
+    .catch(function(err){ msg.style.color='var(--mal)'; msg.textContent='No se pudo. '+porQue(err); });
 }
 function quitarNoticia(id){
   if(!puedePublicarNoticias()){ return; }
@@ -16494,7 +16534,7 @@ function cargarRecord(){
          '<button class="btn sec" style="margin-top:8px" onclick="borrarRecord(\''+r.id+'\')">Listo, quitar</button></div>';
     });
     $('rec-lista').innerHTML=h||'<p class="sub">Sin recordatorios. Agrega el primero arriba.</p>';
-  }).catch(function(err){ if($('rec-lista'))$('rec-lista').innerHTML='<p class="sub">No se pudo cargar ('+err+').</p>'; });
+  }).catch(function(err){ if($('rec-lista'))$('rec-lista').innerHTML='<p class="sub">No se pudo cargar. '+esc(porQue(err))+'</p>'; });
 }
 function borrarRecord(id){ sbDel('sst_recordatorio?id=eq.'+id).then(function(){ cargarRecord(); }).catch(function(err){ aviso('No se pudo', String(err), '📡'); }); }
 
@@ -16748,7 +16788,7 @@ function pintarSaludo(){
   var nom=miNombre();
   if(nom){
     c.innerHTML = franjaDelDia()+', <b>'+esc(nom)+'</b>. ¿Qué tenemos para hoy?'+
-                  '<button class="lapiz" onclick="ponerMiNombre()" title="Cambiar mi nombre">✏️</button>';
+                  '<button class="lapiz" aria-label="Cambiar mi nombre" onclick="ponerMiNombre()" title="Cambiar mi nombre">✏️</button>';
   }else{
     c.innerHTML = 'Hola 👋 ¿Qué tenemos para hoy? '+
                   '<button class="pon" onclick="ponerMiNombre()">Dime tu nombre</button>';
@@ -16980,7 +17020,7 @@ function quitarDoc(id, esLocal){
       docLocalSet(DOC_LEAF, docLocal(DOC_LEAF).filter(function(d){return d.id!==id;}));
       pintarDoc(); return;
     }
-    sbDel('sst_doc?id=eq.'+id).then(pintarDoc).catch(function(err){ aviso('No se pudo quitar','Revisa tu internet. '+err,'📡'); });
+    sbDel('sst_doc?id=eq.'+id).then(pintarDoc).catch(function(err){ aviso('No se pudo quitar', porQue(err), '📡'); });
   }, {si:'Sí, quitar', no:'Cancelar', icono:'📄'});
 }
 function volverDeDoc(){ ir('p-emp-home'); }
@@ -17224,7 +17264,7 @@ function pedirAcceso(){
      }
      m.style.color='var(--ok)';
      m.innerHTML='✓ Solicitud enviada a <b>'+esc(j.dueno||'quien la tiene')+'</b>. Cuando te acepte, la empresa te aparecerá en «¿dónde vas a trabajar hoy?».';
-   }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo enviar (¿sin internet?). '+err; });
+   }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo enviar. '+porQue(err); });
 }
 
 // ---- el dueño responde ----
@@ -17369,7 +17409,7 @@ function generarInvitacion(){
     ['inv-correo','inv-doc','inv-nombre','inv-proy'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
     cargarInvitaciones();
   })
-  .catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo (¿sin internet?). '+err; });
+  .catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo. '+porQue(err); });
 }
 function invCompartir(t){
   if(navigator.share){ navigator.share({text:t}).catch(function(){}); return; }
@@ -17475,7 +17515,7 @@ function canjearInvitacion(){
     refrescarPlan().then(function(){ if(typeof pintarEmpHome==='function') pintarEmpHome(); });
     ir('p-emp-home');
     aviso('Bienvenido a '+(j.nombre||'la empresa'), det, '🤝');
-  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo (¿sin internet?). '+err; });
+  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo. '+porQue(err); });
 }
 
 // =================================================================
@@ -18716,7 +18756,7 @@ function entrarEmpresaCorreo(){
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[]; MIS_EMP=[];
     refrescarPlan().then(function(){ if(typeof pintarEmpHome==='function') pintarEmpHome(); });
     ir('p-emp-home');
-  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo buscar (¿sin internet?). '+err; });
+  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo buscar. '+porQue(err); });
 }
 // ---- crear la empresa (el servidor genera el código y me deja como dueño) ----
 /* ── LA PRUEBA DE 30 DIAS, SIN PEDIRLE NADA A NADIE ───────────────
@@ -18793,7 +18833,7 @@ function crearEmpresaCorreo(){
       aviso('Empresa creada','Tu código es '+j.codigo+'. Guárdalo: con él entra tu equipo de gestión y con él entran tus trabajadores a las charlas.'+
             avisoDePrueba(pr), '🏢', function(){ ir('p-emp-home'); });
     });
-  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo crear (¿sin internet?). '+err; });
+  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo crear. '+porQue(err); });
 }
 function compartirEmpCod(){
   var e=empActiva(); if(!e){ ir('p-emp-entrar'); return; }
@@ -18810,7 +18850,7 @@ function entrarTrabEmpresa(){
     if(!rows.length){ m.style.color='var(--mal)'; m.textContent='Ese código no existe. Pídeselo a tu supervisor o a la empresa.'; return; }
     var e=rows[0]; guardar(LS_EMP,{codigo:cod, id:e.id, nombre:e.nombre});
     if(PORTAL_VUELVE){ PORTAL_VUELVE=0; ir('p-obra'); } else ir('p-reporte-nuevo');
-  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo (¿sin internet?). '+err; });
+  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo. '+porQue(err); });
 }
 function pintarEmpresa(){
   var e=empActiva(), c=$('empresa-cuerpo');
@@ -18878,7 +18918,7 @@ function pintarMsds(){
          '<button class="btn sec" style="margin:0" onclick="borrarMsds(\''+m.id+'\')">Quitar</button></div></div>';
     });
     cont.innerHTML=h;
-  }).catch(function(err){ cont.innerHTML='<p class="sub">No se pudo cargar (¿sin internet?). '+err+'</p>'; });
+  }).catch(function(err){ cont.innerHTML='<p class="sub">No se pudo cargar. '+esc(porQue(err))+'</p>'; });
 }
 function guardarMsds(){
   var e=empActiva(); if(!e){ ir('p-empresa'); return; }
@@ -18897,7 +18937,7 @@ function guardarMsds(){
     paso=sbSubir(nombre,f).then(grabar);
   } else { paso=grabar(url); }
   paso.then(function(){ msg.style.color='var(--verde,#2f9e6f)'; msg.textContent='Ficha guardada.'; setTimeout(function(){ ir('p-msds'); },500); })
-      .catch(function(err){ msg.style.color='#d2564f'; msg.textContent='No se pudo guardar ('+err+'). Revisa el internet o el tamaño del archivo.'; });
+      .catch(function(err){ msg.style.color='#d2564f'; msg.textContent='No se pudo guardar. '+porQue(err); });
 }
 function borrarMsds(id){
   confirmar('¿Quitar esta ficha MSDS?', '', function(){
@@ -18928,7 +18968,7 @@ function verConsolidado(){
     if(!cons.length) h+='<p class="sub">Aún no hay constancias subidas.</p>';
     cons.slice(0,20).forEach(function(c){ h+='<div class="tarj vidrio"><b>'+esc(c.trabajador)+'</b><small>'+esc(c.tema||'')+' · '+esc(c.resultado||'')+' · '+esc(c.fecha||'')+'</small></div>'; });
     $('cons-cuerpo').innerHTML=h;
-  }).catch(function(err){ $('cons-cuerpo').innerHTML='<p class="sub">No se pudo cargar ('+err+').</p>'; });
+  }).catch(function(err){ $('cons-cuerpo').innerHTML='<p class="sub">No se pudo cargar. '+esc(porQue(err))+'</p>'; });
 }
 
 /* ================= TALLERES ================= */
