@@ -32,106 +32,170 @@
 
 /* ══════════════════════════════════════════════════════════════════
    TORRE DE CONTROL SSOMA
-   Es la unica pantalla de la app pensada para un monitor: el lider no
-   la abre en el andamio, la abre en su escritorio con cuatro obras
-   encima. Por eso tiene columna lateral, filtro por proyecto y seis
-   paginas; en el celular todo eso se apila y la columna se esconde.
+   No es una pantalla mas de la app: es una pagina web. La app es de
+   obra —oscura, angosta, para un celular con sol encima—; la Torre es
+   de oficina: fondo claro, papel blanco, todo el ancho del monitor.
+   Por eso trae SU PROPIA paleta y no hereda el tema de la app: aqui
+   el gerente imprime, exporta y enseña en una reunion, y eso se hace
+   en claro.  Y no hay boton de «modo laptop»: el tamaño de la pantalla
+   ya dice en que esta el usuario.
    ══════════════════════════════════════════════════════════════════ */
-body.torre .wrap{max-width:1420px;padding:0}
-body.torre .pie-plan{display:none}
-.tc{display:block}
-.tc-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
-  padding:12px 16px;border-bottom:1px solid rgba(var(--w),.12);
-  position:sticky;top:0;z-index:6;background:var(--fondo)}
-.tc-marca{font-weight:800;letter-spacing:.02em;color:var(--oro);white-space:nowrap}
-.tc-titp{font-size:14px;color:var(--gris);white-space:nowrap}
-.tc-top .der{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.tc-bt{border:1px solid rgba(var(--w),.18);background:rgba(var(--w),.05);color:var(--tinta);
-  border-radius:9px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
-.tc-bt:hover{background:rgba(var(--w),.1)}
-.tc-bt.on{border-color:var(--oro);color:var(--oro)}
-.tc-yo{font-size:13px;color:var(--gris);white-space:nowrap}
-.tc-badge{background:var(--oro);color:#0B2A3A;border-radius:6px;padding:3px 8px;
-  font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-.tc-cuerpo{display:grid;grid-template-columns:250px minmax(0,1fr);gap:0;align-items:start}
+body.torre{
+  --t-plano:#F1F4F7; --t-sup:#FFFFFF;
+  --t-tinta:#0B1A24; --t-tinta2:#43596A;
+  /* el gris de las etiquetas: #78909F daba 3.3:1 sobre blanco y no
+     llegaba al minimo de la norma. Este da 4.9 sobre blanco y 4.4
+     sobre el papel gris del fondo. */
+  --t-mudo:#566E7E;
+  --t-regla:#E2E8ED; --t-regla2:#EDF1F4;
+  --t-marca:#0B2A3A; --t-oro:#F5B700;
+  --t-s1:#2a78d6; --t-s2:#eb6834; --t-s3:#1baf7a;
+  --t-pista:#DDE6EE;
+  --t-ok:#0ca30c; --t-aviso:#fab219; --t-grave:#ec835a; --t-critico:#d03b3b;
+  --t-ambar:#8a5f00;   /* el ámbar, ya legible sobre papel */
+  /* los mismos verdes y rojos, pero en su version de LETRA: el color
+     vivo se queda para barras y donas, donde no hay que leer nada */
+  --t-ok-tx:#0a7d0a; --t-cr-tx:#b32626;
+  --t-sombra:0 1px 2px rgba(11,26,36,.05), 0 0 0 1px rgba(11,26,36,.07);
+  background:var(--t-plano)!important; color:var(--t-tinta);
+}
+/* el fondo de obra —el video, el haz y el tinte— se apaga: aqui estorba */
+body.torre #fondo, body.torre #haz, body.torre #tinte, body.torre .pie-plan,
+body.torre #navbar, body.torre .pwa-banda,
+/* el cartel de «instalar la app» es para el celular de obra; encima de un
+   tablero de gerencia tapa medio informe y no viene a cuento */
+body.torre #instalar, body.torre #inst-cap, body.torre #inst-flecha,
+body.torre #inst-chip, body.torre #calc, body.torre #calc-velo,
+body.torre #marca-agua, body.torre #cortina{display:none!important}
+body.torre .wrap{max-width:none!important;width:100%;padding:0!important;margin:0}
+body.torre #p-gestor{padding:0;margin:0}
+body.torre #p-gestor.pantalla{animation:none}
+
+.tc{display:block;min-height:100vh;background:var(--t-plano);color:var(--t-tinta);
+  font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+.tc-top{position:sticky;top:0;z-index:40;background:var(--t-marca);color:#fff;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 18px}
+.tc-marca{font-weight:800;letter-spacing:.01em;color:var(--t-oro);white-space:nowrap;font-size:15px}
+.tc-titp{font-size:13.5px;color:rgba(255,255,255,.72);white-space:nowrap}
+.tc-top .der{margin-left:auto;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.tc-bt{border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.06);color:#fff;
+  border-radius:7px;padding:6px 11px;font-size:12.5px;font-weight:600;cursor:pointer;
+  white-space:nowrap;font-family:inherit;line-height:1.3;flex:0 0 auto;width:auto}
+select.tc-bt{max-width:190px;padding-right:8px}
+/* en el celular la cabecera se queda en dos filas: los botones se
+   vuelven su ícono y el correo se va, que ya está en la app */
+/* la cabecera se aprieta sola: primero pierde el rótulo de la página y
+   el correo, después las palabras de los botones, y al final el
+   distintivo. Nunca hay que elegir un «modo»: lo elige la pantalla. */
+@media(max-width:1100px){ .tc-titp,.tc-yo{display:none} }
+@media(max-width:900px){ .tc-bt .lb{display:none} }
+@media(max-width:760px){
+  .tc-badge{display:none}
+  select.tc-bt{max-width:148px}
+  .tc-top{padding:9px 12px;gap:8px}
+}
+select.tc-bt option{background:var(--t-sup);color:var(--t-tinta)}
+.tc-bt:hover{background:rgba(255,255,255,.15)}
+.tc-yo{font-size:12.5px;color:rgba(255,255,255,.78);white-space:nowrap;margin-left:4px}
+.tc-badge{background:var(--t-oro);color:var(--t-marca);border-radius:5px;padding:3px 8px;
+  font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.tc-cuerpo{display:grid;grid-template-columns:246px minmax(0,1fr);align-items:start}
 body.torre.sinrail .tc-cuerpo{grid-template-columns:minmax(0,1fr)}
 body.torre.sinrail .tc-rail{display:none}
-.tc-rail{border-right:1px solid rgba(var(--w),.12);padding:16px 12px 40px;
-  position:sticky;top:57px;max-height:calc(100vh - 57px);overflow-y:auto}
-.tc-rt{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--gris);
-  margin:16px 4px 7px;font-weight:800}
+.tc-rail{background:var(--t-sup);border-right:1px solid var(--t-regla);
+  padding:16px 13px 44px;position:sticky;top:47px;max-height:calc(100vh - 47px);overflow-y:auto}
+.tc-rt{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t-mudo);
+  margin:20px 6px 8px;font-weight:800}
 .tc-rt:first-child{margin-top:0}
-.tc-nav{display:flex;flex-direction:column;gap:2px}
-.tc-nav button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;
-  border:0;background:transparent;color:var(--tinta);padding:9px 10px;border-radius:9px;
-  font-size:14px;cursor:pointer;font-weight:600}
-.tc-nav button:hover{background:rgba(var(--w),.07)}
-.tc-nav button.on{background:rgba(var(--w),.1);box-shadow:inset 2px 0 0 var(--oro)}
-.tc-nav .ic{width:18px;text-align:center;flex:0 0 18px}
-.tc-al{display:flex;gap:9px;width:100%;text-align:left;border:1px solid rgba(var(--w),.12);
-  background:rgba(var(--w),.04);color:var(--tinta);border-radius:11px;padding:10px;
-  margin-bottom:7px;cursor:pointer;font-size:13px;line-height:1.35}
-.tc-al:hover{background:rgba(var(--w),.08)}
-.tc-al .pt{width:7px;height:7px;border-radius:50%;flex:0 0 7px;margin-top:5px}
-.tc-al b{display:block;font-size:13px;font-weight:700}
-.tc-al span.d{display:block;color:var(--gris);font-size:12px;margin-top:2px}
-.tc-doc{display:flex;align-items:center;gap:8px;padding:7px 4px;font-size:13px;
-  border-bottom:1px solid rgba(var(--w),.07);cursor:pointer}
-.tc-doc .tx{flex:1;min-width:0}
-.tc-doc .v{color:var(--gris);font-size:11.5px;white-space:nowrap}
-.tc-nota{font-size:11.5px;color:var(--gris);line-height:1.5;margin-top:12px;padding:0 4px}
-.tc-main{padding:16px 18px 60px;min-width:0}
+.tc-nav{display:flex;flex-direction:column;gap:1px}
+.tc-nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  border:0;background:transparent;color:var(--t-tinta2);padding:9px 10px;border-radius:7px;
+  font-size:13.5px;cursor:pointer;font-weight:600;font-family:inherit}
+.tc-nav button:hover{background:var(--t-regla2);color:var(--t-tinta)}
+.tc-nav button.on{background:var(--t-regla2);color:var(--t-tinta);font-weight:700;
+  box-shadow:inset 2.5px 0 0 var(--t-oro)}
+.tc-nav .ic{width:17px;text-align:center;flex:0 0 17px;color:var(--t-mudo)}
+.tc-nav button.on .ic{color:var(--t-tinta)}
+.tc-al{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:start;
+  width:100%;text-align:left;border:1px solid var(--t-regla);background:var(--t-sup);
+  color:var(--t-tinta);border-radius:8px;padding:9px 10px;margin-bottom:6px;cursor:pointer;
+  font-size:12.5px;line-height:1.35;font-family:inherit}
+.tc-al:hover{border-color:var(--t-pista);background:var(--t-regla2)}
+.tc-al .pt{width:7px;height:7px;border-radius:50%;margin-top:5px}
+.tc-al b{display:block;font-size:12.5px;font-weight:700}
+.tc-al span.d{display:block;color:var(--t-mudo);font-size:11.5px;margin-top:2px}
+.tc-doc{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:baseline;
+  padding:7px 5px;font-size:12.5px;border-bottom:1px solid var(--t-regla2);cursor:pointer}
+.tc-doc .pt{width:6px;height:6px;border-radius:50%}
+.tc-doc .tx{min-width:0}
+.tc-doc .v{color:var(--t-mudo);font-size:11px;white-space:nowrap}
+.tc-nota{font-size:11px;color:var(--t-mudo);line-height:1.55;margin-top:14px;padding:0 5px}
+.tc-main{padding:18px 20px 64px;min-width:0}
 .tc-chips{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
-.tc-chips .et{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--gris);
-  font-weight:800;margin-right:4px}
-.tc-chip{border:1px solid rgba(var(--w),.18);background:transparent;color:var(--gris);
-  border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer;font-weight:600}
-.tc-chip.on{background:rgba(var(--w),.12);color:var(--tinta);border-color:rgba(var(--w),.3)}
-.tc-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:11px;margin-bottom:16px}
-.tc-kpi{border:1px solid rgba(var(--w),.12);border-radius:14px;padding:13px 14px 12px;
-  background:rgba(var(--w),.04)}
-.tc-kpi .et{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gris);font-weight:800}
-.tc-kpi .v{font-size:31px;font-weight:800;line-height:1.15;margin-top:6px;font-variant-numeric:tabular-nums}
-.tc-kpi .v small{font-size:14px;font-weight:600;color:var(--gris);margin-left:4px}
-.tc-est{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;
-  border-radius:6px;padding:3px 8px;margin-top:8px}
-.e-ok{background:rgba(47,191,113,.16);color:var(--ok)}
-.e-av{background:rgba(245,183,0,.18);color:var(--oro)}
-.e-cr{background:rgba(229,72,77,.16);color:var(--mal)}
-.e-gr{background:rgba(var(--w),.08);color:var(--gris)}
-.tc-rej{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}
-.tc-card{border:1px solid rgba(var(--w),.12);border-radius:14px;padding:14px 15px 15px;
-  background:rgba(var(--w),.035);min-width:0}
+.tc-chips .et{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t-mudo);
+  font-weight:800;margin-right:5px}
+.tc-chip{border:1px solid var(--t-regla);background:var(--t-sup);color:var(--t-tinta2);
+  border-radius:999px;padding:6px 14px;font-size:12.5px;cursor:pointer;font-weight:600;font-family:inherit}
+.tc-chip:hover{border-color:var(--t-pista)}
+.tc-chip.on{background:var(--t-marca);color:#fff;border-color:var(--t-marca)}
+.tc-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:13px;margin-bottom:14px}
+.tc-kpi{background:var(--t-sup);border-radius:10px;box-shadow:var(--t-sombra);padding:13px 15px 12px}
+.tc-kpi .et{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--t-mudo);font-weight:800}
+.tc-kpi .v{font-size:32px;font-weight:800;line-height:1.12;margin-top:5px;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--t-tinta)}
+.tc-kpi .v small{font-size:13px;font-weight:600;color:var(--t-mudo);margin-left:4px;letter-spacing:0}
+.tc-est{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+  border-radius:5px;padding:3px 8px;margin-top:9px;line-height:1.3}
+.e-ok{background:rgba(12,163,12,.11);color:#0a7d0a}
+.e-av{background:rgba(250,178,25,.16);color:#8a5f00}
+.e-cr{background:rgba(208,59,59,.10);color:#b32626}
+.e-gr{background:var(--t-regla2);color:var(--t-mudo)}
+.tc-rej{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:13px;align-items:start}
+.tc-card{background:var(--t-sup);border-radius:10px;box-shadow:var(--t-sombra);padding:15px 16px 15px;min-width:0}
 .tc-card.ancha{grid-column:1/-1}
-.tc-card h3{font-size:15px;margin:0 0 3px;font-weight:700}
-.tc-card .sub{font-size:12.5px;color:var(--gris);margin:0 0 12px;line-height:1.5}
-.tc-vacio{border:1px dashed rgba(var(--w),.22);border-radius:11px;padding:14px;
-  font-size:13px;color:var(--gris);line-height:1.55}
-.tc-tab{width:100%;border-collapse:collapse;font-size:13px}
-.tc-tab th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--gris);font-weight:800;padding:0 8px 8px 0;border-bottom:1px solid rgba(var(--w),.12)}
-.tc-tab td{padding:9px 8px 9px 0;border-bottom:1px solid rgba(var(--w),.07);vertical-align:top}
-.tc-tab td.n,.tc-tab th.n{text-align:right;font-variant-numeric:tabular-nums;padding-right:0;padding-left:16px;white-space:nowrap}
-.tc-tab th+th,.tc-tab td+td{padding-left:14px}
-.tc-scroll{overflow-x:auto}
-.tc-b{display:flex;flex-direction:column;gap:9px}
-.tc-bf{display:grid;grid-template-columns:minmax(120px,1.7fr) minmax(0,3fr) auto;gap:9px;align-items:center;font-size:13px}
+body.torre label{color:var(--t-tinta)}
+.tc-card h3{font-size:15px;margin:0 0 3px;font-weight:700;color:var(--t-tinta);letter-spacing:-.01em}
+.tc-card .sub{font-size:12.5px;color:var(--t-tinta2);margin:0 0 13px;line-height:1.5}
+.tc-vacio{border:1px dashed var(--t-pista);border-radius:8px;padding:14px;background:var(--t-regla2);
+  font-size:12.5px;color:var(--t-tinta2);line-height:1.55}
+.tc-vacio b{color:var(--t-tinta)}
+.tc-tab{width:100%;border-collapse:collapse;font-size:13px;color:var(--t-tinta)}
+.tc-tab th{text-align:left;font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--t-mudo);font-weight:800;padding:0 0 9px 0;border-bottom:1px solid var(--t-regla)}
+.tc-tab td{padding:10px 0;border-bottom:1px solid var(--t-regla2);vertical-align:top}
+.tc-tab tr:last-child td{border-bottom:0}
+.tc-tab td.n,.tc-tab th.n{text-align:right;font-variant-numeric:tabular-nums;padding-left:18px;white-space:nowrap}
+.tc-tab th+th,.tc-tab td+td{padding-left:16px}
+.tc-tab small{color:var(--t-mudo)}
+.tc-scroll{overflow-x:auto;margin:0 -16px;padding:0 16px}
+.tc-b{display:flex;flex-direction:column;gap:10px}
+.tc-bf{display:grid;grid-template-columns:minmax(120px,1.6fr) minmax(0,3fr) auto;gap:11px;
+  align-items:center;font-size:12.5px;color:var(--t-tinta2)}
 .tc-bf .et{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tc-riel{height:9px;border-radius:5px;background:rgba(var(--w),.1);overflow:hidden;display:flex}
-.tc-val{height:100%;border-radius:5px}
-.tc-num{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap;font-size:12.5px}
-.tc-ley{display:flex;flex-wrap:wrap;gap:12px;margin-top:11px;font-size:12.5px;color:var(--gris)}
+.tc-riel{height:8px;border-radius:4px;background:var(--t-regla2);overflow:hidden;display:flex}
+.tc-val{height:100%;border-radius:4px}
+.tc-num{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap;font-size:12.5px;color:var(--t-tinta)}
+.tc-ley{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:12.5px;color:var(--t-tinta2)}
 .tc-ley .pt{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px}
-.tc-ley b{color:var(--tinta);font-variant-numeric:tabular-nums;margin-left:5px}
+.tc-ley b{color:var(--t-tinta);font-variant-numeric:tabular-nums;margin-left:5px}
 .tc-pir{display:flex;flex-direction:column;gap:5px;align-items:center}
-.tc-pe{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;
-  padding:9px 12px;font-size:13px;font-weight:700;color:#0B2A3A}
-.tc-pe.sin{background:transparent!important;border:1px dashed rgba(var(--w),.3);color:var(--gris)}
-@media(max-width:900px){
+.tc-pe{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:6px;
+  padding:9px 12px;font-size:12.5px;font-weight:700;white-space:nowrap;color:var(--t-tinta)}
+.tc-pe.oscuro{color:#fff}
+.tc-pe.sin{background:var(--t-regla2)!important;border:1px dashed var(--t-pista);color:var(--t-mudo);font-weight:600}
+/* ── la pantalla manda: no hay boton de «modo laptop» ── */
+@media(max-width:980px){
   .tc-cuerpo{grid-template-columns:minmax(0,1fr)}
-  .tc-rail{position:static;max-height:none;border-right:0;border-bottom:1px solid rgba(var(--w),.12)}
-  .tc-main{padding:14px 14px 60px}
-  body.torre .wrap{padding:0}
+  .tc-rail{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--t-regla)}
+  .tc-main{padding:15px 14px 60px}
+  .tc-kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .tc-rej{grid-template-columns:minmax(0,1fr)}
+  .tc-kpi .v{font-size:27px}
+}
+@media print{
+  body.torre .tc-top,body.torre .tc-rail,body.torre .tc-chips{display:none!important}
+  body.torre .tc-main{padding:0}
+  .tc-card{break-inside:avoid;box-shadow:none;border:1px solid #ccc}
 }
 
 /* ══ APARIENCIA ═══════════════════════════════════════════════════
@@ -280,17 +344,7 @@ body{background:#071C27;color:var(--tinta);font-family:system-ui,-apple-system,'
 @keyframes respira{0%,100%{opacity:.55}50%{opacity:1}}
 @media (prefers-reduced-motion:reduce){#haz{animation:none}}
 .wrap{max-width:560px;margin:0 auto;padding:18px 16px 40px;position:relative;z-index:1}
-/* El líder pasa la mitad del día en una laptop. En el celular la app
-   vive en 560px porque eso es lo que hay; en un monitor esos 560px son
-   una columna flaca en medio de la nada. El modo ancho le devuelve el
-   espacio y acomoda sus tarjetas en dos columnas. No cambia nada de la
-   información: cambia cuánta cabe sin bajar el dedo. */
-body.ancho .wrap{max-width:1040px}
-@media(min-width:900px){
-  body.ancho .lider-rejilla{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
-  body.ancho .lider-rejilla>*{margin:0}
-  body.ancho .kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
-}
+
 /* --- vidrio: el mismo truco de Talentos, en tono profesional --- */
 .vidrio{position:relative;background:rgba(var(--w),.045);
   -webkit-backdrop-filter:blur(14px) saturate(120%);backdrop-filter:blur(14px) saturate(120%);
@@ -2515,10 +2569,10 @@ input,textarea{-webkit-user-select:text;user-select:text}
       <span class="tc-marca">◆ OBRASST</span>
       <span class="tc-titp" id="tc-titp">Resumen ejecutivo</span>
       <span class="der">
-        <button class="tc-bt" onclick="tcMes()" id="tc-mes-bt">Cierre</button>
-        <button class="tc-bt" onclick="tcExcel()">↓ Excel</button>
-        <button class="tc-bt" onclick="tcPDF()">⎙ PDF</button>
-        <button class="tc-bt" onclick="ir('p-torre-cfg')">⚙ Qué medir</button>
+        <select class="tc-bt" id="tc-mes-sel" onchange="tcPonerMes(this.value)" aria-label="Mes de cierre"></select>
+        <button class="tc-bt" onclick="tcExcel()" title="Descargar en Excel">↓<span class="lb"> Excel</span></button>
+        <button class="tc-bt" onclick="tcPDF()" title="Imprimir o guardar en PDF">⎙<span class="lb"> PDF</span></button>
+        <button class="tc-bt" onclick="tcVer('cfg')" title="Cambiar las metas">⚙<span class="lb"> Qué medir</span></button>
         <span class="tc-yo" id="tc-yo"></span>
         <span class="tc-badge" id="tc-papel">LÍDER SSOMA</span>
         <button class="tc-bt" onclick="tcSalir()">Salir</button>
@@ -2531,10 +2585,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   </div>
 </section>
 
-<section class="pantalla" id="p-torre-cfg">
-  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-gestor')">‹ Atrás</button><span>Qué medir</span></div>
-  <div id="torre-cfg-cuerpo"></div>
-</section>
+
 
 <section class="pantalla" id="p-noticias">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Noticias</span></div>
@@ -5795,7 +5846,7 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             'p-accidentes':1,'p-acc-nuevo':1,'p-acc-ver':1,
             'p-gestion-quien':1,'p-lider-no':1,
             'p-actividades':1,'p-invitar':1,'p-invitacion':1,
-            'p-buenas':1,'p-buena-nueva':1,'p-buena-ver':1,'p-torre-cfg':1,
+            'p-buenas':1,'p-buena-nueva':1,'p-buena-ver':1,
             'p-semanal':1,'p-semanal-dia':1,'p-estadistica':1,'p-carpeta':1,'p-foto':1,'p-mensual':1,
             'p-escaneos':1,'p-escaneo-nuevo':1,'p-escaneo-ver':1,'p-escaneo-enviar':1,
             'p-reporte-cerrar':1,'p-reporte-excel':1,'p-qr-docs':1,'p-qr-doc':1,
@@ -6013,7 +6064,7 @@ function _ir(p){
   if(p==='p-noticias')pintarNoticias();
   if(p==='p-gestor') tcEntrar();
   else { try{ document.body.classList.remove('torre','sinrail'); }catch(_t){} }
-  if(p==='p-torre-cfg')pintarTorreCfg();
+
   if(p==='p-credencial')pintarCredLista(); if(p==='p-cred-nueva')prepCred(); if(p==='p-record')pintarRecord();
   if(p==='p-normas')pintarNormas();
   if(p==='p-emp-home')pintarEmpHome(); if(p==='p-doc')pintarDoc();
@@ -6052,7 +6103,7 @@ function _ir(p){
 /* la pantalla que explica por que no puede entrar no lleva el pie del
    plan: seria decirle dos veces lo mismo, y la segunda con precio */
 var SIN_PIE={'p-emp-home':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-eval':1,'p-juego':1,
-             'p-gestion-quien':1,'p-lider-no':1,'p-invitacion':1,'p-gestor':1,'p-torre-cfg':1,
+             'p-gestion-quien':1,'p-lider-no':1,'p-invitacion':1,'p-gestor':1,
              'p-firma':1,'p-final':1,'p-listo':1,'p-datos':1,'p-colab':1,'p-acceso':1};
 function pintarPieDePlan(p){
   var pant=document.getElementById(p); if(!pant) return;
@@ -16961,7 +17012,6 @@ function pintarEmpHome(){
   }
   if(pn) pn.innerHTML = hp;
   var c=$('emp-home-cuerpo'); c.innerHTML='';
-  try{ aplicarAncho(); }catch(_an){}
   /* El tablero primero: la data del mes sin abrir nada. */
   c.appendChild(tableroDom());
   if(puedeSerLider() && papelElegido()==='lider'){
@@ -17792,18 +17842,6 @@ function borrarBuena(id){
 //  obra y con quien. Las carpetas siguen ahi, una linea mas abajo,
 //  para el dia que las necesite.
 // =================================================================
-var LS_ANCHO='sstc_ancho';
-function anchoActivo(){ return leer(LS_ANCHO,false)===true; }
-function aplicarAncho(){
-  try{
-    var b=document.body, c=(b.className||'').replace(/\bancho\b/g,'').replace(/\s+/g,' ').trim();
-    b.className = anchoActivo() ? (c+' ancho').trim() : c;
-  }catch(e){}
-}
-function alternarAncho(){
-  guardar(LS_ANCHO, !anchoActivo()); aplicarAncho();
-  if(typeof pintarEmpHome==='function') pintarEmpHome();
-}
 var LID_PEND={solicitudes:0, invitaciones:0, accidentes:0, cargado:false, cuando:0};
 /* Se vuelve a preguntar como mucho cada dos minutos. Sin este freno el
    inicio se repinta al terminar la consulta, el repintado vuelve a
@@ -17901,11 +17939,6 @@ function liderBloquesDom(){
     fila.appendChild(b);
   });
   d.appendChild(fila);
-  var w=document.createElement('button');
-  w.className='btn sec'; w.type='button'; w.style.marginTop='14px';
-  w.textContent = anchoActivo() ? '\uD83D\uDCF1 Tamaño de celular' : '\uD83D\uDDA5\uFE0F Pantalla ancha';
-  w.onclick=alternarAncho;
-  d.appendChild(w);
   return d;
 }
 /* las seis carpetas siguen estando, pero cerradas: el líder las abre el
@@ -17983,7 +18016,7 @@ function tcEntrar(){
     document.body.classList.add('torre');
     /* En el celular la columna se apila encima y empuja el tablero
        media pantalla hacia abajo. Ahí arranca cerrada: el ☰ la abre. */
-    if(window.innerWidth < 900) document.body.classList.add('sinrail');
+    if(window.innerWidth < 980) document.body.classList.add('sinrail');
   }catch(e){}
   if(!TC.listo && !TC.cargando) tcCargar();
   else tcPintar();
@@ -18134,7 +18167,7 @@ function tcEst(tipo, txt){
   return '<span class="tc-est '+c+'">'+i+' '+esc(txt)+'</span>';
 }
 function tcVacio(t){ return '<div class="tc-vacio">'+t+'</div>'; }
-function tcColor(pct){ return pct>=95?'var(--ok)' : pct>=80?'var(--oro)':'var(--mal)'; }
+function tcColor(pct){ return pct>=95?'var(--t-ok)' : pct>=80?'var(--t-aviso)':'var(--t-critico)'; }
 function tcBarras(filas){
   var h='<div class="tc-b">';
   filas.forEach(function(f){
@@ -18169,7 +18202,7 @@ function tcLinea(serie, meta, etiq){
   serie.forEach(function(v,i){
     if(v===null){ prev=false; return; }
     d += (prev?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)+' ';
-    pts += '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.4" fill="var(--cel,#4aa3df)"></circle>';
+    pts += '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.4" fill="var(--t-s1)"></circle>';
     prev=true;
   });
   var g='';
@@ -18178,13 +18211,13 @@ function tcLinea(serie, meta, etiq){
          '<text x="'+(ML-7)+'" y="'+(y(v)+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="currentColor" opacity=".55">'+v.toFixed(1)+'</text>';
   });
   var lm = meta ? '<line x1="'+ML+'" x2="'+(W-MR)+'" y1="'+y(meta).toFixed(1)+'" y2="'+y(meta).toFixed(1)+
-      '" stroke="var(--mal)" stroke-dasharray="5 4" stroke-width="1.6"></line>'+
-      '<text x="'+(ML+6)+'" y="'+(y(meta)-6).toFixed(1)+'" font-size="11.5" font-weight="700" fill="var(--mal)">Meta '+meta+'</text>' : '';
+      '" stroke="var(--t-critico)" stroke-dasharray="5 4" stroke-width="1.6"></line>'+
+      '<text x="'+(ML+6)+'" y="'+(y(meta)-6).toFixed(1)+'" font-size="11.5" font-weight="700" fill="var(--t-critico)">Meta '+meta+'</text>' : '';
   var ex = etiq.map(function(t,i){
     return '<text x="'+x(i).toFixed(1)+'" y="'+(H-7)+'" text-anchor="middle" font-size="11" fill="currentColor" opacity=".6">'+esc(t)+'</text>';
   }).join('');
-  return '<div class="tc-scroll"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;min-width:520px;height:auto;color:var(--tinta)" role="img" aria-label="Índice de frecuencia mes a mes">'+
-    g+lm+'<path d="'+d+'" fill="none" stroke="var(--cel,#4aa3df)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"></path>'+pts+ex+'</svg></div>';
+  return '<div class="tc-scroll"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;min-width:520px;height:auto;color:var(--t-tinta)" role="img" aria-label="Índice de frecuencia mes a mes">'+
+    g+lm+'<path d="'+d+'" fill="none" stroke="var(--t-s1)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"></path>'+pts+ex+'</svg></div>';
 }
 function tcDona(partes){
   var tot=0; partes.forEach(function(p){ tot+=p.v; });
@@ -18200,7 +18233,7 @@ function tcDona(partes){
   var pct=Math.round(partes[0].v*100/tot);
   return '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">'+
     '<svg viewBox="0 0 140 140" width="140" height="140" role="img" aria-label="'+escA(partes[0].et)+'">'+
-    '<circle cx="70" cy="70" r="'+R+'" fill="none" stroke="rgba(var(--w),.1)" stroke-width="21"></circle>'+arcos+
+    '<circle cx="70" cy="70" r="'+R+'" fill="none" stroke="var(--t-regla2)" stroke-width="21"></circle>'+arcos+
     '<text x="70" y="66" text-anchor="middle" font-size="25" font-weight="800" fill="currentColor">'+pct+'%</text>'+
     '<text x="70" y="85" text-anchor="middle" font-size="10" fill="currentColor" opacity=".65">'+esc(partes[0].et.toLowerCase())+'</text></svg>'+
     '<div style="flex:1;min-width:150px"><div class="tc-ley" style="flex-direction:column;gap:7px;margin:0">'+
@@ -18213,8 +18246,10 @@ function tcPintar(){
   var rail=$('tc-rail'), main=$('tc-main'); if(!rail||!main) return;
   var yo=$('tc-yo'); if(yo) yo.textContent = (typeof miNombre==='function' && miNombre()) || correoCuenta() || '';
   var pa=$('tc-papel'); if(pa) pa.textContent = (papelElegido()==='lider') ? 'LÍDER SSOMA' : 'SUPERVISOR';
-  var tp=$('tc-titp'); if(tp) tp.textContent = (TC_PAGS.filter(function(p){return p.id===TC.pag;})[0]||{}).n || '';
-  var mb=$('tc-mes-bt'); if(mb) mb.textContent = 'Cierre '+mesBonito(TC.mes||mesISO());
+  var tp=$('tc-titp');
+  if(tp) tp.textContent = (TC.pag==='cfg') ? 'Qué medir'
+        : ((TC_PAGS.filter(function(p){return p.id===TC.pag;})[0]||{}).n || '');
+  tcPintarMeses();
   rail.innerHTML = tcRailHTML();
   if(TC.cargando){
     main.innerHTML = '<div class="tc-card"><h3>Juntando tus proyectos…</h3>'+
@@ -18229,6 +18264,7 @@ function tcPintar(){
     return;
   }
   var h = tcChipsHTML();
+  if(TC.pag==='cfg'){ main.innerHTML = tcPagCfg(); return; }
   h += (TC.pag==='resumen') ? tcPagResumen()
      : (TC.pag==='acc')     ? tcPagAcc()
      : (TC.pag==='cump')    ? tcPagCump()
@@ -18239,22 +18275,22 @@ function tcPintar(){
 }
 function tcVer(p){ TC.pag=p; tcPintar(); try{ window.scrollTo(0,0); }catch(e){} }
 function tcFiltro(id){ TC.sel=id; tcPintar(); }
-function tcMes(){
-  /* el cierre: se mira el mes que uno elige, no siempre el actual */
-  var m=TC.mes||mesISO(), a=[];
-  for(var i=0;i<12;i++){
+/* El mes de cierre vive en la cabecera, no detrás de un modal: es lo
+   primero que toca un gerente cuando llega el día 1 y quiere ver el
+   mes que se acaba de cerrar. */
+function tcPintarMeses(){
+  var sel=$('tc-mes-sel'); if(!sel) return;
+  var m=TC.mes||mesISO(), h='';
+  for(var i=0;i<18;i++){
     var d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
-    a.push(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2));
+    var x=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
+    h+='<option value="'+x+'"'+(x===m?' selected':'')+'>Cierre '+esc(mesBonito(x))+'</option>';
   }
-  var h='<p class="sub">El tablero se calcula sobre el mes que elijas. Los índices del año no cambian.</p>'+
-    a.map(function(x){ return '<button class="btn '+(x===m?'':'sec')+'" onclick="tcPonerMes(\''+x+'\')">'+esc(mesBonito(x))+'</button>'; }).join('');
-  aviso('Mes de cierre', '', '\uD83D\uDCC5');
-  var cj=document.querySelector('.avisof .caja');
-  if(cj){ var d=document.createElement('div'); d.innerHTML=h; d.style.marginTop='10px'; cj.appendChild(d); }
+  sel.innerHTML=h;
 }
 function tcPonerMes(m){
+  if(!m || m===TC.mes) return;
   TC.mes=m; TC.anio=parseInt(m.slice(0,4),10);
-  try{ var b=document.querySelector('.avisof'); if(b) b.className='avisof'; }catch(e){}
   TC.listo=false; TC.dat={}; tcCargar();
 }
 function tcRailHTML(){
@@ -18294,7 +18330,7 @@ function tcDocEmpBuscar(hoja){
 function tcDocsEmpHTML(){
   return TC_DOC_EMP.map(function(x){
     var m=tcDocEmpBuscar(x.h);
-    var col = m ? 'var(--ok)' : 'var(--mal)';
+    var col = m ? 'var(--t-ok)' : 'var(--t-critico)';
     return '<div class="tc-doc" onclick="tcVer(\'docs\')"><span class="pt" style="width:7px;height:7px;border-radius:50%;background:'+col+'"></span>'+
       '<span class="tx">'+esc(x.n)+'</span><span class="v">'+(m? esc(String(m.creado||'').slice(0,10)) : 'falta')+'</span></div>';
   }).join('');
@@ -18303,26 +18339,26 @@ function tcAlertas(){
   var a=[], ps=TC.proy, cfg=tcCfg();
   var R=tcReps(ps);
   if(R.viejos) a.push({t:R.viejos+' reporte'+(R.viejos===1?'':'s')+' sin cerrar hace más de '+cfg.diasRep+' días',
-                       d:'de '+R.abiertos+' abiertos en total', c:'var(--mal)', pg:'cump'});
+                       d:'de '+R.abiertos+' abiertos en total', c:'var(--t-critico)', pg:'cump'});
   var sinMed=0;
   ps.forEach(function(p){ tcD(p.id).acc.forEach(function(x){ if(!String(x.medidas||'').trim()) sinMed++; }); });
   if(sinMed) a.push({t:sinMed+' investigación'+(sinMed===1?'':'es')+' sin medidas correctivas',
-                     d:'es lo primero que pide un fiscalizador', c:'var(--mal)', pg:'acc'});
+                     d:'es lo primero que pide un fiscalizador', c:'var(--t-critico)', pg:'acc'});
   var sinHHT=ps.filter(function(p){ return !tcHHT([p]); });
   if(sinHHT.length) a.push({t:sinHHT.length+' proyecto'+(sinHHT.length===1?'':'s')+' sin horas hombre',
-                            d:'sin ellas el IF y el IS no se pueden calcular', c:'var(--oro)', pg:'acc'});
+                            d:'sin ellas el IF y el IS no se pueden calcular', c:'var(--t-aviso)', pg:'acc'});
   var sinAcc=ps.filter(function(p){ return !tcD(p.id).acc.length; });
   if(sinAcc.length===ps.length && ps.length)
     a.push({t:'Ningún proyecto lleva registro de accidentes', d:'es obligatorio: D.S. 005-2012-TR, art. 33',
-            c:'var(--oro)', pg:'acc'});
+            c:'var(--t-aviso)', pg:'acc'});
   var flojos=ps.filter(function(p){ var t=tcInspToca(p); return t && tcInspHechas(p)*2 < t; });
   if(flojos.length) a.push({t:flojos.length+' proyecto'+(flojos.length===1?'':'s')+' con menos de la mitad de sus inspecciones',
-                            d:flojos.map(function(p){return p.nombre;}).slice(0,2).join(', '), c:'var(--mal)', pg:'cump'});
+                            d:flojos.map(function(p){return p.nombre;}).slice(0,2).join(', '), c:'var(--t-critico)', pg:'cump'});
   var inv=0; ps.forEach(function(p){ tcD(p.id).inv.forEach(function(i){ if(!i.usada_en) inv++; }); });
   if(inv) a.push({t:inv+' invitación'+(inv===1?'':'es')+' sin usar', d:'ocupan un puesto de gestión mientras tanto',
-                  c:'var(--oro)', pg:'pers'});
+                  c:'var(--t-aviso)', pg:'pers'});
   TC_DOC_EMP.forEach(function(x){
-    if(!tcDocEmpBuscar(x.h)) a.push({t:x.n+' sin cargar', d:'es de la empresa entera, no de una obra', c:'var(--mal)', pg:'docs'});
+    if(!tcDocEmpBuscar(x.h)) a.push({t:x.n+' sin cargar', d:'es de la empresa entera, no de una obra', c:'var(--t-critico)', pg:'docs'});
   });
   return a;
 }
@@ -18387,9 +18423,9 @@ function tcPagResumen(){
   /* reportes: cerrados / abiertos / vencidos */
   h+='<div class="tc-card"><h3>Reportes de actos y condiciones</h3>'+
      '<p class="sub">Lo que reportó la gente en '+TC.anio+'. Lo que lleva más de '+cfg.diasRep+' días abierto es lo que un fiscalizador mira primero.</p>'+
-     (R.tot ? tcDona([{et:'Cerrados', v:R.cerrados, col:'var(--ok)'},
-                      {et:'Abiertos dentro de plazo', v:Math.max(0,R.abiertos-R.viejos), col:'var(--oro)'},
-                      {et:'Abiertos hace más de '+cfg.diasRep+' días', v:R.viejos, col:'var(--mal)'}])
+     (R.tot ? tcDona([{et:'Cerrados', v:R.cerrados, col:'var(--t-ok)'},
+                      {et:'Abiertos dentro de plazo', v:Math.max(0,R.abiertos-R.viejos), col:'var(--t-aviso)'},
+                      {et:'Abiertos hace más de '+cfg.diasRep+' días', v:R.viejos, col:'var(--t-critico)'}])
             : tcVacio('Ningún reporte este año. Cero reportes casi nunca quiere decir que no pasa nada: quiere decir que no se está reportando.'))+
      '</div>';
   /* programa: inspecciones por proyecto */
@@ -18402,9 +18438,9 @@ function tcPagResumen(){
   /* EPP del mes */
   h+='<div class="tc-card"><h3>Consumo de EPP del mes</h3>'+
      '<p class="sub">Lo entregado en '+esc(mesBonito(mes))+', separado por motivo. La pérdida es plata que se va sin proteger a nadie.</p>'+
-     (E.tot ? tcApilada([{et:'Nuevo', v:E.N, col:'var(--ok)'},
-                         {et:'Cambio por desgaste', v:E.C, col:'var(--cel,#4aa3df)'},
-                         {et:'Pérdida', v:E.P, col:'var(--mal)'}], E.tot)
+     (E.tot ? tcApilada([{et:'Nuevo', v:E.N, col:'var(--t-ok)'},
+                         {et:'Cambio por desgaste', v:E.C, col:'var(--t-s1)'},
+                         {et:'Pérdida', v:E.P, col:'var(--t-critico)'}], E.tot)
             : tcVacio('No hay entregas de EPP registradas en el kardex este mes.'))+'</div>';
   /* tabla proyecto por proyecto */
   h+='<div class="tc-card ancha"><h3>Obligaciones del mes, proyecto por proyecto</h3>'+
@@ -18420,9 +18456,9 @@ function tcPagResumen(){
     var per=d.trab.filter(function(w){ return (w.estatus||'activo')==='activo'; }).length;
     var ra=tcRachas([p])[0];
     h+='<tr><td><b style="cursor:pointer" onclick="tcFiltro(\''+escA(p.id)+'\')">'+esc(p.nombre)+'</b>'+
-       '<br><small style="color:var(--gris)">'+esc(p.codigo||'')+'</small></td>'+
-       '<td class="n" style="color:'+((t&&x>=t)?'var(--ok)':'var(--mal)')+'">'+x+'/'+t+'</td>'+
-       '<td class="n" style="color:'+(ab?'var(--mal)':'var(--ok)')+'">'+rep+(ab?(' ('+ab+' ab.)'):'')+'</td>'+
+       '<br><small style="color:var(--t-mudo)">'+esc(p.codigo||'')+'</small></td>'+
+       '<td class="n" style="color:'+((t&&x>=t)?'var(--t-ok-tx)':'var(--t-cr-tx)')+'">'+x+'/'+t+'</td>'+
+       '<td class="n" style="color:'+(ab?'var(--t-cr-tx)':'var(--t-ok-tx)')+'">'+rep+(ab?(' ('+ab+' ab.)'):'')+'</td>'+
        '<td class="n">'+cap+'</td><td class="n">'+tcNum(epp)+'</td><td class="n">'+per+'</td>'+
        '<td class="n">'+(ra&&ra.dias!==null?ra.dias:'—')+'</td></tr>';
   });
@@ -18436,7 +18472,10 @@ function tcPagAcc(){
   var cuenta={}; ACC_CLASES.forEach(function(c){ cuenta[c.k]=0; });
   accs.forEach(function(o){ if(cuenta[o.x.clase]!==undefined) cuenta[o.x.clase]++; });
   var maxN=Math.max.apply(null, ACC_CLASES.map(function(c){ return cuenta[c.k]; }).concat([1]));
+  /* el escalon mortal es el unico lo bastante oscuro para llevar letra
+     blanca; en los demas la letra va en tinta, que es lo que se lee */
   var COL={mortal:'#d03b3b', incap:'#ec835a', leve:'#fab219', primeros:'#7fc77f', casi:'#5fa8d3'};
+  var OSC={mortal:1};
 
   var h='<div class="tc-rej">';
   /* piramide */
@@ -18445,7 +18484,7 @@ function tcPagAcc(){
   ACC_CLASES.slice().sort(function(a,b){ return a.piso-b.piso; }).forEach(function(c){
     var n=cuenta[c.k], ancho = 48 + Math.round((n/maxN)*48);
     h+= n
-      ? '<div class="tc-pe" style="width:'+ancho+'%;background:'+COL[c.k]+'">'+c.ic+' '+esc(c.n)+' · '+n+'</div>'
+      ? '<div class="tc-pe'+(OSC[c.k]?' oscuro':'')+'" style="width:'+ancho+'%;background:'+COL[c.k]+'">'+c.ic+' '+esc(c.n)+' · '+n+'</div>'
       : '<div class="tc-pe sin" style="width:'+ancho+'%">'+c.ic+' '+esc(c.n)+' · 0</div>';
   });
   h+='</div></div>';
@@ -18453,13 +18492,13 @@ function tcPagAcc(){
   h+='<div class="tc-card"><h3>Los tres índices, y de qué salen</h3>'+
      '<p class="sub">Se calculan con las horas hombre del reporte semanal. Si falta ese dato, el índice no existe: no se rellena con un cero.</p>'+
      '<table class="tc-tab"><tbody>'+
-     '<tr><td><b>Horas hombre trabajadas</b><br><small style="color:var(--gris)">obreros + staff, de todo '+TC.anio+'</small></td>'+
+     '<tr><td><b>Horas hombre trabajadas</b><br><small style="color:var(--t-mudo)">obreros + staff, de todo '+TC.anio+'</small></td>'+
        '<td class="n" style="font-size:19px;font-weight:800">'+(I.hht?tcNum(I.hht):'—')+'</td></tr>'+
-     '<tr><td><b>IF · frecuencia</b><br><small style="color:var(--gris)">'+I.n+' accidentes que cuentan × 1 000 000 ÷ HHT</small></td>'+
-       '<td class="n" style="font-size:19px;font-weight:800;color:'+(I.IF===null?'var(--gris)':(I.IF<=cfg.metaIF?'var(--ok)':'var(--mal)'))+'">'+(I.IF===null?'—':tcNum(I.IF,2))+'</td></tr>'+
-     '<tr><td><b>IS · severidad</b><br><small style="color:var(--gris)">'+I.dias+' días perdidos × 1 000 000 ÷ HHT</small></td>'+
+     '<tr><td><b>IF · frecuencia</b><br><small style="color:var(--t-mudo)">'+I.n+' accidentes que cuentan × 1 000 000 ÷ HHT</small></td>'+
+       '<td class="n" style="font-size:19px;font-weight:800;color:'+(I.IF===null?'var(--t-mudo)':(I.IF<=cfg.metaIF?'var(--t-ok-tx)':'var(--t-cr-tx)'))+'">'+(I.IF===null?'—':tcNum(I.IF,2))+'</td></tr>'+
+     '<tr><td><b>IS · severidad</b><br><small style="color:var(--t-mudo)">'+I.dias+' días perdidos × 1 000 000 ÷ HHT</small></td>'+
        '<td class="n" style="font-size:19px;font-weight:800">'+(I.IS===null?'—':tcNum(I.IS,1))+'</td></tr>'+
-     '<tr><td><b>IA · accidentabilidad</b><br><small style="color:var(--gris)">IF × IS ÷ 1000</small></td>'+
+     '<tr><td><b>IA · accidentabilidad</b><br><small style="color:var(--t-mudo)">IF × IS ÷ 1000</small></td>'+
        '<td class="n" style="font-size:19px;font-weight:800">'+(I.IA===null?'—':tcNum(I.IA, I.IA<1?3:2))+'</td></tr>'+
      '</tbody></table>'+
      (I.hht ? '' : '<div class="tc-vacio" style="margin-top:12px">Falta el <b>reporte semanal de horas hombre</b> en '+
@@ -18471,7 +18510,7 @@ function tcPagAcc(){
      tcBarras(tcRachas(TC.proy).map(function(r){
        return {et:r.p.nombre, v:(r.dias===null?365:r.dias), tope:365,
                txt:(r.dias===null?'sin registro':r.dias+' d'),
-               col:(r.dias===null?'rgba(var(--w),.25)':(r.dias<30?'var(--mal)':(r.dias<90?'var(--oro)':'var(--ok)')))};
+               col:(r.dias===null?'var(--t-pista)':(r.dias<30?'var(--t-critico)':(r.dias<90?'var(--t-aviso)':'var(--t-ok)')))};
      }))+'</div>';
   /* tabla de accidentes */
   h+='<div class="tc-card ancha"><h3>Registro de accidentes e incidentes de '+TC.anio+'</h3>'+
@@ -18511,7 +18550,7 @@ function tcPagCump(){
     }).map(function(t){ return t.n; });
     h+='<tr><td><b>'+esc(p.nombre)+'</b></td><td>'+esc(p.sector||'—')+'</td>'+
        '<td class="n">'+hechasN.length+'</td><td class="n">'+toca.length+'</td>'+
-       '<td>'+(faltan.length ? '<span style="color:var(--mal)">'+esc(faltan.slice(0,4).join(' · '))+(faltan.length>4?(' y '+(faltan.length-4)+' más'):'')+'</span>'
+       '<td>'+(faltan.length ? '<span style="color:var(--t-cr-tx)">'+esc(faltan.slice(0,4).join(' · '))+(faltan.length>4?(' y '+(faltan.length-4)+' más'):'')+'</span>'
                              : tcEst('ok','al día'))+'</td></tr>';
   });
   h+='</tbody></table></div></div>';
@@ -18529,9 +18568,9 @@ function tcPagCump(){
      '<p class="sub">Desde que alguien lo levanta hasta que queda cerrado con su acción y su foto.</p>'+
      (prom===null ? tcVacio('Todavía no hay reportes cerrados con fecha de cierre este año.')
        : '<div style="font-size:38px;font-weight:800;font-variant-numeric:tabular-nums">'+prom+
-         '<span style="font-size:16px;color:var(--gris);font-weight:600"> días en promedio</span></div>'+
+         '<span style="font-size:16px;color:var(--t-mudo);font-weight:600"> días en promedio</span></div>'+
          '<div class="tc-ley"><span>'+dias.length+' reportes cerrados · '+R.abiertos+' siguen abiertos · '+
-         '<b style="color:'+(R.viejos?'var(--mal)':'var(--ok)')+'">'+R.viejos+'</b> pasados de '+cfg.diasRep+' días</span></div>')+
+         '<b style="color:'+(R.viejos?'var(--t-cr-tx)':'var(--t-ok-tx)')+'">'+R.viejos+'</b> pasados de '+cfg.diasRep+' días</span></div>')+
      '</div>';
   /* capacitacion: cobertura */
   h+='<div class="tc-card"><h3>Capacitación: cobertura por proyecto</h3>'+
@@ -18548,7 +18587,7 @@ function tcPagCump(){
   var act=tcTop(R.porActiv, 8);
   h+='<div class="tc-card"><h3>Qué actividad concentra los reportes</h3>'+
      '<p class="sub">De los trabajos de alto riesgo que marca cada reporte. Es donde conviene poner la próxima charla.</p>'+
-     (act.length ? tcBarras(act.map(function(a){ return {et:a.k, v:a.v, tope:act[0].v, txt:String(a.v), col:'var(--cel,#4aa3df)'}; }))
+     (act.length ? tcBarras(act.map(function(a){ return {et:a.k, v:a.v, tope:act[0].v, txt:String(a.v), col:'var(--t-s1)'}; }))
                  : tcVacio('Todavía ningún reporte trae marcada la actividad. Es un campo nuevo: aparece al levantar el próximo.'))+
      '</div>';
   return h+'</div>';
@@ -18561,13 +18600,13 @@ function tcPagEpp(){
   var top=tcTop(E.porEpp,10);
   h+='<div class="tc-card"><h3>Qué EPP se consume más</h3>'+
      '<p class="sub">Unidades entregadas en '+esc(mesBonito(mes))+', de todo el kardex.</p>'+
-     (top.length ? tcBarras(top.map(function(a){ return {et:a.k, v:a.v, tope:top[0].v, txt:tcNum(a.v), col:'var(--cel,#4aa3df)'}; }))
+     (top.length ? tcBarras(top.map(function(a){ return {et:a.k, v:a.v, tope:top[0].v, txt:tcNum(a.v), col:'var(--t-s1)'}; }))
                  : tcVacio('Sin entregas registradas este mes.'))+'</div>';
   h+='<div class="tc-card"><h3>Por qué se entrega</h3>'+
      '<p class="sub">Nuevo, cambio por desgaste o pérdida. Cuando la pérdida pasa del '+cfg.metaPerd+'%, hay algo que revisar antes de comprar más.</p>'+
-     (E.tot ? tcApilada([{et:'Nuevo', v:E.N, col:'var(--ok)'},
-                         {et:'Cambio por desgaste', v:E.C, col:'var(--cel,#4aa3df)'},
-                         {et:'Pérdida', v:E.P, col:'var(--mal)'}], E.tot)
+     (E.tot ? tcApilada([{et:'Nuevo', v:E.N, col:'var(--t-ok)'},
+                         {et:'Cambio por desgaste', v:E.C, col:'var(--t-s1)'},
+                         {et:'Pérdida', v:E.P, col:'var(--t-critico)'}], E.tot)
             : tcVacio('Sin entregas registradas este mes.'))+'</div>';
   h+='<div class="tc-card"><h3>Pérdida de EPP por proyecto</h3>'+
      '<p class="sub">Solo las entregas marcadas como pérdida, en '+esc(mesBonito(mes))+'.</p>'+
@@ -18575,12 +18614,12 @@ function tcPagEpp(){
        var e=tcEPP([p],mes);
        var pct = e.tot ? Math.round(e.P*100/e.tot) : 0;
        return {et:p.nombre, v:pct, tope:100, txt:(e.tot? (tcNum(e.P)+' und · '+pct+'%') : 'sin datos'),
-               col:(!e.tot?'rgba(var(--w),.25)':(pct<=cfg.metaPerd?'var(--ok)':'var(--mal)'))};
+               col:(!e.tot?'var(--t-pista)':(pct<=cfg.metaPerd?'var(--t-ok)':'var(--t-critico)'))};
      }))+'</div>';
   var tt=tcTop(E.porTrab,10);
   h+='<div class="tc-card"><h3>Quién recibe más</h3>'+
      '<p class="sub">Diez trabajadores con más unidades este mes. Un nombre muy arriba suele ser una talla mal pedida o un EPP que no aguanta la tarea.</p>'+
-     (tt.length ? tcBarras(tt.map(function(a){ return {et:a.k, v:a.v, tope:tt[0].v, txt:tcNum(a.v), col:'var(--oro)'}; }))
+     (tt.length ? tcBarras(tt.map(function(a){ return {et:a.k, v:a.v, tope:tt[0].v, txt:tcNum(a.v), col:'var(--t-aviso)'}; }))
                 : tcVacio('Sin entregas registradas este mes.'))+'</div>';
   return h+'</div>';
 }
@@ -18619,11 +18658,11 @@ function tcPagPers(){
   if(!autores.length){
     h+=tcVacio('Todavía no hay reportes con nombre. En la app el trabajador puede reportar con su nombre o en anónimo.');
   } else {
-    h+='<div style="border:1px solid var(--oro);border-radius:12px;padding:12px 14px;margin-bottom:12px">'+
-       '<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--oro);font-weight:800">Primero</div>'+
+    h+='<div style="border:1px solid var(--t-aviso);border-radius:9px;padding:12px 14px;margin-bottom:14px;background:rgba(250,178,25,.07)">'+
+       '<div style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--t-ambar);font-weight:800">Primero</div>'+
        '<div style="font-size:21px;font-weight:800;margin-top:3px">'+esc(autores[0].k)+'</div>'+
-       '<div style="color:var(--gris);font-size:13px">'+autores[0].v+' reporte'+(autores[0].v===1?'':'s')+' en el año</div></div>'+
-       tcBarras(autores.slice(1).map(function(a){ return {et:a.k, v:a.v, tope:autores[0].v, txt:String(a.v), col:'var(--cel,#4aa3df)'}; }));
+       '<div style="color:var(--t-mudo);font-size:13px">'+autores[0].v+' reporte'+(autores[0].v===1?'':'s')+' en el año</div></div>'+
+       tcBarras(autores.slice(1).map(function(a){ return {et:a.k, v:a.v, tope:autores[0].v, txt:String(a.v), col:'var(--t-s1)'}; }));
   }
   h+='</div>';
   /* amonestaciones */
@@ -18633,7 +18672,7 @@ function tcPagPers(){
   h+='<div class="tc-card"><h3>Amonestaciones de '+TC.anio+'</h3>'+
      '<p class="sub">Cuántas y de qué tipo. Muchas amonestaciones leves de lo mismo suelen ser un problema de la tarea, no de la persona.</p>'+
      (am.length ? ('<div style="font-size:32px;font-weight:800">'+am.length+'</div>'+
-                   tcBarras(pm.map(function(a){ return {et:a.k, v:a.v, tope:pm[0].v, txt:String(a.v), col:'var(--oro)'}; })))
+                   tcBarras(pm.map(function(a){ return {et:a.k, v:a.v, tope:pm[0].v, txt:String(a.v), col:'var(--t-aviso)'}; })))
                 : tcVacio('Ninguna amonestación registrada este año.'))+'</div>';
   /* buenas practicas */
   var bp=[]; ps.forEach(function(p){ tcD(p.id).buenas.forEach(function(x){ if(tcEnAnio(x.fecha)) bp.push({p:p,x:x}); }); });
@@ -18642,8 +18681,8 @@ function tcPagPers(){
   if(!bp.length){ h+=tcVacio('Todavía ninguna. Es la otra mitad del registro: si solo se anota lo malo, el equipo aprende a esconder.'); }
   else {
     h+=bp.sort(function(a,b){ return String(b.x.fecha).localeCompare(String(a.x.fecha)); }).slice(0,6).map(function(o){
-      return '<div style="border-bottom:1px solid rgba(var(--w),.08);padding:9px 0">'+
-        '<b>\u2B50 '+esc(o.x.titulo)+'</b><div style="color:var(--gris);font-size:12.5px;margin-top:3px">'+
+      return '<div style="border-bottom:1px solid var(--t-regla2);padding:9px 0">'+
+        '<b>\u2B50 '+esc(o.x.titulo)+'</b><div style="color:var(--t-mudo);font-size:12.5px;margin-top:3px">'+
         esc(o.p.nombre)+' · '+esc(fechaLarga(o.x.fecha)||o.x.fecha)+(o.x.autor?(' · '+esc(o.x.autor)):'')+'</div></div>';
     }).join('');
   }
@@ -18678,10 +18717,10 @@ function tcPagPers(){
     h+='<div class="tc-scroll"><table class="tc-tab"><thead><tr><th>Persona</th><th>Empresa</th><th>Obra encargada</th>'+
        '<th>Desde</th><th>Papel</th><th>Estado</th></tr></thead><tbody>';
     inv.forEach(function(o){
-      h+='<tr><td><b>'+esc(o.i.nombre||o.i.correo)+'</b><br><small style="color:var(--gris)">'+esc(o.i.correo)+'</small></td>'+
+      h+='<tr><td><b>'+esc(o.i.nombre||o.i.correo)+'</b><br><small style="color:var(--t-mudo)">'+esc(o.i.correo)+'</small></td>'+
          '<td>'+esc(o.p.nombre)+'</td><td>'+esc(o.i.proyecto||'—')+'</td>'+
          '<td>'+esc(o.i.desde?fechaLarga(String(o.i.desde).slice(0,10)):'—')+'</td>'+
-         '<td>'+(o.i.papel==='colider'?'<span style="color:var(--oro)">segundo líder</span>':'supervisor')+'</td>'+
+         '<td>'+(o.i.papel==='colider'?'<b style="color:var(--t-ambar)">segundo líder</b>':'supervisor')+'</td>'+
          '<td>'+(o.i.usada_en?tcEst('ok','ya entró'):tcEst('av','sin usar'))+'</td></tr>';
     });
     h+='</tbody></table></div>';
@@ -18707,7 +18746,7 @@ function tcPagDocs(){
      '<table class="tc-tab"><tbody>'+
      TC_DOC_EMP.map(function(x){
        var m=tcDocEmpBuscar(x.h);
-       return '<tr><td><b>'+esc(x.n)+'</b>'+(m?('<br><small style="color:var(--gris)">cargado en '+esc(m.p.nombre)+'</small>'):'')+'</td>'+
+       return '<tr><td><b>'+esc(x.n)+'</b>'+(m?('<br><small style="color:var(--t-mudo)">cargado en '+esc(m.p.nombre)+'</small>'):'')+'</td>'+
               '<td class="n">'+(m? tcEst('ok', String(m.creado||'').slice(0,10)) : tcEst('cr','sin cargar'))+'</td></tr>';
      }).join('')+
      '</tbody></table>'+
@@ -18721,7 +18760,7 @@ function tcPagDocs(){
     h+='<tr><td><b>'+esc(x.n)+'</b></td>';
     TC.proy.forEach(function(p){
       var hay=tcD(p.id).docs.some(function(d){ return d.hoja===x.h; });
-      h+='<td class="n">'+(hay? '<span style="color:var(--ok)">\u2713</span>' : '<span style="color:var(--mal)">\u2014</span>')+'</td>';
+      h+='<td class="n">'+(hay? '<span style="color:var(--t-ok-tx)">\u2713</span>' : '<span style="color:var(--t-mudo)">\u2014</span>')+'</td>';
     });
     h+='</tr>';
   });
@@ -18788,44 +18827,54 @@ function tcExcel(){
   aviso('Excel listo','Se descargó el archivo. Ábrelo con Excel: ya viene separado por punto y coma y con los acentos bien.','\uD83D\uDCC4');
 }
 function tcPDF(){
-  /* el PDF del navegador: imprime la pagina que se esta viendo, con la
-     columna escondida para que quepa en A4 horizontal */
-  var tenia = document.body.classList.contains('sinrail');
-  document.body.classList.add('sinrail');
-  setTimeout(function(){
-    try{ window.print(); }catch(e){}
-    setTimeout(function(){ if(!tenia) document.body.classList.remove('sinrail'); }, 500);
-  }, 250);
+  /* el PDF sale de la impresion del navegador; la hoja de estilo de
+     @media print ya deja fuera la cabecera, la columna y los filtros */
+  try{ window.print(); }catch(e){}
 }
 
-/* ══ qué medir: los parámetros del gerente ══ */
-function pintarTorreCfg(){
-  var c=$('torre-cfg-cuerpo'); if(!c) return;
+/* ══ 7 · QUÉ MEDIR: los parámetros del gerente ══
+   No es una pantalla aparte de la app: es una página más de la Torre.
+   Salir a la app oscura para cambiar una meta y volver era un salto de
+   mundo en medio de una reunión.                                     */
+function tcPagCfg(){
   var g=tcCfg();
-  c.innerHTML='<h2>\u2699\uFE0F Qué medir</h2>'+
-    '<p class="sub">Las metas son tuyas, no de la app. Se guardan en el servidor: si las cambias aquí, tu supervisor las ve igual desde la obra.</p>'+
-    '<label>Meta del índice de frecuencia (IF)</label>'+
-    '<input id="tcf-if" type="number" step="0.1" min="0" value="'+g.metaIF+'">'+
-    '<p class="sub" style="margin:5px 0 0;font-size:12.5px">Accidentes incapacitantes por millón de horas hombre. En construcción se suele trabajar con 3.</p>'+
-    '<label>Meta del índice de severidad (IS)</label>'+
-    '<input id="tcf-is" type="number" step="1" min="0" value="'+g.metaIS+'">'+
-    '<label>Cumplimiento de inspecciones que consideras «al día» (%)</label>'+
-    '<input id="tcf-cump" type="number" step="1" min="0" max="100" value="'+g.metaCump+'">'+
-    '<label>Pérdida de EPP aceptable (%)</label>'+
-    '<input id="tcf-perd" type="number" step="1" min="0" max="100" value="'+g.metaPerd+'">'+
-    '<label>Un reporte se considera atrasado después de (días)</label>'+
-    '<input id="tcf-dias" type="number" step="1" min="1" max="90" value="'+g.diasRep+'">'+
-    '<div class="sec-tit" style="margin-top:20px">Qué tarjetas quieres arriba</div>'+
-    '<p class="sub" style="margin:-4px 0 8px;font-size:12.5px">Si un indicador no te sirve, quítalo y deja de ocupar pantalla.</p>'+
-    ['ifr|Índice de frecuencia','isv|Índice de severidad','racha|Racha más corta',
-     'cump|Cumplimiento de inspecciones','epp|EPP entregado en el mes'].map(function(x){
-      var k=x.split('|')[0], n=x.split('|')[1];
-      return '<label style="display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:600">'+
-        '<input type="checkbox" id="tcv-'+k+'" '+(g.ver[k]?'checked':'')+' style="width:auto;margin:0">'+esc(n)+'</label>';
-    }).join('')+
-    '<div id="tcf-msg" style="font-size:14px;margin:12px 0"></div>'+
-    '<button class="btn" onclick="guardarTorreCfg()">Guardar ▸</button>'+
-    '<button class="btn sec" onclick="reiniciarTorreCfg()">Volver a lo de fábrica</button>';
+  function campo(id, et, val, paso, nota){
+    return '<div style="margin-bottom:15px"><label style="display:block;font-size:12.5px;font-weight:700;margin-bottom:5px">'+esc(et)+'</label>'+
+      '<input id="'+id+'" type="number" step="'+paso+'" value="'+val+'" '+
+      'style="width:130px;padding:8px 10px;border:1px solid var(--t-regla);border-radius:7px;'+
+      'font-size:15px;font-weight:700;font-family:inherit;background:var(--t-sup);color:var(--t-tinta);'+
+      'font-variant-numeric:tabular-nums">'+
+      (nota?'<div style="font-size:11.5px;color:var(--t-mudo);margin-top:5px;line-height:1.5">'+nota+'</div>':'')+'</div>';
+  }
+  var h='<div class="tc-rej">';
+  h+='<div class="tc-card"><h3>Tus metas</h3>'+
+     '<p class="sub">Son tuyas, no de la app. Se guardan en el servidor: si las cambias aquí, tu supervisor las ve igual desde la obra.</p>'+
+     campo('tcf-if','Meta del índice de frecuencia (IF)', g.metaIF, '0.1',
+           'Accidentes incapacitantes por millón de horas hombre. En construcción se suele trabajar con 3.')+
+     campo('tcf-is','Meta del índice de severidad (IS)', g.metaIS, '1',
+           'Días perdidos por millón de horas hombre.')+
+     campo('tcf-cump','Cumplimiento que consideras «al día» (%)', g.metaCump, '1',
+           'Debajo de este porcentaje, las inspecciones del mes salen en rojo.')+
+     campo('tcf-perd','Pérdida de EPP aceptable (%)', g.metaPerd, '1',
+           'Sobre este porcentaje, la pérdida deja de ser normal y se marca.')+
+     campo('tcf-dias','Un reporte se atrasa después de (días)', g.diasRep, '1',
+           'Es lo que decide qué sale en «Necesita tu decisión».')+
+     '</div>';
+  h+='<div class="tc-card"><h3>Qué tarjetas quieres arriba</h3>'+
+     '<p class="sub">Si un indicador no te sirve, quítalo y deja de ocupar pantalla. El resto del tablero no cambia.</p>'+
+     ['ifr|Índice de frecuencia','isv|Índice de severidad','racha|Racha más corta',
+      'cump|Cumplimiento de inspecciones','epp|EPP entregado en el mes'].map(function(x){
+       var k=x.split('|')[0], n=x.split('|')[1];
+       return '<label style="display:flex;align-items:center;gap:10px;padding:9px 0;font-size:13.5px;'+
+         'font-weight:600;border-bottom:1px solid var(--t-regla2);cursor:pointer">'+
+         '<input type="checkbox" id="tcv-'+k+'" '+(g.ver[k]?'checked':'')+' style="width:16px;height:16px;margin:0">'+
+         esc(n)+'</label>';
+     }).join('')+
+     '<div id="tcf-msg" style="font-size:12.5px;margin:16px 0 10px;min-height:18px"></div>'+
+     '<button class="tc-bt" style="background:var(--t-marca);border-color:var(--t-marca);padding:9px 18px;font-size:13.5px" onclick="guardarTorreCfg()">Guardar</button> '+
+     '<button class="tc-bt" style="background:var(--t-sup);color:var(--t-tinta2);border-color:var(--t-regla);padding:9px 16px;font-size:13.5px" onclick="reiniciarTorreCfg()">Volver a lo de fábrica</button>'+
+     '</div>';
+  return h+'</div>';
 }
 function guardarTorreCfg(){
   var g=tcCfg(), m=$('tcf-msg');
@@ -18835,16 +18884,16 @@ function guardarTorreCfg(){
   g.metaPerd=parseInt($('tcf-perd').value,10)||10;
   g.diasRep=parseInt($('tcf-dias').value,10)||7;
   ['ifr','isv','racha','cump','epp'].forEach(function(k){ g.ver[k]=$('tcv-'+k).checked?1:0; });
-  m.style.color='var(--gris)'; m.textContent='Guardando…';
+  m.style.color='var(--t-mudo)'; m.textContent='Guardando…';
   tcCfgGuardar().then(function(ok){
-    m.style.color=ok?'var(--ok)':'var(--mal)';
+    m.style.color = ok ? 'var(--t-ok)' : 'var(--t-critico)';
     m.textContent = ok ? 'Guardado para toda la empresa.' : 'Se aplicó aquí, pero no se pudo guardar en el servidor (¿sin internet?).';
-    setTimeout(function(){ ir('p-gestor'); }, 700);
+    setTimeout(function(){ tcVer('resumen'); }, 800);
   });
 }
 function reiniciarTorreCfg(){
   TC_CFG=JSON.parse(JSON.stringify(TC_CFG_DEF));
-  pintarTorreCfg();
+  tcPintar();
 }
 
 // ---- ¿está encendido el login con Google? ----
