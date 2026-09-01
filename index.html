@@ -1296,7 +1296,18 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <h2>Trabajadores</h2>
   <p class="sub">Los que están a tu cargo. De aquí salen el kardex, las credenciales QR y el estatus del personal, así no vuelves a escribir el mismo nombre.</p>
   <button class="btn" onclick="ir('p-trab-nuevo')">➕ Agregar trabajador</button>
+  <div id="trab-traer-caja"></div>
   <div id="trab-lista"></div>
+</section>
+
+<section class="pantalla" id="p-trab-traer">
+  <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span>Traer de otra obra</span></div>
+  <h2>Traer un trabajador</h2>
+  <p class="sub">Gente que ya está cargada en otra obra de tu empresa. Se copia su ficha —nombre, documento, puesto, grupo sanguíneo, contacto de emergencia— para no volver a escribirla.</p>
+  <label class="sec-tit" style="margin:6px 0 6px">¿De qué obra?</label>
+  <select id="tt-obra"></select>
+  <div id="tt-msg" style="font-size:13.5px;margin:10px 0 0"></div>
+  <div id="tt-lista" style="margin-top:12px"></div>
 </section>
 
 <section class="pantalla" id="p-planes">
@@ -5919,7 +5930,7 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             'p-temas':1,'p-modo':1,'p-juego':1,'p-eval':1,'p-datos':1,'p-final':1,
             'p-firma':1,'p-listo':1,'p-generar':1,'p-registro':1,'p-talleres':1,
             'p-taller':1,'p-taller-fin':1,'p-codigo':1,'p-sesion':1,'p-config':1,'p-apariencia':1,'p-formatos':1,
-            'p-trabajadores':1,'p-trab-nuevo':1,'p-trab-ficha':1,'p-planes':1,'p-estatus':1,
+            'p-trabajadores':1,'p-trab-nuevo':1,'p-trab-ficha':1,'p-trab-traer':1,'p-planes':1,'p-estatus':1,
             'p-kardex':1,'p-kardex-nuevo':1,'p-kardex-export':1,'p-empleador':1,
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,
             'p-accidentes':1,'p-acc-nuevo':1,'p-acc-ver':1,
@@ -6165,7 +6176,7 @@ function _ir(p){
   if(p==='p-rol'){ try{pintarRol();}catch(e){} }
   if(p==='p-mis-empresas')cargarMisEmpresas(); if(p==='p-cuenta')prepCuenta();
   if(p==='p-solicitudes')cargarSolicitudes();
-  if(p==='p-trabajadores')pintarTrabajadores(); if(p==='p-trab-nuevo')prepTrabajador();
+  if(p==='p-trabajadores')pintarTrabajadores(); if(p==='p-trab-nuevo')prepTrabajador(); if(p==='p-trab-traer')prepTraerTrab();
   if(p==='p-kardex')pintarKardex(); if(p==='p-kardex-nuevo'){ prepKardex(); prepFotoKardex(); }
   if(p==='p-kardex-export')pintarKardexExport(); if(p==='p-empleador')cargarEmpleador();
   if(p==='p-rol')pintarRol(); if(p==='p-carpeta')pintarCarpeta(); if(p==='p-foto')prepFoto(); if(p==='p-mensual')pintarMensual();
@@ -8533,6 +8544,7 @@ function pintarTrabajadores(){
     });
     c.innerHTML=h;
   }
+  try{ pintarBotonTraer(); }catch(_b){}
   sincronizarTrabajadores();
 }
 /* lo que este sin subir, se sube; y se baja lo que otros hayan cargado.
@@ -8675,6 +8687,156 @@ function vacioPersonalHTML(cargando){
     ? '<option value="">buscando el personal de tu empresa…</option>'
     : '<option value="">— no hay personal cargado todavía —</option>';
 }
+/* ══════════ MOVER GENTE ENTRE OBRAS DE LA MISMA EMPRESA ═════════
+   El caso: un trabajador pasa de la mina al frente de construccion.
+   Hasta ahora habia que escribirlo de nuevo —nombre, DNI, puesto,
+   grupo sanguineo, telefono de emergencia— y el supervisor que lo
+   recibia no tenia forma de saber que ya le habian entregado el arnes
+   la semana pasada.
+
+   Dos cosas distintas, y a proposito:
+   1) SU FICHA se COPIA. Son sus datos, son los mismos en cualquier
+      obra, y volver a teclearlos solo produce errores de dedo.
+   2) SU HISTORIAL NO se copia: se MUESTRA. El kardex de la mina es un
+      registro firmado que pertenece a la mina; copiarlo al frente de
+      construccion seria fabricar entregas que ahi nunca ocurrieron, y
+      eso en una fiscalizacion es peor que no tener nada. Se enseña
+      como lo que es —«esto recibio en la otra obra»— para que el
+      supervisor decida con el dato delante.                        */
+function proyectosHermanos(){
+  var e=empActiva(); if(!e || !MIS_EMP || !MIS_EMP.length) return [];
+  var raiz = e.padre || e.id;
+  return MIS_EMP.filter(function(x){
+    if(String(x.id)===String(e.id)) return false;
+    return String(x.padre_id || x.id) === String(raiz);
+  });
+}
+function pintarBotonTraer(){
+  var c=$('trab-traer-caja'); if(!c) return;
+  var h=proyectosHermanos();
+  c.innerHTML = h.length
+    ? '<button class="btn sec" onclick="ir(\'p-trab-traer\')" style="margin-top:-4px">\uD83D\uDD01 Traer de otra obra'+
+      ' <small style="opacity:.75">('+h.length+' m\u00e1s en tu empresa)</small></button>'
+    : '';
+}
+var TT_GENTE=[];
+function prepTraerTrab(){
+  var sel=$('tt-obra'), h=proyectosHermanos();
+  $('tt-lista').innerHTML=''; $('tt-msg').textContent='';
+  if(!h.length){
+    sel.innerHTML='<option value="">— no tienes otras obras —</option>';
+    $('tt-msg').innerHTML='<p class="sub">Esta es tu \u00fanica obra. Cuando abras otra desde <b>Mis proyectos</b>, aqu\u00ed vas a poder mover gente entre las dos.</p>';
+    return;
+  }
+  sel.innerHTML = h.map(function(x){ return '<option value="'+escA(x.id)+'">'+esc(x.nombre)+'</option>'; }).join('');
+  sel.onchange = cargarGenteDeLaOtra;
+  cargarGenteDeLaOtra();
+}
+function cargarGenteDeLaOtra(){
+  var id=($('tt-obra')||{}).value; if(!id) return;
+  var m=$('tt-msg'); m.style.color='var(--gris)'; m.textContent='Buscando su personal\u2026';
+  $('tt-lista').innerHTML='';
+  bajarTodoElPersonal(id).then(function(rows){
+    TT_GENTE = rows||[];
+    m.textContent='';
+    pintarGenteDeLaOtra();
+  }, function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo. '+porQue(err); });
+}
+function pintarGenteDeLaOtra(){
+  var c=$('tt-lista'); if(!c) return;
+  /* los que YA estan aqui no se ofrecen: se cruzan por documento, que es
+     lo unico que no cambia de escritura entre una obra y otra */
+  var mios={};
+  trabsLocal().forEach(function(t){ var d=_norm(t.dni||''); if(d) mios[d]=1; });
+  var libres = TT_GENTE.filter(function(r){ var d=_norm(r.dni||''); return !d || !mios[d]; });
+  var yaEstan = TT_GENTE.length - libres.length;
+  if(!TT_GENTE.length){ c.innerHTML='<p class="sub">Esa obra todav\u00eda no tiene personal cargado.</p>'; return; }
+  if(!libres.length){
+    c.innerHTML='<p class="sub">Los '+TT_GENTE.length+' de esa obra ya est\u00e1n en esta. No hay nada que traer.</p>';
+    return;
+  }
+  var h='<div class="sec-tit">'+libres.length+' que puedes traer'+
+        (yaEstan? ' <small style="font-weight:400;color:var(--gris)">\u00b7 '+yaEstan+' ya est'+(yaEstan===1?'\u00e1':'\u00e1n')+' aqu\u00ed</small>' : '')+'</div>';
+  libres.forEach(function(r,i){
+    h+='<div class="tarj vidrio" style="display:flex;align-items:center;gap:10px">'+
+       '<span style="flex:1"><b>'+esc(r.nombre||'\u2014')+'</b>'+
+       '<small style="display:block;color:var(--gris)">DNI '+esc(r.dni||'\u2014')+' \u00b7 '+esc(r.puesto||'\u2014')+
+       (r.sangre? ' \u00b7 '+esc(r.sangre) : '')+'</small></span>'+
+       '<button class="btn" style="width:auto;margin:0;padding:8px 14px" onclick="traerTrabajador('+i+')">Traer</button></div>';
+  });
+  h+='<p class="sub" style="margin-top:12px">Se copia su ficha a esta obra. Lo que recibi\u00f3 en la otra <b>no se copia</b>: '+
+     'sale en su ficha, marcado con el nombre de esa obra, para que veas qu\u00e9 EPP ya tiene antes de entregarle otro.</p>';
+  c.innerHTML=h;
+  TT_LIBRES=libres;
+}
+var TT_LIBRES=[];
+function traerTrabajador(i){
+  var r=TT_LIBRES[i]; if(!r) return;
+  var a=trabsLocal();
+  var vivos=a.filter(function(x){ return (x.estatus||'activo')!=='cesado'; }).length;
+  if(frenoLite('trabajador', usadosTotal('trabajador', vivos), 'trabajadores')) return;
+  sumarUso('trabajador');
+  a.push({ id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+           nombre:r.nombre||'', dni:r.dni||'', puesto:r.puesto||'', area:r.area||'',
+           estatus:r.estatus||'activo', sangre:r.sangre||'', emergencia:r.emergencia||'',
+           emerQuien:r.emer_quien||'', sync:0 });
+  trabsSet(a);
+  asegurarPersonal(function(){});
+  var m=$('tt-msg'); m.style.color='var(--ok)';
+  m.textContent = (r.nombre||'El trabajador')+' ya est\u00e1 en esta obra.';
+  pintarGenteDeLaOtra();
+}
+
+/* ── LO QUE RECIBIO EN LAS OTRAS OBRAS ───────────────────────────
+   Solo de lectura y con el nombre de la obra al lado. No entra en el
+   kardex de esta obra ni en su PDF: es informacion para decidir, no
+   un registro de aqui.                                            */
+var TF_OTRAS={};
+function cargarOtrasObrasDe(id){
+  var t=trabPorId(id), h=proyectosHermanos();
+  if(!t || !_norm(t.dni||'') || !h.length || !hayCuenta()){ TF_OTRAS[id]=[]; return Promise.resolve([]); }
+  var dni=_norm(t.dni);
+  return Promise.all(h.map(function(o){
+    return sbGet('sst_trabajador?duenio=eq.'+encodeURIComponent(o.id)+
+                 '&dni=eq.'+encodeURIComponent(t.dni)+'&select=ext,nombre')
+      .then(function(rows){
+        if(!rows || !rows.length) return null;
+        return sbGet('sst_kardex?duenio=eq.'+encodeURIComponent(o.id)+
+                     '&trabajador=eq.'+encodeURIComponent(rows[0].ext)+
+                     '&select=epp,tipo,fecha,cantidad,unidad&order=fecha.desc&limit=60')
+          .then(function(k){ return (k && k.length) ? {obra:o.nombre, epp:k} : null; });
+      })
+      .catch(function(){ return null; });
+  })).then(function(res){
+    TF_OTRAS[id] = res.filter(function(x){ return !!x; });
+    return TF_OTRAS[id];
+  });
+}
+function otrasObrasHTML(id){
+  var d=TF_OTRAS[id];
+  if(d===undefined) return '';
+  if(!d.length) return '';
+  var h='<div class="sec-tit" style="margin-top:20px">\uD83D\uDD01 Lo que recibi\u00f3 en otras obras</div>'+
+        '<p class="sub" style="margin:-2px 0 8px">No es el kardex de esta obra: es lo que la empresa ya le entreg\u00f3 en otro frente. '+
+        'Sirve para no darle dos veces lo mismo.</p>';
+  d.forEach(function(o){
+    var ultimo={};
+    o.epp.forEach(function(x){
+      var key=(x.epp||'').trim().toLowerCase(); if(!key) return;
+      if(!ultimo[key]) ultimo[key]={epp:x.epp, fecha:x.fecha, u:0};
+      ultimo[key].u += (parseInt(x.cantidad,10)||1);
+    });
+    h+='<div class="caja vidrio" style="padding:12px 14px;margin-bottom:9px">'+
+       '<div class="sub" style="margin:0 0 7px"><b>'+esc(o.obra)+'</b></div>';
+    Object.keys(ultimo).forEach(function(key){
+      var u=ultimo[key];
+      h+='<div class="fila"><span>'+esc(u.epp)+' <small style="color:var(--gris)">\u00b7 '+u.u+' und</small></span>'+
+         '<span class="sub">'+(u.fecha? esc(fechaLarga(u.fecha)||u.fecha):'') +'</span></div>';
+    });
+    h+='</div>';
+  });
+  return h;
+}
 /* ══════════════ LA FICHA DEL TRABAJADOR ══════════════════════════
    El caso: el trabajador llega a otro frente y el supervisor pregunta
    «¿tienes respirador?». Hasta hoy no había dónde mirar: al tocar un
@@ -8686,7 +8848,8 @@ function vacioPersonalHTML(cargando){
    EMPRESA, no del celular: da igual quién lo registró.             */
 var TF_ID=null;
 function abrirFichaTrab(id){
-  TF_ID=id; ir('p-trab-ficha'); pintarFichaTrab();
+  TF_ID=id; delete TF_OTRAS[id]; ir('p-trab-ficha'); pintarFichaTrab();
+  cargarOtrasObrasDe(id).then(function(){ if(TF_ID===id) pintarFichaTrab(); });
   /* se pide lo del equipo y se repinta cuando llegue: la pantalla no
      se queda en blanco esperando a la señal de la obra */
   bajarKardex().then(function(){ if(TF_ID===id) pintarFichaTrab(); });
@@ -8753,6 +8916,10 @@ function pintarFichaTrab(){
     });
     h+='</div></details>';
   }
+
+  /* lo de las otras obras va JUSTO DESPUES del EPP de esta: es la misma
+     pregunta —«que tiene ya»— y separarlas era esconder la respuesta */
+  h += otrasObrasHTML(TF_ID);
 
   /* ── capacitaciones ── */
   var caps=TF_CAP[TF_ID];
