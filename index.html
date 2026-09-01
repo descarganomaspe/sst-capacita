@@ -6000,7 +6000,18 @@ function irAtras(){
   /* el trabajador que ya entró no se sale de su obra por equivocación:
      el único camino afuera es «Cambiar de usuario», que es explícito */
   if(act===casa && modoActivo()==='col' && typeof yo==='function' && yo()){ HIST=[]; return; }
-  if(act===casa){ HIST=[]; _ir('p-rol'); return; }
+  if(act===casa){
+    HIST=[];
+    /* Con varias obras, «Atrás» desde el tablero ya no es «sacame de la
+       app»: es «subir un nivel», o sea a la lista de proyectos. Antes
+       caía en la portada de «¿quién eres?», que para el que administra
+       tres obras es una salida en falso —tenía que volver a entrar por
+       la puerta para cambiar de frente. */
+    if(modoActivo()!=='col' && (MIS_EMP||[]).length>1 && alcanzable('p-mis-empresas')){
+      _ir('p-mis-empresas'); return;
+    }
+    _ir('p-rol'); return;
+  }
   while(HIST.length){ var c=HIST.pop(); if(c!==act && c!=='p-rol' && alcanzable(c)){ prev=c; break; } }
   var destino = prev || casa;
   /* si el destino iba a rebotar —o nos deja donde ya estamos— la única
@@ -8517,7 +8528,53 @@ function duenioId(){
 //  propio que se genera una sola vez. Va a Supabase y ademas queda
 //  una copia en el celular para que funcione sin internet.
 // =================================================================
-var LS_TRAB='sstc_trab', LS_DUENIO='sstc_duenio', LS_KARDEX='sstc_kardex';
+/* ══════════ CADA OBRA GUARDA LO SUYO APARTE ═══════════════════════
+   Con los proyectos apareció un problema serio: el personal, el kardex,
+   las amonestaciones, las credenciales y las buenas prácticas vivían en
+   UNA sola clave del celular. El líder se pasaba de la mina al frente
+   de construcción y seguía viendo —y podía editar y subir— a la gente
+   de la mina. Justo el cruce de datos que los proyectos existen para
+   evitar.
+
+   La clave ahora lleva el código de la obra abierta. Y no se cambió
+   llamada por llamada —son más de cuarenta y bastaba olvidar una para
+   que el cruce siguiera— sino aquí: LS_TRAB y compañía dejan de ser
+   textos fijos y pasan a calcularse cada vez que se leen. Todo el resto
+   de la app sigue escrito igual y apunta solo a la obra correcta.
+
+   El trabajador (sin empresa abierta) se queda con la clave de siempre:
+   él no tiene proyectos, tiene su obra y ya.                        */
+var LS_DUENIO='sstc_duenio';
+var _BASE_OBRA = {LS_TRAB:'sstc_trab', LS_KARDEX:'sstc_kardex',
+                  LS_AMON:'sstc_amon', LS_CRED:'sstc_cred', LS_BUENA:'sstc_buenas'};
+var _MIGRADAS = {};
+function claveDeObra(base){
+  var e=(typeof empActiva==='function') ? empActiva() : null;
+  if(!e || !e.codigo) return base;
+  var k = base+'_'+e.codigo;
+  /* mudanza de lo que ya estaba guardado sin obra: se hace una sola vez
+     y hacia la obra que esté abierta, que es la única que existía antes
+     de que hubiera proyectos. */
+  if(!_MIGRADAS[k]){
+    _MIGRADAS[k]=1;
+    try{
+      var viejo=localStorage.getItem(base);
+      if(viejo && !localStorage.getItem(k)){
+        localStorage.setItem(k, viejo);
+        localStorage.removeItem(base);
+      }
+    }catch(_m){}
+  }
+  return k;
+}
+Object.keys(_BASE_OBRA).forEach(function(nombre){
+  try{
+    Object.defineProperty(window, nombre, {
+      get: function(){ return claveDeObra(_BASE_OBRA[nombre]); },
+      configurable:true
+    });
+  }catch(_d){}
+});
 /* Ojo con donde viven estas dos: el arranque corre ANTES de la mitad
    del archivo, y si se declaran abajo, al arrancar valen undefined y
    el consentimiento se vuelve a pedir en cada apertura. Ya paso. */
@@ -9519,7 +9576,7 @@ function copiarSemanal(){
 //  Las cuatro firmas quedan PENDIENTES y se completan cuando cada
 //  uno pueda: trabajador, jefe inmediato, jefe de produccion y SSOMA.
 // =================================================================
-var LS_AMON='sstc_amon';
+/* LS_AMON='sstc_amon' ahora se calcula por obra, arriba */
 var AMON_FIRMAS=[['trabajador','Trabajador'],['jefe','Jefe inmediato'],
                  ['produccion','Jefe de producción'],['ssoma','SSOMA']];
 function amonLocal(){ return leer(LS_AMON,[]) || []; }
@@ -15752,7 +15809,7 @@ function _entregarFoto(du){
 }
 
 /* ---- Credencial / QR ---- */
-var LS_CRED='sstc_cred';
+/* LS_CRED='sstc_cred' ahora se calcula por obra, arriba */
 function credFirma(payload){ return _hh(payload+'|OBRASST-2026').slice(0,10).toUpperCase(); }
 function prepCred(){
   $('c-nombre').value=''; $('c-dni').value=''; $('c-cargo').value='';
@@ -18259,7 +18316,7 @@ function canjearInvitacion(){
 //  en que obra y con que foto, y el lider lo ve junto con todo lo
 //  demas. Se guarda primero en el celular y se sube cuando hay señal.
 // =================================================================
-var LS_BUENA='sstc_buenas';
+/* LS_BUENA='sstc_buenas' ahora se calcula por obra, arriba */
 var BUE_FOTO='', BUE_VER=null;
 function bueLocal(){ return leer(LS_BUENA,[]) || []; }
 function bueSet(a){ guardar(LS_BUENA,a); }
