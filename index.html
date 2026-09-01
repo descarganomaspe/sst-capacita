@@ -19740,6 +19740,19 @@ function compartirPDF(){
   /* 0) ¿vienen por el enlace publico de la politica? Eso se abre solo,
         sin cuenta, sin sector y sin consentimiento: es una pagina para leer. */
   try{ if(legalPorURL()) return; }catch(e){}
+  /* Si la app YA estaba abierta y llega otra credencial (alguien pega el
+     enlace, o el celular se lo entrega a la ventana que ya existe), el
+     navegador solo cambia el # y no vuelve a arrancar nada. Sin esto la
+     pantalla se quedaba como estaba y parecia que el QR no servia. */
+  try{
+    window.addEventListener('hashchange', function(){
+      var c=codDeEnlace(location.hash||'');
+      if(!c) return;
+      try{ history.replaceState(null,'',baseURL()); }catch(_h){}
+      ir('p-verificar');
+      var v=$('v-cod'); if(v){ v.value=c; try{ verificarCred(); }catch(_v){} }
+    });
+  }catch(_hh){}
   /* 0b) ¿vino escaneando una credencial? Es el caso de la puerta de la
          obra: el vigilante apunta la camara al carne y el celular abre
          esto. Se atiende ANTES que nada —antes de cuenta, de sector y de
