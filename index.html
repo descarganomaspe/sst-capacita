@@ -1325,7 +1325,28 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <input id="t-puesto" placeholder="Operario / Oficial / Capataz" autocomplete="off">
     <label class="sec-tit" style="margin:12px 0 6px">Área</label>
     <input id="t-area" placeholder="Estructuras / Acabados / Almacén" autocomplete="off">
-    <label class="sec-tit" style="margin:12px 0 6px">Estatus</label>
+
+    <div class="sec-tit" style="margin:18px 0 4px">Para una emergencia <span style="font-weight:400;color:var(--gris)">· opcional</span></div>
+    <p class="sub" style="margin:0 0 8px;font-size:12.5px">Si lo llenas sale impreso en su credencial. Es lo primero que busca un paramédico y lo que nadie encuentra cuando hace falta.</p>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1">
+        <label class="sec-tit" style="margin:0 0 6px">Grupo sanguíneo</label>
+        <select id="t-sangre">
+          <option value="">— sin registrar —</option>
+          <option value="O+">O+</option><option value="O-">O−</option>
+          <option value="A+">A+</option><option value="A-">A−</option>
+          <option value="B+">B+</option><option value="B-">B−</option>
+          <option value="AB+">AB+</option><option value="AB-">AB−</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <label class="sec-tit" style="margin:0 0 6px">Teléfono de emergencia</label>
+        <input id="t-emergencia" inputmode="tel" maxlength="40" placeholder="987 654 321" autocomplete="off">
+      </div>
+    </div>
+    <input id="t-emer-quien" maxlength="60" placeholder="A quién llamar (esposa, hermano…)" autocomplete="off" style="margin-top:9px">
+
+    <label class="sec-tit" style="margin:16px 0 6px">Estatus</label>
     <select id="t-estatus">
       <option value="activo">Activo</option>
       <option value="descanso">De descanso</option>
@@ -2551,6 +2572,24 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <label>DNI</label><input id="c-dni" inputmode="numeric" placeholder="70123456">
   <label>Cargo</label><input id="c-cargo" placeholder="Operario">
   <label>Habilitado hasta</label><input id="c-vence" type="date">
+  <div class="sec-tit" style="margin-top:16px">Para una emergencia <span style="font-weight:400;color:var(--gris)">· opcional</span></div>
+  <p class="sub" style="margin-top:-4px">Sale impreso en el carné. Si eliges al trabajador de tu personal, se llena solo.</p>
+  <div style="display:flex;gap:10px">
+    <div style="flex:1">
+      <label>Grupo sanguíneo</label>
+      <select id="c-sangre">
+        <option value="">— sin registrar —</option>
+        <option value="O+">O+</option><option value="O-">O−</option>
+        <option value="A+">A+</option><option value="A-">A−</option>
+        <option value="B+">B+</option><option value="B-">B−</option>
+        <option value="AB+">AB+</option><option value="AB-">AB−</option>
+      </select>
+    </div>
+    <div style="flex:1">
+      <label>Teléfono de emergencia</label>
+      <input id="c-emergencia" inputmode="tel" maxlength="40" placeholder="987 654 321">
+    </div>
+  </div>
   <div class="sec-tit" style="margin-top:18px">¿Para qué está habilitado?</div>
   <p class="sub" style="margin-top:-4px">Esto viaja dentro del QR. En la puerta se ve al toque para qué puede entrar y para qué no.</p>
   <div id="c-habil"></div>
@@ -5818,7 +5857,13 @@ var LS_SESION='sstc_sesion';
 function sesionAbierta(){ var x=leer(LS_SESION,null); return !!(x && x.correo && x.emp); }
 function empActiva(){ return sesionAbierta() ? leer(LS_EMP,null) : null; }
 function abrirSesion(correo, emp){
-  guardar(LS_EMP,{codigo:emp.codigo, id:emp.id, nombre:emp.nombre});
+  /* padre/padreNombre son del PROYECTO: dicen de qué empresa cuelga esta
+     obra. Sin guardarlos aquí la app no sabe que está dentro de un
+     proyecto y la invitación no puede decir a qué obra está metiendo a
+     la persona, que es justo lo que evita que un supervisor termine
+     viendo la obra equivocada. */
+  guardar(LS_EMP,{codigo:emp.codigo, id:emp.id, nombre:emp.nombre,
+                  padre:emp.padre||null, padreNombre:emp.padreNombre||''});
   /* el rol viene del servidor ('dueno' o gestor) y es lo que decide si
      esta persona puede abrir el panel del lider. No se elige en el
      celular: se pregunta a la base. */
@@ -8500,6 +8545,34 @@ function pintarTrabajadores(){
       guardaba OTRA copia recien leida — asi que la marca se perdia y todo
       se volvia a subir cada vez que se abria la pantalla. Ahora se marca
       sobre el arreglo que de verdad se guarda.                          */
+/* ══════════ BAJAR EL PERSONAL SIN QUE SE CORTE EN SILENCIO ═══════
+   La consulta iba sin «limit», y eso no significa «traelo todo»:
+   significa «traeme lo que el servidor quiera darme». PostgREST corta
+   en su tope y no avisa. Una empresa con 1200 trabajadores se habria
+   quedado con los primeros y nadie se entera hasta que falta alguien
+   en la lista del kardex.
+   Se pide de 500 en 500 hasta que una tanda venga incompleta. Y si la
+   base todavia no tiene las columnas nuevas (sangre, emergencia), se
+   reintenta sin ellas: mejor el personal sin esos dos datos que la
+   pantalla vacia.                                                   */
+function bajarTodoElPersonal(d, sinExtras, desde, acum){
+  var TANDA=500;
+  desde = desde||0; acum = acum||[];
+  var cols = sinExtras ? 'ext,nombre,dni,puesto,area,estatus'
+                       : 'ext,nombre,dni,puesto,area,estatus,sangre,emergencia,emer_quien';
+  return sbGet('sst_trabajador?duenio=eq.'+encodeURIComponent(d)+
+               '&select='+cols+'&order=creado.asc&limit='+TANDA+'&offset='+desde)
+    .then(function(rows){
+      rows = rows||[];
+      acum = acum.concat(rows);
+      if(rows.length < TANDA || acum.length > 20000) return acum;
+      return bajarTodoElPersonal(d, sinExtras, desde+TANDA, acum);
+    }, function(err){
+      /* 400 = columna que la base todavia no tiene. Una sola marcha atras. */
+      if(!sinExtras) return bajarTodoElPersonal(d, true, 0, []);
+      return acum;
+    });
+}
 var SINCRO_TRAB=false;
 function sincronizarTrabajadores(){
   if(SINCRO_TRAB) return Promise.resolve();
@@ -8513,16 +8586,24 @@ function sincronizarTrabajadores(){
     return cad.then(function(){
       var cuerpo=tanda.map(function(t){
         return {duenio:d, ext:t.id, nombre:t.nombre, dni:t.dni||null,
-                puesto:t.puesto||null, area:t.area||null, estatus:t.estatus||'activo'};
+                puesto:t.puesto||null, area:t.area||null, estatus:t.estatus||'activo',
+                sangre:t.sangre||null, emergencia:t.emergencia||null, emer_quien:t.emerQuien||null};
       });
-      return sbPost('sst_trabajador', cuerpo).then(function(){
-        tanda.forEach(function(t){ t.sync=1; });     /* sobre el arreglo que se guarda */
-      }, function(){ /* sin señal: se quedan sin marcar y se reintenta luego */ });
+      function marcar(){ tanda.forEach(function(t){ t.sync=1; }); }
+      return sbPost('sst_trabajador', cuerpo).then(marcar, function(){
+        /* si la base todavia no tiene sangre/emergencia, se sube sin ellas
+           antes de darla por perdida: el personal importa mas que el dato */
+        var pelado=cuerpo.map(function(o){
+          return {duenio:o.duenio, ext:o.ext, nombre:o.nombre, dni:o.dni,
+                  puesto:o.puesto, area:o.area, estatus:o.estatus};
+        });
+        return sbPost('sst_trabajador', pelado).then(marcar, function(){ /* sin señal: se reintenta luego */ });
+      });
     });
   }, Promise.resolve());
   return subida.then(function(){
     if(pend.length) trabsSet(todos);
-    return sbGet('sst_trabajador?duenio=eq.'+encodeURIComponent(d)+'&select=ext,nombre,dni,puesto,area,estatus');
+    return bajarTodoElPersonal(d);
   }).then(function(rows){
     /* ANTES esto era «if(!rows.length) return;» y se iba SIN soltar el
        cerrojo: SINCRO_TRAB se quedaba en true y no volvia a sincronizar
@@ -8540,14 +8621,19 @@ function sincronizarTrabajadores(){
            Antes se ignoraba y cada equipo se quedaba con su version. */
         if(y.sync && (y.nombre!==r.nombre || (y.dni||'')!==(r.dni||'') ||
                       (y.puesto||'')!==(r.puesto||'') || (y.area||'')!==(r.area||'') ||
+                      (y.sangre||'')!==(r.sangre||'') || (y.emergencia||'')!==(r.emergencia||'') ||
+                      (y.emerQuien||'')!==(r.emer_quien||'') ||
                       (y.estatus||'activo')!==(r.estatus||'activo'))){
           y.nombre=r.nombre; y.dni=r.dni||''; y.puesto=r.puesto||'';
           y.area=r.area||''; y.estatus=r.estatus||'activo';
+          y.sangre=r.sangre||''; y.emergencia=r.emergencia||''; y.emerQuien=r.emer_quien||'';
           cambio=true;
         }
         return;
       }
-      a.push({id:r.ext, nombre:r.nombre, dni:r.dni||'', puesto:r.puesto||'', area:r.area||'', estatus:r.estatus||'activo', sync:1});
+      a.push({id:r.ext, nombre:r.nombre, dni:r.dni||'', puesto:r.puesto||'', area:r.area||'',
+              estatus:r.estatus||'activo', sangre:r.sangre||'', emergencia:r.emergencia||'',
+              emerQuien:r.emer_quien||'', sync:1});
       cambio=true;
     });
     if(cambio){ trabsSet(a); var c=$('trab-lista'); if(c && (document.querySelector('.pantalla.activa')||{}).id==='p-trabajadores') pintarTrabajadores(); }
@@ -8709,6 +8795,9 @@ function prepTrabajador(){
   $('trab-tit').textContent = t ? 'Editar trabajador' : 'Agregar trabajador';
   $('t-nombre').value=t?t.nombre:''; $('t-dni').value=t?(t.dni||''):'';
   $('t-puesto').value=t?(t.puesto||''):''; $('t-area').value=t?(t.area||''):'';
+  $('t-sangre').value=t?(t.sangre||''):'';
+  $('t-emergencia').value=t?(t.emergencia||''):'';
+  $('t-emer-quien').value=t?(t.emerQuien||''):'';
   $('t-estatus').value=t?(t.estatus||'activo'):'activo';
   $('trab-msg').textContent='';
 }
@@ -8726,7 +8815,11 @@ function guardarTrabajador(){
     t={id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}; a.push(t);
   }
   t.nombre=nombre; t.dni=($('t-dni').value||'').trim(); t.puesto=($('t-puesto').value||'').trim();
-  t.area=($('t-area').value||'').trim(); t.estatus=$('t-estatus').value; t.sync=0;
+  t.area=($('t-area').value||'').trim(); t.estatus=$('t-estatus').value;
+  t.sangre=($('t-sangre').value||'').trim();
+  t.emergencia=($('t-emergencia').value||'').trim();
+  t.emerQuien=($('t-emer-quien').value||'').trim();
+  t.sync=0;
   trabsSet(a); TRAB_EDIT=null;
   m.style.color='var(--ok)'; m.textContent='Guardado.';
   setTimeout(function(){ ir('p-trabajadores'); },500);
@@ -15496,6 +15589,7 @@ var LS_CRED='sstc_cred';
 function credFirma(payload){ return _hh(payload+'|OBRASST-2026').slice(0,10).toUpperCase(); }
 function prepCred(){
   $('c-nombre').value=''; $('c-dni').value=''; $('c-cargo').value='';
+  if($('c-sangre')) $('c-sangre').value=''; if($('c-emergencia')) $('c-emergencia').value='';
   var d=new Date(); d.setMonth(d.getMonth()+3); $('c-vence').value=d.toISOString().slice(0,10);
   CRED_HABIL=[]; try{ pintarHabil([]); }catch(_e){}
   $('cred-tarjeta').innerHTML='';
@@ -15517,6 +15611,9 @@ function prepCred(){
     var t=trabPorId(this.value);
     if(!t) return;
     $('c-nombre').value=t.nombre||''; $('c-dni').value=t.dni||''; $('c-cargo').value=t.puesto||'';
+    /* la sangre y el telefono ya estaban en su ficha: no se vuelven a pedir */
+    if($('c-sangre')) $('c-sangre').value=t.sangre||'';
+    if($('c-emergencia')) $('c-emergencia').value=t.emergencia||'';
   };
 }
 /* El carné se dibuja SIEMPRE con esta función, tanto al crearlo como al
@@ -15561,6 +15658,20 @@ function tocaHabil(k){
   if(i>=0) CRED_HABIL.splice(i,1); else CRED_HABIL.push(k);
   var b=$('hab-'+k), x=habilDe(k);
   if(b) b.className='chip-hab'+(i>=0?'':' on')+((x&&x.bri)?' bri':'');
+}
+/* ══ LO QUE MIRA EL QUE LLEGA PRIMERO ═══════════════════════════
+   Un paramedico en obra no busca la habilitacion de altura: busca el
+   grupo sanguineo y a quien llamar. Por eso va aparte y en rojo, no
+   perdido entre los demas datos. Si no se registro, no se inventa ni
+   se deja un hueco raro: sencillamente no sale. */
+function emergenciaHTML(d){
+  if(!d || (!d.s && !d.e)) return '';
+  var p=[];
+  if(d.s) p.push('<b style="font-size:17px">'+esc(d.s)+'</b> <span style="opacity:.8">grupo sanguíneo</span>');
+  if(d.e) p.push('<b>'+esc(d.e)+'</b> <span style="opacity:.8">en una emergencia</span>');
+  return '<div style="margin-top:10px;padding:9px 11px;border-radius:10px;'+
+         'background:rgba(208,59,59,.12);border-left:3px solid #d03b3b;text-align:left;font-size:13.5px">'+
+         '🚑 '+p.join('<br>')+'</div>';
 }
 function chipsHabilHTML(hs, chico){
   if(!hs || !hs.length) return '';
@@ -15665,6 +15776,22 @@ function credPDF(cod){
   doc.setFont('helvetica','bold'); doc.setFontSize(7);
   if(vigente){ doc.setTextColor(12,120,12); doc.text('HABILITADO HASTA '+(fechaLarga(d.v)||'\u2014'), cx+9, cy+112); }
   else { doc.setTextColor(190,40,40); doc.text('VENCIDA EL '+(fechaLarga(d.v)||''), cx+9, cy+112); }
+  /* el grupo sanguineo va en la tarjeta, grande y en rojo: es lo unico
+     de este carne que alguien va a leer con prisa de verdad */
+  if(d.s){
+    doc.setFillColor(208,59,59);
+    doc.roundedRect(cx+CW-78, cy+104, 30, 15, 3, 3, 'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text(String(d.s), cx+CW-63, cy+114.5, {align:'center'});
+  }
+  if(d.e){
+    /* el telefono va en la columna izquierda, debajo del DNI: puesto al
+       lado del QR se salia del borde de la tarjeta con cualquier numero
+       de nueve digitos, y una tarjeta recortada con el texto cortado no
+       sirve de nada */
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(190,40,40);
+    doc.text('Emergencia: '+doc.splitTextToSize(String(d.e), CW-100)[0], cx+9, cy+102);
+  }
   var hs=(d.h||[]).map(function(k){ var x=habilDe(k); return x? x.n : null; })
                   .filter(function(x){ return !!x; });
   if(hs.length){
@@ -15694,6 +15821,8 @@ function credPDF(cod){
   dato('PUESTO', d.c);
   dato('EMPRESA', d.o);
   dato('HABILITADO HASTA', (fechaLarga(d.v)||'sin fecha')+(vigente?'':'   (VENCIDA)'));
+  if(d.s) dato('GRUPO SANGU\u00cdNEO', d.s);
+  if(d.e) dato('EN UNA EMERGENCIA', 'Llamar a '+d.e);
   if(hs.length) dato('HABILITACIONES', hs.join(', '));
 
   /* ── como se verifica ── */
@@ -15728,6 +15857,7 @@ function tarjetaCredHTML(cod){
     '<img src="'+img+'" alt="QR" style="width:180px;height:180px;margin:8px auto;display:block;background:#fff;padding:8px;border-radius:10px">'+
     '<b style="font-size:18px">'+esc(d.n||'')+'</b><br><small class="sub">'+esc(d.c||'')+(d.d?' · DNI '+esc(d.d):'')+'</small><br>'+
     '<small class="sub">'+esc(d.o||'')+' · habilitado hasta '+esc(d.v||'—')+'</small>'+
+    emergenciaHTML(d)+
     chipsHabilHTML(d.h)+
     (vigente?'':'<div class="aviso" style="margin-top:10px;border-left:3px solid var(--mal)">Esta credencial ya venció. Genera una nueva con fecha vigente.</div>')+
     '</div>'+
@@ -15742,6 +15872,10 @@ function generarCredencial(){
   sumarUso('credencial');
   var e=empActiva()||{nombre:'—', codigo:''};
   var datos={n:nombre, d:($('c-dni').value||'').trim(), c:($('c-cargo').value||'').trim(), v:$('c-vence').value, o:e.nombre};
+  /* claves cortas a proposito: cada letra de mas es un cuadrito mas en el
+     QR, y el QR tiene que leerse con un celular sucio a un metro */
+  var _sg=(($('c-sangre')||{}).value||'').trim(); if(_sg) datos.s=_sg;
+  var _em=(($('c-emergencia')||{}).value||'').trim(); if(_em) datos.e=_em;
   if(CRED_HABIL.length) datos.h=CRED_HABIL.slice();
   var payload=b64u(JSON.stringify(datos));
   var cod='OBRASST-CRED:'+payload+'.'+credFirma(payload);
@@ -15888,6 +16022,7 @@ function verificarCred(){
       '<b style="font-size:18px">'+(vigente?'✅ HABILITADO':'⛔ VENCIDO')+'</b><br>'+
       '<b>'+esc(d.n)+'</b><br><small class="sub">'+esc(d.c||'')+(d.d?' · DNI '+esc(d.d):'')+'</small><br>'+
       '<small class="sub">'+esc(d.o||'')+' · hasta '+esc(vence||'—')+'</small>'+
+      emergenciaHTML(d)+
       (vigente && esBrigadista(hs) ? '<div class="aviso" style="margin-top:10px;border-left:3px solid var(--oro)">🚨 Es brigadista de emergencia.</div>' : '')+
       (hs.length ? '<div class="sec-tit" style="margin-top:12px;font-size:11px">Habilitado para</div>'+chipsHabilHTML(hs)
                  : '<p class="sub" style="margin-top:10px">Sin habilitaciones especiales: solo trabajo general. Para altura, andamios, izaje, espacios confinados o caliente, NO.</p>')+
@@ -17557,25 +17692,76 @@ function pintarMisEmpresas(){
     ? '<button class="tarj vidrio" style="margin-top:14px" onclick="ir(\'p-gestor\')"><b>📊 Panel del gestor</b>'+
       '<small>Tus '+MIS_EMP.length+' proyectos juntos: qué inspección falta, qué reporte sigue abierto, cómo va cada supervisor.</small></button>'
     : '';
-  c.innerHTML = MIS_EMP.map(function(e,i){
-    /* Antes esta linea decia «versión LITE» para todo lo que no fuera
-       supervisor o equipo: un SSOMA recien pagado se veia como LITE y
-       parecia que el plan no habia cambiado. Ahora el nombre sale de la
-       misma escalera que manda en el resto de la app. */
+  /* ═══ AGRUPADAS POR EMPRESA ═══════════════════════════════════
+     Una constructora con un RUC lleva varias obras. Cada obra es un
+     PROYECTO: cuelga de la empresa, hereda su plan y su RUC, y tiene
+     su propio equipo. El supervisor de mina no ve nada de la obra de
+     construcción, porque no es miembro de ese proyecto — no porque la
+     pantalla se lo esconda. */
+  function fichaEmp(e, i, esProyecto){
     var vencido = e.vence && String(e.vence).slice(0,10) < hoyISO();
     var idp = vencido ? 'lite' : (PLAN_VIEJO[e.plan] || e.plan || 'lite');
     var pl  = planDe(idp).nombre;
-    var eq  = (planDe(idp).gestores>1) ? (e.gestores||1)+' de '+(e.tope_gestores||planDe(idp).gestores)+' gestores' : 'solo tú';
+    var eq  = (planDe(idp).gestores>1) ? (e.gestores||1)+' de '+(e.tope_gestores||planDe(idp).gestores)+' en gestión' : 'solo tú';
     var cad = vencido ? ' · <span style="color:var(--mal)">venció el '+fechaLarga(String(e.vence).slice(0,10))+'</span>'
             : (e.vence ? ' · hasta el '+fechaLarga(String(e.vence).slice(0,10)) : '');
-    return '<button class="btn sec" style="text-align:left;line-height:1.35" onclick="abrirEmpresaDeLaLista('+i+')">'+
-      '<b>'+esc(e.nombre)+'</b><br><small style="opacity:.75">Código '+esc(e.codigo)+' · '+esc(pl)+' · '+eq+cad+
+    return '<button class="btn sec" style="text-align:left;line-height:1.35'+(esProyecto?';margin-left:14px':'')+'" onclick="abrirEmpresaDeLaLista('+i+')">'+
+      (esProyecto ? '<span style="opacity:.6">└ </span>' : '')+
+      '<b>'+esc(e.nombre)+'</b>'+
+      (esProyecto ? ' <span style="font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--oro)">PROYECTO</span>' : '')+
+      '<br><small style="opacity:.75">Código '+esc(e.codigo)+' · '+esc(pl)+' · '+eq+cad+
       ' · '+(e.rol==='dueno'?'eres el dueño':'gestor')+'</small></button>';
-  }).join('');
+  }
+  var idx={}; MIS_EMP.forEach(function(e,i){ idx[e.id]=i; });
+  var raices = MIS_EMP.filter(function(e){ return !e.padre_id || idx[e.padre_id]===undefined; });
+  var h='';
+  raices.forEach(function(e){
+    h += fichaEmp(e, idx[e.id], !!e.padre_id);
+    MIS_EMP.forEach(function(x){
+      if(x.padre_id === e.id) h += fichaEmp(x, idx[x.id], true);
+    });
+    if(e.rol==='dueno' && !e.padre_id){
+      h += '<button class="btn sec" style="margin-left:14px;text-align:left;border-style:dashed" '+
+           'onclick="pedirProyecto(\''+e.id+'\',\''+escA(e.nombre).replace(/'/g,'')+'\')">'+
+           '➕ <b>Nuevo proyecto de '+esc(e.nombre)+'</b><br>'+
+           '<small style="opacity:.75">Otra obra con el mismo RUC y el mismo plan, con su propio equipo y su propio segundo líder.</small></button>';
+    }
+  });
+  c.innerHTML = h;
+}
+/* ── crear un proyecto ────────────────────────────────────────────
+   No abre una pantalla nueva: es un nombre y ya. Todo lo demás —RUC,
+   plan, fecha— lo hereda de la empresa, que es justo el punto. */
+function pedirProyecto(padreId, padreNombre){
+  preguntar('Nuevo proyecto de '+padreNombre,
+    'Ponle el nombre con el que tu equipo la llama: «Obra Metro Línea 2», «Mina Toquepala». '+
+    'Hereda el RUC y el plan de la empresa; su equipo y sus registros son aparte.',
+    '',
+    function(nombre){
+      nombre=(nombre||'').trim();
+      if(nombre.length<3){ aviso('Falta el nombre','Escribe cómo se llama esa obra.','\uD83C\uDFD7\uFE0F'); return; }
+      sbRpc('sst_crear_proyecto',{p_nombre:nombre, p_padre:padreId}).then(function(j){
+        if(!j || !j.ok){
+          var q=(j&&j.error)||'';
+          aviso('No se pudo crear',
+            q==='no_eres_dueno' ? 'Solo quien activó el plan de la empresa puede abrir proyectos.' :
+            q==='nombre_repetido' ? 'Ya tienes un proyecto con ese nombre. Ponle otro para no confundirlos.' :
+            q==='demasiados_proyectos' ? 'Llegaste a 30 proyectos. Escríbenos y lo vemos.' :
+            q==='sin_sesion' ? 'Entra a tu cuenta primero.' : 'Vuelve a intentarlo.', '\u26A0\uFE0F');
+          return;
+        }
+        cargarMisEmpresas(true).then(function(){
+          aviso('Proyecto creado', '«'+nombre+'» ya está bajo '+padreNombre+'.\n\n'+
+                'Entra a él para cargar su personal y nombrar a sus supervisores. '+
+                'Lo que se registre ahí no lo ve el equipo de tus otras obras.', '\uD83C\uDFD7\uFE0F');
+        });
+      }).catch(function(err){ aviso('No se pudo crear', porQue(err), '\u26A0\uFE0F'); });
+    });
 }
 function abrirEmpresaDeLaLista(i){
   var e=MIS_EMP[i]; if(!e) return;
-  abrirSesion(correoCuenta(), {codigo:e.codigo, id:e.id, nombre:e.nombre, rol:e.rol||''});
+  abrirSesion(correoCuenta(), {codigo:e.codigo, id:e.id, nombre:e.nombre, rol:e.rol||'',
+                               padre:e.padre_id||null, padreNombre:e.padre_nombre||''});
   guardar(LS_PLAN,{plan:e.plan||'lite', vence:e.vence||null, tope_obras:1, tope_gestores:e.tope_gestores||1});
   PLAN_SERVIDOR=true;   /* esta lista vino de sst_mis_empresas */
   ROL_EMP_SERVIDOR = (e.rol==='dueno') ? 'dueno' : 'gestor';
@@ -17718,7 +17904,18 @@ function pintarNotaPapel(){
 }
 function pintarInvitar(){
   var e=empActiva(), c=$('inv-emp');
-  if(c) c.innerHTML = e ? ('🏢 Invitas a <b>'+esc(e.nombre)+'</b> ('+esc(e.codigo)+').') : 'Primero entra a tu empresa.';
+  /* Con varios proyectos esto deja de ser un adorno: el líder tiene que
+     ver, ANTES de generar el código, a qué obra está metiendo a esa
+     persona. Un supervisor puesto en el proyecto equivocado ve datos
+     que no le tocan, y eso es justo lo que los proyectos evitan. */
+  if(c){
+    if(!e){ c.innerHTML='Primero entra a tu empresa.'; }
+    else if(e.padre){
+      c.innerHTML='🏗️ Entra a <b>'+esc(e.nombre)+'</b> ('+esc(e.codigo)+'), proyecto de '+esc(e.padreNombre||'tu empresa')+'.'+
+        '<br><span style="color:var(--gris)">Solo verá esta obra. Para otra, cambia de proyecto y genera otro código.</span>';
+    }
+    else { c.innerHTML='🏢 Invitas a <b>'+esc(e.nombre)+'</b> ('+esc(e.codigo)+').'; }
+  }
   cargarInvitaciones();
 }
 function generarInvitacion(){
@@ -18105,7 +18302,8 @@ var TC_ACCESOS = [
   {ic:'\uD83C\uDF1F', et:'Buenas<br>prácticas',      ir:'p-buenas',        col:'a-verde'},
   {ic:'\uD83D\uDCC8', et:'Horas<br>hombre',          ir:'p-semanal',       col:'a-azul'},
   {ic:'\uD83D\uDC77', et:'Personal y<br>credenciales', ir:'p-trabajadores', col:'a-verde'},
-  {ic:'\uD83D\uDE4B', et:'Solicitudes<br>de acceso',  ir:'p-solicitudes',  col:'a-gris'}
+  {ic:'\uD83D\uDE4B', et:'Solicitudes<br>de acceso',  ir:'p-solicitudes',  col:'a-gris'},
+  {ic:'\uD83C\uDFD7\uFE0F', et:'Mis<br>proyectos',     ir:'p-mis-empresas', col:'a-azul'}
 ];
 function liderBloquesDom(){
   var d=document.createElement('div');
