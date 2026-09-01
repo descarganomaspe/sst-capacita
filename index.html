@@ -1361,6 +1361,10 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <label class="sec-tit" style="margin:0 0 6px">Trabajador</label>
     <select id="k-trab"></select>
 
+    <label class="sec-tit" style="margin:14px 0 6px">¿Para qué actividad?</label>
+    <select id="k-actividad"></select>
+    <p class="sub" id="k-activ-nota" style="margin:6px 0 0;font-size:12.5px"></p>
+
     <div class="sec-tit" style="margin:16px 0 6px">Lo que se lleva</div>
     <p class="sub" style="margin:0 0 8px;font-size:12.5px">Agrega todo lo de esta entrega. Firma <b>una sola vez</b> al final y la firma queda en cada fila del kardex.</p>
     <div id="k-lote"></div>
@@ -5835,7 +5839,10 @@ function salirDeSesion(){
     _ir('p-mis-empresas'); cargarMisEmpresas();
   }, {si:'Sí, salir', no:'Quedarme', icono:'🏢'});
 }
-var S = {sector:null, tema:null, modo:null, i:0, orden:[], resp:[], lite:true, datos:{}};
+var S = {sector:null, tema:null, modo:null, i:0, orden:[], resp:[], lite:true, liteFijo:false, datos:{}};
+/* liteFijo = «no me recalcules el acceso». Lo pone el trabajador que
+   entra con un codigo de evaluacion: no tiene plan, pero tiene que ver
+   su tema completo. Para todos los demas manda el plan pagado. */
 /* EV: cuando llega con el codigo del supervisor, la app queda encerrada en una
    sola prueba. Mientras EV no sea null, no hay menu, ni temas, ni respuestas. */
 var EV = null;
@@ -5852,7 +5859,7 @@ var COL_OK={'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos'
             'p-final':1,'p-firma':1,'p-listo':1,'p-charlas':1,'p-charla':1,'p-programa':1,
             'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1,'p-sector':1,
             'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,
-            'p-obra':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1};
+            'p-obra':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1};
 /* la empresa: su inicio ordenado, las carpetas de documentos y las herramientas
    de obra que sí se comparten en la nube (reportes, inspecciones, credenciales, MSDS…) */
 var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
@@ -6046,9 +6053,19 @@ var SIN_CUENTA={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-sector':1,'p-aparien
   /* lo legal se lee SIEMPRE, con cuenta o sin ella: si para leer la
      politica de privacidad hay que crearse una cuenta, la politica no
      sirve — y Google Play tampoco la acepta asi. */
-  'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,'p-consentir':1};
-var SIN_EMPRESA={'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-invitacion':1};
+  'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,'p-consentir':1,
+  /* el que escanea una credencial en la puerta puede ser el vigilante
+     de la mina, que no tiene cuenta ni tiene por que tenerla. La firma
+     se comprueba dentro del aparato: no hace falta permiso de nadie. */
+  'p-verificar':1};
+var SIN_EMPRESA={'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-invitacion':1,'p-verificar':1};
 function _ir(p){
+  /* EL ACCESO LO DECIDE EL PLAN, NO LA PANTALLA.
+     S.lite solo se recalculaba dentro de pintarInicio(), y a esa
+     pantalla el que gestiona su empresa no llega nunca. Resultado:
+     una empresa en plan SSOMA seguia viendo los temas con candado y
+     «6 de 10 preguntas gratis», como si no hubiera pagado nada. */
+  if(!S.liteFijo && typeof libre==='function'){ try{ S.lite = !libre(); }catch(_l){} }
   /* A los temas no se entra sin sector: antes se colaba con el primero de la
      lista y el supervisor de minería veía preguntas de construcción. */
   /* mismo criterio que el sector: a estas pantallas no se llega sin
@@ -8480,19 +8497,70 @@ function sincronizarTrabajadores(){
     if(pend.length) trabsSet(todos);
     return sbGet('sst_trabajador?duenio=eq.'+encodeURIComponent(d)+'&select=ext,nombre,dni,puesto,area,estatus');
   }).then(function(rows){
-    if(!rows || !rows.length) return;
+    /* ANTES esto era «if(!rows.length) return;» y se iba SIN soltar el
+       cerrojo: SINCRO_TRAB se quedaba en true y no volvia a sincronizar
+       en toda la sesion. Una empresa sin nadie cargado todavia se quedaba
+       sin bajar a su gente para siempre. */
+    if(!rows || !rows.length){ SINCRO_TRAB=false; return trabsLocal(); }
     var a=trabsLocal(), porExt={};
     a.forEach(function(t){ porExt[t.id]=t; });
     var cambio=false;
     rows.forEach(function(r){
       if(!r.ext) return;
-      if(porExt[r.ext]){ return; }
+      var y=porExt[r.ext];
+      if(y){
+        /* el mismo trabajador, editado en otro celular: se actualiza.
+           Antes se ignoraba y cada equipo se quedaba con su version. */
+        if(y.sync && (y.nombre!==r.nombre || (y.dni||'')!==(r.dni||'') ||
+                      (y.puesto||'')!==(r.puesto||'') || (y.area||'')!==(r.area||'') ||
+                      (y.estatus||'activo')!==(r.estatus||'activo'))){
+          y.nombre=r.nombre; y.dni=r.dni||''; y.puesto=r.puesto||'';
+          y.area=r.area||''; y.estatus=r.estatus||'activo';
+          cambio=true;
+        }
+        return;
+      }
       a.push({id:r.ext, nombre:r.nombre, dni:r.dni||'', puesto:r.puesto||'', area:r.area||'', estatus:r.estatus||'activo', sync:1});
       cambio=true;
     });
     if(cambio){ trabsSet(a); var c=$('trab-lista'); if(c && (document.querySelector('.pantalla.activa')||{}).id==='p-trabajadores') pintarTrabajadores(); }
     SINCRO_TRAB=false;
-  }).catch(function(){ SINCRO_TRAB=false; });
+    return a;
+  }).catch(function(){ SINCRO_TRAB=false; return trabsLocal(); });
+}
+/* ══════ EL PERSONAL ES DE LA EMPRESA, NO DEL CELULAR ═══════
+   Esto casi nos cuesta un cliente. El líder cargó a su gente desde el
+   celular; después abrió la app en la laptop para registrar un kardex y
+   la app le dijo «registra primero a tu personal». Los trabajadores
+   estaban en la nube desde el primer día: lo que faltaba era pedirlos.
+   sincronizarTrabajadores() existía, pero SOLO se llamaba al abrir «Mi
+   personal». Cualquier otra pantalla que necesitara la lista —kardex,
+   credencial, amonestación, accidente, puntaje, exportar— se quedaba
+   con lo que hubiera en ESE aparato.
+   asegurarPersonal() es la puerta única: pinta de una con lo que hay,
+   pide lo del equipo, y vuelve a pintar cuando llega. Nadie espera
+   mirando una pantalla vacía, y nadie se queda sin su gente.        */
+/* `siempre` = repinta aunque no haya llegado nadie nuevo. Lo usa quien
+   dejo un «buscando…» en pantalla y tiene que borrarlo pase lo que pase.
+   Quien pasa su PROPIA funcion de pintado NO debe usarlo: se llamaria a
+   si misma sin fin. */
+function asegurarPersonal(repintar, siempre){
+  function pinta(){ if(typeof repintar==='function'){ try{ repintar(); }catch(_q){} } }
+  if(!hayCuenta() || !empActiva()){ if(siempre) pinta(); return Promise.resolve(trabsLocal()); }
+  var antes=trabsLocal().length;
+  return sincronizarTrabajadores().then(function(){
+    if(siempre || trabsLocal().length!==antes) pinta();
+    return trabsLocal();
+  }, function(){ if(siempre) pinta(); return trabsLocal(); });
+}
+/* El rotulo que ve el que abre una lista de personal vacia. Antes decia
+   «registra primero a tu personal» aunque su gente estuviera cargada y
+   solo faltara bajarla: el mensaje acusaba al usuario de algo que no
+   habia hecho mal. */
+function vacioPersonalHTML(cargando){
+  return cargando
+    ? '<option value="">buscando el personal de tu empresa…</option>'
+    : '<option value="">— no hay personal cargado todavía —</option>';
 }
 /* ══════════════ LA FICHA DEL TRABAJADOR ══════════════════════════
    El caso: el trabajador llega a otro frente y el supervisor pregunta
@@ -8672,17 +8740,47 @@ var EPP_SUG=['Casco de seguridad','Barbiquejo','Tafilete','Tapones auditivos',
 function kardexLocal(){ return leer(LS_KARDEX,[]) || []; }
 function kardexSet(a){ guardar(LS_KARDEX,a); }
 var K_LIENZO=null, K_CTX=null, K_TRAZO=false, K_HAYFIRMA=false;
+function pintarSelTrabKardex(cargando){
+  var sel=$('k-trab'); if(!sel) return;
+  var previo=sel.value;
+  var a=trabsLocal().filter(function(t){return t.estatus!=='cesado';});
+  sel.innerHTML = a.length
+    ? a.map(function(t){return '<option value="'+t.id+'">'+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</option>';}).join('')
+    : vacioPersonalHTML(cargando);
+  if(previo) sel.value=previo;
+}
 function prepKardex(){
   var sug=$('k-epp-sug'); sug.innerHTML=EPP_SUG.map(function(e){return '<option value="'+esc(e)+'">';}).join('');
-  var sel=$('k-trab'), a=trabsLocal().filter(function(t){return t.estatus!=='cesado';});
-  sel.innerHTML = a.length ? a.map(function(t){return '<option value="'+t.id+'">'+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</option>';}).join('')
-                           : '<option value="">— registra primero a tu personal —</option>';
+  pintarSelTrabKardex(true);
+  asegurarPersonal(function(){ pintarSelTrabKardex(false); }, true);
+  pintarSelectActividadKardex();
   var hoy=new Date(); $('k-fecha').value=hoy.getFullYear()+'-'+('0'+(hoy.getMonth()+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2);
   $('k-epp').value=''; $('k-cant').value='1'; $('kardex-msg').textContent='';
   K_LOTE=[]; K_FOTO='';
   var fv=$('k-foto-vista'); if(fv) fv.innerHTML='';
   pintarLote();
   prepararLienzoK();
+}
+/* ── PARA QUE ACTIVIDAD SE ENTREGO ESE EPP ──────────────────────────
+   Lo pidio un cliente que lleva mina, y tiene razon: sin esto el kardex
+   dice cuanto arnes salio, pero no si salio por trabajo en altura o
+   porque alguien lo perdio en el almacen. Con la actividad al lado, el
+   consumo se puede leer contra el riesgo que lo genera —y esa es la
+   conversacion que de verdad sirve para comprar.
+   Se usa la MISMA lista que los reportes, la que el lider edita en
+   «Actividades»: si aparece una actividad nueva en la obra, aparece en
+   los dos sitios a la vez. */
+function pintarSelectActividadKardex(){
+  var sel=$('k-actividad'); if(!sel) return;
+  var previo=sel.value;
+  sel.innerHTML = actividades().map(function(x){
+    return '<option value="'+escA(x)+'">'+esc(x)+'</option>';
+  }).join('');
+  if(previo) sel.value=previo;
+  var n=$('k-activ-nota'); if(!n) return;
+  n.innerHTML = (typeof puedeEditarActividades==='function' && puedeEditarActividades())
+    ? 'Es la lista de tu obra. <a onclick="ir(\'p-actividades\')" style="text-decoration:underline;cursor:pointer">Agregar o quitar actividades</a>.'
+    : 'Si el EPP no es para ninguna de estas, deja «Otra / no aplica».';
 }
 function prepararLienzoK(){
   var cv=$('k-lienzo'); if(!cv) return;
@@ -8785,6 +8883,7 @@ function guardarKardex(){
   var firma=K_LIENZO.toDataURL('image/png');
   var foto=(K_FOTO||'');
   var fecha=$('k-fecha').value;
+  var actv=(($('k-actividad')||{}).value||'');
   var lote='L'+Date.now().toString(36);
   var a=kardexLocal(), paraSubir=[];
 
@@ -8792,18 +8891,20 @@ function guardarKardex(){
     sumarUso('kardex');
     var reg={ id:'k'+Date.now().toString(36)+i+Math.random().toString(36).slice(2,5),
       trab:tid, trabNombre:t?t.nombre:'', epp:l.epp, tipo:l.tipo,
-      fecha:fecha, cant:l.cant, unidad:l.unidad,
+      fecha:fecha, cant:l.cant, unidad:l.unidad, actividad:actv,
       firma:firma, foto:foto, lote:lote, sync:0 };
     a.unshift(reg);
     paraSubir.push(reg);
   });
   kardexSet(a);
 
-  function fila(reg, conFoto){
+  function fila(reg, conFoto, conActividad){
     var o={duenio:duenioId(), ext:reg.id, trabajador:tid, trab_nombre:reg.trabNombre,
            epp:reg.epp, tipo:reg.tipo, fecha:reg.fecha, cantidad:reg.cant,
            unidad:reg.unidad, firma:reg.firma};
     if(conFoto && reg.foto) o.foto=reg.foto;
+    /* la actividad tambien es columna nueva: mismo cuidado que la foto */
+    if(conActividad && reg.actividad) o.actividad=reg.actividad;
     return o;
   }
   /* La foto es columna nueva. Si la base todavia no la tiene, PostgREST
@@ -8811,12 +8912,18 @@ function guardarKardex(){
      y nadie se enteraba. Si falla con foto, se reintenta sin ella: mejor
      la entrega arriba sin foto que la entrega perdida. */
   function marcar(){ paraSubir.forEach(function(r){ r.sync=1; }); kardexSet(kardexLocal()); }
-  sbPost('sst_kardex', paraSubir.map(function(r){ return fila(r,true); }))
-    .then(marcar)
-    .catch(function(){
-      return sbPost('sst_kardex', paraSubir.map(function(r){ return fila(r,false); }))
-        .then(marcar).catch(function(){});
+  function intento(conFoto, conActividad){
+    return sbPost('sst_kardex', paraSubir.map(function(r){ return fila(r, conFoto, conActividad); }));
+  }
+  /* se prueba con todo; si la base es vieja se va soltando lo opcional,
+     en orden de lo que menos duele perder. La entrega NUNCA se pierde. */
+  intento(true, true).then(marcar).catch(function(){
+    return intento(true, false).then(marcar).catch(function(){
+      return intento(false, true).then(marcar).catch(function(){
+        return intento(false, false).then(marcar).catch(function(){});
+      });
     });
+  });
 
   K_LOTE=[];
   m.style.color='var(--ok)';
@@ -8894,7 +9001,7 @@ function bajarKardex(){
   if(!e || !e.id || !hayCuenta() || BAJANDO_KARDEX) return Promise.resolve(kardexLocal());
   BAJANDO_KARDEX=true;
   return sbGet('sst_kardex?duenio=eq.'+encodeURIComponent(e.id)+
-      '&select=ext,trabajador,trab_nombre,epp,tipo,fecha,cantidad,unidad'+
+      '&select=ext,trabajador,trab_nombre,epp,tipo,fecha,cantidad,unidad,actividad'+
       '&order=fecha.desc&limit=800')
     .then(function(nube){
       BAJANDO_KARDEX=false;
@@ -8907,6 +9014,7 @@ function bajarKardex(){
         a.push({ id:r.ext, trab:r.trabajador||'', trabNombre:r.trab_nombre||'',
                  epp:r.epp||'', tipo:r.tipo||'N', fecha:r.fecha||'',
                  cant:parseInt(r.cantidad,10)||1, unidad:r.unidad||'UND',
+                 actividad:r.actividad||'',
                  firma:'', foto:'', sync:1, delEquipo:1 });
         nuevos++;
       });
@@ -9142,8 +9250,17 @@ function fotoAmon(){
       '<button class="btn sec" style="margin-top:8px" onclick="AMON_FOTO=null;document.getElementById(\'a-foto-vista\').innerHTML=\'\';">Quitar la foto</button>';
   });
 }
+function pintarSelTrabAmon(){
+  var sel=$('a-trab'); if(!sel) return;
+  var previo=sel.value;
+  var tr=trabsLocal().filter(function(t){return t.estatus!=='cesado';});
+  sel.innerHTML='<option value="">— escribir a mano —</option>'+
+    tr.map(function(t){return '<option value="'+t.id+'">'+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</option>';}).join('');
+  if(previo) sel.value=previo;
+}
 function prepAmonestacion(){
   AMON_FOTO=null;
+  asegurarPersonal(pintarSelTrabAmon);
   var sel=$('a-trab'), tr=trabsLocal().filter(function(t){return t.estatus!=='cesado';});
   sel.innerHTML='<option value="">— escribir a mano —</option>'+
     tr.map(function(t){return '<option value="'+t.id+'">'+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</option>';}).join('');
@@ -9452,7 +9569,7 @@ function prepAccNuevo(){
   $('ac-parte').innerHTML=ACC_PARTES.map(function(x){ return '<option>'+esc(x)+'</option>'; }).join('');
   $('ac-agente').innerHTML=ACC_AGENTES.map(function(x){ return '<option>'+esc(x)+'</option>'; }).join('');
   $('ac-foto-vista').innerHTML=''; $('acc-nuevo-msg').textContent='';
-  accListaTrabajadores(); pintarAccClases();
+  asegurarPersonal(accListaTrabajadores); pintarAccClases();
 }
 function accListaTrabajadores(){
   var caja=$('ac-elige'); if(!caja) return;
@@ -10315,7 +10432,11 @@ function _pdfDeKardex(t, regs, mes){
   y+=12;
 
   /* la tabla de entregas */
-  var cols=[['N°',.05],['TIPO',.07],['EQUIPO DE PROTECCIÓN PERSONAL',.37],['FECHA',.11],['CANT.',.10],['FIRMA',.17],['FOTO',.13]];
+  /* La ACTIVIDAD entra en el registro impreso, no solo en el tablero: el
+     que fiscaliza pregunta para qué trabajo se entregó ese arnés, y la
+     respuesta tiene que estar en la hoja firmada, al lado del equipo. */
+  var cols=[['N°',.05],['TIPO',.06],['EQUIPO DE PROTECCIÓN PERSONAL',.27],['ACTIVIDAD',.15],
+            ['FECHA',.10],['CANT.',.09],['FIRMA',.16],['FOTO',.12]];
   var ancho=W-2*M;
   function tituloTabla(){
     doc.setFillColor(11,42,58); doc.rect(M, y, ancho, 18, 'F');
@@ -10328,7 +10449,8 @@ function _pdfDeKardex(t, regs, mes){
   doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
   var yTabla=y-18, altoTabla=18;
   regs.forEach(function(r, i){
-    var vals=[String(i+1), (r.tipo||'N'), (r.epp||''), _ddmm(r.fecha), (r.cant||1)+' '+(r.unidad||'UND'), '', ''];
+    var vals=[String(i+1), (r.tipo||'N'), (r.epp||''), (r.actividad||'—'),
+              _ddmm(r.fecha), (r.cant||1)+' '+(r.unidad||'UND'), '', ''];
     /* el equipo puede tener nombre largo (un arnes con doble linea de vida
        y absorbedor no entra en una linea): la fila crece, no se recorta */
     var partido=vals.map(function(v,j){ return doc.splitTextToSize(String(v), ancho*cols[j][1]-8).slice(0,2); });
@@ -10352,8 +10474,12 @@ function _pdfDeKardex(t, regs, mes){
       acum+=ancho*cols[j][1];
     });
     /* la firma y la foto, dentro de la misma fila */
-    var xFirma = M + ancho*(cols[0][1]+cols[1][1]+cols[2][1]+cols[3][1]+cols[4][1]);
-    var wFirma = ancho*cols[5][1], wFoto = ancho*cols[6][1];
+    /* la firma y la foto son SIEMPRE las dos ultimas columnas: se suman
+       las de delante en vez de nombrarlas por indice, para que agregar
+       una columna no descoloque las imagenes. Ya paso una vez. */
+    var _antes=0; for(var _c=0;_c<cols.length-2;_c++) _antes+=cols[_c][1];
+    var xFirma = M + ancho*_antes;
+    var wFirma = ancho*cols[cols.length-2][1], wFoto = ancho*cols[cols.length-1][1];
     if(r.firma){
       try{ doc.addImage(r.firma, 'PNG', xFirma+3, y+3, wFirma-6, alto-6, undefined, 'FAST'); }catch(e){}
     } else {
@@ -10375,7 +10501,9 @@ function _pdfDeKardex(t, regs, mes){
   /* leyenda del tipo y firma, como en el formato */
   y+=14;
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(110,110,110);
-  doc.text('Tipo:  N = entrega nueva   ·   C = cambio o reposición   ·   P = préstamo', M, y);
+  /* decia «P = préstamo» y en toda la app P es PÉRDIDA: el registro
+     impreso contradecia al formulario y al tablero. */
+  doc.text('Tipo:  N = entrega nueva   ·   C = cambio o reposición   ·   P = reposición por pérdida', M, y);
   /* la firma va abajo, donde se firma en papel */
   y = Math.max(y+52, H-118);
   doc.setDrawColor(140,140,140); doc.setLineWidth(.7);
@@ -10422,6 +10550,7 @@ function bajarKardexPDF(){
     .catch(function(e){ m.style.color='var(--mal)'; m.textContent='No se pudo: '+(e&&e.message||e); });
 }
 function pintarKardexExport(){
+  asegurarPersonal(function(){ if((document.querySelector('.pantalla.activa')||{}).id==='p-kardex-export') pintarKardexExport(); });
   var sel=$('kx-trab'), a=trabsLocal();
   sel.innerHTML='<option value="">Todos (un archivo por cada uno)</option>'+
     a.map(function(t){return '<option value="'+t.id+'">'+esc(t.nombre)+'</option>';}).join('');
@@ -11579,7 +11708,7 @@ function entrarEvaluacion(o, clave){
   if(ROL!=='sup'){ ROL='col'; guardar(LS_ROL,'col'); }
   EV=o; guardar(LS_EV,o);
   var tm=TEMAS[o.d];
-  S.tema=o.d; S.lite=false;
+  S.tema=o.d; S.lite=false; S.liteFijo=true;
   S.sector=o.s||(tm.sector!=='*'?tm.sector:(leer(LS.sec,null)||SECTORES[0].id));
   /* si el supervisor dejo puesto a donde le llegan los resultados, se copia,
      pero nunca se pisa lo que el dueño del celular ya tenia configurado */
@@ -12836,6 +12965,7 @@ function pintarPuntaje(){
   $('pt-nombre').value=''; $('pt-dni').value=''; $('pt-fecha').value=hoyISO(); $('pt-msg').textContent='';
   ptListaTrabajadores();
   pintarCriterios();
+  asegurarPersonal(ptListaTrabajadores);
   cargarPuntajesDelMes().then(pintarTrabajadorDelMes);
 }
 /* si ya tienes tu personal registrado, se elige de la lista */
@@ -15273,6 +15403,7 @@ function prepCred(){
   var d=new Date(); d.setMonth(d.getMonth()+3); $('c-vence').value=d.toISOString().slice(0,10);
   CRED_HABIL=[]; try{ pintarHabil([]); }catch(_e){}
   $('cred-tarjeta').innerHTML='';
+  asegurarPersonal(function(){ if((document.querySelector('.pantalla.activa')||{}).id==='p-cred-nueva') prepCred(); });
   /* si ya tienes personal registrado, se elige de la lista y se llena solo */
   var caja=$('cred-elige');
   if(!caja){
@@ -15343,13 +15474,153 @@ function chipsHabilHTML(hs, chico){
 }
 function credDatos(cod){
   try{
-    var resto=String(cod).slice('OBRASST-CRED:'.length), payload=resto.split('.')[0];
+    var c=String(cod||'');
+    /* los dos QR de la app tienen la misma forma: PREFIJO:carga.firma */
+    var i=c.indexOf(':'); if(i<0) return null;
+    var payload=c.slice(i+1).split('.')[0];
     return JSON.parse(decodeURIComponent(escape(atob(payload.replace(/-/g,'+').replace(/_/g,'/')))));
   }catch(e){ return null; }
 }
+function esQRdeTrabajador(cod){ return String(cod||'').indexOf('OBRASST-TRAB:')===0; }
+/* ══════════ EL QR TIENE QUE ABRIR OBRASST, NO GOOGLE ══════════════
+   Lo cazo un cliente en una demo, y tenia toda la razon. El QR llevaba
+   el codigo pelado —«OBRASST-CRED:eyJ...»— y eso, para un celular, es
+   texto suelto. Android y iOS, cuando escanean texto que no es una
+   direccion, se lo pasan al buscador: el que abria el carne en la
+   puerta de la obra terminaba mirando una respuesta de Google sobre un
+   texto que Google tampoco entendia.
+
+   Ahora el QR lleva la direccion de OBRASST con la credencial DESPUES
+   del numeral. Eso importa: el fragmento (#) no viaja al servidor en
+   ninguna peticion HTTP. Los datos del trabajador no salen de la app,
+   no quedan en el registro de GitHub Pages ni en el de nadie, y la
+   verificacion se hace dentro del aparato —tambien sin señal, que en
+   una mina es la mitad de los dias.                                 */
+function enlaceCred(cod){
+  var c=String(cod||'');
+  if(c.indexOf('OBRASST-CRED:')===0) c=c.slice('OBRASST-CRED:'.length);
+  if(c.indexOf('OBRASST-TRAB:')===0) return baseURL()+'#trab='+c.slice('OBRASST-TRAB:'.length);
+  return baseURL()+'#cred='+c;
+}
+/* el camino de vuelta: de lo que sea que se pego o se escaneo, al codigo */
+function codDeEnlace(txt){
+  var t=String(txt||'').trim();
+  /* OJO con el guion en la firma: credFirma sale de _hh(), que devuelve
+     «hex-hex». Si la expresion no acepta el guion, el enlace escaneado
+     se lee a medias y la puerta canta «ADULTERADA» sobre una credencial
+     legitima. Paso en la primera prueba. */
+  var m=t.match(/[#?&]cred=([A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+)/);
+  if(m) return 'OBRASST-CRED:'+m[1];
+  m=t.match(/[#?&]trab=([A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+)/);
+  if(m) return 'OBRASST-TRAB:'+m[1];
+  return null;
+}
 function credQR(cod){
-  var qr=qrcode(0,'M'); qr.addData(cod); qr.make();
+  var qr=qrcode(0,'M'); qr.addData(enlaceCred(cod)); qr.make();
   return qr.createDataURL(6,8);
+}
+/* ══════════ EL CARNE SE BAJA EN PDF, NO EN GIF ════════════════════
+   Antes «Descargar el carne» bajaba un GIF del QR pelado: una mancha
+   de cuadritos sin un solo dato del trabajador. Si se te perdia el
+   celular no habia forma de saber de quien era ese carne.
+   Esto es el carne de verdad: una hoja A4 con la tarjeta en tamaño
+   real —85.6 x 54 mm, la de un DNI— para recortar y plastificar, los
+   datos escritos debajo para leerlos sin escanear nada, y la nota de
+   como se verifica. Sale del mismo codigo firmado: si alguien edita el
+   PDF, el QR deja de cuadrar con lo escrito y la app lo canta.     */
+function credPDF(cod){
+  var d=credDatos(cod);
+  if(!d){ aviso('No se pudo','Esa credencial no se puede leer.','\u26a0\ufe0f'); return; }
+  var esTrab=esQRdeTrabajador(cod);
+  var img=credQR(cod);
+  var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
+  var W=595.28, H=841.89, M=44;
+  var vigente = !d.v || d.v>=hoyISO();
+
+  /* cabecera */
+  doc.setFillColor(11,42,58); doc.rect(0,0,W,86,'F');
+  doc.setTextColor(245,183,0); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text(esTrab ? 'OBRASST \u00b7 QR DE IDENTIFICACI\u00d3N' : 'OBRASST \u00b7 CREDENCIAL DE TRABAJADOR', M, 32);
+  doc.setTextColor(255,255,255); doc.setFontSize(16);
+  doc.text(doc.splitTextToSize(d.n||'\u2014', W-2*M)[0], M, 58);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(200,215,225);
+  doc.text((d.o||'')+(d.d?'   \u00b7   DNI '+d.d:''), M, 75);
+
+  /* ── la tarjeta, en tamaño real de carne (85.6 x 54 mm) ── */
+  var CW=242.6, CH=153.1, cx=(W-CW)/2, cy=126;
+  doc.setDrawColor(190,196,202); doc.setLineWidth(0.7);
+  doc.roundedRect(cx, cy, CW, CH, 8, 8, 'S');
+  doc.setFillColor(11,42,58); doc.roundedRect(cx, cy, CW, 26, 8, 8, 'F');
+  doc.rect(cx, cy+16, CW, 10, 'F');
+  doc.setTextColor(245,183,0); doc.setFont('helvetica','bold'); doc.setFontSize(7);
+  /* nada de rombos ni emojis: jsPDF con helvetica solo tiene WinAnsi y
+     cualquier glifo de fuera sale como basura («%/E OBRASST»). */
+  doc.text(esTrab ? 'OBRASST \u00b7 TRABAJADOR' : 'OBRASST', cx+9, cy+16);
+  doc.setTextColor(255,255,255); doc.setFontSize(6.5);
+  doc.text(doc.splitTextToSize((d.o||'').toUpperCase(), CW-92)[0], cx+62, cy+16);
+  try{ doc.addImage(img,'GIF', cx+CW-78, cy+36, 66, 66); }catch(e){}
+  doc.setTextColor(20,20,20); doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+  doc.splitTextToSize(d.n||'\u2014', CW-96).slice(0,2).forEach(function(l,i){
+    doc.text(l, cx+9, cy+50+i*13);
+  });
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(90,90,90);
+  doc.text(doc.splitTextToSize(d.c||'\u2014', CW-96)[0], cx+9, cy+80);
+  if(d.d) doc.text('DNI '+d.d, cx+9, cy+92);
+  doc.setFont('helvetica','bold'); doc.setFontSize(7);
+  if(vigente){ doc.setTextColor(12,120,12); doc.text('HABILITADO HASTA '+(fechaLarga(d.v)||'\u2014'), cx+9, cy+112); }
+  else { doc.setTextColor(190,40,40); doc.text('VENCIDA EL '+(fechaLarga(d.v)||''), cx+9, cy+112); }
+  var hs=(d.h||[]).map(function(k){ var x=habilDe(k); return x? x.n : null; })
+                  .filter(function(x){ return !!x; });
+  if(hs.length){
+    doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(70,70,70);
+    doc.splitTextToSize(hs.join('  \u00b7  '), CW-18).slice(0,2).forEach(function(l,i){
+      doc.text(l, cx+9, cy+126+i*8);
+    });
+  }
+  doc.setDrawColor(215,215,215); doc.setLineWidth(0.5);
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(150,150,150);
+  doc.text('recortar por el borde \u00b7 tama\u00f1o real de carn\u00e9 (85.6 \u00d7 54 mm)', W/2, cy+CH+14, {align:'center'});
+
+  /* ── los datos, escritos, para no depender del escaneo ── */
+  var y=cy+CH+44;
+  doc.setDrawColor(225,225,225); doc.line(M,y,W-M,y); y+=20;
+  function dato(et, val){
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(135,135,135);
+    doc.text(et, M, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(30,30,30);
+    doc.splitTextToSize(String(val||'\u2014'), W-2*M-150).slice(0,2).forEach(function(l,i){
+      doc.text(l, M+150, y+i*13);
+    });
+    y+=26;
+  }
+  dato('TRABAJADOR', d.n);
+  dato('DOCUMENTO', d.d||'no registrado');
+  dato('PUESTO', d.c);
+  dato('EMPRESA', d.o);
+  dato('HABILITADO HASTA', (fechaLarga(d.v)||'sin fecha')+(vigente?'':'   (VENCIDA)'));
+  if(hs.length) dato('HABILITACIONES', hs.join(', '));
+
+  /* ── como se verifica ── */
+  y+=6; doc.setDrawColor(225,225,225); doc.line(M,y,W-M,y); y+=20;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(135,135,135);
+  doc.text('C\u00d3MO SE VERIFICA EN LA PUERTA', M, y); y+=15;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(45,45,45);
+  var nota='Escanea el QR con la c\u00e1mara del celular: abre OBRASST y muestra esta misma credencial. '+
+    'La app comprueba la firma del c\u00f3digo dentro del aparato, sin internet, y avisa si el carn\u00e9 fue '+
+    'alterado o si ya venci\u00f3. Los datos viajan dentro del propio c\u00f3digo: no se consultan a ning\u00fan '+
+    'servidor y no quedan registrados en ninguna p\u00e1gina de terceros.';
+  var ls=doc.splitTextToSize(nota, W-2*M); doc.text(ls, M, y); y+=ls.length*12+10;
+  doc.setFontSize(8.5); doc.setTextColor(120,120,120);
+  var nota2 = esTrab
+    ? 'Estos datos los registr\u00f3 el propio trabajador. Dicen qui\u00e9n es y en qu\u00e9 obra est\u00e1, pero NO son una '+
+      'habilitaci\u00f3n de la empresa: para altura, andamios, izaje o espacios confinados hay que pedir la credencial.'
+    : 'Esta credencial acredita lo que la empresa habilit\u00f3. No reemplaza el examen m\u00e9dico ocupacional, '+
+      'el permiso de trabajo de alto riesgo ni la capacitaci\u00f3n espec\u00edfica de la tarea.';
+  var ls2=doc.splitTextToSize(nota2, W-2*M); doc.text(ls2, M, y);
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(150,150,150);
+  doc.text('Generado con OBRASST el '+fechaLarga(hoyISO()), M, H-26);
+  entregarPDF(doc, _nombreSano('Credencial - '+(d.n||'trabajador'))+'.pdf');
 }
 function tarjetaCredHTML(cod){
   var d=credDatos(cod);
@@ -15365,8 +15636,8 @@ function tarjetaCredHTML(cod){
     (vigente?'':'<div class="aviso" style="margin-top:10px;border-left:3px solid var(--mal)">Esta credencial ya venció. Genera una nueva con fecha vigente.</div>')+
     '</div>'+
     '<div class="dos" style="margin-top:12px">'+
-      '<button class="btn" style="margin:0" onclick="descargarCred(\''+img+'\',\''+esc(d.n||'trabajador').replace(/'/g,"")+'\')">Descargar el carné</button>'+
-      '<button class="btn sec" style="margin:0" onclick="compartirCred(\''+img+'\',\''+esc(d.n||'trabajador').replace(/'/g,"")+'\')">Compartir</button>'+
+      '<button class="btn" style="margin:0" onclick="credPDF(\''+escA(cod)+'\')">\uD83D\uDCC4 Descargar el carné (PDF)</button>'+
+      '<button class="btn sec" style="margin:0" onclick="descargarCred(\''+img+'\',\''+esc(d.n||'trabajador').replace(/'/g,"")+'\')">Solo el QR</button>'+
     '</div>';
 }
 function generarCredencial(){
@@ -15489,6 +15760,9 @@ function pintarBrigada(){
 }
 function verificarCred(){
   var cod=($('v-cod').value||'').trim(); var out=$('v-resultado');
+  /* el QR ahora lleva la direccion de OBRASST; si alguien pega el enlace
+     entero —o si llega por el escaneo del celular— se saca el codigo */
+  var _delEnlace=codDeEnlace(cod); if(_delEnlace) cod=_delEnlace;
   /* El QR del trabajador NO es una credencial: lo genera el mismo trabajador
      con sus datos. Sirve para saber quien es y de que obra, y eso hay que
      decirlo claro en la puerta para que nadie lo tome por una habilitacion. */
@@ -16081,7 +16355,7 @@ function tarjetaQRTrab(){
     '<div class="aviso" style="margin-top:11px;font-size:12.5px;text-align:left">Este QR dice <b>quién eres y en qué obra estás</b>. No es una habilitación: para altura, andamios o espacios confinados tu empresa te tiene que dar la credencial.</div>'+
     '</div>'+
     '<div class="dos" style="margin-top:10px">'+
-      '<button class="btn sec" style="margin:0" onclick="descargarCred(\''+img+'\',\''+escA(nombreDeTrab(y)).replace(/'/g,'')+'\')">Descargar</button>'+
+      '<button class="btn sec" style="margin:0" onclick="credPDF(\''+escA(cod)+'\')">\uD83D\uDCC4 Descargar en PDF</button>'+
       '<button class="btn sec" style="margin:0" onclick="ir(\'p-trab-entrar\')">Cambiar mis datos</button>'+
     '</div>';
 }
@@ -17860,7 +18134,7 @@ function tcCargar(){
         g('sst_hht?duenio=eq.'+E+'&select=fecha,ob_n,ob_h,st_n,st_h,hhc&limit=500'),
         g('sst_inspeccion?empresa=eq.'+E+'&fecha=gte.'+desde+'&select=tipo,fecha,inspector&limit=800'),
         traerReportes(p.id, '&fecha=gte.'+desde+'&limit=900').catch(function(){ return []; }),
-        g('sst_kardex?duenio=eq.'+E+'&select=epp,tipo,fecha,cantidad,trabajador,trab_nombre&order=fecha.desc&limit=900'),
+        g('sst_kardex?duenio=eq.'+E+'&select=epp,tipo,fecha,cantidad,trabajador,trab_nombre,actividad&order=fecha.desc&limit=900'),
         g('sst_constancia?empresa=eq.'+E+'&select=trabajador,dni,tema,resultado,fecha&limit=900'),
         g('sst_trabajador?duenio=eq.'+E+'&select=ext,nombre,dni,puesto,area,estatus&limit=900'),
         g('sst_amonestacion?duenio=eq.'+E+'&select=fecha,t_nombre,t_dni,medida&limit=300'),
@@ -17942,7 +18216,8 @@ function tcInspHechas(p, mes){
   return n;
 }
 function tcEPP(ps, mes){
-  var m=mes||TC.mes||mesISO(), r={N:0,C:0,P:0,tot:0, porEpp:{}, porTrab:{}};
+  var m=mes||TC.mes||mesISO(), r={N:0,C:0,P:0,tot:0, porEpp:{}, porTrab:{},
+                                  porActiv:{}, activP:{}, sinActiv:0};
   ps.forEach(function(p){ tcD(p.id).kdx.forEach(function(k){
     if(String(k.fecha||'').slice(0,7)!==m) return;
     var c=parseInt(k.cantidad,10)||0, t=(k.tipo||'N').toUpperCase();
@@ -17950,6 +18225,12 @@ function tcEPP(ps, mes){
     r.tot+=c;
     var e=(k.epp||'—').trim(); r.porEpp[e]=(r.porEpp[e]||0)+c;
     var q=(k.trab_nombre||'—').trim(); r.porTrab[q]=(r.porTrab[q]||0)+c;
+    /* la actividad es columna nueva: lo entregado ANTES de que existiera
+       no tiene ninguna, y eso se dice, no se reparte a ojo */
+    var v=(k.actividad||'').trim();
+    if(!v){ r.sinActiv+=c; return; }
+    r.porActiv[v]=(r.porActiv[v]||0)+c;
+    if(t==='P') r.activP[v]=(r.activP[v]||0)+c;
   }); });
   return r;
 }
@@ -18434,6 +18715,33 @@ function tcPagEpp(){
        return {et:p.nombre, v:pct, tope:100, txt:(e.tot? (tcNum(e.P)+' und · '+pct+'%') : 'sin datos'),
                col:(!e.tot?'var(--t-pista)':(pct<=cfg.metaPerd?'var(--t-ok)':'var(--t-critico)'))};
      }))+'</div>';
+  /* ── PARA QUE ACTIVIDAD SALIO ────────────────────────────────
+     Sin esto el consumo de EPP es una lista de compras. Con la
+     actividad al lado se lee contra el riesgo que lo genera: si la
+     mitad del arnes se va en «trabajo en altura» esta bien, y si se
+     va en «otra / no aplica» es que nadie sabe para que salio.     */
+  var ta=tcTop(E.porActiv,10);
+  var conActiv=E.tot - E.sinActiv;
+  h+='<div class="tc-card ancha"><h3>Para qué actividad sale el EPP</h3>'+
+     '<p class="sub">Unidades de '+esc(mesBonito(mes))+' repartidas por la actividad de alto riesgo que las pidió, con lo que de esas se fue por pérdida.</p>';
+  if(!ta.length){
+    h+=tcVacio(E.tot
+      ? ('Las '+tcNum(E.tot)+' unidades de este mes se registraron sin actividad. Desde ahora el kardex la pide al entregar: en la próxima entrega ya sale acá.')
+      : 'Sin entregas registradas este mes.');
+  } else {
+    h+='<div class="tc-scroll"><table class="tc-tab"><thead><tr><th>Actividad</th>'+
+       '<th class="n">Unidades</th><th class="n">% del mes</th><th class="n">Por pérdida</th></tr></thead><tbody>';
+    ta.forEach(function(x){
+      var per=E.activP[x.k]||0;
+      h+='<tr><td><b>'+esc(x.k)+'</b></td><td class="n">'+tcNum(x.v)+'</td>'+
+         '<td class="n">'+(conActiv? Math.round(x.v*100/conActiv):0)+'%</td>'+
+         '<td class="n">'+(per? tcNum(per) : '—')+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    if(E.sinActiv) h+='<p class="sub" style="margin-top:9px">'+tcNum(E.sinActiv)+
+      ' unidad'+(E.sinActiv===1?'':'es')+' más se entregaron sin anotar la actividad. No se reparten entre las de arriba: se dicen aparte.</p>';
+  }
+  h+='</div>';
   var tt=tcTop(E.porTrab,10);
   h+='<div class="tc-card"><h3>Quién recibe más</h3>'+
      '<p class="sub">Diez trabajadores con más unidades este mes. Un nombre muy arriba suele ser una talla mal pedida o un EPP que no aguanta la tarea.</p>'+
@@ -19336,6 +19644,22 @@ function compartirPDF(){
   /* 0) ¿vienen por el enlace publico de la politica? Eso se abre solo,
         sin cuenta, sin sector y sin consentimiento: es una pagina para leer. */
   try{ if(legalPorURL()) return; }catch(e){}
+  /* 0b) ¿vino escaneando una credencial? Es el caso de la puerta de la
+         obra: el vigilante apunta la camara al carne y el celular abre
+         esto. Se atiende ANTES que nada —antes de cuenta, de sector y de
+         empresa— porque el que escanea puede no tener ninguna de las
+         tres, y lo unico que necesita es ver si el carne vale.
+         La credencial viene en el fragmento (#), que no viaja al
+         servidor: la comprobacion es aqui adentro, y sin señal. */
+  try{
+    var _mc=codDeEnlace(location.hash||'');
+    if(_mc){
+      try{ history.replaceState(null,'',baseURL()); }catch(_h){}
+      ir('p-verificar');
+      var _vc=$('v-cod'); if(_vc){ _vc.value=_mc; try{ verificarCred(); }catch(_v){} }
+      return;
+    }
+  }catch(_e){}
   // 1) ¿vino por un enlace con código adentro?
   var mk=(location.search||'').match(/[?&]k=([A-Za-z0-9_%.~-]+)/);
   if(mk){
@@ -19357,7 +19681,7 @@ function compartirPDF(){
   if(e0 && e0.d && TEMAS[e0.d] && hoyISO()<=e0.v){
     var us=leer(LS_USA,{});
     if((us[e0.clave]||0) < (e0.tope||1)){
-      EV=e0; S.tema=e0.d; S.lite=false;
+      EV=e0; S.tema=e0.d; S.lite=false; S.liteFijo=true;
       S.sector=e0.s||(TEMAS[e0.d].sector!=='*'?TEMAS[e0.d].sector:SECTORES[0].id);
       ir('p-eval'); return;
     }
