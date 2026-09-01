@@ -6095,7 +6095,7 @@ function _ir(p){
     if(!(_pr && _pr.className && _pr.className.indexOf('on')>-1)) desproteger();
   }
   cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';$(p).className='pantalla activa';window.scrollTo(0,0);
-  if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config'){cargarConfig(); try{ pintarInstalar(); }catch(_e){}} if(p==='p-apariencia')pintarApariencia(); if(p==='p-formatos')pintarFormatos(); if(PANT_CON_TOPE[p]){ try{ quizaRefrescarUsoReal(); }catch(_u){} } if(p==='p-programa')pintarPrograma(); if(p==='p-trab-ficha')pintarFichaTrab(); if(p==='p-planes')pintarPlanes();
+  if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config'){cargarConfig(); try{ pintarInstalar(); }catch(_e){}} if(p==='p-apariencia')pintarApariencia(); if(p==='p-formatos')pintarFormatos(); if(PANT_CON_TOPE[p]){ try{ quizaRefrescarUsoReal(); }catch(_u){} } if(p==='p-programa'){ pintarPrograma(); try{ sincronizarPrograma(); }catch(_pg){} } if(p==='p-trab-ficha')pintarFichaTrab(); if(p==='p-planes')pintarPlanes();
   if(p==='p-eval')pintarEval(); if(p==='p-registro')cargarRegistro(); if(p==='p-generar')pintarGenerar();
   if(p==='p-colab')pintarColab(); if(p==='p-charlas')pintarCharlas();
   if(p==='p-talleres')pintarTalleres();
@@ -6353,11 +6353,22 @@ function estadoSubir(clave, valor){
 function _masHecho(a, b){
   if(a && !b) return a;
   if(b && !a) return b;
+  /* una lapida es una decision, no un hueco: compite por fecha contra
+     lo que sea que traiga el otro celular */
+  if((a && a.borrado) || (b && b.borrado)){
+    var la=(a && +a.ts)||0, lb=(b && +b.ts)||0;
+    return (lb > la) ? b : a;
+  }
   var da = a && (a.dictada || a.iso || a.txt);
   var db = b && (b.dictada || b.iso || b.txt);
   if(da && !db) return a;
   if(db && !da) return b;
-  return a;   /* empate: se respeta lo que ya tenia este celular */
+  /* los dos igual de «hechos»: gana el que se escribio despues. Antes
+     esto devolvia siempre «lo mio» y los dos celulares se pisaban el
+     programa el uno al otro sin parar. */
+  var ta=(a && +a.ts) || 0, tb=(b && +b.ts) || 0;
+  if(ta || tb) return (tb > ta) ? b : a;
+  return a;   /* ninguno trae marca: se respeta lo que ya tenia este celular */
 }
 function fusionarObjetos(mio, ajeno){
   var out={}, k;
@@ -6396,6 +6407,22 @@ function sincronizarCredenciales(){
     return estadoSubir('credenciales', junta).then(function(){ return junta; });
   }).catch(function(){ return leer(LS_CRED,[])||[]; });
 }
+/* El programa, por su cuenta: se pide al ABRIR el calendario, no solo
+   cuando pasa a refrescarse el plan. Antes el supervisor tenia que
+   cerrar y volver a entrar a la app para ver lo que el lider acababa
+   de programar, y en obra eso equivale a no verlo nunca. */
+var SINCRO_PROG=false;
+function sincronizarPrograma(){
+  if(SINCRO_PROG || !hayCuenta() || !empActiva()) return Promise.resolve();
+  SINCRO_PROG=true;
+  return sincronizarObjeto('programa_'+claveObra(),
+    function(){ return progCrudo()||{}; },
+    function(o){ progEscribir(o); },
+    function(){ var act=document.querySelector('.pantalla.activa');
+                if(act && act.id==='p-programa'){ try{ pintarPrograma(); }catch(_e){} } }
+  ).then(function(r){ SINCRO_PROG=false; return r; },
+         function(){ SINCRO_PROG=false; });
+}
 /* Todo junto, para llamarlo desde un solo sitio al entrar a la empresa. */
 var SINCRO_EQUIPO=false;
 function sincronizarConElEquipo(){
@@ -6405,8 +6432,8 @@ function sincronizarConElEquipo(){
     sincronizarObjeto('charlas_dictadas',
       function(){ return leer(LS_CH,{})||{}; },
       function(o){ guardar(LS_CH,o); }),
-    sincronizarObjeto('programa_'+obraActual(),
-      function(){ return progObra()||{}; },
+    sincronizarObjeto('programa_'+claveObra(),
+      function(){ return progCrudo()||{}; },
       function(o){ progEscribir(o); },
       function(){ var act=document.querySelector('.pantalla.activa');
                   if(act && act.id==='p-programa'){ try{ pintarPrograma(); }catch(_e){} } }),
@@ -11962,9 +11989,73 @@ function escA(t){ return esc(t).replace(/"/g,'&quot;'); }
 function dosD(n){ return (n<10?'0':'')+n; }
 function isoDe(a,m,d){ return a+'-'+dosD(m+1)+'-'+dosD(d); }
 function obraActual(){ var c=leer(LS.cfg,{}); return ((c.obra||'')+'').trim() || 'Sin obra'; }
-function progTodo(){ return leer(LS.prog,{}); }
-function progObra(){ var t=progTodo(); return t[obraActual()]||{}; }
-function progEscribir(o){ var t=progTodo(); t[obraActual()]=o; guardar(LS.prog,t); }
+/* ══════════ EL PROGRAMA ES DE LA OBRA, NO DEL QUE LO ESCRIBIO ═════
+   Aqui estaba el error que hacia que el lider armara el programa del
+   mes y el supervisor no lo viera nunca.
+   El programa se guardaba —en el celular Y en el servidor— bajo el
+   NOMBRE DE OBRA TECLEADO en «Datos de mi empresa». Ese nombre lo
+   escribe cada uno a mano: el lider tenia «Sin obra» porque nunca
+   lleno ese campo, y el supervisor «Obra Metro Linea 2». Dos claves
+   distintas, dos programas distintos, y ninguno de los dos veia el
+   del otro. Peor: al corregir el nombre, tu propio programa
+   desaparecia de la pantalla.
+   Ahora la clave es el CODIGO DE LA EMPRESA, que es lo unico que los
+   dos comparten de verdad y que no depende de como lo escriba nadie.
+   El supervisor suelto, sin empresa, sigue con su nombre de obra.  */
+function claveObra(){
+  var e=(typeof empActiva==='function') ? empActiva() : null;
+  if(e && e.codigo) return 'emp:'+e.codigo;
+  return obraActual();
+}
+/* Lo que ya estaba guardado con el nombre viejo no se pierde: la
+   primera vez que se lee con la clave nueva, se muda. */
+function progMigrar(t){
+  var k=claveObra();
+  if(k.indexOf('emp:')!==0) return t;
+  if(t[k] && Object.keys(t[k]).length) return t;
+  var viejo=t[obraActual()];
+  if(viejo && Object.keys(viejo).length){
+    t[k]=viejo; guardar(LS.prog,t);
+  }
+  return t;
+}
+function progTodo(){ return progMigrar(leer(LS.prog,{})||{}); }
+/* Quitar un dia no puede ser «borrarlo del celular»: la fusion con el
+   servidor es una UNION, asi que el dia volvia solo en la siguiente
+   sincronizacion y el lider lo veia reaparecer. Se guarda una lapida
+   —{borrado:1, ts}— que viaja como cualquier otro dia y compite por
+   fecha: la ultima decision manda, se haya tomado donde se haya
+   tomado. Las lapidas no se pintan en ningun sitio. */
+function progCrudo(){ var t=progTodo(); return t[claveObra()]||{}; }
+function progObra(){
+  var r=progCrudo(), o={};
+  for(var k in r) if(Object.prototype.hasOwnProperty.call(r,k) && r[k] && !r[k].borrado) o[k]=r[k];
+  return o;
+}
+function progEscribir(o){
+  var t=progTodo(), r=t[claveObra()]||{}, out={}, k;
+  for(k in r) if(Object.prototype.hasOwnProperty.call(r,k) && r[k] && r[k].borrado) out[k]=r[k];
+  for(k in o) if(Object.prototype.hasOwnProperty.call(o,k)) out[k]=o[k];
+  t[claveObra()]=out; guardar(LS.prog,t);
+  try{ empujarPrograma(); }catch(_e){}
+}
+function progQuitarDia(iso){
+  var t=progTodo(), r=t[claveObra()]||{};
+  r[iso]={borrado:1, ts:Date.now()};
+  t[claveObra()]=r; guardar(LS.prog,t);
+  try{ empujarPrograma(); }catch(_e){}
+}
+/* Sube lo que acaba de cambiar sin esperar a nada. Va con freno para
+   no mandar cinco veces mientras alguien llena el mes entero. */
+var PROG_EMPUJE=null;
+function empujarPrograma(){
+  if(!hayCuenta() || !empActiva()) return;
+  if(PROG_EMPUJE) clearTimeout(PROG_EMPUJE);
+  PROG_EMPUJE=setTimeout(function(){
+    PROG_EMPUJE=null;
+    try{ estadoSubir('programa_'+claveObra(), progCrudo()); }catch(_e){}
+  }, 900);
+}
 function nombreTema(id){ var t=TEMAS[id]; if(!t) return id;
   return t.variante? t.tema+' · '+t.variante : t.tema; }
 /* ── EL PROGRAMA DEL MES YA NO ES SOLO DE CHARLAS ──────────────────
@@ -12244,9 +12335,14 @@ function pintarTemasDia(sel){
 }
 function leerDia(){
   var datos=progObra(), viejo=datos[PROG.dia]||{};
+  /* ts = cuando se escribio. Sin esto, si el lider programa el lunes con
+     una charla y el supervisor con otra, la fusion se quedaba con «la
+     mia» en los dos aparatos y cada uno le re-subia la suya al otro,
+     para siempre. Con la marca de tiempo gana la ultima, y los dos
+     terminan viendo lo mismo. */
   return {tema:DIA_SEL, tipo:DIA_TIPO||'charla', sector:$('dia-sector').value,
           resp:$('dia-resp').value.trim(), hora:$('dia-hora').value||'',
-          dictada:viejo.dictada||null};
+          ts:Date.now(), dictada:viejo.dictada||null};
 }
 function guardarDia(){
   if(!DIA_SEL){
@@ -12271,7 +12367,7 @@ function marcarDictada(){
 }
 function quitarDia(){
   confirmar('¿Quitar lo programado ese día?', '', function(){
-    var datos=progObra(); delete datos[PROG.dia]; progEscribir(datos);
+    progQuitarDia(PROG.dia);
     cerrarDia(); pintarPrograma();
   }, {si:'Sí, quitar', no:'Cancelar', icono:'📅'});
 }
