@@ -727,10 +727,51 @@ html.t-claro .tostada,html.t-alto .tostada{background:#0D1620;color:#fff}
 @media(min-width:560px){.accesos{grid-template-columns:repeat(6,1fr)}}
 .acceso{width:100%;background:none;border:0;padding:0;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--tinta);font-family:inherit}
+/* \u2500\u2500 LOS ICONOS, CON MOVIMIENTO SUAVE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+   Es una app de obra, no una feria: el movimiento tiene que sentirse,
+   no verse. Al tocar, el aro se hunde y el emoji se encoge un pelo
+   —eso confirma el toque en un celular con guantes, donde el dedo tapa
+   justo lo que acabas de tocar\u2014. Al entrar a la portada los circulos
+   aparecen escalonados, muy corto, para que la pantalla no llegue de
+   golpe. Nada de esto se repite ni gira solo: una animacion que no
+   para cansa a los 20 minutos y consume bateria en obra.
+   Y si el celular pide menos movimiento, no hay ninguno.          */
 .acceso .aro{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   font-size:26px;background:rgba(var(--w),.05);border:1.5px solid rgba(var(--w),.13);
-  transition:transform .12s ease}
-.acceso:active .aro{transform:scale(.93)}
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s ease, border-color .18s ease;
+  will-change:transform}
+.acceso .aro>.emo{display:block;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
+.acceso:active .aro{transform:scale(.90); box-shadow:0 0 0 6px rgba(var(--w),.06)}
+.acceso:active .aro>.emo{transform:scale(.86)}
+.acceso:focus-visible .aro{outline:2px solid var(--oro);outline-offset:3px}
+@media(hover:hover){
+  .acceso:hover .aro{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.22)}
+  .acceso:hover .et{color:var(--tinta)}
+}
+.acceso .et{transition:color .18s ease}
+/* la entrada escalonada: corta, y una sola vez */
+@keyframes acc-entra{from{opacity:0;transform:translateY(7px) scale(.94)}to{opacity:1;transform:none}}
+.accesos.entran .acceso{animation:acc-entra .34s cubic-bezier(.22,.9,.3,1) both}
+.accesos.entran .acceso:nth-child(1){animation-delay:.00s}
+.accesos.entran .acceso:nth-child(2){animation-delay:.03s}
+.accesos.entran .acceso:nth-child(3){animation-delay:.06s}
+.accesos.entran .acceso:nth-child(4){animation-delay:.09s}
+.accesos.entran .acceso:nth-child(5){animation-delay:.12s}
+.accesos.entran .acceso:nth-child(6){animation-delay:.15s}
+.accesos.entran .acceso:nth-child(7){animation-delay:.18s}
+.accesos.entran .acceso:nth-child(8){animation-delay:.21s}
+.accesos.entran .acceso:nth-child(n+9){animation-delay:.24s}
+/* el globito rojo llega despues, y llama la atencion una sola vez */
+@keyframes num-late{0%{transform:scale(0)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+.lid-num,.aviso-num{animation:num-late .42s cubic-bezier(.34,1.56,.64,1) .30s both}
+/* las tarjetas tambien se hunden al tocarlas */
+.tarj{transition:transform .16s cubic-bezier(.34,1.56,.64,1), border-color .16s ease}
+.tarj:active{transform:scale(.985)}
+@media(prefers-reduced-motion:reduce){
+  .acceso .aro,.acceso .aro>.emo,.acceso .et,.tarj{transition:none}
+  .accesos.entran .acceso,.lid-num,.aviso-num{animation:none}
+  .acceso:hover .aro{transform:none}
+}
 .acceso .et{font-size:11px;line-height:1.25;text-align:center;color:var(--gris);letter-spacing:.01em}
 .acceso.a-oro   .aro{border-color:rgba(245,183,0,.55);background:rgba(245,183,0,.10)}
 .acceso.a-verde .aro{border-color:rgba(47,191,113,.55);background:rgba(47,191,113,.10)}
@@ -1076,6 +1117,14 @@ html.t-claro .tostada,html.t-alto .tostada{background:#0D1620;color:#fff}
   border:2px solid rgba(var(--w),.85);background:rgba(6,24,34,.60);color:#fff;
   font-size:15px;line-height:22px;text-align:center;font-weight:700}
 .esc-card.marcada{outline:3px solid var(--ok);outline-offset:-1px}
+/* el dia con mas de una actividad lo dice en el calendario */
+.cal-mas{position:absolute;top:2px;right:3px;font-style:normal;font-size:9px;font-weight:800;
+  background:var(--oro);color:#0B2A3A;border-radius:999px;padding:1px 4px;line-height:1.25}
+.cal-d{position:relative}
+/* al repasar: verde la correcta, roja la que marcaste si fallaste */
+.op.mala{border-color:rgba(229,72,77,.55);background:rgba(229,72,77,.10)}
+.eti-r{display:block;margin-top:4px;font-size:11px;font-weight:800;letter-spacing:.07em;
+  text-transform:uppercase;opacity:.85}
 .esc-card.marcada .esc-tic{background:var(--ok);border-color:var(--ok)}
 .esc-selbar{background:rgba(var(--p2),.75);border:1px solid rgba(var(--w),.10);
   border-radius:12px;padding:11px;margin:0 0 12px}
@@ -2012,6 +2061,11 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <section class="pantalla" id="p-temas">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span id="temas-sector"></span></div>
   <h2>¿Qué tema te toca?</h2>
+  <p class="sub" id="temas-cuenta" style="margin-bottom:10px"></p>
+  <div class="kx-seg" id="temas-vista" style="margin-bottom:14px">
+    <button type="button" class="kx-op on" onclick="verTemas('grupos')">Por grupos</button>
+    <button type="button" class="kx-op" onclick="verTemas('todas')">Ver todas</button>
+  </div>
   <div id="lista-temas"></div>
   <button class="btn sec" onclick="ir('p-sector')" style="margin-top:14px">Cambiar de sector</button>
 </section>
@@ -6021,6 +6075,22 @@ var EMP_OK={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-e
             'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,
             'p-obra':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1};
 var PANT_PROTEGIDA={'p-juego':1,'p-final':1,'p-firma':1,'p-listo':1,'p-charla':1};
+/* pantalla \u2192 [llave del plan, como se llama en cristiano] */
+var PANT_LLAVE={
+  'p-msds':['msds','Las hojas MSDS'],
+  'p-msds-nueva':['msds','Las hojas MSDS'],
+  'p-inspec':['inspecciones','Las inspecciones de obra'],
+  'p-inspec-nueva':['inspecciones','Las inspecciones de obra'],
+  'p-inspec-hallaz':['inspecciones','Las inspecciones de obra'],
+  'p-inspec-levant':['inspecciones','Las inspecciones de obra'],
+  'p-inspec-hechas':['inspecciones','Las inspecciones de obra'],
+  'p-amonestaciones':['amonestaciones','Las amonestaciones'],
+  'p-amon-nueva':['amonestaciones','Las amonestaciones'],
+  'p-semanal':['semanal','El reporte semanal de HHT'],
+  'p-semanal-dia':['semanal','El reporte semanal de HHT'],
+  'p-credencial':['qr_credencial','Las credenciales con QR'],
+  'p-cred-nueva':['qr_credencial','Las credenciales con QR']
+};
 /* ── navegación ────────────────────────────────────────────────────
    Un solo flujo. HIST guarda por dónde pasaste y «Atrás» deshace ese
    camino; «Inicio» te devuelve al inicio DEL MODO en el que estás
@@ -6235,6 +6305,19 @@ function _ir(p){
   }
   if(ROL==='col' && !COL_OK[p]) p='p-colab';
   else if(ROL==='emp' && !EMP_OK[p]) p='p-emp-home';
+  /* \u2500\u2500 LA PUERTA DEL PLAN VA AL ENTRAR, NO AL GUARDAR \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+     Lo cazo el cliente: su empresa en LITE entraba a hojas MSDS y a
+     inspecciones, que son de SSOMA. La tabla de planes ya lo decia
+     \u2014msds:1 solo en ssoma y gestion\u2014 pero nadie leia esa llave: la
+     portada escondia el circulo y ya esta, y por el menu se entraba
+     igual. Frenar aqui vale para TODOS los caminos: el menu, el
+     boton de atras, un enlace guardado y el que escribe la pantalla
+     a mano. Y se frena ANTES, no despues de llenar el formulario. */
+  if(PANT_LLAVE[p] && ROL==='emp' && !puede(PANT_LLAVE[p][0])){
+    var _ll=PANT_LLAVE[p];
+    setTimeout(function(){ soloConCodigo(_ll[1], _ll[0]); }, 60);
+    p='p-emp-home';
+  }
   if(!PANT_PROTEGIDA[p] && typeof desproteger==='function'){
     var _pr=document.getElementById('pres');
     if(!(_pr && _pr.className && _pr.className.indexOf('on')>-1)) desproteger();
@@ -6390,7 +6473,8 @@ var PLANES = [
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
     gestores:4, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1, qr_msds:1, qr_credencial:1,
-            msds:1, amonestaciones:1, semanal:1, campanas:1, simulacros:1, constancias:1 } },
+            msds:1, amonestaciones:1, semanal:1, campanas:1, simulacros:1, constancias:1,
+            inspecciones:1 } },
 
   { id:'gestion', nombre:'Gestión SST', precio:199, orden:4,
     compra:'obrasst-gestion',
@@ -6399,7 +6483,7 @@ var PLANES = [
     gestores:10, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_pets:1, qr_iperc:1, qr_msds:1, qr_credencial:1,
             msds:1, amonestaciones:1, semanal:1, campanas:1, simulacros:1, constancias:1,
-            carpetas:1 } }
+            inspecciones:1, carpetas:1 } }
 ];
 /* los nombres viejos de licencia caen en el peldano equivalente */
 /* Cuando el equipo pasa del tope del plan no hay que subir de plan: se
@@ -6907,11 +6991,48 @@ function abrirTema(id){
   } else { _na.style.display='none'; }
   cerrarHoja(); ir('p-modo');
 }
+/* \u2550\u2550\u2550\u2550\u2550\u2550 \u00abNO APARECEN TODAS LAS CAPACITACIONES\u00bb \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   Y era verdad a la vista, aunque no faltara ninguna: miner\u00eda tiene 32
+   capacitaciones y la pantalla mostraba 12 tarjetas, porque las
+   variantes de altura, izaje, caliente, fuego y primeros auxilios se
+   agrupan detr\u00e1s de una sola. Estaban todas, pero el que mira cuenta
+   doce y piensa que le falta lo que pag\u00f3.
+   Dos arreglos, los dos honestos: se dice el n\u00famero de verdad arriba, y
+   hay un bot\u00f3n para verlas TODAS en una lista plana. */
+var TEMAS_VISTA='grupos';
+function verTemas(v){
+  TEMAS_VISTA = (v==='todas') ? 'todas' : 'grupos';
+  var seg=$('temas-vista');
+  if(seg){ var bs=seg.getElementsByTagName('button');
+    for(var i=0;i<bs.length;i++) bs[i].className='kx-op'+((i===0)===(TEMAS_VISTA==='grupos')?' on':''); }
+  pintarTemas();
+}
 function pintarTemas(){
   var c=$('lista-temas');c.innerHTML='';
   var s=sectorDe(S.sector);
   $('temas-sector').textContent='Sector '+s.nombre.toLowerCase();
-  fichasDelSector().forEach(function(f){
+  var todos=temasDelSector(), fichas=fichasDelSector();
+  var cu=$('temas-cuenta');
+  if(cu) cu.innerHTML='<b>'+todos.length+' capacitaciones</b> de '+esc(s.nombre.toLowerCase())+
+    (TEMAS_VISTA==='grupos' ? (' \u00b7 agrupadas en '+fichas.length+' tarjetas. Las que llevan \u25B8 abren la lista de variantes.')
+                            : ' \u00b7 una por una.');
+  if(TEMAS_VISTA==='todas'){
+    todos.map(function(id){ return TEMAS[id]; })
+      .sort(function(a,b){ return String(a.tema+' '+(a.variante||'')).localeCompare(String(b.tema+' '+(b.variante||'')),'es'); })
+      .forEach(function(t){
+        var n=preguntasDe(t.id).length, tot=t.preguntas.length, libre=temaLibre(t.id);
+        var b=document.createElement('button');
+        b.className='tarj vidrio'+(n===0?' bloq':'')+(libre?' libre':'');
+        b.innerHTML='<b>'+esc(t.tema)+(t.variante?' \u00b7 '+esc(t.variante):'')+(n===0?' \uD83D\uDD12':'')+
+          (libre?' <span class="pin-libre">GRATIS</span>':'')+'</b><small>'+esc(t.escenario)+' \u00b7 '+
+          (libre? (tot+' preguntas \u00b7 completa en todos los planes')
+                : (S.lite?(n+' de '+tot+' preguntas gratis'):(tot+' preguntas')))+'</small>';
+        b.onclick=(function(id){ return function(){ abrirTema(id); }; })(t.id);
+        c.appendChild(b);
+      });
+    return;
+  }
+  fichas.forEach(function(f){
     var b=document.createElement('button');
     if(f.tipo==='tema'){
       var t=TEMAS[f.id], n=preguntasDe(f.id).length, tot=t.preguntas.length;
@@ -6926,7 +7047,10 @@ function pintarTemas(){
       var F=FAMILIAS[f.familia];
       var libres=f.ids.filter(function(id){return preguntasDe(id).length>0;}).length;
       b.className='tarj vidrio';
-      b.innerHTML='<b>'+esc(F.titulo)+' ▸</b><small>'+f.ids.length+' equipos y técnicas'+
+      /* se nombran las primeras: asi se ve QUE hay dentro sin abrir */
+      var dentro=f.ids.map(function(id){ return TEMAS[id].variante||TEMAS[id].tema; });
+      var muestra=dentro.slice(0,3).join(' · ')+(dentro.length>3?(' y '+(dentro.length-3)+' m\u00e1s'):'');
+      b.innerHTML='<b>'+esc(F.titulo)+' \u25B8</b><small>'+f.ids.length+' capacitaciones: '+esc(muestra)+
         (S.lite?(' · '+libres+' con preguntas gratis'):'')+'</small>';
       b.onclick=function(){ abrirHoja(f.familia, f.ids); };
     }
@@ -7028,7 +7152,16 @@ function accion(){
   if(!q){ S.i=0; pintarPregunta(); return; }
   if(S.modo==='solo' && $('b-accion').textContent==='Ver la respuesta'){
     var ops=document.querySelectorAll('#opciones .op');
-    for(var i=0;i<ops.length;i++) if(ops[i].dataset.l===q.correcta) ops[i].className='op vidrio ok';
+    for(var i=0;i<ops.length;i++){
+      var L=ops[i].dataset.l, eti='';
+      if(L===q.correcta){ ops[i].className='op vidrio ok'; eti=' \u2713 correcta'; }
+      else if(L===S.marcada){ ops[i].className='op vidrio mala'; eti=' \u2717 tu respuesta'; }
+      else ops[i].className='op vidrio';
+      if(eti && !ops[i].querySelector('.eti-r')){
+        var sp=document.createElement('span'); sp.className='eti-r'; sp.textContent=eti;
+        ops[i].appendChild(sp);
+      }
+    }
     $('revelado').innerHTML=
       '<div class="caja vidrio"><h3>Por qué</h3>'+fmt(q.explicacion)+'</div>'+
       (q.calculo?'<div class="caja vidrio"><h3>Cálculo</h3>'+esc(q.calculo)+'</div>':'')+
@@ -7037,7 +7170,13 @@ function accion(){
     $('b-accion').textContent='Siguiente';
     return;
   }
-  if(S.modo!=='solo') S.resp.push({n:q.n, marcada:S.marcada, ok:S.marcada===q.correcta});
+  /* Antes esto era «if(S.modo!=='solo')». En modo repaso NO se anotaba
+     nada, asi que al final no habia forma de mostrarle al que estudio
+     lo que habia contestado: la pantalla solo listaba la respuesta
+     correcta. El cliente lo pidio y tiene razon —repasar sin ver en
+     que fallaste no es repasar. Se anota en los tres modos; lo que
+     cambia es que en repaso no hay nota ni constancia. */
+  S.resp.push({n:q.n, marcada:S.marcada, ok:S.marcada===q.correcta});
   S.i++;
   if(S.i>=S.orden.length){ final(); } else { pintarPregunta(); }
 }
@@ -7074,17 +7213,25 @@ function final(){
   ir('p-final');
 }
 function finalSolo(t){
+  var bien=S.resp.filter(function(r){return r.ok;}).length, n=S.resp.length || S.orden.length;
   $('f-tema').textContent=t.tema;
-  $('fin-nota').textContent=S.orden.length;
-  $('f-veredicto').textContent='preguntas repasadas';
+  $('fin-nota').textContent = S.resp.length ? (bien+' / '+n) : String(S.orden.length);
+  $('f-veredicto').textContent = S.resp.length ? 'acertadas al repasar' : 'preguntas repasadas';
   $('f-veredicto').style.color='var(--tinta)';
-  $('f-quien').textContent='Modo «solo yo» — repaso, no evaluación. Aquí no hay nota.';
+  $('f-quien').textContent='Modo \u00absolo yo\u00bb \u2014 repaso, no evaluaci\u00f3n. Esto no genera constancia ni queda en el registro.';
   var h='';
   S.orden.forEach(function(q,i){
-    h+='<div class="fila"><span class="pin" style="background:#2A5A72;color:#EAF2F6">'+(i+1)+'</span><span>'+
-       '<b>'+esc(q.enunciado.slice(0,80))+(q.enunciado.length>80?'…':'')+'</b>'+
-       '<br><span style="color:var(--gris)">Respuesta: '+q.correcta+') '+esc(q.opciones[q.correcta])+'</span>'+
-       '<br><i style="color:var(--ok)">💡 '+esc(q.tip)+'</i></span></div>';
+    var r=S.resp[i];
+    var pin = !r ? '<span class="pin" style="background:#2A5A72;color:#EAF2F6">'+(i+1)+'</span>'
+                 : '<span class="pin '+(r.ok?'ok':'mal')+'">'+(r.ok?'\u2713':'\u2717')+'</span>';
+    h+='<div class="fila">'+pin+'<span>'+
+       '<b>'+esc(q.enunciado.slice(0,80))+(q.enunciado.length>80?'\u2026':'')+'</b>'+
+       (r && !r.ok ? '<br><span style="color:var(--mal)">Marcaste: '+(r.marcada||'\u2014')+') '+
+            esc(q.opciones[r.marcada]||'sin responder')+'</span>' : '')+
+       '<br><span style="color:'+((r&&r.ok)?'var(--ok)':'var(--gris)')+'">'+
+         ((r&&r.ok)?'La tuya, y es la correcta: ':'Correcta: ')+q.correcta+') '+esc(q.opciones[q.correcta])+'</span>'+
+       (r && !r.ok ? '<br>'+fmt(q.explicacion) : '')+
+       '<br><i style="color:var(--ok)">\uD83D\uDCA1 '+esc(q.tip)+'</i></span></div>';
   });
   $('f-detalle').innerHTML=h;
   $('b-enviar').style.display='none';
@@ -9182,7 +9329,14 @@ function guardarTrabajador(){
   var nombre=($('t-nombre').value||'').trim(), m=$('trab-msg');
   m.style.color='var(--mal)';
   if(nombre.length<3){ m.textContent='Escribe el nombre completo del trabajador.'; return; }
-  var a=trabsLocal(), t=TRAB_EDIT?trabPorId(TRAB_EDIT):null;
+  /* \u26A0 trabPorId() vuelve a leer el localStorage y devuelve un objeto
+     de OTRO array. Al editar, se modificaba ese objeto suelto y despues
+     se guardaba «a», que nunca se habia tocado: el cambio se perdia
+     entero y en silencio. El tipo de sangre, el puesto, el telefono de
+     emergencia —todo. Hay que buscar la ficha DENTRO del array que se
+     va a guardar. */
+  var a=trabsLocal(), t=null;
+  if(TRAB_EDIT){ for(var _i=0;_i<a.length;_i++) if(a[_i].id===TRAB_EDIT){ t=a[_i]; break; } }
   if(!t){
     /* el cesado no ocupa cupo, ni acá ni en el servidor */
     var vivos=a.filter(function(x){ return (x.estatus||'activo')!=='cesado'; }).length;
@@ -9197,8 +9351,61 @@ function guardarTrabajador(){
   t.emerQuien=($('t-emer-quien').value||'').trim();
   t.sync=0;
   trabsSet(a); TRAB_EDIT=null;
-  m.style.color='var(--ok)'; m.textContent='Guardado.';
+  /* La credencial es una foto firmada de la ficha: lo que se guardo
+     adentro del QR no cambia solo. Si el trabajador cambia de puesto o
+     le ponen su grupo sanguineo, hay que volver a emitirla o el carne
+     sigue diciendo lo de antes —y en la puerta de la obra el que manda
+     es lo que dice el QR, no lo que dice la app. */
+  var _re=0; try{ _re=reemitirCredencialesDe(t); }catch(_rc){}
+  m.style.color='var(--ok)';
+  m.textContent = _re ? ('Guardado. Se actualiz\u00f3 tambi\u00e9n su credencial.') : 'Guardado.';
+  if(_re){
+    aviso('Credencial al d\u00eda',
+      'Se volvi\u00f3 a emitir '+(_re===1?'la credencial de ':'las '+_re+' credenciales de ')+t.nombre+
+      ' con los datos nuevos. Su QR ya muestra lo corregido.\n\n'+
+      'Si ya le entregaste el carn\u00e9 impreso o por WhatsApp, vuelve a mandarle el nuevo: el viejo sigue mostrando lo anterior.',
+      '\uD83E\uDEAA', function(){ ir('p-trabajadores'); });
+    return;
+  }
   setTimeout(function(){ ir('p-trabajadores'); },500);
+}
+/* \u2550\u2550\u2550\u2550\u2550\u2550 LA CREDENCIAL SIGUE A LA FICHA \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   El QR no consulta nada: lleva los datos firmados adentro para que se
+   lea en la puerta sin internet. Eso esta bien, pero significa que al
+   editar la ficha hay que volver a firmar el carne. Se hace solo, y se
+   respeta lo que NO viene de la ficha: la fecha de vencimiento y las
+   habilitaciones, que las pone quien emite el carne, no la ficha. */
+function _mismaPersona(c, t){
+  if(c.trab && t.id && String(c.trab)===String(t.id)) return true;
+  var cd=String(c.d||'').replace(/\D/g,''), td=String(t.dni||'').replace(/\D/g,'');
+  if(cd && td && cd===td) return true;
+  if(!cd && !td) return _norm(c.n||'')===_norm(t.nombre||'');
+  return false;
+}
+function reemitirCredencialesDe(t){
+  if(!t) return 0;
+  var lista=leer(LS_CRED,[]), n=0, e=empActiva()||{nombre:''};
+  lista.forEach(function(c){
+    if(!_mismaPersona(c,t)) return;
+    var v=credDatos(c.cod); if(!v) return;
+    var d={n:t.nombre||v.n||'', d:(t.dni||'').trim(), c:(t.puesto||'').trim(),
+           v:v.v||c.v||'', o:v.o||e.nombre||''};
+    if((t.sangre||'').trim())     d.s=(t.sangre||'').trim();
+    if((t.emergencia||'').trim()) d.e=(t.emergencia||'').trim();
+    if(v.h && v.h.length)         d.h=v.h.slice();
+    var nuevo=b64u(JSON.stringify(d));
+    var cod='OBRASST-CRED:'+nuevo+'.'+credFirma(nuevo);
+    if(cod===c.cod) return;          /* nada cambio: no se toca */
+    c.cod=cod; c.n=d.n; c.d=d.d; c.c=d.c; c.h=(d.h||[]);
+    c.trab=c.trab||t.id||null; c.sync=0;
+    n++;
+  });
+  if(n){
+    guardar(LS_CRED, lista);
+    try{ sincronizarCredenciales(); }catch(_s){}
+    try{ if((document.querySelector('.pantalla.activa')||{}).id==='p-credencial') pintarCredLista(); }catch(_p){}
+  }
+  return n;
 }
 function quitarTrabajador(id){
   confirmar('¿Quitar a este trabajador?', 'Sale de tu registro. Su kardex de EPP se conserva.', function(){
@@ -12075,11 +12282,13 @@ function accesosRapidosDom(){
   var caja=document.createElement('div');
   var t=document.createElement('div'); t.className='accesos-tit'; t.textContent='Lo de todos los días';
   caja.appendChild(t);
-  var fila=document.createElement('div'); fila.className='accesos';
+  var fila=document.createElement('div'); fila.className='accesos entran';
   accesosVisibles().forEach(function(a){
     var b=document.createElement('button'); b.className='acceso '+a.color; b.type='button';
     b.setAttribute('aria-label', a.et.replace(/<br>/g,' '));
-    b.innerHTML='<span class="aro">'+a.ic+'</span><span class="et">'+a.et+'</span>';
+    /* el emoji va dentro de su propio span: asi se puede encoger al
+       tocarlo sin arrastrar el aro ni el globito de avisos */
+    b.innerHTML='<span class="aro"><span class="emo">'+a.ic+'</span></span><span class="et">'+a.et+'</span>';
     b.onclick=function(){
       if(a.fn && typeof window[a.fn]==='function'){ window[a.fn](); return; }
       ir(a.ir);
@@ -12769,14 +12978,44 @@ function nombreTema(id){ var t=TEMAS[id]; if(!t) return id;
    42, con sus preguntas y su constancia firmada).
    Los dias viejos no tienen «tipo» y se leen como charla: nada de lo
    que ya estaba programado se rompe.                               */
-function tipoDelDia(c){ return (c && c.tipo==='capacitacion') ? 'capacitacion' : 'charla'; }
+/* \u2550\u2550\u2550\u2550\u2550 UN D\u00CDA PUEDE TENER M\u00C1S DE UNA COSA \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   En obra pasa seguido: la charla de las 7, y a las 4 una difusi\u00f3n por
+   la campa\u00f1a de dengue. O dos charlas el d\u00eda que viene el cliente.
+   El programa guardaba UNA cosa por fecha y la segunda pisaba a la
+   primera. Ahora la fecha tiene su actividad principal \u2014la que llen\u00f3
+   el mes\u2014 y una lista \u00abextra\u00bb para lo que se suma despu\u00e9s.
+   Se guarda anidado a prop\u00f3sito: as\u00ed los d\u00edas viejos, la fusi\u00f3n con el
+   servidor y las l\u00e1pidas siguen funcionando sin tocar nada. */
+var TIPOS_DIA = {
+  charla:       {ic:'\uD83D\uDDE3\uFE0F', et:'Charla de 5 min'},
+  capacitacion: {ic:'\uD83C\uDF93', et:'Capacitaci\u00f3n'},
+  difusion:     {ic:'\uD83D\uDCE2', et:'Difusi\u00f3n'},
+  simulacro:    {ic:'\uD83E\uDDEF', et:'Simulacro'}
+};
+function tipoDelDia(c){
+  var t = c && c.tipo;
+  return TIPOS_DIA[t] ? t : 'charla';
+}
+/* todo lo del d\u00eda, en orden: la principal y las que se sumaron */
+function actividadesDelDia(c){
+  if(!c) return [];
+  var a=[{d:c, i:-1}];
+  (c.extra||[]).forEach(function(x,i){ a.push({d:x, i:i}); });
+  a.sort(function(p,q){ return String(p.d.hora||'99:99').localeCompare(String(q.d.hora||'99:99')); });
+  return a;
+}
+function cuantasDelDia(c){ return c ? 1+((c.extra||[]).length) : 0; }
 function nombreCharla(n){ var c=charlaDe(parseInt(n,10)); return c? c.titulo : ('Charla '+n); }
 function nombreDelDia(c){
   if(!c) return '';
-  return tipoDelDia(c)==='capacitacion' ? nombreTema(c.tema) : nombreCharla(c.tema);
+  var t=tipoDelDia(c);
+  /* difusi\u00f3n y simulacro llevan el t\u00edtulo escrito a mano: no salen de
+     la lista de charlas ni de la de capacitaciones */
+  if(t==='difusion' || t==='simulacro') return String(c.titulo||c.tema||TIPOS_DIA[t].et);
+  return t==='capacitacion' ? nombreTema(c.tema) : nombreCharla(c.tema);
 }
-function iconoDelDia(c){ return tipoDelDia(c)==='capacitacion' ? '🎓' : '🗣️'; }
-function etiquetaDelDia(c){ return tipoDelDia(c)==='capacitacion' ? 'Capacitación' : 'Charla de 5 min'; }
+function iconoDelDia(c){ return TIPOS_DIA[tipoDelDia(c)].ic; }
+function etiquetaDelDia(c){ return TIPOS_DIA[tipoDelDia(c)].et; }
 function temasDe(sec){ return Object.keys(TEMAS).filter(function(id){
   return TEMAS[id].sector===sec || TEMAS[id].sector==='*'; }); }
 function mesMover(n){
@@ -12800,7 +13039,9 @@ function pintarPrograma(){
       var b=document.createElement('button');
       b.className='cal-d'+(c?(c.dictada?' dic':' con'):'')+(iso===hoy?' hoy':'');
       b.setAttribute('data-iso',iso);
-      b.innerHTML='<b>'+dd+'</b><i>'+(c?(c.dictada?'✅':(tipoDelDia(c)==='capacitacion'?'🎓':'●')):'&nbsp;')+'</i>';
+      var _n=cuantasDelDia(c);
+      b.innerHTML='<b>'+dd+'</b><i>'+(c?(c.dictada?'\u2705':iconoDelDia(c)):'&nbsp;')+'</i>'+
+        (_n>1?'<u class="cal-mas">+'+(_n-1)+'</u>':'');
       b.onclick=function(){ abrirDia(iso); };
       rej.appendChild(b);
     })(d);
@@ -12809,18 +13050,35 @@ function pintarPrograma(){
   var pref=PROG.ano+'-'+dosD(PROG.mes+1), prog=0, dic=0, salt=0, asis=0, filas='';
   Object.keys(datos).sort().forEach(function(iso){
     if(iso.indexOf(pref)!==0) return;
-    var c=datos[iso]; prog++;
-    if(c.dictada){ dic++; asis+=(parseInt(c.dictada.asist,10)||0); }
-    else if(iso<hoy){ salt++; }
+    var c=datos[iso];
     var p=iso.split('-'), f=new Date(+p[0],+p[1]-1,+p[2]);
-    filas+='<div class="prog-fila"><span class="d">'+DIAS[(f.getDay()+6)%7]+' '+(+p[2])+'</span><span>'+
-      '<b>'+iconoDelDia(c)+' '+esc(nombreDelDia(c))+'</b><small>'+
-      etiquetaDelDia(c)+' · '+(c.hora?esc(c.hora)+' · ':'')+
-      esc(c.resp||'sin responsable')+
-      (c.dictada?' · ✅ dictada, '+(parseInt(c.dictada.asist,10)||0)+' asistentes'
-                :(iso<hoy?' · ⚠️ sin marcar':''))+'</small></span></div>';
+    actividadesDelDia(c).forEach(function(x,k){
+      var a=x.d; prog++;
+      if(a.dictada){ dic++; asis+=(parseInt(a.dictada.asist,10)||0); }
+      else if(iso<hoy){ salt++; }
+      filas+='<div class="prog-fila"><span class="d">'+(k===0?(DIAS[(f.getDay()+6)%7]+' '+(+p[2])):'')+'</span><span>'+
+        '<b>'+iconoDelDia(a)+' '+esc(nombreDelDia(a))+'</b><small>'+
+        etiquetaDelDia(a)+' \u00b7 '+(a.hora?esc(a.hora)+' \u00b7 ':'')+
+        esc(a.resp||'sin responsable')+
+        (a.dictada?' \u00b7 \u2705 dictada, '+(parseInt(a.dictada.asist,10)||0)+' asistentes'
+                  :(iso<hoy?' \u00b7 \u26a0\ufe0f sin marcar':''))+'</small></span></div>';
+    });
   });
-  $('prog-resumen').innerHTML='<h3>Resumen del mes</h3><div class="prog-num">'+
+  /* lo que queda del calendario nacional, si es que queda algo */
+  var _sim=simulacrosQueQuedan(), _sh='';
+  if(_sim===null){
+    _sh='<div class="aviso" style="margin-top:12px">No tengo cargado el calendario de simulacros nacionales de '+
+        (new Date().getFullYear())+'. Cuando INDECI lo publique, lo agregamos.</div>';
+  } else if(_sim.length){
+    _sh='<div class="caja vidrio" style="margin-top:12px;border-left:3px solid var(--oro)">'+
+        '<b>\uD83E\uDDEF Simulacros nacionales que faltan este a\u00f1o</b>'+
+        '<p class="sub" style="margin:6px 0 10px">Los convoca INDECI y la obra participa. Se suman al programa sin tocar lo que ya tienes ese d\u00eda.</p>'+
+        _sim.map(function(x){
+          return '<button class="btn sec" style="text-align:left;margin:0 0 7px" onclick="ponerSimulacroNacional(\''+x.iso+'\')">'+
+                 '<b>'+esc(x.n)+'</b><br><small style="opacity:.8">'+esc(fechaLarga(x.iso))+' \u00b7 '+esc(x.hora)+'</small></button>';
+        }).join('')+'</div>';
+  }
+  $('prog-resumen').innerHTML=_sh+'<h3>Resumen del mes</h3><div class="prog-num">'+
     '<span>Programadas <b>'+prog+'</b></span><span>Dictadas <b>'+dic+'</b></span>'+
     '<span>Saltadas <b>'+salt+'</b></span><span>Asistentes <b>'+asis+'</b></span></div>';
   $('prog-lista').innerHTML= filas? ('<h3>Lo programado este mes</h3>'+filas)
@@ -12874,27 +13132,48 @@ function abrirDia(iso){
      baja a mirar. Ahora lo primero que se ve es qué hay ese día, y
      cambiarlo es una decisión aparte que hay que pedir. */
   if(c){
-    h+='<div class="caja vidrio" style="border-left:3px solid var(--oro)">'+
-       '<b style="font-size:16px">'+iconoDelDia(c)+' '+esc(nombreDelDia(c))+'</b>'+
-       '<div class="sub" style="margin:6px 0 0">'+etiquetaDelDia(c)+
-       (c.hora?' · '+esc(c.hora):'')+' · '+esc(c.resp||'sin responsable')+'</div></div>'+
-       '<div class="dos" style="margin-top:10px">'+
-         '<button class="btn" style="margin:0" onclick="verGuionDelDia()">'+
-           (DIA_TIPO==='capacitacion'?'\uD83C\uDF93 Abrir':'\uD83D\uDCD6 Ver el guion')+'</button>'+
-         '<button class="btn sec" style="margin:0" onclick="abrirCambioDia()">\u270F\uFE0F Cambiar</button>'+
-       '</div>';
+    var _acts=actividadesDelDia(c);
+    _acts.forEach(function(x){
+      var a=x.d, esP=(x.i===-1);
+      h+='<div class="caja vidrio" style="border-left:3px solid '+(esP?'var(--oro)':'var(--t-s1,#3f8fbf)')+'">'+
+         '<b style="font-size:16px">'+iconoDelDia(a)+' '+esc(nombreDelDia(a))+'</b>'+
+         '<div class="sub" style="margin:6px 0 0">'+etiquetaDelDia(a)+
+         (a.hora?' \u00b7 '+esc(a.hora):'')+' \u00b7 '+esc(a.resp||'sin responsable')+
+         (a.dictada?' \u00b7 \u2705 dictada':'')+'</div>'+
+         '<div class="dos" style="margin-top:10px">'+
+           '<button class="btn" style="margin:0" onclick="verGuionDelDia('+x.i+')">'+
+             (tipoDelDia(a)==='capacitacion'?'\uD83C\uDF93 Abrir':(tipoDelDia(a)==='charla'?'\uD83D\uDCD6 Ver el guion':'\u2139\uFE0F Detalle'))+'</button>'+
+           '<button class="btn sec" style="margin:0" onclick="abrirCambioDia('+x.i+')">\u270F\uFE0F Cambiar</button>'+
+         '</div>'+
+         (esP?'':'<button class="btn sec" style="margin:8px 0 0;padding:7px" onclick="quitarUnaDelDia('+x.i+')">Quitar solo esta</button>')+
+         '</div>';
+    });
+    /* \u2014 y aqui lo que pidio el cliente: sumar otra cosa el mismo dia \u2014 */
+    h+='<button class="btn sec" style="border-style:dashed;margin-top:6px" onclick="abrirCambioDia(\'nueva\')">'+
+       '\u2795 Agregar otra actividad este d\u00eda</button>'+
+       '<p class="sub" style="margin:6px 0 0;font-size:12.5px">Dos charlas, una charla y una difusi\u00f3n, un simulacro\u2026 lo que toque. Cada una con su hora y su responsable.</p>';
   }
   h+='<div id="dia-editor"'+(c?' style="display:none"':'')+'>'+
+     '<div id="dia-cual" class="sub" style="margin:0 0 8px"></div>'+
      '<label>¿Qué se dicta ese día?</label>'+
      '<div class="ch-chips" id="dia-tipos">'+
-       '<span class="ch-chip'+(DIA_TIPO==='charla'?' on':'')+'" onclick="elegirTipoDia(\'charla\')">🗣️ Charla de 5 min</span>'+
-       '<span class="ch-chip'+(DIA_TIPO==='capacitacion'?' on':'')+'" onclick="elegirTipoDia(\'capacitacion\')">🎓 Capacitación</span>'+
+       '<span class="ch-chip'+(DIA_TIPO==='charla'?' on':'')+'" onclick="elegirTipoDia(\'charla\')">\uD83D\uDDE3\uFE0F Charla de 5 min</span>'+
+       '<span class="ch-chip'+(DIA_TIPO==='capacitacion'?' on':'')+'" onclick="elegirTipoDia(\'capacitacion\')">\uD83C\uDF93 Capacitaci\u00f3n</span>'+
+       '<span class="ch-chip'+(DIA_TIPO==='difusion'?' on':'')+'" onclick="elegirTipoDia(\'difusion\')">\uD83D\uDCE2 Difusi\u00f3n</span>'+
+       '<span class="ch-chip'+(DIA_TIPO==='simulacro'?' on':'')+'" onclick="elegirTipoDia(\'simulacro\')">\uD83E\uDDEF Simulacro</span>'+
      '</div>'+
-     '<label id="dia-lab-tema">Tema de la charla</label>'+
-     '<input id="dia-buscar" placeholder="Buscar por palabra…" oninput="pintarTemasDia()">'+
-     '<div id="dia-cuenta" style="font-size:12px;color:var(--gris);margin:-4px 0 8px"></div>'+
-     '<div class="ch-chips" id="dia-cats"></div>'+
-     '<div class="ch-caja-lista" id="dia-lista"></div>'+
+     '<div id="dia-libre" style="display:none">'+
+       '<label id="dia-lab-libre">T\u00edtulo</label>'+
+       '<input id="dia-libre-tit" placeholder="Campa\u00f1a de dengue" value="'+escA((c&&c.titulo)||'')+'">'+
+       '<div id="dia-sugie" class="ch-chips"></div>'+
+     '</div>'+
+     '<div id="dia-buscador">'+
+       '<label id="dia-lab-tema">Tema de la charla</label>'+
+       '<input id="dia-buscar" placeholder="Buscar por palabra\u2026" oninput="pintarTemasDia()">'+
+       '<div id="dia-cuenta" style="font-size:12px;color:var(--gris);margin:-4px 0 8px"></div>'+
+       '<div class="ch-chips" id="dia-cats"></div>'+
+       '<div class="ch-caja-lista" id="dia-lista"></div>'+
+     '</div>'+
      '<label>Responsable (nombre o cargo)</label><input id="dia-resp" placeholder="Capataz de turno" value="'+escA((c&&c.resp)||'')+'">'+
      '<label>Hora</label><input id="dia-hora" type="time" value="'+escA((c&&c.hora)||'07:00')+'">'+
      '<button class="btn" onclick="guardarDia()" id="dia-guardar">Guardar</button>'+
@@ -12910,7 +13189,7 @@ function abrirDia(iso){
     } else {
       h+='<div class="aviso">Esta charla todavía no toca: se puede marcar como dictada desde el mismo día.</div>';
     }
-    h+='<button class="btn sec" onclick="quitarDia()">Quitar lo de ese día</button>';
+    h+='<button class="btn sec" onclick="quitarDia()">Quitar todo lo de ese d\u00eda</button>';
   }
   $('dia-cuerpo').innerHTML=h;
   DIA_CAT=null;
@@ -12919,10 +13198,54 @@ function abrirDia(iso){
 }
 /* «Cambiar» abre el buscador de temas, que hasta que se pide está
    guardado: así la fecha programada se lee de un vistazo. */
-function abrirCambioDia(){
+/* cual de las actividades del dia se esta tocando:
+   -1 = la principal · 0,1,2\u2026 = una extra · 'nueva' = una que se suma */
+var DIA_QUE=-1;
+function abrirCambioDia(i){
   var e=$('dia-editor'); if(!e) return;
+  DIA_QUE = (i===undefined || i===null) ? -1 : i;
+  var c=(progObra()||{})[PROG.dia]||null;
+  var a = (DIA_QUE==='nueva') ? null : ((DIA_QUE===-1) ? c : ((c&&c.extra||[])[DIA_QUE]));
+  var cual=$('dia-cual');
+  if(cual) cual.innerHTML = (DIA_QUE==='nueva')
+    ? '\u2795 <b>Otra actividad</b> para este mismo d\u00eda. Lo que ya estaba no se toca.'
+    : ('\u270F\uFE0F Est\u00e1s cambiando <b>'+esc(nombreDelDia(a)||'lo de este d\u00eda')+'</b>.');
+  DIA_TIPO = a ? tipoDelDia(a) : 'charla';
+  DIA_SEL  = a ? String(a.tema||'') : '';
+  var ti=$('dia-libre-tit'); if(ti) ti.value = (a && a.titulo) || '';
+  var re=$('dia-resp');   if(re) re.value = (a && a.resp) || '';
+  var ho=$('dia-hora');   if(ho) ho.value = (a && a.hora) || '07:00';
+  var ch=$('dia-tipos');
+  if(ch) [].forEach.call(ch.children, function(x){
+    x.className='ch-chip'+(x.getAttribute('onclick').indexOf("'"+DIA_TIPO+"'")>-1?' on':''); });
+  _pintaModoDia();
+  pintarTemasDia(DIA_SEL);
   e.style.display='';
   try{ e.scrollIntoView({behavior:'smooth', block:'start'}); }catch(_s){}
+}
+/* difusi\u00f3n y simulacro no salen de una lista: se escriben */
+function _pintaModoDia(){
+  var libre = (DIA_TIPO==='difusion' || DIA_TIPO==='simulacro');
+  var l=$('dia-libre'), bu=$('dia-buscador');
+  if(l)  l.style.display  = libre ? '' : 'none';
+  if(bu) bu.style.display = libre ? 'none' : '';
+  var lab=$('dia-lab-libre');
+  if(lab) lab.textContent = (DIA_TIPO==='simulacro') ? 'Qu\u00e9 simulacro' : 'De qu\u00e9 es la difusi\u00f3n';
+  var sg=$('dia-sugie');
+  if(sg){
+    var lista = (DIA_TIPO==='simulacro') ? SIMULACROS_SUG : DIFUSION_SUG;
+    sg.innerHTML = libre ? lista.map(function(x,i){
+      return '<span class="ch-chip" onclick="ponerTituloDia('+i+')">'+esc(x)+'</span>'; }).join('') : '';
+  }
+}
+var DIFUSION_SUG=['Campa\u00f1a de dengue','Uso correcto del bloqueador','Hidrataci\u00f3n en altura',
+  'Manejo de residuos','Salud mental y fatiga','Prevenci\u00f3n de acoso laboral','Cuidado de manos'];
+var SIMULACROS_SUG=['Simulacro Nacional Multipeligro','Simulacro de sismo','Simulacro de incendio',
+  'Simulacro de evacuaci\u00f3n','Simulacro de derrame','Simulacro de rescate en altura',
+  'Simulacro de emergencia m\u00e9dica'];
+function ponerTituloDia(i){
+  var lista = (DIA_TIPO==='simulacro') ? SIMULACROS_SUG : DIFUSION_SUG;
+  var t=$('dia-libre-tit'); if(t && lista[i]) t.value=lista[i];
 }
 function cerrarDia(){ $('hoja-dia').className='hoja'; }
 /* Elegir entre 42 charlas en un desplegable era bajar, elegir, volver a bajar.
@@ -12938,13 +13261,13 @@ function elegirTipoDia(t){
   DIA_TIPO=t; DIA_SEL=''; DIA_CAT=null;
   var b=$('dia-buscar'); if(b) b.value='';
   var lab=$('dia-lab-tema');
-  if(lab) lab.textContent = (t==='capacitacion') ? 'Capacitación a dictar' : 'Tema de la charla';
+  if(lab) lab.textContent = (t==='capacitacion') ? 'Capacitaci\u00f3n a dictar' : 'Tema de la charla';
   var ch=$('dia-tipos');
-  if(ch) [].forEach.call(ch.children, function(x,i){
-    x.className='ch-chip'+(((i===0&&t==='charla')||(i===1&&t==='capacitacion'))?' on':'');
-  });
+  if(ch) [].forEach.call(ch.children, function(x){
+    x.className='ch-chip'+(x.getAttribute('onclick').indexOf("'"+t+"'")>-1?' on':''); });
   var ab=$('dia-abrir');
-  if(ab) ab.textContent = (t==='capacitacion') ? '🎓 Abrir la capacitación' : '📖 Ver el guion de la charla';
+  if(ab) ab.textContent = (t==='capacitacion') ? '\uD83C\uDF93 Abrir la capacitaci\u00f3n' : '\uD83D\uDCD6 Ver el guion de la charla';
+  _pintaModoDia();
   pintarTemasDia();
 }
 function elegirCatDia(cat){ DIA_CAT=cat; pintarTemasDia(); }
@@ -13067,20 +13390,80 @@ function leerDia(){
      mia» en los dos aparatos y cada uno le re-subia la suya al otro,
      para siempre. Con la marca de tiempo gana la ultima, y los dos
      terminan viendo lo mismo. */
-  return {tema:DIA_SEL, tipo:DIA_TIPO||'charla', sector:$('dia-sector').value,
-          resp:$('dia-resp').value.trim(), hora:$('dia-hora').value||'',
-          ts:Date.now(), dictada:viejo.dictada||null};
+  var libre=(DIA_TIPO==='difusion'||DIA_TIPO==='simulacro');
+  var prev = (DIA_QUE==='nueva') ? {} :
+             ((DIA_QUE===-1) ? viejo : ((viejo.extra||[])[DIA_QUE]||{}));
+  var o={tema:DIA_SEL, tipo:DIA_TIPO||'charla', sector:$('dia-sector').value,
+         resp:$('dia-resp').value.trim(), hora:$('dia-hora').value||'',
+         ts:Date.now(), dictada:prev.dictada||null};
+  if(libre) o.titulo=(($('dia-libre-tit')||{}).value||'').trim();
+  return o;
 }
 function guardarDia(){
-  if(!DIA_SEL){
-    aviso(DIA_TIPO==='capacitacion' ? 'Falta la capacitación' : 'Falta la charla',
-      DIA_TIPO==='capacitacion'
-        ? 'Toca una familia y después el título.'
-        : 'Toca una categoría y después el título.', '📅');
+  var libre=(DIA_TIPO==='difusion'||DIA_TIPO==='simulacro');
+  if(libre && !((($('dia-libre-tit')||{}).value||'').trim())){
+    aviso(DIA_TIPO==='simulacro'?'Falta decir qu\u00e9 simulacro':'Falta el tema de la difusi\u00f3n',
+      'Escr\u00edbelo o toca una de las sugerencias.', TIPOS_DIA[DIA_TIPO].ic);
     return;
   }
-  var datos=progObra(); datos[PROG.dia]=leerDia(); progEscribir(datos);
+  if(!libre && !DIA_SEL){
+    aviso(DIA_TIPO==='capacitacion' ? 'Falta la capacitaci\u00f3n' : 'Falta la charla',
+      DIA_TIPO==='capacitacion'
+        ? 'Toca una familia y despu\u00e9s el t\u00edtulo.'
+        : 'Toca una categor\u00eda y despu\u00e9s el t\u00edtulo.', '\uD83D\uDCC5');
+    return;
+  }
+  var datos=progObra(), nuevo=leerDia();
+  var c=datos[PROG.dia];
+  if(DIA_QUE==='nueva' && c){
+    c.extra=(c.extra||[]); c.extra.push(nuevo); c.ts=Date.now();
+  } else if(DIA_QUE!==-1 && DIA_QUE!=='nueva' && c && (c.extra||[])[DIA_QUE]){
+    c.extra[DIA_QUE]=nuevo; c.ts=Date.now();
+  } else {
+    if(c && c.extra && c.extra.length) nuevo.extra=c.extra;   /* no se pierden las de al lado */
+    datos[PROG.dia]=nuevo;
+  }
+  progEscribir(datos);
+  DIA_QUE=-1;
   cerrarDia(); pintarPrograma();
+}
+/* \u2550\u2550\u2550\u2550\u2550 EL SIMULACRO NACIONAL \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   INDECI fija tres al a\u00f1o y la obra tiene que participar. Las fechas
+   son p\u00fablicas, no se inventan: si el a\u00f1o que corre no est\u00e1 en esta
+   lista, la app NO ofrece nada \u2014 antes que poner una fecha inventada
+   en el programa de un cliente, prefiere callarse y decirlo. */
+var SIMULACROS_NAC = {
+  2026: [
+    {iso:'2026-05-29', hora:'10:00', n:'I Simulacro Nacional Multipeligro'},
+    {iso:'2026-08-14', hora:'15:00', n:'II Simulacro Nacional Multipeligro'},
+    {iso:'2026-10-13', hora:'20:00', n:'III Simulacro Nacional Multipeligro'}
+  ]
+};
+function simulacrosQueQuedan(){
+  var hoy=hoyISO(), a=String(new Date().getFullYear());
+  var lista=SIMULACROS_NAC[a]||null;
+  if(!lista) return null;                       /* no hay dato: no se inventa */
+  return lista.filter(function(x){ return x.iso>=hoy; });
+}
+function ponerSimulacroNacional(iso){
+  var q=simulacrosQueQuedan()||[], x=null;
+  q.forEach(function(y){ if(y.iso===iso) x=y; });
+  if(!x) return;
+  var datos=progObra(), c=datos[iso];
+  var act={tema:'', tipo:'simulacro', titulo:x.n, sector:S.sector||SECTORES[0].id,
+           resp:'Brigada de emergencia', hora:x.hora, ts:Date.now(), dictada:null,
+           detalle:'Convocado por INDECI para todo el pa\u00eds. La obra participa con su brigada, '+
+                   'toma el tiempo de evacuaci\u00f3n y deja el acta firmada.'};
+  if(c){ c.extra=(c.extra||[]); c.extra.push(act); c.ts=Date.now(); }
+  else { datos[iso]=act; }
+  progEscribir(datos);
+  var p=iso.split('-');
+  PROG.ano=+p[0]; PROG.mes=(+p[1])-1;
+  pintarPrograma();
+  aviso('Simulacro programado',
+    x.n+' qued\u00f3 en el programa el '+fechaLarga(iso)+' a las '+x.hora+'.\n\n'+
+    'Cambia el responsable si en tu obra lo lleva otro. Recuerda dejar el acta firmada: '+
+    'es lo que te van a pedir.', '\uD83E\uDDEF');
 }
 function marcarDictada(){
   var datos=progObra(), c=leerDia(), a=$('dia-asist');
@@ -13093,10 +13476,23 @@ function marcarDictada(){
   cerrarDia(); pintarPrograma();
 }
 function quitarDia(){
-  confirmar('¿Quitar lo programado ese día?', '', function(){
-    progQuitarDia(PROG.dia);
-    cerrarDia(); pintarPrograma();
-  }, {si:'Sí, quitar', no:'Cancelar', icono:'📅'});
+  var c=(progObra()||{})[PROG.dia];
+  var n=cuantasDelDia(c);
+  confirmar('\u00bfQuitar lo programado ese d\u00eda?',
+    n>1 ? ('Ese d\u00eda tiene '+n+' actividades y se van las '+n+'. Si solo quieres sacar una, t\u00f3cala y usa Cambiar.') : '',
+    function(){
+      progQuitarDia(PROG.dia);
+      cerrarDia(); pintarPrograma();
+    }, {si:'S\u00ed, quitar', no:'Cancelar', icono:'\uD83D\uDCC5'});
+}
+function quitarUnaDelDia(i){
+  var datos=progObra(), c=datos[PROG.dia];
+  if(!c || !(c.extra||[])[i]) return;
+  confirmar('\u00bfQuitar esta actividad?', esc(nombreDelDia(c.extra[i]))+' sale del programa. Lo dem\u00e1s de ese d\u00eda se queda.',
+    function(){
+      c.extra.splice(i,1); c.ts=Date.now(); progEscribir(datos);
+      cerrarDia(); pintarPrograma();
+    }, {si:'S\u00ed, quitar', no:'Cancelar', icono:'\uD83D\uDCC5'});
 }
 // ------------------------------------------------------- llenar el mes
 /* ══════════ QUIÉN DICTA CADA CHARLA ═══════════════════════════════
@@ -13431,13 +13827,25 @@ function charlasDictadas(){ return leer(LS_CH, {}); }
 
 function verCharlas(){ ir('p-charlas'); pintarCharlas(); }
 
-function verGuionDelDia(){
-  if(!DIA_SEL) return;
+function verGuionDelDia(i){
+  var a=null;
+  if(i===undefined || i===null){ if(!DIA_SEL) return; a={tipo:DIA_TIPO, tema:DIA_SEL}; }
+  else { var c=(progObra()||{})[PROG.dia]; if(!c) return;
+         a = (i===-1) ? c : ((c.extra||[])[i]); }
+  if(!a) return;
+  var t=tipoDelDia(a);
+  if(t==='difusion' || t==='simulacro'){
+    aviso(TIPOS_DIA[t].et, String(a.titulo||'')+
+      (a.detalle?('\n\n'+a.detalle):'')+
+      (a.hora?('\n\nHora: '+a.hora):'')+
+      (a.resp?('\nResponsable: '+a.resp):''), TIPOS_DIA[t].ic);
+    return;
+  }
   cerrarDia();
-  /* la charla abre su guion de 5 minutos; la capacitación abre el tema
+  /* la charla abre su guion de 5 minutos; la capacitaci\u00f3n abre el tema
      entero, con sus preguntas y su constancia firmada */
-  if(DIA_TIPO==='capacitacion'){ abrirTema(DIA_SEL); return; }
-  abrirCharla(parseInt(DIA_SEL,10));
+  if(t==='capacitacion'){ abrirTema(a.tema); return; }
+  abrirCharla(parseInt(a.tema,10));
 }
 
 function pintarCharlas(){
@@ -15562,6 +15970,7 @@ function fotoObs(i, campo){
 
 /* ── Guardar ─────────────────────────────────────────────────────────── */
 function guardarInspeccion(exportar){
+  if(soloConCodigo('Las inspecciones de obra','inspecciones')) return;
   var e=reqEmpresa(); if(!e) return;
   var t=INSP.t, modo=modoDe(t), msg=$('i-msg'), E=escalaDe(t);
   if(!($('i-inspector').value||'').trim()){ msg.style.color='var(--mal)'; msg.textContent='Pon tu nombre como inspector.'; return; }
@@ -16621,7 +17030,11 @@ function generarCredencial(){
   /* se guarda con fecha: así la lista se puede ordenar y se sabe cuál es la
      última que hiciste aunque el nombre se repita */
   var lista=leer(LS_CRED,[]);
-  lista.unshift({n:nombre, d:datos.d, v:datos.v, cod:cod, h:(datos.h||[]), c:datos.c, hecho:new Date().toISOString()});
+  /* de que ficha salio: sin esto, al cambiarle el nombre o el DNI al
+     trabajador ya no hay forma de saber cual credencial es la suya */
+  var _de=(($('c-desde')||{}).value||'');
+  lista.unshift({n:nombre, d:datos.d, v:datos.v, cod:cod, h:(datos.h||[]), c:datos.c,
+                 trab:_de||null, hecho:new Date().toISOString()});
   guardar(LS_CRED, lista.slice(0,200));
   try{ sincronizarCredenciales(); }catch(_s){}
   $('cred-tarjeta').innerHTML = tarjetaCredHTML(cod)+
@@ -20417,6 +20830,7 @@ function pintarMsds(){
 }
 function guardarMsds(){
   var e=empActiva(); if(!e){ ir('p-empresa'); return; }
+  if(soloConCodigo('Las hojas MSDS','msds')) return;
   var prod=($('m-producto').value||'').trim();
   if(!prod){ aviso('Falta el producto','¿De qué producto es la ficha MSDS?','🧴'); return; }
   var proveedor=($('m-proveedor').value||'').trim(), nota=($('m-nota').value||'').trim();
