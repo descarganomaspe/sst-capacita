@@ -1,139 +1,93 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B2A3A">
 <title>Documento de la obra · OBRASST</title>
 <style>
-  :root{--fondo:#0B2A3A;--panel:#12384C;--oro:#F5B700;--tinta:#EAF2F6;--gris:#8FA9B8;--mal:#E5484D}
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{min-height:100vh;background:var(--fondo);color:var(--tinta);
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    display:flex;align-items:center;justify-content:center;padding:26px;line-height:1.5}
-  .caja{width:100%;max-width:430px;text-align:center}
-  .marca{font-size:12px;letter-spacing:.20em;font-weight:800;color:var(--oro);margin-bottom:26px}
-  h1{font-size:23px;line-height:1.3;margin-bottom:10px;font-weight:700}
-  p{color:var(--gris);font-size:15px;margin-bottom:8px}
-  .obra{color:var(--tinta);font-weight:700}
-  .giro{width:44px;height:44px;margin:0 auto 20px;border-radius:50%;
-    border:3px solid rgba(245,183,0,.25);border-top-color:var(--oro);animation:g .8s linear infinite}
-  @keyframes g{to{transform:rotate(360deg)}}
-  @media(prefers-reduced-motion:reduce){.giro{animation:none;border-top-color:rgba(245,183,0,.25)}}
-  .btn{display:inline-block;margin-top:18px;background:var(--oro);color:#0B2A3A;
-    text-decoration:none;font-weight:800;font-size:15px;padding:13px 24px;border-radius:11px}
-  .btn.sec{background:transparent;color:var(--oro);border:1.5px solid rgba(245,183,0,.5)}
-  .aviso{background:rgba(229,72,77,.10);border:1px solid rgba(229,72,77,.35);
-    border-radius:12px;padding:15px;text-align:left;margin-top:6px}
-  .aviso b{color:var(--tinta)}
-  .pie{margin-top:30px;font-size:11.5px;color:var(--gris);opacity:.8;line-height:1.6}
-  .oculto{display:none}
-</style></head>
-<body>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:#0B2A3A;color:#EAF2F7;
+  font:16px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.caja{width:100%;max-width:430px;text-align:center}
+.marca{font-size:12px;letter-spacing:.18em;color:#F5B700;font-weight:800;margin-bottom:22px}
+h1{font-size:21px;margin:0 0 10px;line-height:1.3}
+p{margin:0 0 8px;color:#A9C2D0;font-size:15px}
+.giro{width:34px;height:34px;margin:26px auto 0;border-radius:50%;
+  border:3px solid rgba(255,255,255,.18);border-top-color:#F5B700;animation:g .8s linear infinite}
+@keyframes g{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.giro{animation-duration:2.4s}}
+.tarj{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;padding:22px 20px;margin-top:18px;text-align:left}
+.tarj b{color:#EAF2F7}
+.obra{margin-top:20px;font-size:12.5px;color:#7D97A6;letter-spacing:.04em}
+a.btn{display:block;margin-top:16px;padding:14px;border-radius:12px;background:#F5B700;
+  color:#0B2A3A;text-decoration:none;font-weight:800;text-align:center}
+.oculto{display:none}
+</style></head><body>
 <div class="caja">
-  <div class="marca">◆ OBRASST</div>
-
-  <div id="cargando">
+  <div class="marca">&#9670; OBRASST</div>
+  <div id="cuerpo">
+    <h1>Abriendo el documento&hellip;</h1>
+    <p id="quien"></p>
     <div class="giro"></div>
-    <h1>Buscando el documento…</h1>
-    <p>Un segundo.</p>
   </div>
-
-  <div id="listo" class="oculto">
-    <h1 id="l-tit">Documento</h1>
-    <p class="obra" id="l-obra"></p>
-    <a class="btn" id="l-ir" href="#" rel="noopener">Abrir el documento</a>
-    <p style="margin-top:14px;font-size:13px">Si no se abre solo, toca el botón.</p>
-  </div>
-
-  <div id="falla" class="oculto">
-    <h1 id="f-tit">No se pudo abrir</h1>
-    <div class="aviso" id="f-txt"></div>
-    <a class="btn sec" href="https://descarganomaspe.github.io/sst-capacita/">Ir a OBRASST</a>
-  </div>
-
-  <div class="pie">
-    Este código lleva siempre al documento vigente de la obra.<br>
-    Si lo actualizan, el cartel impreso sigue funcionando.
-  </div>
+  <div class="obra" id="pie"></div>
 </div>
-
 <script>
-/* El redirector. Lee ?o=CODIGO&h=hoja, le pregunta a la nube cual es el
-   documento vigente de esa obra y manda para alla. Es todo lo que hace:
-   no guarda nada del que escanea, no pide permisos, no pesa nada. */
 (function(){
-  var SB = { url:'https://gwjjkknuiumgysezeatz.supabase.co',
-             key:'sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx' };
-  var HOJAS = { risst:'Reglamento Interno de SST', pets:'PETS', iperc:'Matriz IPERC',
-                msds:'Hojas MSDS', plan:'Plan anual de SST', mapa:'Mapa de riesgos',
-                emergencia:'Plan de emergencia' };
-  function $(id){ return document.getElementById(id); }
-  function ver(cual){
-    ['cargando','listo','falla'].forEach(function(k){
-      $(k).className = (k===cual) ? '' : 'oculto';
-    });
+  var SB='https://gwjjkknuiumgysezeatz.supabase.co', KEY='sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx';
+  var NOMBRE={risst:'Reglamento Interno de SST', pets:'PETS', iperc:'Matriz IPERC',
+              msds:'Hojas MSDS', plan:'Plan anual de SST', mapa:'Mapa de riesgos',
+              emergencia:'Plan de emergencia'};
+  function q(n){ try{ return new URLSearchParams(location.search).get(n)||''; }catch(e){ return ''; } }
+  var cod=q('o'), hoja=q('h');
+  var cuerpo=document.getElementById('cuerpo'), pie=document.getElementById('pie');
+  document.getElementById('quien').textContent = NOMBRE[hoja] || 'Documento de la obra';
+  if(cod) pie.textContent = 'Obra ' + cod;
+  function di(titulo, texto, extra){
+    cuerpo.innerHTML = '<h1>'+titulo+'</h1><div class="tarj">'+texto+'</div>'+(extra||'');
   }
-  function fallar(titulo, texto){
-    $('f-tit').textContent = titulo;
-    $('f-txt').innerHTML = texto;
-    ver('falla');
-  }
-  function param(n){
-    var m = (location.search||'').match(new RegExp('[?&]'+n+'=([^&]*)'));
-    return m ? decodeURIComponent(m[1].replace(/\+/g,' ')) : '';
-  }
-  var cod = param('o'), hoja = (param('h')||'risst').toLowerCase();
-  var nombreHoja = HOJAS[hoja] || hoja.toUpperCase();
-  document.title = nombreHoja + ' · OBRASST';
-
-  if(!cod){
-    fallar('Falta el código de la obra',
-      'Este enlace vino incompleto. Vuelve a escanear el QR del cartel; si sigue igual, avísale al supervisor de tu obra.');
+  if(!cod || !hoja){
+    di('Este cartel esta incompleto',
+       'Al codigo QR le falta la obra o el documento. Pidele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.');
     return;
   }
-
-  fetch(SB.url+'/rest/v1/rpc/sst_hoja_publica', {
-    method:'POST',
-    headers:{ 'apikey':SB.key, 'Authorization':'Bearer '+SB.key, 'Content-Type':'application/json' },
-    body: JSON.stringify({ p_cod: cod, p_hoja: hoja })
-  })
-  .then(function(r){
-    /* para quien lo esta montando: si la funcion todavia no existe en la
-       base, PostgREST contesta 404. Se anota en la consola con nombre y
-       apellido; al trabajador se le sigue diciendo algo en cristiano. */
-    if(r.status === 404){
-      try{ console.warn('OBRASST · falta correr el SQL: la funcion sst_hoja_publica no existe todavia en Supabase.'); }catch(e){}
-    } else if(!r.ok){
-      try{ console.warn('OBRASST · el servidor contesto ' + r.status); }catch(e){}
-    }
-    return r.json();
-  })
-  .then(function(j){
-    if(j && j.ok && j.url){
-      $('l-tit').textContent = j.titulo || nombreHoja;
-      $('l-obra').textContent = j.obra || '';
-      $('l-ir').href = j.url;
-      ver('listo');
-      setTimeout(function(){ location.replace(j.url); }, 550);
-      return;
-    }
-    if(j && j.motivo === 'codigo_no_existe'){
-      fallar('Esa obra no existe',
-        'El código <b>'+cod.replace(/[<>&]/g,'')+'</b> no está registrado. Puede que el cartel sea de una obra que ya cerró, o que el QR esté rayado. Avísale al supervisor.');
-      return;
-    }
-    if(j && j.motivo === 'sin_documento'){
-      fallar('Todavía no está cargado',
-        'La obra <b>'+String(j.obra||'').replace(/[<>&]/g,'')+'</b> aún no subió su <b>'+nombreHoja+'</b>. '+
-        'El supervisor lo carga desde la app, en la hoja del documento, y este mismo cartel empieza a funcionar sin reimprimirlo.');
-      return;
-    }
-    fallar('No se pudo abrir', 'Algo falló del lado del servidor. Intenta de nuevo en un rato.');
-  })
-  .catch(function(){
-    fallar('Sin internet',
-      'No hay señal para buscar el documento. Acércate a donde agarre y vuelve a escanear.');
-  });
+  fetch(SB+'/rest/v1/rpc/sst_hoja_por_codigo', {
+    method:'POST', headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+    body: JSON.stringify({p_cod:cod, p_hoja:hoja})
+  }).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(j){
+      if(j && j.ok && j.url){
+        if(j.obra) pie.textContent = j.obra + ' \u00b7 ' + cod;
+        location.replace(j.url);
+        /* si el navegador bloquea el salto, queda el boton */
+        setTimeout(function(){
+          di('Toca para abrirlo',
+             'Tu navegador no dejo abrirlo solo.',
+             '<a class="btn" href="'+String(j.url).replace(/"/g,'&quot;')+'">Abrir ' +
+             (NOMBRE[hoja]||'el documento') + '</a>');
+        }, 1200);
+        return;
+      }
+      var e=(j&&j.error)||'';
+      if(e==='obra_no_existe'){
+        di('No encuentro esa obra',
+           'El codigo <b>'+cod+'</b> no corresponde a ninguna obra en OBRASST. Puede que el cartel sea de una obra que ya cerro.');
+      } else if(e==='sin_documento'){
+        if(j.obra) pie.textContent = j.obra + ' \u00b7 ' + cod;
+        di('Todavia no esta cargado',
+           'Esta obra aun no subio su <b>'+(NOMBRE[hoja]||'documento')+'</b> a OBRASST.<br><br>Pideselo a tu supervisor SSOMA: se carga una vez y este mismo cartel empieza a funcionar.');
+      } else {
+        di('No se pudo abrir',
+           'Vuelve a escanear el cartel en un momento. Si sigue igual, avisale a tu supervisor.');
+      }
+    })
+    .catch(function(){
+      di('Sin internet',
+         'Necesitas señal para abrir el documento. Vuelve a escanear el cartel cuando tengas datos o wifi.');
+    });
 })();
 </script>
 </body></html>
