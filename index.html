@@ -1117,6 +1117,36 @@ html.t-claro .tostada,html.t-alto .tostada{background:#0D1620;color:#fff}
   border:2px solid rgba(var(--w),.85);background:rgba(6,24,34,.60);color:#fff;
   font-size:15px;line-height:22px;text-align:center;font-weight:700}
 .esc-card.marcada{outline:3px solid var(--ok);outline-offset:-1px}
+/* \u2500\u2500 MI PERSONAL: UNA FILA POR PERSONA \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+   Cada trabajador ocupaba una tarjeta con tres botones: con 40 personas
+   eran 40 pantallas de scroll para encontrar a uno. Ahora es una fila
+   por persona \u2014inicial, nombre, DNI y puesto\u2014 y los botones aparecen
+   al abrirla. Con 250 trabajadores esto es la diferencia entre una
+   lista y un laberinto. */
+.tr-fila{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:rgba(var(--w),.045);border:1px solid rgba(var(--w),.09);border-left:3px solid var(--ok);
+  border-radius:12px;padding:9px 11px;margin-bottom:6px;cursor:pointer;font-family:inherit;color:var(--tinta)}
+.tr-fila.desc{border-left-color:#d68e1a}
+.tr-fila.ces{border-left-color:var(--mal);opacity:.72}
+.tr-fila:active{transform:scale(.995)}
+.tr-ini{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:13.5px;background:rgba(var(--w),.10);
+  color:var(--tinta);letter-spacing:.02em}
+.tr-tx{flex:1;min-width:0;line-height:1.3}
+.tr-tx b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-tx small{display:block;color:var(--gris);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-qr{flex:none;font-size:15px;opacity:.75}
+.tr-qr.no{opacity:.30}
+.tr-abre{flex:none;color:var(--gris);font-size:15px;transition:transform .18s ease}
+.tr-fila.abierta .tr-abre{transform:rotate(90deg)}
+.tr-acc{display:flex;gap:7px;margin:-2px 0 9px;padding:0 2px}
+.tr-acc .btn{margin:0;padding:9px 6px;font-size:13px}
+.tr-orden{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.tr-orden button{border:1px solid rgba(var(--w),.16);background:rgba(var(--w),.04);color:var(--gris);
+  border-radius:999px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.tr-orden button.on{background:rgba(245,183,0,.16);border-color:var(--oro);color:var(--tinta)}
+.tr-cab{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:16px}
+@media(prefers-reduced-motion:reduce){.tr-abre{transition:none}.tr-fila:active{transform:none}}
 /* el dia con mas de una actividad lo dice en el calendario */
 .cal-mas{position:absolute;top:2px;right:3px;font-style:normal;font-size:9px;font-weight:800;
   background:var(--oro);color:#0B2A3A;border-radius:999px;padding:1px 4px;line-height:1.25}
@@ -1496,6 +1526,11 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <label class="sec-tit" style="margin:12px 0 6px">&#191;Para qu&#233; actividad?</label>
     <select id="k-actividad"></select>
     <p class="sub" id="k-activ-nota" style="margin:6px 0 0;font-size:12.5px"></p>
+
+    <label class="sec-tit" style="margin:12px 0 6px">&#191;D&#243;nde se le entrega?</label>
+    <input id="k-lugar" list="k-lugar-sug" placeholder="Almac&#233;n de obra" autocomplete="off">
+    <datalist id="k-lugar-sug"></datalist>
+    <p class="sub" style="margin:6px 0 0;font-size:12.5px">No sale en el registro oficial &#8212; el formato no cambia. Sirve para el panel de control y para su ficha.</p>
 
     <label class="sec-tit" style="margin:14px 0 6px">Fecha de entrega</label>
     <input id="k-fecha" type="date">
@@ -2062,6 +2097,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="irAtras()">‹ Atrás</button><span id="temas-sector"></span></div>
   <h2>¿Qué tema te toca?</h2>
   <p class="sub" id="temas-cuenta" style="margin-bottom:10px"></p>
+  <input id="temas-busca" placeholder="Buscar: EPP, altura, izaje, extintor&#8230;" autocomplete="off" oninput="buscarTemas()">
   <div class="kx-seg" id="temas-vista" style="margin-bottom:14px">
     <button type="button" class="kx-op on" onclick="verTemas('grupos')">Por grupos</button>
     <button type="button" class="kx-op" onclick="verTemas('todas')">Ver todas</button>
@@ -7000,12 +7036,33 @@ function abrirTema(id){
    Dos arreglos, los dos honestos: se dice el n\u00famero de verdad arriba, y
    hay un bot\u00f3n para verlas TODAS en una lista plana. */
 var TEMAS_VISTA='grupos';
+var TEMAS_BUSCA='';
+/* con 32 capacitaciones, buscar no es un lujo. Al escribir se pasa
+   sola a la vista plana: agrupar resultados de busqueda esconde
+   justo lo que la persona vino a encontrar. */
+function buscarTemas(){
+  var b=$('temas-busca'); TEMAS_BUSCA = b ? b.value : '';
+  if(TEMAS_BUSCA.trim()) TEMAS_VISTA='todas';
+  pintarTemas();
+}
 function verTemas(v){
   TEMAS_VISTA = (v==='todas') ? 'todas' : 'grupos';
   var seg=$('temas-vista');
   if(seg){ var bs=seg.getElementsByTagName('button');
     for(var i=0;i<bs.length;i++) bs[i].className='kx-op'+((i===0)===(TEMAS_VISTA==='grupos')?' on':''); }
   pintarTemas();
+}
+/* una sola tarjeta de tema, para la vista plana y para la busqueda */
+function _tarjTema(t){
+  var n=preguntasDe(t.id).length, tot=t.preguntas.length, libre=temaLibre(t.id);
+  var b=document.createElement('button');
+  b.className='tarj vidrio'+(n===0?' bloq':'')+(libre?' libre':'');
+  b.innerHTML='<b>'+esc(t.tema)+(t.variante?' \u00b7 '+esc(t.variante):'')+(n===0?' \uD83D\uDD12':'')+
+    (libre?' <span class="pin-libre">GRATIS</span>':'')+'</b><small>'+esc(t.escenario)+' \u00b7 '+
+    (libre? (tot+' preguntas \u00b7 completa en todos los planes')
+          : (S.lite?(n+' de '+tot+' preguntas gratis'):(tot+' preguntas')))+'</small>';
+  b.onclick=(function(id){ return function(){ abrirTema(id); }; })(t.id);
+  return b;
 }
 function pintarTemas(){
   var c=$('lista-temas');c.innerHTML='';
@@ -7016,20 +7073,20 @@ function pintarTemas(){
   if(cu) cu.innerHTML='<b>'+todos.length+' capacitaciones</b> de '+esc(s.nombre.toLowerCase())+
     (TEMAS_VISTA==='grupos' ? (' \u00b7 agrupadas en '+fichas.length+' tarjetas. Las que llevan \u25B8 abren la lista de variantes.')
                             : ' \u00b7 una por una.');
+  var f=(TEMAS_BUSCA||'').trim().toLowerCase();
+  if(f){
+    var hall=todos.map(function(id){ return TEMAS[id]; }).filter(function(t){
+      return (t.tema+' '+(t.variante||'')+' '+(t.escenario||'')).toLowerCase().indexOf(f)>-1; });
+    if(cu) cu.innerHTML = hall.length
+      ? ('<b>'+hall.length+'</b> de '+todos.length+' capacitaciones con \u00ab'+esc(TEMAS_BUSCA.trim())+'\u00bb.')
+      : ('Ninguna capacitaci\u00f3n de '+esc(s.nombre.toLowerCase())+' dice \u00ab'+esc(TEMAS_BUSCA.trim())+'\u00bb. Prueba con otra palabra.');
+    hall.forEach(function(t){ c.appendChild(_tarjTema(t)); });
+    return;
+  }
   if(TEMAS_VISTA==='todas'){
     todos.map(function(id){ return TEMAS[id]; })
       .sort(function(a,b){ return String(a.tema+' '+(a.variante||'')).localeCompare(String(b.tema+' '+(b.variante||'')),'es'); })
-      .forEach(function(t){
-        var n=preguntasDe(t.id).length, tot=t.preguntas.length, libre=temaLibre(t.id);
-        var b=document.createElement('button');
-        b.className='tarj vidrio'+(n===0?' bloq':'')+(libre?' libre':'');
-        b.innerHTML='<b>'+esc(t.tema)+(t.variante?' \u00b7 '+esc(t.variante):'')+(n===0?' \uD83D\uDD12':'')+
-          (libre?' <span class="pin-libre">GRATIS</span>':'')+'</b><small>'+esc(t.escenario)+' \u00b7 '+
-          (libre? (tot+' preguntas \u00b7 completa en todos los planes')
-                : (S.lite?(n+' de '+tot+' preguntas gratis'):(tot+' preguntas')))+'</small>';
-        b.onclick=(function(id){ return function(){ abrirTema(id); }; })(t.id);
-        c.appendChild(b);
-      });
+      .forEach(function(t){ c.appendChild(_tarjTema(t)); });
     return;
   }
   fichas.forEach(function(f){
@@ -8883,21 +8940,88 @@ function trabsLocal(){ return leer(LS_TRAB,[]) || []; }
 function trabsSet(a){ guardar(LS_TRAB,a); }
 function trabPorId(id){ var a=trabsLocal(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; }
 
+var TRAB_ORDEN='creado', TRAB_BUSCA='', TRAB_ABIERTO=null;
+var TRAB_ORDENES=[
+  {k:'creado', n:'Como se crearon'},
+  {k:'az',     n:'A \u2013 Z'},
+  {k:'puesto', n:'Por puesto'},
+  {k:'area',   n:'Por \u00e1rea'},
+  {k:'estatus',n:'Por estatus'}
+];
+function trabOrdenar(k){ TRAB_ORDEN=k; TRAB_ABIERTO=null; pintarTrabajadores(); }
+function trabBuscar(){ var b=$('trab-busca'); TRAB_BUSCA=b?b.value:''; pintarTrabajadores(); }
+function trabAbrir(id){ TRAB_ABIERTO = (TRAB_ABIERTO===id)? null : id; pintarTrabajadores(); }
+function _inicialesDe(n){
+  var p=String(n||'').trim().split(/\s+/).filter(Boolean);
+  if(!p.length) return '?';
+  return (p[0][0]+(p.length>1?p[1][0]:'')).toUpperCase();
+}
+function trabsOrdenados(){
+  var a=trabsLocal().slice();
+  var f=(TRAB_BUSCA||'').trim().toLowerCase();
+  if(f) a=a.filter(function(t){
+    return String(t.nombre||'').toLowerCase().indexOf(f)>-1 ||
+           String(t.dni||'').indexOf(f)>-1 ||
+           String(t.puesto||'').toLowerCase().indexOf(f)>-1 ||
+           String(t.area||'').toLowerCase().indexOf(f)>-1; });
+  var cmpNom=function(x,y){ return String(x.nombre||'').localeCompare(String(y.nombre||''),'es'); };
+  if(TRAB_ORDEN==='az')      a.sort(cmpNom);
+  else if(TRAB_ORDEN==='puesto') a.sort(function(x,y){
+    return String(x.puesto||'\uFFFF').localeCompare(String(y.puesto||'\uFFFF'),'es') || cmpNom(x,y); });
+  else if(TRAB_ORDEN==='area') a.sort(function(x,y){
+    return String(x.area||'\uFFFF').localeCompare(String(y.area||'\uFFFF'),'es') || cmpNom(x,y); });
+  else if(TRAB_ORDEN==='estatus'){
+    var peso={activo:0, descanso:1, cesado:2};
+    a.sort(function(x,y){ return (peso[x.estatus||'activo']-peso[y.estatus||'activo']) || cmpNom(x,y); });
+  }
+  /* 'creado' = el orden en que estan guardados, que es el de alta */
+  return a;
+}
 function pintarTrabajadores(){
-  var c=$('trab-lista'), a=trabsLocal();
-  if(!a.length){ c.innerHTML='<p class="sub" style="margin-top:14px">Todavía no tienes trabajadores registrados. Agrega el primero arriba: con eso el kardex y las credenciales se llenan solos.</p>'; }
-  else {
-    var h='<div class="sec-tit" style="margin-top:18px">'+a.length+' trabajador'+(a.length===1?'':'es')+'</div>';
-    a.forEach(function(t){
-      var col = t.estatus==='activo' ? 'var(--ok)' : (t.estatus==='cesado' ? 'var(--mal)' : '#d68e1a');
-      h+='<div class="tarj vidrio" style="display:block"><b>'+esc(t.nombre)+
-         ' <span style="font-size:11px;font-weight:800;color:'+col+'">● '+esc((t.estatus||'activo').toUpperCase())+'</span></b>'+
-         '<small>DNI '+esc(t.dni||'—')+' · '+esc(t.puesto||'—')+(t.area?' · '+esc(t.area):'')+'</small>'+
-         '<div style="display:flex;gap:8px;margin-top:9px">'+
-         '<button class="btn" style="margin:0" onclick="abrirFichaTrab(\''+t.id+'\')">Ver su ficha</button>'+
-         '<button class="btn sec" style="margin:0" onclick="editarTrabajador(\''+t.id+'\')">Editar</button>'+
-         '<button class="btn sec" style="margin:0" onclick="quitarTrabajador(\''+t.id+'\')">Quitar</button></div></div>';
-    });
+  var c=$('trab-lista'), todos=trabsLocal(), a=trabsOrdenados();
+  if(!todos.length){
+    c.innerHTML='<p class="sub" style="margin-top:14px">Todav\u00eda no tienes trabajadores registrados. Agrega el primero arriba: con eso el kardex y las credenciales se llenan solos.</p>';
+  } else {
+    var act=todos.filter(function(t){ return (t.estatus||'activo')==='activo'; }).length;
+    var h='<div class="tr-cab"><span class="sec-tit" style="margin:0">'+todos.length+' trabajador'+(todos.length===1?'':'es')+
+          '</span><small style="color:var(--gris);font-size:12px">'+act+' activo'+(act===1?'':'s')+'</small></div>';
+    if(todos.length>6)
+      h+='<input id="trab-busca" placeholder="Buscar por nombre, DNI, puesto o \u00e1rea" autocomplete="off" '+
+         'oninput="trabBuscar()" value="'+escA(TRAB_BUSCA)+'" style="margin:10px 0 0">';
+    h+='<div class="tr-orden">'+TRAB_ORDENES.map(function(o){
+        return '<button type="button" class="'+(TRAB_ORDEN===o.k?'on':'')+'" onclick="trabOrdenar(\''+o.k+'\')">'+esc(o.n)+'</button>';
+      }).join('')+'</div>';
+    if(!a.length){
+      h+='<p class="sub" style="margin:12px 0 0">Nadie con \u00ab'+esc(TRAB_BUSCA)+'\u00bb.</p>';
+    } else {
+      var grupo='';
+      a.forEach(function(t){
+        /* con orden por puesto, area o estatus se pone el encabezado del grupo:
+           asi la lista se lee de un vistazo en vez de adivinar donde cambia */
+        var g='';
+        if(TRAB_ORDEN==='puesto')  g=(t.puesto||'Sin puesto');
+        else if(TRAB_ORDEN==='area')   g=(t.area||'Sin \u00e1rea');
+        else if(TRAB_ORDEN==='estatus')g={activo:'Activos', descanso:'De descanso', cesado:'Cesados'}[t.estatus||'activo'];
+        if(g && g!==grupo){ grupo=g; h+='<div class="sec-tit" style="margin:14px 0 6px">'+esc(g)+'</div>'; }
+        var cl = (t.estatus==='cesado') ? ' ces' : (t.estatus==='descanso' ? ' desc' : '');
+        var abierto = (TRAB_ABIERTO===t.id);
+        var tieneQR = credencialDe(t) ? '' : ' no';
+        h+='<button type="button" class="tr-fila'+cl+(abierto?' abierta':'')+'" onclick="trabAbrir(\''+t.id+'\')">'+
+           '<span class="tr-ini">'+esc(_inicialesDe(t.nombre))+'</span>'+
+           '<span class="tr-tx"><b>'+esc(t.nombre)+'</b><small>'+esc(t.dni||'sin DNI')+
+             (t.puesto?' \u00b7 '+esc(t.puesto):'')+(t.area?' \u00b7 '+esc(t.area):'')+
+             (t.estatus && t.estatus!=='activo' ? ' \u00b7 '+esc(t.estatus.toUpperCase()) : '')+'</small></span>'+
+           '<span class="tr-qr'+tieneQR+'" title="'+(tieneQR?'sin credencial':'con credencial')+'">\uD83E\uDEAA</span>'+
+           '<span class="tr-abre">\u203A</span></button>';
+        if(abierto){
+          h+='<div class="tr-acc">'+
+             '<button class="btn" onclick="abrirFichaTrab(\''+t.id+'\')">Su ficha</button>'+
+             '<button class="btn sec" onclick="editarTrabajador(\''+t.id+'\')">Editar</button>'+
+             '<button class="btn sec" onclick="verCredDe(\''+t.id+'\')">Su QR</button>'+
+             '<button class="btn sec" onclick="quitarTrabajador(\''+t.id+'\')">Quitar</button></div>';
+        }
+      });
+    }
     c.innerHTML=h;
   }
   try{ pintarBotonTraer(); }catch(_b){}
@@ -9266,8 +9390,10 @@ function pintarFichaTrab(){
     h+='</div>';
     h+='<details style="margin-top:9px"><summary class="sub" style="cursor:pointer">Ver las '+k.length+' entregas una por una</summary><div class="caja vidrio" style="padding:12px 14px;margin-top:8px">';
     k.forEach(function(x){
-      var et={N:'Nuevo',C:'Cambio',P:'Pérdida'}[x.tipo]||x.tipo;
-      h+='<div class="fila"><span>'+esc(x.epp)+' <small style="color:var(--gris)">· '+esc(et)+' · '+x.cant+' '+esc(x.unidad||'UND')+'</small></span>'+
+      var et={N:'Nuevo',C:'Cambio',P:'P\u00e9rdida'}[x.tipo]||x.tipo;
+      h+='<div class="fila"><span>'+esc(x.epp)+' <small style="color:var(--gris)">\u00b7 '+esc(et)+' \u00b7 '+x.cant+' '+esc(x.unidad||'UND')+
+         (x.actividad?' \u00b7 '+esc(x.actividad):'')+
+         (x.lugar?' \u00b7 \uD83D\uDCCD '+esc(x.lugar):'')+'</small></span>'+
          '<span class="sub">'+esc(x.fecha||'')+'</span></div>';
     });
     h+='</div></details>';
@@ -9356,9 +9482,24 @@ function guardarTrabajador(){
      le ponen su grupo sanguineo, hay que volver a emitirla o el carne
      sigue diciendo lo de antes —y en la puerta de la obra el que manda
      es lo que dice el QR, no lo que dice la app. */
-  var _re=0; try{ _re=reemitirCredencialesDe(t); }catch(_rc){}
+  /* si es nuevo y el plan lo permite, nace con su QR; si ya exist\u00eda,
+     su credencial se pone al d\u00eda con los datos nuevos */
+  var _nueva=null, _re=0;
+  try{
+    if(!credencialDe(t)) _nueva=emitirCredencialDe(t);
+    else _re=reemitirCredencialesDe(t);
+  }catch(_rc){}
   m.style.color='var(--ok)';
-  m.textContent = _re ? ('Guardado. Se actualiz\u00f3 tambi\u00e9n su credencial.') : 'Guardado.';
+  m.textContent = _nueva ? 'Guardado. Ya tiene su credencial con QR.'
+                : (_re ? 'Guardado. Se actualiz\u00f3 tambi\u00e9n su credencial.' : 'Guardado.');
+  if(_nueva){
+    aviso('Listo, con su QR',
+      t.nombre+' qued\u00f3 registrado y su credencial se emiti\u00f3 sola, con tres meses de vigencia.\n\n'+
+      'La encuentras en su fila, en el bot\u00f3n \u00abSu QR\u00bb. Si le vas a poner habilitaciones '+
+      '(altura, espacio confinado, el\u00e9ctrico\u2026) entra a Credenciales y m\u00e1rcaselas.',
+      '\uD83E\uDEAA', function(){ ir('p-trabajadores'); });
+    return;
+  }
   if(_re){
     aviso('Credencial al d\u00eda',
       'Se volvi\u00f3 a emitir '+(_re===1?'la credencial de ':'las '+_re+' credenciales de ')+t.nombre+
@@ -9375,6 +9516,59 @@ function guardarTrabajador(){
    editar la ficha hay que volver a firmar el carne. Se hace solo, y se
    respeta lo que NO viene de la ficha: la fecha de vencimiento y las
    habilitaciones, que las pone quien emite el carne, no la ficha. */
+/* \u2550\u2550\u2550\u2550\u2550 TODO TRABAJADOR NACE CON SU CREDENCIAL \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   Antes habia que ir aparte a Credenciales y volver a escribir sus
+   datos. Nadie lo hacia, y en la puerta de la obra el trabajador no
+   tenia QR. Si la ficha existe, la credencial existe: se emite sola al
+   guardarlo, con 3 meses de vigencia, y desde ese momento se mantiene
+   sola cada vez que se edita la ficha.
+   Ojo: en LITE la credencial no entra en el plan (tope 0). Ahi NO se
+   emite y NO se molesta al usuario con un aviso de venta cada vez que
+   registra a alguien: simplemente no la crea. */
+function credencialDe(t){
+  if(!t) return null;
+  var lista=leer(LS_CRED,[]), r=null;
+  lista.forEach(function(c){ if(!r && _mismaPersona(c,t)) r=c; });
+  return r;
+}
+function verCredDe(id){
+  var t=trabPorId(id); if(!t) return;
+  var c=credencialDe(t);
+  if(c){
+    var lista=leer(LS_CRED,[]), i=-1;
+    lista.forEach(function(x,k){ if(x.cod===c.cod && i<0) i=k; });
+    CRED_VIENDO = i;
+    ir('p-credencial');
+    return;
+  }
+  if(!cupoLite('credencial', usadosTotal('credencial', leer(LS_CRED,[]).length))){
+    frenoLite('credencial', usadosTotal('credencial', leer(LS_CRED,[]).length), 'credenciales');
+    return;
+  }
+  var n=emitirCredencialDe(t);
+  if(n){ CRED_VIENDO=0; ir('p-credencial'); }
+  else aviso('No se pudo emitir','Rev\u00edsale el nombre a la ficha y vuelve a intentarlo.','\uD83E\uDEAA');
+}
+function emitirCredencialDe(t, meses){
+  if(!t || String(t.nombre||'').trim().length<3) return null;
+  if(credencialDe(t)) return null;                 /* ya tiene */
+  if(!cupoLite('credencial', usadosTotal('credencial', leer(LS_CRED,[]).length))) return null;
+  var e=empActiva()||{nombre:'\u2014'};
+  var v=new Date(); v.setMonth(v.getMonth()+(meses||3));
+  var datos={n:String(t.nombre).trim(), d:(t.dni||'').trim(), c:(t.puesto||'').trim(),
+             v:v.toISOString().slice(0,10), o:e.nombre||''};
+  if((t.sangre||'').trim())     datos.s=(t.sangre||'').trim();
+  if((t.emergencia||'').trim()) datos.e=(t.emergencia||'').trim();
+  var payload=b64u(JSON.stringify(datos));
+  var cod='OBRASST-CRED:'+payload+'.'+credFirma(payload);
+  var lista=leer(LS_CRED,[]);
+  lista.unshift({n:datos.n, d:datos.d, v:datos.v, cod:cod, h:[], c:datos.c,
+                 trab:t.id||null, auto:1, hecho:new Date().toISOString()});
+  guardar(LS_CRED, lista.slice(0,400));
+  sumarUso('credencial');
+  try{ sincronizarCredenciales(); }catch(_s){}
+  return cod;
+}
 function _mismaPersona(c, t){
   if(c.trab && t.id && String(c.trab)===String(t.id)) return true;
   var cd=String(c.d||'').replace(/\D/g,''), td=String(t.dni||'').replace(/\D/g,'');
@@ -9523,12 +9717,15 @@ function alCambiarTrabKardex(){
 }
 function prepKardex(){
   var sug=$('k-epp-sug'); if(sug) sug.innerHTML=EPP_SUG.map(function(e){return '<option value="'+esc(e)+'">';}).join('');
+  pintarLugaresKardex();
   K_FILTRO=''; var bs=$('k-buscar'); if(bs) bs.value='';
   pintarSelTrabKardex(true);
   asegurarPersonal(function(){ pintarSelTrabKardex(false); alCambiarTrabKardex(); }, true);
   pintarSelectActividadKardex();
   var hoy=new Date(); $('k-fecha').value=hoy.getFullYear()+'-'+('0'+(hoy.getMonth()+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2);
   if($('k-epp')) $('k-epp').value=''; if($('k-cant')) $('k-cant').value='1';
+  /* el lugar casi siempre se repite: se deja el \u00faltimo puesto */
+  var lu=$('k-lugar'); if(lu) lu.value = leer(LS_LUGAR_EPP,'') || '';
   $('kardex-msg').textContent='';
   var man=$('k-manual'); if(man) man.style.display='none';
   var ob=$('k-otro-btn'); if(ob) ob.style.display='';
@@ -9549,6 +9746,30 @@ function prepKardex(){
    Se usa la MISMA lista que los reportes, la que el lider edita en
    \u00abActividades\u00bb: si aparece una actividad nueva en la obra, aparece en
    los dos sitios a la vez. */
+/* \u2550\u2550\u2550\u2550\u2550 \u00bfD\u00d3NDE SE LE ENTREG\u00d3? \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   Lo pidi\u00f3 el cliente y es un dato caro: si el 70% del EPP sale del
+   almac\u00e9n central y el 30% en frente de trabajo, eso dice d\u00f3nde poner
+   el pr\u00f3ximo punto de entrega y d\u00f3nde se est\u00e1 perdiendo la hora del
+   obrero yendo a buscarlo.
+   OJO: el formato SSOMAPCFO043 NO lleva esta columna y no se le agrega.
+   El lugar vive en el panel de control y en la ficha del trabajador,
+   no en el registro que se firma. Eso lo pidi\u00f3 expl\u00edcitamente. */
+var LS_LUGAR_EPP='sstc_ultimo_lugar_epp';
+var LUGARES_EPP=['Almac\u00e9n de obra','Almac\u00e9n central','Frente de trabajo','Caseta de SSOMA',
+  'Campamento','Taller de mantenimiento','Interior mina','Planta','Oficina de obra'];
+function lugaresUsados(){
+  var c={}, a=[];
+  kardexLocal().forEach(function(k){
+    var l=String(k.lugar||'').trim(); if(!l) return;
+    var kk=l.toLowerCase(); if(!c[kk]){ c[kk]=1; a.push(l); }
+  });
+  LUGARES_EPP.forEach(function(l){ if(!c[l.toLowerCase()]) a.push(l); });
+  return a;
+}
+function pintarLugaresKardex(){
+  var d=$('k-lugar-sug'); if(!d) return;
+  d.innerHTML = lugaresUsados().map(function(l){ return '<option value="'+escA(l)+'">'; }).join('');
+}
 function pintarSelectActividadKardex(){
   var sel=$('k-actividad'); if(!sel) return;
   var previo=sel.value;
@@ -9819,6 +10040,8 @@ function guardarKardex(){
   var foto=(K_FOTO||'');
   var fecha=$('k-fecha').value;
   var actv=(($('k-actividad')||{}).value||'');
+  var lugar=((($('k-lugar')||{}).value)||'').trim();
+  if(lugar){ try{ guardar(LS_LUGAR_EPP, lugar); }catch(_gl){} }
   var lote='L'+Date.now().toString(36);
   var a=kardexLocal(), paraSubir=[];
 
@@ -9826,7 +10049,7 @@ function guardarKardex(){
     sumarUso('kardex');
     var reg={ id:'k'+Date.now().toString(36)+i+Math.random().toString(36).slice(2,5),
       trab:tid, trabNombre:t?t.nombre:'', epp:l.epp, tipo:l.tipo,
-      fecha:fecha, cant:l.cant, unidad:l.unidad, actividad:actv,
+      fecha:fecha, cant:l.cant, unidad:l.unidad, actividad:actv, lugar:lugar,
       firma:firma, foto:foto, lote:lote, sync:0 };
     a.unshift(reg);
     paraSubir.push(reg);
@@ -9840,6 +10063,7 @@ function guardarKardex(){
     if(conFoto && reg.foto) o.foto=reg.foto;
     /* la actividad tambien es columna nueva: mismo cuidado que la foto */
     if(conActividad && reg.actividad) o.actividad=reg.actividad;
+    if(conActividad && reg.lugar) o.lugar=reg.lugar;
     return o;
   }
   /* La foto es columna nueva. Si la base todavia no la tiene, PostgREST
@@ -18885,7 +19109,11 @@ function pintarMisEmpresas(){
   var mias = MIS_EMP.filter(function(x){ return x.rol==='dueno'; });
   if(mias.length){
     c.innerHTML = h +
-      '<div style="height:26px"></div>'+
+      '<div style="height:22px"></div>'+
+      '<button class="btn sec" style="text-align:left" onclick="abrirTraspasarMando()">'+
+      '\uD83D\uDD11 <b>Pasarle el mando a otro</b>'+
+      '<br><small style="opacity:.75">Si dejas la obra, el l\u00edder pasa a ser otro de tu equipo. T\u00fa te quedas dentro como supervisor.</small></button>'+
+      '<div style="height:16px"></div>'+
       '<button class="btn sec" style="border-style:dashed;border-color:rgba(229,72,77,.45);text-align:left" '+
       'onclick="abrirBorrarEmpresa()">\uD83D\uDDD1\uFE0F <b>Eliminar una empresa o un proyecto</b>'+
       '<br><small style="opacity:.75">Borra del servidor todo lo suyo, sin vuelta atr\u00e1s. Si despu\u00e9s alguien registra ese RUC, empieza de cero.</small></button>';
@@ -18900,6 +19128,94 @@ function pintarMisEmpresas(){
      3 · escribes el código de esa empresa a mano
    Y aun así el servidor vuelve a comprobar que eres el dueño y que el
    código coincide: la app no borra nada por su cuenta.               */
+/* \u2550\u2550\u2550\u2550\u2550\u2550 PASARLE EL MANDO A OTRO \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   El l\u00edder renuncia o lo mueven de proyecto y la empresa se queda sin
+   nadie que pueda invitar supervisores ni abrir obras. Antes hab\u00eda que
+   escribirnos.
+   Tres decisiones, y las tres pesan:
+   1. Solo se le pasa a alguien que YA es miembro activo. No se entrega
+      una empresa a un correo suelto que quiz\u00e1 ni existe.
+   2. El que entrega NO sale: se queda como supervisor. Si saliera,
+      perder\u00eda el acceso a los registros que \u00e9l mismo levant\u00f3, y en una
+      fiscalizaci\u00f3n eso es justo lo que hay que poder explicar.
+   3. Se confirma escribiendo el c\u00f3digo, igual que para borrar. */
+function abrirTraspasarMando(){
+  var mias = MIS_EMP.filter(function(x){ return x.rol==='dueno'; });
+  if(!mias.length){ aviso('No eres l\u00edder de ninguna','Solo el l\u00edder puede pasar el mando.','\uD83D\uDD12'); return; }
+  var h='<div class="sub" style="margin:0 0 10px">\u00bfDe cu\u00e1l quieres pasar el mando? El que lo recibe pasa a ser el l\u00edder; t\u00fa te quedas dentro como supervisor.</div>';
+  mias.forEach(function(e){
+    h+='<button class="tarj vidrio" style="display:block;width:100%;text-align:left" '+
+       'onclick="pedirCorreoDelMando(\''+escA(e.id)+'\')"><b>'+esc(e.nombre)+'</b>'+
+       '<small>C\u00f3digo '+esc(e.codigo)+(e.padre_id?' \u00b7 es un proyecto':'')+'</small></button>';
+  });
+  aviso('Pasar el mando','','\uD83D\uDD11');
+  var cu=$('avisof-txt'); if(cu){ cu.style.display=''; cu.innerHTML=h; }
+  var si=$('avisof-si'); if(si) si.textContent='Mejor no';
+}
+var MANDO_EMP=null;
+function pedirCorreoDelMando(empId){
+  var e=null; MIS_EMP.forEach(function(x){ if(String(x.id)===String(empId)) e=x; });
+  if(!e) return;
+  MANDO_EMP=e;
+  cerrarAviso(false);
+  setTimeout(function(){
+    preguntar('\u00bfA qui\u00e9n de tu equipo?',
+      'Escribe el correo con el que esa persona entra a OBRASST. Tiene que estar ya dentro de \u00ab'+e.nombre+'\u00bb: '+
+      'si todav\u00eda no entr\u00f3, primero m\u00e1ndale su c\u00f3digo de invitaci\u00f3n.',
+      '', function(correo){ pedirCodigoDelMando(correo); }, '\uD83D\uDD11');
+  }, 240);
+}
+function pedirCodigoDelMando(correo){
+  correo=String(correo||'').trim().toLowerCase();
+  var e=MANDO_EMP;
+  if(!e) return;
+  if(correo.indexOf('@')<1){ aviso('Ese correo no se ve bien','Rev\u00edsalo y vuelve a intentarlo. No se cambi\u00f3 nada.','\u26a0\ufe0f'); return; }
+  setTimeout(function(){
+    preguntar('Confirmar el traspaso',
+      'A partir de ahora, \u00ab'+e.nombre+'\u00bb la va a dirigir '+correo+': podr\u00e1 invitar supervisores, abrir proyectos y '+
+      'eliminar la empresa.\n\nT\u00fa te quedas dentro como supervisor, con acceso a todo lo registrado, pero ya no podr\u00e1s '+
+      'nombrar a nadie.\n\nPara confirmar, escribe el c\u00f3digo: '+e.codigo,
+      '', function(txt){ traspasarMandoAhora(e, correo, txt); }, '\uD83D\uDD11');
+  }, 240);
+}
+function traspasarMandoAhora(e, correo, texto){
+  if(_codLimpio(texto)!==_codLimpio(e.codigo)){
+    aviso('El c\u00f3digo no coincide','Escribe '+e.codigo+' tal cual para confirmar. No se cambi\u00f3 nada.','\u26a0\ufe0f');
+    return;
+  }
+  if(!hayCuenta()){ aviso('Sin sesi\u00f3n','Entra a tu cuenta para poder pasar el mando.','\uD83D\uDD11'); return; }
+  aviso('Pasando el mando\u2026','Un momento.','\u23F3');
+  var confirmo = String(texto||'').toUpperCase().replace(/\s+/g,'');
+  sbRpc('sst_traspasar_mando', {p_emp:e.id, p_correo:correo, p_confirmo:confirmo}).then(function(r){
+    r = r || {};
+    if(r.ok!==true){
+      var m = {sin_sesion:'Tu sesi\u00f3n venci\u00f3. Sal y vuelve a entrar a tu cuenta. No se cambi\u00f3 nada.',
+               no_existe:'Esa empresa ya no est\u00e1 en el servidor. No se cambi\u00f3 nada.',
+               no_eres_dueno:'Solo el l\u00edder puede pasar el mando. No se cambi\u00f3 nada.',
+               codigo_no_coincide:'El c\u00f3digo no coincide. No se cambi\u00f3 nada.',
+               sin_correo:'Falta el correo de quien recibe. No se cambi\u00f3 nada.',
+               ya_eres_tu:'Ese eres t\u00fa. Escribe el correo de la otra persona.',
+               no_es_miembro:'Ese correo todav\u00eda no est\u00e1 dentro de \u00ab'+e.nombre+'\u00bb. Primero m\u00e1ndale su c\u00f3digo de invitaci\u00f3n desde \u00abInvitar\u00bb, que entre una vez, y despu\u00e9s le pasas el mando. No se cambi\u00f3 nada.'}[r.error]
+              || 'No se pudo pasar el mando. No se cambi\u00f3 nada.';
+      aviso('No se hizo el traspaso', m, '\u26a0\ufe0f');
+      return;
+    }
+    /* de aqui en adelante ya no manda: la app tiene que enterarse */
+    ROL_EMP_SERVIDOR='gestor';
+    MIS_EMP.forEach(function(x){ if(String(x.id)===String(e.id)) x.rol='gestor'; });
+    var g=leer(LS_EMP,null); if(g && String(g.id)===String(e.id)){ g.rol='gestor'; guardar(LS_EMP,g); }
+    aviso('Mando entregado',
+      '\u00ab'+r.empresa+'\u00bb ahora la dirige '+r.correo+'.\n\n'+
+      'T\u00fa sigues dentro como supervisor: ves y registras todo, pero ya no nombras gente ni abres proyectos. '+
+      'Av\u00edsale para que entre y lo vea.',
+      '\u2705', function(){
+        if(typeof cargarMisEmpresas==='function') cargarMisEmpresas(true).then(function(){ pintarMisEmpresas(); });
+        else pintarMisEmpresas();
+      });
+  }, function(err){
+    aviso('No se hizo el traspaso', porQue(err)+' No se cambi\u00f3 nada.', '\u26a0\ufe0f');
+  });
+}
 function abrirBorrarEmpresa(){
   var mias = MIS_EMP.filter(function(x){ return x.rol==='dueno'; });
   if(!mias.length){ aviso('No eres due\u00f1o de ninguna','Solo el due\u00f1o puede eliminar una empresa.','\uD83D\uDD12'); return; }
@@ -19734,7 +20050,11 @@ function tcCargar(){
         g('sst_hht?duenio=eq.'+E+'&select=fecha,ob_n,ob_h,st_n,st_h,hhc&limit=500'),
         g('sst_inspeccion?empresa=eq.'+E+'&fecha=gte.'+desde+'&select=tipo,fecha,inspector&limit=800'),
         traerReportes(p.id, '&fecha=gte.'+desde+'&limit=900').catch(function(){ return []; }),
-        g('sst_kardex?duenio=eq.'+E+'&select=epp,tipo,fecha,cantidad,trabajador,trab_nombre,actividad&order=fecha.desc&limit=900'),
+        g('sst_kardex?duenio=eq.'+E+'&select=epp,tipo,fecha,cantidad,trabajador,trab_nombre,actividad,lugar&order=fecha.desc&limit=900')
+          .then(function(r){ return (r&&r.length!==undefined) ? r : []; },function(){
+            /* si la base todavia no tiene «lugar», se pide sin el */
+            return g('sst_kardex?duenio=eq.'+E+'&select=epp,tipo,fecha,cantidad,trabajador,trab_nombre,actividad&order=fecha.desc&limit=900');
+          }),
         g('sst_constancia?empresa=eq.'+E+'&select=trabajador,dni,tema,resultado,fecha&limit=900'),
         g('sst_trabajador?duenio=eq.'+E+'&select=ext,nombre,dni,puesto,area,estatus&limit=900'),
         g('sst_amonestacion?duenio=eq.'+E+'&select=fecha,t_nombre,t_dni,medida&limit=300'),
@@ -19817,7 +20137,8 @@ function tcInspHechas(p, mes){
 }
 function tcEPP(ps, mes){
   var m=mes||TC.mes||mesISO(), r={N:0,C:0,P:0,tot:0, porEpp:{}, porTrab:{},
-                                  porActiv:{}, activP:{}, sinActiv:0};
+                                  porActiv:{}, activP:{}, sinActiv:0,
+                                  porLugar:{}, sinLugar:0};
   ps.forEach(function(p){ tcD(p.id).kdx.forEach(function(k){
     if(String(k.fecha||'').slice(0,7)!==m) return;
     var c=parseInt(k.cantidad,10)||0, t=(k.tipo||'N').toUpperCase();
@@ -19827,6 +20148,11 @@ function tcEPP(ps, mes){
     var q=(k.trab_nombre||'—').trim(); r.porTrab[q]=(r.porTrab[q]||0)+c;
     /* la actividad es columna nueva: lo entregado ANTES de que existiera
        no tiene ninguna, y eso se dice, no se reparte a ojo */
+    /* el lugar de entrega: mismo criterio. Lo que se registro antes de
+       que el campo existiera no tiene lugar, y se cuenta aparte en vez
+       de repartirlo entre los que si lo tienen. */
+    var lg=(k.lugar||'').trim();
+    if(lg) r.porLugar[lg]=(r.porLugar[lg]||0)+c; else r.sinLugar+=c;
     var v=(k.actividad||'').trim();
     if(!v){ r.sinActiv+=c; return; }
     r.porActiv[v]=(r.porActiv[v]||0)+c;
@@ -20296,6 +20622,16 @@ function tcPagCump(){
 function tcPagEpp(){
   var ps=tcSel(), cfg=tcCfg(), mes=TC.mes||mesISO(), E=tcEPP(ps,mes);
   var h='<div class="tc-rej">';
+  /* de donde sale el EPP: dice donde poner el proximo punto de entrega */
+  var lug=tcTop(E.porLugar,8);
+  h+='<div class="tc-card"><h3>D\u00f3nde se entrega el EPP</h3>'+
+     '<p class="sub">Punto de entrega de lo despachado en '+esc(mesBonito(mes))+'. '+
+     'Si casi todo sale de un solo sitio, ah\u00ed se est\u00e1 yendo la hora del obrero que baja a buscarlo.</p>'+
+     (lug.length ? tcBarras(lug.map(function(x){ return {et:x.k, v:x.v, tope:lug[0].v, txt:tcNum(x.v), col:'var(--t-s1)'}; }))+
+        (E.sinLugar? '<p class="sub" style="margin:10px 0 0">'+tcNum(E.sinLugar)+
+          ' unidades no dicen d\u00f3nde se entregaron: son de antes de que el campo existiera.</p>' : '')
+      : tcVacio('Todav\u00eda ninguna entrega trae el lugar. Es un campo nuevo: aparece en la pr\u00f3xima entrega que registres.'))+
+     '</div>';
   var top=tcTop(E.porEpp,10);
   h+='<div class="tc-card"><h3>Qué EPP se consume más</h3>'+
      '<p class="sub">Unidades entregadas en '+esc(mesBonito(mes))+', de todo el kardex.</p>'+
