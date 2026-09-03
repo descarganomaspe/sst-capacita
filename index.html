@@ -772,6 +772,55 @@ html.t-claro .tostada,html.t-alto .tostada{background:#0D1620;color:#fff}
   .accesos.entran .acceso,.lid-num,.aviso-num{animation:none}
   .acceso:hover .aro{transform:none}
 }
+/* ═══════════════ MOVIMIENTO CON SENTIDO ═══════════════════════════
+   Seis. Ni una más. Cada una responde a algo que el usuario acaba de
+   hacer o a algo que tiene que mirar; ninguna está por adornar. Con
+   «reducir movimiento» encendido, la app se queda quieta entera.   */
+
+/* 1 · EL ACCESO RÁPIDO REBOTA. Con guantes y sol de obra, el dedo no
+   siempre siente si el botón registró. El rebote lo dice sin texto. */
+.acceso .aro{position:relative}
+@keyframes rebote{0%{transform:scale(1)}20%{transform:scale(.84)}52%{transform:scale(1.13)}78%{transform:scale(.97)}100%{transform:scale(1)}}
+@keyframes onda{from{opacity:.55;transform:scale(.72)}to{opacity:0;transform:scale(1.75)}}
+.acceso .aro.rebota{animation:rebote .46s cubic-bezier(.28,1.4,.5,1)}
+.acceso .aro.rebota::after{content:'';position:absolute;inset:-2px;border-radius:50%;
+  border:2px solid currentColor;color:var(--oro);animation:onda .52s ease-out;pointer-events:none}
+
+/* 2 · CADA PANTALLA ENTRA. Antes cambiaban de golpe y en un celular de
+   obra no se distingue si navegaste o si la app se colgó. */
+@keyframes pant-entra{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+.pantalla.activa.entra{animation:pant-entra .26s cubic-bezier(.22,.9,.3,1) both}
+
+/* 3 · EL SELLO DE DICTADA. Marcar la charla del día es el logro del
+   día: el ✅ cae como un sello de goma sobre el acta. */
+@keyframes sello{0%{transform:scale(2.4) rotate(-14deg);opacity:0}
+                 55%{transform:scale(.92) rotate(3deg);opacity:1}
+                 78%{transform:scale(1.07) rotate(-1deg)}
+                 100%{transform:scale(1) rotate(0)}}
+.sello-dictada{display:inline-block;transform-origin:50% 60%;
+  animation:sello .52s cubic-bezier(.3,1.5,.5,1) both}
+
+/* 4 · EL CAMPO QUE FALTA SE SACUDE. El aviso dice qué falta; la
+   sacudida dice DÓNDE, que es lo que uno busca con el pulgar. */
+@keyframes sacude{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}
+                  30%,50%,70%{transform:translateX(-6px)}40%,60%{transform:translateX(6px)}}
+.sacude{animation:sacude .48s both}
+
+/* 5 · LOS NÚMEROS DE LA TORRE CUENTAN SOLOS. Un 92% que sube desde 0
+   se lee como un dato recién calculado; puesto de golpe, como una
+   imagen pegada. Sube en 0,6 s y se queda quieto. */
+.kpi-n{font-variant-numeric:tabular-nums}
+
+/* 6 · EL DÍA DE HOY LATE EN EL CALENDARIO. Es la única celda que
+   necesitas encontrar sin buscarla. */
+@keyframes late-hoy{0%,100%{box-shadow:inset 0 0 0 1.5px var(--oro)}
+                    50%{box-shadow:inset 0 0 0 1.5px var(--oro),0 0 0 4px rgba(245,183,0,.15)}}
+.cal-d.hoy{animation:late-hoy 2.8s ease-in-out infinite}
+
+@media(prefers-reduced-motion:reduce){
+  .acceso .aro.rebota,.acceso .aro.rebota::after,.pantalla.activa.entra,
+  .sello-dictada,.sacude,.cal-d.hoy{animation:none}
+}
 .acceso .et{font-size:11px;line-height:1.25;text-align:center;color:var(--gris);letter-spacing:.01em}
 .acceso.a-oro   .aro{border-color:rgba(245,183,0,.55);background:rgba(245,183,0,.10)}
 .acceso.a-verde .aro{border-color:rgba(47,191,113,.55);background:rgba(47,191,113,.10)}
@@ -6329,6 +6378,10 @@ function _ir(p){
     SECTOR_VUELVE = (p==='p-inicio') ? 'p-inicio' : 'p-temas';
     p='p-sector';
   }
+  /* a la difusion se entra por abrirDifusion(), que es quien carga DIFU.
+     Llegando de otra forma (atras, un enlace viejo) la pantalla salia en
+     blanco con solo el boton de Atras. */
+  if(p==='p-difusion' && !(typeof DIFU!=='undefined' && DIFU && DIFU.meta)) p='p-difusiones';
   if(EV && !EV_OK[p]) p='p-eval';
   else if(ROL!=='col' && !SIN_CUENTA[p] && !hayCuenta()){
     p='p-cuenta';
@@ -6358,7 +6411,10 @@ function _ir(p){
     var _pr=document.getElementById('pres');
     if(!(_pr && _pr.className && _pr.className.indexOf('on')>-1)) desproteger();
   }
-  cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';$(p).className='pantalla activa';window.scrollTo(0,0);
+  cerrarHoja();var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';
+  var _nue=$(p); _nue.className='pantalla activa';
+  if(!_sinMovimiento()){ void _nue.offsetWidth; _nue.className='pantalla activa entra'; }
+  window.scrollTo(0,0);
   if(p==='p-sector')pintarSectores(); if(p==='p-inicio'){pintarInicio();pintarMenuSup();} if(p==='p-estadistica')pintarEstadistica(); if(p==='p-temas')pintarTemas(); if(p==='p-config'){cargarConfig(); try{ pintarInstalar(); }catch(_e){}} if(p==='p-apariencia')pintarApariencia(); if(p==='p-formatos')pintarFormatos(); if(PANT_CON_TOPE[p]){ try{ quizaRefrescarUsoReal(); }catch(_u){} } if(p==='p-programa'){ pintarPrograma(); try{ sincronizarPrograma(); }catch(_pg){} } if(p==='p-trab-ficha')pintarFichaTrab(); if(p==='p-planes')pintarPlanes();
   if(p==='p-eval')pintarEval(); if(p==='p-registro')cargarRegistro(); if(p==='p-generar')pintarGenerar();
   if(p==='p-colab')pintarColab(); if(p==='p-charlas')pintarCharlas();
@@ -6469,11 +6525,49 @@ function pintarBarraNav(p){
 function leer(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function guardar(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function borrar(k){try{localStorage.removeItem(k);}catch(e){}}
+/* ── ¿el celular pidió menos movimiento? ── */
+function _sinMovimiento(){
+  try{ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches); }
+  catch(e){ return false; }
+}
+/* sacude el campo que falta y lo deja enfocado */
+function sacude(x){
+  var el = (typeof x==='string') ? document.getElementById(x) : x;
+  if(!el) return;
+  try{ el.scrollIntoView({block:'center',behavior:_sinMovimiento()?'auto':'smooth'}); }catch(e){}
+  try{ if(el.focus) el.focus({preventScroll:true}); }catch(e){}
+  if(_sinMovimiento()) return;
+  el.classList.remove('sacude'); void el.offsetWidth; el.classList.add('sacude');
+  setTimeout(function(){ el.classList.remove('sacude'); }, 620);
+}
+/* un número que sube hasta su valor en poco más de medio segundo */
+function animarNumero(el, hasta, dec){
+  if(!el) return;
+  hasta=Number(hasta); if(!isFinite(hasta)){ return; }
+  var f=dec?10:1;
+  if(_sinMovimiento() || hasta===0){ el.textContent=String(Math.round(hasta*f)/f); return; }
+  var t0=null, dur=620;
+  function paso(t){
+    if(t0===null) t0=t;
+    var k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
+    el.textContent=String(Math.round(hasta*e*f)/f);
+    if(k<1) requestAnimationFrame(paso);
+  }
+  requestAnimationFrame(paso);
+}
 function _norm(s){return (s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
 function _hh(s){s=_norm(s);var h1=5381,h2=52711;for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);h1=(Math.imul(h1,33)+c)>>>0;h2=(Math.imul(h2,31)+c)>>>0;}return h1.toString(16)+'-'+h2.toString(16);}
 /* El plan ya no lo decide el celular. Lo decide el servidor: la licencia
    queda amarrada a la empresa (tabla sst_licencia) y aqui solo guardamos
    la ultima respuesta para que la app siga funcionando sin internet. */
+/* \u2550\u2550 UN SOLO TOPE PARA LAS CREDENCIALES GUARDADAS EN EL CELULAR \u2550\u2550\u2550\u2550
+   Hab\u00eda TRES cortes distintos sobre la misma lista: 400 al emitir
+   autom\u00e1tico, 300 al sincronizar y 200 al generar a mano. Con 250
+   trabajadores \u2014que el plan SSOMA permite\u2014 guardar una credencial a
+   mano borraba 51 de golpe, y el corte de 300 del sincronizador las
+   borraba TAMBI\u00c9N de la nube. Ahora hay un solo n\u00famero, y muy por
+   encima del tope de cualquier plan. */
+var CRED_MAX_LOCAL = 2000;
 var LS_PLAN='sstc_plan';
 var TOPE_EQUIPO = 8;   // compatibilidad con lo viejo
 
@@ -6667,7 +6761,7 @@ function sincronizarCredenciales(){
       if(!k || vistos[k]) return;
       vistos[k]=1; junta.push(c);
     });
-    junta = junta.slice(0,300);
+    junta = junta.slice(0,CRED_MAX_LOCAL);
     guardar(LS_CRED, junta);
     return estadoSubir('credenciales', junta).then(function(){ return junta; });
   }).catch(function(){ return leer(LS_CRED,[])||[]; });
@@ -8690,20 +8784,24 @@ var PANT_CON_TOPE={'p-trabajadores':1,'p-trab-nuevo':1,'p-kardex':1,'p-kardex-nu
 
 function esPorMes(k){ return !!planActual().porMes[k]; }
 /* cuantos lleva usados: del mes si el tope es mensual, del total si no */
-function llevaUsados(k, cuantosHay){
-  return esPorMes(k) ? usadosMes(k) : usadosTotal(k, cuantosHay);
+/* «mas» son las lineas que este guardado va a crear DE GOLPE. Iban
+   sumadas dentro de cuantosHay, y cuantosHay solo se mira cuando el tope
+   es total: en los cuatro planes de pago el kardex es POR MES, asi que
+   un lote de 15 EPP con 79 de 80 usados pasaba el freno y dejaba 94. */
+function llevaUsados(k, cuantosHay, mas){
+  return (esPorMes(k) ? usadosMes(k) : usadosTotal(k, cuantosHay)) + (mas||0);
 }
 
-function cupoLite(k, cuantosHay){
+function cupoLite(k, cuantosHay, mas){
   var t=topeLite(k);
   if(t===Infinity) return true;
-  return llevaUsados(k, cuantosHay) < t;
+  return llevaUsados(k, cuantosHay, mas) < t;
 }
 /* ── La pantalla de tope ──────────────────────────────────────────
    Nombra UN SOLO plan: el primer peldano que levanta este tope.
    Nunca el de arriba. Es el mecanismo entero de la escalera.      */
-function frenoLite(k, cuantosHay, queCosa){
-  if(cupoLite(k, cuantosHay)) return false;
+function frenoLite(k, cuantosHay, queCosa, mas){
+  if(cupoLite(k, cuantosHay, mas)) return false;
   var t=topeLite(k), P=planQueAbre(k, true), A=planActual();
   var cuando = esPorMes(k) ? ' este mes' : '';
   var msj = (t===0)
@@ -9422,19 +9520,28 @@ function pintarFichaTrab(){
   }
 
   /* ── amonestaciones ── */
+  /* guardarAmonestacion escribe tNombre / tDni / desc / medida. Esto
+     buscaba a.trabajador, a.nombre, a.motivo y a.falta \u2014campos que no
+     existen\u2014, as\u00ed que comparaba '' contra el nombre y la ficha dec\u00eda
+     SIEMPRE \u00abNinguna\u00bb, aunque el trabajador tuviera tres. Justo la
+     pantalla con la que se decide si se le renueva. Ahora empareja por
+     DNI cuando lo hay, y por nombre solo si ninguno de los dos lo tiene. */
+  var _tdni=String(t.dni||'').replace(/\D/g,'');
   var am=(typeof amonLocal==='function'? amonLocal() : []).filter(function(a){
-    return _norm(a.trabajador||a.nombre||'')===_norm(t.nombre||'');
+    var ad=String(a.tDni||'').replace(/\D/g,'');
+    if(_tdni && ad) return ad===_tdni;
+    return _norm(a.tNombre||'')===_norm(t.nombre||'');
   });
   h+='<div class="sec-tit" style="margin-top:20px">⚠️ Amonestaciones</div>';
   h+= am.length
     ? '<div class="caja vidrio" style="padding:12px 14px">'+am.map(function(a){
-        return '<div class="fila"><span>'+esc(a.motivo||a.falta||'—')+'</span><span class="sub">'+esc(a.fecha||'')+'</span></div>';
+        return '<div class="fila"><span>'+esc(a.desc||a.medida||'\u2014')+'</span><span class="sub">'+esc(a.fecha||'')+'</span></div>';
       }).join('')+'</div>'
     : '<p class="sub">Ninguna. Que siga así.</p>';
 
   h+='<div class="esc-acc" style="margin-top:20px">'+
      '<button class="btn sec" style="margin:0" onclick="editarTrabajador(\''+TF_ID+'\')">Editar sus datos</button>'+
-     '<button class="btn sec" style="margin:0" onclick="ir(\'p-kardex-nuevo\')">Registrarle EPP</button>'+
+     '<button class="btn sec" style="margin:0" onclick="kardexPara(\''+TF_ID+'\')">Registrarle EPP</button>'+
      '</div>';
   $('tf-cuerpo').innerHTML=h;
 }
@@ -9564,16 +9671,32 @@ function emitirCredencialDe(t, meses){
   var lista=leer(LS_CRED,[]);
   lista.unshift({n:datos.n, d:datos.d, v:datos.v, cod:cod, h:[], c:datos.c,
                  trab:t.id||null, auto:1, hecho:new Date().toISOString()});
-  guardar(LS_CRED, lista.slice(0,400));
+  guardar(LS_CRED, lista.slice(0,CRED_MAX_LOCAL));
   sumarUso('credencial');
   try{ sincronizarCredenciales(); }catch(_s){}
   return cod;
 }
+/* como _norm, pero convirtiendo las tildes en vez de borrarlas:
+   _norm('Ana Rios') y _norm('Ana Rios') con tilde daban lo mismo, y
+   'Nunez' con enie colisionaba con 'Nuez'. */
+function _normNom(s){
+  return String(s||'').normalize? String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+         .toUpperCase().replace(/[^A-Z0-9]/g,'')
+       : _norm(s);
+}
+/* \u2550\u2550 \u00bfESTA CREDENCIAL ES DE ESTA PERSONA? \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   ANTES el emparejamiento por nombre segu\u00eda valiendo aunque la
+   credencial ya tuviera due\u00f1o. Dos \u00abLuis Mamani Quispe\u00bb sin DNI \u2014lo
+   normal cuando se registra la cuadrilla apurado\u2014 y al editar la ficha
+   del segundo se REESCRIB\u00cdA la credencial del primero con el puesto y
+   el tipo de sangre del otro. El QR que uno lleva en el pecho pasaba a
+   declarar el grupo sangu\u00edneo de un compa\u00f1ero. Si la credencial trae
+   trab, ese id manda y no se discute. */
 function _mismaPersona(c, t){
-  if(c.trab && t.id && String(c.trab)===String(t.id)) return true;
+  if(c.trab) return !!(t.id && String(c.trab)===String(t.id));
   var cd=String(c.d||'').replace(/\D/g,''), td=String(t.dni||'').replace(/\D/g,'');
-  if(cd && td && cd===td) return true;
-  if(!cd && !td) return _norm(c.n||'')===_norm(t.nombre||'');
+  if(cd && td) return cd===td;
+  if(!cd && !td) return _normNom(c.n)===_normNom(t.nombre);
   return false;
 }
 function reemitirCredencialesDe(t){
@@ -9602,8 +9725,15 @@ function reemitirCredencialesDe(t){
   return n;
 }
 function quitarTrabajador(id){
-  confirmar('¿Quitar a este trabajador?', 'Sale de tu registro. Su kardex de EPP se conserva.', function(){
+  confirmar('¿Quitar a este trabajador?', 'Sale de tu registro y su credencial QR deja de estar en la lista. Su kardex de EPP se conserva.', function(){
     trabsSet(trabsLocal().filter(function(t){ return t.id!==id; }));
+    /* la credencial quedaba hu\u00e9rfana: segu\u00eda ocupando cupo, ya no se
+       encontraba desde ninguna ficha, y en la garita el QR segu\u00eda
+       diciendo HABILITADO hasta que venciera. */
+    try{
+      var _cs=leer(LS_CRED,[])||[], _q=_cs.filter(function(c){ return String(c.trab||'')!==String(id); });
+      if(_q.length!==_cs.length){ guardar(LS_CRED,_q); try{ sincronizarCredenciales(); }catch(_x){} }
+    }catch(_c){}
     sbDel('sst_trabajador?duenio=eq.'+encodeURIComponent(duenioId())+'&ext=eq.'+encodeURIComponent(id)).catch(function(){});
     pintarTrabajadores();
   }, {si:'Sí, quitar', no:'Cancelar', icono:'👷'});
@@ -9715,6 +9845,15 @@ function alCambiarTrabKardex(){
   pintarRepetidos();
   pintarResumenKardex();
 }
+/* \u2550\u2550 REGISTRAR EPP DESDE LA FICHA \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   El bot\u00f3n de la ficha llamaba a ir('p-kardex-nuevo') a secas y
+   prepKardex() repobla el selector desde cero: quedaba elegido el
+   PRIMER trabajador de la lista. Estabas en la ficha de Juan, tocabas
+   \u00abRegistrarle EPP\u00bb, Juan firmaba en la pantalla\u2026 y la entrega
+   firmada quedaba a nombre de otro. Un registro de descargo mal
+   emitido y sin rastro. */
+var K_PARA=null;
+function kardexPara(id){ K_PARA=id||null; ir('p-kardex-nuevo'); }
 function prepKardex(){
   var sug=$('k-epp-sug'); if(sug) sug.innerHTML=EPP_SUG.map(function(e){return '<option value="'+esc(e)+'">';}).join('');
   pintarLugaresKardex();
@@ -9734,6 +9873,16 @@ function prepKardex(){
   var fv=$('k-foto-vista'); if(fv) fv.innerHTML='';
   pintarChipsEpp();
   pintarLote();
+  if(K_PARA){
+    var sel=$('k-trab');
+    if(sel){ sel.value=K_PARA;
+      if(String(sel.value)!==String(K_PARA)){   /* no estaba en la lista corta: se limpia el filtro y se reintenta */
+        K_FILTRO=''; var _b=$('k-buscar'); if(_b) _b.value='';
+        pintarSelTrabKardex(false); sel.value=K_PARA;
+      }
+    }
+    K_PARA=null;
+  }
   alCambiarTrabKardex();
   prepararLienzoK();
 }
@@ -10033,7 +10182,7 @@ function guardarKardex(){
   if(!K_HAYFIRMA){ m.textContent='Falta la firma del trabajador (paso 3).';
     var cv=$('k-lienzo'); if(cv){ try{ cv.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_s){} }
     return; }
-  if(frenoLite('kardex', usadosTotal('kardex', kardexLocal().length) + lineas.length - 1, 'entregas de EPP')) return;
+  if(frenoLite('kardex', usadosTotal('kardex', kardexLocal().length), 'entregas de EPP', lineas.length - 1)) return;
 
   var t=trabPorId(tid);
   var firma=K_LIENZO.toDataURL('image/png');
@@ -10070,7 +10219,17 @@ function guardarKardex(){
      responde 400 y ANTES eso se tragaba en silencio: la entrega no subia
      y nadie se enteraba. Si falla con foto, se reintenta sin ella: mejor
      la entrega arriba sin foto que la entrega perdida. */
-  function marcar(){ paraSubir.forEach(function(r){ r.sync=1; }); kardexSet(kardexLocal()); }
+  /* kardexLocal() vuelve a parsear el localStorage y devuelve objetos
+     NUEVOS con sync:0. Se marcaba paraSubir (que apunta al arreglo ya
+     persistido) y se guardaba la copia reci\u00e9n le\u00edda: las entregas sub\u00edan
+     bien pero segu\u00edan diciendo \u00ab\u00b7 sin subir\u00bb para siempre, y el supervisor
+     las volv\u00eda a registrar. Mismo patr\u00f3n que el bug de trabPorId. */
+  function marcar(){
+    var ids={}; paraSubir.forEach(function(r){ ids[r.id]=1; });
+    var todo=kardexLocal();
+    todo.forEach(function(r){ if(ids[r.id]) r.sync=1; });
+    kardexSet(todo);
+  }
   function intento(conFoto, conActividad){
     return sbPost('sst_kardex', paraSubir.map(function(r){ return fila(r, conFoto, conActividad); }));
   }
@@ -11677,12 +11836,44 @@ function _pdfDeKardex(t, regs, mes){
   return doc.output('blob');
 }
 /* el boton de la pantalla del kardex */
+/* \u2550\u2550 LAS FIRMAS DEL RESTO DEL EQUIPO \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   bajarKardex() trae las entregas de los otros supervisores SIN firma
+   (pesan mucho y no hacen falta para la lista). firmasDeKardex() estaba
+   escrita para pedirlas justo antes del PDF\u2026 y no se llamaba desde
+   ning\u00fan sitio. Resultado: el registro oficial sal\u00eda con la rayita en
+   blanco mientras el pie dec\u00eda \u00abcada l\u00ednea lleva la firma del
+   trabajador\u00bb. Se entregaba a la fiscalizaci\u00f3n sin las firmas que la
+   ley pide, y sin un solo aviso. */
 function bajarKardexPDF(){
   if(soloConCodigo('Generar el registro de EPP en PDF','constancias')) return;
-  var mes=$('kx-mes').value, tid=$('kx-trab').value, m=$('kx-msg');
+  var mes=$('kx-mes').value, m=$('kx-msg');
   m.style.color='var(--mal)';
   if(!mes){ m.textContent='Elige el mes.'; return; }
+  var deMes=kardexLocal().filter(function(k){ return (k.fecha||'').slice(0,7)===mes; });
+  if(!deMes.length){ m.textContent='No hay entregas registradas en ese mes.'; return; }
+  var faltan=deMes.filter(function(k){ return !k.firma && k.delEquipo; });
+  if(!faltan.length){ _pdfKardexAhora(); return; }
+  m.style.color='var(--gris)';
+  m.textContent='Trayendo las firmas del equipo\u2026';
+  firmasDeKardex(deMes.map(function(k){ return k.id; })).then(function(){
+    var sigueSinFirma=kardexLocal().filter(function(k){
+      return (k.fecha||'').slice(0,7)===mes && !k.firma && k.delEquipo; }).length;
+    if(sigueSinFirma){
+      confirmar('Faltan '+sigueSinFirma+' firmas',
+        'Esas entregas las registr\u00f3 otro supervisor y su firma no est\u00e1 en este equipo '+
+        '(puede ser falta de internet). Si sigues, esas l\u00edneas salen con el espacio de firma en blanco.',
+        function(){ _pdfKardexAhora(); },
+        {si:'Generar igual', no:'Mejor no', icono:'\u270D\uFE0F'});
+      m.textContent='';
+      return;
+    }
+    _pdfKardexAhora();
+  });
+}
+function _pdfKardexAhora(){
+  var mes=$('kx-mes').value, tid=$('kx-trab').value, m=$('kx-msg');
   var todos=kardexLocal().filter(function(k){ return (k.fecha||'').slice(0,7)===mes; });
+  m.style.color='var(--mal)';
   if(!todos.length){ m.textContent='No hay entregas registradas en ese mes.'; return; }
   var trabs=trabsLocal().filter(function(t){ return tid ? t.id===tid : true; });
   var archivos=[];
@@ -12014,10 +12205,13 @@ function kpiCharlasDictadas(){
   try{
     var datos=progObra(), pref=filtroYM();
     var prog=0, dic=0, hoy=hoyISO();
+    /* contaba UN d\u00eda = UNA charla. Un mes con 20 d\u00edas y 28 actividades
+       med\u00eda sobre 20, y pod\u00eda marcar 100% con 8 actividades sin dictar.
+       El indicador que se le ense\u00f1a al cliente ment\u00eda. */
     Object.keys(datos).forEach(function(iso){
       if(pref ? (iso.indexOf(pref)!==0) : (iso.slice(0,4)!==String(filtroAnio()))) return;
       if(iso>hoy) return;                       /* lo que aún no toca no cuenta en contra */
-      prog++; if(datos[iso] && datos[iso].dictada) dic++;
+      actividadesDelDia(datos[iso]).forEach(function(x){ prog++; if(x.d && x.d.dictada) dic++; });
     });
     if(!prog) return {val:null, motivo:'Arma el programa del mes para medirlo.'};
     return { val:Math.round(dic/prog*100), pie:dic+' de '+prog+' dictadas' };
@@ -12056,13 +12250,16 @@ function kpisDom(){
     }else{
       var tono = d.val>=80 ? 'ok' : (d.val>=50 ? 'ojo' : 'mal');
       b.className+=' '+tono;
-      cuerpo='<span class="kpi-val">'+d.val+'<i>%</i></span>'+
+      cuerpo='<span class="kpi-val"><span class="kpi-n">'+d.val+'</span><i>%</i></span>'+
              '<span class="kpi-riel"><i style="width:'+Math.min(100,d.val)+'%"></i></span>'+
              '<span class="kpi-pie">'+esc(d.pie||'')+'</span>';
     }
     b.innerHTML='<span class="kpi-et"><span class="kpi-ic">'+k.ic+'</span>'+esc(k.et)+'</span>'+cuerpo;
     b.onclick=function(){ ir(k.ir); };
     caja.appendChild(b);
+    /* el número sube desde 0: se lee como recién calculado */
+    var _n=b.querySelector('.kpi-n');
+    if(_n){ var _h=parseFloat(_n.textContent); _n.textContent='0'; animarNumero(_n,_h); }
   });
   return caja;
 }
@@ -12514,8 +12711,17 @@ function accesosRapidosDom(){
        tocarlo sin arrastrar el aro ni el globito de avisos */
     b.innerHTML='<span class="aro"><span class="emo">'+a.ic+'</span></span><span class="et">'+a.et+'</span>';
     b.onclick=function(){
-      if(a.fn && typeof window[a.fn]==='function'){ window[a.fn](); return; }
-      ir(a.ir);
+      /* el rebote: se ve ANTES de irse, si no no se ve nunca */
+      var aro=b.querySelector('.aro');
+      if(aro && !_sinMovimiento()){
+        aro.classList.remove('rebota'); void aro.offsetWidth; aro.classList.add('rebota');
+        setTimeout(function(){ aro.classList.remove('rebota'); }, 520);
+      }
+      var salta=function(){
+        if(a.fn && typeof window[a.fn]==='function'){ window[a.fn](); return; }
+        ir(a.ir);
+      };
+      if(_sinMovimiento()) salta(); else setTimeout(salta, 135);
     };
     fila.appendChild(b);
   });
@@ -13370,6 +13576,18 @@ function abrirDia(iso){
            '<button class="btn sec" style="margin:0" onclick="abrirCambioDia('+x.i+')">\u270F\uFE0F Cambiar</button>'+
          '</div>'+
          (esP?'':'<button class="btn sec" style="margin:8px 0 0;padding:7px" onclick="quitarUnaDelDia('+x.i+')">Quitar solo esta</button>')+
+         /* \u2500 MARCAR DICTADA VA AQU\u00cd, DENTRO DE CADA ACTIVIDAD \u2500\u2500\u2500\u2500\u2500\u2500\u2500
+            Antes el bot\u00f3n estaba abajo, suelto, y marcaba siempre la
+            principal: la difusi\u00f3n que agregaste el mismo d\u00eda no se pod\u00eda
+            marcar NUNCA y el resumen del mes la contaba como saltada para
+            siempre. Ahora cada actividad tiene su propio contador de
+            asistentes y su propio bot\u00f3n. */
+         (a.dictada
+           ? '<div class="sub" style="margin:8px 0 0;color:var(--verde,#2e7d32)"><span'+(DIA_SELLO===x.i?' class="sello-dictada"':'')+'>\u2705</span> Dictada el '+esc(a.dictada.txt)+' \u00b7 '+(parseInt(a.dictada.asist,10)||0)+' asistentes</div>'
+           : (iso<=hoyISO()
+               ? '<div style="margin:10px 0 0"><input id="dia-asist'+_idAsist(x.i)+'" type="number" min="0" inputmode="numeric" placeholder="\u00bfCu\u00e1ntos asistieron?" style="margin:0 0 7px">'+
+                 '<button class="btn sec" style="margin:0;padding:8px" onclick="marcarDictada('+x.i+')">\u2705 Marcar como dictada</button></div>'
+               : '<div class="sub" style="margin:8px 0 0">Todav\u00eda no toca: se marca desde el mismo d\u00eda.</div>'))+
          '</div>';
     });
     /* \u2014 y aqui lo que pidio el cliente: sumar otra cosa el mismo dia \u2014 */
@@ -13404,15 +13622,6 @@ function abrirDia(iso){
      (c?'':'<button class="btn sec" onclick="verGuionDelDia()" id="dia-abrir">📖 Abrir</button>')+
      '</div>';
   if(c){
-    if(c.dictada){
-      h+='<div class="caja vidrio tip"><h3>✅ Dictada</h3>Marcada el '+esc(c.dictada.txt)+
-         ' · '+(parseInt(c.dictada.asist,10)||0)+' asistentes</div>';
-    } else if(iso<=hoyISO()){
-      h+='<label>¿Cuántos asistieron?</label><input id="dia-asist" type="number" min="0" inputmode="numeric" placeholder="12">'+
-         '<button class="btn sec" onclick="marcarDictada()">✅ Marcar como dictada</button>';
-    } else {
-      h+='<div class="aviso">Esta charla todavía no toca: se puede marcar como dictada desde el mismo día.</div>';
-    }
     h+='<button class="btn sec" onclick="quitarDia()">Quitar todo lo de ese d\u00eda</button>';
   }
   $('dia-cuerpo').innerHTML=h;
@@ -13628,6 +13837,7 @@ function guardarDia(){
   if(libre && !((($('dia-libre-tit')||{}).value||'').trim())){
     aviso(DIA_TIPO==='simulacro'?'Falta decir qu\u00e9 simulacro':'Falta el tema de la difusi\u00f3n',
       'Escr\u00edbelo o toca una de las sugerencias.', TIPOS_DIA[DIA_TIPO].ic);
+    sacude('dia-libre-tit');
     return;
   }
   if(!libre && !DIA_SEL){
@@ -13635,6 +13845,7 @@ function guardarDia(){
       DIA_TIPO==='capacitacion'
         ? 'Toca una familia y despu\u00e9s el t\u00edtulo.'
         : 'Toca una categor\u00eda y despu\u00e9s el t\u00edtulo.', '\uD83D\uDCC5');
+    sacude('dia-lista');
     return;
   }
   var datos=progObra(), nuevo=leerDia();
@@ -13689,15 +13900,38 @@ function ponerSimulacroNacional(iso){
     'Cambia el responsable si en tu obra lo lleva otro. Recuerda dejar el acta firmada: '+
     'es lo que te van a pedir.', '\uD83E\uDDEF');
 }
-function marcarDictada(){
-  var datos=progObra(), c=leerDia(), a=$('dia-asist');
+/* id de campo v\u00e1lido tambi\u00e9n para el \u00edndice -1 (la actividad principal) */
+function _idAsist(i){ return (i<0) ? 'P' : ('E'+i); }
+/* qué actividad se acaba de marcar: solo esa lleva el sello animado */
+var DIA_SELLO=null;
+/* \u2550\u2550 MARCAR DICTADA \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   ANTES: leerDia() reconstru\u00eda el d\u00eda desde el formulario \u2014y el
+   formulario no tiene extra[]\u2014 y despu\u00e9s pisaba datos[dia] entero. Si
+   el 14 ten\u00edas la charla de las 07:00 y el simulacro nacional de las
+   15:00, al poner los asistentes de la charla el simulacro DESAPAREC\u00cdA
+   del calendario, del PDF y del servidor. Y como en la fusi\u00f3n gana el
+   d\u00eda que trae .dictada, la versi\u00f3n mutilada tambi\u00e9n borraba el extra
+   en el celular del l\u00edder. Ahora se marca la actividad que se pidi\u00f3,
+   sobre el d\u00eda GUARDADO, sin tocar lo dem\u00e1s. */
+function marcarDictada(i){
+  var datos=progObra(), c=datos[PROG.dia];
+  if(!c) return;
+  var idx=(typeof i==='undefined' || i===null) ? -1 : i;
+  var campo=$('dia-asist'+_idAsist(idx));
   var ahora=new Date();
-  c.dictada={iso:ahora.toISOString(),
+  var sello={iso:ahora.toISOString(),
              txt:dosD(ahora.getDate())+'/'+dosD(ahora.getMonth()+1)+'/'+ahora.getFullYear()+
                  ' '+dosD(ahora.getHours())+':'+dosD(ahora.getMinutes()),
-             asist:parseInt(a&&a.value,10)||0};
+             asist:parseInt(campo&&campo.value,10)||0};
+  if(idx===-1) c.dictada=sello;
+  else if(c.extra && c.extra[idx]) c.extra[idx].dictada=sello;
+  else return;
+  c.ts=Date.now();
   datos[PROG.dia]=c; progEscribir(datos);
-  cerrarDia(); pintarPrograma();
+  DIA_SELLO=idx;
+  abrirDia(PROG.dia);   /* la hoja se queda abierta: casi siempre hay otra que marcar */
+  DIA_SELLO=null;
+  pintarPrograma();
 }
 function quitarDia(){
   var c=(progObra()||{})[PROG.dia];
@@ -13855,14 +14089,20 @@ function textoPrograma(){
         'Obra: '+obraActual()+'\n'+
         'Mes: '+MESES[PROG.mes]+' '+PROG.ano+'\n\n';
   var prog=0, dic=0, salt=0, asis=0;
+  /* un dia puede tener dos charlas, o una charla y un simulacro. Esto
+     miraba SOLO la principal: el mes con 30 actividades sal\u00eda con 26
+     l\u00edneas y el pie dec\u00eda \u00abProgramadas: 26\u00bb mientras la pantalla dec\u00eda 30.
+     Y usaba nombreCharla(), as\u00ed que un simulacro sal\u00eda como \u00abCharla\u00bb. */
   Object.keys(datos).sort().forEach(function(iso){
     if(iso.indexOf(pref)!==0) return;
-    var c=datos[iso], p=iso.split('-'), f=new Date(+p[0],+p[1]-1,+p[2]);
-    prog++;
-    if(c.dictada){ dic++; asis+=(parseInt(c.dictada.asist,10)||0); } else if(iso<hoy){ salt++; }
-    t+=DIAS[(f.getDay()+6)%7]+' '+dosD(+p[2])+'/'+p[1]+' · '+(c.hora||'--:--')+' · '+
-       nombreCharla(c.tema)+' · Resp.: '+(c.resp||'por asignar')+
-       (c.dictada?' · DICTADA '+c.dictada.txt+' ('+(parseInt(c.dictada.asist,10)||0)+' asistentes)':'')+'\n';
+    var p=iso.split('-'), f=new Date(+p[0],+p[1]-1,+p[2]);
+    actividadesDelDia(datos[iso]).forEach(function(x){
+      var c=x.d; prog++;
+      if(c.dictada){ dic++; asis+=(parseInt(c.dictada.asist,10)||0); } else if(iso<hoy){ salt++; }
+      t+=DIAS[(f.getDay()+6)%7]+' '+dosD(+p[2])+'/'+p[1]+' · '+(c.hora||'--:--')+' · '+
+         etiquetaDelDia(c)+': '+nombreDelDia(c)+' · Resp.: '+(c.resp||'por asignar')+
+         (c.dictada?' · DICTADA '+c.dictada.txt+' ('+(parseInt(c.dictada.asist,10)||0)+' asistentes)':'')+'\n';
+    });
   });
   if(!prog) t+='(sin charlas programadas)\n';
   t+='\nProgramadas: '+prog+' · Dictadas: '+dic+' · Saltadas: '+salt+' · Asistentes: '+asis+'\n'+
@@ -13899,17 +14139,22 @@ function pdfPrograma(){
   try{
     var datos=progObra(), pref=PROG.ano+'-'+dosD(PROG.mes+1), hoy=hoyISO();
     var filas=[], prog=0, dic=0, salt=0, asis=0;
+    /* una fila por ACTIVIDAD, no por d\u00eda: el PDF que se manda al cliente
+       se com\u00eda las difusiones y los simulacros del mismo d\u00eda, y a los que
+       s\u00ed listaba los llamaba a todos \u00abCharla\u00bb. */
     Object.keys(datos).sort().forEach(function(iso){
       if(iso.indexOf(pref)!==0) return;
-      var c=datos[iso], p=iso.split('-'), f=new Date(+p[0],+p[1]-1,+p[2]);
-      prog++;
-      var est, tipo;
-      if(c.dictada){ est='DICTADA'; tipo=1; dic++; asis+=(parseInt(c.dictada.asist,10)||0); }
-      else if(iso<hoy){ est='NO DICTADA'; tipo=2; salt++; }
-      else { est='PROGRAMADA'; tipo=0; }
-      filas.push({dia:DIAS[(f.getDay()+6)%7], fecha:p[2]+'/'+p[1]+'/'+p[0],
-        hora:c.hora||'--:--', charla:nombreCharla(c.tema), resp:c.resp||'por asignar',
-        est:est, tipo:tipo, asist:c.dictada?String(parseInt(c.dictada.asist,10)||0):'—'});
+      var p=iso.split('-'), f=new Date(+p[0],+p[1]-1,+p[2]);
+      actividadesDelDia(datos[iso]).forEach(function(x){
+        var c=x.d; prog++;
+        var est, tipo;
+        if(c.dictada){ est='DICTADA'; tipo=1; dic++; asis+=(parseInt(c.dictada.asist,10)||0); }
+        else if(iso<hoy){ est='NO DICTADA'; tipo=2; salt++; }
+        else { est='PROGRAMADA'; tipo=0; }
+        filas.push({dia:DIAS[(f.getDay()+6)%7], fecha:p[2]+'/'+p[1]+'/'+p[0],
+          hora:c.hora||'--:--', charla:nombreDelDia(c), resp:c.resp||'por asignar',
+          est:est, tipo:tipo, asist:c.dictada?String(parseInt(c.dictada.asist,10)||0):'—'});
+      });
     });
     if(!prog){ aviso('Mes vacío','Este mes todavía no tiene charlas. Usa «Llenar el mes» o toca un día del calendario.','🗓️'); return; }
 
@@ -16958,7 +17203,26 @@ function _entregarFoto(du){
 
 /* ---- Credencial / QR ---- */
 /* LS_CRED='sstc_cred' ahora se calcula por obra, arriba */
-function credFirma(payload){ return _hh(payload+'|OBRASST-2026').slice(0,10).toUpperCase(); }
+/* \u2550\u2550 LA FIRMA DEL QR \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   El payload es base64url: may\u00fasculas, min\u00fasculas, \u00ab-\u00bb y \u00ab_\u00bb son datos.
+   _hh() los pasaba por _norm(), que sube todo a may\u00fasculas y borra los
+   signos, o sea que firmaba una versi\u00f3n aplastada del c\u00f3digo: cambiar
+   una letra del nombre daba OTRO QR con la MISMA firma y pasaba el
+   control como bueno. Ahora se firma el payload tal cual.
+   Las credenciales ya impresas siguen valiendo: credFirmaOk acepta la
+   firma vieja adem\u00e1s de la nueva. */
+function _hhBruto(s){
+  s=String(s||'');
+  var h1=5381,h2=52711;
+  for(var i=0;i<s.length;i++){ var c=s.charCodeAt(i);
+    h1=(Math.imul(h1,33)^c)>>>0; h2=(Math.imul(h2,31)+c)>>>0; }
+  return h1.toString(16)+'-'+h2.toString(16);
+}
+function credFirma(payload){ return _hhBruto(payload+'|OBRASST-2026').slice(0,10).toUpperCase(); }
+function credFirmaVieja(payload){ return _hh(payload+'|OBRASST-2026').slice(0,10).toUpperCase(); }
+function credFirmaOk(payload, firma){
+  return firma===credFirma(payload) || firma===credFirmaVieja(payload);
+}
 function prepCred(){
   $('c-nombre').value=''; $('c-dni').value=''; $('c-cargo').value='';
   if($('c-sangre')) $('c-sangre').value=''; if($('c-emergencia')) $('c-emergencia').value='';
@@ -17259,7 +17523,7 @@ function generarCredencial(){
   var _de=(($('c-desde')||{}).value||'');
   lista.unshift({n:nombre, d:datos.d, v:datos.v, cod:cod, h:(datos.h||[]), c:datos.c,
                  trab:_de||null, hecho:new Date().toISOString()});
-  guardar(LS_CRED, lista.slice(0,200));
+  guardar(LS_CRED, lista.slice(0,CRED_MAX_LOCAL));
   try{ sincronizarCredenciales(); }catch(_s){}
   $('cred-tarjeta').innerHTML = tarjetaCredHTML(cod)+
     '<p class="sub" style="margin-top:10px">Queda guardada. Puedes volver a verla cuando quieras en <b>Credenciales</b>.</p>'+
@@ -17374,7 +17638,7 @@ function verificarCred(){
      decirlo claro en la puerta para que nadie lo tome por una habilitacion. */
   if(cod.indexOf('OBRASST-TRAB:')===0){
     var rt=cod.slice('OBRASST-TRAB:'.length), pt2=rt.split('.');
-    if(credFirma(pt2[0])!==pt2[1]){ out.innerHTML='<div class="aviso" style="border-left:3px solid var(--mal)">⛔ Ese QR está ADULTERADO.</div>'; return; }
+    if(!credFirmaOk(pt2[0], pt2[1])){ out.innerHTML='<div class="aviso" style="border-left:3px solid var(--mal)">⛔ Ese QR está ADULTERADO.</div>'; return; }
     try{
       var dt=JSON.parse(decodeURIComponent(escape(atob(pt2[0].replace(/-/g,'+').replace(/_/g,'/')))));
       out.innerHTML='<div class="tarj vidrio" style="display:block;border-left:3px solid var(--oro)">'+
@@ -17389,7 +17653,7 @@ function verificarCred(){
   }
   if(cod.indexOf('OBRASST-CRED:')!==0){ out.innerHTML='<div class="aviso" style="border-left:3px solid #d2564f">Ese código no es una credencial OBRASST.</div>'; return; }
   var resto=cod.slice('OBRASST-CRED:'.length), pt=resto.split('.'), payload=pt[0], firma=pt[1];
-  if(credFirma(payload)!==firma){ out.innerHTML='<div class="aviso" style="border-left:3px solid #d2564f">⛔ Credencial ADULTERADA. No dejar pasar.</div>'; return; }
+  if(!credFirmaOk(payload, firma)){ out.innerHTML='<div class="aviso" style="border-left:3px solid #d2564f">⛔ Credencial ADULTERADA. No dejar pasar.</div>'; return; }
   try{
     var d=JSON.parse(decodeURIComponent(escape(atob(payload.replace(/-/g,'+').replace(/_/g,'/')))));
     var vence=d.v, vigente=!vence || vence>=hoyISO();
