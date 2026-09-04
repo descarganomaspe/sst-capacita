@@ -2813,6 +2813,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <p class="sub">Genera el carné con QR del trabajador. En la puerta, «Verificar» lee el QR y dice si está habilitado.</p>
   <div class="dos"><button class="btn" onclick="ir('p-cred-nueva')">Generar credencial</button><button class="btn sec" onclick="ir('p-verificar')">📷 Verificar en la puerta</button></div>
   <button class="btn sec" onclick="ir('p-brigada')">🚨 Mi brigada de emergencia</button>
+  <div id="cred-lote" style="margin-top:12px"></div>
   <div id="cred-lista" style="margin-top:14px"></div>
 </section>
 <section class="pantalla" id="p-cred-nueva">
@@ -6198,7 +6199,8 @@ var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-
             'p-final':1,'p-firma':1,'p-listo':1,'p-charlas':1,'p-charla':1,'p-programa':1,
             'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1,'p-sector':1,
             'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,
-            'p-obra':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1};
+            'p-obra':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1,
+            'p-normas':1,'p-norma':1};
 /* la empresa: su inicio ordenado, las carpetas de documentos y las herramientas
    de obra que sí se comparten en la nube (reportes, inspecciones, credenciales, MSDS…) */
 var EMP_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
@@ -6504,7 +6506,7 @@ function _ir(p){
   else { try{ document.body.classList.remove('torre','sinrail'); }catch(_t){} }
 
   if(p==='p-credencial')pintarCredLista(); if(p==='p-cred-nueva')prepCred(); if(p==='p-record')pintarRecord();
-  if(p==='p-normas')pintarNormas();
+  if(p==='p-normas'){ pintarNormas(); try{ refrescarNormasPDF(); }catch(_n){} }
   if(p==='p-bienvenida')pintarBienvenida();
   if(p==='p-emp-home')pintarEmpHome(); if(p==='p-doc')pintarDoc();
   if(p==='p-rol'){ try{pintarRol();}catch(e){} }
@@ -7710,6 +7712,9 @@ function terminarBienvenida(saltar){
   }
   guardar(LS_BIENVENIDA,{fecha:hoyISO()});
   BV_ACC=null;
+  /* si entro por un atajo del icono, ese era su destino: la bienvenida
+     se metio en el camino una sola vez, no le borra el viaje. */
+  if(aplicarAtajo()) return;
   ir(inicioDelModo());
 }
 function apariencia(){
@@ -10625,6 +10630,13 @@ function pintarNorma(){
   if(n.ojo){
     h+='<div class="aviso" style="margin-top:16px">⚠️ <b>Ojo:</b> '+esc(n.ojo)+'</div>';
   }
+  var bot=(typeof botonesPDF==='function') ? botonesPDF(n.t) : '';
+  if(bot){
+    h+='<div class="sec-tit" style="margin-top:18px">El texto oficial completo</div>'+bot+
+       '<p class="sub" style="margin:6px 0 0">Es el PDF de la norma, entero. Se abre con señal.</p>';
+  }else{
+    h+='<div class="aviso" style="margin-top:16px">De esta norma todavía no tengo el PDF oficial cargado. Lo de arriba es el resumen; el texto completo hay que buscarlo en El Peruano.</div>';
+  }
   h+='<p class="sub" style="margin-top:16px">Referencia rápida. Verifica siempre la versión vigente en El Peruano: las normas se modifican.</p>';
   $('norma-cuerpo').innerHTML=h;
 }
@@ -12250,7 +12262,10 @@ var CATALOGO_ACCESOS = [
   {k:'buenas',    ic:'🌟', et:'Buenas<br>prácticas',            ir:'p-buenas',        color:'a-verde', desde:0, grupo:3},
   {k:'semanal',   ic:'📈', et:'Reporte<br>semanal',            ir:'p-semanal',       color:'a-verde', desde:3, grupo:3},
   {k:'msds',      ic:'🧴', et:'Hojas<br>MSDS',                 ir:'p-msds',          color:'a-azul',  desde:3, grupo:3},
-  {k:'risst',     ic:'📌', et:'Carteles<br>QR',                fn:'abrirRisst',      color:'a-gris',  desde:1, grupo:3}
+  {k:'risst',     ic:'📌', et:'Carteles<br>QR',                fn:'abrirRisst',      color:'a-gris',  desde:1, grupo:3},
+  /* Las normas van en TODOS los planes (desde:0), incluido el gratis:
+     el texto de una ley no es una funcion que se venda por tramos. */
+  {k:'normas',    ic:'\u2696\uFE0F', et:'Normas<br>en PDF',              ir:'p-normas',        color:'a-oro',   desde:0, grupo:3}
 ];
 var LS_MIS_ACCESOS='sstc_mis_accesos';
 /* los que tu plan te deja tener */
@@ -15330,7 +15345,13 @@ function fotoReporte(){
 }
 function prepReporte(){
   R_ANON=false; REP_FOTO=null;
-  $('r-desc').value=''; $('r-lugar').value=''; $('r-autor').value=''; $('r-clase').value='condicion';
+  $('r-desc').value=''; $('r-lugar').value=''; $('r-clase').value='condicion';
+  /* el nombre y la obra ya los dio en la bienvenida o en Ajustes: no se
+     los volvemos a pedir con el casco puesto y una mano ocupada. Se
+     pueden borrar, y el botón de anónimo sigue mandando sobre esto. */
+  var _cfg=leer(LS.cfg,{}) || {};
+  $('r-autor').value = _cfg.cap || '';
+  var _lug=$('r-lugar'); if(_lug && _cfg.obra) _lug.placeholder = _cfg.obra+' · sector, nivel…';
   if($('r-foto-vista')) $('r-foto-vista').innerHTML=''; $('r-msg').textContent='';
   rPintarAnon();
   rPintarModo();
@@ -17892,9 +17913,56 @@ function borrarCred(i){
     try{ sincronizarCredenciales(); }catch(_s){}
   });
 }
+/* ── CREDENCIALES EN LOTE ────────────────────────────────
+   Cuando el personal entra por el Excel del portal, entran 300 fichas
+   de golpe y ninguna trae credencial: la credencial solo se creaba al
+   abrir la ficha de uno en uno. Trescientas fichas sin QR es lo mismo
+   que no tener credenciales. Esto emite las que faltan de una vez.
+   Reglas: al que YA tiene no se le toca (emitirCredencialDe devuelve
+   null si ya existe), el cesado no entra, y el tope del plan se avisa
+   ANTES, contando cuántas se van a emitir, no una por una.          */
+function sinCredencial(){
+  return trabsLocal().filter(function(t){
+    if(String(t.nombre||'').trim().length<3) return false;
+    if((t.estatus||'activo')==='cesado') return false;
+    return !credencialDe(t);
+  });
+}
+function emitirCredencialesEnLote(){
+  var faltan=sinCredencial();
+  if(!faltan.length){
+    aviso('Ya están todas','Cada trabajador activo de tu registro ya tiene su credencial con QR.','🪪');
+    return;
+  }
+  var hay=leer(LS_CRED,[]).length;
+  /* se avisa por el LOTE completo, no por la primera: si son 300 y te
+     entran 40, el usuario tiene que saberlo antes de tocar el botón. */
+  if(frenoLite('credencial', usadosTotal('credencial', hay), 'credenciales', faltan.length-1)) return;
+  confirmar('¿Emitir '+faltan.length+' credencial'+(faltan.length===1?'':'es')+'?',
+    'Se le crea el QR a cada trabajador que todavía no tiene. A los que ya tienen no se les cambia nada, y los cesados no entran.',
+    function(){
+      var n=0;
+      faltan.forEach(function(t){ if(emitirCredencialDe(t)) n++; });
+      try{ pintarCredLista(); }catch(_p){}
+      if(n===faltan.length)
+        aviso('Listo', n+' credencial'+(n===1?'':'es')+' emitida'+(n===1?'':'s')+'. Ya salen en la lista con su QR.','🪪');
+      else
+        aviso('Se emitieron '+n+' de '+faltan.length,
+              'Las demás no entraron por el tope de tu plan. Quedan '+(faltan.length-n)+' trabajadores sin credencial.','⚠️');
+    });
+}
+function botonLoteCred(){
+  var c=document.getElementById('cred-lote'); if(!c) return;
+  var faltan=sinCredencial().length;
+  c.innerHTML = faltan
+    ? '<button class="btn sec" style="margin:0 0 4px" onclick="emitirCredencialesEnLote()">🪪 Emitir las '+faltan+' que faltan</button>'+
+      '<p class="sub" style="margin:0 0 6px">'+faltan+' trabajador'+(faltan===1?'':'es')+' de tu registro todavía no tiene'+(faltan===1?'':'n')+' credencial. Es lo que pasa cuando el personal entra por el Excel.</p>'
+    : '';
+}
 function pintarCredLista(){
+  try{ botonLoteCred(); }catch(_b){}
   var lista=leer(LS_CRED,[]);
-  if(!lista.length){ $('cred-lista').innerHTML='<p class="sub">Aún no generas ninguna. Toca «Generar credencial».</p>'; return; }
+  if(!lista.length){ $('cred-lista').innerHTML='<p class="sub">Aún no generas ninguna. Toca «Generar credencial», o emite en lote las de todo tu personal.</p>'; return; }
   var h='';
   lista.forEach(function(x,i){
     var vig = !x.v || x.v>=hoyISO();
@@ -19142,17 +19210,196 @@ var NORMAS = [
    obliga:['Usar los formatos de registro actualizados.',
      'Precisiones sobre la vigencia y renovación del comité de SST.'],
    revisa:['Que los formatos que usas sean los vigentes.'],
-   ojo:'Léelo siempre junto al D.S. 005-2012-TR: modifica artículos puntuales, no lo reemplaza.'}
+   ojo:'Léelo siempre junto al D.S. 005-2012-TR: modifica artículos puntuales, no lo reemplaza.'},
+
+  /* ── las que faltaban, y que ahora sí tienen su PDF oficial ── */
+  {t:'R.M. 571-2014-MINSA', d:'Modifica los protocolos de exámenes médicos ocupacionales',
+   p:'Cambia partes de la R.M. 312-2011-MINSA: ajusta protocolos y guías de diagnóstico.',
+   obliga:['Aplicar los protocolos con la modificación vigente, no la versión original de 2011.'],
+   revisa:['Que el proveedor de exámenes médicos esté usando la versión modificada.'],
+   ojo:'La R.M. 312-2011-MINSA sola está incompleta. Se lee junto con esta.'},
+
+  {t:'D.S. 043-2007-EM', d:'Reglamento de Seguridad para las Actividades de Hidrocarburos',
+   p:'Es el reglamento de seguridad del sector hidrocarburos: exploración, producción, transporte, refino, almacenamiento y comercialización.',
+   obliga:['Permisos de trabajo escritos para trabajo en caliente, espacios confinados, excavaciones y trabajos eléctricos.',
+     'Clasificación de áreas peligrosas y equipos acordes a esa clasificación.',
+     'Plan de contingencias y respuesta a emergencias del establecimiento.'],
+   revisa:['Los permisos de trabajo firmados por quien corresponde, no en blanco.',
+     'Que el personal de contratista tenga la misma inducción que el propio.'],
+   ojo:'En hidrocarburos el permiso de trabajo no es papeleo: es la barrera. Un PT mal llenado es hallazgo por sí solo.'},
+
+  {t:'R.M. 111-2013-MEM/DM', d:'RESESATE · Seguridad y salud con electricidad',
+   p:'Reglamento de Seguridad y Salud en el Trabajo con Electricidad. Aplica a toda actividad eléctrica, no solo a las eléctricas.',
+   obliga:['Las cinco reglas de oro antes de trabajar en una instalación sin tensión.',
+     'EPP dieléctrico certificado y vigente según el nivel de tensión.',
+     'Personal calificado y autorizado por escrito para maniobras.'],
+   revisa:['Los certificados de los guantes dieléctricos y su fecha de reensayo.',
+     'El procedimiento de bloqueo y señalización (LOTO) aplicado de verdad.'],
+   ojo:'La mayoría de accidentes eléctricos graves ocurren en trabajos que se creían sin tensión. Verificar ausencia de tensión no es opcional.'},
+
+  {t:'R.M. 214-2011-MEM/DM', d:'Código Nacional de Electricidad · Suministro 2011',
+   p:'Reglas técnicas para las instalaciones de suministro eléctrico: líneas, subestaciones y distancias de seguridad.',
+   obliga:['Respetar las distancias mínimas de seguridad a líneas energizadas.'],
+   revisa:['Las distancias en obra cuando hay grúas, andamios o encofrados cerca de una línea.'],
+   ojo:'En obra la línea de media tensión que pasa por encima es el riesgo que más se subestima.'},
+
+  {t:'R.M. 037-2006-MEM/DM', d:'Código Nacional de Electricidad · Utilización',
+   p:'Reglas técnicas para las instalaciones eléctricas de utilización: tableros, conductores, protecciones y puesta a tierra.',
+   obliga:['Tableros, protecciones diferenciales y puesta a tierra según lo que exige el código.'],
+   revisa:['El tablero de obra: diferencial operativo, pozo a tierra con su medición vigente.'],
+   ojo:'El tablero eléctrico provisional de obra es de lo primero que mira un inspector.'},
+
+  {t:'D.S. 015-2005-SA', d:'Valores límite permisibles para agentes químicos',
+   p:'Fija los valores límite de exposición a agentes químicos en el ambiente de trabajo.',
+   obliga:['Monitorear los agentes químicos a los que está expuesto el personal.',
+     'Comparar el resultado del monitoreo contra el valor límite y actuar si se supera.'],
+   revisa:['El informe de monitoreo ocupacional y su fecha.'],
+   ojo:'Sin monitoreo no hay forma de sostener que estás por debajo del límite. La hoja MSDS sola no lo demuestra.'},
+
+  {t:'D.S. 085-2003-PCM', d:'Estándares nacionales de calidad ambiental para ruido',
+   p:'Fija los estándares de ruido ambiental por zona y horario. Es ambiental, no ocupacional, pero en obra urbana se cruza con la licencia municipal.',
+   obliga:['No superar el estándar de la zona donde estás trabajando.'],
+   revisa:['El monitoreo de ruido cuando hay vecinos o la municipalidad lo pide.'],
+   ojo:'El ruido ocupacional (el del oído del trabajador) se rige por otra norma. Este es el del entorno.'},
+
+  {t:'Ley 30102', d:'Medidas preventivas contra la radiación solar',
+   p:'Obliga a proteger de la radiación solar a quien trabaja expuesto al sol.',
+   obliga:['Proveer protector solar, y elementos que den sombra o cubran, al personal expuesto.',
+     'Informar y sensibilizar sobre el riesgo de la radiación ultravioleta.'],
+   revisa:['Que el bloqueador esté disponible y se entregue, no solo comprado.'],
+   ojo:'En obra a cielo abierto esto se olvida siempre. Y el cáncer de piel ocupacional sí se reconoce.'},
+
+  {t:'R.M. 050-2013-TR', d:'Formatos referenciales de los registros del SGSST',
+   p:'Trae los formatos referenciales de los registros obligatorios y la guía básica del sistema de gestión.',
+   obliga:['Llevar los registros obligatorios; los formatos son referenciales, el contenido mínimo no.'],
+   revisa:['Que cada registro tenga al menos los campos que pide el formato referencial.'],
+   ojo:'Puedes usar tu propio formato, pero si le falta un campo del referencial, el inspector lo observa.'},
+
+  {t:'D.L. 1278', d:'Ley de Gestión Integral de Residuos Sólidos',
+   p:'Regula cómo se manejan los residuos, incluidos los peligrosos que genera una obra.',
+   obliga:['Segregar en la fuente y almacenar los residuos peligrosos separados.',
+     'Entregar los residuos peligrosos a una EO-RS autorizada y guardar el manifiesto.'],
+   revisa:['El manifiesto de manejo de residuos peligrosos firmado.',
+     'El punto de acopio señalizado y con contención.'],
+   ojo:'Trapos con hidrocarburo, envases de pintura y baterías son residuo peligroso. Botarlos con el desmonte es infracción.'},
+
+  {t:'D.S. 014-2017-MINAM', d:'Reglamento del D.L. 1278',
+   p:'Desarrolla la ley de residuos sólidos: obligaciones del generador, del transportista y de la EO-RS.',
+   obliga:['Declaración anual de manejo de residuos sólidos cuando corresponde.',
+     'Plan de minimización y manejo de residuos.'],
+   revisa:['Que la EO-RS contratada esté vigente en el registro autoritativo.'],
+   ojo:'Contratar a una EO-RS con registro vencido te deja a ti como responsable del residuo.'}
 ];
+/* ── EL PDF OFICIAL DE CADA NORMA ─────────────────────────────
+   El comentario de la norma vive DENTRO de la app y se lee sin señal.
+   El PDF oficial no: son megas y no tiene sentido meterlos en el
+   archivo de la app. Viven en el mismo almacén donde ya viven las
+   hojas MSDS, en la carpeta 'normas/', y la app pregunta qué hay cada
+   vez que hay internet. La lista que encuentra queda guardada, así que
+   en obra se sigue viendo qué normas hay aunque el PDF solo se pueda
+   abrir cuando vuelva la señal.
+   El nombre del archivo ES el dato: «código - nombre - campo.pdf».
+   Así se pueden subir normas nuevas sin tocar la app.               */
+var LS_NORMAS_PDF='sstc_normas_pdf';
+var NORMAS_PIDIENDO=false;
+function normasPDF(){ var a=leer(LS_NORMAS_PDF,null); return (a && a.length) ? a : []; }
+function urlNormaPDF(archivo){
+  return SB.url+'/storage/v1/object/public/msds/'+
+         ('normas/'+archivo).split('/').map(encodeURIComponent).join('/');
+}
+function partirNombreNorma(archivo){
+  var base=String(archivo||'').replace(/\.pdf$/i,'');
+  var t=base.split(' - ');
+  if(t.length<3) return {cod:base, nom:'', campo:''};
+  return {cod:t[0], campo:t[t.length-1], nom:t.slice(1,-1).join(' - ')};
+}
+function _codNorma(x){ return String(x||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+/* una entrada de la biblioteca puede tener más de un PDF: «Ley 28806 /
+   D.S. 019-2006-TR» son dos textos distintos y los dos se ofrecen. */
+function pdfsDeNorma(titulo){
+  var q=_codNorma(titulo);
+  if(!q) return [];
+  return normasPDF().filter(function(a){
+    var c=_codNorma(partirNombreNorma(a).cod);
+    return c.length>5 && (q.indexOf(c)>=0 || c.indexOf(q)>=0);
+  });
+}
+function cargarNormasPDF(){
+  if(NORMAS_PIDIENDO) return Promise.resolve(normasPDF());
+  NORMAS_PIDIENDO=true;
+  var tk = (typeof hayCuenta==='function' && hayCuenta() && TOK) ? TOK.access_token : SB.key;
+  return fetch(SB.url+'/storage/v1/object/list/msds',{
+      method:'POST',
+      headers:{'apikey':SB.key,'Authorization':'Bearer '+tk,'Content-Type':'application/json'},
+      body:JSON.stringify({prefix:'normas/', limit:300, sortBy:{column:'name',order:'asc'}})
+    })
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(a){
+      var l=(a||[]).map(function(x){ return x.name; })
+                   .filter(function(x){ return /\.pdf$/i.test(x); });
+      if(l.length) guardar(LS_NORMAS_PDF, l);
+      NORMAS_PIDIENDO=false;
+      return normasPDF();
+    })
+    .catch(function(){ NORMAS_PIDIENDO=false; return normasPDF(); });
+}
+/* los PDF que NO tienen ficha escrita en la app: no se esconden, se
+   listan aparte. Es preferible decir «está el PDF pero todavía no le
+   escribí el resumen» a que la norma no aparezca. */
+function pdfsSinFicha(){
+  var usados={};
+  NORMAS.forEach(function(x){ pdfsDeNorma(x.t).forEach(function(a){ usados[a]=1; }); });
+  return normasPDF().filter(function(a){ return !usados[a]; });
+}
+function botonesPDF(titulo){
+  var l=pdfsDeNorma(titulo);
+  if(!l.length) return '';
+  return l.map(function(a){
+    var d=partirNombreNorma(a);
+    return '<a class="btn" style="display:block;text-decoration:none;text-align:center" target="_blank" rel="noopener" href="'+
+           esc(urlNormaPDF(a))+'">📄 Abrir el PDF oficial'+
+           (l.length>1 ? ' · '+esc(d.cod) : '')+'</a>';
+  }).join('');
+}
 function pintarNormas(){
   var q=_norm(($('norma-buscar')&&$('norma-buscar').value)||'');
-  var h='';
+  var h='', conPdf=0;
   NORMAS.forEach(function(n){
     if(q && _norm(n.t+' '+n.d+' '+n.p).indexOf(q)<0) return;
     var idx=NORMAS.indexOf(n);
-    h+='<button class="tarj vidrio" onclick="abrirNorma('+idx+')"><b>'+esc(n.t)+'</b><small>'+esc(n.d)+' ›</small></button>';
+    var tiene=pdfsDeNorma(n.t).length;
+    if(tiene) conPdf++;
+    h+='<button class="tarj vidrio" onclick="abrirNorma('+idx+')"><b>'+esc(n.t)+
+       (tiene?' <span style="font-weight:600;font-size:12px;opacity:.85">📄 PDF</span>':'')+
+       '</b><small>'+esc(n.d)+' ›</small></button>';
   });
-  $('lista-normas').innerHTML=h+'<p class="sub" style="margin-top:12px">Referencia rápida. Verifica siempre la versión vigente en El Peruano; las normas se modifican.</p>';
+  /* los PDF que todavia no tienen ficha escrita: se listan igual */
+  var sueltos=pdfsSinFicha().filter(function(a){
+    return !q || _norm(a).indexOf(q)>=0;
+  });
+  if(sueltos.length){
+    h+='<div class="sec-tit" style="margin-top:18px">También están en PDF</div>';
+    sueltos.forEach(function(a){
+      var d=partirNombreNorma(a);
+      h+='<a class="tarj vidrio" style="display:block;text-decoration:none" target="_blank" rel="noopener" href="'+
+         esc(urlNormaPDF(a))+'"><b>'+esc(d.cod)+' 📄</b><small>'+esc(d.nom)+
+         (d.campo?' · '+esc(d.campo):'')+' ›</small></a>';
+    });
+  }
+  var tot=normasPDF().length;
+  var pie = tot
+    ? ('Hay '+tot+' norma'+(tot===1?'':'s')+' en PDF oficial completo. Se abren con señal; el resumen de cada una se lee sin internet.')
+    : 'Los PDF oficiales se cargan cuando haya señal. Por ahora ves el resumen de cada norma, que sí funciona sin internet.';
+  $('lista-normas').innerHTML=h+'<p class="sub" style="margin-top:12px">'+pie+
+    ' Verifica siempre la versión vigente en El Peruano; las normas se modifican.</p>';
+}
+/* se pide la lista al entrar, y si cambio se vuelve a pintar */
+function refrescarNormasPDF(){
+  var antes=normasPDF().length;
+  cargarNormasPDF().then(function(l){
+    if(l.length!==antes && document.getElementById('p-normas') &&
+       document.getElementById('p-normas').className.indexOf('activa')>=0) pintarNormas();
+  });
 }
 
 
@@ -22382,6 +22629,52 @@ function pedirBorradoCuenta(){
 }
 
 /* lo que hace la app una vez que ya sabe en qué sector estás */
+/* ── ATAJOS DEL ICONO ───────────────────────
+   Una PWA no puede poner un widget en la pantalla de inicio de Android:
+   eso solo lo hace una app nativa. Lo que SI puede es esto: se mantiene
+   apretado el icono y salen cuatro accesos directos. Cada uno abre la app
+   con ?atajo=algo y aqui se traduce a una pantalla. Ahorra los mismos tres
+   toques que ahorraria el widget, sin envolver la app en nada.
+   La bienvenida manda: si el usuario todavia no la vio, el atajo espera.
+
+   OJO con el orden: el arranque de la app corre ANTES que las lineas
+   sueltas de este bloque, asi que ni el mapa ni la URL se pueden leer
+   desde un 'var' de arriba —llegarian sin valor—. Todo va dentro de
+   funciones, que si se izan enteras, y ATAJO se mira la primera vez
+   que alguien pregunta: undefined = «todavia no se miro la URL». */
+var ATAJO;
+function _atajosMapa(){
+  return { reporte:'p-reporte-nuevo', charla:'p-programa',
+           kardex:'p-kardex-nuevo',   normas:'p-normas' };
+}
+function _atajoColOk(){
+  return { 'p-reporte-nuevo':1, 'p-programa':1, 'p-normas':1 };
+}
+function atajoPedido(){
+  if(ATAJO!==undefined) return ATAJO;
+  ATAJO=null;
+  try{
+    var m=(location.search||'').match(/[?&]atajo=([a-z]+)/);
+    if(m && _atajosMapa()[m[1]]){
+      ATAJO=m[1];
+      try{ history.replaceState(null,'',baseURL()); }catch(_h){}
+    }
+  }catch(_a){}
+  return ATAJO;
+}
+function aplicarAtajo(){
+  var k=atajoPedido();
+  if(!k) return false;
+  var pant=_atajosMapa()[k];
+  if(!pant){ ATAJO=null; return false; }
+  /* si la bienvenida no se dio, NO se consume el atajo: se guarda y se
+     aplica recien cuando el usuario termine de configurar la app. */
+  if(typeof yaSeDioLaBienvenida==='function' && !yaSeDioLaBienvenida()) return false;
+  if(ROL==='col' && !_atajoColOk()[pant]){ ATAJO=null; return false; }
+  ATAJO=null;
+  ir(pant);
+  return true;
+}
 function seguirElArranque(){
   ROL=leer(LS_ROL,null);
   if(ROL==='col'){
@@ -22389,6 +22682,7 @@ function seguirElArranque(){
        de entrada. Antes la app lo devolvía a escribir otra vez su código y
        su documento cada mañana; con guantes y a las 6 a.m. eso alcanza
        para que deje de usarla. */
+    if(aplicarAtajo()) return;
     ir((typeof inicioDelModo==='function') ? inicioDelModo() : 'p-colab');
     return;
   }
@@ -22398,7 +22692,7 @@ function seguirElArranque(){
   if(AVISO_GOOGLE && !hayCuenta()){ ROL='emp'; guardar(LS_ROL,'emp'); CU_MODO='entrar'; ir('p-cuenta'); return; }
   if(ROL==='emp'){
     if(!hayCuenta()){ prepCuenta('entrar'); ir('p-cuenta'); return; }
-    if(sesionAbierta()){ ir('p-emp-home'); refrescarPlan(); return; }
+    if(sesionAbierta()){ if(!aplicarAtajo()) ir('p-emp-home'); refrescarPlan(); return; }
     cargarMisEmpresas(true); return;
   }
   ir('p-rol'); pintarRol();
