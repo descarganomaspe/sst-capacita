@@ -3231,6 +3231,19 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <button class="btn" onclick="terminarBienvenida()" id="bv-listo">Listo, entrar</button>
   <button class="btn sec" onclick="terminarBienvenida(true)">Saltar por ahora</button>
 </section>
+<div class="hoja" id="hoja-lupa">
+  <div class="velo" onclick="cerrarLupa()"></div>
+  <div class="panel">
+    <div class="tirador"></div>
+    <h2>🔍 Buscar dentro de la norma</h2>
+    <p class="sub" id="lupa-que">—</p>
+    <input id="lupa-q" placeholder="andamio, arnés, extintor, altura…" autocomplete="off"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();lupaBuscar();}">
+    <button class="btn" style="margin:9px 0 0" onclick="lupaBuscar()">Buscar</button>
+    <div id="lupa-res" style="margin-top:12px"></div>
+    <button class="btn sec" onclick="cerrarLupa()">Cerrar</button>
+  </div>
+</div>
 <div class="hoja" id="hoja-pack">
   <div class="velo" onclick="cerrarPack()"></div>
   <div class="panel">
@@ -19237,17 +19250,25 @@ var NORMAS = [
      'El procedimiento de bloqueo y señalización (LOTO) aplicado de verdad.'],
    ojo:'La mayoría de accidentes eléctricos graves ocurren en trabajos que se creían sin tensión. Verificar ausencia de tensión no es opcional.'},
 
-  {t:'R.M. 214-2011-MEM/DM', d:'Código Nacional de Electricidad · Suministro 2011',
-   p:'Reglas técnicas para las instalaciones de suministro eléctrico: líneas, subestaciones y distancias de seguridad.',
-   obliga:['Respetar las distancias mínimas de seguridad a líneas energizadas.'],
+  {t:'R.M. 214-2011-MEM/DM', d:'Resolución que aprueba el CNE · Suministro 2011',
+   p:'Es la resolución que pone en vigencia el Código Nacional de Electricidad · Suministro 2011. El Código en sí —líneas, subestaciones y distancias de seguridad— es un documento aparte, de cientos de páginas.',
+   obliga:['Respetar las distancias mínimas de seguridad a líneas energizadas, que fija el Código.'],
    revisa:['Las distancias en obra cuando hay grúas, andamios o encofrados cerca de una línea.'],
-   ojo:'En obra la línea de media tensión que pasa por encima es el riesgo que más se subestima.'},
+   ojo:'El PDF que tengo cargado es la resolución de dos páginas, no el Código completo: del Suministro 2011 no encontré una descarga oficial del texto íntegro. El de Utilización sí está entero, más abajo.'},
 
-  {t:'R.M. 037-2006-MEM/DM', d:'Código Nacional de Electricidad · Utilización',
-   p:'Reglas técnicas para las instalaciones eléctricas de utilización: tableros, conductores, protecciones y puesta a tierra.',
-   obliga:['Tableros, protecciones diferenciales y puesta a tierra según lo que exige el código.'],
+  {t:'R.M. 037-2006-MEM/DM', d:'Resolución que aprueba el CNE · Utilización',
+   p:'Es la resolución que pone en vigencia el Código Nacional de Electricidad · Utilización. El Código completo está cargado aparte, entero.',
+   obliga:['Tableros, protecciones diferenciales y puesta a tierra según lo que exige el Código.'],
    revisa:['El tablero de obra: diferencial operativo, pozo a tierra con su medición vigente.'],
-   ojo:'El tablero eléctrico provisional de obra es de lo primero que mira un inspector.'},
+   ojo:'Este PDF es la resolución de dos páginas. Para el articulado busca «CNE Utilización 2006», que sí trae las 836 páginas.'},
+
+  {t:'CNE Utilización 2006', d:'Código Nacional de Electricidad · Utilización, texto completo',
+   p:'El Código entero: 836 páginas de reglas técnicas para las instalaciones eléctricas de utilización — conductores, tableros, protecciones, puesta a tierra, y las secciones especiales (obras, ambientes húmedos, cercos eléctricos, salas de máquinas).',
+   obliga:['Tableros, protecciones diferenciales y puesta a tierra según la sección que corresponda.',
+     'Secciones especiales cuando el ambiente lo exige: húmedo, con polvo combustible, con riesgo de explosión.'],
+   revisa:['El tablero provisional de obra: diferencial que dispara, pozo a tierra con medición vigente.',
+     'Que el proyecto eléctrico cite la sección del Código, no un criterio del instalador.'],
+   ojo:'Pesa 10 MB: bájalo con wifi, no con datos en obra. La lupa sí busca dentro sin bajar el PDF entero.'},
 
   {t:'D.S. 015-2005-SA', d:'Valores límite permisibles para agentes químicos',
    p:'Fija los valores límite de exposición a agentes químicos en el ambiente de trabajo.',
@@ -19361,36 +19382,248 @@ function botonesPDF(titulo){
            (l.length>1 ? ' · '+esc(d.cod) : '')+'</a>';
   }).join('');
 }
+/* ── ESPECIALIDAD Y SECTOR DE CADA NORMA ──────────────────────
+   La biblioteca sirve a los cuatro sectores. Una norma es de un
+   sector (la G.050 es de obra, el 024 es de mina) o es transversal
+   (la Ley 29783 manda en los cuatro). Y dentro de eso se ordena por
+   especialidad, que es como un prevencionista busca de verdad: no
+   piensa «decreto supremo», piensa «esto es de salud ocupacional».
+   Se guarda aparte de NORMAS para poder revisarlo de un vistazo.  */
+var NORMA_META={
+  'Ley 29783':                    {esp:'Marco legal',       sec:'*'},
+  'D.S. 005-2012-TR':             {esp:'Marco legal',       sec:'*'},
+  'Ley 30222':                    {esp:'Marco legal',       sec:'*'},
+  'D.S. 006-2014-TR':             {esp:'Marco legal',       sec:'*'},
+  'R.M. 050-2013-TR':             {esp:'Marco legal',       sec:'*'},
+  'Norma G.050 (RNE)':            {esp:'Construcción',      sec:'construccion'},
+  'D.S. 011-2019-TR':             {esp:'Construcción',      sec:'construccion'},
+  'D.S. 024-2016-EM':             {esp:'Minería',           sec:'mineria'},
+  'D.S. 023-2017-EM':             {esp:'Minería',           sec:'mineria'},
+  'D.S. 043-2007-EM':             {esp:'Hidrocarburos',     sec:'hidrocarburos'},
+  'R.M. 111-2013-MEM/DM':         {esp:'Eléctrico',         sec:'*'},
+  'R.M. 214-2011-MEM/DM':         {esp:'Eléctrico',         sec:'*'},
+  'R.M. 037-2006-MEM/DM':         {esp:'Eléctrico',         sec:'*'},
+  'CNE Utilización 2006':         {esp:'Eléctrico',         sec:'*'},
+  'D.S. 003-98-SA':               {esp:'Salud ocupacional', sec:'*'},
+  'R.M. 312-2011-MINSA':          {esp:'Salud ocupacional', sec:'*'},
+  'R.M. 571-2014-MINSA':          {esp:'Salud ocupacional', sec:'*'},
+  'R.M. 375-2008-TR':             {esp:'Salud ocupacional', sec:'*'},
+  'D.S. 015-2005-SA':             {esp:'Salud ocupacional', sec:'*'},
+  'Ley 30102':                    {esp:'Salud ocupacional', sec:'*'},
+  'D.L. 1278':                    {esp:'Ambiental',         sec:'*'},
+  'D.S. 014-2017-MINAM':          {esp:'Ambiental',         sec:'*'},
+  'D.S. 085-2003-PCM':            {esp:'Ambiental',         sec:'*'},
+  'Ley 28806 / D.S. 019-2006-TR': {esp:'Fiscalización',     sec:'*'}
+};
+var ESP_ORDEN=['Marco legal','Construcción','Minería','Hidrocarburos',
+               'Eléctrico','Salud ocupacional','Ambiental','Fiscalización','Otras'];
+var ESP_PIE={
+  'Marco legal':'La ley de SST, su reglamento y los registros que exige. Manda en los cuatro sectores.',
+  'Construcción':'Solo para obra: edificación, montaje y habilitación urbana.',
+  'Minería':'Solo para minería: interior mina, tajo y planta concentradora.',
+  'Hidrocarburos':'Solo para hidrocarburos: refinería, planta de proceso y almacenamiento.',
+  'Eléctrico':'Trabajos con electricidad. Aplica en cualquier sector, no solo en las eléctricas.',
+  'Salud ocupacional':'Exámenes médicos, ergonomía, agentes químicos, SCTR y radiación solar.',
+  'Ambiental':'Residuos sólidos y ruido. Lo que cruza con la licencia y con la comunidad.',
+  'Fiscalización':'Cómo actúa SUNAFIL y cuánto cuesta incumplir.',
+  'Otras':'PDF cargados que todavía no tienen resumen escrito en la app.'
+};
+/* el campo del nombre del archivo → especialidad, para los PDF que
+   todavía no tienen ficha escrita */
+var CAMPO_ESP={'General':'Marco legal','Construccion':'Construcción','Mineria':'Minería',
+  'Hidrocarburos':'Hidrocarburos','Electrico':'Eléctrico','Salud ocupacional':'Salud ocupacional',
+  'Ambiental':'Ambiental','Fiscalizacion':'Fiscalización'};
+var ESP_SEC={'Construcción':'construccion','Minería':'mineria','Hidrocarburos':'hidrocarburos'};
+var SEC_ICONO={construccion:'🏗️', mineria:'⛏️', industria:'🏭', hidrocarburos:'🛢️'};
+function metaNorma(t){
+  var m=NORMA_META[t];
+  return m || {esp:'Otras', sec:'*'};
+}
+function nombreSector(id){
+  for(var i=0;i<SECTORES.length;i++) if(SECTORES[i].id===id) return SECTORES[i].nombre;
+  return id;
+}
+/* TODO lo que hay para mostrar: las fichas escritas y los PDF que
+   todavía no tienen ficha. Nada se esconde. */
+function entradasNormas(){
+  var out=[];
+  NORMAS.forEach(function(x,i){
+    var m=metaNorma(x.t);
+    out.push({tipo:'ficha', i:i, cod:x.t, det:x.d, esp:m.esp, sec:m.sec,
+              busca:x.t+' '+x.d+' '+x.p, pdfs:pdfsDeNorma(x.t)});
+  });
+  pdfsSinFicha().forEach(function(a){
+    var d=partirNombreNorma(a), esp=CAMPO_ESP[d.campo]||'Otras';
+    out.push({tipo:'pdf', arch:a, cod:d.cod, det:d.nom, esp:esp,
+              sec:ESP_SEC[esp]||'*', busca:a, pdfs:[a]});
+  });
+  return out;
+}
+var NORMA_SECTOR='*';   /* el chip elegido: '*' = todos los sectores */
+function elegirSectorNorma(id){ NORMA_SECTOR=id; pintarNormas(); }
+/* ── LA LUPA: BUSCAR UNA PALABRA DENTRO DEL PDF ───────────────
+   Como el buscador del navegador, pero sin tener que abrir el PDF y
+   sin bajarlo entero: el texto de cada norma está guardado aparte, en
+   'normas/_txt/', y pesa la décima parte. Se busca ahí, se dice en qué
+   página está y el enlace abre el PDF justo en esa página.
+   Dos honestidades que no se negocian:
+   · si el PDF es un escaneo (imagen, sin letras dentro) se dice, no se
+     devuelve «0 resultados» como si la palabra no estuviera;
+   · si no hay señal se dice que hace falta señal, no «no se encontró». */
+var TXT_NORMA={};       /* archivo -> [texto de cada pagina], esta sesion */
+var LUPA_ARCH=null;
+var IDX_NORMAS=null;    /* paginas y peso de cada texto */
+function urlTextoNorma(archivo){
+  return SB.url+'/storage/v1/object/public/msds/'+
+    ('normas/_txt/'+String(archivo).replace(/\.pdf$/i,'')+'.json')
+      .split('/').map(encodeURIComponent).join('/');
+}
+function traerIndiceNormas(){
+  if(IDX_NORMAS) return Promise.resolve(IDX_NORMAS);
+  return fetch(SB.url+'/storage/v1/object/public/msds/'+
+      ('normas/_txt/_indice.json').split('/').map(encodeURIComponent).join('/'))
+    .then(function(r){ return r.ok?r.json():Promise.reject(r.status); })
+    .then(function(j){ IDX_NORMAS=(j&&j.normas)||{}; return IDX_NORMAS; })
+    .catch(function(){ return null; });
+}
+function traerTextoNorma(archivo){
+  if(TXT_NORMA[archivo]) return Promise.resolve(TXT_NORMA[archivo]);
+  return fetch(urlTextoNorma(archivo))
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(j){
+      TXT_NORMA[archivo]={p:(j.p||[]), escaneado:!!j.escaneado};
+      return TXT_NORMA[archivo];
+    });
+}
+/* sin tildes PERO sin cambiar el largo: si se corriera un solo
+   caracter, el recorte quedaria desalineado y se marcaria otra palabra */
+var _TILDES={'á':'a','à':'a','ä':'a','â':'a','é':'e','è':'e','ë':'e','ê':'e',
+  'í':'i','ì':'i','ï':'i','î':'i','ó':'o','ò':'o','ö':'o','ô':'o',
+  'ú':'u','ù':'u','ü':'u','û':'u','ñ':'n','ç':'c'};
+function _plano(x){
+  return String(x||'').toLowerCase().replace(/[áàäâéèëêíìïîóòöôúùüûñç]/g,function(c){
+    return _TILDES[c]||c; });
+}
+function _recorte(txt, pos, largo){
+  var a=Math.max(0,pos-55), b=Math.min(txt.length,pos+largo+75);
+  return (a>0?'…':'')+esc(txt.slice(a,pos))+
+         '<mark style="background:var(--oro);color:#0B2A3A;border-radius:3px;padding:0 2px">'+
+         esc(txt.slice(pos,pos+largo))+'</mark>'+
+         esc(txt.slice(pos+largo,b))+(b<txt.length?'…':'');
+}
+function buscarEnTexto(pags, palabra, tope){
+  var q=_plano(palabra), hits=[];
+  if(!q) return hits;
+  for(var i=0;i<pags.length;i++){
+    var t=pags[i], T=_plano(t), pos=T.indexOf(q), enEsta=0;
+    while(pos>=0 && enEsta<3 && hits.length<(tope||60)){
+      hits.push({pag:i+1, frag:_recorte(t,pos,q.length)});
+      enEsta++; pos=T.indexOf(q,pos+q.length);
+    }
+    if(hits.length>=(tope||60)) break;
+  }
+  return hits;
+}
+function abrirLupa(archivo){
+  LUPA_ARCH=archivo;
+  var d=partirNombreNorma(archivo);
+  $('lupa-que').textContent=d.cod+' · '+(d.nom||'');
+  var i=$('lupa-q'); if(i) i.value='';
+  $('lupa-res').innerHTML='<p class="sub" style="margin:0">Escribe una palabra y te digo en qué página del PDF está. La primera búsqueda baja el texto de esta norma; las siguientes son al toque.</p>';
+  $('hoja-lupa').className='hoja abierta';
+  setTimeout(function(){ try{ i.focus(); }catch(e){} }, 260);
+}
+function cerrarLupa(){ $('hoja-lupa').className='hoja'; }
+function lupaBuscar(){
+  var q=(($('lupa-q')&&$('lupa-q').value)||'').trim();
+  var c=$('lupa-res');
+  if(q.length<3){ c.innerHTML='<div class="aviso" style="margin:0">Escribe al menos tres letras.</div>'; return; }
+  if(!LUPA_ARCH) return;
+  c.innerHTML='<p class="sub" style="margin:0">Buscando…</p>';
+  traerTextoNorma(LUPA_ARCH).then(function(t){
+    if(t.escaneado){
+      c.innerHTML='<div class="aviso" style="margin:0">Este PDF es un escaneo: son fotos de las hojas, no tiene letras adentro. No hay forma de buscar dentro de él, ni con esta lupa ni con el buscador del navegador. Ábrelo y léelo.</div>';
+      return;
+    }
+    var hits=buscarEnTexto(t.p, q);
+    if(!hits.length){
+      c.innerHTML='<div class="aviso" style="margin:0">«'+esc(q)+'» no aparece en esta norma. Fíjate en el singular y el plural, y prueba con una palabra más corta.</div>';
+      return;
+    }
+    var pags={}; hits.forEach(function(x){ pags[x.pag]=1; });
+    var h='<p class="sub" style="margin:0 0 8px"><b>'+hits.length+'</b> '+(hits.length===1?'coincidencia':'coincidencias')+
+          ' en '+Object.keys(pags).length+' página'+(Object.keys(pags).length===1?'':'s')+' de '+t.p.length+'. Toca una para abrir el PDF ahí.</p>';
+    hits.forEach(function(x){
+      h+='<a class="tarj vidrio" style="display:block;text-decoration:none" target="_blank" rel="noopener" href="'+
+         esc(urlNormaPDF(LUPA_ARCH))+'#page='+x.pag+'">'+
+         '<b>Página '+x.pag+' ›</b><small style="line-height:1.5">'+x.frag+'</small></a>';
+    });
+    c.innerHTML=h;
+  }).catch(function(){
+    c.innerHTML='<div class="aviso" style="margin:0">No se pudo bajar el texto de esta norma. Suele ser falta de señal: la lupa necesita internet la primera vez. El PDF sí se puede abrir si ya lo tienes descargado.</div>';
+  });
+}
 function pintarNormas(){
   var q=_norm(($('norma-buscar')&&$('norma-buscar').value)||'');
-  var h='', conPdf=0;
-  NORMAS.forEach(function(n){
-    if(q && _norm(n.t+' '+n.d+' '+n.p).indexOf(q)<0) return;
-    var idx=NORMAS.indexOf(n);
-    var tiene=pdfsDeNorma(n.t).length;
-    if(tiene) conPdf++;
-    h+='<button class="tarj vidrio" onclick="abrirNorma('+idx+')"><b>'+esc(n.t)+
-       (tiene?' <span style="font-weight:600;font-size:12px;opacity:.85">📄 PDF</span>':'')+
-       '</b><small>'+esc(n.d)+' ›</small></button>';
+  var todas=entradasNormas();
+  var mio=(typeof leer==='function') ? leer(LS.sec,null) : null;
+
+  /* ── los chips de sector ── */
+  var chips='<div class="chips" style="margin:2px 0 12px">';
+  var unChip=function(id, et){
+    return '<button class="ch-chip'+(NORMA_SECTOR===id?' on':'')+'" type="button" onclick="elegirSectorNorma(\''+id+'\')">'+et+'</button>';
+  };
+  chips+=unChip('*','📚 Todas');
+  SECTORES.forEach(function(x){
+    chips+=unChip(x.id, (SEC_ICONO[x.id]||'')+' '+x.nombre+(x.id===mio?' ·':''));
   });
-  /* los PDF que todavia no tienen ficha escrita: se listan igual */
-  var sueltos=pdfsSinFicha().filter(function(a){
-    return !q || _norm(a).indexOf(q)>=0;
+  chips+='</div>';
+
+  var visibles=todas.filter(function(e){
+    if(q && _norm(e.busca).indexOf(q)<0) return false;
+    if(NORMA_SECTOR!=='*' && e.sec!=='*' && e.sec!==NORMA_SECTOR) return false;
+    return true;
   });
-  if(sueltos.length){
-    h+='<div class="sec-tit" style="margin-top:18px">También están en PDF</div>';
-    sueltos.forEach(function(a){
-      var d=partirNombreNorma(a);
-      h+='<a class="tarj vidrio" style="display:block;text-decoration:none" target="_blank" rel="noopener" href="'+
-         esc(urlNormaPDF(a))+'"><b>'+esc(d.cod)+' 📄</b><small>'+esc(d.nom)+
-         (d.campo?' · '+esc(d.campo):'')+' ›</small></a>';
-    });
+
+  var h=chips;
+  if(NORMA_SECTOR!=='*'){
+    var propias=visibles.filter(function(e){ return e.sec===NORMA_SECTOR; }).length;
+    h+= propias
+      ? '<p class="sub" style="margin:-4px 0 12px">'+propias+' norma'+(propias===1?'':'s')+' propia'+(propias===1?'':'s')+' de '+esc(nombreSector(NORMA_SECTOR))+', más las que mandan en todos los sectores.</p>'
+      : '<div class="aviso" style="margin:-2px 0 12px">'+esc(nombreSector(NORMA_SECTOR))+' no tiene un reglamento de seguridad propio como la obra o la mina: le manda la Ley 29783 con su reglamento, más lo eléctrico, lo de salud ocupacional y lo ambiental. Eso es lo que ves abajo, y no es un hueco de la app.</div>';
   }
+
+  /* ── agrupado por especialidad ── */
+  var vacio=true;
+  ESP_ORDEN.forEach(function(esp){
+    var g=visibles.filter(function(e){ return e.esp===esp; });
+    if(!g.length) return;
+    vacio=false;
+    h+='<div class="sec-tit" style="margin-top:18px">'+esc(esp)+' · '+g.length+'</div>';
+    if(ESP_PIE[esp]) h+='<p class="sub" style="margin:-6px 0 8px">'+esc(ESP_PIE[esp])+'</p>';
+    g.forEach(function(e){
+      var tiene=e.pdfs.length;
+      var marca = (e.sec!=='*') ? ' <span style="font-weight:600;font-size:11px;letter-spacing:.05em;opacity:.8">'+(SEC_ICONO[e.sec]||'')+'</span>' : '';
+      var pdf   = tiene ? ' <span style="font-weight:600;font-size:12px;opacity:.85">📄 PDF</span>' : '';
+      var sinf  = (e.tipo==='pdf') ? ' <span style="font-weight:600;font-size:11px;opacity:.7">sin resumen</span>' : '';
+      var abre  = (e.tipo==='ficha') ? ('abrirNorma('+e.i+')')
+                                     : ('window.open('+JSON.stringify(urlNormaPDF(e.arch))+',\'_blank\',\'noopener\')');
+      h+='<div style="display:flex;gap:8px;align-items:stretch">'+
+           '<button class="tarj vidrio" style="flex:1;margin-right:0" onclick="'+abre+'">'+
+             '<b>'+esc(e.cod)+marca+pdf+sinf+'</b><small>'+esc(e.det||'—')+' ›</small></button>'+
+           (tiene ? '<button class="btn sec" title="Buscar una palabra dentro del PDF" aria-label="Buscar dentro de '+escA(e.cod)+'" '+
+                    'style="width:52px;flex:none;margin:0 0 9px;padding:0;font-size:19px" '+
+                    'onclick="abrirLupa('+JSON.stringify(e.pdfs[0])+')">🔍</button>' : '')+
+         '</div>';
+    });
+  });
+  if(vacio) h+='<div class="aviso" style="margin-top:14px">Nada con esa palabra. Prueba con el código («024», «G.050») o con el tema («ergonomía», «residuos»).</div>';
+
   var tot=normasPDF().length;
   var pie = tot
-    ? ('Hay '+tot+' norma'+(tot===1?'':'s')+' en PDF oficial completo. Se abren con señal; el resumen de cada una se lee sin internet.')
+    ? ('Hay '+tot+' norma'+(tot===1?'':'s')+' en PDF oficial completo. El resumen de cada una se lee sin internet; el PDF y la lupa necesitan señal.')
     : 'Los PDF oficiales se cargan cuando haya señal. Por ahora ves el resumen de cada norma, que sí funciona sin internet.';
-  $('lista-normas').innerHTML=h+'<p class="sub" style="margin-top:12px">'+pie+
+  $('lista-normas').innerHTML=h+'<p class="sub" style="margin-top:16px">'+pie+
     ' Verifica siempre la versión vigente en El Peruano; las normas se modifican.</p>';
 }
 /* se pide la lista al entrar, y si cambio se vuelve a pintar */
