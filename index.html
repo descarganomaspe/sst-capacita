@@ -19323,7 +19323,27 @@ var NORMAS = [
    Así se pueden subir normas nuevas sin tocar la app.               */
 var LS_NORMAS_PDF='sstc_normas_pdf';
 var NORMAS_PIDIENDO=false;
-function normasPDF(){ var a=leer(LS_NORMAS_PDF,null); return (a && a.length) ? a : []; }
+/* ── LOS QUE SE REVISARON Y NO ERAN ─────────────────────────
+   Al auditar los PDF uno por uno leyendo su texto —no fiándose del
+   nombre del archivo— salieron dos que no eran la norma que decían.
+   Como el almacén no deja borrar con la llave pública, se listan aquí
+   y la app no los muestra. Cuando se borren del almacén, esta lista
+   deja de hacer efecto sola: filtra por nombre, no rompe nada.
+   NUNCA se agrega algo a esta lista «por si acaso»: solo lo que se
+   abrió, se leyó y se comprobó que era otra cosa.               */
+var NORMAS_DESCARTADAS=[
+  /* era el Boletín Informativo Laboral N° 91, un artículo SOBRE el
+     reglamento, no el reglamento. El bueno está subido aparte. */
+  'D.S. 011-2019-TR - Reglamento de SST para el sector Construccion - Construccion.pdf',
+  /* eran solo unas páginas sueltas de anexos del diario, sin el
+     articulado del decreto. El bueno está subido aparte. */
+  'D.S. 023-2017-EM - Modificatoria del Reglamento de SSO en Mineria - Mineria.pdf'
+];
+function normasPDF(){
+  var a=leer(LS_NORMAS_PDF,null);
+  a=(a && a.length) ? a : [];
+  return a.filter(function(x){ return NORMAS_DESCARTADAS.indexOf(x)<0; });
+}
 function urlNormaPDF(archivo){
   return SB.url+'/storage/v1/object/public/msds/'+
          ('normas/'+archivo).split('/').map(encodeURIComponent).join('/');
@@ -19478,13 +19498,19 @@ function urlTextoNorma(archivo){
     ('normas/_txt/'+String(archivo).replace(/\.pdf$/i,'')+'.json')
       .split('/').map(encodeURIComponent).join('/');
 }
-function traerIndiceNormas(){
+/* el índice va numerado: el almacén no deja reescribir un archivo con la
+   llave pública, así que cada vez que se agregan normas sube uno nuevo.
+   La app pide el más nuevo primero y cae al anterior si no está. */
+var INDICE_NORMAS=['normas/_txt/_indice-2.json','normas/_txt/_indice.json'];
+function traerIndiceNormas(i){
   if(IDX_NORMAS) return Promise.resolve(IDX_NORMAS);
+  i=i||0;
+  if(i>=INDICE_NORMAS.length) return Promise.resolve(null);
   return fetch(SB.url+'/storage/v1/object/public/msds/'+
-      ('normas/_txt/_indice.json').split('/').map(encodeURIComponent).join('/'))
+      INDICE_NORMAS[i].split('/').map(encodeURIComponent).join('/'))
     .then(function(r){ return r.ok?r.json():Promise.reject(r.status); })
     .then(function(j){ IDX_NORMAS=(j&&j.normas)||{}; return IDX_NORMAS; })
-    .catch(function(){ return null; });
+    .catch(function(){ return traerIndiceNormas(i+1); });
 }
 function traerTextoNorma(archivo){
   if(TXT_NORMA[archivo]) return Promise.resolve(TXT_NORMA[archivo]);
@@ -19606,14 +19632,22 @@ function pintarNormas(){
       var marca = (e.sec!=='*') ? ' <span style="font-weight:600;font-size:11px;letter-spacing:.05em;opacity:.8">'+(SEC_ICONO[e.sec]||'')+'</span>' : '';
       var pdf   = tiene ? ' <span style="font-weight:600;font-size:12px;opacity:.85">📄 PDF</span>' : '';
       var sinf  = (e.tipo==='pdf') ? ' <span style="font-weight:600;font-size:11px;opacity:.7">sin resumen</span>' : '';
+      /* páginas y escaneo: se dicen antes de que toque, no después */
+      var d0 = tiene ? datoDelPDF(e.pdfs[0]) : null;
+      if(d0){
+        pdf += ' <span style="font-weight:500;font-size:11.5px;opacity:.7">'+d0.pags+' pág.</span>';
+        if(d0.escaneado) pdf += ' <span style="font-weight:600;font-size:11px;opacity:.75">escaneado</span>';
+      }
       var abre  = (e.tipo==='ficha') ? ('abrirNorma('+e.i+')')
                                      : ('window.open('+JSON.stringify(urlNormaPDF(e.arch))+',\'_blank\',\'noopener\')');
       h+='<div style="display:flex;gap:8px;align-items:stretch">'+
            '<button class="tarj vidrio" style="flex:1;margin-right:0" onclick="'+abre+'">'+
              '<b>'+esc(e.cod)+marca+pdf+sinf+'</b><small>'+esc(e.det||'—')+' ›</small></button>'+
-           (tiene ? '<button class="btn sec" title="Buscar una palabra dentro del PDF" aria-label="Buscar dentro de '+escA(e.cod)+'" '+
-                    'style="width:52px;flex:none;margin:0 0 9px;padding:0;font-size:19px" '+
-                    'onclick="abrirLupa('+JSON.stringify(e.pdfs[0])+')">🔍</button>' : '')+
+           (tiene && !(d0 && d0.escaneado)
+             ? '<button class="btn sec" title="Buscar una palabra dentro del PDF" aria-label="Buscar dentro de '+escA(e.cod)+'" '+
+               'style="width:52px;flex:none;margin:0 0 9px;padding:0;font-size:19px" '+
+               'onclick="abrirLupa('+JSON.stringify(e.pdfs[0])+')">🔍</button>'
+             : '')+
          '</div>';
     });
   });
@@ -19628,11 +19662,17 @@ function pintarNormas(){
 }
 /* se pide la lista al entrar, y si cambio se vuelve a pintar */
 function refrescarNormasPDF(){
-  var antes=normasPDF().length;
-  cargarNormasPDF().then(function(l){
-    if(l.length!==antes && document.getElementById('p-normas') &&
+  var antes=normasPDF().length, habia=!!IDX_NORMAS;
+  Promise.all([cargarNormasPDF(), traerIndiceNormas()]).then(function(r){
+    var cambio = (r[0].length!==antes) || (!habia && IDX_NORMAS);
+    if(cambio && document.getElementById('p-normas') &&
        document.getElementById('p-normas').className.indexOf('activa')>=0) pintarNormas();
   });
+}
+/* cuántas páginas tiene, y si es un escaneo. Sale del índice; si el
+   índice todavía no llegó, no se inventa nada: no se muestra. */
+function datoDelPDF(archivo){
+  return (IDX_NORMAS && IDX_NORMAS[archivo]) || null;
 }
 
 
