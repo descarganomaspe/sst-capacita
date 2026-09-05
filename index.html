@@ -154,6 +154,14 @@ body.torre.sinrail .tc-rail{display:none}
 .tc-card{background:var(--t-sup);border-radius:10px;box-shadow:var(--t-sombra);padding:15px 16px 15px;min-width:0}
 .tc-card.ancha{grid-column:1/-1}
 body.torre label{color:var(--t-tinta)}
+.tc-fresco{font-size:11.5px;color:var(--t-tinta);opacity:.72;white-space:nowrap;
+           display:inline-flex;align-items:center;gap:5px}
+.tc-fresco.viejo{color:var(--t-aviso);opacity:1}
+.tc-fresco .pip{width:7px;height:7px;border-radius:50%;background:var(--t-ok);display:inline-block}
+.tc-fresco.cargando .pip{background:var(--t-s1);animation:tcpip 1s ease-in-out infinite}
+.tc-fresco.viejo .pip{background:var(--t-aviso)}
+@keyframes tcpip{0%,100%{opacity:.25}50%{opacity:1}}
+@media (max-width:900px){ .tc-fresco{display:none} }
 .tc-card h3{font-size:15px;margin:0 0 3px;font-weight:700;color:var(--t-tinta);letter-spacing:-.01em}
 .tc-card .sub{font-size:12.5px;color:var(--t-tinta2);margin:0 0 13px;line-height:1.5}
 .tc-vacio{border:1px dashed var(--t-pista);border-radius:8px;padding:14px;background:var(--t-regla2);
@@ -478,6 +486,40 @@ body.connav .pantalla{padding-top:2px}
         background:rgba(var(--w),.06);border:1px solid rgba(var(--w),.12);color:var(--gris);cursor:pointer}
 .sd-rap button.on{background:rgba(245,183,0,.16);border-color:rgba(245,183,0,.42);color:var(--tinta)}
 .sd-avance{margin-top:10px;font-size:13px;color:var(--gris)}
+/* ══ REPORTAR: la decision mas importante, a la vista ══════════════
+   «que se vea mas entendible y ordenado». Lo primero que hay que
+   decidir —condicion o acto— estaba escondido dentro de un desplegable
+   y encima cortado a media frase. Ahora son dos tarjetas que se leen
+   enteras y se tocan; el <select> sigue existiendo por debajo para no
+   romper nada de lo que ya guardaba bien. */
+.rep-tipos{display:grid;gap:9px}
+.rep-tipo{display:block;width:100%;text-align:left;padding:12px 13px;border-radius:13px;font:inherit;
+          background:rgba(var(--w),.05);border:1px solid rgba(var(--w),.11);color:var(--tinta);cursor:pointer}
+.rep-tipo .ic{font-size:19px;display:block;margin-bottom:3px}
+.rep-tipo b{display:block;font-size:15px}
+.rep-tipo small{display:block;color:var(--gris);font-size:12.5px;line-height:1.4;margin-top:3px}
+.rep-tipo.on{background:rgba(245,183,0,.14);border-color:rgba(245,183,0,.5)}
+.rep-quien{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.rep-op{padding:11px 12px;border-radius:12px;font:inherit;text-align:left;
+        background:rgba(var(--w),.05);border:1px solid rgba(var(--w),.11);color:var(--tinta);cursor:pointer}
+.rep-op b{display:block;font-size:14px}
+.rep-op small{display:block;color:var(--gris);font-size:11.5px;line-height:1.35;margin-top:3px}
+.rep-op.on{background:rgba(245,183,0,.14);border-color:rgba(245,183,0,.5)}
+/* ══ LA LISTA: primero el resumen, y cada tarjeta con su estado ════ */
+.rep-seg{display:flex;gap:7px;margin-top:12px}
+.rep-seg button{flex:1;padding:9px 6px;border-radius:12px;font:inherit;line-height:1.2;cursor:pointer;
+        background:rgba(var(--w),.05);border:1px solid rgba(var(--w),.11);color:var(--gris)}
+.rep-seg button b{display:block;font-size:19px;color:var(--tinta);font-variant-numeric:tabular-nums}
+.rep-seg button small{font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+.rep-seg button.on{background:rgba(245,183,0,.14);border-color:rgba(245,183,0,.5);color:var(--tinta)}
+.rep-seg button.cr b{color:var(--mal)}
+.rep-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;
+          font-size:11.5px;font-weight:700;letter-spacing:.2px}
+.rep-pill.ab{background:rgba(214,142,26,.16);color:#e0a33c}
+.rep-pill.vc{background:rgba(178,49,54,.18);color:#e2686c}
+.rep-pill.ok{background:rgba(31,160,102,.16);color:var(--ok)}
+.rep-cab{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.rep-cla{font-size:12.5px;color:var(--gris)}
 .sd-avance .barrita{height:6px;border-radius:999px;background:rgba(var(--w),.08);margin-top:6px;overflow:hidden}
 .sd-avance .barrita i{display:block;height:100%;background:var(--ok);transition:width .25s}
 .sd-res{margin-top:9px;padding:9px 12px;border-radius:10px;background:rgba(245,183,0,.10);
@@ -3002,24 +3044,72 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <section class="pantalla" id="p-reporte-nuevo">
   <div class="barra"><span>Nuevo reporte</span></div>
   <h2>🚨 Reportar algo inseguro</h2>
-  <p class="sub">Ves algo peligroso, lo reportas. Ayudas a que nadie salga lastimado.</p>
-  <label>¿Qué es?</label><select id="r-clase"><option value="condicion">Condición insegura (algo del lugar/equipo)</option><option value="acto">Acto inseguro (algo que alguien hizo)</option></select>
-  <label>Descríbelo</label><textarea id="r-desc" placeholder="Andamio sin barandas en el 3er piso"></textarea>
-  <label>¿Dónde?</label><input id="r-lugar" placeholder="Sector B, nivel 3">
-  <label>¿Con qué actividad tiene que ver?</label>
-  <select id="r-actividad"></select>
-  <p class="sub" id="r-activ-nota" style="margin:6px 0 0;font-size:12.5px"></p>
-  <label style="margin-top:12px">Foto (opcional)</label>
-  <button class="btn sec" onclick="fotoReporte()" style="margin:0 0 10px">📷 Tomar la foto</button>
-  <div id="r-foto-vista"></div>
-  <div class="tarj vidrio" style="margin-top:14px" onclick="rToggleAnon()"><b id="r-anon-et">🙈 Reportar sin mi nombre (anónimo)</b><small id="r-anon-sub">Nadie sabrá que fuiste tú. Así de simple. (No suma a tu racha: para sumarla habría que saber quién fuiste.)</small></div>
-  <div id="r-autor-wrap"><label>Tu nombre (si quieres crédito)</label><input id="r-autor" placeholder="Tu nombre"></div>
+  <p class="sub">Cuatro pasos. Lo que reportes le llega a los supervisores de tu obra.</p>
+  <div id="r-avance" class="sd-avance"></div>
+
+  <div class="paso" id="r-p1">
+    <div class="paso-cab"><span class="paso-n">1</span><b>¿Qué viste?</b><span class="paso-est" id="r-e1"></span></div>
+    <div class="paso-cu">
+      <div class="rep-tipos">
+        <button type="button" class="rep-tipo" id="r-t-cond" onclick="rPonerClase('condicion')">
+          <span class="ic">⚠️</span><b>Condición insegura</b>
+          <small>Algo del lugar, del equipo o del material: un andamio sin baranda, un tablero destapado, un piso resbaloso.</small></button>
+        <button type="button" class="rep-tipo" id="r-t-acto" onclick="rPonerClase('acto')">
+          <span class="ic">👤</span><b>Acto inseguro</b>
+          <small>Algo que alguien está haciendo: trabajar sin arnés, amolar sin careta, cruzar por debajo de una carga.</small></button>
+      </div>
+      <select id="r-clase" style="display:none">
+        <option value="condicion">Condición insegura</option>
+        <option value="acto">Acto inseguro</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="paso" id="r-p2">
+    <div class="paso-cab"><span class="paso-n">2</span><b>Cuéntalo y, si puedes, fótalo</b><span class="paso-est" id="r-e2"></span></div>
+    <div class="paso-cu">
+      <textarea id="r-desc" placeholder="Andamio sin barandas en el 3er piso, hay gente trabajando encima" oninput="rCalcular()"></textarea>
+      <p class="sub" style="margin:5px 0 0;font-size:12.5px" id="r-desc-nota">Con una línea basta: qué es, dónde y por qué es peligroso.</p>
+      <button class="btn sec" onclick="fotoReporte()" style="margin:11px 0 0">📷 Tomar la foto <span style="font-weight:400;opacity:.75">(opcional)</span></button>
+      <div id="r-foto-vista" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="paso" id="r-p3">
+    <div class="paso-cab"><span class="paso-n">3</span><b>¿Dónde y en qué trabajo?</b><span class="paso-est" id="r-e3"></span></div>
+    <div class="paso-cu">
+      <label class="sec-tit" style="margin:0 0 6px">Lugar</label>
+      <input id="r-lugar" list="r-lugar-sug" placeholder="Bloque B, nivel 3" autocomplete="off" oninput="rCalcular()">
+      <datalist id="r-lugar-sug"></datalist>
+      <div class="sd-rap" id="r-lugar-rap"></div>
+      <label class="sec-tit" style="margin:13px 0 6px">Actividad de alto riesgo</label>
+      <select id="r-actividad" onchange="rCalcular()"></select>
+      <p class="sub" id="r-activ-nota" style="margin:6px 0 0;font-size:12.5px"></p>
+    </div>
+  </div>
+
+  <div class="paso" id="r-p4">
+    <div class="paso-cab"><span class="paso-n">4</span><b>¿Quién lo reporta?</b><span class="paso-est" id="r-e4"></span></div>
+    <div class="paso-cu">
+      <div class="rep-quien">
+        <button type="button" class="rep-op" id="r-q-yo" onclick="rPonerAnon(false)"><b>Con mi nombre</b><small>Suma a tu racha y el supervisor puede preguntarte</small></button>
+        <button type="button" class="rep-op" id="r-q-anon" onclick="rPonerAnon(true)"><b>🙈 Anónimo</b><small>Nadie sabrá que fuiste tú. No suma a tu racha</small></button>
+      </div>
+      <div id="r-autor-wrap" style="margin-top:11px">
+        <label class="sec-tit" style="margin:0 0 6px">Tu nombre</label>
+        <input id="r-autor" placeholder="Tu nombre" oninput="rCalcular()">
+      </div>
+      <p class="sub" id="r-anon-sub" style="margin:8px 0 0;font-size:12.5px"></p>
+      <span id="r-anon-et" style="display:none"></span>
+    </div>
+  </div>
+
   <div id="r-sin-obra" class="aviso" style="display:none;margin:14px 0 4px">
     Todavía no tienes el código de tu obra, así que esto no se puede guardar en la app.
     Igual lo puedes mandar: se arma el reporte con su fecha y hora y lo compartes por WhatsApp
     o por donde quieras. Cuando tengas el código, se guarda solo.
   </div>
-  <button class="btn" id="r-enviar" onclick="reporteEnviar()">Enviar el reporte</button>
+  <button class="btn" id="r-enviar" onclick="reporteEnviar()" style="margin-top:14px">Enviar el reporte</button>
   <div id="r-msg" style="font-size:14px;margin-top:10px"></div>
 </section>
 
@@ -3189,7 +3279,8 @@ input,textarea{-webkit-user-select:text;user-select:text}
         <select class="tc-bt" id="tc-mes-sel" onchange="tcPonerMes(this.value)" aria-label="Mes de cierre"></select>
         <button class="tc-bt" onclick="tcExcel()" title="Descargar en Excel">↓<span class="lb"> Excel</span></button>
         <button class="tc-bt" onclick="tcPDF()" title="Imprimir o guardar en PDF">⎙<span class="lb"> PDF</span></button>
-        <button class="tc-bt" onclick="tcRefrescar()" title="Volver a pedir los datos">↻<span class="lb"> Actualizar</span></button>
+        <button class="tc-bt" id="tc-refbt" onclick="tcRefrescar()" title="Volver a pedir los datos">↻<span class="lb"> Actualizar</span></button>
+        <span class="tc-fresco" id="tc-fresco"></span>
         <button class="tc-bt" onclick="tcVer('cfg')" title="Cambiar las metas">⚙<span class="lb"> Qué medir</span></button>
         <span class="tc-yo" id="tc-yo"></span>
         <span class="tc-badge" id="tc-papel">LÍDER SSOMA</span>
@@ -18354,7 +18445,8 @@ function fotoReporte(){
     if(!du) return;
     REP_FOTO=du;
     $('r-foto-vista').innerHTML='<img src="'+du+'" style="width:100%;border-radius:12px;margin-bottom:10px">'+
-      '<button class="btn sec" style="margin:0 0 10px" onclick="REP_FOTO=null;document.getElementById(\'r-foto-vista\').innerHTML=\'\';">Quitar la foto</button>';
+      '<button class="btn sec" style="margin:0 0 10px" onclick="REP_FOTO=null;document.getElementById(\'r-foto-vista\').innerHTML=\'\';rCalcular();">Quitar la foto</button>';
+    try{ rCalcular(); }catch(_c){}
   });
 }
 function prepReporte(){
@@ -18367,8 +18459,87 @@ function prepReporte(){
   $('r-autor').value = _cfg.cap || '';
   var _lug=$('r-lugar'); if(_lug && _cfg.obra) _lug.placeholder = _cfg.obra+' · sector, nivel…';
   if($('r-foto-vista')) $('r-foto-vista').innerHTML=''; $('r-msg').textContent='';
+  rLugaresSugeridos();
   rPintarAnon();
   rPintarModo();
+  rCalcular();
+}
+/* los lugares donde ya se reporto algo en esta obra: casi siempre el
+   siguiente reporte es del mismo frente, y escribirlo igualito a mano
+   es lo que rompe el filtro por sede despues */
+function rLugaresSugeridos(){
+  var vistos={}, ops=[];
+  (REP_LISTA||[]).forEach(function(x){
+    var l=String(x.lugar||'').trim();
+    if(l && !vistos[l]){ vistos[l]=1; ops.push(l); }
+  });
+  try{ (lugaresUsados()||[]).forEach(function(l){ if(l && !vistos[l]){ vistos[l]=1; ops.push(l); } }); }catch(_e){}
+  var dl=$('r-lugar-sug');
+  if(dl) dl.innerHTML=ops.map(function(l){ return '<option value="'+escA(l)+'">'; }).join('');
+  var rp=$('r-lugar-rap');
+  if(rp) rp.innerHTML=ops.slice(0,4).map(function(l){
+    return '<button type="button" onclick="rPonerLugar(\''+escA(l)+'\')">📍 '+esc(l)+'</button>';
+  }).join('');
+}
+function rPonerLugar(l){ var e=$('r-lugar'); if(!e) return; e.value=l; rCalcular(); rLugarRapMarcar(); }
+function rLugarRapMarcar(){
+  var rp=$('r-lugar-rap'); if(!rp) return;
+  var v=(($('r-lugar')||{}).value||'').trim();
+  [].forEach.call(rp.querySelectorAll('button'), function(b){
+    b.className = (b.textContent.replace(/^📍\s*/,'')===v) ? 'on' : '';
+  });
+}
+function rPonerClase(c){
+  var s=$('r-clase'); if(s) s.value=c;
+  rCalcular();
+}
+function rPonerAnon(v){ R_ANON=!!v; rPintarAnon(); rCalcular(); }
+/* ══ QUE SE VEA DONDE VA CADA COSA Y QUE FALTA ═══════════════════
+   Mismo lenguaje que el reporte del dia: pasos numerados, cada uno
+   dice si ya esta y, si no, que le falta. */
+function rCalcular(){
+  var cl=(($('r-clase')||{}).value||''), desc=(($('r-desc')||{}).value||'').trim();
+  var lug=(($('r-lugar')||{}).value||'').trim();
+  var act=(($('r-actividad')||{}).value||'');
+  var aut=(($('r-autor')||{}).value||'').trim();
+  var tc=$('r-t-cond'), ta=$('r-t-acto');
+  if(tc) tc.className='rep-tipo'+(cl==='condicion'?' on':'');
+  if(ta) ta.className='rep-tipo'+(cl==='acto'?' on':'');
+  var qy=$('r-q-yo'), qa=$('r-q-anon');
+  if(qy) qy.className='rep-op'+(R_ANON?'':' on');
+  if(qa) qa.className='rep-op'+(R_ANON?' on':'');
+  rLugarRapMarcar();
+
+  function marca(idP, idE, listo, txt){
+    var c=$(idP), e=$(idE);
+    if(c) c.className = listo ? 'paso lista' : 'paso';
+    if(e) e.innerHTML = (listo?'✓ ':'')+txt;
+  }
+  marca('r-p1','r-e1', !!cl, cl==='acto' ? 'Acto inseguro' : (cl ? 'Condición insegura' : 'Elige una'));
+  var okD = desc.length>=8;
+  marca('r-p2','r-e2', okD, okD ? (REP_FOTO?'Contado y con foto':'Contado') : (desc? 'Cuéntalo un poco más' : 'Falta contarlo'));
+  marca('r-p3','r-e3', !!lug, lug ? (lug+(act?(' · '+act):'')) : 'Falta el lugar');
+  marca('r-p4','r-e4', R_ANON || !!aut, R_ANON ? 'Anónimo' : (aut || 'Pon tu nombre'));
+
+  var d=$('r-desc-nota');
+  if(d){
+    d.style.color='var(--gris)';
+    d.textContent = !desc ? 'Con una línea basta: qué es, dónde y por qué es peligroso.'
+      : (desc.length<8 ? 'Un poquito más: con dos palabras nadie sabe qué arreglar.'
+      : 'Así está bien.');
+  }
+  var falta=[];
+  if(!cl) falta.push('qué viste');
+  if(!okD) falta.push('contarlo');
+  if(!lug) falta.push('el lugar');
+  if(!R_ANON && !aut) falta.push('tu nombre');
+  var hechos=4-falta.length;
+  var av=$('r-avance');
+  if(av) av.innerHTML = falta.length
+    ? ('Falta '+falta.join(' y ')+'.<div class="barrita"><i style="width:'+Math.round(hechos/4*100)+'%"></i></div>')
+    : ('Listo para enviar<div class="barrita"><i style="width:100%"></i></div>');
+  var b=$('r-enviar');
+  if(b) b.style.opacity = falta.length ? '.55' : '1';
 }
 /* ¿A DONDE VA EL REPORTE?
    Esto estaba MAL y por eso el reporte del trabajador nunca llegaba:
@@ -18417,11 +18588,17 @@ function compartirReporte(){
   msg.textContent = f ? 'Se abrió WhatsApp con el reporte. La foto mándala aparte.'
                       : 'Se abrió WhatsApp con el reporte.';
 }
-function rToggleAnon(){ R_ANON=!R_ANON; rPintarAnon(); }
 function rPintarAnon(){
-  $('r-anon-et').textContent = R_ANON?'✅ Anónimo (sin tu nombre)':'🙈 Reportar sin mi nombre (anónimo)';
-  $('r-autor-wrap').style.display = R_ANON?'none':'';
+  var et=$('r-anon-et');
+  if(et) et.textContent = R_ANON?'✅ Anónimo (sin tu nombre)':'🙈 Reportar sin mi nombre (anónimo)';
+  var w=$('r-autor-wrap'); if(w) w.style.display = R_ANON?'none':'';
+  var sb=$('r-anon-sub');
+  if(sb) sb.textContent = R_ANON
+    ? 'No se guarda tu nombre en ningún lado. El reporte llega igual a los supervisores.'
+    : 'Tu nombre va con el reporte y suma a tu racha.';
 }
+/* el boton viejo seguia enganchado en algunas rutas: que no reviente */
+function rToggleAnon(){ rPonerAnon(!R_ANON); }
 
 // =================================================================
 //  ACTIVIDADES DE ALTO RIESGO  ·  con qué tiene que ver el reporte
@@ -18809,12 +18986,13 @@ function pintarReporte(){
         ((MIS_EMP&&MIS_EMP.length>1)? ' <a href="#" onclick="ir(\'p-mis-empresas\');return false" style="color:var(--cel)">Cambiar de empresa</a>':'')+
         '</p>' : '')+
     '<button class="btn" onclick="ir(\'p-reporte-nuevo\')">＋ Reportar algo inseguro</button>'+
-    (e?'<div class="esc-acc" style="margin-top:10px">'+
+    (e?'<div class="rep-seg" id="rep-seg"></div>'+
+       '<div id="rep-sede-cont" style="margin-top:10px"></div>'+
+       '<div id="rep-lista" style="margin-top:14px"><p class="sub">Cargando…</p></div>'+
+       '<div class="esc-acc" style="margin-top:16px">'+
         '<button class="btn sec" style="margin:0" onclick="ir(\'p-reporte-excel\')">📊 Informe en Excel</button>'+
-        '<button class="btn sec" style="margin:0" onclick="filtrarReportes()" id="rep-filtro-btn">Ver: abiertos</button>'+
         '<button class="btn sec" style="margin:0" onclick="ir(\'p-actividades\')">🗂️ Actividades</button>'+
-       '</div><div id="rep-sede-cont" style="margin-top:10px"></div>'+
-       '<div id="rep-lista" style="margin-top:14px"><p class="sub">Cargando…</p></div>'
+       '</div>'
       :'<p class="sub" style="margin-top:12px">Entra a tu empresa para ver y hacer reportes.</p>');
   if(!e) return;
   traerReportes(e.id, '&order=creado.desc&limit=500')
@@ -18830,27 +19008,85 @@ function pintarReporte(){
    del que mira, no del programa. */
 var REP_VER='todos';
 function verTodosLosReportes(){ REP_VER='todos'; pintarListaReportes(); }
+/* el boton viejo daba vueltas entre tres estados sin decir cuales:
+   se toca y a ver que sale. Se queda por si algo lo llama, pero la
+   pantalla ahora usa el resumen de arriba, que ademas CUENTA. */
 function filtrarReportes(){
   REP_VER = (REP_VER==='abiertos') ? 'todos' : (REP_VER==='todos' ? 'cerrados' : 'abiertos');
   pintarListaReportes();
+}
+function verReportes(cual){ REP_VER=cual; pintarListaReportes(); }
+var REP_DIAS_VIEJO=7;   /* abierto mas de una semana = se le fue de las manos */
+function repDiasAbierto(r){
+  var f=String(r.fecha||'').slice(0,10); if(!f) return null;
+  try{
+    var d=Math.floor((new Date(hoyISO()+'T00:00:00') - new Date(f+'T00:00:00'))/86400000);
+    return d<0?0:d;
+  }catch(e){ return null; }
+}
+function repCuentas(){
+  var a=(REP_LISTA||[]).filter(function(r){
+    return !REP_SEDE || String(r.lugar||'').trim()===REP_SEDE;
+  });
+  var ab=0, vc=0, ce=0;
+  a.forEach(function(r){
+    if(r.estado==='atendido'){ ce++; return; }
+    ab++;
+    var d=repDiasAbierto(r);
+    if(d!==null && d>REP_DIAS_VIEJO) vc++;
+  });
+  return {tot:a.length, ab:ab, vc:vc, ce:ce};
+}
+/* Antes arriba habia tres botones del mismo tamaño y un «Ver: todos»
+   que no decia nada. Lo que el supervisor necesita saber al entrar es
+   cuantos tiene encima y cuantos se le estan pudriendo. Eso ES el
+   filtro: se ve y se toca. */
+function pintarResumenReportes(){
+  var c=$('rep-seg'); if(!c) return;
+  var q=repCuentas();
+  function bt(cual, num, et, cr){
+    return '<button type="button" class="'+(REP_VER===cual?'on':'')+(cr&&num?' cr':'')+
+           '" onclick="verReportes(\''+cual+'\')"><b>'+num+'</b><small>'+et+'</small></button>';
+  }
+  c.innerHTML = bt('abiertos', q.ab, 'abiertos') +
+                bt('viejos',  q.vc, '+'+REP_DIAS_VIEJO+' días', true) +
+                bt('cerrados',q.ce, 'cerrados') +
+                bt('todos',   q.tot,'todos');
 }
 function pintarListaReportes(){
   var c=$('rep-lista'); if(!c) return;
   var b=$('rep-filtro-btn');
   if(b) b.textContent='Ver: '+REP_VER;
   pintarFiltroSede();
+  pintarResumenReportes();
   var lista=REP_LISTA.filter(function(r){
     if(REP_VER==='abiertos' && r.estado==='atendido') return false;
     if(REP_VER==='cerrados' && r.estado!=='atendido') return false;
+    if(REP_VER==='viejos'){
+      if(r.estado==='atendido') return false;
+      var d=repDiasAbierto(r);
+      if(d===null || d<=REP_DIAS_VIEJO) return false;
+    }
     if(REP_SEDE && String(r.lugar||'').trim()!==REP_SEDE) return false;
     return true;
+  });
+  /* lo abierto primero y lo mas viejo arriba: es lo que se le esta
+     quedando atras, no lo que acaba de llegar */
+  lista=lista.slice().sort(function(x,y){
+    var cx=(x.estado==='atendido')?1:0, cy=(y.estado==='atendido')?1:0;
+    if(cx!==cy) return cx-cy;
+    var fx=String(x.fecha||''), fy=String(y.fecha||'');
+    return cx ? fy.localeCompare(fx) : fx.localeCompare(fy);
   });
   if(!lista.length){
     if(REP_LISTA.length){
       /* hay reportes, los escondio el filtro: se dice y se ofrece el botón */
       var ab=REP_LISTA.filter(function(r){ return r.estado!=='atendido'; }).length;
       var ce=REP_LISTA.length-ab;
-      c.innerHTML='<div class="aviso">No hay reportes <b>'+esc(REP_VER)+'</b>, pero la obra sí tiene '+
+      c.innerHTML='<div class="aviso">'+
+        (REP_VER==='viejos'
+          ? 'Nada lleva más de '+REP_DIAS_VIEJO+' días abierto. Vas al día.'
+          : 'No hay reportes <b>'+esc(REP_VER)+'</b>')+', pero la obra sí tiene '+
         REP_LISTA.length+' reporte'+(REP_LISTA.length===1?'':'s')+' ('+ab+' abierto'+(ab===1?'':'s')+
         ' · '+ce+' cerrado'+(ce===1?'':'s')+').'+
         '<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="verTodosLosReportes()">Ver todos</button></div></div>';
@@ -18873,13 +19109,22 @@ function pintarListaReportes(){
   var h='';
   lista.forEach(function(r){
     var cerrado = r.estado==='atendido';
-    var col = cerrado ? '#2f9e6f' : '#d68e1a';
+    var dias = cerrado ? null : repDiasAbierto(r);
+    var viejo = (dias!==null && dias>REP_DIAS_VIEJO);
+    var col = cerrado ? '#2f9e6f' : (viejo ? '#b23136' : '#d68e1a');
+    var pill = cerrado
+      ? '<span class="rep-pill ok">✅ Cerrado</span>'
+      : ('<span class="rep-pill '+(viejo?'vc':'ab')+'">'+(viejo?'🔴':'🟠')+' '+
+         (dias===null ? 'Abierto' : (dias===0?'Abierto hoy':('Abierto hace '+dias+' día'+(dias===1?'':'s'))))+'</span>');
     h+='<div class="tarj vidrio rep-card" style="display:block;border-left:3px solid '+col+';cursor:pointer" onclick="verDetalleReporte(\''+r.id+'\')">'+
-       '<b>'+(r.clase==='acto'?'👤 Acto inseguro':'⚠️ Condición insegura')+' · '+esc(r.lugar||'sin lugar')+'</b>'+
+       '<div class="rep-cab">'+pill+
+         '<span class="rep-cla">'+(r.clase==='acto'?'👤 Acto inseguro':'⚠️ Condición insegura')+'</span></div>'+
+       '<b>📍 '+esc(r.lugar||'Sin lugar')+'</b>'+
        '<small>'+esc(r.descripcion)+'</small>'+
        '<div class="sub" style="margin-top:4px">'+
        (r.anonimo ? '🙈 Anónimo' : esc(r.autor || 'sin nombre'))+' · '+
-       esc(fechaLarga(r.fecha)||r.fecha||'')+' · '+(cerrado?'✓ cerrado':'abierto')+'</div>';
+       esc(fechaLarga(r.fecha)||r.fecha||'')+
+       (r.actividad ? (' · '+esc(r.actividad)) : '')+'</div>';
     /* el antes y el después, uno al lado del otro */
     if(r.foto_url || r.foto_cierre){
       h+='<div class="rep-fotos">';
@@ -18896,7 +19141,13 @@ function pintarListaReportes(){
     }
     h+='</div>';
   });
-  c.innerHTML='<p class="sub" style="margin:0 0 8px">Toca un reporte para ver el detalle, cerrarlo o eliminarlo.</p>'+h;
+  var q=repCuentas();
+  var enca = (REP_VER==='viejos')
+    ? 'Estos llevan más de '+REP_DIAS_VIEJO+' días abiertos. Son los que hay que levantar primero.'
+    : (REP_VER==='abiertos' ? 'Los más viejos arriba: eso es lo que se está quedando atrás.'
+    : (REP_VER==='cerrados' ? 'Cerrados con su evidencia.'
+    : 'Primero lo abierto, y dentro de eso lo más viejo arriba.'));
+  c.innerHTML='<p class="sub" style="margin:0 0 8px">'+enca+' Toca uno para ver el detalle, cerrarlo o eliminarlo.</p>'+h;
 }
 
 /* ── FILTRAR POR OBRA O SEDE ──────────────────────────────────────
@@ -18917,7 +19168,7 @@ function pintarFiltroSede(){
   var sedes=sedesDeLosReportes();
   if(sedes.length<2){ cont.innerHTML=''; return; }
   var h='<select id="rep-sede" class="sel" onchange="REP_SEDE=this.value;pintarListaReportes()">'+
-        '<option value="">Todas las sedes ('+sedes.length+')</option>';
+        '<option value="">📍 Todas las sedes ('+sedes.length+')</option>';
   sedes.forEach(function(s){
     var n=(REP_LISTA||[]).filter(function(r){ return String(r.lugar||'').trim()===s; }).length;
     h+='<option value="'+escA(s)+'"'+(REP_SEDE===s?' selected':'')+'>'+esc(s)+' ('+n+')</option>';
@@ -24595,7 +24846,8 @@ function liderCarpetasDom(){
 //  existe se DICE que no existe, no se rellena con un cero bonito.
 // =================================================================
 var TC = { pag:'resumen', sel:'*', anio:(new Date()).getFullYear(), mes:'',
-           proy:[], dat:{}, cargando:false, listo:false, cuando:0, avance:'' };
+           proy:[], dat:{}, cargando:false, callado:false, listo:false,
+           cuando:0, fallo:0, avance:'' };
 var TC_PAGS=[
   {id:'resumen', ic:'\u25A6', n:'Resumen ejecutivo'},
   {id:'acc',     ic:'\u26A0', n:'Accidentabilidad'},
@@ -24633,8 +24885,26 @@ function tcCfgGuardar(){
     });
 }
 
-function tcSalir(){ try{ document.body.classList.remove('torre','sinrail'); }catch(e){} ir('p-emp-home'); }
+function tcSalir(){ try{ document.body.classList.remove('torre','sinrail'); }catch(e){} tcReloj(false); ir('p-emp-home'); }
 function tcRail(){ try{ document.body.classList.toggle('sinrail'); }catch(e){} }
+/* ══════ LA TORRE SE QUEDABA CONGELADA ═══════════════════════════
+   Marcelo: «no se actualiza lo del lider con los datos nuevos en la
+   torre de control». Y era exactamente eso: la Torre pedia los datos
+   UNA vez por sesion. Despues, TC.listo quedaba en true para siempre
+   y entrar de nuevo solo volvia a pintar lo mismo de antes. El lider
+   veia el tablero de la primera vez que lo abrio ese dia, aunque sus
+   supervisores hubieran registrado veinte cosas desde entonces. Peor
+   todavia: no habia forma de notarlo —el tablero no decia de cuando
+   eran las cifras—, asi que se tomaban decisiones con numeros viejos
+   creyendo que eran los de hoy.
+   Ahora: se pinta al toque lo que ya se tiene (nada de pantalla en
+   blanco) y en paralelo se vuelve a preguntar al servidor; cuando
+   llega, se repinta. Ademas se refresca sola cada pocos minutos
+   mientras esta abierta y al volver a la pestaña, y arriba dice
+   siempre de que hora son los datos.                                */
+var TC_CADA = 180000;      /* cada 3 minutos mientras esta abierta */
+var TC_MIN  = 15000;       /* pero no dos veces en 15 s */
+var TC_RELOJ = null;
 function tcEntrar(){
   try{
     document.body.classList.add('torre');
@@ -24642,13 +24912,50 @@ function tcEntrar(){
        media pantalla hacia abajo. Ahí arranca cerrada: el ☰ la abre. */
     if(window.innerWidth < 980) document.body.classList.add('sinrail');
   }catch(e){}
-  if(!TC.listo && !TC.cargando) tcCargar();
-  else tcPintar();
+  if(!TC.listo && !TC.cargando){ tcCargar(); }
+  else {
+    tcPintar();
+    /* Entrar a la Torre es un acto deliberado del lider: aqui SIEMPRE
+       se vuelve a preguntar. Nada de «hace poco lo pedi»: si acaba de
+       salir a ver algo y vuelve, es justo cuando quiere lo ultimo.
+       Se pide por detras, sin tapar lo que ya se ve. */
+    if(!TC.cargando) tcCargar(true);
+  }
+  tcReloj(true);
+}
+/* mientras la Torre este abierta se refresca sola; al salir se apaga */
+function tcReloj(prender){
+  try{ if(TC_RELOJ){ clearInterval(TC_RELOJ); TC_RELOJ=null; } }catch(e){}
+  if(!prender) return;
+  TC_RELOJ=setInterval(function(){
+    var act=(document.querySelector('.pantalla.activa')||{}).id;
+    if(act!=='p-gestor'){ tcReloj(false); return; }
+    if(document.hidden) return;              /* si no la esta mirando, no se gasta datos */
+    if(TC.cargando || !TC.listo) return;
+    tcCargar(true);
+  }, TC_CADA);
+}
+/* volver a la pestaña despues de un rato es justo cuando mas mentira
+   dicen los numeros viejos */
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden) return;
+  if((document.querySelector('.pantalla.activa')||{}).id!=='p-gestor') return;
+  if(TC.cargando || !TC.listo) return;
+  if((Date.now()-(TC.cuando||0)) > TC_MIN) tcCargar(true);
+});
+function tcHoraDatos(){
+  if(!TC.cuando) return '';
+  try{
+    var d=new Date(TC.cuando);
+    return d.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ return ''; }
 }
 /* ── traer los datos de todos los proyectos ─────────────────────── */
-function tcCargar(){
+function tcCargar(callado){
   if(TC.cargando) return Promise.resolve();
-  TC.cargando=true; TC.avance='Buscando tus proyectos…'; tcPintar();
+  TC.cargando=true; TC.callado=!!callado;
+  TC.avance= callado ? '' : 'Buscando tus proyectos…';
+  tcPintar();
   var A=String(TC.anio), desde=A+'-01-01';
   function g(q){ return sbGet(q).catch(function(){ return []; }); }
   return sbRpc('sst_mis_empresas',{}).then(function(rows){
@@ -24680,18 +24987,23 @@ function tcCargar(){
         TC.dat[p.id]={acc:r[0]||[], hht:r[1]||[], insp:r[2]||[], rep:r[3]||[], kdx:r[4]||[],
                       cons:r[5]||[], trab:r[6]||[], amon:r[7]||[], buenas:r[8]||[],
                       inv:r[9]||[], docs:r[10]||[]};
-        hechos++; TC.avance='Juntando '+hechos+' de '+TC.proy.length+' proyectos…'; tcPintar();
+        hechos++;
+        if(!TC.callado){ TC.avance='Juntando '+hechos+' de '+TC.proy.length+' proyectos…'; tcPintar(); }
       });
     }));
   }).then(function(){
     return tcCfgCargar();
   }).then(function(){
-    TC.cargando=false; TC.listo=true; TC.cuando=Date.now(); TC.avance=''; tcPintar();
+    TC.cargando=false; TC.callado=false; TC.listo=true; TC.cuando=Date.now(); TC.avance=''; tcPintar();
   }).catch(function(){
-    TC.cargando=false; TC.avance=''; tcPintar();
+    /* si se cayo la señal, se deja lo que ya estaba en pantalla: mejor
+       un dato de hace rato —y dicho— que un tablero en blanco */
+    TC.cargando=false; TC.callado=false; TC.avance='';
+    TC.fallo=Date.now(); tcPintar();
   });
 }
-function tcRefrescar(){ TC.listo=false; TC.dat={}; TC.proy=[]; tcCargar(); }
+/* el boton de arriba: vuelve a pedir SIN vaciar la pantalla primero */
+function tcRefrescar(){ if(TC.cargando) return; tcCargar(TC.listo); }
 
 /* ── cuentas ─────────────────────────────────────────────────────── */
 function tcSel(){ return TC.sel==='*' ? TC.proy : TC.proy.filter(function(p){ return p.id===TC.sel; }); }
@@ -24890,8 +25202,10 @@ function tcPintar(){
   if(tp) tp.textContent = (TC.pag==='cfg') ? 'Qué medir'
         : ((TC_PAGS.filter(function(p){return p.id===TC.pag;})[0]||{}).n || '');
   tcPintarMeses();
+  tcPintarFrescura();
   rail.innerHTML = tcRailHTML();
-  if(TC.cargando){
+  /* si es un refresco por detras, NO se tapa el tablero que ya se ve */
+  if(TC.cargando && !(TC.callado && TC.listo)){
     main.innerHTML = '<div class="tc-card"><h3>Juntando tus proyectos…</h3>'+
       '<p class="sub">'+esc(TC.avance||'Un momento.')+'</p></div>';
     return;
@@ -24918,6 +25232,22 @@ function tcFiltro(id){ TC.sel=id; tcPintar(); }
 /* El mes de cierre vive en la cabecera, no detrás de un modal: es lo
    primero que toca un gerente cuando llega el día 1 y quiere ver el
    mes que se acaba de cerrar. */
+/* De cuando son estos numeros. Un tablero que no dice su hora invita
+   a decidir con datos viejos creyendo que son los de ahora. */
+function tcPintarFrescura(){
+  var c=$('tc-fresco'); if(!c) return;
+  if(TC.cargando && TC.callado){ c.className='tc-fresco cargando'; c.innerHTML='<span class="pip"></span>Actualizando…'; return; }
+  if(!TC.listo){ c.className='tc-fresco'; c.innerHTML=''; return; }
+  var min=Math.floor((Date.now()-(TC.cuando||0))/60000);
+  var viejo = (TC.fallo && TC.fallo>(TC.cuando||0)) || min>=10;
+  c.className='tc-fresco'+(viejo?' viejo':'');
+  if(TC.fallo && TC.fallo>(TC.cuando||0)){
+    c.innerHTML='<span class="pip"></span>Sin señal · datos de las '+esc(tcHoraDatos());
+  }else{
+    c.innerHTML='<span class="pip"></span>Datos de las '+esc(tcHoraDatos())+
+      (min>=2 ? (' · hace '+min+' min') : '');
+  }
+}
 function tcPintarMeses(){
   var sel=$('tc-mes-sel'); if(!sel) return;
   var m=TC.mes||mesISO(), h='';
