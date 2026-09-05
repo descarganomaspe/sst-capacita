@@ -1913,6 +1913,8 @@ input,textarea{-webkit-user-select:text;user-select:text}
 
     <div class="sec-tit" style="margin:18px 0 8px">Qué pasó</div>
     <textarea id="a-desc" rows="5" placeholder="Describe el hecho: qué, cuándo, dónde y qué riesgo generó."></textarea>
+    <button class="btn sec" style="margin:9px 0 0" onclick="abrirBaseNormativa()">📚 Buscar la base normativa</button>
+    <p class="sub" style="margin:6px 0 0;font-size:12.5px">Busca la palabra en las normas —arnés, andamio, extintor— y pega el artículo que sustenta la medida, con su cita.</p>
     <label class="sec-tit" style="margin:12px 0 6px">Foto (opcional)</label>
     <button class="btn sec" onclick="fotoAmon()" style="margin:0">📷 Tomar la foto</button>
     <div id="a-foto-vista" style="margin-top:8px"></div>
@@ -1932,7 +1934,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
 </section>
 
 <section class="pantalla" id="p-amon-ver">
-  <div class="barra"><span>Amonestación</span></div>
+  <div class="barra"><span>Papeleta</span></div>
   <div id="amon-det"></div>
 </section>
 
@@ -3429,6 +3431,19 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <button class="btn" style="margin:9px 0 0" onclick="lupaBuscar()">Buscar</button>
     <div id="lupa-res" style="margin-top:12px"></div>
     <button class="btn sec" onclick="cerrarLupa()">Cerrar</button>
+  </div>
+</div>
+<div class="hoja" id="hoja-base">
+  <div class="velo" onclick="cerrarBaseNormativa()"></div>
+  <div class="panel">
+    <div class="tirador"></div>
+    <h2>📚 Base normativa</h2>
+    <p class="sub" id="base-que">Busca la palabra en las normas y elige el párrafo que sustenta la medida.</p>
+    <input id="base-q" placeholder="arnés, andamio, extintor, altura…" autocomplete="off"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();buscarBaseNormativa();}">
+    <button class="btn" style="margin:9px 0 0" onclick="buscarBaseNormativa()">Buscar en las normas</button>
+    <div id="base-res" style="margin-top:12px"></div>
+    <button class="btn sec" onclick="cerrarBaseNormativa()">Cerrar</button>
   </div>
 </div>
 <div class="hoja" id="hoja-pack">
@@ -10445,23 +10460,39 @@ function pintarFichaTrab(){
      SIEMPRE \u00abNinguna\u00bb, aunque el trabajador tuviera tres. Justo la
      pantalla con la que se decide si se le renueva. Ahora empareja por
      DNI cuando lo hay, y por nombre solo si ninguno de los dos lo tiene. */
-  var _tdni=String(t.dni||'').replace(/\D/g,'');
-  var am=(typeof amonLocal==='function'? amonLocal() : []).filter(function(a){
-    var ad=String(a.tDni||'').replace(/\D/g,'');
-    if(_tdni && ad) return ad===_tdni;
-    return _norm(a.tNombre||'')===_norm(t.nombre||'');
-  });
-  h+='<div class="sec-tit" style="margin-top:20px">⚠️ Amonestaciones</div>';
-  h+= am.length
-    ? '<div class="caja vidrio" style="padding:12px 14px">'+am.map(function(a){
-        return '<div class="fila"><span>'+esc(a.desc||a.medida||'\u2014')+'</span><span class="sub">'+esc(a.fecha||'')+'</span></div>';
-      }).join('')+'</div>'
-    : '<p class="sub">Ninguna. Que siga así.</p>';
+  /* Y ahora se usa amonDe(), que ademas empareja por el id que la
+     papeleta guarda desde que se crea. Cada una se puede ABRIR: desde
+     ahi se saca su PDF de una hoja, que es lo que se manda. */
+  var am=amonDe(TF_ID);
+  h+='<div class="sec-tit" style="margin-top:20px">⚠️ Papeletas y amonestaciones</div>';
+  if(!am.length){
+    h+='<p class="sub">Ninguna. Que siga así.</p>';
+  }else{
+    var _sin=am.filter(function(a){ return amonPendientes(a)>0; }).length;
+    h+='<div class="caja vidrio" style="padding:12px 14px">';
+    am.forEach(function(a){
+      var pend=amonPendientes(a);
+      h+='<button type="button" class="fila" style="width:100%;background:none;border:0;padding:7px 0;text-align:left;cursor:pointer;font:inherit;color:inherit" '+
+         'onclick="verAmon(\''+a.id+'\')">'+
+         '<span><b>'+esc(a.medida||'—')+'</b><small style="display:block;color:var(--gris)">'+
+           esc(String(a.desc||'').slice(0,70))+(String(a.desc||'').length>70?'…':'')+'</small></span>'+
+         '<span class="sub" style="white-space:nowrap">'+esc(fechaLarga(a.fecha)||a.fecha||'')+
+           (a.sync?'':' · sin subir')+
+           (pend? ('<br><span style="color:#d68e1a">✍️ faltan '+pend+'</span>') : '<br><span style="color:var(--ok)">✅ firmada</span>')+
+         '</span></button>';
+    });
+    h+='</div>';
+    h+='<p class="sub" style="margin-top:7px">Toca una para verla, firmarla o sacar su papeleta en PDF.'+
+       (_sin? (' '+_sin+' todavía no está'+(_sin===1?'':'n')+' firmada'+(_sin===1?'':'s')+' del todo.') : '')+'</p>';
+  }
 
   h+='<div class="esc-acc" style="margin-top:20px">'+
      '<button class="btn sec" style="margin:0" onclick="editarTrabajador(\''+TF_ID+'\')">Editar sus datos</button>'+
      '<button class="btn sec" style="margin:0" onclick="kardexPara(\''+TF_ID+'\')">Registrarle EPP</button>'+
      '</div>';
+  /* Volver desde la papeleta tiene que devolver a ESTA ficha, no a la
+     lista de amonestaciones de toda la obra. */
+  AMON_VUELVE='p-trab-ficha';
   $('tf-cuerpo').innerHTML=h;
 }
 var TRAB_EDIT=null;
@@ -11668,6 +11699,20 @@ var AMON_FIRMAS=[['trabajador','Trabajador'],['jefe','Jefe inmediato'],
 function amonLocal(){ return leer(LS_AMON,[]) || []; }
 function amonSet(a){ guardar(LS_AMON,a); }
 function amonPorId(id){ var a=amonLocal(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; }
+/* Las papeletas de UNA persona. Se busca por id y, para las que se
+   escribieron antes de que existiera ese amarre, por DNI y por nombre.
+   Es lo que hace que la papeleta aparezca en su ficha. */
+function _soloDig(x){ return String(x||'').replace(/\D/g,''); }
+function amonDe(trabId){
+  var t=trabPorId(trabId); if(!t) return [];
+  var dni=_soloDig(t.dni), nom=_normNom(t.nombre||'');
+  return amonLocal().filter(function(a){
+    if(a.trab) return String(a.trab)===String(trabId);
+    if(dni && _soloDig(a.tDni)===dni) return true;
+    if(!dni && !_soloDig(a.tDni)) return _normNom(a.tNombre||'')===nom && nom.length>2;
+    return false;
+  }).sort(function(x,y){ return String(y.fecha||'').localeCompare(String(x.fecha||'')); });
+}
 function amonPendientes(a){
   var n=0; AMON_FIRMAS.forEach(function(f){ if(!(a.firmas||{})[f[0]]) n++; }); return n;
 }
@@ -11734,7 +11779,23 @@ function guardarAmonestacion(){
     fecha:hoy.getFullYear()+'-'+('0'+(hoy.getMonth()+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2),
     tNombre:tn, tDni:($('a-t-dni').value||'').trim(), tPuesto:($('a-t-puesto').value||'').trim(),
     qNombre:($('a-q-nombre').value||'').trim(), qDni:($('a-q-dni').value||'').trim(), qPuesto:($('a-q-puesto').value||'').trim(),
-    desc:d, medida:$('a-medida').value, foto:AMON_FOTO||null, firmas:{}, sync:0 };
+    desc:d, medida:$('a-medida').value, foto:AMON_FOTO||null, firmas:{}, sync:0,
+    /* ══ A QUIEN ES ══════════════════════════════════════════════
+       La papeleta guardaba el nombre escrito a mano y nada mas. Por
+       eso no aparecia en la ficha del trabajador ni en su historial:
+       nadie sabia de quien era. Ahora se guarda el id de la persona
+       —el mismo que usa el kardex y la credencial— y si se escribio
+       a mano se busca por DNI. */
+    trab: (function(){
+      var sel=$('a-trab'), id=sel? sel.value : '';
+      if(id && trabPorId(id)) return id;
+      var dni=String(($('a-t-dni').value||'')).replace(/\D/g,'');
+      if(dni.length>=6){
+        var m=trabsLocal().filter(function(t){ return String(t.dni||'').replace(/\D/g,'')===dni; })[0];
+        if(m) return m.id;
+      }
+      return null;
+    })() };
   var a=amonLocal(); a.unshift(reg); amonSet(a);
   /* Antes: sbPost(...).catch(function(){}). Sin señal, la papeleta se
      quedaba en el celular y nadie la volvia a intentar nunca — igual
@@ -11808,6 +11869,10 @@ function pintarAmonestaciones(){
   c.innerHTML=h;
 }
 var AMON_VER=null;
+/* De donde se entro a la papeleta, para que «Atras» devuelva ahi. Si
+   se abrio desde la ficha de un trabajador, volver a la lista de todas
+   las amonestaciones de la obra seria perderlo. */
+var AMON_VUELVE='p-amonestaciones';
 function verAmon(id){ AMON_VER=id; ir('p-amon-ver'); }
 function pintarAmonDetalle(){
   var x=amonPorId(AMON_VER); if(!x){ ir('p-amonestaciones'); return; }
@@ -11828,9 +11893,12 @@ function pintarAmonDetalle(){
                '<button class="btn sec" style="margin:9px 0 0" onclick="firmarAmon(\''+x.id+'\',\''+f[0]+'\',\''+esc(f[1])+'\')">Firmar ahora</button>'; }
     h+='</div>';
   });
-  h+='<button class="btn" style="margin-top:16px" onclick="bajarPapeleta(\''+x.id+'\')">📄 Descargar la papeleta (Word)</button>';
-  h+='<p class="sub" style="margin-top:8px">Sale en el formato de tu empresa, con las firmas que ya estén hechas. Las que falten quedan en blanco para firmar a mano.</p>';
-  h+='<button class="btn sec" style="margin-top:12px" onclick="quitarAmon(\''+x.id+'\')">Quitar esta amonestación</button>';
+  h+='<div class="sec-tit" style="margin-top:20px">La papeleta</div>';
+  h+='<button class="btn" style="margin-top:8px" onclick="papeletaPDF(\''+x.id+'\')">📄 Generar PDF (una hoja A4)</button>';
+  h+='<button class="btn sec" style="margin-top:9px" onclick="bajarPapeleta(\''+x.id+'\')">📝 Descargar en Word</button>';
+  h+='<div id="amon-pap-msg" style="font-size:13px;margin-top:9px"></div>';
+  h+='<p class="sub" style="margin-top:8px">El PDF es para mandar: llega igual en todos los celulares, no se puede editar y entra en <b>una sola hoja</b>. El Word es el formato editable para archivar. Los dos salen con las firmas que ya estén hechas; las que falten quedan en blanco para firmar a mano.</p>';
+  h+='<button class="btn sec" style="margin-top:16px" onclick="quitarAmon(\''+x.id+'\')">Quitar esta amonestación</button>';
   $('amon-det').innerHTML=h;
 }
 function quitarAmon(id){
@@ -12386,13 +12454,246 @@ function generarPapeleta(a){
   return _zipDe(entradas, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 }
 
+/* ══════════ LA PAPELETA EN PDF, EN UNA HOJA A4 Y PUNTO ═════════════
+   El Word es el formato para archivar, pero el que se manda por
+   WhatsApp al jefe de obra o al cliente tiene que ser PDF: llega igual
+   en todos los celulares y nadie lo edita sin querer.
+   Y una papeleta de dos hojas no sirve: la segunda se pierde, y la
+   firma del trabajador queda en una hoja suelta que no prueba nada.
+   Por eso aqui NO se pagina: el documento se arma con un alto fijo y
+   lo unico que se estira es el motivo. Si el motivo es largo, se
+   achica la letra hasta que entre; si aun asi no entra —lo cual pasa
+   con un texto normativo pegado entero— se corta con puntos suspensivos
+   y se dice en pantalla, en vez de sacar una segunda hoja a escondidas.
+   El detalle completo siempre queda en la app y en el Word.          */
+function _pdfDeAmon(a){
+  var emp=empleador();
+  var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
+  var W=595.28, H=841.89, M=36, y=0;
+  var recorto=false;
+
+  /* ── cabecera con el logo y el codigo del formato ── */
+  doc.setDrawColor(120,120,120); doc.setLineWidth(.8);
+  doc.rect(M, 34, W-2*M, 56);
+  doc.line(M+118, 34, M+118, 90);
+  doc.line(W-M-118, 34, W-M-118, 90);
+  if(emp.logo){
+    try{ doc.addImage(emp.logo, M+8, 42, 102, 40, undefined, 'FAST'); }
+    catch(e){ _rotulo(); }
+  } else { _rotulo(); }
+  function _rotulo(){
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(110,110,110);
+    var li=doc.splitTextToSize(String(emp.razon||'EMPRESA'), 104).slice(0,3);
+    var y0=62-(li.length-1)*5;
+    li.forEach(function(t,i){ doc.text(t, M+59, y0+i*10, {align:'center'}); });
+  }
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,20,20);
+  doc.text('PAPELETA DE NOTIFICACIÓN', W/2, 58, {align:'center'});
+  doc.setFontSize(9);
+  doc.text('DE MEDIDA DISCIPLINARIA', W/2, 73, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(90,90,90);
+  var _f=formatoDe('amonestacion');
+  doc.text('Código: '+(_f.cod||'SSOMA-PC-FO-053'), W-M-110, 50);
+  doc.text('Versión: '+(_f.rev||'00'),             W-M-110, 63);
+  doc.text('Fecha: '+(_f.fecha? _ddmm(String(_f.fecha).slice(0,10)) : _ddmm(hoyISO())), W-M-110, 76);
+  y=100;
+
+  function bloque(pares, alto){
+    alto=alto||30;
+    var x=M, ancho=(W-2*M), acum=0;
+    doc.setDrawColor(150,150,150); doc.setLineWidth(.6);
+    doc.rect(x, y, ancho, alto);
+    pares.forEach(function(par, i){
+      var w=ancho*par[2];
+      if(i>0) doc.line(x+acum, y, x+acum, y+alto);
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(120,120,120);
+      doc.text(String(par[0]).toUpperCase(), x+acum+5, y+10);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(25,25,25);
+      var v=doc.splitTextToSize(String(par[1]==null||par[1]===''?'—':par[1]), w-10);
+      doc.text(v[0]||'—', x+acum+5, y+23);
+      acum+=w;
+    });
+    y+=alto;
+  }
+  function titulo(t){
+    doc.setFillColor(11,42,58); doc.rect(M, y, W-2*M, 16, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(255,255,255);
+    doc.text(String(t).toUpperCase(), M+6, y+11);
+    y+=16;
+  }
+
+  bloque([['Empresa', emp.razon||'', .52],['RUC', emp.ruc||'', .20],['Fecha', fechaLarga(a.fecha)||a.fecha||'', .28]]);
+  bloque([['Obra / proyecto', emp.proyecto || nombreDeLaObra() || emp.dom || '', 1]]);
+  y+=8;
+  titulo('Datos del trabajador');
+  bloque([['Apellidos y nombres', a.tNombre||'', .54],['DNI', a.tDni||'', .18],['Cargo', a.tPuesto||'', .28]]);
+  y+=8;
+  titulo('Quien impone la medida');
+  bloque([['Apellidos y nombres', a.qNombre||'', .54],['DNI', a.qDni||'', .18],['Cargo', a.qPuesto||'', .28]]);
+  y+=8;
+
+  /* ── la medida, marcada ── */
+  titulo('Medida disciplinaria');
+  var MED=['Amonestación verbal','Amonestación escrita','Suspensión 1 día',
+           'Suspensión 2 días','Suspensión 5 días','Retiro de obra'];
+  var ancho=W-2*M, colW=ancho/3, filaAlto=18;
+  doc.setDrawColor(150,150,150); doc.setLineWidth(.6);
+  doc.rect(M, y, ancho, filaAlto*2);
+  doc.line(M+colW, y, M+colW, y+filaAlto*2);
+  doc.line(M+colW*2, y, M+colW*2, y+filaAlto*2);
+  doc.line(M, y+filaAlto, M+ancho, y+filaAlto);
+  MED.forEach(function(et, i){
+    var cx=M+(i%3)*colW+7, cy=y+Math.floor(i/3)*filaAlto+12;
+    var marcado=(String(a.medida||'')===et);
+    doc.setDrawColor(60,60,60); doc.setLineWidth(.8);
+    doc.rect(cx, cy-8, 9, 9);
+    if(marcado){
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,20,20);
+      doc.text('X', cx+2, cy-.5);
+    }
+    doc.setFont('helvetica', marcado?'bold':'normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+    doc.text(et, cx+14, cy);
+  });
+  y+=filaAlto*2+10;
+
+  /* ── el motivo: lo unico elastico de toda la hoja ── */
+  titulo('Motivo de la sanción');
+  /* Lo que queda libre hasta donde arrancan las firmas. Todo lo de
+     abajo tiene alto fijo, asi que este numero es exacto y no una
+     estimacion: por eso se puede prometer UNA hoja. */
+  var ALTO_FIRMAS=176, ALTO_COMPROMISO=54;
+  var libre = (H-M-ALTO_FIRMAS-ALTO_COMPROMISO) - y - 10;
+  var texto = String(a.desc||'').trim() || '—';
+  var tam=9, lineas, alturaLinea;
+  for(;;){
+    doc.setFont('helvetica','normal'); doc.setFontSize(tam);
+    alturaLinea = tam*1.28;
+    lineas = doc.splitTextToSize(texto, ancho-14);
+    if(lineas.length*alturaLinea+16 <= libre || tam<=6.2) break;
+    tam -= .4;
+  }
+  var caben = Math.max(1, Math.floor((libre-16)/alturaLinea));
+  if(lineas.length>caben){
+    recorto=true;
+    lineas = lineas.slice(0, caben);
+    lineas[caben-1] = String(lineas[caben-1]).slice(0, Math.max(0, String(lineas[caben-1]).length-3))+'…';
+  }
+  var altoCaja=Math.max(60, lineas.length*alturaLinea+16);
+  doc.setDrawColor(150,150,150); doc.setLineWidth(.6);
+  doc.rect(M, y, ancho, altoCaja);
+  doc.setTextColor(25,25,25);
+  lineas.forEach(function(t,i){ doc.text(t, M+7, y+14+i*alturaLinea); });
+  y+=altoCaja+8;
+
+  /* ── el compromiso, siempre al mismo alto ── */
+  y = H-M-ALTO_FIRMAS-ALTO_COMPROMISO;
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.2); doc.setTextColor(70,70,70);
+  var comp=doc.splitTextToSize(
+    'Declaro haber sido notificado de la medida disciplinaria descrita, conforme al Reglamento Interno de '+
+    'Seguridad y Salud en el Trabajo de '+(emp.razon||'la empresa')+' y al D.S. N° 005-2012-TR. Me comprometo '+
+    'a cumplir las disposiciones de seguridad y salud en el trabajo en el ejercicio de mis funciones.', ancho-14).slice(0,4);
+  doc.rect(M, y, ancho, ALTO_COMPROMISO-8);
+  comp.forEach(function(t,i){ doc.text(t, M+7, y+13+i*9.5); });
+  y += ALTO_COMPROMISO;
+
+  /* ── las cuatro firmas, en dos filas de dos ── */
+  titulo('Firmas');
+  var fw=ancho/2, fh=(ALTO_FIRMAS-16)/2;
+  AMON_FIRMAS.forEach(function(f, i){
+    var fx=M+(i%2)*fw, fy=y+Math.floor(i/2)*fh;
+    doc.setDrawColor(150,150,150); doc.setLineWidth(.6);
+    doc.rect(fx, fy, fw, fh);
+    var dat=(a.firmas||{})[f[0]];
+    if(dat){
+      try{ doc.addImage(dat, 'PNG', fx+10, fy+6, fw-20, fh-26, undefined, 'FAST'); }catch(e){}
+    }
+    doc.setDrawColor(90,90,90); doc.setLineWidth(.5);
+    doc.line(fx+14, fy+fh-16, fx+fw-14, fy+fh-16);
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(90,90,90);
+    doc.text(f[1].toUpperCase(), fx+fw/2, fy+fh-6, {align:'center'});
+    if(!dat){
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(150,150,150);
+      doc.text('(pendiente de firma)', fx+fw/2, fy+fh-24, {align:'center'});
+    }
+  });
+
+  /* Si jsPDF hubiera abierto una segunda hoja, algo se nos escapo: se
+     borra y se deja constancia, antes que entregar dos hojas. */
+  try{ while(doc.getNumberOfPages()>1) doc.deletePage(doc.getNumberOfPages()); }catch(_e){}
+  return {blob:doc.output('blob'), recorto:recorto, paginas:1};
+}
+/* ══════════ GENERAR LA PAPELETA LA DEJA EN SU LEGAJO ═══════════════
+   Antes, generar la papeleta era descargar un archivo y nada mas: la
+   amonestacion se quedaba en el celular del que la escribio. Si ese
+   supervisor se iba de la obra, la papeleta se iba con el.
+   Ahora, generar es tambien REGISTRAR: sin preguntar nada, la papeleta
+   queda amarrada al trabajador, sale en su ficha y sube al servidor de
+   la empresa para que la vea cualquiera del equipo. No se pregunta
+   porque no hay una respuesta razonable a «¿quieres que quede
+   registrado?» en un documento disciplinario.                        */
+function _dejarEnElLegajo(a, alTerminar){
+  /* si se escribio a mano y despues se cargo al trabajador, se amarra
+     ahora, que es cuando el documento pasa a existir de verdad */
+  if(!a.trab){
+    var dni=_soloDig(a.tDni);
+    var m = dni ? trabsLocal().filter(function(t){ return _soloDig(t.dni)===dni; })[0] : null;
+    if(!m && a.tNombre){
+      var nom=_normNom(a.tNombre);
+      m = trabsLocal().filter(function(t){ return _normNom(t.nombre)===nom; })[0];
+    }
+    if(m){
+      var todo=amonLocal();
+      todo.forEach(function(z){ if(z.id===a.id){ z.trab=m.id; z.sync=0; a.trab=m.id; } });
+      amonSet(todo);
+    }
+  }
+  var m2=$('amon-pap-msg');
+  function di(t,c){ if(m2){ m2.style.color=c||'var(--gris)'; m2.innerHTML=t; } }
+  if(!puedoSubir()){
+    di('Guardada en este celular. Sube sola al servidor de la empresa cuando haya señal.');
+    if(alTerminar) alTerminar();
+    return;
+  }
+  di('Guardando en el legajo del trabajador…');
+  subirAmon([a]).then(function(bien){
+    di(bien
+      ? ('✅ Queda registrada en el legajo de '+esc(a.tNombre||'el trabajador')+
+         '. Sale en su ficha y la ve todo el equipo.')
+      : 'Guardada en este celular. Sube sola cuando haya señal.',
+      bien?'var(--ok)':'var(--gris)');
+    if(alTerminar) alTerminar();
+  }, function(){ di('Guardada en este celular. Sube sola cuando haya señal.'); if(alTerminar) alTerminar(); });
+}
+function _bajarPapeletaBlob(blob, a, ext){
+  var url=URL.createObjectURL(blob);
+  var n=_nombreSano('Papeleta - '+(a.tNombre||'trabajador')+' - '+(a.fecha||hoyISO()))+'.'+ext;
+  var el=document.createElement('a'); el.href=url; el.download=n; document.body.appendChild(el); el.click();
+  setTimeout(function(){ document.body.removeChild(el); URL.revokeObjectURL(url); }, 4000);
+  return n;
+}
 function bajarPapeleta(id){
   var a=amonPorId(id); if(!a) return;
   var blob=generarPapeleta(a); if(!blob) return;
-  var url=URL.createObjectURL(blob);
-  var n='Papeleta - '+(a.tNombre||'trabajador').replace(/[\\\/:*?"<>|]/g,'')+' - '+a.fecha+'.docx';
-  var el=document.createElement('a'); el.href=url; el.download=n; document.body.appendChild(el); el.click();
-  setTimeout(function(){ document.body.removeChild(el); URL.revokeObjectURL(url); }, 4000);
+  _bajarPapeletaBlob(blob, a, 'docx');
+  _dejarEnElLegajo(a);
+}
+function papeletaPDF(id){
+  var a=amonPorId(id); if(!a) return;
+  if(soloConCodigo('Generar la papeleta de notificación en PDF','amonestaciones')) return;
+  var m=$('amon-pap-msg');
+  var R;
+  try{ R=_pdfDeAmon(a); }
+  catch(e){
+    if(m){ m.style.color='var(--mal)'; m.textContent='No se pudo armar el PDF. '+(e&&e.message||e); }
+    return;
+  }
+  _bajarPapeletaBlob(R.blob, a, 'pdf');
+  _dejarEnElLegajo(a, function(){
+    if(R.recorto && m){
+      m.innerHTML += '<br><span style="color:#d68e1a">✂️ El motivo era muy largo para una hoja y en el PDF sale recortado. '+
+        'Completo lo tienes acá arriba y en el Word.</span>';
+    }
+  });
 }
 
 // =================================================================
@@ -20917,6 +21218,155 @@ function buscarEnTexto(pags, palabra, tope){
     if(hits.length>=(tope||60)) break;
   }
   return hits;
+}
+/* ══════════ DE LA NORMA A LA PAPELETA, SIN COPIAR A MANO ═══════════
+   Una papeleta que dice «no usó arnés» y nada mas se discute. Una que
+   cita el articulo que lo obliga, no. Hasta ahora ese articulo habia
+   que buscarlo en el PDF, copiarlo a mano y pegarlo —o, lo que pasa de
+   verdad, escribirlo de memoria y mal.
+   Esto busca la palabra en toda la biblioteca, muestra el PARRAFO
+   entero (no el recorte de la lupa, que sirve para ubicar pero no para
+   citar) y lo pega en la descripcion con su cita: norma, codigo y
+   pagina. El texto va tal cual sale de la norma: no se resume ni se
+   reescribe, porque en un documento disciplinario la cita tiene que
+   poder comprobarse abriendo el PDF en esa pagina.                  */
+var BASE_CORTAR=false, BASE_HALLAZGOS=[];
+/* El parrafo alrededor de la palabra, cortado por frases y no a la
+   mitad de una. Hasta 600 caracteres: lo que entra en una papeleta. */
+function _parrafoNorma(txt, pos, largo){
+  var t=String(txt||'');
+  var ini=Math.max(0, pos-420), fin=Math.min(t.length, pos+largo+420);
+  var trozo=t.slice(ini, fin);
+  var rel=pos-ini;
+  /* hacia atras hasta el final de la frase anterior */
+  var a=Math.max(trozo.lastIndexOf('. ', Math.max(0,rel-1)),
+                 trozo.lastIndexOf('\n', Math.max(0,rel-1)));
+  a = (a>=0 && rel-a<400) ? a+1 : 0;
+  /* Pero si el articulo empieza un poco mas arriba, se arranca AHI.
+     «Todo trabajador que realice labores en altura…» es una frase
+     completa y correcta, pero sin el «Articulo 27» la cita no se puede
+     comprobar, y una papeleta sin articulo citable se discute igual
+     que una sin cita. El numero del articulo es la mitad del valor. */
+  var antes=trozo.slice(0, rel);
+  var mArt=/(?:^|[\s\n])(Art[íi]culo\s+\d+[°º]?\.?)(?![\s\S]*(?:^|[\s\n])Art[íi]culo\s+\d+)/i.exec(antes);
+  if(mArt){
+    var iArt=antes.lastIndexOf(mArt[1]);
+    if(iArt>=0 && rel-iArt<520) a=iArt;
+  }
+  /* hacia adelante hasta el final de la frase que contiene la palabra */
+  var b=trozo.indexOf('. ', rel+largo);
+  if(b<0 || b-rel>500) b=Math.min(trozo.length, rel+largo+320);
+  else b+=1;
+  var out=trozo.slice(a,b).replace(/\s+/g,' ').trim();
+  if(out.length>600) out=out.slice(0,597).replace(/\s\S*$/,'')+'…';
+  return out;
+}
+function abrirBaseNormativa(){
+  BASE_CORTAR=false; BASE_HALLAZGOS=[];
+  var inp=$('base-q'); if(inp) inp.value='';
+  var n=normasPDF().filter(function(a){ var d=datoDelPDF(a); return !(d&&d.escaneado); }).length;
+  var q=$('base-que');
+  if(q) q.textContent = n
+    ? ('Se busca en las '+n+' normas de la biblioteca. Elige el párrafo y se pega en «Qué pasó» con su cita.')
+    : 'Todavía no hay normas descargadas en este celular. Entra una vez a Normas con internet y vuelve.';
+  $('base-res').innerHTML='<p class="sub" style="margin:0">Escribe la palabra que define la falta: arnés, andamio, extintor, bloqueo, altura…</p>';
+  $('hoja-base').className='hoja abierta';
+  _baseEngancha();
+  setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 260);
+}
+function cerrarBaseNormativa(){ BASE_CORTAR=true; $('hoja-base').className='hoja'; }
+/* un solo escuchador, con data-: nada de onclick armado con texto */
+function _baseEngancha(){
+  var c=$('base-res'); if(!c || c.getAttribute('data-ok')==='1') return;
+  c.setAttribute('data-ok','1');
+  c.onclick=function(ev){
+    var b=ev.target.closest ? ev.target.closest('[data-usar]') : null;
+    if(b && c.contains(b)){ usarBaseNormativa(parseInt(b.getAttribute('data-usar'),10)); return; }
+    var v=ev.target.closest ? ev.target.closest('[data-vpdf]') : null;
+    if(v && c.contains(v)){
+      window.open(urlNormaPDF(v.getAttribute('data-vpdf'))+'#page='+v.getAttribute('data-vpag'),'_blank','noopener');
+    }
+  };
+}
+function _baseFila(i){
+  var x=BASE_HALLAZGOS[i];
+  return '<div class="caja vidrio" style="padding:12px 13px;margin-bottom:9px">'+
+    '<b style="font-size:12.5px">'+esc(x.cod)+'</b>'+
+    '<small style="display:block;color:var(--gris);margin:1px 0 7px">'+esc(x.nom)+' · página '+x.pag+'</small>'+
+    '<p style="margin:0 0 10px;font-size:13.5px;line-height:1.45">'+x.marcado+'</p>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+      '<button class="btn" type="button" style="width:auto;padding:8px 13px;margin:0" data-usar="'+i+'">Usar este texto</button>'+
+      '<button class="btn sec" type="button" style="width:auto;padding:8px 13px;margin:0" data-vpdf="'+escA(x.archivo)+'" data-vpag="'+x.pag+'">Ver en el PDF</button>'+
+    '</div></div>';
+}
+function buscarBaseNormativa(){
+  var q=(($('base-q')&&$('base-q').value)||'').trim();
+  var c=$('base-res');
+  if(q.length<3){ c.innerHTML='<div class="aviso" style="margin:0">Escribe al menos tres letras.</div>'; return; }
+  BASE_CORTAR=false; BASE_HALLAZGOS=[];
+  var lista=normasPDF().filter(function(a){ var d=datoDelPDF(a); return !(d&&d.escaneado); });
+  if(!lista.length){
+    c.innerHTML='<div class="aviso" style="margin:0">No hay normas descargadas en este celular. Entra una vez a «Normas» con internet y vuelve.</div>';
+    return;
+  }
+  var i=0;
+  function pinta(fin){
+    var h='';
+    if(BASE_HALLAZGOS.length){
+      h+='<p class="sub" style="margin:0 0 9px">'+BASE_HALLAZGOS.length+' párrafo'+(BASE_HALLAZGOS.length===1?'':'s')+
+         ' con «'+esc(q)+'»'+(fin?'':' · buscando…')+'</p>';
+      for(var k=0;k<BASE_HALLAZGOS.length;k++) h+=_baseFila(k);
+    }else{
+      h+= fin
+        ? '<div class="aviso" style="margin:0">No encontré «'+esc(q)+'» en ninguna norma. Prueba con otra palabra: en la ley suele estar en singular y sin tilde («arnes», «andamio»).</div>'
+        : '<p class="sub" style="margin:0">Buscando en '+lista.length+' normas…</p>';
+    }
+    if(!fin) h+='<button class="btn sec" type="button" style="margin:8px 0 0" onclick="BASE_CORTAR=true">Detener</button>';
+    c.innerHTML=h;
+  }
+  pinta(false);
+  function paso(){
+    if(BASE_CORTAR || i>=lista.length || BASE_HALLAZGOS.length>=25){ pinta(true); return; }
+    var arch=lista[i++];
+    traerTextoNorma(arch).then(function(t){
+      var d=partirNombreNorma(arch);
+      var pags=t.p||[], qq=_plano(q);
+      for(var pg=0; pg<pags.length && BASE_HALLAZGOS.length<25; pg++){
+        var txt=pags[pg], T=_plano(txt), pos=T.indexOf(qq), enEsta=0;
+        while(pos>=0 && enEsta<2 && BASE_HALLAZGOS.length<25){
+          var par=_parrafoNorma(txt, pos, q.length);
+          if(par.length>25){
+            /* la palabra, resaltada dentro del parrafo ya recortado */
+            var P=_plano(par), pp=P.indexOf(qq);
+            var marcado = pp>=0
+              ? (esc(par.slice(0,pp))+'<mark style="background:var(--oro);color:#0B2A3A;border-radius:3px;padding:0 2px">'+
+                 esc(par.slice(pp,pp+q.length))+'</mark>'+esc(par.slice(pp+q.length)))
+              : esc(par);
+            BASE_HALLAZGOS.push({archivo:arch, cod:d.cod, nom:d.nom, pag:pg+1, texto:par, marcado:marcado});
+          }
+          enEsta++; pos=T.indexOf(qq, pos+q.length);
+        }
+      }
+      pinta(false); setTimeout(paso, 0);
+    }, function(){ pinta(false); setTimeout(paso, 0); });
+  }
+  paso();
+}
+/* Se AÑADE, no se pisa: lo que el supervisor escribio de su puño es lo
+   que describe el hecho, y la norma va debajo sustentandolo. */
+function usarBaseNormativa(i){
+  var x=BASE_HALLAZGOS[i]; if(!x) return;
+  var ta=$('a-desc'); if(!ta) return;
+  var cita='Base normativa: '+x.cod+(x.nom?(' — '+x.nom):'')+', pág. '+x.pag+'. '+
+           'Texto: «'+x.texto+'»';
+  var ya=String(ta.value||'').trim();
+  ta.value = ya ? (ya+'\n\n'+cita) : cita;
+  try{ ta.dispatchEvent(new Event('input',{bubbles:true})); }catch(_e){}
+  cerrarBaseNormativa();
+  try{ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }catch(_f){}
+  var m=$('amon-msg');
+  if(m){ m.style.color='var(--ok)';
+         m.textContent='Base normativa agregada: '+x.cod+', pág. '+x.pag+'. Revísala y ajústala si hace falta.'; }
 }
 var LUPA_CORTAR=false;
 function abrirLupa(archivo){
