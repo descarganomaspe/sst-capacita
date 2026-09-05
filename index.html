@@ -24848,6 +24848,8 @@ function liderCarpetasDom(){
 var TC = { pag:'resumen', sel:'*', anio:(new Date()).getFullYear(), mes:'',
            proy:[], dat:{}, cargando:false, callado:false, listo:false,
            cuando:0, fallo:0, avance:'' };
+/* lo que NO se pudo leer, por proyecto. Se dice; no se pinta como cero */
+var TC_FALLO={};
 var TC_PAGS=[
   {id:'resumen', ic:'\u25A6', n:'Resumen ejecutivo'},
   {id:'acc',     ic:'\u26A0', n:'Accidentabilidad'},
@@ -24957,7 +24959,35 @@ function tcCargar(callado){
   TC.avance= callado ? '' : 'Buscando tus proyectos…';
   tcPintar();
   var A=String(TC.anio), desde=A+'-01-01';
-  function g(q){ return sbGet(q).catch(function(){ return []; }); }
+  /* ══════ UN CERO NO ES UN DATO ══════════════════════════════════
+     Aqui habia un agujero feo. g() se tragaba CUALQUIER error y
+     devolvia [], asi que si al servidor le faltaba una sola columna
+     del select —PostgREST no devuelve «las demas», rechaza la
+     consulta entera— el panel salia en CERO. Y en cero se ve igual
+     que «no hubo nada».
+     Paso de verdad: el kardex pedia «lugar», esa columna no existia
+     en la base, y la Torre del lider mostraba 0 entregas de EPP
+     teniendo 25 guardadas. Encima el reintento sin la columna estaba
+     escrito... pero nunca corria, porque el catch de g() ya habia
+     convertido el error en [] antes.
+     Ahora: el reintento corre de verdad, y lo que aun asi no se pueda
+     leer queda anotado y se DICE arriba del tablero. */
+  function g(q, etq, pid){
+    return sbGet(q).catch(function(){
+      if(etq && pid){ (TC_FALLO[pid]=TC_FALLO[pid]||{})[etq]=1; }
+      return [];
+    });
+  }
+  /* pide con las columnas opcionales; si el servidor las rechaza,
+     vuelve a pedir sin ellas antes de darse por vencido */
+  function gOpc(base, extra, etq, pid){
+    return sbGet(base+extra).catch(function(){
+      return sbGet(base).catch(function(){
+        (TC_FALLO[pid]=TC_FALLO[pid]||{})[etq]=1;
+        return [];
+      });
+    });
+  }
   return sbRpc('sst_mis_empresas',{}).then(function(rows){
     TC.proy=(rows||[]).map(function(e){
       return {id:e.id, nombre:e.nombre, codigo:e.codigo, plan:e.plan||'lite',
@@ -24967,22 +24997,23 @@ function tcCargar(callado){
     var hechos=0;
     return Promise.all(TC.proy.map(function(p){
       var E=encodeURIComponent(p.id);
+      TC_FALLO[p.id]={};
       return Promise.all([
-        g('sst_accidente?empresa=eq.'+E+'&select=fecha,clase,dias,medidas,t_nombre,lugar&order=fecha.desc&limit=400'),
-        g('sst_hht?duenio=eq.'+E+'&select=fecha,ob_n,ob_h,st_n,st_h,hhc&limit=500'),
-        g('sst_inspeccion?empresa=eq.'+E+'&fecha=gte.'+desde+'&select=tipo,fecha,inspector&limit=800'),
-        traerReportes(p.id, '&fecha=gte.'+desde+'&limit=900').catch(function(){ return []; }),
-        g('sst_kardex?duenio=eq.'+E+'&select=epp,tipo,fecha,cantidad,trabajador,trab_nombre,actividad,lugar&order=fecha.desc&limit=900')
-          .then(function(r){ return (r&&r.length!==undefined) ? r : []; },function(){
-            /* si la base todavia no tiene «lugar», se pide sin el */
-            return g('sst_kardex?duenio=eq.'+E+'&select=epp,tipo,fecha,cantidad,trabajador,trab_nombre,actividad&order=fecha.desc&limit=900');
-          }),
-        g('sst_constancia?empresa=eq.'+E+'&select=trabajador,dni,tema,resultado,fecha&limit=900'),
-        g('sst_trabajador?duenio=eq.'+E+'&select=ext,nombre,dni,puesto,area,estatus&limit=900'),
-        g('sst_amonestacion?duenio=eq.'+E+'&select=fecha,t_nombre,t_dni,medida&limit=300'),
-        g('sst_buena?empresa=eq.'+E+'&select=fecha,titulo,autor,actividad&limit=300'),
-        g('sst_invitacion?empresa_id=eq.'+E+'&select=nombre,correo,proyecto,papel,usada_en,desde&limit=100'),
-        g('sst_doc?empresa=eq.'+E+'&select=hoja,nombre,creado&limit=500')
+        gOpc('sst_accidente?empresa=eq.'+E+'&order=fecha.desc&limit=400&select=fecha,clase,dias,medidas,t_nombre',
+             ',lugar', 'accidentes', p.id),
+        gOpc('sst_hht?duenio=eq.'+E+'&limit=500&select=fecha,ob_n,ob_h,st_n,st_h,hhc',
+             '', 'horas hombre', p.id),
+        g('sst_inspeccion?empresa=eq.'+E+'&fecha=gte.'+desde+'&select=tipo,fecha,inspector&limit=800', 'inspecciones', p.id),
+        traerReportes(p.id, '&fecha=gte.'+desde+'&limit=900').catch(function(){
+          (TC_FALLO[p.id]=TC_FALLO[p.id]||{})['reportes']=1; return []; }),
+        gOpc('sst_kardex?duenio=eq.'+E+'&order=fecha.desc&limit=900&select=epp,tipo,fecha,cantidad,trabajador,trab_nombre',
+             ',actividad,lugar', 'entregas de EPP', p.id),
+        g('sst_constancia?empresa=eq.'+E+'&select=trabajador,dni,tema,resultado,fecha&limit=900', 'capacitaciones', p.id),
+        g('sst_trabajador?duenio=eq.'+E+'&select=ext,nombre,dni,puesto,area,estatus&limit=900', 'trabajadores', p.id),
+        g('sst_amonestacion?duenio=eq.'+E+'&select=fecha,t_nombre,t_dni,medida&limit=300', 'amonestaciones', p.id),
+        g('sst_buena?empresa=eq.'+E+'&select=fecha,titulo,autor,actividad&limit=300', 'buenas prácticas', p.id),
+        g('sst_invitacion?empresa_id=eq.'+E+'&select=nombre,correo,proyecto,papel,usada_en,desde&limit=100', 'invitaciones', p.id),
+        g('sst_doc?empresa=eq.'+E+'&select=hoja,nombre,creado&limit=500', 'documentos', p.id)
       ]).then(function(r){
         TC.dat[p.id]={acc:r[0]||[], hht:r[1]||[], insp:r[2]||[], rep:r[3]||[], kdx:r[4]||[],
                       cons:r[5]||[], trab:r[6]||[], amon:r[7]||[], buenas:r[8]||[],
@@ -25119,6 +25150,26 @@ function tcEst(tipo, txt){
   return '<span class="tc-est '+c+'">'+i+' '+esc(txt)+'</span>';
 }
 function tcVacio(t){ return '<div class="tc-vacio">'+t+'</div>'; }
+/* ══ LO QUE NO SE PUDO LEER SE DICE ═══════════════════════════════
+   Un panel en cero porque el servidor rechazo la consulta se ve
+   exactamente igual que un panel en cero porque no paso nada. Y con
+   eso se toman decisiones. Aqui se separan las dos cosas. */
+function tcAvisoFallos(){
+  var ps=tcSel(), malas={}, hay=false;
+  ps.forEach(function(p){
+    var f=TC_FALLO[p.id]||{};
+    Object.keys(f).forEach(function(k){ malas[k]=(malas[k]||[]); malas[k].push(p.nombre); hay=true; });
+  });
+  if(!hay) return '';
+  var qs=Object.keys(malas);
+  return '<div class="tc-card" style="border-color:var(--t-aviso);margin-bottom:14px">'+
+    '<h3 style="margin:0 0 6px">⚠️ Esto no se pudo leer</h3>'+
+    '<p class="sub" style="margin:0">No es que no haya: es que el servidor no contestó por '+
+    '<b>'+qs.map(esc).join('</b>, <b>')+'</b>'+
+    (ps.length>1 ? (' ('+esc(Object.keys(malas).map(function(k){ return malas[k].join(', '); })[0])+')') : '')+
+    '. Lo que veas de eso en el tablero está incompleto — no lo tomes como un cero. '+
+    'Toca <b>↻ Actualizar</b>; si sigue igual, avísame.</p></div>';
+}
 function tcColor(pct){ return pct>=95?'var(--t-ok)' : pct>=80?'var(--t-aviso)':'var(--t-critico)'; }
 function tcBarras(filas){
   var h='<div class="tc-b">';
@@ -25217,7 +25268,7 @@ function tcPintar(){
       '<button class="tc-bt" onclick="tcSalir()">Volver al inicio</button></div>';
     return;
   }
-  var h = tcChipsHTML();
+  var h = tcChipsHTML() + tcAvisoFallos();
   if(TC.pag==='cfg'){ main.innerHTML = tcPagCfg(); return; }
   h += (TC.pag==='resumen') ? tcPagResumen()
      : (TC.pag==='acc')     ? tcPagAcc()
