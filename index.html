@@ -444,6 +444,8 @@ body.connav .pantalla{padding-top:2px}
    dónde vuelven —«‹ Temas», «‹ Charlas»—, que eso sí es información.
    Cuando la barra queda con el título solo, el título va a la izquierda. */
 .barra:not(:has(button)){justify-content:flex-start}
+.kx-seg{display:flex;gap:8px}
+.kx-seg .ke-op{flex:1}
 .kx-fil{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:12px;
         background:var(--vidrio,rgba(255,255,255,.05));border:1px solid var(--borde,rgba(255,255,255,.09));
         margin-bottom:7px}
@@ -2270,15 +2272,28 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <h2>Registro de entrega de EPP</h2>
   <p class="sub">Un registro por trabajador con lo que se le entregó en el mes. En Excel sale el formato SSOMAPCFO043 tal cual; en PDF sale el mismo contenido listo para mandar.</p>
   <div class="caja vidrio" style="padding:15px">
-    <label class="sec-tit" style="margin:0 0 6px">Mes</label>
-    <input id="kx-mes" type="month" onchange="pintarResumenMesKardex()" oninput="pintarResumenMesKardex()">
+    <label class="sec-tit" style="margin:0 0 6px">Periodo</label>
+    <div class="kx-seg" id="kx-seg">
+      <button type="button" class="ke-op on" data-p="mes"  onclick="kxPeriodo('mes')">Un mes</button>
+      <button type="button" class="ke-op"    data-p="todo" onclick="kxPeriodo('todo')">Todo lo registrado</button>
+    </div>
+    <div id="kx-mes-caja">
+      <label class="sec-tit" style="margin:12px 0 6px">Mes</label>
+      <input id="kx-mes" type="month" onchange="pintarResumenMesKardex()" oninput="pintarResumenMesKardex()">
+    </div>
     <div id="kx-resumen"></div>
     <label class="sec-tit" style="margin:12px 0 6px">Trabajador</label>
-    <select id="kx-trab"><option value="">Todos (un archivo por cada uno)</option></select>
+    <select id="kx-trab" onchange="pintarResumenMesKardex()"><option value="">Todos (un archivo por cada uno)</option></select>
     <div id="kx-msg" style="font-size:13.5px;margin:9px 0 0"></div>
     <button class="btn" onclick="exportarKardex()" style="margin-top:11px">📊 Generar Excel</button>
     <button class="btn sec" onclick="bajarKardexPDF()" style="margin-top:9px">📄 Generar PDF</button>
     <p class="sub" style="margin:9px 0 0;font-size:12.5px">El Excel es el formato oficial para archivar. El PDF es para mandar: llega igual en todos los celulares y no se puede editar. Si son varios trabajadores, van en una carpeta comprimida.</p>
+  </div>
+  <div class="caja vidrio" style="padding:15px;margin-top:12px">
+    <div class="sec-tit" style="margin:0 0 6px">El legajo completo</div>
+    <p class="sub" style="margin:0 0 10px">Todo el EPP que se ha entregado en esta obra, desde el primer día, con un archivo por trabajador y en orden alfabético. Es lo que se pide en una fiscalización o cuando se cierra la obra.</p>
+    <button class="btn" onclick="exportarLegajoCompleto()" style="margin:0">🗂️ Todo el personal · todos los meses (Excel)</button>
+    <div id="kx-legajo-msg" style="font-size:13px;margin-top:9px"></div>
   </div>
   <div id="kx-resultado"></div>
 </section>
@@ -13018,7 +13033,7 @@ function _pdfDeKardex(t, regs, mes){
           ['DNI', t.dni||'', .16],
           ['Puesto de trabajo', t.puesto||'', .38]]);
   bloque([['Área', t.area||'', .40],
-          ['Mes del registro', mes||'', .28],
+          ['Periodo del registro', mes||'', .28],
           ['Obra / proyecto', nombreDeLaObra()||'', .32]]);
   y+=12;
 
@@ -13119,18 +13134,20 @@ function _pdfDeKardex(t, regs, mes){
    ley pide, y sin un solo aviso. */
 function bajarKardexPDF(){
   if(soloConCodigo('Generar el registro de EPP en PDF','constancias')) return;
-  var mes=$('kx-mes').value, m=$('kx-msg');
+  var m=$('kx-msg');
+  var _P=kardexDelPeriodo(); var mes=_P.mes||'';
   m.style.color='var(--mal)';
-  if(!mes){ m.textContent='Elige el mes.'; return; }
-  var deMes=kardexLocal().filter(function(k){ return String(k.fecha||'').slice(0,7)===mes; });
+  if(KX_PERIODO==='mes' && !mes){ m.textContent='Elige el mes, o pasa a «Todo lo registrado».'; return; }
+  var deMes=_P.regs;
   if(!deMes.length){ m.textContent=kardexPorQueVacio(mes); return; }
   var faltan=deMes.filter(function(k){ return !k.firma && k.delEquipo; });
   if(!faltan.length){ _pdfKardexAhora(); return; }
   m.style.color='var(--gris)';
   m.textContent='Trayendo las firmas del equipo\u2026';
   firmasDeKardex(deMes.map(function(k){ return k.id; })).then(function(){
+    var _ids={}; deMes.forEach(function(k){ _ids[k.id]=1; });
     var sigueSinFirma=kardexLocal().filter(function(k){
-      return String(k.fecha||'').slice(0,7)===mes && !k.firma && k.delEquipo; }).length;
+      return _ids[k.id] && !k.firma && k.delEquipo; }).length;
     if(sigueSinFirma){
       confirmar('Faltan '+sigueSinFirma+' firmas',
         'Esas entregas las registr\u00f3 otro supervisor y su firma no est\u00e1 en este equipo '+
@@ -13144,21 +13161,22 @@ function bajarKardexPDF(){
   });
 }
 function _pdfKardexAhora(){
-  var mes=$('kx-mes').value, tid=$('kx-trab').value, m=$('kx-msg');
-  var todos=kardexLocal().filter(function(k){ return String(k.fecha||'').slice(0,7)===mes; });
+  var tid=$('kx-trab').value, m=$('kx-msg');
+  var P=kardexDelPeriodo();
+  var mes=P.mes||'', todos=P.regs;
   m.style.color='var(--mal)';
   if(!todos.length){ m.textContent=kardexPorQueVacio(mes); return; }
   var grupos=kardexAgrupado(todos, tid);
   if(!grupos.length){
-    m.textContent='Ese trabajador no tiene entregas en '+_mesBonito(mes)+', pero sí hay '+todos.length+
+    m.textContent='Ese trabajador no tiene entregas en '+P.etq+', pero sí hay '+todos.length+
                   ' entrega'+(todos.length===1?'':'s')+' de otra gente. Elige «Todos» para verlas.';
     return;
   }
   var archivos=[], fallaron=[];
   grupos.forEach(function(g){
     try{
-      archivos.push({nombre:_nombreSano('Entrega EPP - '+(g.t.nombre||'trabajador')+' - '+mes)+'.pdf',
-                     blob:_pdfDeKardex(g.t, g.regs, mes)});
+      archivos.push({nombre:_nombreSano('Entrega EPP - '+(g.t.nombre||'trabajador')+' - '+P.archivo)+'.pdf',
+                     blob:_pdfDeKardex(g.t, g.regs, P.etq)});
     }catch(e){ fallaron.push(g.t.nombre||'sin nombre'); }
   });
   /* antes el catch estaba vacio: si el PDF de alguien reventaba, ese
@@ -13173,8 +13191,8 @@ function _pdfKardexAhora(){
   m.style.color='var(--gris)';
   m.textContent = (archivos.length===1) ? 'Armando el PDF…'
                 : ('Armando '+archivos.length+' PDF y comprimiéndolos…');
-  entregarArchivos(archivos, {via:'otra', texto:'Registro de entrega de EPP · '+mes+' · '+(nombreDeLaObra()||'')},
-                   _nombreSano('Entrega EPP - '+(nombreDeLaObra()||'obra')+' - '+mes)+'.zip')
+  entregarArchivos(archivos, {via:'otra', texto:'Registro de entrega de EPP · '+P.etq+' · '+(nombreDeLaObra()||'')},
+                   _nombreSano('Entrega EPP - '+(nombreDeLaObra()||'obra')+' - '+P.archivo)+'.zip')
     .then(function(r){
       m.style.color='var(--ok)';
       m.textContent = (r.cuantos===1) ? 'Listo: PDF armado.'
@@ -13268,6 +13286,8 @@ function kardexPorQueVacio(mes){
   var R=kardexMesesConEntregas();
   var obra=(empActiva()&&empActiva().nombre) ? (' de «'+empActiva().nombre+'»') : '';
   if(!R.total) return 'Todavía no hay ninguna entrega en el kardex'+obra+'.';
+  if(!mes) return 'No hay ninguna entrega con fecha en el kardex'+obra+
+                  (R.sinFecha? (' — hay '+R.sinFecha+' guardada'+(R.sinFecha===1?'':'s')+' sin fecha.') : '.');
   var t='En '+_mesBonito(mes)+' no hay entregas en el kardex'+obra+'.';
   if(R.meses.length){
     var top=R.meses.slice(0,3).map(function(x){ return _mesBonito(x.mes)+' ('+x.n+')'; }).join(', ');
@@ -13276,6 +13296,47 @@ function kardexPorQueVacio(mes){
   if(R.sinFecha) t+=' Y hay '+R.sinFecha+' entrega'+(R.sinFecha===1?'':'s')+' guardada'+(R.sinFecha===1?'':'s')+' sin fecha, que no entra'+(R.sinFecha===1?'':'n')+' en ningún mes.';
   if(MIS_EMP && MIS_EMP.length>1) t+=' Ojo: cada obra guarda su kardex aparte.';
   return t;
+}
+/* ══════════ UN MES, O TODA LA VIDA DEL TRABAJADOR ═════════════════
+   El registro salia siempre de UN mes. Pero el documento que piden de
+   verdad —en una fiscalizacion, al cerrar la obra, o cuando alguien
+   reclama que nunca le dieron un arnes— es el historial completo de
+   esa persona, no el pedacito de septiembre. Y el que lleva la
+   documentacion de la obra necesita ademas el legajo entero: un
+   archivo por trabajador, todos, en orden alfabetico, de una sola vez.
+   Aqui estan las dos cosas. El periodo se elige arriba y vale igual
+   para el Excel y para el PDF.                                      */
+var KX_PERIODO='mes';
+function kxPeriodo(v){
+  KX_PERIODO = (v==='todo') ? 'todo' : 'mes';
+  var seg=$('kx-seg');
+  if(seg){
+    var bs=seg.getElementsByTagName('button');
+    for(var i=0;i<bs.length;i++) bs[i].className = (bs[i].getAttribute('data-p')===KX_PERIODO)?'ke-op on':'ke-op';
+  }
+  var caja=$('kx-mes-caja'); if(caja) caja.style.display = (KX_PERIODO==='todo') ? 'none' : '';
+  var m=$('kx-msg'); if(m) m.textContent='';
+  $('kx-resultado').innerHTML='';
+  pintarResumenMesKardex();
+}
+/* Las entregas del periodo elegido, y como se llama ese periodo tanto
+   en pantalla como en el nombre del archivo. */
+function kardexDelPeriodo(){
+  var todo=kardexLocal();
+  if(KX_PERIODO==='todo'){
+    var con=todo.filter(function(k){ return String(k.fecha||'').length>=7; });
+    var meses=con.map(function(k){ return String(k.fecha).slice(0,7); }).sort();
+    var etq = meses.length
+      ? (meses[0]===meses[meses.length-1] ? _mesBonito(meses[0])
+         : ('de '+_mesBonito(meses[0])+' a '+_mesBonito(meses[meses.length-1])))
+      : 'todo lo registrado';
+    return {regs:con, etq:etq,
+            archivo: meses.length ? ('historico '+meses[0]+' a '+meses[meses.length-1]) : 'historico',
+            sinFecha: todo.length-con.length};
+  }
+  var mes=($('kx-mes')||{}).value||'';
+  return {regs: todo.filter(function(k){ return String(k.fecha||'').slice(0,7)===mes; }),
+          etq: mes? _mesBonito(mes) : '', archivo: mes, mes:mes, sinFecha:0};
 }
 function pintarKardexExport(){
   asegurarPersonal(function(){ if((document.querySelector('.pantalla.activa')||{}).id==='p-kardex-export') pintarKardexExport(); });
@@ -13310,16 +13371,21 @@ function pintarKardexExport(){
    todo ve de una que la entrega que acaba de registrar SI esta. */
 function pintarResumenMesKardex(){
   var c=$('kx-resumen'); if(!c) return;
+  var P=kardexDelPeriodo();
   var mes=($('kx-mes')||{}).value||'';
-  if(!mes){ c.innerHTML=''; return; }
+  if(KX_PERIODO==='mes' && !mes){ c.innerHTML=''; return; }
   var R=kardexMesesConEntregas();
-  var enMes=kardexLocal().filter(function(k){ return String(k.fecha||'').slice(0,7)===mes; });
+  var enMes=P.regs;
   var gente=kardexAgrupado(enMes,'').length;
   if(enMes.length){
-    c.innerHTML='<div class="aviso" style="margin-top:10px">🗃️ En '+esc(_mesBonito(mes))+' hay <b>'+enMes.length+
-      '</b> entrega'+(enMes.length===1?'':'s')+' de <b>'+gente+'</b> trabajador'+(gente===1?'':'es')+'.</div>';
+    c.innerHTML='<div class="aviso" style="margin-top:10px">🗃️ '+
+      (KX_PERIODO==='todo' ? ('Hay <b>'+enMes.length+'</b> entrega'+(enMes.length===1?'':'s')+
+          ' de <b>'+gente+'</b> trabajador'+(gente===1?'':'es')+', '+esc(P.etq)+'.')
+        : ('En '+esc(P.etq)+' hay <b>'+enMes.length+'</b> entrega'+(enMes.length===1?'':'s')+
+           ' de <b>'+gente+'</b> trabajador'+(gente===1?'':'es')+'.'))+'</div>';
   }else{
-    c.innerHTML='<div class="aviso" style="margin-top:10px">🗃️ '+esc(kardexPorQueVacio(mes))+'</div>';
+    c.innerHTML='<div class="aviso" style="margin-top:10px">🗃️ '+
+      esc(KX_PERIODO==='todo' ? kardexPorQueVacio('') : kardexPorQueVacio(mes))+'</div>';
   }
   if(R.sinFecha && enMes.length){
     c.innerHTML+='<div class="aviso" style="margin-top:8px">⚠️ Hay '+R.sinFecha+' entrega'+(R.sinFecha===1?'':'s')+
@@ -13346,55 +13412,118 @@ function arreglarKardexSinFecha(){
       var m=$('kx-msg'); if(m){ m.style.color='var(--ok)'; m.textContent='Listo: ya entran en '+_mesBonito(mes)+'.'; }
     }, {si:'Sí, ponerles fecha', no:'Cancelar', icono:'🗓️'});
 }
-function exportarKardex(){
-  if(soloConCodigo('Generar el registro de EPP en Excel','constancias')) return;
-  var mes=$('kx-mes').value, tid=$('kx-trab').value, m=$('kx-msg');
-  m.style.color='var(--mal)';
-  $('kx-resultado').innerHTML='';
-  if(!mes){ m.textContent='Elige el mes.'; return; }
-  var todos=kardexLocal().filter(function(k){ return String(k.fecha||'').slice(0,7)===mes; });
-  if(!todos.length){ m.textContent=kardexPorQueVacio(mes); return; }
-  var grupos=kardexAgrupado(todos, tid);
-  if(!grupos.length){
-    m.textContent='Ese trabajador no tiene entregas en '+_mesBonito(mes)+', pero sí hay '+todos.length+
-                  ' entrega'+(todos.length===1?'':'s')+' de otra gente. Elige «Todos» para verlas.';
-    return;
-  }
+/* Arma los .xlsx de una tanda de grupos. Devuelve una promesa con los
+   archivos, cediendo el hilo cada tanto: con 300 trabajadores esto
+   tarda, y una pantalla congelada parece una app rota. */
+function _armarLegajo(grupos, etqArchivo, alAvanzar){
   var logo=_logoBytes();
-  var hechos=0, h='', sueltos=0, sinFirma=0;
-  grupos.forEach(function(g){
-    if(g.suelto) sueltos++;
-    var hojas=kardexEnHojas(g.regs);
-    hojas.forEach(function(parte, i){
-      var suf = (hojas.length>1) ? (' ('+(i+1)+' de '+hojas.length+')') : '';
-      var F=_firmasDelXlsx(parte);
-      sinFirma += parte.filter(function(r){ return !r.firma; }).length;
-      var repl={};
-      for(var k in F.reemplazos) if(Object.prototype.hasOwnProperty.call(F.reemplazos,k)) repl[k]=F.reemplazos[k];
-      if(logo) repl['xl/media/image2.jpeg']=logo;
-      var blob=_armarXlsx(hojaDeTrabajador(g.t, parte), repl, F.extras);
-      var url=URL.createObjectURL(blob);
-      var nombre='Entrega EPP - '+String(g.t.nombre||'trabajador').replace(/[\\\/:*?"<>|]/g,'')+' - '+mes+suf+'.xlsx';
-      h+='<a class="btn sec" style="text-align:center;display:block;text-decoration:none" download="'+esc(nombre)+'" href="'+url+'">'+
-         '⬇️ '+esc(g.t.nombre)+suf+' ('+parte.length+' entrega'+(parte.length===1?'':'s')+')'+
-         (g.suelto?' <small style="color:var(--gris)">· sin ficha en este celular</small>':'')+'</a>';
-      hechos++;
-    });
+  var archivos=[], sueltos=0, sinFirma=0, i=0;
+  return new Promise(function(listo){
+    function paso(){
+      var t0=Date.now();
+      while(i<grupos.length && (Date.now()-t0)<120){
+        var g=grupos[i++];
+        if(g.suelto) sueltos++;
+        var hojas=kardexEnHojas(g.regs);
+        for(var j=0;j<hojas.length;j++){
+          var parte=hojas[j];
+          var suf=(hojas.length>1)?(' ('+(j+1)+' de '+hojas.length+')'):'';
+          var F=_firmasDelXlsx(parte);
+          sinFirma += parte.filter(function(r){ return !r.firma; }).length;
+          var repl={};
+          for(var k in F.reemplazos) if(Object.prototype.hasOwnProperty.call(F.reemplazos,k)) repl[k]=F.reemplazos[k];
+          if(logo) repl['xl/media/image2.jpeg']=logo;
+          archivos.push({
+            nombre:_nombreSano('Entrega EPP - '+(g.t.nombre||'trabajador')+' - '+etqArchivo)+suf+'.xlsx',
+            blob:_armarXlsx(hojaDeTrabajador(g.t, parte), repl, F.extras),
+            quien:g.t.nombre, suelto:g.suelto, n:parte.length, suf:suf});
+        }
+      }
+      if(alAvanzar) alAvanzar(i, grupos.length);
+      if(i<grupos.length) setTimeout(paso, 0);
+      else listo({archivos:archivos, sueltos:sueltos, sinFirma:sinFirma});
+    }
+    paso();
   });
-  m.style.color='var(--ok)';
-  m.textContent=hechos+' archivo'+(hechos===1?'':'s')+' listo'+(hechos===1?'':'s')+'. Toca para descargar.';
+}
+function _notasDelLegajo(sinFirma, sueltos){
   var _emp=empleador();
-  $('kx-resultado').innerHTML='<div class="sec-tit" style="margin-top:16px">Archivos</div>'+h+
-    ((!_emp.razon || !_emp.ruc) ? ('<p class="sub" style="margin-top:10px">⚠️ Falta la razón social o el RUC de tu empresa: el formato sale con esos campos en blanco, '+
+  return ((!_emp.razon || !_emp.ruc) ? ('<p class="sub" style="margin-top:10px">⚠️ Falta la razón social o el RUC de tu empresa: el formato sale con esos campos en blanco, '+
        'y el compromiso que firma el trabajador nombra a tu empresa. '+
        '<button class="btn sec" style="width:auto;padding:7px 13px;margin:9px 0 0" onclick="ir(\'p-empleador\')">Completar datos del empleador</button></p>') : '')+
     (sinFirma? ('<p class="sub" style="margin-top:10px">✍️ '+sinFirma+' línea'+(sinFirma===1?'':'s')+' sale'+(sinFirma===1?'':'n')+
        ' con la firma en blanco: son entregas que registró otro supervisor y cuya firma todavía no llegó a este celular. '+
-       'Con internet, entra una vez a «Registro del mes» y vuelve a generarlo.</p>') : '')+
+       'Con internet, entra una vez aquí y vuelve a generarlo.</p>') : '')+
     (sueltos? ('<p class="sub" style="margin-top:10px">⚠️ '+sueltos+' de estos registros son de gente que no está en el personal de este celular '+
                '(la entrega la hizo otro supervisor, o al trabajador ya lo dieron de baja). Salen igual, con el nombre que quedó en la entrega, '+
                'pero sin DNI ni puesto. Si entras a «Mi personal» y esperas a que sincronice, salen completos.</p>') : '')+
     '<p class="sub" style="margin-top:10px">Cada archivo trae el formato SSOMAPCFO043 tal cual, con los datos del trabajador en la fila 12 y sus entregas desde la fila 16. El formato admite 60 líneas: al que tenga más se le arma un segundo archivo, no se le recorta.</p>';
+}
+function exportarKardex(){
+  if(soloConCodigo('Generar el registro de EPP en Excel','constancias')) return;
+  var tid=$('kx-trab').value, m=$('kx-msg');
+  m.style.color='var(--mal)';
+  $('kx-resultado').innerHTML='';
+  var P=kardexDelPeriodo();
+  if(KX_PERIODO==='mes' && !P.mes){ m.textContent='Elige el mes, o pasa a «Todo lo registrado».'; return; }
+  if(!P.regs.length){ m.textContent=kardexPorQueVacio(P.mes||''); return; }
+  var grupos=kardexAgrupado(P.regs, tid);
+  if(!grupos.length){
+    m.textContent='Ese trabajador no tiene entregas en '+P.etq+', pero sí hay '+P.regs.length+
+                  ' entrega'+(P.regs.length===1?'':'s')+' de otra gente. Elige «Todos» para verlas.';
+    return;
+  }
+  m.style.color='var(--gris)'; m.textContent='Armando…';
+  _armarLegajo(grupos, P.archivo, function(hechos, total){
+    if(total>3) m.textContent='Armando… '+hechos+' de '+total;
+  }).then(function(R){
+    var h='';
+    R.archivos.forEach(function(a){
+      var url=URL.createObjectURL(a.blob);
+      h+='<a class="btn sec" style="text-align:center;display:block;text-decoration:none" download="'+esc(a.nombre)+'" href="'+url+'">'+
+         '⬇️ '+esc(a.quien)+esc(a.suf)+' ('+a.n+' entrega'+(a.n===1?'':'s')+')'+
+         (a.suelto?' <small style="color:var(--gris)">· sin ficha en este celular</small>':'')+'</a>';
+    });
+    m.style.color='var(--ok)';
+    m.textContent=R.archivos.length+' archivo'+(R.archivos.length===1?'':'s')+' listo'+
+                  (R.archivos.length===1?'':'s')+' · '+P.etq+'. Toca para descargar.';
+    $('kx-resultado').innerHTML='<div class="sec-tit" style="margin-top:16px">Archivos · '+esc(P.etq)+'</div>'+h+
+      _notasDelLegajo(R.sinFirma, R.sueltos);
+  });
+}
+/* ══════ EL LEGAJO ENTERO, DE UNA ═══════════════════
+   Todo el personal, todos los meses, en orden alfabetico y dentro de
+   un solo ZIP. Con 300 trabajadores serian 300 enlaces sueltos en
+   pantalla, que no le sirven a nadie: por eso va comprimido, igual
+   que el PDF.                                                       */
+function exportarLegajoCompleto(){
+  if(soloConCodigo('Generar el registro de EPP en Excel','constancias')) return;
+  var m=$('kx-legajo-msg');
+  function di(t,c){ if(m){ m.style.color=c||'var(--gris)'; m.innerHTML=t; } }
+  var con=kardexLocal().filter(function(k){ return String(k.fecha||'').length>=7; });
+  var sinFecha=kardexLocal().length-con.length;
+  if(!con.length){ di(kardexPorQueVacio(''),'var(--mal)'); return; }
+  var grupos=kardexAgrupado(con, '');
+  di('Armando el legajo de '+grupos.length+' trabajador'+(grupos.length===1?'':'es')+'…');
+  var meses=con.map(function(k){ return String(k.fecha).slice(0,7); }).sort();
+  var etq='historico '+meses[0]+' a '+meses[meses.length-1];
+  _armarLegajo(grupos, etq, function(hechos,total){
+    di('Armando… '+hechos+' de '+total+' trabajadores');
+  }).then(function(R){
+    di('Comprimiendo '+R.archivos.length+' archivo'+(R.archivos.length===1?'':'s')+'…');
+    return entregarArchivos(R.archivos,
+      {via:'otra', texto:'Registro de entrega de EPP · '+(nombreDeLaObra()||'')+' · '+etq},
+      _nombreSano('Entrega EPP - '+(nombreDeLaObra()||'obra')+' - '+etq)+'.zip')
+      .then(function(z){
+        di('✅ Listo: '+R.archivos.length+' registro'+(R.archivos.length===1?'':'s')+' de '+grupos.length+
+           ' trabajador'+(grupos.length===1?'':'es')+', en orden alfabético, dentro de «'+esc(z.nombre)+'».'+
+           (sinFecha? ('<br>⚠️ Quedaron fuera '+sinFecha+' entrega'+(sinFecha===1?'':'s')+' sin fecha: '+
+                       'no pertenecen a ningún mes. Ponles fecha arriba y vuelve a generarlo.') : ''),
+           'var(--ok)');
+      });
+  }).catch(function(e){
+    di('No se pudo armar el legajo. '+porQue(e),'var(--mal)');
+  });
 }
 
 // =================================================================
