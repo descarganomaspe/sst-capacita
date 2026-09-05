@@ -444,6 +444,42 @@ body.connav .pantalla{padding-top:2px}
    dónde vuelven —«‹ Temas», «‹ Charlas»—, que eso sí es información.
    Cuando la barra queda con el título solo, el título va a la izquierda. */
 .barra:not(:has(button)){justify-content:flex-start}
+/* ══ EL DIA, EN PASOS ═════════════════════════════════════════════
+   «hazlo mas interactivo y ordenado, cuestion que el supervisor sabra
+   donde colocar los datos». Antes era un formulario largo dentro de
+   una sola caja: quien lo abria por primera vez no sabia por donde
+   empezar ni cuanto le faltaba. Ahora son pasos numerados, cada uno
+   dice si ya esta puesto, y arriba se ve la semana entera con los
+   dias que faltan. */
+.paso{border-radius:14px;background:var(--vidrio,rgba(255,255,255,.05));
+      border:1px solid var(--borde,rgba(255,255,255,.09));margin-top:11px;overflow:hidden}
+.paso.lista{border-color:rgba(31,160,102,.42)}
+.paso-cab{display:flex;align-items:center;gap:10px;padding:12px 14px 10px}
+.paso-n{flex:0 0 auto;width:25px;height:25px;border-radius:50%;display:grid;place-items:center;
+        font-size:13px;font-weight:800;background:rgba(var(--w),.10);color:var(--gris)}
+.paso.lista .paso-n{background:var(--ok);color:#06210f}
+.paso-cab b{flex:1;font-size:15px}
+.paso-est{font-size:12px;color:var(--gris);text-align:right;line-height:1.25}
+.paso.lista .paso-est{color:var(--ok)}
+.paso-cu{padding:0 14px 14px}
+.sd-dias{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch}
+.sd-dia{flex:0 0 auto;min-width:52px;padding:7px 8px;border-radius:11px;text-align:center;
+        background:rgba(var(--w),.05);border:1px solid rgba(var(--w),.10);
+        font:inherit;color:var(--gris);cursor:pointer;line-height:1.25}
+.sd-dia b{display:block;font-size:15px;color:var(--tinta)}
+.sd-dia small{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px}
+.sd-dia .pt{display:block;font-size:11px;margin-top:2px}
+.sd-dia.hecho{border-color:rgba(31,160,102,.45);background:rgba(31,160,102,.10)}
+.sd-dia.hecho .pt{color:var(--ok)}
+.sd-dia.hoy b{color:var(--sol,#f5b700)}
+.sd-dia.sel{outline:2px solid var(--sol,#f5b700);outline-offset:1px}
+.sd-rap{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.sd-rap button{flex:0 0 auto;padding:5px 11px;border-radius:999px;font:inherit;font-size:12.5px;
+        background:rgba(var(--w),.06);border:1px solid rgba(var(--w),.12);color:var(--gris);cursor:pointer}
+.sd-rap button.on{background:rgba(245,183,0,.16);border-color:rgba(245,183,0,.42);color:var(--tinta)}
+.sd-avance{margin-top:10px;font-size:13px;color:var(--gris)}
+.sd-avance .barrita{height:6px;border-radius:999px;background:rgba(var(--w),.08);margin-top:6px;overflow:hidden}
+.sd-avance .barrita i{display:block;height:100%;background:var(--ok);transition:width .25s}
 .sd-res{margin-top:9px;padding:9px 12px;border-radius:10px;background:rgba(245,183,0,.10);
         border:1px solid rgba(245,183,0,.28);font-size:13.5px;line-height:1.4;
         font-variant-numeric:tabular-nums}
@@ -1748,6 +1784,13 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div id="cn-msg" style="font-size:13px;margin-top:9px"></div>
 </section>
 
+<section class="pantalla" id="p-eval-ver">
+  <div class="barra"><span>Evaluación rendida</span></div>
+  <div id="ev-cab"></div>
+  <div id="ev-cuerpo"></div>
+  <div id="ev-pie" style="margin-top:14px"></div>
+</section>
+
 <section class="pantalla" id="p-estatus">
   <div class="barra"><span>Estatus del personal</span></div>
   <h2>Estatus del personal</h2>
@@ -1885,56 +1928,77 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <section class="pantalla" id="p-semanal-dia">
   <div class="barra"><span>Un día</span></div>
   <h2>Día de trabajo</h2>
-  <p class="sub">Solo pones la hora de entrada y de salida, cuánta gente hubo y cuánto duró la charla. Las horas hombre las saca la app.</p>
+  <p class="sub">Cuatro pasos. Tú pones las horas y cuánta gente hubo; las horas hombre las saca la app.</p>
+  <div id="sd-avance" class="sd-avance"></div>
 
-  <div class="caja vidrio" style="padding:15px">
-    <label class="sec-tit" style="margin:0 0 6px">Fecha</label>
-    <input id="sd-fecha" type="date" onchange="sdCalcular()">
-
-    <label class="sec-tit" style="margin:14px 0 6px">Lugar <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gris)">(opcional)</span></label>
-    <input id="sd-lugar" list="sd-lugar-sug" placeholder="Frente 3, Nivel 4, Planta Ate…" autocomplete="off" oninput="sdCalcular()">
-    <datalist id="sd-lugar-sug"></datalist>
-    <p class="sub" style="margin:5px 0 0;font-size:12.5px" id="sd-lugar-nota">Si trabajas siempre en el mismo punto, déjalo en blanco: el reporte sale a nombre de la obra. Si te mueves de frente en frente, ponlo y cada día queda con su lugar.</p>
-
-    <div class="sec-tit" style="margin:18px 0 8px">👷 Obreros</div>
-    <div style="display:flex;gap:10px">
-      <div style="flex:1.1"><label class="sec-tit" style="margin:0 0 6px">Cuántos son</label>
-        <input id="sd-ob-n" inputmode="numeric" value="0" oninput="sdCalcular()"></div>
-      <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Entrada</label>
-        <input id="sd-ob-e" type="time" value="07:00" onchange="sdCalcular()" oninput="sdCalcular()"></div>
-      <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Salida</label>
-        <input id="sd-ob-s" type="time" value="17:00" onchange="sdCalcular()" oninput="sdCalcular()"></div>
+  <div class="paso" id="sd-p1">
+    <div class="paso-cab"><span class="paso-n">1</span><b>¿Qué día y dónde?</b><span class="paso-est" id="sd-e1"></span></div>
+    <div class="paso-cu">
+      <div class="sd-dias" id="sd-dias"></div>
+      <input id="sd-fecha" type="date" onchange="sdFechaCambio()">
+      <label class="sec-tit" style="margin:13px 0 6px">Lugar <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gris)">(opcional)</span></label>
+      <input id="sd-lugar" list="sd-lugar-sug" placeholder="Frente 3, Nivel 4, Planta Ate…" autocomplete="off" oninput="sdCalcular()">
+      <datalist id="sd-lugar-sug"></datalist>
+      <div class="sd-rap" id="sd-lugar-rap"></div>
+      <p class="sub" style="margin:6px 0 0;font-size:12.5px">Si siempre trabajas en el mismo punto, déjalo en blanco: el reporte sale a nombre de la obra.</p>
     </div>
-    <label class="sec-tit" style="margin:10px 0 6px">Refrigerio <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gris)">(minutos que NO son horas hombre)</span></label>
-    <input id="sd-ob-r" inputmode="numeric" value="60" oninput="sdCalcular()">
-    <div id="sd-ob-res" class="sd-res">—</div>
-
-    <div class="sec-tit" style="margin:18px 0 8px">👔 Staff / empleados</div>
-    <div style="display:flex;gap:10px">
-      <div style="flex:1.1"><label class="sec-tit" style="margin:0 0 6px">Cuántos son</label>
-        <input id="sd-st-n" inputmode="numeric" value="0" oninput="sdCalcular()"></div>
-      <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Entrada</label>
-        <input id="sd-st-e" type="time" value="08:00" onchange="sdCalcular()" oninput="sdCalcular()"></div>
-      <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Salida</label>
-        <input id="sd-st-s" type="time" value="17:00" onchange="sdCalcular()" oninput="sdCalcular()"></div>
-    </div>
-    <label class="sec-tit" style="margin:10px 0 6px">Refrigerio <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gris)">(minutos)</span></label>
-    <input id="sd-st-r" inputmode="numeric" value="60" oninput="sdCalcular()">
-    <div id="sd-st-res" class="sd-res">—</div>
-
-    <div class="sec-tit" style="margin:18px 0 8px">🎓 Capacitación del día</div>
-    <div style="display:flex;gap:10px">
-      <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Cuántos asistieron</label>
-        <input id="sd-hhc-n" inputmode="numeric" value="0" oninput="sdCalcular()"></div>
-      <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Cuántos minutos</label>
-        <input id="sd-hhc-m" inputmode="numeric" value="0" placeholder="15" oninput="sdCalcular()"></div>
-    </div>
-    <div id="sd-hhc-res" class="sd-res">—</div>
-
-    <div id="sd-total" style="margin-top:16px"></div>
-    <div id="sd-msg" style="font-size:13.5px;margin:9px 0 0"></div>
-    <button class="btn" onclick="guardarDiaSemanal()" style="margin-top:11px">Guardar el día</button>
   </div>
+
+  <div class="paso" id="sd-p2">
+    <div class="paso-cab"><span class="paso-n">2</span><b>👷 Obreros</b><span class="paso-est" id="sd-e2"></span></div>
+    <div class="paso-cu">
+      <label class="sec-tit" style="margin:0 0 6px">Cuántos entraron</label>
+      <input id="sd-ob-n" inputmode="numeric" value="0" oninput="sdCalcular()">
+      <div class="sd-rap" id="sd-ob-rap"></div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Entrada</label>
+          <input id="sd-ob-e" type="time" value="07:00" onchange="sdCalcular()" oninput="sdCalcular()"></div>
+        <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Salida</label>
+          <input id="sd-ob-s" type="time" value="17:00" onchange="sdCalcular()" oninput="sdCalcular()"></div>
+      </div>
+      <label class="sec-tit" style="margin:12px 0 6px">Refrigerio <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gris)">(minutos que NO son horas hombre)</span></label>
+      <input id="sd-ob-r" inputmode="numeric" value="60" oninput="sdCalcular()">
+      <div class="sd-rap" id="sd-ob-rrap"></div>
+      <div id="sd-ob-res" class="sd-res">—</div>
+    </div>
+  </div>
+
+  <div class="paso" id="sd-p3">
+    <div class="paso-cab"><span class="paso-n">3</span><b>👔 Staff / empleados</b><span class="paso-est" id="sd-e3"></span></div>
+    <div class="paso-cu">
+      <label class="sec-tit" style="margin:0 0 6px">Cuántos entraron <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gris)">(si no hubo, deja 0)</span></label>
+      <input id="sd-st-n" inputmode="numeric" value="0" oninput="sdCalcular()">
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Entrada</label>
+          <input id="sd-st-e" type="time" value="08:00" onchange="sdCalcular()" oninput="sdCalcular()"></div>
+        <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Salida</label>
+          <input id="sd-st-s" type="time" value="17:00" onchange="sdCalcular()" oninput="sdCalcular()"></div>
+      </div>
+      <label class="sec-tit" style="margin:12px 0 6px">Refrigerio <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gris)">(minutos)</span></label>
+      <input id="sd-st-r" inputmode="numeric" value="60" oninput="sdCalcular()">
+      <div class="sd-rap" id="sd-st-rrap"></div>
+      <div id="sd-st-res" class="sd-res">—</div>
+    </div>
+  </div>
+
+  <div class="paso" id="sd-p4">
+    <div class="paso-cab"><span class="paso-n">4</span><b>🎓 Charla del día</b><span class="paso-est" id="sd-e4"></span></div>
+    <div class="paso-cu">
+      <div style="display:flex;gap:10px">
+        <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Cuántos asistieron</label>
+          <input id="sd-hhc-n" inputmode="numeric" value="0" oninput="sdCalcular()"></div>
+        <div style="flex:1"><label class="sec-tit" style="margin:0 0 6px">Cuántos minutos</label>
+          <input id="sd-hhc-m" inputmode="numeric" value="0" placeholder="15" oninput="sdCalcular()"></div>
+      </div>
+      <div class="sd-rap" id="sd-hhc-rap"></div>
+      <div id="sd-hhc-res" class="sd-res">—</div>
+      <p class="sub" style="margin:7px 0 0;font-size:12.5px">Si ese día no hubo charla, déjalo en cero: el día se guarda igual.</p>
+    </div>
+  </div>
+
+  <div id="sd-total" style="margin-top:16px"></div>
+  <div id="sd-msg" style="font-size:13.5px;margin:9px 0 0"></div>
+  <button class="btn" id="sd-guardar" onclick="guardarDiaSemanal()" style="margin-top:11px">Guardar el día</button>
 </section>
 
 <section class="pantalla" id="p-amonestaciones">
@@ -6600,7 +6664,7 @@ var EMP_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-emp
             'p-taller':1,'p-taller-fin':1,'p-codigo':1,'p-sesion':1,'p-config':1,'p-apariencia':1,'p-formatos':1,
             'p-trabajadores':1,'p-trab-nuevo':1,'p-trab-ficha':1,'p-trab-traer':1,'p-planes':1,'p-estatus':1,
             'p-kardex':1,'p-kardex-nuevo':1,'p-kardex-export':1,'p-empleador':1,
-            'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,'p-constancias':1,
+            'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,'p-constancias':1,'p-eval-ver':1,
             'p-accidentes':1,'p-acc-nuevo':1,'p-acc-ver':1,
             'p-gestion-quien':1,'p-lider-no':1,
             'p-actividades':1,'p-invitar':1,'p-invitacion':1,
@@ -6954,6 +7018,7 @@ function _ir(p){
   if(p==='p-rol')pintarRol(); if(p==='p-carpeta')pintarCarpeta(); if(p==='p-foto')prepFoto(); if(p==='p-mensual')pintarMensual();
   if(p==='p-semanal')pintarSemanal(); if(p==='p-semanal-dia')prepDiaSemanal();
   if(p==='p-constancias'){ pintarConstancias(); cargarConstanciasObra(); }
+  if(p==='p-eval-ver')pintarEvalVer();
   if(p==='p-amonestaciones')pintarAmonestaciones(); if(p==='p-amon-nueva')prepAmonestacion();
   if(p==='p-amon-ver')pintarAmonDetalle(); if(p==='p-amon-firma')prepFirmaAmon(); if(p==='p-estatus')pintarEstatus();
   if(p==='p-accidentes')pintarAccidentes(); if(p==='p-acc-nuevo')prepAccNuevo(); if(p==='p-acc-ver')pintarAccVer();
@@ -10568,11 +10633,29 @@ function asegurarCapacitaciones(id){
     if(TF_ID===id) pintarFichaTrab();
   }, function(){ delete TF_CAP_PIDIENDO[id]; });
 }
+/* ── LAS COLUMNAS DE LA EVALUACION PUEDEN NO ESTAR TODAVIA ────────
+   Si el servidor no tiene puntaje/total/minimo/detalle, PostgREST no
+   devuelve «las demas»: rechaza la consulta ENTERA con un 400 y la
+   pantalla saldria vacia, como si se hubieran borrado las constancias.
+   Se pregunta con las columnas, y si la base dice que no, se vuelve a
+   preguntar sin ellas y se recuerda para no repetir el viaje.       */
+var CONS_SEL_BASE='trabajador,dni,cargo,tipo,tema,resultado,folio,fecha';
+var CONS_SEL_DET =',puntaje,total,minimo,detalle';
+function _pedirConstancias(cola){
+  function pedir(conDet){
+    return sbGet('sst_constancia?'+cola.replace('{SEL}', CONS_SEL_BASE+(conDet?CONS_SEL_DET:'')));
+  }
+  if(CONS_COL_DET===false) return pedir(false);
+  return pedir(true).then(function(r){ CONS_COL_DET=true; return r; }, function(cod){
+    if(CONS_COL_DET===true) return Promise.reject(cod);
+    CONS_COL_DET=false; return pedir(false);
+  });
+}
 function cargarCapacitacionesDe(id){
   var e=empActiva(), t=trabPorId(id);
   if(!e || !t || !hayCuenta()) return Promise.resolve([]);
-  return sbGet('sst_constancia?empresa=eq.'+encodeURIComponent(e.id)+
-      '&select=trabajador,dni,tema,resultado,fecha&order=fecha.desc&limit=600')
+  return _pedirConstancias('empresa=eq.'+encodeURIComponent(e.id)+
+      '&select={SEL}&order=fecha.desc&limit=600')
     .then(function(rows){
       var dni=String(t.dni||'').replace(/\D/g,'');
       var nom=_norm(t.nombre||'');
@@ -10655,8 +10738,8 @@ function cargarConstanciasObra(){
   var e=empActiva();
   if(!e || !hayCuenta() || CONS_CARGANDO) return Promise.resolve(CONS_OBRA||[]);
   CONS_CARGANDO=true;
-  return sbGet('sst_constancia?empresa=eq.'+encodeURIComponent(e.id)+
-      '&select=trabajador,dni,cargo,tipo,tema,resultado,folio,fecha&order=fecha.desc&limit=2000')
+  return _pedirConstancias('empresa=eq.'+encodeURIComponent(e.id)+
+      '&select={SEL}&order=fecha.desc&limit=2000')
     .then(function(rows){
       CONS_OBRA=rows||[]; CONS_CARGANDO=false;
       if((document.querySelector('.pantalla.activa')||{}).id==='p-constancias') pintarConstancias();
@@ -10692,7 +10775,7 @@ function pintarConstancias(){
   f.slice(0,150).forEach(function(x,i){
     var ap=esAprobado(x.resultado);
     h+='<button type="button" class="kx-fil" style="width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit" '+
-       'onclick="bajarConstanciaObra('+(CONS_OBRA.indexOf(x))+')">'+
+       'onclick="verEvaluacionDeObra('+(CONS_OBRA.indexOf(x))+')">'+
        '<div class="kx-txt"><b>'+esc(x.trabajador||'—')+'</b>'+
          '<small>'+esc(x.tema||'—')+(x.dni?(' · DNI '+esc(x.dni)):'')+'</small></div>'+
        '<div class="kx-lado"><span class="kx-est '+(ap?'ok':'esp')+'">'+(ap?'✅ '+esc(x.resultado||''):'⚠️ '+esc(x.resultado||''))+'</span>'+
@@ -10731,6 +10814,209 @@ function constanciasExcel(){
       '¿Qué hago con el Excel?');
     m.style.color='var(--ok)'; m.textContent=f.length+' constancia'+(f.length===1?'':'s')+' en el Excel.';
   }catch(e){ m.textContent='No se pudo armar el Excel: '+(e&&e.message||e); }
+}
+/* ══════════ LA EVALUACION QUE RINDIO, TAL CUAL ══════════════════
+   No es la constancia. Es la hoja: cada pregunta, las cuatro
+   alternativas, la que marco, la correcta, y la nota de abajo. Lo
+   mismo que le sale a el al terminar, visto desde la ficha.
+   Si la evaluacion se rindio antes de que esto existiera, no se
+   inventa nada: se dice que de esa solo quedo el veredicto.       */
+var EV_VER=null;
+function verEvaluacion(c){ if(!c) return; EV_VER=c; ir('p-eval-ver'); }
+function verEvaluacionDeFicha(i){ verEvaluacion((TF_CAP[TF_ID]||[])[i]); }
+function verEvaluacionDeObra(i){ verEvaluacion((CONS_OBRA||[])[i]); }
+function _notaDe(c){
+  var d=c && c.detalle;
+  var n=(c.total!=null? c.total : (d&&d.p? d.p.length : null));
+  var b=(c.puntaje!=null? c.puntaje : (d&&d.p? d.p.filter(function(x){return x.ok;}).length : null));
+  var m=(c.minimo!=null? c.minimo : (n!=null? Math.ceil(n*0.7) : null));
+  return {b:b, n:n, min:m};
+}
+function pintarEvalVer(){
+  var c=EV_VER, cab=$('ev-cab'), cu=$('ev-cuerpo'), pie=$('ev-pie');
+  if(!cab||!cu||!pie) return;
+  if(!c){ cab.innerHTML=''; cu.innerHTML='<p class="sub">No hay ninguna evaluación abierta.</p>'; pie.innerHTML=''; return; }
+  var d=c.detalle, hay=!!(d && d.p && d.p.length), N=_notaDe(c);
+  var ap=esAprobado(c.resultado);
+  if(N.b!=null && N.min!=null) ap=(N.b>=N.min);
+
+  var h='<h2 style="margin-bottom:4px">'+esc(c.tema||'Evaluación')+'</h2>';
+  h+='<p class="sub" style="margin-top:0">'+esc(c.trabajador||'—')+
+     (c.dni?(' · DNI '+esc(c.dni)):'')+(c.cargo?(' · '+esc(c.cargo)):'')+
+     ' · '+esc(fechaLarga(String(c.fecha||'').slice(0,10))||String(c.fecha||'').slice(0,10))+'</p>';
+  h+='<div class="caja vidrio" style="padding:14px;text-align:center;margin-top:10px">'+
+     '<div style="font-size:34px;font-weight:800;line-height:1.1">'+
+       (N.b!=null&&N.n!=null ? (N.b+' / '+N.n) : '—')+'</div>'+
+     '<div style="font-weight:700;color:'+(ap?'var(--ok)':'var(--mal)')+'">'+
+       (ap?'APROBADO':'DESAPROBADO')+(N.min!=null?(' — mínimo '+N.min):'')+'</div>'+
+     (c.folio?('<div class="sub" style="margin-top:6px">Folio '+esc(c.folio)+'</div>'):'')+
+     (hay&&d.salidas ? ('<div class="sub" style="color:var(--mal)">Salió de la app '+d.salidas+' vez'+(d.salidas===1?'':'es')+' durante la prueba</div>') : '')+
+     '</div>';
+  cab.innerHTML=h;
+
+  if(!hay){
+    cu.innerHTML='<div class="aviso" style="margin-top:12px">De esta evaluación el servidor solo guardó el veredicto: '+
+      '<b>'+esc(c.resultado||'—')+'</b>. Lo que marcó pregunta por pregunta no quedó registrado '+
+      '—se rindió antes de que la app lo guardara— y no se inventa. Las que se rindan de ahora en adelante '+
+      'sí salen completas aquí.</div>';
+  }else{
+    var b='';
+    if(d.escenario) b+='<p class="sub" style="margin-top:14px">'+esc(d.escenario)+'</p>';
+    b+='<div class="sec-tit" style="margin-top:14px">📝 Lo que marcó, pregunta por pregunta</div>';
+    d.p.forEach(function(q,i){
+      b+='<div class="caja vidrio" style="padding:12px 13px;margin-top:9px">';
+      b+='<div style="display:flex;gap:8px;align-items:flex-start">'+
+         '<span class="pin '+(q.ok?'ok':'mal')+'">'+(q.ok?'✓':'✕')+'</span>'+
+         '<b style="flex:1">'+(i+1)+'. '+esc(q.e||'')+'</b></div>';
+      ['a','b','c','d'].forEach(function(L){
+        if(!q.o || q.o[L]==null) return;
+        var esC=(L===q.c), esM=(L===q.m);
+        var col= esC ? 'var(--ok)' : (esM ? 'var(--mal)' : 'var(--gris)');
+        var fon= esM ? (esC?'rgba(31,122,73,.13)':'rgba(178,49,54,.13)') : 'transparent';
+        var eti= (esC&&esM) ? ' ✓ correcta — la que marcó' : (esC ? ' ✓ correcta' : (esM ? ' ✗ lo que marcó' : ''));
+        b+='<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:'+fon+';color:'+col+
+           ';font-weight:'+((esC||esM)?'700':'400')+'">'+L+') '+esc(q.o[L])+
+           (eti?('<span style="font-size:11.5px;opacity:.85">'+eti+'</span>'):'')+'</div>';
+      });
+      if(!q.m) b+='<div class="sub" style="margin-top:6px">No marcó ninguna.</div>';
+      b+='</div>';
+    });
+    if(d.evaluador||d.obra||d.empresaTrab){
+      b+='<p class="sub" style="margin-top:12px">'+
+         (d.obra?('Obra: '+esc(d.obra)+' · '):'')+
+         (d.empresaTrab?('Empresa del trabajador: '+esc(d.empresaTrab)+(d.vinculo?(' ('+esc(d.vinculo)+')'):'')+' · '):'')+
+         (d.evaluador?('Evaluador: '+esc(d.evaluador)):'')+'</p>';
+    }
+    cu.innerHTML=b;
+  }
+  var ph='';
+  if(hay) ph+='<button class="btn" onclick="bajarEvaluacionVista()">📝 Bajar esta evaluación (PDF)</button>';
+  ph+='<button class="btn sec" onclick="bajarConstanciaVista()" style="margin-top:9px">📄 Sacar la constancia del empleador</button>';
+  pie.innerHTML=ph;
+}
+function bajarConstanciaVista(){
+  var c=EV_VER; if(!c) return;
+  try{
+    var blob=_pdfDeConstancia(c);
+    var n=_nombreSano('Constancia - '+(c.trabajador||'trabajador')+' - '+(c.tema||'')+' - '+String(c.fecha||'').slice(0,10))+'.pdf';
+    pedirEnvio([{nombre:n, blob:blob}],
+      'Constancia de capacitación · '+(c.trabajador||'')+' · '+(c.tema||''), n,
+      '¿Qué hago con la constancia?');
+  }catch(e){ aviso('No se pudo armar la constancia', String(e && e.message || e), '📄'); }
+}
+function bajarEvaluacionVista(){
+  var c=EV_VER; if(!c) return;
+  try{
+    var blob=_pdfDeEvaluacion(c);
+    var n=_nombreSano('Evaluacion - '+(c.trabajador||'trabajador')+' - '+(c.tema||'')+' - '+String(c.fecha||'').slice(0,10))+'.pdf';
+    pedirEnvio([{nombre:n, blob:blob}],
+      'Evaluación rendida · '+(c.trabajador||'')+' · '+(c.tema||''), n,
+      '¿Qué hago con la evaluación?');
+  }catch(e){ aviso('No se pudo armar el PDF', String(e && e.message || e), '📄'); }
+}
+/* el acta de la evaluacion desde el registro de la empresa: la misma
+   hoja que rindio, sin su firma —esa la hizo con el dedo en su celular
+   y no esta en el servidor; inventarla seria falsificar el documento */
+function _pdfDeEvaluacion(c){
+  var d=c.detalle||{}, emp=empleador(), e=empActiva()||{}, N=_notaDe(c);
+  var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
+  var W=595.28, H=841.89, M=44, PIE=H-62, y=0;
+  doc.setDrawColor(120,120,120); doc.setLineWidth(.8);
+  doc.rect(M,40,W-2*M,58);
+  if(emp.logo){ try{ doc.addImage(emp.logo, M+8, 48, 96, 42, undefined, 'FAST'); }catch(_e){} }
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(20,20,20);
+  doc.text('EVALUACIÓN DE CAPACITACIÓN SST', W/2+40, 66, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100,100,100);
+  doc.text('Copia del empleador · Art. 35 de la Ley 29783', W/2+40, 82, {align:'center'});
+  y=120;
+  var colW=(W-2*M-18)/2;
+  var datos=[['Tema', (c.tema||'')+(d.variante?(' · '+d.variante):'')],
+             ['Fecha', fechaLarga(String(c.fecha||'').slice(0,10))||String(c.fecha||'').slice(0,10)],
+             ['Trabajador', c.trabajador||''], ['Documento', c.dni||''],
+             ['Cargo', c.cargo||''], ['Empresa', emp.razon || e.nombre || ''],
+             ['Obra / proyecto', d.obra || e.nombre || nombreDeLaObra() || ''],
+             ['Evaluador', d.evaluador||''],
+             ['Folio de verificación', c.folio||''],
+             ['Salidas de la app en la prueba', String(d.salidas||0)]];
+  for(var i=0;i<datos.length;i+=2){
+    var alto=0;
+    for(var cc=0;cc<2;cc++){
+      var par=datos[i+cc]; if(!par) continue;
+      var x=M+cc*(colW+18);
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
+      doc.text(String(par[0]).toUpperCase(), x, y);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(25,25,25);
+      var tx=doc.splitTextToSize(String(par[1]||'—'), colW);
+      doc.text(tx, x, y+10);
+      alto=Math.max(alto, 10+10*tx.length);
+    }
+    y+=alto+5;
+  }
+  y+=6;
+  var apro=(N.b!=null&&N.min!=null)? (N.b>=N.min) : esAprobado(c.resultado);
+  if(apro){ doc.setFillColor(232,244,236); } else { doc.setFillColor(250,235,235); }
+  doc.roundedRect(M,y,W-2*M,30,5,5,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  if(apro){ doc.setTextColor(31,122,73); } else { doc.setTextColor(178,49,54); }
+  doc.text('Resultado: '+(N.b!=null&&N.n!=null?(N.b+' / '+N.n+' — '):'')+(apro?'APROBADO':'DESAPROBADO')+
+           (N.min!=null?('   (mínimo para aprobar: '+N.min+')'):''), M+10, y+20);
+  y+=44;
+  var VERDE=[31,122,73], ROJO=[178,49,54], GRISC=[70,70,70];
+  var ps=(d.p||[]);
+  if(!ps.length){
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90,90,90);
+    doc.text(doc.splitTextToSize('De esta evaluación el registro conserva únicamente el resultado. El detalle de lo respondido no fue guardado y no se reconstruye.', W-2*M), M, y);
+    y+=40;
+  }
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(25,25,25);
+  if(ps.length){ doc.text('Preguntas y respuestas', M, y); y+=14; }
+  ps.forEach(function(q,i){
+    var letras=['a','b','c','d'].filter(function(L){ return q.o && q.o[L]!=null; });
+    var alt=11*doc.splitTextToSize((i+1)+'. '+String(q.e||'').replace(/\s+/g,' '), W-2*M).length+4;
+    letras.forEach(function(L){ alt+=10.5*doc.splitTextToSize('X  '+L+')  '+String(q.o[L]).replace(/\s+/g,' '), W-2*M-30).length+3; });
+    alt+=14;
+    if(y+alt>PIE){ doc.addPage(); y=52; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(25,25,25);
+    var qtx=doc.splitTextToSize((i+1)+'. '+String(q.e||'').replace(/\s+/g,' '), W-2*M);
+    doc.text(qtx,M,y); y+=11*qtx.length+4;
+    letras.forEach(function(L){
+      var esC=(L===q.c), esM=(L===q.m);
+      var tx=doc.splitTextToSize(L+')  '+String(q.o[L]).replace(/\s+/g,' '), W-2*M-30);
+      var hOp=10.5*tx.length;
+      if(esM){
+        if(esC){ doc.setFillColor(226,242,231); } else { doc.setFillColor(250,229,229); }
+        doc.roundedRect(M+14,y-8,W-2*M-14,hOp+5,3,3,'F');
+      }
+      var marca='', col=GRISC;
+      if(esC){ marca='V'; col=VERDE; } else if(esM){ marca='X'; col=ROJO; }
+      if(marca){
+        doc.setFont('zapfdingbats','normal'); doc.setFontSize(9);
+        doc.setTextColor(col[0],col[1],col[2]);
+        doc.text(marca==='V'?'4':'8', M+2, y);
+      }
+      doc.setFont('helvetica', (esC||esM)?'bold':'normal'); doc.setFontSize(9);
+      doc.setTextColor(col[0],col[1],col[2]);
+      doc.text(tx, M+18, y);
+      y+=hOp+3;
+    });
+    doc.setFont('helvetica','italic'); doc.setFontSize(8);
+    if(q.ok){ doc.setTextColor(31,122,73); doc.text('Respuesta correcta.', M+18, y); }
+    else { doc.setTextColor(178,49,54); doc.text('Marcó '+(q.m||'—')+'; la correcta era '+(q.c||'—')+'.', M+18, y); }
+    y+=14;
+  });
+  if(y+120>PIE){ doc.addPage(); y=60; } else { y+=10; }
+  doc.setDrawColor(150,150,150); doc.setLineWidth(.8);
+  doc.line(M,y+40,M+200,y+40); doc.line(W-M-200,y+40,W-M,y+40);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(70,70,70);
+  doc.text('Firma del trabajador', M, y+54);
+  doc.text('Firma del responsable SSOMA', W-M-200, y+54);
+  doc.setFontSize(7); doc.setTextColor(140,140,140);
+  doc.text(doc.splitTextToSize(
+    'Copia del empleador emitida desde el registro de la empresa. El trabajador rindió y firmó la evaluación '+
+    'en su propio equipo; esta copia reproduce lo registrado y deja el espacio de firma en blanco. Registro de '+
+    'capacitación conforme al Art. 35 de la Ley 29783; datos personales tratados conforme a la Ley 29733 y el '+
+    'D.S. 016-2024-JUS.', W-2*M), M, y+76);
+  return doc.output('blob');
 }
 function bajarConstanciaDe(i){
   var c=(TF_CAP[TF_ID]||[])[i]; if(!c) return;
@@ -10801,14 +11087,17 @@ function pintarFichaTrab(){
     h+='<div class="caja vidrio" style="padding:12px 14px">';
     caps.forEach(function(c,ci){
       var ap=esAprobado(c.resultado);
+      var _hayD=!!(c.detalle && c.detalle.p && c.detalle.p.length);
       h+='<button type="button" class="fila" style="width:100%;background:none;border:0;padding:9px 0;text-align:left;cursor:pointer;font:inherit;color:inherit" '+
-         'onclick="bajarConstanciaDe('+ci+')">'+
-         '<span>'+esc(c.tema||'—')+'<small style="display:block;color:var(--gris)">📄 Toca para sacar su constancia</small></span>'+
+         'onclick="verEvaluacionDeFicha('+ci+')">'+
+         '<span>'+esc(c.tema||'—')+'<small style="display:block;color:var(--gris)">'+
+           (_hayD ? ('📝 Toca para ver la evaluación que rindió'+(c.puntaje!=null&&c.total?(' · '+c.puntaje+'/'+c.total):''))
+                  : '📄 Toca para ver su constancia')+'</small></span>'+
          '<span class="sub" style="white-space:nowrap;text-align:right"><b style="color:'+(ap?'var(--ok)':'var(--mal)')+'">'+esc(c.resultado||'')+'</b><br>'+
          esc(fechaLarga(String(c.fecha||'').slice(0,10))||String(c.fecha||'').slice(0,10))+'</span></button>';
     });
     h+='</div>';
-    h+='<p class="sub" style="margin-top:7px">Es la copia del empleador: la misma que rindió el trabajador, sin su firma (esa la hizo en su celular). Sale con el folio de verificación.</p>';
+    h+='<p class="sub" style="margin-top:7px">Toca cualquiera para ver la evaluación tal cual la rindió —lo que marcó pregunta por pregunta y su nota— y de ahí sacas el papel para el archivo.</p>';
   }
 
   /* ── amonestaciones ── */
@@ -12015,50 +12304,150 @@ function sdCalcular(){
       ? ('<div class="aviso" style="margin:0">📊 <b>'+_n2(hht)+' HHT</b> ese día'+
          (hhc? (' · <b>'+_n2(hhc)+' HHC</b> · '+_n2(hhc/hht*100)+' % de capacitación') : '')+
          (($('sd-lugar')||{}).value ? (' · 📍 '+esc(($('sd-lugar')||{}).value)) : '')+'</div>')
-      : '';
+      : '<div class="aviso" style="margin:0;opacity:.75">Cuando pongas cuánta gente hubo y sus horas, aquí sale el total de horas hombre del día.</div>';
   }
+  sdPasos({obN:obN, obH:obH, stN:stN, stH:stH, hhcN:hhcN, hhcM:hhcM, hhc:hhc, hht:hht});
   return {obN:obN, obH:obH||0, stN:stN, stH:stH||0, hhcN:hhcN, hhcM:hhcM, hhc:hhc, hht:hht};
 }
-function prepDiaSemanal(){
-  var hoy=new Date();
-  if(!$('sd-fecha').value) $('sd-fecha').value=hoy.getFullYear()+'-'+('0'+(hoy.getMonth()+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2);
+/* ══════ QUE SE VEA DONDE VA CADA DATO Y QUE FALTA ════════════════
+   Cada paso dice, con su propia letra, si ya esta puesto y —cuando no
+   lo esta— que le falta exactamente. Y arriba, cuanto queda. */
+function sdPasos(R){
+  function marca(idP, idE, listo, txt){
+    var c=$(idP), e=$(idE);
+    if(c) c.className = listo ? 'paso lista' : 'paso';
+    if(e) e.innerHTML = (listo?'✓ ':'')+txt;
+  }
+  var f=($('sd-fecha')||{}).value||'', lug=(($('sd-lugar')||{}).value||'').trim();
+  marca('sd-p1','sd-e1', !!f, f ? (fechaCorta(f)+(lug?(' · 📍 '+esc(lug)):'')) : 'Elige la fecha');
+  var okOb = !!(R.obN && R.obH);
+  marca('sd-p2','sd-e2', okOb,
+    okOb ? (_n2(R.obN*R.obH)+' HHT') : (!R.obN ? 'Cuántos son' : 'Revisa las horas'));
+  var okSt = (!R.stN) || !!(R.stN && R.stH);
+  marca('sd-p3','sd-e3', okSt && (R.stN>0),
+    R.stN ? (R.stH? (_n2(R.stN*R.stH)+' HHT') : 'Revisa las horas') : 'Sin staff ese día');
+  var okC = !!(R.hhcN && R.hhcM);
+  marca('sd-p4','sd-e4', okC, okC ? (_n2(R.hhc)+' HHC') : 'Sin charla ese día');
+
+  var av=$('sd-avance');
+  if(av){
+    var falta=[];
+    if(!f) falta.push('la fecha');
+    if(!R.obN && !R.stN) falta.push('cuánta gente hubo');
+    if(R.obN && !R.obH) falta.push('las horas de los obreros');
+    if(R.stN && !R.stH) falta.push('las horas del staff');
+    var hechos=(f?1:0)+(okOb?1:0)+((R.stN&&R.stH)?1:0)+(okC?1:0);
+    av.innerHTML = falta.length
+      ? ('Falta '+falta.join(' y ')+'.<div class="barrita"><i style="width:'+Math.round(hechos/4*100)+'%"></i></div>')
+      : ('Listo para guardar'+(R.hht?(' · '+_n2(R.hht)+' HHT'):'')+
+         '<div class="barrita"><i style="width:'+Math.round(hechos/4*100)+'%"></i></div>');
+  }
+  var g=$('sd-guardar');
+  if(g) g.style.opacity = ((f && (R.obN||R.stN)) ? '1' : '.55');
+}
+function fechaCorta(iso){
+  try{
+    var d=new Date(iso+'T00:00:00');
+    var D=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][d.getDay()];
+    return D+' '+d.getDate()+'/'+(d.getMonth()+1);
+  }catch(e){ return iso; }
+}
+/* la semana de un vistazo: que dias ya estan y cual falta. Tocar uno
+   abre ese dia —para llenarlo o para corregirlo— sin salir. */
+function sdPintarDias(){
+  var c=$('sd-dias'); if(!c) return;
+  var f=($('sd-fecha')||{}).value; if(!f) return;
+  var d=new Date(f+'T00:00:00');
+  var lun=new Date(d.valueOf()); lun.setDate(lun.getDate()-((d.getDay()+6)%7));
+  var guard={}; semLocal().forEach(function(x){ guard[x.fecha]=x; });
+  var hoy=hoyISO(), h='';
+  for(var i=0;i<7;i++){
+    var x=new Date(lun.valueOf()); x.setDate(lun.getDate()+i);
+    var iso=x.getFullYear()+'-'+('0'+(x.getMonth()+1)).slice(-2)+'-'+('0'+x.getDate()).slice(-2);
+    var g=guard[iso], cl='sd-dia'+(g?' hecho':'')+(iso===hoy?' hoy':'')+(iso===f?' sel':'');
+    h+='<button type="button" class="'+cl+'" onclick="sdIrADia(\''+iso+'\')">'+
+       '<small>'+['lun','mar','mié','jue','vie','sáb','dom'][i]+'</small>'+
+       '<b>'+x.getDate()+'</b>'+
+       '<span class="pt">'+(g? ('✓ '+_n2((g.obN*g.obH)+(g.stN*g.stH))) : (iso>hoy?'—':'falta'))+'</span></button>';
+  }
+  c.innerHTML=h;
+}
+function sdIrADia(iso){ var f=$('sd-fecha'); if(!f) return; f.value=iso; sdFechaCambio(); }
+function sdFechaCambio(){ prepDiaSemanal(true); }
+/* atajos: lo que el supervisor pondria a mano y siempre es lo mismo */
+function sdRapidos(){
+  function pon(id, vals, campo, suf){
+    var c=$(id); if(!c) return;
+    var act=String((($(campo)||{}).value||'')).trim();
+    c.innerHTML=vals.map(function(v){
+      return '<button type="button" class="'+(String(v)===act?'on':'')+'" onclick="sdPoner(\''+campo+'\',\''+v+'\')">'+v+(suf||'')+'</button>';
+    }).join('');
+  }
+  pon('sd-ob-rrap',[0,30,45,60],'sd-ob-r',' min');
+  pon('sd-st-rrap',[0,30,45,60],'sd-st-r',' min');
+  pon('sd-hhc-rap',[5,10,15,30],'sd-hhc-m',' min');
   var nOb=trabsLocal().filter(function(t){return t.estatus==='activo';}).length;
-  if($('sd-ob-n').value==='0' && nOb) $('sd-ob-n').value=String(nOb);
+  var c=$('sd-ob-rap');
+  if(c) c.innerHTML = nOb
+    ? ('<button type="button" onclick="sdPoner(\'sd-ob-n\',\''+nOb+'\')">Todos los activos ('+nOb+')</button>')
+    : '';
+  var l=$('sd-lugar-rap');
+  if(l){
+    var vistos={}, ops=[];
+    semLocal().slice().reverse().forEach(function(x){ if(x.lugar && !vistos[x.lugar] && ops.length<4){ vistos[x.lugar]=1; ops.push(x.lugar); } });
+    var actual=(($('sd-lugar')||{}).value||'').trim();
+    l.innerHTML=ops.map(function(v){
+      return '<button type="button" class="'+(v===actual?'on':'')+'" onclick="sdPoner(\'sd-lugar\',\''+escA(v)+'\')">📍 '+esc(v)+'</button>';
+    }).join('');
+  }
+}
+function sdPoner(campo, valor){
+  var el=$(campo); if(!el) return;
+  el.value=valor; sdCalcular(); sdRapidos();
+}
+function prepDiaSemanal(mantenerFecha){
+  var fi=$('sd-fecha'); if(!fi) return;
+  if(!fi.value) fi.value=hoyISO();
+  var f=fi.value;
+  var todos=semLocal();
+  var ya=todos.filter(function(x){ return x.fecha===f; })[0];
   /* las horas y el lugar del ultimo dia guardado: en obra se repiten
      casi siempre, y volver a escribirlas cada dia es lo que hace que la
      gente deje de llenar el reporte */
-  var ult=semLocal().slice(-1)[0];
-  if(ult){
-    if(ult.obE) $('sd-ob-e').value=ult.obE;
-    if(ult.obS) $('sd-ob-s').value=ult.obS;
-    if(ult.obR!=null) $('sd-ob-r').value=String(ult.obR);
-    if(ult.stE) $('sd-st-e').value=ult.stE;
-    if(ult.stS) $('sd-st-s').value=ult.stS;
-    if(ult.stR!=null) $('sd-st-r').value=String(ult.stR);
-    if(ult.stN) $('sd-st-n').value=String(ult.stN);
-  }
-  $('sd-hhc-n').value='0'; $('sd-hhc-m').value='';
-  /* si ya hay un dia guardado con esta fecha, se abre para corregirlo
-     en vez de escribirlo de nuevo a ciegas */
-  var ya=semLocal().filter(function(x){ return x.fecha===$('sd-fecha').value; })[0];
-  if(ya){
-    $('sd-ob-n').value=String(ya.obN||0); $('sd-st-n').value=String(ya.stN||0);
-    if(ya.obE) $('sd-ob-e').value=ya.obE; if(ya.obS) $('sd-ob-s').value=ya.obS;
-    if(ya.stE) $('sd-st-e').value=ya.stE; if(ya.stS) $('sd-st-s').value=ya.stS;
-    if(ya.obR!=null) $('sd-ob-r').value=String(ya.obR);
-    if(ya.stR!=null) $('sd-st-r').value=String(ya.stR);
-    $('sd-hhc-n').value=String(ya.hhcN||0); $('sd-hhc-m').value=String(ya.hhcM||'');
-    $('sd-lugar').value=ya.lugar||'';
-  }
+  var ult=todos.slice(-1)[0] || {};
+  var b = ya || {};
+  var nAct=trabsLocal().filter(function(t){return t.estatus==='activo';}).length;
+  function pon(id,v){ var e=$(id); if(e) e.value=(v==null?'':String(v)); }
+  pon('sd-ob-n', ya ? (ya.obN||0) : (nAct||0));
+  pon('sd-ob-e', b.obE || ult.obE || '07:00');
+  pon('sd-ob-s', b.obS || ult.obS || '17:00');
+  pon('sd-ob-r', b.obR!=null ? b.obR : (ult.obR!=null ? ult.obR : 60));
+  pon('sd-st-n', ya ? (ya.stN||0) : (ult.stN||0));
+  pon('sd-st-e', b.stE || ult.stE || '08:00');
+  pon('sd-st-s', b.stS || ult.stS || '17:00');
+  pon('sd-st-r', b.stR!=null ? b.stR : (ult.stR!=null ? ult.stR : 60));
+  /* la charla NO se arrastra: es de ese dia y solo de ese dia */
+  pon('sd-hhc-n', ya ? (ya.hhcN||0) : 0);
+  pon('sd-hhc-m', ya ? (ya.hhcM||'') : '');
+  pon('sd-lugar', ya ? (ya.lugar||'') : '');
+
   var dl=$('sd-lugar-sug');
   if(dl){
     var vistos={}, ops=[];
-    semLocal().forEach(function(x){ if(x.lugar && !vistos[x.lugar]){ vistos[x.lugar]=1; ops.push(x.lugar); } });
+    todos.forEach(function(x){ if(x.lugar && !vistos[x.lugar]){ vistos[x.lugar]=1; ops.push(x.lugar); } });
     try{ lugaresUsados().forEach(function(l){ if(l && !vistos[l]){ vistos[l]=1; ops.push(l); } }); }catch(_l){}
     dl.innerHTML=ops.map(function(l){ return '<option value="'+escA(l)+'">'; }).join('');
   }
-  $('sd-msg').textContent='';
-  sdCalcular();
+  var g=$('sd-guardar');
+  if(g) g.textContent = ya ? 'Actualizar el día' : 'Guardar el día';
+  var m=$('sd-msg');
+  if(m){
+    m.style.color='var(--gris)';
+    m.innerHTML = ya
+      ? ('Este día ya estaba guardado con <b>'+_n2((ya.obN*ya.obH)+(ya.stN*ya.stH))+' HHT</b>. Lo que cambies lo reemplaza.')
+      : '';
+  }
+  sdPintarDias(); sdRapidos(); sdCalcular();
 }
 function guardarDiaSemanal(){
   var m=$('sd-msg'); m.style.color='var(--mal)';
@@ -12084,6 +12473,8 @@ function guardarDiaSemanal(){
   subirSemanal([d]);
   m.style.color='var(--ok)';
   m.textContent='Día guardado: '+_n2(R.hht)+' HHT'+(R.hhc?(' y '+_n2(R.hhc)+' HHC'):'')+'.';
+  try{ sdPintarDias(); }catch(_p){}
+  var _g=$('sd-guardar'); if(_g) _g.textContent='Actualizar el día';
   setTimeout(function(){ ir('p-semanal'); },700);
 }
 /* ══════ EL REPORTE SEMANAL TAMBIEN ESPERA SEÑAL ═══════════════════
@@ -17843,14 +18234,62 @@ function pintarTrabajadorDelMes(){
 /* El trabajador no tiene cuenta: la base de datos no le deja escribir en
    las tablas. Manda lo suyo por funciones que solo hacen una cosa y que
    piden el código de la obra. Quien sí tiene cuenta escribe directo. */
+/* ══════ LA EVALUACION, NO EL VEREDICTO ══════════════════════════
+   Marcelo: «no te dije acerca de una constancia, sino de la misma
+   evaluacion realizada por el trabajador, lo que marco, y su
+   puntuacion, literal, lo que le sale al final».
+   Tenia razon y el problema era de raiz: el servidor guardaba
+   «aprobado» y nada mas. Lo que el trabajador marco vivia solo en su
+   celular. Ahora se manda entero —enunciado, las cuatro alternativas,
+   la que marco y la correcta— para que el supervisor vea la misma
+   hoja, no un resumen.
+   Se manda aparte del resto porque las columnas son nuevas: si el
+   servidor todavia no las tiene, la constancia se guarda igual que
+   siempre y no se pierde nada. Se prueba una vez y se recuerda.   */
+var CONS_COL_DET = null;   /* null = sin probar · true/false = ya sabemos */
 function guardarConstancia(d){
   var e=empDeTrabajo(); if(!e) return Promise.resolve();
+  var fila={trabajador:d.trabajador, dni:d.dni, cargo:d.cargo,
+            tipo:d.tipo, tema:d.tema, resultado:d.resultado, folio:d.folio, fecha:d.fecha};
+  var hayDet = !!(d.detalle && d.detalle.p && d.detalle.p.length);
   if(hayCuenta() && sesionAbierta()){
-    return sbPost('sst_constancia',{empresa:e.id, trabajador:d.trabajador, dni:d.dni, cargo:d.cargo,
-      tipo:d.tipo, tema:d.tema, resultado:d.resultado, folio:d.folio, fecha:d.fecha});
+    var base={}; for(var k in fila) base[k]=fila[k]; base.empresa=e.id;
+    if(!hayDet || CONS_COL_DET===false) return sbPost('sst_constancia', base);
+    var con={}; for(var k2 in base) con[k2]=base[k2];
+    con.puntaje=d.puntaje; con.total=d.total; con.minimo=d.minimo; con.detalle=d.detalle;
+    return sbPost('sst_constancia', con).then(function(r){ CONS_COL_DET=true; return r; },
+      function(){ CONS_COL_DET=false; return sbPost('sst_constancia', base); });
   }
   return sbRpc('sst_constancia_nueva',{p_cod:e.codigo, p_trabajador:d.trabajador, p_dni:d.dni,
-    p_cargo:d.cargo, p_tipo:d.tipo, p_tema:d.tema, p_resultado:d.resultado, p_folio:d.folio, p_fecha:d.fecha});
+      p_cargo:d.cargo, p_tipo:d.tipo, p_tema:d.tema, p_resultado:d.resultado, p_folio:d.folio, p_fecha:d.fecha})
+    .then(function(r){
+      if(!hayDet) return r;
+      /* si esta funcion todavia no existe en el servidor, la constancia
+         ya quedo guardada: esto no se lleva nada por delante */
+      return sbRpc('sst_constancia_detalle',{p_folio:d.folio, p_dni:d.dni, p_trabajador:d.trabajador,
+          p_puntaje:d.puntaje, p_total:d.total, p_minimo:d.minimo, p_detalle:d.detalle})
+        .then(function(){ CONS_COL_DET=true; return r; },
+              function(){ CONS_COL_DET=false; return r; });
+    });
+}
+/* la hoja tal cual la rindio, para que el supervisor vea lo mismo */
+function _detalleDeEvaluacion(){
+  if(!hayTema()) return null;
+  var t=TEMAS[S.tema]||{}, cfg=leer(LS.cfg,{});
+  function cortar(x,n){ x=String(x==null?'':x).replace(/\s+/g,' ').trim(); return x.length>n ? x.slice(0,n-1)+'\u2026' : x; }
+  var ps=[];
+  S.resp.forEach(function(r,i){
+    var q=S.orden[i]; if(!q) return;
+    var o={};
+    ['a','b','c','d'].forEach(function(L){ if(q.opciones && q.opciones[L]!=null) o[L]=cortar(q.opciones[L],220); });
+    ps.push({n:q.n, e:cortar(q.enunciado,420), o:o, c:q.correcta, m:r.marcada||'', ok:r.ok?1:0});
+  });
+  return {v:1, tid:S.tema, tema:t.tema||'', variante:t.variante||'', escenario:cortar(t.escenario||'',200),
+          sector:(sectorDe(S.sector)||{}).nombre||'', salidas:(S.salidas||0),
+          evaluador:cortar(S.datos.evaluador||cfg.cap||'',80),
+          obra:cortar(S.datos.obra||cfg.obra||'',80),
+          empresaTrab:cortar(S.datos.empresa||'',80), vinculo:cortar(S.datos.vinculo||'',40),
+          p:ps};
 }
 
 /* ── LA COLUMNA QUE TODAVIA PUEDE NO EXISTIR ──────────────────────
@@ -18887,11 +19326,34 @@ function entregarArchivos(archivos, como, nombreZip){
       bajarBlob(x.blob, x.nombre);
       return {modo:'bajado', nombre:x.nombre, cuantos:archivos.length};
     }
-    /* el camino bueno: el celular adjunta el archivo de verdad */
-    if(puede && como.via!=='mail' && como.via!=='wa'){
+    /* ══════ EL ARCHIVO TIENE QUE IRSE CON EL MENSAJE ══════════════
+       Aqui la embarre yo: al meter el selector de envio deje WhatsApp
+       FUERA del camino de navigator.share, asi que elegir WhatsApp
+       garantizaba que se mandara solo texto — justo lo contrario de lo
+       que el usuario acababa de pedir.
+       navigator.share CON archivos es el unico camino por el que un
+       navegador puede adjuntar de verdad: abre el menu del celular y
+       WhatsApp aparece ahi con el archivo pegado. Asi que si el equipo
+       sabe hacerlo, WhatsApp va por ahi.
+       El numero que escribio no se pierde: se copia al portapapeles y
+       se le dice, porque en el menu del sistema el chat lo elige el.
+       Solo cuando el equipo NO sabe adjuntar (una laptop, casi siempre)
+       se cae al camino viejo: se descarga y se abre el chat con el
+       texto, diciendolo. */
+    if(puede && como.via!=='mail'){
+      if(como.via==='wa' && como.destino){
+        try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(String(como.destino)); }catch(_c){}
+      }
       return navigator.share({files:[f], title:x.nombre, text:como.texto||''})
         .then(function(){ return {modo:'compartido', nombre:x.nombre, cuantos:archivos.length}; })
-        .catch(function(){ bajarBlob(x.blob, x.nombre); return {modo:'bajado', nombre:x.nombre, cuantos:archivos.length}; });
+        .catch(function(err){
+          /* el usuario cancelo el menu: no se le baja el archivo por la
+             espalda ni se le abre otra cosa */
+          var cancelo = err && (err.name==='AbortError' || /abort|cancel/i.test(String(err)));
+          if(cancelo) return {modo:'cancelado', nombre:x.nombre, cuantos:archivos.length};
+          bajarBlob(x.blob, x.nombre);
+          return {modo:'bajado', nombre:x.nombre, cuantos:archivos.length};
+        });
     }
     /* si el navegador no sabe adjuntar, se baja y se abre el chat o el
        correo con el mensaje. No se finge que el archivo va solo. */
@@ -22180,7 +22642,7 @@ function _parrafoNorma(txt, pos, largo){
    adjunte un archivo sola. Asi que en esos dos casos el archivo se
    descarga y se abre el chat con el mensaje escrito, y la hoja lo dice
    antes, no despues.                                                  */
-var ENV={archivos:null, texto:'', zip:'', via:''};
+var ENV={archivos:null, texto:'', zip:'', via:'', puedeArchivos:false};
 function pedirEnvio(archivos, texto, nombreZip, titulo){
   if(!archivos || !archivos.length) return;
   ENV={archivos:archivos, texto:texto||'', zip:nombreZip||'', via:''};
@@ -22191,13 +22653,24 @@ function pedirEnvio(archivos, texto, nombreZip, titulo){
       ? ('1 archivo: '+archivos[0].nombre)
       : (archivos.length+' archivos, van juntos en «'+(nombreZip||'una carpeta comprimida')+'»');
   }
-  var puedeCompartir=false;
-  try{ puedeCompartir = !!(navigator.canShare && navigator.share); }catch(_e){}
+  /* canShare({files}) es lo unico que dice de verdad si este equipo
+     puede adjuntar. No basta con que exista navigator.share: en varias
+     laptops existe y no acepta archivos. */
+  var puedeArchivos=false;
+  try{
+    var _f=new File([new Blob(['x'])],'p.txt',{type:'text/plain'});
+    puedeArchivos = !!(navigator.canShare && navigator.share && navigator.canShare({files:[_f]}));
+  }catch(_e){ puedeArchivos=false; }
+  ENV.puedeArchivos=puedeArchivos;
   var h='';
-  if(puedeCompartir)
-    h+='<button class="tarj vidrio" onclick="envElegir(\'compartir\')"><b>📲 Compartir</b><small>Abre el menú del celular: WhatsApp, correo, Drive, lo que tengas</small></button>';
-  h+='<button class="tarj vidrio" onclick="envElegir(\'wa\')"><b>💬 Mandar por WhatsApp</b><small>Se descarga y se abre el chat con el mensaje puesto para que lo adjuntes</small></button>';
-  h+='<button class="tarj vidrio" onclick="envElegir(\'mail\')"><b>✉️ Mandar por correo</b><small>Se descarga y se abre tu correo con el asunto puesto</small></button>';
+  if(puedeArchivos){
+    h+='<button class="tarj vidrio" onclick="envElegir(\'compartir\')"><b>📲 Compartir con el archivo</b><small>Abre el menú del celular con el archivo ya pegado: WhatsApp, correo, Drive</small></button>';
+    h+='<button class="tarj vidrio" onclick="envElegir(\'wa\')"><b>💬 WhatsApp a un número</b><small>Se copia el número y se abre el menú con el archivo pegado</small></button>';
+  }else{
+    h+='<button class="tarj vidrio" onclick="envElegir(\'wa\')"><b>💬 Mandar por WhatsApp</b>'+
+       '<small>Este equipo no deja que la app adjunte sola: se descarga y se abre el chat con el mensaje, y tú arrastras el archivo</small></button>';
+  }
+  h+='<button class="tarj vidrio" onclick="envElegir(\'mail\')"><b>✉️ Mandar por correo</b><small>Se descarga y se abre tu correo con el asunto puesto para que lo adjuntes</small></button>';
   h+='<button class="tarj vidrio" onclick="envElegir(\'bajar\')"><b>⬇️ Solo descargar</b><small>Se guarda en este equipo y ya</small></button>';
   $('env-ops').innerHTML=h;
   $('env-dest').style.display='none';
@@ -22210,16 +22683,28 @@ function envElegir(via){
   if(via==='compartir' || via==='bajar'){ enviarAhora(); return; }
   var d=$('env-dest'), et=$('env-dest-et'), v=$('env-dest-val');
   d.style.display='';
+  /* se limpia ANTES de escribir el aviso: si se limpiaba despues (como
+     lo tenia yo) el aviso se borraba solo y el usuario nunca sabia si
+     el archivo iba pegado o no */
+  var _m=$('env-msg'); if(_m){ _m.innerHTML=''; _m.style.color='var(--gris)'; }
   if(via==='wa'){
     et.textContent='Número de WhatsApp (con o sin +51)';
     v.placeholder='999 888 777'; v.type='tel'; v.inputMode='tel';
     v.value=leer('sstc_env_wa','')||'';
+    var av=$('env-msg');
+    if(av){
+      av.style.color='var(--gris)';
+      av.innerHTML = ENV.puedeArchivos
+        ? 'Se abrirá el menú del celular <b>con el archivo pegado</b>. Elige WhatsApp y luego el contacto: el número queda copiado para que lo pegues si hace falta.'
+        : 'Ojo: en este equipo la app <b>no puede adjuntar sola</b>. Se descarga el archivo y se abre el chat con el mensaje; el archivo lo arrastras tú.';
+    }
   }else{
     et.textContent='Correo de quien lo recibe';
     v.placeholder='residente@empresa.com'; v.type='email'; v.inputMode='email';
     v.value=leer('sstc_env_mail','')||'';
+    var am=$('env-msg');
+    if(am) am.innerHTML='Se descarga el archivo y se abre tu correo con el asunto puesto: el archivo lo adjuntas tú.';
   }
-  $('env-msg').textContent='';
   try{ v.focus(); }catch(_e){}
 }
 function enviarAhora(){
@@ -25678,7 +26163,8 @@ function hacerPDF(){
     $('listo-nombre').textContent=PDF.nombre;
     try{ guardarConstancia({trabajador:S.datos.nombre, dni:S.datos.dni, cargo:S.datos.cargo,
         tipo:'evaluacion', tema:(TEMAS[S.tema]&&TEMAS[S.tema].tema)||S.tema,
-        resultado:(b>=min?'aprobado':'desaprobado'), folio:cod, fecha:(S.datos.fecha||hoyISO())}); }catch(_x){}
+        resultado:(b>=min?'aprobado':'desaprobado'), folio:cod, fecha:(S.datos.fecha||hoyISO()),
+        puntaje:b, total:n, minimo:min, detalle:_detalleDeEvaluacion()}); }catch(_x){}
     ir('p-listo');
   }catch(e){ aviso('No se pudo generar el PDF', String(e.message||e), '📄'); }
 }
