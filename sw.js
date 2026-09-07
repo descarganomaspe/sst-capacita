@@ -1,4 +1,4 @@
-var CACHE = 'sstc-e76dc6cd8c-b';
+var CACHE = 'sstc-0d5df754de-b';
 self.addEventListener('install', function(e){ self.skipWaiting(); });
 self.addEventListener('activate', function(e){
   e.waitUntil(caches.keys().then(function(ks){

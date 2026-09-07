@@ -3022,7 +3022,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <label>Colegiatura <span style="color:var(--gris)">(opcional · CIP, CQP…)</span></label><input id="r-cip" placeholder="CIP 123456">
   <button type="button" class="tarj vidrio" id="r-sello-tarj" onclick="rToggleSello()" style="margin:4px 0 12px">
     <b id="r-sello-et">🔏 Mi sello junto a mi firma</b>
-    <small>En cada documento que firmes (constancias, inspecciones, papeletas, kardex, diplomas) sale, debajo de tu firma, un sello con tu nombre, tu cargo y tu colegiatura. Igual firmas.</small>
+    <small>En cada documento que firmes (constancias, inspecciones, papeletas, kardex, diplomas) sale, debajo de tu firma, tu nombre en mayúsculas, tu cargo y —si la pusiste— tu colegiatura, como un sello. Igual firmas.</small>
   </button>
   <label>Empresa</label><input id="r-empresa" placeholder="Nombre de tu empresa">
   <label>Obra o proyecto</label><input id="r-obra" placeholder="Proyecto Metro de Lima — Línea 2">
@@ -10900,23 +10900,21 @@ function selloDatos(nombre){
   return {nombre:s.nombre, cargo:s.cargo||'', cip:s.cip||'', empresa:s.empresa||''};
 }
 function _pdfSello(doc, cx, yTop, o, w, chico){
+  /* «que el sello sea negro y sin recuadro»: solo las lineas, en tinta
+     negra, con el nombre en mayusculas. La colegiatura sale si la puso. */
   if(!o) return 0;
   w = w || (chico ? 118 : 176);
   var lh = chico ? 7.5 : 9.5;
-  var lineas=[[String(o.nombre||'').toUpperCase(), chico?7.2:8.6, 'bold']];
-  if(o.cargo)   lineas.push([o.cargo, chico?6:7.3, 'normal']);
-  if(o.cip)     lineas.push([o.cip, chico?5.6:6.8, 'normal']);
-  if(o.empresa && !chico) lineas.push([o.empresa, 6.2, 'normal']);
-  var h = 10 + lineas.length*lh + 4;
-  var TIN=[36,66,150];
-  doc.setDrawColor(TIN[0],TIN[1],TIN[2]);
-  doc.setLineWidth(chico?1:1.3); doc.roundedRect(cx-w/2, yTop, w, h, 5, 5, 'S');
-  doc.setLineWidth(.45);          doc.roundedRect(cx-w/2+2.5, yTop+2.5, w-5, h-5, 3.5, 3.5, 'S');
-  doc.setTextColor(TIN[0],TIN[1],TIN[2]);
-  var yy=yTop+9+lh*0.6;
+  var lineas=[[String(o.nombre||'').toUpperCase(), chico?7.4:9, 'bold']];
+  if(o.cargo)   lineas.push([o.cargo, chico?6.2:7.5, 'normal']);
+  if(o.cip)     lineas.push([o.cip, chico?5.8:7, 'normal']);
+  if(o.empresa && !chico) lineas.push([o.empresa, 6.4, 'normal']);
+  var h = 4 + lineas.length*lh;
+  doc.setTextColor(20,20,20);
+  var yy=yTop+4+lh*0.7;
   lineas.forEach(function(l){
     doc.setFont('helvetica', l[2]); doc.setFontSize(l[1]);
-    var tx=String(l[0]); while(doc.getTextWidth(tx)>w-12 && tx.length>4) tx=tx.slice(0,-2);
+    var tx=String(l[0]); while(doc.getTextWidth(tx)>w-6 && tx.length>4) tx=tx.slice(0,-2);
     doc.text(tx, cx, yy, {align:'center'}); yy+=lh;
   });
   return h;
@@ -11102,9 +11100,7 @@ function _pdfDeConstancia(c){
   doc.text('Firma del trabajador', M+aw/2, yf+92, {align:'center'});
   var selloR=selloDatos(d.evaluador||'') || selloDatos();
   if(selloR){
-    _pdfSello(doc, W-M-aw/2, yf+2, selloR, 176, false);
-    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
-    doc.text('Firma y sello del responsable SSOMA', W-M-aw/2, yf+92, {align:'center'});
+    _pdfSello(doc, W-M-aw/2, yf+72, selloR, 200, false);
   } else {
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(TINTA[0],TINTA[1],TINTA[2]);
     doc.text(d.evaluador||'', W-M-aw/2, yf+82, {align:'center'});
@@ -15030,7 +15026,7 @@ function _pdfDeKardex(t, regs, mes){
   doc.line(W-M-218, y, W-M-18, y);
   doc.setFontSize(8); doc.setTextColor(80,80,80);
   doc.text('Responsable SSOMA', W-M-218, y+13);
-  var selloK=selloDatos(); if(selloK) _pdfSello(doc, W-M-118, y-44, selloK, 176, false);
+  var selloK=selloDatos(); if(selloK) _pdfSello(doc, W-M-118, y+22, selloK, 200, false);
   doc.setFontSize(7.5); doc.setTextColor(120,120,120);
   doc.text('Cada línea lleva la firma del trabajador en el momento de la entrega.', M+18, y+13);
   doc.setFontSize(7); doc.setTextColor(155,155,155);
@@ -18944,7 +18940,7 @@ function _pdfDiplomaTdm(g, mes, puesto, oficial){
   doc.setFont('helvetica','normal'); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]); doc.setFontSize(8.5);
   var sup=(leer(LS_SUP,{})||{}).nombre||'';
   var selloD=selloDatos();
-  if(selloD) _pdfSello(doc, 230, yf-62, selloD, 176, false);
+  if(selloD) _pdfSello(doc, 230, yf+22, selloD, 220, false);
   else if(sup) doc.text(sup, 230, yf+27, {align:'center'});
   /* pie */
   doc.setFontSize(7.5); doc.setTextColor(140,140,140);
@@ -27375,9 +27371,7 @@ function hacerPDF(){
     /* el evaluador: con sello si lo activo (viaja en el enlace), si no el nombre */
     var selloEv = S.selloEval && _norm(S.selloEval.nombre||'')===_norm(S.datos.evaluador||'') ? S.selloEval : selloDatos(S.datos.evaluador||cfg.cap||'');
     if(selloEv){
-      _pdfSello(doc, W-M-aw/2, yf+2, selloEv, 176, false);
-      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
-      doc.text('Firma y sello del evaluador', W-M-aw/2, yf+82, {align:'center'});
+      _pdfSello(doc, W-M-aw/2, yf+72, selloEv, 200, false);
     } else {
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(TINTA[0],TINTA[1],TINTA[2]);
       doc.text(S.datos.evaluador||cfg.cap||'', W-M-aw/2, yf+82, {align:'center'});
