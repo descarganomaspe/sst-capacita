@@ -1559,7 +1559,7 @@ html.t-claro .tostada,html.t-alto .tostada{background:#0D1620;color:#fff}
 .subg.abierto>.subg-cab .fl{transform:rotate(180deg)}
 .subg-cont{display:none}
 .subg.abierto>.subg-cont{display:block}
-.lienzo{width:100%;height:200px;background:#fff;border-radius:14px;touch-action:none;display:block;margin-bottom:12px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+.lienzo{width:100%;height:260px;background:#fff;border-radius:14px;touch-action:none;display:block;margin-bottom:12px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
 /* --- hoja flotante de variantes (mismo patron que el selector de subtemas) --- */
 .hoja{position:fixed;inset:0;z-index:50;display:none}
 .hoja.abierta{display:block}
@@ -3019,6 +3019,11 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <label>Nombre y apellidos</label><input id="r-nombre" placeholder="Marcelo Lamas">
   <label>DNI o carné de extranjería</label><input id="r-doc" placeholder="45872103">
   <label>Cargo</label><input id="r-cargo" placeholder="Supervisor SSOMA">
+  <label>Colegiatura <span style="color:var(--gris)">(opcional · CIP, CQP…)</span></label><input id="r-cip" placeholder="CIP 123456">
+  <button type="button" class="tarj vidrio" id="r-sello-tarj" onclick="rToggleSello()" style="margin:4px 0 12px">
+    <b id="r-sello-et">🔏 Mi sello junto a mi firma</b>
+    <small>En cada documento que firmes (constancias, inspecciones, papeletas, kardex, diplomas) sale, debajo de tu firma, un sello con tu nombre, tu cargo y tu colegiatura. Igual firmas.</small>
+  </button>
   <label>Empresa</label><input id="r-empresa" placeholder="Nombre de tu empresa">
   <label>Obra o proyecto</label><input id="r-obra" placeholder="Proyecto Metro de Lima — Línea 2">
   <label>Tu empresa en esta obra es</label>
@@ -6619,6 +6624,9 @@ var SECTORES = [{"id":"construccion","nombre":"Construcción","icono":"🏗️",
 var FAMILIAS = {"primeros_auxilios":{"titulo":"Primeros auxilios","pregunta":"¿Qué emergencia estás atendiendo?","orden":1},"izaje":{"titulo":"Izaje de cargas","pregunta":"¿Con qué vas a izar?","orden":4},"altura":{"titulo":"Trabajos en altura","pregunta":"¿Cómo trabajas en altura?","orden":5},"caliente":{"titulo":"Trabajos en caliente","pregunta":"¿Qué trabajo en caliente vas a hacer?","orden":8},"fuego":{"titulo":"Uso de extintores","pregunta":"¿Qué se está quemando?","orden":9}};
 var TALLERES = [{"id":"ats","icono":"📋","nombre":"Llenado del ATS","sub":"Análisis de Trabajo Seguro · inicio de jornada","sector":"*","min":8,"intro":"El ATS se llena en obra, en cuadrilla, ANTES de empezar la tarea del día. Aquí practicas cómo llenarlo bien: identificar la tarea, sus peligros, el riesgo y las medidas.","pasos":[{"tipo":"orden","titulo":"El orden del ATS","instru":"Toca los pasos en el orden en que se llena un ATS.","items":["Describir la tarea del día","Identificar los peligros de cada paso","Evaluar el riesgo (probabilidad y severidad)","Definir las medidas de control","Indicar el EPP necesario","Firmar todo el equipo que hará la tarea"]},{"tipo":"elige","titulo":"¿Cuándo se llena?","pregunta":"¿En qué momento se llena el ATS?","ops":["Al final de la jornada, como reporte de lo que se hizo","Al inicio de la jornada, antes de empezar la tarea","Solo cuando ocurre un incidente","Una vez al mes, al inicio de la obra"],"correcta":1,"sustento":"El ATS es preventivo: se llena en campo, con la cuadrilla, antes de iniciar la tarea de ese día."},{"tipo":"marca","titulo":"Peligro, riesgo o medida","instru":"De esta lista, marca solo lo que es un PELIGRO (la fuente que puede dañar).","items":[{"t":"Trabajar al borde de una excavación","mal":true},{"t":"Colocar barandas y línea de vida","mal":false},{"t":"Herramienta eléctrica con cable pelado","mal":true},{"t":"Usar guantes dieléctricos","mal":false},{"t":"Piso con aceite derramado","mal":true}],"nota":"El peligro es la fuente (el borde, el cable pelado, el aceite). La medida es lo que haces para controlarlo."},{"tipo":"elige","titulo":"Cambió la tarea","pregunta":"A media jornada tu cuadrilla pasa a una tarea distinta a la del ATS. ¿Qué haces?","ops":["Sigues con el mismo ATS, total es el mismo día","Llenas un ATS nuevo para la tarea nueva","Lo anotas al reverso y sigues","Esperas al día siguiente"],"correcta":1,"sustento":"Cada tarea tiene sus propios peligros. Si la tarea cambia, se llena un ATS nuevo para esa tarea."}],"cierre":"Ya sabes llenar un ATS: tarea, peligros, riesgo, medidas, EPP y firmas — al inicio, y uno nuevo si la tarea cambia."},{"id":"iperc","icono":"🧩","nombre":"IPERC de línea base","sub":"Identificación de peligros a inicio de obra","sector":"construccion","min":8,"intro":"En construcción, el IPERC que se hace es el de LÍNEA BASE, a inicio de obra. Ojo: el IPERC continuo es de minería (D.S. 024-2016-EM), no de construcción.","pasos":[{"tipo":"elige","titulo":"¿Cuál usa construcción?","pregunta":"En una obra de construcción, ¿qué IPERC corresponde?","ops":["IPERC continuo, por cada guardia","IPERC de línea base, a inicio de obra","No se hace IPERC en construcción","Solo ATS, nunca IPERC"],"correcta":1,"sustento":"Construcción hace IPERC de línea base al inicio de la obra. El IPERC continuo es propio de la actividad minera (D.S. 024-2016-EM)."},{"tipo":"orden","titulo":"Los pasos del IPERC","instru":"Ordena los pasos para evaluar un riesgo en el IPERC.","items":["Identificar el peligro","Estimar la probabilidad de que ocurra","Estimar la severidad del daño","Determinar el nivel de riesgo","Aplicar la jerarquía de controles","Reevaluar el riesgo residual"]},{"tipo":"orden","titulo":"Jerarquía de controles","instru":"Ordena los controles del más eficaz (primero) al menos eficaz (último).","items":["Eliminación","Sustitución","Controles de ingeniería","Controles administrativos","Equipo de protección personal (EPP)"]},{"tipo":"elige","titulo":"El EPP","pregunta":"¿Qué lugar ocupa el EPP en la jerarquía de controles?","ops":["El primero: es lo más importante","El último: es la última barrera, no la primera","No es un control","Reemplaza a los demás controles"],"correcta":1,"sustento":"El EPP es la última barrera. Primero se elimina o controla el peligro en la fuente; el EPP protege a la persona cuando el riesgo no pudo eliminarse."}],"cierre":"IPERC de línea base a inicio de obra, jerarquía de controles con el EPP al final, y el continuo es de minería."},{"id":"residuos","icono":"♻️","nombre":"Segregación de residuos","sub":"Código de colores en obra","sector":"*","min":6,"intro":"Segregar bien es separar cada residuo en su recipiente. Practica el código de colores que se usa en obra (base NTP 900.058).","pasos":[{"tipo":"elige","titulo":"El trapo con aceite","pregunta":"Un trapo impregnado con aceite o solvente, ¿en qué tacho va?","ops":["Verde (aprovechable)","Negro (común)","Rojo (peligroso)","Marrón (orgánico)"],"correcta":2,"sustento":"Todo lo contaminado con hidrocarburos o químicos es residuo peligroso: va al tacho rojo."},{"tipo":"elige","titulo":"La botella de plástico","pregunta":"Una botella de plástico limpia, ¿dónde va?","ops":["Rojo (peligroso)","Amarillo / verde (reaprovechable)","Rojo, por si acaso","Se deja en el suelo"],"correcta":1,"sustento":"El plástico limpio es reaprovechable/reciclable. El rojo es solo para residuos peligrosos."},{"tipo":"marca","titulo":"Al tacho rojo","instru":"Marca lo que SÍ es residuo peligroso (tacho rojo).","items":[{"t":"Envase de pintura o solvente","mal":true},{"t":"Cartón limpio","mal":false},{"t":"Guantes impregnados de químico","mal":true},{"t":"Waipe / trapo con grasa","mal":true},{"t":"Restos de comida","mal":false}],"nota":"Peligroso = contaminado con químicos, hidrocarburos, pilas, aerosoles. Lo demás va a su color."}],"cierre":"Peligroso al rojo, reaprovechable a su color, y nada de mezclar. Segregar bien empieza en tu puesto."},{"id":"rotomartillo","icono":"🔩","nombre":"Uso del rotomartillo","sub":"Herramienta eléctrica manual","sector":"construccion","min":6,"intro":"El rotomartillo es útil pero castiga: proyecciones, atrapamiento y vibración. Practica el uso seguro paso a paso.","pasos":[{"tipo":"orden","titulo":"Antes y durante","instru":"Ordena el uso seguro del rotomartillo.","items":["Ponerte el EPP (lentes, guantes, protección auditiva, respirador si hay polvo)","Inspeccionar el equipo, el cable y la broca","Asegurar la pieza y tomar postura firme con las dos manos","Perforar con presión constante, sin forzar","Apagar y desconectar antes de dejarlo"]},{"tipo":"marca","titulo":"Lo que NO se hace","instru":"Marca las prácticas INSEGURAS.","items":[{"t":"Operar con una sola mano","mal":true},{"t":"Usar lentes de seguridad","mal":false},{"t":"Trabajar con la broca gastada o rajada","mal":true},{"t":"Desconectar jalando del cable","mal":true},{"t":"Revisar el cable antes de enchufar","mal":false}],"nota":"Dos manos, broca en buen estado, y se desconecta del enchufe, nunca jalando el cable."},{"tipo":"elige","titulo":"El polvo","pregunta":"Al perforar concreto se levanta mucho polvo de sílice. ¿Qué haces?","ops":["Nada, es normal","Uso respirador y, si se puede, perforación con agua o captación de polvo","Aguanto la respiración","Solo me alejo un poco"],"correcta":1,"sustento":"El polvo de sílice daña el pulmón (silicosis). Respirador adecuado y control del polvo en la fuente."}],"cierre":"EPP puesto, equipo inspeccionado, dos manos, control del polvo, y se desconecta del enchufe."},{"id":"andamio","icono":"🏗️","nombre":"Montaje de andamio","sub":"Armado, uso y desmontaje","sector":"construccion","min":8,"intro":"Un andamio mal armado es una caída esperando ocurrir. Practica el armado seguro y aprende a reconocer cuándo NO se debe subir.","pasos":[{"tipo":"orden","titulo":"El armado","instru":"Ordena el montaje seguro del andamio.","items":["Nivelar y apoyar la base sobre terreno firme","Armar los cuerpos y colocar los arriostres","Instalar la plataforma completa y sin huecos","Colocar barandas y rodapié","Instalar el acceso (escalera interna)","Inspeccionar y colocar la tarjeta de habilitación"]},{"tipo":"marca","titulo":"No subas si...","instru":"Marca las condiciones por las que NO se debe subir al andamio.","items":[{"t":"Le faltan arriostres","mal":true},{"t":"Tiene tarjeta verde de inspección vigente","mal":false},{"t":"La plataforma está incompleta","mal":true},{"t":"No tiene barandas","mal":true},{"t":"La base está nivelada y firme","mal":false}],"nota":"Sin arriostres, sin baranda o con plataforma incompleta: no se sube. La tarjeta verde habilita, la roja bloquea."},{"tipo":"elige","titulo":"La tarjeta","pregunta":"El andamio tiene tarjeta ROJA. ¿Qué significa?","ops":["Está listo para usar","No está habilitado: no se debe usar","Solo lo usa el capataz","Se puede usar con cuidado"],"correcta":1,"sustento":"Tarjeta roja = andamio NO habilitado (en armado, incompleto o observado). Solo se sube con tarjeta verde vigente."}],"cierre":"Base firme, arriostres, plataforma completa, barandas, acceso e inspección. Y solo se sube con tarjeta verde."}];
 var LS = {lic:'sstc_lic', cfg:'sstc_cfg', sec:'sstc_sector', prog:'sstc_prog'};
+/* «el espacio para la firma era muy chiquito; hay firmas grandes».
+   Un solo alto para todos los recuadros de firma de la app. */
+var ALTO_FIRMA=260;
 var LS_SUP='sstc_sup', LS_EV='sstc_ev', LS_USA='sstc_usados', LS_MES='sstc_mes';
 var LS_ROL='sstc_rol';
 /* ROL: 'sup' = el que capacita (ve todo lo que compro). 'col' = el trabajador,
@@ -10878,6 +10886,41 @@ function abrirFichaTrab(id){
    una evaluacion DESAPROBADA salia en verde y contada como aprobada.
    El supervisor que revisa si alguien puede subir a un andamio veia un
    visto bueno donde habia un jalado. Se mira la palabra completa. */
+/* ══════ EL SELLO JUNTO A LA FIRMA ═══════════════════════════════
+   «hay ingenieros o supervisores que desearan firmar pero que
+   aparezca su sello: su nombre y su cargo abajo, con el estilo de un
+   sello, igualmente firman». Es lo que hace un sello de goma: un
+   recuadro de doble linea en tinta azul con el nombre en mayusculas,
+   el cargo y la colegiatura. Solo sale si el supervisor lo activo en
+   «Tus datos» y solo bajo SU nombre: no se le pone sello a otro.  */
+function selloDatos(nombre){
+  var s=leer(LS_SUP,{})||{};
+  if(!s.sello || !s.nombre) return null;
+  if(nombre && _norm(String(nombre))!==_norm(String(s.nombre))) return null;
+  return {nombre:s.nombre, cargo:s.cargo||'', cip:s.cip||'', empresa:s.empresa||''};
+}
+function _pdfSello(doc, cx, yTop, o, w, chico){
+  if(!o) return 0;
+  w = w || (chico ? 118 : 176);
+  var lh = chico ? 7.5 : 9.5;
+  var lineas=[[String(o.nombre||'').toUpperCase(), chico?7.2:8.6, 'bold']];
+  if(o.cargo)   lineas.push([o.cargo, chico?6:7.3, 'normal']);
+  if(o.cip)     lineas.push([o.cip, chico?5.6:6.8, 'normal']);
+  if(o.empresa && !chico) lineas.push([o.empresa, 6.2, 'normal']);
+  var h = 10 + lineas.length*lh + 4;
+  var TIN=[36,66,150];
+  doc.setDrawColor(TIN[0],TIN[1],TIN[2]);
+  doc.setLineWidth(chico?1:1.3); doc.roundedRect(cx-w/2, yTop, w, h, 5, 5, 'S');
+  doc.setLineWidth(.45);          doc.roundedRect(cx-w/2+2.5, yTop+2.5, w-5, h-5, 3.5, 3.5, 'S');
+  doc.setTextColor(TIN[0],TIN[1],TIN[2]);
+  var yy=yTop+9+lh*0.6;
+  lineas.forEach(function(l){
+    doc.setFont('helvetica', l[2]); doc.setFontSize(l[1]);
+    var tx=String(l[0]); while(doc.getTextWidth(tx)>w-12 && tx.length>4) tx=tx.slice(0,-2);
+    doc.text(tx, cx, yy, {align:'center'}); yy+=lh;
+  });
+  return h;
+}
 function _horasTxt(h){ h=parseFloat(h)||0; return (h===1?'1 hora':(String(h).replace('.',',')+' horas')); }
 function esAprobado(r){
   /* ojo: _norm() de esta app pasa a MAYUSCULAS (es el normalizador de
@@ -10950,54 +10993,134 @@ function cargarCapacitacionesDe(id){
    su celular y no esta en el servidor. Inventarla seria falsificar un
    documento; dejar el espacio en blanco para que la firme es lo que
    corresponde.                                                       */
-function _pdfDeConstancia(c){
+/* la misma cara que la constancia del trabajador, para que el archivo
+   de la empresa no tenga dos documentos distintos del mismo hecho */
+function _pdfCabeceraEmpresa(doc, W, M, folio, sub, chico){
   var emp=empleador(), e=empActiva()||{};
-  var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
-  var W=595.28, H=841.89, M=44, y=0;
-  doc.setDrawColor(120,120,120); doc.setLineWidth(.8);
-  doc.rect(M, 40, W-2*M, 58);
-  if(emp.logo){ try{ doc.addImage(emp.logo, M+8, 48, 96, 42, undefined, 'FAST'); }catch(_e){} }
-  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(20,20,20);
-  doc.text('CONSTANCIA DE CAPACITACIÓN', W/2+40, 66, {align:'center'});
-  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100,100,100);
-  doc.text('Copia del empleador · Art. 35 de la Ley 29783', W/2+40, 82, {align:'center'});
-  y=124;
-  function fila(et, val){
-    doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
-    doc.text(String(et).toUpperCase(), M, y);
-    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(25,25,25);
-    var tx=doc.splitTextToSize(String(val==null||val===''?'—':val), W-2*M);
-    doc.text(tx, M, y+15);
-    y += 15 + 13*tx.length + 12;
-    doc.setDrawColor(225,225,225); doc.setLineWidth(.5);
-    doc.line(M, y-8, W-M, y-8);
+  var AZUL=[11,42,58], ORO=[245,183,0];
+  var hB = chico ? 46 : 78;
+  doc.setFillColor(AZUL[0],AZUL[1],AZUL[2]); doc.rect(0,0,W,hB,'F');
+  doc.setFillColor(ORO[0],ORO[1],ORO[2]); doc.rect(0,hB,W,4,'F');
+  var xT=M;
+  if(emp.logo && !chico){
+    try{ doc.setFillColor(255,255,255); doc.roundedRect(M,14,96,50,6,6,'F'); doc.addImage(emp.logo, M+6, 18, 84, 42, undefined, 'FAST'); xT=M+112; }catch(_e){}
   }
-  fila('Trabajador', c.trabajador||'');
-  fila('Documento', c.dni||'');
-  if(c.cargo) fila('Cargo', c.cargo);
-  fila('Tema de la capacitación', c.tema||'');
-  fila('Resultado', String(c.resultado||'').toUpperCase());
-  fila('Fecha', fechaLarga(String(c.fecha||'').slice(0,10))||String(c.fecha||''));
-  /* las horas solo si el registro las trae: no se inventa el dato */
-  if(c.detalle && c.detalle.horas) fila('Duración de la capacitación', _horasTxt(c.detalle.horas));
-  fila('Empresa', emp.razon || e.nombre || '');
-  fila('Obra / proyecto', e.nombre || nombreDeLaObra() || '');
-  if(c.folio) fila('Folio de verificación', c.folio);
-
-  var yf=Math.max(y+40, H-190);
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(chico?11:13);
+  doc.text(String(emp.razon || e.nombre || 'OBRASST').toUpperCase(), xT, chico?20:34);
+  doc.setFont('helvetica','normal'); doc.setFontSize(chico?8:9); doc.setTextColor(203,220,230);
+  doc.text(sub||'Sistema de Gestión de Seguridad y Salud en el Trabajo', xT, chico?33:50);
+  if(folio){ doc.setFontSize(8); doc.setTextColor(255,233,168); doc.setFont('helvetica','bold'); doc.text('FOLIO '+folio, W-M, chico?20:30, {align:'right'}); }
+  var ls=selloFormato('constancia');
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(203,220,230);
+  ls.forEach(function(tx,i){ doc.text(tx, W-M, (chico?32:42)+i*9, {align:'right'}); });
+  return hB+4;
+}
+function _pdfTarjeta(doc, x,yy,w,h,et,val){
+  doc.setFillColor(244,247,249); doc.setDrawColor(226,232,236); doc.setLineWidth(.6);
+  doc.roundedRect(x,yy,w,h,6,6,'FD');
+  doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(110,110,110);
+  doc.text(String(et).toUpperCase(), x+9, yy+13);
+  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(28,36,42);
+  doc.text(doc.splitTextToSize(String(val==null||val===''?'—':val), w-18).slice(0,2), x+9, yy+27);
+}
+function _pdfDeConstancia(c){
+  var emp=empleador(), e=empActiva()||{}, d=c.detalle||{}, N=_notaDe(c);
+  var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
+  var W=595.28, H=841.89, M=44, y;
+  var AZUL=[11,42,58], ORO=[245,183,0], GRIS=[110,110,110], TINTA=[28,36,42], VERDE=[31,122,73], ROJO=[178,49,54];
+  var aprob=(N.b!=null&&N.min!=null)? (N.b>=N.min) : esAprobado(c.resultado);
+  y=_pdfCabeceraEmpresa(doc, W, M, c.folio, 'Copia del empleador · Sistema de Gestión de SST', false)+30;
+  doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(AZUL[0],AZUL[1],AZUL[2]);
+  doc.text('CONSTANCIA DE CAPACITACIÓN', W/2, y, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+  doc.text('Copia del empleador · Art. 35 de la Ley N.° 29783 · R.M. 050-2013-TR', W/2, y+16, {align:'center'});
+  doc.setDrawColor(ORO[0],ORO[1],ORO[2]); doc.setLineWidth(2); doc.line(W/2-60, y+26, W/2+60, y+26);
+  y+=56;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+  doc.text('Se deja constancia de que', W/2, y, {align:'center'}); y+=26;
+  doc.setFont('helvetica','bold'); doc.setTextColor(AZUL[0],AZUL[1],AZUL[2]);
+  var nom=String(c.trabajador||'').toUpperCase(), tam=22;
+  doc.setFontSize(tam); while(tam>13 && doc.getTextWidth(nom)>W-2*M-40){ tam-=1; doc.setFontSize(tam); }
+  doc.text(nom, W/2, y, {align:'center'}); y+=16;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+  var l2=[]; if(c.dni) l2.push('DNI '+c.dni); if(c.cargo) l2.push(c.cargo); if(d.empresaTrab) l2.push(d.empresaTrab+(d.vinculo?' ('+d.vinculo+')':''));
+  doc.text(l2.join('  ·  ')||' ', W/2, y, {align:'center'}); y+=26;
+  doc.setFontSize(10.5); doc.text((c.tipo==='taller') ? 'participó en el taller' : 'participó en la capacitación y rindió la evaluación del tema', W/2, y, {align:'center'}); y+=22;
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(TINTA[0],TINTA[1],TINTA[2]);
+  var tt=doc.splitTextToSize(String(c.tema||''), W-2*M-40); doc.text(tt, W/2, y, {align:'center'}); y+=15*tt.length;
+  if(d.escenario){ doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+    var es=doc.splitTextToSize(d.escenario, W-2*M-60); doc.text(es.slice(0,2), W/2, y+2, {align:'center'}); y+=11*Math.min(2,es.length); }
+  y+=18;
+  var gw=(W-2*M-16)/3, gh=40;
+  _pdfTarjeta(doc, M,        y, gw, gh, 'Fecha de la evaluación', fechaLarga(String(c.fecha||'').slice(0,10))||String(c.fecha||''));
+  _pdfTarjeta(doc, M+gw+8,   y, gw, gh, 'Duración', d.horas ? _horasTxt(d.horas) : '—');
+  _pdfTarjeta(doc, M+2*gw+16,y, gw, gh, 'Sector', d.sector || '—');
+  y+=gh+8;
+  _pdfTarjeta(doc, M,        y, gw, gh, 'Obra / proyecto', d.obra || e.nombre || nombreDeLaObra() || '');
+  _pdfTarjeta(doc, M+gw+8,   y, gw, gh, 'Evaluador', d.evaluador || '—');
+  _pdfTarjeta(doc, M+2*gw+16,y, gw, gh, 'Empresa', emp.razon || e.nombre || '');
+  y+=gh+22;
+  /* resultado */
+  var rh=92;
+  doc.setFillColor(aprob?232:250, aprob?244:235, aprob?236:235);
+  doc.setDrawColor(aprob?VERDE[0]:ROJO[0], aprob?VERDE[1]:ROJO[1], aprob?VERDE[2]:ROJO[2]); doc.setLineWidth(1);
+  doc.roundedRect(M,y,W-2*M,rh,10,10,'FD');
+  var cx=M+58, cy=y+rh/2;
+  doc.setFillColor(255,255,255); doc.circle(cx,cy,34,'F'); doc.setLineWidth(3); doc.circle(cx,cy,34,'S');
+  doc.setFont('helvetica','bold'); doc.setTextColor(aprob?VERDE[0]:ROJO[0], aprob?VERDE[1]:ROJO[1], aprob?VERDE[2]:ROJO[2]);
+  if(N.b!=null && N.n!=null){
+    doc.setFontSize(22); doc.text(String(N.b), cx, cy+2, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]); doc.text('de '+N.n, cx, cy+15, {align:'center'});
+  } else {
+    doc.setFontSize(22); doc.text(aprob?'✓':'✕', cx, cy+7, {align:'center'});
+  }
+  var xr=M+112;
+  doc.setFont('helvetica','bold'); doc.setFontSize(19); doc.setTextColor(aprob?VERDE[0]:ROJO[0], aprob?VERDE[1]:ROJO[1], aprob?VERDE[2]:ROJO[2]);
+  doc.text(String(c.resultado||(aprob?'aprobado':'desaprobado')).toUpperCase(), xr, y+30);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(70,70,70);
+  doc.text((N.b!=null&&N.n!=null) ? (Math.round(N.b*100/N.n)+' % de respuestas correctas · mínimo para aprobar: '+N.min+' de '+N.n)
+                                   : 'De esta evaluación el registro conserva el resultado; la nota no fue guardada.', xr, y+46);
+  if(d.p && d.p.length){
+    var qw=18, qg=5;
+    d.p.forEach(function(q,i){
+      doc.setFillColor(q.ok?VERDE[0]:ROJO[0], q.ok?VERDE[1]:ROJO[1], q.ok?VERDE[2]:ROJO[2]);
+      doc.roundedRect(xr+i*(qw+qg), y+58, qw, 16, 3, 3, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
+      doc.text(String(i+1), xr+i*(qw+qg)+qw/2, y+69.5, {align:'center'});
+    });
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+    doc.text('verde: correcta · rojo: incorrecta · el acta con cada pregunta se saca desde la ficha', xr, y+84);
+  }
+  y+=rh+14;
+  /* firmas en blanco: el trabajador firmo en su celular */
+  var yf=H-200, aw=(W-2*M-40)/2;
   doc.setDrawColor(150,150,150); doc.setLineWidth(.8);
-  doc.line(M, yf, M+200, yf);
-  doc.line(W-M-200, yf, W-M, yf);
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(70,70,70);
-  doc.text('Firma del trabajador', M, yf+14);
-  doc.text('Firma del responsable SSOMA', W-M-200, yf+14);
-  doc.setFontSize(7); doc.setTextColor(140,140,140);
+  doc.line(M,yf+70,M+aw,yf+70); doc.line(W-M-aw,yf+70,W-M,yf+70);
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(TINTA[0],TINTA[1],TINTA[2]);
+  doc.text(c.trabajador||'', M+aw/2, yf+82, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+  doc.text('Firma del trabajador', M+aw/2, yf+92, {align:'center'});
+  var selloR=selloDatos(d.evaluador||'') || selloDatos();
+  if(selloR){
+    _pdfSello(doc, W-M-aw/2, yf+2, selloR, 176, false);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+    doc.text('Firma y sello del responsable SSOMA', W-M-aw/2, yf+92, {align:'center'});
+  } else {
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(TINTA[0],TINTA[1],TINTA[2]);
+    doc.text(d.evaluador||'', W-M-aw/2, yf+82, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+    doc.text('Firma del responsable SSOMA', W-M-aw/2, yf+92, {align:'center'});
+  }
+  if(c.folio){ try{
+    var qr=qrcode(0,'M'); qr.addData('OBRASST · Constancia '+c.folio+' · '+(c.trabajador||'')+' · '+String(c.fecha||'').slice(0,10)); qr.make();
+    doc.addImage(qr.createDataURL(4,0),'PNG', W/2-24, yf-2, 48, 48);
+    doc.setFontSize(6.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]); doc.text('Folio '+c.folio, W/2, yf+56, {align:'center'});
+  }catch(_q){} }
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(130,130,130);
   doc.text(doc.splitTextToSize(
-    'Copia del empleador emitida desde el registro de la empresa. El trabajador rindió y firmó la '+
-    'evaluación en su propio equipo; esta copia reproduce el registro conservado por el empleador y '+
-    'deja el espacio de firma en blanco. Registro de capacitación conforme al Art. 35 de la Ley 29783; '+
-    'datos personales tratados conforme a la Ley 29733 y el D.S. 016-2024-JUS.', W-2*M), M, yf+40);
-  try{ while(doc.getNumberOfPages()>1) doc.deletePage(doc.getNumberOfPages()); }catch(_x){}
+    'Copia del empleador emitida desde el registro de la empresa. El trabajador rindió y firmó la evaluación en su propio equipo; '+
+    'esta copia reproduce lo registrado y deja el espacio de firma en blanco. Registro de capacitación conforme al Art. 35 de la '+
+    'Ley N.° 29783; datos personales tratados conforme a la Ley N.° 29733 y el D.S. 016-2024-JUS.', W-2*M), M, H-64);
   return doc.output('blob');
 }
 /* ══════ TODAS LAS CONSTANCIAS DE LA OBRA, EN UN SOLO SITIO ═══════
@@ -11814,10 +11937,10 @@ function pintarSelectActividadKardex(){
 function prepararLienzoK(){
   var cv=$('k-lienzo'); if(!cv) return;
   var r=cv.getBoundingClientRect(), e=window.devicePixelRatio||1;
-  cv.width=Math.max(1,Math.round(r.width*e)); cv.height=Math.max(1,Math.round(150*e));
-  cv.style.height='150px';
+  cv.width=Math.max(1,Math.round(r.width*e)); cv.height=Math.max(1,Math.round(ALTO_FIRMA*e));
+  cv.style.height=ALTO_FIRMA+'px';
   K_CTX=cv.getContext('2d'); K_CTX.setTransform(e,0,0,e,0,0);
-  K_CTX.fillStyle='#fff'; K_CTX.fillRect(0,0,r.width,150);
+  K_CTX.fillStyle='#fff'; K_CTX.fillRect(0,0,r.width,ALTO_FIRMA);
   K_CTX.strokeStyle='#0b2a36'; K_CTX.lineWidth=2.2; K_CTX.lineCap='round'; K_CTX.lineJoin='round';
   K_HAYFIRMA=false; K_LIENZO=cv;
   if(cv.getAttribute('data-listo')==='1') return;
@@ -13307,9 +13430,9 @@ function prepFirmaAmon(){
   $('af-msg').textContent='';
   var cv=$('af-lienzo'); if(!cv) return;
   var r=cv.getBoundingClientRect(), e=window.devicePixelRatio||1;
-  cv.width=Math.max(1,Math.round(r.width*e)); cv.height=Math.max(1,Math.round(150*e)); cv.style.height='150px';
+  cv.width=Math.max(1,Math.round(r.width*e)); cv.height=Math.max(1,Math.round(ALTO_FIRMA*e)); cv.style.height=ALTO_FIRMA+'px';
   AF_CTX=cv.getContext('2d'); AF_CTX.setTransform(e,0,0,e,0,0);
-  AF_CTX.fillStyle='#fff'; AF_CTX.fillRect(0,0,r.width,150);
+  AF_CTX.fillStyle='#fff'; AF_CTX.fillRect(0,0,r.width,ALTO_FIRMA);
   AF_CTX.strokeStyle='#0b2a36'; AF_CTX.lineWidth=2.2; AF_CTX.lineCap='round'; AF_CTX.lineJoin='round';
   AF_HAY=false; AF_CV=cv;
   if(cv.getAttribute('data-listo')==='1') return;
@@ -13998,6 +14121,7 @@ function _pdfDeAmon(a){
     doc.line(fx+14, fy+fh-16, fx+fw-14, fy+fh-16);
     doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(90,90,90);
     doc.text(f[1].toUpperCase(), fx+fw/2, fy+fh-6, {align:'center'});
+    if(f[0]==='ssoma'){ var selloP=selloDatos(); if(selloP) _pdfSello(doc, fx+fw-60, fy+4, selloP, 104, true); }
     if(!dat){
       doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(150,150,150);
       doc.text('(pendiente de firma)', fx+fw/2, fy+fh-24, {align:'center'});
@@ -14780,7 +14904,7 @@ function _pdfDeKardex(t, regs, mes){
   }
   /* una fila de datos con etiqueta arriba y valor abajo, en cajas */
   function bloque(pares){
-    var alto=30, x=M, ancho=(W-2*M);
+    var alto=26, x=M, ancho=(W-2*M);
     doc.setDrawColor(150,150,150); doc.setLineWidth(.6);
     doc.rect(x, y, ancho, alto);
     var acum=0;
@@ -14788,10 +14912,10 @@ function _pdfDeKardex(t, regs, mes){
       var w=ancho*par[2];
       if(i>0) doc.line(x+acum, y, x+acum, y+alto);
       doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(120,120,120);
-      doc.text(String(par[0]).toUpperCase(), x+acum+5, y+10);
+      doc.text(String(par[0]).toUpperCase(), x+acum+5, y+9);
       doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(25,25,25);
       var v=doc.splitTextToSize(String(par[1]==null||par[1]===''?'—':par[1]), w-10);
-      doc.text(v[0]||'—', x+acum+5, y+23);
+      doc.text(v[0]||'—', x+acum+5, y+20);
       acum+=w;
     });
     y+=alto;
@@ -14839,8 +14963,12 @@ function _pdfDeKardex(t, regs, mes){
     /* la fila tiene que dar para la firma: el trabajador firma CADA cosa
        que se lleva, no una vez al pie de la hoja. Eso era lo que pedia
        Marcelo y es lo que hace que el registro sirva como descargo. */
-    var alto=Math.max(38, 6+lineas*11);
-    if(y+alto > H-150){
+    /* «acaba en el item 10 y pasa a la siguiente hoja; en una A4 entran
+       12 o 13». Se ajusto: filas de 33 pt (la firma sigue legible: se
+       ajusta por proporcion, no se aplasta), cabecera mas compacta y el
+       pie reservado justo. Primera hoja: 13 filas; las siguientes: 17. */
+    var alto=Math.max(33, 6+lineas*11);
+    if(y+alto > H-130){
       doc.setDrawColor(150,150,150); doc.setLineWidth(.6); doc.rect(M, yTabla, ancho, altoTabla);
       doc.addPage(); cabecera(); y=104; tituloTabla(); yTabla=y-18; altoTabla=18;
       doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
@@ -14862,7 +14990,18 @@ function _pdfDeKardex(t, regs, mes){
     var xFirma = M + ancho*_antes;
     var wFirma = ancho*cols[cols.length-2][1], wFoto = ancho*cols[cols.length-1][1];
     if(r.firma){
-      try{ doc.addImage(r.firma, 'PNG', xFirma+3, y+3, wFirma-6, alto-6, undefined, 'FAST'); }catch(e){}
+      /* la firma entra por proporcion: el recuadro de firmar ahora es
+         alto, y estirarla a la celda la dejaba como un garabato chato */
+      try{
+        var _pr=null; try{ _pr=doc.getImageProperties(r.firma); }catch(_ip){}
+        var bw=wFirma-6, bh=alto-4, iw=bw, ih=bh;
+        if(_pr && _pr.width && _pr.height){
+          /* alto por proporcion; a lo ancho se deja estirar hasta 1.6x,
+             que una firma aguanta sin verse rara y asi no queda diminuta */
+          var esc=Math.min(bw/_pr.width, bh/_pr.height); ih=_pr.height*esc; iw=Math.min(bw, _pr.width*esc*1.6);
+        }
+        doc.addImage(r.firma, 'PNG', xFirma+3+(bw-iw)/2, y+2+(bh-ih)/2, iw, ih, undefined, 'FAST');
+      }catch(e){}
     } else {
       doc.setDrawColor(180,180,180); doc.setLineWidth(.5);
       doc.line(xFirma+6, y+alto-9, xFirma+wFirma-6, y+alto-9);
@@ -14891,6 +15030,7 @@ function _pdfDeKardex(t, regs, mes){
   doc.line(W-M-218, y, W-M-18, y);
   doc.setFontSize(8); doc.setTextColor(80,80,80);
   doc.text('Responsable SSOMA', W-M-218, y+13);
+  var selloK=selloDatos(); if(selloK) _pdfSello(doc, W-M-118, y-44, selloK, 176, false);
   doc.setFontSize(7.5); doc.setTextColor(120,120,120);
   doc.text('Cada línea lleva la firma del trabajador en el momento de la entrega.', M+18, y+13);
   doc.setFontSize(7); doc.setTextColor(155,155,155);
@@ -16586,6 +16726,7 @@ function empezarEval(){
   $('d-aviso').style.display='';
   $('d-aviso').innerHTML='Revisa que tus datos estén bien y dale a Empezar. Lo demás ya vino en el código de tu supervisor.';
   $('d-eval').value=EV.ev||'';
+  S.selloEval = EV.sl ? {nombre:EV.ev||'', cargo:EV.ec||'', cip:EV.cip||'', empresa:EV.em||''} : null;
   $('d-obra').value=EV.ob||'';
   $('d-empresa').value=EV.em||'';
   $('d-fecha').value=EV.fe||hoyISO();
@@ -16652,11 +16793,20 @@ function entrarMes(o){
 }
 
 // ------------------------------------------------- registro del supervisor
+var R_SELLO=false;
+function rToggleSello(){ R_SELLO=!R_SELLO; rPintarSello(); }
+function rPintarSello(){
+  var e=$('r-sello-et'), t=$('r-sello-tarj'); if(!e) return;
+  e.textContent = R_SELLO ? '✅ Con sello junto a mi firma' : '🔏 Mi sello junto a mi firma';
+  if(t) t.style.borderColor = R_SELLO ? 'rgba(245,183,0,.55)' : '';
+}
 function cargarRegistro(){
   var s=leer(LS_SUP,{}), c=leer(LS.cfg,{});
   $('r-nombre').value=s.nombre||c.cap||'';
   $('r-doc').value=s.doc||'';
   $('r-cargo').value=s.cargo||'';
+  var _cip=$('r-cip'); if(_cip) _cip.value=s.cip||'';
+  R_SELLO=!!s.sello; rPintarSello();
   $('r-empresa').value=s.empresa||'';
   $('r-obra').value=s.obra||c.obra||'';
   if(s.vinculo) $('r-vinculo').value=s.vinculo;
@@ -16664,7 +16814,8 @@ function cargarRegistro(){
 function guardarRegistro(){
   var s={nombre:$('r-nombre').value.trim(), doc:$('r-doc').value.trim(),
          cargo:$('r-cargo').value.trim(), empresa:$('r-empresa').value.trim(),
-         obra:$('r-obra').value.trim(), vinculo:$('r-vinculo').value};
+         obra:$('r-obra').value.trim(), vinculo:$('r-vinculo').value,
+         cip:(($('r-cip')||{}).value||'').trim(), sello:!!R_SELLO};
   if(!s.nombre){ aviso('Falta tu nombre','Es el que sale como evaluador en la constancia de cada trabajador.','✏️'); return; }
   guardar(LS_SUP,s);
   var c=leer(LS.cfg,{}); c.cap=s.nombre; if(s.obra) c.obra=s.obra; guardar(LS.cfg,c);
@@ -16756,6 +16907,9 @@ function generarEval(){
   var o={t:'E', d:id, v:vence, s:$('g-sector').value, fe:fe,
          ev:s.nombre||'', ob:s.obra||'', em:s.empresa||'', vi:s.vinculo||'',
          'in':parseInt($('g-intentos').value,10)||1};
+  /* el sello del evaluador viaja con el enlace: la constancia se arma en
+     el celular del trabajador, que no tiene los datos del supervisor */
+  if(s.sello && s.nombre){ o.sl=1; if(s.cargo) o.ec=s.cargo; if(s.cip) o.cip=s.cip; }
   if(cf.via && cf.via!=='local' && cf.destino) o.ct={v:cf.via, d:cf.destino};
   var ids=temaIDs(), corto=codCorto(1, ids.indexOf(id), diasDe(vence));
   var pie='Un solo tema, en modo evaluado. Vale hasta el <b>'+fechaLarga(vence)+
@@ -18380,9 +18534,9 @@ var FIRMA={paso:null, trab:null, cap:null, trazos:0, dib:null, g:null};
 function prepararLienzo(){
   var cv=$('lienzo'), r=cv.getBoundingClientRect(), esc=window.devicePixelRatio||1;
   if(r.width<10) return;
-  cv.width=Math.round(r.width*esc); cv.height=Math.round(200*esc);
+  cv.width=Math.round(r.width*esc); cv.height=Math.round(ALTO_FIRMA*esc);
   var g=cv.getContext('2d'); g.scale(esc,esc);
-  g.fillStyle='#ffffff'; g.fillRect(0,0,r.width,200);
+  g.fillStyle='#ffffff'; g.fillRect(0,0,r.width,ALTO_FIRMA);
   g.strokeStyle='#10222E'; g.lineWidth=2.4; g.lineCap='round'; g.lineJoin='round';
   FIRMA.g=g; FIRMA.trazos=0; FIRMA.dib=null; $('b-fir').disabled=true;
 }
@@ -18789,7 +18943,9 @@ function _pdfDiplomaTdm(g, mes, puesto, oficial){
   doc.text('Residente / Gerencia', W-230, yf+14, {align:'center'});
   doc.setFont('helvetica','normal'); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]); doc.setFontSize(8.5);
   var sup=(leer(LS_SUP,{})||{}).nombre||'';
-  if(sup) doc.text(sup, 230, yf+27, {align:'center'});
+  var selloD=selloDatos();
+  if(selloD) _pdfSello(doc, 230, yf-62, selloD, 176, false);
+  else if(sup) doc.text(sup, 230, yf+27, {align:'center'});
   /* pie */
   doc.setFontSize(7.5); doc.setTextColor(140,140,140);
   doc.text('Emitido el '+(fechaLarga(hoyISO())||hoyISO())+' · Reconocimiento interno de la empresa, no es una certificación. Generado con OBRASST.', W/2, H-52, {align:'center'});
@@ -20728,7 +20884,7 @@ function abrirFirmaInsp(quien){
 }
 function prepLienzoInsp(){
   var cv=$('firmai-cv'); if(!cv) return;
-  var ancho=cv.parentNode.clientWidth-2, alto=180, r=window.devicePixelRatio||1;
+  var ancho=cv.parentNode.clientWidth-2, alto=ALTO_FIRMA, r=window.devicePixelRatio||1;
   cv.style.width=ancho+'px'; cv.style.height=alto+'px';
   cv.width=Math.round(ancho*r); cv.height=Math.round(alto*r);
   var g=cv.getContext('2d'); g.scale(r,r);
@@ -21044,6 +21200,7 @@ function pdfDeInspeccion(idx){
         doc.text(doc.splitTextToSize(cargo, fw)[0], x, y+fh+37); }
     }
     recuadroFirma(imFirmaInsp, M, 'INSPECTOR', r.inspector||'', r.cargo||'');
+    var selloI=selloDatos(r.inspector||''); if(selloI) _pdfSello(doc, M+fw-62, y+4, selloI, 116, true);
     recuadroFirma(imFirmaResp, M+fw+16, 'RESPONSABLE DEL AREA', r.nombreResp||'', r.cargoResp||'',
                   'no firmo en el momento');
     y += fh + 44;
@@ -22031,7 +22188,7 @@ function abrirFirmaLista(nombre, dni){
 }
 function prepLienzoLista(){
   var cv=$('firmal-cv'); if(!cv) return;
-  var anchoCSS=cv.parentNode.clientWidth-2, altoCSS=190;
+  var anchoCSS=cv.parentNode.clientWidth-2, altoCSS=ALTO_FIRMA;
   var r=window.devicePixelRatio||1;
   cv.style.width=anchoCSS+'px'; cv.style.height=altoCSS+'px';
   cv.width=Math.round(anchoCSS*r); cv.height=Math.round(altoCSS*r);
@@ -22694,7 +22851,7 @@ function mostrarFormDifu(){
 var FIRMADIFU={cv:null, ctx:null, trazos:[], pintando:false};
 function prepLienzoDifu(){
   var cv=$('difu-cv'); if(!cv) return;
-  var ancho=cv.parentNode.clientWidth-2, alto=170, r=window.devicePixelRatio||1;
+  var ancho=cv.parentNode.clientWidth-2, alto=ALTO_FIRMA, r=window.devicePixelRatio||1;
   cv.style.width=ancho+'px'; cv.style.height=alto+'px';
   cv.width=Math.round(ancho*r); cv.height=Math.round(alto*r);
   var g=cv.getContext('2d'); g.scale(r,r);
@@ -27069,135 +27226,232 @@ function hacerDiplomaTaller(){
   }catch(e){ $('tal-fin-msg').style.color='#d2564f'; $('tal-fin-msg').textContent='No se pudo generar el PDF: '+e.message; }
 }
 
+/* ══════ LA CONSTANCIA DEL TRABAJADOR, COMO DOCUMENTO ═════════════
+   Marcelo: «que se vea profesional, bien hecho, no texto por texto».
+   Antes era una lista de campos en dos columnas y las preguntas
+   pegadas debajo. Ahora es un documento de verdad:
+     pag. 1  la constancia: cabecera con el logo de la empresa, a
+             quien se le otorga (nombre grande), por que tema, los
+             datos en tarjetas, el resultado con su nota grande y la
+             tira de 10 cuadritos, las firmas, el QR de verificacion.
+     pag. 2+ el detalle de la evaluacion, pregunta por pregunta, en
+             tarjetas con marca verde/roja.
+   Nada de lo que decia antes se pierde: solo cambia como se ve.   */
 function hacerPDF(){
   try{
-    var t=TEMAS[S.tema], cfg=leer(LS.cfg,{});
-    var b=S.resp.filter(function(r){return r.ok;}).length, n=S.resp.length, min=Math.ceil(n*0.7);
+    var t=TEMAS[S.tema], cfg=leer(LS.cfg,{}), emp=(typeof empleador==='function')? empleador() : {};
+    var b=S.resp.filter(function(r){return r.ok;}).length, n=S.resp.length, min=Math.ceil(n*0.7), aprob=(b>=min);
     var det=S.resp.map(function(r,i){return (i+1)+(r.ok?'B':'M');}).join('');
     var cod='SST-'+_hh((S.datos.nombre||'')+S.tema+det).slice(0,4).toUpperCase()+'-'+n+b;
     var doc=new jspdf.jsPDF({unit:'pt',format:'a4'});
-    var W=595.28, M=44, PIE=800, y=52;
-
-    // --- cabecera ---
-    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(11,42,58);
-    doc.text('CONSTANCIA DE EVALUACIÓN SST',M,y);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(110,110,110);
-    doc.text('Verificación: '+cod, W-M, y, {align:'right'});
-    /* el código del formato, como en cualquier registro del sistema */
-    (function(){
-      var ls=selloFormato('constancia'); if(!ls.length) return;
-      doc.setFontSize(7.5);
-      ls.forEach(function(t,i){ doc.text(t, W-M, y+11+i*9, {align:'right'}); });
-      doc.setFontSize(8.5);
-    })();
-    y+=8; doc.setDrawColor(190,190,190); doc.setLineWidth(.8); doc.line(M,y,W-M,y); y+=16;
-
-    // --- datos en DOS columnas ---
-    var colW=(W-2*M-18)/2;
-    var datos=[
-      ['Tema', t.variante? t.tema+' · '+t.variante : t.tema],
-      ['Sector', sectorDe(S.sector).nombre],
-      ['Escenario', t.escenario],
-      ['Fecha de evaluación', fechaLarga(S.datos.fecha)],
-      ['Duración de la capacitación', _horasTxt(S.datos.horas||1)],
-      ['Trabajador', S.datos.nombre],
-      ['DNI', S.datos.dni],
-      ['Cargo', S.datos.cargo],
-      ['Empresa', (S.datos.empresa||'—')+(S.datos.vinculo?' ('+S.datos.vinculo+')':'')],
-      ['Obra / proyecto', S.datos.obra||cfg.obra],
-      ['Evaluador', S.datos.evaluador||cfg.cap],
-      ['Salidas de la app en la prueba', String(S.salidas||0)],
-      ['', '']
-    ];
-    doc.setTextColor(25,25,25);
-    for(var i=0;i<datos.length;i+=2){
-      var alto=0;
-      for(var c=0;c<2;c++){
-        var par=datos[i+c]; if(!par) continue;
-        var x=M+c*(colW+18);
-        doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
-        doc.text(par[0].toUpperCase(), x, y);
-        doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(25,25,25);
-        var tx=doc.splitTextToSize(String(par[1]||'—'), colW);
-        doc.text(tx, x, y+10);
-        alto=Math.max(alto, 10+10*tx.length);
-      }
-      y+=alto+5;
-    }
-    y+=4;
-
-    // --- resultado ---
-    if(b>=min){ doc.setFillColor(232,244,236); } else { doc.setFillColor(250,235,235); }
-    doc.roundedRect(M,y,W-2*M,30,5,5,'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(12);
-    if(b>=min){ doc.setTextColor(31,122,73); } else { doc.setTextColor(178,49,54); }
-    doc.text('Resultado: '+b+' / '+n+' — '+(b>=min?'APROBADO':'DESAPROBADO')+'   (mínimo para aprobar: '+min+')', M+10, y+20);
-    y+=44;
-
-    // --- preguntas completas; cada bloque entero en una sola página ---
+    var W=595.28, H=841.89, M=44, PIE=H-58, y=0;
+    var AZUL=[11,42,58], ORO=[245,183,0], GRIS=[110,110,110], TINTA=[28,36,42];
     var VERDE=[31,122,73], ROJO=[178,49,54], GRISC=[70,70,70];
+    var nombreTemaC = t.variante? t.tema+' · '+t.variante : t.tema;
+    var empresaTxt = emp.razon || (empDeTrabajo()||{}).nombre || '';
+
+    function cabecera(chico){
+      /* banda azul con el logo (si hay), el nombre de la empresa y el folio */
+      var hB = chico ? 46 : 78;
+      doc.setFillColor(AZUL[0],AZUL[1],AZUL[2]); doc.rect(0,0,W,hB,'F');
+      doc.setFillColor(ORO[0],ORO[1],ORO[2]); doc.rect(0,hB,W,4,'F');
+      var xT=M;
+      if(emp.logo && !chico){
+        try{
+          doc.setFillColor(255,255,255); doc.roundedRect(M,14,96,50,6,6,'F');
+          doc.addImage(emp.logo, M+6, 18, 84, 42, undefined, 'FAST');
+          xT=M+112;
+        }catch(_e){}
+      }
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(chico?11:13);
+      doc.text(String(empresaTxt||'OBRASST').toUpperCase(), xT, chico?20:34);
+      doc.setFont('helvetica','normal'); doc.setFontSize(chico?8:9); doc.setTextColor(203,220,230);
+      doc.text(chico ? ('Detalle de la evaluación · '+nombreTemaC) : 'Sistema de Gestión de Seguridad y Salud en el Trabajo', xT, chico?33:50);
+      doc.setFontSize(8); doc.setTextColor(255,233,168); doc.setFont('helvetica','bold');
+      doc.text('FOLIO '+cod, W-M, chico?20:30, {align:'right'});
+      var ls=selloFormato('constancia');
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(203,220,230);
+      ls.forEach(function(tx,i){ doc.text(tx, W-M, (chico?32:42)+i*9, {align:'right'}); });
+      return hB+4;
+    }
+    function tarjeta(x,yy,w,h,et,val,grande){
+      doc.setFillColor(244,247,249); doc.setDrawColor(226,232,236); doc.setLineWidth(.6);
+      doc.roundedRect(x,yy,w,h,6,6,'FD');
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+      doc.text(String(et).toUpperCase(), x+9, yy+13);
+      doc.setFont('helvetica','bold'); doc.setFontSize(grande?10.5:9.5); doc.setTextColor(TINTA[0],TINTA[1],TINTA[2]);
+      var tx=doc.splitTextToSize(String(val==null||val===''?'—':val), w-18);
+      doc.text(tx.slice(0,2), x+9, yy+27);
+    }
+
+    /* ═══ PÁGINA 1: LA CONSTANCIA ═══ */
+    y=cabecera(false)+30;
+    doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(AZUL[0],AZUL[1],AZUL[2]);
+    doc.text('CONSTANCIA DE CAPACITACIÓN', W/2, y, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+    doc.text('Registro de capacitación y evaluación · Art. 35 de la Ley N.° 29783 · R.M. 050-2013-TR', W/2, y+16, {align:'center'});
+    doc.setDrawColor(ORO[0],ORO[1],ORO[2]); doc.setLineWidth(2); doc.line(W/2-60, y+26, W/2+60, y+26);
+    y+=56;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+    doc.text('Se deja constancia de que', W/2, y, {align:'center'});
+    y+=26;
+    doc.setFont('helvetica','bold'); doc.setTextColor(AZUL[0],AZUL[1],AZUL[2]);
+    var nom=String(S.datos.nombre||'').toUpperCase(), tam=22;
+    doc.setFontSize(tam); while(tam>13 && doc.getTextWidth(nom)>W-2*M-40){ tam-=1; doc.setFontSize(tam); }
+    doc.text(nom, W/2, y, {align:'center'});
+    y+=16;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+    var linea2=[]; if(S.datos.dni) linea2.push('DNI '+S.datos.dni); if(S.datos.cargo) linea2.push(S.datos.cargo);
+    if(S.datos.empresa) linea2.push(S.datos.empresa+(S.datos.vinculo?' ('+S.datos.vinculo+')':''));
+    doc.text(linea2.join('  ·  ')||' ', W/2, y, {align:'center'});
+    y+=26;
+    doc.setFontSize(10.5); doc.text('participó en la capacitación y rindió la evaluación del tema', W/2, y, {align:'center'});
+    y+=22;
+    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(TINTA[0],TINTA[1],TINTA[2]);
+    var tt=doc.splitTextToSize(nombreTemaC, W-2*M-40);
+    doc.text(tt, W/2, y, {align:'center'}); y+=15*tt.length;
+    doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+    var es=doc.splitTextToSize(t.escenario||'', W-2*M-60);
+    doc.text(es.slice(0,2), W/2, y+2, {align:'center'}); y+=11*Math.min(2,es.length)+18;
+
+    /* tarjetas de datos: 3 x 2 */
+    var gw=(W-2*M-16)/3, gh=40;
+    tarjeta(M,        y, gw, gh, 'Fecha de la evaluación', fechaLarga(S.datos.fecha));
+    tarjeta(M+gw+8,   y, gw, gh, 'Duración', _horasTxt(S.datos.horas||1));
+    tarjeta(M+2*gw+16,y, gw, gh, 'Sector', sectorDe(S.sector).nombre);
+    y+=gh+8;
+    tarjeta(M,        y, gw, gh, 'Obra / proyecto', S.datos.obra||cfg.obra||'');
+    tarjeta(M+gw+8,   y, gw, gh, 'Evaluador', S.datos.evaluador||cfg.cap||'');
+    tarjeta(M+2*gw+16,y, gw, gh, 'Modalidad', 'Evaluación en OBRASST · '+n+' preguntas');
+    y+=gh+22;
+
+    /* el resultado: nota grande, veredicto, tira de cuadritos */
+    var rh=92;
+    doc.setFillColor(aprob?232:250, aprob?244:235, aprob?236:235);
+    doc.setDrawColor(aprob?VERDE[0]:ROJO[0], aprob?VERDE[1]:ROJO[1], aprob?VERDE[2]:ROJO[2]); doc.setLineWidth(1);
+    doc.roundedRect(M,y,W-2*M,rh,10,10,'FD');
+    /* circulo con la nota */
+    var cx=M+58, cy=y+rh/2;
+    doc.setFillColor(255,255,255); doc.circle(cx,cy,34,'F');
+    doc.setDrawColor(aprob?VERDE[0]:ROJO[0], aprob?VERDE[1]:ROJO[1], aprob?VERDE[2]:ROJO[2]); doc.setLineWidth(3); doc.circle(cx,cy,34,'S');
+    doc.setFont('helvetica','bold'); doc.setFontSize(22); doc.setTextColor(aprob?VERDE[0]:ROJO[0], aprob?VERDE[1]:ROJO[1], aprob?VERDE[2]:ROJO[2]);
+    doc.text(String(b), cx, cy+2, {align:'center'});
+    doc.setFontSize(9); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]); doc.setFont('helvetica','normal');
+    doc.text('de '+n, cx, cy+15, {align:'center'});
+    /* veredicto */
+    var xr=M+112;
+    doc.setFont('helvetica','bold'); doc.setFontSize(19); doc.setTextColor(aprob?VERDE[0]:ROJO[0], aprob?VERDE[1]:ROJO[1], aprob?VERDE[2]:ROJO[2]);
+    doc.text(aprob?'APROBADO':'DESAPROBADO', xr, y+30);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(GRISC[0],GRISC[1],GRISC[2]);
+    doc.text(Math.round(b*100/n)+' % de respuestas correctas · mínimo para aprobar: '+min+' de '+n, xr, y+46);
+    /* tira: un cuadrito por pregunta */
+    var qw=18, qg=5, xq=xr;
+    S.resp.forEach(function(r,i){
+      var ok=r.ok;
+      doc.setFillColor(ok?VERDE[0]:ROJO[0], ok?VERDE[1]:ROJO[1], ok?VERDE[2]:ROJO[2]);
+      doc.roundedRect(xq+i*(qw+qg), y+58, qw, 16, 3, 3, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
+      doc.text(String(i+1), xq+i*(qw+qg)+qw/2, y+69.5, {align:'center'});
+    });
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+    doc.text('verde: correcta · rojo: incorrecta · el detalle va en la página siguiente', xr, y+84);
+    y+=rh+14;
+    if(S.salidas){
+      doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+      doc.text('Durante la prueba el celular salió de la app '+S.salidas+' vez'+(S.salidas===1?'':'es')+'; queda anotado para quien revise.', M, y);
+      y+=12;
+    }
+
+    /* firmas + QR de verificacion, anclados abajo */
+    var yf=H-200;
+    var aw=(W-2*M-40)/2;
+    if(FIRMA.trab){ try{ doc.addImage(FIRMA.trab,'JPEG',M+10,yf,aw-20,64); }catch(_f){} }
+    doc.setDrawColor(150,150,150); doc.setLineWidth(.8);
+    doc.line(M,yf+70,M+aw,yf+70); doc.line(W-M-aw,yf+70,W-M,yf+70);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(TINTA[0],TINTA[1],TINTA[2]);
+    doc.text(S.datos.nombre||'', M+aw/2, yf+82, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+    doc.text('Firma del trabajador evaluado', M+aw/2, yf+92, {align:'center'});
+    /* el evaluador: con sello si lo activo (viaja en el enlace), si no el nombre */
+    var selloEv = S.selloEval && _norm(S.selloEval.nombre||'')===_norm(S.datos.evaluador||'') ? S.selloEval : selloDatos(S.datos.evaluador||cfg.cap||'');
+    if(selloEv){
+      _pdfSello(doc, W-M-aw/2, yf+2, selloEv, 176, false);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+      doc.text('Firma y sello del evaluador', W-M-aw/2, yf+82, {align:'center'});
+    } else {
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(TINTA[0],TINTA[1],TINTA[2]);
+      doc.text(S.datos.evaluador||cfg.cap||'', W-M-aw/2, yf+82, {align:'center'});
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+      doc.text('Evaluador / responsable de la capacitación', W-M-aw/2, yf+92, {align:'center'});
+    }
+    /* QR con el folio: se lee con cualquier celular */
+    try{
+      var qr=qrcode(0,'M'); qr.addData('OBRASST · Constancia '+cod+' · '+(S.datos.nombre||'')+' · '+(S.datos.fecha||hoyISO())); qr.make();
+      var img=qr.createDataURL(4,0);
+      doc.addImage(img,'PNG', W/2-24, yf-2, 48, 48);
+      doc.setFontSize(6.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+      doc.text('Folio '+cod, W/2, yf+56, {align:'center'});
+    }catch(_q){}
+    /* pie legal */
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(130,130,130);
+    doc.text(doc.splitTextToSize('Registro de capacitación conforme al Art. 35 de la Ley N.° 29783. Lo conserva el empleador, responsable del tratamiento de los datos personales (Ley N.° 29733 · D.S. 016-2024-JUS). El folio de verificación se calcula con el nombre, el tema y cada respuesta: una constancia adulterada no lo reproduce. Emitida el '+new Date().toLocaleString('es-PE')+' con OBRASST.', W-2*M), M, H-64);
+
+    /* ═══ PÁGINA 2+: EL DETALLE, PREGUNTA POR PREGUNTA ═══ */
+    doc.addPage();
+    y=cabecera(true)+22;
+    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(AZUL[0],AZUL[1],AZUL[2]);
+    doc.text('Detalle de la evaluación', M, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(GRIS[0],GRIS[1],GRIS[2]);
+    doc.text(S.datos.nombre+' · '+fechaLarga(S.datos.fecha)+' · '+b+' de '+n+' correctas', W-M, y, {align:'right'});
+    y+=18;
     function medirBloque(i,q){
       var h=0;
-      h+=11*doc.splitTextToSize((i+1)+'. '+q.enunciado.replace(/\s+/g,' '), W-2*M).length+4;
+      h+=11*doc.splitTextToSize((i+1)+'. '+q.enunciado.replace(/\s+/g,' '), W-2*M-24).length+6;
       ['a','b','c','d'].forEach(function(L){
-        h+=10.5*doc.splitTextToSize('X  '+L+')  '+q.opciones[L].replace(/\s+/g,' '), W-2*M-30).length+3;
+        h+=10.5*doc.splitTextToSize('X  '+L+')  '+q.opciones[L].replace(/\s+/g,' '), W-2*M-54).length+3;
       });
-      return h+12;
+      return h+30;
     }
-    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(25,25,25);
-    doc.text('Preguntas y respuestas',M,y); y+=14;
     S.resp.forEach(function(r,i){
       var q=S.orden[i];
-      doc.setFontSize(9);
       var h=medirBloque(i,q);
-      if(y+h>PIE){ doc.addPage(); y=52; }
-      // enunciado
-      doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(25,25,25);
-      var qtx=doc.splitTextToSize((i+1)+'. '+q.enunciado.replace(/\s+/g,' '), W-2*M);
-      doc.text(qtx,M,y); y+=11*qtx.length+4;
-      // opciones
+      if(y+h>PIE){ doc.addPage(); y=cabecera(true)+22; }
+      /* la tarjeta */
+      doc.setFillColor(252,252,252); doc.setDrawColor(r.ok?VERDE[0]:ROJO[0], r.ok?VERDE[1]:ROJO[1], r.ok?VERDE[2]:ROJO[2]); doc.setLineWidth(.8);
+      doc.roundedRect(M, y, W-2*M, h-6, 7, 7, 'FD');
+      /* la marca a la izquierda */
+      doc.setFillColor(r.ok?VERDE[0]:ROJO[0], r.ok?VERDE[1]:ROJO[1], r.ok?VERDE[2]:ROJO[2]);
+      doc.roundedRect(M, y, 6, h-6, 3, 3, 'F');
+      var yy=y+16, xi=M+16;
+      doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(TINTA[0],TINTA[1],TINTA[2]);
+      var qtx=doc.splitTextToSize((i+1)+'. '+q.enunciado.replace(/\s+/g,' '), W-2*M-24);
+      doc.text(qtx, xi, yy); yy+=11*qtx.length+5;
       doc.setFontSize(9);
       ['a','b','c','d'].forEach(function(L){
         var esCorr=(L===q.correcta), esMarc=(L===r.marcada);
-        var tx=doc.splitTextToSize(L+')  '+q.opciones[L].replace(/\s+/g,' '), W-2*M-30);
+        var tx=doc.splitTextToSize(L+')  '+q.opciones[L].replace(/\s+/g,' '), W-2*M-54);
         var hOp=10.5*tx.length;
-        if(esMarc){ // sombreado de lo que marcó
+        if(esMarc){
           if(esCorr){ doc.setFillColor(226,242,231); } else { doc.setFillColor(250,229,229); }
-          doc.roundedRect(M+14,y-8,W-2*M-14,hOp+5,3,3,'F');
+          doc.roundedRect(xi+12, yy-8, W-2*M-34, hOp+5, 3, 3, 'F');
         }
         var marca='', col=GRISC;
-        if(esCorr){ marca='V'; col=VERDE; }
-        else if(esMarc){ marca='X'; col=ROJO; }
-        if(marca){
-          doc.setFont('zapfdingbats','normal'); doc.setFontSize(9);
-          doc.setTextColor(col[0],col[1],col[2]);
-          doc.text(marca==='V'?'4':'8', M+2, y);   // ZapfDingbats: 4=✔ 8=✗
-          doc.setFontSize(9);
-        }
-        doc.setFont('helvetica', (esCorr||esMarc)?'bold':'normal');
-        doc.setTextColor(col[0],col[1],col[2]);
-        doc.text(tx, M+18, y);
-        y+=hOp+3;
+        if(esCorr){ marca='4'; col=VERDE; } else if(esMarc){ marca='8'; col=ROJO; }
+        if(marca){ doc.setFont('zapfdingbats','normal'); doc.setFontSize(9); doc.setTextColor(col[0],col[1],col[2]); doc.text(marca, xi, yy); doc.setFontSize(9); }
+        doc.setFont('helvetica', (esCorr||esMarc)?'bold':'normal'); doc.setTextColor(col[0],col[1],col[2]);
+        doc.text(tx, xi+18, yy); yy+=hOp+3;
       });
-      // línea de estado de la pregunta
       doc.setFont('helvetica','italic'); doc.setFontSize(8);
-      if(r.ok){ doc.setTextColor(31,122,73); doc.text('Respuesta correcta.', M+18, y); }
-      else { doc.setTextColor(178,49,54); doc.text('Marcó '+(r.marcada||'—')+'; la correcta era '+q.correcta+'.', M+18, y); }
-      y+=14;
+      if(r.ok){ doc.setTextColor(VERDE[0],VERDE[1],VERDE[2]); doc.text('Respuesta correcta.', xi+18, yy+2); }
+      else { doc.setTextColor(ROJO[0],ROJO[1],ROJO[2]); doc.text('Marcó '+(r.marcada||'—')+'; la correcta era '+q.correcta+'.', xi+18, yy+2); }
+      y+=h;
     });
-
-    // --- firmas: bloque entero, sin partirse ---
-    if(y+128>PIE){ doc.addPage(); y=60; } else { y+=8; }
-    var aw=(W-2*M-24)/2;
-    if(FIRMA.trab) doc.addImage(FIRMA.trab,'JPEG',M,y,aw,70);
-    doc.setDrawColor(150,150,150); doc.setLineWidth(.8);
-    doc.line(M,y+74,M+aw,y+74);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(60,60,60);
-    doc.text('Firma del evaluado — '+(S.datos.nombre||''), M, y+85);
-    doc.setFontSize(8); doc.setTextColor(110,110,110);
-    doc.text('Evaluado por: '+(S.datos.evaluador||cfg.cap||''), M+aw+24, y+85);
-    doc.setFontSize(7); doc.setTextColor(130,130,130);
-    doc.text(doc.splitTextToSize('Registro de capacitación conforme al Art. 35 de la Ley 29783. Lo conserva el empleador, responsable del tratamiento de los datos personales (Ley 29733 · D.S. 016-2024-JUS). Generado por OBRASST; el código de verificación permite detectar constancias adulteradas.', W-2*M), M, y+100);
+    /* numeracion de paginas */
+    var np=doc.getNumberOfPages();
+    for(var pg=1; pg<=np; pg++){
+      doc.setPage(pg); doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(150,150,150);
+      doc.text('Página '+pg+' de '+np+' · Folio '+cod, W-M, H-30, {align:'right'});
+    }
 
     var slug=(S.datos.nombre||'trabajador').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
     PDF.doc=doc;
