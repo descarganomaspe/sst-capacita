@@ -481,6 +481,28 @@ body.connav .pantalla{padding-top:2px}
 .paso-est{font-size:12px;color:var(--gris);text-align:right;line-height:1.25}
 .paso.lista .paso-est{color:var(--ok)}
 .paso-cu{padding:0 14px 14px}
+/* ── TALLERES: figuras que se tocan y parejas ── */
+.tl-fig{position:relative;border-radius:14px;overflow:hidden;margin:6px 0 12px;
+  /* fondo propio y opaco: encima de la foto de la app el dibujo no se leía */
+  background:#0e1a22;border:1px solid var(--borde,rgba(255,255,255,.12))}
+html.t-claro .tl-fig, html.t-alto .tl-fig{background:#f2f4f6}
+.tl-fig svg{display:block;width:100%;height:auto}
+.tl-zona{position:absolute;transform:translate(-50%,-50%);border-radius:50%;border:2.5px dashed rgba(var(--w),.45);
+  background:rgba(var(--w),.06);cursor:pointer;touch-action:manipulation}
+.tl-zona:active{transform:translate(-50%,-50%) scale(.94)}
+.tl-zona.on{border-style:solid;border-color:var(--oro);background:rgba(245,183,0,.22)}
+.tl-zona.bien{border-color:var(--ok);background:rgba(31,160,102,.28);border-style:solid}
+.tl-zona.falla{border-color:var(--mal);background:rgba(229,72,77,.26);border-style:solid}
+.tl-zona b{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:15px}
+.tl-pistas{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 10px}
+.tl-pista{font-size:12px;padding:5px 9px;border-radius:99px;background:rgba(var(--w),.08);color:var(--gris)}
+.tl-par{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}
+.tl-col{display:grid;gap:7px;align-content:start}
+.tl-it{padding:11px 12px;border-radius:12px;text-align:left;font:inherit;font-size:13.5px;line-height:1.35;
+  background:rgba(var(--w),.05);border:1.5px solid rgba(var(--w),.14);color:var(--tinta);cursor:pointer}
+.tl-it.on{border-color:var(--oro);background:rgba(245,183,0,.12)}
+.tl-it.hecho{border-color:var(--ok);background:rgba(31,160,102,.14);opacity:.85;cursor:default}
+.tl-it small{display:block;color:var(--gris);font-size:11.5px;margin-top:3px}
 /* ── NOMBRAR SUPERVISORES ── */
 .inv-papeles{display:grid;gap:9px}
 .inv-papel{display:block;width:100%;text-align:left;padding:13px 14px;border-radius:13px;
@@ -3160,7 +3182,8 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <section class="pantalla" id="p-taller-fin">
   <div class="barra"><button class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-talleres')">‹ Talleres</button><span>Constancia</span></div>
   <h2 id="talfin-titulo">¡Taller completado!</h2>
-  <p class="sub">Pon los datos del trabajador para emitir su constancia de participación.</p>
+  <p class="sub">Elige al trabajador para emitir su constancia. Queda en su ficha, junto a sus capacitaciones.</p>
+  <div id="tal-elige"></div>
   <label>Nombre y apellido</label><input id="tal-nombre" placeholder="Juan Pérez">
   <label>DNI</label><input id="tal-dni" inputmode="numeric" placeholder="70123456">
   <label>Cargo</label><input id="tal-cargo" placeholder="Operario">
@@ -6677,7 +6700,7 @@ var LITE  = {"SST-CON-02":[1,2,6,7],"SST-CON-13":[1,2,5,7],"SST-MIN-02":[1,2,4,7
 function pareceLicencia(v){ return /^(SST|EQS|OBE|PRV|GES|PRU)[A-Z0-9]{6}$/.test(_norm(v||'')); }
 var SECTORES = [{"id":"construccion","nombre":"Construcción","icono":"🏗️","pie":"Obra, edificación y montaje"},{"id":"mineria","nombre":"Minería","icono":"⛏️","pie":"Interior mina, tajo y planta concentradora"},{"id":"industria","nombre":"Industria","icono":"🏭","pie":"Planta de producción y manufactura"},{"id":"hidrocarburos","nombre":"Hidrocarburos","icono":"🛢️","pie":"Refinería, planta de proceso y almacenamiento"}];
 var FAMILIAS = {"primeros_auxilios":{"titulo":"Primeros auxilios","pregunta":"¿Qué emergencia estás atendiendo?","orden":1},"izaje":{"titulo":"Izaje de cargas","pregunta":"¿Con qué vas a izar?","orden":4},"altura":{"titulo":"Trabajos en altura","pregunta":"¿Cómo trabajas en altura?","orden":5},"caliente":{"titulo":"Trabajos en caliente","pregunta":"¿Qué trabajo en caliente vas a hacer?","orden":8},"fuego":{"titulo":"Uso de extintores","pregunta":"¿Qué se está quemando?","orden":9}};
-var TALLERES = [{"id":"ats","icono":"📋","nombre":"Llenado del ATS","sub":"Análisis de Trabajo Seguro · inicio de jornada","sector":"*","min":8,"intro":"El ATS se llena en obra, en cuadrilla, ANTES de empezar la tarea del día. Aquí practicas cómo llenarlo bien: identificar la tarea, sus peligros, el riesgo y las medidas.","pasos":[{"tipo":"orden","titulo":"El orden del ATS","instru":"Toca los pasos en el orden en que se llena un ATS.","items":["Describir la tarea del día","Identificar los peligros de cada paso","Evaluar el riesgo (probabilidad y severidad)","Definir las medidas de control","Indicar el EPP necesario","Firmar todo el equipo que hará la tarea"]},{"tipo":"elige","titulo":"¿Cuándo se llena?","pregunta":"¿En qué momento se llena el ATS?","ops":["Al final de la jornada, como reporte de lo que se hizo","Al inicio de la jornada, antes de empezar la tarea","Solo cuando ocurre un incidente","Una vez al mes, al inicio de la obra"],"correcta":1,"sustento":"El ATS es preventivo: se llena en campo, con la cuadrilla, antes de iniciar la tarea de ese día."},{"tipo":"marca","titulo":"Peligro, riesgo o medida","instru":"De esta lista, marca solo lo que es un PELIGRO (la fuente que puede dañar).","items":[{"t":"Trabajar al borde de una excavación","mal":true},{"t":"Colocar barandas y línea de vida","mal":false},{"t":"Herramienta eléctrica con cable pelado","mal":true},{"t":"Usar guantes dieléctricos","mal":false},{"t":"Piso con aceite derramado","mal":true}],"nota":"El peligro es la fuente (el borde, el cable pelado, el aceite). La medida es lo que haces para controlarlo."},{"tipo":"elige","titulo":"Cambió la tarea","pregunta":"A media jornada tu cuadrilla pasa a una tarea distinta a la del ATS. ¿Qué haces?","ops":["Sigues con el mismo ATS, total es el mismo día","Llenas un ATS nuevo para la tarea nueva","Lo anotas al reverso y sigues","Esperas al día siguiente"],"correcta":1,"sustento":"Cada tarea tiene sus propios peligros. Si la tarea cambia, se llena un ATS nuevo para esa tarea."}],"cierre":"Ya sabes llenar un ATS: tarea, peligros, riesgo, medidas, EPP y firmas — al inicio, y uno nuevo si la tarea cambia."},{"id":"iperc","icono":"🧩","nombre":"IPERC de línea base","sub":"Identificación de peligros a inicio de obra","sector":"construccion","min":8,"intro":"En construcción, el IPERC que se hace es el de LÍNEA BASE, a inicio de obra. Ojo: el IPERC continuo es de minería (D.S. 024-2016-EM), no de construcción.","pasos":[{"tipo":"elige","titulo":"¿Cuál usa construcción?","pregunta":"En una obra de construcción, ¿qué IPERC corresponde?","ops":["IPERC continuo, por cada guardia","IPERC de línea base, a inicio de obra","No se hace IPERC en construcción","Solo ATS, nunca IPERC"],"correcta":1,"sustento":"Construcción hace IPERC de línea base al inicio de la obra. El IPERC continuo es propio de la actividad minera (D.S. 024-2016-EM)."},{"tipo":"orden","titulo":"Los pasos del IPERC","instru":"Ordena los pasos para evaluar un riesgo en el IPERC.","items":["Identificar el peligro","Estimar la probabilidad de que ocurra","Estimar la severidad del daño","Determinar el nivel de riesgo","Aplicar la jerarquía de controles","Reevaluar el riesgo residual"]},{"tipo":"orden","titulo":"Jerarquía de controles","instru":"Ordena los controles del más eficaz (primero) al menos eficaz (último).","items":["Eliminación","Sustitución","Controles de ingeniería","Controles administrativos","Equipo de protección personal (EPP)"]},{"tipo":"elige","titulo":"El EPP","pregunta":"¿Qué lugar ocupa el EPP en la jerarquía de controles?","ops":["El primero: es lo más importante","El último: es la última barrera, no la primera","No es un control","Reemplaza a los demás controles"],"correcta":1,"sustento":"El EPP es la última barrera. Primero se elimina o controla el peligro en la fuente; el EPP protege a la persona cuando el riesgo no pudo eliminarse."}],"cierre":"IPERC de línea base a inicio de obra, jerarquía de controles con el EPP al final, y el continuo es de minería."},{"id":"residuos","icono":"♻️","nombre":"Segregación de residuos","sub":"Código de colores en obra","sector":"*","min":6,"intro":"Segregar bien es separar cada residuo en su recipiente. Practica el código de colores que se usa en obra (base NTP 900.058).","pasos":[{"tipo":"elige","titulo":"El trapo con aceite","pregunta":"Un trapo impregnado con aceite o solvente, ¿en qué tacho va?","ops":["Verde (aprovechable)","Negro (común)","Rojo (peligroso)","Marrón (orgánico)"],"correcta":2,"sustento":"Todo lo contaminado con hidrocarburos o químicos es residuo peligroso: va al tacho rojo."},{"tipo":"elige","titulo":"La botella de plástico","pregunta":"Una botella de plástico limpia, ¿dónde va?","ops":["Rojo (peligroso)","Amarillo / verde (reaprovechable)","Rojo, por si acaso","Se deja en el suelo"],"correcta":1,"sustento":"El plástico limpio es reaprovechable/reciclable. El rojo es solo para residuos peligrosos."},{"tipo":"marca","titulo":"Al tacho rojo","instru":"Marca lo que SÍ es residuo peligroso (tacho rojo).","items":[{"t":"Envase de pintura o solvente","mal":true},{"t":"Cartón limpio","mal":false},{"t":"Guantes impregnados de químico","mal":true},{"t":"Waipe / trapo con grasa","mal":true},{"t":"Restos de comida","mal":false}],"nota":"Peligroso = contaminado con químicos, hidrocarburos, pilas, aerosoles. Lo demás va a su color."}],"cierre":"Peligroso al rojo, reaprovechable a su color, y nada de mezclar. Segregar bien empieza en tu puesto."},{"id":"rotomartillo","icono":"🔩","nombre":"Uso del rotomartillo","sub":"Herramienta eléctrica manual","sector":"construccion","min":6,"intro":"El rotomartillo es útil pero castiga: proyecciones, atrapamiento y vibración. Practica el uso seguro paso a paso.","pasos":[{"tipo":"orden","titulo":"Antes y durante","instru":"Ordena el uso seguro del rotomartillo.","items":["Ponerte el EPP (lentes, guantes, protección auditiva, respirador si hay polvo)","Inspeccionar el equipo, el cable y la broca","Asegurar la pieza y tomar postura firme con las dos manos","Perforar con presión constante, sin forzar","Apagar y desconectar antes de dejarlo"]},{"tipo":"marca","titulo":"Lo que NO se hace","instru":"Marca las prácticas INSEGURAS.","items":[{"t":"Operar con una sola mano","mal":true},{"t":"Usar lentes de seguridad","mal":false},{"t":"Trabajar con la broca gastada o rajada","mal":true},{"t":"Desconectar jalando del cable","mal":true},{"t":"Revisar el cable antes de enchufar","mal":false}],"nota":"Dos manos, broca en buen estado, y se desconecta del enchufe, nunca jalando el cable."},{"tipo":"elige","titulo":"El polvo","pregunta":"Al perforar concreto se levanta mucho polvo de sílice. ¿Qué haces?","ops":["Nada, es normal","Uso respirador y, si se puede, perforación con agua o captación de polvo","Aguanto la respiración","Solo me alejo un poco"],"correcta":1,"sustento":"El polvo de sílice daña el pulmón (silicosis). Respirador adecuado y control del polvo en la fuente."}],"cierre":"EPP puesto, equipo inspeccionado, dos manos, control del polvo, y se desconecta del enchufe."},{"id":"andamio","icono":"🏗️","nombre":"Montaje de andamio","sub":"Armado, uso y desmontaje","sector":"construccion","min":8,"intro":"Un andamio mal armado es una caída esperando ocurrir. Practica el armado seguro y aprende a reconocer cuándo NO se debe subir.","pasos":[{"tipo":"orden","titulo":"El armado","instru":"Ordena el montaje seguro del andamio.","items":["Nivelar y apoyar la base sobre terreno firme","Armar los cuerpos y colocar los arriostres","Instalar la plataforma completa y sin huecos","Colocar barandas y rodapié","Instalar el acceso (escalera interna)","Inspeccionar y colocar la tarjeta de habilitación"]},{"tipo":"marca","titulo":"No subas si...","instru":"Marca las condiciones por las que NO se debe subir al andamio.","items":[{"t":"Le faltan arriostres","mal":true},{"t":"Tiene tarjeta verde de inspección vigente","mal":false},{"t":"La plataforma está incompleta","mal":true},{"t":"No tiene barandas","mal":true},{"t":"La base está nivelada y firme","mal":false}],"nota":"Sin arriostres, sin baranda o con plataforma incompleta: no se sube. La tarjeta verde habilita, la roja bloquea."},{"tipo":"elige","titulo":"La tarjeta","pregunta":"El andamio tiene tarjeta ROJA. ¿Qué significa?","ops":["Está listo para usar","No está habilitado: no se debe usar","Solo lo usa el capataz","Se puede usar con cuidado"],"correcta":1,"sustento":"Tarjeta roja = andamio NO habilitado (en armado, incompleto o observado). Solo se sube con tarjeta verde vigente."}],"cierre":"Base firme, arriostres, plataforma completa, barandas, acceso e inspección. Y solo se sube con tarjeta verde."}];
+var TALLERES = [{"id":"ats","icono":"📋","nombre":"Llenado del ATS","sub":"Análisis de Trabajo Seguro · inicio de jornada","sector":"*","min":9,"intro":"El ATS se llena en obra, en cuadrilla, ANTES de empezar la tarea del día. Aquí practicas lo que cuesta: separar el peligro de la medida, y mirar el frente de trabajo antes de meterle mano.","pasos":[{"tipo":"orden","titulo":"El orden del ATS","instru":"Toca los pasos en el orden en que se llena un ATS.","items":["Describir la tarea del día, paso por paso","Identificar los peligros de cada paso","Evaluar el riesgo (probabilidad y severidad)","Definir las medidas de control","Indicar el EPP necesario","Firmar todo el equipo que hará la tarea"]},{"tipo":"elige","titulo":"¿Cuándo se llena?","pregunta":"¿En qué momento se llena el ATS?","ops":["Al final de la jornada, como reporte de lo que se hizo","Al inicio de la jornada, antes de empezar la tarea","Solo cuando ocurre un incidente","Una vez al mes, al inicio de la obra"],"correcta":1,"sustento":"El ATS es preventivo: si se llena después, ya no controló nada, solo dejó papel. Y se llena en el frente de trabajo, mirando el frente de trabajo. Un ATS llenado en la oficina describe una obra que nadie está viendo."},{"tipo":"empareja","titulo":"Peligro y su medida","instru":"Une cada peligro con la medida que de verdad lo controla.","pares":[{"a":"Trabajo al borde de una excavación","b":"Baranda o línea de vida anclada sobre la cabeza","pista":"Si te puedes caer al vacío, la medida tiene que sujetarte o impedir que llegues al borde."},{"a":"Cable de la amoladora pelado","b":"Sacar la herramienta de servicio y tarjetearla","pista":"Una herramienta dañada no se negocia ni se le pone cinta aislante: se retira."},{"a":"Polvo de sílice al perforar concreto","b":"Perforar con agua o con captación de polvo, y respirador","pista":"Primero se controla el polvo en la fuente. El respirador viene después, no en lugar de."},{"a":"Saco de 40 kg para levantar entre uno","b":"Ayuda mecánica o dos personas","pista":"La R.M. 375-2008-TR pone el tope de manipulación manual en 25 kg para varones y 15 kg para mujeres."},{"a":"Piso con aceite derramado","b":"Limpiar el derrame y señalizar mientras seca","pista":"Un derrame no se esquiva ni se rodea: se limpia."}],"nota":"El peligro es la fuente (el borde, el cable pelado, el polvo, el peso). La medida es lo que haces para que esa fuente no te alcance. En el ATS van los dos, uno al frente del otro."},{"tipo":"figura","titulo":"Lo que el ATS no previó","instru":"Esta cuadrilla ya empezó y su ATS quedó en blanco a la mitad. Toca en el dibujo lo que ese ATS tenía que haber previsto.","fig":"obra","zonas":[{"x":51,"y":36,"r":7,"mal":true,"t":"El que está arriba trabaja sin casco: el ATS tenía que listar el EPP y verificarlo antes de subir a nadie"},{"x":44,"y":65,"r":7,"mal":true,"t":"La escalera está casi vertical y sin amarrar: el ATS debía prever el amarre arriba y un ayudante al pie"},{"x":69,"y":93,"r":7,"mal":true,"t":"Zanja abierta sin señalizar ni proteger: la delimitación se decide en el ATS, antes de abrirla"},{"x":82,"y":78,"r":6,"mal":true,"t":"Material apilado al filo de la zanja: el ATS debía fijar dónde se acopia, lejos del borde"},{"x":19,"y":64,"r":8,"mal":false,"t":"El muro en construcción no es un hallazgo: es la tarea"}],"nota":"Un ATS que no describe lo que hay alrededor no sirve. La tarea es una sola, pero el frente de trabajo tiene su propia lista de peligros."},{"tipo":"elige","titulo":"Cambió la tarea","pregunta":"A media jornada tu cuadrilla pasa a una tarea distinta a la del ATS. ¿Qué haces?","ops":["Sigues con el mismo ATS, total es el mismo día","Llenas un ATS nuevo para la tarea nueva","Lo anotas al reverso y sigues","Esperas al día siguiente"],"correcta":1,"sustento":"El ATS no es del día ni del trabajador: es de la tarea. Cambia la tarea, cambian los peligros y cambia el EPP. Lo mismo vale si cambia el lugar, si entra gente nueva a la cuadrilla o si empieza a llover: se para, se conversa y se llena de nuevo."}],"cierre":"Tarea, peligros, riesgo, medidas, EPP y firmas. Al inicio, en el frente, mirando alrededor, y uno nuevo cada vez que la tarea cambia."},{"id":"arnes","icono":"🧗","nombre":"Uso del arnés","sub":"Trabajo en altura · anclaje y revisión","sector":"*","min":9,"intro":"El arnés no evita la caída: la detiene. Y solo la detiene bien si el anclaje está donde debe, el enganche es el correcto y el equipo está sano. Aquí revisas, anclas y decides.","pasos":[{"tipo":"orden","titulo":"Antes de subir","instru":"Ordena lo que haces antes de exponerte a la altura.","items":["Revisar cintas, costuras, hebillas y mosquetón","Ponerte el arnés y ajustar pecho y piernas hasta que quede firme","Elegir un punto de anclaje resistente, por encima de la cabeza","Verificar que abajo hay espacio libre para que el equipo frene","Enganchar el mosquetón de doble seguro al anillo dorsal"]},{"tipo":"elige","titulo":"Dónde va el anclaje","pregunta":"Vas a trabajar parado en una plataforma. ¿Dónde enganchas la línea de vida?","ops":["En la baranda que tengas más a mano","En un punto resistente, por encima de la cabeza","En el piso de la plataforma, a la altura de los pies","Donde alcance el mosquetón sin estirarte"],"correcta":1,"sustento":"Anclado sobre la cabeza caes poco y el equipo trabaja de frente. Anclado a los pies caes todo el largo de la línea antes de que empiece a frenarte, y el tirón sube muchísimo: eso es el factor de caída. Las cifras de caída libre máxima y de distancia libre bajo tus pies las da el fabricante del equipo y el procedimiento de la obra, no la G.050: lo que la G.050 fija es desde cuándo hablamos de altura, 1.80 m de altura de trabajo."},{"tipo":"figura","titulo":"Este compañero no sube","instru":"Está listo para trabajar y tiene tres cosas mal. Toca en el dibujo dónde están.","fig":"arnes","zonas":[{"x":26,"y":69,"r":8,"mal":true,"t":"La línea de vida está anclada a los pies, en la plataforma, y no sobre la cabeza"},{"x":50,"y":42,"r":7,"mal":true,"t":"El mosquetón está en el enganche del pecho: para detención de caídas se usa el anillo dorsal, el de la espalda"},{"x":15,"y":55,"r":7,"mal":true,"t":"La plataforma tiene un solo poste: le falta la baranda superior, el travesaño intermedio y el rodapié"},{"x":50,"y":24,"r":6,"mal":false,"t":"El casco está puesto, eso está bien"},{"x":50,"y":5,"r":6,"mal":false,"t":"La viga de arriba está bien: es justo el punto alto donde debía ir el anclaje"}],"nota":"El enganche del pecho se usa para posicionamiento o para ascenso guiado; el que detiene una caída es el dorsal, porque te deja colgando derecho y no doblado."},{"tipo":"marca","titulo":"Este arnés no vuelve al frente","instru":"Marca lo que obliga a sacar el arnés o el conector de servicio.","items":[{"t":"Costura de la cinta descosida o con hilos cortados","mal":true},{"t":"Cinta con una quemadura de esmerilado o de chispa de soldadura","mal":true},{"t":"Hebilla deformada, oxidada o que no traba","mal":true},{"t":"Mosquetón cuyo seguro no cierra solo","mal":true},{"t":"Etiqueta del fabricante legible, con modelo y año","mal":false},{"t":"Cinta con polvo de cemento, que se limpia y queda sana","mal":false}],"nota":"Se revisa cada vez, antes de ponérselo, con las dos manos y recorriendo toda la cinta. Un arnés sin etiqueta legible tampoco sube: no sabes qué es ni de cuándo es."},{"tipo":"elige","titulo":"Ya frenó una caída","pregunta":"Un arnés con su absorbedor detuvo la caída de un compañero. Por fuera se ve entero. ¿Qué se hace con él?","ops":["Se revisa y, si no se ve roto, se sigue usando","Se retira de servicio y se da de baja: no se repara","Se manda a coser donde el tapicero","Se deja para trabajos de poca altura"],"correcta":1,"sustento":"El absorbedor de energía funciona una sola vez: se rasga por dentro a propósito para amortiguar el tirón. Después de eso ya no responde igual, aunque por fuera parezca nuevo. Todos los fabricantes indican darlo de baja tras una detención de caída. Se corta, se descarta para que nadie lo reponga al almacén, y la baja se registra. El reemplazo lo paga el empleador: la Ley 29783 prohíbe cargarle el costo del EPP al trabajador."}],"cierre":"Revisado antes de ponértelo, anclaje sobre la cabeza, enganche dorsal, mosquetón de doble seguro y espacio libre abajo. Y si ya frenó una caída, se da de baja."},{"id":"andamio","icono":"🏗️","nombre":"Uso y verificación de andamio","sub":"Armado, tarjeta y decisión de subir","sector":"construccion","min":9,"intro":"Un andamio mal armado es una caída esperando su turno. Aquí lo armas, lo revisas y decides lo único que de verdad importa en campo: si subes o no subes.","pasos":[{"tipo":"orden","titulo":"El armado","instru":"Ordena el montaje seguro del andamio.","items":["Revisar el terreno y nivelar la base sobre husillos o durmientes","Armar los cuerpos y colocar todos los arriostres","Instalar la plataforma completa, sin huecos y bien trabada","Colocar baranda superior, travesaño intermedio y rodapié","Dejar el acceso por dentro, con escalera interna","Inspeccionar y colocar la tarjeta con firma y fecha"]},{"tipo":"figura","titulo":"Antes de poner el pie","instru":"Llegas al frente y encuentras este andamio armado. Toca todo lo que está mal.","fig":"andamio","zonas":[{"x":23,"y":85,"r":7,"mal":true,"t":"Una pata está apoyada sobre un ladrillo: la base va sobre husillo o durmiente, nunca sobre ladrillos ni bloques sueltos"},{"x":50,"y":50,"r":7,"mal":true,"t":"La plataforma está incompleta: hay un hueco entre los tablones justo por donde se camina"},{"x":50,"y":70,"r":7,"mal":true,"t":"Al cuerpo de abajo le falta el arriostre diagonal: solo está arriostrado el tramo de arriba"},{"x":50,"y":16,"r":8,"mal":true,"t":"La baranda del nivel alto tiene solo la superior: falta el travesaño intermedio y el rodapié"},{"x":79,"y":66,"r":7,"mal":true,"t":"El acceso es una escalera apoyada por fuera: se sube por dentro, por el acceso del propio andamio"},{"x":77,"y":87,"r":6,"mal":false,"t":"Esa pata sí está bien: apoyada sobre su husillo, nivelada"}],"nota":"El rodapié no es un detalle: es lo que impide que una herramienta se vaya al piso sobre la cabeza del que pasa abajo."},{"tipo":"marca","titulo":"No subas si...","instru":"Marca las condiciones por las que NO se sube al andamio.","items":[{"t":"Una pata apoyada sobre ladrillos o bloques sueltos","mal":true},{"t":"Plataforma con un hueco entre tablones","mal":true},{"t":"Baranda sin travesaño intermedio y sin rodapié","mal":true},{"t":"Falta el arriostre en uno de los cuerpos","mal":true},{"t":"Tarjeta verde firmada y con fecha de esta semana","mal":false},{"t":"Base sobre husillos nivelados y terreno compactado","mal":false}],"nota":"Si encuentras cualquiera de estas, no lo arregles tú por tu cuenta ni subas a ver: avisas al responsable del montaje y el andamio se bloquea hasta que se corrija."},{"tipo":"elige","titulo":"La tarjeta","pregunta":"El andamio tiene tarjeta roja. ¿Qué significa y quién pone esa tarjeta?","ops":["Está listo para usar. La pone el primero que sube","No está habilitado. La coloca la persona competente que lo inspeccionó, no el que va a subir","Significa que solo sube el capataz. La pone el almacén","Es decorativa: el color lo elige la cuadrilla"],"correcta":1,"sustento":"Verde: inspeccionado y habilitado. Roja: en armado, incompleto u observado, no se sube. Varias obras usan además una amarilla para uso restringido, con arnés permanente. El detalle de colores lo fija el procedimiento de cada obra, pero lo que no cambia es quién firma: el que inspeccionó. Y la fecha tiene que estar vigente: una tarjeta verde de hace tres semanas, después de una lluvia o de mover el andamio de sitio, ya no dice nada."},{"tipo":"elige","titulo":"Por dónde se sube","pregunta":"El andamio está habilitado y tienes que subir con un balde de mortero. ¿Cómo lo haces?","ops":["Trepando por los travesaños con el balde en una mano","Por la escalera interna, con las dos manos libres, y el balde izado con soga","Por una escalera apoyada por fuera, con el balde en la mano","Te lo pasa un compañero mientras estás parado en la baranda"],"correcta":1,"sustento":"Las dos manos libres siempre: el material sube con soga, balde de izaje o polea. Los travesaños no son peldaños, no están hechos ni pensados para pisarlos. Y la escalera apoyada por fuera empuja el andamio y te obliga a pasar por encima del borde de la plataforma, que es justo el momento en que la gente se cae."}],"cierre":"Base firme sobre husillos, arriostres completos, plataforma sin huecos, baranda con intermedio y rodapié, acceso por dentro. Y solo se sube con tarjeta verde vigente."},{"id":"respirador","icono":"😷","nombre":"Uso del respirador","sub":"Elección del filtro y prueba de sello","sector":"*","min":8,"intro":"Un respirador solo protege si es el correcto para ESE contaminante y si sella contra tu cara. Si entra aire por el borde, da igual lo caro que sea el cartucho.","pasos":[{"tipo":"elige","titulo":"No hay uno que sirva para todo","pregunta":"Vas a pintar con brocha en un ambiente cerrado. Tienes a la mano un respirador con filtro de partículas, el mismo que usas para cortar concreto. ¿Sirve?","ops":["Sí, es respirador, protege igual","No: el filtro de partículas no retiene vapores de solvente; necesitas cartucho para vapores orgánicos","Sí, si le pones dos filtros","Sirve si aguantas la respiración de rato en rato"],"correcta":1,"sustento":"El filtro de partículas es una malla: atrapa polvo y neblina, cosas que se pueden atascar. El vapor de solvente es gas, pasa de largo por esa malla; se retiene con carbón activado, que es lo que lleva el cartucho químico. Primero se define qué hay en el aire, después se elige el equipo. El color y el código de cada cartucho los trae la ficha técnica del fabricante que compra la obra: se lee esa ficha, no se adivina por el color."},{"tipo":"empareja","titulo":"Cada contaminante con su filtro","instru":"Une cada situación con la familia de filtro o cartucho que corresponde.","pares":[{"a":"Polvo de cemento y sílice al cortar","b":"Filtro de partículas","pista":"El polvo son partículas sólidas: se retienen con un filtro mecánico, no con un cartucho químico."},{"a":"Pintura o solvente con olor fuerte","b":"Cartucho para vapores orgánicos","pista":"El solvente se evapora. Eso no lo detiene una malla de partículas."},{"a":"Vapores ácidos en limpieza de metal","b":"Cartucho para gases ácidos","pista":"El cartucho de vapores orgánicos no está hecho para gases ácidos: es otro medio filtrante."},{"a":"Pintado con pistola: neblina y solvente juntos","b":"Cartucho combinado, partículas más vapores","pista":"Cuando hay dos contaminantes a la vez no eliges uno: usas el combinado."},{"a":"Espacio confinado con poco oxígeno","b":"Ningún filtro sirve: equipo con suministro de aire","pista":"Un filtro limpia el aire que hay. Si no hay oxígeno, no hay nada que limpiar."}],"nota":"Estas son familias, no marcas. La letra, el color y el tiempo de servicio de cada cartucho los declara el fabricante en su ficha técnica, y esa ficha tiene que estar en la obra junto con el equipo."},{"tipo":"orden","titulo":"Cómo se pone y cómo se comprueba","instru":"Ordena la colocación y la prueba de sello. Se hace cada vez que te lo pones.","items":["Revisar la pieza facial, las válvulas y las cintas","Colocar la pieza sobre nariz y boca y pasar las cintas por la cabeza","Ajustar las cintas hasta que quede firme, sin lastimar","Prueba de presión negativa: tapar los cartuchos, inhalar suave y ver si la pieza se pega a la cara","Prueba de presión positiva: tapar la válvula de exhalación, soplar suave y ver que no se escape aire por los bordes"]},{"tipo":"figura","titulo":"Por qué no sella","instru":"Este compañero se puso el respirador para lijar masilla. Toca lo que le impide sellar.","fig":"respirador","zonas":[{"x":50,"y":77,"r":8,"mal":true,"t":"La barba pasa por debajo de la pieza facial: ahí no hay sello y el aire entra sin filtrar"},{"x":70,"y":38,"r":7,"mal":true,"t":"La cinta de cabeza del lado derecho está suelta: la pieza no se pega a la cara de ese lado"},{"x":31,"y":40,"r":7,"mal":false,"t":"La cinta del lado izquierdo está bien ajustada"},{"x":31,"y":59,"r":7,"mal":false,"t":"El cartucho izquierdo está en su sitio y hace par con el derecho"}],"nota":"Con barba en la zona de sello el respirador de medio rostro no funciona, por muy bien que lo aprietes. El que necesita barba trabaja con equipo de otra familia, de los que no dependen del sello contra la piel, y eso lo define el programa de protección respiratoria de la obra."},{"tipo":"elige","titulo":"Cuándo se cambia el cartucho","pregunta":"¿Cuándo toca cambiar el cartucho químico?","ops":["Cuando se ve sucio por fuera","Cuando empiezas a oler o sentir sabor, cuando cuesta respirar, o al cumplirse el plazo del fabricante","Una vez al año, sea como sea","Cuando se acaba la obra"],"correcta":1,"sustento":"El cartucho se satura por dentro y no se nota por fuera: el aspecto no dice nada. Oler el contaminante ya es una señal tardía, y hay gases que casi no se huelen, así que el olor no puede ser tu único aviso. Por eso el cambio va por programa, con el tiempo de servicio que da el fabricante según la concentración y las horas de uso. Entre turno y turno el equipo se limpia y se guarda cerrado, no colgado en la estructura ni en el bolsillo del pantalón."}],"cierre":"Primero el contaminante, después el filtro. Prueba de sello positiva y negativa cada vez. Sin barba en la zona de sello, y el cartucho se cambia por programa, no por color."},{"id":"tapones","icono":"🎧","nombre":"Protección auditiva","sub":"Tapones y orejeras · colocación que sí protege","sector":"*","min":6,"intro":"La sordera por ruido no duele y no avisa: se instala de a poco y no se recupera. Un tapón bien puesto protege; el mismo tapón mal puesto casi no hace nada.","pasos":[{"tipo":"elige","titulo":"Desde cuándo hay que protegerse","pregunta":"¿Cómo te das cuenta en campo de que el ruido ya es un problema?","ops":["Cuando te empieza a doler el oído","Cuando para hablar con alguien a un metro tienes que levantar mucho la voz o gritar","Solo cuando el supervisor lo dice","Si es por poco rato, nunca hace falta"],"correcta":1,"sustento":"Esa es la regla rápida de campo, y sirve para pedir la medición. La cifra la fija la R.M. 375-2008-TR: 85 dB(A) para una jornada de 8 horas. Por encima de eso primero se reduce el ruido en la fuente o se aísla, y la protección auditiva es la última barrera, igual que cualquier otro EPP en la jerarquía del Art. 21 de la Ley 29783. Y ojo: a más ruido, menos tiempo de exposición permitido."},{"tipo":"orden","titulo":"Cómo se pone un tapón","instru":"Ordena la colocación de un tapón de espuma. Cada paso cambia lo que protege.","items":["Lavarte o limpiarte bien las manos","Enrollar el tapón entre los dedos hasta dejarlo delgado","Con la otra mano, jalar la oreja hacia arriba y atrás","Meter el tapón dentro del canal, no dejarlo apoyado en la entrada","Sostenerlo con el dedo hasta que expanda y llene el canal"]},{"tipo":"figura","titulo":"Así no protege","instru":"Este compañero se está poniendo el tapón antes de entrar a picar concreto. Toca lo que está mal.","fig":"tapones","zonas":[{"x":66,"y":51,"r":7,"mal":true,"t":"El tapón está a medio meter, apoyado en la entrada: así deja pasar casi todo el ruido"},{"x":81,"y":53,"r":7,"mal":true,"t":"Se lo está colocando con las manos sucias: por ahí entra la infección al oído"},{"x":35,"y":85,"r":8,"mal":true,"t":"La orejera cuelga del cuello sin usar: ahí no protege absolutamente nada"},{"x":54,"y":51,"r":6,"mal":false,"t":"La oreja y el canal no tienen nada malo: el problema es lo que se está metiendo en él"}],"nota":"Un tapón a medio meter puede perder buena parte de lo que promete la ficha. Después de ponértelo, tapa las orejas con las palmas: si casi no notas diferencia, están bien puestos; si el ruido baja mucho al taparte, están mal."},{"tipo":"elige","titulo":"Tapón u orejera","pregunta":"Tienes que entrar y salir de la zona del compresor toda la mañana, cada rato. ¿Qué conviene?","ops":["Tapones, porque siempre protegen más","Orejera: se pone y se saca rápido, y con tanta entrada y salida el tapón termina mal colocado","Nada, son ratos cortos","Algodón en los oídos"],"correcta":1,"sustento":"El tapón conviene en jornadas largas, con calor, o cuando el casco y la careta estorban a la orejera; pero exige colocarlo bien cada vez y con las manos limpias. La orejera conviene para entrar y salir, para gente con el oído irritado y cuando no puedes garantizar manos limpias. Cuánto atenúa cada modelo lo declara el fabricante en su ficha, y ese valor se logra solo si está bien puesto. La orejera colgada del cuello no protege nada, y el EPP lo entrega el empleador sin costo para ti (Ley 29783, Art. 60 y 62)."}],"cierre":"Manos limpias, tapón enrollado, oreja arriba y atrás, dentro del canal y sostenido hasta que expanda. 85 dB(A) en 8 horas es el límite de la R.M. 375-2008-TR, y lo que cuelga del cuello no cuenta."},{"id":"actos","icono":"👀","nombre":"Actos y condiciones subestándares","sub":"Ver, avisar y reportar sin buscar culpables","sector":"*","min":8,"intro":"Casi todo accidente avisa antes. Avisa como un acto (algo que alguien hizo) o como una condición (algo que quedó así). Aquí aprendes a distinguirlos, a corregir y a reportar sin que nadie termine castigado.","pasos":[{"tipo":"elige","titulo":"Acto o condición","pregunta":"¿Cuál de estos es una CONDICIÓN subestándar?","ops":["Un compañero corta con amoladora sin lentes","La baranda del vano quedó sin travesaño intermedio","El operario apura el corte para terminar antes de la hora","El ayudante levanta solo un saco de 50 kg"],"correcta":1,"sustento":"Acto es lo que hace la persona. Condición es cómo quedó el lugar, el equipo o el material. La diferencia importa porque se corrigen distinto: la condición se corrige con materiales, tiempo y decisión de la jefatura; el acto se corrige hablando, entrenando y, sobre todo, preguntando por qué le resultó más fácil hacerlo mal que bien. Casi siempre detrás de un acto hay una condición: el que corta sin lentes muchas veces es el que no encontró lentes en el almacén."},{"tipo":"marca","titulo":"Solo los actos","instru":"Marca solo los ACTOS subestándares, es decir, lo que hace la persona.","items":[{"t":"Retirar la guarda del disco para que la amoladora corte más rápido","mal":true},{"t":"Subir al andamio trepando por los travesaños en vez de la escalera","mal":true},{"t":"Operar el rotomartillo sin lentes, teniéndolos en el bolsillo","mal":true},{"t":"Baranda del segundo nivel sin travesaño intermedio","mal":false},{"t":"Tablero eléctrico sin tapa y con cables a la vista","mal":false},{"t":"Extensión eléctrica con empalmes encintados cruzando el pasillo","mal":false}],"nota":"Los tres primeros son decisiones de alguien. Los tres últimos están ahí aunque no haya nadie mirando: son condiciones. Las dos se reportan igual."},{"tipo":"figura","titulo":"Recorrido de cinco minutos","instru":"Estás haciendo tu recorrido antes de empezar. Toca lo que reportarías, sea acto o condición.","fig":"obra","zonas":[{"x":51,"y":36,"r":7,"mal":true,"t":"Acto: el compañero subió sin casco. Es una decisión de la persona, y se conversa con él ahí mismo"},{"x":62,"y":87,"r":7,"mal":true,"t":"Condición: cable eléctrico tendido cruzando el paso de la gente"},{"x":80,"y":84,"r":6,"mal":true,"t":"Condición: material apilado al filo de la zanja, listo para venirse abajo sobre el que esté dentro"},{"x":92,"y":79,"r":6,"mal":true,"t":"Condición: el extintor está tapado con un balde. En una emergencia nadie lo encuentra"},{"x":19,"y":64,"r":8,"mal":false,"t":"El muro en construcción no es un hallazgo: es la tarea"}],"nota":"Uno es acto y tres son condiciones. Fíjate en la proporción: casi siempre hay más condiciones que actos, y son las más fáciles de corregir el mismo día."},{"tipo":"orden","titulo":"Qué haces cuando lo ves","instru":"Ordena lo que corresponde hacer al detectar un acto o una condición.","items":["Ponerte a salvo tú primero","Avisar al que está expuesto y detener la tarea si el peligro es inmediato","Corregir en el momento lo que esté a tu alcance","Reportar al supervisor o en la app, con lugar, hora y qué viste","Verificar después que quedó corregido de verdad"]},{"tipo":"elige","titulo":"Reportar sin culpables","pregunta":"Ves a un compañero de otra cuadrilla haciendo algo inseguro. ¿Qué haces?","ops":["Nada, no es tu cuadrilla","Le avisas en el momento, sin gritarle, y lo reportas para que se corrija","Le tomas foto y la mandas al grupo de la obra para que todos la vean","Se lo cuentas al capataz para que lo sancionen"],"correcta":1,"sustento":"El reporte existe para corregir, no para castigar. Si termina en sanción o en burla, la gente deja de reportar y los peligros se esconden hasta que uno explota. La Ley 29783 pone la comunicación de peligros entre las obligaciones del trabajador (Art. 79) y obliga al empleador a investigar y corregir. El nombre del que hizo el acto no es el dato importante: el dato importante es qué hay que cambiar para que no vuelva a pasar. Y el reporte puede ser anónimo si te sientes más cómodo así."}],"cierre":"Acto es lo que hace la persona, condición es cómo quedó el entorno. Te pones a salvo, avisas, corriges lo que puedas, reportas y verificas. Sin buscar culpables."},{"id":"iperc","icono":"🧩","nombre":"IPERC de línea base","sub":"Identificación de peligros a inicio de obra","sector":"construccion","min":8,"intro":"En construcción, el IPERC que se hace es el de LÍNEA BASE, a inicio de obra. Ojo: el IPERC continuo es de minería (D.S. 024-2016-EM), no de construcción.","pasos":[{"tipo":"elige","titulo":"¿Cuál usa construcción?","pregunta":"En una obra de construcción, ¿qué IPERC corresponde?","ops":["IPERC continuo, por cada guardia","IPERC de línea base, a inicio de obra","No se hace IPERC en construcción","Solo ATS, nunca IPERC"],"correcta":1,"sustento":"Construcción hace IPERC de línea base al inicio de la obra. El IPERC continuo es propio de la actividad minera (D.S. 024-2016-EM)."},{"tipo":"orden","titulo":"Los pasos del IPERC","instru":"Ordena los pasos para evaluar un riesgo en el IPERC.","items":["Identificar el peligro","Estimar la probabilidad de que ocurra","Estimar la severidad del daño","Determinar el nivel de riesgo","Aplicar la jerarquía de controles","Reevaluar el riesgo residual"]},{"tipo":"orden","titulo":"Jerarquía de controles","instru":"Ordena los controles del más eficaz (primero) al menos eficaz (último).","items":["Eliminación","Sustitución","Controles de ingeniería","Controles administrativos","Equipo de protección personal (EPP)"]},{"tipo":"elige","titulo":"El EPP","pregunta":"¿Qué lugar ocupa el EPP en la jerarquía de controles?","ops":["El primero: es lo más importante","El último: es la última barrera, no la primera","No es un control","Reemplaza a los demás controles"],"correcta":1,"sustento":"El EPP es la última barrera. Primero se elimina o controla el peligro en la fuente; el EPP protege a la persona cuando el riesgo no pudo eliminarse."}],"cierre":"IPERC de línea base a inicio de obra, jerarquía de controles con el EPP al final, y el continuo es de minería."},{"id":"residuos","icono":"♻️","nombre":"Segregación de residuos","sub":"Código de colores en obra","sector":"*","min":6,"intro":"Segregar bien es separar cada residuo en su recipiente. Practica el código de colores que se usa en obra (base NTP 900.058).","pasos":[{"tipo":"elige","titulo":"El trapo con aceite","pregunta":"Un trapo impregnado con aceite o solvente, ¿en qué tacho va?","ops":["Verde (aprovechable)","Negro (común)","Rojo (peligroso)","Marrón (orgánico)"],"correcta":2,"sustento":"Todo lo contaminado con hidrocarburos o químicos es residuo peligroso: va al tacho rojo."},{"tipo":"elige","titulo":"La botella de plástico","pregunta":"Una botella de plástico limpia, ¿dónde va?","ops":["Rojo (peligroso)","Amarillo / verde (reaprovechable)","Rojo, por si acaso","Se deja en el suelo"],"correcta":1,"sustento":"El plástico limpio es reaprovechable/reciclable. El rojo es solo para residuos peligrosos."},{"tipo":"marca","titulo":"Al tacho rojo","instru":"Marca lo que SÍ es residuo peligroso (tacho rojo).","items":[{"t":"Envase de pintura o solvente","mal":true},{"t":"Cartón limpio","mal":false},{"t":"Guantes impregnados de químico","mal":true},{"t":"Waipe / trapo con grasa","mal":true},{"t":"Restos de comida","mal":false}],"nota":"Peligroso = contaminado con químicos, hidrocarburos, pilas, aerosoles. Lo demás va a su color."}],"cierre":"Peligroso al rojo, reaprovechable a su color, y nada de mezclar. Segregar bien empieza en tu puesto."},{"id":"rotomartillo","icono":"🔩","nombre":"Uso del rotomartillo","sub":"Herramienta eléctrica manual","sector":"construccion","min":6,"intro":"El rotomartillo es útil pero castiga: proyecciones, atrapamiento y vibración. Practica el uso seguro paso a paso.","pasos":[{"tipo":"orden","titulo":"Antes y durante","instru":"Ordena el uso seguro del rotomartillo.","items":["Ponerte el EPP (lentes, guantes, protección auditiva, respirador si hay polvo)","Inspeccionar el equipo, el cable y la broca","Asegurar la pieza y tomar postura firme con las dos manos","Perforar con presión constante, sin forzar","Apagar y desconectar antes de dejarlo"]},{"tipo":"marca","titulo":"Lo que NO se hace","instru":"Marca las prácticas INSEGURAS.","items":[{"t":"Operar con una sola mano","mal":true},{"t":"Usar lentes de seguridad","mal":false},{"t":"Trabajar con la broca gastada o rajada","mal":true},{"t":"Desconectar jalando del cable","mal":true},{"t":"Revisar el cable antes de enchufar","mal":false}],"nota":"Dos manos, broca en buen estado, y se desconecta del enchufe, nunca jalando el cable."},{"tipo":"elige","titulo":"El polvo","pregunta":"Al perforar concreto se levanta mucho polvo de sílice. ¿Qué haces?","ops":["Nada, es normal","Uso respirador y, si se puede, perforación con agua o captación de polvo","Aguanto la respiración","Solo me alejo un poco"],"correcta":1,"sustento":"El polvo de sílice daña el pulmón (silicosis). Respirador adecuado y control del polvo en la fuente."}],"cierre":"EPP puesto, equipo inspeccionado, dos manos, control del polvo, y se desconecta del enchufe."}];
 var LS = {lic:'sstc_lic', cfg:'sstc_cfg', sec:'sstc_sector', prog:'sstc_prog'};
 /* «el espacio para la firma era muy chiquito; hay firmas grandes».
    Un solo alto para todos los recuadros de firma de la app. */
@@ -15966,6 +15989,10 @@ var CATALOGO_ACCESOS = [
   /* ── 1. lo de todos los días ── */
   {k:'charlas',   ic:'🗓️', et:'Programa<br>de charlas',       ir:'p-programa',      color:'a-oro',   desde:0, grupo:1},
   {k:'temas',     ic:'🎓', et:'Capacitación<br>por tema',      ir:'p-temas',         color:'a-verde', desde:0, grupo:1},
+  /* Los talleres estaban escondidos dentro de una carpeta del sistema:
+     existían y nadie los encontraba. Son lo más pedido por el trabajador
+     —se practica, no se lee— así que van arriba con lo de todos los días. */
+  {k:'talleres',  ic:'🧰', et:'Talleres<br>prácticos',          ir:'p-talleres',      color:'a-oro',   desde:0, grupo:1},
   {k:'kardex',    ic:'🦺', et:'Entrega<br>de EPP',             ir:'p-kardex',        color:'a-azul',  desde:0, grupo:1},
   {k:'reporte',   ic:'🚨', et:'Reportar acto<br>o condición',  ir:'p-reporte',       color:'a-rojo',  desde:0, grupo:1},
   {k:'asisten',   ic:'📷', et:'Escanear<br>documento',         ir:'p-escaneos',      color:'a-azul',  desde:0, grupo:1},
@@ -24470,7 +24497,7 @@ function lupaBuscarTodas(q){
 }
 /* ── LA LISTA ─────────────────────────────────────────────────
    OJO, ESTO FUE UN ERROR CARO: antes cada tarjeta se armaba con
-   onclick="abrirLupa("D.S. 011-2019-TR - ...")" — comillas dobles
+   un onclick de abrirLupa con «D.S. 011-2019-TR - ...» en comillas dobles
    dentro de un atributo con comillas dobles. El navegador cortaba
    el atributo en la primera comilla de adentro y la lupa NO ABRIA.
    La prueba no lo cazo porque llamaba a la funcion directamente en
@@ -27682,6 +27709,161 @@ function verConsolidado(){
 }
 
 /* ================= TALLERES ================= */
+/* ══════ LAS FIGURAS DE LOS TALLERES ══════════════════════════════
+   Dibujadas aquí mismo con SVG: la app es un solo archivo y no puede
+   ir a buscar imágenes a ningún lado. Cada figura trae sus zonas
+   tocables en coordenadas de 0 a 100, así que se estiran solas en
+   cualquier pantalla.
+   No son bonitas por gusto: el trabajador reconoce su andamio, su
+   arnés y su cara con el respirador, y eso es lo que hace que se
+   acuerde al día siguiente.                                        */
+var TL_TRAZO='rgba(255,255,255,.72)', TL_RELLENO='rgba(255,255,255,.10)';
+function _figColores(){
+  var claro = document.documentElement.className.indexOf('t-claro')>-1 ||
+              document.documentElement.className.indexOf('t-alto')>-1;
+  return claro ? {t:'rgba(16,26,34,.78)', r:'rgba(16,26,34,.07)', p:'#c9902a', v:'#1f7a4d', m:'#c0392b'}
+               : {t:'rgba(255,255,255,.75)', r:'rgba(255,255,255,.09)', p:'#f5b700', v:'#2fbf71', m:'#e5484d'};
+}
+var FIGURAS = {
+  /* trabajador con arnés en altura */
+  arnes: function(c){ return ''+
+    '<rect x="0" y="0" width="200" height="150" fill="none"/>'+
+    /* estructura y punto de anclaje alto */
+    '<line x1="14" y1="8" x2="186" y2="8" stroke="'+c.t+'" stroke-width="3"/>'+
+    '<line x1="30" y1="8" x2="30" y2="150" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    '<line x1="170" y1="8" x2="170" y2="150" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    /* plataforma */
+    '<rect x="30" y="104" width="140" height="6" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2"/>'+
+    /* línea de vida floja, anclada abajo (el error) */
+    '<path d="M100 62 C 92 84, 70 96, 52 104" fill="none" stroke="'+c.t+'" stroke-width="2.2" stroke-dasharray="5 4"/>'+
+    '<circle cx="52" cy="104" r="4" fill="none" stroke="'+c.t+'" stroke-width="2.2"/>'+
+    /* trabajador */
+    '<circle cx="100" cy="40" r="11" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    '<path d="M88 36 a12 12 0 0 1 24 0" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.4"/>'+  /* casco */
+    '<line x1="100" y1="51" x2="100" y2="86" stroke="'+c.t+'" stroke-width="2.6"/>'+
+    '<line x1="100" y1="58" x2="84" y2="74" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    '<line x1="100" y1="58" x2="116" y2="72" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    '<line x1="100" y1="86" x2="90" y2="104" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    '<line x1="100" y1="86" x2="111" y2="104" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    /* arnés: pecho y piernas */
+    '<rect x="91" y="56" width="18" height="13" rx="3" fill="none" stroke="'+c.t+'" stroke-width="2"/>'+
+    '<line x1="93" y1="76" x2="107" y2="76" stroke="'+c.t+'" stroke-width="1.8" stroke-dasharray="3 3"/>'+
+    /* baranda que falta: solo un poste */
+    '<line x1="30" y1="104" x2="30" y2="80" stroke="'+c.t+'" stroke-width="2.2"/>'; },
+
+  /* andamio armado */
+  andamio: function(c){ return ''+
+    '<rect x="0" y="0" width="200" height="150" fill="none"/>'+
+    /* cuerpos */
+    '<line x1="46" y1="24" x2="46" y2="132" stroke="'+c.t+'" stroke-width="3"/>'+
+    '<line x1="154" y1="24" x2="154" y2="132" stroke="'+c.t+'" stroke-width="3"/>'+
+    '<line x1="46" y1="78" x2="154" y2="78" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    '<line x1="46" y1="24" x2="154" y2="24" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    /* diagonal solo en un tramo */
+    '<line x1="46" y1="78" x2="154" y2="24" stroke="'+c.t+'" stroke-width="1.8" stroke-dasharray="4 3"/>'+
+    /* plataforma incompleta: dos tablones y un hueco */
+    '<rect x="48" y="72" width="42" height="6" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="1.8"/>'+
+    '<rect x="112" y="72" width="40" height="6" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="1.8"/>'+
+    /* base: un pie sobre ladrillo */
+    '<line x1="20" y1="132" x2="180" y2="132" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    '<rect x="40" y="124" width="13" height="8" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="1.8"/>'+
+    '<circle cx="154" cy="130" r="3.6" fill="none" stroke="'+c.t+'" stroke-width="1.8"/>'+
+    /* acceso: escalera apoyada por fuera */
+    '<line x1="168" y1="132" x2="150" y2="76" stroke="'+c.t+'" stroke-width="1.8"/>'+
+    '<line x1="176" y1="130" x2="158" y2="74" stroke="'+c.t+'" stroke-width="1.8"/>'+
+    /* baranda del nivel alto: falta el intermedio */
+    '<line x1="46" y1="24" x2="154" y2="24" stroke="'+c.t+'" stroke-width="2"/>'; },
+
+  /* cara con respirador de medio rostro */
+  respirador: function(c){ return ''+
+    '<rect x="0" y="0" width="200" height="150" fill="none"/>'+
+    '<ellipse cx="100" cy="74" rx="42" ry="52" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.6"/>'+
+    /* ojos */
+    '<circle cx="86" cy="58" r="3" fill="'+c.t+'"/>'+
+    '<circle cx="114" cy="58" r="3" fill="'+c.t+'"/>'+
+    /* pieza facial */
+    '<path d="M74 78 q26 -12 52 0 q2 22 -26 32 q-28 -10 -26 -32 z" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.6"/>'+
+    /* cartuchos */
+    '<rect x="52" y="80" width="21" height="16" rx="4" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.2"/>'+
+    '<rect x="127" y="80" width="21" height="16" rx="4" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.2"/>'+
+    /* arneses de cabeza: uno suelto */
+    '<path d="M62 74 q-16 -22 12 -34" fill="none" stroke="'+c.t+'" stroke-width="2"/>'+
+    '<path d="M138 74 q18 -14 4 -30" fill="none" stroke="'+c.t+'" stroke-width="2" stroke-dasharray="4 3"/>'+
+    /* barba */
+    '<path d="M78 104 q22 20 44 0 q-6 20 -22 22 q-16 -2 -22 -22 z" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="1.8"/>'+
+    '<g stroke="'+c.t+'" stroke-width="1.3" opacity=".85">'+
+      '<line x1="86" y1="112" x2="84" y2="120"/><line x1="93" y1="116" x2="92" y2="124"/>'+
+      '<line x1="100" y1="118" x2="100" y2="126"/><line x1="107" y1="116" x2="108" y2="124"/>'+
+      '<line x1="114" y1="112" x2="116" y2="120"/></g>'+
+    /* válvula de exhalación */
+    '<circle cx="100" cy="100" r="6" fill="none" stroke="'+c.t+'" stroke-width="2"/>'; },
+
+  /* cabeza de perfil, la oreja y el tapon a medio meter */
+  tapones: function(c){ return ''+
+    '<rect x="0" y="0" width="200" height="150" fill="none"/>'+
+    /* craneo y nuca */
+    '<path d="M78 40 C 96 14, 142 20, 148 60 C 152 84, 144 96, 136 101 L 134 126" '+
+      'fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.6" stroke-linecap="round"/>'+
+    /* frente, nariz, boca y menton */
+    '<path d="M78 40 C 66 52, 67 58, 70 64 L 60 86 L 71 91 L 69 99 C 74 113, 88 119, 100 114 L 136 101" '+
+      'fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.6" stroke-linejoin="round"/>'+
+    /* hombro */
+    '<path d="M134 126 C 150 130, 168 132, 186 132" fill="none" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    '<path d="M112 132 C 118 128, 126 126, 134 126" fill="none" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    /* ojo */
+    '<circle cx="76" cy="60" r="2.6" fill="'+c.t+'"/>'+
+    /* OREJA: helix, lobulo y el canal */
+    '<path d="M100 62 C 116 56, 124 68, 120 80 C 117 90, 110 94, 104 92" '+
+      'fill="none" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    '<path d="M104 70 C 112 66, 115 74, 110 80" fill="none" stroke="'+c.t+'" stroke-width="1.8"/>'+
+    '<circle cx="107" cy="79" r="3.4" fill="none" stroke="'+c.t+'" stroke-width="1.8"/>'+
+    /* TAPON a medio meter: apoyado en la entrada, no dentro */
+    '<path d="M122 70 C 134 64, 144 70, 142 78 C 140 86, 128 88, 122 82 Z" '+
+      'fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.2"/>'+
+    '<line x1="124" y1="76" x2="138" y2="74" stroke="'+c.t+'" stroke-width="1.2"/>'+
+    /* MANO que lo empuja, con dedos y suciedad */
+    '<path d="M148 66 C 162 60, 176 66, 178 78 C 180 92, 168 100, 156 96 C 148 93, 145 84, 148 78 Z" '+
+      'fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.2"/>'+
+    '<line x1="152" y1="72" x2="166" y2="70" stroke="'+c.t+'" stroke-width="1.4"/>'+
+    '<line x1="153" y1="80" x2="169" y2="79" stroke="'+c.t+'" stroke-width="1.4"/>'+
+    '<line x1="154" y1="88" x2="167" y2="88" stroke="'+c.t+'" stroke-width="1.4"/>'+
+    '<g stroke="'+c.t+'" stroke-width="1.6" opacity=".9">'+
+      '<line x1="160" y1="64" x2="163" y2="61"/><line x1="171" y1="72" x2="175" y2="70"/>'+
+      '<line x1="164" y1="94" x2="167" y2="97"/></g>'+
+    /* OREJERA colgando del cuello, sin usar */
+    '<path d="M74 120 C 80 110, 96 108, 104 116" fill="none" stroke="'+c.t+'" stroke-width="2.2"/>'+
+    '<rect x="62" y="118" width="17" height="21" rx="6" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.2"/>'+
+    '<rect x="100" y="114" width="15" height="19" rx="6" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.2"/>'; },
+
+  /* escena de obra con actos y condiciones */
+  obra: function(c){ return ''+
+    '<rect x="0" y="0" width="200" height="150" fill="none"/>'+
+    '<line x1="6" y1="132" x2="194" y2="132" stroke="'+c.t+'" stroke-width="2.4"/>'+
+    /* muro en construcción */
+    '<rect x="12" y="60" width="52" height="72" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2"/>'+
+    '<line x1="12" y1="84" x2="64" y2="84" stroke="'+c.t+'" stroke-width="1.2"/>'+
+    '<line x1="12" y1="108" x2="64" y2="108" stroke="'+c.t+'" stroke-width="1.2"/>'+
+    /* escalera mal apoyada */
+    '<line x1="70" y1="132" x2="96" y2="62" stroke="'+c.t+'" stroke-width="2"/>'+
+    '<line x1="80" y1="132" x2="106" y2="62" stroke="'+c.t+'" stroke-width="2"/>'+
+    '<line x1="76" y1="112" x2="86" y2="112" stroke="'+c.t+'" stroke-width="1.4"/>'+
+    '<line x1="82" y1="92" x2="92" y2="92" stroke="'+c.t+'" stroke-width="1.4"/>'+
+    /* trabajador sin casco arriba */
+    '<circle cx="102" cy="54" r="7" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2.2"/>'+
+    '<line x1="102" y1="61" x2="102" y2="80" stroke="'+c.t+'" stroke-width="2.2"/>'+
+    '<line x1="102" y1="66" x2="92" y2="74" stroke="'+c.t+'" stroke-width="2"/>'+
+    '<line x1="102" y1="66" x2="112" y2="72" stroke="'+c.t+'" stroke-width="2"/>'+
+    /* cable tendido por el piso */
+    '<path d="M110 132 q22 -12 42 0 q18 10 34 -2" fill="none" stroke="'+c.t+'" stroke-width="2" stroke-dasharray="6 4"/>'+
+    /* material apilado al borde de la zanja */
+    '<path d="M150 132 l10 -16 l10 16 z" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2"/>'+
+    /* zanja abierta sin señalizar */
+    '<path d="M120 132 l6 14 l26 0 l6 -14" fill="none" stroke="'+c.t+'" stroke-width="2.2"/>'+
+    /* extintor tapado por un balde */
+    '<rect x="176" y="106" width="12" height="20" rx="3" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="2"/>'+
+    '<path d="M172 126 l20 0 l-3 8 l-14 0 z" fill="'+c.r+'" stroke="'+c.t+'" stroke-width="1.8"/>'; }
+};
+
 var TL = {taller:null, paso:0, dato:null, sel:null};
 function tallerDe(id){ for(var i=0;i<TALLERES.length;i++) if(TALLERES[i].id===id) return TALLERES[i]; return null; }
 function _baraja(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
@@ -27745,6 +27927,28 @@ function tallerPintar(){
     cont.innerHTML=h;
     TL.dato={orden:[], pool:_baraja(paso.items.map(function(x,i){return i;}))};
     tallerOrdenPintar();
+    return;
+  }
+  if(paso.tipo==='figura'){
+    /* «quizás le podríamos agregar más imágenes o figuras»: el trabajador
+       toca sobre el dibujo lo que está mal, como lo haría en campo. */
+    h+='<p class="sub" style="margin-bottom:10px">'+esc(paso.instru)+'</p>'+
+       '<div class="tl-fig" id="tal-fig"></div>'+
+       '<div class="tl-pistas" id="tal-pistas"></div>'+
+       '<button class="btn" onclick="tallerFiguraComprobar()">Comprobar</button>'+
+       '<div id="tal-fb" style="margin-top:12px"></div>';
+    cont.innerHTML=h;
+    TL.dato={sel:{}};
+    tallerFiguraPintar();
+    return;
+  }
+  if(paso.tipo==='empareja'){
+    h+='<p class="sub" style="margin-bottom:10px">'+esc(paso.instru)+'</p>'+
+       '<div class="tl-par"><div class="tl-col" id="tal-pa"></div><div class="tl-col" id="tal-pb"></div></div>'+
+       '<div id="tal-fb" style="margin-top:4px"></div>';
+    cont.innerHTML=h;
+    TL.dato={hechos:{}, elegidoA:null, orden:_baraja(paso.pares.map(function(x,i){return i;}))};
+    tallerParPintar();
     return;
   }
   if(paso.tipo==='marca'){
@@ -27819,14 +28023,132 @@ function tallerMarcaComprobar(){
     fb.innerHTML='<div class="aviso" style="border-left:3px solid #d2564f">Revisa: falta marcar alguna o marcaste de más. '+esc(paso.nota||'')+'</div>';
   }
 }
+/* ── FIGURA: tocar sobre el dibujo lo que está mal ── */
+function tallerFiguraPintar(){
+  var paso=TL.taller.pasos[TL.paso], caja=$('tal-fig'); if(!caja) return;
+  var c=_figColores(), dibujo=(FIGURAS[paso.fig]||function(){return '';})(c);
+  var h='<svg viewBox="0 0 200 150" role="img" aria-label="'+escA(paso.instru||'')+'">'+dibujo+'</svg>';
+  (paso.zonas||[]).forEach(function(z,i){
+    var d=(z.r||9)*2;
+    /* que ningun circulo se corte contra el borde del cuadro */
+    var cx=Math.min(100-d/2, Math.max(d/2, z.x)), cy=Math.min(100-d/2*0.75, Math.max(d/2*0.75, z.y));
+    h+='<button type="button" class="tl-zona" data-i="'+i+'" aria-label="'+escA(z.t||('zona '+(i+1)))+'"'+
+       ' style="left:'+cx+'%;top:'+cy+'%;width:'+d+'%;padding-bottom:'+(d*0.75)+'%;height:0"'+
+       ' onclick="tallerFiguraToca('+i+')"></button>';
+  });
+  caja.innerHTML=h;
+  var p=$('tal-pistas');
+  if(p) p.innerHTML='<span class="tl-pista">Toca los círculos donde veas algo mal</span>'+
+     '<span class="tl-pista">Hay '+(paso.zonas||[]).filter(function(z){return z.mal;}).length+' cosas mal</span>';
+}
+function tallerFiguraToca(i){
+  var d=TL.dato; d.sel[i]=!d.sel[i];
+  var b=document.querySelector('#tal-fig .tl-zona[data-i="'+i+'"]');
+  if(b) b.className='tl-zona'+(d.sel[i]?' on':'');
+}
+function tallerFiguraComprobar(){
+  var paso=TL.taller.pasos[TL.paso], d=TL.dato, fb=$('tal-fb');
+  var zonas=paso.zonas||[];
+  var bien=zonas.every(function(z,i){ return !!d.sel[i]===!!z.mal; });
+  /* se pinta lo acertado y lo que faltó: se aprende viendo, no leyendo */
+  zonas.forEach(function(z,i){
+    var b=document.querySelector('#tal-fig .tl-zona[data-i="'+i+'"]'); if(!b) return;
+    if(z.mal && d.sel[i]) b.className='tl-zona bien';
+    else if(z.mal && !d.sel[i]) b.className='tl-zona falla';
+    else if(!z.mal && d.sel[i]) b.className='tl-zona falla';
+    else b.className='tl-zona';
+  });
+  var faltaron=zonas.filter(function(z,i){ return z.mal && !d.sel[i]; });
+  var demas  =zonas.filter(function(z,i){ return !z.mal && d.sel[i]; });
+  if(bien){
+    fb.innerHTML='<div class="aviso" style="border-left:3px solid #2f9e6f">✅ Los encontraste todos.'+
+      (paso.nota?' '+esc(paso.nota):'')+'</div>'+
+      '<div class="caja vidrio" style="padding:12px;margin-top:8px"><ul class="ch-lista" style="margin:0">'+
+      zonas.filter(function(z){return z.mal;}).map(function(z){ return '<li>'+esc(z.t)+'</li>'; }).join('')+
+      '</ul></div>'+
+      '<button class="btn" onclick="tallerSiguiente()">Siguiente ▸</button>';
+  } else {
+    fb.innerHTML='<div class="aviso" style="border-left:3px solid #d2564f">'+
+      (faltaron.length? 'Te falt'+(faltaron.length===1?'ó 1':'aron '+faltaron.length)+' (en rojo). ' : '')+
+      (demas.length? 'Y marcaste '+demas.length+' que est'+(demas.length===1?'á':'án')+' bien. ' : '')+
+      'Mira los círculos y vuelve a intentarlo.</div>'+
+      '<button class="btn sec" onclick="tallerFiguraPintar();document.getElementById(\'tal-fb\').innerHTML=\'\';TL.dato={sel:{}}">Intentar de nuevo</button>';
+  }
+}
+/* ── EMPAREJAR: unir cada cosa con la suya ── */
+function tallerParPintar(){
+  var paso=TL.taller.pasos[TL.paso], d=TL.dato;
+  var ca=$('tal-pa'), cb=$('tal-pb'); if(!ca||!cb) return;
+  ca.innerHTML=''; cb.innerHTML='';
+  paso.pares.forEach(function(par,i){
+    var b=document.createElement('button'); b.type='button';
+    b.className='tl-it'+(d.hechos[i]?' hecho':(d.elegidoA===i?' on':''));
+    b.innerHTML='<b>'+esc(par.a)+'</b>';
+    if(!d.hechos[i]) b.onclick=function(){ d.elegidoA=(d.elegidoA===i?null:i); tallerParPintar(); };
+    ca.appendChild(b);
+  });
+  d.orden.forEach(function(i){
+    var b=document.createElement('button'); b.type='button';
+    b.className='tl-it'+(d.hechos[i]?' hecho':'');
+    b.innerHTML=esc(paso.pares[i].b);
+    if(!d.hechos[i]) b.onclick=function(){ tallerParElige(i); };
+    cb.appendChild(b);
+  });
+  var fb=$('tal-fb');
+  var faltan=paso.pares.length-Object.keys(d.hechos).length;
+  if(!faltan){
+    fb.innerHTML='<div class="aviso" style="border-left:3px solid #2f9e6f">✅ Todas emparejadas.'+
+      (paso.nota?' '+esc(paso.nota):'')+'</div><button class="btn" onclick="tallerSiguiente()">Siguiente ▸</button>';
+  } else if(!fb.innerHTML){
+    fb.innerHTML='<p class="sub">Toca uno de la izquierda y después el que le corresponde. Faltan '+faltan+'.</p>';
+  }
+}
+function tallerParElige(j){
+  var d=TL.dato, fb=$('tal-fb');
+  if(d.elegidoA===null || d.elegidoA===undefined){
+    fb.innerHTML='<p class="sub">Primero toca uno de la izquierda.</p>'; return;
+  }
+  if(d.elegidoA===j){
+    d.hechos[j]=1; d.elegidoA=null; fb.innerHTML=''; tallerParPintar();
+  } else {
+    var par=TL.taller.pasos[TL.paso].pares[d.elegidoA];
+    fb.innerHTML='<div class="aviso" style="border-left:3px solid #d2564f">Esa no va con «'+esc(par.a)+'». '+
+      esc(par.pista||'Piensa para qué sirve cada una.')+'</div>';
+    d.elegidoA=null; tallerParPintar();
+  }
+}
 function tallerSiguiente(){ TL.paso++; tallerPintar(); }
 function tallerAConstancia(){
   var cfg=leer(LS.cfg,{}), sup=leer(LS_SUP,{});
   $('talfin-titulo').textContent='¡'+TL.taller.nombre+' completado!';
   $('tal-nombre').value=''; $('tal-dni').value=''; $('tal-cargo').value='';
-  $('tal-empresa').value=cfg.empresa||''; $('tal-obra').value=cfg.obra||'';
+  $('tal-empresa').value=cfg.empresa||(empActiva()||{}).nombre||'';
+  $('tal-obra').value=cfg.obra||'';
   $('tal-fin-msg').textContent='';
+  TL.trab=null;
   ir('p-taller-fin');
+  /* el trabajador se elige de la lista de la obra: así el taller queda
+     amarrado a SU ficha y no a un nombre escrito a mano que después no
+     cuadra con nada. */
+  try{ asegurarPersonal(tallerListaTrabajadores, true); }catch(_e){ tallerListaTrabajadores(); }
+}
+function tallerListaTrabajadores(){
+  var caja=$('tal-elige'); if(!caja) return;
+  var a=(typeof trabsLocal==='function'? trabsLocal():[]).filter(function(t){ return t.estatus!=='cesado'; });
+  if(!a.length){
+    caja.innerHTML='<p class="sub" style="margin:0 0 10px">Todavía no tienes personal cargado: escribe los datos abajo y luego regístralo en «Mi personal».</p>';
+    return;
+  }
+  caja.innerHTML='<label>Elegir de mi personal</label><select id="tal-elige-sel">'+
+    '<option value="">— escribir a mano —</option>'+
+    a.map(function(t){ return '<option value="'+escA(t.id)+'">'+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</option>'; }).join('')+
+    '</select>';
+  $('tal-elige-sel').onchange=function(){
+    var t=trabPorId(this.value);
+    TL.trab = t ? t.id : null;
+    if(!t) return;
+    $('tal-nombre').value=t.nombre||''; $('tal-dni').value=t.dni||''; $('tal-cargo').value=t.puesto||'';
+  };
 }
 function hacerDiplomaTaller(){
   var nombre=($('tal-nombre').value||'').trim();
@@ -27873,8 +28195,13 @@ function hacerDiplomaTaller(){
     doc.setFontSize(8); doc.setTextColor(150,150,150);
     doc.text('Folio de verificación: '+folio+'  ·  Constancia de participación en taller práctico. No reemplaza la capacitación formal de la Ley 29783.', W/2, H-M+2, {align:'center'});
     entregarPDF(doc, 'Constancia_'+t.id+'_'+nombre.replace(/[^A-Za-z0-9]/g,'')+'.pdf');
-    try{ encolarConstancia({trabajador:nombre, dni:dni, cargo:cargo, tipo:'taller', tema:t.nombre, resultado:'completado', folio:folio, fecha:fecha}); }catch(_x){}
-    $('tal-fin-msg').style.color='#2f9e6f'; $('tal-fin-msg').textContent='Constancia generada (folio '+folio+'). Si no se descargó, revisa los permisos del navegador.';
+    try{ encolarConstancia({trabajador:nombre, dni:dni, cargo:cargo, tipo:'taller', tema:'Taller: '+t.nombre,
+        resultado:'completado', folio:folio, fecha:fecha}); }catch(_x){}
+    $('tal-fin-msg').style.color='#2f9e6f';
+    $('tal-fin-msg').innerHTML='Constancia generada (folio '+esc(folio)+'). '+
+      (TL.trab ? 'Queda registrada en la ficha de '+esc(nombre.split(' ')[0])+'. ' : '')+
+      'Si no se descargó, revisa los permisos del navegador.'+
+      (TL.trab ? '<br><button class="btn sec" style="margin:9px 0 0" onclick="abrirFichaTrab(\''+escA(TL.trab)+'\')">Ver su ficha ▸</button>' : '');
   }catch(e){ $('tal-fin-msg').style.color='#d2564f'; $('tal-fin-msg').textContent='No se pudo generar el PDF: '+e.message; }
 }
 
