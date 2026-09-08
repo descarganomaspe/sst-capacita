@@ -7930,6 +7930,163 @@ function sincronizarPrograma(){
   ).then(function(r){ SINCRO_PROG=false; return r; },
          function(){ SINCRO_PROG=false; });
 }
+/* ══════ LO QUE SUBE TIENE QUE PODER BAJAR ═════════════════════════
+   Una obra la llevan entre varios: el dueño desde la oficina y uno o
+   dos supervisores en campo. Todos entran con el mismo código y todos
+   son miembros de la misma empresa en el servidor.
+
+   Pero cuatro modulos SUBIAN y no BAJABAN nunca: amonestaciones,
+   reporte semanal de HHT, accidentes y buenas practicas. El resultado
+   en obra era exactamente este: la supervisora registraba una
+   amonestacion, la veia en su celular, y el dueño no la veia jamas —
+   ni ella las de el. Cada telefono era una isla, y la obra terminaba
+   sin un solo registro: justo lo contrario de lo que pide la Ley
+   29783, que habla del registro DE LA OBRA, no del de cada uno.
+
+   Estas cuatro funciones son el viaje de vuelta. Copian el mismo
+   patron de bajarKardex(): se pide por empresa, se agrega solo lo que
+   este celular no tiene, y lo del equipo queda marcado con delEquipo
+   para no confundirlo con lo propio. Nada que este sin subir se pisa.
+*/
+var BAJANDO_AMON=false;
+function bajarAmon(){
+  var e=empActiva();
+  if(!e || !e.id || !hayCuenta() || BAJANDO_AMON) return Promise.resolve(amonLocal());
+  BAJANDO_AMON=true;
+  function tanda(desde, acum){
+    return sbGet('sst_amonestacion?duenio=eq.'+encodeURIComponent(e.id)+
+        '&select=ext,fecha,t_nombre,t_dni,t_puesto,q_nombre,q_dni,q_puesto,descripcion,medida,firmas'+
+        '&order=fecha.desc,ext.asc&limit=300&offset='+desde)
+      .then(function(rows){
+        rows=rows||[]; acum=acum.concat(rows);
+        if(rows.length<300 || acum.length>5000) return acum;
+        return tanda(desde+300, acum);
+      });
+  }
+  return tanda(0,[]).then(function(nube){
+    BAJANDO_AMON=false;
+    if(!nube || !nube.length) return amonLocal();
+    var a=amonLocal(), porId={}, cambio=false;
+    a.forEach(function(x){ if(x && x.id) porId[x.id]=x; });
+    nube.forEach(function(r){
+      if(!r.ext) return;
+      var y=porId[r.ext];
+      if(y){
+        /* la papeleta ya esta aqui. Lo unico que puede haber cambiado
+           en el otro celular son las firmas: si alla firmo el jefe de
+           obra, aca tiene que aparecer firmado. Lo que este sin subir
+           no se toca: es una edicion de este celular que todavia no
+           viajo. */
+        if(!y.sync) return;
+        var f=r.firmas||{}, mias=y.firmas||{}, k;
+        for(k in f) if(Object.prototype.hasOwnProperty.call(f,k)){
+          if(f[k] && !mias[k]){ mias[k]=f[k]; cambio=true; }
+        }
+        y.firmas=mias;
+        return;
+      }
+      a.push({ id:r.ext, fecha:r.fecha||'',
+               tNombre:r.t_nombre||'', tDni:r.t_dni||'', tPuesto:r.t_puesto||'',
+               qNombre:r.q_nombre||'', qDni:r.q_dni||'', qPuesto:r.q_puesto||'',
+               desc:r.descripcion||'', medida:r.medida||'',
+               firmas:r.firmas||{}, foto:'', sync:1, delEquipo:1 });
+      cambio=true;
+    });
+    if(cambio){
+      a.sort(function(x,y){ return String(y.fecha||'').localeCompare(String(x.fecha||'')); });
+      amonSet(a);
+      var act=document.querySelector('.pantalla.activa');
+      if(act && act.id==='p-amonestaciones'){ try{ pintarAmonestaciones(); }catch(_e){} }
+    }
+    return a;
+  }).catch(function(){ BAJANDO_AMON=false; return amonLocal(); });
+}
+
+var BAJANDO_SEM=false;
+function bajarSemanal(){
+  var e=empActiva();
+  if(!e || !e.id || !hayCuenta() || BAJANDO_SEM) return Promise.resolve(semLocal());
+  BAJANDO_SEM=true;
+  /* el reporte semanal se identifica por la FECHA del dia, no por un
+     id de celular: dos supervisores anotando el mismo dia son el mismo
+     dia de la obra */
+  function pedir(conExtras){
+    var cols = conExtras ? 'fecha,ob_n,ob_h,st_n,st_h,hhc,lugar,ob_entrada,ob_salida,st_entrada,st_salida'
+                         : 'fecha,ob_n,ob_h,st_n,st_h,hhc';
+    return sbGet('sst_hht?duenio=eq.'+encodeURIComponent(e.id)+
+                 '&select='+cols+'&order=fecha.desc&limit=1000')
+      .catch(function(cod){ if(conExtras && cod===400) return pedir(false); return Promise.reject(cod); });
+  }
+  return pedir(true).then(function(nube){
+    BAJANDO_SEM=false;
+    if(!nube || !nube.length) return semLocal();
+    var a=semLocal(), tengo={}, nuevos=0;
+    a.forEach(function(d){ if(d && d.fecha) tengo[d.fecha]=1; });
+    nube.forEach(function(r){
+      if(!r.fecha || tengo[r.fecha]) return;
+      a.push({ fecha:r.fecha, obN:+r.ob_n||0, obH:+r.ob_h||0,
+               stN:+r.st_n||0, stH:+r.st_h||0, hhc:+r.hhc||0,
+               lugar:r.lugar||'', obE:r.ob_entrada||'', obS:r.ob_salida||'',
+               stE:r.st_entrada||'', stS:r.st_salida||'', sync:1, delEquipo:1 });
+      nuevos++;
+    });
+    if(nuevos){
+      a.sort(function(x,y){ return String(y.fecha||'').localeCompare(String(x.fecha||'')); });
+      semSet(a);
+      var act=document.querySelector('.pantalla.activa');
+      if(act && act.id==='p-semanal'){ try{ pintarSemanal(); }catch(_e){} }
+    }
+    return a;
+  }).catch(function(){ BAJANDO_SEM=false; return semLocal(); });
+}
+
+var BAJANDO_ACC=false;
+function bajarAccidentes(){
+  var e=empActiva();
+  if(!e || !e.id || !hayCuenta() || BAJANDO_ACC) return Promise.resolve(accLocal());
+  BAJANDO_ACC=true;
+  return sbGet('sst_accidente?empresa=eq.'+encodeURIComponent(e.id)+
+      '&select=ext,fecha,hora,clase,t_nombre,t_tipodoc,t_doc,t_puesto,lugar,descripcion,'+
+      'parte,agente,dias,causas,medidas,responsable,plazo,mtpe'+
+      '&order=fecha.desc&limit=1000')
+    .then(function(nube){
+      BAJANDO_ACC=false;
+      if(!nube || !nube.length) return accLocal();
+      var a=accLocal(), tengo={}, nuevos=0;
+      a.forEach(function(x){ if(x && x.id) tengo[x.id]=1; });
+      nube.forEach(function(r){
+        if(!r.ext || tengo[r.ext]) return;
+        a.push({ id:r.ext, fecha:r.fecha||'', hora:r.hora||'', clase:r.clase||'',
+                 tNombre:r.t_nombre||'', tTipoDoc:r.t_tipodoc||'DNI', tDoc:r.t_doc||'',
+                 tPuesto:r.t_puesto||'', lugar:r.lugar||'', desc:r.descripcion||'',
+                 parte:r.parte||'', agente:r.agente||'', dias:+r.dias||0,
+                 causas:r.causas||'', medidas:r.medidas||'', resp:r.responsable||'',
+                 plazo:r.plazo||null, mtpe:!!r.mtpe, sync:1, delEquipo:1 });
+        nuevos++;
+      });
+      if(nuevos){
+        a.sort(function(x,y){ return String(y.fecha||'').localeCompare(String(x.fecha||'')); });
+        accSet(a);
+        var act=document.querySelector('.pantalla.activa');
+        if(act && act.id==='p-accidentes'){ try{ pintarAccidentes(); }catch(_e){} }
+      }
+      return a;
+    }).catch(function(){ BAJANDO_ACC=false; return accLocal(); });
+}
+
+/* Las buenas practicas YA tenian su viaje de vuelta (bajarBuenas, mas
+   abajo); lo que faltaba era llamarlo al abrir la pantalla. */
+/* Todo lo del equipo de un solo viaje, para colgarlo donde ya se
+   sincroniza el resto. */
+function bajarLoDelEquipo(){
+  return Promise.all([
+    bajarAmon().catch(function(){}),
+    bajarSemanal().catch(function(){}),
+    bajarAccidentes().catch(function(){}),
+    bajarBuenas().catch(function(){}),
+    bajarInspecciones().catch(function(){})
+  ]);
+}
 /* Todo junto, para llamarlo desde un solo sitio al entrar a la empresa. */
 var SINCRO_EQUIPO=false;
 function sincronizarConElEquipo(){
@@ -7945,7 +8102,8 @@ function sincronizarConElEquipo(){
       function(){ var act=document.querySelector('.pantalla.activa');
                   if(act && act.id==='p-programa'){ try{ pintarPrograma(); }catch(_e){} } }),
     sincronizarCredenciales(),
-    bajarKardex()
+    bajarKardex(),
+    bajarLoDelEquipo()
   ]).then(function(){ SINCRO_EQUIPO=false; })
     .catch(function(){ SINCRO_EQUIPO=false; });
 }
@@ -8107,6 +8265,11 @@ function sectorDe(id){ for(var i=0;i<SECTORES.length;i++) if(SECTORES[i].id===id
 function temasDelSector(){ return Object.keys(TEMAS).filter(function(id){
   return TEMAS[id].sector===S.sector || TEMAS[id].sector==='*'; }); }
 var SECTOR_VUELVE='';
+/* De donde vino el trabajador cuando escribe el codigo de su obra: si entro
+   desde el portal, al validar vuelve a la pantalla de la obra; si entro desde
+   la app, va derecho a reportar. Sin declararla, «entrarTrabEmpresa» reventaba
+   con «PORTAL_VUELVE is not defined» y el trabajador veia «No se pudo». */
+var PORTAL_VUELVE=0;
 /* ══════════ EL SECTOR ES DE LA OBRA, NO DEL CELULAR ═══════════════
    Antes el sector vivía en el aparato: cada supervisor elegía el suyo y
    la misma obra podía estar mostrando capacitaciones de construcción en
@@ -13348,6 +13511,7 @@ function totalesSemanal(dias){
 function pintarSemanal(){
   var c=$('sm-cuerpo'); if(!c) return;
   try{ sincronizarSemanalPendiente(); }catch(_s){}
+  try{ bajarSemanal(); }catch(_b){}
   if(SM_PERIODO==='semana' && !($('sm-semana')||{}).value){
     var hoy=new Date();
     $('sm-semana').value=semanaDe(hoy.getFullYear()+'-'+('0'+(hoy.getMonth()+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2));
@@ -13719,6 +13883,7 @@ function sincronizarAmonPendiente(){
 }
 function pintarAmonestaciones(){
   sincronizarAmonPendiente();
+  try{ bajarAmon(); }catch(_b){}
   var a=amonLocal(), c=$('amon-lista');
   if(!a.length){ c.innerHTML='<p class="sub" style="margin-top:14px">Todavía no hay amonestaciones registradas.</p>'; return; }
   var h='';
@@ -13906,6 +14071,7 @@ function accDiasSin(){
 
 /* ── la lista ── */
 function pintarAccidentes(){
+  try{ sincronizarAccPendientes(); bajarAccidentes(); }catch(_b){}
   var anio=new Date().getFullYear();
   pintarAccIndices(anio); pintarAccPiramide(anio);
   var a=accLocal().slice().sort(function(x,y){ return (y.fecha||'').localeCompare(x.fecha||''); });
@@ -21680,9 +21846,49 @@ function guardarLevant(cerrar){
   setTimeout(function(){ ir('p-inspec-hallaz'); pintarHallaz(); },900);
 }
 
+/* ══════ LAS INSPECCIONES DEL RESTO DEL EQUIPO ═════════════════════
+   Las inspecciones tambien subian sin bajar. Aqui hay una diferencia
+   honesta con los otros modulos: al servidor solo viaja el RESUMEN de
+   la inspeccion (tipo, puntaje, resultado, quien la hizo), no los
+   hallazgos uno por uno ni las firmas. Asi que lo que se baja se
+   muestra como lo que es —«la hizo otro del equipo, esto salio»— y no
+   se ofrece el PDF, que solo puede armarlo el celular que la levanto.
+   Mentir aqui seria peor que la falta: un PDF a medias en una
+   fiscalizacion es un problema, no una ayuda.                        */
+var BAJANDO_INSP=false;
+function bajarInspecciones(){
+  var e=empActiva();
+  if(!e || !e.id || !hayCuenta() || BAJANDO_INSP) return Promise.resolve(inspecGuardadas());
+  BAJANDO_INSP=true;
+  return sbGet('sst_inspeccion?empresa=eq.'+encodeURIComponent(e.id)+
+      '&select=ext,tipo,items,observacion,inspector,resultado,fecha&order=fecha.desc&limit=600')
+    .then(function(nube){
+      BAJANDO_INSP=false;
+      if(!nube || !nube.length) return inspecGuardadas();
+      var a=inspecGuardadas(), tengo={}, nuevos=0;
+      a.forEach(function(x){ if(x && x.id) tengo[x.id]=1; });
+      nube.forEach(function(r){
+        if(!r.ext || tengo[r.ext]) return;
+        a.push({ id:r.ext, empresa:e.id, nombre:r.tipo||'Inspección',
+                 fecha:r.fecha||'', hora:'', sec:'', area:'', planeada:'',
+                 puntos:r.items||null, hallazgos:[],
+                 inspector:r.inspector||'', resultado:r.resultado||'',
+                 resumenEquipo:r.observacion||'', subido:true, delEquipo:1 });
+        nuevos++;
+      });
+      if(nuevos){
+        a.sort(function(x,y){ return String(y.fecha||'').localeCompare(String(x.fecha||'')); });
+        guardarInspecLocal(a);
+        var act=document.querySelector('.pantalla.activa');
+        if(act && act.id==='p-inspec-hechas'){ try{ pintarInspecHechas(); }catch(_e){} }
+      }
+      return a;
+    }).catch(function(){ BAJANDO_INSP=false; return inspecGuardadas(); });
+}
 /* ---- Las inspecciones ya hechas ---- */
 function pintarInspecHechas(){
   var c=$('inspechechas-cuerpo'); if(!c) return;
+  try{ sincronizarInspecPendientes(); bajarInspecciones(); }catch(_b){}
   var todas=inspecGuardadas(), h='<h2>📋 Inspecciones guardadas</h2>';
   if(!todas.length){ c.innerHTML=h+'<div class="caja vidrio" style="padding:18px;text-align:center">Todavía no hay ninguna.</div>'; return; }
   h+='<p class="sub">'+todas.length+' en este celular. Las que tienen observaciones abiertas salen marcadas.</p>';
@@ -21693,10 +21899,16 @@ function pintarInspecHechas(){
       '<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gris)">'+
         esc((INSP_CAT[r.sec]||{}).n||r.sec)+' · '+esc(r.fecha)+' '+esc(r.hora||'')+(r.subido?' · ☁️':' · 📴')+'</div>'+
       '<b style="display:block;margin:5px 0">'+esc(r.nombre)+'</b>'+
-      '<div style="font-size:13px;color:var(--gris)">'+
-        (r.area?esc(r.area)+' · ':'')+(r.planeada==='planeada'?'Planeada':'No planeada')+' · '+
-        (ab? ('⚠️ '+ab+' sin levantar') : ((r.hallazgos||[]).length? '✅ todo levantado':'✅ conforme'))+'</div>'+
-      '<button class="btn sec" style="margin:9px 0 0" onclick="pdfDeInspeccion('+i+')">📄 PDF del formato</button>'+
+      (r.delEquipo
+        ? '<div style="font-size:13px;color:var(--gris)">'+
+            (r.inspector?esc(r.inspector)+' · ':'')+(r.resultado?esc(r.resultado):'')+'</div>'+
+          (r.resumenEquipo?'<div style="font-size:13px;color:var(--gris);margin-top:5px">'+esc(r.resumenEquipo)+'</div>':'')+
+          '<div class="aviso" style="margin-top:9px;font-size:12.5px">👥 La levantó otro del equipo. '+
+          'Aquí ves el resumen; el PDF con las fotos y las firmas sale del celular que la hizo.</div>'
+        : '<div style="font-size:13px;color:var(--gris)">'+
+            (r.area?esc(r.area)+' · ':'')+(r.planeada==='planeada'?'Planeada':'No planeada')+' · '+
+            (ab? ('⚠️ '+ab+' sin levantar') : ((r.hallazgos||[]).length? '✅ todo levantado':'✅ conforme'))+'</div>'+
+          '<button class="btn sec" style="margin:9px 0 0" onclick="pdfDeInspeccion('+i+')">📄 PDF del formato</button>')+
       '</div>';
   });
   c.innerHTML=h;
@@ -23435,7 +23647,12 @@ var DIFU={hoja:null, meta:null, docs:[], abrio:false, alFondo:false, desde:0, fi
 var DIFU_ESPERA=20000;   /* 20 s: lo que toma leer aunque sea el compromiso */
 
 function abrirDifusion(hoja){
-  var x=null; PORTAL_HOJAS.forEach(function(y){ if(y.h===hoja) x=y; });
+  /* La lista de hojas se llama DOCS_OBRA. Decia «PORTAL_HOJAS», que no
+     existe en ningun lado: al trabajador que tocaba «Leerlo y dejar
+     constancia» se le reventaba aqui mismo y la pantalla de difusion
+     nunca abria. Es decir, la entrega de documentos de la Ley 29783
+     estaba muerta en la app. */
+  var x=null; DOCS_OBRA.forEach(function(y){ if(y.h===hoja) x=y; });
   DIFU={hoja:hoja, meta:x, docs:PORTAL.docs[hoja]||[], abrio:false, alFondo:false, desde:0, firma:null};
   $('difu-tit').textContent=x?x.n:'Documento';
   pintarDifusion(); ir('p-difusion');
@@ -26129,6 +26346,7 @@ function bajarBuenas(){
 }
 function pintarBuenas(){
   var c=$('buenas-cuerpo'); if(!c) return;
+  try{ subirBuenasPendientes(); bajarBuenas(); }catch(_b){}
   var a=bueLocal();
   var h='<h2>🌟 Buenas prácticas</h2>'+
     '<p class="sub">Lo que salió bien en obra, anotado para repetirlo. Es lo que se cuenta en la charla del lunes y lo que un auditor pide cuando pregunta qué hace distinto tu empresa.</p>'+
