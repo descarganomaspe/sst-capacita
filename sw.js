@@ -1,4 +1,4 @@
-var CACHE = 'sstc-c5ae837aec-c';
+var CACHE = 'sstc-26c6e05a0b-c';
 /* ══ LO QUE SE GUARDA AL INSTALAR ══
    Antes install no guardaba nada: el SW viejo servia el index nuevo por
    red, lo metia en el cache VIEJO, y al activarse el SW nuevo borraba ese
