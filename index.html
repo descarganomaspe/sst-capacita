@@ -373,6 +373,17 @@ body{background:#071C27;color:var(--tinta);font-family:system-ui,-apple-system,'
     radial-gradient(120% 80% at 50% -10%, #1E6E8C 0%, #0E3D53 38%, #071C27 78%),
     radial-gradient(60% 45% at 78% 8%, rgba(245,183,0,.20) 0%, rgba(245,183,0,0) 60%)}
 #fondo video{width:100%;height:100%;object-fit:cover;opacity:.62}
+/* --- el intro de ambiente: 6 s, una vez por sesion, siempre saltable --- */
+#intro{position:fixed;inset:0;z-index:9999;background:#000;display:none}
+#intro.on{display:block}
+#intro video{width:100%;height:100%;object-fit:cover;display:block}
+#intro-x{position:absolute;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));
+  background:rgba(255,255,255,.15);color:#EAF2F6;border:1px solid rgba(255,255,255,.24);
+  border-radius:999px;padding:9px 20px;font-size:13.5px;font-weight:600;cursor:pointer;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+#intro-x:focus-visible{outline:2px solid #F5B700;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){#intro{display:none!important}}
 #haz{position:fixed;inset:0;z-index:-2;pointer-events:none;
   background:conic-gradient(from 200deg at 50% -20%, rgba(245,183,0,0) 0deg, rgba(245,183,0,.13) 30deg, rgba(245,183,0,0) 70deg);
   animation:respira 14s ease-in-out infinite}
@@ -1920,7 +1931,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
 </script>
 </head>
 <body>
-<div id="fondo"><video id="video" autoplay muted loop playsinline preload="auto" poster="fondo.jpg" onerror="this.remove()" onloadeddata="document.getElementById('haz').style.opacity=.35"><source src="fondo.mp4" type="video/mp4"></video></div>
+<div id="fondo"><video id="video" autoplay muted loop playsinline preload="none" poster="fondo.jpg" onerror="this.remove()" onloadeddata="document.getElementById('haz').style.opacity=.35"></video></div>
 <div id="haz"></div><div id="tinte"></div>
 <div class="wrap">
 
@@ -4059,6 +4070,11 @@ input,textarea{-webkit-user-select:text;user-select:text}
   </div>
 </div>
 
+</div>
+
+<div id="intro" aria-hidden="true">
+  <video id="intro-v" muted playsinline preload="none" disablepictureinpicture></video>
+  <button id="intro-x" type="button">Saltar</button>
 </div>
 
 <div id="pres" aria-hidden="true">
@@ -19373,6 +19389,62 @@ function presDesdeTema(){
   if(S.modo==='evaluar'){ return; }   // nunca dentro del flujo del evaluado
   presAbrir(S.tema);
 }
+/* ══ EL INTRO DE AMBIENTE ══════════════════════════════════════════
+   Seis segundos antes de la PRIMERA capacitacion de cada sesion. No se
+   repite -el que dicta cuatro temas seguidos lo ve una vez-, se salta
+   con un boton desde el segundo cero, y no aparece si el celular pide
+   menos movimiento o esta en 2G o con ahorro de datos.
+   Lo que muestra son los cuatro sectores, nada mas: ni un procedimiento.
+   Un video no ensena a poner un arnes; para eso estan las laminas y la
+   norma citada. Si el archivo falta o el navegador se niega a
+   reproducirlo, la presentacion sigue igual -nunca deja a nadie
+   esperando: hay un tope de 8 segundos.                              */
+var INTRO_VISTO = false;
+function introConviene(){
+  if(INTRO_VISTO) return false;
+  try{ if(sessionStorage.getItem('sstc_intro')==='1') return false; }catch(_s){}
+  try{ if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return false; }catch(_m){}
+  try{ var c=navigator.connection;
+       if(c && (c.saveData===true || /(^|-)2g$/.test(String(c.effectiveType||'')))) return false; }catch(_c){}
+  return true;
+}
+function introTocar(){
+  if(!introConviene()) return;
+  INTRO_VISTO = true;
+  try{ sessionStorage.setItem('sstc_intro','1'); }catch(_g){}
+  var w=$('intro'), v=$('intro-v'), b=$('intro-x');
+  if(!w || !v) return;
+  var cerrado=false, tope=null;
+  function cerrar(){
+    if(cerrado) return; cerrado=true;
+    if(tope) clearTimeout(tope);
+    try{ v.pause(); v.removeAttribute('src'); v.load(); }catch(_p){}
+    w.className=''; w.setAttribute('aria-hidden','true');
+  }
+  v.onended=cerrar; v.onerror=cerrar;
+  if(b) b.onclick=cerrar;
+  w.className='on'; w.setAttribute('aria-hidden','false');
+  tope=setTimeout(cerrar, 8000);
+  try{
+    v.src='intro.mp4';
+    var pr=v.play(); if(pr && pr.catch) pr.catch(cerrar);
+  }catch(_e){ cerrar(); }
+}
+/* El telon de la portada. El elemento existe desde siempre pero el
+   archivo no se publicaba: cada apertura pedia un fondo.mp4 que daba
+   404. Ahora existe y se pide aparte -nunca en la instalacion- y solo
+   si la conexion da para 150 KB de adorno.                           */
+(function(){
+  function telon(){
+    var v=$('video'); if(!v) return;
+    try{ var c=navigator.connection;
+         if(c && (c.saveData===true || /(^|-)(2g|slow-2g)$/.test(String(c.effectiveType||'')))) return; }catch(_c){}
+    try{ if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return; }catch(_m){}
+    try{ v.src='fondo.mp4'; var p=v.play(); if(p && p.catch) p.catch(function(){}); }catch(_e){}
+  }
+  if(document.readyState==='complete') setTimeout(telon,1200);
+  else window.addEventListener('load', function(){ setTimeout(telon,1200); });
+})();
 function presAbrir(id){
   if(!id || !TEMAS[id] || S.modo==='evaluar') return;
   if(preguntasDe(id).length===0){ ir('p-codigo'); return; }   // tema bloqueado: no hay con qué armarla
@@ -19397,6 +19469,8 @@ function presAbrir(id){
     if(e.requestFullscreen){ var pr=e.requestFullscreen(); if(pr&&pr.catch) pr.catch(function(){}); }
     else if(e.webkitRequestFullscreen){ e.webkitRequestFullscreen(); }
   }catch(err){}
+  /* la lamina 1 ya esta montada detras: el intro solo la tapa 6 s */
+  introTocar();
 }
 function presPinta(){
   var a=$('pres-slides').children;

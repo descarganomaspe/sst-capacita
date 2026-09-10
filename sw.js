@@ -1,4 +1,4 @@
-var CACHE = 'sstc-62cbba5c49-c';
+var CACHE = 'sstc-91e6c63999-c';
 /* ══ LO QUE SE GUARDA AL INSTALAR ══
    Antes install no guardaba nada: el SW viejo servia el index nuevo por
    red, lo metia en el cache VIEJO, y al activarse el SW nuevo borraba ese
@@ -6,7 +6,8 @@ var CACHE = 'sstc-62cbba5c49-c';
    pantalla en blanco (y la primerisima instalacion tambien). Ahora la app
    entera se guarda en install, antes de activar. */
 var BASE = ['./', './index.html', './manifest.webmanifest', './icono-192.png', './icono-512.png',
-            './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg'];
+            './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
+            './intro.mp4'];
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){
     /* uno por uno: si un icono falta, no se cae la instalacion entera */
