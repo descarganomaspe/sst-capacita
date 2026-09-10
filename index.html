@@ -11372,11 +11372,14 @@ function traerTrabajador(i){
   var vivos=a.filter(function(x){ return (x.estatus||'activo')!=='cesado'; }).length;
   if(frenoLite('trabajador', usadosTotal('trabajador', vivos), 'trabajadores')) return;
   sumarUso('trabajador');
-  a.push({ id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+  var nuevo={ id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
            nombre:r.nombre||'', dni:r.dni||'', puesto:r.puesto||'', area:r.area||'',
            estatus:r.estatus||'activo', sangre:r.sangre||'', emergencia:r.emergencia||'',
-           emerQuien:r.emer_quien||'', sync:0 });
+           emerQuien:r.emer_quien||'', sync:0 };
+  a.push(nuevo);
   trabsSet(a);
+  /* todo trabajador nace con su credencial, venga de donde venga */
+  try{ if((nuevo.estatus||'activo')!=='cesado') emitirCredencialDe(nuevo); }catch(_c){}
   asegurarPersonal(function(){});
   var m=$('tt-msg'); m.style.color='var(--ok)';
   m.textContent = (r.nombre||'El trabajador')+' ya est\u00e1 en esta obra.';
@@ -13189,17 +13192,23 @@ function bajarKardex(){
      los EPP mas antiguos, que son los que tocaba renovar. Se pide de
      500 en 500 hasta que una tanda venga incompleta — el mismo
      patron que ya usaba el personal. */
-  function tanda(desde, acum){
+  /* si la tabla todavia no tiene la columna «lugar», se pide sin ella:
+     mejor las entregas sin el sitio que ninguna entrega */
+  function tanda(desde, acum, conLugar){
     return sbGet('sst_kardex?duenio=eq.'+encodeURIComponent(e.id)+
         '&select=ext,trabajador,trab_nombre,epp,tipo,fecha,cantidad,unidad,actividad'+
+        (conLugar?',lugar':'')+
         '&order=fecha.desc,ext.asc&limit=500&offset='+desde)
       .then(function(rows){
         rows=rows||[]; acum=acum.concat(rows);
         if(rows.length<500 || acum.length>20000) return acum;
-        return tanda(desde+500, acum);
+        return tanda(desde+500, acum, conLugar);
+      }, function(cod){
+        if(conLugar && desde===0) return tanda(0, [], false);
+        throw cod;
       });
   }
-  return tanda(0, [])
+  return tanda(0, [], true)
     .then(function(nube){
       BAJANDO_KARDEX=false;
       if(!nube || !nube.length) return kardexLocal();
@@ -13211,7 +13220,7 @@ function bajarKardex(){
         a.push({ id:r.ext, trab:r.trabajador||'', trabNombre:r.trab_nombre||'',
                  epp:r.epp||'', tipo:r.tipo||'N', fecha:r.fecha||'',
                  cant:parseInt(r.cantidad,10)||1, unidad:r.unidad||'UND',
-                 actividad:r.actividad||'',
+                 actividad:r.actividad||'', lugar:r.lugar||'',
                  firma:'', foto:'', sync:1, delEquipo:1 });
         nuevos++;
       });
@@ -17644,24 +17653,54 @@ function entrarMes(o){
   if(!o.p || !o.p.length) return 'Ese enlace no trae ningún programa adentro. Pídele a tu supervisor que arme el mes en la app y te lo mande de nuevo.';
   if(ROL!=='sup'){ ROL='col'; guardar(LS_ROL,'col'); }
   if(!S.sector) S.sector=leer(LS.sec,null)||SECTORES[0].id;
-  /* solo se abren las charlas que estan EN el calendario: ni una mas */
-  var ch=[]; o.p.forEach(function(r){ var s=String(r[1]); if(ch.indexOf(s)<0) ch.push(s); });
+  /* Solo se abren las charlas de 5 minutos que estan EN el calendario:
+     ni una mas. Antes entraba tambien el tema vacio de un simulacro o
+     una difusion, y la lista decia «son 25» cuando habia 20 abribles. */
+  var ch=[]; o.p.forEach(function(r){
+    if((r[5]||'charla')!=='charla') return;
+    var s=String(r[1]||''); if(!s) return;
+    if(ch.indexOf(s)<0) ch.push(s); });
   guardar(LS_MES,{v:o.v, ob:o.ob||'', ev:o.ev||'', ch:ch});
-  if(o.ob){ var cf=leer(LS.cfg,{}); if(!(cf.obra||'').trim()){ cf.obra=o.ob; guardar(LS.cfg,cf); } }
+  /* El nombre de obra del codigo MANDA: antes solo se ponia si el
+     trabajador no habia escrito ninguno, y el que habia tecleado
+     «obra 2» a mano se quedaba mirando un calendario vacio.
+     Solo si es un nombre de verdad: un «Sin obra» o un «Obra» generico
+     no tiene por que pisar lo que la persona ya tenia puesto. */
+  var _ob=String(o.ob||'').trim();
+  if(_ob && _ob!=='Sin obra' && _ob!=='Obra'){
+    var cf=leer(LS.cfg,{}); cf.obra=_ob; guardar(LS.cfg,cf);
+  } else if(_ob){
+    var cf0=leer(LS.cfg,{});
+    if(!(cf0.obra||'').trim()){ cf0.obra=_ob; guardar(LS.cfg,cf0); }
+  }
   if(o.p && o.p.length){
-    var todo=leer(LS.prog,{}), obra=(o.ob||'').trim()||'Sin obra';
-    var d=todo[obra]||{};
+    var d=progObra()||{};
     o.p.forEach(function(r){
       var iso=r[0];
+      var act={ tema:String(r[1]||''), tipo:(r[5]||'charla'), titulo:String(r[6]||''),
+                sector:r[4]||null, resp:r[2]||'', hora:r[3]||'', dictada:null };
+      if(r[7]) act.detalle=String(r[7]);
+      if(r[8]){
+        /* una segunda actividad del mismo dia. Puede llegar ANTES que la
+           principal, porque las filas van ordenadas por hora: por eso se
+           deja el hueco preparado y no se pisa cuando llegue. */
+        if(!d[iso]) d[iso]={tema:'', tipo:'charla', titulo:'', sector:null, resp:'', hora:'', dictada:null};
+        d[iso].extra=(d[iso].extra||[]);
+        d[iso].extra.push(act);
+        return;
+      }
       if(d[iso] && d[iso].dictada) return;       // no pisar lo que ya marco el que dicta
-      d[iso]={tema:String(r[1]), sector:r[4]||null, resp:r[2]||'', hora:r[3]||'', dictada:(d[iso]&&d[iso].dictada)||null};
+      var _ex=(d[iso] && d[iso].extra) || null;  // las extras que ya hubieran llegado
+      d[iso]=act;
+      if(_ex) d[iso].extra=_ex;
     });
-    todo[obra]=d; guardar(LS.prog,todo);
+    progEscribir(d);      /* misma clave con la que despues se lee */
     var pr=o.p[0][0].split('-'); PROG.ano=+pr[0]; PROG.mes=+pr[1]-1;
   }
   var m0=$('cod-msg');
   if(m0){ m0.style.color='var(--ok)';
-    m0.textContent='Listo. Programa cargado: '+ch.length+' charla'+(ch.length===1?'':'s')+' hasta el '+fechaLarga(o.v)+'.'; }
+    var _n=(o.p||[]).length;
+    m0.textContent='Listo. Programa cargado: '+_n+' actividad'+(_n===1?'':'es')+' hasta el '+fechaLarga(o.v)+'.'; }
   setTimeout(function(){ ir('p-programa'); }, 700);
   return null;
 }
@@ -17799,10 +17838,16 @@ function generarMes(){
   var datos=progObra(), pref=ym[0]+'-'+ym[1], p=[];
   Object.keys(datos).sort().forEach(function(iso){
     if(iso.indexOf(pref)!==0) return;
-    var c=datos[iso];
-    p.push([iso, String(c.tema), c.resp||'', c.hora||'', c.sector||null]);
+    /* la principal y las que se sumaron ese dia, cada una en su fila */
+    actividadesDelDia(datos[iso]).forEach(function(a){
+      var c=a.d, t=tipoDelDia(c);
+      p.push([iso, String(c.tema||''), c.resp||'', c.hora||'', c.sector||null,
+              t, String(c.titulo||''),
+              _diaEsLibre(t) ? String(c.detalle||'') : '',
+              (a.i>=0 ? 1 : 0)]);
+    });
   });
-  var o={t:'M', v:ultimo, ob:obraActual(), ev:s.nombre||''};
+  var o={t:'M', v:ultimo, ob:nombreDeLaObra(), ev:s.nombre||''};
   if(p.length) o.p=p;
   if(!p.length){
     $('g-salida-mes').innerHTML='<div class="cod-caja"><h3>Falta armar el mes</h3><p class="cod-pie">'+
@@ -17810,8 +17855,11 @@ function generarMes(){
       '(o usa «Llenar el mes») y vuelve aquí.</p></div>';
     return;
   }
-  var distintas=[]; p.forEach(function(r){ if(distintas.indexOf(r[1])<0) distintas.push(r[1]); });
-  var pie='Les carga el programa de '+MESES[mes]+': <b>'+p.length+' días</b> con su charla, su hora y su responsable, '+
+  var distintas=[]; p.forEach(function(r){
+    if((r[5]||'charla')!=='charla') return;          /* solo las de 5 min se abren */
+    if(r[1] && distintas.indexOf(r[1])<0) distintas.push(r[1]); });
+  var dias=[]; p.forEach(function(r){ if(dias.indexOf(r[0])<0) dias.push(r[0]); });
+  var pie='Les carga el programa de '+MESES[mes]+': <b>'+p.length+' actividad'+(p.length===1?'':'es')+'</b> en '+dias.length+' día'+(dias.length===1?'':'s')+', con su hora y su responsable, '+
     'y les abre el guion de <b>esas '+distintas.length+' charlas</b> — solo esas. El resto del temario no se abre.'+
     '<br><br>Vale hasta el <b>'+fechaLarga(ultimo)+'</b>, sin límite de veces y para todos los celulares que quieras.'+
     '<br><br>⚠️ Este va <b>solo por enlace</b>: el calendario completo no entra en un código de 10 letras.';
@@ -19048,20 +19096,44 @@ function pintarCharlasColab(){
   var m=mesVigente(), d=charlasDictadas(), h='';
   if(!m){ $('charlas-sub').textContent='Todavía no tienes ningún programa cargado. Vuelve al inicio y abre el enlace del mes que te mandó tu supervisor.';
     $('lista-charlas').innerHTML=''; return; }
-  var datos=progObra(), hoy=hoyISO(), vistos={};
-  $('charlas-sub').innerHTML='Las charlas del programa de <b>'+esc(m.ob||'tu obra')+'</b>, hasta el '+
-    fechaLarga(m.v)+'. Son <b>'+(m.ch||[]).length+'</b>: las que puso tu supervisor en el calendario.';
+  var datos=progObra(), hoy=hoyISO(), cuenta=0;
+  /* ── SE MUESTRA EL CALENDARIO, NO SOLO LOS GUIONES ──
+     Antes esta lista solo pintaba las charlas de 5 minutos, y ademas una
+     sola vez cada una. Una capacitacion, un simulacro o una difusion no
+     tienen numero de charla, asi que charlaDe() devolvia null y la
+     actividad DESAPARECIA: el supervisor programaba 25 y el trabajador
+     veia 20. Y las segundas actividades del dia no se miraban nunca.
+     Ahora se lista todo lo programado, en orden de fecha, y solo las
+     charlas son las que se pueden abrir. */
+  var filas='';
   Object.keys(datos).sort().forEach(function(iso){
-    var c0=datos[iso], ch=charlaDe(parseInt(c0.tema,10));
-    if(!ch || vistos[ch.n]) return;
-    vistos[ch.n]=1;
     var p=iso.split('-'), f=new Date(+p[0],+p[1]-1,+p[2]);
-    h+='<button class="tarj vidrio" onclick="abrirCharla('+ch.n+')">'+
-       '<b>'+(d[ch.n]?'✅ ':'')+esc(ch.titulo)+'</b>'+
-       '<small>'+DIAS[(f.getDay()+6)%7]+' '+(+p[2])+'/'+p[1]+(c0.hora?' · '+esc(c0.hora):'')+
-       ' · '+esc(c0.resp||'sin responsable')+(iso===hoy?' · <b>hoy</b>':'')+'</small></button>';
+    var cuando=DIAS[(f.getDay()+6)%7]+' '+(+p[2])+'/'+p[1];
+    actividadesDelDia(datos[iso]).forEach(function(a){
+      var c=a.d, t=tipoDelDia(c), nom=nombreDelDia(c);
+      if(!nom) return;
+      cuenta++;
+      var pie=cuando+(c.hora?' · '+esc(c.hora):'')+' · '+esc(c.resp||'sin responsable')+
+              (iso===hoy?' · <b>hoy</b>':'');
+      if(t==='charla'){
+        var ch=charlaDe(parseInt(c.tema,10));
+        if(ch && charlaAbierta(ch.n)){
+          filas+='<button class="tarj vidrio" onclick="abrirCharla('+ch.n+')">'+
+                 '<b>'+(d[ch.n]?'✅ ':'')+esc(ch.titulo)+'</b><small>'+pie+'</small></button>';
+          return;
+        }
+      }
+      /* lo que no se abre igual se ve: si no, el programa miente */
+      filas+='<div class="tarj vidrio" style="opacity:.82;cursor:default">'+
+             '<b>'+iconoDelDia(c)+' '+esc(nom)+'</b><small>'+esc(etiquetaDelDia(c))+' · '+pie+
+             (c.detalle? '<br>'+esc(String(c.detalle).slice(0,220)) : '')+'</small></div>';
+    });
   });
-  $('lista-charlas').innerHTML=h||'<span style="color:var(--gris)">El programa que te mandaron no tiene charlas.</span>';
+  h=filas;
+  $('charlas-sub').innerHTML='El programa de <b>'+esc(m.ob||'tu obra')+'</b>, hasta el '+
+    fechaLarga(m.v)+'. Son <b>'+cuenta+'</b> actividad'+(cuenta===1?'':'es')+
+    ': las que puso tu supervisor en el calendario.';
+  $('lista-charlas').innerHTML=h||'<span style="color:var(--gris)">El programa que te mandaron no tiene actividades.</span>';
 }
 
 function abrirCharla(n){
@@ -26697,15 +26769,35 @@ function guardarBuena(){
 function subirBuena(reg){
   var e=empActiva(); if(!e) return Promise.resolve(false);
   if(!hayCuenta()) return Promise.resolve(false);
-  /* upsert por (empresa,ext): un 409 «ya existe» cuenta como subida y no
-     se reintenta para siempre */
-  return sbSubirFilas('sst_buena',{empresa:e.id, ext:reg.id, fecha:reg.fecha, titulo:reg.titulo,
-      descripcion:reg.desc, lugar:reg.lugar||null, actividad:reg.actividad||null,
-      autor:reg.autor||null})
-    .then(function(){ var a=bueLocal();
-      for(var i=0;i<a.length;i++) if(a[i].id===reg.id) a[i].sync=1;
-      bueSet(a); return true; })
-    .catch(function(){ return false; });
+  /* la foto primero al almacen; si no se puede, la fila sube igual */
+  var antes;
+  if(reg.foto && String(reg.foto).indexOf('data:')===0){
+    antes=subirFoto('buenas', _dataURLaArchivo(reg.foto,'buena.jpg'))
+      .then(function(url){ return url||null; }, function(){ return null; });
+  } else {
+    antes=Promise.resolve(reg.foto || null);
+  }
+  return antes.then(function(url){
+    function fila(conFoto){
+      var f={empresa:e.id, ext:reg.id, fecha:reg.fecha, titulo:reg.titulo,
+             descripcion:reg.desc, lugar:reg.lugar||null, actividad:reg.actividad||null,
+             autor:reg.autor||null};
+      if(conFoto && url) f.foto_url=url;
+      return f;
+    }
+    function guardado(){
+      var a=bueLocal();
+      for(var i=0;i<a.length;i++) if(a[i].id===reg.id){ a[i].sync=1; if(url) a[i].foto=url; }
+      bueSet(a); return true;
+    }
+    /* upsert por (empresa,ext): un 409 «ya existe» cuenta como subida y no
+       se reintenta para siempre */
+    return sbSubirFilas('sst_buena', fila(true)).then(guardado, function(cod){
+      /* 400 = esa columna no existe todavia: se sube sin la foto */
+      if(cod!==400 || !url) return false;
+      return sbSubirFilas('sst_buena', fila(false)).then(guardado, function(){ return false; });
+    });
+  }).catch(function(){ return false; });
 }
 /* lo que quedó sin subir por falta de señal se sube solo al entrar */
 var BUE_SINCRO=false;
@@ -26722,8 +26814,11 @@ function bajarBuenas(){
   var e=empActiva(); if(!e || !hayCuenta()) return Promise.resolve(0);
   var base='sst_buena?empresa=eq.'+encodeURIComponent(e.id)+'&select=id,ext,fecha,titulo,descripcion,lugar,actividad,autor';
   /* «destacada» es columna opcional: si la base no la tiene, se pide sin ella */
-  return sbGet(base+',destacada&order=fecha.desc&limit=200')
-    .catch(function(cod){ if(cod!==400) return Promise.reject(cod); return sbGet(base+'&order=fecha.desc&limit=200'); })
+  return sbGet(base+',destacada,foto_url&order=fecha.desc&limit=200')
+    .catch(function(cod){ if(cod!==400) return Promise.reject(cod);
+      return sbGet(base+',destacada&order=fecha.desc&limit=200')
+        .catch(function(c2){ if(c2!==400) return Promise.reject(c2);
+          return sbGet(base+'&order=fecha.desc&limit=200'); }); })
     .then(function(rows){
       var a=bueLocal(), tengo={}, nuevos=0;
       a.forEach(function(x){ tengo[x.id]=1; });
@@ -26731,7 +26826,7 @@ function bajarBuenas(){
         var id=r.ext||('s'+r.id);
         if(tengo[id]) return;
         a.push({id:id, fecha:r.fecha, titulo:r.titulo, desc:r.descripcion||'', lugar:r.lugar||'',
-                actividad:r.actividad||'', autor:r.autor||'', foto:null, sync:1, deOtro:1,
+                actividad:r.actividad||'', autor:r.autor||'', foto:r.foto_url||null, sync:1, deOtro:1,
                 destacada:!!r.destacada});
         nuevos++;
       });
