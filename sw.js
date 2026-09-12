@@ -1,4 +1,8 @@
-var CACHE = 'sstc-26c6e05a0b-c';
+var CACHE = 'sstc-1ab0608cf4-d';
+/* caja aparte para lo que llega por «Compartir»: NO se borra al activar
+   un service worker nuevo, porque el usuario puede estar compartiendo
+   justo cuando entra una actualizacion. */
+var COMP = 'sstc-compartido';
 /* ══ LO QUE SE GUARDA AL INSTALAR ══
    Antes install no guardaba nada: el SW viejo servia el index nuevo por
    red, lo metia en el cache VIEJO, y al activarse el SW nuevo borraba ese
@@ -16,7 +20,9 @@ self.addEventListener('install', function(e){
 });
 self.addEventListener('activate', function(e){
   e.waitUntil(caches.keys().then(function(ks){
-    return Promise.all(ks.map(function(k){ if (k !== CACHE) return caches.delete(k); }));
+    return Promise.all(ks.map(function(k){
+      if (k !== CACHE && k !== COMP) return caches.delete(k);
+    }));
   }).then(function(){ return self.clients.claim(); }));
 });
 /* con 2G, un fetch sin tope espera minutos antes de caer al cache:
@@ -28,6 +34,46 @@ function conTope(req, ms){
   });
 }
 self.addEventListener('fetch', function(e){
+  /* ══ LO QUE LLEGA DESDE «COMPARTIR» ════════════════════════════════
+     Android manda aqui un POST multipart con el archivo adentro. No hay
+     pagina que lo reciba: lo recoge el service worker, lo deja guardado
+     y manda la app a abrirse con el id. Asi funciona aunque la app este
+     cerrada y aunque no haya señal.
+     Se responde con un redirect 303 porque es lo que el navegador
+     espera despues de un POST: si no, queda la pagina colgada.      */
+  var _u; try{ _u = new URL(e.request.url); }catch(_x){ _u = null; }
+  if (_u && e.request.method === 'POST' && /__compartir\/?$/.test(_u.pathname)){
+    e.respondWith(
+      e.request.formData().then(function(fd){
+        var id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+        var f = null;
+        try{ f = fd.get('archivo'); }catch(_g){}
+        if (!f || !f.size){
+          /* compartieron un enlace o un texto, no un archivo */
+          var txt = [];
+          ['titulo','texto','enlace'].forEach(function(k){
+            var v=''; try{ v = fd.get(k)||''; }catch(_h){}
+            if (v) txt.push(String(v));
+          });
+          return Response.redirect('./?compartido=' + id + '&t=' +
+            encodeURIComponent(txt.join(' ').slice(0,400)), 303);
+        }
+        return caches.open(COMP).then(function(c){
+          return c.put(new Request('./__recibido__/' + id),
+            new Response(f, {headers:{
+              'Content-Type': f.type || 'application/octet-stream',
+              'X-Nombre': encodeURIComponent(f.name || 'hoja'),
+              'X-Peso': String(f.size)
+            }}));
+        }).then(function(){
+          return Response.redirect('./?compartido=' + id, 303);
+        });
+      }).catch(function(){
+        return Response.redirect('./?compartido=fallo', 303);
+      })
+    );
+    return;
+  }
   if (e.request.method !== 'GET') return;
   /* SOLO lo nuestro. Antes se cacheaba TODO lo que pedia la app,
      incluidas las respuestas del servidor de datos: sin senal se
