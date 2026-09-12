@@ -1052,6 +1052,24 @@ html.t-alto .mp-t{border:1px solid #000;color:#000;background:#fff}
   max-width:88vw;text-align:center}
 .tostada.vista{opacity:1;transform:translate(-50%,0)}
 html.t-claro .tostada,html.t-alto .tostada{background:#0D1620;color:#fff}
+/* los proyectos u obras de la empresa, en Datos del empleador */
+.pry-fila{display:flex;align-items:stretch;gap:6px;margin:0 0 7px}
+.pry-el{flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:left;
+  background:rgba(var(--w),.05);border:1px solid rgba(var(--w),.12);border-radius:12px;
+  padding:10px 12px;color:inherit;font:inherit;cursor:pointer}
+.pry-fila.on .pry-el{border-color:var(--oro);background:rgba(245,183,0,.12)}
+.pry-tic{flex:0 0 22px;width:22px;height:22px;border-radius:999px;
+  border:2px solid rgba(var(--w),.28);display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;line-height:1}
+.pry-fila.on .pry-tic{border-color:var(--oro);background:var(--oro);color:#1A1200}
+.pry-n{flex:1;min-width:0;font-size:14.5px;line-height:1.3;word-break:break-word}
+.pry-n small{display:block;font-size:11.5px;color:var(--gris);margin-top:2px}
+.pry-x{flex:0 0 auto;background:transparent;border:1px solid rgba(var(--w),.12);
+  border-radius:12px;color:var(--gris);font-size:15px;padding:0 12px;cursor:pointer}
+html.t-claro .pry-el,html.t-alto .pry-el{background:#F4F6F8;border-color:rgba(16,26,34,.16)}
+html.t-claro .pry-fila.on .pry-el,html.t-alto .pry-fila.on .pry-el{background:#FFF7E0;border-color:#C89400}
+html.t-alto .pry-fila.on .pry-tic{background:#000;border-color:#000;color:#fff}
+html.t-claro .pry-x,html.t-alto .pry-x{border-color:rgba(16,26,34,.16)}
 /* ══ LA BARRA DE «HAY VERSION NUEVA» ═══════════════════
    Solo sale cuando NO se puede recargar solo: evaluacion en curso,
    formulario a medio llenar, un cuadro abierto. Si el momento es
@@ -3092,8 +3110,13 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <input id="em-act" placeholder="CONSTRUCCIÓN">
     <label class="sec-tit" style="margin:12px 0 6px">N° de trabajadores en el centro laboral</label>
     <input id="em-ntrab" inputmode="numeric" placeholder="se llena solo con tu personal">
-    <label class="sec-tit" style="margin:12px 0 6px">Proyecto u obra</label>
-    <input id="em-proyecto" placeholder="EDIFICIO MULTIFAMILIAR LOS ANDES – Av. Perú 123, Lima">
+    <div class="sec-tit" style="margin:18px 0 6px">Proyectos u obras de la empresa</div>
+    <p class="sub" style="margin:0 0 9px;font-size:12.5px">Anota todos los que tienes. El que marques queda como <b>el actual</b>, y es el que sale por defecto en las constancias, el kardex, las amonestaciones y los talleres. Antes sal&#237;a la raz&#243;n social, que no es un proyecto.</p>
+    <div id="em-proyectos"></div>
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <input id="em-proy-nuevo" style="flex:1;margin:0" placeholder="L&#237;nea 2 del Metro – Ramal 4" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarProyecto();}">
+      <button type="button" class="btn sec" style="margin:0;flex:0 0 auto;padding:0 15px;width:auto" onclick="agregarProyecto()">Agregar</button>
+    </div>
     <div class="sec-tit" style="margin:18px 0 8px">Cabecera de tus formatos</div>
     <div style="display:flex;gap:10px">
       <div style="flex:2"><label class="sec-tit" style="margin:0 0 6px">Código</label>
@@ -3813,11 +3836,12 @@ input,textarea{-webkit-user-select:text;user-select:text}
 
 <section class="pantalla" id="p-quim-cat">
   <div class="io-nav">
-    <button type="button" class="io-atras" onclick="ir('p-msds-nueva')">Producto</button>
+    <button type="button" class="io-atras" onclick="qcVolver()">Atr&#225;s</button>
     <span class="io-cen">Cat&#225;logo</span>
     <span style="width:44px"></span>
   </div>
   <h1 class="io-h1">Cat&#225;logo de qu&#237;micos</h1>
+  <p class="io-h2" id="qc-cuenta"></p>
   <div class="io-grupo" style="padding:13px 15px;border-color:rgba(245,183,0,.30);background:rgba(245,183,0,.08)">
     <b style="font-size:14px">Es un punto de partida, no la hoja del fabricante.</b>
     <p style="margin:6px 0 0;font-size:13px;line-height:1.45;color:var(--gris)">Dos productos de la misma familia y distinta marca no siempre se clasifican igual. Lo que manda es la hoja de seguridad del que est&#225; en tu almac&#233;n: comp&#225;ralo y corrige antes de guardar.</p>
@@ -9330,6 +9354,16 @@ var OBRAS_DEL_TRAB=[];
    del codigo con el que entraron, se muestra fijo, y solo lo escribe el
    dueño cuando crea el proyecto. */
 function obraFija(){
+  /* EL PROYECTO MANDA SOBRE LA RAZON SOCIAL. Hasta ahora esto devolvia
+     el nombre de la empresa en OBRASST, y por eso en «Obra / proyecto»
+     salía «Climaxi Ingenieros» —que es el empleador, no la obra—.
+     Si la empresa declaró sus proyectos en «Datos del empleador», manda
+     el que esté marcado como actual. Si no declaró ninguno, se sigue
+     usando el nombre de la obra, igual que antes. */
+  try{
+    var p=(typeof proyectoActual==='function') ? proyectoActual() : '';
+    if(p) return String(p);
+  }catch(_e){}
   var e=empActiva();
   return (e && e.nombre) ? String(e.nombre) : '';
 }
@@ -9350,9 +9384,15 @@ function fijarCampoObra(idInput, idSelect, idNota){
   inp.style.opacity='.7';
   inp.style.display='';
   if(sel) sel.style.display='none';
-  if(nota) nota.innerHTML='<span class="sub" style="display:block;margin-top:5px">'+
-    'Es el nombre de tu obra en OBRASST. Se escribe una sola vez, al crear el proyecto, '+
-    'para que todos los documentos salgan igual.</span>';
+  if(nota){
+    var _dePry=false;
+    try{ _dePry = (typeof proyectoActual==='function') && proyectoActual()===fija; }catch(_p){}
+    nota.innerHTML='<span class="sub" style="display:block;margin-top:5px">'+
+      (_dePry
+        ? 'Es el proyecto que tienes marcado en «Datos del empleador». Si estás en otro frente, cámbialo ahí y sale igual en todos los documentos.'
+        : 'Es el nombre de tu obra en OBRASST. Si tu empresa lleva varios frentes, anótalos en «Datos del empleador» y el que marques sale aquí.')+
+      '</span>';
+  }
   return true;
 }
 function dObraElegida(){
@@ -15880,7 +15920,7 @@ function cargarEmpleador(){
   $('em-razon').value=e.razon||''; $('em-ruc').value=e.ruc||'';
   $('em-dom').value=e.dom||'';     $('em-act').value=e.act||'CONSTRUCCIÓN';
   $('em-ntrab').value=e.ntrab||String(trabsLocal().filter(function(t){return t.estatus==='activo';}).length||'');
-  $('em-proyecto').value=e.proyecto||''; $('em-fcod').value=e.formatoCod||'';
+  pintarProyectos(); $('em-fcod').value=e.formatoCod||'';
   $('em-frev').value=e.formatoRev||''; $('em-ffecha').value=e.formatoFecha||'';
   $('em-ckardex').value=e.codKardex||'';
   $('em-msg').textContent='';
@@ -15913,6 +15953,87 @@ function cargarEmpleador(){
     };
   }
 }
+/* ══ LOS PROYECTOS U OBRAS ═══════════════════════════════
+   «Colocas predeterminadamente Climaxi Ingenieros como proyecto, o sea
+   nada que ver». Y era así: la app usaba el nombre de la EMPRESA en
+   OBRASST como nombre de la obra, porque hasta ahora eran la misma cosa.
+   Para una constructora con cuatro frentes eso es falso: la razón social
+   no es un proyecto.
+   Ahora la empresa declara sus proyectos aquí, uno queda marcado como el
+   actual, y ESE es el que sale por defecto en todos lados. Se guardan al
+   toque —como el logo—, no hace falta pulsar Guardar para que queden.
+   Si todavía no hay ninguno, se sigue usando el nombre de la obra, que
+   es como funcionaba antes: nadie pierde nada.                       */
+function proyectosEmp(){
+  var e=empleador(), l=e.proyectos;
+  if(!l || !l.length){
+    var p=String(e.proyecto||'').trim();
+    l = p ? [p] : [];
+  }
+  return (l||[]).map(function(x){ return String(x||'').trim(); }).filter(Boolean);
+}
+function proyectoActual(){
+  var e=empleador(), l=proyectosEmp(), p=String(e.proyecto||'').trim();
+  if(p && l.indexOf(p)>=0) return p;
+  return l.length ? l[0] : p;
+}
+function _guardarProyectos(l, actual){
+  var e=empleador();
+  e.proyectos=l.slice();
+  e.proyecto=String(actual||'').trim();
+  guardar(LS_EMPLEADOR,e);
+  pintarProyectos();
+}
+function pintarProyectos(){
+  var c=$('em-proyectos'); if(!c) return;
+  var l=proyectosEmp(), act=proyectoActual();
+  if(!l.length){
+    c.innerHTML='<p class="sub" style="margin:0 0 9px">Todavía no anotaste ninguno. Mientras tanto, en los documentos sale el nombre de tu obra en OBRASST.</p>';
+    return;
+  }
+  var h='';
+  l.forEach(function(n,i){
+    var on=(n===act);
+    h+='<div class="pry-fila'+(on?' on':'')+'">'+
+       '<button type="button" class="pry-el" onclick="elegirProyecto('+i+')" '+
+         (on?'aria-pressed="true"':'aria-pressed="false"')+'>'+
+         '<span class="pry-tic">'+(on?'✓':'')+'</span>'+
+         '<span class="pry-n">'+esc(n)+(on?'<small>el actual · es el que sale en los documentos</small>':'')+'</span>'+
+       '</button>'+
+       '<button type="button" class="pry-x" onclick="quitarProyecto('+i+')" aria-label="Quitar '+escA(n)+'">✕</button>'+
+       '</div>';
+  });
+  c.innerHTML=h;
+}
+function agregarProyecto(){
+  var inp=$('em-proy-nuevo'); if(!inp) return;
+  var n=String(inp.value||'').trim();
+  if(!n){ try{ inp.focus(); }catch(_f){} return; }
+  var l=proyectosEmp();
+  var ya=null;
+  l.forEach(function(x){ if(x.toLowerCase()===n.toLowerCase()) ya=x; });
+  if(ya){ _guardarProyectos(l, ya); inp.value=''; tostada('Ese ya estaba · queda como el actual'); return; }
+  l.push(n);
+  /* el primero que se anota queda como el actual: es lo que espera
+     cualquiera que acaba de escribirlo */
+  _guardarProyectos(l, (l.length===1) ? n : proyectoActual());
+  inp.value='';
+  var m=$('em-msg'); if(m){ m.style.color='var(--ok)'; m.textContent='Proyecto agregado.'; }
+}
+function elegirProyecto(i){
+  var l=proyectosEmp(); if(!l[i]) return;
+  _guardarProyectos(l, l[i]);
+  var m=$('em-msg'); if(m){ m.style.color='var(--ok)';
+    m.textContent='Ahora los documentos salen con «'+l[i]+'».'; }
+}
+function quitarProyecto(i){
+  var l=proyectosEmp(), n=l[i]; if(!n) return;
+  confirmar('¿Quitar este proyecto?', '«'+n+'» deja de estar en la lista. Lo que ya registraste no cambia: los documentos emitidos conservan el nombre con el que salieron.', function(){
+    var q=l.filter(function(x,j){ return j!==i; });
+    var act=proyectoActual();
+    _guardarProyectos(q, (act===n) ? (q[0]||'') : act);
+  }, {si:'Sí, quitarlo', no:'Cancelar', icono:'🏗️'});
+}
 function pintarLogoVista(dat){
   var c=$('em-logo-vista'); if(!c) return;
   c.innerHTML = dat
@@ -15926,7 +16047,6 @@ function guardarEmpleador(){
   e.razon=($('em-razon').value||'').trim(); e.ruc=($('em-ruc').value||'').trim();
   e.dom=($('em-dom').value||'').trim();     e.act=($('em-act').value||'').trim();
   e.ntrab=($('em-ntrab').value||'').trim();
-  e.proyecto=($('em-proyecto').value||'').trim();
   e.formatoCod=($('em-fcod').value||'').trim();
   e.formatoRev=($('em-frev').value||'').trim();
   e.formatoFecha=($('em-ffecha').value||'').trim();
@@ -29632,11 +29752,25 @@ function pintarMsds(){
   var lim=$('q-limpiar');
   if(lim) lim.style.display=((($('q-buscar')||{}).value||'')?'block':'none');
 
+  /* «¿los 51 productos cargados? no los veo» — y tenía razón: el
+     catálogo existía, pero la ÚNICA puerta estaba dentro de «Agregar un
+     producto», en el paso 1. Quien entra a Químicos ve su lista vacía y
+     concluye, con toda la lógica del mundo, que no hay ningún catálogo.
+     Ahora la puerta está aquí, con el número a la vista. */
+  var puerta='<div class="io-grupo" style="margin-top:12px">'+
+    '<button type="button" class="io-fila" onclick="abrirCatalogoSolo()">'+
+      '<span class="io-ic morado">&#128214;</span>'+
+      '<span class="io-tx"><b>Catálogo de químicos de obra</b>'+
+      '<small>'+SGA.cat.length+' productos ya clasificados, con su etiqueta SGA y su rombo. '+
+      'Toca uno y se agrega con todo puesto.</small></span>'+
+      '<span class="io-chev">&#8250;</span></button></div>';
   if(!todos.length){
     cont.innerHTML='<div class="io-grupo"><div class="io-vacio">'+
       '<span class="em">&#129514;</span><b>Todav&#237;a no hay productos</b>'+
-      '<p>Agrega el primero. Si est&#225; en el cat&#225;logo, sale con su etiqueta SGA y su rombo ya puestos.</p></div></div>'+
-      '<button type="button" class="io-bt pri" onclick="nuevoQuimico()">&#65291; Agregar el primer producto</button>';
+      '<p>Los de tu almac&#233;n los cargas t&#250;: cada hoja MSDS es la de TU proveedor. '+
+      'Para no empezar de cero, el cat&#225;logo de abajo trae '+SGA.cat.length+' productos de obra ya clasificados.</p></div></div>'+
+      '<button type="button" class="io-bt pri" onclick="nuevoQuimico()">&#65291; Agregar el primer producto</button>'+
+      puerta;
     return;
   }
   if(!a.length){
@@ -29660,6 +29794,7 @@ function pintarMsds(){
   });
   h+='</div>';
   h+='<button type="button" class="io-bt sec" onclick="nuevoQuimico()">&#65291; Agregar un producto</button>';
+  h+=puerta;
   cont.innerHTML=h;
 }
 function abrirMsds(){
@@ -29719,9 +29854,37 @@ function qRevisar(){
   if(g){ g.disabled=!prod; }
 }
 /* ── EL CATALOGO ─────────────────────────────────────────────────── */
-function abrirCatalogo(){ var b=$('qc-buscar'); if(b) b.value=''; ir('p-quim-cat'); pintarCatalogo(); }
+/* a dónde vuelve el botón de Atrás del catálogo: depende de por dónde
+   se entró —desde el paso 1 de un producto nuevo, o desde la lista. */
+var QC_VUELVE='p-msds-nueva';
+function abrirCatalogo(){
+  QC_VUELVE='p-msds-nueva';
+  var b=$('qc-buscar'); if(b) b.value='';
+  ir('p-quim-cat'); pintarCatalogo();
+}
+/* entrar al catálogo derecho desde la lista de productos: se prepara
+   el formulario en blanco, porque al tocar un producto el catálogo
+   lleva a «Agregar un producto» con todo cargado. Sin esto se colaban
+   los datos del último producto que se estuvo editando. */
+function abrirCatalogoSolo(){
+  if(soloConCodigo('Los productos químicos','msds')) return;
+  QUIM_EDIT=null; _limpiarFormQuim();
+  var t=$('q-nuevo-tit'); if(t) t.textContent='Nuevo producto';
+  var hh=$('q-nuevo-h'); if(hh) hh.textContent='Agregar un producto';
+  QC_VUELVE='p-msds';
+  var b=$('qc-buscar'); if(b) b.value='';
+  ir('p-quim-cat'); pintarCatalogo();
+}
+function qcVolver(){
+  if(QC_VUELVE==='p-msds'){ ir('p-msds'); pintarMsds(); return; }
+  ir('p-msds-nueva');
+}
 function pintarCatalogo(){
   var c=$('qc-lista'); if(!c) return;
+  var cu=$('qc-cuenta');
+  if(cu) cu.textContent=SGA.cat.length+' productos de obra ya clasificados, en '+
+    (function(){ var g={},n=0; SGA.cat.forEach(function(q){ if(!g[q.g]){g[q.g]=1;n++;} }); return n; })()+
+    ' grupos. Toca uno y se agrega con su etiqueta SGA y su rombo puestos.';
   var t=_norm(($('qc-buscar')&&$('qc-buscar').value)||'');
   var por={}, orden=[];
   SGA.cat.forEach(function(q){
@@ -31803,7 +31966,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
       barra de abajo y espera el toque.
 
    Nunca se recarga en la primera instalacion, ni dos veces seguidas. */
-var SELLO_APP='7d8d3ab128';
+var SELLO_APP='f30aa643db';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
