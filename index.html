@@ -15961,7 +15961,8 @@ function cargarEmpleador(){
   $('em-razon').value=e.razon||''; $('em-ruc').value=e.ruc||'';
   $('em-dom').value=e.dom||'';     $('em-act').value=e.act||'CONSTRUCCIÓN';
   $('em-ntrab').value=e.ntrab||String(trabsLocal().filter(function(t){return t.estatus==='activo';}).length||'');
-  pintarProyectos(); $('em-fcod').value=e.formatoCod||'';
+  pintarProyectos(); try{ cargarProyectosNube(); }catch(_pn){}
+  $('em-fcod').value=e.formatoCod||'';
   $('em-frev').value=e.formatoRev||''; $('em-ffecha').value=e.formatoFecha||'';
   $('em-ckardex').value=e.codKardex||'';
   $('em-msg').textContent='';
@@ -16018,18 +16019,97 @@ function proyectoActual(){
   if(p && l.indexOf(p)>=0) return p;
   return l.length ? l[0] : p;
 }
+/* ══ Y VIVEN EN LA OBRA, NO EN ESTE CELULAR ══════════════════
+   «Imposible, tiene que vivir en la nube» — y tenía razón: el día que
+   el líder se va, sus frentes se iban con su teléfono y el que entraba
+   los volvía a escribir a su manera.
+   Ahora la lista es de la EMPRESA y está en el servidor. El celular
+   guarda una copia para poder trabajar sin señal y para pintar al
+   instante, pero la que manda es la de arriba. Lo que se toca aquí
+   sube solo; si no hay señal, queda pendiente y se reintenta.
+   Cambiarla es del líder: al supervisor el servidor le contesta que no
+   —y aquí se le explica en cristiano, no con un código de error.   */
+var PROY_ESTADO='';
+var PROY_PENDIENTE=false;
+var PROY_BAJANDO=false;
+function _empProyId(){
+  var e=(typeof empActiva==='function') ? empActiva() : null;
+  return (e && e.id) ? e.id : null;
+}
+function cargarProyectosNube(){
+  var id=_empProyId();
+  if(!id || typeof sbRpc!=='function' || !hayCuenta()) return Promise.resolve(false);
+  if(PROY_BAJANDO) return Promise.resolve(false);
+  PROY_BAJANDO=true;
+  return sbRpc('sst_proyectos',{p_emp:id}).then(function(r){
+    PROY_BAJANDO=false;
+    if(!r || r.ok!==true) return false;
+    /* si este celular tiene cambios sin subir, NO se pisan con lo de
+       arriba: primero se suben, que si no el usuario ve desaparecer lo
+       que acaba de escribir. */
+    if(PROY_PENDIENTE){ subirProyectos(); return false; }
+    var e=empleador();
+    e.proyectos=(r.proyectos||[]).map(String);
+    e.proyecto=String(r.actual||'');
+    guardar(LS_EMPLEADOR,e);
+    PROY_ESTADO='Guardado en la obra: lo ve todo tu equipo.';
+    pintarProyectos();
+    return true;
+  }).catch(function(){ PROY_BAJANDO=false; return false; });
+}
+function subirProyectos(){
+  var id=_empProyId();
+  if(!id || typeof sbRpc!=='function' || !hayCuenta()){
+    PROY_PENDIENTE=true;
+    PROY_ESTADO='Guardado en este celular. Se sube a la obra cuando entres a tu cuenta.';
+    pintarProyectos(); return Promise.resolve(false);
+  }
+  var e=empleador();
+  return sbRpc('sst_guardar_proyectos',
+               {p_emp:id, p_lista:(e.proyectos||[]), p_actual:String(e.proyecto||'')})
+  .then(function(r){
+    if(r && r.ok===true){
+      PROY_PENDIENTE=false;
+      /* el servidor limpia repetidos y recorta: se toma lo que ÉL dice */
+      var g=empleador();
+      g.proyectos=(r.proyectos||[]).map(String);
+      g.proyecto=String(r.actual||'');
+      guardar(LS_EMPLEADOR,g);
+      PROY_ESTADO='Guardado en la obra: lo ve todo tu equipo.';
+      pintarProyectos(); return true;
+    }
+    PROY_PENDIENTE=true;
+    var q=(r&&r.error)||'';
+    PROY_ESTADO = (q==='no_eres_lider')
+      ? 'Esto lo cambia el líder de la empresa. Lo que escribas queda en tu celular, pero no le llega a tu equipo.'
+      : (q==='no_existe' || q==='sin_empresa')
+      ? 'Entra a tu obra para que la lista se guarde en ella.'
+      : 'No se pudo guardar en la obra. Queda en este celular y se reintenta.';
+    pintarProyectos(); return false;
+  }).catch(function(){
+    PROY_PENDIENTE=true;
+    PROY_ESTADO='Sin señal: queda en este celular y se sube solo cuando vuelva.';
+    pintarProyectos(); return false;
+  });
+}
 function _guardarProyectos(l, actual){
   var e=empleador();
   e.proyectos=l.slice();
   e.proyecto=String(actual||'').trim();
   guardar(LS_EMPLEADOR,e);
+  PROY_PENDIENTE=true;
+  PROY_ESTADO='Guardando en la obra…';
   pintarProyectos();
+  subirProyectos();
 }
 function pintarProyectos(){
   var c=$('em-proyectos'); if(!c) return;
   var l=proyectosEmp(), act=proyectoActual();
+  var pie = PROY_ESTADO
+    ? ('<p class="sub" style="margin:7px 0 0;font-size:12.5px'+(PROY_PENDIENTE?';color:var(--oro)':'')+'">'+esc(PROY_ESTADO)+'</p>')
+    : '';
   if(!l.length){
-    c.innerHTML='<p class="sub" style="margin:0 0 9px">Todavía no anotaste ninguno. Mientras tanto, en los documentos sale el nombre de tu obra en OBRASST.</p>';
+    c.innerHTML='<p class="sub" style="margin:0 0 9px">Todavía no anotaste ninguno. Mientras tanto, en los documentos sale el nombre de tu obra en OBRASST.</p>'+pie;
     return;
   }
   var h='';
@@ -16044,7 +16124,7 @@ function pintarProyectos(){
        '<button type="button" class="pry-x" onclick="quitarProyecto('+i+')" aria-label="Quitar '+escA(n)+'">✕</button>'+
        '</div>';
   });
-  c.innerHTML=h;
+  c.innerHTML=h+pie;
 }
 function agregarProyecto(){
   var inp=$('em-proy-nuevo'); if(!inp) return;
@@ -27016,7 +27096,7 @@ function pintarAccionesEmpresas(){
   if(mias.length){
     h+='<div class="sec-tit" style="margin-top:20px">Solo el líder</div>'+
       '<button class="mp-fila" type="button" onclick="abrirTraspasarMando()"><span class="mp-ic">🔑</span>'+
-        '<span><b>Pasarle el mando a otro</b><small>Si dejas la obra, el líder pasa a ser otro de tu equipo. Tú te quedas dentro como supervisor.</small></span>'+
+        '<span><b>Pasarle el mando a otro</b><small>Si dejas la obra, el líder pasa a ser otro de tu equipo. Puedes dejar días de acompañamiento en los que manden los dos.</small></span>'+
         '<span class="mp-ir" aria-hidden="true">›</span></button>'+
       '<button class="mp-fila peligro" type="button" onclick="abrirBorrarEmpresa()"><span class="mp-ic">🗑️</span>'+
         '<span><b>Eliminar una empresa o una obra</b><small>Borra del servidor todo lo suyo, sin vuelta atrás. Si después alguien registra ese RUC, empieza de cero.</small></span>'+
@@ -27064,7 +27144,7 @@ function pintarAccionesEmpresas(){
 function abrirTraspasarMando(){
   var mias = MIS_EMP.filter(function(x){ return x.rol==='dueno'; });
   if(!mias.length){ aviso('No eres l\u00edder de ninguna','Solo el l\u00edder puede pasar el mando.','\uD83D\uDD12'); return; }
-  var h='<div class="sub" style="margin:0 0 10px">\u00bfDe cu\u00e1l quieres pasar el mando? El que lo recibe pasa a ser el l\u00edder; t\u00fa te quedas dentro como supervisor.</div>';
+  var h='<div class="sub" style="margin:0 0 10px">\u00bfDe cu\u00e1l quieres pasar el mando? El que lo recibe pasa a ser el l\u00edder. Puedes dejar unos d\u00edas de acompa\u00f1amiento en los que manden los dos; despu\u00e9s te quedas dentro como supervisor.</div>';
   mias.forEach(function(e){
     h+='<button class="tarj vidrio" style="display:block;width:100%;text-align:left" '+
        'onclick="pedirCorreoDelMando(\''+escA(e.id)+'\')"><b>'+esc(e.nombre)+'</b>'+
@@ -27084,20 +27164,51 @@ function pedirCorreoDelMando(empId){
     preguntar('\u00bfA qui\u00e9n de tu equipo?',
       'Escribe el correo con el que esa persona entra a OBRASST. Tiene que estar ya dentro de \u00ab'+e.nombre+'\u00bb: '+
       'si todav\u00eda no entr\u00f3, primero m\u00e1ndale su c\u00f3digo de invitaci\u00f3n.',
-      '', function(correo){ pedirCodigoDelMando(correo); }, '\uD83D\uDD11');
+      '', function(correo){ pedirDiasDelMando(correo); }, '\uD83D\uDD11');
   }, 240);
+}
+/* ══ LOS DÍAS DE ACOMPAÑAMIENTO ═════════════════════════
+   Una salida de verdad no es un interruptor. Durante unos días hacen
+   falta los dos mandando: el que se va todavía tiene que poder nombrar
+   a alguien o abrir un frente mientras entrega.
+   El plazo lo cuenta el SERVIDOR y se vence solo. Nadie tiene que
+   acordarse de nada, ni hay que escribir a soporte el día seis.   */
+var MANDO_DIAS=5;
+function pedirDiasDelMando(correo){
+  correo=String(correo||'').trim().toLowerCase();
+  var e=MANDO_EMP;
+  if(!e) return;
+  if(correo.indexOf('@')<1){ aviso('Ese correo no se ve bien','Revísalo y vuelve a intentarlo. No se cambió nada.','⚠️'); return; }
+  setTimeout(function(){
+    preguntar('¿Cuántos días de acompañamiento?',
+      'Durante ese plazo mandan LOS DOS: '+correo+' y tú. Los dos pueden nombrar supervisores y abrir frentes, '+
+      'y así entregas sin dejar la obra a medias.\n\nCuando se cumpla el plazo, tú pasas a supervisor solo, '+
+      'sin que nadie tenga que hacer nada.\n\nEscribe 0 si quieres entregar de una vez. Máximo 90.',
+      '5', function(txt){ _mandoConDias(correo, txt); }, '📅');
+  }, 240);
+}
+function _mandoConDias(correo, txt){
+  var d=parseInt(String(txt||'').replace(/[^0-9]/g,''),10);
+  if(isNaN(d)) d=0;
+  if(d<0) d=0; if(d>90) d=90;
+  MANDO_DIAS=d;
+  pedirCodigoDelMando(correo);
 }
 function pedirCodigoDelMando(correo){
   correo=String(correo||'').trim().toLowerCase();
   var e=MANDO_EMP;
   if(!e) return;
-  if(correo.indexOf('@')<1){ aviso('Ese correo no se ve bien','Rev\u00edsalo y vuelve a intentarlo. No se cambi\u00f3 nada.','\u26a0\ufe0f'); return; }
+  var d=MANDO_DIAS|0;
+  var conAcomp = d>0
+    ? ('Durante los próximos '+d+' día'+(d===1?'':'s')+' van a mandar los dos: '+correo+' y tú. '+
+       'Al cumplirse el plazo, tú pasas a supervisor solo — con acceso a todo lo registrado, pero sin poder nombrar a nadie.')
+    : ('Desde ahora la dirige '+correo+', y tú quedas como supervisor en el acto: sigues viendo todo lo registrado, '+
+       'pero ya no puedes nombrar a nadie.');
   setTimeout(function(){
     preguntar('Confirmar el traspaso',
-      'A partir de ahora, \u00ab'+e.nombre+'\u00bb la va a dirigir '+correo+': podr\u00e1 invitar supervisores, abrir proyectos y '+
-      'eliminar la empresa.\n\nT\u00fa te quedas dentro como supervisor, con acceso a todo lo registrado, pero ya no podr\u00e1s '+
-      'nombrar a nadie.\n\nPara confirmar, escribe el c\u00f3digo: '+e.codigo,
-      '', function(txt){ traspasarMandoAhora(e, correo, txt); }, '\uD83D\uDD11');
+      '«'+e.nombre+'» pasa a manos de '+correo+': podrá invitar supervisores, abrir proyectos y eliminar la empresa.\n\n'+
+      conAcomp+'\n\nPara confirmar, escribe el código: '+e.codigo,
+      '', function(txt){ traspasarMandoAhora(e, correo, txt); }, '🔑');
   }, 240);
 }
 function traspasarMandoAhora(e, correo, texto){
@@ -27108,7 +27219,7 @@ function traspasarMandoAhora(e, correo, texto){
   if(!hayCuenta()){ aviso('Sin sesi\u00f3n','Entra a tu cuenta para poder pasar el mando.','\uD83D\uDD11'); return; }
   aviso('Pasando el mando\u2026','Un momento.','\u23F3');
   var confirmo = String(texto||'').toUpperCase().replace(/\s+/g,'');
-  sbRpc('sst_traspasar_mando', {p_emp:e.id, p_correo:correo, p_confirmo:confirmo}).then(function(r){
+  sbRpc('sst_traspasar_mando', {p_emp:e.id, p_correo:correo, p_confirmo:confirmo, p_dias:(MANDO_DIAS|0)}).then(function(r){
     r = r || {};
     if(r.ok!==true){
       var m = {sin_sesion:'Tu sesi\u00f3n venci\u00f3. Sal y vuelve a entrar a tu cuenta. No se cambi\u00f3 nada.',
@@ -32007,7 +32118,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
       barra de abajo y espera el toque.
 
    Nunca se recarga en la primera instalacion, ni dos veces seguidas. */
-var SELLO_APP='79d67b1adf';
+var SELLO_APP='e6800e23e6';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
