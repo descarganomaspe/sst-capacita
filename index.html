@@ -394,6 +394,29 @@ body{background:#071C27;color:var(--tinta);font-family:system-ui,-apple-system,'
   font-variant-numeric:tabular-nums;background:rgba(var(--w),.08);
   border:1px solid rgba(var(--w),.10);border-radius:999px;padding:2px 10px;line-height:1.5}
 .bloque-sub{margin-top:5px;font-size:13px;line-height:1.45;color:var(--gris)}
+/* ══════ LOS DOS NIVELES DESPLEGABLES (12/09/2026) ══════════════════
+   Con 60 capacitaciones por sector, la lista plana era un rollo de tres
+   pantallazos. Marcelo pidio agruparlas «por familia, luego por
+   especialidad», y que las dos se desplieguen. Ahora la especialidad es
+   el bloque -boton con su flecha- y la familia se abre EN LINEA, debajo
+   de su propia tarjeta, en vez de en una hoja flotante: asi el atras no
+   tiene nada que cerrar y el pulgar no pierde el sitio. */
+button.bloque{width:100%;display:block;text-align:left;background:none;
+  border:0;border-top:1px solid rgba(var(--w),.13);color:inherit;
+  font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.bloque:focus-visible{outline:2px solid var(--oro);outline-offset:3px;border-radius:10px}
+.bloque-fle{flex:0 0 auto;color:var(--oro);font-size:13px;line-height:1;
+  transition:transform .18s ease;display:inline-block;margin-left:2px}
+.bloque[aria-expanded="true"] .bloque-fle{transform:rotate(90deg)}
+.bloque[aria-expanded="false"] .bloque-sub{display:none}
+/* la tarjeta de familia y sus variantes */
+.fam-cab{position:relative;padding-right:38px}
+.fam-fle{position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  color:var(--oro);font-size:14px;transition:transform .18s ease}
+.fam-cab[aria-expanded="true"] .fam-fle{transform:translateY(-50%) rotate(90deg)}
+.fam-hijos{margin:0 0 10px;padding-left:14px;
+  border-left:2px solid rgba(245,183,0,.30)}
+.fam-hijos .tarj{margin-bottom:8px}
 #haz{position:fixed;inset:0;z-index:-2;pointer-events:none;
   background:conic-gradient(from 200deg at 50% -20%, rgba(245,183,0,0) 0deg, rgba(245,183,0,.13) 30deg, rgba(245,183,0,0) 70deg);
   animation:respira 14s ease-in-out infinite}
@@ -4422,8 +4445,9 @@ input,textarea{-webkit-user-select:text;user-select:text}
       <p class="sub" style="margin:-4px 0 8px;font-size:12.5px">El mismo de su cuenta OBRASST, letra por letra. Si todavía no tiene cuenta, la crea con ese correo.</p>
       <label>Su documento</label>
       <input id="inv-doc" placeholder="DNI o carné de extranjería" style="text-transform:uppercase" oninput="invRevisar()">
-      <label>Nombre y apellido — opcional</label>
+      <label>Nombre y apellido</label>
       <input id="inv-nombre" placeholder="Miguel Aguirre" oninput="invRevisar()">
+      <p class="sub" style="margin:-4px 0 8px;font-size:12.5px">Con este nombre entra también a tu <b>lista de trabajadores</b> como <b>Prevencionista de riesgos</b>, con su credencial. Antes lo nombrabas y no aparecía por ningún lado.</p>
     </div>
   </div>
 
@@ -4669,16 +4693,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
   </div>
 </div>
 
-<div class="hoja" id="hoja">
-  <div class="velo" onclick="cerrarHoja()"></div>
-  <div class="panel">
-    <div class="tirador"></div>
-    <h2 id="hoja-titulo"></h2>
-    <p class="sub" id="hoja-sub"></p>
-    <div id="hoja-lista"></div>
-    <button class="btn sec" onclick="cerrarHoja()">Cerrar</button>
-  </div>
-</div>
+
 
 </div>
 
@@ -7902,6 +7917,15 @@ function alcanzable(p){
   return !!EMP_OK[p];
 }
 function irAtras(){
+  /* ══════ EL ATRÁS DEJABA LA HOJA FLOTANDO (12/09/2026) ══════
+     El gesto del sistema ya cerraba primero lo que estuviera abierto
+     -_atrasDelSistema() consulta _hayAlgoAbierto()-, pero el BOTÓN «‹ Atrás»
+     de la barra llamaba aquí directo. Resultado: la pantalla de abajo
+     retrocedía y la hoja de variantes se quedaba encima, flotando sobre
+     otra pantalla. Marcelo lo describió exacto: «no se quede eso flotante».
+     El botón y el gesto tienen que hacer lo mismo, y lo primero que hacen
+     es cerrar lo de arriba. */
+  if(_hayAlgoAbierto()) return;
   var act=(document.querySelector('.pantalla.activa')||{}).id, prev=null;
   var casa=inicioDelModo();
   /* el trabajador que ya entró no se sale de su obra por equivocación:
@@ -7928,6 +7952,8 @@ function irAtras(){
 }
 /* Inicio: te lleva al inicio de tu modo. Si ya estás ahí, a la portada. */
 function irHome(){
+  /* mismo criterio que el botón de atrás: nada se queda flotando */
+  if(_hayAlgoAbierto()) return;
   var act=(document.querySelector('.pantalla.activa')||{}).id;
   var casa=inicioDelModo();
   HIST=[];
@@ -9220,7 +9246,7 @@ function pintarTemas(){
   var todos=temasDelSector(), fichas=fichasDelSector();
   var cu=$('temas-cuenta');
   if(cu) cu.innerHTML='<b>'+todos.length+' capacitaciones</b> de '+esc(s.nombre.toLowerCase())+
-    (TEMAS_VISTA==='grupos' ? (' \u00b7 en '+BLOQUES.length+' bloques. Las que llevan \u25B8 abren la lista de variantes.')
+    (TEMAS_VISTA==='grupos' ? (' \u00b7 en '+BLOQUES.length+' especialidades. Toca una para abrirla; las familias se despliegan dentro.')
                             : ' \u00b7 una por una.');
   var f=(TEMAS_BUSCA||'').trim().toLowerCase();
   if(f){
@@ -9238,7 +9264,7 @@ function pintarTemas(){
       .forEach(function(t){ c.appendChild(_tarjTema(t)); });
     return;
   }
-  var bloqueActual=null, titB={}, subB={};
+  var titB={}, subB={};
   BLOQUES.forEach(function(x){ titB[x[0]]=x[1]; subB[x[0]]=x[2]||''; });
   /* cuantas CAPACITACIONES hay en cada bloque, no cuantas tarjetas: una
      tarjeta de familia lleva siete adentro y decir «5 tarjetas» engaña */
@@ -9247,66 +9273,91 @@ function pintarTemas(){
     var k=f.bloque||'gestion';
     cuentaB[k]=(cuentaB[k]||0) + (f.tipo==='familia' ? f.ids.length : 1);
   });
+  /* las fichas, repartidas por bloque y en su orden */
+  var porB={}, ordenB=[];
   fichas.forEach(function(f){
-    /* el encabezado del bloque, la primera vez que aparece uno */
-    if(f.bloque && f.bloque!==bloqueActual){
-      bloqueActual=f.bloque;
-      var h=document.createElement('div');
-      h.className='bloque'+(c.children.length===0?' primero':'');
-      var nn=cuentaB[f.bloque]||0;
-      h.innerHTML='<div class="bloque-fila"><span class="bloque-nom">'+esc(titB[f.bloque]||'')+'</span>'+
-                  '<span class="bloque-n">'+nn+'</span></div>'+
-                  (subB[f.bloque]? '<div class="bloque-sub">'+esc(subB[f.bloque])+'</div>' : '');
-      c.appendChild(h);
-    }
-    var b=document.createElement('button');
-    if(f.tipo==='tema'){
-      var t=TEMAS[f.id], n=preguntasDe(f.id).length, tot=t.preguntas.length;
-      b.className='tarj vidrio'+(n===0?' bloq':'');
-      var libre=temaLibre(f.id);
-      if(libre) b.className='tarj vidrio libre';
-      b.innerHTML='<b>'+esc(t.tema)+(n===0?' 🔒':'')+(libre?' <span class="pin-libre">GRATIS</span>':'')+'</b><small>'+esc(t.escenario)+' · '+
-        (libre? (tot+' preguntas · completa en todos los planes')
-              : (S.lite?(n+' de '+tot+' preguntas gratis'):(tot+' preguntas')))+'</small>';
-      b.onclick=function(){ abrirTema(f.id); };
-    } else {
+    var k=f.bloque||'gestion';
+    if(!porB[k]){ porB[k]=[]; ordenB.push(k); }
+    porB[k].push(f);
+  });
+
+  ordenB.forEach(function(k, i){
+    var abierto=bloqueAbierto(k, i);
+    var h=document.createElement('button');
+    h.type='button';
+    h.className='bloque'+(i===0?' primero':'');
+    h.setAttribute('aria-expanded', abierto?'true':'false');
+    h.innerHTML='<div class="bloque-fila"><span class="bloque-nom">'+esc(titB[k]||'')+'</span>'+
+                '<span class="bloque-n">'+(cuentaB[k]||0)+'</span>'+
+                '<span class="bloque-fle" aria-hidden="true">\u25B8</span></div>'+
+                (subB[k]? '<div class="bloque-sub">'+esc(subB[k])+'</div>' : '');
+    h.onclick=function(){ ABIERTO.b[k]=!abierto; guardarAbierto(); pintarTemas(); };
+    c.appendChild(h);
+    if(!abierto) return;
+
+    porB[k].forEach(function(f){
+      if(f.tipo==='tema'){ c.appendChild(_tarjTema(TEMAS[f.id])); return; }
+      /* ── la familia: cabecera desplegable y sus variantes en linea ── */
       var F=FAMILIAS[f.familia];
       var libres=f.ids.filter(function(id){return preguntasDe(id).length>0;}).length;
-      b.className='tarj vidrio';
-      /* se nombran las primeras: asi se ve QUE hay dentro sin abrir */
+      var ab=!!ABIERTO.f[f.familia];
       var dentro=f.ids.map(function(id){ return TEMAS[id].variante||TEMAS[id].tema; });
-      var muestra=dentro.slice(0,3).join(' · ')+(dentro.length>3?(' y '+(dentro.length-3)+' m\u00e1s'):'');
-      b.innerHTML='<b>'+esc(F.titulo)+' \u25B8</b><small>'+f.ids.length+' capacitaciones: '+esc(muestra)+
-        (S.lite?(' · '+libres+' con preguntas gratis'):'')+'</small>';
-      b.onclick=function(){ abrirHoja(f.familia, f.ids); };
-    }
-    c.appendChild(b);
+      var muestra=dentro.slice(0,3).join(' \u00b7 ')+(dentro.length>3?(' y '+(dentro.length-3)+' m\u00e1s'):'');
+      var b=document.createElement('button');
+      b.type='button';
+      b.className='tarj vidrio fam-cab';
+      b.setAttribute('aria-expanded', ab?'true':'false');
+      b.innerHTML='<b>'+esc(F.titulo)+'</b><small>'+f.ids.length+' capacitaciones: '+esc(muestra)+
+        (S.lite?(' \u00b7 '+libres+' con preguntas gratis'):'')+'</small>'+
+        '<span class="fam-fle" aria-hidden="true">\u25B8</span>';
+      b.onclick=function(){ ABIERTO.f[f.familia]=!ab; guardarAbierto(); pintarTemas(); };
+      c.appendChild(b);
+      if(!ab) return;
+      var caja=document.createElement('div'); caja.className='fam-hijos';
+      f.ids.forEach(function(id){ caja.appendChild(_tarjVariante(id)); });
+      c.appendChild(caja);
+    });
   });
 }
-// --------------------------------------------------------- hoja de variantes
-function abrirHoja(familia, ids){
-  var F=FAMILIAS[familia];
-  $('hoja-titulo').textContent=F.pregunta;
-  /* ══════ EL SUBTITULO ERA UNO SOLO PARA TODAS (12/09/2026) ══════
-     Decia «las preguntas cambian con el equipo», que servia cuando la unica
-     familia con esa palabra era EPP. Al abrir «Tanques, buzones y silos»
-     quedaba pidiendo elegir un equipo que no existe. Ahora cada familia trae
-     el suyo, y si alguna no lo declara cae en el texto neutro. */
-  $('hoja-sub').textContent=F.sub||'Las preguntas cambian seg\u00fan el caso. Elige el tuyo.';
-  var c=$('hoja-lista'); c.innerHTML='';
-  ids.forEach(function(id){
-    var t=TEMAS[id], n=preguntasDe(id).length, tot=t.preguntas.length;
-    var propia=(t.sector!=='*');
-    var b=document.createElement('button');
-    b.className='tarj vidrio'+(n===0?' bloq':'');
-    b.innerHTML='<b>'+esc(t.variante||t.tema)+(n===0?' 🔒':'')+(propia?' <span style="color:var(--oro);font-size:11px;letter-spacing:.06em">DE TU SECTOR</span>':'')+
-      '</b><small>'+esc(t.escenario)+' · '+(S.lite?(n+' de '+tot+' gratis'):(tot+' preguntas'))+'</small>';
-    b.onclick=function(){ abrirTema(id); };
-    c.appendChild(b);
-  });
-  $('hoja').className='hoja abierta';
+/* ══ QUE QUEDA ABIERTO ════════════════════════════════════════════
+   Se recuerda entre visitas: si el usuario abrio «alto riesgo» y la
+   familia de altura, al volver los encuentra igual. Por defecto solo
+   viene abierto el PRIMER bloque -el de todos los dias, que empieza por
+   EPP-, para que nadie vuelva a abrir la pantalla y no ver nada.     */
+var ABIERTO={b:{}, f:{}};
+try{
+  var _g=JSON.parse(localStorage.getItem('sstc_temas_abiertos')||'null');
+  if(_g && typeof _g==='object'){ ABIERTO.b=_g.b||{}; ABIERTO.f=_g.f||{}; }
+}catch(e){}
+function guardarAbierto(){
+  try{ localStorage.setItem('sstc_temas_abiertos', JSON.stringify(ABIERTO)); }catch(e){}
 }
-function cerrarHoja(){ $('hoja').className='hoja'; }
+function bloqueAbierto(k, i){
+  if(Object.prototype.hasOwnProperty.call(ABIERTO.b, k)) return !!ABIERTO.b[k];
+  return i===0;
+}
+/* la tarjeta de una variante dentro de su familia: dice su nombre corto
+   y, si el tema es propio del sector, lo marca */
+function _tarjVariante(id){
+  var t=TEMAS[id], n=preguntasDe(id).length, tot=t.preguntas.length;
+  var propia=(t.sector!=='*');
+  var b=document.createElement('button'); b.type='button';
+  b.className='tarj vidrio'+(n===0?' bloq':'');
+  b.innerHTML='<b>'+esc(t.variante||t.tema)+(n===0?' \uD83D\uDD12':'')+
+    (propia?' <span style="color:var(--oro);font-size:11px;letter-spacing:.06em">DE TU SECTOR</span>':'')+
+    '</b><small>'+esc(t.escenario)+' \u00b7 '+(S.lite?(n+' de '+tot+' gratis'):(tot+' preguntas'))+'</small>';
+  b.onclick=function(){ abrirTema(id); };
+  return b;
+}
+/* ══ LA HOJA DE VARIANTES SE FUE (12/09/2026) ═════════════
+   Las familias abrian una hoja flotante desde abajo. Dos problemas: el
+   boton «‹ Atrás» navegaba la pantalla de atras y la hoja se quedaba
+   encima -«no se quede eso flotante»-, y para comparar dos variantes
+   habia que abrir y cerrar. Ahora la familia se despliega EN LINEA
+   dentro de su bloque, asi que abrirHoja ya no existe. cerrarHoja se
+   queda porque _ir() y abrirTema() la llaman en cada cambio de
+   pantalla, y ahora simplemente no encuentra nada que cerrar.        */
+function cerrarHoja(){ var j=$('hoja'); if(j) j.className='hoja'; }
 /* ══ EL TEMA TIENE QUE ESTAR PUESTO ════════════════════════════════
    Las pantallas de la evaluación (elegir modo, las preguntas, los datos
    y el resultado) viven de `S.tema`, que está solo en memoria. Si se
@@ -27697,6 +27748,12 @@ function generarInvitacion(){
   if(correo.indexOf('@')<1 || correo.lastIndexOf('.')<correo.indexOf('@')){
     m.textContent='Escribe el correo con el que esa persona va a entrar. Tiene que ser el mismo, letra por letra.'; return; }
   if(_norm(doc).length<6){ m.textContent='Falta su documento: DNI de 8 dígitos, o carné de extranjería.'; return; }
+  /* ══════ EL NOMBRE DEJÓ DE SER OPCIONAL (12/09/2026) ══════
+     Antes se podía nombrar a un supervisor sin poner su nombre. Ahora esa
+     misma persona entra a la lista de trabajadores, y un trabajador sin
+     nombre no sirve para nada: ni para el registro de capacitación, ni
+     para la credencial, ni para la fiscalización. */
+  if(nom.length<3){ m.textContent='Escribe su nombre y apellido. Con eso entra también a tu lista de trabajadores como Prevencionista de riesgos.'; return; }
   if(hasta && desde && hasta<desde){ m.textContent='La fecha de término no puede ser antes que la de inicio.'; return; }
   m.style.color='var(--gris)'; m.textContent='Generando el código…';
   var papel=($('inv-papel')&&$('inv-papel').value==='colider')?'colider':'gestor';
@@ -27719,6 +27776,7 @@ function generarInvitacion(){
       return;
     }
     m.textContent='';
+    var _ficha=fichaDeSupervisor(nom, doc);
     var cod=invBonito(j.codigo);
     var comoQue = (j.papel==='colider') ? 'como segundo líder SSOMA' : 'como supervisor SSOMA';
     var texto='Te invito a OBRASST '+comoQue+' de '+((empActiva()||{}).nombre||'nuestra empresa')+'.'+
@@ -27735,7 +27793,13 @@ function generarInvitacion(){
         (j.papel==='colider'?'como <b>segundo líder</b>':'como <b>supervisor SSOMA</b>')+'. Vence el '+fechaLarga(j.vence)+'.</p>'+
       '<button class="btn" style="margin:0" onclick="invCompartir('+JSON.stringify(texto).replace(/"/g,'&quot;')+')">Mandárselo por WhatsApp</button>'+
       '<button class="btn sec" style="margin:8px 0 0" onclick="invCopiar('+JSON.stringify(texto).replace(/"/g,'&quot;')+')">Copiar las instrucciones</button>'+
-      '</div>';
+      '</div>'+
+      (_ficha && _ficha.nuevo
+        ? '<p class="sub" style="margin:10px 0 0">Adem\u00e1s entr\u00f3 a tu <b>lista de trabajadores</b> como <b>Prevencionista de riesgos</b>'+
+          (_ficha.conQR?', con su credencial emitida':'')+'. Si su puesto real es otro, c\u00e1mbiaselo en su ficha.</p>'
+        : (_ficha && _ficha.ya
+          ? '<p class="sub" style="margin:10px 0 0">Ya estaba en tu lista de trabajadores con ese documento, as\u00ed que no se duplic\u00f3.</p>'
+          : ''));
     /* se limpian los datos de la persona para poder invitar a la siguiente,
        pero NO el recuadro con el código: es lo único que el líder tiene que
        copiar, y borrárselo justo después de generarlo sería cruel. */
@@ -27743,6 +27807,40 @@ function generarInvitacion(){
     cargarInvitaciones();
   })
   .catch(function(err){ m.style.color='var(--mal)'; m.textContent='No se pudo. '+porQue(err); });
+}
+/* ══════ EL SUPERVISOR ENTRA A LA LISTA DE TRABAJADORES ══════
+   «tampoco el de que los supervisores entren de frente a la lista de
+   trabajadores como Prevencionista de Riesgo» —Marcelo, 12/09/2026—, y
+   tenía razón: sst_invitar solo generaba el código. La persona quedaba
+   con acceso a la obra pero fuera del personal, o sea sin ficha, sin
+   credencial y sin salir en ningún registro. Que es lo primero que
+   pregunta un fiscalizador: el que supervisa, ¿está en tu registro de
+   capacitación?
+   Se busca por DOCUMENTO, no por nombre: el mismo Miguel escrito de dos
+   maneras distintas no tiene que aparecer dos veces.
+   El tope de trabajadores del plan NO frena esto a propósito: al que
+   acabas de nombrar supervisor no se le puede negar la ficha. El uso sí
+   se suma, así que la cuenta sigue siendo honesta.                  */
+var PUESTO_SUP='Prevencionista de riesgos';
+function fichaDeSupervisor(nombre, doc){
+  nombre=(nombre||'').trim();
+  var dni=_norm(doc||'');
+  if(nombre.length<3 || dni.length<6) return null;
+  var a=trabsLocal();
+  for(var i=0;i<a.length;i++){
+    if(_norm(a[i].dni||'')===dni){
+      if(!(a[i].puesto||'').trim()){ a[i].puesto=PUESTO_SUP; a[i].sync=0; trabsSet(a); }
+      return {ya:true, t:a[i]};
+    }
+  }
+  var t={id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+         nombre:nombre, dni:dni, puesto:PUESTO_SUP, area:'',
+         estatus:'activo', sangre:'', emergencia:'', emerQuien:'', sync:0};
+  a.push(t); trabsSet(a);
+  try{ sumarUso('trabajador'); }catch(e){}
+  var conQR=false;
+  try{ if(!credencialDe(t)){ emitirCredencialDe(t); conQR=true; } }catch(e){}
+  return {nuevo:true, t:t, conQR:conQR};
 }
 function invCompartir(t){
   if(navigator.share){ navigator.share({text:t}).catch(function(){}); return; }
@@ -28164,6 +28262,14 @@ var TC_ACCESOS = [
   {ic:'\uD83D\uDDD3\uFE0F', et:'Programa<br>de charlas', ir:'p-programa',  col:'a-oro'},
   {ic:'\uD83E\uDDF0', et:'Talleres<br>prácticos',     ir:'p-talleres',      col:'a-oro'},
   {ic:'\uD83E\uDD1D', et:'Nombrar<br>supervisores',  ir:'p-invitar',       col:'a-viol'},
+  /* ══════ «EL TRASPASO NO LO HAS PUESTO» (12/09/2026) ══════
+     Si estaba: abrirTraspasarMando() existe desde hace semanas. Pero
+     vivía dentro de «Mis proyectos», en una sección llamada «Solo el
+     líder», o sea a dos puertas del inicio y con un nombre que no dice
+     «traspaso». El mismo problema que con las capacitaciones: estar no
+     es lo mismo que verse. Marcelo deja su empresa en días; esto tiene
+     que estar donde lo encuentre sin buscarlo. */
+  {ic:'\uD83D\uDD11', et:'Pasar el mando<br>a otro',  fn:'abrirTraspasarMando', col:'a-oro'},
   {ic:'\uD83D\uDEA8', et:'Reportes<br>abiertos',     ir:'p-reporte',       col:'a-rojo'},
   {ic:'\uD83C\uDFE5', et:'Accidentes<br>e índices',  ir:'p-accidentes',    col:'a-rojo'},
   {ic:'\uD83C\uDF1F', et:'Buenas<br>prácticas',      ir:'p-buenas',        col:'a-verde'},
@@ -28181,7 +28287,12 @@ function liderBloquesDom(){
     var b=document.createElement('button'); b.className='acceso '+a.col; b.type='button';
     b.setAttribute('aria-label', a.et.replace(/<br>/g,' '));
     b.innerHTML='<span class="aro">'+a.ic+'</span><span class="et">'+a.et+'</span>';
-    b.onclick=function(){ ir(a.ir); };
+    /* casi todos los círculos llevan a una pantalla; alguno dispara una
+       acción -el traspaso abre su propio cuadro, no tiene pantalla- */
+    b.onclick=(function(ac){ return function(){
+      if(ac.fn && typeof window[ac.fn]==='function'){ window[ac.fn](); return; }
+      ir(ac.ir);
+    }; })(a);
     if(a.ir==='p-invitar' && LID_PEND.invitaciones){
       var s1=document.createElement('span'); s1.className='lid-num';
       s1.textContent=String(LID_PEND.invitaciones);
@@ -32178,7 +32289,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
       barra de abajo y espera el toque.
 
    Nunca se recarga en la primera instalacion, ni dos veces seguidas. */
-var SELLO_APP='9cb540897f';
+var SELLO_APP='c65628d15f';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
