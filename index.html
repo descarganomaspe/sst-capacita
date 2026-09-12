@@ -9094,8 +9094,18 @@ function pintarSectores(){
     c.appendChild(av);
   }
   SECTORES.forEach(function(s){
-    var n=Object.keys(TEMAS).filter(function(id){return TEMAS[id].sector===s.id;}).length;
-    if(!n) return;
+    /* ══════ EL CONTADOR QUE DESANIMABA (12/09/2026) ══════
+       Contaba solo los temas escritos EN la carpeta del sector y decia
+       «Construccion · 5 temas». Pero en construccion se dictan 37: los 5
+       propios mas los 32 transversales (altura, izaje, caliente,
+       extintores, primeros auxilios...) que salen en los cuatro sectores.
+       El que abria la app leia «5» y pensaba que no habia nada. Se cuenta
+       lo que de verdad va a ver: lo suyo y lo transversal. */
+    var n=Object.keys(TEMAS).filter(function(id){
+      var sec=TEMAS[id].sector; return sec===s.id || sec==='*';
+    }).length;
+    var nPropios=Object.keys(TEMAS).filter(function(id){return TEMAS[id].sector===s.id;}).length;
+    if(!nPropios) return;
     var b=document.createElement('button'); b.className='tarj vidrio';
     var _hoy = (sectorDeLaObra()===s.id);
     b.innerHTML='<b>'+s.icono+' '+esc(s.nombre)+(_hoy?' <span style="color:var(--oro);font-size:11px;letter-spacing:.06em">EL DE ESTA OBRA</span>':'')+
@@ -28107,6 +28117,17 @@ function liderDecisionesDom(){
    adentro de cada pantalla, que es donde hace falta.                */
 var TC_ACCESOS = [
   {ic:'\uD83D\uDDFC', et:'Torre de<br>control',      ir:'p-gestor',        col:'a-oro'},
+  /* ══════ «NO VEO LAS CAPACITACIONES EN LA APP» (12/09/2026) ══════
+     Y tenia razon. El inicio del lider traia solo las herramientas de
+     mando, y las capacitaciones —que son el producto— vivian una puerta
+     mas abajo: habia que tocar «Trabajar como supervisor en una obra»
+     para verlas. El dueño de una app de capacitacion abria su app y no
+     encontraba sus capacitaciones. Ahora las tres de todos los dias
+     estan aqui arriba, y el que quiera bajarse a la obra sigue
+     teniendo su boton. */
+  {ic:'\uD83C\uDF93', et:'Capacitación<br>por tema',  ir:'p-temas',         col:'a-verde'},
+  {ic:'\uD83D\uDDD3\uFE0F', et:'Programa<br>de charlas', ir:'p-programa',  col:'a-oro'},
+  {ic:'\uD83E\uDDF0', et:'Talleres<br>prácticos',     ir:'p-talleres',      col:'a-oro'},
   {ic:'\uD83E\uDD1D', et:'Nombrar<br>supervisores',  ir:'p-invitar',       col:'a-viol'},
   {ic:'\uD83D\uDEA8', et:'Reportes<br>abiertos',     ir:'p-reporte',       col:'a-rojo'},
   {ic:'\uD83C\uDFE5', et:'Accidentes<br>e índices',  ir:'p-accidentes',    col:'a-rojo'},
@@ -32122,7 +32143,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
       barra de abajo y espera el toque.
 
    Nunca se recarga en la primera instalacion, ni dos veces seguidas. */
-var SELLO_APP='00ee26babb';
+var SELLO_APP='6827a6060b';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
