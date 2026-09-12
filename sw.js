@@ -1,4 +1,4 @@
-var CACHE = 'sstc-1ab0608cf4-d';
+var CACHE = 'sstc-7d8d3ab128-e';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -86,8 +86,16 @@ self.addEventListener('fetch', function(e){
   catch(_x){ _mio = false; }
   if (!_mio) return;
   var esNav = (e.request.mode === 'navigate');
+  /* ── sw.js NO se guarda ──────────────────────────────────
+     La app le pregunta a sw.js cada tanto —con ?_=<hora> pegado, para
+     esquivar el cache del navegador— nada mas que para leerle el sello
+     y saber si hay version nueva. Si se guardara cada respuesta, cada
+     consulta dejaria una entrada distinta y en un mes habria cientos
+     de copias del mismo archivo de 4 KB en el celular. */
+  var _esSW = false;
+  try{ _esSW = /(^|\/)sw\.js$/.test(_u ? _u.pathname : ''); }catch(_s){}
   e.respondWith(conTope(e.request, esNav ? 4000 : 15000).then(function(r){
-    if (r && r.ok){ var c = r.clone(); caches.open(CACHE).then(function(x){ try{ x.put(e.request, c); }catch(err){} }); }
+    if (r && r.ok && !_esSW){ var c = r.clone(); caches.open(CACHE).then(function(x){ try{ x.put(e.request, c); }catch(err){} }); }
     return r;
   }).catch(function(){
     /* ./?app=1, ./?atajo=kardex y ./ son la misma app: se ignora la query */
