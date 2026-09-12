@@ -9369,6 +9369,41 @@ function obraFija(){
 }
 /* Pone el nombre de la obra en un campo y lo deja de solo lectura
    cuando la app ya sabe cual es. Devuelve true si quedo fijo. */
+/* ══ ELEGIR EL FRENTE EN EL PROPIO DOCUMENTO ══════════════════
+   Con varios proyectos anotados, obligar a ir a «Datos del empleador»
+   cada vez que se emite un documento de otro frente es un viaje de ida
+   y vuelta por cada constancia. Cuando hay dos o más, aquí mismo sale
+   un selector: el marcado viene puesto, y lo que se elija vale SOLO
+   para este documento — no cambia el marcado ni lo que ven los demás.
+   El campo sigue siendo de solo lectura a propósito: así nadie teclea
+   «Metro de Limaa» y ese nombre se va impreso en una constancia.   */
+function _picoObra(inp, fija){
+  var lista=[];
+  try{ lista = (typeof proyectosEmp==='function') ? proyectosEmp() : []; }catch(_e){ lista=[]; }
+  var id=inp.id+'-pick';
+  var sel=document.getElementById(id);
+  if(lista.length < 2){
+    if(sel && sel.parentNode) sel.parentNode.removeChild(sel);
+    return false;
+  }
+  if(!sel){
+    sel=document.createElement('select'); sel.id=id;
+    sel.setAttribute('aria-label','Proyecto u obra de este documento');
+    sel.onchange=function(){ var i=$(inp.id); if(i) i.value=this.value; };
+    if(inp.parentNode) inp.parentNode.insertBefore(sel, inp);
+  }
+  var hay=false;
+  sel.innerHTML=lista.map(function(n){
+    if(n===fija) hay=true;
+    return '<option value="'+escA(n)+'"'+(n===fija?' selected':'')+'>'+esc(n)+'</option>';
+  }).join('');
+  if(!hay && fija){
+    sel.insertAdjacentHTML('afterbegin','<option value="'+escA(fija)+'" selected>'+esc(fija)+'</option>');
+  }
+  sel.value=fija;
+  sel.style.display='';
+  return true;
+}
 function fijarCampoObra(idInput, idSelect, idNota){
   var inp=$(idInput); if(!inp) return false;
   var fija=obraFija();
@@ -9377,6 +9412,8 @@ function fijarCampoObra(idInput, idSelect, idNota){
   if(!fija){
     inp.readOnly=false; inp.style.opacity=''; inp.style.display='';
     if(nota) nota.innerHTML='';
+    var _v=document.getElementById(idInput+'-pick');
+    if(_v && _v.parentNode) _v.parentNode.removeChild(_v);
     return false;
   }
   inp.value=fija;
@@ -9384,13 +9421,17 @@ function fijarCampoObra(idInput, idSelect, idNota){
   inp.style.opacity='.7';
   inp.style.display='';
   if(sel) sel.style.display='none';
+  var _varios=false;
+  try{ _varios=_picoObra(inp, fija); }catch(_pk){}
   if(nota){
     var _dePry=false;
     try{ _dePry = (typeof proyectoActual==='function') && proyectoActual()===fija; }catch(_p){}
     nota.innerHTML='<span class="sub" style="display:block;margin-top:5px">'+
-      (_dePry
-        ? 'Es el proyecto que tienes marcado en «Datos del empleador». Si estás en otro frente, cámbialo ahí y sale igual en todos los documentos.'
-        : 'Es el nombre de tu obra en OBRASST. Si tu empresa lleva varios frentes, anótalos en «Datos del empleador» y el que marques sale aquí.')+
+      (_varios
+        ? 'Elige arriba el frente de ESTE documento. Viene puesto el que tienes marcado en «Datos del empleador»; cambiarlo aquí no cambia el marcado.'
+        : (_dePry
+          ? 'Es el proyecto que tienes marcado en «Datos del empleador». Si estás en otro frente, cámbialo ahí y sale igual en todos los documentos.'
+          : 'Es el nombre de tu obra en OBRASST. Si tu empresa lleva varios frentes, anótalos en «Datos del empleador» y el que marques sale aquí.'))+
       '</span>';
   }
   return true;
@@ -31966,7 +32007,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
       barra de abajo y espera el toque.
 
    Nunca se recarga en la primera instalacion, ni dos veces seguidas. */
-var SELLO_APP='f30aa643db';
+var SELLO_APP='79d67b1adf';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
