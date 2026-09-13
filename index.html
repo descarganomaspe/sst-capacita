@@ -2885,6 +2885,31 @@ input,textarea{-webkit-user-select:text;user-select:text}
   </div>
 </section>
 
+<section class="pantalla" id="p-comite">
+  <div class="barra"><span>Comité de SST</span></div>
+  <h2>Comité de Seguridad y Salud en el Trabajo</h2>
+  <p class="sub">Lo primero no es llenar un formato: es saber qué te toca. La app cuenta a tu gente y te dice si la ley te pide un <b>Comité paritario</b> o un <b>Supervisor de SST</b>.</p>
+  <div id="comite-cuerpo"></div>
+</section>
+
+<section class="pantalla" id="p-comite-armar">
+  <div class="barra"><span>El padrón</span></div>
+  <h2 id="ca-tit">El padrón</h2>
+  <p class="sub" id="ca-sub">—</p>
+  <div id="comite-armar"></div>
+</section>
+
+<section class="pantalla" id="p-comite-acta">
+  <div class="barra"><span>Acta de reunión</span></div>
+  <h2 id="cac-tit">Nueva acta</h2>
+  <div id="comite-acta"></div>
+</section>
+
+<section class="pantalla" id="p-comite-ver">
+  <div class="barra"><span>Acta</span></div>
+  <div id="comite-det"></div>
+</section>
+
 <section class="pantalla" id="p-accidentes">
   <div class="barra"><span>Accidentes e incidentes</span></div>
   <h2>Registro de accidentes e incidentes</h2>
@@ -7858,6 +7883,7 @@ var EMP_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-emp
             'p-trabajadores':1,'p-trab-nuevo':1,'p-trab-ficha':1,'p-trab-traer':1,'p-planes':1,'p-estatus':1,
             'p-kardex':1,'p-kardex-nuevo':1,'p-kardex-export':1,'p-empleador':1,
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,'p-constancias':1,'p-eval-ver':1,
+            'p-comite':1,'p-comite-armar':1,'p-comite-acta':1,'p-comite-ver':1,
             'p-accidentes':1,'p-acc-nuevo':1,'p-acc-ver':1,
             'p-gestion-quien':1,'p-lider-no':1,
             'p-actividades':1,'p-invitar':1,'p-invitacion':1,
@@ -7924,7 +7950,12 @@ var PANT_LLAVE={
      papel: «entregas de epp (10, pero sin descarga de registro del mes
      o total)». Es un tope de LLAVE, no de cantidad — se usa la
      herramienta, la constancia impresa se paga. */
-  'p-kardex-export':['kardex_export','La descarga del kardex del mes']
+  'p-kardex-export':['kardex_export','La descarga del kardex del mes'],
+  /* p-comite NO lleva llave a propósito: es la pantalla que contesta
+     «¿me toca comité o supervisor?», y esa respuesta es de todos. Lo
+     que se paga son las actas y el padrón paritario.                */
+  'p-comite-acta':['comite','El Libro de Actas del Comité'],
+  'p-comite-ver':['comite','El Libro de Actas del Comité']
 };
 /* ── navegación ────────────────────────────────────────────────────
    Un solo flujo. HIST guarda por dónde pasaste y «Atrás» deshace ese
@@ -8267,6 +8298,10 @@ function _ir(p){
   if(p==='p-amonestaciones')pintarAmonestaciones(); if(p==='p-amon-nueva')prepAmonestacion();
   if(p==='p-amon-ver')pintarAmonDetalle(); if(p==='p-amon-firma')prepFirmaAmon(); if(p==='p-estatus')pintarEstatus();
   if(p==='p-accidentes')pintarAccidentes(); if(p==='p-acc-nuevo')prepAccNuevo(); if(p==='p-acc-ver')pintarAccVer();
+  if(p==='p-comite'){ pintarComite(); comiteSync().then(function(){ if(_pantAct()==='p-comite') pintarComite(); }); }
+  if(p==='p-comite-armar')pintarComiteArmar();
+  if(p==='p-comite-acta')prepComiteActa();
+  if(p==='p-comite-ver')pintarComiteVer();
   if(p==='p-lider-no')pintarLiderNo();
   if(p==='p-invitar'){ prepInvitar(); pintarInvitar(); } if(p==='p-invitacion')prepCanje();
   if(p==='p-buenas'){ pintarBuenas(); subirBuenasPendientes().then(bajarBuenas).then(function(n){ if(n) pintarBuenas(); }); }
@@ -8505,7 +8540,7 @@ var PLANES = [
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
     gestores:1, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
-            constancias:1, semanal:1, qr_pets:1, kardex_export:1 } },
+            constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1 } },
 
   { id:'supervisor', nombre:'Supervisor SST', precio:59, anual:590, tienda:69, tiendaAnual:690, orden:2,
     compra:'obrasst-supervisor', compraAnual:'obrasst-supervisor-anual',
@@ -8513,7 +8548,7 @@ var PLANES = [
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
     gestores:3, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
-            constancias:1, semanal:1, qr_pets:1, kardex_export:1,
+            constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1,
             qr_iperc:1, inspecciones:1 } },
 
   { id:'ssoma', nombre:'SSOMA', precio:99, anual:990, tienda:119, tiendaAnual:1190, orden:3,
@@ -8522,7 +8557,7 @@ var PLANES = [
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
     gestores:6, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
-            constancias:1, semanal:1, qr_pets:1, kardex_export:1,
+            constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1,
             qr_iperc:1, inspecciones:1,
             msds:1, qr_msds:1, campanas:1, simulacros:1 } },
 
@@ -8532,7 +8567,7 @@ var PLANES = [
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
     gestores:10, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
-            constancias:1, semanal:1, qr_pets:1, kardex_export:1,
+            constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1,
             qr_iperc:1, inspecciones:1,
             msds:1, qr_msds:1, campanas:1, simulacros:1,
             carpetas:1 } }
@@ -9091,6 +9126,11 @@ function repintarSiEsElTablero(){
   if(act && act.id==='p-emp-home' && typeof pintarEmpHome==='function') pintarEmpHome();
 }
 function esc(t){var d=document.createElement('div');d.textContent=t||'';return d.innerHTML;}
+/* esc() sirve para texto: escapa & < > y nada mas. Dentro de un
+   value="..." eso no alcanza — un apellido con comillas parte el
+   atributo y se lleva por delante el resto de la etiqueta. escAt()
+   es el mismo escape mas las comillas. */
+function escAt(t){ return esc(t).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 // las explicaciones vienen con viñetas '• ' al inicio de línea: se pintan como lista
 function fmt(t){
   var lin=(t||'').split('\n'), h='', ul=false;
@@ -11764,12 +11804,54 @@ function frenoLite(k, cuantosHay, queCosa, mas){
 /* Lo que gana el peldano siguiente, dicho en una linea. Es lo que se
    muestra cuando lo que pediste vive mas arriba: nunca se le enseña a
    nadie el precio de un plan que esta a dos saltos. */
-var GANA_EL_SIGUIENTE = {
-  prevencionista:'el programa de charlas completo, 80 kardex al mes, 30 asistencias escaneadas al mes, 50 trabajadores y el QR del RISST',
-  supervisor:'todo el programa de capacitaciones, 200 kardex al mes, 100 trabajadores y los QR de PETS e IPERC',
-  ssoma:'hojas MSDS, amonestaciones, reporte semanal de HHT, constancias y todos los QR',
-  gestion:'las seis carpetas del sistema de gestión y todo sin tope'
-};
+/* el nombre de cada llave del plan, en cristiano. `doc` no esta: se
+   saco de la vitrina el 13/09/2026 («eso sacalo, no se que es»). */
+var NOMBRE_LLAVE=[['constancias','Constancias de capacitación firmadas'],
+            ['kardex_export','Descarga del kardex del mes y el total'],
+            ['qr_risst','QR del RISST'],['qr_pets','QR de PETS'],['qr_iperc','QR de IPERC'],
+            ['comite','Comité de SST: padrón, actas y acuerdos'],
+            ['inspecciones','Inspecciones de obra'],
+            ['msds','Hojas MSDS'],['qr_msds','QR de las hojas MSDS'],
+            ['campanas','Campañas'],['simulacros','Simulacros'],
+            ['carpetas','Las seis carpetas del sistema de gestión']];
+/* ══════ LO QUE GANAS AL SUBIR SE CALCULA, NO SE ESCRIBE ═══════════
+   Esto era una lista escrita a mano, y el dia que Marcelo rehizo la
+   matriz se quedo mintiendo: le ofrecia al del LITE «el QR del RISST»
+   —que ya tenia— y al del Supervisor «amonestaciones», que tambien
+   tenia desde el plan gratis. Un argumento de venta falso es peor que
+   no tener ninguno: el cliente paga, no ve nada nuevo, y pide que le
+   devuelvan la plata. Ahora sale de restar un peldaño menos el otro.
+   Si la matriz cambia, el texto cambia solo.                        */
+function _ganaEl(id){
+  var P=planDe(id), A=null, i;
+  for(i=0;i<PLANES.length;i++) if(PLANES[i].orden===P.orden-1) A=PLANES[i];
+  if(!A) return 'más cupo y más herramientas';
+  var l=[];
+  /* lo que se abre y antes no */
+  NOMBRE_LLAVE.forEach(function(x){
+    if(P.puede[x[0]] && !A.puede[x[0]]) l.push(x[1].toLowerCase());
+  });
+  /* el contenido completo, que es lo caro */
+  if(P.temas===-1 && A.temas!==-1) l.unshift('todas las capacitaciones del sector y las '+CHARLAS.length+' charlas');
+  /* y el cupo, solo el que de verdad crece */
+  var cupos=[['trabajador','trabajadores'],['kardex','entregas de EPP'],
+             ['escaneo','documentos escaneados'],['credencial','credenciales'],
+             ['amonestacion','amonestaciones'],['semana','semanas de reporte HHT']];
+  var suben=[];
+  cupos.forEach(function(c){
+    var a=A.tope[c[0]], b=P.tope[c[0]];
+    if(b===-1 && a!==-1) suben.push(c[1]+' sin tope');
+    else if(b>a && a!==-1) suben.push(b+' '+c[1]);
+  });
+  if(suben.length) l.push(suben.slice(0,3).join(', '));
+  if(P.gestores>A.gestores) l.push('hasta '+P.gestores+' personas en la gestión');
+  if(!l.length) return 'más cupo y más herramientas';
+  l=l.slice(0,4);
+  return l.length===1 ? l[0] : (l.slice(0,-1).join(', ')+' y '+l[l.length-1]);
+}
+var GANA_EL_SIGUIENTE = (function(){
+  var o={}; PLANES.forEach(function(P){ if(P.orden>0) o[P.id]=_ganaEl(P.id); }); return o;
+})();
 /* lo que no entra en el plan y no es cuestion de cantidad, sino de llave */
 function soloConCodigo(queCosa, llave){
   if(!llave) llave='constancias';
@@ -11851,17 +11933,9 @@ function _puntosDelPlan(P){
   }
   l.push(P.gestores>1 ? ('Hasta '+P.gestores+' personas en la gestión, y más por S/ '+PUESTO_EXTRA+' al mes cada una')
                       : 'Una sola persona');
-  /* Cada llave sale UNA vez y con el nombre que el usuario ve en la app.
-     `doc` no esta: se saco de la vitrina el 13/09/2026. */
-  var llaves=[['constancias','Constancias de capacitación firmadas'],
-              ['kardex_export','Descarga del kardex del mes y el total'],
-              ['qr_risst','QR del RISST'],['qr_pets','QR de PETS'],['qr_iperc','QR de IPERC'],
-              ['inspecciones','Inspecciones de obra'],
-              ['msds','Hojas MSDS'],['qr_msds','QR de las hojas MSDS'],
-              ['campanas','Campañas'],['simulacros','Simulacros'],
-              ['carpetas','Las seis carpetas del sistema de gestión']];
+  /* Cada llave sale UNA vez y con el nombre que el usuario ve en la app. */
   var puestas={};
-  llaves.forEach(function(x){
+  NOMBRE_LLAVE.forEach(function(x){
     if(P.puede[x[0]] && !puestas[x[1]]){ puestas[x[1]]=1; l.push(x[1]); }
   });
   return l.filter(Boolean);
@@ -12311,7 +12385,11 @@ var _BASE_OBRA = {LS_TRAB:'sstc_trab', LS_KARDEX:'sstc_kardex',
                      Sin esto, borrar una credencial no servia de nada:
                      el otro celular la volvia a subir y en la garita el
                      QR del despedido seguia diciendo HABILITADO. */
-                  LS_CRED_TUMBA:'sstc_cred_tumba'};
+                  LS_CRED_TUMBA:'sstc_cred_tumba',
+                  /* el comité también es de UNA obra: un frente de
+                     construcción y una mina no comparten comité, y sus
+                     libros de actas no se pueden mezclar. */
+                  LS_COMITE:'sstc_comite'};
 var _MIGRADAS = {};
 function claveDeObra(base){
   var e=(typeof empActiva==='function') ? empActiva() : null;
@@ -15291,6 +15369,850 @@ function copiarSemanal(){
 }
 
 // =================================================================
+//  EL COMITÉ DE SEGURIDAD Y SALUD EN EL TRABAJO
+//
+//  De las quince ideas que trajo Marcelo, esta es la que eligió. Y es
+//  la correcta, porque el comité es la única obligación de la Ley
+//  29783 que NO se resuelve con un documento: se resuelve con doce
+//  reuniones al año, cada una con su acta, su quórum y sus acuerdos
+//  con responsable y plazo. Es lo primero que pide SUNAFIL y lo
+//  primero que no tiene nadie.
+//
+//  La regla que ordena toda la pantalla es de la ley, no del negocio:
+//    · menos de 20 trabajadores  → Supervisor de SST   (Ley 29783, art. 30)
+//    · 20 o más                  → Comité paritario    (Ley 29783, art. 29)
+//  El número de miembros sale del D.S. 005-2012-TR art. 43: de 4 a 12;
+//  con más de 100 trabajadores, 6 y dos más por cada 100, tope 12.
+// =================================================================
+function _pantAct(){ return (document.querySelector('.pantalla.activa')||{}).id; }
+
+var COMITE_MIN = 20;                    /* Ley 29783, arts. 29 y 30 */
+var COMITE_LADOS = [
+  ['empleador',  'Del empleador',     'Los designa la empresa'],
+  ['trabajador', 'De los trabajadores','Los eligen los trabajadores en votación (Ley 29783, art. 31)']
+];
+var COMITE_TIPOS = {
+  instalacion:   'Constitución e instalación',
+  ordinaria:     'Reunión ordinaria',
+  extraordinaria:'Reunión extraordinaria'
+};
+
+function comiteLocal(){
+  var c=null;
+  try{ c=leer(LS_COMITE,null); }catch(e){ c=null; }
+  if(!c || typeof c!=='object') c={};
+  if(!Array.isArray(c.miembros)) c.miembros=[];
+  if(!Array.isArray(c.actas))    c.actas=[];
+  return c;
+}
+function comiteGuardar(c, callado){
+  c.ts=Date.now();
+  guardar(LS_COMITE, c);
+  if(!callado) comiteEmpujar();
+  return c;
+}
+/* ── el viaje a la nube ────────────────────────────────────────────
+   El comité NO es de un celular: el presidente lo arma desde la
+   oficina y el secretario levanta el acta en obra. Si cada teléfono
+   guardara el suyo habría dos comités distintos, que es exactamente
+   lo que un inspector encuentra y multa. Va por `sst_estado`, la misma
+   puerta del programa del mes: una clave por obra, un objeto entero. */
+var _COM_EMPUJE=null;
+function comiteEmpujar(){
+  if(typeof hayCuenta!=='function' || !hayCuenta() || !empActiva()) return;
+  if(_COM_EMPUJE) clearTimeout(_COM_EMPUJE);
+  _COM_EMPUJE=setTimeout(function(){
+    _COM_EMPUJE=null;
+    try{ estadoSubir('comite_'+claveObra(), comiteLocal()); }catch(_e){}
+  }, 800);
+}
+/* La fusión no puede ser «gana el último que escribió» a secas: el
+   padrón y las actas cambian por caminos distintos. El padrón sí es
+   uno solo y gana el más nuevo; las actas se UNEN por id, porque dos
+   actas escritas en dos teléfonos son dos actas, no una repetida. */
+function comiteFusion(mio, ajeno){
+  if(!ajeno || typeof ajeno!=='object') return mio;
+  var nuevo = ((+ajeno.ts||0) > (+mio.ts||0)) ? ajeno : mio;
+  var out = {
+    tipo: nuevo.tipo, desde: nuevo.desde, hasta: nuevo.hasta,
+    eleccion: nuevo.eleccion, instalacion: nuevo.instalacion, libro: nuevo.libro,
+    miembros: Array.isArray(nuevo.miembros) ? nuevo.miembros : [],
+    actas: [], ts: Math.max(+mio.ts||0, +ajeno.ts||0)
+  };
+  var por={};
+  (mio.actas||[]).forEach(function(a){ if(a && a.id) por[a.id]=a; });
+  (ajeno.actas||[]).forEach(function(a){
+    if(!a || !a.id) return;
+    var y=por[a.id];
+    if(!y || (+a.ts||0) > (+y.ts||0)) por[a.id]=a;
+  });
+  for(var k in por) if(Object.prototype.hasOwnProperty.call(por,k)) out.actas.push(por[k]);
+  out.actas.sort(function(x,y){ return String(y.fecha||'').localeCompare(String(x.fecha||'')); });
+  return out;
+}
+var _COM_BAJANDO=false;
+function comiteSync(){
+  if(typeof hayCuenta!=='function' || !hayCuenta() || !empActiva() || _COM_BAJANDO)
+    return Promise.resolve(comiteLocal());
+  _COM_BAJANDO=true;
+  return estadoBajar('comite_'+claveObra()).then(function(aj){
+    _COM_BAJANDO=false;
+    var mio=comiteLocal();
+    if(aj===null || aj===undefined) return mio;
+    var junto=comiteFusion(mio, aj);
+    comiteGuardar(junto, true);
+    estadoSubir('comite_'+claveObra(), junto);
+    return junto;
+  }).catch(function(){ _COM_BAJANDO=false; return comiteLocal(); });
+}
+
+/* ── lo que dice la ley con TU número de gente ──────────────────── */
+function comiteCuantos(){
+  try{ return trabsLocal().filter(function(t){ return t.estatus!=='cesado'; }).length; }
+  catch(e){ return 0; }
+}
+/* D.S. 005-2012-TR art. 43: de 4 a 12 miembros. A falta de acuerdo, no
+   menos de 6 con más de 100 trabajadores, agregando 2 por cada 100
+   adicionales, hasta un máximo de 12. */
+function comiteLoQueToca(n){
+  n = +n || 0;
+  if(n < COMITE_MIN)
+    return { tipo:'supervisor', min:1,
+             ley:'Ley 29783, art. 30',
+             dice:'Con menos de 20 trabajadores no te toca comité: los trabajadores nombran a un Supervisor de SST.' };
+  var min = (n > 100) ? Math.min(12, 6 + 2*(Math.floor((n-1)/100) - 1)) : 4;
+  return { tipo:'comite', min:min,
+           ley:'Ley 29783, art. 29 · D.S. 005-2012-TR, art. 43',
+           dice:'Con '+n+' trabajadores te toca un Comité paritario de por lo menos '+min+' integrantes: '+
+                (min/2)+' del empleador y '+(min/2)+' de los trabajadores.' };
+}
+function comiteTitulares(lado){
+  return comiteLocal().miembros.filter(function(m){ return m.lado===lado && !m.sup; });
+}
+function comiteSuplentes(lado){
+  return comiteLocal().miembros.filter(function(m){ return m.lado===lado && m.sup; });
+}
+/* ¿está bien armado? Devuelve la lista de lo que falta, en cristiano.
+   No es un adorno: es lo que el inspector revisa antes que nada. */
+function comiteFaltas(){
+  var c=comiteLocal(), n=comiteCuantos(), toca=comiteLoQueToca(n), f=[];
+  if(toca.tipo==='supervisor'){
+    if(!c.miembros.length) f.push('Falta nombrar al Supervisor de SST.');
+    if(!c.eleccion) f.push('Falta la fecha de la elección.');
+    if(!c.hasta) f.push('Falta hasta cuándo dura su mandato.');
+    return f;
+  }
+  var e=comiteTitulares('empleador').length, t=comiteTitulares('trabajador').length;
+  if(e+t < toca.min) f.push('Faltan integrantes: tienes '+(e+t)+' y te piden '+toca.min+'.');
+  if(e!==t) f.push('El comité no es paritario: '+e+' del empleador y '+t+' de los trabajadores. Tienen que ser iguales.');
+  if(e+t > 12) f.push('Son más de 12 integrantes, y el máximo de ley es 12 (D.S. 005-2012-TR, art. 43).');
+  if(!c.miembros.some(function(m){ return m.cargo==='presidente'; })) f.push('Falta elegir al Presidente (D.S. 005-2012-TR, art. 56).');
+  if(!c.miembros.some(function(m){ return m.cargo==='secretario'; })) f.push('Falta designar al Secretario (D.S. 005-2012-TR, art. 58).');
+  if(!c.eleccion) f.push('Falta la fecha de la elección de los representantes de los trabajadores.');
+  if(!c.instalacion) f.push('Falta la fecha del acta de constitución e instalación.');
+  if(!c.desde || !c.hasta) f.push('Falta el período del mandato.');
+  else {
+    var anios=(new Date(c.hasta) - new Date(c.desde))/31557600000;
+    if(anios > 2.02) f.push('El mandato pasa de 2 años, y el máximo de ley es 2 (D.S. 005-2012-TR, art. 62).');
+    if(anios < 0.98) f.push('El mandato no llega a 1 año, y el mínimo de ley es 1 (D.S. 005-2012-TR, art. 62).');
+  }
+  return f;
+}
+function comiteDiasDeMandato(){
+  var c=comiteLocal();
+  if(!c.hasta) return null;
+  return Math.round((new Date(String(c.hasta).slice(0,10)) - new Date(hoyISO()))/86400000);
+}
+/* quórum de la reunión: la mitad más uno (D.S. 005-2012-TR, art. 69) */
+function comiteQuorum(){
+  var tot=comiteLocal().miembros.filter(function(m){ return !m.sup; }).length;
+  return tot ? Math.floor(tot/2)+1 : 0;
+}
+function comiteHuboQuorum(a){
+  var q=comiteQuorum();
+  return q>0 && ((a.asistentes||[]).length >= q);
+}
+
+/* ── las doce reuniones del año (D.S. 005-2012-TR, art. 68) ─────── */
+function comiteActasDe(anio){
+  return comiteLocal().actas.filter(function(a){ return String(a.fecha||'').slice(0,4)===String(anio); })
+    .sort(function(x,y){ return String(x.fecha||'').localeCompare(String(y.fecha||'')); });
+}
+function comiteMesesDelAnio(anio){
+  var act=comiteActasDe(anio), hoy=hoyISO(), ymHoy=hoy.slice(0,7), out=[];
+  for(var m=1;m<=12;m++){
+    var ym=anio+'-'+dosD(m);
+    var ord=act.filter(function(a){ return String(a.fecha).slice(0,7)===ym && a.tipo!=='extraordinaria'; })[0]||null;
+    var estado = ord ? 'hecha' : (ym < ymHoy ? 'perdida' : (ym===ymHoy ? 'toca' : 'futura'));
+    out.push({ mes:m, ym:ym, acta:ord, estado:estado,
+               extra: act.filter(function(a){ return String(a.fecha).slice(0,7)===ym && a.tipo==='extraordinaria'; }) });
+  }
+  return out;
+}
+/* los acuerdos que alguien tiene que cumplir y todavía no cumplió */
+function comiteAcuerdosPendientes(){
+  var hoy=hoyISO(), out=[];
+  comiteLocal().actas.forEach(function(a){
+    (a.acuerdos||[]).forEach(function(ac, i){
+      if(ac.hecho) return;
+      out.push({ acta:a.id, n:a.n, fechaActa:a.fecha, i:i, t:ac.t, quien:ac.quien,
+                 plazo:ac.plazo, vencido: !!(ac.plazo && ac.plazo < hoy) });
+    });
+  });
+  return out.sort(function(x,y){ return String(x.plazo||'9999').localeCompare(String(y.plazo||'9999')); });
+}
+function comiteNumeroSiguiente(anio){
+  var n=0;
+  comiteActasDe(anio).forEach(function(a){ var v=parseInt(String(a.n||'').replace(/\D/g,''),10); if(v>n) n=v; });
+  return dosD3(n+1);
+}
+function dosD3(n){ n=String(n); while(n.length<3) n='0'+n; return n; }
+
+/* ══════════ LA PANTALLA ══════════════════════════════════════════ */
+function pintarComite(){
+  var c=$('comite-cuerpo'); if(!c) return;
+  var d=comiteLocal(), n=comiteCuantos(), toca=comiteLoQueToca(n);
+  var esComite = toca.tipo==='comite';
+  var h='';
+
+  /* 1 · la respuesta, antes que cualquier formulario */
+  h+='<div class="caja vidrio" style="padding:15px;border-color:var(--oro)">'+
+     '<div class="sec-tit" style="margin:0 0 6px">Lo que te toca a ti</div>'+
+     '<p style="margin:0 0 4px;font-size:15.5px"><b>'+(esComite?'Comité paritario de SST':'Supervisor de SST')+'</b></p>'+
+     '<p class="sub" style="margin:0">'+esc(toca.dice)+'</p>'+
+     '<p class="sub" style="margin:8px 0 0"><span class="ley">'+esc(toca.ley)+'</span></p>';
+  if(!n) h+='<p class="sub" style="margin:9px 0 0">Todavía no has registrado trabajadores, así que este cálculo sale en cero. '+
+            '<button class="btn sec" style="margin:8px 0 0" onclick="ir(\'p-trabajadores\')">Registrar a mi personal ▸</button></p>';
+  h+='</div>';
+
+  /* 2 · el que todavía no puede tener comité, que sepa cuándo podrá */
+  if(esComite && !puede('comite')){
+    var P=planQueAbre('comite', false);
+    h+='<div class="aviso" style="margin-top:14px;border-color:var(--oro)">🔒 <b>El libro del comité se abre con el plan '+
+       esc(P?P.nombre:'siguiente')+'.</b> Ahí entran el padrón paritario, las doce actas del año y los acuerdos con responsable y plazo.'+
+       '<div style="margin-top:9px"><button class="btn" style="margin:0" onclick="ir(\'p-planes\');pintarPlanes()">Ver los planes ▸</button></div></div>';
+    c.innerHTML=h; return;
+  }
+
+  /* 3 · el estado del mandato */
+  var dias=comiteDiasDeMandato();
+  if(d.hasta){
+    var col = dias<0 ? 'var(--mal)' : (dias<=60 ? 'var(--oro)' : 'var(--ok)');
+    var txt = dias<0 ? ('El mandato venció hace '+Math.abs(dias)+' día'+(Math.abs(dias)===1?'':'s')+'. Hay que convocar a nuevas elecciones.')
+            : (dias<=60 ? ('El mandato vence en '+dias+' día'+(dias===1?'':'s')+'. Conviene convocar a elecciones ya.')
+                        : ('Mandato vigente hasta el '+(fechaLarga(d.hasta)||d.hasta)+'.'));
+    h+='<div class="aviso" style="margin-top:14px;border-color:'+col+'">'+(dias<0?'⛔':(dias<=60?'⏳':'✅'))+' '+esc(txt)+'</div>';
+  }
+
+  /* 4 · el padrón */
+  h+='<div class="sec-tit" style="margin-top:20px">'+(esComite?'El padrón':'El supervisor')+'</div>';
+  if(!d.miembros.length){
+    h+='<p class="sub" style="margin:6px 0 0">Todavía no hay nadie registrado.</p>'+
+       '<button class="btn" style="margin-top:10px" onclick="ir(\'p-comite-armar\')">➕ '+(esComite?'Armar el comité':'Nombrar al supervisor')+'</button>';
+  } else {
+    if(esComite){
+      COMITE_LADOS.forEach(function(L){
+        var tit=comiteTitulares(L[0]), sup=comiteSuplentes(L[0]);
+        h+='<div class="tarj vidrio" style="display:block"><b>'+esc(L[1])+' · '+tit.length+'</b>';
+        tit.concat(sup).forEach(function(m){
+          h+='<small style="display:block;margin-top:5px">'+(m.cargo==='presidente'?'⭐ ':(m.cargo==='secretario'?'✒️ ':'· '))+
+             esc(m.nombre)+(m.sup?' <i>(suplente)</i>':'')+(m.puesto?' — '+esc(m.puesto):'')+'</small>';
+        });
+        h+='</div>';
+      });
+    } else {
+      d.miembros.forEach(function(m){
+        h+='<div class="tarj vidrio" style="display:block"><b>'+esc(m.nombre)+'</b>'+
+           '<small>'+esc(m.puesto||'—')+(m.dni?' · DNI '+esc(m.dni):'')+'</small></div>';
+      });
+    }
+    h+='<button class="btn sec" style="margin-top:10px" onclick="ir(\'p-comite-armar\')">✏️ Editar el padrón</button>';
+  }
+
+  /* 5 · lo que falta para estar en regla */
+  var f=comiteFaltas();
+  if(f.length){
+    h+='<div class="aviso" style="margin-top:14px;border-color:var(--mal)">⚠️ <b>Lo que te falta para estar en regla</b>'+
+       '<ul style="margin:8px 0 0;padding-left:18px">'+f.map(function(x){ return '<li style="margin-bottom:4px">'+esc(x)+'</li>'; }).join('')+'</ul></div>';
+  } else if(d.miembros.length){
+    h+='<div class="aviso" style="margin-top:14px;border-color:var(--ok)">✅ El '+(esComite?'comité':'supervisor')+' está completo y en regla.</div>';
+  }
+
+  if(!esComite){ c.innerHTML=h; comitePieSupervisor(c); return; }
+
+  /* 6 · las doce reuniones del año, de un vistazo */
+  var anio=hoyISO().slice(0,4), meses=comiteMesesDelAnio(anio);
+  var hechas=meses.filter(function(m){ return m.estado==='hecha'; }).length;
+  var perdidas=meses.filter(function(m){ return m.estado==='perdida'; }).length;
+  h+='<div class="sec-tit" style="margin-top:22px">Las reuniones de '+anio+'</div>';
+  h+='<p class="sub" style="margin:4px 0 8px">Una ordinaria al mes, en día fijado (<span class="ley">D.S. 005-2012-TR, art. 68</span>). '+
+     'Llevas <b>'+hechas+' de 12</b>'+(perdidas?(' y se te pasaron <b style="color:var(--mal)">'+perdidas+'</b>'):'')+'.</p>';
+  h+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:7px">';
+  meses.forEach(function(m){
+    var cl = m.estado==='hecha' ? 'var(--ok)' : (m.estado==='perdida' ? 'var(--mal)' : (m.estado==='toca' ? 'var(--oro)' : 'rgba(148,162,172,.45)'));
+    var ic = m.estado==='hecha' ? '✓' : (m.estado==='perdida' ? '✕' : (m.estado==='toca' ? '!' : '·'));
+    var accion = m.acta ? ('verActaComite(\''+m.acta.id+'\')') : ('nuevaActaComite(\''+m.ym+'\')');
+    h+='<button class="btn sec" style="margin:0;padding:9px 2px;border-color:'+cl+';min-width:0" onclick="'+accion+'">'+
+       '<span style="display:block;font-size:11px;opacity:.75">'+MESES_3[m.mes-1]+'</span>'+
+       '<span style="display:block;font-size:15px;color:'+cl+'">'+ic+'</span></button>';
+  });
+  h+='</div>';
+  h+='<button class="btn" style="margin-top:12px" onclick="nuevaActaComite(\'\')">➕ Levantar un acta</button>';
+
+  /* 7 · los acuerdos, que es lo único que el comité produce de verdad */
+  var ac=comiteAcuerdosPendientes();
+  h+='<div class="sec-tit" style="margin-top:22px">Acuerdos pendientes</div>';
+  if(!ac.length){
+    h+='<p class="sub" style="margin:6px 0 0">No hay acuerdos sin cerrar.</p>';
+  } else {
+    var venc=ac.filter(function(x){ return x.vencido; }).length;
+    h+='<p class="sub" style="margin:4px 0 8px">'+ac.length+' sin cerrar'+(venc?(' · <b style="color:var(--mal)">'+venc+' fuera de plazo</b>'):'')+'.</p>';
+    ac.slice(0,12).forEach(function(x){
+      h+='<button class="tarj vidrio" onclick="verActaComite(\''+x.acta+'\')"><b>'+esc(x.t)+'</b>'+
+         '<small>'+(x.quien?esc(x.quien)+' · ':'')+(x.plazo? (x.vencido?'⛔ venció el ':'📅 para el ')+ (fechaLarga(x.plazo)||x.plazo) : 'sin plazo')+
+         ' · acta N° '+esc(x.n||'—')+'</small></button>';
+    });
+  }
+
+  /* 8 · el libro */
+  h+='<div class="sec-tit" style="margin-top:22px">El Libro de Actas</div>';
+  h+='<p class="sub" style="margin:4px 0 8px">La constitución, la instalación, las reuniones y los acuerdos van todos al mismo libro '+
+     '(<span class="ley">D.S. 005-2012-TR, arts. 51 y 53</span>). Este PDF es para imprimirlo y pegarlo en el libro legalizado, o para mandarlo entero.</p>';
+  h+='<button class="btn sec" style="margin:0" onclick="comiteLibroPDF()">📕 Descargar el Libro de Actas '+anio+'</button>';
+  c.innerHTML=h;
+}
+function comitePieSupervisor(c){
+  var h=document.createElement('div');
+  h.className='aviso'; h.style.marginTop='16px';
+  h.innerHTML='ℹ️ El Supervisor de SST tiene las mismas funciones que el comité y las mismas facilidades '+
+    '(<span class="ley">Ley 29783, art. 32</span>). El día que pases de 20 trabajadores, esta pantalla te lo va a decir sola: '+
+    'ahí toca convocar a elecciones y armar el comité paritario.';
+  c.appendChild(h);
+}
+
+/* ══════════ EL PADRÓN ═══════════════════════════════════════════ */
+var COM_EDITA=null;      /* id del miembro que se está editando */
+function pintarComiteArmar(){
+  var c=$('comite-armar'); if(!c) return;
+  var d=comiteLocal(), n=comiteCuantos(), toca=comiteLoQueToca(n), esComite=toca.tipo==='comite';
+  $('ca-tit').textContent = esComite ? 'El padrón del Comité' : 'El Supervisor de SST';
+  $('ca-sub').textContent = esComite
+    ? 'Mitad y mitad: los mismos de la empresa que de los trabajadores. Es lo primero que se mira en una fiscalización.'
+    : 'Lo nombran los propios trabajadores. Queda con su período y su acta.';
+  var h='';
+
+  /* fechas del mandato */
+  h+='<div class="caja vidrio" style="padding:15px">'+
+     '<div class="sec-tit" style="margin:0 0 8px">El período</div>'+
+     '<label class="sec-tit" style="margin:0 0 5px">Fecha de la elección</label>'+
+     '<input id="cm-eleccion" type="date" value="'+escAt(d.eleccion||'')+'">';
+  if(esComite){
+    h+='<label class="sec-tit" style="margin:12px 0 5px">Fecha del acta de instalación</label>'+
+       '<input id="cm-instalacion" type="date" value="'+esc(d.instalacion||'')+'">'+
+       '<p class="sub" style="margin:5px 0 0;font-size:12.5px">Los nuevos miembros inician funciones dentro de los 10 días hábiles de terminada la elección.</p>';
+  }
+  h+='<div style="display:flex;gap:10px;margin-top:12px">'+
+     '<div style="flex:1"><label class="sec-tit" style="margin:0 0 5px">Desde</label><input id="cm-desde" type="date" value="'+esc(d.desde||'')+'"></div>'+
+     '<div style="flex:1"><label class="sec-tit" style="margin:0 0 5px">Hasta</label><input id="cm-hasta" type="date" value="'+esc(d.hasta||'')+'"></div>'+
+     '</div>'+
+     '<p class="sub" style="margin:5px 0 0;font-size:12.5px">El mandato de los representantes de los trabajadores dura de 1 a 2 años (<span class="ley">D.S. 005-2012-TR, art. 62</span>).</p>';
+  if(esComite){
+    h+='<label class="sec-tit" style="margin:12px 0 5px">N° del Libro de Actas legalizado (opcional)</label>'+
+       '<input id="cm-libro" placeholder="Ej.: 0001-2026" value="'+escAt(d.libro||'')+'">';
+  }
+  h+='<button class="btn" style="margin-top:12px" onclick="guardarPeriodoComite()">Guardar el período</button></div>';
+
+  /* la gente */
+  h+='<div class="sec-tit" style="margin-top:22px">'+(esComite?'Integrantes':'Supervisor nombrado')+'</div>';
+  if(!d.miembros.length) h+='<p class="sub" style="margin:6px 0 0">Todavía no hay nadie.</p>';
+  (esComite?COMITE_LADOS:[['trabajador','Supervisor de SST','']]).forEach(function(L){
+    var gente=d.miembros.filter(function(m){ return esComite ? m.lado===L[0] : true; });
+    if(esComite){
+      h+='<p class="sub" style="margin:12px 0 4px"><b>'+esc(L[1])+'</b> · '+esc(L[2])+'</p>';
+      if(!gente.length) h+='<p class="sub" style="margin:0 0 4px;opacity:.7">— nadie todavía —</p>';
+    }
+    gente.forEach(function(m){
+      h+='<div class="tarj vidrio" style="display:block"><b>'+esc(m.nombre)+(m.sup?' <i>(suplente)</i>':'')+'</b>'+
+         '<small>'+esc(m.puesto||'—')+(m.dni?' · DNI '+esc(m.dni):'')+'</small>'+
+         '<div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap">';
+      if(esComite && !m.sup){
+        h+='<button class="btn sec" style="margin:0;flex:1;min-width:110px;padding:8px" onclick="cargoComite(\''+m.id+'\',\'presidente\')">'+
+           (m.cargo==='presidente'?'⭐ Presidente':'Hacer Presidente')+'</button>'+
+           '<button class="btn sec" style="margin:0;flex:1;min-width:110px;padding:8px" onclick="cargoComite(\''+m.id+'\',\'secretario\')">'+
+           (m.cargo==='secretario'?'✒️ Secretario':'Hacer Secretario')+'</button>';
+      }
+      h+='<button class="btn sec" style="margin:0;padding:8px" onclick="editarMiembroComite(\''+m.id+'\')">✏️</button>'+
+         '<button class="btn sec" style="margin:0;padding:8px" onclick="quitarMiembroComite(\''+m.id+'\')">🗑️</button>'+
+         '</div></div>';
+    });
+  });
+
+  /* alta */
+  var ed = COM_EDITA ? (d.miembros.filter(function(m){ return m.id===COM_EDITA; })[0]||null) : null;
+  h+='<div class="caja vidrio" style="padding:15px;margin-top:16px">'+
+     '<div class="sec-tit" style="margin:0 0 8px">'+(ed?'Editar a '+esc(ed.nombre):(esComite?'Agregar un integrante':'Nombrar al supervisor'))+'</div>'+
+     '<select id="cm-trab"></select><div style="height:10px"></div>'+
+     '<input id="cm-nombre" placeholder="Nombres y apellidos" value="'+escAt(ed?ed.nombre:'')+'">'+
+     '<div style="height:8px"></div>'+
+     '<div style="display:flex;gap:10px">'+
+     '<input id="cm-dni" inputmode="numeric" placeholder="DNI" style="flex:1" value="'+escAt(ed?ed.dni:'')+'">'+
+     '<input id="cm-puesto" placeholder="Puesto" style="flex:1" value="'+escAt(ed?ed.puesto:'')+'"></div>';
+  if(esComite){
+    h+='<div style="height:10px"></div><select id="cm-lado">'+
+       '<option value="empleador"'+(ed&&ed.lado==='empleador'?' selected':'')+'>Representante del empleador</option>'+
+       '<option value="trabajador"'+(!ed||ed.lado==='trabajador'?' selected':'')+'>Representante de los trabajadores</option>'+
+       '</select><div style="height:8px"></div><select id="cm-sup">'+
+       '<option value="0"'+(ed&&ed.sup?'':' selected')+'>Titular</option>'+
+       '<option value="1"'+(ed&&ed.sup?' selected':'')+'>Suplente</option></select>';
+  }
+  h+='<div id="cm-msg" style="font-size:13.5px;margin:11px 0 0"></div>'+
+     '<button class="btn" style="margin-top:10px" onclick="guardarMiembroComite()">'+(ed?'Guardar los cambios':'Agregar')+'</button>'+
+     (ed?'<button class="btn sec" style="margin-top:8px" onclick="COM_EDITA=null;pintarComiteArmar()">Cancelar</button>':'')+
+     '</div>';
+  c.innerHTML=h;
+  comiteSelTrab(ed);
+}
+function comiteSelTrab(ed){
+  var sel=$('cm-trab'); if(!sel) return;
+  var tr=[];
+  try{ tr=trabsLocal().filter(function(t){ return t.estatus!=='cesado'; }); }catch(e){}
+  sel.innerHTML='<option value="">— escribir a mano —</option>'+
+    tr.map(function(t){ return '<option value="'+t.id+'">'+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</option>'; }).join('');
+  sel.onchange=function(){
+    var t=null;
+    try{ t=trabPorId(this.value); }catch(e){}
+    if(t){ $('cm-nombre').value=t.nombre||''; $('cm-dni').value=t.dni||''; $('cm-puesto').value=t.puesto||''; }
+  };
+}
+function guardarPeriodoComite(){
+  var d=comiteLocal();
+  d.eleccion = ($('cm-eleccion')||{}).value || '';
+  if($('cm-instalacion')) d.instalacion=$('cm-instalacion').value||'';
+  d.desde = ($('cm-desde')||{}).value || '';
+  d.hasta = ($('cm-hasta')||{}).value || '';
+  if($('cm-libro')) d.libro=$('cm-libro').value||'';
+  if(d.desde && d.hasta && d.hasta <= d.desde){
+    aviso('Revisa las fechas','La fecha de «hasta» tiene que ser posterior a la de «desde».','📅'); return;
+  }
+  d.tipo = comiteLoQueToca(comiteCuantos()).tipo;
+  comiteGuardar(d);
+  aviso('Guardado','El período quedó registrado.','✅');
+  pintarComiteArmar();
+}
+function guardarMiembroComite(){
+  var d=comiteLocal(), esComite=comiteLoQueToca(comiteCuantos()).tipo==='comite';
+  var nom=($('cm-nombre').value||'').trim();
+  if(nom.length<3){ $('cm-msg').innerHTML='<span style="color:var(--mal)">Escribe el nombre completo.</span>'; return; }
+  var lado = esComite ? $('cm-lado').value : 'trabajador';
+  var sup  = esComite ? ($('cm-sup').value==='1'?1:0) : 0;
+  if(!esComite && d.miembros.length && !COM_EDITA){
+    $('cm-msg').innerHTML='<span style="color:var(--mal)">Ya hay un supervisor nombrado. Edítalo o quítalo primero.</span>'; return;
+  }
+  if(esComite && !sup && !COM_EDITA && comiteTitulares(lado).length>=6){
+    $('cm-msg').innerHTML='<span style="color:var(--mal)">Ya hay 6 titulares de ese lado; el comité no puede pasar de 12 (D.S. 005-2012-TR, art. 43).</span>'; return;
+  }
+  var m = COM_EDITA ? (d.miembros.filter(function(x){ return x.id===COM_EDITA; })[0]) : null;
+  if(!m){ m={ id:'cm'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), cargo:'miembro' }; d.miembros.push(m); }
+  m.nombre=nom; m.dni=($('cm-dni').value||'').trim(); m.puesto=($('cm-puesto').value||'').trim();
+  m.lado=lado; m.sup=sup;
+  if(sup) m.cargo='miembro';
+  COM_EDITA=null;
+  comiteGuardar(d);
+  pintarComiteArmar();
+}
+function editarMiembroComite(id){ COM_EDITA=id; pintarComiteArmar(); window.scrollTo(0,document.body.scrollHeight); }
+function quitarMiembroComite(id){
+  var d=comiteLocal(), m=d.miembros.filter(function(x){ return x.id===id; })[0];
+  confirmar('¿Quitar a '+(m?m.nombre:'esta persona')+'?','Sale del padrón. Las actas donde ya firmó no se tocan.', function(){
+    var dd=comiteLocal();
+    dd.miembros=dd.miembros.filter(function(x){ return x.id!==id; });
+    comiteGuardar(dd); if(COM_EDITA===id) COM_EDITA=null;
+    pintarComiteArmar();
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'⚠️'});
+}
+/* El Presidente lo elige el propio comité entre sus miembros (art. 56)
+   y el Secretario se designa por consenso (art. 58). Aquí solo se
+   registra quién quedó: la app no elige por nadie. */
+function cargoComite(id, cargo){
+  var d=comiteLocal(), yo=null;
+  d.miembros.forEach(function(m){ if(m.id===id) yo=m; });
+  if(!yo) return;
+  var quitar = (yo.cargo===cargo);          /* tocarlo dos veces lo quita */
+  d.miembros.forEach(function(m){ if(m.cargo===cargo) m.cargo='miembro'; });
+  if(!quitar) yo.cargo=cargo;
+  comiteGuardar(d);
+  pintarComiteArmar();
+}
+
+/* ══════════ EL ACTA ═════════════════════════════════════════════ */
+var COM_ACTA=null;        /* id del acta abierta (null = nueva) */
+var COM_YM='';            /* mes al que apunta el acta nueva */
+var COM_ACU=[];           /* los acuerdos que se están escribiendo */
+function nuevaActaComite(ym){
+  if(soloConCodigo('El Libro de Actas del Comité','comite')) return;
+  COM_ACTA=null; COM_YM=ym||''; COM_ACU=[];
+  ir('p-comite-acta');
+}
+function verActaComite(id){ COM_ACTA=id; ir('p-comite-ver'); }
+function actaComitePorId(id){
+  var a=comiteLocal().actas;
+  for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i];
+  return null;
+}
+function editarActaComite(id){
+  var a=actaComitePorId(id); if(!a) return;
+  COM_ACTA=id; COM_YM=String(a.fecha||'').slice(0,7);
+  COM_ACU=(a.acuerdos||[]).map(function(x){ return {t:x.t, quien:x.quien, plazo:x.plazo, hecho:x.hecho||0}; });
+  ir('p-comite-acta');
+}
+function prepComiteActa(){
+  var c=$('comite-acta'); if(!c) return;
+  var d=comiteLocal(), a=COM_ACTA? actaComitePorId(COM_ACTA) : null;
+  var anio=(COM_YM||hoyISO()).slice(0,4);
+  var fecha = a ? a.fecha : ((COM_YM && COM_YM>=hoyISO().slice(0,7)) ? (COM_YM+'-'+hoyISO().slice(8,10)) :
+                             (COM_YM ? COM_YM+'-15' : hoyISO()));
+  $('cac-tit').textContent = a ? ('Acta N° '+(a.n||'—')) : 'Nueva acta';
+  if(!a) COM_ACU = COM_ACU.length ? COM_ACU : [];
+  var tipo = a ? a.tipo : (d.actas.length ? 'ordinaria' : 'instalacion');
+  var h='';
+  h+='<div class="caja vidrio" style="padding:15px">'+
+     '<div style="display:flex;gap:10px">'+
+     '<div style="flex:1"><label class="sec-tit" style="margin:0 0 5px">N° de acta</label>'+
+     '<input id="ca-n" value="'+escAt(a?a.n:comiteNumeroSiguiente(anio))+'"></div>'+
+     '<div style="flex:2"><label class="sec-tit" style="margin:0 0 5px">Fecha</label>'+
+     '<input id="ca-fecha" type="date" value="'+escAt(fecha)+'"></div></div>'+
+     '<label class="sec-tit" style="margin:12px 0 5px">Tipo de reunión</label><select id="ca-tipo">';
+  for(var k in COMITE_TIPOS) if(Object.prototype.hasOwnProperty.call(COMITE_TIPOS,k))
+    h+='<option value="'+k+'"'+(tipo===k?' selected':'')+'>'+COMITE_TIPOS[k]+'</option>';
+  h+='</select>'+
+     '<p class="sub" style="margin:5px 0 0;font-size:12.5px">La ordinaria es una al mes. La extraordinaria la convoca el Presidente, la piden dos miembros, o sale sola cuando hay un accidente mortal (<span class="ley">D.S. 005-2012-TR, art. 68</span>).</p>'+
+     '<div style="display:flex;gap:10px;margin-top:12px">'+
+     '<div style="flex:1"><label class="sec-tit" style="margin:0 0 5px">Hora</label><input id="ca-hora" type="time" value="'+escAt(a?a.hora:'')+'"></div>'+
+     '<div style="flex:2"><label class="sec-tit" style="margin:0 0 5px">Lugar</label><input id="ca-lugar" placeholder="Sala de reuniones / obra" value="'+escAt(a?a.lugar:'')+'"></div>'+
+     '</div></div>';
+
+  /* asistencia y quórum */
+  var q=comiteQuorum(), asis=a?(a.asistentes||[]):d.miembros.filter(function(m){return !m.sup;}).map(function(m){return m.id;});
+  h+='<div class="sec-tit" style="margin-top:20px">Quiénes asistieron</div>'+
+     '<p class="sub" style="margin:4px 0 8px">El quórum es la mitad más uno: <b>'+q+'</b> de '+
+     d.miembros.filter(function(m){return !m.sup;}).length+' titulares (<span class="ley">D.S. 005-2012-TR, art. 69</span>).</p>';
+  if(!d.miembros.length){
+    h+='<div class="aviso" style="border-color:var(--oro)">⚠️ No hay nadie en el padrón todavía. '+
+       '<button class="btn sec" style="margin:9px 0 0" onclick="ir(\'p-comite-armar\')">Armar el padrón ▸</button></div>';
+  }
+  d.miembros.forEach(function(m){
+    var ok=asis.indexOf(m.id)>-1;
+    h+='<label class="tarj vidrio" style="display:flex;align-items:center;gap:11px;cursor:pointer">'+
+       '<input type="checkbox" class="ca-asis" data-id="'+escAt(m.id)+'"'+(ok?' checked':'')+' onchange="pintarQuorumComite()" style="width:20px;height:20px;flex:0 0 auto">'+
+       '<span style="flex:1"><b>'+esc(m.nombre)+'</b><small style="display:block">'+
+       (m.cargo==='presidente'?'Presidente · ':(m.cargo==='secretario'?'Secretario · ':''))+
+       (m.lado==='empleador'?'Del empleador':'De los trabajadores')+(m.sup?' · suplente':'')+'</small></span></label>';
+  });
+  h+='<div id="ca-quorum" style="margin-top:8px;font-size:13.5px"></div>';
+
+  /* agenda y desarrollo */
+  h+='<div class="sec-tit" style="margin-top:20px">Agenda</div>'+
+     '<textarea id="ca-agenda" rows="4" placeholder="Un punto por línea: lectura del acta anterior, avance del programa anual, accidentes del mes...">'+esc(a?a.agenda:'')+'</textarea>'+
+     '<div class="sec-tit" style="margin-top:16px">Desarrollo</div>'+
+     '<textarea id="ca-desarrollo" rows="6" placeholder="Qué se trató y qué se dijo. Esto es lo que queda en el Libro de Actas.">'+esc(a?a.desarrollo:'')+'</textarea>';
+
+  /* acuerdos */
+  h+='<div class="sec-tit" style="margin-top:20px">Acuerdos</div>'+
+     '<p class="sub" style="margin:4px 0 8px">Un acuerdo sin responsable y sin fecha no es un acuerdo. Es lo primero que un inspector cruza con la siguiente acta.</p>'+
+     '<div id="ca-acuerdos"></div>'+
+     '<button class="btn sec" style="margin-top:8px" onclick="agregarAcuerdoComite()">➕ Agregar un acuerdo</button>';
+
+  h+='<div id="ca-msg" style="font-size:13.5px;margin:14px 0 0"></div>'+
+     '<button class="btn" style="margin-top:10px" onclick="guardarActaComite()">Guardar el acta</button>';
+  c.innerHTML=h;
+  pintarAcuerdosComite();
+  pintarQuorumComite();
+}
+function pintarQuorumComite(){
+  var c=$('ca-quorum'); if(!c) return;
+  var n=document.querySelectorAll('.ca-asis:checked').length, q=comiteQuorum();
+  if(!q){ c.innerHTML=''; return; }
+  c.innerHTML = (n>=q)
+    ? '<span style="color:var(--ok)">✅ Hay quórum: '+n+' de '+q+' necesarios.</span>'
+    : '<span style="color:var(--oro)">⚠️ Sin quórum: '+n+' de '+q+'. El acta igual se levanta, pero el Presidente tiene que citar a otra reunión dentro de los 8 días siguientes.</span>';
+}
+function agregarAcuerdoComite(){ COM_ACU.push({t:'',quien:'',plazo:'',hecho:0}); pintarAcuerdosComite(); }
+function quitarAcuerdoComite(i){ leerAcuerdosComite(); COM_ACU.splice(i,1); pintarAcuerdosComite(); }
+function leerAcuerdosComite(){
+  COM_ACU.forEach(function(ac,i){
+    var t=$('ac-t-'+i), q=$('ac-q-'+i), p=$('ac-p-'+i);
+    if(t) ac.t=t.value; if(q) ac.quien=q.value; if(p) ac.plazo=p.value;
+  });
+}
+function pintarAcuerdosComite(){
+  var c=$('ca-acuerdos'); if(!c) return;
+  if(!COM_ACU.length){ c.innerHTML='<p class="sub" style="margin:0">Sin acuerdos todavía.</p>'; return; }
+  var h='';
+  COM_ACU.forEach(function(ac,i){
+    h+='<div class="caja vidrio" style="padding:13px;margin-bottom:10px">'+
+       '<div class="sec-tit" style="margin:0 0 6px">Acuerdo '+(i+1)+'</div>'+
+       '<textarea id="ac-t-'+i+'" rows="2" placeholder="Qué se acordó hacer">'+esc(ac.t)+'</textarea>'+
+       '<div style="display:flex;gap:10px;margin-top:8px">'+
+       '<input id="ac-q-'+i+'" placeholder="Responsable" style="flex:1" value="'+escAt(ac.quien)+'">'+
+       '<input id="ac-p-'+i+'" type="date" style="flex:1" value="'+escAt(ac.plazo)+'"></div>'+
+       '<button class="btn sec" style="margin:9px 0 0;padding:8px" onclick="quitarAcuerdoComite('+i+')">Quitar</button></div>';
+  });
+  c.innerHTML=h;
+}
+function guardarActaComite(){
+  leerAcuerdosComite();
+  var d=comiteLocal();
+  var fecha=($('ca-fecha')||{}).value||'';
+  if(!fecha){ $('ca-msg').innerHTML='<span style="color:var(--mal)">Falta la fecha de la reunión.</span>'; return; }
+  var asis=[];
+  var cajas=document.querySelectorAll('.ca-asis:checked');
+  for(var i=0;i<cajas.length;i++) asis.push(cajas[i].getAttribute('data-id'));
+  var acu=COM_ACU.filter(function(x){ return (x.t||'').trim().length>2; })
+                 .map(function(x){ return {t:x.t.trim(), quien:(x.quien||'').trim(), plazo:x.plazo||'', hecho:x.hecho?1:0}; });
+  var a = COM_ACTA ? actaComitePorId(COM_ACTA) : null;
+  if(!a){ a={ id:'ca'+Date.now().toString(36)+Math.random().toString(36).slice(2,5) }; d.actas.push(a); }
+  a.n=($('ca-n')||{}).value||''; a.tipo=($('ca-tipo')||{}).value||'ordinaria';
+  a.fecha=fecha; a.hora=($('ca-hora')||{}).value||''; a.lugar=($('ca-lugar')||{}).value||'';
+  a.asistentes=asis; a.agenda=($('ca-agenda')||{}).value||''; a.desarrollo=($('ca-desarrollo')||{}).value||'';
+  a.acuerdos=acu; a.ts=Date.now();
+  d.actas.sort(function(x,y){ return String(y.fecha||'').localeCompare(String(x.fecha||'')); });
+  comiteGuardar(d);
+  COM_ACTA=a.id; COM_ACU=[];
+  ir('p-comite-ver');
+}
+function pintarComiteVer(){
+  var a=COM_ACTA? actaComitePorId(COM_ACTA) : null;
+  if(!a){ ir('p-comite'); return; }
+  var d=comiteLocal();
+  var nom={}; d.miembros.forEach(function(m){ nom[m.id]=m; });
+  var h='<h2>Acta N° '+esc(a.n||'—')+'</h2>'+
+        '<p class="sub">'+esc(COMITE_TIPOS[a.tipo]||'Reunión')+' · '+esc(fechaLarga(a.fecha)||a.fecha)+
+        (a.hora?' · '+esc(a.hora):'')+(a.lugar?' · '+esc(a.lugar):'')+'</p>';
+  var q=comiteQuorum(), n=(a.asistentes||[]).length;
+  h+='<div class="aviso" style="border-color:'+(comiteHuboQuorum(a)?'var(--ok)':'var(--oro)')+'">'+
+     (comiteHuboQuorum(a)?'✅':'⚠️')+' Asistieron '+n+' de '+d.miembros.filter(function(m){return !m.sup;}).length+
+     ' titulares. Quórum: '+q+'.</div>';
+  h+='<div class="sec-tit" style="margin-top:18px">Asistentes</div>';
+  if(!n) h+='<p class="sub" style="margin:6px 0 0">No se marcó a nadie.</p>';
+  (a.asistentes||[]).forEach(function(id){
+    var m=nom[id]; if(!m) return;
+    h+='<div class="tarj vidrio" style="display:block"><b>'+esc(m.nombre)+'</b><small>'+
+       (m.cargo==='presidente'?'Presidente · ':(m.cargo==='secretario'?'Secretario · ':''))+
+       (m.lado==='empleador'?'Del empleador':'De los trabajadores')+'</small></div>';
+  });
+  if(a.agenda) h+='<div class="sec-tit" style="margin-top:18px">Agenda</div><div class="caja vidrio" style="padding:14px"><p style="margin:0;white-space:pre-wrap">'+esc(a.agenda)+'</p></div>';
+  if(a.desarrollo) h+='<div class="sec-tit" style="margin-top:18px">Desarrollo</div><div class="caja vidrio" style="padding:14px"><p style="margin:0;white-space:pre-wrap">'+esc(a.desarrollo)+'</p></div>';
+  h+='<div class="sec-tit" style="margin-top:18px">Acuerdos</div>';
+  if(!(a.acuerdos||[]).length) h+='<p class="sub" style="margin:6px 0 0">Esta reunión no dejó acuerdos escritos.</p>';
+  (a.acuerdos||[]).forEach(function(ac,i){
+    var venc = ac.plazo && !ac.hecho && ac.plazo < hoyISO();
+    h+='<div class="tarj vidrio" style="display:block"><b>'+(ac.hecho?'✅ ':(venc?'⛔ ':'⏳ '))+esc(ac.t)+'</b>'+
+       '<small>'+(ac.quien?esc(ac.quien)+' · ':'')+(ac.plazo?((venc?'venció el ':'para el ')+(fechaLarga(ac.plazo)||ac.plazo)):'sin plazo')+'</small>'+
+       '<button class="btn sec" style="margin:9px 0 0;padding:8px" onclick="cerrarAcuerdoComite(\''+a.id+'\','+i+')">'+
+       (ac.hecho?'Marcar como pendiente':'Marcar cumplido')+'</button></div>';
+  });
+  h+='<div class="sec-tit" style="margin-top:20px">El papel</div>'+
+     '<button class="btn" style="margin-top:8px" onclick="comiteActaPDF(\''+a.id+'\')">📄 Descargar el acta en PDF</button>'+
+     '<p class="sub" style="margin-top:8px">Sale con el espacio de firma de cada asistente, para imprimirla y pegarla en el Libro de Actas legalizado.</p>'+
+     '<button class="btn sec" style="margin-top:14px" onclick="editarActaComite(\''+a.id+'\')">✏️ Editar el acta</button>'+
+     '<button class="btn sec" style="margin-top:9px" onclick="quitarActaComite(\''+a.id+'\')">Quitar esta acta</button>';
+  $('comite-det').innerHTML=h;
+}
+function cerrarAcuerdoComite(idActa, i){
+  var d=comiteLocal(), a=null;
+  d.actas.forEach(function(x){ if(x.id===idActa) a=x; });
+  if(!a || !a.acuerdos || !a.acuerdos[i]) return;
+  a.acuerdos[i].hecho = a.acuerdos[i].hecho ? 0 : 1;
+  a.ts=Date.now();
+  comiteGuardar(d);
+  pintarComiteVer();
+}
+function quitarActaComite(id){
+  confirmar('¿Quitar esta acta?','Se borra de este celular y de la nube. Si ya la pegaste en el libro legalizado, ahí se queda.', function(){
+    var d=comiteLocal();
+    d.actas=d.actas.filter(function(x){ return x.id!==id; });
+    comiteGuardar(d);
+    COM_ACTA=null;
+    ir('p-comite');
+  }, {si:'Sí, quitar', no:'Cancelar', icono:'⚠️'});
+}
+
+/* ══════════ EL PAPEL ════════════════════════════════════════════
+   Un acta de comité no vale por estar en un celular: vale pegada en
+   el Libro de Actas legalizado, con las firmas de los que asistieron.
+   Por eso el PDF deja la línea de firma de cada uno, aunque la app ya
+   sepa quién estuvo. La firma en papel es la que pide el inspector. */
+function _comHoja(doc, W, M, titulo, sub){
+  doc.setFillColor(11,42,58); doc.rect(0,0,W,74,'F');
+  doc.setTextColor(245,183,0); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+  doc.text('OBRASST · COMITÉ DE SEGURIDAD Y SALUD EN EL TRABAJO', M, 28);
+  doc.setTextColor(255,255,255); doc.setFontSize(15);
+  doc.text(doc.splitTextToSize(titulo, W-2*M)[0], M, 50);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(200,215,225);
+  doc.text(doc.splitTextToSize(sub||'', W-2*M)[0], M, 65);
+}
+function _comPie(doc, W, H, M){
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(150,150,150);
+  doc.text('Ley 29783 · D.S. 005-2012-TR · generado con OBRASST el '+(fechaLarga(hoyISO())||hoyISO()), M, H-24);
+}
+function comiteActaPDF(id){
+  var a=actaComitePorId(id); if(!a){ return; }
+  var d=comiteLocal(), e=null;
+  try{ e=empActiva(); }catch(_e){}
+  var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
+  var W=595.28, H=841.89, M=46, y=0;
+  var nom={}; d.miembros.forEach(function(m){ nom[m.id]=m; });
+
+  _comHoja(doc, W, M, 'ACTA N° '+(a.n||'—')+' · '+(COMITE_TIPOS[a.tipo]||'Reunión').toUpperCase(),
+           (e&&e.nombre? e.nombre+'   ·   ' : '')+(fechaLarga(a.fecha)||a.fecha)+
+           (a.hora?'   ·   '+a.hora:'')+(a.lugar?'   ·   '+a.lugar:''));
+  y=104;
+  function salto(alto){
+    if(y+alto < H-60) return;
+    _comPie(doc,W,H,M); doc.addPage();
+    _comHoja(doc, W, M, 'ACTA N° '+(a.n||'—')+' (continúa)', e&&e.nombre? e.nombre : '');
+    y=104;
+  }
+  function titulo(t){
+    salto(34);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(11,42,58);
+    doc.text(t.toUpperCase(), M, y); y+=7;
+    doc.setDrawColor(225,225,225); doc.setLineWidth(0.7); doc.line(M,y,W-M,y); y+=15;
+  }
+  function parrafo(t){
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,35,35);
+    doc.splitTextToSize(String(t||'—'), W-2*M).forEach(function(l){ salto(14); doc.text(l, M, y); y+=13; });
+    y+=6;
+  }
+  /* quórum: el dato que decide si la reunión valió */
+  var tit=d.miembros.filter(function(m){ return !m.sup; }).length;
+  var asis=(a.asistentes||[]).length, q=comiteQuorum();
+  titulo('Quórum');
+  parrafo('Asistieron '+asis+' de '+tit+' integrantes titulares. El quórum mínimo es de '+q+
+          ' (la mitad más uno, D.S. 005-2012-TR art. 69). '+
+          (comiteHuboQuorum(a) ? 'La sesión se realizó con quórum.'
+                               : 'La sesión se realizó SIN quórum; corresponde citar a nueva reunión dentro de los ocho días siguientes.'));
+  if(a.agenda){ titulo('Agenda'); parrafo(a.agenda); }
+  if(a.desarrollo){ titulo('Desarrollo'); parrafo(a.desarrollo); }
+
+  if((a.acuerdos||[]).length){
+    titulo('Acuerdos');
+    a.acuerdos.forEach(function(ac,i){
+      salto(40);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(20,20,20);
+      doc.splitTextToSize((i+1)+'. '+String(ac.t||''), W-2*M-120).forEach(function(l){ doc.text(l, M, y); y+=13; });
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(110,110,110);
+      doc.text('Responsable: '+(ac.quien||'—')+'     Plazo: '+(ac.plazo? (fechaLarga(ac.plazo)||ac.plazo) : 'sin plazo')+
+               '     Estado: '+(ac.hecho?'CUMPLIDO':'PENDIENTE'), M, y);
+      y+=20;
+    });
+  }
+
+  /* firmas: dos columnas, línea y nombre */
+  titulo('Firmas de los asistentes');
+  var col=0, x0=M, ancho=(W-2*M-24)/2;
+  (a.asistentes||[]).forEach(function(idm){
+    var m=nom[idm]; if(!m) return;
+    salto(64);
+    var x = x0 + col*(ancho+24);
+    doc.setDrawColor(150,150,150); doc.setLineWidth(0.7);
+    doc.line(x, y+34, x+ancho, y+34);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,30,30);
+    doc.splitTextToSize(m.nombre||'', ancho).slice(0,1).forEach(function(l){ doc.text(l, x, y+46); });
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
+    doc.text((m.cargo==='presidente'?'Presidente':(m.cargo==='secretario'?'Secretario':'Miembro'))+
+             ' · '+(m.lado==='empleador'?'Del empleador':'De los trabajadores')+(m.dni?' · DNI '+m.dni:''), x, y+57);
+    col++;
+    if(col===2){ col=0; y+=78; }
+  });
+  if(col===1) y+=78;
+  _comPie(doc,W,H,M);
+  entregarPDF(doc, 'acta-comite-'+(a.n||'sn')+'-'+String(a.fecha||'').slice(0,10)+'.pdf');
+}
+function comiteLibroPDF(){
+  var d=comiteLocal(), anio=hoyISO().slice(0,4), actas=comiteActasDe(anio);
+  var e=null; try{ e=empActiva(); }catch(_e){}
+  var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
+  var W=595.28, H=841.89, M=46, y=0;
+  _comHoja(doc, W, M, 'LIBRO DE ACTAS '+anio, (e&&e.nombre? e.nombre+'   ·   ' : '')+
+           'Comité de Seguridad y Salud en el Trabajo'+(d.libro? '   ·   Libro N° '+d.libro : ''));
+  y=104;
+  function salto(alto){
+    if(y+alto < H-60) return;
+    _comPie(doc,W,H,M); doc.addPage();
+    _comHoja(doc, W, M, 'LIBRO DE ACTAS '+anio+' (continúa)', e&&e.nombre? e.nombre : '');
+    y=104;
+  }
+  function titulo(t){
+    salto(34);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(11,42,58);
+    doc.text(t.toUpperCase(), M, y); y+=7;
+    doc.setDrawColor(225,225,225); doc.setLineWidth(0.7); doc.line(M,y,W-M,y); y+=15;
+  }
+  function linea(et, val){
+    salto(16);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(130,130,130);
+    doc.text(et, M, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(30,30,30);
+    doc.splitTextToSize(String(val||'—'), W-2*M-140).slice(0,3).forEach(function(l,i){ doc.text(l, M+140, y+i*12); });
+    y+=18;
+  }
+  /* 1 · quiénes son */
+  titulo('El Comité');
+  linea('Elección', d.eleccion? (fechaLarga(d.eleccion)||d.eleccion) : '—');
+  linea('Instalación', d.instalacion? (fechaLarga(d.instalacion)||d.instalacion) : '—');
+  linea('Mandato', (d.desde? (fechaLarga(d.desde)||d.desde):'—')+'  a  '+(d.hasta? (fechaLarga(d.hasta)||d.hasta):'—'));
+  linea('Integrantes', d.miembros.filter(function(m){return !m.sup;}).length+' titulares · '+
+                       d.miembros.filter(function(m){return m.sup;}).length+' suplentes');
+  y+=6;
+  COMITE_LADOS.forEach(function(L){
+    titulo(L[1]);
+    d.miembros.filter(function(m){ return m.lado===L[0]; }).forEach(function(m){
+      salto(15);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(30,30,30);
+      doc.text('· '+(m.nombre||'')+(m.dni?'  ·  DNI '+m.dni:'')+(m.puesto?'  ·  '+m.puesto:'')+
+               (m.cargo==='presidente'?'  ·  PRESIDENTE':(m.cargo==='secretario'?'  ·  SECRETARIO':''))+
+               (m.sup?'  (suplente)':''), M, y);
+      y+=14;
+    });
+    y+=6;
+  });
+  /* 2 · el cumplimiento del año, que es lo que se fiscaliza */
+  titulo('Reuniones de '+anio);
+  var meses=comiteMesesDelAnio(anio), hechas=0;
+  meses.forEach(function(m){ if(m.estado==='hecha') hechas++; });
+  parrafoLibro('Se realizaron '+hechas+' de las 12 reuniones ordinarias que exige el D.S. 005-2012-TR art. 68'+
+               (hechas<12? ('. Meses sin acta ordinaria: '+meses.filter(function(m){return m.estado==='perdida';})
+                    .map(function(m){ return MESES_ES[m.mes-1]; }).join(', ')||'—') : '.'));
+  function parrafoLibro(t){
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,35,35);
+    doc.splitTextToSize(String(t||''), W-2*M).forEach(function(l){ salto(14); doc.text(l, M, y); y+=13; });
+    y+=8;
+  }
+  /* 3 · acta por acta */
+  actas.slice().sort(function(x,y2){ return String(x.fecha||'').localeCompare(String(y2.fecha||'')); }).forEach(function(a){
+    titulo('Acta N° '+(a.n||'—')+' · '+(COMITE_TIPOS[a.tipo]||'Reunión'));
+    linea('Fecha', (fechaLarga(a.fecha)||a.fecha)+(a.hora?'  ·  '+a.hora:'')+(a.lugar?'  ·  '+a.lugar:''));
+    linea('Asistencia', (a.asistentes||[]).length+' de '+d.miembros.filter(function(m){return !m.sup;}).length+
+                        '  ·  '+(comiteHuboQuorum(a)?'con quórum':'SIN quórum'));
+    if(a.agenda) parrafoLibro('Agenda: '+a.agenda);
+    if(a.desarrollo) parrafoLibro(a.desarrollo);
+    (a.acuerdos||[]).forEach(function(ac,i){
+      salto(30);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,20,20);
+      doc.splitTextToSize('Acuerdo '+(i+1)+': '+String(ac.t||''), W-2*M).forEach(function(l){ salto(13); doc.text(l, M, y); y+=12; });
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(110,110,110);
+      doc.text('Responsable: '+(ac.quien||'—')+'   Plazo: '+(ac.plazo||'sin plazo')+'   '+(ac.hecho?'CUMPLIDO':'PENDIENTE'), M, y);
+      y+=18;
+    });
+    y+=6;
+  });
+  if(!actas.length) parrafoLibro('No hay actas registradas en '+anio+'.');
+  _comPie(doc,W,H,M);
+  entregarPDF(doc, 'libro-de-actas-comite-'+anio+'.pdf');
+}
+
+// =================================================================
 //  AMONESTACIONES
 //  Las cuatro firmas quedan PENDIENTES y se completan cuando cada
 //  uno pueda: trabajador, jefe inmediato, jefe de produccion y SSOMA.
@@ -17927,6 +18849,19 @@ function supItemDom(it, ruta){
    cada semana o cada mes. Así el pulgar encuentra lo de siempre sin
    leer, y lo de fin de mes no estorba a las siete de la mañana.
    «grupo» ordena; «desde» dice a partir de qué plan existe. */
+/* ══════ `desde` ES EL ORDEN DEL PRIMER PLAN QUE TRAE LA LLAVE ══════
+   Regla, y no es de estilo: si PLANES dice que el plan X abre algo,
+   `desde` tiene que ser el orden de X. Ni uno más.
+   La matriz del 13/09 bajó llaves por la escalera —LITE se quedó con
+   credenciales y amonestaciones, el Prevencionista con el reporte
+   semanal y las constancias, el Supervisor con inspecciones— y estos
+   `desde` se quedaron todos en 3. O sea: el plan lo vendía, el portero
+   del router dejaba pasar... y en la portada no había icono. Marcelo
+   dictó el LITE renglón por renglón —«credenciales con QR (10),
+   amonestaciones (5)»— y ninguno de los dos salía en pantalla.
+   Es el mismo error que el de los 140 códigos con otra ropa: la app y
+   la matriz diciendo cosas distintas sobre lo mismo. Ahora lo cuida
+   una prueba (pruebalic/catalogo.js) que lo recorre entero.        */
 var CATALOGO_ACCESOS = [
   /* ── 1. lo de todos los días ── */
   {k:'charlas',   ic:'🗓️', et:'Programa<br>de charlas',       ir:'p-programa',      color:'a-oro',   desde:0, grupo:1},
@@ -17950,15 +18885,30 @@ var CATALOGO_ACCESOS = [
      es el dueño de la empresa. */
   {k:'equipo',    ic:'🤝', et:'Nombrar<br>supervisores',       ir:'p-invitar',       color:'a-viol',  desde:0, grupo:2,
    ver:function(){ return (planActual().gestores||1)>1 && soyDuenoDeLaEmpresa()!==false && hayCuenta(); }},
-  {k:'credencial',ic:'🪪', et:'Credenciales<br>y QR',          ir:'p-credencial',    color:'a-viol',  desde:3, grupo:2},
-  {k:'amonesta',  ic:'⚠️', et:'Amonestaciones',                ir:'p-amonestaciones',color:'a-gris',  desde:3, grupo:2},
+  {k:'credencial',ic:'🪪', et:'Credenciales<br>y QR',          ir:'p-credencial',    color:'a-viol',  desde:0, grupo:2},
+  /* ══════ EL COMITÉ SALE EN TODOS LOS PLANES, Y NO ES REGALO ══════
+     Es el único acceso del catálogo cuya puerta está partida en dos, y
+     la partió la ley, no el precio:
+       · con menos de 20 trabajadores NO te toca comité, te toca un
+         Supervisor de SST (Ley 29783 art. 30). Eso el LITE lo hace
+         entero y gratis, porque es lo que a una empresa de 10 le
+         corresponde de verdad. Venderle un comité sería venderle algo
+         que la ley no le pide.
+       · con 20 o más te toca comité paritario (art. 29), y eso —padrón,
+         libro de actas, las doce reuniones, los acuerdos— vive desde el
+         plan Prevencionista, que es donde empiezan a caber 20 personas.
+     Por eso `desde:0` con llave `comite` adentro: el LITE entra, ve la
+     respuesta que le toca y la usa. El día que pase de 20, la app se lo
+     dice antes que el inspector.                                     */
+  {k:'comite',    ic:'🏛️', et:'Comité<br>de SST',              ir:'p-comite',        color:'a-azul',  desde:0, grupo:2},
+  {k:'amonesta',  ic:'⚠️', et:'Amonestaciones',                ir:'p-amonestaciones',color:'a-gris',  desde:0, grupo:2},
   /* ── 3. lo que se entrega ── */
-  {k:'inspec',    ic:'✅', et:'Inspecciones',                  ir:'p-inspec',        color:'a-gris',  desde:3, grupo:3},
+  {k:'inspec',    ic:'✅', et:'Inspecciones',                  ir:'p-inspec',        color:'a-gris',  desde:2, grupo:3},
   {k:'accidente', ic:'🚑', et:'Accidentes<br>e incidentes',    ir:'p-accidentes',    color:'a-rojo',  desde:0, grupo:3},
   {k:'buenas',    ic:'🌟', et:'Buenas<br>prácticas',            ir:'p-buenas',        color:'a-verde', desde:0, grupo:3},
-  {k:'semanal',   ic:'📈', et:'Reporte<br>semanal',            ir:'p-semanal',       color:'a-verde', desde:3, grupo:3},
+  {k:'semanal',   ic:'📈', et:'Reporte<br>semanal',            ir:'p-semanal',       color:'a-verde', desde:1, grupo:3},
   {k:'msds',      ic:'🧪', et:'Químicos<br>MSDS y SGA',        ir:'p-msds',          color:'a-azul',  desde:3, grupo:3},
-  {k:'risst',     ic:'📌', et:'Carteles<br>QR',                fn:'abrirRisst',      color:'a-gris',  desde:1, grupo:3},
+  {k:'risst',     ic:'📌', et:'Carteles<br>QR',                fn:'abrirRisst',      color:'a-gris',  desde:0, grupo:3},
   /* «¿dónde has puesto los procedimientos? se supone que deben de estar
      ahí, a la vista». Tenía razón: estaban escritos y entregados como
      archivos sueltos, que en obra no los ve nadie. Acá están. */
@@ -17978,7 +18928,7 @@ var CATALOGO_ACCESOS = [
          SSOMA los tenia listados en su plan y no podia entrar.
      No es un cambio comercial: los tres ya estaban vendidos desde el
      peldaño 3. Lo que cambia es que ahora se pueden abrir.             */
-  {k:'constancias',ic:'🎓', et:'Constancias de<br>capacitación',  ir:'p-constancias',  color:'a-verde', desde:3, grupo:3},
+  {k:'constancias',ic:'🎓', et:'Constancias de<br>capacitación',  ir:'p-constancias',  color:'a-verde', desde:1, grupo:3},
   {k:'campanas',  ic:'📣', et:'Campañas',                    fn:'abrirCampanas',   color:'a-oro',   desde:3, grupo:3},
   {k:'simulacros',ic:'🧯', et:'Simulacros',                  fn:'abrirSimulacros', color:'a-rojo',  desde:3, grupo:3}
 ];
@@ -18659,7 +19609,8 @@ var HISTORIA = {
   /* faltaban los dos que mas historia acumulan, y sin ellos el modo
      lectura no se activaba nunca para MSDS ni para inspecciones */
   msds:         function(){ try{ return quimLocal().length; }catch(e){ return 0; } },
-  inspec:       function(){ try{ return inspecGuardadas().length; }catch(e){ return 0; } }
+  inspec:       function(){ try{ return inspecGuardadas().length; }catch(e){ return 0; } },
+  comite:       function(){ try{ return (comiteLocal().actas||[]).length; }catch(e){ return 0; } }
 };
 function hayHistoriaDe(k){
   try{ var f=HISTORIA[k]; return f? (f()||0) : 0; }catch(e){ return 0; }
@@ -18679,7 +19630,8 @@ var PANT_HISTORIA={
   'p-amonestaciones':'amonesta', 'p-amon-nueva':'amonesta',
   'p-semanal':'semanal', 'p-semanal-dia':'semanal',
   'p-credencial':'credencial', 'p-cred-nueva':'credencial',
-  'p-kardex-export':'kardex'
+  'p-kardex-export':'kardex',
+  'p-comite-acta':'comite', 'p-comite-ver':'comite'
 };
 function hayHistoriaDePantalla(p){
   var k=PANT_HISTORIA[p]; if(!k) return 0;
@@ -32755,7 +33707,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
       barra de abajo y espera el toque.
 
    Nunca se recarga en la primera instalacion, ni dos veces seguidas. */
-var SELLO_APP='548edd2397';
+var SELLO_APP='d2cc5bfbac';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
