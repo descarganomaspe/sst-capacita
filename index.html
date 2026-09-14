@@ -33680,6 +33680,44 @@ function yaInstalada(){
   try{ return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone===true; }
   catch(e){ return false; }
 }
+/* ══════ POR QUE NO APARECIO EL ICONO ═══════════════════════════════
+   Marcelo, 14/09/2026: «lo quise instalar, pero no lo coloca en mi
+   pantalla de inicio». El boton llamaba a prompt() y se quedaba mudo:
+   pasara lo que pasara, el usuario veia exactamente lo mismo. Y son
+   TRES causas distintas, con tres arreglos distintos:
+     1. El enlace se abrio DENTRO de otra app (WhatsApp, Gmail, Facebook).
+        Ese visor no instala nada y ni siquiera tiene el menu de Chrome.
+        Lo unico que sirve ahi es salir a Chrome con el enlace.
+     2. Android SI la instalo, pero el launcher no pone iconos nuevos en
+        la pantalla de inicio —viene apagado en varios Xiaomi, Samsung y
+        Motorola—. La app esta, en el cajon de aplicaciones.
+     3. Ya esta instalada, o esta la de Play Store, y por eso Chrome no
+        la vuelve a ofrecer.
+   Adivinar cual de las tres es, desde este lado, no se puede. Decirlas
+   por su nombre, si. */
+function navegadorEmbebido(){
+  var u=navigator.userAgent||'';
+  /* «; wv)» es la marca del WebView de Android, que es lo que usan
+     WhatsApp, Gmail e Instagram para abrir enlaces sin salir de ellos. */
+  return /FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger|; wv\)/i.test(u);
+}
+var PLAY_INSTALADA=false;
+try{
+  if(navigator.getInstalledRelatedApps){
+    navigator.getInstalledRelatedApps().then(function(l){
+      PLAY_INSTALADA = !!(l && l.length);
+      try{ pintarInstalar(); }catch(x){}
+    }).catch(function(){});
+  }
+}catch(_gia){}
+function _enlaceApp(){ return location.origin + location.pathname.replace(/[^/]*$/,''); }
+function _copiarEnlace(){
+  var u=_enlaceApp();
+  var fin=function(ok){ var m=document.getElementById('pwa-copia');
+    if(m) m.textContent = ok ? 'Enlace copiado. Pégalo en Chrome.' : ('Cópialo a mano: '+u); };
+  try{ navigator.clipboard.writeText(u).then(function(){fin(true);}, function(){fin(false);}); }
+  catch(e){ fin(false); }
+}
 window.addEventListener('beforeinstallprompt', function(e){
   e.preventDefault(); PWA_PROMPT=e;
   try{ pintarInstalar(); }catch(x){}
@@ -33691,18 +33729,40 @@ function huecosInstalar(){
   if(v && l.indexOf(v)<0) l.push(v);
   return l;
 }
+function _cartelInstalar(h){ huecosInstalar().forEach(function(c){ c.innerHTML=h; }); }
 function instalarApp(){
   if(PWA_PROMPT){
-    PWA_PROMPT.prompt();
-    PWA_PROMPT.userChoice.then(function(){ PWA_PROMPT=null; try{ pintarInstalar(); }catch(x){} });
+    var p=PWA_PROMPT;
+    p.prompt();
+    /* Lo que faltaba: escuchar la respuesta. Sin esto, aceptar y cancelar
+       se veian igual —o sea, no se veia nada— y el que no encontraba el
+       icono no tenia forma de saber si se instalo o si le dio a «ahora no». */
+    p.userChoice.then(function(r){
+      PWA_PROMPT=null;
+      if(r && r.outcome==='accepted'){
+        _cartelInstalar('<div class="aviso" style="text-align:left">✅ <b>Quedó instalada.</b>'+
+          '<div style="margin-top:8px;font-size:15px;line-height:1.6">Si no la ves en la pantalla de inicio, <b>está en el cajón de aplicaciones</b> (desliza hacia arriba y búscala como OBRASST). Muchos celulares vienen con «Añadir iconos a la pantalla de inicio» apagado: se prende manteniendo apretada la pantalla de inicio ▸ Ajustes, y desde el cajón la arrastras donde quieras.</div></div>');
+      } else {
+        _cartelInstalar('<div class="aviso" style="text-align:left">Se canceló la instalación.'+
+          '<div style="margin-top:8px;font-size:15px;line-height:1.6">Cuando quieras vuelve a intentarlo. No se descarga nada: queda como un acceso a pantalla completa, con su ícono, y funciona sin señal.</div></div>'+
+          '<button class="btn" style="margin-top:10px" onclick="instalarApp()">📲 Intentar otra vez</button>');
+      }
+    });
+    return;
+  }
+  if(navegadorEmbebido()){
+    _cartelInstalar('<div class="aviso" style="text-align:left">📲 <b>Estás dentro de otra app</b>'+
+      '<div style="margin-top:8px;font-size:15px;line-height:1.6">Abriste el enlace desde WhatsApp, Gmail o Facebook, y ese visor no puede instalar nada —ni siquiera tiene el menú de Chrome—. Toca los <b>tres puntitos ⋮</b> de arriba y elige <b>«Abrir en Chrome»</b> o <b>«Abrir en el navegador»</b>. Ahí sí aparece el botón de instalar.</div>'+
+      '<div id="pwa-copia" class="sub" style="margin-top:8px;font-size:12.5px"></div></div>'+
+      '<button class="btn sec" style="margin-top:10px" onclick="_copiarEnlace()">📋 Copiar el enlace</button>');
     return;
   }
   var pasos='<div class="aviso" style="text-align:left">📲 <b>Para tenerla como app</b>'+
     (esIOS()
       ? '<div style="margin-top:8px;font-size:15px;line-height:1.6">1. Toca <b>Compartir</b> abajo (el cuadrito con la flecha ↑).<br>2. Baja y toca <b>«Añadir a pantalla de inicio»</b>.<br>3. Toca <b>Añadir</b>.<br><span style="color:var(--gris)">Tiene que ser desde <b>Safari</b>. Si estás en Chrome dentro del iPhone, no sale la opción.</span></div>'
-      : '<div style="margin-top:8px;font-size:15px;line-height:1.6">1. Toca los <b>tres puntitos ⋮</b> arriba a la derecha.<br>2. Toca <b>«Instalar aplicación»</b> o <b>«Agregar a pantalla principal»</b>.<br><span style="color:var(--gris)">Si no te sale, entra desde Chrome.</span></div>')+
+      : '<div style="margin-top:8px;font-size:15px;line-height:1.6">1. Toca los <b>tres puntitos ⋮</b> arriba a la derecha.<br>2. Toca <b>«Instalar aplicación»</b> o <b>«Agregar a pantalla principal»</b>.<br>3. Si te la instaló pero no ves el ícono, <b>está en el cajón de aplicaciones</b>: varios celulares no ponen solos los íconos nuevos en la pantalla de inicio.<br><span style="color:var(--gris)">Si no te sale la opción, es que ya la tienes instalada, o que no estás en Chrome.</span></div>')+
     '</div>';
-  huecosInstalar().forEach(function(c){ c.innerHTML=pasos; });
+  _cartelInstalar(pasos);
 }
 function pintarInstalar(){
   var l=huecosInstalar(); if(!l.length) return;
@@ -33712,11 +33772,19 @@ function pintarInstalar(){
        en vez de dejar una burbuja que no sirve para nada */
     l.forEach(function(c){ c.innerHTML=''; });
     return;
+  } else if(PLAY_INSTALADA && !PWA_PROMPT){
+    /* Android nos confirmo que la app de Play ya esta en este celular.
+       Ofrecerle instalarla de nuevo seria mentirle dos veces: no se va a
+       instalar, y ya la tiene. */
+    h='<p class="sub" style="margin:14px 0 0;font-size:12.5px">Ya tienes OBRASST instalada en este celular. Búscala por su ícono, o en el cajón de aplicaciones.</p>';
   } else if(PWA_PROMPT){
     /* Android nos dio permiso de abrir el instalador: un toque y queda en la
        pantalla de inicio, sin APK y sin permisos raros. */
     h='<button class="btn" style="margin-top:14px" onclick="instalarApp()">📲 Instalar en mi pantalla de inicio</button>'+
       '<p class="sub" style="margin:7px 0 0;font-size:12.5px">Queda con su ícono, a pantalla completa y funcionando sin señal. No es una descarga: es un toque.</p>';
+  } else if(navegadorEmbebido()){
+    h='<button class="btn" style="margin-top:14px" onclick="instalarApp()">📲 Abrirla en Chrome para instalarla</button>'+
+      '<p class="sub" style="margin:7px 0 0;font-size:12.5px">Estás viendo esto dentro de otra app, y desde ahí Android no deja instalar.</p>';
   } else {
     h='<button class="btn sec" style="margin-top:14px" onclick="instalarApp()">📲 ¿Cómo la instalo en mi celular?</button>';
   }
@@ -33760,7 +33828,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
       barra de abajo y espera el toque.
 
    Nunca se recarga en la primera instalacion, ni dos veces seguidas. */
-var SELLO_APP='31716140bd';
+var SELLO_APP='77e349e5c5';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
