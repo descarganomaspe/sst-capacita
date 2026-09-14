@@ -8534,7 +8534,7 @@ var PLANES = [
     gestores:1, charlas:5, temas:4,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1 } },
 
-  { id:'prevencionista', nombre:'Prevencionista de Riesgo', precio:29, anual:290, tienda:35, tiendaAnual:350, orden:1,
+  { id:'prevencionista', nombre:'Prevencionista de Riesgo', precio:29, anual:290, tienda:34.99, tiendaAnual:349.99, orden:1,
     compra:'obrasst-prevencionista', compraAnual:'obrasst-prevencionista-anual',
     tope:{ trabajador:50, kardex:100, reporte:-1, doc:-1, credencial:60, amonestacion:20, semana:4, escaneo:50 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
@@ -8542,7 +8542,7 @@ var PLANES = [
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
             constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1 } },
 
-  { id:'supervisor', nombre:'Supervisor SST', precio:59, anual:590, tienda:69, tiendaAnual:690, orden:2,
+  { id:'supervisor', nombre:'Supervisor SST', precio:59, anual:590, tienda:68.99, tiendaAnual:689.99, orden:2,
     compra:'obrasst-supervisor', compraAnual:'obrasst-supervisor-anual',
     tope:{ trabajador:150, kardex:300, reporte:-1, doc:-1, credencial:200, amonestacion:60, semana:8, escaneo:150 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
@@ -8551,7 +8551,7 @@ var PLANES = [
             constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1,
             qr_iperc:1, inspecciones:1 } },
 
-  { id:'ssoma', nombre:'SSOMA', precio:99, anual:990, tienda:119, tiendaAnual:1190, orden:3,
+  { id:'ssoma', nombre:'SSOMA', precio:99, anual:990, tienda:119.99, tiendaAnual:1189.99, orden:3,
     compra:'sst-capacita', compraAnual:'sst-capacita-anual',
     tope:{ trabajador:400, kardex:600, reporte:-1, doc:-1, credencial:500, amonestacion:150, semana:-1, escaneo:400 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
@@ -8561,7 +8561,7 @@ var PLANES = [
             qr_iperc:1, inspecciones:1,
             msds:1, qr_msds:1, campanas:1, simulacros:1 } },
 
-  { id:'gestion', nombre:'Gestión SST', precio:229, anual:2290, tienda:269, tiendaAnual:2690, orden:4,
+  { id:'gestion', nombre:'Gestión SST', precio:229, anual:2290, tienda:269.99, tiendaAnual:2689.99, orden:4,
     compra:'obrasst-gestion', compraAnual:'obrasst-gestion-anual',
     tope:{ trabajador:-1, kardex:-1, reporte:-1, doc:-1, credencial:-1, amonestacion:-1, semana:-1, escaneo:-1 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
@@ -8578,6 +8578,16 @@ var PLANES = [
    de archivos dentro de cada hoja del sistema de gestión. Queda en -1
    en los cinco planes —o sea, sin tope— y fuera del texto que se
    vende. El freno sigue escrito por si algún día hace falta.        */
+/* ══════ LOS ,99 NO LOS PUSE YO, LOS PONE GOOGLE ══════════════════
+   Al dar de alta los ocho productos (14/09/2026) Play Console redondeó
+   CADA precio a terminación ,99 y avisó de paso: «los precios se
+   ajustan para que el valor final resulte atractivo». 35 se volvió
+   34,99; 119 se volvió 119,99; 269 se volvió 269,99.
+   Lo importante no es el céntimo: es que la app no puede decir «S/ 35»
+   mientras Google cobra 34,99. Ya sabemos en qué termina eso —la app
+   diciendo una cosa y el servidor otra— así que estos números son
+   EXACTAMENTE los que Play cobra. Si algún día se cambian allá, se
+   cambian aquí el mismo día.                                        */
 /* ══════ DOS PRECIOS, Y NO ES UN TRUCO ════════════════════════════
    `precio` es el de la web, donde se cobra por Mercado Pago (~5% de
    comisión). `tienda` es el de Google Play y App Store, que se quedan
@@ -8644,7 +8654,13 @@ function planQueAbre(clave, esTope){
   }
   return null;
 }
-function precioTexto(P){ return P.precio ? ('S/ '+P.precio.toFixed(2).replace('.00','')+' al mes') : 'gratis'; }
+/* El precio que se nombra es el del canal por el que entró: desde la
+   app de Play, el de Play. Antes esto decía siempre el de la web, y
+   el que abría el candado desde el celular veía 29 y pagaba 34,99. */
+function precioTexto(P){
+  var v = (typeof _mes==='function') ? _mes(P) : P.precio;
+  return v ? ('S/ '+v.toFixed(2).replace('.00','')+' al mes') : 'gratis';
+}
 function diasParaVencer(){
   var p=planLocal(); if(!p.vence) return null;
   var a=new Date(String(p.vence).slice(0,10)+'T00:00:00'), b=new Date(hoyISO()+'T00:00:00');
@@ -33707,7 +33723,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
       barra de abajo y espera el toque.
 
    Nunca se recarga en la primera instalacion, ni dos veces seguidas. */
-var SELLO_APP='d2cc5bfbac';
+var SELLO_APP='56ceb69d54';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
