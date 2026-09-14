@@ -33805,6 +33805,26 @@ try{
     }).catch(function(){});
   }
 }catch(_gia){}
+/* ══════ QUE EL CELULAR DIGA LO QUE SABE ════════════════════════════
+   «No se pone el ícono en escritorio cuando se instala; antes aparecía»
+   (Marcelo, 14/09/2026). Desde la página no hay forma de mirar la
+   pantalla de inicio de nadie: lo único honesto es que la app diga en
+   voz alta las cuatro cosas que Android sí le contesta, y que el que
+   está con el celular en la mano las lea. Sin esto, cada intento de
+   arreglo es una adivinanza.
+   Y la respuesta importa, porque el ícono falta por motivos opuestos:
+   si Android ya tiene la app de Play instalada, Chrome NO instala una
+   segunda copia —y hace bien—; si el instalador está disponible y aun
+   así no aparece el ícono, el que no lo pone es el launcher. */
+function diagInstalar(){
+  var d=[];
+  d.push(yaInstalada() ? 'abierta como app' : 'abierta en el navegador');
+  d.push(PWA_PROMPT ? 'instalador disponible' : 'sin instalador');
+  d.push(PLAY_INSTALADA ? 'la app de Play YA está instalada' : 'sin app de Play instalada');
+  if(navegadorEmbebido()) d.push('dentro de otra app');
+  if(esIOS()) d.push('iPhone');
+  return d.join(' · ');
+}
 function _enlaceApp(){ return location.origin + location.pathname.replace(/[^/]*$/,''); }
 function _copiarEnlace(){
   var u=_enlaceApp();
@@ -33836,7 +33856,8 @@ function instalarApp(){
       PWA_PROMPT=null;
       if(r && r.outcome==='accepted'){
         _cartelInstalar('<div class="aviso" style="text-align:left">✅ <b>Quedó instalada.</b>'+
-          '<div style="margin-top:8px;font-size:15px;line-height:1.6">Si no la ves en la pantalla de inicio, <b>está en el cajón de aplicaciones</b> (desliza hacia arriba y búscala como OBRASST). Muchos celulares vienen con «Añadir iconos a la pantalla de inicio» apagado: se prende manteniendo apretada la pantalla de inicio ▸ Ajustes, y desde el cajón la arrastras donde quieras.</div></div>');
+          '<div style="margin-top:8px;font-size:15px;line-height:1.6">Android la instaló como una aplicación de verdad, y por eso entra por el <b>cajón de aplicaciones</b> (desliza hacia arriba y búscala como OBRASST). Muchos celulares —Xiaomi, Samsung, Motorola— vienen con «Añadir iconos a la pantalla de inicio» apagado y no la sacan solos: mantén apretada la app en el cajón y arrástrala a la pantalla de inicio, o préndelo en Ajustes de la pantalla de inicio.</div>'+
+          '<div style="margin-top:10px;font-size:15px;line-height:1.6"><b>Si la quieres directo en la pantalla de inicio:</b> tres puntitos ⋮ de Chrome ▸ <b>«Añadir a pantalla de inicio»</b>. Ese camino le pide permiso al launcher y sale un cuadro de Android que dice «Añadir automáticamente». Ese sí la pone donde la quieres.</div></div>');
       } else {
         _cartelInstalar('<div class="aviso" style="text-align:left">Se canceló la instalación.'+
           '<div style="margin-top:8px;font-size:15px;line-height:1.6">Cuando quieras vuelve a intentarlo. No se descarga nada: queda como un acceso a pantalla completa, con su ícono, y funciona sin señal.</div></div>'+
@@ -33883,6 +33904,7 @@ function pintarInstalar(){
   } else {
     h='<button class="btn sec" style="margin-top:14px" onclick="instalarApp()">📲 ¿Cómo la instalo en mi celular?</button>';
   }
+  h+='<p class="sub" style="margin:6px 0 0;font-size:11.5px;opacity:.75">Android dice: '+esc(diagInstalar())+'</p>';
   l.forEach(function(c){ c.innerHTML=h; });
 }
 /* este bloque corre DESPUÉS del script principal, así que la primera pintada
@@ -33923,7 +33945,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
       barra de abajo y espera el toque.
 
    Nunca se recarga en la primera instalacion, ni dos veces seguidas. */
-var SELLO_APP='03753e3a24';
+var SELLO_APP='8a4fd6282b';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
