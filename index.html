@@ -8243,7 +8243,18 @@ function _ir(p){
   }
   /* la primera vez que alguien llega a su casa, se le pregunta como
      quiere ver la app. Una sola vez y se puede saltar. */
-  if(!yaSeDioLaBienvenida() && (p==='p-emp-home' || p==='p-inicio' || p==='p-colab')) p='p-bienvenida';
+  /* ══════ EL ASISTENTE ES DEL QUE GESTIONA, NO DEL TRABAJADOR ══════
+     Marcelo, 14/09/2026: «le quise hacer probar a un trabajador la app y
+     me sale para que ponga la empresa y el nombre del proyecto, y recién
+     después el código. ¿Por qué hacemos que decida cómo se llama la
+     empresa y el proyecto?». Tenía razón y era grave: al trabajador se le
+     pedían SIETE pantallas —empresa, obras, su nombre, su cuadrilla, el
+     sector, los accesos, el tema— antes de dejarlo escribir el código.
+     Y todo eso ya lo definió la empresa: el trabajador no decide nada de
+     eso, solo llega con un código en el celular. Por eso p-colab sale de
+     esta lista: el que entra como trabajador ve el campo del código y
+     nada más. */
+  if(!yaSeDioLaBienvenida() && (p==='p-emp-home' || p==='p-inicio')) p='p-bienvenida';
   if(!PANT_PROTEGIDA[p] && typeof desproteger==='function'){
     var _pr=document.getElementById('pres');
     if(!(_pr && _pr.className && _pr.className.indexOf('on')>-1)) desproteger();
@@ -10269,7 +10280,7 @@ var LS_BIENVENIDA='sstc_bienvenida';
    Nada se guarda «para despues».                                  */
 var BV_ACC=null;
 var BV_PASO=0;
-var BV={ emp:'', obras:[], nombre:'', equipo:'', sector:null };
+var BV={ emp:'', obras:[], nombre:'', sector:null };
 var BV_GUIA=[
   {k:'emp',    n:'La empresa', t:'¿De qué empresa es esta obra?',
    s:'El nombre que va en la cabecera del kardex, de las constancias y del reporte del mes.'},
@@ -10277,8 +10288,11 @@ var BV_GUIA=[
    s:'Puedes anotar varias. La primera es donde estás ahora; las demás quedan listas para crearlas.'},
   {k:'quien',  n:'Tú',         t:'¿Cómo te llamas?',
    s:'Va firmado en todo lo que generes. Si mañana lo revisa un inspector, tiene que decir quién lo hizo.'},
-  {k:'equipo', n:'Tu equipo',  t:'¿Cuál es tu equipo?',
-   s:'La cuadrilla, el frente o el área a tu cargo. Si trabajas solo, sáltalo.'},
+  /* La cuadrilla se preguntaba aquí y ya no: «al final los mueven y todo
+     un desorden» (Marcelo, 14/09/2026). Un dato que cambia cada semana no
+     puede vivir en la pantalla de entrada, porque nadie vuelve a
+     corregirlo y termina mintiendo en los documentos. El que igual la
+     quiera anotar la tiene en Configuración, que es donde se corrige. */
   {k:'sector', n:'El sector',  t:'¿De qué es tu obra?',
    s:'De esto dependen las charlas, las capacitaciones y las inspecciones que te va a ofrecer la app.'},
   {k:'acc',    n:'Tus accesos',t:'¿Qué quieres tener a la mano?',
@@ -10299,7 +10313,6 @@ function pintarBienvenida(){
   var cfg=leer(LS.cfg,{}) || {}, e=empActiva();
   if(!BV.emp)    BV.emp    = (e&&e.nombre) || cfg.empresa || '';
   if(!BV.nombre) BV.nombre = cfg.cap || '';
-  if(!BV.equipo) BV.equipo = cfg.equipo || '';
   if(!BV.obras.length && cfg.obra) BV.obras=[cfg.obra];
   if(BV.sector===null) BV.sector = leer(LS.sec,null);
 
@@ -10332,13 +10345,6 @@ function pintarBienvenida(){
   }
   else if(g.k==='quien'){
     h='<input id="bv-nombre" placeholder="Marcelo Lamas" autocomplete="off" value="'+escA(BV.nombre)+'">';
-  }
-  else if(g.k==='equipo'){
-    var P=planActual();
-    h='<input id="bv-equipo" placeholder="Cuadrilla de estructuras / Frente 2" autocomplete="off" value="'+escA(BV.equipo)+'">';
-    h+= (P.gestores===1 || P.gestores===undefined)
-      ? '<p class="sub" style="margin:10px 0 0;font-size:12.5px">Tu plan '+esc(P.nombre)+' es de un solo gestor: aquí solo estás tú. El nombre del equipo se usa para ordenar tus registros.</p>'
-      : '<p class="sub" style="margin:10px 0 0;font-size:12.5px">Tu plan '+esc(P.nombre)+' admite '+(P.gestores===-1?'gestores sin tope':(P.gestores+' gestores'))+'. Cuando termines puedes invitarlos desde «Mi equipo».</p>';
   }
   else if(g.k==='sector'){
     SECTORES.forEach(function(x){
@@ -10434,7 +10440,6 @@ function bvRecoger(){
   var g=bvPasoActual();
   if(g.k==='emp'){    var x=$('bv-emp');    if(x) BV.emp=(x.value||'').trim(); }
   if(g.k==='quien'){  var n=$('bv-nombre'); if(n) BV.nombre=(n.value||'').trim(); }
-  if(g.k==='equipo'){ var q=$('bv-equipo'); if(q) BV.equipo=(q.value||'').trim(); }
   if(g.k==='obras'){
     var o=$('bv-obra'), v=o?(o.value||'').trim():'';
     if(v.length>=3 && !BV.obras.some(function(y){ return _norm(y)===_norm(v); })) BV.obras.push(v);
@@ -10456,7 +10461,6 @@ function terminarBienvenida(saltar){
     bvRecoger();
     var cfg=leer(LS.cfg,{}) || {};
     if(BV.nombre) cfg.cap=BV.nombre;
-    if(BV.equipo) cfg.equipo=BV.equipo;
     if(BV.emp)    cfg.empresa=BV.emp;
     if(BV.obras.length){ cfg.obra=BV.obras[0]; cfg.obras=BV.obras.slice(); }
     guardar(LS.cfg,cfg);
@@ -10467,7 +10471,7 @@ function terminarBienvenida(saltar){
   guardar(LS_BIENVENIDA,{fecha:hoyISO()});
   BV_ACC=null; BV_PASO=0;
   var obras=pendientes.slice();
-  BV={ emp:'', obras:[], nombre:'', equipo:'', sector:null };
+  BV={ emp:'', obras:[], nombre:'', sector:null };
   if(aplicarAtajo()) return;
   ir(inicioDelModo());
   /* las obras de mas NO se crean a escondidas: se avisa y se ofrece
@@ -15271,6 +15275,7 @@ function pintarSemanal(){
      '<button class="btn" style="margin:0;flex:1;min-width:150px" onclick="semanalPDF()">📄 PDF del reporte</button>'+
      '<button class="btn sec" style="margin:0;flex:1;min-width:150px" onclick="semanalExcel()">📊 Excel</button>'+
      '</div>';
+  h+='<button class="btn sec" style="margin-top:9px" onclick="compartirSemanal()">📤 Enviar el reporte</button>';
   h+='<button class="btn sec" style="margin-top:9px" onclick="copiarSemanal()">📋 Copiar el resumen</button>';
   h+='<div id="sm-msg" style="font-size:13px;margin-top:9px"></div>';
   c.innerHTML=h;
@@ -15416,9 +15421,99 @@ function quitarDiaSem(f){
     semSet(semLocal().filter(function(d){ return d.fecha!==f; })); pintarSemanal();
   }, {si:'Sí, quitar', no:'Cancelar', icono:'📅'});
 }
+/* ══════ LO QUE SE MANDA NO PUEDE SER LA PANTALLA ═══════════════════
+   Marcelo, 14/09/2026, con la captura de WhatsApp delante: «la
+   información está bien, pero no está ordenado ni se ve como un
+   reporte». Y no lo era, porque esto copiaba el innerText del panel:
+   mandaba la interfaz. De ahí salía todo lo que se veía mal —la
+   etiqueta y su número en renglones distintos, porque en pantalla son
+   dos cajas una encima de otra; el periodo repetido dos veces, una en
+   la cabecera y otra en el subtítulo; y un «Corregir» detrás de cada
+   día, que es un BOTÓN—. Nadie manda eso a un cliente.
+   El texto ahora se escribe aparte, con lo que lleva un reporte: de
+   quién es, de qué obra, de qué periodo, quién lo emite, el bloque de
+   indicadores alineado, el detalle por día y la nota de cómo se
+   calcula. Los puntos guía alinean la columna de números también en
+   WhatsApp, que usa tipografía de ancho variable. */
+function _smFila(et, val, ancho){
+  var e=String(et), v=String(val), n=(ancho||22)-e.length;
+  return e+' '+(n>0?new Array(n+1).join('.'):'')+' '+v;
+}
+function _smDer(v, w){ var s=String(v); while(s.length<(w||7)) s=' '+s; return s; }
+/* en un reporte de horas hombre los ceros NO se recortan: 56 h y 56.00 h
+   dicen lo mismo, pero solo el segundo se lee como una cifra medida. */
+function _smH(v){ var x=Number(v)||0; return x.toFixed(2); }
+function _smFecha(iso){ var q=String(iso||'').split('-'); return q.length===3 ? (q[2]+'/'+q[1]+'/'+q[0]) : String(iso||''); }
+function textoSemanal(){
+  var P=semanalDelPeriodo();
+  var dias=(P.dias||[]).slice().sort(function(a,b){ return String(a.fecha).localeCompare(String(b.fecha)); });
+  if(!dias.length) return '';
+  var T=totalesSemanal(dias), emp=empleador()||{}, cfg=leer(LS.cfg,{})||{};
+  var obra=emp.proyecto||nombreDeLaObra()||'';
+  var raya='──────────────────────────────────';
+  var L=[];
+  L.push('REPORTE SEMANAL DE HORAS HOMBRE');
+  L.push('HHT trabajadas y HHC de capacitación');
+  L.push('══════════════════════════════════');
+  L.push('');
+  if(emp.razon) L.push(_smFila('Empresa', emp.razon));
+  if(emp.ruc)   L.push(_smFila('RUC', emp.ruc));
+  if(obra)      L.push(_smFila('Obra', obra));
+  L.push(_smFila('Periodo', (P.desde?_smFecha(P.desde):'—')+' al '+(P.hasta?_smFecha(P.hasta):'—')));
+  L.push(_smFila('Días con registro', String(T.dias)));
+  if(cfg.cap) L.push(_smFila('Elaborado por', cfg.cap));
+  L.push(_smFila('Emitido', _smFecha(hoyISO())));
+  L.push('');
+  L.push('1 · RESUMEN DEL PERIODO');
+  L.push(raya);
+  L.push(_smFila('HHT obreros',        _smDer(_smH(T.obHHT),8)+' h'));
+  L.push(_smFila('HHT staff',          _smDer(_smH(T.stHHT),8)+' h'));
+  L.push(_smFila('HHT TOTAL',          _smDer(_smH(T.hht),8)+' h'));
+  L.push(_smFila('HHC capacitación',   _smDer(_smH(T.hhc),8)+' h'));
+  L.push(_smFila('HHC sobre HHT',      _smDer(T.hht?_smH(T.pct):'—',8)+' %'));
+  L.push(_smFila('Promedio obreros/día', _smDer(T.dias?_smH(T.obDia/T.dias):'—',8)));
+  L.push(_smFila('Promedio staff/día',   _smDer(T.dias?_smH(T.stDia/T.dias):'—',8)));
+  L.push('');
+  L.push('2 · DETALLE DIARIO');
+  L.push(raya);
+  dias.forEach(function(d){
+    var hht=(d.obN||0)*(d.obH||0)+(d.stN||0)*(d.stH||0);
+    L.push(_smFecha(d.fecha)+(d.lugar?(' · '+d.lugar):''));
+    L.push('   Obreros  '+(d.obN||0)+' × '+_n2(d.obH||0)+' h'+(d.obE?('   '+d.obE+'–'+d.obS):''));
+    L.push('   Staff    '+(d.stN||0)+' × '+_n2(d.stH||0)+' h'+(d.stE?('   '+d.stE+'–'+d.stS):''));
+    L.push('   HHC      '+_smDer(_smH(d.hhc||0),7)+' h'+(d.hhcN?('  ('+d.hhcN+' asistentes × '+(d.hhcM||0)+' min)'):''));
+    L.push('   HHT      '+_smDer(_smH(hht),7)+' h');
+    L.push('');
+  });
+  L.push('3 · CÓMO SE CALCULA');
+  L.push(raya);
+  L.push('Las HHT son la jornada de cada día —de la entrada a la');
+  L.push('salida, descontando el refrigerio— por el número de');
+  L.push('personas de ese día. Las HHC son los asistentes por los');
+  L.push('minutos de capacitación. Las HHT son el denominador de');
+  L.push('los índices de frecuencia, severidad y accidentabilidad.');
+  L.push('Ley 29783 · D.S. 005-2012-TR');
+  L.push('');
+  L.push('Generado con OBRASST · '+_smFecha(hoyISO()));
+  return L.join('\n');
+}
 function copiarSemanal(){
-  var t=$('sm-cuerpo').innerText;
-  try{ navigator.clipboard.writeText(t); aviso('Resumen copiado','Ya lo puedes pegar donde quieras.','📋'); }catch(e){ aviso('Cópialo a mano','Selecciona el resumen de arriba y cópialo.','📋'); }
+  var t=textoSemanal();
+  if(!t){ aviso('Nada que copiar','No hay días registrados en ese periodo.','📅'); return; }
+  try{
+    navigator.clipboard.writeText(t);
+    aviso('Reporte copiado','Ya se puede pegar en WhatsApp, en un correo o en el informe del mes. Va con la cabecera, los indicadores y el detalle por día.','📋');
+  }catch(e){ aviso('Cópialo a mano','Selecciona el resumen de arriba y cópialo.','📋'); }
+}
+function compartirSemanal(){
+  var t=textoSemanal();
+  if(!t){ aviso('Nada que compartir','No hay días registrados en ese periodo.','📅'); return; }
+  var titulo='Reporte semanal HHT y HHC'+((nombreDeLaObra()?(' · '+nombreDeLaObra()):''));
+  if(navigator.share){
+    navigator.share({title:titulo, text:t}).catch(function(){});
+    return;
+  }
+  copiarSemanal();
 }
 
 // =================================================================
@@ -33828,7 +33923,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
       barra de abajo y espera el toque.
 
    Nunca se recarga en la primera instalacion, ni dos veces seguidas. */
-var SELLO_APP='77e349e5c5';
+var SELLO_APP='03753e3a24';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
