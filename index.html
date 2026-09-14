@@ -11964,10 +11964,17 @@ function _puntosDelPlan(P){
    es el costo real. `tienda` = precio ÷ 0,85, redondeado.
    Si el plan no trae precio de tienda, se cae al de la web: nunca se
    muestra un precio vacio.                                          */
-function _mes(P){ return (desdePlayStore() && P.tienda) ? P.tienda : P.precio; }
-function _anio(P){ return (desdePlayStore() && P.tiendaAnual) ? P.tiendaAnual : P.anual; }
+function _mes(P){ return (enLaTienda() && P.tienda) ? P.tienda : P.precio; }
+function _anio(P){ return (enLaTienda() && P.tiendaAnual) ? P.tiendaAnual : P.anual; }
 function pintarPlanes(){
   var c=$('planes-cuerpo'); if(!c) return;
+  /* Mientras no se sepa si la caja de Google abre, se pinta con el
+     precio de la web —el que sí se puede cobrar— y en cuanto conteste
+     se vuelve a pintar. Un parpadeo de medio segundo es barato; un
+     precio que no se puede cobrar, no. */
+  if(_TIENDA_VIVA === null){
+    probarTienda().then(function(){ try{ if($('planes-cuerpo')) pintarPlanes(); }catch(_pp){} });
+  }
   var A=planActual(), pl=planLocal();
   var h='';
   if(pl.vence && A.orden>0){
@@ -12013,8 +12020,8 @@ function pintarPlanes(){
          ahi. Si no lo esta —TWA viejo, productos sin dar de alta— no se
          muestra boton de pago: solo el del codigo. Nunca un boton que
          no cobra. */
-      if(P.compra && (!desdePlayStore() || tiendaDisponible())){
-        var _fn = desdePlayStore() ? 'comprarPlanEnTienda' : 'comprarPlan';
+      if(P.compra){
+        var _fn = enLaTienda() ? 'comprarPlanEnTienda' : 'comprarPlan';
         h+='<button class="btn" style="margin:12px 0 0" onclick="'+_fn+'(\''+P.compra+'\',\''+esc(P.nombre)+'\')">'+
            'Pagar S/ '+num2(_mes(P))+' al mes</button>';
         /* el anual va DEBAJO y en secundario: el que decide por precio ve
@@ -12074,9 +12081,39 @@ function servicioTienda(){
     .then(function(svc){ _DGS=svc; return svc; })
     .catch(function(){ return null; });
 }
-function tiendaDisponible(){
-  return !!(desdePlayStore() && window.getDigitalGoodsService && window.PaymentRequest);
+/* ══════ «VENIR DE PLAY» NO ES «PLAY PUEDE COBRAR» ═════════════════
+   Se parecen y no son lo mismo, y la diferencia cuesta plata.
+   El instalador que reparte descarganomaspe.github.io es el MISMO
+   caparazón que el de Play: Android le pone el mismo referrer, así que
+   desdePlayStore() contestaba que sí. Pero Google solo deja cobrar si
+   la app la INSTALÓ Play Store; sobre un APK puesto a mano la caja ni
+   se abre. Resultado con lo de antes: un botón que dice «Pagar S/ 34,99»
+   y al tocarlo no pasa nada. Eso es peor que no tener botón.
+   La única respuesta honesta es preguntarle a la caja si abre. Se
+   pregunta UNA vez, se guarda la respuesta, y mientras no conteste no
+   se promete nada: se trata como web, que es el camino que siempre
+   funciona. Prometer el precio de Play y después no poder cobrarlo es
+   el peor de los dos errores posibles.
+   Ojo con la política de pagos de Play: cobrar por fuera de Google
+   está prohibido DENTRO de la app de Play, y por eso el camino de
+   Mercado Pago solo aparece cuando la caja de Google NO abre — es
+   decir, cuando la app no vino de Play.                            */
+var _TIENDA_VIVA = null;     /* null = todavía no se sabe */
+function probarTienda(){
+  if(_TIENDA_VIVA !== null) return Promise.resolve(_TIENDA_VIVA);
+  if(!desdePlayStore() || !window.getDigitalGoodsService || !window.PaymentRequest){
+    _TIENDA_VIVA = false;
+    return Promise.resolve(false);
+  }
+  return servicioTienda().then(function(svc){
+    _TIENDA_VIVA = !!svc;
+    return _TIENDA_VIVA;
+  }).catch(function(){ _TIENDA_VIVA = false; return false; });
 }
+/* la caja de Google abre de verdad en este celular */
+function tiendaDisponible(){ return _TIENDA_VIVA === true; }
+function enLaTienda(){ return _TIENDA_VIVA === true; }
+try{ setTimeout(function(){ try{ probarTienda(); }catch(_pt){} }, 1200); }catch(_pt0){}
 /* Cobrar con la caja de Google. Devuelve una promesa que resuelve con
    el token de compra, que es lo unico que sirve: el servidor lo
    verifica contra Google antes de abrir nada. Confiar en que el
@@ -33723,7 +33760,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
       barra de abajo y espera el toque.
 
    Nunca se recarga en la primera instalacion, ni dos veces seguidas. */
-var SELLO_APP='56ceb69d54';
+var SELLO_APP='31716140bd';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
