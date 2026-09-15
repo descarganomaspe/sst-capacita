@@ -6,6 +6,20 @@
 <meta name="theme-color" content="#0B2A3A">
 <title>OBRASST</title>
 <link rel="manifest" href="manifest.webmanifest">
+<script>
+/* Un solo dueño del evento de instalación. Había dos bloques haciendo
+   preventDefault y prompt() sobre el MISMO evento; el segundo prompt()
+   se perdía y Android se quedaba en "Instalando…" sin terminar. */
+var __PWA_EV=null, __PWA_USADO=false;
+function __pwaGuardar(e){ __PWA_EV=e; __PWA_USADO=false; }
+function __pwaPrompt(){
+  if(!__PWA_EV || __PWA_USADO) return null;
+  __PWA_USADO=true; var p=__PWA_EV;
+  try{ p.prompt(); }catch(x){ __PWA_EV=null; return null; }
+  return p.userChoice;
+}
+</script>
+
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icono-192.png">
@@ -2402,6 +2416,40 @@ input,textarea{-webkit-user-select:text;user-select:text}
   cursor:pointer;font-family:inherit}
 #inst-chip.on{display:block}
 
+
+/* ── accesos en páginas que se deslizan ── */
+.accesos-cab{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.acc-lapiz{background:none;border:0;padding:4px 6px;font-size:17px;cursor:pointer;opacity:.75;line-height:1}
+.acc-lapiz:active{transform:scale(.9)}
+.acc-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;margin:0 -4px}
+.acc-track::-webkit-scrollbar{display:none}
+.acc-pag{flex:0 0 100%;scroll-snap-align:start;padding:0 4px;box-sizing:border-box}
+.acc-puntos{display:flex;justify-content:center;gap:7px;margin-top:10px}
+.acc-punto{width:7px;height:7px;border-radius:50%;background:rgba(var(--w),.22);transition:all .18s}
+.acc-punto.on{background:var(--oro);width:18px;border-radius:4px}
+/* ── el editor de accesos ── */
+.acc-ed .acceso{opacity:.42;transition:opacity .15s}
+.acc-ed .acceso.on{opacity:1}
+.acc-ed .aro{position:relative}
+.acc-tick{position:absolute;right:-3px;bottom:-3px;width:21px;height:21px;border-radius:50%;
+  background:var(--oro);color:#0B2A3A;font-size:12px;font-weight:800;display:flex;
+  align-items:center;justify-content:center;line-height:1}
+.acc-ed-it:not(.on) .acc-tick{background:transparent}
+/* ── la guía del primer uso ── */
+#guia-capa{position:fixed;inset:0;z-index:9999;display:none}
+#guia-capa.on{display:block}
+#guia-hueco{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(3,14,20,.80);
+  transition:all .28s cubic-bezier(.4,0,.2,1);pointer-events:none;border:2px solid var(--oro)}
+#guia-globo{position:absolute;left:16px;right:16px;background:#13394E;border:1px solid #2A5A75;
+  border-radius:14px;padding:15px 16px;box-shadow:0 14px 34px rgba(0,0,0,.45)}
+#guia-globo b{display:block;font-size:16px;margin-bottom:5px;color:var(--oro)}
+#guia-globo p{margin:0;font-size:13.5px;line-height:1.45;color:#fff}
+#guia-pie{display:flex;align-items:center;gap:9px;margin-top:13px}
+#guia-pasos{flex:1;display:flex;gap:6px}
+.guia-pt{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.25)}
+.guia-pt.on{background:var(--oro)}
+#guia-globo .btn{margin:0;width:auto;padding:9px 18px}
 </style>
 <script>
 /* apariencia: se aplica antes del primer pixel, sin esperar al resto del JS */
@@ -2422,31 +2470,27 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <div class="wrap">
 
 <!-- ================= 1.ª pantalla: quién eres ================= -->
+<div id="guia-capa" aria-hidden="true">
+  <div id="guia-hueco"></div>
+  <div id="guia-globo">
+    <b id="guia-tit"></b>
+    <p id="guia-tx"></p>
+    <div id="guia-pie">
+      <div id="guia-pasos"></div>
+      <button class="btn sec" onclick="cerrarGuia()" style="margin:0;width:auto;padding:9px 14px">Saltar</button>
+      <button class="btn" id="guia-sig" onclick="guiaSiguiente()">Siguiente</button>
+    </div>
+  </div>
+</div>
 <div id="navbar" class="navbar" style="display:none">
   <button type="button" class="nav-b" id="nav-atras">‹ Atrás</button>
   <button type="button" class="nav-b" id="nav-home">Inicio ⌂</button>
   <span class="nav-donde" id="nav-donde"></span>
 </div>
 
-<section class="pantalla activa" id="p-rol">
-  <div class="marca">◆ OBRASST</div>
-  <h1>Antes de entrar,<br>¿quién eres?</h1>
-  <p class="sub">Dos puertas: el que gestiona la seguridad de la obra, y el que trabaja en ella.</p>
-  <button class="tarj vidrio" onclick="elegirRol('emp')"><b>🏢 Gestiono la SST</b><small>Líder o supervisor SSOMA. Entras con tu correo. Adentro eliges cuál de los dos eres.</small></button>
-  <button class="tarj vidrio" onclick="elegirRol('col')"><b>🦺 Soy trabajador</b><small>Vas a rendir una evaluación, ver la charla del día o reportar algo inseguro. Entras con el código que te pasaron. No pagas nada.</small></button>
-  <div id="rol-sesion"></div>
-  <div id="pwa-banda" class="pwa-banda"></div>
-  <div class="pie">Se puede cambiar después: en Ajustes hay «Cambiar de usuario» o «Cambiar de empresa».</div>
-</section>
 
-<section class="pantalla" id="p-gestion-quien">
-  <div class="barra"><span>Gestiono la SST</span></div>
-  <h1>¿Cuál de los dos eres?</h1>
-  <p class="sub">Los dos entran con su correo. La diferencia la pone el plan que tenga la empresa.</p>
-  <button class="tarj vidrio" onclick="elegirGestor('lider')"><b>🎖️ Soy el líder SSOMA</b><small>Ves tus proyectos juntos en la Torre de control, delegas supervisores, exportas el consolidado y decides qué se mide. Viene con el plan Gestión SST.</small></button>
-  <button class="tarj vidrio" onclick="elegirGestor('sup')"><b>🦺 Soy el supervisor SSOMA</b><small>Llevas tu obra: inspecciones, kardex de EPP, charlas, capacitaciones, reportes, amonestaciones y accidentes. Está en todos los planes.</small></button>
-  <div class="pie">Si te equivocas no pasa nada: se cambia desde Ajustes cuando quieras.</div>
-</section>
+
+
 
 <section class="pantalla" id="p-lider-no">
   <div class="barra"><span>Torre de control</span></div>
@@ -3308,13 +3352,32 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div id="ini-cuerpo"></div>
 
   <div class="sec-tit">⚙️ Ajustes</div>
-  <div class="fila-ajustes">
-    <button class="btn sec" id="b-gen" onclick="abrirGenerar()">🎟️ Códigos para mi cuadrilla</button>
-    <button class="btn sec" onclick="ir('p-empleador')">🏢 Datos de mi empresa</button>
-    <button class="btn sec" onclick="ir('p-config')">Envío de resultados</button>
-    <button class="btn sec" onclick="ir('p-apariencia')">🎨 Apariencia</button>
-    <button class="btn sec" onclick="ir('p-legal')">🔒 Privacidad y condiciones</button>
-    <button class="btn sec" onclick="cambiarUsuario()">Cambiar de usuario</button>
+  <div class="grupo">
+    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🏢</span><span class="tx">Mi empresa<small>Datos y códigos de cuadrilla</small></span><span class="fl">▾</span></button>
+    <div class="grupo-cont">
+      <button class="btn sec" onclick="ir('p-empleador')">Datos de mi empresa</button>
+      <button class="btn sec" id="b-gen" onclick="abrirGenerar()">🎟️ Códigos para mi cuadrilla</button>
+    </div>
+  </div>
+  <div class="grupo">
+    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">📁</span><span class="tx">Documentos<small>A dónde se envía lo que generas</small></span><span class="fl">▾</span></button>
+    <div class="grupo-cont">
+      <button class="btn sec" onclick="ir('p-config')">Envío de resultados</button>
+    </div>
+  </div>
+  <div class="grupo">
+    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🎨</span><span class="tx">La app<small>Apariencia, guía, privacidad</small></span><span class="fl">▾</span></button>
+    <div class="grupo-cont">
+      <button class="btn sec" onclick="ir('p-apariencia')">Apariencia</button>
+      <button class="btn sec" onclick="repetirGuia()">🧭 Ver la guía otra vez</button>
+      <button class="btn sec" onclick="ir('p-legal')">🔒 Privacidad y condiciones</button>
+    </div>
+  </div>
+  <div class="grupo">
+    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">👤</span><span class="tx">Mi cuenta<small>Cambiar de usuario</small></span><span class="fl">▾</span></button>
+    <div class="grupo-cont">
+      <button class="btn sec" onclick="cambiarUsuario()">Cambiar de usuario</button>
+    </div>
   </div>
   <div class="pie">Herramienta de apoyo. No reemplaza la capacitación dictada por persona competente conforme a la Ley 29783.<br>
     <a onclick="ir('p-legal')" style="color:#f5c542;text-decoration:underline;cursor:pointer">Privacidad y condiciones</a></div>
@@ -4372,7 +4435,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
 </section>
 
 <!-- ================= LA CUENTA (correo + contraseña) ================= -->
-<section class="pantalla" id="p-cuenta">
+<section class="pantalla activa" id="p-cuenta">
   <div class="barra"><span>Tu cuenta</span></div>
   <div class="marca">◆ OBRASST</div>
   <h1 id="cu-tit">Entra a tu<br>cuenta.</h1>
@@ -4594,20 +4657,37 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <div id="emp-home-cuerpo"></div>
   <div id="emp-home-panel"></div>
   <div class="sec-tit" style="margin-top:20px">⚙️ Ajustes</div>
-  <div class="fila-ajustes">
-    <button class="btn sec" onclick="ir('p-empleador')">🏢 Datos de mi empresa</button>
-    <button class="btn sec" onclick="compartirEmpCod()">Compartir el código</button>
-    <button class="btn sec" id="aj-config" onclick="ir('p-config')">Envío de resultados</button>
-    <button class="btn sec" id="aj-formatos" onclick="ir('p-formatos')">📋 Códigos de formato</button>
-  <div class="pwa-banda"></div>
-    <button class="btn sec" onclick="ir('p-apariencia')">🎨 Apariencia</button>
-    <button class="btn sec" onclick="pedirCodigo('')">Mi plan / activar código</button>
-    <button class="btn sec" id="aj-solic" onclick="ir('p-solicitudes')">Solicitudes de acceso</button>
-    <button class="btn sec" onclick="salirDeSesion()">Cambiar de empresa</button>
-    <!-- La política de privacidad SOLO se alcanzaba desde p-inicio, que está
-         muerto, o por deep-link ?legal=. Google Play exige que el enlace se
-         pueda abrir desde dentro de la app. -->
-    <button class="btn sec" onclick="ir('p-legal')">🔒 Privacidad y condiciones</button>
+  <div class="grupo">
+    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🏢</span><span class="tx">Mi empresa<small>Datos, código, quién entra</small></span><span class="fl">▾</span></button>
+    <div class="grupo-cont">
+      <button class="btn sec" onclick="ir('p-empleador')">Datos de mi empresa</button>
+      <button class="btn sec" onclick="compartirEmpCod()">Compartir el código</button>
+      <button class="btn sec" id="aj-solic" onclick="ir('p-solicitudes')">Solicitudes de acceso</button>
+      <button class="btn sec" onclick="salirDeSesion()">Cambiar de empresa</button>
+    </div>
+  </div>
+  <div class="grupo">
+    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">📁</span><span class="tx">Documentos y formatos<small>Carpetas, códigos, a dónde se envía</small></span><span class="fl">▾</span></button>
+    <div class="grupo-cont">
+      <button class="btn sec" onclick="verCarpetasGestion()">📁 Carpetas de gestión</button>
+      <button class="btn sec" id="aj-formatos" onclick="ir('p-formatos')">Códigos de formato</button>
+      <button class="btn sec" id="aj-config" onclick="ir('p-config')">Envío de resultados</button>
+    </div>
+  </div>
+  <div class="grupo">
+    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🎨</span><span class="tx">La app<small>Apariencia, instalación, guía, privacidad</small></span><span class="fl">▾</span></button>
+    <div class="grupo-cont">
+      <button class="btn sec" onclick="ir('p-apariencia')">Apariencia</button>
+      <button class="btn sec" onclick="repetirGuia()">🧭 Ver la guía otra vez</button>
+      <div class="pwa-banda"></div>
+      <button class="btn sec" onclick="ir('p-legal')">🔒 Privacidad y condiciones</button>
+    </div>
+  </div>
+  <div class="grupo">
+    <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">💳</span><span class="tx">Mi plan y mi cuenta<small>Plan, código de activación</small></span><span class="fl">▾</span></button>
+    <div class="grupo-cont">
+      <button class="btn sec" onclick="pedirCodigo('')">Mi plan / activar código</button>
+    </div>
   </div>
   <div class="salir-caja">
     <p class="quien" id="emp-quien"></p>
@@ -8033,13 +8113,13 @@ function irAtras(){
     if(modoActivo()!=='col' && (MIS_EMP||[]).length>1 && alcanzable('p-mis-empresas')){
       _ir('p-mis-empresas'); return;
     }
-    _ir('p-rol'); return;
+    _ir('p-cuenta'); return;
   }
   while(HIST.length){ var c=HIST.pop(); if(c!==act && c!=='p-rol' && alcanzable(c)){ prev=c; break; } }
   var destino = prev || casa;
   /* si el destino iba a rebotar —o nos deja donde ya estamos— la única
      salida honesta es la portada de «¿quién eres?» */
-  if(!alcanzable(destino) || destino===act){ HIST=[]; destino='p-rol'; }
+  if(!alcanzable(destino) || destino===act){ HIST=[]; destino='p-cuenta'; }
   _ir(destino);
 }
 /* Inicio: te lleva al inicio de tu modo. Si ya estás ahí, a la portada. */
@@ -8050,8 +8130,8 @@ function irHome(){
   var casa=inicioDelModo();
   HIST=[];
   if(modoActivo()==='col' && typeof yo==='function' && yo()){ _ir(casa); return; }
-  var destino = (act===casa) ? 'p-rol' : casa;
-  if(!alcanzable(destino) || destino===act) destino='p-rol';
+  var destino = (act===casa) ? 'p-cuenta' : casa;
+  if(!alcanzable(destino) || destino===act) destino='p-cuenta';
   _ir(destino);
 }
 /* ══ EL GESTO DE ATRÁS DEL CELULAR ═════════════════════════════════
@@ -9292,7 +9372,7 @@ function elegirSector(id){
   }
   var d=SECTOR_VUELVE || 'p-inicio'; SECTOR_VUELVE='';
   /* si el sector se preguntó al abrir la app, se sigue por donde iba */
-  if(d==='__arranque__'){ HIST=[]; try{ seguirElArranque(); }catch(e2){ ir('p-rol'); } return; }
+  if(d==='__arranque__'){ HIST=[]; try{ seguirElArranque(); }catch(e2){ ir('p-cuenta'); } return; }
   ir(d);
 }
 /* el sector de hoy, en cristiano (lo usa el tablero y Ajustes) */
@@ -19691,7 +19771,7 @@ function refrescarTableroDom(){
    Se recuerda cómo lo dejaste, por celular, así que el que lo cierra
    una vez no lo vuelve a ver más.                                 */
 var LS_TAB_PLEGADO='sstc_tablero_plegado';
-function tableroPlegado(){ try{ return leer(LS_TAB_PLEGADO,false)===true; }catch(_e){ return false; } }
+function tableroPlegado(){ try{ return leer(LS_TAB_PLEGADO,true)!==false; }catch(_e){ return true; } }
 function plegarTablero(){
   var caja=document.querySelector('.tablero'); if(!caja) return;
   var ahora = caja.className.indexOf('plegado')===-1;
@@ -19836,40 +19916,202 @@ function abrirRisst(){
   if(!puede('qr_risst')){ soloConCodigo('Los carteles QR de la obra','qr_risst'); return; }
   ir('p-qr-docs');
 }
-function accesosRapidosDom(){
-  var caja=document.createElement('div');
-  var t=document.createElement('div'); t.className='accesos-tit'; t.textContent='Lo de todos los días';
-  caja.appendChild(t);
-  var fila=document.createElement('div'); fila.className='accesos entran';
-  accesosVisibles().forEach(function(a){
-    var b=document.createElement('button'); b.className='acceso '+a.color; b.type='button';
-    b.setAttribute('aria-label', a.et.replace(/<br>/g,' '));
-    /* el emoji va dentro de su propio span: asi se puede encoger al
-       tocarlo sin arrastrar el aro ni el globito de avisos */
-    b.innerHTML='<span class="aro"><span class="emo">'+a.ic+'</span></span><span class="et">'+a.et+'</span>';
-    b.onclick=function(){
-      /* el rebote: se ve ANTES de irse, si no no se ve nunca */
-      var aro=b.querySelector('.aro');
-      if(aro && !_sinMovimiento()){
-        aro.classList.remove('rebota'); void aro.offsetWidth; aro.classList.add('rebota');
-        setTimeout(function(){ aro.classList.remove('rebota'); }, 520);
-      }
-      var salta=function(){
-        if(a.fn && typeof window[a.fn]==='function'){ window[a.fn](); return; }
-        ir(a.ir);
-      };
-      if(_sinMovimiento()) salta(); else setTimeout(salta, 135);
+/* ══════════ ACCESOS RÁPIDOS EN PÁGINAS DE NUEVE ══════════
+   Salían todos de corrido y la portada se hacía larguísima. Ahora van de
+   nueve en nueve: se desliza al costado para los siguientes, y con el
+   lápiz eliges cuáles quieres en la primera cara. La preferencia se
+   guarda en el celular: es de quien usa ESTE teléfono. */
+var VER_CARPETAS=false, ACC_EDITANDO=false, ACC_SEL=[];
+
+function misAccesos(){ try{ var v=leer(LS_MIS_ACCESOS,null); return (v&&v.length)?v:null; }catch(_e){ return null; } }
+function guardarMisAccesos(arr){ try{ guardar(LS_MIS_ACCESOS, arr); }catch(_e){} }
+function accesosOrdenados(){
+  var todos=accesosVisibles(), mis=misAccesos();
+  if(!mis) return todos;
+  var porK={}; todos.forEach(function(a){ porK[a.k]=a; });
+  var out=[];
+  mis.forEach(function(k){ if(porK[k]){ out.push(porK[k]); porK[k]=null; } });
+  todos.forEach(function(a){ if(porK[a.k]) out.push(a); });
+  return out;
+}
+function repintarCasa(){
+  var act=document.querySelector('.pantalla.activa'), id=act?act.id:'';
+  if(id==='p-inicio'){ try{ pintarMenuSup(); }catch(_e){} return; }
+  try{ pintarEmpHome(); }catch(_e){}
+}
+function verCarpetasGestion(){
+  VER_CARPETAS=true; repintarCasa();
+  setTimeout(function(){
+    var g=document.querySelector('#emp-home-cuerpo .grupo');
+    if(g){ try{ g.scrollIntoView({block:'start', behavior:'smooth'}); }catch(_e){} }
+  }, 140);
+}
+
+/* un círculo, con su rebote, igual que antes */
+function accesoBotonDom(a){
+  var b=document.createElement('button'); b.className='acceso '+a.color; b.type='button';
+  b.setAttribute('aria-label', a.et.replace(/<br>/g,' '));
+  b.innerHTML='<span class="aro"><span class="emo">'+a.ic+'</span></span><span class="et">'+a.et+'</span>';
+  b.onclick=function(){
+    var aro=b.querySelector('.aro');
+    if(aro && !_sinMovimiento()){
+      aro.classList.remove('rebota'); void aro.offsetWidth; aro.classList.add('rebota');
+      setTimeout(function(){ aro.classList.remove('rebota'); }, 520);
+    }
+    var salta=function(){
+      if(a.fn && typeof window[a.fn]==='function'){ window[a.fn](); return; }
+      ir(a.ir);
     };
-    fila.appendChild(b);
-  });
-  caja.appendChild(fila);
+    if(_sinMovimiento()) salta(); else setTimeout(salta, 135);
+  };
+  return b;
+}
+
+function accesosRapidosDom(){
+  if(ACC_EDITANDO) return accesosEditorDom();
+  var caja=document.createElement('div'); caja.id='acc-caja';
+  var cab=document.createElement('div'); cab.className='accesos-cab';
+  var t=document.createElement('div'); t.className='accesos-tit'; t.textContent='Lo de todos los días';
+  var lap=document.createElement('button'); lap.type='button'; lap.className='acc-lapiz';
+  lap.setAttribute('aria-label','Elegir qué accesos van adelante'); lap.textContent='✏️';
+  lap.onclick=abrirEditorAccesos;
+  cab.appendChild(t); cab.appendChild(lap); caja.appendChild(cab);
+
+  var lista=accesosOrdenados();
+  var track=document.createElement('div'); track.className='acc-track'; track.id='acc-track';
+  var paginas=Math.max(1, Math.ceil(lista.length/9));
+  for(var i=0;i<paginas;i++){
+    var pag=document.createElement('div'); pag.className='acc-pag';
+    var grid=document.createElement('div'); grid.className='accesos entran';
+    lista.slice(i*9,(i+1)*9).forEach(function(a){ grid.appendChild(accesoBotonDom(a)); });
+    pag.appendChild(grid); track.appendChild(pag);
+  }
+  caja.appendChild(track);
+  if(paginas>1){
+    var pts=document.createElement('div'); pts.className='acc-puntos';
+    for(var j=0;j<paginas;j++){ var d=document.createElement('span'); d.className='acc-punto'+(j===0?' on':''); pts.appendChild(d); }
+    caja.appendChild(pts);
+    track.addEventListener('scroll', function(){
+      var w=track.clientWidth||1, n=Math.round(track.scrollLeft/w);
+      var ds=pts.querySelectorAll('.acc-punto');
+      for(var k=0;k<ds.length;k++) ds[k].className='acc-punto'+(k===n?' on':'');
+    });
+  }
   return caja;
 }
+
+function abrirEditorAccesos(){
+  var lista=accesosOrdenados();
+  ACC_SEL=(misAccesos() || lista.slice(0,9).map(function(a){return a.k;})).slice(0,9);
+  ACC_EDITANDO=true; repintarCasa();
+}
+function accesosEditorDom(){
+  var caja=document.createElement('div'); caja.id='acc-caja';
+  var cab=document.createElement('div'); cab.className='accesos-cab';
+  var t=document.createElement('div'); t.className='accesos-tit'; t.textContent='¿Cuáles van adelante?';
+  cab.appendChild(t); caja.appendChild(cab);
+  var ay=document.createElement('p'); ay.className='sub'; ay.style.cssText='margin:0 0 10px;font-size:12.5px';
+  ay.textContent='Toca los que quieres en la primera cara: hasta nueve. El resto queda en las siguientes, deslizando al costado.';
+  caja.appendChild(ay);
+  var msg=document.createElement('div'); msg.id='acc-ed-msg';
+  msg.style.cssText='font-size:12.5px;min-height:18px;margin:0 0 8px;color:var(--oro)';
+  caja.appendChild(msg);
+  var grid=document.createElement('div'); grid.className='accesos acc-ed';
+  accesosOrdenados().forEach(function(a){
+    var on=ACC_SEL.indexOf(a.k)>-1;
+    var b=document.createElement('button'); b.type='button';
+    b.className='acceso '+a.color+' acc-ed-it'+(on?' on':'');
+    b.setAttribute('data-k', a.k);
+    b.innerHTML='<span class="aro"><span class="emo">'+a.ic+'</span><span class="acc-tick">'+(on?'✓':'')+'</span></span>'
+              + '<span class="et">'+a.et+'</span>';
+    b.onclick=function(){ accEdToggle(a.k); };
+    grid.appendChild(b);
+  });
+  caja.appendChild(grid);
+  var pie=document.createElement('div'); pie.style.cssText='display:flex;gap:9px;margin-top:14px';
+  var g=document.createElement('button'); g.className='btn'; g.style.margin='0'; g.textContent='Guardar'; g.onclick=accEdGuardar;
+  var c=document.createElement('button'); c.className='btn sec'; c.style.margin='0'; c.textContent='Cancelar';
+  c.onclick=function(){ ACC_EDITANDO=false; repintarCasa(); };
+  pie.appendChild(g); pie.appendChild(c); caja.appendChild(pie);
+  var r=document.createElement('button'); r.className='btn sec'; r.style.marginTop='9px';
+  r.textContent='Volver al orden original'; r.onclick=accEdReset; caja.appendChild(r);
+  return caja;
+}
+function accEdMsg(tx){ var m=document.getElementById('acc-ed-msg'); if(m) m.textContent=tx||''; }
+function accEdToggle(k){
+  var i=ACC_SEL.indexOf(k);
+  if(i>-1) ACC_SEL.splice(i,1);
+  else {
+    if(ACC_SEL.length>=9){ accEdMsg('Ya tienes nueve. Quita uno antes de poner otro.'); return; }
+    ACC_SEL.push(k);
+  }
+  accEdMsg('');
+  var b=document.querySelector('.acc-ed-it[data-k="'+k+'"]'); if(!b) return;
+  var on=ACC_SEL.indexOf(k)>-1;
+  b.className=b.className.replace(' on','')+(on?' on':'');
+  var tk=b.querySelector('.acc-tick'); if(tk) tk.textContent=on?'✓':'';
+}
+function accEdGuardar(){
+  if(!ACC_SEL.length){ accEdMsg('Elige al menos uno.'); return; }
+  guardarMisAccesos(ACC_SEL.slice()); ACC_EDITANDO=false; repintarCasa();
+}
+function accEdReset(){ try{ borrar(LS_MIS_ACCESOS); }catch(_e){} ACC_EDITANDO=false; repintarCasa(); }
+
+/* ══════════ LA GUÍA DEL PRIMER USO ══════════
+   Tres señales y se acabó: qué es el tablero, qué son los accesos, y
+   dónde vive lo que se configura. Una sola vez por celular; después
+   queda en Ajustes ▸ La app por si la quiere repetir. */
+var LS_GUIA='sstc_guia_vista';
+var GUIA_PASO=0, GUIA_PASOS=[];
+function guiaYaVista(){ try{ return leer(LS_GUIA,false)===true; }catch(_e){ return true; } }
+function pasosDeLaGuia(){
+  return [
+    { sel:'.tablero-barra', tit:'El tablero de tu obra',
+      tx:'Acá están los números del mes. Toca esta barra para abrirlo o cerrarlo: arranca cerrado para que no te ocupe la pantalla.' },
+    { sel:'#acc-caja', tit:'Tus accesos rápidos',
+      tx:'Lo que usas todos los días. Desliza al costado para ver los siguientes nueve, y toca el lápiz ✏️ para elegir cuáles van adelante.' },
+    { sel:'.sec-tit + .grupo', tit:'Ajustes, en cuatro cajones',
+      tx:'Tu empresa, documentos, la app y tu plan. Todo lo que se configura vive acá adentro.' }
+  ];
+}
+function arrancarGuia(forzar){
+  if(!forzar && guiaYaVista()) return;
+  GUIA_PASOS = pasosDeLaGuia().filter(function(x){ return !!document.querySelector(x.sel); });
+  if(!GUIA_PASOS.length) return;
+  GUIA_PASO=0;
+  var c=document.getElementById('guia-capa'); if(!c) return;
+  c.className='on';
+  var ps=document.getElementById('guia-pasos');
+  if(ps){ ps.innerHTML=''; for(var i=0;i<GUIA_PASOS.length;i++){ var d=document.createElement('span'); d.className='guia-pt'; ps.appendChild(d); } }
+  pintarPasoGuia();
+}
+function pintarPasoGuia(){
+  var x=GUIA_PASOS[GUIA_PASO]; if(!x) return cerrarGuia();
+  var el=document.querySelector(x.sel); if(!el) return guiaSiguiente();
+  try{ el.scrollIntoView({block:'center', behavior:'auto'}); }catch(_e){}
+  var r=el.getBoundingClientRect(), pad=8;
+  var h=document.getElementById('guia-hueco');
+  h.style.left=(r.left-pad)+'px'; h.style.top=(r.top-pad)+'px';
+  h.style.width=(r.width+pad*2)+'px'; h.style.height=(r.height+pad*2)+'px';
+  document.getElementById('guia-tit').textContent=x.tit;
+  document.getElementById('guia-tx').textContent=x.tx;
+  var g=document.getElementById('guia-globo'), alto=window.innerHeight;
+  if(r.bottom + 190 > alto){ g.style.top=''; g.style.bottom=(alto - r.top + 18)+'px'; }
+  else { g.style.bottom=''; g.style.top=(r.bottom + 18)+'px'; }
+  var pts=document.querySelectorAll('.guia-pt');
+  for(var i=0;i<pts.length;i++) pts[i].className='guia-pt'+(i===GUIA_PASO?' on':'');
+  var sig=document.getElementById('guia-sig');
+  if(sig) sig.textContent=(GUIA_PASO===GUIA_PASOS.length-1)?'Entendido':'Siguiente';
+}
+function guiaSiguiente(){ GUIA_PASO++; if(GUIA_PASO>=GUIA_PASOS.length) return cerrarGuia(); pintarPasoGuia(); }
+function cerrarGuia(){ var c=document.getElementById('guia-capa'); if(c) c.className=''; try{ guardar(LS_GUIA,true); }catch(_e){} }
+function repetirGuia(){ setTimeout(function(){ arrancarGuia(true); }, 300); }
 function pintarMenuSup(){
   var c=$('ini-cuerpo'); if(!c) return;
   c.innerHTML='';
   c.appendChild(accesosRapidosDom());
   SUP_ESTRUCTURA.forEach(function(g,gi){ c.appendChild(supGrupoDom(g,gi)); });
+  setTimeout(function(){ try{ arrancarGuia(false); }catch(_g){} }, 700);
 }
 
 /* ---- la estadistica: lo local sale al toque; lo de la obra, de la nube ---- */
@@ -20070,7 +20312,8 @@ function elegirRol(r){
   HIST=[];
   if(r==='col'){ ir('p-colab'); return; }
   /* gestión de la SST: primero se pregunta cuál de los dos es */
-  ir('p-gestion-quien');
+  try{ if(!leer(LS_PAPEL,null)) ponerPapel('sup'); }catch(_e){}
+  seguirComoGestor();
 }
 /* el camino de siempre, ya con el papel elegido */
 function seguirComoGestor(){
@@ -20121,7 +20364,7 @@ function cambiarUsuario(){
   /* no borra la licencia: solo vuelve a preguntar por que puerta se entra */
   EV=null; try{ localStorage.removeItem(LS_EV); localStorage.removeItem(LS_ROL);
                 localStorage.removeItem(LS_PAPEL); }catch(e){}
-  ROL=null; ir('p-rol');
+  ROL=null; ir('p-cuenta');
 }
 var COD_PIDE='';
 function pedirCodigo(tipo){
@@ -26719,7 +26962,7 @@ function salirDeMiObra(){
     'Se borran tus datos de este celular. Lo que ya mandaste —tus constancias, tus reportes— se queda guardado en la empresa.',
     function(){
       try{ localStorage.removeItem(LS_MITRAB); localStorage.removeItem(LS_ROL); }catch(e){}
-      ROL=null; HIST=[]; _ir('p-rol');
+      ROL=null; HIST=[]; _ir('p-cuenta');
     }, {si:'Sí, salir', no:'Quedarme', icono:'👋'});
 }
 function pintarObra(){
@@ -28276,7 +28519,9 @@ function pintarEmpHome(){
   c.appendChild(accesosRapidosDom());
   /* Las seis carpetas del sistema son del plan Gestión SST. En los
      demás no salen bloqueadas: no salen. */
-  if(puede('carpetas')){
+  /* Las carpetas de gestión son del líder. En modo supervisor ocupaban
+     media pantalla sin que nadie las abriera: ahora se piden desde Ajustes. */
+  if(puede('carpetas') && (papelElegido()==='lider' || VER_CARPETAS)){
     EMP_ESTRUCTURA.forEach(function(g,gi){ c.appendChild(empGrupoDom(g,gi)); });
   }
   }
@@ -28305,6 +28550,7 @@ function pintarEmpHome(){
   var q=$('emp-quien');
   if(q){ var cor = (typeof TOK!=='undefined' && TOK && TOK.correo) ? TOK.correo : '';
          q.textContent = cor ? ('Sesión de '+cor) : ''; }
+  setTimeout(function(){ try{ arrancarGuia(false); }catch(_g){} }, 700);
 }
 function empGrupoDom(g,gi){
   /* todas cerradas: la primera se abria sola y tapaba las otras cinco */
@@ -28575,7 +28821,7 @@ function salirDeCuenta(){
   confirmar('¿Cerrar sesión en este celular?', 'No se borra nada: tus documentos y los de tu empresa quedan en la nube. Vuelves a entrar con tu correo y ahí siguen.', function(){
     borrarToken(); cerrarSesion(); borrar(LS_EMP);
     try{ localStorage.removeItem(LS_PLAN); localStorage.removeItem(LS_ROL); }catch(e){}
-    ROL=null; HIST=[]; _ir('p-rol'); pintarRol();
+    ROL=null; HIST=[]; _ir('p-cuenta'); pintarRol();
   }, {si:'Sí, cerrar sesión', no:'Quedarme', icono:'🚪'});
 }
 
@@ -28792,6 +29038,58 @@ function pedirCorreoDelMando(empId){
   if(!e) return;
   MANDO_EMP=e;
   cerrarAviso(false);
+  setTimeout(function(){ _mandoListaEquipo(e); }, 240);
+}
+/* ══ A QUIÉN ═══════════════════════════════════════════
+   Escribir el correo a mano era pedir un error de tipeo en la operación
+   más delicada de la app. Y no hacía falta: el servidor ya exige que sea
+   miembro (error «no_es_miembro»), así que la lista de candidatos existe
+   — son los de sst_invitacion que ya usaron su código. Se muestran y se
+   toca al que recibe. Queda la opción de escribirlo a mano por si
+   alguien entró por otra vía. */
+function _mandoListaEquipo(e){
+  aviso('\u00bfA qui\u00e9n de tu equipo?','Viendo qui\u00e9n est\u00e1 dentro de \u00ab'+e.nombre+'\u00bb\u2026','\u23F3');
+  sbGet('sst_invitacion?empresa_id=eq.'+encodeURIComponent(e.id)+
+        '&select=correo,nombre,papel,usada_en&order=usada_en.desc&limit=80')
+  .then(function(rows){
+    var mio=String(correoCuenta()||'').toLowerCase();
+    var vistos={}, gente=[];
+    (rows||[]).forEach(function(r){
+      if(!r.usada_en || !r.correo) return;
+      var c=String(r.correo).toLowerCase();
+      if(c===mio || vistos[c]) return;
+      vistos[c]=1; gente.push(r);
+    });
+    var h='';
+    if(!gente.length){
+      h='<div class="aviso" style="margin:0 0 10px"><b>Todav\u00eda no hay nadie m\u00e1s dentro.</b>'+
+        '<p class="sub" style="margin:6px 0 0">El mando solo se le pasa a alguien que ya entr\u00f3 con su cuenta. '+
+        'Primero m\u00e1ndale su c\u00f3digo de invitaci\u00f3n desde \u00abInvitar\u00bb y espera a que entre una vez.</p></div>';
+    } else {
+      h='<div class="sub" style="margin:0 0 10px">Toca a quien va a recibir \u00ab'+esc(e.nombre)+'\u00bb. '+
+        'Solo salen los que ya entraron con su cuenta.</div>';
+      gente.forEach(function(r){
+        var nom=String(r.nombre||'').trim() || r.correo;
+        h+='<button class="tarj vidrio" style="display:block;width:100%;text-align:left" '+
+           'onclick="_mandoElegido(\''+escA(r.correo)+'\')"><b>'+esc(nom)+'</b>'+
+           '<small>'+esc(r.correo)+(r.papel?(' \u00b7 '+esc(r.papel)):'')+'</small></button>';
+      });
+    }
+    h+='<button class="btn sec" style="margin-top:12px" onclick="_mandoAMano()">Escribir el correo a mano</button>';
+    aviso('\u00bfA qui\u00e9n de tu equipo?','','\uD83D\uDD11');
+    var cu=$('avisof-txt'); if(cu){ cu.style.display=''; cu.innerHTML=h; }
+    var si=$('avisof-si'); if(si) si.textContent='Mejor no';
+  }, function(){
+    aviso('No se pudo ver tu equipo','Sin internet no se puede saber qui\u00e9n est\u00e1 dentro. Int\u00e9ntalo cuando tengas se\u00f1al, o escribe el correo a mano.','\u26a0\ufe0f', function(){ _mandoAMano(); });
+  });
+}
+function _mandoElegido(correo){
+  cerrarAviso(false);
+  setTimeout(function(){ pedirDiasDelMando(correo); }, 240);
+}
+function _mandoAMano(){
+  var e=MANDO_EMP; if(!e) return;
+  cerrarAviso(false);
   setTimeout(function(){
     preguntar('\u00bfA qui\u00e9n de tu equipo?',
       'Escribe el correo con el que esa persona entra a OBRASST. Tiene que estar ya dentro de \u00ab'+e.nombre+'\u00bb: '+
@@ -28974,7 +29272,7 @@ function borrarEmpresaAhora(e, texto){
     aviso('Eliminada', '\u00ab'+e.nombre+'\u00bb'+extra+' ya no existe. Si alguien registra ese RUC otra vez, empieza de cero.',
       '\u2705', function(){
         if(typeof pintarMisEmpresas==='function') pintarMisEmpresas();
-        if(!MIS_EMP.length) _ir('p-rol');
+        if(!MIS_EMP.length) _ir('p-cuenta');
         else _ir('p-mis-empresas');
       });
   }, function(err){
@@ -32058,7 +32356,7 @@ function verQuimico(id){
   Q_QR=null; QUIM_VER=q; ir('p-quimico'); pintarQuimico();
 }
 function salirQuimico(){
-  if(Q_QR){ Q_QR=null; QUIM_VER=null; ir('p-rol'); return; }
+  if(Q_QR){ Q_QR=null; QUIM_VER=null; ir('p-cuenta'); return; }
   QUIM_VER=null; ir('p-msds'); pintarMsds();
 }
 function editarQuimicoActual(){ if(QUIM_VER && !Q_QR) editarQuimico(QUIM_VER.id); }
@@ -33468,7 +33766,7 @@ function compartirPDF(){
     if(/[?&]inicio=1/.test(location.search)){
       try{ localStorage.removeItem(LS_ROL); }catch(e){}
       ROL=null; history.replaceState(null,'',baseURL());
-      ir('p-rol'); return;
+      ir('p-cuenta'); return;
     }
   }catch(e){}
   // 2) ¿quedó una evaluación a medias en este celular?
@@ -33754,7 +34052,7 @@ function seguirElArranque(){
     ROL='emp'; guardar(LS_ROL,'emp');
     ir(dondeVolver() || 'p-emp-home'); refrescarPlan(); return;
   }
-  ir('p-rol'); pintarRol();
+  ir('p-cuenta'); pintarRol();
 }
 function temasDelSectorExiste(id){
   for(var k in TEMAS) if(TEMAS[k].sector===id) return true;
@@ -33834,7 +34132,7 @@ function _copiarEnlace(){
   catch(e){ fin(false); }
 }
 window.addEventListener('beforeinstallprompt', function(e){
-  e.preventDefault(); PWA_PROMPT=e;
+  e.preventDefault(); __pwaGuardar(e); PWA_PROMPT=e;
   try{ pintarInstalar(); }catch(x){}
 });
 window.addEventListener('appinstalled', function(){ PWA_PROMPT=null; try{ pintarInstalar(); }catch(x){} });
@@ -33848,11 +34146,12 @@ function _cartelInstalar(h){ huecosInstalar().forEach(function(c){ c.innerHTML=h
 function instalarApp(){
   if(PWA_PROMPT){
     var p=PWA_PROMPT;
-    p.prompt();
+    var _uc=__pwaPrompt();
+    if(!_uc){ _cartelInstalar('<div class="aviso">El instalador ya se us\u00f3 una vez en esta pantalla. Recarga y vuelve a intentarlo.</div>'); return; }
     /* Lo que faltaba: escuchar la respuesta. Sin esto, aceptar y cancelar
        se veian igual —o sea, no se veia nada— y el que no encontraba el
        icono no tenia forma de saber si se instalo o si le dio a «ahora no». */
-    p.userChoice.then(function(r){
+    _uc.then(function(r){
       PWA_PROMPT=null;
       if(r && r.outcome==='accepted'){
         _cartelInstalar('<div class="aviso" style="text-align:left">✅ <b>Quedó instalada.</b>'+
@@ -34188,7 +34487,7 @@ function instPostergada(){
 }
 
 window.addEventListener('beforeinstallprompt', function(e){
-  e.preventDefault(); INST.evento = e;
+  e.preventDefault(); __pwaGuardar(e); INST.evento = e;
   if(!instPostergada()) setTimeout(function(){ ofrecerInstalar(); }, 2500);
   else instChip(true);
 });
@@ -34287,7 +34586,7 @@ function instCopiar(){
 function instalarSi(){
   var caso = INST.caso;
   if(INST.evento){
-    INST.evento.prompt();
+    __pwaPrompt();
     INST.evento.userChoice.then(function(r){
       if(r && r.outcome === 'accepted'){ try{ localStorage.setItem(LS_INST,'si'); }catch(e){} }
       INST.evento = null; instCerrar();
