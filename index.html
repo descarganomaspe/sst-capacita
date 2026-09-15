@@ -2496,6 +2496,28 @@ html.t-alto .insig-b{border:2px solid #000;background:#ff0;color:#000}
 .sim-tag.hoy{background:rgba(229,72,77,.18);color:#ff8f93}
 .sim-tag.hecho{background:rgba(47,158,111,.16);color:#57c79b}
 html.t-claro .sim-hito{background:#fff}
+
+/* ── el sello de la foto ── */
+.cam-sello{position:absolute;left:0;right:0;bottom:96px;display:flex;justify-content:center;pointer-events:none;z-index:4}
+.cam-sello button{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;
+  min-height:44px;padding:9px 16px;border-radius:999px;font:inherit;font-size:13.5px;font-weight:700;
+  border:1px solid rgba(255,255,255,.28);background:rgba(8,16,22,.62);color:#fff;cursor:pointer;
+  backdrop-filter:blur(6px)}
+.cam-sello button.on{border-color:var(--oro);color:var(--oro);background:rgba(8,16,22,.78)}
+.cam-sello small{display:block;font-weight:400;font-size:11px;opacity:.8;margin-top:1px}
+.sello-fila{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:13px 2px;border-bottom:1px solid rgba(var(--w),.10)}
+.sello-fila:last-child{border-bottom:0}
+.sello-fila .tx>b{display:block;font-size:14.5px}
+.sello-fila .tx small b{color:var(--tinta)}
+.sello-fila .tx small{display:block;font-size:12px;color:var(--gris);margin-top:2px;line-height:1.45}
+.interruptor{flex:0 0 auto;width:52px;height:31px;border-radius:999px;border:0;cursor:pointer;
+  background:rgba(var(--w),.16);position:relative;transition:background .18s}
+.interruptor::after{content:'';position:absolute;top:3px;left:3px;width:25px;height:25px;border-radius:50%;
+  background:#fff;transition:transform .18s}
+.interruptor.on{background:var(--oro)}
+.interruptor.on::after{transform:translateX(21px)}
+.interruptor:disabled{opacity:.4;cursor:default}
 </style>
 <script>
 /* apariencia: se aplica antes del primer pixel, sin esperar al resto del JS */
@@ -3416,6 +3438,7 @@ html.t-claro .sim-hito{background:#fff}
     <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🎨</span><span class="tx">La app<small>Apariencia, guía, privacidad</small></span><span class="fl">▾</span></button>
     <div class="grupo-cont">
       <button class="btn sec" onclick="ir('p-apariencia')">Apariencia</button>
+      <button class="btn sec" onclick="ir('p-sello')">📍 Sello de las fotos</button>
       <button class="btn sec" onclick="repetirGuia()">🧭 Ver la guía otra vez</button>
       <button class="btn sec" onclick="ir('p-legal')">🔒 Privacidad y condiciones</button>
     </div>
@@ -4479,6 +4502,17 @@ html.t-claro .sim-hito{background:#fff}
   <div id="campav-cuerpo"></div>
 </section>
 
+
+<!-- ================= CÁMARA CON SELLO ================= -->
+<section class="pantalla" id="p-camara">
+  <div class="barra"><span>Cámara con sello</span></div>
+  <div id="camara-cuerpo"></div>
+</section>
+<section class="pantalla" id="p-sello">
+  <div class="barra"><span>El sello de las fotos</span></div>
+  <div id="sello-cuerpo"></div>
+</section>
+
 <!-- ===== RECORDATORIOS ===== -->
 <section class="pantalla" id="p-record">
   <div class="barra"><span>Recordatorios</span></div>
@@ -4757,6 +4791,7 @@ html.t-claro .sim-hito{background:#fff}
     <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🎨</span><span class="tx">La app<small>Apariencia, instalación, guía, privacidad</small></span><span class="fl">▾</span></button>
     <div class="grupo-cont">
       <button class="btn sec" onclick="ir('p-apariencia')">Apariencia</button>
+      <button class="btn sec" onclick="ir('p-sello')">📍 Sello de las fotos</button>
       <button class="btn sec" onclick="repetirGuia()">🧭 Ver la guía otra vez</button>
       <div class="pwa-banda"></div>
       <button class="btn sec" onclick="ir('p-legal')">🔒 Privacidad y condiciones</button>
@@ -4805,6 +4840,7 @@ html.t-claro .sim-hito{background:#fff}
   </div>
   <div class="cam-guia" id="cam-guia"></div>
   <div class="cam-msg" id="cam-msg"></div>
+  <div class="cam-sello" id="cam-sello"></div>
   <div class="cam-abajo">
     <button type="button" class="cam-gal" aria-label="Elegir de la galería" onclick="camDesdeGaleria()" title="Elegir de la galería">🖼️</button>
     <button type="button" class="cam-disparo" id="cam-disparo" aria-label="Tomar la foto" onclick="dispararCamara()"></button>
@@ -8019,7 +8055,7 @@ var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-
             'p-final':1,'p-firma':1,'p-listo':1,'p-charlas':1,'p-charla':1,'p-programa':1,
             'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1,'p-sector':1,
             'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,
-            'p-obra':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1,
+            'p-obra':1,'p-camara':1,'p-sello':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1,
             'p-normas':1,'p-norma':1,'p-procedimientos':1,'p-proc':1,
             /* el cartel del almacén lo escanea el trabajador, no el gestor:
                si esta pantalla no está abierta para él, el QR no sirve */
@@ -8029,7 +8065,7 @@ var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-
 var EMP_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
             'p-reporte':1,'p-reporte-nuevo':1,'p-inspec':1,'p-inspec-nueva':1,
             'p-inspec-hallaz':1,'p-inspec-levant':1,'p-inspec-hechas':1,'p-firma-insp':1,
-            'p-brigada':1,'p-simulacros':1,'p-sim-nuevo':1,'p-sim-correr':1,'p-sim-cierre':1,'p-campanas':1,'p-campana':1,
+            'p-brigada':1,'p-camara':1,'p-sello':1,'p-simulacros':1,'p-sim-nuevo':1,'p-sim-correr':1,'p-sim-cierre':1,'p-campanas':1,'p-campana':1,
             'p-lista':1,'p-firma-lista':1,'p-listas':1,
             'p-petar':1,'p-petar-nuevo':1,'p-credencial':1,'p-cred-nueva':1,'p-verificar':1,
             'p-empresa':1,'p-msds':1,'p-msds-nueva':1,'p-quim-cat':1,'p-quim-frases':1,
@@ -8452,6 +8488,8 @@ function _ir(p){
   if(p==='p-inspec')pintarInspec(); if(p==='p-petar')pintarPetar();
   if(p==='p-inspec-hallaz')pintarHallaz(); if(p==='p-inspec-hechas')pintarInspecHechas();
   if(p==='p-brigada')pintarBrigada();
+  if(p==='p-camara')pintarCamaraSello();
+  if(p==='p-sello')pintarAjustesSello();
   if(p==='p-simulacros')pintarSimulacros();
   if(p==='p-sim-nuevo')pintarSimNuevo();
   if(p==='p-sim-correr')pintarSimCorrer();
@@ -26921,10 +26959,591 @@ function _dataURLaArchivo(du, nombre){
   catch(e){ var b=new Blob([u],{type:tipo}); b.name=nombre||'foto.jpg'; return b; }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   EL SELLO DE LA FOTO  ·  fecha, hora, coordenadas, UTM y mapa
+
+   Una foto de obra sin fecha ni lugar no prueba nada. El inspector la
+   mira y pregunta lo mismo siempre: ¿cuándo fue?, ¿dónde fue? Y si la
+   respuesta es «confía en mí», la evidencia no sirve. Por eso el sello
+   se quema DENTRO de la imagen al momento de tomarla: una foto que se
+   puede editar después tampoco prueba nada.
+
+   Toda la app toma fotos por una sola puerta —`tomarFoto()`, que usan
+   los reportes, las inspecciones, los hallazgos, los levantamientos, el
+   kardex y las buenas prácticas—, así que el sello se pone en un solo
+   sitio y sale en todas partes.
+
+   Arranca APAGADO. Se prende una vez en Ajustes ▸ La app y desde ahí
+   vale para toda la app; cada campo se puede apagar por separado, y en
+   la propia cámara hay un interruptor para la foto que estás por tomar.
+
+   Lo que se sella NUNCA son los escaneos de documentos (`doc:true`):
+   una hoja de MSDS con un mapa encima queda arruinada.
+
+   ── Sobre la señal ──────────────────────────────────────────────
+   El GPS es satélite, no internet: las coordenadas y el UTM salen en un
+   túnel del Metro o en una mina sin una raya de cobertura. Lo único que
+   necesita internet es el mapita y el nombre de la calle; sin señal se
+   omiten y el resto del sello sale igual. Eso es a propósito: lo que
+   vale en un registro es la coordenada, no el dibujito.
+   ════════════════════════════════════════════════════════════════ */
+
+var LS_SELLO = 'sstc_sello';
+function selloCfg(){
+  var c = leer(LS_SELLO, null);
+  if(!c || typeof c!=='object') c = {};
+  /* apagado por defecto: nadie quiere que su app cambie sola de
+     comportamiento. Se prende una vez y ya. */
+  if(c.on===undefined)    c.on    = false;
+  if(c.fecha===undefined) c.fecha = true;
+  if(c.coord===undefined) c.coord = true;
+  if(c.obra===undefined)  c.obra  = true;
+  if(c.mapa===undefined)  c.mapa  = true;
+  return c;
+}
+function selloGuardar(c){ guardar(LS_SELLO, c); return c; }
+function selloPonerCampo(k, v){ var c=selloCfg(); c[k]=!!v; selloGuardar(c); return c; }
+function selloActivo(){ return !!selloCfg().on; }
+
+/* ══════════ UTM ══════════════════════════════════════════════════
+   Conversión WGS84 → UTM, la de siempre (Snyder). Es matemática pura:
+   no pide internet ni permisos, y en el Perú es lo que la gente de
+   campo usa de verdad —«18S, 277431 E, 8668102 N» se entiende en una
+   mesa de obra mucho mejor que dos decimales de latitud—.
+   El Perú cae en las zonas 17, 18 y 19, todas en el hemisferio sur.
+   Ojo con el dato: desde 2015 el oficial es WGS84. Si alguien compara
+   contra un plano viejo en PSAD56, hay cientos de metros de diferencia,
+   y por eso el sello dice SIEMPRE el datum. */
+function utmDe(lat, lon){
+  var a=6378137.0, f=1/298.257223563, k0=0.9996;
+  var e2=f*(2-f), ep2=e2/(1-e2);
+  var rad=Math.PI/180, phi=lat*rad;
+  var zona=Math.floor((lon+180)/6)+1;
+  /* las dos excepciones del mundo real: Noruega y Svalbard. No nos tocan,
+     pero omitirlas es el tipo de cosa que después muerde. */
+  if(lat>=56 && lat<64 && lon>=3 && lon<12) zona=32;
+  if(lat>=72 && lat<84){
+    if(lon>=0  && lon<9)  zona=31;
+    else if(lon>=9  && lon<21) zona=33;
+    else if(lon>=21 && lon<33) zona=35;
+    else if(lon>=33 && lon<42) zona=37;
+  }
+  var lon0=((zona-1)*6-180+3)*rad;
+  var N=a/Math.sqrt(1-e2*Math.sin(phi)*Math.sin(phi));
+  var T=Math.tan(phi)*Math.tan(phi);
+  var C=ep2*Math.cos(phi)*Math.cos(phi);
+  var A=(lon*rad-lon0)*Math.cos(phi);
+  var M=a*((1 - e2/4 - 3*e2*e2/64 - 5*e2*e2*e2/256)*phi
+         - (3*e2/8 + 3*e2*e2/32 + 45*e2*e2*e2/1024)*Math.sin(2*phi)
+         + (15*e2*e2/256 + 45*e2*e2*e2/1024)*Math.sin(4*phi)
+         - (35*e2*e2*e2/3072)*Math.sin(6*phi));
+  var este = k0*N*(A + (1-T+C)*A*A*A/6
+           + (5-18*T+T*T+72*C-58*ep2)*Math.pow(A,5)/120) + 500000;
+  var norte= k0*(M + N*Math.tan(phi)*(A*A/2
+           + (5-T+9*C+4*C*C)*Math.pow(A,4)/24
+           + (61-58*T+T*T+600*C-330*ep2)*Math.pow(A,6)/720));
+  if(lat<0) norte += 10000000;
+  return { zona:zona, hemisferio:(lat<0?'S':'N'),
+           este:Math.round(este), norte:Math.round(norte) };
+}
+function utmTexto(lat, lon){
+  var u=utmDe(lat, lon);
+  var mil=function(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };
+  return 'UTM '+u.zona+u.hemisferio+'  E '+mil(u.este)+'  N '+mil(u.norte)+'  (WGS84)';
+}
+
+/* ══════════ DÓNDE ESTOY ══════════════════════════════════════════ */
+var GPS_ULTIMO=null, GPS_PIDIENDO=null;
+function pedirGPS(espera){
+  /* se pide al ABRIR la cámara, no al disparar: así el satélite ya
+     enganchó cuando la persona termina de encuadrar, y la foto no se
+     queda esperando con el casco puesto. */
+  if(!navigator.geolocation) return Promise.resolve(null);
+  if(GPS_ULTIMO && (Date.now()-GPS_ULTIMO.t) < 45000) return Promise.resolve(GPS_ULTIMO);
+  if(GPS_PIDIENDO) return GPS_PIDIENDO;
+  GPS_PIDIENDO = new Promise(function(ok){
+    var listo=false;
+    var fin=function(v){ if(listo) return; listo=true; GPS_PIDIENDO=null; ok(v); };
+    try{
+      navigator.geolocation.getCurrentPosition(function(p){
+        GPS_ULTIMO={ lat:p.coords.latitude, lon:p.coords.longitude,
+                     prec:Math.round(p.coords.accuracy||0), t:Date.now() };
+        fin(GPS_ULTIMO);
+      }, function(){ fin(null); },
+      { enableHighAccuracy:true, timeout:(espera||12000), maximumAge:30000 });
+    }catch(e){ fin(null); }
+    setTimeout(function(){ fin(GPS_ULTIMO); }, (espera||12000)+800);
+  });
+  return GPS_PIDIENDO;
+}
+
+/* la calle, si hay señal. Se guarda por coordenada redondeada: dentro
+   de la misma obra no se vuelve a preguntar en todo el día. */
+var DIR_CACHE={};
+function direccionDe(lat, lon){
+  var k=lat.toFixed(4)+','+lon.toFixed(4);
+  if(DIR_CACHE[k]!==undefined) return Promise.resolve(DIR_CACHE[k]);
+  return fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat='+
+               encodeURIComponent(lat)+'&lon='+encodeURIComponent(lon),
+               {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(0); })
+    .then(function(j){
+      var d=j.address||{};
+      var p=[];
+      if(d.road) p.push(d.road + (d.house_number?(' '+d.house_number):''));
+      var zona = d.suburb || d.neighbourhood || d.city_district || d.town || d.village;
+      if(zona) p.push(zona);
+      var ciu = d.city || d.province || d.state;
+      if(ciu && ciu!==zona) p.push(ciu);
+      var t = p.join(', ') || (j.display_name||'').split(',').slice(0,3).join(', ');
+      DIR_CACHE[k]=t; return t;
+    })
+    .catch(function(){ DIR_CACHE[k]=''; return ''; });
+}
+
+/* el mapita, de las teselas de OpenStreetMap. Se cachean: la segunda
+   foto en el mismo frente no baja nada.
+   La atribución «© OpenStreetMap» va impresa en el sello porque la
+   licencia lo exige, no porque quede bonito. */
+var TILE_CACHE={};
+function _tile(z,x,y){
+  var k=z+'/'+x+'/'+y;
+  if(TILE_CACHE[k]) return TILE_CACHE[k];
+  TILE_CACHE[k]=new Promise(function(ok){
+    var im=new Image();
+    im.crossOrigin='anonymous';
+    im.onload=function(){ ok(im); };
+    im.onerror=function(){ ok(null); };
+    im.src='https://tile.openstreetmap.org/'+z+'/'+x+'/'+y+'.png';
+    setTimeout(function(){ ok(null); }, 7000);
+  });
+  return TILE_CACHE[k];
+}
+function mapaDe(lat, lon, px){
+  var z=16;
+  var n=Math.pow(2,z);
+  var xf=(lon+180)/360*n;
+  var la=lat*Math.PI/180;
+  var yf=(1-Math.log(Math.tan(la)+1/Math.cos(la))/Math.PI)/2*n;
+  var x0=Math.floor(xf), y0=Math.floor(yf);
+  var cv=document.createElement('canvas'); cv.width=px; cv.height=px;
+  var g=cv.getContext('2d');
+  g.fillStyle='#e8e6e1'; g.fillRect(0,0,px,px);
+  var pedidos=[];
+  for(var dx=-1; dx<=1; dx++) for(var dy=-1; dy<=1; dy++)
+    pedidos.push({dx:dx, dy:dy, p:_tile(z, x0+dx, y0+dy)});
+  return Promise.all(pedidos.map(function(t){ return t.p; })).then(function(ims){
+    var hay=false;
+    /* el punto exacto dentro de su tesela, para centrar el recorte */
+    var cx=(xf-x0)*256, cy=(yf-y0)*256;
+    var ox=px/2 - cx, oy=px/2 - cy;
+    ims.forEach(function(im, i){
+      if(!im) return;
+      hay=true;
+      var t=pedidos[i];
+      g.drawImage(im, ox + t.dx*256, oy + t.dy*256, 256, 256);
+    });
+    if(!hay) return null;
+    /* el pin */
+    var mx=px/2, my=px/2;
+    g.beginPath(); g.arc(mx, my-px*0.045, px*0.085, 0, Math.PI*2);
+    g.fillStyle='#d03b3b'; g.fill();
+    g.strokeStyle='#fff'; g.lineWidth=Math.max(2,px*0.018); g.stroke();
+    g.beginPath();
+    g.moveTo(mx-px*0.045, my-px*0.015); g.lineTo(mx+px*0.045, my-px*0.015);
+    g.lineTo(mx, my+px*0.075); g.closePath(); g.fill();
+    /* atribución, obligatoria por licencia */
+    g.fillStyle='rgba(255,255,255,.82)';
+    g.fillRect(0, px-Math.round(px*0.115), px, Math.round(px*0.115));
+    g.fillStyle='#333';
+    g.font='600 '+Math.round(px*0.082)+'px system-ui, sans-serif';
+    g.textAlign='right'; g.textBaseline='bottom';
+    g.fillText('© OpenStreetMap', px-Math.round(px*0.03), px-Math.round(px*0.018));
+    return cv;
+  }).catch(function(){ return null; });
+}
+
+/* ══════════ EL SELLO ═════════════════════════════════════════════ */
+function _fechaSello(d){
+  var MES=['ene','feb','mar','abr','may','jun','jul','ago','set','oct','nov','dic'];
+  var dd=function(n){ return (n<10?'0':'')+n; };
+  return d.getDate()+' '+MES[d.getMonth()]+' '+d.getFullYear()+'  '+
+         dd(d.getHours())+':'+dd(d.getMinutes())+':'+dd(d.getSeconds());
+}
+function _quienFirma(){
+  try{
+    var y=(typeof yo==='function') ? yo() : null;
+    if(y) return ((y.n||'')+' '+(y.a||'')).trim();
+    var c=leer(LS.cfg,{})||{};
+    if(c.cap) return c.cap;
+    if(typeof TOK!=='undefined' && TOK && TOK.correo) return TOK.correo;
+  }catch(e){}
+  return '';
+}
+function _dondeEstoy(){
+  try{
+    var e=(typeof empActiva==='function' && empActiva()) ||
+          (typeof empDeTrabajo==='function' && empDeTrabajo()) || null;
+    var emp=(typeof empleador==='function') ? (empleador()||{}) : {};
+    var p=[];
+    if(e && e.nombre) p.push(e.nombre);
+    if(emp.razon && emp.razon!==(e&&e.nombre)) p.push(emp.razon);
+    return p.join('  ·  ');
+  }catch(e){ return ''; }
+}
+
+/* Junta lo que se va a imprimir. Se llama ANTES de disparar para que la
+   foto no espere por el GPS. */
+function reunirSello(){
+  var c=selloCfg();
+  var base={ cfg:c, fecha:new Date(), obra:_dondeEstoy(), quien:_quienFirma(),
+             gps:null, dir:'', mapa:null };
+  if(!c.on) return Promise.resolve(base);
+  if(!c.coord && !c.mapa) return Promise.resolve(base);
+  return pedirGPS().then(function(g){
+    base.gps=g;
+    if(!g) return base;
+    var tareas=[];
+    if(c.mapa) tareas.push(direccionDe(g.lat, g.lon).then(function(t){ base.dir=t; }));
+    if(c.mapa) tareas.push(mapaDe(g.lat, g.lon, 260).then(function(cv){ base.mapa=cv; }));
+    return Promise.all(tareas).then(function(){ return base; },
+                                    function(){ return base; });
+  }, function(){ return base; });
+}
+
+/* Dibuja la banda sobre la foto y devuelve el dataURL nuevo. */
+function sellarFoto(du, datos){
+  var c=(datos&&datos.cfg) || selloCfg();
+  if(!c.on) return Promise.resolve(du);
+  return new Promise(function(ok){
+    var im=new Image();
+    im.onerror=function(){ ok(du); };
+    im.onload=function(){
+      try{
+        var W=im.width, H=im.height;
+        var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+        var g=cv.getContext('2d');
+        g.drawImage(im,0,0,W,H);
+
+        /* todo escalado al ancho, para que se vea igual en una foto de
+           900 px que en una de 1600 */
+        var u=W/1000;
+        var pad=Math.round(18*u);
+        var lineas=[];
+        if(c.obra && datos.obra)  lineas.push({t:datos.obra, peso:'700', tam:27});
+        if(c.mapa && datos.dir)   lineas.push({t:datos.dir,  peso:'400', tam:24});
+        if(c.coord && datos.gps){
+          lineas.push({t:datos.gps.lat.toFixed(6)+',  '+datos.gps.lon.toFixed(6)+
+                         (datos.gps.prec?('   ±'+datos.gps.prec+' m'):''),
+                       peso:'400', tam:24});
+          lineas.push({t:utmTexto(datos.gps.lat, datos.gps.lon), peso:'600', tam:24});
+        }
+        if(c.coord && !datos.gps)
+          lineas.push({t:'Sin señal de GPS al tomar la foto', peso:'400', tam:23});
+
+        var alto_l=Math.round(34*u);
+        var hayMapa=!!(c.mapa && datos.mapa);
+        var altoTexto=lineas.length*alto_l;
+        var altoPie=c.fecha ? Math.round(40*u) : 0;
+        var lado=Math.max(altoTexto+altoPie, Math.round(150*u));
+        var banda=Math.min(Math.round(H*0.34), lado + pad*2);
+        var y0=H-banda;
+
+        /* la banda: oscura y pareja. Acá no se juega a adivinar si la
+           foto es clara: un registro tiene que leerse siempre. */
+        var grad=g.createLinearGradient(0,y0-Math.round(26*u),0,H);
+        grad.addColorStop(0,'rgba(8,16,22,0)');
+        grad.addColorStop(0.18,'rgba(8,16,22,.72)');
+        grad.addColorStop(1,'rgba(8,16,22,.86)');
+        g.fillStyle=grad; g.fillRect(0,y0-Math.round(26*u),W,banda+Math.round(26*u));
+
+        var x=pad;
+        if(hayMapa){
+          var mp=banda-pad*2;
+          g.save();
+          g.beginPath();
+          var rr=Math.round(10*u);
+          g.moveTo(x+rr,y0+pad); g.arcTo(x+mp,y0+pad,x+mp,y0+pad+mp,rr);
+          g.arcTo(x+mp,y0+pad+mp,x,y0+pad+mp,rr); g.arcTo(x,y0+pad+mp,x,y0+pad,rr);
+          g.arcTo(x,y0+pad,x+mp,y0+pad,rr); g.closePath(); g.clip();
+          g.drawImage(datos.mapa, x, y0+pad, mp, mp);
+          g.restore();
+          g.strokeStyle='rgba(255,255,255,.55)'; g.lineWidth=Math.max(1,2*u);
+          g.stroke();
+          x += mp + pad;
+        }
+
+        g.textAlign='left'; g.textBaseline='top';
+        var y=y0+pad;
+        lineas.forEach(function(L){
+          g.font=L.peso+' '+Math.round(L.tam*u)+'px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+          g.fillStyle = (L.peso==='700') ? '#FFFFFF' : 'rgba(255,255,255,.93)';
+          /* si no entra, se corta: nunca se sale de la foto */
+          var t=L.t, max=W-x-pad;
+          while(t.length>4 && g.measureText(t).width>max) t=t.slice(0,-2);
+          if(t!==L.t) t=t.slice(0,-1)+'…';
+          g.fillText(t, x, y);
+          y += alto_l;
+        });
+
+        if(c.fecha){
+          var ft=_fechaSello(datos.fecha||new Date());
+          g.font='800 '+Math.round(30*u)+'px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+          g.fillStyle='#FFFFFF';
+          g.textAlign='right'; g.textBaseline='bottom';
+          g.fillText(ft, W-pad, H-pad);
+          if(c.obra && datos.quien){
+            g.textAlign='left';
+            g.font='500 '+Math.round(23*u)+'px system-ui, sans-serif';
+            g.fillStyle='rgba(255,255,255,.80)';
+            var q=datos.quien, maxq=W-x-pad-g.measureText(ft).width-pad;
+            while(q.length>3 && g.measureText(q).width>maxq) q=q.slice(0,-2);
+            g.fillText(q, x, H-pad);
+          }
+        }
+
+        /* marca de la casa, chiquita, abajo a la derecha del mapa */
+        g.textAlign='left'; g.textBaseline='bottom';
+        g.font='700 '+Math.round(19*u)+'px system-ui, sans-serif';
+        g.fillStyle='rgba(245,183,0,.85)';
+        if(!c.fecha || !(c.obra && datos.quien)) g.fillText('OBRASST', x, H-pad);
+
+        ok(cv.toDataURL('image/jpeg', 0.88));
+      }catch(e){ ok(du); }
+    };
+    im.src=du;
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LA CÁMARA SUELTA  ·  una foto sellada que no va a ningún formulario
+
+   La mayoría de las fotos de la app ya nacen dentro de algo —un reporte,
+   una inspección, un levantamiento—. Pero en obra pasa seguido que hay
+   que sacar una foto y mandarla por WhatsApp en el momento: «mira cómo
+   quedó», «esto hay que pararlo ya». Antes eso se hacía con la cámara
+   del celular y llegaba una foto sin fecha ni lugar, que no sirve para
+   el archivo.
+
+   Acá sale sellada, se comparte por WhatsApp, y si resulta que además
+   merecía un reporte, se pasa a un reporte con la foto ya puesta.
+   ════════════════════════════════════════════════════════════════ */
+var CAM_SUELTA = null;   /* la última foto tomada acá */
+
+function abrirCamaraSello(){ ir('p-camara'); }
+
+function pintarCamaraSello(){
+  var c = $('camara-cuerpo'); if(!c) return;
+  var cfg = selloCfg();
+  var h = '<h2>📸 Cámara con sello</h2>';
+  h += '<p class="sub">La foto sale con la fecha, la hora, la obra y las coordenadas quemadas adentro. ' +
+       'Sirve para mandarla por WhatsApp sin que nadie tenga que creerte cuándo y dónde fue.</p>';
+
+  if(!cfg.on){
+    h += '<div class="aviso" style="margin-top:14px"><b>El sello está apagado.</b>' +
+         '<p class="sub" style="margin:7px 0 0">Préndelo una vez y vale para toda la app: los reportes, ' +
+         'las inspecciones, los hallazgos y los levantamientos empiezan a salir sellados también.</p>' +
+         '<button class="btn" style="margin:10px 0 0" onclick="ir(\'p-sello\')">Prender el sello ▸</button></div>';
+  }
+
+  if(CAM_SUELTA){
+    h += '<div class="caja vidrio" style="padding:10px;margin-top:14px">' +
+         '<img src="' + CAM_SUELTA + '" alt="La foto que tomaste" style="width:100%;border-radius:12px;display:block">' +
+         '</div>';
+    h += '<div class="dos" style="margin-top:12px">' +
+         '<button class="btn" style="margin:0" onclick="compartirFotoSello()">📲 Compartir por WhatsApp</button>' +
+         '<button class="btn sec" style="margin:0" onclick="bajarFotoSello()">⬇️ Descargar</button>' +
+         '</div>';
+    h += '<div class="sec-tit" style="margin-top:20px">¿Esta foto merece un registro?</div>';
+    h += '<p class="sub" style="margin:-2px 0 9px">Una foto en el WhatsApp del grupo se pierde el viernes. ' +
+         'En un reporte queda con su folio, su responsable y su cierre.</p>';
+    h += '<button class="tarj vidrio" style="display:block;width:100%;text-align:left" onclick="fotoSelloAReporte()">' +
+         '<b>🚨 Usarla en un reporte de acto o condición</b>' +
+         '<small>Se abre el reporte con esta foto ya puesta</small></button>';
+    h += '<button class="btn sec" style="margin-top:14px" onclick="CAM_SUELTA=null;pintarCamaraSello()">Tomar otra</button>';
+  } else {
+    h += '<button class="btn" style="margin-top:18px" onclick="dispararCamaraSello()">📷 Tomar la foto</button>';
+    h += '<div class="caja vidrio" style="padding:14px;margin-top:16px">' +
+         '<b>Lo que va a salir impreso</b><ul class="sub" style="margin:8px 0 0;padding-left:18px;line-height:1.75">' +
+         (cfg.fecha ? '<li>Fecha y hora exactas</li>' : '') +
+         (cfg.obra  ? '<li>La obra, la empresa y tu nombre</li>' : '') +
+         (cfg.coord ? '<li>Latitud y longitud, y su UTM con la zona y el datum</li>' : '') +
+         (cfg.mapa  ? '<li>El mapita y la calle, si hay señal</li>' : '') +
+         '</ul>' +
+         '<button class="btn sec" style="margin:11px 0 0" onclick="ir(\'p-sello\')">Cambiar qué sale ▸</button></div>';
+  }
+  c.innerHTML = h;
+}
+
+function dispararCamaraSello(){
+  tomarFoto({max:1400, calidad:0.86, titulo:'Foto con sello'}).then(function(du){
+    if(!du) return;
+    CAM_SUELTA = du;
+    pintarCamaraSello();
+  });
+}
+
+function _nombreFotoSello(){
+  var d = new Date(), dd = function(n){ return (n<10?'0':'')+n; };
+  return 'obrasst-' + d.getFullYear() + dd(d.getMonth()+1) + dd(d.getDate()) +
+         '-' + dd(d.getHours()) + dd(d.getMinutes()) + '.jpg';
+}
+
+/* WhatsApp no recibe archivos por enlace: lo que funciona de verdad en
+   el celular es compartir el archivo con la hoja del sistema, y de ahí
+   el usuario elige WhatsApp. Si el celular no sabe compartir archivos,
+   se descarga y se dice qué hacer, en vez de fallar en silencio. */
+function compartirFotoSello(){
+  if(!CAM_SUELTA) return;
+  var nombre = _nombreFotoSello();
+  try{
+    var f = _dataURLaArchivo(CAM_SUELTA, nombre);
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[f]})){
+      navigator.share({ files:[f], title:'Foto de obra',
+                        text:'Foto con fecha, hora y ubicación · OBRASST' })
+        .catch(function(){});
+      return;
+    }
+  }catch(e){}
+  bajarFotoSello();
+  aviso('Se descargó la foto',
+        'Este celular no deja compartir archivos directamente desde la app. La foto quedó en tus descargas: ábrela en WhatsApp desde ahí.',
+        '⬇️');
+}
+function bajarFotoSello(){
+  if(!CAM_SUELTA) return;
+  try{
+    var a=document.createElement('a');
+    a.href=CAM_SUELTA; a.download=_nombreFotoSello();
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }catch(e){}
+}
+
+/* de la foto suelta al reporte, sin volver a sacarla */
+function fotoSelloAReporte(){
+  if(!CAM_SUELTA) return;
+  var foto = CAM_SUELTA;
+  ir('p-reporte-nuevo');
+  setTimeout(function(){
+    try{
+      REP_FOTO = foto;
+      var v = $('r-foto-vista');
+      if(v) v.innerHTML = '<img src="'+foto+'" style="width:100%;border-radius:12px;margin-bottom:10px">' +
+        '<button class="btn sec" style="margin:0 0 10px" onclick="REP_FOTO=null;document.getElementById(\'r-foto-vista\').innerHTML=\'\';rCalcular();">Quitar la foto</button>';
+      try{ rCalcular(); }catch(_c){}
+      CAM_SUELTA = null;
+    }catch(e){}
+  }, 350);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   AJUSTES DEL SELLO
+   ════════════════════════════════════════════════════════════════ */
+function pintarAjustesSello(){
+  var c = $('sello-cuerpo'); if(!c) return;
+  var cfg = selloCfg();
+  var fila = function(k, titulo, sub, bloqueado){
+    return '<div class="sello-fila"><span class="tx"><b>' + esc(titulo) + '</b>' +
+           '<small>' + sub + '</small></span>' +
+           '<button class="interruptor' + (cfg[k] ? ' on' : '') + '" role="switch" ' +
+           'aria-checked="' + (cfg[k]?'true':'false') + '" aria-label="' + escA(titulo) + '" ' +
+           (bloqueado ? 'disabled ' : '') +
+           'onclick="selloToggle(\'' + k + '\')"></button></div>';
+  };
+
+  var h = '<h2>📍 El sello de las fotos</h2>';
+  h += '<p class="sub">Una foto de obra sin fecha ni lugar no prueba nada: el inspector pregunta ' +
+       '<i>¿cuándo fue?</i> y <i>¿dónde fue?</i>, y «confía en mí» no es una respuesta. ' +
+       'El sello se quema dentro de la imagen al momento de tomarla, no después.</p>';
+
+  h += '<div class="caja vidrio" style="padding:4px 14px;margin-top:16px">' +
+       fila('on', 'Sellar las fotos',
+            cfg.on ? 'Prendido. Vale para los reportes, inspecciones, hallazgos, levantamientos, kardex y buenas prácticas.'
+                   : 'Apagado. Las fotos salen tal cual, sin fecha ni ubicación.') +
+       '</div>';
+
+  if(cfg.on){
+    h += '<div class="sec-tit" style="margin-top:20px">Qué sale impreso</div>';
+    h += '<div class="caja vidrio" style="padding:4px 14px">' +
+         fila('fecha', 'Fecha y hora', 'Funciona siempre, sin señal y sin GPS.') +
+         fila('obra',  'Obra, empresa y quién', 'Sale de lo que la app ya sabe. No te pide nada.') +
+         fila('coord', 'Coordenadas y UTM',
+              'Latitud, longitud y su UTM con zona y datum WGS84, más la precisión en metros. ' +
+              '<b>El GPS es satélite: funciona sin internet</b>, en un túnel o en mina.') +
+         fila('mapa',  'Mapita y calle',
+              'Lo único que necesita internet. Sin señal se omite y el resto del sello sale igual.') +
+         '</div>';
+
+    h += '<div class="aviso" style="margin-top:16px">📄 <b>Los escaneos de documentos nunca se sellan.</b>' +
+         '<p class="sub" style="margin:7px 0 0">Las fotos de hojas y de MSDS salen limpias: un mapa encima de una ' +
+         'hoja técnica la arruina.</p></div>';
+
+    h += '<div class="aviso" style="margin-top:12px">⚠️ <b>El sello no se puede quitar después.</b>' +
+         '<p class="sub" style="margin:7px 0 0">Va quemado en la imagen, y de eso se trata: una foto que se puede ' +
+         'editar después tampoco prueba nada. En la propia cámara hay un interruptor por si una foto puntual ' +
+         'tiene que salir limpia.</p></div>';
+
+    h += '<div class="sec-tit" style="margin-top:20px">¿Cómo se va a ver?</div>';
+    h += '<div id="sello-muestra"><p class="sub">Armando el ejemplo…</p></div>';
+  }
+
+  h += '<button class="btn sec" style="margin-top:20px" onclick="ir(\'p-camara\')">📸 Abrir la cámara con sello</button>';
+  c.innerHTML = h;
+  if(cfg.on) _muestraSello();
+}
+
+function selloToggle(k){
+  var c = selloCfg();
+  c[k] = !c[k];
+  selloGuardar(c);
+  pintarAjustesSello();
+}
+
+/* Una muestra de verdad, hecha con los datos de verdad: la obra real,
+   el nombre real y, si da permiso, la coordenada real. Así lo que ve
+   acá es exactamente lo que le va a salir en obra. */
+function _muestraSello(){
+  var c = $('sello-muestra'); if(!c) return;
+  var cv = document.createElement('canvas');
+  cv.width = 900; cv.height = 600;
+  var g = cv.getContext('2d');
+  var gr = g.createLinearGradient(0, 0, 0, 600);
+  gr.addColorStop(0, '#9fb6c4'); gr.addColorStop(0.55, '#c8b79a'); gr.addColorStop(1, '#8a7f6d');
+  g.fillStyle = gr; g.fillRect(0, 0, 900, 600);
+  g.fillStyle = 'rgba(255,255,255,.16)';
+  g.fillRect(90, 120, 210, 380); g.fillRect(560, 60, 260, 440);
+  g.fillStyle = 'rgba(0,0,0,.10)';
+  for(var i=0;i<7;i++) g.fillRect(0, 420 + i*26, 900, 12);
+  g.fillStyle = 'rgba(255,255,255,.55)';
+  g.font = '600 26px system-ui, sans-serif'; g.textAlign = 'center';
+  g.fillText('ejemplo · así va a salir tu foto', 450, 260);
+
+  reunirSello().then(function(d){
+    sellarFoto(cv.toDataURL('image/jpeg', 0.9), d).then(function(du){
+      var m = $('sello-muestra'); if(!m) return;
+      m.innerHTML = '<img src="' + du + '" alt="Ejemplo del sello" style="width:100%;border-radius:12px;display:block">' +
+        '<p class="sub" style="margin:8px 0 0">' +
+        (d && d.gps ? ('Con tu ubicación de ahora, precisión ±' + d.gps.prec + ' m.')
+                    : 'Sin GPS todavía: cuando tomes una foto, la app te va a pedir permiso de ubicación.') +
+        '</p>';
+    });
+  });
+}
+
 /* ── la cámara de la app ── */
 var CAM={stream:null, resolver:null, op:null, cara:'environment'};
 function tomarFoto(op){
   op=op||{}; op.max=op.max||1100; op.calidad=op.calidad||0.82;
+  /* El sello se decide por foto, arrancando de lo que diga Ajustes.
+     Los escaneos de documentos NO se sellan nunca: una hoja de MSDS con
+     un mapa encima queda arruinada. */
+  CAM.sello = op.doc ? false : selloActivo();
+  CAM.selloDatos = null;
+  if(CAM.sello){
+    /* se pide el GPS al ABRIR, no al disparar: cuando la persona
+       termina de encuadrar, el satelite ya engancho */
+    try{ reunirSello().then(function(d){ CAM.selloDatos=d; _pintarSelloCam(); }); }catch(_s){}
+  }
   return new Promise(function(ok){
     CAM.resolver=ok; CAM.op=op;
     var md=navigator.mediaDevices;
@@ -26932,6 +27551,7 @@ function tomarFoto(op){
     $('cam-tit').textContent = op.titulo || 'Tomar foto';
     $('cam-msg').textContent = 'Encendiendo la cámara…';
     $('cam').className = 'cam abierta' + (op.doc?' doc':'');
+    _pintarSelloCam();
     _encenderCamara();
   });
 }
@@ -26983,11 +27603,53 @@ function camDesdeGaleria(){
   };
   inp.click();
 }
+/* ══ POR ACA PASAN TODAS LAS FOTOS DE LA APP ══════════════════════
+   Reportes, inspecciones, hallazgos, levantamientos, kardex, buenas
+   practicas: las doce puertas terminan aca. Por eso el sello se pone en
+   un solo sitio y sale en todas partes, en vez de repetirlo doce veces
+   y olvidarlo en la trece. */
 function _entregarFoto(du){
   _apagarCamara();
   var c=$('cam'); if(c) c.className='cam';
   var f=CAM.resolver; CAM.resolver=null;
-  if(f) try{ f(du); }catch(e){}
+  if(!f) return;
+  if(!du || !CAM.sello){ try{ f(du); }catch(e){} return; }
+  var msg=$('cam-msg'); if(msg) msg.textContent='Sellando la foto…';
+  var poner=function(d){
+    sellarFoto(du, d || {cfg:selloCfg(), fecha:new Date(),
+                         obra:_dondeEstoy(), quien:_quienFirma(), gps:null, dir:'', mapa:null})
+      .then(function(x){ try{ f(x); }catch(e){} },
+            function(){ try{ f(du); }catch(e){} });
+  };
+  /* si el GPS todavia no volvio, se le dan tres segundos mas y se sella
+     con lo que haya: mejor una foto con fecha y obra que ninguna */
+  if(CAM.selloDatos) poner(CAM.selloDatos);
+  else {
+    var listo=false;
+    var t=setTimeout(function(){ if(!listo){ listo=true; poner(null); } }, 3000);
+    try{ reunirSello().then(function(d){ if(!listo){ listo=true; clearTimeout(t); poner(d); } }); }
+    catch(_e){ if(!listo){ listo=true; clearTimeout(t); poner(null); } }
+  }
+}
+/* el interruptor que se ve encima del disparador */
+function _pintarSelloCam(){
+  var c=$('cam-sello'); if(!c) return;
+  var op=CAM.op||{};
+  if(op.doc || !selloCfg().on){ c.innerHTML=''; return; }
+  var d=CAM.selloDatos;
+  var sub = !CAM.sello ? 'sin sello'
+          : (d && d.gps) ? ('GPS ±'+d.gps.prec+' m')
+          : (d ? 'sin GPS · va fecha y obra' : 'buscando GPS…');
+  c.innerHTML='<button type="button" class="'+(CAM.sello?'on':'')+'" onclick="_toggleSelloCam()">'+
+    (CAM.sello?'📍':'○')+' <span>Sello'+
+    '<small>'+esc(sub)+'</small></span></button>';
+}
+function _toggleSelloCam(){
+  CAM.sello=!CAM.sello;
+  if(CAM.sello && !CAM.selloDatos){
+    try{ reunirSello().then(function(d){ CAM.selloDatos=d; _pintarSelloCam(); }); }catch(_e){}
+  }
+  _pintarSelloCam();
 }
 
 /* ---- Credencial / QR ---- */
