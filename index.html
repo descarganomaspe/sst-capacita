@@ -2562,6 +2562,8 @@ html.t-claro .sim-hito{background:#fff}
 .cam-porque b{color:var(--tinta)}
 .cam-vista{border-radius:var(--r2);overflow:hidden;background:rgba(var(--p),.5);min-height:80px}
 .cam-vista img{display:block;width:100%;height:auto;border-radius:var(--r2)}
+.cam-vista.cruda{background:#06111a}
+.cam-vista.cruda img{max-height:34vh;object-fit:contain}
 /* variantes del aviso: se usaba para cuatro cosas opuestas y el color
    se ponía a mano, caso por caso, con un style= en la etiqueta */
 .aviso.ok{background:rgba(47,191,113,.10);border-color:rgba(47,191,113,.30)}
@@ -2571,6 +2573,46 @@ html.t-claro .sim-hito{background:#fff}
 .cam-pies button:focus-visible,.esc-m:focus-visible,.interruptor:focus-visible,
 .cam-luz:focus-visible,.cam-x:focus-visible,.cam-disparo:focus-visible,
 .cam-gal:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
+
+/* ── elegir qué hacer con la foto: las dos salidas, a la vista ── */
+.cam-opciones{display:grid;gap:var(--e3);margin-top:var(--e4)}
+.cam-opcion{display:flex;gap:var(--e4);align-items:stretch;text-align:left;width:100%;
+  background:rgba(var(--p),.5);border:1.5px solid rgba(var(--w),.14);border-radius:var(--r3);
+  padding:var(--e3);cursor:pointer;font:inherit;color:var(--tinta);transition:border-color .16s,background .16s}
+.cam-opcion:hover{border-color:rgba(var(--w),.30);background:rgba(var(--p),.75)}
+.cam-opcion.sug{border-color:var(--oro)}
+.cam-op-mini{flex:0 0 96px;width:96px;min-height:96px;border-radius:var(--r1);overflow:hidden;
+  background:rgba(var(--w),.06);display:grid;place-items:center}
+.cam-op-mini img{width:100%;height:100%;object-fit:cover;display:block}
+.cam-op-mini em{font-style:normal;font-size:var(--f1);color:var(--gris)}
+.cam-op-tx{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0}
+.cam-op-tx b{font-size:var(--f4);line-height:1.25}
+.cam-op-tx small{font-size:var(--f2);color:var(--gris);line-height:1.45}
+.cam-marca{align-self:flex-start;font-size:var(--f1);font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;color:#0B2A3A;background:var(--oro);border-radius:var(--r4);padding:3px 9px}
+.cam-cab{display:flex;margin:0 0 var(--e2)}
+.cam-atras{background:none;border:0;padding:8px 0;font:inherit;font-size:var(--f2);
+  color:var(--gris);cursor:pointer;min-height:44px}
+.cam-atras:hover{color:var(--tinta)}
+.cam-opcion:focus-visible,.cam-atras:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
+
+.nrm-paises{margin-bottom:var(--e2)}
+.nrm-paises .ch-chip{font-weight:600}
+.nrm-obliga{display:block;font-size:var(--f2);color:var(--gris);line-height:1.5;margin:6px 0 2px}
+.nrm-card.vacio{border-color:rgba(245,183,0,.34);background:rgba(245,183,0,.06)}
+
+.idi-lista{display:grid;gap:var(--e2);margin-top:var(--e4)}
+.idi{display:flex;align-items:center;gap:var(--e4);width:100%;text-align:left;cursor:pointer;
+  background:rgba(var(--p),.5);border:1.5px solid rgba(var(--w),.12);border-radius:var(--r2);
+  padding:var(--e3) var(--e4);font:inherit;color:var(--tinta);min-height:64px}
+.idi:hover{border-color:rgba(var(--w),.28)}
+.idi.on{border-color:var(--oro)}
+.idi .ban{font-size:26px;line-height:1}
+.idi .tx{flex:1 1 auto;min-width:0}
+.idi .tx b{display:block;font-size:var(--f4)}
+.idi .tx small{display:block;font-size:var(--f2);color:var(--gris);margin-top:2px}
+.idi .tic{color:var(--oro);font-size:19px;font-weight:700}
+.idi:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
 </style>
 <script>
 /* apariencia: se aplica antes del primer pixel, sin esperar al resto del JS */
@@ -3491,6 +3533,7 @@ html.t-claro .sim-hito{background:#fff}
     <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🎨</span><span class="tx">La app<small>Apariencia, guía, privacidad</small></span><span class="fl">▾</span></button>
     <div class="grupo-cont">
       <button class="btn sec" onclick="ir('p-apariencia')">Apariencia</button>
+      <button class="btn sec" onclick="ir('p-idioma')">🌐 Idioma</button>
       <button class="btn sec" onclick="ir('p-sello')">📍 Sello de las fotos</button>
       <button class="btn sec" onclick="repetirGuia()">🧭 Ver la guía otra vez</button>
       <button class="btn sec" onclick="ir('p-legal')">🔒 Privacidad y condiciones</button>
@@ -4555,6 +4598,13 @@ html.t-claro .sim-hito{background:#fff}
   <div id="campav-cuerpo"></div>
 </section>
 
+
+
+<!-- ================= IDIOMA ================= -->
+<section class="pantalla" id="p-idioma">
+  <div class="barra"><span>Idioma</span></div>
+  <div id="idioma-cuerpo"></div>
+</section>
 
 <!-- ================= CÁMARA CON SELLO ================= -->
 <section class="pantalla" id="p-camara">
@@ -8109,7 +8159,7 @@ var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-
             'p-final':1,'p-firma':1,'p-listo':1,'p-charlas':1,'p-charla':1,'p-programa':1,
             'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1,'p-sector':1,
             'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,
-            'p-obra':1,'p-camara':1,'p-sello':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1,
+            'p-obra':1,'p-camara':1,'p-sello':1,'p-idioma':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1,
             'p-normas':1,'p-norma':1,'p-procedimientos':1,'p-proc':1,
             /* el cartel del almacén lo escanea el trabajador, no el gestor:
                si esta pantalla no está abierta para él, el QR no sirve */
@@ -8119,7 +8169,7 @@ var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-
 var EMP_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
             'p-reporte':1,'p-reporte-nuevo':1,'p-inspec':1,'p-inspec-nueva':1,
             'p-inspec-hallaz':1,'p-inspec-levant':1,'p-inspec-hechas':1,'p-firma-insp':1,
-            'p-brigada':1,'p-camara':1,'p-sello':1,'p-simulacros':1,'p-sim-nuevo':1,'p-sim-correr':1,'p-sim-cierre':1,'p-campanas':1,'p-campana':1,
+            'p-brigada':1,'p-camara':1,'p-sello':1,'p-idioma':1,'p-simulacros':1,'p-sim-nuevo':1,'p-sim-correr':1,'p-sim-cierre':1,'p-campanas':1,'p-campana':1,
             'p-lista':1,'p-firma-lista':1,'p-listas':1,
             'p-petar':1,'p-petar-nuevo':1,'p-credencial':1,'p-cred-nueva':1,'p-verificar':1,
             'p-empresa':1,'p-msds':1,'p-msds-nueva':1,'p-quim-cat':1,'p-quim-frases':1,
@@ -8544,6 +8594,7 @@ function _ir(p){
   if(p==='p-brigada')pintarBrigada();
   if(p==='p-camara')pintarCamaraSello();
   if(p==='p-sello')pintarAjustesSello();
+  if(p==='p-idioma')pintarAjustesIdioma();
   if(p==='p-simulacros')pintarSimulacros();
   if(p==='p-sim-nuevo')pintarSimNuevo();
   if(p==='p-sim-correr')pintarSimCorrer();
@@ -8597,7 +8648,9 @@ function _ir(p){
   if(p==='p-reporte-excel')prepReporteExcel();
   if(p==='p-qr-docs'){ pintarQRDocs(); cargarHojasQR().then(pintarQRDocs); }
   if(p==='p-qr-doc')prepQRDoc();
-  pintarBarraNav(p); pintarPieDePlan(p);}
+  pintarBarraNav(p); pintarPieDePlan(p);
+  try{ aplicarIdioma(); }catch(_i){}
+}
 
 /* ── El pie del plan ──────────────────────────────────────────────
    El aviso del plan sale en todas las pantallas del gestor, pero
@@ -27702,51 +27755,55 @@ function queEs(du){
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   LA CÁMARA  ·  una sola, y adentro decide qué tiene delante
+   LA CÁMARA  ·  una sola, y la última palabra es del usuario
 
-   Había dos: «Escanear documento», con su marco punteado, y la cámara
-   de siempre. Eso obligaba a acertar ANTES de mirar por el visor, y el
-   que se equivocaba terminaba con una hoja de MSDS con un mapa quemado
-   encima, o con una foto de obra en blanco y negro.
+   La primera versión de esto se equivocaba en algo más grave que
+   confundir una hoja con una foto: APLICABA su decisión sola. Tomabas
+   una foto de obra, la app decidía «hoja», y lo primero que veías era
+   tu foto en blanco y negro. Nadie lee el interruptor de arriba cuando
+   está viendo algo que no pidió — lo primero que hace es asustarse.
 
-   Ahora es una. Se toma la foto y la app la mira: si ve papel la
-   endereza y la limpia; si ve obra le quema la fecha, la hora, la obra
-   y las coordenadas. Lo que decidió sale escrito y a un toque de
-   cambiarse, porque una máquina que adivina sin decirlo es peor que
-   una que pregunta.
+   Así que ahora no se aplica nada. Sale la foto TAL COMO SALIÓ, y
+   debajo las dos salidas posibles con su miniatura de verdad, hechas
+   con esa misma foto. Las dos se ven. Eliges viendo, no leyendo.
+
+   La app sigue diciendo cuál cree que es —para eso midió— pero lo dice
+   con una etiqueta, no con un hecho consumado.
    ════════════════════════════════════════════════════════════════ */
 var CAM_CRUDA = null;     /* la foto tal como salió */
 var CAM_LECTURA = null;   /* lo que la app leyó en ella */
-var CAM_TIPO = 'foto';    /* 'doc' o 'foto' — el usuario manda */
-var CAM_SELLADA = null;   /* cache de la versión sellada */
-var CAM_LIMPIA = null;    /* cache de la versión limpiada */
+var CAM_SUGERIDO = '';    /* lo que la app cree: 'doc' o 'foto' */
+var CAM_TIPO = '';        /* lo que el usuario eligió. Vacío = todavía no */
+var CAM_SELLADA = null;   /* cache de la versión sellada, tamaño completo */
+var CAM_LIMPIA = null;    /* cache de la versión limpiada, tamaño completo */
+var CAM_MUESTRA = null;   /* las dos miniaturas de la pantalla de elegir */
 var CAM_MODO = 'scan';    /* scan · gris · orig */
 var CAM_GIRO = 0;
-var CAM_PENSANDO = false;
 
 function abrirCamaraSello(){ ir('p-camara'); }
 
 /* ── la pantalla ────────────────────────────────────────────────── */
 function pintarCamaraSello(){
   var c = $('camara-cuerpo'); if(!c) return;
-  c.innerHTML = CAM_CRUDA ? _camDespues() : _camAntes();
-  if(CAM_CRUDA) _camVista();
+  if(!CAM_CRUDA){ c.innerHTML = _camAntes(); return; }
+  if(!CAM_TIPO){ c.innerHTML = _camElegir(); _camMuestras(); return; }
+  c.innerHTML = _camTrabajo(); _camVista();
 }
 
 function _camAntes(){
   var cfg = selloCfg();
   var h = '<h2>📷 Cámara</h2>';
-  h += '<p class="sub">Una sola cámara para todo. Toma la foto y la app mira qué tiene delante: ' +
-       'si es una hoja la limpia y la guarda como documento; si es obra le quema la fecha, la hora y el lugar.</p>';
+  h += '<p class="sub">Una sola cámara para todo. Tomas la foto y después eliges qué hacer con ella: ' +
+       'si es una hoja la limpia y la guarda en Documentos; si es de obra le quema la fecha, la hora y el lugar.</p>';
 
   h += '<button class="btn" style="margin-top:16px" onclick="dispararCamaraSello()">📷 Tomar la foto</button>';
 
   h += '<div class="cam-dos">' +
        '<div class="cam-caso"><b>📄 Si es una hoja</b>' +
-       '<small>Le quita la sombra, le sube el contraste y la deja como un escaneo. ' +
+       '<small>Le quita la sombra, recorta la mesa y la deja como un escaneo. ' +
        'Después le pones nombre y queda en Documentos.</small>' +
        '<i>Sin sello: un mapa encima de un MSDS lo arruina.</i></div>' +
-       '<div class="cam-caso"><b>🏗️ Si es obra</b>' +
+       '<div class="cam-caso"><b>🏗️ Si es de obra</b>' +
        '<small>' + (cfg.on
           ? 'Sale con fecha y hora, la obra, quién la tomó y las coordenadas con su UTM.'
           : 'Sale tal cual. El sello está apagado.') + '</small>' +
@@ -27767,22 +27824,122 @@ function _camAntes(){
   return h;
 }
 
-function _camDespues(){
-  var doc = (CAM_TIPO === 'doc');
-  var h = '<h2>' + (doc ? '📄 Es una hoja' : '🏗️ Es una foto de obra') + '</h2>';
+/* ── elegir: las dos salidas, cada una con su muestra ───────────── */
+function _camElegir(){
+  var h = '<h2>¿Qué hago con esta foto?</h2>';
+  h += '<p class="sub">Así salió. Abajo están las dos cosas que puede hacer con ella: ' +
+       'mira cuál te sirve y tócala.</p>';
 
-  /* el interruptor de dos caras: lo que decidió, y cómo desdecirlo */
-  h += '<div class="cam-elige" role="radiogroup" aria-label="Qué es esta foto">' +
-       '<button type="button" role="radio" aria-checked="' + (doc?'true':'false') + '" class="' + (doc?'on':'') +
-       '" onclick="camTipo(\'doc\')">📄 Documento</button>' +
-       '<button type="button" role="radio" aria-checked="' + (doc?'false':'true') + '" class="' + (doc?'':'on') +
-       '" onclick="camTipo(\'foto\')">🏗️ Foto de obra</button></div>';
+  /* la foto va con techo de altura A PROPOSITO: si ocupa la pantalla
+     entera, las dos opciones quedan abajo y el usuario no las ve. Verlas
+     las dos, juntas y sin desplazar, es el punto de esta pantalla. */
+  h += '<div class="cam-vista cruda" style="margin-top:14px">' +
+       '<img src="' + CAM_CRUDA + '" alt="La foto que acabas de tomar"></div>';
 
   var l = CAM_LECTURA;
-  if(l){
-    h += '<p class="cam-porque">' + (l.seguro ? '' : '<b>No estoy seguro.</b> ') +
-         esc(l.porque) + (l.seguro ? '' : ' Si me equivoqué, cámbialo arriba.') + '</p>';
+  var sug = CAM_SUGERIDO;
+  var marca = function(k){
+    if(k !== sug) return '';
+    return '<span class="cam-marca">' + (l && l.seguro ? 'creo que es esta' : 'quizá esta') + '</span>';
+  };
+  var tarjeta = function(k, ic, tit, sub, idM){
+    return '<button type="button" class="cam-opcion' + (k === sug ? ' sug' : '') + '" onclick="camTipo(\'' + k + '\')">' +
+           '<span class="cam-op-mini" id="' + idM + '"><em>preparando…</em></span>' +
+           '<span class="cam-op-tx"><b>' + ic + ' ' + tit + '</b>' + marca(k) +
+           '<small>' + sub + '</small></span></button>';
+  };
+
+  if(l && l.porque){
+    h += '<p class="cam-porque" style="margin-top:12px">' +
+         (l.seguro ? '' : '<b>No estoy seguro.</b> ') + esc(l.porque) + '</p>';
   }
+
+  /* «Es de obra» va primero y siempre en el mismo sitio: es lo que mas
+     se usa en esta app, y el que busca con prisa lo encuentra donde
+     estaba la vez pasada. El orden no cambia con lo que la app opine —
+     lo que cambia es la marca. */
+  h += '<div class="cam-opciones">';
+  h += tarjeta('foto', '🏗️', 'Es de obra',
+       selloActivo() ? 'Le quema la fecha, la hora, la obra y las coordenadas. Lista para WhatsApp o para un reporte.'
+                     : 'Sale tal cual, para WhatsApp o para un reporte. El sello está apagado.', 'cam-mini-foto');
+  h += tarjeta('doc', '📄', 'Es una hoja',
+       'La limpia, recorta la mesa y la guarda en Documentos con su nombre y su fecha.', 'cam-mini-doc');
+  h += '</div>';
+
+  h += '<button class="btn sec" style="margin-top:14px" onclick="camOtra()">Tomar otra</button>';
+  return h;
+}
+
+/* Las dos miniaturas se hacen con la foto de verdad, no con un dibujo:
+   lo que ves en chiquito es exactamente lo que vas a obtener. Se trabaja
+   sobre una copia de 420 px para que salgan al toque. */
+function _camMuestras(){
+  if(!CAM_CRUDA) return;
+  var raiz = CAM_CRUDA;
+  var poner = function(id, url){
+    var e = $(id); if(!e) return;
+    e.innerHTML = '<img src="' + url + '" alt="">';
+  };
+  if(CAM_MUESTRA && CAM_MUESTRA.de === raiz){
+    if(CAM_MUESTRA.doc) poner('cam-mini-doc', CAM_MUESTRA.doc);
+    if(CAM_MUESTRA.foto) poner('cam-mini-foto', CAM_MUESTRA.foto);
+    return;
+  }
+  CAM_MUESTRA = { de:raiz, doc:null, foto:null };
+  _camChico(raiz, 420).then(function(chica){
+    if(CAM_CRUDA !== raiz) return;
+    procesarEscaneo(chica, 'scan', 0).then(function(u){
+      if(CAM_CRUDA !== raiz) return;
+      CAM_MUESTRA.doc = u; poner('cam-mini-doc', u);
+    }, function(){ poner('cam-mini-doc', chica); });
+
+    if(!selloActivo()){ CAM_MUESTRA.foto = chica; poner('cam-mini-foto', chica); return; }
+    var sellar = function(d){
+      sellarFoto(chica, d || { cfg:selloCfg(), fecha:new Date(), obra:_dondeEstoy(),
+                               quien:_quienFirma(), gps:null, dir:'', mapa:null })
+        .then(function(u){
+          if(CAM_CRUDA !== raiz) return;
+          CAM_MUESTRA.foto = u; poner('cam-mini-foto', u);
+        }, function(){ poner('cam-mini-foto', chica); });
+    };
+    /* el GPS puede tardar, y una miniatura que dice «preparando…» medio
+       minuto es una miniatura rota. Dos segundos y se sella con lo que
+       haya; cuando el GPS llegue, la foto grande ya sale completa. */
+    if(CAM.selloDatos) sellar(CAM.selloDatos);
+    else {
+      var ya = false;
+      var t = setTimeout(function(){ if(!ya){ ya = true; sellar(CAM.selloDatos || null); } }, 2000);
+      try{
+        reunirSello().then(function(d){ if(!ya){ ya = true; clearTimeout(t); sellar(d); } },
+                           function(){ if(!ya){ ya = true; clearTimeout(t); sellar(null); } });
+      }catch(e){ if(!ya){ ya = true; clearTimeout(t); sellar(null); } }
+    }
+  });
+}
+
+function _camChico(du, lado){
+  return new Promise(function(ok){
+    var im = new Image();
+    im.onload = function(){
+      var r = Math.min(1, lado / Math.max(im.width, im.height));
+      var c = document.createElement('canvas');
+      c.width = Math.max(8, Math.round(im.width * r));
+      c.height = Math.max(8, Math.round(im.height * r));
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      ok(c.toDataURL('image/jpeg', 0.86));
+    };
+    im.onerror = function(){ ok(du); };
+    im.src = du;
+  });
+}
+
+/* ── ya elegido: la pantalla de trabajo ─────────────────────────── */
+function _camTrabajo(){
+  var doc = (CAM_TIPO === 'doc');
+  var h = '<div class="cam-cab">' +
+          '<button type="button" class="cam-atras" onclick="camVolverAElegir()">‹ No, es otra cosa</button>' +
+          '</div>';
+  h += '<h2>' + (doc ? '📄 Hoja' : '🏗️ Foto de obra') + '</h2>';
 
   h += '<div id="cam-vista" class="cam-vista"><p class="sub" style="padding:18px 0;text-align:center">Preparando…</p></div>';
 
@@ -27814,7 +27971,7 @@ function _camBotonModo(k, et){
   return '<button type="button" class="esc-m' + (CAM_MODO===k?' on':'') + '" onclick="camModo(\'' + k + '\')">' + et + '</button>';
 }
 
-/* ── la vista previa, que es la foto de verdad ya trabajada ─────── */
+/* la vista grande: la foto ya trabajada, al tamaño de verdad */
 function _camVista(){
   var c = $('cam-vista'); if(!c || !CAM_CRUDA) return;
   var poner = function(url, pie){
@@ -27850,22 +28007,21 @@ function _camVista(){
 
 /* ── lo que hace cada botón ─────────────────────────────────────── */
 function dispararCamaraSello(){
-  /* crudo: no se sella todavía, porque todavía no sabemos qué es.
-     1600 px y calidad 0.9 sirven para las dos cosas: es lo que pide una
-     hoja de firmas para que la firma se lea. */
+  /* crudo: no se sella todavía, porque todavía no se sabe qué es —y
+     esta vez ni siquiera lo decide la app sola. 1600 px y calidad 0.9
+     sirven para las dos cosas: es lo que pide una hoja de firmas para
+     que la firma se lea. */
   tomarFoto({ max:1600, calidad:0.9, titulo:'Cámara', crudo:true }).then(function(du){
     if(!du) return;
-    CAM_CRUDA = du; CAM_SELLADA = null; CAM_LIMPIA = null;
+    CAM_CRUDA = du; CAM_SELLADA = null; CAM_LIMPIA = null; CAM_MUESTRA = null;
     CAM_MODO = 'scan'; CAM_GIRO = 0;
-    CAM_PENSANDO = true;
-    CAM_TIPO = 'foto'; CAM_LECTURA = null;
+    CAM_TIPO = ''; CAM_SUGERIDO = ''; CAM_LECTURA = null;
     pintarCamaraSello();
-    var v = $('cam-vista'); if(v) v.innerHTML = '<p class="sub" style="padding:18px 0;text-align:center">Mirando la foto…</p>';
     queEs(du).then(function(r){
-      CAM_PENSANDO = false;
-      CAM_LECTURA = r; CAM_TIPO = r.tipo;
-      pintarCamaraSello();
-    }, function(){ CAM_PENSANDO = false; pintarCamaraSello(); });
+      if(CAM_CRUDA !== du) return;
+      CAM_LECTURA = r; CAM_SUGERIDO = r.tipo;
+      if(!CAM_TIPO) pintarCamaraSello();
+    }, function(){});
   });
 }
 
@@ -27874,10 +28030,12 @@ function camTipo(t){
   CAM_TIPO = t;
   pintarCamaraSello();
 }
+function camVolverAElegir(){ CAM_TIPO = ''; pintarCamaraSello(); }
 function camModo(m){ CAM_MODO = m; pintarCamaraSello(); }
 function camGirar(){ CAM_GIRO = (CAM_GIRO + 90) % 360; pintarCamaraSello(); }
 function camOtra(){
   CAM_CRUDA = null; CAM_SELLADA = null; CAM_LIMPIA = null; CAM_LECTURA = null;
+  CAM_MUESTRA = null; CAM_TIPO = ''; CAM_SUGERIDO = '';
   pintarCamaraSello();
   dispararCamaraSello();
 }
@@ -27889,6 +28047,7 @@ function camAGuardar(){
   var seguir = function(listo){
     ESC_ENTREGA = { orig:CAM_CRUDA, listo:listo, modo:CAM_MODO, giro:CAM_GIRO };
     CAM_CRUDA = null; CAM_SELLADA = null; CAM_LIMPIA = null; CAM_LECTURA = null;
+    CAM_MUESTRA = null; CAM_TIPO = ''; CAM_SUGERIDO = '';
     abrirEscaneoNuevo();
   };
   var clave = CAM_MODO + '|' + CAM_GIRO;
@@ -27946,6 +28105,7 @@ function fotoSelloAReporte(){
         '<button class="btn sec" style="margin:0 0 10px" onclick="REP_FOTO=null;document.getElementById(\'r-foto-vista\').innerHTML=\'\';rCalcular();">Quitar la foto</button>';
       try{ rCalcular(); }catch(_c){}
       CAM_CRUDA = null; CAM_SELLADA = null; CAM_LIMPIA = null; CAM_LECTURA = null;
+      CAM_MUESTRA = null; CAM_TIPO = ''; CAM_SUGERIDO = '';
     }catch(e){}
   }, 350);
 }
@@ -27953,6 +28113,48 @@ function fotoSelloAReporte(){
 /* ══════════════════════════════════════════════════════════════════
    AJUSTES DEL SELLO
    ════════════════════════════════════════════════════════════════ */
+
+/* ── la pantalla del idioma ─────────────────────────────────────── */
+function pintarAjustesIdioma(){
+  var c = $('idioma-cuerpo'); if(!c) return;
+  var ac = idiomaActual();
+  var h = '<h2>🌐 Idioma</h2>';
+  h += '<p class="sub">La app arranca en el idioma del celular. Esto lo cambia solo para ti, ' +
+       'en este teléfono: no cambia nada de la obra ni de lo que ya está guardado.</p>';
+  h += '<div class="idi-lista">';
+  IDIOMAS.forEach(function(x){
+    var va = (x.id === 'es') ? 100 : cuantoVa(x.id);
+    h += '<button type="button" class="idi' + (ac===x.id?' on':'') + '" onclick="ponerIdioma(\'' + x.id + '\')">' +
+         '<span class="ban">' + x.b + '</span>' +
+         '<span class="tx"><b>' + esc(x.n) + '</b>' +
+         '<small>' + (x.id==='es' ? 'El idioma original de la app'
+                    : (va >= 100 ? 'Menús y títulos traducidos'
+                                 : 'Traducido a medias · ' + va + '%')) + '</small></span>' +
+         (ac===x.id ? '<span class="tic">✓</span>' : '') + '</button>';
+  });
+  h += '</div>';
+
+  h += '<div class="aviso ojo" style="margin-top:18px"><b>Hasta dónde llega hoy.</b>' +
+       '<p class="sub" style="margin:7px 0 0">Están traducidos los <b>títulos de pantalla y los accesos</b>: ' +
+       'lo que hace falta para moverse por la app sin saber español. El contenido largo —las charlas, ' +
+       'los procedimientos, las normas— sigue en español, y sale en español en vez de salir en blanco. ' +
+       'Cada semana entra un bloque más.</p></div>';
+
+  h += '<div class="aviso" style="margin-top:12px">⚖️ <b>Las normas no se traducen, y es a propósito.</b>' +
+       '<p class="sub" style="margin:7px 0 0">Una ley solo vale en el idioma en que fue publicada. ' +
+       'Traducir un artículo y que alguien lo cite en un informe es meterle un problema, no ayudarlo.</p></div>';
+
+  if(idiomaActual() === 'qu' || cuantoVa('qu') < 100){
+    h += '<div class="aviso" style="margin-top:12px">🏔️ <b>Sobre el quechua.</b>' +
+         '<p class="sub" style="margin:7px 0 0">Es quechua sureño (Cusco-Collao), el del sur andino y el de la mina. ' +
+         'Va a medias a propósito: está puesto lo que se puede decir con seguridad y lo demás sale en español. ' +
+         'Media traducción honesta sirve en obra; una entera inventada, no. ' +
+         'Falta que un hablante la revise antes de darla por cerrada.</p></div>';
+  }
+
+  c.innerHTML = h;
+}
+
 function pintarAjustesSello(){
   var c = $('sello-cuerpo'); if(!c) return;
   var cfg = selloCfg();
@@ -30417,6 +30619,244 @@ var NORMA_META={
   'D.S. 085-2003-PCM':            {esp:'Ambiental',         sec:'*'},
   'Ley 28806 / D.S. 019-2006-TR': {esp:'Fiscalización',     sec:'*'}
 };
+/* ══════════════════════════════════════════════════════════════════
+   LAS NORMAS, POR PAÍS
+
+   La app nació peruana y sus normas también. Pero Soletanche Bachy
+   —y media obra grande de la región— trabaja en Chile, Colombia y
+   Argentina, y allá la Ley 29783 no le sirve a nadie: lo que manda es
+   la Ley 16.744, el Decreto 1072 o la Ley 19.587, según dónde estés
+   parado.
+
+   Así que la app pregunta una vez en qué país estás y muestra lo de
+   ese país. Lo adivina por el reloj del celular —que es lo único que
+   sabe sin pedir permiso de nada— y se puede cambiar de un toque.
+
+   Cada norma trae su enlace al texto OFICIAL: LeyChile, el Régimen
+   Legal de Bogotá, argentina.gob.ar y el Boletín Oficial. Nada de
+   resúmenes de blog. Verificado en setiembre de 2026, y con eso viene
+   la advertencia honesta: una norma se modifica sin avisar, así que el
+   enlace oficial está ahí para que compruebes antes de firmar nada.
+   ════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════
+   LOS IDIOMAS  ·  el esqueleto
+
+   La app nació en español y tiene miles de textos escritos DENTRO del
+   código, no en un archivo aparte. Sacarlos todos de golpe es semanas
+   de trabajo y cada texto mal sacado rompe una pantalla. Así que esto
+   es el esqueleto, y está hecho para que crezca sin romper nada:
+
+   · La LLAVE de cada texto es el propio español. `t('Mi obra')`.
+     No hay códigos tipo `pantalla.obra.titulo` que haya que inventar,
+     mantener y buscar cuando algo sale en blanco.
+   · Si falta una traducción, sale el español. No sale la llave, no sale
+     un hueco, no revienta: sale el texto que ya estaba. Por eso se puede
+     traducir de a poco y publicar en cualquier momento.
+   · Lo que se traduce primero es la espina: los títulos de pantalla y
+     los accesos. Es lo que se ve sin leer, y es lo que permite moverse
+     por la app sin saber español.
+
+   El quechua es sureño (Cusco-Collao), que es el del sur andino y el
+   de la minería. Va a medias a propósito: está traducido lo que se
+   puede decir con seguridad, y lo demás sale en español hasta que un
+   hablante lo revise. Media traducción honesta sirve; una entera
+   inventada, no.
+   ════════════════════════════════════════════════════════════════ */
+var IDIOMAS = [
+  { id:'es', n:'Español', b:'\uD83C\uDDEA\uD83C\uDDF8' },
+  { id:'en', n:'English', b:'\uD83C\uDDEC\uD83C\uDDE7' },
+  { id:'fr', n:'Français', b:'\uD83C\uDDEB\uD83C\uDDF7' },
+  { id:'pt', n:'Português', b:'\uD83C\uDDE7\uD83C\uDDF7' },
+  { id:'zh', n:'中文', b:'\uD83C\uDDE8\uD83C\uDDF3' },
+  { id:'qu', n:'Runa simi', b:'\uD83C\uDFD4\uFE0F' }
+];
+var LS_IDIOMA = 'sstc_idioma';
+var TRAD = {"en":{"Mi obra":"My site","Mi empresa":"My company","Mi personal":"My people","Mis proyectos":"My projects","Tu cuenta":"Your account","Mis datos":"My details","Tus datos":"Your data","Datos de tu empresa":"Your company details","Datos del trabajador":"Worker details","Empresa":"Company","Nueva empresa":"New company","Tu equipo":"Your team","Invitación":"Invitation","Pedir acceso":"Request access","Solicitudes":"Requests","Acceso completo":"Full access","Planes":"Plans","Torre de control":"Control tower","Apariencia":"Appearance","Antes de empezar":"Before you start","Legal":"Legal","Privacidad":"Privacy","Términos":"Terms","Aviso":"Notice","Ficha del trabajador":"Worker file","Nuevo trabajador":"New worker","Estatus del personal":"Staff status","Traer de otra obra":"Bring from another site","Supervisor":"Supervisor","Credenciales":"ID badges","Nueva credencial":"New badge","Verificar":"Verify","Pase de lista":"Roll call","Asistencias":"Attendance","Firma":"Signature","Firmar":"Sign","Amonestaciones":"Warnings","Nueva amonestación":"New warning","Papeleta":"Slip","Reportar":"Report","Reportes":"Reports","Nuevo reporte":"New report","Cerrar reporte":"Close report","Reporte semanal":"Weekly report","Reporte mensual":"Monthly report","Un día":"One day","Informe":"Report","Estadística":"Statistics","Inspecciones":"Inspections","Por levantar":"To close out","Guardadas":"Saved","Permisos":"Work permits","Kardex de EPP":"PPE log","Entrega de EPP":"PPE handout","Buenas prácticas":"Good practices","Buena práctica":"Good practice","Nueva":"New","Registro":"Record","Registro del mes":"Month's record","Enviar":"Send","Foto":"Photo","Escanear":"Scan","Documentos":"Documents","Cámara":"Camera","El sello de las fotos":"Photo stamp","Charlas SSOMA":"Toolbox talks","Talleres":"Workshops","Constancias":"Certificates","Evaluación rendida":"Test taken","Seguridad del día":"Safety of the day","Trabajador del mes":"Worker of the month","Actividades de alto riesgo":"High-risk work","Comité de SST":"H&S committee","El padrón":"The roster","Acta de reunión":"Meeting minutes","Acta":"Minutes","Accidentes e incidentes":"Accidents and incidents","Nuevo evento":"New event","Evento":"Event","Mi brigada":"My emergency team","Simulacros":"Drills","Programar simulacro":"Schedule a drill","Simulacro en curso":"Drill in progress","Cierre del simulacro":"Drill close-out","Campañas":"Campaigns","Campaña":"Campaign","Normas":"Regulations","Norma":"Regulation","Procedimientos":"Procedures","Carteles QR":"QR posters","Cartel":"Poster","Recordatorios":"Reminders","Noticias":"News","Códigos de formato":"Format codes","Envío de resultados":"Sending results","Programa de charlas":"Talks schedule","Capacitación por tema":"Training by topic","Talleres prácticos":"Hands-on workshops","Reportar acto o condición":"Report unsafe act or condition","Código de cuadrilla":"Crew code","Nombrar supervisores":"Appoint supervisors","Credenciales y QR":"Badges and QR","Químicos MSDS y SGA":"Chemicals SDS and GHS","Procedimientos SSOMA":"HSE procedures","Constancias de capacitación":"Training certificates"},"fr":{"Mi obra":"Mon chantier","Mi empresa":"Mon entreprise","Mi personal":"Mon personnel","Mis proyectos":"Mes projets","Tu cuenta":"Votre compte","Mis datos":"Mes données","Tus datos":"Vos données","Datos de tu empresa":"Données de l'entreprise","Datos del trabajador":"Données du salarié","Empresa":"Entreprise","Nueva empresa":"Nouvelle entreprise","Tu equipo":"Votre équipe","Invitación":"Invitation","Pedir acceso":"Demander l'accès","Solicitudes":"Demandes","Acceso completo":"Accès complet","Planes":"Formules","Torre de control":"Tour de contrôle","Apariencia":"Apparence","Antes de empezar":"Avant de commencer","Legal":"Mentions légales","Privacidad":"Confidentialité","Términos":"Conditions","Aviso":"Avis","Ficha del trabajador":"Fiche du salarié","Nuevo trabajador":"Nouveau salarié","Estatus del personal":"Statut du personnel","Traer de otra obra":"Importer d'un autre chantier","Supervisor":"Superviseur","Credenciales":"Badges","Nueva credencial":"Nouveau badge","Verificar":"Vérifier","Pase de lista":"Appel","Asistencias":"Présences","Firma":"Signature","Firmar":"Signer","Amonestaciones":"Avertissements","Nueva amonestación":"Nouvel avertissement","Papeleta":"Formulaire","Reportar":"Signaler","Reportes":"Signalements","Nuevo reporte":"Nouveau signalement","Cerrar reporte":"Clôturer le signalement","Reporte semanal":"Rapport hebdomadaire","Reporte mensual":"Rapport mensuel","Un día":"Une journée","Informe":"Rapport","Estadística":"Statistiques","Inspecciones":"Inspections","Por levantar":"À lever","Guardadas":"Enregistrées","Permisos":"Permis de travail","Kardex de EPP":"Registre des EPI","Entrega de EPP":"Remise des EPI","Buenas prácticas":"Bonnes pratiques","Buena práctica":"Bonne pratique","Nueva":"Nouvelle","Registro":"Enregistrement","Registro del mes":"Enregistrement du mois","Enviar":"Envoyer","Foto":"Photo","Escanear":"Numériser","Documentos":"Documents","Cámara":"Appareil photo","El sello de las fotos":"Le tampon des photos","Charlas SSOMA":"Causeries HSE","Talleres":"Ateliers","Constancias":"Attestations","Evaluación rendida":"Évaluation passée","Seguridad del día":"Sécurité du jour","Trabajador del mes":"Salarié du mois","Actividades de alto riesgo":"Travaux à haut risque","Comité de SST":"Comité HSE","El padrón":"Le registre","Acta de reunión":"Procès-verbal","Acta":"Procès-verbal","Accidentes e incidentes":"Accidents et incidents","Nuevo evento":"Nouvel événement","Evento":"Événement","Mi brigada":"Mon équipe d'intervention","Simulacros":"Exercices","Programar simulacro":"Planifier un exercice","Simulacro en curso":"Exercice en cours","Cierre del simulacro":"Clôture de l'exercice","Campañas":"Campagnes","Campaña":"Campagne","Normas":"Réglementation","Norma":"Texte réglementaire","Procedimientos":"Procédures","Carteles QR":"Affiches QR","Cartel":"Affiche","Recordatorios":"Rappels","Noticias":"Actualités","Códigos de formato":"Codes de format","Envío de resultados":"Envoi des résultats","Programa de charlas":"Programme des causeries","Capacitación por tema":"Formation par thème","Talleres prácticos":"Ateliers pratiques","Reportar acto o condición":"Signaler un acte ou une situation","Código de cuadrilla":"Code d'équipe","Nombrar supervisores":"Nommer des superviseurs","Credenciales y QR":"Badges et QR","Químicos MSDS y SGA":"Produits chimiques FDS et SGH","Procedimientos SSOMA":"Procédures HSE","Constancias de capacitación":"Attestations de formation"},"pt":{"Mi obra":"Minha obra","Mi empresa":"Minha empresa","Mi personal":"Meu pessoal","Mis proyectos":"Meus projetos","Tu cuenta":"Sua conta","Mis datos":"Meus dados","Tus datos":"Seus dados","Datos de tu empresa":"Dados da empresa","Datos del trabajador":"Dados do trabalhador","Empresa":"Empresa","Nueva empresa":"Nova empresa","Tu equipo":"Sua equipe","Invitación":"Convite","Pedir acceso":"Pedir acesso","Solicitudes":"Solicitações","Acceso completo":"Acesso completo","Planes":"Planos","Torre de control":"Torre de controle","Apariencia":"Aparência","Antes de empezar":"Antes de começar","Legal":"Legal","Privacidad":"Privacidade","Términos":"Termos","Aviso":"Aviso","Ficha del trabajador":"Ficha do trabalhador","Nuevo trabajador":"Novo trabalhador","Estatus del personal":"Status do pessoal","Traer de otra obra":"Trazer de outra obra","Supervisor":"Supervisor","Credenciales":"Credenciais","Nueva credencial":"Nova credencial","Verificar":"Verificar","Pase de lista":"Chamada","Asistencias":"Presenças","Firma":"Assinatura","Firmar":"Assinar","Amonestaciones":"Advertências","Nueva amonestación":"Nova advertência","Papeleta":"Papeleta","Reportar":"Reportar","Reportes":"Reportes","Nuevo reporte":"Novo reporte","Cerrar reporte":"Fechar reporte","Reporte semanal":"Relatório semanal","Reporte mensual":"Relatório mensal","Un día":"Um dia","Informe":"Relatório","Estadística":"Estatística","Inspecciones":"Inspeções","Por levantar":"A corrigir","Guardadas":"Salvas","Permisos":"Permissões","Kardex de EPP":"Kardex de EPI","Entrega de EPP":"Entrega de EPI","Buenas prácticas":"Boas práticas","Buena práctica":"Boa prática","Nueva":"Nova","Registro":"Registro","Registro del mes":"Registro do mês","Enviar":"Enviar","Foto":"Foto","Escanear":"Escanear","Documentos":"Documentos","Cámara":"Câmera","El sello de las fotos":"O carimbo das fotos","Charlas SSOMA":"Palestras SSMA","Talleres":"Oficinas","Constancias":"Certificados","Evaluación rendida":"Avaliação feita","Seguridad del día":"Segurança do dia","Trabajador del mes":"Trabalhador do mês","Actividades de alto riesgo":"Atividades de alto risco","Comité de SST":"Comitê de SST","El padrón":"O cadastro","Acta de reunión":"Ata de reunião","Acta":"Ata","Accidentes e incidentes":"Acidentes e incidentes","Nuevo evento":"Novo evento","Evento":"Evento","Mi brigada":"Minha brigada","Simulacros":"Simulados","Programar simulacro":"Agendar simulado","Simulacro en curso":"Simulado em curso","Cierre del simulacro":"Encerramento do simulado","Campañas":"Campanhas","Campaña":"Campanha","Normas":"Normas","Norma":"Norma","Procedimientos":"Procedimentos","Carteles QR":"Cartazes QR","Cartel":"Cartaz","Recordatorios":"Lembretes","Noticias":"Notícias","Códigos de formato":"Códigos de formato","Envío de resultados":"Envio de resultados","Programa de charlas":"Programa de palestras","Capacitación por tema":"Treinamento por tema","Talleres prácticos":"Oficinas práticas","Reportar acto o condición":"Reportar ato ou condição","Código de cuadrilla":"Código de equipe","Nombrar supervisores":"Nomear supervisores","Credenciales y QR":"Credenciais e QR","Químicos MSDS y SGA":"Químicos FISPQ e GHS","Procedimientos SSOMA":"Procedimentos SSMA","Constancias de capacitación":"Certificados de treinamento"},"zh":{"Mi obra":"我的工地","Mi empresa":"我的公司","Mi personal":"我的人员","Mis proyectos":"我的项目","Tu cuenta":"你的账户","Mis datos":"我的资料","Tus datos":"你的数据","Datos de tu empresa":"公司资料","Datos del trabajador":"工人资料","Empresa":"公司","Nueva empresa":"新建公司","Tu equipo":"你的团队","Invitación":"邀请","Pedir acceso":"申请访问","Solicitudes":"申请","Acceso completo":"完整访问","Planes":"套餐","Torre de control":"控制塔","Apariencia":"外观","Antes de empezar":"开始之前","Legal":"法律","Privacidad":"隐私","Términos":"条款","Aviso":"提示","Ficha del trabajador":"工人档案","Nuevo trabajador":"新增工人","Estatus del personal":"人员状态","Traer de otra obra":"从其他工地导入","Supervisor":"主管","Credenciales":"工牌","Nueva credencial":"新建工牌","Verificar":"验证","Pase de lista":"点名","Asistencias":"考勤","Firma":"签名","Firmar":"签名","Amonestaciones":"警告","Nueva amonestación":"新建警告","Papeleta":"单据","Reportar":"上报","Reportes":"上报记录","Nuevo reporte":"新建上报","Cerrar reporte":"关闭上报","Reporte semanal":"周报","Reporte mensual":"月报","Un día":"单日","Informe":"报告","Estadística":"统计","Inspecciones":"检查","Por levantar":"待整改","Guardadas":"已保存","Permisos":"作业许可","Kardex de EPP":"劳保用品台账","Entrega de EPP":"劳保发放","Buenas prácticas":"良好做法","Buena práctica":"良好做法","Nueva":"新建","Registro":"记录","Registro del mes":"本月记录","Enviar":"发送","Foto":"照片","Escanear":"扫描","Documentos":"文件","Cámara":"相机","El sello de las fotos":"照片水印","Charlas SSOMA":"班前会","Talleres":"实操培训","Constancias":"证书","Evaluación rendida":"已完成测评","Seguridad del día":"今日安全","Trabajador del mes":"本月之星","Actividades de alto riesgo":"高风险作业","Comité de SST":"安全委员会","El padrón":"名册","Acta de reunión":"会议纪要","Acta":"纪要","Accidentes e incidentes":"事故与未遂","Nuevo evento":"新建事件","Evento":"事件","Mi brigada":"我的应急队","Simulacros":"演练","Programar simulacro":"安排演练","Simulacro en curso":"演练进行中","Cierre del simulacro":"演练收尾","Campañas":"宣传活动","Campaña":"宣传活动","Normas":"法规","Norma":"法规","Procedimientos":"作业程序","Carteles QR":"二维码海报","Cartel":"海报","Recordatorios":"提醒","Noticias":"消息","Códigos de formato":"编号规则","Envío de resultados":"结果发送","Programa de charlas":"班前会计划","Capacitación por tema":"分主题培训","Talleres prácticos":"实操培训","Reportar acto o condición":"上报不安全行为或状态","Código de cuadrilla":"班组码","Nombrar supervisores":"任命主管","Credenciales y QR":"工牌与二维码","Químicos MSDS y SGA":"化学品SDS与GHS","Procedimientos SSOMA":"HSE作业程序","Constancias de capacitación":"培训证书"},"qu":{"Mi obra":"Llamk'anay","Mi personal":"Llamk'aqniykuna","Nueva empresa":"Musuq empresa","Ficha del trabajador":"Llamk'aqpa qillqan","Nuevo trabajador":"Musuq llamk'aq","Verificar":"Chiqaqchay","Firma":"Sutinchay","Firmar":"Sutinchay","Reportar":"Willay","Reportes":"Willaykuna","Nuevo reporte":"Musuq willay","Inspecciones":"Qhawaykuna","Guardadas":"Waqaychasqa","Buenas prácticas":"Allin ruwaykuna","Buena práctica":"Allin ruway","Nueva":"Musuq","Registro":"Qillqay","Enviar":"Apachiy","Foto":"Rikch'a","Documentos":"Qillqakuna","Charlas SSOMA":"Rimanakuykuna","Normas":"Kamachikuykuna","Norma":"Kamachikuy","Recordatorios":"Yuyarichiykuna","Noticias":"Musuq willaykuna"}};
+
+function idiomaDetectado(){
+  try{
+    var l = (navigator.language || 'es').toLowerCase();
+    for(var i=0;i<IDIOMAS.length;i++) if(l.indexOf(IDIOMAS[i].id) === 0) return IDIOMAS[i].id;
+  }catch(e){}
+  return 'es';
+}
+function idiomaActual(){
+  try{ var v = leer(LS_IDIOMA, null); if(v && idiomaPorId(v)) return v; }catch(e){}
+  return idiomaDetectado();
+}
+function idiomaPorId(id){
+  for(var i=0;i<IDIOMAS.length;i++) if(IDIOMAS[i].id === id) return IDIOMAS[i];
+  return null;
+}
+/* Traduce. Si no hay traducción devuelve lo que le diste, que es
+   español correcto: nunca devuelve una llave ni un hueco.
+   Se llama `trad` y no `t` a propósito: en este archivo conviven
+   librerías minificadas donde `t` es una variable cualquiera, y
+   declarar una función global con ese nombre es pedir que un día
+   deje de funcionar una de las dos sin que nadie sepa por qué. */
+function trad(s){
+  var d = TRAD[idiomaActual()];
+  if(!d) return s;
+  return d[s] || s;
+}
+function cuantoVa(id){
+  var d = TRAD[id]; if(!d) return 100;
+  var n = 0; for(var k in TRAD.en) n++;
+  var m = 0; for(var k2 in d) m++;
+  return n ? Math.round(100 * m / n) : 0;
+}
+function ponerIdioma(id){
+  if(!idiomaPorId(id)) return;
+  try{ guardar(LS_IDIOMA, id); }catch(e){}
+  try{ document.documentElement.lang = id; }catch(e2){}
+  aplicarIdioma();
+  try{ repintarCasa(); }catch(e3){}
+  try{ pintarAjustesIdioma(); }catch(e4){}
+}
+
+/* ══ APLICARLO SIN TOCAR EL HTML ═══════════════════════════════════
+   El español original se guarda en `data-es` la primera vez que se
+   pasa por un elemento. A partir de ahí la llave es ese dato, no lo
+   que hay en pantalla — si no, al cambiar de idioma dos veces se
+   traduciría una traducción y saldría cualquier cosa. */
+function _trad1(el){
+  if(!el) return;
+  var base = el.getAttribute('data-es');
+  if(base === null){
+    base = (el.textContent || '').trim();
+    if(!base || base.length > 60) return;
+    el.setAttribute('data-es', base);
+  }
+  var n = trad(base);
+  if(el.textContent !== n) el.textContent = n;
+}
+function aplicarIdioma(){
+  try{
+    var i, L;
+    L = document.querySelectorAll('.barra > span');
+    for(i=0;i<L.length;i++) _trad1(L[i]);
+    L = document.querySelectorAll('.acceso .et');
+    for(i=0;i<L.length;i++){
+      var el = L[i];
+      var base = el.getAttribute('data-es');
+      if(base === null){
+        /* los accesos traen <br> adentro: la llave es el texto plano */
+        base = (el.textContent || '').trim();
+        if(!base) continue;
+        el.setAttribute('data-es', base);
+        el.setAttribute('data-br', el.innerHTML.indexOf('<br') >= 0 ? '1' : '0');
+      }
+      var n = trad(base);
+      if(n === base && el.getAttribute('data-br') === '1') continue;  /* deja el salto de línea del español */
+      if(el.textContent !== n) el.textContent = n;
+    }
+  }catch(e){}
+}
+
+var PAISES = [
+  { id:'pe', n:'Perú',      b:'\uD83C\uDDF5\uD83C\uDDEA', fuente:'El Peruano' },
+  { id:'cl', n:'Chile',     b:'\uD83C\uDDE8\uD83C\uDDF1', fuente:'LeyChile (BCN)' },
+  { id:'co', n:'Colombia',  b:'\uD83C\uDDE8\uD83C\uDDF4', fuente:'Régimen Legal y gestores normativos' },
+  { id:'ar', n:'Argentina', b:'\uD83C\uDDE6\uD83C\uDDF7', fuente:'argentina.gob.ar y Boletín Oficial' }
+];
+var LS_PAIS = 'sstc_pais';
+
+/* El reloj del celular dice el país sin pedir permiso de ubicación ni
+   gastar datos. Si no se puede leer, Perú, que es de donde venimos. */
+function paisDetectado(){
+  try{
+    var z = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').toLowerCase();
+    if(z.indexOf('santiago') >= 0 || z.indexOf('punta_arenas') >= 0 || z.indexOf('easter') >= 0) return 'cl';
+    if(z.indexOf('bogota') >= 0) return 'co';
+    if(z.indexOf('argentina') >= 0 || z.indexOf('buenos_aires') >= 0 || z.indexOf('cordoba') >= 0) return 'ar';
+    if(z.indexOf('lima') >= 0) return 'pe';
+  }catch(e){}
+  return 'pe';
+}
+function paisActual(){
+  try{ var v = leer(LS_PAIS, null); if(v && paisPorId(v)) return v; }catch(e){}
+  return paisDetectado();
+}
+function paisPorId(id){
+  for(var i=0;i<PAISES.length;i++) if(PAISES[i].id===id) return PAISES[i];
+  return null;
+}
+function ponerPais(id){
+  if(!paisPorId(id)) return;
+  try{ guardar(LS_PAIS, id); }catch(e){}
+  NORMA_SECTOR = '*';
+  pintarNormas();
+}
+
+var NORMAS_PAIS = {"cl":[{"c":"Código del Trabajo, art. 184","d":"Deber general de protección","a":"sst","s":"*","y":"2003","o":"Obliga al empleador a tomar todas las medidas necesarias para proteger la vida y la salud de sus trabajadores.","u":"https://www.bcn.cl/leychile/navegar?idNorma=207436"},{"c":"Ley 16.744","d":"Accidentes del trabajo y enfermedades profesionales","a":"sst","s":"*","y":"1968","o":"Obliga a cotizar el seguro laboral, a denunciar todo accidente y a que la mutual cubra atención y pensiones.","u":"https://www.bcn.cl/leychile/navegar?idNorma=28650"},{"c":"D.S. 101","d":"Reglamento de la Ley 16.744","a":"sst","s":"*","y":"1968","o":"Obliga a emitir la DIAT o la DIEP ante el organismo administrador apenas se conoce el accidente o la enfermedad.","u":"https://www.bcn.cl/leychile/navegar?idNorma=9231"},{"c":"D.S. 44","d":"Gestión preventiva de los riesgos laborales","a":"sst","s":"*","y":"2024 · rige desde el 1-feb-2025","o":"Obliga a matriz de peligros, mapa de riesgos, programa preventivo y comité paritario sobre 25 trabajadores. Reemplazó al D.S. 40 y derogó el D.S. 54.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1205298"},{"c":"D.S. 594","d":"Condiciones sanitarias y ambientales básicas","a":"salud","s":"*","y":"1999","o":"Obliga a dar agua potable, baños y ventilación, y a no superar 85 dB(A) ni los límites de agentes químicos.","u":"https://www.bcn.cl/leychile/navegar?idNorma=167766"},{"c":"D.S. 76","d":"Reglamento del art. 66 bis · contratistas","a":"sst","s":"*","y":"2006","o":"Obliga al mandante a llevar registro de contratistas y, sobre 50 trabajadores en obra, a implementar un sistema de gestión SST.","u":"https://www.bcn.cl/leychile/navegar?idNorma=257601"},{"c":"Ley 20.123","d":"Ley de subcontratación","a":"sst","s":"*","y":"2006","o":"Obliga al mandante a proteger a los trabajadores de sus contratistas en la obra, con responsabilidad solidaria o subsidiaria.","u":"https://www.bcn.cl/leychile/navegar?idNorma=254080"},{"c":"Ley 21.643","d":"Ley Karin · acoso y violencia laboral","a":"sst","s":"*","y":"2024 · rige desde el 1-ago-2024","o":"Obliga a tener protocolo de prevención del acoso y la violencia, y a investigar toda denuncia en máximo 30 días.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1200096"},{"c":"D.S. 21","d":"Reglamento de investigación de la Ley Karin","a":"sst","s":"*","y":"2024","o":"Fija cómo investigar: plazos, confidencialidad, medidas de resguardo inmediatas y envío del informe a la Dirección del Trabajo.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1204689"},{"c":"Ley 21.012","d":"Riesgo grave e inminente","a":"sst","s":"*","y":"2017","o":"Obliga a informar el riesgo grave e inminente y permite al trabajador paralizar faenas y evacuar sin represalias.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1103798"},{"c":"Ley 20.001","d":"Peso máximo de carga humana","a":"sst","s":"*","y":"2005 · límite de 25 kg desde 2016","o":"Prohíbe la carga manual sobre 25 kilos en hombres y 20 en mujeres y menores; la prohíbe del todo en embarazadas.","u":"https://www.bcn.cl/leychile/navegar?idNorma=235279"},{"c":"D.S. 63","d":"Reglamento del manejo manual de carga","a":"sst","s":"*","y":"2005","o":"Obliga a evaluar los riesgos del manejo manual de carga con el método oficial y a capacitar en técnicas seguras.","u":"https://www.bcn.cl/leychile/navegar?idNorma=241855"},{"c":"Ley 20.096","d":"Protección contra la radiación UV","a":"salud","s":"*","y":"2006","o":"Obliga a proteger a quien trabaja expuesto al sol: informar el índice UV y dar bloqueador, ropa y sombra.","u":"https://www.bcn.cl/leychile/navegar?idNorma=248323"},{"c":"D.S. 18","d":"Certificación de elementos de protección personal","a":"sst","s":"*","y":"1982","o":"Obliga a que todo elemento de protección personal usado en obra esté certificado por un organismo autorizado.","u":"https://www.bcn.cl/leychile/navegar?idNorma=7603"},{"c":"D.S. 28","d":"Hipobaria intermitente crónica por gran altitud","a":"salud","s":"mineria","y":"2012","o":"Obliga a exámenes de salud, aclimatación y oxígeno para quien trabaja sobre 3.000 metros. Se incorpora al D.S. 594.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1045465"},{"c":"D.S. 47 (OGUC)","d":"Ordenanza General de Urbanismo y Construcciones","a":"sst","s":"construccion","y":"1992","o":"Obliga a cerrar y señalizar la obra, y a proteger a peatones y vecinos durante faenas de construcción y demolición.","u":"https://www.bcn.cl/leychile/navegar?idNorma=8201"},{"c":"D.S. 132","d":"Reglamento de Seguridad Minera","a":"sst","s":"mineria","y":"2002","o":"Obliga a informar de inmediato al Sernageomin los accidentes fatales y a tener experto en prevención y reglamento interno.","u":"https://www.bcn.cl/leychile/navegar?idNorma=221064"},{"c":"D.S. 160","d":"Seguridad de instalaciones de combustibles líquidos","a":"sst","s":"hidrocarburos","y":"2008","o":"Obliga a inscribir las instalaciones ante la SEC y a mantener distancias, señalización y plan de emergencia.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1004120"},{"c":"D.S. 280","d":"Seguridad del transporte y distribución de gas de red","a":"sst","s":"hidrocarburos","y":"2009","o":"Obliga a diseñar y operar las redes de gas con personal autorizado y a reportar todo incidente a la SEC.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1012263"},{"c":"D.S. 8 (RIC)","d":"Seguridad de instalaciones de consumo eléctrico","a":"sst","s":"electrico","y":"2019","o":"Obliga a ejecutar las instalaciones eléctricas con instalador autorizado SEC, protección diferencial y puesta a tierra.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1143069"},{"c":"D.S. 43","d":"Almacenamiento de sustancias peligrosas","a":"sst","s":"*","y":"2015","o":"Obliga a almacenar las sustancias peligrosas separadas por incompatibilidad, en bodega autorizada, señalizada y con control de derrames.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1088802"},{"c":"D.S. 57","d":"Reglamento GHS de sustancias y mezclas peligrosas","a":"salud","s":"*","y":"2019","o":"Obliga a clasificar, etiquetar con pictogramas GHS y entregar la hoja de datos de seguridad de cada producto químico.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1155752"},{"c":"D.S. 298","d":"Transporte de cargas peligrosas","a":"sst","s":"*","y":"1994","o":"Obliga a rotular el vehículo, portar la hoja de seguridad y llevar conductor con curso vigente al transportar cargas peligrosas.","u":"https://www.bcn.cl/leychile/navegar?idNorma=12087"},{"c":"D.S. 10","d":"Reglamento de calderas y autoclaves","a":"sst","s":"industria","y":"2012","o":"Obliga a inscribir calderas y autoclaves ante la Seremi de Salud y a inspeccionarlas con operador acreditado.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1055319"},{"c":"Ley 19.300","d":"Bases generales del Medio Ambiente","a":"ambiente","s":"*","y":"1994","o":"Obliga a someter al SEIA los proyectos listados y a cumplir la resolución de calificación ambiental durante toda la obra.","u":"https://www.bcn.cl/leychile/navegar?idNorma=30667"},{"c":"D.S. 40 (MMA)","d":"Reglamento del SEIA","a":"ambiente","s":"*","y":"2012 · última reforma 21-ene-2026","o":"Define si el proyecto entra por DIA o por EIA y obliga a describir impactos, permisos ambientales y compromisos.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1053563"},{"c":"D.S. 148","d":"Reglamento sanitario de residuos peligrosos","a":"ambiente","s":"*","y":"2003","o":"Obliga a declarar los residuos peligrosos, almacenarlos hasta seis meses y entregarlos a destinatario autorizado con guía.","u":"https://www.bcn.cl/leychile/navegar?idNorma=226458"},{"c":"Ley 20.920","d":"Ley REP de reciclaje","a":"ambiente","s":"*","y":"2016","o":"Obliga a los productores de neumáticos, envases y otros productos prioritarios a financiar su recolección y cumplir metas.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1090894"},{"c":"D.S. 38 (MMA)","d":"Norma de emisión de ruido","a":"ambiente","s":"*","y":"2011","o":"Obliga a no superar los límites de ruido medidos en la vivienda vecina, según zona y horario diurno o nocturno.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1040928"},{"c":"D.S. 90","d":"Norma de emisión de RILes a aguas superficiales","a":"ambiente","s":"*","y":"2000","o":"Obliga a tratar y monitorear los residuos líquidos antes de descargarlos a ríos, lagos o mar, por parámetro.","u":"https://www.bcn.cl/leychile/navegar?idNorma=182637"},{"c":"Ley 20.551","d":"Cierre de faenas e instalaciones mineras","a":"ambiente","s":"mineria","y":"2011","o":"Obliga a toda faena minera a tener plan de cierre aprobado y garantía financiera antes de iniciar operaciones.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1032158"},{"c":"D.S. 41 (Minería)","d":"Reglamento de la ley de cierre de faenas","a":"ambiente","s":"mineria","y":"2012","o":"Detalla cómo elaborar, auditar y actualizar el plan de cierre y cómo se calcula la garantía ante el Sernageomin.","u":"https://www.bcn.cl/leychile/navegar?idNorma=1045967"},{"c":"D.S. 248","d":"Reglamento de depósitos de relaves","a":"ambiente","s":"mineria","y":"2006","o":"Obliga a que el Sernageomin apruebe el diseño, la operación y el cierre de todo depósito de relaves antes de construirlo.","u":"https://www.bcn.cl/leychile/navegar?idNorma=259901"}],"co":[{"c":"Ley 9 de 1979","d":"Código Sanitario · Título III, salud ocupacional","a":"salud","s":"*","y":"1979","o":"Obliga al empleador a mantener ambiente de trabajo higiénico y seguro, programa permanente de medicina e higiene, y registrar accidentes.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=1177"},{"c":"Resolución 2400 de 1979","d":"Estatuto de Seguridad Industrial","a":"sst","s":"*","y":"1979","o":"Obliga a condiciones locativas seguras, orden y aseo, ventilación, servicios sanitarios, EPP y protección de máquinas.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=53565"},{"c":"Resolución 2013 de 1986","d":"COPASST · comité paritario","a":"sst","s":"*","y":"1986","o":"Obliga a conformar comité paritario con 10 o más trabajadores y a reunirlo al menos una vez al mes en horario laboral.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=5411"},{"c":"Decreto 2222 de 1993","d":"Higiene y seguridad en minería a cielo abierto","a":"sst","s":"mineria","y":"1993","o":"Obliga a controlar explosivos, taludes, transporte, ruido e instalaciones eléctricas y a prestar servicio médico en la mina.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=10679"},{"c":"Ley 99 de 1993","d":"Ley del medio ambiente · crea el SINA","a":"ambiente","s":"*","y":"1993","o":"Obliga a obtener licencia ambiental previa para obras que deterioren gravemente los recursos naturales, otorgada por la ANLA o la corporación regional.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=297"},{"c":"Decreto Ley 1295 de 1994","d":"Sistema General de Riesgos Laborales","a":"sst","s":"*","y":"1994","o":"Obliga a afiliar a todo trabajador a una ARL, pagar la cotización según clase de riesgo y reportar accidentes y enfermedades.","u":"https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=2629"},{"c":"Ley 1010 de 2006","d":"Acoso laboral","a":"sst","s":"*","y":"2006","o":"Obliga a incluir en el reglamento interno mecanismos de prevención del acoso laboral y un procedimiento interno confidencial.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=18843"},{"c":"Resolución 627 de 2006","d":"Norma de ruido y ruido ambiental","a":"ambiente","s":"construccion","y":"2006","o":"Obliga a no superar los límites de ruido por zona y horario: zona residencial 65 dB(A) de día y 55 de noche.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=19982"},{"c":"Resolución 1401 de 2007","d":"Investigación de incidentes y accidentes","a":"sst","s":"*","y":"2007","o":"Obliga a investigar todo incidente y accidente dentro de 15 días y a remitir los graves y mortales a la ARL.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=53497"},{"c":"Resolución 2646 de 2008","d":"Factores de riesgo psicosocial","a":"sst","s":"*","y":"2008","o":"Obliga a identificar y evaluar factores psicosociales intra y extralaborales y a vigilar epidemiológicamente el estrés ocupacional.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=31607"},{"c":"Ley 1562 de 2012","d":"Sistema de Riesgos Laborales · crea el SG-SST","a":"sst","s":"*","y":"2012","o":"Obliga a afiliar a la ARL a contratistas con contratos mayores a un mes y a reportar accidentes graves y mortales.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=48365"},{"c":"Decreto 1477 de 2014","d":"Tabla de enfermedades laborales","a":"salud","s":"*","y":"2014","o":"Obliga a usar la tabla oficial para calificar enfermedades laborales y orienta los programas de vigilancia por agente de riesgo.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=58849"},{"c":"Decreto 1072 de 2015","d":"Decreto Único del Sector Trabajo · Capítulo 6, SG-SST","a":"sst","s":"*","y":"2015","o":"Obliga a implementar y documentar el SG-SST: política, matriz de peligros, plan anual, responsable asignado, capacitación y plan de emergencias.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=62506"},{"c":"Decreto 472 de 2015","d":"Multas, clausura y paralización de obra","a":"sst","s":"*","y":"2015","o":"Permite al inspector clausurar el lugar de trabajo hasta 120 días y paralizar labores de inmediato por riesgo grave e inminente.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=61117"},{"c":"Decreto 1886 de 2015","d":"Seguridad en labores mineras subterráneas","a":"sst","s":"mineria","y":"2015","o":"Obliga a ventilación forzada, monitoreo de gases, autorrescatadores, planos actualizados, brigadas y refugios en toda mina subterránea.","u":"https://gestornormativo.creg.gov.co/gestor/entorno/docs/decreto_1886_2015.htm"},{"c":"Decreto 1076 de 2015","d":"Decreto Único del Sector Ambiente","a":"ambiente","s":"*","y":"2015","o":"Define qué proyectos requieren licencia ambiental y obliga a presentar estudio de impacto y plan de manejo antes de iniciar obra.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=62511"},{"c":"Decreto 1079 de 2015","d":"Transporte de mercancías peligrosas · Capítulo 7","a":"sst","s":"*","y":"2015","o":"Obliga a entregar la carga rotulada, dar tarjeta de emergencia al conductor, tener plan de contingencia y exigirle curso básico.","u":"https://rndc.mintransporte.gov.co/portals/0/DECRETO%201079%20DE%202015%20Capitulo%207.pdf"},{"c":"Resolución 631 de 2015","d":"Límites de vertimientos de agua residual","a":"ambiente","s":"industria","y":"2015","o":"Obliga a caracterizar el agua residual vertida y a cumplir los límites de DBO, DQO, sólidos, grasas y metales según la actividad.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=70346"},{"c":"Resolución 472 de 2017","d":"Residuos de construcción y demolición (RCD)","a":"ambiente","s":"construccion","y":"2017","o":"Obliga al gran generador a tener programa de manejo de RCD antes de iniciar obra y a reportar cada trimestre.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=68359"},{"c":"Resolución 0312 de 2019","d":"Estándares mínimos del SG-SST","a":"sst","s":"*","y":"2019","o":"Obliga a autoevaluar 7, 21 o 60 estándares mínimos según tamaño y riesgo, y a reportar el resultado cada año.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=82666"},{"c":"Resolución 5018 de 2019","d":"SST en el sector eléctrico","a":"sst","s":"electrico","y":"2019","o":"Obliga a aplicar lineamientos de SST en generación, transmisión, distribución y comercialización, incluidos contratistas en tareas de alto riesgo.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=88299"},{"c":"Resolución 491 de 2020","d":"Espacios confinados","a":"sst","s":"*","y":"2020","o":"Obliga a identificar y señalizar los espacios confinados, medir gases antes y durante, permiso de entrada, vigía y equipo de rescate.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=90906"},{"c":"Resolución 773 de 2021","d":"SGA · etiquetado de productos químicos","a":"sst","s":"industria","y":"2021","o":"Obliga a etiquetar los químicos con pictogramas SGA, tener la ficha de datos de seguridad accesible y capacitar cada año.","u":"https://normograma.supersalud.gov.co/compilacion/docs/resolucion_mtra_0773_2021.htm"},{"c":"Resolución 1257 de 2021","d":"Metas de aprovechamiento de RCD","a":"ambiente","s":"construccion","y":"2021","o":"Obliga a cumplir metas anuales de aprovechamiento de RCD y permite entregarlos a un receptor certificado avisando con 30 días.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=119018"},{"c":"Resolución 4272 de 2021","d":"Trabajo en alturas","a":"sst","s":"*","y":"2021 · rige desde el 8-ago-2022","o":"Obliga a programa de prevención de caídas, coordinador de alturas, permiso escrito, certificación de trabajadores y plan de rescate. Derogó la 1409 de 2012.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=120880"},{"c":"Resolución 2764 de 2022","d":"Batería de riesgo psicosocial","a":"sst","s":"*","y":"2022","o":"Obliga a aplicar la batería oficial de riesgo psicosocial cada año si el riesgo es alto y cada dos años si no.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=127124"},{"c":"Resolución 839 de 2023","d":"Registro RESPEL a través del RUA","a":"ambiente","s":"*","y":"2023 · rige desde el 1-ene-2026","o":"Obliga al generador de residuos peligrosos a inscribirse y reportar cada año en el RUA, entre febrero y abril.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=146438&dt=S"},{"c":"Ley 2365 de 2024","d":"Acoso sexual en el ámbito laboral","a":"sst","s":"*","y":"2024","o":"Obliga a tener política y protocolo interno contra el acoso sexual, con ruta de atención y publicación semestral de quejas y sanciones.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=157481"},{"c":"Resolución 40117 de 2024","d":"RETIE · nuevo Anexo General","a":"sst","s":"electrico","y":"2024","o":"Obliga a que toda instalación eléctrica se diseñe, construya e inspeccione bajo RETIE y se certifique antes de energizarla.","u":"https://gestornormativo.creg.gov.co/gestor/entorno/docs/resolucion_minminas_40117_2024.htm"},{"c":"Resolución 40537 de 2024","d":"Exploración y producción de hidrocarburos","a":"sst","s":"hidrocarburos","y":"2024","o":"Obliga a operar pozos bajo normas API/ISO, probar integridad y presión, y tener plan de contingencia y certificación de equipos.","u":"https://gestornormativo.creg.gov.co/gestor/entorno/docs/resolucion_minminas_40537_2024.htm"},{"c":"Ley 2466 de 2025","d":"Reforma laboral","a":"sst","s":"*","y":"2025","o":"Obliga a las empresas de plataformas digitales a pagar el cubrimiento de riesgos laborales de los trabajadores que las usan.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=181933"},{"c":"Resolución 3461 de 2025","d":"Comité de Convivencia Laboral","a":"sst","s":"*","y":"2025 · rige desde el 11-set-2025","o":"Obliga a conformar el comité de convivencia, recibir quejas en 5 días y cerrar el trámite preventivo en 65 días. Derogó la 652 y la 1356 de 2012.","u":"https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=190589&dt=S"},{"c":"Resolución 40284 de 2026","d":"Modifica el RETIE","a":"sst","s":"electrico","y":"2026 · rige desde el 1-jul-2026","o":"Ajusta libros y anexos del RETIE: exime de certificación plena la autogeneración menor a 10 kVA y precisa alcances de los técnicos electricistas.","u":"https://gestornormativo.creg.gov.co/gestor/entorno/docs/resolucion_minminas_40284_2026.htm"}],"ar":[{"c":"Ley 19.587","d":"Higiene y Seguridad en el Trabajo","a":"sst","s":"*","y":"1972","o":"Obliga a capacitar al personal, hacer examen preocupacional y periódico, y proteger máquinas, ventilación, ruido y señalización.","u":"https://www.argentina.gob.ar/normativa/nacional/17612/texto"},{"c":"Decreto 351/79","d":"Reglamento general de higiene y seguridad","a":"sst","s":"*","y":"1979 · sigue vigente","o":"Fija valores exigibles de iluminación, ruido, ventilación, baños, matafuegos y salidas, y obliga a adecuar el establecimiento.","u":"https://www.argentina.gob.ar/normativa/nacional/decreto-351-1979-32030"},{"c":"Decreto 1338/96","d":"Servicios de medicina y de higiene y seguridad","a":"sst","s":"*","y":"1996","o":"Obliga a tener servicio de medicina del trabajo y de higiene y seguridad, con horas-profesional mensuales según dotación y riesgo.","u":"https://www.argentina.gob.ar/normativa/nacional/40574/actualizacion"},{"c":"Ley 24.557","d":"Ley de Riesgos del Trabajo","a":"sst","s":"*","y":"1995","o":"Obliga a afiliarse a una ART o autoasegurarse, denunciar cada accidente y garantizar las prestaciones médicas del trabajador.","u":"https://www.argentina.gob.ar/normativa/nacional/norma-27971/actualizacion"},{"c":"Ley 27.348","d":"Comisiones médicas obligatorias","a":"sst","s":"*","y":"2017","o":"Obliga al trabajador accidentado a pasar por la comisión médica jurisdiccional, con patrocinio letrado, antes de demandar judicialmente.","u":"https://www.argentina.gob.ar/normativa/nacional/ley-27348-2017-272119"},{"c":"Resolución SRT 463/09","d":"Relevamiento General de Riesgos Laborales","a":"sst","s":"*","y":"2009","o":"Obliga a presentar a la ART el relevamiento de riesgos del establecimiento y un plan de regularización de incumplimientos.","u":"https://www.argentina.gob.ar/normativa/nacional/153431/texto"},{"c":"Resolución SRT 299/11","d":"Constancia de entrega de EPP","a":"sst","s":"*","y":"2011","o":"Obliga a entregar EPP certificados y a registrar cada entrega en una constancia individual firmada por el trabajador.","u":"https://www.argentina.gob.ar/normativa/nacional/norma-180669/texto"},{"c":"Resolución MTEySS 295/03","d":"Ergonomía y agentes químicos","a":"sst","s":"*","y":"2003","o":"Obliga a respetar los límites de exposición a químicos, ruido y vibraciones y las pautas de levantamiento manual de cargas.","u":"https://servicios.infoleg.gob.ar/infolegInternet/anexos/90000-94999/90396/norma.htm"},{"c":"Resolución SRT 886/15","d":"Protocolo de Ergonomía","a":"sst","s":"*","y":"2015","o":"Obliga a evaluar el riesgo ergonómico de cada puesto, identificar los factores críticos y ejecutar medidas correctivas con plazos.","u":"https://www.argentina.gob.ar/normativa/nacional/norma-246272/texto"},{"c":"Resolución SRT 84/12","d":"Protocolo de iluminación","a":"sst","s":"*","y":"2012","o":"Obliga a medir la iluminación de cada puesto con el protocolo oficial firmado y a repetirla cada doce meses.","u":"https://servicios.infoleg.gob.ar/infolegInternet/anexos/190000-194999/193616/norma.htm"},{"c":"Resolución SRT 85/12","d":"Protocolo de ruido","a":"sst","s":"*","y":"2012","o":"Obliga a medir el nivel de ruido por puesto con el protocolo oficial y a corregir si supera el límite.","u":"https://servicios.infoleg.gob.ar/infolegInternet/anexos/190000-194999/193617/norma.htm"},{"c":"Resolución SRT 953/10","d":"Espacios confinados","a":"sst","s":"*","y":"2010","o":"Obliga a cumplir la IRAM 3625 antes de entrar: medir atmósfera, ventilar, permiso escrito y vigía en la boca.","u":"https://www.argentina.gob.ar/normativa/nacional/norma-169317/texto"},{"c":"Resolución SRT 30/23","d":"Carga térmica · estrés por calor","a":"sst","s":"*","y":"2023 · rige desde ene-2024","o":"Obliga a evaluar el estrés por calor con el índice TGBH y aplicar pausas o medidas al superar el límite.","u":"https://www.boletinoficial.gob.ar/detalleAviso/primera/291179/20230728"},{"c":"Resolución SRT 37/10","d":"Exámenes médicos","a":"salud","s":"*","y":"2010","o":"Obliga al preocupacional a cargo del empleador y al periódico a cargo de la ART cuando hay agentes de riesgo.","u":"https://www.argentina.gob.ar/normativa/nacional/163171/texto"},{"c":"Decreto 658/96","d":"Listado de enfermedades profesionales","a":"salud","s":"*","y":"1996","o":"Define qué enfermedad se reconoce como profesional según agente y tarea, y fija los agentes que disparan exámenes periódicos.","u":"https://www.argentina.gob.ar/normativa/nacional/37572/actualizacion"},{"c":"Resolución SRT 81/19","d":"Vigilancia de sustancias cancerígenas (SVCC)","a":"salud","s":"industria","y":"2019","o":"Obliga a inscribir el establecimiento, declarar cada 1 de abril los cancerígenos usados y guardar historias clínicas cuarenta años.","u":"https://www.argentina.gob.ar/normativa/nacional/norma-329835/texto"},{"c":"Resolución SRT 861/15","d":"Protocolo de contaminantes químicos","a":"sst","s":"industria","y":"2015","o":"Obliga a medir contaminantes químicos en aire con el protocolo oficial donde haya exposición y a compararlos contra los límites.","u":"https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-861-2015-246217/texto"},{"c":"Resolución SRT 743/03","d":"Registro de accidentes industriales mayores (RENPRIAM)","a":"sst","s":"industria","y":"2003","o":"Obliga a declarar cada año antes del 15 de abril si se superan los umbrales de sustancias peligrosas almacenadas.","u":"https://www.argentina.gob.ar/srt/prevencion/registros-obligatorios"},{"c":"Resolución SRT 900/15","d":"Protocolo de puesta a tierra","a":"sst","s":"electrico","y":"2015","o":"Obliga a medir la resistencia de puesta a tierra y verificar la continuidad de masas, con protocolo firmado y validez anual.","u":"https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-900-2015-246348/texto"},{"c":"Resolución SRT 3068/14","d":"Trabajos con tensión hasta 1 kV","a":"sst","s":"electrico","y":"2014","o":"Obliga a ejecutar los trabajos con tensión en baja tensión según el reglamento AEA y a habilitar al personal con plan de capacitación.","u":"https://www.boletinoficial.gob.ar/detalleAviso/primera/115737/20141120"},{"c":"Resolución SRT 11/22","d":"Trabajos con tensión mayor a 1 kV","a":"sst","s":"electrico","y":"2022","o":"Obliga a respetar las distancias de aproximación del reglamento AEA 2020 en alta tensión y a habilitar al personal.","u":"https://www.boletinoficial.gob.ar/detalleAviso/primera/258260/20220303"},{"c":"Decreto 911/96","d":"Higiene y seguridad en la construcción","a":"sst","s":"construccion","y":"1996","o":"Obliga a llevar legajo técnico en obra, asignar horas del servicio de higiene y seguridad y capacitar por niveles.","u":"https://www.argentina.gob.ar/normativa/nacional/decreto-911-1996-38568/actualizacion"},{"c":"Resolución SRT 231/96","d":"Condiciones básicas de obra y legajo técnico","a":"sst","s":"construccion","y":"1996","o":"Obliga al aviso de obra ante la ART antes de empezar y al legajo técnico firmado por el responsable.","u":"https://www.argentina.gob.ar/normativa/nacional/norma-40554/texto"},{"c":"Resolución SRT 51/97","d":"Aviso de obra y Programa de Seguridad","a":"sst","s":"construccion","y":"1997","o":"Obliga a avisar a la ART cinco días hábiles antes de iniciar y a tener Programa de Seguridad aprobado.","u":"https://www.argentina.gob.ar/normativa/nacional/44588/texto"},{"c":"Resolución SRT 319/99","d":"Obras repetitivas y de corta duración","a":"sst","s":"construccion","y":"1999","o":"Obliga al comitente a coordinar el servicio de higiene y a presentar programa para obras de hasta siete días.","u":"https://www.argentina.gob.ar/normativa/nacional/59941/texto"},{"c":"Resolución SRT 550/11","d":"Demolición, excavación y submuración","a":"sst","s":"construccion","y":"2011","o":"Obliga a Programa de Seguridad aprobado por la ART antes de demoler, excavar o submurar, con técnico presente permanentemente.","u":"https://www.argentina.gob.ar/normativa/nacional/181606/texto"},{"c":"Resolución SRT 503/14","d":"Movimiento de suelos y excavaciones","a":"sst","s":"construccion","y":"2014","o":"Obliga a entibar o taludar zanjas y pozos de más de 1,20 metros y a señalizar el perímetro.","u":"https://www.argentina.gob.ar/normativa/nacional/227747/texto"},{"c":"Resolución SRT 61/23","d":"Trabajo en altura en construcción","a":"sst","s":"construccion","y":"2023 · rige desde mar-2024","o":"Obliga a sumar al legajo técnico las listas de verificación de andamios, plataformas y sistemas anticaída, y a capacitar.","u":"https://www.boletinoficial.gob.ar/detalleAviso/primera/300086/20231206"},{"c":"Decreto 249/2007","d":"Higiene y seguridad en minería","a":"sst","s":"mineria","y":"2007","o":"Obliga a servicio de higiene y seguridad, plan de emergencia con brigada de incendio y registro foliado de capacitación.","u":"https://www.argentina.gob.ar/normativa/nacional/126637/texto"},{"c":"Ley 24.585","d":"Protección ambiental de la actividad minera","a":"ambiente","s":"mineria","y":"1995","o":"Obliga a presentar y obtener aprobación del informe de impacto ambiental antes de iniciar cualquier etapa minera.","u":"https://www.argentina.gob.ar/normativa/nacional/norma-30096/texto"},{"c":"Resolución SE 105/92","d":"Protección ambiental en exploración y explotación","a":"ambiente","s":"hidrocarburos","y":"1992","o":"Obliga a estudio ambiental antes del primer pozo y a monitoreos periódicos informados a la Secretaría de Energía.","u":"https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-105-1992-25949/texto"},{"c":"Resolución SE 277/2025","d":"Registro de tanques aéreos de combustibles","a":"ambiente","s":"hidrocarburos","y":"2025","o":"Obliga a inscribir cada tanque aéreo y presentar declaración jurada de inspección API 653 firmada por inspector certificado.","u":"https://www.boletinoficial.gob.ar/detalleAviso/primera/327570/20250627"},{"c":"Resolución SE 119/2026","d":"Transporte de Hidrocarburos Líquidos","a":"sst","s":"hidrocarburos","y":"2026 · rige desde may-2026","o":"Obliga a diseñar, operar y gestionar la integridad de los ductos interprovinciales según la ASME B31.4 edición 2022.","u":"https://www.boletinoficial.gob.ar/detalleAviso/primera/342162/20260520"},{"c":"Ley 25.675","d":"Ley General del Ambiente","a":"ambiente","s":"*","y":"2002","o":"Obliga a evaluar el impacto ambiental antes de obras que degraden el ambiente y a contratar seguro de recomposición.","u":"https://www.argentina.gob.ar/normativa/nacional/ley-25675-79980/texto"},{"c":"Ley 24.051","d":"Residuos peligrosos (con el Decreto 831/93)","a":"ambiente","s":"*","y":"1991","o":"Obliga a inscribirse como generador, emitir manifiesto por cada carga y entregar solo a transportistas y operadores habilitados.","u":"https://www.argentina.gob.ar/normativa/nacional/ley-24051-450/actualizacion"}]};
+
+
+/* ══ LOS HUECOS, DICHOS ══════════════════════════════════════════
+   Buscar «altura» en Chile y que no salga nada es peor que inútil:
+   parece que la app está incompleta cuando lo que pasa es que ese
+   decreto NO EXISTE. Un ingeniero SSOMA necesita saber eso, y necesita
+   saber de qué cuelga entonces la obligación. Estos huecos se buscan
+   igual que una norma y salen con su explicación.
+   Verificados contra fuente oficial en setiembre de 2026: si aparece
+   un decreto nuevo, esto sale de acá y entra como norma. */
+var VACIOS_PAIS = {
+  cl: [
+    { c:'Trabajo en altura', d:'Chile no tiene un decreto propio',
+      o:'No hay reglamento chileno dedicado al trabajo en altura. La obligación de arnés, barandas y puntos de anclaje cuelga del art. 184 del Código del Trabajo y de la matriz de riesgos del D.S. 44.',
+      u:'https://www.bcn.cl/leychile/navegar?idNorma=1205298', e:'Marco legal' },
+    { c:'Espacios confinados', d:'Chile no tiene un decreto propio',
+      o:'No hay reglamento chileno dedicado. La obligación sale del D.S. 594 (ventilación y agentes químicos) y de la matriz del D.S. 44. La NCh 3386 existe pero es voluntaria, no es ley.',
+      u:'https://www.bcn.cl/leychile/navegar?idNorma=167766', e:'Marco legal' },
+    { c:'Ojo con el nombre', d:'El D.S. 40 de SST ya no existe',
+      o:'Fue reemplazado por el D.S. 44, vigente desde el 1 de febrero de 2025, que también derogó el D.S. 54 de comités paritarios. El «D.S. 40» que sigue vivo es el del SEIA, que es ambiental y es otra cosa.',
+      u:'https://www.bcn.cl/leychile/navegar?idNorma=1205298', e:'Marco legal' }
+  ],
+  ar: [
+    { c:'Altura fuera de construcción', d:'No hay norma nacional propia',
+      o:'La Resolución SRT 61/23 es solo para construcción. En industria y minería la obligación sale del Decreto 351/79 y de la Resolución MTEySS 295/03.',
+      u:'https://www.argentina.gob.ar/normativa/nacional/decreto-351-1979-32030', e:'Marco legal' },
+    { c:'Baja de 122 normas', d:'Resolución SRT 35/2026',
+      o:'El 28 de julio de 2026 la SRT dio de baja 122 normas de riesgos del trabajo. Ninguna de esta lista figura derogada, pero antes de usar una en un legajo conviene abrir el anexo oficial.',
+      u:'https://www.boletinoficial.gob.ar/', e:'Marco legal' }
+  ],
+  co: [
+    { c:'Lo que ya no se cita', d:'Normas derogadas que siguen circulando',
+      o:'La Resolución 1409 de 2012 de alturas la derogó la 4272 de 2021; la 652 y la 1356 de 2012 de convivencia las derogó la 3461 de 2025; la 2404 de 2019 la derogó la 2764 de 2022.',
+      u:'https://www.alcaldiabogota.gov.co/sisjur/normas/Norma1.jsp?i=120880', e:'Marco legal' }
+  ]
+};
+/* de ámbito + sector a la especialidad con la que la pantalla agrupa */
+function _espDeNorma(a, s){
+  if(a === 'ambiente') return 'Ambiental';
+  if(a === 'salud')    return 'Salud ocupacional';
+  if(s === 'construccion')  return 'Construcción';
+  if(s === 'mineria')       return 'Minería';
+  if(s === 'hidrocarburos') return 'Hidrocarburos';
+  if(s === 'electrico')     return 'Eléctrico';
+  return 'Marco legal';
+}
+/* «eléctrico» no es un sector de la app: es una especialidad que manda
+   en los cuatro. Por eso su norma se marca como de todos los sectores. */
+function _secDeNorma(s){
+  return (s === 'electrico' || s === '*') ? '*' : s;
+}
+function entradasDePais(p){
+  var L = NORMAS_PAIS[p] || [], out = [], i, x;
+  for(i=0;i<L.length;i++){
+    x = L[i];
+    out.push({ tipo:'ext', url:x.u, cod:x.c, det:x.d, obliga:x.o, anio:x.y,
+               esp:_espDeNorma(x.a, x.s), sec:_secDeNorma(x.s),
+               busca:x.c+' '+x.d+' '+x.o, pdfs:[] });
+  }
+  var V = VACIOS_PAIS[p] || [];
+  for(i=0;i<V.length;i++){
+    x = V[i];
+    out.push({ tipo:'vacio', url:x.u, cod:x.c, det:x.d, obliga:x.o, anio:'ojo',
+               esp:x.e, sec:'*', busca:x.c+' '+x.d+' '+x.o, pdfs:[] });
+  }
+  return out;
+}
+
 var ESP_ORDEN=['Marco legal','Construcción','Minería','Hidrocarburos',
                'Eléctrico','Salud ocupacional','Ambiental','Fiscalización','Otras'];
 var ESP_PIE={
@@ -30448,6 +30888,10 @@ function nombreSector(id){
 /* TODO lo que hay para mostrar: las fichas escritas y los PDF que
    todavía no tienen ficha. Nada se esconde. */
 function entradasNormas(){
+  /* Fuera del Perú no se mezclan las normas: al que trabaja en Chile la
+     Ley 29783 no le sirve de nada y verla en su lista es ruido. */
+  var p = paisActual();
+  if(p !== 'pe') return entradasDePais(p);
   var out=[];
   NORMAS.forEach(function(x,i){
     var m=metaNorma(x.t);
@@ -31080,6 +31524,14 @@ function pintarNormas(){
   });
 
   var h='';
+  /* ── el país, primero: cambia TODA la lista ── */
+  var pa = paisActual();
+  h+='<div class="ch-chips nrm-paises" role="group" aria-label="País de las normas">';
+  PAISES.forEach(function(x){
+    h+='<button class="ch-chip'+(pa===x.id?' on':'')+'" type="button" data-pais="'+escA(x.id)+'"'+
+       (pa===x.id?' aria-pressed="true"':' aria-pressed="false"')+'>'+x.b+' '+esc(x.n)+'</button>';
+  });
+  h+='</div>';
   /* ── los chips de sector ── */
   h+='<div class="ch-chips" role="group" aria-label="Filtrar por sector">';
   h+='<button class="ch-chip'+(NORMA_SECTOR==='*'?' on':'')+'" type="button" data-sec="*"'+
@@ -31119,6 +31571,26 @@ function pintarNormas(){
         tags+='<span class="nrm-tag ojo">sin PDF todavía</span>';
       }
       if(e.tipo==='pdf') tags+='<span class="nrm-tag">sin resumen escrito</span>';
+      if(e.tipo==='ext' || e.tipo==='vacio'){
+        var esv = (e.tipo==='vacio');
+        /* Afuera todavía no hay PDF cargado ni ficha escrita: hay la
+           obligación en una línea y el enlace al texto OFICIAL. Es poco,
+           pero es verdad, y es más de lo que tenía antes, que era nada. */
+        h+='<div class="nrm-fila">'+
+             '<button class="nrm-card'+(esv?' vacio':'')+'" type="button" data-abre="ext" data-url="'+escA(e.url)+'">'+
+               '<span class="cod">'+(esv?'⚠️ ':'')+esc(e.cod)+'</span>'+
+               '<span class="nom">'+esc(e.det)+'</span>'+
+               '<span class="nrm-obliga">'+esc(e.obliga)+'</span>'+
+               '<span class="meta">'+
+                 (e.sec!=='*' ? '<span class="nrm-tag">'+(SEC_ICONO[e.sec]||'')+' '+esc(nombreSector(e.sec))+'</span>' : '')+
+                 (esv ? '<span class="nrm-tag ojo">no hay norma propia</span>'
+                      : '<span class="nrm-tag">'+esc(e.anio)+'</span>')+
+                 '<span class="nrm-tag pdf">'+(esv?'de dónde cuelga ▸':'texto oficial ▸')+'</span>'+
+               '</span>'+
+             '</button>'+
+           '</div>';
+        return;
+      }
       h+='<div class="nrm-fila">'+
            '<button class="nrm-card" type="button" data-abre="'+(e.tipo==='ficha'?'ficha':'pdf')+'" '+
              'data-i="'+(e.i===undefined?'':e.i)+'" data-arch="'+escA(e.tipo==='pdf'?e.arch:'')+'">'+
@@ -31151,9 +31623,12 @@ function pintarNormas(){
   }
   h+='<div id="nrm-dentro"></div>';
   h+='<p class="sub" style="margin-top:18px">'+
-     (tot ? ('Hay <b>'+tot+'</b> norma'+(tot===1?'':'s')+' con su PDF oficial completo. El resumen se lee sin internet; el PDF y la lupa necesitan señal.')
-          : 'Los PDF oficiales todavía no están cargados. Por ahora ves el resumen de cada norma, que sí funciona sin internet.')+
-     ' Verifica siempre la versión vigente en El Peruano; las normas se modifican.</p>';
+     (pa!=='pe'
+        ? ('Normas de '+esc(paisPorId(pa).n)+', verificadas contra '+esc(paisPorId(pa).fuente)+' en setiembre de 2026. '+
+           'Cada tarjeta abre el <b>texto oficial</b>, no un resumen de blog. Todavía no hay PDF guardado ni ficha escrita como en Perú: eso viene después.')
+        : (tot ? ('Hay <b>'+tot+'</b> norma'+(tot===1?'':'s')+' con su PDF oficial completo. El resumen se lee sin internet; el PDF y la lupa necesitan señal.')
+               : 'Los PDF oficiales todavía no están cargados. Por ahora ves el resumen de cada norma, que sí funciona sin internet.'))+
+     ' Una norma se modifica sin avisar: antes de firmar algo, comprueba la versión vigente en el enlace oficial.</p>';
 
   caja.innerHTML=h;
   /* UN solo escuchador para todo: nada de onclick armado con texto */
@@ -31162,10 +31637,13 @@ function pintarNormas(){
     if(!b || !caja.contains(b)) return;
     if(b.id==='nrm-btn-dentro'){ buscarDentroDeNormas(($('norma-buscar')&&$('norma-buscar').value)||''); return; }
     if(b.id==='nrm-stop'){ pararBusquedaDentro(); return; }
+    if(b.hasAttribute('data-pais')){ ponerPais(b.getAttribute('data-pais')); return; }
     if(b.hasAttribute('data-sec')){ NORMA_SECTOR=b.getAttribute('data-sec'); pintarNormas(); return; }
     if(b.hasAttribute('data-lupa')){ abrirLupa(b.getAttribute('data-lupa')); return; }
     if(b.hasAttribute('data-abre')){
-      if(b.getAttribute('data-abre')==='ficha'){ abrirNorma(parseInt(b.getAttribute('data-i'),10)); }
+      var q=b.getAttribute('data-abre');
+      if(q==='ficha'){ abrirNorma(parseInt(b.getAttribute('data-i'),10)); }
+      else if(q==='ext'){ var u=b.getAttribute('data-url'); if(u) window.open(u,'_blank','noopener'); }
       else{ var a=b.getAttribute('data-arch'); if(a) window.open(urlNormaPDF(a),'_blank','noopener'); }
       return;
     }
