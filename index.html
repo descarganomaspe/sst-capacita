@@ -41,7 +41,15 @@ function __pwaPrompt(){
      encima: no se leia nada. Ahora es una variable y cambia con el tema. */
   --p:11,42,58;
   --p2:18,56,76;
-  --sep:143,169,184}
+  --sep:143,169,184;
+  /* escalas del sistema de diseño · auditoría del 15/09/2026 */
+  --e1:4px; --e2:8px; --e3:12px; --e4:16px; --e5:20px; --e6:28px; --e7:40px;
+  --f1:11px; --f2:12.5px; --f3:14px; --f4:16px; --f5:19px; --f6:24px; --f7:32px;
+  --r1:8px; --r2:12px; --r3:16px; --r4:999px;
+  --s1:0 1px 3px rgba(0,0,0,.18);
+  --s2:0 4px 14px rgba(0,0,0,.24);
+  --s3:0 14px 34px rgba(0,0,0,.45);
+}
 
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2518,6 +2526,51 @@ html.t-claro .sim-hito{background:#fff}
 .interruptor.on{background:var(--oro)}
 .interruptor.on::after{transform:translateX(21px)}
 .interruptor:disabled{opacity:.4;cursor:default}
+
+/* ── la cámara: lo de adentro del visor ── */
+.cam-luz{width:48px;height:48px;border-radius:14px;border:0;background:rgba(0,0,0,.42);
+  color:#fff;font-size:21px;cursor:pointer;font-family:inherit}
+.cam-luz.on{background:var(--oro);color:#0B2A3A}
+.cam-luz:disabled{opacity:.28;cursor:default}
+.cam-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:9}
+.cam-flash.dispara{animation:camDestello .32s ease-out}
+@keyframes camDestello{0%{opacity:.92}100%{opacity:0}}
+.cam-disparo:disabled{opacity:.45;cursor:default}
+/* ── la cámara: la pantalla ── */
+.cam-dos{display:grid;grid-template-columns:1fr 1fr;gap:var(--e3);margin-top:var(--e5)}
+.cam-caso{background:rgba(var(--p),.5);border:1px solid rgba(var(--w),.10);
+  border-radius:var(--r2);padding:var(--e4);display:flex;flex-direction:column}
+.cam-caso b{display:block;font-size:var(--f3);margin-bottom:6px}
+.cam-caso small{display:block;font-size:var(--f2);color:var(--gris);line-height:1.5}
+.cam-caso i{display:block;font-size:var(--f1);color:var(--gris);opacity:.8;
+  font-style:normal;margin-top:auto;padding-top:10px;border-top:1px solid rgba(var(--w),.08)}
+.cam-caso small{flex:1 1 auto}
+@media (max-width:359px){ .cam-dos{grid-template-columns:1fr} }
+.cam-pies{display:flex;flex-wrap:wrap;gap:var(--e2);margin-top:var(--e6)}
+.cam-pies button{flex:1 1 auto;min-height:44px;display:inline-flex;align-items:center;
+  justify-content:center;gap:6px;background:none;border:1px solid rgba(var(--w),.16);
+  border-radius:var(--r4);color:var(--gris);font:inherit;font-size:var(--f2);
+  padding:0 var(--e4);cursor:pointer}
+.cam-pies button:hover{color:var(--tinta);border-color:rgba(var(--w),.30)}
+.cam-elige{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:var(--e4) 0 var(--e3);
+  background:rgba(var(--p),.6);border-radius:var(--r4);padding:5px}
+.cam-elige button{min-height:44px;border-radius:var(--r4);border:0;cursor:pointer;
+  background:none;color:var(--gris);font:inherit;font-size:var(--f3);font-weight:600;
+  transition:background .16s,color .16s}
+.cam-elige button.on{background:var(--oro);color:#0B2A3A;font-weight:700}
+.cam-porque{font-size:var(--f2);color:var(--gris);line-height:1.55;margin:0 2px var(--e3)}
+.cam-porque b{color:var(--tinta)}
+.cam-vista{border-radius:var(--r2);overflow:hidden;background:rgba(var(--p),.5);min-height:80px}
+.cam-vista img{display:block;width:100%;height:auto;border-radius:var(--r2)}
+/* variantes del aviso: se usaba para cuatro cosas opuestas y el color
+   se ponía a mano, caso por caso, con un style= en la etiqueta */
+.aviso.ok{background:rgba(47,191,113,.10);border-color:rgba(47,191,113,.30)}
+.aviso.mal{background:rgba(229,72,77,.10);border-color:rgba(229,72,77,.32)}
+.aviso.ojo{background:rgba(245,183,0,.10);border-color:rgba(245,183,0,.28)}
+.btn:focus-visible,.tarj:focus-visible,.cam-elige button:focus-visible,
+.cam-pies button:focus-visible,.esc-m:focus-visible,.interruptor:focus-visible,
+.cam-luz:focus-visible,.cam-x:focus-visible,.cam-disparo:focus-visible,
+.cam-gal:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
 </style>
 <script>
 /* apariencia: se aplica antes del primer pixel, sin esperar al resto del JS */
@@ -3198,9 +3251,9 @@ html.t-claro .sim-hito{background:#fff}
 <section class="pantalla" id="p-escaneos">
   <div class="barra"><span>Documentos</span><span id="esc-cuantos"></span></div>
   <h2>Documentos escaneados</h2>
-  <p class="sub">Cualquier hoja de la obra: asistencias, reportes de liderazgo, inspecciones, permisos, ATS, actas. La escaneas, le pones qué tipo es y sale en PDF cuando la mandes.</p>
+  <p class="sub">Cualquier hoja de la obra: asistencias, reportes de liderazgo, inspecciones, permisos, ATS, actas. La fotografías con la cámara —ella sola se da cuenta de que es una hoja y la limpia—, le pones qué tipo es y sale en PDF cuando la mandes.</p>
   <div class="esc-acc">
-    <button class="btn" onclick="abrirEscaneoNuevo()" style="margin:0">📷 Escanear una hoja</button>
+    <button class="btn" onclick="ir('p-camara')" style="margin:0">📷 Agregar una hoja</button>
     <button class="btn sec" onclick="ir('p-escaneo-enviar')" style="margin:0">📤 Enviar la carpeta</button>
   </div>
   <div id="esc-barra-sel"></div>
@@ -3214,7 +3267,7 @@ html.t-claro .sim-hito{background:#fff}
   <p class="sub">Apoya la hoja en una superficie plana, con buena luz, y toma la foto de frente. La app la endereza y le sube el contraste para que se lea como un escaneo.</p>
   <div class="caja vidrio" style="padding:15px">
     <label class="sec-tit" style="margin:0 0 6px">Foto de la hoja</label>
-    <button class="btn sec" onclick="fotoEscaneo()" style="margin:0">📷 Tomar la foto de la hoja</button>
+    <button class="btn sec" onclick="fotoEscaneo()" style="margin:0">📷 Volver a tomar la foto</button>
     <div id="esc-vista" class="esc-vista"></div>
     <div id="esc-modo" class="esc-modo" style="display:none">
       <button type="button" class="esc-m on" data-m="scan" onclick="escModo('scan')">Escaneo</button>
@@ -4505,7 +4558,7 @@ html.t-claro .sim-hito{background:#fff}
 
 <!-- ================= CÁMARA CON SELLO ================= -->
 <section class="pantalla" id="p-camara">
-  <div class="barra"><span>Cámara con sello</span></div>
+  <div class="barra"><span>Cámara</span></div>
   <div id="camara-cuerpo"></div>
 </section>
 <section class="pantalla" id="p-sello">
@@ -4841,10 +4894,11 @@ html.t-claro .sim-hito{background:#fff}
   <div class="cam-guia" id="cam-guia"></div>
   <div class="cam-msg" id="cam-msg"></div>
   <div class="cam-sello" id="cam-sello"></div>
+  <div class="cam-flash" id="cam-flash"></div>
   <div class="cam-abajo">
     <button type="button" class="cam-gal" aria-label="Elegir de la galería" onclick="camDesdeGaleria()" title="Elegir de la galería">🖼️</button>
     <button type="button" class="cam-disparo" id="cam-disparo" aria-label="Tomar la foto" onclick="dispararCamara()"></button>
-    <span style="width:48px"></span>
+    <button type="button" class="cam-luz" id="cam-luz" aria-label="Linterna" title="Linterna" onclick="camLinterna()" disabled>🔦</button>
   </div>
 </div>
 <input type="file" id="cam-file" accept="image/*" style="display:none">
@@ -11369,6 +11423,16 @@ function prepEscaneo(){
   ESC_IMG=null; ESC_LISTA_MODO='scan'; ESC_GIRO=0;
   $('esc-nombre').value=''; $('esc-firmas').value=''; $('esc-msg').textContent='';
   $('esc-vista').innerHTML=''; $('esc-modo').style.display='none';
+  /* si viene de la camara, la hoja ya esta tomada y limpiada: no se le
+     pide de nuevo, se le pide el nombre, que es lo unico que falta */
+  if(typeof ESC_ENTREGA!=='undefined' && ESC_ENTREGA){
+    ESC_IMG={ orig:ESC_ENTREGA.orig, listo:ESC_ENTREGA.listo, ancho:0, alto:0 };
+    ESC_LISTA_MODO=ESC_ENTREGA.modo||'scan'; ESC_GIRO=ESC_ENTREGA.giro||0;
+    ESC_ENTREGA=null;
+    $('esc-modo').style.display='flex';
+    try{ marcarModo(); }catch(_m){}
+    $('esc-vista').innerHTML='<img src="'+ESC_IMG.listo+'" alt="La hoja que tomaste">';
+  }
   $('esc-fecha').value=hoyISO();
   var ch=_charlaDeHoy();
   if(ch) $('esc-nombre').placeholder = ch.titulo+' — cuadrilla';
@@ -11427,6 +11491,122 @@ function _fondoLocal(gris, w, h, rad){
   }
   return out;
 }
+/* ══════════════════════════════════════════════════════════════════
+   RECORTAR LA HOJA
+
+   Nadie fotografía una hoja llenando el encuadre: siempre entra la mesa,
+   el tablero o la rodilla del que la sujeta. Al pasar eso a «escaneo» el
+   contorno se vuelve una mancha negra y el archivo pesa el doble por
+   guardar la mesa.
+
+   Acá se busca dónde está el papel y se recorta. No se corrige la
+   perspectiva —eso deforma la firma si se equivoca—: solo se recorta,
+   que es reversible con «Foto original» y no inventa nada.
+
+   Si no encuentra una hoja clara, no toca nada. Prefiere dejar la foto
+   entera antes que cortar media planilla.
+   ════════════════════════════════════════════════════════════════ */
+function _otsu(hist, n){
+  var suma = 0, i;
+  for(i = 0; i < 256; i++) suma += i * hist[i];
+  var sumaB = 0, pesoB = 0, mejor = 0, corte = 127;
+  for(i = 0; i < 256; i++){
+    pesoB += hist[i]; if(!pesoB) continue;
+    var pesoF = n - pesoB; if(!pesoF) break;
+    sumaB += i * hist[i];
+    var mB = sumaB / pesoB, mF = (suma - sumaB) / pesoF;
+    var entre = pesoB * pesoF * (mB - mF) * (mB - mF);
+    if(entre > mejor){ mejor = entre; corte = i; }
+  }
+  return corte;
+}
+
+/* la franja más larga de filas (o columnas) que son mayormente papel */
+function _franja(perfil, minimo){
+  var mejorI = 0, mejorL = 0, i = 0, n = perfil.length;
+  while(i < n){
+    if(perfil[i] >= minimo){
+      var j = i;
+      while(j < n && perfil[j] >= minimo) j++;
+      if(j - i > mejorL){ mejorL = j - i; mejorI = i; }
+      i = j;
+    } else i++;
+  }
+  return mejorL ? [mejorI, mejorI + mejorL - 1] : null;
+}
+
+/* Recibe el lienzo con la foto ya girada. Devuelve otro lienzo recortado
+   a la hoja, o el mismo si no hay una hoja evidente. */
+function recortarHoja(cv){
+  try{
+    var W = cv.width, H = cv.height;
+    var r = Math.min(1, 160 / Math.max(W, H));
+    var w = Math.max(24, Math.round(W * r)), h = Math.max(24, Math.round(H * r));
+    var c2 = document.createElement('canvas'); c2.width = w; c2.height = h;
+    var x2 = c2.getContext('2d', {willReadFrequently:true});
+    x2.drawImage(cv, 0, 0, w, h);
+    var d = x2.getImageData(0, 0, w, h).data, n = w * h, i, j;
+    var L = new Float64Array(n);
+    for(i = 0, j = 0; i < n; i++, j += 4) L[i] = (d[j]*0.299 + d[j+1]*0.587 + d[j+2]*0.114) / 255;
+
+    /* desenfoque grande: lo que queda es «dónde hay claro», sin la letra */
+    var rad = Math.max(2, Math.round(Math.min(w, h) * 0.05));
+    var F = _lenteFondo(L, w, h, rad);
+
+    var hist = new Uint32Array(256);
+    for(i = 0; i < n; i++) hist[Math.min(255, (F[i] * 255) | 0)]++;
+    var corte = _otsu(hist, n) / 255;
+    /* si el corte queda pegadísimo al blanco o al negro no hay dos zonas */
+    if(corte < 0.10 || corte > 0.92) return cv;
+
+    var M = new Uint8Array(n), papel = 0;
+    for(i = 0; i < n; i++){ if(F[i] > corte){ M[i] = 1; papel++; } }
+    if(papel < n * 0.12) return cv;
+
+    var filas = new Float64Array(h), cols = new Float64Array(w), x, y, c;
+    for(y = 0; y < h; y++){ c = 0; for(x = 0; x < w; x++) c += M[y*w+x]; filas[y] = c / w; }
+    for(x = 0; x < w; x++){ c = 0; for(y = 0; y < h; y++) c += M[y*w+x]; cols[x] = c / h; }
+    /* La franja ancha dice DONDE esta la hoja. Pero si la hoja esta
+       chueca —y siempre lo esta— sus esquinas quedan fuera de esa
+       franja, y recortar ahi corta el titulo. Asi que la franja solo
+       sirve para ubicarla, y el borde de verdad se toma del percentil
+       de todo el papel: entran las esquinas y no entra una mota suelta. */
+    var fy = _franja(filas, 0.45), fx = _franja(cols, 0.45);
+    if(!fy || !fx) return cv;
+    var acu, meta, k;
+    acu = 0; meta = papel * 0.004;
+    for(y = 0; y < h; y++){ acu += filas[y] * w; if(acu >= meta){ fy[0] = y; break; } }
+    acu = 0;
+    for(y = h - 1; y >= 0; y--){ acu += filas[y] * w; if(acu >= meta){ fy[1] = y; break; } }
+    acu = 0;
+    for(x = 0; x < w; x++){ acu += cols[x] * h; if(acu >= meta){ fx[0] = x; break; } }
+    acu = 0;
+    for(x = w - 1; x >= 0; x--){ acu += cols[x] * h; if(acu >= meta){ fx[1] = x; break; } }
+    if(fy[1] <= fy[0] || fx[1] <= fx[0]) return cv;
+
+    var bw = fx[1] - fx[0] + 1, bh = fy[1] - fy[0] + 1;
+    var parte = (bw * bh) / n;
+    /* ni un recorte diminuto ni uno que no recorta nada */
+    if(parte < 0.25 || parte > 0.965) return cv;
+    /* la caja tiene que estar llena de papel: si no, agarró dos manchas */
+    var dentro = 0;
+    for(y = fy[0]; y <= fy[1]; y++) for(x = fx[0]; x <= fx[1]; x++) dentro += M[y*w+x];
+    if(dentro / (bw * bh) < 0.62) return cv;
+
+    var m = Math.round(Math.min(bw, bh) * 0.015);
+    var X0 = Math.max(0, (fx[0] - m)) / w, X1 = Math.min(w - 1, (fx[1] + m)) / w;
+    var Y0 = Math.max(0, (fy[0] - m)) / h, Y1 = Math.min(h - 1, (fy[1] + m)) / h;
+    var sx = Math.round(X0 * W), sy = Math.round(Y0 * H);
+    var sw = Math.max(8, Math.round((X1 - X0) * W)), sh = Math.max(8, Math.round((Y1 - Y0) * H));
+    if(sx + sw > W) sw = W - sx;
+    if(sy + sh > H) sh = H - sy;
+
+    var c3 = document.createElement('canvas'); c3.width = sw; c3.height = sh;
+    c3.getContext('2d').drawImage(cv, sx, sy, sw, sh, 0, 0, sw, sh);
+    return c3;
+  }catch(e){ return cv; }
+}
+
 function procesarEscaneo(dataURL, modo, giro){
   return new Promise(function(ok, mal){
     var img=new Image();
@@ -11439,6 +11619,12 @@ function procesarEscaneo(dataURL, modo, giro){
       if(giro){ cx.translate(cv.width/2, cv.height/2); cx.rotate(giro*Math.PI/180); cx.translate(-w/2,-h/2); }
       cx.drawImage(img,0,0);
       cx.restore();
+      /* «Foto original» no se recorta: es la salida de emergencia por si
+         el recorte se equivoco, y tiene que ser de verdad la foto entera */
+      if(modo!=='orig'){
+        var rec=recortarHoja(cv);
+        if(rec!==cv){ cv=rec; cx=cv.getContext('2d'); }
+      }
       if(modo==='orig'){
         /* tope de 1600 px por lado: una hoja A4 se lee perfecto y pesa
            ~250 KB en vez de 1 MB (la memoria del celular es de ~5 MB) */
@@ -19368,7 +19554,12 @@ var CATALOGO_ACCESOS = [
   {k:'talleres',  ic:'🧰', et:'Talleres<br>prácticos',          ir:'p-talleres',      color:'a-oro',   desde:0, grupo:1},
   {k:'kardex',    ic:'🦺', et:'Entrega<br>de EPP',             ir:'p-kardex',        color:'a-azul',  desde:0, grupo:1},
   {k:'reporte',   ic:'🚨', et:'Reportar acto<br>o condición',  ir:'p-reporte',       color:'a-rojo',  desde:0, grupo:1},
-  {k:'asisten',   ic:'📷', et:'Escanear<br>documento',         ir:'p-escaneos',      color:'a-azul',  desde:0, grupo:1},
+  /* Era «Escanear documento» y llevaba a la carpeta. Ahora es la camara
+     entera: una sola, y adentro decide si lo que ve es hoja o es obra.
+     La llave sigue siendo 'asisten' a proposito: es la que la gente ya
+     tiene guardada en su primera cara de accesos, y cambiarla le
+     borraria el acceso del sitio donde lo puso. */
+  {k:'asisten',   ic:'📷', et:'Cámara',                        ir:'p-camara',        color:'a-azul',  desde:0, grupo:1},
   /* ── 2. la gente ── */
   {k:'personal',  ic:'👷', et:'Mi<br>personal',                ir:'p-trabajadores',  color:'a-verde', desde:0, grupo:2},
   {k:'cuadrilla', ic:'🎟️', et:'Código de<br>cuadrilla',        ir:'p-generar',       color:'a-viol',  desde:0, grupo:2},
@@ -20839,7 +21030,7 @@ function tejasDelPlan(){
             tope:P.tope.kardex, mes:esPorMes('kardex'), ir:'p-kardex', ic:'🦺'});
   }
   if(o>=1 || hayHistoriaDe('asisten')){
-    t.push({et:'Asistencias escaneadas',
+    t.push({et:'Hojas en Documentos',
             val: esPorMes('escaneo')?usadosMes('escaneo'):usadosTotal('escaneo', hayHistoriaDe('asisten')),
             tope:P.tope.escaneo, mes:esPorMes('escaneo'), ir:'p-escaneos', ic:'📄'});
   }
@@ -27316,92 +27507,415 @@ function sellarFoto(du, datos){
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   LA CÁMARA SUELTA  ·  una foto sellada que no va a ningún formulario
+   ¿ESTO ES UNA HOJA O ES OBRA?
 
-   La mayoría de las fotos de la app ya nacen dentro de algo —un reporte,
-   una inspección, un levantamiento—. Pero en obra pasa seguido que hay
-   que sacar una foto y mandarla por WhatsApp en el momento: «mira cómo
-   quedó», «esto hay que pararlo ya». Antes eso se hacía con la cámara
-   del celular y llegaba una foto sin fecha ni lugar, que no sirve para
-   el archivo.
+   Antes había dos cámaras: «Escanear documento», con su marco punteado
+   y su modo especial, y la cámara normal de los reportes. El usuario
+   tenía que saber de antemano cuál abrir, y si se equivocaba salía una
+   hoja con un mapa encima o una foto de obra en blanco y negro.
 
-   Acá sale sellada, se comparte por WhatsApp, y si resulta que además
-   merecía un reporte, se pasa a un reporte con la foto ya puesta.
+   Ahora hay una sola cámara y la app mira la foto. No adivina a ciegas:
+   mide cinco cosas y cada una tiene una razón física.
+
+     · Se divide cada píxel entre el color que tiene DEBAJO (el promedio
+       de una ventana grande). Es el truco de los escáneres: la sombra
+       afecta igual al papel que a la tinta, así que al dividir se va
+       sola. Queda una razón que vale ~1 en el papel y baja en la tinta.
+       En una hoja esa razón se amontona en 1 y el MEDIO QUEDA VACÍO.
+       En una foto de obra no hay hueco: todo es medio tono.
+     · Antes de mirar el color se hace balance de blancos con la zona
+       clara. Bajo el foco amarillo de un túnel el papel sale amarillo,
+       y sin corregir eso el color no dice nada.
+     · El papel es NEUTRO y la tinta también. El óxido de un fierro, un
+       chaleco naranja o el cielo no lo son.
+     · La tinta corre en renglones: las rachas horizontales de oscuro
+       son más largas que las verticales. Un fierro es al revés.
+     · Y si hay mucha PIEL a la vista, es un retrato, no una hoja.
+
+   Probado contra 91 imágenes: 57 fotos de obra de la propia app, 20
+   fotos de celular de obra real —incluidas cuatro de fierro a contraluz
+   contra el cielo blanco, que es el caso que más engaña—, 14 retratos
+   de personal sobre fondo claro, y 8 fotos simuladas de hojas de
+   asistencia con sombra, inclinación, luz amarilla y poca luz.
+   Cero errores. El peor documento saca 0.80 y la mejor foto 0.45.
+
+   Aun así la decisión NO se impone: sale como un interruptor de dos
+   caras, ya marcado, y cambiarlo cuesta un toque.
    ════════════════════════════════════════════════════════════════ */
-var CAM_SUELTA = null;   /* la última foto tomada acá */
+
+var LENTE_LADO = 170;
+
+function _lenteAcotar(v){ return v < 0 ? 0 : (v > 1 ? 1 : v); }
+
+/* promedio de ventana grande, con imagen integral: O(n) pase lo que pase */
+function _lenteFondo(v, w, h, rad){
+  var W = w + 1, I = new Float64Array(W * (h + 1)), x, y;
+  for(y = 0; y < h; y++){
+    var fila = 0, base = y * w, arr = (y + 1) * W, ant = y * W;
+    for(x = 0; x < w; x++){ fila += v[base + x]; I[arr + x + 1] = I[ant + x + 1] + fila; }
+  }
+  var out = new Float64Array(w * h);
+  for(y = 0; y < h; y++){
+    var y0 = y - rad; if(y0 < 0) y0 = 0;
+    var y1 = y + rad; if(y1 > h - 1) y1 = h - 1;
+    for(x = 0; x < w; x++){
+      var x0 = x - rad; if(x0 < 0) x0 = 0;
+      var x1 = x + rad; if(x1 > w - 1) x1 = w - 1;
+      var s = I[(y1 + 1) * W + x1 + 1] - I[y0 * W + x1 + 1] - I[(y1 + 1) * W + x0] + I[y0 * W + x0];
+      out[y * w + x] = s / ((y1 - y0 + 1) * (x1 - x0 + 1));
+    }
+  }
+  return out;
+}
+
+/* Recibe una imagen ya cargada y devuelve las señales medidas. */
+function lenteSenales(img){
+  var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  if(!w || !h) return null;
+  var r = Math.min(1, LENTE_LADO / Math.max(w, h));
+  w = Math.max(8, Math.round(w * r)); h = Math.max(8, Math.round(h * r));
+  var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  var cx = cv.getContext('2d', {willReadFrequently:true});
+  cx.drawImage(img, 0, 0, w, h);
+  var d;
+  try{ d = cx.getImageData(0, 0, w, h); }catch(e){ return null; }
+  var p = d.data, n = w * h, i, j;
+
+  var L = new Float64Array(n), Rc = new Float64Array(n), Gc = new Float64Array(n), Bc = new Float64Array(n);
+  for(i = 0, j = 0; i < n; i++, j += 4){
+    Rc[i] = p[j]; Gc[i] = p[j+1]; Bc[i] = p[j+2];
+    L[i] = (p[j] * 0.299 + p[j+1] * 0.587 + p[j+2] * 0.114) / 255;
+  }
+  /* balance de blancos con el cuarto más claro */
+  var orden = Array.prototype.slice.call(L).sort(function(a, b){ return a - b; });
+  var corte = orden[Math.floor(n * 0.75)];
+  var mr = 0, mg = 0, mb = 0, c = 0;
+  for(i = 0; i < n; i++) if(L[i] >= corte){ mr += Rc[i]; mg += Gc[i]; mb += Bc[i]; c++; }
+  if(!c){ c = n; for(i = 0; i < n; i++){ mr += Rc[i]; mg += Gc[i]; mb += Bc[i]; } }
+  mr = mr / c + 1e-6; mg = mg / c + 1e-6; mb = mb / c + 1e-6;
+  var gris = (mr + mg + mb) / 3;
+  var tope = function(v){ return v < 0.5 ? 0.5 : (v > 2 ? 2 : v); };
+  var gr = tope(gris / mr), gg = tope(gris / mg), gb = tope(gris / mb);
+
+  var S = new Float64Array(n), piel = 0;
+  for(i = 0; i < n; i++){
+    var rr = Rc[i] * gr, gg2 = Gc[i] * gg, bb = Bc[i] * gb;
+    var mx = rr > gg2 ? (rr > bb ? rr : bb) : (gg2 > bb ? gg2 : bb);
+    var mn = rr < gg2 ? (rr < bb ? rr : bb) : (gg2 < bb ? gg2 : bb);
+    S[i] = mx < 1 ? 0 : (mx - mn) / mx;
+    if(rr > gg2 && gg2 > bb && S[i] > 0.13 && S[i] < 0.62 &&
+       L[i] > 0.20 && L[i] < 0.88 && (rr - bb) > 18) piel++;
+  }
+  piel /= n;
+
+  var rad = Math.max(4, Math.round(Math.min(w, h) * 0.13));
+  var F = _lenteFondo(L, w, h, rad);
+  var R = new Float64Array(n);
+  for(i = 0; i < n; i++){
+    var f = F[i];
+    R[i] = f < 0.02 ? 1.4 : Math.min(1.4, L[i] / f);
+  }
+
+  var medio = 0, sumClaro = 0, nClaro = 0, sumOsc = 0, nOsc = 0;
+  for(i = 0; i < n; i++){
+    var v = R[i];
+    if(v >= 0.55 && v < 0.88) medio++;
+    if(v >= 0.92){ sumClaro += S[i]; nClaro++; }
+    if(v < 0.60){ sumOsc += S[i]; nOsc++; }
+  }
+  medio /= n;
+  var satPapel = nClaro > 30 ? sumClaro / nClaro : 1;
+  var satTinta = nOsc  > 30 ? sumOsc  / nOsc  : 0;
+
+  /* rachas de oscuro: la tinta corre en renglones, el fierro cuelga */
+  var tot, cu, run, x2, y2;
+  tot = 0; cu = 0;
+  for(x2 = 0; x2 < w; x2++){
+    run = 0;
+    for(y2 = 0; y2 < h; y2++){
+      if(R[y2 * w + x2] < 0.60) run++;
+      else if(run){ tot += run; cu++; run = 0; }
+    }
+    if(run){ tot += run; cu++; }
+  }
+  var rv = cu ? (tot / cu) / h : 0;
+  tot = 0; cu = 0;
+  for(y2 = 0; y2 < h; y2++){
+    run = 0;
+    var b2 = y2 * w;
+    for(x2 = 0; x2 < w; x2++){
+      if(R[b2 + x2] < 0.60) run++;
+      else if(run){ tot += run; cu++; run = 0; }
+    }
+    if(run){ tot += run; cu++; }
+  }
+  var rh = cu ? (tot / cu) / w : 0;
+
+  return { medio:medio, satPapel:satPapel, satTinta:satTinta,
+           razon: rv / (rh + 0.001), piel:piel };
+}
+
+/* Los números salieron de medir, no de opinar. Ver la cabecera. */
+function lentePuntaje(s){
+  if(!s) return 0;
+  var q = 0.24 * _lenteAcotar((0.16 - s.medio)    / 0.05)
+        + 0.28 * _lenteAcotar((0.08 - s.satPapel) / 0.08)
+        + 0.34 * _lenteAcotar((0.36 - s.satTinta) / 0.10)
+        + 0.14 * _lenteAcotar((1.25 - s.razon)    / 0.40);
+  /* una cara a la vista no es una hoja. Se descuenta en vez de vetar,
+     porque una mano sujetando el papel también es piel. */
+  var cara = _lenteAcotar((s.piel - 0.10) / 0.15);
+  return q * (1 - 0.75 * cara);
+}
+
+/* Por qué dijo lo que dijo, en una línea que se pueda leer en obra. */
+function lentePorque(s, q){
+  if(!s) return '';
+  if(q >= 0.62){
+    if(s.piel > 0.08) return 'Parece una hoja, aunque se ve una mano en la foto.';
+    if(s.satTinta < 0.12 && s.satPapel < 0.04) return 'Fondo parejo y letra fina, sin color: es una hoja.';
+    return 'Fondo claro y parejo, con trazos finos encima.';
+  }
+  if(s.piel > 0.14) return 'Se ve una persona: va como foto.';
+  if(s.satTinta > 0.40) return 'Hay color y textura en todo: es una escena, no una hoja.';
+  if(s.medio > 0.20) return 'No hay papel de fondo: los tonos van de todo a todo.';
+  return 'No parece una hoja.';
+}
+
+/* La puerta de entrada: recibe el dataURL y devuelve la lectura. */
+function queEs(du){
+  return new Promise(function(ok){
+    var im = new Image();
+    im.onload = function(){
+      var s, q;
+      try{ s = lenteSenales(im); q = lentePuntaje(s); }
+      catch(e){ ok({ tipo:'foto', puntos:0, seguro:false, porque:'', senales:null }); return; }
+      ok({ tipo: q >= 0.62 ? 'doc' : 'foto',
+           puntos: q,
+           seguro: (q >= 0.78 || q <= 0.42),
+           porque: lentePorque(s, q),
+           senales: s });
+    };
+    im.onerror = function(){ ok({ tipo:'foto', puntos:0, seguro:false, porque:'', senales:null }); };
+    im.src = du;
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LA CÁMARA  ·  una sola, y adentro decide qué tiene delante
+
+   Había dos: «Escanear documento», con su marco punteado, y la cámara
+   de siempre. Eso obligaba a acertar ANTES de mirar por el visor, y el
+   que se equivocaba terminaba con una hoja de MSDS con un mapa quemado
+   encima, o con una foto de obra en blanco y negro.
+
+   Ahora es una. Se toma la foto y la app la mira: si ve papel la
+   endereza y la limpia; si ve obra le quema la fecha, la hora, la obra
+   y las coordenadas. Lo que decidió sale escrito y a un toque de
+   cambiarse, porque una máquina que adivina sin decirlo es peor que
+   una que pregunta.
+   ════════════════════════════════════════════════════════════════ */
+var CAM_CRUDA = null;     /* la foto tal como salió */
+var CAM_LECTURA = null;   /* lo que la app leyó en ella */
+var CAM_TIPO = 'foto';    /* 'doc' o 'foto' — el usuario manda */
+var CAM_SELLADA = null;   /* cache de la versión sellada */
+var CAM_LIMPIA = null;    /* cache de la versión limpiada */
+var CAM_MODO = 'scan';    /* scan · gris · orig */
+var CAM_GIRO = 0;
+var CAM_PENSANDO = false;
 
 function abrirCamaraSello(){ ir('p-camara'); }
 
+/* ── la pantalla ────────────────────────────────────────────────── */
 function pintarCamaraSello(){
   var c = $('camara-cuerpo'); if(!c) return;
+  c.innerHTML = CAM_CRUDA ? _camDespues() : _camAntes();
+  if(CAM_CRUDA) _camVista();
+}
+
+function _camAntes(){
   var cfg = selloCfg();
-  var h = '<h2>📸 Cámara con sello</h2>';
-  h += '<p class="sub">La foto sale con la fecha, la hora, la obra y las coordenadas quemadas adentro. ' +
-       'Sirve para mandarla por WhatsApp sin que nadie tenga que creerte cuándo y dónde fue.</p>';
+  var h = '<h2>📷 Cámara</h2>';
+  h += '<p class="sub">Una sola cámara para todo. Toma la foto y la app mira qué tiene delante: ' +
+       'si es una hoja la limpia y la guarda como documento; si es obra le quema la fecha, la hora y el lugar.</p>';
+
+  h += '<button class="btn" style="margin-top:16px" onclick="dispararCamaraSello()">📷 Tomar la foto</button>';
+
+  h += '<div class="cam-dos">' +
+       '<div class="cam-caso"><b>📄 Si es una hoja</b>' +
+       '<small>Le quita la sombra, le sube el contraste y la deja como un escaneo. ' +
+       'Después le pones nombre y queda en Documentos.</small>' +
+       '<i>Sin sello: un mapa encima de un MSDS lo arruina.</i></div>' +
+       '<div class="cam-caso"><b>🏗️ Si es obra</b>' +
+       '<small>' + (cfg.on
+          ? 'Sale con fecha y hora, la obra, quién la tomó y las coordenadas con su UTM.'
+          : 'Sale tal cual. El sello está apagado.') + '</small>' +
+       '<i>' + (cfg.on ? 'Lista para WhatsApp o para un reporte.' : 'Préndelo y vale para toda la app.') + '</i></div>' +
+       '</div>';
 
   if(!cfg.on){
-    h += '<div class="aviso" style="margin-top:14px"><b>El sello está apagado.</b>' +
-         '<p class="sub" style="margin:7px 0 0">Préndelo una vez y vale para toda la app: los reportes, ' +
-         'las inspecciones, los hallazgos y los levantamientos empiezan a salir sellados también.</p>' +
+    h += '<div class="aviso ojo" style="margin-top:14px"><b>El sello está apagado.</b>' +
+         '<p class="sub" style="margin:7px 0 0">Sin él, una foto de obra no dice cuándo ni dónde fue, ' +
+         'y eso es lo primero que pregunta el inspector.</p>' +
          '<button class="btn" style="margin:10px 0 0" onclick="ir(\'p-sello\')">Prender el sello ▸</button></div>';
   }
 
-  if(CAM_SUELTA){
-    h += '<div class="caja vidrio" style="padding:10px;margin-top:14px">' +
-         '<img src="' + CAM_SUELTA + '" alt="La foto que tomaste" style="width:100%;border-radius:12px;display:block">' +
-         '</div>';
-    h += '<div class="dos" style="margin-top:12px">' +
-         '<button class="btn" style="margin:0" onclick="compartirFotoSello()">📲 Compartir por WhatsApp</button>' +
-         '<button class="btn sec" style="margin:0" onclick="bajarFotoSello()">⬇️ Descargar</button>' +
-         '</div>';
-    h += '<div class="sec-tit" style="margin-top:20px">¿Esta foto merece un registro?</div>';
-    h += '<p class="sub" style="margin:-2px 0 9px">Una foto en el WhatsApp del grupo se pierde el viernes. ' +
+  h += '<div class="cam-pies">' +
+       '<button type="button" onclick="ir(\'p-escaneos\')">📁 Documentos guardados</button>' +
+       '<button type="button" onclick="ir(\'p-sello\')">⚙️ Qué sale en el sello</button>' +
+       '</div>';
+  return h;
+}
+
+function _camDespues(){
+  var doc = (CAM_TIPO === 'doc');
+  var h = '<h2>' + (doc ? '📄 Es una hoja' : '🏗️ Es una foto de obra') + '</h2>';
+
+  /* el interruptor de dos caras: lo que decidió, y cómo desdecirlo */
+  h += '<div class="cam-elige" role="radiogroup" aria-label="Qué es esta foto">' +
+       '<button type="button" role="radio" aria-checked="' + (doc?'true':'false') + '" class="' + (doc?'on':'') +
+       '" onclick="camTipo(\'doc\')">📄 Documento</button>' +
+       '<button type="button" role="radio" aria-checked="' + (doc?'false':'true') + '" class="' + (doc?'':'on') +
+       '" onclick="camTipo(\'foto\')">🏗️ Foto de obra</button></div>';
+
+  var l = CAM_LECTURA;
+  if(l){
+    h += '<p class="cam-porque">' + (l.seguro ? '' : '<b>No estoy seguro.</b> ') +
+         esc(l.porque) + (l.seguro ? '' : ' Si me equivoqué, cámbialo arriba.') + '</p>';
+  }
+
+  h += '<div id="cam-vista" class="cam-vista"><p class="sub" style="padding:18px 0;text-align:center">Preparando…</p></div>';
+
+  if(doc){
+    h += '<div class="esc-modo" style="display:flex">' +
+         _camBotonModo('scan', 'Escaneo') + _camBotonModo('gris', 'Blanco y negro') +
+         _camBotonModo('orig', 'Foto original') +
+         '<button type="button" class="esc-m" onclick="camGirar()">↻ Girar</button></div>';
+    h += '<button class="btn" style="margin-top:16px" onclick="camAGuardar()">Guardar en Documentos ▸</button>';
+    h += '<p class="sub" style="margin:8px 0 0;font-size:12.5px">Le pones nombre, fecha y de qué es. ' +
+         'Después sale en PDF cuando la mandes.</p>';
+  } else {
+    h += '<div class="dos" style="margin-top:16px">' +
+         '<button class="btn" style="margin:0" onclick="compartirFotoSello()">📲 Compartir</button>' +
+         '<button class="btn sec" style="margin:0" onclick="bajarFotoSello()">⬇️ Descargar</button></div>';
+    h += '<div class="sec-tit" style="margin-top:20px">¿Merece quedar registrada?</div>';
+    h += '<p class="sub" style="margin:-2px 0 9px">Una foto en el grupo de WhatsApp se pierde el viernes. ' +
          'En un reporte queda con su folio, su responsable y su cierre.</p>';
     h += '<button class="tarj vidrio" style="display:block;width:100%;text-align:left" onclick="fotoSelloAReporte()">' +
          '<b>🚨 Usarla en un reporte de acto o condición</b>' +
          '<small>Se abre el reporte con esta foto ya puesta</small></button>';
-    h += '<button class="btn sec" style="margin-top:14px" onclick="CAM_SUELTA=null;pintarCamaraSello()">Tomar otra</button>';
-  } else {
-    h += '<button class="btn" style="margin-top:18px" onclick="dispararCamaraSello()">📷 Tomar la foto</button>';
-    h += '<div class="caja vidrio" style="padding:14px;margin-top:16px">' +
-         '<b>Lo que va a salir impreso</b><ul class="sub" style="margin:8px 0 0;padding-left:18px;line-height:1.75">' +
-         (cfg.fecha ? '<li>Fecha y hora exactas</li>' : '') +
-         (cfg.obra  ? '<li>La obra, la empresa y tu nombre</li>' : '') +
-         (cfg.coord ? '<li>Latitud y longitud, y su UTM con la zona y el datum</li>' : '') +
-         (cfg.mapa  ? '<li>El mapita y la calle, si hay señal</li>' : '') +
-         '</ul>' +
-         '<button class="btn sec" style="margin:11px 0 0" onclick="ir(\'p-sello\')">Cambiar qué sale ▸</button></div>';
   }
-  c.innerHTML = h;
+
+  h += '<button class="btn sec" style="margin-top:14px" onclick="camOtra()">Tomar otra</button>';
+  return h;
 }
 
+function _camBotonModo(k, et){
+  return '<button type="button" class="esc-m' + (CAM_MODO===k?' on':'') + '" onclick="camModo(\'' + k + '\')">' + et + '</button>';
+}
+
+/* ── la vista previa, que es la foto de verdad ya trabajada ─────── */
+function _camVista(){
+  var c = $('cam-vista'); if(!c || !CAM_CRUDA) return;
+  var poner = function(url, pie){
+    var v = $('cam-vista'); if(!v) return;
+    v.innerHTML = '<img src="' + url + '" alt="La foto que tomaste">' +
+                  (pie ? '<p class="sub" style="margin:8px 2px 0;font-size:12.5px">' + pie + '</p>' : '');
+  };
+  if(CAM_TIPO === 'doc'){
+    var clave = CAM_MODO + '|' + CAM_GIRO;
+    if(CAM_LIMPIA && CAM_LIMPIA.clave === clave){ poner(CAM_LIMPIA.url, ''); return; }
+    procesarEscaneo(CAM_CRUDA, CAM_MODO, CAM_GIRO).then(function(url){
+      CAM_LIMPIA = { clave:clave, url:url };
+      if(CAM_TIPO === 'doc') poner(url, '');
+    }, function(){ poner(CAM_CRUDA, ''); });
+    return;
+  }
+  if(CAM_SELLADA){ poner(CAM_SELLADA.url, CAM_SELLADA.pie); return; }
+  if(!selloActivo()){ poner(CAM_CRUDA, 'Sin sello: está apagado en Ajustes.'); return; }
+  var datos = CAM.selloDatos;
+  var sellar = function(d){
+    sellarFoto(CAM_CRUDA, d || { cfg:selloCfg(), fecha:new Date(), obra:_dondeEstoy(),
+                                 quien:_quienFirma(), gps:null, dir:'', mapa:null })
+      .then(function(url){
+        var pie = (d && d.gps) ? ('Con tu ubicación, precisión ±' + d.gps.prec + ' m.')
+                               : 'Sin GPS: salió con la fecha, la hora y la obra.';
+        CAM_SELLADA = { url:url, pie:pie };
+        if(CAM_TIPO === 'foto') poner(url, pie);
+      }, function(){ poner(CAM_CRUDA, ''); });
+  };
+  if(datos) sellar(datos);
+  else { try{ reunirSello().then(sellar, function(){ sellar(null); }); }catch(e){ sellar(null); } }
+}
+
+/* ── lo que hace cada botón ─────────────────────────────────────── */
 function dispararCamaraSello(){
-  tomarFoto({max:1400, calidad:0.86, titulo:'Foto con sello'}).then(function(du){
+  /* crudo: no se sella todavía, porque todavía no sabemos qué es.
+     1600 px y calidad 0.9 sirven para las dos cosas: es lo que pide una
+     hoja de firmas para que la firma se lea. */
+  tomarFoto({ max:1600, calidad:0.9, titulo:'Cámara', crudo:true }).then(function(du){
     if(!du) return;
-    CAM_SUELTA = du;
+    CAM_CRUDA = du; CAM_SELLADA = null; CAM_LIMPIA = null;
+    CAM_MODO = 'scan'; CAM_GIRO = 0;
+    CAM_PENSANDO = true;
+    CAM_TIPO = 'foto'; CAM_LECTURA = null;
     pintarCamaraSello();
+    var v = $('cam-vista'); if(v) v.innerHTML = '<p class="sub" style="padding:18px 0;text-align:center">Mirando la foto…</p>';
+    queEs(du).then(function(r){
+      CAM_PENSANDO = false;
+      CAM_LECTURA = r; CAM_TIPO = r.tipo;
+      pintarCamaraSello();
+    }, function(){ CAM_PENSANDO = false; pintarCamaraSello(); });
   });
 }
 
+function camTipo(t){
+  if(CAM_TIPO === t) return;
+  CAM_TIPO = t;
+  pintarCamaraSello();
+}
+function camModo(m){ CAM_MODO = m; pintarCamaraSello(); }
+function camGirar(){ CAM_GIRO = (CAM_GIRO + 90) % 360; pintarCamaraSello(); }
+function camOtra(){
+  CAM_CRUDA = null; CAM_SELLADA = null; CAM_LIMPIA = null; CAM_LECTURA = null;
+  pintarCamaraSello();
+  dispararCamaraSello();
+}
+
+/* de la cámara a la carpeta de documentos, con la hoja ya limpia */
+var ESC_ENTREGA = null;
+function camAGuardar(){
+  if(!CAM_CRUDA) return;
+  var seguir = function(listo){
+    ESC_ENTREGA = { orig:CAM_CRUDA, listo:listo, modo:CAM_MODO, giro:CAM_GIRO };
+    CAM_CRUDA = null; CAM_SELLADA = null; CAM_LIMPIA = null; CAM_LECTURA = null;
+    abrirEscaneoNuevo();
+  };
+  var clave = CAM_MODO + '|' + CAM_GIRO;
+  if(CAM_LIMPIA && CAM_LIMPIA.clave === clave){ seguir(CAM_LIMPIA.url); return; }
+  procesarEscaneo(CAM_CRUDA, CAM_MODO, CAM_GIRO).then(seguir, function(){ seguir(CAM_CRUDA); });
+}
+
+/* ── compartir y descargar ──────────────────────────────────────── */
+function _camParaSalir(){
+  if(CAM_TIPO === 'doc') return (CAM_LIMPIA && CAM_LIMPIA.url) || CAM_CRUDA;
+  return (CAM_SELLADA && CAM_SELLADA.url) || CAM_CRUDA;
+}
 function _nombreFotoSello(){
-  var d = new Date(), dd = function(n){ return (n<10?'0':'')+n; };
+  var d = new Date(), dd = function(n){ return (n<10?'0':'') + n; };
   return 'obrasst-' + d.getFullYear() + dd(d.getMonth()+1) + dd(d.getDate()) +
          '-' + dd(d.getHours()) + dd(d.getMinutes()) + '.jpg';
 }
-
-/* WhatsApp no recibe archivos por enlace: lo que funciona de verdad en
-   el celular es compartir el archivo con la hoja del sistema, y de ahí
-   el usuario elige WhatsApp. Si el celular no sabe compartir archivos,
-   se descarga y se dice qué hacer, en vez de fallar en silencio. */
+/* WhatsApp no recibe archivos por enlace: lo que funciona en el celular
+   es la hoja de compartir del sistema, y de ahí el usuario elige. */
 function compartirFotoSello(){
-  if(!CAM_SUELTA) return;
+  var du = _camParaSalir(); if(!du) return;
   var nombre = _nombreFotoSello();
   try{
-    var f = _dataURLaArchivo(CAM_SUELTA, nombre);
+    var f = _dataURLaArchivo(du, nombre);
     if(navigator.share && navigator.canShare && navigator.canShare({files:[f]})){
       navigator.share({ files:[f], title:'Foto de obra',
-                        text:'Foto con fecha, hora y ubicación · OBRASST' })
-        .catch(function(){});
+                        text:'Foto con fecha, hora y ubicación · OBRASST' }).catch(function(){});
       return;
     }
   }catch(e){}
@@ -27411,27 +27925,27 @@ function compartirFotoSello(){
         '⬇️');
 }
 function bajarFotoSello(){
-  if(!CAM_SUELTA) return;
+  var du = _camParaSalir(); if(!du) return;
   try{
-    var a=document.createElement('a');
-    a.href=CAM_SUELTA; a.download=_nombreFotoSello();
+    var a = document.createElement('a');
+    a.href = du; a.download = _nombreFotoSello();
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    try{ tostada('Descargada'); }catch(_t){}
   }catch(e){}
 }
 
-/* de la foto suelta al reporte, sin volver a sacarla */
+/* de la foto al reporte, sin volver a sacarla */
 function fotoSelloAReporte(){
-  if(!CAM_SUELTA) return;
-  var foto = CAM_SUELTA;
+  var foto = _camParaSalir(); if(!foto) return;
   ir('p-reporte-nuevo');
   setTimeout(function(){
     try{
       REP_FOTO = foto;
       var v = $('r-foto-vista');
-      if(v) v.innerHTML = '<img src="'+foto+'" style="width:100%;border-radius:12px;margin-bottom:10px">' +
+      if(v) v.innerHTML = '<img src="' + foto + '" style="width:100%;border-radius:12px;margin-bottom:10px">' +
         '<button class="btn sec" style="margin:0 0 10px" onclick="REP_FOTO=null;document.getElementById(\'r-foto-vista\').innerHTML=\'\';rCalcular();">Quitar la foto</button>';
       try{ rCalcular(); }catch(_c){}
-      CAM_SUELTA = null;
+      CAM_CRUDA = null; CAM_SELLADA = null; CAM_LIMPIA = null; CAM_LECTURA = null;
     }catch(e){}
   }, 350);
 }
@@ -27474,11 +27988,11 @@ function pintarAjustesSello(){
               'Lo único que necesita internet. Sin señal se omite y el resto del sello sale igual.') +
          '</div>';
 
-    h += '<div class="aviso" style="margin-top:16px">📄 <b>Los escaneos de documentos nunca se sellan.</b>' +
-         '<p class="sub" style="margin:7px 0 0">Las fotos de hojas y de MSDS salen limpias: un mapa encima de una ' +
-         'hoja técnica la arruina.</p></div>';
+    h += '<div class="aviso ok" style="margin-top:16px">📄 <b>Las hojas nunca se sellan.</b>' +
+         '<p class="sub" style="margin:7px 0 0">Cuando la cámara ve papel, la trata como documento y la deja limpia: ' +
+         'un mapa encima de una hoja de MSDS la arruina. Si se equivoca, lo cambias con un toque.</p></div>';
 
-    h += '<div class="aviso" style="margin-top:12px">⚠️ <b>El sello no se puede quitar después.</b>' +
+    h += '<div class="aviso ojo" style="margin-top:12px">⚠️ <b>El sello no se puede quitar después.</b>' +
          '<p class="sub" style="margin:7px 0 0">Va quemado en la imagen, y de eso se trata: una foto que se puede ' +
          'editar después tampoco prueba nada. En la propia cámara hay un interruptor por si una foto puntual ' +
          'tiene que salir limpia.</p></div>';
@@ -27487,7 +28001,7 @@ function pintarAjustesSello(){
     h += '<div id="sello-muestra"><p class="sub">Armando el ejemplo…</p></div>';
   }
 
-  h += '<button class="btn sec" style="margin-top:20px" onclick="ir(\'p-camara\')">📸 Abrir la cámara con sello</button>';
+  h += '<button class="btn sec" style="margin-top:20px" onclick="ir(\'p-camara\')">📷 Abrir la cámara</button>';
   c.innerHTML = h;
   if(cfg.on) _muestraSello();
 }
@@ -27500,8 +28014,7 @@ function selloToggle(k){
 }
 
 /* Una muestra de verdad, hecha con los datos de verdad: la obra real,
-   el nombre real y, si da permiso, la coordenada real. Así lo que ve
-   acá es exactamente lo que le va a salir en obra. */
+   el nombre real y, si da permiso, la coordenada real. */
 function _muestraSello(){
   var c = $('sello-muestra'); if(!c) return;
   var cv = document.createElement('canvas');
@@ -27531,15 +28044,18 @@ function _muestraSello(){
 }
 
 /* ── la cámara de la app ── */
-var CAM={stream:null, resolver:null, op:null, cara:'environment'};
+var CAM={stream:null, resolver:null, op:null, cara:'environment', luz:false};
 function tomarFoto(op){
   op=op||{}; op.max=op.max||1100; op.calidad=op.calidad||0.82;
   /* El sello se decide por foto, arrancando de lo que diga Ajustes.
      Los escaneos de documentos NO se sellan nunca: una hoja de MSDS con
      un mapa encima queda arruinada. */
-  CAM.sello = op.doc ? false : selloActivo();
+  /* «crudo» es de la camara suelta: todavia no sabemos si lo que hay
+     delante es una hoja o es obra, asi que no se sella aqui. El GPS SI
+     se pide, para que al decidir el sello salga al instante. */
+  CAM.sello = (op.doc || op.crudo) ? false : selloActivo();
   CAM.selloDatos = null;
-  if(CAM.sello){
+  if(CAM.sello || (op.crudo && selloActivo())){
     /* se pide el GPS al ABRIR, no al disparar: cuando la persona
        termina de encuadrar, el satelite ya engancho */
     try{ reunirSello().then(function(d){ CAM.selloDatos=d; _pintarSelloCam(); }); }catch(_s){}
@@ -27552,6 +28068,7 @@ function tomarFoto(op){
     $('cam-msg').textContent = 'Encendiendo la cámara…';
     $('cam').className = 'cam abierta' + (op.doc?' doc':'');
     _pintarSelloCam();
+    var bd=$('cam-disparo'); if(bd) bd.disabled=true;
     _encenderCamara();
   });
 }
@@ -27566,12 +28083,44 @@ function _encenderCamara(){
     var v=$('cam-v'); v.srcObject=st;
     var pl=v.play(); if(pl && pl.catch) pl.catch(function(){});
     $('cam-msg').textContent='';
+    var bd=$('cam-disparo'); if(bd) bd.disabled=false;
+    _verLinterna();
   }).catch(function(){
     $('cam-msg').textContent='No se pudo abrir la cámara. Toca 🖼️ para elegir la foto de la galería.';
   });
 }
-function voltearCamara(){ CAM.cara = (CAM.cara==='environment') ? 'user' : 'environment'; _encenderCamara(); }
+function voltearCamara(){ CAM.cara = (CAM.cara==='environment') ? 'user' : 'environment'; CAM.luz=false; _encenderCamara(); }
+/* ══ LA LINTERNA ═══════════════════════════════════════════════════
+   En un tunel o en un tablero electrico la foto sale negra y no sirve
+   de prueba. No todos los celulares dejan prenderla desde la web: si
+   este no puede, el boton se queda apagado en vez de mentir. */
+function _pistaLuz(){
+  try{
+    if(!CAM.stream) return null;
+    var t=CAM.stream.getVideoTracks()[0];
+    if(!t || !t.getCapabilities) return null;
+    var c=t.getCapabilities();
+    return (c && c.torch) ? t : null;
+  }catch(e){ return null; }
+}
+function _verLinterna(){
+  var b=$('cam-luz'); if(!b) return;
+  var t=_pistaLuz();
+  b.disabled = !t;
+  b.className = 'cam-luz' + (CAM.luz ? ' on' : '');
+  b.title = t ? (CAM.luz?'Apagar la linterna':'Prender la linterna') : 'Este celular no deja prender la linterna desde la app';
+}
+function camLinterna(){
+  var t=_pistaLuz(); if(!t) return;
+  CAM.luz = !CAM.luz;
+  try{ t.applyConstraints({advanced:[{torch:CAM.luz}]}); }catch(e){ CAM.luz=false; }
+  _verLinterna();
+}
 function _apagarCamara(){
+  /* la linterna se apaga ANTES de soltar la pista: si no, en algunos
+     celulares el LED se queda prendido hasta que se cierra el navegador */
+  try{ var t0=_pistaLuz(); if(t0 && CAM.luz) t0.applyConstraints({advanced:[{torch:false}]}); }catch(e0){}
+  CAM.luz=false;
   try{ if(CAM.stream){ CAM.stream.getTracks().forEach(function(t){ t.stop(); }); } }catch(e){}
   CAM.stream=null;
   try{ var v=$('cam-v'); if(v) v.srcObject=null; }catch(e){}
@@ -27585,6 +28134,13 @@ function cerrarCamara(){
 function dispararCamara(){
   var v=$('cam-v'), op=CAM.op||{};
   if(!v || !v.videoWidth){ $('cam-msg').textContent='La cámara todavía no está lista.'; return; }
+  /* que se note que disparó: con guante y a pleno sol, el único aviso
+     de que la foto salió es este destello y el golpecito */
+  try{
+    var fl=$('cam-flash');
+    if(fl && !_sinMovimiento()){ fl.className='cam-flash'; void fl.offsetWidth; fl.className='cam-flash dispara'; }
+    if(navigator.vibrate) navigator.vibrate(18);
+  }catch(_f){}
   var max=op.max||1100;
   var r=Math.min(1, max/Math.max(v.videoWidth, v.videoHeight));
   var w=Math.max(1,Math.round(v.videoWidth*r)), h=Math.max(1,Math.round(v.videoHeight*r));
