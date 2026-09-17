@@ -523,6 +523,7 @@ html.t-alto .calc-x{background:#EDEDED;border:1px solid #000}
   padding:10px 16px;cursor:pointer;line-height:1;pointer-events:auto;
   touch-action:manipulation;-webkit-user-select:none;user-select:none}
 .nav-b:active{background:rgba(var(--w),.24);transform:scale(.96)}
+.nav-idi{padding:9px 12px;font-size:17px;line-height:1;flex:0 0 auto}
 .nav-donde{margin-left:auto;font-size:12px;color:rgba(234,242,246,.62);
   letter-spacing:.06em;text-transform:uppercase;font-weight:700}
 body.connav .wrap{padding-top:66px}
@@ -2613,6 +2614,42 @@ html.t-claro .sim-hito{background:#fff}
 .idi .tx small{display:block;font-size:var(--f2);color:var(--gris);margin-top:2px}
 .idi .tic{color:var(--oro);font-size:19px;font-weight:700}
 .idi:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
+
+.scan-rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));
+  gap:var(--e3);margin-top:var(--e4)}
+.scan-hoja{position:relative;background:rgba(var(--p),.5);border:1px solid rgba(var(--w),.12);
+  border-radius:var(--r2);padding:8px;display:flex;flex-direction:column;gap:7px}
+.scan-hoja img{width:100%;height:172px;object-fit:cover;object-position:top;
+  border-radius:var(--r1);background:#fff;display:block}
+.scan-hoja .num{position:absolute;top:14px;left:14px;z-index:2;min-width:26px;height:26px;
+  border-radius:999px;background:var(--oro);color:#0B2A3A;font-size:13px;font-weight:800;
+  display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.scan-hoja .bts{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.scan-hoja .bts button,.scan-hoja .bts span{min-height:38px;border-radius:9px;border:0;
+  background:rgba(var(--w),.08);color:var(--tinta);font:inherit;font-size:15px;cursor:pointer}
+.scan-hoja .bts button:hover{background:rgba(var(--w),.16)}
+.scan-hoja .bts button.mal{color:var(--mal)}
+.scan-hoja .bts button:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
+
+.trf{display:flex;gap:var(--e4);align-items:flex-start}
+.trf img{width:104px;height:139px;object-fit:cover;border-radius:var(--r2);
+  background:rgba(var(--w),.08);display:block}
+.trf-bt{display:flex;flex-direction:column;gap:8px;flex:1 1 auto}
+.cart-lista{display:grid;gap:8px}
+.cart-t{display:flex;align-items:center;gap:var(--e3);width:100%;text-align:left;cursor:pointer;
+  background:rgba(var(--p),.5);border:1.5px solid rgba(var(--w),.12);border-radius:var(--r2);
+  padding:9px 12px;font:inherit;color:var(--tinta);min-height:62px}
+.cart-t.on{border-color:var(--oro);background:rgba(245,183,0,.07)}
+.cart-t .ini{flex:0 0 auto;width:42px;height:56px;border-radius:9px;overflow:hidden;
+  background:rgba(var(--w),.10);color:var(--gris);display:grid;place-items:center;
+  font-size:14px;font-weight:800;letter-spacing:.02em}
+.cart-t .ini.con{background:none}
+.cart-t .ini img{width:100%;height:100%;object-fit:cover;display:block}
+.cart-t .tx{flex:1 1 auto;min-width:0}
+.cart-t .tx b{display:block;font-size:var(--f3);line-height:1.3}
+.cart-t .tx small{display:block;font-size:var(--f2);color:var(--gris);margin-top:2px}
+.cart-t .tic{flex:0 0 auto;color:var(--oro);font-size:19px;font-weight:700;width:20px;text-align:center}
+.cart-t:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
 </style>
 <script>
 /* apariencia: se aplica antes del primer pixel, sin esperar al resto del JS */
@@ -2649,6 +2686,8 @@ html.t-claro .sim-hito{background:#fff}
   <button type="button" class="nav-b" id="nav-atras">‹ Atrás</button>
   <button type="button" class="nav-b" id="nav-home">Inicio ⌂</button>
   <span class="nav-donde" id="nav-donde"></span>
+  <button type="button" class="nav-b nav-idi" id="nav-idi" onclick="ir('p-idioma')"
+          aria-label="Cambiar el idioma" title="Idioma"></button>
 </div>
 
 
@@ -2719,6 +2758,7 @@ html.t-claro .sim-hito{background:#fff}
        texto ofrezca algo que no se puede tocar es peor que no ofrecerlo. -->
   <div class="fila-ajustes" style="margin-top:10px">
     <button class="btn sec" onclick="ir('p-estatus')">📊 Estatus del personal</button>
+    <button class="btn sec" onclick="ir('p-cargos')">🖼️ Cartel de cargos y brigada</button>
     <button class="btn sec" onclick="ir('p-puntaje')">🏅 Evaluar el día · Trabajador del mes</button>
   </div>
   <div id="trab-traer-caja"></div>
@@ -2753,7 +2793,9 @@ html.t-claro .sim-hito{background:#fff}
   <div class="barra"><span>Nuevo trabajador</span></div>
   <h2 id="trab-tit">Agregar trabajador</h2>
   <div class="caja vidrio" style="padding:15px">
-    <label class="sec-tit" style="margin:0 0 6px">Nombres y apellidos</label>
+    <label class="sec-tit" style="margin:0 0 6px">Foto</label>
+    <div id="t-foto-vista"></div>
+    <label class="sec-tit" style="margin:14px 0 6px">Nombres y apellidos</label>
     <input id="t-nombre" placeholder="Juan Pérez Quispe" autocomplete="off">
     <label class="sec-tit" style="margin:12px 0 6px">DNI</label>
     <input id="t-dni" inputmode="numeric" maxlength="12" placeholder="70123456" autocomplete="off">
@@ -3296,6 +3338,7 @@ html.t-claro .sim-hito{background:#fff}
   <p class="sub">Cualquier hoja de la obra: asistencias, reportes de liderazgo, inspecciones, permisos, ATS, actas. La fotografías con la cámara —ella sola se da cuenta de que es una hoja y la limpia—, le pones qué tipo es y sale en PDF cuando la mandes.</p>
   <div class="esc-acc">
     <button class="btn" onclick="ir('p-camara')" style="margin:0">📷 Agregar una hoja</button>
+    <button class="btn sec" onclick="ir('p-scan')" style="margin:0">🖨️ Escanear varias → PDF</button>
     <button class="btn sec" onclick="ir('p-escaneo-enviar')" style="margin:0">📤 Enviar la carpeta</button>
   </div>
   <div id="esc-barra-sel"></div>
@@ -4599,6 +4642,24 @@ html.t-claro .sim-hito{background:#fff}
 </section>
 
 
+
+
+
+<!-- ================= CARTEL DE CARGOS ================= -->
+<section class="pantalla" id="p-cargos">
+  <div class="barra"><span>Cartel de cargos</span></div>
+  <div id="cargos-cuerpo"></div>
+</section>
+
+<!-- ================= ESCÁNER ================= -->
+<section class="pantalla" id="p-scan">
+  <div class="barra"><span>Escáner</span></div>
+  <div id="scan-cuerpo"></div>
+</section>
+<section class="pantalla" id="p-scan-pdf">
+  <div class="barra"><span>Exportar</span></div>
+  <div id="scan-pdf-cuerpo"></div>
+</section>
 
 <!-- ================= IDIOMA ================= -->
 <section class="pantalla" id="p-idioma">
@@ -8159,7 +8220,7 @@ var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-
             'p-final':1,'p-firma':1,'p-listo':1,'p-charlas':1,'p-charla':1,'p-programa':1,
             'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1,'p-sector':1,
             'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,
-            'p-obra':1,'p-camara':1,'p-sello':1,'p-idioma':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1,
+            'p-obra':1,'p-camara':1,'p-sello':1,'p-idioma':1,'p-scan':1,'p-scan-pdf':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1,
             'p-normas':1,'p-norma':1,'p-procedimientos':1,'p-proc':1,
             /* el cartel del almacén lo escanea el trabajador, no el gestor:
                si esta pantalla no está abierta para él, el QR no sirve */
@@ -8169,7 +8230,7 @@ var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-
 var EMP_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
             'p-reporte':1,'p-reporte-nuevo':1,'p-inspec':1,'p-inspec-nueva':1,
             'p-inspec-hallaz':1,'p-inspec-levant':1,'p-inspec-hechas':1,'p-firma-insp':1,
-            'p-brigada':1,'p-camara':1,'p-sello':1,'p-idioma':1,'p-simulacros':1,'p-sim-nuevo':1,'p-sim-correr':1,'p-sim-cierre':1,'p-campanas':1,'p-campana':1,
+            'p-brigada':1,'p-camara':1,'p-sello':1,'p-idioma':1,'p-scan':1,'p-scan-pdf':1,'p-cargos':1,'p-simulacros':1,'p-sim-nuevo':1,'p-sim-correr':1,'p-sim-cierre':1,'p-campanas':1,'p-campana':1,
             'p-lista':1,'p-firma-lista':1,'p-listas':1,
             'p-petar':1,'p-petar-nuevo':1,'p-credencial':1,'p-cred-nueva':1,'p-verificar':1,
             'p-empresa':1,'p-msds':1,'p-msds-nueva':1,'p-quim-cat':1,'p-quim-frases':1,
@@ -8595,6 +8656,9 @@ function _ir(p){
   if(p==='p-camara')pintarCamaraSello();
   if(p==='p-sello')pintarAjustesSello();
   if(p==='p-idioma')pintarAjustesIdioma();
+  if(p==='p-scan')pintarScan();
+  if(p==='p-scan-pdf')prepScanPdf();
+  if(p==='p-cargos')pintarCartel();
   if(p==='p-simulacros')pintarSimulacros();
   if(p==='p-sim-nuevo')pintarSimNuevo();
   if(p==='p-sim-correr')pintarSimCorrer();
@@ -8721,6 +8785,22 @@ function pintarBarraNav(p){
   if(h) h.style.display = (enSuCasa || enCasaGestor) ? 'none' : '';
   if(a && subeAProyectos) a.textContent='\u2039 Mis obras';
   else if(a) a.textContent='\u2039 Atr\u00e1s';
+  /* La banderita: estaba SOLO dentro de Ajustes, o sea escondida en el
+     último sitio donde uno la busca. Acá se ve desde cualquier pantalla
+     y no estorba: es una bandera, no un botón con texto. */
+  var bi=document.getElementById('nav-idi');
+  if(bi){
+    var mostrar = !esconder && p!=='p-idioma';
+    bi.style.display = mostrar ? '' : 'none';
+    if(mostrar){
+      try{
+        var x = idiomaPorId(idiomaActual());
+        bi.textContent = x ? x.b : '\uD83C\uDF10';
+        bi.title = 'Idioma: ' + (x ? x.n : '');
+        bi.setAttribute('aria-label', 'Idioma: ' + (x ? x.n : '') + '. Tocar para cambiarlo');
+      }catch(_i){ bi.textContent='\uD83C\uDF10'; }
+    }
+  }
 }
 function leer(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 /* ══════ CUANDO LA MEMORIA DEL CELULAR SE LLENA ══════════════════
@@ -14204,6 +14284,15 @@ function pintarFichaTrab(){
 }
 var TRAB_EDIT=null;
 function prepTrabajador(){
+  /* la foto vive aparte (IndexedDB) y se carga por su cuenta: si tarda
+     o falla, el formulario ya está usable */
+  TRAB_FOTO = null;
+  try{
+    pintarFotoTrab();
+    if(TRAB_EDIT) fotoTrabLeer(TRAB_EDIT).then(function(du){
+      if(du && TRAB_EDIT){ TRAB_FOTO = du; pintarFotoTrab(); }
+    });
+  }catch(_f){}
   var t=TRAB_EDIT?trabPorId(TRAB_EDIT):null;
   $('trab-tit').textContent = t ? 'Editar trabajador' : 'Agregar trabajador';
   $('t-nombre').value=t?t.nombre:''; $('t-dni').value=t?(t.dni||''):'';
@@ -14235,6 +14324,12 @@ function guardarTrabajador(){
     t={id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}; a.push(t);
   }
   t.nombre=nombre; t.dni=($('t-dni').value||'').trim(); t.puesto=($('t-puesto').value||'').trim();
+  /* la marca de que tiene foto sí va en la ficha (pesa 4 bytes); la
+     foto misma va a IndexedDB, que no tiene el techo de 5 MB */
+  try{
+    if(TRAB_FOTO){ t.foto = 1; fotoTrabGuardar(t.id, TRAB_FOTO)['catch'](function(){}); }
+    else if(TRAB_FOTO === ''){ t.foto = 0; fotoTrabBorrar(t.id); }
+  }catch(_gf){}
   t.area=($('t-area').value||'').trim(); t.estatus=$('t-estatus').value;
   t.sangre=($('t-sangre').value||'').trim();
   t.emergencia=($('t-emergencia').value||'').trim();
@@ -27755,6 +27850,708 @@ function queEs(du){
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   LA FOTO DEL TRABAJADOR, Y EL CARTEL DE CARGOS
+
+   En obra hay un cartel que no falta en ninguna caseta: el de quiénes
+   son los brigadistas. Y otro con el Supervisor SST elegido por los
+   trabajadores, y otro con el comité. Hoy se hacen en Word, con fotos
+   pegadas a mano, y se rehacen enteros cada vez que entra alguien.
+
+   Acá la foto vive en la ficha del trabajador y el cartel se arma solo:
+   eliges a quiénes y qué cargo cumplen, y sale una hoja A4 lista para
+   imprimir y pegar.
+
+   ── DÓNDE VIVEN LAS FOTOS, Y POR QUÉ ──
+   NO en el almacenamiento normal del navegador. Ese tiene unos 5 MB
+   para TODA la app, y cincuenta fotos lo llenan solas: el que pierde
+   sus datos por eso no vuelve. Van en IndexedDB, que no tiene ese
+   techo, y la ficha del trabajador guarda solo la marca de que tiene
+   foto. Si el celular no deja usar IndexedDB, no hay foto y el cartel
+   sale con las iniciales: no se rompe nada.
+   ════════════════════════════════════════════════════════════════ */
+var _FDB = null, _FDB_NO = false;
+function _fotosDB(){
+  if(_FDB) return Promise.resolve(_FDB);
+  if(_FDB_NO) return Promise.reject('sin-idb');
+  return new Promise(function(ok, mal){
+    var q;
+    try{ q = indexedDB.open('sstc-fotos', 1); }catch(e){ _FDB_NO = true; return mal(e); }
+    q.onupgradeneeded = function(){ try{ q.result.createObjectStore('trab'); }catch(e){} };
+    q.onsuccess = function(){ _FDB = q.result; ok(_FDB); };
+    q.onerror   = function(){ _FDB_NO = true; mal(q.error); };
+  });
+}
+function fotoTrabLeer(id){
+  return _fotosDB().then(function(db){
+    return new Promise(function(ok){
+      try{
+        var t = db.transaction('trab', 'readonly').objectStore('trab').get(String(id));
+        t.onsuccess = function(){ ok(t.result || null); };
+        t.onerror   = function(){ ok(null); };
+      }catch(e){ ok(null); }
+    });
+  }).catch(function(){ return null; });
+}
+function fotoTrabGuardar(id, du){
+  return _fotosDB().then(function(db){
+    return new Promise(function(ok, mal){
+      try{
+        var t = db.transaction('trab', 'readwrite').objectStore('trab').put(du, String(id));
+        t.onsuccess = function(){ ok(true); };
+        t.onerror   = function(){ mal(t.error); };
+      }catch(e){ mal(e); }
+    });
+  });
+}
+function fotoTrabBorrar(id){
+  return _fotosDB().then(function(db){
+    try{ db.transaction('trab', 'readwrite').objectStore('trab')['delete'](String(id)); }catch(e){}
+  }).catch(function(){});
+}
+
+/* ── la foto en el formulario del trabajador ─────────────────────── */
+var TRAB_FOTO = null;      /* la foto en edición, todavía sin guardar */
+function tomarFotoTrab(){
+  /* retrato: sin sello y sin el marco de documento. Una foto de carné
+     con un mapa quemado encima no sirve para un cartel. */
+  tomarFoto({ max:640, calidad:0.78, retrato:true, titulo:'Foto del trabajador' }).then(function(du){
+    if(!du) return;
+    _recortarRetrato(du).then(function(x){
+      TRAB_FOTO = x;
+      pintarFotoTrab();
+    });
+  });
+}
+/* 3:4 y centrada arriba: es donde está la cara en una foto de cuerpo */
+function _recortarRetrato(du){
+  return new Promise(function(ok){
+    var im = new Image();
+    im.onload = function(){
+      var W = 600, H = 800;
+      var e = Math.max(W/im.width, H/im.height);
+      var w = im.width*e, h = im.height*e;
+      var c = document.createElement('canvas'); c.width = W; c.height = H;
+      var x = c.getContext('2d');
+      x.fillStyle = '#0B2A3A'; x.fillRect(0, 0, W, H);
+      x.drawImage(im, (W-w)/2, Math.min(0, (H-h)*0.32), w, h);
+      ok(c.toDataURL('image/jpeg', 0.80));
+    };
+    im.onerror = function(){ ok(du); };
+    im.src = du;
+  });
+}
+function quitarFotoTrab(){ TRAB_FOTO = ''; pintarFotoTrab(); }
+function pintarFotoTrab(){
+  var c = $('t-foto-vista'); if(!c) return;
+  if(TRAB_FOTO){
+    c.innerHTML = '<div class="trf"><img src="' + TRAB_FOTO + '" alt="Foto del trabajador">' +
+      '<div class="trf-bt"><button type="button" class="btn sec" style="margin:0" onclick="tomarFotoTrab()">Cambiarla</button>' +
+      '<button type="button" class="btn sec" style="margin:0;color:var(--mal)" onclick="quitarFotoTrab()">Quitarla</button></div></div>';
+  } else {
+    c.innerHTML = '<button type="button" class="btn sec" style="margin:0" onclick="tomarFotoTrab()">📷 Tomar la foto</button>' +
+      '<p class="sub" style="margin:7px 0 0;font-size:12.5px">Opcional. Sirve para el cartel de brigadistas, ' +
+      'el del comité y el del supervisor SST. Se guarda en este celular.</p>';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   EL CARTEL A4
+   ════════════════════════════════════════════════════════════════ */
+var CARGOS = [
+  { k:'bpa', n:'Brigada de primeros auxilios',  ic:'🚑', col:[229,72,77] },
+  { k:'bci', n:'Brigada contra incendios',      ic:'🧯', col:[214,90,26] },
+  { k:'bev', n:'Brigada de evacuación',         ic:'🚪', col:[47,150,191] },
+  { k:'sup', n:'Supervisor de SST',             ic:'🦺', col:[245,183,0] },
+  { k:'com', n:'Comité de SST',                 ic:'🏛️', col:[47,191,113] },
+  { k:'sub', n:'Sub-comité de SST',             ic:'🏛️', col:[120,150,170] },
+  { k:'res', n:'Responsable de área',           ic:'📋', col:[143,110,200] }
+];
+function cargoPorK(k){ for(var i=0;i<CARGOS.length;i++) if(CARGOS[i].k===k) return CARGOS[i]; return CARGOS[0]; }
+
+var CART = { cargo:'bpa', sel:[], titulo:'', vigencia:'' };
+
+function pintarCartel(){
+  var c = $('cargos-cuerpo'); if(!c) return;
+  var trabs = (typeof trabsLocal==='function' ? trabsLocal() : [])
+              .filter(function(t){ return (t.estatus||'activo') !== 'cesado'; });
+  var cg = cargoPorK(CART.cargo);
+
+  var h = '<h2>🖼️ Cartel de cargos</h2>';
+  h += '<p class="sub">El cartel que va pegado en la caseta: quién es brigadista, quién es el supervisor ' +
+       'elegido, quiénes son del comité. Sale en A4, listo para imprimir.</p>';
+
+  h += '<div class="sec-tit" style="margin-top:18px">¿De qué es el cartel?</div>';
+  h += '<div class="ch-chips" role="group" aria-label="Cargo">';
+  CARGOS.forEach(function(x){
+    h += '<button type="button" class="ch-chip' + (CART.cargo===x.k?' on':'') + '" ' +
+         'onclick="cartCargo(\'' + x.k + '\')">' + x.ic + ' ' + esc(x.n) + '</button>';
+  });
+  h += '</div>';
+
+  if(!trabs.length){
+    h += '<div class="aviso ojo" style="margin-top:16px"><b>Todavía no hay personal.</b>' +
+         '<p class="sub" style="margin:7px 0 0">Registra a tu gente primero y después vuelve acá.</p>' +
+         '<button class="btn" style="margin:10px 0 0" onclick="ir(\'p-trabajadores\')">Ir a Mi personal ▸</button></div>';
+    c.innerHTML = h; return;
+  }
+
+  h += '<div class="sec-tit" style="margin-top:20px">¿Quiénes? <span style="color:var(--oro)">' +
+       CART.sel.length + ' elegido' + (CART.sel.length===1?'':'s') + '</span></div>';
+  h += '<p class="sub" style="margin:-4px 0 10px">Si eliges uno solo, el cartel sale con su foto grande. ' +
+       'Si eliges varios, salen todos en la misma hoja.</p>';
+  h += '<div class="cart-lista">';
+  trabs.forEach(function(t){
+    var on = CART.sel.indexOf(t.id) > -1;
+    var ini = (t.nombre||'?').trim().split(/\s+/).slice(0,2)
+              .map(function(x){ return x.charAt(0); }).join('').toUpperCase();
+    h += '<button type="button" class="cart-t' + (on?' on':'') + '" onclick="cartElegir(\'' + t.id + '\')">' +
+         '<span class="ini" id="cart-ini-' + t.id + '">' + esc(ini) + '</span>' +
+         '<span class="tx"><b>' + esc(t.nombre||'') + '</b>' +
+         '<small>' + esc(t.puesto||'—') + (t.area?' · '+esc(t.area):'') + '</small></span>' +
+         '<span class="tic">' + (on?'✓':'') + '</span></button>';
+  });
+  h += '</div>';
+
+  h += '<div class="caja vidrio" style="padding:15px;margin-top:16px">';
+  h += '<label class="sec-tit" style="margin:0 0 6px">Título del cartel</label>';
+  h += '<input id="cart-titulo" maxlength="60" placeholder="' + escA(cg.n) + '" value="' + escA(CART.titulo) + '" ' +
+       'oninput="CART.titulo=this.value">';
+  h += '<label class="sec-tit" style="margin:12px 0 6px">Vigencia (opcional)</label>';
+  h += '<input id="cart-vig" maxlength="40" placeholder="Del 01/10/2026 al 31/03/2027" value="' + escA(CART.vigencia) + '" ' +
+       'oninput="CART.vigencia=this.value">';
+  h += '</div>';
+
+  h += '<div id="cart-msg" style="font-size:13.5px;margin:12px 0 0"></div>';
+  h += '<button class="btn" style="margin-top:14px" onclick="cartArmar()"' +
+       (CART.sel.length?'':' disabled') + '>📄 Armar la hoja A4</button>';
+  if(!CART.sel.length){
+    h += '<p class="sub" style="margin:8px 0 0;font-size:12.5px">Elige al menos a una persona.</p>';
+  }
+  h += '<div id="cart-listo"></div>';
+  c.innerHTML = h;
+  _cartPintarCaras(trabs);
+}
+/* las caras se traen de IndexedDB después de pintar: si no hay, quedan
+   las iniciales, que es una lista perfectamente usable */
+function _cartPintarCaras(trabs){
+  trabs.forEach(function(t){
+    fotoTrabLeer(t.id).then(function(du){
+      if(!du) return;
+      var e = $('cart-ini-' + t.id); if(!e) return;
+      e.innerHTML = '<img src="' + du + '" alt="">';
+      e.className = 'ini con';
+    });
+  });
+}
+function cartCargo(k){
+  CART.cargo = k;
+  if(!CART.titulo) { /* el título sigue al cargo mientras nadie lo toque */ }
+  pintarCartel();
+}
+function cartElegir(id){
+  var i = CART.sel.indexOf(id);
+  if(i > -1) CART.sel.splice(i, 1); else CART.sel.push(id);
+  pintarCartel();
+}
+
+/* ── armar la hoja ───────────────────────────────────────────────── */
+function cartArmar(){
+  if(!CART.sel.length) return;
+  var m = $('cart-msg'); if(m){ m.style.color='var(--gris)'; m.textContent='Armando la hoja…'; }
+  var trabs = trabsLocal();
+  var gente = CART.sel.map(function(id){
+    for(var i=0;i<trabs.length;i++) if(trabs[i].id===id) return trabs[i];
+    return null;
+  }).filter(Boolean);
+
+  Promise.all(gente.map(function(t){
+    return fotoTrabLeer(t.id).then(function(du){ return { t:t, foto:du }; });
+  })).then(function(lista){
+    try{
+      var url = _cartDibujar(lista);
+      if(m) m.textContent = '';
+      var c = $('cart-listo');
+      if(c) c.innerHTML =
+        '<div class="aviso ok" style="margin-top:14px">✅ <b>' + esc(_cartNombre()) + '</b>' +
+        '<p class="sub" style="margin:6px 0 0">' + lista.length + ' persona' + (lista.length===1?'':'s') +
+        ' · una hoja A4</p></div>' +
+        '<div class="dos" style="margin-top:12px">' +
+        '<button class="btn" style="margin:0" onclick="cartCompartir()">📲 Compartir</button>' +
+        '<button class="btn sec" style="margin:0" onclick="cartDescargar()">⬇️ Descargar</button></div>' +
+        '<p class="sub" style="margin:9px 0 0;font-size:12.5px">Imprímelo en A4 y pégalo en la caseta.</p>';
+      var sinFoto = lista.filter(function(x){ return !x.foto; }).length;
+      if(sinFoto && c){
+        c.innerHTML += '<div class="aviso ojo" style="margin-top:12px"><b>' + sinFoto +
+          (sinFoto===1?' persona sale':' personas salen') + ' con sus iniciales.</b>' +
+          '<p class="sub" style="margin:6px 0 0">Todavía no tienen foto. Se les toma desde su ficha, ' +
+          'en Mi personal, y el cartel se rehace en un toque.</p></div>';
+      }
+    }catch(e){
+      if(m){ m.style.color='var(--mal)'; m.textContent='No se pudo armar la hoja. Prueba con menos personas.'; }
+    }
+  });
+}
+
+var CART_PDF = null;
+function _cartNombre(){
+  var n = (CART.titulo || cargoPorK(CART.cargo).n).trim();
+  try{ n = n.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(e){}
+  n = n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return 'cartel-' + (n || 'cargos') + '.pdf';
+}
+function _cartDibujar(lista){
+  var cg = cargoPorK(CART.cargo);
+  var doc = new jspdf.jsPDF({ unit:'mm', format:'a4' });
+  var W = 210, H = 297, M = 14;
+  var util = W - M*2;
+
+  /* franja del color del cargo */
+  doc.setFillColor(cg.col[0], cg.col[1], cg.col[2]);
+  doc.rect(0, 0, W, 4, 'F');
+
+  /* ── la cabecera se MIDE, no se adivina ──────────────────────────
+     Un título de dos líneas escrito a una altura fija se monta encima
+     del nombre de la obra. Pasó en la primera prueba: «SUPERVISOR DE
+     SEGURIDAD Y SALUD EN EL TRABAJO» se comió el subtítulo. */
+  var y = 18;
+  doc.setTextColor(20, 24, 30);
+  doc.setFont('helvetica', 'bold');
+  var tam = 21, tit = (CART.titulo || cg.n).toUpperCase(), lin;
+  while(tam > 12){
+    doc.setFontSize(tam);
+    lin = doc.splitTextToSize(tit, util);
+    if(lin.length <= 2) break;
+    tam -= 1.5;
+  }
+  doc.setFontSize(tam);
+  lin = doc.splitTextToSize(tit, util);
+  lin.slice(0, 3).forEach(function(l){
+    doc.text(l, W/2, y, { align:'center' });
+    y += tam * 0.40;
+  });
+  y += 2.5;
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
+  doc.setTextColor(90, 98, 108);
+  var obra = (typeof nombreDeLaObra === 'function' ? nombreDeLaObra() : '');
+  if(obra){ doc.text(obra, W/2, y, { align:'center', maxWidth: util }); y += 5.4; }
+  if(CART.vigencia){
+    doc.setFontSize(9.4);
+    doc.text(CART.vigencia, W/2, y, { align:'center', maxWidth: util }); y += 5.4;
+  }
+  y += 4;
+
+  /* ── la rejilla ──────────────────────────────────────────────────
+     La foto es 3:4 SIEMPRE, que es como se recorta al tomarla. Si la
+     casilla no respeta esa proporción, la cara sale estirada. Así que
+     se elige el número de columnas que ENTRA, no el que se ve bonito. */
+  var n = lista.length;
+  var dispo = H - y - 16;
+  var hueco = 6;
+  var altoTexto = function(cols){ return cols >= 4 ? 12 : (cols === 3 ? 15.5 : (cols === 2 ? 17.5 : 20)); };
+
+  var cols = n === 1 ? 1 : (n <= 4 ? 2 : (n <= 9 ? 3 : 4));
+  var cw, foth, ch, filas, alto;
+  while(true){
+    cw = (util - hueco*(cols-1)) / cols;
+    if(n === 1) cw = Math.min(cw, 88);          /* uno solo no ocupa la hoja entera */
+    foth = cw * 4/3;
+    ch = foth + altoTexto(cols);
+    filas = Math.ceil(n / cols);
+    alto = filas*ch + hueco*(filas-1);
+    if(alto <= dispo || cols >= 6) break;
+    cols += 1;
+  }
+  /* si aun con seis columnas no entra, se encoge todo por igual */
+  if(alto > dispo){
+    var k = dispo / alto;
+    cw *= k; foth = cw * 4/3; ch = foth + altoTexto(cols)*k;
+    alto = filas*ch + hueco*(filas-1);
+  }
+  var anchoFila = cols*cw + hueco*(cols-1);
+  var x0 = (W - anchoFila) / 2;
+  /* con pocas filas, el bloque se centra en lo que queda de hoja */
+  var y0 = y + Math.max(0, (dispo - alto) * (filas <= 2 ? 0.30 : 0.10));
+
+  lista.forEach(function(x, i){
+    var c = i % cols, f = Math.floor(i / cols);
+    /* la última fila incompleta va centrada, no pegada a la izquierda */
+    var enFila = Math.min(cols, n - f*cols);
+    var corr = (enFila < cols) ? ((cols - enFila) * (cw + hueco)) / 2 : 0;
+    var px = x0 + corr + c*(cw+hueco);
+    var py = y0 + f*(ch+hueco);
+
+    doc.setFillColor(238, 241, 244);
+    doc.roundedRect(px, py, cw, foth, 3, 3, 'F');
+    if(x.foto){
+      try{ doc.addImage(x.foto, 'JPEG', px, py, cw, foth, undefined, 'FAST'); }catch(e){}
+    } else {
+      var ini2 = (x.t.nombre||'?').trim().split(/\s+/).slice(0,2)
+                 .map(function(w){ return w.charAt(0); }).join('').toUpperCase();
+      doc.setTextColor(168, 178, 190);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(Math.min(46, cw*0.82));
+      doc.text(ini2, px + cw/2, py + foth/2 + cw*0.26, { align:'center' });
+    }
+    doc.setDrawColor(206, 214, 222); doc.setLineWidth(0.3);
+    doc.roundedRect(px, py, cw, foth, 3, 3, 'S');
+
+    var ty = py + foth + 5.2;
+    doc.setTextColor(20, 24, 30);
+    doc.setFont('helvetica', 'bold');
+    var fn = cols >= 4 ? 7.4 : (cols === 3 ? 8.6 : (cols === 2 ? 10 : 12.5));
+    doc.setFontSize(fn);
+    doc.splitTextToSize((x.t.nombre||'').trim(), cw).slice(0, 2).forEach(function(l){
+      doc.text(l, px + cw/2, ty, { align:'center' }); ty += fn*0.40;
+    });
+
+    doc.setFont('helvetica', 'bold');
+    var fc = cols >= 4 ? 6.4 : (cols === 3 ? 7.2 : (cols === 2 ? 8 : 9.6));
+    doc.setFontSize(fc);
+    doc.setTextColor(cg.col[0], cg.col[1], cg.col[2]);
+    ty += 0.8;
+    doc.splitTextToSize(cg.n, cw).slice(0, 2).forEach(function(l){
+      doc.text(l, px + cw/2, ty, { align:'center' }); ty += fc*0.40;
+    });
+
+    if(x.t.puesto && cols <= 3){
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(cols === 3 ? 6.3 : 7.2);
+      doc.setTextColor(128, 138, 148);
+      doc.text(x.t.puesto, px + cw/2, ty + 0.8, { align:'center', maxWidth: cw });
+    }
+  });
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.6);
+  doc.setTextColor(150, 158, 166);
+  var hoy = new Date(), dd = function(v){ return (v<10?'0':'')+v; };
+  doc.text('Emitido el ' + dd(hoy.getDate()) + '/' + dd(hoy.getMonth()+1) + '/' + hoy.getFullYear() +
+           '  ·  OBRASST', W/2, H - 9, { align:'center' });
+
+  var bl = doc.output('blob');
+  CART_PDF = { blob: bl, nombre: _cartNombre() };
+  return bl;
+}
+function cartCompartir(){
+  if(!CART_PDF) return;
+  var f;
+  try{ f = new File([CART_PDF.blob], CART_PDF.nombre, { type:'application/pdf' }); }catch(e){ f = null; }
+  if(f && navigator.share && navigator.canShare && navigator.canShare({ files:[f] })){
+    navigator.share({ files:[f], title:CART_PDF.nombre }).catch(function(){});
+    return;
+  }
+  cartDescargar();
+  aviso('Se descargó el cartel',
+        'Este celular no deja compartir archivos desde la app. El PDF quedó en tus descargas.', '⬇️');
+}
+function cartDescargar(){
+  if(!CART_PDF) return;
+  try{
+    var u = URL.createObjectURL(CART_PDF.blob);
+    var a = document.createElement('a');
+    a.href = u; a.download = CART_PDF.nombre;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ try{ URL.revokeObjectURL(u); }catch(e){} }, 4000);
+    try{ tostada('Descargado'); }catch(e){}
+  }catch(e){}
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   EL ESCÁNER  ·  varias hojas, un PDF, y se manda
+
+   Hasta ahora la app escaneaba de a una hoja y la guardaba suelta en
+   Documentos. Eso sirve para una asistencia, pero no para lo que pasa
+   de verdad en obra: un permiso de trabajo tiene cuatro hojas, un ATS
+   tiene tres, un acta de comité tiene dos y la lista de firmas atrás.
+   El que las mandaba una por una terminaba mandando seis fotos sueltas
+   por WhatsApp, y del otro lado nadie sabía cuál iba primero.
+
+   Esto hace lo que hace un escáner de verdad: fotografías una hoja, la
+   endereza y la limpia, y te pregunta si hay otra. Cuando ya no hay
+   más, le pones nombre al archivo, sale un PDF con las páginas en
+   orden y se manda por donde quieras.
+   ════════════════════════════════════════════════════════════════ */
+var SCAN = { pags: [], modo: 'scan', nombre: '', pdf: null, armando: false };
+
+function abrirEscaner(){ ir('p-scan'); }
+
+/* ── agregar una hoja ────────────────────────────────────────────── */
+function scanAgregar(){
+  /* doc:true a propósito: acá el usuario YA dijo que es una hoja.
+     Preguntárselo de nuevo con el interruptor de la cámara sería
+     preguntarle dos veces lo mismo. */
+  tomarFoto({ max:1600, calidad:0.9, doc:true,
+              titulo:'Hoja ' + (SCAN.pags.length + 1) }).then(function(du){
+    if(!du){ pintarScan(); return; }
+    var m = $('scan-msg'); if(m){ m.style.color='var(--gris)'; m.textContent='Enderezando la hoja…'; }
+    pintarScan();
+    procesarEscaneo(du, SCAN.modo, 0).then(function(listo){
+      SCAN.pags.push({ orig:du, giro:0, listo:listo });
+      SCAN.pdf = null;
+      var m2 = $('scan-msg'); if(m2) m2.textContent='';
+      pintarScan();
+    }, function(){
+      var m2 = $('scan-msg');
+      if(m2){ m2.style.color='var(--mal)'; m2.textContent='No se pudo leer esa foto. Tómala otra vez.'; }
+    });
+  });
+}
+
+function scanModo(m){
+  if(SCAN.modo === m) return;
+  SCAN.modo = m; SCAN.pdf = null;
+  var pend = SCAN.pags.slice();
+  SCAN.pags = [];
+  pintarScan();
+  var msg = $('scan-msg'); if(msg){ msg.style.color='var(--gris)'; msg.textContent='Volviendo a procesar…'; }
+  var cad = Promise.resolve();
+  pend.forEach(function(p){
+    cad = cad.then(function(){
+      return procesarEscaneo(p.orig, SCAN.modo, p.giro).then(function(du){
+        SCAN.pags.push({ orig:p.orig, giro:p.giro, listo:du }); pintarScan();
+      });
+    });
+  });
+  cad.then(function(){ var m2=$('scan-msg'); if(m2) m2.textContent=''; });
+}
+
+function scanGirar(i){
+  var p = SCAN.pags[i]; if(!p) return;
+  p.giro = (p.giro + 90) % 360; SCAN.pdf = null;
+  procesarEscaneo(p.orig, SCAN.modo, p.giro).then(function(du){ p.listo = du; pintarScan(); });
+}
+function scanQuitar(i){ SCAN.pags.splice(i, 1); SCAN.pdf = null; pintarScan(); }
+function scanMover(i, d){
+  var j = i + d;
+  if(j < 0 || j >= SCAN.pags.length) return;
+  var t = SCAN.pags[i]; SCAN.pags[i] = SCAN.pags[j]; SCAN.pags[j] = t;
+  SCAN.pdf = null; pintarScan();
+}
+function scanVaciar(){
+  if(!SCAN.pags.length) return;
+  confirmar('¿Botar las ' + SCAN.pags.length + ' hojas?',
+            'Se pierden las que ya fotografiaste. Esto no se puede deshacer.',
+            function(){ SCAN.pags = []; SCAN.pdf = null; pintarScan(); });
+}
+
+/* ── la pantalla ─────────────────────────────────────────────────── */
+function pintarScan(){
+  var c = $('scan-cuerpo'); if(!c) return;
+  var n = SCAN.pags.length;
+  var h = '<h2>🖨️ Escáner</h2>';
+
+  if(!n){
+    h += '<p class="sub">Fotografía la primera hoja. Después te pregunta si hay otra, ' +
+         'y otra, hasta que digas basta. Al final sale un PDF con todas en orden, ' +
+         'con el nombre que le pongas, listo para mandar.</p>';
+    h += '<button class="btn" style="margin-top:18px" onclick="scanAgregar()">📷 Escanear la primera hoja</button>';
+    h += '<div id="scan-msg" style="font-size:13.5px;margin:10px 0 0"></div>';
+    h += '<div class="caja vidrio" style="padding:15px;margin-top:18px">' +
+         '<b>Para qué sirve de verdad</b>' +
+         '<ul class="sub" style="margin:8px 0 0;padding-left:18px;line-height:1.75">' +
+         '<li>Un permiso de trabajo de cuatro hojas, en un solo archivo.</li>' +
+         '<li>El ATS con su lista de firmas atrás.</li>' +
+         '<li>El acta del comité con los acuerdos y las firmas.</li>' +
+         '<li>Un certificado de calibración que te pidió el cliente.</li>' +
+         '</ul></div>';
+    h += '<div class="cam-pies"><button type="button" onclick="ir(\'p-escaneos\')">📁 Documentos guardados</button></div>';
+    c.innerHTML = h;
+    return;
+  }
+
+  h += '<p class="sub">' + n + ' hoja' + (n===1?'':'s') + ' lista' + (n===1?'':'s') +
+       '. En este orden van al PDF: arrástralas con las flechas si alguna quedó al revés.</p>';
+
+  h += '<div class="scan-rejilla">';
+  SCAN.pags.forEach(function(p, i){
+    h += '<div class="scan-hoja">' +
+         '<span class="num">' + (i+1) + '</span>' +
+         '<img src="' + p.listo + '" alt="Hoja ' + (i+1) + '">' +
+         '<span class="bts">' +
+           (i > 0 ? '<button type="button" onclick="scanMover(' + i + ',-1)" aria-label="Subir">↑</button>' : '<span></span>') +
+           '<button type="button" onclick="scanGirar(' + i + ')" aria-label="Girar">↻</button>' +
+           (i < n-1 ? '<button type="button" onclick="scanMover(' + i + ',1)" aria-label="Bajar">↓</button>' : '<span></span>') +
+           '<button type="button" class="mal" onclick="scanQuitar(' + i + ')" aria-label="Quitar">✕</button>' +
+         '</span></div>';
+  });
+  h += '</div>';
+
+  h += '<div id="scan-msg" style="font-size:13.5px;margin:12px 0 0"></div>';
+
+  h += '<button class="btn" style="margin-top:14px" onclick="scanAgregar()">＋ Agregar otra hoja</button>';
+
+  h += '<div class="sec-tit" style="margin-top:20px">Cómo se ven</div>';
+  h += '<div class="esc-modo" style="display:flex">' +
+       _scanBotonModo('scan', 'Escaneo') +
+       _scanBotonModo('gris', 'Blanco y negro') +
+       _scanBotonModo('orig', 'Foto original') +
+       '</div>';
+  h += '<p class="sub" style="margin:8px 0 0;font-size:12.5px">' +
+       'Blanco y negro pesa la mitad y es lo que se manda por WhatsApp sin que se corte.</p>';
+
+  h += '<button class="btn" style="margin-top:20px" onclick="ir(\'p-scan-pdf\')">📄 Exportar como PDF ▸</button>';
+  h += '<button class="btn sec" style="margin-top:9px;color:var(--mal)" onclick="scanVaciar()">Botar todo y empezar de nuevo</button>';
+  c.innerHTML = h;
+}
+function _scanBotonModo(k, et){
+  return '<button type="button" class="esc-m' + (SCAN.modo===k?' on':'') + '" onclick="scanModo(\'' + k + '\')">' + et + '</button>';
+}
+
+/* ── exportar ────────────────────────────────────────────────────── */
+function _scanNombrePorDefecto(){
+  var d = new Date(), dd = function(v){ return (v<10?'0':'') + v; };
+  return 'Escaneo ' + dd(d.getDate()) + '-' + dd(d.getMonth()+1) + '-' + d.getFullYear();
+}
+function prepScanPdf(){
+  var c = $('scan-pdf-cuerpo'); if(!c) return;
+  var n = SCAN.pags.length;
+  if(!n){ ir('p-scan'); return; }
+  var h = '<h2>📄 El PDF</h2>';
+  h += '<p class="sub">' + n + ' hoja' + (n===1?'':'s') + ' en un solo archivo. ' +
+       'Ponle un nombre que se entienda cuando llegue al correo de otro.</p>';
+
+  h += '<div class="caja vidrio" style="padding:15px;margin-top:16px">';
+  h += '<label class="sec-tit" style="margin:0 0 6px">Nombre del archivo</label>';
+  h += '<input id="scan-nombre" maxlength="70" placeholder="Permiso de trabajo en caliente — frente 3" ' +
+       'value="' + escA(SCAN.nombre || _scanNombrePorDefecto()) + '">';
+  h += '<p class="sub" style="margin:2px 0 0;font-size:12.5px">Se guarda como <span id="scan-comose">archivo.pdf</span></p>';
+  h += '</div>';
+
+  h += '<div id="scan-pdf-msg" style="font-size:13.5px;margin:12px 0 0"></div>';
+  h += '<div id="scan-pdf-listo"></div>';
+  h += '<button class="btn" id="scan-armar" style="margin-top:14px" onclick="scanArmar()">Armar el PDF</button>';
+  h += '<button class="btn sec" style="margin-top:9px" onclick="ir(\'p-scan\')">‹ Volver a las hojas</button>';
+  c.innerHTML = h;
+
+  var inp = $('scan-nombre');
+  if(inp){
+    var refrescar = function(){
+      SCAN.nombre = inp.value;
+      var e = $('scan-comose'); if(e) e.textContent = _scanArchivo();
+      SCAN.pdf = null;
+      var l = $('scan-pdf-listo'); if(l) l.innerHTML = '';
+      var b = $('scan-armar'); if(b) b.style.display = '';
+    };
+    inp.oninput = refrescar;
+    refrescar();
+  }
+}
+function _scanArchivo(){
+  var n = (SCAN.nombre || _scanNombrePorDefecto()).trim() || 'escaneo';
+  try{ n = n.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(e){}
+  n = n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return (n || 'escaneo') + '.pdf';
+}
+function _scanMedir(du){
+  return new Promise(function(ok){
+    var im = new Image();
+    im.onload  = function(){ ok({ du:du, w:im.naturalWidth||im.width||1200, h:im.naturalHeight||im.height||1600 }); };
+    im.onerror = function(){ ok({ du:du, w:1200, h:1600 }); };
+    im.src = du;
+  });
+}
+function scanArmar(){
+  if(!SCAN.pags.length || SCAN.armando) return;
+  SCAN.armando = true;
+  var m = $('scan-pdf-msg');
+  if(m){ m.style.color='var(--gris)'; m.textContent='Armando el PDF de ' + SCAN.pags.length + ' hoja' + (SCAN.pags.length===1?'':'s') + '…'; }
+  /* Hay que MEDIR cada imagen antes de meterla. Si se le pregunta el
+     ancho a una imagen que todavía no cargó, devuelve 0 y el PDF sale
+     con las páginas en blanco. */
+  Promise.all(SCAN.pags.map(function(p){ return _scanMedir(p.listo); })).then(function(pags){
+    try{
+      var doc = new jspdf.jsPDF({ unit:'pt', format:'a4' });
+      var W = 595.28, H = 841.89;
+      pags.forEach(function(p, i){
+        if(i) doc.addPage();
+        var e = Math.min(W/p.w, H/p.h), w = p.w*e, h = p.h*e;
+        doc.addImage(p.du, 'JPEG', (W-w)/2, (H-h)/2, w, h, undefined, 'FAST');
+      });
+      var bl = doc.output('blob');
+      SCAN.pdf = { blob: bl, nombre: _scanArchivo(), peso: bl.size };
+      SCAN.armando = false;
+      if(m) m.textContent = '';
+      var b = $('scan-armar'); if(b) b.style.display = 'none';
+      _scanPintarListo();
+    }catch(err){
+      SCAN.armando = false;
+      if(m){ m.style.color='var(--mal)';
+        m.textContent='No se pudo armar el PDF. Prueba en «Blanco y negro», que pesa mucho menos, o quita alguna hoja.'; }
+    }
+  });
+}
+function _scanPeso(b){
+  if(b < 1024*1024) return Math.max(1, Math.round(b/1024)) + ' KB';
+  return (b/1024/1024).toFixed(1).replace('.', ',') + ' MB';
+}
+function _scanPintarListo(){
+  var c = $('scan-pdf-listo'); if(!c || !SCAN.pdf) return;
+  var n = SCAN.pags.length;
+  var h = '<div class="aviso ok" style="margin-top:14px">✅ <b>' + esc(SCAN.pdf.nombre) + '</b>' +
+          '<p class="sub" style="margin:6px 0 0">' + n + ' página' + (n===1?'':'s') + ' · ' +
+          _scanPeso(SCAN.pdf.peso) + '</p></div>';
+  h += '<div class="dos" style="margin-top:12px">' +
+       '<button class="btn" style="margin:0" onclick="scanCompartir()">📲 Compartir</button>' +
+       '<button class="btn sec" style="margin:0" onclick="scanDescargar()">⬇️ Descargar</button></div>';
+  h += '<p class="sub" style="margin:9px 0 0;font-size:12.5px">' +
+       'Compartir abre la lista del celular: WhatsApp, correo, Drive, lo que tengas.</p>';
+  if(SCAN.pdf.peso > 15*1024*1024){
+    h += '<div class="aviso ojo" style="margin-top:12px"><b>Pesa bastante.</b>' +
+         '<p class="sub" style="margin:6px 0 0">Por WhatsApp puede no pasar. Cámbialo a «Blanco y negro» ' +
+         'y vuelve a armarlo: el mismo documento pesa la mitad o menos.</p></div>';
+  }
+  h += '<button class="btn sec" style="margin-top:16px" onclick="scanNuevo()">Escanear otro documento</button>';
+  c.innerHTML = h;
+}
+function scanCompartir(){
+  if(!SCAN.pdf) return;
+  var f;
+  try{ f = new File([SCAN.pdf.blob], SCAN.pdf.nombre, { type:'application/pdf' }); }
+  catch(e){ f = null; }
+  if(f && navigator.share && navigator.canShare && navigator.canShare({ files:[f] })){
+    navigator.share({ files:[f], title:SCAN.pdf.nombre,
+                      text:(SCAN.nombre || 'Documento escaneado') + ' · OBRASST' })
+      .catch(function(){});
+    return;
+  }
+  scanDescargar();
+  aviso('Se descargó el PDF',
+        'Este celular no deja compartir archivos directamente desde la app. El PDF quedó en tus descargas: ' +
+        'ábrelo desde ahí y mándalo por donde quieras.', '⬇️');
+}
+function scanDescargar(){
+  if(!SCAN.pdf) return;
+  try{
+    var u = URL.createObjectURL(SCAN.pdf.blob);
+    var a = document.createElement('a');
+    a.href = u; a.download = SCAN.pdf.nombre;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ try{ URL.revokeObjectURL(u); }catch(e){} }, 4000);
+    try{ tostada('Descargado'); }catch(e){}
+  }catch(e){}
+}
+function scanNuevo(){
+  SCAN.pags = []; SCAN.pdf = null; SCAN.nombre = '';
+  ir('p-scan');
+  setTimeout(scanAgregar, 300);
+}
+
+/* ── desde la cámara: «esto es una hoja, y hay más» ──────────────── */
+function camAEscaner(){
+  if(!CAM_CRUDA) return;
+  var seguir = function(listo){
+    SCAN.pags.push({ orig:CAM_CRUDA, giro:CAM_GIRO, listo:listo });
+    SCAN.modo = CAM_MODO; SCAN.pdf = null;
+    CAM_CRUDA = null; CAM_SELLADA = null; CAM_LIMPIA = null;
+    CAM_LECTURA = null; CAM_MUESTRA = null; CAM_TIPO = ''; CAM_SUGERIDO = '';
+    ir('p-scan');
+    setTimeout(scanAgregar, 320);
+  };
+  var clave = CAM_MODO + '|' + CAM_GIRO;
+  if(CAM_LIMPIA && CAM_LIMPIA.clave === clave){ seguir(CAM_LIMPIA.url); return; }
+  procesarEscaneo(CAM_CRUDA, CAM_MODO, CAM_GIRO).then(seguir, function(){ seguir(CAM_CRUDA); });
+}
+
+/* ══════════════════════════════════════════════════════════════════
    LA CÁMARA  ·  una sola, y la última palabra es del usuario
 
    La primera versión de esto se equivocaba en algo más grave que
@@ -27818,8 +28615,9 @@ function _camAntes(){
   }
 
   h += '<div class="cam-pies">' +
-       '<button type="button" onclick="ir(\'p-escaneos\')">📁 Documentos guardados</button>' +
-       '<button type="button" onclick="ir(\'p-sello\')">⚙️ Qué sale en el sello</button>' +
+       '<button type="button" onclick="ir(\'p-scan\')">🖨️ Escanear varias hojas</button>' +
+       '<button type="button" onclick="ir(\'p-escaneos\')">📁 Documentos</button>' +
+       '<button type="button" onclick="ir(\'p-sello\')">⚙️ El sello</button>' +
        '</div>';
   return h;
 }
@@ -27949,8 +28747,11 @@ function _camTrabajo(){
          _camBotonModo('orig', 'Foto original') +
          '<button type="button" class="esc-m" onclick="camGirar()">↻ Girar</button></div>';
     h += '<button class="btn" style="margin-top:16px" onclick="camAGuardar()">Guardar en Documentos ▸</button>';
-    h += '<p class="sub" style="margin:8px 0 0;font-size:12.5px">Le pones nombre, fecha y de qué es. ' +
-         'Después sale en PDF cuando la mandes.</p>';
+    /* Lo que hace un escáner de verdad: preguntar si hay otra hoja.
+       Un permiso de trabajo tiene cuatro y nadie las manda de a una. */
+    h += '<button class="btn sec" style="margin-top:9px" onclick="camAEscaner()">＋ Tiene más hojas · armar un PDF</button>';
+    h += '<p class="sub" style="margin:8px 0 0;font-size:12.5px">Una sola hoja va a Documentos con su nombre. ' +
+         'Si el documento tiene varias, se juntan todas en un PDF y se manda entero.</p>';
   } else {
     h += '<div class="dos" style="margin-top:16px">' +
          '<button class="btn" style="margin:0" onclick="compartirFotoSello()">📲 Compartir</button>' +
@@ -28255,7 +29056,7 @@ function tomarFoto(op){
   /* «crudo» es de la camara suelta: todavia no sabemos si lo que hay
      delante es una hoja o es obra, asi que no se sella aqui. El GPS SI
      se pide, para que al decidir el sello salga al instante. */
-  CAM.sello = (op.doc || op.crudo) ? false : selloActivo();
+  CAM.sello = (op.doc || op.crudo || op.retrato) ? false : selloActivo();
   CAM.selloDatos = null;
   if(CAM.sello || (op.crudo && selloActivo())){
     /* se pide el GPS al ABRIR, no al disparar: cuando la persona
@@ -30710,6 +31511,7 @@ function ponerIdioma(id){
   try{ guardar(LS_IDIOMA, id); }catch(e){}
   try{ document.documentElement.lang = id; }catch(e2){}
   aplicarIdioma();
+  try{ var _a=document.querySelector('.pantalla.activa'); pintarBarraNav(_a?_a.id:''); }catch(e5){}
   try{ repintarCasa(); }catch(e3){}
   try{ pintarAjustesIdioma(); }catch(e4){}
 }
