@@ -2550,6 +2550,18 @@ html.t-claro .sim-hito{background:#fff}
 .cart-ir .tx b{display:block;font-size:var(--f3)}
 .cart-ir .tx small{display:block;font-size:var(--f2);color:var(--gris);line-height:1.5;margin-top:3px}
 .cart-ir .ch{flex:0 0 auto;color:var(--gris);font-size:17px}
+
+/* ── señalética ── */
+.sen-rej{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;margin-top:4px}
+.sen-c{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;text-align:center;
+  background:rgba(var(--p),.6);border:1px solid rgba(var(--w),.10);border-radius:var(--r2);
+  padding:13px 9px 11px;color:inherit;font:inherit}
+.sen-c b{font-size:12.5px;line-height:1.3;font-weight:700}
+.sen-ic{display:block;line-height:0}
+.sen-ic svg{display:block}
+.sen-tag{font-size:10px;font-style:normal;color:var(--oro);letter-spacing:.04em;text-transform:uppercase}
+.sen-vista{display:flex;justify-content:center;padding:18px;margin-top:14px;border-radius:var(--r2);
+  background:#fff;border:1px solid rgba(var(--w),.10)}
 /* ── el plan, ahora en Ajustes ── */
 .ajp{background:rgba(var(--p),.55);border:1px solid rgba(var(--w),.12);border-radius:var(--r2);
   padding:13px;margin-bottom:10px}
@@ -4959,6 +4971,15 @@ body.carrete .pantalla.llena{padding:0}
   <div id="me-panel"></div>
   <div id="me-lista"></div>
   <div id="me-acciones"></div>
+</section>
+
+<section class="pantalla" id="p-senales">
+  <div class="barra"><span>Señalética</span></div>
+  <div id="sen-cuerpo"></div>
+</section>
+<section class="pantalla" id="p-senal">
+  <div class="barra"><span>La señal</span></div>
+  <div id="sen1-cuerpo"></div>
 </section>
 
 <section class="pantalla" id="p-boletines">
@@ -8501,7 +8522,7 @@ var EMP_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-emp
             'p-brigada':1,'p-camara':1,'p-sello':1,'p-idioma':1,'p-scan':1,'p-scan-pdf':1,'p-cargos':1,'p-simulacros':1,'p-sim-nuevo':1,'p-sim-correr':1,'p-sim-cierre':1,'p-campanas':1,'p-campana':1,
             'p-lista':1,'p-firma-lista':1,'p-listas':1,
             'p-petar':1,'p-petar-nuevo':1,'p-credencial':1,'p-cred-nueva':1,'p-verificar':1,
-            'p-salida':1,'p-boletines':1,'p-bol-vistos':1,'p-boletin':1,'p-carrete':1,'p-buzon-sup':1,'p-aviso-charla':1,'p-empresa':1,'p-msds':1,'p-msds-nueva':1,'p-quim-cat':1,'p-quim-frases':1,
+            'p-salida':1,'p-senales':1,'p-senal':1,'p-boletines':1,'p-bol-vistos':1,'p-boletin':1,'p-carrete':1,'p-buzon-sup':1,'p-aviso-charla':1,'p-empresa':1,'p-msds':1,'p-msds-nueva':1,'p-quim-cat':1,'p-quim-frases':1,
             'p-quimico':1,'p-quim-qr':1,'p-msds-foto':1,'p-compartido':1,'p-puntaje':1,'p-tdm':1,
             'p-programa':1,'p-charlas':1,'p-charla':1,'p-normas':1,'p-norma':1,'p-record':1,
             'p-procedimientos':1,'p-proc':1,
@@ -8930,6 +8951,8 @@ function _ir(p){
   if(p==='p-scan-pdf')prepScanPdf();
   if(p==='p-cargos')pintarCartel();
   if(p==='p-salida')prepSalida();
+  if(p==='p-senales')pintarSenales();
+  if(p==='p-senal')pintarSenal();
   if(p==='p-boletines')prepBoletines();
   if(p==='p-bol-vistos')pintarVistos();
   if(p==='p-boletin')pintarBoletinAbierto();
@@ -20056,6 +20079,7 @@ var CATALOGO_ACCESOS = [
   {k:'asisten',   ic:'📷', et:'Cámara',                        ir:'p-camara',        color:'a-azul',  desde:0, grupo:1},
   /* ── 2. la gente ── */
   {k:'escaner',   ic:'🖨️', et:'Escáner<br>de documentos',     ir:'p-scan',          color:'a-azul',  desde:0, grupo:1},
+  {k:'senales',   ic:'🔺', et:'Señalética<br>de la obra',       ir:'p-senales',       color:'a-rojo',  desde:0, grupo:3},
   {k:'boletines', ic:'📰', et:'Boletines<br>de la obra',       ir:'p-boletines',     color:'a-oro',   desde:0, grupo:1},
   {k:'buzon',     ic:'💬', et:'Buzón de<br>sugerencias',      ir:'p-buzon-sup',     color:'a-viol',  desde:0, grupo:2},
   {k:'personal',  ic:'👷', et:'Mi<br>personal',                ir:'p-trabajadores',  color:'a-verde', desde:0, grupo:2},
@@ -29356,6 +29380,710 @@ function publicarBoletinEvento(op){
       }
       aviso('No se pudo publicar','Revisa la se\u00f1al e int\u00e9ntalo desde Boletines.','\uD83D\uDCF0');
     });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SEÑALÉTICA  ·  NTP 399.010-1 y las personalizadas de la obra
+
+   Dos cosas distintas que hoy se resuelven las dos en una imprenta:
+
+   1) La señal de catálogo. Riesgo eléctrico, caída a distinto nivel,
+      uso obligatorio de casco. Están normadas: forma, color y
+      proporción salen de la NTP 399.010-1 (3.ª ed. 2016), que a su
+      vez se apoya en ISO 3864-1 e ISO 7010.
+
+   2) La que solo sirve en TU obra. «Acceso autorizado al tablero
+      eléctrico» no dice nada si no dice QUIÉN. Con la foto y el
+      nombre del electricista, cualquiera que pase sabe a quién
+      llamar y a quién sacar de ahí.
+
+   ── LO QUE ESTA PANTALLA RESPETA DE LA NORMA ──────────────────────
+   · Prohibición: círculo, fondo blanco, anillo y banda diagonal
+     rojos, símbolo negro. Rojo ≥ 35 % del área (10.3.5). Anillo 10 %
+     del diámetro y banda 8 %, a 45°, de arriba-izquierda a
+     abajo-derecha (ISO 3864-1).
+   · Obligación: círculo azul, símbolo blanco. Azul ≥ 50 % (10.4.3),
+     reborde 1/20 del diámetro (10.4.4).
+   · Advertencia: triángulo equilátero amarillo con banda negra,
+     símbolo negro. Amarillo ≥ 50 % (10.5.4), reborde 1/20 del lado.
+   · Emergencia: cuadrado verde, símbolo blanco. Verde ≥ 50 % (10.6.3).
+   · Contra incendios: cuadrado rojo, símbolo blanco. Rojo ≥ 50 %.
+   · El texto NO va dentro del símbolo (10.2.5). Va acompañándolo, en
+     el cartel (11.1), que es exactamente como se arma acá.
+   · Tamaño según distancia: A ≥ L²/2000, con A en m² y L en metros,
+     entre 5 y 50 m. Bajo 5 m, mínimo 125 cm²; sobre 50 m, 12 500 cm².
+
+   ── LO QUE NO ES ──────────────────────────────────────────────────
+   Los pictogramas están DIBUJADOS acá siguiendo las formas y los
+   colores que manda la norma. No son las láminas maestras de ISO
+   7010, que son material con licencia. Para una señal certificada de
+   fábrica se compra la lámina; esto es para imprimir y pegar hoy, que
+   es lo que hace falta cuando el tablero ya está energizado.
+   ════════════════════════════════════════════════════════════════ */
+
+/* colores de seguridad · aproximación RAL de ISO 3864-4.
+   Lo autoritativo de la NTP son las coordenadas CIE del Anexo A; esto
+   es la traducción práctica que usa la industria. */
+var SEN_COL = {
+  rojo:   [155, 36, 35],
+  azul:   [  0, 83,135],
+  amaril: [249,169,  0],
+  verde:  [ 35,127, 82],
+  blanco: [255,255,255],
+  negro:  [ 26, 26, 27]
+};
+
+/* ── los pictogramas ──────────────────────────────────────────────
+   Se definen UNA vez, en una caja de 0 a 100, y de ahí salen los dos
+   dibujos: el de la pantalla (SVG) y el del PDF (vectores jsPDF). Si
+   se dibujaran dos veces, un día uno de los dos se quedaría viejo. */
+var SEN_PIC = {
+  /* rayo con punta de flecha hacia abajo (W012) */
+  rayo: [ {p:[[62,6],[30,54],[47,54],[36,94],[72,42],[52,42],[62,6]]} ],
+
+  /* silueta que cae desde el borde de una plataforma (W008) */
+  caida: [
+    {p:[[6,84],[46,84],[46,94],[6,94]]},                 /* la plataforma */
+    {c:[70,18,9]},                                        /* cabeza */
+    {p:[[60,30],[80,26],[92,52],[84,56],[74,38],[70,60],[58,56]]},  /* torso y brazo */
+    {p:[[58,56],[74,52],[92,80],[83,86],[66,64],[56,86],[46,80]]}   /* piernas cayendo */
+  ],
+
+  /* dos objetos cayendo sobre una superficie (W035) */
+  objetos: [
+    {p:[[8,80],[92,80],[92,92],[8,92]]},                  /* el suelo */
+    {p:[[22,8],[48,8],[48,34],[22,34]]},                  /* caja 1 */
+    {p:[[54,26],[84,26],[84,52],[54,52]]},                /* caja 2 */
+    {p:[[16,60],[34,60],[30,72],[12,72]]},                /* rebote */
+    {p:[[60,62],[80,62],[76,74],[56,74]]}
+  ],
+
+  /* cabeza de perfil con casco (M014) */
+  casco: [
+    {c:[52,60,26]},                                       /* cabeza */
+    {p:[[12,44],[88,44],[88,52],[12,52]]},                /* ala del casco */
+    {p:[[20,44],[24,26],[40,14],[64,14],[80,26],[84,44]]} /* copa */
+  ],
+
+  /* cara de frente con lentes (M004) */
+  lentes: [
+    {c:[50,44,32]},                                       /* cabeza */
+    {p:[[10,40],[90,40],[90,58],[10,58]]},                /* banda de los lentes */
+    {p:[[24,84],[76,84],[76,94],[24,94]]}                 /* hombros */
+  ],
+
+  /* par de guantes (M009) */
+  guantes: [
+    {p:[[10,38],[20,18],[28,20],[24,40],[30,20],[38,22],[34,42],[42,26],[49,30],[42,52],[42,92],[12,92],[10,38]]},
+    {p:[[90,38],[80,18],[72,20],[76,40],[70,20],[62,22],[66,42],[58,26],[51,30],[58,52],[58,92],[88,92],[90,38]]}
+  ],
+
+  /* bota de seguridad (M008) */
+  bota: [
+    {p:[[24,10],[52,10],[56,58],[88,72],[92,90],[14,90],[14,62],[24,58],[24,10]]},
+    {p:[[14,90],[92,90],[92,96],[14,96]]}                 /* la suela */
+  ],
+
+  /* persona caminando (P080 · debajo de la banda de prohibición) */
+  peaton: [
+    {c:[54,12,10]},
+    {p:[[46,24],[64,24],[78,50],[70,56],[60,38],[60,56],[46,56]]},
+    {p:[[46,54],[62,54],[74,86],[64,90],[54,66],[38,92],[28,86],[46,54]]}
+  ],
+
+  /* extintor con su manguera (F001) */
+  extintor: [
+    {p:[[40,18],[62,18],[62,26],[40,26]]},                /* la válvula */
+    {p:[[36,26],[66,26],[70,40],[70,92],[32,92],[32,40],[36,26]]},
+    {p:[[70,34],[86,40],[90,58],[82,58],[80,46],[70,42]]} /* manguera */
+  ],
+
+  /* figura corriendo hacia la puerta (E001) */
+  corre: [
+    {p:[[74,8],[94,8],[94,94],[74,94],[74,86],[86,86],[86,16],[74,16]]},  /* la puerta */
+    {c:[34,14,9]},
+    {p:[[24,26],[44,24],[64,44],[57,52],[40,38],[40,54],[24,54]]},
+    {p:[[24,52],[42,50],[54,82],[44,88],[34,64],[18,88],[8,82],[24,52]]}
+  ],
+
+  /* cuatro flechas convergiendo sobre un grupo (E007) */
+  reunion: [
+    {p:[[50,2],[62,20],[54,20],[54,34],[46,34],[46,20],[38,20]]},
+    {p:[[98,50],[80,62],[80,54],[66,54],[66,46],[80,46],[80,38]]},
+    {p:[[50,98],[38,80],[46,80],[46,66],[54,66],[54,80],[62,80]]},
+    {p:[[2,50],[20,38],[20,46],[34,46],[34,54],[20,54],[20,62]]},
+    {c:[42,44,6]}, {c:[58,44,6]},
+    {p:[[34,52],[66,52],[70,66],[30,66]]}
+  ],
+
+  /* cruz de primeros auxilios (E003) */
+  cruz: [ {p:[[38,8],[62,8],[62,38],[92,38],[92,62],[62,62],[62,92],[38,92],[38,62],[8,62],[8,38],[38,38]]} ]
+};
+
+/* ── el catálogo ──────────────────────────────────────────────────
+   `g` es el grupo de la NTP, y de ahí salen forma y colores. */
+var SENALES = [
+  { k:'electrico', g:'adv', pic:'rayo',     n:'Riesgo eléctrico',
+    t:'RIESGO ELÉCTRICO', iso:'W012',
+    d:'Tableros, celdas, líneas energizadas y todo punto con partes vivas.' },
+  { k:'desnivel',  g:'adv', pic:'caida',    n:'Caída a distinto nivel',
+    t:'RIESGO DE CAÍDA A DISTINTO NIVEL', iso:'W008',
+    d:'Bordes de losa, vanos, plataformas, escaleras y accesos a techo.' },
+  { k:'objetos',   g:'adv', pic:'objetos',  n:'Caída de objetos',
+    t:'CUIDADO: CAÍDA DE OBJETOS', iso:'W035',
+    d:'Debajo de andamios, izajes y frentes en altura.' },
+
+  { k:'casco',     g:'obl', pic:'casco',    n:'Uso obligatorio de casco',
+    t:'USO OBLIGATORIO DE CASCO DE SEGURIDAD', iso:'M014', d:'' },
+  { k:'lentes',    g:'obl', pic:'lentes',   n:'Protección ocular',
+    t:'USO OBLIGATORIO DE PROTECCIÓN OCULAR', iso:'M004', d:'' },
+  { k:'guantes',   g:'obl', pic:'guantes',  n:'Guantes de seguridad',
+    t:'USO OBLIGATORIO DE GUANTES DE SEGURIDAD', iso:'M009', d:'' },
+  { k:'botas',     g:'obl', pic:'bota',     n:'Calzado de seguridad',
+    t:'USO OBLIGATORIO DE CALZADO DE SEGURIDAD', iso:'M008', d:'' },
+
+  { k:'noautoriz', g:'proh', pic:'peaton',  n:'Solo personal autorizado',
+    t:'PROHIBIDO EL PASO A PERSONAL NO AUTORIZADO', iso:'P080',
+    d:'La que va en el tablero eléctrico, la subestación y el almacén de químicos.',
+    gente:true },
+
+  { k:'extintor',  g:'fuego', pic:'extintor', n:'Extintor',
+    t:'EXTINTOR', iso:'F001', d:'' },
+
+  { k:'salida',    g:'emer', pic:'corre',   n:'Salida de emergencia',
+    t:'SALIDA DE EMERGENCIA', iso:'E001', d:'' },
+  { k:'reunion',   g:'emer', pic:'reunion', n:'Punto de reunión',
+    t:'PUNTO DE REUNIÓN EN CASO DE EMERGENCIA', iso:'E007', d:'' },
+  { k:'botiquin',  g:'emer', pic:'cruz',    n:'Botiquín / primeros auxilios',
+    t:'BOTIQUÍN DE PRIMEROS AUXILIOS', iso:'E003', d:'' }
+];
+
+var SEN_GRUPOS = {
+  adv:   { n:'Advertencia',            forma:'triangulo', fondo:'amaril', simbolo:'negro',  borde:'negro' },
+  obl:   { n:'Obligación',             forma:'circulo',   fondo:'azul',   simbolo:'blanco', borde:'blanco' },
+  proh:  { n:'Prohibición',            forma:'prohib',    fondo:'blanco', simbolo:'negro',  borde:'rojo' },
+  emer:  { n:'Emergencia',             forma:'cuadro',    fondo:'verde',  simbolo:'blanco', borde:'blanco' },
+  fuego: { n:'Protección contra incendios', forma:'cuadro', fondo:'rojo', simbolo:'blanco', borde:'blanco' }
+};
+
+function senalPorK(k){ for(var i=0;i<SENALES.length;i++) if(SENALES[i].k===k) return SENALES[i]; return SENALES[0]; }
+function _rgb(k){ var c=SEN_COL[k]||[0,0,0]; return 'rgb('+c[0]+','+c[1]+','+c[2]+')'; }
+
+/* ══════════ EL DIBUJO EN SVG (la pantalla) ═══════════════════════ */
+function senalSVG(k, tam){
+  var S = senalPorK(k), G = SEN_GRUPOS[S.g];
+  var W = tam || 120, h = '<svg viewBox="0 0 100 100" width="'+W+'" height="'+W+'" role="img" aria-label="'+escA(S.n)+'">';
+
+  function pic(color, cx, cy, lado){
+    var p = SEN_PIC[S.pic] || [], out = '';
+    p.forEach(function(f){
+      if(f.p){
+        out += '<polygon points="' + f.p.map(function(q){
+          return (cx + (q[0]-50)*lado/100).toFixed(2)+','+(cy + (q[1]-50)*lado/100).toFixed(2);
+        }).join(' ') + '" fill="'+color+'"/>';
+      }else if(f.c){
+        out += '<circle cx="'+(cx+(f.c[0]-50)*lado/100).toFixed(2)+'" cy="'+(cy+(f.c[1]-50)*lado/100).toFixed(2)+
+               '" r="'+(f.c[2]*lado/100).toFixed(2)+'" fill="'+color+'"/>';
+      }
+    });
+    return out;
+  }
+
+  if(G.forma==='triangulo'){
+    /* triángulo equilátero con el símbolo adentro */
+    h += '<polygon points="50,4 96,86 4,86" fill="'+_rgb('negro')+'"/>';
+    h += '<polygon points="50,13 88,81 12,81" fill="'+_rgb(G.fondo)+'"/>';
+    h += pic(_rgb(G.simbolo), 50, 60, 54);
+  }else if(G.forma==='circulo'){
+    h += '<circle cx="50" cy="50" r="47" fill="'+_rgb(G.fondo)+'"/>';
+    h += '<circle cx="50" cy="50" r="47" fill="none" stroke="'+_rgb('blanco')+'" stroke-width="4.7"/>';
+    h += pic(_rgb(G.simbolo), 50, 50, 56);
+  }else if(G.forma==='prohib'){
+    /* anillo 10 % del diámetro, banda 8 %, a 45° */
+    h += '<circle cx="50" cy="50" r="47" fill="'+_rgb('blanco')+'"/>';
+    h += '<circle cx="50" cy="50" r="42" fill="none" stroke="'+_rgb('rojo')+'" stroke-width="10"/>';
+    h += pic(_rgb(G.simbolo), 50, 50, 48);
+    h += '<line x1="20" y1="20" x2="80" y2="80" stroke="'+_rgb('rojo')+'" stroke-width="8"/>';
+  }else{
+    h += '<rect x="2" y="2" width="96" height="96" rx="3" fill="'+_rgb(G.fondo)+'"/>';
+    h += '<rect x="6.8" y="6.8" width="86.4" height="86.4" rx="2" fill="none" stroke="'+_rgb('blanco')+'" stroke-width="4.8"/>';
+    h += pic(_rgb(G.simbolo), 50, 50, 62);
+  }
+  return h + '</svg>';
+}
+
+/* ══════════ EL DIBUJO EN PDF (mismas figuras) ════════════════════ */
+function _senPicPDF(doc, S, colRGB, cx, cy, lado){
+  var p = SEN_PIC[S.pic] || [];
+  doc.setFillColor(colRGB[0], colRGB[1], colRGB[2]);
+  p.forEach(function(f){
+    if(f.p){
+      var pts = f.p.map(function(q){ return [cx + (q[0]-50)*lado/100, cy + (q[1]-50)*lado/100]; });
+      var rel = [];
+      for(var i=1;i<pts.length;i++) rel.push([pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]]);
+      doc.lines(rel, pts[0][0], pts[0][1], [1,1], 'F', true);
+    }else if(f.c){
+      doc.circle(cx + (f.c[0]-50)*lado/100, cy + (f.c[1]-50)*lado/100, f.c[2]*lado/100, 'F');
+    }
+  });
+}
+
+/* dibuja la señal (solo el pictograma normado) en un cuadrado de lado L */
+function senalPDF(doc, k, x, y, L){
+  var S = senalPorK(k), G = SEN_GRUPOS[S.g];
+  var C = function(n){ return SEN_COL[n]; };
+  var cx = x + L/2, cy = y + L/2;
+
+  if(G.forma==='triangulo'){
+    var h = L*0.866;                       /* alto de un equilátero de lado L */
+    var yb = y + (L-h)/2;
+    var tri = function(k2, enc){
+      var a = [cx, yb + enc*1.2],
+          b = [x + L - enc, yb + h - enc*0.6],
+          c = [x + enc,     yb + h - enc*0.6];
+      doc.setFillColor(k2[0],k2[1],k2[2]);
+      doc.lines([[b[0]-a[0], b[1]-a[1]], [c[0]-b[0], c[1]-b[1]]], a[0], a[1], [1,1], 'F', true);
+    };
+    tri(C('negro'), 0);
+    tri(C('amaril'), L*0.05);              /* reborde = 1/20 del lado */
+    _senPicPDF(doc, S, C('negro'), cx, yb + h*0.615, L*0.52);
+  }else if(G.forma==='circulo'){
+    /* ══ EL ANILLO SE DIBUJA CON DOS CÍRCULOS LLENOS ═══════════════
+       jsPDF arma un círculo con cuatro curvas y, con un trazo grueso,
+       la costura del arranque asoma como una rayita a la derecha. Se
+       vio en la primera prueba. Dos rellenos, uno encima del otro, no
+       tienen costura y además dan el grosor exacto que pide la norma. */
+    doc.setFillColor(255,255,255); doc.circle(cx, cy, L/2, 'F');
+    doc.setFillColor(C('azul')[0],C('azul')[1],C('azul')[2]);
+    doc.circle(cx, cy, L/2 - L/20, 'F');                     /* reborde 1/20 */
+    _senPicPDF(doc, S, C('blanco'), cx, cy, L*0.54);
+  }else if(G.forma==='prohib'){
+    doc.setFillColor(C('rojo')[0],C('rojo')[1],C('rojo')[2]);
+    doc.circle(cx, cy, L/2, 'F');                            /* el anillo... */
+    doc.setFillColor(255,255,255);
+    doc.circle(cx, cy, L/2 - L*0.10, 'F');                   /* ...de 10 % */
+    _senPicPDF(doc, S, C('negro'), cx, cy, L*0.46);
+    /* la banda: un rectángulo girado 45°, sin costuras ni remates */
+    var r = L/2 - L*0.10, an = L*0.04, k = 0.7071;
+    var a = [cx - r*k, cy - r*k], b = [cx + r*k, cy + r*k];
+    var nx = an*k, ny = -an*k;
+    doc.setFillColor(C('rojo')[0],C('rojo')[1],C('rojo')[2]);
+    doc.lines([[ (b[0]+nx)-(a[0]+nx), (b[1]+ny)-(a[1]+ny) ],
+               [ (b[0]-nx)-(b[0]+nx), (b[1]-ny)-(b[1]+ny) ],
+               [ (a[0]-nx)-(b[0]-nx), (a[1]-ny)-(b[1]-ny) ]],
+              a[0]+nx, a[1]+ny, [1,1], 'F', true);
+  }else{
+    var col = C(G.fondo);
+    doc.setFillColor(col[0],col[1],col[2]);
+    doc.rect(x, y, L, L, 'F');
+    doc.setDrawColor(255,255,255); doc.setLineWidth(L/20);
+    doc.rect(x + L/40, y + L/40, L - L/20, L - L/20, 'S');
+    _senPicPDF(doc, S, C('blanco'), cx, cy, L*0.60);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LA PANTALLA
+   ════════════════════════════════════════════════════════════════ */
+var SEN = { k:'', texto:'', sub:'', tam:'A4', porHoja:1, gente:[], busca:'', pdf:null };
+
+/* los tamaños y cuántas señales entran en cada hoja.
+   El área que ocupa cada señal decide hasta qué distancia se lee:
+   A ≥ L²/2000 (NTP 13), con A en m² y L en metros. */
+var SEN_TAM = [
+  { k:'A3', n:'A3', w:297, h:420 },
+  { k:'A4', n:'A4', w:210, h:297 },
+  { k:'A5', n:'A5', w:148, h:210 }
+];
+function senTamPorK(k){ for(var i=0;i<SEN_TAM.length;i++) if(SEN_TAM[i].k===k) return SEN_TAM[i]; return SEN_TAM[1]; }
+
+/* cuántas caben, de verdad, en esa hoja */
+function senRejilla(tam, porHoja){
+  var opciones = { 1:[1,1], 2:[1,2], 4:[2,2], 6:[2,3], 8:[2,4] };
+  return opciones[porHoja] || [1,1];
+}
+/* hasta qué distancia se lee una señal de lado `lado` mm, según la NTP.
+   Se devuelve el MENOR de los dos criterios (la fórmula y el Anexo C
+   no concuerdan entre sí, y quedarse con el más exigente es lo que
+   protege al que la lee). */
+function senDistancia(ladoMM){
+  var aM2 = (ladoMM/1000) * (ladoMM/1000);
+  var L = Math.sqrt(aM2 * 2000);
+  if(L > 50) L = 50;
+  return L;
+}
+
+function abrirSenales(){ ir('p-senales'); }
+
+function pintarSenales(){
+  var c = $('sen-cuerpo'); if(!c) return;
+  var h = '<h2>🔺 Señalética</h2>';
+  h += '<p class="sub">Las señales de la NTP 399.010-1, listas para imprimir, y las tuyas: '+
+       'la del tablero con la foto del electricista que sí puede tocarlo.</p>';
+
+  var grupos = ['adv','obl','proh','fuego','emer'];
+  grupos.forEach(function(g){
+    var lista = SENALES.filter(function(s){ return s.g===g; });
+    if(!lista.length) return;
+    h += '<div class="sec-tit" style="margin-top:20px">'+esc(SEN_GRUPOS[g].n)+'</div>';
+    h += '<div class="sen-rej">';
+    lista.forEach(function(s){
+      h += '<button type="button" class="sen-c" onclick="abrirSenal(\''+s.k+'\')">'+
+           '<span class="sen-ic">'+senalSVG(s.k, 72)+'</span>'+
+           '<b>'+esc(s.n)+'</b>'+
+           (s.gente?'<i class="sen-tag">con fotos</i>':'')+
+           '</button>';
+    });
+    h += '</div>';
+  });
+
+  h += '<div class="caja vidrio" style="padding:15px;margin-top:22px">'+
+       '<b>Sobre estos dibujos, sin adornos.</b>'+
+       '<p class="sub" style="margin:7px 0 0;line-height:1.6">Están hechos siguiendo la forma, el color y '+
+       'las proporciones que manda la NTP 399.010-1 (círculo azul con reborde de 1/20 del diámetro, '+
+       'triángulo amarillo con banda negra, anillo rojo del 10 % y banda del 8 % a 45°). '+
+       '<b>No son las láminas maestras de ISO 7010</b>, que son material con licencia. '+
+       'Sirven para imprimir y pegar hoy; si necesitas una señal certificada de fábrica, se compra.</p></div>';
+  c.innerHTML = h;
+}
+
+function abrirSenal(k){
+  var S = senalPorK(k);
+  SEN = { k:k, texto:S.t, sub:'', tam:'A4', porHoja:1, gente:[], busca:'', pdf:null };
+  ir('p-senal');
+}
+
+function pintarSenal(){
+  var c = $('sen1-cuerpo'); if(!c) return;
+  if(!SEN.k){ ir('p-senales'); return; }
+  var S = senalPorK(SEN.k), T = senTamPorK(SEN.tam);
+  var LY = senLayout(), lado = LY.lado;
+
+  var h = '<h2>'+esc(S.n)+'</h2>';
+  h += '<p class="sub">'+(S.d ? esc(S.d)+' · ' : '')+'Grupo de '+esc(SEN_GRUPOS[S.g].n).toLowerCase()+
+       (S.iso ? ' · referencia ISO 7010 '+esc(S.iso) : '')+'.</p>';
+
+  h += '<div class="sen-vista">'+senalSVG(SEN.k, 150)+'</div>';
+
+  h += '<label style="margin-top:16px">El texto del cartel</label>'+
+       '<input id="sen-t" maxlength="90" value="'+escA(SEN.texto)+'" oninput="SEN.texto=this.value">'+
+       '<p class="sub" style="margin:6px 0 0;font-size:12px">La norma no deja poner texto <b>dentro</b> del '+
+       'símbolo (10.2.5), pero sí acompañándolo en el cartel (11.1). Así va acá.</p>';
+
+  h += '<label style="margin-top:12px">Renglón de abajo (opcional)</label>'+
+       '<input id="sen-s" maxlength="90" placeholder="Solo el electricista autorizado · Anexo 3 del PETS-14" '+
+       'value="'+escA(SEN.sub)+'" oninput="SEN.sub=this.value">';
+
+  /* ── las personas autorizadas ── */
+  if(S.gente){
+    h += '<div class="sec-tit" style="margin-top:20px">¿Quién está autorizado? <span style="color:var(--oro)">'+
+         SEN.gente.length+'</span></div>';
+    h += '<p class="sub" style="margin:-4px 0 8px">Salen con su foto y su nombre debajo de la señal. '+
+         'Un cartel que dice «solo personal autorizado» y no dice quién, no autoriza a nadie ni impide nada.</p>';
+    h += '<div class="cart-busca"><span>🔎</span><input id="sen-q" placeholder="Buscar por nombre o DNI" '+
+         'autocomplete="off" value="'+escA(SEN.busca)+'" oninput="senBuscar(this.value)"></div>';
+    h += '<div id="sen-lista" class="cart-lista"></div>';
+  }
+
+  /* ── tamaño ── */
+  h += '<div class="sec-tit" style="margin-top:22px">¿De qué tamaño?</div>';
+  h += '<div class="ch-chips">';
+  SEN_TAM.forEach(function(t){
+    h += '<button type="button" class="ch-chip'+(SEN.tam===t.k?' on':'')+'" onclick="senTam(\''+t.k+'\')">'+
+         t.n+' <small style="opacity:.75">'+t.w+'×'+t.h+' mm</small></button>';
+  });
+  h += '</div>';
+
+  h += '<div class="sec-tit" style="margin-top:16px">¿Cuántas por hoja?</div>';
+  h += '<div class="ch-chips">';
+  [1,2,4,6].forEach(function(n){
+    h += '<button type="button" class="ch-chip'+(SEN.porHoja===n?' on':'')+'" onclick="senPorHoja('+n+')">'+n+'</button>';
+  });
+  h += '</div>';
+
+  var dist = senDistancia(lado);
+  h += '<div class="aviso'+(dist<5?' ojo':'')+'" style="margin-top:14px">'+
+       '<b>Señal de '+Math.round(lado)+' × '+Math.round(lado)+' mm</b>'+
+       '<p class="sub" style="margin:6px 0 0;line-height:1.6">Se lee bien hasta unos <b>'+
+       (dist<5 ? 'menos de 5' : Math.round(dist))+' metros</b>. '+
+       'Sale de la fórmula de la NTP: el área tiene que ser al menos la distancia al cuadrado dividida entre 2000. '+
+       (dist<5 ? 'Para menos de 5 m la norma pide 125 cm² como mínimo; esta señal queda por debajo, así que solo sirve de cerca.' : '')+
+       '</p></div>';
+
+  var emp = (typeof empleador==='function') ? empleador() : {};
+  if(emp.logo){
+    h += '<p class="sub" style="margin:12px 0 0;font-size:12.5px">Lleva el logo de tu empresa en la cabecera, '+
+         'fuera del pictograma: la norma no deja tapar ni alterar el símbolo.</p>';
+  }else{
+    h += '<div class="aviso" style="margin-top:12px"><b>Sin logo de la empresa.</b>'+
+         '<p class="sub" style="margin:6px 0 0">Cárgalo en Datos de mi empresa y sale en todos los carteles.</p>'+
+         '<button class="btn sec" style="margin:9px 0 0" onclick="ir(\'p-empleador\')">Ir a Datos de mi empresa</button></div>';
+  }
+
+  h += '<p class="sub" id="sen-msg" style="margin:12px 0 0;min-height:18px"></p>';
+  h += '<button class="btn" style="margin:4px 0 0" onclick="senArmar()">📄 Armar el cartel</button>';
+  h += '<div id="sen-listo"></div>';
+  h += '<button class="btn sec" style="margin-top:14px" onclick="ir(\'p-senales\')">Volver a las señales</button>';
+  c.innerHTML = h;
+  if(S.gente) _senPintarLista();
+}
+
+function senTam(k){ SEN.tam=k; SEN.pdf=null; pintarSenal(); }
+function senPorHoja(n){ SEN.porHoja=n; SEN.pdf=null; pintarSenal(); }
+function senBuscar(v){ SEN.busca=v; _senPintarLista(); }
+
+/* ══ UNA SOLA CUENTA DEL REPARTO ═══════════════════════════════════
+   La pantalla decía «186 mm» y el PDF salía con 164: eran dos cuentas
+   distintas del mismo reparto. Ahora es una, y las dos la llaman. */
+function senLayout(){
+  var S = senalPorK(SEN.k), T = senTamPorK(SEN.tam), rej = senRejilla(SEN.tam, SEN.porHoja);
+  var M = 12, hueco = 8;
+  var emp = (typeof empleador==='function') ? empleador() : {};
+  var obra = (typeof nombreDeLaObra==='function') ? nombreDeLaObra() : '';
+  var hCab = 0;
+  if(emp.logo || emp.razon || obra) hCab = ((SEN.porHoja===1) ? 16 : 12) + 8;
+  var arriba = M + hCab, pie = 9;
+  var anchoCel = (T.w - M*2 - hueco*(rej[0]-1)) / rej[0];
+  var altoCel  = (T.h - arriba - M - pie - hueco*(rej[1]-1)) / rej[1];
+
+  var n = (S.gente ? SEN.gente.length : 0);
+  var fw = 0, fh = 0, altoFotos = 0;
+  if(n){
+    fw = Math.min((anchoCel - 6*(n-1)) / n, 40);
+    fh = fw * 4/3;
+    altoFotos = fh + 12;                 /* la foto, el nombre y el puesto */
+  }
+  var altoTexto = Math.min(30, Math.max(14, (altoCel - altoFotos) * 0.22));
+  var lado = Math.min(anchoCel, altoCel - altoTexto - altoFotos);
+  if(lado < 20) lado = Math.max(20, anchoCel*0.6);
+  return { T:T, rej:rej, M:M, hueco:hueco, arriba:arriba, pie:pie,
+           anchoCel:anchoCel, altoCel:altoCel, lado:lado,
+           altoTexto:altoTexto, altoFotos:altoFotos, fw:fw, fh:fh, hCab:hCab };
+}
+
+function _senPintarLista(){
+  var c = $('sen-lista'); if(!c) return;
+  var todos = (typeof trabsLocal==='function' ? trabsLocal() : [])
+              .filter(function(t){ return (t.estatus||'activo')!=='cesado'; });
+  var q = _cartNorm(SEN.busca).trim(), ps = q?q.split(/\s+/):[];
+  var lista = todos.filter(function(t){
+    if(!ps.length) return true;
+    var txt=_cartNorm((t.nombre||'')+' '+(t.dni||'')+' '+(t.puesto||'')+' '+(t.area||''));
+    for(var i=0;i<ps.length;i++) if(txt.indexOf(ps[i])<0) return false;
+    return true;
+  });
+  if(!todos.length){
+    c.innerHTML = '<div class="aviso ojo"><b>Todavía no hay personal.</b>'+
+      '<p class="sub" style="margin:7px 0 0">El cartel sale igual, pero sin nombres. '+
+      'Registra a tu gente y tómale la foto desde su ficha.</p></div>';
+    return;
+  }
+  if(!lista.length){ c.innerHTML = '<p class="sub" style="margin:10px 0 0">Nadie con «'+esc(SEN.busca)+'».</p>'; return; }
+  var h='';
+  lista.forEach(function(t){
+    var on = SEN.gente.indexOf(t.id) > -1;
+    var ini = (t.nombre||'?').trim().split(/\s+/).slice(0,2).map(function(x){ return x.charAt(0); }).join('').toUpperCase();
+    h += '<button type="button" class="cart-t'+(on?' on':'')+'" onclick="senElegir(\''+t.id+'\')">'+
+         '<span class="ini" id="sen-ini-'+t.id+'">'+esc(ini)+'</span>'+
+         '<span class="tx"><b>'+esc(t.nombre||'')+'</b><small>'+esc(t.dni||'sin DNI')+
+         (t.puesto?' · '+esc(t.puesto):'')+'</small></span>'+
+         '<span class="tic">'+(on?'✓':'')+'</span></button>';
+  });
+  c.innerHTML = h;
+  lista.forEach(function(t){
+    fotoTrabLeer(t.id).then(function(du){
+      if(!du) return;
+      var e = $('sen-ini-'+t.id); if(!e) return;
+      e.innerHTML = '<img src="'+du+'" alt="">'; e.className='ini con';
+    });
+  });
+}
+function senElegir(id){
+  var i = SEN.gente.indexOf(id);
+  if(i>-1) SEN.gente.splice(i,1); else SEN.gente.push(id);
+  SEN.pdf = null;
+  _senPintarLista();
+  var t = $('sen-lista'); if(t) pintarSenal();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   EL CARTEL EN PDF
+
+   Cada señal ocupa su casilla: el pictograma normado arriba y el
+   texto debajo, nunca encima. El logo de la empresa va en la cabecera
+   de la hoja, no sobre el símbolo: la norma prohíbe alterarlo.
+   ════════════════════════════════════════════════════════════════ */
+function senArmar(){
+  var m = $('sen-msg'); if(m){ m.style.color='var(--gris)'; m.textContent='Armando el cartel…'; }
+  var S = senalPorK(SEN.k);
+  var ids = S.gente ? SEN.gente.slice() : [];
+  Promise.all(ids.map(function(id){
+    return fotoTrabLeer(id).then(function(du){ return { id:id, foto:du }; });
+  })).then(function(fotos){
+    try{
+      _senDibujar(fotos);
+      if(m) m.textContent='';
+      var T = senTamPorK(SEN.tam);
+      var c = $('sen-listo');
+      if(c) c.innerHTML =
+        '<div class="aviso ok" style="margin-top:14px">✅ <b>'+esc(SEN.texto||S.n)+'</b>'+
+        '<p class="sub" style="margin:6px 0 0">'+SEN.porHoja+' señal'+(SEN.porHoja===1?'':'es')+
+        ' en una hoja '+T.n+'</p></div>'+
+        '<div class="dos" style="margin-top:12px">'+
+        '<button class="btn" style="margin:0" onclick="senCompartir()">📲 Compartir</button>'+
+        '<button class="btn sec" style="margin:0" onclick="senImprimir()">🖨️ Imprimir</button></div>'+
+        '<p class="sub" style="margin:9px 0 0;font-size:12.5px">Imprime al 100 %, sin «ajustar a la página»: '+
+        'si la impresora la encoge, el tamaño deja de cumplir la norma.</p>';
+    }catch(e){
+      if(m){ m.style.color='var(--mal)'; m.textContent='No se pudo armar: '+String(e && e.message || e); }
+    }
+  });
+}
+
+function _senDibujar(fotos){
+  var S = senalPorK(SEN.k), T = senTamPorK(SEN.tam), rej = senRejilla(SEN.tam, SEN.porHoja);
+  var LY = senLayout();
+  var doc = new jspdf.jsPDF({ unit:'mm', format:[T.w, T.h], orientation:'portrait' });
+  var M = LY.M, hueco = LY.hueco;
+  var emp = (typeof empleador==='function') ? empleador() : {};
+  var obra = (typeof nombreDeLaObra==='function') ? nombreDeLaObra() : '';
+
+  /* ── la cabecera: logo y empresa, NUNCA encima del símbolo ── */
+  var yTop = M;
+  var hCab = 0;
+  if(emp.logo || emp.razon || obra){
+    hCab = (SEN.porHoja === 1) ? 16 : 12;
+    if(emp.logo){
+      try{ doc.addImage(emp.logo, M, yTop, hCab*1.9, hCab, undefined, 'FAST'); }catch(e){}
+    }
+    doc.setFont('helvetica','bold'); doc.setFontSize(SEN.porHoja===1 ? 10.5 : 8.6);
+    doc.setTextColor(40,48,56);
+    doc.text(String(emp.razon || '').toUpperCase(), T.w - M, yTop + hCab*0.42, { align:'right', maxWidth: T.w - M*2 - hCab*2.2 });
+    doc.setFont('helvetica','normal'); doc.setFontSize(SEN.porHoja===1 ? 8.4 : 7.2);
+    doc.setTextColor(120,130,140);
+    if(obra) doc.text(obra, T.w - M, yTop + hCab*0.86, { align:'right', maxWidth: T.w - M*2 - hCab*2.2 });
+    doc.setDrawColor(215,222,228); doc.setLineWidth(0.4);
+    doc.line(M, yTop + hCab + 3, T.w - M, yTop + hCab + 3);
+    hCab += 8;
+  }
+
+  var arriba = LY.arriba, pie = LY.pie;
+  var anchoCel = LY.anchoCel, altoCel = LY.altoCel;
+  var hayGente = !!(S.gente && fotos.length);
+  var altoFotos = LY.altoFotos, altoTexto = LY.altoTexto, lado = LY.lado;
+
+  for(var i=0; i<SEN.porHoja; i++){
+    var col = i % rej[0], fil = Math.floor(i / rej[0]);
+    var x0 = M + col*(anchoCel + hueco);
+    var y0 = arriba + fil*(altoCel + hueco);
+    var sx = x0 + (anchoCel - lado)/2;
+
+    senalPDF(doc, SEN.k, sx, y0, lado);
+
+    /* el texto, DEBAJO del símbolo. Un triángulo equilátero mide 0,866
+       de alto: si el texto se pone al final de la casilla cuadrada,
+       queda un hueco de aire que nadie pidió. */
+    var altoReal = (SEN_GRUPOS[S.g].forma === 'triangulo')
+                 ? (lado + lado*0.866)/2 : lado;
+    var ty = y0 + altoReal + altoTexto*0.40;
+    doc.setFont('helvetica','bold');
+    var ft = Math.max(7, Math.min(16, lado*0.115));
+    doc.setFontSize(ft); doc.setTextColor(24,28,34);
+    var lin = doc.splitTextToSize(String(SEN.texto||S.t).toUpperCase(), anchoCel - 4);
+    lin.slice(0,3).forEach(function(l){
+      doc.text(l, x0 + anchoCel/2, ty, { align:'center' }); ty += ft*0.42;
+    });
+    if(SEN.sub){
+      doc.setFont('helvetica','normal');
+      var fs = Math.max(6, ft*0.62);
+      doc.setFontSize(fs); doc.setTextColor(110,120,130);
+      doc.splitTextToSize(SEN.sub, anchoCel - 4).slice(0,2).forEach(function(l){
+        doc.text(l, x0 + anchoCel/2, ty + 1, { align:'center' }); ty += fs*0.42;
+      });
+    }
+
+    /* las personas autorizadas, con su foto */
+    if(hayGente){
+      var trabs = (typeof trabsLocal==='function' ? trabsLocal() : []), porId = {};
+      trabs.forEach(function(t){ porId[t.id]=t; });
+      var n = fotos.length;
+      var fw = LY.fw || Math.min((anchoCel - 6*(n-1)) / n, 40);
+      var fh = LY.fh || fw * 4/3;
+      var anchoFila = n*fw + 6*(n-1);
+      var fx = x0 + (anchoCel - anchoFila)/2;
+      var fy = y0 + altoCel - altoFotos + 2;
+      fotos.forEach(function(f, j){
+        var px = fx + j*(fw+6), t = porId[f.id] || {};
+        doc.setFillColor(238,241,244);
+        doc.roundedRect(px, fy, fw, fh, 1.6, 1.6, 'F');
+        if(f.foto){ try{ doc.addImage(f.foto, 'JPEG', px, fy, fw, fh, undefined, 'FAST'); }catch(e){} }
+        else{
+          var ini=(t.nombre||'?').trim().split(/\s+/).slice(0,2).map(function(w){return w.charAt(0);}).join('').toUpperCase();
+          doc.setTextColor(168,178,190); doc.setFont('helvetica','bold');
+          doc.setFontSize(Math.min(20, fw*0.7));
+          doc.text(ini, px+fw/2, fy+fh/2+fw*0.22, {align:'center'});
+        }
+        doc.setDrawColor(206,214,222); doc.setLineWidth(0.3);
+        doc.roundedRect(px, fy, fw, fh, 1.6, 1.6, 'S');
+        doc.setFont('helvetica','bold'); doc.setFontSize(Math.max(5.4, Math.min(8, fw*0.20)));
+        doc.setTextColor(24,28,34);
+        var nom = doc.splitTextToSize((t.nombre||'').trim(), fw+4);
+        var ny = fy + fh + 3.2;
+        nom.slice(0,2).forEach(function(l){ doc.text(l, px+fw/2, ny, {align:'center'}); ny += 3; });
+        if(t.puesto){
+          doc.setFont('helvetica','normal'); doc.setFontSize(Math.max(4.8, Math.min(6.6, fw*0.16)));
+          doc.setTextColor(120,130,140);
+          doc.text(t.puesto, px+fw/2, ny, {align:'center', maxWidth: fw+4});
+        }
+      });
+    }
+  }
+
+  /* el pie, con la norma y el tamaño real */
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.6);
+  doc.setTextColor(150,158,166);
+  var d = senDistancia(lado);
+  doc.text('NTP 399.010-1 · señal de ' + Math.round(lado) + ' mm, legible hasta ~' +
+           (d<5?'5':Math.round(d)) + ' m · imprimir al 100 % · OBRASST',
+           T.w/2, T.h - 6, { align:'center' });
+
+  var slug = String(SEN.texto || S.n).normalize('NFD').replace(/[̀-ͯ]/g,'')
+             .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,42);
+  SEN.pdf = { blob: doc.output('blob'), doc: doc, nombre: 'senal-' + (slug||'sst') + '-' + T.n + '.pdf' };
+  return SEN.pdf;
+}
+
+function senCompartir(){
+  if(!SEN.pdf) return;
+  var f = null;
+  try{ f = new File([SEN.pdf.blob], SEN.pdf.nombre, { type:'application/pdf' }); }catch(e){}
+  if(f && navigator.share && navigator.canShare && navigator.canShare({ files:[f] })){
+    navigator.share({ files:[f], title:SEN.pdf.nombre }).catch(function(){});
+    return;
+  }
+  senBajar();
+  aviso('Se descargó la señal',
+        'Este celular no deja compartir archivos desde la app. El PDF quedó en tus descargas.', '⬇️');
+}
+function senBajar(){
+  if(!SEN.pdf) return;
+  try{
+    var u = URL.createObjectURL(SEN.pdf.blob), a = document.createElement('a');
+    a.href = u; a.download = SEN.pdf.nombre;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ try{ URL.revokeObjectURL(u); }catch(e){} }, 4000);
+  }catch(e){}
+}
+function senImprimir(){
+  if(!SEN.pdf) return;
+  /* abrir el PDF es lo que de verdad manda a imprimir en un celular:
+     el visor del sistema tiene el botón, la app no. */
+  try{
+    var u = URL.createObjectURL(SEN.pdf.blob);
+    var w = window.open(u, '_blank');
+    if(!w){ senBajar(); aviso('Se descargó','El navegador no dejó abrir el PDF. Quedó en tus descargas, ábrelo e imprímelo desde ahí.','🖨️'); }
+    setTimeout(function(){ try{ URL.revokeObjectURL(u); }catch(e){} }, 20000);
+  }catch(e){ senBajar(); }
 }
 
 var SAL = { emp:null, pend:null, paso:'mirar', res:null, pdf:null, yendo:false };
