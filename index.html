@@ -2577,14 +2577,27 @@ html.t-claro .sim-hito{background:#fff}
 .senp-tit{text-align:center;font-weight:800;font-size:12px;margin:9px 2px 0;line-height:1.25;
   text-transform:uppercase}
 .senp-vacio{text-align:center;color:#8A8A8A;font-style:italic;padding:16px 0 14px}
-.senp-caras{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:10px 0 2px}
-.senp-p{width:58px;text-align:center}
-.senp-p .ini{display:grid;place-items:center;width:58px;height:70px;border:1px solid #111;
-  background:#EEF1F4;color:#9AA4B0;font-weight:800;font-size:16px;overflow:hidden}
+.senp-caras{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:10px 0 2px}
+.senp-p{width:var(--tw,58px);text-align:center}
+.senp-p .ini{display:grid;place-items:center;width:100%;aspect-ratio:3/4;border:1px solid #111;
+  background:#EEF1F4;color:#9AA4B0;font-weight:800;font-size:calc(var(--tw,58px)*.28);overflow:hidden}
 .senp-p .ini img{width:100%;height:100%;object-fit:cover;display:block}
-.senp-p b{display:block;font-size:9px;line-height:1.2;margin-top:3px;text-transform:uppercase;
-  overflow-wrap:anywhere}
-.senp-mas{align-self:center;font-weight:800;color:#666}
+.senp-p b{display:block;font-size:var(--tf,9px);line-height:1.15;margin-top:3px;text-transform:uppercase;
+  overflow-wrap:break-word;hyphens:auto}
+/* el cartel de la señal, tal como se imprime: marco, pictograma y la
+   banda del color de la señal con el texto debajo */
+.sen-cartel{background:#fff;border:0;padding:0;margin:0 auto;position:relative;
+  box-shadow:0 2px 14px rgba(0,0,0,.28)}
+.sen-cartel::before{content:"";position:absolute;inset:0;border:5px solid #111;pointer-events:none}
+.sen-cartel .sen-cpic{display:block;padding:6% 7.5% 0;line-height:0}
+.sen-cartel .sen-cpic svg{width:100%;height:auto;display:block}
+.sen-cartel .sen-cban{display:flex;flex-direction:column;justify-content:center;
+  margin:5.5% 5.5%;background:var(--cb,#00599E);color:var(--ct,#fff);
+  font-weight:800;font-size:12px;line-height:1.22;text-align:center;padding:9px 7px;
+  text-transform:uppercase;letter-spacing:.005em;overflow-wrap:anywhere}
+.sen-cartel .sen-cban small{display:block;font-weight:600;font-size:9.5px;opacity:.9;margin-top:4px;
+  text-transform:none;letter-spacing:0}
+.sen-fr{display:block;height:7px;border-radius:0 0 3px 3px;margin:5px -4px -4px}
 .senp-pie{background:#111;color:#fff;text-align:center;font-weight:800;font-size:10px;padding:7px 6px;
   margin-top:10px;border-radius:3px;text-transform:uppercase;line-height:1.3}
 .senp-elegida{display:flex;align-items:center;gap:10px;margin-top:9px;padding:9px 11px;
@@ -29660,10 +29673,10 @@ function _senPx(mm){
    LA PANTALLA
    ════════════════════════════════════════════════════════════════ */
 var SEN = { tab:'norma', filtro:'', busca:'',
-            k:'', texto:'', sub:'', tam:'A4', porHoja:1, pdf:null };
+            k:'', texto:'', sub:'', tam:'A4', orient:'v', porHoja:1, pdf:null };
 /* el cartel de personal autorizado. Nace en blanco a propósito: el
    área la escribe quien lo pega en la puerta, no la app. */
-var SENP = { titulo:'', pie:'', gente:[], busca:'', tam:'A4', cols:0,
+var SENP = { titulo:'', pie:'', gente:[], busca:'', tam:'A4', orient:'v', cols:0,
              senal:'', pick:false, qsen:'', pdf:null };
 
 var SEN_TAM = [
@@ -29672,9 +29685,31 @@ var SEN_TAM = [
   { k:'A5', n:'A5', w:148, h:210 }
 ];
 function senTamPorK(k){ for(var i=0;i<SEN_TAM.length;i++) if(SEN_TAM[i].k===k) return SEN_TAM[i]; return SEN_TAM[1]; }
+/* la misma hoja, parada o echada. A5 horizontal es 210 × 148. */
+function senHoja(tamK, orient){
+  var T = senTamPorK(tamK);
+  return (orient === 'h') ? { k:T.k, n:T.n, w:T.h, h:T.w, oh:true }
+                          : { k:T.k, n:T.n, w:T.w, h:T.h, oh:false };
+}
 function senRejilla(porHoja){
   return ({1:[1,1], 2:[1,2], 4:[2,2], 6:[2,3], 9:[3,3]})[porHoja] || [1,1];
 }
+/* ── el cartel, tal como está en el Anexo B ───────────────────────
+   La señal no es el pictograma suelto: es el cartel. Marco negro,
+   fondo blanco, el pictograma arriba y DEBAJO una banda del color de
+   la señal con el texto en blanco (en la de advertencia, amarilla,
+   el texto va en negro: blanco sobre amarillo no se lee).
+   Proporción 7:10, la del Anexo B. */
+var SEN_RAZON = 0.70;
+var SEN_COLOR = {
+  obl:   { f:[0,89,158],  t:[255,255,255], cf:'#00599E', ct:'#FFFFFF' },
+  proh:  { f:[217,38,28], t:[255,255,255], cf:'#D9261C', ct:'#FFFFFF' },
+  fuego: { f:[217,38,28], t:[255,255,255], cf:'#D9261C', ct:'#FFFFFF' },
+  emer:  { f:[0,150,69],  t:[255,255,255], cf:'#009645', ct:'#FFFFFF' },
+  adv:   { f:[252,219,0], t:[26,26,26],    cf:'#FCDB00', ct:'#1A1A1A' }
+};
+function senColor(g){ return SEN_COLOR[g] || SEN_COLOR.obl; }
+
 /* hasta qué distancia se lee, según la NTP: A ≥ L²/2000, con A en m² y
    L en metros, entre 5 y 50 m */
 function senDistancia(ladoMM){
@@ -29732,7 +29767,12 @@ function pintarSenales(){
        '<b>De dónde salen estos dibujos.</b>'+
        '<p class="sub" style="margin:7px 0 0;line-height:1.6">Del Anexo B de la NTP 399.010-1, leídos del '+
        'propio PDF de la norma trazo por trazo. No están redibujados ni son parecidos: son los de la norma, '+
-       'con su forma, su color y sus bordes, y por eso se imprimen nítidos a cualquier tamaño.</p></div>';
+       'con su forma, su color y sus bordes, y por eso se imprimen nítidos a cualquier tamaño.</p>'+
+       '<p class="sub" style="margin:9px 0 0;line-height:1.6">Se imprimen como manda la norma: '+
+       '<b>enmarcadas</b>, con el pictograma arriba y <b>el texto debajo en una banda del color de la '+
+       'señal</b> — azul la de obligación, roja la de prohibición y la de incendios, verde la de '+
+       'evacuación, amarilla la de advertencia (esa con el texto en negro, que sobre amarillo el blanco '+
+       'no se lee).</p></div>';
   c.innerHTML = h;
   _senPintarCatalogo();
 }
@@ -29755,7 +29795,8 @@ function _senPintarCatalogo(){
           (lista.length===1?' señal':' señales')+'</p><div class="sen-rej">';
   lista.forEach(function(s){
     h += '<button type="button" class="sen-c" onclick="abrirSenal(\''+escA(s.k)+'\')">'+
-         '<span class="sen-ic">'+senalSVG(s, 74)+'</span>'+
+         '<span class="sen-ic">'+senalSVG(s, 74)+
+         '<i class="sen-fr" style="background:'+senColor(s.g).cf+'"></i></span>'+
          '<b>'+esc(_senCorto(s.n))+'</b></button>';
   });
   c.innerHTML = h + '</div>';
@@ -29793,15 +29834,15 @@ function pintarSenal(){
 
   var h = '<h2>'+esc(S.n)+'</h2>';
   h += '<p class="sub">Grupo de '+esc(NTP_GRUPOS[S.g]||'').toLowerCase()+' · NTP 399.010-1, Anexo B.</p>';
-  h += '<div class="sen-vista">'+senalSVG(S, 150)+'</div>';
+  h += '<div class="sen-vista" id="sen-vista">'+_senCartelHTML(S, SEN.texto, SEN.sub, 196)+'</div>';
 
   h += '<label style="margin-top:16px">El texto del cartel</label>'+
-       '<input id="sen-t" maxlength="90" value="'+escA(SEN.texto)+'" oninput="SEN.texto=this.value;SEN.pdf=null">'+
+       '<input id="sen-t" maxlength="90" value="'+escA(SEN.texto)+'" oninput="senTexto(this.value)">'+
        '<p class="sub" style="margin:6px 0 0;font-size:12px">La norma no deja poner texto <b>dentro</b> del '+
        'símbolo (10.2.5), pero sí acompañándolo en el cartel (11.1). Así va acá.</p>';
   h += '<label style="margin-top:12px">Renglón de abajo (opcional)</label>'+
        '<input id="sen-s" maxlength="90" placeholder="Tablero general TG-01 · Sector B" '+
-       'value="'+escA(SEN.sub)+'" oninput="SEN.sub=this.value;SEN.pdf=null">';
+       'value="'+escA(SEN.sub)+'" oninput="senSub(this.value)">';
 
   h += '<div class="sec-tit" style="margin-top:22px">¿De qué tamaño?</div><div class="ch-chips">';
   SEN_TAM.forEach(function(t){
@@ -29809,6 +29850,10 @@ function pintarSenal(){
          t.n+' <small style="opacity:.75">'+t.w+'×'+t.h+'</small></button>';
   });
   h += '</div>';
+  h += '<div class="sec-tit" style="margin-top:16px">¿Cómo va la hoja?</div><div class="ch-chips">'+
+       '<button type="button" class="ch-chip'+(SEN.orient!=='h'?' on':'')+'" onclick="senOrient(\'v\')">Vertical</button>'+
+       '<button type="button" class="ch-chip'+(SEN.orient==='h'?' on':'')+'" onclick="senOrient(\'h\')">Horizontal</button>'+
+       '</div>';
   h += '<div class="sec-tit" style="margin-top:16px">¿Cuántas por hoja?</div><div class="ch-chips">';
   [1,2,4,6,9].forEach(function(n){
     h += '<button type="button" class="ch-chip'+(SEN.porHoja===n?' on':'')+'" onclick="senPorHoja('+n+')">'+n+'</button>';
@@ -29817,7 +29862,8 @@ function pintarSenal(){
 
   var d = senDistancia(LY.lado);
   h += '<div class="aviso'+(d<5?' ojo':'')+'" style="margin-top:14px">'+
-       '<b>Señal de '+Math.round(LY.lado)+' × '+Math.round(LY.lado)+' mm</b>'+
+       '<b>Cartel de '+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm</b> · símbolo de '+
+       Math.round(LY.lado)+' mm'+
        '<p class="sub" style="margin:6px 0 0;line-height:1.6">Se lee bien hasta unos <b>'+
        (d<5 ? 'menos de 5' : Math.round(d))+' metros</b>. Sale de la fórmula de la NTP: el área tiene que ser '+
        'al menos la distancia al cuadrado dividida entre 2000.'+
@@ -29833,6 +29879,23 @@ function pintarSenal(){
 }
 function senTam(k){ SEN.tam=k; SEN.pdf=null; pintarSenal(); }
 function senPorHoja(n){ SEN.porHoja=n; SEN.pdf=null; pintarSenal(); }
+function senOrient(o){ SEN.orient=o; SEN.pdf=null; pintarSenal(); }
+function senTexto(v){ SEN.texto=v; SEN.pdf=null; _senRefrescarVista(); }
+function senSub(v){ SEN.sub=v; SEN.pdf=null; _senRefrescarVista(); }
+function _senRefrescarVista(){
+  var c = $('sen-vista'); if(!c || !SEN.k) return;
+  c.innerHTML = _senCartelHTML(senalPorK(SEN.k), SEN.texto, SEN.sub, 196);
+  var l = $('sen-listo'); if(l) l.innerHTML = '';
+}
+
+/* el mismo cartel, en pantalla: lo que se ve es lo que se imprime */
+function _senCartelHTML(S, texto, sub, ancho){
+  var C = senColor(S.g), w = ancho || 180;
+  return '<div class="sen-cartel" style="width:'+w+'px;--cb:'+C.cf+';--ct:'+C.ct+'">'+
+         '<span class="sen-cpic">'+senalSVG(S, Math.round(w*0.85))+'</span>'+
+         '<span class="sen-cban">'+esc(String(texto || S.n).toUpperCase())+
+         (sub ? '<small>'+esc(sub)+'</small>' : '')+'</span></div>';
+}
 
 function _senAvisoLogo(){
   var emp = (typeof empleador==='function') ? empleador() : {};
@@ -29844,7 +29907,7 @@ function _senAvisoLogo(){
 }
 
 function senLayout(){
-  var T = senTamPorK(SEN.tam), rej = senRejilla(SEN.porHoja);
+  var T = senHoja(SEN.tam, SEN.orient), rej = senRejilla(SEN.porHoja);
   var M = 12, hueco = 8;
   var emp = (typeof empleador==='function') ? empleador() : {};
   var obra = (typeof nombreDeLaObra==='function') ? nombreDeLaObra() : '';
@@ -29852,10 +29915,62 @@ function senLayout(){
   var arriba = M + hCab, pie = 9;
   var anchoCel = (T.w - M*2 - hueco*(rej[0]-1)) / rej[0];
   var altoCel  = (T.h - arriba - M - pie - hueco*(rej[1]-1)) / rej[1];
-  var altoTexto = Math.min(30, Math.max(12, altoCel*0.20));
-  var lado = Math.min(anchoCel, altoCel - altoTexto);
+  /* el cartel entero entra en su casilla sin deformarse */
+  var w = Math.min(anchoCel, altoCel*SEN_RAZON), h = w/SEN_RAZON;
   return { T:T, rej:rej, M:M, hueco:hueco, arriba:arriba, pie:pie,
-           anchoCel:anchoCel, altoCel:altoCel, lado:lado, altoTexto:altoTexto, hCab:hCab };
+           anchoCel:anchoCel, altoCel:altoCel, w:w, h:h,
+           lado:w*0.85, hCab:hCab };
+}
+
+/* ── el cartel dibujado en el PDF ─────────────────────────────────
+   Todas las medidas salen del ancho del cartel, así sale igual en A5
+   que en A3. El marco es negro y grueso porque es lo que separa la
+   señal de la pared: sin marco, un cartel pegado en un muro claro no
+   tiene borde. */
+function _senCartelPDF(doc, png, S, texto, sub, x, y, w){
+  var h = w/SEN_RAZON, C = senColor(S.g);
+  var t = w*0.030, p = w*0.055;
+
+  doc.setFillColor(255,255,255); doc.rect(x, y, w, h, 'F');
+  doc.setDrawColor(17,17,17); doc.setLineWidth(t);
+  doc.rect(x + t/2, y + t/2, w - t, h - t, 'S');
+
+  var s = w*0.85;
+  if(png){ try{ doc.addImage(png, 'PNG', x+(w-s)/2, y+p, s, s, undefined, 'FAST'); }catch(e){} }
+
+  var bw = w - 2*p, bh = h*0.25, bx = x + p, by = y + h - p - bh;
+  doc.setFillColor(C.f[0], C.f[1], C.f[2]);
+  doc.rect(bx, by, bw, bh, 'F');
+
+  /* el texto se achica hasta entrar: nunca se sale de la banda */
+  var ancho = bw - w*0.06, lin, ft = (bh*0.34)/_MMPT, subLin = [], fs = 0;
+  doc.setFont('helvetica','bold');
+  for(;;){
+    doc.setFontSize(ft);
+    lin = doc.splitTextToSize(String(texto || S.n).toUpperCase(), ancho);
+    fs = ft*0.66;
+    subLin = [];
+    if(sub){ doc.setFont('helvetica','normal'); doc.setFontSize(fs);
+             subLin = doc.splitTextToSize(String(sub), ancho).slice(0,2);
+             doc.setFont('helvetica','bold'); }
+    var alto = lin.length*ft*1.14*_MMPT + (subLin.length ? subLin.length*fs*1.14*_MMPT + bh*0.06 : 0);
+    if((lin.length <= 3 && alto <= bh - w*0.025) || ft <= 4.5) break;
+    ft -= 0.35;
+  }
+  lin = lin.slice(0,3);
+  var lh = ft*1.14*_MMPT, lhs = fs*1.14*_MMPT;
+  var altoTot = lin.length*lh + (subLin.length ? subLin.length*lhs + bh*0.06 : 0);
+  var cy = by + (bh - altoTot)/2 + ft*0.36*_MMPT;
+
+  doc.setTextColor(C.t[0], C.t[1], C.t[2]);
+  doc.setFont('helvetica','bold'); doc.setFontSize(ft);
+  lin.forEach(function(l, i){ doc.text(l, bx+bw/2, cy + i*lh, { align:'center' }); });
+  if(subLin.length){
+    doc.setFont('helvetica','normal'); doc.setFontSize(fs);
+    var sy = cy + lin.length*lh + bh*0.06 - ft*0.36*_MMPT + fs*0.36*_MMPT;
+    subLin.forEach(function(l, i){ doc.text(l, bx+bw/2, sy + i*lhs, { align:'center' }); });
+  }
+  return { w:w, h:h, lado:s };
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -29873,11 +29988,12 @@ function senArmar(){
   senRaster(S.s, _senPx(LY.lado)).then(function(png){
     _senDibujar(png);
     if(m) m.textContent = '';
-    var T = senTamPorK(SEN.tam), c = $('sen-listo');
+    var T = senHoja(SEN.tam, SEN.orient), c = $('sen-listo');
     if(c) c.innerHTML =
       '<div class="aviso ok" style="margin-top:14px">✅ <b>'+esc(SEN.texto||S.n)+'</b>'+
       '<p class="sub" style="margin:6px 0 0">'+SEN.porHoja+(SEN.porHoja===1?' señal':' señales')+
-      ' en una hoja '+T.n+' · '+Math.round(LY.lado)+' × '+Math.round(LY.lado)+' mm cada una</p></div>'+
+      ' en una hoja '+T.n+(T.oh?' horizontal':'')+' · cartel de '+Math.round(LY.w)+' × '+
+      Math.round(LY.h)+' mm</p></div>'+
       '<div class="dos" style="margin-top:12px">'+
       '<button class="btn" style="margin:0" onclick="senCompartir()">📲 Compartir</button>'+
       '<button class="btn sec" style="margin:0" onclick="senImprimir()">🖨️ Imprimir</button></div>'+
@@ -29890,23 +30006,29 @@ function senArmar(){
 
 function _senDibujar(png){
   var S = senalPorK(SEN.k), LY = senLayout(), T = LY.T, rej = LY.rej;
-  var doc = new jspdf.jsPDF({ unit:'mm', format:[T.w, T.h], orientation:'portrait' });
+  /* T ya viene con la orientación puesta desde senLayout() */
+  var doc = new jspdf.jsPDF({ unit:'mm', format:[T.w, T.h],
+                              orientation: (T.w > T.h) ? 'landscape' : 'portrait' });
   var M = LY.M, hueco = LY.hueco;
   var emp = (typeof empleador==='function') ? empleador() : {};
   var obra = (typeof nombreDeLaObra==='function') ? nombreDeLaObra() : '';
 
   /* la cabecera: logo y empresa, NUNCA encima del símbolo */
   if(LY.hCab){
-    var hL = (SEN.porHoja===1) ? 16 : 12;
-    if(emp.logo){ try{ doc.addImage(emp.logo, M, M, hL*1.9, hL, undefined, 'FAST'); }catch(e){} }
+    var hL = (SEN.porHoja===1) ? 16 : 12, anchoL = 0;
+    /* el logo va SIEMPRE arriba a la derecha de la hoja */
+    if(emp.logo){
+      anchoL = hL*1.9;
+      try{ doc.addImage(emp.logo, T.w-M-anchoL, M, anchoL, hL, undefined, 'FAST'); }catch(e){}
+    }
     doc.setFont('helvetica','bold'); doc.setFontSize(SEN.porHoja===1 ? 10.5 : 8.6);
     doc.setTextColor(40,48,56);
-    doc.text(String(emp.razon||'').toUpperCase(), T.w-M, M+hL*0.42,
-             { align:'right', maxWidth: T.w-M*2-hL*2.2 });
+    doc.text(String(emp.razon||'').toUpperCase(), M, M+hL*0.42,
+             { align:'left', maxWidth: T.w-M*2-anchoL-6 });
     if(obra){
       doc.setFont('helvetica','normal'); doc.setFontSize(SEN.porHoja===1 ? 8.4 : 7.2);
       doc.setTextColor(120,130,140);
-      doc.text(obra, T.w-M, M+hL*0.86, { align:'right', maxWidth: T.w-M*2-hL*2.2 });
+      doc.text(obra, M, M+hL*0.86, { align:'left', maxWidth: T.w-M*2-anchoL-6 });
     }
     doc.setDrawColor(215,222,228); doc.setLineWidth(0.4);
     doc.line(M, M+hL+3, T.w-M, M+hL+3);
@@ -29914,35 +30036,21 @@ function _senDibujar(png){
 
   for(var i=0; i<SEN.porHoja; i++){
     var col = i % rej[0], fil = Math.floor(i / rej[0]);
-    var x0 = M + col*(LY.anchoCel + hueco);
-    var y0 = LY.arriba + fil*(LY.altoCel + hueco);
-    var sx = x0 + (LY.anchoCel - LY.lado)/2;
-
-    try{ doc.addImage(png, 'PNG', sx, y0, LY.lado, LY.lado, undefined, 'FAST'); }catch(e){}
-
-    var ty = y0 + LY.lado + LY.altoTexto*0.42;
-    doc.setFont('helvetica','bold');
-    var ft = Math.max(7, Math.min(16, LY.lado*0.115));
-    doc.setFontSize(ft); doc.setTextColor(24,28,34);
-    doc.splitTextToSize(String(SEN.texto||S.n).toUpperCase(), LY.anchoCel-4).slice(0,3)
-       .forEach(function(l){ doc.text(l, x0+LY.anchoCel/2, ty, { align:'center' }); ty += ft*0.42; });
-    if(SEN.sub){
-      doc.setFont('helvetica','normal');
-      var fs = Math.max(6, ft*0.62);
-      doc.setFontSize(fs); doc.setTextColor(110,120,130);
-      doc.splitTextToSize(SEN.sub, LY.anchoCel-4).slice(0,2)
-         .forEach(function(l){ doc.text(l, x0+LY.anchoCel/2, ty+1, { align:'center' }); ty += fs*0.42; });
-    }
+    var x0 = M + col*(LY.anchoCel + hueco) + (LY.anchoCel - LY.w)/2;
+    var y0 = LY.arriba + fil*(LY.altoCel + hueco) + (LY.altoCel - LY.h)/2;
+    _senCartelPDF(doc, png, S, SEN.texto, SEN.sub, x0, y0, LY.w);
   }
 
   doc.setFont('helvetica','normal'); doc.setFontSize(6.6); doc.setTextColor(150,158,166);
   var d = senDistancia(LY.lado);
-  doc.text('NTP 399.010-1 · señal de '+Math.round(LY.lado)+' mm, legible hasta ~'+
-           (d<5?'5':Math.round(d))+' m · imprimir al 100 % · OBRASST',
+  doc.text('NTP 399.010-1 · cartel de '+Math.round(LY.w)+' × '+Math.round(LY.h)+
+           ' mm, símbolo de '+Math.round(LY.lado)+' mm, legible hasta ~'+
+           (d<5?'5':Math.round(d))+' m · imprimir al 100 % · cortar por el marco · OBRASST',
            T.w/2, T.h-6, { align:'center' });
 
   SEN.pdf = { blob: doc.output('blob'),
-              nombre: 'senal-'+(_senSlug(SEN.texto||S.n)||'sst')+'-'+T.n+'.pdf' };
+              nombre: 'senal-'+(_senSlug(SEN.texto||S.n)||'sst')+'-'+T.n+
+                      (T.oh?'-horizontal':'')+'.pdf' };
   return SEN.pdf;
 }
 
@@ -30025,24 +30133,48 @@ function _senPersMini(){
   if(!SENP.gente.length){
     h += '<div class="senp-vacio">Todavía no elegiste a nadie</div>';
   }else{
-    h += '<div class="senp-caras">';
-    SENP.gente.slice(0,6).forEach(function(id){
+    /* salen TODOS: las caras se achican solas. Un cartel que dice
+       «y 2 más» no autoriza a esos dos. */
+    var n = SENP.gente.length;
+    var tw = n<=4 ? 58 : n<=8 ? 46 : n<=12 ? 38 : n<=20 ? 31 : n<=32 ? 26 : 21;
+    var tf = n<=4 ? 9 : n<=8 ? 8 : n<=12 ? 7 : n<=20 ? 6.4 : 5.8;
+    h += '<div class="senp-caras" style="--tw:'+tw+'px;--tf:'+tf+'px">';
+    SENP.gente.forEach(function(id){
       var t = por[id] || {};
+      /* en la vista chica va solo el apellido, que es como se llaman en
+         obra; en el papel va el nombre completo */
+      var et = (tw >= 46) ? _senpCorto(t.nombre) : _senpApellido(t.nombre);
       h += '<span class="senp-p"><span class="ini" id="senp-mini-'+escA(id)+'">'+
-           esc(_senpIni(t.nombre))+'</span><b>'+esc(_senpCorto(t.nombre))+'</b></span>';
+           esc(_senpIni(t.nombre))+'</span><b>'+esc(et)+'</b></span>';
     });
-    if(SENP.gente.length > 6) h += '<span class="senp-mas">+'+(SENP.gente.length-6)+'</span>';
     h += '</div>';
   }
   h += '<div class="senp-pie">QUEDA TERMINANTEMENTE PROHIBIDO '+esc(_senpPie())+'</div></div>';
   return h;
 }
+/* «Ana Lucía Rojas del Castillo» es «Ana Rojas», no «Ana del»: las
+   partículas no son apellido. */
+var _SEN_PART = {'de':1,'del':1,'la':1,'las':1,'los':1,'y':1,'da':1,'di':1,'san':1,'santa':1};
+function _senpPiezas(n){
+  return String(n||'').trim().split(/\s+/).filter(function(x){ return x; });
+}
+function _senpApellido(n){
+  var p = _senpPiezas(n);
+  if(p.length <= 1) return p[0] || '';
+  var i = (p.length >= 3) ? p.length-2 : 1;
+  while(i > 0 && _SEN_PART[p[i].toLowerCase()]) i--;
+  /* si el apellido arranca con partícula, se la lleva pegada */
+  var ap = p[i];
+  if(i > 0 && _SEN_PART[p[i-1].toLowerCase()] && i-1 > 0) ap = p[i-1]+' '+ap;
+  return ap;
+}
 function _senpCorto(n){
-  var p = String(n||'').trim().split(/\s+/);
-  return p.length <= 2 ? p.join(' ') : (p[0]+' '+p[p.length-2]);
+  var p = _senpPiezas(n);
+  if(p.length <= 2) return p.join(' ');
+  return p[0] + ' ' + _senpApellido(n);
 }
 function _senpCarasMini(){
-  SENP.gente.slice(0,6).forEach(function(id){
+  SENP.gente.forEach(function(id){
     fotoTrabLeer(id).then(function(du){
       if(!du) return;
       var e = $('senp-mini-'+id); if(!e) return;
@@ -30107,12 +30239,19 @@ function pintarSenalPers(){
   });
   h += '</div>';
 
+  h += '<div class="sec-tit" style="margin-top:16px">¿Cómo va la hoja?</div><div class="ch-chips">'+
+       '<button type="button" class="ch-chip'+(SENP.orient!=='h'?' on':'')+'" onclick="senpOrient(\'v\')">Vertical</button>'+
+       '<button type="button" class="ch-chip'+(SENP.orient==='h'?' on':'')+'" onclick="senpOrient(\'h\')">Horizontal</button>'+
+       '</div>';
   h += '<div class="sec-tit" style="margin-top:16px">¿Cuántas caras por fila?</div><div class="ch-chips">';
-  [0,2,3,4,5].forEach(function(n){
+  [0,2,3,4,5,6].forEach(function(n){
     h += '<button type="button" class="ch-chip'+(SENP.cols===n?' on':'')+'" onclick="senpCols('+n+')">'+
          (n===0?'Automático':n)+'</button>';
   });
-  h += '</div>';
+  h += '</div>'+
+       '<p class="sub" style="margin:8px 0 0;font-size:12.5px">En automático la app prueba todas las '+
+       'repartijas y se queda con la que hace las caras más grandes <b>entrando todas</b>. Solo pasa a '+
+       'una segunda hoja si ya no se les reconocería la cara.</p>';
 
   h += _senAvisoLogo();
   h += '<p class="sub" id="senp-msg" style="margin:12px 0 0;min-height:18px"></p>';
@@ -30133,6 +30272,7 @@ function _senpRefrescarPrev(){
 function senpTit(v){ SENP.titulo = v; SENP.pdf = null; _senpRefrescarPrev(); }
 function senpPie(v){ SENP.pie = v; SENP.pdf = null; _senpRefrescarPrev(); }
 function senpTam(k){ SENP.tam = k; SENP.pdf = null; pintarSenalPers(); }
+function senpOrient(o){ SENP.orient = o; SENP.pdf = null; pintarSenalPers(); }
 function senpCols(n){ SENP.cols = n; SENP.pdf = null; pintarSenalPers(); }
 function senpBusca(v){ SENP.busca = v; _senpPintarLista(); }
 function senpPick(){ SENP.pick = !SENP.pick; pintarSenalPers(); }
@@ -30232,12 +30372,13 @@ function senpArmar(){
   Promise.all([caras, pic]).then(function(r){
     var hojas = _senpDibujar(r[0], r[1]);
     if(m) m.textContent = '';
-    var T = senTamPorK(SENP.tam), c = $('senp-listo');
+    var T = senHoja(SENP.tam, SENP.orient), c = $('senp-listo');
     if(c) c.innerHTML =
       '<div class="aviso ok" style="margin-top:14px">✅ <b>'+esc(_senpTitulo())+'</b>'+
       '<p class="sub" style="margin:6px 0 0">'+SENP.gente.length+
       (SENP.gente.length===1?' persona autorizada':' personas autorizadas')+' · '+T.n+
-      (hojas>1 ? ' · '+hojas+' hojas' : '')+'</p></div>'+
+      (T.oh?' horizontal':' vertical')+
+      (hojas>1 ? ' · '+hojas+' hojas' : ' · todas en una hoja')+'</p></div>'+
       '<div class="dos" style="margin-top:12px">'+
       '<button class="btn" style="margin:0" onclick="senpCompartir()">📲 Compartir</button>'+
       '<button class="btn sec" style="margin:0" onclick="senpImprimir()">🖨️ Imprimir</button></div>'+
@@ -30251,9 +30392,45 @@ function senpArmar(){
 var _MMPT = 25.4/72;                 /* un punto tipográfico en milímetros */
 function _senpCentro(ft){ return ft*0.36*_MMPT; }   /* del centro a la línea base */
 
+/* ── cuántas caras por fila, sin que nadie se quede fuera ─────────
+   El supervisor no elige la rejilla: la app prueba todas las
+   repartijas posibles y se queda con la que hace las caras más
+   grandes entrando TODAS. Un cartel que dice «y 2 más» no autoriza
+   a esos dos. */
+function _senpGeometria(n, cols, W, disp, k){
+  var celW = W/cols, filas = Math.ceil(n/cols);
+  var altoNom = 15*k, celH, fh, fw, fn;
+  var tope = (cols <= 2 ? 96 : cols === 3 ? 76 : cols === 4 ? 62 : 50) * k;
+  for(var v=0; v<4; v++){
+    celH = Math.min(disp/filas, tope + altoNom + 3*k);
+    fh = Math.min(celH - altoNom - 3*k, tope);
+    fw = fh*0.75;
+    if(fw > celW - 5*k){ fw = celW - 5*k; fh = fw/0.75; }
+    fn = Math.max(5.2*k, Math.min(16*k, fw*0.30));
+    altoNom = Math.max(9.5*k, fn*1.13*_MMPT*2.8);
+  }
+  if(fw <= 0 || fh <= 0) return null;
+  return { cols:cols, filas:filas, celW:celW, fw:fw, fh:fh, fn:fn, altoNom:altoNom,
+           alto: filas*(fh + altoNom + 3*k) + (filas-1)*4*k };
+}
+function _senpMejor(n, W, disp, k){
+  var mejor = null;
+  for(var c=1; c<=n; c++){
+    var g = _senpGeometria(n, c, W, disp, k);
+    if(!g || g.alto > disp + 0.5) continue;
+    if(!mejor || g.fw > mejor.fw) mejor = g;
+  }
+  return mejor;
+}
+/* por debajo de esto una cara ya no se reconoce y el cartel no sirve:
+   22 mm de ancho es una foto carné chica, y el nombre debajo todavía
+   se lee de pie frente a la puerta. Menos que eso es adorno. */
+function _senpMinimo(k){ return 22*k; }
+
 function _senpDibujar(fotos, picto){
-  var T = senTamPorK(SENP.tam), k = T.w/210;
-  var doc = new jspdf.jsPDF({ unit:'mm', format:[T.w, T.h], orientation:'portrait' });
+  var T = senHoja(SENP.tam, SENP.orient), k = Math.min(T.w, T.h)/210;
+  var doc = new jspdf.jsPDF({ unit:'mm', format:[T.w, T.h],
+                              orientation: (T.w > T.h) ? 'landscape' : 'portrait' });
   var emp = (typeof empleador==='function') ? empleador() : {};
   var obra = (typeof nombreDeLaObra==='function') ? nombreDeLaObra() : '';
   var por = _senpPorId();
@@ -30261,11 +30438,6 @@ function _senpDibujar(fotos, picto){
 
   var tit = 'ÚNICO PERSONAL AUTORIZADO PARA ' + _senpTitulo() + ':';
   var pie = 'QUEDA TERMINANTEMENTE PROHIBIDO ' + _senpPie();
-
-  /* cuánta gente entra por hoja */
-  var n = fotos.length;
-  var cols = SENP.cols || (n<=2 ? Math.max(1,n) : n<=6 ? 3 : n<=12 ? 4 : 5);
-  var hojas = [], resto = fotos.slice();
 
   function cabecera(){
     /* el marco: doble filete, como el formato de papel */
@@ -30276,16 +30448,20 @@ function _senpDibujar(fotos, picto){
 
     var y = Mb + 7*k;
     if(emp.logo || emp.razon || obra){
-      var hL = 11*k;
-      if(emp.logo){ try{ doc.addImage(emp.logo, X, y, hL*1.9, hL, undefined, 'FAST'); }catch(e){} }
+      var hL = 11*k, anchoL = 0;
+      /* el logo va SIEMPRE arriba a la derecha de la hoja */
+      if(emp.logo){
+        anchoL = hL*1.9;
+        try{ doc.addImage(emp.logo, X + W - anchoL, y, anchoL, hL, undefined, 'FAST'); }catch(e){}
+      }
       doc.setFont('helvetica','bold'); doc.setFontSize(9*k);
       doc.setTextColor(40,48,56);
-      doc.text(String(emp.razon||'').toUpperCase(), X+W, y+hL*0.45,
-               { align:'right', maxWidth: W - hL*2.2 });
+      doc.text(String(emp.razon||'').toUpperCase(), X, y + hL*0.45,
+               { align:'left', maxWidth: W - anchoL - 6*k });
       if(obra){
         doc.setFont('helvetica','normal'); doc.setFontSize(7.2*k);
         doc.setTextColor(120,130,140);
-        doc.text(obra, X+W, y+hL*0.9, { align:'right', maxWidth: W - hL*2.2 });
+        doc.text(obra, X, y + hL*0.9, { align:'left', maxWidth: W - anchoL - 6*k });
       }
       y += hL + 5*k;
     }
@@ -30348,80 +30524,81 @@ function _senpDibujar(fotos, picto){
   }
 
   /* la rejilla de caras: foto y, DEBAJO, el nombre */
-  function caras(grupo, yArriba, yAbajo){
-    var filas = Math.ceil(grupo.length/cols);
-    var celW = W/cols, disp = yAbajo - yArriba;
-    /* con poca gente la foto crece: un cartel con una sola cara y una
-       foto de carné perdida en medio de la hoja no lo mira nadie.
-       Y el nombre crece con la foto, porque de lejos el nombre es lo
-       único que se lee. Se resuelve en dos vueltas: el alto del nombre
-       depende de su cuerpo, y su cuerpo del ancho de la foto. */
-    var tope = (cols <= 2 ? 96 : cols === 3 ? 76 : 62) * k;
-    var altoNom = 15*k, celH, fh, fw, fn;
-    for(var v=0; v<3; v++){
-      celH = Math.min(disp/filas, tope + altoNom + 3*k);
-      fh = Math.min(celH - altoNom - 3*k, tope);
-      fw = fh*0.75;
-      if(fw > celW - 6*k){ fw = celW - 6*k; fh = fw/0.75; }
-      fn = Math.max(6.5*k, Math.min(16*k, fw*0.30));
-      altoNom = Math.max(11*k, fn*1.13*_MMPT*2.8);
-    }
-    var altoTot = filas*(fh + altoNom + 3*k) + (filas-1)*4*k;
-    var y0 = yArriba + Math.max(0, (disp - altoTot)/2);
-
+  function caras(grupo, G, yArriba, yAbajo){
+    var disp = yAbajo - yArriba;
+    var y0 = yArriba + Math.max(0, (disp - G.alto)/2);
     grupo.forEach(function(f, i){
-      var col = i % cols, fil = Math.floor(i/cols);
-      var enFila = Math.min(cols, grupo.length - fil*cols);
-      var anchoFila = enFila*celW;
-      var xFila = X + (W - anchoFila)/2;
-      var cxc = xFila + col*celW + celW/2;
-      var px = cxc - fw/2;
-      var py = y0 + fil*(fh + altoNom + 3*k + 4*k);
+      var col = i % G.cols, fil = Math.floor(i/G.cols);
+      var enFila = Math.min(G.cols, grupo.length - fil*G.cols);
+      var xFila = X + (W - enFila*G.celW)/2;
+      var cxc = xFila + col*G.celW + G.celW/2;
+      var px = cxc - G.fw/2;
+      var py = y0 + fil*(G.fh + G.altoNom + 3*k + 4*k);
       var t = por[f.id] || {};
 
       doc.setFillColor(238,241,244);
-      doc.rect(px, py, fw, fh, 'F');
-      if(f.foto){ try{ doc.addImage(f.foto, px, py, fw, fh, undefined, 'FAST'); }catch(e){} }
+      doc.rect(px, py, G.fw, G.fh, 'F');
+      if(f.foto){ try{ doc.addImage(f.foto, px, py, G.fw, G.fh, undefined, 'FAST'); }catch(e){} }
       else{
-        doc.setFont('helvetica','bold'); doc.setFontSize(fw*1.6);
+        doc.setFont('helvetica','bold'); doc.setFontSize(G.fw*1.6);
         doc.setTextColor(178,186,196);
-        doc.text(_senpIni(t.nombre), px+fw/2, py+fh/2+_senpCentro(fw*1.6), { align:'center' });
+        doc.text(_senpIni(t.nombre), px+G.fw/2, py+G.fh/2+_senpCentro(G.fw*1.6), { align:'center' });
       }
       doc.setDrawColor(20,20,20); doc.setLineWidth(0.5*k);
-      doc.rect(px, py, fw, fh, 'S');
+      doc.rect(px, py, G.fw, G.fh, 'S');
 
       /* el nombre, debajo de la foto */
-      doc.setFont('helvetica','bold'); doc.setFontSize(fn);
+      doc.setFont('helvetica','bold'); doc.setFontSize(G.fn);
       doc.setTextColor(17,17,17);
-      var ny = py + fh + fn*1.25*_MMPT;
-      doc.splitTextToSize(String(t.nombre||'').toUpperCase(), celW-4*k).slice(0,2)
-         .forEach(function(l){ doc.text(l, cxc, ny, { align:'center' }); ny += fn*1.08*_MMPT; });
+      var ny = py + G.fh + G.fn*1.25*_MMPT;
+      doc.splitTextToSize(String(t.nombre||'').toUpperCase(), G.celW-3*k).slice(0,2)
+         .forEach(function(l){ doc.text(l, cxc, ny, { align:'center' }); ny += G.fn*1.08*_MMPT; });
       if(t.puesto){
-        var fq = fn*0.74;
+        var fq = G.fn*0.74;
         doc.setFont('helvetica','normal'); doc.setFontSize(fq);
         doc.setTextColor(110,118,128);
-        doc.text(String(t.puesto), cxc, ny, { align:'center', maxWidth: celW-4*k });
+        doc.text(String(t.puesto), cxc, ny, { align:'center', maxWidth: G.celW-3*k });
       }
     });
   }
 
-  /* cuántos entran por hoja, con la cabecera y el pie ya puestos */
-  var yA = cabecera(), yB = pieDePagina(1, 1);
-  var filasMax = Math.max(1, Math.floor((yB - 5*k - yA) / (24*k + 13*k + 7*k)));
-  var porHoja = cols*filasMax;
+  /* ── medir la hoja con la cabecera y el pie ya puestos ── */
+  var yA = cabecera(), yB = pieDePagina(1, 1) - 5*k;
+  var disp = yB - yA, n = fotos.length;
+
+  /* la repartija: la que él fijó, o la que hace las caras más grandes
+     con TODOS adentro */
+  var G = SENP.cols ? _senpGeometria(n, Math.min(SENP.cols, n), W, disp, k)
+                    : _senpMejor(n, W, disp, k);
+  var porHoja = n;
+  if(!G || G.fw < _senpMinimo(k)){
+    /* no entran legibles: se parte en hojas, con la mayor cantidad que
+       sí se reconoce en cada una */
+    for(var m = n - 1; m >= 1; m--){
+      var g = SENP.cols ? _senpGeometria(m, Math.min(SENP.cols, m), W, disp, k)
+                        : _senpMejor(m, W, disp, k);
+      if(g && g.fw >= _senpMinimo(k)){ G = g; porHoja = m; break; }
+    }
+    if(!G){ G = _senpGeometria(n, Math.min(6, n), W, disp, k); porHoja = n; }
+  }
+  var hojas = [], resto = fotos.slice();
   while(resto.length) hojas.push(resto.splice(0, porHoja));
   if(!hojas.length) hojas.push([]);
 
-  /* ahora sí, de verdad: la primera hoja se vuelve a dibujar limpia */
-  doc = new jspdf.jsPDF({ unit:'mm', format:[T.w, T.h], orientation:'portrait' });
+  /* ahora sí: la hoja de medir se tira y se dibujan todas limpias */
+  doc = new jspdf.jsPDF({ unit:'mm', format:[T.w, T.h],
+                          orientation: (T.w > T.h) ? 'landscape' : 'portrait' });
   hojas.forEach(function(g, i){
-    if(i) doc.addPage([T.w, T.h], 'portrait');
-    var a = cabecera(), b = pieDePagina(i+1, hojas.length);
-    caras(g, a, b - 5*k);
+    if(i) doc.addPage([T.w, T.h], (T.w > T.h) ? 'landscape' : 'portrait');
+    var a = cabecera(), b = pieDePagina(i+1, hojas.length) - 5*k;
+    /* todas las hojas con la MISMA rejilla: pegadas una al lado de la
+       otra en la puerta tienen que verse como un solo cartel */
+    caras(g, G, a, b);
   });
 
   SENP.pdf = { blob: doc.output('blob'),
-               nombre: 'personal-autorizado-'+(_senSlug(_senpTitulo())||'area')+'-'+T.n+'.pdf' };
+               nombre: 'personal-autorizado-'+(_senSlug(_senpTitulo())||'area')+'-'+T.n+
+                       (SENP.orient==='h'?'-horizontal':'')+'.pdf' };
   return hojas.length;
 }
 
