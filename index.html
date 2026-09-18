@@ -2692,6 +2692,31 @@ html.t-claro .sim-hito{background:#fff}
 .ats-sug-b b{display:block;font-size:13px;line-height:1.35}
 .ats-sug-b small{display:block;font-size:11.5px;color:var(--gris);margin-top:3px;line-height:1.4}
 .ats-sug-b small i{font-style:normal;color:var(--oro);font-weight:700}
+.ats-modo{display:flex;gap:6px;margin:12px 0 4px;background:rgba(var(--w),.06);padding:4px;border-radius:var(--r4)}
+.ats-modo button{flex:1 1 0;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700;padding:9px 6px;
+  border-radius:calc(var(--r4) - 4px);color:var(--gris);background:none;border:0}
+.ats-modo button.on{background:rgba(var(--w),.13);color:var(--tinta)}
+.ats-rej{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:8px;margin-top:12px}
+.ats-rc{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;font:inherit;
+  padding:11px 7px 10px;border-radius:var(--r2);color:var(--tinta);
+  background:rgba(var(--p),.55);border:1.5px solid rgba(var(--w),.1);transition:border-color .12s,transform .12s}
+.ats-rc:active{transform:scale(.96)}
+.ats-rc:hover{border-color:var(--c)}
+.ats-rc-ic{width:64px;height:64px;display:grid;place-items:center;border-radius:11px;background:#fff;
+  box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.ats-rc-ic svg{display:block;width:100%;height:100%}
+.ats-rc b{font-size:10.5px;line-height:1.25;text-align:center;font-weight:700;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ats-elegido{display:flex;align-items:center;gap:12px;margin-top:12px;padding:11px 12px;border-radius:var(--r2);
+  background:rgba(0,150,69,.10);border:1.5px solid rgba(0,150,69,.45)}
+.ats-elegido>span{flex:0 0 auto;width:48px;height:48px;display:grid;place-items:center;border-radius:10px;background:#fff}
+.ats-elegido>span svg{display:block}
+.ats-elegido>div{flex:1 1 auto;min-width:0}
+.ats-elegido i{display:block;font-style:normal;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ok)}
+.ats-elegido b{display:block;font-size:13px;line-height:1.3;margin-top:3px}
+.ats-elegido button{flex:0 0 auto;cursor:pointer;font:inherit;font-size:12px;font-weight:700;padding:8px 11px;
+  border-radius:9px;color:var(--tinta);background:rgba(var(--w),.09);border:1px solid rgba(var(--w),.16)}
+.ats-sin{font-size:20px;color:var(--gris)}
 .and-tipos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
 .and-t{display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;font:inherit;
   background:rgba(var(--p),.5);border:1.5px solid rgba(var(--w),.12);border-radius:var(--r2);
@@ -30464,7 +30489,7 @@ function atsNuevoObj(modo){
            acts:[], gente:[], firmas:{}, vb:{}, devuelto:null, nubeId:null, obs:'' };
 }
 var ATS = null;
-var ATSV = { paso:'datos', actAbierta:-1, busca:'', nueva:null, tipo:'' };
+var ATSV = { paso:'datos', actAbierta:-1, busca:'', nueva:null, tipo:'', modo:'dibujo' };
 
 function abrirATS(){ ir('p-ats'); }
 
@@ -30891,13 +30916,39 @@ function _atsAsistente(){
 
   h += '<div class="ats-guia-q">'+esc(E.q)+'</div>';
 
-  if(E.k === 'm'){
-    h += '<textarea id="ats-eta" rows="4" maxlength="'+E.max+'" placeholder="'+escA(E.ej)+'" '+
-         'oninput="ATSV.nueva.m=this.value;_atsGuiaBoton()">'+esc(N.m)+'</textarea>';
+  /* ══ CON DIBUJO SE ENTIENDE MEJOR ═══════════════════════════════
+     El trabajador no lee una lista de 34 renglones: reconoce la señal
+     que ya vio colgada en la obra. Así que el riesgo y el control se
+     eligen TOCANDO la señalética de la NTP que la app ya tiene, y al
+     ATS va solo el nombre, como pide el formato. De paso lo entrena:
+     cada vez que arma un ATS vuelve a ver el dibujo. */
+  var conDib = (E.k==='r' || E.k==='m');
+  if(conDib){
+    h += '<div class="ats-modo">'+
+      '<button type="button" class="'+(ATSV.modo!=='texto'?'on':'')+'" onclick="atsModo(\'dibujo\')">🖼️ Elegir con dibujo</button>'+
+      '<button type="button" class="'+(ATSV.modo==='texto'?'on':'')+'" onclick="atsModo(\'texto\')">⌨️ Escribirlo</button>'+
+      '</div>';
+  }
+
+  if(!conDib || ATSV.modo==='texto'){
+    if(E.k === 'm'){
+      h += '<textarea id="ats-eta" rows="4" maxlength="'+E.max+'" placeholder="'+escA(E.ej)+'" '+
+           'oninput="ATSV.nueva.m=this.value;_atsGuiaBoton()">'+esc(N.m)+'</textarea>';
+    }else{
+      h += '<input id="ats-eta" maxlength="'+E.max+'" placeholder="'+escA(E.ej)+'" value="'+escA(N[E.k])+'" '+
+           'oninput="ATSV.nueva.'+E.k+'=this.value;_atsGuiaBoton()" '+
+           'onkeydown="if(event.key===\'Enter\'){event.preventDefault();atsGuiaSigue();}">';
+    }
   }else{
-    h += '<input id="ats-eta" maxlength="'+E.max+'" placeholder="'+escA(E.ej)+'" value="'+escA(N[E.k])+'" '+
-         'oninput="ATSV.nueva.'+E.k+'=this.value;_atsGuiaBoton()" '+
-         'onkeydown="if(event.key===\'Enter\'){event.preventDefault();atsGuiaSigue();}">';
+    if(String(N[E.k]||'').trim()){
+      h += '<div class="ats-elegido"><span>'+_atsSenIco(N[E.k], 44)+'</span>'+
+           '<div><i>Elegido</i><b>'+esc(N[E.k])+'</b></div>'+
+           '<button type="button" onclick="atsQuitaEleccion()">Cambiar</button></div>';
+    }
+    h += '<div class="cart-busca" style="margin-top:12px"><span>🔎</span>'+
+         '<input placeholder="'+(E.k==='r'?'Buscar: caída, eléctrico, aplastado…':'Buscar: arnés, casco, vigía, bloqueo…')+'" '+
+         'autocomplete="off" value="'+escA(ATSV.busca)+'" oninput="atsBuscaSenal(this.value)"></div>';
+    h += '<div id="ats-rej">'+_atsRejilla(E.k, ATSV.busca)+'</div>';
   }
 
   /* en la etapa del peligro, la biblioteca de los IPERC: al elegir uno
@@ -30930,7 +30981,7 @@ function atsGuiaSigue(){
   }
   if(iE < ATS_ETAPAS.length-1){
     N.eta = ATS_ETAPAS[iE+1].k;
-    ATSV.busca = '';
+    ATSV.busca = ''; ATSV.modo = 'dibujo';
     pintarATSNuevo();
     setTimeout(function(){ var e=$('ats-eta'); if(e) e.focus(); }, 60);
     return;
@@ -30947,6 +30998,70 @@ function atsGuiaAtras(){
   var iE = _atsEtapa(N.eta);
   if(iE === 0){ ATSV.nueva = null; pintarATSNuevo(); return; }
   N.eta = ATS_ETAPAS[iE-1].k;
+  pintarATSNuevo();
+}
+
+/* ── la rejilla de señales ────────────────────────────────────────
+   Riesgo  → las 34 de ADVERTENCIA, que son exactamente eso.
+   Control → las de OBLIGACIÓN y PROHIBICIÓN: «usa arnés», «no pases».
+   Al ATS va el nombre en texto, como pide el formato; el dibujo es
+   para que el trabajador lo reconozca y lo aprenda.               */
+function atsModo(m){ ATSV.modo = m; ATSV.busca=''; pintarATSNuevo(); }
+function atsQuitaEleccion(){
+  if(!ATSV.nueva) return;
+  ATSV.nueva[ATSV.nueva.eta] = '';
+  pintarATSNuevo();
+}
+function _atsSenales(eta){
+  if(typeof NTP_SENALES === 'undefined') return [];
+  var g = (eta==='r') ? {adv:1} : {obl:1, proh:1};
+  return NTP_SENALES.filter(function(s){ return g[s.g]; });
+}
+function _atsSenIco(nombre, px){
+  if(typeof NTP_SENALES === 'undefined') return '';
+  var n = _senNorm(nombre);
+  for(var i=0;i<NTP_SENALES.length;i++){
+    if(_senNorm(NTP_SENALES[i].n).indexOf(n) === 0) return senalSVG(NTP_SENALES[i], px||44);
+  }
+  return '<span class="ats-sin">✎</span>';
+}
+function _atsRejilla(eta, q){
+  var l = _atsSenales(eta);
+  var t = _senNorm(String(q||'')).trim(), ps = t ? t.split(/\s+/) : [];
+  if(ps.length){
+    l = l.filter(function(s){
+      var x = _senNorm(s.n);
+      for(var i=0;i<ps.length;i++) if(x.indexOf(ps[i])<0) return false;
+      return true;
+    });
+  }
+  if(!l.length) return '<p class="sub" style="margin-top:14px;font-size:12.5px">Ninguna señal con esa palabra. '+
+    'Toca «Escribirlo» y ponlo con tus palabras: vale igual.</p>';
+  var h = '<div class="ats-rej">';
+  l.forEach(function(s){
+    var col = (typeof senColor==='function') ? senColor(s.g).cf : '#8A9099';
+    h += '<button type="button" class="ats-rc" style="--c:'+col+'" onclick="atsTomaSenal(\''+escA(s.k)+'\')">'+
+         '<span class="ats-rc-ic">'+senalSVG(s, 64)+'</span>'+
+         '<b>'+esc(_senCorto(s.n))+'</b></button>';
+  });
+  return h + '</div>';
+}
+function atsBuscaSenal(q){
+  ATSV.busca = q;
+  var c = $('ats-rej'); if(!c || !ATSV.nueva) return;
+  c.innerHTML = _atsRejilla(ATSV.nueva.eta, q);
+}
+function atsTomaSenal(k){
+  if(!ATSV.nueva || typeof NTP_SENALES==='undefined') return;
+  for(var i=0;i<NTP_SENALES.length;i++){
+    if(NTP_SENALES[i].k === k){
+      /* al papel va el texto; la flecha de dirección no tiene glifo
+         en el PDF, así que se quita */
+      ATSV.nueva[ATSV.nueva.eta] = String(NTP_SENALES[i].n)
+        .replace(/[←-⇿]\s*/g,'').replace(/\s*·\s*$/,'').trim();
+      break;
+    }
+  }
   pintarATSNuevo();
 }
 
