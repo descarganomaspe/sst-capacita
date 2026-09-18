@@ -2759,6 +2759,89 @@ html.t-claro .sim-hito{background:#fff}
 .ats-modo-obra{margin-top:16px;padding:13px 14px;border-radius:var(--r2);
   background:rgba(var(--p),.5);border:1.5px solid rgba(var(--w),.12)}
 .ats-modo-obra .sec-tit{margin:0 0 8px}
+/* ══ MOVIMIENTO ═══════════════════════════════════════════════════
+   Reglas que me puse, porque una app de obra no es una web de agencia:
+   1 · nada retrasa una información. Todo entra en menos de 0.3 s y la
+       primera tarjeta sale casi de una, así que nadie espera a que la
+       pantalla «termine» para leer.
+   2 · solo transform y opacity. Son las dos cosas que el celular anima
+       en la GPU; animar alto o margen lo hace pensar en cada cuadro y
+       en un celular de obra eso se ve como tirones.
+   3 · el que tenga puesto «reducir movimiento» en su Android no ve
+       NADA de esto, y no por cortesía: mucha gente lo activa porque el
+       movimiento le marea de verdad.
+   4 · lo que parpadea es solo lo que tiene que alarmar. Si parpadea
+       todo, no alarma nada.                                          */
+@keyframes ob-sube{ from{ opacity:0; transform:translateY(10px) } to{ opacity:1; transform:none } }
+@keyframes ob-lat{ 0%,100%{ box-shadow:0 0 0 0 rgba(217,38,28,0) }
+                   50%{ box-shadow:0 0 0 5px rgba(217,38,28,.16) } }
+@keyframes ob-entra-qr{ from{ opacity:0; transform:scale(.94) } to{ opacity:1; transform:none } }
+
+/* la entrada escalonada de la pantalla del trabajador */
+#p-obra.activa .tw-cab,
+#p-obra.activa .sec-tit,
+#p-obra.activa .tw-h,
+#p-obra.activa .tw-qr-abre,
+#p-obra.activa .tw-c,
+#p-obra.activa .tarj{ animation:ob-sube .26s cubic-bezier(.16,1,.3,1) both }
+#p-obra.activa .tw-h:nth-child(2){ animation-delay:.04s }
+#p-obra.activa .tw-rej .tw-c:nth-child(1){ animation-delay:.02s }
+#p-obra.activa .tw-rej .tw-c:nth-child(2){ animation-delay:.05s }
+#p-obra.activa .tw-rej .tw-c:nth-child(3){ animation-delay:.08s }
+#p-obra.activa .tw-rej .tw-c:nth-child(4){ animation-delay:.10s }
+#p-obra.activa .tw-rej .tw-c:nth-child(5){ animation-delay:.12s }
+#p-obra.activa .tw-rej .tw-c:nth-child(6){ animation-delay:.14s }
+#p-obra.activa .tw-rej .tw-c:nth-child(7){ animation-delay:.16s }
+#p-obra.activa .tw-rej .tw-c:nth-child(8){ animation-delay:.18s }
+#p-obra.activa .tw-rej .tw-c:nth-child(n+9){ animation-delay:.20s }
+
+/* el rojo del ATS late despacio: es lo único que puede parar un trabajo */
+.tw-h.roja{ animation:ob-sube .26s cubic-bezier(.16,1,.3,1) both, ob-lat 2.6s ease-in-out 1.2s infinite }
+/* el que está cargando respira, para que se note que no está colgado */
+.tw-h.cargando .tw-h-ic{ animation:ob-resp 1.4s ease-in-out infinite }
+@keyframes ob-resp{ 0%,100%{ opacity:.45 } 50%{ opacity:1 } }
+
+/* el QR: al abrirse crece un poco, no aparece de golpe */
+.tw-qr-caja:not([hidden]){ animation:ob-entra-qr .24s cubic-bezier(.16,1,.3,1) both }
+.tw-qr-abre.alto{ padding:16px 15px }
+.tw-qr-abre.alto b{ font-size:16px }
+.tw-qr-abre.alto>span:first-child{ font-size:26px }
+.tw-qr-abre .tic{ transition:transform .2s ease }
+.tw-qr-abre.abierta .tic{ transform:rotate(90deg) }
+
+/* el toque: todo lo que se puede tocar se hunde un poco */
+.tw-c, .tw-h, .tw-qr-abre, .cart-t, .ats-rc, .ats-sug-b{
+  transition:transform .13s cubic-bezier(.16,1,.3,1), border-color .15s ease, background .15s ease }
+.tw-c:active, .tw-h:active, .tw-qr-abre:active, .cart-t:active,
+.ats-rc:active, .ats-sug-b:active{ transform:scale(.97) }
+
+/* los pasos del ATS: el contenido entra por el lado al que se avanza */
+#p-ats-nuevo.activa .ats-guia-q,
+#p-ats-nuevo.activa .ats-rej,
+#p-ats-nuevo.activa .ats-peli,
+#p-ats-nuevo.activa .uni-caja{ animation:ob-sube .22s cubic-bezier(.16,1,.3,1) both }
+.ats-guia-p{ transition:background .18s ease, border-color .18s ease }
+.ats-guia-p i{ transition:background .18s ease, color .18s ease, transform .18s cubic-bezier(.16,1,.3,1) }
+.ats-guia-p.on i{ transform:scale(1.12) }
+
+/* la lista del ATS del día y los modelos */
+#p-ats-dia.activa .cart-t, #p-ats-dia.activa .ats-ul li,
+#p-docs-obra.activa .tarj{ animation:ob-sube .24s cubic-bezier(.16,1,.3,1) both }
+#p-ats-dia.activa .cart-t:nth-child(2){ animation-delay:.04s }
+#p-ats-dia.activa .cart-t:nth-child(3){ animation-delay:.08s }
+#p-ats-dia.activa .cart-t:nth-child(n+4){ animation-delay:.11s }
+
+@media (prefers-reduced-motion:reduce){
+  #p-obra.activa .tw-cab, #p-obra.activa .sec-tit, #p-obra.activa .tw-h,
+  #p-obra.activa .tw-qr-abre, #p-obra.activa .tw-c, #p-obra.activa .tarj,
+  .tw-h.roja, .tw-h.cargando .tw-h-ic, .tw-qr-caja:not([hidden]),
+  #p-ats-nuevo.activa .ats-guia-q, #p-ats-nuevo.activa .ats-rej,
+  #p-ats-nuevo.activa .ats-peli, #p-ats-nuevo.activa .uni-caja,
+  #p-ats-dia.activa .cart-t, #p-ats-dia.activa .ats-ul li,
+  #p-docs-obra.activa .tarj{ animation:none!important }
+  .tw-c:active, .tw-h:active, .tw-qr-abre:active, .cart-t:active,
+  .ats-rc:active, .ats-sug-b:active{ transform:none }
+}
 .and-tipos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
 .and-t{display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;font:inherit;
   background:rgba(var(--p),.5);border:1.5px solid rgba(var(--w),.12);border-radius:var(--r2);
@@ -38124,60 +38207,73 @@ function pintarObra(){
   var h='<div class="tw-cab"><div><h2 style="margin:0">Hola, '+esc(String(y.n||'').split(' ')[0]||'')+'</h2>'+
         '<p class="sub" style="margin:3px 0 0">'+esc(e.nombre||'')+' · '+esc(e.codigo||'')+'</p></div></div>';
 
-  /* ── HOY: lo primero, porque es lo único que decide si trabaja ── */
+  /* ══ ARRIBA VA LO QUE DECIDE ALGO ESTA MAÑANA ═════════════════════
+     Y eso cambia según la obra:
+
+     · Obra DIGITAL — lo que decide si empieza o no es si su ATS está
+       liberado. Eso manda, y el QR va debajo.
+
+     · Obra en PAPEL — el ATS está en una tabla al pie de la tarea, no
+       acá; el modelo es material de consulta, no una alarma de hoy.
+       Entonces lo único que de verdad necesita en la puerta a las
+       siete es su QR, y ese se queda con el lugar de arriba. El modelo
+       baja a la rejilla, como una opción más. */
   var pend=0;
   try{ pend=carrPendientes(); }catch(_p){}
-  var A = _obraHoy();
-  h+='<div class="sec-tit" style="margin-top:16px">Hoy</div><div class="tw-hoy">';
+  var papel = (typeof ATSCFG==='object' && ATSCFG.modo === 'papel');
+  var A = papel ? null : _obraHoy();
 
-  /* En una obra que trabaja en papel, el ATS existe pero no está acá:
-     está en una tabla, escrito a mano. Mostrarle «no hay ATS» todos los
-     días sería una alarma que nunca se apaga, y una alarma que nunca se
-     apaga enseña a ignorar también las que sí importan. */
-  if(typeof ATSCFG==='object' && ATSCFG.modo === 'papel'){
-    var _nm = (ATSCFG.modelos||[]).length;
-    h+='<button type="button" class="tw-h" onclick="abrirATSDia()">'+
-       '<span class="tw-h-ic">\ud83d\udcd0</span><span class="tw-h-tx"><b>El ATS de tu actividad</b>'+
-       '<small>'+(_nm ? ('Tu obra llena el ATS en papel. Ac\u00e1 tienes '+_nm+' modelo'+(_nm===1?'':'s')+
-                          ' con los peligros y controles de tu tarea.')
-                      : 'Tu obra llena el ATS en papel. Tu supervisor todav\u00eda no public\u00f3 modelos.')+
-       '</small></span><span class="tic">\u203a</span></button>';
-  }else if(A === null){
-    h+='<button type="button" class="tw-h cargando" onclick="abrirATSDia()">'+
-       '<span class="tw-h-ic">⏳</span><span class="tw-h-tx"><b>Buscando el ATS de hoy…</b>'+
-       '<small>Un momento.</small></span></button>';
-  }else if(!A.n){
-    h+='<button type="button" class="tw-h roja" onclick="abrirATSDia()">'+
-       '<span class="tw-h-ic">⛔</span><span class="tw-h-tx"><b>Todavía no hay ATS de hoy</b>'+
-       '<small>Hasta que tu capataz lo suba y lo liberen, la tarea no empieza.</small></span>'+
-       '<span class="tic">›</span></button>';
-  }else if(A.libres === A.n){
-    h+='<button type="button" class="tw-h verde" onclick="abrirATSDia()">'+
-       '<span class="tw-h-ic">✅</span><span class="tw-h-tx"><b>Puedes empezar</b>'+
-       '<small>'+(A.n===1 ? 'El ATS de hoy está liberado: ' + esc(String(A.uno.trabajo||'').slice(0,46))
-                          : 'Los '+A.n+' ATS de hoy están liberados.')+'</small></span>'+
-       '<span class="tic">›</span></button>';
+  function _qrFila(destacado){
+    return '<button type="button" class="tw-qr-abre'+(destacado?' alto':'')+'" onclick="obraQR()">'+
+      '<span>🪪</span><div><b>Mi credencial</b>'+
+      '<small>El QR que escanea el supervisor en la puerta</small></div>'+
+      '<span class="tic" id="obra-qr-fl">›</span></button>'+
+      '<div id="obra-qr" class="tw-qr-caja" hidden></div>';
+  }
+
+  if(papel){
+    h+='<div class="sec-tit" style="margin-top:16px">En la puerta</div>';
+    h+=_qrFila(true);
+    if(pend){
+      h+='<div class="tw-hoy" style="margin-top:10px">'+
+         '<button type="button" class="tw-h oro" onclick="abrirCarrete()">'+
+         '<span class="tw-h-ic">📰</span><span class="tw-h-tx"><b>'+pend+' boletín'+(pend===1?'':'es')+' sin ver</b>'+
+         '<small>Ábrelos: tu supervisor necesita tu acuse para el expediente.</small></span>'+
+         '<span class="tic">›</span></button></div>';
+    }
   }else{
-    h+='<button type="button" class="tw-h roja" onclick="abrirATSDia()">'+
-       '<span class="tw-h-ic">⛔</span><span class="tw-h-tx"><b>Todavía no se puede empezar</b>'+
-       '<small>'+(A.libres? A.libres+' de '+A.n+' ATS liberados. ' : '')+
-       'Falta el V°B° del SSOMA.</small></span>'+
-       '<span class="tic">›</span></button>';
+    h+='<div class="sec-tit" style="margin-top:16px">Hoy</div><div class="tw-hoy">';
+    if(A === null){
+      h+='<button type="button" class="tw-h cargando" onclick="abrirATSDia()">'+
+         '<span class="tw-h-ic">⏳</span><span class="tw-h-tx"><b>Buscando el ATS de hoy…</b>'+
+         '<small>Un momento.</small></span></button>';
+    }else if(!A.n){
+      h+='<button type="button" class="tw-h roja" onclick="abrirATSDia()">'+
+         '<span class="tw-h-ic">⛔</span><span class="tw-h-tx"><b>Todavía no hay ATS de hoy</b>'+
+         '<small>Hasta que tu capataz lo suba y lo liberen, la tarea no empieza.</small></span>'+
+         '<span class="tic">›</span></button>';
+    }else if(A.libres === A.n){
+      h+='<button type="button" class="tw-h verde" onclick="abrirATSDia()">'+
+         '<span class="tw-h-ic">✅</span><span class="tw-h-tx"><b>Puedes empezar</b>'+
+         '<small>'+(A.n===1 ? 'El ATS de hoy está liberado: ' + esc(String(A.uno.trabajo||'').slice(0,46))
+                            : 'Los '+A.n+' ATS de hoy están liberados.')+'</small></span>'+
+         '<span class="tic">›</span></button>';
+    }else{
+      h+='<button type="button" class="tw-h roja" onclick="abrirATSDia()">'+
+         '<span class="tw-h-ic">⛔</span><span class="tw-h-tx"><b>Todavía no se puede empezar</b>'+
+         '<small>'+(A.libres? A.libres+' de '+A.n+' ATS liberados. ' : '')+
+         'Falta el V°B° del SSOMA.</small></span>'+
+         '<span class="tic">›</span></button>';
+    }
+    if(pend){
+      h+='<button type="button" class="tw-h oro" onclick="abrirCarrete()">'+
+         '<span class="tw-h-ic">📰</span><span class="tw-h-tx"><b>'+pend+' boletín'+(pend===1?'':'es')+' sin ver</b>'+
+         '<small>Ábrelos: tu supervisor necesita tu acuse para el expediente.</small></span>'+
+         '<span class="tic">›</span></button>';
+    }
+    h+='</div>';
+    h+=_qrFila(false);
   }
-  if(pend){
-    h+='<button type="button" class="tw-h oro" onclick="abrirCarrete()">'+
-       '<span class="tw-h-ic">📰</span><span class="tw-h-tx"><b>'+pend+' boletín'+(pend===1?'':'es')+' sin ver</b>'+
-       '<small>Ábrelos: tu supervisor necesita tu acuse para el expediente.</small></span>'+
-       '<span class="tic">›</span></button>';
-  }
-  h+='</div>';
-
-  /* ── el QR, plegado: se abre de un toque en la puerta ── */
-  h+='<button type="button" class="tw-qr-abre" onclick="obraQR()">'+
-     '<span>🪪</span><div><b>Mi credencial</b>'+
-     '<small>El QR que escanea el supervisor en la puerta</small></div>'+
-     '<span class="tic" id="obra-qr-fl">›</span></button>';
-  h+='<div id="obra-qr" class="tw-qr-caja" hidden></div>';
 
   /* ── todo lo que puede hacer, sin deslizar ── */
   var hechas=[]; try{ hechas=leer(LS_DIFU,[])||[]; }catch(_d){}
@@ -38249,14 +38345,15 @@ function pintarObra(){
 }
 function obraQR(){
   var c=$('obra-qr'), f=$('obra-qr-fl'); if(!c) return;
+  var b=c.previousElementSibling;
   if(c.hidden){
     c.innerHTML = tarjetaQRTrab();
     c.hidden = false;
-    if(f) f.textContent = '‹';
+    if(b && b.classList) b.classList.add('abierta');
     try{ c.scrollIntoView({block:'nearest', behavior:'smooth'}); }catch(_e){}
   }else{
     c.hidden = true; c.innerHTML = '';
-    if(f) f.textContent = '›';
+    if(b && b.classList) b.classList.remove('abierta');
   }
 }
 
