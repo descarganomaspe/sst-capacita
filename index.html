@@ -2717,6 +2717,10 @@ html.t-claro .sim-hito{background:#fff}
 .ats-elegido button{flex:0 0 auto;cursor:pointer;font:inherit;font-size:12px;font-weight:700;padding:8px 11px;
   border-radius:9px;color:var(--tinta);background:rgba(var(--w),.09);border:1px solid rgba(var(--w),.16)}
 .ats-sin{font-size:20px;color:var(--gris)}
+.esc-aviso{display:block;margin:0 0 10px;padding:11px 13px;border-radius:var(--r2);
+  background:rgba(252,219,0,.13);border:1px solid rgba(252,219,0,.45);font-size:12.8px;line-height:1.45}
+.esc-aviso b{display:block;margin-bottom:3px}
+.esc-aviso span{display:block;color:var(--gris)}
 .and-tipos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
 .and-t{display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;font:inherit;
   background:rgba(var(--p),.5);border:1.5px solid rgba(var(--w),.12);border-radius:var(--r2);
@@ -12297,32 +12301,54 @@ function _franja(perfil, minimo){
 /* ══════════════════════════════════════════════════════════════════
    EL ESCÁNER · encontrar la hoja y enderezarla
 
-   Lo que había antes recortaba un rectángulo RECTO alrededor de lo
-   más claro de la foto. Por eso sobrevivía la mesa, el borde del
-   escritorio y el dedo: una hoja fotografiada de pie nunca es un
-   rectángulo recto en la foto, es un trapecio. Recortar recto deja
-   fuera las esquinas o deja dentro media mesa.
+   La versión anterior buscaba la hoja por COLOR: lo claro y sin color
+   es papel. Suena razonable y falla en obra, que es donde se usa: si
+   la hoja está sobre una mesa blanca, sobre el plano, sobre el capó de
+   una camioneta clara o bajo una luz que lava todo, la mancha de
+   «papel» se sale de la hoja y se traga la mesa. Y como después se
+   buscaba el cuadrilátero de ÁREA MÁXIMA dentro de esa mancha, el
+   error se agrandaba a propósito: cuanto más mesa entraba, mejor
+   puntuaba. Por eso salía la mesa y salía el dedo.
 
-   Ahora se busca la hoja de verdad:
+   Esto ahora hace lo que hacen los escáneres de verdad, que no miran
+   el color del papel sino su BORDE:
 
-     1. se achica la foto y se mide el COLOR, no solo el brillo. El
-        papel es claro y sin color; la mesa de melamina es marrón y el
-        dedo es rosado. La saturación es lo que los separa;
-     2. se agarra la mancha de papel más grande y se rellenan sus
-        huecos (la letra es oscura, pero está dentro de la hoja);
-     3. se saca su envolvente convexa y de ahí las CUATRO esquinas;
-     4. se comprueba que el cuadrilátero tenga cara de hoja: área
-        suficiente, esquinas entre 50° y 130°, lados opuestos parecidos;
+     1. se achica la foto y se pasa a gris con un desenfoque suave,
+        que borra la textura del papel y la letra;
+     2. se saca el gradiente (Sobel), se adelgaza a un píxel con
+        supresión de no-máximos y se cierra con histéresis — eso es
+        Canny, el detector de bordes de siempre;
+     3. de ese mapa de bordes salen candidatos por DOS caminos, porque
+        ninguno solo alcanza:
+          · el contorno: la mancha de borde más grande, su envolvente
+            convexa y sus cuatro esquinas;
+          · las rectas: una transformada de Hough saca las líneas
+            largas de la foto, y se arman cuadriláteros con dos casi
+            horizontales y dos casi verticales. Un dedo no genera
+            rectas largas; el borde de una hoja sí;
+     4. y aquí está lo que faltaba antes — cada candidato se PUNTÚA, y
+        no por tamaño:
+          · cuánto de su perímetro cae de verdad sobre píxeles de
+            borde (un lado imaginario no vale),
+          · si por dentro es más claro que por fuera en los cuatro
+            lados (una hoja lo es; un pedazo de mesa no),
+          · si por dentro es parejo (el papel lo es; una escena no),
+          · y la geometría: esquinas cerca de 90°, lados opuestos
+            parecidos, área razonable.
+        Gana el de mejor puntaje, no el más grande.
      5. se estima la proporción real de la hoja —una A4 fotografiada
         en diagonal se ve casi cuadrada— y se endereza con una
         homografía, muestreando con interpolación bilineal.
 
-   Lo que esto corrige: la foto torcida, la tomada de costado, el
-   trapecio de la perspectiva, la mesa y los dedos alrededor.
+   Si ningún candidato llega a un puntaje decente, NO se recorta nada
+   y se avisa. Un recorte equivocado es peor que ninguno: el que firma
+   no se da cuenta de que le faltó media hoja.
+
    Lo que NO corrige: una hoja arrugada o doblada en el medio. Eso
-   necesita seguir la curva de cada renglón y no está hecho; lo digo
-   antes de que lo descubra en la obra.
+   necesita seguir la curva de cada renglón y no está hecho.
    ════════════════════════════════════════════════════════════════ */
+
+var DOC_LADO = 480;     /* a este ancho se hace toda la detección */
 
 function _docChico(cv, lado){
   var r = Math.min(1, lado / Math.max(cv.width, cv.height));
@@ -12332,85 +12358,149 @@ function _docChico(cv, lado){
   return c;
 }
 
-/* la máscara de papel: claro y sin color */
-function _docPapel(d, w, h){
-  var n = w*h, L = new Float32Array(n), S = new Float32Array(n), i, j;
-  for(i=0, j=0; i<n; i++, j+=4){
-    var R=d[j], G=d[j+1], B=d[j+2];
-    var mx = R>G ? (R>B?R:B) : (G>B?G:B);
-    var mn = R<G ? (R<B?R:B) : (G<B?G:B);
-    L[i] = mx/255;
-    S[i] = mx ? (mx-mn)/mx : 0;
+/* ── gris + desenfoque separable (caja doble ≈ gaussiana) ───────── */
+function _docGris(d, w, h){
+  var n = w*h, g = new Float32Array(n), i, j;
+  for(i=0, j=0; i<n; i++, j+=4) g[i] = d[j]*0.299 + d[j+1]*0.587 + d[j+2]*0.114;
+  return g;
+}
+function _docCaja(g, w, h, r){
+  var n = w*h, t = new Float32Array(n), o = new Float32Array(n), x, y, i, k, s;
+  for(y=0; y<h; y++){
+    var fila = y*w;
+    s = 0;
+    for(k=-r; k<=r; k++) s += g[fila + Math.min(w-1, Math.max(0, k))];
+    for(x=0; x<w; x++){
+      t[fila+x] = s/(2*r+1);
+      s -= g[fila + Math.min(w-1, Math.max(0, x-r))];
+      s += g[fila + Math.min(w-1, Math.max(0, x+r+1))];
+    }
   }
-  /* el brillo de referencia: el percentil 92 de la foto. Un flash o una
-     sombra mueven todo el histograma, así que no sirve un número fijo. */
-  var hist = new Uint32Array(256), k;
-  for(i=0;i<n;i++) hist[(L[i]*255)|0]++;
-  var acum = 0, alto = 255;
-  for(k=255;k>=0;k--){ acum += hist[k]; if(acum >= n*0.08){ alto = k; break; } }
-  var ref = Math.max(40, alto)/255;
+  for(x=0; x<w; x++){
+    s = 0;
+    for(k=-r; k<=r; k++) s += t[Math.min(h-1, Math.max(0, k))*w + x];
+    for(y=0; y<h; y++){
+      o[y*w+x] = s/(2*r+1);
+      s -= t[Math.min(h-1, Math.max(0, y-r))*w + x];
+      s += t[Math.min(h-1, Math.max(0, y+r+1))*w + x];
+    }
+  }
+  return o;
+}
+function _docSuave(g, w, h, r){ return _docCaja(_docCaja(g, w, h, r), w, h, r); }
 
-  var M = new Uint8Array(n), cuantos = 0;
-  for(i=0;i<n;i++){
-    if(L[i] > ref*0.62 && S[i] < 0.34){ M[i] = 1; cuantos++; }
+/* ── Sobel: magnitud y dirección ────────────────────────────────── */
+function _docSobel(g, w, h){
+  var n = w*h, mag = new Float32Array(n), dir = new Uint8Array(n), x, y;
+  for(y=1; y<h-1; y++){
+    for(x=1; x<w-1; x++){
+      var i = y*w+x;
+      var a=g[i-w-1], b=g[i-w], c=g[i-w+1];
+      var d=g[i-1],              e=g[i+1];
+      var f=g[i+w-1], gg=g[i+w], hh=g[i+w+1];
+      var gx = (c + 2*e + hh) - (a + 2*d + f);
+      var gy = (f + 2*gg + hh) - (a + 2*b + c);
+      mag[i] = Math.sqrt(gx*gx + gy*gy);
+      /* la dirección se cuantiza a 0, 45, 90 y 135 grados */
+      var ang = Math.atan2(gy, gx) * 180/Math.PI; if(ang < 0) ang += 180;
+      dir[i] = (ang < 22.5 || ang >= 157.5) ? 0 : (ang < 67.5 ? 1 : (ang < 112.5 ? 2 : 3));
+    }
   }
-  return { M:M, cuantos:cuantos, L:L, S:S };
+  return { mag:mag, dir:dir };
 }
 
-/* cerrar: tapa la letra y los agujeritos del ruido antes de buscar la mancha */
-function _docCerrar(M, w, h, r){
-  var n = w*h, A = new Uint8Array(n), B = new Uint8Array(n), x, y, i, dx, dy;
+/* ── Canny: adelgazar e histéresis ──────────────────────────────── */
+function _docCanny(mag, dir, w, h, pct){
+  var n = w*h, i, x, y;
+  /* los umbrales salen de la propia foto: el percentil 92 de la
+     magnitud. Un número fijo falla con luz distinta. */
+  var ord = new Float32Array(n); ord.set(mag);
+  var muestra = [];
+  for(i=0;i<n;i+=7) muestra.push(mag[i]);
+  muestra.sort(function(a,b){ return a-b; });
+  var alto = muestra[Math.floor(muestra.length*(pct||0.92))] || 1;
+  if(alto < 4) alto = 4;
+  var bajo = alto*0.4;
+
+  var fino = new Float32Array(n);
+  for(y=1; y<h-1; y++){
+    for(x=1; x<w-1; x++){
+      i = y*w+x; var m = mag[i]; if(m < bajo) continue;
+      var a, b;
+      switch(dir[i]){
+        case 0: a=mag[i-1];   b=mag[i+1];   break;
+        case 1: a=mag[i-w+1]; b=mag[i+w-1]; break;
+        case 2: a=mag[i-w];   b=mag[i+w];   break;
+        default:a=mag[i-w-1]; b=mag[i+w+1];
+      }
+      if(m >= a && m >= b) fino[i] = m;
+    }
+  }
+  var E = new Uint8Array(n), cola = new Int32Array(n), fin = 0;
+  for(i=0;i<n;i++) if(fino[i] >= alto){ E[i] = 1; cola[fin++] = i; }
+  var ini = 0;
+  while(ini < fin){
+    var p = cola[ini++], px = p % w, py = (p/w)|0;
+    for(var dy=-1; dy<=1; dy++) for(var dx=-1; dx<=1; dx++){
+      var xx = px+dx, yy = py+dy;
+      if(xx<0||yy<0||xx>=w||yy>=h) continue;
+      var q = yy*w+xx;
+      if(!E[q] && fino[q] >= bajo){ E[q] = 1; cola[fin++] = q; }
+    }
+  }
+  return E;
+}
+/* engordar el borde un poco: los tramos rotos se juntan */
+function _docDilatar(E, w, h, r){
+  var n = w*h, O = new Uint8Array(n), x, y, dx, dy;
   for(y=0;y<h;y++) for(x=0;x<w;x++){
-    i = y*w+x; var v = 0;
+    var v = 0;
     for(dy=-r; dy<=r && !v; dy++){
       var yy = y+dy; if(yy<0||yy>=h) continue;
-      for(dx=-r; dx<=r; dx++){ var xx=x+dx; if(xx<0||xx>=w) continue; if(M[yy*w+xx]){ v=1; break; } }
+      for(dx=-r; dx<=r; dx++){ var xx=x+dx; if(xx<0||xx>=w) continue; if(E[yy*w+xx]){ v=1; break; } }
     }
-    A[i] = v;
+    O[y*w+x] = v;
   }
-  for(y=0;y<h;y++) for(x=0;x<w;x++){
-    i = y*w+x; var t = 1;
-    for(dy=-r; dy<=r && t; dy++){
-      var yy2 = y+dy; if(yy2<0||yy2>=h){ t=0; break; }
-      for(dx=-r; dx<=r; dx++){ var xx2=x+dx; if(xx2<0||xx2>=w||!A[yy2*w+xx2]){ t=0; break; } }
-    }
-    B[i] = t;
-  }
-  return B;
+  return O;
 }
 
-/* la mancha más grande, y de paso sus píxeles de borde */
-function _docMancha(M, w, h){
-  var n = w*h, et = new Int32Array(n), cola = new Int32Array(n);
-  var mejor = 0, mejorEt = 0, et2 = 0, i;
+/* ── camino A · el contorno más grande ──────────────────────────── */
+function _docManchas(M, w, h, cuantas){
+  /* La mancha con MÁS PÍXELES no es la que interesa: un recuadro
+     interior del formato, dibujado con línea gruesa, puede tener más
+     píxeles que el borde de la hoja. Lo que interesa es la que ENCIERRA
+     más superficie, así que se ordena por el área de su envolvente. */
+  var n = w*h, et = new Int32Array(n), cola = new Int32Array(n), et2 = 0, i;
+  var grupos = [];
   for(i=0;i<n;i++){
     if(!M[i] || et[i]) continue;
-    et2++; var ini=0, fin=0, tam=0;
+    et2++; var ini=0, fin=0, pts=[];
     cola[fin++] = i; et[i] = et2;
     while(ini < fin){
-      var p = cola[ini++]; tam++;
-      var x = p % w, y = (p/w)|0;
-      if(x>0   && M[p-1] && !et[p-1]){ et[p-1]=et2; cola[fin++]=p-1; }
-      if(x<w-1 && M[p+1] && !et[p+1]){ et[p+1]=et2; cola[fin++]=p+1; }
-      if(y>0   && M[p-w] && !et[p-w]){ et[p-w]=et2; cola[fin++]=p-w; }
-      if(y<h-1 && M[p+w] && !et[p+w]){ et[p+w]=et2; cola[fin++]=p+w; }
+      var p = cola[ini++]; var x = p % w, y = (p/w)|0;
+      pts.push([x,y]);
+      for(var dy=-1; dy<=1; dy++) for(var dx=-1; dx<=1; dx++){
+        var xx=x+dx, yy=y+dy;
+        if(xx<0||yy<0||xx>=w||yy>=h) continue;
+        var q = yy*w+xx;
+        if(M[q] && !et[q]){ et[q]=et2; cola[fin++]=q; }
+      }
     }
-    if(tam > mejor){ mejor = tam; mejorEt = et2; }
+    if(pts.length >= 24) grupos.push(pts);
   }
-  if(!mejorEt) return null;
-  var pts = [];
-  for(i=0;i<n;i++){
-    if(et[i] !== mejorEt) continue;
-    var x2 = i % w, y2 = (i/w)|0;
-    if(x2===0 || y2===0 || x2===w-1 || y2===h-1 ||
-       et[i-1]!==mejorEt || et[i+1]!==mejorEt || et[i-w]!==mejorEt || et[i+w]!==mejorEt){
-      pts.push([x2, y2]);
-    }
-  }
-  return { pts:pts, tam:mejor };
+  grupos.forEach(function(g){
+    var c = _docCasco(g);
+    g._casco = c;
+    g._area = c.length>=3 ? _docAreaPoli(c) : 0;
+  });
+  grupos.sort(function(a,b){ return b._area - a._area; });
+  return grupos.slice(0, cuantas||3);
 }
-
-/* envolvente convexa (cadena monótona de Andrew) */
+function _docAreaPoli(p){
+  var a = 0;
+  for(var i=0, j=p.length-1; i<p.length; j=i++) a += p[j][0]*p[i][1] - p[i][0]*p[j][1];
+  return Math.abs(a)/2;
+}
 function _docCasco(p){
   if(p.length < 4) return p.slice();
   var s = p.slice().sort(function(a,b){ return a[0]-b[0] || a[1]-b[1]; });
@@ -12427,18 +12517,15 @@ function _docCasco(p){
   abajo.pop(); arriba.pop();
   return abajo.concat(arriba);
 }
-
-/* las cuatro esquinas: se parte de los extremos en las diagonales y se
-   afina buscando el cuadrilátero de mayor área dentro del casco */
 function _docEsquinas(casco){
   if(casco.length < 4) return null;
   var idx = [0,0,0,0], v = [ 1e18, -1e18, -1e18, 1e18 ], i;
   for(i=0;i<casco.length;i++){
     var x = casco[i][0], y = casco[i][1];
-    if(x+y < v[0]){ v[0]=x+y; idx[0]=i; }   /* arriba-izquierda  */
-    if(x-y > v[1]){ v[1]=x-y; idx[1]=i; }   /* arriba-derecha    */
-    if(x+y > v[2]){ v[2]=x+y; idx[2]=i; }   /* abajo-derecha     */
-    if(x-y < v[3]){ v[3]=x-y; idx[3]=i; }   /* abajo-izquierda   */
+    if(x+y < v[0]){ v[0]=x+y; idx[0]=i; }
+    if(x-y > v[1]){ v[1]=x-y; idx[1]=i; }
+    if(x+y > v[2]){ v[2]=x+y; idx[2]=i; }
+    if(x-y < v[3]){ v[3]=x-y; idx[3]=i; }
   }
   function area(q){
     var a = 0;
@@ -12454,37 +12541,289 @@ function _docEsquinas(casco){
         var pr = idx.slice();
         pr[k] = ((idx[k]+d) % casco.length + casco.length) % casco.length;
         if(pr[k]===pr[(k+1)%4] || pr[k]===pr[(k+3)%4]) continue;
-        var a2 = area(pr);
-        if(a2 > mejor + 0.5){ mejor = a2; idx = pr; cambio = true; }
+        if(area(pr) > mejor + 0.5){ mejor = area(pr); idx = pr; cambio = true; }
       }
     }
   }
-  return { q: idx.map(function(i2){ return casco[i2].slice(); }), area: mejor };
+  return idx.map(function(i2){ return casco[i2].slice(); });
 }
 
+/* ── camino B · las rectas largas (Hough) ───────────────────────── */
+function _docHough(E, w, h){
+  var NA = 180, diag = Math.ceil(Math.sqrt(w*w + h*h)), NR = diag*2;
+  var acc = new Uint16Array(NA*NR), sen = new Float32Array(NA), cos = new Float32Array(NA), a, i;
+  for(a=0;a<NA;a++){ var t = a*Math.PI/NA; sen[a]=Math.sin(t); cos[a]=Math.cos(t); }
+  for(var y=0;y<h;y++) for(var x=0;x<w;x++){
+    if(!E[y*w+x]) continue;
+    for(a=0;a<NA;a++){
+      var r = ((x*cos[a] + y*sen[a]) | 0) + diag;
+      if(r>=0 && r<NR) acc[a*NR+r]++;
+    }
+  }
+  /* picos: máximos locales por encima de un mínimo razonable */
+  var minVotos = Math.max(24, Math.round(Math.min(w,h)*0.28));
+  var picos = [];
+  for(a=0;a<NA;a++){
+    for(var r2=1;r2<NR-1;r2++){
+      var v = acc[a*NR+r2];
+      if(v < minVotos) continue;
+      var ok = true;
+      for(var da=-2; da<=2 && ok; da++){
+        var a2 = (a+da+NA)%NA;
+        for(var dr=-6; dr<=6; dr++){
+          var rr = r2+dr; if(rr<0||rr>=NR) continue;
+          if(acc[a2*NR+rr] > v){ ok=false; break; }
+        }
+      }
+      if(ok) picos.push({ a:a, r:r2-diag, v:v, th:a*Math.PI/NA });
+    }
+  }
+  picos.sort(function(p,q){ return q.v-p.v; });
+  return picos.slice(0, 40);
+}
+function _docCorte(l1, l2){
+  var c1=Math.cos(l1.th), s1=Math.sin(l1.th), c2=Math.cos(l2.th), s2=Math.sin(l2.th);
+  var det = c1*s2 - s1*c2;
+  if(Math.abs(det) < 0.18) return null;         /* casi paralelas */
+  return [ (l1.r*s2 - l2.r*s1)/det, (l2.r*c1 - l1.r*c2)/det ];
+}
+function _docCuadsDeRectas(picos, w, h){
+  var H = [], V = [], i;
+  for(i=0;i<picos.length;i++){
+    var gr = picos[i].a;                         /* 0 = vertical, 90 = horizontal */
+    if(gr > 60 && gr < 120) H.push(picos[i]);
+    else V.push(picos[i]);
+  }
+  H = H.slice(0, 8); V = V.slice(0, 8);
+  var out = [];
+  for(var a=0;a<H.length;a++) for(var b=a+1;b<H.length;b++)
+  for(var c=0;c<V.length;c++) for(var d=c+1;d<V.length;d++){
+    var p1=_docCorte(H[a],V[c]), p2=_docCorte(H[a],V[d]),
+        p3=_docCorte(H[b],V[d]), p4=_docCorte(H[b],V[c]);
+    if(!p1||!p2||!p3||!p4) continue;
+    var q = _docOrdenar([p1,p2,p3,p4]);
+    var fuera = false;
+    for(var k=0;k<4;k++){
+      if(q[k][0] < -w*0.06 || q[k][0] > w*1.06 || q[k][1] < -h*0.06 || q[k][1] > h*1.06){ fuera=true; break; }
+    }
+    if(!fuera) out.push(q);
+  }
+  return out;
+}
+function _docOrdenar(p){
+  var c = [0,0], i;
+  for(i=0;i<4;i++){ c[0]+=p[i][0]/4; c[1]+=p[i][1]/4; }
+  return p.slice().sort(function(a,b){
+    return Math.atan2(a[1]-c[1], a[0]-c[0]) - Math.atan2(b[1]-c[1], b[0]-c[0]);
+  });
+}
+
+/* ── afinar los lados: el dedo ─────────────────────────────────────
+   La envolvente convexa solo puede CRECER. Si el pulgar tapa el borde
+   izquierdo de la hoja, el casco se abre para incluirlo y el recorte
+   se lleva el dedo — que es exactamente lo que se veía.
+   Aquí, ya con las cuatro esquinas aproximadas, cada lado se vuelve a
+   ajustar: se juntan los píxeles de borde que caen en una franja
+   angosta a lo largo de ese lado y se les ajusta una RECTA por mínimos
+   cuadrados totales, descartando los que se salen. El borde de la hoja
+   son cientos de píxeles alineados; el contorno del dedo es una curva
+   corta que queda como descarte. Después se cruzan las cuatro rectas y
+   salen las esquinas afinadas.                                    */
+function _docRecta(pts){
+  var n = pts.length; if(n < 8) return null;
+  var mx=0, my=0, i;
+  for(i=0;i<n;i++){ mx += pts[i][0]; my += pts[i][1]; }
+  mx/=n; my/=n;
+  var sxx=0, syy=0, sxy=0;
+  for(i=0;i<n;i++){
+    var dx = pts[i][0]-mx, dy = pts[i][1]-my;
+    sxx += dx*dx; syy += dy*dy; sxy += dx*dy;
+  }
+  /* dirección principal: el autovector mayor de la matriz de covarianza */
+  var th = 0.5*Math.atan2(2*sxy, sxx-syy);
+  var dxv = Math.cos(th), dyv = Math.sin(th);
+  /* la normal y la distancia al origen */
+  var nx = -dyv, ny = dxv;
+  return { nx:nx, ny:ny, c: nx*mx + ny*my };
+}
+function _docCruceRectas(a, b){
+  var det = a.nx*b.ny - a.ny*b.nx;
+  if(Math.abs(det) < 1e-6) return null;
+  return [ (a.c*b.ny - b.c*a.ny)/det, (a.nx*b.c - b.nx*a.c)/det ];
+}
+function _docAfinar(q, E, w, h, ancho){
+  var banda = Math.max(3, Math.round(Math.min(w,h)*(ancho||0.028)));
+  var rectas = [], k;
+  for(k=0;k<4;k++){
+    var a = q[k], b = q[(k+1)%4];
+    var lx = b[0]-a[0], ly = b[1]-a[1], L = Math.hypot(lx,ly) || 1;
+    var ux = lx/L, uy = ly/L, nx = -uy, ny = ux;
+    var pts = [];
+    for(var t=0; t<=L; t++){
+      var px = a[0]+ux*t, py = a[1]+uy*t;
+      for(var o=-banda; o<=banda; o++){
+        var xx = Math.round(px + nx*o), yy = Math.round(py + ny*o);
+        if(xx<0||yy<0||xx>=w||yy>=h) continue;
+        if(E[yy*w+xx]) pts.push([xx,yy]);
+      }
+    }
+    var r = _docRecta(pts);
+    /* dos vueltas de descarte: se quita lo que se aleja más de 2 px */
+    for(var v=0; v<2 && r; v++){
+      var buenos = [];
+      for(var i=0;i<pts.length;i++){
+        if(Math.abs(r.nx*pts[i][0] + r.ny*pts[i][1] - r.c) < 2.2) buenos.push(pts[i]);
+      }
+      if(buenos.length < Math.max(10, L*0.25)) { r = null; break; }
+      r = _docRecta(buenos);
+    }
+    if(!r) return null;
+    rectas.push(r);
+  }
+  var q2 = [];
+  for(k=0;k<4;k++){
+    var p = _docCruceRectas(rectas[(k+3)%4], rectas[k]);
+    if(!p) return null;
+    if(p[0] < -w*0.15 || p[0] > w*1.15 || p[1] < -h*0.15 || p[1] > h*1.15) return null;
+    q2.push(p);
+  }
+  return q2;
+}
+
+/* ── el puntaje: esto es lo que decide ──────────────────────────── */
 function _docDist(a,b){ var dx=a[0]-b[0], dy=a[1]-b[1]; return Math.sqrt(dx*dx+dy*dy); }
 function _docAngulo(a,b,c){
   var v1=[a[0]-b[0], a[1]-b[1]], v2=[c[0]-b[0], c[1]-b[1]];
   var d = (v1[0]*v2[0]+v1[1]*v2[1]) / (Math.hypot(v1[0],v1[1])*Math.hypot(v2[0],v2[1]) || 1);
   return Math.acos(Math.max(-1, Math.min(1, d)))*180/Math.PI;
 }
-/* ¿esto tiene cara de hoja? */
-function _docValido(q, w, h){
-  var A = 0, k;
-  for(k=0;k<4;k++){ A += q[k][0]*q[(k+1)%4][1] - q[(k+1)%4][0]*q[k][1]; }
-  A = Math.abs(A)/2;
-  if(A < w*h*0.18) return false;
+function _docArea(q){
+  var A = 0;
+  for(var k=0;k<4;k++) A += q[k][0]*q[(k+1)%4][1] - q[(k+1)%4][0]*q[k][1];
+  return Math.abs(A)/2;
+}
+function _docLuz(g, w, h, x, y){
+  var xi = Math.round(x), yi = Math.round(y);
+  if(xi<0||yi<0||xi>=w||yi>=h) return -1;
+  return g[yi*w+xi];
+}
+function _docPuntaje(q, w, h, gris, E){
+  var A = _docArea(q), rel = A/(w*h);
+  if(rel < 0.09 || rel > 1.02) return -1;
+
+  /* geometría: esquinas cerca de 90°, lados opuestos parecidos */
+  var geo = 1, k;
   for(k=0;k<4;k++){
     var ang = _docAngulo(q[(k+3)%4], q[k], q[(k+1)%4]);
-    if(ang < 50 || ang > 130) return false;
+    if(ang < 45 || ang > 135) return -1;
+    geo *= 1 - Math.min(1, Math.abs(ang-90)/60)*0.55;
   }
   var l = [ _docDist(q[0],q[1]), _docDist(q[1],q[2]), _docDist(q[2],q[3]), _docDist(q[3],q[0]) ];
-  if(Math.min(l[0],l[2])/Math.max(l[0],l[2]) < 0.45) return false;
-  if(Math.min(l[1],l[3])/Math.max(l[1],l[3]) < 0.45) return false;
-  return true;
+  var r1 = Math.min(l[0],l[2])/Math.max(l[0],l[2]), r2 = Math.min(l[1],l[3])/Math.max(l[1],l[3]);
+  if(r1 < 0.42 || r2 < 0.42) return -1;
+  geo *= (r1+r2)/2;
+
+  /* centro del cuadrilátero, para saber qué es «adentro» */
+  var cx = (q[0][0]+q[1][0]+q[2][0]+q[3][0])/4, cy = (q[0][1]+q[1][1]+q[2][1]+q[3][1])/4;
+
+  var sobreBorde = 0, total = 0, contraste = 0, conLuz = 0;
+  for(k=0;k<4;k++){
+    var a = q[k], b = q[(k+1)%4], largo = _docDist(a,b);
+    var pasos = Math.max(8, Math.round(largo/3));
+    for(var s=1; s<pasos; s++){
+      var t = s/pasos, x = a[0]+(b[0]-a[0])*t, y = a[1]+(b[1]-a[1])*t;
+      total++;
+      /* ¿hay borde detectado a menos de 2 px? */
+      var xi = Math.round(x), yi = Math.round(y), hay = 0;
+      for(var dy=-2; dy<=2 && !hay; dy++) for(var dx=-2; dx<=2; dx++){
+        var xx=xi+dx, yy=yi+dy;
+        if(xx<0||yy<0||xx>=w||yy>=h) continue;
+        if(E[yy*w+xx]){ hay=1; break; }
+      }
+      if(hay) sobreBorde++;
+      /* adentro más claro que afuera: el vector hacia el centro */
+      var vx = cx-x, vy = cy-y, m = Math.hypot(vx,vy) || 1;
+      var paso = Math.max(3, Math.min(w,h)*0.02);
+      var din = _docLuz(gris, w, h, x + vx/m*paso, y + vy/m*paso);
+      var dou = _docLuz(gris, w, h, x - vx/m*paso, y - vy/m*paso);
+      if(din >= 0 && dou >= 0){ conLuz++; if(din - dou > 7) contraste++; }
+    }
+  }
+  if(!total) return -1;
+  var apoyo = sobreBorde/total;
+  var claro = conLuz ? contraste/conLuz : 0;
+  if(apoyo < 0.35) return -1;          /* lados imaginarios: no es una hoja */
+  /* Y el filtro que faltaba: si adentro NO es más claro que afuera en
+     la mayoría del contorno, esto no es el borde de una hoja — es un
+     recuadro dibujado DENTRO del formato, con papel a los dos lados.
+     Sin esta línea el escáner recortaba la tabla del medio y dejaba
+     fuera el encabezado y las firmas. */
+  if(claro < 0.40) return -1;
+
+  /* adentro tiene que ser claro y parejo — papel, no escena */
+  var sum=0, sum2=0, cuenta=0;
+  var pasoM = Math.max(2, Math.round(Math.min(w,h)/60));
+  for(var yy2=Math.round(Math.min(q[0][1],q[1][1],q[2][1],q[3][1])); yy2<h; yy2+=pasoM){
+    if(yy2 > Math.max(q[0][1],q[1][1],q[2][1],q[3][1])) break;
+    for(var xx2=0; xx2<w; xx2+=pasoM){
+      if(!_docDentro(q, xx2, yy2)) continue;
+      var v = gris[yy2*w+xx2]; sum += v; sum2 += v*v; cuenta++;
+    }
+  }
+  if(cuenta < 20) return -1;
+  var media = sum/cuenta, desv = Math.sqrt(Math.max(0, sum2/cuenta - media*media));
+  var brillo = Math.min(1, media/190);
+  var pareja = Math.max(0, 1 - desv/85);
+
+  /* el área cuenta poco y con tope: que no vuelva a ganar el más grande */
+  var tam = Math.min(1, rel/0.55);
+
+  return apoyo*0.34 + claro*0.24 + brillo*0.16 + pareja*0.12 + geo*0.09 + tam*0.05;
+}
+function _docDentro(q, x, y){
+  var dentro = false;
+  for(var i=0, j=3; i<4; j=i++){
+    var xi=q[i][0], yi=q[i][1], xj=q[j][0], yj=q[j][1];
+    if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi||1e-9) + xi)) dentro = !dentro;
+  }
+  return dentro;
 }
 
-/* homografía destino → origen, resolviendo 8×8 por eliminación */
+/* ── la proporción real de la hoja (Zhang & He) ─────────────────── */
+function _docProporcion(q, w, h){
+  var cx = w/2, cy = h/2;
+  var p = q.map(function(z){ return [z[0]-cx, z[1]-cy, 1]; });
+  function cruz(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+  function punto(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+  var m1 = cruz(cruz(p[0],p[2]), cruz(p[1],p[3]));
+  if(!m1[2]) return 0;
+  var k2v = cruz(cruz(p[0],p[1]), cruz(p[3],p[2]));
+  var k3v = cruz(cruz(p[0],p[3]), cruz(p[1],p[2]));
+  var den2 = punto(k2v, [0,0,1]), den3 = punto(k3v, [0,0,1]);
+  if(!den2 || !den3) return 0;
+  var n2 = [k2v[0], k2v[1], k2v[2]], n3 = [k3v[0], k3v[1], k3v[2]];
+  var f2 = -(n2[0]*n3[0] + n2[1]*n3[1]) / (n2[2]*n3[2] || 1e-9);
+  if(!(f2 > 100) || !isFinite(f2)) return 0;
+  var f = Math.sqrt(f2);
+  var A = [[1/f,0,0],[0,1/f,0],[0,0,1]];
+  function mul(M,v){ return [M[0][0]*v[0]+M[0][1]*v[1]+M[0][2]*v[2],
+                             M[1][0]*v[0]+M[1][1]*v[1]+M[1][2]*v[2],
+                             M[2][0]*v[0]+M[2][1]*v[1]+M[2][2]*v[2]]; }
+  var a2 = mul(A, n2), a3 = mul(A, n3);
+  var rr = Math.sqrt((a2[0]*a2[0]+a2[1]*a2[1]+a2[2]*a2[2]) /
+                     (a3[0]*a3[0]+a3[1]*a3[1]+a3[2]*a3[2]));
+  if(!isFinite(rr) || rr<=0) return 0;
+  var l = [ _docDist(q[0],q[1]), _docDist(q[1],q[2]), _docDist(q[2],q[3]), _docDist(q[3],q[0]) ];
+  var r0 = ((l[0]+l[2])/2) / ((l[1]+l[3])/2 || 1);
+  if(rr/r0 < 0.5 || rr/r0 > 2) rr = r0;
+  /* si queda muy cerca de A4 u oficio, se ajusta al formato */
+  [1/Math.SQRT2, Math.SQRT2, 8.5/13, 13/8.5, 8.5/11, 11/8.5].forEach(function(f2b){
+    if(Math.abs(rr-f2b)/f2b < 0.07) rr = f2b;
+  });
+  return rr;
+}
+
+/* ── homografía destino → origen ────────────────────────────────── */
 function _docHomografia(dst, src){
   var A = [], b = [], i;
   for(i=0;i<4;i++){
@@ -12497,89 +12836,117 @@ function _docHomografia(dst, src){
     var piv = i;
     for(j=i+1;j<n;j++) if(Math.abs(A[j][i]) > Math.abs(A[piv][i])) piv = j;
     if(Math.abs(A[piv][i]) < 1e-9) return null;
-    var t = A[i]; A[i] = A[piv]; A[piv] = t;
-    var tb = b[i]; b[i] = b[piv]; b[piv] = tb;
+    var t = A[i]; A[i]=A[piv]; A[piv]=t;
+    var tb = b[i]; b[i]=b[piv]; b[piv]=tb;
     for(j=i+1;j<n;j++){
-      var f = A[j][i]/A[i][i];
+      var f = A[j][i]/A[i][i]; if(!f) continue;
       for(k=i;k<n;k++) A[j][k] -= f*A[i][k];
       b[j] -= f*b[i];
     }
   }
-  var x = new Float64Array(9);
+  var x = new Array(n);
   for(i=n-1;i>=0;i--){
     var s = b[i];
     for(j=i+1;j<n;j++) s -= A[i][j]*x[j];
     x[i] = s/A[i][i];
   }
-  x[8] = 1;
   return x;
 }
 
-/* ── la proporción real de la hoja ─────────────────────────────────
-   Una A4 fotografiada de costado se ve casi cuadrada. Con las cuatro
-   esquinas y el punto principal en el centro se puede despejar la
-   distancia focal y de ahí la proporción verdadera (Zhang & He). Si
-   la foto es casi frontal el despeje se indetermina —no hay
-   perspectiva de la que sacar nada— y ahí manda el promedio de los
-   lados, que en ese caso ya es correcto. */
-function _docProporcion(q, w, h){
-  var l = [ _docDist(q[0],q[1]), _docDist(q[1],q[2]), _docDist(q[2],q[3]), _docDist(q[3],q[0]) ];
-  var r = ((l[0]+l[2])/2) / ((l[1]+l[3])/2);
-  try{
-    var u0 = w/2, v0 = h/2;
-    var m = q.map(function(p){ return [p[0]-u0, p[1]-v0, 1]; });
-    function cru(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
-    function pun(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
-    var d2 = pun(cru(m[1], m[3]), m[2]), d3 = pun(cru(m[2], m[3]), m[1]);
-    if(Math.abs(d2) > 1e-9 && Math.abs(d3) > 1e-9){
-      var k2 = pun(cru(m[0], m[3]), m[2]) / d2;
-      var k3 = pun(cru(m[0], m[3]), m[1]) / d3;
-      var n2 = [k2*m[1][0]-m[0][0], k2*m[1][1]-m[0][1], k2*m[1][2]-m[0][2]];
-      var n3 = [k3*m[2][0]-m[0][0], k3*m[2][1]-m[0][1], k3*m[2][2]-m[0][2]];
-      if(Math.abs(n2[2]) > 1e-6 && Math.abs(n3[2]) > 1e-6){
-        var f2 = -(n2[0]*n3[0] + n2[1]*n3[1]) / (n2[2]*n3[2]);
-        if(f2 > 100){
-          var a = (n2[0]*n2[0] + n2[1]*n2[1])/f2 + n2[2]*n2[2];
-          var b = (n3[0]*n3[0] + n3[1]*n3[1])/f2 + n3[2]*n3[2];
-          if(b > 1e-12){
-            var rr = Math.sqrt(a/b);
-            /* solo se le hace caso si no se aleja demasiado de lo que
-               ya dicen los lados: un despeje disparado es un despeje malo */
-            if(isFinite(rr) && rr > 0.3 && rr < 3.4 && rr/r > 0.5 && rr/r < 2) r = rr;
-          }
-        }
-      }
-    }
-  }catch(e){}
-  [1/1.41421, 1.41421, 1/1.294, 1.294].forEach(function(t){
-    if(Math.abs(r - t)/t < 0.07) r = t;
+/* ══ LO QUE LLAMA LA APP ═══════════════════════════════════════════
+   Devuelve { cv, puntaje } o null. El puntaje sirve para avisarle al
+   usuario cuando la detección fue floja, en vez de entregarle un
+   recorte malo como si fuera bueno. */
+function buscarHoja(cv){
+  var chico = _docChico(cv, DOC_LADO);
+  var w = chico.width, h = chico.height;
+  var d = chico.getContext('2d', {willReadFrequently:true}).getImageData(0,0,w,h).data;
+
+  var gris = _docGris(d, w, h);
+  var suave = _docSuave(gris, w, h, Math.max(1, Math.round(Math.min(w,h)/150)));
+  var so = _docSobel(suave, w, h);
+
+  var cands = [], Eref = null;
+
+  /* DOS PASADAS de sensibilidad. La normal sirve para una hoja sobre
+     algo oscuro. La sensible es para la hoja sobre mesa blanca o sobre
+     el plano: ahí el borde apenas se diferencia y con el umbral normal
+     lo único que pasa el corte es la LETRA, que está adentro. */
+  [0.92, 0.72].forEach(function(pct, vuelta){
+    var E = _docDilatar(_docCanny(so.mag, so.dir, w, h, pct), w, h, 1);
+    if(!vuelta) Eref = E;
+    try{
+      _docManchas(E, w, h, 3).forEach(function(g){
+        var q = _docEsquinas(g._casco);
+        if(q) cands.push({ q:q, E:E });
+      });
+    }catch(e){}
+    try{
+      _docCuadsDeRectas(_docHough(E, w, h), w, h).forEach(function(q){ cands.push({ q:q, E:E }); });
+    }catch(e){}
   });
-  return Math.max(0.3, Math.min(3.4, r));
+
+  /* la foto entera, por si la hoja ya ocupa todo el cuadro */
+  cands.push({ q:[[0,0],[w-1,0],[w-1,h-1],[0,h-1]], E:Eref });
+
+  /* Se puntúa todo barato, y solo se afinan los tres mejores. Afinar
+     los veintitantos candidatos costaba un segundo largo en la
+     compu; en un celular de obra eso son cinco segundos mirando una
+     pantalla quieta. */
+  var puntuados = [];
+  cands.forEach(function(c){
+    var p = _docPuntaje(c.q, w, h, gris, c.E);
+    if(p > 0) puntuados.push({ q:c.q, E:c.E, p:p });
+  });
+  puntuados.sort(function(a,b){ return b.p - a.p; });
+
+  var mejor = null, mejorP = -1;
+  if(puntuados.length){ mejor = puntuados[0].q; mejorP = puntuados[0].p; }
+  puntuados.slice(0, 3).forEach(function(c){
+    try{
+      /* dos vueltas: primero una franja ancha, para alcanzar el borde
+         verdadero aunque el casco se haya abierto por un dedo; después
+         una angosta, para ajustar fino sobre ese borde ya encontrado */
+      var qa = c.q;
+      [0.075, 0.03].forEach(function(an){
+        if(!qa) return;
+        var q2 = _docAfinar(qa, c.E, w, h, an);
+        if(q2) qa = q2;
+      });
+      if(qa && qa !== c.q){
+        var pa = _docPuntaje(qa, w, h, gris, c.E);
+        if(pa > mejorP){ mejorP = pa; mejor = qa; }
+      }
+    }catch(e){}
+  });
+  if(!mejor || mejorP < 0.38) return null;
+
+  /* Un pelín hacia ADENTRO. Probé al revés —un poco hacia afuera, por
+     miedo a comerme el texto— y lo que entraba era una tirita de mesa
+     en el filo, que en el PDF se ve como un marco negro. Ningún
+     formato tiene texto a menos del 1% del borde; la mesa sí está
+     siempre ahí. Así que se entra 0.8% y el filo sale limpio. */
+  var cx = (mejor[0][0]+mejor[1][0]+mejor[2][0]+mejor[3][0])/4;
+  var cy = (mejor[0][1]+mejor[1][1]+mejor[2][1]+mejor[3][1])/4;
+  var q = mejor.map(function(p){
+    return [ cx + (p[0]-cx)*0.992, cy + (p[1]-cy)*0.992 ];
+  });
+
+  return { q:q, w:w, h:h, puntaje:mejorP };
 }
 
-/* ── la función que usa la app ───────────────────────────────────── */
 function enderezarHoja(cv){
   try{
-    var chico = _docChico(cv, 460);
-    var w = chico.width, h = chico.height;
-    var d = chico.getContext('2d', {willReadFrequently:true}).getImageData(0,0,w,h).data;
-    var pa = _docPapel(d, w, h);
-    if(pa.cuantos < w*h*0.12) return null;
-    var r = Math.max(1, Math.round(Math.min(w,h)*0.018));
-    var M = _docCerrar(pa.M, w, h, r);
-    var man = _docMancha(M, w, h);
-    if(!man || man.tam < w*h*0.15) return null;
-    var casco = _docCasco(man.pts);
-    var es = _docEsquinas(casco);
-    if(!es || !_docValido(es.q, w, h)) return null;
+    var r = buscarHoja(cv);
+    if(!r) return null;
+    var kx = cv.width/r.w, ky = cv.height/r.h;
+    var q = r.q.map(function(p){ return [p[0]*kx, p[1]*ky]; });
 
-    /* de la foto chica a la grande */
-    var kx = cv.width/w, ky = cv.height/h;
-    var q = es.q.map(function(p){ return [p[0]*kx, p[1]*ky]; });
-
-    var prop = _docProporcion(es.q, w, h);
+    var prop = _docProporcion(r.q, r.w, r.h);
     var l = [ _docDist(q[0],q[1]), _docDist(q[1],q[2]), _docDist(q[2],q[3]), _docDist(q[3],q[0]) ];
-    var lado = Math.max((l[0]+l[2])/2, (l[1]+l[3])/2);
+    var anchoM = (l[0]+l[2])/2, altoM = (l[1]+l[3])/2;
+    if(!prop) prop = anchoM/(altoM||1);
+    var lado = Math.max(anchoM, altoM);
     var W2, H2;
     if(prop >= 1){ W2 = lado; H2 = lado/prop; } else { H2 = lado; W2 = lado*prop; }
     var tope = 1700, esc = Math.min(1, tope/Math.max(W2,H2));
@@ -12611,16 +12978,68 @@ function enderezarHoja(cv){
       }
     }
     oc.putImageData(od, 0, 0);
-    return out;
+    var fino = _docRecorteFino(out);
+    fino._puntaje = r.puntaje;
+    return fino;
   }catch(e){ return null; }
+}
+
+/* ── el repaso final: la tirita de fondo que quedó en el filo ──────
+   La detección se pasa un pelo hacia afuera a propósito, para no
+   comerse el texto. Ese pelo deja a veces una franja oscura de mesa
+   en el borde. Aquí se recorta: se mira el brillo de cada fila y cada
+   columna desde afuera hacia adentro y se descarta mientras sea
+   bastante más oscura que la hoja. Con tope del 4%, para que una hoja
+   con un margen impreso oscuro no se quede sin borde.             */
+function _docRecorteFino(cv){
+  try{
+    var w = cv.width, h = cv.height;
+    var g = cv.getContext('2d', {willReadFrequently:true});
+    var d = g.getImageData(0,0,w,h).data;
+    var x, y, i;
+    /* el brillo de la hoja: la mediana del 60% central */
+    var mues = [];
+    for(y=Math.round(h*0.25); y<h*0.75; y+=3) for(x=Math.round(w*0.25); x<w*0.75; x+=3){
+      i=(y*w+x)*4; mues.push(d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114);
+    }
+    mues.sort(function(a,b){ return a-b; });
+    var ref = mues[Math.floor(mues.length*0.6)] || 200;
+    var oscuro = ref*0.6;
+    /* Se mira la PROPORCIÓN de píxeles oscuros de cada fila y columna,
+       no su promedio: una tirita negra de tres píxeles en el filo casi
+       no mueve el promedio de una fila blanca, pero salta enseguida
+       contando cuántos son oscuros. */
+    function fracFila(y2){
+      var c=0; for(var x2=0;x2<w;x2++){ var j=(y2*w+x2)*4;
+        if(d[j]*0.299+d[j+1]*0.587+d[j+2]*0.114 < oscuro) c++; }
+      return c/w;
+    }
+    function fracCol(x2){
+      var c=0; for(var y2=0;y2<h;y2++){ var j=(y2*w+x2)*4;
+        if(d[j]*0.299+d[j+1]*0.587+d[j+2]*0.114 < oscuro) c++; }
+      return c/h;
+    }
+    var topeX = Math.round(w*0.035), topeY = Math.round(h*0.035);
+    var x0=0, x1=w-1, y0=0, y1=h-1;
+    while(x0 < topeX && fracCol(x0) > 0.5) x0++;
+    while(w-1-x1 < topeX && fracCol(x1) > 0.5) x1--;
+    while(y0 < topeY && fracFila(y0) > 0.5) y0++;
+    while(h-1-y1 < topeY && fracFila(y1) > 0.5) y1--;
+    var nw = x1-x0+1, nh = y1-y0+1;
+    if(nw === w && nh === h) return cv;
+    if(nw < w*0.85 || nh < h*0.85) return cv;
+    var out = document.createElement('canvas'); out.width = nw; out.height = nh;
+    out.getContext('2d').drawImage(cv, x0, y0, nw, nh, 0, 0, nw, nh);
+    return out;
+  }catch(e){ return cv; }
 }
 
 /* ── desenfoque: máscara de enfoque sobre el gris ya normalizado ──
    No inventa detalle que no está; realza el que hay, que es lo único
    honesto que se puede hacer con una foto movida. */
 function _docEnfocar(g, w, h, fuerza){
-  var n = w*h, b = new Float32Array(n), i, x, y;
-  var tmp = new Float32Array(n);
+  var n = w*h, i, x, y;
+  var tmp = new Float32Array(n), b = new Float32Array(n);
   for(y=0;y<h;y++) for(x=0;x<w;x++){
     var s=0, c=0, dx;
     for(dx=-1; dx<=1; dx++){ var xx=x+dx; if(xx<0||xx>=w) continue; s+=g[y*w+xx]; c++; }
@@ -12635,7 +13054,6 @@ function _docEnfocar(g, w, h, fuerza){
     var v = g[i] + (g[i]-b[i])*fuerza;
     g[i] = v<0 ? 0 : (v>255 ? 255 : v);
   }
-  return g;
 }
 
 function recortarHoja(cv){
@@ -12708,6 +13126,7 @@ function recortarHoja(cv){
   }catch(e){ return cv; }
 }
 
+var ESC_HALLADA = true;
 function procesarEscaneo(dataURL, modo, giro){
   return new Promise(function(ok, mal){
     var img=new Image();
@@ -12723,15 +13142,19 @@ function procesarEscaneo(dataURL, modo, giro){
       /* «Foto original» no se recorta: es la salida de emergencia por si
          el recorte se equivoco, y tiene que ser de verdad la foto entera */
       if(modo!=='orig'){
-        /* primero se intenta encontrar la hoja de verdad y enderezarla.
-           Si la foto no da para eso —hoja sobre fondo blanco, media
-           hoja fuera de cuadro— se cae al recorte recto de siempre,
-           que es peor pero nunca deja la pantalla vacía. */
+        /* Se busca la hoja de verdad y se endereza. Si NO se encuentra,
+           antes se caía a un recorte recto «por si acaso»: eso es
+           justamente lo que dejaba media mesa y el dedo adentro, y
+           encima lo entregaba como si estuviera bien. Ahora no se
+           recorta nada y se avisa arriba: el que escanea vuelve a
+           tomar la foto, que toma tres segundos, en vez de archivar
+           una hoja a la que le falta el encabezado. */
         var der = enderezarHoja(cv);
-        if(der){ cv = der; cx = cv.getContext('2d', {willReadFrequently:true}); }
-        else{
-          var rec = recortarHoja(cv);
-          if(rec!==cv){ cv=rec; cx=cv.getContext('2d'); }
+        if(der){
+          cv = der; cx = cv.getContext('2d', {willReadFrequently:true});
+          ESC_HALLADA = true;
+        }else{
+          ESC_HALLADA = false;
         }
       }
       if(modo==='orig'){
@@ -12792,7 +13215,12 @@ function pintarVistaEscaneo(){
   var c=$('esc-vista');
   procesarEscaneo(ESC_IMG.orig, ESC_LISTA_MODO, ESC_GIRO).then(function(url){
     ESC_IMG.listo=url;
-    c.innerHTML='<img src="'+url+'" alt="Vista previa de la hoja escaneada">';
+    var aviso = (!ESC_HALLADA && ESC_LISTA_MODO!=='orig')
+      ? '<div class="esc-aviso">\u26a0\ufe0f <b>No encontr\u00e9 el borde de la hoja</b>'+
+        '<span>Sali\u00f3 la foto entera, sin recortar. Vuelve a tomarla con la hoja sobre algo '+
+        'de otro color, que se vean sus cuatro esquinas y sin sombra encima.</span></div>'
+      : '';
+    c.innerHTML = aviso + '<img src="'+url+'" alt="Vista previa de la hoja escaneada">';
   }).catch(function(){ c.innerHTML='<img src="'+ESC_IMG.orig+'" alt="Hoja">'; });
 }
 function _dataURLaFile(url, nombre){
