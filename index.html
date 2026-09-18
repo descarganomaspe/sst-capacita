@@ -2809,6 +2809,32 @@ html.t-claro .sim-hito{background:#fff}
 .tw-qr-abre .tic{ transition:transform .2s ease }
 .tw-qr-abre.abierta .tic{ transform:rotate(90deg) }
 
+/* ¿a quién acudo?: la brigada y el comité, en la mano del trabajador */
+.qui-gr{ margin-top:12px }
+.qui-gr-t{ font-size:12.5px; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--gris); margin:0 0 7px; font-weight:700 }
+.qui-p{ display:flex; align-items:center; gap:11px; padding:11px 13px; margin-bottom:8px;
+  border:1px solid var(--linea); border-radius:14px; background:var(--caja);
+  animation:ob-sube .26s cubic-bezier(.16,1,.3,1) both }
+.qui-gr .qui-p:nth-child(2){ animation-delay:.03s }
+.qui-gr .qui-p:nth-child(3){ animation-delay:.06s }
+.qui-gr .qui-p:nth-child(4){ animation-delay:.09s }
+.qui-gr .qui-p:nth-child(5){ animation-delay:.12s }
+.qui-ini{ flex:0 0 38px; width:38px; height:38px; border-radius:50%; display:flex;
+  align-items:center; justify-content:center; font-weight:800; font-size:13.5px;
+  color:#fff; background:linear-gradient(135deg,#00599E,#0b7ad1); letter-spacing:.02em }
+.qui-ini.sup{ background:linear-gradient(135deg,#7a8794,#98a4b0) }
+.qui-tx{ flex:1 1 auto; min-width:0 }
+.qui-tx b{ display:block; font-size:14.5px; line-height:1.3;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.qui-tx small{ display:block; color:var(--gris); font-size:12.5px; margin-top:2px }
+.qui-tel{ flex:0 0 auto; width:40px; height:40px; border-radius:50%; display:flex;
+  align-items:center; justify-content:center; font-size:17px; text-decoration:none;
+  background:rgba(0,150,69,.14); border:1px solid rgba(0,150,69,.32);
+  transition:transform .13s cubic-bezier(.16,1,.3,1) }
+.qui-tel:active{ transform:scale(.9) }
+@media (prefers-reduced-motion: reduce){ .qui-p{ animation:none } }
+
 /* el toque: todo lo que se puede tocar se hunde un poco */
 .tw-c, .tw-h, .tw-qr-abre, .cart-t, .ats-rc, .ats-sug-b{
   transition:transform .13s cubic-bezier(.16,1,.3,1), border-color .15s ease, background .15s ease }
@@ -5396,6 +5422,10 @@ body.carrete .pantalla.llena{padding:0}
 <section class="pantalla" id="p-buzon">
   <div class="barra"><span>Buzón</span></div>
   <div id="buz-cuerpo"></div>
+</section>
+<section class="pantalla" id="p-quienes">
+  <div class="barra"><span>¿A quién acudo?</span></div>
+  <div id="quienes-cuerpo"></div>
 </section>
 <section class="pantalla" id="p-buzon-sup">
   <div class="barra"><span>Buzón de sugerencias</span></div>
@@ -8905,7 +8935,7 @@ var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-
             'p-final':1,'p-firma':1,'p-listo':1,'p-charlas':1,'p-charla':1,'p-programa':1,
             'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1,'p-sector':1,
             'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,
-            'p-obra':1,'p-ats-dia':1,'p-carrete':1,'p-boletin':1,'p-buzon':1,'p-camara':1,'p-sello':1,'p-idioma':1,'p-scan':1,'p-scan-pdf':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1,
+            'p-obra':1,'p-ats-dia':1,'p-carrete':1,'p-boletin':1,'p-buzon':1,'p-quienes':1,'p-camara':1,'p-sello':1,'p-idioma':1,'p-scan':1,'p-scan-pdf':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1,
             'p-normas':1,'p-norma':1,'p-procedimientos':1,'p-proc':1,
             /* el cartel del almacén lo escanea el trabajador, no el gestor:
                si esta pantalla no está abierta para él, el QR no sirve */
@@ -8929,7 +8959,7 @@ var EMP_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-emp
             'p-trabajadores':1,'p-trab-nuevo':1,'p-trab-ficha':1,'p-trab-traer':1,'p-planes':1,'p-estatus':1,
             'p-kardex':1,'p-kardex-nuevo':1,'p-kardex-export':1,'p-empleador':1,
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,'p-constancias':1,'p-eval-ver':1,
-            'p-comite':1,'p-comite-armar':1,'p-comite-acta':1,'p-comite-ver':1,
+            'p-comite':1,'p-comite-armar':1,'p-comite-acta':1,'p-comite-ver':1,'p-quienes':1,
             'p-accidentes':1,'p-acc-nuevo':1,'p-acc-ver':1,
             'p-gestion-quien':1,'p-lider-no':1,
             'p-actividades':1,'p-invitar':1,'p-invitacion':1,
@@ -9362,6 +9392,7 @@ function _ir(p){
   if(p==='p-carrete'){ prepCarrete(); try{ document.body.classList.add('carrete'); }catch(_cb){} }
   else { try{ carrParar(); document.body.classList.remove('carrete'); }catch(_cp){} }
   if(p==='p-buzon')pintarBuzon();
+  if(p==='p-quienes')pintarQuienes();
   if(p==='p-buzon-sup')prepBuzonSup();
   if(p==='p-aviso-charla')pintarAvisoCharla();
   if(p==='p-simulacros')pintarSimulacros();
@@ -18107,6 +18138,7 @@ function pintarComite(){
   h+='<p class="sub" style="margin:4px 0 8px">La constitución, la instalación, las reuniones y los acuerdos van todos al mismo libro '+
      '(<span class="ley">D.S. 005-2012-TR, arts. 51 y 53</span>). Este PDF es para imprimirlo y pegarlo en el libro legalizado, o para mandarlo entero.</p>';
   h+='<button class="btn sec" style="margin:0" onclick="comiteLibroPDF()">📕 Descargar el Libro de Actas '+anio+'</button>';
+  h+=_quiBotonPublicar('comite');
   c.innerHTML=h;
 }
 function comitePieSupervisor(c){
@@ -26472,6 +26504,7 @@ function subirReporte(fila){
   });
 }
 
+var RPC_ACT = null;   /* ¿la RPC del servidor ya acepta la actividad? */
 function mandarReporteANube(d){
   var e=empDeTrabajo(); if(!e) return Promise.reject('sin_obra');
   if(hayCuenta() && sesionAbierta()){
@@ -26479,9 +26512,24 @@ function mandarReporteANube(d){
       actividad:d.actividad||null,
       foto_url:d.foto_url, anonimo:d.anonimo, autor:d.autor, fecha:d.fecha});
   }
-  return sbRpc('sst_reporte_nuevo',{p_cod:e.codigo, p_clase:d.clase, p_descripcion:d.descripcion,
-    p_lugar:d.lugar, p_foto_url:d.foto_url, p_anonimo:d.anonimo, p_autor:d.autor, p_fecha:d.fecha})
-   .then(function(j){ if(j && j.ok===false) return Promise.reject(j.motivo||'no_se_pudo'); return true; });
+  var base = {p_cod:e.codigo, p_clase:d.clase, p_descripcion:d.descripcion,
+    p_lugar:d.lugar, p_foto_url:d.foto_url, p_anonimo:d.anonimo, p_autor:d.autor, p_fecha:d.fecha};
+  function mandar(conAct){
+    var a = {}; for(var k in base) a[k]=base[k];
+    if(conAct) a.p_actividad = d.actividad || null;
+    return sbRpc('sst_reporte_nuevo', a)
+      .then(function(j){ if(j && j.ok===false) return Promise.reject(j.motivo||'no_se_pudo'); return true; });
+  }
+  /* Si el servidor todavia tiene la version vieja de la funcion, sin
+     p_actividad, contesta 404 (PGRST202: no encuentra esa firma). Eso
+     NO puede costarle el reporte al que lo esta mandando: se reintenta
+     sin el campo y se anota para no volver a probar en esta sesion. */
+  if(RPC_ACT === false || !d.actividad) return mandar(false);
+  return mandar(true).catch(function(err){
+    if(err!==404 && String(err).indexOf('404')<0) return Promise.reject(err);
+    RPC_ACT = false;
+    return mandar(false);
+  });
 }
 function subirFoto(carpeta, file){
   var e=empDeTrabajo();
@@ -26765,6 +26813,7 @@ function guardarReporte(){
   (f? subirFoto('reportes',f).then(grabar, function(){ return grabar(null); }) : grabar(null))
     .then(function(){
       var avisado=avisarDelReporte(datos);
+      try{ if(ROL==='col') anotarMiReporte(datos); }catch(_mr){}
       /* el anónimo no suma: para sumar habría que saber quién fue, y eso
          es justo lo que el anónimo promete que no se guarda */
       try{
@@ -26774,15 +26823,16 @@ function guardarReporte(){
       msg.textContent = avisado
         ? 'Listo. Quedó guardado en la obra y se abrió el aviso al supervisor.'
         : '¡Gracias! Tu reporte quedó guardado en la obra; el supervisor lo ve en su app.';
-      setTimeout(function(){ ir(sesionAbierta()? 'p-reporte' : 'p-colab'); },1100);
+      setTimeout(function(){ ir(sesionAbierta()? 'p-reporte' : 'p-obra'); },1100);
     })
     .catch(function(err){
       /* si la nube no responde el reporte NO se tira a la basura:
          se guarda en el celular y se sube en cuanto haya senal. */
       colaReporte(datos);
+      try{ if(ROL==='col') anotarMiReporte(datos); }catch(_mr2){}
       msg.style.color='#d68e1a';
       msg.textContent='Sin internet: tu reporte quedó guardado en el celular y se sube solo cuando vuelva la señal.';
-      setTimeout(function(){ ir(sesionAbierta()? 'p-reporte' : 'p-colab'); },1400);
+      setTimeout(function(){ ir(sesionAbierta()? 'p-reporte' : 'p-obra'); },1400);
     });
 }
 /* ── LA COLA DE REPORTES SIN SEÑAL ────────────────────────────────
@@ -27044,6 +27094,52 @@ function avisarEnPantalla(titulo, cuerpo){
   avisoSistema(titulo, cuerpo, { tag:'obrasst-reporte', ir:'p-reporte' });
   return true;
 }
+/* el buzón, con la misma vigilancia que los reportes: al trabajador
+   se le prometió que eso llega, y llegar es que alguien se entere. */
+var BUZ_TIMER=null, BUZ_PIDIENDO=false, BUZ_ABIERTAS=0;
+function buzVistosKey(){ var e=(typeof empActiva==='function')?empActiva():null;
+  return 'sstc_buz_vistos'+(e&&e.codigo?('_'+e.codigo):''); }
+function buzVistos(){ return leer(buzVistosKey(), {ids:[]}); }
+function buzVistosSet(v){ guardar(buzVistosKey(), {ids:(v.ids||[]).slice(0,300)}); }
+function revisarSugerenciasNuevas(silencioso){
+  var e=(typeof empActiva==='function')?empActiva():null;
+  if(!e || typeof hayCuenta!=='function' || !hayCuenta() || BUZ_PIDIENDO) return Promise.resolve(0);
+  BUZ_PIDIENDO=true;
+  return sbGet('sst_sugerencia?empresa=eq.'+encodeURIComponent(e.id)+
+               '&leida=eq.false&select=id,tema,texto,creado&order=creado.desc&limit=60')
+    .then(function(a){
+      BUZ_PIDIENDO=false; a=a||[];
+      var v=buzVistos(), viejos={}, nuevas=[];
+      (v.ids||[]).forEach(function(id){ viejos[id]=1; });
+      a.forEach(function(r){ if(!viejos[r.id]) nuevas.push(r); });
+      BUZ_ABIERTAS=a.length;
+      /* la primera vez solo se toma nota: no se avisa de 20 sugerencias viejas */
+      if(!v.ids || !v.ids.length){ buzVistosSet({ids:a.map(function(r){return r.id;})}); return 0; }
+      if(nuevas.length && !silencioso){
+        var u=nuevas[0];
+        avisoSistema(
+          nuevas.length===1 ? 'Alguien escribió al buzón' : (nuevas.length+' mensajes nuevos en el buzón'),
+          (u.tema? u.tema+'\n' : '')+String(u.texto||'').slice(0,110),
+          { tag:'obrasst-buzon', ir:'p-buzon-sup' });
+      }
+      buzVistosSet({ids:a.map(function(r){return r.id;})});
+      return nuevas.length;
+    })
+    .catch(function(){ BUZ_PIDIENDO=false; return 0; });
+}
+function arrancarVigilanciaBuzon(){
+  if(BUZ_TIMER) return;
+  revisarSugerenciasNuevas(true);
+  BUZ_TIMER=setInterval(function(){
+    if(document.hidden) return;
+    revisarSugerenciasNuevas(false);
+  }, 300000);
+  try{
+    document.addEventListener('visibilitychange', function(){
+      if(!document.hidden) revisarSugerenciasNuevas(false);
+    });
+  }catch(_v){}
+}
 /* pregunta a la nube cuántos reportes abiertos hay y avisa por lo nuevo */
 function revisarReportesNuevos(silencioso){
   var e=empActiva();
@@ -27100,6 +27196,7 @@ function pintarAvisoReportes(){
 /* mientras la app esté abierta, se revisa cada 3 minutos */
 function arrancarVigilanciaReportes(){
   if(AVISO_TIMER) return;
+  try{ arrancarVigilanciaBuzon(); }catch(_b){}
   revisarReportesNuevos(true);
   AVISO_TIMER=setInterval(function(){
     if(document.hidden) return;
@@ -27115,6 +27212,37 @@ function pararVigilanciaReportes(){ if(AVISO_TIMER){ clearInterval(AVISO_TIMER);
 
 /* ── LA LISTA DE REPORTES ────────────────────────────────────────── */
 var REP_LISTA=[];
+var LS_MIS_REP='sstc_mis_reportes';
+function misReportes(){ var a=leer(LS_MIS_REP,[]); return Array.isArray(a)?a:[]; }
+function anotarMiReporte(d){
+  try{
+    var a=misReportes();
+    a.push({clase:d.clase, desc:String(d.descripcion||'').slice(0,160), lugar:d.lugar||'',
+            act:d.actividad||'', fecha:d.fecha||hoyISO(), anon:!!d.anonimo, ts:Date.now()});
+    guardar(LS_MIS_REP, a.slice(-60));
+  }catch(_e){}
+}
+function _misRepLista(){
+  var a=misReportes().slice().reverse();
+  if(!a.length){
+    return '<div class="caja vidrio" style="padding:18px;margin-top:14px">'+
+      '<b>Todavía no has reportado nada.</b>'+
+      '<p class="sub" style="margin:8px 0 0">Si ves algo que puede lastimar a alguien —una guarda rota, '+
+      'un cable pelado, un hueco sin tapar— repórtalo. Se puede sin tu nombre.</p></div>';
+  }
+  var h='<div class="sec-tit" style="margin-top:20px">Lo que mandaste desde este celular · '+a.length+'</div>';
+  h+='<p class="sub" style="margin:0 0 10px">Los reportes de toda la obra los ve tu supervisor: '+
+     'muchos son anónimos y no son tuyos para verlos. Estos sí: son los que mandaste tú.</p>';
+  a.slice(0,30).forEach(function(r){
+    h+='<div class="tarj vidrio" style="display:block;border-left:3px solid '+
+       (r.clase==='acto'?'#d68e1a':'#d9261c')+'">'+
+       '<b>'+esc(r.clase==='acto'?'Acto inseguro':'Condición insegura')+'</b>'+
+       '<small>'+esc(fechaLarga(r.fecha)||r.fecha)+(r.lugar?' · '+esc(r.lugar):'')+
+       (r.act?' · '+esc(r.act):'')+(r.anon?' · sin tu nombre':'')+'</small>'+
+       '<p class="sub" style="margin:7px 0 0">'+esc(r.desc)+'</p></div>';
+  });
+  return h;
+}
 function pintarReporte(){
   var e=empActiva(), c=$('reporte-cuerpo');
   c.innerHTML='<h2>🚨 Reportes de la obra</h2>'+
@@ -27130,7 +27258,7 @@ function pintarReporte(){
         '<button class="btn sec" style="margin:0" onclick="ir(\'p-reporte-excel\')">📊 Informe (Excel o PDF)</button>'+
         '<button class="btn sec" style="margin:0" onclick="ir(\'p-actividades\')">🗂️ Actividades</button>'+
        '</div>'
-      :'<p class="sub" style="margin-top:12px">Entra a tu empresa para ver y hacer reportes.</p>');
+      : _misRepLista());
   if(!e) return;
   traerReportes(e.id, '&order=creado.desc&limit=500')
     .then(function(rows){ REP_LISTA=rows||[]; pintarListaReportes(); })
@@ -33007,8 +33135,11 @@ function _atsCuentaFirmas(d){
 function _atsDiaCartas(l){
   var h = '<div class="cart-lista">';
   l.forEach(function(d, i){
-    var est = d.estado || 'borrador', E = ATS_EST[est] || ATS_EST.borrador;
     var libre = !!(d.vb && d.vb.sst && !d.devuelto);
+    var est = d.estado;
+    if(!est){ est = (typeof atsEstado==='function') ? atsEstado(d)
+                  : (d.devuelto ? 'observado' : (libre ? 'vigente' : 'borrador')); }
+    var E = ATS_EST[est] || ATS_EST.borrador;
     var np = 0; (d.acts||[]).forEach(function(a){ np += (a.filas||[]).length; });
     h += '<button type="button" class="cart-t" style="border-left:3px solid '+E.c+'" '+
       'onclick="atsDiaVer('+i+')">'+
@@ -37389,6 +37520,266 @@ function brigadaDeLaObra(){
   });
   return out;
 }
+/* >>> QUIENES-INI (lo re-inyecta armar.py, no editar a mano) <<< */
+/* ═══════════════════════════════════════════════════════════════════
+   QUIÉN ES QUIÉN EN LA OBRA  ·  comité / supervisor SST / brigada
+   ───────────────────────────────────────────────────────────────────
+   El comité, el Supervisor de SST elegido y la brigada de emergencia
+   vivían SOLO en el celular del que gestiona. El trabajador —que es a
+   quien representan y a quien la brigada tiene que auxiliar— no los
+   veía por ningún lado: ni en su pantalla, ni en el QR, ni en los
+   documentos. Preguntarle a un peón quién es su representante ante el
+   comité y que no sepa contestar no es un detalle de la app: es que el
+   comité, para él, no existe.
+
+   La ley manda publicarlos donde la gente los vea:
+     · comité y supervisor SST → D.S. 005-2012-TR, art. 45
+     · brigada y plan de emergencia → Ley 29783, art. 35.d
+   El cartel A4 para la vitrina ya estaba. Esto es el mismo cartel, en
+   el bolsillo de cada uno, que es donde de verdad se mira.
+
+   Viaja por la misma puerta que los boletines: una hoja de sst_doc que
+   el servidor le entrega al que tiene el código de la obra. Sin DNI.
+   El teléfono va solo el del brigadista, que para eso está.
+   ═══════════════════════════════════════════════════════════════════ */
+
+var HOJA_QUIENES = 'quienes';
+var QUIENES = { dato:null, cargando:false, pedido:false };
+
+/* ── lo que se publica (y lo que NO) ──────────────────────────────── */
+function quienesPaquete(){
+  var d = (typeof comiteLocal==='function') ? comiteLocal() : {miembros:[]};
+  var n = (typeof comiteCuantos==='function') ? comiteCuantos() : 0;
+  var toca = (typeof comiteLoQueToca==='function') ? comiteLoQueToca(n) : {tipo:'supervisor', nombre:'Supervisor de SST'};
+  var e = (typeof empActiva==='function') ? empActiva() : null;
+
+  var org = (d.miembros||[]).map(function(m){
+    return { n: m.nombre||'', p: m.puesto||'',
+             lado: (m.lado==='empleador') ? 'e' : 't',
+             sup: m.sup?1:0,
+             cargo: m.cargo||'miembro' };   /* sin DNI: al trabajador no le sirve y no es suyo */
+  }).filter(function(m){ return m.n; });
+
+  var brig = ((typeof brigadaDeLaObra==='function') ? brigadaDeLaObra() : [])
+    .filter(function(p){ return p.vig; })          /* credencial vencida no se publica como brigadista */
+    .map(function(p){ return { n:p.n, c:p.c||'', tel:p.tel||'', roles:p.roles||[] }; });
+
+  return { v:1,
+    tipo: toca.tipo,                 /* comite | subcomite | supervisor */
+    titulo: toca.nombre || 'Comité de SST',
+    ley: toca.ley || '',
+    obra: e ? (e.nombre||'') : '',
+    periodo: d.periodo || null,
+    org: org,
+    brig: brig,
+    punto: d.punto || '',            /* punto de reunión, si lo cargaron */
+    emerg: d.emerg || '',            /* teléfono de emergencia de la obra */
+    al: hoyISO() };
+}
+
+function quienesCuantos(){
+  var p = quienesPaquete();
+  return { org:p.org.length, brig:p.brig.length, tipo:p.tipo };
+}
+
+/* ── el supervisor lo publica ─────────────────────────────────────── */
+function quienesPublicar(){
+  var e = (typeof empActiva==='function') ? empActiva() : null;
+  if(!e || !e.id){ aviso('Primero abre tu obra','Esto se publica en una obra: ábrela y vuelve.','🏗️'); return; }
+  if(typeof hayCuenta==='function' && !hayCuenta()){
+    aviso('Necesitas tu cuenta','Entra a tu cuenta para publicarlo en la obra.','🔑'); return; }
+
+  var p = quienesPaquete();
+  if(!p.org.length && !p.brig.length){
+    aviso('Todavía no hay a quién publicar',
+          'Carga al comité (o al Supervisor de SST) y marca a los brigadistas en sus credenciales. '+
+          'Entonces esto aparece en el celular de toda la obra.','👥'); return;
+  }
+
+  var conTel = p.brig.filter(function(b){ return b.tel; }).length;
+  var quien = !p.org.length ? ''
+    : (p.tipo==='supervisor' ? 'a tu Supervisor de SST'
+       : p.org.length+' integrante'+(p.org.length===1?'':'s')+' del '+p.titulo.toLowerCase());
+  var cuantos = !p.brig.length ? ''
+    : (p.brig.length===1 ? 'a 1 brigadista' : 'a '+p.brig.length+' brigadistas');
+  confirmar('¿Publicarlo para toda la obra?',
+    'Cualquiera con el código de esta obra va a ver '+
+    [quien, cuantos].filter(Boolean).join(' y ')+
+    ': su nombre y su puesto. El DNI no viaja.'+
+    (conTel? (conTel===1 ? ' El teléfono sí, pero solo el del brigadista que lo tiene en su credencial: en una emergencia eso es lo que se necesita.'
+                         : ' El teléfono sí, pero solo el de los '+conTel+' brigadistas que lo tienen en su credencial: en una emergencia eso es lo que se necesita.') : '')+
+    ' Es lo mismo que el cartel de la vitrina, en el celular de cada uno.',
+    function(){ _quienesSubir(p); },
+    {si:'Sí, publicarlo', no:'Todavía no', icono:'📣'});
+}
+
+function _quienesSubir(p){
+  var e = empActiva();
+  var fila = { empresa:e.id, hoja:HOJA_QUIENES, nombre:p.titulo,
+               nota:JSON.stringify(p), url:null };
+  /* una sola hoja por obra: si ya hay, se reemplaza */
+  sbGet('sst_doc?empresa=eq.'+encodeURIComponent(e.id)+'&hoja=eq.'+HOJA_QUIENES+'&select=id&limit=1')
+    .then(function(rows){
+      if(rows && rows.length)
+        return sbPatch('sst_doc?id=eq.'+encodeURIComponent(rows[0].id), {nombre:fila.nombre, nota:fila.nota});
+      return sbPost('sst_doc', fila);
+    })
+    .then(function(){
+      aviso('Publicado',
+        'Ya está en el celular de tu gente, en «¿A quién acudo?». Si cambias el comité o marcas un brigadista nuevo, '+
+        'vuelve a publicarlo para que les llegue.', '✅');
+    })
+    .catch(function(err){
+      aviso('No se pudo publicar', (typeof porQue==='function'? porQue(err) : String(err)), '📡');
+    });
+}
+
+/* ── el trabajador lo lee ─────────────────────────────────────────── */
+function quienesTraer(cuando){
+  var e = (typeof empDeTrabajo==='function') ? empDeTrabajo() : null;
+  if(!e || !e.codigo){ QUIENES.dato=null; if(cuando) cuando(); return; }
+  if(QUIENES.cargando) return;
+  QUIENES.cargando = true;
+  sbRpc('sst_docs_obra', { p_cod: e.codigo })
+    .then(function(rows){
+      QUIENES.cargando=false; QUIENES.pedido=true;
+      var d = (rows||[]).filter(function(x){ return x.hoja===HOJA_QUIENES; })[0];
+      var p = null;
+      if(d){ try{ p = (typeof d.nota==='string') ? JSON.parse(d.nota) : d.nota; }catch(_e){ p=null; } }
+      QUIENES.dato = p;
+      try{ guardar('sstc_quienes_'+e.codigo, p); }catch(_g){}   /* para que funcione sin señal */
+      if(cuando) cuando();
+    })
+    .catch(function(){
+      QUIENES.cargando=false; QUIENES.pedido=true;
+      try{ QUIENES.dato = leer('sstc_quienes_'+e.codigo, null); }catch(_l){ QUIENES.dato=null; }
+      if(cuando) cuando();
+    });
+}
+
+var _QUI_CARGO = { presidente:'Presidente', secretario:'Secretario', miembro:'Integrante' };
+
+function pintarQuienes(){
+  var c = $('quienes-cuerpo'); if(!c) return;
+  var e = (typeof empDeTrabajo==='function') ? empDeTrabajo() : null;
+  if(!e || !e.codigo){ ir('p-trab-entrar'); return; }
+
+  if(!QUIENES.pedido){
+    c.innerHTML = '<h2>🆘 ¿A quién acudo?</h2><p class="sub" style="margin-top:14px">Cargando…</p>';
+    quienesTraer(function(){ pintarQuienes(); });
+    return;
+  }
+
+  var p = QUIENES.dato;
+  var h = '<h2>🆘 ¿A quién acudo?</h2>';
+
+  if(!p || (!(p.org||[]).length && !(p.brig||[]).length)){
+    h += '<div class="aviso" style="margin-top:16px"><b>Tu obra todavía no lo publicó.</b>'+
+         '<p class="sub" style="margin:6px 0 0">Pídeselo a tu supervisor: son tus representantes ante el comité '+
+         'y los brigadistas que te auxilian si pasa algo. La ley manda que estén publicados donde los veas '+
+         '(<span class="ley">D.S. 005-2012-TR, art. 45</span>).</p></div>'+
+         '<button class="btn sec" style="margin-top:14px" onclick="ir(\'p-obra\')">Volver</button>';
+    c.innerHTML = h; return;
+  }
+
+  /* ── 1 · la brigada va PRIMERO: es lo que se busca con prisa ── */
+  var brig = p.brig || [];
+  if(brig.length){
+    h += '<div class="sec-tit" style="margin-top:18px">Si pasa algo, ahora</div>';
+    h += '<p class="sub" style="margin:0 0 10px">Avisa al brigadista más cercano, no al primero de la lista. '+
+         'Si hay heridos, primero asegura la zona: un segundo accidentado no ayuda a nadie.</p>';
+    ['bp','bf','be'].forEach(function(k){
+      var x = (typeof habilDe==='function') ? habilDe(k) : null;
+      var gente = brig.filter(function(b){ return (b.roles||[]).indexOf(k)>=0; });
+      if(!gente.length || !x) return;
+      h += '<div class="qui-gr"><div class="qui-gr-t">'+x.ic+' '+esc(x.n.replace('Brigadista · ',''))+'</div>';
+      gente.forEach(function(b){
+        h += '<div class="qui-p">'+
+             '<div class="qui-ini">'+esc(_quiIni(b.n))+'</div>'+
+             '<div class="qui-tx"><b>'+esc(b.n)+'</b>'+(b.c?'<small>'+esc(b.c)+'</small>':'')+'</div>'+
+             (b.tel? '<a class="qui-tel" href="tel:'+escA(b.tel)+'">📞</a>' : '')+
+             '</div>';
+      });
+      h += '</div>';
+    });
+    if(p.punto) h += '<div class="aviso" style="margin-top:12px">📍 <b>Punto de reunión:</b> '+esc(p.punto)+'</div>';
+    if(p.emerg) h += '<a class="btn" style="margin-top:10px;display:block;text-align:center" href="tel:'+escA(p.emerg)+'">📞 Emergencia de la obra · '+esc(p.emerg)+'</a>';
+  }
+
+  /* ── 2 · quién te representa ── */
+  var org = p.org || [];
+  if(org.length){
+    var esSup = (p.tipo==='supervisor');
+    h += '<div class="sec-tit" style="margin-top:24px">'+(esSup?'Tu Supervisor de SST':'Quién te representa')+'</div>';
+    h += '<p class="sub" style="margin:0 0 10px">'+
+         (esSup
+          ? 'Lo eligieron los trabajadores de esta obra. Tiene las mismas funciones que un comité: '+
+            'a él le llevas lo que no se arregla hablando con tu capataz.'
+          : 'Los de la izquierda los eligieron ustedes; los otros los pone la empresa. '+
+            'A los tuyos les llevas lo que no se arregla en el frente.')+'</p>';
+
+    function bloque(titulo, lista){
+      if(!lista.length) return '';
+      var s = '<div class="qui-gr"><div class="qui-gr-t">'+titulo+'</div>';
+      lista.forEach(function(m){
+        var etq = (m.cargo && m.cargo!=='miembro') ? _QUI_CARGO[m.cargo] : (m.sup? 'Suplente' : 'Titular');
+        s += '<div class="qui-p">'+
+             '<div class="qui-ini'+(m.sup?' sup':'')+'">'+esc(_quiIni(m.n))+'</div>'+
+             '<div class="qui-tx"><b>'+esc(m.n)+'</b><small>'+esc(etq)+(m.p?' · '+esc(m.p):'')+'</small></div>'+
+             '</div>';
+      });
+      return s+'</div>';
+    }
+    if(esSup){
+      h += bloque('El elegido', org);
+    }else{
+      h += bloque('👷 Por los trabajadores', org.filter(function(m){ return m.lado==='t'; }));
+      h += bloque('🏢 Por la empresa',       org.filter(function(m){ return m.lado==='e'; }));
+    }
+    if(p.periodo && (p.periodo.desde || p.periodo.hasta)){
+      h += '<p class="sub" style="margin-top:10px">Mandato: '+
+           esc([p.periodo.desde, p.periodo.hasta].filter(Boolean).join(' — '))+'</p>';
+    }
+  }
+
+  h += '<div class="caja vidrio" style="padding:15px;margin-top:20px">'+
+       '<b>Lo que puedes pedirles</b>'+
+       '<p class="sub" style="margin:7px 0 0;line-height:1.6">Que se vea tu reporte, que se trate un peligro en la reunión '+
+       'del comité, que te expliquen una decisión que te afecta. No tienes que dar tu nombre para que el tema entre: '+
+       'también puedes usar el buzón.</p>'+
+       '<button class="btn sec" style="margin:11px 0 0" onclick="abrirBuzon()">💬 Escribir al buzón sin mi nombre</button>'+
+       '</div>';
+
+  if(p.ley) h += '<p class="sub" style="margin-top:14px;font-size:12.5px"><span class="ley">'+esc(p.ley)+'</span></p>';
+  h += '<p class="sub" style="margin-top:6px;font-size:12px">Publicado por tu obra el '+
+       esc((typeof fechaLarga==='function'? fechaLarga(p.al) : p.al)||'')+'.</p>';
+  h += '<button class="btn sec" style="margin-top:12px" onclick="ir(\'p-obra\')">Volver</button>';
+  c.innerHTML = h;
+}
+
+function _quiIni(n){
+  var q = String(n||'').trim().split(/\s+/).filter(Boolean);
+  if(!q.length) return '?';
+  return (q[0][0] + (q.length>1 ? q[1][0] : '')).toUpperCase();
+}
+
+function abrirQuienes(){ ir('p-quienes'); }
+
+/* ── el botón que va en las dos pantallas del que gestiona ────────── */
+function _quiBotonPublicar(de){
+  var q = quienesCuantos();
+  var hay = (de==='brigada') ? q.brig : q.org;
+  if(!hay) return '';
+  var que = (de==='brigada')
+    ? (q.brig + ' brigadista' + (q.brig===1?'':'s'))
+    : (q.tipo==='supervisor' ? 'El Supervisor de SST elegido'
+       : q.org + ' integrante' + (q.org===1?'':'s'));
+  return '<button type="button" class="cart-ir" style="margin-top:12px" onclick="quienesPublicar()">'+
+    '<span class="ic">📣</span><span class="tx"><b>Publicarlo en los celulares de la obra</b>'+
+    '<small>'+que+'. Le aparece a cualquiera que entre con el código, en «¿A quién acudo?». '+
+    'Sin DNI.</small></span><span class="ch">›</span></button>';
+}
+/* <<< QUIENES-FIN >>> */
 function pintarBrigada(){
   var c=$('brigada-cuerpo'); if(!c) return;
   var b=brigadaDeLaObra(), e=empActiva();
@@ -37414,6 +37805,7 @@ function pintarBrigada(){
   });
   var vencidos=b.filter(function(p){ return !p.vig; }).length;
   if(vencidos) h+='<div class="aviso" style="margin-top:14px;border-left:3px solid var(--mal)">'+vencidos+' brigadista'+(vencidos===1?'':'s')+' con la credencial vencida. Renuévala antes de que la necesites.</div>';
+  h+=_quiBotonPublicar('brigada');
   h+='<button type="button" class="cart-ir" onclick="abrirCartel(\'brigada\')">'+
      '<span class="ic">🖼️</span><span class="tx"><b>Cartel de brigada</b>'+
      '<small>La hoja A4 con sus fotos y su función, para pegar en la caseta y en el punto de reunión.</small></span>'+
@@ -38282,6 +38674,7 @@ function pintarObra(){
       ? {ic:'📐', t:'ATS de mi tarea', s:'Modelo para copiar', f:"abrirATSDia()", cl:'oro', id:'obra-ats'}
       : {ic:'📋', t:'ATS del día', s:'Firmado y liberado', f:"abrirATSDia()", cl:'oro', id:'obra-ats'},
     {ic:'🚨', t:'Reportar',    s:'Algo inseguro',       f:"reportarDesdeObra()", cl:'rojo', id:'obra-reportar'},
+    {ic:'🆘', t:'¿A quién acudo?', s:'Brigada y comité', f:"abrirQuienes()", cl:'rojo', id:'obra-quienes'},
     {ic:'📰', t:'Boletines',   s:'El mural de la obra', f:"abrirCarrete()", n:pend},
     {ic:'📚', t:'Documentos',  s:'RISST, IPERC, PETS',  f:"ir('p-docs-obra')", id:'obra-docs'},
     {ic:'🗓️', t:'Charlas', s:'Qué toca hoy',  f:"charlasDesdeObra()"},
@@ -46120,7 +46513,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='9b1e4d77c2';
+var SELLO_APP='fca77fe522';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
