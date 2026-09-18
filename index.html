@@ -31547,18 +31547,23 @@ function pintarATSDia(){
        'Si uno no tiene el V°B° del SSOMA, esa tarea no debe empezar.</p>';
   h += '<div id="atsdia-lista"><p class="sub" style="margin-top:14px">Cargando…</p></div>';
   c.innerHTML = h;
-  sbGet('sst_doc?empresa=eq.'+encodeURIComponent(e.id)+'&hoja=eq.ats'+
-        '&select=id,nombre,nota,creado&order=creado.desc&limit=60')
+  /* El trabajador no tiene cuenta: no puede leer sst_doc directo (sus
+     permisos son solo para cuentas). Entra por la misma puerta que los
+     boletines — el código de su obra — y el servidor le devuelve el ATS
+     sin los trazos de firma de sus compañeros. */
+  sbRpc('sst_ats_del_dia', { p_cod: e.codigo || '', p_dias: 10 })
     .then(function(rows){
       ATSDIA.lista = (rows||[]).map(function(r){
-        var d=null; try{ d=JSON.parse(r.nota||'null'); }catch(_e){}
-        return d ? d : null;
+        var d = r.nota;
+        if(typeof d === 'string'){ try{ d = JSON.parse(d); }catch(_e){ d = null; } }
+        return d;
       }).filter(Boolean);
       _atsDiaLista();
     })
-    .catch(function(){
+    .catch(function(err){
       var l=$('atsdia-lista');
-      if(l) l.innerHTML='<div class="aviso">No se pudieron traer los ATS. Puede que no haya señal: prueba otra vez cuando tengas internet.</div>';
+      if(l) l.innerHTML='<div class="aviso">No se pudieron traer los ATS. '+
+        esc(porQue(err))+'</div>';
     });
 }
 function _atsDiaLista(){
@@ -31581,7 +31586,7 @@ function _atsDiaLista(){
 }
 function _atsCuentaFirmas(d){
   var g = d.gente||[], f = 0;
-  g.forEach(function(x){ if(x.tr) f++; });
+  g.forEach(function(x){ if(x.tr || x.f) f++; });
   if(!g.length) return 'sin cuadrilla';
   return (f===g.length) ? ('firmaron los '+g.length) : (f+' de '+g.length+' firmaron');
 }
@@ -31642,8 +31647,8 @@ function atsDiaVer(i){
   if(g.length){
     h += '<div class="sec-tit" style="margin-top:18px">La cuadrilla \u00b7 '+g.length+'</div><div class="ats-vbmini">';
     g.forEach(function(x){
-      h += '<div><span>'+esc(x.n||'')+(x.d?' \u00b7 '+esc(x.d):'')+'</span><b>'+
-           (x.tr?'\u2713 firm\u00f3':'sin firma')+'</b></div>';
+      h += '<div><span>'+esc(x.n||'')+(x.d?' · '+esc(x.d):'')+'</span><b>'+
+           ((x.tr||x.f)?'✓ firmó':'sin firma')+'</b></div>';
     });
     h += '</div>';
   }
@@ -36847,9 +36852,14 @@ function pintarDocsObraTrab(){
   h+='<p class="sub">Los que subió tu empresa. La ley obliga a entregártelos: cuando termines de leer uno, dejas tu constancia y te la llevas en PDF.</p>';
   h+='<div id="docsobra-lista"><p class="sub">Cargando…</p></div>';
   c.innerHTML=h;
-  var hojas=DOCS_OBRA.map(function(x){ return '"'+x.h+'"'; }).join(',');
-  sbGet('sst_doc?empresa=eq.'+e.id+'&hoja=in.('+encodeURIComponent(hojas)+')&select=id,nombre,url,nota,hoja&order=creado.desc')
+  /* Antes esto leia sst_doc directo y SIEMPRE fallaba: sst_doc solo abre
+     para cuentas, y el trabajador no tiene cuenta — entra con el codigo de
+     su obra. El mensaje que veia era «puede que no haya senal», que era
+     mentira: era un permiso. Ahora entra por la misma puerta que los
+     boletines, y el servidor decide que hojas le corresponden. */
+  sbRpc('sst_docs_obra', { p_cod: e.codigo || '' })
     .then(function(rows){
+      rows = (rows||[]).filter(function(d){ return d.hoja!=='noticias'; });
       PORTAL.docs={};
       rows.forEach(function(d){ (PORTAL.docs[d.hoja]=PORTAL.docs[d.hoja]||[]).push(d); });
       pintarListaDocsObra();
@@ -37122,7 +37132,13 @@ function pintarNoticias(){
 function cargarNoticias(){
   var e=empDeTrabajo();
   if(!e || !e.id){ $('noti-lista').innerHTML='<p class="sub">Entra con el código de tu obra para ver sus noticias.</p>'; return; }
-  sbGet('sst_doc?empresa=eq.'+e.id+'&hoja=eq.noticias&select=id,nombre,url,nota,creado&order=creado.desc&limit=40')
+  /* mismo motivo que en «Documentos de SST»: el trabajador no tiene
+     cuenta, asi que entra por el codigo de obra. Quien SI tiene cuenta
+     puede seguir leyendo la tabla, que ademas le deja publicar. */
+  (hayCuenta()
+    ? sbGet('sst_doc?empresa=eq.'+e.id+'&hoja=eq.noticias&select=id,nombre,url,nota,creado&order=creado.desc&limit=40')
+    : sbRpc('sst_docs_obra', { p_cod: e.codigo || '' })
+        .then(function(rows){ return (rows||[]).filter(function(d){ return d.hoja==='noticias'; }).slice(0,40); }))
     .then(function(rows){ NOTI.lista=rows; pintarListaNoticias(); })
     .catch(function(){ $('noti-lista').innerHTML='<div class="aviso">No se pudieron traer las noticias. Puede que no haya señal.</div>'; });
 }
