@@ -2586,16 +2586,22 @@ html.t-claro .sim-hito{background:#fff}
   overflow-wrap:break-word;hyphens:auto}
 /* el cartel de la señal, tal como se imprime: marco, pictograma y la
    banda del color de la señal con el texto debajo */
-.sen-cartel{background:#fff;border:0;padding:0;margin:0 auto;position:relative;
+.sen-cartel{background:#fff;margin:0 auto;position:relative;box-sizing:border-box;
+  display:flex;flex-direction:column;padding:5.5% 5.5%;
   box-shadow:0 2px 14px rgba(0,0,0,.28)}
 .sen-cartel::before{content:"";position:absolute;inset:0;border:5px solid #111;pointer-events:none}
-.sen-cartel .sen-cpic{display:block;padding:6% 7.5% 0;line-height:0}
-.sen-cartel .sen-cpic svg{width:100%;height:auto;display:block}
-.sen-cartel .sen-cban{display:flex;flex-direction:column;justify-content:center;
-  margin:5.5% 5.5%;background:var(--cb,#00599E);color:var(--ct,#fff);
-  font-weight:800;font-size:12px;line-height:1.22;text-align:center;padding:9px 7px;
-  text-transform:uppercase;letter-spacing:.005em;overflow-wrap:anywhere}
-.sen-cartel .sen-cban small{display:block;font-weight:600;font-size:9.5px;opacity:.9;margin-top:4px;
+.sen-cartel .sen-clogo{display:block;flex:0 0 auto;height:11.5%;margin-bottom:2.5%;line-height:0}
+.sen-cartel .sen-clogo img{height:100%;width:auto;max-width:46%;object-fit:contain;display:block}
+.sen-cartel .sen-cpic{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;
+  line-height:0;padding-bottom:3.5%}
+.sen-cartel .sen-cpic svg{max-width:100%;max-height:100%;width:auto;height:auto;display:block}
+.sen-cartel .sen-cban{flex:0 0 auto;box-sizing:border-box;display:flex;flex-direction:column;
+  justify-content:center;min-height:22%;max-height:42%;overflow:hidden;
+  background:var(--cb,#00599E);color:var(--ct,#fff);
+  font-weight:800;font-size:13px;line-height:1.14;text-align:center;padding:3% 3.5%;
+  text-transform:uppercase;letter-spacing:.005em;overflow-wrap:break-word}
+.sen-cartel .sen-cban b{display:block;font-weight:800}
+.sen-cartel .sen-cban small{display:block;font-weight:600;font-size:.72em;opacity:.92;margin-top:.35em;
   text-transform:none;letter-spacing:0}
 .sen-fr{display:block;height:7px;border-radius:0 0 3px 3px;margin:5px -4px -4px}
 .senp-pie{background:#111;color:#fff;text-align:center;font-weight:800;font-size:10px;padding:7px 6px;
@@ -29864,10 +29870,12 @@ function pintarSenal(){
   h += '<div class="aviso'+(d<5?' ojo':'')+'" style="margin-top:14px">'+
        '<b>Cartel de '+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm</b> · símbolo de '+
        Math.round(LY.lado)+' mm'+
-       '<p class="sub" style="margin:6px 0 0;line-height:1.6">Se lee bien hasta unos <b>'+
-       (d<5 ? 'menos de 5' : Math.round(d))+' metros</b>. Sale de la fórmula de la NTP: el área tiene que ser '+
-       'al menos la distancia al cuadrado dividida entre 2000.'+
-       (d<5 ? ' Para menos de 5 m la norma pide 125 cm² como mínimo, y esta queda por debajo: solo sirve de cerca.' : '')+
+       '<p class="sub" style="margin:6px 0 0;line-height:1.6">'+
+       (d<5 ? 'Se lee <b>solo de cerca</b>: no llega a los 5 metros. La norma pide 125 cm² como mínimo '+
+              'para 5 m y este símbolo queda por debajo. Pon menos por hoja, una hoja más grande, o '+
+              'acorta el texto: la banda le está comiendo sitio al símbolo.'
+            : 'Se lee bien hasta unos <b>'+Math.round(d)+' metros</b>. Sale de la fórmula de la NTP: '+
+              'el área tiene que ser al menos la distancia al cuadrado dividida entre 2000.')+
        '</p></div>';
 
   h += _senAvisoLogo();
@@ -29876,6 +29884,7 @@ function pintarSenal(){
   h += '<div id="sen-listo"></div>';
   h += '<button class="btn sec" style="margin-top:14px" onclick="ir(\'p-senales\')">Volver a las señales</button>';
   c.innerHTML = h;
+  _senAjustarBanda();
 }
 function senTam(k){ SEN.tam=k; SEN.pdf=null; pintarSenal(); }
 function senPorHoja(n){ SEN.porHoja=n; SEN.pdf=null; pintarSenal(); }
@@ -29884,116 +29893,169 @@ function senTexto(v){ SEN.texto=v; SEN.pdf=null; _senRefrescarVista(); }
 function senSub(v){ SEN.sub=v; SEN.pdf=null; _senRefrescarVista(); }
 function _senRefrescarVista(){
   var c = $('sen-vista'); if(!c || !SEN.k) return;
-  c.innerHTML = _senCartelHTML(senalPorK(SEN.k), SEN.texto, SEN.sub, 196);
+  c.innerHTML = _senCartelHTML(senalPorK(SEN.k), SEN.texto, SEN.sub, 200);
+  _senAjustarBanda();
   var l = $('sen-listo'); if(l) l.innerHTML = '';
 }
 
-/* el mismo cartel, en pantalla: lo que se ve es lo que se imprime */
+/* el mismo cartel, en pantalla: lo que se ve es lo que se imprime.
+   La banda crece con el texto hasta un tope y, pasado eso, el texto se
+   achica. Nunca se sale: un renglón blanco fuera de la banda roja no se
+   ve, y una señal que no se lee no es una señal. */
 function _senCartelHTML(S, texto, sub, ancho){
-  var C = senColor(S.g), w = ancho || 180;
-  return '<div class="sen-cartel" style="width:'+w+'px;--cb:'+C.cf+';--ct:'+C.ct+'">'+
-         '<span class="sen-cpic">'+senalSVG(S, Math.round(w*0.85))+'</span>'+
-         '<span class="sen-cban">'+esc(String(texto || S.n).toUpperCase())+
-         (sub ? '<small>'+esc(sub)+'</small>' : '')+'</span></div>';
+  var C = senColor(S.g), w = ancho || 200, h = Math.round(w/SEN_RAZON);
+  var emp = (typeof empleador==='function') ? empleador() : {};
+  var h1 = '<div class="sen-cartel" style="width:'+w+'px;height:'+h+'px;--cb:'+C.cf+';--ct:'+C.ct+'">';
+  if(emp.logo && _senCabeLogo(160)) h1 += '<span class="sen-clogo"><img src="'+escA(emp.logo)+'" alt=""></span>';
+  h1 += '<span class="sen-cpic">'+senalSVG(S, Math.round(w*0.84))+'</span>'+
+        '<span class="sen-cban"><b>'+esc(String(texto || S.n).toUpperCase())+'</b>'+
+        (sub ? '<small>'+esc(sub)+'</small>' : '')+'</span></div>';
+  return h1;
+}
+function _senAjustarBanda(){
+  var b = document.querySelector('.sen-cartel .sen-cban'); if(!b) return;
+  var f = 13;
+  b.style.fontSize = f+'px';
+  var guarda = 0;
+  while(b.scrollHeight > b.clientHeight + 1 && f > 5.5 && guarda++ < 40){
+    f -= 0.5; b.style.fontSize = f+'px';
+  }
 }
 
 function _senAvisoLogo(){
   var emp = (typeof empleador==='function') ? empleador() : {};
-  if(emp.logo) return '<p class="sub" style="margin:12px 0 0;font-size:12.5px">Lleva el logo de tu empresa '+
-    'en la cabecera, fuera del pictograma: la norma no deja tapar ni alterar el símbolo.</p>';
+  if(emp.logo) return '<p class="sub" style="margin:12px 0 0;font-size:12.5px">Tu logo va '+
+    '<b>dentro del marco, arriba a la izquierda</b>, fuera del pictograma: la norma no deja '+
+    'tapar ni alterar el símbolo.</p>';
   return '<div class="aviso" style="margin-top:12px"><b>Sin logo de la empresa.</b>'+
-    '<p class="sub" style="margin:6px 0 0">Cárgalo en Datos de mi empresa y sale en todos los carteles.</p>'+
+    '<p class="sub" style="margin:6px 0 0">Cárgalo en Datos de mi empresa y sale dentro del marco '+
+    'de todos los carteles.</p>'+
     '<button class="btn sec" style="margin:9px 0 0" onclick="ir(\'p-empleador\')">Ir a Datos de mi empresa</button></div>';
 }
 
 function senLayout(){
   var T = senHoja(SEN.tam, SEN.orient), rej = senRejilla(SEN.porHoja);
-  var M = 12, hueco = 8;
-  var emp = (typeof empleador==='function') ? empleador() : {};
-  var obra = (typeof nombreDeLaObra==='function') ? nombreDeLaObra() : '';
-  var hCab = (emp.logo || emp.razon || obra) ? (((SEN.porHoja===1)?16:12) + 8) : 0;
-  var arriba = M + hCab, pie = 9;
+  var M = 12, hueco = 8, arriba = M, pie = 9;
   var anchoCel = (T.w - M*2 - hueco*(rej[0]-1)) / rej[0];
   var altoCel  = (T.h - arriba - M - pie - hueco*(rej[1]-1)) / rej[1];
   /* el cartel entero entra en su casilla sin deformarse */
   var w = Math.min(anchoCel, altoCel*SEN_RAZON), h = w/SEN_RAZON;
   return { T:T, rej:rej, M:M, hueco:hueco, arriba:arriba, pie:pie,
            anchoCel:anchoCel, altoCel:altoCel, w:w, h:h,
-           lado:w*0.85, hCab:hCab };
+           lado:_senPicLado(w, h), hCab:0 };
+}
+
+/* cuánto le queda al pictograma después del logo y de la banda */
+/* por debajo de 6 mm el logo es una mancha que solo le roba sitio al
+   símbolo: en los carteles chiquitos no va */
+function _senCabeLogo(w){
+  var emp = (typeof empleador==='function') ? empleador() : {};
+  return !!(emp.logo && w*0.115 >= 6);
+}
+function _senPicLado(w, h){
+  var p = w*0.055, hl = _senCabeLogo(w) ? (w*0.115 + w*0.025) : 0, hb = h*0.25;
+  try{
+    var d = new jspdf.jsPDF({ unit:'mm', format:[w, h] });
+    hb = _senCaja(d, SEN.texto, SEN.sub, w, h).hb;
+  }catch(e){}
+  return Math.max(0, Math.min(w - 2*p, (h - p - hb) - w*0.035 - (p + hl)));
+}
+
+/* ── la banda: cuánto mide y qué texto entra ───────────────────────
+   Primero se busca el cuerpo más grande que quepa; si aun en el más
+   chico sobran renglones, se recortan con puntos suspensivos. De acá
+   no sale ni una letra fuera de la banda. */
+function _senCaja(doc, texto, sub, w, h){
+  var p = w*0.055, wi = w - 2*p, ancho = wi - w*0.07;
+  var hbMin = h*0.22, hbMax = h*0.42, pad = w*0.030, hueco = w*0.015;
+  var t = String(texto||'').toUpperCase();
+  var ft = w*0.095/_MMPT, lin, fs, subLin, alto;
+  for(;;){
+    doc.setFont('helvetica','bold'); doc.setFontSize(ft);
+    lin = doc.splitTextToSize(t, ancho);
+    fs  = Math.max(3.6, ft*0.66);
+    subLin = [];
+    if(sub){
+      doc.setFont('helvetica','normal'); doc.setFontSize(fs);
+      subLin = doc.splitTextToSize(String(sub), ancho).slice(0,2);
+    }
+    var hSub = subLin.length ? subLin.length*fs*1.14*_MMPT + hueco : 0;
+    alto = lin.length*ft*1.14*_MMPT + hSub;
+    if(alto + pad*2 <= hbMax || ft <= 4.2) break;
+    ft -= 0.3;
+  }
+  var hSub2 = subLin.length ? subLin.length*fs*1.14*_MMPT + hueco : 0;
+  var hb = Math.min(hbMax, Math.max(hbMin, alto + pad*2));
+  var caben = Math.max(1, Math.floor((hb - pad*2 - hSub2) / (ft*1.14*_MMPT) + 0.02));
+  if(lin.length > caben){
+    lin = lin.slice(0, caben);
+    lin[caben-1] = String(lin[caben-1]).replace(/\s*\S{0,4}$/, '') + '…';
+  }
+  alto = lin.length*ft*1.14*_MMPT + hSub2;
+  return { hb:hb, ft:ft, fs:fs, lin:lin, sub:subLin, alto:alto, pad:pad, p:p, wi:wi };
 }
 
 /* ── el cartel dibujado en el PDF ─────────────────────────────────
    Todas las medidas salen del ancho del cartel, así sale igual en A5
    que en A3. El marco es negro y grueso porque es lo que separa la
-   señal de la pared: sin marco, un cartel pegado en un muro claro no
-   tiene borde. */
-function _senCartelPDF(doc, png, S, texto, sub, x, y, w){
-  var h = w/SEN_RAZON, C = senColor(S.g);
-  var t = w*0.030, p = w*0.055;
+   señal de la pared. El logo de la empresa va DENTRO del marco, arriba
+   y a la izquierda, nunca encima del símbolo. */
+function _senCartelPDF(doc, png, S, texto, sub, x, y, w, logo){
+  var h = w/SEN_RAZON, C = senColor(S.g), t = w*0.030;
+  var K = _senCaja(doc, texto, sub, w, h);
+  var p = K.p, xi = x + p, wi = K.wi;
 
   doc.setFillColor(255,255,255); doc.rect(x, y, w, h, 'F');
   doc.setDrawColor(17,17,17); doc.setLineWidth(t);
   doc.rect(x + t/2, y + t/2, w - t, h - t, 'S');
 
-  var s = w*0.85;
-  if(png){ try{ doc.addImage(png, 'PNG', x+(w-s)/2, y+p, s, s, undefined, 'FAST'); }catch(e){} }
+  var yc = y + p;
+  if(logo && logo.du && _senCabeLogo(w)){
+    var hl = w*0.115, lw = hl*logo.r, lmax = wi*0.46;
+    if(lw > lmax){ lw = lmax; hl = lw/logo.r; }
+    try{ doc.addImage(logo.du, xi, yc, lw, hl, undefined, 'FAST'); }catch(e){}
+    yc += hl + w*0.025;
+  }
 
-  var bw = w - 2*p, bh = h*0.25, bx = x + p, by = y + h - p - bh;
+  var yb = y + h - p - K.hb;
+  var hueco = w*0.035;
+  var s = Math.min(wi, (yb - hueco) - yc);
+  if(png && s > 0){
+    try{ doc.addImage(png, 'PNG', x + (w - s)/2, yc + ((yb - hueco) - yc - s)/2,
+                      s, s, undefined, 'FAST'); }catch(e){}
+  }
+
   doc.setFillColor(C.f[0], C.f[1], C.f[2]);
-  doc.rect(bx, by, bw, bh, 'F');
-
-  /* el texto se achica hasta entrar: nunca se sale de la banda */
-  var ancho = bw - w*0.06, lin, ft = (bh*0.34)/_MMPT, subLin = [], fs = 0;
-  doc.setFont('helvetica','bold');
-  for(;;){
-    doc.setFontSize(ft);
-    lin = doc.splitTextToSize(String(texto || S.n).toUpperCase(), ancho);
-    fs = ft*0.66;
-    subLin = [];
-    if(sub){ doc.setFont('helvetica','normal'); doc.setFontSize(fs);
-             subLin = doc.splitTextToSize(String(sub), ancho).slice(0,2);
-             doc.setFont('helvetica','bold'); }
-    var alto = lin.length*ft*1.14*_MMPT + (subLin.length ? subLin.length*fs*1.14*_MMPT + bh*0.06 : 0);
-    if((lin.length <= 3 && alto <= bh - w*0.025) || ft <= 4.5) break;
-    ft -= 0.35;
-  }
-  lin = lin.slice(0,3);
-  var lh = ft*1.14*_MMPT, lhs = fs*1.14*_MMPT;
-  var altoTot = lin.length*lh + (subLin.length ? subLin.length*lhs + bh*0.06 : 0);
-  var cy = by + (bh - altoTot)/2 + ft*0.36*_MMPT;
-
+  doc.rect(xi, yb, wi, K.hb, 'F');
   doc.setTextColor(C.t[0], C.t[1], C.t[2]);
-  doc.setFont('helvetica','bold'); doc.setFontSize(ft);
-  lin.forEach(function(l, i){ doc.text(l, bx+bw/2, cy + i*lh, { align:'center' }); });
-  if(subLin.length){
-    doc.setFont('helvetica','normal'); doc.setFontSize(fs);
-    var sy = cy + lin.length*lh + bh*0.06 - ft*0.36*_MMPT + fs*0.36*_MMPT;
-    subLin.forEach(function(l, i){ doc.text(l, bx+bw/2, sy + i*lhs, { align:'center' }); });
+  var lh = K.ft*1.14*_MMPT, lhs = K.fs*1.14*_MMPT;
+  var cy = yb + (K.hb - K.alto)/2 + K.ft*0.36*_MMPT;
+  doc.setFont('helvetica','bold'); doc.setFontSize(K.ft);
+  K.lin.forEach(function(l, i){ doc.text(l, xi + wi/2, cy + i*lh, { align:'center' }); });
+  if(K.sub.length){
+    doc.setFont('helvetica','normal'); doc.setFontSize(K.fs);
+    var sy = cy + K.lin.length*lh + w*0.015 - K.ft*0.36*_MMPT + K.fs*0.36*_MMPT;
+    K.sub.forEach(function(l, i){ doc.text(l, xi + wi/2, sy + i*lhs, { align:'center' }); });
   }
-  return { w:w, h:h, lado:s };
+  return { lado: s, hb: K.hb, ft: K.ft };
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   EL CARTEL DE LA SEÑAL, EN PDF
-
-   El pictograma se pasa por un lienzo a la resolución del papel y
-   entra al PDF como imagen. Va arriba y el texto debajo, nunca
-   encima: la norma (10.2.5) no deja escribir dentro del símbolo.
-   El logo de la empresa va en la cabecera de la hoja, fuera del
-   pictograma, por lo mismo.
-   ════════════════════════════════════════════════════════════════ */
 function senArmar(){
   var m = $('sen-msg'); if(m){ m.style.color='var(--gris)'; m.textContent='Armando el cartel…'; }
   var S = senalPorK(SEN.k), LY = senLayout();
   senRaster(S.s, _senPx(LY.lado)).then(function(png){
-    _senDibujar(png);
+    var r = _senDibujar(png);
     if(m) m.textContent = '';
     var T = senHoja(SEN.tam, SEN.orient), c = $('sen-listo');
+    var chico = (r && r.ft < 5.4);
     if(c) c.innerHTML =
       '<div class="aviso ok" style="margin-top:14px">✅ <b>'+esc(SEN.texto||S.n)+'</b>'+
       '<p class="sub" style="margin:6px 0 0">'+SEN.porHoja+(SEN.porHoja===1?' señal':' señales')+
       ' en una hoja '+T.n+(T.oh?' horizontal':'')+' · cartel de '+Math.round(LY.w)+' × '+
       Math.round(LY.h)+' mm</p></div>'+
+      (chico ? '<div class="aviso ojo" style="margin-top:10px"><b>El texto quedó muy chico.</b>'+
+        '<p class="sub" style="margin:6px 0 0">A este tamaño casi no se lee. Pon menos señales '+
+        'por hoja, usa una hoja más grande, o acorta el texto del cartel.</p></div>' : '')+
       '<div class="dos" style="margin-top:12px">'+
       '<button class="btn" style="margin:0" onclick="senCompartir()">📲 Compartir</button>'+
       '<button class="btn sec" style="margin:0" onclick="senImprimir()">🖨️ Imprimir</button></div>'+
@@ -30006,52 +30068,42 @@ function senArmar(){
 
 function _senDibujar(png){
   var S = senalPorK(SEN.k), LY = senLayout(), T = LY.T, rej = LY.rej;
-  /* T ya viene con la orientación puesta desde senLayout() */
   var doc = new jspdf.jsPDF({ unit:'mm', format:[T.w, T.h],
                               orientation: (T.w > T.h) ? 'landscape' : 'portrait' });
   var M = LY.M, hueco = LY.hueco;
   var emp = (typeof empleador==='function') ? empleador() : {};
-  var obra = (typeof nombreDeLaObra==='function') ? nombreDeLaObra() : '';
 
-  /* la cabecera: logo y empresa, NUNCA encima del símbolo */
-  if(LY.hCab){
-    var hL = (SEN.porHoja===1) ? 16 : 12, anchoL = 0;
-    /* el logo va SIEMPRE arriba a la derecha de la hoja */
-    if(emp.logo){
-      anchoL = hL*1.9;
-      try{ doc.addImage(emp.logo, T.w-M-anchoL, M, anchoL, hL, undefined, 'FAST'); }catch(e){}
-    }
-    doc.setFont('helvetica','bold'); doc.setFontSize(SEN.porHoja===1 ? 10.5 : 8.6);
-    doc.setTextColor(40,48,56);
-    doc.text(String(emp.razon||'').toUpperCase(), M, M+hL*0.42,
-             { align:'left', maxWidth: T.w-M*2-anchoL-6 });
-    if(obra){
-      doc.setFont('helvetica','normal'); doc.setFontSize(SEN.porHoja===1 ? 8.4 : 7.2);
-      doc.setTextColor(120,130,140);
-      doc.text(obra, M, M+hL*0.86, { align:'left', maxWidth: T.w-M*2-anchoL-6 });
-    }
-    doc.setDrawColor(215,222,228); doc.setLineWidth(0.4);
-    doc.line(M, M+hL+3, T.w-M, M+hL+3);
+  /* el logo, con su proporción real, para no deformarlo */
+  var logo = null;
+  if(emp.logo){
+    var r = 2.2;
+    try{ var pr = doc.getImageProperties(emp.logo); if(pr && pr.height) r = pr.width/pr.height; }catch(e){}
+    logo = { du: emp.logo, r: r };
   }
 
+  var ultimo = null;
   for(var i=0; i<SEN.porHoja; i++){
     var col = i % rej[0], fil = Math.floor(i / rej[0]);
     var x0 = M + col*(LY.anchoCel + hueco) + (LY.anchoCel - LY.w)/2;
     var y0 = LY.arriba + fil*(LY.altoCel + hueco) + (LY.altoCel - LY.h)/2;
-    _senCartelPDF(doc, png, S, SEN.texto, SEN.sub, x0, y0, LY.w);
+    ultimo = _senCartelPDF(doc, png, S, SEN.texto, SEN.sub, x0, y0, LY.w, logo);
   }
 
+  var lado = (ultimo && ultimo.lado) ? ultimo.lado : LY.lado;
   doc.setFont('helvetica','normal'); doc.setFontSize(6.6); doc.setTextColor(150,158,166);
-  var d = senDistancia(LY.lado);
+  var d = senDistancia(lado);
+  /* si no llega a 5 m se dice así: poner «~5 m» en una señal de 20 mm
+     sería mentirle a quien la cuelga */
   doc.text('NTP 399.010-1 · cartel de '+Math.round(LY.w)+' × '+Math.round(LY.h)+
-           ' mm, símbolo de '+Math.round(LY.lado)+' mm, legible hasta ~'+
-           (d<5?'5':Math.round(d))+' m · imprimir al 100 % · cortar por el marco · OBRASST',
+           ' mm, símbolo de '+Math.round(lado)+' mm, legible '+
+           (d<5 ? 'solo de cerca (menos de 5 m)' : 'hasta ~'+Math.round(d)+' m')+
+           ' · imprimir al 100 % · cortar por el marco · OBRASST',
            T.w/2, T.h-6, { align:'center' });
 
   SEN.pdf = { blob: doc.output('blob'),
               nombre: 'senal-'+(_senSlug(SEN.texto||S.n)||'sst')+'-'+T.n+
                       (T.oh?'-horizontal':'')+'.pdf' };
-  return SEN.pdf;
+  return ultimo;
 }
 
 function _senSlug(t){
