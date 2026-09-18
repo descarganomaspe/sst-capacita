@@ -2756,6 +2756,9 @@ html.t-claro .sim-hito{background:#fff}
 .qr-plato{background:#fff;border-radius:14px;padding:16px;margin:10px auto 12px;
   width:min(300px,78vw);display:block;box-shadow:0 2px 14px rgba(0,0,0,.28)}
 .qr-plato img{display:block;width:100%;height:auto;image-rendering:pixelated}
+.ats-modo-obra{margin-top:16px;padding:13px 14px;border-radius:var(--r2);
+  background:rgba(var(--p),.5);border:1.5px solid rgba(var(--w),.12)}
+.ats-modo-obra .sec-tit{margin:0 0 8px}
 .and-tipos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
 .and-t{display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;font:inherit;
   background:rgba(var(--p),.5);border:1.5px solid rgba(var(--w),.12);border-radius:var(--r2);
@@ -31102,6 +31105,23 @@ function pintarATS(){
        'consecuencia y su control. La actividad puede tener varios peligros: se escribe una vez '+
        'y al costado van todas sus filas.</p>';
 
+  /* Lo primero: cómo trabaja ESTA obra. De aquí depende lo que ve el
+     trabajador en su celular, así que se decide antes de nada. */
+  var _mo = (typeof atsModoObra==='function') ? atsModoObra() : 'digital';
+  h += '<div class="ats-modo-obra">'+
+    '<div class="sec-tit" style="margin:0 0 8px">¿Cómo se hace el ATS en esta obra?</div>'+
+    '<div class="ats-modo">'+
+    '<button type="button" class="'+(_mo!=='papel'?'on':'')+'" onclick="atsModoPoner(\'digital\')">📱 Digital</button>'+
+    '<button type="button" class="'+(_mo==='papel'?'on':'')+'" onclick="atsModoPoner(\'papel\')">📄 En papel</button>'+
+    '</div>'+
+    '<p class="sub" style="margin:9px 0 0;font-size:12.5px">'+
+    (_mo==='papel'
+      ? 'El trabajador <b>no</b> verá «ATS del día» ni el aviso rojo: verá los <b>modelos</b> que publiques, '+
+        'con los peligros y controles de su actividad, para copiarlos bien en el papel.'
+      : 'El trabajador ve en su celular el ATS de hoy y si está liberado. Si tu proyecto no acepta ATS virtual, '+
+        'ponlo en papel: ese aviso desaparece y en su lugar ve tus modelos.')+
+    '</p></div>';
+
   h += '<div class="dos" style="margin-top:16px">'+
        '<button class="btn" style="margin:0" onclick="atsCrear(\'dia\')">➕ ATS del día</button>'+
        '<button class="btn sec" style="margin:0" onclick="atsCrear(\'modelo\')">📐 Armar un modelo</button>'+
@@ -31823,8 +31843,9 @@ function atsArmar(){
       '<button class="btn" style="margin:0" onclick="_senCompartir(ATS.pdf)">📲 Compartir</button>'+
       '<button class="btn sec" style="margin:0" onclick="_senImprimir(ATS.pdf)">🖨️ Imprimir</button></div>'+
       (ATS.modo==='modelo'
-        ? '<p class="sub" style="margin:9px 0 0;font-size:12.5px">Es el modelo: imprímelo y que la '+
-          'cuadrilla lo copie a mano en el formato del proyecto.</p>'
+        ? '<button class="btn" style="margin:11px 0 0" onclick="atsPublicarModelo()">📤 Publicarlo para la cuadrilla</button>'+
+          '<p class="sub" style="margin:9px 0 0;font-size:12.5px">Imprímelo para que lo copien a mano — y '+
+          'publícalo: les queda en el celular, con los peligros y controles de la actividad, aunque no haya señal.</p>'
         : '<p class="sub" style="margin:9px 0 0;font-size:12.5px">Imprime a doble cara por el lado largo.</p>');
   }catch(e){
     if(m){ m.style.color='var(--mal)'; m.textContent='No se pudo armar: '+String(e && e.message || e); }
@@ -32690,18 +32711,153 @@ function _atsDesdePaquete(d, nubeId){
 /* gente que vino de la nube y no está en «Mi personal» de este celular */
 var _ATS_EXT = {};
 
+/* ══ ¿ESTA OBRA HACE EL ATS EN DIGITAL O EN PAPEL? ═════════════════
+   No todos los proyectos aceptan el ATS virtual. En los que no, el
+   trabajador abría la app y le salía en rojo «todavía no hay ATS de
+   hoy» — todos los días, para siempre, en una obra donde el ATS sí
+   existe pero está en una tabla, escrito a mano. Una alarma que nunca
+   se apaga no es una alarma: es ruido, y enseña a la gente a ignorar
+   también las que sí importan.
+
+   Ahora lo decide el supervisor, una vez por obra:
+     · DIGITAL → el trabajador ve el ATS del día y si está liberado.
+     · PAPEL   → eso desaparece y en su lugar ve el MODELO que el
+                 supervisor armó para su actividad, que es lo que de
+                 verdad le sirve: los peligros y los controles de su
+                 tarea, para copiarlos bien y para consultarlos.
+
+   Viaja como una fila de sst_doc con hoja 'ats-cfg', que es la puerta
+   que el trabajador ya puede leer con el código de su obra.        */
+var LS_ATSCFG = 'sstc_ats_modo';
+var ATSCFG = { modo:null, cargando:false, modelos:null };
+
+function atsModoObra(){
+  if(ATSCFG.modo) return ATSCFG.modo;
+  var g = null; try{ g = leer(LS_ATSCFG, null); }catch(e){}
+  return (g && g.modo) || 'digital';
+}
+function atsModoPoner(m){
+  ATSCFG.modo = m;
+  try{ guardar(LS_ATSCFG, { modo:m, t:Date.now() }); }catch(e){}
+  var e = (typeof empActiva==='function') ? empActiva() : null;
+  if(!e || !e.id || typeof hayCuenta!=='function' || !hayCuenta()){ pintarATS(); return; }
+  /* una sola fila por obra: primero se busca la que haya */
+  sbGet('sst_doc?empresa=eq.'+encodeURIComponent(e.id)+'&hoja=eq.ats-cfg&select=id&limit=1')
+    .then(function(rows){
+      if(rows && rows[0] && rows[0].id)
+        return sbPatch('sst_doc?id=eq.'+encodeURIComponent(rows[0].id), { nombre:m });
+      return sbPost('sst_doc', { empresa:e.id, hoja:'ats-cfg', nombre:m, nota:null });
+    })
+    .then(function(){ pintarATS(); },
+          function(err){ aviso('No se pudo guardar', porQue(err)+' Queda puesto en este celular.', '📡'); pintarATS(); });
+}
+/* del lado del trabajador: se lee del servidor con el código de obra */
+function atsCfgTraer(cuando){
+  var e = (typeof empDeTrabajo==='function') ? empDeTrabajo() : null;
+  if(!e || !e.codigo || ATSCFG.cargando) return;
+  ATSCFG.cargando = true;
+  sbRpc('sst_docs_obra', { p_cod: e.codigo })
+    .then(function(rows){
+      rows = rows || [];
+      var cfg = null, mods = [];
+      rows.forEach(function(d){
+        if(d.hoja === 'ats-cfg' && !cfg) cfg = String(d.nombre||'').toLowerCase();
+        if(d.hoja === 'ats-modelo'){
+          var x = d.nota;
+          if(typeof x === 'string'){ try{ x = JSON.parse(x); }catch(_e){ x = null; } }
+          if(x) mods.push(x);
+        }
+      });
+      ATSCFG.modo = (cfg === 'papel') ? 'papel' : 'digital';
+      ATSCFG.modelos = mods;
+      ATSCFG.cargando = false;
+      if(cuando) try{ cuando(); }catch(_c){}
+    }, function(){
+      ATSCFG.modo = ATSCFG.modo || 'digital';
+      ATSCFG.modelos = ATSCFG.modelos || [];
+      ATSCFG.cargando = false;
+      if(cuando) try{ cuando(); }catch(_c){}
+    });
+}
+/* publicar un modelo para que la cuadrilla lo vea en su celular */
+function atsPublicarModelo(){
+  if(!ATS || ATS.modo !== 'modelo') return;
+  var e = (typeof empActiva==='function') ? empActiva() : null;
+  if(!e || !e.id || !hayCuenta()){
+    aviso('Falta tu cuenta', 'Entra a tu cuenta para publicar el modelo a la cuadrilla.', '📡'); return;
+  }
+  var paq = _atsPaquete(ATS);
+  paq.modelo = true;
+  var nombre = (ATS.trabajo||'Modelo de ATS').slice(0,90);
+  var p = ATS.nubeId
+    ? sbPatch('sst_doc?id=eq.'+encodeURIComponent(ATS.nubeId), { nombre:nombre, nota:JSON.stringify(paq) })
+    : sbFetch(SB.url+'/rest/v1/sst_doc', { method:'POST',
+        body: JSON.stringify({ empresa:e.id, hoja:'ats-modelo', nombre:nombre, nota:JSON.stringify(paq) }) })
+      .then(function(r){ return r.ok ? r.json().catch(function(){return [];}) : Promise.reject(r.status); })
+      .then(function(rows){ if(rows && rows[0] && rows[0].id){ ATS.nubeId = rows[0].id; atsGuardar(); } return true; });
+  p.then(function(){
+    aviso('Publicado', 'La cuadrilla ya lo ve en «ATS del día» desde su celular, con los peligros y los controles de esta actividad.', '📤');
+    pintarATSNuevo();
+  }, function(err){ aviso('No se pudo publicar', porQue(err), '📡'); });
+}
+
 /* ── el ATS del día, del lado del trabajador ──────────────────────── */
 var ATSDIA = { lista:null, abierto:null, cargando:false };
-function abrirATSDia(){ ir('p-ats-dia'); }
+function abrirATSDia(){
+  ir('p-ats-dia');
+  /* el rótulo de arriba dice lo que el trabajador va a encontrar, no
+     lo que la pantalla se llama por dentro */
+  try{
+    var b = document.querySelector('#p-ats-dia .barra span');
+    if(b) b.textContent = (ATSCFG.modo==='papel') ? 'ATS de mi tarea' : 'ATS del día';
+  }catch(e){}
+}
 function pintarATSDia(){
   var c = $('atsdia-cuerpo'); if(!c) return;
   var e = (typeof empDeTrabajo==='function') ? empDeTrabajo() : null;
   if(!e || !e.id){ ir('p-trab-entrar'); return; }
-  var h = '<h2>📋 ATS del día</h2>';
-  h += '<p class="sub">Los análisis de trabajo seguro de hoy en tu obra, con las firmas de quien los liberó. '+
-       'Si uno no tiene el V°B° del SSOMA, esa tarea no debe empezar.</p>';
-  h += '<div id="atsdia-lista"><p class="sub" style="margin-top:14px">Cargando…</p></div>';
-  c.innerHTML = h;
+
+  if(ATSCFG.modo === null){
+    c.innerHTML = '<h2>📋 ATS</h2><p class="sub" style="margin-top:14px">Cargando…</p>';
+    atsCfgTraer(function(){ pintarATSDia(); });
+    return;
+  }
+
+  /* ── obra en papel: lo que sirve es el modelo de su actividad ── */
+  if(ATSCFG.modo === 'papel'){
+    var h = '<h2>📐 El ATS de tu actividad</h2>';
+    h += '<p class="sub">En esta obra el ATS se llena <b>a mano, en papel</b>, al pie de la tarea. Acá tienes '+
+         'el modelo que armó tu supervisor: los peligros de tu actividad, con su riesgo, su consecuencia y su '+
+         'control. Léelo antes de empezar y cópialo tal cual.</p>';
+    var M = ATSCFG.modelos || [];
+    if(!M.length){
+      h += '<div class="aviso" style="margin-top:16px"><b>Tu supervisor todavía no publicó modelos.</b>'+
+           '<p class="sub" style="margin:6px 0 0">Pídeselo: lo arma una vez por actividad y te queda acá '+
+           'para siempre, aunque no tengas señal.</p></div>';
+    }else{
+      h += '<div class="sec-tit" style="margin-top:20px">Modelos de tu obra · '+M.length+'</div><div class="cart-lista">';
+      M.forEach(function(d, i){
+        var np = 0; (d.acts||[]).forEach(function(a){ np += (a.filas||[]).length; });
+        h += '<button type="button" class="cart-t" style="border-left:3px solid #00599E" onclick="atsModeloVer('+i+')">'+
+          '<span class="ini" style="font-size:16px">📐</span>'+
+          '<span class="tx"><b>'+esc(d.trabajo || 'Modelo sin nombre')+'</b>'+
+          '<small>'+(d.area?esc(d.area)+' · ':'')+np+(np===1?' peligro':' peligros')+'</small></span>'+
+          '<span class="tic">›</span></button>';
+      });
+      h += '</div>';
+    }
+    h += '<p class="sub" style="margin-top:16px;font-size:12.5px">Si tu obra cambia y empieza a aceptar el ATS '+
+         'digital, tu supervisor lo activa y acá te empezará a salir el ATS del día con las firmas.</p>';
+    c.innerHTML = h;
+    return;
+  }
+
+  /* ── obra en digital: el ATS del día, como siempre ── */
+  var h2 = '<h2>📋 ATS del día</h2>';
+  h2 += '<p class="sub">Los análisis de trabajo seguro de hoy en tu obra, con las firmas de quien los liberó. '+
+        'Si uno no tiene el V°B° del SSOMA, esa tarea no debe empezar.</p>';
+  h2 += '<div id="atsdia-lista"><p class="sub" style="margin-top:14px">Cargando…</p></div>';
+  c.innerHTML = h2;
   /* El trabajador no tiene cuenta: no puede leer sst_doc directo (sus
      permisos son solo para cuentas). Entra por la misma puerta que los
      boletines — el código de su obra — y el servidor le devuelve el ATS
@@ -32717,9 +32873,29 @@ function pintarATSDia(){
     })
     .catch(function(err){
       var l=$('atsdia-lista');
-      if(l) l.innerHTML='<div class="aviso">No se pudieron traer los ATS. '+
-        esc(porQue(err))+'</div>';
+      if(l) l.innerHTML='<div class="aviso">No se pudieron traer los ATS. '+esc(porQue(err))+'</div>';
     });
+}
+function atsModeloVer(i){
+  var d = (ATSCFG.modelos||[])[i]; if(!d) return;
+  var c = $('atsdia-cuerpo'); if(!c) return;
+  var h = '<button class="btn sec" style="margin:0 0 14px" onclick="pintarATSDia()">‹ Volver a los modelos</button>';
+  h += '<h2 style="margin:0">'+esc(d.trabajo||'Modelo')+'</h2>';
+  h += '<p class="sub" style="margin:4px 0 12px">'+(d.area?esc(d.area):'')+(d.ubic?' · '+esc(d.ubic):'')+'</p>';
+  h += '<div class="aviso" style="border-color:#00599E"><b>📐 Esto se copia a mano</b>'+
+       '<p class="sub" style="margin:5px 0 0">Es el modelo de la actividad. En el papel va lo mismo, con tu '+
+       'firma y la de tus compañeros al pie.</p></div>';
+  (d.acts||[]).forEach(function(a){
+    h += '<div class="sec-tit" style="margin-top:16px">'+esc(a.a||'Actividad')+'</div><ul class="ats-ul">';
+    (a.filas||[]).forEach(function(f){
+      h += '<li><b>'+esc(f.p||'')+'</b>'+
+           (f.r?'<i>Riesgo: '+esc(f.r)+'</i>':'')+
+           (f.c?'<i>Consecuencia: '+esc(f.c)+'</i>':'')+
+           '<span>'+esc(f.m||'')+'</span></li>';
+    });
+    h += '</ul>';
+  });
+  c.innerHTML = h;
 }
 function _atsDiaLista(){
   var c = $('atsdia-lista'); if(!c) return;
@@ -37954,7 +38130,19 @@ function pintarObra(){
   var A = _obraHoy();
   h+='<div class="sec-tit" style="margin-top:16px">Hoy</div><div class="tw-hoy">';
 
-  if(A === null){
+  /* En una obra que trabaja en papel, el ATS existe pero no está acá:
+     está en una tabla, escrito a mano. Mostrarle «no hay ATS» todos los
+     días sería una alarma que nunca se apaga, y una alarma que nunca se
+     apaga enseña a ignorar también las que sí importan. */
+  if(typeof ATSCFG==='object' && ATSCFG.modo === 'papel'){
+    var _nm = (ATSCFG.modelos||[]).length;
+    h+='<button type="button" class="tw-h" onclick="abrirATSDia()">'+
+       '<span class="tw-h-ic">\ud83d\udcd0</span><span class="tw-h-tx"><b>El ATS de tu actividad</b>'+
+       '<small>'+(_nm ? ('Tu obra llena el ATS en papel. Ac\u00e1 tienes '+_nm+' modelo'+(_nm===1?'':'s')+
+                          ' con los peligros y controles de tu tarea.')
+                      : 'Tu obra llena el ATS en papel. Tu supervisor todav\u00eda no public\u00f3 modelos.')+
+       '</small></span><span class="tic">\u203a</span></button>';
+  }else if(A === null){
     h+='<button type="button" class="tw-h cargando" onclick="abrirATSDia()">'+
        '<span class="tw-h-ic">⏳</span><span class="tw-h-tx"><b>Buscando el ATS de hoy…</b>'+
        '<small>Un momento.</small></span></button>';
@@ -37994,7 +38182,9 @@ function pintarObra(){
   /* ── todo lo que puede hacer, sin deslizar ── */
   var hechas=[]; try{ hechas=leer(LS_DIFU,[])||[]; }catch(_d){}
   var tiles=[
-    {ic:'📋', t:'ATS del día', s:'Firmado y liberado',  f:"abrirATSDia()", cl:'oro', id:'obra-ats'},
+    (typeof ATSCFG==='object' && ATSCFG.modo==='papel')
+      ? {ic:'📐', t:'ATS de mi tarea', s:'Modelo para copiar', f:"abrirATSDia()", cl:'oro', id:'obra-ats'}
+      : {ic:'📋', t:'ATS del día', s:'Firmado y liberado', f:"abrirATSDia()", cl:'oro', id:'obra-ats'},
     {ic:'🚨', t:'Reportar',    s:'Algo inseguro',       f:"reportarDesdeObra()", cl:'rojo', id:'obra-reportar'},
     {ic:'📰', t:'Boletines',   s:'El mural de la obra', f:"abrirCarrete()", n:pend},
     {ic:'📚', t:'Documentos',  s:'RISST, IPERC, PETS',  f:"ir('p-docs-obra')", id:'obra-docs'},
@@ -38034,7 +38224,16 @@ function pintarObra(){
     drenarAcuses();
   }catch(_c){}
   try{
-    if(typeof ATSDIA==='object' && ATSDIA.lista===null && !ATSDIA.cargando){
+    /* la configuración de la obra: decide qué se le muestra arriba */
+    if(typeof ATSCFG==='object' && ATSCFG.modo===null && !ATSCFG.cargando){
+      atsCfgTraer(function(){
+        if((document.querySelector('.pantalla.activa')||{}).id==='p-obra') pintarObra();
+      });
+    }
+  }catch(_cf){}
+  try{
+    if(typeof ATSCFG==='object' && ATSCFG.modo==='papel'){ /* en papel no se piden los ATS del día */ }
+    else if(typeof ATSDIA==='object' && ATSDIA.lista===null && !ATSDIA.cargando){
       ATSDIA.cargando = true;
       sbRpc('sst_ats_del_dia', { p_cod: e.codigo||'', p_dias: 10 }).then(function(rows){
         ATSDIA.lista = (rows||[]).map(function(r){
