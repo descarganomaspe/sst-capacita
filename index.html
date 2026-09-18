@@ -9589,6 +9589,33 @@ var TOPE_EQUIPO = 8;   // compatibilidad con lo viejo
    del slug (P.compra / P.compraAnual). Si aqui dice 29 y alla sigue
    diciendo 19.90, la app promete un precio y Mercado Pago cobra otro.
    Los slugs anuales son nuevos: hay que darlos de alta.              */
+/* ══ DÓNDE ENTRA LO NUEVO (ATS, andamios, señalética) ═════════════
+   El criterio no cambió: LITE es la herramienta ENTERA con poco
+   volumen, y lo que se cobra es el volumen y el contenido.
+
+   ATS · es el documento que más se usa en obra: uno por cuadrilla y
+   por día. Por eso va POR MES y con la escalera pegada al tamaño real
+   del cliente: 5 al mes alcanzan para probarlo una semana en una
+   cuadrilla, no para llevar una obra. 60 = dos al día (una cuadrilla),
+   200 = siete al día (varios frentes), 600 = una obra grande.
+
+   ATS modelo · el que se imprime donde no aceptan ATS virtual, para
+   que la cuadrilla lo copie a mano. Se hace UNA VEZ por actividad, no
+   todos los días, así que NO va por mes y no le descuenta al cupo
+   diario. Cobrarle al que no puede usar el digital sería cobrarle por
+   la limitación de su cliente, no por nuestro trabajo.
+
+   Tarjetas de andamio y señalética · son contenido caro de producir
+   (171 pictogramas leídos de la propia NTP) y a la vez el mejor
+   anzuelo que tiene la app: el supervisor que imprime tres tarjetas ya
+   la adoptó. Por eso LITE da una probada de verdad —5 hojas de
+   tarjetas y 10 señales al mes— y desde el primer plan de pago no hay
+   tope.
+
+   ATS del día del TRABAJADOR · nunca tiene tope, en ningún plan. Si el
+   hombre no puede ver si su ATS está liberado, se cae el motivo entero
+   del producto. Y son los trabajadores los que hacen que la app entre
+   a la siguiente obra.                                              */
 var PLANES = [
   /* LITE · la herramienta entera, el contenido de muestra.
      El cambio de fondo del 13/09/2026: antes LITE era una version
@@ -9598,23 +9625,29 @@ var PLANES = [
      —las 60 capacitaciones y las 119 charlas— que es lo caro de
      producir y lo unico que de verdad se compra. */
   { id:'lite', nombre:'LITE', precio:0, orden:0,
-    tope:{ trabajador:10, kardex:10, reporte:-1, doc:-1, credencial:10, amonestacion:5, semana:0, escaneo:10 },
-    porMes:{ kardex:true, reporte:false, escaneo:true, amonestacion:true },
+    tope:{ trabajador:10, kardex:10, reporte:-1, doc:-1, credencial:10, amonestacion:5, semana:0, escaneo:10,
+           ats:5, ats_modelo:3, andamio:5, senal:10 },
+    porMes:{ kardex:true, reporte:false, escaneo:true, amonestacion:true,
+             ats:true, andamio:true, senal:true },
     gestores:1, charlas:5, temas:4,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1 } },
 
   { id:'prevencionista', nombre:'Prevencionista de Riesgo', precio:29, anual:290, tienda:34.99, tiendaAnual:349.99, orden:1,
     compra:'obrasst-prevencionista', compraAnual:'obrasst-prevencionista-anual',
-    tope:{ trabajador:50, kardex:100, reporte:-1, doc:-1, credencial:60, amonestacion:20, semana:4, escaneo:50 },
-    porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
+    tope:{ trabajador:50, kardex:100, reporte:-1, doc:-1, credencial:60, amonestacion:20, semana:4, escaneo:50,
+           ats:60, ats_modelo:-1, andamio:-1, senal:-1 },
+    porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true,
+             ats:true, andamio:true, senal:true },
     gestores:1, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
             constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1 } },
 
   { id:'supervisor', nombre:'Supervisor SST', precio:59, anual:590, tienda:68.99, tiendaAnual:689.99, orden:2,
     compra:'obrasst-supervisor', compraAnual:'obrasst-supervisor-anual',
-    tope:{ trabajador:150, kardex:300, reporte:-1, doc:-1, credencial:200, amonestacion:60, semana:8, escaneo:150 },
-    porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
+    tope:{ trabajador:150, kardex:300, reporte:-1, doc:-1, credencial:200, amonestacion:60, semana:8, escaneo:150,
+           ats:200, ats_modelo:-1, andamio:-1, senal:-1 },
+    porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true,
+             ats:true, andamio:true, senal:true },
     gestores:3, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
             constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1,
@@ -9622,8 +9655,10 @@ var PLANES = [
 
   { id:'ssoma', nombre:'SSOMA', precio:99, anual:990, tienda:119.99, tiendaAnual:1189.99, orden:3,
     compra:'sst-capacita', compraAnual:'sst-capacita-anual',
-    tope:{ trabajador:400, kardex:600, reporte:-1, doc:-1, credencial:500, amonestacion:150, semana:-1, escaneo:400 },
-    porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
+    tope:{ trabajador:400, kardex:600, reporte:-1, doc:-1, credencial:500, amonestacion:150, semana:-1, escaneo:400,
+           ats:600, ats_modelo:-1, andamio:-1, senal:-1 },
+    porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true,
+             ats:true, andamio:true, senal:true },
     gestores:6, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
             constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1,
@@ -9632,8 +9667,10 @@ var PLANES = [
 
   { id:'gestion', nombre:'Gestión SST', precio:229, anual:2290, tienda:269.99, tiendaAnual:2689.99, orden:4,
     compra:'obrasst-gestion', compraAnual:'obrasst-gestion-anual',
-    tope:{ trabajador:-1, kardex:-1, reporte:-1, doc:-1, credencial:-1, amonestacion:-1, semana:-1, escaneo:-1 },
-    porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true },
+    tope:{ trabajador:-1, kardex:-1, reporte:-1, doc:-1, credencial:-1, amonestacion:-1, semana:-1, escaneo:-1,
+           ats:-1, ats_modelo:-1, andamio:-1, senal:-1 },
+    porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true,
+             ats:true, andamio:true, senal:true },
     gestores:10, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
             constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1,
@@ -13771,7 +13808,8 @@ function quizaRefrescarUsoReal(){
 var PANT_CON_TOPE={'p-trabajadores':1,'p-trab-nuevo':1,'p-kardex':1,'p-kardex-nuevo':1,
   'p-credencial':1,'p-cred-nueva':1,'p-amonestaciones':1,'p-amon-nueva':1,
   'p-escaneos':1,'p-escaneo-nuevo':1,'p-reporte':1,'p-reporte-nuevo':1,
-  'p-semanal':1,'p-semanal-dia':1,'p-doc':1,'p-emp-home':1,'p-planes':1,'p-estatus':1};
+  'p-semanal':1,'p-semanal-dia':1,'p-doc':1,'p-emp-home':1,'p-planes':1,'p-estatus':1,
+  'p-ats':1,'p-ats-nuevo':1,'p-andamios':1,'p-senales':1,'p-senal':1,'p-senal-pers':1};
 
 function esPorMes(k){ return !!planActual().porMes[k]; }
 /* cuantos lleva usados: del mes si el tope es mensual, del total si no */
@@ -13847,7 +13885,9 @@ function _ganaEl(id){
   /* y el cupo, solo el que de verdad crece */
   var cupos=[['trabajador','trabajadores'],['kardex','entregas de EPP'],
              ['escaneo','documentos escaneados'],['credencial','credenciales'],
-             ['amonestacion','amonestaciones'],['semana','semanas de reporte HHT']];
+             ['amonestacion','amonestaciones'],['semana','semanas de reporte HHT'],
+             ['ats','ATS'],['andamio','hojas de tarjetas de andamio'],
+             ['senal','señales de la norma']];
   var suben=[];
   cupos.forEach(function(c){
     var a=A.tope[c[0]], b=P.tope[c[0]];
@@ -31751,11 +31791,17 @@ function atsGente(id){
    obligaciones, las reglas y la lista de firmas.
    ════════════════════════════════════════════════════════════════ */
 function atsArmar(){
+  /* el cupo del plan: el ATS del día es un consumible diario, el modelo
+     no — se hace una vez por actividad y por eso cuenta aparte */
+  var _k = (ATS && ATS.modo==='modelo') ? 'ats_modelo' : 'ats';
+  var _q = (ATS && ATS.modo==='modelo') ? 'modelos de ATS' : 'ATS';
+  if(typeof frenoLite==='function' && frenoLite(_k, 0, _q)) return;
   var m = $('ats-msg'); if(m){ m.style.color='var(--gris)'; m.textContent='Armando el ATS…'; }
   try{
     atsGuardar();
     var hojas = _atsDibujar();
     if(m) m.textContent = '';
+    if(typeof sumarUso==='function') sumarUso(_k, 1);
     var c = $('ats-listo');
     if(c) c.innerHTML =
       '<div class="aviso ok" style="margin-top:14px">✅ <b>'+esc(ATS.trabajo||'ATS')+'</b>'+
@@ -32917,9 +32963,11 @@ function _andPrev(){ var p = $('and-prev'); if(p) p.innerHTML = _andMini(); }
    LAS TARJETAS EN PDF
    ════════════════════════════════════════════════════════════════ */
 function andArmar(){
+  if(typeof frenoLite==='function' && frenoLite('andamio', 0, 'hojas de tarjetas de andamio')) return;
   var m = $('and-msg'); if(m){ m.style.color='var(--gris)'; m.textContent='Armando las tarjetas…'; }
   try{
     _andDibujar();
+    if(typeof sumarUso==='function') sumarUso('andamio', 1);
     if(m) m.textContent = '';
     var T = andTipo(AND.tipo), H = senHoja(AND.tam, AND.orient), c = $('and-listo');
     if(c) c.innerHTML =
@@ -33748,10 +33796,12 @@ function _senCartelPDF(doc, png, S, aviso, texto, sub, x, y, w, h, logo){
 }
 
 function senArmar(){
+  if(typeof frenoLite==='function' && frenoLite('senal', 0, 'señales de la norma')) return;
   var m = $('sen-msg'); if(m){ m.style.color='var(--gris)'; m.textContent='Armando el cartel…'; }
   var S = senalPorK(SEN.k), LY = senLayout();
   senRaster(S.s, _senPx(LY.lado)).then(function(png){
     var r = _senDibujar(png);
+    if(typeof sumarUso==='function') sumarUso('senal', 1);
     if(m) m.textContent = '';
     var T = senHoja(SEN.tam, SEN.orient), c = $('sen-listo');
     var chico = (r && r.ft < 5.4);
@@ -34115,6 +34165,8 @@ function senpElegir(id){
    Si no entran todos en una hoja, sigue en la siguiente con la misma
    cabecera: un cartel cortado no autoriza a los que quedaron fuera. */
 function senpArmar(){
+  if(typeof frenoLite==='function' && frenoLite('senal', 0, 'señales de la norma')) return;
+  if(typeof sumarUso==='function') sumarUso('senal', 1);
   var m = $('senp-msg');
   if(!SENP.gente.length){
     if(m){ m.style.color='var(--oro)'; m.textContent='Elige al menos a una persona.'; }
