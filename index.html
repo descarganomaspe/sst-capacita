@@ -2721,6 +2721,29 @@ html.t-claro .sim-hito{background:#fff}
   background:rgba(252,219,0,.13);border:1px solid rgba(252,219,0,.45);font-size:12.8px;line-height:1.45}
 .esc-aviso b{display:block;margin-bottom:3px}
 .esc-aviso span{display:block;color:var(--gris)}
+.tw-hoy{display:grid;gap:8px;margin-top:10px}
+.tw-h{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;font:inherit;
+  padding:14px 14px;border-radius:var(--r2);color:var(--tinta);
+  background:rgba(var(--p),.55);border:1.5px solid rgba(var(--w),.12)}
+.tw-h.verde{border-color:rgba(0,150,69,.6);background:rgba(0,150,69,.10)}
+.tw-h.roja{border-color:rgba(217,38,28,.55);background:rgba(217,38,28,.09)}
+.tw-h.oro{border-color:rgba(245,183,0,.5);background:rgba(245,183,0,.08)}
+.tw-h-ic{flex:0 0 auto;font-size:25px;line-height:1}
+.tw-h-tx{flex:1 1 auto;min-width:0}
+.tw-h-tx b{display:block;font-size:15.5px;line-height:1.25}
+.tw-h-tx small{display:block;font-size:12.3px;color:var(--gris);line-height:1.4;margin-top:3px}
+.tw-h .tic{flex:0 0 auto;font-size:19px;color:var(--gris)}
+.tw-qr-abre{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;font:inherit;
+  margin-top:14px;padding:13px 14px;border-radius:var(--r2);color:var(--tinta);
+  background:rgba(var(--p),.5);border:1.5px solid rgba(var(--w),.12)}
+.tw-qr-abre>span:first-child{flex:0 0 auto;font-size:22px;line-height:1}
+.tw-qr-abre div{flex:1 1 auto;min-width:0}
+.tw-qr-abre b{display:block;font-size:14.5px}
+.tw-qr-abre small{display:block;font-size:12px;color:var(--gris);margin-top:2px;line-height:1.4}
+.tw-qr-abre .tic{flex:0 0 auto;font-size:19px;color:var(--gris)}
+.tw-qr-caja{margin-top:10px}
+.tw-rej{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:10px}
+.tw-rej .tw-c{width:auto;min-width:0;flex:none;scroll-snap-align:none}
 .and-tipos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
 .and-t{display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;font:inherit;
   background:rgba(var(--p),.5);border:1.5px solid rgba(var(--w),.12);border-radius:var(--r2);
@@ -26800,6 +26823,77 @@ function ponerGlobito(n){
     else if(navigator.clearAppBadge) navigator.clearAppBadge();
   }catch(e){}
 }
+/* ══ POR QUÉ NO LLEGABAN LOS AVISOS ═══════════════════════════════
+   El permiso estaba dado y no llegaba nada. La razón: la app creaba el
+   aviso con `new Notification(...)`, que es la API de escritorio.
+   En Chrome de Android ese constructor LANZA una excepción — Google lo
+   desactivó a propósito porque en el celular un aviso tiene que salir
+   del service worker, para que siga saliendo aunque la app esté
+   cerrada. Como la llamada estaba dentro de un try/catch que devolvía
+   false y se olvidaba, el aviso moría en silencio y desde afuera se
+   veía como «no funciona».
+   Ahora se manda por el service worker (registration.showNotification),
+   que es el camino que Android acepta, y solo se cae al constructor en
+   una computadora. El ícono es el de OBRASST, resuelto contra la
+   dirección de la app para que no dependa de en qué pantalla estés. */
+function _avisoIcono(n){
+  try{ return new URL(n, location.href).href; }catch(e){ return n; }
+}
+function avisoSistema(titulo, cuerpo, op){
+  op = op || {};
+  var d = {
+    body: cuerpo || '',
+    icon:  _avisoIcono('icono-192.png'),
+    badge: _avisoIcono('icono-mask-192.png'),
+    tag: op.tag || 'obrasst',
+    renotify: true,
+    lang: 'es',
+    data: { ir: op.ir || '' },
+    requireInteraction: !!op.fijo
+  };
+  try{ d.vibrate = [70,50,70]; }catch(e){}
+  try{
+    if(!('Notification' in window)) return Promise.resolve('no_hay');
+    if(Notification.permission !== 'granted') return Promise.resolve(Notification.permission);
+  }catch(e){ return Promise.resolve('no_hay'); }
+  try{
+    if('serviceWorker' in navigator && navigator.serviceWorker.ready){
+      return navigator.serviceWorker.ready.then(function(reg){
+        if(reg && reg.showNotification){
+          return reg.showNotification(titulo, d).then(function(){ return 'ok'; },
+                                                      function(){ return _avisoDirecto(titulo, d); });
+        }
+        return _avisoDirecto(titulo, d);
+      }, function(){ return _avisoDirecto(titulo, d); });
+    }
+  }catch(e){}
+  return Promise.resolve(_avisoDirecto(titulo, d));
+}
+function _avisoDirecto(titulo, d){
+  try{
+    var n = new Notification(titulo, d);
+    n.onclick = function(){
+      try{ window.focus(); }catch(e){}
+      try{ if(navigator.clearAppBadge) navigator.clearAppBadge(); }catch(e){}
+      if(d.data && d.data.ir){ try{ ir(d.data.ir); }catch(e){} }
+      n.close();
+    };
+    return 'ok';
+  }catch(e){ return 'sin_soporte'; }
+}
+/* el service worker avisa qué pantalla abrir cuando tocan el aviso */
+try{
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.addEventListener('message', function(ev){
+      var m = ev && ev.data;
+      if(m && m.tipo==='aviso-click'){
+        try{ if(navigator.clearAppBadge) navigator.clearAppBadge(); }catch(e){}
+        if(m.ir){ try{ ir(m.ir); }catch(e){} }
+      }
+    });
+  }
+}catch(e){}
+
 function pedirPermisoAvisos(){
   try{
     if(!('Notification' in window)) return Promise.resolve('no_hay');
@@ -26809,12 +26903,8 @@ function pedirPermisoAvisos(){
   }catch(e){ return Promise.resolve('no_hay'); }
 }
 function avisarEnPantalla(titulo, cuerpo){
-  try{
-    if(!('Notification' in window) || Notification.permission!=='granted') return false;
-    var n=new Notification(titulo,{ body:cuerpo, icon:'icono-192.png', badge:'icono-192.png', tag:'obrasst-reporte' });
-    n.onclick=function(){ try{ window.focus(); }catch(e){} ir('p-reporte'); n.close(); };
-    return true;
-  }catch(e){ return false; }
+  avisoSistema(titulo, cuerpo, { tag:'obrasst-reporte', ir:'p-reporte' });
+  return true;
 }
 /* pregunta a la nube cuántos reportes abiertos hay y avisa por lo nuevo */
 function revisarReportesNuevos(silencioso){
@@ -30250,17 +30340,41 @@ function avChRevisar(){
 }
 
 function avisarCharla(titulo, cuerpo){
-  try{
-    if(!('Notification' in window) || Notification.permission!=='granted') return false;
-    var n=new Notification(titulo, {body:cuerpo, icon:'icono-192.png',
-          badge:'icono-192.png', tag:'obrasst-charla'});
-    n.onclick=function(){
-      try{ window.focus(); }catch(_f){}
-      try{ if(navigator.clearAppBadge) navigator.clearAppBadge(); }catch(_c){}
-      ir('p-programa'); n.close();
-    };
-    return true;
-  }catch(_e){ return false; }
+  avisoSistema(titulo, cuerpo, { tag:'obrasst-charla', ir:'p-programa' });
+  return true;
+}
+
+/* ── probar el aviso y decir la verdad si falla ────────────────── */
+function probarAviso(){
+  var m = $('avch-prueba');
+  function di(t, mal){ if(m){ m.style.color = mal ? 'var(--mal)' : 'var(--ok)'; m.textContent = t; } }
+  if(!('Notification' in window)){
+    di('Este navegador no tiene avisos del sistema. En el celular, instala la app desde el menú «Instalar en mi pantalla de inicio» y prueba otra vez.', true);
+    return;
+  }
+  if(Notification.permission === 'denied'){
+    di('Los avisos están BLOQUEADOS para esta app. Ábrelos en los ajustes del navegador → Notificaciones → OBRASST, y vuelve a probar.', true);
+    return;
+  }
+  di('Mandando…');
+  pedirPermisoAvisos().then(function(perm){
+    if(perm !== 'granted'){
+      di(perm === 'denied'
+        ? 'Dijiste que no. Actívalo en los ajustes del navegador, en «Notificaciones».'
+        : 'No se dio el permiso. Vuelve a intentarlo y toca «Permitir».', true);
+      return;
+    }
+    avisoSistema('OBRASST', 'Si ves este aviso, los avisos de la charla van a llegar.',
+                 { tag:'obrasst-prueba', ir:'p-aviso-charla' }).then(function(r){
+      if(r === 'ok'){
+        di('✓ Mandado. Si no lo ves en la barra, revisa que el celular no esté en «No molestar» o en ahorro de batería con la app restringida.');
+      }else if(r === 'sin_soporte'){
+        di('Tu navegador aceptó el permiso pero no deja mostrar el aviso. Pasa casi siempre cuando la app está abierta dentro de otra app (WhatsApp, Facebook): ábrela en Chrome.', true);
+      }else{
+        di('No se pudo mostrar el aviso ('+r+').', true);
+      }
+    });
+  });
 }
 
 function avChArrancar(){
@@ -30298,6 +30412,12 @@ function pintarAvisoCharla(){
        '<p class="sub" style="margin:8px 0 0;font-size:12.5px">Antes de la jornada, para que te dé tiempo de prepararla.</p>';
   }
   h+='</div>';
+
+  /* Un botón para PROBARLO. «Ya lo habilité y no llega nada» no se
+     puede diagnosticar a ciegas: acá se manda uno de verdad y, si no
+     sale, se dice exactamente por qué. */
+  h+='<button class="btn sec" style="margin-top:14px" onclick="probarAviso()">\ud83d\udd14 Mandarme un aviso de prueba</button>'+
+     '<p class="sub" id="avch-prueba" style="margin:8px 0 0;min-height:18px;font-size:12.5px"></p>';
 
   if(tema){
     h+='<div class="sec-tit" style="margin-top:20px">Hoy tocaría</div>'+
@@ -37736,6 +37856,26 @@ function salirDeMiObra(){
    Los rectángulos van en orden de uso, no de importancia teórica: lo
    primero es lo que abre veinte veces al día.
    ════════════════════════════════════════════════════════════════ */
+/* ══ LA PANTALLA DEL TRABAJADOR ═══════════════════════════════════
+   Estaba ordenada por lo que la app tiene, no por lo que el hombre
+   necesita a las siete de la mañana en la puerta de la obra. Lo
+   primero que veía era su QR ocupando la pantalla entera, y lo que de
+   verdad decide si puede empezar a trabajar —si su ATS está liberado—
+   quedaba a novecientos píxeles para abajo, dentro de una tira que se
+   desliza y donde la mitad de los botones no se ven nunca.
+
+   Ahora arriba va HOY: si puede empezar o no, qué boletines debe,
+   qué charla toca. Después el QR, plegado, que se abre de un toque
+   cuando llega a la puerta. Y abajo todo lo que puede hacer, en una
+   rejilla donde se ve TODO de una vez, sin deslizar.              */
+function _obraHoy(){
+  var l = (typeof ATSDIA==='object' && ATSDIA.lista) ? ATSDIA.lista : null;
+  if(!l) return null;
+  var hoy = hoyISO(), del = l.filter(function(d){ return d.fecha===hoy; });
+  if(!del.length) return { n:0 };
+  var libres = del.filter(function(d){ return d.vb && d.vb.sst && !d.devuelto; });
+  return { n:del.length, libres:libres.length, uno:del[0] };
+}
 function pintarObra(){
   var c=$('obra-cuerpo'); if(!c) return;
   var e=empDeTrabajo(), y=yo();
@@ -37744,29 +37884,65 @@ function pintarObra(){
   var h='<div class="tw-cab"><div><h2 style="margin:0">Hola, '+esc(String(y.n||'').split(' ')[0]||'')+'</h2>'+
         '<p class="sub" style="margin:3px 0 0">'+esc(e.nombre||'')+' · '+esc(e.codigo||'')+'</p></div></div>';
 
-  h+='<div id="obra-qr">'+tarjetaQRTrab()+'</div>';
-  h+=tarjetaRacha();
-
-  /* ── la tira de rectángulos ── */
+  /* ── HOY: lo primero, porque es lo único que decide si trabaja ── */
   var pend=0;
   try{ pend=carrPendientes(); }catch(_p){}
-  var hechas=[]; try{ hechas=leer(LS_DIFU,[])||[]; }catch(_d){}
+  var A = _obraHoy();
+  h+='<div class="sec-tit" style="margin-top:16px">Hoy</div><div class="tw-hoy">';
 
+  if(A === null){
+    h+='<button type="button" class="tw-h cargando" onclick="abrirATSDia()">'+
+       '<span class="tw-h-ic">⏳</span><span class="tw-h-tx"><b>Buscando el ATS de hoy…</b>'+
+       '<small>Un momento.</small></span></button>';
+  }else if(!A.n){
+    h+='<button type="button" class="tw-h roja" onclick="abrirATSDia()">'+
+       '<span class="tw-h-ic">⛔</span><span class="tw-h-tx"><b>Todavía no hay ATS de hoy</b>'+
+       '<small>Hasta que tu capataz lo suba y lo liberen, la tarea no empieza.</small></span>'+
+       '<span class="tic">›</span></button>';
+  }else if(A.libres === A.n){
+    h+='<button type="button" class="tw-h verde" onclick="abrirATSDia()">'+
+       '<span class="tw-h-ic">✅</span><span class="tw-h-tx"><b>Puedes empezar</b>'+
+       '<small>'+(A.n===1 ? 'El ATS de hoy está liberado: ' + esc(String(A.uno.trabajo||'').slice(0,46))
+                          : 'Los '+A.n+' ATS de hoy están liberados.')+'</small></span>'+
+       '<span class="tic">›</span></button>';
+  }else{
+    h+='<button type="button" class="tw-h roja" onclick="abrirATSDia()">'+
+       '<span class="tw-h-ic">⛔</span><span class="tw-h-tx"><b>Todavía no se puede empezar</b>'+
+       '<small>'+(A.libres? A.libres+' de '+A.n+' ATS liberados. ' : '')+
+       'Falta el V°B° del SSOMA.</small></span>'+
+       '<span class="tic">›</span></button>';
+  }
+  if(pend){
+    h+='<button type="button" class="tw-h oro" onclick="abrirCarrete()">'+
+       '<span class="tw-h-ic">📰</span><span class="tw-h-tx"><b>'+pend+' boletín'+(pend===1?'':'es')+' sin ver</b>'+
+       '<small>Ábrelos: tu supervisor necesita tu acuse para el expediente.</small></span>'+
+       '<span class="tic">›</span></button>';
+  }
+  h+='</div>';
+
+  /* ── el QR, plegado: se abre de un toque en la puerta ── */
+  h+='<button type="button" class="tw-qr-abre" onclick="obraQR()">'+
+     '<span>🪪</span><div><b>Mi credencial</b>'+
+     '<small>El QR que escanea el supervisor en la puerta</small></div>'+
+     '<span class="tic" id="obra-qr-fl">›</span></button>';
+  h+='<div id="obra-qr" class="tw-qr-caja" hidden></div>';
+
+  /* ── todo lo que puede hacer, sin deslizar ── */
+  var hechas=[]; try{ hechas=leer(LS_DIFU,[])||[]; }catch(_d){}
   var tiles=[
-    {ic:'📰', t:'Boletines',   s:'El mural de la obra', f:"abrirCarrete()", n:pend, cl:'oro'},
-    {ic:'🚨', t:'Reportar',    s:'Algo inseguro',       f:"reportarDesdeObra()", cl:'rojo', id:'obra-reportar'},
-    {ic:'📝', t:'Evaluación',  s:'Con el código',       f:"evaluacionDesdeObra()"},
     {ic:'📋', t:'ATS del día', s:'Firmado y liberado',  f:"abrirATSDia()", cl:'oro', id:'obra-ats'},
+    {ic:'🚨', t:'Reportar',    s:'Algo inseguro',       f:"reportarDesdeObra()", cl:'rojo', id:'obra-reportar'},
+    {ic:'📰', t:'Boletines',   s:'El mural de la obra', f:"abrirCarrete()", n:pend},
     {ic:'📚', t:'Documentos',  s:'RISST, IPERC, PETS',  f:"ir('p-docs-obra')", id:'obra-docs'},
-    {ic:'🗓️', t:'Charlas',     s:'Qué toca hoy',        f:"charlasDesdeObra()"},
-    {ic:'💬', t:'Buzón',       s:'Sin tu nombre',       f:"abrirBuzon()"},
+    {ic:'🗓️', t:'Charlas', s:'Qué toca hoy',  f:"charlasDesdeObra()"},
+    {ic:'📝', t:'Evaluación', s:'Con el código', f:"evaluacionDesdeObra()"},
+    {ic:'💬', t:'Buzón',      s:'Sin tu nombre',    f:"abrirBuzon()"},
     {ic:'📰', t:'Noticias',    s:'Avisos de la obra',   f:"ir('p-noticias')"}
   ];
   if(hechas.length) tiles.push({ic:'✅', t:'Constancias', s:hechas.length+' guardada'+(hechas.length===1?'':'s'), f:"ir('p-difusiones')"});
 
-  h+='<div class="sec-tit" style="margin-top:20px">Lo que puedes hacer'+
-     '<span class="tw-mas">desliza →</span></div>';
-  h+='<div class="tw-tira" id="tw-tira">';
+  h+='<div class="sec-tit" style="margin-top:22px">Lo que puedes hacer</div>';
+  h+='<div class="tw-rej">';
   tiles.forEach(function(x){
     h+='<button type="button" class="tw-c'+(x.cl?(' '+x.cl):'')+'"'+(x.id?(' id="'+x.id+'"'):'')+
        ' onclick="'+x.f+'">'+
@@ -37774,11 +37950,8 @@ function pintarObra(){
        '<b>'+esc(x.t)+'</b><small>'+esc(x.s)+'</small></button>';
   });
   h+='</div>';
-  if(pend){
-    h+='<button type="button" class="tw-aviso" onclick="abrirCarrete()">'+
-       '<b>Tienes '+pend+' boletín'+(pend===1?'':'es')+' sin ver.</b>'+
-       '<small>Ábrelos: tu supervisor necesita tu acuse para el expediente.</small></button>';
-  }
+
+  h+=tarjetaRacha();
 
   h+='<button class="btn sec" id="obra-guia-otra" style="margin-top:18px" onclick="repetirGuia()">🧭 Ver la guía otra vez</button>';
   h+='<div class="pwa-banda"></div>';
@@ -37788,16 +37961,42 @@ function pintarObra(){
   c.innerHTML=h;
 
   try{ pintarInstalar(); }catch(_e){}
-  /* los boletines se traen en segundo plano: la pantalla no espera al
-     servidor para dibujarse, y cuando llegan se repinta el número */
+  /* los boletines y el ATS se traen en segundo plano: la pantalla no
+     espera al servidor para dibujarse, y cuando llegan se repinta */
   try{
     if(!CARR.lista.length && !CARR.cargando){
       cargarCarrete().then(function(l){ if(l && l.length) pintarObra(); });
     }
     drenarAcuses();
   }catch(_c){}
+  try{
+    if(typeof ATSDIA==='object' && ATSDIA.lista===null && !ATSDIA.cargando){
+      ATSDIA.cargando = true;
+      sbRpc('sst_ats_del_dia', { p_cod: e.codigo||'', p_dias: 10 }).then(function(rows){
+        ATSDIA.lista = (rows||[]).map(function(r){
+          var d=r.nota; if(typeof d==='string'){ try{ d=JSON.parse(d); }catch(_x){ d=null; } } return d;
+        }).filter(Boolean);
+        ATSDIA.cargando = false;
+        if((document.querySelector('.pantalla.activa')||{}).id==='p-obra') pintarObra();
+      }, function(){ ATSDIA.lista=[]; ATSDIA.cargando=false;
+        if((document.querySelector('.pantalla.activa')||{}).id==='p-obra') pintarObra(); });
+    }
+  }catch(_a){}
   setTimeout(function(){ try{ arrancarGuia(false); }catch(_g){} }, 400);
 }
+function obraQR(){
+  var c=$('obra-qr'), f=$('obra-qr-fl'); if(!c) return;
+  if(c.hidden){
+    c.innerHTML = tarjetaQRTrab();
+    c.hidden = false;
+    if(f) f.textContent = '‹';
+    try{ c.scrollIntoView({block:'nearest', behavior:'smooth'}); }catch(_e){}
+  }else{
+    c.hidden = true; c.innerHTML = '';
+    if(f) f.textContent = '›';
+  }
+}
+
 function reportarDesdeObra(){ ir('p-reporte-nuevo'); }
 function evaluacionDesdeObra(){ pedirCodigo('ev'); }
 function charlasDesdeObra(){ pedirCodigo('mes'); }
@@ -45503,7 +45702,15 @@ function pintarInstalar(){
   } else {
     h='<button class="btn sec" style="margin-top:14px" onclick="instalarApp()">📲 ¿Cómo la instalo en mi celular?</button>';
   }
-  h+='<p class="sub" style="margin:6px 0 0;font-size:11.5px;opacity:.75">Android dice: '+esc(diagInstalar())+'</p>';
+  /* El diagnóstico («sin instalador · sin app de Play instalada») sirve
+     para entender por qué no aparece el botón, y eso es cosa de quien
+     gestiona, no del que está en el frente. Al trabajador esa línea no
+     le dice nada y le ensucia la pantalla, así que solo sale del lado
+     de la empresa. */
+  var _act = (document.querySelector('.pantalla.activa')||{}).id;
+  if(_act !== 'p-obra' && _act !== 'p-colab'){
+    h+='<p class="sub" style="margin:6px 0 0;font-size:11.5px;opacity:.75">Android dice: '+esc(diagInstalar())+'</p>';
+  }
   l.forEach(function(c){ c.innerHTML=h; });
 }
 /* este bloque corre DESPUÉS del script principal, así que la primera pintada
@@ -45661,6 +45868,11 @@ if('serviceWorker' in navigator){
   var _ACT_HABIA = !!navigator.serviceWorker.controller;
   window.addEventListener('load', function(){
     navigator.serviceWorker.register('sw.js').catch(function(){});
+    /* si la app se abrió desde un aviso, va derecho a su pantalla */
+    try{
+      var _m = (location.search||'').match(/[?&]ir=([a-z0-9-]+)/i);
+      if(_m) setTimeout(function(){ try{ ir(_m[1]); }catch(_e){} }, 700);
+    }catch(_i){}
     setTimeout(function(){ actBuscar(true); }, 4000);
   });
   try{

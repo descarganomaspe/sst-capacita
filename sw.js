@@ -1,4 +1,4 @@
-var CACHE = 'sstc-8a4fd6282b-e';
+var CACHE = 'sstc-9b1e4d77c2-f';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -105,4 +105,30 @@ self.addEventListener('fetch', function(e){
       return Response.error();
     });
   }));
+});
+
+/* ══ EL TOQUE EN EL AVISO ═══════════════════════════════════════════
+   En el celular el aviso lo muestra el service worker, así que el
+   toque también llega acá y no a la página. Sin esto, el trabajador
+   tocaba el aviso de la charla y no pasaba nada: el aviso se cerraba
+   y la app se quedaba donde estaba.
+   Si la app ya está abierta se le trae al frente y se le dice a qué
+   pantalla ir; si estaba cerrada, se abre con la pantalla en la
+   dirección, que la app lee al arrancar. */
+self.addEventListener('notificationclick', function(e){
+  e.notification.close();
+  var destino = '';
+  try{ destino = (e.notification.data && e.notification.data.ir) || ''; }catch(_d){}
+  e.waitUntil(
+    self.clients.matchAll({ type:'window', includeUncontrolled:true }).then(function(lista){
+      for(var i=0;i<lista.length;i++){
+        var c = lista[i];
+        if(c.url.indexOf(self.registration.scope) === 0 && 'focus' in c){
+          try{ c.postMessage({ tipo:'aviso-click', ir:destino }); }catch(_p){}
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow('./' + (destino ? ('?ir=' + encodeURIComponent(destino)) : ''));
+    })
+  );
 });
