@@ -25,6 +25,11 @@ alter table sst_trabajador
   -- la que se crea sola el trabajador se marca false a mano.
   add column if not exists verificado boolean not null default true;
 
+-- OJO: «duenio» es TEXT, no uuid. Lleva el id de la empresa cuando hay
+-- empresa, y un id propio cuando el supervisor trabaja por su cuenta.
+-- Comparar contra un uuid sin castear revienta con «operator does not
+-- exist: text = uuid», y lo hace DENTRO de la funcion, o sea en la cara
+-- del trabajador que esta entrando. Lo cazo el banco de pruebas.
 create index if not exists sst_trab_doc_idx on sst_trabajador (duenio, dni);
 create unique index if not exists sst_trab_usuario_idx
   on sst_trabajador (usuario) where usuario is not null;
@@ -120,7 +125,7 @@ begin
          (t.usuario is not null) as ya_tiene_cuenta
     into v_t
     from sst_trabajador t
-   where t.duenio = v_emp
+   where t.duenio = v_emp::text
      and upper(btrim(coalesce(t.dni, ''))) = v_doc
    limit 1;
 
@@ -206,7 +211,7 @@ begin
   select t.id, t.nombre, t.verificado, t.usuario
     into v_id, v_nombre, v_verif, v_dueno
     from sst_trabajador t
-   where t.duenio = v_emp and upper(btrim(coalesce(t.dni, ''))) = v_doc
+   where t.duenio = v_emp::text and upper(btrim(coalesce(t.dni, ''))) = v_doc
    limit 1;
 
   if v_id is not null and v_dueno is not null and v_dueno <> v_usuario then
@@ -217,7 +222,7 @@ begin
     -- no está en el registro: se crea provisional y entra a la bandeja
     insert into sst_trabajador (duenio, ext, nombre, dni, td, puesto, correo,
                                 foto_url, estatus, usuario, verificado)
-         values (v_emp, 'auto-' || v_doc || '-' || substr(v_usuario::text, 1, 8), btrim(coalesce(p_nombre, '')), v_doc,
+         values (v_emp::text, 'auto-' || v_doc || '-' || substr(v_usuario::text, 1, 8), btrim(coalesce(p_nombre, '')), v_doc,
                  coalesce(p_td, 'DNI'), null, nullif(btrim(coalesce(p_correo, '')), ''),
                  nullif(btrim(coalesce(p_foto, '')), ''), 'activo', v_usuario, false)
       returning id, nombre, verificado into v_id, v_nombre, v_verif;
