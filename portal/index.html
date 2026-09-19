@@ -247,15 +247,127 @@ td .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px}
 }
 .toast i{width:8px; height:8px; border-radius:50%; background:var(--casco); flex:0 0 auto; margin-top:6px}
 
+/* ══ ESCRIBIR: el cajón lateral, el diálogo, la firma ═══════════════
+   Lo que se decide desde el portal se decide en un cajón que se abre
+   sobre la tabla, no en otra página: la lista sigue ahí detrás y el
+   vivo la sigue refrescando. */
+textarea{
+  width:100%; font-family:inherit; font-size:14.5px; color:var(--texto); line-height:1.5;
+  background:var(--panel); border:1px solid var(--raya2); border-radius:8px;
+  padding:10px 12px; outline:none; resize:vertical; min-height:84px;
+  transition:border-color .12s, box-shadow .12s;
+}
+textarea:focus{border-color:var(--azul); box-shadow:0 0 0 3px rgba(37,99,168,.12)}
+input[type=date]{width:auto; min-width:170px}
+input[type=file]{padding:8px 10px; font-size:13px; color:var(--gris)}
+.bt.mal{background:var(--panel); color:var(--mal); border-color:#E7B3B6}
+.bt.mal:hover{background:var(--mal-f)}
+.bt.ok{background:var(--ok); border-color:var(--ok)}
+.bt.ok:hover{background:#177A4C}
+.fila-acc{white-space:nowrap; text-align:right}
+tr.clic{cursor:pointer}
+
+.hoja-fondo{position:fixed; inset:0; z-index:30; background:rgba(11,42,58,.32); display:flex; justify-content:flex-end}
+.hoja{
+  width:min(580px, 100%); height:100%; background:var(--panel);
+  box-shadow:-12px 0 40px -20px rgba(11,42,58,.5);
+  display:flex; flex-direction:column; animation:entra .18s ease-out;
+}
+@keyframes entra{from{transform:translateX(24px); opacity:0} to{transform:none; opacity:1}}
+.hoja-cab{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:18px 22px 14px; border-bottom:1px solid var(--raya)}
+.hoja-cab h2{font-size:17px; line-height:1.3}
+.hoja-cab .sub{font-size:13px; color:var(--gris); margin:3px 0 0}
+.hoja-cuerpo{padding:18px 22px 24px; overflow:auto; flex:1; min-height:0}
+.hoja-pie{padding:14px 22px; border-top:1px solid var(--raya); display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; background:var(--panel)}
+.cerrar{
+  -webkit-appearance:none; appearance:none; cursor:pointer; border:0; background:transparent;
+  color:var(--gris); font-size:24px; line-height:1; padding:0 6px 2px; border-radius:6px; flex:0 0 auto;
+}
+.cerrar:hover{background:var(--fondo); color:var(--tinta)}
+
+.dialogo-fondo{position:fixed; inset:0; z-index:40; background:rgba(11,42,58,.32); display:grid; place-items:center; padding:16px}
+.dialogo{
+  width:100%; max-width:440px; background:var(--panel); border-radius:14px;
+  box-shadow:0 24px 60px -20px rgba(11,42,58,.6); padding:22px 22px 18px;
+}
+.dialogo h2{font-size:16px; margin:0 0 8px}
+.dialogo p{margin:0 0 16px; color:var(--texto); font-size:14px; line-height:1.55}
+.dialogo .acciones{justify-content:flex-end}
+
+.datos{display:grid; gap:4px 16px; grid-template-columns:max-content 1fr; font-size:13.5px; margin:0}
+.datos dt{color:var(--gris); margin:0; white-space:nowrap}
+.datos dd{margin:0; color:var(--texto); min-width:0; overflow-wrap:anywhere}
+.seccion{margin:22px 0 0}
+.seccion h3{font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); font-weight:600; margin:0 0 10px}
+.foto-caja{border:1px solid var(--raya); border-radius:10px; overflow:hidden; background:var(--fondo); margin:10px 0 0}
+.foto-caja img{display:block; width:100%; max-height:320px; object-fit:contain; background:#fff}
+.foto-caja .et{display:block; font-size:11.5px; color:var(--gris); padding:6px 10px; border-top:1px solid var(--raya)}
+.msg{font-size:13px; min-height:18px; margin:8px 0 0; line-height:1.5}
+.msg.mal{color:var(--mal)} .msg.ok{color:var(--ok)} .msg.gris{color:var(--gris)}
+.aviso.mal{background:var(--mal-f); border-color:#F0C9CC}
+.aviso.ok{background:var(--ok-f); border-color:#BFE3CE}
+.aviso .acciones{margin-top:10px}
+
+/* la bandeja de fichas por confirmar */
+.bandeja{border:1px solid #EED9A8; background:var(--ojo-f); border-radius:12px; margin:0 0 18px; overflow:hidden}
+.bandeja .tarj-cab{border-color:#EED9A8}
+.pend{display:flex; gap:14px; align-items:flex-start; padding:14px 18px; border-top:1px solid #EED9A8; flex-wrap:wrap; background:var(--panel)}
+.pend .ini{width:40px; height:40px; border-radius:50%; background:var(--fondo); color:var(--tinta); display:grid; place-items:center; font-weight:600; font-size:13px; flex:0 0 auto; overflow:hidden}
+.pend .ini img{width:100%; height:100%; object-fit:cover}
+.pend .qui{flex:1; min-width:200px}
+.pend .qui b{display:block; color:var(--tinta)}
+.pend .qui small{color:var(--gris); font-size:12.5px}
+.pend .par{display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 0}
+.pend .acc{display:flex; gap:8px; flex-wrap:wrap; align-items:center; align-self:center}
+
+/* el ATS: estado, pasos, firma */
+.estado-ats{display:flex; align-items:center; gap:12px; border:1px solid var(--raya); border-left-width:4px; border-radius:10px; padding:12px 14px; background:var(--fondo)}
+.estado-ats .ic{font-size:22px; line-height:1}
+.estado-ats b{display:block; font-size:14px}
+.estado-ats small{display:block; color:var(--gris); font-size:12.5px; margin-top:2px}
+.estado-ats.gris{border-left-color:var(--gris2)} .estado-ats.gris b{color:var(--gris)}
+.estado-ats.azul{border-left-color:var(--azul)} .estado-ats.azul b{color:var(--azul)}
+.estado-ats.ojo{border-left-color:var(--ojo)} .estado-ats.ojo b{color:var(--ojo)}
+.estado-ats.ok{border-left-color:var(--ok)} .estado-ats.ok b{color:var(--ok)}
+.estado-ats.mal{border-left-color:var(--mal)} .estado-ats.mal b{color:var(--mal)}
+.paso{border:1px solid var(--raya); border-radius:10px; padding:14px 16px; margin:0 0 10px; background:var(--panel)}
+.paso.hecho{background:var(--ok-f); border-color:#BFE3CE}
+.paso.toca{border-color:var(--tinta); box-shadow:0 0 0 1px var(--tinta)}
+.paso-cab{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
+.paso-cab b{font-size:14px; color:var(--tinta)}
+.paso .pie{font-size:12.5px; color:var(--gris); margin:6px 0 0; line-height:1.5}
+.firma-img{display:block; width:100%; max-width:280px; max-height:100px; object-fit:contain; background:#fff; border:1px solid var(--raya); border-radius:8px; margin:10px 0 0}
+.check{display:flex; gap:10px; align-items:flex-start; font-size:13.5px; margin:12px 0 0; cursor:pointer; line-height:1.5}
+.check input{width:18px; height:18px; margin:2px 0 0; flex:0 0 auto; padding:0}
+.lienzo{border:1px solid var(--raya2); border-radius:10px; overflow:hidden; background:#fff; margin:10px 0 0; position:relative}
+.lienzo canvas{display:block; touch-action:none; cursor:crosshair}
+.lienzo .guia{position:absolute; left:16px; right:16px; bottom:40px; border-bottom:1px dashed var(--raya2); pointer-events:none}
+.lienzo .pista{position:absolute; left:0; right:0; bottom:12px; text-align:center; font-size:12px; color:var(--gris2); pointer-events:none}
+.firmas-t td{vertical-align:middle}
+.firmas-t img{display:block; width:120px; height:42px; object-fit:contain; background:#fff; border:1px solid var(--raya); border-radius:6px}
+.filas-ats{font-size:13px}
+.filas-ats th{font-size:11px; padding:8px 10px}
+.filas-ats td{padding:8px 10px}
+.acto{font-weight:600; color:var(--tinta); background:#FAFBFC}
+.marcas{display:flex; gap:6px; flex-wrap:wrap}
+
 /* ── celular: el carril se vuelve pestañas arriba ── */
 @media (max-width:900px){
-  #portal.on{grid-template-columns:1fr; grid-template-rows:56px auto 1fr}
-  .rail{position:static; height:auto; border-right:0; border-bottom:1px solid var(--raya); padding:8px 10px; display:flex; gap:4px; overflow-x:auto; white-space:nowrap}
+  .hoja{width:100%}
+  .datos{grid-template-columns:1fr} .datos dt{margin-top:6px}
+  /* minmax(0,1fr): con «1fr» a secas la columna mide lo que pide la
+     barra y la página se ensancha; la barra, en cambio, se parte en dos
+     filas cuando no entra */
+  #portal.on{grid-template-columns:minmax(0,1fr); grid-template-rows:auto auto 1fr}
+  .barra{height:auto; min-height:56px; min-width:0; padding:8px 14px; flex-wrap:wrap; row-gap:6px}
+  /* min-width:0 — sin eso, la fila de pestañas mide lo que suman todas
+     y estira la página hacia el costado en vez de desplazarse */
+  .rail{position:static; height:auto; min-width:0; max-width:100vw; border-right:0; border-bottom:1px solid var(--raya); padding:8px 10px; display:flex; gap:4px; overflow-x:auto; white-space:nowrap}
   .rail .grupo{display:none}
   .nav{width:auto; padding:8px 12px; flex:0 0 auto}
   .nav .n{margin-left:6px}
   .main{padding:18px 16px 48px}
-  .barra{padding:0 14px; gap:10px}
+  .barra{gap:10px}
   .barra .marca b{display:none}
   .obra-sel{max-width:200px}
   .obra-sel select{max-width:150px}
@@ -307,6 +419,14 @@ td .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px}
   </header>
   <nav class="rail" id="rail" aria-label="Secciones"></nav>
   <main class="main" id="main"></main>
+</div>
+<!-- el cajón lateral donde se decide: ficha, reporte, ATS -->
+<div id="hoja-fondo" class="hoja-fondo" hidden role="dialog" aria-modal="true" aria-labelledby="hoja-t">
+  <aside class="hoja" id="hoja"></aside>
+</div>
+<!-- confirmar y preguntar, sin los cuadros del navegador -->
+<div id="dialogo-fondo" class="dialogo-fondo" hidden role="alertdialog" aria-modal="true" aria-labelledby="dlg-t">
+  <div class="dialogo" id="dialogo"></div>
 </div>
 <div id="toast" class="toast" hidden><i></i><span id="toast-t"></span></div>
 
@@ -372,7 +492,10 @@ function refrescarToken(){
   return _REFRESCANDO;
 }
 function sbFetch(url, opt, reintento){
-  opt=opt||{}; opt.headers=sbH();
+  /* las cabeceras se arman en cada intento: si el token se renovó, el
+     reintento tiene que salir con el nuevo. Lo extra (Prefer, el tipo
+     de una foto) viaja en opt.extra y se suma encima. */
+  opt=opt||{}; opt.headers=Object.assign(sbH(), opt.extra||{});
   return fetch(url, opt).then(function(r){
     if(r.status===401 && !reintento && TOK && TOK.refresh_token){
       return refrescarToken().then(function(){ return sbFetch(url, opt, true); }, function(){ return r; });
@@ -382,6 +505,13 @@ function sbFetch(url, opt, reintento){
 }
 function sbGet(path){ return sbFetch(SB.url+'/rest/v1/'+path,{}).then(function(r){ return r.ok?r.json():Promise.reject(r.status); }); }
 function sbRpc(fn,args){ return sbFetch(SB.url+'/rest/v1/rpc/'+fn,{method:'POST',body:JSON.stringify(args||{})}).then(function(r){ return r.ok?r.json():Promise.reject(r.status); }); }
+/* PATCH que devuelve las filas tocadas: si vuelve vacío, no se escribió
+   nada (la fila ya no está o la cuenta no puede), y eso hay que decirlo
+   en vez de dar por hecho el «guardado». */
+function sbPatch(path, obj){
+  return sbFetch(SB.url+'/rest/v1/'+path, {method:'PATCH', body:JSON.stringify(obj), extra:{'Prefer':'return=representation'}})
+    .then(function(r){ return r.ok ? r.json().catch(function(){ return []; }) : Promise.reject(r.status); });
+}
 
 /* Entrar con correo o con DNI. El DNI se resuelve a su correo por el
    mismo alias que usa la app; la contraseña es siempre la de la cuenta. */
@@ -501,6 +631,8 @@ document.addEventListener('visibilitychange', function(){
 /* llega un cambio: si la vista abierta mira esa tabla, se refresca en
    silencio y la fila nueva se pinta con un destello */
 function alCambiar(tabla, tipo, fila){
+  /* si hay un cajón abierto sobre esa misma fila, se entera primero */
+  try{ if(typeof hojaCambio==='function') hojaCambio(tabla, tipo, fila); }catch(e){}
   var v = vistasDe().filter(function(x){ return x.id===VISTA.actual; })[0];
   if(!v) return;
   if((v.tablas||[]).indexOf(tabla)>=0){
@@ -585,12 +717,13 @@ function tabla(caja, cols, filas, op){
     });
     h+='</tr></thead><tbody>';
     var nuevo = VISTA.ultimoCambio && VISTA.ultimoCambio.id;
-    lista.slice(0, op.max||500).forEach(function(f){
+    lista.slice(0, op.max||500).forEach(function(f, i){
       var esN = nuevo && (f.id===nuevo || f.ext===nuevo);
-      h+='<tr'+(esN?' class="nuevo"':'')+'>';
+      var cl = (esN?'nuevo ':'')+(op.alClic?'clic':'');
+      h+='<tr'+(cl.trim()?' class="'+cl.trim()+'"':'')+' data-i="'+i+'">';
       cols.forEach(function(c){
         var v = typeof c.h==='function' ? c.h(f) : esc(val(f,c));
-        h+='<td'+(c.num?' class="num"':'')+'>'+v+'</td>';
+        h+='<td'+(c.num?' class="num"':(c.acc?' class="fila-acc"':''))+'>'+v+'</td>';
       });
       h+='</tr>';
     });
@@ -600,11 +733,22 @@ function tabla(caja, cols, filas, op){
   var qi=$(caja.id+'-q');
   qi.oninput=function(){ est.q=qi.value; var pos=qi.selectionStart; tabla(caja, cols, filas, op); var q2=$(caja.id+'-q'); q2.focus(); try{ q2.setSelectionRange(pos,pos); }catch(e){} };
   Array.prototype.forEach.call(caja.querySelectorAll('th'), function(th){
-    th.onclick=function(){ var k=th.getAttribute('data-k'); if(est.ord===k) est.asc=!est.asc; else { est.ord=k; est.asc=true; } tabla(caja, cols, filas, op); };
+    th.onclick=function(){ var k=th.getAttribute('data-k'); var c0=cols.filter(function(c){ return c.k===k; })[0]; if(c0&&c0.acc) return;
+      if(est.ord===k) est.asc=!est.asc; else { est.ord=k; est.asc=true; } tabla(caja, cols, filas, op); };
   });
   $(caja.id+'-csv').onclick=function(){ csv(cols, lista, op.archivo||'obrasst'); };
+  /* la fila que se toca y el botón que lleva una acción: los dos
+     reciben la fila entera, no un id que haya que volver a buscar */
+  var vis = lista.slice(0, op.max||500);
+  if(op.alClic) Array.prototype.forEach.call(caja.querySelectorAll('tbody tr[data-i]'), function(tr){
+    tr.onclick=function(ev){ if(ev.target.closest('button,a,input')) return; var f=vis[+tr.getAttribute('data-i')]; if(f) op.alClic(f); };
+  });
+  if(op.accion) Array.prototype.forEach.call(caja.querySelectorAll('tbody [data-acc]'), function(b){
+    b.onclick=function(ev){ ev.stopPropagation(); var tr=b.closest('tr'); var f=tr?vis[+tr.getAttribute('data-i')]:null; if(f) op.accion(b.getAttribute('data-acc'), f, b); };
+  });
 }
 function csv(cols, filas, nombre){
+  cols = cols.filter(function(c){ return !c.acc; });
   var sep=';', out=[cols.map(function(c){ return '"'+c.t.replace(/"/g,'""')+'"'; }).join(sep)];
   filas.forEach(function(f){
     out.push(cols.map(function(c){
@@ -664,8 +808,11 @@ function pillEstado(v){
   v=String(v||'activo');
   return '<span class="pill '+(v==='activo'?'ok':(v==='cesado'?'gris':'ojo'))+'">'+esc(v)+'</span>';
 }
+/* la app cierra con estado 'atendido' y la fecha en «cerrado»; una fila
+   vieja puede decir 'cerrado' a secas. Cualquiera de las tres cuenta. */
+function reporteCerrado(r){ return !!(r.cerrado || r.estado==='cerrado' || r.estado==='atendido'); }
 function pillReporte(r){
-  if(r.cerrado || r.estado==='cerrado') return '<span class="pill ok">cerrado</span>';
+  if(reporteCerrado(r)) return '<span class="pill ok">cerrado</span>';
   return '<span class="pill mal">abierto</span>';
 }
 function nota(o){ if(!o) return null; if(typeof o==='string'){ try{ return JSON.parse(o); }catch(e){ return null; } } return o; }
@@ -704,8 +851,9 @@ var COL = {
     {k:'clase', t:'Clase'},
     {k:'descripcion', t:'Qué se reportó', h:function(f){ return esc(f.descripcion)+(f.lugar?'<span class="sub">'+esc(f.lugar)+'</span>':''); }},
     {k:'autor', t:'Quién', v:function(f){ return f.anonimo ? 'anónimo' : (f.autor||''); }},
-    {k:'estado', t:'Estado', h:pillReporte, v:function(f){ return (f.cerrado||f.estado==='cerrado')?'cerrado':'abierto'; }},
-    {k:'accion', t:'Acción', h:function(f){ return esc(f.accion||'')+(f.cerrado_por?'<span class="sub">'+esc(f.cerrado_por)+'</span>':''); }}
+    {k:'estado', t:'Estado', h:pillReporte, v:function(f){ return reporteCerrado(f)?'cerrado':'abierto'; }},
+    {k:'accion', t:'Acción', h:function(f){ return esc(f.accion||'')+(f.cerrado_por?'<span class="sub">'+esc(f.cerrado_por)+(f.cerrado?' · '+esc(fechaLarga(f.cerrado)):'')+'</span>':''); }},
+    {k:'_acc', t:'', acc:true, h:function(f){ return reporteCerrado(f) ? '<button type="button" class="bt sec chico" data-acc="ver">Ver</button>' : '<button type="button" class="bt chico" data-acc="cerrar">Cerrar</button>'; }}
   ],
   accidentes: [
     {k:'fecha', t:'Fecha', h:function(f){ return esc(fechaLarga(f.fecha)); }},
@@ -746,7 +894,8 @@ function vistaTabla(tablaSb, cols, op){
     function pinta(silencio){
       traer(tablaSb, op.extra||'&order='+(op.ordenSb||'creado')+'.desc', op.limite).then(function(filas){
         VISTA.cache[tablaSb]=filas;
-        tabla(t, cols, filas, {orden:op.ordenPor||cols[0].k, asc:false, unidad:op.unidad, vacio:op.vacio, vacioSub:op.vacioSub, archivo:op.archivo});
+        tabla(t, cols, filas, {orden:op.ordenPor||cols[0].k, asc:false, unidad:op.unidad, vacio:op.vacio, vacioSub:op.vacioSub, archivo:op.archivo,
+                               alClic:op.alClic, accion:op.accion});
       }).catch(function(cod){ if(!silencio) fallo(t, cod); });
     }
     VISTA.recargar=pinta; pinta();
@@ -770,7 +919,7 @@ function vistaResumenLider(caja){
       var activos = trab.filter(function(t){ return (t.estatus||'activo')==='activo'; }).length;
       var porConf = trab.filter(function(t){ return t.verificado===false; }).length;
       var consMes = cons.filter(function(c){ return mesDe(c.fecha)===MES; }).length;
-      var abiertos = reps.filter(function(x){ return !(x.cerrado||x.estado==='cerrado'); }).length;
+      var abiertos = reps.filter(function(x){ return !reporteCerrado(x); }).length;
       var accAnio = accs.filter(function(a){ return anioDe(a.fecha)===ANIO; });
       var nIF = accAnio.filter(function(a){ return ACC_CUENTA[a.clase]; }).length;
       var dias = accAnio.reduce(function(s,a){ return s+(parseInt(a.dias,10)||0); },0);
@@ -799,7 +948,7 @@ function vistaResumenLider(caja){
       /* lo último que pasó, mezclado */
       var ult=[];
       cons.slice(0,6).forEach(function(c){ ult.push({f:c.fecha, t:'Constancia · '+c.tema, s:c.resultado}); });
-      reps.slice(0,6).forEach(function(x){ ult.push({f:x.fecha||x.creado, t:'Reporte · '+(x.clase||''), s:(x.cerrado||x.estado==='cerrado')?'cerrado':'abierto'}); });
+      reps.slice(0,6).forEach(function(x){ ult.push({f:x.fecha||x.creado, t:'Reporte · '+(x.clase||''), s:reporteCerrado(x)?'cerrado':'abierto'}); });
       kar.slice(0,6).forEach(function(k){ ult.push({f:k.fecha, t:'EPP · '+k.epp, s:(k.cantidad||1)+' und'}); });
       ult.sort(function(a,b){ return String(b.f||'').localeCompare(String(a.f||'')); });
       h+='<div class="tarj"><div class="tarj-cab"><div><h2>Lo último</h2><p class="sub">Lo más reciente de la obra, venga de donde venga</p></div></div>'+
@@ -915,7 +1064,7 @@ function vistaMiObra(caja){
       traer('sst_doc','&select=id,hoja,nombre,nota,creado&hoja=in.(ats,iperc)&order=creado.desc',60)
     ]).then(function(r){
       var trab=r[0], reps=r[1], kar=r[2], cons=r[3], docs=r[4];
-      var abiertos=reps.filter(function(x){ return !(x.cerrado||x.estado==='cerrado'); });
+      var abiertos=reps.filter(function(x){ return !reporteCerrado(x); });
       var hoyK=kar.filter(function(k){ return k.fecha===HOY; }).length;
       var hoyC=cons.filter(function(c){ return c.fecha===HOY; }).length;
       var atsHoy=docs.filter(function(d){ var n=nota(d.nota); return n && n.fecha===HOY; });
@@ -927,11 +1076,13 @@ function vistaMiObra(caja){
         cifra('Constancias hoy', hoyC, 'evaluaciones y talleres', '')+
         cifra('ATS / IPERC de hoy', atsHoy.length, atsHoy.length?'en la nube':'ninguno subido', atsHoy.length?'ok':'ojo')+
         '</div>';
-      if(porConf) h+='<div class="aviso ojo"><b>'+porConf+(porConf===1?' persona entró con su DNI y espera':' personas entraron con su DNI y esperan')+' tu confirmación.</b> Se confirman desde la app, en «Mi personal».</div>';
+      if(porConf) h+='<div class="aviso ojo"><b>'+porConf+(porConf===1?' persona entró con su DNI y espera':' personas entraron con su DNI y esperan')+' tu confirmación.</b> '+
+        '<button type="button" class="bt chico" id="ir-bandeja" style="margin-left:8px">Confirmarlas ahora</button></div>';
       h+='<div class="dos">';
-      h+='<div class="tarj"><div class="tarj-cab"><div><h2>Reportes abiertos</h2><p class="sub">Lo que la gente reportó y sigue sin cerrar</p></div></div>'+
+      h+='<div class="tarj"><div class="tarj-cab"><div><h2>Reportes abiertos</h2><p class="sub">Lo que la gente reportó y sigue sin cerrar · toca uno para cerrarlo</p></div></div>'+
         (abiertos.length ? '<div class="tabla-caja"><table><tbody>'+abiertos.slice(0,8).map(function(x){
-          return '<tr><td style="white-space:nowrap;color:var(--gris)">'+esc(fechaLarga(x.fecha||x.creado))+'</td><td><span class="pill gris">'+esc(x.clase||'')+'</span></td><td>'+esc(x.descripcion||'')+(x.lugar?'<span class="sub">'+esc(x.lugar)+'</span>':'')+'</td></tr>'; }).join('')+'</tbody></table></div>'
+          return '<tr class="clic" data-rep="'+esc(x.id)+'"><td style="white-space:nowrap;color:var(--gris)">'+esc(fechaLarga(x.fecha||x.creado))+'</td><td><span class="pill gris">'+esc(x.clase||'')+'</span></td><td>'+esc(x.descripcion||'')+(x.lugar?'<span class="sub">'+esc(x.lugar)+'</span>':'')+'</td>'+
+                 '<td class="fila-acc"><button type="button" class="bt chico" data-rep="'+esc(x.id)+'">Cerrar</button></td></tr>'; }).join('')+'</tbody></table></div>'
         : '<div class="vacio"><b>Nada abierto</b>Todo lo reportado está cerrado.</div>')+'</div>';
       h+='<div class="tarj"><div class="tarj-cab"><div><h2>Últimas entregas de EPP</h2><p class="sub">Con la firma de quien recibió</p></div></div>'+
         (kar.length ? '<div class="tabla-caja"><table><tbody>'+kar.slice(0,8).map(function(k){
@@ -939,6 +1090,10 @@ function vistaMiObra(caja){
         : '<div class="vacio"><b>Sin entregas</b>Se registran desde la app o desde el celular del almacenero.</div>')+'</div>';
       h+='</div>';
       caja.innerHTML=h;
+      var ib=$('ir-bandeja'); if(ib) ib.onclick=function(){ navegar('personal'); };
+      Array.prototype.forEach.call(caja.querySelectorAll('[data-rep]'), function(el){
+        el.onclick=function(ev){ ev.stopPropagation(); abrirReporte(el.getAttribute('data-rep')); };
+      });
     }).catch(function(cod){ fallo(caja, cod); });
   }
   VISTA.recargar=pinta; pinta();
@@ -951,10 +1106,15 @@ function vistaATS(caja){
     traer('sst_doc','&select=id,hoja,nombre,nota,creado&hoja=in.(ats,iperc,ats-modelo)&order=creado.desc',300).then(function(docs){
       var filas=docs.map(function(d){
         var n=nota(d.nota)||{};
-        var firmas=0; try{ firmas=Object.keys(n.firmas||{}).length; }catch(e){}
+        /* en la nube la cuadrilla viene como lista {n,d,tr}: firmó el que
+           trae trazo. (Un paquete viejo puede traer «firmas» aparte.) */
+        var gente=(n.gente||[]).length, firmas=0;
+        (n.gente||[]).forEach(function(g){ if(g && g.tr) firmas++; });
+        if(!firmas && n.firmas){ try{ firmas=Object.keys(n.firmas).length; }catch(e){} }
+        var est = d.hoja==='ats' ? atsEstadoDe(n) : '';
         var vb=n.vb||{}; var vbs=['cap','ing','sst'].filter(function(k){ return vb[k]; }).length;
         return {id:d.id, hoja:d.hoja, nombre:d.nombre||n.trabajo||n.labor||'', fecha:n.fecha||String(d.creado||'').slice(0,10),
-                area:n.area||n.nivel||'', gente:(n.gente||[]).length, firmas:firmas, vb:vbs, devuelto:!!n.devuelto, creado:d.creado};
+                area:n.area||n.nivel||'', gente:gente, firmas:firmas, vb:vbs, est:est, devuelto:!!n.devuelto, creado:d.creado};
       });
       var cols=[
         {k:'fecha', t:'Fecha', h:function(f){ return esc(fechaLarga(f.fecha)); }},
@@ -962,11 +1122,14 @@ function vistaATS(caja){
         {k:'nombre', t:'Trabajo / labor', h:function(f){ return '<b>'+esc(f.nombre)+'</b>'+(f.area?'<span class="sub">'+esc(f.area)+'</span>':''); }},
         {k:'gente', t:'Cuadrilla', num:true},
         {k:'firmas', t:'Firmas', num:true, h:function(f){ return f.gente ? esc(f.firmas)+' / '+esc(f.gente) : esc(f.firmas); }},
-        {k:'vb', t:'V°B°', h:function(f){ if(f.hoja!=='ats') return ''; if(f.devuelto) return '<span class="pill mal">devuelto</span>';
-          return f.vb>=3 ? '<span class="pill ok">liberado</span>' : '<span class="pill ojo">'+f.vb+' de 3</span>'; }, v:function(f){ return f.hoja==='ats'?(f.devuelto?'devuelto':f.vb+'/3'):''; }}
+        {k:'est', t:'Estado', h:function(f){ if(f.hoja!=='ats') return ''; var E=ATS_EST[f.est]||ATS_EST.borrador;
+          return '<span class="pill '+E.cl+'">'+esc(E.et)+'</span>'+(f.est!=='vigente'&&f.est!=='observado'&&f.est!=='borrador'?'<span class="sub">'+f.vb+' de 3 V°B°</span>':''); },
+          v:function(f){ return f.hoja==='ats' ? ((ATS_EST[f.est]||{}).et||'')+' · '+f.vb+'/3' : ''; }},
+        {k:'_acc', t:'', acc:true, h:function(f){ return f.hoja==='ats' ? '<button type="button" class="bt '+(f.est==='vigente'||f.est==='observado'?'sec ':'')+'chico" data-acc="abrir">'+(f.est==='vigente'||f.est==='observado'||f.est==='borrador'?'Ver':'Dar V°B°')+'</button>' : ''; }}
       ];
-      caja.innerHTML='<div class="aviso">Los que la cuadrilla firmó en el celular. El V°B° del SSOMA se da desde la app; aquí se ve al instante si ya está.</div><div class="tarj" id="t-ats"></div>';
-      tabla($('t-ats'), cols, filas, {orden:'fecha', asc:false, unidad:'papeles', vacio:'Ningún ATS ni IPERC subido', vacioSub:'Cuando el supervisor los suba desde la app, aparecen aquí.', archivo:'ats-iperc'});
+      caja.innerHTML='<div class="aviso">Los que la cuadrilla firmó en el celular. Desde aquí se da el V°B° —capataz, ingeniero, SSOMA— con la misma firma y las mismas reglas que en la app, o se devuelve con observación. El IPERC continuo se firma en el frente.</div><div class="tarj" id="t-ats"></div>';
+      tabla($('t-ats'), cols, filas, {orden:'fecha', asc:false, unidad:'papeles', vacio:'Ningún ATS ni IPERC subido', vacioSub:'Cuando el supervisor los suba desde la app, aparecen aquí.', archivo:'ats-iperc',
+        alClic:function(f){ if(f.hoja==='ats') abrirATS(f.id); }, accion:function(acc, f){ if(f.hoja==='ats') abrirATS(f.id); }});
     }).catch(function(cod){ fallo(caja, cod); });
   }
   VISTA.recargar=pinta; pinta();
@@ -981,24 +1144,25 @@ var VISTAS_LIDER = [
   {id:'cump',    g:'Indicadores', ic:'✔', n:'Cumplimiento', s:'Constancias de evaluaciones y talleres', tablas:['sst_constancia'],
    pintar:vistaTabla('sst_constancia', COL.constancias, {ordenSb:'fecha', ordenPor:'fecha', unidad:'constancias', vacio:'Ninguna constancia todavía', archivo:'constancias'})},
   {id:'epp',     g:'Indicadores', ic:'⛑', n:'Consumo de EPP', s:'Lo que sale del almacén, con firma', pintar:vistaEPP, tablas:['sst_kardex']},
-  {id:'personas', g:'Registros', ic:'☺', n:'Personal', s:'La gente de la obra y el estado de su ficha', tablas:['sst_trabajador'],
-   pintar:vistaTabla('sst_trabajador', COL.personal, {ordenSb:'nombre', extra:'&select=id,nombre,dni,td,puesto,area,estatus,verificado,usuario,almacenero&order=nombre.asc', ordenPor:'nombre', unidad:'personas', vacio:'Sin personal cargado', archivo:'personal'})},
-  {id:'reportes', g:'Registros', ic:'🚨', n:'Reportes', s:'Actos y condiciones subestándares', tablas:['sst_reporte'],
-   pintar:vistaTabla('sst_reporte', COL.reportes, {ordenSb:'creado', ordenPor:'fecha', unidad:'reportes', vacio:'Ningún reporte', archivo:'reportes'})},
+  {id:'personas', g:'Registros', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
+  {id:'reportes', g:'Registros', ic:'🚨', n:'Reportes', s:'Actos y condiciones subestándares · se cierran desde aquí', tablas:['sst_reporte'],
+   pintar:vistaTabla('sst_reporte', COL.reportes, {ordenSb:'creado', ordenPor:'fecha', unidad:'reportes', vacio:'Ningún reporte', archivo:'reportes',
+     alClic:function(f){ abrirReporte(f.id); }, accion:function(acc, f){ abrirReporte(f.id); }})},
+  {id:'ats',     g:'Registros', ic:'📋', n:'ATS e IPERC', s:'Los papeles de la tarea, firmados en el celular · el V°B° se da desde aquí', pintar:vistaATS, tablas:['sst_doc']},
   {id:'docs',    g:'Registros', ic:'☰', n:'Documentos', s:'Todo lo que la obra subió a la nube', tablas:['sst_doc'],
    pintar:vistaTabla('sst_doc', COL.docs, {ordenSb:'creado', extra:'&select=id,hoja,nombre,url,creado&order=creado.desc', ordenPor:'creado', unidad:'documentos', vacio:'Ningún documento', archivo:'documentos'})}
 ];
 var VISTAS_SUP = [
   {id:'obra',    g:'Mi obra', ic:'▦', n:'Hoy en la obra', s:'Lo que necesita tu ojo esta mañana', pintar:vistaMiObra,
    tablas:['sst_trabajador','sst_reporte','sst_kardex','sst_constancia','sst_doc']},
-  {id:'personal', g:'Mi obra', ic:'☺', n:'Personal', s:'La gente de la obra y el estado de su ficha', tablas:['sst_trabajador'],
-   pintar:vistaTabla('sst_trabajador', COL.personal, {ordenSb:'nombre', extra:'&select=id,nombre,dni,td,puesto,area,estatus,verificado,usuario,almacenero&order=nombre.asc', ordenPor:'nombre', unidad:'personas', vacio:'Sin personal cargado', archivo:'personal'})},
-  {id:'ats',     g:'Registros', ic:'📋', n:'ATS e IPERC', s:'Los papeles de la tarea, firmados en el celular', pintar:vistaATS, tablas:['sst_doc']},
+  {id:'personal', g:'Mi obra', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
+  {id:'ats',     g:'Registros', ic:'📋', n:'ATS e IPERC', s:'Los papeles de la tarea, firmados en el celular · el V°B° se da desde aquí', pintar:vistaATS, tablas:['sst_doc']},
   {id:'kardex',  g:'Registros', ic:'⛑', n:'Entrega de EPP', s:'El kardex, con la firma de quien recibió', pintar:vistaEPP, tablas:['sst_kardex']},
   {id:'constancias', g:'Registros', ic:'✔', n:'Constancias', s:'Evaluaciones y talleres cerrados', tablas:['sst_constancia'],
    pintar:vistaTabla('sst_constancia', COL.constancias, {ordenSb:'fecha', ordenPor:'fecha', unidad:'constancias', vacio:'Ninguna constancia todavía', archivo:'constancias'})},
-  {id:'reportes', g:'Registros', ic:'🚨', n:'Reportes', s:'Actos y condiciones subestándares', tablas:['sst_reporte'],
-   pintar:vistaTabla('sst_reporte', COL.reportes, {ordenSb:'creado', ordenPor:'fecha', unidad:'reportes', vacio:'Ningún reporte', archivo:'reportes'})},
+  {id:'reportes', g:'Registros', ic:'🚨', n:'Reportes', s:'Actos y condiciones subestándares · se cierran desde aquí', tablas:['sst_reporte'],
+   pintar:vistaTabla('sst_reporte', COL.reportes, {ordenSb:'creado', ordenPor:'fecha', unidad:'reportes', vacio:'Ningún reporte', archivo:'reportes',
+     alClic:function(f){ abrirReporte(f.id); }, accion:function(acc, f){ abrirReporte(f.id); }})},
   {id:'encuestas', g:'Registros', ic:'★', n:'Encuestas', s:'Cómo calificaron tus capacitaciones', tablas:['sst_encuesta'],
    pintar:vistaTabla('sst_encuesta', COL.encuestas, {ordenSb:'creado', ordenPor:'fecha', unidad:'encuestas', vacio:'Ninguna encuesta', vacioSub:'Salen solas después de cada evaluación y cada taller.', archivo:'encuestas'})},
   {id:'docs',    g:'Registros', ic:'☰', n:'Documentos', s:'Todo lo que la obra subió a la nube', tablas:['sst_doc'],
@@ -1049,6 +1213,655 @@ function arrancar(){
   } else mostrarEntrada();
 }
 document.addEventListener('DOMContentLoaded', arrancar);
+
+
+/* ══════════════════════════════════════════════════════════════════
+   OBRASST · el portal · escribir
+   Hasta acá el portal miraba. Desde acá también decide: confirma
+   fichas, cierra reportes y da el V°B° del ATS. Cuatro reglas:
+
+   1. LA MISMA FORMA. Lo que el portal escribe lo tiene que leer la app
+      tal cual: la misma RPC para la ficha, los mismos campos del
+      reporte, el mismo JSON del ATS con la firma como trazo y no como
+      foto. Si acá se inventara un campo, el celular no lo vería.
+   2. LAS MISMAS TRABAS. Nadie da V°B° antes de que firme la cuadrilla;
+      el SSOMA no firma antes del ingeniero; cerrar un reporte pide
+      decir qué se hizo; devolver un ATS pide el motivo. Lo que en el
+      celular no se puede, acá tampoco.
+   3. QUIÉN Y CUÁNDO. Cada escritura deja nombre, hora y la cuenta desde
+      la que se hizo; el servidor guarda además auth.uid().
+   4. NO PISAR. Antes de escribir el ATS se vuelve a leer. Si alguien lo
+      firmó desde el celular mientras se miraba acá, se avisa y no se
+      escribe encima.
+   ════════════════════════════════════════════════════════════════ */
+
+/* el mismo «quién» que deja la app al cerrar un reporte */
+function quienSoy(){ return String((TOK&&TOK.correo)||'').split('@')[0]; }
+
+/* ══ EL DIÁLOGO ═════════════════════════════════════════════════════
+   Confirmar y preguntar sin los cuadros del navegador: se ven igual en
+   todas las máquinas, se cierran con Esc y devuelven el foco. */
+var DIALOGO = { foco:null };
+function dialogo(op){
+  return new Promise(function(res){
+    var f=$('dialogo-fondo'), d=$('dialogo');
+    DIALOGO.foco=document.activeElement;
+    d.innerHTML = '<h2 id="dlg-t">'+esc(op.titulo||'')+'</h2><p>'+esc(op.texto||'')+'</p>'+
+      (op.campo ? '<div class="campo">'+(op.campo.etiqueta?'<label for="dlg-campo">'+esc(op.campo.etiqueta)+'</label>':'')+
+        '<textarea id="dlg-campo" maxlength="'+(op.campo.maximo||400)+'" placeholder="'+esc(op.campo.placeholder||'')+'">'+esc(op.campo.valor||'')+'</textarea>'+
+        '<div class="msg mal" id="dlg-msg"></div></div>' : '')+
+      '<div class="acciones"><button type="button" class="bt sec" id="dlg-no">'+esc(op.no||'Cancelar')+'</button>'+
+      '<button type="button" class="bt'+(op.mal?' mal':'')+'" id="dlg-si">'+esc(op.si||'Sí')+'</button></div>';
+    f.hidden=false;
+    function cerrar(v){
+      f.hidden=true; document.removeEventListener('keydown', tecla);
+      try{ if(DIALOGO.foco) DIALOGO.foco.focus(); }catch(e){}
+      res(v);
+    }
+    function tecla(ev){ if(ev.key==='Escape'){ ev.preventDefault(); ev.stopPropagation(); cerrar(null); } }
+    document.addEventListener('keydown', tecla);
+    $('dlg-no').onclick=function(){ cerrar(null); };
+    $('dlg-si').onclick=function(){
+      if(op.campo){
+        var v=$('dlg-campo').value.trim();
+        if(op.campo.minimo && v.length<op.campo.minimo){ $('dlg-msg').textContent=op.campo.corto||'Escribe un poco más.'; $('dlg-campo').focus(); return; }
+        cerrar(v);
+      } else cerrar(true);
+    };
+    f.onclick=function(ev){ if(ev.target===f) cerrar(null); };
+    setTimeout(function(){ try{ ($('dlg-campo')||$('dlg-si')).focus(); }catch(e){} }, 30);
+  });
+}
+function confirmar(titulo, texto, op){
+  op=op||{};
+  return dialogo({titulo:titulo, texto:texto, si:op.si, no:op.no, mal:op.mal}).then(function(v){ return v===true; });
+}
+function preguntar(titulo, texto, campo, op){
+  op=op||{};
+  return dialogo({titulo:titulo, texto:texto, si:op.si||'Guardar', no:op.no, mal:op.mal, campo:campo});
+}
+
+/* ══ EL CAJÓN ═══════════════════════════════════════════════════════
+   Se abre sobre la tabla; la tabla sigue viva detrás. Si el vivo trae
+   un cambio de la misma fila que está abierta, el cajón se entera. */
+var HOJA = { abierta:false, id:null, tabla:null, alCambio:null, foco:null };
+function abrirHoja(titulo, sub, cuerpo, pie, op){
+  op=op||{};
+  var f=$('hoja-fondo'), h=$('hoja');
+  if(!HOJA.abierta) HOJA.foco=document.activeElement;
+  HOJA.abierta=true; HOJA.id=op.id||null; HOJA.tabla=op.tabla||null; HOJA.alCambio=op.alCambio||null;
+  h.innerHTML='<div class="hoja-cab"><div><h2 id="hoja-t">'+esc(titulo)+'</h2>'+(sub?'<p class="sub" id="hoja-s">'+esc(sub)+'</p>':'')+'</div>'+
+    '<button type="button" class="cerrar" id="hoja-x" aria-label="Cerrar">×</button></div>'+
+    '<div class="hoja-cuerpo" id="hoja-cuerpo">'+cuerpo+'</div>'+
+    (pie ? '<div class="hoja-pie" id="hoja-pie">'+pie+'</div>' : '');
+  f.hidden=false; document.body.style.overflow='hidden';
+  $('hoja-x').onclick=cerrarHoja;
+  f.onclick=function(ev){ if(ev.target===f) cerrarHoja(); };
+  document.removeEventListener('keydown', hojaTecla); document.addEventListener('keydown', hojaTecla);
+  if(!op.sinFoco) setTimeout(function(){ try{ $('hoja-x').focus(); }catch(e){} }, 30);
+}
+function hojaTecla(ev){
+  if(ev.key!=='Escape' || !$('dialogo-fondo').hidden) return;
+  /* un Esc en medio de un texto escrito no tira lo escrito */
+  var a=document.activeElement;
+  if(a && /^(TEXTAREA|INPUT)$/.test(a.tagName) && a.type!=='checkbox' && String(a.value||'').trim()){ a.blur(); return; }
+  cerrarHoja();
+}
+function cerrarHoja(){
+  var f=$('hoja-fondo'); if(f.hidden) return;
+  f.hidden=true; document.body.style.overflow='';
+  HOJA.abierta=false; HOJA.id=null; HOJA.tabla=null; HOJA.alCambio=null;
+  document.removeEventListener('keydown', hojaTecla);
+  try{ if(HOJA.foco) HOJA.foco.focus(); }catch(e){}
+}
+function hojaCambio(tabla, tipo, fila){
+  if(!HOJA.abierta || !HOJA.tabla || tabla!==HOJA.tabla) return;
+  if(fila && HOJA.id && fila.id!==undefined && String(fila.id)!==String(HOJA.id)) return;
+  if(typeof HOJA.alCambio==='function') HOJA.alCambio(tipo, fila);
+}
+/* un aviso arriba del cajón: «esto cambió mientras lo mirabas» */
+function hojaAvisar(texto, botones){
+  var c=$('hoja-cuerpo'); if(!c) return;
+  var viejo=$('hoja-aviso'); if(viejo) viejo.remove();
+  var d=document.createElement('div'); d.className='aviso ojo'; d.id='hoja-aviso';
+  d.innerHTML='<b>'+esc(texto)+'</b>'+(botones?'<div class="acciones">'+botones+'</div>':'');
+  c.insertBefore(d, c.firstChild);
+  /* el que está firmando abajo no ve el aviso de arriba: se le dice también por el toast */
+  if(c.scrollTop>80) toast(texto);
+}
+function porQueFallo(e){
+  if(e && e.portal) return e.portal;
+  if(e===401 || e===403) return 'Esta cuenta no tiene permiso para escribir en esta obra.';
+  if(e===404) return 'El servidor no encontró lo que se quería guardar.';
+  if(typeof e==='number') return 'El servidor contestó '+e+'.';
+  return 'No hubo conexión. Inténtalo otra vez.';
+}
+/* traer UNA fila por id, fresca, dentro de la obra */
+function traerUna(tabla, id, select){
+  return sbGet(tabla+'?id=eq.'+encodeURIComponent(id)+'&'+filtroObra(tabla)+(select?'&select='+select:'')+'&limit=1')
+    .then(function(rows){ return (rows||[]).filter(function(r){ return String(r.id)===String(id); })[0]||null; });
+}
+
+/* ══ 1 · LAS FICHAS POR CONFIRMAR ═══════════════════════════════════
+   El que entró con el código de la obra y su documento sin estar en
+   el padrón espera acá. Misma RPC que la app (sst_trab_resolver), las
+   mismas tres salidas y los mismos textos de confirmación. */
+var BANDEJA = { lista:null, cargando:false, error:'' };
+function iniDe(n){ var w=String(n||'').replace(/,/g,' ').split(/\s+/).filter(Boolean); return ((w[0]||'?')[0]+((w[1]||'')[0]||'')).toUpperCase(); }
+function cargarBandeja(){
+  if(!YO.obra) return Promise.resolve([]);
+  BANDEJA.cargando=true;
+  return sbRpc('sst_trab_pendientes', {p_emp:YO.obra.id}).then(function(j){
+    BANDEJA.cargando=false;
+    BANDEJA.lista = (j && j.ok) ? (j.lista||[]) : [];
+    BANDEJA.error = (j && !j.ok) ? (j.motivo||'raro') : '';
+    return BANDEJA.lista;
+  }, function(){ BANDEJA.cargando=false; BANDEJA.lista=[]; BANDEJA.error='sin_senal'; return []; });
+}
+function pintarBandeja(caja){
+  if(!caja) return;
+  var l=BANDEJA.lista;
+  if(l===null){ caja.innerHTML=''; return; }
+  if(BANDEJA.error==='sin_senal'){
+    caja.innerHTML='<div class="aviso ojo"><b>No se pudo traer la lista de fichas por confirmar.</b> Se reintenta con el vivo.</div>'; return;
+  }
+  if(!l.length){ caja.innerHTML=''; return; }
+  var h='<div class="bandeja"><div class="tarj-cab"><div><h2>⏳ '+l.length+(l.length===1?' persona espera que la confirmes':' personas esperan que las confirmes')+'</h2>'+
+    '<p class="sub">Entraron con el código de la obra y su documento, pero no estaban en tu registro de personal. '+
+    'Mientras no los confirmes pueden ver todo y reportar, pero su firma en el ATS sale marcada y no se les emite constancia.</p></div></div>';
+  l.forEach(function(p){
+    var par=p.parecidos||[];
+    h+='<div class="pend" data-id="'+esc(p.id)+'">'+
+      '<div class="ini">'+(p.foto_url?'<img src="'+esc(p.foto_url)+'" alt="">':esc(iniDe(p.nombre)))+'</div>'+
+      '<div class="qui"><b>'+esc(p.nombre||'(sin nombre)')+'</b><small>'+esc(p.td||'DNI')+' '+esc(p.doc||'')+(p.correo?' · '+esc(p.correo):'')+(p.creado?' · entró '+esc(hace(p.creado)):'')+'</small>';
+    if(par.length){
+      h+='<div class="par"><small style="width:100%;color:var(--gris)">¿Es alguno de estos que ya tienes?</small>';
+      par.forEach(function(t){ h+='<button type="button" class="bt sec chico" data-acc="fundir" data-ficha="'+esc(t.id)+'">🔗 Sí, es '+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</button>'; });
+      h+='</div>';
+    }
+    h+='</div><div class="acc"><button type="button" class="bt chico" data-acc="confirmar">✓ Es de mi obra</button>'+
+       '<button type="button" class="bt mal chico" data-acc="rechazar">No es de acá</button></div></div>';
+  });
+  h+='</div>';
+  caja.innerHTML=h;
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-acc]'), function(b){
+    b.onclick=function(){
+      var fila=b.closest('.pend'); if(!fila) return;
+      resolverFicha(fila.getAttribute('data-id'), b.getAttribute('data-acc'), b.getAttribute('data-ficha')||null, fila);
+    };
+  });
+}
+var MOTIVO_FICHA = { no_eres_miembro:'Esta cuenta no gestiona esta obra.', no_esta:'Ya no está en espera: alguien lo resolvió desde la app.',
+                     falta_ficha:'Falta decir con qué ficha se une.', accion_rara:'El servidor no entendió la acción.' };
+function resolverFicha(id, accion, ficha, filaEl){
+  var previa = Promise.resolve(true);
+  if(accion==='rechazar') previa = confirmar('¿No es de esta obra?',
+    'Se le cierra el acceso: la próxima vez que entre con ese documento no va a poder. '+
+    'Si es de la obra y solo está mal escrito, mejor confírmalo y corrige su ficha después.', {si:'Sí, sacarlo', mal:true});
+  if(accion==='fundir') previa = confirmar('¿Es la misma persona?',
+    'Su cuenta pasa a la ficha que ya tenías, con su kardex y sus constancias. La ficha que se creó sola se retira '+
+    'para que no te quede el mismo hombre dos veces.', {si:'Sí, es la misma'});
+  previa.then(function(ok){
+    if(!ok) return;
+    Array.prototype.forEach.call(filaEl.querySelectorAll('button'), function(b){ b.disabled=true; });
+    sbRpc('sst_trab_resolver', {p_id:id, p_accion:accion, p_ficha:ficha||null}).then(function(j){
+      if(!j || !j.ok){
+        Array.prototype.forEach.call(filaEl.querySelectorAll('button'), function(b){ b.disabled=false; });
+        toast('No se pudo: '+(MOTIVO_FICHA[(j&&j.motivo)||'']||'el servidor contestó '+((j&&j.motivo)||'algo raro')+'.'));
+        return;
+      }
+      toast(accion==='confirmar' ? 'Ficha confirmada. Ya puede firmar y recibir constancias.'
+          : accion==='fundir' ? 'Cuenta unida a la ficha que ya tenías.' : 'Acceso cerrado para ese documento.');
+      if(typeof VISTA.recargar==='function') VISTA.recargar(true);
+    }, function(e){
+      Array.prototype.forEach.call(filaEl.querySelectorAll('button'), function(b){ b.disabled=false; });
+      toast('No se pudo: '+porQueFallo(e));
+    });
+  });
+}
+/* la vista de personal: la bandeja arriba, el padrón abajo */
+function vistaPersonal(caja){
+  cargando(caja);
+  caja.innerHTML='<div id="bandeja"></div><div class="tarj" id="t-sst_trabajador"></div>';
+  var t=$('t-sst_trabajador'); cargando(t);
+  function pinta(silencio){
+    cargarBandeja().then(function(){ pintarBandeja($('bandeja')); });
+    traer('sst_trabajador','&select=id,nombre,dni,td,puesto,area,estatus,verificado,usuario,almacenero&order=nombre.asc').then(function(filas){
+      VISTA.cache.sst_trabajador=filas;
+      tabla(t, COL.personal, filas, {orden:'nombre', asc:true, unidad:'personas', vacio:'Sin personal cargado', archivo:'personal'});
+    }).catch(function(cod){ if(!silencio) fallo(t, cod); });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+
+/* ══ 2 · CERRAR UN REPORTE ══════════════════════════════════════════
+   Igual que en la app: se cierra diciendo QUÉ se hizo, con la fecha y
+   con la foto del después si la hay. Marcar «atendido» a secas no le
+   sirve a nadie; la auditoría pide la evidencia. */
+var RC = { foto:null, nombre:'' };
+function claseReporte(r){ return r.clase==='acto' ? '👤 Acto inseguro' : '⚠️ Condición insegura'; }
+function abrirReporte(id){
+  traerUna('sst_reporte', id).then(function(r){
+    if(!r){ toast('Ese reporte ya no está.'); return; }
+    pintarReporte(r);
+  }, function(e){ toast('No se pudo abrir: '+porQueFallo(e)); });
+}
+function pintarReporte(r){
+  RC.foto=null; RC.nombre='';
+  var cerrado = !!(r.cerrado || r.estado==='cerrado' || r.estado==='atendido');
+  var h='<dl class="datos">'+
+    '<dt>Fecha</dt><dd>'+esc(fechaLarga(r.fecha||r.creado))+(r.creado?' <span style="color:var(--gris)">· '+esc(hace(r.creado))+'</span>':'')+'</dd>'+
+    (r.lugar?'<dt>Lugar</dt><dd>'+esc(r.lugar)+'</dd>':'')+
+    (r.actividad&&r.actividad!=='__NO_VIAJO__'?'<dt>Actividad</dt><dd>'+esc(r.actividad)+'</dd>':'')+
+    '<dt>Quién</dt><dd>'+(r.anonimo?'<span class="pill gris">anónimo</span>':esc(r.autor||'—'))+'</dd>'+
+    '<dt>Estado</dt><dd>'+(cerrado?'<span class="pill ok">cerrado</span>':'<span class="pill mal">abierto</span>')+'</dd>'+
+    '</dl>';
+  if(r.foto_url) h+='<div class="foto-caja"><img src="'+esc(r.foto_url)+'" alt="Foto del hallazgo"><span class="et">Así lo encontraron</span></div>';
+  var pie='';
+  if(cerrado){
+    h+='<div class="seccion"><h3>Cómo se cerró</h3><dl class="datos">'+
+      '<dt>Qué se hizo</dt><dd>'+esc(r.accion||'—')+'</dd>'+
+      '<dt>Cuándo</dt><dd>'+esc(fechaLarga(r.cerrado)||'—')+'</dd>'+
+      '<dt>Quién</dt><dd>'+esc(r.cerrado_por||'—')+'</dd></dl>'+
+      (r.foto_cierre?'<div class="foto-caja"><img src="'+esc(r.foto_cierre)+'" alt="Foto del levantamiento"><span class="et">Así quedó</span></div>':'')+'</div>';
+    pie='<button type="button" class="bt sec" id="rc-volver">Cerrar</button>';
+  } else {
+    h+='<div class="seccion"><h3>Cerrarlo</h3>'+
+      '<div class="campo"><label for="rc-accion">Qué se hizo</label><textarea id="rc-accion" maxlength="600" placeholder="Se retiró la baranda suelta y se colocó una nueva anclada…"></textarea>'+
+      '<p class="ayuda">Es lo que se audita. Una línea basta, pero tiene que decir qué se corrigió.</p></div>'+
+      '<div class="campo"><label for="rc-fecha">Fecha del levantamiento</label><input type="date" id="rc-fecha" value="'+hoyISO()+'" max="'+hoyISO()+'"></div>'+
+      '<div class="campo"><label for="rc-foto">Foto del después (opcional)</label><input type="file" id="rc-foto" accept="image/*">'+
+      '<div id="rc-vista"></div><p class="ayuda">Se achica a 1200 px, igual que la que toma el celular.</p></div>'+
+      '<div class="msg" id="rc-msg"></div></div>';
+    pie='<button type="button" class="bt sec" id="rc-volver">Dejarlo abierto</button><button type="button" class="bt ok" id="rc-guardar">Cerrar el reporte</button>';
+  }
+  abrirHoja(claseReporte(r), r.descripcion||'', h, pie, {id:r.id, tabla:'sst_reporte', alCambio:function(tipo, fila){
+    if(tipo==='DELETE'){ hojaAvisar('Este reporte se borró desde la app.'); return; }
+    if(fila && (fila.cerrado || fila.estado==='cerrado' || fila.estado==='atendido') && !cerrado){
+      hojaAvisar('Alguien acaba de cerrar este reporte desde la app.', '<button type="button" class="bt sec chico" onclick="abrirReporte(\''+esc(r.id)+'\')">Ver cómo quedó</button>');
+    }
+  }});
+  $('rc-volver').onclick=cerrarHoja;
+  if(!cerrado){
+    $('rc-foto').onchange=function(){
+      var f=this.files&&this.files[0]; RC.foto=null; $('rc-vista').innerHTML='';
+      if(!f) return;
+      achicarFoto(f, 1200, 0.82).then(function(b){
+        RC.foto=b; RC.nombre=f.name||'cierre.jpg';
+        $('rc-vista').innerHTML='<div class="foto-caja"><img src="'+URL.createObjectURL(b)+'" alt="Foto del levantamiento"><span class="et">Así quedó · '+Math.round(b.size/1024)+' KB</span></div>';
+      }, function(){ $('rc-msg').className='msg mal'; $('rc-msg').textContent='Esa imagen no se pudo leer. Prueba con un JPG o PNG.'; });
+    };
+    $('rc-guardar').onclick=function(){ guardarCierre(r); };
+    setTimeout(function(){ try{ $('rc-accion').focus(); }catch(e){} }, 60);
+  }
+}
+function guardarCierre(r){
+  var m=$('rc-msg'); m.className='msg mal';
+  var acc=($('rc-accion').value||'').trim();
+  if(acc.length<5){ m.textContent='Escribe qué se hizo, aunque sea en una línea. Es lo que se audita.'; $('rc-accion').focus(); return; }
+  var fecha=$('rc-fecha').value||hoyISO();
+  if(fecha>hoyISO()){ m.textContent='La fecha del levantamiento no puede ser de mañana.'; return; }
+  var bt=$('rc-guardar'); bt.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+  var quien=quienSoy();
+  function grabar(url){
+    var d={ estado:'atendido', accion:acc, cerrado:fecha, cerrado_por:quien };
+    if(url) d.foto_cierre=url;
+    return sbPatch('sst_reporte?id=eq.'+encodeURIComponent(r.id), d).then(function(rows){
+      if(!rows || !rows.length) return Promise.reject({portal:'No se guardó: el reporte ya no está o esta cuenta no puede cerrarlo.'});
+      return true;
+    });
+  }
+  var sinFoto=false;
+  var subida = RC.foto
+    ? subirFoto('reportes', RC.foto, RC.nombre).then(grabar, function(){ sinFoto=true; return grabar(null); })
+    : grabar(null);
+  subida.then(function(){
+    toast(sinFoto ? 'Cerrado. La foto no subió; el cierre quedó registrado sin ella.' : 'Cerrado. Queda la evidencia del levantamiento.');
+    cerrarHoja();
+    if(typeof VISTA.recargar==='function') VISTA.recargar(true);
+  }).catch(function(e){
+    bt.disabled=false; m.className='msg mal'; m.textContent='No se pudo guardar. '+porQueFallo(e);
+  });
+}
+/* la foto se achica en el navegador, como en el celular, para que no
+   viaje una de 4 MB por la red de la obra */
+function achicarFoto(file, max, calidad){
+  return new Promise(function(res, rej){
+    var img=new Image(), url=URL.createObjectURL(file);
+    img.onload=function(){
+      var w=img.naturalWidth, h=img.naturalHeight, k=Math.min(1, max/Math.max(w,h,1));
+      var cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round(w*k)); cv.height=Math.max(1,Math.round(h*k));
+      var g=cv.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,cv.width,cv.height); g.drawImage(img,0,0,cv.width,cv.height);
+      URL.revokeObjectURL(url);
+      cv.toBlob(function(b){ if(b) res(b); else rej('sin_foto'); }, 'image/jpeg', calidad);
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); rej('foto_rara'); };
+    img.src=url;
+  });
+}
+/* misma ruta y mismo balde que la app: <obra>/<carpeta>/<fecha>-<nombre> */
+function subirFoto(carpeta, blob, nombre){
+  var ruta=(YO.obra?YO.obra.id:'x')+'/'+carpeta+'/'+Date.now()+'-'+String(nombre||'foto.jpg').replace(/[^A-Za-z0-9.\-_]/g,'_');
+  return sbFetch(SB.url+'/storage/v1/object/msds/'+encodeURIComponent(ruta), {method:'POST', body:blob, extra:{'Content-Type':'image/jpeg'}})
+    .then(function(r){ return r.ok ? (SB.url+'/storage/v1/object/public/msds/'+encodeURIComponent(ruta)) : Promise.reject(r.status); });
+}
+
+/* ══ 3 · EL V°B° DEL ATS ════════════════════════════════════════════
+   El recorrido es el de la app, letra por letra:
+     borrador → firma la cuadrilla → V°B° capataz → V°B° ingeniero
+              → V°B° SSOMA (sin esta no se trabaja) → vigente
+   Cualquiera de los tres puede DEVOLVERLO con el motivo escrito.
+   El estado no se guarda suelto: se deduce de lo firmado. */
+var ATS_PASOS = [
+  { k:'cap', et:'Capataz / responsable de grupo', ic:'👷', pie:'Quien dirige la cuadrilla. Firma después de que firmaron todos sus hombres.' },
+  { k:'ing', et:'Ingeniero de producción', ic:'📐', pie:'Revisa que la secuencia de trabajo y los controles sean los que van a ejecutarse.' },
+  { k:'sst', et:'V°B° SSOMA', ic:'🦺', pie:'Sin esta firma el ATS queda BLOQUEADO y la cuadrilla no debe empezar.' }
+];
+var ATS_CONFIRMA = 'Fui al frente y los peligros, riesgos y controles de este ATS son los que hay hoy en obra.';
+var ATS_EST = {
+  borrador:  { et:'En borrador', cl:'gris', ic:'✏️' },
+  firmado:   { et:'Firmado por la cuadrilla', cl:'azul', ic:'✍️' },
+  enviado:   { et:'Esperando al ingeniero', cl:'azul', ic:'📤' },
+  liberado:  { et:'Esperando V°B° del SSOMA', cl:'ojo', ic:'⏳' },
+  vigente:   { et:'Liberado · se puede trabajar', cl:'ok', ic:'✅' },
+  observado: { et:'Devuelto con observación', cl:'mal', ic:'↩️' }
+};
+var ATS_REQ = ['Permiso de trabajo','Procedimiento específico','Capacitación específica','Monitoreo de gases','Monitoreo de ruido','MSDS'];
+var ATS_EPP = ['Botas c/puntera acero','Botas dieléctricas','Botas de jebe','Casco de seguridad','Barbiquejo','Tapones auditivos','Protección auditiva tipo copa','Respirador c/humo',
+  'Respirador c/gases','Respirador c/polvo','Guantes de cuero/badana','Guantes dieléctricos','Guantes de neopreno','Guantes de jebe','Lentes de seguridad','Chaleco reflectivo','Uniforme',
+  'Arnés 1 LV','Arnés 2 LV c/shock abs.','Arnés 2 LV c/cable acero','Linterna minera','Mandil de cuero','Mangas de cuero / escarpines','Guantes caña larga','Careta de soldador',
+  'Uniforme jean','Lentes de oxicorte','Careta de esmerilador','Traje Tyvek','Otros'];
+var ATS_EPC = ['Barandas rígidas','Conos','Tranqueras','Cintas','Malla naranja','Iluminación','Letreros','Línea de vida','Balizas luminosas','Freno vertical','Bloqueo retráctil','Vigías',
+  'Extintor','Protector c/ruido','Protector c/polvo','Malla contra caídas','Paletas Pare/Siga','Otros'];
+var ATS_PERM = ['Trabajo en caliente','Excavación','Trabajo en altura','Izaje de carga','Trabajos eléctricos','Espacios confinados'];
+
+/* en el paquete de la nube la cuadrilla viene como lista {n,d,p,tr,t}:
+   firmó el que trae trazo */
+function atsFaltan(n){ var f=0; (n.gente||[]).forEach(function(g){ if(!g||!g.tr) f++; }); return f; }
+function atsFirmoCuadrilla(n){ return !!((n.gente||[]).length) && atsFaltan(n)===0; }
+function atsEstadoDe(n){
+  if(!n) return 'borrador';
+  if(n.devuelto) return 'observado';
+  var vb=n.vb||{};
+  if(vb.sst) return 'vigente';
+  if(vb.ing) return 'liberado';
+  if(vb.cap) return 'enviado';
+  if(atsFirmoCuadrilla(n)) return 'firmado';
+  return 'borrador';
+}
+function atsPuedeTrabajar(n){ return !!(n && !n.devuelto && n.vb && n.vb.sst && n.vb.sst.tr); }
+function atsPaso(k){ for(var i=0;i<ATS_PASOS.length;i++) if(ATS_PASOS[i].k===k) return ATS_PASOS[i]; return null; }
+function cuando(t){
+  if(!t) return ''; var d=new Date(t);
+  return dos(d.getDate())+'/'+dos(d.getMonth()+1)+'/'+d.getFullYear()+' · '+dos(d.getHours())+':'+dos(d.getMinutes());
+}
+
+/* ── la firma: trazo, no foto (la misma función que la app) ─────── */
+function atsNorm(trazos){
+  if(!trazos || !trazos.length) return null;
+  var x0=1e9, y0=1e9, x1=-1e9, y1=-1e9, hay=0;
+  trazos.forEach(function(t){
+    if(!t || t.length<2) return;
+    for(var i=0;i<t.length;i++){ var x=t[i][0], y=t[i][1]; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; hay++; }
+  });
+  if(!hay) return null;
+  var an=Math.max(1, x1-x0), al=Math.max(1, y1-y0);
+  var mg=Math.max(an,al)*0.06;
+  x0-=mg; y0-=mg; an+=mg*2; al+=mg*2;
+  if(al/an < 0.13){ var falta=(an*0.13-al)/2; y0-=falta; al=an*0.13; }
+  var k=1000/an, p=[];
+  trazos.forEach(function(t){
+    if(!t || t.length<2) return;
+    var q=[]; for(var i=0;i<t.length;i++) q.push(Math.round((t[i][0]-x0)*k), Math.round((t[i][1]-y0)*k));
+    p.push(q);
+  });
+  if(!p.length) return null;
+  return { h:Math.round(al*k), p:p };
+}
+function atsFirmaImg(tr, anchoPx){
+  if(!tr || !tr.p || !tr.p.length) return '';
+  var W=anchoPx||300, H=Math.round(W*(tr.h||380)/1000);
+  var cv=document.createElement('canvas'), r=2; cv.width=W*r; cv.height=H*r;
+  var g=cv.getContext('2d'); g.scale(r,r);
+  g.fillStyle='#ffffff'; g.fillRect(0,0,W,H);
+  g.strokeStyle='#101820'; g.lineWidth=Math.max(1,W/170); g.lineCap='round'; g.lineJoin='round';
+  var k=W/1000;
+  tr.p.forEach(function(s){ g.beginPath(); g.moveTo(s[0]*k, s[1]*k); for(var i=2;i<s.length;i+=2) g.lineTo(s[i]*k, s[i+1]*k); g.stroke(); });
+  return cv.toDataURL('image/png');
+}
+/* el lienzo: mouse, dedo o lápiz, con eventos de puntero */
+var LIENZO = { trazos:[], pintando:false, cv:null, g:null, alCambiar:null };
+function prepLienzo(caja, alto, alCambiar){
+  var cv=caja.querySelector('canvas'); if(!cv) return;
+  var ancho=Math.max(200, caja.clientWidth-2), r=window.devicePixelRatio||1;
+  cv.style.width=ancho+'px'; cv.style.height=alto+'px'; cv.width=Math.round(ancho*r); cv.height=Math.round(alto*r);
+  var g=cv.getContext('2d'); g.scale(r,r);
+  g.fillStyle='#ffffff'; g.fillRect(0,0,ancho,alto);
+  g.strokeStyle='#101820'; g.lineWidth=2.4; g.lineCap='round'; g.lineJoin='round';
+  LIENZO.cv=cv; LIENZO.g=g; LIENZO.trazos=[]; LIENZO.pintando=false; LIENZO.alCambiar=alCambiar||null;
+  function pos(ev){ var b=cv.getBoundingClientRect(); return [ev.clientX-b.left, ev.clientY-b.top]; }
+  cv.onpointerdown=function(ev){ ev.preventDefault(); try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
+    LIENZO.pintando=true; var p=pos(ev); LIENZO.trazos.push([p]); g.beginPath(); g.moveTo(p[0],p[1]); };
+  cv.onpointermove=function(ev){ if(!LIENZO.pintando) return; ev.preventDefault();
+    var p=pos(ev); LIENZO.trazos[LIENZO.trazos.length-1].push(p); g.lineTo(p[0],p[1]); g.stroke(); };
+  cv.onpointerup=cv.onpointercancel=cv.onpointerleave=function(){ if(!LIENZO.pintando) return; LIENZO.pintando=false; if(LIENZO.alCambiar) LIENZO.alCambiar(); };
+}
+function lienzoPuntos(){ var n=0; LIENZO.trazos.forEach(function(t){ n+=t.length; }); return n; }
+
+/* ── el cajón del ATS ─────────────────────────────────────────────── */
+var ATSD = { d:null, n:null, k:null };
+function abrirATS(id){
+  traerUna('sst_doc', id, 'id,hoja,nombre,nota,creado,url').then(function(d){
+    if(!d){ toast('Ese ATS ya no está en la nube.'); return; }
+    pintarATSDoc(d);
+  }, function(e){ toast('No se pudo abrir: '+porQueFallo(e)); });
+}
+function pintarATSDoc(d, avisoTexto){
+  var n=nota(d.nota)||{};
+  ATSD.d=d; ATSD.n=n; ATSD.k=null;
+  var est=atsEstadoDe(n), E=ATS_EST[est]||ATS_EST.borrador;
+  var faltan=atsFaltan(n), gente=n.gente||[];
+  var h='';
+  h+='<div class="estado-ats '+E.cl+'"><span class="ic">'+E.ic+'</span><div><b>'+esc(E.et)+'</b>'+
+     '<small>'+(atsPuedeTrabajar(n) ? 'La cuadrilla puede empezar.' : 'Mientras no esté el V°B° del SSOMA, la cuadrilla NO debe empezar.')+'</small></div></div>';
+  if(n.devuelto){
+    var por=atsPaso(n.devuelto.por);
+    h+='<div class="aviso mal" style="margin-top:12px"><b>↩️ Lo devolvió '+esc(por?por.et:'un responsable')+(n.devuelto.t?' · '+esc(cuando(n.devuelto.t)):'')+'</b>'+
+       '<p style="margin:6px 0 0">'+esc(n.devuelto.texto||'')+'</p>'+
+       '<p class="ayuda" style="margin:8px 0 0">El capataz lo corrige en su celular y lo vuelve a mandar. Si la observación ya no corresponde, se puede levantar desde aquí.</p>'+
+       '<div class="acciones"><button type="button" class="bt sec chico" id="ats-levantar">Levantar la observación</button></div></div>';
+  }
+  h+='<div class="seccion"><h3>La tarea</h3><dl class="datos">'+
+     '<dt>Fecha</dt><dd>'+esc(fechaLarga(n.fecha))+(n.hora?' · '+esc(n.hora):'')+(n.turno?' · turno '+esc(n.turno):'')+'</dd>'+
+     (n.area?'<dt>Área</dt><dd>'+esc(n.area)+'</dd>':'')+
+     (n.ubic?'<dt>Ubicación</dt><dd>'+esc(n.ubic)+'</dd>':'')+
+     ((n.codigo||n.rev)?'<dt>Formato</dt><dd class="mono">'+esc(n.codigo||'')+(n.rev?' · rev. '+esc(n.rev):'')+'</dd>':'')+
+     (n.obs?'<dt>Observaciones</dt><dd>'+esc(n.obs)+'</dd>':'')+
+     '<dt>Subido</dt><dd>'+esc(fechaLarga(d.creado))+' <span style="color:var(--gris)">· '+esc(hace(d.creado))+'</span></dd>'+
+     '</dl></div>';
+  /* la cuadrilla y sus firmas */
+  h+='<div class="seccion"><h3>Cuadrilla · '+(gente.length-faltan)+' de '+gente.length+' firmaron</h3>';
+  if(!gente.length) h+='<p class="ayuda">El capataz todavía no armó la cuadrilla.</p>';
+  else {
+    h+='<div class="tabla-caja"><table class="firmas-t"><tbody>';
+    gente.forEach(function(g){
+      h+='<tr><td><b>'+esc(g.n||'')+'</b><span class="sub mono">'+esc(g.d||'')+(g.p?' · '+esc(g.p):'')+'</span></td>'+
+         '<td>'+(g.tr?'<img src="'+atsFirmaImg(g.tr, 240)+'" alt="Firma de '+esc(g.n||'')+'">':'<span class="pill ojo">sin firma</span>')+'</td>'+
+         '<td style="color:var(--gris);white-space:nowrap;font-size:12px">'+(g.t?esc(cuando(g.t)):'')+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+  }
+  h+='</div>';
+  /* peligros y controles */
+  var acts=n.acts||[];
+  h+='<div class="seccion"><h3>Peligros y controles</h3>';
+  if(!acts.length) h+='<p class="ayuda">Sin actividades cargadas.</p>';
+  else {
+    h+='<div class="tabla-caja"><table class="filas-ats"><thead><tr><th>Peligro</th><th>Riesgo</th><th>Consecuencia</th><th>Control</th></tr></thead><tbody>';
+    acts.forEach(function(a){
+      h+='<tr><td colspan="4" class="acto">'+esc(a.a||'')+'</td></tr>';
+      (a.filas||[]).forEach(function(f){ h+='<tr><td>'+esc(f.p||'')+'</td><td>'+esc(f.r||'')+'</td><td>'+esc(f.c||'')+'</td><td>'+esc(f.m||'')+'</td></tr>'; });
+    });
+    h+='</tbody></table></div>';
+  }
+  h+='</div>';
+  /* lo que aplica */
+  var bloques=[['req','Requisitos',ATS_REQ],['epp','EPP',ATS_EPP],['epc','Protección colectiva',ATS_EPC],['perm','Permisos',ATS_PERM]];
+  var hayMarca=false, hm='';
+  bloques.forEach(function(b){
+    var m=n[b[0]]||{}, l=[];
+    b[2].forEach(function(et,i){ if(m[i]==='A') l.push(et); });
+    if(!l.length) return; hayMarca=true;
+    hm+='<div style="margin:0 0 10px"><small style="display:block;color:var(--gris);font-size:12px;margin:0 0 5px">'+esc(b[1])+'</small><div class="marcas">'+
+        l.map(function(x){ return '<span class="pill azul">'+esc(x)+'</span>'; }).join('')+'</div></div>';
+  });
+  if(hayMarca) h+='<div class="seccion"><h3>Aplica en esta tarea</h3>'+hm+'</div>';
+  /* el circuito de V°B° */
+  h+='<div class="seccion"><h3>V°B°</h3>';
+  if(faltan) h+='<div class="aviso ojo"><b>Faltan '+faltan+(faltan===1?' firma':' firmas')+' de la cuadrilla.</b> Nadie da V°B° antes de que firmen los que van a hacer el trabajo. Se firma en el celular del capataz.</div>';
+  var vb=n.vb||{};
+  ATS_PASOS.forEach(function(p, i){
+    var f=vb[p.k];
+    var previo = (i===0) ? !faltan : !!vb[ATS_PASOS[i-1].k];
+    var toca = !f && previo && !n.devuelto;
+    h+='<div class="paso'+(f?' hecho':(toca?' toca':''))+'" id="paso-'+p.k+'"><div class="paso-cab"><b>'+p.ic+' '+esc(p.et)+'</b>'+
+       (f?'<button type="button" class="bt sec chico" data-quitar="'+p.k+'">Repetir</button>':'')+'</div>';
+    if(f){
+      h+='<img class="firma-img" src="'+atsFirmaImg(f.tr, 280)+'" alt="Firma de '+esc(f.n||'')+'">'+
+         '<p class="pie"><b style="color:var(--texto)">'+esc(f.n||'')+'</b> · '+esc(cuando(f.t))+(f.cuenta?' · desde '+esc(f.cuenta):'')+'</p>'+
+         '<p class="pie">✓ '+esc(ATS_CONFIRMA)+'</p>';
+    } else if(n.devuelto){
+      h+='<p class="pie">Está devuelto. Se firma cuando el capataz lo corrija y lo vuelva a mandar.</p>';
+    } else if(!previo){
+      h+='<p class="pie">Le toca cuando firme '+esc(i===0?'la cuadrilla':ATS_PASOS[i-1].et)+'.</p>';
+    } else {
+      h+='<p class="pie">'+esc(p.pie)+'</p>'+
+         '<label class="check"><input type="checkbox" id="atsok-'+p.k+'"><span>'+esc(ATS_CONFIRMA)+'</span></label>'+
+         '<div class="campo" style="margin:12px 0 0"><label for="atsn-'+p.k+'">Nombre y apellidos de quien firma</label>'+
+         '<input id="atsn-'+p.k+'" maxlength="80" placeholder="Como figura en su DNI" value="'+esc(vb['_n_'+p.k]||leer('sstp_firmante_'+p.k,'')||'')+'"></div>'+
+         '<div class="lienzo" id="lienzo-'+p.k+'"><canvas></canvas><div class="guia"></div><div class="pista">Firma aquí con el mouse, el dedo o el lápiz</div></div>'+
+         '<div class="msg" id="atsm-'+p.k+'"></div>'+
+         '<div class="acciones" style="margin-top:10px"><button type="button" class="bt" id="atsb-'+p.k+'" disabled>✍️ Firmar</button>'+
+         '<button type="button" class="bt sec" id="atsl-'+p.k+'">Borrar y repetir</button>'+
+         '<button type="button" class="bt mal" id="atsd-'+p.k+'">↩️ Devolverlo con observación</button></div>';
+    }
+    h+='</div>';
+  });
+  h+='<p class="ayuda">El portal deja constancia de quién dijo ser cada firmante, a qué hora firmó y desde qué cuenta. No verifica identidad — igual que una firma en papel.</p></div>';
+  var pie='<button type="button" class="bt sec" id="ats-volver">Cerrar</button>';
+  abrirHoja(n.trabajo||d.nombre||'ATS', 'ATS · '+(n.area?n.area+' · ':'')+fechaLarga(n.fecha), h, pie, {id:d.id, tabla:'sst_doc', sinFoco:true, alCambio:function(tipo, fila){
+    if(tipo==='DELETE'){ hojaAvisar('Este ATS se borró desde la app.'); return; }
+    /* el vivo también devuelve lo que este mismo portal acaba de
+       escribir: si la nota que llega es la que ya se tiene, no es un
+       cambio ajeno y no hay nada que avisar */
+    if(fila && fila.nota!==undefined && ATSD.d && String(fila.nota)===String(ATSD.d.nota)) return;
+    hojaAvisar('Este ATS cambió hace un momento desde el celular.', '<button type="button" class="bt sec chico" onclick="abrirATS(\''+esc(d.id)+'\')">Volver a cargarlo</button>');
+  }});
+  if(avisoTexto) hojaAvisar(avisoTexto);
+  $('ats-volver').onclick=cerrarHoja;
+  var lev=$('ats-levantar'); if(lev) lev.onclick=function(){ levantarObservacion(); };
+  Array.prototype.forEach.call(document.querySelectorAll('#hoja [data-quitar]'), function(b){ b.onclick=function(){ quitarVB(b.getAttribute('data-quitar')); }; });
+  /* el paso que toca: lienzo, candado y botones */
+  ATS_PASOS.forEach(function(p){
+    var caja=$('lienzo-'+p.k); if(!caja) return;
+    ATSD.k=p.k;
+    var bt=$('atsb-'+p.k), ok=$('atsok-'+p.k), nom=$('atsn-'+p.k);
+    function candado(){ var listo = ok.checked && nom.value.trim().length>=4 && lienzoPuntos()>=12; bt.disabled=!listo; }
+    setTimeout(function(){ prepLienzo(caja, 200, candado); }, 30);
+    ok.onchange=candado; nom.oninput=candado;
+    $('atsl-'+p.k).onclick=function(){ prepLienzo(caja, 200, candado); candado(); };
+    bt.onclick=function(){ firmarVB(p.k); };
+    $('atsd-'+p.k).onclick=function(){ devolverATS(p.k); };
+  });
+}
+
+/* escribir el ATS: releer, comparar, aplicar, guardar. Si cambió
+   mientras se miraba, no se escribe encima. */
+function escribirATS(mutar){
+  var d=ATSD.d;
+  return traerUna('sst_doc', d.id, 'id,hoja,nombre,nota,creado,url').then(function(fila){
+    if(!fila) return Promise.reject({portal:'Este ATS ya no está en la nube. Alguien lo borró desde la app.'});
+    if(String(fila.nota||'')!==String(d.nota||'')) return Promise.reject({cambio:true, fila:fila});
+    var n=nota(fila.nota)||{};
+    mutar(n);
+    n.estado=atsEstadoDe(n);
+    var texto=JSON.stringify(n);
+    return sbPatch('sst_doc?id=eq.'+encodeURIComponent(d.id), {nota:texto}).then(function(rows){
+      if(!rows || !rows.length) return Promise.reject({portal:'No se guardó: esta cuenta no puede escribir este ATS o ya no existe.'});
+      fila.nota=texto; return fila;
+    });
+  });
+}
+function despuesDeEscribir(mensaje){
+  return function(fila){ toast(mensaje); pintarATSDoc(fila); if(typeof VISTA.recargar==='function') VISTA.recargar(true); };
+}
+function siFallaEscribir(k){
+  return function(e){
+    if(e && e.cambio){
+      pintarATSDoc(e.fila, 'Este ATS cambió mientras lo mirabas: alguien lo firmó o lo movió desde el celular. Se volvió a cargar; revísalo y, si corresponde, firma de nuevo.');
+      return;
+    }
+    var m=k?$('atsm-'+k):null;
+    if(m){ m.className='msg mal'; m.textContent='No se pudo guardar. '+porQueFallo(e); var b=$('atsb-'+k); if(b) b.disabled=false; }
+    else toast('No se pudo guardar. '+porQueFallo(e));
+  };
+}
+function firmarVB(k){
+  var m=$('atsm-'+k), bt=$('atsb-'+k); m.className='msg mal';
+  if(!$('atsok-'+k).checked){ m.textContent='Marca primero que fuiste al frente y que los peligros son los de hoy.'; return; }
+  var nombre=$('atsn-'+k).value.trim();
+  if(nombre.length<4){ m.textContent='Escribe el nombre de quien firma.'; $('atsn-'+k).focus(); return; }
+  if(lienzoPuntos()<12){ m.textContent='Esa firma está vacía.'; return; }
+  var tr=atsNorm(LIENZO.trazos);
+  if(!tr){ m.textContent='No se pudo leer el trazo. Vuelve a firmar.'; return; }
+  bt.disabled=true; m.className='msg gris'; m.textContent='Guardando la firma…';
+  var cuenta=(TOK&&TOK.correo)||'';
+  escribirATS(function(n){
+    /* las mismas trabas que en el celular, comprobadas sobre la copia fresca */
+    var vb=n.vb||{}; var i=ATS_PASOS.map(function(p){ return p.k; }).indexOf(k);
+    if(n.devuelto) throw {portal:'Está devuelto con observación: primero tiene que corregirse.'};
+    if(atsFaltan(n)) throw {portal:'Faltan firmas de la cuadrilla.'};
+    if(i>0 && !vb[ATS_PASOS[i-1].k]) throw {portal:'Todavía no firmó '+ATS_PASOS[i-1].et+'.'};
+    if(vb[k]) throw {portal:'Este paso ya estaba firmado.'};
+    n.vb=vb;
+    n.vb[k]={ n:nombre, tr:tr, t:Date.now(), conforme:true, via:'portal', cuenta:cuenta };
+    n.vb['_n_'+k]=nombre;
+    n.devuelto=null;
+  }).then(function(fila){
+    guardar('sstp_firmante_'+k, nombre);
+    despuesDeEscribir(k==='sst' ? 'V°B° del SSOMA guardado. El ATS queda liberado; la cuadrilla lo ve en su celular.' : 'Firma guardada. Le toca al siguiente.')(fila);
+  }).catch(siFallaEscribir(k));
+}
+function devolverATS(k){
+  preguntar('Devolver el ATS', 'Escribe claro qué hay que corregir: lo va a leer el capataz en el frente.',
+    {placeholder:'Falta el control para la caída de objetos en la actividad 2…', minimo:6, maximo:400, corto:'Sin decir qué está mal, devolverlo no sirve de nada.'},
+    {si:'Devolverlo', mal:true}).then(function(t){
+    if(!t) return;
+    var cuenta=(TOK&&TOK.correo)||'';
+    escribirATS(function(n){
+      n.devuelto={ por:k, texto:String(t).slice(0,400), t:Date.now(), cuenta:cuenta };
+    }).then(despuesDeEscribir('Devuelto. El capataz ve la observación en su celular.')).catch(siFallaEscribir(k));
+  });
+}
+function quitarVB(k){
+  var p=atsPaso(k)||{};
+  confirmar('¿Repetir esta firma?', 'Se borra el V°B° de '+(p.et||'')+' y también los que venían después. Si el ATS estaba liberado, deja de estarlo hasta que vuelvan a firmar.',
+    {si:'Sí, repetir', mal:true}).then(function(ok){
+    if(!ok) return;
+    escribirATS(function(n){
+      var vb=n.vb||{}; var desde=0; ATS_PASOS.forEach(function(x,i){ if(x.k===k) desde=i; });
+      for(var i=desde;i<ATS_PASOS.length;i++) delete vb[ATS_PASOS[i].k];
+      n.vb=vb;
+    }).then(despuesDeEscribir('Firma retirada. Hay que volver a darla.')).catch(siFallaEscribir(null));
+  });
+}
+function levantarObservacion(){
+  confirmar('¿Levantar la observación?', 'El ATS vuelve al punto donde estaba antes de devolverlo, con las firmas que ya tenía. Hazlo solo si lo observado ya se corrigió o no correspondía.',
+    {si:'Sí, levantarla'}).then(function(ok){
+    if(!ok) return;
+    escribirATS(function(n){ n.devuelto=null; }).then(despuesDeEscribir('Observación levantada.')).catch(siFallaEscribir(null));
+  });
+}
 
 </script>
 </body>
