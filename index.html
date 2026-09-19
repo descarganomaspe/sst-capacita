@@ -3416,7 +3416,7 @@ body.carrete .pantalla.llena{padding:0}
     <button class="btn sec" onclick="ir('p-puntaje')">🏅 Evaluar el día · Trabajador del mes</button>
   </div>
   <div id="trab-traer-caja"></div>
-  <div id="trab-lista"></div>
+  <div id="trab-pend-aviso"></div><div id="trab-lista"></div>
 </section>
 
 <section class="pantalla" id="p-trab-traer">
@@ -5455,8 +5455,12 @@ body.carrete .pantalla.llena{padding:0}
   <div class="barra"><span>¿A quién acudo?</span></div>
   <div id="quienes-cuerpo"></div>
 </section>
+<section class="pantalla" id="p-trabpend">
+  <div class="barra"><span>Esperando confirmación</span></div>
+  <div id="trabpend-cuerpo"></div>
+</section>
 <section class="pantalla" id="p-buzon-sup">
-  <div class="barra"><span>Buzón de sugerencias</span></div>
+  <div class="barra"><span>Quejas y sugerencias</span></div>
   <div id="buzs-cuerpo"></div>
 </section>
 <section class="pantalla" id="p-aviso-charla">
@@ -5664,7 +5668,7 @@ body.carrete .pantalla.llena{padding:0}
   <div id="emp-home-panel"></div>
   <div class="aj-cajones">
   <div class="sec-tit" style="margin-top:20px">⚙️ Ajustes</div>
-  <div class="grupo">
+  <div class="grupo" id="aj-g1">
     <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🏢</span><span class="tx">Mi empresa y mi equipo<small>Datos, código y quién entra</small></span><span class="fl">▾</span></button>
     <div class="grupo-cont">
       <button class="btn sec" onclick="ir('p-empleador')">Datos de mi empresa</button>
@@ -5674,7 +5678,7 @@ body.carrete .pantalla.llena{padding:0}
       <button class="btn sec" id="aj-mando" onclick="abrirTraspasarMando()">Pasarle el mando a otro</button>
     </div>
   </div>
-  <div class="grupo">
+  <div class="grupo" id="aj-g2">
     <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">📁</span><span class="tx">Documentos y formatos<small>Dónde queda y con qué código sale</small></span><span class="fl">▾</span></button>
     <div class="grupo-cont">
       <button class="btn sec" onclick="verCarpetasGestion()">📁 Carpetas de gestión</button>
@@ -5683,14 +5687,14 @@ body.carrete .pantalla.llena{padding:0}
       <button class="btn sec" onclick="ir('p-qr-docs')">📌 Carteles QR de los documentos</button>
     </div>
   </div>
-  <div class="grupo">
+  <div class="grupo" id="aj-g3">
     <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🔔</span><span class="tx">Avisos<small>Qué te avisa la app y a qué hora</small></span><span class="fl">▾</span></button>
     <div class="grupo-cont">
       <button class="btn sec" onclick="ir('p-aviso-charla')">Aviso de la charla del día</button>
       <button class="btn sec" onclick="ir('p-record')">⏰ Recordatorios</button>
     </div>
   </div>
-  <div class="grupo">
+  <div class="grupo" id="aj-g4">
     <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">🎨</span><span class="tx">La app<small>Cómo se ve, idioma, instalación</small></span><span class="fl">▾</span></button>
     <div class="grupo-cont">
       <button class="btn sec" onclick="ir('p-apariencia')">Apariencia</button>
@@ -5701,7 +5705,7 @@ body.carrete .pantalla.llena{padding:0}
       <button class="btn sec" onclick="ir('p-legal')">🔒 Privacidad y condiciones</button>
     </div>
   </div>
-  <div class="grupo">
+  <div class="grupo" id="aj-g5">
     <button class="grupo-cab" onclick="toggleGrupo(this)"><span class="ic">💳</span><span class="tx">Mi cuenta y mi plan<small>Lo que pagas y en qué obra estás</small></span><span class="fl">▾</span></button>
     <div class="grupo-cont">
       <div id="aj-plan"></div>
@@ -8623,7 +8627,25 @@ var LS_TOK='sstc_cuenta';
 var TOK = null;
 try{ TOK = JSON.parse(localStorage.getItem(LS_TOK)||'null'); }catch(e){ TOK=null; }
 
-function hayCuenta(){ return !!(TOK && TOK.access_token); }
+/* ══════ «CUENTA» SIEMPRE QUISO DECIR LA CUENTA DE LA EMPRESA ══════
+   Hay noventa y cinco sitios que llaman a hayCuenta() para decidir una
+   sola cosa: si esta persona gestiona algo. Mientras el trabajador no
+   tenía cuenta, «tener token» y «ser gestor» eran lo mismo y nadie
+   notó que eran dos preguntas distintas.
+
+   Desde que el trabajador entra con su documento y su PIN, tiene token
+   propio. Si hayCuenta() siguiera contestando que sí, el trabajador se
+   metería por las ramas del supervisor en todos esos sitios — y las
+   vería VACÍAS, porque sus permisos no son esos. El caso más feo:
+   «Noticias» leía sst_doc directo en vez de pasar por sst_docs_obra, o
+   sea justo el error que arreglamos ayer, vuelto a abrir por la puerta
+   de atrás.
+
+   Una línea aquí y los noventa y cinco siguen queriendo decir lo que
+   siempre quisieron. Lo del trabajador va por hayCuentaTrab().      */
+function hayCuenta(){ return !!(TOK && TOK.access_token) && ROL !== 'col'; }
+function hayCuentaTrab(){ return !!(TOK && TOK.access_token); }
+function esTrabajador(){ return ROL === 'col'; }
 function correoCuenta(){ return (TOK && TOK.correo) || ''; }
 function sbH(){
   /* Se lee TOK directo, no a traves de hayCuenta(). Parece lo mismo y no
@@ -8987,7 +9009,7 @@ var EMP_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-emp
             'p-trabajadores':1,'p-trab-nuevo':1,'p-trab-ficha':1,'p-trab-traer':1,'p-planes':1,'p-estatus':1,
             'p-kardex':1,'p-kardex-nuevo':1,'p-kardex-export':1,'p-empleador':1,
             'p-amonestaciones':1,'p-amon-nueva':1,'p-amon-ver':1,'p-amon-firma':1,'p-constancias':1,'p-eval-ver':1,
-            'p-comite':1,'p-comite-armar':1,'p-comite-acta':1,'p-comite-ver':1,'p-quienes':1,
+            'p-comite':1,'p-comite-armar':1,'p-comite-acta':1,'p-comite-ver':1,'p-quienes':1,'p-trabpend':1,
             'p-accidentes':1,'p-acc-nuevo':1,'p-acc-ver':1,
             'p-gestion-quien':1,'p-lider-no':1,
             'p-actividades':1,'p-invitar':1,'p-invitacion':1,
@@ -9093,6 +9115,23 @@ function pintarRol(){
    empresa. Antes todos apuntaban a p-inicio (el inicio del rol viejo)
    y el portero los rebotaba: el trabajador terminaba otra vez en el
    formulario de entrada, escribiendo el codigo que ya habia escrito. */
+/* ══════ ARRIBA DE LA CASA HAY ALGO OTRA VEZ ══════════════════════
+   Cuando «p-rol» no existía, irAtras() e irHome() se escribieron para
+   un mundo sin portada: estando en el inicio no hacían nada, porque no
+   había a dónde subir. Al devolver la pantalla de «¿quién eres?» esos
+   dos caminos quedaron viejos, y en la casa del trabajador que todavía
+   no entró —p-colab— los dos botones se veían y no hacían nada. Marcelo
+   lo cazó a los dos minutos: «estoy apretando atrás e inicio, pero no
+   me manda a inicio».                                              */
+function salidaDeLaCasa(){
+  if(document.getElementById('p-rol')) return 'p-rol';
+  return 'p-cuenta';
+}
+/* ¿el que está acá ya entró de verdad, o sigue en la puerta? */
+function yaEntro(){
+  if(modoActivo()==='col') return !!(typeof yo==='function' && yo());
+  return (typeof sesionAbierta==='function') ? sesionAbierta() : true;
+}
 function inicioDelModo(){
   if(modoActivo()==='col') return (typeof yo==='function' && yo()) ? 'p-obra' : 'p-colab';
   return MODO_HOME[modoActivo()] || 'p-emp-home';
@@ -9137,11 +9176,12 @@ function irAtras(){
     if(modoActivo()!=='col' && (MIS_EMP||[]).length>1 && alcanzable('p-mis-empresas')){
       _ir('p-mis-empresas'); return;
     }
-    /* Ya no existe la portada de «¿quién eres?». Desde el inicio, atrás
-       no tiene a dónde ir: antes caía en «Entra a tu cuenta» y le pedía
-       la sesión a alguien que ya estaba trabajando adentro. Si de verdad
-       no hay sesión, p-cuenta sí es el sitio; si la hay, se queda. */
-    if(!alcanzable(casa)) _ir('p-cuenta');
+    /* El que todavía está en la puerta —el trabajador sin sus datos, el
+       gestor sin sesión— sí tiene a dónde subir: a «¿quién eres?». El
+       que ya entró se queda, porque para él atrás sería salirse de la
+       obra sin querer. */
+    if(!yaEntro()){ _ir(salidaDeLaCasa()); return; }
+    if(!alcanzable(casa)) _ir(salidaDeLaCasa());
     return;
   }
   while(HIST.length){ var c=HIST.pop(); if(c!==act && alcanzable(c)){ prev=c; break; } }
@@ -9162,12 +9202,11 @@ function irHome(){
   var casa=inicioDelModo();
   HIST=[];
   if(modoActivo()==='col' && typeof yo==='function' && yo()){ _ir(casa); return; }
-  /* «Inicio» lleva al inicio y ahí termina. Con la portada eliminada,
-     el «si ya estás en el inicio, anda a la portada» se convirtió en
-     «si ya estás en el inicio, anda a iniciar sesión»: justo lo que
-     Marcelo vio. Estando en casa, el botón no tiene nada que hacer. */
-  if(act===casa) return;
-  var destino = alcanzable(casa) ? casa : 'p-cuenta';
+  /* «Inicio» lleva al inicio y ahí termina — para el que ya entró. El
+     que sigue en la puerta no tiene inicio todavía: su «inicio» es la
+     pantalla de «¿quién eres?», que es de donde vino. */
+  if(act===casa){ if(!yaEntro()) _ir(salidaDeLaCasa()); return; }
+  var destino = alcanzable(casa) ? casa : salidaDeLaCasa();
   if(destino===act) return;
   _ir(destino);
 }
@@ -9428,6 +9467,7 @@ function _ir(p){
   else { try{ carrParar(); document.body.classList.remove('carrete'); }catch(_cp){} }
   if(p==='p-buzon')pintarBuzon();
   if(p==='p-quienes')pintarQuienes();
+  if(p==='p-trabpend')prepTrabPend();
   if(p==='p-buzon-sup')prepBuzonSup();
   if(p==='p-aviso-charla')pintarAvisoCharla();
   if(p==='p-simulacros')pintarSimulacros();
@@ -9586,7 +9626,10 @@ function pintarBarraNav(p){
      un botón que no hace nada es peor que no tener botón. Se esconden, y
      queda «Salir · cambiar de usuario» al final de la pantalla, que es
      explícito. */
-  var enSuCasa = (modoActivo()==='col') && (typeof yo==='function') && !!yo() &&
+  /* Se escondían solo para el trabajador que ya entró. Al que estaba en
+     la puerta se le mostraban dos botones muertos, que es justo lo que
+     este mismo comentario decía que no había que hacer. */
+  var enSuCasa = (modoActivo()==='col') && (typeof yaEntro==='function') && yaEntro() &&
                  (p===inicioDelModo());
   var a=document.getElementById('nav-atras');
   /* En el inicio del gestor, «Inicio» no tiene a dónde ir. «Atrás» solo
@@ -14724,6 +14767,21 @@ function trabsOrdenados(){
 }
 function pintarTrabajadores(){
   var c=$('trab-lista'), todos=trabsLocal(), a=trabsOrdenados();
+  /* Los que entraron con su documento y no estaban en esta lista. Va
+     arriba de todo y en rojo: un pendiente que nadie ve es alguien que
+     se pasó la semana sin poder firmar su ATS. */
+  try{
+    if(PEND.lista===null && !PEND.cargando) prepTrabPend();
+    var _np = pendCuantos();
+    var _pc = $('trab-pend-aviso');
+    if(_pc) _pc.innerHTML = _np
+      ? '<button type="button" class="cart-ir" style="margin:0 0 14px;border-color:rgba(217,38,28,.45);'+
+        'background:rgba(217,38,28,.10)" onclick="ir(\'p-trabpend\')">'+
+        '<span class="ic">⏳</span><span class="tx"><b>'+_np+' esperando que los confirmes</b>'+
+        '<small>Entraron con el código de la obra y no están en tu personal. Hasta que los mires, '+
+        'su firma en el ATS sale marcada.</small></span><span class="ch">›</span></button>'
+      : '';
+  }catch(_pe){}
   if(!todos.length){
     c.innerHTML='<p class="sub" style="margin-top:14px">Todav\u00eda no tienes trabajadores registrados. Agrega el primero arriba: con eso el kardex y las credenciales se llenan solos.</p>';
   } else {
@@ -14795,8 +14853,8 @@ function pintarTrabajadores(){
 function bajarTodoElPersonal(d, sinExtras, desde, acum){
   var TANDA=500;
   desde = desde||0; acum = acum||[];
-  var cols = sinExtras ? 'ext,nombre,dni,puesto,area,estatus'
-                       : 'ext,nombre,dni,puesto,area,estatus,sangre,emergencia,emer_quien';
+  var cols = sinExtras ? 'ext,nombre,dni,puesto,area,estatus,verificado'
+                       : 'ext,nombre,dni,puesto,area,estatus,sangre,emergencia,emer_quien,verificado,usuario';
   return sbGet('sst_trabajador?duenio=eq.'+encodeURIComponent(d)+
                '&select='+cols+'&order=creado.asc,ext.asc&limit='+TANDA+'&offset='+desde)
     .then(function(rows){
@@ -23334,9 +23392,15 @@ var LS_GUIA_TRAB='sstc_guia_trab';
 var GUIA_PASO=0, GUIA_PASOS=[];
 /* El mismo celular puede ser el del supervisor hoy y el del trabajador
    mañana: cada guía lleva su propia marca de vista. */
+var LS_GUIA_LIDER='sstc_guia_lider';
 function _guiaLlave(){
   var p=(document.querySelector('.pantalla.activa')||{}).id;
-  return (p==='p-obra' || p==='p-colab') ? LS_GUIA_TRAB : LS_GUIA;
+  if(p==='p-obra' || p==='p-colab') return LS_GUIA_TRAB;
+  /* el líder y el supervisor comparten pantalla pero no ven lo mismo:
+     cada uno lleva su propia marca, y el que pasa de uno a otro recibe
+     la guía que le toca en vez de ninguna. */
+  try{ if(papelElegido()==='lider' && puedeSerLider()) return LS_GUIA_LIDER; }catch(_e){}
+  return LS_GUIA;
 }
 function guiaYaVista(){ try{ return leer(_guiaLlave(),false)===true; }catch(_e){ return true; } }
 /* ══ BUSCAR SOLO DENTRO DE LO QUE SE VE ══════════════════════════
@@ -23355,25 +23419,74 @@ function _guiaEl(sel){
 }
 function pasosDeLaGuia(){
   var p=(document.querySelector('.pantalla.activa')||{}).id;
-  /* ── la casa del trabajador ── */
+
+  /* ══ LA CASA DEL TRABAJADOR ══════════════════════════════════════
+     Ocho paradas. El orden no es el de la pantalla: es el del día.
+     Primero lo que decide si puede empezar a trabajar, después lo que
+     lo protege, al final lo suyo. */
   if(p==='p-obra') return [
-    { sel:'#obra-qr', tit:'Tu credencial',
-      tx:'Este es tu QR. El supervisor lo escanea en la puerta y ve quién eres, de qué obra y qué tienes al día. Llévalo en el celular o bájalo en PDF.' },
-    { sel:'#obra-reportar', tit:'Si ves algo inseguro, repórtalo',
+    { sel:'.tw-hoy, .tw-qr-abre', tit:'1 · Lo primero de la mañana',
+      tx:'Acá dice si el ATS de hoy está liberado. Mientras no lo esté, tu tarea no debe empezar — y eso no es un consejo, es la ley.' },
+    { sel:'#obra-ats', tit:'2 · El ATS de tu tarea',
+      tx:'Los peligros de lo que vas a hacer hoy, con quién los liberó. Si tu obra trabaja en papel, acá está el modelo para copiarlo bien.' },
+    { sel:'#obra-quienes', tit:'3 · A quién acudir',
+      tx:'Quién es tu capataz, tu residente, tu supervisor SSOMA. Quién te representa ante el comité. Y los brigadistas, con su teléfono para llamar de un toque si pasa algo.' },
+    { sel:'#obra-reportar', tit:'4 · Si ves algo inseguro',
       tx:'Tomas la foto y listo. Puedes hacerlo sin dar tu nombre: lo que importa es que se levante, no quién avisó.' },
-    { sel:'#obra-docs', tit:'Los documentos que te deben entregar',
+    { sel:'#obra-docs', tit:'5 · Lo que te deben entregar',
       tx:'RISST, IPERC, PETS, mapa de riesgos. Los lees acá y tu constancia queda guardada, con tu firma y en PDF.' },
-    { sel:'#obra-guia-otra', tit:'Y si algo no se entiende',
-      tx:'Este botón vuelve a mostrarte esta guía cuando quieras. Abajo también está la salida, para cambiar de obra o de usuario.' }
+    { sel:'.tw-qr-abre', tit:'6 · Tu credencial',
+      tx:'Tu QR. El supervisor lo escanea en la puerta y ve quién eres, de qué obra y en qué estás capacitado. Funciona sin señal.' },
+    { sel:'#obra-racha', tit:'7 · Tu racha',
+      tx:'Cuenta los días que miraste tu zona, reportaste algo o confirmaste tu charla. No es un juego: es lo que tu empresa mira cuando decide a quién asciende.' },
+    { sel:'#obra-guia-otra', tit:'8 · Y si algo no se entiende',
+      tx:'Este botón te vuelve a mostrar esta guía cuando quieras. Abajo está la salida, para cambiar de obra o de usuario.' }
   ];
-  /* ── la casa del que gestiona ── */
+
+  var _lider = false;
+  try{ _lider = (papelElegido()==='lider' && puedeSerLider()); }catch(_e){}
+
+  /* ══ LA TORRE DEL LÍDER ══════════════════════════════════════════
+     El líder no dicta charlas: mira varias obras y decide dónde parar
+     el golpe. Su guía habla de comparar, no de ejecutar. */
+  if(_lider) return [
+    { sel:'#emp-home-panel', tit:'1 · Tu torre de control',
+      tx:'Desde acá ves todas tus obras a la vez. Lo que sale primero no es lo más nuevo: es lo que está peor.' },
+    { sel:'#emp-home-tit', tit:'2 · Cambiar de obra',
+      tx:'Toca el nombre para saltar entre obras. Cada una lleva su propio personal, su kardex y su comité: nada se mezcla, y eso es a propósito.' },
+    { sel:'.tablero-barra', tit:'3 · Los números del mes',
+      tx:'Reportes, capacitación, horas sin accidentes. Toca la barra para abrirlo o cerrarlo. Es lo que vas a pegar en tu informe.' },
+    { sel:'#acc-caja', tit:'4 · Lo que usas todos los días',
+      tx:'Desliza al costado para ver el resto, y toca el lápiz ✏️ para poner adelante lo tuyo. Cada obra puede tener accesos distintos.' },
+    { sel:'#aj-g1', tit:'5 · Tu equipo',
+      tx:'Acá invitas a tus supervisores y decides quién entra a cada obra. También se revoca desde acá, y conviene revisarlo cuando alguien se va.' },
+    { sel:'#aj-g2', tit:'6 · Los documentos de la obra',
+      tx:'RISST, IPERC, PETS, políticas. Lo que subas acá le aparece al trabajador en su celular, y su constancia de lectura queda guardada.' },
+    { sel:'#aj-g4', tit:'7 · Cómo se comporta la app',
+      tx:'El sello de tus fotos, el idioma, la apariencia y si el ATS de esta obra es digital o en papel. Se configura una vez por obra.' },
+    { sel:'#aj-g5', tit:'8 · Tu plan',
+      tx:'Cuánto llevas usado del mes y qué te abre el siguiente plan. Si un tope te frena a mitad de obra, acá se ve venir antes de que pase.' }
+  ];
+
+  /* ══ LA CASA DEL SUPERVISOR ══════════════════════════════════════
+     Él sí ejecuta: libera ATS, dicta charlas, levanta reportes. */
   return [
-    { sel:'.tablero-barra', tit:'El tablero de tu obra',
-      tx:'Acá están los números del mes. Toca esta barra para abrirlo o cerrarlo: arranca cerrado para que no te ocupe la pantalla.' },
-    { sel:'#acc-caja', tit:'Tus accesos rápidos',
-      tx:'Lo que usas todos los días. Desliza al costado para ver los siguientes nueve, y toca el lápiz ✏️ para elegir cuáles van adelante.' },
-    { sel:'.aj-cajones', tit:'Ajustes, en cuatro cajones',
-      tx:'Tu empresa, documentos, la app y tu plan. Todo lo que se configura vive acá adentro.' }
+    { sel:'#emp-saludo', tit:'1 · Esta es tu obra',
+      tx:'Todo lo que hagas acá queda firmado con tu nombre y con esta obra. Si mañana lo revisa un inspector, tiene que decir quién lo hizo.' },
+    { sel:'.tablero-barra', tit:'2 · El tablero del mes',
+      tx:'Los números de tu obra: reportes abiertos, capacitación al día, horas sin accidentes. Toca la barra para abrirlo o cerrarlo.' },
+    { sel:'#acc-caja', tit:'3 · Tus accesos rápidos',
+      tx:'Lo que usas todos los días. Desliza al costado para ver los siguientes, y toca el lápiz ✏️ para elegir cuáles van adelante.' },
+    { sel:'#aj-g1', tit:'4 · Tu personal',
+      tx:'Cárgalo antes de repartir el código de la obra. Si tu gente entra y no está en esta lista, te va a caer a todos en «esperando confirmación».' },
+    { sel:'#aj-g2', tit:'5 · Lo que le entregas a tu gente',
+      tx:'RISST, IPERC, PETS, boletines, noticias. Lo que subas le llega al celular de cada trabajador, y su constancia de lectura queda guardada.' },
+    { sel:'#aj-g4', tit:'6 · El ATS, digital o en papel',
+      tx:'Acá eliges cuál usa esta obra. Si tu cliente no acepta ATS virtual, ponlo en papel y a tu gente le aparecen tus modelos para copiar.' },
+    { sel:'#aj-g3', tit:'7 · Avisos y el comité',
+      tx:'Acá pones los recordatorios de la obra, y desde acá cargas el comité y la brigada. Publícalos: a tu gente le aparecen en «¿A quién acudo?» con el teléfono del brigadista.' },
+    { sel:'#aj-g5', tit:'8 · Tu plan y tus topes',
+      tx:'Cuánto llevas usado este mes. Conviene mirarlo antes de una semana grande, no cuando el tope te frena a mitad de un ATS.' }
   ];
 }
 function arrancarGuia(forzar){
@@ -25292,6 +25405,24 @@ function verGuionDelDia(i){
   abrirCharla(parseInt(a.tema,10));
 }
 
+function _chlInterruptor(){
+  var on = charlasContenidoAbierto();
+  return '<button type="button" class="cart-ir" style="margin-top:0;margin-bottom:14px" onclick="chlAbrirContenido()">'+
+    '<span class="ic">'+(on?'📖':'🔒')+'</span><span class="tx">'+
+    '<b>El guion, ¿lo puede leer tu gente?</b><small>'+
+    (on ? 'Ahora sí: el trabajador abre la charla y la lee completa.'
+        : 'Ahora no: el trabajador ve el calendario —cuándo le toca y de qué— pero el guion es solo tuyo.')+
+    '</small></span><span class="ch">'+(on?'Sí':'No')+'</span></button>';
+}
+function chlAbrirContenido(){
+  var on = charlasContenidoAbierto();
+  confirmar(on ? '¿Cerrar el guion?' : '¿Abrir el guion a tu gente?',
+    on ? 'El trabajador va a seguir viendo el calendario, pero ya no podrá abrir la charla.'
+       : 'El trabajador va a poder leer la charla completa antes de que se la dictes. '+
+         'A algunos les sirve para llegar preparados; a otros les quita el sentido a la charla. Tú conoces a tu gente.',
+    function(){ cfgObraPoner('charlasContenido', !on, function(){ pintarCharlas(); }); },
+    {si: on?'Sí, cerrarlo':'Sí, abrirlo', no:'Dejarlo como está', icono: on?'🔒':'📖'});
+}
 function pintarCharlas(){
   if(ROL==='col'){ pintarCharlasColab(); return; }
   var d=charlasDictadas(), h='', catActual='', chl=!charlasAbiertas();
@@ -25317,6 +25448,9 @@ function pintarCharlas(){
        '<b>'+(bloq?'🔒 ':(ya?'✅ ':''))+esc(c.titulo)+'</b>'+
        '<small>'+(bloq?'Se abre con el código':esc(c.acuerdo))+'</small></button>';
   });
+  /* el interruptor va arriba de la lista, donde el que programa lo ve */
+  try{ var _ci=$('charlas-sub');
+       if(_ci) _ci.innerHTML += '<div style="margin-top:12px">'+_chlInterruptor()+'</div>'; }catch(_ce){}
   $('lista-charlas').innerHTML=h;
 }
 
@@ -25346,7 +25480,7 @@ function pintarCharlasColab(){
               (iso===hoy?' · <b>hoy</b>':'');
       if(t==='charla'){
         var ch=charlaDe(parseInt(c.tema,10));
-        if(ch && charlaAbierta(ch.n)){
+        if(ch && charlaAbierta(ch.n) && charlasContenidoAbierto()){
           filas+='<button class="tarj vidrio" onclick="abrirCharla('+ch.n+')">'+
                  '<b>'+(d[ch.n]?'✅ ':'')+esc(ch.titulo)+'</b><small>'+pie+'</small></button>';
           return;
@@ -25361,7 +25495,10 @@ function pintarCharlasColab(){
   h=filas;
   $('charlas-sub').innerHTML='El programa de <b>'+esc(m.ob||'tu obra')+'</b>, hasta el '+
     fechaLarga(m.v)+'. Son <b>'+cuenta+'</b> actividad'+(cuenta===1?'':'es')+
-    ': las que puso tu supervisor en el calendario.';
+    ': las que puso tu supervisor en el calendario.'+
+    (charlasContenidoAbierto()
+      ? ' Las charlas las puedes abrir y leer.'
+      : ' El guion de cada charla lo lee quien la dicta; acá ves cuándo te toca y de qué es.');
   $('lista-charlas').innerHTML=h||'<span style="color:var(--gris)">El programa que te mandaron no tiene actividades.</span>';
 }
 
@@ -30148,7 +30285,7 @@ function prepBuzonSup(){
 }
 function pintarBuzonSup(error){
   var c=$('buzs-cuerpo'); if(!c) return;
-  var h='<h2>💬 Buzón de sugerencias</h2>'+
+  var h='<h2>💬 Buzón de quejas y sugerencias</h2>'+
     '<p class="sub">Lo que la gente de la obra no te dice en la cara. Llega sin nombre y así se queda: '+
     'la app no guarda quién lo escribió, ni su DNI, ni su aparato. Si lo guardara «por si acaso», '+
     'nadie escribiría lo que de verdad hay que oír.</p>';
@@ -30492,7 +30629,12 @@ function carrEntendido(enDetalle){
    trabajador exactamente eso, porque un buzón en el que no se confía
    está vacío.
    ════════════════════════════════════════════════════════════════ */
-var BUZ_TEMAS=['Un riesgo que nadie ve','Algo que se puede mejorar','Un EPP que falta',
+var /* «Sugerencias» a secas dejaba afuera media razón por la que alguien
+   abre este buzón. El que tiene una queja —que lo mandan sin arnés,
+   que el baño está inmundo, que su capataz lo trata mal— no encontraba
+   dónde ponerla y se la guardaba. Es el mismo buzón: lo que cambia es
+   que ahora lo dice. */
+BUZ_TEMAS=['Un riesgo que nadie ve','Una queja','Algo que se puede mejorar','Un EPP que falta',
                'Una máquina o herramienta','Trato y convivencia','Otra cosa'];
 var BUZ_TEMA='';
 
@@ -30501,7 +30643,7 @@ function abrirBuzon(){ BUZ_TEMA=''; ir('p-buzon'); }
 function pintarBuzon(){
   var c=$('buz-cuerpo'); if(!c) return;
   var e=empDeTrabajo();
-  var h='<h2>💬 Buzón de sugerencias</h2>'+
+  var h='<h2>💬 Quejas y sugerencias</h2>'+
     '<p class="sub">Lo que escribas llega a tu supervisor SSOMA y al líder de la obra <b>sin tu nombre</b>. '+
     'La app no manda tu DNI, ni tu nombre, ni nada de tu celular: solo el código de la obra y lo que escribiste. '+
     'Ni el supervisor ni nosotros podemos saber quién lo mandó.</p>';
@@ -30516,9 +30658,9 @@ function pintarBuzon(){
   });
   h+='</div>';
   h+='<label style="margin-top:14px">Cuéntalo con tus palabras</label>'+
-     '<textarea id="buz-x" rows="6" maxlength="3000" placeholder="En el frente 3 la escalera está suelta desde el lunes y nadie la amarra…"></textarea>'+
+     '<textarea id="buz-x" rows="6" maxlength="3000" placeholder="En el frente 3 la escalera está suelta desde el lunes y nadie la amarra. O lo que sea que te esté molestando…"></textarea>'+
      '<p class="sub" id="buz-msg" style="margin:8px 0 0;min-height:18px"></p>'+
-     '<button class="btn" style="margin:8px 0 0" onclick="mandarSugerencia()">Mandarla sin mi nombre</button>'+
+     '<button class="btn" style="margin:8px 0 0" onclick="mandarSugerencia()">Mandarlo sin mi nombre</button>'+
      '<button class="btn sec" style="margin:9px 0 0" onclick="ir(\'p-obra\')">Volver</button>';
   c.innerHTML=h;
 }
@@ -30535,7 +30677,7 @@ function mandarSugerencia(){
       if(r && r.ok===true){
         if($('buz-x')) $('buz-x').value='';
         BUZ_TEMA='';
-        aviso('Llegó', 'Tu sugerencia está en el buzón de la obra, sin tu nombre. Gracias por decirlo.', '💬',
+        aviso('Llegó', 'Está en el buzón de la obra, sin tu nombre. Gracias por decirlo.', '💬',
               function(){ ir('p-obra'); });
         return;
       }
@@ -32479,7 +32621,15 @@ function _atsReverso(doc, W, H, M, por){
   y += hH+hH2;
 
   var ids = (ATS.gente||[]).slice();
-  var gente = ids.map(function(id){ return (por[id]||{}).nombre || ''; });
+  /* Si la ficha de alguien todavía no la confirmó el supervisor, su
+     firma vale igual —la cuadrilla no puede quedarse parada esperando
+     un trámite— pero el papel tiene que decirlo. Un ATS que lleva un
+     nombre que nadie verificó y no lo advierte es peor que uno que sí
+     lo advierte. */
+  var gente = ids.map(function(id){
+    var t = por[id] || {};
+    return (t.nombre || '') + ((t.verificado === false) ? '  (pend. verificar)' : '');
+  });
   var firmas = ATS.firmas || {};
   var nF = Math.max(10, gente.length);
   var hF = Math.max(6.6, (H - M - 18 - y)/nF);
@@ -32977,7 +33127,43 @@ var _ATS_EXT = {};
    Viaja como una fila de sst_doc con hoja 'ats-cfg', que es la puerta
    que el trabajador ya puede leer con el código de su obra.        */
 var LS_ATSCFG = 'sstc_ats_modo';
-var ATSCFG = { modo:null, cargando:false, modelos:null };
+var ATSCFG = { modo:null, cargando:false, modelos:null, extra:null };
+
+/* ══════ LO QUE LA OBRA CONFIGURA, MÁS ALLÁ DEL ATS ════════════════
+   La hoja «ats-cfg» ya viaja al celular del trabajador y ya está en la
+   lista blanca del servidor. Su campo «nombre» lleva el modo del ATS
+   —papel o digital— y su «nota» estaba vacío. Ahí van el resto de los
+   interruptores de la obra, sin inventar otra hoja ni pedirle otra
+   migración a la base.                                             */
+function cfgObra(k, pordefecto){
+  var x = (typeof ATSCFG==='object' && ATSCFG.extra) ? ATSCFG.extra : null;
+  if(!x){ try{ x = (leer(LS_ATSCFG,null)||{}).extra || null; }catch(_e){ x=null; } }
+  if(!x || x[k]===undefined || x[k]===null) return pordefecto;
+  return x[k];
+}
+function cfgObraPoner(k, v, alTerminar){
+  var x = {};
+  try{ x = JSON.parse(JSON.stringify((typeof ATSCFG==='object' && ATSCFG.extra) || {})); }catch(_e){ x={}; }
+  x[k] = v;
+  if(typeof ATSCFG==='object') ATSCFG.extra = x;
+  try{ guardar(LS_ATSCFG, { modo: atsModoObra(), extra: x, t: Date.now() }); }catch(_g){}
+  var e = (typeof empActiva==='function') ? empActiva() : null;
+  if(!e || !e.id || typeof hayCuenta!=='function' || !hayCuenta()){ if(alTerminar) alTerminar(); return; }
+  var modo = atsModoObra();
+  sbGet('sst_doc?empresa=eq.'+encodeURIComponent(e.id)+'&hoja=eq.ats-cfg&select=id&limit=1')
+    .then(function(rows){
+      if(rows && rows[0] && rows[0].id)
+        return sbPatch('sst_doc?id=eq.'+encodeURIComponent(rows[0].id), { nota: JSON.stringify(x) });
+      return sbPost('sst_doc', { empresa:e.id, hoja:'ats-cfg', nombre:modo, nota: JSON.stringify(x) });
+    })
+    .then(function(){ if(alTerminar) alTerminar(); },
+          function(err){
+            aviso('No se pudo guardar', porQue(err)+' Queda puesto en este celular.', '📡');
+            if(alTerminar) alTerminar();
+          });
+}
+/* ¿el trabajador puede leer el guion de la charla, o solo el calendario? */
+function charlasContenidoAbierto(){ return cfgObra('charlasContenido', false) === true; }
 
 function atsModoObra(){
   if(ATSCFG.modo) return ATSCFG.modo;
@@ -32986,7 +33172,7 @@ function atsModoObra(){
 }
 function atsModoPoner(m){
   ATSCFG.modo = m;
-  try{ guardar(LS_ATSCFG, { modo:m, t:Date.now() }); }catch(e){}
+  try{ guardar(LS_ATSCFG, { modo:m, extra:(ATSCFG.extra||{}), t:Date.now() }); }catch(e){}
   var e = (typeof empActiva==='function') ? empActiva() : null;
   if(!e || !e.id || typeof hayCuenta!=='function' || !hayCuenta()){ pintarATS(); return; }
   /* una sola fila por obra: primero se busca la que haya */
@@ -32994,7 +33180,11 @@ function atsModoPoner(m){
     .then(function(rows){
       if(rows && rows[0] && rows[0].id)
         return sbPatch('sst_doc?id=eq.'+encodeURIComponent(rows[0].id), { nombre:m });
-      return sbPost('sst_doc', { empresa:e.id, hoja:'ats-cfg', nombre:m, nota:null });
+      /* nota lleva el resto de la configuración de la obra: si se pisa
+         con null, el interruptor de las charlas se borra al cambiar el
+         modo del ATS. */
+      return sbPost('sst_doc', { empresa:e.id, hoja:'ats-cfg', nombre:m,
+                                 nota: JSON.stringify(ATSCFG.extra||{}) });
     })
     .then(function(){ pintarATS(); },
           function(err){ aviso('No se pudo guardar', porQue(err)+' Queda puesto en este celular.', '📡'); pintarATS(); });
@@ -33009,7 +33199,12 @@ function atsCfgTraer(cuando){
       rows = rows || [];
       var cfg = null, mods = [];
       rows.forEach(function(d){
-        if(d.hoja === 'ats-cfg' && !cfg) cfg = String(d.nombre||'').toLowerCase();
+        if(d.hoja === 'ats-cfg' && !cfg){
+          cfg = String(d.nombre||'').toLowerCase();
+          var _x = d.nota;
+          if(typeof _x === 'string'){ try{ _x = JSON.parse(_x); }catch(_e){ _x = null; } }
+          ATSCFG.extra = (_x && typeof _x==='object') ? _x : {};
+        }
         if(d.hoja === 'ats-modelo'){
           var x = d.nota;
           if(typeof x === 'string'){ try{ x = JSON.parse(x); }catch(_e){ x = null; } }
@@ -37601,8 +37796,18 @@ function quienesPaquete(){
     .filter(function(p){ return p.vig; })          /* credencial vencida no se publica como brigadista */
     .map(function(p){ return { n:p.n, c:p.c||'', tel:p.tel||'', roles:p.roles||[] }; });
 
+  /* ── la línea de mando ──────────────────────────────────────────
+     El trabajador sabe quién es su capataz porque lo tiene al lado.
+     No siempre sabe quién es el residente, ni el de producción, ni el
+     de SSOMA — y son justo a los que hay que subir cuando el capataz
+     es el problema. Viaja con nombre, cargo y teléfono si lo cargaron;
+     sin DNI, como todo lo demás de esta hoja. */
+  var mando = (d.mando || []).filter(function(m){ return m && m.n; })
+    .map(function(m){ return { cargo:m.cargo||'', n:m.n, tel:m.tel||'' }; });
+
   return { v:1,
     tipo: toca.tipo,                 /* comite | subcomite | supervisor */
+    mando: mando,
     titulo: toca.nombre || 'Comité de SST',
     ley: toca.ley || '',
     obra: e ? (e.nombre||'') : '',
@@ -37616,7 +37821,7 @@ function quienesPaquete(){
 
 function quienesCuantos(){
   var p = quienesPaquete();
-  return { org:p.org.length, brig:p.brig.length, tipo:p.tipo };
+  return { org:p.org.length, brig:p.brig.length, mando:p.mando.length, tipo:p.tipo };
 }
 
 /* ── el supervisor lo publica ─────────────────────────────────────── */
@@ -37627,7 +37832,7 @@ function quienesPublicar(){
     aviso('Necesitas tu cuenta','Entra a tu cuenta para publicarlo en la obra.','🔑'); return; }
 
   var p = quienesPaquete();
-  if(!p.org.length && !p.brig.length){
+  if(!p.org.length && !p.brig.length && !p.mando.length){
     aviso('Todavía no hay a quién publicar',
           'Carga al comité (o al Supervisor de SST) y marca a los brigadistas en sus credenciales. '+
           'Entonces esto aparece en el celular de toda la obra.','👥'); return;
@@ -37715,6 +37920,7 @@ function pintarQuienes(){
          '<p class="sub" style="margin:6px 0 0">Pídeselo a tu supervisor: son tus representantes ante el comité '+
          'y los brigadistas que te auxilian si pasa algo. La ley manda que estén publicados donde los veas '+
          '(<span class="ley">D.S. 005-2012-TR, art. 45</span>).</p></div>'+
+         _quiPieSupervisor()+
          '<button class="btn sec" style="margin-top:14px" onclick="ir(\'p-obra\')">Volver</button>';
     c.innerHTML = h; return;
   }
@@ -37743,7 +37949,24 @@ function pintarQuienes(){
     if(p.emerg) h += '<a class="btn" style="margin-top:10px;display:block;text-align:center" href="tel:'+escA(p.emerg)+'">📞 Emergencia de la obra · '+esc(p.emerg)+'</a>';
   }
 
-  /* ── 2 · quién te representa ── */
+  /* ── 2 · quién manda en su frente ── */
+  var mando = p.mando || [];
+  if(mando.length){
+    h += '<div class="sec-tit" style="margin-top:24px">Quién manda en tu frente</div>';
+    h += '<p class="sub" style="margin:0 0 10px">De abajo hacia arriba. Si algo no se arregla con el primero, '+
+         'el siguiente es el que sigue — y si es un peligro que nadie quiere ver, tienes el buzón y tu comité.</p>';
+    h += '<div class="qui-gr">';
+    mando.forEach(function(m){
+      h += '<div class="qui-p">'+
+           '<div class="qui-ini" style="background:linear-gradient(135deg,#6b4ea8,#8a6fc4)">'+esc(_quiIni(m.n))+'</div>'+
+           '<div class="qui-tx"><b>'+esc(m.n)+'</b><small>'+esc(m.cargo||'—')+'</small></div>'+
+           (m.tel? '<a class="qui-tel" href="tel:'+escA(m.tel)+'">📞</a>' : '')+
+           '</div>';
+    });
+    h += '</div>';
+  }
+
+  /* ── 3 · quién te representa ── */
   var org = p.org || [];
   if(org.length){
     var esSup = (p.tipo==='supervisor');
@@ -37790,8 +38013,19 @@ function pintarQuienes(){
   if(p.ley) h += '<p class="sub" style="margin-top:14px;font-size:12.5px"><span class="ley">'+esc(p.ley)+'</span></p>';
   h += '<p class="sub" style="margin-top:6px;font-size:12px">Publicado por tu obra el '+
        esc((typeof fechaLarga==='function'? fechaLarga(p.al) : p.al)||'')+'.</p>';
+  h += _quiPieSupervisor();
   h += '<button class="btn sec" style="margin-top:12px" onclick="ir(\'p-obra\')">Volver</button>';
   c.innerHTML = h;
+}
+
+/* el que gestiona ve la misma pantalla que su gente —para saber qué
+   están viendo— y desde ahí edita */
+function _quiPieSupervisor(){
+  if(typeof hayCuenta!=='function' || !hayCuenta()) return '';
+  return '<button type="button" class="cart-ir" style="margin-top:16px" onclick="MANDO_EDITA=null;pintarMando()">'+
+    '<span class="ic">👷</span><span class="tx"><b>Editar la línea de mando</b>'+
+    '<small>Esto es lo que ve tu gente. Carga al capataz, al residente, al de producción.</small>'+
+    '</span><span class="ch">›</span></button>';
 }
 
 function _quiIni(n){
@@ -37815,6 +38049,105 @@ function _quiBotonPublicar(de){
     '<span class="ic">📣</span><span class="tx"><b>Publicarlo en los celulares de la obra</b>'+
     '<small>'+que+'. Le aparece a cualquiera que entre con el código, en «¿A quién acudo?». '+
     'Sin DNI.</small></span><span class="ch">›</span></button>';
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LA LÍNEA DE MANDO, DEL LADO DEL QUE LA CARGA
+   Se guarda dentro del comité de la obra (comiteLocal().mando), que ya
+   es por obra y ya sube solo a la nube. Un sitio menos que inventar.
+   ═══════════════════════════════════════════════════════════════════ */
+var MANDO_EDITA = null;
+
+function mandoLocal(){
+  var d = (typeof comiteLocal==='function') ? comiteLocal() : {};
+  return Array.isArray(d.mando) ? d.mando : [];
+}
+function mandoGuardar(a){
+  var d = comiteLocal();
+  d.mando = a;
+  comiteGuardar(d);
+}
+function mandoCargos(){
+  var base = (typeof CARGOS_SUGERIDOS!=='undefined') ? CARGOS_SUGERIDOS.slice() : [];
+  /* los de la obra primero: si el supervisor ya dijo qué cargos hay
+     aquí, esos son los que va a querer llenar */
+  var mios = (typeof cargosDeLaObra==='function' && cargosDeLaObra()) || [];
+  var out = mios.slice();
+  base.forEach(function(c){ if(out.indexOf(c)<0) out.push(c); });
+  return out;
+}
+
+function pintarMando(){
+  var c = $('quienes-cuerpo'); if(!c) return;
+  var a = mandoLocal();
+  var h = '<button class="btn sec" style="margin:0 0 14px" onclick="pintarQuienes()">‹ Volver</button>';
+  h += '<h2>👷 La línea de mando</h2>';
+  h += '<p class="sub">Quién es el capataz, el residente, el de producción, el de SSOMA. '+
+       'Tu gente los va a ver en «¿A quién acudo?» con su teléfono, para saber a quién subir cuando algo no se arregla abajo.</p>';
+
+  if(a.length){
+    h += '<div class="qui-gr" style="margin-top:16px">';
+    a.forEach(function(m,i){
+      h += '<div class="qui-p">'+
+           '<div class="qui-ini" style="background:linear-gradient(135deg,#6b4ea8,#8a6fc4)">'+esc(_quiIni(m.n))+'</div>'+
+           '<div class="qui-tx"><b>'+esc(m.n)+'</b><small>'+esc(m.cargo||'—')+(m.tel?' · '+esc(m.tel):'')+'</small></div>'+
+           '<button type="button" class="qui-tel" style="background:rgba(var(--w),.08);border-color:rgba(var(--w),.14)" '+
+             'onclick="mandoEditar('+i+')">✏️</button>'+
+           '</div>';
+    });
+    h += '</div>';
+    h += '<p class="sub" style="margin-top:8px;font-size:12.5px">El orden es el que ves: pon abajo al que está más cerca del trabajador.</p>';
+  } else {
+    h += '<div class="caja vidrio" style="padding:18px;margin-top:16px"><b>Todavía no cargaste a nadie.</b>'+
+         '<p class="sub" style="margin:8px 0 0">Empieza por el capataz: es el que tu gente tiene al lado y el primero al que van a acudir.</p></div>';
+  }
+
+  var ed = (MANDO_EDITA!==null) ? (a[MANDO_EDITA]||{}) : {};
+  h += '<div class="sec-tit" style="margin-top:22px">'+(MANDO_EDITA!==null?'Editar':'Agregar a alguien')+'</div>';
+  h += '<label>Cargo</label><select id="mn-cargo">'+
+       mandoCargos().map(function(x){
+         return '<option value="'+escA(x)+'"'+((ed.cargo===x)?' selected':'')+'>'+esc(x)+'</option>';
+       }).join('')+'</select>';
+  h += '<label style="margin-top:12px">Nombre</label><input id="mn-n" placeholder="Ing. Marta Salas" value="'+escA(ed.n||'')+'">';
+  h += '<label style="margin-top:12px">Teléfono <span style="font-weight:400;color:var(--gris)">(opcional)</span></label>'+
+       '<input id="mn-tel" inputmode="tel" placeholder="987654321" value="'+escA(ed.tel||'')+'">';
+  h += '<div class="esc-acc" style="margin-top:12px">'+
+       '<button class="btn" style="margin:0" onclick="mandoGuardarUno()">'+(MANDO_EDITA!==null?'Guardar':'Agregar')+'</button>'+
+       (MANDO_EDITA!==null
+         ? '<button class="btn sec" style="margin:0" onclick="mandoQuitar()">Quitarlo</button>'
+         : '')+
+       '</div>';
+  if(MANDO_EDITA!==null)
+    h += '<button class="btn sec" style="margin-top:9px" onclick="MANDO_EDITA=null;pintarMando()">Cancelar</button>';
+
+  if(a.length)
+    h += '<button type="button" class="cart-ir" style="margin-top:20px" onclick="quienesPublicar()">'+
+         '<span class="ic">📣</span><span class="tx"><b>Publicarlo en los celulares de la obra</b>'+
+         '<small>Va junto con el comité y la brigada, en «¿A quién acudo?».</small></span><span class="ch">›</span></button>';
+  c.innerHTML = h;
+}
+
+function mandoEditar(i){ MANDO_EDITA = i; pintarMando(); }
+
+function mandoGuardarUno(){
+  var n = (($('mn-n')||{}).value||'').trim();
+  if(n.length < 3){ aviso('Falta el nombre','Escribe el nombre completo de la persona.','✏️'); return; }
+  var m = { cargo: (($('mn-cargo')||{}).value||''), n: n,
+            tel: (($('mn-tel')||{}).value||'').trim() };
+  var a = mandoLocal().slice();
+  if(MANDO_EDITA!==null) a[MANDO_EDITA] = m; else a.push(m);
+  mandoGuardar(a);
+  MANDO_EDITA = null;
+  pintarMando();
+}
+
+function mandoQuitar(){
+  if(MANDO_EDITA===null) return;
+  var a = mandoLocal().slice(), quien = a[MANDO_EDITA];
+  confirmar('¿Quitar a '+((quien&&quien.n)||'esta persona')+'?',
+    'Deja de salir en la línea de mando. Si ya lo publicaste, vuelve a publicar para que desaparezca del celular de tu gente.',
+    function(){ a.splice(MANDO_EDITA,1); mandoGuardar(a); MANDO_EDITA=null; pintarMando(); },
+    {si:'Sí, quitarlo', no:'Dejarlo', icono:'👷'});
 }
 /* <<< QUIENES-FIN >>> */
 function pintarBrigada(){
@@ -38301,36 +38634,499 @@ var LS_MITRAB='sstc_mi_trabajador';
 function yo(){ var x=leer(LS_MITRAB,null); return (x && x.dni) ? x : null; }
 function guardarYo(o){ guardar(LS_MITRAB,o); }
 
+/* >>> IDENTIDAD-INI (lo re-inyecta armar.py, no editar a mano) <<< */
+/* ═══════════════════════════════════════════════════════════════════
+   QUIÉN ES EL QUE ESTÁ ENTRANDO
+   ───────────────────────────────────────────────────────────────────
+   Antes el trabajador escribía su nombre a mano y ese nombre no tenía
+   nada que ver con la ficha que la empresa guarda de él. Sus
+   constancias salían a un nombre que el kardex no reconocía, así que
+   su capacitación no llegaba a su fila y el supervisor se la volvía a
+   programar.
+
+   Ahora entra con su documento. El servidor busca su ficha en la obra
+   y le enseña cómo se llama según la empresa, para que él lo confirme.
+   Si no está, entra igual —nadie se queda en la puerta a las 6 a.m.—
+   pero marcado como no verificado hasta que el supervisor lo confirme.
+
+   La clave: un PIN de seis dígitos. Supabase exige ocho caracteres con
+   mayúscula, minúscula y número, así que el PIN se envuelve acá antes
+   de mandarlo. Seis y no cuatro porque el documento es público: con
+   cuatro son diez mil combinaciones, con seis un millón.
+   ═══════════════════════════════════════════════════════════════════ */
+
+var ID = { paso:'doc', cod:'', td:'DNI', doc:'', ficha:null, foto:null,
+           nombre:'', apell:'', correo:'', cargando:false, msg:'', msgMal:true };
+
+function _idNorm(td, v){
+  v = String(v||'').trim();
+  return (td==='DNI') ? v.replace(/\D/g,'') : v.toUpperCase().replace(/[^A-Z0-9]/g,'');
+}
+/* el correo de la cuenta cuando el trabajador no da uno suyo.
+   «.invalid» está reservado por norma (RFC 2606): no existe y no puede
+   existir, así que no le estamos escribiendo a nadie por accidente. */
+function _idCorreoSint(doc){ return 'd' + String(doc||'').toLowerCase() + '@obrasst.invalid'; }
+/* la envoltura del PIN. No agrega secreto —el molde está en el código
+   publicado— solo hace que el PIN pase la política de Supabase. */
+function _idClave(pin){ return 'Ob' + String(pin||'') + 'x'; }
+
+function _idPinOk(p){
+  p = String(p||'');
+  if(!/^\d{6}$/.test(p)) return 'El PIN son 6 números.';
+  if(/^(\d)\1{5}$/.test(p)) return 'Ese PIN es el mismo número seis veces. Pon otro.';
+  if('012345678901234567'.indexOf(p)>=0 || '987654321098765432'.indexOf(p)>=0)
+    return 'Ese PIN es una escalera de números. Pon otro.';
+  if(ID.doc && ID.doc.indexOf(p)>=0) return 'Ese PIN sale de tu propio documento, que cualquiera ve. Pon otro.';
+  return '';
+}
+
+function _idParteNombre(oficial){
+  var t = String(oficial||'').trim();
+  var c = t.indexOf(',');
+  if(c > 0) return { a: t.slice(0,c).trim(), n: t.slice(c+1).trim() };
+  return { a:'', n:t };
+}
+
+function _idDi(txt, mal){ ID.msg=txt||''; ID.msgMal=(mal!==false); idPintar(); }
+
+/* ── la pantalla, que es una sola con varios pasos ────────────────── */
+function idPintar(){
+  var act = (document.querySelector('.pantalla.activa')||{}).id;
+  var c = $(act==='p-trab-entrar' ? 'trabentrar2-cuerpo' : 'trabentrar-cuerpo');
+  if(!c) return;
+  var h = '';
+  var msg = ID.msg ? '<p class="sub" style="margin:10px 0 0;color:'+
+    (ID.msgMal?'var(--mal)':'var(--gris)')+'">'+esc(ID.msg)+'</p>' : '<p class="sub" style="min-height:18px;margin:10px 0 0"></p>';
+
+  if(ID.paso==='doc'){
+    var e = leer(LS_EMP,null);
+    h += '<h2>🏗️ Entra a tu obra</h2>';
+    h += '<p class="sub">Con el código que te dio tu supervisor y tu documento. Tu nombre lo pone la empresa: así tus capacitaciones quedan a tu nombre de verdad.</p>';
+    h += '<label>Código de la obra</label>'+
+         '<input id="id-cod" placeholder="ABC-DEF" autocomplete="off" spellcheck="false" value="'+escA(ID.cod||(e&&e.codigo)||'')+'" '+
+         'style="text-align:center;letter-spacing:.14em;text-transform:uppercase;font-weight:700;font-size:18px">';
+    h += '<div class="dos" style="margin-top:14px"><div><label>Documento</label><select id="id-td">'+
+         ['DNI','CE','PTP','Pasaporte'].map(function(t){
+           return '<option value="'+t+'"'+(ID.td===t?' selected':'')+'>'+(t==='CE'?'Carné de extranjería':t)+'</option>';
+         }).join('')+'</select></div>'+
+         '<div><label>Número</label><input id="id-doc" maxlength="14" inputmode="numeric" placeholder="70123456" value="'+escA(ID.doc)+'"></div></div>';
+    h += msg;
+    h += '<button class="btn" style="margin-top:12px" onclick="idBuscar()">Continuar ▸</button>';
+    h += '<div class="sec-tit" style="margin-top:22px">¿Ya entraste antes?</div>'+
+         '<button class="btn sec" style="margin-top:0" onclick="ID.paso=\'volver\';ID.msg=\'\';idPintar()">Entrar con mi PIN</button>';
+    c.innerHTML = h;
+    return;
+  }
+
+  if(ID.paso==='confirmar'){
+    var f = ID.ficha||{};
+    var p = _idParteNombre(f.nombre);
+    h += '<h2>¿Eres tú?</h2>';
+    h += '<p class="sub">Así te tiene registrado tu empresa.</p>';
+    h += '<div class="caja vidrio" style="padding:18px;margin-top:14px;text-align:center">'+
+         '<div class="qui-ini" style="margin:0 auto 10px;width:52px;height:52px;flex:none;font-size:18px">'+
+           esc(((p.n||'?')[0]||'?')+((p.a||' ')[0]||'')) + '</div>'+
+         '<b style="font-size:17px;line-height:1.3;display:block">'+esc(f.nombre||'')+'</b>'+
+         (f.puesto?'<p class="sub" style="margin:6px 0 0">'+esc(f.puesto)+'</p>':'')+
+         (f.proyecto?'<p class="sub" style="margin:2px 0 0">'+esc(f.proyecto)+'</p>':'')+
+         '</div>';
+    h += msg;
+    h += '<button class="btn" style="margin-top:14px" onclick="ID.paso=\'clave\';ID.msg=\'\';idPintar()">Sí, soy yo ▸</button>';
+    h += '<button class="btn sec" style="margin-top:9px" onclick="idNoSoyYo()">No soy yo</button>';
+    c.innerHTML = h;
+    return;
+  }
+
+  if(ID.paso==='nombre'){
+    h += '<h2>No estás en la lista todavía</h2>';
+    h += '<p class="sub">Tu empresa no te cargó aún. Entras igual: escribe tu nombre y tu supervisor lo confirma después. '+
+         'Mientras tanto puedes ver todo y reportar — lo que se emita a tu nombre espera esa confirmación.</p>';
+    h += '<div class="dos" style="margin-top:14px">'+
+         '<div><label>Nombres</label><input id="id-n" placeholder="Juan Carlos" value="'+escA(ID.nombre)+'"></div>'+
+         '<div><label>Apellidos</label><input id="id-a" placeholder="Pérez Quispe" value="'+escA(ID.apell)+'"></div></div>';
+    h += msg;
+    h += '<button class="btn" style="margin-top:12px" onclick="idNombreListo()">Continuar ▸</button>';
+    h += '<button class="btn sec" style="margin-top:9px" onclick="ID.paso=\'doc\';ID.msg=\'\';idPintar()">‹ Volver</button>';
+    c.innerHTML = h;
+    return;
+  }
+
+  if(ID.paso==='clave'){
+    h += '<h2>🔒 Tu PIN</h2>';
+    h += '<p class="sub">Seis números que solo tú sepas. Con esto vuelves a entrar desde cualquier celular, y con esto firmas. '+
+         '<b>No pongas tu fecha de nacimiento ni parte de tu documento</b>: eso lo sabe cualquiera en la obra.</p>';
+    h += '<div class="dos" style="margin-top:14px">'+
+         '<div><label>PIN</label><input id="id-pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" style="text-align:center;letter-spacing:.5em;font-size:20px"></div>'+
+         '<div><label>Otra vez</label><input id="id-pin2" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" style="text-align:center;letter-spacing:.5em;font-size:20px"></div></div>';
+    h += '<div class="sec-tit" style="margin-top:20px">Tu foto</div>';
+    h += '<p class="sub" style="margin:0 0 9px">Le sirve a tu supervisor para reconocerte, y va en tu credencial. Puedes ponerla después.</p>';
+    h += ID.foto
+       ? '<img src="'+ID.foto+'" alt="Tu foto" style="width:96px;height:96px;object-fit:cover;border-radius:50%;display:block;margin:0 auto 8px">'+
+         '<button class="btn sec" style="margin:0" onclick="ID.foto=null;idPintar()">Quitar la foto</button>'
+       : '<input id="id-foto" type="file" accept="image/*" capture="user" style="display:none" onchange="idFoto(this)">'+
+         '<button class="btn sec" style="margin:0" onclick="document.getElementById(\'id-foto\').click()">📷 Tomarme la foto</button>';
+    h += '<div class="sec-tit" style="margin-top:20px">Tu correo <span style="font-weight:400;color:var(--gris)">(si tienes)</span></div>';
+    h += '<p class="sub" style="margin:0 0 7px">Sirve para recuperar tu PIN sin pedirle nada a nadie. Si no pones ninguno, el que te lo reinicia es tu supervisor.</p>';
+    h += '<input id="id-correo" type="email" inputmode="email" placeholder="tucorreo@gmail.com" value="'+escA(ID.correo)+'">';
+    h += msg;
+    h += '<button class="btn" style="margin-top:12px" onclick="idCrear()">Entrar a mi obra ▸</button>';
+    c.innerHTML = h;
+    return;
+  }
+
+  /* volver a entrar: un solo casillero, como Binance o Facebook */
+  h += '<h2>🔑 Entrar</h2>';
+  h += '<p class="sub">Con tu documento, tu celular o tu correo — lo que te acuerdes — y tu PIN.</p>';
+  h += '<label>Documento, celular o correo</label>'+
+       '<input id="id-quien" autocomplete="username" placeholder="70123456" value="'+escA(ID.doc)+'">';
+  h += '<label style="margin-top:12px">Tu PIN</label>'+
+       '<input id="id-pinv" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="••••••" style="text-align:center;letter-spacing:.5em;font-size:20px">';
+  h += msg;
+  h += '<button class="btn" style="margin-top:12px" onclick="idVolver()">Entrar ▸</button>';
+  h += '<button class="btn sec" style="margin-top:9px" onclick="ID.paso=\'doc\';ID.msg=\'\';idPintar()">Es mi primera vez en esta obra</button>';
+  h += '<p class="sub" style="margin-top:14px;font-size:12.5px">¿Olvidaste el PIN? Tu supervisor te lo reinicia desde su app en un toque.</p>';
+  c.innerHTML = h;
+}
+
+/* ── paso 1: buscar la ficha ──────────────────────────────────────── */
+function idBuscar(){
+  var cod = _norm(($('id-cod')||{}).value||'');
+  if(cod.length>=6) cod = cod.slice(0,3)+'-'+cod.slice(3,6);
+  ID.cod = cod;
+  ID.td  = (($('id-td')||{}).value)||'DNI';
+  ID.doc = _idNorm(ID.td, ($('id-doc')||{}).value);
+  if(!cod){ _idDi('Escribe el código de tu obra.'); return; }
+  if(ID.td==='DNI' && ID.doc.length!==8){ _idDi('El DNI son 8 dígitos, sin puntos ni guiones.'); return; }
+  if(ID.td!=='DNI' && ID.doc.length<6){ _idDi('Escribe tu número de documento completo.'); return; }
+  _idDi('Buscándote en la obra…', false);
+  sbRpc('sst_trab_buscar', {p_cod:cod, p_td:ID.td, p_doc:ID.doc})
+    .then(function(j){
+      if(!j || !j.ok){
+        if(j && j.motivo==='codigo_no_existe'){ _idDi('Ese código no existe. Revísalo con tu supervisor.'); return; }
+        if(j && j.motivo==='muy_seguido'){ _idDi('Demasiados intentos. Espera unos minutos.'); return; }
+        _idDi('No se pudo buscar. Inténtalo otra vez.'); return;
+      }
+      if(j.estado==='cesado'){
+        _idDi('Tu ficha en esta obra figura como cesada. Habla con tu supervisor.'); return;
+      }
+      if(j.estado==='no_esta'){ ID.ficha=null; ID.paso='nombre'; ID.msg=''; idPintar(); return; }
+      if(j.ya_tiene_cuenta){
+        ID.ficha=j; ID.paso='volver';
+        _idDi('Ya hay una cuenta con ese documento. Entra con tu PIN.', false); return;
+      }
+      ID.ficha=j; ID.paso='confirmar'; ID.msg=''; idPintar();
+    })
+    .catch(function(err){ _idDi('No hubo señal. Inténtalo otra vez en un rato.'); });
+}
+
+function idNoSoyYo(){
+  aviso('Entonces hay algo que corregir',
+    'Ese documento está cargado a nombre de otra persona en esta obra. Avísale a tu supervisor antes de seguir: '+
+    'si entras igual, tus constancias saldrían con el nombre equivocado.', '⚠️',
+    function(){ ID.paso='doc'; ID.ficha=null; ID.msg=''; idPintar(); });
+}
+
+function idNombreListo(){
+  ID.nombre = (($('id-n')||{}).value||'').trim();
+  ID.apell  = (($('id-a')||{}).value||'').trim();
+  if(ID.nombre.length<2 || ID.apell.length<2){ _idDi('Escribe tus nombres y tus apellidos.'); return; }
+  ID.paso='clave'; ID.msg=''; idPintar();
+}
+
+function idFoto(inp){
+  var f = inp && inp.files && inp.files[0]; if(!f) return;
+  _idDi('Preparando la foto…', false);
+  fotoDeArchivo(f, 600, 0.8).then(function(du){ ID.foto=du; ID.msg=''; idPintar(); },
+                                 function(){ _idDi('No se pudo leer esa foto. Prueba otra vez.'); });
+}
+
+/* ── paso 2: crear la cuenta y enlazarla con la ficha ─────────────── */
+function idCrear(){
+  if(ID.cargando) return;
+  var pin  = (($('id-pin')||{}).value||'').trim();
+  var pin2 = (($('id-pin2')||{}).value||'').trim();
+  ID.correo = (($('id-correo')||{}).value||'').trim().toLowerCase();
+  var mal = _idPinOk(pin);
+  if(mal){ _idDi(mal); return; }
+  if(pin!==pin2){ _idDi('Los dos PIN no son iguales.'); return; }
+  if(ID.correo && (ID.correo.indexOf('@')<1 || ID.correo.indexOf('.')<2)){
+    _idDi('Ese correo no se ve bien. Bórralo si no quieres poner ninguno.'); return; }
+
+  ID.cargando = true;
+  _idDi('Creando tu acceso…', false);
+  /* el rol PRIMERO: en cuanto haya token, hayCuenta() tiene que poder
+     contestar «no, este es un trabajador». Si se deja para el final,
+     entre el alta y el enlace la app lo trata como gestor. */
+  ROL='col'; try{ guardar(LS_ROL,'col'); }catch(_r){}
+  var correoCuenta = ID.correo || _idCorreoSint(ID.doc);
+
+  authPost('signup', { email: correoCuenta, password: _idClave(pin) })
+    .then(function(j){
+      /* Supabase puede devolver el alta sin sesión: entonces se entra. */
+      if(j && j.access_token) return j;
+      return authPost('token?grant_type=password', { email: correoCuenta, password: _idClave(pin) });
+    })
+    .then(function(j){
+      guardarToken(j);
+      return _idSubirFoto();
+    })
+    .then(function(fotoUrl){
+      return sbRpc('sst_trab_enlazar', {
+        p_cod: ID.cod, p_td: ID.td, p_doc: ID.doc,
+        p_nombre: (ID.apell ? (ID.apell + ', ' + ID.nombre) : ID.nombre),
+        p_correo: ID.correo || null, p_foto: fotoUrl || null, p_cel: null });
+    })
+    .then(function(j){
+      ID.cargando = false;
+      if(!j || !j.ok){
+        if(j && j.motivo==='ficha_ocupada'){
+          _idDi('Ese documento ya está enlazado a otra cuenta. Habla con tu supervisor.'); return; }
+        _idDi('Tu acceso quedó creado, pero no se pudo enlazar con la obra. Inténtalo otra vez.'); return;
+      }
+      _idListo(j);
+    })
+    .catch(function(err){
+      ID.cargando = false;
+      var m = (err && (err.msg || err.error_description || err.message)) || '';
+      if(/registered|already/i.test(m)){
+        ID.paso='volver';
+        _idDi('Ya existe una cuenta con ese documento. Entra con tu PIN.', false); return;
+      }
+      if(/weak|password/i.test(m)){ _idDi('Ese PIN no fue aceptado. Prueba con otros seis números.'); return; }
+      _idDi('No se pudo crear tu acceso. ¿Hay señal? Inténtalo otra vez.');
+    });
+}
+
+function _idSubirFoto(){
+  if(!ID.foto) return Promise.resolve(null);
+  try{
+    var f = _dataURLaArchivo(ID.foto, 'yo.jpg');
+    return subirFoto('trabajadores', f).catch(function(){ return null; });
+  }catch(_e){ return Promise.resolve(null); }
+}
+
+/* ── volver a entrar: un casillero para todo ──────────────────────── */
+function idVolver(){
+  if(ID.cargando) return;
+  var quien = (($('id-quien')||{}).value||'').trim();
+  var pin   = (($('id-pinv')||{}).value||'').trim();
+  if(!quien){ _idDi('Escribe tu documento, tu celular o tu correo.'); return; }
+  if(!/^\d{6}$/.test(pin)){ _idDi('El PIN son 6 números.'); return; }
+  ID.cargando = true;
+  _idDi('Entrando…', false);
+  ROL='col'; try{ guardar(LS_ROL,'col'); }catch(_r){}
+
+  /* si trae arroba es un correo y no hay nada que resolver; si no,
+     el servidor dice a qué cuenta apunta ese documento o ese celular */
+  var buscarCorreo = (quien.indexOf('@')>0)
+    ? Promise.resolve(quien.toLowerCase())
+    : sbRpc('sst_alias_correo', {p_alias: quien.toLowerCase().replace(/[^0-9a-z]/g,'')})
+        .then(function(j){ return (j && j.ok) ? j.correo : null; });
+
+  buscarCorreo
+    .then(function(correo){
+      if(!correo) return Promise.reject({noHay:true});
+      return authPost('token?grant_type=password', {email:correo, password:_idClave(pin)});
+    })
+    .then(function(j){ guardarToken(j); return _idMiFicha(); })
+    .then(function(f){
+      ID.cargando = false;
+      if(!f){ _idDi('Entraste, pero no encontramos tu ficha. Escribe el código de tu obra.'); ID.paso='doc'; return; }
+      _idListo(f);
+    })
+    .catch(function(err){
+      ID.cargando = false;
+      /* misma respuesta si el usuario no existe o si el PIN está mal:
+         decir cuál de los dos falló es regalar media llave */
+      _idDi('Ese documento o ese PIN no coinciden. Revísalos.');
+    });
+}
+
+/* con su token ya puede leer SU ficha por RLS: no hace falta un RPC */
+function _idMiFicha(){
+  return sbGet('sst_trabajador?select=id,nombre,dni,td,puesto,area,proyecto,verificado,duenio&limit=1')
+    .then(function(rows){
+      var t = rows && rows[0]; if(!t) return null;
+      return { ok:true, trab:t.id, nombre:t.nombre, verificado:t.verificado,
+               puesto:t.puesto, proyecto:t.proyecto, dni:t.dni, td:t.td, duenio:t.duenio };
+    })
+    .catch(function(){ return null; });
+}
+
+/* ── ya está adentro ──────────────────────────────────────────────── */
+function _idListo(j){
+  var oficial = j.nombre || (ID.apell ? (ID.apell+', '+ID.nombre) : ID.nombre);
+  var p = _idParteNombre(oficial);
+  guardarYo({ n: p.n || oficial, a: p.a || '', dni: ID.doc || j.dni || '',
+              td: ID.td || j.td || 'DNI', c: j.puesto || '',
+              trab: j.trab || null, verificado: j.verificado !== false,
+              proyecto: j.proyecto || '' });
+  ROL='col'; guardar(LS_ROL,'col');
+  var seguir = function(){
+    ID.paso='doc'; ID.msg=''; ID.foto=null;
+    if(j.verificado === false){
+      aviso('Entraste', 'Tu supervisor todavía tiene que confirmarte. Mientras tanto puedes ver todo y reportar; '+
+            'lo que se emita a tu nombre —tu constancia, tu firma en el ATS— espera esa confirmación.', '⏳',
+            function(){ ir('p-obra'); });
+    } else {
+      ir('p-obra');
+    }
+  };
+  /* si ya tiene obra guardada seguimos; si no, se resuelve por el código */
+  var e = leer(LS_EMP,null);
+  if(e && e.id && (!ID.cod || e.codigo===ID.cod)){ seguir(); return; }
+  sbRpc('sst_resolver',{cod:ID.cod}).then(function(rows){
+    if(rows && rows.length) guardar(LS_EMP,{codigo:ID.cod, id:rows[0].id, nombre:rows[0].nombre});
+    seguir();
+  }, seguir);
+}
+
+/* el PIN al firmar: se pide de verdad contra el servidor, no contra
+   una copia en el celular, que se puede editar con las herramientas
+   del navegador. */
+function idPedirPin(porQue, alDarlo){
+  var y = (typeof yo==='function') ? yo() : null;
+  if(!y || !hayCuentaTrab()){ if(alDarlo) alDarlo(); return; }
+  preguntar('Tu PIN', porQue || 'Escribe tu PIN para firmar.', '', function(pin){
+    pin = String(pin||'').trim();
+    if(!/^\d{6}$/.test(pin)){ aviso('PIN incorrecto','El PIN son 6 números.','🔒'); return; }
+    var correo = (TOK && TOK.correo) || _idCorreoSint(y.dni);
+    authPost('token?grant_type=password', {email:correo, password:_idClave(pin)})
+      .then(function(j){ guardarToken(j); if(alDarlo) alDarlo(); },
+            function(){ aviso('PIN incorrecto','Ese no es tu PIN. Si lo olvidaste, tu supervisor te lo reinicia.','🔒'); });
+  }, '🔒');
+  /* el casillero del aviso es de texto: para un PIN tiene que taparse */
+  try{ var _i=$('avisof-inp');
+       if(_i){ _i.type='password'; _i.inputMode='numeric'; _i.maxLength=6;
+               _i.style.textAlign='center'; _i.style.letterSpacing='.5em'; } }catch(_e){}
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LA BANDEJA: LOS QUE ENTRARON SIN ESTAR EN LA LISTA
+   Nadie se queda en la puerta a las 6 a.m., pero tampoco se le emite
+   una constancia a alguien que nadie miró. Acá el supervisor cierra
+   esa brecha en un toque.
+   ═══════════════════════════════════════════════════════════════════ */
+var PEND = { lista:null, cargando:false, error:'' };
+
+function prepTrabPend(){
+  PEND.lista=null; PEND.error=''; pintarTrabPend();
+  var e = (typeof empActiva==='function') ? empActiva() : null;
+  if(!e || !e.id || !hayCuenta()){ PEND.lista=[]; pintarTrabPend(); return; }
+  if(PEND.cargando) return;
+  PEND.cargando = true;
+  sbRpc('sst_trab_pendientes', {p_emp:e.id})
+    .then(function(j){
+      PEND.cargando=false;
+      PEND.lista = (j && j.ok) ? (j.lista||[]) : [];
+      if(j && !j.ok) PEND.error = (j.motivo==='no_eres_miembro') ? 'no_eres' : 'raro';
+      pintarTrabPend(); pendGlobito();
+    }, function(){ PEND.cargando=false; PEND.lista=[]; PEND.error='sin_senal'; pintarTrabPend(); });
+}
+
+function pendCuantos(){ return (PEND.lista||[]).length; }
+
+/* el mismo número rojo que llevan los reportes, en el acceso de personal */
+function pendGlobito(){
+  try{
+    var n = pendCuantos(), aros = document.querySelectorAll('.acceso');
+    for(var i=0;i<aros.length;i++){
+      var b=aros[i], et=(b.textContent||''), viejo=b.querySelector('.pend-num');
+      if(/Personal|Trabajadores/i.test(et) && n>0){
+        if(!viejo){ var s=document.createElement('span'); s.className='aviso-num pend-num';
+          var aro=b.querySelector('.aro'); (aro||b).appendChild(s); viejo=s; }
+        viejo.textContent = n>99 ? '99+' : String(n);
+      } else if(viejo){ viejo.parentNode.removeChild(viejo); }
+    }
+  }catch(_e){}
+}
+
+function pintarTrabPend(){
+  var c = $('trabpend-cuerpo'); if(!c) return;
+  var h = '<h2>⏳ Esperando que los confirmes</h2>';
+  h += '<p class="sub">Entraron con el código de la obra y su documento, pero no estaban en tu registro de personal. '+
+       'Mientras no los confirmes pueden ver todo y reportar, pero su firma en el ATS sale marcada y no se les emite constancia.</p>';
+
+  if(PEND.lista===null){ c.innerHTML = h+'<p class="sub" style="margin-top:16px">Cargando…</p>'; return; }
+  if(PEND.error==='sin_senal'){
+    c.innerHTML = h+'<div class="aviso" style="margin-top:16px">No se pudo traer la lista. ¿Hay señal?</div>'+
+      '<button class="btn sec" style="margin-top:12px" onclick="prepTrabPend()">Probar otra vez</button>'; return;
+  }
+  if(!PEND.lista.length){
+    c.innerHTML = h+'<div class="caja vidrio" style="padding:18px;margin-top:16px"><b>No hay nadie esperando.</b>'+
+      '<p class="sub" style="margin:8px 0 0">Cuando alguien entre con un documento que no está en tu personal, aparece acá.</p></div>'+
+      '<button class="btn sec" style="margin-top:14px" onclick="ir(\'p-trabajadores\')">Ver mi personal</button>';
+    return;
+  }
+
+  h += '<div class="sec-tit" style="margin-top:20px">'+PEND.lista.length+' esperando</div>';
+  PEND.lista.forEach(function(p, i){
+    var par = p.parecidos || [];
+    h += '<div class="caja vidrio" style="padding:15px;margin-top:12px">';
+    h += '<div class="qui-p" style="border:0;background:none;padding:0;margin:0">'+
+         (p.foto_url
+            ? '<img src="'+escA(p.foto_url)+'" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex:0 0 44px">'
+            : '<div class="qui-ini">'+esc(_quiIni(p.nombre))+'</div>')+
+         '<div class="qui-tx"><b>'+esc(p.nombre||'(sin nombre)')+'</b>'+
+         '<small>'+esc(p.td||'DNI')+' '+esc(p.doc)+(p.correo?' · '+esc(p.correo):'')+'</small></div></div>';
+
+    if(par.length){
+      h += '<div class="sec-tit" style="margin-top:14px;font-size:12px">¿Es alguno de estos que ya tienes?</div>';
+      par.forEach(function(t){
+        h += '<button class="btn sec" style="margin:7px 0 0;text-align:left" '+
+             'onclick="pendResolver(\''+escA(p.id)+'\',\'fundir\',\''+escA(t.id)+'\')">'+
+             '🔗 Sí, es '+esc(t.nombre)+(t.dni?' · '+esc(t.dni):'')+'</button>';
+      });
+    }
+    h += '<div class="esc-acc" style="margin-top:12px">'+
+         '<button class="btn" style="margin:0" onclick="pendResolver(\''+escA(p.id)+'\',\'confirmar\',null)">✓ Es de mi obra</button>'+
+         '<button class="btn sec" style="margin:0" onclick="pendResolver(\''+escA(p.id)+'\',\'rechazar\',null)">No es de acá</button>'+
+         '</div>';
+    h += '</div>';
+  });
+  h += '<button class="btn sec" style="margin-top:16px" onclick="prepTrabPend()">↻ Actualizar</button>';
+  c.innerHTML = h;
+}
+
+function pendResolver(id, accion, ficha){
+  var hacerlo = function(){
+    sbRpc('sst_trab_resolver', {p_id:id, p_accion:accion, p_ficha:ficha||null})
+      .then(function(j){
+        if(!j || !j.ok){ aviso('No se pudo', 'El servidor contestó: '+((j&&j.motivo)||'algo raro')+'.', '⚠️'); return; }
+        /* la ficha nueva o fundida cambia el personal: hay que volver a bajarlo */
+        try{ if(typeof bajarTrabajadores==='function') bajarTrabajadores(); }catch(_b){}
+        prepTrabPend();
+      }, function(){ aviso('No se pudo', 'No hubo señal. Inténtalo otra vez.', '📡'); });
+  };
+  if(accion==='rechazar'){
+    confirmar('¿No es de esta obra?',
+      'Se le cierra el acceso: la próxima vez que entre con ese documento no va a poder. '+
+      'Si es de la obra y solo está mal escrito, mejor confírmalo y corrige su ficha después.',
+      hacerlo, {si:'Sí, sacarlo', no:'Cancelar', icono:'🚫'});
+    return;
+  }
+  if(accion==='fundir'){
+    confirmar('¿Es la misma persona?',
+      'Su cuenta pasa a la ficha que ya tenías, con su kardex y sus constancias. La ficha que se creó sola se retira '+
+      'para que no te quede el mismo hombre dos veces.',
+      hacerlo, {si:'Sí, es la misma', no:'Cancelar', icono:'🔗'});
+    return;
+  }
+  hacerlo();
+}
+/* <<< IDENTIDAD-FIN >>> */
 function pintarTrabEntrar(){
-  /* la misma ficha sirve para entrar la primera vez (p-colab) y para
-     cambiar de obra despues (p-trab-entrar) */
-  var act=(document.querySelector('.pantalla.activa')||{}).id;
-  var c=$(act==='p-trab-entrar' ? 'trabentrar2-cuerpo' : 'trabentrar-cuerpo'); if(!c) return;
-  var e=leer(LS_EMP,null), y=yo()||{};
-  var h='<h2>🏗️ Entra a tu obra</h2>';
-  h+='<p class="sub">El código te lo da tu supervisor. Tus datos quedan en <b>este</b> celular y sirven para tu QR y para tus constancias.</p>';
-  h+='<label>Código de la obra</label>'+
-     '<input id="tw-cod" placeholder="ABC-DEF" autocomplete="off" spellcheck="false" value="'+escA((e&&e.codigo)||'')+'" '+
-     'style="text-align:center;letter-spacing:.14em;text-transform:uppercase;font-weight:700;font-size:18px">';
-  h+='<div class="sec-tit" style="margin-top:18px">Tus datos</div>';
-  h+='<div class="dos"><div><label>Nombres</label><input id="tw-n" placeholder="Juan Carlos" value="'+escA(y.n||'')+'"></div>'+
-     '<div><label>Apellidos</label><input id="tw-a" placeholder="Pérez Quispe" value="'+escA(y.a||'')+'"></div></div>';
-  h+='<div class="dos"><div><label>Documento</label><select id="tw-td">'+
-     ['DNI','CE','PTP','Pasaporte'].map(function(t){
-       return '<option value="'+t+'"'+((y.td||'DNI')===t?' selected':'')+'>'+(t==='CE'?'Carné de extranjería':t)+'</option>';
-     }).join('')+'</select></div>'+
-     '<div><label>Número</label><input id="tw-d" maxlength="14" placeholder="70123456" value="'+escA(y.dni||'')+'"></div></div>';
-  h+='<p class="sub" style="font-size:12.5px;margin-top:6px">Tu documento es lo que te identifica: con él la app sabe cuál QR mostrarte y a nombre de quién van tus constancias. Si eres extranjero, elige carné de extranjería, PTP o pasaporte.</p>';
-  h+='<label>Cargo (opcional)</label><input id="tw-c" placeholder="Operario" value="'+escA(y.c||'')+'">';
-  h+='<div id="tw-msg" style="font-size:14px;margin:10px 0"></div>';
-  h+='<button class="btn" onclick="entrarAMiObra()">Entrar a mi obra ▸</button>';
-  h+='<div class="sec-tit" style="margin-top:22px">¿Te pasaron otro código?</div>'+
-     '<p class="sub" style="margin-top:-4px">Si lo que te mandaron es el código de una <b>evaluación</b> o un enlace de WhatsApp, pégalo acá.</p>'+
-     '<input id="tr-cod" placeholder="TU CÓDIGO" autocomplete="off" spellcheck="false" '+
-     'style="text-align:center;letter-spacing:.16em;text-transform:uppercase;font-weight:700">'+
-     '<div id="tr-cod-msg" style="font-size:13.5px;margin:8px 0 0"></div>'+
-     '<button class="btn sec" onclick="entrarCodigoTrab()" style="margin-top:9px">Abrir ese código</button>';
-  c.innerHTML=h;
+  /* La ficha de antes pedía el nombre a mano y no miraba el registro de
+     la empresa: el trabajador escribía «Juan Perez», la planilla decía
+     «PÉREZ QUISPE, JUAN CARLOS», y sus constancias salían a nombre de
+     alguien que el kardex no reconocía. Ahora lo lleva idPintar(), que
+     entra por el documento y deja que sea la empresa la que diga cómo
+     se llama. */
+  if(!ID.cod){ var _e=leer(LS_EMP,null); if(_e && _e.codigo) ID.cod=_e.codigo; }
+  if(!ID.doc){ var _y=(typeof yo==='function')?yo():null; if(_y && _y.dni) ID.doc=_y.dni; }
+  /* el que ya entró alguna vez arranca en «entrar con mi PIN» */
+  if(ID.paso==='doc' && hayCuentaTrab()) ID.paso='volver';
+  idPintar();
 }
 function entrarAMiObra(){
   var cod=_norm(($('tw-cod').value||''));
@@ -38488,7 +39284,7 @@ function tarjetaRacha(){
   var n=viva?r.dias:0;
   var hito=hitoDeRacha(n);
   var col = n>=30 ? 'var(--ok)' : (n>=7 ? 'var(--oro)' : 'var(--cel)');
-  var h='<div class="caja vidrio" style="padding:14px 15px;margin-top:14px">';
+  var h='<div class="caja vidrio" id="obra-racha" style="padding:14px 15px;margin-top:14px">';
   h+='<div style="display:flex;align-items:center;gap:14px">';
   h+='<div style="width:56px;height:56px;border-radius:14px;flex:none;display:flex;flex-direction:column;'+
      'align-items:center;justify-content:center;background:rgba(var(--p),.14);border:1px solid rgba(var(--sep),.35)">'+
@@ -38716,7 +39512,7 @@ function pintarObra(){
     {ic:'📚', t:'Documentos',  s:'RISST, IPERC, PETS',  f:"ir('p-docs-obra')", id:'obra-docs'},
     {ic:'🗓️', t:'Charlas', s:'Qué toca hoy',  f:"charlasDesdeObra()"},
     {ic:'📝', t:'Evaluación', s:'Con el código', f:"evaluacionDesdeObra()"},
-    {ic:'💬', t:'Buzón',      s:'Sin tu nombre',    f:"abrirBuzon()"},
+    {ic:'💬', t:'Buzón',      s:'Quejas y sugerencias', f:"abrirBuzon()"},
     {ic:'📰', t:'Noticias',    s:'Avisos de la obra',   f:"ir('p-noticias')"}
   ];
   if(hechas.length) tiles.push({ic:'✅', t:'Constancias', s:hechas.length+' guardada'+(hechas.length===1?'':'s'), f:"ir('p-difusiones')"});
@@ -46552,7 +47348,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='b905123353';
+var SELLO_APP='9b0e51e601';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
