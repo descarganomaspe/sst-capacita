@@ -8985,7 +8985,7 @@ var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-
             'p-final':1,'p-firma':1,'p-listo':1,'p-charlas':1,'p-charla':1,'p-programa':1,
             'p-trab-empresa':1,'p-reporte':1,'p-reporte-nuevo':1,'p-sector':1,
             'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,
-            'p-obra':1,'p-ats-dia':1,'p-carrete':1,'p-boletin':1,'p-buzon':1,'p-quienes':1,'p-camara':1,'p-sello':1,'p-idioma':1,'p-scan':1,'p-scan-pdf':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1,
+            'p-obra':1,'p-ats-dia':1,'p-carrete':1,'p-boletin':1,'p-buzon':1,'p-quienes':1,'p-msds':1,'p-camara':1,'p-sello':1,'p-idioma':1,'p-scan':1,'p-scan-pdf':1,'p-difusion':1,'p-difusiones':1,'p-noticias':1,'p-trab-entrar':1,'p-docs-obra':1,'p-gestor':1,'p-verificar':1,
             'p-normas':1,'p-norma':1,'p-procedimientos':1,'p-proc':1,
             /* el cartel del almacén lo escanea el trabajador, no el gestor:
                si esta pantalla no está abierta para él, el QR no sirve */
@@ -27077,8 +27077,9 @@ function activarAvisosDelCelular(){
   pedirPermisoAvisos().then(function(r){
     if(r==='granted'){
       m.style.color='var(--ok)';
-      m.textContent='Listo. Mientras tengas la app abierta te avisamos apenas entre un reporte, y el número sale sobre el ícono.';
+      m.textContent='Listo. Mientras tengas la app abierta te avisamos de lo que entre, y el número sale sobre el ícono.';
       arrancarVigilanciaReportes();
+      try{ arrancarVigilanciaTrab(); }catch(_vt2){}
       avisarEnPantalla('Avisos activados','Aquí te van a llegar los reportes nuevos de '+nombreDeLaObra()+'.');
     } else if(r==='denied'){
       m.style.color='#d68e1a';
@@ -27291,8 +27292,11 @@ function revisarSugerenciasNuevas(silencioso){
       if(!v.ids || !v.ids.length){ buzVistosSet({ids:a.map(function(r){return r.id;})}); return 0; }
       if(nuevas.length && !silencioso){
         var u=nuevas[0];
+        var _esQueja = /queja|trato|convivencia/i.test(String(u.tema||''));
         avisoSistema(
-          nuevas.length===1 ? 'Alguien escribió al buzón' : (nuevas.length+' mensajes nuevos en el buzón'),
+          nuevas.length===1
+            ? (_esQueja ? 'Se recibió una queja' : 'Se recibió una sugerencia')
+            : (nuevas.length+' mensajes nuevos en el buzón'),
           (u.tema? u.tema+'\n' : '')+String(u.texto||'').slice(0,110),
           { tag:'obrasst-buzon', ir:'p-buzon-sup' });
       }
@@ -27320,7 +27324,7 @@ function revisarReportesNuevos(silencioso){
   if(!e || !hayCuenta() || AVISO_PIDIENDO) return Promise.resolve(0);
   AVISO_PIDIENDO=true;
   return sbGet('sst_reporte?empresa=eq.'+encodeURIComponent(e.id)+
-               '&estado=neq.atendido&select=id,clase,descripcion,lugar,fecha&order=creado.desc&limit=60')
+               '&estado=neq.atendido&select=id,clase,descripcion,lugar,fecha,autor,anonimo&order=creado.desc&limit=60')
     .then(function(a){
       AVISO_PIDIENDO=false;
       a=a||[];
@@ -27337,10 +27341,13 @@ function revisarReportesNuevos(silencioso){
       }
       if(nuevos.length && !silencioso){
         var uno=nuevos[0];
+        var quien = uno.anonimo ? 'Un trabajador (sin su nombre)'
+                                : (String(uno.autor||'').trim() || 'Un trabajador');
+        var que = (uno.clase==='acto'?'acto inseguro':'condición insegura');
         avisarEnPantalla(
-          nuevos.length===1 ? 'Reporte nuevo en la obra' : (nuevos.length+' reportes nuevos en la obra'),
-          (uno.clase==='acto'?'Acto inseguro':'Condición insegura')+
-          (uno.lugar? ' · '+uno.lugar : '')+'\n'+String(uno.descripcion||'').slice(0,110));
+          nuevos.length===1 ? (quien+' reportó un '+que)
+                            : (nuevos.length+' reportes nuevos en la obra'),
+          (uno.lugar? uno.lugar+'\n' : '')+String(uno.descripcion||'').slice(0,110));
       }
       repVistosSet({n:a.length, ids:a.map(function(r){return r.id;})});
       return nuevos.length;
@@ -30639,6 +30646,14 @@ BUZ_TEMAS=['Un riesgo que nadie ve','Una queja','Algo que se puede mejorar','Un 
 var BUZ_TEMA='';
 
 function abrirBuzon(){ BUZ_TEMA=''; ir('p-buzon'); }
+/* El trabajador entra a las hojas por el mismo sitio que el gestor, pero
+   sus productos los trae el código de la obra. Se piden al abrir y no
+   antes: en obra la señal es cara y esto puede ser una lista larga. */
+function abrirMsdsTrab(){
+  ir('p-msds');
+  cargarQuimicos().then(function(){ try{ pintarMsds(); }catch(_e){} },
+                        function(){ try{ pintarMsds(); }catch(_e){} });
+}
 
 function pintarBuzon(){
   var c=$('buz-cuerpo'); if(!c) return;
@@ -39114,6 +39129,124 @@ function pendResolver(id, accion, ficha){
   }
   hacerlo();
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   LOS AVISOS DEL TRABAJADOR
+   El supervisor tenía vigilancia de reportes y de buzón; el trabajador
+   no tenía nada. Se le publica un boletín, una noticia, se cambia el
+   comité o la brigada, y él se enteraba la próxima vez que abriera la
+   app y se pusiera a mirar.
+
+   OJO CON LO QUE ESTO ES Y LO QUE NO: esto avisa mientras la app está
+   ABIERTA. Para que le llegue con la app cerrada hace falta Web Push
+   —claves VAPID, suscripción y un servidor que empuje—, que es otro
+   trabajo. Decirlo acá para que nadie lo prometa de más.
+   ═══════════════════════════════════════════════════════════════════ */
+var TRAB_TIMER=null, TRAB_PIDIENDO=false;
+var LS_TRAB_VISTO='sstc_trab_visto';
+
+function _trabVisto(){
+  var e=(typeof empDeTrabajo==='function')?empDeTrabajo():null;
+  var k=LS_TRAB_VISTO+'_'+((e&&e.codigo)||'x');
+  var v=null; try{ v=leer(k,null); }catch(_e){}
+  return { k:k, v:(v||{bol:[], noti:[], quienes:'', visto:false}) };
+}
+function _trabVistoSet(k, v){
+  /* «ya miré una vez» tiene que ser una marca propia, no deducirse de
+     que las listas estén vacías. Con lo segundo, una obra recién
+     abierta —sin boletines, sin noticias, sin comité— se quedaba para
+     siempre en «primera vuelta», y el primer boletín que publicaran no
+     avisaba nunca. Justo el día que más importa. */
+  try{ guardar(k, {bol:(v.bol||[]).slice(0,120), noti:(v.noti||[]).slice(0,120),
+                   quienes:v.quienes||'', visto:true}); }catch(_e){}
+}
+
+function revisarNovedadesTrab(silencioso){
+  var e=(typeof empDeTrabajo==='function')?empDeTrabajo():null;
+  if(!e || !e.codigo || ROL!=='col' || TRAB_PIDIENDO) return Promise.resolve(0);
+  if(typeof yo!=='function' || !yo()) return Promise.resolve(0);
+  TRAB_PIDIENDO=true;
+  var g=_trabVisto(), k=g.k, v=g.v, primera = (v.visto !== true);
+  var cuantas=0;
+
+  return Promise.all([
+    sbRpc('sst_boletines_publicos', {p_cod:e.codigo}).catch(function(){ return null; }),
+    sbRpc('sst_docs_obra', {p_cod:e.codigo}).catch(function(){ return null; })
+  ]).then(function(r){
+    TRAB_PIDIENDO=false;
+    var bol=r[0], docs=r[1];
+
+    /* ── boletines ── */
+    if(Array.isArray(bol)){
+      var viejos={}; (v.bol||[]).forEach(function(x){ viejos[x]=1; });
+      var nuevos=bol.filter(function(b){ return b && b.id && !viejos[b.id]; });
+      if(nuevos.length && !primera && !silencioso){
+        cuantas+=nuevos.length;
+        avisoSistema(
+          nuevos.length===1 ? 'Boletín nuevo en tu obra' : (nuevos.length+' boletines nuevos en tu obra'),
+          String(nuevos[0].titulo||'').slice(0,110) || 'Ábrelo: tu supervisor necesita tu acuse.',
+          { tag:'obrasst-boletin', ir:'p-carrete' });
+      }
+      v.bol = bol.map(function(b){ return b.id; });
+    }
+
+    if(Array.isArray(docs)){
+      /* ── noticias ── */
+      var noti = docs.filter(function(d){ return d.hoja==='noticias'; });
+      var vn={}; (v.noti||[]).forEach(function(x){ vn[x]=1; });
+      var nn = noti.filter(function(d){ return d && d.id && !vn[d.id]; });
+      if(nn.length && !primera && !silencioso){
+        cuantas+=nn.length;
+        avisoSistema(
+          nn.length===1 ? 'Noticia nueva en tu obra' : (nn.length+' noticias nuevas en tu obra'),
+          String(nn[0].nombre||'').slice(0,110),
+          { tag:'obrasst-noticia', ir:'p-noticias' });
+      }
+      v.noti = noti.map(function(d){ return d.id; });
+
+      /* ── el comité, la brigada y la línea de mando ── */
+      var q = docs.filter(function(d){ return d.hoja==='quienes'; })[0];
+      if(q){
+        var sello='';
+        try{
+          var pq = (typeof q.nota==='string') ? JSON.parse(q.nota) : q.nota;
+          sello = (pq && pq.al ? pq.al : '') + '|' +
+                  ((pq && pq.org ? pq.org.length : 0)) + '|' +
+                  ((pq && pq.brig ? pq.brig.length : 0)) + '|' +
+                  ((pq && pq.mando ? pq.mando.length : 0));
+        }catch(_e){ sello = String(q.creado||''); }
+        if(sello && v.quienes && sello!==v.quienes && !silencioso){
+          cuantas++;
+          avisoSistema('Tu obra actualizó quién es quién',
+            'Cambió el comité, la brigada o la línea de mando. Míralo: son a quienes tienes que acudir.',
+            { tag:'obrasst-quienes', ir:'p-quienes' });
+          /* que la pantalla se rearme con lo nuevo la próxima vez */
+          try{ QUIENES.pedido=false; QUIENES.dato=null; }catch(_q){}
+        }
+        v.quienes = sello;
+      }
+    }
+
+    _trabVistoSet(k, v);
+    return cuantas;
+  }, function(){ TRAB_PIDIENDO=false; return 0; });
+}
+
+function arrancarVigilanciaTrab(){
+  if(TRAB_TIMER) return;
+  /* la primera vuelta solo toma nota: nadie quiere doce avisos de
+     boletines viejos al instalar la app */
+  revisarNovedadesTrab(true);
+  TRAB_TIMER=setInterval(function(){
+    if(document.hidden) return;
+    revisarNovedadesTrab(false);
+  }, 240000);
+  try{
+    document.addEventListener('visibilitychange', function(){
+      if(!document.hidden) revisarNovedadesTrab(false);
+    });
+  }catch(_v){}
+}
 /* <<< IDENTIDAD-FIN >>> */
 function pintarTrabEntrar(){
   /* La ficha de antes pedía el nombre a mano y no miraba el registro de
@@ -39445,6 +39578,10 @@ function pintarObra(){
        baja a la rejilla, como una opción más. */
   var pend=0;
   try{ pend=carrPendientes(); }catch(_p){}
+  /* los avisos de su obra: boletines, noticias y los cambios de comité,
+     brigada y línea de mando. Igual que la del supervisor, vive mientras
+     la app esté abierta. */
+  try{ if(typeof arrancarVigilanciaTrab==='function') arrancarVigilanciaTrab(); }catch(_vt){}
   var papel = (typeof ATSCFG==='object' && ATSCFG.modo === 'papel');
   var A = papel ? null : _obraHoy();
 
@@ -39510,6 +39647,7 @@ function pintarObra(){
     {ic:'🆘', t:'¿A quién acudo?', s:'Brigada y comité', f:"abrirQuienes()", cl:'rojo', id:'obra-quienes'},
     {ic:'📰', t:'Boletines',   s:'El mural de la obra', f:"abrirCarrete()", n:pend},
     {ic:'📚', t:'Documentos',  s:'RISST, IPERC, PETS',  f:"ir('p-docs-obra')", id:'obra-docs'},
+    {ic:'🧪', t:'Hojas MSDS',  s:'De los productos de tu obra', f:"abrirMsdsTrab()", id:'obra-msds'},
     {ic:'🗓️', t:'Charlas', s:'Qué toca hoy',  f:"charlasDesdeObra()"},
     {ic:'📝', t:'Evaluación', s:'Con el código', f:"evaluacionDesdeObra()"},
     {ic:'💬', t:'Buzón',      s:'Quejas y sugerencias', f:"abrirBuzon()"},
@@ -44928,7 +45066,19 @@ var NF_TXT={
 function _quimSel(){ return 'id,producto,proveedor,ficha_url,nota'+(QUIM_EXTRA_OK===false?'':',extra'); }
 function cargarQuimicos(){
   var e=_quimEmp();
-  if(!e || !e.id || !hayCuenta()) return Promise.resolve(quimLocal());
+  if(!e || !e.id) return Promise.resolve(quimLocal());
+  /* el trabajador no tiene cuenta de empresa: entra por el código de
+     su obra, y el servidor le devuelve SOLO lo que subió su empresa */
+  if(!hayCuenta()){
+    if(!e.codigo) return Promise.resolve(quimLocal());
+    return sbRpc('sst_msds_obra', {p_cod:e.codigo})
+      .then(function(j){
+        if(!j || !j.ok) return quimLocal();
+        var a=(j.lista||[]).map(_quimNormal);
+        a.sort(function(x,y){ return _norm(x.producto).localeCompare(_norm(y.producto)); });
+        quimSet(a); return a;
+      }, function(){ return quimLocal(); });
+  }
   return sbGet('sst_msds?empresa=eq.'+encodeURIComponent(e.id)+'&select='+_quimSel()+'&order=producto')
     .then(function(rows){
       if(QUIM_EXTRA_OK===null) QUIM_EXTRA_OK=true;
@@ -45023,7 +45173,10 @@ function pintarMsds(){
      producto», en el paso 1. Quien entra a Químicos ve su lista vacía y
      concluye, con toda la lógica del mundo, que no hay ningún catálogo.
      Ahora la puerta está aquí, con el número a la vista. */
-  var puerta='<div class="io-grupo" style="margin-top:12px">'+
+  /* El trabajador entra a mirar: las hojas son suyas porque a él se las
+     piden. Cargar productos y el catálogo son del que administra. */
+  var _mio = (typeof hayCuenta==='function') ? hayCuenta() : true;
+  var puerta = !_mio ? '' : '<div class="io-grupo" style="margin-top:12px">'+
     '<button type="button" class="io-fila" onclick="abrirCatalogoSolo()">'+
       '<span class="io-ic morado">&#128214;</span>'+
       '<span class="io-tx"><b>Catálogo de químicos de obra</b>'+
@@ -45033,9 +45186,13 @@ function pintarMsds(){
   if(!todos.length){
     cont.innerHTML='<div class="io-grupo"><div class="io-vacio">'+
       '<span class="em">&#129514;</span><b>Todav&#237;a no hay productos</b>'+
-      '<p>Los de tu almac&#233;n los cargas t&#250;: cada hoja MSDS es la de TU proveedor. '+
-      'Para no empezar de cero, el cat&#225;logo de abajo trae '+SGA.cat.length+' productos de obra ya clasificados.</p></div></div>'+
-      '<button type="button" class="io-bt pri" onclick="nuevoQuimico()">&#65291; Agregar el primer producto</button>'+
+      (_mio
+        ? '<p>Los de tu almac&#233;n los cargas t&#250;: cada hoja MSDS es la de TU proveedor. '+
+          'Para no empezar de cero, el cat&#225;logo de abajo trae '+SGA.cat.length+' productos de obra ya clasificados.</p>'
+        : '<p>Tu obra todav&#237;a no carg&#243; ninguna hoja de seguridad. P&#237;deselas a tu supervisor: '+
+          'si te piden la hoja de un producto y no la tienes, el que queda mal parado eres t&#250;.</p>')+
+      '</div></div>'+
+      (_mio ? '<button type="button" class="io-bt pri" onclick="nuevoQuimico()">&#65291; Agregar el primer producto</button>' : '')+
       puerta;
     return;
   }
@@ -45059,7 +45216,7 @@ function pintarMsds(){
        '<span class="io-chev">&#8250;</span></button>';
   });
   h+='</div>';
-  h+='<button type="button" class="io-bt sec" onclick="nuevoQuimico()">&#65291; Agregar un producto</button>';
+  if(_mio) h+='<button type="button" class="io-bt sec" onclick="nuevoQuimico()">&#65291; Agregar un producto</button>';
   h+=puerta;
   cont.innerHTML=h;
 }
@@ -47367,7 +47524,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='466fb44a64';
+var SELLO_APP='19f84b4558';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
