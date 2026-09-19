@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OBRASST · Portal</title>
+<meta name="description" content="El portal de OBRASST: lo que la obra registra en la app, en tu pantalla, al instante.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../icono-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   OBRASST · el portal
+   Blanco, sobrio, de escritorio. El único color de marca es el
+   petróleo de la app, que acá es tinta y no fondo. El amarillo del
+   casco no se usa como texto —no contrasta sobre blanco—: es una
+   marca, una raya, un punto.
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  --fondo:#F6F8FA;       /* la mesa */
+  --panel:#FFFFFF;       /* cada tarjeta y tabla */
+  --raya:#E3E8EC;        /* filetes */
+  --raya2:#CBD4DB;
+  --tinta:#0B2A3A;       /* petróleo: títulos, botón primario */
+  --texto:#22323D;
+  --gris:#6B7C88;
+  --gris2:#98A7B1;
+  --casco:#F5B700;       /* solo como marca */
+  --ok:#1E8E5A; --ok-f:#E8F5EE;
+  --ojo:#B7791F; --ojo-f:#FBF3E4;
+  --mal:#C6323A; --mal-f:#FBE9EA;
+  --azul:#2563A8; --azul-f:#E9F0FA;
+  --sombra:0 1px 2px rgba(11,42,58,.06), 0 8px 24px -16px rgba(11,42,58,.18);
+  --f:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --rail:248px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--fondo); color:var(--texto);
+  font-family:var(--f); font-size:14.5px; line-height:1.55;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+h1,h2,h3{color:var(--tinta); font-weight:600; letter-spacing:-.01em; margin:0; text-wrap:balance}
+h1{font-size:22px} h2{font-size:17px} h3{font-size:14.5px}
+a{color:var(--azul)}
+button{font-family:inherit; font-size:inherit}
+[hidden]{display:none !important}
+:focus-visible{outline:2px solid var(--azul); outline-offset:2px; border-radius:4px}
+
+/* ── botones ── */
+.bt{
+  -webkit-appearance:none; appearance:none; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  font-weight:500; font-size:14px; line-height:1;
+  color:#fff; background:var(--tinta); border:1px solid var(--tinta);
+  border-radius:8px; padding:10px 16px; white-space:nowrap;
+  transition:background .12s, border-color .12s;
+}
+.bt:hover{background:#123B50}
+.bt.sec{background:var(--panel); color:var(--tinta); border-color:var(--raya2)}
+.bt.sec:hover{background:var(--fondo)}
+.bt.chico{padding:7px 11px; font-size:13px; border-radius:7px}
+.bt[disabled]{opacity:.55; cursor:default}
+
+/* ── campos ── */
+label{display:block; font-size:12.5px; font-weight:500; color:var(--gris); margin:0 0 6px; letter-spacing:.01em}
+input,select{
+  width:100%; font-family:inherit; font-size:14.5px; color:var(--texto);
+  background:var(--panel); border:1px solid var(--raya2); border-radius:8px;
+  padding:10px 12px; outline:none; transition:border-color .12s, box-shadow .12s;
+}
+input:focus,select:focus{border-color:var(--azul); box-shadow:0 0 0 3px rgba(37,99,168,.12)}
+input::placeholder{color:var(--gris2)}
+.campo{margin:0 0 14px}
+.ayuda{font-size:12.5px; color:var(--gris); margin:6px 0 0; line-height:1.5}
+.error{
+  font-size:13.5px; color:var(--mal); background:var(--mal-f);
+  border:1px solid #F0C9CC; border-radius:8px; padding:10px 12px; margin:0 0 14px; line-height:1.5;
+}
+
+/* ══ LA ENTRADA ═══════════════════════════════════════════════════ */
+#entrada{
+  min-height:100%; display:grid; place-items:center; padding:32px 16px;
+}
+.ent-caja{
+  width:100%; max-width:400px; background:var(--panel);
+  border:1px solid var(--raya); border-radius:14px; box-shadow:var(--sombra);
+  padding:34px 32px 28px;
+}
+.marca{display:flex; align-items:center; gap:11px; margin:0 0 26px}
+.marca-ic{
+  width:38px; height:38px; border-radius:10px; background:var(--tinta);
+  display:grid; place-items:center; flex:0 0 auto;
+}
+.marca-ic i{display:block; width:18px; height:5px; background:var(--casco); border-radius:2px}
+.marca b{display:block; font-size:17px; color:var(--tinta); letter-spacing:.04em}
+.marca small{display:block; font-size:12px; color:var(--gris); margin-top:1px}
+.ent-caja h1{font-size:20px; margin:0 0 4px}
+.ent-caja .sub{color:var(--gris); font-size:14px; margin:0 0 24px; line-height:1.5}
+.ent-pie{margin:22px 0 0; padding-top:16px; border-top:1px solid var(--raya); font-size:12.5px; color:var(--gris); line-height:1.6}
+.ent-pie a{color:var(--gris)}
+
+/* ══ EL ARMAZÓN ═══════════════════════════════════════════════════ */
+#portal{display:none; min-height:100%}
+#portal.on{display:grid; grid-template-columns:var(--rail) 1fr; grid-template-rows:56px 1fr}
+.barra{
+  grid-column:1 / -1; display:flex; align-items:center; gap:14px;
+  background:var(--panel); border-bottom:1px solid var(--raya); padding:0 20px;
+  position:sticky; top:0; z-index:5;
+}
+.barra .marca{margin:0; gap:9px}
+.barra .marca-ic{width:30px; height:30px; border-radius:8px}
+.barra .marca-ic i{width:14px; height:4px}
+.barra .marca b{font-size:14.5px}
+.barra .marca small{display:none}
+.obra-sel{
+  display:flex; align-items:center; gap:10px; margin-left:8px;
+  padding:6px 10px 6px 12px; border:1px solid var(--raya); border-radius:8px; background:var(--fondo);
+  max-width:360px;
+}
+.obra-sel select{border:0; background:transparent; padding:0; font-weight:500; color:var(--tinta); width:auto; max-width:260px}
+.obra-sel select:focus{box-shadow:none}
+.papel{
+  font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase;
+  padding:4px 9px; border-radius:999px; background:var(--azul-f); color:var(--azul);
+}
+.papel.lider{background:#FFF4CC; color:#7A5A00}
+.vivo{
+  margin-left:auto; display:inline-flex; align-items:center; gap:7px;
+  font-size:12.5px; color:var(--gris); font-variant-numeric:tabular-nums;
+}
+.vivo i{width:8px; height:8px; border-radius:50%; background:var(--gris2)}
+.vivo.on i{background:var(--ok); box-shadow:0 0 0 3px rgba(30,142,90,.18)}
+.vivo.sondeo i{background:var(--ojo)}
+.cuenta{display:flex; align-items:center; gap:10px; font-size:13px; color:var(--gris)}
+.cuenta b{color:var(--texto); font-weight:500}
+.avatar{
+  width:30px; height:30px; border-radius:50%; background:var(--tinta); color:#fff;
+  display:grid; place-items:center; font-size:12px; font-weight:600; letter-spacing:.03em;
+}
+
+.rail{
+  background:var(--panel); border-right:1px solid var(--raya); padding:18px 12px;
+  position:sticky; top:56px; height:calc(100vh - 56px); overflow:auto;
+}
+.rail .grupo{
+  font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--gris2); padding:8px 12px 6px; margin-top:8px;
+}
+.rail .grupo:first-child{margin-top:0}
+.nav{
+  -webkit-appearance:none; appearance:none; cursor:pointer; width:100%; text-align:left;
+  display:flex; align-items:center; gap:11px;
+  background:transparent; border:0; border-radius:8px; padding:9px 12px;
+  color:var(--texto); font-size:14px; font-weight:450;
+}
+.nav:hover{background:var(--fondo)}
+.nav.on{background:var(--azul-f); color:var(--azul); font-weight:500}
+.nav .ic{width:18px; text-align:center; font-size:15px; opacity:.85}
+.nav .n{margin-left:auto; font-size:11.5px; font-variant-numeric:tabular-nums; color:var(--gris); background:var(--fondo); border-radius:999px; padding:2px 7px}
+.nav.on .n{background:#fff; color:var(--azul)}
+
+.main{padding:28px 32px 60px; min-width:0}
+.cab{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin:0 0 20px}
+.cab .sub{color:var(--gris); margin:4px 0 0; font-size:14px}
+.acciones{display:flex; gap:8px; flex-wrap:wrap}
+
+/* ── tarjetas y cifras ── */
+.rej{display:grid; gap:14px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); margin:0 0 22px}
+.cifra{
+  background:var(--panel); border:1px solid var(--raya); border-radius:12px; padding:16px 18px 15px;
+  display:flex; flex-direction:column; gap:6px; min-width:0;
+}
+.cifra .et{font-size:12.5px; color:var(--gris); font-weight:500}
+.cifra .v{font-size:28px; font-weight:600; color:var(--tinta); line-height:1.1; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.cifra .v small{font-size:14px; color:var(--gris); font-weight:500; margin-left:4px; letter-spacing:0}
+.cifra .pie{font-size:12.5px; color:var(--gris)}
+.cifra.ok .v{color:var(--ok)} .cifra.ojo .v{color:var(--ojo)} .cifra.mal .v{color:var(--mal)}
+.cifra .barra-p{height:5px; border-radius:3px; background:var(--fondo); overflow:hidden; margin-top:4px}
+.cifra .barra-p i{display:block; height:100%; background:var(--tinta); border-radius:3px}
+
+.tarj{background:var(--panel); border:1px solid var(--raya); border-radius:12px; margin:0 0 18px; overflow:hidden}
+.tarj-cab{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; border-bottom:1px solid var(--raya); flex-wrap:wrap}
+.tarj-cab h2{font-size:15px}
+.tarj-cab .sub{font-size:13px; color:var(--gris); margin:2px 0 0}
+.tarj-cuerpo{padding:16px 18px}
+.dos{display:grid; gap:18px; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr))}
+
+/* ── tablas ── */
+.tabla-caja{overflow:auto}
+table{width:100%; border-collapse:collapse; font-size:13.5px}
+th{
+  text-align:left; font-size:11.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--gris); padding:10px 14px; border-bottom:1px solid var(--raya); background:#FAFBFC;
+  white-space:nowrap; cursor:pointer; user-select:none;
+}
+th:hover{color:var(--tinta)}
+th.num,td.num{text-align:right; font-variant-numeric:tabular-nums}
+td{padding:10px 14px; border-bottom:1px solid var(--raya); vertical-align:top; max-width:420px}
+tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:#FAFBFC}
+tr.nuevo td{animation:llego 2.6s ease-out}
+@keyframes llego{0%{background:#FFF4CC} 100%{background:transparent}}
+td .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px}
+.pill{display:inline-block; font-size:11.5px; font-weight:500; padding:3px 9px; border-radius:999px; white-space:nowrap}
+.pill.ok{background:var(--ok-f); color:var(--ok)} .pill.ojo{background:var(--ojo-f); color:var(--ojo)}
+.pill.mal{background:var(--mal-f); color:var(--mal)} .pill.gris{background:var(--fondo); color:var(--gris)}
+.pill.azul{background:var(--azul-f); color:var(--azul)}
+.vacio{padding:36px 18px; text-align:center; color:var(--gris); font-size:14px}
+.vacio b{display:block; color:var(--texto); font-weight:500; margin-bottom:4px}
+.herr{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.herr input{width:240px; padding:8px 11px; font-size:13.5px}
+.cuenta-f{font-size:12.5px; color:var(--gris); font-variant-numeric:tabular-nums; white-space:nowrap}
+.mono{font-family:var(--mono); font-size:12.5px}
+
+/* ── gráfico de barras chico (sin librería) ── */
+.barras{display:flex; align-items:flex-end; gap:6px; height:120px; padding:6px 0 0}
+.barras .b{flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end}
+.barras .b i{display:block; width:100%; max-width:38px; background:var(--tinta); border-radius:4px 4px 0 0; min-height:2px}
+.barras .b.mal i{background:var(--mal)} .barras .b.ok i{background:var(--ok)}
+.barras .b small{font-size:11px; color:var(--gris); white-space:nowrap}
+.barras .b b{font-size:12px; color:var(--tinta); font-variant-numeric:tabular-nums; font-weight:500}
+
+/* ── la lista de obras del líder ── */
+.obras{display:grid; gap:12px; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr))}
+.obra-t{
+  -webkit-appearance:none; appearance:none; cursor:pointer; text-align:left;
+  background:var(--panel); border:1px solid var(--raya); border-radius:12px; padding:15px 16px;
+  display:flex; flex-direction:column; gap:8px; color:inherit; transition:border-color .12s, box-shadow .12s;
+}
+.obra-t:hover{border-color:var(--raya2); box-shadow:var(--sombra)}
+.obra-t b{color:var(--tinta); font-size:15px; font-weight:600}
+.obra-t .cod{font-family:var(--mono); font-size:12px; color:var(--gris); letter-spacing:.06em}
+.obra-t .fila{display:flex; gap:14px; font-size:12.5px; color:var(--gris); flex-wrap:wrap}
+.obra-t .fila b{font-size:13px; color:var(--texto); font-weight:500}
+
+.aviso{background:var(--azul-f); border:1px solid #CFDDF0; border-radius:10px; padding:12px 14px; font-size:13.5px; line-height:1.55; color:var(--texto); margin:0 0 16px}
+.aviso.ojo{background:var(--ojo-f); border-color:#EED9A8}
+.toast{
+  position:fixed; right:20px; bottom:20px; z-index:20; max-width:360px;
+  background:var(--tinta); color:#fff; border-radius:10px; padding:12px 16px;
+  font-size:13.5px; line-height:1.5; box-shadow:0 12px 30px -10px rgba(11,42,58,.5);
+  display:flex; gap:10px; align-items:flex-start;
+}
+.toast i{width:8px; height:8px; border-radius:50%; background:var(--casco); flex:0 0 auto; margin-top:6px}
+
+/* ── celular: el carril se vuelve pestañas arriba ── */
+@media (max-width:900px){
+  #portal.on{grid-template-columns:1fr; grid-template-rows:56px auto 1fr}
+  .rail{position:static; height:auto; border-right:0; border-bottom:1px solid var(--raya); padding:8px 10px; display:flex; gap:4px; overflow-x:auto; white-space:nowrap}
+  .rail .grupo{display:none}
+  .nav{width:auto; padding:8px 12px; flex:0 0 auto}
+  .nav .n{margin-left:6px}
+  .main{padding:18px 16px 48px}
+  .barra{padding:0 14px; gap:10px}
+  .barra .marca b{display:none}
+  .obra-sel{max-width:200px}
+  .obra-sel select{max-width:150px}
+  .cuenta b{display:none}
+  .vivo span{display:none}
+  .cifra .v{font-size:24px}
+}
+@media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important} }
+@media print{ .rail,.barra,.acciones,.herr{display:none !important} #portal.on{display:block} .main{padding:0} }
+
+</style>
+</head>
+<body>
+<!-- ═══════════ LA ENTRADA ═══════════ -->
+<div id="entrada">
+  <div class="ent-caja">
+    <div class="marca"><span class="marca-ic"><i></i></span><span><b>OBRASST</b><small>Seguridad y salud en obra</small></span></div>
+    <h1>Entrar al portal</h1>
+    <p class="sub">La misma cuenta de la app. Lo que registres en el celular aparece aquí al instante.</p>
+    <form id="f-entrar" autocomplete="on">
+      <div class="campo">
+        <label for="e-quien">Correo o DNI</label>
+        <input id="e-quien" name="username" autocomplete="username" inputmode="email" placeholder="tu@correo.com · 45872103" required>
+      </div>
+      <div class="campo">
+        <label for="e-clave">Contraseña</label>
+        <input id="e-clave" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <div id="e-error" class="error" hidden></div>
+      <button class="bt" type="submit" id="e-bt" style="width:100%;padding:12px">Entrar</button>
+      <p class="ayuda" style="margin-top:14px">Es la cuenta de supervisor o líder que creaste en la app. Si entras con tu DNI, tiene que estar vinculado a esa cuenta.</p>
+    </form>
+    <div class="ent-pie">¿Sin cuenta? Se crea desde la app, en «Yo llevo la SST de la obra». · <a href="../">Abrir la app</a></div>
+  </div>
+</div>
+
+<!-- ═══════════ EL PORTAL ═══════════ -->
+<div id="portal">
+  <header class="barra">
+    <div class="marca"><span class="marca-ic"><i></i></span><span><b>OBRASST</b></span></div>
+    <div class="obra-sel" id="obra-sel" hidden>
+      <span style="font-size:12px;color:var(--gris)">Obra</span>
+      <select id="sel-obra" aria-label="Obra"></select>
+    </div>
+    <span class="papel" id="papel">—</span>
+    <div class="vivo" id="vivo" title="Sincronización con la app"><i></i><span id="vivo-t">Conectando…</span></div>
+    <div class="cuenta"><span class="avatar" id="avatar">·</span><b id="cuenta-n"></b>
+      <button class="bt sec chico" type="button" id="bt-salir">Salir</button></div>
+  </header>
+  <nav class="rail" id="rail" aria-label="Secciones"></nav>
+  <main class="main" id="main"></main>
+</div>
+<div id="toast" class="toast" hidden><i></i><span id="toast-t"></span></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   OBRASST · el portal · núcleo
+   Misma nube que la app, misma cuenta, mismas tablas. Por eso lo que
+   se registra en el celular aparece acá: no hay dos bases, hay una.
+   ══════════════════════════════════════════════════════════════ */
+'use strict';
+var SB = { url:'https://gwjjkknuiumgysezeatz.supabase.co',
+           key:'sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx' };
+var LS_TOK = 'sstp_cuenta';        /* distinto del de la app: son dos ventanas, no una */
+var TOK = null;
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function leer(k, d){ try{ var v=localStorage.getItem(k); return v===null?d:JSON.parse(v); }catch(e){ return d; } }
+function guardar(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function hoyISO(){ var d=new Date(); return d.getFullYear()+'-'+dos(d.getMonth()+1)+'-'+dos(d.getDate()); }
+function dos(n){ return (n<10?'0':'')+n; }
+function fechaLarga(iso){ if(!iso) return ''; var p=String(iso).slice(0,10).split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : String(iso); }
+function hace(iso){
+  if(!iso) return '';
+  var ms = Date.now() - new Date(iso).getTime(); if(isNaN(ms)) return '';
+  var m = Math.round(ms/60000);
+  if(m < 1) return 'ahora'; if(m < 60) return 'hace '+m+' min';
+  var h = Math.round(m/60); if(h < 24) return 'hace '+h+' h';
+  var d = Math.round(h/24); if(d < 30) return 'hace '+d+' d';
+  return fechaLarga(iso);
+}
+function toast(t){
+  var c=$('toast'); if(!c) return;
+  $('toast-t').textContent=t; c.hidden=false;
+  clearTimeout(toast._t); toast._t=setTimeout(function(){ c.hidden=true; }, 3200);
+}
+
+/* ── la cuenta ────────────────────────────────────────────────────── */
+function guardarToken(j){
+  if(!j || !j.access_token) return null;
+  TOK = { access_token:j.access_token, refresh_token:j.refresh_token||'',
+          expira: Date.now() + ((j.expires_in||3600)-60)*1000,
+          correo:(j.user&&j.user.email)||(TOK&&TOK.correo)||'', uid:(j.user&&j.user.id)||(TOK&&TOK.uid)||'' };
+  guardar(LS_TOK, TOK); return TOK;
+}
+function borrarToken(){ TOK=null; try{ localStorage.removeItem(LS_TOK); }catch(e){} }
+function sbH(){
+  var h={'apikey':SB.key,'Content-Type':'application/json'};
+  h.Authorization='Bearer '+((TOK&&TOK.access_token)||SB.key);
+  return h;
+}
+function authPost(ruta, cuerpo){
+  return fetch(SB.url+'/auth/v1/'+ruta, {method:'POST', headers:{'apikey':SB.key,'Content-Type':'application/json'},
+    body:JSON.stringify(cuerpo)}).then(function(r){ return r.json().then(function(j){ return r.ok ? j : Promise.reject(j); }); });
+}
+var _REFRESCANDO=null;
+function refrescarToken(){
+  if(!TOK || !TOK.refresh_token) return Promise.reject('sin_token');
+  if(_REFRESCANDO) return _REFRESCANDO;
+  _REFRESCANDO = authPost('token?grant_type=refresh_token',{refresh_token:TOK.refresh_token})
+    .then(function(j){ _REFRESCANDO=null; return guardarToken(j); },
+          function(e){ _REFRESCANDO=null; if(e && typeof e==='object' && (e.error||e.msg||e.error_code)) borrarToken(); return Promise.reject(e); });
+  return _REFRESCANDO;
+}
+function sbFetch(url, opt, reintento){
+  opt=opt||{}; opt.headers=sbH();
+  return fetch(url, opt).then(function(r){
+    if(r.status===401 && !reintento && TOK && TOK.refresh_token){
+      return refrescarToken().then(function(){ return sbFetch(url, opt, true); }, function(){ return r; });
+    }
+    return r;
+  });
+}
+function sbGet(path){ return sbFetch(SB.url+'/rest/v1/'+path,{}).then(function(r){ return r.ok?r.json():Promise.reject(r.status); }); }
+function sbRpc(fn,args){ return sbFetch(SB.url+'/rest/v1/rpc/'+fn,{method:'POST',body:JSON.stringify(args||{})}).then(function(r){ return r.ok?r.json():Promise.reject(r.status); }); }
+
+/* Entrar con correo o con DNI. El DNI se resuelve a su correo por el
+   mismo alias que usa la app; la contraseña es siempre la de la cuenta. */
+function entrar(quien, clave){
+  quien = String(quien||'').trim();
+  var esDoc = /^[0-9A-Za-z]{6,12}$/.test(quien) && quien.indexOf('@')<0;
+  var correoP = esDoc
+    ? sbRpc('sst_alias_correo', {p_alias: quien.toLowerCase().replace(/[^0-9a-z]/g,'')}).then(function(j){
+        /* la RPC contesta {ok, correo} o {ok:false, motivo} — igual que en la app */
+        if(!j || !j.ok || !j.correo) return Promise.reject({portal:'Ese DNI no está vinculado a ninguna cuenta. Entra con tu correo, o vincula tu DNI desde la app.'});
+        return String(j.correo);
+      })
+    : Promise.resolve(quien.toLowerCase());
+  return correoP.then(function(correo){
+    return authPost('token?grant_type=password', {email:correo, password:clave}).then(guardarToken);
+  });
+}
+
+/* ── quién soy, dónde estoy ───────────────────────────────────────── */
+var YO = { empresas:[], obra:null, rol:'', nombre:'' };
+function cargarEmpresas(){
+  return sbRpc('sst_mis_empresas',{}).then(function(rows){
+    YO.empresas = Array.isArray(rows) ? rows : [];
+    return YO.empresas;
+  });
+}
+function elegirObra(id){
+  var o=null; YO.empresas.forEach(function(e){ if(String(e.id)===String(id)) o=e; });
+  if(!o) o=YO.empresas[0]; if(!o) return;
+  YO.obra=o; YO.rol = (o.rol==='dueno') ? 'lider' : 'sup';
+  guardar('sstp_obra', o.id);
+  pintarBarra(); pintarRail(); vivoReconectar();
+  navegar(VISTA.actual && vistasDe().some(function(v){ return v.id===VISTA.actual; }) ? VISTA.actual : vistasDe()[0].id);
+}
+function iniciales(s){ var w=String(s||'').split(/[\s@._]+/).filter(Boolean); return ((w[0]||'?')[0]+((w[1]||'')[0]||'')).toUpperCase(); }
+
+/* ── el dueño de cada tabla: unas dicen «empresa», otras «duenio» ── */
+var DUENO = { sst_trabajador:'duenio', sst_kardex:'duenio', sst_hht:'duenio', sst_amonestacion:'duenio' };
+function filtroObra(tabla){ return (DUENO[tabla]||'empresa')+'=eq.'+encodeURIComponent(YO.obra.id); }
+
+/* ══ EN VIVO ══════════════════════════════════════════════════════
+   Lo que pasa en el celular tiene que verse acá sin recargar. Dos
+   caminos, y siempre hay uno andando:
+   · el socket de Realtime de Supabase: avisa cada fila que cambia;
+   · si el socket no abre (red de la obra, proxy, tabla fuera de la
+     publicación), se sondea cada 20 s. Lento, pero nunca mudo.
+   El cliente es propio y chico: no vale la pena cargar 100 KB de
+   librería para hacer un JOIN y un heartbeat. */
+var VIVO = { ws:null, ok:false, ref:0, lat:null, sondeo:null, tablas:[], cuando:0, intentos:0 };
+var VIVO_TABLAS = ['sst_trabajador','sst_kardex','sst_constancia','sst_reporte','sst_doc','sst_encuesta',
+                   'sst_accidente','sst_inspeccion','sst_hht','sst_amonestacion','sst_buena','sst_puntaje'];
+function vivoEstado(cl, t){ var v=$('vivo'); if(!v) return; v.className='vivo '+(cl||''); $('vivo-t').textContent=t; }
+function vivoReconectar(){
+  vivoCerrar();
+  if(!YO.obra || !TOK) return;
+  vivoEstado('', 'Conectando…');
+  vivoSondeo(true);
+  try{
+    var ws = new WebSocket(SB.url.replace(/^http/,'ws')+'/realtime/v1/websocket?apikey='+encodeURIComponent(SB.key)+'&vsn=1.0.0');
+    VIVO.ws = ws;
+    ws.onopen = function(){
+      VIVO.intentos=0;
+      var cambios = VIVO_TABLAS.map(function(t){
+        return {event:'*', schema:'public', table:t, filter:(DUENO[t]||'empresa')+'=eq.'+YO.obra.id};
+      });
+      vivoEnviar('realtime:portal', 'phx_join', {config:{postgres_changes:cambios, broadcast:{self:false}, private:false}, access_token:TOK.access_token});
+      /* las versiones nuevas de Realtime piden el token también como
+         evento aparte; mandarlo dos veces no molesta a las viejas */
+      vivoEnviar('realtime:portal', 'access_token', {access_token:TOK.access_token});
+      VIVO.lat = setInterval(function(){
+        vivoEnviar('phoenix','heartbeat',{});
+        /* si la sesión se renovó, el socket tiene que enterarse o RLS
+           le corta los avisos cuando venza el token viejo */
+        if(TOK && TOK.access_token) vivoEnviar('realtime:portal', 'access_token', {access_token:TOK.access_token});
+      }, 25000);
+    };
+    ws.onmessage = function(ev){
+      var m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
+      if(m.event==='phx_reply' && m.topic==='realtime:portal'){
+        if(m.payload && m.payload.status==='ok'){ VIVO.ok=true; vivoEstado('on','En vivo'); vivoSondeo(false); }
+        else { vivoEstado('sondeo','Sondeo cada 20 s'); }
+      }
+      if(m.event==='postgres_changes' && m.payload && m.payload.data){
+        var d=m.payload.data; VIVO.cuando=Date.now();
+        alCambiar(d.table, d.type, d.record||d.old_record);
+      }
+      if(m.event==='phx_error' || m.event==='phx_close'){ vivoEstado('sondeo','Sondeo cada 20 s'); vivoSondeo(true); }
+    };
+    ws.onerror = function(){ vivoEstado('sondeo','Sondeo cada 20 s'); vivoSondeo(true); };
+    ws.onclose = function(){
+      VIVO.ok=false; if(VIVO.lat){ clearInterval(VIVO.lat); VIVO.lat=null; }
+      vivoEstado('sondeo','Sondeo cada 20 s'); vivoSondeo(true);
+      /* se vuelve a intentar, cada vez más despacio, hasta 2 min */
+      if(YO.obra && TOK){ VIVO.intentos++; setTimeout(vivoReconectar, Math.min(120000, 3000*Math.pow(2, VIVO.intentos))); }
+    };
+  }catch(e){ vivoEstado('sondeo','Sondeo cada 20 s'); vivoSondeo(true); }
+}
+function vivoEnviar(topic, event, payload){
+  try{ VIVO.ref++; VIVO.ws.send(JSON.stringify({topic:topic, event:event, payload:payload||{}, ref:String(VIVO.ref)})); }catch(e){}
+}
+function vivoCerrar(){
+  if(VIVO.lat){ clearInterval(VIVO.lat); VIVO.lat=null; }
+  if(VIVO.ws){ try{ VIVO.ws.onclose=null; VIVO.ws.close(); }catch(e){} VIVO.ws=null; }
+  VIVO.ok=false; vivoSondeo(false);
+}
+function vivoSondeo(prender){
+  if(VIVO.sondeo){ clearInterval(VIVO.sondeo); VIVO.sondeo=null; }
+  if(!prender) return;
+  VIVO.sondeo = setInterval(function(){
+    if(document.hidden || VIVO.ok) return;
+    if(VISTA.actual && typeof VISTA.recargar==='function') VISTA.recargar(true);
+  }, 20000);
+}
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden && VISTA.actual && typeof VISTA.recargar==='function') VISTA.recargar(true);
+});
+/* llega un cambio: si la vista abierta mira esa tabla, se refresca en
+   silencio y la fila nueva se pinta con un destello */
+function alCambiar(tabla, tipo, fila){
+  var v = vistasDe().filter(function(x){ return x.id===VISTA.actual; })[0];
+  if(!v) return;
+  if((v.tablas||[]).indexOf(tabla)>=0){
+    VISTA.ultimoCambio = {tabla:tabla, tipo:tipo, id:fila && (fila.id||fila.ext)};
+    if(typeof VISTA.recargar==='function') VISTA.recargar(true);
+    if(tipo==='INSERT') toast('Nuevo registro desde la app: '+NOMBRE_TABLA[tabla]);
+  }
+}
+var NOMBRE_TABLA = { sst_trabajador:'personal', sst_kardex:'entrega de EPP', sst_constancia:'constancia',
+  sst_reporte:'reporte', sst_doc:'documento', sst_encuesta:'encuesta', sst_accidente:'accidente',
+  sst_inspeccion:'inspección', sst_hht:'horas hombre', sst_amonestacion:'amonestación', sst_buena:'buena práctica',
+  sst_puntaje:'puntaje' };
+
+/* ── navegación ──────────────────────────────────────────────────── */
+var VISTA = { actual:null, recargar:null, ultimoCambio:null, cache:{} };
+function vistasDe(){ return (YO.rol==='lider') ? VISTAS_LIDER : VISTAS_SUP; }
+function navegar(id){
+  var v = vistasDe().filter(function(x){ return x.id===id; })[0]; if(!v) return;
+  VISTA.actual=id; VISTA.recargar=null;
+  try{ history.replaceState(null,'', '#'+id); }catch(e){}
+  pintarRail();
+  var main=$('main');
+  main.innerHTML = '<div class="cab"><div><h1>'+esc(v.n)+'</h1><p class="sub">'+esc(v.s||'')+'</p></div>'+
+    '<div class="acciones" id="acciones"></div></div><div id="vista"></div>';
+  v.pintar($('vista'));
+}
+function pintarRail(){
+  var r=$('rail'); if(!r) return;
+  var h='', grupo='';
+  vistasDe().forEach(function(v){
+    if(v.g && v.g!==grupo){ grupo=v.g; h+='<div class="grupo">'+esc(v.g)+'</div>'; }
+    h+='<button type="button" class="nav'+(VISTA.actual===v.id?' on':'')+'" data-v="'+esc(v.id)+'">'+
+       '<span class="ic">'+v.ic+'</span><span>'+esc(v.n)+'</span></button>';
+  });
+  r.innerHTML=h;
+  Array.prototype.forEach.call(r.querySelectorAll('.nav'), function(b){ b.onclick=function(){ navegar(b.getAttribute('data-v')); }; });
+}
+function pintarBarra(){
+  var sel=$('sel-obra'), caja=$('obra-sel');
+  if(YO.empresas.length>1){
+    caja.hidden=false;
+    sel.innerHTML = YO.empresas.map(function(e){
+      return '<option value="'+esc(e.id)+'"'+(YO.obra&&String(e.id)===String(YO.obra.id)?' selected':'')+'>'+esc(e.nombre)+(e.codigo?' · '+esc(e.codigo):'')+'</option>';
+    }).join('');
+    sel.onchange=function(){ elegirObra(sel.value); };
+  } else if(YO.obra){
+    caja.hidden=false; sel.innerHTML='<option>'+esc(YO.obra.nombre)+(YO.obra.codigo?' · '+esc(YO.obra.codigo):'')+'</option>';
+  }
+  var p=$('papel'); p.textContent = YO.rol==='lider' ? 'Líder' : 'Supervisor'; p.className='papel '+(YO.rol==='lider'?'lider':'');
+  $('cuenta-n').textContent = TOK.correo||''; $('avatar').textContent = iniciales(TOK.correo);
+}
+
+/* ── tabla genérica: buscador, orden, contador y CSV ──────────────── */
+function tabla(caja, cols, filas, op){
+  op=op||{};
+  var est = caja._est || {q:'', ord:op.orden||null, asc:op.asc!==false};
+  caja._est = est;
+  function val(f, c){ var v = typeof c.v==='function' ? c.v(f) : f[c.k]; return v==null?'':v; }
+  var q = est.q.toLowerCase();
+  var lista = filas.filter(function(f){
+    if(!q) return true;
+    return cols.some(function(c){ return String(val(f,c)).toLowerCase().indexOf(q)>=0; });
+  });
+  if(est.ord){
+    var c0 = cols.filter(function(c){ return c.k===est.ord; })[0];
+    if(c0) lista.sort(function(a,b){
+      var x=val(a,c0), y=val(b,c0);
+      if(c0.num){ x=parseFloat(x)||0; y=parseFloat(y)||0; return est.asc ? x-y : y-x; }
+      x=String(x); y=String(y); return est.asc ? x.localeCompare(y) : y.localeCompare(x);
+    });
+  }
+  var h='<div class="tarj-cab"><div class="herr">'+
+    '<input type="search" placeholder="Buscar…" value="'+esc(est.q)+'" id="'+caja.id+'-q" aria-label="Buscar">'+
+    '<span class="cuenta-f">'+lista.length+(lista.length!==filas.length?' de '+filas.length:'')+' '+(op.unidad||'filas')+'</span></div>'+
+    '<div class="acciones"><button type="button" class="bt sec chico" id="'+caja.id+'-csv">Exportar CSV</button></div></div>';
+  if(!lista.length){
+    h+='<div class="vacio"><b>'+esc(op.vacio||'Nada todavía')+'</b>'+esc(op.vacioSub||'Cuando se registre algo en la app, aparece aquí solo.')+'</div>';
+  } else {
+    h+='<div class="tabla-caja"><table><thead><tr>';
+    cols.forEach(function(c){
+      h+='<th'+(c.num?' class="num"':'')+' data-k="'+esc(c.k)+'">'+esc(c.t)+(est.ord===c.k?(est.asc?' ↑':' ↓'):'')+'</th>';
+    });
+    h+='</tr></thead><tbody>';
+    var nuevo = VISTA.ultimoCambio && VISTA.ultimoCambio.id;
+    lista.slice(0, op.max||500).forEach(function(f){
+      var esN = nuevo && (f.id===nuevo || f.ext===nuevo);
+      h+='<tr'+(esN?' class="nuevo"':'')+'>';
+      cols.forEach(function(c){
+        var v = typeof c.h==='function' ? c.h(f) : esc(val(f,c));
+        h+='<td'+(c.num?' class="num"':'')+'>'+v+'</td>';
+      });
+      h+='</tr>';
+    });
+    h+='</tbody></table></div>';
+  }
+  caja.innerHTML=h;
+  var qi=$(caja.id+'-q');
+  qi.oninput=function(){ est.q=qi.value; var pos=qi.selectionStart; tabla(caja, cols, filas, op); var q2=$(caja.id+'-q'); q2.focus(); try{ q2.setSelectionRange(pos,pos); }catch(e){} };
+  Array.prototype.forEach.call(caja.querySelectorAll('th'), function(th){
+    th.onclick=function(){ var k=th.getAttribute('data-k'); if(est.ord===k) est.asc=!est.asc; else { est.ord=k; est.asc=true; } tabla(caja, cols, filas, op); };
+  });
+  $(caja.id+'-csv').onclick=function(){ csv(cols, lista, op.archivo||'obrasst'); };
+}
+function csv(cols, filas, nombre){
+  var sep=';', out=[cols.map(function(c){ return '"'+c.t.replace(/"/g,'""')+'"'; }).join(sep)];
+  filas.forEach(function(f){
+    out.push(cols.map(function(c){
+      var v = typeof c.v==='function' ? c.v(f) : f[c.k]; if(v==null) v='';
+      return '"'+String(v).replace(/"/g,'""')+'"';
+    }).join(sep));
+  });
+  var blob=new Blob(['﻿'+out.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=nombre+'-'+hoyISO()+'.csv'; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 800);
+}
+function cifra(et, v, pie, cl, unidad){
+  return '<div class="cifra'+(cl?' '+cl:'')+'"><span class="et">'+esc(et)+'</span>'+
+    '<span class="v">'+esc(v)+(unidad?'<small>'+esc(unidad)+'</small>':'')+'</span>'+
+    (pie?'<span class="pie">'+esc(pie)+'</span>':'')+'</div>';
+}
+function barras(series, cl){
+  var max = Math.max.apply(null, series.map(function(s){ return s.v; }).concat([1]));
+  return '<div class="barras">'+series.map(function(s){
+    return '<div class="b'+(s.cl?' '+s.cl:'')+'"><b>'+esc(s.v)+'</b><i style="height:'+Math.max(2, Math.round(s.v/max*84))+'px"></i><small>'+esc(s.t)+'</small></div>';
+  }).join('')+'</div>';
+}
+function cargando(caja){ caja.innerHTML='<div class="vacio">Cargando…</div>'; }
+function fallo(caja, cod){
+  caja.innerHTML='<div class="vacio"><b>No se pudo cargar</b>'+
+    (cod===403||cod===401 ? 'Esta cuenta no tiene permiso sobre esta obra.' : 'Revisa tu conexión. Se reintenta solo.')+'</div>';
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   OBRASST · el portal · las vistas
+   Dos perfiles sobre las mismas tablas. El líder mira la empresa:
+   obras, equipo, indicadores. El supervisor mira su obra: la gente,
+   el kardex, los papeles del día. Cada vista declara qué tablas mira,
+   y con eso el vivo sabe cuándo repintarla.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── traer una tabla de la obra, con caché corta por vista ────────── */
+function traer(tabla, extra, limite){
+  return sbGet(tabla+'?'+filtroObra(tabla)+(extra||'')+'&limit='+(limite||1000));
+}
+function anioDe(iso){ return String(iso||'').slice(0,4); }
+function mesDe(iso){ return String(iso||'').slice(0,7); }
+var HOY = hoyISO(), MES = HOY.slice(0,7), ANIO = HOY.slice(0,4);
+var ACC_CUENTA = {incap:true, mortal:true};
+var ACC_NOMBRE = {casi:'Casi accidente', primeros:'Primeros auxilios', leve:'Accidente leve', incap:'Incapacitante', mortal:'Mortal'};
+function hhtDe(filas, mes){
+  var t=0;
+  filas.forEach(function(x){
+    var f=String(x.fecha||''); if(mes ? mesDe(f)!==mes : anioDe(f)!==ANIO) return;
+    t += (parseFloat(x.ob_n)||0)*(parseFloat(x.ob_h)||0) + (parseFloat(x.st_n)||0)*(parseFloat(x.st_h)||0);
+  });
+  return t;
+}
+function pillEstado(v){
+  v=String(v||'activo');
+  return '<span class="pill '+(v==='activo'?'ok':(v==='cesado'?'gris':'ojo'))+'">'+esc(v)+'</span>';
+}
+function pillReporte(r){
+  if(r.cerrado || r.estado==='cerrado') return '<span class="pill ok">cerrado</span>';
+  return '<span class="pill mal">abierto</span>';
+}
+function nota(o){ if(!o) return null; if(typeof o==='string'){ try{ return JSON.parse(o); }catch(e){ return null; } } return o; }
+
+/* ═══ COLUMNAS ═══════════════════════════════════════════════════ */
+var COL = {
+  personal: [
+    {k:'nombre', t:'Nombre', h:function(f){ return '<b>'+esc(f.nombre)+'</b>'+(f.dni?'<span class="sub mono">'+esc((f.td||'DNI')+' '+f.dni)+'</span>':''); }},
+    {k:'puesto', t:'Puesto'}, {k:'area', t:'Área'},
+    {k:'estatus', t:'Estatus', h:function(f){ return pillEstado(f.estatus); }},
+    {k:'verificado', t:'Ficha', h:function(f){ return f.verificado===false ? '<span class="pill ojo">por confirmar</span>' : (f.usuario?'<span class="pill azul">con app</span>':'<span class="pill gris">sin app</span>'); }},
+    {k:'almacenero', t:'Almacén', h:function(f){ return f.almacenero ? '<span class="pill azul">entrega EPP</span>' : ''; }}
+  ],
+  kardex: [
+    {k:'fecha', t:'Fecha', v:function(f){ return f.fecha||''; }, h:function(f){ return esc(fechaLarga(f.fecha)); }},
+    {k:'trab_nombre', t:'Trabajador'},
+    {k:'epp', t:'EPP'},
+    {k:'cantidad', t:'Cant.', num:true, v:function(f){ return f.cantidad||1; }, h:function(f){ return esc(f.cantidad||1)+' '+esc(f.unidad||''); }},
+    {k:'tipo', t:'Motivo', v:function(f){ return {N:'Nuevo',C:'Cambio',P:'Pérdida'}[f.tipo]||f.tipo||''; }},
+    {k:'lugar', t:'Lugar'},
+    {k:'firma', t:'Firma', h:function(f){ return f.firma ? '<span class="pill ok">firmado</span>' : '<span class="pill ojo">sin firma</span>'; }, v:function(f){ return f.firma?'sí':'no'; }},
+    {k:'entregado_por', t:'Registró', h:function(f){ return f.entregado_por ? '<span class="pill azul">almacenero</span>' : '<span class="pill gris">supervisor</span>'; }, v:function(f){ return f.entregado_por?'almacenero':'supervisor'; }}
+  ],
+  constancias: [
+    {k:'fecha', t:'Fecha', h:function(f){ return esc(fechaLarga(f.fecha)); }},
+    {k:'trabajador', t:'Trabajador', h:function(f){ return '<b>'+esc(f.trabajador)+'</b>'+(f.dni?'<span class="sub mono">'+esc(f.dni)+'</span>':''); }},
+    {k:'tema', t:'Tema'},
+    {k:'tipo', t:'Tipo', v:function(f){ return f.tipo||(String(f.tema||'').indexOf('Taller')===0?'taller':'evaluación'); }},
+    {k:'resultado', t:'Resultado', h:function(f){
+      var r=String(f.resultado||''); var cl = /aprob|complet/i.test(r) && !/desaprob/i.test(r) ? 'ok' : (/desaprob/i.test(r)?'mal':'gris');
+      return '<span class="pill '+cl+'">'+esc(r||'—')+'</span>'; }},
+    {k:'folio', t:'Folio', h:function(f){ return '<span class="mono">'+esc(f.folio||'')+'</span>'; }}
+  ],
+  reportes: [
+    {k:'fecha', t:'Fecha', h:function(f){ return esc(fechaLarga(f.fecha||f.creado)); }, v:function(f){ return f.fecha||f.creado||''; }},
+    {k:'clase', t:'Clase'},
+    {k:'descripcion', t:'Qué se reportó', h:function(f){ return esc(f.descripcion)+(f.lugar?'<span class="sub">'+esc(f.lugar)+'</span>':''); }},
+    {k:'autor', t:'Quién', v:function(f){ return f.anonimo ? 'anónimo' : (f.autor||''); }},
+    {k:'estado', t:'Estado', h:pillReporte, v:function(f){ return (f.cerrado||f.estado==='cerrado')?'cerrado':'abierto'; }},
+    {k:'accion', t:'Acción', h:function(f){ return esc(f.accion||'')+(f.cerrado_por?'<span class="sub">'+esc(f.cerrado_por)+'</span>':''); }}
+  ],
+  accidentes: [
+    {k:'fecha', t:'Fecha', h:function(f){ return esc(fechaLarga(f.fecha)); }},
+    {k:'clase', t:'Clase', h:function(f){ var c=f.clase; return '<span class="pill '+(ACC_CUENTA[c]?'mal':(c==='leve'?'ojo':'gris'))+'">'+esc(ACC_NOMBRE[c]||c)+'</span>'; }, v:function(f){ return ACC_NOMBRE[f.clase]||f.clase; }},
+    {k:'t_nombre', t:'Trabajador'},
+    {k:'dias', t:'Días perdidos', num:true},
+    {k:'medidas', t:'Medidas'}
+  ],
+  docs: [
+    {k:'creado', t:'Fecha', h:function(f){ return esc(fechaLarga(f.creado))+'<span class="sub">'+esc(hace(f.creado))+'</span>'; }},
+    {k:'hoja', t:'Tipo', h:function(f){ return '<span class="pill azul">'+esc(f.hoja||'')+'</span>'; }},
+    {k:'nombre', t:'Documento'},
+    {k:'url', t:'Archivo', h:function(f){ return f.url ? '<a href="'+esc(f.url)+'" target="_blank" rel="noopener">abrir</a>' : ''; }, v:function(f){ return f.url||''; }}
+  ],
+  encuestas: [
+    {k:'fecha', t:'Fecha', h:function(f){ return esc(fechaLarga(f.fecha||f.creado)); }, v:function(f){ return f.fecha||f.creado||''; }},
+    {k:'tema', t:'Capacitación'},
+    {k:'expositor', t:'Expositor'},
+    {k:'tipo', t:'Tipo'},
+    {k:'prom', t:'Promedio', num:true, v:function(f){
+      var n=0,s=0; for(var i=1;i<=10;i++){ var v=f['p'+i]; if(v){ n++; s+=v; } } return n? (s/n).toFixed(2) : ''; },
+      h:function(f){ var n=0,s=0; for(var i=1;i<=10;i++){ var v=f['p'+i]; if(v){ n++; s+=v; } }
+        if(!n) return ''; var p=s/n; return '<span class="pill '+(p>=3.5?'ok':(p>=2.5?'ojo':'mal'))+'">'+p.toFixed(2)+' / 4</span>'; }},
+    {k:'fortaleza', t:'Fortaleza'}, {k:'debilidad', t:'Por mejorar'}
+  ],
+  inspecciones: [
+    {k:'fecha', t:'Fecha', h:function(f){ return esc(fechaLarga(f.fecha)); }},
+    {k:'tipo', t:'Tipo'}, {k:'inspector', t:'Inspector'}
+  ]
+};
+
+/* ═══ LAS VISTAS DE TABLA (comunes a los dos perfiles) ═══════════ */
+function vistaTabla(tablaSb, cols, op){
+  return function(caja){
+    cargando(caja);
+    var id='t-'+tablaSb; caja.innerHTML='<div class="tarj" id="'+id+'"></div>'; var t=$(id);
+    cargando(t);
+    function pinta(silencio){
+      traer(tablaSb, op.extra||'&order='+(op.ordenSb||'creado')+'.desc', op.limite).then(function(filas){
+        VISTA.cache[tablaSb]=filas;
+        tabla(t, cols, filas, {orden:op.ordenPor||cols[0].k, asc:false, unidad:op.unidad, vacio:op.vacio, vacioSub:op.vacioSub, archivo:op.archivo});
+      }).catch(function(cod){ if(!silencio) fallo(t, cod); });
+    }
+    VISTA.recargar=pinta; pinta();
+  };
+}
+
+/* ═══ RESUMEN DEL LÍDER ══════════════════════════════════════════ */
+function vistaResumenLider(caja){
+  cargando(caja);
+  function pinta(){
+    Promise.all([
+      traer('sst_trabajador','&select=id,estatus,verificado,puesto&order=nombre.asc'),
+      traer('sst_constancia','&select=fecha,resultado,tema&order=fecha.desc',2000),
+      traer('sst_reporte','&select=id,fecha,creado,cerrado,estado,clase&order=creado.desc',1000),
+      traer('sst_accidente','&select=fecha,clase,dias&order=fecha.desc',1000),
+      traer('sst_hht','&select=fecha,ob_n,ob_h,st_n,st_h&order=fecha.desc',2000),
+      traer('sst_kardex','&select=fecha,epp,cantidad&order=fecha.desc',3000),
+      traer('sst_inspeccion','&select=fecha,tipo&order=fecha.desc',1000)
+    ]).then(function(r){
+      var trab=r[0], cons=r[1], reps=r[2], accs=r[3], hht=r[4], kar=r[5], insp=r[6];
+      var activos = trab.filter(function(t){ return (t.estatus||'activo')==='activo'; }).length;
+      var porConf = trab.filter(function(t){ return t.verificado===false; }).length;
+      var consMes = cons.filter(function(c){ return mesDe(c.fecha)===MES; }).length;
+      var abiertos = reps.filter(function(x){ return !(x.cerrado||x.estado==='cerrado'); }).length;
+      var accAnio = accs.filter(function(a){ return anioDe(a.fecha)===ANIO; });
+      var nIF = accAnio.filter(function(a){ return ACC_CUENTA[a.clase]; }).length;
+      var dias = accAnio.reduce(function(s,a){ return s+(parseInt(a.dias,10)||0); },0);
+      var H = hhtDe(hht);
+      var IF = H ? nIF*1e6/H : null, IS = H ? dias*1e6/H : null;
+      var karMes = kar.filter(function(k){ return mesDe(k.fecha)===MES; }).reduce(function(s,k){ return s+(parseInt(k.cantidad,10)||1); },0);
+      var inspMes = insp.filter(function(i){ return mesDe(i.fecha)===MES; }).length;
+      /* un trabajador capacitado = con constancia aprobada este año */
+      var h='<div class="rej">'+
+        cifra('Personal activo', activos, porConf?porConf+' por confirmar':'de la obra', '')+
+        cifra('Constancias este mes', consMes, cons.length+' en total', consMes?'ok':'')+
+        cifra('Reportes abiertos', abiertos, reps.length+' registrados', abiertos?'mal':'ok')+
+        cifra('Índice de frecuencia', IF===null?'—':IF.toFixed(2), H?'por millón de HHT · '+ANIO:'sin horas hombre del año', IF===null?'':(IF>3?'mal':'ok'))+
+        cifra('Índice de severidad', IS===null?'—':IS.toFixed(1), dias+' días perdidos · '+ANIO, IS===null?'':(IS>50?'mal':'ok'))+
+        cifra('EPP entregado este mes', karMes, 'unidades', '')+
+        cifra('Inspecciones este mes', inspMes, insp.length+' en total', '')+
+        '</div>';
+      /* últimos seis meses de constancias y de reportes */
+      var meses=[]; for(var i=5;i>=0;i--){ var d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-i); meses.push(d.getFullYear()+'-'+dos(d.getMonth()+1)); }
+      var sC = meses.map(function(m){ return {t:m.slice(5)+'/'+m.slice(2,4), v:cons.filter(function(c){ return mesDe(c.fecha)===m; }).length}; });
+      var sR = meses.map(function(m){ return {t:m.slice(5)+'/'+m.slice(2,4), v:reps.filter(function(x){ return mesDe(x.fecha||x.creado)===m; }).length, cl:'mal'}; });
+      h+='<div class="dos">'+
+        '<div class="tarj"><div class="tarj-cab"><div><h2>Constancias por mes</h2><p class="sub">Evaluaciones y talleres cerrados</p></div></div><div class="tarj-cuerpo">'+barras(sC)+'</div></div>'+
+        '<div class="tarj"><div class="tarj-cab"><div><h2>Reportes por mes</h2><p class="sub">Actos y condiciones desde el celular</p></div></div><div class="tarj-cuerpo">'+barras(sR)+'</div></div>'+
+        '</div>';
+      /* lo último que pasó, mezclado */
+      var ult=[];
+      cons.slice(0,6).forEach(function(c){ ult.push({f:c.fecha, t:'Constancia · '+c.tema, s:c.resultado}); });
+      reps.slice(0,6).forEach(function(x){ ult.push({f:x.fecha||x.creado, t:'Reporte · '+(x.clase||''), s:(x.cerrado||x.estado==='cerrado')?'cerrado':'abierto'}); });
+      kar.slice(0,6).forEach(function(k){ ult.push({f:k.fecha, t:'EPP · '+k.epp, s:(k.cantidad||1)+' und'}); });
+      ult.sort(function(a,b){ return String(b.f||'').localeCompare(String(a.f||'')); });
+      h+='<div class="tarj"><div class="tarj-cab"><div><h2>Lo último</h2><p class="sub">Lo más reciente de la obra, venga de donde venga</p></div></div>'+
+        (ult.length ? '<div class="tabla-caja"><table><tbody>'+ult.slice(0,12).map(function(u){
+          return '<tr><td style="white-space:nowrap;color:var(--gris)">'+esc(fechaLarga(u.f))+'</td><td>'+esc(u.t)+'</td><td>'+esc(u.s||'')+'</td></tr>'; }).join('')+'</tbody></table></div>'
+        : '<div class="vacio"><b>Todavía no hay movimiento</b>Cuando la obra empiece a registrar, esto se llena solo.</div>')+'</div>';
+      caja.innerHTML=h;
+    }).catch(function(cod){ fallo(caja, cod); });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+
+/* ═══ OBRAS Y EQUIPO (líder) ═════════════════════════════════════ */
+function vistaEquipo(caja){
+  cargando(caja);
+  function pinta(){
+    var hijas = YO.empresas.filter(function(e){ return String(e.padre_id||'')===String(YO.obra.id); });
+    Promise.all([
+      sbRpc('sst_equipo',{p_emp:YO.obra.id}).catch(function(){ return []; }),
+      sbRpc('sst_solicitudes',{p_emp:YO.obra.id}).catch(function(){ return []; })
+    ]).then(function(r){
+      var eq=Array.isArray(r[0])?r[0]:[], sol=Array.isArray(r[1])?r[1]:[];
+      var h='';
+      if(hijas.length){
+        h+='<div class="tarj-cab" style="border:0;padding:0 0 12px"><div><h2>Obras de esta empresa</h2><p class="sub">Toca una para verla como supervisor</p></div></div><div class="obras" style="margin-bottom:22px">';
+        hijas.forEach(function(o){
+          h+='<button type="button" class="obra-t" data-id="'+esc(o.id)+'"><b>'+esc(o.nombre)+'</b><span class="cod">'+esc(o.codigo||'')+'</span>'+
+             '<span class="fila"><span>'+(o.sector?esc(o.sector):'')+'</span></span></button>';
+        });
+        h+='</div>';
+      }
+      h+='<div class="dos"><div class="tarj"><div class="tarj-cab"><div><h2>Equipo</h2><p class="sub">Quiénes gestionan esta obra</p></div></div>';
+      if(!eq.length) h+='<div class="vacio"><b>Solo tú</b>Nombra supervisores desde la app: «Nombrar supervisores».</div>';
+      else h+='<div class="tabla-caja"><table><thead><tr><th>Correo</th><th>Papel</th><th>Estado</th></tr></thead><tbody>'+eq.map(function(m){
+        return '<tr><td>'+esc(m.correo||'')+(m.soy_yo?' <span class="pill azul">tú</span>':'')+'</td><td>'+esc(m.rol==='dueno'?'Líder':'Supervisor')+'</td>'+
+               '<td>'+(m.estado==='activo'?'<span class="pill ok">activo</span>':'<span class="pill gris">'+esc(m.estado||'')+'</span>')+'</td></tr>'; }).join('')+'</tbody></table></div>';
+      h+='</div><div class="tarj"><div class="tarj-cab"><div><h2>Solicitudes de acceso</h2><p class="sub">Gente que pidió entrar a la obra</p></div></div>';
+      if(!sol.length) h+='<div class="vacio"><b>Ninguna pendiente</b>Se atienden desde la app.</div>';
+      else h+='<div class="tabla-caja"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Cargo</th></tr></thead><tbody>'+sol.map(function(s){
+        return '<tr><td>'+esc(s.nombre||'')+(s.mensaje?'<span class="sub">'+esc(s.mensaje)+'</span>':'')+'</td><td>'+esc(s.correo||'')+'</td><td>'+esc(s.cargo||'')+'</td></tr>'; }).join('')+'</tbody></table></div>';
+      h+='</div></div>';
+      caja.innerHTML=h;
+      Array.prototype.forEach.call(caja.querySelectorAll('.obra-t'), function(b){ b.onclick=function(){ $('sel-obra').value=b.getAttribute('data-id'); elegirObra(b.getAttribute('data-id')); }; });
+    }).catch(function(cod){ fallo(caja, cod); });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+
+/* ═══ ACCIDENTABILIDAD (líder) ═══════════════════════════════════ */
+function vistaAccidentes(caja){
+  cargando(caja);
+  function pinta(){
+    Promise.all([
+      traer('sst_accidente','&order=fecha.desc',1000),
+      traer('sst_hht','&select=fecha,ob_n,ob_h,st_n,st_h&order=fecha.desc',2000)
+    ]).then(function(r){
+      var accs=r[0], hht=r[1];
+      var anio=accs.filter(function(a){ return anioDe(a.fecha)===ANIO; });
+      var n=anio.filter(function(a){ return ACC_CUENTA[a.clase]; }).length;
+      var dias=anio.reduce(function(s,a){ return s+(parseInt(a.dias,10)||0); },0);
+      var H=hhtDe(hht), IF=H?n*1e6/H:null, IS=H?dias*1e6/H:null;
+      var ultimo=null; anio.forEach(function(a){ if(ACC_CUENTA[a.clase]||a.clase==='leve'){ if(!ultimo||a.fecha>ultimo) ultimo=a.fecha; } });
+      var racha = ultimo ? Math.floor((new Date(HOY)-new Date(ultimo))/86400000) : null;
+      var h='<div class="rej">'+
+        cifra('Horas hombre '+ANIO, Math.round(H).toLocaleString('es-PE'), 'del reporte semanal', '')+
+        cifra('Índice de frecuencia', IF===null?'—':IF.toFixed(2), 'incapacitantes × 10⁶ / HHT', IF===null?'':(IF>3?'mal':'ok'))+
+        cifra('Índice de severidad', IS===null?'—':IS.toFixed(1), 'días perdidos × 10⁶ / HHT', IS===null?'':(IS>50?'mal':'ok'))+
+        cifra('Días sin accidente con lesión', racha===null?'—':racha, ultimo?'desde el '+fechaLarga(ultimo):'ninguno registrado este año', racha===null?'ok':'')+
+        '</div>';
+      var porClase = Object.keys(ACC_NOMBRE).map(function(k){ return {t:ACC_NOMBRE[k], v:anio.filter(function(a){ return a.clase===k; }).length, cl:ACC_CUENTA[k]?'mal':''}; });
+      h+='<div class="tarj"><div class="tarj-cab"><div><h2>Por clase · '+ANIO+'</h2><p class="sub">Solo incapacitantes y mortales entran al índice de frecuencia</p></div></div><div class="tarj-cuerpo">'+barras(porClase)+'</div></div>';
+      h+='<div class="tarj" id="t-acc"></div>';
+      caja.innerHTML=h;
+      tabla($('t-acc'), COL.accidentes, accs, {orden:'fecha', asc:false, unidad:'eventos', vacio:'Ningún evento registrado', archivo:'accidentes'});
+    }).catch(function(cod){ fallo(caja, cod); });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+
+/* ═══ EPP (los dos) ══════════════════════════════════════════════ */
+function vistaEPP(caja){
+  cargando(caja);
+  function pinta(){
+    traer('sst_kardex','&order=fecha.desc',3000).then(function(kar){
+      var mes=kar.filter(function(k){ return mesDe(k.fecha)===MES; });
+      var cuenta={}; mes.forEach(function(k){ var e=String(k.epp||'').trim(); if(!e) return; cuenta[e]=(cuenta[e]||0)+(parseInt(k.cantidad,10)||1); });
+      var top=Object.keys(cuenta).map(function(e){ return {t:e.length>14?e.slice(0,13)+'…':e, v:cuenta[e]}; }).sort(function(a,b){ return b.v-a.v; }).slice(0,8);
+      var sinFirma=kar.filter(function(k){ return !k.firma; }).length;
+      var alm=kar.filter(function(k){ return k.entregado_por; }).length;
+      var h='<div class="rej">'+
+        cifra('Entregas este mes', mes.length, mes.reduce(function(s,k){ return s+(parseInt(k.cantidad,10)||1); },0)+' unidades', '')+
+        cifra('Sin firma', sinFirma, 'de '+kar.length+' en total', sinFirma?'ojo':'ok')+
+        cifra('Registradas por el almacenero', alm, 'desde su celular', '')+
+        '</div>';
+      if(top.length) h+='<div class="tarj"><div class="tarj-cab"><div><h2>Lo que más sale este mes</h2><p class="sub">Unidades por tipo de EPP</p></div></div><div class="tarj-cuerpo">'+barras(top)+'</div></div>';
+      h+='<div class="tarj" id="t-kar"></div>';
+      caja.innerHTML=h;
+      tabla($('t-kar'), COL.kardex, kar, {orden:'fecha', asc:false, unidad:'entregas', vacio:'Ninguna entrega registrada', archivo:'kardex'});
+    }).catch(function(cod){ fallo(caja, cod); });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+
+/* ═══ MI OBRA (supervisor) ═══════════════════════════════════════ */
+function vistaMiObra(caja){
+  cargando(caja);
+  function pinta(){
+    Promise.all([
+      traer('sst_trabajador','&select=id,estatus,verificado&order=nombre.asc'),
+      traer('sst_reporte','&select=id,fecha,creado,cerrado,estado,clase,descripcion,lugar&order=creado.desc',300),
+      traer('sst_kardex','&select=fecha,epp,cantidad,trab_nombre,firma&order=fecha.desc',300),
+      traer('sst_constancia','&select=fecha,trabajador,tema,resultado&order=fecha.desc',300),
+      traer('sst_doc','&select=id,hoja,nombre,nota,creado&hoja=in.(ats,iperc)&order=creado.desc',60)
+    ]).then(function(r){
+      var trab=r[0], reps=r[1], kar=r[2], cons=r[3], docs=r[4];
+      var abiertos=reps.filter(function(x){ return !(x.cerrado||x.estado==='cerrado'); });
+      var hoyK=kar.filter(function(k){ return k.fecha===HOY; }).length;
+      var hoyC=cons.filter(function(c){ return c.fecha===HOY; }).length;
+      var atsHoy=docs.filter(function(d){ var n=nota(d.nota); return n && n.fecha===HOY; });
+      var porConf=trab.filter(function(t){ return t.verificado===false; }).length;
+      var h='<div class="rej">'+
+        cifra('Personal', trab.filter(function(t){ return (t.estatus||'activo')==='activo'; }).length, porConf?porConf+' fichas por confirmar':'activos', porConf?'ojo':'')+
+        cifra('Reportes abiertos', abiertos.length, 'sin cerrar', abiertos.length?'mal':'ok')+
+        cifra('EPP entregado hoy', hoyK, 'entregas', '')+
+        cifra('Constancias hoy', hoyC, 'evaluaciones y talleres', '')+
+        cifra('ATS / IPERC de hoy', atsHoy.length, atsHoy.length?'en la nube':'ninguno subido', atsHoy.length?'ok':'ojo')+
+        '</div>';
+      if(porConf) h+='<div class="aviso ojo"><b>'+porConf+(porConf===1?' persona entró con su DNI y espera':' personas entraron con su DNI y esperan')+' tu confirmación.</b> Se confirman desde la app, en «Mi personal».</div>';
+      h+='<div class="dos">';
+      h+='<div class="tarj"><div class="tarj-cab"><div><h2>Reportes abiertos</h2><p class="sub">Lo que la gente reportó y sigue sin cerrar</p></div></div>'+
+        (abiertos.length ? '<div class="tabla-caja"><table><tbody>'+abiertos.slice(0,8).map(function(x){
+          return '<tr><td style="white-space:nowrap;color:var(--gris)">'+esc(fechaLarga(x.fecha||x.creado))+'</td><td><span class="pill gris">'+esc(x.clase||'')+'</span></td><td>'+esc(x.descripcion||'')+(x.lugar?'<span class="sub">'+esc(x.lugar)+'</span>':'')+'</td></tr>'; }).join('')+'</tbody></table></div>'
+        : '<div class="vacio"><b>Nada abierto</b>Todo lo reportado está cerrado.</div>')+'</div>';
+      h+='<div class="tarj"><div class="tarj-cab"><div><h2>Últimas entregas de EPP</h2><p class="sub">Con la firma de quien recibió</p></div></div>'+
+        (kar.length ? '<div class="tabla-caja"><table><tbody>'+kar.slice(0,8).map(function(k){
+          return '<tr><td style="white-space:nowrap;color:var(--gris)">'+esc(fechaLarga(k.fecha))+'</td><td>'+esc(k.trab_nombre||'')+'</td><td>'+esc(k.epp||'')+' × '+esc(k.cantidad||1)+'</td><td>'+(k.firma?'<span class="pill ok">firmado</span>':'<span class="pill ojo">sin firma</span>')+'</td></tr>'; }).join('')+'</tbody></table></div>'
+        : '<div class="vacio"><b>Sin entregas</b>Se registran desde la app o desde el celular del almacenero.</div>')+'</div>';
+      h+='</div>';
+      caja.innerHTML=h;
+    }).catch(function(cod){ fallo(caja, cod); });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+
+/* ═══ ATS / IPERC (supervisor) ═══════════════════════════════════ */
+function vistaATS(caja){
+  cargando(caja);
+  function pinta(){
+    traer('sst_doc','&select=id,hoja,nombre,nota,creado&hoja=in.(ats,iperc,ats-modelo)&order=creado.desc',300).then(function(docs){
+      var filas=docs.map(function(d){
+        var n=nota(d.nota)||{};
+        var firmas=0; try{ firmas=Object.keys(n.firmas||{}).length; }catch(e){}
+        var vb=n.vb||{}; var vbs=['cap','ing','sst'].filter(function(k){ return vb[k]; }).length;
+        return {id:d.id, hoja:d.hoja, nombre:d.nombre||n.trabajo||n.labor||'', fecha:n.fecha||String(d.creado||'').slice(0,10),
+                area:n.area||n.nivel||'', gente:(n.gente||[]).length, firmas:firmas, vb:vbs, devuelto:!!n.devuelto, creado:d.creado};
+      });
+      var cols=[
+        {k:'fecha', t:'Fecha', h:function(f){ return esc(fechaLarga(f.fecha)); }},
+        {k:'hoja', t:'Papel', h:function(f){ return '<span class="pill azul">'+esc(f.hoja==='ats'?'ATS':(f.hoja==='iperc'?'IPERC':'Modelo'))+'</span>'; }, v:function(f){ return f.hoja; }},
+        {k:'nombre', t:'Trabajo / labor', h:function(f){ return '<b>'+esc(f.nombre)+'</b>'+(f.area?'<span class="sub">'+esc(f.area)+'</span>':''); }},
+        {k:'gente', t:'Cuadrilla', num:true},
+        {k:'firmas', t:'Firmas', num:true, h:function(f){ return f.gente ? esc(f.firmas)+' / '+esc(f.gente) : esc(f.firmas); }},
+        {k:'vb', t:'V°B°', h:function(f){ if(f.hoja!=='ats') return ''; if(f.devuelto) return '<span class="pill mal">devuelto</span>';
+          return f.vb>=3 ? '<span class="pill ok">liberado</span>' : '<span class="pill ojo">'+f.vb+' de 3</span>'; }, v:function(f){ return f.hoja==='ats'?(f.devuelto?'devuelto':f.vb+'/3'):''; }}
+      ];
+      caja.innerHTML='<div class="aviso">Los que la cuadrilla firmó en el celular. El V°B° del SSOMA se da desde la app; aquí se ve al instante si ya está.</div><div class="tarj" id="t-ats"></div>';
+      tabla($('t-ats'), cols, filas, {orden:'fecha', asc:false, unidad:'papeles', vacio:'Ningún ATS ni IPERC subido', vacioSub:'Cuando el supervisor los suba desde la app, aparecen aquí.', archivo:'ats-iperc'});
+    }).catch(function(cod){ fallo(caja, cod); });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+
+/* ═══ EL CATÁLOGO DE VISTAS ══════════════════════════════════════ */
+var VISTAS_LIDER = [
+  {id:'resumen', g:'Empresa', ic:'▦', n:'Resumen ejecutivo', s:'Cómo va la obra, en una pantalla', pintar:vistaResumenLider,
+   tablas:['sst_trabajador','sst_constancia','sst_reporte','sst_accidente','sst_hht','sst_kardex','sst_inspeccion']},
+  {id:'equipo',  g:'Empresa', ic:'⚑', n:'Obras y equipo', s:'Tus obras, tus supervisores, y quién pidió entrar', pintar:vistaEquipo, tablas:[]},
+  {id:'acc',     g:'Indicadores', ic:'⚠', n:'Accidentabilidad', s:'Índices del año con las horas hombre reales', pintar:vistaAccidentes, tablas:['sst_accidente','sst_hht']},
+  {id:'cump',    g:'Indicadores', ic:'✔', n:'Cumplimiento', s:'Constancias de evaluaciones y talleres', tablas:['sst_constancia'],
+   pintar:vistaTabla('sst_constancia', COL.constancias, {ordenSb:'fecha', ordenPor:'fecha', unidad:'constancias', vacio:'Ninguna constancia todavía', archivo:'constancias'})},
+  {id:'epp',     g:'Indicadores', ic:'⛑', n:'Consumo de EPP', s:'Lo que sale del almacén, con firma', pintar:vistaEPP, tablas:['sst_kardex']},
+  {id:'personas', g:'Registros', ic:'☺', n:'Personal', s:'La gente de la obra y el estado de su ficha', tablas:['sst_trabajador'],
+   pintar:vistaTabla('sst_trabajador', COL.personal, {ordenSb:'nombre', extra:'&select=id,nombre,dni,td,puesto,area,estatus,verificado,usuario,almacenero&order=nombre.asc', ordenPor:'nombre', unidad:'personas', vacio:'Sin personal cargado', archivo:'personal'})},
+  {id:'reportes', g:'Registros', ic:'🚨', n:'Reportes', s:'Actos y condiciones subestándares', tablas:['sst_reporte'],
+   pintar:vistaTabla('sst_reporte', COL.reportes, {ordenSb:'creado', ordenPor:'fecha', unidad:'reportes', vacio:'Ningún reporte', archivo:'reportes'})},
+  {id:'docs',    g:'Registros', ic:'☰', n:'Documentos', s:'Todo lo que la obra subió a la nube', tablas:['sst_doc'],
+   pintar:vistaTabla('sst_doc', COL.docs, {ordenSb:'creado', extra:'&select=id,hoja,nombre,url,creado&order=creado.desc', ordenPor:'creado', unidad:'documentos', vacio:'Ningún documento', archivo:'documentos'})}
+];
+var VISTAS_SUP = [
+  {id:'obra',    g:'Mi obra', ic:'▦', n:'Hoy en la obra', s:'Lo que necesita tu ojo esta mañana', pintar:vistaMiObra,
+   tablas:['sst_trabajador','sst_reporte','sst_kardex','sst_constancia','sst_doc']},
+  {id:'personal', g:'Mi obra', ic:'☺', n:'Personal', s:'La gente de la obra y el estado de su ficha', tablas:['sst_trabajador'],
+   pintar:vistaTabla('sst_trabajador', COL.personal, {ordenSb:'nombre', extra:'&select=id,nombre,dni,td,puesto,area,estatus,verificado,usuario,almacenero&order=nombre.asc', ordenPor:'nombre', unidad:'personas', vacio:'Sin personal cargado', archivo:'personal'})},
+  {id:'ats',     g:'Registros', ic:'📋', n:'ATS e IPERC', s:'Los papeles de la tarea, firmados en el celular', pintar:vistaATS, tablas:['sst_doc']},
+  {id:'kardex',  g:'Registros', ic:'⛑', n:'Entrega de EPP', s:'El kardex, con la firma de quien recibió', pintar:vistaEPP, tablas:['sst_kardex']},
+  {id:'constancias', g:'Registros', ic:'✔', n:'Constancias', s:'Evaluaciones y talleres cerrados', tablas:['sst_constancia'],
+   pintar:vistaTabla('sst_constancia', COL.constancias, {ordenSb:'fecha', ordenPor:'fecha', unidad:'constancias', vacio:'Ninguna constancia todavía', archivo:'constancias'})},
+  {id:'reportes', g:'Registros', ic:'🚨', n:'Reportes', s:'Actos y condiciones subestándares', tablas:['sst_reporte'],
+   pintar:vistaTabla('sst_reporte', COL.reportes, {ordenSb:'creado', ordenPor:'fecha', unidad:'reportes', vacio:'Ningún reporte', archivo:'reportes'})},
+  {id:'encuestas', g:'Registros', ic:'★', n:'Encuestas', s:'Cómo calificaron tus capacitaciones', tablas:['sst_encuesta'],
+   pintar:vistaTabla('sst_encuesta', COL.encuestas, {ordenSb:'creado', ordenPor:'fecha', unidad:'encuestas', vacio:'Ninguna encuesta', vacioSub:'Salen solas después de cada evaluación y cada taller.', archivo:'encuestas'})},
+  {id:'docs',    g:'Registros', ic:'☰', n:'Documentos', s:'Todo lo que la obra subió a la nube', tablas:['sst_doc'],
+   pintar:vistaTabla('sst_doc', COL.docs, {ordenSb:'creado', extra:'&select=id,hoja,nombre,url,creado&order=creado.desc', ordenPor:'creado', unidad:'documentos', vacio:'Ningún documento', archivo:'documentos'})}
+];
+
+/* ═══ ARRANQUE ═══════════════════════════════════════════════════ */
+function mostrarEntrada(msg){
+  $('portal').className=''; $('entrada').hidden=false;
+  var e=$('e-error'); if(msg){ e.textContent=msg; e.hidden=false; } else e.hidden=true;
+}
+function mostrarPortal(){
+  $('entrada').hidden=true; $('portal').className='on';
+  var guardada=leer('sstp_obra',null);
+  var hash=(location.hash||'').slice(1);
+  VISTA.actual = hash || null;
+  elegirObra(guardada);
+}
+function arrancar(){
+  TOK=leer(LS_TOK,null);
+  $('f-entrar').onsubmit=function(ev){
+    ev.preventDefault();
+    var bt=$('e-bt'); bt.disabled=true; bt.textContent='Entrando…';
+    entrar($('e-quien').value, $('e-clave').value).then(function(){
+      return cargarEmpresas();
+    }).then(function(emps){
+      bt.disabled=false; bt.textContent='Entrar';
+      if(!emps.length){ borrarToken(); mostrarEntrada('Esta cuenta entra, pero no es líder ni supervisor de ninguna obra. El portal es para quien gestiona; el trabajador usa la app.'); return; }
+      mostrarPortal();
+    }).catch(function(e){
+      bt.disabled=false; bt.textContent='Entrar';
+      var m = (e && e.portal) || ((e && (e.error_code==='invalid_credentials' || /invalid/i.test(e.msg||e.error_description||''))) ? 'Ese correo o esa contraseña no coinciden.' : 'No se pudo entrar. Revisa tu conexión.');
+      mostrarEntrada(m);
+    });
+  };
+  $('bt-salir').onclick=function(){
+    vivoCerrar(); borrarToken(); YO={empresas:[],obra:null,rol:'',nombre:''};
+    /* el que entra después empieza por el principio, no por la sección
+       donde el anterior se quedó */
+    VISTA.actual=null; VISTA.cache={}; try{ history.replaceState(null,'',location.pathname); }catch(e){}
+    mostrarEntrada();
+  };
+  if(TOK && TOK.access_token){
+    cargarEmpresas().then(function(emps){
+      if(!emps.length){ borrarToken(); mostrarEntrada(); return; }
+      mostrarPortal();
+    }).catch(function(){ borrarToken(); mostrarEntrada(); });
+  } else mostrarEntrada();
+}
+document.addEventListener('DOMContentLoaded', arrancar);
+
+</script>
+</body>
+</html>
