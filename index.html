@@ -47112,6 +47112,15 @@ function seguirElArranque(){
      propios del sector —EPP entre ellos—. Ver sectorActivo(). */
   try{ aplicarSectorDeLaObra(); }catch(_as){}
   if(ROL==='col'){
+    /* «col» se guarda en cuanto toca la puerta del trabajador, mucho
+       antes de que deje sus datos. Si la app se fía de esa marca, el
+       que solo miró queda abriendo siempre la pantalla del trabajador
+       y la pregunta de quién es no vuelve a salir nunca. Se le hace
+       caso al rol solo cuando terminó de entrar. */
+    if(!(typeof yo==='function' && yo())){
+      ir('p-rol'); try{ pintarRol(); }catch(_pr){}
+      return;
+    }
     /* El trabajador que ya se registró vuelve A SU OBRA, no al formulario
        de entrada. Antes la app lo devolvía a escribir otra vez su código y
        su documento cada mañana; con guantes y a las 6 a.m. eso alcanza
@@ -47125,7 +47134,17 @@ function seguirElArranque(){
   if(RECUPERANDO){ ROL='emp'; guardar(LS_ROL,'emp'); ir('p-clave-nueva'); return; }
   if(AVISO_GOOGLE && !hayCuenta()){ ROL='emp'; guardar(LS_ROL,'emp'); CU_MODO='entrar'; ir('p-cuenta'); return; }
   if(ROL==='emp'){
-    if(!hayCuenta()){ prepCuenta('entrar'); ir('p-cuenta'); return; }
+    if(!hayCuenta()){
+      /* mismo criterio del otro lado: si nunca llegó a abrir sesión en
+         ninguna empresa, la marca de «emp» tampoco significa nada y la
+         pregunta de quién es tiene que volver a salir. El que sí entró
+         alguna vez va derecho a su cuenta, que es lo que necesita. */
+      if(!sesionAbierta() && !leer(LS_SESION,null)){
+        ir('p-rol'); try{ pintarRol(); }catch(_pr){}
+        return;
+      }
+      prepCuenta('entrar'); ir('p-cuenta'); return;
+    }
     if(sesionAbierta()){ if(!aplicarAtajo()) ir(dondeVolver() || 'p-emp-home'); refrescarPlan(); return; }
     cargarMisEmpresas(true); return;
   }
@@ -47348,7 +47367,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='9b0e51e601';
+var SELLO_APP='466fb44a64';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
