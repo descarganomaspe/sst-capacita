@@ -3298,6 +3298,32 @@ body.carrete .pantalla.llena{padding:0}
 <div class="wrap">
 
 <!-- ================= 1.ª pantalla: quién eres ================= -->
+<section class="pantalla" id="p-rol">
+  <div class="marca">◆ OBRASST</div>
+  <h1>¿Quién<br>eres?</h1>
+  <p class="sub">Se contesta una sola vez. Después la app entra sola por tu puerta.</p>
+
+  <button type="button" class="cart-ir" style="margin-top:22px;border-color:rgba(var(--w),.20)"
+          onclick="elegirRol('col')">
+    <span class="ic">👷</span>
+    <span class="tx"><b>Trabajo en la obra</b>
+    <small>Me pasaron el código de una obra. No necesito cuenta ni contraseña: entro con ese código y mis datos.</small></span>
+    <span class="ch">›</span>
+  </button>
+
+  <button type="button" class="cart-ir" style="border-color:rgba(var(--w),.20)"
+          onclick="elegirRol('emp')">
+    <span class="ic">🦺</span>
+    <span class="tx"><b>Yo llevo la SST de la obra</b>
+    <small>Supervisor, prevencionista, residente o dueño. Entro con mi correo y manejo la documentación de la empresa.</small></span>
+    <span class="ch">›</span>
+  </button>
+
+  <div id="rol-sesion"></div>
+
+  <div class="pie">Si te equivocas no pasa nada: desde adentro hay «Cambiar de usuario» y vuelves acá.</div>
+</section>
+
 <div id="guia-capa" aria-hidden="true">
   <div id="guia-hueco"></div>
   <div id="guia-globo">
@@ -5354,7 +5380,9 @@ body.carrete .pantalla.llena{padding:0}
   <button class="btn sec" id="cu-olvide" onclick="pedirRecuperacion()" style="margin-top:4px">¿Olvidaste tu contraseña?</button>
   <div class="sec-tit" style="margin-top:18px" id="cu-alt-tit">¿Primera vez en OBRASST?</div>
   <button class="btn sec" id="cu-alt" onclick="cuentaCambiarModo()">Crear mi cuenta</button>
-  <div class="pie">La cuenta es tuya, no del celular: si cambias de equipo entras igual y tu información sigue ahí. Los trabajadores no necesitan cuenta: entran con el código de la obra.</div>
+  <div class="sec-tit" style="margin-top:20px">¿Te pasaron el código de una obra?</div>
+  <button class="btn sec" style="margin-top:0" onclick="elegirRol('col')">👷 Entrar con el código de mi obra</button>
+  <div class="pie">La cuenta es tuya, no del celular: si cambias de equipo entras igual y tu información sigue ahí. El trabajador no necesita cuenta: entra con el código de la obra y sus datos.</div>
 </section>
 
 <!-- ================= ¿EN QUÉ EMPRESA TRABAJO HOY? ================= -->
@@ -9350,8 +9378,15 @@ function _ir(p){
   }
   cerrarHoja();
   try{ var _gc=document.getElementById('guia-capa'); if(_gc && _gc.className==='on') _gc.className=''; }catch(_gg){}
+  var _nue=$(p);
+  if(!_nue){
+    var _alt = (typeof inicioDelModo==='function') ? inicioDelModo() : 'p-cuenta';
+    _nue = $(_alt);
+    if(!_nue) return;          /* ni el inicio existe: mejor no tocar nada */
+    p = _alt;
+  }
   var a=document.querySelectorAll('.pantalla');for(var i=0;i<a.length;i++)a[i].className='pantalla';
-  var _nue=$(p); _nue.className='pantalla activa';
+  _nue.className='pantalla activa';
   try{ anotarDonde(p); }catch(_d){}
   if(!_sinMovimiento()){ void _nue.offsetWidth; _nue.className='pantalla activa entra'; }
   window.scrollTo(0,0);
@@ -23638,10 +23673,12 @@ function entrarSesion(){
 }
 function entrarMuestra(){ arrancarSup(); }
 function cambiarUsuario(){
-  /* no borra la licencia: solo vuelve a preguntar por que puerta se entra */
+  /* no borra la licencia: solo vuelve a preguntar por que puerta se entra.
+     Y para preguntarlo hay que llevarlo a la pantalla que pregunta, no a
+     la del correo: si no, «cambiar de usuario» solo sabia volverse gestor. */
   EV=null; try{ localStorage.removeItem(LS_EV); localStorage.removeItem(LS_ROL);
                 localStorage.removeItem(LS_PAPEL); }catch(e){}
-  ROL=null; ir('p-cuenta');
+  ROL=null; ir('p-rol'); try{ pintarRol(); }catch(_pr){}
 }
 var COD_PIDE='';
 function pedirCodigo(tipo){
@@ -46304,7 +46341,9 @@ function seguirElArranque(){
     ROL='emp'; guardar(LS_ROL,'emp');
     ir(dondeVolver() || 'p-emp-home'); refrescarPlan(); return;
   }
-  ir('p-cuenta'); pintarRol();
+  /* sin rol guardado: se pregunta por cual puerta entra, en vez de
+     meterlo por la del que gestiona y que el trabajador se pierda. */
+  ir('p-rol'); pintarRol();
 }
 function temasDelSectorExiste(id){
   for(var k in TEMAS) if(TEMAS[k].sector===id) return true;
@@ -46513,7 +46552,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='fca77fe522';
+var SELLO_APP='b905123353';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
