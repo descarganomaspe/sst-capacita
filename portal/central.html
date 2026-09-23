@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OBRASST Central · para contratistas con subcontratas</title>
+<meta name="description" content="OBRASST Central junta la capacitación, los ATS, el EPP y las observaciones de todas las empresas de tu obra en un solo lugar. La principal paga; las subcontratas entran gratis.">
+<link rel="icon" href="../icono-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   OBRASST Central · la página para la contratista principal
+   Marcelo, 23/09/2026: «lo llevará a la página web donde se le
+   explicará… de forma profesional, entendible, darles métricas para que
+   entiendan el ahorro que se genera, entender la facilidad que hay en
+   usar la app». Misma marca que el portal: petróleo de tinta, el
+   amarillo del casco como marca y nunca como texto sobre blanco.
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  --petroleo:#0B2A3A; --petroleo2:#123B50; --petroleo3:#1B4B63;
+  --casco:#F5B700; --papel:#FFFFFF; --mesa:#F4F6F8; --raya:#E1E7EC; --raya2:#C9D3DA;
+  --texto:#22323D; --gris:#5E717E; --gris2:#8D9DA8;
+  --ok:#1C8A55; --ok-f:#E6F4EC; --ojo:#9A5B00; --ojo-f:#FBF1E0; --mal:#C23A40; --mal-f:#FBE8E9;
+  --f:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; -webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{transition:none !important; animation:none !important} }
+body{margin:0; background:var(--papel); color:var(--texto); font:16px/1.6 var(--f); -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0; color:var(--petroleo); font-weight:600; letter-spacing:-.015em; text-wrap:balance}
+p{margin:0}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--casco); outline-offset:3px; border-radius:4px}
+.ancho{max-width:1120px; margin:0 auto; padding-inline:20px}
+@media (min-width:760px){ .ancho{padding-inline:32px} }
+.ceja{font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--gris)}
+/* en el celular cada rejilla es UNA columna que no se estira: sin esto,
+   la tabla de muestra (min-width) ensanchaba la portada y el texto quedaba
+   cortado bajo el overflow:hidden. Las media queries de abajo la parten. */
+.portada .ancho, .calc, .pedir, .planes, .dp, .dolores, .pasos, .roles, .dos{grid-template-columns:minmax(0,1fr)}
+.portada .ancho > *, .calc > *, .pedir > *{min-width:0}
+
+/* ── botones ── */
+.bt{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:0 20px; border-radius:10px;
+  font:600 15px/1 var(--f); text-decoration:none; cursor:pointer; border:1px solid transparent; transition:background .12s, border-color .12s}
+.bt.casco{background:var(--casco); color:var(--petroleo)}
+.bt.casco:hover{background:#FFC72B}
+.bt.claro{background:transparent; color:#fff; border-color:rgba(255,255,255,.4)}
+.bt.claro:hover{background:rgba(255,255,255,.08)}
+.bt.tinta{background:var(--petroleo); color:#fff}
+.bt.tinta:hover{background:var(--petroleo2)}
+.bt.linea{background:var(--papel); color:var(--petroleo); border-color:var(--raya2)}
+.bt.linea:hover{background:var(--mesa)}
+.bt.chico{min-height:38px; padding:0 14px; font-size:14px; border-radius:8px}
+.aviso-datos{font-size:12.5px; color:var(--gris); margin:10px 0 0; line-height:1.5}
+.aviso-datos a{color:var(--petroleo)}
+.bt.wa{background:#1F7A4D; color:#fff; flex-direction:column; gap:3px; padding-block:9px; line-height:1.15}
+.bt.wa .num{font-weight:500; font-size:13.5px; opacity:.92; white-space:nowrap}
+.bt.wa:hover{background:#18643F}
+.contacto{display:grid; gap:10px; justify-items:start}
+.contacto .dato{font-size:14.5px}
+
+/* ── la barra ── */
+.barra{position:sticky; top:0; z-index:10; background:var(--petroleo); border-bottom:1px solid rgba(255,255,255,.08)}
+.barra .ancho{display:flex; align-items:center; gap:18px; min-height:62px}
+.marca{display:flex; align-items:center; gap:10px; text-decoration:none; color:#fff}
+.marca-ic{width:32px; height:32px; border-radius:9px; background:var(--petroleo3); display:grid; place-items:center; flex:none}
+.marca-ic i{display:block; width:15px; height:4px; background:var(--casco); border-radius:2px}
+.marca b{font-size:15px; letter-spacing:.05em}
+.marca span{font-size:12.5px; color:#9FB6C4; border-left:1px solid rgba(255,255,255,.18); padding-left:10px}
+.nav{display:none; gap:22px; margin-left:auto}
+.nav a{color:#C8D7E0; text-decoration:none; font-size:14px}
+.nav a:hover{color:#fff}
+.barra .acc{display:flex; gap:8px; margin-left:auto}
+@media (min-width:980px){ .nav{display:flex} .barra .acc{margin-left:10px} }
+@media (max-width:560px){ .marca span{display:none} .barra .bt.linea-o{display:none} }
+.barra .bt.linea-o{background:transparent; color:#fff; border-color:rgba(255,255,255,.3)}
+
+/* ── la portada ── */
+.portada{background:var(--petroleo); color:#D5E2EA; padding-block:56px 72px; overflow:hidden}
+.portada .ancho{display:grid; gap:44px; align-items:center}
+@media (min-width:980px){ .portada .ancho{grid-template-columns:1.12fr .88fr} }
+.sello{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; letter-spacing:.06em; color:var(--petroleo);
+  background:var(--casco); padding:5px 10px; border-radius:999px; margin-bottom:18px}
+.portada h1{color:#fff; font-size:clamp(34px,4.8vw,52px); line-height:1.05; letter-spacing:-.025em}
+.portada .lede{margin-top:18px; font-size:18.5px; line-height:1.55; max-width:36em}
+.portada .lede b{color:#fff; font-weight:600}
+.portada .ctas{display:flex; gap:10px; flex-wrap:wrap; margin-top:28px}
+.pruebas{display:grid; gap:10px; margin-top:30px; font-size:14px; color:#AFC3CF}
+@media (min-width:640px) and (max-width:979px){ .pruebas{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.pruebas span{display:flex; gap:9px; align-items:flex-start}
+.pruebas span::before{content:''; width:7px; height:7px; border-radius:2px; background:var(--casco); flex:none; margin-top:8px}
+
+/* la pantalla de muestra: la oficina, clara, como la Torre */
+.tablero{background:var(--papel); color:var(--texto); border-radius:14px; box-shadow:0 30px 60px -30px rgba(0,0,0,.6); overflow:hidden; font-size:13px}
+.tablero .top{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:11px 14px; background:#0E3143; color:#E6EEF2}
+.tablero .top b{color:var(--casco); letter-spacing:.04em; font-size:12.5px}
+.tablero .top .obra{font-weight:600}
+.tablero .top .tag{background:var(--casco); color:var(--petroleo); font:700 9.5px/1 var(--f); letter-spacing:.1em; padding:3px 6px; border-radius:4px}
+.tablero .top .yo{margin-left:auto; font:600 10px/1 var(--f); letter-spacing:.1em; padding:5px 7px; border-radius:4px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
+.tablero .cu{padding:12px}
+.alerta{padding:8px 11px; border-radius:8px; background:var(--mal-f); color:#7D1E22; font-size:12.5px; margin-bottom:10px}
+.alerta b{color:var(--mal)}
+.tabla-ov{overflow-x:auto; border:1px solid var(--raya); border-radius:8px}
+.tablero table{width:100%; border-collapse:collapse; min-width:520px}
+.tablero th{font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--gris); text-align:left; padding:8px 9px; border-bottom:1px solid var(--raya); font-weight:600; white-space:nowrap; background:#FAFBFC}
+.tablero td{padding:7px 9px; border-bottom:1px solid #EEF2F5; white-space:nowrap}
+.tablero tr:last-child td{border-bottom:0}
+.tablero .n{text-align:right}
+.sem{display:inline-flex; align-items:center; gap:6px; font-weight:600}
+.sem::before{content:''; width:8px; height:8px; border-radius:50%; background:currentColor}
+.v{color:var(--ok)} .a{color:var(--ojo)} .r{color:var(--mal)}
+.pie-muestra{font-size:12px; color:#8FAAB9; margin-top:10px}
+
+/* ── secciones ── */
+.sec{padding-block:68px}
+.sec.mesa{background:var(--mesa)}
+.sec h2{font-size:clamp(26px,3.4vw,36px); line-height:1.12}
+.sec .intro{margin-top:12px; font-size:17.5px; color:var(--gris); max-width:40em}
+.cab-sec{margin-bottom:34px}
+
+/* el dolor */
+.dolores{display:grid; gap:14px}
+@media (min-width:760px){ .dolores{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.dolor{display:flex; gap:14px; align-items:flex-start; padding:18px 20px; border-radius:12px; background:var(--papel); border:1px solid var(--raya)}
+.dolor .x{flex:none; width:26px; height:26px; border-radius:50%; background:var(--mal-f); color:var(--mal); display:grid; place-items:center; font-weight:700; font-size:14px}
+.dolor b{display:block; color:var(--petroleo); font-weight:600}
+.dolor p{color:var(--gris); font-size:15px; margin-top:2px}
+.vuelta{margin-top:22px; padding:18px 20px; border-radius:12px; background:var(--petroleo); color:#D5E2EA; font-size:16.5px}
+.vuelta b{color:#fff}
+
+/* los pasos (son una secuencia de verdad: van numerados) */
+.pasos{display:grid; gap:16px; counter-reset:p}
+@media (min-width:760px){ .pasos{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (min-width:1080px){ .pasos{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.paso{counter-increment:p; padding:22px 20px; border-radius:12px; border:1px solid var(--raya); background:var(--papel); display:grid; gap:8px; align-content:start}
+.paso::before{content:counter(p); width:34px; height:34px; border-radius:9px; background:var(--petroleo); color:var(--casco); display:grid; place-items:center; font-weight:700; font-size:16px}
+.paso h3{font-size:17.5px; line-height:1.25}
+.paso p{color:var(--gris); font-size:15px}
+.paso small{font-size:13px; color:var(--gris2)}
+
+/* quién ve qué */
+.roles{display:grid; gap:12px}
+@media (min-width:760px){ .roles{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (min-width:1080px){ .roles{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.rol{padding:18px 20px; border-radius:12px; background:var(--papel); border:1px solid var(--raya); display:grid; gap:8px; align-content:start}
+.rol .quien{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+.rol .quien b{color:var(--petroleo); font-size:16.5px}
+.rol .quien span{font-size:12.5px; color:var(--gris)}
+.rol p{color:var(--gris); font-size:15px}
+.split{display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--gris)}
+.split .b{display:flex; width:110px; height:8px; border-radius:4px; overflow:hidden; background:#B7C7D2; flex:none}
+.split .b i{display:block; height:100%; background:var(--casco)}
+.leyenda{display:flex; gap:16px; margin-top:14px; font-size:13px; color:var(--gris)}
+.leyenda span{display:inline-flex; gap:7px; align-items:center}
+.leyenda i{width:11px; height:11px; border-radius:3px; display:inline-block}
+
+/* la calculadora */
+.calc{display:grid; gap:22px}
+@media (min-width:980px){ .calc{grid-template-columns:1.05fr 1fr; align-items:start} }
+.calc-in{padding:22px; border-radius:14px; background:var(--papel); border:1px solid var(--raya)}
+.campo{display:grid; gap:6px; margin-bottom:16px}
+.campo label{font-size:14px; font-weight:500; color:var(--texto)}
+.campo small{font-size:12.5px; color:var(--gris)}
+.campo .fila{display:flex; align-items:center; gap:12px}
+input[type=range]{flex:1; accent-color:var(--petroleo); min-width:0}
+input[type=number], input[type=text], input[type=email], input[type=tel], select, textarea{
+  width:100%; font:inherit; font-size:15px; color:var(--texto); background:var(--papel); border:1px solid var(--raya2); border-radius:9px; padding:10px 12px}
+.campo .fila input[type=number]{width:104px; flex:none; text-align:right}
+input:focus, select:focus, textarea:focus{outline:none; border-color:var(--petroleo3); box-shadow:0 0 0 3px rgba(27,75,99,.15)}
+details.supuestos{margin-top:4px; border-top:1px solid var(--raya); padding-top:12px}
+details.supuestos summary{cursor:pointer; font-size:14px; font-weight:600; color:var(--petroleo)}
+details.supuestos .campo{margin-top:14px}
+.calc-out{padding:24px; border-radius:14px; background:var(--petroleo); color:#CFDDE6; display:grid; gap:4px}
+.calc-out .fila{display:flex; justify-content:space-between; align-items:baseline; gap:14px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,.12)}
+.calc-out .fila span{font-size:14.5px}
+.calc-out .fila b{font-size:20px; color:#fff; font-weight:600; white-space:nowrap}
+.calc-out .gran{padding:16px 0 6px; border:0}
+.calc-out .gran b{font-size:clamp(28px,4vw,38px); color:var(--casco)}
+.calc-out .gran.neg b{color:#FFB4B8}
+.calc-out .nota{font-size:13.5px; color:#9DB5C3; margin-top:10px; line-height:1.55}
+.calc-out .punto{margin-top:12px; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,.06); font-size:14.5px; color:#E3ECF1}
+.calc-out .punto b{color:#fff}
+
+/* precios */
+.planes{display:grid; gap:16px}
+@media (min-width:860px){ .planes{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.plan{padding:26px 24px; border-radius:14px; border:1px solid var(--raya); background:var(--papel); display:grid; gap:12px; align-content:start}
+.plan.central{border:2px solid var(--petroleo); box-shadow:0 20px 40px -28px rgba(11,42,58,.45)}
+.plan .nom{display:flex; align-items:center; gap:10px}
+.plan .nom h3{font-size:22px}
+.plan .nom .tag{font:700 10px/1 var(--f); letter-spacing:.1em; text-transform:uppercase; padding:5px 8px; border-radius:999px; background:var(--casco); color:var(--petroleo)}
+.plan .precio{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.plan .precio b{font-size:40px; color:var(--petroleo); letter-spacing:-.02em; line-height:1}
+.plan .precio span{color:var(--gris); font-size:15px}
+.plan .piso{font-size:15px; color:var(--texto)}
+.plan ul{margin:4px 0 0; padding:0; list-style:none; display:grid; gap:8px; font-size:15px}
+.plan li{display:grid; grid-template-columns:18px 1fr; gap:8px}
+.plan li::before{content:'✓'; color:var(--ok); font-weight:700}
+.plan .impl{font-size:14px; color:var(--gris); padding-top:10px; border-top:1px solid var(--raya)}
+.letra{margin-top:18px; font-size:14.5px; color:var(--gris); max-width:60em}
+.solo{margin-top:16px; padding:14px 18px; border-radius:12px; background:var(--mesa); font-size:15px}
+.solo a{color:var(--petroleo); font-weight:600}
+
+/* demo y piloto */
+.dp{display:grid; gap:14px}
+@media (min-width:760px){ .dp{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.dp div{padding:20px 22px; border-radius:12px; background:var(--papel); border:1px solid var(--raya)}
+.dp .cuanto{font:600 13px/1 var(--f); letter-spacing:.08em; text-transform:uppercase; color:var(--gris)}
+.dp h3{font-size:19px; margin:8px 0 6px}
+.dp p{color:var(--gris); font-size:15px}
+
+/* el formulario */
+.pedir{display:grid; gap:26px}
+@media (min-width:980px){ .pedir{grid-template-columns:.9fr 1.1fr; align-items:start} }
+.form{padding:24px; border-radius:14px; background:var(--papel); border:1px solid var(--raya)}
+.dos{display:grid; gap:0 14px}
+@media (min-width:560px){ .dos{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.opciones{display:flex; gap:8px; flex-wrap:wrap}
+.opciones label{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--raya2); border-radius:10px; cursor:pointer; font-weight:500}
+.opciones input{accent-color:var(--petroleo)}
+.opciones label:has(input:checked){border-color:var(--petroleo); background:#EEF3F6}
+.trampa{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden}
+.msg{font-size:14px; margin-top:12px; min-height:20px}
+.msg.mal{color:var(--mal)} .msg.ok{color:var(--ok)}
+.listo{padding:26px 24px; border-radius:14px; background:var(--ok-f); border:1px solid #BFE0CD}
+.listo b{display:block; color:var(--ok); font-size:18px; margin-bottom:6px}
+.aparte{color:var(--gris); font-size:15px; display:grid; gap:12px}
+.aparte b{color:var(--petroleo)}
+
+/* preguntas */
+.faq{display:grid; gap:10px; max-width:860px}
+.faq details{border:1px solid var(--raya); border-radius:12px; background:var(--papel); padding:0 18px}
+.faq summary{cursor:pointer; padding:16px 0; font-weight:600; color:var(--petroleo); list-style:none; display:flex; justify-content:space-between; gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+'; color:var(--gris); font-weight:500; font-size:20px; line-height:1}
+.faq details[open] summary::after{content:'–'}
+.faq details p{padding:0 0 16px; color:var(--gris); font-size:15.5px}
+
+/* pie */
+.pie{background:var(--petroleo); color:#9FB6C4; padding-block:36px; font-size:14px}
+.pie .ancho{display:flex; gap:18px 28px; flex-wrap:wrap; align-items:center}
+.pie a{color:#DCE7EE}
+.pie .der{margin-left:auto}
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="ancho">
+    <a class="marca" href="#arriba" aria-label="OBRASST Central, inicio"><span class="marca-ic"><i></i></span><b>OBRASST</b><span>Central</span></a>
+    <nav class="nav" aria-label="Secciones">
+      <a href="#como">Cómo funciona</a><a href="#ahorro">Ahorro</a><a href="#precios">Precios</a><a href="#preguntas">Preguntas</a>
+    </nav>
+    <div class="acc">
+      <a class="bt chico linea-o" href="index.html">Entrar</a>
+      <a class="bt chico casco" href="#demo">Pedir demo</a>
+    </div>
+  </div>
+</header>
+
+<main id="arriba">
+<section class="portada">
+  <div class="ancho">
+    <div>
+      <span class="sello">En lanzamiento · abrimos los primeros pilotos</span>
+      <h1>Todas tus subcontratas, al día y a la vista.</h1>
+      <p class="lede">Capacitación, ATS, EPP y observaciones de cada empresa de tu obra, en un solo lugar. Tu supervisor observa con foto, la subcontrata levanta con foto y tu jefe lo ve desde la oficina. <b>La principal paga; las subcontratas entran gratis.</b></p>
+      <div class="ctas">
+        <a class="bt casco" href="#demo">Pedir una demo de 30 minutos</a>
+        <a class="bt claro" href="#demo" data-quiere="piloto">Probarlo 30 días en mi obra</a>
+      </div>
+      <div class="pruebas">
+        <span>Sin instalar nada: en el celular y en la PC</span>
+        <span>Funciona sin señal en el frente</span>
+        <span>Con la normativa peruana: Ley 29783 y su reglamento</span>
+      </div>
+    </div>
+    <figure style="margin:0">
+      <div class="tablero" role="img" aria-label="Tablero de ejemplo del jefe SSOMA: seis empresas de una obra con sus trabajadores, capacitación al día, ATS de hoy, observaciones abiertas y vencidas, y un estado en color.">
+        <div class="top"><b>◆ OBRASST</b><span class="obra">Estación Los Álamos</span><span class="tag">CENTRAL</span><span class="yo">JEFE SSOMA</span></div>
+        <div class="cu">
+          <div class="alerta"><b>Subió a ti</b> · Encofrados Rímac · encofrado sin arriostre · venció hace 2 h</div>
+          <div class="tabla-ov">
+            <table>
+              <thead><tr><th>Empresa</th><th class="n">Gente</th><th class="n">Capacitación</th><th class="n">ATS hoy</th><th class="n">Abiertas</th><th>Estado</th></tr></thead>
+              <tbody>
+                <tr><td><b>Consorcio Vía Andina</b></td><td class="n">212</td><td class="n">96 %</td><td class="n">14/14</td><td class="n">1</td><td><span class="sem v">Bien</span></td></tr>
+                <tr><td>Encofrados Rímac</td><td class="n">318</td><td class="n">88 %</td><td class="n">9/10</td><td class="n">5</td><td><span class="sem r">Vencida</span></td></tr>
+                <tr><td>Electro Montajes Pacífico</td><td class="n">164</td><td class="n">97 %</td><td class="n">6/6</td><td class="n">2</td><td><span class="sem v">Bien</span></td></tr>
+                <tr><td>Andamios Chavín</td><td class="n">96</td><td class="n">81 %</td><td class="n">4/4</td><td class="n">3</td><td><span class="sem a">Capacitación</span></td></tr>
+                <tr><td>Excavaciones Sur Grande</td><td class="n">210</td><td class="n">92 %</td><td class="n">7/8</td><td class="n">0</td><td><span class="sem a">Falta 1 ATS</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <figcaption class="pie-muestra">Pantalla de ejemplo: empresas y cifras inventadas.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="sec mesa">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Hoy</p><h2>Así se controla hoy a las subcontratas</h2></div>
+    <div class="dolores">
+      <div class="dolor"><span class="x" aria-hidden="true">×</span><div><b>Un Excel por empresa</b><p>Cada subcontrata manda lo suyo, en su formato y cuando puede. Tu equipo lo junta a mano.</p></div></div>
+      <div class="dolor"><span class="x" aria-hidden="true">×</span><div><b>Levantamientos por WhatsApp</b><p>La observación se pierde en un chat, sin plazo y sin la foto del después.</p></div></div>
+      <div class="dolor"><span class="x" aria-hidden="true">×</span><div><b>El informe mensual, armado a mano</b><p>Asistencias, kardex, horas hombre y fotos de diez empresas, unidos la última noche del mes.</p></div></div>
+      <div class="dolor"><span class="x" aria-hidden="true">×</span><div><b>Lo que vence, nadie lo avisa</b><p>La capacitación de altura venció en marzo y se sabe en la auditoría.</p></div></div>
+    </div>
+    <p class="vuelta">Con Central, cada subcontrata registra en la misma app —gratis— y tú lo ves junto, al instante. <b>No le pides nada a nadie: la información llega sola.</b></p>
+  </div>
+</section>
+
+<section class="sec" id="como">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Cómo funciona</p><h2>Cuatro pasos, y el primero lo hacemos contigo</h2></div>
+    <div class="pasos">
+      <div class="paso"><h3>Instalamos tu obra</h3><p>Activamos Central en tu obra, nombras a tu equipo con su rango —supervisor, jefe, gerente— y fijas tu estándar: qué capacitación exige cada puesto y en cuánto tiempo se levanta cada observación.</p><small>Día 1 · una hora</small></div>
+      <div class="paso"><h3>Invitas a tus subcontratas</h3><p>Escribes su RUC y a su supervisor le llega un enlace por WhatsApp. Acepta con un toque y entra gratis, con su gente.</p><small>Semana 1</small></div>
+      <div class="paso"><h3>Observas con foto; ellas levantan con foto</h3><p>Riesgo alto, 24 horas; medio, 72; bajo, 7 días. Si vence, sube solo: primero al jefe y luego al gerente.</p><small>Todos los días</small></div>
+      <div class="paso"><h3>La oficina lo ve todo</h3><p>Cumplimiento por empresa, matriz de capacitación, lo que venció y el informe del mes, sin armar nada.</p><small>Desde la PC</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec mesa">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Quién hace qué</p><h2>Cada uno ve lo suyo, donde trabaja</h2>
+      <p class="intro">El gerente vive en la oficina y el supervisor, en el frente. Central está pensado para eso: lo de campo en el celular y lo de gestión en la PC.</p></div>
+    <div class="roles">
+      <div class="rol"><div class="quien"><b>Gerente SSOMA</b><span>principal</span></div><div class="split"><span class="b"><i style="width:10%"></i></span>10 % campo · 90 % oficina</div><p>El consolidado de la obra, la tendencia del mes, las empresas en riesgo y el informe para el cliente.</p></div>
+      <div class="rol"><div class="quien"><b>Jefe SSOMA</b><span>principal</span></div><div class="split"><span class="b"><i style="width:40%"></i></span>40 % campo · 60 % oficina</div><p>Invita a las subcontratas, fija el estándar y recibe lo que se vence. Su tablero: el cumplimiento de cada empresa.</p></div>
+      <div class="rol"><div class="quien"><b>Supervisor SSOMA</b><span>principal</span></div><div class="split"><span class="b"><i style="width:50%"></i></span>50 % campo · 50 % oficina</div><p>Recorre, observa con foto y valida los levantamientos. En la oficina, sus pendientes.</p></div>
+      <div class="rol"><div class="quien"><b>Supervisor de la subcontrata</b><span>gratis</span></div><p>Lleva su empresa en la app como siempre —ATS, charlas, capacitación, EPP— y levanta lo que le observan.</p></div>
+      <div class="rol"><div class="quien"><b>Trabajadores</b><span>de todas las empresas</span></div><p>Entran con su DNI y un PIN. Su credencial con QR, su ATS del día y sus capacitaciones, en su celular.</p></div>
+    </div>
+    <div class="leyenda"><span><i style="background:var(--casco)"></i>campo</span><span><i style="background:#B7C7D2"></i>oficina</span></div>
+  </div>
+</section>
+
+<section class="sec" id="ahorro">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Ahorro</p><h2>Pon tus números</h2>
+      <p class="intro">La cuenta es simple y la ves entera: las horas que tu equipo gasta hoy juntando información y persiguiendo levantamientos, contra lo que cuesta Central. Mueve los valores a tu realidad.</p></div>
+    <div class="calc">
+      <form class="calc-in" id="calc" onsubmit="return false">
+        <div class="campo"><label for="c-trab">Trabajadores en la obra, propios y de subcontratas</label>
+          <div class="fila"><input type="range" id="c-trab-r" min="100" max="5000" step="50" value="1100" aria-label="Trabajadores (deslizar)"><input type="number" id="c-trab" min="1" max="100000" value="1100"></div>
+          <small>Se cobra por el día de más gente del mes.</small></div>
+        <div class="campo"><label for="c-subs">Subcontratas</label>
+          <div class="fila"><input type="range" id="c-subs-r" min="1" max="60" value="12" aria-label="Subcontratas (deslizar)"><input type="number" id="c-subs" min="0" max="500" value="12"></div></div>
+        <div class="campo"><label for="c-sup">Supervisores SSOMA de la principal</label>
+          <div class="fila"><input type="range" id="c-sup-r" min="1" max="40" value="6" aria-label="Supervisores (deslizar)"><input type="number" id="c-sup" min="1" max="200" value="6"></div></div>
+        <details class="supuestos">
+          <summary>Ajustar los supuestos</summary>
+          <div class="campo"><label for="c-hsub">Horas al mes, por subcontrata, para juntar y revisar su información</label>
+            <div class="fila"><input type="range" id="c-hsub-r" min="0" max="30" value="8" aria-label="Horas por subcontrata (deslizar)"><input type="number" id="c-hsub" min="0" max="200" value="8"></div>
+            <small>Asistencias, kardex, horas hombre, constancias y fotos que tu equipo pide, ordena y revisa.</small></div>
+          <div class="campo"><label for="c-hper">Minutos al día, por supervisor, persiguiendo y verificando levantamientos</label>
+            <div class="fila"><input type="range" id="c-hper-r" min="0" max="180" step="5" value="60" aria-label="Minutos por supervisor (deslizar)"><input type="number" id="c-hper" min="0" max="600" value="60"></div></div>
+          <div class="campo"><label for="c-hora">Costo de una hora de supervisor, en soles</label>
+            <div class="fila"><input type="range" id="c-hora-r" min="15" max="150" value="45" aria-label="Costo por hora (deslizar)"><input type="number" id="c-hora" min="1" max="1000" value="45"></div>
+            <small>Un supervisor que le cuesta a la empresa S/ 9,000 al mes, en 200 horas, sale S/ 45 la hora.</small></div>
+          <div class="campo"><label for="c-p1">De ese tiempo de juntar información, cuánto deja de hacerse a mano (%)</label>
+            <div class="fila"><input type="range" id="c-p1-r" min="0" max="100" step="5" value="70" aria-label="Porcentaje de información (deslizar)"><input type="number" id="c-p1" min="0" max="100" value="70"></div></div>
+          <div class="campo"><label for="c-p2">De ese tiempo de perseguir levantamientos, cuánto se va (%)</label>
+            <div class="fila"><input type="range" id="c-p2-r" min="0" max="100" step="5" value="50" aria-label="Porcentaje de levantamientos (deslizar)"><input type="number" id="c-p2" min="0" max="100" value="50"></div></div>
+        </details>
+      </form>
+      <div class="calc-out" aria-live="polite">
+        <div class="fila"><span>Horas que tu equipo recupera al mes</span><b id="o-horas">—</b></div>
+        <div class="fila"><span>Lo que valen esas horas</span><b id="o-valor">—</b></div>
+        <div class="fila"><span>Central, al mes</span><b id="o-central">—</b></div>
+        <div class="fila gran" id="o-dif-f"><span id="o-dif-t">Queda a tu favor, cada mes</span><b id="o-dif">—</b></div>
+        <p class="punto" id="o-punto"></p>
+        <p class="nota">Es un cálculo a partir de tus valores, no una promesa. Deja fuera lo que no se mide en horas: la evidencia ordenada ante tu cliente y ante SUNAFIL, y la observación que se levanta antes del accidente.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec mesa" id="precios">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Precios</p><h2>Paga la principal. Las subcontratas, nada.</h2>
+      <p class="intro">Un solo contrato y una sola factura, a la principal. Cada subcontrata entra a tu obra sin pagar, así nadie tiene excusa para no usarlo.</p></div>
+    <div class="planes">
+      <div class="plan central">
+        <div class="nom"><h3>Central</h3><span class="tag">Una obra</span></div>
+        <div class="precio"><b>S/ 3.90</b><span>por trabajador al mes</span></div>
+        <p class="piso">Desde <b>S/ 2,400</b> al mes · más IGV</p>
+        <ul>
+          <li>Subcontratas ilimitadas, gratis dentro de la obra</li>
+          <li>Tu equipo con rangos: supervisor, jefe y gerente</li>
+          <li>Observación con foto, plazos por riesgo y escalamiento</li>
+          <li>Tablero por empresa, matriz de capacitación e informe mensual</li>
+          <li>La app completa para cada empresa y cada trabajador</li>
+        </ul>
+        <p class="impl">Implementación: <b>S/ 4,900</b>, una sola vez. Cargamos tu personal, tu plan de capacitación por puesto y capacitamos a tus supervisores y a los de tus subcontratas.</p>
+        <a class="bt tinta" href="#demo">Pedir una demo</a>
+      </div>
+      <div class="plan">
+        <div class="nom"><h3>Corporativo</h3><span class="tag" style="background:#E6EDF2;color:var(--petroleo)">Dos obras o más</span></div>
+        <div class="precio"><b>S/ 3.20</b><span>por trabajador al mes</span></div>
+        <p class="piso">Desde <b>S/ 8,900</b> al mes · más IGV</p>
+        <ul>
+          <li>Todo lo de Central, en cada obra</li>
+          <li>El consolidado de la gerencia: tus obras lado a lado</li>
+          <li>Comparativo entre obras y entre contratistas</li>
+          <li>Conviene desde unos 2,300 trabajadores entre todas tus obras</li>
+        </ul>
+        <p class="impl">Implementación: <b>S/ 14,900</b>, una sola vez.</p>
+        <a class="bt linea" href="https://wa.me/51967991730?text=Hola%2C%20quiero%20conversar%20sobre%20OBRASST%20Corporativo%20para%20mis%20obras." target="_blank" rel="noopener">Conversemos por WhatsApp</a>
+      </div>
+    </div>
+    <p class="letra">Se cobra por el día de más gente del mes —los trabajadores habilitados ese día—, no por todos los que pasaron por la obra. Factura electrónica mensual; pagas por transferencia o con un enlace de pago. Nada se paga desde la tienda del celular.</p>
+    <p class="solo">¿Tu empresa trabaja sin subcontratas? Los planes de siempre, desde gratis, se ven y se compran en <a href="../">la app</a>.</p>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Antes de decidir</p><h2>Demo y piloto no son lo mismo</h2></div>
+    <div class="dp">
+      <div><p class="cuanto">30 minutos</p><h3>La demo</h3><p>Una videollamada. Te mostramos una obra de ejemplo con sus subcontratas: cómo se observa, cómo se levanta y qué ve la oficina. Sin compromiso.</p></div>
+      <div><p class="cuanto">30 días</p><h3>El piloto</h3><p>En tu obra real, con hasta 3 subcontratas, sin pagar licencia. Al terminar decides: si sigues, se paga la implementación y empieza el primer mes.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec mesa" id="demo">
+  <div class="ancho pedir">
+    <div class="aparte">
+      <p class="ceja">Pedir</p>
+      <h2>Cuéntanos de tu obra</h2>
+      <p>Te escribimos en menos de un día hábil para coordinar la demo o el piloto.</p>
+      <p><b>Lo que nos sirve saber:</b> cuánta gente tienes, cuántas subcontratas y qué te cuesta más controlar hoy.</p>
+      <div class="contacto">
+        <p><b>¿Prefieres hablar directo?</b></p>
+        <a class="bt wa" id="bt-wa" href="https://wa.me/51967991730?text=Hola%2C%20quiero%20saber%20de%20OBRASST%20Central%20para%20mi%20obra." target="_blank" rel="noopener"><span>Escribir por WhatsApp</span><span class="num">967 991 730</span></a>
+        <p class="dato">O al correo <a href="mailto:marcelolamasa@gmail.com?subject=OBRASST%20Central"><b>marcelolamasa@gmail.com</b></a></p>
+      </div>
+    </div>
+    <div>
+      <form class="form" id="f-pedir" novalidate>
+        <div class="campo"><label>¿Qué quieres?</label>
+          <div class="opciones">
+            <label><input type="radio" name="quiere" value="demo" checked> Demo de 30 minutos</label>
+            <label><input type="radio" name="quiere" value="piloto"> Piloto de 30 días</label>
+          </div></div>
+        <div class="dos">
+          <div class="campo"><label for="p-nombre">Nombre y apellido</label><input id="p-nombre" type="text" autocomplete="name" maxlength="120" required></div>
+          <div class="campo"><label for="p-cargo">Cargo</label><input id="p-cargo" type="text" autocomplete="organization-title" maxlength="80" placeholder="Jefe SSOMA"></div>
+          <div class="campo"><label for="p-empresa">Empresa</label><input id="p-empresa" type="text" autocomplete="organization" maxlength="160" required></div>
+          <div class="campo"><label for="p-ruc">RUC</label><input id="p-ruc" type="text" inputmode="numeric" maxlength="11" placeholder="11 dígitos"></div>
+          <div class="campo"><label for="p-correo">Correo</label><input id="p-correo" type="email" autocomplete="email" maxlength="160" required></div>
+          <div class="campo"><label for="p-wa">WhatsApp</label><input id="p-wa" type="tel" autocomplete="tel" maxlength="20" placeholder="9•• ••• •••"></div>
+          <div class="campo"><label for="p-trab">Trabajadores en la obra</label><input id="p-trab" type="number" min="1" max="100000" inputmode="numeric"></div>
+          <div class="campo"><label for="p-subs">Subcontratas</label><input id="p-subs" type="number" min="0" max="500" inputmode="numeric"></div>
+        </div>
+        <div class="campo"><label for="p-msg">¿Qué te cuesta más controlar hoy?</label><textarea id="p-msg" rows="3" maxlength="800"></textarea></div>
+        <div class="trampa" aria-hidden="true"><label for="p-web">No llenar</label><input id="p-web" type="text" tabindex="-1" autocomplete="off"></div>
+        <button class="bt tinta" type="submit" id="p-bt">Enviar</button>
+        <p class="aviso-datos">Usamos estos datos solo para escribirte por la demo o el piloto; no los compartimos. <a href="../?legal=privacidad" target="_blank" rel="noopener">Cómo tratamos los datos</a>.</p>
+        <p class="msg" id="p-msg-e" role="status"></p>
+      </form>
+      <div class="listo" id="p-listo" hidden><b>Listo, ya la tenemos.</b><p>Te escribimos en menos de un día hábil para coordinar. Si es urgente, escríbenos por WhatsApp al <a href="https://wa.me/51967991730?text=Hola%2C%20quiero%20saber%20de%20OBRASST%20Central%20para%20mi%20obra." target="_blank" rel="noopener"><b>967 991 730</b></a>.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="preguntas">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Preguntas</p><h2>Lo que suelen preguntar</h2></div>
+    <div class="faq">
+      <details><summary>¿La subcontrata tiene que pagar algo?</summary><p>No. Dentro de tu obra entra gratis, con su gente. Si un día quiere usar OBRASST en sus otras obras, compra su propio plan, y el primer año le sale a mitad de precio.</p></details>
+      <details><summary>¿Qué ve la principal de cada subcontrata?</summary><p>Lo que esa empresa registra en tu obra: su personal, su capacitación, sus ATS, su EPP y las observaciones. Nada de sus otras obras. Una subcontrata nunca ve a otra.</p></details>
+      <details><summary>¿Y lo que reporta la gente de la subcontrata?</summary><p>Lo resuelve primero su propio supervisor. A la principal le sube solo lo de riesgo alto que no se levanta a tiempo, el peligro inminente —al instante— y lo que es de otra empresa. Del resto ve los números, y reportar mucho cuenta a favor, no en contra. Así nadie se pone la soga al cuello por usar la app.</p></details>
+      <details><summary>¿Hay que capacitar a todos para usarla?</summary><p>No. La subcontrata acepta con un toque y el trabajador entra con su DNI y un PIN. En la implementación capacitamos a tus supervisores y a los de tus subcontratas; cada pantalla trae su guía.</p></details>
+      <details><summary>¿Funciona donde no hay señal?</summary><p>Sí. Lo del frente se registra en el celular sin señal y sube solo cuando vuelve.</p></details>
+      <details><summary>¿Ya usamos Drive u OneDrive. Hay que dejarlos?</summary><p>No. Lo que ya está en tu carpeta se enlaza, no se vuelve a subir. Central junta lo que la app registra y lo que tú ya guardas, sin doble registro.</p></details>
+      <details><summary>¿Cómo se paga?</summary><p>Con factura electrónica mensual a la principal, por transferencia o con enlace de pago. Se cobra el día de más gente del mes, y nunca menos que el piso del plan.</p></details>
+      <details><summary>¿Qué pasa con la información cuando termina la obra?</summary><p>Queda en solo lectura doce meses y se descarga completa. Cada subcontrata se lleva su registro; la principal se queda con las observaciones y los indicadores.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="pie">
+  <div class="ancho">
+    <a class="marca" href="#arriba"><span class="marca-ic"><i></i></span><b>OBRASST</b></a>
+    <a href="index.html">Entrar a mi cuenta</a>
+    <a href="../">Abrir la app</a>
+    <a href="../?legal=terminos" target="_blank" rel="noopener">Términos</a>
+    <a href="../?legal=privacidad" target="_blank" rel="noopener">Privacidad</a>
+    <span class="der"><a href="mailto:marcelolamasa@gmail.com">marcelolamasa@gmail.com</a> · WhatsApp <a href="https://wa.me/51967991730?text=Hola%2C%20quiero%20saber%20de%20OBRASST%20Central%20para%20mi%20obra." target="_blank" rel="noopener">967 991 730</a> · precios en soles</span>
+  </div>
+</footer>
+
+<script>
+'use strict';
+/* ── la calculadora: cada campo con su barra; todo a la vista ── */
+var SB = { url:'https://gwjjkknuiumgysezeatz.supabase.co', key:'sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx' };
+var $ = function(id){ return document.getElementById(id); };
+var PRECIO = 3.90, PISO = 2400;
+function soles(n){ return 'S/ '+Math.round(n).toLocaleString('es-PE'); }
+function num(id){ var v = parseFloat($(id).value); return isFinite(v) ? v : 0; }
+['c-trab','c-subs','c-sup','c-hsub','c-hper','c-hora','c-p1','c-p2'].forEach(function(id){
+  var n = $(id), r = $(id+'-r');
+  if(r) r.addEventListener('input', function(){ n.value = r.value; calcular(); });
+  n.addEventListener('input', function(){ if(r) r.value = n.value; calcular(); });
+});
+function calcular(){
+  var trab = Math.max(0, num('c-trab')), subs = Math.max(0, num('c-subs')), sup = Math.max(0, num('c-sup'));
+  var hsub = Math.max(0, num('c-hsub')), mper = Math.max(0, num('c-hper')), hora = Math.max(0, num('c-hora'));
+  var p1 = Math.min(100, Math.max(0, num('c-p1')))/100, p2 = Math.min(100, Math.max(0, num('c-p2')))/100;
+  var hInfo = subs * hsub * p1;
+  var hLev  = sup * (mper/60) * 22 * p2;          /* 22 días hábiles */
+  var horas = hInfo + hLev, valor = horas * hora;
+  var central = Math.max(PISO, trab * PRECIO);
+  var dif = valor - central;
+  $('o-horas').textContent = Math.round(horas).toLocaleString('es-PE')+' h';
+  $('o-valor').textContent = soles(valor);
+  $('o-central').textContent = soles(central)+' + IGV';
+  $('o-dif').textContent = soles(Math.abs(dif));
+  $('o-dif-t').textContent = dif >= 0 ? 'Queda a tu favor, cada mes' : 'Cuesta más de lo que ahorra en horas';
+  $('o-dif-f').className = 'fila gran' + (dif >= 0 ? '' : ' neg');
+  var eq = hora ? central / hora : 0;
+  var porSup = (sup && eq) ? Math.round(eq / sup / 22 * 60) : 0;
+  $('o-punto').innerHTML = hora
+    ? 'Central se paga solo si le devuelve a tu equipo <b>'+Math.round(eq).toLocaleString('es-PE')+' horas al mes</b>'+
+      (sup ? ': <b>'+porSup+' minutos al día</b> por supervisor.' : '.')
+    : '';
+}
+calcular();
+
+/* ── los botones de la portada eligen demo o piloto ── */
+Array.prototype.forEach.call(document.querySelectorAll('[data-quiere]'), function(a){
+  a.addEventListener('click', function(){ var r = document.querySelector('input[name=quiere][value="'+a.getAttribute('data-quiere')+'"]'); if(r) r.checked = true; });
+});
+
+/* ── pedir la demo: al servidor; si no se puede, por correo con todo escrito ── */
+$('f-pedir').addEventListener('submit', function(ev){
+  ev.preventDefault();
+  var m = $('p-msg-e'), bt = $('p-bt');
+  function mal(t, foco){ m.className = 'msg mal'; m.textContent = t; if(foco) try{ $(foco).focus(); }catch(e){} }
+  var d = {
+    quiere: (document.querySelector('input[name=quiere]:checked')||{}).value || 'demo',
+    nombre: $('p-nombre').value.trim(), cargo: $('p-cargo').value.trim(), empresa: $('p-empresa').value.trim(),
+    ruc: $('p-ruc').value.replace(/\D/g,''), correo: $('p-correo').value.trim().toLowerCase(), whatsapp: $('p-wa').value.trim(),
+    trabajadores: $('p-trab').value.trim(), subcontratas: $('p-subs').value.trim(), mensaje: $('p-msg').value.trim(),
+    web: $('p-web').value, origen: 'central.html'
+  };
+  if(d.nombre.length < 3) return mal('Escribe tu nombre.', 'p-nombre');
+  if(d.empresa.length < 2) return mal('Escribe el nombre de tu empresa.', 'p-empresa');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.correo)) return mal('Revisa tu correo: así no te podemos escribir.', 'p-correo');
+  if(d.ruc && d.ruc.length !== 11) return mal('El RUC tiene 11 dígitos. Si no lo tienes a la mano, déjalo vacío.', 'p-ruc');
+  bt.disabled = true; m.className = 'msg'; m.textContent = 'Enviando…';
+  fetch(SB.url+'/rest/v1/rpc/sst_pedir_central', {method:'POST', headers:{'apikey':SB.key, 'Authorization':'Bearer '+SB.key, 'Content-Type':'application/json'},
+    body: JSON.stringify({p:d})})
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(j){
+      if(!j || !j.ok) return Promise.reject(j && j.motivo || 'raro');
+      $('f-pedir').hidden = true; $('p-listo').hidden = false;
+    })
+    .catch(function(){
+      /* sin servidor, igual llega: se abre el correo con todo escrito */
+      var cuerpo = 'Quiero: '+(d.quiere==='piloto'?'Piloto de 30 días':'Demo de 30 minutos')+'\n'+
+        'Nombre: '+d.nombre+'\nCargo: '+d.cargo+'\nEmpresa: '+d.empresa+'\nRUC: '+d.ruc+'\nCorreo: '+d.correo+'\nWhatsApp: '+d.whatsapp+
+        '\nTrabajadores: '+d.trabajadores+'\nSubcontratas: '+d.subcontratas+'\n\n'+d.mensaje;
+      bt.disabled = false;
+      m.className = 'msg mal';
+      m.innerHTML = 'No se pudo enviar desde aquí. Mándalo con todo escrito: '+
+        '<a href="https://wa.me/51967991730?text='+encodeURIComponent('OBRASST Central\n'+cuerpo)+'" target="_blank" rel="noopener">por WhatsApp</a> o '+
+        '<a href="mailto:marcelolamasa@gmail.com?subject='+encodeURIComponent('OBRASST Central · '+d.empresa)+
+        '&body='+encodeURIComponent(cuerpo)+'">por correo</a>, y solo dale Enviar.';
+    });
+});
+</script>
+</body>
+</html>

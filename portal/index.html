@@ -351,6 +351,48 @@ tr.clic{cursor:pointer}
 .acto{font-weight:600; color:var(--tinta); background:#FAFBFC}
 .marcas{display:flex; gap:6px; flex-wrap:wrap}
 
+/* ══ 23/09/2026 · entrada y salida, la matriz, la guía ════════════════ */
+#entrada{align-content:center; gap:0}
+.enlace{-webkit-appearance:none; appearance:none; background:none; border:0; padding:0; margin:12px 0 0; color:var(--azul); font-size:13px; cursor:pointer; text-decoration:underline; text-underline-offset:3px}
+.ent-pie p{margin:0 0 10px}
+.ent-pie p:last-child{margin:0}
+.ent-legal{font-size:12px}
+.ent-legal a{text-decoration:underline; text-underline-offset:2px}
+.ent-bts{display:flex; gap:8px; flex-wrap:wrap}
+.ent-bts .bt, .barra-bts .bt{text-decoration:none}
+.ent-central{display:grid; gap:4px; width:100%; max-width:400px; margin:14px auto 0; padding:16px 18px; border-radius:14px;
+  background:var(--tinta); color:#D5E2EA; text-decoration:none; font-size:13.5px; line-height:1.5; box-shadow:var(--sombra)}
+.ent-central b{color:#fff; font-weight:600}
+.ent-central-t{color:#fff; font-weight:600; font-size:15px}
+.ent-central-ir{color:var(--casco); font-weight:600; margin-top:4px}
+.ent-central:hover{background:#123B50}
+.ent-central:focus-visible{outline:2px solid var(--casco); outline-offset:3px}
+.barra-bts{display:flex; gap:6px; align-items:center}
+
+/* la matriz: la primera columna y la cabecera quietas al desplazarse */
+.mat-caja{max-height:72vh}
+table.mat{font-size:12.5px}
+table.mat th, table.mat td{padding:7px 9px}
+table.mat thead th{position:sticky; top:0; z-index:2; background:#FAFBFC}
+table.mat th.mat-c{white-space:normal; min-width:96px; max-width:128px; vertical-align:bottom; line-height:1.25; text-transform:none; letter-spacing:0; font-size:11.5px; cursor:default}
+table.mat th.mat-c.extra{color:var(--gris2)}
+table.mat .mat-p{position:sticky; left:0; z-index:1; background:var(--panel); min-width:210px; box-shadow:1px 0 0 var(--raya)}
+table.mat thead th.mat-p{z-index:3; background:#FAFBFC}
+table.mat td.mat-e{text-align:center; vertical-align:middle}
+table.mat .na{color:var(--gris2)}
+table.mat tbody tr:hover td.mat-p{background:#FAFBFC}
+.herr .check{white-space:nowrap}
+
+/* la guía rápida */
+.guia-fondo{position:fixed; inset:0; z-index:50}
+.guia-luz{position:fixed; border-radius:10px; box-shadow:0 0 0 9999px rgba(11,42,58,.46); outline:2px solid var(--casco); outline-offset:0; pointer-events:none; transition:top .18s ease-out, left .18s ease-out, width .18s ease-out, height .18s ease-out}
+.guia-carta{position:fixed; width:min(340px, calc(100vw - 32px)); background:var(--panel); border-radius:14px; padding:18px 18px 14px; box-shadow:0 24px 60px -20px rgba(11,42,58,.6)}
+.guia-carta h2{font-size:16px; margin:0 0 6px}
+.guia-carta p{margin:0 0 14px; font-size:14px; line-height:1.55}
+.guia-carta .guia-n{font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); margin:0 0 4px}
+.guia-carta .acciones{justify-content:flex-end}
+@media (max-width:600px){ .guia-carta{left:16px !important; right:16px; top:auto !important; bottom:16px; width:auto} }
+
 /* ── celular: el carril se vuelve pestañas arriba ── */
 @media (max-width:900px){
   .hoja{width:100%}
@@ -372,6 +414,8 @@ tr.clic{cursor:pointer}
   .obra-sel{max-width:200px}
   .obra-sel select{max-width:150px}
   .cuenta b{display:none}
+  .barra-bts .bt{padding:6px 9px}
+  .ent-central{margin-top:12px}
   .vivo span{display:none}
   .cifra .v{font-size:24px}
 }
@@ -398,10 +442,21 @@ tr.clic{cursor:pointer}
       </div>
       <div id="e-error" class="error" hidden></div>
       <button class="bt" type="submit" id="e-bt" style="width:100%;padding:12px">Entrar</button>
-      <p class="ayuda" style="margin-top:14px">Es la cuenta de supervisor o líder que creaste en la app. Si entras con tu DNI, tiene que estar vinculado a esa cuenta.</p>
+      <button class="enlace" type="button" id="e-olvide">¿Olvidaste tu contraseña?</button>
+      <div id="e-olvide-msg" class="msg" hidden></div>
+      <p class="ayuda" style="margin-top:12px">Es la cuenta de supervisor o líder que creaste en la app. Si entras con tu DNI, tiene que estar vinculado a esa cuenta. El trabajador no entra aquí: usa la app.</p>
     </form>
-    <div class="ent-pie">¿Sin cuenta? Se crea desde la app, en «Yo llevo la SST de la obra». · <a href="../">Abrir la app</a></div>
+    <div class="ent-pie">
+      <p><b>¿Todavía no tienes cuenta?</b> Se crea en la app, en «Yo llevo la SST de la obra», y es la misma para los dos.</p>
+      <p class="ent-bts"><a class="bt sec chico" href="../?inicio=1">Crear mi cuenta en la app</a> <a class="bt sec chico" href="../">Abrir la app</a></p>
+      <p class="ent-legal">Al entrar aceptas los <a href="../?legal=terminos" target="_blank" rel="noopener">Términos y condiciones</a> y la <a href="../?legal=privacidad" target="_blank" rel="noopener">Política de datos</a>.</p>
+    </div>
   </div>
+  <a class="ent-central" href="central.html">
+    <span class="ent-central-t">¿Tu empresa trabaja con subcontratas?</span>
+    <span>Con <b>OBRASST Central</b> ves a todas las empresas de tu obra en un solo lugar. Las subcontratas entran gratis.</span>
+    <span class="ent-central-ir">Conocer Central y Corporativo ›</span>
+  </a>
 </div>
 
 <!-- ═══════════ EL PORTAL ═══════════ -->
@@ -414,6 +469,10 @@ tr.clic{cursor:pointer}
     </div>
     <span class="papel" id="papel">—</span>
     <div class="vivo" id="vivo" title="Sincronización con la app"><i></i><span id="vivo-t">Conectando…</span></div>
+    <div class="barra-bts">
+      <button class="bt sec chico" type="button" id="bt-guia" title="Ver otra vez la guía rápida">Guía</button>
+      <a class="bt sec chico" id="bt-app" href="../" target="_blank" rel="noopener" title="La app se abre en otra pestaña">Abrir la app</a>
+    </div>
     <div class="cuenta"><span class="avatar" id="avatar">·</span><b id="cuenta-n"></b>
       <button class="bt sec chico" type="button" id="bt-salir">Salir</button></div>
   </header>
@@ -498,7 +557,14 @@ function sbFetch(url, opt, reintento){
   opt=opt||{}; opt.headers=Object.assign(sbH(), opt.extra||{});
   return fetch(url, opt).then(function(r){
     if(r.status===401 && !reintento && TOK && TOK.refresh_token){
-      return refrescarToken().then(function(){ return sbFetch(url, opt, true); }, function(){ return r; });
+      return refrescarToken().then(function(){ return sbFetch(url, opt, true); }, function(){
+        /* 23/09/2026 · si la sesión ya no se puede renovar, antes cada
+           tabla decía «Esta cuenta no tiene permiso sobre esta obra» y el
+           usuario se quedaba mirando un portal vacío sin saber que tenía
+           que volver a entrar. Ahora se le devuelve a la entrada. */
+        if(!TOK && typeof sesionVencida==='function') sesionVencida();
+        return r;
+      });
     }
     return r;
   });
@@ -538,10 +604,20 @@ function cargarEmpresas(){
     return YO.empresas;
   });
 }
+/* 23/09/2026 · «Líder» es lo mismo que en la app: el dueño de una
+   empresa con Gestión SST vigente. Antes el portal llamaba líder a
+   cualquier dueño —aunque tuviera LITE— y le mostraba otra cosa que la
+   app. El dueño con otro plan entra como supervisor, con «Obras y
+   equipo», que es lo que puede manejar desde su celular. */
+function esLiderDe(o){
+  if(!o || o.rol!=='dueno') return false;
+  if(String(o.plan||'')!=='gestion') return false;
+  return !o.vence || String(o.vence).slice(0,10) >= hoyISO();
+}
 function elegirObra(id){
   var o=null; YO.empresas.forEach(function(e){ if(String(e.id)===String(id)) o=e; });
   if(!o) o=YO.empresas[0]; if(!o) return;
-  YO.obra=o; YO.rol = (o.rol==='dueno') ? 'lider' : 'sup';
+  YO.obra=o; YO.rol = esLiderDe(o) ? 'lider' : 'sup'; YO.dueno = (o.rol==='dueno');
   guardar('sstp_obra', o.id);
   pintarBarra(); pintarRail(); vivoReconectar();
   navegar(VISTA.actual && vistasDe().some(function(v){ return v.id===VISTA.actual; }) ? VISTA.actual : vistasDe()[0].id);
@@ -648,17 +724,35 @@ var NOMBRE_TABLA = { sst_trabajador:'personal', sst_kardex:'entrega de EPP', sst
 
 /* ── navegación ──────────────────────────────────────────────────── */
 var VISTA = { actual:null, recargar:null, ultimoCambio:null, cache:{} };
-function vistasDe(){ return (YO.rol==='lider') ? VISTAS_LIDER : VISTAS_SUP; }
-function navegar(id){
+function vistasDe(){
+  if(YO.rol==='lider') return VISTAS_LIDER;
+  /* el dueño sin Gestión SST: lo del supervisor y su equipo */
+  if(YO.dueno) return VISTAS_SUP.slice(0,2).concat(VISTAS_LIDER.filter(function(v){ return v.id==='equipo'; }).map(function(v){
+    return Object.assign({}, v, {g:VISTAS_SUP[0].g}); }), VISTAS_SUP.slice(2));
+  return VISTAS_SUP;
+}
+/* 23/09/2026 · antes cada sección REEMPLAZABA la dirección: el «atrás»
+   del navegador sacaba al usuario del portal entero. Ahora cada sección
+   deja su paso, y «atrás» vuelve a la anterior. */
+function navegar(id, desdeHistoria){
   var v = vistasDe().filter(function(x){ return x.id===id; })[0]; if(!v) return;
+  var antes = VISTA.actual;
   VISTA.actual=id; VISTA.recargar=null;
-  try{ history.replaceState(null,'', '#'+id); }catch(e){}
+  try{
+    if(desdeHistoria || !antes) history.replaceState({v:id},'', '#'+id);
+    else if(antes!==id) history.pushState({v:id},'', '#'+id);
+  }catch(e){}
   pintarRail();
   var main=$('main');
   main.innerHTML = '<div class="cab"><div><h1>'+esc(v.n)+'</h1><p class="sub">'+esc(v.s||'')+'</p></div>'+
     '<div class="acciones" id="acciones"></div></div><div id="vista"></div>';
   v.pintar($('vista'));
 }
+window.addEventListener('popstate', function(){
+  if(!YO.obra || !TOK) return;
+  var id=(location.hash||'').slice(1);
+  if(id && id!==VISTA.actual){ try{ if(typeof cerrarHoja==='function') cerrarHoja(); }catch(e){} navegar(id, true); }
+});
 function pintarRail(){
   var r=$('rail'); if(!r) return;
   var h='', grupo='';
@@ -682,6 +776,7 @@ function pintarBarra(){
     caja.hidden=false; sel.innerHTML='<option>'+esc(YO.obra.nombre)+(YO.obra.codigo?' · '+esc(YO.obra.codigo):'')+'</option>';
   }
   var p=$('papel'); p.textContent = YO.rol==='lider' ? 'Líder' : 'Supervisor'; p.className='papel '+(YO.rol==='lider'?'lider':'');
+  p.title = YO.rol==='lider' ? 'Dueño de la empresa con Gestión SST: ves todas tus obras' : (YO.dueno ? 'Dueño de esta obra' : 'Supervisor de esta obra');
   $('cuenta-n').textContent = TOK.correo||''; $('avatar').textContent = iniciales(TOK.correo);
 }
 
@@ -864,7 +959,7 @@ var COL = {
   ],
   docs: [
     {k:'creado', t:'Fecha', h:function(f){ return esc(fechaLarga(f.creado))+'<span class="sub">'+esc(hace(f.creado))+'</span>'; }},
-    {k:'hoja', t:'Tipo', h:function(f){ return '<span class="pill azul">'+esc(f.hoja||'')+'</span>'; }},
+    {k:'hoja', t:'Tipo', h:function(f){ return '<span class="pill azul">'+esc(tipoDoc(f.hoja))+'</span>'; }, v:function(f){ return tipoDoc(f.hoja); }},
     {k:'nombre', t:'Documento'},
     {k:'url', t:'Archivo', h:function(f){ return f.url ? '<a href="'+esc(f.url)+'" target="_blank" rel="noopener">abrir</a>' : ''; }, v:function(f){ return f.url||''; }}
   ],
@@ -881,9 +976,25 @@ var COL = {
   ],
   inspecciones: [
     {k:'fecha', t:'Fecha', h:function(f){ return esc(fechaLarga(f.fecha)); }},
-    {k:'tipo', t:'Tipo'}, {k:'inspector', t:'Inspector'}
+    {k:'tipo', t:'Formato', h:function(f){ return '<b>'+esc(f.tipo||'')+'</b>'; }, v:function(f){ return f.tipo||''; }},
+    {k:'inspector', t:'Inspector'},
+    {k:'resultado', t:'Resultado', h:function(f){ var r=String(f.resultado||''); var cl=/no conform|nc|observ/i.test(r)?'ojo':(r?'ok':'gris');
+      return r ? '<span class="pill '+cl+'">'+esc(r)+'</span>' : ''; }},
+    {k:'observacion', t:'Hallazgos', h:function(f){ return esc(String(f.observacion||'').slice(0,220))+(String(f.observacion||'').length>220?'…':''); }},
+    {k:'foto_url', t:'Foto', h:function(f){ return f.foto_url ? '<a href="'+esc(f.foto_url)+'" target="_blank" rel="noopener">ver</a>' : ''; }, v:function(f){ return f.foto_url||''; }}
   ]
 };
+
+/* 23/09/2026 · la hoja «sst_doc» guarda de todo: los archivos que la obra
+   sube y, junto, lo que la app necesita para funcionar (la configuración
+   del ATS, el plan de capacitación, lo programado, el quién es quién).
+   «Documentos» mostraba las dos cosas mezcladas: filas «ats-cfg» o
+   «temas» sin archivo que abrir. Ahora muestra solo lo que tiene archivo;
+   lo demás tiene su propia sección. */
+var TIPO_DOC = { risst:'RISST', pets:'PETS', iperc:'IPERC', ats:'ATS', 'ats-modelo':'ATS modelo', msds:'Hoja MSDS', pdf:'PDF',
+                 asistencia:'Asistencia', noticias:'Aviso', mapa:'Mapa de riesgos', plan:'Plan', programa:'Programa', politica:'Política',
+                 matriz:'Matriz', procedimiento:'Procedimiento', registro:'Registro', otro:'Otro' };
+function tipoDoc(h){ h=String(h||''); return TIPO_DOC[h] || (h ? h.charAt(0).toUpperCase()+h.slice(1).replace(/-/g,' ') : 'Documento'); }
 
 /* ═══ LAS VISTAS DE TABLA (comunes a los dos perfiles) ═══════════ */
 function vistaTabla(tablaSb, cols, op){
@@ -893,6 +1004,7 @@ function vistaTabla(tablaSb, cols, op){
     cargando(t);
     function pinta(silencio){
       traer(tablaSb, op.extra||'&order='+(op.ordenSb||'creado')+'.desc', op.limite).then(function(filas){
+        if(typeof op.filtrar==='function') filas=filas.filter(op.filtrar);
         VISTA.cache[tablaSb]=filas;
         tabla(t, cols, filas, {orden:op.ordenPor||cols[0].k, asc:false, unidad:op.unidad, vacio:op.vacio, vacioSub:op.vacioSub, archivo:op.archivo,
                                alClic:op.alClic, accion:op.accion});
@@ -1135,51 +1247,422 @@ function vistaATS(caja){
   VISTA.recargar=pinta; pinta();
 }
 
+/* ═══ CAPACITACIÓN: LA MATRIZ (los dos) ══════════════════════════
+   23/09/2026 · La app tenía su matriz (quién está al día en qué) y el
+   portal no: justo lo que se mira en la oficina y se manda al cliente.
+   La cuenta es la de la app, letra por letra (plan-cap.js·capEstadoDe):
+   por cada persona, lo que exige SU puesto según el plan de la obra, y
+   de cada tema el mejor registro: al día, por vencer (30 días), vencida,
+   desaprobó o falta. Sin plan, se cuenta contra lo ya dictado. */
+var PC_MESES_OP=[3,6,12], PC_MESES_DEF=12, PC_AVISO=30;
+var ST_TXT={si:'Sí', pv:'Por vencer', ven:'Vencida', de:'Desaprobó', no:'Falta', na:'—'};
+var ST_CL={si:'ok', pv:'ojo', ven:'mal', de:'mal', no:'gris', na:''};
+function nrm(x){ return String(x==null?'':x).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim(); }
+function temaLimpio(t){ return String(t||'').replace(/\s*\(forma breve\)\s*$/i,'').trim(); }
+function esTallerC(c){ return !!c && (c.tipo==='taller' || /^\s*taller\s*:/i.test(String(c.tema||''))); }
+function esAprobadoR(r){
+  var t=String(r||'').toLowerCase(); if(!t) return false;
+  if(t.indexOf('desaprob')>-1 || t.indexOf('no aprob')>-1) return false;
+  if(t.indexOf('complet')>-1 || t.indexOf('particip')>-1) return true;
+  return t.indexOf('aprob')>-1;
+}
+function isoL(d){ return d.getFullYear()+'-'+dos(d.getMonth()+1)+'-'+dos(d.getDate()); }
+function masMeses(iso, m){
+  var f=String(iso||'').slice(0,10); if(!/^\d{4}-\d{2}-\d{2}$/.test(f)) return '';
+  var p=f.split('-'), d=new Date(+p[0], +p[1]-1+m, +p[2]);
+  if(d.getDate()!==+p[2]) d=new Date(+p[0], +p[1]+m, 0);
+  return isoL(d);
+}
+function masDias(iso, n){ var p=String(iso).split('-'); return isoL(new Date(+p[0], +p[1]-1, +p[2]+n)); }
+function _listaTemas(a){
+  var out=[], v={};
+  (Array.isArray(a)?a:[]).forEach(function(t){ if(typeof t!=='string') return; t=temaLimpio(t).replace(/\s+/g,' ').slice(0,120); var k=nrm(t); if(!k||v[k]) return; v[k]=1; out.push(t); });
+  return out;
+}
+/* el plan vive en sst_doc (hoja «temas», con pc:1); de varias filas, la de versión más alta */
+function planDeFilas(rows){
+  var mejor=null;
+  (rows||[]).forEach(function(r){
+    if(r.hoja!=='temas') return;
+    var d=nota(r.nota); if(!d || d.pc!==1) return;
+    if(!mejor || (+d.v||0) > (+mejor.v||0)) mejor=d;
+  });
+  if(!mejor) return null;
+  var p={ meses:(PC_MESES_OP.indexOf(+mejor.meses)>-1 ? +mejor.meses : PC_MESES_DEF), todos:_listaTemas(mejor.todos), puestos:{},
+          act:(/^\d{4}-\d{2}-\d{2}$/.test(String(mejor.act||'')) ? String(mejor.act) : '') };
+  if(mejor.puestos && typeof mejor.puestos==='object') Object.keys(mejor.puestos).forEach(function(k){
+    var x=mejor.puestos[k]; if(!x || typeof x!=='object') return;
+    var nom=String(x.n||k).replace(/\s+/g,' ').trim().slice(0,120), kk=nrm(nom), l=_listaTemas(x.l);
+    if(kk && l.length) p.puestos[kk]={n:nom, l:l};
+  });
+  return (p.todos.length || Object.keys(p.puestos).length) ? p : null;
+}
+function planExige(plan, puesto){
+  if(!plan) return [];
+  var out=plan.todos.slice(), v={}; out.forEach(function(t){ v[nrm(t)]=1; });
+  var x=plan.puestos[nrm(puesto)];
+  if(x) x.l.forEach(function(t){ var k=nrm(t); if(!v[k]){ v[k]=1; out.push(t); } });
+  return out;
+}
+function planExigeTodo(plan){
+  if(!plan) return [];
+  var out=plan.todos.slice(), v={}; out.forEach(function(t){ v[nrm(t)]=1; });
+  Object.keys(plan.puestos).forEach(function(k){ plan.puestos[k].l.forEach(function(t){ var kk=nrm(t); if(!v[kk]){ v[kk]=1; out.push(t); } }); });
+  return out;
+}
+function estadoDe(caps, puesto, plan, exigeSinPlan){
+  var meses=(plan&&plan.meses)||PC_MESES_DEF, pronto=masDias(HOY, PC_AVISO);
+  var por={}, orden=[];
+  (caps||[]).forEach(function(c){
+    var t=temaLimpio(c.tema); if(!t) return;
+    var k=nrm(t), x=por[k];
+    if(!x){ x=por[k]={t:t, k:k, ok:'', ult:'', ultOk:false}; orden.push(k); }
+    var f=String(c.fecha||'').slice(0,10), ap=esTallerC(c) || esAprobadoR(c.resultado);
+    if(ap && f>=x.ok) x.ok=f;
+    if(f>x.ult || (f===x.ult && ap)){ x.ult=f; x.ultOk=ap; }
+  });
+  function fila(x, t, req){
+    var i={t:(x?x.t:t), k:(x?x.k:nrm(t)), req:req, st:'no', vence:'', ok:''};
+    if(!x) return i;
+    i.ok=x.ok; i.vence=x.ok ? masMeses(x.ok, meses) : '';
+    if(x.ok && i.vence>=HOY) i.st=(i.vence<=pronto) ? 'pv' : 'si';
+    else if(!x.ultOk) i.st='de';
+    else i.st='ven';
+    return i;
+  }
+  var exige = plan ? planExige(plan, puesto) : (exigeSinPlan||[]);
+  var reqK={}, items=[];
+  exige.forEach(function(t){ var k=nrm(t); if(!k||reqK[k]) return; reqK[k]=1; items.push(fila(por[k], t, true)); });
+  var cel={}; items.forEach(function(i){ cel[i.k]=i; });
+  orden.forEach(function(k){ if(!reqK[k]) cel[k]=fila(por[k], por[k].t, false); });
+  var vig=items.filter(function(i){ return i.st==='si'||i.st==='pv'; }).length;
+  return {cel:cel, n:items.length, vig:vig, completo:(items.length>0 && vig===items.length)};
+}
+function matrizDe(trab, cons, plan){
+  var cols={}, lista=[];
+  function col(t, req){ var k=nrm(t); if(!k) return; if(!cols[k]){ cols[k]={t:t, k:k, req:!!req, taller:/^\s*taller\s*:/i.test(t)}; lista.push(cols[k]); } else if(req) cols[k].req=true; }
+  if(plan) planExigeTodo(plan).forEach(function(t){ col(t, true); });
+  cons.forEach(function(c){ var t=temaLimpio(c.tema); if(t) col(t, false); });
+  lista.sort(function(a,b){ if(a.req!==b.req) return a.req?-1:1; if(a.taller!==b.taller) return a.taller?1:-1; return a.t.localeCompare(b.t,'es'); });
+  var porDni={}, porNom={}, filas=[];
+  function persona(nombre, dni, puesto){
+    var d=String(dni||'').replace(/\D/g,''), n=nrm(nombre), p=null;
+    if(d && porDni[d]) p=porDni[d]; else if(n && porNom[n] && (!d || !porNom[n].dni)) p=porNom[n];
+    if(!p){ p={nombre:nombre||'', dni:d, puesto:puesto||'', caps:[]}; filas.push(p); }
+    if(!p.puesto && puesto) p.puesto=puesto; if(!p.dni && d) p.dni=d;
+    if(p.dni) porDni[p.dni]=p; if(n && !porNom[n]) porNom[n]=p;
+    return p;
+  }
+  trab.forEach(function(t){ if((t.estatus||'activo')!=='cesado') persona(t.nombre, t.dni, t.puesto); });
+  cons.forEach(function(c){ if(temaLimpio(c.tema)) persona(c.trabajador, c.dni, c.cargo).caps.push(c); });
+  var sinPlan = plan ? null : lista.map(function(c){ return c.t; });
+  filas.forEach(function(p){ var e=estadoDe(p.caps, p.puesto, plan, sinPlan); p.cel=e.cel; p.n=e.n; p.vig=e.vig; p.completo=e.completo; });
+  filas.sort(function(a,b){ return String(a.nombre).localeCompare(String(b.nombre),'es'); });
+  return {cols:lista, filas:filas};
+}
+var MAT={q:'', solo:''};
+function vistaMatriz(caja){
+  cargando(caja);
+  function pinta(){
+    Promise.all([
+      traer('sst_trabajador','&select=id,nombre,dni,puesto,estatus&order=nombre.asc',3000),
+      traer('sst_constancia','&select=fecha,trabajador,dni,tema,tipo,resultado,cargo&order=fecha.desc',5000),
+      traer('sst_doc','&select=id,hoja,nota&hoja=eq.temas&order=creado.desc',300)
+    ]).then(function(r){
+      var plan=planDeFilas(r[2]), M=matrizDe(r[0], r[1], plan);
+      VISTA.cache.matriz=M;
+      var n=M.filas.length, alDia=M.filas.filter(function(p){ return p.completo; }).length;
+      var pv=0, ven=0, falta=0;
+      M.filas.forEach(function(p){ Object.keys(p.cel).forEach(function(k){ var c=p.cel[k]; if(!c.req) return; if(c.st==='pv') pv++; else if(c.st==='ven') ven++; else if(c.st==='no'||c.st==='de') falta++; }); });
+      var h='<div class="rej">'+
+        cifra('Personas al día', alDia+' / '+n, plan?'con todo lo que pide su puesto':'con todo lo dictado en la obra', alDia===n&&n?'ok':'')+
+        cifra('Por vencer', pv, 'en los próximos 30 días', pv?'ojo':'ok')+
+        cifra('Vencidas', ven, 'hay que repetirlas', ven?'mal':'ok')+
+        cifra('Faltan o desaprobaron', falta, 'temas exigidos sin aprobar', falta?'mal':'ok')+'</div>';
+      h+= plan
+        ? '<div class="aviso">Cuenta contra el <b>plan de capacitación por puesto</b> de la obra'+(plan.act?' (actualizado el '+esc(fechaLarga(plan.act))+')':'')+'. Lo aprobado vale <b>'+plan.meses+' meses</b>. El plan se arma en la app, en «Lo que exige cada puesto».</div>'
+        : '<div class="aviso ojo"><b>La obra no tiene plan por puesto.</b> Se cuenta contra todo lo que ya se dictó. Arma el plan en la app («Programar capacitación» › «Lo que exige cada puesto») y esta matriz pasa a medir lo que exige cada puesto.</div>';
+      h+='<div class="tarj" id="t-mat"></div>';
+      caja.innerHTML=h;
+      pintarMatriz(M);
+    }).catch(function(cod){ fallo(caja, cod); });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+function pintarMatriz(M){
+  var t=$('t-mat'); if(!t) return;
+  var q=nrm(MAT.q), filas=M.filas.filter(function(p){
+    if(q && (nrm(p.nombre)+' '+p.dni+' '+nrm(p.puesto)).indexOf(q)<0) return false;
+    if(MAT.solo==='pend') return !p.completo && p.n>0;
+    return true;
+  });
+  var cols=M.cols;
+  var h='<div class="tarj-cab"><div class="herr"><input type="search" id="mat-q" placeholder="Buscar nombre, DNI o puesto…" value="'+esc(MAT.q)+'" aria-label="Buscar">'+
+    '<label class="check" style="margin:0"><input type="checkbox" id="mat-pend"'+(MAT.solo==='pend'?' checked':'')+'><span>Solo quienes deben algo</span></label>'+
+    '<span class="cuenta-f">'+filas.length+' de '+M.filas.length+' personas</span></div>'+
+    '<div class="acciones"><button type="button" class="bt sec chico" id="mat-csv">Exportar CSV</button></div></div>';
+  if(!cols.length || !M.filas.length){
+    h+='<div class="vacio"><b>Todavía no hay nada que cruzar</b>Cuando haya personal cargado y constancias, aquí sale quién está al día en qué.</div>';
+  } else {
+    h+='<div class="tabla-caja mat-caja"><table class="mat"><thead><tr><th class="mat-p">Persona</th><th class="num">Al día</th>'+
+      cols.map(function(c){ return '<th class="mat-c'+(c.req?'':' extra')+'" title="'+esc(c.t)+(c.req?'':' · no lo exige el plan')+'"><span>'+esc(c.t)+'</span></th>'; }).join('')+'</tr></thead><tbody>';
+    filas.slice(0,800).forEach(function(p){
+      h+='<tr><td class="mat-p"><b>'+esc(p.nombre||'(sin nombre)')+'</b><span class="sub">'+esc(p.puesto||'sin puesto')+(p.dni?' · '+esc(p.dni):'')+'</span></td>'+
+         '<td class="num">'+(p.n ? '<span class="pill '+(p.completo?'ok':(p.vig?'ojo':'mal'))+'">'+p.vig+' / '+p.n+'</span>' : '—')+'</td>';
+      cols.forEach(function(c){
+        var x=p.cel[c.k], st=x?x.st:'na';
+        var tit=x ? (ST_TXT[st]+(x.ok?' · aprobada el '+fechaLarga(x.ok):'')+(x.vence?' · vence el '+fechaLarga(x.vence):'')) : 'No lo exige su puesto';
+        h+='<td class="mat-e" title="'+esc(tit)+'">'+(st==='na'?'<span class="na">—</span>':'<span class="pill '+ST_CL[st]+'">'+esc(ST_TXT[st])+'</span>')+'</td>';
+      });
+      h+='</tr>';
+    });
+    h+='</tbody></table></div>';
+  }
+  t.innerHTML=h;
+  var qi=$('mat-q'); if(qi) qi.oninput=function(){ MAT.q=qi.value; var pos=qi.selectionStart; pintarMatriz(M); var q2=$('mat-q'); if(q2){ q2.focus(); try{ q2.setSelectionRange(pos,pos); }catch(e){} } };
+  var pe=$('mat-pend'); if(pe) pe.onchange=function(){ MAT.solo=pe.checked?'pend':''; pintarMatriz(M); };
+  var cb=$('mat-csv'); if(cb) cb.onclick=function(){
+    var cs=[{k:'nombre', t:'Persona'}, {k:'dni', t:'DNI'}, {k:'puesto', t:'Puesto'}, {k:'_al', t:'Al día', v:function(f){ return f.n ? (f.vig+' de '+f.n) : ''; }}]
+      .concat(cols.map(function(c){ return {k:'c_'+c.k, t:c.t, v:function(f){ var x=f.cel[c.k]; if(!x) return '—'; return ST_TXT[x.st]+(x.vence?' (vence '+fechaLarga(x.vence)+')':''); }}; }));
+    csv(cs, filas, 'matriz-capacitacion');
+  };
+}
+
+/* ═══ CAPACITACIÓN: LO PROGRAMADO (los dos) ═══════════════════════
+   Lo que el supervisor programó en la app (sst_doc, hoja «temas»): el
+   día, el tema, para quién y cuántos ya la rindieron ese día. */
+function paraTexto(p){
+  if(!p || !p.k || p.k==='todos') return 'Toda la obra';
+  var v=(Array.isArray(p.v)?p.v:[]).join(', ');
+  return (p.k==='puesto'?'Puesto':'Lugar')+': '+v;
+}
+function vistaProgramadas(caja){
+  cargando(caja);
+  function pinta(){
+    Promise.all([
+      traer('sst_doc','&select=id,hoja,nombre,nota,creado&hoja=eq.temas&order=creado.desc',500),
+      traer('sst_constancia','&select=fecha,tema,resultado,tipo&order=fecha.desc',5000)
+    ]).then(function(r){
+      var cons=r[1], filas=[];
+      r[0].forEach(function(d){
+        if(d.hoja!=='temas') return;
+        var o=nota(d.nota); if(!o || o.t!=='E' || !o.d) return;
+        var fe=String(o.fe||o.v||'').slice(0,10), hasta=o.para ? fe : String(o.v||fe).slice(0,10);
+        var nom=String(d.nombre||'').replace(/^Capacitación\s*·\s*/,'') || o.d;
+        var kn=nrm(nom);
+        var del=cons.filter(function(c){ var ct=nrm(temaLimpio(c.tema)); return ct && kn.indexOf(ct)===0 && String(c.fecha||'').slice(0,10)>=fe && String(c.fecha||'').slice(0,10)<=hasta; });
+        var ap=del.filter(function(c){ return esTallerC(c) || esAprobadoR(c.resultado); }).length;
+        var est = hasta<HOY ? 'pasada' : (fe>HOY ? 'proxima' : 'hoy');
+        filas.push({id:d.id, fe:fe, hasta:hasta, tema:nom, para:paraTexto(o.para), ev:o.ev||'', intentos:parseInt(o['in'],10)||1, rindieron:del.length, aprobaron:ap, est:est, creado:d.creado});
+      });
+      var cols=[
+        {k:'fe', t:'Día', h:function(f){ return esc(fechaLarga(f.fe))+(f.hasta!==f.fe?'<span class="sub">hasta el '+esc(fechaLarga(f.hasta))+'</span>':''); }},
+        {k:'tema', t:'Tema', h:function(f){ return '<b>'+esc(f.tema)+'</b>'; }},
+        {k:'para', t:'Para quiénes'},
+        {k:'est', t:'Estado', h:function(f){ return f.est==='hoy'?'<span class="pill ok">hoy</span>':(f.est==='proxima'?'<span class="pill azul">próxima</span>':'<span class="pill gris">pasada</span>'); },
+          v:function(f){ return {hoy:'hoy', proxima:'próxima', pasada:'pasada'}[f.est]; }},
+        {k:'rindieron', t:'Rindieron', num:true, h:function(f){ return f.rindieron ? esc(f.rindieron)+'<span class="sub">'+esc(f.aprobaron)+' aprobaron</span>' : (f.est==='proxima'?'—':'0'); }},
+        {k:'ev', t:'Evaluador'}
+      ];
+      caja.innerHTML='<div class="aviso">Se programa en la app, en «Capacitación por tema» › «Programar capacitación». Ese día, a la gente elegida le aparece «Iniciar capacitación» en su celular; lo que rinden llega aquí a «Constancias» y a la matriz.</div><div class="tarj" id="t-prog"></div>';
+      tabla($('t-prog'), cols, filas, {orden:'fe', asc:false, unidad:'programadas', vacio:'Nada programado todavía', vacioSub:'Cuando programes una capacitación en la app, aparece aquí con su día.', archivo:'capacitaciones-programadas'});
+    }).catch(function(cod){ fallo(caja, cod); });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+
+/* ═══ CANAL DE DENUNCIA (quien la lea en la app, la lee aquí) ══════
+   Las mismas funciones del servidor que la app: sst_denuncias_ver decide
+   quién puede leer; abrir una la pasa a «en revisión»; cerrarla pide la
+   respuesta que leerá quien la mandó con su número de seguimiento. */
+var DEN_TIPOS={sin_seguridad:'Me mandan a trabajar sin seguridad', represalia:'Represalia por reportar o por negarme a un trabajo peligroso',
+  hostigamiento:'Acoso u hostigamiento sexual', maltrato:'Maltrato, insultos o discriminación', alcohol:'Alcohol o drogas en la obra',
+  ocultan:'Esconden un accidente o un incidente', fraude:'Robo, coima o fraude', otro:'Otra cosa'};
+var DEN_EST={nueva:'Nueva', revision:'En revisión', cerrada:'Cerrada'};
+var DEN_LEY={
+  hostigamiento:'El hostigamiento sexual tiene su propio procedimiento por ley (Ley 27942 y su reglamento, D.S. 014-2019-MIMP). Pásala sin demora a quien lleva estos casos en tu empresa.',
+  represalia:'Interrumpir un trabajo ante un peligro inminente está protegido por la Ley 29783 (art. 63). Una represalia por eso, o por reportar, hay que pararla y corregirla.',
+  sin_seguridad:'Si todavía está pasando, no esperes a responder: que alguien vaya al frente.',
+  ocultan:'Un accidente escondido no se investiga y se repite. Revisa el registro de accidentes e incidentes.'};
+var DENP={lista:[], foto:{}};
+function vistaDenuncias(caja){
+  cargando(caja);
+  function pinta(){
+    sbRpc('sst_denuncias_ver',{p_emp:YO.obra.id}).then(function(r){
+      if(!r || !r.ok){
+        var m=(r&&r.motivo)||'';
+        caja.innerHTML='<div class="vacio"><b>'+(m==='no_eres_miembro'?'Este canal no lo lees tú':'No se pudo abrir el canal')+'</b>'+
+          (m==='no_eres_miembro'?'Lo leen el dueño de la obra, el líder de la empresa y los supervisores que ellos marquen en la app.':'Inténtalo en un momento.')+'</div>';
+        return;
+      }
+      DENP.lista=r.lista||[];
+      var cols=[
+        {k:'dia', t:'Llegó', h:function(f){ return esc(fechaLarga(f.dia)); }},
+        {k:'tipo', t:'Tipo', h:function(f){ return '<b>'+esc(DEN_TIPOS[f.tipo]||DEN_TIPOS.otro)+'</b>'+(f.obra&&r.lider?'<span class="sub">'+esc(f.obra)+'</span>':''); }, v:function(f){ return DEN_TIPOS[f.tipo]||'Otra cosa'; }},
+        {k:'texto', t:'Qué dice', h:function(f){ var x=String(f.texto||''); return esc(x.slice(0,160))+(x.length>160?'…':'')+(f.con_foto?' <span class="pill gris">con foto</span>':''); }},
+        {k:'estado', t:'Estado', h:function(f){ return '<span class="pill '+(f.estado==='cerrada'?'ok':(f.estado==='nueva'?'mal':'ojo'))+'">'+esc(DEN_EST[f.estado]||f.estado)+'</span>'; }, v:function(f){ return DEN_EST[f.estado]||f.estado; }},
+        {k:'_acc', t:'', acc:true, h:function(f){ return '<button type="button" class="bt '+(f.estado==='cerrada'?'sec ':'')+'chico" data-acc="abrir">'+(f.estado==='cerrada'?'Ver':'Atender')+'</button>'; }}
+      ];
+      caja.innerHTML='<div class="aviso">Llegan sin nombre y sin hora: la app no guarda quién la escribió, y las de cada día llegan juntas a la mañana siguiente. No intentes averiguarlo; el canal sirve mientras la gente confíe en él.</div><div class="tarj" id="t-den"></div>';
+      tabla($('t-den'), cols, DENP.lista, {orden:'dia', asc:false, unidad:'denuncias', vacio:'No hay denuncias', vacioSub:'Cuéntale a tu gente en la charla que el canal existe y que es anónimo de verdad.', archivo:'denuncias',
+        alClic:abrirDenuncia, accion:function(acc, f){ abrirDenuncia(f); }});
+    }, function(cod){
+      caja.innerHTML='<div class="vacio"><b>'+(cod===404?'Falta activar el canal en el servidor':'No se pudo abrir el canal')+'</b>'+(cod===404?'Se activa con el SQL «2026-09-21-denuncia».':'Revisa tu conexión.')+'</div>';
+    });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+function abrirDenuncia(d){
+  var cerrada=d.estado==='cerrada';
+  var h='<dl class="datos"><dt>Llegó</dt><dd>'+esc(fechaLarga(d.dia))+'</dd>'+(d.obra?'<dt>Obra</dt><dd>'+esc(d.obra)+'</dd>':'')+
+    (d.lugar?'<dt>Dónde</dt><dd>'+esc(d.lugar)+'</dd>':'')+'<dt>Estado</dt><dd>'+esc(DEN_EST[d.estado]||d.estado)+'</dd></dl>'+
+    '<div class="seccion"><h3>Lo que escribió</h3><p style="margin:0;white-space:pre-wrap">'+esc(d.texto||'')+'</p></div>'+
+    (d.con_foto?'<div id="den-foto" class="foto-caja"><span class="et">Cargando la foto…</span></div>':'')+
+    (DEN_LEY[d.tipo]?'<div class="aviso ojo" style="margin-top:16px">'+esc(DEN_LEY[d.tipo])+'</div>':'');
+  var pie;
+  if(cerrada){
+    h+='<div class="seccion"><h3>Tu respuesta</h3><p style="margin:0;white-space:pre-wrap">'+esc(d.respuesta||'(sin texto)')+'</p>'+(d.atendida_dia?'<p class="ayuda">Cerrada el '+esc(fechaLarga(d.atendida_dia))+'</p>':'')+'</div>';
+    pie='<button type="button" class="bt sec" id="den-volver">Cerrar</button>';
+  } else {
+    h+='<div class="seccion"><h3>Responder y cerrar</h3><div class="campo"><label for="den-resp">Respuesta para quien la mandó</label>'+
+      '<textarea id="den-resp" maxlength="1500" placeholder="Qué se hizo o qué se va a hacer. La lee solo quien tiene el número de seguimiento.">'+esc(d.respuesta||'')+'</textarea></div><div class="msg" id="den-msg"></div></div>';
+    pie='<button type="button" class="bt sec" id="den-volver">Dejarla abierta</button><button type="button" class="bt ok" id="den-cerrar">Cerrar con esta respuesta</button>';
+  }
+  abrirHoja(DEN_TIPOS[d.tipo]||'Denuncia', 'Canal de denuncia', h, pie, {id:d.id});
+  $('den-volver').onclick=cerrarHoja;
+  if(d.con_foto){
+    var poner=function(src){ var c=$('den-foto'); if(c) c.innerHTML = src ? '<img src="'+src+'" alt="Foto de la denuncia">' : '<span class="et">No se pudo traer la foto.</span>'; };
+    if(DENP.foto[d.id]) poner(DENP.foto[d.id]);
+    else sbRpc('sst_denuncia_foto',{p_id:d.id}).then(function(r){
+      if(r && r.ok && r.foto && /^data:image\/(jpeg|webp|png);base64,/.test(r.foto)){ DENP.foto[d.id]=r.foto; poner(r.foto); } else poner('');
+    }, function(){ poner(''); });
+  }
+  /* abrirla ya le dice a quien la mandó que alguien la leyó */
+  if(d.estado==='nueva') sbRpc('sst_denuncia_atender',{p_id:d.id, p_estado:'revision', p_respuesta:null}).then(function(r){
+    if(r && r.ok){ d.estado='revision'; if(typeof VISTA.recargar==='function') VISTA.recargar(true); }
+  }, function(){});
+  if(!cerrada) $('den-cerrar').onclick=function(){
+    var t=String($('den-resp').value||'').trim(), m=$('den-msg'), b=$('den-cerrar');
+    if(t.length<5){ m.className='msg mal'; m.textContent='Escribe una respuesta, aunque sea corta: a quien la mandó le sirve saber qué pasó.'; return; }
+    b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    sbRpc('sst_denuncia_atender',{p_id:d.id, p_estado:'cerrada', p_respuesta:t}).then(function(r){
+      if(!r || !r.ok){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo cerrar'+((r&&r.motivo)?' ('+r.motivo+')':'')+'.'; return; }
+      toast('Cerrada. Quien la mandó lee tu respuesta con su número de seguimiento.'); cerrarHoja();
+      if(typeof VISTA.recargar==='function') VISTA.recargar(true);
+    }, function(){ b.disabled=false; m.className='msg mal'; m.textContent='No hubo conexión. Tu respuesta sigue escrita: inténtalo otra vez.'; });
+  };
+}
+
 /* ═══ EL CATÁLOGO DE VISTAS ══════════════════════════════════════ */
+/* 23/09/2026 · el mismo menú para lo mismo, con los nombres de la app.
+   Lo que faltaba y la app sí tenía: la matriz de capacitación, lo
+   programado, las inspecciones y el canal de denuncia. «Cumplimiento»
+   pasa a llamarse «Constancias», como en la app. */
+var V = {
+  matriz: {id:'matriz', g:'Capacitación', ic:'▤', n:'Matriz', s:'Quién está al día en qué, contra lo que exige su puesto', pintar:vistaMatriz, tablas:['sst_trabajador','sst_constancia','sst_doc']},
+  prog:   {id:'prog', g:'Capacitación', ic:'🗓', n:'Programadas', s:'Lo que se programó en la app: el día, el tema y cuántos la rindieron', pintar:vistaProgramadas, tablas:['sst_doc','sst_constancia']},
+  enc:    {id:'encuestas', g:'Capacitación', ic:'★', n:'Encuestas', s:'Cómo calificaron tus capacitaciones', tablas:['sst_encuesta'],
+           pintar:vistaTabla('sst_encuesta', COL.encuestas, {ordenSb:'creado', ordenPor:'fecha', unidad:'encuestas', vacio:'Ninguna encuesta', vacioSub:'Salen solas después de cada evaluación y cada taller.', archivo:'encuestas'})},
+  insp:   {id:'insp', g:'Registros', ic:'🔎', n:'Inspecciones', s:'Las que se llenaron en el celular, con lo que encontraron', tablas:['sst_inspeccion'],
+           pintar:vistaTabla('sst_inspeccion', COL.inspecciones, {ordenSb:'fecha', ordenPor:'fecha', unidad:'inspecciones', vacio:'Ninguna inspección todavía', vacioSub:'Se llenan en la app, en «Inspecciones».', archivo:'inspecciones'})},
+  docs:   {id:'docs', g:'Registros', ic:'☰', n:'Documentos', s:'Los archivos que la obra subió: RISST, PETS, IPERC, MSDS', tablas:['sst_doc'],
+           pintar:vistaTabla('sst_doc', COL.docs, {extra:'&select=id,hoja,nombre,url,creado&url=not.is.null&order=creado.desc', ordenPor:'creado', unidad:'documentos',
+             vacio:'Ningún archivo subido', vacioSub:'Los documentos se suben desde la app, en «Documentos de la obra».', archivo:'documentos', filtrar:function(f){ return !!f.url; }})},
+  den:    {id:'denuncias', g:'Canal de denuncia', ic:'🛡', n:'Denuncias', s:'Lo que la gente denunció sin nombre · se responde desde aquí', pintar:vistaDenuncias, tablas:[]},
+  acc:    {id:'acc', g:'Indicadores', ic:'⚠', n:'Accidentabilidad', s:'Índices del año con las horas hombre reales', pintar:vistaAccidentes, tablas:['sst_accidente','sst_hht']},
+  reportes: {id:'reportes', g:'Registros', ic:'🚨', n:'Reportes', s:'Actos y condiciones subestándares · se cierran desde aquí', tablas:['sst_reporte'],
+           pintar:vistaTabla('sst_reporte', COL.reportes, {ordenSb:'creado', ordenPor:'fecha', unidad:'reportes', vacio:'Ningún reporte', archivo:'reportes',
+             alClic:function(f){ abrirReporte(f.id); }, accion:function(acc, f){ abrirReporte(f.id); }})},
+  ats:    {id:'ats', g:'Registros', ic:'📋', n:'ATS e IPERC', s:'Los papeles de la tarea, firmados en el celular · el V°B° se da desde aquí', pintar:vistaATS, tablas:['sst_doc']}
+};
+function conGrupo(v, g){ return Object.assign({}, v, {g:g}); }
 var VISTAS_LIDER = [
   {id:'resumen', g:'Empresa', ic:'▦', n:'Resumen ejecutivo', s:'Cómo va la obra, en una pantalla', pintar:vistaResumenLider,
    tablas:['sst_trabajador','sst_constancia','sst_reporte','sst_accidente','sst_hht','sst_kardex','sst_inspeccion']},
   {id:'equipo',  g:'Empresa', ic:'⚑', n:'Obras y equipo', s:'Tus obras, tus supervisores, y quién pidió entrar', pintar:vistaEquipo, tablas:[]},
-  {id:'acc',     g:'Indicadores', ic:'⚠', n:'Accidentabilidad', s:'Índices del año con las horas hombre reales', pintar:vistaAccidentes, tablas:['sst_accidente','sst_hht']},
-  {id:'cump',    g:'Indicadores', ic:'✔', n:'Cumplimiento', s:'Constancias de evaluaciones y talleres', tablas:['sst_constancia'],
-   pintar:vistaTabla('sst_constancia', COL.constancias, {ordenSb:'fecha', ordenPor:'fecha', unidad:'constancias', vacio:'Ninguna constancia todavía', archivo:'constancias'})},
+  V.acc,
   {id:'epp',     g:'Indicadores', ic:'⛑', n:'Consumo de EPP', s:'Lo que sale del almacén, con firma', pintar:vistaEPP, tablas:['sst_kardex']},
+  V.matriz, V.prog,
+  {id:'cump',    g:'Capacitación', ic:'✔', n:'Constancias', s:'Evaluaciones y talleres cerrados', tablas:['sst_constancia'],
+   pintar:vistaTabla('sst_constancia', COL.constancias, {ordenSb:'fecha', ordenPor:'fecha', unidad:'constancias', vacio:'Ninguna constancia todavía', archivo:'constancias'})},
+  V.enc,
   {id:'personas', g:'Registros', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
-  {id:'reportes', g:'Registros', ic:'🚨', n:'Reportes', s:'Actos y condiciones subestándares · se cierran desde aquí', tablas:['sst_reporte'],
-   pintar:vistaTabla('sst_reporte', COL.reportes, {ordenSb:'creado', ordenPor:'fecha', unidad:'reportes', vacio:'Ningún reporte', archivo:'reportes',
-     alClic:function(f){ abrirReporte(f.id); }, accion:function(acc, f){ abrirReporte(f.id); }})},
-  {id:'ats',     g:'Registros', ic:'📋', n:'ATS e IPERC', s:'Los papeles de la tarea, firmados en el celular · el V°B° se da desde aquí', pintar:vistaATS, tablas:['sst_doc']},
-  {id:'docs',    g:'Registros', ic:'☰', n:'Documentos', s:'Todo lo que la obra subió a la nube', tablas:['sst_doc'],
-   pintar:vistaTabla('sst_doc', COL.docs, {ordenSb:'creado', extra:'&select=id,hoja,nombre,url,creado&order=creado.desc', ordenPor:'creado', unidad:'documentos', vacio:'Ningún documento', archivo:'documentos'})}
+  V.reportes, V.insp, V.ats, V.docs,
+  V.den
 ];
 var VISTAS_SUP = [
   {id:'obra',    g:'Mi obra', ic:'▦', n:'Hoy en la obra', s:'Lo que necesita tu ojo esta mañana', pintar:vistaMiObra,
    tablas:['sst_trabajador','sst_reporte','sst_kardex','sst_constancia','sst_doc']},
   {id:'personal', g:'Mi obra', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
-  {id:'ats',     g:'Registros', ic:'📋', n:'ATS e IPERC', s:'Los papeles de la tarea, firmados en el celular · el V°B° se da desde aquí', pintar:vistaATS, tablas:['sst_doc']},
-  {id:'kardex',  g:'Registros', ic:'⛑', n:'Entrega de EPP', s:'El kardex, con la firma de quien recibió', pintar:vistaEPP, tablas:['sst_kardex']},
-  {id:'constancias', g:'Registros', ic:'✔', n:'Constancias', s:'Evaluaciones y talleres cerrados', tablas:['sst_constancia'],
+  V.matriz, V.prog,
+  {id:'constancias', g:'Capacitación', ic:'✔', n:'Constancias', s:'Evaluaciones y talleres cerrados', tablas:['sst_constancia'],
    pintar:vistaTabla('sst_constancia', COL.constancias, {ordenSb:'fecha', ordenPor:'fecha', unidad:'constancias', vacio:'Ninguna constancia todavía', archivo:'constancias'})},
-  {id:'reportes', g:'Registros', ic:'🚨', n:'Reportes', s:'Actos y condiciones subestándares · se cierran desde aquí', tablas:['sst_reporte'],
-   pintar:vistaTabla('sst_reporte', COL.reportes, {ordenSb:'creado', ordenPor:'fecha', unidad:'reportes', vacio:'Ningún reporte', archivo:'reportes',
-     alClic:function(f){ abrirReporte(f.id); }, accion:function(acc, f){ abrirReporte(f.id); }})},
-  {id:'encuestas', g:'Registros', ic:'★', n:'Encuestas', s:'Cómo calificaron tus capacitaciones', tablas:['sst_encuesta'],
-   pintar:vistaTabla('sst_encuesta', COL.encuestas, {ordenSb:'creado', ordenPor:'fecha', unidad:'encuestas', vacio:'Ninguna encuesta', vacioSub:'Salen solas después de cada evaluación y cada taller.', archivo:'encuestas'})},
-  {id:'docs',    g:'Registros', ic:'☰', n:'Documentos', s:'Todo lo que la obra subió a la nube', tablas:['sst_doc'],
-   pintar:vistaTabla('sst_doc', COL.docs, {ordenSb:'creado', extra:'&select=id,hoja,nombre,url,creado&order=creado.desc', ordenPor:'creado', unidad:'documentos', vacio:'Ningún documento', archivo:'documentos'})}
+  V.enc,
+  V.ats,
+  {id:'kardex',  g:'Registros', ic:'⛑', n:'Entrega de EPP', s:'El kardex, con la firma de quien recibió', pintar:vistaEPP, tablas:['sst_kardex']},
+  V.reportes, V.insp, V.docs,
+  V.acc,
+  V.den
 ];
 
 /* ═══ ARRANQUE ═══════════════════════════════════════════════════ */
 function mostrarEntrada(msg){
   $('portal').className=''; $('entrada').hidden=false;
   var e=$('e-error'); if(msg){ e.textContent=msg; e.hidden=false; } else e.hidden=true;
+  try{ if(typeof guiaCerrar==='function') guiaCerrar(); }catch(_g){}
 }
 function mostrarPortal(){
   $('entrada').hidden=true; $('portal').className='on';
   var guardada=leer('sstp_obra',null);
   var hash=(location.hash||'').slice(1);
-  VISTA.actual = hash || null;
+  VISTA.actual = null;
   elegirObra(guardada);
+  if(hash && hash!==VISTA.actual && vistasDe().some(function(v){ return v.id===hash; })) navegar(hash, true);
+  /* la primera vez, la guía corta; después, en el botón «Guía» */
+  setTimeout(function(){ try{ if(typeof guiaPrimeraVez==='function') guiaPrimeraVez(); }catch(_g){} }, 600);
+}
+/* 23/09/2026 · salir a la entrada, por el botón o porque la sesión venció */
+function limpiarSesion(){
+  vivoCerrar(); borrarToken(); YO={empresas:[],obra:null,rol:'',nombre:'',dueno:false};
+  try{ if(typeof cerrarHoja==='function') cerrarHoja(); }catch(_h){}
+  /* el que entra después empieza por el principio, no por la sección
+     donde el anterior se quedó */
+  VISTA.actual=null; VISTA.cache={}; try{ history.replaceState(null,'',location.pathname); }catch(e){}
+}
+var _VENCIDA=false;
+function sesionVencida(){
+  if(_VENCIDA || $('entrada').hidden===false) return;
+  _VENCIDA=true; setTimeout(function(){ _VENCIDA=false; }, 3000);
+  limpiarSesion();
+  mostrarEntrada('Tu sesión venció. Vuelve a entrar con tu correo o tu DNI: lo que dejaste está guardado.');
+}
+/* ¿Olvidaste tu contraseña? Mismo camino que la app: el correo trae un
+   enlace que abre la app para poner la nueva, y con ella se entra aquí. */
+function pedirClaveNueva(){
+  var m=$('e-olvide-msg'), quien=String($('e-quien').value||'').trim();
+  m.hidden=false; m.className='msg mal';
+  if(!quien){ m.textContent='Escribe arriba tu correo (o tu DNI) y vuelve a tocar aquí.'; $('e-quien').focus(); return; }
+  var esDoc = /^[0-9A-Za-z]{6,12}$/.test(quien) && quien.indexOf('@')<0;
+  if(!esDoc && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(quien)){ m.textContent='Ese correo no parece completo. Revísalo.'; return; }
+  m.className='msg gris'; m.textContent='Mandando el correo…';
+  var correoP = esDoc
+    ? sbRpc('sst_alias_correo', {p_alias: quien.toLowerCase().replace(/[^0-9a-z]/g,'')}).then(function(j){
+        if(!j || !j.ok || !j.correo) return Promise.reject({portal:'Ese DNI no está vinculado a ninguna cuenta. Escribe el correo con el que la creaste.'});
+        return String(j.correo); })
+    : Promise.resolve(quien.toLowerCase());
+  correoP.then(function(correo){
+    var app = location.href.replace(/[#?].*$/,'').replace(/portal\/(index\.html)?$/,'');
+    return fetch(SB.url+'/auth/v1/recover', {method:'POST', headers:{'apikey':SB.key,'Content-Type':'application/json'},
+      body:JSON.stringify({email:correo, redirect_to:app})}).then(function(r){
+        if(!r.ok) return Promise.reject({portal:'No se pudo mandar el correo ahora. Escríbenos a descarganomaspe@gmail.com y te la reiniciamos a mano.'});
+        return correo;
+      });
+  }).then(function(correo){
+    m.className='msg ok';
+    m.textContent = esDoc
+      ? 'Listo. Mandamos un enlace al correo de la cuenta de ese DNI. Ábrelo: se abre la app para poner tu contraseña nueva. Luego entras aquí con ella.'
+      : 'Listo. Mandamos un enlace a '+correo+'. Ábrelo: se abre la app para poner tu contraseña nueva. Luego entras aquí con ella. Si no llega, revisa «Spam».';
+  }).catch(function(e){ m.className='msg mal'; m.textContent=(e&&e.portal)||'No se pudo (¿sin internet?). Inténtalo en un momento.'; });
 }
 function arrancar(){
   TOK=leer(LS_TOK,null);
@@ -1198,13 +1681,9 @@ function arrancar(){
       mostrarEntrada(m);
     });
   };
-  $('bt-salir').onclick=function(){
-    vivoCerrar(); borrarToken(); YO={empresas:[],obra:null,rol:'',nombre:''};
-    /* el que entra después empieza por el principio, no por la sección
-       donde el anterior se quedó */
-    VISTA.actual=null; VISTA.cache={}; try{ history.replaceState(null,'',location.pathname); }catch(e){}
-    mostrarEntrada();
-  };
+  $('bt-salir').onclick=function(){ limpiarSesion(); mostrarEntrada(); };
+  var eo=$('e-olvide'); if(eo) eo.onclick=pedirClaveNueva;
+  var bg=$('bt-guia'); if(bg) bg.onclick=function(){ if(typeof guiaAbrir==='function') guiaAbrir(); };
   if(TOK && TOK.access_token){
     cargarEmpresas().then(function(emps){
       if(!emps.length){ borrarToken(); mostrarEntrada(); return; }
@@ -1861,6 +2340,106 @@ function levantarObservacion(){
     if(!ok) return;
     escribirATS(function(n){ n.devuelto=null; }).then(despuesDeEscribir('Observación levantada.')).catch(siFallaEscribir(null));
   });
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   OBRASST · el portal · la guía rápida
+   Marcelo, 23/09/2026: «puedes crear una guía para la página web, como
+   lo de la app, algo rápido y simple». Seis pasos la primera vez que se
+   entra; después, en el botón «Guía» de arriba. Cada paso señala algo
+   que está en la pantalla; si no está (una sola obra, una vista sin
+   tabla) se salta, en vez de señalar el vacío.
+   ══════════════════════════════════════════════════════════════ */
+var LS_GUIA = 'sstp_guia_v1';
+var GUIA_PASOS = [
+  { sel:'#rail', tit:'Todas las secciones',
+    tx:'Aquí están las secciones de tu obra, agrupadas: capacitación, registros, indicadores y el canal de denuncia. Toca una y se abre.' },
+  { sel:'#obra-sel', tit:'Tu obra',
+    tx:'Todo lo que ves es de la obra elegida. Si llevas más de una, la cambias aquí.' },
+  { sel:'#vivo', tit:'En vivo',
+    tx:'Con el punto verde, lo que se registra en el celular aparece aquí solo, sin recargar la página.' },
+  { sel:'#main .herr input[type=search], #main #mat-q', tit:'Buscar y exportar',
+    tx:'Cada tabla tiene su buscador y su botón «Exportar CSV», que se abre en Excel. Toca el título de una columna para ordenarla.' },
+  { sel:'#bt-app', tit:'La app, para el campo',
+    tx:'ATS, EPP, capacitación y reportes se registran en el celular. Este botón abre la app en otra pestaña; aquí revisas, confirmas y cierras.' },
+  { sel:'#bt-guia', tit:'Esta guía',
+    tx:'Si la quieres ver otra vez, está aquí. Para salir de tu cuenta, «Salir».' }
+];
+var GUIA = { i:0, pasos:[], abierta:false, foco:null };
+function _guiaVisible(e){
+  if(!e) return false;
+  if(e.closest('[hidden]')) return false;
+  var r = e.getBoundingClientRect();
+  return r.width > 0 && r.height > 0;
+}
+function guiaPrimeraVez(){
+  if(leer(LS_GUIA, 0)) return;
+  guiaAbrir();
+}
+function guiaAbrir(){
+  if($('portal').className !== 'on') return;
+  GUIA.pasos = GUIA_PASOS.filter(function(p){ return _guiaVisible(document.querySelector(p.sel)); });
+  if(!GUIA.pasos.length) return;
+  GUIA.i = 0; GUIA.abierta = true; GUIA.foco = document.activeElement;
+  document.addEventListener('keydown', _guiaTecla);
+  window.addEventListener('resize', _guiaRepintar);
+  guiaPintar();
+}
+function _guiaRepintar(){ if(GUIA.abierta) guiaPintar(); }
+function _guiaTecla(ev){
+  if(!GUIA.abierta) return;
+  if(ev.key === 'Escape'){ ev.preventDefault(); guiaCerrar(true); }
+  else if(ev.key === 'ArrowRight'){ ev.preventDefault(); guiaMover(1); }
+  else if(ev.key === 'ArrowLeft'){ ev.preventDefault(); guiaMover(-1); }
+}
+function guiaMover(d){
+  var n = GUIA.i + d;
+  if(n < 0) return;
+  if(n >= GUIA.pasos.length){ guiaCerrar(true); return; }
+  GUIA.i = n; guiaPintar();
+}
+function guiaPintar(){
+  var p = GUIA.pasos[GUIA.i], e = p && document.querySelector(p.sel);
+  if(!_guiaVisible(e)){ if(GUIA.i < GUIA.pasos.length - 1){ GUIA.i++; guiaPintar(); } else guiaCerrar(true); return; }
+  var caja = $('guia');
+  if(!caja){ caja = document.createElement('div'); caja.id = 'guia'; caja.className = 'guia-fondo'; document.body.appendChild(caja); }
+  try{ e.scrollIntoView({block:'nearest', inline:'nearest'}); }catch(_s){}
+  var r = e.getBoundingClientRect(), pad = 6, ult = (GUIA.i === GUIA.pasos.length - 1);
+  caja.innerHTML =
+    '<div class="guia-luz" style="top:'+Math.max(4, r.top-pad)+'px;left:'+Math.max(4, r.left-pad)+'px;'+
+      'width:'+Math.min(window.innerWidth-8, r.width+pad*2)+'px;height:'+Math.min(window.innerHeight-8, r.height+pad*2)+'px"></div>'+
+    '<div class="guia-carta" role="dialog" aria-modal="true" aria-labelledby="guia-t" aria-describedby="guia-x">'+
+      '<p class="guia-n"><span>Paso</span> '+(GUIA.i+1)+' <span>de</span> '+GUIA.pasos.length+'</p>'+
+      '<h2 id="guia-t">'+esc(p.tit)+'</h2><p id="guia-x">'+esc(p.tx)+'</p>'+
+      '<div class="acciones">'+
+        (ult ? '' : '<button type="button" class="bt sec chico" id="guia-no">Saltar</button>')+
+        (GUIA.i > 0 ? '<button type="button" class="bt sec chico" id="guia-ant">Atrás</button>' : '')+
+        '<button type="button" class="bt chico" id="guia-si">'+(ult ? 'Listo' : 'Siguiente')+'</button>'+
+      '</div></div>';
+  /* la carta, al lado de lo señalado: abajo si cabe, si no arriba; en el
+     celular, abajo de la pantalla (lo resuelve la hoja de estilos) */
+  var c = caja.querySelector('.guia-carta'), cw = c.offsetWidth, ch = c.offsetHeight;
+  var top = (r.bottom + 12 + ch < window.innerHeight) ? (r.bottom + 12) : Math.max(12, r.top - 12 - ch);
+  var left = Math.min(Math.max(12, r.left), window.innerWidth - cw - 12);
+  /* lo que ocupa toda la altura (la columna de la izquierda): la carta a su lado */
+  if(r.height > window.innerHeight * 0.6 && r.right + 16 + cw < window.innerWidth){ top = Math.max(12, Math.min(r.top + 40, window.innerHeight - ch - 12)); left = r.right + 16; }
+  c.style.top = top + 'px'; c.style.left = left + 'px';
+  var no = $('guia-no'), ant = $('guia-ant'), si = $('guia-si');
+  if(no) no.onclick = function(){ guiaCerrar(true); };
+  if(ant) ant.onclick = function(){ guiaMover(-1); };
+  si.onclick = function(){ guiaMover(1); };
+  caja.onclick = function(ev){ if(ev.target === caja) guiaCerrar(true); };
+  setTimeout(function(){ try{ si.focus(); }catch(_f){} }, 20);
+}
+function guiaCerrar(vista){
+  var caja = $('guia'); if(caja) caja.remove();
+  if(!GUIA.abierta) return;
+  GUIA.abierta = false;
+  document.removeEventListener('keydown', _guiaTecla);
+  window.removeEventListener('resize', _guiaRepintar);
+  if(vista) guardar(LS_GUIA, 1);
+  try{ if(GUIA.foco && GUIA.foco.focus) GUIA.foco.focus(); }catch(_f){}
 }
 
 </script>
