@@ -1,4 +1,4 @@
-var CACHE = 'sstc-6023aacdbe-a';
+var CACHE = 'sstc-6fe1f46641-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
