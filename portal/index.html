@@ -209,6 +209,23 @@ td .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px}
 .pill.ok{background:var(--ok-f); color:var(--ok)} .pill.ojo{background:var(--ojo-f); color:var(--ojo)}
 .pill.mal{background:var(--mal-f); color:var(--mal)} .pill.gris{background:var(--fondo); color:var(--gris)}
 .pill.azul{background:var(--azul-f); color:var(--azul)}
+/* el espacio de la empresa (01/10/2026) */
+.esp-p{display:grid; gap:10px}
+.esp-p .fila1{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.esp-p .usa{font-size:22px; font-weight:600; color:var(--tinta); font-variant-numeric:tabular-nums}
+.esp-p .de{color:var(--gris)}
+.esp-p .pct{margin-left:auto; font-family:var(--mono); font-size:15px; color:var(--tinta)}
+.esp-p .pct.ojo{color:var(--ojo)} .esp-p .pct.mal{color:var(--mal)}
+.esp-barra{display:flex; height:12px; border-radius:999px; overflow:hidden; background:var(--fondo); border:1px solid var(--raya)}
+.esp-barra i{display:block; height:100%}
+.esp-partes{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; color:var(--gris)}
+.esp-partes span{display:inline-flex; align-items:center; gap:6px}
+.esp-partes .pto{width:10px; height:10px; border-radius:3px}
+.esp-partes b{color:var(--texto); font-weight:500; font-variant-numeric:tabular-nums}
+.c-fotos{background:#2F8FC4} .c-docs{background:#D9A200} .c-esc{background:#7B6BD6} .c-base{background:#1E8E5A}
+.esp-av{padding:10px 12px; border-radius:9px; font-size:13.5px}
+.esp-av.ojo{background:var(--ojo-f); color:#6B4A12} .esp-av.mal{background:var(--mal-f); color:#7D1E24}
+.esp-p .pie{font-size:12.5px; color:var(--gris); margin:0}
 .vacio{padding:36px 18px; text-align:center; color:var(--gris); font-size:14px}
 .vacio b{display:block; color:var(--texto); font-weight:500; margin-bottom:4px}
 .herr{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
@@ -1132,16 +1149,66 @@ function vistaResumenLider(caja){
 }
 
 /* ═══ OBRAS Y EQUIPO (líder) ═════════════════════════════════════ */
+/* ══ EL ESPACIO DE LA EMPRESA (01/10/2026) ═══════════════════════════
+   El mismo medidor que la app (sst_espacio): lo que usa la empresa
+   entera —la madre y sus obras— contra el espacio de su plan, aprobado
+   por Marcelo el 25/09/2026 (LITE 1 GB, Prevencionista 5, Supervisor
+   SST 15, SSOMA 40, Gestión SST 100). El servidor mide cada 6 horas.
+   Si todavía no tiene la función, la tarjeta no sale. */
+var ESP_GB=1073741824;
+var ESP_CARPETA={ reportes:'fotos', inspecciones:'fotos', trabajadores:'fotos', buenas:'fotos', kardex:'fotos',
+                  docs:'docs', boletines:'docs', induccion:'docs', msds:'docs', asistencias:'esc' };
+var ESP_GRUPOS=[['fotos','Fotos','c-fotos'],['docs','Documentos','c-docs'],['esc','Escaneos','c-esc'],['base','Registros y firmas','c-base']];
+var ESP_PLAN={ lite:'LITE', prevencionista:'Prevencionista de Riesgo', supervisor:'Supervisor SST', ssoma:'SSOMA',
+               equipo:'SSOMA', gestion:'Gestión SST', empresa:'Gestión SST', central:'Central', corporativo:'Corporativo' };
+function _espTam(b){
+  b=+b||0;
+  if(b < 1048576) return Math.round(b/1024)+' KB';
+  if(b < ESP_GB){ var mb=b/1048576; return (mb<10 ? mb.toFixed(1) : String(Math.round(mb)))+' MB'; }
+  var gb=b/ESP_GB;
+  if(gb >= 1000) return (gb/1000).toFixed(1).replace(/\.0$/,'')+' TB';
+  return (gb<100 ? gb.toFixed(1).replace(/\.0$/,'') : String(Math.round(gb)))+' GB';
+}
+function _espGb(gb){ gb=+gb||0; return (gb>=1000 && gb%1000===0) ? (gb/1000)+' TB' : gb.toLocaleString('en-US')+' GB'; }
+function tarjetaEspacio(j){
+  if(!j || j.ok!==true) return '';
+  var inclGb=(+j.incluido_gb||0)+(+j.extra_gb||0), incl=inclGb*ESP_GB, usa=+j.total||0;
+  var g={fotos:0, docs:0, esc:0, base:0}, car=(j.archivos && j.archivos.carpetas) || {};
+  Object.keys(car).forEach(function(k){ g[ESP_CARPETA[k]||'docs'] += (+car[k]||0); });
+  g.base=(j.base && +j.base.total) || 0;
+  var pct=incl ? 100*usa/incl : 0, nivel=!incl ? 0 : (usa>=incl ? 100 : (usa>=0.8*incl ? 80 : 0));
+  var pctTx=(usa>0 && pct<1) ? '<1 %' : (Math.floor(pct)+' %'), base=Math.max(incl, usa) || 1;
+  var h='<div class="tarj"><div class="tarj-cab"><div><h2>Espacio de la empresa</h2>'+
+        '<p class="sub">Plan '+esc(ESP_PLAN[j.plan]||j.plan||'')+' · todas sus obras</p></div></div>'+
+        '<div class="tarj-cuerpo esp-p">'+
+        '<div class="fila1"><span class="usa">'+_espTam(usa)+'</span><span class="de">de '+_espGb(inclGb)+'</span>'+
+        '<span class="pct'+(nivel===100?' mal':(nivel===80?' ojo':''))+'">'+esc(pctTx)+'</span></div>'+
+        '<div class="esp-barra" role="img" aria-label="'+esc(pctTx)+' usado">';
+  ESP_GRUPOS.forEach(function(x){ var w=100*g[x[0]]/base; if(w>0) h+='<i class="'+x[2]+'" style="width:'+Math.max(w,.6).toFixed(2)+'%"></i>'; });
+  h+='</div><div class="esp-partes">';
+  ESP_GRUPOS.forEach(function(x){ h+='<span><i class="pto '+x[2]+'"></i>'+esc(x[1])+' <b>'+_espTam(g[x[0]])+'</b></span>'; });
+  h+='</div>';
+  if(+j.extra_gb>0) h+='<p class="pie">'+_espGb(j.incluido_gb)+' del plan + '+_espGb(j.extra_gb)+' comprados aparte.</p>';
+  if(!j.archivos) h+='<p class="pie">Los archivos no se pudieron medir esta vez: el número es solo de los registros.</p>';
+  if(nivel===100) h+='<div class="esp-av mal"><b>Llegaste al espacio de tu plan.</b> Nada se borra y los registros de seguridad se siguen guardando. Te conviene ampliarlo: pasa al plan siguiente desde la app o escríbenos a descarganomaspe@gmail.com.</div>';
+  else if(nivel===80) h+='<div class="esp-av ojo"><b>Te queda poco espacio.</b> Ya usas más del 80 % del espacio del plan. Los registros se siguen guardando igual; para no quedarte corto, pasa al plan siguiente desde la app o escríbenos a descarganomaspe@gmail.com.</div>';
+  var al=j.al ? new Date(j.al) : null;
+  function dd(n){ return (n<10?'0':'')+n; }
+  h+='<p class="pie">Suma fotos, documentos, escaneos y registros de todas las obras. '+
+     (al && !isNaN(al) ? ('Medido el '+dd(al.getDate())+'/'+dd(al.getMonth()+1)+' a las '+dd(al.getHours())+':'+dd(al.getMinutes())+'. Se mide cada 6 horas.') : '')+'</p>';
+  return h+'</div></div>';
+}
 function vistaEquipo(caja){
   cargando(caja);
   function pinta(){
     var hijas = YO.empresas.filter(function(e){ return String(e.padre_id||'')===String(YO.obra.id); });
     Promise.all([
       sbRpc('sst_equipo',{p_emp:YO.obra.id}).catch(function(){ return []; }),
-      sbRpc('sst_solicitudes',{p_emp:YO.obra.id}).catch(function(){ return []; })
+      sbRpc('sst_solicitudes',{p_emp:YO.obra.id}).catch(function(){ return []; }),
+      sbRpc('sst_espacio',{p_emp:YO.obra.id, p_forzar:false}).catch(function(){ return null; })
     ]).then(function(r){
       var eq=Array.isArray(r[0])?r[0]:[], sol=Array.isArray(r[1])?r[1]:[];
-      var h='';
+      var h=tarjetaEspacio(r[2]);
       if(hijas.length){
         h+='<div class="tarj-cab" style="border:0;padding:0 0 12px"><div><h2>Obras de esta empresa</h2><p class="sub">Toca una para verla como supervisor</p></div></div><div class="obras" style="margin-bottom:22px">';
         hijas.forEach(function(o){
@@ -1999,6 +2066,8 @@ var PIND_MOTIVO = { no_eres_de_la_obra:'Esta cuenta no es de esta obra.', enlace
 function _pindMotivo(m){ return PIND_MOTIVO[m] || (typeof m==='number' ? 'Revisa tu conexión e inténtalo otra vez.' : 'No se pudo guardar. Inténtalo otra vez.'); }
 /* el archivo, al balde de la obra: el mismo camino que la app */
 function subirArchivoP(carpeta, file){
+  /* el mismo tope que la app: 25 MB por archivo y los videos por enlace */
+  if(file && (/^video\//i.test(file.type||'') || (file.size||0) > 25*1024*1024)) return Promise.reject('muy-grande');
   var ruta=YO.obra.id+'/'+carpeta+'/'+Date.now()+'-'+String(file.name||'documento.pdf').replace(/[^A-Za-z0-9.\-_]/g,'_');
   return sbFetch(SB.url+'/storage/v1/object/msds/'+encodeURIComponent(ruta), {method:'POST', body:file, extra:{'Content-Type':file.type||'application/octet-stream'}})
     .then(function(r){ return r.ok ? (SB.url+'/storage/v1/object/public/msds/'+encodeURIComponent(ruta)) : Promise.reject(r.status); });
