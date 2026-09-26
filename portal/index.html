@@ -676,7 +676,10 @@ var YO = { empresas:[], obra:null, rol:'', nombre:'' };
 function cargarEmpresas(){
   return sbRpc('sst_mis_empresas',{}).then(function(rows){
     YO.empresas = Array.isArray(rows) ? rows : [];
-    return YO.empresas;
+    /* 26/09/2026 · ¿es del equipo de OBRASST? Entonces ve las fallas que
+       la gente reporta desde la app. Sin el SQL del 02/10, un 404: no. */
+    return sbRpc('sst_soy_admin',{}).then(function(a){ YO.admin = (a === true); }, function(){ YO.admin = false; })
+      .then(function(){ return YO.empresas; });
   });
 }
 /* 23/09/2026 · «Líder» es lo mismo que en la app: el dueño de una
@@ -800,11 +803,14 @@ var NOMBRE_TABLA = { sst_trabajador:'personal', sst_kardex:'entrega de EPP', sst
 /* ── navegación ──────────────────────────────────────────────────── */
 var VISTA = { actual:null, recargar:null, ultimoCambio:null, cache:{} };
 function vistasDe(){
-  if(YO.rol==='lider') return VISTAS_LIDER;
+  var v;
+  if(YO.rol==='lider') v = VISTAS_LIDER;
   /* el dueño sin Gestión SST: lo del supervisor y su equipo */
-  if(YO.dueno) return VISTAS_SUP.slice(0,2).concat(VISTAS_LIDER.filter(function(v){ return v.id==='equipo'; }).map(function(v){
+  else if(YO.dueno) v = VISTAS_SUP.slice(0,2).concat(VISTAS_LIDER.filter(function(v){ return v.id==='equipo'; }).map(function(v){
     return Object.assign({}, v, {g:VISTAS_SUP[0].g}); }), VISTAS_SUP.slice(2));
-  return VISTAS_SUP;
+  else v = VISTAS_SUP;
+  /* las fallas de la app: solo el equipo de OBRASST */
+  return YO.admin ? v.concat([V_FALLAS]) : v;
 }
 /* 23/09/2026 · antes cada sección REEMPLAZABA la dirección: el «atrás»
    del navegador sacaba al usuario del portal entero. Ahora cada sección
@@ -1018,7 +1024,7 @@ var COL = {
   ],
   reportes: [
     {k:'fecha', t:'Fecha', h:function(f){ return esc(fechaLarga(f.fecha||f.creado)); }, v:function(f){ return f.fecha||f.creado||''; }},
-    {k:'clase', t:'Clase'},
+    {k:'clase', t:'Clase', h:function(f){ return esc(claseCorta(f.clase)); }, v:function(f){ return claseCorta(f.clase); }},
     {k:'descripcion', t:'Qué se reportó', h:function(f){ return esc(f.descripcion)+(f.lugar?'<span class="sub">'+esc(f.lugar)+'</span>':''); }},
     {k:'autor', t:'Quién', v:function(f){ return f.anonimo ? 'anónimo' : (f.autor||''); }},
     {k:'estado', t:'Estado', h:pillReporte, v:function(f){ return reporteCerrado(f)?'cerrado':'abierto'; }},
@@ -1135,7 +1141,7 @@ function vistaResumenLider(caja){
       /* lo último que pasó, mezclado */
       var ult=[];
       cons.slice(0,6).forEach(function(c){ ult.push({f:c.fecha, t:'Constancia · '+c.tema, s:c.resultado}); });
-      reps.slice(0,6).forEach(function(x){ ult.push({f:x.fecha||x.creado, t:'Reporte · '+(x.clase||''), s:reporteCerrado(x)?'cerrado':'abierto'}); });
+      reps.slice(0,6).forEach(function(x){ ult.push({f:x.fecha||x.creado, t:'Reporte · '+claseCorta(x.clase), s:reporteCerrado(x)?'cerrado':'abierto'}); });
       kar.slice(0,6).forEach(function(k){ ult.push({f:k.fecha, t:'EPP · '+k.epp, s:(k.cantidad||1)+' und'}); });
       ult.sort(function(a,b){ return String(b.f||'').localeCompare(String(a.f||'')); });
       h+='<div class="tarj"><div class="tarj-cab"><div><h2>Lo último</h2><p class="sub">Lo más reciente de la obra, venga de donde venga</p></div></div>'+
@@ -1318,7 +1324,7 @@ function vistaMiObra(caja){
       h+='<div class="dos">';
       h+='<div class="tarj"><div class="tarj-cab"><div><h2>Reportes abiertos</h2><p class="sub">Lo que la gente reportó y sigue sin cerrar · toca uno para cerrarlo</p></div></div>'+
         (abiertos.length ? '<div class="tabla-caja"><table><tbody>'+abiertos.slice(0,8).map(function(x){
-          return '<tr class="clic" data-rep="'+esc(x.id)+'"><td style="white-space:nowrap;color:var(--gris)">'+esc(fechaLarga(x.fecha||x.creado))+'</td><td><span class="pill gris">'+esc(x.clase||'')+'</span></td><td>'+esc(x.descripcion||'')+(x.lugar?'<span class="sub">'+esc(x.lugar)+'</span>':'')+'</td>'+
+          return '<tr class="clic" data-rep="'+esc(x.id)+'"><td style="white-space:nowrap;color:var(--gris)">'+esc(fechaLarga(x.fecha||x.creado))+'</td><td><span class="pill gris">'+esc(claseCorta(x.clase))+'</span></td><td>'+esc(x.descripcion||'')+(x.lugar?'<span class="sub">'+esc(x.lugar)+'</span>':'')+'</td>'+
                  '<td class="fila-acc"><button type="button" class="bt chico" data-rep="'+esc(x.id)+'">Cerrar</button></td></tr>'; }).join('')+'</tbody></table></div>'
         : '<div class="vacio"><b>Nada abierto</b>Todo lo reportado está cerrado.</div>')+'</div>';
       h+='<div class="tarj"><div class="tarj-cab"><div><h2>Últimas entregas de EPP</h2><p class="sub">Con la firma de quien recibió</p></div></div>'+
@@ -1610,6 +1616,127 @@ var DEN_LEY={
   sin_seguridad:'Si todavía está pasando, no esperes a responder: que alguien vaya al frente.',
   ocultan:'Un accidente escondido no se investiga y se repite. Revisa el registro de accidentes e incidentes.'};
 var DENP={lista:[], foto:{}};
+/* ═══ LAS FALLAS DE LA APP (solo el equipo de OBRASST) ════════════
+   26/09/2026 · Marcelo: «si es que habría alguna falla en la app, que el
+   usuario lo reporte, y que llegue notificación a nosotros». Llegan con
+   el diagnóstico que arma la app y el plan REAL de la empresa, leído en
+   el servidor: «No puede entrar» con el plan vencido no es una falla.
+   Se marcan vistas al abrirlas, y «Resuelta» lleva una nota que el que
+   reportó lee en su app («Mis reportes»). */
+var FALLAP = { filtro:'nueva', lista:[] };
+var FALLA_TIPO_P = { entrar:'No puede entrar', traba:'Se traba o se cierra', guardar:'No guarda o no sube', error:'Le sale un error', otra:'Otra cosa' };
+var FALLA_EST_P = { nueva:'Nueva', vista:'Vista', resuelta:'Resuelta' };
+var FALLA_PLAN_P = { vigente:'Plan vigente', vencido:'Plan vencido', lite:'LITE', sin_empresa:'Sin empresa' };
+var V_FALLAS = {id:'fallas', g:'OBRASST', ic:'🐞', n:'Fallas de la app', s:'Lo que la gente reportó desde la app · solo lo ve el equipo de OBRASST',
+                pintar:vistaFallas, tablas:[]};
+function _fallaHora(iso){
+  var d = new Date(iso); if(isNaN(d.getTime())) return '';
+  return fechaLarga(iso) + ' ' + ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
+}
+function vistaFallas(caja){
+  cargando(caja);
+  function pinta(){
+    sbRpc('sst_fallas_ver', {p_estado: FALLAP.filtro==='todas' ? null : FALLAP.filtro, p_limite: 500}).then(function(r){
+      if(!r || !r.ok){
+        caja.innerHTML='<div class="vacio"><b>No se pudo abrir</b>'+((r&&r.motivo)==='no_eres_admin'?'Esta lista es solo para el equipo de OBRASST.':'Inténtalo en un momento.')+'</div>';
+        return;
+      }
+      FALLAP.lista = r.lista || [];
+      var F = [['nueva','Nuevas'],['vista','Vistas'],['resuelta','Resueltas'],['todas','Todas']];
+      var h = '<div class="seg" role="tablist" aria-label="Cuáles">'+F.map(function(x){
+        return '<button type="button" role="tab" data-f="'+x[0]+'" aria-selected="'+(FALLAP.filtro===x[0])+'" class="'+(FALLAP.filtro===x[0]?'on':'')+'">'+esc(x[1])+'</button>';
+      }).join('')+'</div>'+
+      '<div class="aviso">Cada una trae lo que la app sabe de ese celular: la versión, el equipo, la pantalla y los últimos errores. '+
+      '«No puede entrar» con el plan vencido no es una falla: se contesta con el plan.</div><div class="tarj" id="t-fallas"></div>';
+      caja.innerHTML = h;
+      [].forEach.call(caja.querySelectorAll('.seg button'), function(b){ b.onclick=function(){ FALLAP.filtro=b.getAttribute('data-f'); pinta(); }; });
+      var cols=[
+        {k:'creado', t:'Llegó', h:function(f){ return esc(_fallaHora(f.creado))+'<span class="sub">'+esc(hace(f.creado))+'</span>'; }},
+        {k:'codigo', t:'Código', h:function(f){ return '<b>'+esc(f.codigo)+'</b>'; }},
+        {k:'tipo', t:'Qué pasó', h:function(f){ var x=String(f.texto||''); return '<b>'+esc(FALLA_TIPO_P[f.tipo]||f.tipo)+'</b>'+(x?'<span class="sub">'+esc(x.slice(0,140))+(x.length>140?'…':'')+'</span>':''); },
+         v:function(f){ return (FALLA_TIPO_P[f.tipo]||f.tipo)+' · '+(f.texto||''); }},
+        {k:'quien', t:'Quién', h:function(f){ return esc(f.correo||f.contacto||'Sin cuenta')+'<span class="sub">'+esc([f.empresa_nombre, f.rol].filter(Boolean).join(' · '))+'</span>'; },
+         v:function(f){ return [f.correo, f.contacto, f.empresa_nombre, f.rol].filter(Boolean).join(' · '); }},
+        {k:'plan_estado', t:'Plan', h:function(f){ var e=f.plan_estado||''; return '<span class="pill '+(e==='vencido'?'mal':(e==='vigente'?'ok':'gris'))+'">'+esc(FALLA_PLAN_P[e]||e||'—')+'</span>'; },
+         v:function(f){ return FALLA_PLAN_P[f.plan_estado]||f.plan_estado||''; }},
+        {k:'estado', t:'Estado', h:function(f){ return '<span class="pill '+(f.estado==='resuelta'?'ok':(f.estado==='nueva'?'mal':'ojo'))+'">'+esc(FALLA_EST_P[f.estado]||f.estado)+'</span>'; },
+         v:function(f){ return FALLA_EST_P[f.estado]||f.estado; }},
+        {k:'_acc', t:'', acc:true, h:function(f){ return '<button type="button" class="bt '+(f.estado==='resuelta'?'sec ':'')+'chico" data-acc="abrir">'+(f.estado==='resuelta'?'Ver':'Atender')+'</button>'; }}
+      ];
+      tabla($('t-fallas'), cols, FALLAP.lista, {orden:'creado', asc:false, unidad:'fallas', archivo:'fallas-de-la-app',
+        vacio: FALLAP.filtro==='nueva' ? 'No hay fallas nuevas' : 'No hay fallas en esta lista',
+        vacioSub:'Llegan cuando alguien toca «Reportar una falla» en la app (Ajustes ▸ Ayuda, o «Avísanos» en la entrada).',
+        alClic:abrirFallaP, accion:function(acc, f){ abrirFallaP(f); }});
+    }, function(cod){
+      caja.innerHTML='<div class="vacio"><b>'+(cod===404?'Falta activar las fallas en el servidor':'No se pudo abrir')+'</b>'+
+        (cod===404?'Se activa con el SQL «2026-10-02-fallas».':'Revisa tu conexión.')+'</div>';
+    });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+/* el número de WhatsApp que dejó, si parece uno (Perú: 9 dígitos que empiezan con 9) */
+function _fallaWa(c){
+  var d=String(c||'').replace(/[^0-9]/g,'');
+  if(/^9\d{8}$/.test(d)) d='51'+d;
+  return (d.length>=10 && d.length<=15 && String(c||'').indexOf('@')<0) ? d : '';
+}
+function abrirFallaP(f){
+  var g=f.diag||{}, wa=_fallaWa(f.contacto), mail=/@/.test(f.contacto||'') ? f.contacto : (f.correo||'');
+  if(/\.invalid$/i.test(mail)) mail='';
+  var fila=function(t, v){ return (v===undefined||v===null||v==='') ? '' : '<dt>'+esc(t)+'</dt><dd>'+v+'</dd>'; };
+  var h='<dl class="datos">'+
+    fila('Llegó', esc(_fallaHora(f.creado)))+
+    fila('Qué pasó', esc(FALLA_TIPO_P[f.tipo]||f.tipo))+
+    fila('Cuenta', esc(f.correo||''))+
+    fila('Responder a', esc(f.contacto||''))+
+    fila('Empresa', esc(f.empresa_nombre||''))+
+    fila('Es', esc(f.rol||''))+
+    fila('Plan', esc((FALLA_PLAN_P[f.plan_estado]||f.plan_estado||'')+(f.plan?' · '+f.plan:'')+(f.plan_vence?' · vence '+fechaLarga(f.plan_vence):'')))+
+    fila('Versión', esc(f.sello||g.v||''))+
+    '</dl>'+
+    '<div class="seccion"><h3>Lo que escribió</h3><p style="margin:0;white-space:pre-wrap">'+esc(f.texto||'(nada: tocó «No puedo entrar»)')+'</p></div>';
+  var rev=g.revision;
+  if(rev) h+='<div class="seccion"><h3>La revisión que hizo la app</h3><p style="margin:0">'+
+    (rev.internet===false?'Sin internet. ':'Con internet. ')+(rev.servidor===false?'El servidor NO contestaba desde su celular. ':'El servidor contestaba. ')+
+    (rev.plan_vencido?'Su plan (en el celular) estaba vencido.':'')+'</p></div>';
+  h+='<div class="seccion"><h3>El celular</h3><dl class="datos">'+
+    fila('Pantalla', esc(g.pantalla||''))+fila('Venía de', esc(g.desde||''))+
+    fila('App', esc(g.app||''))+fila('Pantalla (px)', esc(g.px||''))+fila('Internet', g.online===false?'no':'sí')+
+    fila('Idioma', esc(g.idioma||''))+fila('País · rubro', esc([g.pais, g.sector].filter(Boolean).join(' · ')))+
+    fila('Personal en el celular', g.personal!==undefined?esc(String(g.personal)):'')+
+    fila('Esperando señal', g.colas && Object.keys(g.colas).length ? esc(Object.keys(g.colas).map(function(k){ return k+': '+g.colas[k]; }).join(' · ')) : '')+
+    fila('Navegador', '<span style="font-size:12px;word-break:break-all">'+esc(g.ua||'')+'</span>')+
+    fila('Hora del celular', esc((g.hora||'')+(g.zona?' · '+g.zona:'')))+
+    '</dl></div>';
+  var er=Array.isArray(g.errores)?g.errores:[];
+  if(er.length) h+='<div class="seccion"><h3>Los últimos errores</h3>'+er.slice().reverse().map(function(e){
+    return '<p style="margin:0 0 6px;font-family:var(--mono,monospace);font-size:12px;word-break:break-word">'+esc(_fallaHora(new Date(e.t).toISOString()))+' · '+esc(e.p||'')+
+      (e.n>1?' · ×'+e.n:'')+'<br>'+esc(e.m||'')+(e.f?' ('+esc(e.f)+':'+esc(String(e.l||''))+')':'')+'</p>';
+  }).join('')+'</div>';
+  if(f.nota) h+='<div class="seccion"><h3>Tu respuesta</h3><p style="margin:0;white-space:pre-wrap">'+esc(f.nota)+'</p></div>';
+  h+='<div class="seccion"><h3>'+(f.estado==='resuelta'?'Cambiar la respuesta':'Responder y marcar resuelta')+'</h3><div class="campo"><label for="fa-nota">La respuesta que va a leer en «Mis reportes» de su app</label>'+
+    '<textarea id="fa-nota" maxlength="1500" placeholder="Qué era y qué hacer. Ej.: «Ya está arreglado: cierra y abre la app».">'+esc(f.nota||'')+'</textarea></div><div class="msg" id="fa-msg"></div></div>';
+  var pie='<button type="button" class="bt sec" id="fa-volver">Cerrar</button>'+
+    (wa?'<a class="bt sec" target="_blank" rel="noopener" href="https://wa.me/'+wa+'?text='+encodeURIComponent('Hola, te escribimos de OBRASST por tu reporte '+f.codigo+'.')+'">WhatsApp</a>':'')+
+    (mail?'<a class="bt sec" href="mailto:'+esc(mail)+'?subject='+encodeURIComponent('Tu reporte '+f.codigo+' · OBRASST')+'">Correo</a>':'')+
+    '<button type="button" class="bt ok" id="fa-resuelta">Resuelta</button>';
+  abrirHoja(f.codigo+' · '+(FALLA_TIPO_P[f.tipo]||f.tipo), 'Fallas de la app', h, pie, {id:f.id});
+  $('fa-volver').onclick=cerrarHoja;
+  /* abrirla ya la marca vista */
+  if(f.estado==='nueva') sbRpc('sst_falla_atender',{p_id:f.id, p_estado:'vista', p_nota:null}).then(function(r){
+    if(r && r.ok){ f.estado='vista'; if(typeof VISTA.recargar==='function') VISTA.recargar(); }
+  }, function(){});
+  $('fa-resuelta').onclick=function(){
+    var t=String($('fa-nota').value||'').trim(), m=$('fa-msg'), b=$('fa-resuelta');
+    b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    sbRpc('sst_falla_atender',{p_id:f.id, p_estado:'resuelta', p_nota:t||null}).then(function(r){
+      if(!r || !r.ok){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo'+((r&&r.motivo)?' ('+r.motivo+')':'')+'.'; return; }
+      toast('Resuelta. La persona lee tu respuesta en «Mis reportes» de su app.'); cerrarHoja();
+      if(typeof VISTA.recargar==='function') VISTA.recargar();
+    }, function(){ b.disabled=false; m.className='msg mal'; m.textContent='No hubo conexión. Tu respuesta sigue escrita: inténtalo otra vez.'; });
+  };
+}
+
 function vistaDenuncias(caja){
   cargando(caja);
   function pinta(){
@@ -2641,6 +2768,9 @@ function vistaPersonal(caja){
    sirve a nadie; la auditoría pide la evidencia. */
 var RC = { foto:null, nombre:'' };
 function claseReporte(r){ return r.clase==='acto' ? '👤 Acto inseguro' : '⚠️ Condición insegura'; }
+/* 26/09/2026 · en la tabla y en «Hoy en la obra» la clase salía tal como la
+   guarda la base («condicion», sin tilde). Se muestra con su nombre. */
+function claseCorta(c){ return c==='acto' ? 'Acto' : (c==='condicion' ? 'Condición' : (c||'')); }
 function abrirReporte(id){
   traerUna('sst_reporte', id).then(function(r){
     if(!r){ toast('Ese reporte ya no está.'); return; }
