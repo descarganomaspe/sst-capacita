@@ -1,4 +1,4 @@
-var CACHE = 'sstc-55b0624034-a';
+var CACHE = 'sstc-814acdc888-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -9,7 +9,7 @@ var COMP = 'sstc-compartido';
    cache. La primera apertura sin señal despues de cada publicacion daba
    pantalla en blanco (y la primerisima instalacion tambien). Ahora la app
    entera se guarda en install, antes de activar. */
-var BASE = ['./', './index.html', './idioma-pt.js?v=79c863e456', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
+var BASE = ['./', './index.html', './idioma-fr.js?v=46c74f9d72', './procedimientos.js?v=b9b304e9f9', './idioma-pt.js?v=2327aa6009', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
             './intro.mp4'];
 self.addEventListener('install', function(e){
