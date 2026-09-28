@@ -1,5 +1,6 @@
-/* OBRASST · el PDF de las evaluaciones para el portal. Lo arma armar.py:
-   el jsPDF de la app (licencia MIT, abajo) y evaluaciones-pdf.js. No editar. */
+/* OBRASST · el PDF de las evaluaciones y el registro de seguimiento para el
+   portal. Lo arma armar.py: el jsPDF de la app (licencia MIT, abajo),
+   evaluaciones-pdf.js y registro-cap.js. No editar. */
 /** @license
  *
  * jsPDF - PDF Document creation from JavaScript
@@ -642,28 +643,38 @@ var EVPDF = (function(){
       letra(doc, 'bold', 10.5, TINTA); doc.text('Preguntas y respuestas', M, y); y += 12;
     }
     ps.forEach(function(q, j){
-      var letras = ['a','b','c','d'].filter(function(L){ return q.o && q.o[L] != null; });
+      /* 28/09/2026 · las preguntas propias de la empresa: hasta la «h»,
+         varias correctas, o —ordenar, relacionar, escribir— en palabras */
+      var enPalabras = !!(q.t && !/^(una|varias|vf)$/.test(q.t)), multi = (q.t === 'varias');
+      var letras = enPalabras ? [] : ['a','b','c','d','e','f','g','h'].filter(function(L){ return q.o && q.o[L] != null; });
       letra(doc, 'bold', 8.7, TEXTO);
       var qtx = doc.splitTextToSize((j + 1) + '. ' + txt(q.e).replace(/\s+/g, ' '), W - 2 * M - 22);
       var alto = 11 + qtx.length * 10 + 4;
       letra(doc, 'normal', 8.3);
       var ops = letras.map(function(L){ return doc.splitTextToSize(L + ')  ' + txt(q.o[L]).replace(/\s+/g, ' '), W - 2 * M - 52); });
+      var pal = enPalabras ? [doc.splitTextToSize('Respondió: ' + (txt(q.mt) || '—'), W - 2 * M - 52)].concat(q.ok ? [] : [doc.splitTextToSize('Correcta: ' + txt(q.ct), W - 2 * M - 52)]) : [];
       ops.forEach(function(l){ alto += l.length * 9.6 + 3.6; });
-      alto += q.ok ? 6 : 17;
+      pal.forEach(function(l){ alto += l.length * 9.6 + 3.6; });
+      alto += q.ok ? 6 : (enPalabras ? 6 : 17);
       if(y + alto > PIE){ doc.addPage(); y = banda(doc, ctx, txt(c.trabajador) + ' · ' + txt(c.tema), true) + 18; }
       doc.setFillColor(255,255,255); col(doc, q.ok ? [196,226,209] : [238,196,198], 'd'); doc.setLineWidth(.7);
       doc.roundedRect(M, y, W - 2 * M, alto - 5, 5, 5, 'FD');
       col(doc, q.ok ? VERDE : ROJO, 'f'); doc.roundedRect(M, y, 4, alto - 5, 2, 2, 'F');
       var yy = y + 12.5, xi = M + 13;
       letra(doc, 'bold', 8.7, TEXTO); doc.text(qtx, xi, yy); yy += qtx.length * 10 + 3.5;
+      pal.forEach(function(l, n){
+        var ok = (n === 0) ? !!q.ok : true, hOp = l.length * 9.6;
+        letra(doc, 'bold', 8.3, ok ? VERDE : ROJO);
+        doc.text(l, xi + 18, yy); yy += hOp + 3.6;
+      });
       letras.forEach(function(L, n){
-        var esC = (L === q.c), esM = (L === q.m), l = ops[n], hOp = l.length * 9.6;
+        var esC = multi ? String(q.c || '').indexOf(L) > -1 : (L === q.c), esM = multi ? String(q.m || '').indexOf(L) > -1 : (L === q.m), l = ops[n], hOp = l.length * 9.6;
         if(esM){ if(esC) doc.setFillColor(226,243,232); else doc.setFillColor(251,230,231); doc.roundedRect(xi + 12, yy - 7.5, W - 2 * M - 38, hOp + 3.5, 3, 3, 'F'); }
         if(esC) marcaOk(doc, xi, yy, true, 8); else if(esM) marcaOk(doc, xi, yy, false, 8);
         letra(doc, (esC || esM) ? 'bold' : 'normal', 8.3, esC ? VERDE : (esM ? ROJO : [80,92,100]));
         doc.text(l, xi + 18, yy); yy += hOp + 3.6;
       });
-      if(!q.ok){
+      if(!q.ok && !enPalabras){
         letra(doc, 'italic', 7.6, ROJO);
         doc.text(q.m ? ('Marcó ' + q.m + '; la correcta era ' + (q.c || '—') + '.') : ('No marcó ninguna; la correcta era ' + (q.c || '—') + '.'), xi + 18, yy + 1.5);
       }
@@ -872,4 +883,761 @@ var EVPDF = (function(){
 
   return { evaluacion:evaluacion, registro:registro, grupos:grupos, grupoDe:grupoDe, nota:nota,
            encuestasDe:encuestasDe, promEnc:promEnc, notasEnc:notasEnc, llave:llave, PUNTOS:PUNTOS };
+})();
+;
+/* ══════════════════════════════════════════════════════════════════
+   EL REGISTRO DE SEGUIMIENTO DE CAPACITACIONES, EN EXCEL (28/09/2026)
+
+   Marcelo: «la empresa debe tener un registro maestro de capacitaciones,
+   donde salgan sus trabajadores, las notas, las fechas que han dado, los
+   temas correspondientes; y obviamente algunos no estarán en dichas
+   capacitaciones, otros sí». Mandó el Excel que usaban como modelo —«a mí
+   no me gusta mucho, es muy tedioso»— y pidió que se entienda más fácil,
+   que sea ordenado, técnico y profesional, y que el supervisor, el SSOMA
+   o el líder lo descarguen de la app para tenerlo en su computadora.
+
+   Del modelo se toma la idea —el personal en filas, cada capacitación en
+   columnas agrupadas por mes, y el cumplimiento de cada uno al final— y
+   se deja atrás lo que lo hacía tedioso: cuatro columnas por capacitación
+   (programado · fecha · nota · clasificación). Aquí va UNA celda por
+   capacitación con la nota y su color, y la fecha arriba, en la columna.
+     · verde: aprobó (nota vigesimal de 0 a 20, aprueba con 14 = 70 %)
+     · rojo:  desaprobó
+     · F ámbar: estaba programada para él y no la rindió
+     · P azul:  está programada y todavía no llega el día
+     · D:       ese día estaba de descanso
+     · — gris:  ese día no estaba en la obra (no había ingresado, se fue)
+   Tres hojas: RESUMEN (los números que se miran primero, por capacitación,
+   por frente y quién debe qué), SEGUIMIENTO (la matriz) y DETALLE (una
+   fila por evaluación, para filtrar). Los totales son fórmulas: si alguien
+   corrige una nota a mano en el Excel, el cumplimiento se recalcula.
+
+   Del Excel de ejemplo no queda nada: ni el logo, ni la empresa, ni una
+   sola persona. Solo la idea.
+
+   Módulo puro: recibe los datos ya traídos (la app y el portal traen lo
+   suyo) y devuelve el .xlsx. Lo usan la app (Constancias) y el portal
+   (viaja en portal/evaluaciones-pdf.js, que arma armar.py).
+   ════════════════════════════════════════════════════════════════ */
+var RCAP = (function(){
+  'use strict';
+  var MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SETIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  var MESES_C = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SET','OCT','NOV','DIC'];
+  var APRUEBA = 14;
+
+  /* ── lo común ─────────────────────────────────────────────────────── */
+  function nrm(x){ return String(x == null ? '' : x).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function nomClave(x){ return nrm(x).split(' ').filter(Boolean).sort().join(' '); }
+  function docClave(x){ return String(x == null ? '' : x).toUpperCase().replace(/[^0-9A-Z]/g, ''); }
+  function temaLimpio(t){ return String(t == null ? '' : t).replace(/\s*\(forma breve\)\s*$/i, '').replace(/\s+/g, ' ').trim(); }
+  function iso(x){ var s = String(x || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
+  function dma(i){ var p = String(i || '').split('-'); return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : ''; }
+  function serial(i){ var p = String(i || '').split('-'); if(p.length !== 3) return null; return Math.round((Date.UTC(+p[0], +p[1] - 1, +p[2]) - Date.UTC(1899, 11, 30)) / 86400000); }
+  function esc(t){ return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+                   .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, ''); }
+  function col(n){ var s = ''; n++; while(n > 0){ var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+  function ref(c, r){ return col(c) + r; }
+  function abs(c, r){ return '$' + col(c) + '$' + r; }
+  function red1(x){ return Math.round(x * 10) / 10; }
+  function prom(l){ return l.length ? red1(l.reduce(function(a, b){ return a + b; }, 0) / l.length) : null; }
+  function ultimoDia(y, m){ return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10); }   /* m: 1–12 */
+
+  /* el periodo que se elige en la app y en el portal */
+  var PERIODOS = [['mes', 'Este mes'], ['trim', 'Últimos 3 meses'], ['anio', 'Este año'], ['todo', 'Todo']];
+  function rango(k, hoy){
+    hoy = iso(hoy) || new Date().toISOString().slice(0, 10);
+    var y = +hoy.slice(0, 4), m = +hoy.slice(5, 7);
+    if(k === 'mes') return { k:k, desde:hoy.slice(0, 7) + '-01', hasta:ultimoDia(y, m) };
+    if(k === 'trim'){ var d = new Date(Date.UTC(y, m - 3, 1)); return { k:k, desde:d.toISOString().slice(0, 10), hasta:ultimoDia(y, m) }; }
+    if(k === 'anio') return { k:k, desde:y + '-01-01', hasta:y + '-12-31' };
+    return { k:'todo', desde:'', hasta:'' };
+  }
+
+  /* lo programado a la obra (sst_doc, hojas «temas» y «temas-hist»): solo
+     lo que dice para quién es y qué día. Lo de antes del 21/09 (sin «para»)
+     tenía una ventana de varios días y no dice a quién le tocaba: no sirve
+     para saber quién faltó, y no se usa. */
+  function programadasDe(filas, temaDe){
+    var out = [];
+    (filas || []).forEach(function(r){
+      if(!r) return;
+      var o = null;
+      try{ o = (typeof r.nota === 'string') ? JSON.parse(r.nota) : r.nota; }catch(_e){ o = null; }
+      if(!o || typeof o !== 'object' || o.t !== 'E' || !o.d || !o.para || typeof o.para !== 'object') return;
+      var fe = iso(o.fe || o.v); if(!fe) return;
+      if(['todos', 'puesto', 'lugar'].indexOf(o.para.k || 'todos') < 0) return;
+      var para = { k:o.para.k || 'todos', v:(Array.isArray(o.para.v) ? o.para.v : []).filter(function(x){ return typeof x === 'string' && x.trim(); }).slice(0, 40) };
+      var tema = '';
+      try{ tema = temaDe ? String(temaDe(o, r) || '') : ''; }catch(_t){ tema = ''; }
+      if(!tema) tema = String(o.tn || String(r.nombre || '').replace(/^\s*Capacitaci[oó]n\s*·\s*/i, '') || o.d);
+      out.push({ tema:temaLimpio(tema), fe:fe, para:para, ev:String(o.ev || '') });
+    });
+    return out;
+  }
+
+  /* la situación de un trabajador un día dado (la misma regla que situacion.js) */
+  function _hist(t){
+    return (Array.isArray(t.hist) ? t.hist : []).filter(function(e){ return e && iso(e.f); })
+      .sort(function(a, b){ return a.f < b.f ? -1 : (a.f > b.f ? 1 : ((a.t || 0) - (b.t || 0))); });
+  }
+  function situacionEn(t, dia){
+    var l = _hist(t);
+    var st = l.length ? { e:(l[0].de && l[0].de.e) || 'activo', a:(l[0].de && l[0].de.a) || '', k:'' } : { e:t.estatus || 'activo', a:t.frente || '', k:'' };
+    /* sin historia, un cesado con fecha estaba activo antes de esa fecha */
+    if(!l.length && t.estatus === 'cesado' && iso(t.desde) && dia < t.desde) st = { e:'activo', a:t.frente || '', k:'' };
+    l.forEach(function(ev){ if(ev.f <= dia) st = { e:ev.e || 'activo', a:(ev.a != null ? ev.a : st.a), k:ev.k || '' }; });
+    if(iso(t.ingreso) && dia < t.ingreso) st = { e:'fuera', a:st.a, k:'antes' };
+    return st;
+  }
+  function situacionTxt(t, hoy){
+    var st = situacionEn(t, hoy);
+    var l = _hist(t).filter(function(e){ return e.f <= hoy; });
+    var ult = l.length ? l[l.length - 1] : null;
+    var desde = ult ? ' desde ' + dma(ult.f) : (iso(t.desde) ? ' desde ' + dma(t.desde) : '');
+    if(st.e === 'cesado') return (st.k === 'obra' ? 'Trasladado a otra obra' : 'Cesado') + desde;
+    if(st.e === 'descanso') return 'De descanso' + desde;
+    if(st.e === 'fuera') return 'Ingresa el ' + dma(t.ingreso);
+    return 'Activo';
+  }
+
+  /* ── los datos: capacitaciones, personas y celdas ─────────────────── */
+  function preparar(ent){
+    ent = ent || {};
+    var hoy = iso(ent.hoy) || new Date().toISOString().slice(0, 10);
+    var desde = iso(ent.desde) || '0000-01-01', hasta = iso(ent.hasta) || '9999-12-31';
+    /* 1 · las personas del padrón */
+    var gente = [], porDoc = {}, porNom = {};
+    (ent.trabajadores || []).forEach(function(t){
+      if(!t || !String(t.nombre || '').trim()) return;
+      var p = { nombre:String(t.nombre).replace(/\s+/g, ' ').trim(), dni:String(t.dni || '').trim(), cargo:String(t.cargo || '').trim(),
+                empresa:String(t.empresa || '').trim(), frente:String(t.frente || '').trim(), estatus:t.estatus || 'activo', desde:iso(t.desde),
+                ingreso:iso(t.ingreso), hist:Array.isArray(t.hist) ? t.hist : [], padron:true, cel:{}, evs:[] };
+      gente.push(p);
+      var dk = docClave(p.dni); if(dk && !porDoc[dk]) porDoc[dk] = p;
+      var nk = nomClave(p.nombre); if(nk && !porNom[nk]) porNom[nk] = p;
+    });
+    function buscar(nombre, dni){
+      var dk = docClave(dni); if(dk && porDoc[dk]) return porDoc[dk];
+      var nk = nomClave(nombre), x = nk && porNom[nk];
+      /* por nombre, salvo que los dos tengan documento y no sea el mismo */
+      if(x && !(dk && docClave(x.dni) && docClave(x.dni) !== dk)) return x;
+      return null;
+    }
+    /* 2 · las evaluaciones del periodo, agrupadas en capacitaciones (tema + día) */
+    var ses = {}, sesL = [];
+    function sesion(tema, dia, tipo){
+      var t = temaLimpio(tema) || 'Capacitación', k = nrm(t) + '|' + dia;
+      if(!ses[k]){ ses[k] = { k:k, tema:t, dia:dia, tipo:tipo || 'evaluacion', evs:[], prog:null, evaluador:'', horas:0 }; sesL.push(ses[k]); }
+      return ses[k];
+    }
+    var detalle = [];
+    (ent.constancias || []).forEach(function(c){
+      if(!c) return;
+      var dia = iso(c.fecha); if(!dia || dia < desde || dia > hasta) return;
+      var tipo = String(c.tipo || '').toLowerCase();
+      var taller = tipo === 'taller' || /^\s*taller\s*:/i.test(String(c.tema || ''));
+      var s = sesion(c.tema, dia, taller ? 'taller' : 'evaluacion');
+      var d = (c.detalle && typeof c.detalle === 'object') ? c.detalle : {};
+      var ev = c.ev || d.evaluador, hs = c.hs || d.horas;
+      if(!s.evaluador && ev) s.evaluador = String(ev).slice(0, 80);
+      if(!s.horas && +hs > 0) s.horas = +hs;
+      var b = (c.puntaje != null && c.puntaje !== '') ? +c.puntaje : null, n = (c.total != null && c.total !== '') ? +c.total : null;
+      if(b == null && Array.isArray(d.p) && d.p.length){ n = d.p.length; b = d.p.filter(function(q){ return q && q.ok; }).length; }
+      if(!(n > 0) || !isFinite(b)){ b = null; n = null; }
+      var min = (c.minimo != null && c.minimo !== '' && isFinite(+c.minimo)) ? +c.minimo : (n ? Math.ceil(n * 0.7) : null);
+      var r = String(c.resultado || '').toLowerCase();
+      var aprob = (b != null && n) ? (b >= min) : (!/desaprob|no aprob/.test(r) && /aprob|complet/.test(r));
+      var nota = (b != null && n) ? red1(Math.max(0, Math.min(20, b * 20 / n))) : null;
+      var p = buscar(c.trabajador, c.dni);
+      if(!p){
+        p = { nombre:String(c.trabajador || '—').replace(/\s+/g, ' ').trim(), dni:String(c.dni || '').trim(), cargo:String(c.cargo || '').trim(),
+              empresa:'', frente:'', estatus:'', hist:[], padron:false, cel:{}, evs:[] };
+        gente.push(p);
+        var dk2 = docClave(p.dni); if(dk2) porDoc[dk2] = p;
+        var nk2 = nomClave(p.nombre); if(nk2 && !porNom[nk2]) porNom[nk2] = p;
+      }
+      var e = { p:p, s:s, nota:nota, b:b, n:n, aprob:aprob, taller:taller, folio:String(c.folio || ''), cargo:String(c.cargo || p.cargo || '') };
+      s.evs.push(e); p.evs.push(e); detalle.push(e);
+    });
+    /* 3 · lo programado del periodo se suma a su capacitación de ese día;
+       si nadie la rindió todavía, se crea (vacía: son justo las que faltan).
+       La programada lleva el nombre con su variante («Trabajos en altura ·
+       Andamios») y la constancia el tema a secas: se junta si empieza igual. */
+    (ent.programadas || []).forEach(function(o){
+      if(!o || !o.para) return;
+      var dia = iso(o.fe || o.v); if(!dia || dia < desde || dia > hasta) return;
+      var tp = temaLimpio(o.tema || o.d); if(!tp) return;
+      var kp = nrm(tp), s = null;
+      sesL.forEach(function(x){ if(!s && x.dia === dia && nrm(x.tema) === kp) s = x; });
+      if(!s) sesL.forEach(function(x){ var kx = nrm(x.tema); if(!s && x.dia === dia && x.evs.length && kx && kp.indexOf(kx) === 0) s = x; });
+      if(!s) s = sesion(tp, dia, 'evaluacion');
+      (s.prog = s.prog || []).push(o.para);
+      if(!s.evaluador && o.ev) s.evaluador = String(o.ev).slice(0, 80);
+    });
+    sesL.sort(function(a, b){ return a.dia < b.dia ? -1 : (a.dia > b.dia ? 1 : a.tema.localeCompare(b.tema, 'es')); });
+    /* 4 · cada persona, cada capacitación: la celda */
+    function leToca(p, s){
+      if(!s.prog || !p.padron) return false;
+      return s.prog.some(function(pa){
+        if(!pa || !pa.k || pa.k === 'todos') return true;
+        var quiero = (Array.isArray(pa.v) ? pa.v : []).map(nrm).filter(Boolean);
+        if(pa.k === 'puesto') return quiero.indexOf(nrm(p.cargo)) > -1;
+        if(pa.k === 'lugar'){ var fr = situacionEn(p, s.dia).a || p.frente; return quiero.indexOf(nrm(fr)) > -1; }
+        return false;
+      });
+    }
+    gente.forEach(function(p){
+      sesL.forEach(function(s){
+        var mios = p.evs.filter(function(e){ return e.s === s; });
+        var cel = { t:'' };
+        if(mios.length){
+          /* si la rindió dos veces, vale la mejor */
+          mios.sort(function(a, b){ return ((b.nota == null ? -1 : b.nota) - (a.nota == null ? -1 : a.nota)) || ((b.aprob ? 1 : 0) - (a.aprob ? 1 : 0)); });
+          var e = mios[0];
+          cel = (e.nota != null) ? { t:'nota', v:e.nota, ok:e.nota >= APRUEBA } : { t:(e.aprob ? 'si' : 'no') };
+        } else if(p.padron){
+          var st = situacionEn(p, s.dia);
+          if(st.e === 'cesado' || st.e === 'fuera') cel = { t:'fuera' };
+          else if(leToca(p, s)) cel = { t:(s.dia >= hoy ? 'prog' : (st.e === 'descanso' ? 'desc' : 'falto')) };
+        }
+        p.cel[s.k] = cel;
+      });
+    });
+    /* el orden: los del padrón por nombre; los que rindieron sin estar en el padrón, al final */
+    gente.sort(function(a, b){ return (a.padron === b.padron ? 0 : (a.padron ? -1 : 1)) || a.nombre.localeCompare(b.nombre, 'es'); });
+    /* quien ya no está y no tuvo nada que ver con el periodo, no aparece */
+    gente = gente.filter(function(p){
+      if(!p.padron) return true;
+      var algo = sesL.some(function(s){ var c = p.cel[s.k]; return c.t && c.t !== 'fuera'; });
+      return algo || situacionEn(p, hoy).e !== 'cesado';
+    });
+    return { hoy:hoy, desde:desde, hasta:hasta, gente:gente, ses:sesL, detalle:detalle };
+  }
+
+  /* ── los números: los usa el Excel y el portal para su vista ─────── */
+  function _cuenta(c, x){
+    if(!c || !c.t) return;
+    if(c.t === 'nota' || c.t === 'si' || c.t === 'no'){ x.rend++; if((c.t === 'nota' && c.ok) || c.t === 'si') x.apr++; if(c.t === 'nota') x.notas.push(c.v); }
+    else if(c.t === 'falto') x.falt++;
+    else if(c.t === 'prog') x.pend++;
+    else if(c.t === 'desc') x.desc++;
+  }
+  function _cierra(x){
+    x.prog = x.rend + x.falt;
+    x.cumpl = x.prog ? x.rend / x.prog : null;
+    x.aprob = x.rend ? x.apr / x.rend : null;
+    x.prom = prom(x.notas);
+    return x;
+  }
+  function estadisticas(D){
+    var porSes = D.ses.map(function(s){
+      var x = { s:s, rend:0, apr:0, falt:0, pend:0, desc:0, notas:[] };
+      D.gente.forEach(function(p){ _cuenta(p.cel[s.k], x); });
+      _cierra(x); x.programados = x.rend + x.falt + x.pend;
+      return x;
+    });
+    var tot = { rend:0, apr:0, falt:0, pend:0, desc:0, notas:[] };
+    D.gente.forEach(function(p){ D.ses.forEach(function(s){ _cuenta(p.cel[s.k], tot); }); });
+    _cierra(tot);
+    var padron = D.gente.filter(function(p){ return p.padron; });
+    var fr = {}, frL = [];
+    padron.forEach(function(p){
+      var f = situacionEn(p, D.hoy).a || p.frente || 'Sin frente';
+      if(!fr[f]){ fr[f] = { f:f, n:0, rend:0, apr:0, falt:0, pend:0, desc:0, notas:[] }; frL.push(fr[f]); }
+      fr[f].n++;
+      D.ses.forEach(function(s){ _cuenta(p.cel[s.k], fr[f]); });
+    });
+    frL.forEach(_cierra);
+    frL.sort(function(a, b){ return a.f.localeCompare(b.f, 'es'); });
+    var pendientes = [];
+    D.gente.forEach(function(p){
+      var l = D.ses.filter(function(s){ var c = p.cel[s.k]; return c && c.t === 'falto'; });
+      if(l.length) pendientes.push({ p:p, ses:l });
+    });
+    pendientes.sort(function(a, b){ return (b.ses.length - a.ses.length) || a.p.nombre.localeCompare(b.p.nombre, 'es'); });
+    return {
+      kpi:{ activos:padron.filter(function(p){ var e = situacionEn(p, D.hoy).e; return e !== 'cesado' && e !== 'fuera'; }).length,
+            personas:D.gente.length,
+            capacitaciones:D.ses.length,
+            dictadas:porSes.filter(function(x){ return x.rend > 0; }).length,
+            porVenir:porSes.filter(function(x){ return !x.rend && x.s.dia >= D.hoy; }).length,
+            rendidas:tot.rend, faltas:tot.falt, cumplimiento:tot.cumpl, aprobacion:tot.aprob, promedio:tot.prom },
+      porSes:porSes, porFrente:frL, pendientes:pendientes
+    };
+  }
+
+  /* ── los estilos ─────────────────────────────────────────────────── */
+  var C = { petroleo:'0B2A3A', azul:'12506B', tinta:'1B2A33', gris:'5E6E79', grisc:'98A7B1', raya:'CBD4DB', fondo:'F3F6F8', blanco:'FFFFFF',
+            okF:'E3F4EA', okT:'1E6B45', malF:'FBE3E4', malT:'A8201A', ojoF:'FFF1D6', ojoT:'8A5700', progF:'E6EFFA', progT:'23599A', naF:'EEF1F4', naT:'8A97A3',
+            cabSes:'DCE7ED', cabRes:'FCEFC4', pie:'EEF3F6' };
+  function Estilos(){
+    this.fonts = []; this.fills = []; this.borders = []; this.xfs = []; this.numFmts = []; this.dxfs = []; this.mapa = {};
+    this.font({}); this.fill(null); this.fill('gray125'); this.border(null);
+    this.xf({});
+  }
+  Estilos.prototype.font = function(f){
+    var x = '<font>' + (f.b ? '<b/>' : '') + (f.i ? '<i/>' : '') + '<sz val="' + (f.sz || 10) + '"/><color rgb="FF' + (f.c || C.tinta) + '"/><name val="Calibri"/><family val="2"/></font>';
+    var i = this.fonts.indexOf(x); if(i < 0){ this.fonts.push(x); i = this.fonts.length - 1; } return i;
+  };
+  Estilos.prototype.fill = function(c){
+    var x = c === 'gray125' ? '<fill><patternFill patternType="gray125"/></fill>' : (c ? '<fill><patternFill patternType="solid"><fgColor rgb="FF' + c + '"/><bgColor indexed="64"/></patternFill></fill>' : '<fill><patternFill patternType="none"/></fill>');
+    var i = this.fills.indexOf(x); if(i < 0){ this.fills.push(x); i = this.fills.length - 1; } return i;
+  };
+  Estilos.prototype.border = function(b){
+    var lado = function(n){ return b ? '<' + n + ' style="' + (b.s || 'thin') + '"><color rgb="FF' + (b.c || C.raya) + '"/></' + n + '>' : '<' + n + '/>'; };
+    var x = '<border>' + lado('left') + lado('right') + lado('top') + lado('bottom') + '<diagonal/></border>';
+    var i = this.borders.indexOf(x); if(i < 0){ this.borders.push(x); i = this.borders.length - 1; } return i;
+  };
+  Estilos.prototype.fmt = function(code){
+    var hechos = { '0':1, '0.00':2, '0%':9, '0.00%':10 };
+    if(hechos[code]) return hechos[code];
+    var i = this.numFmts.indexOf(code);
+    if(i < 0){ this.numFmts.push(code); i = this.numFmts.length - 1; }
+    return 164 + i;
+  };
+  /* s: {b, i, sz, c (color de letra), f (fondo), borde:true|{c,s}, h:'left|center|right', v:'top|center', wrap, fmt} */
+  Estilos.prototype.xf = function(s){
+    var clave = JSON.stringify(s); if(this.mapa[clave] != null) return this.mapa[clave];
+    var fo = this.font({ b:s.b, i:s.i, sz:s.sz, c:s.c }), fi = this.fill(s.f || null), bo = this.border(s.borde ? (s.borde === true ? {} : s.borde) : null);
+    var nf = s.fmt ? this.fmt(s.fmt) : 0;
+    /* todo centrado en vertical: una fila alta (un texto largo) no deja lo demás pegado abajo */
+    var al = '<alignment' + (s.h ? ' horizontal="' + s.h + '"' : '') + ' vertical="' + (s.v || 'center') + '"' + (s.wrap ? ' wrapText="1"' : '') + '/>';
+    var x = '<xf numFmtId="' + nf + '" fontId="' + fo + '" fillId="' + fi + '" borderId="' + bo + '" xfId="0"' + (nf ? ' applyNumberFormat="1"' : '') +
+            ' applyFont="1"' + (fi ? ' applyFill="1"' : '') + (bo ? ' applyBorder="1"' : '') + ' applyAlignment="1">' + al + '</xf>';
+    this.xfs.push(x); this.mapa[clave] = this.xfs.length - 1;
+    return this.xfs.length - 1;
+  };
+  /* formato condicional: solo el color de la letra */
+  Estilos.prototype.dxf = function(color){
+    this.dxfs.push('<dxf><font><b/><color rgb="FF' + color + '"/></font></dxf>');
+    return this.dxfs.length - 1;
+  };
+  Estilos.prototype.xml = function(){
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      (this.numFmts.length ? '<numFmts count="' + this.numFmts.length + '">' + this.numFmts.map(function(c, i){ return '<numFmt numFmtId="' + (164 + i) + '" formatCode="' + esc(c) + '"/>'; }).join('') + '</numFmts>' : '') +
+      '<fonts count="' + this.fonts.length + '">' + this.fonts.join('') + '</fonts>' +
+      '<fills count="' + this.fills.length + '">' + this.fills.join('') + '</fills>' +
+      '<borders count="' + this.borders.length + '">' + this.borders.join('') + '</borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="' + this.xfs.length + '">' + this.xfs.join('') + '</cellXfs>' +
+      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
+      (this.dxfs.length ? '<dxfs count="' + this.dxfs.length + '">' + this.dxfs.join('') + '</dxfs>' : '') +
+      '</styleSheet>';
+  };
+
+  /* ── una hoja ────────────────────────────────────────────────────── */
+  function Hoja(nombre){
+    this.nombre = nombre; this.filas = {}; this.altos = {}; this.anchos = {}; this.merges = []; this.condic = [];
+    this.congelar = null; this.filtro = null; this.titulos = null; this.maxC = 0; this.maxR = 0;
+    this.ajustar = true; this.escala = 100; this.activa = false;
+  }
+  Hoja.prototype.celda = function(c, r, v, s, formula){
+    if(!this.filas[r]) this.filas[r] = {};
+    this.filas[r][c] = { v:v, s:s || 0, f:formula || null };
+    if(c > this.maxC) this.maxC = c;
+    if(r > this.maxR) this.maxR = r;
+  };
+  Hoja.prototype.unir = function(c1, r1, c2, r2, v, s, formula){
+    this.celda(c1, r1, v, s, formula);
+    for(var r = r1; r <= r2; r++) for(var c = c1; c <= c2; c++) if(r !== r1 || c !== c1) this.celda(c, r, null, s);
+    if(c2 > c1 || r2 > r1) this.merges.push(ref(c1, r1) + ':' + ref(c2, r2));
+  };
+  /* el cumplimiento se pinta solo: rojo bajo 70 %, ámbar bajo 90 %, verde desde 90 % */
+  Hoja.prototype.semaforo = function(rango, dx){ this.condic.push({ r:rango, dx:dx }); };
+  Hoja.prototype.xml = function(){
+    var self = this, h = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
+    h += '<sheetPr>' + (this.ajustar ? '<pageSetUpPr fitToPage="1"/>' : '') + '</sheetPr>';
+    h += '<dimension ref="A1:' + ref(Math.max(0, this.maxC), Math.max(1, this.maxR)) + '"/>';
+    h += '<sheetViews><sheetView workbookViewId="0" showGridLines="0"' + (this.activa ? ' tabSelected="1"' : '') + '>';
+    if(this.congelar){
+      var cz = this.congelar.c, rz = this.congelar.r, panel = (cz && rz) ? 'bottomRight' : (rz ? 'bottomLeft' : 'topRight');
+      h += '<pane' + (cz ? ' xSplit="' + cz + '"' : '') + (rz ? ' ySplit="' + rz + '"' : '') + ' topLeftCell="' + ref(cz, rz + 1) + '" activePane="' + panel + '" state="frozen"/>' +
+           '<selection pane="' + panel + '" activeCell="' + ref(cz, rz + 1) + '" sqref="' + ref(cz, rz + 1) + '"/>';
+    }
+    h += '</sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>';
+    var cs = Object.keys(this.anchos).map(Number).sort(function(a, b){ return a - b; });
+    if(cs.length) h += '<cols>' + cs.map(function(c){ return '<col min="' + (c + 1) + '" max="' + (c + 1) + '" width="' + self.anchos[c] + '" customWidth="1"/>'; }).join('') + '</cols>';
+    h += '<sheetData>';
+    Object.keys(this.filas).map(Number).sort(function(a, b){ return a - b; }).forEach(function(r){
+      var fila = self.filas[r];
+      h += '<row r="' + r + '"' + (self.altos[r] ? ' ht="' + self.altos[r] + '" customHeight="1"' : '') + '>';
+      Object.keys(fila).map(Number).sort(function(a, b){ return a - b; }).forEach(function(c){
+        var x = fila[c], rr = ref(c, r);
+        if(x.f){
+          if(typeof x.v === 'number' && isFinite(x.v)) h += '<c r="' + rr + '" s="' + x.s + '"><f>' + esc(x.f) + '</f><v>' + x.v + '</v></c>';
+          else h += '<c r="' + rr + '" s="' + x.s + '" t="str"><f>' + esc(x.f) + '</f><v>' + esc(x.v == null ? '' : x.v) + '</v></c>';
+        } else if(x.v == null || x.v === ''){
+          h += '<c r="' + rr + '" s="' + x.s + '"/>';
+        } else if(typeof x.v === 'number' && isFinite(x.v)){
+          h += '<c r="' + rr + '" s="' + x.s + '"><v>' + x.v + '</v></c>';
+        } else {
+          h += '<c r="' + rr + '" s="' + x.s + '" t="inlineStr"><is><t xml:space="preserve">' + esc(x.v) + '</t></is></c>';
+        }
+      });
+      h += '</row>';
+    });
+    h += '</sheetData>';
+    if(this.filtro) h += '<autoFilter ref="' + this.filtro + '"/>';
+    if(this.merges.length) h += '<mergeCells count="' + this.merges.length + '">' + this.merges.map(function(m){ return '<mergeCell ref="' + m + '"/>'; }).join('') + '</mergeCells>';
+    var pr = 1;
+    this.condic.forEach(function(k){
+      var sup = k.r.split(':')[0];
+      h += '<conditionalFormatting sqref="' + k.r + '">' +
+           '<cfRule type="expression" dxfId="' + k.dx[0] + '" priority="' + (pr++) + '" stopIfTrue="1"><formula>AND(ISNUMBER(' + sup + '),' + sup + '&lt;0.7)</formula></cfRule>' +
+           '<cfRule type="expression" dxfId="' + k.dx[1] + '" priority="' + (pr++) + '" stopIfTrue="1"><formula>AND(ISNUMBER(' + sup + '),' + sup + '&lt;0.9)</formula></cfRule>' +
+           '<cfRule type="expression" dxfId="' + k.dx[2] + '" priority="' + (pr++) + '" stopIfTrue="1"><formula>ISNUMBER(' + sup + ')</formula></cfRule>' +
+           '</conditionalFormatting>';
+    });
+    h += '<printOptions horizontalCentered="1"/><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.55" header="0.2" footer="0.25"/>' +
+         '<pageSetup paperSize="9" orientation="landscape"' + (this.ajustar ? ' fitToWidth="1" fitToHeight="0"' : ' scale="' + this.escala + '"') + '/>' +
+         '<headerFooter><oddFooter>&amp;L&amp;8Registro de seguimiento de capacitaciones · ' + esc(this.nombre) + '&amp;R&amp;8Página &amp;P de &amp;N</oddFooter></headerFooter>';
+    return h + '</worksheet>';
+  };
+
+  /* ── el ZIP (sin comprimir: el .xlsx lo acepta así) ──────────────── */
+  var TABLA_CRC = null;
+  function crc32(u8){
+    if(!TABLA_CRC){ TABLA_CRC = []; for(var n = 0; n < 256; n++){ var c = n; for(var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); TABLA_CRC[n] = c >>> 0; } }
+    var r = 0xFFFFFFFF; for(var i = 0; i < u8.length; i++) r = TABLA_CRC[(r ^ u8[i]) & 255] ^ (r >>> 8);
+    return (r ^ 0xFFFFFFFF) >>> 0;
+  }
+  function zip(archivos){
+    var enc = new TextEncoder(), partes = [], central = [], off = 0;
+    var d = new Date(), dt = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF, df = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF;
+    archivos.forEach(function(a){
+      var nb = enc.encode(a.n), datos = enc.encode(a.x), crc = crc32(datos);
+      var lh = new Uint8Array(30 + nb.length), v = new DataView(lh.buffer);
+      v.setUint32(0, 0x04034b50, true); v.setUint16(4, 20, true); v.setUint16(6, 0x0800, true); v.setUint16(8, 0, true);
+      v.setUint16(10, dt, true); v.setUint16(12, df, true); v.setUint32(14, crc, true); v.setUint32(18, datos.length, true); v.setUint32(22, datos.length, true);
+      v.setUint16(26, nb.length, true); v.setUint16(28, 0, true); lh.set(nb, 30);
+      var ch = new Uint8Array(46 + nb.length), w = new DataView(ch.buffer);
+      w.setUint32(0, 0x02014b50, true); w.setUint16(4, 20, true); w.setUint16(6, 20, true); w.setUint16(8, 0x0800, true); w.setUint16(10, 0, true);
+      w.setUint16(12, dt, true); w.setUint16(14, df, true); w.setUint32(16, crc, true); w.setUint32(20, datos.length, true); w.setUint32(24, datos.length, true);
+      w.setUint16(28, nb.length, true); w.setUint16(30, 0, true); w.setUint16(32, 0, true); w.setUint16(34, 0, true); w.setUint16(36, 0, true);
+      w.setUint32(38, 0, true); w.setUint32(42, off, true); ch.set(nb, 46);
+      partes.push(lh, datos); central.push(ch); off += lh.length + datos.length;
+    });
+    var tam = central.reduce(function(s, x){ return s + x.length; }, 0);
+    var fin = new Uint8Array(22), f = new DataView(fin.buffer);
+    f.setUint32(0, 0x06054b50, true); f.setUint16(8, archivos.length, true); f.setUint16(10, archivos.length, true); f.setUint32(12, tam, true); f.setUint32(16, off, true);
+    return new Blob(partes.concat(central, [fin]), { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+
+  /* ── el libro ────────────────────────────────────────────────────── */
+  function armar(ent){
+    ent = ent || {};
+    var D = preparar(ent), X = estadisticas(D), E = new Estilos();
+    var emp = ent.empresa || {};
+    var linea = [emp.razon, emp.ruc ? 'RUC ' + emp.ruc : '', emp.obra ? 'Obra: ' + emp.obra : ''].filter(Boolean).join('  ·  ');
+    var periodo = (D.desde === '0000-01-01' ? 'Desde el inicio' : dma(D.desde)) + ' al ' + (D.hasta === '9999-12-31' ? dma(D.hoy) : dma(D.hasta));
+    var emitido = dma(D.hoy) + (ent.hora ? ' ' + ent.hora : '');
+    var conEmpresa = D.gente.some(function(p){ return p.padron && p.empresa; });
+    var DX = [E.dxf(C.malT), E.dxf(C.ojoT), E.dxf(C.okT)];
+    var S = {
+      tit: E.xf({ b:1, sz:16, c:C.petroleo, v:'center' }),
+      sub: E.xf({ sz:10, c:C.gris, v:'center' }),
+      etq: E.xf({ b:1, sz:9, c:C.gris, f:C.fondo, h:'left', borde:{ c:C.raya } }),
+      dato: E.xf({ sz:10, c:C.tinta, h:'left', borde:{ c:C.raya } }),
+      ley: E.xf({ sz:9, c:C.gris, v:'center', wrap:1 }),
+      banda: E.xf({ b:1, sz:9, c:C.blanco, f:C.azul, h:'center', borde:{ c:C.azul } }),
+      bandaFija: E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'center', borde:{ c:C.petroleo } }),
+      cab: E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'center', v:'center', wrap:1, borde:{ c:'3C5A69' } }),
+      cabIzq: E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'left', v:'center', wrap:1, borde:{ c:'3C5A69' } }),
+      cabSes: E.xf({ b:1, sz:8, c:C.petroleo, f:C.cabSes, h:'center', v:'center', wrap:1, borde:{ c:'B7C6CE' } }),
+      cabRes: E.xf({ b:1, sz:9, c:C.petroleo, f:C.cabRes, h:'center', v:'center', wrap:1, borde:{ c:'E0C77A' } }),
+      n: E.xf({ sz:9, c:C.gris, h:'center', borde:true }),
+      nom: E.xf({ b:1, sz:10, c:C.tinta, borde:true }),
+      txt: E.xf({ sz:9, c:C.tinta, borde:true }),
+      txtW: E.xf({ sz:9, c:C.tinta, borde:true, wrap:1 }),
+      txtC: E.xf({ sz:9, c:C.tinta, h:'center', borde:true }),
+      sitOk: E.xf({ sz:9, c:C.okT, borde:true }),
+      sitFuera: E.xf({ sz:9, c:C.malT, borde:true }),
+      sitDesc: E.xf({ sz:9, c:C.ojoT, borde:true }),
+      afuera: E.xf({ i:1, sz:9, c:C.gris, borde:true }),
+      ok: E.xf({ b:1, sz:10, c:C.okT, f:C.okF, h:'center', borde:true, fmt:'0.0' }),
+      mal: E.xf({ b:1, sz:10, c:C.malT, f:C.malF, h:'center', borde:true, fmt:'0.0' }),
+      si: E.xf({ b:1, sz:10, c:C.okT, f:C.okF, h:'center', borde:true }),
+      no: E.xf({ b:1, sz:10, c:C.malT, f:C.malF, h:'center', borde:true }),
+      falto: E.xf({ b:1, sz:9, c:C.ojoT, f:C.ojoF, h:'center', borde:true }),
+      prog: E.xf({ b:1, sz:9, c:C.progT, f:C.progF, h:'center', borde:true }),
+      desc: E.xf({ sz:9, c:C.ojoT, f:'FFF8EA', h:'center', borde:true }),
+      na: E.xf({ sz:9, c:C.naT, f:C.naF, h:'center', borde:true }),
+      vacio: E.xf({ borde:true }),
+      ent: E.xf({ b:1, sz:10, c:C.tinta, h:'center', borde:true, fmt:'0' }),
+      pct: E.xf({ b:1, sz:10, c:C.petroleo, h:'center', borde:true, fmt:'0%' }),
+      prom: E.xf({ b:1, sz:10, c:C.tinta, h:'center', borde:true, fmt:'0.0' }),
+      pieEt: E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, h:'right', borde:true }),
+      pieEnt: E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, h:'center', borde:true, fmt:'0' }),
+      piePct: E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, h:'center', borde:true, fmt:'0%' }),
+      pieProm: E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, h:'center', borde:true, fmt:'0.0' }),
+      pieVacio: E.xf({ f:C.pie, borde:true }),
+      fecha: E.xf({ sz:9, c:C.tinta, h:'center', borde:true, fmt:'dd/mm/yyyy' }),
+      kpiN: E.xf({ b:1, sz:22, c:C.petroleo, f:C.fondo, h:'center', v:'center', borde:{ c:C.raya }, fmt:'0' }),
+      kpiP: E.xf({ b:1, sz:22, c:C.petroleo, f:C.fondo, h:'center', v:'center', borde:{ c:C.raya }, fmt:'0%' }),
+      kpiD: E.xf({ b:1, sz:22, c:C.petroleo, f:C.fondo, h:'center', v:'center', borde:{ c:C.raya }, fmt:'0.0' }),
+      kpiE: E.xf({ b:1, sz:9, c:C.gris, f:C.fondo, h:'center', v:'center', wrap:1, borde:{ c:C.raya } }),
+      sec: E.xf({ b:1, sz:11, c:C.petroleo, v:'center' }),
+      secN: E.xf({ sz:9, c:C.gris, v:'center' }),
+      leyTx: E.xf({ sz:9, c:C.tinta, v:'center', wrap:1 })
+    };
+
+    /* ══ SEGUIMIENTO: la matriz ══ */
+    var H = new Hoja('Seguimiento');
+    var fijas = ['N°', 'Trabajador', 'DNI / doc.', 'Cargo'].concat(conEmpresa ? ['Empresa'] : []).concat(['Frente / área', 'Situación']);
+    var anchosF = [5, 32, 11, 18].concat(conEmpresa ? [18] : []).concat([16, 21]);
+    var FIJAS = fijas.length, cEmp = conEmpresa ? 4 : -1, cFr = conEmpresa ? 5 : 4, cSit = FIJAS - 1;
+    var nS = D.ses.length, c0 = FIJAS, cR = FIJAS + nS;   /* cR: la primera de las de cumplimiento */
+    anchosF.forEach(function(w, i){ H.anchos[i] = w; });
+    for(var i = 0; i < nS; i++) H.anchos[c0 + i] = 10;
+    [12, 10, 10, 13, 10].forEach(function(w, i){ H.anchos[cR + i] = w; });
+    var ult = cR + 4;
+    H.unir(0, 1, ult, 1, 'REGISTRO DE SEGUIMIENTO DE CAPACITACIONES', S.tit); H.altos[1] = 26;
+    H.unir(0, 2, ult, 2, (linea ? linea + '  ·  ' : '') + 'Periodo: ' + periodo + '  ·  Emitido: ' + emitido, S.sub);
+    H.unir(0, 3, ult, 3, 'Nota de 0 a 20: aprueba con ' + APRUEBA + ' (70 %).   F = le tocaba y no la rindió.   P = programada, todavía no llega el día.   D = de descanso ese día.   — = ese día no estaba en la obra.   ✓ = taller o constancia sin nota.   En blanco: no le tocaba.', S.ley);
+    H.altos[3] = 26;
+    /* fila 4: las bandas (trabajador · los meses · cumplimiento) */
+    H.unir(0, 4, FIJAS - 1, 4, 'TRABAJADOR', S.bandaFija);
+    var i0 = 0;
+    while(i0 < nS){
+      var mes = D.ses[i0].dia.slice(0, 7), i1 = i0;
+      while(i1 + 1 < nS && D.ses[i1 + 1].dia.slice(0, 7) === mes) i1++;
+      H.unir(c0 + i0, 4, c0 + i1, 4, (i1 > i0 ? MESES : MESES_C)[+mes.slice(5, 7) - 1] + ' ' + mes.slice(0, 4), S.banda);
+      i0 = i1 + 1;
+    }
+    H.unir(cR, 4, ult, 4, 'CUMPLIMIENTO', S.bandaFija);
+    /* fila 5: los encabezados */
+    fijas.forEach(function(t, i){ H.celda(i, 5, t, i === 1 ? S.cabIzq : S.cab); });
+    D.ses.forEach(function(s, i){
+      var tema = s.tema.length > 64 ? s.tema.slice(0, 62) + '…' : s.tema;
+      H.celda(c0 + i, 5, dma(s.dia).slice(0, 5) + '\n' + tema, S.cabSes);
+    });
+    ['Programadas', 'Rendidas', 'Aprobadas', 'Cumplimiento', 'Promedio'].forEach(function(t, i){ H.celda(cR + i, 5, t, S.cabRes); });
+    H.altos[5] = 96;
+    /* las personas */
+    var r = 6, primera = 6;
+    D.gente.forEach(function(p, k){
+      H.celda(0, r, k + 1, S.n);
+      H.celda(1, r, p.nombre, p.padron ? S.nom : S.afuera);
+      H.celda(2, r, p.dni || '', S.txtC);
+      H.celda(3, r, p.cargo || '', S.txt);
+      if(conEmpresa) H.celda(cEmp, r, p.empresa || '', S.txt);
+      H.celda(cFr, r, p.padron ? (situacionEn(p, D.hoy).a || p.frente || '') : '', S.txt);
+      var st = p.padron ? situacionTxt(p, D.hoy) : 'No está en el padrón';
+      H.celda(cSit, r, st, !p.padron ? S.afuera : (/^Activo/.test(st) ? S.sitOk : (/^(De descanso|Ingresa)/.test(st) ? S.sitDesc : S.sitFuera)));
+      var x = { rend:0, apr:0, falt:0, pend:0, desc:0, notas:[] };
+      D.ses.forEach(function(s, i){
+        var c = p.cel[s.k] || { t:'' }, cc = c0 + i;
+        _cuenta(c, x);
+        if(c.t === 'nota') H.celda(cc, r, c.v, c.ok ? S.ok : S.mal);
+        else if(c.t === 'si') H.celda(cc, r, '✓', S.si);
+        else if(c.t === 'no') H.celda(cc, r, '✗', S.no);
+        else if(c.t === 'falto') H.celda(cc, r, 'F', S.falto);
+        else if(c.t === 'prog') H.celda(cc, r, 'P', S.prog);
+        else if(c.t === 'desc') H.celda(cc, r, 'D', S.desc);
+        else if(c.t === 'fuera') H.celda(cc, r, '—', S.na);
+        else H.celda(cc, r, null, S.vacio);
+      });
+      _cierra(x);
+      if(nS){
+        var rg = ref(c0, r) + ':' + ref(c0 + nS - 1, r);
+        H.celda(cR, r, x.prog, S.ent, 'COUNT(' + rg + ')+COUNTIF(' + rg + ',"✓")+COUNTIF(' + rg + ',"✗")+COUNTIF(' + rg + ',"F")');
+        H.celda(cR + 1, r, x.rend, S.ent, 'COUNT(' + rg + ')+COUNTIF(' + rg + ',"✓")+COUNTIF(' + rg + ',"✗")');
+        H.celda(cR + 2, r, x.apr, S.ent, 'COUNTIF(' + rg + ',">=' + APRUEBA + '")+COUNTIF(' + rg + ',"✓")');
+        H.celda(cR + 3, r, x.cumpl == null ? '' : x.cumpl, S.pct, 'IF(' + ref(cR, r) + '>0,' + ref(cR + 1, r) + '/' + ref(cR, r) + ',"")');
+        H.celda(cR + 4, r, x.prom == null ? '' : x.prom, S.prom, 'IF(COUNT(' + rg + ')>0,AVERAGE(' + rg + '),"")');
+      } else { for(var q = 0; q < 5; q++) H.celda(cR + q, r, '', S.vacio); }
+      r++;
+    });
+    var ultimaP = r - 1;
+    if(!D.gente.length){ H.unir(0, 6, ult, 6, 'No hay trabajadores ni evaluaciones en este periodo.', S.ley); ultimaP = 6; r = 7; }
+    if(D.gente.length && nS) H.semaforo(ref(cR + 3, primera) + ':' + ref(cR + 3, ultimaP), DX);
+    /* el pie: por capacitación */
+    if(D.gente.length && nS){
+      [['Rindieron', 'n'], ['Aprobaron', 'a'], ['Asistencia', 'p'], ['Nota promedio', 'm']].forEach(function(x, j){
+        var rr = r + 1 + j;
+        H.unir(0, rr, FIJAS - 1, rr, x[0], S.pieEt);
+        X.porSes.forEach(function(e, i){
+          var cc = c0 + i, rg2 = ref(cc, primera) + ':' + ref(cc, ultimaP), rn = ref(cc, r + 1);
+          if(x[1] === 'n') H.celda(cc, rr, e.rend, S.pieEnt, 'COUNT(' + rg2 + ')+COUNTIF(' + rg2 + ',"✓")+COUNTIF(' + rg2 + ',"✗")');
+          else if(x[1] === 'a') H.celda(cc, rr, e.apr, S.pieEnt, 'COUNTIF(' + rg2 + ',">=' + APRUEBA + '")+COUNTIF(' + rg2 + ',"✓")');
+          else if(x[1] === 'p') H.celda(cc, rr, e.cumpl == null ? '' : e.cumpl, S.piePct, 'IF(' + rn + '+COUNTIF(' + rg2 + ',"F")>0,' + rn + '/(' + rn + '+COUNTIF(' + rg2 + ',"F")),"")');
+          else H.celda(cc, rr, e.prom == null ? '' : e.prom, S.pieProm, 'IF(COUNT(' + rg2 + ')>0,AVERAGE(' + rg2 + '),"")');
+        });
+        for(var q2 = 0; q2 < 5; q2++) H.celda(cR + q2, rr, null, S.pieVacio);
+      });
+      H.semaforo(ref(c0, r + 3) + ':' + ref(c0 + nS - 1, r + 3), DX);
+    }
+    H.congelar = { c:2, r:5 };
+    if(D.gente.length) H.filtro = 'A5:' + ref(ult, ultimaP);
+    /* una matriz ancha no se encoge hasta no poder leerse: va en varias
+       hojas, repitiendo arriba los encabezados y a la izquierda el nombre */
+    if(nS > 16){ H.ajustar = false; H.escala = 75; H.titulos = "'Seguimiento'!$A:$B,'Seguimiento'!$4:$5"; }
+    else H.titulos = "'Seguimiento'!$4:$5";
+
+    /* ══ DETALLE: una fila por evaluación ══ */
+    var DT = new Hoja('Detalle');
+    var cabD = ['Fecha', 'Capacitación', 'Tipo', 'Trabajador', 'DNI / doc.', 'Cargo', 'Frente / área', 'Resultado', 'Nota (0–20)', 'Correctas', 'Folio', 'Evaluador', 'Horas'];
+    [11, 38, 11, 30, 11, 18, 16, 13, 10, 10, 16, 24, 7].forEach(function(w, i){ DT.anchos[i] = w; });
+    DT.unir(0, 1, cabD.length - 1, 1, 'DETALLE DE LAS EVALUACIONES', S.tit); DT.altos[1] = 26;
+    DT.unir(0, 2, cabD.length - 1, 2, (linea ? linea + '  ·  ' : '') + 'Periodo: ' + periodo + '  ·  Emitido: ' + emitido, S.sub);
+    DT.unir(0, 3, cabD.length - 1, 3, 'Una fila por cada evaluación rendida. Usa los filtros del encabezado para ver una capacitación, una fecha, un frente o solo los desaprobados.', S.ley);
+    cabD.forEach(function(t, i){ DT.celda(i, 4, t, i === 1 || i === 3 ? S.cabIzq : S.cab); });
+    DT.altos[4] = 30;
+    var rd = 5;
+    D.detalle.slice().sort(function(a, b){ return a.s.dia < b.s.dia ? -1 : (a.s.dia > b.s.dia ? 1 : (a.s.tema.localeCompare(b.s.tema, 'es') || a.p.nombre.localeCompare(b.p.nombre, 'es'))); }).forEach(function(e){
+      DT.celda(0, rd, serial(e.s.dia), S.fecha);
+      DT.celda(1, rd, e.s.tema, S.txt);
+      DT.celda(2, rd, e.taller ? 'Taller' : 'Evaluación', S.txtC);
+      DT.celda(3, rd, e.p.nombre, S.nom);
+      DT.celda(4, rd, e.p.dni || '', S.txtC);
+      DT.celda(5, rd, e.cargo || '', S.txt);
+      DT.celda(6, rd, e.p.padron ? (situacionEn(e.p, e.s.dia).a || e.p.frente || '') : '', S.txt);
+      DT.celda(7, rd, (e.taller && e.nota == null) ? (e.aprob ? 'Completado' : 'Incompleto') : (e.aprob ? 'Aprobado' : 'Desaprobado'), e.aprob ? S.si : S.no);
+      DT.celda(8, rd, e.nota != null ? e.nota : '', e.nota != null ? (e.nota >= APRUEBA ? S.ok : S.mal) : S.vacio);
+      DT.celda(9, rd, (e.b != null && e.n) ? (e.b + ' de ' + e.n) : '', S.txtC);
+      DT.celda(10, rd, e.folio, S.txtC);
+      DT.celda(11, rd, e.s.evaluador || '', S.txt);
+      DT.celda(12, rd, e.s.horas || '', S.txtC);
+      rd++;
+    });
+    if(rd === 5){ DT.unir(0, 5, cabD.length - 1, 5, 'Nadie rindió una evaluación en este periodo.', S.ley); }
+    DT.congelar = { c:0, r:4 };
+    if(rd > 5) DT.filtro = 'A4:' + ref(cabD.length - 1, rd - 1);
+    DT.titulos = "'Detalle'!$4:$4";
+
+    /* ══ RESUMEN: lo que se mira primero ══
+       Una grilla pareja de 12 columnas (B a M): los seis indicadores
+       ocupan dos cada uno y las tablas se acomodan encima de la grilla. */
+    var R = new Hoja('Resumen'); R.activa = true;
+    R.anchos[0] = 2; for(var g = 1; g <= 12; g++) R.anchos[g] = 11.5;
+    var B = 1, M = 12;
+    R.unir(B, 1, M, 1, 'REGISTRO DE SEGUIMIENTO DE CAPACITACIONES', S.tit); R.altos[1] = 28;
+    R.unir(B, 2, M, 2, 'Programa de capacitación en seguridad y salud en el trabajo  ·  Resumen del periodo', S.sub);
+    [['Empresa', emp.razon || '—'], ['RUC', emp.ruc || '—'], ['Obra / proyecto', emp.obra || '—'], ['Responsable', emp.responsable || '—'],
+     ['Periodo', periodo], ['Emitido', emitido + (ent.por ? '  ·  por ' + ent.por : '')]].forEach(function(x, j){
+      R.unir(B, 4 + j, B + 1, 4 + j, x[0], S.etq); R.unir(B + 2, 4 + j, M, 4 + j, x[1], S.dato);
+    });
+    var K = X.kpi, rk = 11;
+    R.celda(B, rk, 'Indicadores del periodo', S.sec); R.altos[rk] = 20; rk++;
+    [[K.activos, 'Trabajadores activos hoy', S.kpiN], [K.dictadas, 'Capacitaciones dictadas', S.kpiN], [K.rendidas, 'Evaluaciones rendidas', S.kpiN],
+     [K.cumplimiento == null ? '—' : K.cumplimiento, 'Cumplimiento: rindieron lo que les tocaba', S.kpiP],
+     [K.aprobacion == null ? '—' : K.aprobacion, 'Aprobación: aprobaron lo que rindieron', S.kpiP],
+     [K.promedio == null ? '—' : K.promedio, 'Nota promedio (de 20)', S.kpiD]].forEach(function(x, j){
+      var c1 = B + j * 2;
+      R.unir(c1, rk, c1 + 1, rk, x[0], x[2]); R.unir(c1, rk + 1, c1 + 1, rk + 1, x[1], S.kpiE);
+    });
+    R.altos[rk] = 40; R.altos[rk + 1] = 32;
+    /* por capacitación */
+    var rc = rk + 3;
+    R.celda(B, rc, 'Por capacitación', S.sec); R.unir(B + 3, rc, M, rc, 'En el mismo orden que las columnas de «Seguimiento».', S.secN); R.altos[rc] = 20; rc++;
+    /* [título, columnas que ocupa] */
+    var colsC = [['Fecha', 1], ['Capacitación', 3], ['Programados', 1], ['Rindieron', 1], ['Faltaron', 1], ['Asistencia', 1], ['Aprobaron', 1], ['Promedio', 1], ['Evaluador', 2]];
+    function fila(rr, cols, vals){
+      var c = B;
+      cols.forEach(function(k, j){ var v = vals[j]; if(k[1] > 1) R.unir(c, rr, c + k[1] - 1, rr, v[0], v[1], v[2]); else R.celda(c, rr, v[0], v[1], v[2]); c += k[1]; });
+    }
+    fila(rc, colsC, colsC.map(function(k, j){ return [k[0], (j === 1 || j === 8) ? S.cabIzq : S.cab]; }));
+    R.altos[rc] = 28;
+    var r0 = rc + 1;
+    X.porSes.forEach(function(e, j){
+      var rr = r0 + j, s = e.s;
+      fila(rr, colsC, [
+        [serial(s.dia), S.fecha],
+        [s.tema + (s.tipo === 'taller' ? ' (taller)' : '') + (s.dia >= D.hoy && !e.rend ? '  · por venir' : ''), S.txtW],
+        [e.programados, S.ent], [e.rend, S.ent], [e.falt, S.ent],
+        [e.cumpl == null ? '' : e.cumpl, S.pct, 'IF(' + ref(B + 5, rr) + '+' + ref(B + 6, rr) + '>0,' + ref(B + 5, rr) + '/(' + ref(B + 5, rr) + '+' + ref(B + 6, rr) + '),"")'],
+        [e.apr, S.ent], [e.prom == null ? '' : e.prom, S.prom], [s.evaluador || '', S.txtW]
+      ]);
+      if(s.tema.length > 40 || (s.evaluador || '').length > 26) R.altos[rr] = 26;
+    });
+    if(!X.porSes.length) R.unir(B, r0, M, r0, 'Todavía no hay capacitaciones en este periodo.', S.ley);
+    else R.semaforo(ref(B + 7, r0) + ':' + ref(B + 7, r0 + X.porSes.length - 1), DX);
+    /* por frente */
+    var rf = r0 + Math.max(1, X.porSes.length) + 1;
+    R.celda(B, rf, 'Por frente / área', S.sec); R.unir(B + 3, rf, M, rf, 'Según dónde está cada uno hoy.', S.secN); R.altos[rf] = 20; rf++;
+    var colsF = [['Frente / área', 3], ['Trabajadores', 1], ['Programadas', 1], ['Rindieron', 1], ['Faltaron', 1], ['Cumplimiento', 1], ['Aprobaron', 1], ['Promedio', 1]];
+    fila(rf, colsF, colsF.map(function(k, j){ return [k[0], j === 0 ? S.cabIzq : S.cab]; }));
+    R.altos[rf] = 28;
+    X.porFrente.forEach(function(x, j){
+      var rr = rf + 1 + j;
+      fila(rr, colsF, [[x.f, S.txt], [x.n, S.ent], [x.prog, S.ent], [x.rend, S.ent], [x.falt, S.ent],
+        [x.cumpl == null ? '' : x.cumpl, S.pct, 'IF(' + ref(B + 4, rr) + '>0,' + ref(B + 5, rr) + '/' + ref(B + 4, rr) + ',"")'], [x.apr, S.ent], [x.prom == null ? '' : x.prom, S.prom]]);
+    });
+    if(!X.porFrente.length) R.unir(B, rf + 1, M, rf + 1, 'No hay personal en el padrón de la obra.', S.ley);
+    else R.semaforo(ref(B + 7, rf + 1) + ':' + ref(B + 7, rf + X.porFrente.length), DX);
+    /* quién debe qué */
+    var rp = rf + 1 + Math.max(1, X.porFrente.length) + 1;
+    R.celda(B, rp, 'Pendientes: quién no rindió lo que le tocaba', S.sec); R.altos[rp] = 20; rp++;
+    var colsP = [['Trabajador', 3], ['Cargo', 2], ['Frente / área', 2], ['Faltó a', 1], ['Las que no rindió', 4]];
+    fila(rp, colsP, colsP.map(function(k, j){ return [k[0], (j === 3) ? S.cab : S.cabIzq]; }));
+    R.altos[rp] = 24;
+    X.pendientes.forEach(function(x, j){
+      var rr = rp + 1 + j, p = x.p;
+      var cuales = x.ses.slice(0, 6).map(function(s){ return dma(s.dia).slice(0, 5) + ' ' + s.tema; }).join(' · ') + (x.ses.length > 6 ? ' · y ' + (x.ses.length - 6) + ' más' : '');
+      fila(rr, colsP, [[p.nombre, S.nom], [p.cargo || '', S.txt], [situacionEn(p, D.hoy).a || p.frente || '', S.txt], [x.ses.length, S.ent], [cuales, S.txtW]]);
+      if(cuales.length > 54) R.altos[rr] = Math.min(80, 12.5 * Math.ceil(cuales.length / 54) + 3);
+    });
+    if(!X.pendientes.length) R.unir(B, rp + 1, M, rp + 1, 'Nadie debe nada: todos rindieron lo que les tocaba.', S.ley);
+    /* cómo se lee */
+    var rl = rp + 1 + Math.max(1, X.pendientes.length) + 1;
+    R.celda(B, rl, 'Cómo se lee', S.sec); R.altos[rl] = 20; rl++;
+    [['16.0', S.ok, 'Aprobó. La nota va de 0 a 20 y aprueba con ' + APRUEBA + ' (el 70 % de respuestas correctas).'],
+     ['11.0', S.mal, 'Desaprobó.'],
+     ['F', S.falto, 'Le tocaba y no la rindió: cuenta en contra de su cumplimiento.'],
+     ['P', S.prog, 'Programada: todavía no llega el día. No cuenta todavía.'],
+     ['D', S.desc, 'Ese día estaba de descanso: no cuenta.'],
+     ['—', S.na, 'Ese día no estaba en la obra (no había ingresado, se trasladó o cesó): no cuenta.'],
+     ['✓', S.si, 'Taller completado o constancia sin nota.']].forEach(function(x, j){
+      R.celda(B, rl + j, x[0], x[1]); R.unir(B + 1, rl + j, M, rl + j, x[2], S.leyTx);
+    });
+    R.unir(B, rl + 8, M, rl + 8, 'Le tocaba = estaba programada para toda la obra, para su puesto o para su frente (se programa en la app, en Capacitación por tema). Cumplimiento = las que rindió entre las que le tocaban hasta hoy. Los totales de «Seguimiento» son fórmulas: si corriges una nota, se recalculan.', S.ley);
+    R.altos[rl + 8] = 38;
+
+    /* ══ el libro ══ */
+    var hojas = [R, H, DT];
+    var wb = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<bookViews><workbookView activeTab="0"/></bookViews><sheets>' + hojas.map(function(h, i){ return '<sheet name="' + esc(h.nombre) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('') + '</sheets>';
+    var dn = [];
+    hojas.forEach(function(h, i){
+      if(h.filtro){ var pz = h.filtro.split(':'); dn.push('<definedName name="_xlnm._FilterDatabase" localSheetId="' + i + '" hidden="1">\'' + h.nombre + '\'!' + pz.map(function(x){ return x.replace(/^([A-Z]+)(\d+)$/, '$$$1$$$2'); }).join(':') + '</definedName>'); }
+      if(h.titulos) dn.push('<definedName name="_xlnm.Print_Titles" localSheetId="' + i + '">' + esc(h.titulos) + '</definedName>');
+    });
+    if(dn.length) wb += '<definedNames>' + dn.join('') + '</definedNames>';
+    wb += '<calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>';
+    var ahora = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+    var archivos = [
+      { n:'[Content_Types].xml', x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+          '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+          '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+          hojas.map(function(h, i){ return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') +
+          '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+          '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
+          '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>' },
+      { n:'_rels/.rels', x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+          '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+          '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>' +
+          '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>' },
+      { n:'docProps/core.xml', x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
+          '<dc:title>Registro de seguimiento de capacitaciones</dc:title><dc:creator>OBRASST</dc:creator>' +
+          '<dcterms:created xsi:type="dcterms:W3CDTF">' + ahora + '</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">' + ahora + '</dcterms:modified></cp:coreProperties>' },
+      { n:'docProps/app.xml', x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>OBRASST</Application></Properties>' },
+      { n:'xl/workbook.xml', x:wb },
+      { n:'xl/_rels/workbook.xml.rels', x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+          hojas.map(function(h, i){ return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('') +
+          '<Relationship Id="rId' + (hojas.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' }
+    ];
+    hojas.forEach(function(h, i){ archivos.push({ n:'xl/worksheets/sheet' + (i + 1) + '.xml', x:h.xml() }); });
+    archivos.push({ n:'xl/styles.xml', x:E.xml() });   /* al final: las hojas registran sus estilos al armarse */
+    return { blob:zip(archivos), datos:D, numeros:X };
+  }
+
+  /* el nombre del archivo */
+  function nombreArchivo(obra, rg, hoy){
+    var p = (rg && rg.k === 'mes') ? (hoy || '').slice(0, 7) : ((rg && rg.k === 'anio') ? (hoy || '').slice(0, 4) : ((rg && rg.k === 'trim') ? 'ultimos 3 meses' : 'todo'));
+    return ('Registro de seguimiento de capacitaciones - ' + String(obra || 'obra') + ' - ' + p).normalize('NFD').replace(/[̀-ͯ]/g, '')
+             .replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120) + '.xlsx';
+  }
+
+  return { armar:armar, preparar:preparar, estadisticas:estadisticas, programadasDe:programadasDe, rango:rango, PERIODOS:PERIODOS,
+           situacionEn:situacionEn, situacionTxt:situacionTxt, nombreArchivo:nombreArchivo, APRUEBA:APRUEBA, _zip:zip, _crc32:crc32 };
 })();
