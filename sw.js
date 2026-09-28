@@ -1,4 +1,4 @@
-var CACHE = 'sstc-814acdc888-a';
+var CACHE = 'sstc-18f379fdf0-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -9,7 +9,7 @@ var COMP = 'sstc-compartido';
    cache. La primera apertura sin señal despues de cada publicacion daba
    pantalla en blanco (y la primerisima instalacion tambien). Ahora la app
    entera se guarda en install, antes de activar. */
-var BASE = ['./', './index.html', './idioma-fr.js?v=46c74f9d72', './procedimientos.js?v=b9b304e9f9', './idioma-pt.js?v=2327aa6009', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
+var BASE = ['./', './index.html', './idioma-fr.js?v=f552535ca0', './procedimientos.js?v=b9b304e9f9', './idioma-pt.js?v=78f9321f5b', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
             './intro.mp4'];
 self.addEventListener('install', function(e){
@@ -117,8 +117,23 @@ self.addEventListener('fetch', function(e){
    dirección, que la app lee al arrancar. */
 self.addEventListener('notificationclick', function(e){
   e.notification.close();
-  var destino = '';
+  var destino = '', ruta = '';
   try{ destino = (e.notification.data && e.notification.data.ir) || ''; }catch(_d){}
+  try{ ruta = (e.notification.data && e.notification.data.ruta) || ''; }catch(_r){}
+  /* el aviso de una falla (push) lleva a una dirección: el portal */
+  if(ruta){
+    var url = '';
+    try{ url = new URL(ruta, self.registration.scope).href; }catch(_u){ url = self.registration.scope; }
+    e.waitUntil(
+      self.clients.matchAll({ type:'window', includeUncontrolled:true }).then(function(lista){
+        for(var i=0;i<lista.length;i++){
+          if(lista[i].url.split('#')[0] === url.split('#')[0] && 'focus' in lista[i]) return lista[i].focus();
+        }
+        return self.clients.openWindow(url);
+      })
+    );
+    return;
+  }
   e.waitUntil(
     self.clients.matchAll({ type:'window', includeUncontrolled:true }).then(function(lista){
       for(var i=0;i<lista.length;i++){
@@ -131,4 +146,27 @@ self.addEventListener('notificationclick', function(e){
       return self.clients.openWindow('./' + (destino ? ('?ir=' + encodeURIComponent(destino)) : ''));
     })
   );
+});
+
+/* ══ LOS AVISOS QUE MANDA EL SERVIDOR (Web Push) · 28/09/2026 ═══════
+   Hoy los recibe el equipo de OBRASST: cada falla que reportan desde la
+   app (función aviso-falla). El servidor manda {titulo, cuerpo, ruta,
+   tag} cifrado; el navegador lo descifra y lo entrega acá, aunque la
+   app esté cerrada. Se muestra siempre: un push sin aviso visible hace
+   que el navegador lo corte. */
+self.addEventListener('push', function(e){
+  var d = {};
+  try{ d = e.data ? e.data.json() : {}; }catch(_j){ try{ d = { cuerpo: e.data ? e.data.text() : '' }; }catch(_t){ d = {}; } }
+  var base = self.registration.scope;
+  var op = {
+    body: String(d.cuerpo || 'Tienes un aviso nuevo.').slice(0, 400),
+    icon: new URL('icono-192.png', base).href,
+    badge: new URL('icono-mask-192.png', base).href,
+    tag: String(d.tag || 'obrasst-aviso'),
+    renotify: true,
+    lang: 'es',
+    data: { ruta: String(d.ruta || ''), ir: String(d.ir || '') }
+  };
+  try{ op.vibrate = [70, 50, 70]; }catch(_v){}
+  e.waitUntil(self.registration.showNotification(String(d.titulo || 'OBRASST').slice(0, 120), op));
 });
