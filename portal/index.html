@@ -61,9 +61,6 @@ button{font-family:inherit; font-size:inherit}
 }
 .bt:hover{background:#123B50}
 a.bt{text-decoration:none}
-.avp{border:1px solid var(--raya);border-radius:14px;padding:14px 16px;margin:0 0 14px;background:var(--panel);box-shadow:var(--sombra)}
-.avp-cab{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 6px}.avp-cab b{font-size:15px;margin-right:4px}
-.avp .sub{margin:4px 0 8px;font-size:13.5px}.avp-bts{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.avp .msg{margin-top:6px}
 .bt.sec{background:var(--panel); color:var(--tinta); border-color:var(--raya2)}
 .bt.sec:hover{background:var(--fondo)}
 .bt.chico{padding:7px 11px; font-size:13px; border-radius:7px}
@@ -499,25 +496,6 @@ table.mat tbody tr:hover td.mat-p{background:#FAFBFC}
 .evp-cif{grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; margin-bottom:18px}
 .evp-cif .cifra{padding:12px 12px 11px} .evp-cif .cifra .v{font-size:20px}
 @media (max-width:600px){ .evp-cif{grid-template-columns:repeat(2, minmax(0,1fr))} }
-/* ══ 27/09/2026 · los códigos de los planes (solo el equipo de OBRASST) ══ */
-.cod-form{display:grid; gap:0 16px; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
-.cod-form .ancho{grid-column:1 / -1}
-.cod-form .seg{margin:0; display:flex}
-.cod-form .seg button{flex:1 1 0}
-.cod-cuantos{max-width:120px}
-.cod-nuevos{margin:16px 0 0; border:1px solid #BFE3CE; background:var(--ok-f); border-radius:10px; padding:12px 14px}
-.cod-nuevos h3{margin:0 0 8px; font-size:13.5px; color:var(--ok)}
-.cod-fila{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:7px 0; border-top:1px solid #D5ECDF}
-.cod-fila:first-of-type{border-top:0}
-.cod-c{font-family:var(--mono); font-size:18px; font-weight:500; letter-spacing:.08em; color:var(--tinta); margin-right:auto}
-.cod-t{font-family:var(--mono); font-weight:500; letter-spacing:.05em; color:var(--tinta)}
-.cod-busca{display:flex; gap:8px}
-.cod-busca input{font-family:var(--mono); letter-spacing:.06em; text-transform:uppercase}
-.cod-busca .bt{flex:0 0 auto}
-.cod-res{margin:12px 0 0}
-.cod-res .datos{margin-top:4px}
-.cod-resumen td.num{font-variant-numeric:tabular-nums}
-@media (max-width:600px){ .cod-form{grid-template-columns:1fr} .cod-c{font-size:16px} }
 @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important} }
 @media print{ .rail,.barra,.acciones,.herr{display:none !important} #portal.on{display:block} .main{padding:0} }
 
@@ -571,6 +549,7 @@ table.mat tbody tr:hover td.mat-p{background:#FAFBFC}
     <div class="barra-bts">
       <button class="bt sec chico" type="button" id="bt-guia" title="Ver otra vez la guía rápida">Guía</button>
       <a class="bt sec chico" id="bt-app" href="../" target="_blank" rel="noopener" title="La app se abre en otra pestaña">Abrir la app</a>
+      <a class="bt sec chico" id="bt-consola" href="../consola/" target="_blank" rel="noopener" hidden title="Solo la ve la cuenta del creador de OBRASST">Consola</a>
     </div>
     <div class="cuenta"><span class="avatar" id="avatar">·</span><b id="cuenta-n"></b>
       <button class="bt sec chico" type="button" id="bt-salir">Salir</button></div>
@@ -595,6 +574,12 @@ table.mat tbody tr:hover td.mat-p{background:#FAFBFC}
    se registra en el celular aparece acá: no hay dos bases, hay una.
    ══════════════════════════════════════════════════════════════ */
 'use strict';
+/* 28/09/2026 · lo del creador (fallas, códigos, avisos) se mudó a la Consola
+   OBRASST: un aviso viejo o un enlace guardado a #fallas o #codigos va allá */
+(function(){
+  function aLaConsola(){ try{ var h=String(location.hash||''); if(/^#(fallas|codigos)$/.test(h)) location.replace('../consola/'+h); }catch(e){} }
+  aLaConsola(); window.addEventListener('hashchange', aLaConsola);
+})();
 var SB = { url:'https://gwjjkknuiumgysezeatz.supabase.co',
            key:'sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx' };
 var LS_TOK = 'sstp_cuenta';        /* distinto del de la app: son dos ventanas, no una */
@@ -700,8 +685,9 @@ var YO = { empresas:[], obra:null, rol:'', nombre:'' };
 function cargarEmpresas(){
   return sbRpc('sst_mis_empresas',{}).then(function(rows){
     YO.empresas = Array.isArray(rows) ? rows : [];
-    /* 26/09/2026 · ¿es del equipo de OBRASST? Entonces ve las fallas que
-       la gente reporta desde la app. Sin el SQL del 02/10, un 404: no. */
+    /* 26/09/2026 · ¿es la cuenta del creador de OBRASST? Desde el 28/09 no
+       ve nada suyo aquí: solo la puerta a su Consola, arriba. Sin el SQL del
+       02/10, un 404: no. */
     return sbRpc('sst_soy_admin',{}).then(function(a){ YO.admin = (a === true); }, function(){ YO.admin = false; })
       .then(function(){ return YO.empresas; });
   });
@@ -833,8 +819,9 @@ function vistasDe(){
   else if(YO.dueno) v = VISTAS_SUP.slice(0,2).concat(VISTAS_LIDER.filter(function(v){ return v.id==='equipo'; }).map(function(v){
     return Object.assign({}, v, {g:VISTAS_SUP[0].g}); }), VISTAS_SUP.slice(2));
   else v = VISTAS_SUP;
-  /* las fallas de la app: solo el equipo de OBRASST */
-  return YO.admin ? v.concat([V_FALLAS, V_CODIGOS]) : v;
+  /* 28/09/2026 · las fallas, los códigos y los avisos del creador se mudaron a la
+     Consola OBRASST (consola/): aquí solo queda lo de la empresa */
+  return v;
 }
 /* 23/09/2026 · antes cada sección REEMPLAZABA la dirección: el «atrás»
    del navegador sacaba al usuario del portal entero. Ahora cada sección
@@ -883,6 +870,8 @@ function pintarBarra(){
   var p=$('papel'); p.textContent = YO.rol==='lider' ? 'Líder' : 'Supervisor'; p.className='papel '+(YO.rol==='lider'?'lider':'');
   p.title = YO.rol==='lider' ? 'Dueño de la empresa con Gestión SST: ves todas tus obras' : (YO.dueno ? 'Dueño de esta obra' : 'Supervisor de esta obra');
   $('cuenta-n').textContent = TOK.correo||''; $('avatar').textContent = iniciales(TOK.correo);
+  /* la puerta a la Consola OBRASST: solo la cuenta del creador (lo dice el servidor) */
+  var bc=$('bt-consola'); if(bc) bc.hidden = (YO.admin!==true);
 }
 
 /* ── tabla genérica: buscador, orden, contador y CSV ──────────────── */
@@ -1766,550 +1755,6 @@ var DEN_LEY={
   sin_seguridad:'Si todavía está pasando, no esperes a responder: que alguien vaya al frente.',
   ocultan:'Un accidente escondido no se investiga y se repite. Revisa el registro de accidentes e incidentes.'};
 var DENP={lista:[], foto:{}};
-/* ═══ LAS FALLAS DE LA APP (solo el equipo de OBRASST) ════════════
-   26/09/2026 · Marcelo: «si es que habría alguna falla en la app, que el
-   usuario lo reporte, y que llegue notificación a nosotros». Llegan con
-   el diagnóstico que arma la app y el plan REAL de la empresa, leído en
-   el servidor: «No puede entrar» con el plan vencido no es una falla.
-   Se marcan vistas al abrirlas, y «Resuelta» lleva una nota que el que
-   reportó lee en su app («Mis reportes»). */
-var FALLAP = { filtro:'nueva', lista:[] };
-var FALLA_TIPO_P = { entrar:'No puede entrar', traba:'Se traba o se cierra', guardar:'No guarda o no sube', error:'Le sale un error', otra:'Otra cosa' };
-var FALLA_EST_P = { nueva:'Nueva', vista:'Vista', resuelta:'Resuelta' };
-var FALLA_PLAN_P = { vigente:'Plan vigente', vencido:'Plan vencido', lite:'LITE', sin_empresa:'Sin empresa' };
-var V_FALLAS = {id:'fallas', g:'OBRASST', ic:'🐞', n:'Fallas de la app', s:'Lo que la gente reportó desde la app · solo lo ve el equipo de OBRASST',
-                pintar:vistaFallas, tablas:[]};
-function _fallaHora(iso){
-  var d = new Date(iso); if(isNaN(d.getTime())) return '';
-  return fechaLarga(iso) + ' ' + ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
-}
-/* ══ LOS AVISOS DE FALLAS EN ESTA PC (28/09/2026) ═══════════════════
-   Marcelo: «cuando hago el reporte de una falla, no me llega nada a mí
-   como creador de la app». Cada falla deja un aviso en el servidor y la
-   función aviso-falla lo manda a los equipos activados (Web Push) y por
-   correo (Resend). Aquí se activa en esta PC; en el celular, en la app
-   (Ajustes ▸ Avisos). El service worker del portal (avisos-sw.js) solo
-   muestra los avisos: no guarda nada ni toca la red. */
-var AVP = { sub:undefined, estado:null, correo:null, msg:'', cl:'', pedido:false };
-function avpPuede(){ try{ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }catch(e){ return false; } }
-function _avpBytes(s){ s=String(s||'').replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; var b=atob(s), u=new Uint8Array(b.length); for(var i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
-function avpFuncion(accion){
-  return sbFetch(SB.url+'/functions/v1/aviso-falla', {method:'POST', body:JSON.stringify({accion:accion})})
-    .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); });
-}
-function avpEquipo(){
-  var ua=''; try{ ua=navigator.userAgent||''; }catch(e){}
-  var so=/Android/i.test(ua)?'Android':(/iPhone|iPad/i.test(ua)?'iPhone':(/Windows/i.test(ua)?'Windows':(/Mac OS X/i.test(ua)?'Mac':(/Linux/i.test(ua)?'Linux':'Otro'))));
-  var nav=/Edg\//.test(ua)?'Edge':(/OPR\//.test(ua)?'Opera':(/Firefox\//.test(ua)?'Firefox':(/Chrome\//.test(ua)?'Chrome':(/Safari\//.test(ua)?'Safari':'Navegador'))));
-  return so+' · '+nav+' · portal';
-}
-function avpRegistro(){
-  return navigator.serviceWorker.register('avisos-sw.js', {scope:'./'}).then(function(reg){
-    if(reg.active) return reg;
-    return new Promise(function(ok, mal){
-      var w = reg.installing || reg.waiting;
-      if(!w) return ok(reg);
-      w.addEventListener('statechange', function(){ if(w.state==='activated') ok(reg); else if(w.state==='redundant') mal('sw'); });
-      setTimeout(function(){ if(reg.active) ok(reg); else mal('sw'); }, 20000);
-    });
-  });
-}
-function avpSubActual(){
-  if(!avpPuede()) return Promise.resolve(null);
-  return navigator.serviceWorker.getRegistration('./').then(function(reg){
-    if(!reg || !reg.active || String(reg.scope).indexOf('/portal/')<0) return null;
-    return reg.pushManager.getSubscription();
-  }).then(function(s){ AVP.sub=s||null; return AVP.sub; }, function(){ AVP.sub=null; return null; });
-}
-function avpPintar(){
-  var c=$('avp'); if(!c) return;
-  var lista=(AVP.estado&&AVP.estado.equipos)||[], este=AVP.sub;
-  var aqui=!!(este && lista.some(function(x){ return x.endpoint===este.endpoint; }));
-  var permiso=''; try{ permiso=Notification.permission; }catch(e){}
-  var h='<div class="avp-cab"><b>🔔 Que te llegue cada falla</b>'+
-    '<span class="pill '+(aqui?'ok':'gris')+'">En esta PC: '+(aqui?'activados':'sin activar')+'</span>'+
-    (AVP.correo===null?'':'<span class="pill '+(AVP.correo?'ok':'gris')+'">Correo: '+(AVP.correo?'listo':'falta configurarlo')+'</span>')+
-    '<span class="pill gris">'+lista.length+' '+(lista.length===1?'equipo recibe':'equipos reciben')+'</span></div>';
-  if(!avpPuede()) h+='<p class="sub">Este navegador no recibe notificaciones. Usa Chrome o Edge.</p>';
-  else if(permiso==='denied') h+='<p class="sub">Las notificaciones están bloqueadas para este sitio. Ábrelas en el candado junto a la dirección y vuelve aquí.</p>';
-  else if(aqui) h+='<div class="avp-bts"><button type="button" class="bt chico" id="avp-probar">Mandar una prueba</button><button type="button" class="bt sec chico" id="avp-quitar">Dejar de recibir en esta PC</button></div>';
-  else h+='<p class="sub">Actívalo y cada falla te llega a esta PC al instante (con el navegador abierto). En el celular se activa desde la app: Ajustes ▸ Avisos.</p>'+
-          '<div class="avp-bts"><button type="button" class="bt chico" id="avp-activar">Activar en esta PC</button></div>';
-  if(AVP.correo===false) h+='<p class="sub" style="margin-top:8px">Para el correo: en Supabase ▸ Edge Functions ▸ Secrets, <b>RESEND_API_KEY</b> y <b>CORREO_ADMIN</b>.</p>';
-  h+='<div class="msg '+esc(AVP.cl)+'" id="avp-msg">'+esc(AVP.msg)+'</div>';
-  c.innerHTML=h;
-  var b;
-  if((b=$('avp-activar'))) b.onclick=avpActivar;
-  if((b=$('avp-probar'))) b.onclick=avpProbar;
-  if((b=$('avp-quitar'))) b.onclick=avpQuitar;
-}
-function _avpMsg(t, cl){ AVP.msg=t||''; AVP.cl=cl||''; var m=$('avp-msg'); if(m){ m.className='msg '+(cl||''); m.textContent=AVP.msg; } }
-function avpCargar(){
-  avpPintar();
-  Promise.all([
-    avpSubActual(),
-    sbRpc('sst_aviso_estado',{}).then(function(r){ return (r&&r.ok)?r:null; }, function(){ return null; }),
-    avpFuncion('estado').then(function(r){ return !!(r&&r.correo); }, function(){ return null; })
-  ]).then(function(r){ AVP.estado=r[1]; AVP.correo=r[2]; avpPintar(); });
-}
-function avpActivar(){
-  var b=$('avp-activar'); if(b) b.disabled=true;
-  _avpMsg('Pidiendo permiso…','gris');
-  var pedir; try{ pedir=Promise.resolve(Notification.requestPermission()); }catch(e){ pedir=Promise.resolve(Notification.permission); }
-  var llave=null;
-  pedir.then(function(p){
-    if(p!=='granted') return Promise.reject('permiso');
-    _avpMsg('Activando…','gris');
-    return avpFuncion('clave');
-  }).then(function(k){
-    if(!k||!k.publica) return Promise.reject('clave');
-    llave=_avpBytes(k.publica);
-    return avpRegistro();
-  }).then(function(reg){
-    return reg.pushManager.getSubscription().then(function(s){
-      if(!s) return reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:llave});
-      return reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:llave}).catch(function(){
-        return s.unsubscribe().then(function(){ return reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:llave}); });
-      });
-    });
-  }).then(function(sub){
-    AVP.sub=sub;
-    return sbRpc('sst_aviso_suscribir',{p_sub:sub.toJSON(), p_equipo:avpEquipo()});
-  }).then(function(r){
-    if(!r||!r.ok) return Promise.reject((r&&r.motivo)||'servidor');
-    return sbRpc('sst_aviso_probar',{}).catch(function(){ return null; });
-  }).then(function(){
-    _avpMsg('Listo: en unos segundos te llega una prueba a esta PC.','ok');
-    avpCargar();
-  }, function(err){
-    if(b) b.disabled=false;
-    _avpMsg(err==='permiso'?'Sin tu permiso no se pueden mostrar avisos. Si tocaste «Bloquear», ábrelo en el candado junto a la dirección.'
-          :(err==='no_eres_admin'?'Esta cuenta no es del equipo de OBRASST.':'No se pudo activar ('+err+'). Inténtalo otra vez.'),'mal');
-  });
-}
-function avpProbar(){
-  var b=$('avp-probar'); if(b) b.disabled=true;
-  sbRpc('sst_aviso_probar',{}).then(function(r){
-    if(b) b.disabled=false;
-    if(r&&r.ok) _avpMsg('Mandada: te llega en unos segundos.','ok');
-    else _avpMsg(r&&r.motivo==='muchas'?'Ya mandaste varias en el último minuto: espera un poco.':'No se pudo mandar la prueba.','mal');
-  }, function(){ if(b) b.disabled=false; _avpMsg('No hubo conexión.','mal'); });
-}
-function avpQuitar(){
-  var s=AVP.sub; if(!s) return;
-  var b=$('avp-quitar'); if(b) b.disabled=true;
-  sbRpc('sst_aviso_quitar',{p_endpoint:s.endpoint}).then(function(r){
-    if(!r||!r.ok) return Promise.reject('no');
-    return s.unsubscribe().catch(function(){});
-  }).then(function(){ AVP.sub=null; _avpMsg('Esta PC ya no recibe los avisos.','gris'); avpCargar(); },
-          function(){ if(b) b.disabled=false; _avpMsg('No se pudo quitar. Revisa la conexión.','mal'); });
-}
-function vistaFallas(caja){
-  cargando(caja);
-  function pinta(){
-    sbRpc('sst_fallas_ver', {p_estado: FALLAP.filtro==='todas' ? null : FALLAP.filtro, p_limite: 500}).then(function(r){
-      if(!r || !r.ok){
-        caja.innerHTML='<div class="vacio"><b>No se pudo abrir</b>'+((r&&r.motivo)==='no_eres_admin'?'Esta lista es solo para el equipo de OBRASST.':'Inténtalo en un momento.')+'</div>';
-        return;
-      }
-      FALLAP.lista = r.lista || [];
-      var F = [['nueva','Nuevas'],['vista','Vistas'],['resuelta','Resueltas'],['todas','Todas']];
-      var h = '<div class="seg" role="tablist" aria-label="Cuáles">'+F.map(function(x){
-        return '<button type="button" role="tab" data-f="'+x[0]+'" aria-selected="'+(FALLAP.filtro===x[0])+'" class="'+(FALLAP.filtro===x[0]?'on':'')+'">'+esc(x[1])+'</button>';
-      }).join('')+'</div>'+
-      '<div class="aviso">Cada una trae lo que la app sabe de ese celular: la versión, el equipo, la pantalla y los últimos errores. '+
-      '«No puede entrar» con el plan vencido no es una falla: se contesta con el plan.</div><div class="tarj" id="t-fallas"></div>';
-      caja.innerHTML = '<div class="avp" id="avp"></div>' + h;
-      avpPintar(); if(!AVP.pedido){ AVP.pedido=true; avpCargar(); }
-      [].forEach.call(caja.querySelectorAll('.seg button'), function(b){ b.onclick=function(){ FALLAP.filtro=b.getAttribute('data-f'); pinta(); }; });
-      var cols=[
-        {k:'creado', t:'Llegó', h:function(f){ return esc(_fallaHora(f.creado))+'<span class="sub">'+esc(hace(f.creado))+'</span>'; }},
-        {k:'codigo', t:'Código', h:function(f){ return '<b>'+esc(f.codigo)+'</b>'; }},
-        {k:'tipo', t:'Qué pasó', h:function(f){ var x=String(f.texto||''); return '<b>'+esc(FALLA_TIPO_P[f.tipo]||f.tipo)+'</b>'+(x?'<span class="sub">'+esc(x.slice(0,140))+(x.length>140?'…':'')+'</span>':''); },
-         v:function(f){ return (FALLA_TIPO_P[f.tipo]||f.tipo)+' · '+(f.texto||''); }},
-        {k:'quien', t:'Quién', h:function(f){ return esc(f.correo||f.contacto||'Sin cuenta')+'<span class="sub">'+esc([f.empresa_nombre, f.rol].filter(Boolean).join(' · '))+'</span>'; },
-         v:function(f){ return [f.correo, f.contacto, f.empresa_nombre, f.rol].filter(Boolean).join(' · '); }},
-        {k:'plan_estado', t:'Plan', h:function(f){ var e=f.plan_estado||''; return '<span class="pill '+(e==='vencido'?'mal':(e==='vigente'?'ok':'gris'))+'">'+esc(FALLA_PLAN_P[e]||e||'—')+'</span>'; },
-         v:function(f){ return FALLA_PLAN_P[f.plan_estado]||f.plan_estado||''; }},
-        {k:'estado', t:'Estado', h:function(f){ return '<span class="pill '+(f.estado==='resuelta'?'ok':(f.estado==='nueva'?'mal':'ojo'))+'">'+esc(FALLA_EST_P[f.estado]||f.estado)+'</span>'; },
-         v:function(f){ return FALLA_EST_P[f.estado]||f.estado; }},
-        {k:'_acc', t:'', acc:true, h:function(f){ return '<button type="button" class="bt '+(f.estado==='resuelta'?'sec ':'')+'chico" data-acc="abrir">'+(f.estado==='resuelta'?'Ver':'Atender')+'</button>'; }}
-      ];
-      tabla($('t-fallas'), cols, FALLAP.lista, {orden:'creado', asc:false, unidad:'fallas', archivo:'fallas-de-la-app',
-        vacio: FALLAP.filtro==='nueva' ? 'No hay fallas nuevas' : 'No hay fallas en esta lista',
-        vacioSub:'Llegan cuando alguien toca «Reportar una falla» en la app (Ajustes ▸ Ayuda, o «Avísanos» en la entrada).',
-        alClic:abrirFallaP, accion:function(acc, f){ abrirFallaP(f); }});
-    }, function(cod){
-      caja.innerHTML='<div class="vacio"><b>'+(cod===404?'Falta activar las fallas en el servidor':'No se pudo abrir')+'</b>'+
-        (cod===404?'Se activa con el SQL «2026-10-02-fallas».':'Revisa tu conexión.')+'</div>';
-    });
-  }
-  VISTA.recargar=pinta; pinta();
-}
-/* el número de WhatsApp que dejó, si parece uno (Perú: 9 dígitos que empiezan con 9) */
-function _fallaWa(c){
-  var d=String(c||'').replace(/[^0-9]/g,'');
-  if(/^9\d{8}$/.test(d)) d='51'+d;
-  return (d.length>=10 && d.length<=15 && String(c||'').indexOf('@')<0) ? d : '';
-}
-function abrirFallaP(f){
-  var g=f.diag||{}, wa=_fallaWa(f.contacto), mail=/@/.test(f.contacto||'') ? f.contacto : (f.correo||'');
-  if(/\.invalid$/i.test(mail)) mail='';
-  var fila=function(t, v){ return (v===undefined||v===null||v==='') ? '' : '<dt>'+esc(t)+'</dt><dd>'+v+'</dd>'; };
-  var h='<dl class="datos">'+
-    fila('Llegó', esc(_fallaHora(f.creado)))+
-    fila('Qué pasó', esc(FALLA_TIPO_P[f.tipo]||f.tipo))+
-    fila('Cuenta', esc(f.correo||''))+
-    fila('Responder a', esc(f.contacto||''))+
-    fila('Empresa', esc(f.empresa_nombre||''))+
-    fila('Es', esc(f.rol||''))+
-    fila('Plan', esc((FALLA_PLAN_P[f.plan_estado]||f.plan_estado||'')+(f.plan?' · '+f.plan:'')+(f.plan_vence?' · vence '+fechaLarga(f.plan_vence):'')))+
-    fila('Versión', esc(f.sello||g.v||''))+
-    '</dl>'+
-    '<div class="seccion"><h3>Lo que escribió</h3><p style="margin:0;white-space:pre-wrap">'+esc(f.texto||'(nada: tocó «No puedo entrar»)')+'</p></div>';
-  var rev=g.revision;
-  if(rev) h+='<div class="seccion"><h3>La revisión que hizo la app</h3><p style="margin:0">'+
-    (rev.internet===false?'Sin internet. ':'Con internet. ')+(rev.servidor===false?'El servidor NO contestaba desde su celular. ':'El servidor contestaba. ')+
-    (rev.plan_vencido?'Su plan (en el celular) estaba vencido.':'')+'</p></div>';
-  h+='<div class="seccion"><h3>El celular</h3><dl class="datos">'+
-    fila('Pantalla', esc(g.pantalla||''))+fila('Venía de', esc(g.desde||''))+
-    fila('App', esc(g.app||''))+fila('Pantalla (px)', esc(g.px||''))+fila('Internet', g.online===false?'no':'sí')+
-    fila('Idioma', esc(g.idioma||''))+fila('País · rubro', esc([g.pais, g.sector].filter(Boolean).join(' · ')))+
-    fila('Personal en el celular', g.personal!==undefined?esc(String(g.personal)):'')+
-    fila('Esperando señal', g.colas && Object.keys(g.colas).length ? esc(Object.keys(g.colas).map(function(k){ return k+': '+g.colas[k]; }).join(' · ')) : '')+
-    fila('Navegador', '<span style="font-size:12px;word-break:break-all">'+esc(g.ua||'')+'</span>')+
-    fila('Hora del celular', esc((g.hora||'')+(g.zona?' · '+g.zona:'')))+
-    '</dl></div>';
-  var er=Array.isArray(g.errores)?g.errores:[];
-  if(er.length) h+='<div class="seccion"><h3>Los últimos errores</h3>'+er.slice().reverse().map(function(e){
-    return '<p style="margin:0 0 6px;font-family:var(--mono,monospace);font-size:12px;word-break:break-word">'+esc(_fallaHora(new Date(e.t).toISOString()))+' · '+esc(e.p||'')+
-      (e.n>1?' · ×'+e.n:'')+'<br>'+esc(e.m||'')+(e.f?' ('+esc(e.f)+':'+esc(String(e.l||''))+')':'')+'</p>';
-  }).join('')+'</div>';
-  if(f.nota) h+='<div class="seccion"><h3>Tu respuesta</h3><p style="margin:0;white-space:pre-wrap">'+esc(f.nota)+'</p></div>';
-  h+='<div class="seccion"><h3>'+(f.estado==='resuelta'?'Cambiar la respuesta':'Responder y marcar resuelta')+'</h3><div class="campo"><label for="fa-nota">La respuesta que va a leer en «Mis reportes» de su app</label>'+
-    '<textarea id="fa-nota" maxlength="1500" placeholder="Qué era y qué hacer. Ej.: «Ya está arreglado: cierra y abre la app».">'+esc(f.nota||'')+'</textarea></div><div class="msg" id="fa-msg"></div></div>';
-  var pie='<button type="button" class="bt sec" id="fa-volver">Cerrar</button>'+
-    (wa?'<a class="bt sec" target="_blank" rel="noopener" href="https://wa.me/'+wa+'?text='+encodeURIComponent('Hola, te escribimos de OBRASST por tu reporte '+f.codigo+'.')+'">WhatsApp</a>':'')+
-    (mail?'<a class="bt sec" href="mailto:'+esc(mail)+'?subject='+encodeURIComponent('Tu reporte '+f.codigo+' · OBRASST')+'">Correo</a>':'')+
-    '<button type="button" class="bt ok" id="fa-resuelta">Resuelta</button>';
-  abrirHoja(f.codigo+' · '+(FALLA_TIPO_P[f.tipo]||f.tipo), 'Fallas de la app', h, pie, {id:f.id});
-  $('fa-volver').onclick=cerrarHoja;
-  /* abrirla ya la marca vista */
-  if(f.estado==='nueva') sbRpc('sst_falla_atender',{p_id:f.id, p_estado:'vista', p_nota:null}).then(function(r){
-    if(r && r.ok){ f.estado='vista'; if(typeof VISTA.recargar==='function') VISTA.recargar(); }
-  }, function(){});
-  $('fa-resuelta').onclick=function(){
-    var t=String($('fa-nota').value||'').trim(), m=$('fa-msg'), b=$('fa-resuelta');
-    b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
-    sbRpc('sst_falla_atender',{p_id:f.id, p_estado:'resuelta', p_nota:t||null}).then(function(r){
-      if(!r || !r.ok){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo'+((r&&r.motivo)?' ('+r.motivo+')':'')+'.'; return; }
-      toast('Resuelta. La persona lee tu respuesta en «Mis reportes» de su app.'); cerrarHoja();
-      if(typeof VISTA.recargar==='function') VISTA.recargar();
-    }, function(){ b.disabled=false; m.className='msg mal'; m.textContent='No hubo conexión. Tu respuesta sigue escrita: inténtalo otra vez.'; });
-  };
-}
-
-/* ══ LOS CÓDIGOS DE LOS PLANES · 27/09/2026 ══════════════════════════
-   Marcelo: «Verifica que se tenga los códigos de cada plan generados
-   para poder empezar a dar, ya sea mensuales o anuales». No había: un
-   código nacía solo al aprobarse un pago web. Aquí el equipo de OBRASST
-   los crea en el momento de darlos, anota para quién, los copia o los
-   manda por WhatsApp, busca el de un cliente y anula uno que nadie usó
-   (sql/2026-10-04-codigos.sql). El servidor pregunta en cada paso si la
-   cuenta es del equipo: esconder el menú no es la seguridad. */
-var CODP = { plan:'supervisor', dias:30, lista:[], resumen:[], nuevos:null };
-var COD_PLANES = [['prevencionista','Prevencionista de Riesgo'],['supervisor','Supervisor SST'],['ssoma','SSOMA'],['gestion','Gestión SST']];
-var COD_PLAN_N = { prevencionista:'Prevencionista de Riesgo', supervisor:'Supervisor SST', ssoma:'SSOMA', gestion:'Gestión SST',
-                   empresa:'Empresa (plan viejo)', equipo:'Equipo (plan viejo)', lite:'LITE' };
-var COD_ORIGEN = { mano:'Creados aquí', web:'Pago web', prueba:'Mes gratis', premio:'Premios por recomendar', otro:'Stock viejo' };
-var COD_APP = 'https://descarganomaspe.github.io/sst-capacita/';
-var V_CODIGOS = {id:'codigos', g:'OBRASST', ic:'🎟️', n:'Códigos de los planes', s:'Créalos cuando los vas a dar · solo lo ve el equipo de OBRASST',
-                 pintar:vistaCodigos, tablas:[]};
-function _codPlan(p){ return COD_PLAN_N[p] || p || '—'; }
-function _codPeriodo(d){ return +d===365 ? 'Anual · 365 días' : (+d===30 ? 'Mensual · 30 días' : d+' días'); }
-/* el celular que anotaron en «para quién», si hay uno (Perú: 9 dígitos que empiezan con 9) */
-function _codWa(t){
-  /* sin «(?<!…)»: un Safari viejo no lo entiende y tumbaría el portal entero */
-  var m = String(t||'').match(/(?:^|\D)(?:\+?51[\s.-]*)?(9\d{2}[\s.-]*\d{3}[\s.-]*\d{3})(?!\d)/);
-  return m ? '51'+m[1].replace(/\D/g,'') : '';
-}
-function _codMensaje(c){
-  return 'Hola, este es tu código de OBRASST:\n*'+c.codigo+'*\n'+
-    'Plan '+_codPlan(c.plan)+' · '+(+c.dias===365 ? 'un año (365 días)' : 'un mes (30 días)')+'.\n\n'+
-    'Actívalo en la app con la cuenta del dueño de la empresa: toca «Tengo un código» y escríbelo tal cual. '+
-    'Sirve una sola vez; si tu plan todavía tenía días, se suman.\n'+COD_APP;
-}
-function _codWaLink(c){ return 'https://wa.me/'+_codWa(c.para)+'?text='+encodeURIComponent(_codMensaje(c)); }
-function copiarTexto(t){
-  function aMano(){
-    var a=document.createElement('textarea'); a.value=t; a.setAttribute('readonly',''); a.style.position='fixed'; a.style.opacity='0';
-    document.body.appendChild(a); a.select(); var r=false; try{ r=document.execCommand('copy'); }catch(e){} a.remove(); return r;
-  }
-  if(navigator.clipboard && window.isSecureContext)
-    return navigator.clipboard.writeText(t).then(function(){ return true; }, function(){ return aMano(); });
-  return Promise.resolve(aMano());
-}
-function _codCopiar(t, b, aviso){
-  copiarTexto(t).then(function(r){
-    if(!r){ toast('No se pudo copiar: selecciónalo y cópialo a mano.'); return; }
-    toast(aviso||'Copiado.');
-    if(b){ var antes=b.textContent; b.textContent='Copiado ✓'; setTimeout(function(){ b.textContent=antes; }, 1600); }
-  });
-}
-function vistaCodigos(caja){
-  var armado=false;
-  cargando(caja);
-  /* la primera vez arma todo; después (vuelve a la pestaña, el sondeo)
-     solo refresca las cifras y la lista: lo que estás escribiendo arriba
-     no se borra */
-  function pinta(){
-    sbRpc('sst_admin_codigos',{}).then(function(r){
-      if(!r || !r.ok){
-        armado=false;
-        caja.innerHTML='<div class="vacio"><b>No se pudo abrir</b>'+((r&&r.motivo)==='no_eres_admin'?'Esta sección es solo para el equipo de OBRASST.':'Inténtalo en un momento.')+'</div>';
-        return;
-      }
-      CODP.resumen=r.resumen||[]; CODP.lista=r.lista||[];
-      if(!armado || !$('cod-crear')){ armado=true; caja.innerHTML=_codArmazon(); _codCablear(); _codPintarNuevos(); }
-      $('cod-resumen').innerHTML=_codResumen(CODP.resumen);
-      _codTabla();
-      _codRecomendados();
-    }, function(cod){
-      if(armado && $('cod-crear')) return;
-      caja.innerHTML='<div class="vacio"><b>'+(cod===404?'Falta activar los códigos en el servidor':'No se pudo abrir')+'</b>'+
-        (cod===404?'Se activa con el SQL «2026-10-04-codigos».':'Revisa tu conexión.')+'</div>';
-    });
-  }
-  VISTA.recargar=pinta; pinta();
-}
-function _codArmazon(){
-  return '<div class="aviso">Cada código abre su plan <b>una sola vez</b>, en la empresa de quien lo escribe en «Tengo un código» '+
-    '(tiene que ser el dueño de la empresa). Si la empresa todavía tenía días, se suman. Créalo cuando lo vas a dar y anota para quién: '+
-    'así sabes cuál se usó.</div>'+
-    '<div class="tarj"><div class="tarj-cab"><div><h2>Crear códigos</h2><p class="sub">Salen igual que los de la venta web: la app los reconoce.</p></div></div>'+
-    '<div class="tarj-cuerpo"><div class="cod-form">'+
-      '<div class="campo"><label for="cod-plan">Plan</label><select id="cod-plan">'+
-        COD_PLANES.map(function(p){ return '<option value="'+p[0]+'"'+(CODP.plan===p[0]?' selected':'')+'>'+esc(p[1])+'</option>'; }).join('')+'</select></div>'+
-      '<div class="campo"><label id="cod-per-l">Periodo</label><div class="seg" id="cod-per" role="radiogroup" aria-labelledby="cod-per-l">'+
-        [[30,'Mensual · 30 días'],[365,'Anual · 365 días']].map(function(x){
-          return '<button type="button" role="radio" data-d="'+x[0]+'" aria-checked="'+(CODP.dias===x[0])+'" class="'+(CODP.dias===x[0]?'on':'')+'">'+esc(x[1])+'</button>';
-        }).join('')+'</div></div>'+
-      '<div class="campo"><label for="cod-cuantos">Cuántos</label><input id="cod-cuantos" class="cod-cuantos" type="number" min="1" max="20" value="1" inputmode="numeric"></div>'+
-      '<div class="campo"><label for="cod-para">Para quién <span class="gris-t">(opcional)</span></label>'+
-        '<input id="cod-para" maxlength="80" autocomplete="off" placeholder="Ej.: Ing. Rosa Díaz · 987 654 321 · Yape"></div>'+
-    '</div><button type="button" class="bt" id="cod-crear">Crear</button><div class="msg" id="cod-msg" aria-live="polite"></div><div id="cod-nuevos"></div></div></div>'+
-    '<div class="tarj"><div class="tarj-cab"><div><h2>Cuántos hay</h2><p class="sub">Libres: nadie los activó todavía. Cuenta también los de la venta web y los del stock viejo.</p></div></div>'+
-      '<div id="cod-resumen"></div></div>'+
-    '<div class="tarj"><div class="tarj-cab"><div><h2>Buscar un código</h2><p class="sub">Para el «mi código no funciona»: si existe, de qué plan es y, si ya se usó, dónde y cuándo.</p></div></div>'+
-      '<div class="tarj-cuerpo"><div class="cod-busca"><input id="cod-q" maxlength="24" autocomplete="off" spellcheck="false" placeholder="SST…" aria-label="Código a buscar">'+
-      '<button type="button" class="bt sec" id="cod-q-bt">Buscar</button></div><div class="cod-res" id="cod-res" aria-live="polite"></div></div></div>'+
-    '<div class="tarj"><div class="tarj-cab"><div><h2>Recomienda OBRASST</h2><p class="sub">Cada 5 recomendados que pagan su primer plan, '+
-      'el que los trajo gana días gratis de su plan: 30, después 45 y 60 cada 5 más (Gestión SST, la mitad; en LITE, de Supervisor SST). '+
-      'Se suman al plan que tenga cuando los activa en su app. No es un código: queda en su empresa.</p></div></div>'+
-      '<div id="cod-recs"><div class="tarj-cuerpo"><span class="gris-t">Cargando…</span></div></div></div>'+
-    '<div class="tarj" id="t-codigos"></div>';
-}
-/* 27/09/2026 · cuántos recomiendan y quiénes traen más (sql/2026-10-06-recomienda.sql) */
-function _codRecomendados(){
-  var c=$('cod-recs'); if(!c) return;
-  sbRpc('sst_admin_recomendados',{}).then(function(r){
-    if(!r || !r.ok){ c.innerHTML='<div class="tarj-cuerpo"><span class="gris-t">No se pudo leer.</span></div>'; return; }
-    var h='<div class="tarj-cuerpo"><div class="rej" style="margin:0">'+
-      cifra('Anotados', r.anotados||0, 'empresas que llegaron recomendadas')+
-      cifra('Pagaron', r.pagaron||0, 'ya pagaron su primer plan', r.pagaron?'ok':'')+
-      cifra('Premios', r.premios||0, (r.premios_usados||0)+' ya activados')+
-      cifra('Días regalados', r.dias_dados||0, 'sumados a sus planes')+
-      '</div></div>';
-    var L=r.lista||[];
-    if(L.length){
-      h+='<div class="tabla-caja"><table class="cod-resumen"><thead><tr><th>Empresa</th><th>Código</th><th class="num">Anotados</th>'+
-         '<th class="num">Pagaron</th><th class="num">Premios</th></tr></thead><tbody>'+
-         L.slice(0,50).map(function(x){
-           return '<tr><td><b>'+esc(x.empresa||'—')+'</b></td><td><span class="cod-t">'+esc(x.codigo)+'</span></td>'+
-             '<td class="num">'+(+x.anotados||0)+'</td><td class="num">'+(+x.pagaron||0)+'</td><td class="num">'+(+x.premios||0)+'</td></tr>';
-         }).join('')+'</tbody></table></div>';
-    }
-    c.innerHTML=h;
-  }, function(cod){
-    c.innerHTML='<div class="tarj-cuerpo"><span class="gris-t">'+(cod===404?'Se activa con el SQL «2026-10-06-recomienda».':'Revisa tu conexión.')+'</span></div>';
-  });
-}
-function _codCablear(){
-  $('cod-plan').onchange=function(){ CODP.plan=this.value; };
-  [].forEach.call(document.querySelectorAll('#cod-per button'), function(b){
-    b.onclick=function(){
-      CODP.dias=+b.getAttribute('data-d');
-      [].forEach.call(document.querySelectorAll('#cod-per button'), function(x){
-        var on = +x.getAttribute('data-d')===CODP.dias; x.className=on?'on':''; x.setAttribute('aria-checked', String(on)); });
-    };
-  });
-  $('cod-crear').onclick=_codCrear;
-  $('cod-q-bt').onclick=_codBuscar;
-  $('cod-q').onkeydown=function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); _codBuscar(); } };
-}
-function _codCrear(){
-  var n=parseInt($('cod-cuantos').value, 10), para=$('cod-para').value.trim(), m=$('cod-msg'), b=$('cod-crear');
-  if(!(n>=1 && n<=20)){ m.className='msg mal'; m.textContent='De 1 a 20 por vez.'; $('cod-cuantos').focus(); return; }
-  b.disabled=true; m.className='msg gris'; m.textContent='Creando…';
-  sbRpc('sst_admin_crear_codigos', {p_plan:CODP.plan, p_dias:CODP.dias, p_cuantos:n, p_para:para||null}).then(function(r){
-    b.disabled=false;
-    if(!r || !r.ok){
-      m.className='msg mal';
-      m.textContent=({no_eres_admin:'Esta cuenta no es del equipo de OBRASST.', plan_raro:'Ese plan no se vende.',
-                      dias_raros:'Solo de 30 o de 365 días.', cuantos_raro:'De 1 a 20 por vez.'})[(r&&r.motivo)||''] || 'No se pudo crear.';
-      return;
-    }
-    m.textContent=''; $('cod-para').value=''; $('cod-cuantos').value='1';
-    CODP.nuevos={plan:r.plan, dias:r.dias, para:r.para, codigos:r.codigos||[]};
-    _codPintarNuevos();
-    toast(CODP.nuevos.codigos.length===1 ? 'Código creado.' : CODP.nuevos.codigos.length+' códigos creados.');
-    if(typeof VISTA.recargar==='function') VISTA.recargar(true);
-  }, function(){
-    b.disabled=false; m.className='msg mal';
-    m.textContent='No hubo conexión. Antes de volver a crear, mira la lista de abajo: quizá sí se crearon.';
-  });
-}
-function _codPintarNuevos(){
-  var c=$('cod-nuevos'), N=CODP.nuevos; if(!c) return;
-  if(!N || !N.codigos.length){ c.innerHTML=''; return; }
-  var nom=_codPlan(N.plan)+' · '+(+N.dias===365?'anual':'mensual');
-  c.innerHTML='<div class="cod-nuevos"><h3>'+(N.codigos.length===1?'Listo, tu código':'Listos, '+N.codigos.length+' códigos')+
-    ' · '+esc(nom)+(N.para?' · para '+esc(N.para):'')+'</h3>'+
-    N.codigos.map(function(k, i){
-      return '<div class="cod-fila"><span class="cod-c">'+esc(k)+'</span>'+
-        '<button type="button" class="bt sec chico" data-a="copiar" data-i="'+i+'">Copiar</button>'+
-        '<a class="bt chico" target="_blank" rel="noopener" href="'+esc(_codWaLink({codigo:k, plan:N.plan, dias:N.dias, para:N.para}))+'">WhatsApp</a></div>';
-    }).join('')+
-    '<div class="acciones" style="margin-top:10px">'+(N.codigos.length>1?'<button type="button" class="bt sec chico" data-a="todos">Copiar todos</button>':'')+
-    '<button type="button" class="bt sec chico" data-a="listo">Listo, ya los guardé</button></div></div>';
-  [].forEach.call(c.querySelectorAll('[data-a]'), function(b){
-    b.onclick=function(){
-      var a=b.getAttribute('data-a');
-      if(a==='copiar') _codCopiar(N.codigos[+b.getAttribute('data-i')], b);
-      else if(a==='todos') _codCopiar(nom+'\n'+N.codigos.join('\n'), b, N.codigos.length+' códigos copiados.');
-      else { CODP.nuevos=null; _codPintarNuevos(); }
-    };
-  });
-}
-function _codResumen(R){
-  var filas={}, orden=[];
-  COD_PLANES.forEach(function(p){ [30,365].forEach(function(d){
-    var k=p[0]+'|'+d; filas[k]={plan:p[0], dias:d, libres:0, usados:0, de:{}}; orden.push(k); }); });
-  (R||[]).forEach(function(x){
-    var k=x.plan+'|'+x.dias;
-    if(!filas[k]){ filas[k]={plan:x.plan, dias:x.dias, libres:0, usados:0, de:{}}; orden.push(k); }
-    var f=filas[k]; f.libres+=+x.libres||0; f.usados+=+x.usados||0;
-    f.de[x.origen]=(f.de[x.origen]||0)+(+x.libres||0)+(+x.usados||0);
-  });
-  var h='<div class="tabla-caja"><table class="cod-resumen"><thead><tr><th>Plan</th><th>Periodo</th><th class="num">Libres</th>'+
-        '<th class="num">Usados</th><th>De dónde salieron</th></tr></thead><tbody>';
-  orden.forEach(function(k){
-    var f=filas[k], de=Object.keys(f.de).map(function(o){ return (COD_ORIGEN[o]||o)+': '+f.de[o]; }).join(' · ');
-    h+='<tr data-k="'+esc(k)+'"><td><b>'+esc(_codPlan(f.plan))+'</b></td><td>'+esc(+f.dias===365?'Anual':(+f.dias===30?'Mensual':f.dias+' días'))+'</td>'+
-       '<td class="num">'+(f.libres?'<b>'+f.libres+'</b>':'<span class="pill gris">0</span>')+'</td><td class="num">'+f.usados+'</td>'+
-       '<td>'+(de?esc(de):'<span class="gris-t">Todavía ninguno</span>')+'</td></tr>';
-  });
-  return h+'</tbody></table></div>';
-}
-function _codTabla(){
-  var cols=[
-    {k:'creado', t:'Creado', h:function(c){ return esc(fechaLarga(c.creado))+'<span class="sub">'+esc(hace(c.creado))+'</span>'; }},
-    {k:'codigo', t:'Código', h:function(c){ return '<span class="cod-t">'+esc(c.codigo)+'</span>'; }},
-    {k:'plan', t:'Plan', h:function(c){ return '<b>'+esc(_codPlan(c.plan))+'</b><span class="sub">'+esc(_codPeriodo(c.dias))+'</span>'; },
-     v:function(c){ return _codPlan(c.plan)+' · '+_codPeriodo(c.dias); }},
-    {k:'para', t:'Para', h:function(c){ return c.para ? esc(c.para) : '<span class="gris-t">Sin anotar</span>'; }},
-    {k:'usado_en', t:'Estado', h:function(c){
-       return c.usado_en ? '<span class="pill ok">Activado</span><span class="sub">'+esc([c.empresa, fechaLarga(c.usado_en)].filter(Boolean).join(' · '))+'</span>'
-                         : '<span class="pill azul">Libre</span>'; },
-     v:function(c){ return c.usado_en ? 'Activado · '+[c.empresa, fechaLarga(c.usado_en)].filter(Boolean).join(' · ') : 'Libre'; }},
-    {k:'_acc', t:'', acc:true, h:function(){ return '<button type="button" class="bt sec chico" data-acc="copiar">Copiar</button>'; }}
-  ];
-  tabla($('t-codigos'), cols, CODP.lista, {orden:'creado', asc:false, unidad:'códigos', archivo:'codigos-obrasst',
-    vacio:'Todavía no creaste códigos', vacioSub:'Los que crees arriba aparecen aquí, con su estado.',
-    alClic:abrirCodigoP, accion:function(acc, c, b){ if(acc==='copiar') _codCopiar(c.codigo, b); }});
-}
-function _codBuscar(){
-  var v=$('cod-q').value.trim(), out=$('cod-res'), b=$('cod-q-bt'), n=v.toUpperCase().replace(/[^A-Z0-9]/g,'');
-  if(!n){ out.innerHTML='<div class="msg mal">Escribe el código tal como te lo pasaron.</div>'; $('cod-q').focus(); return; }
-  b.disabled=true; out.innerHTML='<div class="msg gris">Buscando…</div>';
-  sbRpc('sst_admin_buscar_codigo', {p_codigo:v}).then(function(r){
-    b.disabled=false;
-    if(!r || !r.ok){ out.innerHTML='<div class="msg mal">'+((r&&r.motivo)==='no_eres_admin'?'Esta cuenta no es del equipo de OBRASST.':'No se pudo buscar.')+'</div>'; return; }
-    if(!r.existe && r.baja){
-      var por = r.motivo==='anulado' ? 'lo anulaste' : (r.motivo==='stock viejo' ? 'era del stock viejo' : String(r.motivo||''));
-      out.innerHTML='<div class="aviso ojo"><b class="cod-t">'+esc(n)+'</b> está dado de baja'+(r.baja_en?' desde el '+esc(fechaLarga(r.baja_en)):'')+
-        ' ('+esc(por)+'). Ya no activa nada: al cliente le sale «no es válido».'+
-        (r.plan ? '<dl class="datos"><dt>Era</dt><dd>'+esc(_codPlan(r.plan))+' · '+esc(_codPeriodo(r.dias))+'</dd>'+
-                  (r.para ? '<dt>Para</dt><dd>'+esc(r.para)+'</dd>' : '')+'</dl>' : '')+
-        '<p class="ayuda" style="margin-top:8px">Si le corresponde un plan, créale uno nuevo arriba.</p></div>';
-      return;
-    }
-    if(!r.existe){
-      out.innerHTML='<div class="aviso mal"><b>'+esc(n)+' no existe.</b> Revísalo letra por letra (una O por un 0, una I por un 1).</div>';
-      return;
-    }
-    var hoy=hoyISO(), vence=r.vence_hoy ? String(r.vence_hoy).slice(0,10) : '';
-    var fila=function(t, x){ return x ? '<dt>'+esc(t)+'</dt><dd>'+x+'</dd>' : ''; };
-    out.innerHTML='<div class="aviso '+(r.usado?'ojo':'ok')+'"><b class="cod-t">'+esc(n)+'</b> · '+esc(_codPlan(r.plan))+' · '+
-      esc(_codPeriodo(r.dias))+' · '+esc(COD_ORIGEN[r.origen]||r.origen||'')+
-      '<dl class="datos">'+
-        fila('Estado', r.usado ? 'Ya se usó'+(r.usado_en?' el '+esc(fechaLarga(r.usado_en)):'')+(r.empresa?' en <b>'+esc(r.empresa)+'</b>':'') : 'Libre: nadie lo activó todavía')+
-        fila('Dueño', r.dueno ? esc(r.dueno) : '')+
-        fila('Esa empresa hoy', r.usado && r.plan_hoy ? esc(_codPlan(r.plan_hoy))+(vence?(vence<hoy?' · venció el ':' · vence el ')+esc(fechaLarga(vence)):'') : '')+
-        fila('Para', r.para ? esc(r.para) : '')+
-        fila('Creado', r.creado ? esc(fechaLarga(r.creado)) : '')+
-      '</dl><p class="ayuda" style="margin-top:8px">'+
-      (r.usado ? 'Cada código vale una sola vez: para renovar, hace falta uno nuevo.'
-               : 'Si no le entra: tiene que escribirlo con la cuenta del dueño de la empresa (si no, le sale «Solo el dueño…»), y en «Tengo un código».')+
-      '</p></div>';
-  }, function(){ b.disabled=false; out.innerHTML='<div class="msg mal">No hubo conexión.</div>'; });
-}
-function abrirCodigoP(c){
-  var usado=!!c.usado_en;
-  var h='<p style="margin:0 0 14px"><span class="cod-c">'+esc(c.codigo)+'</span></p>'+
-    '<dl class="datos">'+
-      '<dt>Plan</dt><dd>'+esc(_codPlan(c.plan))+'</dd>'+
-      '<dt>Periodo</dt><dd>'+esc(_codPeriodo(c.dias))+'</dd>'+
-      '<dt>Creado</dt><dd>'+esc(fechaLarga(c.creado))+'</dd>'+
-      '<dt>Estado</dt><dd>'+(usado ? 'Activado'+(c.empresa?' en <b>'+esc(c.empresa)+'</b>':'')+' el '+esc(fechaLarga(c.usado_en)) : 'Libre: nadie lo activó todavía')+'</dd>'+
-    '</dl>'+
-    '<div class="seccion"><h3>Para quién</h3><div class="campo"><label for="cp-para">A quién se lo diste: nombre, celular, cómo pagó</label>'+
-      '<input id="cp-para" maxlength="80" autocomplete="off" value="'+esc(c.para||'')+'"></div>'+
-      '<button type="button" class="bt sec chico" id="cp-guardar">Guardar</button><div class="msg" id="cp-msg" aria-live="polite"></div></div>';
-  var pie='<button type="button" class="bt sec" id="cp-cerrar">Cerrar</button>'+
-    (usado ? '' : '<button type="button" class="bt mal" id="cp-anular">Anular</button>')+
-    '<button type="button" class="bt sec" id="cp-copiar">Copiar</button>'+
-    (usado ? '' : '<a class="bt" id="cp-wa" target="_blank" rel="noopener" href="'+esc(_codWaLink(c))+'">WhatsApp</a>');
-  abrirHoja(c.codigo, _codPlan(c.plan)+' · '+_codPeriodo(c.dias), h, pie, {id:c.codigo});
-  $('cp-cerrar').onclick=cerrarHoja;
-  $('cp-copiar').onclick=function(){ _codCopiar(c.codigo, this); };
-  $('cp-guardar').onclick=function(){
-    var t=$('cp-para').value.trim(), m=$('cp-msg'), b=this;
-    b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
-    sbRpc('sst_admin_codigo_para', {p_codigo:c.codigo, p_para:t||null}).then(function(r){
-      b.disabled=false;
-      if(!r || !r.ok){ m.className='msg mal'; m.textContent='No se pudo'+((r&&r.motivo)?' ('+r.motivo+')':'')+'.'; return; }
-      c.para=t||null; m.className='msg ok'; m.textContent='Guardado.';
-      var wa=$('cp-wa'); if(wa) wa.href=_codWaLink(c);
-      if(typeof VISTA.recargar==='function') VISTA.recargar(true);
-    }, function(){ b.disabled=false; m.className='msg mal'; m.textContent='No hubo conexión: inténtalo otra vez.'; });
-  };
-  if(!usado) $('cp-anular').onclick=function(){
-    confirmar('¿Anular '+c.codigo+'?', 'Deja de servir: si ya se lo mandaste a alguien, cuando lo escriba le va a salir «no es válido». Queda anotado como anulado.',
-              {si:'Anular', mal:true}).then(function(si){
-      if(!si) return;
-      sbRpc('sst_admin_anular_codigo', {p_codigo:c.codigo}).then(function(r){
-        if(!r || !r.ok){
-          toast(({ya_usado:'Ya lo activaron: no se puede anular.', no_existe:'Ya no existía.', no_es_de_mano:'Ese no se creó aquí: no se anula.'})[(r&&r.motivo)||''] || 'No se pudo anular.');
-          return;
-        }
-        toast(c.codigo+' anulado.'); cerrarHoja();
-        if(typeof VISTA.recargar==='function') VISTA.recargar(true);
-      }, function(){ toast('No hubo conexión: no se anuló.'); });
-    });
-  };
-}
-
 function vistaDenuncias(caja){
   cargando(caja);
   function pinta(){
