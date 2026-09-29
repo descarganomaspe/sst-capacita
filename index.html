@@ -15410,16 +15410,109 @@ function entrarCodigoTrab(){
 var MESES_N=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio',
              'Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
 var LS_SUBC='sstc_subcarpetas';
-function subcLeer(){ return leer(LS_SUBC,{}) || {}; }
-function subcGuardar(x){ guardar(LS_SUBC,x); }
-function subcDe(clave){ var x=subcLeer(); return x[clave] || []; }
+/* ══ LAS SUBCARPETAS VIAJAN CON LA EMPRESA (30/09/2026) ══════════════
+   Los certificados de otro tipo, los tipos de simulacro propios y los
+   años que se agregan a mano vivían SOLO en este celular: en otro
+   celular —o lo que se subía desde la web— la carpeta salía vacía
+   aunque sus documentos estuvieran en la nube. Ahora la lista es de la
+   empresa: una fila de sst_doc con la hoja «subcarpetas» (la misma
+   puerta que «empleador» o «ats-cfg»), con su copia aquí en
+   «sstc_subc_<código>». Al abrir una carpeta se juntan las dos; lo que
+   se agregó sin señal sube entonces, y lo que se quitó sin señal se
+   quita (queda anotado en «sstc_subcq_<código>» hasta que llegue).
+   La lista vieja de este celular (sstc_subcarpetas) se sigue viendo,
+   pero no sube: no se sabe de qué empresa era.                       */
+var HOJA_SUBC='subcarpetas', SUBC_SYNC_CUANDO=0;
+function _subcCod(){ var e=empActiva(); return (e && e.codigo) ? String(e.codigo) : ''; }
+function _subcUnir(a, b){
+  var o={};
+  [a, b].forEach(function(m){
+    if(!m || typeof m!=='object') return;
+    Object.keys(m).forEach(function(k){
+      if(!Array.isArray(m[k])) return;
+      m[k].forEach(function(n){ n=String(n==null?'':n).trim(); if(!n) return; if(!o[k]) o[k]=[]; if(o[k].indexOf(n)===-1) o[k].push(n); });
+    });
+  });
+  return o;
+}
+function _subcSin(m, quitados){
+  var o=_subcUnir(m, {});
+  (quitados||[]).forEach(function(q){ if(q && o[q.k]) o[q.k]=o[q.k].filter(function(n){ return n!==q.n; }); });
+  return o;
+}
+function subcEmp(){ var c=_subcCod(); return c ? (leer('sstc_subc_'+c,{})||{}) : {}; }
+function _subcQuitados(){ var c=_subcCod(); return c ? (leer('sstc_subcq_'+c,[])||[]) : []; }
+function subcLeer(){ return _subcSin(_subcUnir(subcEmp(), leer(LS_SUBC,{})||{}), _subcQuitados()); }
+function subcGuardar(x){ var c=_subcCod(); if(c) guardar('sstc_subc_'+c, x||{}); else guardar(LS_SUBC, x||{}); }
+function subcDe(clave){ return subcLeer()[clave] || []; }
 function subcAgregar(clave, nombre){
-  var x=subcLeer(); if(!x[clave]) x[clave]=[];
-  if(x[clave].indexOf(nombre)===-1){ x[clave].push(nombre); subcGuardar(x); }
+  nombre=String(nombre||'').trim(); if(!nombre) return;
+  var c=_subcCod();
+  if(!c){ var v=leer(LS_SUBC,{})||{}; if(!v[clave]) v[clave]=[]; if(v[clave].indexOf(nombre)===-1){ v[clave].push(nombre); guardar(LS_SUBC,v); } return; }
+  var m=subcEmp(); if(!m[clave]) m[clave]=[];
+  if(m[clave].indexOf(nombre)===-1){ m[clave].push(nombre); guardar('sstc_subc_'+c, m); }
+  /* si se había quitado sin señal y se vuelve a agregar, ya no se quita */
+  var q=_subcQuitados().filter(function(x){ return !(x && x.k===clave && x.n===nombre); });
+  guardar('sstc_subcq_'+c, q);
+  subcANube(function(n){ return _subcUnir(n, (function(){ var o={}; o[clave]=[nombre]; return o; })()); });
 }
 function subcQuitar(clave, nombre){
-  var x=subcLeer(); if(!x[clave]) return;
-  x[clave]=x[clave].filter(function(n){ return n!==nombre; }); subcGuardar(x);
+  var v=leer(LS_SUBC,{})||{};
+  if(v[clave]){ v[clave]=v[clave].filter(function(n){ return n!==nombre; }); guardar(LS_SUBC,v); }
+  var c=_subcCod(); if(!c) return;
+  var m=subcEmp();
+  if(m[clave]){ m[clave]=m[clave].filter(function(n){ return n!==nombre; }); guardar('sstc_subc_'+c, m); }
+  var q=_subcQuitados(); if(!q.some(function(x){ return x && x.k===clave && x.n===nombre; })) q.push({k:clave, n:nombre});
+  guardar('sstc_subcq_'+c, q);
+  subcANube(function(n){ return n; });
+}
+/* la fila de la nube: si hay más de una (dos celulares la crearon a la
+   vez), se juntan todas y se escribe en la primera */
+function subcTraerNube(){
+  var e=empActiva();
+  if(!e || !e.id || !hayCuenta()) return Promise.reject('sin_cuenta');
+  return sbGet('sst_doc?empresa=eq.'+encodeURIComponent(e.id)+'&hoja=eq.'+HOJA_SUBC+'&select=id,nota,creado&order=creado.asc&limit=5')
+    .then(function(rows){
+      var m={}, id=null;
+      (Array.isArray(rows)?rows:[]).forEach(function(r){
+        if(!r) return; if(!id) id=r.id;
+        var x=null; try{ x=JSON.parse(r.nota||'{}'); }catch(_j){ x=null; }
+        m=_subcUnir(m, x);
+      });
+      return {emp:e.id, id:id, mapa:m};
+    });
+}
+/* lee, aplica el cambio, quita lo que se quitó y escribe; al llegar,
+   la copia de aquí queda igual a la de la nube */
+function subcANube(cambio){
+  var c=_subcCod();
+  return subcTraerNube().then(function(nb){
+    var q=_subcQuitados();
+    var nueva=_subcSin(_subcUnir(cambio(nb.mapa)||{}, subcEmp()), q);
+    var nota=JSON.stringify(nueva);
+    var p = nb.id
+      ? sbPatch('sst_doc?id=eq.'+encodeURIComponent(nb.id), {nota:nota})
+      : sbPost('sst_doc', {empresa:nb.emp, hoja:HOJA_SUBC, nombre:'Subcarpetas de la empresa', nota:nota});
+    return p.then(function(){
+      if(c && _subcCod()===c){ guardar('sstc_subc_'+c, nueva); guardar('sstc_subcq_'+c, []); }
+      return true;
+    });
+  }).catch(function(){ return false; });   /* sin señal: queda aquí y sube en la próxima */
+}
+/* al abrir una carpeta con niveles. true si cambió lo que se ve. */
+function subcSincronizar(){
+  var c=_subcCod();
+  if(!c || !hayCuenta()) return Promise.resolve(false);
+  var antes=JSON.stringify(subcLeer());
+  return subcTraerNube().then(function(nb){
+    var q=_subcQuitados(), mia=subcEmp();
+    var junta=_subcSin(_subcUnir(nb.mapa, mia), q);
+    guardar('sstc_subc_'+c, junta);
+    /* esta copia tenía algo que la nube no (agregado o quitado sin señal): sube */
+    var hayQueSubir = q.length || JSON.stringify(_subcUnir(nb.mapa, junta))!==JSON.stringify(_subcUnir(nb.mapa, {}));
+    var fin = hayQueSubir ? subcANube(function(n){ return n; }) : Promise.resolve(true);
+    return fin.then(function(){ return JSON.stringify(subcLeer())!==antes; });
+  }).catch(function(){ return false; });
 }
 function anioActual(){ return new Date().getFullYear(); }
 
@@ -15498,6 +15591,15 @@ function pintarCarpeta(){
     h+='<button class="btn" onclick="nuevaSub(\''+NAV.base+'\',\''+esc(NAV.titulo)+'\')">➕ Agregar</button>';
   }
   c.innerHTML=h;
+  /* las subcarpetas de la empresa: lo que se agregó en otro celular o
+     desde la web. Una consulta, y no más de una cada 15 s. */
+  if(nivel!=='mes' && Date.now()-SUBC_SYNC_CUANDO > 15000){
+    SUBC_SYNC_CUANDO=Date.now();
+    subcSincronizar().then(function(cambio){
+      var pa=document.getElementById('p-carpeta');
+      if(cambio && pa && pa.className.indexOf('activa')>-1) pintarCarpeta();
+    });
+  }
 }
 function nuevaSub(clave, queCosa){
   preguntar('Nuevo '+queCosa, '¿Cómo se va a llamar?', '', function(n){
@@ -64362,7 +64464,11 @@ function datoDelPDF(archivo){
 var EMP_ESTRUCTURA = [
   { g:'Sistema Integrado', ic:'🗂️', sub:'Políticas, IPERC, PETS, comité, certificados y mapas', items:[
       {leaf:'politicas', t:'Políticas'},
+      /* 30/09/2026 · las dos que el trabajador ya ve en «Documentos de SST»
+         (sst_docs_obra) y que no tenían dónde cargarse */
+      {leaf:'pol-hostigamiento', t:'Política contra el hostigamiento sexual'},
       {leaf:'risst', t:'RISST'},
+      {leaf:'organigrama', t:'Organigrama'},
       {leaf:'prog-anual', t:'Programa Anual SST 2026'},
       {leaf:'objetivos', t:'Objetivos y metas'},
       {leaf:'prog-capacitacion', t:'Programación de capacitación anual SST 2026'},
@@ -64381,7 +64487,11 @@ var EMP_ESTRUCTURA = [
         {leaf:'cert-izaje', t:'Certificado de aparejos de izaje'},
         {leaf:'cert-extintores', t:'Certificado de extintores'},
         {libre:'certificados', t:'➕ Agregar otro tipo de certificado'} ]},
-      {libre:'mapa-riesgos', t:'Mapa de Riesgos'} ]},
+      /* 30/09/2026 · una carpeta, no una lista de subcarpetas: el trabajador
+         lee «mapa-riesgos» tal cual (sst_docs_obra), y lo que caía en
+         «mapa-riesgos_<nombre>» no le llegaba nunca. Varios mapas = varios
+         documentos en la misma carpeta, cada uno con su nombre. */
+      {leaf:'mapa-riesgos', t:'Mapa de Riesgos'} ]},
 
   { g:'Sistema Informativo', ic:'📢', sub:'Charlas, capacitación, informes y registros de obra', items:[
       {accion:'charlas',      t:'Charlas de 5 minutos'},
@@ -64414,7 +64524,7 @@ var EMP_ESTRUCTURA = [
 
   { g:'Respuesta ante emergencias', ic:'🧯', sub:'Plan, mapas, simulacros, brigadistas y MSDS', items:[
       {leaf:'plan-emergencia', t:'Plan de Respuesta ante Emergencia'},
-      {libre:'mapa-evacuacion', t:'Mapa de Evacuación'},
+      {leaf:'mapa-evacuacion', t:'Mapa de Evacuación'},
       {anio:'simulacro', t:'Simulacros', porMes:true, porTema:true},
       {leaf:'brigadistas', t:'Brigadistas'},
       {leaf:'estacion-emergencia', t:'Estación de Emergencia'},
@@ -64732,7 +64842,8 @@ function docLocal(leaf){ return leer(docKey(leaf),[]); }
 function docLocalSet(leaf,arr){ guardar(docKey(leaf),arr); }
 function abrirDoc(leaf,titulo,ruta){
   DOC_LEAF=leaf; $('doc-tit').textContent=titulo; $('doc-ruta').textContent=ruta||'Empresa';
-  $('doc-ayuda').textContent='Carga aquí el documento: un archivo o un enlace (Drive, web). Se comparte con todo tu equipo por el código de la empresa.';
+  $('doc-ayuda').textContent='Carga aquí el documento: un archivo o un enlace (Drive, web). Se comparte con todo tu equipo por el código de la empresa. '+
+    'Desde la computadora también se suben, en el portal web: «Documentos».';
   $('doc-nombre').value=''; $('doc-url').value=''; $('doc-nota').value=''; try{$('doc-archivo').value='';}catch(e){} $('doc-msg').textContent='';
   ir('p-doc');
 }
@@ -74155,7 +74266,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='8e10568ed5';
+var SELLO_APP='5616c5a2d8';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
