@@ -234,6 +234,7 @@ td .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px}
 .herr input{width:240px; padding:8px 11px; font-size:13.5px}
 .cuenta-f{font-size:12.5px; color:var(--gris); font-variant-numeric:tabular-nums; white-space:nowrap}
 .mono{font-family:var(--mono); font-size:12.5px}
+td .mono{white-space:nowrap}
 
 /* ── gráfico de barras chico (sin librería) ── */
 .barras{display:flex; align-items:flex-end; gap:6px; height:120px; padding:6px 0 0}
@@ -591,15 +592,31 @@ function leer(k, d){ try{ var v=localStorage.getItem(k); return v===null?d:JSON.
 function guardar(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 function hoyISO(){ var d=new Date(); return d.getFullYear()+'-'+dos(d.getMonth()+1)+'-'+dos(d.getDate()); }
 function dos(n){ return (n<10?'0':'')+n; }
-function fechaLarga(iso){ if(!iso) return ''; var p=String(iso).slice(0,10).split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : String(iso); }
+function fechaLarga(iso){
+  if(!iso) return '';
+  /* 29/09/2026 · lo que trae hora (creado, subido…) se cuenta en el día de aquí: a las 8 p. m. de
+     Lima ya es el día siguiente en UTC, y la lista mostraba mañana. Una fecha sola queda igual. */
+  if(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(String(iso))){
+    var t = new Date(iso);
+    if(!isNaN(t)) return ('0'+t.getDate()).slice(-2)+'/'+('0'+(t.getMonth()+1)).slice(-2)+'/'+t.getFullYear();
+  }
+  var p=String(iso).slice(0,10).split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : String(iso);
+}
+/* 29/09/2026 · «1 inspección», no «1 inspecciones» */
+var UNIDAD_1 = {'códigos':'código', 'dadas de baja':'dada de baja', 'empresas':'empresa', 'fallas':'falla', 'pagos':'pago', 'capacitaciones':'capacitación',
+  'constancias':'constancia', 'denuncias':'denuncia', 'difusiones':'difusión', 'documentos':'documento', 'encuestas':'encuesta', 'entregas':'entrega',
+  'eventos':'evento', 'inspecciones':'inspección', 'papeles':'papel', 'personas':'persona', 'programadas':'programada', 'reportes':'reporte', 'filas':'fila'};
+function unidadN(n, u){ u = u || 'filas'; return +n === 1 ? (UNIDAD_1[u] || u) : u; }
 function hace(iso){
   if(!iso) return '';
   var ms = Date.now() - new Date(iso).getTime(); if(isNaN(ms)) return '';
   var m = Math.round(ms/60000);
   if(m < 1) return 'ahora'; if(m < 60) return 'hace '+m+' min';
   var h = Math.round(m/60); if(h < 24) return 'hace '+h+' h';
-  var d = Math.round(h/24); if(d < 30) return 'hace '+d+' d';
-  return fechaLarga(iso);
+  var d = Math.round(h/24); if(d < 45) return 'hace '+d+' d';
+  /* 29/09/2026 · antes devolvía la fecha: en «Documentos» salía la misma fecha dos veces */
+  var me = Math.round(d/30.44); if(me < 12) return 'hace '+me+(me===1?' mes':' meses');
+  var a = Math.round(d/365.25); return 'hace '+a+(a===1?' año':' años');
 }
 function toast(t){
   var c=$('toast'); if(!c) return;
@@ -895,7 +912,7 @@ function tabla(caja, cols, filas, op){
   }
   var h='<div class="tarj-cab"><div class="herr">'+
     '<input type="search" placeholder="Buscar…" value="'+esc(est.q)+'" id="'+caja.id+'-q" aria-label="Buscar">'+
-    '<span class="cuenta-f">'+lista.length+(lista.length!==filas.length?' de '+filas.length:'')+' '+(op.unidad||'filas')+'</span></div>'+
+    '<span class="cuenta-f">'+lista.length+(lista.length!==filas.length?' de '+filas.length:'')+' '+esc(unidadN(lista.length!==filas.length?filas.length:lista.length, op.unidad))+'</span></div>'+
     '<div class="acciones"><button type="button" class="bt sec chico" id="'+caja.id+'-csv">Exportar CSV</button></div></div>';
   if(!lista.length){
     h+='<div class="vacio"><b>'+esc(op.vacio||'Nada todavía')+'</b>'+esc(op.vacioSub||'Cuando se registre algo en la app, aparece aquí solo.')+'</div>';
@@ -1041,7 +1058,7 @@ var COL = {
     {k:'descripcion', t:'Qué se reportó', h:function(f){ return esc(f.descripcion)+(f.lugar?'<span class="sub">'+esc(f.lugar)+'</span>':''); }},
     {k:'autor', t:'Quién', v:function(f){ return f.anonimo ? 'anónimo' : (f.autor||''); }},
     {k:'estado', t:'Estado', h:pillReporte, v:function(f){ return reporteCerrado(f)?'cerrado':'abierto'; }},
-    {k:'accion', t:'Acción', h:function(f){ return esc(f.accion||'')+(f.cerrado_por?'<span class="sub">'+esc(f.cerrado_por)+(f.cerrado?' · '+esc(fechaLarga(f.cerrado)):'')+'</span>':''); }},
+    {k:'accion', t:'Acción', h:function(f){ return esc(f.accion||'')+(f.cerrado_por?'<span class="sub">'+esc(f.cerrado_por)+(/^\d{4}-\d{2}-\d{2}/.test(String(f.cerrado||''))?' · '+esc(fechaLarga(f.cerrado)):'')+'</span>':''); }},
     {k:'_acc', t:'', acc:true, h:function(f){ return reporteCerrado(f) ? '<button type="button" class="bt sec chico" data-acc="ver">Ver</button>' : '<button type="button" class="bt chico" data-acc="cerrar">Cerrar</button>'; }}
   ],
   accidentes: [
