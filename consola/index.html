@@ -528,19 +528,37 @@ function authPost(ruta, cuerpo){
     .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return r.ok ? j : Promise.reject(j); }); });
 }
 var _REFRESCANDO=null;
+/* 30/09/2026 · otra pestaña (o ventana) pudo renovar ya la sesión y guardarla en este
+   navegador: se usa esa. Antes esta pestaña probaba con la llave vieja, el servidor la
+   rechazaba por «ya usada» y se borraba la sesión de todas. */
+function _tokDeOtraPestana(usado){
+  var o = leer(LS_TOK, null), uid = TOK && TOK.uid;
+  /* la misma cuenta: si en la otra pestaña entró otra persona, esta no se cambia sola */
+  return (o && o.access_token && o.refresh_token && o.refresh_token !== usado && (!uid || !o.uid || o.uid === uid)) ? o : null;
+}
 function refrescarToken(){
   if(!TOK || !TOK.refresh_token) return Promise.reject('sin_token');
+  var otra = _tokDeOtraPestana(TOK.refresh_token);
+  if(otra){ TOK = otra; if(!(otra.expira && Date.now() > otra.expira)) return Promise.resolve(TOK); }
   if(_REFRESCANDO) return _REFRESCANDO;
-  _REFRESCANDO = authPost('token?grant_type=refresh_token', {refresh_token:TOK.refresh_token})
+  var usado = TOK.refresh_token;
+  _REFRESCANDO = authPost('token?grant_type=refresh_token', {refresh_token:usado})
     .then(function(j){ _REFRESCANDO=null; return guardarToken(j); },
-          function(e){ _REFRESCANDO=null; if(e && typeof e==='object' && (e.error||e.msg||e.error_code)) borrarToken(); return Promise.reject(e); });
+          function(e){ _REFRESCANDO=null;
+            var o = _tokDeOtraPestana(usado); if(o){ TOK = o; return TOK; }
+            if(e && typeof e==='object' && (e.error||e.msg||e.error_code)) borrarToken(); return Promise.reject(e); });
   return _REFRESCANDO;
 }
 function sbFetch(url, opt, reintento){
   opt=opt||{}; opt.headers=Object.assign(sbH(), opt.extra||{});
   /* si el token ya venció, se renueva ANTES de pedir: una vuelta menos */
   if(!reintento && TOK && TOK.refresh_token && TOK.expira && Date.now() > TOK.expira)
-    return refrescarToken().then(function(){ return sbFetch(url, opt, true); }, function(){ return sbFetch(url, opt, true); });
+    return refrescarToken().then(function(){ return sbFetch(url, opt, true); }, function(){
+      /* 30/09/2026 · no se pudo renovar y la sesión se borró: a la entrada, «Tu sesión venció».
+         Antes se volvía a pedir sin cuenta (el servidor decía «sin permiso») y la consola
+         seguía a la vista diciendo «No se pudo guardar: revisa tu conexión». */
+      if(!TOK){ sesionVencida(); return Promise.reject(401); }
+      return sbFetch(url, opt, true); });
   return fetch(url, opt).then(function(r){
     if(r.status===401 && !reintento && TOK && TOK.refresh_token){
       return refrescarToken().then(function(){ return sbFetch(url, opt, true); }, function(){
