@@ -8,7 +8,7 @@
    3 · al tocar un aviso, abrir la consola en «Fallas».
    Solo toca lo que está dentro de consola/: la app y el portal tienen
    sus propios service workers. */
-var CACHE = 'consola-2';
+var CACHE = 'consola-3';
 var BASE = ['./', './index.html', './manifest.webmanifest', './icono-192.png', './icono-512.png',
             './icono-mask-512.png', './icono-insignia.png', './apple-touch-icon.png'];
 

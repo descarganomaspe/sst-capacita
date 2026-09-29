@@ -174,6 +174,23 @@ textarea{line-height:1.5; resize:vertical; min-height:84px}
 .bloque-cab h2{font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); font-weight:600}
 .bloque-cab .sub{font-size:13px; color:var(--gris2)}
 .rej{display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr))}
+/* 29/09/2026 · boletas y facturas */
+.mal-t{color:var(--mal)}
+.msg.ojo{color:var(--ojo)}
+.datos dd .sub{display:block; color:var(--gris); font-size:12.5px; margin-top:2px}
+.cp-copia{display:grid; gap:6px}
+.cp-c{display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:10px; row-gap:1px; align-items:center; padding:8px 10px; border:1px solid var(--raya); border-radius:9px; background:var(--panel)}
+.cp-c .et{grid-column:1; font-size:11.5px; color:var(--gris)}
+.cp-c .v{grid-column:1; font-size:13.5px; color:var(--tinta); overflow-wrap:anywhere}
+.cp-c > :last-child{grid-column:2; grid-row:1 / span 2}
+.cpf-doc{display:grid; grid-template-columns:minmax(0,190px) minmax(0,1fr); gap:0 12px}
+.cpf-doc.fac{grid-template-columns:minmax(0,1fr)}
+.cpf-busca{display:flex; gap:8px; align-items:stretch}
+.cpf-busca input{flex:1 1 auto; min-width:0}
+.cpf-busca .bt{white-space:nowrap}
+.cpf-plan{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0 12px}
+.cp-emi{display:grid; grid-template-columns:110px minmax(0,1fr) minmax(0,1fr); gap:0 12px}
+@media (max-width:560px){ .cpf-doc, .cpf-plan, .cp-emi{grid-template-columns:minmax(0,1fr)} .cpf-busca{flex-wrap:wrap} .cpf-busca .bt{flex:1 1 100%} }
 /* 29/09/2026 · las seis cifras de «Empresas y planes» en una fila (la sexta quedaba sola abajo) */
 @media (min-width:421px){ #emp-cifras{grid-template-columns:repeat(auto-fit, minmax(140px, 1fr))} }
 .cifra{background:var(--panel); border:1px solid var(--raya); border-radius:12px; padding:15px 16px 14px; display:flex; flex-direction:column; gap:5px; min-width:0;
@@ -468,7 +485,8 @@ function fechaHora(iso){ var h=horaLima(iso); return fechaLima(iso)+(h?' '+h:'')
 /* 29/09/2026 · «1 inspección», no «1 inspecciones» */
 var UNIDAD_1 = {'códigos':'código', 'dadas de baja':'dada de baja', 'empresas':'empresa', 'fallas':'falla', 'pagos':'pago', 'capacitaciones':'capacitación',
   'constancias':'constancia', 'denuncias':'denuncia', 'difusiones':'difusión', 'documentos':'documento', 'encuestas':'encuesta', 'entregas':'entrega',
-  'eventos':'evento', 'inspecciones':'inspección', 'papeles':'papel', 'personas':'persona', 'programadas':'programada', 'reportes':'reporte', 'filas':'fila'};
+  'eventos':'evento', 'inspecciones':'inspección', 'papeles':'papel', 'personas':'persona', 'programadas':'programada', 'reportes':'reporte', 'filas':'fila',
+  'comprobantes':'comprobante'};
 function unidadN(n, u){ u = u || 'filas'; return +n === 1 ? (UNIDAD_1[u] || u) : u; }
 function hace(iso){
   if(!iso) return '';
@@ -603,19 +621,21 @@ var IC = {
   ventas:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2.4-1.6-2.4 1.6-2.4-1.6-2.4 1.6L6 18.9z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/></svg>',
   empresas:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 20.5v-15a1 1 0 0 1 1-1h8.5a1 1 0 0 1 1 1v15"/><path d="M15 9.5h3.5a1 1 0 0 1 1 1v10"/><path d="M3 20.5h18M8 8.5h3M8 12h3M8 15.5h3"/></svg>',
   codigos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v1.8a2.2 2.2 0 0 0 0 4.4V16a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-1.8a2.2 2.2 0 0 0 0-4.4z"/><path d="M14.5 7v1.6M14.5 11.2v1.6M14.5 15.4V17"/></svg>',
+  comprobantes:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h8l3.5 3.5v13.5h-11.5z"/><path d="M14.5 3.5V7H18"/><path d="M9.5 11h6M9.5 14.5h6M9.5 18h3.5"/></svg>',
   avisos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5v-5a6 6 0 1 1 12 0v5l1.8 2H4.2z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg>'
 };
 var VISTAS = [
   {id:'resumen',  n:'Resumen',           c:'Resumen',  s:'Hoy y el mes, de un vistazo'},
   {id:'fallas',   n:'Fallas',            c:'Fallas',   s:'Lo que la gente reporta desde la app. «No puede entrar» con el plan vencido no es una falla: se contesta con el plan.'},
   {id:'ventas',   n:'Ventas',            c:'Ventas',   s:'Los pagos de OBRASST: la web, la tienda de Descarga Nomás y Google Play'},
+  {id:'comprobantes', n:'Boletas y facturas', c:'Boletas', s:'La boleta o la factura de cada venta: lo que pidió el cliente, lista para emitir en SUNAT, y su número y su PDF cuando ya salió'},
   {id:'empresas', n:'Empresas y planes', c:'Empresas', s:'Cada empresa, con el plan que tiene hoy, sus obras y su gente'},
   {id:'codigos',  n:'Códigos',           c:'Códigos',  s:'Créalos cuando los vas a dar, anota para quién y busca el de un cliente'},
   {id:'avisos',   n:'Avisos',            c:'Avisos',   s:'Que cada falla te llegue al celular y a la PC, al instante'}
 ];
 var VISTA = { actual:null, recargar:null };
 function vistaDe(id){ return VISTAS.filter(function(v){ return v.id===id; })[0]; }
-function pintor(id){ return ({resumen:vistaResumen, fallas:vistaFallas, ventas:vistaVentas, empresas:vistaEmpresas, codigos:vistaCodigos, avisos:vistaAvisos})[id]; }
+function pintor(id){ return ({resumen:vistaResumen, fallas:vistaFallas, ventas:vistaVentas, comprobantes:vistaComprobantes, empresas:vistaEmpresas, codigos:vistaCodigos, avisos:vistaAvisos})[id]; }
 function navegar(id, desdeHistoria){
   var v = vistaDe(id); if(!v) v = VISTAS[0];
   var antes = VISTA.actual;
@@ -1083,7 +1103,8 @@ function vistaVentas(caja){
       var EST=[['aprobadas','Aprobadas'],['pendientes','Sin terminar'],['rechazadas','Rechazadas'],['todas','Todas']];
       var h='<div class="aviso" style="margin:0 0 16px"><b>Cómo le llega el plan al que paga.</b> Web y tienda de Descarga Nomás (Mercado Pago): al aprobarse el pago, '+
           'el servidor crea en ese momento un código nuevo con el plan y los días que pagó, y se lo muestra en la página de pago; por correo también, si en Supabase ▸ Edge Functions ▸ Secrets '+
-          'están <b>RESEND_API_KEY</b> y <b>CORREO_DE</b>. Google Play no lleva código: el plan se activa solo en su empresa.</div>'+
+          'están <b>RESEND_API_KEY</b> y <b>CORREO_DE</b>. Google Play no lleva código: el plan se activa solo en su empresa. '+
+          'La boleta o la factura de cada venta queda en <a href="#comprobantes" data-ir-v="comprobantes">Boletas y facturas</a>.</div>'+
         '<div class="filtros"><div class="seg" role="tablist" aria-label="Periodo" id="ven-per">'+PER.map(function(x){
           return '<button type="button" role="tab" data-p="'+x[0]+'" aria-selected="'+(VEN.per===x[0])+'" class="'+(VEN.per===x[0]?'on':'')+'">'+esc(x[1])+'</button>'; }).join('')+'</div>'+
         '<div class="seg" role="tablist" aria-label="Estado" id="ven-est">'+EST.map(function(x){
@@ -1568,12 +1589,15 @@ function _codPintarNuevos(){
         '<a class="bt chico" target="_blank" rel="noopener" href="'+esc(_codWaLink({codigo:k, plan:N.plan, dias:N.dias, para:N.para}))+'">WhatsApp</a></div>';
     }).join('')+
     '<div class="acciones" style="margin-top:10px">'+(N.codigos.length>1?'<button type="button" class="bt sec chico" data-a="todos">Copiar todos</button>':'')+
+    '<button type="button" class="bt chico" data-a="comprobante">Hacer su boleta o factura</button>'+
     '<button type="button" class="bt sec chico" data-a="listo">Listo, ya los guardé</button></div></div>';
   [].forEach.call(c.querySelectorAll('[data-a]'), function(b){
     b.onclick=function(){
       var a=b.getAttribute('data-a');
       if(a==='copiar') copiar(N.codigos[+b.getAttribute('data-i')], b);
       else if(a==='todos') copiar(nom+'\n'+N.codigos.join('\n'), b, N.codigos.length+' códigos copiados.');
+      /* 29/09/2026 · la venta a mano lleva su comprobante: el plan y los códigos ya van puestos */
+      else if(a==='comprobante') _cpNuevo({plan:N.plan, dias:N.dias, codigos:N.codigos, nota:N.para?'Para: '+N.para:null});
       else { CODP.nuevos=null; _codPintarNuevos(); }
     };
   });
@@ -1759,6 +1783,520 @@ function avpLimpiarOtros(){
   }).then(function(){ return n; }, function(){ return n; });
 }
 function _avpMsg(t, cl){ AVP.msg=t||''; AVP.cl=cl||''; var m=$('avp-msg'); if(m){ m.className='msg '+(cl||''); m.textContent=AVP.msg; } }
+/* ══ BOLETAS Y FACTURAS (29/09/2026) ═════════════════════════════════
+   Marcelo: «emitir factura automáticamente cuando alguien compre por
+   Mercado Pago y/o Play Store … y una opción en la consola de emisión de
+   factura o boleta … cuando me escriben y les saco códigos», y después:
+   «y si se hace un ERP dentro de la consola? … yo coloco el DNI o RUC y
+   se llenan automáticamente sus campos para emitirle su factura o boleta».
+   SUNAT: toda venta de más de S/ 5 lleva comprobante; la boleta de más de
+   S/ 700, el documento del cliente; en el Nuevo RUS, solo boletas.
+   Cada venta deja aquí el suyo (el que pidió el cliente o, si no pidió
+   nada, su boleta). Se emite en SUNAT SOL o en el Facturador SUNAT y se
+   anota con su serie, número y PDF, que el cliente ve en su app.
+   Con el RUC, la razón social y la dirección fiscal se traen del padrón
+   de SUNAT (el mismo servicio que usa la app al crear la empresa). Con el
+   DNI: si esa persona tiene RUC 10, SUNAT publica su nombre; si no, se
+   escribe (el nombre de un DNI no es un dato público).               */
+var CP = { r:null, filtro:'por_emitir', tBusca:null };
+var CP_SOL = 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm';
+var CP_EST = { pendiente:['Por emitir','ojo'], en_proceso:['En proceso','azul'], emitido:['Emitido','ok'], rechazado:['Rechazado por SUNAT','mal'],
+               anulado:['Anulado','gris'], fuera:['Hecho por otro lado','gris'], por_pagar:['Sin pagar','gris'] };
+var CP_DOC = { '1':'DNI', '4':'Carné de extranjería', '6':'RUC', '7':'Pasaporte' };
+var CP_ORIGEN = { web:'Mercado Pago', play:'Google Play', mano:'A mano' };
+var CP_REG = { nrus:'Nuevo RUS (solo boletas)', rer:'Régimen Especial (RER)', mype:'Régimen MYPE Tributario', general:'Régimen General' };
+var CP_MAL = { no_eres_admin:'Esta cuenta no es la del creador.', ruc_malo:'Ese RUC no pasa el dígito verificador de SUNAT: revísalo.',
+  falta_razon_social:'La factura lleva la razón social.', dni_malo:'El DNI son 8 números.', doc_malo:'Revisa el número del documento.',
+  doc_tipo_malo:'Elige el tipo de documento.', correo_malo:'Revisa el correo.', monto_malo:'Escribe el monto: el total en soles.',
+  falta_descripcion:'Escribe qué se vendió, o elige el plan.', descripcion_larga:'La descripción es muy larga (hasta 250 letras).',
+  sin_factura:'En el Nuevo RUS no se emiten facturas (lo dice «Ajustes»).', ya_tiene:'Esa venta ya tiene su comprobante.',
+  venta_no_existe:'Esa venta ya no está, o no está aprobada.', ya_emitido:'Ya se emitió: ya no se corrige aquí.',
+  serie_mala:'La serie son 4 letras o números: F001, B001, E001, EB01…', serie_de_boleta:'Una factura va con serie que empieza con F (o E, la de SUNAT SOL).',
+  serie_de_factura:'Una boleta va con serie que empieza con B (o E, la de SUNAT SOL).', numero_malo:'Escribe el número (sin la serie).',
+  fecha_mala:'Revisa la fecha de emisión.', numero_repetido:'Esa serie y ese número ya están en otro comprobante.', pdf_malo:'El PDF no se pudo anotar.',
+  no_existe:'Ese comprobante ya no está.', sin_motivo:'Escribe por qué (queda en el registro).', ya_anulado:'Ya estaba anulado.',
+  regimen_malo:'Elige el régimen.', nombre_largo:'El nombre es muy largo.', direccion_larga:'La dirección es muy larga.', nota_larga:'La nota es muy larga.',
+  plan_malo:'Ese plan no se vende.', no_emitido:'Primero márcalo como emitido.', demasiados_codigos:'Hasta 50 códigos por comprobante.',
+  ajuste_desconocido:'Ese ajuste no existe.', motivo_largo:'El motivo es muy largo.', no_se_puede:'En ese estado no se puede marcar como emitido.' };
+function _cpMal(j, def){ return CP_MAL[(j&&j.motivo)||''] || def || 'No se pudo.'; }
+function _cpPill(e){ var x=CP_EST[e]||[e||'—','gris']; return '<span class="pill '+x[1]+'">'+esc(x[0])+'</span>'; }
+function _cpNumero(c){ return c && c.serie ? c.serie+'-'+c.numero : ''; }
+function _cpTipo(c){ return c && c.tipo==='factura' ? 'Factura' : 'Boleta'; }
+function _cpDoc(c){ return c && c.doc_numero ? (CP_DOC[c.doc_tipo]||'Doc.')+' '+c.doc_numero : ''; }
+function _cpFalta(c){
+  return !c ? '' : (c.falta==='doc' ? 'Falta el documento del cliente: la boleta pasa de S/ 700'
+       : (c.falta==='nombre' ? 'Falta el nombre del cliente: la boleta pasa de S/ 700' : (c.falta==='monto' ? 'Falta el monto' : '')));
+}
+function _cpAjustes(){ return (CP.r && CP.r.ajustes) || {}; }
+function _cpHayFactura(){ return !CP.r || CP.r.factura!==false; }
+/* el total, y si el régimen lleva IGV: la base y el impuesto (18 %) */
+function _cpIgv(monto, reg){
+  var t=+monto||0; if(!t) return '';
+  if(reg==='nrus') return 'Nuevo RUS: sin IGV aparte';
+  if(!reg) return 'Con IGV, si tu régimen lo lleva (ponlo en «Ajustes»)';
+  var b=Math.round(t/1.18*100)/100, i=Math.round((t-b)*100)/100;
+  return 'Valor de venta '+soles(b)+' + IGV (18 %) '+soles(i);
+}
+/* lo que se vendió, legible: obrasst-supervisor-anual → Supervisor SST · anual */
+function _cpProducto(p){
+  p=String(p||'').toLowerCase().replace(/_/g,'-');
+  if(!p) return 'Venta';
+  if(p==='sst-capacita') return 'SSOMA · mensual (tienda)';
+  if(p==='sst-capacita-anual') return 'SSOMA · anual';
+  var m=p.match(/^obrasst-(prevencionista|supervisor|ssoma|gestion)(-anual)?$/);
+  if(m) return planN(m[1])+' · '+(m[2]?'anual':'mensual');
+  return p.replace(/-/g,' ').replace(/\b\w/g, function(x){ return x.toUpperCase(); });
+}
+
+function vistaComprobantes(caja){
+  cargando(caja);
+  var ac=$('acciones');
+  if(ac) ac.innerHTML='<button type="button" class="bt sec" id="cp-ajustes">Ajustes</button><button type="button" class="bt" id="cp-nuevo">Nuevo comprobante</button>';
+  if($('cp-ajustes')) $('cp-ajustes').onclick=_cpAbrirAjustes;
+  if($('cp-nuevo')) $('cp-nuevo').onclick=function(){ _cpNuevo(); };
+  function pinta(){
+    sbRpc('sst_admin_comprobantes', {p_dias:90}).then(function(r){
+      if(!r || !r.ok){ noAbre(caja, r, null, '2026-10-14-comprobantes'); return; }
+      marcarActualizado(); CP.r=r; _cpPintar(caja);
+    }, function(cod){ if(CP.r && $('t-cp')) return; noAbre(caja, null, cod, '2026-10-14-comprobantes'); });
+  }
+  VISTA.recargar=function(silencio){ if(silencio && HOJA.abierta) return; pinta(); }; pinta();
+}
+function _cpPintar(caja){
+  var r=CP.r, L=r.lista||[], S=r.sin_comprobante||[], k=r.cuentas||{}, aj=r.ajustes||{};
+  var porEmitir=(+k.pendiente||0)+(+k.rechazado||0)+(+k.en_proceso||0);
+  var emitidos=L.filter(function(c){ return c.estado==='emitido'; });
+  var mes=hoyLima().slice(0,7), delMes=emitidos.filter(function(c){ return String(c.emitido_en||'').slice(0,7)===mes; });
+  var totMes=delMes.reduce(function(s, c){ return s+(+c.monto||0); }, 0);
+  var h='';
+  if(!aj.regimen) h+='<div class="aviso ojo"><b>Falta tu régimen tributario.</b> En el Nuevo RUS, SUNAT no deja emitir facturas. '+
+    'Lo ves en SUNAT SOL, en tu Ficha RUC, o te lo dice tu contador. Ponlo en «Ajustes».</div>';
+  h+='<div class="aviso">SUNAT: toda venta de más de S/ 5 lleva comprobante, lo pida o no el cliente, y la boleta de más de S/ 700 lleva su documento. '+
+    'Cada venta deja aquí el suyo: el que pidió el cliente o, si no pidió nada, su boleta. Emítelo en '+
+    '<a href="'+CP_SOL+'" target="_blank" rel="noopener">SUNAT SOL</a> o en el Facturador SUNAT, y anótalo aquí con su número y su PDF: el cliente lo ve en su app.</div>';
+  h+='<div class="rej" id="cp-cifras" style="margin-bottom:18px">'+
+    cifra('Por emitir', num(porEmitir), porEmitir===1?'pendiente en SUNAT':'pendientes en SUNAT', porEmitir?'ojo':'', 'por_emitir')+
+    cifra('Ventas sin comprobante', num(S.length), 'últimos 90 días', S.length?'mal':'', 'sin')+
+    cifra('Emitidos este mes', num(delMes.length), soles(totMes)+' en total', '', 'emitido')+
+    cifra('Anulados', num((+k.anulado||0)+(+k.fuera||0)), 'o hechos por otro lado', '', 'anulado')+'</div>';
+  var F=[['por_emitir','Por emitir'],['sin','Ventas sin comprobante'],['emitido','Emitidos'],['anulado','Anulados'],['todos','Todos']];
+  h+='<div class="seg" id="cp-filtro" role="tablist">'+F.map(function(f){
+      return '<button type="button" role="tab" data-f="'+f[0]+'" aria-selected="'+(CP.filtro===f[0])+'" class="'+(CP.filtro===f[0]?'on':'')+'">'+esc(f[1])+'</button>';
+    }).join('')+'</div>';
+  h+= CP.filtro==='sin' ? '<div class="tarj" id="t-cp-sin">'+_cpSinTabla(S)+'</div>' : '<div class="tarj" id="t-cp"></div>';
+  if(CP.filtro==='emitido' && emitidos.length) h+='<p class="ayuda">El CSV sirve de registro de ventas para tu contador: fecha, número, cliente, documento y monto.</p>';
+  caja.innerHTML=h;
+  [].forEach.call(caja.querySelectorAll('#cp-cifras [data-ir], #cp-filtro [data-f]'), function(b){
+    b.onclick=function(){ CP.filtro=b.getAttribute('data-ir')||b.getAttribute('data-f'); var t=$('t-cp'); if(t) t._est=null; _cpPintar(caja); };
+  });
+  if(CP.filtro==='sin'){ _cpCablearSin(S); return; }
+  var filas=L.filter(function(c){
+    if(CP.filtro==='por_emitir') return /^(pendiente|rechazado|en_proceso)$/.test(c.estado);
+    if(CP.filtro==='emitido') return c.estado==='emitido';
+    if(CP.filtro==='anulado') return c.estado==='anulado' || c.estado==='fuera';
+    return true;
+  });
+  var cols=[
+    {k:'creado', t:'Fecha', h:function(c){ return esc(fechaLima(c.estado==='emitido'&&c.emitido_en?c.emitido_en:c.creado))+'<span class="sub">'+esc(CP_ORIGEN[c.origen]||c.origen||'')+'</span>'; },
+     v:function(c){ return c.estado==='emitido'&&c.emitido_en ? c.emitido_en : c.creado; }},
+    {k:'numero', t:'Número', h:function(c){ return c.serie ? '<span class="cod-t">'+esc(_cpNumero(c))+'</span>' : '<span class="gris-t">—</span>'; },
+     v:function(c){ return _cpNumero(c); }},
+    {k:'nombre', t:'Cliente', h:function(c){
+       return (c.nombre?'<b>'+esc(c.nombre)+'</b>':'<span class="gris-t">Sin nombre</span>')+'<span class="sub">'+esc([_cpDoc(c), c.correo].filter(Boolean).join(' · ')||'—')+'</span>'; },
+     v:function(c){ return [c.nombre||'', _cpDoc(c), c.correo||''].join(' · '); }},
+    {k:'tipo', t:'Tipo', h:function(c){ return '<span class="pill '+(c.tipo==='factura'?'azul':'gris')+'">'+esc(_cpTipo(c))+'</span>'; }, v:_cpTipo},
+    {k:'descripcion', t:'Lo que se vendió', h:function(c){ return esc(c.descripcion||'—')+(c.codigos&&c.codigos.length?'<span class="sub cod-t">'+esc(c.codigos.join(', '))+'</span>':''); }},
+    {k:'monto', t:'Monto', num:true, h:function(c){ return c.monto!=null ? esc(soles(c.monto, c.moneda)) : '<span class="gris-t">—</span>'; }},
+    {k:'estado', t:'Estado', h:function(c){
+       var f=_cpFalta(c);
+       return _cpPill(c.estado)+(f && /^(pendiente|rechazado)$/.test(c.estado) ? '<span class="sub mal-t">'+esc(c.falta==='doc'?'Falta el DNI':(c.falta==='nombre'?'Falta el nombre':'Falta el monto'))+'</span>' : ''); },
+     v:function(c){ return (CP_EST[c.estado]||[c.estado])[0]; }}
+  ];
+  var vacio = ({por_emitir:['Nada por emitir','Cuando entre una venta, su comprobante aparece aquí.'], emitido:['Todavía ninguno emitido','Los que marques como emitidos aparecen aquí, con su número.'],
+                anulado:['Ninguno anulado',''], todos:['Todavía no hay comprobantes','Cada venta deja aquí el suyo.']})[CP.filtro] || ['Nada todavía',''];
+  tabla($('t-cp'), cols, filas, {orden:'creado', asc:false, unidad:'comprobantes', archivo:'comprobantes-obrasst', vacio:vacio[0], vacioSub:vacio[1], alClic:_cpAbrir});
+}
+function _cpSinTabla(S){
+  if(!S.length) return '<div class="vacio"><b>Ninguna venta sin comprobante</b>Las de los últimos 90 días ya tienen el suyo.</div>';
+  return '<div class="tarj-cab"><div><h2>Ventas sin comprobante</h2><p class="sub">Pagos aprobados de los últimos 90 días que todavía no tienen boleta ni factura aquí.</p></div></div>'+
+    '<div class="tabla-caja"><table class="mini"><thead><tr><th scope="col">Fecha</th><th scope="col">Venta</th><th scope="col" class="num">Monto</th><th scope="col">Cliente</th><th scope="col"></th></tr></thead><tbody>'+
+    S.map(function(s, i){
+      return '<tr><td>'+esc(fechaLima(s.fecha))+'</td>'+
+        '<td><b>'+esc(_cpProducto(s.producto))+'</b><span class="sub">'+esc(CP_ORIGEN[s.origen]||s.origen)+(s.codigo?' · código '+esc(s.codigo):'')+'</span></td>'+
+        '<td class="num">'+(s.monto!=null?esc(soles(s.monto, s.moneda)):'<span class="gris-t">—</span>')+'</td>'+
+        '<td>'+(s.correo?esc(s.correo):'<span class="gris-t">—</span>')+'</td>'+
+        '<td class="fila-acc"><div class="acciones"><button type="button" class="bt chico" data-sin="'+i+'" data-a="crear">Hacer su comprobante</button>'+
+        '<button type="button" class="bt sec chico" data-sin="'+i+'" data-a="fuera">Ya se hizo fuera</button></div></td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
+function _cpCablearSin(S){
+  [].forEach.call(document.querySelectorAll('#t-cp-sin [data-sin]'), function(b){
+    b.onclick=function(){
+      var s=S[+b.getAttribute('data-sin')]; if(!s) return;
+      if(b.getAttribute('data-a')==='crear')
+        _cpNuevo({origen:s.origen, venta_ref:s.ref, monto:s.monto, correo:s.correo, codigos:s.codigo?[s.codigo]:[], producto:s.producto, fecha:s.fecha});
+      else _cpFuera(s);
+    };
+  });
+}
+/* «ya se hizo fuera»: se emitió por otro lado (o no va) y deja de salir */
+function _cpFuera(s){
+  abrirHoja('Ya se hizo fuera', _cpProducto(s.producto)+(s.monto!=null?' · '+soles(s.monto, s.moneda):''),
+    '<p class="ayuda" style="margin:0 0 12px">La venta deja de salir en «Ventas sin comprobante». Úsalo si su boleta o factura ya la emitiste por otro lado.</p>'+
+    '<div class="campo"><label for="cp-fnota">Qué pasó (queda en el registro)</label><textarea id="cp-fnota" rows="2" maxlength="300" placeholder="Ej.: la emití en SUNAT SOL el 20/09, B001-15"></textarea></div>'+
+    '<p class="msg" id="cp-fmsg" role="status"></p>',
+    '<button type="button" class="bt sec" id="cp-fno">Cancelar</button><button type="button" class="bt" id="cp-fsi">Guardar</button>');
+  $('cp-fno').onclick=cerrarHoja;
+  $('cp-fsi').onclick=function(){
+    var n=$('cp-fnota').value.trim(), m=$('cp-fmsg'), b=this;
+    if(n.length<5){ m.className='msg mal'; m.textContent='Escribe qué pasó (queda en el registro).'; $('cp-fnota').focus(); return; }
+    b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    sbRpc('sst_admin_comprobante_guardar', {p_id:null, p_datos:{origen:s.origen, venta_ref:s.ref, fuera:true, nota:n}}).then(function(j){
+      if(j && j.ok){ cerrarHoja(); toast('Listo: esa venta ya no sale como «sin comprobante».'); if(VISTA.recargar) VISTA.recargar(); return; }
+      b.disabled=false; m.className='msg mal'; m.textContent=_cpMal(j);
+    }, function(){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo guardar: revisa tu conexión.'; });
+  };
+}
+
+/* ── el detalle ─────────────────────────────────────────────────────── */
+function _cpAbrir(c){
+  var reg=_cpAjustes().regimen, f=_cpFalta(c), abierto=/^(pendiente|rechazado|en_proceso)$/.test(c.estado);
+  var monto = c.monto!=null ? '<b>'+esc(soles(c.monto, c.moneda))+'</b>'+(_cpIgv(c.monto, reg)?'<span class="sub">'+esc(_cpIgv(c.monto, reg))+'</span>':'') : '<span class="gris-t">—</span>';
+  var cuerpo=(f && abierto ? '<div class="aviso ojo">'+esc(f)+'. Pídeselo al cliente y corrígelo aquí antes de emitirla.</div>' : '')+
+    (c.estado==='rechazado' && c.sunat_nota ? '<div class="aviso mal"><b>SUNAT:</b> '+esc(c.sunat_nota)+'</div>' : '')+
+    '<dl class="datos">'+
+      fila('Estado', _cpPill(c.estado)+(c.estado==='emitido' ? ' <b class="cod-t">'+esc(_cpNumero(c))+'</b> · '+esc(fechaLarga(c.emitido_en)) : ''))+
+      fila('Tipo', esc(_cpTipo(c)))+
+      fila(c.tipo==='factura'?'Razón social':'Cliente', c.nombre?esc(c.nombre):'<span class="gris-t">Sin nombre (va a «cliente»)</span>')+
+      fila('Documento', _cpDoc(c)?esc(_cpDoc(c)):'<span class="gris-t">Sin documento</span>')+
+      (c.tipo==='factura' ? fila('Dirección fiscal', c.direccion?esc(c.direccion):'<span class="gris-t">—</span>') : '')+
+      fila('Correo', c.correo?esc(c.correo):'<span class="gris-t">—</span>')+
+      fila('Lo que se vendió', esc(c.descripcion||'—'))+
+      fila('Monto', monto)+
+      fila('Venta', esc(CP_ORIGEN[c.origen]||c.origen||'')+(c.pago?' · pago '+esc(c.pago):'')+(c.empresa?' · '+esc(c.empresa):'')+' · '+esc(fechaLima(c.creado)))+
+      fila('Códigos', c.codigos&&c.codigos.length ? '<span class="cod-t">'+esc(c.codigos.join(', '))+'</span>' : '')+
+      fila('Lo pidió', ({cliente:'El cliente', auto:'Nadie: es su boleta (no pidió nada)', creador:'Tú, desde la consola'})[c.pedido_por]||'')+
+      fila('Nota', c.nota?esc(c.nota):'')+
+      fila('Anulado', c.anulado_motivo?esc(c.anulado_motivo):'')+
+      fila('Emitido por', c.emitido_por?esc(c.emitido_por):'')+
+    '</dl>'+
+    (abierto ? _cpParaSunat(c) : '')+
+    '<div id="cp-acc" class="seccion"></div>';
+  abrirHoja(_cpTipo(c)+(c.estado==='emitido' ? ' '+_cpNumero(c) : ''),
+            [c.nombre||c.correo||'', c.monto!=null?soles(c.monto, c.moneda):''].filter(Boolean).join(' · '), cuerpo, null);
+  [].forEach.call(document.querySelectorAll('#hoja-cuerpo [data-copia]'), function(b){
+    b.onclick=function(){ copiar(b.getAttribute('data-copia'), b); };
+  });
+  _cpAcciones(c);
+}
+/* los datos listos para copiarlos en SUNAT SOL, uno por uno */
+function _cpParaSunat(c){
+  var it=[[c.tipo==='factura'?'RUC del cliente':'Documento del cliente', c.doc_numero||''],
+          [c.tipo==='factura'?'Razón social':'Nombre', c.nombre||'']];
+  if(c.tipo==='factura') it.push(['Dirección fiscal', c.direccion||'']);
+  it.push(['Correo (SUNAT se lo manda)', c.correo||''], ['Descripción', c.descripcion||''], ['Precio total', c.monto!=null?(+c.monto).toFixed(2):'']);
+  return '<div class="seccion"><h3>Para emitirla en SUNAT</h3><p class="ayuda" style="margin:0 0 10px">Entra a SUNAT SOL y emite la '+(c.tipo==='factura'?'factura':'boleta')+
+    ' electrónica con estos datos. Cantidad: 1. Luego vuelve y toca «Ya la emití».</p>'+
+    '<div class="cp-copia">'+it.map(function(x){
+      return '<div class="cp-c"><span class="et">'+esc(x[0])+'</span><span class="v">'+(x[1]?esc(x[1]):'<span class="gris-t">—</span>')+'</span>'+
+        (x[1]?'<button type="button" class="bt sec chico" data-copia="'+esc(x[1])+'">Copiar</button>':'<span></span>')+'</div>';
+    }).join('')+'</div>'+
+    '<p style="margin:12px 0 0"><a class="bt sec chico" href="'+CP_SOL+'" target="_blank" rel="noopener">Abrir SUNAT SOL</a></p></div>';
+}
+function _cpAcciones(c){
+  var caja=$('cp-acc'); if(!caja) return;
+  var abierto=/^(pendiente|rechazado|en_proceso)$/.test(c.estado);
+  var h='<h3>Acciones</h3><div class="acciones">';
+  if(abierto) h+='<button type="button" class="bt" id="cp-emitida">Ya la emití</button><button type="button" class="bt sec" id="cp-corregir">Corregir datos</button>'+
+                 '<button type="button" class="bt sec" id="cp-anular">Anular</button>';
+  if(c.estado==='emitido') h+=(c.pdf?'<button type="button" class="bt" id="cp-verpdf">Ver el PDF</button>':'')+
+                 '<button type="button" class="bt sec" id="cp-subirpdf">'+(c.pdf?'Cambiar el PDF':'Subir el PDF')+'</button>'+
+                 '<button type="button" class="bt sec" id="cp-anular">Anular</button>';
+  h+='</div>';
+  if(!abierto && c.estado!=='emitido') h='';
+  caja.innerHTML=h;
+  if($('cp-emitida')) $('cp-emitida').onclick=function(){ _cpFormEmitida(c); };
+  if($('cp-corregir')) $('cp-corregir').onclick=function(){ _cpNuevo(null, c); };
+  if($('cp-anular')) $('cp-anular').onclick=function(){ _cpFormAnular(c); };
+  if($('cp-verpdf')) $('cp-verpdf').onclick=function(){ _cpVerPdf(c, this); };
+  if($('cp-subirpdf')) $('cp-subirpdf').onclick=function(){ _cpFormPdf(c); };
+}
+function _cpFormEmitida(c){
+  var caja=$('cp-acc'), aj=_cpAjustes();
+  var serie = c.tipo==='factura' ? (aj.serie_factura||'F001') : (aj.serie_boleta||'B001');
+  caja.innerHTML='<h3>Ya la emití</h3>'+
+    '<p class="ayuda" style="margin:0 0 12px">Anota la serie y el número que te dio SUNAT. En SUNAT SOL la serie suele ser E001 (factura) o EB01 (boleta); en el Facturador, la tuya ('+esc(serie)+').</p>'+
+    '<div class="cp-emi"><div class="campo"><label for="cp-serie">Serie</label><input id="cp-serie" maxlength="4" autocomplete="off" spellcheck="false" value="'+esc(serie)+'"></div>'+
+    '<div class="campo"><label for="cp-num">Número</label><input id="cp-num" type="number" min="1" max="99999999" inputmode="numeric" autocomplete="off"></div>'+
+    '<div class="campo"><label for="cp-fecha">Fecha de emisión</label><input id="cp-fecha" type="date" value="'+esc(hoyLima())+'" max="'+esc(hoyLima())+'"></div></div>'+
+    '<div class="campo"><label for="cp-pdf">El PDF <span class="gris-t">(opcional; el cliente lo ve en su app)</span></label><input id="cp-pdf" type="file" accept="application/pdf,.pdf"></div>'+
+    '<p class="msg" id="cp-msg" role="status"></p>'+
+    '<div class="acciones"><button type="button" class="bt sec" id="cp-cancelar">Cancelar</button><button type="button" class="bt" id="cp-guardar">Guardar</button></div>';
+  $('cp-cancelar').onclick=function(){ _cpAcciones(c); };
+  setTimeout(function(){ try{ $('cp-num').focus(); }catch(_f){} }, 30);
+  $('cp-guardar').onclick=function(){
+    var s=$('cp-serie').value.trim().toUpperCase(), n=parseInt($('cp-num').value, 10), fe=$('cp-fecha').value, file=($('cp-pdf').files||[])[0], m=$('cp-msg'), b=this;
+    if(!/^[A-Z0-9]{4}$/.test(s)){ m.className='msg mal'; m.textContent=CP_MAL.serie_mala; $('cp-serie').focus(); return; }
+    if(!(n>=1 && n<=99999999)){ m.className='msg mal'; m.textContent=CP_MAL.numero_malo; $('cp-num').focus(); return; }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(fe)){ m.className='msg mal'; m.textContent=CP_MAL.fecha_mala; return; }
+    if(file && !_cpPdfBueno(file, m)) return;
+    b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    sbRpc('sst_admin_comprobante_emitido', {p_id:c.id, p_serie:s, p_numero:n, p_fecha:fe, p_pdf_path:null}).then(function(j){
+      if(!j || !j.ok){ b.disabled=false; m.className='msg mal'; m.textContent=_cpMal(j); return; }
+      var listo=function(txt){ toast(txt); cerrarHoja(); if(VISTA.recargar) VISTA.recargar(); };
+      if(!file){ listo('Listo: '+s+'-'+n+' emitida.'); return; }
+      m.textContent='Subiendo el PDF…';
+      _cpSubirPdf(c.id, s+'-'+n, file).then(function(){ listo('Listo: '+s+'-'+n+' emitida, con su PDF.'); },
+        function(){ listo('Quedó emitida ('+s+'-'+n+'), pero el PDF no subió: súbelo desde su detalle.'); });
+    }, function(){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo guardar: revisa tu conexión.'; });
+  };
+}
+function _cpFormPdf(c){
+  var caja=$('cp-acc');
+  caja.innerHTML='<h3>'+(c.pdf?'Cambiar el PDF':'Subir el PDF')+'</h3>'+
+    '<div class="campo"><label for="cp-pdf">El PDF de '+esc(_cpNumero(c))+'</label><input id="cp-pdf" type="file" accept="application/pdf,.pdf"></div>'+
+    '<p class="msg" id="cp-msg" role="status"></p>'+
+    '<div class="acciones"><button type="button" class="bt sec" id="cp-cancelar">Cancelar</button><button type="button" class="bt" id="cp-guardar">Subir</button></div>';
+  $('cp-cancelar').onclick=function(){ _cpAcciones(c); };
+  $('cp-guardar').onclick=function(){
+    var file=($('cp-pdf').files||[])[0], m=$('cp-msg'), b=this;
+    if(!file){ m.className='msg mal'; m.textContent='Elige el PDF.'; return; }
+    if(!_cpPdfBueno(file, m)) return;
+    b.disabled=true; m.className='msg gris'; m.textContent='Subiendo…';
+    _cpSubirPdf(c.id, _cpNumero(c), file).then(function(){ toast('Listo: el PDF de '+_cpNumero(c)+' ya está.'); cerrarHoja(); if(VISTA.recargar) VISTA.recargar(); },
+      function(e){ b.disabled=false; m.className='msg mal'; m.textContent= e==='balde' ? 'El balde «comprobantes» no está: corre el SQL 2026-10-14-comprobantes.' : 'No se pudo subir: revisa tu conexión.'; });
+  };
+}
+function _cpPdfBueno(file, m){
+  if(!/pdf$/i.test(file.type||'') && !/\.pdf$/i.test(file.name||'')){ m.className='msg mal'; m.textContent='Tiene que ser el PDF.'; return false; }
+  if(file.size > 5*1024*1024){ m.className='msg mal'; m.textContent='El PDF pasa de 5 MB.'; return false; }
+  return true;
+}
+/* el PDF va al balde privado «comprobantes», en la carpeta del comprobante */
+function _cpSubirPdf(id, nombre, file){
+  var path = id+'/'+String(nombre||'comprobante').replace(/[^A-Za-z0-9._-]/g,'')+'.pdf';
+  return sbFetch(SB.url+'/storage/v1/object/comprobantes/'+path, {method:'POST', body:file, extra:{'Content-Type':'application/pdf', 'x-upsert':'true'}})
+    .then(function(r){
+      if(!r.ok) return Promise.reject(r.status===404 || r.status===400 ? 'balde' : r.status);
+      return sbRpc('sst_admin_comprobante_pdf', {p_id:id, p_pdf_path:path}).then(function(j){ return (j&&j.ok) ? path : Promise.reject('rpc'); });
+    });
+}
+function _cpVerPdf(c, b){
+  if(!c.pdf_path) return;
+  var antes=b?b.textContent:''; if(b){ b.disabled=true; b.textContent='Abriendo…'; }
+  sbFetch(SB.url+'/storage/v1/object/authenticated/comprobantes/'+c.pdf_path, {method:'GET'}).then(function(r){
+    if(!r.ok) return Promise.reject(r.status);
+    return r.blob();
+  }).then(function(bl){
+    var u=URL.createObjectURL(bl), a=document.createElement('a');
+    a.href=u; a.download=(_cpNumero(c)||'comprobante')+'.pdf'; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); }, 1500);
+    if(b){ b.disabled=false; b.textContent=antes; }
+  }, function(){ if(b){ b.disabled=false; b.textContent=antes; } toast('No se pudo abrir el PDF: revisa tu conexión.'); });
+}
+function _cpFormAnular(c){
+  var caja=$('cp-acc');
+  caja.innerHTML='<h3>Anular</h3>'+
+    (c.estado==='emitido' ? '<div class="aviso ojo" style="margin-bottom:12px">Esto solo lo anota aquí. En SUNAT se anula aparte: con la comunicación de baja o con una nota de crédito.</div>' : '')+
+    '<div class="campo"><label for="cp-motivo">Por qué (queda en el registro)</label><textarea id="cp-motivo" rows="2" maxlength="300" placeholder="Ej.: el cliente pidió devolución"></textarea></div>'+
+    '<p class="msg" id="cp-msg" role="status"></p>'+
+    '<div class="acciones"><button type="button" class="bt sec" id="cp-cancelar">Cancelar</button><button type="button" class="bt mal" id="cp-guardar">Sí, anularlo</button></div>';
+  $('cp-cancelar').onclick=function(){ _cpAcciones(c); };
+  $('cp-guardar').onclick=function(){
+    var mo=$('cp-motivo').value.trim(), m=$('cp-msg'), b=this;
+    if(mo.length<5){ m.className='msg mal'; m.textContent=CP_MAL.sin_motivo; $('cp-motivo').focus(); return; }
+    b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    sbRpc('sst_admin_comprobante_anular', {p_id:c.id, p_motivo:mo}).then(function(j){
+      if(j && j.ok){ toast('Anulado.'); cerrarHoja(); if(VISTA.recargar) VISTA.recargar(); return; }
+      b.disabled=false; m.className='msg mal'; m.textContent=_cpMal(j);
+    }, function(){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo guardar: revisa tu conexión.'; });
+  };
+}
+
+/* ── nuevo (o corregir): con el DNI o el RUC se llena solo ───────────── */
+function _cpNuevo(pre, c){
+  pre = pre || {}; var edit = !!c, d = c || pre;
+  var hayF=_cpHayFactura(), tipo = (d.tipo==='factura' && hayF) ? 'factura' : 'boleta';
+  var webFija = edit ? (c.origen==='web' && !!c.pago) : pre.origen==='web';
+  var planes = COD_PLANES.map(function(p){ return '<option value="'+p[0]+'"'+(d.plan===p[0]?' selected':'')+'>'+esc(p[1])+'</option>'; }).join('');
+  var cod = (d.codigos||[]).join(', ');
+  var titulo = edit ? 'Corregir datos' : (pre.venta_ref ? 'Comprobante de una venta' : 'Nuevo comprobante');
+  var sub = edit ? _cpTipo(c)+' · '+(CP_ORIGEN[c.origen]||'') : (pre.venta_ref ? (CP_ORIGEN[pre.origen]||'')+' · '+_cpProducto(pre.producto) : 'Para una venta a mano: el que te escribió y le sacaste códigos');
+  var h='<div class="campo"><label id="cpf-tl">Comprobante</label><div class="seg" id="cpf-tipo" role="radiogroup" aria-labelledby="cpf-tl">'+
+      '<button type="button" role="radio" data-t="boleta" class="'+(tipo==='boleta'?'on':'')+'" aria-checked="'+(tipo==='boleta')+'">Boleta</button>'+
+      '<button type="button" role="radio" data-t="factura" class="'+(tipo==='factura'?'on':'')+'" aria-checked="'+(tipo==='factura')+'"'+(hayF?'':' disabled title="En el Nuevo RUS no se emiten facturas"')+'>Factura</button></div>'+
+      (hayF?'':'<p class="ayuda" style="margin:-8px 0 12px">Nuevo RUS: solo boletas.</p>')+'</div>'+
+    '<div class="cpf-doc"><div class="campo" id="cpf-dt-c"><label for="cpf-dt">Documento</label><select id="cpf-dt">'+
+        [['1','DNI'],['4','Carné de extranjería'],['7','Pasaporte'],['6','RUC']].map(function(o){
+          return '<option value="'+o[0]+'"'+((d.doc_tipo||'1')===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></div>'+
+      '<div class="campo"><label for="cpf-dn" id="cpf-dn-l">Número</label><div class="cpf-busca"><input id="cpf-dn" maxlength="12" autocomplete="off" spellcheck="false" inputmode="numeric" value="'+esc(d.doc_numero||'')+'">'+
+        '<button type="button" class="bt sec" id="cpf-buscar">Buscar en SUNAT</button></div></div></div>'+
+    '<p class="msg" id="cpf-sunat" role="status" style="margin-top:-8px"></p>'+
+    '<div class="campo"><label for="cpf-nom" id="cpf-nom-l">Nombre</label><input id="cpf-nom" maxlength="150" autocomplete="off" value="'+esc(d.nombre||'')+'"></div>'+
+    '<div class="campo" id="cpf-dir-c"><label for="cpf-dir">Dirección fiscal <span class="gris-t">(opcional)</span></label><input id="cpf-dir" maxlength="200" autocomplete="off" value="'+esc(d.direccion||'')+'"></div>'+
+    '<div class="campo"><label for="cpf-cor">Correo <span class="gris-t">(SUNAT le manda el comprobante)</span></label><input id="cpf-cor" type="email" maxlength="120" autocomplete="off" value="'+esc(d.correo||'')+'"></div>';
+  if(!edit && !pre.venta_ref){
+    h+='<div class="cpf-plan"><div class="campo"><label for="cpf-plan">Plan</label><select id="cpf-plan"><option value="">Otro (escribe qué)</option>'+planes+'</select></div>'+
+       '<div class="campo"><label for="cpf-dias">Periodo</label><select id="cpf-dias"><option value="30"'+(+d.dias===365?'':' selected')+'>Mensual · 30 días</option><option value="365"'+(+d.dias===365?' selected':'')+'>Anual · 365 días</option></select></div></div>';
+  }
+  h+='<div class="campo"><label for="cpf-desc">Lo que se vendió <span class="gris-t">'+(edit||pre.venta_ref?'(opcional)':'(si no es un plan)')+'</span></label><input id="cpf-desc" maxlength="250" autocomplete="off" value="'+esc(edit?(c.descripcion||''):'')+'"'+(edit?'':' placeholder="Sale solo con el plan: «OBRASST · Plan … · 1 mes (30 días)»"')+'></div>'+
+    '<div class="cpf-plan"><div class="campo"><label for="cpf-monto">Monto total (S/)</label><input id="cpf-monto" type="number" min="0.01" step="0.01" inputmode="decimal" value="'+esc(d.monto!=null?d.monto:'')+'"'+(webFija?' readonly':'')+'>'+
+      (webFija?'<p class="ayuda">El que pagó por Mercado Pago: no se cambia.</p>':'')+'</div>'+
+      '<div class="campo"><label for="cpf-cod">Códigos <span class="gris-t">(opcional)</span></label><input id="cpf-cod" maxlength="600" autocomplete="off" spellcheck="false" value="'+esc(cod)+'" placeholder="PRV-ABC-123, …"></div></div>'+
+    '<div class="campo"><label for="cpf-nota">Nota para ti <span class="gris-t">(opcional)</span></label><input id="cpf-nota" maxlength="300" autocomplete="off" value="'+esc(d.nota||'')+'" placeholder="Ej.: pagó por Yape"></div>'+
+    '<p class="msg" id="cpf-msg" role="status"></p>';
+  abrirHoja(titulo, sub, h, '<button type="button" class="bt sec" id="cpf-no">Cancelar</button><button type="button" class="bt" id="cpf-si">'+(edit?'Guardar':'Guardar · por emitir')+'</button>');
+  var st={tipo:tipo};
+  function pintaTipo(){
+    var fac = st.tipo==='factura';
+    [].forEach.call(document.querySelectorAll('#cpf-tipo button'), function(b){ var on=b.getAttribute('data-t')===st.tipo; b.className=on?'on':''; b.setAttribute('aria-checked', String(on)); });
+    $('cpf-dt-c').hidden = fac; $('cpf-dir-c').hidden = !fac; $('cpf-dt-c').parentNode.classList.toggle('fac', fac);
+    $('cpf-dn-l').textContent = fac ? 'RUC del cliente' : 'Número';
+    $('cpf-nom-l').textContent = fac ? 'Razón social' : 'Nombre';
+    $('cpf-dn').setAttribute('maxlength', fac ? '11' : '12');
+  }
+  [].forEach.call(document.querySelectorAll('#cpf-tipo button'), function(b){ b.onclick=function(){ if(b.disabled) return; st.tipo=b.getAttribute('data-t'); pintaTipo(); $('cpf-sunat').textContent=''; }; });
+  pintaTipo();
+  $('cpf-no').onclick = edit ? function(){ _cpAbrir(c); } : cerrarHoja;
+  $('cpf-buscar').onclick=function(){ _cpBuscarDoc(st); };
+  $('cpf-dn').onkeydown=function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); _cpBuscarDoc(st); } };
+  /* lo que ya se le hizo antes: de la propia lista, sin salir a la red */
+  $('cpf-dn').onchange=function(){ _cpDeAntes(st); };
+  var pl=$('cpf-plan'); if(pl && pre.plan) pl.value=pre.plan;
+  setTimeout(function(){ try{ $('cpf-dn').focus(); }catch(_f){} }, 30);
+  $('cpf-si').onclick=function(){
+    var m=$('cpf-msg'), b=this, fac=st.tipo==='factura';
+    var dn=$('cpf-dn').value.replace(/[^A-Za-z0-9]/g,'').toUpperCase(), dt=fac?'6':$('cpf-dt').value;
+    var datos={tipo:st.tipo, doc_tipo:dn?dt:null, doc_numero:dn||null, nombre:$('cpf-nom').value.trim()||null,
+               direccion:fac?($('cpf-dir').value.trim()||null):null, correo:$('cpf-cor').value.trim()||null,
+               descripcion:$('cpf-desc').value.trim()||null, nota:$('cpf-nota').value.trim()||null,
+               codigos:$('cpf-cod').value.split(/[\s,;]+/).map(function(x){ return x.trim(); }).filter(Boolean)};
+    var mo=parseFloat(String($('cpf-monto').value).replace(',','.'));
+    if(!webFija) datos.monto = mo>0 ? mo : null;
+    if(fac){ var mal=_cpRucMalo(dn); if(mal){ m.className='msg mal'; m.textContent=mal; $('cpf-dn').focus(); return; }
+             if(!datos.nombre){ m.className='msg mal'; m.textContent=CP_MAL.falta_razon_social; $('cpf-nom').focus(); return; } }
+    else if(dn && dt==='1' && !/^\d{8}$/.test(dn)){ m.className='msg mal'; m.textContent=CP_MAL.dni_malo; $('cpf-dn').focus(); return; }
+    if(!edit){
+      if(pre.venta_ref){ datos.origen=pre.origen; datos.venta_ref=pre.venta_ref; }
+      else {
+        datos.origen='mano';
+        var p=$('cpf-plan').value; if(p){ datos.plan=p; datos.dias=+$('cpf-dias').value; }
+        if(!p && !datos.descripcion){ m.className='msg mal'; m.textContent=CP_MAL.falta_descripcion; $('cpf-desc').focus(); return; }
+      }
+      if(!webFija && !(datos.monto>0)){ m.className='msg mal'; m.textContent=CP_MAL.monto_malo; $('cpf-monto').focus(); return; }
+    }
+    b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    sbRpc('sst_admin_comprobante_guardar', {p_id:edit?c.id:null, p_datos:datos}).then(function(j){
+      if(!j || !j.ok){ b.disabled=false; m.className='msg mal'; m.textContent=_cpMal(j); return; }
+      toast(edit ? 'Datos corregidos.' : (st.tipo==='factura'?'Factura':'Boleta')+' guardada: por emitir.');
+      cerrarHoja();
+      if(VISTA.actual!=='comprobantes'){ CP.filtro='por_emitir'; navegar('comprobantes'); }
+      else if(VISTA.recargar) VISTA.recargar();
+    }, function(){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo guardar: revisa tu conexión.'; });
+  };
+}
+function _cpRucMalo(ruc){
+  ruc=String(ruc||'').replace(/\D/g,'');
+  if(ruc.length!==11) return 'El RUC tiene 11 dígitos.';
+  if(['10','15','16','17','20'].indexOf(ruc.slice(0,2))<0) return 'Un RUC peruano empieza por 10, 15, 16, 17 o 20.';
+  var w=[5,4,3,2,7,6,5,4,3,2], s=0; for(var i=0;i<10;i++) s+=(+ruc.charAt(i))*w[i];
+  var r=11-(s%11); if(r===10) r=0; if(r===11) r=1;
+  return r===+ruc.charAt(10) ? '' : CP_MAL.ruc_malo;
+}
+/* el RUC 10 de una persona es 10 + su DNI + el dígito verificador */
+function _cpRuc10(dni){
+  var p='10'+dni, w=[5,4,3,2,7,6,5,4,3,2], s=0; for(var i=0;i<10;i++) s+=(+p.charAt(i))*w[i];
+  var r=11-(s%11); if(r===10) r=0; if(r===11) r=1; return p+r;
+}
+/* si ya se le hizo un comprobante con ese documento, se llena con lo de esa vez */
+function _cpDeAntes(st){
+  var dn=$('cpf-dn').value.replace(/[^A-Za-z0-9]/g,'').toUpperCase(); if(!dn || !CP.r) return false;
+  var x=(CP.r.lista||[]).filter(function(c){ return c.doc_numero===dn && c.nombre; })[0];
+  if(!x) return false;
+  if(!$('cpf-nom').value.trim()) $('cpf-nom').value=x.nombre;
+  if(st.tipo==='factura' && !$('cpf-dir').value.trim() && x.direccion) $('cpf-dir').value=x.direccion;
+  if(!$('cpf-cor').value.trim() && x.correo) $('cpf-cor').value=x.correo;
+  var m=$('cpf-sunat'); m.className='msg ok'; m.textContent='✓ De su comprobante anterior ('+_cpNumero(x)+(x.serie?'':' '+fechaLima(x.creado))+'). Revísalo.';
+  return true;
+}
+/* Buscar en SUNAT: con el RUC, la razón social, la dirección fiscal y si está
+   activo; con el DNI, su nombre si tiene RUC 10. El padrón de SUNAT es un
+   corte con fecha: se dice cuál. */
+var CP_SUNAT = ['https://openruc.com/api/ruc/'];
+function _cpPadron(ruc){
+  var i=0;
+  function pide(){
+    if(i>=CP_SUNAT.length) return Promise.reject('sin_camino');
+    var u=CP_SUNAT[i++];
+    return fetch(u+encodeURIComponent(ruc)).then(function(r){ return r.ok ? r.json() : (r.status===404 ? {} : Promise.reject(r.status)); }).catch(function(e){ return i<CP_SUNAT.length ? pide() : Promise.reject(e); });
+  }
+  return pide();
+}
+function _cpBuscarDoc(st){
+  var fac=st.tipo==='factura', m=$('cpf-sunat'), b=$('cpf-buscar');
+  var dn=$('cpf-dn').value.replace(/\D/g,''), dt=fac?'6':$('cpf-dt').value;
+  m.className='msg mal';
+  if(!dn){ m.textContent=fac?'Escribe el RUC.':'Escribe el DNI o el RUC.'; $('cpf-dn').focus(); return; }
+  var ruc;
+  if(fac || dt==='6' || dn.length===11){ var mal=_cpRucMalo(dn); if(mal){ m.textContent=mal; return; } ruc=dn; }
+  else if(dt==='1' && dn.length===8) ruc=_cpRuc10(dn);
+  else { m.className='msg gris'; m.textContent='Con ese documento SUNAT no publica datos: escribe el nombre.'; return; }
+  if(_cpDeAntes(st) && !fac) return;
+  b.disabled=true; m.className='msg gris'; m.textContent='Preguntando a SUNAT…';
+  _cpPadron(ruc).then(function(j){
+    b.disabled=false;
+    var razon=String(j && (j.razon_social || j.razonSocial || j.nombre) || '').trim();
+    if(!razon){
+      m.className='msg ojo';
+      m.textContent = ruc===dn ? 'Ese RUC no figura en el padrón de SUNAT. Revísalo o escribe los datos a mano.'
+                               : 'Esa persona no tiene RUC 10: SUNAT no publica su nombre. Escríbelo (el de su DNI).';
+      return;
+    }
+    $('cpf-nom').value=razon;
+    var dir=String(j.direccion || j.domicilio || '').trim();
+    if(fac && dir) $('cpf-dir').value=dir;
+    var est=String(j.estado||'').toUpperCase(), con=String(j.condicion||'').toUpperCase(), fe=String(j.as_of || j.fecha || '').slice(0,10);
+    var ojo = (est && est!=='ACTIVO') ? ' Ojo: figura '+est+'.' : ((con && con!=='HABIDO') ? ' Ojo: figura '+con+'.' : '');
+    m.className = ojo ? 'msg mal' : 'msg ok';
+    m.textContent='✓ Traído de SUNAT'+(fe?' (padrón al '+fechaLarga(fe)+')':'')+'.'+ojo+(ruc!==dn?' Es el nombre de su RUC 10.':'')+' Revísalo antes de guardar.';
+  }, function(){
+    b.disabled=false; m.className='msg mal';
+    m.textContent='No se pudo consultar a SUNAT (sin señal o el servicio no responde). Escribe los datos a mano.';
+  });
+}
+
+/* ── ajustes: RUC, régimen y series ───────────────────────────────────── */
+function _cpAbrirAjustes(){
+  abrirHoja('Ajustes de boletas y facturas', 'Tu RUC, tu régimen y tus series', '<div class="vacio">Cargando…</div>', null);
+  sbRpc('sst_admin_facturacion', {p_ajustes:null}).then(function(j){
+    if(!j || !j.ok){ $('hoja-cuerpo').innerHTML='<div class="vacio"><b>No se pudo leer</b>'+esc(_cpMal(j))+'</div>'; return; }
+    var a=j.ajustes||{};
+    $('hoja-cuerpo').innerHTML=
+      '<div class="campo"><label for="cpa-ruc">Tu RUC</label><input id="cpa-ruc" maxlength="11" inputmode="numeric" autocomplete="off" value="'+esc(a.ruc||'')+'"></div>'+
+      '<div class="campo"><label for="cpa-reg">Tu régimen tributario</label><select id="cpa-reg"><option value="">No sé todavía</option>'+
+        Object.keys(CP_REG).map(function(k){ return '<option value="'+k+'"'+(a.regimen===k?' selected':'')+'>'+esc(CP_REG[k])+'</option>'; }).join('')+'</select>'+
+        '<p class="ayuda">Lo ves en SUNAT SOL, en tu Ficha RUC, o te lo dice tu contador. En el Nuevo RUS la app y la consola dejan de ofrecer factura.</p></div>'+
+      '<div class="cpf-plan"><div class="campo"><label for="cpa-sf">Serie de facturas</label><input id="cpa-sf" maxlength="4" autocomplete="off" value="'+esc(a.serie_factura||'F001')+'"></div>'+
+        '<div class="campo"><label for="cpa-sb">Serie de boletas</label><input id="cpa-sb" maxlength="4" autocomplete="off" value="'+esc(a.serie_boleta||'B001')+'"></div></div>'+
+      '<p class="ayuda" style="margin-top:-6px">Las del Facturador SUNAT (o tu sistema): F001, B001… En SUNAT SOL, SUNAT pone la suya (E001, EB01).</p>'+
+      '<p class="msg" id="cpa-msg" role="status"></p>';
+    $('hoja').querySelector('.hoja-cuerpo').insertAdjacentHTML('afterend',
+      '<div class="hoja-pie"><button type="button" class="bt sec" id="cpa-no">Cancelar</button><button type="button" class="bt" id="cpa-si">Guardar</button></div>');
+    $('cpa-no').onclick=cerrarHoja;
+    $('cpa-si').onclick=function(){
+      var m=$('cpa-msg'), b=this, ruc=$('cpa-ruc').value.replace(/\D/g,''), mal=_cpRucMalo(ruc);
+      if(mal){ m.className='msg mal'; m.textContent=mal; $('cpa-ruc').focus(); return; }
+      b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+      sbRpc('sst_admin_facturacion', {p_ajustes:{ruc:ruc, regimen:$('cpa-reg').value, serie_factura:$('cpa-sf').value.trim().toUpperCase(), serie_boleta:$('cpa-sb').value.trim().toUpperCase()}}).then(function(j2){
+        if(j2 && j2.ok){ toast('Ajustes guardados.'); cerrarHoja(); if(VISTA.actual==='comprobantes' && VISTA.recargar) VISTA.recargar(); return; }
+        b.disabled=false; m.className='msg mal'; m.textContent=_cpMal(j2);
+      }, function(){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo guardar: revisa tu conexión.'; });
+    };
+  }, function(cod){
+    $('hoja-cuerpo').innerHTML='<div class="vacio"><b>No se pudo leer</b>'+(cod===404?'Se activa con el SQL «2026-10-14-comprobantes».':'Revisa tu conexión.')+'</div>';
+  });
+}
+
 function vistaAvisos(caja){
   caja.innerHTML='<div class="tarj"><div class="tarj-cuerpo" id="avp"></div></div>'+
     '<div class="tarj"><div class="tarj-cab"><div><h2>Equipos que reciben</h2><p class="sub">Cada celular o PC donde activaste los avisos.</p></div></div><div id="avp-equipos"><div class="vacio">Cargando…</div></div></div>'+
