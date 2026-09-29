@@ -385,6 +385,27 @@ tr.clic{cursor:pointer}
 .pi-docb div{flex:1; min-width:0; display:grid; gap:1px}
 .pi-docb i{font-style:normal; color:var(--ok); font-weight:600}
 @media (max-width:640px){ .pi-fila{grid-template-columns:1fr} }
+/* 30/09 · Documentos: subirlos desde la computadora a las carpetas de la app */
+.dc-fila{display:grid; gap:8px; padding:12px 0 0; border-top:1px solid var(--raya)}
+.dc-fila:first-child{border-top:0; padding-top:0}
+.dc-arch{display:flex; align-items:center; gap:9px; min-width:0; font-size:13.5px}
+.dc-arch b{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500}
+.dc-arch small{color:var(--gris); font-size:12px; white-space:nowrap; font-variant-numeric:tabular-nums}
+.dc-arch .pill{margin-left:auto}
+.dc-quitar{-webkit-appearance:none; appearance:none; background:none; border:0; color:var(--gris); cursor:pointer; font-size:19px; line-height:1; padding:2px 7px; border-radius:6px; margin-left:auto}
+.dc-arch .pill + .dc-quitar{margin-left:0}
+.dc-quitar:hover{background:var(--fondo); color:var(--mal)}
+.dc-campos{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); gap:10px}
+.dc-campos label, .dc-extra label{margin:0 0 4px; font-size:12px}
+.dc-extra{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px}
+.dc-fila .msg{margin:0}
+.dc-ancho{grid-column:1 / -1}
+.dc-filtro{display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:12px 18px 0}
+.dc-filtro label{margin:0}
+.dc-filtro select{width:auto; min-width:260px; max-width:100%}
+.dc-carp{display:inline-grid; gap:2px; justify-items:start}
+.dc-carp small{color:var(--gris); font-size:12px}
+@media (max-width:640px){ .dc-campos{grid-template-columns:1fr} .dc-filtro select{min-width:0; width:100%} .dc-arch{flex-wrap:wrap} .dc-arch b{flex:1 1 55%} }
 .check input{width:18px; height:18px; margin:2px 0 0; flex:0 0 auto; padding:0}
 .lienzo{border:1px solid var(--raya2); border-radius:10px; overflow:hidden; background:#fff; margin:10px 0 0; position:relative}
 .lienzo canvas{display:block; touch-action:none; cursor:crosshair}
@@ -1390,6 +1411,9 @@ function vistaATS(caja){
   cargando(caja);
   function pinta(){
     traer('sst_doc','&select=id,hoja,nombre,nota,creado&hoja=in.(ats,iperc,ats-modelo)&order=creado.desc',300).then(function(docs){
+      /* 30/09/2026 · «iperc» es también la carpeta de documentos de la app: un
+         IPERC subido como archivo (sin su paquete en «nota») está en «Documentos» */
+      docs=docs.filter(function(d){ var n=nota(d.nota); return d.hoja!=='iperc' || (n && typeof n==='object'); });
       var filas=docs.map(function(d){
         var n=nota(d.nota)||{};
         /* en la nube la cuadrilla viene como lista {n,d,tr}: firmó el que
@@ -2453,6 +2477,487 @@ function abrirIndP(it){
   };
 }
 
+/* ══ DOCUMENTOS: SUBIRLOS DESDE LA COMPUTADORA (30/09/2026) ══════════
+   Marcelo, mirando «Documentos» vacío: «¿no sería mejor cargarlo desde
+   la web, y que se vea en la app?». Las carpetas son LAS DE LA APP —la
+   misma hoja de sst_doc—, así que lo que se sube aquí sale en el celular
+   al abrir esa carpeta, y lo que se sube en el celular sale aquí solo (el
+   vivo mira sst_doc). El archivo va al mismo balde y por el mismo camino
+   que en la app (<obra>/docs/…), con el mismo tope: 25 MB y los videos
+   por enlace. Las carpetas del sistema de gestión son del plan Gestión
+   SST, como en la app; las del menú del supervisor, de todos.
+   Los meses (Informe de Medio Ambiente), los simulacros (año, mes y
+   tipo) y los certificados de otro tipo arman la hoja igual que la app
+   (navClave: «base_año_mes_tema»; los libres, «base_» + _norm(nombre)),
+   y los nombres nuevos se anotan en la fila «subcarpetas» de la empresa,
+   que la app junta al abrir la carpeta. */
+var DC_MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
+var DC_SIMULACROS=['Simulacro Multipeligro','Simulacro contra amago de fuego','Simulacro de derrame de hidrocarburos',
+                   'Simulacro de rescate','Simulacro de sismo','Simulacro de evacuación'];
+/* h = la hoja de la app · g = su grupo en la app · gs = del plan Gestión SST ·
+   tipo: 'mes' (año y mes), 'sim' (año, mes y tipo), 'libre' (con nombre propio) */
+var DC_CARPETAS=[
+  {h:'politicas', t:'Políticas', g:'Sistema Integrado', gs:1},
+  {h:'pol-hostigamiento', t:'Política contra el hostigamiento sexual', g:'Sistema Integrado', gs:1},
+  {h:'risst', t:'RISST', g:'Sistema Integrado', gs:1},
+  {h:'organigrama', t:'Organigrama', g:'Sistema Integrado', gs:1},
+  {h:'prog-anual', t:'Programa Anual SST 2026', g:'Sistema Integrado', gs:1},
+  {h:'objetivos', t:'Objetivos y metas', g:'Sistema Integrado', gs:1},
+  {h:'prog-capacitacion', t:'Programación de capacitación anual SST 2026', g:'Sistema Integrado', gs:1},
+  {h:'prog-inspeccion', t:'Programa de Inspección anual SST 2026', g:'Sistema Integrado', gs:1},
+  {h:'iperc', t:'IPERC', g:'Sistema Integrado', gs:1},
+  {h:'pets', t:'PETS', g:'Sistema Integrado', gs:1},
+  {h:'comite', t:'Comité de Seguridad y Salud en el Trabajo', g:'Sistema Integrado', gs:1},
+  {h:'subcomite', t:'Subcomité de SST', g:'Sistema Integrado', gs:1},
+  {h:'estandares', t:'Estándares del cliente', g:'Sistema Integrado', gs:1},
+  {h:'campanas', t:'Campañas', g:'Sistema Integrado', gs:1},
+  {h:'mapa-riesgos', t:'Mapa de Riesgos', g:'Sistema Integrado', gs:1},
+  {h:'cert-andamiero', t:'Certificados de andamieros', g:'Certificados', gs:1},
+  {h:'cert-rigger', t:'Certificado de Rigger', g:'Certificados', gs:1},
+  {h:'cert-operador', t:'Certificado de Operador', g:'Certificados', gs:1},
+  {h:'cert-izaje', t:'Certificado de aparejos de izaje', g:'Certificados', gs:1},
+  {h:'cert-extintores', t:'Certificado de extintores', g:'Certificados', gs:1},
+  {h:'certificados', t:'Otro tipo de certificado', g:'Certificados', gs:1, tipo:'libre'},
+  {h:'pma', t:'Plan de Manejo Ambiental (PMA)', g:'Medio Ambiente', gs:1},
+  {h:'rrss', t:'RRSS · Empresas Operadoras de Residuos Sólidos', g:'Medio Ambiente', gs:1},
+  {h:'ma-informe', t:'Informe de Medio Ambiente', g:'Medio Ambiente', gs:1, tipo:'mes'},
+  {h:'ieaia', t:'Matriz IEAIA', g:'Medio Ambiente', gs:1},
+  {h:'so-programa', t:'Programa de Salud', g:'Salud Ocupacional', gs:1},
+  {h:'so-covid', t:'Plan para la vigilancia, prevención y control de COVID-19', g:'Salud Ocupacional', gs:1},
+  {h:'so-monitoreo', t:'Monitoreo Ocupacional', g:'Salud Ocupacional', gs:1},
+  {h:'so-plan', t:'Plan de Salud Ocupacional', g:'Salud Ocupacional', gs:1},
+  {h:'pausas', t:'Pausas activas', g:'Salud Ocupacional', gs:1},
+  {h:'controles', t:'Controles ocupacionales', g:'Salud Ocupacional', gs:1},
+  {h:'plan-emergencia', t:'Plan de Respuesta ante Emergencia', g:'Respuesta ante emergencias', gs:1},
+  {h:'mapa-evacuacion', t:'Mapa de Evacuación', g:'Respuesta ante emergencias', gs:1},
+  {h:'simulacro', t:'Simulacros', g:'Respuesta ante emergencias', gs:1, tipo:'sim'},
+  {h:'brigadistas', t:'Brigadistas', g:'Respuesta ante emergencias', gs:1},
+  {h:'estacion-emergencia', t:'Estación de Emergencia', g:'Respuesta ante emergencias', gs:1},
+  {h:'primeros-auxilios', t:'Manual de Primeros Auxilios', g:'Respuesta ante emergencias', gs:1},
+  {h:'contactos-emergencia', t:'Contactos de emergencia del proyecto', g:'Respuesta ante emergencias', gs:1},
+  /* el menú del supervisor: todos los planes */
+  {h:'difusiones', t:'Difusiones', g:'Charlas · menú del supervisor'},
+  {h:'insp-antes-despues', t:'Inspección antes y después', g:'Informe SSOMA · menú del supervisor'},
+  {h:'registro-evaluaciones', t:'Registro de evaluaciones', g:'Informe SSOMA · menú del supervisor'},
+  {h:'comite-sup', t:'Comité de SST', g:'Comité o Subcomité · menú del supervisor'},
+  {h:'subcomite-sup', t:'Subcomité de SST', g:'Comité o Subcomité · menú del supervisor'}
+];
+/* por el nombre del archivo, su carpeta (lo más preciso primero) */
+var DC_ADIVINA=[
+  [/hostigamiento|acoso sexual/, 'pol-hostigamiento'], [/\brisst\b|reglamento interno/, 'risst'], [/organigrama/, 'organigrama'],
+  [/\biperc\b/, 'iperc'], [/\bpets?\b|procedimiento escrito/, 'pets'], [/mapa de riesgo/, 'mapa-riesgos'],
+  [/(mapa|plano|rutas?) de evacuacion/, 'mapa-evacuacion'], [/simulacro/, 'sim'],
+  [/programa anual|plan anual de (sst|seguridad)/, 'prog-anual'], [/objetivos? y metas|\bobjetivos\b/, 'objetivos'],
+  [/program\w* (anual )?de capacitacion|capacitacion anual|plan de capacitacion/, 'prog-capacitacion'],
+  [/program\w* (anual )?de inspeccion|inspecciones? anual/, 'prog-inspeccion'], [/antes y despues/, 'insp-antes-despues'],
+  [/registro de evaluacion|\bevaluaciones\b/, 'registro-evaluaciones'], [/politica/, 'politicas'],
+  [/subcomite/, 'subcomite'], [/comite/, 'comite'], [/estandar/, 'estandares'], [/campana/, 'campanas'],
+  [/andami/, 'cert-andamiero'], [/rigger/, 'cert-rigger'], [/\boperador/, 'cert-operador'],
+  [/izaje|aparejo|eslinga|grillete/, 'cert-izaje'], [/extintor/, 'cert-extintores'],
+  [/\bpma\b|manejo ambiental/, 'pma'], [/residuos? solidos|\beo ?rs\b|\brrss\b/, 'rrss'],
+  [/ieaia|aspectos? (e impactos? )?ambientales?/, 'ieaia'], [/informe (de )?(medio )?ambient|monitoreo ambiental/, 'ma-informe'],
+  [/covid/, 'so-covid'], [/monitoreo/, 'so-monitoreo'], [/programa de salud/, 'so-programa'], [/salud ocupacional/, 'so-plan'],
+  [/pausas? activas?/, 'pausas'], [/controles? ocupacional|examen(es)? medico|\bemo\b/, 'controles'],
+  [/primeros auxilios/, 'primeros-auxilios'], [/brigad/, 'brigadistas'], [/estacion de emergencia/, 'estacion-emergencia'],
+  [/(contactos?|telefonos?|directorio) de emergencia/, 'contactos-emergencia'], [/emergencia|contingencia/, 'plan-emergencia'],
+  [/difusion/, 'difusiones'], [/certificad/, 'certificados']
+];
+/* lo que la app guarda en sst_doc y no es un documento: su configuración */
+var DC_NO_DOCS={ ats:1, 'ats-cfg':1, 'ats-modelo':1, temas:1, 'temas-hist':1, empleador:1, 'tdm-cfg':1, quienes:1, subcarpetas:1 };
+var DC_TOPE=25*1024*1024;
+var DC={ cola:[], subc:null, filtro:'', filas:[], sec:0 };
+
+function _dcNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[_\-.]+/g,' ').replace(/\s+/g,' ').trim(); }
+function _dcClave(s){ return String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }   /* el _norm de la app, tal cual */
+function _dcGestion(){
+  var o=YO.obra||{}, p=String(o.plan||'');
+  return (p==='gestion' || p==='empresa') && (!o.vence || String(o.vence).slice(0,10) >= hoyISO());
+}
+function _dcCarpetas(){ var gs=_dcGestion(); return DC_CARPETAS.filter(function(c){ return gs || !c.gs; }); }
+function _dcCarpeta(h){ var x=null; DC_CARPETAS.forEach(function(c){ if(!x && c.h===h) x=c; }); return x; }
+function _dcAnioHoy(){ return +String(hoyISO()).slice(0,4); }
+function _dcMesHoy(){ return DC_MESES[(+String(hoyISO()).slice(5,7)||1)-1]; }
+function _dcNombreDe(f){ return String(f.name||'').replace(/\.[a-z0-9]{2,5}$/i,'').replace(/[_]+/g,' ').replace(/\s+/g,' ').trim().slice(0,120); }
+function _dcPeso(b){ b=+b||0; return b < 1048576 ? Math.max(1, Math.round(b/1024))+' KB' : (b/1048576).toFixed(b < 10485760 ? 1 : 0)+' MB'; }
+/* '' si el archivo puede subir; si no, el porqué */
+function _dcNoVa(f){
+  if(!f) return 'Sin archivo.';
+  if(/^video\//i.test(f.type||'') || /\.(mp4|mov|m4v|3gp|avi|mkv|webm|wmv|flv|mpe?g|mts)$/i.test(f.name||''))
+    return 'Los videos no se suben: súbelo a YouTube o a Drive y agrégalo con «Agregar un enlace».';
+  if(/^audio\//i.test(f.type||'')) return 'Los audios no se suben: súbelo a Drive y agrégalo con «Agregar un enlace».';
+  if((f.size||0) > DC_TOPE) return 'Pesa más de 25 MB, que es el tope por archivo. Comprímelo, o súbelo a Drive y agrega el enlace.';
+  if(!(f.size>0)) return 'El archivo está vacío.';
+  return '';
+}
+function _dcAdivina(nombre){
+  var n=_dcNorm(nombre), ok={};
+  _dcCarpetas().forEach(function(c){ ok[c.tipo==='sim' ? 'sim' : c.h]=c.h; });
+  for(var i=0;i<DC_ADIVINA.length;i++){ if(DC_ADIVINA[i][0].test(n) && ok[DC_ADIVINA[i][1]]) return ok[DC_ADIVINA[i][1]]; }
+  return '';
+}
+
+/* ── la fila «subcarpetas» de la empresa (la misma que junta la app) ── */
+function dcSubcTraer(){
+  return traer('sst_doc', '&hoja=eq.subcarpetas&select=id,nota,creado&order=creado.asc', 5).then(function(rows){
+    var m={}, id=null;
+    (Array.isArray(rows)?rows:[]).forEach(function(r){
+      if(!r || (r.hoja && r.hoja!=='subcarpetas')) return; if(!id) id=r.id;
+      var x=null; try{ x=JSON.parse(r.nota||'{}'); }catch(_j){ x=null; }
+      if(x && typeof x==='object') Object.keys(x).forEach(function(k){
+        if(!Array.isArray(x[k])) return; m[k]=m[k]||[];
+        x[k].forEach(function(n){ n=String(n==null?'':n).trim(); if(n && m[k].indexOf(n)<0) m[k].push(n); });
+      });
+    });
+    DC.subc={id:id, mapa:m}; return DC.subc;
+  });
+}
+function dcSubcDe(clave){ return (DC.subc && DC.subc.mapa && DC.subc.mapa[clave]) || []; }
+/* agrega nombres nuevos: lee, junta y escribe (la app hace lo mismo) */
+function dcSubcAgregar(nuevos){
+  if(!nuevos.length) return Promise.resolve(true);
+  return dcSubcTraer().then(function(nb){
+    var m=nb.mapa, cambio=false;
+    nuevos.forEach(function(x){ m[x.k]=m[x.k]||[]; if(m[x.k].indexOf(x.n)<0){ m[x.k].push(x.n); cambio=true; } });
+    if(!cambio) return true;
+    var nota=JSON.stringify(m);
+    return nb.id ? sbPatch('sst_doc?id=eq.'+encodeURIComponent(nb.id), {nota:nota})
+                 : sbPostP('sst_doc', {empresa:YO.obra.id, hoja:'subcarpetas', nombre:'Subcarpetas de la empresa', nota:nota});
+  });
+}
+/* INSERT y DELETE que devuelven las filas: si vuelve vacío, no se escribió */
+function sbPostP(tabla, fila){
+  return sbFetch(SB.url+'/rest/v1/'+tabla, {method:'POST', body:JSON.stringify(fila), extra:{'Prefer':'return=representation'}})
+    .then(function(r){ return r.ok ? r.json().catch(function(){ return [fila]; }) : Promise.reject(r.status); });
+}
+function sbDelP(path){
+  return sbFetch(SB.url+'/rest/v1/'+path, {method:'DELETE', extra:{'Prefer':'return=representation'}})
+    .then(function(r){
+      if(!r.ok) return Promise.reject(r.status);
+      if(r.status===204) return [{}];
+      return r.json().catch(function(){ return [{}]; });
+    });
+}
+
+/* ── de qué carpeta es una fila, con su nombre de gente ─────────────── */
+function dcCarpetaDe(h){
+  h=String(h||''); var c=_dcCarpeta(h);
+  if(c) return {c:c, t:c.t, sub:c.g, base:c.h};
+  var p=h.split('_');
+  if(p[0]==='ma-informe' && p.length>=3) return {c:_dcCarpeta('ma-informe'), t:'Informe de Medio Ambiente', sub:p[2]+' '+p[1], base:'ma-informe'};
+  if(p[0]==='simulacro' && p.length>=3) return {c:_dcCarpeta('simulacro'), t:'Simulacros', sub:p.slice(1).join(' · '), base:'simulacro'};
+  if(p[0]==='certificados' && p.length>=2){
+    var k=h.slice('certificados_'.length), nom=k;
+    dcSubcDe('certificados').forEach(function(n){ if(_dcClave(n)===k) nom=n; });
+    return {c:_dcCarpeta('certificados'), t:'Certificados · '+nom, sub:'Otro tipo de certificado', base:'certificados'};
+  }
+  return {c:null, t:tipoDoc(h), sub:'', base:h};
+}
+function dcEsDoc(h){ return !!dcCarpetaDe(h).c; }
+/* la hoja «iperc» es la carpeta de la app y también el papel del IPERC
+   (su «nota» es el paquete en JSON): el papel va en «ATS e IPERC», no aquí */
+function _dcEsPapel(f){ return !!f && f.hoja==='iperc' && !f.url && /^\s*\{/.test(String(f.nota||'')); }
+
+/* ── la carpeta de un archivo: el menú y, si toca, año, mes, tipo o nombre ── */
+function _dcSelCarpeta(id, val, etq){
+  var L=_dcCarpetas(), grupos=[], por={};
+  L.forEach(function(c){ if(!por[c.g]){ por[c.g]=[]; grupos.push(c.g); } por[c.g].push(c); });
+  return '<select id="'+id+'" aria-label="'+esc(etq||'Carpeta')+'"><option value="">— ¿en qué carpeta va? —</option>'+
+    grupos.map(function(g){ return '<optgroup label="'+esc(g)+'">'+por[g].map(function(c){
+      return '<option value="'+esc(c.h)+'"'+(c.h===val?' selected':'')+'>'+esc(c.t)+'</option>'; }).join('')+'</optgroup>'; }).join('')+'</select>';
+}
+function _dcExtra(pfx, st){
+  var c=_dcCarpeta(st.h); if(!c || !c.tipo) return '';
+  var a0=_dcAnioHoy(), h='';
+  function sel(id, et, ops, v){ return '<div><label for="'+id+'">'+esc(et)+'</label><select id="'+id+'">'+
+    ops.map(function(o){ return '<option value="'+esc(o)+'"'+(String(o)===String(v)?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+'</select></div>'; }
+  if(c.tipo==='mes' || c.tipo==='sim'){
+    var anios=[]; for(var i=a0+1;i>=a0-3;i--) anios.push(String(i));
+    h+=sel(pfx+'-anio', 'Año', anios, st.anio)+sel(pfx+'-mes', 'Mes', DC_MESES, st.mes);
+  }
+  if(c.tipo==='sim'){
+    var propios=dcSubcDe('simulacro_'+st.anio+'_'+st.mes+'_temas').filter(function(t){ return DC_SIMULACROS.indexOf(t)<0; });
+    var ops=DC_SIMULACROS.concat(propios);
+    h+='<div class="dc-ancho"><label for="'+pfx+'-tipo">Tipo de simulacro</label><select id="'+pfx+'-tipo">'+
+       ops.map(function(o){ return '<option value="'+esc(o)+'"'+(o===st.tipo?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+
+       '<option value="+"'+(st.tipo==='+'?' selected':'')+'>➕ Otro tipo…</option></select></div>';
+    if(st.tipo==='+') h+='<div class="dc-ancho"><label for="'+pfx+'-tipon">¿Cuál?</label><input id="'+pfx+'-tipon" maxlength="60" value="'+esc(st.tipoN||'')+'" placeholder="Simulacro de fuga de gas"></div>';
+  }
+  if(c.tipo==='libre'){
+    var L=dcSubcDe('certificados');
+    h+='<div><label for="'+pfx+'-lib">Tipo de certificado</label><select id="'+pfx+'-lib">'+
+       '<option value="">— elige —</option>'+L.map(function(o){ return '<option value="'+esc(o)+'"'+(o===st.lib?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+
+       '<option value="+"'+(st.lib==='+'?' selected':'')+'>➕ Nuevo tipo…</option></select></div>';
+    if(st.lib==='+') h+='<div><label for="'+pfx+'-libn">Nombre del tipo</label><input id="'+pfx+'-libn" maxlength="60" value="'+esc(st.libN||'')+'" placeholder="Certificado de soldador"></div>';
+  }
+  return h;
+}
+/* la hoja de sst_doc, igual que la arma la app; o el porqué no se puede */
+function _dcHoja(st){
+  var c=_dcCarpeta(st.h);
+  if(!c || !_dcCarpetas().some(function(x){ return x.h===c.h; })) return {err:'Elige su carpeta.'};
+  if(c.tipo==='mes') return {h:c.h+'_'+st.anio+'_'+st.mes};
+  if(c.tipo==='sim'){
+    var t = st.tipo==='+' ? String(st.tipoN||'').replace(/\s+/g,' ').trim() : st.tipo;
+    if(!t) return {err:'Escribe el tipo de simulacro.'};
+    if(/[_']/.test(t)) return {err:'El tipo no puede llevar «_» ni comillas.'};
+    return {h:c.h+'_'+st.anio+'_'+st.mes+'_'+t, nuevo: st.tipo==='+' && DC_SIMULACROS.indexOf(t)<0 ? {k:'simulacro_'+st.anio+'_'+st.mes+'_temas', n:t} : null};
+  }
+  if(c.tipo==='libre'){
+    var n = st.lib==='+' ? String(st.libN||'').replace(/\s+/g,' ').trim() : st.lib;
+    if(!n) return {err:st.lib==='+' ? 'Escribe el nombre del tipo de certificado.' : 'Elige el tipo de certificado.'};
+    if(!_dcClave(n)) return {err:'El nombre necesita letras o números.'};
+    if(/'/.test(n)) return {err:'El nombre no puede llevar comillas.'};
+    return {h:c.h+'_'+_dcClave(n), nuevo: st.lib==='+' ? {k:'certificados', n:n} : null};
+  }
+  return {h:c.h};
+}
+function _dcEstado(h){
+  var st={h:h||'', anio:String(_dcAnioHoy()), mes:_dcMesHoy(), tipo:DC_SIMULACROS[0], tipoN:'', lib:'', libN:''};
+  return st;
+}
+/* conecta el menú de carpeta y sus campos (id = pfx+'-c'); al cambiar, repinta los campos */
+function _dcCablear(pfx, st, alCambiar){
+  var s=$(pfx+'-c'); if(!s) return;
+  s.onchange=function(){ st.h=s.value; var ex=$(pfx+'-ex'); if(ex){ ex.innerHTML=_dcExtra(pfx, st); ex.hidden=!ex.innerHTML; _dcCablearExtra(pfx, st, alCambiar); } if(alCambiar) alCambiar(); };
+  _dcCablearExtra(pfx, st, alCambiar);
+}
+function _dcCablearExtra(pfx, st, alCambiar){
+  function repinta(){ var ex=$(pfx+'-ex'); if(ex){ ex.innerHTML=_dcExtra(pfx, st); ex.hidden=!ex.innerHTML; _dcCablearExtra(pfx, st, alCambiar); } if(alCambiar) alCambiar(); }
+  var a=$(pfx+'-anio'), m=$(pfx+'-mes'), t=$(pfx+'-tipo'), tn=$(pfx+'-tipon'), l=$(pfx+'-lib'), ln=$(pfx+'-libn');
+  if(a) a.onchange=function(){ st.anio=a.value; repinta(); };
+  if(m) m.onchange=function(){ st.mes=m.value; repinta(); };
+  if(t) t.onchange=function(){ st.tipo=t.value; repinta(); if(t.value==='+'){ var x=$(pfx+'-tipon'); if(x) x.focus(); } };
+  if(tn) tn.oninput=function(){ st.tipoN=tn.value; };
+  if(l) l.onchange=function(){ st.lib=l.value; repinta(); if(l.value==='+'){ var x=$(pfx+'-libn'); if(x) x.focus(); } };
+  if(ln) ln.oninput=function(){ st.libN=ln.value; };
+}
+
+/* ── la vista ──────────────────────────────────────────────────────── */
+function vistaDocs(caja){
+  DC.cola=[]; DC.filtro=''; DC.subc=null; DC.filas=[];
+  var ac=$('acciones');
+  if(ac) ac.innerHTML='<button type="button" class="bt sec" id="dc-enlace">🔗 Agregar un enlace</button>';
+  caja.innerHTML=
+    '<div class="pi-zona" id="dc-zona" tabindex="0" role="button" aria-label="Arrastra aquí los documentos de la obra, o toca para elegirlos">'+
+      '<b>⬆ Arrastra aquí los documentos de la obra</b>'+
+      '<span>PDF, Word, Excel o fotos, de hasta 25 MB cada uno. Cada archivo va a su carpeta —RISST, PETS, IPERC…— por su nombre; si no se reconoce, la eliges. '+
+      'Sale en la app al abrir esa carpeta.</span>'+
+      '<label class="bt sec chico" for="dc-archivos">Elegir archivos</label>'+
+      '<input type="file" id="dc-archivos" multiple class="pi-oculto"></div>'+
+    '<div id="dc-cola"></div>'+
+    '<div class="tarj" id="t-docs"></div>';
+  _pindZona($('dc-zona'), function(files){ _dcEncolar(files); });
+  $('dc-archivos').onchange=function(){ _dcEncolar(this.files); this.value=''; };
+  if($('dc-enlace')) $('dc-enlace').onclick=function(){ abrirEnlaceDoc(); };
+  /* los nombres propios (tipos de certificado y de simulacro) llegan
+     aparte: la tabla no los espera */
+  dcSubcTraer().then(function(){ _dcPintarCola(); if(DC.filas.length) _dcTabla(); }, function(){});
+  function pinta(silencio){
+    var t=$('t-docs'); if(!t) return;
+    if(!DC.filas.length && !silencio) cargando(t);
+    traer('sst_doc', '&select=id,hoja,nombre,url,nota,creado&order=creado.desc'+
+      '&hoja=not.in.(ats,ats-cfg,ats-modelo,temas,temas-hist,empleador,tdm-cfg,quienes,subcarpetas)', 1000)
+      .then(function(filas){
+        DC.filas=(Array.isArray(filas)?filas:[]).filter(function(f){
+          return f && !DC_NO_DOCS[f.hoja] && !_dcEsPapel(f) && (dcEsDoc(f.hoja) || !!f.url);
+        });
+        VISTA.cache.sst_doc=DC.filas;
+        _dcTabla();
+      }).catch(function(cod){ if(!silencio) fallo(t, cod); });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+function _dcTabla(){
+  var t=$('t-docs'); if(!t) return;
+  var todas=DC.filas, por={}, orden=[];
+  todas.forEach(function(f){ var d=dcCarpetaDe(f.hoja), k=d.c ? d.base : '~'+f.hoja;
+    if(!por[k]){ por[k]={n:0, t:d.c ? d.c.t : d.t}; orden.push(k); } por[k].n++; });
+  if(DC.filtro && !por[DC.filtro]) DC.filtro='';
+  var filas = DC.filtro ? todas.filter(function(f){ var d=dcCarpetaDe(f.hoja); return (d.c ? d.base : '~'+f.hoja)===DC.filtro; }) : todas;
+  var cols=[
+    {k:'creado', t:'Fecha', h:function(f){ return esc(fechaLarga(f.creado))+'<span class="sub">'+esc(hace(f.creado))+'</span>'; }},
+    {k:'hoja', t:'Carpeta', v:function(f){ return dcCarpetaDe(f.hoja).t; }, h:function(f){
+       var d=dcCarpetaDe(f.hoja);
+       return '<span class="dc-carp"><span class="pill azul">'+esc(d.t)+'</span>'+(d.sub?'<small>'+esc(d.sub)+'</small>':'')+'</span>'; }},
+    {k:'nombre', t:'Documento', h:function(f){ return '<b>'+esc(f.nombre||'Documento')+'</b>'+(f.nota && dcEsDoc(f.hoja) && String(f.nota).length<300 ? '<span class="sub">'+esc(f.nota)+'</span>' : ''); }},
+    {k:'url', t:'Archivo', v:function(f){ return /^data:/i.test(f.url||'') ? 'foto' : (f.url||''); }, h:function(f){
+       if(!f.url) return '<span class="pill gris">sin archivo</span>';
+       if(/^data:/i.test(f.url)) return '<button type="button" class="enlace dc-abrir" data-acc="ver">abrir</button>';
+       return '<a href="'+esc(f.url)+'" target="_blank" rel="noopener">abrir</a>'; }},
+    {k:'_acc', t:'', acc:true, h:function(f){ return dcEsDoc(f.hoja) ? '<button type="button" class="bt sec chico" data-acc="quitar">Quitar</button>' : ''; }}
+  ];
+  var h='';
+  if(orden.length>1){
+    h='<div class="dc-filtro"><label for="dc-filtro">Ver</label><select id="dc-filtro"><option value="">Todas las carpetas ('+todas.length+')</option>'+
+      orden.slice().sort(function(a, b){ return String(por[a].t).localeCompare(String(por[b].t)); }).map(function(k){
+        return '<option value="'+esc(k)+'"'+(k===DC.filtro?' selected':'')+'>'+esc(por[k].t)+' ('+por[k].n+')</option>'; }).join('')+'</select></div>';
+  }
+  var caja=document.createElement('div'); caja.id='t-docs-t'; caja._est=(t.querySelector('#t-docs-t')||{})._est;
+  t.innerHTML=h; t.appendChild(caja);
+  tabla(caja, cols, filas, { orden:'creado', asc:false, unidad:'documentos', archivo:'documentos',
+    vacio: DC.filtro ? 'Nada en esta carpeta' : 'Todavía no hay documentos',
+    vacioSub: 'Arrástralos aquí arriba, o súbelos desde la app en su carpeta: salen en los dos lados.',
+    accion:function(acc, f){ if(acc==='quitar') quitarDocP(f); else if(acc==='ver') _dcVerDato(f.url); } });
+  if($('dc-filtro')) $('dc-filtro').onchange=function(){ DC.filtro=this.value; _dcTabla(); };
+}
+/* las fotos de pausas activas y controles viven dentro de la fila (data:),
+   y el navegador no abre esas direcciones en otra pestaña: se abren como archivo */
+function _dcVerDato(u){
+  try{
+    var p=String(u).split(','), tipo=(p[0].match(/data:([^;]+)/)||[])[1]||'application/octet-stream';
+    var bin=atob(p[1]||''), a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i);
+    var url=URL.createObjectURL(new Blob([a], {type:tipo})); window.open(url, '_blank', 'noopener');
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+  }catch(e){ toast('No se pudo abrir esa foto.'); }
+}
+
+/* ── los archivos soltados: a la cola, cada uno con su carpeta adivinada ── */
+function _dcEncolar(files){
+  Array.prototype.forEach.call(files||[], function(f){
+    var err=_dcNoVa(f), st=_dcEstado(err ? '' : _dcAdivina(f.name));
+    DC.sec++;
+    DC.cola.push({ n:DC.sec, f:f, st:st, nombre:_dcNombreDe(f), estado: err ? 'mal' : 'lista', msg:err, adivinada:!!st.h });
+  });
+  _dcPintarCola();
+  var c=$('dc-cola'); if(c && c.scrollIntoView) try{ c.scrollIntoView({block:'nearest', behavior:'smooth'}); }catch(_s){}
+}
+function _dcPintarCola(){
+  var c=$('dc-cola'); if(!c) return;
+  if(!DC.cola.length){ c.innerHTML=''; return; }
+  var listos=DC.cola.filter(function(x){ return x.estado==='lista' || x.estado==='error'; }).length;
+  var h='<div class="tarj pi-cola"><div class="tarj-cab"><div><h2>Archivos por subir</h2><p class="sub">Revisa el nombre y la carpeta de cada uno, y súbelos.</p></div>'+
+        '<div class="pi-cola-acc"><button type="button" class="bt sec chico" id="dc-cola-no">Vaciar</button>'+
+        '<button type="button" class="bt chico" id="dc-cola-si"'+(listos?'':' disabled')+'>Subir '+listos+'</button></div></div><div class="tarj-cuerpo">';
+  DC.cola.forEach(function(x){
+    var p='dc'+x.n, bloq=(x.estado!=='lista' && x.estado!=='error');
+    var est = x.estado==='ok' ? '<span class="pill ok">subido</span>' : (x.estado==='mal' ? '<span class="pill mal">no va</span>' :
+              (x.estado==='sube' ? '<span class="pill azul">subiendo…</span>' : (x.estado==='error' ? '<span class="pill ojo">revisar</span>' :
+              (x.st.h ? (x.adivinada ? '<span class="pill gris">carpeta por el nombre</span>' : '') : '<span class="pill ojo">elige su carpeta</span>'))));
+    h+='<div class="dc-fila" data-n="'+x.n+'"><div class="dc-arch"><span aria-hidden="true">📄</span><b title="'+esc(x.f.name)+'">'+esc(x.f.name)+'</b><small>'+esc(_dcPeso(x.f.size))+'</small>'+est+
+       (x.estado==='sube' ? '' : '<button type="button" class="dc-quitar" data-quita="'+x.n+'" aria-label="Sacar «'+esc(x.f.name)+'» de la lista">×</button>')+'</div>';
+    if(x.estado==='mal') h+='<div class="msg mal">'+esc(x.msg||'Este archivo no sube.')+'</div>';
+    else if(x.estado!=='ok'){
+      h+='<div class="dc-campos"><div><label for="'+p+'-nom">Nombre del documento</label><input id="'+p+'-nom" maxlength="120" value="'+esc(x.nombre)+'"'+(bloq?' disabled':'')+'></div>'+
+         '<div><label for="'+p+'-c">Carpeta</label>'+_dcSelCarpeta(p+'-c', x.st.h, 'Carpeta de «'+x.f.name+'»')+'</div></div>'+
+         '<div class="dc-extra" id="'+p+'-ex"'+(_dcExtra(p, x.st)?'':' hidden')+'>'+_dcExtra(p, x.st)+'</div>';
+      if(x.estado==='error' && x.msg) h+='<div class="msg mal">'+esc(x.msg)+'</div>';
+    }
+    h+='</div>';
+  });
+  h+='<div class="msg gris" id="dc-cola-msg"></div></div></div>';
+  c.innerHTML=h;
+  DC.cola.forEach(function(x){
+    var p='dc'+x.n;
+    if(x.estado==='sube' || x.estado==='ok' || x.estado==='mal'){ Array.prototype.forEach.call(c.querySelectorAll('[data-n="'+x.n+'"] select, [data-n="'+x.n+'"] input'), function(e){ e.disabled=true; }); return; }
+    var nom=$(p+'-nom'); if(nom) nom.oninput=function(){ x.nombre=nom.value; };
+    _dcCablear(p, x.st, function(){
+      /* elegir la carpeta a mano: ya no es «por el nombre»; y si no iba por falta de carpeta, ya va */
+      x.adivinada=false;
+      var fila=c.querySelector('[data-n="'+x.n+'"]'); if(!fila) return;
+      if(x.estado==='error'){ x.estado='lista'; x.msg=''; var em=fila.querySelector(':scope > .msg'); if(em) em.remove(); }
+      var pill=fila.querySelector('.dc-arch .pill');
+      if(pill) pill.remove();
+      if(!x.st.h){ var np=document.createElement('span'); np.className='pill ojo'; np.textContent='elige su carpeta';
+        var qb=fila.querySelector('.dc-arch .dc-quitar'); fila.querySelector('.dc-arch').insertBefore(np, qb||null); }
+      var b=$('dc-cola-si'); var L=DC.cola.filter(function(y){ return y.estado==='lista' || y.estado==='error'; }).length;
+      if(b){ b.textContent='Subir '+L; b.disabled=!L; }
+    });
+  });
+  Array.prototype.forEach.call(c.querySelectorAll('[data-quita]'), function(b){
+    b.onclick=function(){ var n=+b.getAttribute('data-quita'); DC.cola=DC.cola.filter(function(y){ return y.n!==n; }); _dcPintarCola(); };
+  });
+  $('dc-cola-no').onclick=function(){ DC.cola=DC.cola.filter(function(y){ return y.estado==='sube'; }); _dcPintarCola(); };
+  $('dc-cola-si').onclick=_dcSubirCola;
+}
+/* cada archivo: al balde, y su fila a sst_doc con la hoja de su carpeta */
+function _dcSubirCola(){
+  var listos=DC.cola.filter(function(x){ return x.estado==='lista' || x.estado==='error'; });
+  if(!listos.length) return;
+  listos.forEach(function(x){
+    var r=_dcHoja(x.st), nom=String(x.nombre||'').replace(/\s+/g,' ').trim();
+    if(r.err){ x.estado='error'; x.msg=r.err; return; }
+    if(!nom){ x.estado='error'; x.msg='Ponle un nombre al documento.'; return; }
+    x.hoja=r.h; x.nuevo=r.nuevo; x.nombre=nom.slice(0,120); x.estado='sube'; x.msg='';
+  });
+  var tareas=DC.cola.filter(function(x){ return x.estado==='sube'; });
+  _dcPintarCola();
+  if(!tareas.length){ var m2=$('dc-cola-msg'); if(m2){ m2.className='msg mal'; m2.textContent='Revisa lo que falta en cada archivo.'; } return; }
+  var hechos=0, nuevos=[];
+  tareas.reduce(function(cad, x){
+    return cad.then(function(){
+      return subirArchivoP('docs', x.f).then(function(url){
+        return sbPostP('sst_doc', {empresa:YO.obra.id, hoja:x.hoja, nombre:x.nombre, url:url, nota:null}).then(function(rows){
+          if(Array.isArray(rows) && !rows.length) return Promise.reject('sin_fila');
+          x.estado='ok'; hechos++; if(x.nuevo) nuevos.push(x.nuevo);
+        }, function(e){ x.estado='error'; x.msg=_dcMotivo(e, 'fila'); });
+      }, function(e){ x.estado='error'; x.msg=_dcMotivo(e, 'archivo'); });
+    }).then(function(){ _dcPintarCola(); });
+  }, Promise.resolve()).then(function(){
+    return dcSubcAgregar(nuevos).catch(function(){ return false; });
+  }).then(function(){
+    DC.cola=DC.cola.filter(function(x){ return x.estado!=='ok'; });
+    _dcPintarCola();
+    if(hechos) toast(hechos===1 ? 'Documento subido: ya está en la app, en su carpeta' : hechos+' documentos subidos: ya están en la app, en su carpeta');
+    /* los que se intentaron y fallaron (los que «no van» ya dicen por qué) */
+    var fallaron=DC.cola.filter(function(x){ return x.estado==='error'; }).length, mm=$('dc-cola-msg');
+    if(mm && fallaron){ mm.className='msg mal'; mm.textContent = hechos ? 'Estos no subieron: revisa el aviso de cada uno y vuelve a tocar «Subir».' : 'No subió ninguno: revisa el aviso de cada uno.'; }
+    if(VISTA.recargar) VISTA.recargar(true);
+  });
+}
+function _dcMotivo(e, que){
+  if(e==='muy-grande') return 'Pesa más de 25 MB o es un video: no sube.';
+  if(e===401 || e===403 || e==='sin_fila') return 'Esta cuenta no puede cargar documentos en esta obra.';
+  if(e===413) return 'Pesa demasiado para el almacenamiento.';
+  if(e===400 && que==='archivo') return 'El almacenamiento no aceptó este tipo de archivo.';
+  return que==='archivo' ? 'No se pudo subir el archivo. Revisa tu conexión y vuelve a tocar «Subir».' : 'El archivo subió, pero no se pudo guardar en su carpeta. Vuelve a tocar «Subir».';
+}
+
+/* ── un enlace (un video en YouTube, un archivo en Drive) ─────────── */
+function abrirEnlaceDoc(){
+  var st=_dcEstado('');
+  var cuerpo='<p class="ayuda" style="margin:0 0 14px">Para los videos y lo que ya está en Drive o OneDrive: no ocupa espacio y se abre igual desde el celular.</p>'+
+    '<div class="campo"><label for="de-c">Carpeta</label>'+_dcSelCarpeta('de-c', '', 'Carpeta')+'</div>'+
+    '<div class="dc-extra campo" id="de-ex" hidden></div>'+
+    '<div class="campo"><label for="de-nom">Cómo se llama</label><input id="de-nom" maxlength="120" placeholder="Video de inducción de izaje"></div>'+
+    '<div class="campo"><label for="de-url">Enlace</label><input id="de-url" type="url" placeholder="https://drive.google.com/file/d/…/view"></div>'+
+    '<div class="campo"><label for="de-nota">Nota (opcional)</label><input id="de-nota" maxlength="200" placeholder="Versión 3, aprobada por gerencia"></div>'+
+    '<div class="msg" id="de-msg"></div>';
+  abrirHoja('Agregar un enlace', 'Sale en la app, en la carpeta que elijas', cuerpo, '<button type="button" class="bt" id="de-guardar">Guardar</button>', {sinFoco:true});
+  var aviso=function(){ var m=$('de-msg'); if(m && m.className.indexOf('mal')>-1){ m.className='msg'; m.textContent=''; } };
+  var go=function(){ _dcCablear('de', st, aviso); };
+  if(DC.subc) go(); else dcSubcTraer().then(go, go);
+  setTimeout(function(){ try{ $('de-c').focus(); }catch(e){} }, 30);
+  $('de-guardar').onclick=function(){
+    var m=$('de-msg'), b=this;
+    var r=_dcHoja(st), nom=String($('de-nom').value||'').replace(/\s+/g,' ').trim(), url=String($('de-url').value||'').trim(), nota=String($('de-nota').value||'').trim();
+    if(r.err){ m.className='msg mal'; m.textContent=r.err; return; }
+    if(!nom){ m.className='msg mal'; m.textContent='Ponle un nombre.'; $('de-nom').focus(); return; }
+    if(!/^https?:\/\/\S+\.\S+/i.test(url)){ m.className='msg mal'; m.textContent='El enlace tiene que empezar con https://'; $('de-url').focus(); return; }
+    b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    sbPostP('sst_doc', {empresa:YO.obra.id, hoja:r.h, nombre:nom.slice(0,120), url:url, nota:nota||null}).then(function(rows){
+      if(Array.isArray(rows) && !rows.length) return Promise.reject('sin_fila');
+      return dcSubcAgregar(r.nuevo ? [r.nuevo] : []).catch(function(){ return false; });
+    }).then(function(){
+      cerrarHoja(); toast('Enlace guardado: ya está en la app, en su carpeta');
+      if(VISTA.recargar) VISTA.recargar(true);
+    }, function(e){ b.disabled=false; m.className='msg mal'; m.textContent=_dcMotivo(e, 'fila').replace('El archivo subió, pero no', 'No'); });
+  };
+}
+
+/* ── quitar: de la carpeta, en los dos lados ─────────────────────── */
+function quitarDocP(f){
+  var d=dcCarpetaDe(f.hoja);
+  confirmar('¿Quitar «'+(f.nombre||'este documento')+'»?', 'Sale de la carpeta «'+d.t+'», aquí y en la app de todo el equipo.', {si:'Sí, quitar', mal:true}).then(function(si){
+    if(!si) return;
+    sbDelP('sst_doc?id=eq.'+encodeURIComponent(f.id)).then(function(rows){
+      if(Array.isArray(rows) && !rows.length) return Promise.reject('sin_fila');
+      DC.filas=DC.filas.filter(function(x){ return x.id!==f.id; }); _dcTabla();
+      toast('Quitado de la carpeta');
+      if(VISTA.recargar) VISTA.recargar(true);
+    }).catch(function(e){ toast(e==='sin_fila' ? 'No se pudo quitar: esta cuenta no puede, o ya no estaba.' : 'No se pudo quitar. Revisa tu conexión.'); });
+  });
+}
+
 /* ═══ EL CATÁLOGO DE VISTAS ══════════════════════════════════════ */
 /* 23/09/2026 · el mismo menú para lo mismo, con los nombres de la app.
    Lo que faltaba y la app sí tenía: la matriz de capacitación, lo
@@ -2466,9 +2971,8 @@ var V = {
            pintar:vistaTabla('sst_encuesta', COL.encuestas, {ordenSb:'creado', ordenPor:'fecha', unidad:'encuestas', vacio:'Ninguna encuesta', vacioSub:'Salen solas después de cada evaluación y cada taller.', archivo:'encuestas'})},
   insp:   {id:'insp', g:'Registros', ic:'🔎', n:'Inspecciones', s:'Las que se llenaron en el celular, con lo que encontraron', tablas:['sst_inspeccion'],
            pintar:vistaTabla('sst_inspeccion', COL.inspecciones, {ordenSb:'fecha', ordenPor:'fecha', unidad:'inspecciones', vacio:'Ninguna inspección todavía', vacioSub:'Se llenan en la app, en «Inspecciones».', archivo:'inspecciones'})},
-  docs:   {id:'docs', g:'Registros', ic:'☰', n:'Documentos', s:'Los archivos que la obra subió: RISST, PETS, IPERC, MSDS', tablas:['sst_doc'],
-           pintar:vistaTabla('sst_doc', COL.docs, {extra:'&select=id,hoja,nombre,url,creado&url=not.is.null&order=creado.desc', ordenPor:'creado', unidad:'documentos',
-             vacio:'Ningún archivo subido', vacioSub:'Los documentos se suben desde la app, en «Documentos de la obra».', archivo:'documentos', filtrar:function(f){ return !!f.url; }})},
+  docs:   {id:'docs', g:'Registros', ic:'☰', n:'Documentos', s:'RISST, PETS, IPERC y los demás: súbelos aquí o en la app, son las mismas carpetas', tablas:['sst_doc'],
+           pintar:vistaDocs},
   den:    {id:'denuncias', g:'Canal de denuncia', ic:'🛡', n:'Denuncias', s:'Lo que la gente denunció sin nombre · se responde desde aquí', pintar:vistaDenuncias, tablas:[]},
   acc:    {id:'acc', g:'Indicadores', ic:'⚠', n:'Accidentabilidad', s:'Índices del año con las horas hombre reales', pintar:vistaAccidentes, tablas:['sst_accidente','sst_hht']},
   reportes: {id:'reportes', g:'Registros', ic:'🚨', n:'Reportes', s:'Actos y condiciones subestándares · se cierran desde aquí', tablas:['sst_reporte'],
@@ -3268,6 +3772,8 @@ var GUIA_PASOS = [
     tx:'Con el punto verde, lo que se registra en el celular aparece aquí solo, sin recargar la página.' },
   { sel:'#main .herr input[type=search], #main #mat-q', tit:'Buscar y exportar',
     tx:'Cada tabla tiene su buscador y su botón «Exportar CSV», que se abre en Excel. Toca el título de una columna para ordenarla.' },
+  { sel:'#dc-zona', tit:'Los documentos, desde la computadora',
+    tx:'Arrastra aquí el RISST, los PETS, el IPERC y los demás: cada uno va a su carpeta por el nombre y sale en la app, en esa misma carpeta.' },
   { sel:'#bt-app', tit:'La app, para el campo',
     tx:'ATS, EPP, capacitación y reportes se registran en el celular. Este botón abre la app en otra pestaña; aquí revisas, confirmas y cierras.' },
   { sel:'#bt-guia', tit:'Esta guía',
