@@ -8,11 +8,11 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-  padding:24px;background:#0B2A3A;color:#EAF2F7;
+  padding:24px 16px;background:#0B2A3A;color:#EAF2F7;
   font:16px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
 .caja{width:100%;max-width:430px;text-align:center}
 .marca{font-size:12px;letter-spacing:.18em;color:#F5B700;font-weight:800;margin-bottom:22px}
-h1{font-size:21px;margin:0 0 10px;line-height:1.3}
+h1{font-size:21px;margin:0 0 10px;line-height:1.3;text-wrap:balance}
 p{margin:0 0 8px;color:#A9C2D0;font-size:15px}
 .giro{width:34px;height:34px;margin:26px auto 0;border-radius:50%;
   border:3px solid rgba(255,255,255,.18);border-top-color:#F5B700;animation:g .8s linear infinite}
@@ -24,7 +24,18 @@ p{margin:0 0 8px;color:#A9C2D0;font-size:15px}
 .obra{margin-top:20px;font-size:12.5px;color:#7D97A6;letter-spacing:.04em}
 a.btn{display:block;margin-top:16px;padding:14px;border-radius:12px;background:#F5B700;
   color:#0B2A3A;text-decoration:none;font-weight:800;text-align:center}
-.oculto{display:none}
+/* 30/09/2026 · varios documentos en la carpeta: se elige uno */
+.lista{display:grid;gap:10px;margin-top:18px;text-align:left}
+a.doc{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;text-decoration:none;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#EAF2F7}
+a.doc:active,a.doc:hover{background:rgba(255,255,255,.11)}
+a.doc:focus-visible{outline:2px solid #F5B700;outline-offset:2px}
+a.doc .ic{font-size:22px;line-height:1;flex:0 0 auto}
+a.doc .tx{flex:1;min-width:0;display:grid;gap:2px}
+a.doc b{font-weight:700;overflow-wrap:anywhere}
+a.doc small{color:#8FB0C2;font-size:12.5px}
+a.doc .nuevo{color:#F5B700;font-weight:700}
+a.doc .ir{flex:0 0 auto;color:#F5B700;font-weight:800;font-size:14px}
 </style></head><body>
 <div class="caja">
   <div class="marca">&#9670; OBRASST</div>
@@ -40,54 +51,99 @@ a.btn{display:block;margin-top:16px;padding:14px;border-radius:12px;background:#
   var SB='https://gwjjkknuiumgysezeatz.supabase.co', KEY='sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx';
   var NOMBRE={risst:'Reglamento Interno de SST', pets:'PETS', iperc:'Matriz IPERC',
               msds:'Hojas MSDS', plan:'Plan anual de SST', mapa:'Mapa de riesgos',
-              emergencia:'Plan de emergencia'};
+              emergencia:'Plan de emergencia', politica:'Política de SST',
+              hostigamiento:'Política contra el hostigamiento sexual', organigrama:'Organigrama',
+              comite:'Comité de SST', brigadistas:'Brigadistas', contactos:'Contactos de emergencia'};
   function q(n){ try{ return new URLSearchParams(location.search).get(n)||''; }catch(e){ return ''; } }
-  var cod=q('o'), hoja=q('h');
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function web(u){ return /^https?:\/\//i.test(String(u||'')); }
+  function fecha(f){ var p=String(f||'').split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : ''; }
+  /* 30/09/2026 · el cartel nuevo lleva su propia ficha (?t=), no el código de
+     la obra: el código es la llave para entrar a la obra y un cartel está a
+     la vista de cualquiera. Los de antes (?o=&h=) siguen funcionando. */
+  var tk=q('t'), cod=q('o'), hoja=q('h');
   var cuerpo=document.getElementById('cuerpo'), pie=document.getElementById('pie');
   document.getElementById('quien').textContent = NOMBRE[hoja] || 'Documento de la obra';
-  if(cod) pie.textContent = 'Obra ' + cod;
   function di(titulo, texto, extra){
-    cuerpo.innerHTML = '<h1>'+titulo+'</h1><div class="tarj">'+texto+'</div>'+(extra||'');
+    cuerpo.innerHTML = '<h1>'+esc(titulo)+'</h1>'+(texto ? '<div class="tarj">'+texto+'</div>' : '')+(extra||'');
   }
-  if(!cod || !hoja){
-    di('Este cartel esta incompleto',
-       'Al codigo QR le falta la obra o el documento. Pidele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.');
+  function abrir(url, que){
+    location.replace(url);
+    /* si el navegador bloquea el salto, queda el botón */
+    setTimeout(function(){
+      di('Toca para abrirlo', 'Tu navegador no dejó abrirlo solo.',
+         '<a class="btn" href="'+esc(url)+'" rel="noopener">Abrir '+esc(que||'el documento')+'</a>');
+    }, 1200);
+  }
+  function rpc(fn, cuerpoJ){
+    return fetch(SB+'/rest/v1/rpc/'+fn, {
+      method:'POST', headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+      body: JSON.stringify(cuerpoJ)
+    }).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); });
+  }
+  function sinInternet(){
+    di('Sin internet', 'Necesitas señal para abrir el documento. Vuelve a escanear el cartel cuando tengas datos o wifi.');
+  }
+
+  if(tk){
+    rpc('sst_qr_abrir', {p_t:tk}).then(function(j){
+      j = j || {};
+      var nombre = j.titulo || NOMBRE[j.hoja] || 'Documento de la obra';
+      if(j.obra) pie.textContent = j.obra;
+      if(j.ok){
+        /* lo que abre: el enlace puesto a mano y lo que haya en la carpeta */
+        var items=[];
+        if(web(j.url)) items.push({nombre:nombre, url:j.url, enlace:true});
+        (Array.isArray(j.docs) ? j.docs : []).forEach(function(d){ if(d && web(d.url)) items.push({nombre:d.nombre||nombre, url:d.url, fecha:d.fecha}); });
+        if(items.length===1){ document.getElementById('quien').textContent = items[0].nombre; abrir(items[0].url, nombre); return; }
+        if(items.length>1){
+          var primero=true;
+          cuerpo.innerHTML='<h1>'+esc(nombre)+'</h1><p>Toca el que necesitas.</p><div class="lista">'+
+            items.map(function(it){
+              var marca='';
+              if(!it.enlace && primero){ marca=' · <span class="nuevo">el más reciente</span>'; primero=false; }
+              return '<a class="doc" href="'+esc(it.url)+'" rel="noopener"><span class="ic" aria-hidden="true">'+(it.enlace?'🔗':'📄')+'</span>'+
+                '<span class="tx"><b>'+esc(it.nombre)+'</b><small>'+(it.enlace ? 'Enlace' : ('Subido el '+esc(fecha(it.fecha))))+marca+'</small></span>'+
+                '<span class="ir">Abrir</span></a>';
+            }).join('')+'</div>';
+          return;
+        }
+      }
+      var e=j.error||'';
+      if(e==='no_existe'){
+        di('Este cartel ya no está activo', 'Pídele a tu supervisor que imprima el cartel nuevo desde OBRASST, en «Los QR de tu obra».');
+      } else if(e==='sin_documento'){
+        di('Todavía no está cargado',
+           'Esta obra aún no subió su <b>'+esc(nombre)+'</b> a OBRASST.<br><br>Pídeselo a tu supervisor SSOMA: se sube una vez, en la app o en la web, y este mismo cartel empieza a funcionar.');
+      } else {
+        di('No se pudo abrir', 'Vuelve a escanear el cartel en un momento. Si sigue igual, avísale a tu supervisor.');
+      }
+    }).catch(sinInternet);
     return;
   }
-  fetch(SB+'/rest/v1/rpc/sst_hoja_por_codigo', {
-    method:'POST', headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
-    body: JSON.stringify({p_cod:cod, p_hoja:hoja})
-  }).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
-    .then(function(j){
-      if(j && j.ok && j.url){
-        if(j.obra) pie.textContent = j.obra + ' \u00b7 ' + cod;
-        location.replace(j.url);
-        /* si el navegador bloquea el salto, queda el boton */
-        setTimeout(function(){
-          di('Toca para abrirlo',
-             'Tu navegador no dejo abrirlo solo.',
-             '<a class="btn" href="'+String(j.url).replace(/"/g,'&quot;')+'">Abrir ' +
-             (NOMBRE[hoja]||'el documento') + '</a>');
-        }, 1200);
-        return;
-      }
-      var e=(j&&j.error)||'';
-      if(e==='obra_no_existe'){
-        di('No encuentro esa obra',
-           'El codigo <b>'+cod+'</b> no corresponde a ninguna obra en OBRASST. Puede que el cartel sea de una obra que ya cerro.');
-      } else if(e==='sin_documento'){
-        if(j.obra) pie.textContent = j.obra + ' \u00b7 ' + cod;
-        di('Todavia no esta cargado',
-           'Esta obra aun no subio su <b>'+(NOMBRE[hoja]||'documento')+'</b> a OBRASST.<br><br>Pideselo a tu supervisor SSOMA: se carga una vez y este mismo cartel empieza a funcionar.');
-      } else {
-        di('No se pudo abrir',
-           'Vuelve a escanear el cartel en un momento. Si sigue igual, avisale a tu supervisor.');
-      }
-    })
-    .catch(function(){
-      di('Sin internet',
-         'Necesitas señal para abrir el documento. Vuelve a escanear el cartel cuando tengas datos o wifi.');
-    });
+
+  if(!cod || !hoja){
+    di('Este cartel está incompleto',
+       'Al código QR le falta el documento. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.');
+    return;
+  }
+  rpc('sst_hoja_por_codigo', {p_cod:cod, p_hoja:hoja}).then(function(j){
+    if(j && j.ok && web(j.url)){
+      if(j.obra) pie.textContent = j.obra;
+      abrir(j.url, NOMBRE[hoja]);
+      return;
+    }
+    var e=(j&&j.error)||'';
+    if(e==='obra_no_existe'){
+      di('No encuentro esa obra', 'Este cartel no corresponde a ninguna obra en OBRASST. Puede que sea de una obra que ya cerró.');
+    } else if(e==='sin_documento'){
+      if(j.obra) pie.textContent = j.obra;
+      di('Todavía no está cargado',
+         'Esta obra aún no subió su <b>'+esc(NOMBRE[hoja]||'documento')+'</b> a OBRASST.<br><br>Pídeselo a tu supervisor SSOMA: se carga una vez y este mismo cartel empieza a funcionar.');
+    } else {
+      di('No se pudo abrir', 'Vuelve a escanear el cartel en un momento. Si sigue igual, avísale a tu supervisor.');
+    }
+  }).catch(sinInternet);
 })();
 </script>
 </body></html>
