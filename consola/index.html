@@ -174,6 +174,8 @@ textarea{line-height:1.5; resize:vertical; min-height:84px}
 .bloque-cab h2{font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); font-weight:600}
 .bloque-cab .sub{font-size:13px; color:var(--gris2)}
 .rej{display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr))}
+/* 29/09/2026 · las seis cifras de «Empresas y planes» en una fila (la sexta quedaba sola abajo) */
+@media (min-width:421px){ #emp-cifras{grid-template-columns:repeat(auto-fit, minmax(140px, 1fr))} }
 .cifra{background:var(--panel); border:1px solid var(--raya); border-radius:12px; padding:15px 16px 14px; display:flex; flex-direction:column; gap:5px; min-width:0;
   text-align:left; font:inherit; color:inherit}
 button.cifra{cursor:pointer; -webkit-appearance:none; appearance:none; transition:border-color .12s, box-shadow .12s}
@@ -280,6 +282,10 @@ td .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px}
 .datos dd{margin:0; color:var(--texto); min-width:0; overflow-wrap:anywhere}
 .seccion{margin:22px 0 0}
 .seccion h3{font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); font-weight:600; margin:0 0 10px}
+.linea{list-style:none; margin:0; padding:0 0 0 14px; border-left:2px solid var(--raya); display:grid; gap:10px; font-size:13.5px; line-height:1.45}
+.linea li{position:relative}
+.linea li::before{content:''; position:absolute; left:-20px; top:6px; width:10px; height:10px; border-radius:50%; background:var(--panel); box-shadow:inset 0 0 0 2px var(--casco)}
+.linea .sub{display:block; color:var(--gris); font-size:12.5px; margin-top:2px}
 .mini{width:100%; font-size:13px}
 .mini td, .mini th{padding:7px 10px}
 .mini th{cursor:default}
@@ -459,14 +465,22 @@ function fechaLima(iso){
   catch(e){ return fechaLarga(iso); }
 }
 function fechaHora(iso){ var h=horaLima(iso); return fechaLima(iso)+(h?' '+h:''); }
+/* 29/09/2026 · «1 inspección», no «1 inspecciones» */
+var UNIDAD_1 = {'códigos':'código', 'dadas de baja':'dada de baja', 'empresas':'empresa', 'fallas':'falla', 'pagos':'pago', 'capacitaciones':'capacitación',
+  'constancias':'constancia', 'denuncias':'denuncia', 'difusiones':'difusión', 'documentos':'documento', 'encuestas':'encuesta', 'entregas':'entrega',
+  'eventos':'evento', 'inspecciones':'inspección', 'papeles':'papel', 'personas':'persona', 'programadas':'programada', 'reportes':'reporte', 'filas':'fila'};
+function unidadN(n, u){ u = u || 'filas'; return +n === 1 ? (UNIDAD_1[u] || u) : u; }
 function hace(iso){
   if(!iso) return '';
   var ms = Date.now() - new Date(iso).getTime(); if(isNaN(ms)) return '';
   var m = Math.round(ms/60000);
   if(m < 1) return 'ahora'; if(m < 60) return 'hace '+m+' min';
   var h = Math.round(m/60); if(h < 24) return 'hace '+h+' h';
-  var d = Math.round(h/24); if(d < 30) return 'hace '+d+' d';
-  return fechaLarga(iso);
+  var d = Math.round(h/24); if(d < 45) return 'hace '+d+' d';
+  /* 29/09/2026 · antes devolvía la fecha cortando el texto (en UTC): la lista
+     mostraba «26/08/2026» y debajo «27/08/2026» para la misma empresa */
+  var me = Math.round(d/30.44); if(me < 12) return 'hace '+me+(me===1?' mes':' meses');
+  var a = Math.round(d/365.25); return 'hace '+a+(a===1?' año':' años');
 }
 var MES_N = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 function nombreMes(ym){ var p=String(ym||'').split('-'); var m=MES_N[(+p[1]||1)-1]||''; return m.charAt(0).toUpperCase()+m.slice(1)+' '+(p[0]||''); }
@@ -657,7 +671,7 @@ function tabla(caja, cols, filas, op){
   var id = caja.id;
   var h='<div class="tarj-cab"><div class="herr">'+
     (op.sinBuscar ? '' : '<input type="search" placeholder="Buscar…" value="'+esc(est.q)+'" id="'+id+'-q" aria-label="Buscar en la lista">')+
-    '<span class="cuenta-f">'+lista.length+(lista.length!==filas.length?' de '+filas.length:'')+' '+esc(op.unidad||'filas')+'</span></div>'+
+    '<span class="cuenta-f">'+lista.length+(lista.length!==filas.length?' de '+filas.length:'')+' '+esc(unidadN(lista.length!==filas.length?filas.length:lista.length, op.unidad))+'</span></div>'+
     '<div class="acciones">'+(op.extraCab||'')+'<button type="button" class="bt sec chico" id="'+id+'-csv">Exportar CSV</button></div></div>';
   if(!lista.length){
     h+='<div class="vacio"><b>'+esc(op.vacio||'Nada todavía')+'</b>'+esc(op.vacioSub||'')+'</div>';
@@ -1049,7 +1063,10 @@ function vistaVentas(caja){
       var soloPen = +montos.PEN||0, prom = t.aprobadas ? soloPen/t.aprobadas : 0;
       var PER=[['mes','Este mes'],['antes','El mes pasado'],['90','Últimos 90 días'],['todo','Todo']];
       var EST=[['aprobadas','Aprobadas'],['pendientes','Sin terminar'],['rechazadas','Rechazadas'],['todas','Todas']];
-      var h='<div class="filtros"><div class="seg" role="tablist" aria-label="Periodo" id="ven-per">'+PER.map(function(x){
+      var h='<div class="aviso" style="margin:0 0 16px"><b>Cómo le llega el plan al que paga.</b> Web y tienda de Descarga Nomás (Mercado Pago): al aprobarse el pago, '+
+          'el servidor crea en ese momento un código nuevo con el plan y los días que pagó, y se lo muestra en la página de pago; por correo también, si en Supabase ▸ Edge Functions ▸ Secrets '+
+          'están <b>RESEND_API_KEY</b> y <b>CORREO_DE</b>. Google Play no lleva código: el plan se activa solo en su empresa.</div>'+
+        '<div class="filtros"><div class="seg" role="tablist" aria-label="Periodo" id="ven-per">'+PER.map(function(x){
           return '<button type="button" role="tab" data-p="'+x[0]+'" aria-selected="'+(VEN.per===x[0])+'" class="'+(VEN.per===x[0]?'on':'')+'">'+esc(x[1])+'</button>'; }).join('')+'</div>'+
         '<div class="seg" role="tablist" aria-label="Estado" id="ven-est">'+EST.map(function(x){
           return '<button type="button" role="tab" data-e="'+x[0]+'" aria-selected="'+(VEN.est===x[0])+'" class="'+(VEN.est===x[0]?'on':'')+'">'+esc(x[1])+'</button>'; }).join('')+'</div></div>'+
@@ -1123,9 +1140,30 @@ function abrirVenta(x){
 /* ══ 4 · LAS EMPRESAS Y SUS PLANES ═══════════════════════════════════
    Cada empresa madre con el plan que tiene HOY (un plan vencido cuenta
    como LITE), su mes gratis, sus obras, su gente y su dueño. Tocar una
-   abre el detalle: miembros, códigos, meses gratis y fallas. */
+   abre el detalle: de dónde sale la fecha, miembros, códigos, meses
+   gratis y fallas; y desde ahí se corrige el vencimiento o se da de baja
+   la que nadie usa (29/09/2026, sql/2026-10-13-consola-corregir-y-baja). */
 var EMP = { q:'', filtro:'todas', r:null, tBusca:null };
 var EMP_EST = { vigente:['Con plan','ok'], prueba:['Mes gratis','casco'], vencido:['Vencido','ojo'], lite:['LITE','gris'] };
+/* 29/09/2026 · por qué el servidor no deja dar de baja una empresa */
+var BAJA_NO = {
+  tiene_cuentas:'tiene cuentas activas. Si ya no la usan, primero tienen que salir de la empresa.',
+  tiene_trabajadores:'tiene trabajadores registrados.',
+  tiene_codigos:'tiene códigos activados: son el registro de lo que se pagó y no se borran.',
+  tiene_compras:'tiene compras de Google Play: son el registro de lo que se pagó y no se borran.',
+  tiene_mes_gratis:'usó su mes gratis: queda como registro, para que no se repita con el mismo RUC.'
+};
+/* el día (AAAA-MM-DD) de una fecha con hora, en Lima */
+function diaLima(iso){
+  var d=new Date(iso); if(isNaN(d.getTime())) return String(iso||'').slice(0,10);
+  try{ return new Intl.DateTimeFormat('en-CA', {timeZone:'America/Lima', year:'numeric', month:'2-digit', day:'2-digit'}).format(d); }
+  catch(e){ return String(iso).slice(0,10); }
+}
+/* «sst_constancia: 2» → «2 constancias» (lo que se guardó al darla de baja) */
+function _empGuardado(g){
+  var k=Object.keys(g||{}); if(!k.length) return 'Solo la empresa';
+  return k.map(function(t){ return g[t]+' en '+String(t).replace(/^sst_/,'').replace(/_/g,' '); }).join(' · ');
+}
 function vistaEmpresas(caja){
   cargando(caja);
   function pinta(){
@@ -1136,7 +1174,7 @@ function vistaEmpresas(caja){
       var armado = !!$('emp-q');
       if(!armado){
         caja.innerHTML =
-          '<div class="herr" style="margin:0 0 14px"><input type="search" id="emp-q" placeholder="Buscar por nombre, RUC, código o correo del dueño" aria-label="Buscar empresas" style="width:min(460px,100%)" value="'+esc(EMP.q)+'"></div>'+
+          '<div class="herr" style="margin:0 0 14px"><input type="search" id="emp-q" placeholder="Buscar por nombre, RUC, código o correo" aria-label="Buscar empresas" style="width:min(460px,100%)" value="'+esc(EMP.q)+'"></div>'+
           '<div class="rej" id="emp-cifras" style="margin-bottom:18px"></div><div class="tarj" id="t-empresas"></div>';
         $('emp-q').oninput=function(){
           var v=this.value; clearTimeout(EMP.tBusca);
@@ -1144,11 +1182,13 @@ function vistaEmpresas(caja){
         };
       }
       var F=[['todas','Todas', t.n||0], ['vigente','Con plan', pe.vigente||0], ['prueba','En su mes gratis', pe.prueba||0], ['vencido','Plan vencido', pe.vencido||0], ['lite','LITE', pe.lite||0]];
+      if(t.de_baja!=null) F.push(['baja','Dadas de baja', t.de_baja||0]);
       $('emp-cifras').innerHTML = F.map(function(x){
         return '<button type="button" class="cifra'+(EMP.filtro===x[0]?' sel':'')+'" data-f="'+x[0]+'" aria-pressed="'+(EMP.filtro===x[0])+'"'+(EMP.filtro===x[0]?' style="border-color:var(--casco);box-shadow:0 0 0 1px var(--casco)"':'')+'>'+
           '<span class="et">'+esc(x[1])+'</span><span class="v">'+num(x[2])+'</span></button>';
       }).join('');
       [].forEach.call(document.querySelectorAll('#emp-cifras [data-f]'), function(b){ b.onclick=function(){ EMP.filtro=b.getAttribute('data-f'); pinta(); }; });
+      if(EMP.filtro==='baja'){ pintaBajas(); return; }
       var L=(r.lista||[]).filter(function(x){ return EMP.filtro==='todas' || x.estado===EMP.filtro; });
       var cols=[
         {k:'nombre', t:'Empresa', h:function(x){ return '<b>'+esc(x.nombre||'—')+'</b><span class="sub">'+esc([x.ruc?('RUC '+x.ruc):'', PAIS_N[x.pais]||x.pais].filter(Boolean).join(' · '))+'</span>'; },
@@ -1156,14 +1196,16 @@ function vistaEmpresas(caja){
         {k:'plan_hoy', t:'Plan hoy', h:function(x){
            var e=EMP_EST[x.estado]||['—','gris'];
            var pie = x.estado==='vencido' ? 'Tenía '+planN(x.plan)+' · venció el '+fechaLarga(x.vence)
-                   : (x.vence && x.estado!=='lite' ? 'Vence el '+fechaLarga(x.vence) : '');
+                   : (x.vence && x.estado!=='lite' ? 'Vence el '+fechaLarga(x.vence) : (x.estado==='vigente' ? 'Sin fecha de vencimiento' : ''));
            return '<b>'+esc(planN(x.plan_hoy))+'</b> <span class="pill '+e[1]+'">'+esc(e[0])+'</span>'+(pie?'<span class="sub">'+esc(pie)+'</span>':''); },
          v:function(x){ return planN(x.plan_hoy)+' · '+((EMP_EST[x.estado]||[x.estado])[0])+(x.vence?' · '+fechaLarga(x.vence):''); }},
         {k:'obras', t:'Obras', num:true, h:function(x){ return num(1+(+x.obras||0)); }, v:function(x){ return 1+(+x.obras||0); }},
         {k:'gestores', t:'Gestores', num:true, h:function(x){ return num(x.gestores||0)+'<span class="sub">de '+num(x.tope_gestores||1)+'</span>'; }},
         {k:'trabajadores', t:'Trabajadores', num:true},
-        {k:'dueno', t:'Dueño', h:function(x){ return x.dueno ? esc(x.dueno) : '<span class="gris-t">Sin dueño</span>'; }},
-        {k:'fecha', t:'Alta', h:function(x){ return esc(fechaLima(x.fecha))+'<span class="sub">'+esc(hace(x.fecha))+'</span>'; }}
+        {k:'dueno', t:'Dueño', h:function(x){ return (x.dueno ? esc(x.dueno) : '<span class="gris-t">Sin dueño</span>')+
+           (x.ultimo_ingreso ? '<span class="sub">su gente entró '+esc(hace(x.ultimo_ingreso))+'</span>' : ''); },
+         v:function(x){ return (x.dueno||'')+(x.ultimo_ingreso?' · entró '+fechaHora(x.ultimo_ingreso):''); }},
+        {k:'fecha', t:'Alta', h:function(x){ return esc(fechaLima(x.fecha))+'<span class="sub">'+esc(hace(x.fecha))+'</span>'; }, v:function(x){ return x.fecha||''; }}
       ];
       var tc=$('t-empresas'); tc._est = tc._est || {q:'', ord:'fecha', asc:false};
       tabla(tc, cols, L, {orden:'fecha', asc:false, unidad:'empresas', archivo:'empresas-obrasst', alClic:abrirEmpresa, sinBuscar:true,
@@ -1171,18 +1213,154 @@ function vistaEmpresas(caja){
         vacioSub: EMP.q ? 'Prueba con parte del nombre, el RUC sin guiones o el correo del dueño.' : ''});
     }, function(cod){ noAbre(caja, null, cod, '2026-10-12-consola'); });
   }
+  /* las dadas de baja: se guardó todo y se pueden devolver */
+  function pintaBajas(){
+    var tc=$('t-empresas'); tc.innerHTML='<div class="vacio">Cargando…</div>';
+    sbRpc('sst_admin_empresas_de_baja', {}).then(function(r){
+      if(!r || !r.ok){ tc.innerHTML='<div class="vacio"><b>No se pudo abrir</b>'+esc(r&&r.motivo==='no_eres_admin'?'Esta cuenta no es la del creador.':'Falta el SQL «2026-10-13-consola-corregir-y-baja».')+'</div>'; return; }
+      var q=String(EMP.q||'').toLowerCase();
+      var L=(r.lista||[]).filter(function(x){ return !q || (String(x.nombre||'')+' '+String(x.codigo||'')).toLowerCase().indexOf(q)>=0; });
+      var cols=[
+        {k:'nombre', t:'Empresa', h:function(x){ return '<b>'+esc(x.nombre||'—')+'</b><span class="sub">'+esc(['código '+(x.codigo||'—'), x.obras ? (x.obras===1?'1 obra':x.obras+' obras') : ''].filter(Boolean).join(' · '))+'</span>'; },
+         v:function(x){ return (x.nombre||'')+' '+(x.codigo||''); }},
+        {k:'plan', t:'Tenía', h:function(x){ return esc(planN(x.plan))+(x.vence?'<span class="sub">vencía el '+esc(fechaLarga(x.vence))+'</span>':''); }, v:function(x){ return planN(x.plan); }},
+        {k:'baja', t:'Dada de baja', h:function(x){ return esc(fechaHora(x.baja))+(x.admin?'<span class="sub">'+esc(x.admin)+'</span>':''); }, v:function(x){ return x.baja||''; }},
+        {k:'motivo', t:'Por qué', h:function(x){ return x.motivo ? esc(x.motivo) : '<span class="gris-t">—</span>'; }},
+        {k:'guardado', t:'Se guardó', h:function(x){ return esc(_empGuardado(x.guardado)); }, v:function(x){ return _empGuardado(x.guardado); }},
+        {k:'acc', t:'', acc:true, h:function(){ return '<button type="button" class="bt sec chico" data-acc="devolver">Devolver</button>'; }}
+      ];
+      tc._est = {q:'', ord:'baja', asc:false};
+      tabla(tc, cols, L, {orden:'baja', asc:false, unidad:'dadas de baja', archivo:'empresas-de-baja-obrasst', sinBuscar:true,
+        vacio:'Ninguna empresa dada de baja', vacioSub:'Se da de baja desde el detalle de la empresa, si nadie la usa.',
+        accion:function(a, x, b){
+          if(a!=='devolver') return;
+          confirmar('Devolver «'+(x.nombre||'')+'»', 'Vuelve tal como estaba, con su código '+(x.codigo||'')+' y lo que se guardó.', {si:'Sí, devolverla'}).then(function(si){
+            if(!si) return;
+            b.disabled=true;
+            sbRpc('sst_admin_empresa_devolver', {p_id:x.id}).then(function(j){
+              if(j && j.ok){ toast('«'+(x.nombre||'')+'» volvió.'); pinta(); return; }
+              b.disabled=false;
+              toast(j&&j.motivo==='codigo_ocupado' ? 'No se puede: otra empresa ya tiene su código ('+(x.codigo||'')+').' : 'No se pudo devolver. Inténtalo otra vez.');
+            }, function(){ b.disabled=false; toast('No se pudo devolver: revisa tu conexión.'); });
+          });
+        }});
+    }, function(){ tc.innerHTML='<div class="vacio"><b>No se pudo abrir</b>Revisa tu conexión.</div>'; });
+  }
   VISTA.recargar=function(silencio){ if(silencio && HOJA.abierta) return; pinta(); }; pinta();
 }
 var ROL_N = { dueno:'Dueño', gestor:'Gestor', trabajador:'Trabajador' };
+/* 29/09/2026 · Marcelo: «Climaxi vence en octubre, cuando activé su plan gratis
+   en agosto, no entiendo». La fecha sale de lo que se fue sumando: el mes
+   gratis, cada código (si quedaban días, se suman al final), Google Play y lo
+   que se corrigió a mano. Aquí se cuenta en orden. */
+function _empLineaTiempo(r){
+  var e=r.empresa||{}, ev=[];
+  var t=function(iso, soloDia){ var d=new Date(soloDia ? String(iso).slice(0,10)+'T00:00:00-05:00' : iso); return isNaN(d.getTime()) ? 0 : d.getTime(); };
+  (r.pruebas||[]).forEach(function(p){ if(p.desde) ev.push({t:t(p.desde, true), tipo:'prueba', p:p}); });
+  (r.codigos||[]).forEach(function(k){ if(k.usado_en) ev.push({t:t(k.usado_en), tipo:'codigo', k:k}); });
+  (r.compras||[]).forEach(function(k){ if(k.fecha) ev.push({t:t(k.fecha), tipo:'play', k:k}); });
+  (r.registro||[]).forEach(function(g){ if(g.accion==='vence_corregido') ev.push({t:t(g.cuando), tipo:'corregido', g:g}); });
+  if(!ev.length) return '';
+  ev.sort(function(a,b){ return a.t-b.t; });
+  var fin=null, li=[];
+  ev.forEach(function(v){
+    if(v.tipo==='prueba'){
+      fin=String(v.p.hasta||'').slice(0,10);
+      li.push('<li><b>Mes gratis</b> (SSOMA), del '+esc(fechaLarga(v.p.desde))+' al '+esc(fechaLarga(v.p.hasta))+
+        (v.p.correo?'<span class="sub">Lo activó '+esc(v.p.correo)+'</span>':'')+'</li>');
+    } else if(v.tipo==='codigo'){
+      var dia=diaLima(v.k.usado_en), dias=+v.k.dias||30, desde=(fin && fin>dia) ? fin : dia, hasta=sumarDias(desde, dias);
+      li.push('<li><b>Código de '+esc(planN(v.k.plan))+'</b>, '+(dias===365?'un año':(dias===30?'30 días':dias+' días'))+' ('+esc(COD_ORIGEN[v.k.origen]||v.k.origen||'')+'), activado el '+esc(fechaLarga(dia))+
+        '<span class="sub">'+(desde!==dia ? 'Todavía le quedaban días: se sumaron al final, del '+esc(fechaLarga(desde))+' al '+esc(fechaLarga(hasta))
+                                       : 'Del '+esc(fechaLarga(dia))+' al '+esc(fechaLarga(hasta)))+'</span></li>');
+      fin=hasta;
+    } else if(v.tipo==='play'){
+      li.push('<li><b>Google Play · '+esc(planN(v.k.plan))+'</b>, comprado el '+esc(fechaLima(v.k.fecha))+(v.k.vence?'<span class="sub">Hasta el '+esc(fechaLarga(v.k.vence))+' (se renueva sola mientras pague)</span>':'')+'</li>');
+      if(v.k.vence) fin=String(v.k.vence).slice(0,10);
+    } else {
+      var a=(v.g.antes||{}).vence, d=(v.g.despues||{}).vence;
+      li.push('<li><b>Corregido a mano</b> el '+esc(fechaLima(v.g.cuando))+': vence el '+esc(fechaLarga(d))+(a?' (antes, el '+esc(fechaLarga(a))+')':'')+
+        '<span class="sub">«'+esc(v.g.motivo||'')+'»'+(v.g.admin?' · '+esc(v.g.admin):'')+'</span></li>');
+      fin=d ? String(d).slice(0,10) : fin;
+    }
+  });
+  var real=e.vence ? String(e.vence).slice(0,10) : null;
+  var nota = (real && fin && real!==fin) ? '<p class="ayuda" style="margin:8px 0 0">La fecha de hoy ('+esc(fechaLarga(real))+') no sale de lo de arriba: se cambió por otro lado (el editor SQL).</p>' : '';
+  return '<div class="seccion"><h3>De dónde sale la fecha</h3><ol class="linea">'+li.join('')+'</ol>'+nota+'</div>';
+}
+var REG_ACC = { vence_corregido:'Vencimiento corregido', empresa_baja:'Dada de baja', empresa_devuelta:'Devuelta' };
+function _empRegistro(r){
+  var G=r.registro||[]; if(!G.length) return '';
+  return '<div class="seccion"><h3>Lo que se hizo desde la consola</h3><ul class="linea">'+G.map(function(g){
+    var det = g.accion==='vence_corregido' ? 'del '+fechaLarga((g.antes||{}).vence)+' al '+fechaLarga((g.despues||{}).vence) : '';
+    return '<li><b>'+esc(REG_ACC[g.accion]||g.accion)+'</b>'+(det?' · '+esc(det):'')+'<span class="sub">'+esc(fechaHora(g.cuando))+(g.admin?' · '+esc(g.admin):'')+(g.motivo?' · «'+esc(g.motivo)+'»':'')+'</span></li>';
+  }).join('')+'</ul></div>';
+}
+function _empAcciones(r){
+  var e=r.empresa||{}, no=(r.baja||{}).por_que_no, puedeCorregir=e.plan && e.plan!=='lite';
+  var h='<h3>Acciones</h3><div class="acciones">'+
+    (puedeCorregir?'<button type="button" class="bt sec" id="em-corregir">Corregir el vencimiento</button>':'')+
+    (no?'':'<button type="button" class="bt mal" id="em-baja">Dar de baja esta empresa</button>')+'</div>';
+  if(no) h+='<p class="ayuda" style="margin:10px 0 0">No se puede dar de baja: '+esc(BAJA_NO[no]||no)+'</p>';
+  if(!puedeCorregir && no) h='<h3>Acciones</h3><p class="ayuda" style="margin:0">Es LITE (no tiene vencimiento que corregir) y no se puede dar de baja: '+esc(BAJA_NO[no]||no)+'</p>';
+  return h;
+}
+function _empCablearAcciones(x, r){
+  var e=r.empresa||{}, caja=$('em-acciones'); if(!caja) return;
+  function volver(){ caja.innerHTML=_empAcciones(r); _empCablearAcciones(x, r); }
+  var bc=$('em-corregir');
+  if(bc) bc.onclick=function(){
+    caja.innerHTML='<h3>Corregir el vencimiento</h3>'+
+      '<div class="campo"><label for="em-vence">Nueva fecha de vencimiento</label><input type="date" id="em-vence" min="2025-01-01" value="'+esc(String(e.vence||hoyLima()).slice(0,10))+'"></div>'+
+      '<div class="campo"><label for="em-motivo">Por qué (queda en el registro)</label><textarea id="em-motivo" rows="2" maxlength="300" placeholder="Ej.: se quitan los 30 días del código que activé de prueba"></textarea></div>'+
+      '<p class="msg" id="em-msg" role="status"></p>'+
+      '<div class="acciones"><button type="button" class="bt sec" id="em-cancelar">Cancelar</button><button type="button" class="bt" id="em-guardar">Guardar</button></div>';
+    $('em-cancelar').onclick=volver;
+    setTimeout(function(){ try{ $('em-vence').focus(); }catch(_f){} }, 30);
+    $('em-guardar').onclick=function(){
+      var v=$('em-vence').value, m=$('em-motivo').value.trim(), msg=$('em-msg'), b=this;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(v)){ msg.className='msg mal'; msg.textContent='Elige la fecha.'; return; }
+      if(m.length<5){ msg.className='msg mal'; msg.textContent='Escribe por qué (queda en el registro).'; $('em-motivo').focus(); return; }
+      b.disabled=true; msg.className='msg gris'; msg.textContent='Guardando…';
+      sbRpc('sst_admin_plan_corregir', {p_id:e.id, p_vence:v, p_motivo:m}).then(function(j){
+        if(j && j.ok){ toast('Listo: ahora vence el '+fechaLarga(v)+'.'); abrirEmpresa(x); if(VISTA.recargar) VISTA.recargar(); return; }
+        b.disabled=false; msg.className='msg mal';
+        msg.textContent = ({sin_motivo:'Escribe por qué (queda en el registro).', sin_fecha:'Elige la fecha.', fecha_rara:'Esa fecha no parece bien: revisa el año.',
+                            es_lite:'Es LITE: no tiene vencimiento que corregir.', es_la_misma:'Ya vence ese día.', no_eres_admin:'Esta cuenta no es la del creador.'})[j&&j.motivo] ||
+                          'No se pudo guardar. Si falta el SQL «2026-10-13-consola-corregir-y-baja», córrelo primero.';
+      }, function(){ b.disabled=false; msg.className='msg mal'; msg.textContent='No se pudo guardar: revisa tu conexión.'; });
+    };
+  };
+  var bb=$('em-baja');
+  if(bb) bb.onclick=function(){
+    caja.innerHTML='<h3>Dar de baja «'+esc(e.nombre||'')+'»</h3>'+
+      '<p style="margin:0 0 8px">Deja de aparecer en la consola, y su código <span class="mono">'+esc(e.codigo||'')+'</span> ya no deja entrar a nadie. Nadie la usa: no tiene cuentas activas, trabajadores, códigos, compras ni mes gratis.</p>'+
+      '<p class="ayuda" style="margin:0 0 12px">Se guarda todo: si fue un error, se devuelve desde «Dadas de baja».</p>'+
+      '<div class="campo"><label for="em-bmotivo">Por qué (opcional)</label><input id="em-bmotivo" maxlength="200" placeholder="Ej.: empresa de prueba, sin dueño"></div>'+
+      '<p class="msg" id="em-msg" role="status"></p>'+
+      '<div class="acciones"><button type="button" class="bt sec" id="em-cancelar">Cancelar</button><button type="button" class="bt mal" id="em-bsi">Sí, darla de baja</button></div>';
+    $('em-cancelar').onclick=volver;
+    $('em-bsi').onclick=function(){
+      var b=this, msg=$('em-msg'); b.disabled=true; msg.className='msg gris'; msg.textContent='Dando de baja…';
+      sbRpc('sst_admin_empresa_baja', {p_id:e.id, p_motivo:$('em-bmotivo').value.trim()||null}).then(function(j){
+        if(j && j.ok){ cerrarHoja(); toast('«'+(e.nombre||'')+'» se dio de baja. Si fue un error, está en «Dadas de baja».'); if(VISTA.recargar) VISTA.recargar(); return; }
+        b.disabled=false; msg.className='msg mal';
+        msg.textContent = j && BAJA_NO[j.motivo] ? 'No se puede: '+BAJA_NO[j.motivo] :
+                          (j && j.motivo==='es_una_obra' ? 'Es una obra: se da de baja la empresa madre.' :
+                          'No se pudo. Si falta el SQL «2026-10-13-consola-corregir-y-baja», córrelo primero.');
+      }, function(){ b.disabled=false; msg.className='msg mal'; msg.textContent='No se pudo: revisa tu conexión.'; });
+    };
+  };
+}
 function abrirEmpresa(x){
   abrirHoja(x.nombre||'Empresa', planN(x.plan_hoy)+' · '+((EMP_EST[x.estado]||[x.estado])[0]), '<div class="vacio">Cargando…</div>',
     '<button type="button" class="bt sec" id="em-cerrar">Cerrar</button>');
   $('em-cerrar').onclick=cerrarHoja;
   sbRpc('sst_admin_empresa', {p_id:x.id}).then(function(r){
     var c=$('hoja-cuerpo'); if(!c) return;
-    if(!r || !r.ok){ c.innerHTML='<div class="vacio"><b>No se pudo abrir</b>'+esc(r&&r.motivo==='no_existe'?'Esa empresa ya no está.':'Inténtalo otra vez.')+'</div>'; return; }
+    if(!r || !r.ok){ c.innerHTML='<div class="vacio"><b>No se pudo abrir</b>'+esc(r&&r.motivo==='no_existe'?'Esa empresa ya no está (¿se dio de baja?).':'Inténtalo otra vez.')+'</div>'; return; }
     var e=r.empresa||{}, hoy=r.hoy||hoyLima();
-    var vence = e.vence ? ((String(e.vence)<hoy?'venció el ':'vence el ')+fechaLarga(e.vence)) : '';
+    var vence = e.vence ? ((String(e.vence)<hoy?'venció el ':'vence el ')+fechaLarga(e.vence)) : (e.plan && e.plan!=='lite' ? 'sin fecha de vencimiento' : '');
     var h='<dl class="datos">'+
       fila('Plan hoy', esc(planN(e.plan_hoy))+(e.plan && e.plan!==e.plan_hoy ? ' <span class="gris-t">(tenía '+esc(planN(e.plan))+')</span>' : ''))+
       fila('Vence', esc(vence))+
@@ -1192,13 +1370,15 @@ function abrirEmpresa(x){
       fila('Rubro', esc(rubroN(e.sector)))+
       fila('Código de la empresa', e.codigo ? '<span class="mono">'+esc(e.codigo)+'</span>' : '')+
       fila('Alta', esc(fechaHora(e.fecha)))+
+      ('ultimo_ingreso' in r ? fila('Último ingreso', r.ultimo_ingreso ? esc(fechaHora(r.ultimo_ingreso))+' <span class="gris-t">('+esc(hace(r.ultimo_ingreso))+')</span>' : '<span class="gris-t">Nadie de su gente entró</span>') : '')+
       '</dl>';
+    h+=_empLineaTiempo(r);
     var O=r.obras||[];
     h+='<div class="seccion"><h3>Obras ('+(1+O.length)+')</h3><p style="margin:0">'+esc(e.nombre)+' <span class="gris-t">(la madre)</span>'+
       O.map(function(o){ return '<br>'+esc(o.nombre)+(o.codigo?' <span class="mono gris-t">'+esc(o.codigo)+'</span>':''); }).join('')+'</p></div>';
     var M=r.miembros||[];
     h+='<div class="seccion"><h3>Su gente con cuenta ('+M.length+')</h3>'+(M.length ? '<div class="tabla-caja"><table class="mini"><thead><tr><th>Cuenta</th><th>Rol</th><th>Dónde</th></tr></thead><tbody>'+
-      M.map(function(m){ return '<tr><td>'+esc(m.correo||'—')+(m.estado!=='activo'?' <span class="pill gris">'+esc(m.estado)+'</span>':'')+'</td><td>'+esc(ROL_N[m.rol]||m.rol||'')+
+      M.map(function(m){ return '<tr><td>'+esc(m.correo||'—')+(m.estado!=='activo'?' <span class="pill gris">'+esc(m.estado==='salio'?'salió':m.estado)+'</span>':'')+'</td><td>'+esc(ROL_N[m.rol]||m.rol||'')+
         (m.dueno_hasta && new Date(m.dueno_hasta)<new Date() ? '<span class="sub">ya no es dueño</span>' : '')+'</td><td>'+esc(m.es_madre?'La madre':(m.obra||''))+'</td></tr>'; }).join('')+
       '</tbody></table></div>' : '<p class="gris-t" style="margin:0">Nadie todavía.</p>')+'</div>';
     var C=r.codigos||[];
@@ -1213,8 +1393,11 @@ function abrirEmpresa(x){
     if(FL.length) h+='<div class="seccion"><h3>Fallas que reportaron ('+FL.length+')</h3><ul class="lista-ult" style="margin:0 -22px">'+FL.map(function(f){
       return '<li><button type="button" data-falla="'+esc(f.id)+'" style="padding:9px 22px"><span class="tx"><b>'+esc(f.codigo)+' · '+esc(FALLA_TIPO[f.tipo]||f.tipo)+'</b><small>'+esc(f.correo||'')+'</small></span>'+
         '<span class="der">'+pillFalla(f.estado)+'<br>'+esc(fechaLima(f.creado))+'</span></button></li>'; }).join('')+'</ul></div>';
+    h+=_empRegistro(r);
+    if('baja' in r) h+='<div class="seccion" id="em-acciones">'+_empAcciones(r)+'</div>';
     c.innerHTML=h;
     [].forEach.call(c.querySelectorAll('[data-falla]'), function(b){ b.onclick=function(){ cerrarHoja(); FALLAC.abrir=b.getAttribute('data-falla'); FALLAC.filtro='todas'; navegar('fallas'); }; });
+    _empCablearAcciones(x, r);
     var dueno=(M.filter(function(m){ return m.rol==='dueno' && m.es_madre && m.estado==='activo'; })[0]||{}).correo || x.dueno || '';
     var pie=$('hoja').querySelector('.hoja-pie');
     if(pie){
@@ -1288,7 +1471,7 @@ function _codArmazon(){
     '<div class="tarj"><div class="tarj-cab"><div><h2>Buscar un código</h2><p class="sub">Para el «mi código no funciona»: si existe, de qué plan es y, si ya se usó, dónde y cuándo.</p></div></div>'+
       '<div class="tarj-cuerpo"><div class="cod-busca"><input id="cod-q" maxlength="24" autocomplete="off" spellcheck="false" placeholder="SST…" aria-label="Código a buscar">'+
       '<button type="button" class="bt sec" id="cod-q-bt">Buscar</button></div><div class="cod-res" id="cod-res" aria-live="polite"></div></div></div>'+
-    '<div class="tarj"><div class="tarj-cab"><div><h2>Cuántos hay</h2><p class="sub">Libres: nadie los activó todavía. Cuenta también los de la venta web y los del stock viejo.</p></div></div>'+
+    '<div class="tarj"><div class="tarj-cab"><div><h2>Cuántos hay</h2><p class="sub">Libres: nadie los activó todavía. Cuenta también los de la venta web y los del stock viejo. Los planes sin ningún código no aparecen.</p></div></div>'+
       '<div id="cod-resumen"></div></div>'+
     '<div class="tarj"><div class="tarj-cab"><div><h2>Recomienda OBRASST</h2><p class="sub">Cada 5 recomendados que pagan su primer plan, '+
       'el que los trajo gana días gratis de su plan: 30, después 45 y 60 cada 5 más (Gestión SST, la mitad; en LITE, de Supervisor SST). '+
@@ -1389,6 +1572,9 @@ function _codResumen(R){
   });
   var h='<div class="tabla-caja"><table class="mini"><thead><tr><th>Plan</th><th>Periodo</th><th class="num">Libres</th>'+
         '<th class="num">Usados</th><th>De dónde salieron</th></tr></thead><tbody>';
+  /* 29/09/2026 · solo los planes que tienen algún código (antes, 8 filas con casi todo en cero) */
+  orden=orden.filter(function(k){ return filas[k].libres || filas[k].usados; });
+  if(!orden.length) return '<div class="vacio"><b>Todavía no hay códigos</b>Aparecen al crearlos aquí o al venderse en la web.</div>';
   orden.forEach(function(k){
     var f=filas[k], de=Object.keys(f.de).map(function(o){ return (COD_ORIGEN[o]||o)+': '+f.de[o]; }).join(' · ');
     h+='<tr data-k="'+esc(k)+'"><td><b>'+esc(planN(f.plan))+'</b></td><td>'+esc(+f.dias===365?'Anual':(+f.dias===30?'Mensual':f.dias+' días'))+'</td>'+
