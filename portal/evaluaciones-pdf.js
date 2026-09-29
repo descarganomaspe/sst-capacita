@@ -965,8 +965,9 @@ var RCAP = (function(){
       try{ o = (typeof r.nota === 'string') ? JSON.parse(r.nota) : r.nota; }catch(_e){ o = null; }
       if(!o || typeof o !== 'object' || o.t !== 'E' || !o.d || !o.para || typeof o.para !== 'object') return;
       var fe = iso(o.fe || o.v); if(!fe) return;
-      if(['todos', 'puesto', 'lugar'].indexOf(o.para.k || 'todos') < 0) return;
-      var para = { k:o.para.k || 'todos', v:(Array.isArray(o.para.v) ? o.para.v : []).filter(function(x){ return typeof x === 'string' && x.trim(); }).slice(0, 40) };
+      /* 01/10/2026 · «trab»: programada a personas del padrón (su id del servidor) */
+      if(['todos', 'puesto', 'lugar', 'trab'].indexOf(o.para.k || 'todos') < 0) return;
+      var para = { k:o.para.k || 'todos', v:(Array.isArray(o.para.v) ? o.para.v : []).filter(function(x){ return typeof x === 'string' && x.trim(); }).slice(0, o.para.k === 'trab' ? 300 : 40) };
       var tema = '';
       try{ tema = temaDe ? String(temaDe(o, r) || '') : ''; }catch(_t){ tema = ''; }
       if(!tema) tema = String(o.tn || String(r.nombre || '').replace(/^\s*Capacitaci[oó]n\s*·\s*/i, '') || o.d);
@@ -1009,7 +1010,7 @@ var RCAP = (function(){
     var gente = [], porDoc = {}, porNom = {};
     (ent.trabajadores || []).forEach(function(t){
       if(!t || !String(t.nombre || '').trim()) return;
-      var p = { nombre:String(t.nombre).replace(/\s+/g, ' ').trim(), dni:String(t.dni || '').trim(), cargo:String(t.cargo || '').trim(),
+      var p = { id:(t.id != null && t.id !== '') ? String(t.id) : '', nombre:String(t.nombre).replace(/\s+/g, ' ').trim(), dni:String(t.dni || '').trim(), cargo:String(t.cargo || '').trim(),
                 empresa:String(t.empresa || '').trim(), frente:String(t.frente || '').trim(), estatus:t.estatus || 'activo', desde:iso(t.desde),
                 ingreso:iso(t.ingreso), hist:Array.isArray(t.hist) ? t.hist : [], padron:true, cel:{}, evs:[] };
       gente.push(p);
@@ -1080,6 +1081,8 @@ var RCAP = (function(){
       if(!s.prog || !p.padron) return false;
       return s.prog.some(function(pa){
         if(!pa || !pa.k || pa.k === 'todos') return true;
+        /* por persona: el id de su ficha en el servidor, tal cual */
+        if(pa.k === 'trab') return !!p.id && (Array.isArray(pa.v) ? pa.v : []).indexOf(p.id) > -1;
         var quiero = (Array.isArray(pa.v) ? pa.v : []).map(nrm).filter(Boolean);
         if(pa.k === 'puesto') return quiero.indexOf(nrm(p.cargo)) > -1;
         if(pa.k === 'lugar'){ var fr = situacionEn(p, s.dia).a || p.frente; return quiero.indexOf(nrm(fr)) > -1; }
@@ -1590,7 +1593,7 @@ var RCAP = (function(){
      ['✓', S.si, 'Taller completado o constancia sin nota.']].forEach(function(x, j){
       R.celda(B, rl + j, x[0], x[1]); R.unir(B + 1, rl + j, M, rl + j, x[2], S.leyTx);
     });
-    R.unir(B, rl + 8, M, rl + 8, 'Le tocaba = estaba programada para toda la obra, para su puesto o para su frente (se programa en la app, en Capacitación por tema). Cumplimiento = las que rindió entre las que le tocaban hasta hoy. Los totales de «Seguimiento» son fórmulas: si corriges una nota, se recalculan.', S.ley);
+    R.unir(B, rl + 8, M, rl + 8, 'Le tocaba = estaba programada para toda la obra, para su puesto, para su frente o para él con nombre (se programa en la app, en Capacitación por tema, o en el portal). Cumplimiento = las que rindió entre las que le tocaban hasta hoy. Los totales de «Seguimiento» son fórmulas: si corriges una nota, se recalculan.', S.ley);
     R.altos[rl + 8] = 38;
 
     /* ══ el libro ══ */
