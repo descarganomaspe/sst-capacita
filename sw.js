@@ -1,4 +1,4 @@
-var CACHE = 'sstc-18f379fdf0-a';
+var CACHE = 'sstc-7e69b8d950-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -9,7 +9,7 @@ var COMP = 'sstc-compartido';
    cache. La primera apertura sin señal despues de cada publicacion daba
    pantalla en blanco (y la primerisima instalacion tambien). Ahora la app
    entera se guarda en install, antes de activar. */
-var BASE = ['./', './index.html', './idioma-fr.js?v=f552535ca0', './procedimientos.js?v=b9b304e9f9', './idioma-pt.js?v=78f9321f5b', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
+var BASE = ['./', './index.html', './idioma-fr.js?v=b892ed7c05', './procedimientos.js?v=b9b304e9f9', './idioma-pt.js?v=e351a88de5', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
             './intro.mp4'];
 self.addEventListener('install', function(e){
@@ -120,7 +120,7 @@ self.addEventListener('notificationclick', function(e){
   var destino = '', ruta = '';
   try{ destino = (e.notification.data && e.notification.data.ir) || ''; }catch(_d){}
   try{ ruta = (e.notification.data && e.notification.data.ruta) || ''; }catch(_r){}
-  /* el aviso de una falla (push) lleva a una dirección: el portal */
+  /* el aviso de una falla (push) lleva a una dirección: la Consola OBRASST (consola/#fallas) */
   if(ruta){
     var url = '';
     try{ url = new URL(ruta, self.registration.scope).href; }catch(_u){ url = self.registration.scope; }
@@ -149,8 +149,10 @@ self.addEventListener('notificationclick', function(e){
 });
 
 /* ══ LOS AVISOS QUE MANDA EL SERVIDOR (Web Push) · 28/09/2026 ═══════
-   Hoy los recibe el equipo de OBRASST: cada falla que reportan desde la
-   app (función aviso-falla). El servidor manda {titulo, cuerpo, ruta,
+   Hoy los recibe el creador de OBRASST: cada falla que reportan desde la
+   app (función aviso-falla). Desde el 28/09 se activan en la Consola
+   OBRASST (consola/, con su propio service worker); este queda por si
+   un equipo los había activado aquí antes. El servidor manda {titulo, cuerpo, ruta,
    tag} cifrado; el navegador lo descifra y lo entrega acá, aunque la
    app esté cerrada. Se muestra siempre: un push sin aviso visible hace
    que el navegador lo corte. */
