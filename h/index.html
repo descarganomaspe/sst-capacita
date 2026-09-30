@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B2A3A">
+<title>Equipo de la obra · OBRASST</title>
+<style>
+/* 01/10/2026 · lo que abre el QR de un equipo o una herramienta: si está al
+   día, quién no y por qué, sin cuenta y desde cualquier celular. */
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;
+  padding:28px 16px 32px;background:#0B2A3A;color:#EAF2F7;
+  font:16px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.caja{width:100%;max-width:430px}
+.marca{font-size:12px;letter-spacing:.18em;color:#F5B700;font-weight:800;margin-bottom:18px;text-align:center}
+h1{font-size:21px;margin:0 0 10px;line-height:1.3;text-wrap:balance;text-align:center}
+p{margin:0 0 8px;color:#A9C2D0;font-size:15px}
+.giro{width:34px;height:34px;margin:26px auto 0;border-radius:50%;
+  border:3px solid rgba(255,255,255,.18);border-top-color:#F5B700;animation:g .8s linear infinite}
+@keyframes g{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.giro{animation-duration:2.4s}}
+.estado{border-radius:16px;padding:18px 18px 16px;text-align:center;border:2px solid}
+.estado b{display:block;font-size:24px;letter-spacing:.04em;line-height:1.15}
+.estado span{display:block;font-size:15px;margin-top:6px}
+.estado.ok{background:#E7F6EE;border-color:#2FBF71;color:#0E4D2E}
+.estado.ojo{background:#FFF4D6;border-color:#F5B700;color:#5B4200}
+.estado.mal{background:#FDE8E8;border-color:#E5484D;color:#7A1216}
+.estado.baja{background:#E6EBEE;border-color:#8FA9B8;color:#2B3B45}
+.eq{margin-top:18px;text-align:center}
+.eq .cod{display:inline-block;font:800 30px/1.1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;color:#fff}
+.eq .tipo{display:block;font-size:17px;font-weight:700;margin-top:4px}
+.eq .det{display:block;font-size:14px;color:#8FB0C2;margin-top:2px}
+.tarj{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;padding:16px 18px;margin-top:16px}
+.tarj h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#8FB0C2;margin:0 0 8px}
+.cinta{display:flex;align-items:center;gap:10px;font-size:15px}
+.cinta i{flex:0 0 auto;width:34px;height:18px;border-radius:4px;border:1px solid rgba(255,255,255,.45)}
+ul{margin:0;padding-left:20px}
+li{margin:0 0 4px;font-size:15px}
+.hist{display:grid;gap:6px}
+.hist div{display:flex;justify-content:space-between;gap:10px;font-size:14px;border-top:1px solid rgba(255,255,255,.08);padding-top:6px}
+.hist div:first-child{border-top:0;padding-top:0}
+.hist .r-ok{color:#7FE0A8}.hist .r-ojo{color:#F5C84C}.hist .r-mal{color:#FF8A8E}
+a.btn{display:block;margin-top:18px;padding:14px;border-radius:12px;background:#F5B700;
+  color:#0B2A3A;text-decoration:none;font-weight:800;text-align:center}
+a.btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.nota{font-size:12.5px;color:#7D97A6;text-align:center;margin-top:10px}
+.obra{margin-top:20px;font-size:12.5px;color:#7D97A6;letter-spacing:.04em;text-align:center}
+</style></head><body>
+<div class="caja">
+  <div class="marca">&#9670; OBRASST</div>
+  <div id="cuerpo">
+    <h1>Buscando el equipo&hellip;</h1>
+    <div class="giro"></div>
+  </div>
+  <div class="obra" id="pie"></div>
+</div>
+<script>
+(function(){
+  var SB='https://gwjjkknuiumgysezeatz.supabase.co', KEY='sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx';
+  /* 01/10/2026 · el idioma del celular que escanea: castellano, y si el
+     celular está en inglés, portugués o francés, en ese (como la app).
+     Los datos (el código, la marca, lo que anotó el supervisor) van
+     como se escribieron. */
+  var L='es'; try{ L=String((navigator.languages && navigator.languages[0]) || navigator.language || 'es').slice(0,2).toLowerCase(); }catch(_l){}
+  var TX={
+    en:{'Buscando el equipo…':'Looking up the equipment…','Esta etiqueta está incompleta':'This label is incomplete',
+      'Al QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir la etiqueta desde OBRASST.':'The QR is missing its token. Ask your supervisor to print the label again from OBRASST.',
+      'Esta etiqueta ya no está activa':'This label is no longer active',
+      'Pídele a tu supervisor que imprima la etiqueta nueva desde OBRASST, en «Equipos y herramientas».':'Ask your supervisor to print the new label from OBRASST, under “Equipment and tools”.',
+      'No se pudo abrir':"It couldn't be opened",'Vuelve a escanear la etiqueta en un momento. Si sigue igual, avísale a tu supervisor.':'Scan the label again in a moment. If nothing changes, tell your supervisor.',
+      'DADO DE BAJA':'RETIRED','Ya no se usa en la obra.':'No longer used on site.','FUERA DE SERVICIO':'OUT OF SERVICE','No lo uses.':'Do not use it.',
+      'CON OBSERVACIÓN':'FLAGGED','Consulta con tu supervisor antes de usarlo.':'Check with your supervisor before using it.','AL DÍA':'UP TO DATE',
+      'Revisado el {0}.':'Checked on {0}.','LE TOCA REVISIÓN':'DUE FOR INSPECTION','La última fue el {0}.':'The last one was on {0}.',
+      'Todavía no tiene ninguna revisión.':"It hasn't been checked yet.",'La cinta':'The tape','{0} es el color de {1}.':'{0} is the color for {1}.',
+      'En la revisión le pusieron la {0}.':'At the check it got the {0}.','Lo que tiene':"What's inside",'Las últimas revisiones':'Latest checks',
+      'Conforme':'Passed','Con observación':'Flagged','Fuera de servicio':'Out of service','Revisarlo en OBRASST':'Check it in OBRASST',
+      'La revisión la anota el supervisor desde la app.':'The supervisor logs the check from the app.','Sin internet':'No internet',
+      'Necesitas señal para ver este equipo. Vuelve a escanear la etiqueta cuando tengas datos o wifi.':'You need a signal to see this equipment. Scan the label again when you have data or wifi.',
+      'Equipo de la obra':'Site equipment'},
+    pt:{'Buscando el equipo…':'Buscando o equipamento…','Esta etiqueta está incompleta':'Esta etiqueta está incompleta',
+      'Al QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir la etiqueta desde OBRASST.':'Falta a ficha no QR. Peça ao seu supervisor que imprima a etiqueta de novo pelo OBRASST.',
+      'Esta etiqueta ya no está activa':'Esta etiqueta não está mais ativa',
+      'Pídele a tu supervisor que imprima la etiqueta nueva desde OBRASST, en «Equipos y herramientas».':'Peça ao seu supervisor que imprima a etiqueta nova pelo OBRASST, em «Equipamentos e ferramentas».',
+      'No se pudo abrir':'Não foi possível abrir','Vuelve a escanear la etiqueta en un momento. Si sigue igual, avísale a tu supervisor.':'Escaneie a etiqueta de novo daqui a pouco. Se continuar igual, avise o seu supervisor.',
+      'DADO DE BAJA':'DADO DE BAIXA','Ya no se usa en la obra.':'Não se usa mais na obra.','FUERA DE SERVICIO':'FORA DE SERVIÇO','No lo uses.':'Não use.',
+      'CON OBSERVACIÓN':'COM OBSERVAÇÃO','Consulta con tu supervisor antes de usarlo.':'Consulte o seu supervisor antes de usar.','AL DÍA':'EM DIA',
+      'Revisado el {0}.':'Revisado em {0}.','LE TOCA REVISIÓN':'REVISÃO PENDENTE','La última fue el {0}.':'A última foi em {0}.',
+      'Todavía no tiene ninguna revisión.':'Ainda não tem nenhuma revisão.','La cinta':'A fita','{0} es el color de {1}.':'{0} é a cor de {1}.',
+      'En la revisión le pusieron la {0}.':'Na revisão colocaram a {0}.','Lo que tiene':'O que contém','Las últimas revisiones':'As últimas revisões',
+      'Conforme':'Conforme','Con observación':'Com observação','Fuera de servicio':'Fora de serviço','Revisarlo en OBRASST':'Revisar no OBRASST',
+      'La revisión la anota el supervisor desde la app.':'A revisão é registrada pelo supervisor no app.','Sin internet':'Sem internet',
+      'Necesitas señal para ver este equipo. Vuelve a escanear la etiqueta cuando tengas datos o wifi.':'Você precisa de sinal para ver este equipamento. Escaneie a etiqueta de novo quando tiver dados ou wi-fi.',
+      'Equipo de la obra':'Equipamento da obra'},
+    fr:{'Buscando el equipo…':"Recherche de l'équipement…",'Esta etiqueta está incompleta':'Cette étiquette est incomplète',
+      'Al QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir la etiqueta desde OBRASST.':"Il manque l'identifiant au QR. Demandez à votre superviseur de réimprimer l'étiquette depuis OBRASST.",
+      'Esta etiqueta ya no está activa':"Cette étiquette n'est plus active",
+      'Pídele a tu supervisor que imprima la etiqueta nueva desde OBRASST, en «Equipos y herramientas».':'Demandez à votre superviseur d’imprimer la nouvelle étiquette depuis OBRASST, dans « Équipements et outils ».',
+      'No se pudo abrir':"Impossible d'ouvrir",'Vuelve a escanear la etiqueta en un momento. Si sigue igual, avísale a tu supervisor.':'Scannez à nouveau l’étiquette dans un instant. Si rien ne change, prévenez votre superviseur.',
+      'DADO DE BAJA':'RETIRÉ','Ya no se usa en la obra.':"N'est plus utilisé sur le chantier.",'FUERA DE SERVICIO':'HORS SERVICE','No lo uses.':'Ne pas utiliser.',
+      'CON OBSERVACIÓN':'AVEC REMARQUE','Consulta con tu supervisor antes de usarlo.':'Consultez votre superviseur avant de l’utiliser.','AL DÍA':'À JOUR',
+      'Revisado el {0}.':'Inspecté le {0}.','LE TOCA REVISIÓN':'À INSPECTER','La última fue el {0}.':'La dernière date du {0}.',
+      'Todavía no tiene ninguna revisión.':"Il n'a encore jamais été inspecté.",'La cinta':'Le ruban','{0} es el color de {1}.':'{0} : couleur de {1}.',
+      'En la revisión le pusieron la {0}.':'À l’inspection, il a reçu le {0}.','Lo que tiene':'Contenu','Las últimas revisiones':'Dernières inspections',
+      'Conforme':'Conforme','Con observación':'Avec remarque','Fuera de servicio':'Hors service','Revisarlo en OBRASST':"L'inspecter dans OBRASST",
+      'La revisión la anota el supervisor desde la app.':"Le superviseur enregistre l'inspection depuis l'application.",'Sin internet':'Pas d’internet',
+      'Necesitas señal para ver este equipo. Vuelve a escanear la etiqueta cuando tengas datos o wifi.':'Il faut du réseau pour voir cet équipement. Scannez à nouveau l’étiquette quand vous aurez des données ou du wifi.',
+      'Equipo de la obra':'Équipement du chantier'}
+  };
+  if(!TX[L]) L='es';
+  function t(s){ var v=TX[L] && TX[L][s]; v=(v===undefined) ? s : v; for(var i=1;i<arguments.length;i++) v=v.split('{'+(i-1)+'}').join(arguments[i]); return v; }
+  /* el color, su muestra y «la cinta roja» (cinta es femenino) */
+  var COLORES={rojo:['Rojo','#D32F2F','roja'], azul:['Azul','#1E5BD8','azul'], amarillo:['Amarillo','#F5C400','amarilla'], verde:['Verde','#2E9E48','verde'],
+               blanco:['Blanco','#FFFFFF','blanca'], naranja:['Naranja','#F57C00','naranja'], negro:['Negro','#222222','negra'], morado:['Morado','#7B3FB5','morada']};
+  var COL_TX={ en:{rojo:['Red','red tape'],azul:['Blue','blue tape'],amarillo:['Yellow','yellow tape'],verde:['Green','green tape'],blanco:['White','white tape'],naranja:['Orange','orange tape'],negro:['Black','black tape'],morado:['Purple','purple tape']},
+               pt:{rojo:['Vermelho','fita vermelha'],azul:['Azul','fita azul'],amarillo:['Amarelo','fita amarela'],verde:['Verde','fita verde'],blanco:['Branco','fita branca'],naranja:['Laranja','fita laranja'],negro:['Preto','fita preta'],morado:['Roxo','fita roxa']},
+               fr:{rojo:['Rouge','ruban rouge'],azul:['Bleu','ruban bleu'],amarillo:['Jaune','ruban jaune'],verde:['Vert','ruban vert'],blanco:['Blanc','ruban blanc'],naranja:['Orange','ruban orange'],negro:['Noir','ruban noir'],morado:['Violet','ruban violet']} };
+  var MESES={ es:['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'],
+              en:['January','February','March','April','May','June','July','August','September','October','November','December'],
+              pt:['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'],
+              fr:['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'] };
+  /* el tipo, si es uno de la lista de la app */
+  var TIPOS={ en:{'Amoladora':'Angle grinder','Taladro':'Drill','Rotomartillo':'Rotary hammer','Sierra circular':'Circular saw','Esmeril':'Bench grinder','Pulidora':'Polisher','Soldadora':'Welder',
+      'Extensión eléctrica':'Extension cord','Otra herramienta eléctrica':'Other power tool','Martillo':'Hammer','Comba':'Sledgehammer','Llave':'Wrench','Alicate':'Pliers','Destornillador':'Screwdriver',
+      'Cincel':'Chisel','Serrucho':'Handsaw','Barreta':'Crowbar','Pala':'Shovel','Carretilla':'Wheelbarrow','Otra herramienta manual':'Other hand tool','Caja de herramientas':'Toolbox',
+      'Maletín de herramientas':'Tool case','Tablero de herramientas':'Tool board','Eslinga':'Sling','Estrobo':'Wire rope sling','Grillete':'Shackle','Tecle':'Chain hoist','Arnés':'Harness',
+      'Línea de vida':'Lifeline','Escalera':'Ladder','Extintor':'Fire extinguisher','Botiquín':'First aid kit','Lavaojos':'Eyewash station','Camilla':'Stretcher','Tablero eléctrico':'Electrical panel',
+      'Montacargas':'Forklift','Compresora':'Compressor','Grupo electrógeno':'Generator','Mezcladora':'Concrete mixer','Vibradora':'Concrete vibrator','Otro equipo':'Other equipment'},
+    pt:{'Amoladora':'Esmerilhadeira','Taladro':'Furadeira','Rotomartillo':'Martelete','Sierra circular':'Serra circular','Esmeril':'Esmeril de bancada','Pulidora':'Politriz','Soldadora':'Máquina de solda',
+      'Extensión eléctrica':'Extensão elétrica','Otra herramienta eléctrica':'Outra ferramenta elétrica','Martillo':'Martelo','Comba':'Marreta','Llave':'Chave','Alicate':'Alicate','Destornillador':'Chave de fenda',
+      'Cincel':'Talhadeira','Serrucho':'Serrote','Barreta':'Pé de cabra','Pala':'Pá','Carretilla':'Carrinho de mão','Otra herramienta manual':'Outra ferramenta manual','Caja de herramientas':'Caixa de ferramentas',
+      'Maletín de herramientas':'Maleta de ferramentas','Tablero de herramientas':'Painel de ferramentas','Eslinga':'Linga','Estrobo':'Estropo','Grillete':'Manilha','Tecle':'Talha','Arnés':'Cinto paraquedista',
+      'Línea de vida':'Linha de vida','Escalera':'Escada','Extintor':'Extintor','Botiquín':'Kit de primeiros socorros','Lavaojos':'Lava-olhos','Camilla':'Maca','Tablero eléctrico':'Quadro elétrico',
+      'Montacargas':'Empilhadeira','Compresora':'Compressor','Grupo electrógeno':'Gerador','Mezcladora':'Betoneira','Vibradora':'Vibrador de concreto','Otro equipo':'Outro equipamento'},
+    fr:{'Amoladora':"Meuleuse d'angle",'Taladro':'Perceuse','Rotomartillo':'Perforateur','Sierra circular':'Scie circulaire','Esmeril':'Touret à meuler','Pulidora':'Polisseuse','Soldadora':'Poste à souder',
+      'Extensión eléctrica':'Rallonge électrique','Otra herramienta eléctrica':'Autre outil électrique','Martillo':'Marteau','Comba':'Masse','Llave':'Clé','Alicate':'Pince','Destornillador':'Tournevis',
+      'Cincel':'Burin','Serrucho':'Scie égoïne','Barreta':'Pied-de-biche','Pala':'Pelle','Carretilla':'Brouette','Otra herramienta manual':'Autre outil à main','Caja de herramientas':'Caisse à outils',
+      'Maletín de herramientas':'Mallette à outils','Tablero de herramientas':'Panneau à outils','Eslinga':'Élingue','Estrobo':'Estrope','Grillete':'Manille','Tecle':'Palan','Arnés':'Harnais',
+      'Línea de vida':'Ligne de vie','Escalera':'Échelle','Extintor':'Extincteur','Botiquín':'Trousse de secours','Lavaojos':'Douche oculaire','Camilla':'Civière','Tablero eléctrico':'Tableau électrique',
+      'Montacargas':'Chariot élévateur','Compresora':'Compresseur','Grupo electrógeno':'Groupe électrogène','Mezcladora':'Bétonnière','Vibradora':'Vibreur à béton','Otro equipo':'Autre équipement'} };
+  function q(n){ try{ return new URLSearchParams(location.search).get(n)||''; }catch(e){ return ''; } }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function fecha(f){ var p=String(f||'').split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : ''; }
+  function color(k){ return COLORES[String(k||'').toLowerCase()] || null; }
+  function nomColor(k){ var c=color(k), x=COL_TX[L] && COL_TX[L][String(k||'').toLowerCase()]; return x ? x[0] : (c ? c[0] : String(k||'')); }
+  function cinta(k){ var c=color(k); return c ? '<i style="background:'+c[1]+'"></i>'+esc(nomColor(k)) : esc(k||''); }
+  function cintaDe(k){ var x=COL_TX[L] && COL_TX[L][String(k||'').toLowerCase()]; if(x) return x[1]; var c=color(k); return 'cinta '+(c ? c[2] : String(k||'').toLowerCase()); }
+  function tipo(s){ var m=TIPOS[L]; return (m && m[s]) || s; }
+  try{ document.documentElement.lang=L; document.title=t('Equipo de la obra')+' · OBRASST'; }catch(_d){}
+  var cuerpo=document.getElementById('cuerpo'), pie=document.getElementById('pie');
+  try{ var h1=cuerpo.querySelector('h1'); if(h1) h1.textContent=t('Buscando el equipo…'); }catch(_b){}
+  var tk=q('t').toLowerCase().replace(/[^0-9a-f]/g,'');
+  function di(titulo, texto){ cuerpo.innerHTML='<h1>'+esc(t(titulo))+'</h1>'+(texto ? '<div class="tarj"><p style="margin:0">'+esc(t(texto))+'</p></div>' : ''); }
+  if(!tk){ di('Esta etiqueta está incompleta', 'Al QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir la etiqueta desde OBRASST.'); return; }
+  fetch(SB+'/rest/v1/rpc/sst_equipo_abrir', {
+    method:'POST', headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+    body: JSON.stringify({p_t:tk})
+  }).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); }).then(function(j){
+    j = j || {};
+    if(j.obra) pie.textContent = j.obra;
+    if(!j.ok){
+      if(j.error==='no_existe') di('Esta etiqueta ya no está activa', 'Pídele a tu supervisor que imprima la etiqueta nueva desde OBRASST, en «Equipos y herramientas».');
+      else di('No se pudo abrir', 'Vuelve a escanear la etiqueta en un momento. Si sigue igual, avísale a tu supervisor.');
+      return;
+    }
+    var u=j.ult||{}, mes=String(j.mes||String(j.hoy||'').slice(0,7)), nomMes=MESES[L][(parseInt(mes.slice(5,7),10)||1)-1]||'';
+    var alDia = (u.r==='conforme' && String(u.f||'').slice(0,7)===mes);
+    var est, cls, obs=u.o ? esc(u.o)+(/[.!?]$/.test(String(u.o).trim()) ? '' : '.') : '';
+    if(j.estado==='baja'){ cls='baja'; est='<b>'+esc(t('DADO DE BAJA'))+'</b><span>'+esc(t('Ya no se usa en la obra.'))+'</span>'; }
+    else if(j.estado==='fuera'){ cls='mal'; est='<b>'+esc(t('FUERA DE SERVICIO'))+'</b><span>'+esc(t('No lo uses.'))+(obs ? ' '+obs : '')+'</span>'; }
+    else if(u.r==='observado'){ cls='ojo'; est='<b>'+esc(t('CON OBSERVACIÓN'))+'</b><span>'+(obs ? obs+' ' : '')+esc(t('Consulta con tu supervisor antes de usarlo.'))+'</span>'; }
+    else if(alDia){ cls='ok'; est='<b>'+esc(t('AL DÍA'))+'</b><span>'+esc(t('Revisado el {0}.', fecha(u.f)))+'</span>'; }
+    else { cls='ojo'; est='<b>'+esc(t('LE TOCA REVISIÓN'))+'</b><span>'+esc(u.f ? t('La última fue el {0}.', fecha(u.f)) : t('Todavía no tiene ninguna revisión.'))+'</span>'; }
+    var h='<div class="estado '+cls+'" id="estado">'+est+'</div>';
+    h+='<div class="eq"><span class="cod">'+esc(j.codigo)+'</span><span class="tipo">'+esc(tipo(j.tipo))+'</span>'+(j.detalle ? '<span class="det">'+esc(j.detalle)+'</span>' : '')+'</div>';
+    if(j.color_mes || u.c){
+      h+='<div class="tarj"><h2>'+esc(t('La cinta'))+'</h2>';
+      if(j.color_mes) h+='<div class="cinta">'+(function(){ var c=color(j.color_mes); return c ? '<i style="background:'+c[1]+'"></i>' : ''; })()+
+        '<span>'+esc(t('{0} es el color de {1}.', nomColor(j.color_mes), nomMes))+'</span></div>';
+      if(u.c && alDia && j.color_mes && String(u.c).toLowerCase()!==String(j.color_mes).toLowerCase())
+        h+='<p style="margin:8px 0 0">'+esc(t('En la revisión le pusieron la {0}.', cintaDe(u.c)))+'</p>';
+      h+='</div>';
+    }
+    var cont=Array.isArray(j.contenido) ? j.contenido.filter(function(x){ return x && String(x).trim(); }) : [];
+    if(cont.length) h+='<div class="tarj"><h2>'+esc(t('Lo que tiene'))+'</h2><ul>'+cont.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul></div>';
+    var hist=Array.isArray(j.hist) ? j.hist : [];
+    if(hist.length){
+      var R={conforme:['Conforme','r-ok'], observado:['Con observación','r-ojo'], fuera:['Fuera de servicio','r-mal']};
+      h+='<div class="tarj"><h2>'+esc(t('Las últimas revisiones'))+'</h2><div class="hist">'+hist.map(function(x){
+        var r=R[x.r]||[x.r,''];
+        return '<div><span>'+esc(fecha(x.f))+(x.c ? ' · '+esc(cintaDe(x.c)) : '')+'</span><span class="'+r[1]+'">'+esc(t(r[0]))+'</span></div>';
+      }).join('')+'</div></div>';
+    }
+    h+='<a class="btn" href="../?equipo='+encodeURIComponent(tk)+'">'+esc(t('Revisarlo en OBRASST'))+'</a>';
+    h+='<p class="nota">'+esc(t('La revisión la anota el supervisor desde la app.'))+'</p>';
+    cuerpo.innerHTML=h;
+  }).catch(function(){
+    di('Sin internet', 'Necesitas señal para ver este equipo. Vuelve a escanear la etiqueta cuando tengas datos o wifi.');
+  });
+})();
+</script>
+</body></html>
