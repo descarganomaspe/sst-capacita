@@ -1,6 +1,6 @@
 /* OBRASST · el generador de QR de la app (qrcode-generator de Kazuhiko Arase,
-   licencia MIT, abajo) y la dirección de los carteles, para el portal. Lo arma
-   armar.py desde la app. No editar. */
+   licencia MIT, abajo), la dirección de los carteles y su dibujo, para el
+   portal. Lo arma armar.py desde la app. No editar. */
 var BASE_QR_APP = 'https://descarganomaspe.github.io/sst-capacita/d/';
 //---------------------------------------------------------------------
 //
@@ -2299,3 +2299,260 @@ var qrcode = function() {
 }(function () {
     return qrcode;
 }));
+;
+/* ══════════════════════════════════════════════════════════════════
+   LOS CARTELES QR DE LOS DOCUMENTOS · EL DIBUJO (01/10/2026)
+   Marcelo: «mejora el diseño de dichos QR de documentos… que salga el
+   logo de la empresa también, que no salga pequeño o muy grande, el QR
+   también, y su título correspondiente, con algunos diseños».
+   Una hoja A4 vertical (1240 × 1754 px, 150 ppp), en tres diseños, con:
+     · el logo de la empresa dentro de una caja fija (hasta 520 × 170 px:
+       unos 8 × 2,6 cm impreso), sin su marco blanco y sin deformarlo, así
+       sea chico o enorme el que se subió; sin logo, la razón social;
+     · el título del cartel y, en el Perú, su nombre completo;
+     · el QR de 640 px (unos 10 cm impreso), dibujado módulo por módulo
+       para que salga nítido, con su margen blanco;
+     · «Escanea con la cámara de tu celular» y la obra.
+   El mismo dibujo en la app y en el portal: armar.py lo pone en la app y
+   lo suma a portal/qr.js. Necesita qrcode() al dibujar.
+   ══════════════════════════════════════════════════════════════════ */
+var CARTEL_W = 1240, CARTEL_H = 1754;
+var CARTEL_DISENOS = [
+  {k:'clasico', n:'Clásico', d:'Blanco y sobrio, con el título en una franja oscura.'},
+  {k:'senal',   n:'Señal',   d:'Como las señales de seguridad: azul para los documentos, verde para las emergencias.'},
+  {k:'obra',    n:'Obra',    d:'Amarillo y negro, de alta visibilidad: se ve de lejos.'}
+];
+/* el nombre completo de cada cartel (en el Perú; afuera va solo el título) */
+var CARTEL_LARGO = {
+  risst:'Reglamento Interno de Seguridad y Salud en el Trabajo',
+  pets:'Procedimientos Escritos de Trabajo Seguro',
+  iperc:'Identificación de Peligros, Evaluación de Riesgos y Controles',
+  msds:'Hojas de datos de seguridad de los productos químicos',
+  plan:'Programa anual de seguridad y salud en el trabajo',
+  mapa:'Los peligros y riesgos de la obra, señalizados',
+  emergencia:'Qué hacer y a dónde ir en una emergencia',
+  politica:'Política de Seguridad y Salud en el Trabajo',
+  hostigamiento:'Prevención y sanción del hostigamiento sexual',
+  organigrama:'Quién es quién en la obra',
+  comite:'Comité de Seguridad y Salud en el Trabajo',
+  brigadistas:'Las brigadas de emergencia de la obra',
+  contactos:'Los teléfonos para llamar en una emergencia'
+};
+var CARTEL_VERDE = { emergencia:1, brigadistas:1, contactos:1 };
+function cartelDiseno(k){ var r=CARTEL_DISENOS[0]; CARTEL_DISENOS.forEach(function(d){ if(d.k===k) r=d; }); return r; }
+
+/* ── lo de siempre ── */
+function _cqCaja(g, x, y, w, h, r){
+  g.beginPath(); g.moveTo(x+r, y); g.lineTo(x+w-r, y); g.quadraticCurveTo(x+w, y, x+w, y+r);
+  g.lineTo(x+w, y+h-r); g.quadraticCurveTo(x+w, y+h, x+w-r, y+h); g.lineTo(x+r, y+h);
+  g.quadraticCurveTo(x, y+h, x, y+h-r); g.lineTo(x, y+r); g.quadraticCurveTo(x, y, x+r, y); g.closePath();
+}
+function _cqLineas(g, txt, ancho){
+  var pal=String(txt||'').split(/\s+/), lin=[], act='';
+  pal.forEach(function(p){ if(!p) return; var t=act ? act+' '+p : p; if(g.measureText(t).width > ancho && act){ lin.push(act); act=p; } else act=t; });
+  if(act) lin.push(act);
+  return lin;
+}
+/* el tamaño de letra más grande con el que el texto entra en «maxL» líneas;
+   si ni con la letra más chica entra, una línea más; y si tampoco, se corta con «…» */
+function _cqAjustar(g, txt, ancho, maxL, grande, chico, peso){
+  var fam=' system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif';
+  for(var extra=0; extra<2; extra++){
+    for(var s=grande; s>=chico; s-=2){
+      g.font=(peso||'800')+' '+s+'px'+fam;
+      var l=_cqLineas(g, txt, ancho);
+      if(l.length<=maxL+extra && l.every(function(x){ return g.measureText(x).width<=ancho; })) return {s:s, l:l};
+    }
+  }
+  g.font=(peso||'800')+' '+chico+'px'+fam;
+  var l2=_cqLineas(g, txt, ancho), n=maxL+1;
+  if(l2.length>n){ l2=l2.slice(0, n); var u=l2[n-1]; while(u.length>1 && g.measureText(u+'…').width>ancho) u=u.slice(0, -1); l2[n-1]=u.replace(/\s+$/, '')+'…'; }
+  return {s:chico, l:l2};
+}
+function _cqTexto(g, lineas, x, y, s, alto, color){
+  g.fillStyle=color; g.textAlign='center'; g.textBaseline='alphabetic';
+  lineas.forEach(function(l, i){ g.fillText(l, x, y + i*alto); });
+  return y + (lineas.length-1)*alto;
+}
+function _cqFuente(s, peso){ return (peso||'700')+' '+s+'px system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif'; }
+/* el QR, módulo por módulo (nítido a cualquier tamaño), con su margen blanco */
+function _cqQR(g, enlace, cx, top, lado){
+  var qr=qrcode(0, 'M'); qr.addData(enlace); qr.make();
+  var n=qr.getModuleCount(), m=Math.floor(lado/(n+8)), q=m*(n+8), x0=Math.round(cx-q/2), y0=top+Math.round((lado-q)/2);
+  g.fillStyle='#ffffff'; g.fillRect(x0, y0, q, q);
+  g.fillStyle='#000000';
+  for(var r=0;r<n;r++) for(var c=0;c<n;c++) if(qr.isDark(r, c)) g.fillRect(x0+(c+4)*m, y0+(r+4)*m, m, m);
+  return {x:x0, y:y0, lado:q};
+}
+/* las esquinas que enmarcan el QR */
+function _cqEsquinas(g, x, y, w, h, largo, grueso, color){
+  g.strokeStyle=color; g.lineWidth=grueso; g.lineCap='round';
+  [[x, y, 1, 1], [x+w, y, -1, 1], [x, y+h, 1, -1], [x+w, y+h, -1, -1]].forEach(function(p){
+    g.beginPath(); g.moveTo(p[0], p[1]+p[3]*largo); g.lineTo(p[0], p[1]); g.lineTo(p[0]+p[2]*largo, p[1]); g.stroke();
+  });
+}
+/* un documento, dibujado (no un emoji: sale igual en todos los celulares) */
+function _cqIconoDoc(g, cx, cy, s, color){
+  var w=s*0.72, h=s, x=cx-w/2, y=cy-h/2, d=s*0.24;
+  g.fillStyle=color; g.beginPath(); g.moveTo(x, y); g.lineTo(x+w-d, y); g.lineTo(x+w, y+d); g.lineTo(x+w, y+h); g.lineTo(x, y+h); g.closePath(); g.fill();
+  g.fillStyle='rgba(255,255,255,.55)'; g.beginPath(); g.moveTo(x+w-d, y); g.lineTo(x+w-d, y+d); g.lineTo(x+w, y+d); g.closePath(); g.fill();
+  g.fillStyle='#ffffff';
+  for(var i=0;i<4;i++){ var ly=y+h*0.42+i*h*0.13; g.fillRect(x+w*0.18, ly, w*(i===3 ? 0.4 : 0.64), h*0.05); }
+}
+/* un celular */
+function _cqIconoCel(g, cx, cy, s, color){
+  var w=s*0.56, h=s, x=cx-w/2, y=cy-h/2;
+  g.fillStyle=color; _cqCaja(g, x, y, w, h, s*0.1); g.fill();
+  g.fillStyle='#ffffff'; _cqCaja(g, x+s*0.06, y+s*0.12, w-s*0.12, h-s*0.26, s*0.03); g.fill();
+  g.fillStyle=color; var q=s*0.09, qx=cx-q*1.5, qy=cy-q*1.2;
+  [[0,0],[2,0],[0,2],[1,1],[2,2]].forEach(function(p){ g.fillRect(qx+p[0]*q, qy+p[1]*q, q*0.9, q*0.9); });
+}
+/* la cinta de peligro (amarillo y negro) */
+function _cqFranjas(g, x, y, w, h){
+  g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
+  g.fillStyle='#F5C400'; g.fillRect(x, y, w, h);
+  g.fillStyle='#1A1A1A'; var p=h*1.1;
+  for(var i=-2; i*p < w+h; i++){ g.beginPath(); g.moveTo(x+i*p, y+h); g.lineTo(x+i*p+p/2, y+h); g.lineTo(x+i*p+p/2+h, y); g.lineTo(x+i*p+h, y); g.closePath(); g.fill(); }
+  g.restore();
+}
+/* el logo sin su marco blanco (una vez por logo), para que salga del tamaño de su caja */
+var _CQ_LOGO = {};
+function cartelLogo(du){
+  if(!du) return Promise.resolve(null);
+  var k=String(du).length+':'+String(du).slice(-40);
+  if(_CQ_LOGO[k]) return _CQ_LOGO[k];
+  _CQ_LOGO[k]=new Promise(function(ok){
+    var im=new Image();
+    im.onload=function(){
+      var w=im.naturalWidth||im.width, h=im.naturalHeight||im.height, r={im:im, sx:0, sy:0, sw:w, sh:h};
+      try{
+        var c=document.createElement('canvas'); c.width=w; c.height=h;
+        var g=c.getContext('2d'); g.drawImage(im, 0, 0);
+        var d=g.getImageData(0, 0, w, h).data, x0=w, y0=h, x1=-1, y1=-1;
+        for(var y=0;y<h;y++) for(var x=0;x<w;x++){
+          var i=(y*w+x)*4;
+          if(d[i+3]<24) continue;
+          if(d[i]>234 && d[i+1]>234 && d[i+2]>234) continue;
+          if(x<x0) x0=x; if(x>x1) x1=x; if(y<y0) y0=y; if(y>y1) y1=y;
+        }
+        if(x1>=0){ r={im:im, sx:x0, sy:y0, sw:x1-x0+1, sh:y1-y0+1}; }
+      }catch(e){}
+      ok(r);
+    };
+    im.onerror=function(){ ok(null); };
+    im.src=du;
+  });
+  return _CQ_LOGO[k];
+}
+/* el logo dentro de su caja, centrado y con su proporción; sin logo, el nombre */
+function _cqLogo(g, L, cx, top, cw, ch, nombre, color){
+  if(L && L.im){
+    var r=L.sw/L.sh, w=cw, h=cw/r;
+    if(h>ch){ h=ch; w=ch*r; }
+    g.drawImage(L.im, L.sx, L.sy, L.sw, L.sh, Math.round(cx-w/2), Math.round(top+(ch-h)/2), Math.round(w), Math.round(h));
+    return true;
+  }
+  if(!nombre) return false;
+  var f=_cqAjustar(g, nombre, cw, 2, 64, 36, '800');
+  var alto=f.s*1.12, y0=top+ch/2-((f.l.length-1)*alto)/2+f.s*0.35;
+  _cqTexto(g, f.l, cx, y0, f.s, alto, color);
+  return false;
+}
+
+/* «Escanea…» con el celular a la izquierda, el grupo centrado y sin salirse */
+function _cqEscanea(g, cy, t1, t2, color, gris){
+  var f=_cqAjustar(g, t1, CARTEL_W-300, 1, 46, 30, '800'), s=f.s;
+  g.font=_cqFuente(s, '800'); var tw=g.measureText(f.l[0]||'').width, ic=s*1.55, gap=s*0.55, tot=ic*0.56+gap+tw, x0=CARTEL_W/2-tot/2;
+  _cqIconoCel(g, x0+ic*0.28, cy-s*0.36, ic, color);
+  g.textAlign='left'; g.fillStyle=color; g.fillText(f.l[0]||'', x0+ic*0.56+gap, cy);
+  var f2=_cqAjustar(g, t2, CARTEL_W-240, 1, 30, 22, '500');
+  _cqTexto(g, f2.l, CARTEL_W/2, cy+s*0.5+f2.s+12, f2.s, 0, gris);
+  return cy+s*0.5+f2.s+12;
+}
+/* el primer renglón de un bloque de «n» líneas, centrado en una franja */
+function _cqBase(n, s, lh, top, alto){ var bloque=(n-1)*lh+s*0.74; return top+(alto-bloque)/2+s*0.74; }
+
+/* ══ EL CARTEL ══
+   o: { diseno, hoja, titulo, largo, enlace, empresa (razón social), obra,
+        logo (data URL o nada), tx (traducir, si hay) }
+   Devuelve una promesa con el lienzo y su PNG. */
+function cartelDibujar(o){
+  o=o||{};
+  var tx=o.tx||function(z){ return z; };
+  return cartelLogo(o.logo).then(function(L){
+    var cv=document.createElement('canvas'); cv.width=CARTEL_W; cv.height=CARTEL_H;
+    var g=cv.getContext('2d'), W=CARTEL_W, H=CARTEL_H, cx=W/2;
+    var dis=cartelDiseno(o.diseno).k, titulo=String(o.titulo||'Documento'), largo=o.largo ? String(tx(o.largo)||o.largo) : '';
+    var t1=tx('Escanea con la cámara de tu celular'), t2=tx('Abre siempre la versión vigente del documento.');
+    var empresa=String(o.empresa||''), obra=String(o.obra||''), marca=empresa || obra;
+    g.fillStyle='#ffffff'; g.fillRect(0, 0, W, H);
+    /* lo de abajo va fijo: el QR se acomoda en lo que queda (640 px, unos 10 cm; con un título
+       larguísimo baja hasta 440 px, unos 7,5 cm, que igual se lee a un par de metros) */
+    function qrEn(top, pieArriba, pad){
+      var libre=pieArriba-top-2*pad-190;
+      return Math.max(440, Math.min(640, libre));
+    }
+    if(dis==='senal'){
+      var col=CARTEL_VERDE[o.hoja] ? '#1B7F3B' : '#1554B3';
+      _cqLogo(g, L, cx, 56, 520, 170, marca, '#0B2A3A');
+      var ft=_cqAjustar(g, titulo.toUpperCase(), W-150, 2, 92, 58, '900'), lht=ft.s*1.06;
+      var fl=largo ? _cqAjustar(g, largo, W-200, 2, 36, 26, '600') : null, lhl=fl ? fl.s*1.24 : 0;
+      var py=262, icoH=196, bloque=(ft.l.length-1)*lht+ft.s*0.74+(fl ? 24+fl.l.length*lhl : 0), ph=icoH+bloque+64;
+      g.fillStyle=col; g.fillRect(0, py, W, ph);
+      g.fillStyle='#ffffff'; g.beginPath(); g.arc(cx, py+100, 74, 0, Math.PI*2); g.fill();
+      _cqIconoDoc(g, cx, py+100, 92, col);
+      var yb=py+icoH+ft.s*0.74;
+      g.font=_cqFuente(ft.s, '900'); var yt=_cqTexto(g, ft.l, cx, yb, ft.s, lht, '#ffffff');
+      if(fl){ g.font=_cqFuente(fl.s, '600'); _cqTexto(g, fl.l, cx, yt+24+fl.s, fl.s, lhl, 'rgba(255,255,255,.93)'); }
+      var pie=H-110, pad=30, QR=qrEn(py+ph+40, pie, pad), qy=py+ph+40+pad;
+      g.fillStyle='#ffffff'; _cqCaja(g, cx-QR/2-pad, qy-pad, QR+pad*2, QR+pad*2, 26); g.fill();
+      g.lineWidth=12; g.strokeStyle=col; _cqCaja(g, cx-QR/2-pad, qy-pad, QR+pad*2, QR+pad*2, 26); g.stroke();
+      _cqQR(g, o.enlace, cx, qy, QR);
+      _cqEscanea(g, qy+QR+pad+78, t1, t2, col, '#4A5A66');
+      g.fillStyle=col; g.fillRect(0, pie, W, 110);
+      var fo=_cqAjustar(g, obra, W-260, 1, 38, 24, '700'); g.font=_cqFuente(fo.s, '700'); _cqTexto(g, fo.l, cx, pie+54, fo.s, 0, '#ffffff');
+      g.font=_cqFuente(20, '800'); g.fillStyle='rgba(255,255,255,.82)'; g.textAlign='center'; g.fillText('◆ OBRASST', cx, pie+90);
+    } else if(dis==='obra'){
+      _cqFranjas(g, 0, 0, W, 60);
+      var ft2=_cqAjustar(g, titulo.toUpperCase(), W-140, 2, 104, 62, '900'), lht2=ft2.s*1.04;
+      var fl2=largo ? _cqAjustar(g, largo, W-180, 2, 36, 26, '700') : null, lhl2=fl2 ? fl2.s*1.24 : 0;
+      var bloque2=(ft2.l.length-1)*lht2+ft2.s*0.74+(fl2 ? 22+fl2.l.length*lhl2 : 0), yh=60, ah=48+214+44+bloque2+44;
+      g.fillStyle='#F5C400'; g.fillRect(0, yh, W, ah);
+      g.fillStyle='#ffffff'; _cqCaja(g, cx-320, yh+48, 640, 214, 24); g.fill();
+      _cqLogo(g, L, cx, yh+70, 560, 170, marca, '#1A1A1A');
+      var yb2=yh+48+214+44+ft2.s*0.74;
+      g.font=_cqFuente(ft2.s, '900'); var yt2=_cqTexto(g, ft2.l, cx, yb2, ft2.s, lht2, '#1A1A1A');
+      if(fl2){ g.font=_cqFuente(fl2.s, '700'); _cqTexto(g, fl2.l, cx, yt2+22+fl2.s, fl2.s, lhl2, '#3A3000'); }
+      var pie2=H-160, pad2=28, QR2=qrEn(yh+ah+40, pie2, pad2), qy2=yh+ah+40+pad2;
+      g.fillStyle='#ffffff'; _cqCaja(g, cx-QR2/2-pad2, qy2-pad2, QR2+pad2*2, QR2+pad2*2, 22); g.fill();
+      g.lineWidth=14; g.strokeStyle='#1A1A1A'; _cqCaja(g, cx-QR2/2-pad2, qy2-pad2, QR2+pad2*2, QR2+pad2*2, 22); g.stroke();
+      _cqQR(g, o.enlace, cx, qy2, QR2);
+      _cqEscanea(g, qy2+QR2+pad2+80, t1, t2, '#1A1A1A', '#4A4A4A');
+      var fo2=_cqAjustar(g, obra, W-200, 1, 40, 24, '800'); g.font=_cqFuente(fo2.s, '800'); _cqTexto(g, fo2.l, cx, H-104, fo2.s, 0, '#1A1A1A');
+      g.font=_cqFuente(20, '800'); g.fillStyle='#8A7400'; g.textAlign='center'; g.fillText('◆ OBRASST', cx, H-74);
+      _cqFranjas(g, 0, H-60, W, 60);
+    } else {
+      /* clásico */
+      g.fillStyle='#0B2A3A'; g.fillRect(0, 0, W, 22);
+      _cqLogo(g, L, cx, 66, 520, 170, marca, '#0B2A3A');
+      g.fillStyle='#E3E9ED'; g.fillRect(120, 274, W-240, 3);
+      var ft3=_cqAjustar(g, titulo, W-240, 2, 96, 60, '800'), lht3=ft3.s*1.08;
+      var hb=Math.round((ft3.l.length-1)*lht3+ft3.s*0.74+ft3.s*1.1), yb3=_cqBase(ft3.l.length, ft3.s, lht3, 306, hb);
+      g.fillStyle='#0B2A3A'; _cqCaja(g, 70, 306, W-140, hb, 30); g.fill();
+      g.fillStyle='#F5B700'; _cqCaja(g, cx-90, 306+hb-12, 180, 12, 6); g.fill();
+      g.font=_cqFuente(ft3.s, '800'); _cqTexto(g, ft3.l, cx, yb3, ft3.s, lht3, '#ffffff');
+      var abajo=306+hb;
+      if(largo){ var fl3=_cqAjustar(g, largo, W-220, 2, 36, 26, '600'); g.font=_cqFuente(fl3.s, '600'); abajo=_cqTexto(g, fl3.l, cx, abajo+44+fl3.s*0.74, fl3.s, fl3.s*1.24, '#3E5968')+10; }
+      var pie3=H-120, pad3=30, QR3=qrEn(abajo+56, pie3, pad3), qy3=abajo+56+pad3;
+      g.fillStyle='#ffffff'; _cqCaja(g, cx-QR3/2-pad3, qy3-pad3, QR3+pad3*2, QR3+pad3*2, 26); g.fill();
+      g.lineWidth=4; g.strokeStyle='#CBD6DD'; _cqCaja(g, cx-QR3/2-pad3, qy3-pad3, QR3+pad3*2, QR3+pad3*2, 26); g.stroke();
+      _cqEsquinas(g, cx-QR3/2-pad3-16, qy3-pad3-16, QR3+pad3*2+32, QR3+pad3*2+32, 92, 12, '#F5B700');
+      _cqQR(g, o.enlace, cx, qy3, QR3);
+      _cqEscanea(g, qy3+QR3+pad3+84, t1, t2, '#0B2A3A', '#5B7282');
+      g.fillStyle='#0B2A3A'; g.fillRect(0, pie3, W, 120);
+      var fo3=_cqAjustar(g, obra, W-260, 1, 38, 24, '700'); g.font=_cqFuente(fo3.s, '700'); _cqTexto(g, fo3.l, cx, pie3+58, fo3.s, 0, '#ffffff');
+      g.font=_cqFuente(20, '800'); g.fillStyle='#F5B700'; g.textAlign='center'; g.fillText('◆ OBRASST', cx, pie3+96);
+    }
+    return { canvas:cv, png:cv.toDataURL('image/png') };
+  });
+}
