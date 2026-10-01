@@ -1690,8 +1690,14 @@ function quimLeerTexto(texto){
   r.sw = _qlPalabra(base) || quimPalabraDeH(r.h);
   r.nf = _qlRombo(texto);
   var s1 = texto.slice(0, s2 ? s2.ini : Math.min(texto.length, 3000));
-  r.n = _qlCampo(s1, /(nombre\s+(comercial\s+)?del\s+producto|nombre\s+comercial|nombre\s+de\s+la\s+(sustancia|mezcla)|identificador\s+del\s+producto|denominaci[oó]n|product\s+name|trade\s+name|product\s+identifier)\s*[:.\-]?\s*([^\n]{2,120})/i);
-  r.m = _qlCampo(s1, /(fabricante|proveedor|nombre\s+del\s+proveedor|distribuidor|importador|raz[oó]n\s+social|manufacturer|supplier|company\s+name)\s*[:.\-]?\s*([^\n]{2,120})/i);
+  /* 01/10/2026 · el valor va en la misma línea («Proveedor  Pinturas X», como sale una
+     tabla) o, después de «:», en la siguiente. Antes, «1. IDENTIFICACIÓN DEL PRODUCTO Y
+     DEL PROVEEDOR» —el título de la sección 1 de casi toda hoja en castellano— daba como
+     marca la línea de abajo. Y «Producto» a secas, al empezar la línea, es el nombre. */
+  var SEP = '(?:[ \\t]*[:.\\-][ \\t\\n]*|[ \\t]+)';
+  r.n = _qlCampo(s1, new RegExp('(nombre\\s+(comercial\\s+)?del\\s+producto|nombre\\s+comercial|nombre\\s+de\\s+la\\s+(sustancia|mezcla)|identificador\\s+del\\s+producto|denominaci[oó]n|product\\s+name|trade\\s+name|product\\s+identifier)' + SEP + '([^\\n]{2,120})', 'i')) ||
+        _qlCampo(s1, new RegExp('(?:^|\\n)[ \\t]*(producto)' + SEP + '([^\\n]{2,120})', 'i'));
+  r.m = _qlCampo(s1, new RegExp('(fabricante|proveedor|nombre\\s+del\\s+proveedor|distribuidor|importador|raz[oó]n\\s+social|manufacturer|supplier|company\\s+name)' + SEP + '([^\\n]{2,120})', 'i'));
   return r;
 }
 

@@ -990,6 +990,15 @@ var RCAP = (function(){
     if(iso(t.ingreso) && dia < t.ingreso) st = { e:'fuera', a:st.a, k:'antes' };
     return st;
   }
+  /* 01/10/2026 · la ubicación (la sede o el lugar donde trabaja) un día dado: la misma regla que
+     situacion.js y que el servidor (_sst_ubic_en). Sin cambios de ubicación en su historia, la de su ficha */
+  function ubicacionEn(t, dia){
+    var l = _hist(t).filter(function(e){ return e.u != null; });
+    if(!l.length) return String(t.ubic || '');
+    var u = String((l[0].de && l[0].de.u) || '');
+    l.forEach(function(e){ if(e.f <= dia) u = String(e.u || ''); });
+    return u;
+  }
   function situacionTxt(t, hoy){
     var st = situacionEn(t, hoy);
     var l = _hist(t).filter(function(e){ return e.f <= hoy; });
@@ -1012,7 +1021,7 @@ var RCAP = (function(){
       if(!t || !String(t.nombre || '').trim()) return;
       var p = { id:(t.id != null && t.id !== '') ? String(t.id) : '', nombre:String(t.nombre).replace(/\s+/g, ' ').trim(), dni:String(t.dni || '').trim(), cargo:String(t.cargo || '').trim(),
                 empresa:String(t.empresa || '').trim(), frente:String(t.frente || '').trim(), estatus:t.estatus || 'activo', desde:iso(t.desde),
-                ingreso:iso(t.ingreso), hist:Array.isArray(t.hist) ? t.hist : [], padron:true, cel:{}, evs:[] };
+                ingreso:iso(t.ingreso), hist:Array.isArray(t.hist) ? t.hist : [], ubic:String(t.ubicacion || '').trim(), padron:true, cel:{}, evs:[] };
       gente.push(p);
       var dk = docClave(p.dni); if(dk && !porDoc[dk]) porDoc[dk] = p;
       var nk = nomClave(p.nombre); if(nk && !porNom[nk]) porNom[nk] = p;
@@ -1058,6 +1067,8 @@ var RCAP = (function(){
         var nk2 = nomClave(p.nombre); if(nk2 && !porNom[nk2]) porNom[nk2] = p;
       }
       var e = { p:p, s:s, nota:nota, b:b, n:n, aprob:aprob, taller:taller, folio:String(c.folio || ''), cargo:String(c.cargo || p.cargo || '') };
+      /* dónde estaba ese día: la que guardó la constancia; si no la tiene, la de su historia */
+      e.ubic = String(c.ubicacion || '').trim() || (p.padron ? ubicacionEn(p, dia) : '');
       s.evs.push(e); p.evs.push(e); detalle.push(e);
     });
     /* 3 · lo programado del periodo se suma a su capacitación de ese día;
@@ -1233,7 +1244,11 @@ var RCAP = (function(){
     this.nombre = nombre; this.filas = {}; this.altos = {}; this.anchos = {}; this.merges = []; this.condic = [];
     this.congelar = null; this.filtro = null; this.titulos = null; this.maxC = 0; this.maxR = 0;
     this.ajustar = true; this.escala = 100; this.activa = false;
+    this.pie = 'Registro de seguimiento de capacitaciones';   /* 01/10 · lo usa también el consumo de EPP */
+    this.imgs = [];   /* 01/10 · las fotos (consumo de EPP): {c, r, m (índice en la lista de medios), w, h, dx, dy} en píxeles */
   }
+  /* una imagen sobre la celda (c, r): m es la llave de su archivo (la misma foto en varias filas se guarda una vez) */
+  Hoja.prototype.imagen = function(c, r, m, w, h, dx, dy){ this.imgs.push({ c:c, r:r, m:m, w:Math.round(w), h:Math.round(h), dx:Math.round(dx || 0), dy:Math.round(dy || 0) }); };
   Hoja.prototype.celda = function(c, r, v, s, formula){
     if(!this.filas[r]) this.filas[r] = {};
     this.filas[r][c] = { v:v, s:s || 0, f:formula || null };
@@ -1293,7 +1308,8 @@ var RCAP = (function(){
     });
     h += '<printOptions horizontalCentered="1"/><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.55" header="0.2" footer="0.25"/>' +
          '<pageSetup paperSize="9" orientation="landscape"' + (this.ajustar ? ' fitToWidth="1" fitToHeight="0"' : ' scale="' + this.escala + '"') + '/>' +
-         '<headerFooter><oddFooter>&amp;L&amp;8Registro de seguimiento de capacitaciones · ' + esc(this.nombre) + '&amp;R&amp;8Página &amp;P de &amp;N</oddFooter></headerFooter>';
+         '<headerFooter><oddFooter>&amp;L&amp;8' + esc(this.pie) + ' · ' + esc(this.nombre) + '&amp;R&amp;8Página &amp;P de &amp;N</oddFooter></headerFooter>';
+    if(this.imgs.length) h += '<drawing r:id="rId1"/>';
     return h + '</worksheet>';
   };
 
@@ -1306,9 +1322,10 @@ var RCAP = (function(){
   }
   function zip(archivos){
     var enc = new TextEncoder(), partes = [], central = [], off = 0;
+    /* a.b: un archivo binario ya hecho (las fotos); a.x: texto */
     var d = new Date(), dt = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF, df = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF;
     archivos.forEach(function(a){
-      var nb = enc.encode(a.n), datos = enc.encode(a.x), crc = crc32(datos);
+      var nb = enc.encode(a.n), datos = a.b || enc.encode(a.x), crc = crc32(datos);
       var lh = new Uint8Array(30 + nb.length), v = new DataView(lh.buffer);
       v.setUint32(0, 0x04034b50, true); v.setUint16(4, 20, true); v.setUint16(6, 0x0800, true); v.setUint16(8, 0, true);
       v.setUint16(10, dt, true); v.setUint16(12, df, true); v.setUint32(14, crc, true); v.setUint32(18, datos.length, true); v.setUint32(22, datos.length, true);
@@ -1335,6 +1352,9 @@ var RCAP = (function(){
     var periodo = (D.desde === '0000-01-01' ? 'Desde el inicio' : dma(D.desde)) + ' al ' + (D.hasta === '9999-12-31' ? dma(D.hoy) : dma(D.hasta));
     var emitido = dma(D.hoy) + (ent.hora ? ' ' + ent.hora : '');
     var conEmpresa = D.gente.some(function(p){ return p.padron && p.empresa; });
+    /* la columna de la ubicación, solo si la obra las usa */
+    var conUbic = D.gente.some(function(p){ return p.padron && (p.ubic || _hist(p).some(function(e){ return e.u != null; })); }) ||
+                  D.detalle.some(function(e){ return !!e.ubic; });
     var DX = [E.dxf(C.malT), E.dxf(C.ojoT), E.dxf(C.okT)];
     var S = {
       tit: E.xf({ b:1, sz:16, c:C.petroleo, v:'center' }),
@@ -1386,9 +1406,9 @@ var RCAP = (function(){
 
     /* ══ SEGUIMIENTO: la matriz ══ */
     var H = new Hoja('Seguimiento');
-    var fijas = ['N°', 'Trabajador', 'DNI / doc.', 'Cargo'].concat(conEmpresa ? ['Empresa'] : []).concat(['Frente / área', 'Situación']);
-    var anchosF = [5, 32, 11, 18].concat(conEmpresa ? [18] : []).concat([16, 21]);
-    var FIJAS = fijas.length, cEmp = conEmpresa ? 4 : -1, cFr = conEmpresa ? 5 : 4, cSit = FIJAS - 1;
+    var fijas = ['N°', 'Trabajador', 'DNI / doc.', 'Cargo'].concat(conEmpresa ? ['Empresa'] : []).concat(['Frente / área']).concat(conUbic ? ['Ubicación'] : []).concat(['Situación']);
+    var anchosF = [5, 32, 11, 18].concat(conEmpresa ? [18] : []).concat([16]).concat(conUbic ? [16] : []).concat([21]);
+    var FIJAS = fijas.length, cEmp = conEmpresa ? 4 : -1, cFr = conEmpresa ? 5 : 4, cUb = conUbic ? cFr + 1 : -1, cSit = FIJAS - 1;
     var nS = D.ses.length, c0 = FIJAS, cR = FIJAS + nS;   /* cR: la primera de las de cumplimiento */
     anchosF.forEach(function(w, i){ H.anchos[i] = w; });
     for(var i = 0; i < nS; i++) H.anchos[c0 + i] = 10;
@@ -1425,6 +1445,7 @@ var RCAP = (function(){
       H.celda(3, r, p.cargo || '', S.txt);
       if(conEmpresa) H.celda(cEmp, r, p.empresa || '', S.txt);
       H.celda(cFr, r, p.padron ? (situacionEn(p, D.hoy).a || p.frente || '') : '', S.txt);
+      if(conUbic) H.celda(cUb, r, p.padron ? ubicacionEn(p, D.hoy) : '', S.txt);
       var st = p.padron ? situacionTxt(p, D.hoy) : 'No está en el padrón';
       H.celda(cSit, r, st, !p.padron ? S.afuera : (/^Activo/.test(st) ? S.sitOk : (/^(De descanso|Ingresa)/.test(st) ? S.sitDesc : S.sitFuera)));
       var x = { rend:0, apr:0, falt:0, pend:0, desc:0, notas:[] };
@@ -1479,11 +1500,12 @@ var RCAP = (function(){
 
     /* ══ DETALLE: una fila por evaluación ══ */
     var DT = new Hoja('Detalle');
-    var cabD = ['Fecha', 'Capacitación', 'Tipo', 'Trabajador', 'DNI / doc.', 'Cargo', 'Frente / área', 'Resultado', 'Nota (0–20)', 'Correctas', 'Folio', 'Evaluador', 'Horas'];
-    [11, 38, 11, 30, 11, 18, 16, 13, 10, 10, 16, 24, 7].forEach(function(w, i){ DT.anchos[i] = w; });
+    var cabD = ['Fecha', 'Capacitación', 'Tipo', 'Trabajador', 'DNI / doc.', 'Cargo', 'Frente / área'].concat(conUbic ? ['Ubicación'] : []).concat(['Resultado', 'Nota (0–20)', 'Correctas', 'Folio', 'Evaluador', 'Horas']);
+    [11, 38, 11, 30, 11, 18, 16].concat(conUbic ? [16] : []).concat([13, 10, 10, 16, 24, 7]).forEach(function(w, i){ DT.anchos[i] = w; });
+    var dU = conUbic ? 1 : 0;   /* lo que se corre a la derecha si va la ubicación */
     DT.unir(0, 1, cabD.length - 1, 1, 'DETALLE DE LAS EVALUACIONES', S.tit); DT.altos[1] = 26;
     DT.unir(0, 2, cabD.length - 1, 2, (linea ? linea + '  ·  ' : '') + 'Periodo: ' + periodo + '  ·  Emitido: ' + emitido, S.sub);
-    DT.unir(0, 3, cabD.length - 1, 3, 'Una fila por cada evaluación rendida. Usa los filtros del encabezado para ver una capacitación, una fecha, un frente o solo los desaprobados.', S.ley);
+    DT.unir(0, 3, cabD.length - 1, 3, 'Una fila por cada evaluación rendida. Usa los filtros del encabezado para ver una capacitación, una fecha, un frente' + (conUbic ? ', una ubicación (la de ese día)' : '') + ' o solo los desaprobados.', S.ley);
     cabD.forEach(function(t, i){ DT.celda(i, 4, t, i === 1 || i === 3 ? S.cabIzq : S.cab); });
     DT.altos[4] = 30;
     var rd = 5;
@@ -1495,12 +1517,13 @@ var RCAP = (function(){
       DT.celda(4, rd, e.p.dni || '', S.txtC);
       DT.celda(5, rd, e.cargo || '', S.txt);
       DT.celda(6, rd, e.p.padron ? (situacionEn(e.p, e.s.dia).a || e.p.frente || '') : '', S.txt);
-      DT.celda(7, rd, (e.taller && e.nota == null) ? (e.aprob ? 'Completado' : 'Incompleto') : (e.aprob ? 'Aprobado' : 'Desaprobado'), e.aprob ? S.si : S.no);
-      DT.celda(8, rd, e.nota != null ? e.nota : '', e.nota != null ? (e.nota >= APRUEBA ? S.ok : S.mal) : S.vacio);
-      DT.celda(9, rd, (e.b != null && e.n) ? (e.b + ' de ' + e.n) : '', S.txtC);
-      DT.celda(10, rd, e.folio, S.txtC);
-      DT.celda(11, rd, e.s.evaluador || '', S.txt);
-      DT.celda(12, rd, e.s.horas || '', S.txtC);
+      if(conUbic) DT.celda(7, rd, e.ubic || '', S.txt);
+      DT.celda(7 + dU, rd, (e.taller && e.nota == null) ? (e.aprob ? 'Completado' : 'Incompleto') : (e.aprob ? 'Aprobado' : 'Desaprobado'), e.aprob ? S.si : S.no);
+      DT.celda(8 + dU, rd, e.nota != null ? e.nota : '', e.nota != null ? (e.nota >= APRUEBA ? S.ok : S.mal) : S.vacio);
+      DT.celda(9 + dU, rd, (e.b != null && e.n) ? (e.b + ' de ' + e.n) : '', S.txtC);
+      DT.celda(10 + dU, rd, e.folio, S.txtC);
+      DT.celda(11 + dU, rd, e.s.evaluador || '', S.txt);
+      DT.celda(12 + dU, rd, e.s.horas || '', S.txtC);
       rd++;
     });
     if(rd === 5){ DT.unir(0, 5, cabD.length - 1, 5, 'Nadie rindió una evaluación en este periodo.', S.ley); }
@@ -1598,6 +1621,16 @@ var RCAP = (function(){
 
     /* ══ el libro ══ */
     var hojas = [R, H, DT];
+    return { blob:libro(hojas, E, 'Registro de seguimiento de capacitaciones'), datos:D, numeros:X };
+  }
+
+  /* ── el .xlsx: las hojas y sus estilos, en el ZIP (01/10: aparte, lo usa también el consumo de EPP) ── */
+  /* medios: [{ b:Uint8Array, ext:'jpeg'|'png' }] · cada hoja con imgs lleva su dibujo */
+  function libro(hojas, E, titulo, medios){
+    medios = medios || [];
+    var conDib = hojas.map(function(h){ return !!(h.imgs && h.imgs.length); }), nDib = 0, dibDe = {};
+    hojas.forEach(function(h, i){ if(conDib[i]) dibDe[i] = ++nDib; });
+    var EMU = 9525;
     var wb = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
       '<bookViews><workbookView activeTab="0"/></bookViews><sheets>' + hojas.map(function(h, i){ return '<sheet name="' + esc(h.nombre) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('') + '</sheets>';
     var dn = [];
@@ -1611,6 +1644,9 @@ var RCAP = (function(){
     var archivos = [
       { n:'[Content_Types].xml', x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
           '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+          (medios.some(function(m){ return m.ext === 'jpeg'; }) ? '<Default Extension="jpeg" ContentType="image/jpeg"/>' : '') +
+          (medios.some(function(m){ return m.ext === 'png'; }) ? '<Default Extension="png" ContentType="image/png"/>' : '') +
+          Object.keys(dibDe).map(function(i){ return '<Override PartName="/xl/drawings/drawing' + dibDe[i] + '.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>'; }).join('') +
           '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
           hojas.map(function(h, i){ return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') +
           '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
@@ -1621,7 +1657,7 @@ var RCAP = (function(){
           '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>' +
           '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>' },
       { n:'docProps/core.xml', x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
-          '<dc:title>Registro de seguimiento de capacitaciones</dc:title><dc:creator>OBRASST</dc:creator>' +
+          '<dc:title>' + esc(titulo || 'OBRASST') + '</dc:title><dc:creator>OBRASST</dc:creator>' +
           '<dcterms:created xsi:type="dcterms:W3CDTF">' + ahora + '</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">' + ahora + '</dcterms:modified></cp:coreProperties>' },
       { n:'docProps/app.xml', x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>OBRASST</Application></Properties>' },
       { n:'xl/workbook.xml', x:wb },
@@ -1629,9 +1665,27 @@ var RCAP = (function(){
           hojas.map(function(h, i){ return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('') +
           '<Relationship Id="rId' + (hojas.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' }
     ];
-    hojas.forEach(function(h, i){ archivos.push({ n:'xl/worksheets/sheet' + (i + 1) + '.xml', x:h.xml() }); });
+    hojas.forEach(function(h, i){
+      archivos.push({ n:'xl/worksheets/sheet' + (i + 1) + '.xml', x:h.xml() });
+      if(!conDib[i]) return;
+      var nd = dibDe[i], usados = {};
+      archivos.push({ n:'xl/worksheets/_rels/sheet' + (i + 1) + '.xml.rels', x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing' + nd + '.xml"/></Relationships>' });
+      var dib = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
+      h.imgs.forEach(function(g, k){
+        usados[g.m] = 1;
+        dib += '<xdr:oneCellAnchor><xdr:from><xdr:col>' + g.c + '</xdr:col><xdr:colOff>' + (g.dx * EMU) + '</xdr:colOff><xdr:row>' + (g.r - 1) + '</xdr:row><xdr:rowOff>' + (g.dy * EMU) + '</xdr:rowOff></xdr:from>' +
+          '<xdr:ext cx="' + (g.w * EMU) + '" cy="' + (g.h * EMU) + '"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="' + (k + 2) + '" name="Foto ' + (k + 1) + '"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>' +
+          '<xdr:blipFill><a:blip r:embed="rIm' + g.m + '"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>' +
+          '<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + (g.w * EMU) + '" cy="' + (g.h * EMU) + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>';
+      });
+      archivos.push({ n:'xl/drawings/drawing' + nd + '.xml', x:dib + '</xdr:wsDr>' });
+      archivos.push({ n:'xl/drawings/_rels/drawing' + nd + '.xml.rels', x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        Object.keys(usados).map(function(m){ return '<Relationship Id="rIm' + m + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/foto' + m + '.' + medios[m].ext + '"/>'; }).join('') + '</Relationships>' });
+    });
+    medios.forEach(function(m, k){ archivos.push({ n:'xl/media/foto' + k + '.' + m.ext, b:m.b }); });
     archivos.push({ n:'xl/styles.xml', x:E.xml() });   /* al final: las hojas registran sus estilos al armarse */
-    return { blob:zip(archivos), datos:D, numeros:X };
+    return zip(archivos);
   }
 
   /* el nombre del archivo */
@@ -1642,5 +1696,7 @@ var RCAP = (function(){
   }
 
   return { armar:armar, preparar:preparar, estadisticas:estadisticas, programadasDe:programadasDe, rango:rango, PERIODOS:PERIODOS,
-           situacionEn:situacionEn, situacionTxt:situacionTxt, nombreArchivo:nombreArchivo, APRUEBA:APRUEBA, _zip:zip, _crc32:crc32 };
+           situacionEn:situacionEn, situacionTxt:situacionTxt, nombreArchivo:nombreArchivo, APRUEBA:APRUEBA, _zip:zip, _crc32:crc32,
+           /* 01/10 · lo del .xlsx, para otros libros (el consumo de EPP del portal) */
+           ubicacionEn:ubicacionEn, xlsx:{ Hoja:Hoja, Estilos:Estilos, libro:libro, C:C, ref:ref, serial:serial, dma:dma } };
 })();
