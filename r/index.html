@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B2A3A">
+<link rel="icon" href="../icono-192.png">
+<title>Requerimiento · OBRASST</title>
+<style>
+/* 04/10/2026 · lo que abre el enlace de un requerimiento: el pedido entero, para
+   el jefe que no usa OBRASST. Lo ve en su celular o en su computadora, lo baja en
+   PDF o en Excel y —solo si quien lo pidió lo permitió— lo autoriza aquí mismo.
+   05/10/2026 · las firmas de la ruta: al gerente le llega SU enlace (…&f=llave);
+   ve el pedido ya aprobado por Seguridad y firma en su casillero, sin cuenta. */
+*{box-sizing:border-box}
+:root{--tinta:#0B2A3A;--texto:#1B2A33;--gris:#5E6E79;--gris2:#8A97A3;--raya:#DCE3E8;--fondo:#F3F6F8;--oro:#F5B700;
+  --ok:#127A47;--ok-f:#E3F4EA;--ojo:#8A5700;--ojo-f:#FFF1D6;--mal:#B72F2B;--mal-f:#FBE3E4}
+body{margin:0;background:var(--fondo);color:var(--texto);font:16px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  padding:0 0 calc(32px + env(safe-area-inset-bottom,0px))}
+.cab{background:var(--tinta);color:#fff;padding:calc(18px + env(safe-area-inset-top,0px)) 16px 22px}
+.cab-in{max-width:760px;margin:0 auto}
+.cuerpo{max-width:792px;margin:0 auto}   /* 760 de tarjeta + su margen: alineada con la cabecera */
+.marca{font-size:12px;letter-spacing:.18em;color:var(--oro);font-weight:800}
+.cab h1{font-size:15px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin:10px 0 2px;color:#C8D7E1}
+.num{font:800 30px/1.15 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.02em;margin:0}
+.cab .obra{margin:4px 0 0;color:#A9C2D0;font-size:14.5px}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0}
+.pill{display:inline-block;font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:#fff;color:var(--tinta)}
+.pill.ok{background:var(--ok-f);color:var(--ok)} .pill.med{background:var(--ojo-f);color:var(--ojo)} .pill.mal{background:var(--mal-f);color:var(--mal)}
+.pill.neu{background:#E6EBEE;color:#2B3B45} .pill.urg{background:var(--mal);color:#fff}
+.cuerpo{padding:16px}
+.tarj{background:#fff;border:1px solid var(--raya);border-radius:14px;padding:16px;margin:0 0 14px}
+.tarj h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--gris);margin:0 0 10px;font-weight:700}
+.datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 18px;margin:0}
+.datos dt{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris2);font-weight:700}
+.datos dd{margin:1px 0 0;font-size:15.5px;overflow-wrap:anywhere}
+.lin{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:10px 0;border-top:1px solid var(--raya)}
+.lin:first-of-type{border-top:0;padding-top:0}
+.lin-tx{flex:1;min-width:0} .lin-tx b{display:block;font-size:15.5px;overflow-wrap:anywhere}
+.lin-tx small{display:block;color:var(--gris);font-size:13px;line-height:1.45;margin-top:2px}
+.lin-tx small.sus{font-style:italic}
+.lin-n{flex:0 0 auto;text-align:right;min-width:70px}
+.lin-n b{display:block;font-size:20px;font-variant-numeric:tabular-nums;color:var(--tinta)}
+.lin-n small{display:block;color:var(--gris);font-size:12.5px}
+.lin-n em{display:block;font-style:normal;font-size:12.5px;font-weight:700;margin-top:3px}
+.lin-n em.aut{color:var(--ok)} .lin-n em.rec{color:var(--ojo)}
+.lin-n input{width:88px;text-align:center}
+.sus-l p{margin:0 0 5px;font-size:14.5px}
+.firmas{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.fc{border:1px solid var(--raya);border-radius:12px;padding:10px 12px;min-width:0;display:flex;flex-direction:column}
+.fc small{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gris2);font-weight:700}
+.fc canvas{display:block;width:100%;height:76px;margin:6px 0;border-bottom:1px solid var(--raya)}
+.fc b{font-size:14.5px;overflow-wrap:anywhere} .fc span{font-size:13px;color:var(--gris)} .fc i{font-style:normal;font-size:12px;color:var(--gris2);margin-top:2px}
+.fc.falta{border-style:dashed;border-color:var(--mal)} .fc.falta b{color:var(--mal);margin:14px 0}
+.fc.espera{border-color:#E0B64A} .fc.espera b{color:var(--ojo);margin:14px 0 2px} .fc.mia{border-style:solid;border-width:2px;border-color:var(--oro)}
+.fc .papel{display:block;font-style:normal;font-size:13px;color:var(--gris);text-align:center;padding:28px 0;margin:6px 0;background:var(--fondo);border-radius:8px;border-bottom:1px solid var(--raya)}
+.tarj.mia{border:2px solid var(--oro)} .tarj.mia h2{color:var(--tinta)}
+.resumen{font-size:14.5px;margin:0 0 6px}
+.aviso{border-radius:12px;padding:12px 14px;font-size:14.5px;margin:0 0 14px;border:1px solid}
+.aviso.ok{background:var(--ok-f);border-color:#B5DFC6;color:#0E4D2E} .aviso.med{background:var(--ojo-f);border-color:#F0DC9A;color:#5B4200}
+.aviso.mal{background:var(--mal-f);border-color:#F2BDBF;color:#7A1216}
+label{display:block;font-size:13.5px;color:var(--gris);margin:12px 0 4px}
+input,textarea{width:100%;font:inherit;padding:11px 12px;border:1px solid #C4CFD7;border-radius:10px;background:#fff;color:var(--texto)}
+input:focus,textarea:focus{outline:2px solid var(--tinta);outline-offset:1px}
+.lienzo{border:2px dashed #B8C5CE;border-radius:12px;overflow:hidden;background:#fff;margin:6px 0 4px}
+.lienzo canvas{display:block;touch-action:none;cursor:crosshair}
+.bt{display:inline-flex;align-items:center;justify-content:center;gap:6px;font:inherit;font-weight:700;padding:12px 16px;border-radius:12px;border:1px solid var(--tinta);
+  background:var(--tinta);color:#fff;cursor:pointer;min-height:46px}
+.bt.sec{background:#fff;color:var(--tinta);border-color:#B8C5CE} .bt.oro{background:var(--oro);border-color:var(--oro);color:var(--tinta)}
+.bt:disabled{opacity:.5;cursor:default} .bt:focus-visible{outline:3px solid var(--oro);outline-offset:2px}
+.fila-bt{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0} .fila-bt .bt{flex:1 1 140px}
+.lnk{background:none;border:0;padding:4px 0;color:var(--tinta);font:inherit;font-size:13.5px;font-weight:700;text-decoration:underline;cursor:pointer}
+.msg{font-size:14px;min-height:20px;margin:10px 0 0} .msg.mal{color:var(--mal)} .msg.gris{color:var(--gris)}
+.nota{font-size:12.5px;color:var(--gris2);text-align:center;margin:18px 16px 0}
+.centro{text-align:center;padding:40px 16px}
+.giro{width:34px;height:34px;margin:22px auto 0;border-radius:50%;border:3px solid rgba(11,42,58,.15);border-top-color:var(--oro);animation:g .8s linear infinite}
+@keyframes g{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.giro{animation-duration:2.4s}}
+@media print{.no-imp{display:none!important} body{background:#fff} .tarj{break-inside:avoid}}
+</style></head><body>
+<header class="cab"><div class="cab-in">
+  <div class="marca">&#9670; OBRASST</div>
+  <div id="cab"><h1>Requerimiento</h1></div>
+</div></header>
+<main class="cuerpo" id="cuerpo"><div class="centro"><b>Buscando el requerimiento…</b><div class="giro"></div></div></main>
+<p class="nota no-imp" id="pie"></p>
+<script>var RQ_VER='2d452f513f', EVPDF_VER='df40a6c083';   /* los pone armar.py: las huellas de r/requerimiento.js y de portal/evaluaciones-pdf.js */</script>
+<script>
+(function(){
+  var SB='https://gwjjkknuiumgysezeatz.supabase.co', KEY='sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx';
+  var cuerpo=document.getElementById('cuerpo'), cab=document.getElementById('cab'), pie=document.getElementById('pie');
+  var R=null, PAD=null, tk='', fk='', MI=null, PADM=null;
+  function $(i){ return document.getElementById(i); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function q(n){ try{ return new URLSearchParams(location.search).get(n)||''; }catch(e){ return ''; } }
+  function rpc(fn, args){
+    return fetch(SB+'/rest/v1/rpc/'+fn, { method:'POST', headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'}, body:JSON.stringify(args||{}) })
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); });
+  }
+  function di(titulo, texto){ cuerpo.innerHTML='<div class="tarj centro"><b>'+esc(titulo)+'</b>'+(texto ? '<p style="margin:8px 0 0;color:var(--gris)">'+esc(texto)+'</p>' : '')+'</div>'; }
+  /* lo común con la app (los nombres, la cuenta, el PDF y el Excel) se carga al lado */
+  function cargar(src){ return new Promise(function(ok, no){ var s=document.createElement('script'); s.src=src; s.onload=function(){ ok(); }; s.onerror=function(){ no('red'); }; document.head.appendChild(s); }); }
+  var _papel=null;
+  function papel(){ if(!_papel) _papel=cargar('../portal/evaluaciones-pdf.js?v='+EVPDF_VER).then(function(){ if(typeof jspdf==='undefined' || typeof RCAP==='undefined') return Promise.reject('red'); }, function(e){ _papel=null; return Promise.reject(e); }); return _papel; }
+  function bajar(blob, nombre){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nombre; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+  /* una firma (el trazo) pintada en un lienzo */
+  function pintarFirma(cv, tr){
+    if(!cv || !tr || !tr.p) return;
+    var r=window.devicePixelRatio||1, w=cv.clientWidth||240, h=cv.clientHeight||76;
+    cv.width=Math.round(w*r); cv.height=Math.round(h*r);
+    var g=cv.getContext('2d'); g.scale(r,r);
+    var th=tr.h||380, k=Math.min(w/1000, h/th), ox=(w-1000*k)/2, oy=(h-th*k)/2;
+    g.strokeStyle='#101820'; g.lineWidth=1.6; g.lineCap='round'; g.lineJoin='round';
+    tr.p.forEach(function(s){ g.beginPath(); g.moveTo(ox+s[0]*k, oy+s[1]*k); for(var i=2;i+1<s.length;i+=2) g.lineTo(ox+s[i]*k, oy+s[i+1]*k); g.stroke(); });
+  }
+  function firmaPNG(tr){
+    try{ var cv=document.createElement('canvas'), W=360, H=Math.round(W*(tr.h||380)/1000); cv.width=W*2; cv.height=H*2;
+      var g=cv.getContext('2d'); g.scale(2,2); g.fillStyle='#fff'; g.fillRect(0,0,W,H); g.strokeStyle='#101820'; g.lineWidth=Math.max(1,W/170); g.lineCap='round'; g.lineJoin='round';
+      var k=W/1000; tr.p.forEach(function(s){ g.beginPath(); g.moveTo(s[0]*k, s[1]*k); for(var i=2;i+1<s.length;i+=2) g.lineTo(s[i]*k, s[i+1]*k); g.stroke(); });
+      var bin=atob(cv.toDataURL('image/png').split(',')[1]), u=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u;
+    }catch(e){ return null; }
+  }
+  /* el lienzo para firmar: dedo, lápiz o mouse */
+  function pad(cv, alto){
+    var ancho=Math.max(200, cv.parentNode.clientWidth-4), r=window.devicePixelRatio||1;
+    cv.style.width=ancho+'px'; cv.style.height=alto+'px'; cv.width=Math.round(ancho*r); cv.height=Math.round(alto*r);
+    var g=cv.getContext('2d'); g.scale(r,r);
+    var P={ trazos:[], pinta:false,
+      limpiar:function(){ P.trazos=[]; g.fillStyle='#fff'; g.fillRect(0,0,ancho,alto); },
+      puntos:function(){ var n=0; P.trazos.forEach(function(t){ n+=t.length; }); return n; },
+      trazo:function(){
+        if(P.puntos()<12) return null;
+        var x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+        P.trazos.forEach(function(t){ t.forEach(function(p){ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; }); });
+        var an=Math.max(1,x1-x0), al=Math.max(1,y1-y0), mg=Math.max(an,al)*0.06; x0-=mg; y0-=mg; an+=mg*2; al+=mg*2;
+        if(al/an<0.13){ var f=(an*0.13-al)/2; y0-=f; al=an*0.13; }
+        var k=1000/an, p=[];
+        P.trazos.forEach(function(t){ if(t.length<2) return; var s=[]; t.forEach(function(pt){ s.push(Math.round((pt[0]-x0)*k), Math.round((pt[1]-y0)*k)); }); p.push(s); });
+        return p.length ? { h:Math.round(al*k), p:p } : null;
+      } };
+    P.limpiar(); g.strokeStyle='#101820'; g.lineWidth=2.4; g.lineCap='round'; g.lineJoin='round';
+    function pos(ev){ var b=cv.getBoundingClientRect(); return [ev.clientX-b.left, ev.clientY-b.top]; }
+    cv.onpointerdown=function(ev){ ev.preventDefault(); try{ cv.setPointerCapture(ev.pointerId); }catch(e){} P.pinta=true; if(P.alFirmar) P.alFirmar(); var p=pos(ev); P.trazos.push([p]); g.beginPath(); g.moveTo(p[0],p[1]); };
+    cv.onpointermove=function(ev){ if(!P.pinta) return; ev.preventDefault(); var p=pos(ev); P.trazos[P.trazos.length-1].push(p); g.lineTo(p[0],p[1]); g.stroke(); };
+    cv.onpointerup=cv.onpointercancel=cv.onpointerleave=function(){ P.pinta=false; };
+    return P;
+  }
+
+  function pintar(){
+    var r=R, K=RQB.clase(r.clase), E=RQB.estado(r), ek=RQB.estadoK(r), aut=(r.res && r.res.accion==='autorizar') ? r.res : null;
+    document.title='Requerimiento '+(r.numero||'')+' · OBRASST';
+    cab.innerHTML='<h1>'+esc(K.t.toLowerCase().replace(/^./, function(c){ return c.toUpperCase(); }))+'</h1><p class="num" id="numero">N.° '+esc(r.numero||'')+'</p>'+
+      '<p class="obra">'+esc(r.obra||'')+'</p><div class="pills"><span class="pill '+E.c+'" id="estado">'+E.ic+' '+esc(E.n)+'</span>'+(RQB.urge(r) ? '<span class="pill urg">Urgente</span>' : '')+'</div>';
+    var h='';
+    var est={ enviado:'Espera a quien autoriza.', autorizado:'Falta que llegue lo pedido.', parcial:'Llegó una parte de lo pedido.', atendido:'Llegó todo lo autorizado.',
+              firmas:'Seguridad ya lo aprobó: le faltan firmas.',
+              observado:'Se devolvió con una observación: quien lo pidió lo corrige y lo reenvía.', rechazado:'No se autorizó.', anulado:'Quien lo pidió lo retiró.' }[ek];
+    /* la firma de quien abrió SU enlace (…&f=llave): cuál es, y si ya se puede poner */
+    var miPaso=MI ? RQB.ruta(r).filter(function(p){ return p.k===MI; })[0] : null, miVisto=miPaso ? RQB.visto(r, MI) : null;
+    if(r.res && r.res.nota && r.res.accion!=='autorizar')
+      h+='<div class="aviso '+(r.res.accion==='rechazar' ? 'mal' : 'med')+'" id="obs"><b>'+(r.res.accion==='observar' ? 'Observación de ' : 'Lo rechazó ')+esc(r.res.n||'')+':</b> '+esc(r.res.nota)+'</div>';
+    h+='<div class="tarj"><h2>El pedido</h2><dl class="datos">'+
+       '<div><dt>Fecha</dt><dd>'+esc(RQB.dma(r.fecha))+(r.creado ? ' · '+esc(RQB.hora(r.creado)) : '')+'</dd></div>'+
+       '<div><dt>Se necesita para</dt><dd>'+(r.para ? esc(RQB.dma(r.para)) : 'Sin fecha')+'</dd></div>'+
+       '<div><dt>Ubicación</dt><dd>'+esc(r.ubicacion||'—')+'</dd></div>'+
+       '<div><dt>Solicita</dt><dd>'+esc([(r.por||{}).n, (r.por||{}).c].filter(Boolean).join(' · '))+'</dd></div>'+
+       '<div><dt>'+(aut ? esc(RQB.titulo2(r)) : 'Enviado a')+'</dt><dd>'+esc(aut ? [aut.n, aut.c].filter(Boolean).join(' · ') : ([(r.a||{}).n, (r.a||{}).c].filter(Boolean).join(' · ') || '—'))+'</dd></div>'+
+       '<div><dt>Estado</dt><dd>'+esc(est||'')+'</dd></div></dl></div>';
+    h+='<div class="tarj" id="lineas"><h2>Lo que se pide · '+r.items.length+'</h2>'+r.items.map(function(it, i){
+      var a=RQB.cantAut(r, i), rc=RQB.cantRec(r, i);
+      return '<div class="lin"><div class="lin-tx"><b>'+esc(it.d)+'</b>'+(it.e ? '<small>'+esc(it.e)+'</small>' : '')+(it.s ? '<small class="sus">'+esc(it.s)+'</small>' : '')+'</div>'+
+        '<div class="lin-n"><b>'+RQB.num(it.c)+'</b><small>'+esc(it.u||'und')+'</small>'+
+        ((aut && a!==null && a!==+it.c) ? '<em class="aut">Autorizado '+RQB.num(a)+'</em>' : '')+((r.aten && rc!==null) ? '<em class="rec">Llegó '+RQB.num(rc)+'</em>' : '')+'</div></div>'; }).join('')+'</div>';
+    if(r.motivo) h+='<div class="tarj"><h2>Motivo</h2><p style="margin:0;white-space:pre-wrap">'+esc(r.motivo)+'</p></div>';
+    var at=RQB.analisisTxt(r.analisis);
+    if(at.length) h+='<div class="tarj sus-l" id="sustento"><h2>Sustento: el consumo de EPP de la obra</h2>'+at.map(function(l){ return '<p>'+esc(l)+'</p>'; }).join('')+'</div>';
+    if(aut && aut.nota) h+='<div class="aviso ok"><b>Nota de quien autoriza:</b> '+esc(aut.nota)+'</div>';
+    if(r.aten) h+='<div class="aviso ok"><b>'+(r.aten.parcial ? 'Recibido en parte' : 'Recibido')+':</b> '+esc([r.aten.n, RQB.cuando(r.aten.t), r.aten.nota].filter(Boolean).join(' · '))+'</div>';
+    /* autorizarlo aquí, si quien lo pidió lo permitió (el enlace de un gerente es para firmar, no para autorizar) */
+    if(r.estado==='enviado' && r.por_enlace && !miPaso) h+='<div class="tarj no-imp" id="resolver"></div>';
+    else if(r.estado==='enviado' && !miPaso) h+='<div class="aviso med no-imp" id="solo-cuenta">Para autorizarlo hay que entrar a OBRASST con una cuenta del equipo de la obra. Con este enlace se puede ver y bajar.</div>';
+    /* la firma de quien abrió su enlace */
+    if(miPaso){
+      if(miVisto) h+='<div class="aviso ok no-imp" id="mi-lista"><b>Ya está tu firma como '+esc(miPaso.t)+'.</b> '+esc(RQB.cuando(miVisto.t))+'. No hace falta nada más.</div>';
+      else if(RQB.seFirma(r)) h+='<div class="tarj mia no-imp" id="mi-firma"></div>';
+      else if(r.estado==='enviado' || r.estado==='observado') h+='<div class="aviso med no-imp" id="mi-espera"><b>Todavía falta la aprobación de Seguridad.</b> Cuando esté, vuelve a abrir este enlace para firmar como '+esc(miPaso.t)+'.</div>';
+      else h+='<div class="aviso mal no-imp" id="mi-nada"><b>Este requerimiento ya no espera firmas:</b> '+(r.estado==='rechazado' ? 'fue rechazado.' : 'fue anulado.')+'</div>';
+    }
+    var Fs=RQB.firmantes(r);
+    h+='<div class="tarj"><h2>Firmas</h2><div class="firmas" id="firmas">'+Fs.map(function(k){
+         var mia=(k.k===MI);
+         if(k.ok) return '<div class="fc'+(mia ? ' mia' : '')+'" data-k="'+esc(k.k)+'"><small>'+esc(k.t)+'</small>'+(k.f ? '<canvas id="f-'+esc(k.k)+'"></canvas>' : '<em class="papel">📄 En papel</em>')+
+                         '<b>'+esc(k.n||'')+'</b>'+(k.c ? '<span>'+esc(k.c)+'</span>' : '')+'<i>'+esc([k.cuando, k.como].filter(Boolean).join(' · '))+'</i>'+(k.nota ? '<i>«'+esc(k.nota)+'»</i>' : '')+'</div>';
+         if(k.extra) return '<div class="fc espera'+(mia ? ' mia' : '')+'" data-k="'+esc(k.k)+'"><small>'+esc(k.t)+'</small><b>'+((mia && RQB.seFirma(r)) ? 'Falta tu firma' : 'Falta firmar')+'</b>'+(k.n ? '<span>'+esc(k.n)+'</span>' : '')+'</div>';
+         return '<div class="fc falta" data-k="'+esc(k.k)+'"><small>'+esc(k.t)+'</small><b>'+esc(k.falta)+'</b></div>';
+       }).join('')+'</div>'+
+       ((!miPaso && RQB.seFirma(r) && RQB.faltan(r).length) ? '<p style="margin:10px 0 0;font-size:13px;color:var(--gris)" id="nota-faltan">A cada persona que falta firmar le llega su propio enlace: con él firma en su casillero.</p>' : '')+'</div>';
+    h+='<div class="fila-bt no-imp"><button type="button" class="bt" id="b-pdf">⬇ PDF</button><button type="button" class="bt sec" id="b-xlsx">⬇ Excel</button></div><p class="msg" id="msg"></p>';
+    cuerpo.innerHTML=h;
+    Fs.forEach(function(k){ if(k.ok && k.f) pintarFirma($('f-'+k.k), k.f); });
+    $('b-pdf').onclick=function(){ doc('pdf'); }; $('b-xlsx').onclick=function(){ doc('xlsx'); };
+    if($('resolver')) pintarResolver();
+    if($('mi-firma')) pintarMiFirma(miPaso);
+    pie.textContent='OBRASST deja constancia de quién dijo ser, a qué hora firmó y desde dónde. Este enlace es solo de este requerimiento.';
+  }
+  function doc(tipo){
+    var m=$('msg'), b=$(tipo==='pdf' ? 'b-pdf' : 'b-xlsx'); b.disabled=true; m.className='msg gris'; m.textContent='Armando el archivo…';
+    papel().then(function(){
+      if(tipo==='pdf') bajar(RQB.pdf(R, {}).output('blob'), RQB.nombreArchivo(R, 'pdf'));
+      else bajar(RQB.xlsx(R, { firmaPNG:firmaPNG }), RQB.nombreArchivo(R, 'xlsx'));
+      b.disabled=false; m.textContent='';
+    }).catch(function(){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo armar el archivo. Revisa tu conexión e inténtalo otra vez.'; });
+  }
+  /* el gerente firma en su casillero: su nombre, su trazo y, si quiere, una nota */
+  function pintarMiFirma(p){
+    var c=$('mi-firma'), r=R, aut=(r.res && r.res.accion==='autorizar') ? r.res : null;
+    c.innerHTML='<h2>Tu firma · '+esc(p.t)+'</h2>'+
+      '<p class="resumen"><b>'+esc((r.por||{}).n||'')+'</b> pide lo de arriba'+(aut ? ', y <b>'+esc(aut.n||'')+'</b> ya lo aprobó por Seguridad' : '')+'. Falta tu firma como <b>'+esc(p.t)+'</b>.</p>'+
+      '<p style="margin:0 0 4px;font-size:13.5px;color:var(--gris)">Queda tu nombre, la hora y tu firma, y dice «por enlace». Si no estás de acuerdo, no firmes y avísale a quien te lo envió.</p>'+
+      '<label for="m-n">Tu nombre y apellidos</label><input id="m-n" maxlength="120" autocomplete="name" value="'+esc(p.n||'')+'">'+
+      '<label for="m-nota">Nota <span style="color:var(--gris2)">(si quieres)</span></label><input id="m-nota" maxlength="300">'+
+      '<label for="m-cv">Tu firma: con el dedo o con el mouse, dentro del recuadro</label><div class="lienzo"><canvas id="m-cv"></canvas></div>'+
+      '<button type="button" class="lnk" id="m-borrar">Borrar y repetir la firma</button>'+
+      '<p class="msg" id="m-msg"></p><div class="fila-bt"><button type="button" class="bt oro" id="m-ok">✍️ Firmar</button></div>';
+    PADM=pad($('m-cv'), 170);
+    var limpia=function(){ var m=$('m-msg'); if(m && /\bmal\b/.test(m.className)) m.textContent=''; };
+    PADM.alFirmar=limpia; c.oninput=limpia;
+    $('m-borrar').onclick=function(){ PADM.limpiar(); };
+    $('m-ok').onclick=firmarMia;
+  }
+  function firmarMia(){
+    var m=$('m-msg'); m.className='msg mal';
+    var n=$('m-n').value.trim();
+    if(n.length<3){ m.textContent='Escribe tu nombre y apellidos.'; $('m-n').focus(); return; }
+    var tr=PADM ? PADM.trazo() : null;
+    if(!tr){ m.textContent='Falta tu firma: firma dentro del recuadro.'; return; }
+    $('m-ok').disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    rpc('sst_req_visar_enlace', { p:{ t:tk, x:fk, n:n, f:tr, nota:$('m-nota').value.trim() } }).then(function(j){
+      if(j && j.ok){ R=j.req; if(j.mi) MI=j.mi; pintar(); window.scrollTo(0,0);
+        var d=document.createElement('div'); d.className='aviso ok'; d.id='hecho';
+        d.innerHTML='<b>Firmado.</b> Gracias: quien lo pidió ya lo ve en OBRASST.';
+        var v=$('mi-lista'); if(v) v.remove();
+        cuerpo.insertBefore(d, cuerpo.firstChild); return; }
+      if($('m-ok')) $('m-ok').disabled=false;
+      m.className='msg mal';
+      var mt=(j && j.motivo)||'';
+      m.textContent={ ya_firmado:'Ese casillero ya está firmado. Vuelve a abrir el enlace para verlo.', no_esta_autorizado:'Todavía falta la aprobación de Seguridad.', paso:'Este enlace ya no sirve para firmar: pide que te lo envíen otra vez.',
+                      firma:'Falta tu nombre o tu firma.', muy_seguido:'Espera un momento y vuelve a intentarlo.', no_existe:'Este enlace ya no está activo.' }[mt] || 'No se pudo guardar. Inténtalo otra vez.';
+      if(mt==='ya_firmado' || mt==='no_esta_autorizado' || mt==='paso') abrir();
+    }, function(){ if($('m-ok')) $('m-ok').disabled=false; m.className='msg mal'; m.textContent='No hubo conexión. Inténtalo otra vez.'; });
+  }
+  function pintarResolver(){
+    var c=$('resolver'), r=R;
+    c.innerHTML='<h2>¿Lo autorizas?</h2><p style="margin:0 0 6px;font-size:14.5px"><b>'+esc((r.por||{}).n||'')+'</b> te envió este pedido para que lo autorices desde aquí, sin cuenta. Queda tu nombre, la hora y tu firma, y dice «por enlace».</p>'+
+      '<p style="margin:0 0 4px;font-size:13.5px;color:var(--gris)">Si alguna cantidad no va, cámbiala antes de firmar.</p>'+
+      r.items.map(function(it, i){ return '<div class="lin"><div class="lin-tx"><b>'+esc(it.d)+'</b><small>Pide '+RQB.num(it.c)+' '+esc(it.u||'und')+'</small></div>'+
+        '<div class="lin-n"><input type="text" inputmode="decimal" maxlength="9" id="c'+i+'" aria-label="Cantidad autorizada de '+esc(it.d)+'" value="'+esc(RQB.num(it.c))+'"></div></div>'; }).join('')+
+      '<label for="r-n">Tu nombre y apellidos</label><input id="r-n" maxlength="120" autocomplete="name" value="'+esc((r.a||{}).n||'')+'">'+
+      '<label for="r-c">Tu cargo</label><input id="r-c" maxlength="80" value="'+esc((r.a||{}).c||'')+'">'+
+      '<label for="r-nota">Nota <span style="color:var(--gris2)">(si quieres; para observar o rechazar, el motivo)</span></label><textarea id="r-nota" rows="2" maxlength="1000"></textarea>'+
+      '<label for="r-cv">Tu firma: con el dedo o con el mouse, dentro del recuadro</label><div class="lienzo"><canvas id="r-cv"></canvas></div>'+
+      '<button type="button" class="lnk" id="r-borrar">Borrar y repetir la firma</button>'+
+      '<p class="msg" id="r-msg"></p><div class="fila-bt"><button type="button" class="bt oro" id="r-ok">✅ Autorizar</button>'+
+      '<button type="button" class="bt sec" id="r-obs">↩ Observar</button><button type="button" class="bt sec" id="r-no">Rechazar</button></div>';
+    PAD=pad($('r-cv'), 170);
+    /* el aviso de lo que faltaba se va apenas lo corrige */
+    var limpia=function(){ var m=$('r-msg'); if(m && /\bmal\b/.test(m.className)) m.textContent=''; };
+    PAD.alFirmar=limpia; c.oninput=limpia;
+    $('r-borrar').onclick=function(){ PAD.limpiar(); };
+    $('r-ok').onclick=function(){ resolver('autorizar'); }; $('r-obs').onclick=function(){ resolver('observar'); }; $('r-no').onclick=function(){ resolver('rechazar'); };
+  }
+  function resolver(accion){
+    var m=$('r-msg'), r=R; m.className='msg mal';
+    var n=$('r-n').value.trim(), nota=$('r-nota').value.trim();
+    if(n.length<3){ m.textContent='Escribe tu nombre y apellidos.'; $('r-n').focus(); return; }
+    var p={ t:tk, accion:accion, n:n, c:$('r-c').value.trim(), nota:nota };
+    if(accion==='autorizar'){
+      var cant=[], distinto=false;
+      for(var i=0;i<r.items.length;i++){
+        var v=parseFloat(String($('c'+i).value).replace(',', '.'));
+        if(isNaN(v) || v<0 || v>1000000){ m.textContent='Revisa la cantidad de la línea '+(i+1)+'.'; $('c'+i).focus(); return; }
+        v=Math.round(v*100)/100; cant.push(v); if(v!==+r.items[i].c) distinto=true;
+      }
+      if(!cant.some(function(v){ return v>0; })){ m.textContent='Si no autorizas ninguna línea, recházalo con su motivo.'; return; }
+      var tr=PAD ? PAD.trazo() : null;
+      if(!tr){ m.textContent='Falta tu firma: firma dentro del recuadro.'; return; }
+      p.f=tr; if(distinto) p.cant=cant;
+    } else {
+      if(nota.length<3){ m.textContent=(accion==='observar' ? 'Escribe en la nota qué hay que corregir.' : 'Escribe en la nota por qué se rechaza.'); $('r-nota').focus(); return; }
+      var tr2=PAD ? PAD.trazo() : null; if(tr2) p.f=tr2;
+    }
+    ['r-ok','r-obs','r-no'].forEach(function(id){ $(id).disabled=true; });
+    m.className='msg gris'; m.textContent='Guardando…';
+    rpc('sst_req_resolver_enlace', { p:p }).then(function(j){
+      if(j && j.ok){ R=j.req; pintar(); window.scrollTo(0,0);
+        var d=document.createElement('div'); d.className='aviso ok'; d.id='hecho';
+        d.innerHTML='<b>'+(accion==='autorizar' ? 'Autorizado.' : (accion==='observar' ? 'Devuelto con tu observación.' : 'Rechazado.'))+'</b> Quien lo pidió ya lo ve en su app.';
+        cuerpo.insertBefore(d, cuerpo.firstChild); return; }
+      ['r-ok','r-obs','r-no'].forEach(function(id){ if($(id)) $(id).disabled=false; });
+      m.className='msg mal';
+      var mt=(j && j.motivo)||'';
+      m.textContent={ ya_resuelto:'Ya lo resolvió otra persona hace un momento. Vuelve a abrir el enlace para verlo.', solo_con_cuenta:'Este pedido solo se autoriza entrando a OBRASST con una cuenta.',
+                      firma:'Falta tu nombre o tu firma.', nota:'Escribe el motivo en la nota.', muy_seguido:'Espera un momento y vuelve a intentarlo.', no_existe:'Este enlace ya no está activo.' }[mt] || 'No se pudo guardar. Inténtalo otra vez.';
+      if(mt==='ya_resuelto') abrir();
+    }, function(){ ['r-ok','r-obs','r-no'].forEach(function(id){ if($(id)) $(id).disabled=false; }); m.className='msg mal'; m.textContent='No hubo conexión. Inténtalo otra vez.'; });
+  }
+  function abrir(){
+    /* con la llave de una firma, el servidor dice cuál es «la mía». Un servidor que todavía no la conoce: se abre sin ella */
+    var pedir=fk ? rpc('sst_req_abrir', { p_t:tk, p_f:fk }).then(null, function(cod){ return cod===404 ? rpc('sst_req_abrir', { p_t:tk }) : Promise.reject(cod); }) : rpc('sst_req_abrir', { p_t:tk });
+    pedir.then(function(j){
+      if(!j || !j.ok || !j.req){
+        var mt=(j && j.motivo)||'';
+        if(mt==='muy_seguido') di('Espera un momento', 'Este enlace se abrió muchas veces seguidas. Vuelve a intentarlo en unos minutos.');
+        else di('Este enlace ya no está activo', 'Pídele a quien te lo mandó que te lo envíe otra vez desde OBRASST.');
+        return;
+      }
+      R=j.req; MI=j.mi||null; pintar();
+      if(fk && !MI){ var d=document.createElement('div'); d.className='aviso med no-imp'; d.id='mi-no'; d.innerHTML='<b>Este enlace ya no sirve para firmar.</b> Puedes ver y bajar el pedido; para firmar, pide que te envíen tu enlace otra vez.'; cuerpo.insertBefore(d, cuerpo.firstChild); }
+    }, function(cod){
+      if(cod===404) di('Todavía no está disponible', 'Los requerimientos se están terminando de activar. Vuelve a abrir el enlace más tarde.');
+      else di('Sin conexión', 'Necesitas internet para ver este requerimiento. Vuelve a abrir el enlace cuando tengas señal.');
+    });
+  }
+  tk=q('t').toLowerCase().replace(/[^0-9a-f]/g,'');
+  fk=q('f').toLowerCase().replace(/[^0-9a-f]/g,''); if(fk.length!==16) fk='';
+  if(tk.length!==32){ di('Este enlace está incompleto', 'Pídele a quien te lo mandó que te lo envíe otra vez desde OBRASST.'); return; }
+  cargar('requerimiento.js?v='+RQ_VER).then(function(){ if(typeof RQB==='undefined') return Promise.reject('red'); abrir(); })
+    .catch(function(){ di('No se pudo cargar', 'Revisa tu conexión y vuelve a abrir el enlace.'); });
+})();
+</script>
+</body></html>
