@@ -1,0 +1,88 @@
+# ══════════════════════════════════════════════════════════════════
+#  OBRASST · el portal web en https://obrasstapp.com (Netlify)
+#
+#  Netlify publica SOLO la carpeta portal/ de este repositorio, en la
+#  raíz del dominio. La app y las páginas de los QR (d/, h/, r/) NO se
+#  mudan: siguen en https://descarganomaspe.github.io/sst-capacita/
+#  (ahí están los datos de cada celular y los QR ya impresos).
+#
+#  Este archivo va en la RAÍZ del repositorio.
+# ══════════════════════════════════════════════════════════════════
+[build]
+  publish = "portal"
+  command = ""
+  # Cada despliegue gasta créditos del plan: solo se despliega cuando
+  # cambia algo de portal/ o este archivo (si no, se cancela solo).
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- portal/ netlify.toml"
+
+# ── direcciones cortas ────────────────────────────────────────────
+[[redirects]]
+  from = "/app"
+  to = "https://descarganomaspe.github.io/sst-capacita/"
+  status = 302
+  force = true
+[[redirects]]
+  from = "/app/*"
+  to = "https://descarganomaspe.github.io/sst-capacita/:splat"
+  status = 302
+  force = true
+[[redirects]]
+  from = "/consola"
+  to = "https://descarganomaspe.github.io/sst-capacita/consola/"
+  status = 302
+  force = true
+[[redirects]]
+  from = "/consola/*"
+  to = "https://descarganomaspe.github.io/sst-capacita/consola/:splat"
+  status = 302
+  force = true
+[[redirects]]
+  from = "/terminos"
+  to = "https://descarganomaspe.github.io/sst-capacita/?legal=terminos"
+  status = 302
+  force = true
+[[redirects]]
+  from = "/privacidad"
+  to = "https://descarganomaspe.github.io/sst-capacita/?legal=privacidad"
+  status = 302
+  force = true
+
+# quien escribe la dirección de antes, con /portal/
+[[redirects]]
+  from = "/portal"
+  to = "/"
+  status = 301
+  force = true
+[[redirects]]
+  from = "/portal/*"
+  to = "/:splat"
+  status = 301
+  force = true
+
+# ── lo que el portal toma de la app, que vive en GitHub Pages ─────
+# los términos y la política («../?legal=terminos» desde la raíz)
+[[redirects]]
+  from = "/"
+  to = "https://descarganomaspe.github.io/sst-capacita/?legal=:legal"
+  status = 302
+  force = true
+  query = {legal = ":legal"}
+# «lo que exige la ley» y el ícono
+[[redirects]]
+  from = "/exige.js"
+  to = "https://descarganomaspe.github.io/sst-capacita/exige.js"
+  status = 200
+  force = true
+[[redirects]]
+  from = "/icono-192.png"
+  to = "https://descarganomaspe.github.io/sst-capacita/icono-192.png"
+  status = 200
+  force = true
+
+# ── cabeceras ─────────────────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
