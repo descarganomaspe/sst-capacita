@@ -1,4 +1,4 @@
-var CACHE = 'sstc-a6a2b73c4d-a';
+var CACHE = 'sstc-8136ecc784-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -9,7 +9,7 @@ var COMP = 'sstc-compartido';
    cache. La primera apertura sin señal despues de cada publicacion daba
    pantalla en blanco (y la primerisima instalacion tambien). Ahora la app
    entera se guarda en install, antes de activar. */
-var BASE = ['./', './index.html', './exige.js?v=35cd514ecd', './idioma-fr.js?v=7ea1050d0f', './procedimientos.js?v=b9b304e9f9', './idioma-pt.js?v=982787370f', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
+var BASE = ['./', './index.html', './exige.js?v=35cd514ecd', './idioma-fr.js?v=c24bf1bc99', './procedimientos.js?v=b9b304e9f9', './idioma-pt.js?v=0e07d97bec', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
             './intro.mp4'];
 self.addEventListener('install', function(e){
@@ -19,9 +19,15 @@ self.addEventListener('install', function(e){
   }).then(function(){ return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function(e){
+  /* ══ SOLO LAS CAJAS DE LA APP (02/10/2026) ══
+     Antes se borraba TODA caja que no fuera la de esta version: tambien
+     las de la consola y, desde hoy, la de los documentos que el cartel QR
+     deja guardados en el celular para abrirlos sin señal (obrasst-docs,
+     de d/). Cada actualizacion de la app se los habria llevado. Las de la
+     app empiezan todas con «sstc-»: solo esas se limpian. */
   e.waitUntil(caches.keys().then(function(ks){
     return Promise.all(ks.map(function(k){
-      if (k !== CACHE && k !== COMP) return caches.delete(k);
+      if (/^sstc-/.test(k) && k !== CACHE && k !== COMP) return caches.delete(k);
     }));
   }).then(function(){ return self.clients.claim(); }));
 });
@@ -101,11 +107,37 @@ self.addEventListener('fetch', function(e){
     /* ./?app=1, ./?atajo=kardex y ./ son la misma app: se ignora la query */
     return caches.match(e.request, {ignoreSearch:true}).then(function(r){
       if (r) return r;
+      /* el cartel QR (d/) y la etiqueta de un equipo (h/) son paginas
+         aparte: sin señal y sin copia guardada NO se les sirve la app
+         —abria la app entera en la direccion del cartel—, se dice que
+         falta señal. (Quien ya abrio un cartel tiene el service worker
+         de d/, que atiende antes que este.) */
+      if (esNav && _u && /\/(d|h)\/(index\.html)?$/.test(_u.pathname)) return sinSenalQR();
       if (esNav) return caches.match('./index.html');
       return Response.error();
     });
   }));
 });
+function sinSenalQR(){
+  /* en el idioma del celular, como la página del cartel (d/). Los textos van con \u para que no dependan de cómo se lea este archivo */
+  var T = {
+    es: ['Sin internet', 'Necesitas se\u00f1al para abrirlo la primera vez. Vuelve a escanear el c\u00f3digo QR cuando tengas datos o wifi.'],
+    en: ['No internet', 'You need a signal to open it the first time. Scan the QR code again when you have data or wifi.'],
+    pt: ['Sem internet', 'Voc\u00ea precisa de sinal para abrir pela primeira vez. Escaneie o c\u00f3digo QR de novo quando tiver dados ou wi-fi.'],
+    fr: ['Pas d\u2019internet', 'Il faut du r\u00e9seau pour l\u2019ouvrir la premi\u00e8re fois. Scannez \u00e0 nouveau le code QR quand vous aurez des donn\u00e9es ou du wifi.']
+  };
+  var l = 'es';
+  try{ l = String((self.navigator && (self.navigator.language || (self.navigator.languages || [])[0])) || 'es').slice(0, 2).toLowerCase(); }catch(_l){}
+  var t = T[l] || T.es;
+  var h = '<!doctype html><html lang="' + (T[l] ? l : 'es') + '"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1"><title>' + t[0] + ' \u00b7 OBRASST</title></head>' +
+    '<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;' +
+    'background:#0B2A3A;color:#EAF2F7;font:16px/1.55 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;text-align:center">' +
+    '<div style="max-width:430px"><div style="font-size:12px;letter-spacing:.18em;color:#F5B700;font-weight:800;margin-bottom:22px">&#9670; OBRASST</div>' +
+    '<h1 style="font-size:21px;margin:0 0 10px">' + t[0] + '</h1>' +
+    '<p style="margin:0;color:#A9C2D0;font-size:15px">' + t[1] + '</p></div></body></html>';
+  return new Response(h, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
 
 /* ══ EL TOQUE EN EL AVISO ═══════════════════════════════════════════
    En el celular el aviso lo muestra el service worker, así que el
