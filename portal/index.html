@@ -1335,6 +1335,9 @@ td .prq-sus,.prq-sus{font-style:italic}
 .acc-h{font-size:20px; margin:0 0 4px}
 .acc-check{display:flex; align-items:flex-start; gap:9px; margin:0 0 10px; font-size:13px; font-weight:400; color:var(--texto); letter-spacing:0; line-height:1.5; cursor:pointer}
 .acc-check input{width:16px; height:16px; margin:2px 0 0; padding:0; flex:0 0 auto; accent-color:var(--tinta)}
+/* el plan que eligió en «Planes», dicho encima del formulario de crear cuenta */
+.acc-plan{margin:-12px 0 18px; padding:11px 13px; border-radius:10px; background:var(--azul-f); color:var(--texto); font-size:13px; line-height:1.5}
+.acc-plan b{color:var(--tinta); font-weight:600}
 .acc-google{width:100%; margin-top:10px; padding:11px}
 #f-crear .bt.casco{margin-top:6px}
 
@@ -1753,6 +1756,7 @@ try{var _s0=JSON.parse(localStorage.getItem('sstp_cuenta')||'null');if((_s0&&_s0
         <div id="acc-crear" role="tabpanel" aria-labelledby="acc-t-crear" hidden>
           <h2 class="acc-h">Crea tu cuenta</h2>
           <p class="sub">Con tu correo y una contraseña. Es una sola cuenta: sirve aquí y en la app.</p>
+          <p class="acc-plan" id="c-plan" aria-live="polite" hidden></p>
           <form id="f-crear" autocomplete="on" novalidate>
             <div class="campo">
               <label for="c-nombre">Tu nombre y apellido</label>
@@ -12200,7 +12204,7 @@ var VISTAS_SUP = [
    3. SIN RASTREO. Ni cookies ni analítica: lo que se guarda en el
       navegador es lo que hace falta para funcionar, y se dice.
    ══════════════════════════════════════════════════════════════════ */
-var INI = { listo:false, tab:'entrar', espia:null, q:'', tema:'', google:false, prov:null, usd:false };
+var INI = { listo:false, tab:'entrar', espia:null, q:'', tema:'', google:false, prov:null, usd:false, plan:'' };
 var FAQ_POR_TEMA = 3;   /* sin buscar ni elegir tema, las primeras de cada uno */
 var SOPORTE = 'descarganomaspe@gmail.com';
 var LS_DATOS_OK = 'sstp_datos_ok';
@@ -12280,6 +12284,22 @@ function iniTablaHTML(id, miOrden, sinPrecio){
   });
   return h+'</tbody></table></div>';
 }
+/* 05/10/2026 · Marcelo, mirando la página ya publicada: «sale "Empezar gratis" en los otros planes, corrígelo».
+   Gratis es LITE; el SSOMA se prueba 30 días; los demás planes de pago dicen «Elegir este plan». El plan se
+   activa y se paga desde la app, así que el botón lleva a crear la cuenta y deja dicho ahí, encima del
+   formulario, cuál eligió, cuánto cuesta y cómo sigue. */
+function iniPlanCta(P){ return P.id===INI_PLAN_PRUEBA ? 'Probar 30 días gratis' : (P.m>0 ? 'Elegir este plan' : 'Empezar gratis'); }
+function iniPlanElige(id){
+  var c=$('c-plan'); if(!c) return;
+  var x=iniPrecios().filter(function(y){ return y.P.id===id; })[0];
+  if(!x || !(x.P.m>0) || x.P.id===INI_PLAN_PRUEBA){ INI.plan=''; c.hidden=true; c.innerHTML=''; return; }
+  var pr=INI_PLANES.filter(function(P){ return P.id===INI_PLAN_PRUEBA; })[0];
+  INI.plan=x.P.id;
+  c.innerHTML='<b>Elegiste '+esc(x.P.n)+'</b> · '+_plata(x.m, x.usd)+' al mes. Primero crea tu cuenta: el plan '+
+    (x.usd ? 'se pide y se activa' : 'se activa y se paga')+' desde la app, en «Planes».'+
+    (pr ? ' Mientras tanto, al crear tu empresa se activan 30 días gratis del plan '+esc(pr.n)+', sin tarjeta.' : '');
+  c.hidden=false;
+}
 function iniPlanesPintar(){
   var c=$('ini-planes'); if(!c) return;
   var L=iniPrecios(), usd=L[0].usd, U=L[0].U;
@@ -12306,7 +12326,7 @@ function iniPlanesPintar(){
            : '<div class="precio">Gratis</div><div class="anual">Para siempre</div>')+
       '<p class="ini-para">'+esc(P.para)+'</p>'+
       '<ul>'+li.map(function(t){ return '<li><span>'+t+'</span></li>'; }).join('')+'</ul>'+mas+
-      '<button type="button" class="bt '+(prueba?'casco':'sec')+'" data-acceso="crear">'+(prueba ? 'Probar 30 días gratis' : 'Empezar gratis')+'</button>'+
+      '<button type="button" class="bt '+(prueba?'casco':'sec')+'" data-acceso="crear" data-plan-elige="'+esc(P.id)+'">'+iniPlanCta(P)+'</button>'+
     '</article>';
   }).join('');
   /* el porqué del precio: qué se paga, y la cuenta de cada plan (se calcula, no se escribe) */
@@ -12718,7 +12738,7 @@ function iniArrancar(){
   /* «Entrar» y «Crear cuenta», estén donde estén */
   e.addEventListener('click', function(ev){
     var b = ev.target.closest ? ev.target.closest('[data-acceso]') : null;
-    if(b){ ev.preventDefault(); accTab(b.getAttribute('data-acceso'), true); return; }
+    if(b){ ev.preventDefault(); if(b.hasAttribute('data-plan-elige')) iniPlanElige(b.getAttribute('data-plan-elige')); accTab(b.getAttribute('data-acceso'), true); return; }
     var t = ev.target.closest ? ev.target.closest('[data-tema]') : null;
     if(t){ INI.tema=t.getAttribute('data-tema')||''; faqTemasPintar(); faqPintar(); return; }
     var d = ev.target.closest ? ev.target.closest('[data-datos]') : null;
@@ -12748,7 +12768,7 @@ function iniArrancar(){
 }
 /* cuando llega pais.js: los precios del país de quien mira y la lista de países */
 function iniPaisListo(){
-  try{ iniPlanesPintar(); faqPintar(); }catch(_e){}
+  try{ iniPlanesPintar(); if(INI.plan) iniPlanElige(INI.plan); faqPintar(); }catch(_e){}
 }
 /* el enlace de quien recomienda (?rec=REC12345) también puede traer aquí: se guarda
    como en la app, para anotarlo cuando la empresa exista */
