@@ -24,46 +24,169 @@ p{margin:0 0 8px;color:#A9C2D0;font-size:15px}
 .obra{margin-top:20px;font-size:12.5px;color:#7D97A6;letter-spacing:.04em}
 a.btn{display:block;margin-top:16px;padding:14px;border-radius:12px;background:#F5B700;
   color:#0B2A3A;text-decoration:none;font-weight:800;text-align:center}
+a.btn:focus-visible{outline:2px solid #EAF2F7;outline-offset:2px}
 /* 30/09/2026 · varios documentos en la carpeta: se elige uno */
 .lista{display:grid;gap:10px;margin-top:18px;text-align:left}
-a.doc{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;text-decoration:none;
+a.doc,div.doc{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;text-decoration:none;
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#EAF2F7}
 a.doc:active,a.doc:hover{background:rgba(255,255,255,.11)}
 a.doc:focus-visible{outline:2px solid #F5B700;outline-offset:2px}
-a.doc .ic{font-size:22px;line-height:1;flex:0 0 auto}
-a.doc .tx{flex:1;min-width:0;display:grid;gap:2px}
-a.doc b{font-weight:700;overflow-wrap:anywhere}
-a.doc small{color:#8FB0C2;font-size:12.5px}
-a.doc .nuevo{color:#F5B700;font-weight:700}
-a.doc .ir{flex:0 0 auto;color:#F5B700;font-weight:800;font-size:14px}
+.doc .ic{font-size:22px;line-height:1;flex:0 0 auto}
+.doc .tx{flex:1;min-width:0;display:grid;gap:2px}
+.doc b{font-weight:700;overflow-wrap:anywhere}
+.doc small{color:#8FB0C2;font-size:12.5px}
+.doc .nuevo{color:#F5B700;font-weight:700}
+.doc .ir{flex:0 0 auto;color:#F5B700;font-weight:800;font-size:14px;font-variant-numeric:tabular-nums}
+/* 02/10/2026 · lo que este celular ya tiene guardado, y lo que necesita señal */
+.doc .ya{color:#6FD08C;font-weight:700}
+div.doc.off{opacity:.55}
+div.doc.off .ir{color:#8FB0C2;font-weight:600}
+.baja{margin:18px auto 0;max-width:300px}
+.baja .riel{height:6px;border-radius:6px;background:rgba(255,255,255,.14);overflow:hidden}
+.baja .riel i{display:block;height:100%;width:0;background:#F5B700;border-radius:6px;transition:width .25s}
+.baja p{margin:9px 0 0;font-size:13.5px;font-variant-numeric:tabular-nums}
+.nota{margin:14px 0 0;font-size:13px;color:#8FB0C2}
 </style></head><body>
 <div class="caja">
   <div class="marca">&#9670; OBRASST</div>
   <div id="cuerpo">
-    <h1>Abriendo el documento&hellip;</h1>
+    <h1 id="abriendo">Abriendo el documento&hellip;</h1>
     <p id="quien"></p>
     <div class="giro"></div>
+    <div id="baja"></div>
   </div>
   <div class="obra" id="pie"></div>
 </div>
 <script>
 (function(){
   var SB='https://gwjjkknuiumgysezeatz.supabase.co', KEY='sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx';
+  /* 02/10/2026 · el idioma del celular que escanea: castellano, y si el
+     celular está en inglés, portugués o francés, en ese (como la app y
+     como la etiqueta de los equipos). Los nombres que puso la obra van
+     como se escribieron. */
+  var L='es'; try{ L=String((navigator.languages && navigator.languages[0]) || navigator.language || 'es').slice(0,2).toLowerCase(); }catch(_l){}
+  var TX={
+    en:{'Documento de la obra':'Site document','Abriendo el documento…':'Opening the document…','Toca para abrirlo':'Tap to open it',
+      'Tu navegador no dejó abrirlo solo.':"Your browser didn't let it open on its own.",'Abrir el documento':'Open the document',
+      'Sin internet':'No internet','Sin señal':'No signal',
+      'Necesitas señal para abrir este documento la primera vez. Después queda guardado en este celular y abre también sin señal.':'You need a signal to open this document the first time. After that it stays saved on this phone and opens without a signal too.',
+      'Vuelve a escanear el cartel cuando tengas datos o wifi.':'Scan the poster again when you have data or wifi.',
+      'Toca el que necesitas.':'Tap the one you need.','Enlace':'Link','Subido el {0}':'Uploaded on {0}','el más reciente':'the most recent','Abrir':'Open',
+      'Este cartel ya no está activo':'This poster is no longer active',
+      'Pídele a tu supervisor que imprima el cartel nuevo desde OBRASST, en «Los QR de tu obra».':"Ask your supervisor to print the new poster from OBRASST, under “Your site's QR codes”.",
+      'Todavía no está cargado':'Not uploaded yet',
+      'Esta obra aún no subió su <b>{0}</b> a OBRASST.':"This site hasn't uploaded this document to OBRASST yet: <b>{0}</b>.",
+      'Pídeselo a tu supervisor SSOMA: se sube una vez, en la app o en la web, y este mismo cartel empieza a funcionar.':'Ask your safety supervisor for it: it is uploaded once, in the app or on the web, and this same poster starts working.',
+      'Pídeselo a tu supervisor SSOMA: se carga una vez y este mismo cartel empieza a funcionar.':'Ask your safety supervisor for it: it is uploaded once and this same poster starts working.',
+      'No se pudo abrir':"It couldn't be opened",'Vuelve a escanear el cartel en un momento. Si sigue igual, avísale a tu supervisor.':'Scan the poster again in a moment. If nothing changes, tell your supervisor.',
+      'Este cartel está incompleto':'This poster is incomplete',
+      'Al código QR le falta el documento. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.':'The QR code is missing its document. Ask your supervisor to print the poster again from OBRASST.',
+      'No encuentro esa obra':"I can't find that site",
+      'Este cartel no corresponde a ninguna obra en OBRASST. Puede que sea de una obra que ya cerró.':"This poster doesn't match any site in OBRASST. It may belong to a site that has already closed.",
+      'Descargando… {0} %':'Downloading… {0}%','Descargando… {0} MB':'Downloading… {0} MB',
+      'Queda guardado en este celular: la próxima vez abre al toque, también sin señal.':'It stays saved on this phone: next time it opens right away, even without a signal.',
+      'guardado en este celular':'saved on this phone',
+      'Este celular guardó este documento el {0}. Puede haber una versión más nueva: cuando tengas señal, escanea el cartel otra vez.':'This phone saved this document on {0}. There may be a newer version: when you have a signal, scan the poster again.',
+      'Abrir la copia guardada':'Open the saved copy',
+      'Lo que este celular tiene guardado, al {0}. Puede haber versiones más nuevas: cuando tengas señal, escanea el cartel otra vez.':'What this phone has saved, as of {0}. There may be newer versions: when you have a signal, scan the poster again.',
+      'Guardado':'Saved','Necesita señal':'Needs a signal',
+      'Ese documento ya no está guardado en este celular.':'That document is no longer saved on this phone.',
+      'Reglamento Interno de SST':'Internal H&S rules','Matriz IPERC':'IPERC matrix','Hojas MSDS':'Safety data sheets','Plan anual de SST':'Annual H&S plan',
+      'Mapa de riesgos':'Risk map','Plan de emergencia':'Emergency plan','Política de SST':'H&S policy',
+      'Política contra el hostigamiento sexual':'Sexual harassment prevention policy','Organigrama':'Organization chart','Comité de SST':'H&S committee',
+      'Brigadistas':'Emergency team','Contactos de emergencia':'Emergency contacts'},
+    pt:{'Documento de la obra':'Documento da obra','Abriendo el documento…':'Abrindo o documento…','Toca para abrirlo':'Toque para abrir',
+      'Tu navegador no dejó abrirlo solo.':'O seu navegador não deixou abrir sozinho.','Abrir el documento':'Abrir o documento',
+      'Sin internet':'Sem internet','Sin señal':'Sem sinal',
+      'Necesitas señal para abrir este documento la primera vez. Después queda guardado en este celular y abre también sin señal.':'Você precisa de sinal para abrir este documento pela primeira vez. Depois ele fica salvo neste celular e abre também sem sinal.',
+      'Vuelve a escanear el cartel cuando tengas datos o wifi.':'Escaneie o cartaz de novo quando tiver dados ou wi-fi.',
+      'Toca el que necesitas.':'Toque no que você precisa.','Enlace':'Link','Subido el {0}':'Enviado em {0}','el más reciente':'o mais recente','Abrir':'Abrir',
+      'Este cartel ya no está activo':'Este cartaz não está mais ativo',
+      'Pídele a tu supervisor que imprima el cartel nuevo desde OBRASST, en «Los QR de tu obra».':'Peça ao seu supervisor que imprima o cartaz novo pelo OBRASST, em «Os QR da sua obra».',
+      'Todavía no está cargado':'Ainda não foi enviado',
+      'Esta obra aún no subió su <b>{0}</b> a OBRASST.':'Esta obra ainda não enviou este documento ao OBRASST: <b>{0}</b>.',
+      'Pídeselo a tu supervisor SSOMA: se sube una vez, en la app o en la web, y este mismo cartel empieza a funcionar.':'Peça ao seu supervisor SSOMA: envia-se uma vez, no app ou na web, e este mesmo cartaz começa a funcionar.',
+      'Pídeselo a tu supervisor SSOMA: se carga una vez y este mismo cartel empieza a funcionar.':'Peça ao seu supervisor SSOMA: envia-se uma vez e este mesmo cartaz começa a funcionar.',
+      'No se pudo abrir':'Não foi possível abrir','Vuelve a escanear el cartel en un momento. Si sigue igual, avísale a tu supervisor.':'Escaneie o cartaz de novo daqui a pouco. Se continuar igual, avise o seu supervisor.',
+      'Este cartel está incompleto':'Este cartaz está incompleto',
+      'Al código QR le falta el documento. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.':'Falta o documento no código QR. Peça ao seu supervisor que imprima o cartaz de novo pelo OBRASST.',
+      'No encuentro esa obra':'Não encontro essa obra',
+      'Este cartel no corresponde a ninguna obra en OBRASST. Puede que sea de una obra que ya cerró.':'Este cartaz não corresponde a nenhuma obra no OBRASST. Pode ser de uma obra que já foi encerrada.',
+      'Descargando… {0} %':'Baixando… {0} %','Descargando… {0} MB':'Baixando… {0} MB',
+      'Queda guardado en este celular: la próxima vez abre al toque, también sin señal.':'Fica salvo neste celular: da próxima vez abre na hora, também sem sinal.',
+      'guardado en este celular':'salvo neste celular',
+      'Este celular guardó este documento el {0}. Puede haber una versión más nueva: cuando tengas señal, escanea el cartel otra vez.':'Este celular salvou este documento em {0}. Pode haver uma versão mais nova: quando tiver sinal, escaneie o cartaz de novo.',
+      'Abrir la copia guardada':'Abrir a cópia salva',
+      'Lo que este celular tiene guardado, al {0}. Puede haber versiones más nuevas: cuando tengas señal, escanea el cartel otra vez.':'O que este celular tem salvo, em {0}. Pode haver versões mais novas: quando tiver sinal, escaneie o cartaz de novo.',
+      'Guardado':'Salvo','Necesita señal':'Precisa de sinal',
+      'Ese documento ya no está guardado en este celular.':'Esse documento não está mais salvo neste celular.',
+      'Reglamento Interno de SST':'Regulamento Interno de SST','Matriz IPERC':'Matriz IPERC','Hojas MSDS':'Fichas FDS (MSDS)','Plan anual de SST':'Plano anual de SST',
+      'Mapa de riesgos':'Mapa de riscos','Plan de emergencia':'Plano de emergência','Política de SST':'Política de SST',
+      'Política contra el hostigamiento sexual':'Política contra o assédio sexual','Organigrama':'Organograma','Comité de SST':'Comitê de SST',
+      'Brigadistas':'Brigadistas','Contactos de emergencia':'Contatos de emergência'},
+    fr:{'Documento de la obra':'Document du chantier','Abriendo el documento…':'Ouverture du document…','Toca para abrirlo':'Touchez pour l’ouvrir',
+      'Tu navegador no dejó abrirlo solo.':'Votre navigateur ne l’a pas laissé s’ouvrir tout seul.','Abrir el documento':'Ouvrir le document',
+      'Sin internet':'Pas d’internet','Sin señal':'Pas de réseau',
+      'Necesitas señal para abrir este documento la primera vez. Después queda guardado en este celular y abre también sin señal.':'Il faut du réseau pour ouvrir ce document la première fois. Ensuite il reste enregistré sur ce téléphone et s’ouvre aussi sans réseau.',
+      'Vuelve a escanear el cartel cuando tengas datos o wifi.':'Scannez à nouveau l’affiche quand vous aurez des données ou du wifi.',
+      'Toca el que necesitas.':'Touchez celui dont vous avez besoin.','Enlace':'Lien','Subido el {0}':'Ajouté le {0}','el más reciente':'le plus récent','Abrir':'Ouvrir',
+      'Este cartel ya no está activo':'Cette affiche n’est plus active',
+      'Pídele a tu supervisor que imprima el cartel nuevo desde OBRASST, en «Los QR de tu obra».':'Demandez à votre superviseur d’imprimer la nouvelle affiche depuis OBRASST, dans « Les QR de votre chantier ».',
+      'Todavía no está cargado':'Pas encore ajouté',
+      'Esta obra aún no subió su <b>{0}</b> a OBRASST.':'Ce chantier n’a pas encore ajouté ce document dans OBRASST : <b>{0}</b>.',
+      'Pídeselo a tu supervisor SSOMA: se sube una vez, en la app o en la web, y este mismo cartel empieza a funcionar.':'Demandez-le à votre superviseur SSOMA : on l’ajoute une fois, dans l’application ou sur le web, et cette même affiche commence à fonctionner.',
+      'Pídeselo a tu supervisor SSOMA: se carga una vez y este mismo cartel empieza a funcionar.':'Demandez-le à votre superviseur SSOMA : on l’ajoute une fois et cette même affiche commence à fonctionner.',
+      'No se pudo abrir':"Impossible d'ouvrir",'Vuelve a escanear el cartel en un momento. Si sigue igual, avísale a tu supervisor.':'Scannez à nouveau l’affiche dans un instant. Si rien ne change, prévenez votre superviseur.',
+      'Este cartel está incompleto':'Cette affiche est incomplète',
+      'Al código QR le falta el documento. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.':'Il manque le document au code QR. Demandez à votre superviseur de réimprimer l’affiche depuis OBRASST.',
+      'No encuentro esa obra':'Chantier introuvable',
+      'Este cartel no corresponde a ninguna obra en OBRASST. Puede que sea de una obra que ya cerró.':'Cette affiche ne correspond à aucun chantier dans OBRASST. Elle vient peut-être d’un chantier déjà terminé.',
+      'Descargando… {0} %':'Téléchargement… {0} %','Descargando… {0} MB':'Téléchargement… {0} Mo',
+      'Queda guardado en este celular: la próxima vez abre al toque, también sin señal.':'Il reste enregistré sur ce téléphone : la prochaine fois il s’ouvre tout de suite, même sans réseau.',
+      'guardado en este celular':'enregistré sur ce téléphone',
+      'Este celular guardó este documento el {0}. Puede haber una versión más nueva: cuando tengas señal, escanea el cartel otra vez.':'Ce téléphone a enregistré ce document le {0}. Il existe peut-être une version plus récente : quand vous aurez du réseau, scannez à nouveau l’affiche.',
+      'Abrir la copia guardada':'Ouvrir la copie enregistrée',
+      'Lo que este celular tiene guardado, al {0}. Puede haber versiones más nuevas: cuando tengas señal, escanea el cartel otra vez.':'Ce que ce téléphone a enregistré, au {0}. Il existe peut-être des versions plus récentes : quand vous aurez du réseau, scannez à nouveau l’affiche.',
+      'Guardado':'Enregistré','Necesita señal':'Réseau nécessaire',
+      'Ese documento ya no está guardado en este celular.':'Ce document n’est plus enregistré sur ce téléphone.',
+      'Reglamento Interno de SST':'Règlement intérieur SST','Matriz IPERC':'Matrice IPERC','Hojas MSDS':'Fiches FDS','Plan anual de SST':'Plan annuel SST',
+      'Mapa de riesgos':'Carte des risques','Plan de emergencia':"Plan d'urgence",'Política de SST':'Politique SST',
+      'Política contra el hostigamiento sexual':'Politique contre le harcèlement sexuel','Organigrama':'Organigramme','Comité de SST':'Comité SST',
+      'Brigadistas':"Équipiers d'urgence",'Contactos de emergencia':"Contacts d'urgence"}
+  };
+  if(!TX[L]) L='es';
+  function t(s){ var v=TX[L] && TX[L][s]; v=(v===undefined) ? s : v; for(var i=1;i<arguments.length;i++) v=v.split('{'+(i-1)+'}').join(arguments[i]); return v; }
+  try{ document.documentElement.lang=L; document.title=t('Documento de la obra')+' · OBRASST'; }catch(_d){}
+
   var NOMBRE={risst:'Reglamento Interno de SST', pets:'PETS', iperc:'Matriz IPERC',
               msds:'Hojas MSDS', plan:'Plan anual de SST', mapa:'Mapa de riesgos',
               emergencia:'Plan de emergencia', politica:'Política de SST',
               hostigamiento:'Política contra el hostigamiento sexual', organigrama:'Organigrama',
               comite:'Comité de SST', brigadistas:'Brigadistas', contactos:'Contactos de emergencia'};
+  function nombreDe(h){ return NOMBRE[h] ? t(NOMBRE[h]) : ''; }
   function q(n){ try{ return new URLSearchParams(location.search).get(n)||''; }catch(e){ return ''; } }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function web(u){ return /^https?:\/\//i.test(String(u||'')); }
-  function fecha(f){ var p=String(f||'').split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : ''; }
+  var MES_EN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  /* «2026-09-29» → 29/09/2026 (en inglés «Sep 29, 2026», que no se confunde) */
+  function fecha(f){
+    var p=String(f||'').slice(0,10).split('-'); if(p.length!==3) return '';
+    return L==='en' ? (MES_EN[(+p[1]||1)-1]+' '+(+p[2])+', '+p[0]) : (p[2]+'/'+p[1]+'/'+p[0]);
+  }
+  function fechaDeMs(ms){
+    var d=new Date(ms||Date.now());
+    return fecha(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2));
+  }
   /* 30/09/2026 · el cartel nuevo lleva su propia ficha (?t=), no el código de
      la obra: el código es la llave para entrar a la obra y un cartel está a
      la vista de cualquiera. Los de antes (?o=&h=) siguen funcionando. */
   var tk=q('t'), cod=q('o'), hoja=q('h');
+  /* «&falta=1»: el service worker no encontró el documento guardado y
+     manda de vuelta acá. Esa vez se abre directo: sin vueltas. */
+  var FALTA=(q('falta')==='1');
   var cuerpo=document.getElementById('cuerpo'), pie=document.getElementById('pie');
-  document.getElementById('quien').textContent = NOMBRE[hoja] || 'Documento de la obra';
+  document.getElementById('abriendo').textContent = t('Abriendo el documento…');
+  document.getElementById('quien').textContent = nombreDe(hoja) || t('Documento de la obra');
   function di(titulo, texto, extra){
     cuerpo.innerHTML = '<h1>'+esc(titulo)+'</h1>'+(texto ? '<div class="tarj">'+texto+'</div>' : '')+(extra||'');
   }
@@ -71,8 +194,8 @@ a.doc .ir{flex:0 0 auto;color:#F5B700;font-weight:800;font-size:14px}
     location.replace(url);
     /* si el navegador bloquea el salto, queda el botón */
     setTimeout(function(){
-      di('Toca para abrirlo', 'Tu navegador no dejó abrirlo solo.',
-         '<a class="btn" href="'+esc(url)+'" rel="noopener">Abrir '+esc(que||'el documento')+'</a>');
+      di(t('Toca para abrirlo'), t('Tu navegador no dejó abrirlo solo.'),
+         '<a class="btn" href="'+esc(url)+'" rel="noopener">'+esc(t('Abrir el documento'))+'</a>');
     }, 1200);
   }
   function rpc(fn, cuerpoJ){
@@ -81,69 +204,407 @@ a.doc .ir{flex:0 0 auto;color:#F5B700;font-weight:800;font-size:14px}
       body: JSON.stringify(cuerpoJ)
     }).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); });
   }
+
+  /* ══ SIN SEÑAL (02/10/2026) ═══════════════════════════════════════
+     «¿Y si el trabajador no tiene internet?» El cartel pregunta al
+     servidor cuál es el documento vigente, y eso sin señal no se puede.
+     Lo que sí se puede: que este celular guarde el documento la primera
+     vez que lo abre. Después
+       · con señal, pregunta igual (la versión vigente manda) y, si es la
+         misma que ya tiene, la abre al toque y sin gastar datos;
+       · sin señal, muestra lo que tiene guardado y de qué fecha es, y
+         avisa que puede haber una versión más nueva.
+     Se guarda solo lo que está en el almacén de OBRASST; un enlace a
+     Drive o OneDrive no se puede bajar desde acá: ese necesita señal.
+     Todo va en una caja del navegador (CAJA): los documentos (doc/…), lo
+     último que contestó el servidor para cada cartel (r/…) y la lista de
+     lo guardado, con su peso y su fecha (indice). El service worker de
+     al lado (sw.js) sirve la página y los documentos cuando no hay red.
+     Si el navegador no tiene con qué (modo privado, uno viejo), todo
+     sigue como antes: el documento se abre directo. */
+  var ALMACEN=SB+'/storage/v1/object/public/';
+  var CAJA='obrasst-docs';
+  /* hasta 60 documentos o 300 MB; si no cabe, salen los que hace más
+     tiempo no se abren. (window.__D_TOPE: solo para las pruebas.) */
+  var TOPE=window.__D_TOPE || { n:60, b:300*1048576, uno:60*1048576 };
+  var RAIZ=''; try{ RAIZ=new URL('./', location.href).href; }catch(_r){}
+  var CLAVE = tk ? ('t-'+tk) : ((cod && hoja) ? ('o-'+cod+'-'+hoja) : '');
+  var PUEDE=false;
+  try{ PUEDE = !!(RAIZ && window.caches && navigator.serviceWorker && window.isSecureContext!==false && window.Response && window.Blob); }catch(_p){}
+
+  function nuestra(u){ return String(u||'').indexOf(ALMACEN)===0; }
+  /* una huella corta de la dirección, para la llave de la caja */
+  function huella(s, semilla){
+    var a=0xdeadbeef^semilla, b=0x41c6ce57^semilla;
+    for(var i=0;i<s.length;i++){ var c=s.charCodeAt(i); a=Math.imul(a^c,2654435761); b=Math.imul(b^c,1597334677); }
+    a=Math.imul(a^(a>>>16),2246822507)^Math.imul(b^(b>>>13),3266489909);
+    b=Math.imul(b^(b>>>16),2246822507)^Math.imul(a^(a>>>13),3266489909);
+    return ('0000000'+(b>>>0).toString(16)).slice(-8)+('0000000'+(a>>>0).toString(16)).slice(-8);
+  }
+  /* el nombre del archivo, limpio (el almacén le pone la hora delante) */
+  function archivoDe(u){
+    var n='';
+    try{ n=decodeURIComponent(String(u).split('#')[0].split('?')[0].split('/').pop()||''); }catch(e){ n=''; }
+    n=n.split('/').pop().replace(/^\d{10,}-/, '');
+    try{ n=n.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(e){}
+    n=n.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^[-.]+|-+$/g, '').slice(-80);
+    return n || 'documento';
+  }
+  function rutaDoc(u){ return RAIZ+'doc/'+huella(u,7)+huella(u,91)+'/'+archivoDe(u); }
+  function tipoDe(nombre, dicho){
+    if(dicho && !/octet-stream/i.test(dicho)) return dicho;
+    var e=(String(nombre).split('.').pop()||'').toLowerCase();
+    return ({pdf:'application/pdf', jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp', gif:'image/gif',
+             doc:'application/msword', docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+             xls:'application/vnd.ms-excel', xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+             ppt:'application/vnd.ms-powerpoint', pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+             txt:'text/plain'})[e] || dicho || 'application/octet-stream';
+  }
+  /* nada de lo de guardar puede dejar la página colgada en «Abriendo…»:
+     si el navegador no contesta a tiempo, se sigue como si no pudiera */
+  function conTope(p, ms){
+    return new Promise(function(ok, mal){
+      var r=setTimeout(function(){ mal(new Error('tope')); }, ms);
+      Promise.resolve(p).then(function(v){ clearTimeout(r); ok(v); }, function(e){ clearTimeout(r); mal(e); });
+    });
+  }
+  function caja(){ return PUEDE ? conTope(caches.open(CAJA), 4000) : Promise.reject(new Error('sin caja')); }
+  var K_INDICE=RAIZ+'indice';
+  function kResp(clave){ return RAIZ+'r/'+encodeURIComponent(clave); }
+  function json(o){ return new Response(JSON.stringify(o), { headers:{ 'Content-Type':'application/json' } }); }
+  /* la lista de lo guardado se lee y se reescribe entera: de a uno, para
+     que anotar, tocar y limpiar no se pisen */
+  var turno=Promise.resolve();
+  function enTurno(f){ var p=turno.then(f, f); turno=p.then(function(){}, function(){}); return p; }
+  function leerIndice(c){ return c.match(K_INDICE).then(function(r){ return r ? r.json() : []; }).then(function(a){ return Array.isArray(a) ? a : []; }, function(){ return []; }); }
+  /* anota un documento recién guardado y, si no cabe, saca los que hace
+     más tiempo no se abren (nunca el que se acaba de guardar) */
+  function anotar(c, k, bytes){
+    return enTurno(function(){ return leerIndice(c).then(function(a){
+      a=a.filter(function(x){ return x && x.k!==k; });
+      a.push({ k:k, b:bytes, t:Date.now(), de:CLAVE });
+      a.sort(function(x, y){ return (x.t||0)-(y.t||0); });
+      var total=0, fuera=[], i;
+      for(i=0;i<a.length;i++) total+=(a[i].b||0);
+      i=0;
+      while((a.length>TOPE.n || total>TOPE.b) && i<a.length){
+        if(a[i].k===k){ i++; continue; }
+        total-=(a[i].b||0); fuera.push(a[i].k); a.splice(i, 1);
+      }
+      return Promise.all(fuera.map(function(x){ return c['delete'](x); })).then(function(){ return c.put(K_INDICE, json(a)); });
+    }); });
+  }
+  function tocar(c, k){
+    return enTurno(function(){ return leerIndice(c).then(function(a){
+      for(var i=0;i<a.length;i++) if(a[i].k===k){ a[i].t=Date.now(); return c.put(K_INDICE, json(a)); }
+    }); }).then(function(){}, function(){});
+  }
+  /* lo que el servidor dice que ya no va en este cartel, fuera de este celular */
+  function limpiar(vigentes){
+    return caja().then(function(c){
+      return enTurno(function(){ return leerIndice(c).then(function(a){
+        var fuera=[], queda=[];
+        a.forEach(function(x){ if(x && x.de===CLAVE && vigentes.indexOf(x.k)<0) fuera.push(x.k); else queda.push(x); });
+        if(!fuera.length) return;
+        return Promise.all(fuera.map(function(x){ return c['delete'](x); })).then(function(){ return c.put(K_INDICE, json(queda)); });
+      }); });
+    }).then(function(){}, function(){});
+  }
+  function guardarResp(j){
+    if(!CLAVE) return Promise.resolve();
+    return caja().then(function(c){
+      return c.put(kResp(CLAVE), json({ t:Date.now(), j:{ ok:true, obra:j.obra||'', hoja:j.hoja||hoja||'', titulo:j.titulo||null, url:j.url||null, docs:Array.isArray(j.docs) ? j.docs : [] } }));
+    }).then(function(){}, function(){});
+  }
+  function leerResp(){
+    if(!CLAVE) return Promise.resolve(null);
+    return caja().then(function(c){ return c.match(kResp(CLAVE)); }).then(function(r){ return r ? r.json() : null; }).then(function(g){ return (g && g.j) ? g : null; }, function(){ return null; });
+  }
+  function olvidar(){
+    if(!CLAVE) return Promise.resolve();
+    return caja().then(function(c){ return c['delete'](kResp(CLAVE)); }).then(function(){ return limpiar([]); }).then(function(){}, function(){});
+  }
+
+  /* el service worker de esta página: registrado y, después, activo */
+  var swHay=Promise.resolve(false), swActivo=Promise.resolve(false);
+  if(PUEDE){
+    var registro=navigator.serviceWorker.register('sw.js');
+    swHay=conTope(registro, 5000).then(function(){ return true; }, function(){ return false; });
+    swActivo=registro.then(function(reg){
+      return new Promise(function(ok){
+        function mira(){ var w=reg.active; if(w && w.state==='activated'){ ok(true); return true; } return false; }
+        if(mira()) return;
+        var w=reg.installing || reg.waiting || reg.active;
+        if(!w){ ok(false); return; }
+        w.addEventListener('statechange', function(){ if(w.state==='activated') ok(true); else if(w.state==='redundant') ok(false); });
+        setTimeout(function(){ if(!mira()) ok(false); }, 8000);
+      });
+    }, function(){ return false; });
+  }
+
+  /* baja el archivo avisando cuánto va; si la red se queda muda 20 s, corta */
+  function bajar(u, alAvance){
+    var ctl=null; try{ ctl=new AbortController(); }catch(_a){}
+    var reloj=null;
+    function cortar(){ try{ if(ctl) ctl.abort(); }catch(_c){} }
+    function latido(){ clearTimeout(reloj); reloj=setTimeout(cortar, 20000); }
+    latido();
+    var op={ mode:'cors', credentials:'omit' }; if(ctl) op.signal=ctl.signal;
+    return fetch(u, op).then(function(r){
+      if(!r.ok) throw new Error('http '+r.status);
+      var total=+(r.headers.get('Content-Length')||0), tipo=r.headers.get('Content-Type')||'';
+      if(total>TOPE.uno){ cortar(); throw new Error('muy grande'); }
+      if(!r.body || !r.body.getReader) return r.blob().then(function(b){ return { blob:b, tipo:tipo }; });
+      var lector=r.body.getReader(), partes=[], n=0;
+      function otra(){
+        return lector.read().then(function(x){
+          if(x.done) return { blob:new Blob(partes), tipo:tipo };
+          partes.push(x.value); n+=x.value.length; latido();
+          if(n>TOPE.uno){ cortar(); throw new Error('muy grande'); }
+          if(alAvance){ try{ alAvance(n, total); }catch(_v){} }
+          return otra();
+        });
+      }
+      return otra();
+    }).then(function(x){ clearTimeout(reloj); return x; }, function(e){ clearTimeout(reloj); throw e; });
+  }
+  function guardarDoc(c, k, r){
+    var nombre=k.split('/').pop();
+    var cab={ 'Content-Type':tipoDe(nombre, r.tipo), 'Content-Length':String(r.blob.size),
+              'Content-Disposition':"inline; filename*=UTF-8''"+encodeURIComponent(nombre), 'X-Guardado':new Date().toISOString() };
+    return c.put(k, new Response(r.blob, { status:200, headers:cab })).then(function(){ return anotar(c, k, r.blob.size); });
+  }
+  function colaDe(){ return tk ? ('?t='+encodeURIComponent(tk)) : ((cod && hoja) ? ('?o='+encodeURIComponent(cod)+'&h='+encodeURIComponent(hoja)) : ''); }
+  function saltar(u, reemplazar){ if(reemplazar) location.replace(u); else location.href=u; }
+  /* muestra un documento que ya está en la caja: por el service worker
+     (con su nombre) o, si no está activo, directo desde la caja */
+  function mostrar(c, k, reemplazar){
+    return swActivo.then(function(activo){
+      if(activo){ saltar(k+colaDe(), reemplazar); return k+colaDe(); }
+      return c.match(k).then(function(r){ if(!r) throw new Error('no está'); return r.blob(); })
+        .then(function(b){ var u=URL.createObjectURL(b); saltar(u, reemplazar); return u; });
+    });
+  }
+  /* abre un documento: el guardado si ya está, o lo baja, lo guarda y lo
+     abre. Lo que falle en el camino termina en «directo», como antes. */
+  function abrirDoc(it, op){
+    op=op||{};
+    function directo(){ if(op.reemplazar) abrir(it.url, it.nombre); else location.href=it.url; }
+    if(FALTA || !PUEDE || !nuestra(it.url)){ directo(); return Promise.resolve(); }
+    var k=rutaDoc(it.url);
+    return swHay.then(function(hay){
+      if(!hay) throw new Error('sin service worker');
+      return caja();
+    }).then(function(c){
+      return c.match(k).then(function(ya){
+        if(ya) return tocar(c, k);
+        return bajar(it.url, op.alAvance).then(function(r){ return guardarDoc(c, k, r); });
+      }).then(function(){ return conTope(op.antes, 3000).then(function(){}, function(){}); })   /* que lo anotado de este cartel quede escrito antes de irse */
+        .then(function(){ return mostrar(c, k, op.reemplazar); });
+    }).then(function(u){
+      /* si el navegador lo trata como descarga, la página sigue acá: queda el botón */
+      if(op.reemplazar) setTimeout(function(){
+        di(t('Toca para abrirlo'), t('Tu navegador no dejó abrirlo solo.'),
+           '<a class="btn" href="'+esc(u)+'">'+esc(t('Abrir el documento'))+'</a>');
+      }, 1500);
+    }, directo);
+  }
+  function avance(n, total){
+    var b=document.getElementById('baja'); if(!b) return;
+    var pc = total>0 ? Math.min(99, Math.floor(n*100/total)) : -1;
+    var txt = pc>=0 ? t('Descargando… {0} %', String(pc)) : t('Descargando… {0} MB', (n/1048576).toFixed(1).replace('.', L==='en' ? '.' : ','));
+    if(!b.firstChild){
+      b.className='baja';
+      b.innerHTML='<div class="riel"><i></i></div><p></p><p class="nota">'+esc(t('Queda guardado en este celular: la próxima vez abre al toque, también sin señal.'))+'</p>';
+    }
+    b.querySelector('.riel').style.display = pc>=0 ? '' : 'none';
+    b.querySelector('i').style.width = Math.max(pc, 0)+'%';
+    b.querySelector('p').textContent = txt;
+  }
+
+  /* ── lo que abre el cartel ── */
+  function armar(j, nombre){
+    var items=[];
+    if(web(j.url)) items.push({ nombre:nombre, url:j.url, enlace:true });
+    (Array.isArray(j.docs) ? j.docs : []).forEach(function(d){ if(d && web(d.url)) items.push({ nombre:d.nombre||nombre, url:d.url, fecha:d.fecha }); });
+    return items;
+  }
+  /* cuáles de estos ya están en este celular: { ruta: true } */
+  function guardados(items){
+    var out={};
+    if(!PUEDE) return Promise.resolve(out);
+    return caja().then(function(c){
+      return Promise.all(items.map(function(it){
+        if(!nuestra(it.url)) return null;
+        var k=rutaDoc(it.url);
+        return c.match(k).then(function(r){ if(r) out[k]=true; });
+      }));
+    }).then(function(){ return out; }, function(){ return out; });
+  }
+  var LISTA=null;     /* lo que está pintado: para rehacerlo al volver con «atrás» */
+  function pintarLista(nombre, items, sinRed, cuando){
+    LISTA={ nombre:nombre, items:items, sinRed:sinRed, cuando:cuando };
+    return guardados(items).then(function(ya){
+      var primero=true;
+      var filas=items.map(function(it, i){
+        var marca='', k=nuestra(it.url) ? rutaDoc(it.url) : '', esta=!!(k && ya[k]);
+        if(!it.enlace && primero){ marca=' · <span class="nuevo">'+esc(t('el más reciente'))+'</span>'; primero=false; }
+        var sub = it.enlace ? esc(t('Enlace')) : esc(t('Subido el {0}', fecha(it.fecha)));
+        if(sinRed){
+          if(!esta) return '<div class="doc off"><span class="ic" aria-hidden="true">'+(it.enlace?'🔗':'📄')+'</span>'+
+            '<span class="tx"><b>'+esc(it.nombre)+'</b><small>'+sub+'</small></span><span class="ir">'+esc(t('Necesita señal'))+'</span></div>';
+          return '<a class="doc" data-i="'+i+'" href="'+esc(k+colaDe())+'"><span class="ic" aria-hidden="true">📄</span>'+
+            '<span class="tx"><b>'+esc(it.nombre)+'</b><small>'+sub+' · <span class="ya">'+esc(t('Guardado'))+'</span></small></span>'+
+            '<span class="ir">'+esc(t('Abrir'))+'</span></a>';
+        }
+        return '<a class="doc" data-i="'+i+'" href="'+esc(it.url)+'" rel="noopener"><span class="ic" aria-hidden="true">'+(it.enlace?'🔗':'📄')+'</span>'+
+          '<span class="tx"><b>'+esc(it.nombre)+'</b><small>'+sub+marca+(esta ? ' · <span class="ya">✓ '+esc(t('guardado en este celular'))+'</span>' : '')+'</small></span>'+
+          '<span class="ir">'+esc(t('Abrir'))+'</span></a>';
+      }).join('');
+      cuerpo.innerHTML = sinRed
+        ? '<h1>'+esc(t('Sin señal'))+'</h1><p><b style="color:#EAF2F7">'+esc(nombre)+'</b></p>'+
+          '<div class="tarj" style="padding:16px 18px">'+esc(t('Lo que este celular tiene guardado, al {0}. Puede haber versiones más nuevas: cuando tengas señal, escanea el cartel otra vez.', fechaDeMs(cuando)))+'</div>'+
+          '<div class="lista">'+filas+'</div>'
+        : '<h1>'+esc(nombre)+'</h1><p>'+esc(t('Toca el que necesitas.'))+'</p><div class="lista">'+filas+'</div>';
+      [].forEach.call(cuerpo.querySelectorAll('a.doc'), function(a){
+        a.addEventListener('click', function(ev){
+          var it=items[+a.getAttribute('data-i')];
+          if(!it || !PUEDE || FALTA || !nuestra(it.url)) return;      /* un enlace: como siempre */
+          if(ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) return;
+          ev.preventDefault();
+          if(a.getAttribute('data-va')) return;
+          a.setAttribute('data-va', '1');
+          var ir=a.querySelector('.ir');
+          abrirDoc(it, { reemplazar:false, alAvance:function(n, total){ if(ir) ir.textContent = total>0 ? Math.min(99, Math.floor(n*100/total))+' %' : (n/1048576).toFixed(1)+' MB'; } })
+            .then(function(){ setTimeout(function(){ if(LISTA) pintarLista(LISTA.nombre, LISTA.items, LISTA.sinRed, LISTA.cuando); }, 2500); });
+        });
+      });
+    });
+  }
+  /* al volver con «atrás» desde el documento, la lista se rehace (con lo
+     que ahora sí está guardado) */
+  try{
+    window.addEventListener('pageshow', function(ev){
+      if(ev && ev.persisted && LISTA) pintarLista(LISTA.nombre, LISTA.items, LISTA.sinRed, LISTA.cuando);
+    });
+  }catch(_ps){}
+
   function sinInternet(){
-    di('Sin internet', 'Necesitas señal para abrir el documento. Vuelve a escanear el cartel cuando tengas datos o wifi.');
+    if(FALTA){
+      di(t('Sin señal'), esc(t('Ese documento ya no está guardado en este celular.'))+'<br><br>'+esc(t('Vuelve a escanear el cartel cuando tengas datos o wifi.')));
+      return;
+    }
+    di(t('Sin internet'), esc(t('Necesitas señal para abrir este documento la primera vez. Después queda guardado en este celular y abre también sin señal.'))+
+      '<br><br>'+esc(t('Vuelve a escanear el cartel cuando tengas datos o wifi.')));
+  }
+  /* sin señal: lo que este celular guardó de este cartel, si guardó algo.
+     Con «soloSiHay» (la señal está lenta, no caída): si no hay copia no
+     toca la pantalla y devuelve false, para seguir esperando al servidor. */
+  function sinSenal(soloSiHay, vale){
+    soloSiHay=(soloSiHay===true);
+    function nada(){ if(!soloSiHay) sinInternet(); return false; }
+    return conTope(leerResp(), 5000).then(function(g){
+      if(!g) return nada();
+      var j=g.j, nombre=j.titulo || nombreDe(j.hoja) || t('Documento de la obra');
+      var items=armar(j, nombre);
+      return guardados(items).then(function(ya){
+        var hay=items.filter(function(it){ return nuestra(it.url) && ya[rutaDoc(it.url)]; });
+        if(!hay.length) return nada();
+        if(vale && !vale()) return false;        /* el servidor contestó mientras se miraba la caja */
+        if(j.obra) pie.textContent=j.obra;
+        if(items.length===1){
+          var k=rutaDoc(hay[0].url);
+          di(t('Sin señal'), '<b>'+esc(hay[0].nombre)+'</b><br><br>'+
+             esc(t('Este celular guardó este documento el {0}. Puede haber una versión más nueva: cuando tengas señal, escanea el cartel otra vez.', fechaDeMs(g.t))),
+             '<a class="btn" id="copia" href="'+esc(k+colaDe())+'">'+esc(t('Abrir la copia guardada'))+'</a>');
+          var b=document.getElementById('copia');
+          if(b) b.addEventListener('click', function(ev){
+            if(ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) return;
+            ev.preventDefault();
+            caja().then(function(c){ return tocar(c, k).then(function(){ return mostrar(c, k, false); }); }).then(function(){}, function(){ location.href=k+colaDe(); });
+          });
+          return true;
+        }
+        return pintarLista(nombre, items, true, g.t).then(function(){ return true; });
+      });
+    }).then(function(r){ return r; }, nada);
+  }
+  /* la respuesta del servidor. Si tarda más de 7 s (señal de sótano: ni
+     llega ni falla) y este celular ya tiene una copia, se ofrece la copia;
+     si no la tiene, se sigue esperando, como siempre. */
+  function conServidor(p, alOk){
+    var hecho=false;
+    var lento=setTimeout(function(){
+      if(hecho) return;
+      sinSenal(true, function(){ if(hecho) return false; hecho=true; return true; });
+    }, 7000);
+    p.then(function(j){ if(hecho) return; hecho=true; clearTimeout(lento); alOk(j); },
+           function(){ if(hecho) return; hecho=true; clearTimeout(lento); sinSenal(); });
   }
 
   if(tk){
-    rpc('sst_qr_abrir', {p_t:tk}).then(function(j){
+    conServidor(rpc('sst_qr_abrir', {p_t:tk}), function(j){
       j = j || {};
-      var nombre = j.titulo || NOMBRE[j.hoja] || 'Documento de la obra';
+      var nombre = j.titulo || nombreDe(j.hoja) || t('Documento de la obra');
       if(j.obra) pie.textContent = j.obra;
       if(j.ok){
         /* lo que abre: el enlace puesto a mano y lo que haya en la carpeta */
-        var items=[];
-        if(web(j.url)) items.push({nombre:nombre, url:j.url, enlace:true});
-        (Array.isArray(j.docs) ? j.docs : []).forEach(function(d){ if(d && web(d.url)) items.push({nombre:d.nombre||nombre, url:d.url, fecha:d.fecha}); });
-        if(items.length===1){ document.getElementById('quien').textContent = items[0].nombre; abrir(items[0].url, nombre); return; }
-        if(items.length>1){
-          var primero=true;
-          cuerpo.innerHTML='<h1>'+esc(nombre)+'</h1><p>Toca el que necesitas.</p><div class="lista">'+
-            items.map(function(it){
-              var marca='';
-              if(!it.enlace && primero){ marca=' · <span class="nuevo">el más reciente</span>'; primero=false; }
-              return '<a class="doc" href="'+esc(it.url)+'" rel="noopener"><span class="ic" aria-hidden="true">'+(it.enlace?'🔗':'📄')+'</span>'+
-                '<span class="tx"><b>'+esc(it.nombre)+'</b><small>'+(it.enlace ? 'Enlace' : ('Subido el '+esc(fecha(it.fecha))))+marca+'</small></span>'+
-                '<span class="ir">Abrir</span></a>';
-            }).join('')+'</div>';
-          return;
+        var items=armar(j, nombre);
+        var anotado=null;
+        if(items.length){
+          anotado=guardarResp(j).then(function(){
+            return limpiar(items.filter(function(it){ return nuestra(it.url); }).map(function(it){ return rutaDoc(it.url); }));
+          });
         }
+        if(items.length===1){ document.getElementById('quien').textContent = items[0].nombre; abrirDoc(items[0], { reemplazar:true, alAvance:avance, antes:anotado }); return; }
+        if(items.length>1){ pintarLista(nombre, items, false, 0); return; }
       }
       var e=j.error||'';
       if(e==='no_existe'){
-        di('Este cartel ya no está activo', 'Pídele a tu supervisor que imprima el cartel nuevo desde OBRASST, en «Los QR de tu obra».');
+        olvidar();
+        di(t('Este cartel ya no está activo'), esc(t('Pídele a tu supervisor que imprima el cartel nuevo desde OBRASST, en «Los QR de tu obra».')));
       } else if(e==='sin_documento'){
-        di('Todavía no está cargado',
-           'Esta obra aún no subió su <b>'+esc(nombre)+'</b> a OBRASST.<br><br>Pídeselo a tu supervisor SSOMA: se sube una vez, en la app o en la web, y este mismo cartel empieza a funcionar.');
+        olvidar();
+        di(t('Todavía no está cargado'),
+           t('Esta obra aún no subió su <b>{0}</b> a OBRASST.', esc(nombre))+'<br><br>'+
+           esc(t('Pídeselo a tu supervisor SSOMA: se sube una vez, en la app o en la web, y este mismo cartel empieza a funcionar.')));
       } else {
-        di('No se pudo abrir', 'Vuelve a escanear el cartel en un momento. Si sigue igual, avísale a tu supervisor.');
+        di(t('No se pudo abrir'), esc(t('Vuelve a escanear el cartel en un momento. Si sigue igual, avísale a tu supervisor.')));
       }
-    }).catch(sinInternet);
+    });
     return;
   }
 
   if(!cod || !hoja){
-    di('Este cartel está incompleto',
-       'Al código QR le falta el documento. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.');
+    di(t('Este cartel está incompleto'),
+       esc(t('Al código QR le falta el documento. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.')));
     return;
   }
-  rpc('sst_hoja_por_codigo', {p_cod:cod, p_hoja:hoja}).then(function(j){
+  conServidor(rpc('sst_hoja_por_codigo', {p_cod:cod, p_hoja:hoja}), function(j){
     if(j && j.ok && web(j.url)){
       if(j.obra) pie.textContent = j.obra;
-      abrir(j.url, NOMBRE[hoja]);
+      var uno={ nombre:nombreDe(hoja) || t('Documento de la obra'), url:j.url };
+      var anotado=null;
+      if(nuestra(j.url)){
+        anotado=guardarResp({ obra:j.obra, hoja:hoja, docs:[{ nombre:uno.nombre, url:j.url, fecha:'' }] }).then(function(){ return limpiar([rutaDoc(j.url)]); });
+      }
+      abrirDoc(uno, { reemplazar:true, alAvance:avance, antes:anotado });
       return;
     }
     var e=(j&&j.error)||'';
     if(e==='obra_no_existe'){
-      di('No encuentro esa obra', 'Este cartel no corresponde a ninguna obra en OBRASST. Puede que sea de una obra que ya cerró.');
+      olvidar();
+      di(t('No encuentro esa obra'), esc(t('Este cartel no corresponde a ninguna obra en OBRASST. Puede que sea de una obra que ya cerró.')));
     } else if(e==='sin_documento'){
+      olvidar();
       if(j.obra) pie.textContent = j.obra;
-      di('Todavía no está cargado',
-         'Esta obra aún no subió su <b>'+esc(NOMBRE[hoja]||'documento')+'</b> a OBRASST.<br><br>Pídeselo a tu supervisor SSOMA: se carga una vez y este mismo cartel empieza a funcionar.');
+      di(t('Todavía no está cargado'),
+         t('Esta obra aún no subió su <b>{0}</b> a OBRASST.', esc(nombreDe(hoja) || t('Documento de la obra')))+'<br><br>'+
+         esc(t('Pídeselo a tu supervisor SSOMA: se carga una vez y este mismo cartel empieza a funcionar.')));
     } else {
-      di('No se pudo abrir', 'Vuelve a escanear el cartel en un momento. Si sigue igual, avísale a tu supervisor.');
+      di(t('No se pudo abrir'), esc(t('Vuelve a escanear el cartel en un momento. Si sigue igual, avísale a tu supervisor.')));
     }
-  }).catch(sinInternet);
+  });
 })();
 </script>
 </body></html>
