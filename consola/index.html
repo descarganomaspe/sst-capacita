@@ -298,6 +298,8 @@ td .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px}
 .datos dt{color:var(--gris); margin:0; white-space:nowrap}
 .datos dd{margin:0; color:var(--texto); min-width:0; overflow-wrap:anywhere}
 .seccion{margin:22px 0 0}
+.rec-prov{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0 14px}
+@media (max-width:700px){ .rec-prov{grid-template-columns:1fr} }
 .seccion h3{font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); font-weight:600; margin:0 0 10px}
 .linea{list-style:none; margin:0; padding:0 0 0 14px; border-left:2px solid var(--raya); display:grid; gap:10px; font-size:13.5px; line-height:1.45}
 .linea li{position:relative}
@@ -456,7 +458,7 @@ var SB = { url:'https://gwjjkknuiumgysezeatz.supabase.co',
            key:'sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx' };
 var LS_TOK = 'sstc_consola_cuenta';   /* la sesión de la consola: aparte de la de la app y del portal */
 var TOK = null;
-var CONS = { admin:null, fallasNuevas:null, ultimo:null };
+var CONS = { admin:null, fallasNuevas:null, reclamosPend:null, ultimo:null };
 var $ = function(id){ return document.getElementById(id); };
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -622,11 +624,13 @@ var IC = {
   empresas:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 20.5v-15a1 1 0 0 1 1-1h8.5a1 1 0 0 1 1 1v15"/><path d="M15 9.5h3.5a1 1 0 0 1 1 1v10"/><path d="M3 20.5h18M8 8.5h3M8 12h3M8 15.5h3"/></svg>',
   codigos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v1.8a2.2 2.2 0 0 0 0 4.4V16a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-1.8a2.2 2.2 0 0 0 0-4.4z"/><path d="M14.5 7v1.6M14.5 11.2v1.6M14.5 15.4V17"/></svg>',
   comprobantes:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h8l3.5 3.5v13.5h-11.5z"/><path d="M14.5 3.5V7H18"/><path d="M9.5 11h6M9.5 14.5h6M9.5 18h3.5"/></svg>',
-  avisos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5v-5a6 6 0 1 1 12 0v5l1.8 2H4.2z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg>'
+  avisos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5v-5a6 6 0 1 1 12 0v5l1.8 2H4.2z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg>',
+  reclamos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6c3-1.200 5.500-1.200 8.500.7 3-1.900 5.500-1.900 8.500-.7v12.500c-3-1.200-5.500-1.200-8.500.7-3-1.900-5.500-1.900-8.500-.7z"/><path d="M12 6.7v12.500"/></svg>'
 };
 var VISTAS = [
   {id:'resumen',  n:'Resumen',           c:'Resumen',  s:'Hoy y el mes, de un vistazo'},
   {id:'fallas',   n:'Fallas',            c:'Fallas',   s:'Lo que la gente reporta desde la app. «No puede entrar» con el plan vencido no es una falla: se contesta con el plan.'},
+  {id:'reclamos', n:'Reclamos',          c:'Reclamos', s:'El Libro de Reclamaciones: cada hoja con su plazo de quince días hábiles, tu respuesta y la copia que se le manda al consumidor'},
   {id:'ventas',   n:'Ventas',            c:'Ventas',   s:'Los pagos de OBRASST: la web, la tienda de Descarga Nomás y Google Play'},
   {id:'comprobantes', n:'Boletas y facturas', c:'Boletas', s:'La boleta o la factura de cada venta: lo que pidió el cliente, lista para emitir en SUNAT, y su número y su PDF cuando ya salió'},
   {id:'empresas', n:'Empresas y planes', c:'Empresas', s:'Cada empresa, con el plan que tiene hoy, sus obras y su gente'},
@@ -635,7 +639,7 @@ var VISTAS = [
 ];
 var VISTA = { actual:null, recargar:null };
 function vistaDe(id){ return VISTAS.filter(function(v){ return v.id===id; })[0]; }
-function pintor(id){ return ({resumen:vistaResumen, fallas:vistaFallas, ventas:vistaVentas, comprobantes:vistaComprobantes, empresas:vistaEmpresas, codigos:vistaCodigos, avisos:vistaAvisos})[id]; }
+function pintor(id){ return ({resumen:vistaResumen, fallas:vistaFallas, reclamos:vistaReclamos, ventas:vistaVentas, comprobantes:vistaComprobantes, empresas:vistaEmpresas, codigos:vistaCodigos, avisos:vistaAvisos})[id]; }
 function navegar(id, desdeHistoria){
   var v = vistaDe(id); if(!v) v = VISTAS[0];
   var antes = VISTA.actual;
@@ -656,7 +660,10 @@ window.addEventListener('popstate', function(){
 });
 function pintarNav(){
   var n = CONS.fallasNuevas;
-  var insignia = function(v){ return (v.id==='fallas' && n) ? '<span class="n" aria-label="'+n+' nuevas">'+(n>99?'99+':n)+'</span>' : ''; };
+  var rp = CONS.reclamosPend;
+  var insignia = function(v){
+    if(v.id==='reclamos' && rp) return '<span class="n" aria-label="'+rp+' por responder">'+(rp>99?'99+':rp)+'</span>';
+    return (v.id==='fallas' && n) ? '<span class="n" aria-label="'+n+' nuevas">'+(n>99?'99+':n)+'</span>' : ''; };
   $('rail').innerHTML = '<div class="grupo">Solo tú</div>' + VISTAS.map(function(v){
     return '<button type="button" class="nav'+(VISTA.actual===v.id?' on':'')+'" data-v="'+v.id+'"'+(VISTA.actual===v.id?' aria-current="page"':'')+'>'+
       IC[v.id]+'<span>'+esc(v.n)+'</span>'+insignia(v)+'</button>';
@@ -676,6 +683,12 @@ function contarFallas(){
     if(typeof n!=='number') return;
     var antes = CONS.fallasNuevas; CONS.fallasNuevas = n;
     if(antes!==n) pintarNav();
+  }, function(){});
+  /* 03/10 · y los reclamos por responder: tienen plazo */
+  sbRpc('sst_admin_reclamos', {p_estado:'pendientes'}).then(function(r){
+    if(!r || !r.ok) return;
+    var n2 = +r.pendientes || 0, a2 = CONS.reclamosPend; CONS.reclamosPend = n2;
+    if(a2!==n2) pintarNav();
   }, function(){});
 }
 function marcarActualizado(){
@@ -1066,6 +1079,194 @@ function abrirFalla(f){
       toast('Resuelta. La persona lee tu respuesta en «Mis reportes» de su app.'); cerrarHoja();
       if(VISTA.actual==='fallas' && typeof VISTA.recargar==='function') VISTA.recargar();
     }, function(){ b.disabled=false; m.className='msg mal'; m.textContent='No hubo conexión. Tu respuesta sigue escrita: inténtalo otra vez.'; });
+  };
+}
+
+/* ══ 2b · EL LIBRO DE RECLAMACIONES (03/10/2026) ═════════════════════
+   Marcelo: «…también agregarle libro de reclamaciones». Las hojas entran
+   por la página de inicio del portal (y por la app, que lleva ahí). Aquí
+   se ven, se responden y se anota que la copia salió al consumidor.
+   Lo que pide el reglamento (D.S. 011-2011-PCM, con el D.S. 101-2022-PCM):
+   responder por escrito en no más de quince (15) días hábiles, por el
+   medio que pidió el consumidor; que la hoja le llegue a su correo; y
+   guardar las hojas por lo menos dos años (por eso aquí no se borran).
+   Los datos del proveedor —razón social, RUC y domicilio— van impresos
+   en cada hoja: se ponen aquí, una vez. */
+var REC = { filtro:'pendientes', r:null, abrir:null, editaProv:false, copiaSola:false };
+var REC_MAL = { no_eres_admin:'Esta cuenta no es la del creador.', ruc_malo:'Ese RUC no pasa el dígito verificador de SUNAT: revísalo.', correo_malo:'Revisa el correo.',
+  muy_corto:'Muy corto: escribe el dato completo.', respuesta_corta:'La respuesta es muy corta: explica qué se hizo.', no_esta:'Esa hoja ya no está.' };
+/* el día en que vence: quince días hábiles después del registro, contando de
+   lunes a viernes. Los feriados no se descuentan: dan más días, no menos. */
+function _recVence(iso){
+  var d=new Date(iso); if(isNaN(d)) return null;
+  var f=new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  /* el día de Lima en que se registró */
+  try{ var p=fechaLima(iso).split('/'); if(p.length===3) f=new Date(Date.UTC(+p[2], +p[1]-1, +p[0])); }catch(_e){}
+  var n=0; while(n<15){ f.setUTCDate(f.getUTCDate()+1); var w=f.getUTCDay(); if(w!==0 && w!==6) n++; }
+  return f;
+}
+function _recFaltan(iso){
+  var v=_recVence(iso); if(!v) return null;
+  var h=hoyLima().split('-'), hoy=new Date(Date.UTC(+h[0], +h[1]-1, +h[2])), n=0, c=new Date(hoy);
+  if(hoy>v) return -1;
+  while(c<v){ c.setUTCDate(c.getUTCDate()+1); var w=c.getUTCDay(); if(w!==0 && w!==6) n++; }
+  return n;
+}
+function _recPlazo(h){
+  if(h.respondido) return '<span class="pill ok">Respondida</span>';
+  var v=_recVence(h.fecha), q=_recFaltan(h.fecha); if(!v) return '';
+  var dia=dos(v.getUTCDate())+'/'+dos(v.getUTCMonth()+1);
+  if(q<0) return '<span class="pill mal">Venció el '+dia+'</span>';
+  return '<span class="pill '+(q<=3?'mal':(q<=7?'ojo':'gris'))+'">Vence el '+dia+'</span><span class="sub">'+(q===0?'hoy es el último día':(q===1?'queda 1 día hábil':'quedan '+q+' días hábiles'))+'</span>';
+}
+function _recMonto(b){
+  if(!b || b.monto===null || b.monto===undefined || b.monto==='') return '';
+  var n=+b.monto; return isNaN(n) ? '' : (b.moneda==='USD' ? 'US$ ' : 'S/ ')+n.toFixed(2);
+}
+/* la hoja en texto: para pegarla en un correo */
+function _recTexto(h){
+  var c=h.consumidor||{}, b=h.bien||{}, p=h.proveedor||{}, L=[];
+  /* la hoja lleva el proveedor como figuraba ese día; la que entró antes de ponerlo, el de hoy */
+  if(!p.razon) p=(REC.r && REC.r.proveedor && REC.r.proveedor.razon) ? REC.r.proveedor : {razon:'OBRASST · Descarga Nomás'};
+  L.push('LIBRO DE RECLAMACIONES · HOJA DE RECLAMACIÓN N.° '+h.numero);
+  L.push('Fecha: '+fechaHora(h.fecha));
+  L.push('Proveedor: '+[p.razon, p.ruc ? 'RUC '+p.ruc : '', p.domicilio].filter(Boolean).join(' · '));
+  L.push(''); L.push('1. CONSUMIDOR RECLAMANTE');
+  L.push([c.nombre, (c.doc_tipo||'Documento')+' '+c.doc].filter(Boolean).join(' · '));
+  L.push([c.domicilio, c.telefono, c.correo].filter(Boolean).join(' · '));
+  if(c.menor) L.push('Padre, madre o representante: '+(c.apoderado||''));
+  L.push(''); L.push('2. BIEN CONTRATADO');
+  L.push([(b.tipo==='producto'?'Producto':'Servicio'), b.descripcion, _recMonto(b) ? 'Monto reclamado: '+_recMonto(b) : ''].filter(Boolean).join(' · '));
+  L.push(''); L.push('3. '+(h.tipo==='queja'?'QUEJA':'RECLAMO'));
+  L.push('Detalle: '+(h.detalle||'')); L.push('Pedido: '+(h.pedido||''));
+  L.push(''); L.push('4. RESPUESTA DEL PROVEEDOR');
+  L.push(h.respuesta ? h.respuesta+' ('+fechaHora(h.respondido)+')' : 'Pendiente. Se responde en un plazo no mayor a quince (15) días hábiles.');
+  return L.join('\n');
+}
+function vistaReclamos(caja){
+  cargando(caja);
+  function pinta(){
+    sbRpc('sst_admin_reclamos', {p_estado: REC.filtro==='todas' ? null : REC.filtro}).then(function(r){
+      if(!r || !r.ok){ noAbre(caja, r, null, '2026-10-22-libro-de-reclamaciones'); return; }
+      REC.r=r; marcarActualizado();
+      if(CONS.reclamosPend!==(+r.pendientes||0)){ CONS.reclamosPend=+r.pendientes||0; pintarNav(); }
+      var P=r.proveedor||{}, lista=r.lista||[];
+      var F=[['pendientes','Por responder'],['respondidas','Respondidas'],['todas','Todas']];
+      var h='';
+      /* los datos del proveedor */
+      if(!P.listo || REC.editaProv){
+        h+='<section class="tarj" style="padding:16px 18px;margin:0 0 16px" aria-labelledby="rec-prov-t"><h2 id="rec-prov-t" style="margin:0 0 4px">'+(P.listo?'Los datos del proveedor':'Faltan los datos del proveedor')+'</h2>'+
+          '<p class="sub" style="margin:0 0 14px">La razón social, el RUC y el domicilio van impresos en cada Hoja de Reclamación y al pie de la página de inicio del portal. '+(P.listo?'':'Mientras falten, las hojas salen sin ellos.')+'</p>'+
+          '<div class="rec-prov"><div class="campo"><label for="rec-razon">Razón social (o tu nombre, si el RUC es de persona natural)</label><input id="rec-razon" maxlength="200" value="'+esc(P.razon||'')+'"></div>'+
+          '<div class="campo"><label for="rec-ruc">RUC</label><input id="rec-ruc" maxlength="13" inputmode="numeric" value="'+esc(P.ruc||'')+'"></div>'+
+          '<div class="campo"><label for="rec-dom">Domicilio</label><input id="rec-dom" maxlength="200" placeholder="Calle, número, distrito, ciudad" value="'+esc(P.domicilio||'')+'"></div>'+
+          '<div class="campo"><label for="rec-correo">Correo al que el consumidor puede escribir (opcional)</label><input id="rec-correo" type="email" maxlength="160" value="'+esc(P.correo||'')+'"></div></div>'+
+          '<div class="msg" id="rec-prov-msg" aria-live="polite"></div>'+
+          '<div class="acciones"><button type="button" class="bt" id="rec-prov-ok">Guardar</button>'+(P.listo?'<button type="button" class="bt sec" id="rec-prov-no">Cancelar</button>':'')+'</div></section>';
+      } else {
+        h+='<div class="aviso" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 320px"><b>'+esc(P.razon)+'</b> · RUC '+esc(P.ruc)+' · '+esc(P.domicilio)+(P.correo?' · '+esc(P.correo):'')+
+          '<br>Así sale el proveedor en cada hoja y al pie de la página de inicio.</span><button type="button" class="bt sec chico" id="rec-prov-ed">Cambiar</button></div>';
+      }
+      h+='<div class="rej" style="margin:0 0 16px">'+
+        cifra('Por responder', num(r.pendientes||0), 'Cada una, en no más de 15 días hábiles', r.pendientes?'mal':'')+
+        cifra('Sin copia al consumidor', num(r.sin_copia||0), 'La hoja tiene que llegarle a su correo', r.sin_copia?'ojo':'')+
+      '</div><p class="sub" id="rec-copia-como" style="margin:-6px 0 16px;font-size:13px;color:var(--gris)" hidden></p>'+
+      '<div class="seg" role="tablist" aria-label="Cuáles">'+F.map(function(x){
+        return '<button type="button" role="tab" data-f="'+x[0]+'" aria-selected="'+(REC.filtro===x[0])+'" class="'+(REC.filtro===x[0]?'on':'')+'">'+esc(x[1])+'</button>';
+      }).join('')+'</div><div class="tarj" id="t-reclamos"></div>'+
+      '<p class="sub" style="margin:12px 0 0;font-size:13px;color:var(--gris)">El plazo se cuenta de lunes a viernes desde el día siguiente al registro. Los feriados no están descontados: si hay uno en medio, tienes un día más, no uno menos. Las hojas se guardan por lo menos dos años: aquí no se borran.</p>';
+      caja.innerHTML=h;
+      [].forEach.call(caja.querySelectorAll('.seg button'), function(b){ b.onclick=function(){ REC.filtro=b.getAttribute('data-f'); pinta(); }; });
+      var ed=$('rec-prov-ed'); if(ed) ed.onclick=function(){ REC.editaProv=true; pinta(); };
+      var no=$('rec-prov-no'); if(no) no.onclick=function(){ REC.editaProv=false; pinta(); };
+      var okb=$('rec-prov-ok'); if(okb) okb.onclick=function(){
+        var m=$('rec-prov-msg'), d={ razon:$('rec-razon').value, ruc:$('rec-ruc').value, domicilio:$('rec-dom').value, correo:$('rec-correo').value };
+        if(String(d.razon).trim().length<3 || String(d.ruc).replace(/\D/g,'').length!==11 || String(d.domicilio).trim().length<3){ m.className='msg mal'; m.textContent='Faltan la razón social, el RUC (11 números) o el domicilio.'; return; }
+        okb.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+        sbRpc('sst_admin_libro_proveedor', {p_datos:d}).then(function(j){
+          okb.disabled=false;
+          if(!j || !j.ok){ m.className='msg mal'; m.textContent=REC_MAL[(j&&j.motivo)||''] || 'No se pudo guardar.'; return; }
+          REC.editaProv=false; toast('Guardado. Desde ahora sale en cada hoja y en la página de inicio.'); pinta();
+        }, function(){ okb.disabled=false; m.className='msg mal'; m.textContent='No hubo conexión. Inténtalo otra vez.'; });
+      };
+      var cols=[
+        {k:'fecha', t:'Llegó', h:function(x){ return esc(fechaHora(x.fecha))+'<span class="sub">'+esc(hace(x.fecha))+'</span>'; }},
+        {k:'numero', t:'N.°', h:function(x){ return '<b class="cod-t">'+esc(x.numero)+'</b>'; }},
+        {k:'tipo', t:'Es', h:function(x){ return '<span class="pill '+(x.tipo==='queja'?'azul':'casco')+'">'+(x.tipo==='queja'?'Queja':'Reclamo')+'</span>'; }, v:function(x){ return x.tipo; }},
+        {k:'quien', t:'Quién', h:function(x){ var c=x.consumidor||{}; return esc(c.nombre||'')+'<span class="sub">'+esc(c.correo||'')+'</span>'; }, v:function(x){ var c=x.consumidor||{}; return [c.nombre, c.correo, c.doc].filter(Boolean).join(' · '); }},
+        {k:'sobre', t:'Sobre', h:function(x){ var d=String(x.detalle||''); return '<b>'+esc((x.bien||{}).descripcion||'')+'</b><span class="sub">'+esc(d.slice(0,120))+(d.length>120?'…':'')+'</span>'; }, v:function(x){ return ((x.bien||{}).descripcion||'')+' · '+(x.detalle||''); }},
+        {k:'plazo', t:'Plazo', h:_recPlazo, v:function(x){ var v=_recVence(x.fecha); return x.respondido ? 'Respondida' : (v ? 'Vence '+dos(v.getUTCDate())+'/'+dos(v.getUTCMonth()+1)+'/'+v.getUTCFullYear() : ''); }},
+        {k:'copia', t:'Copia', h:function(x){ return x.copia_enviada ? '<span class="pill ok">Enviada</span>' : '<span class="pill ojo">Falta</span>'; }, v:function(x){ return x.copia_enviada ? 'Enviada' : 'Falta'; }},
+        {k:'_acc', t:'', acc:true, h:function(x){ return '<button type="button" class="bt '+(x.respondido?'sec ':'')+'chico" data-acc="abrir">'+(x.respondido?'Ver':'Atender')+'</button>'; }}
+      ];
+      tabla($('t-reclamos'), cols, lista, {orden:'fecha', asc:false, unidad:'hojas', archivo:'libro-de-reclamaciones',
+        vacio: REC.filtro==='pendientes' ? 'No hay hojas por responder' : 'No hay hojas en esta lista',
+        vacioSub:'Llegan cuando alguien registra un reclamo o una queja en el Libro de Reclamaciones, al pie de la página de inicio del portal.',
+        alClic:abrirReclamo, accion:function(acc, x){ abrirReclamo(x); }});
+      /* ¿la copia al consumidor sale sola? lo dice la función que manda los correos */
+      avpFuncion('estado').then(function(j){
+        REC.copiaSola = !!(j && j.copia);
+        var c=$('rec-copia-como'); if(!c) return;
+        c.hidden=false;
+        c.textContent = REC.copiaSola
+          ? 'La copia de cada hoja le sale sola al consumidor, a su correo, apenas la registra. Si alguna queda en «Falta» pasados unos minutos, mándasela tú.'
+          : 'Hoy la copia de cada hoja la mandas tú («Abrir en mi correo», dentro de la hoja). Para que salga sola hace falta un remitente con dominio propio en Resend (el secreto CORREO_DE).';
+      }, function(){});
+      if(REC.abrir){ var id=REC.abrir; REC.abrir=null; var x0=lista.filter(function(x){ return String(x.id)===String(id); })[0]; if(x0) abrirReclamo(x0); }
+    }, function(cod){ noAbre(caja, null, cod, '2026-10-22-libro-de-reclamaciones'); });
+  }
+  VISTA.recargar=function(silencio){ if(silencio && (HOJA.abierta || REC.editaProv || $('rec-razon'))) return; pinta(); }; pinta();
+}
+function abrirReclamo(x){
+  var c=x.consumidor||{}, b=x.bien||{}, p=x.proveedor||{};
+  var h='<dl class="datos">'+
+    fila('Llegó', esc(fechaHora(x.fecha)))+
+    fila('Plazo', _recPlazo(x))+
+    fila('Quiere la respuesta por', x.responder_por==='carta' ? '<b>Carta</b>, a su domicilio' : 'Correo electrónico')+
+    '</dl>'+
+    '<div class="seccion"><h3>1. El consumidor</h3><dl class="datos">'+
+      fila('Nombre', esc(c.nombre||''))+fila(esc(c.doc_tipo||'Documento'), esc(c.doc||''))+fila('Domicilio', esc(c.domicilio||''))+
+      fila('Teléfono', esc(c.telefono||''))+fila('Correo', esc(c.correo||''))+(c.menor ? fila('Es menor: lo representa', esc(c.apoderado||'')) : '')+'</dl></div>'+
+    '<div class="seccion"><h3>2. El bien contratado</h3><dl class="datos">'+
+      fila('Es', b.tipo==='producto'?'Producto':'Servicio')+fila('Descripción', esc(b.descripcion||''))+fila('Monto reclamado', esc(_recMonto(b)))+'</dl></div>'+
+    '<div class="seccion"><h3>3. '+(x.tipo==='queja'?'La queja':'El reclamo')+'</h3><p style="margin:0 0 10px;white-space:pre-wrap">'+esc(x.detalle||'')+'</p>'+
+      '<p style="margin:0;white-space:pre-wrap"><b>Pide:</b> '+esc(x.pedido||'')+'</p></div>'+
+    '<div class="seccion"><h3>La copia de la hoja al consumidor</h3><p style="margin:0 0 10px" id="rec-copia-t">'+
+      (x.copia_enviada ? 'Enviada el '+esc(fechaHora(x.copia_enviada))+'.' : 'Todavía no consta que se le haya enviado. El reglamento pide que la hoja le llegue a su correo: mándasela y anótalo aquí.')+'</p>'+
+      '<div class="acciones"><a class="bt sec chico" id="rec-correo-hoja" href="mailto:'+esc(c.correo||'')+'?subject='+encodeURIComponent('Tu Hoja de Reclamación N.° '+x.numero+' · OBRASST')+'&body='+encodeURIComponent('Hola, '+(c.nombre||'')+'.\n\nRecibimos tu '+(x.tipo==='queja'?'queja':'reclamo')+'. Esta es la copia de tu Hoja de Reclamación; te respondemos en un plazo no mayor a quince (15) días hábiles.\n\n'+_recTexto(x).slice(0, 1500))+'">Abrir en mi correo</a>'+
+      '<button type="button" class="bt sec chico" id="rec-copiar">Copiar la hoja</button>'+
+      (x.copia_enviada ? '' : '<button type="button" class="bt chico" id="rec-copia-ok">Ya se la envié</button>')+'</div></div>'+
+    '<div class="seccion"><h3>'+(x.respondido?'4. Tu respuesta':'4. Responder')+'</h3>'+
+      (x.respondido ? '<p class="sub" style="margin:0 0 8px">Respondida el '+esc(fechaHora(x.respondido))+'.</p>' : '')+
+      '<div class="campo"><label for="rec-resp">Lo que hiciste y lo que le respondes: queda en su hoja</label>'+
+      '<textarea id="rec-resp" maxlength="4000" style="min-height:130px" placeholder="Qué se revisó, qué se hizo y desde cuándo.">'+esc(x.respuesta||'')+'</textarea></div>'+
+      '<p class="sub" style="margin:0 0 8px">El consumidor la lee en el portal con su número y su clave. Además '+(x.responder_por==='carta' ? '<b>pidió carta</b>: envíasela a su domicilio y guarda el cargo.' : 'envíasela a su correo: guarda ese correo como constancia.')+'</p>'+
+      '<div class="msg" id="rec-msg" aria-live="polite"></div></div>';
+  var pie='<button type="button" class="bt sec" id="rec-volver">Cerrar</button>'+
+    (x.respondido && c.correo ? '<a class="bt sec" id="rec-correo-resp" href="mailto:'+esc(c.correo)+'?subject='+encodeURIComponent('Respuesta a tu '+(x.tipo==='queja'?'queja':'reclamo')+' N.° '+x.numero+' · OBRASST')+'&body='+encodeURIComponent('Hola, '+(c.nombre||'')+'.\n\nEsta es nuestra respuesta a tu Hoja de Reclamación N.° '+x.numero+':\n\n'+String(x.respuesta||'').slice(0, 1500))+'">Enviarla por correo</a>' : '')+
+    '<button type="button" class="bt ok" id="rec-guardar">'+(x.respondido?'Guardar el cambio':'Guardar la respuesta')+'</button>';
+  abrirHoja((x.tipo==='queja'?'Queja ':'Reclamo ')+x.numero, 'Libro de Reclamaciones', h, pie);
+  $('rec-volver').onclick=cerrarHoja;
+  $('rec-copiar').onclick=function(){ copiar(_recTexto(x), $('rec-copiar'), 'Copiada: pégala en tu correo'); };
+  var ck=$('rec-copia-ok'); if(ck) ck.onclick=function(){
+    ck.disabled=true;
+    sbRpc('sst_admin_reclamo_copia', {p_id:x.id}).then(function(j){
+      if(!j || !j.ok){ ck.disabled=false; toast(REC_MAL[(j&&j.motivo)||''] || 'No se pudo anotar.'); return; }
+      x.copia_enviada=(j.hoja && j.hoja.copia_enviada) || new Date().toISOString();
+      $('rec-copia-t').textContent='Enviada el '+fechaHora(x.copia_enviada)+'.'; ck.remove(); toast('Anotado: la copia ya se le envió.');
+      if(VISTA.actual==='reclamos' && typeof VISTA.recargar==='function') VISTA.recargar(true);
+    }, function(){ ck.disabled=false; toast('No hubo conexión. Inténtalo otra vez.'); });
+  };
+  $('rec-guardar').onclick=function(){
+    var t=String($('rec-resp').value||'').trim(), m=$('rec-msg'), bt=$('rec-guardar');
+    if(t.length<10){ m.className='msg mal'; m.textContent=REC_MAL.respuesta_corta; $('rec-resp').focus(); return; }
+    bt.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    sbRpc('sst_admin_reclamo_responder', {p_id:x.id, p_respuesta:t}).then(function(j){
+      if(!j || !j.ok){ bt.disabled=false; m.className='msg mal'; m.textContent=REC_MAL[(j&&j.motivo)||''] || 'No se pudo guardar.'; return; }
+      toast('Respuesta guardada. Ahora envíasela por '+(x.responder_por==='carta'?'carta':'correo')+'.'); cerrarHoja();
+      REC.abrir=x.id;
+      if(VISTA.actual==='reclamos' && typeof VISTA.recargar==='function'){ if(REC.filtro==='pendientes') REC.filtro='todas'; VISTA.recargar(); }
+    }, function(){ bt.disabled=false; m.className='msg mal'; m.textContent='No hubo conexión. Tu respuesta sigue escrita: inténtalo otra vez.'; });
   };
 }
 
