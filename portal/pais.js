@@ -1055,3 +1055,160 @@ function txOT(s, p){
   if(vacio) for(i = 0; i < DO_LIMPIEZA.length; i++) s = s.replace(DO_LIMPIEZA[i][0], DO_LIMPIEZA[i][1]);
   return s;
 }
+/* ── para crear la empresa desde la web (03/10/2026) ── */
+function rucMalo(ruc){
+  ruc=String(ruc||'').replace(/\D/g,'');
+  if(ruc.length!==11) return 'El RUC tiene 11 dígitos.';
+  var ini=ruc.slice(0,2);
+  if(['10','15','16','17','20'].indexOf(ini)<0)
+    return 'Un RUC peruano empieza por 10, 15, 16, 17 o 20.';
+  var pesos=[5,4,3,2,7,6,5,4,3,2], suma=0;
+  for(var i=0;i<10;i++) suma += parseInt(ruc.charAt(i),10)*pesos[i];
+  var resto=11-(suma%11); if(resto===10) resto=0; if(resto===11) resto=1;
+  if(resto!==parseInt(ruc.charAt(10),10)) return 'Ese RUC no existe: revisa los dígitos.';
+  return '';
+}
+var EMP_DOCS = {
+  pe:   { n:'RUC',  largo:'RUC de la empresa',  ph:'20123456789',   im:'numeric', max:11, quien:'SUNAT' },
+  'do': { n:'RNC',  largo:'RNC de la empresa',  ph:'101234567',     im:'numeric', max:13, quien:'DGII' },
+  cl:   { n:'RUT',  largo:'RUT de la empresa',  ph:'76.123.456-0',  im:'text',    max:12, quien:'SII' },
+  co:   { n:'NIT',  largo:'NIT de la empresa',  ph:'900.123.456-8', im:'numeric', max:15, quien:'DIAN' },
+  ar:   { n:'CUIT', largo:'CUIT de la empresa', ph:'30-71234567-1', im:'numeric', max:13, quien:'ARCA' },
+  /* 26/09/2026 · los cinco nuevos (paises-fuente/nuevos/): RUT de
+     Uruguay, 12 números (DGI; su dígito verificador es reservado, no se
+     calcula); RUC de Paraguay (DNIT; su sitio no se dejó leer: blando);
+     RFC de México, 12 caracteres la persona moral y 13 la física (SAT),
+     con letras: se guarda con ellas; EIN de Estados Unidos, 9 números,
+     XX-XXXXXXX (IRS, Pub. 1635); BN de Canadá, 9 números (estándar de
+     datos del Gobierno de Canadá). */
+  uy:   { n:'RUT',  largo:'RUT de la empresa',  ph:'211234560012',  im:'numeric', max:15, quien:'DGI' },
+  py:   { n:'RUC',  largo:'RUC de la empresa',  ph:'80012345-6',    im:'numeric', max:12, quien:'DNIT' },
+  mx:   { n:'RFC',  largo:'RFC de la empresa',  ph:'CAN120101AB1',  im:'text',    max:15, quien:'SAT' },
+  us:   { n:'EIN',  largo:'EIN de la empresa',  ph:'12-3456789',    im:'numeric', max:10, quien:'IRS' },
+  ca:   { n:'BN',   largo:'Business Number (BN) de la empresa', ph:'123456789', im:'numeric', max:15, quien:'CRA' }
+};
+function empDoc(p){ return EMP_DOCS[p] || EMP_DOCS.pe; }
+/* el dígito verificador del RUT (módulo 11, pesos 2 a 7 desde la derecha) */
+function rutDv(cuerpo){
+  var s = 0, f = 2, c = String(cuerpo || '');
+  for(var i = c.length - 1; i >= 0; i--){ s += (+c.charAt(i)) * f; f = (f === 7) ? 2 : f + 1; }
+  var r = 11 - (s % 11);
+  return r === 11 ? '0' : (r === 10 ? 'K' : String(r));
+}
+/* el de verificación del NIT (DIAN: pesos primos desde la derecha) */
+function nitDv(cuerpo){
+  var w = [3,7,13,17,19,23,29,37,41,43,47,53,59,67,71], c = String(cuerpo || ''), s = 0;
+  for(var i = 0; i < c.length && i < w.length; i++) s += (+c.charAt(c.length - 1 - i)) * w[i];
+  var r = s % 11;
+  return (r === 0 || r === 1) ? r : 11 - r;
+}
+/* la CUIT: pesos 5,4,3,2,7,6,5,4,3,2; 11 es 0 y 10 es 9 */
+function cuitOk(d){
+  d = String(d || '');
+  if(!/^\d{11}$/.test(d)) return false;
+  var w = [5,4,3,2,7,6,5,4,3,2], s = 0;
+  for(var i = 0; i < 10; i++) s += (+d.charAt(i)) * w[i];
+  var r = 11 - (s % 11);
+  if(r === 11) r = 0; else if(r === 10) r = 9;
+  return r === +d.charAt(10);
+}
+/* lo que la persona ESCRIBIÓ, como se guarda en el servidor: solo
+   números. El RUT se escribe siempre con su verificador: se guarda el
+   cuerpo (lo que va antes del guion). No se le pasa lo que ya vino del
+   servidor: eso ya está guardado. */
+function empDocNorm(p, escrito){
+  var v = String(escrito == null ? '' : escrito).trim();
+  /* el RFC lleva letras (y a veces Ñ o &): se guarda con ellas */
+  if(p === 'mx') return v.toUpperCase().replace(/[^A-Z0-9Ñ&]/g, '');
+  /* el BN puede venir con su cuenta de programa (123456789 RT0001): el BN son los 9 primeros */
+  if(p === 'ca'){ var b = v.replace(/\D/g, ''); return b.length > 9 && /[A-Za-z]/.test(v) ? b.slice(0, 9) : b; }
+  if(p === 'cl'){
+    var s = v.toUpperCase().replace(/[^0-9K]/g, '');
+    return s.length > 1 ? s.slice(0, -1).replace(/\D/g, '') : '';
+  }
+  return v.replace(/\D/g, '');
+}
+/* como se muestra y se imprime. Recibe lo del servidor (el RUT, su
+   cuerpo) o algo ya mostrado (el RUT, con su guion) */
+function _milesPunto(d){ return String(d || '').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+function empDocFmt(p, v){
+  var d = String(v == null ? '' : v).trim();
+  if(!d) return '';
+  if(p === 'cl'){
+    var s = d.toUpperCase().replace(/[^0-9K]/g, '');
+    var cuerpo = (d.indexOf('-') > -1) ? s.slice(0, -1) : s;
+    if(!/^\d{6,8}$/.test(cuerpo)) return d;
+    return _milesPunto(cuerpo) + '-' + rutDv(cuerpo);
+  }
+  var n = d.replace(/\D/g, '');
+  if(p === 'co' && n.length >= 6) return _milesPunto(n.slice(0, -1)) + '-' + n.slice(-1);
+  if(p === 'ar' && n.length === 11) return n.slice(0, 2) + '-' + n.slice(2, 10) + '-' + n.slice(10);
+  if(p === 'mx') return d.toUpperCase().replace(/[^A-Z0-9Ñ&]/g, '') || d;
+  if(p === 'us' && n.length === 9) return n.slice(0, 2) + '-' + n.slice(2);
+  return n || d;
+}
+/* null si está bien · {duro:'…'} si no se puede seguir · {blando:'…'}
+   si conviene revisarlo, pero se puede seguir tocando otra vez */
+function empDocRevisar(p, v){
+  var raw = String(v == null ? '' : v).trim(), d = raw.replace(/\D/g, ''), x = empDoc(p);
+  if(!raw) return { duro:'Falta el ' + x.n + '. Es lo que hace que tu empresa sea una sola en la app.' };
+  if(p === 'pe'){
+    var m = (typeof rucMalo === 'function') ? rucMalo(d) : (d.length === 11 ? '' : 'El RUC tiene 11 dígitos.');
+    return m ? { duro:m } : null;
+  }
+  if(p === 'do') return (typeof rncRevisar === 'function') ? rncRevisar(d) : (/^(\d{9}|\d{11})$/.test(d) ? null : { duro:'El RNC tiene 9 dígitos; la cédula, 11.' });
+  if(p === 'cl'){
+    var s = raw.toUpperCase().replace(/[^0-9K]/g, '');
+    if(!/^\d{6,8}[0-9K]$/.test(s))
+      return { duro:'El RUT son sus números y el dígito verificador del final (0 a 9, o K). Por ejemplo, 76.123.456-0.' };
+    if(rutDv(s.slice(0, -1)) !== s.slice(-1))
+      return { duro:'El RUT no calza con su dígito verificador: revisa los números y el del final.' };
+    return null;
+  }
+  if(p === 'co'){
+    if(d.length < 6 || d.length > 11)
+      return { duro:'Escribe el NIT con su dígito de verificación, el que va después del guion: por ejemplo, 900.123.456-8.' };
+    if(!/-/.test(raw) && d.length === 9 && /^[89]/.test(d))
+      return { blando:'¿Le falta el dígito de verificación? Es el número que va después del guion en el RUT de la DIAN (900.123.456-8). Si el NIT está completo, vuelve a tocar.' };
+    if(nitDv(d.slice(0, -1)) !== +d.slice(-1))
+      return { blando:'El dígito de verificación no calza con el NIT. Revísalo en el RUT de la DIAN; si está tal cual, vuelve a tocar.' };
+    return null;
+  }
+  if(p === 'ar'){
+    if(d.length !== 11)
+      return { duro:'La CUIT son 11 números: por ejemplo, 30-71234567-1.' };
+    if(!cuitOk(d))
+      return { blando:'El último número de la CUIT no calza con los otros diez. Revísala en la constancia de ARCA; si está tal cual, vuelve a tocar.' };
+    return null;
+  }
+  if(p === 'uy'){
+    if(d.length !== 12) return { duro:'El RUT son 12 números: por ejemplo, 211234560012.' };
+    return null;
+  }
+  if(p === 'py'){
+    if(d.length < 5 || d.length > 10)
+      return { blando:'Revisa el RUC: son los números con el dígito verificador del final, el que va después del guion. Si está tal cual, vuelve a tocar.' };
+    return null;
+  }
+  if(p === 'mx'){
+    var r = raw.toUpperCase().replace(/[^A-Z0-9Ñ&]/g, '');
+    if(!/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/.test(r))
+      return { duro:'El RFC de una empresa son 12 caracteres: 3 letras, la fecha de constitución (aammdd) y 3 de la homoclave. El de una persona física, 13.' };
+    return null;
+  }
+  if(p === 'us'){
+    if(d.length !== 9) return { duro:'El EIN son 9 números: por ejemplo, 12-3456789.' };
+    return null;
+  }
+  if(p === 'ca'){
+    var bn = empDocNorm('ca', raw);
+    if(bn.length !== 9) return { duro:'El Business Number son 9 números: por ejemplo, 123456789.' };
+    return null;
+  }
+  return null;
+}
+var EMP_CREAR_NOMBRE_PH = { pe:'Constructora Los Andes S.A.C.', 'do':'Constructora Caribe S.R.L.',
+  cl:'Constructora Cordillera SpA', co:'Constructora Andina S.A.S.', ar:'Constructora del Plata S.A.',
+  uy:'Constructora Oriental S.A.', py:'Constructora Guaraní S.A.', mx:'Constructora del Valle S.A. de C.V.',
+  us:'Northfield Builders LLC', ca:'Maple Ridge Construction Ltd.' };
+var ALTA_SECTORES = [{"id":"construccion","nombre":"Construcción","icono":"🏗️","pie":"Obra, edificación y montaje"},{"id":"mineria","nombre":"Minería","icono":"⛏️","pie":"Interior mina, tajo y planta concentradora"},{"id":"industria","nombre":"Industria","icono":"🏭","pie":"Planta de producción y manufactura"},{"id":"hidrocarburos","nombre":"Hidrocarburos","icono":"🛢️","pie":"Refinería, planta de proceso y almacenamiento"}];

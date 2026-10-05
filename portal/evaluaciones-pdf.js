@@ -393,6 +393,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
                                       nota, resultado y firma de cada uno,
                                       y detrás (si se pide) cada
                                       evaluación y las encuestas.
+     · EVPDF.constancia(c, ctx)      (05/10/2026) la constancia de una
+                                      persona: la hoja que se archiva. Si
+                                      la fila es de un taller, su
+                                      constancia de participación.
+     · EVPDF.constancias(lista, ctx) las de varios, una por hoja.
+     · EVPDF.diplomaTaller(d, ctx)   la del taller con sus datos sueltos
+                                      (la app la saca al terminarlo).
    No toca la pantalla ni el servidor: recibe filas, devuelve un jsPDF.
    Lo que cambia entre la app y el portal (el logo, la fecha larga, el
    sello del supervisor, el QR) viaja en «ctx».
@@ -503,10 +510,10 @@ var EVPDF = (function(){
   }
 
   /* ── el papel ───────────────────────────────────────────────────── */
-  function nuevo(ctx){
+  function nuevo(ctx, apaisado){
     var J = (ctx && ctx.jsPDF) || (typeof window !== 'undefined' && window.jspdf && window.jspdf.jsPDF);
     if(!J) throw new Error('Falta el generador de PDF');
-    return new J({ unit:'pt', format:'a4' });
+    return apaisado ? new J({ unit:'pt', format:'a4', orientation:'landscape' }) : new J({ unit:'pt', format:'a4' });
   }
   function col(doc, c, que){ if(que === 'f') doc.setFillColor(c[0], c[1], c[2]); else if(que === 'd') doc.setDrawColor(c[0], c[1], c[2]); else doc.setTextColor(c[0], c[1], c[2]); }
   function letra(doc, peso, tam, c){ doc.setFont('helvetica', peso || 'normal'); doc.setFontSize(tam); if(c) col(doc, c); }
@@ -799,7 +806,7 @@ var EVPDF = (function(){
     doc.text(doc.splitTextToSize(
       'Cada fila sale del registro de la empresa: la nota y cada respuesta se guardaron cuando el trabajador terminó; la firma es la que hizo con el dedo en su celular al cerrar su evaluación' +
       (op.encuestas ? '. Las encuestas van en un anexo, sin nombre: no se pueden relacionar con ninguna fila de este registro.' : '.') +
-      (ctx.emitido ? ' Emitido el ' + ctx.emitido + '.' : ''), W - 2 * M - aw - 30), M, y + 16);
+      (ctx.emitido ? ' Emitido el ' + txt(ctx.emitido).replace(/\.\s*$/, '') + '.' : ''), W - 2 * M - aw - 30), M, y + 16);
 
     /* detrás, cada evaluación */
     if(op.detalle !== false) lista.forEach(function(c, i){ paginasEvaluacion(doc, c, ctx, i + 1, lista.length, false); });
@@ -881,8 +888,219 @@ var EVPDF = (function(){
     });
   }
 
+  /* ══ LA CONSTANCIA (05/10/2026) ══════════════════════════════════
+     Marcelo: «tener la opción de descargar la evaluación y la constancia
+     de evaluación desde la página web en formato PDF».
+     La constancia —quién, qué tema, cuándo, su resultado, su firma y su
+     folio: la hoja que se archiva y la que pide el fiscalizador— la armaba
+     solo la app, por su cuenta. Ahora vive aquí, junto a la evaluación: la
+     que sale del celular y la que sale de la computadora son LA MISMA.
+     Es la copia del empleador, y lo dice: lleva la firma que el trabajador
+     hizo en su celular si llegó al registro; si no, la raya en blanco.
+     Un taller no lleva nota: su papel es la constancia de participación
+     (apaisada), la misma que sale al terminarlo. */
+  var MC = 44;
+  function bandaCons(doc, ctx, folio, sub){
+    var hB = 78, xT = MC;
+    col(doc, TINTA, 'f'); doc.rect(0, 0, W, hB, 'F');
+    col(doc, ORO, 'f'); doc.rect(0, hB, W, 4, 'F');
+    if(ctx.logo){
+      try{ doc.setFillColor(255,255,255); doc.roundedRect(MC, 14, 96, 50, 6, 6, 'F'); imagenEnCaja(doc, ctx.logo, MC + 6, 18, 84, 42); xT = MC + 112; }catch(e){}
+    }
+    letra(doc, 'bold', 13, [255,255,255]);
+    doc.text(cortar(doc, txt(ctx.empresa || ctx.obra || 'OBRASST').toUpperCase(), W - xT - MC - 120), xT, 34);
+    letra(doc, 'normal', 9, SUAVE); doc.text(txt(sub), xT, 50);
+    if(folio){ letra(doc, 'bold', 8, [255,233,168]); doc.text('FOLIO ' + folio, W - MC, 30, { align:'right' }); }
+    letra(doc, 'normal', 7, SUAVE);
+    (ctx.formato || []).slice(0, 3).forEach(function(l, i){ doc.text(txt(l), W - MC, 42 + i * 9, { align:'right' }); });
+    return hB + 4;
+  }
+  function tarjeta(doc, x, y, w, h, et, val){
+    doc.setFillColor(244,247,249); doc.setDrawColor(226,232,236); doc.setLineWidth(.6);
+    doc.roundedRect(x, y, w, h, 6, 6, 'FD');
+    letra(doc, 'bold', 6.8, [110,110,110]); doc.text(txt(et).toUpperCase(), x + 9, y + 13);
+    letra(doc, 'bold', 9.5, [28,36,42]);
+    doc.text(doc.splitTextToSize(txt(val) || '—', w - 18).slice(0, 2), x + 9, y + 27);
+  }
+  /* la hoja de una constancia, sobre la página en la que esté el doc (A4 de pie) */
+  function paginaConstancia(doc, c, ctx){
+    var d = c.detalle || {}, N = nota(c), aprob = N.aprob, y;
+    var GR = [110,110,110], TI = [28,36,42], VE = [31,122,73], RO = [178,49,54], cc = aprob ? VE : RO;
+    y = bandaCons(doc, ctx, c.folio, 'Copia del empleador · Sistema de Gestión de SST') + 30;
+    letra(doc, 'bold', 20, TINTA); doc.text('CONSTANCIA DE CAPACITACIÓN', W / 2, y, { align:'center' });
+    letra(doc, 'normal', 9.5, GR);
+    doc.text('Copia del empleador' + (ctx.ley ? ' · Art. 35 de la Ley N.° 29783 · R.M. 050-2013-TR' : ''), W / 2, y + 16, { align:'center' });
+    col(doc, ORO, 'd'); doc.setLineWidth(2); doc.line(W / 2 - 60, y + 26, W / 2 + 60, y + 26);
+    y += 56;
+    letra(doc, 'normal', 10.5, GR); doc.text('Se deja constancia de que', W / 2, y, { align:'center' }); y += 26;
+    var nom = txt(c.trabajador).toUpperCase(), tam = 22;
+    letra(doc, 'bold', tam, TINTA);
+    while(tam > 13 && doc.getTextWidth(nom) > W - 2 * MC - 40){ tam -= 1; doc.setFontSize(tam); }
+    doc.text(cortar(doc, nom, W - 2 * MC - 20), W / 2, y, { align:'center' }); y += 16;
+    letra(doc, 'normal', 9.5, GR);
+    var l2 = [];
+    if(c.dni) l2.push(etDoc(ctx, c.dni) + ' ' + c.dni);
+    if(c.cargo) l2.push(c.cargo);
+    if(d.empresaTrab) l2.push(d.empresaTrab + (d.vinculo ? ' (' + d.vinculo + ')' : ''));
+    doc.text(cortar(doc, l2.join('  ·  ') || ' ', W - 2 * MC), W / 2, y, { align:'center' }); y += 26;
+    doc.setFontSize(10.5); doc.text('participó en la capacitación y rindió la evaluación del tema', W / 2, y, { align:'center' }); y += 22;
+    letra(doc, 'bold', 14, TI);
+    var tt = doc.splitTextToSize(txt(c.tema), W - 2 * MC - 40).slice(0, 3); doc.text(tt, W / 2, y, { align:'center' }); y += 15 * tt.length;
+    if(d.escenario){
+      letra(doc, 'italic', 9, GR);
+      var es = doc.splitTextToSize(txt(d.escenario), W - 2 * MC - 60); doc.text(es.slice(0, 2), W / 2, y + 2, { align:'center' }); y += 11 * Math.min(2, es.length);
+    }
+    y += 18;
+    var gw = (W - 2 * MC - 16) / 3, gh = 40;
+    tarjeta(doc, MC,               y, gw, gh, 'Fecha de la evaluación', fechaDe(ctx, c.fecha) || txt(c.fecha));
+    tarjeta(doc, MC + gw + 8,      y, gw, gh, 'Duración', horasDe(ctx, d.horas) || '—');
+    tarjeta(doc, MC + 2 * gw + 16, y, gw, gh, 'Sector', d.sector || '—');
+    y += gh + 8;
+    tarjeta(doc, MC,               y, gw, gh, 'Obra / proyecto', d.obra || ctx.obra || '');
+    tarjeta(doc, MC + gw + 8,      y, gw, gh, 'Evaluador', d.evaluador || '—');
+    tarjeta(doc, MC + 2 * gw + 16, y, gw, gh, 'Empresa', ctx.empresa || '');
+    y += gh + 22;
+    /* el resultado */
+    var rh = 92;
+    doc.setFillColor(aprob ? 232 : 250, aprob ? 244 : 235, aprob ? 236 : 235); col(doc, cc, 'd'); doc.setLineWidth(1);
+    doc.roundedRect(MC, y, W - 2 * MC, rh, 10, 10, 'FD');
+    var cx = MC + 58, cy = y + rh / 2;
+    doc.setFillColor(255,255,255); doc.circle(cx, cy, 34, 'F'); doc.setLineWidth(3); col(doc, cc, 'd'); doc.circle(cx, cy, 34, 'S');
+    if(N.b != null && N.n){
+      letra(doc, 'bold', 22, cc); doc.text(String(N.b), cx, cy + 2, { align:'center' });
+      letra(doc, 'normal', 9, GR); doc.text('de ' + N.n, cx, cy + 15, { align:'center' });
+    } else marcaOk(doc, cx - 9, cy + 8, aprob, 24);
+    var xr = MC + 112;
+    letra(doc, 'bold', 19, cc);
+    doc.text(txt(c.resultado || (aprob ? 'aprobado' : 'desaprobado')).toUpperCase(), xr, y + 30);
+    letra(doc, 'normal', 9.5, [70,70,70]);
+    doc.text((N.b != null && N.n) ? (Math.round(N.b * 100 / N.n) + ' % de respuestas correctas · mínimo para aprobar: ' + N.min + ' de ' + N.n)
+                                   : 'De esta evaluación el registro conserva el resultado; la nota no fue guardada.', xr, y + 46);
+    if(d.p && d.p.length){
+      var qg = 5, qw = Math.min(18, (W - xr - MC - 12) / d.p.length - qg);
+      d.p.forEach(function(q, i){
+        col(doc, q.ok ? VE : RO, 'f'); doc.roundedRect(xr + i * (qw + qg), y + 58, qw, 16, 3, 3, 'F');
+        letra(doc, 'bold', qw < 12 ? 6.5 : 8, [255,255,255]); doc.text(String(i + 1), xr + i * (qw + qg) + qw / 2, y + 69.5, { align:'center' });
+      });
+      letra(doc, 'normal', 7.5, GR);
+      doc.text('verde: correcta · rojo: incorrecta · cada pregunta, con lo que marcó, está en el PDF de su evaluación', xr, y + 84);
+    }
+    /* la firma del trabajador: desde el 30/09 llega a la empresa al cerrar su evaluación; la de antes
+       quedó solo en su celular (raya en blanco: inventarla sería falsificar el documento) */
+    var yf = H - 200, aw = (W - 2 * MC - 40) / 2;
+    if(c.firma) imagenEnCaja(doc, c.firma, MC + 10, yf, aw - 20, 64);
+    col(doc, [150,150,150], 'd'); doc.setLineWidth(.8);
+    doc.line(MC, yf + 70, MC + aw, yf + 70); doc.line(W - MC - aw, yf + 70, W - MC, yf + 70);
+    letra(doc, 'bold', 8.5, TI); doc.text(cortar(doc, txt(c.trabajador), aw), MC + aw / 2, yf + 82, { align:'center' });
+    letra(doc, 'normal', 7.5, GR);
+    doc.text('Firma del trabajador' + (c.firma && c.firmado ? ' · firmó el ' + fechaDe(ctx, c.firmado) : ''), MC + aw / 2, yf + 92, { align:'center' });
+    var hizo = false, fs = ctx.selloConstancia || ctx.sello;
+    if(fs) try{ hizo = !!fs(doc, W - MC - aw / 2, yf + 72, d.evaluador || ''); }catch(e){}
+    if(!hizo){
+      letra(doc, 'bold', 8.5, TI); doc.text(cortar(doc, txt(d.evaluador) || ' ', aw), W - MC - aw / 2, yf + 82, { align:'center' });
+      letra(doc, 'normal', 7.5, GR); doc.text('Firma del responsable SSOMA', W - MC - aw / 2, yf + 92, { align:'center' });
+    }
+    if(ctx.qr && c.folio){
+      try{
+        var q0 = ctx.qr('OBRASST · Constancia ' + c.folio + ' · ' + txt(c.trabajador) + ' · ' + dia(c));
+        if(q0){ doc.addImage(q0, 'PNG', W / 2 - 24, yf - 2, 48, 48); letra(doc, 'normal', 6.5, GR); doc.text('Folio ' + c.folio, W / 2, yf + 56, { align:'center' }); }
+      }catch(e){}
+    }
+    letra(doc, 'normal', 7, [130,130,130]);
+    doc.text(doc.splitTextToSize(
+      'Copia del empleador emitida desde el registro de la empresa. El trabajador rindió y firmó la evaluación en su propio equipo; ' +
+      (c.firma ? 'esta copia reproduce lo registrado, con la firma que hizo en su celular al cerrarla. '
+               : 'esta copia reproduce lo registrado y deja el espacio de firma en blanco. ') +
+      (ctx.ley ? 'Registro de capacitación conforme al Art. 35 de la Ley N.° 29783; datos personales tratados conforme a la Ley N.° 29733 y el D.S. 016-2024-JUS.' : '') +
+      (ctx.emitido ? ' Emitida el ' + txt(ctx.emitido).replace(/\.\s*$/, '') + '.' : ''), W - 2 * MC), MC, H - 64);
+  }
+  /* la constancia de participación de un taller, sobre la página en la que esté el doc (A4 apaisada).
+     d: {taller:{nombre, sub, pasos (cuántos, o la lista)}, nombre, dni, cargo, empresa, obra, fecha, folio,
+         ludico (la forma breve), pasos (los que hizo), responsable} */
+  function paginaTaller(doc, d, ctx){
+    var t = d.taller || {}, WL = H, HL = W, ML = 54, y = ML + 34, ancho = WL - 2 * ML - 40;
+    var nPasos = (typeof t.pasos === 'number') ? t.pasos : ((t.pasos && t.pasos.length) || 0), tam;
+    col(doc, TINTA, 'd'); doc.setLineWidth(2.4); doc.rect(ML - 16, ML - 16, WL - 2 * (ML - 16), HL - 2 * (ML - 16));
+    doc.setDrawColor(201,154,58); doc.setLineWidth(1); doc.rect(ML - 10, ML - 10, WL - 2 * (ML - 10), HL - 2 * (ML - 10));
+    letra(doc, 'bold', 12, [120,120,120]); doc.text('OBRASST', WL / 2, y, { align:'center' }); y += 34;
+    letra(doc, 'bold', 30, TINTA); doc.text('CONSTANCIA DE PARTICIPACIÓN', WL / 2, y, { align:'center' }); y += 30;
+    letra(doc, 'normal', 12, [90,90,90]); doc.text('Se deja constancia de que', WL / 2, y, { align:'center' }); y += 40;
+    var nom = txt(d.nombre).toUpperCase(); tam = 26; letra(doc, 'bold', tam, [20,20,20]);
+    while(tam > 14 && doc.getTextWidth(nom) > ancho){ tam -= 1; doc.setFontSize(tam); }
+    doc.text(cortar(doc, nom, ancho + 30), WL / 2, y, { align:'center' }); y += 22;
+    letra(doc, 'normal', 11, [90,90,90]);
+    var sub = [];
+    if(d.dni) sub.push(etDoc(ctx, d.dni) + ' ' + d.dni);
+    if(d.cargo) sub.push(d.cargo);
+    if(d.empresa) sub.push(d.empresa);
+    if(sub.length) doc.text(cortar(doc, sub.join('  ·  '), ancho + 30), WL / 2, y, { align:'center' });
+    y += 34;
+    letra(doc, 'normal', 13, [60,60,60]); doc.text('participó y completó satisfactoriamente el taller práctico de', WL / 2, y, { align:'center' }); y += 30;
+    var tn = txt(t.nombre || 'Taller práctico').toUpperCase(); tam = 20; letra(doc, 'bold', tam, TINTA);
+    while(tam > 12 && doc.getTextWidth(tn) > ancho){ tam -= 1; doc.setFontSize(tam); }
+    doc.text(cortar(doc, tn, ancho + 30), WL / 2, y, { align:'center' }); y += 26;
+    letra(doc, 'normal', 11, [90,90,90]);
+    if(t.sub) doc.text(cortar(doc, txt(t.sub), ancho + 30), WL / 2, y, { align:'center' });
+    y += 17;
+    /* cuál de las dos formas se hizo va EN EL PAPEL: una corrida de cinco pasos y el taller entero no son
+       el mismo hecho. Si no se sabe cuántos pasos tuvo (el taller ya no está en la lista), no se inventa. */
+    letra(doc, 'normal', 10, [120,120,120]);
+    var hechos = parseInt(d.pasos, 10) || 0;
+    doc.text(d.ludico ? ('Forma breve · ' + (hechos || 5) + ' pasos prácticos del taller')
+                      : ('Taller completo' + ((hechos || nPasos) ? ' · ' + (hechos || nPasos) + ' pasos' : '')), WL / 2, y, { align:'center' });
+    var yL = HL - ML - 34;
+    col(doc, [150,150,150], 'd'); doc.setLineWidth(.7);
+    doc.line(ML + 40, yL, ML + 230, yL); doc.line(WL - ML - 230, yL, WL - ML - 40, yL);
+    letra(doc, 'normal', 10, [70,70,70]);
+    doc.text(cortar(doc, fechaDe(ctx, d.fecha) + (d.obra ? '  ·  ' + d.obra : ''), WL - 2 * ML - 310), ML + 40, yL + 16);
+    doc.text(cortar(doc, txt(d.responsable) || 'Responsable SSOMA', 230), WL - ML - 230, yL + 16);
+    letra(doc, 'normal', 8, [140,140,140]);
+    doc.text('Fecha y obra', ML + 40, yL - 6);
+    /* cuando el trabajador practicó solo, la casilla no es de un responsable: es la modalidad */
+    doc.text(d.responsable === 'Práctica autónoma del trabajador' ? 'Modalidad' : 'Responsable de la capacitación', WL - ML - 230, yL - 6);
+    letra(doc, 'normal', 8, [150,150,150]);
+    doc.text('Folio de verificación: ' + txt(d.folio) + '  ·  Constancia de participación en taller práctico. ' +
+             (ctx.ley === false ? 'No reemplaza la capacitación formal que exige la ley.' : 'No reemplaza la capacitación formal de la Ley 29783.'), WL / 2, HL - ML + 2, { align:'center' });
+  }
+  /* de la fila guardada («Taller: Uso del arnés (forma breve)») a los datos de su papel */
+  function datosTaller(c, ctx){
+    var d = c.detalle || {}, nom = txt(c.tema).replace(/^\s*taller\s*:\s*/i, '').trim(), breve = /\(forma breve\)\s*$/i.test(nom), T = null;
+    nom = nom.replace(/\s*\(forma breve\)\s*$/i, '').trim();
+    if(ctx.taller) try{ T = ctx.taller(nom, c); }catch(e){ T = null; }
+    if(!T) T = { nombre:nom || 'Taller práctico', sub:'', pasos:0 };
+    return { taller:T, nombre:txt(c.trabajador), dni:txt(c.dni), cargo:txt(c.cargo), empresa:d.empresaTrab || ctx.empresa || '', obra:d.obra || ctx.obra || '',
+             fecha:dia(c) || new Date().toISOString().slice(0, 10), folio:c.folio, ludico:breve, pasos:d.pasos || 0,
+             responsable:d.evaluador || ctx.responsable || 'Responsable SSOMA' };
+  }
+  function diplomaTaller(d, ctx){
+    ctx = ctx || {};
+    var doc = nuevo(ctx, true);
+    paginaTaller(doc, d || {}, ctx);
+    return doc;
+  }
+  function constancia(c, ctx){
+    ctx = ctx || {};
+    if(esTallerC(c)) return diplomaTaller(datosTaller(c, ctx), ctx);
+    var doc = nuevo(ctx);
+    paginaConstancia(doc, c, ctx);
+    return doc;
+  }
+  /* las de varios en un solo archivo: una por hoja (la del taller, apaisada) */
+  function constancias(lista, ctx){
+    ctx = ctx || {};
+    var doc = null;
+    (lista || []).forEach(function(c){
+      if(!c) return;
+      var t = esTallerC(c);
+      if(!doc) doc = nuevo(ctx, t); else doc.addPage('a4', t ? 'landscape' : 'portrait');
+      if(t) paginaTaller(doc, datosTaller(c, ctx), ctx); else paginaConstancia(doc, c, ctx);
+    });
+    return doc || nuevo(ctx);
+  }
+
   return { evaluacion:evaluacion, registro:registro, grupos:grupos, grupoDe:grupoDe, nota:nota,
-           encuestasDe:encuestasDe, promEnc:promEnc, notasEnc:notasEnc, llave:llave, PUNTOS:PUNTOS };
+           encuestasDe:encuestasDe, promEnc:promEnc, notasEnc:notasEnc, llave:llave, PUNTOS:PUNTOS,
+           constancia:constancia, constancias:constancias, diplomaTaller:diplomaTaller, esTaller:esTallerC };
 })();
 ;
 /* ══════════════════════════════════════════════════════════════════

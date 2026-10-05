@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>OBRASST</title>
+<style>
+html,body{height:100%;margin:0}
+body{display:flex;align-items:center;justify-content:center;background:#F6F8FA;color:#22323D;font:15px/1.55 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;padding:20px;box-sizing:border-box}
+#espera{color:#6B7C88}
+#paso{max-width:420px;background:#fff;border:1px solid #E3E8EC;border-radius:12px;padding:26px 24px;box-shadow:0 1px 2px rgba(11,42,58,.06),0 8px 24px -16px rgba(11,42,58,.18)}
+#paso small{display:block;color:#8A6100;font-weight:600;letter-spacing:.12em;font-size:12px;margin-bottom:8px}
+#paso h1{font-size:19px;margin:0 0 8px;color:#0B2A3A}
+#paso p{margin:0 0 18px}
+#paso button{font:inherit;font-weight:500;color:#fff;background:#0B2A3A;border:1px solid #0B2A3A;border-radius:8px;padding:11px 20px;cursor:pointer}
+#paso button:focus-visible{outline:2px solid #2563A8;outline-offset:2px}
+#paso .chico{font-size:13px;color:#6B7C88;margin:14px 0 0}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+<p id="espera">Entrando a OBRASST…</p>
+<div id="paso" hidden>
+  <small>OBRASST</small>
+  <h1>Un paso más</h1>
+  <p>En este navegador ya se usa la app de OBRASST. Toca «Continuar» para que el portal y la app cuenten como un solo equipo: tu cuenta se abre en dos a la vez.</p>
+  <button type="button" id="sigue">Continuar</button>
+  <p class="chico">Vuelves al portal, en obrasstapp.com.</p>
+</div>
+<script>
+/* OBRASST-EQUIPO-1 · «la llave de este equipo» · 05/10/2026
+   El portal vive también en https://obrasstapp.com, que es otro origen: su almacén no es el de la app. Para que
+   la app y el portal abiertos en un mismo navegador sigan contando como UN dispositivo (cada cuenta se abre en
+   dos), el portal de obrasstapp.com pasa por aquí una sola vez: esta página —que vive junto a la app— lee la
+   llave del equipo (la crea si todavía no había) y lo devuelve con ella en «#equipo=».
+   La llave es un código al azar: no dice quién es la persona ni qué aparato usa, y sola no abre nada.
+   Solo se le entrega a las direcciones de la lista.
+   CUÁNDO PIDE UN TOQUE. Algunos navegadores borran lo guardado por un sitio que solo sirve de paso —por el que se
+   entra y se sale sin tocar nada— si hace más de 45 días que la persona no lo usa. Aquí está guardado lo de la
+   app. Por eso, si en este navegador hay cosas de la app y no se ve que se haya usado en el último mes, no se
+   pasa de largo: se pide «Continuar». Ese toque es usar el sitio, y lo guardado no corre riesgo. */
+(function(){
+  var PERMITIDAS = ['https://obrasstapp.com/', 'https://www.obrasstapp.com/', 'https://obrasst.netlify.app/'];
+  var para = '';
+  try{ var m = String(location.hash || '').match(/[#&]para=([^&]+)/); para = m ? decodeURIComponent(m[1]) : ''; }catch(_e){ para = ''; }
+  if(PERMITIDAS.indexOf(para) < 0){ try{ location.replace('./'); }catch(_r){} return; }
+  var LLAVE = 'sstc_dispositivo';
+  function llave(){
+    var id = '';
+    try{ id = localStorage.getItem(LLAVE) || ''; }catch(_l){}
+    if(/^"[A-Za-z0-9-]{8,64}"$/.test(id)) id = id.slice(1, -1);
+    if(!/^[A-Za-z0-9-]{8,64}$/.test(id)){
+      try{ id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ''; }catch(_c){ id = ''; }
+      if(!id) id = 'd' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+      try{ localStorage.setItem(LLAVE, id); }catch(_s){}
+    }
+    return id;
+  }
+  function vuelve(){ var u = para + '#equipo=' + llave(); try{ location.replace(u); }catch(_v){ location.href = u; } }
+  /* ¿hay cosas de la app guardadas aquí? ¿y se usó hace poco? (la sesión de la app anota cuándo se renovó) */
+  var hay = false, reciente = false;
+  try{
+    for(var i = 0; i < localStorage.length; i++){ var k = localStorage.key(i) || ''; if(k !== LLAVE && /^sst[cp_]/.test(k)){ hay = true; break; } }
+    ['sstc_cuenta', 'sstp_cuenta'].forEach(function(c){        /* la app, o el portal de esta misma casa */
+      var s = JSON.parse(localStorage.getItem(c) || 'null');
+      if(s && typeof s.expira === 'number' && Date.now() - s.expira < 30 * 86400000) reciente = true;
+    });
+  }catch(_h){}
+  if(!hay || reciente){ vuelve(); return; }
+  document.getElementById('espera').hidden = true;
+  document.getElementById('paso').hidden = false;
+  var b = document.getElementById('sigue');
+  b.onclick = function(){ b.disabled = true; vuelve(); };
+  try{ b.focus(); }catch(_f){}
+})();
+</script>
+<noscript><p>Vuelve a <a href="https://obrasstapp.com/">obrasstapp.com</a>.</p></noscript>
+</body>
+</html>
