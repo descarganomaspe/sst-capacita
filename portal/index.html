@@ -229,6 +229,13 @@ td .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px}
 .pill.ok{background:var(--ok-f); color:var(--ok)} .pill.ojo{background:var(--ojo-f); color:var(--ojo)}
 .pill.mal{background:var(--mal-f); color:var(--mal)} .pill.gris{background:var(--fondo); color:var(--gris)}
 .pill.azul{background:var(--azul-f); color:var(--azul)}
+/* 05/10/2026 · la cadena de supervisión: el contador del menú y la invitación en la entrada (lo demás, en cadena.js) */
+.nav .n.cad-n{background:var(--azul-f); color:var(--azul); font-weight:600}
+.nav .n.cad-n.mal{background:var(--mal-f); color:var(--mal)}
+.nav.on .n.cad-n{background:#fff}
+.cad-inv{display:grid; gap:3px; margin:0 0 16px; padding:12px 14px; border-radius:10px; background:var(--azul-f); border:1px solid #CFDDF0; font-size:13.5px; line-height:1.5; color:var(--texto)}
+.cad-inv b{color:var(--tinta); font-weight:600}
+.cad-inv.mal{background:var(--ojo-f); border-color:#EED9A8}
 /* el espacio de la empresa (01/10/2026) */
 .esp-p{display:grid; gap:10px}
 .esp-p .fila1{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
@@ -1730,6 +1737,7 @@ try{var _s0=JSON.parse(localStorage.getItem('sstp_cuenta')||'null');if((_s0&&_s0
       </div>
 
       <div class="ent-caja" id="acceso">
+        <div class="cad-inv" id="cad-inv" hidden role="status"></div>
         <div class="acc-tabs" role="tablist" aria-label="Tu cuenta">
           <button type="button" role="tab" id="acc-t-entrar" aria-controls="acc-entrar" aria-selected="true" class="on">Entrar</button>
           <button type="button" role="tab" id="acc-t-crear" aria-controls="acc-crear" aria-selected="false" tabindex="-1">Crear cuenta</button>
@@ -2077,7 +2085,7 @@ function fechaLarga(iso){
 /* 29/09/2026 · «1 inspección», no «1 inspecciones» */
 var UNIDAD_1 = {'códigos':'código', 'dadas de baja':'dada de baja', 'empresas':'empresa', 'fallas':'falla', 'pagos':'pago', 'capacitaciones':'capacitación',
   'constancias':'constancia', 'denuncias':'denuncia', 'difusiones':'difusión', 'documentos':'documento', 'encuestas':'encuesta', 'entregas':'entrega',
-  'equipos':'equipo', 'eventos':'evento', 'inspecciones':'inspección', 'papeles':'papel', 'personas':'persona', 'programadas':'programada', 'reportes':'reporte', 'requerimientos':'requerimiento', 'productos':'producto', 'firmas':'firma', 'filas':'fila'};
+  'equipos':'equipo', 'eventos':'evento', 'inspecciones':'inspección', 'observaciones':'observación', 'papeles':'papel', 'personas':'persona', 'programadas':'programada', 'reportes':'reporte', 'requerimientos':'requerimiento', 'productos':'producto', 'firmas':'firma', 'filas':'fila'};
 function unidadN(n, u){ u = u || 'filas'; return +n === 1 ? (UNIDAD_1[u] || u) : u; }
 function hace(iso){
   if(!iso) return '';
@@ -2500,6 +2508,8 @@ function elegirObra(id){
   pintarBarra(); pintarRail(); vivoReconectar();
   navegar(VISTA.actual && vistasDe().some(function(v){ return v.id===VISTA.actual; }) ? VISTA.actual : vistasDe()[0].id);
   try{ paisAlDia(); }catch(_pa){}
+  /* 05/10/2026 · la cadena de supervisión de esta obra: su portada, para el menú y sus contadores */
+  try{ cadAlElegir(); }catch(_cd){}
 }
 function iniciales(s){ var w=String(s||'').split(/[\s@._]+/).filter(Boolean); return ((w[0]||'?')[0]+((w[1]||'')[0]||'')).toUpperCase(); }
 
@@ -2615,7 +2625,8 @@ function vistasDe(){
   /* 28/09/2026 · las fallas, los códigos y los avisos del creador se mudaron a la
      Consola OBRASST (consola/): aquí solo queda lo de la empresa */
   /* 01/10/2026 · afuera del Perú, sin lo que la app esconde en ese país */
-  return v.filter(function(x){ return !vistaOcultaPais(x.id); });
+  /* 05/10/2026 · y las secciones de la cadena de supervisión, si el servidor ya las tiene */
+  return cadVistasEn(v.filter(function(x){ return !vistaOcultaPais(x.id); }));
 }
 /* 23/09/2026 · antes cada sección REEMPLAZABA la dirección: el «atrás»
    del navegador sacaba al usuario del portal entero. Ahora cada sección
@@ -2655,6 +2666,7 @@ function pintarRail(){
   r.innerHTML=h;
   Array.prototype.forEach.call(r.querySelectorAll('.nav'), function(b){ b.onclick=function(){ navegar(b.getAttribute('data-v')); }; });
   if(YO && YO.central && typeof cenRailPie==='function') cenRailPie(r);
+  else if(typeof cadRail==='function') cadRail(r);
 }
 function pintarBarra(){
   var sel=$('sel-obra'), caja=$('obra-sel');
@@ -12524,7 +12536,7 @@ var FAQ = [
 
   /* ── datos y legal ── */
   { t:'Datos y legal', q:'¿Dónde se guardan los datos?', k:'servidor nube seguridad supabase brasil cifrado',
-    r:'<p>En servidores de Supabase ubicados en São Paulo, Brasil, con la conexión cifrada. Cada empresa solo ve lo suyo. En el celular queda una copia para que la app funcione sin señal.</p><p>El detalle está en la <a href="../?legal=privacidad" target="_blank" rel="noopener">Política de datos</a>.</p>' },
+    r:'<p>En servidores de Supabase ubicados en São Paulo, Brasil, con la conexión cifrada. Cada empresa solo ve lo suyo; lo único que otra puede ver es lo que tu empresa le abre al aceptar su invitación para supervisarla en una obra. En el celular queda una copia para que la app funcione sin señal.</p><p>El detalle está en la <a href="../?legal=privacidad" target="_blank" rel="noopener">Política de datos</a>.</p>' },
   { t:'Datos y legal', q:'¿De quién son los datos de mi personal?', k:'propiedad datos venden publicidad responsable encargado',
     r:'<p>De tu empresa, que es la responsable. OBRASST los guarda por su encargo y se los devuelve en PDF o en Excel cuando los necesita. No vendemos datos ni ponemos publicidad.</p>' },
   { t:'Datos y legal', q:'¿Este sitio usa cookies?', k:'cookies rastreo seguimiento analitica almacenamiento navegador guardar permisos',
@@ -12673,6 +12685,7 @@ function datosDetalle(){
     '<tr><td>Tu sesión<br><code>sstp_cuenta · sstc_cuenta</code></td><td>Que sigas dentro sin escribir tu contraseña cada vez.</td><td>Hasta que tocas «Salir» o la sesión vence.</td></tr>'+
     '<tr><td>El identificador de este equipo<br><code>sstc_dispositivo · sstp_equipo_salto</code></td><td>Un código al azar para contar en cuántos equipos está abierta tu cuenta (dos a la vez). Va al servidor con el tipo de equipo y el navegador. En obrasstapp.com, la primera vez que entras se le pide ese código a la dirección donde vive la app —un salto de ida y vuelta—, para que la app y el portal de este navegador cuenten como un solo equipo; se anota que ya se pidió.</td><td>Hasta que borras los datos del sitio.</td></tr>'+
     '<tr><td>Tus preferencias<br><code>sstp_obra · sstp_guia_v1 · sstp_pais_… · sstp_firmante_… · sstp_cargos_… · sstp_iq_cargo_… · sstp_rq_pref</code></td><td>Recordar la obra que elegiste, que ya viste la guía, el país de la obra, los nombres y cargos que usaste en tus documentos y al firmar una inspección, y cómo armaste tu último requerimiento (para cuántos días, dónde y a quién se lo enviaste).</td><td>Hasta que borras los datos del sitio.</td></tr>'+
+    '<tr><td>La invitación que abriste<br><code>sstp_cad_ficha</code></td><td>Si entraste por el enlace con el que otra empresa te invitó a su obra, guardar esa invitación mientras entras o creas tu cuenta, para que no tengas que volver a abrir el enlace.</td><td>Hasta que la aceptas o la descartas, o cierras la pestaña.</td></tr>'+
     '<tr><td>Este aviso<br><code>sstp_datos_ok</code></td><td>No volver a mostrártelo.</td><td>Hasta que borras los datos del sitio.</td></tr>'+
     '<tr><td>En la app: tus registros pendientes</td><td>Que la app funcione sin señal: lo que registras queda en el celular hasta que sube.</td><td>Hasta que sube, o hasta que borras los datos de la app.</td></tr>'+
     '</tbody></table></div>'+
@@ -12943,6 +12956,9 @@ function mostrarAlta(recien){
   var q=$('alta-quien'); if(q) q.textContent = (TOK && (TOK.cap || TOK.correo)) || '';
   var s=$('alta-salir'); if(s) s.onclick=function(){ dispositivoLiberar(); limpiarSesion(); mostrarEntrada(); };
   datosAvisoVer();
+  /* 05/10/2026 · la cuenta sin obra que llegó por una invitación de la cadena: primero la invitación */
+  if(cadFicha()){ cargarPais().then(function(){}, function(){}); cadEnAlta(); return; }
+  CADP.alta=false;
   cargarPais().then(function(){ altaPintar(); }, function(){ altaPintar(); });
   altaPintar();
 }
@@ -12952,7 +12968,7 @@ function _altaMsg(t, clase){
   m.textContent=t||'';
 }
 function altaPintar(){
-  var c=$('alta-main'); if(!c || $('alta').hidden) return;
+  var c=$('alta-main'); if(!c || $('alta').hidden || CADP.alta) return;      /* CADP.alta: está la invitación de la cadena */
   /* lo que ya estaba escrito no se pierde al repintar */
   var escrito={}; ['al-nombre','al-doc','al-cod','al-inv','al-inv-doc','al-ac-nombre','al-ac-cargo','al-ac-msg'].forEach(function(id){ var x=$(id); if(x) escrito[id]=x.value; });
   var h='<h1>'+(ALTA.recien ? 'Tu cuenta ya está. Falta tu obra.' : 'Tu cuenta todavía no está en ninguna obra')+'</h1>'+
@@ -13501,20 +13517,28 @@ function mostrarEntrada(msg){
   if(msg){ e.textContent=msg; e.hidden=false; accTab('entrar'); setTimeout(iniIrAcceso, 60); } else e.hidden=true;
   try{ iniArrancar(); }catch(_i){}
   try{ if(typeof guiaCerrar==='function') guiaCerrar(); }catch(_g){}
+  /* 05/10/2026 · la invitación de la cadena que llegó en la dirección: se dice de quién es */
+  try{ cadEnEntrada(); if(cadFicha() && !msg) setTimeout(iniIrAcceso, 60); }catch(_cd){}
 }
 function mostrarPortal(){
   _soloVer('portal'); iniLimpiarAncla();
   var guardada=leer('sstp_obra',null);
   var hash=(location.hash||'').slice(1);
   VISTA.actual = null;
+  /* 05/10/2026 · «…#cad-obs»: las secciones de la cadena llegan con su portada, un momento después */
+  if(/^cad(-|$)/.test(hash) && !CADP.irA) CADP.irA = hash;
   elegirObra(guardada);
   if(hash && hash!==VISTA.actual && vistasDe().some(function(v){ return v.id===hash; })) navegar(hash, true);
+  /* 05/10/2026 · llegó con una invitación de la cadena (…/?cad=…): se abre encima, y la guía espera */
+  var _inv=false; try{ _inv=cadSiToca(); }catch(_cd){}
+  if(_inv) return;
   /* la primera vez, la guía corta; después, en el botón «Guía» */
   setTimeout(function(){ try{ if(typeof guiaPrimeraVez==='function') guiaPrimeraVez(); }catch(_g){} }, 600);
 }
 /* 23/09/2026 · salir a la entrada, por el botón o porque la sesión venció */
 function limpiarSesion(){
   vivoCerrar(); borrarToken(); YO={empresas:[],obra:null,rol:'',nombre:'',dueno:false};
+  try{ CADP.ini=null; CADP.de=''; CADP.alta=false; }catch(_cd){}
   try{ if(typeof cerrarHoja==='function') cerrarHoja(); }catch(_h){}
   /* el que entra después empieza por el principio, no por la sección
      donde el anterior se quedó */
@@ -13571,6 +13595,133 @@ function cargarCentral(){
   _CENTRAL_CARGA.catch(function(){ _CENTRAL_CARGA=null; });
   return _CENTRAL_CARGA;
 }
+/* ══ LA CADENA DE SUPERVISIÓN (05/10/2026) ═══════════════════════════════════════════════════════════
+   Marcelo: «No, quiero que lo apliques.» Central de verdad, y hacia arriba: las empresas que trabajan en la obra
+   se enlazan —«A supervisa a B»—; la de arriba ve las cifras del día de la de abajo, le deja observaciones con
+   foto y plazo, y valida cuando las levanta. La principal ve a sus subcontratas; a la principal la miran el
+   cliente, la supervisión y el regulador. Cada empresa en su propio espacio.
+   Aquí va solo lo que hace falta desde el arranque: saber si esta obra tiene algo en la cadena (para el menú y sus
+   contadores), y la invitación que llega en la dirección (…/?cad=<ficha>). Lo demás es portal/cadena.js, que se
+   pide al abrir sus secciones. Sin el SQL en el servidor (sql/2026-10-25-cadena.sql), nada de esto aparece. */
+var CADENA_VER='5b6a265913';   /* lo pone armar.py: el hash de portal/cadena.js */
+var _CAD_CARGA=null;
+function cargarCadena(){
+  if(typeof cadPintar==='function') return Promise.resolve(true);
+  if(_CAD_CARGA) return _CAD_CARGA;
+  _CAD_CARGA=new Promise(function(res, rej){
+    var s=document.createElement('script'); s.src='cadena.js?v='+(CADENA_VER||'0');
+    s.onload=function(){ (typeof cadPintar==='function') ? res(true) : (_CAD_CARGA=null, rej('sin_cadena')); };
+    s.onerror=function(){ _CAD_CARGA=null; rej('sin_cadena'); };
+    document.head.appendChild(s);
+  });
+  return _CAD_CARGA;
+}
+var CADP = { de:'', ini:null, t:0, yendo:null, ficha:null, alta:false, irA:null };
+var LS_CAD_FICHA='sstp_cad_ficha';
+function vistaCad(cual){
+  return function(caja){ cargando(caja); cargarCadena().then(function(){ cadPintar(cual, caja); }, function(){ fallo(caja); }); };
+}
+var CAD_VISTAS = [
+  {id:'cad', g:'Supervisión', ic:'🔗', n:'Empresas de la obra', s:'Tus subcontratas y quienes te supervisan: las cifras de hoy de cada una, y las invitaciones', pintar:vistaCad('inicio'), tablas:[], mira:true},
+  {id:'cad-obs', g:'Supervisión', ic:'📌', n:'Observaciones', s:'Con foto, riesgo y plazo: quien observa valida; quien recibe levanta. Lo vencido sube solo', pintar:vistaCad('obs'), tablas:[], mira:true},
+  {id:'cad-equipo', g:'Supervisión', ic:'🎖', n:'Rangos del equipo', s:'Supervisor, jefe y gerente: a quién le sube lo vencido y quién puede invitar o anular', pintar:vistaCad('equipo'), tablas:[], mira:true}
+];
+/* ¿esta obra tiene algo en la cadena? (Central, alguien a quien supervisa o alguien que la supervisa) */
+function cadHay(){
+  var i=CADP.ini; if(!i || !i.ok || !YO.obra || CADP.de!==String(YO.obra.id)) return false;
+  return !!((i.central && i.central.activo) || (i.abajo||[]).length || (i.arriba||[]).length);
+}
+/* las secciones de la cadena, en el menú: SOLO cuando la obra tiene algo en la cadena (Central activo, alguien a
+   quien supervisa o que la supervisa, o una invitación pendiente), y van segundas: es lo del día. Sin nada, el menú
+   queda como siempre —igual que en la app, donde el acceso tampoco sale—: publicar esto no le cambia nada a nadie
+   hasta que a una obra se le active Central o la inviten. */
+function cadVistasEn(v){
+  var i=CADP.ini; if(!YO.obra || !i || !i.ok || CADP.de!==String(YO.obra.id) || !v.length) return v;
+  if(!cadHay()) return v;
+  var g0=v[0].g, k=0; while(k<v.length && v[k].g===g0) k++;
+  return v.slice(0, k).concat(CAD_VISTAS, v.slice(k));
+}
+/* los contadores del menú: lo que espera a esta empresa (levantar lo suyo, validar lo que le levantaron) */
+function cadRail(r){
+  var i=CADP.ini; if(!i || !i.ok || !YO.obra || CADP.de!==String(YO.obra.id)) return;
+  var c=i.cuenta||{}, n=(c.por_levantar||0)+(c.por_validar||0), b=r.querySelector('.nav[data-v="cad-obs"]');
+  if(b && n) b.insertAdjacentHTML('beforeend', '<span class="n cad-n'+(((c.vencidas_mias||0)+(c.subio||0)) ? ' mal' : '')+'" title="'+
+    esc([(c.por_levantar ? c.por_levantar+' por levantar' : ''), (c.por_validar ? c.por_validar+' por validar' : '')].filter(Boolean).join(' · '))+'">'+n+'</span>');
+}
+/* la portada de la cadena de esta obra: se pide al entrar a la obra y cada vez que algo cambia */
+function cadTraer(forzar){
+  if(!YO.obra || !TOK) return Promise.resolve(null);
+  var de=String(YO.obra.id);
+  if(!forzar && CADP.de===de && CADP.ini && Date.now()-CADP.t<30000) return Promise.resolve(CADP.ini);
+  if(CADP.yendo && CADP.yendoDe===de && !forzar) return CADP.yendo;
+  CADP.yendoDe=de;
+  CADP.yendo=sbRpc('sst_cad_inicio', {p_emp:YO.obra.id}).then(function(j){
+    CADP.yendo=null;
+    if(!YO.obra || String(YO.obra.id)!==de) return null;      /* cambió de obra mientras llegaba */
+    CADP.de=de; CADP.ini=(j && typeof j==='object') ? j : {ok:false}; CADP.t=Date.now();
+    /* el menú se repinta: aparecen sus secciones (o cambian de sitio) y se ponen al día los contadores */
+    pintarRail();
+    /* quien llegó con «…#cad-obs» en la dirección (o acaba de aceptar una invitación) cuando el menú todavía no
+       tenía esas secciones: ahora sí */
+    if(CADP.irA){
+      var h=CADP.irA; CADP.irA=null;
+      if(h!==VISTA.actual && vistasDe().some(function(x){ return x.id===h; })) navegar(h, true);
+    }
+    return CADP.ini;
+  }, function(){ CADP.yendo=null; CADP.irA=null; if(CADP.de!==de){ CADP.de=de; CADP.ini={ok:false}; } return CADP.ini; });   /* 404: el servidor sin el SQL. No aparece nada */
+  return CADP.yendo;
+}
+function cadAlElegir(){
+  if(!YO.obra) return;
+  if(CADP.de!==String(YO.obra.id)){ CADP.ini=null; CADP.de=''; }
+  cadTraer(true);
+}
+/* ── la invitación que llega en la dirección: …/?cad=<ficha de 32> ── */
+function cadFicha(){ return CADP.ficha || null; }
+function cadFichaPoner(t){
+  CADP.ficha = (/^[a-f0-9]{32}$/.test(String(t||''))) ? String(t) : null;
+  try{ if(CADP.ficha) sessionStorage.setItem(LS_CAD_FICHA, CADP.ficha); else sessionStorage.removeItem(LS_CAD_FICHA); }catch(e){}
+  if(!CADP.ficha){ CADP.inv=null; var b=$('cad-inv'); if(b){ b.hidden=true; b.innerHTML=''; } }
+}
+function cadLeerDireccion(){
+  var m=/[?&]cad=([a-f0-9]{32})(&|$)/.exec(location.search||''), t=m ? m[1] : null;
+  if(!t){ try{ t=sessionStorage.getItem(LS_CAD_FICHA); }catch(e){ t=null; } }
+  cadFichaPoner(t);
+  /* la ficha no se queda en la dirección: no se copia sin querer al compartir la pantalla ni vuelve al recargar */
+  if(m){ try{ history.replaceState(null, '', location.pathname+(location.hash||'')); }catch(e){} }
+}
+var CAD_PAPEL_T = { principal:'como subcontrata', cliente:'como su cliente', supervision:'como su supervisión', regulador:'como entidad que la fiscaliza' };
+/* en la entrada (sin sesión): se dice de quién es la invitación, y que hay que entrar o crear la cuenta */
+function cadEnEntrada(){
+  var b=$('cad-inv'), t=cadFicha(); if(!b) return;
+  if(!t){ b.hidden=true; return; }
+  var pinta=function(j){
+    if(!cadFicha()) return;
+    if(!j || !j.ok){ b.className='cad-inv mal'; b.innerHTML='<b>Esta invitación no existe.</b><span>Revisa que el enlace esté completo, o pídele a quien te invitó que te lo mande otra vez.</span>'; b.hidden=false; return; }
+    var mal = j.estado==='vencida' ? 'Esta invitación venció.' : (j.estado==='activa' ? 'Esta invitación ya fue aceptada.' : (j.estado!=='invitada' ? 'Esta invitación fue retirada.' : ''));
+    b.className='cad-inv'+(mal ? ' mal' : '');
+    b.innerHTML = mal
+      ? '<b>'+esc(mal)+'</b><span>'+(j.estado==='activa' ? 'Si la aceptaste tú, entra con tu cuenta: tu espacio de esa obra ya está en tu lista.' : 'Pídele a '+esc(j.obra||'quien te invitó')+' que te mande otra.')+'</span>'
+      : '<b>📨 '+esc(j.obra||'Una obra')+' te invitó a OBRASST '+esc(j.clase==='subcontrata' ? 'como subcontrata' : (j.papel==='regulador' ? 'para fiscalizarla' : 'para supervisarla'))+'</b>'+
+        '<span>'+(j.para ? 'Invitación para '+esc(j.para)+'. ' : '')+'Entra con tu cuenta o crea una (es gratis): al entrar te mostramos la invitación para aceptarla.</span>';
+    b.hidden=false;
+  };
+  if(CADP.inv && CADP.inv.t===t){ pinta(CADP.inv.j); return; }
+  sbRpc('sst_cad_invitacion', {p_token:t}).then(function(j){ CADP.inv={t:t, j:j}; pinta(j); }, function(){ /* el servidor sin el SQL, o sin red: no se dice nada */ });
+}
+/* con sesión y con obra: la invitación se abre encima del portal */
+function cadSiToca(){
+  var t=cadFicha(); if(!t || !TOK) return false;
+  cargarCadena().then(function(){ cadAceptarHoja(t); }, function(){});
+  return true;
+}
+/* con sesión y sin obra (la cuenta recién creada del invitado): la invitación va antes que «crea tu obra» */
+function cadEnAlta(){
+  var c=$('alta-main'); if(!c) return;
+  CADP.alta=true;
+  c.innerHTML='<div class="vacio">Abriendo tu invitación…</div>';
+  cargarCadena().then(function(){ cadAceptarEnAlta(c, cadFicha()); }, function(){ CADP.alta=false; cadFichaPoner(null); altaPintar(); });
+}
 function esDemoCentral(){ return /[?&]demo=central(&|$)/.test(location.search||''); }
 function arrancar(){
   if(esDemoCentral()){
@@ -13585,6 +13736,7 @@ function arrancar(){
 }
 function arrancarCuenta(soloEntrada){
   TOK=leer(LS_TOK,null);
+  try{ if(!soloEntrada) cadLeerDireccion(); }catch(_cd){}
   $('f-entrar').onsubmit=function(ev){
     ev.preventDefault();
     var bt=$('e-bt'); bt.disabled=true; bt.textContent='Entrando…';
