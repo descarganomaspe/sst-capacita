@@ -1447,6 +1447,17 @@ td .prq-sus,.prq-sus{font-style:italic}
 .plan-c-desde{margin:0 0 6px; font-size:15px} .plan-c-desde b{color:var(--tinta)}
 .plan-c-mas{margin:0 0 12px; font-size:13.5px; line-height:1.55; color:var(--gris)}
 .plan-candado .acciones{margin-top:14px}
+/* 06/10/2026 · «Mi plan»: su insignia en el menú y el aviso de arriba de cada sección */
+.nav .n.plw-n{flex:0 0 auto; font-weight:500; letter-spacing:.01em}
+.nav .n.plw-n.ojo{background:var(--ojo-f); color:var(--ojo)} .nav .n.plw-n.mal{background:var(--mal-f); color:var(--mal)} .nav .n.plw-n.azul{background:var(--azul-f); color:var(--azul)}
+.nav.on .n.plw-n.ojo{background:var(--ojo-f); color:var(--ojo)} .nav.on .n.plw-n.mal{background:var(--mal-f); color:var(--mal)}
+.plan-av{display:flex; align-items:center; gap:10px 14px; flex-wrap:wrap; margin:0 0 18px; padding:11px 12px 11px 16px; border-radius:10px;
+  border:1px solid #EED9A8; background:var(--ojo-f); color:var(--texto); font-size:13.5px; line-height:1.5}
+.plan-av.mal{border-color:#F0C9CC; background:var(--mal-f)} .plan-av.regalo{border-color:#EBD27A; background:#FFFBEA}
+.plan-av-t{flex:1 1 320px; min-width:0} .plan-av-t b{color:var(--tinta); font-weight:600}
+.plan-av .bt{flex:0 0 auto}
+.plan-av-x{flex:0 0 auto; width:28px; height:28px; border:0; background:transparent; color:var(--gris); font-size:20px; line-height:1; cursor:pointer; border-radius:6px}
+.plan-av-x:hover{background:rgba(11,42,58,.07); color:var(--tinta)}
 .hoja-planes .ini-comp-caja{border:1px solid var(--raya); border-radius:10px} .hoja-planes .ini-comp-t{min-width:740px} .hoja-planes .ini-comp-t thead th:first-child,.hoja-planes .ini-comp-t tbody th,.hoja-planes .ini-comp-t tr.g th{padding-left:14px}
 /* en pantalla angosta no se corre de lado: cada acceso con lo que hace, y debajo un casillero por plan */
 @media (max-width:860px){
@@ -2510,6 +2521,8 @@ function elegirObra(id){
   try{ paisAlDia(); }catch(_pa){}
   /* 05/10/2026 · la cadena de supervisión de esta obra: su portada, para el menú y sus contadores */
   try{ cadAlElegir(); }catch(_cd){}
+  /* 06/10/2026 · «Mi plan»: si el mes gratis sigue sin activar, y los pagos que quedaron a medias */
+  try{ planwAlElegir(); }catch(_pl){}
 }
 function iniciales(s){ var w=String(s||'').split(/[\s@._]+/).filter(Boolean); return ((w[0]||'?')[0]+((w[1]||'')[0]||'')).toUpperCase(); }
 
@@ -2626,7 +2639,8 @@ function vistasDe(){
      Consola OBRASST (consola/): aquí solo queda lo de la empresa */
   /* 01/10/2026 · afuera del Perú, sin lo que la app esconde en ese país */
   /* 05/10/2026 · y las secciones de la cadena de supervisión, si el servidor ya las tiene */
-  return cadVistasEn(v.filter(function(x){ return !vistaOcultaPais(x.id); }));
+  /* 06/10/2026 · y «Mi plan»: quien registró la empresa la tiene arriba, junto a «Obras y equipo»; los demás, al final */
+  return cadVistasEn(planVistasEn(v.filter(function(x){ return !vistaOcultaPais(x.id); })));
 }
 /* 23/09/2026 · antes cada sección REEMPLAZABA la dirección: el «atrás»
    del navegador sacaba al usuario del portal entero. Ahora cada sección
@@ -2642,8 +2656,10 @@ function navegar(id, desdeHistoria){
   }catch(e){}
   pintarRail();
   var main=$('main');
-  main.innerHTML = '<div class="cab"><div><h1>'+esc(v.n)+'</h1><p class="sub">'+esc(v.s||'')+'</p></div>'+
+  /* 06/10/2026 · arriba de cada sección, el aviso del plan cuando toca: vence en días, venció, o el mes gratis sin activar */
+  main.innerHTML = '<div id="plan-aviso" data-sin-pais hidden></div><div class="cab"><div><h1>'+esc(v.n)+'</h1><p class="sub">'+esc(v.s||'')+'</p></div>'+
     '<div class="acciones" id="acciones"></div></div><div id="vista"></div>';
+  try{ planwAvisoPintar(); }catch(_pa){}
   /* 05/10/2026 · la sección que el plan de la obra no trae: su candado (v.mira: la sección se encarga sola) */
   var falta = v.mira ? null : planWebFalta(id);
   if(falta){ planWebCandado($('vista'), falta); return; }
@@ -2661,7 +2677,8 @@ function pintarRail(){
     if(v.g && v.g!==grupo){ grupo=v.g; h+='<div class="grupo">'+esc(v.g)+'</div>'; }
     var cand = !!planWebFalta(v.id);
     h+='<button type="button" class="nav'+(VISTA.actual===v.id?' on':'')+(cand ? ' cand' : '')+'" data-v="'+esc(v.id)+'"'+(cand ? ' title="No está en tu plan"' : '')+'>'+
-       '<span class="ic">'+v.ic+'</span><span>'+esc(v.n)+'</span>'+(cand ? '<span class="nav-cand" aria-label="No está en tu plan">🔒</span>' : '')+'</button>';
+       '<span class="ic">'+v.ic+'</span><span>'+esc(v.n)+'</span>'+(cand ? '<span class="nav-cand" aria-label="No está en tu plan">🔒</span>' : '')+
+       (v.id==='plan' ? planwInsignia() : '')+'</button>';
   });
   r.innerHTML=h;
   Array.prototype.forEach.call(r.querySelectorAll('.nav'), function(b){ b.onclick=function(){ navegar(b.getAttribute('data-v')); }; });
@@ -3080,8 +3097,8 @@ function tarjetaEspacio(j){
   h+='</div>';
   if(+j.extra_gb>0) h+='<p class="pie">'+_espGb(j.incluido_gb)+' del plan + '+_espGb(j.extra_gb)+' comprados aparte.</p>';
   if(!j.archivos) h+='<p class="pie">Los archivos no se pudieron medir esta vez: el número es solo de los registros.</p>';
-  if(nivel===100) h+='<div class="esp-av mal"><b>Llegaste al espacio de tu plan.</b> Nada se borra y los registros de seguridad se siguen guardando. Te conviene ampliarlo: pasa al plan siguiente desde la app o escríbenos a descarganomaspe@gmail.com.</div>';
-  else if(nivel===80) h+='<div class="esp-av ojo"><b>Te queda poco espacio.</b> Ya usas más del 80 % del espacio del plan. Los registros se siguen guardando igual; para no quedarte corto, pasa al plan siguiente desde la app o escríbenos a descarganomaspe@gmail.com.</div>';
+  if(nivel===100) h+='<div class="esp-av mal"><b>Llegaste al espacio de tu plan.</b> Nada se borra y los registros de seguridad se siguen guardando. Te conviene ampliarlo: pasa al plan siguiente en «Mi plan» o escríbenos a descarganomaspe@gmail.com.</div>';
+  else if(nivel===80) h+='<div class="esp-av ojo"><b>Te queda poco espacio.</b> Ya usas más del 80 % del espacio del plan. Los registros se siguen guardando igual; para no quedarte corto, pasa al plan siguiente en «Mi plan» o escríbenos a descarganomaspe@gmail.com.</div>';
   var al=j.al ? new Date(j.al) : null;
   function dd(n){ return (n<10?'0':'')+n; }
   h+='<p class="pie">Suma fotos, documentos, escaneos y registros de todas las obras. '+
@@ -12228,7 +12245,7 @@ var LS_DATOS_OK = 'sstp_datos_ok';
 var LEGAL_VER_WEB = '1.0';
 
 /* >>> INI-PLANES (lo pone armar.py desde PLANES, PUESTO_EXTRA y OBRA_EXTRA de la app: no editar a mano) <<< */
-var INI_PLANES = [{"id":"lite","n":"LITE","m":0,"a":0,"trab":10,"obras":1,"gest":1,"ch":5,"te":4,"gb":1,"para":"Para probarla con tu cuadrilla, sin pagar.","porque":"Gratis para siempre. Es la app entera con poco volumen: registras a tu gente, entregas EPP, haces el ATS y sacas credenciales. Lo que viene de muestra es el contenido.","orden":0,"tope":{"trabajador":10,"kardex":10,"reporte":-1,"credencial":10,"amonestacion":5,"semana":0,"escaneo":10,"ats":5,"ats_modelo":3,"andamio":5,"senal":10},"mes":["amonestacion","andamio","ats","escaneo","kardex","senal"]},{"id":"prevencionista","n":"Prevencionista de Riesgo","m":59,"a":590,"trab":60,"obras":1,"gest":2,"ch":-1,"te":-1,"gb":5,"para":"Para quien lleva solo la seguridad de una obra.","porque":"Abre todo el contenido de tu sector, las capacitaciones y las charlas, y los registros que se entregan: constancias firmadas, kardex en Excel, reporte semanal y requerimientos.","orden":1,"tope":{"trabajador":60,"kardex":120,"reporte":-1,"credencial":80,"amonestacion":20,"semana":4,"escaneo":60,"ats":60,"ats_modelo":-1,"andamio":-1,"senal":-1},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"supervisor","n":"Supervisor SST","m":139,"a":1390,"trab":150,"obras":2,"gest":4,"ch":-1,"te":-1,"gb":15,"para":"Para la obra que inspecciona sus equipos y sus frentes.","porque":"Suma las inspecciones de obra, el QR de cada equipo con su inspección diaria y su etiqueta, la matriz IPERC con QR y tus propias preguntas. Con dos obras y cuatro personas en la gestión.","orden":2,"tope":{"trabajador":150,"kardex":300,"reporte":-1,"credencial":200,"amonestacion":60,"semana":8,"escaneo":150,"ats":200,"ats_modelo":-1,"andamio":-1,"senal":-1},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"ssoma","n":"SSOMA","m":299,"a":2990,"trab":400,"obras":5,"gest":8,"ch":-1,"te":-1,"gb":40,"para":"Para el área SSOMA de una empresa con varias obras.","porque":"Suma los productos químicos con su hoja MSDS y su etiqueta, las campañas y los simulacros. Con cinco obras y ocho personas en la gestión.","orden":3,"tope":{"trabajador":400,"kardex":600,"reporte":-1,"credencial":500,"amonestacion":150,"semana":-1,"escaneo":400,"ats":600,"ats_modelo":-1,"andamio":-1,"senal":-1},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"gestion","n":"Gestión SST","m":590,"a":5900,"trab":1000,"obras":12,"gest":16,"ch":-1,"te":-1,"gb":100,"para":"Para la empresa que lleva su sistema de gestión completo.","porque":"Sin tope de ATS, de entregas de EPP ni de credenciales. Trae las carpetas del sistema de gestión y, en la web, el resumen de todas tus obras para la gerencia. Con doce obras y dieciséis personas.","orden":4,"tope":{"trabajador":1000,"kardex":-1,"reporte":-1,"credencial":-1,"amonestacion":-1,"semana":-1,"escaneo":-1,"ats":-1,"ats_modelo":-1,"andamio":-1,"senal":-1},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]}];
+var INI_PLANES = [{"id":"lite","n":"LITE","m":0,"a":0,"trab":10,"obras":1,"gest":1,"ch":5,"te":4,"gb":1,"para":"Para probarla con tu cuadrilla, sin pagar.","porque":"Gratis para siempre. Es la app entera con poco volumen: registras a tu gente, entregas EPP, haces el ATS y sacas credenciales. Lo que viene de muestra es el contenido.","orden":0,"tope":{"trabajador":10,"kardex":10,"reporte":-1,"credencial":10,"amonestacion":5,"semana":0,"escaneo":10,"ats":5,"ats_modelo":3,"andamio":5,"senal":10},"mes":["amonestacion","andamio","ats","escaneo","kardex","senal"]},{"id":"prevencionista","n":"Prevencionista de Riesgo","m":59,"a":590,"trab":60,"obras":1,"gest":2,"ch":-1,"te":-1,"sm":"obrasst-prevencionista","sa":"obrasst-prevencionista-anual","gb":5,"para":"Para quien lleva solo la seguridad de una obra.","porque":"Abre todo el contenido de tu sector, las capacitaciones y las charlas, y los registros que se entregan: constancias firmadas, kardex en Excel, reporte semanal y requerimientos.","orden":1,"tope":{"trabajador":60,"kardex":120,"reporte":-1,"credencial":80,"amonestacion":20,"semana":4,"escaneo":60,"ats":60,"ats_modelo":-1,"andamio":-1,"senal":-1},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"supervisor","n":"Supervisor SST","m":139,"a":1390,"trab":150,"obras":2,"gest":4,"ch":-1,"te":-1,"sm":"obrasst-supervisor","sa":"obrasst-supervisor-anual","gb":15,"para":"Para la obra que inspecciona sus equipos y sus frentes.","porque":"Suma las inspecciones de obra, el QR de cada equipo con su inspección diaria y su etiqueta, la matriz IPERC con QR y tus propias preguntas. Con dos obras y cuatro personas en la gestión.","orden":2,"tope":{"trabajador":150,"kardex":300,"reporte":-1,"credencial":200,"amonestacion":60,"semana":8,"escaneo":150,"ats":200,"ats_modelo":-1,"andamio":-1,"senal":-1},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"ssoma","n":"SSOMA","m":299,"a":2990,"trab":400,"obras":5,"gest":8,"ch":-1,"te":-1,"sm":"obrasst-ssoma","sa":"obrasst-ssoma-anual","gb":40,"para":"Para el área SSOMA de una empresa con varias obras.","porque":"Suma los productos químicos con su hoja MSDS y su etiqueta, las campañas y los simulacros. Con cinco obras y ocho personas en la gestión.","orden":3,"tope":{"trabajador":400,"kardex":600,"reporte":-1,"credencial":500,"amonestacion":150,"semana":-1,"escaneo":400,"ats":600,"ats_modelo":-1,"andamio":-1,"senal":-1},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"gestion","n":"Gestión SST","m":590,"a":5900,"trab":1000,"obras":12,"gest":16,"ch":-1,"te":-1,"sm":"obrasst-gestion","sa":"obrasst-gestion-anual","gb":100,"para":"Para la empresa que lleva su sistema de gestión completo.","porque":"Sin tope de ATS, de entregas de EPP ni de credenciales. Trae las carpetas del sistema de gestión y, en la web, el resumen de todas tus obras para la gerencia. Con doce obras y dieciséis personas.","orden":4,"tope":{"trabajador":1000,"kardex":-1,"reporte":-1,"credencial":-1,"amonestacion":-1,"semana":-1,"escaneo":-1,"ats":-1,"ats_modelo":-1,"andamio":-1,"senal":-1},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]}];
 var INI_EXTRA = {"puesto":49,"obra":79};
 var INI_GRUPOS = [["cap","Capacitación"],["dia","El día a día en la obra"],["gente","La gente"],["doc","Documentos y consulta"],["web","En la computadora"]];
 var INI_VITRINA = [{"k":"temas","g":"cap","ic":"🎓","n":"Capacitación por tema","d":"El trabajador la lee en su celular, rinde su evaluación y firma. La nota queda en su récord.","desde":0,"cupo":"temas"},{"k":"charlas","g":"cap","ic":"🗓️","n":"Charlas de 5 minutos","d":"El programa del mes y el guion de cada charla, listo para dictar.","desde":0,"cupo":"charlas"},{"k":"talleres","g":"cap","ic":"🧰","n":"Talleres prácticos","d":"Para practicar en campo, paso a paso. Se hace, no se lee.","desde":0},{"k":"induccion","g":"cap","ic":"📘","n":"Inducción del personal nuevo","d":"Tema por tema, con la firma del trabajador el día que ingresa.","desde":0},{"k":"programar","g":"cap","ic":"📅","n":"Programar capacitación","d":"Eliges el tema, el día y para quiénes. Ese día les aparece en su app.","desde":0},{"k":"constancias","g":"cap","ic":"📜","n":"Constancias y matriz de capacitación","d":"Cada evaluación con su nota y su firma, en PDF. Y la matriz de quién está al día según su puesto.","desde":1,"web":["constancias","cump","matriz","registro"]},{"k":"preguntas","g":"cap","ic":"✍️","n":"Tus propias preguntas","d":"Agrega a cada capacitación las preguntas de tu obra o de tu cliente.","desde":2},{"k":"ats","g":"dia","ic":"📋","n":"ATS de la tarea","d":"Se llena en el celular, firma la cuadrilla y el supervisor lo libera. En minería, el IPERC continuo.","desde":0,"tope":"ats"},{"k":"kardex","g":"dia","ic":"🦺","n":"Entrega de EPP","d":"Cada entrega con la firma de quien recibe. El kardex se arma solo.","desde":0,"tope":"kardex"},{"k":"kardex_export","g":"dia","ic":"📊","n":"Kardex y consumo de EPP en Excel y PDF","d":"El registro del mes o el total, y cuánto sale mes a mes, para entregar o archivar.","desde":1},{"k":"reqs","g":"dia","ic":"🧾","n":"Requerimientos de EPP y materiales","d":"La app calcula cuánto pedir con el consumo y el personal de la obra. Firman quien pide, Seguridad y los gerentes.","desde":1,"web":["reqs"],"nuevo":1},{"k":"reporte","g":"dia","ic":"🚨","n":"Reportes de actos y condiciones","d":"Con foto, desde el celular. Se les hace seguimiento hasta cerrarlos.","desde":0},{"k":"asisten","g":"dia","ic":"📷","n":"Cámara y escáner de documentos","d":"La lista de asistencia o cualquier hoja firmada pasa del papel al archivo de la obra.","desde":0,"tope":"escaneo"},{"k":"senales","g":"dia","ic":"🔺","n":"Señalética de la obra","d":"Las señales de la norma, listas para imprimir en el tamaño que necesitas.","desde":0,"tope":"senal"},{"k":"andamio","g":"dia","ic":"🪜","n":"Tarjetas de andamio","d":"El semáforo verde, amarillo y rojo que se cuelga en el andamio.","desde":0,"tope":"andamio"},{"k":"accidente","g":"dia","ic":"🚑","n":"Accidentes e incidentes","d":"El registro de cada evento, con sus datos y su seguimiento.","desde":0},{"k":"buenas","g":"dia","ic":"🌟","n":"Buenas prácticas","d":"Lo que se hizo bien, con foto, para reconocerlo y repetirlo.","desde":0},{"k":"semanal","g":"dia","ic":"📈","n":"Reporte semanal de horas hombre","d":"Las horas trabajadas y las de capacitación de la semana, en PDF y en Excel.","desde":1,"tope":"semana"},{"k":"inspec","g":"dia","ic":"✅","n":"Inspecciones de obra","d":"Las listas de verificación de tu sector, llenadas en el celular con sus fotos.","desde":2,"web":["insp"]},{"k":"equipos","g":"dia","ic":"🏷️","n":"Equipos y herramientas con QR","d":"Cada equipo con su etiqueta. El trabajador escanea el QR y hace su inspección diaria antes de usarlo.","desde":2,"web":["equipos","inspeq"],"nuevo":1},{"k":"msds","g":"dia","ic":"🧪","n":"Productos químicos","d":"Cada producto con su hoja MSDS, su etiqueta y su rombo. El cartel con QR va en el almacén.","desde":3,"web":["quimicos"]},{"k":"campanas","g":"dia","ic":"📣","n":"Campañas","d":"Campañas de una semana ya armadas, día por día, con su evidencia en PDF.","desde":3},{"k":"simulacros","g":"dia","ic":"🧯","n":"Simulacros","d":"Se programan, se corren con cronómetro y se cierran con su informe.","desde":3},{"k":"personal","g":"gente","ic":"👷","n":"Tu personal","d":"La ficha de cada trabajador, con su estado, su frente y su historia en la obra.","desde":0,"tope":"trabajador"},{"k":"credencial","g":"gente","ic":"🪪","n":"Credenciales con QR y carné","d":"La credencial de cada trabajador y su carné con los teléfonos de emergencia de la obra.","desde":0,"tope":"credencial"},{"k":"cargos","g":"gente","ic":"🖼️","n":"Brigada, comité y supervisor de SST","d":"Designas a cada uno con su función y su foto, y sale el cartel para la caseta.","desde":0,"web":["cargos"],"nuevo":1},{"k":"comite","g":"gente","ic":"🏛️","n":"Comité de SST","d":"El padrón, el libro de actas y los acuerdos del comité.","desde":1},{"k":"amonesta","g":"gente","ic":"⚠️","n":"Amonestaciones","d":"La papeleta con su descargo y su firma, en PDF o en Word.","desde":0,"tope":"amonestacion"},{"k":"boletines","g":"gente","ic":"📰","n":"Boletines y noticias","d":"Lo que pegarías en la caseta llega al celular de cada uno, con acuse de quién lo leyó.","desde":0},{"k":"buzon","g":"gente","ic":"💬","n":"Buzón de sugerencias y canal de denuncias","d":"El trabajador escribe desde su celular. Las denuncias van sin nombre, y la empresa responde.","desde":0},{"k":"risst","g":"doc","ic":"📌","n":"Cartel QR del reglamento interno","d":"El trabajador escanea y lee el documento vigente en su celular.","desde":0},{"k":"qr_pets","g":"doc","ic":"📌","n":"Cartel QR de los procedimientos","d":"Los procedimientos de trabajo, a un escaneo de distancia.","desde":1},{"k":"qr_iperc","g":"doc","ic":"📌","n":"Cartel QR de la matriz IPERC","d":"La matriz de riesgos de cada frente, a la vista de quien la necesita.","desde":2},{"k":"proced","g":"doc","ic":"📘","n":"Procedimientos y normas","d":"Los procedimientos de trabajo y la biblioteca de normas, para consultar en la obra.","desde":0},{"k":"carpetas","g":"doc","ic":"🗂️","n":"Las carpetas del sistema de gestión","d":"Todo el sistema de gestión ordenado en carpetas, con cada documento en su lugar.","desde":4},{"k":"portal","g":"web","ic":"💻","n":"Portal web","d":"Lo que registras en el celular se ve al instante en la pantalla de la oficina, para revisar y descargar.","desde":0},{"k":"resumen","g":"web","ic":"📈","n":"Resumen ejecutivo de todas tus obras","d":"Cómo va cada obra en una pantalla, para la gerencia.","desde":4}];
@@ -12282,8 +12299,9 @@ function iniCelda(x, P){
   return '<span class="si" aria-label="Lo trae">✓</span>';
 }
 /* la tabla que compara: el tamaño primero, y después cada acceso con lo que hace */
-function iniTablaHTML(id, miOrden, sinPrecio){
-  var L=iniPrecios(), h='<div class="ini-comp-caja" tabindex="0" role="region" aria-label="Qué trae cada plan, acceso por acceso"><table class="ini-comp-t" id="'+id+'" style="--planes:'+INI_PLANES.length+'"><thead><tr><th scope="col">Qué trae</th>'+
+function iniTablaHTML(id, miOrden, sinPrecio, precios){
+  /* precios: los de quien paga (en «Mi plan»); sin eso, los de quien mira la página de inicio */
+  var L=precios||iniPrecios(), h='<div class="ini-comp-caja" tabindex="0" role="region" aria-label="Qué trae cada plan, acceso por acceso"><table class="ini-comp-t" id="'+id+'" style="--planes:'+INI_PLANES.length+'"><thead><tr><th scope="col">Qué trae</th>'+
     L.map(function(x){ return '<th scope="col" class="'+(miOrden===x.P.orden ? 'mio' : '')+'">'+esc(x.P.n)+(sinPrecio ? '' : '<span>'+(x.m>0 ? _plata(x.m, x.usd)+' al mes' : 'Gratis')+'</span>')+(miOrden===x.P.orden ? '<em>Tu plan</em>' : '')+'</th>'; }).join('')+'</tr></thead><tbody>';
   var corto=function(P){ return ({prevencionista:'Prev.', supervisor:'Superv.', gestion:'Gestión'})[P.id] || P.n; };
   var fila=function(nombre, sub, celdas, cl){ return '<tr'+(cl ? ' class="'+cl+'"' : '')+'><th scope="row"><b>'+nombre+'</b>'+(sub ? '<small>'+esc(sub)+'</small>' : '')+'</th>'+celdas.map(function(c, i){ return '<td class="'+(miOrden===INI_PLANES[i].orden ? 'mio' : '')+'" data-p="'+esc(corto(INI_PLANES[i]))+'">'+c+'</td>'; }).join('')+'</tr>'; };
@@ -12310,8 +12328,9 @@ function iniPlanElige(id){
   if(!x || !(x.P.m>0) || x.P.id===INI_PLAN_PRUEBA){ INI.plan=''; c.hidden=true; c.innerHTML=''; return; }
   var pr=INI_PLANES.filter(function(P){ return P.id===INI_PLAN_PRUEBA; })[0];
   INI.plan=x.P.id;
+  /* 06/10/2026 · el plan ya se elige y se paga aquí, dentro del portal («Mi plan») */
   c.innerHTML='<b>Elegiste '+esc(x.P.n)+'</b> · '+_plata(x.m, x.usd)+' al mes. Primero crea tu cuenta: el plan '+
-    (x.usd ? 'se pide y se activa' : 'se activa y se paga')+' desde la app, en «Planes».'+
+    (x.usd ? 'se pide' : 'se paga')+' después, dentro del portal, en «Mi plan».'+
     (pr ? ' Mientras tanto, al crear tu empresa se activan 30 días gratis del plan '+esc(pr.n)+', sin tarjeta.' : '');
   c.hidden=false;
 }
@@ -12363,9 +12382,9 @@ function iniPlanesPintar(){
   var l=$('ini-letra'); if(!l) return;
   var puesto = usd ? U.puesto : INI_EXTRA.puesto, obra = usd ? U.obra : INI_EXTRA.obra;
   l.innerHTML = usd
-    ? '<p><b>Fuera del Perú</b> los planes se pagan en dólares, directo con nosotros: los pides desde la app, en «Planes», y te llega un código para activarlos. El año cuesta diez meses.</p>'+
+    ? '<p><b>Fuera del Perú</b> los planes se pagan en dólares, directo con nosotros: los pides dentro del portal, en «Mi plan», o desde la app, y te llega un código para activarlos. El año cuesta diez meses.</p>'+
       '<p><b>Dentro de la app, por Google Play,</b> es una suscripción que se renueva sola hasta que la canceles, en la moneda de tu celular. ¿Te falta alguien o una obra? '+_plata(puesto, true)+' al mes cada persona más en la gestión y '+_plata(obra, true)+' al mes cada obra más.</p>'
-    : '<p><b>Pagando por la web</b> (Mercado Pago) es un solo pago por el mes o el año que eliges: no se renueva solo y no guardamos tu tarjeta. El año cuesta diez meses. Precios en soles. El plan se elige y se paga desde la app, en «Planes».</p>'+
+    : '<p><b>Pagando por la web</b> (Mercado Pago) es un solo pago por el mes o el año que eliges: no se renueva solo y no guardamos tu tarjeta. El año cuesta diez meses. Precios en soles. El plan se elige y se paga dentro del portal, en «Mi plan», o desde la app.</p>'+
       '<p><b>Dentro de la app, por Google Play,</b> es una suscripción que se renueva sola hasta que la canceles, y cuesta un poco más por la comisión de la tienda. ¿Te falta alguien o una obra? '+_plata(puesto)+' al mes cada persona más en la gestión y '+_plata(obra)+' al mes cada obra más.</p>';
 }
 
@@ -12400,23 +12419,203 @@ function planWebCandado(caja, x){
     '<h2><span aria-hidden="true">'+x.ic+'</span> '+esc(x.n)+'</h2><p class="plan-c-d">'+esc(x.d)+'</p>'+
     (P ? '<p class="plan-c-desde">Se abre con el plan <b>'+esc(P.n)+'</b>'+planWebPrecio(P)+' o uno mayor.</p>' : '')+
     (otros.length ? '<p class="plan-c-mas">Ese plan también suma: '+otros.map(function(v){ return esc(v.n); }).join(' · ')+'.</p>' : '')+
-    '<p class="ayuda">Lo que ya registraste no se borra: vuelve a verse aquí cuando tu plan lo incluya. El plan se elige y se paga desde la app, en «Planes».</p>'+
-    '<div class="acciones"><button type="button" class="bt" id="plan-c-ver">Ver qué trae cada plan</button></div></div></div>';
+    '<p class="ayuda">Lo que ya registraste no se borra: vuelve a verse aquí cuando tu plan lo incluya. '+planwDonde()+'.</p>'+
+    '<div class="acciones"><button type="button" class="bt" id="plan-c-ir">'+(planwPuedePagar() ? 'Elegir mi plan' : 'Ver mi plan')+'</button>'+
+    '<button type="button" class="bt sec" id="plan-c-ver">Ver qué trae cada plan</button></div></div></div>';
   $('plan-c-ver').onclick=planesHoja;
+  $('plan-c-ir').onclick=function(){ navegar('plan'); };
 }
 /* lo que se descarga y el plan no trae: se dice desde cuál */
 function planWebAvisoBaja(que, k){
   var x=INI_VITRINA.filter(function(v){ return v.k===k; })[0], P=x ? planWebPlan(x.desde) : null;
-  dialogo({titulo:'No está en tu plan', texto:'«'+que+'» no entra en tu plan '+planWebActual().n+'.'+(P ? ' Se abre con el plan '+P.n+planWebPrecio(P)+' o uno mayor.' : '')+' El plan se elige y se paga desde la app, en «Planes».', si:'Ver qué trae cada plan', no:'Cerrar'})
-    .then(function(v){ if(v===true) planesHoja(); });
+  dialogo({titulo:'No está en tu plan', texto:'«'+que+'» no entra en tu plan '+planWebActual().n+'.'+(P ? ' Se abre con el plan '+P.n+planWebPrecio(P)+' o uno mayor.' : '')+' '+planwDonde()+'.', si:(planwPuedePagar() ? 'Elegir mi plan' : 'Ver mi plan'), no:'Cerrar'})
+    .then(function(v){ if(v===true) navegar('plan'); });
 }
 /* la tabla de los planes, dentro del portal */
 function planesHoja(){
   var A=planWebActual(), o=YO.obra||{};
   var h='<p class="ayuda" style="margin:0 0 12px">Tu obra está en el plan <b>'+esc(A.n)+'</b>'+((o.vence && _dcOrdenPlan()>0) ? ' hasta el '+esc(String(o.vence).slice(8,10)+'/'+String(o.vence).slice(5,7)+'/'+String(o.vence).slice(0,4)) : '')+
-        '. El plan se elige y se paga desde la app, en «Planes»'+(paisObraP()==='pe' ? '' : ', con su precio')+'; al cambiarlo, estas secciones se abren solas.</p>'+iniTablaHTML('planes-t', A.orden, paisObraP()!=='pe');
-  abrirHoja('Qué trae cada plan', 'Acceso por acceso, con lo que hace cada uno', h, '<button type="button" class="bt sec" id="planes-no">Cerrar</button>', {ancha:true, clase:'hoja-planes'});
+        '. '+planwDonde()+(paisObraP()==='pe' ? '' : ', con su precio')+'; al cambiarlo, estas secciones se abren solas.</p>'+iniTablaHTML('planes-t', A.orden, paisObraP()!=='pe');
+  abrirHoja('Qué trae cada plan', 'Acceso por acceso, con lo que hace cada uno', h, '<button type="button" class="bt sec" id="planes-no">Cerrar</button>'+
+    (VISTA.actual==='plan' ? '' : '<button type="button" class="bt" id="planes-ir">'+(planwPuedePagar() ? 'Elegir mi plan' : 'Ver mi plan')+'</button>'), {ancha:true, clase:'hoja-planes'});
   $('planes-no').onclick=cerrarHoja;
+  var pi=$('planes-ir'); if(pi) pi.onclick=function(){ cerrarHoja(); navegar('plan'); };
+}
+
+/* ══ MI PLAN (06/10/2026) ══════════════════════════════════════════════
+   Marcelo: «¿Hay un medio por la página web por dónde activen el mes gratis después de iniciar sesión y estés en el
+   portal? ¿O vean los planes después de iniciar sesión? ¿Hay un flujo para ello?» No lo había: el mes gratis se
+   activaba solo al crear la empresa, los planes se veían de rebote (desde un candado) y pagar era solo en la app.
+   Eligió: «B por favor» — verlo, activarlo y pagarlo aquí.
+   La sección entera es portal/plan.js, que se pide al abrirla. Aquí va lo que hace falta desde el arranque:
+   · la sección en el menú (quien registró la empresa la tiene arriba, junto a «Obras y equipo»; los demás, al final)
+     y su insignia: los días que quedan, «LITE», o el pago que se espera;
+   · el aviso de arriba de cada sección cuando toca: el plan vence en 7 días o menos, venció hace poco, o el mes
+     gratis sigue sin activar. Se cierra con su ×, y no vuelve ese día (o esa semana);
+   · los pagos empezados en este navegador (LS_PAGO): al volver a entrar se miran, y el plan pagado se activa solo.
+   Nada nuevo en el servidor: sst_mi_plan, sst_prueba_gratis, sst_comprobante_preparar, sst_mis_comprobantes y
+   sst_activar_licencia son las mismas funciones que usa la app. */
+var PLAN_VER='9a0263296f';   /* lo pone armar.py: el hash de portal/plan.js */
+var LS_PAGO='sstp_pago', LS_PLAN_AVISO='sstp_plan_aviso';
+var PAQUETE_APP='pe.descarganomas.obrasst';
+var PLANW={ mi:null, de:'', t:0, yendo:null, yendoDe:'', regalo:0 };
+var _PLW_CARGA=null;
+function cargarPlanW(){
+  if(typeof plwPintar==='function') return Promise.resolve(true);
+  if(_PLW_CARGA) return _PLW_CARGA;
+  _PLW_CARGA=_cargarJS('plan.js?v='+(PLAN_VER||'0'), function(){ return typeof plwPintar==='function'; });
+  _PLW_CARGA.catch(function(){ _PLW_CARGA=null; });
+  return _PLW_CARGA;
+}
+function vistaPlan(caja){ cargando(caja); cargarPlanW().then(function(){ plwPintar(caja); }, function(){ fallo(caja); }); }
+var V_PLAN={id:'plan', g:'Cuenta', ic:'💳', n:'Mi plan', s:'En qué plan está tu empresa, cuánto le queda y cómo renovarlo o cambiarlo', pintar:vistaPlan, tablas:[], mira:true};
+function planVistasEn(v){
+  if(!v.length || !YO.obra) return v;
+  var k=-1;
+  if(YO.dueno || YO.rol==='lider'){ for(var i=0;i<v.length;i++) if(v[i].id==='equipo') k=i; }
+  if(k>-1) return v.slice(0, k+1).concat([Object.assign({}, V_PLAN, {g:v[k].g})], v.slice(k+1));
+  return v.concat([V_PLAN]);
+}
+/* dónde se cambia el plan, dicho en los candados: aquí mismo —se paga en el Perú, se pide afuera— o, dentro de la
+   app de Android, en la app */
+function planwDonde(){
+  if(planwEnAndroid()) return 'El plan se elige y se paga en la app, en «Planes»';
+  return paisDelPagoP()==='pe' ? 'El plan se elige y se paga aquí mismo, en «Mi plan»' : 'El plan se elige y se pide aquí mismo, en «Mi plan»';
+}
+/* quien registró la empresa es quien elige y paga el plan (el servidor no deja a nadie más) */
+function planwPuedePagar(){ return !!(YO.obra && (YO.dueno || YO.rol==='lider')); }
+/* ¿en qué moneda se cobra? La paga la empresa (la madre), no la obra: como paisDelPago() de la app */
+function paisDelPagoP(){
+  var o=YO.obra||{};
+  try{ if(o.padre_id && MIS_PAISES_P && MIS_PAISES_P[o.padre_id]) return String(MIS_PAISES_P[o.padre_id]).toLowerCase(); }catch(_e){}
+  return paisObraP() || 'pe';
+}
+/* dentro de la app de Android (su envoltorio) no se ofrece pagar por la web: es la regla de pagos de Google Play.
+   La app lo anota en la sesión (sstc_play) cuando Android la abre; aquí además se mira de dónde se llega. */
+function planwEnAndroid(){
+  try{ if(sessionStorage.getItem('sstc_play')==='1' || sessionStorage.getItem('sstp_enapp')==='1') return true; }catch(_e){}
+  try{ if(String(document.referrer||'').indexOf('android-app://'+PAQUETE_APP)===0){ try{ sessionStorage.setItem('sstp_enapp', '1'); }catch(_s){} return true; } }catch(_r){}
+  return false;
+}
+/* ¿el plan de esta obra lo da la cadena de supervisión? (la obra con Central, o la subcontrata enlazada a una) */
+function planwPorCadena(){
+  var i=CADP.ini; if(!i || !i.ok || !YO.obra || CADP.de!==String(YO.obra.id)) return false;
+  if(String(YO.obra.plan||'')!=='gestion') return false;
+  if(i.central && i.central.activo) return true;
+  return (i.arriba||[]).some(function(l){ return l.clase==='subcontrata' && l.estado==='activa'; });
+}
+/* el plan de la obra abierta: cuál es, hasta cuándo, cuántos días le quedan o hace cuántos venció */
+function planwEstado(){
+  var o=YO.obra||{}, hoy=hoyISO(), v=o.vence ? String(o.vence).slice(0,10) : '', orden=_dcOrdenPlan();
+  return { orden:orden, plan:planWebActual(), vence:v,
+           dias:(v && orden>0) ? Math.round((Date.parse(v)-Date.parse(hoy))/86400000) : null,
+           vencio:(v && v<hoy) ? Math.round((Date.parse(hoy)-Date.parse(v))/86400000) : null,
+           cadena:planwPorCadena() };
+}
+/* lo que el servidor dice del plan: los topes y lo que se usa, y si el mes gratis ya se usó (la persona o la empresa) */
+function planwMiTraer(forzar){
+  if(!YO.obra || !TOK) return Promise.resolve(null);
+  var de=String(YO.obra.id);
+  if(!forzar && PLANW.de===de && PLANW.mi && Date.now()-PLANW.t<60000) return Promise.resolve(PLANW.mi);
+  if(PLANW.yendo && PLANW.yendoDe===de) return PLANW.yendo;
+  PLANW.yendoDe=de;
+  PLANW.yendo=sbRpc('sst_mi_plan', {p_emp:YO.obra.id}).then(function(j){
+    PLANW.yendo=null;
+    if(!YO.obra || String(YO.obra.id)!==de) return null;
+    PLANW.de=de; PLANW.mi=(j && typeof j==='object' && !Array.isArray(j)) ? j : null; PLANW.t=Date.now();
+    return PLANW.mi;
+  }, function(){ PLANW.yendo=null; return (PLANW.de===de) ? PLANW.mi : null; });
+  return PLANW.yendo;
+}
+/* los pagos empezados en este navegador con esta cuenta, el más nuevo primero (se olvidan a los 10 días) */
+function planwPagos(){
+  var l=leer(LS_PAGO, []), uid=(TOK && TOK.uid) || '', desde=Date.now()-10*86400000;
+  if(!Array.isArray(l)) return [];
+  /* lo que pasó de 10 días se borra de verdad (de cualquier cuenta de este navegador) */
+  var vivos=l.filter(function(x){ return x && x.t>desde; });
+  if(vivos.length!==l.length){ if(vivos.length) guardar(LS_PAGO, vivos); else { try{ localStorage.removeItem(LS_PAGO); }catch(_e){} } l=vivos; }
+  if(!uid) return [];
+  /* «abierto» (se está esperando: el cartel y la insignia) dura un día; después el pago sigue apuntado, sin cartel */
+  return l.filter(function(x){ return x && x.uid===uid && x.t>desde && x.slug && x.emp; })
+          .map(function(x){ if(x.abierto && x.t<Date.now()-86400000) x.abierto=false; return x; });
+}
+function planwPagosGuardar(l){
+  var uid=(TOK && TOK.uid) || '', todo=leer(LS_PAGO, []), desde=Date.now()-10*86400000;
+  if(!uid) return;
+  if(!Array.isArray(todo)) todo=[];
+  guardar(LS_PAGO, (l||[]).map(function(x){ x.uid=uid; return x; }).concat(todo.filter(function(x){ return x && x.uid && x.uid!==uid && x.t>desde; })));
+}
+/* la insignia de «Mi plan» en el menú */
+function planwInsignia(){
+  if(!YO.obra || YO.central) return '';
+  if(planwPagos().some(function(x){ return x.abierto; })) return '<span class="n plw-n azul" title="Esperando tu pago">pago…</span>';
+  var E=planwEstado(); if(E.cadena) return '';
+  if(E.orden>0 && E.dias!==null && E.dias<=30)
+    return '<span class="n plw-n'+(E.dias<=3 ? ' mal' : (E.dias<=7 ? ' ojo' : ''))+'" title="Tu plan '+esc(E.plan.n)+' vale hasta el '+esc(fechaLarga(E.vence))+'">'+(E.dias===0 ? 'hoy' : E.dias+' d')+'</span>';
+  if(E.orden===0) return '<span class="n plw-n" title="Estás en LITE, el plan gratis">LITE</span>';
+  return '';
+}
+/* el aviso de arriba de cada sección (menos en «Mi plan», que ya lo dice todo) */
+function planwAvisoQue(){
+  if(!YO.obra || YO.central || VISTA.actual==='plan') return null;
+  var E=planwEstado(), due=planwPuedePagar(); if(E.cadena) return null;
+  if(E.orden>0 && E.dias!==null && E.dias<=7) return { k:'a'+E.vence, cl:(E.dias<=3 ? 'mal' : 'ojo'), dura:1,
+    h:'<b>Tu plan '+esc(E.plan.n)+' '+(E.dias===0 ? 'vence hoy' : (E.dias===1 ? 'vence mañana' : 'vence en '+E.dias+' días'))+'</b> (el '+esc(fechaLarga(E.vence))+'). Después la cuenta vuelve a LITE, que es gratis, y nada se borra.'+(due ? '' : ' Avísale a quien registró la empresa.'),
+    bt:(due ? 'Renovar o cambiar de plan' : 'Ver mi plan') };
+  if(E.orden===0 && E.vencio!==null && E.vencio<=30) return { k:'b'+E.vence, cl:'ojo', dura:7,
+    h:'<b>Tu plan venció el '+esc(fechaLarga(E.vence))+'</b> y la cuenta está en LITE. Lo registrado no se borró: vuelve a abrirse cuando retomas tu plan.'+(due ? '' : ' Avísale a quien registró la empresa.'),
+    bt:(due ? 'Ver los planes' : 'Ver mi plan') };
+  var mi=(PLANW.mi && PLANW.de===String(YO.obra.id)) ? PLANW.mi : null;
+  if(E.orden===0 && due && mi && mi.prueba_usada===false && mi.prueba_empresa===false) return { k:'c', cl:'regalo', dura:7,
+    h:'<b>🎁 Tu primer mes es gratis:</b> 30 días del plan SSOMA completo, sin tarjeta y sin cobro automático.', bt:'Activar mi mes gratis' };
+  return null;
+}
+function planwAvisoPintar(){
+  var c=$('plan-aviso'); if(!c) return;
+  var a=planwAvisoQue(), id=YO.obra ? String(YO.obra.id) : '';
+  if(a){ var g=(leer(LS_PLAN_AVISO, {})||{})[id]; if(g && g.k===a.k && g.h>hoyISO()) a=null; }
+  if(!a){ c.hidden=true; c.innerHTML=''; return; }
+  c.className='plan-av '+a.cl; c.setAttribute('data-k', a.k);
+  c.innerHTML='<span class="plan-av-t">'+a.h+'</span><button type="button" class="bt chico'+(a.cl==='regalo' ? ' casco' : '')+'" id="plan-av-ir">'+esc(a.bt)+'</button>'+
+    '<button type="button" class="plan-av-x" id="plan-av-x" aria-label="Ocultar este aviso" title="Ocultar este aviso">×</button>';
+  c.hidden=false;
+  /* el del mes gratis dice «Activar mi mes gratis» y eso hace: lleva a «Mi plan» y, apenas carga, lo activa ahí
+     (plan.js: plwCargar), donde se ve el resultado o el motivo. Los otros dos solo llevan */
+  $('plan-av-ir').onclick=function(){ PLANW.regalo=(a.k==='c') ? Date.now() : 0; navegar('plan'); };
+  $('plan-av-x').onclick=function(){
+    var t=leer(LS_PLAN_AVISO, {})||{}, d=new Date(Date.now()+a.dura*86400000);
+    t[id]={ k:a.k, h:d.getFullYear()+'-'+dos(d.getMonth()+1)+'-'+dos(d.getDate()) }; guardar(LS_PLAN_AVISO, t);
+    c.hidden=true; c.innerHTML='';
+  };
+}
+/* al abrir una obra: lo que dice el servidor de su plan (para el aviso del mes gratis) y los pagos a medias */
+function planwAlElegir(){
+  if(!YO.obra || YO.central) return;
+  var de=String(YO.obra.id);
+  if(PLANW.de!==de){ PLANW.mi=null; PLANW.de=''; PLANW.t=0; PLANW.regalo=0; }
+  planwMiTraer(false).then(function(){ if(YO.obra && String(YO.obra.id)===de) planwAvisoPintar(); });
+  if(planwPagos().some(function(x){ return x.abrio; })) cargarPlanW().then(function(){ plwEspiar(); plwRevisarPago(false).then(function(pago){ if(!pago) plwVigilar(); }); }, function(){});
+}
+/* el plan cambió (se activó el mes gratis, se pagó, se escribió un código): la lista de obras otra vez. La obra
+   abierta sigue siendo la misma —el mismo objeto, con sus datos al día—, así nadie pierde lo que tenía a medio
+   escribir en otra sección: se repintan la barra y el menú, y solo «Mi plan» o un candado se vuelven a pintar. */
+function planwRefrescar(){
+  var viejas=YO.empresas||[], id=YO.obra ? String(YO.obra.id) : '';
+  return cargarEmpresas().then(function(nuevas){
+    YO.empresas=(nuevas||[]).map(function(n){
+      var v=null; viejas.forEach(function(x){ if(String(x.id)===String(n.id)) v=x; });
+      if(!v) return n;
+      Object.keys(v).forEach(function(k){ if(!(k in n)) delete v[k]; }); Object.assign(v, n); return v;
+    });
+    var o=null; YO.empresas.forEach(function(e){ if(String(e.id)===id) o=e; });
+    if(!o){ if(YO.empresas.length) elegirObra(YO.empresas[0].id); return; }
+    YO.obra=o; YO.rol=esLiderDe(o) ? 'lider' : 'sup'; YO.dueno=(o.rol==='dueno');
+    PLANW.mi=null; PLANW.t=0;
+    pintarBarra();
+    var sigue=vistasDe().some(function(x){ return x.id===VISTA.actual; });
+    if(VISTA.actual==='plan' || $('plan-candado') || !sigue) navegar(sigue ? VISTA.actual : vistasDe()[0].id, true);
+    else { pintarRail(); planwAvisoPintar(); }
+  });
 }
 
 /* ── las preguntas ─────────────────────────────────────────────────
@@ -12511,10 +12710,10 @@ var FAQ = [
   { t:'Planes y pagos', q:'¿Cuánto cuesta?', k:'precio costo tarifa mensual anual soles gratis',
     r:function(){ var L=INI_PLANES[0]; return '<p>El plan LITE es gratis para siempre, con '+L.trab+' trabajadores y '+L.obras+' obra. Los planes de pago empiezan en '+_faqDesde()+' al mes, y el año cuesta diez meses.</p><p>Lo que trae cada uno está en <a href="#planes">Planes</a>.</p>'; } },
   { t:'Planes y pagos', q:'¿Hay prueba gratis?', k:'demo probar 30 dias mes gratis tarjeta',
-    r:'<p>Sí. Al crear tu empresa se activan 30 días del plan SSOMA completo, sin tarjeta y sin cobro automático. Es una vez por empresa y por persona.</p>' },
-  { t:'Planes y pagos', q:'¿Cómo se paga?', k:'pagar pago mercado pago tarjeta yape google play comprar contratar codigo',
-    r:'<p>Desde la app, en «Planes». Hay dos caminos:</p>'+
-      '<ul><li><b>Por la web, con Mercado Pago:</b> un solo pago por el mes o el año que eliges, con los medios de pago que Mercado Pago te muestra. Recibes un código que activa el plan. No se renueva solo y no guardamos tu tarjeta.</li>'+
+    r:'<p>Sí. Al crear tu empresa se activan 30 días del plan SSOMA completo, sin tarjeta y sin cobro automático. Es una vez por empresa y por persona.</p><p>Si no se activó al crearla, la activas dentro del portal, en «Mi plan», o en la app, en «Planes».</p>' },
+  { t:'Planes y pagos', q:'¿Cómo se paga?', k:'pagar pago mercado pago tarjeta yape google play comprar contratar codigo mi plan renovar',
+    r:'<p>Dentro del portal, en «Mi plan», o desde la app, en «Planes». Hay dos caminos:</p>'+
+      '<ul><li><b>Por la web, con Mercado Pago:</b> un solo pago por el mes o el año que eliges, con los medios de pago que Mercado Pago te muestra. Pagando desde el portal, el plan se activa solo cuando el pago se aprueba; además recibes un código, que es el que lo activa. No se renueva solo y no guardamos tu tarjeta.</li>'+
       '<li><b>Dentro de la app de Google Play:</b> es una suscripción de Google Play. Se renueva sola hasta que la canceles y cuesta un poco más por la comisión de la tienda.</li></ul>'+
       '<p>Si renuevas antes de que venza, los días se suman.</p>' },
   { t:'Planes y pagos', q:'¿Qué pasa cuando terminan los 30 días?', k:'vence prueba termina cobran lite',
@@ -12522,7 +12721,7 @@ var FAQ = [
   { t:'Planes y pagos', q:'¿Se renueva solo? ¿Cómo cancelo?', k:'cancelar suscripcion baja renovacion automatica cobro',
     r:'<p>Pagando por la web no hay nada que cancelar: es un solo pago y, cuando vence, la cuenta vuelve a LITE si no renuevas.</p><p>La suscripción de Google Play se renueva sola y se cancela en Google Play.</p>' },
   { t:'Planes y pagos', q:'¿Dan boleta o factura?', k:'comprobante sunat ruc factura boleta',
-    r:'<p>Sí. En la app, antes de pagar por Mercado Pago, eliges boleta o factura; si no eliges, sale boleta. Si no te llegó tu comprobante, escríbenos a <a href="mailto:'+SOPORTE+'">'+SOPORTE+'</a> con el correo de tu cuenta.</p>' },
+    r:'<p>Sí. Antes de pagar por Mercado Pago —en el portal o en la app— eliges boleta o factura; si no eliges, sale boleta. Los tuyos quedan en «Mi plan», con su PDF cuando se emiten. Si no te llegó tu comprobante, escríbenos a <a href="mailto:'+SOPORTE+'">'+SOPORTE+'</a> con el correo de tu cuenta.</p>' },
   { t:'Planes y pagos', q:'Si dejo de pagar, ¿pierdo mis registros?', k:'borrar perder documentos vencido no pago',
     r:'<p>No se borra nada. La cuenta vuelve a LITE y sigues usando lo que LITE trae. Lo de los accesos de tu plan anterior —por ejemplo, las constancias o las inspecciones— queda guardado y vuelve a abrirse, con todo lo registrado, cuando retomas un plan que los incluya.</p>' },
   { t:'Planes y pagos', q:'¿Sirve para varias obras?', k:'obras proyectos multiples sedes adicional',
@@ -12686,6 +12885,7 @@ function datosDetalle(){
     '<tr><td>El identificador de este equipo<br><code>sstc_dispositivo · sstp_equipo_salto</code></td><td>Un código al azar para contar en cuántos equipos está abierta tu cuenta (dos a la vez). Va al servidor con el tipo de equipo y el navegador. En obrasstapp.com, la primera vez que entras se le pide ese código a la dirección donde vive la app —un salto de ida y vuelta—, para que la app y el portal de este navegador cuenten como un solo equipo; se anota que ya se pidió.</td><td>Hasta que borras los datos del sitio.</td></tr>'+
     '<tr><td>Tus preferencias<br><code>sstp_obra · sstp_guia_v1 · sstp_pais_… · sstp_firmante_… · sstp_cargos_… · sstp_iq_cargo_… · sstp_rq_pref</code></td><td>Recordar la obra que elegiste, que ya viste la guía, el país de la obra, los nombres y cargos que usaste en tus documentos y al firmar una inspección, y cómo armaste tu último requerimiento (para cuántos días, dónde y a quién se lo enviaste).</td><td>Hasta que borras los datos del sitio.</td></tr>'+
     '<tr><td>La invitación que abriste<br><code>sstp_cad_ficha</code></td><td>Si entraste por el enlace con el que otra empresa te invitó a su obra, guardar esa invitación mientras entras o creas tu cuenta, para que no tengas que volver a abrir el enlace.</td><td>Hasta que la aceptas o la descartas, o cierras la pestaña.</td></tr>'+
+    '<tr><td>Tu plan<br><code>sstp_pago · sstp_cod_guardados · sstp_plan_aviso · sstp_enapp · sstc_play</code></td><td>Si empiezas a pagar un plan desde el portal, recordar ese pago para activar tu plan cuando se apruebe, y el código que pagaste y guardaste para después. También, que cerraste el aviso de que tu plan vence, y si llegaste desde la app de Android (ahí el plan se paga en la app).</td><td>El pago, 10 días; el código, hasta que lo activas; el aviso, hasta que borras los datos del sitio; lo de la app, hasta que cierras la pestaña.</td></tr>'+
     '<tr><td>Este aviso<br><code>sstp_datos_ok</code></td><td>No volver a mostrártelo.</td><td>Hasta que borras los datos del sitio.</td></tr>'+
     '<tr><td>En la app: tus registros pendientes</td><td>Que la app funcione sin señal: lo que registras queda en el celular hasta que sube.</td><td>Hasta que sube, o hasta que borras los datos de la app.</td></tr>'+
     '</tbody></table></div>'+
@@ -12693,6 +12893,7 @@ function datosDetalle(){
     '<ul><li><b>Supabase</b>: aloja la base de datos y el inicio de sesión, en São Paulo, Brasil.</li>'+
     '<li><b>Google Fonts</b>: de ahí toma el portal su tipografía; tu navegador se la pide a Google.</li>'+
     '<li><b>Mercado Pago</b> o <b>Google Play</b>: solo cuando pagas un plan, con sus propias políticas.</li>'+
+    '<li>El servicio que busca el <b>RUC</b> en el padrón público (openruc.com): solo si pides factura y tocas «Buscar en SUNAT»; recibe el RUC que escribiste.</li>'+
     '<li><b>OpenStreetMap</b>, en la app: solo si prendes el sello de la foto con dirección o mapa.</li></ul>'+
     '<h3>Cómo se borra</h3>'+
     '<p>«Salir» borra tu sesión de este equipo. Para borrar todo lo demás, usa «Borrar datos del sitio» en la configuración de tu navegador: la próxima vez empiezas de cero. Tu información de la obra no se pierde: está en la nube, en tu cuenta.</p>'+
@@ -13099,7 +13300,10 @@ function altaCreada(j, pr){
   else if(q==='ya_usada') nota='<p class="alta-nota ojo">La prueba gratis de esta empresa ya se usó antes, así que empiezas en el plan LITE.</p>';
   else if(q==='ya_la_usaste') nota='<p class="alta-nota ojo">Tu mes gratis ya lo usaste con otra empresa (es uno por persona), así que esta empieza en el plan LITE.</p>';
   else if(q==='ya_tiene_plan') nota='<p class="alta-nota">Esta empresa ya tiene un plan activo.</p>';
-  else nota='<p class="alta-nota ojo"><b>No se pudo activar tu mes gratis.</b> Entra a «Planes» en la app y toca «Activar mi mes gratis»; si sigue sin salir, escríbenos a '+SOPORTE+' y lo activamos a mano. Tu empresa quedó creada igual.</p>';
+  else nota='<p class="alta-nota ojo"><b>No se pudo activar tu mes gratis.</b> Entra a tu portal y, en «Mi plan», toca «Activar mi mes gratis»; si sigue sin salir, escríbenos a '+SOPORTE+' y lo activamos a mano. Tu empresa quedó creada igual.</p>';
+  /* 06/10/2026 · el plan que eligió en la página de inicio: se paga adentro, en «Mi plan» */
+  var elegido=INI.plan ? INI_PLANES.filter(function(P){ return P.id===INI.plan; })[0] : null;
+  if(elegido) nota+='<p class="alta-nota" id="alta-plan">Elegiste el plan <b>'+esc(elegido.n)+'</b>: lo '+(INI.usd ? 'pides' : 'pagas')+' cuando quieras dentro del portal, en «Mi plan».</p>';
   c.innerHTML='<div class="alta-caja alta-listo"><h1 style="font-size:22px;margin:0 0 4px">Empresa creada</h1>'+
     '<p class="sub" style="margin:0">'+esc(j.nombre||'')+'</p>'+
     '<div class="cod" id="alta-cod">'+esc(j.codigo||'')+'</div>'+
@@ -13539,6 +13743,9 @@ function mostrarPortal(){
 function limpiarSesion(){
   vivoCerrar(); borrarToken(); YO={empresas:[],obra:null,rol:'',nombre:'',dueno:false};
   try{ CADP.ini=null; CADP.de=''; CADP.alta=false; }catch(_cd){}
+  /* 06/10/2026 · «Mi plan»: nada de la cuenta que sale queda a la vista de la que entra */
+  try{ PLANW.mi=null; PLANW.de=''; PLANW.t=0; PLANW.yendo=null; PLANW.regalo=0;
+       if(typeof PLW==='object' && PLW){ clearTimeout(PLW.reloj); PLW.d=null; PLW.de=''; PLW.aviso=null; PLW.f=null; PLW.guardado=null; PLW.revisando=null; PLW.activando=false; } }catch(_pl){}
   try{ if(typeof cerrarHoja==='function') cerrarHoja(); }catch(_h){}
   /* el que entra después empieza por el principio, no por la sección
      donde el anterior se quedó */
@@ -14066,8 +14273,10 @@ function topeTrabP(){
 function nuevaFichaP(){
   var tope=topeTrabP(), activos=(VISTA.cache.sst_trabajador||[]).filter(function(t){ return String(t.estatus||'activo')!=='cesado'; }).length;
   if(activos>=tope){
+    /* 06/10/2026 · el plan se cambia aquí mismo, en «Mi plan» */
     dialogo({titulo:'Llegaste al tope de tu plan', texto:'Tu obra tiene '+activos+' trabajadores activos y el plan '+(ESP_PLAN[(YO.obra||{}).plan]||'actual')+' llega a '+tope+'. '+
-      'Para sumar más, sube de plan desde la app (Ajustes → Mi plan), o da de baja a quien ya no esté.', si:'Entendido', no:''});
+      'Para sumar más, sube de plan en «Mi plan», o da de baja a quien ya no esté.', si:(planwPuedePagar() ? 'Ver los planes' : 'Ver mi plan'), no:'Cerrar'})
+      .then(function(v){ if(v===true) navegar('plan'); });
     return;
   }
   FP.f={ nuevo:true, estatus:'activo' }; pintarFichaP();
@@ -14720,6 +14929,8 @@ var GUIA_PASOS = [
     tx:'Capacitaciones, charlas del mes, boletines y noticias: lo que programes o publiques aquí le sale a tu gente en su app, igual que si lo hicieras en el celular.' },
   { sel:'#qrp-todos', tit:'Los carteles QR, desde la impresora',
     tx:'Cada cartel abre lo que está en su carpeta. Imprímelos todos de una vez; cuando subas la versión nueva de un documento, el cartel pegado abre la nueva.' },
+  { sel:'#rail .nav[data-v="plan"]', tit:'Tu plan',
+    tx:'Aquí ves en qué plan está tu empresa y cuánto le queda. Quien la registró activa aquí el mes gratis, y elige y paga el plan sin salir del portal.' },
   { sel:'#bt-app', tit:'La app, para el campo',
     tx:'ATS, EPP, capacitación y reportes se registran en el celular. Este botón abre la app en otra pestaña; aquí revisas, confirmas y cierras, y programas y publicas lo que tu gente ve en su app.' },
   { sel:'#bt-guia', tit:'Esta guía',
