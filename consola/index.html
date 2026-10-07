@@ -2,6 +2,18 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<script>
+/* 06/10/2026 · la consola también se abre dentro de obrasstapp.com. Si llega como «…/consola» (sin la barra final)
+   se pone la barra: sin ella sus archivos (sw.js, los íconos, el manifiesto) se pedirían fuera de consola/.
+   Se intenta UNA vez por pestaña: si el servidor la devolviera otra vez sin la barra, no se queda dando vueltas
+   (la consola abre igual: es un solo archivo; ahí solo faltarían su ícono y los avisos de este navegador). */
+(function(){ try{
+  var p = location.pathname, k = 'sstc_barra', ya = false;
+  if(!/\/consola$/.test(p)){ try{ sessionStorage.removeItem(k); }catch(e){} return; }
+  try{ ya = sessionStorage.getItem(k) === '1'; sessionStorage.setItem(k, '1'); }catch(e){ ya = true; }
+  if(!ya) location.replace(p + '/' + location.search + location.hash);
+}catch(e){} })();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Consola OBRASST</title>
 <meta name="description" content="Solo para el creador de OBRASST: fallas, ventas, empresas, códigos y avisos.">
@@ -277,6 +289,23 @@ td .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px}
 .lista-ult .tx small{display:block; color:var(--gris); font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .lista-ult .der{text-align:right; flex:0 0 auto; font-size:12.5px; color:var(--gris); font-variant-numeric:tabular-nums}
 .lista-ult .der b{display:block; color:var(--tinta); font-size:13.5px}
+/* 06/10/2026 · las cuentas con acceso (van después de las reglas de .lista-ult, y pesan más: ahí un <button> es la
+   fila entera y los textos se cortan con «…»; aquí los botones son botones y nada se corta) */
+.lista-ult.cu-lista .fila{align-items:center}
+.lista-ult.cu-lista .tx b, .lista-ult.cu-lista .tx small{white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere}
+.lista-ult.cu-lista .tx small{margin-top:2px; line-height:1.4}
+.lista-ult.cu-lista .cu-der{display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; flex:0 0 auto; text-align:right}
+.lista-ult.cu-lista .cu-der .bt{width:auto; display:inline-flex; align-items:center; text-align:center; gap:8px; padding:7px 11px; font-weight:500; font-size:13px; line-height:1;
+  color:var(--bt-fg); background:var(--bt-bg); border:1px solid var(--bt-bg); border-radius:7px; cursor:pointer}
+.lista-ult.cu-lista .cu-der .bt:hover{background:var(--bt-hover)}
+.lista-ult.cu-lista .cu-der .bt.sec{background:var(--panel); color:var(--tinta); border-color:var(--raya2)}
+.lista-ult.cu-lista .cu-der .bt.sec:hover{background:var(--fondo)}
+@media (max-width:560px){
+  .lista-ult.cu-lista .fila{flex-wrap:wrap; row-gap:9px}
+  .lista-ult.cu-lista .tx{flex:1 1 100%}
+  .lista-ult.cu-lista .cu-der{flex:1 1 100%; justify-content:space-between}
+  .lista-ult.cu-lista .cu-der .bt{padding:9px 14px}
+}
 
 /* ── el cajón y el diálogo ── */
 .hoja-fondo{position:fixed; inset:0; z-index:30; background:var(--velo); display:flex; justify-content:flex-end}
@@ -403,7 +432,7 @@ table.cen-ped td{vertical-align:top}
     </form>
     <div class="puerta-pie">
       <p>No es parte de ningún plan. Las demás cuentas no pueden abrirla, aunque tengan Gestión SST.</p>
-      <p class="puerta-bts"><a class="bt sec chico" href="../">Abrir la app</a> <a class="bt sec chico" href="../portal/">Abrir el portal</a></p>
+      <p class="puerta-bts"><a class="bt sec chico" href="../" data-a="app">Abrir la app</a> <a class="bt sec chico" href="../portal/" data-a="portal">Abrir el portal</a></p>
     </div>
   </div>
 </div>
@@ -414,9 +443,10 @@ table.cen-ped td{vertical-align:top}
     <div class="marca"><span class="marca-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="11" width="12" height="9" rx="2" fill="#F5B700"/><path d="M8.5 11V8.5a3.5 3.5 0 0 1 7 0V11" fill="none" stroke="#8C96A3" stroke-width="1.8"/></svg></span>
       <span><b>OBRASST</b><small>Consola del creador</small></span></div>
     <h1>Esta consola es solo del creador</h1>
-    <p class="candado">La cuenta <b id="cerrado-correo"></b> no tiene acceso. No depende del plan: aquí entra únicamente la cuenta del creador de OBRASST.</p>
+    <p class="candado">La cuenta <b id="cerrado-correo"></b> no tiene acceso. No depende del plan: aquí entran únicamente las cuentas del creador de OBRASST.</p>
+    <p class="ayuda" id="cerrado-vinc" style="margin:-8px 0 18px">¿Es una de tus cuentas? Entra con la que ya tiene acceso y, en «Resumen», baja hasta «Cuentas con acceso»: ahí se vincula.</p>
     <div class="puerta-bts"><button class="bt" type="button" id="cerrado-salir">Entrar con otra cuenta</button>
-      <a class="bt sec" href="../">Abrir la app</a></div>
+      <a class="bt sec" href="../" data-a="app">Abrir la app</a></div>
   </div>
 </div>
 
@@ -470,6 +500,12 @@ table.cen-ped td{vertical-align:top}
 var SB = { url:'https://gwjjkknuiumgysezeatz.supabase.co',
            key:'sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx' };
 var LS_TOK = 'sstc_consola_cuenta';   /* la sesión de la consola: aparte de la de la app y del portal */
+/* 06/10/2026 · la consola también se abre dentro de obrasstapp.com (…/consola/): ahí el portal es la raíz del sitio y
+   la app está en /app. En GitHub Pages, como siempre: ../portal/ y ../ */
+function enFamilia(){ return /(^|\.)obrasstapp\.com$|^obrasst\.netlify\.app$/i.test(location.hostname); }
+function urlApp(){ return enFamilia() ? '/app' : '../'; }
+function urlPortal(){ return enFamilia() ? '/' : '../portal/'; }
+function ponerEnlaces(){ [].forEach.call(document.querySelectorAll('a[data-a]'), function(a){ a.setAttribute('href', a.getAttribute('data-a') === 'app' ? urlApp() : urlPortal()); }); }
 var TOK = null;
 var CONS = { admin:null, fallasNuevas:null, reclamosPend:null, ultimo:null };
 var $ = function(id){ return document.getElementById(id); };
@@ -682,7 +718,7 @@ function pintarNav(){
   $('rail').innerHTML = '<div class="grupo">Solo tú</div>' + VISTAS.map(function(v){
     return '<button type="button" class="nav'+(VISTA.actual===v.id?' on':'')+'" data-v="'+v.id+'"'+(VISTA.actual===v.id?' aria-current="page"':'')+'>'+
       IC[v.id]+'<span>'+esc(v.n)+'</span>'+insignia(v)+'</button>';
-  }).join('') + '<div class="pie-rail">No es parte de ningún plan: solo la ve la cuenta del creador.<br><a href="../portal/">Portal</a> · <a href="../">App</a></div>';
+  }).join('') + '<div class="pie-rail">No es parte de ningún plan: solo la ve la cuenta del creador.<br><a href="'+esc(urlPortal())+'">Portal</a> · <a href="'+esc(urlApp())+'">App</a></div>';
   $('tabs').innerHTML = VISTAS.map(function(v){
     return '<button type="button" class="tab'+(VISTA.actual===v.id?' on':'')+'" data-v="'+v.id+'"'+(VISTA.actual===v.id?' aria-current="page"':'')+'>'+
       IC[v.id]+'<span>'+esc(v.c)+'</span>'+insignia(v)+'</button>';
@@ -970,13 +1006,124 @@ function vistaResumen(caja){
               '<span class="der"><b>'+esc(soles(x.monto, x.moneda))+'</b>'+esc(fechaHora(x.fecha))+'</span></div></li>';
           }).join('')+'</ul>' : '<div class="vacio"><b>Ninguna venta todavía</b>Aparecen al aprobarse un pago.</div>'))+'</div>'+
       '</div></section>';
+      /* 06/10/2026 · quién entra a esta consola (se pinta aparte: con el servidor de antes, no sale) */
+      h+='<section class="bloque" id="cu-bloque" aria-labelledby="r-cu" hidden></section>';
       caja.innerHTML = h;
+      cuentasPintar();
       g30Cablear('g-ventas'); g30Cablear('g-fallas');
       [].forEach.call(caja.querySelectorAll('[data-ir]'), function(b){ b.onclick=function(){ navegar(b.getAttribute('data-ir')); }; });
       [].forEach.call(caja.querySelectorAll('[data-falla]'), function(b){ b.onclick=function(){ FALLAC.abrir=b.getAttribute('data-falla'); FALLAC.filtro='todas'; navegar('fallas'); }; });
     }, function(cod){ if(!RES.r || cod===404) noAbre(caja, null, cod, '2026-10-12-consola'); });
   }
   VISTA.recargar=pinta; pinta();
+}
+
+/* ══ 1b · LAS CUENTAS CON ACCESO (06/10/2026) ════════════════════════
+   Marcelo: «…iniciar sesión con el correo info@…, …@outlook.com o …@gmail.com como únicos correos que puedan
+   entrar ahí». La lista de correos vive en el servidor (aquí no se escribe ninguno) y cada correo entra solo
+   cuando su CUENTA está vinculada: el proyecto no confirma correos, así que «el correo está en la lista» no
+   alcanza (entraría quien creara primero una cuenta con ese correo). Vincular pide las dos cosas a la vez:
+   la sesión de quien ya entra (pide una llave de 5 minutos) y la contraseña de la otra cuenta (con ella esa
+   cuenta se presenta y entrega la llave). Servidor: sql/2026-10-26-consola-cuentas.sql. */
+var CU = { lista:null, yendo:false };
+var CU_MAL = { no_eres_admin:'Esta cuenta no es la del creador.', no_esta:'Ese correo no está en la lista de la consola.', eres_tu:'Esa es la cuenta con la que estás dentro.',
+               llave_mala:'No se pudo vincular: pasó mucho tiempo. Inténtalo otra vez.', sin_sesion:'No se pudo entrar con esa cuenta. Inténtalo otra vez.' };
+function cuentasPintar(){
+  var c=$('cu-bloque'); if(!c) return;
+  sbRpc('sst_admin_cuentas', {}).then(function(r){
+    c=$('cu-bloque'); if(!c) return;
+    if(!r || !r.ok){ c.hidden=true; return; }
+    CU.lista = r.lista || [];
+    var falta = CU.lista.filter(function(x){ return !x.vinculada; }).length;
+    c.innerHTML='<div class="bloque-cab"><h2 id="r-cu">Cuentas con acceso</h2><span class="sub">Las únicas que entran a esta consola'+(falta ? ' · '+(falta===1 ? 'falta vincular 1' : 'faltan vincular '+falta) : '')+'</span></div>'+
+      '<div class="tarj"><ul class="lista-ult cu-lista" id="cu-lista">'+CU.lista.map(function(x){
+        var det = x.yo ? 'Es la cuenta con la que estás dentro'+(x.desde ? ' · con acceso desde el '+fechaLima(x.desde) : '')
+                : (x.vinculada ? 'Con acceso desde el '+fechaLima(x.desde)
+                : (x.existe ? 'La cuenta existe, pero todavía no está vinculada: no entra' : 'Todavía no tiene cuenta: se crea al vincularla'));
+        return '<li data-cu="'+esc(x.correo)+'"><div class="fila"><span class="tx"><b>'+esc(x.correo)+'</b><small>'+esc(det)+'</small></span>'+
+          '<span class="der cu-der">'+(x.vinculada ? '<span class="pill ok">Con acceso</span>' : '<span class="pill ojo">Sin vincular</span>')+
+          (x.yo ? '' : (x.vinculada ? '<button type="button" class="bt sec chico" data-cu-quitar="'+esc(x.correo)+'">Quitar acceso</button>'
+                                    : '<button type="button" class="bt chico" data-cu-vinc="'+esc(x.correo)+'">Vincular</button>'))+'</span></div></li>';
+      }).join('')+'</ul>'+
+      '<p class="ayuda" style="margin:0; padding:10px 16px 13px; border-top:1px solid var(--raya)">Un correo de esta lista entra solo cuando su cuenta está vinculada. Así, aunque alguien cree una cuenta con uno de estos correos, no entra. Para vincular una, se escribe su contraseña.</p></div>';
+    c.hidden=false;
+    [].forEach.call(c.querySelectorAll('[data-cu-vinc]'), function(b){ b.onclick=function(){ cuVincular(b.getAttribute('data-cu-vinc')); }; });
+    [].forEach.call(c.querySelectorAll('[data-cu-quitar]'), function(b){ b.onclick=function(){ cuQuitar(b.getAttribute('data-cu-quitar')); }; });
+  }, function(){ var z=$('cu-bloque'); if(z) z.hidden=true; });      /* el servidor de antes (404) o sin señal: el bloque no sale */
+}
+function _cuClaveMala(k){ return (k.length < 8 || !/[a-z]/.test(k) || !/[A-Z]/.test(k) || !/[0-9]/.test(k)) ? 'La contraseña necesita 8 caracteres o más, con una mayúscula, una minúscula y un número.' : ''; }
+function cuVincular(correo){
+  var x = (CU.lista || []).filter(function(y){ return y.correo === correo; })[0]; if(!x || x.vinculada) return;
+  var crear = !x.existe;
+  abrirHoja('Vincular esta cuenta', correo,
+    '<p class="ayuda" style="margin:0 0 14px">'+(crear
+      ? 'Todavía no hay una cuenta de OBRASST con ese correo. Se crea ahora, con la contraseña que escribas, y queda con acceso a la consola. Con esa misma cuenta se entra a la app y al portal.'
+      : 'Escribe la contraseña de esa cuenta. Con eso se comprueba que es tuya y queda con acceso a la consola.')+'</p>'+
+    '<div class="campo"><label for="cu-clave">'+(crear ? 'Contraseña para esa cuenta' : 'Contraseña de esa cuenta')+'</label>'+
+      '<input id="cu-clave" type="password" autocomplete="new-password" autocapitalize="off" spellcheck="false"></div>'+
+    (crear ? '<div class="campo"><label for="cu-clave2">Repítela</label><input id="cu-clave2" type="password" autocomplete="new-password" autocapitalize="off" spellcheck="false"></div>' : '')+
+    '<div id="cu-msg" class="msg" role="alert"></div>'+
+    (crear ? '' : '<p class="ayuda">¿No la recuerdas? Cámbiala desde el portal o la app, en «¿Olvidaste tu contraseña?», y vuelve.</p>'),
+    '<button type="button" class="bt sec" id="cu-no">Cancelar</button><button type="button" class="bt" id="cu-si">'+(crear ? 'Crear y vincular' : 'Vincular')+'</button>');
+  $('cu-no').onclick=cerrarHoja;
+  $('cu-si').onclick=function(){ cuHacer(correo, crear); };
+  $('cu-clave').onkeydown=function(ev){ if(ev.key==='Enter' && !crear){ ev.preventDefault(); cuHacer(correo, crear); } };
+  setTimeout(function(){ try{ $('cu-clave').focus(); }catch(e){} }, 60);
+}
+function cuHacer(correo, crear){
+  var k=($('cu-clave')||{}).value||'', m=$('cu-msg'), b=$('cu-si'); if(!m || !b || CU.yendo) return;
+  var mal=function(t){ CU.yendo=false; b.disabled=false; b.textContent = crear ? 'Crear y vincular' : 'Vincular'; m.className='msg mal'; m.textContent=t; };
+  m.className='msg'; m.textContent='';
+  if(!k){ mal('Escribe la contraseña.'); try{ $('cu-clave').focus(); }catch(e){} return; }
+  if(crear){
+    var pm=_cuClaveMala(k); if(pm){ mal(pm); return; }
+    if(k !== (($('cu-clave2')||{}).value||'')){ mal('Las dos contraseñas no son iguales.'); return; }
+  }
+  CU.yendo=true; b.disabled=true; b.textContent='Vinculando…';
+  var llave='', otra='';
+  /* 1 · la llave, con la sesión de quien ya entra */
+  sbRpc('sst_admin_llave', {p_correo:correo}).then(function(r){
+    if(!r || !r.ok || !r.llave) return Promise.reject({nuestro:CU_MAL[(r&&r.motivo)||''] || 'No se pudo empezar. Inténtalo otra vez.'});
+    llave=r.llave;
+    /* 2 · la otra cuenta: entrar (o crearla) con la contraseña escrita. No toca la sesión de la consola */
+    return crear ? authPost('signup', {email:correo, password:k}) : authPost('token?grant_type=password', {email:correo, password:k});
+  }).then(function(j){
+    if(!j || !j.access_token) return Promise.reject({nuestro: crear ? 'La cuenta se creó, pero falta confirmar su correo: abre el enlace que llegó a ese buzón y vuelve a tocar «Vincular».' : 'No se pudo entrar con esa cuenta. Inténtalo otra vez.'});
+    otra=j.access_token;
+    /* 3 · esa cuenta se presenta con la llave */
+    return fetch(SB.url+'/rest/v1/rpc/sst_admin_vincularme', {method:'POST', headers:{'apikey':SB.key, 'Content-Type':'application/json', 'Authorization':'Bearer '+otra},
+                 body:JSON.stringify({p_llave:llave})}).then(function(r){ return r.ok ? r.json() : Promise.reject({nuestro:'El servidor no dejó vincularla ('+r.status+'). Inténtalo otra vez.'}); });
+  }).then(function(v){
+    /* la sesión de la otra cuenta que se abrió para esto se cierra: no queda nada suyo en este navegador */
+    try{ fetch(SB.url+'/auth/v1/logout?scope=local', {method:'POST', headers:{'apikey':SB.key, 'Authorization':'Bearer '+otra}}).catch(function(){}); }catch(e){}
+    if(!v || !v.ok) return Promise.reject({nuestro:CU_MAL[(v&&v.motivo)||''] || 'No se pudo vincular. Inténtalo otra vez.'});
+    CU.yendo=false; cerrarHoja();
+    toast('Listo: '+correo+' ya entra a la consola.');
+    cuentasPintar();
+  }).catch(function(e){
+    if(otra){ try{ fetch(SB.url+'/auth/v1/logout?scope=local', {method:'POST', headers:{'apikey':SB.key, 'Authorization':'Bearer '+otra}}).catch(function(){}); }catch(_e){} }
+    if(e && e.nuestro){ mal(e.nuestro); return; }
+    var t = e && typeof e==='object' ? String(e.error_code||e.error||e.msg||e.message||'') : '';
+    if(/weak|password should/i.test(t)) mal('La contraseña necesita 8 caracteres o más, con una mayúscula, una minúscula y un número.');
+    else if(/already|registered|exists/i.test(t)){
+      /* se quiso crear y ya existía (alguien la creó entre tanto): se pide su contraseña de verdad */
+      mal('Ya hay una cuenta con ese correo. Cierra, toca «Vincular» otra vez y escribe su contraseña; si no la sabes, cámbiala desde el portal, en «¿Olvidaste tu contraseña?».');
+      cuentasPintar();
+    }
+    else if(/invalid|credentials|grant/i.test(t)) mal('La contraseña no es esa. Si no la recuerdas, cámbiala desde el portal o la app, en «¿Olvidaste tu contraseña?», y vuelve.');
+    else if(/confirm/i.test(t)) mal('Esa cuenta todavía no confirmó su correo: abre el enlace que llegó a ese buzón y vuelve.');
+    else mal('No hubo conexión con el servidor. Inténtalo otra vez.');
+  });
+}
+function cuQuitar(correo){
+  confirmar('Quitar el acceso', correo+' dejará de entrar a la consola. Su cuenta no se borra: sigue sirviendo para la app y el portal, y la puedes volver a vincular cuando quieras.', {si:'Quitar acceso', no:'Cancelar', mal:true})
+    .then(function(si){
+      if(!si) return;
+      sbRpc('sst_admin_desvincular', {p_correo:correo}).then(function(r){
+        if(r && r.ok){ toast(correo+' ya no entra a la consola.'); cuentasPintar(); }
+        else toast(CU_MAL[(r&&r.motivo)||''] || 'No se pudo quitar. Inténtalo otra vez.');
+      }, function(){ toast('No hubo conexión. Inténtalo otra vez.'); });
+    });
 }
 
 /* ══ 2 · LAS FALLAS (lo que tenía el portal, ahora aquí) ══════════════
@@ -2851,6 +2998,7 @@ if(navigator.serviceWorker) navigator.serviceWorker.addEventListener('message', 
 });
 
 (function(){
+  ponerEnlaces();
   registrarSW();
   TOK = leer(LS_TOK, null);
   if(!TOK || !TOK.access_token){ TOK=null; mostrar('entrada'); return; }
