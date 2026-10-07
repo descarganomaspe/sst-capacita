@@ -177,6 +177,35 @@ function plwAtarAviso(){
   Array.prototype.forEach.call(z.querySelectorAll('[data-plw]'), function(b){ b.onclick = function(){ plwAccion(b.getAttribute('data-plw'), b); }; });
 }
 
+/* ── el respaldo: avisar que pagué ──
+   Marcelo (06/10/2026): «podría ser como respaldo un mensaje al WhatsApp o al correo, mencionando: he realizado un pago
+   para el plan …, esperando el código, si es que no funciona automáticamente». El mensaje va ya escrito, con lo que hace
+   falta para ubicar el pago: el plan, el periodo y el monto, la empresa y su código, la cuenta, cuándo empezó y la
+   referencia del comprobante. Lo manda la persona desde SU WhatsApp o su correo: de aquí no sale nada solo.
+   p: el pago apuntado (sin él, el último que llegó a abrir Mercado Pago; si no hay, uno general). cod: el código, si ya salió */
+function plwRespaldo(p, cod){
+  if(!p) p = planwPagos().filter(function(x){ return x.abrio; })[0] || null;
+  var o = YO.obra || {}, e = (p && _plwEmp(p.emp)) || o, P = p ? (_plwPlan(p.plan) || { n:p.plan }) : null, L = [];
+  L.push('Hola. He realizado un pago para ' + (P ? 'el plan ' + P.n + ' de OBRASST (' + _plwPer(p.per) + ' · ' + _plata(p.monto) + ')' : 'un plan de OBRASST') +
+         (cod ? ' y mi plan no se activó con el código que me salió.' : ' y mi plan todavía no se activa. Quedo a la espera del código.'));
+  L.push('Empresa: ' + (e.padre_nombre || e.nombre || '—') + (e.codigo ? ' (código ' + e.codigo + ')' : ''));
+  if(TOK && TOK.correo) L.push('Cuenta: ' + TOK.correo);
+  if(cod) L.push('Código: ' + cod);
+  if(p){
+    var d = new Date(p.t0 || p.t);
+    L.push('Pago iniciado: ' + dos(d.getDate()) + '/' + dos(d.getMonth() + 1) + '/' + d.getFullYear() + ', ' + dos(d.getHours()) + ':' + dos(d.getMinutes()));
+    if(p.cp) L.push('Referencia: ' + String(p.cp).slice(0, 8));
+  }
+  var t = L.join('\n'), wa = (typeof SOPORTE_WA === 'string' && /^\d{8,15}$/.test(SOPORTE_WA)) ? SOPORTE_WA : '';
+  return { t:t, wa:wa ? 'https://wa.me/' + wa + '?text=' + encodeURIComponent(t) : '',
+           correo:'mailto:' + SOPORTE + '?subject=' + encodeURIComponent('OBRASST · pagué' + (P ? ' el plan ' + P.n : '') + ' y no se activó') + '&body=' + encodeURIComponent(t) };
+}
+function plwRespaldoBts(p, cod){
+  var r = plwRespaldo(p, cod);
+  return (r.wa ? '<a class="bt sec chico" data-resp="wa" href="' + esc(r.wa) + '" target="_blank" rel="noopener">Avisar por WhatsApp</a>' : '') +
+         '<a class="bt sec chico" data-resp="correo" href="' + esc(r.correo) + '">Avisar por correo</a>';
+}
+
 /* ── el pago que se espera ── */
 function plwEsperaHTML(){
   var p = planwPagos().filter(function(x){ return x.abierto; })[0]; if(!p) return '';
@@ -188,7 +217,9 @@ function plwEsperaHTML(){
     '<div class="acciones"><button type="button" class="bt chico" data-plw="revisar">Ya pagué: revisar ahora</button>' +
     '<a class="bt sec chico" href="' + esc(plwEnlace(p.slug, p.cp)) + '" target="_blank" rel="noopener">Abrir Mercado Pago otra vez</a>' +
     '<button type="button" class="bt sec chico" data-plw="dejar">No voy a pagar ahora</button></div>' +
-    '<p class="plw-chico" id="plw-espera-msg">¿Te salió un código en pantalla o te llegó por correo? También sirve: escríbelo abajo, en «Tengo un código».</p></div>';
+    '<p class="plw-chico" id="plw-espera-msg">¿Te salió un código en pantalla o te llegó por correo? También sirve: escríbelo abajo, en «Tengo un código».</p>' +
+    '<div class="plw-resp" id="plw-resp"><span><b>¿Ya pagaste y no se activa?</b> Espera unos minutos; si sigue igual, avísanos y lo activamos nosotros. El mensaje ya va escrito con los datos de tu pago.</span>' +
+    '<span class="plw-resp-b">' + plwRespaldoBts(p) + '</span></div></div>';
 }
 
 /* ── el estado ── */
@@ -307,7 +338,15 @@ function plwCodigoHTML(){
     '<div class="tarj-cuerpo"><label for="plw-cod">Código del plan</label><div class="plw-cod-f"><input id="plw-cod" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="PRV · SST · EQS · GES">' +
     '<button type="button" class="bt" id="plw-cod-bt" data-plw="codigo">Activar</button></div>' +
     '<p class="msg" id="plw-cod-msg" role="status"></p>' +
-    '<p class="ayuda">Cada código vale una sola vez y se queda en esta empresa. El de un mes dura 30 días y el de un año, 365; los días se suman a los que te queden.</p></div></div>';
+    '<p class="ayuda">Cada código vale una sola vez y se queda en esta empresa. El de un mes dura 30 días y el de un año, 365; los días se suman a los que te queden.</p>' +
+    plwRespaldoLineaHTML() + '</div></div>';
+}
+/* y siempre a mano: quien pagó (aquí, en la app o como sea) y no tiene su plan, avisa desde aquí */
+function plwRespaldoLineaHTML(){
+  var r = plwRespaldo();
+  return '<p class="ayuda plw-resp-l" id="plw-resp-cod">¿Pagaste y no te llegó el código, o tu plan no se activó? Avísanos por ' +
+    (r.wa ? '<a data-resp="wa" href="' + esc(r.wa) + '" target="_blank" rel="noopener">WhatsApp</a> o por ' : '') +
+    '<a data-resp="correo" href="' + esc(r.correo) + '">correo</a>: el mensaje ya va escrito.</p>';
 }
 /* ── lo que se pide suelto ── */
 function plwExtrasHTML(L){
@@ -605,7 +644,7 @@ function plwRevisarPago(manual){
     }
     if(manual){
       var m2 = $('plw-espera-msg');
-      if(m2){ m2.className = 'plw-chico plw-ojo'; m2.textContent = 'Todavía no vemos tu pago. Si ya pagaste, espera un minuto y vuelve a tocar; si te salió un código en pantalla, escríbelo abajo, en «Tengo un código».'; }
+      if(m2){ m2.className = 'plw-chico plw-ojo'; m2.textContent = 'Todavía no vemos tu pago. Si ya pagaste, espera un minuto y vuelve a tocar; si te salió un código en pantalla, escríbelo abajo, en «Tengo un código». Y si sigue sin activarse, avísanos con los botones de aquí abajo.'; }
     }
     return false;
   }, function(){
@@ -619,6 +658,8 @@ function _plwQuitarPago(p){
   /* con él se van los que llevan su mismo comprobante: son el mismo pago (el servidor reusa el comprobante de un producto sin pagar) */
   planwPagosGuardar(planwPagos().filter(function(x){ return !((x.t === p.t && x.slug === p.slug) || (p.cp && x.cp === p.cp)); }));
   if(!planwPagos().length) clearTimeout(PLW.reloj);
+  /* la insignia del menú deja de decir «pago…» (también cuando el pago llegó y el plan no se activó) */
+  try{ pintarRail(); }catch(e){}
 }
 function plwPagado(p, fila){
   var cod = (fila.codigos || [])[0], P = _plwPlan(p.plan) || { n:p.plan, orden:_plwOrdenDe(p.plan) }, e = _plwEmp(p.emp);
@@ -626,7 +667,7 @@ function plwPagado(p, fila){
   if(p.cp) planwPagosGuardar(planwPagos().filter(function(x){ return !(x.cp === p.cp && !(x.t === p.t && x.slug === p.slug)); }));
   if(!cod){
     _plwQuitarPago(p);
-    plwAvisar('ojo', '<b>Recibimos tu pago de ' + esc(P.n) + ', pero el código no salió solo.</b> No tienes que pagar otra vez: escríbenos a <a href="mailto:' + SOPORTE + '">' + SOPORTE + '</a> con el correo de tu cuenta y lo activamos a mano.');
+    plwAvisar('ojo', '<b>Recibimos tu pago de ' + esc(P.n) + ', pero el código no salió solo.</b> No tienes que pagar otra vez: avísanos por WhatsApp o por correo y lo activamos a mano. El mensaje ya va escrito con los datos de tu pago.', plwRespaldoBts(p));
     plwRepintar(); return;
   }
   if(!e){
@@ -710,7 +751,8 @@ function plwActivar(cod, emp, op){
     if(op.pago){
       _plwQuitarPago(op.pago);
       plwAvisar('ojo', '<b>Recibimos tu pago, pero el plan no se activó solo.</b> ' + esc(t) + ' Tu código es <span class="plw-mono">' + esc(cod) + '</span>: ' +
-        (q === 'no_eres_dueno' ? 'pásaselo a quien registró la empresa.' : 'si no logras activarlo abajo, en «Tengo un código», escríbenos a <a href="mailto:' + SOPORTE + '">' + SOPORTE + '</a>.'));
+        (q === 'no_eres_dueno' ? 'pásaselo a quien registró la empresa.' : 'si no logras activarlo abajo, en «Tengo un código», avísanos por WhatsApp o por correo.'),
+        q === 'no_eres_dueno' ? '' : plwRespaldoBts(op.pago, cod));
       plwRepintar();
     } else if(op.msg){ op.msg.className = 'msg mal'; op.msg.textContent = t; }
     else plwAvisar('ojo', '<b>' + esc(t) + '</b>');
@@ -836,6 +878,11 @@ function _plwCss(){
     '.plw-espera h2{font-size:16px;display:flex;align-items:flex-start;gap:10px;line-height:1.35}.plw-espera h2 .plw-gira{margin-top:3px}.plw-espera p{margin:0;font-size:14px;line-height:1.55;max-width:90ch}.plw-espera p b{color:var(--tinta)}',
     '.plw-gira{flex:0 0 auto;width:16px;height:16px;border-radius:50%;border:2px solid #9DB9DA;border-top-color:var(--azul);animation:plw-gira 1s linear infinite}',
     '@keyframes plw-gira{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.plw-gira{animation:none}}',
+    /* el respaldo: avisar por WhatsApp o por correo */
+    '.plw-resp{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;border-top:1px dashed #BCD0EA;padding-top:11px;margin-top:2px;font-size:13px;line-height:1.5;color:var(--texto)}',
+    '.plw-resp>span:first-child{flex:1 1 320px;min-width:0;max-width:78ch}.plw-resp b{color:var(--tinta);font-weight:600}.plw-resp-b{display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto}',
+    '.plw-resp-l{margin-top:8px}.plw-resp-l a{font-weight:500}',
+    '@media (max-width:520px){.plw-resp-b{flex:1 1 100%}.plw-resp-b .bt{flex:1 1 0;text-align:center}}',
     /* el estado */
     '.plw-estado .tarj-cuerpo{display:grid;gap:12px;padding:20px 22px}',
     '.plw-ceja{margin:0;font-size:11.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--gris)}',
