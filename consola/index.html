@@ -1561,6 +1561,121 @@ function diaLima(iso){
   try{ return new Intl.DateTimeFormat('en-CA', {timeZone:'America/Lima', year:'numeric', month:'2-digit', day:'2-digit'}).format(d); }
   catch(e){ return String(iso).slice(0,10); }
 }
+/* ══ 08/10/2026 · EL DUEÑO Y EL LUGAR (sql/2026-10-29-ubicacion-y-consola.sql) ══════════
+   Marcelo: «que salga ahí qué empresa está registrada, el nombre del creador, correo y su número de
+   celular, y esa data poder descargarlo. Y quizás también, qué provincia está su proyecto, país,
+   departamento, distrito». Los datos del dueño son los de su cuenta (los que puso al registrarse o en
+   «Mis datos»); el celular se muestra y se revisa con celular-base.js, el mismo de la app y la web. */
+var UBI_NIVELES = { pe:['Departamento','Provincia','Distrito'], cl:['Región','Comuna'], co:['Departamento','Municipio'], ar:['Provincia','Localidad'],
+  mx:['Estado','Municipio'], us:['Estado','Ciudad'], ca:['Provincia o territorio','Ciudad'], py:['Departamento','Distrito'], uy:['Departamento','Localidad'],
+  'do':['Provincia','Municipio'] };
+function _empNiveles(p){ return UBI_NIVELES[p] || ['Región','Ciudad']; }
+/* «Miraflores» y debajo «Lima, Lima» (lo más chico primero) */
+function _empLugarH(x){
+  var l=[x.ubi_n3, x.ubi_n2, x.ubi_n1].filter(Boolean);
+  if(!l.length) return '<span class="gris-t">Sin lugar</span>';
+  return '<b>'+esc(l[0])+'</b>'+(l.length>1?'<span class="sub">'+esc(l.slice(1).join(', '))+'</span>':'');
+}
+function _empLugarT(x){ return [x.ubi_n3, x.ubi_n2, x.ubi_n1].filter(Boolean).join(', '); }
+function _empCel(d){ return (d && d.cel) ? celMostrar(d.cel, d.cel_pais) : ''; }
+function _empPromos(d){
+  if(!d || d.promos==null) return '';
+  return d.promos ? ('Sí'+(d.promos_f?' · desde el '+fechaLarga(String(d.promos_f).slice(0,10)):'')) : 'No';
+}
+function _empRegPor(d){ return !d || !d.reg_por ? '' : (d.reg_por==='web' ? 'En la web' : 'En la app'); }
+/* un .xlsx de una hoja, con la cabecera fija y filtros (sin librerías: un zip guardado tal cual) */
+var _CRC_T=null;
+function _crc32(u8){
+  if(!_CRC_T){ _CRC_T=new Uint32Array(256); for(var i=0;i<256;i++){ var c=i; for(var k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); _CRC_T[i]=c>>>0; } }
+  var x=0xFFFFFFFF; for(var j=0;j<u8.length;j++) x=_CRC_T[(x^u8[j])&0xFF]^(x>>>8); return (x^0xFFFFFFFF)>>>0;
+}
+function _zip(partes, tipo){
+  var enc=new TextEncoder(), trozos=[], central=[], off=0, t=((12<<11))>>>0, f=(((2026-1980)<<9)|(1<<5)|1)>>>0;
+  partes.forEach(function(p){
+    var nb=enc.encode(p.n), d=enc.encode(p.d), crc=_crc32(d);
+    var lh=new Uint8Array(30+nb.length), v=new DataView(lh.buffer);
+    v.setUint32(0,0x04034b50,true); v.setUint16(4,20,true); v.setUint16(10,t,true); v.setUint16(12,f,true);
+    v.setUint32(14,crc,true); v.setUint32(18,d.length,true); v.setUint32(22,d.length,true); v.setUint16(26,nb.length,true); lh.set(nb,30);
+    trozos.push(lh, d);
+    var ch=new Uint8Array(46+nb.length), w=new DataView(ch.buffer);
+    w.setUint32(0,0x02014b50,true); w.setUint16(4,20,true); w.setUint16(6,20,true); w.setUint16(12,t,true); w.setUint16(14,f,true);
+    w.setUint32(16,crc,true); w.setUint32(20,d.length,true); w.setUint32(24,d.length,true); w.setUint16(28,nb.length,true); w.setUint32(42,off,true); ch.set(nb,46);
+    central.push(ch); off+=lh.length+d.length;
+  });
+  var tam=0; central.forEach(function(c){ trozos.push(c); tam+=c.length; });
+  var fin=new Uint8Array(22), z=new DataView(fin.buffer);
+  z.setUint32(0,0x06054b50,true); z.setUint16(8,central.length,true); z.setUint16(10,central.length,true); z.setUint32(12,tam,true); z.setUint32(16,off,true);
+  trozos.push(fin);
+  return new Blob(trozos, {type:tipo});
+}
+function _xe(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,''); }
+function _colL(n){ var s=''; n++; while(n>0){ var m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; }
+function xlsxConsola(titulo, cols, filas){
+  var x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+    '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'+
+    '<cols>'+cols.map(function(c,i){ return '<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+(c.w||18)+'" customWidth="1"/>'; }).join('')+'</cols><sheetData>'+
+    '<row r="1">'+cols.map(function(c,i){ return '<c r="'+_colL(i)+'1" s="1" t="inlineStr"><is><t>'+_xe(c.t)+'</t></is></c>'; }).join('')+'</row>';
+  filas.forEach(function(r,k){
+    var n=k+2;
+    x+='<row r="'+n+'">'+cols.map(function(c,i){
+      var v=c.v(r), ref=_colL(i)+n;
+      if(c.num && v!=null && v!=='' && !isNaN(v)) return '<c r="'+ref+'"><v>'+Number(v)+'</v></c>';
+      v=(v==null)?'':String(v);
+      return v ? '<c r="'+ref+'" t="inlineStr"><is><t xml:space="preserve">'+_xe(v)+'</t></is></c>' : '';
+    }).join('')+'</row>';
+  });
+  x+='</sheetData><autoFilter ref="A1:'+_colL(cols.length-1)+'1"/></worksheet>';
+  var est='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+    '<fonts count="2"><font><sz val="10"/><name val="Calibri"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>'+
+    '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'+
+    '<fill><patternFill patternType="solid"><fgColor rgb="FF0B2A3A"/><bgColor indexed="64"/></patternFill></fill></fills>'+
+    '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'+
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'+
+    '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'+
+    '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf></cellXfs></styleSheet>';
+  var lib='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+    '<sheets><sheet name="'+_xe(String(titulo).slice(0,28))+'" sheetId="1" r:id="rId1"/></sheets></workbook>';
+  var R='http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+  return _zip([
+    {n:'[Content_Types].xml', d:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'+
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+
+      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'+
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+    {n:'_rels/.rels', d:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+      '<Relationship Id="rId1" Type="'+R+'officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+    {n:'xl/workbook.xml', d:lib},
+    {n:'xl/_rels/workbook.xml.rels', d:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+      '<Relationship Id="rId1" Type="'+R+'worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="'+R+'styles" Target="styles.xml"/></Relationships>'},
+    {n:'xl/styles.xml', d:est},
+    {n:'xl/worksheets/sheet1.xml', d:x}
+  ], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+function bajarArchivo(blob, nombre){
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nombre; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 800);
+}
+/* las empresas de la lista, en Excel: una columna por dato (para filtrar y ordenar allá) */
+function empExcel(L){
+  var cols=[
+    {t:'Empresa', w:30, v:function(x){ return x.nombre; }}, {t:'Código', w:11, v:function(x){ return x.codigo; }},
+    {t:'RUC o documento', w:15, v:function(x){ return x.ruc; }}, {t:'País', w:12, v:function(x){ return PAIS_N[x.pais]||x.pais; }},
+    {t:'Rubro', w:13, v:function(x){ return rubroN(x.sector); }},
+    {t:'Departamento o región', w:20, v:function(x){ return x.ubi_n1; }}, {t:'Provincia o ciudad', w:18, v:function(x){ return x.ubi_n2; }},
+    {t:'Distrito', w:18, v:function(x){ return x.ubi_n3; }}, {t:'Ubigeo', w:9, v:function(x){ return x.ubigeo; }},
+    {t:'Dirección', w:28, v:function(x){ return x.direccion; }},
+    {t:'Plan hoy', w:14, v:function(x){ return planN(x.plan_hoy); }}, {t:'Estado', w:14, v:function(x){ return (EMP_EST[x.estado]||[x.estado])[0]; }},
+    {t:'Vence', w:11, v:function(x){ return x.vence||''; }}, {t:'Obras', w:7, num:true, v:function(x){ return 1+(+x.obras||0); }},
+    {t:'Gestores', w:9, num:true, v:function(x){ return +x.gestores||0; }}, {t:'Trabajadores', w:11, num:true, v:function(x){ return +x.trabajadores||0; }},
+    {t:'Dueño · nombres', w:18, v:function(x){ var d=x.dueno_datos||{}; return d.nombres || (!d.apellidos ? d.nombre : ''); }},
+    {t:'Dueño · apellidos', w:18, v:function(x){ return (x.dueno_datos||{}).apellidos; }},
+    {t:'Correo', w:28, v:function(x){ return x.dueno; }}, {t:'Celular', w:17, v:function(x){ return _empCel(x.dueno_datos); }},
+    {t:'Promociones', w:22, v:function(x){ return _empPromos(x.dueno_datos); }}, {t:'Se registró', w:11, v:function(x){ return _empRegPor(x.dueno_datos); }},
+    {t:'Alta', w:11, v:function(x){ return fechaLima(x.fecha); }}, {t:'Último ingreso', w:16, v:function(x){ return x.ultimo_ingreso ? fechaHora(x.ultimo_ingreso) : ''; }}
+  ];
+  bajarArchivo(xlsxConsola('Empresas', cols, L), 'empresas-obrasst-'+hoyLima()+'.xlsx');
+  try{ toast('Listo: '+L.length+(L.length===1?' empresa':' empresas')+' en Excel'); }catch(_t){}
+}
 /* «sst_constancia: 2» → «2 constancias» (lo que se guardó al darla de baja) */
 function _empGuardado(g){
   var k=Object.keys(g||{}); if(!k.length) return 'Solo la empresa';
@@ -1576,7 +1691,7 @@ function vistaEmpresas(caja){
       var armado = !!$('emp-q');
       if(!armado){
         caja.innerHTML =
-          '<div class="herr" style="margin:0 0 14px"><input type="search" id="emp-q" placeholder="Buscar por nombre, RUC, código o correo" aria-label="Buscar empresas" style="width:min(460px,100%)" value="'+esc(EMP.q)+'"></div>'+
+          '<div class="herr" style="margin:0 0 14px"><input type="search" id="emp-q" placeholder="Buscar por nombre, RUC, código, dueño, correo, celular o lugar" aria-label="Buscar empresas" style="width:min(520px,100%)" value="'+esc(EMP.q)+'"></div>'+
           '<div class="rej" id="emp-cifras" style="margin-bottom:18px"></div><div class="tarj" id="t-empresas"></div>';
         $('emp-q').oninput=function(){
           var v=this.value; clearTimeout(EMP.tBusca);
@@ -1595,6 +1710,7 @@ function vistaEmpresas(caja){
       var cols=[
         {k:'nombre', t:'Empresa', h:function(x){ return '<b>'+esc(x.nombre||'—')+'</b><span class="sub">'+esc([x.ruc?('RUC '+x.ruc):'', PAIS_N[x.pais]||x.pais].filter(Boolean).join(' · '))+'</span>'; },
          v:function(x){ return (x.nombre||'')+' '+(x.ruc||'')+' '+(x.codigo||''); }},
+        {k:'lugar', t:'Lugar', h:_empLugarH, v:_empLugarT},
         {k:'plan_hoy', t:'Plan hoy', h:function(x){
            var e=EMP_EST[x.estado]||['—','gris'];
            var pie = x.estado==='vencido' ? 'Tenía '+planN(x.plan)+' · venció el '+fechaLarga(x.vence)
@@ -1604,15 +1720,20 @@ function vistaEmpresas(caja){
         {k:'obras', t:'Obras', num:true, h:function(x){ return num(1+(+x.obras||0)); }, v:function(x){ return 1+(+x.obras||0); }},
         {k:'gestores', t:'Gestores', num:true, h:function(x){ return num(x.gestores||0)+'<span class="sub">de '+num(x.tope_gestores||1)+'</span>'; }},
         {k:'trabajadores', t:'Trabajadores', num:true},
-        {k:'dueno', t:'Dueño', h:function(x){ return (x.dueno ? esc(x.dueno) : '<span class="gris-t">Sin dueño</span>')+
-           (x.ultimo_ingreso ? '<span class="sub">su gente entró '+esc(hace(x.ultimo_ingreso))+'</span>' : ''); },
-         v:function(x){ return (x.dueno||'')+(x.ultimo_ingreso?' · entró '+fechaHora(x.ultimo_ingreso):''); }},
+        {k:'dueno', t:'Dueño', h:function(x){ var d=x.dueno_datos||{}, cel=_empCel(d);
+           if(!x.dueno) return '<span class="gris-t">Sin dueño</span>';
+           return (d.nombre ? '<b>'+esc(d.nombre)+'</b><span class="sub">'+esc(x.dueno)+'</span>' : esc(x.dueno))+
+             '<span class="sub">'+(cel ? '<span class="mono">'+esc(cel)+'</span>' : '<span class="gris-t">sin celular</span>')+'</span>'+
+             (x.ultimo_ingreso ? '<span class="sub">su gente entró '+esc(hace(x.ultimo_ingreso))+'</span>' : ''); },
+         v:function(x){ var d=x.dueno_datos||{}; return [d.nombre, x.dueno, _empCel(d)].filter(Boolean).join(' · ')+(x.ultimo_ingreso?' · entró '+fechaHora(x.ultimo_ingreso):''); }},
         {k:'fecha', t:'Alta', h:function(x){ return esc(fechaLima(x.fecha))+'<span class="sub">'+esc(hace(x.fecha))+'</span>'; }, v:function(x){ return x.fecha||''; }}
       ];
       var tc=$('t-empresas'); tc._est = tc._est || {q:'', ord:'fecha', asc:false};
       tabla(tc, cols, L, {orden:'fecha', asc:false, unidad:'empresas', archivo:'empresas-obrasst', alClic:abrirEmpresa, sinBuscar:true,
+        extraCab:'<button type="button" class="bt sec chico" id="emp-xlsx">Exportar Excel</button> ',
         vacio: EMP.q ? 'Ninguna empresa con «'+EMP.q+'»' : 'Ninguna empresa en esta lista',
-        vacioSub: EMP.q ? 'Prueba con parte del nombre, el RUC sin guiones o el correo del dueño.' : ''});
+        vacioSub: EMP.q ? 'Prueba con parte del nombre, el RUC sin guiones, el apellido o el celular del dueño, o el distrito.' : ''});
+      var bx=$('emp-xlsx'); if(bx){ bx.disabled=!L.length; bx.onclick=function(){ empExcel(L); }; }
     }, function(cod){ noAbre(caja, null, cod, '2026-10-12-consola'); });
   }
   /* las dadas de baja: se guardó todo y se pueden devolver */
@@ -1650,7 +1771,142 @@ function vistaEmpresas(caja){
   }
   VISTA.recargar=function(silencio){ if(silencio && HOJA.abierta) return; pinta(); }; pinta();
 }
-var ROL_N = { dueno:'Dueño', gestor:'Gestor', trabajador:'Trabajador' };
+var ROL_N = { dueno:'Dueño', colider:'Colíder', gestor:'Gestor', trabajador:'Trabajador' };
+/* >>> CELULAR-BASE-INI (lo re-inyecta armar.py, no editar a mano) <<< */
+/* ══ LOS DATOS DE LA CUENTA: NOMBRES, APELLIDOS Y CELULAR (08/10/2026) ═════════════════════════════════
+   Marcelo: «dentro del registro se pueda colocar que registren su número de celular para tenerlo como data, y
+   en la parte de consola, en la sección empresa, que salga ahí … el nombre del creado, correo y su número de
+   celular, y esa data poder descargarlo».
+   El MISMO archivo en la app y en la web (armar.py lo inyecta en las dos): los países con su código, cómo se
+   revisa el número, cómo se muestra y qué se guarda. La cuenta lo lleva en sus datos de usuario (los ve ella y,
+   en la Consola, el administrador):
+     nombres, apellidos · nombre (el primero, para el saludo) · cap (nombres y apellidos: el de los documentos)
+     cel ('+51987654321') · cel_pais ('pe') · promos (sí o no: aparte y opcional) · promos_f (cuándo lo dijo)
+     reg (el día que se registró con este formulario) · reg_por ('app' o 'web')
+   No se manda ningún SMS ni se «verifica» el número: es el dato de contacto que la persona declara. Las
+   promociones van con su propia casilla, sin marcar, porque son otro fin (Ley 29733, art. 13.5). */
+var CEL_PAISES = [
+  { p:'pe', n:'Perú',                 c:'51',  ej:'987 654 321' },
+  { p:'ar', n:'Argentina',            c:'54',  ej:'11 2345 6789' },
+  { p:'cl', n:'Chile',                c:'56',  ej:'9 1234 5678' },
+  { p:'co', n:'Colombia',             c:'57',  ej:'300 123 4567' },
+  { p:'mx', n:'México',               c:'52',  ej:'55 1234 5678' },
+  { p:'py', n:'Paraguay',             c:'595', ej:'981 123 456' },
+  { p:'do', n:'República Dominicana', c:'1',   ej:'809 555 0142' },
+  { p:'uy', n:'Uruguay',              c:'598', ej:'99 123 456' },
+  { p:'us', n:'Estados Unidos',       c:'1',   ej:'713 555 0142' },
+  { p:'ca', n:'Canadá',               c:'1',   ej:'416 555 0142' },
+  { p:'otro', n:'Otro país',          c:'',    ej:'+34 612 345 678' }
+];
+function celPais(p){
+  for(var i = 0; i < CEL_PAISES.length; i++) if(CEL_PAISES[i].p === p) return CEL_PAISES[i];
+  return CEL_PAISES[0];
+}
+/* el país del número que ya está guardado: por su código (el +1 se reparte por el código de área) */
+function celPaisDe(e164, guardado){
+  var d = String(e164 || '').replace(/[^0-9]/g, '');
+  if(guardado && guardado !== 'otro'){ var g = celPais(guardado); if(g.p === guardado && d.indexOf(g.c) === 0) return guardado; }
+  if(!d) return guardado || '';
+  if(d.charAt(0) === '1'){ var a = d.slice(1, 4); return (a === '809' || a === '829' || a === '849') ? 'do' : 'us'; }
+  var l = CEL_PAISES.filter(function(x){ return x.c && x.c !== '1'; }).sort(function(a, b){ return b.c.length - a.c.length; });
+  for(var i = 0; i < l.length; i++) if(d.indexOf(l[i].c) === 0) return l[i].p;
+  return 'otro';
+}
+/* las opciones de la lista: «Perú +51» (la que se elige primero es la del país de quien mira) */
+function celOpciones(sel){
+  return CEL_PAISES.map(function(x){
+    return '<option value="' + x.p + '"' + (x.p === sel ? ' selected' : '') + '>' + x.n + (x.c ? ' +' + x.c : '') + '</option>';
+  }).join('');
+}
+/* revisa lo escrito y lo devuelve en formato internacional (+51987654321). Perú: 9 dígitos y empieza con 9;
+   EE. UU., Canadá y República Dominicana: 10 dígitos (código de área y número); los demás, de 8 a 12. */
+function celValidar(pais, txt){
+  var P = celPais(pais), s = String(txt || '').trim(), d = s.replace(/[^0-9]/g, '');
+  if(!d) return { ok:false, msg:'Escribe tu número de celular.' };
+  var mas = s.charAt(0) === '+' || s.slice(0, 2) === '00';
+  if(s.slice(0, 2) === '00') d = d.slice(2);
+  if(P.p === 'otro'){
+    if(!mas) return { ok:false, msg:'Escríbelo con el código de tu país adelante, por ejemplo +34 612 345 678.' };
+    if(d.length < 8 || d.length > 15) return { ok:false, msg:'Ese número no parece completo. Revísalo, con el código de tu país.' };
+    return { ok:true, e164:'+' + d, pais:'otro' };
+  }
+  if(mas){
+    if(d.indexOf(P.c) !== 0) return { ok:false, msg:'Ese número trae el código de otro país. Elige en la lista el país de tu celular.' };
+    d = d.slice(P.c.length);
+  } else if(P.p === 'pe' && d.length === 11 && d.slice(0, 2) === '51'){ d = d.slice(2); }
+  else if(P.c === '1' && d.length === 11 && d.charAt(0) === '1'){ d = d.slice(1); }
+  if(P.c !== '1') d = d.replace(/^0+/, '');
+  if(P.p === 'pe'){ if(!/^9[0-9]{8}$/.test(d)) return { ok:false, msg:'El celular del Perú tiene 9 dígitos y empieza con 9.' }; }
+  else if(P.c === '1'){ if(!/^[2-9][0-9]{9}$/.test(d)) return { ok:false, msg:'Son 10 dígitos: el código de área y el número.' }; }
+  else if(d.length < 8 || d.length > 12) return { ok:false, msg:'Ese número no parece completo. Revísalo.' };
+  return { ok:true, e164:'+' + P.c + d, pais:P.p };
+}
+/* para mostrarlo: +51 987 654 321 · +1 809 555 0142 · +57 300 123 4567 · +598 99 123 456 */
+function celMostrar(e164, pais){
+  var d = String(e164 || '').replace(/[^0-9]/g, '');
+  if(!d) return '';
+  var p = celPaisDe(e164, pais), P = celPais(p), c = (p !== 'otro' && P.c && d.indexOf(P.c) === 0) ? P.c : '';
+  var n = c ? d.slice(c.length) : d, g;
+  if(!c) return '+' + d;   /* de otro país no se sabe dónde termina el código: va junto */
+  if(n.length === 10) g = n.slice(0, 3) + ' ' + n.slice(3, 6) + ' ' + n.slice(6);
+  else { g = ''; while(n.length > 3){ g = ' ' + n.slice(-3) + g; n = n.slice(0, -3); } g = n + g; }
+  return '+' + c + ' ' + g;
+}
+/* lo que se escribe en el campo del número, sin el código (para volver a editarlo) */
+function celNacional(e164, pais){
+  var d = String(e164 || '').replace(/[^0-9]/g, ''), P = celPais(pais);
+  if(pais === 'otro' || !P.c) return d ? '+' + d : '';
+  return d.indexOf(P.c) === 0 ? d.slice(P.c.length) : d;
+}
+/* el enlace de WhatsApp (solo los dígitos del número internacional) */
+function celWhatsApp(e164){ var d = String(e164 || '').replace(/[^0-9]/g, ''); return d ? 'https://wa.me/' + d : ''; }
+
+function regLimpio(s){ return String(s || '').replace(/\s+/g, ' ').trim().slice(0, 60); }
+function regNombreCompleto(nombres, apellidos){ return (regLimpio(nombres) + ' ' + regLimpio(apellidos)).trim().slice(0, 120); }
+/* nombres y apellidos: con letras de verdad (dos o más), sin números ni correos */
+function regNombreMal(s, que){
+  s = regLimpio(s);
+  var letras = (s.match(/[A-Za-zÀ-ÖØ-öø-ÿĀ-ž]/g) || []).length;
+  if(!s) return 'Escribe tus ' + que + '.';
+  if(letras < 2 || /[0-9@_=<>{}\[\]\\\/|#$%*+]/.test(s)) return 'Revisa tus ' + que + ': solo letras, como en tu documento.';
+  return '';
+}
+/* todo lo del formulario de una vez: { ok, campo, msg, cel } */
+function regValidar(o){
+  var m = regNombreMal(o.nombres, 'nombres'); if(m) return { ok:false, campo:'nombres', msg:m };
+  m = regNombreMal(o.apellidos, 'apellidos'); if(m) return { ok:false, campo:'apellidos', msg:m };
+  var c = celValidar(o.pais, o.numero); if(!c.ok) return { ok:false, campo:'cel', msg:c.msg };
+  return { ok:true, cel:c };
+}
+/* lo que se guarda en la cuenta. «nombre» es el del saludo y «cap» el que va en los documentos (los mismos de antes) */
+function regMeta(o, cel, extra){
+  var nom = regLimpio(o.nombres), ape = regLimpio(o.apellidos), ahora = new Date().toISOString();
+  var m = { nombres:nom, apellidos:ape, nombre:nom.split(' ')[0].slice(0, 40), cap:regNombreCompleto(nom, ape),
+            cel:cel.e164, cel_pais:cel.pais, promos:!!o.promos, promos_f:ahora, datos_f:ahora };
+  if(extra) for(var k in extra) if(Object.prototype.hasOwnProperty.call(extra, k)) m[k] = extra[k];
+  return m;
+}
+/* lo que le falta a una cuenta (la de antes, o la que entró con Google) */
+function regFaltan(md){
+  md = md || {};
+  var f = [];
+  if(!regLimpio(md.nombres)) f.push('nombres');
+  if(!regLimpio(md.apellidos)) f.push('apellidos');
+  if(!String(md.cel || '').replace(/[^0-9]/g, '')) f.push('cel');
+  return f;
+}
+/* para llenar el formulario de quien todavía no los tiene: lo que ya hay en la cuenta (el nombre de los documentos, o
+   el que trajo Google), partido en nombres y apellidos como se usa acá (dos y dos, uno y dos, uno y uno). Se revisa. */
+function regPartirNombre(md){
+  md = md || {};
+  if(regLimpio(md.nombres) || regLimpio(md.apellidos)) return { nombres:regLimpio(md.nombres), apellidos:regLimpio(md.apellidos) };
+  if(regLimpio(md.given_name) && regLimpio(md.family_name)) return { nombres:regLimpio(md.given_name), apellidos:regLimpio(md.family_name) };
+  var t = regLimpio(md.cap || md.full_name || md.name || md.nombre || '').split(' ').filter(Boolean);
+  if(t.length >= 4) return { nombres:t.slice(0, 2).join(' '), apellidos:t.slice(2).join(' ') };
+  if(t.length >= 2) return { nombres:t[0], apellidos:t.slice(1).join(' ') };
+  return { nombres:t.join(' '), apellidos:'' };
+}
+/* <<< CELULAR-BASE-FIN >>> */
 /* 29/09/2026 · Marcelo: «Climaxi vence en octubre, cuando activé su plan gratis
    en agosto, no entiendo». La fecha sale de lo que se fue sumando: el mes
    gratis, cada código (si quedaban días, se suman al final), Google Play y lo
@@ -1771,16 +2027,31 @@ function abrirEmpresa(x){
       fila('País', esc(PAIS_N[e.pais]||e.pais||''))+
       fila('Rubro', esc(rubroN(e.sector)))+
       fila('Código de la empresa', e.codigo ? '<span class="mono">'+esc(e.codigo)+'</span>' : '')+
+      fila('Lugar', [e.ubi_n3, e.ubi_n2, e.ubi_n1].filter(Boolean).length ? esc([e.ubi_n3, e.ubi_n2, e.ubi_n1].filter(Boolean).join(', '))+(e.ubigeo?' <span class="gris-t">· ubigeo <span class="mono">'+esc(e.ubigeo)+'</span></span>':'') : '<span class="gris-t">Sin lugar todavía</span>')+
+      fila('Dirección', e.direccion ? esc(e.direccion) : '')+
       fila('Alta', esc(fechaHora(e.fecha)))+
       ('ultimo_ingreso' in r ? fila('Último ingreso', r.ultimo_ingreso ? esc(fechaHora(r.ultimo_ingreso))+' <span class="gris-t">('+esc(hace(r.ultimo_ingreso))+')</span>' : '<span class="gris-t">Nadie de su gente entró</span>') : '')+
       '</dl>';
+    /* 08/10/2026 · quién la registró: sus datos de cuenta */
+    var du=r.dueno;
+    if(du && typeof du==='object'){
+      var cel=_empCel(du), wa=cel ? celWhatsApp(du.cel) : '';
+      h+='<div class="seccion"><h3>El dueño</h3><dl class="datos">'+
+        fila('Nombre', du.nombre ? esc(du.nombre) : '<span class="gris-t">No lo puso todavía</span>')+
+        fila('Correo', du.correo ? '<a href="mailto:'+esc(du.correo)+'">'+esc(du.correo)+'</a>' : '')+
+        fila('Celular', cel ? '<span class="mono">'+esc(cel)+'</span>'+(wa?' · <a href="'+esc(wa)+'" target="_blank" rel="noopener">WhatsApp</a>':'') : '<span class="gris-t">Sin celular todavía</span>')+
+        fila('Promociones', esc(_empPromos(du)) || '<span class="gris-t">—</span>')+
+        fila('Se registró', esc(_empRegPor(du)))+'</dl></div>';
+    }
     h+=_empLineaTiempo(r);
     var O=r.obras||[];
     h+='<div class="seccion"><h3>Obras ('+(1+O.length)+')</h3><p style="margin:0">'+esc(e.nombre)+' <span class="gris-t">(la madre)</span>'+
-      O.map(function(o){ return '<br>'+esc(o.nombre)+(o.codigo?' <span class="mono gris-t">'+esc(o.codigo)+'</span>':''); }).join('')+'</p></div>';
+      O.map(function(o){ var lu=[o.ubi_n3, o.ubi_n2, o.ubi_n1].filter(Boolean).join(', ');
+        return '<br>'+esc(o.nombre)+(o.codigo?' <span class="mono gris-t">'+esc(o.codigo)+'</span>':'')+(lu?' <span class="gris-t">· '+esc(lu)+'</span>':''); }).join('')+'</p></div>';
     var M=r.miembros||[];
-    h+='<div class="seccion"><h3>Su gente con cuenta ('+M.length+')</h3>'+(M.length ? '<div class="tabla-caja"><table class="mini"><thead><tr><th>Cuenta</th><th>Rol</th><th>Dónde</th></tr></thead><tbody>'+
-      M.map(function(m){ return '<tr><td>'+esc(m.correo||'—')+(m.estado!=='activo'?' <span class="pill gris">'+esc(m.estado==='salio'?'salió':m.estado)+'</span>':'')+'</td><td>'+esc(ROL_N[m.rol]||m.rol||'')+
+    h+='<div class="seccion"><h3>Su gente con cuenta ('+M.length+')</h3>'+(M.length ? '<div class="tabla-caja"><table class="mini"><thead><tr><th>Cuenta</th><th>Celular</th><th>Rol</th><th>Dónde</th></tr></thead><tbody>'+
+      M.map(function(m){ return '<tr><td>'+(m.nombre?'<b>'+esc(m.nombre)+'</b><span class="sub">'+esc(m.correo||'—')+'</span>':esc(m.correo||'—'))+(m.estado!=='activo'?' <span class="pill gris">'+esc(m.estado==='salio'?'salió':m.estado)+'</span>':'')+'</td>'+
+        '<td>'+(m.cel?'<span class="mono">'+esc(celMostrar(m.cel))+'</span>':'<span class="gris-t">—</span>')+'</td><td>'+esc(ROL_N[m.rol]||m.rol||'')+
         (m.dueno_hasta && new Date(m.dueno_hasta)<new Date() ? '<span class="sub">ya no es dueño</span>' : '')+'</td><td>'+esc(m.es_madre?'La madre':(m.obra||''))+'</td></tr>'; }).join('')+
       '</tbody></table></div>' : '<p class="gris-t" style="margin:0">Nadie todavía.</p>')+'</div>';
     var C=r.codigos||[];
@@ -1805,6 +2076,7 @@ function abrirEmpresa(x){
     if(pie){
       pie.innerHTML='<button type="button" class="bt sec" id="em-cerrar">Cerrar</button>'+
         (dueno?'<a class="bt sec" href="mailto:'+esc(dueno)+'?subject='+encodeURIComponent('OBRASST · '+(e.nombre||''))+'">Escribir al dueño</a>':'')+
+        (du && du.cel ? '<a class="bt sec" href="'+esc(celWhatsApp(du.cel))+'" target="_blank" rel="noopener">WhatsApp</a>' : '')+
         '<button type="button" class="bt" id="em-codigo">Crearle un código</button>';
       $('em-cerrar').onclick=cerrarHoja;
       $('em-codigo').onclick=function(){ cerrarHoja(); CODP.paraPre=[e.nombre, dueno].filter(Boolean).join(' · ').slice(0,80); navegar('codigos'); };
