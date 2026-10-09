@@ -1,4 +1,4 @@
-var CACHE = 'sstc-c1dd47aaec-a';
+var CACHE = 'sstc-8e81da8f9d-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -9,7 +9,7 @@ var COMP = 'sstc-compartido';
    cache. La primera apertura sin señal despues de cada publicacion daba
    pantalla en blanco (y la primerisima instalacion tambien). Ahora la app
    entera se guarda en install, antes de activar. */
-var BASE = ['./', './index.html', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=6819964170', './exige.js?v=35cd514ecd', './idioma-fr.js?v=97bf6bfc30', './procedimientos.js?v=88b03837ba', './idioma-pt.js?v=9eb774133e', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
+var BASE = ['./', './index.html', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=bd9370f11f', './exige.js?v=35cd514ecd', './idioma-fr.js?v=3628fd32aa', './procedimientos.js?v=88b03837ba', './idioma-pt.js?v=f47ef2bd0e', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
             './intro.mp4'];
 self.addEventListener('install', function(e){
