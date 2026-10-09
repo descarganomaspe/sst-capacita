@@ -2329,6 +2329,7 @@ var CARTEL_LARGO = {
   iperc:'Identificación de Peligros, Evaluación de Riesgos y Controles',
   msds:'Hojas de datos de seguridad de los productos químicos',
   plan:'Programa anual de seguridad y salud en el trabajo',
+  objetivos:'Objetivos y metas de seguridad y salud en el trabajo',
   mapa:'Los peligros y riesgos de la obra, señalizados',
   emergencia:'Qué hacer y a dónde ir en una emergencia',
   politica:'Política de Seguridad y Salud en el Trabajo',
@@ -2354,14 +2355,23 @@ function _cqLineas(g, txt, ancho){
   return lin;
 }
 /* el tamaño de letra más grande con el que el texto entra en «maxL» líneas;
-   si ni con la letra más chica entra, una línea más; y si tampoco, se corta con «…» */
-function _cqAjustar(g, txt, ancho, maxL, grande, chico, peso){
+   si ni con la letra más chica entra, una línea más; y si tampoco, se corta con «…».
+   07/10/2026 · «piso» (solo el título): los carteles propios llevan el título que escribe la obra,
+   hasta 80 letras; antes de cortarlo, la letra baja un poco más, hasta ese piso. */
+function _cqAjustar(g, txt, ancho, maxL, grande, chico, peso, piso){
   var fam=' system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif';
   for(var extra=0; extra<2; extra++){
     for(var s=grande; s>=chico; s-=2){
       g.font=(peso||'800')+' '+s+'px'+fam;
       var l=_cqLineas(g, txt, ancho);
       if(l.length<=maxL+extra && l.every(function(x){ return g.measureText(x).width<=ancho; })) return {s:s, l:l};
+    }
+  }
+  if(piso && piso<chico){
+    for(var s3=chico-2; s3>=piso; s3-=2){
+      g.font=(peso||'800')+' '+s3+'px'+fam;
+      var l3=_cqLineas(g, txt, ancho);
+      if(l3.length<=maxL+1 && l3.every(function(x){ return g.measureText(x).width<=ancho; })) return {s:s3, l:l3};
     }
   }
   g.font=(peso||'800')+' '+chico+'px'+fam;
@@ -2495,7 +2505,7 @@ function cartelDibujar(o){
     if(dis==='senal'){
       var col=CARTEL_VERDE[o.hoja] ? '#1B7F3B' : '#1554B3';
       _cqLogo(g, L, cx, 56, 520, 170, marca, '#0B2A3A');
-      var ft=_cqAjustar(g, titulo.toUpperCase(), W-150, 2, 92, 58, '900'), lht=ft.s*1.06;
+      var ft=_cqAjustar(g, titulo.toUpperCase(), W-150, 2, 92, 58, '900', 42), lht=ft.s*1.06;
       var fl=largo ? _cqAjustar(g, largo, W-200, 2, 36, 26, '600') : null, lhl=fl ? fl.s*1.24 : 0;
       var py=262, icoH=196, bloque=(ft.l.length-1)*lht+ft.s*0.74+(fl ? 24+fl.l.length*lhl : 0), ph=icoH+bloque+64;
       g.fillStyle=col; g.fillRect(0, py, W, ph);
@@ -2514,7 +2524,7 @@ function cartelDibujar(o){
       g.font=_cqFuente(20, '800'); g.fillStyle='rgba(255,255,255,.82)'; g.textAlign='center'; g.fillText('◆ OBRASST', cx, pie+90);
     } else if(dis==='obra'){
       _cqFranjas(g, 0, 0, W, 60);
-      var ft2=_cqAjustar(g, titulo.toUpperCase(), W-140, 2, 104, 62, '900'), lht2=ft2.s*1.04;
+      var ft2=_cqAjustar(g, titulo.toUpperCase(), W-140, 2, 104, 62, '900', 42), lht2=ft2.s*1.04;
       var fl2=largo ? _cqAjustar(g, largo, W-180, 2, 36, 26, '700') : null, lhl2=fl2 ? fl2.s*1.24 : 0;
       var bloque2=(ft2.l.length-1)*lht2+ft2.s*0.74+(fl2 ? 22+fl2.l.length*lhl2 : 0), yh=60, ah=48+214+44+bloque2+44;
       g.fillStyle='#F5C400'; g.fillRect(0, yh, W, ah);
@@ -2536,7 +2546,7 @@ function cartelDibujar(o){
       g.fillStyle='#0B2A3A'; g.fillRect(0, 0, W, 22);
       _cqLogo(g, L, cx, 66, 520, 170, marca, '#0B2A3A');
       g.fillStyle='#E3E9ED'; g.fillRect(120, 274, W-240, 3);
-      var ft3=_cqAjustar(g, titulo, W-240, 2, 96, 60, '800'), lht3=ft3.s*1.08;
+      var ft3=_cqAjustar(g, titulo, W-240, 2, 96, 60, '800', 44), lht3=ft3.s*1.08;
       var hb=Math.round((ft3.l.length-1)*lht3+ft3.s*0.74+ft3.s*1.1), yb3=_cqBase(ft3.l.length, ft3.s, lht3, 306, hb);
       g.fillStyle='#0B2A3A'; _cqCaja(g, 70, 306, W-140, hb, 30); g.fill();
       g.fillStyle='#F5B700'; _cqCaja(g, cx-90, 306+hb-12, 180, 12, 6); g.fill();

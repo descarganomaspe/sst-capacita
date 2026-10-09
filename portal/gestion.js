@@ -3155,7 +3155,10 @@ function gesVistaCargar(caja){
       traer('sst_accidente', '&select=id,fecha&order=fecha.desc', 2000).catch(nada),
       gesActTraer(true).catch(nada),
       traer('sst_inspeccion', '&select=id,fecha&order=fecha.desc', 2000).catch(nada),
-      traer('sst_reporte', '&select=id&order=creado.desc', 2000).catch(nada)
+      traer('sst_reporte', '&select=id&order=creado.desc', 2000).catch(nada),
+      /* 07/10/2026 · la entrega de EPP y los datos de la empresa también se cargan aquí (portal/mas.js) */
+      traerTodo('sst_kardex', '&select=ext&order=fecha.desc,ext.desc', 30000).catch(nada),
+      traer('sst_doc', '&select=id,nota&hoja=eq.empleador&order=creado.desc', 1).catch(nada)
     ]).then(function(r){
       if(n!==CARW.n || VISTA.actual!=='cargar') return;
       var trab=r[0], hht=r[1], acc=r[2], act=r[3]||[], insp=r[4], rep=r[5];
@@ -3165,9 +3168,17 @@ function gesVistaCargar(caja){
       var T=[];
       function tarj(o){ if(!o.id || !hay(o.id)) return; T.push(o); }
       function nb(n, uno, varios){ return '<b>'+n+'</b> '+(n===1 ? uno : varios); }
+      var kar=r[6], idKar=hay('kardex') ? 'kardex' : (hay('epp') ? 'epp' : ''), emp=null;
+      try{ emp=(r[7] && r[7][0]) ? nota(r[7][0].nota) : null; }catch(_e){ emp=null; }
+      tarj({ id:'empresa', ic:'🏢', t:'Datos y logo de la empresa', d:'La razón social, los códigos de tus formatos y el logo: salen en la cabecera de cada registro. Conviene dejarlo listo antes que nada.',
+        n:r[7]===null ? '' : ((emp && emp.razon) ? '<b>'+esc(String(emp.razon).slice(0, 60))+'</b>'+((emp.logo) ? ' · con logo' : ' · sin logo todavía') : 'Todavía sin cargar'),
+        bts:[['car-emp', (emp && emp.razon) ? 'Revisar los datos' : 'Cargar mis datos', function(){ ir('empresa'); }]] });
       tarj({ id:idPer, ic:'👷', t:'Tu personal', d:'Sube la relación de tu Excel (o pégala): cada fila, una ficha. Lo demás se une a cada persona por su documento, así que conviene empezar por aquí.',
         n:activos===null ? '' : (activos ? '<b>'+activos+'</b> '+(activos===1 ? 'trabajador activo' : 'trabajadores activos') : 'Todavía nadie cargado'),
         bts:[['car-per', '⬆ Subir mi lista', function(){ ir(idPer, function(){ gesPersonalSubir(); }); }], ['car-per-ver', 'Ver el personal', function(){ ir(idPer); }, true]] });
+      tarj({ id:idKar, ic:'⛑', t:'Entrega de EPP (kardex)', d:'El kardex que ya llevabas, desde tu Excel: una fila por EPP entregado, con su fecha y a quién. Y las entregas de hoy, con la firma en la pantalla o en papel.',
+        n:kar===null ? '' : (kar.length ? '<b>'+kar.length+'</b> '+(kar.length===1 ? 'entrega en el kardex' : 'entregas en el kardex') : 'Ninguna entrega todavía'),
+        bts:[['car-kar', '⬆ Subir mi kardex', function(){ ir(idKar, function(){ masIr('masEppSubir'); }); }], ['car-kar-una', '＋ Registrar una entrega', function(){ ir(idKar, function(){ masIr('masEppNueva'); }); }, true]] });
       tarj({ id:'hh', ic:'⏱', t:'Horas hombre', d:'Las trabajadas y las de capacitación de los meses anteriores: un rango de días con su horario, o el total del mes repartido.',
         n:hht===null ? '' : (Object.keys(dias).length ? '<b>'+Object.keys(dias).length+'</b> '+(Object.keys(dias).length===1 ? 'día registrado' : 'días registrados') : 'Ningún día registrado'),
         bts:[['car-hh', 'Llenar meses anteriores', function(){ HHW.alAbrir=function(){ hhAbrirVarios(); }; ir('hh'); }], ['car-hh-ver', 'Ver las horas', function(){ ir('hh'); }, true]] });

@@ -49,10 +49,17 @@ function _plwRucMalo(ruc){
   var r = 11 - (s % 11); if(r === 10) r = 0; if(r === 11) r = 1;
   return r === +ruc.charAt(10) ? '' : PLW_CP_MAL.ruc_malo;
 }
-/* los precios de quien paga: en soles en el Perú; afuera, en dólares (PRECIO_USD de pais.js) */
+/* los precios de quien paga: en soles en el Perú; afuera, en dólares (PRECIO_USD de pais.js).
+   07/10/2026 · Marcelo: «colócalos en soles, o tener la opción ahí que elija el usuario en dólares o soles». La moneda
+   en que se MIRAN la elige quien mira (monedaVer: lo elegido en este navegador; si no, la de quien paga). Lo que se
+   COBRA aquí no cambia: cm y ca son el mes y el año en soles, que es lo que cobra Mercado Pago.
+   fuera: la empresa que paga no es del Perú (ahí el plan se pide) · usd: se muestran en dólares ·
+   sinU: se quieren en dólares y la lista de precios en dólares todavía no llegó */
 function plwPrecios(){
-  var pais = paisDelPagoP(), fuera = pais !== 'pe', U = (fuera && typeof PRECIO_USD === 'object') ? PRECIO_USD : null;
-  return INI_PLANES.map(function(P){ var m = P.m, a = P.a; if(U && U[P.id]){ m = U[P.id].m; a = U[P.id].a; } return { P:P, m:m, a:a, usd:!!U, fuera:fuera, U:U }; });
+  var pais = paisDelPagoP(), fuera = pais !== 'pe', hayU = (typeof PRECIO_USD === 'object' && !!PRECIO_USD);
+  var ver = (typeof monedaVer === 'function') ? monedaVer(fuera) : (fuera ? 'usd' : 'pen'), usd = (ver === 'usd' && hayU), U = usd ? PRECIO_USD : null;
+  return INI_PLANES.map(function(P){ var m = P.m, a = P.a; if(usd && U[P.id]){ m = U[P.id].m; a = U[P.id].a; }
+    return { P:P, m:m, a:a, cm:P.m, ca:P.a, usd:usd, fuera:fuera, U:U, ver:ver, sinU:(ver === 'usd' && !hayU) }; });
 }
 /* el enlace de Mercado Pago de un pago: la función «pago» de siempre, con el producto (uno de los de los planes) y
    el comprobante. Se arma cada vez: de lo guardado en el navegador no se usa ninguna dirección. */
@@ -148,7 +155,7 @@ function plwHTML(){
     h += plwPlanesHTML(E, L, due, dentro);
   }
   h += '<details class="ini-comp-d plw-comp" id="plw-comp"><summary>Qué trae cada plan, acceso por acceso <span>· ' + INI_VITRINA.length + ' accesos</span></summary>' +
-       iniTablaHTML('plw-t', E.plan.orden, fuera && !L[0].usd, L) + '</details>';
+       iniTablaHTML('plw-t', E.plan.orden, L[0].sinU, L) + '</details>';
   if(due && !cad){
     h += '<div class="plw-dos">' + plwCodigoHTML() + plwExtrasHTML(L) + '</div>';
   }
@@ -294,9 +301,12 @@ function plwPlanesHTML(E, L, due, dentro){
   var per = PLW.per, usd = L[0].usd, fuera = L[0].fuera, sinFecha = E.orden > 0 && E.dias === null, paga = due && !fuera && !dentro && !sinFecha, h = '';
   h += '<div class="plw-cab"><div><h2>' + (sinFecha ? 'Los planes' : (E.orden > 0 ? 'Renueva o cambia de plan' : 'Elige tu plan')) + '</h2>' +
        '<p class="sub">' + (fuera ? 'Fuera del Perú los planes se contratan directo con nosotros, en dólares.' : (sinFecha ? 'Lo que trae cada uno y lo que cuesta.' : 'Se paga con Mercado Pago: un solo pago, sin renovación automática. No guardamos tu tarjeta.')) + '</p></div>' +
+       '<div class="plw-sel">' + ((typeof monedaSelectorHTML === 'function') ? monedaSelectorHTML('plw-moneda', L[0].ver === 'usd' ? 'usd' : 'pen') : '') +
        '<div class="seg chico" role="group" aria-label="Periodo" id="plw-per">' +
        '<button type="button" data-per="m" class="' + (per === 'm' ? 'on' : '') + '" aria-pressed="' + (per === 'm') + '">Por mes</button>' +
-       '<button type="button" data-per="a" class="' + (per === 'a' ? 'on' : '') + '" aria-pressed="' + (per === 'a') + '">Por año · pagas 10 meses</button></div></div>';
+       '<button type="button" data-per="a" class="' + (per === 'a' ? 'on' : '') + '" aria-pressed="' + (per === 'a') + '">Por año · pagas 10 meses</button></div></div></div>';
+  var notaM = (typeof monedaNota === 'function' && !L[0].sinU) ? monedaNota(usd ? 'usd' : 'pen', fuera) : '';
+  if(notaM) h += '<p class="moneda-nota plw-moneda-n" id="plw-moneda-n">' + notaM + '</p>';
   if(!due) h += '<p class="ayuda plw-quien" id="plw-quien">El plan lo elige y lo paga quien registró la empresa. Aquí ves lo que trae cada uno.</p>';
   else if(dentro) h += '<div class="aviso plw-quien" id="plw-quien">Estás dentro de la app: aquí el plan se elige y se paga en la app, en «Planes». <a href="' + esc(appBase()) + '?ir=p-planes">Ir a «Planes» en la app</a></div>';
   else if(sinFecha && !fuera) h += '<p class="ayuda plw-quien" id="plw-quien">Tu plan no tiene fecha de vencimiento: no hay nada que renovar, y por eso aquí no se ofrece pagar (un pago le pondría fecha). Para pasar a un plan mayor, escríbenos a <a href="mailto:' + SOPORTE + '">' + SOPORTE + '</a> y lo vemos contigo.</p>';
@@ -305,9 +315,9 @@ function plwPlanesHTML(E, L, due, dentro){
     var P = x.P; if(P.orden === 0) return;
     var mio = E.orden > 0 && P.orden === E.orden, sig = !mio && P.orden === E.orden + 1, monto = per === 'a' ? x.a : x.m;
     var suma = INI_VITRINA.filter(function(v){ return v.desde === P.orden; });
-    var precio = (x.usd || !fuera)
-      ? '<div class="precio">' + _plata(monto, x.usd) + ' <small>' + (per === 'a' ? 'al año' : 'al mes') + '</small></div>' +
-        '<div class="anual">' + (per === 'a' ? 'equivale a ' + _plata2(x.a / 12, x.usd) + ' al mes · ahorras ' + _plata(x.m * 12 - x.a, x.usd) : 'o ' + _plata(x.a, x.usd) + ' al año') + '</div>'
+    var precio = !x.sinU
+      ? '<div class="precio" data-sin-pais>' + _plata(monto, x.usd) + ' <small>' + (per === 'a' ? 'al año' : 'al mes') + '</small></div>' +
+        '<div class="anual" data-sin-pais>' + (per === 'a' ? 'equivale a ' + _plata2(x.a / 12, x.usd) + ' al mes · ahorras ' + _plata(x.m * 12 - x.a, x.usd) : 'o ' + _plata(x.a, x.usd) + ' al año') + '</div>'
       : '<div class="precio plw-sinp">En dólares</div><div class="anual">Te pasamos el precio al pedirlo</div>';
     var bt = '';
     if(paga){
@@ -315,7 +325,7 @@ function plwPlanesHTML(E, L, due, dentro){
       var cl = mio ? ' casco' : (P.orden < E.orden ? ' sec' : ((sig && E.orden === 0) ? ' casco' : ''));
       bt = (mio ? '<p class="plw-nota-bt">Los días se suman a los que te quedan.</p>' : '') +
            '<button type="button" class="bt' + cl + '" data-plw="pagar" data-plan="' + esc(P.id) + '">' +
-           (mio ? 'Renovar' : (P.orden < E.orden ? 'Cambiar' : 'Pagar')) + ' · ' + _plata(monto) + '</button>';
+           (mio ? 'Renovar' : (P.orden < E.orden ? 'Cambiar' : 'Pagar')) + ' · ' + _plata(per === 'a' ? x.ca : x.cm) + '</button>';
     } else if(due && fuera && !dentro){
       bt = '<button type="button" class="bt' + (mio ? ' sec' : '') + '" data-plw="pedir" data-plan="' + esc(P.id) + '">Pedir este plan</button>';
     }
@@ -351,7 +361,9 @@ function plwRespaldoLineaHTML(){
 /* ── lo que se pide suelto ── */
 function plwExtrasHTML(L){
   var usd = L[0].usd, U = L[0].U, fuera = L[0].fuera, o = YO.obra || {};
-  var obra = usd ? U.obra : INI_EXTRA.obra, puesto = usd ? U.puesto : INI_EXTRA.puesto, conPrecio = usd || !fuera;
+  var obra = usd ? U.obra : INI_EXTRA.obra, puesto = usd ? U.puesto : INI_EXTRA.puesto, conPrecio = !L[0].sinU;
+  var UU = (typeof PRECIO_USD === 'object' && PRECIO_USD) ? PRECIO_USD : null;
+  var obraC = fuera ? (UU ? _plata(UU.obra, true) : '') : _plata(INI_EXTRA.obra), puestoC = fuera ? (UU ? _plata(UU.puesto, true) : '') : _plata(INI_EXTRA.puesto);
   var raiz = o.padre_nombre || o.nombre || 'mi empresa', plan = planWebActual().n;
   var correo = function(cosa, monto){
     var t = 'Hola. Quiero sumar ' + cosa + (monto ? ' (' + monto + ' al mes)' : '') + ' al plan ' + plan + ' de ' + raiz + (o.codigo ? ' (código ' + o.codigo + ')' : '') + '.';
@@ -359,8 +371,8 @@ function plwExtrasHTML(L){
   };
   return '<div class="tarj plw-extras" id="plw-extras"><div class="tarj-cab"><div><h2>¿Te falta una obra, una persona o espacio?</h2><p class="sub">Se suma a tu plan, sin cambiarlo</p></div></div>' +
     '<div class="tarj-cuerpo"><ul class="plw-ex">' +
-    '<li><span><b>Una obra más</b>' + (conPrecio ? _plata(obra, usd) + ' al mes' : '') + '</span><a class="bt sec chico" href="' + esc(correo('una obra extra', conPrecio ? _plata(obra, usd) : '')) + '">Pedirla</a></li>' +
-    '<li><span><b>Una persona más en la gestión</b>' + (conPrecio ? _plata(puesto, usd) + ' al mes' : '') + '</span><a class="bt sec chico" href="' + esc(correo('un puesto extra', conPrecio ? _plata(puesto, usd) : '')) + '">Pedirla</a></li>' +
+    '<li><span><b>Una obra más</b>' + (conPrecio ? '<span data-sin-pais>' + _plata(obra, usd) + ' al mes</span>' : '') + '</span><a class="bt sec chico" href="' + esc(correo('una obra extra', obraC)) + '">Pedirla</a></li>' +
+    '<li><span><b>Una persona más en la gestión</b>' + (conPrecio ? '<span data-sin-pais>' + _plata(puesto, usd) + ' al mes</span>' : '') + '</span><a class="bt sec chico" href="' + esc(correo('un puesto extra', puestoC)) + '">Pedirla</a></li>' +
     '<li><span><b>Más espacio</b>Te escribimos con las opciones</span><a class="bt sec chico" href="' + esc(correo('más espacio', '')) + '">Pedirlo</a></li></ul>' +
     '<p class="ayuda">Se piden por correo: te escribimos con el cobro y, apenas esté pagado, lo sumamos a tu empresa. No cambias de plan ni pierdes nada.</p></div></div>';
 }
@@ -388,9 +400,9 @@ function plwCompHTML(){
 /* ── la letra chica: lo mismo que dice la página de inicio ── */
 function plwLetraHTML(L, dentro){
   var usd = L[0].usd, U = L[0].U, fuera = L[0].fuera;
-  if(fuera) return '<div class="ini-letra plw-letra" data-sin-pais><p><b>Fuera del Perú</b> los planes se pagan en dólares, directo con nosotros: los pides aquí o desde la app, y te llega un código para activarlos. El año cuesta diez meses.</p>' +
+  if(fuera) return '<div class="ini-letra plw-letra" data-sin-pais><p><b>Fuera del Perú</b> los planes se pagan en dólares, directo con nosotros: los pides aquí o desde la app, y te llega un código para activarlos. El año cuesta diez meses.' + ((usd || L[0].sinU) ? '' : ' Los montos en soles son una referencia.') + '</p>' +
     '<p><b>Dentro de la app, por Google Play,</b> es una suscripción que se renueva sola hasta que la canceles, en la moneda de tu celular.</p></div>';
-  return '<div class="ini-letra plw-letra" data-sin-pais><p><b>Pagando por la web</b> (Mercado Pago) es un solo pago por el mes o el año que eliges: no se renueva solo y no guardamos tu tarjeta. El año cuesta diez meses. Precios en soles. Antes de pagar eliges boleta o factura.</p>' +
+  return '<div class="ini-letra plw-letra" data-sin-pais><p><b>Pagando por la web</b> (Mercado Pago) es un solo pago por el mes o el año que eliges: no se renueva solo y no guardamos tu tarjeta. El año cuesta diez meses. ' + (usd ? 'Se cobra en soles: los montos en dólares son una referencia.' : 'Precios en soles.') + ' Antes de pagar eliges boleta o factura.</p>' +
     '<p><b>Dentro de la app, por Google Play,</b> es una suscripción que se renueva sola hasta que la canceles, y cuesta un poco más por la comisión de la tienda. Si pagaste ahí, se cancela en Google Play.</p></div>';
 }
 
@@ -399,6 +411,7 @@ function plwAtar(){
   var c = PLW.caja; if(!c) return;
   Array.prototype.forEach.call(c.querySelectorAll('[data-plw]'), function(b){ b.onclick = function(){ plwAccion(b.getAttribute('data-plw'), b); }; });
   Array.prototype.forEach.call(c.querySelectorAll('#plw-per button'), function(b){ b.onclick = function(){ PLW.per = b.getAttribute('data-per') === 'a' ? 'a' : 'm'; plwRepintar(); }; });
+  if(typeof monedaAtar === 'function') monedaAtar($('plw-moneda'), plwRepintar);
   var x = $('plw-av-x'); if(x) x.onclick = function(){ PLW.aviso = null; var z = $('plw-aviso'); if(z) z.innerHTML = ''; };
   var i = $('plw-cod'); if(i) i.onkeydown = function(ev){ if(ev.key === 'Enter'){ ev.preventDefault(); plwCodigo(); } };
 }
@@ -449,7 +462,7 @@ function plwRegalo(b){
 function plwPagar(planId){
   var x = plwPrecios().filter(function(y){ return y.P.id === planId; })[0]; if(!x || !plwSoyDueno()) return;
   var per = PLW.per, o = YO.obra, E = planwEstado();
-  PLW.f = { modo:'pagar', plan:x.P.id, per:per, slug:(per === 'a' ? x.P.sa : x.P.sm), monto:(per === 'a' ? x.a : x.m), dias:(per === 'a' ? 365 : 30),
+  PLW.f = { modo:'pagar', plan:x.P.id, per:per, slug:(per === 'a' ? x.P.sa : x.P.sm), monto:(per === 'a' ? x.ca : x.cm), dias:(per === 'a' ? 365 : 30),
             emp:o.id, empN:o.nombre, tipo:'boleta', listo:null, cp:null, id:null, v:{}, sinCp:false };
   if(!PLW.f.slug){ plwAvisar('mal', '<b>Ese plan todavía no se puede pagar aquí.</b> Escríbenos a ' + SOPORTE + '.'); return; }
   plwFormHoja(x.P, E);
@@ -902,6 +915,7 @@ function _plwCss(){
     '.plw-guardado b{display:block;color:var(--tinta);font-weight:600;font-size:14px}',
     /* los planes */
     '.plw-cab{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;margin:26px 0 22px}.plw-cab h2{font-size:19px}.plw-cab .sub{margin:3px 0 0;font-size:13.5px;color:var(--gris)}',
+    '.plw-sel{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap}.plw-moneda-n{margin:-12px 0 18px}',
     '.plw-quien{margin:-10px 0 22px;max-width:90ch}.plw-quien.aviso{margin:-8px 0 22px}p.plw-quien{font-size:13.5px}',
     '.plw-planes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:stretch;margin:0 0 18px}',
     '@media (max-width:1180px){.plw-planes{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:22px}}@media (max-width:640px){.plw-planes{grid-template-columns:minmax(0,1fr)}}',

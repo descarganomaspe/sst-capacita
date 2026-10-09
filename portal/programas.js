@@ -32,16 +32,16 @@ var PROG_TIPOS = [
   { k:'sst',  ic:'🧭', n:'Programa anual de SST', tit:'PROGRAMA ANUAL DE SEGURIDAD Y SALUD EN EL TRABAJO', una:'actividad', varias:'actividades',
     d:'El paraguas del año: el objetivo, la meta, las actividades de gestión mes a mes y, colgados de él, los otros cuatro programas.',
     obj:'Prevenir los accidentes de trabajo y las enfermedades ocupacionales mediante la gestión de los riesgos de la obra, el cumplimiento de la normativa de seguridad y salud en el trabajo y la mejora continua.' },
-  { k:'cap',  ic:'🎓', n:'Programa de capacitación', tit:'PROGRAMA ANUAL DE CAPACITACIONES', una:'capacitación', varias:'capacitaciones', acceso:'',
+  { k:'cap',  ic:'🎓', n:'Programa de capacitación', tit:'PROGRAMA ANUAL DE CAPACITACIONES', una:'capacitación', varias:'capacitaciones',
     d:'Los temas del año, mes a mes, con su responsable, a quién va dirigido y sus horas. Lo dictado se cuenta solo.',
     obj:'Dar a cada trabajador los conocimientos y las habilidades para hacer su trabajo de forma segura, según los peligros de su puesto.' },
-  { k:'insp', ic:'🔎', n:'Programa de inspecciones', tit:'PROGRAMA ANUAL DE INSPECCIONES', una:'inspección', varias:'inspecciones', acceso:'inspec',
+  { k:'insp', ic:'🔎', n:'Programa de inspecciones', tit:'PROGRAMA ANUAL DE INSPECCIONES', una:'inspección', varias:'inspecciones', desde:2,
     d:'Qué se inspecciona, con qué frecuencia y quién responde. Las inspecciones registradas se cuentan solas.',
     obj:'Detectar a tiempo las condiciones y los actos subestándares de la obra y corregirlos antes de que causen un accidente.' },
-  { k:'sim',  ic:'🧯', n:'Programa de simulacros', tit:'PROGRAMA ANUAL DE SIMULACROS', una:'simulacro', varias:'simulacros', masc:1, acceso:'simulacros',
+  { k:'sim',  ic:'🧯', n:'Programa de simulacros', tit:'PROGRAMA ANUAL DE SIMULACROS', una:'simulacro', varias:'simulacros', masc:1, desde:2,
     d:'Los simulacros del año, con su escenario y su responsable. Los realizados se cuentan solos.',
     obj:'Comprobar que el plan de respuesta ante emergencias funciona y que el personal sabe qué hacer cuando ocurre una.' },
-  { k:'camp', ic:'🎯', n:'Programa de campañas', tit:'PROGRAMA ANUAL DE CAMPAÑAS DE SEGURIDAD', una:'campaña', varias:'campañas', acceso:'campanas',
+  { k:'camp', ic:'🎯', n:'Programa de campañas', tit:'PROGRAMA ANUAL DE CAMPAÑAS DE SEGURIDAD', una:'campaña', varias:'campañas', desde:2,
     d:'Las campañas de seguridad del año, con su mensaje y su responsable. Las realizadas se cuentan solas.',
     obj:'Reforzar la cultura de prevención con campañas sobre los riesgos más importantes de la obra.' }
 ];
@@ -373,11 +373,16 @@ function progVista(caja){
   }
   PROGW.pinta=pinta; VISTA.recargar=pinta; pinta();
 }
-/* el plan que abre un acceso de la vitrina (para el candado de una tarjeta) */
-function _pgPlanDe(k){
-  if(!k || (typeof planWebTrae==='function' && planWebTrae(k))) return null;
-  var x=(typeof INI_VITRINA==='object' ? INI_VITRINA : []).filter(function(v){ return v.k===k; })[0];
-  return x ? (planWebPlan(x.desde) || { n:'' }) : null;
+/* el plan que abre un programa (para el candado de su tarjeta). 07/10/2026 · Marcelo: «Programas del año, sí, pero con
+   limitaciones, ya lo colocas tú, y completo desde supervisor». La sección se abre desde Prevencionista con DOS
+   programas —el de capacitación y el anual de SST—; los de inspecciones, simulacros y campañas (desde:2) se abren
+   desde Supervisor SST, que es donde está completo. No depende de que el plan traiga la sección de simulacros o de
+   campañas: el programa se arma igual, y lo ejecutado se marca a mano mientras tanto. */
+var PROG_COMPLETO = 2;
+function _pgPlanDe(T){
+  var d=(T && T.desde) || 0;
+  if(!d || typeof YO!=='object' || !YO || YO.central || !YO.obra || typeof _dcOrdenPlan!=='function' || _dcOrdenPlan()>=d) return null;
+  return (typeof planWebPlan==='function' && planWebPlan(d)) || { n:'' };
 }
 function _pgTira(R, anio, tipo){
   var cerr=progCerrados(anio);
@@ -405,11 +410,17 @@ function progPintar(){
     (otros.length ? '<span class="acc-otros" id="pg-otros">También hay programas de'+otros.map(function(y){ return ' <button type="button" class="bt-link" data-anio="'+esc(y)+'">'+esc(y)+'</button>'; }).join('')+'</span>' : '')+'</div>';
   h+='<div class="aviso" id="pg-que"><b>Cada programa es la hoja del año:</b> las actividades en filas y los doce meses en columnas. Lo programado (P) lo marcas tú; lo ejecutado (E) se cuenta solo con lo que la obra registra en OBRASST '+
      '—capacitaciones, inspecciones, simulacros y campañas— y también se puede marcar a mano. Cada uno sale en PDF y en Excel, con su bloque de firmas.</div>';
+  var falta=PROG_TIPOS.filter(function(T){ return !!_pgPlanDe(T); });
+  if(falta.length){
+    var Pm=_pgPlanDe(falta[0]), Pa=(typeof planWebActual==='function') ? planWebActual() : null;
+    h+='<div class="aviso ojo" id="pg-plan">Tu plan'+(Pa ? ' <b>'+esc(Pa.n)+'</b>' : '')+' trae <b>dos de los cinco programas</b>: el de capacitación y el anual de SST. Los de inspecciones, simulacros y campañas —y el anual de SST con todo colgado de él— '+
+       'se abren con el plan <b>'+esc(Pm.n||'Supervisor SST')+'</b>'+((typeof planWebPrecio==='function') ? planWebPrecio(Pm) : '')+' o uno mayor. <button type="button" class="bt-link" data-plan="insp">Ver qué trae cada plan</button></div>';
+  }
   h+='<div class="pg-hub" id="pg-hub">'+PROG_TIPOS.map(function(T){
-    var f=progDe(F, T.k, A), plan=_pgPlanDe(T.acceso), prev=progDe(F, T.k, String(+A-1));
+    var f=progDe(F, T.k, A), plan=_pgPlanDe(T), prev=progDe(F, T.k, String(+A-1));
     var cab='<h3><span aria-hidden="true">'+T.ic+'</span>'+esc(T.n)+'</h3>';
     if(plan) return '<section class="pg-t cand" data-tipo="'+T.k+'">'+cab+'<p>'+esc(T.d)+'</p><div class="pg-n">🔒 No está en tu plan'+(plan.n ? ': se abre con el plan <b>'+esc(plan.n)+'</b>' : '')+'</div>'+
-      '<div class="acciones"><button type="button" class="bt sec chico" data-plan="'+T.k+'">Ver qué trae</button></div></section>';
+      '<div class="acciones"><button type="button" class="bt sec chico" data-plan="'+T.k+'">Ver qué trae cada plan</button></div></section>';
     if(!f) return '<section class="pg-t" data-tipo="'+T.k+'">'+cab+'<p>'+esc(T.d)+'</p><div class="pg-n">Todavía no está armado para '+esc(A)+'.</div>'+
       '<div class="acciones"><button type="button" class="bt chico" data-armar="'+T.k+'">Armar el programa</button>'+(prev ? '<button type="button" class="bt sec chico" data-copiar="'+T.k+'">Copiar el de '+esc(String(+A-1))+'</button>' : '')+'</div></section>';
     var R=progResumen(f.d, H, F), d=f.d;
@@ -432,7 +443,7 @@ function progPintar(){
   Array.prototype.forEach.call(caja.querySelectorAll('[data-abrir]'), function(b){ b.onclick=function(){ progAbrir(b.getAttribute('data-abrir'), A); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('[data-pdf]'), function(b){ b.onclick=function(){ progVer(b.getAttribute('data-pdf'), A); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('[data-xls]'), function(b){ b.onclick=function(){ var f=progDe(PROGW.filas, b.getAttribute('data-xls'), A); if(f) progExcel(f.d, PROGW.H, PROGW.filas, b); }; });
-  Array.prototype.forEach.call(caja.querySelectorAll('[data-plan]'), function(b){ b.onclick=function(){ var T=progTipo(b.getAttribute('data-plan')); navegar(T.k==='insp' ? 'insp' : (T.k==='sim' ? 'simulacros' : 'campanas')); }; });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-plan]'), function(b){ b.onclick=function(){ if(typeof planesHoja==='function') planesHoja(); else navegar('plan'); }; });
 }
 
 /* ── la hoja a la vista: «para aprobar» (solo lo programado) o «con el avance» (programado y ejecutado) ──
@@ -505,7 +516,7 @@ function _pgfCopia(prev, anio, des){
 function progAbrir(tipo, anio, op){
   _gesCss(); _yaCss(); _papCss(); _pgCss();
   op=op||{}; anio=String(anio);
-  var T=progTipo(tipo), plan=_pgPlanDe(T.acceso);
+  var T=progTipo(tipo), plan=_pgPlanDe(T);
   if(plan){ toast('Este programa se abre con el plan '+(plan.n||'siguiente')+'.'); return Promise.resolve(false); }
   abrirHoja(progNombre(T.k, anio), 'Lo programado, mes a mes; lo ejecutado se cuenta solo con lo que la obra registra', '<div class="vacio" id="pgf-carga">Trayendo lo de la obra…</div>',
     '<button type="button" class="bt mal" id="pgf-quitar" hidden>Quitar</button><button type="button" class="bt sec" id="pgf-sig" disabled>Siguiente ›</button><button type="button" class="bt" id="pgf-ok" disabled>Guardar el programa</button>',
@@ -700,7 +711,7 @@ function _pgfCatLista(){
   if(PGF._cat && PGF._catT===PGF.tipo) return PGF._cat;
   var t=PGF.tipo, cat=PGF.cat||{}, out=[], pe=(paisObraP()==='pe'), sec=sectorObraP(), tx=function(s){ return pe ? s : txPaisP(s); };
   if(t==='sst') PROG_SST_BASE.forEach(function(x){
-    if(x.ref){ var R=progTipo(x.ref); if(!_pgPlanDe(R.acceso)) out.push({ g:x.g, n:R.n, sub:'Se llena sola con ese programa', ref:x.ref }); }
+    if(x.ref){ var R=progTipo(x.ref); if(!_pgPlanDe(R)) out.push({ g:x.g, n:R.n, sub:'Se llena sola con ese programa', ref:x.ref }); }
     else out.push({ g:x.g, n:(x.fuera && !pe && paisObraP()!=='do') ? x.fuera : tx(x.n), sub:x.cada ? 'Todos los meses' : 'En '+(x.en||[]).map(function(m){ return progMes(m, true); }).join(' y '), cada:x.cada||0, en:x.en||null });
   });
   else if(t==='cap'){
@@ -1203,4 +1214,324 @@ function progExcel(d, H, progs, bt){
     if(bt) bt.disabled=false;
     return true;
   }, function(){ if(bt) bt.disabled=false; toast('No se pudo armar el Excel. Revisa tu conexión.'); return false; });
+}
+
+/* ══ OBJETIVOS Y METAS (08/10/2026) ══════════════════════════════════════════════════════════════════════════════════
+   Marcelo: «agregar el QR de objetivos y metas, y también el poder crear objetivos y metas (que es de acuerdo al programa
+   anual de seguridad), osea que se jale la data, y si es que ya se tiene, poder acoplarlo».
+   La sección «Objetivos y metas» (Programas e indicadores). Lo que guarda: sst_doc, hoja «ges-objetivos», SIN «url», una
+   fila por año:
+     nota = { v:1, k:'obj', anio, cod, ver, aprob, items:[{ id, obj, meta, ind, resp, plazo, fuente }], firmas:[{ rol, nombre, cargo }],
+              por, cuando }
+   «fuente» dice de dónde sale cada objetivo: 'sst' (el objetivo del programa anual de SST), 'linea:<línea>' (una línea de sus
+   actividades), 'cap' · 'insp' · 'sim' · 'camp' (otro programa del año) o '' (escrito o pegado a mano). El avance NO se escribe:
+   lo dice el programa del que sale (lo ejecutado ÷ lo programado a la fecha, con la misma cuenta de «Programas del año»).
+     · «Traer del programa anual de SST»: propone los objetivos desde los programas de ese año; no toca lo escrito a mano.
+     · «Acoplar lo que ya tienes»: pegar las filas de tu Excel, o subir tu documento a la carpeta «Objetivos y metas».
+     · El PDF para firmar, y «Publicar en el cartel QR»: el PDF va a la carpeta «Objetivos y metas», la que abre su cartel.
+   Sin citar normas: los objetivos de cada línea son de uso general (es mejor un casillero vacío que una norma inventada). */
+var OBJ_HOJA = 'ges-objetivos';
+var OBJ_LINEA = {
+  'Gestión y liderazgo':'Que la línea de mando lidere la seguridad y salud en el trabajo de la obra.',
+  'Peligros y riesgos':'Identificar los peligros, evaluar los riesgos y aplicar sus controles en cada frente de trabajo.',
+  'Capacitación':'Que cada trabajador reciba la capacitación que necesita para trabajar seguro.',
+  'Inspecciones':'Detectar y corregir a tiempo los actos y las condiciones subestándares.',
+  'Salud ocupacional':'Cuidar la salud de los trabajadores y prevenir las enfermedades ocupacionales.',
+  'Emergencias':'Estar preparados para responder ante una emergencia.',
+  'Accidentes e incidentes':'Reportar e investigar los accidentes y los incidentes para que no se repitan.',
+  'Campañas y participación':'Promover la participación de los trabajadores en la prevención.',
+  'Mejora continua':'Revisar los resultados de la gestión y mejorarla de forma continua.'
+};
+var OBJW = { obra:null, anio:'', filas:null, progs:null, H:null, caja:null, n:0, d:null, id:null, texto:'' };
+function _objCss(){
+  if($('obj-css')) return;
+  var s=document.createElement('style'); s.id='obj-css';
+  s.textContent='.obj-anio{display:flex;align-items:center;gap:10px;margin:0 0 14px}.obj-anio b{font-size:18px;color:var(--tinta);font-variant-numeric:tabular-nums}'+
+    '.obj-l{list-style:none;margin:0;padding:0;display:grid;gap:10px}'+
+    '.obj-i{display:grid;grid-template-columns:34px minmax(0,1fr) 170px;gap:12px;align-items:start;border:1px solid var(--raya);border-radius:12px;padding:12px 14px;background:var(--panel)}'+
+    '.obj-n{width:30px;height:30px;border-radius:50%;background:var(--azul-f);color:var(--azul);display:flex;align-items:center;justify-content:center;font-weight:600;font-variant-numeric:tabular-nums}'+
+    '.obj-t b{display:block;color:var(--tinta);font-weight:600;font-size:14.5px;line-height:1.35}.obj-t dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:3px 12px;margin:8px 0 0;font-size:13px}'+
+    '.obj-t dt{color:var(--gris)}.obj-t dd{margin:0;min-width:0;overflow-wrap:anywhere}.obj-f{font-size:11.5px;color:var(--gris);margin-top:6px}'+
+    '.obj-av{display:grid;gap:5px;justify-items:end;text-align:right}.obj-av .pind-barra{width:120px}.obj-av b{font-size:20px;color:var(--tinta);font-variant-numeric:tabular-nums}.obj-av small{color:var(--gris);font-size:12px}'+
+    '.obj-acc{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:4px}'+
+    '@media (max-width:720px){.obj-i{grid-template-columns:30px minmax(0,1fr)}.obj-av{grid-column:2;justify-items:start;text-align:left}.obj-acc{justify-content:flex-start}}';
+  document.head.appendChild(s);
+}
+function objTraer(fresco){
+  return traer('sst_doc', '&select=id,hoja,nombre,nota,creado&hoja=eq.'+OBJ_HOJA+'&order=creado.desc', 200).then(function(rows){
+    var l=[];
+    (rows||[]).forEach(function(r){ if(!r || r.hoja!==OBJ_HOJA) return; var d=nota(r.nota); if(!d || d.k!=='obj' || !d.anio) return; l.push({ id:r.id, creado:r.creado, texto:String(r.nota||''), d:objLimpio(d) }); });
+    return l;
+  });
+}
+function objLimpio(n){
+  n=n||{};
+  return { v:1, k:'obj', anio:String(n.anio||'').slice(0, 4), cod:String(n.cod||''), ver:String(n.ver||'01'), aprob:String(n.aprob||''),
+    items:(Array.isArray(n.items) ? n.items : []).slice(0, 60).map(function(x){ x=x||{};
+      return { id:String(x.id||_pgId()), obj:String(x.obj||'').slice(0, 400), meta:String(x.meta||'').slice(0, 300), ind:String(x.ind||'').slice(0, 300),
+               resp:String(x.resp||'').slice(0, 120), plazo:String(x.plazo||'').slice(0, 60), fuente:String(x.fuente||'').slice(0, 80) }; }),
+    firmas:(Array.isArray(n.firmas) ? n.firmas : []).slice(0, 4).map(function(f){ f=f||{}; return { rol:String(f.rol||''), nombre:String(f.nombre||''), cargo:String(f.cargo||'') }; }),
+    por:String(n.por||''), cuando:String(n.cuando||'') };
+}
+function objDe(filas, anio){ return (filas||[]).filter(function(f){ return String(f.d.anio)===String(anio); })[0] || null; }
+/* las actividades de una línea del programa anual, contadas como se cuentan en «Programas del año» */
+function _objResumenLinea(sst, H, progs, linea){
+  var copia=Object.assign({}, sst, { items:(sst.items||[]).filter(function(it){ return !it.ref && gesTxt(it.n) && String(it.g||'')===linea; }) });
+  return progResumen(copia, H, progs);
+}
+/* el avance de un objetivo: lo que dice su programa (null si se escribió a mano) */
+function objAvance(it, progs, H, anio){
+  var f=String(it.fuente||''), sst=progDe(progs, 'sst', anio);
+  if(f==='sst' && sst) return progResumen(sst.d, H, progs);
+  if(f.indexOf('linea:')===0 && sst) return _objResumenLinea(sst.d, H, progs, f.slice(6));
+  if(/^(cap|insp|sim|camp)$/.test(f)){ var o=progDe(progs, f, anio); return o ? progResumen(o.d, H, progs) : null; }
+  return null;
+}
+function objFuenteN(f){
+  f=String(f||'');
+  if(f==='sst') return 'Del programa anual de SST';
+  if(f.indexOf('linea:')===0) return 'Del programa anual de SST · '+f.slice(6);
+  if(/^(cap|insp|sim|camp)$/.test(f)) return 'Del '+progTipo(f).n.charAt(0).toLowerCase()+progTipo(f).n.slice(1);
+  return 'Escrito aquí';
+}
+/* lo que se propone desde los programas del año (cada fuente una sola vez) */
+function objDesdeProgramas(progs, anio){
+  var out=[], sst=progDe(progs, 'sst', anio), plazo='Diciembre de '+anio;
+  if(sst){
+    var d=sst.d;
+    out.push({ obj:gesTxt(d.obj) || progTipo('sst').obj, meta:gesTxt(d.meta) || 'Cumplir el 100 % de las actividades programadas.', ind:gesTxt(d.ind) || '(Actividades ejecutadas ÷ actividades programadas) × 100',
+               resp:'', plazo:plazo, fuente:'sst' });
+    PROG_LINEAS.forEach(function(L){
+      var its=(d.items||[]).filter(function(it){ return !it.ref && gesTxt(it.n) && String(it.g||'')===L; });
+      if(!its.length) return;
+      var cuenta={}; its.forEach(function(it){ var r=gesTxt(it.resp); if(r) cuenta[r]=(cuenta[r]||0)+1; });
+      var resp=Object.keys(cuenta).sort(function(a, b){ return cuenta[b]-cuenta[a]; })[0] || '';
+      out.push({ obj:OBJ_LINEA[L] || L, meta:'Cumplir las '+its.length+' '+(its.length===1 ? 'actividad programada' : 'actividades programadas')+' de «'+L+'».', ind:'(Actividades ejecutadas ÷ actividades programadas) × 100',
+                 resp:resp, plazo:plazo, fuente:'linea:'+L });
+    });
+  }
+  ['cap', 'insp', 'sim', 'camp'].forEach(function(k){
+    var o=progDe(progs, k, anio); if(!o) return;
+    var T=progTipo(k), n=(o.d.items||[]).filter(function(it){ return gesTxt(it.n); }).length;
+    out.push({ obj:gesTxt(o.d.obj) || T.obj, meta:'Cumplir '+(n ? 'los '+n+' '+progGen(k, n===1 ? 'programada' : 'programadas')+' del ' : 'el ')+T.n.charAt(0).toLowerCase()+T.n.slice(1)+'.',
+               ind:'('+T.varias.charAt(0).toUpperCase()+T.varias.slice(1)+' '+progGen(k, 'ejecutadas')+' ÷ '+progGen(k, 'programadas')+') × 100', resp:'', plazo:plazo, fuente:k });
+  });
+  return out;
+}
+function objVacio(anio, progs){
+  var sst=progDe(progs, 'sst', anio), F=sst ? (sst.d.firmas||[]).map(function(f){ return { rol:f.rol, nombre:f.nombre, cargo:f.cargo }; }) : [];
+  if(!F.length){ var yo=''; try{ yo=gesQuien(); }catch(e){} F=[{ rol:'Elaborado por', nombre:yo, cargo:'' }, { rol:'Revisado por', nombre:'', cargo:'' }, { rol:'Aprobado por', nombre:'', cargo:'' }]; }
+  return objLimpio({ anio:anio, ver:'01', items:[], firmas:F });
+}
+function objVista(caja){
+  _gesCss(); _papCss(); _pgCss(); _objCss();
+  var oid=(YO.obra||{}).id;
+  if(OBJW.obra!==oid){ OBJW.obra=oid; OBJW.anio=''; }
+  if(!OBJW.anio) OBJW.anio=ANIO;
+  OBJW.caja=caja;
+  var ac=$('acciones'); if(ac) ac.innerHTML='';
+  cargando(caja);
+  function pinta(silencio){
+    var n=++OBJW.n, A=OBJW.anio;
+    Promise.all([objTraer(true), progTraer(true), progHechos(A, true)]).then(function(r){
+      if(n!==OBJW.n || VISTA.actual!=='objetivos') return;
+      OBJW.filas=r[0]; OBJW.progs=r[1]; OBJW.H=r[2];
+      var f=objDe(r[0], A); OBJW.id=f ? f.id : null; OBJW.texto=f ? f.texto : ''; OBJW.d=f ? f.d : null;
+      objPintar();
+    }).catch(function(cod){ if(n!==OBJW.n || VISTA.actual!=='objetivos') return; if(!silencio) fallo(caja, cod); });
+  }
+  OBJW.pinta=pinta; VISTA.recargar=pinta; pinta();
+}
+function objPintar(){
+  var caja=OBJW.caja; if(!caja || !document.body.contains(caja)) return;
+  var A=OBJW.anio, d=OBJW.d, progs=OBJW.progs, H=OBJW.H, sst=progDe(progs, 'sst', A), ac=$('acciones');
+  if(ac){
+    ac.innerHTML='<button type="button" class="bt sec" id="obj-traer">⬇ Traer del programa anual</button><button type="button" class="bt sec" id="obj-pegar">📋 Pegar de mi Excel</button>'+
+      '<button type="button" class="bt sec" id="obj-subir">📎 Subir mi documento</button>'+(d && d.items.length ? '<button type="button" class="bt" id="obj-hoja">📄 La hoja para firmar</button>' : '');
+    $('obj-traer').onclick=objTraerDelPrograma; $('obj-pegar').onclick=objPegar; $('obj-subir').onclick=objSubirDoc;
+    if($('obj-hoja')) $('obj-hoja').onclick=objHoja;
+  }
+  var h='<div class="obj-anio"><button type="button" class="bt sec chico" id="obj-ant" aria-label="El año anterior">‹</button><b>'+esc(A)+'</b><button type="button" class="bt sec chico" id="obj-sig" aria-label="El año siguiente">›</button>'+
+    '<span class="ayuda" style="margin:0">'+(sst ? 'El programa anual de SST '+esc(A)+' está armado: de ahí salen los objetivos y su avance.' : 'Todavía no hay programa anual de SST '+esc(A)+': arma el programa en «Programas del año» para traer de ahí los objetivos.')+'</span></div>';
+  if(!d || !d.items.length){
+    h+='<div class="vacio" id="obj-vacio"><b>Todavía no hay objetivos y metas para '+esc(A)+'</b>'+(sst ? 'Tráelos del programa anual de SST (un objetivo por cada línea que tenga actividades, con su meta, su indicador y su avance), o pégalos de tu Excel.' : 'Escríbelos aquí o pégalos de tu Excel. Con el programa anual armado, salen solos de él, con su avance.')+
+      '<div class="acciones" style="justify-content:center;margin-top:12px">'+(sst ? '<button type="button" class="bt" id="obj-traer2">⬇ Traer del programa anual de SST</button>' : '<button type="button" class="bt" id="obj-ir-prog">Ir a «Programas del año»</button>')+
+      '<button type="button" class="bt sec" id="obj-nuevo2">＋ Escribir uno</button></div></div>';
+  } else {
+    var conAv=d.items.map(function(it){ return objAvance(it, progs, H, A); }), med=conAv.filter(function(R){ return R && R.aFecha; });
+    var tot=med.length ? Math.round(med.reduce(function(s, R){ return s+R.pct; }, 0)/med.length) : null;
+    h+='<div class="rej" id="obj-cifras">'+cifra('Objetivos', d.items.length, med.length+' con avance medido', '')+cifra('Avance promedio', tot===null ? '—' : tot+' %', tot===null ? 'todavía no hay nada que medir' : 'de los que se miden', tot===null ? '' : (tot>=90 ? 'ok' : (tot>=60 ? 'ojo' : 'mal')))+'</div>';
+    h+='<ol class="obj-l" id="obj-lista">'+d.items.map(function(it, i){
+      var R=conAv[i], av='';
+      if(R && R.aFecha) av='<b>'+R.pct+' %</b><span class="pind-barra"><i style="width:'+Math.max(2, Math.min(100, R.pct))+'%"></i></span><small>'+R.cumpl+' de '+R.aFecha+' a la fecha</small>';
+      else if(R) av='<b>—</b><small>'+(R.prog ? 'todavía no toca medir' : 'sin meses marcados')+'</small>';
+      else av='<small>Se mide aparte</small>';
+      return '<li class="obj-i" data-i="'+i+'"><span class="obj-n">'+(i+1)+'</span><div class="obj-t"><b>'+esc(it.obj||'(sin objetivo)')+'</b><dl>'+
+        '<dt>Meta</dt><dd>'+esc(it.meta||'—')+'</dd><dt>Indicador</dt><dd>'+esc(it.ind||'—')+'</dd>'+(it.resp ? '<dt>Responsable</dt><dd>'+esc(it.resp)+'</dd>' : '')+(it.plazo ? '<dt>Plazo</dt><dd>'+esc(it.plazo)+'</dd>' : '')+
+        '</dl><div class="obj-f">'+esc(objFuenteN(it.fuente))+'</div></div><div class="obj-av">'+av+'<div class="obj-acc"><button type="button" class="bt sec chico" data-acc="editar">Editar</button><button type="button" class="bt sec chico" data-acc="quitar">Quitar</button></div></div></li>';
+    }).join('')+'</ol>';
+    h+='<div class="acciones" style="justify-content:flex-start;margin-top:12px"><button type="button" class="bt sec" id="obj-nuevo">＋ Agregar un objetivo</button></div>';
+  }
+  caja.innerHTML=h;
+  $('obj-ant').onclick=function(){ OBJW.anio=String(+OBJW.anio-1); OBJW.pinta(); };
+  $('obj-sig').onclick=function(){ OBJW.anio=String(+OBJW.anio+1); OBJW.pinta(); };
+  if($('obj-traer2')) $('obj-traer2').onclick=objTraerDelPrograma;
+  if($('obj-ir-prog')) $('obj-ir-prog').onclick=function(){ navegar('programas'); };
+  if($('obj-nuevo')) $('obj-nuevo').onclick=function(){ objEditar(-1); };
+  if($('obj-nuevo2')) $('obj-nuevo2').onclick=function(){ objEditar(-1); };
+  Array.prototype.forEach.call(caja.querySelectorAll('#obj-lista [data-acc]'), function(b){
+    b.onclick=function(){ var i=+b.closest('[data-i]').getAttribute('data-i'); if(b.getAttribute('data-acc')==='editar') objEditar(i); else objQuitar(i); };
+  });
+}
+/* guardar el año entero (si otro lo cambió mientras tanto, no se le escribe encima) */
+function objGuardar(d){
+  d=objLimpio(Object.assign({}, d, { por:gesQuien(), cuando:new Date().toISOString() }));
+  var texto=JSON.stringify(d), nombre='Objetivos y metas '+d.anio, p;
+  if(OBJW.id){
+    p=traerUna('sst_doc', OBJW.id, 'id,hoja,nota').then(function(fila){
+      if(!fila) return Promise.reject({portal:'Estos objetivos ya no están: alguien los quitó.'});
+      if(String(fila.nota||'')!==String(OBJW.texto||'')) return Promise.reject({portal:'Otra persona los cambió mientras tanto. Vuelve a abrir la sección para ver cómo quedaron.'});
+      return sbPatch('sst_doc?id=eq.'+encodeURIComponent(OBJW.id), { nombre:nombre, nota:texto });
+    }).then(function(rows){ if(Array.isArray(rows) && !rows.length) return Promise.reject({portal:'No se guardó: esta cuenta no puede cambiarlos.'}); return OBJW.id; });
+  } else {
+    p=objTraer(true).then(function(filas){
+      if(objDe(filas, d.anio)) return Promise.reject({portal:'Alguien ya guardó los objetivos de este año mientras tanto. Vuelve a abrir la sección.'});
+      return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:OBJ_HOJA, nombre:nombre, nota:texto });
+    }).then(function(rows){ if(Array.isArray(rows) && !rows.length) return Promise.reject({portal:'No se guardó: esta cuenta no puede registrar en esta obra.'}); return (rows && rows[0] && rows[0].id) || null; });
+  }
+  return p.then(function(id){ OBJW.id=id||OBJW.id; OBJW.texto=texto; OBJW.d=d; return d; });
+}
+function objTraerDelPrograma(){
+  var A=OBJW.anio, prop=objDesdeProgramas(OBJW.progs, A);
+  if(!prop.length){ toast('Todavía no hay programas del año '+A+': ármalos en «Programas del año».'); return; }
+  var d=OBJW.d || objVacio(A, OBJW.progs), ya={};
+  d.items.forEach(function(it){ if(it.fuente) ya[it.fuente]=1; });
+  var nuevos=prop.filter(function(x){ return !ya[x.fuente]; });
+  if(!nuevos.length){ toast('Ya está todo lo del programa anual: no hay nada nuevo que traer.'); return; }
+  confirmar('¿Traer '+nuevos.length+(nuevos.length===1 ? ' objetivo' : ' objetivos')+' del programa anual?', 'Salen de los programas de '+A+': el objetivo general, uno por cada línea con actividades y uno por cada programa armado, cada uno con su meta, su indicador y su avance. Lo que escribiste a mano se queda.',
+    { si:'Traerlos' }).then(function(si){
+    if(!si) return;
+    var d2=objLimpio(d); nuevos.forEach(function(x){ d2.items.push(Object.assign({ id:_pgId() }, x)); });
+    objGuardar(d2).then(function(){ toast('Listo: '+nuevos.length+(nuevos.length===1 ? ' objetivo traído.' : ' objetivos traídos.')); objPintar(); }, function(e){ toast('No se pudo guardar. '+porQueFallo(e)); });
+  });
+}
+function objEditar(i){
+  var d=OBJW.d || objVacio(OBJW.anio, OBJW.progs), it=(i>=0) ? d.items[i] : { obj:'', meta:'', ind:'', resp:'', plazo:'Diciembre de '+OBJW.anio, fuente:'' };
+  var campo=function(id, et, v, max, area){ return '<div class="campo"><label for="'+id+'">'+et+'</label>'+(area ? '<textarea id="'+id+'" maxlength="'+max+'" rows="2">'+esc(v||'')+'</textarea>' : '<input id="'+id+'" maxlength="'+max+'" value="'+esc(v||'')+'">')+'</div>'; };
+  abrirHoja(i>=0 ? 'Objetivo '+(i+1) : 'Un objetivo nuevo', objFuenteN(it.fuente)+(it.fuente ? ' · su avance lo dice ese programa' : ''),
+    campo('objf-obj', 'Objetivo', it.obj, 400, true)+campo('objf-meta', 'Meta', it.meta, 300, true)+campo('objf-ind', 'Indicador', it.ind, 300)+
+    '<div class="campo-dos">'+campo('objf-resp', 'Responsable', it.resp, 120)+campo('objf-plazo', 'Plazo', it.plazo, 60)+'</div><p class="msg" id="objf-msg"></p>',
+    '<button type="button" class="bt sec" id="objf-no">Cancelar</button><button type="button" class="bt" id="objf-si">Guardar</button>', { sinFoco:true });
+  setTimeout(function(){ try{ $('objf-obj').focus(); }catch(e){} }, 40);
+  $('objf-no').onclick=cerrarHoja;
+  $('objf-si').onclick=function(){
+    var o={ obj:gesTxt($('objf-obj').value), meta:gesTxt($('objf-meta').value), ind:gesTxt($('objf-ind').value), resp:gesTxt($('objf-resp').value), plazo:gesTxt($('objf-plazo').value) };
+    if(o.obj.length<5){ var m=$('objf-msg'); m.className='msg mal'; m.textContent='Escribe el objetivo.'; $('objf-obj').focus(); return; }
+    if(!o.meta){ var m2=$('objf-msg'); m2.className='msg mal'; m2.textContent='Escribe su meta: lo que se quiere lograr y cuánto.'; $('objf-meta').focus(); return; }
+    var d2=objLimpio(d);
+    if(i>=0) d2.items[i]=Object.assign({}, d2.items[i], o); else d2.items.push(Object.assign({ id:_pgId(), fuente:'' }, o));
+    this.disabled=true; var bt=this;
+    objGuardar(d2).then(function(){ cerrarHoja(); toast('Objetivo guardado.'); objPintar(); }, function(e){ bt.disabled=false; var m3=$('objf-msg'); m3.className='msg mal'; m3.textContent='No se pudo guardar. '+porQueFallo(e); });
+  };
+}
+function objQuitar(i){
+  var d=OBJW.d; if(!d || !d.items[i]) return;
+  confirmar('¿Quitar este objetivo?', '«'+d.items[i].obj+'». Si sale del programa anual, lo puedes volver a traer.', { si:'Quitar', mal:true }).then(function(si){
+    if(!si) return;
+    var d2=objLimpio(d); d2.items.splice(i, 1);
+    objGuardar(d2).then(function(){ toast('Quitado.'); objPintar(); }, function(e){ toast('No se pudo quitar. '+porQueFallo(e)); });
+  });
+}
+/* acoplar lo que ya tiene: las filas de su Excel (objetivo · meta · indicador · responsable · plazo) */
+function objPegar(){
+  preguntar('Pegar de mi Excel', 'Copia las filas de tu cuadro de objetivos —una por objetivo, con sus columnas en este orden: objetivo, meta, indicador, responsable y plazo— y pégalas aquí. Las que ya estén, se quedan.',
+    { etiqueta:'Las filas de tu Excel', placeholder:'Reducir los accidentes\t0 accidentes con tiempo perdido\tN.º de accidentes\tIng. de seguridad\tDiciembre', maximo:20000, minimo:3, corto:'Pega al menos una fila.' }, { si:'Agregar' }).then(function(t){
+    if(t==null) return;
+    var filas=String(t).split(/\r?\n/).map(function(l){ return l.split(/\t|;/).map(function(c){ return gesTxt(c.replace(/^"|"$/g, '')); }); })
+      .filter(function(c){ return c[0] && c[0].length>=3 && !/^objetivos?$/i.test(c[0]); });
+    if(!filas.length){ toast('No encontré filas con un objetivo.'); return; }
+    var d2=objLimpio(OBJW.d || objVacio(OBJW.anio, OBJW.progs));
+    filas.slice(0, 40).forEach(function(c){ d2.items.push({ id:_pgId(), obj:c[0], meta:c[1]||'', ind:c[2]||'', resp:c[3]||'', plazo:c[4]||'', fuente:'' }); });
+    objGuardar(d2).then(function(){ toast(filas.length===1 ? '1 objetivo agregado.' : filas.length+' objetivos agregados.'); objPintar(); }, function(e){ toast('No se pudo guardar. '+porQueFallo(e)); });
+  });
+}
+/* o su propio documento, a la carpeta «Objetivos y metas» (la que abre su cartel QR) */
+function objSubirDoc(){
+  var inp=document.createElement('input'); inp.type='file'; inp.accept='application/pdf,image/*,.doc,.docx,.xls,.xlsx';
+  inp.onchange=function(){
+    var f=inp.files && inp.files[0]; if(!f) return;
+    if(f.size>25*1024*1024){ toast('Pesa más de 25 MB: comprímelo.'); return; }
+    toast('Subiendo «'+f.name+'»…');
+    subirArchivoP('objetivos', f).then(function(url){
+      return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'objetivos', nombre:String(f.name||'Objetivos y metas').replace(/\.[a-z0-9]{2,5}$/i, '').slice(0, 120), url:url, nota:null });
+    }).then(function(){ toast('Listo: quedó en la carpeta «Objetivos y metas» (y en su cartel QR).'); }, function(e){ toast('No se pudo subir. '+porQueFallo(e)); });
+  };
+  inp.click();
+}
+/* la hoja para firmar (el PDF), con la vista previa, y publicarla en el cartel QR */
+function objPdf(d, op){
+  op=op||{};
+  var fuera=(paisObraP()!=='pe'), progs=OBJW.progs, H=OBJW.H;
+  return Promise.all([cargarEvPDF(), papCtx()]).then(function(r){
+    var X=r[1]||{}, anio=String(d.anio);
+    var C={ emp:X.emp||{}, logo:X.logo||null, obra:X.obra||'', fmt:{ obj:{ cod:d.cod, rev:d.ver, fecha:d.aprob } }, tx:fuera ? txPaisP : null, rotulo:X.obra||'' };
+    var P=_ppDoc('h', C, 'OBJETIVOS Y METAS DE SEGURIDAD Y SALUD EN EL TRABAJO '+anio, 'Avance al '+fechaLarga(hoyISO()), 'obj'), doc=P.doc, tx=P.tx;
+    P.cabecera();
+    var x0=P.M, m=P.w/2, hF=6;
+    P.par(x0, P.y, 22, m-22, hF, 'EMPRESA', C.emp.razon||''); P.par(x0+m, P.y, 30, m-30, hF, 'OBRA / PROYECTO', C.obra||''); P.y+=hF+2.2;
+    var cols=[['obj', 'OBJETIVO', 70, true], ['meta', 'META', 58], ['ind', 'INDICADOR', 50], ['resp', 'RESPONSABLE', 34], ['plazo', 'PLAZO', 22], ['av', 'AVANCE', 28]], wN=7, hCab=7;
+    var cab=function(){ var x=x0; P.celda(x, P.y, wN, hCab, 'N.º', {f:_PP_AZUL, b:true, pt:6.6, al:'c'}); x+=wN; cols.forEach(function(c){ P.celda(x, P.y, c[2], hCab, tx(c[1]), {f:_PP_AZUL, b:true, pt:6.6, al:'c'}); x+=c[2]; }); P.y+=hCab; };
+    cab();
+    d.items.forEach(function(it, i){
+      var R=objAvance(it, progs, H, anio), v={ obj:it.obj, meta:it.meta, ind:it.ind, resp:it.resp, plazo:it.plazo, av:(R && R.aFecha) ? R.pct+' % ('+R.cumpl+' de '+R.aFecha+')' : (R ? 'Sin medir aún' : '') };
+      var hR=8; cols.forEach(function(c){ hR=Math.max(hR, P.alto(tx(v[c[0]]||''), c[2]-2.8, c[3] ? 7.6 : 7, !!c[3])+1.8); });
+      if(!P.cabe(hR)){ P.salto(); cab(); }
+      var x=x0; P.celda(x, P.y, wN, hR, String(i+1), {pt:7, al:'c'}); x+=wN;
+      cols.forEach(function(c){ P.celda(x, P.y, c[2], hR, tx(v[c[0]]||''), {pt:c[3] ? 7.6 : 7, b:!!c[3], al:c[0]==='av' ? 'c' : ''}); x+=c[2]; });
+      P.y+=hR;
+    });
+    P.y+=1.6;
+    var ley='El avance de cada objetivo sale del programa del que se tomó (lo ejecutado ÷ lo programado a la fecha), con lo registrado en OBRASST y lo marcado a mano.';
+    if(!P.cabe(4)) P.salto();
+    P.txt(tx(ley), x0, P.y, P.w, {pt:6.4, c:_PP_TENUE, max:2}); P.y+=P.alto(tx(ley), P.w, 6.4)+2.6;
+    var Fm=(d.firmas||[]).filter(function(f){ return gesTxt(f.rol) || gesTxt(f.nombre) || gesTxt(f.cargo); });
+    if(Fm.length){
+      var hFi=27; if(!P.cabe(hFi+1)) P.salto();
+      var wF=P.w/Fm.length;
+      Fm.forEach(function(f, i){
+        var x=x0+i*wF, y=P.y;
+        P.celda(x, y, wF, 4.8, tx(String(f.rol||'').toUpperCase()), {f:_PP_AZUL, b:true, pt:6.8, al:'c'});
+        P.caja(x, y+4.8, wF, hFi-4.8);
+        doc.setDrawColor(120, 128, 136); doc.setLineWidth(0.2); doc.line(x+wF*0.14, y+17.4, x+wF*0.86, y+17.4);
+        P.txt(f.nombre||'', x+1.4, y+18, wF-2.8, {pt:7.4, b:true, al:'c', max:1});
+        P.txt(tx(f.cargo||''), x+1.4, y+21.6, wF-2.8, {pt:6.6, al:'c', c:_PP_TENUE, max:2});
+      });
+      P.y+=hFi+1.4;
+    }
+    var S=P.listo();
+    S.nombre=_papNombre('Objetivos y metas SST '+anio+' - '+(C.obra||'obra'))+'.pdf';
+    return S;
+  });
+}
+function objHoja(){
+  var d=OBJW.d; if(!d || !d.items.length) return;
+  abrirHoja('Objetivos y metas '+d.anio, 'La hoja para firmar, con el avance de hoy', '<div class="pdfv" id="objh-prev"><div class="pdfv-msg">Armando la hoja…</div></div><p class="ayuda" style="margin-top:10px">«Publicar en el cartel QR» deja este PDF en la carpeta «Objetivos y metas»: es lo que abre su cartel.</p><p class="msg" id="objh-msg"></p>',
+    '<button type="button" class="bt sec" id="objh-pdf" disabled>Descargar PDF</button><button type="button" class="bt sec" id="objh-imp" disabled>Imprimir</button><button type="button" class="bt" id="objh-qr" disabled>▣ Publicar en el cartel QR</button>', { ancha:true, sinFoco:true });
+  var R=null;
+  objPdf(d).then(function(S){
+    R=S; if(!$('objh-prev')) return;
+    pdfVistaP($('objh-prev'), S.blob); ['objh-pdf', 'objh-imp', 'objh-qr'].forEach(function(k){ var b=$(k); if(b) b.disabled=false; });
+  }, function(){ if($('objh-prev')) $('objh-prev').innerHTML='<div class="pdfv-msg">No se pudo armar la hoja. Revisa tu conexión e inténtalo otra vez.</div>'; });
+  $('objh-pdf').onclick=function(){ if(R) papBajar(R); };
+  $('objh-imp').onclick=function(){ if(R) papImprimir(R); };
+  $('objh-qr').onclick=function(){
+    if(!R) return; var bt=this; bt.disabled=true;
+    var m=$('objh-msg'); m.className='msg gris'; m.textContent='Publicando…';
+    var f=null; try{ f=new File([R.blob], R.nombre, { type:'application/pdf' }); }catch(e){ f=R.blob; f.name=R.nombre; }
+    subirArchivoP('objetivos', f).then(function(url){
+      return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'objetivos', nombre:('Objetivos y metas de SST '+d.anio).slice(0, 120), url:url, nota:null });
+    }).then(function(){
+      bt.disabled=false; m.className='msg ok'; m.textContent='Publicado: está en la carpeta «Objetivos y metas» y lo abre su cartel QR (imprímelo en «Carteles QR»).';
+    }, function(e){ bt.disabled=false; m.className='msg mal'; m.textContent='No se pudo publicar. '+porQueFallo(e); });
+  };
 }

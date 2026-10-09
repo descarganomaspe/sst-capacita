@@ -23,15 +23,33 @@ var PAISES = [
 var LS_PAIS = 'sstc_pais';
 
 /* El reloj del celular dice el país sin pedir permiso de ubicación ni
-   gastar datos. Si no se puede leer, Perú, que es de donde venimos. */
+   gastar datos. Si no se puede leer, Perú, que es de donde venimos.
+   07/10/2026 · Marcelo: «Los planes están en dólares, colócalos en soles».
+   El reloj solo no alcanza: la zona «Bogotá, Lima, Quito» de Windows —la de
+   casi toda computadora del Perú— llega como America/Bogota cuando la región
+   de Windows no es «Perú», y a esa persona se le ofrecía Colombia y precios
+   en dólares. Ahora se mira también el idioma del equipo: Bogotá es Colombia
+   solo si el idioma lo dice (es-CO); y con el idioma del Perú (es-PE) y la
+   hora del Perú (UTC-5), es el Perú aunque la zona se llame distinto (la del
+   Este de EE. UU. en invierno, Panamá, Cancún). Ante la duda, Perú. */
+function _paisIdiomas(){
+  var o = {};
+  try{
+    var L = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || ''];
+    for(var i = 0; i < L.length; i++){ var m = String(L[i] || '').match(/^es[-_]([A-Za-z]{2})$/); if(m) o[m[1].toLowerCase()] = 1; }
+  }catch(e){}
+  return o;
+}
 function paisDetectado(){
   try{
     var z = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').toLowerCase();
+    if(z.indexOf('lima') >= 0) return 'pe';
+    var idi = _paisIdiomas();
+    if(z.indexOf('bogota') >= 0) return (idi.co && !idi.pe) ? 'co' : 'pe';
+    if(idi.pe && new Date().getTimezoneOffset() === 300) return 'pe';
     if(z.indexOf('santiago') >= 0 || z.indexOf('punta_arenas') >= 0 || z.indexOf('easter') >= 0) return 'cl';
-    if(z.indexOf('bogota') >= 0) return 'co';
     if(z.indexOf('santo_domingo') >= 0) return 'do';
     if(z.indexOf('argentina') >= 0 || z.indexOf('buenos_aires') >= 0 || z.indexOf('cordoba') >= 0) return 'ar';
-    if(z.indexOf('lima') >= 0) return 'pe';
     /* 26/09/2026 */
     if(z.indexOf('montevideo') >= 0) return 'uy';
     if(z.indexOf('asuncion') >= 0) return 'py';
@@ -87,7 +105,9 @@ var _OCULTA_FUERA = {
                'p-procedimientos':1, 'p-proc':1, 'p-temas':1, 'p-generar':1, 'p-talleres':1, 'p-taller':1,
                'p-taller-fin':1, 'p-ind-armar':1, 'p-ind-avance':1, 'p-ind-ed':1, 'p-ind-trab':1,
                'p-senales':1, 'p-senal':1, 'p-senal-pers':1, 'p-constancias':1, 'p-plan-cap':1,
-               'p-campanas':1, 'p-campana':1 }
+               'p-campanas':1, 'p-campana':1,
+               /* 08/10 · la autorización del grupo sanguíneo está escrita sobre la Ley 29733 (Perú) */
+               'p-aut-lista':1, 'p-aut-trab':1, 'p-aut-firma':1 }
 };
 var OBRA_OCULTA = {
   cl:_OCULTA_FUERA, co:_OCULTA_FUERA, ar:_OCULTA_FUERA,
@@ -99,7 +119,9 @@ var OBRA_OCULTA = {
     pantallas: { 'p-temas':1, 'p-generar':1, 'p-talleres':1, 'p-taller':1,
                  'p-taller-fin':1, 'p-ind-armar':1, 'p-ind-avance':1, 'p-ind-ed':1, 'p-ind-trab':1,
                  'p-senales':1, 'p-senal':1, 'p-senal-pers':1, 'p-constancias':1, 'p-plan-cap':1,
-                 'p-campanas':1, 'p-campana':1 }
+                 'p-campanas':1, 'p-campana':1,
+                 /* 08/10 · la autorización del grupo sanguíneo está escrita sobre la Ley 29733 (Perú) */
+                 'p-aut-lista':1, 'p-aut-trab':1, 'p-aut-firma':1 }
   }
 };
 /* compatibilidad con lo que ya preguntaba por «solo de Perú» */
@@ -651,7 +673,10 @@ function _doResolver(s, cita){
 }
 
 /* ¿vale la pena pasarlo por la capa? (la mayoría del texto no tiene nada) */
-var _DO_HAY = /\+51\b|29783|27942|005-2012|011-2019|050-2013|G\.?\s?050|003-98|29733|016-2024|1278|014-2017|021-2016|NTP|375|42-F|28256|015-2005|021-2008|111-2013|30222|31246|Electricidad|SUNAFIL|SUNAT|MTPE|Promoción del Empleo|INDECI|SCTR|Complementario|DNI|RUC|[Cc]arné de extranjería|RISST|PETAR|PETS|IPERC|[Ss]ub-?comit|Comité de S|[Cc]omité paritario|[Ss]upervisor(?:es)? de S|supervisor SST|1[.,]80|Quispe|Mamani|Lima|Andes|constructora\.pe|999 888 777|987 654 321|distrito|CIP|SAMU|Perú|168-A|Libro de Actas|mitad más uno|ordinaria|Nº 005|N° 005|S\/\s?\d/;
+/* 07/10/2026 · «mismo libro», «libro legalizado», «dura de 1 a 2 años» y «10 días hábiles de terminada»: cuatro frases
+   del comité que DO_FRASES ya tenía escritas para RD y que nunca se cambiaban, porque su renglón no trae ninguna de
+   las otras palabras (la cita va en su propio <span>): allá se seguía leyendo el mandato «de 1 a 2 años» del Perú. */
+var _DO_HAY = /\+51\b|29783|27942|005-2012|011-2019|050-2013|G\.?\s?050|003-98|29733|016-2024|1278|014-2017|021-2016|NTP|375|42-F|28256|015-2005|021-2008|111-2013|30222|31246|Electricidad|SUNAFIL|SUNAT|MTPE|Promoción del Empleo|INDECI|SCTR|Complementario|DNI|RUC|[Cc]arné de extranjería|RISST|PETAR|PETS|IPERC|[Ss]ub-?comit|Comité de S|[Cc]omité paritario|[Ss]upervisor(?:es)? de S|supervisor SST|1[.,]80|Quispe|Mamani|Lima|Andes|constructora\.pe|999 888 777|987 654 321|distrito|CIP|SAMU|Perú|168-A|Libro de Actas|mitad más uno|ordinaria|Nº 005|N° 005|mismo libro|libro legalizado|dura de 1 a 2 años|10 días hábiles de terminada|S\/\s?\d/;
 
 function txDO(s){
   if(s == null) return s;
