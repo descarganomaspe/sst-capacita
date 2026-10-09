@@ -192,7 +192,7 @@ function progLimpio(n){
   return d;
 }
 function progVacio(tipo, anio, des){
-  var T=progTipo(tipo), obra=String((YO.obra||{}).nombre||'');
+  var T=progTipo(tipo), obra=String(nombreObraP()||'');
   return progLimpio({ tipo:T.k, anio:String(anio), cod:'', ver:'01', aprob:'', acta:'', obj:T.obj, alc:obra ? 'Todo el personal de '+obra+', propio y de las empresas contratistas.' : 'Todo el personal de la obra, propio y de las empresas contratistas.',
     meta:T.k==='sst' ? 'Cumplir el 100 % de las actividades programadas.' : '', ind:T.k==='sst' ? '(Actividades ejecutadas ÷ actividades programadas) × 100' : '', pres:'', rec:'',
     items:[], firmas:progFirmasDef(T.k, des), base:true });
@@ -1147,7 +1147,7 @@ function progExcel(d, H, progs, bt){
   if(bt) bt.disabled=true;
   var fuera=(paisObraP()!=='pe');
   return Promise.all([cargarEvPDF(), papCtx().catch(function(){ return {}; }), fuera ? cargarExige().catch(function(){ return null; }) : Promise.resolve(null)]).then(function(r){
-    var X=RCAP.xlsx, E=new X.Estilos(), C=X.C, ctx=r[1]||{}, T=progTipo(d.tipo), anio=String(d.anio), obra=String(ctx.obra || (YO.obra||{}).nombre || ''), tx=fuera ? txPaisP : function(s){ return s; };
+    var X=RCAP.xlsx, E=new X.Estilos(), C=X.C, ctx=r[1]||{}, T=progTipo(d.tipo), anio=String(d.anio), obra=String(ctx.obra || nombreObraP() || ''), tx=fuera ? txPaisP : function(s){ return s; };
     var sTit=E.xf({ b:1, sz:14, c:C.petroleo }), sSub=E.xf({ sz:10, c:C.gris }), sRot=E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, borde:true, v:'top' }), sVal=E.xf({ sz:10, c:C.tinta, borde:true, wrap:1, v:'top' }),
         sCab=E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'center', v:'center', wrap:1, borde:true }), sTx=E.xf({ sz:10, c:C.tinta, borde:true, wrap:1 }), sTxB=E.xf({ b:1, sz:10, c:C.tinta, borde:true, wrap:1 }),
         sCen=E.xf({ sz:10, c:C.tinta, h:'center', borde:true }), sPE=E.xf({ b:1, sz:8, c:C.gris, h:'center', borde:true }), sP=E.xf({ b:1, sz:9, c:C.progT, f:C.progF, h:'center', borde:true }), sE=E.xf({ b:1, sz:9, c:C.okT, f:C.okF, h:'center', borde:true }),

@@ -264,25 +264,47 @@ function cgPaginas(d, op){
      la distancia a la que se lee un cartel pegado en la caseta: de 26 mm no baja. Entre ese mínimo y el tope
      (46 mm; una sola persona sí ocupa media hoja) se elige sola: la más grande con la que la hoja sale en
      MENOS páginas. Un cartel de dos hojas sirve; uno de tres pudiendo ser de dos, no. */
-  var MINIMO=26;
-  function anchoMax(cols, n){ return Math.min((util-hueco*(cols-1))/cols, (n===1) ? 88 : 46); }
-  /* se dibuja de mentira con cada candidato {cols, cw}, se cuenta en cuántas hojas sale, y se dibuja de verdad el mejor */
+  /* 09/10/2026 · Marcelo: «solo salen en un espacio pequeño sin aprovechar todo la hoja A4… tiene que ser automático: si es
+     uno, se aprovecha toda la hoja; si son dos, uno abajo del otro…; si son tres, se ve la forma que se llene la hoja».
+     La foto tenía un tope de 46 mm (88 con una sola persona): con dos o tres personas el cartel quedaba arriba y el resto
+     de la hoja, en blanco. Ahora el tope es la hoja misma: se prueba cada número de columnas y cada ancho, se descarta lo
+     que no entra en la hoja, y gana lo que sale en menos hojas con la foto más grande. Con la foto crecen el nombre y la
+     función (escala(): igual que antes hasta 46 mm, y hasta casi el doble con una foto grande). */
+  var MINIMO=26, TOPE_FOTO=170;
+  function anchoMax(cols, n){ return Math.min((util-hueco*(cols-1))/cols, TOPE_FOTO); }
+  function escala(cw){ return cw<=46 ? 1 : Math.min(1.9, cw/46); }
+  /* lo más bajo que se dibujó en una hoja (sin el pie, que se pone después): si pasa del tope, el candidato no entra */
+  function _fondo(ops){
+    var m=0;
+    (ops||[]).forEach(function(q){
+      var b=(q.t==='r' || q.t==='f') ? q.y+q.h : (q.t==='l' ? Math.max(q.y, q.y2) : (q.t==='t' ? q.y+(q.tam||8)*0.12 : q.y));
+      if(b>m) m=b;
+    });
+    return m;
+  }
+  /* se dibuja de mentira con cada candidato {cols, cw}, se cuenta en cuántas hojas sale (y si algo se sale de la hoja),
+     y se dibuja de verdad el mejor */
   function elMejor(dibuja, cands){
-    var mejor=null;
+    var mejor=null, mejorMal=null;
     cands.forEach(function(k){
       var p0=pags, o0=o; pags=[]; o=null;
       dibuja(k.cols, k.cw);
-      var np=pags.length; pags=p0; o=o0;
-      if(!mejor || np<mejor.np || (np===mejor.np && (k.cw>mejor.cw+0.01 || (Math.abs(k.cw-mejor.cw)<=0.01 && k.cols>mejor.cols)))) mejor={ np:np, cols:k.cols, cw:k.cw };
+      var np=pags.length, sale=pags.some(function(pg){ return _fondo(pg.ops)>tope+0.6; }); pags=p0; o=o0;
+      var gana=function(m){ return !m || np<m.np || (np===m.np && (k.cw>m.cw+0.01 || (Math.abs(k.cw-m.cw)<=0.01 && k.cols>m.cols))); };
+      if(sale){ if(gana(mejorMal)) mejorMal={ np:np, cols:k.cols, cw:k.cw }; return; }
+      if(gana(mejor)) mejor={ np:np, cols:k.cols, cw:k.cw };
     });
+    mejor=mejor || mejorMal;
     dibuja(mejor.cols, mejor.cw);
   }
   function anchos(cols, n){ var l=[], a=anchoMax(cols, n); if(a<MINIMO) return l; for(var w=a; w>MINIMO+0.5; w-=2) l.push({ cols:cols, cw:w }); l.push({ cols:cols, cw:Math.min(a, MINIMO) }); return l; }
-  /* por grupos (el clásico): las columnas que pide el grupo más grande, sin pasar de cuatro */
+  /* por grupos (el clásico): de una columna hasta las que pide el grupo más grande (sin pasar de cinco). 09/10/2026 · antes
+     solo las del grupo más grande: cuatro personas iban siempre en una fila de cuatro fotos chicas; ahora también se
+     prueba dos por fila (dos filas de fotos grandes), y gana la que llena mejor la hoja */
   function candPorGrupo(n, maxG){
-    var cols=Math.max(1, Math.min(maxG, 4));
-    while(anchoMax(cols, n)<MINIMO && cols>1) cols-=1;
-    return anchos(cols, n);
+    var l=[];
+    for(var c=1; c<=Math.max(1, Math.min(maxG, 5)); c++) l=l.concat(anchos(c, n));
+    return l.length ? l : [{ cols:1, cw:anchoMax(1, n) }];
   }
   /* todos seguidos (con cabecera, tarjetas): de una a cinco columnas */
   function candSeguido(n){
@@ -291,10 +313,11 @@ function cgPaginas(d, op){
     return l.length ? l : [{ cols:1, cw:anchoMax(1, n) }];
   }
   function todos(){ var l=[]; grupos.forEach(function(g){ g.gente.forEach(function(p){ l.push({ p:p, rol:g.rol }); }); }); return l; }
-  function tamNombre(cols){ return cols>=4 ? 7.4 : (cols===3 ? 8.6 : (cols===2 ? 10 : 12.5)); }
-  function tamRol(cols){ return cols>=4 ? 6.4 : (cols===3 ? 7.2 : (cols===2 ? 8 : 9.6)); }
+  function tamNombre(cols, cw){ return (cols>=4 ? 7.4 : (cols===3 ? 8.6 : (cols===2 ? 10 : 12.5)))*escala(cw||0); }
+  function tamRol(cols, cw){ return (cols>=4 ? 6.4 : (cols===3 ? 7.2 : (cols===2 ? 8 : 9.6)))*escala(cw||0); }
+  function tamPuesto(cols, cw){ return (cols===3 ? 6.4 : 7.4)*escala(cw||0); }
   function nombreYPuesto(x, cx, ty, cw, cols){
-    var fn=tamNombre(cols);
+    var fn=tamNombre(cols, cw);
     cgPartir(String(x.nombre||'').trim(), fn, true, cw, 2).forEach(function(l){ T(l, cx, ty, fn, { b:1 }); ty+=fn*0.40; });
     return ty;
   }
@@ -303,12 +326,12 @@ function cgPaginas(d, op){
   function clasico(cols, cw){
     hoja();
     var y=cabClasica(false), y0=y, unSolo=grupos.length===1;
-    var foth=cw*4/3, altoCab=unSolo ? 0 : 9.6;
-    var ch=foth+(cols>=4 ? 12 : (cols===3 ? 15.5 : (cols===2 ? 17.5 : 20))), yy=y, altoTodo=0;
+    var foth=cw*4/3, altoCab=unSolo ? 0 : 9.6, ke=escala(cw);
+    var ch=foth+(cols>=4 ? 12 : (cols===3 ? 15.5 : (cols===2 ? 17.5 : 20)))*ke, yy=y, altoTodo=0;
     /* con poco contenido, el bloque se baja un poco para no quedar pegado al título */
     grupos.forEach(function(g){ var f=Math.ceil(g.gente.length/cols); altoTodo+=altoCab+f*ch+hueco*(f-1)+hueco; });
     altoTodo-=hueco;
-    if(altoTodo<(tope-y)) yy=y+(tope-y-altoTodo)*(grupos.length<=2 ? 0.20 : 0.06);
+    if(altoTodo<(tope-y)) yy=y+(tope-y-altoTodo)*(grupos.length<=2 ? 0.30 : 0.06);
     grupos.forEach(function(g){
       var r=g.rol, gente=g.gente, m=gente.length, filas=Math.ceil(m/cols), altoG=altoCab+filas*ch+hueco*(filas-1);
       /* el grupo que entra entero en una hoja no se parte: pasa a la siguiente */
@@ -320,10 +343,10 @@ function cgPaginas(d, op){
         for(var c2=0; c2<enFila; c2++){
           var x=gente[f*cols+c2], px=x0+c2*(cw+hueco);
           F(x, px, yy, cw, foth, 3);
-          var ty=nombreYPuesto(x, px+cw/2, yy+foth+5.2, cw, cols), fc=tamRol(cols);
-          ty+=0.8;
+          var ty=nombreYPuesto(x, px+cw/2, yy+foth+5.2*ke, cw, cols), fc=tamRol(cols, cw);
+          ty+=0.8*ke;
           cgPartir(r.n, fc, true, cw, 2).forEach(function(l){ T(l, px+cw/2, ty, fc, { b:1, c:_cgTinta(r.col) }); ty+=fc*0.40; });
-          if(x.puesto && cols<=3){ var fp=cols===3 ? 6.4 : 7.4; T(cgCorta(x.puesto, fp, false, cw), px+cw/2, ty+0.6, fp, { c:GRIS2 }); }
+          if(x.puesto && cols<=3){ var fp=tamPuesto(cols, cw); T(cgCorta(x.puesto, fp, false, cw), px+cw/2, ty+0.6*ke, fp, { c:GRIS2 }); }
         }
         yy+=ch+hueco;
       }
@@ -339,9 +362,9 @@ function cgPaginas(d, op){
     y+=2;
     if(d.obra){ T(cgCorta(d.obra, 10.5, false, util), W/2, y, 10.5, { c:[203,220,230] }); y+=5.4; }
     if(d.vigencia){ T(cgCorta(d.vigencia, 9.4, false, util), W/2, y, 9.4, { c:[203,220,230] }); }
-    var y0=hB+2.2+9, l=todos(), n=l.length, foth=cw*4/3;
-    var ch=foth+(cols>=4 ? 10 : (cols===3 ? 12.5 : (cols===2 ? 14.5 : 17))), filas=Math.ceil(n/cols), altoTodo=filas*ch+hueco*(filas-1), yy=y0;
-    var rh=cols>=4 ? 5.4 : (cols===3 ? 6 : (cols===2 ? 6.8 : 8.4)), fr=cols>=4 ? 6.2 : (cols===3 ? 7 : (cols===2 ? 8 : 10));
+    var y0=hB+2.2+9, l=todos(), n=l.length, foth=cw*4/3, ke=escala(cw);
+    var ch=foth+(cols>=4 ? 10 : (cols===3 ? 12.5 : (cols===2 ? 14.5 : 17)))*ke, filas=Math.ceil(n/cols), altoTodo=filas*ch+hueco*(filas-1), yy=y0;
+    var rh=(cols>=4 ? 5.4 : (cols===3 ? 6 : (cols===2 ? 6.8 : 8.4)))*ke, fr=(cols>=4 ? 6.2 : (cols===3 ? 7 : (cols===2 ? 8 : 10)))*ke;
     if(altoTodo<(tope-y0)) yy=y0+(tope-y0-altoTodo)*0.10;
     for(var f=0; f<filas; f++){
       if(f>0 && yy+ch>tope+0.5){
@@ -356,8 +379,8 @@ function cgPaginas(d, op){
         R(px, yy+foth-rh, cw, rh, { f:r.col, rr:3 }); R(px, yy+foth-rh, cw, rh-3, { f:r.col });
         T(cgCorta(r.n, fr, true, cw-3), px+cw/2, yy+foth-rh/2+fr*0.125, fr, { b:1, c:_cgSobre(r.col) });
         R(px, yy, cw, foth, { s:[206,214,222], sw:0.3, rr:3 });
-        var ty=nombreYPuesto(it.p, px+cw/2, yy+foth+5, cw, cols);
-        if(it.p.puesto && cols<=3){ var fp=cols===3 ? 6.4 : 7.4; T(cgCorta(it.p.puesto, fp, false, cw), px+cw/2, ty+0.9, fp, { c:GRIS2 }); }
+        var ty=nombreYPuesto(it.p, px+cw/2, yy+foth+5*ke, cw, cols);
+        if(it.p.puesto && cols<=3){ var fp=tamPuesto(cols, cw); T(cgCorta(it.p.puesto, fp, false, cw), px+cw/2, ty+0.9*ke, fp, { c:GRIS2 }); }
       }
       yy+=ch+hueco;
     }
@@ -367,8 +390,8 @@ function cgPaginas(d, op){
   function tarjetas(cols, cw){
     hoja();
     var y=cabClasica(true), y0=y, l=todos(), n=l.length;
-    var pad=cols>=4 ? 1.8 : 2.4, sH=cols>=4 ? 5.6 : (cols===3 ? 6.2 : (cols===2 ? 7 : 8.6)), fr=cols>=4 ? 6.2 : (cols===3 ? 7 : (cols===2 ? 8 : 10));
-    var fw=cw-2*pad, foth=fw*4/3, ch=sH+pad+foth+(cols>=4 ? 9.6 : (cols===3 ? 12.4 : (cols===2 ? 14.4 : 17))), h5=5;
+    var ke=escala(cw), pad=(cols>=4 ? 1.8 : 2.4)*ke, sH=(cols>=4 ? 5.6 : (cols===3 ? 6.2 : (cols===2 ? 7 : 8.6)))*ke, fr=(cols>=4 ? 6.2 : (cols===3 ? 7 : (cols===2 ? 8 : 10)))*ke;
+    var fw=cw-2*pad, foth=fw*4/3, ch=sH+pad+foth+(cols>=4 ? 9.6 : (cols===3 ? 12.4 : (cols===2 ? 14.4 : 17)))*ke, h5=5;
     var filas=Math.ceil(n/cols), altoTodo=filas*ch+h5*(filas-1), yy=y;
     if(altoTodo<(tope-y)) yy=y+(tope-y-altoTodo)*0.12;
     for(var f=0; f<filas; f++){
@@ -381,8 +404,8 @@ function cgPaginas(d, op){
         R(px, yy, cw, 6, { f:r.col, rr:3 }); R(px, yy+3, cw, sH-3, { f:r.col });
         T(cgCorta(r.n, fr, true, cw-3), px+cw/2, yy+sH/2+fr*0.125, fr, { b:1, c:_cgSobre(r.col) });
         F(it.p, px+pad, yy+sH+pad, fw, foth, 2);
-        var ty=nombreYPuesto(it.p, px+cw/2, yy+sH+pad+foth+4.6, fw, cols);
-        if(it.p.puesto && cols<=3){ var fp=cols===3 ? 6.4 : 7.4; T(cgCorta(it.p.puesto, fp, false, fw), px+cw/2, ty+0.9, fp, { c:GRIS2 }); }
+        var ty=nombreYPuesto(it.p, px+cw/2, yy+sH+pad+foth+4.6*ke, fw, cols);
+        if(it.p.puesto && cols<=3){ var fp=tamPuesto(cols, cw); T(cgCorta(it.p.puesto, fp, false, fw), px+cw/2, ty+0.9*ke, fp, { c:GRIS2 }); }
         R(px, yy, cw, ch, { s:r.col, sw:0.45, rr:3 });
       }
       yy+=ch+h5;

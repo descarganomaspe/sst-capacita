@@ -261,7 +261,8 @@ function _stkZ(it, cfg, ctx){
   };
   Z.marca=function(){
     var m=C.marca;
-    if(m==='logo' && ctx.logo) return { tipo:'logo', src:ctx.logo };
+    /* 09/10/2026 · con su proporción (ctx.logoR, ancho/alto del logo ya sin su marco blanco): la caja se ajusta al logo */
+    if(m==='logo' && ctx.logo) return { tipo:'logo', src:ctx.logo, r:(+ctx.logoR>0 ? Math.min(Math.max(+ctx.logoR, 0.5), 8) : 0) };
     if(m==='logo' || m==='empresa'){ var e=String(ctx.empresa||ctx.obra||'').trim(); return e ? { tipo:'txt', t:e } : { tipo:'txt', t:'OBRASST' }; }
     if(m==='obrasst') return { tipo:'txt', t:'OBRASST' };
     return { tipo:'' };
@@ -276,9 +277,13 @@ function _stkZ(it, cfg, ctx){
     var pad=p.pad||3, base=p.base||(y+h/2+Z.cap(p.tamL||5.6)/2), ley=cfg.leyenda, mk=p.sinMarca ? { tipo:'' } : Z.marca();
     var izq=x+pad;
     if(mk.tipo==='logo'){
-      var lh=h-2.2, lw=Math.min(lh*3.2, w*0.32);
-      Z.R(izq-1, y+1.1, lw+2, lh, { f:Z.BLANCO, rr:1, s:claro ? K.borde : null, sw:claro ? 0.25 : 0 });
-      Z.I(mk.src, izq-0.4, y+1.5, lw+0.8, lh-0.8, { modo:'cabe' });
+      /* 09/10/2026 · Marcelo: «cuando coloco la opción de logo de la empresa, sale muy pequeño». Dos causas: el logo
+         llegaba con su marco blanco de 312 × 312 (el logo de verdad era una franjita en medio) y la caja era chica. Ahora
+         llega sin marco (logoSinMarco) y la caja usa casi todo el alto de la banda y hasta el 42 % de su ancho, ajustada
+         a la proporción del logo: el aviso de la derecha se achica solo para dejarle sitio. */
+      var lh=h-1.5, r=mk.r || 3, lw=Math.min(Math.max(lh*r, lh), w*0.42), lhi=Math.min(lh-0.7, lw/r);
+      Z.R(izq-1, y+0.75, lw+2, lh, { f:Z.BLANCO, rr:1, s:claro ? K.borde : null, sw:claro ? 0.25 : 0 });
+      Z.I(mk.src, izq-0.2, y+0.75+(lh-lhi)/2, lw+0.4, lhi, { modo:'cabe' });
       izq+=lw+2.6;
     } else if(mk.tipo==='txt'){
       var lmax=Math.min(stkAncho(ley, p.tamL||5.6, true), (w-2*pad)*0.66);
@@ -502,10 +507,14 @@ STK_LAY.compacto=function(Z){
 STK_LAY.vertical=function(Z){
   var K=Z.K, it=Z.it, W=46, mk=Z.marca();
   if(K.claro) Z.L(1, 10, W-1, 10, K.borde, 0.4); else { Z.R(0, 0, W, 10, { f:K.band, rr:3 }); Z.R(0, 5, W, 5, { f:K.band }); }
-  if(mk.tipo==='logo'){ Z.R(W/2-9, 1, 18, 4.4, { f:Z.BLANCO, rr:0.8 }); Z.I(mk.src, W/2-8.6, 1.2, 17.2, 4, { modo:'cabe' }); }
+  if(mk.tipo==='logo'){
+    /* 09/10/2026 · más grande: hasta 34 × 5,4 mm, ajustada a la proporción del logo */
+    var vr=mk.r || 3, vh=5.4, vw=Math.min(Math.max(vh*vr, vh), W-12);
+    Z.R(W/2-vw/2-0.8, 0.8, vw+1.6, vh+0.4, { f:Z.BLANCO, rr:0.8 }); Z.I(mk.src, W/2-vw/2, 1, vw, vh, { modo:'cabe' });
+  }
   else if(mk.tipo==='txt'){ var m=stkCabe(mk.t, W-6, 4.6, 3.8, true); Z.T(m.t, W/2, 4.3, m.tam, { b:true, c:K.ac, al:'c' }); }
   var ly=stkCabe(Z.cfg.leyenda, W-4, 4.6, 3.4, true);
-  Z.T(ly.t, W/2, mk.tipo ? 8.3 : 6.4, ly.tam, { b:true, c:K.bt, al:'c' });
+  Z.T(ly.t, W/2, mk.tipo==='logo' ? 8.75 : (mk.tipo ? 8.3 : 6.4), ly.tam, { b:true, c:K.bt, al:'c' });
   var y=11.5;
   if(Z.sangreCaja(2.5, y, W-5, 10.5, 'fila', 19, { tamL:4.4 })) y+=12;
   Z.Q(6.5, y, 33); y+=33;

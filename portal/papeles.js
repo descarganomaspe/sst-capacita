@@ -136,7 +136,7 @@ function papCtx(fresco){
   ]).then(function(r){
     var emp=r[0]||{}, it=(r[1] && r[1].valor && typeof r[1].valor==='object' && r[1].valor.items) || {}, cfg=(r[2]||[])[0]||null;
     return _papLogo(emp.logo).then(function(L){
-      PAP.ctx={ emp:{ razon:String(emp.razon||''), logo:L ? L.du : null }, logo:L, obra:String((YO.obra||{}).nombre||''), fmt:{ ats:_papFmt(it.ats), iperc:_papFmt(it.iperc) },
+      PAP.ctx={ emp:{ razon:String(emp.razon||''), logo:L ? L.du : null }, logo:L, obra:String(nombreObraP()||''), fmt:{ ats:_papFmt(it.ats), iperc:_papFmt(it.iperc) },
                 modo:(cfg && String(cfg.nombre||'').toLowerCase()==='papel') ? 'papel' : 'digital', cfgId:cfg ? cfg.id : null, pref:_papPref(r[3] && r[3].valor) };
       PAP.ctxObra=oid; PAP.ctxT=Date.now();
       return PAP.ctx;

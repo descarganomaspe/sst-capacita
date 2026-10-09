@@ -100,14 +100,16 @@ var _OCULTA_OTROS = {
 /* Chile, Colombia y Argentina (28/09): lo mismo que RD, y además el
    comité, que en RD tiene su versión y allá todavía no */
 var _OCULTA_FUERA = {
-  accesos:   { comite:1, proced:1, temas:1, talleres:1, induccion:1, senales:1, constancias:1, campanas:1 },
+  accesos:   { comite:1, proced:1, temas:1, talleres:1, induccion:1, senales:1, constancias:1, campanas:1, sctr:1 },
   pantallas: { 'p-comite':1, 'p-comite-acta':1, 'p-comite-armar':1, 'p-comite-ver':1,
                'p-procedimientos':1, 'p-proc':1, 'p-temas':1, 'p-generar':1, 'p-talleres':1, 'p-taller':1,
                'p-taller-fin':1, 'p-ind-armar':1, 'p-ind-avance':1, 'p-ind-ed':1, 'p-ind-trab':1,
                'p-senales':1, 'p-senal':1, 'p-senal-pers':1, 'p-constancias':1, 'p-plan-cap':1,
                'p-campanas':1, 'p-campana':1,
                /* 08/10 · la autorización del grupo sanguíneo está escrita sobre la Ley 29733 (Perú) */
-               'p-aut-lista':1, 'p-aut-trab':1, 'p-aut-firma':1 }
+               'p-aut-lista':1, 'p-aut-trab':1, 'p-aut-firma':1,
+               /* 09/10 · el SCTR es del Perú (D.S. 003-98-SA) */
+               'p-sctr':1, 'p-sctr-nuevo':1 }
 };
 var OBRA_OCULTA = {
   cl:_OCULTA_FUERA, co:_OCULTA_FUERA, ar:_OCULTA_FUERA,
@@ -115,13 +117,14 @@ var OBRA_OCULTA = {
   /* 26/09/2026 · los procedimientos ya tienen su versión dominicana
      (procedimientos/fuente/do): el acceso se ve y muestra solo esos */
   'do': {
-    accesos:   { temas:1, talleres:1, induccion:1, senales:1, constancias:1, campanas:1 },
+    accesos:   { temas:1, talleres:1, induccion:1, senales:1, constancias:1, campanas:1, sctr:1 },
     pantallas: { 'p-temas':1, 'p-generar':1, 'p-talleres':1, 'p-taller':1,
                  'p-taller-fin':1, 'p-ind-armar':1, 'p-ind-avance':1, 'p-ind-ed':1, 'p-ind-trab':1,
                  'p-senales':1, 'p-senal':1, 'p-senal-pers':1, 'p-constancias':1, 'p-plan-cap':1,
                  'p-campanas':1, 'p-campana':1,
                  /* 08/10 · la autorización del grupo sanguíneo está escrita sobre la Ley 29733 (Perú) */
-                 'p-aut-lista':1, 'p-aut-trab':1, 'p-aut-firma':1 }
+                 'p-aut-lista':1, 'p-aut-trab':1, 'p-aut-firma':1,
+                 'p-sctr':1, 'p-sctr-nuevo':1 }
   }
 };
 /* compatibilidad con lo que ya preguntaba por «solo de Perú» */

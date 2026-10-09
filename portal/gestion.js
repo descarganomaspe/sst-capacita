@@ -373,6 +373,14 @@ function _gpPintarArchivo(aviso){
   };
   $('gp-plantilla').onclick=function(){ _gpPlantilla(this); };
 }
+/* 09/10/2026 · desde otra parte (el SCTR, portal/sctr.js): la lista ya leída va directo a «cómo queda», con las mismas
+   reglas que un Excel subido aquí (quién es nuevo, quién ya estaba, el tope del plan) */
+function gesPersonalDesdeFilas(filas, nombre){
+  gesPersonalSubir();
+  (filas||[]).forEach(function(f, i){ if(f && f.r===undefined) f.r=i+1; });
+  var P=GES.per; P.hojas=[{ n:nombre||'', filas:filas||[] }]; P.nombre=nombre||''; P.hoja=0;
+  _gpPrepararHoja(); _gpPintarRevisar();
+}
 /* de varias hojas, la que más se parece a una lista de personas */
 function _gpMejorHoja(hojas){
   var mejor=0, max=-1;
@@ -1140,7 +1148,7 @@ function _hhvGuardar(){
 function hhExcel(bt){
   if(bt) bt.disabled=true;
   cargarEvPDF().then(function(){
-    var X=RCAP.xlsx, E=new X.Estilos(), C=X.C, ym=HHW.ym, a=+ym.slice(0,4), m=+ym.slice(5,7)-1, nd=new Date(a, m+1, 0).getDate(), obra=String((YO.obra||{}).nombre||'');
+    var X=RCAP.xlsx, E=new X.Estilos(), C=X.C, ym=HHW.ym, a=+ym.slice(0,4), m=+ym.slice(5,7)-1, nd=new Date(a, m+1, 0).getDate(), obra=String(nombreObraP()||'');
     var sTit=E.xf({ b:1, sz:14, c:C.petroleo }), sSub=E.xf({ sz:10, c:C.gris }), sCab=E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'center', v:'center', wrap:1, borde:true }), sCabI=E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'left', borde:true });
     var sTx=E.xf({ sz:10, c:C.tinta, borde:true }), sN0=E.xf({ sz:10, c:C.tinta, h:'right', borde:true, fmt:'#,##0' }), sN2=E.xf({ sz:10, c:C.tinta, h:'right', borde:true, fmt:'#,##0.00' });
     var sT0=E.xf({ b:1, sz:10, c:C.petroleo, f:C.pie, h:'right', borde:true, fmt:'#,##0' }), sT2=E.xf({ b:1, sz:10, c:C.petroleo, f:C.pie, h:'right', borde:true, fmt:'#,##0.00' }), sTt=E.xf({ b:1, sz:10, c:C.petroleo, f:C.pie, borde:true });
@@ -1638,7 +1646,7 @@ function _acchGuardar(){
 function accExcel(bt){
   if(bt) bt.disabled=true;
   cargarEvPDF().then(function(){
-    var X=RCAP.xlsx, E=new X.Estilos(), C=X.C, A=String(ACCW.anio), S=accMeses(ACCW.accs, ACCW.hht, A), obra=String((YO.obra||{}).nombre||''), esHoy=(A===ANIO), mesHoy=esHoy ? +MES.slice(5,7) : 12;
+    var X=RCAP.xlsx, E=new X.Estilos(), C=X.C, A=String(ACCW.anio), S=accMeses(ACCW.accs, ACCW.hht, A), obra=String(nombreObraP()||''), esHoy=(A===ANIO), mesHoy=esHoy ? +MES.slice(5,7) : 12;
     var sTit=E.xf({ b:1, sz:14, c:C.petroleo }), sSub=E.xf({ sz:10, c:C.gris }), sCab=E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'center', v:'center', wrap:1, borde:true }), sCabI=E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'left', v:'center', borde:true });
     var sTx=E.xf({ sz:10, c:C.tinta, borde:true }), sTxW=E.xf({ sz:10, c:C.tinta, borde:true, wrap:1 }), sN0=E.xf({ sz:10, c:C.tinta, h:'right', borde:true, fmt:'#,##0' }), sN2=E.xf({ sz:10, c:C.tinta, h:'right', borde:true, fmt:'#,##0.00' });
     var sT0=E.xf({ b:1, sz:10, c:C.petroleo, f:C.pie, h:'right', borde:true, fmt:'#,##0' }), sT2=E.xf({ b:1, sz:10, c:C.petroleo, f:C.pie, h:'right', borde:true, fmt:'#,##0.00' }), sTt=E.xf({ b:1, sz:10, c:C.petroleo, f:C.pie, borde:true });
@@ -2235,7 +2243,7 @@ function capExcel(bt){
   if(!F.length){ toast('Todavía no hay capacitaciones registradas para exportar.'); return; }
   if(bt) bt.disabled=true;
   cargarEvPDF().then(function(){
-    var X=RCAP.xlsx, E=new X.Estilos(), C=X.C, obra=String((YO.obra||{}).nombre||'');
+    var X=RCAP.xlsx, E=new X.Estilos(), C=X.C, obra=String(nombreObraP()||'');
     var sTit=E.xf({ b:1, sz:14, c:C.petroleo }), sSub=E.xf({ sz:10, c:C.gris }), sCab=E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'left', v:'center', wrap:1, borde:true });
     var sTx=E.xf({ sz:10, c:C.tinta, borde:true }), sTxW=E.xf({ sz:10, c:C.tinta, borde:true, wrap:1 }), sN0=E.xf({ sz:10, c:C.tinta, h:'right', borde:true, fmt:'#,##0' }), sN1=E.xf({ sz:10, c:C.tinta, h:'right', borde:true, fmt:'#,##0.0' }),
         sFe=E.xf({ sz:10, c:C.tinta, h:'center', borde:true, fmt:'dd/mm/yyyy' });
@@ -2797,7 +2805,8 @@ function _repfGuardar(){
    evacuados, faltan, hallazgos, notas), más el tiempo logrado en segundos («seg») en vez de los toques del cronómetro:
      { v:1, k:'sim', estado:'hecho'|'programado', tipo, fecha, hora, lugar, punto, lider, escenario, meta, seg,
        presentes, evacuados, faltan, hallazgos:[{t}], notas, ev:[{u,n}], nac, por, cuando }
-   El cronómetro para correrlo en el momento sigue en la app (allí vive solo en el celular): lo corrido se pasa aquí. */
+   El cronómetro para correrlo en el momento sigue en la app. 09/10/2026 · lo que se programa o se corre en el celular llega
+   aquí solo, a esta misma hoja (gestion-sincro.js, con «app»: el id del celular), y lo de aquí baja al celular. */
 var GES_SIM_BASE = [['sismo', '🌎', 'Sismo', 180, ''], ['incendio', '🔥', 'Incendio / amago', 240, ''], ['medica', '🩹', 'Emergencia médica', 300, ''], ['otro', '🧯', 'Otro', 300, '']];
 var SIMW = { filas:[], n:0, caja:null, cat:null, firma:'' };
 function simTipos(){ var c=(SIMW.cat && Array.isArray(SIMW.cat.simTipos) && SIMW.cat.simTipos.length) ? SIMW.cat.simTipos.slice() : GES_SIM_BASE.slice(); if(!c.some(function(t){ return t[0]==='otro'; })) c.push(['otro', '🧯', 'Otro', 300, '']); return c; }
@@ -2838,7 +2847,7 @@ function simPintar(){
   var prog=F.filter(function(f){ return f.d.estado!=='hecho'; }), atras=prog.filter(function(f){ return String(f.d.fecha)<hoy; }).length;
   var ult=hechos.filter(function(f){ return f.d.seg!=null && f.d.seg!==''; })[0], gente=hechos.reduce(function(s, f){ return s+(parseInt(f.d.evacuados, 10) || parseInt(f.d.presentes, 10) || 0); }, 0);
   var h='<div class="aviso" id="sim-que"><b>Aquí se programan los simulacros del año y se registran los que ya se hicieron</b>, con sus tiempos, cuántos participaron y lo que se encontró. '+
-    'El cronómetro para correrlo en el momento está en la app; lo que se corre allí vive en ese celular, así que al terminar pásalo aquí con «Registrar uno ya realizado».</div>';
+    'El cronómetro para correrlo en el momento está en la app: lo que se programa o se corre allí llega aquí solo, y lo que registras aquí se ve en la app.</div>';
   h+='<div class="rej">'+
     cifra('Realizados en '+A, hechos.length, hechos.length ? 'el último, el '+fechaLarga(hechos[0].d.fecha) : 'ninguno todavía', hechos.length ? 'ok' : '')+
     cifra('Programados', prog.length, atras ? gesPlural(atras, 'ya pasó su día', 'ya pasaron su día') : (prog.length ? 'por hacer' : 'ninguno por venir'), atras ? 'mal' : '')+
@@ -3016,7 +3025,7 @@ function campPintar(){
   var atras=prog.filter(function(f){ return campEstado(f.d).k==='atrasada'; }).length, curso=prog.filter(function(f){ return campEstado(f.d).k==='curso'; }).length;
   var gente=hechas.reduce(function(s, f){ return s+(parseInt(f.d.participantes, 10)||0); }, 0);
   var h='<div class="aviso" id="cam-que"><b>Aquí se programan las campañas del año y se registran las que ya se hicieron</b>, con lo que se hizo cada día, cuántos participaron y su evidencia. '+
-    'Las campañas armadas día por día (con su dinámica y sus materiales) están en la app, en «Campañas»; lo que se marca allí vive en ese celular.</div>';
+    'Las campañas armadas día por día (con su dinámica y sus materiales) están en la app, en «Campañas»: lo que se marca allí llega aquí solo, y lo que registras aquí se ve en la app.</div>';
   h+='<div class="rej">'+
     cifra('Realizadas en '+A, hechas.length, hechas.length ? 'campañas con su registro' : 'ninguna todavía', hechas.length ? 'ok' : '')+
     cifra('Programadas', prog.length, atras ? gesPlural(atras, 'ya pasó su fecha', 'ya pasaron su fecha') : (curso ? gesPlural(curso, 'en curso', 'en curso') : (prog.length ? 'por hacer' : 'ninguna por venir')), atras ? 'mal' : '')+

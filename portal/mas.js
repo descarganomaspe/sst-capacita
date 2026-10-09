@@ -859,7 +859,7 @@ function bueVer(x){
     '<button type="button" class="bt mal" id="bue-v-q">Quitar</button><button type="button" class="bt sec" id="bue-v-copiar">Copiar para compartir</button>'+
     (conDest ? '<button type="button" class="bt" id="bue-v-dest">'+(x.destacada ? 'Quitar el destacado' : '⭐ Destacarla')+'</button>' : ''), {sinFoco:true});
   $('bue-v-copiar').onclick=function(){
-    var t='🌟 BUENA PRÁCTICA — '+((YO.obra||{}).nombre||'')+'\n'+fechaLarga(x.fecha)+(x.lugar ? ' · '+x.lugar : '')+'\n\n'+(x.titulo||'')+'\n'+(x.descripcion||'')+(x.autor ? '\n\nLo hizo: '+x.autor : '');
+    var t='🌟 BUENA PRÁCTICA — '+(nombreObraP()||'')+'\n'+fechaLarga(x.fecha)+(x.lugar ? ' · '+x.lugar : '')+'\n\n'+(x.titulo||'')+'\n'+(x.descripcion||'')+(x.autor ? '\n\nLo hizo: '+x.autor : '');
     try{ navigator.clipboard.writeText(t).then(function(){ toast('Copiada: ya la puedes pegar en WhatsApp o en un correo.'); }, function(){ _masMal($('bue-v-msg'), 'No se pudo copiar. Selecciona el texto y cópialo a mano.'); }); }
     catch(e){ _masMal($('bue-v-msg'), 'No se pudo copiar. Selecciona el texto y cópialo a mano.'); }
   };
@@ -956,7 +956,7 @@ function masCtx(mas){
     gente.forEach(function(t){ if(t.dni && t.td) docs[String(t.dni).trim().toUpperCase()]=t.td; });
     return (logo ? MAS_APP.logoSinMarco(logo) : Promise.resolve(null)).then(function(){
       var pais=paisObraP(), o=YO.obra||{};
-      var base={ id:oid, obra:String(o.nombre||''), codigo:String(o.codigo||''), sector:sectorObraP(),
+      var base={ id:oid, obra:String(nombreObraP(o)||''), codigo:String(o.codigo||''), sector:sectorObraP(),
         emp:{ razon:String(em.razon||''), logo:logo, dom:String(em.dom||''), ruc:String(o.ruc||''), formatoCod:String(em.formatoCod||''), formatoRev:String(em.formatoRev||''), formatoFecha:String(em.formatoFecha||''), codKardex:String(em.codKardex||'') },
         fmt:it, base:appBase(), doc:docPersonaP(), docs:docs, trabs:gente.map(function(t){ return { id:t.id, nombre:t.nombre, dni:t.dni, puesto:t.puesto }; }),
         n:masActivos(gente).length, sup:gesQuien(), libre:(_dcOrdenPlan()>0), rd:(pais==='do'), tx:(pais!=='pe') ? txPaisP : null, varias:((YO.empresas||[]).length>1) };
@@ -1498,7 +1498,7 @@ function _crefGuardar(){
       if(!r.ok){ S.guardando=false; bt.disabled=false; _masDice(m, '', ''); return masTopeAviso(r, 'credenciales').then(function(){ return 'tope'; }); }
       return Promise.all([masCtx({ com:R.com, tumbas:R.tumbas }), _creCap().catch(function(){ return null; })]).then(function(rr){
         var C=rr[0], D=rr[1];
-        var datos={ n:n, d:d, c:c, v:v, o:String((YO.obra||{}).nombre||'') };
+        var datos={ n:n, d:d, c:c, v:v, o:String(nombreObraP()||'') };
         if(conSos){ if(t.sangre) datos.s=t.sangre; if(t.emergencia) datos.e=t.emergencia; if(t.emerQuien) datos.q=t.emerQuien.slice(0, 40); }
         if(S.h.length) datos.h=S.h.slice();
         /* el sello «Capacitación al día»: la fecha hasta la que está al día con lo que exige su puesto, firmada con lo demás */
@@ -2949,14 +2949,19 @@ function _stkwTraer(){
       var nube=r[2] && r[2].valor;
       if(!STKW.cfg || (nube && (+nube.ts||0)>(+STKW.cfg.ts||0))) STKW.cfg=stkCfg(nube);
       STKW.R=R; STKW.C=C; STKW.aut=(r[3] && typeof autPorTrabajador==='function') ? autPorTrabajador(r[3], 'ext') : null;
-      return true;
+      var lg=(C.emp && C.emp.logo) || '';
+      if(!lg || (STKW.logo && STKW.logo.de===lg)) return true;
+      return MAS_APP.logoSinMarco(lg).then(function(x){ STKW.logo=(x && x.du) ? { de:lg, du:x.du, r:x.r } : null; return true; }, function(){ return true; });
     });
   });
 }
 function _stkwCtx(){
   var C=STKW.C||{}, emp=C.emp||{}, sos=[];
   try{ sos=MAS_APP.usar(C).emergsLocal().slice(0, MAS_APP.EMERG_EN_STICKER || 2); }catch(e){ sos=[]; }
-  return { sos:sos, empresa:emp.razon || C.obra || '', obra:C.obra || '', titulo:C.obra || '', logo:emp.logo || '' };
+  /* 09/10/2026 · el logo sin su marco blanco y con su proporción (STKW.logo, lo recorta _stkwTraer): con el marco salía
+     como una franjita en medio de su caja («sale muy pequeño», Marcelo) */
+  var L=(STKW.logo && STKW.logo.de===emp.logo && STKW.logo.du) ? STKW.logo : null;
+  return { sos:sos, empresa:emp.razon || C.obra || '', obra:C.obra || '', titulo:C.obra || '', logo:L ? L.du : (emp.logo || ''), logoR:L ? (+L.r || 0) : 0 };
 }
 function _stkwVigentes(){
   var hoy=hoyISO();

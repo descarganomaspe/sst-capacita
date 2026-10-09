@@ -1356,7 +1356,7 @@ function _menLeyenda(P, Lz, dibuja){
 function menPdf(d, L, C, op){
   op=op||{}; C=C||{};
   return cargarEvPDF().then(function(){
-    var blanco=!!op.blanco, obra=String((YO.obra||{}).nombre||'');
+    var blanco=!!op.blanco, obra=String(nombreObraP()||'');
     var P=_ppDoc('h', { emp:C.emp||{}, logo:C.logo||null, obra:obra, rotulo:obra, tx:C.tx, fmt:{ inspm:{ cod:d.cod, rev:d.ver, fecha:blanco ? '' : d.fecha } } },
                  'INSPECCIÓN MENSUAL DE EQUIPOS Y HERRAMIENTAS', menMesTxt(d.mes).toUpperCase()+(blanco ? ' · hoja para llevar al campo' : ''), 'inspm');
     var doc=P.doc, M=P.M, W=P.w, hF=6.2, col=eqColor(d.color);

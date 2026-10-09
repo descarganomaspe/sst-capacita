@@ -112,7 +112,7 @@ function snCtx(fresco){
     emp=emp||{};
     var logo=/^data:image\//.test(String(emp.logo||'')) ? emp.logo : null;
     return SEN_APP.logo(logo).then(null, function(){ return null; }).then(function(L){
-      SNW.ctx={ emp:{ razon:String(emp.razon||''), logo:logo }, logo:L, obra:String((YO.obra||{}).nombre||''), trabs:[], creds:{} };
+      SNW.ctx={ emp:{ razon:String(emp.razon||''), logo:logo }, logo:L, obra:String(nombreObraP()||''), trabs:[], creds:{} };
       SNW.ctxObra=oid; SNW.ctxT=Date.now();
       return SNW.ctx;
     });
