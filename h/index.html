@@ -29,6 +29,8 @@ p{margin:0 0 8px;color:#A9C2D0;font-size:15px}
 .estado.ojo{background:#FFF4D6;border-color:#F5B700;color:#5B4200}
 .estado.mal{background:#FDE8E8;border-color:#E5484D;color:#7A1216}
 .estado.baja{background:#E6EBEE;border-color:#8FA9B8;color:#2B3B45}
+.estado.bloq{background:#3A0D10;border-color:#E5484D;color:#FFD9DB}
+.estado.bloq b{color:#fff}
 .eq{margin-top:18px;text-align:center}
 .eq .cod{display:inline-block;font:800 30px/1.1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;color:#fff}
 .eq .tipo{display:block;font-size:17px;font-weight:700;margin-top:4px}
@@ -128,6 +130,8 @@ a.btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
       'Equipo de la obra':'Équipement du chantier'}
   };
   if(!TX[L]) L='es';
+  /* 13/10/2026 · el bloqueo y etiquetado (sql/2026-11-06-bloqueos.sql) */
+  (function(){ var X={"en":{"BLOQUEADO":"LOCKED OUT","No lo uses ni lo enciendas: tiene un candado puesto.":"Don't use it or switch it on: it has a lock on.","No lo uses ni lo enciendas: tiene {0} candados puestos.":"Don't use it or switch it on: it has {0} locks on.","Los candados":"The locks","Candado {0}":"Lock {0}","desde las {0}":"since {0}","Eléctrica":"Electrical","Mecánica":"Mechanical","Hidráulica":"Hydraulic","Neumática":"Pneumatic","Térmica":"Thermal","Química":"Chemical","Por gravedad":"Gravity","Otra":"Other","Solo quien puso su candado lo quita.":"Only the person who put a lock on can take it off."},"pt":{"BLOQUEADO":"BLOQUEADO","No lo uses ni lo enciendas: tiene un candado puesto.":"Não use nem ligue: tem um cadeado colocado.","No lo uses ni lo enciendas: tiene {0} candados puestos.":"Não use nem ligue: tem {0} cadeados colocados.","Los candados":"Os cadeados","Candado {0}":"Cadeado {0}","desde las {0}":"desde as {0}","Eléctrica":"Elétrica","Mecánica":"Mecânica","Hidráulica":"Hidráulica","Neumática":"Pneumática","Térmica":"Térmica","Química":"Química","Por gravedad":"Por gravidade","Otra":"Outra","Solo quien puso su candado lo quita.":"Só quem colocou o cadeado pode tirá-lo."},"fr":{"BLOQUEADO":"CONSIGNÉ","No lo uses ni lo enciendas: tiene un candado puesto.":"Ne l'utilisez pas et ne le mettez pas en marche : il porte un cadenas.","No lo uses ni lo enciendas: tiene {0} candados puestos.":"Ne l'utilisez pas et ne le mettez pas en marche : il porte {0} cadenas.","Los candados":"Les cadenas","Candado {0}":"Cadenas {0}","desde las {0}":"depuis {0}","Eléctrica":"Électrique","Mecánica":"Mécanique","Hidráulica":"Hydraulique","Neumática":"Pneumatique","Térmica":"Thermique","Química":"Chimique","Por gravedad":"Gravité","Otra":"Autre","Solo quien puso su candado lo quita.":"Seule la personne qui a posé son cadenas peut l'enlever."}}; for(var l in X) for(var k in X[l]) (TX[l]=TX[l]||{})[k]=X[l][k]; })();
   function t(s){ var v=TX[L] && TX[L][s]; v=(v===undefined) ? s : v; for(var i=1;i<arguments.length;i++) v=v.split('{'+(i-1)+'}').join(arguments[i]); return v; }
   /* el color, su muestra y «la cinta roja» (cinta es femenino) */
   var COLORES={rojo:['Rojo','#D32F2F','roja'], azul:['Azul','#1E5BD8','azul'], amarillo:['Amarillo','#F5C400','amarilla'], verde:['Verde','#2E9E48','verde'],
@@ -232,6 +236,24 @@ a.btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
       h+='<p class="nota">'+esc(t('La inspección se hace en la app: checklist, fotos y firma.'))+'</p>';
     }
     cuerpo.innerHTML=h;
+    /* 13/10/2026 · con candados puestos (bloqueo y etiquetado): BLOQUEADO, por encima de todo lo demás. Sin nombres:
+       esta página la abre cualquiera que escanee el QR. */
+    if(j.estado!=='baja') fetch(SB+'/rest/v1/rpc/sst_bloqueo_ver', { method:'POST', credentials:'omit',
+        headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'}, body:JSON.stringify({p_t:tk}) })
+      .then(function(r){ return r.ok ? r.json() : null; }).then(function(b){
+        var l=(b && b.ok && Array.isArray(b.bloqueos)) ? b.bloqueos : [];
+        if(!l.length) return;
+        var EN={electrica:['⚡','Eléctrica'], mecanica:['⚙️','Mecánica'], hidraulica:['💧','Hidráulica'], neumatica:['💨','Neumática'],
+                termica:['🔥','Térmica'], quimica:['🧪','Química'], gravedad:['⬇️','Por gravedad'], otra:['❔','Otra']};
+        var es=document.getElementById('estado');
+        if(es){ es.className='estado bloq'; es.innerHTML='<b>🔒 '+esc(t('BLOQUEADO'))+'</b><span>'+esc(l.length===1 ? t('No lo uses ni lo enciendas: tiene un candado puesto.') : t('No lo uses ni lo enciendas: tiene {0} candados puestos.', l.length))+'</span>'; }
+        var hh='<div class="tarj" id="bloqueos"><h2>'+esc(t('Los candados'))+'</h2><div class="hist">'+l.map(function(x){
+          var d=new Date(x.desde), hora=isNaN(d) ? '' : ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+          return '<div><span>'+(x.energia||[]).map(function(k){ var e=EN[k]||['','']; return e[0]+' '+esc(t(e[1])); }).join(' · ')+'</span>'+
+                 '<span>'+(x.candado ? esc(t('Candado {0}', x.candado))+' · ' : '')+esc(t('desde las {0}', hora))+'</span></div>';
+        }).join('')+'</div><p class="firmas falta" style="margin-top:10px">'+esc(t('Solo quien puso su candado lo quita.'))+'</p></div>';
+        var eq=cuerpo.querySelector('.eq'); if(eq) eq.insertAdjacentHTML('afterend', hh);
+      }, function(){});
   }).catch(function(){
     di('Sin internet', 'Necesitas señal para ver este equipo. Vuelve a escanear la etiqueta cuando tengas datos o wifi.');
   });
