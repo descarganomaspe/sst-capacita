@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B2A3A">
+<link rel="icon" href="../icono-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>Visita a la obra · OBRASST</title>
+<style>
+/* 13/10/2026 · lo que abre el QR de la puerta (la idea 2 que eligió Marcelo): el visitante deja sus datos, ve las
+   reglas, contesta tres preguntas y sale con su pase del día. Sin instalar nada y sin cuenta. */
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;
+  padding:24px 16px 32px;background:#0B2A3A;color:#EAF2F7;
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.caja{width:100%;max-width:440px}
+.marca{font-size:12px;letter-spacing:.18em;color:#F5B700;font-weight:800;margin-bottom:14px;text-align:center}
+h1{font-size:22px;margin:0 0 6px;line-height:1.25;text-wrap:balance;text-align:center}
+.sub{margin:0 0 14px;color:#A9C2D0;font-size:15px;text-align:center}
+.giro{width:34px;height:34px;margin:26px auto 0;border-radius:50%;
+  border:3px solid rgba(255,255,255,.18);border-top-color:#F5B700;animation:g .8s linear infinite}
+@keyframes g{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.giro{animation-duration:2.4s}}
+.pasos{display:flex;justify-content:center;gap:8px;margin:0 0 16px}
+.pasos i{width:34px;height:6px;border-radius:3px;background:rgba(255,255,255,.18)}
+.pasos i.on{background:#F5B700}
+.tarj{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:16px;margin-top:12px}
+label{display:block;font-size:13px;color:#A9C2D0;margin:12px 0 5px}
+label:first-child{margin-top:0}
+input[type=text],input[type=tel]{width:100%;padding:13px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.07);color:#fff;font:inherit;font-size:16px}
+input:focus{outline:2px solid #F5B700;outline-offset:1px}
+.opc{font-size:12px;color:#7D97A6}
+.btn{display:block;width:100%;margin-top:16px;padding:15px;border-radius:14px;border:0;background:#F5B700;color:#0B2A3A;
+  font:inherit;font-size:17px;font-weight:800;cursor:pointer;text-align:center}
+.btn.sec{background:rgba(255,255,255,.08);color:#EAF2F7;border:1px solid rgba(255,255,255,.2);font-weight:700}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,.op:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.msg{min-height:20px;margin:10px 0 0;color:#FF8A8E;font-size:14px;text-align:center}
+.reglas{display:grid;gap:8px;margin-top:4px}
+.regla{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.regla .ic{flex:none;font-size:32px;line-height:1}
+.regla span{font-size:15.5px;line-height:1.35}
+.regla.propia{border-color:rgba(245,183,0,.5);background:rgba(245,183,0,.08)}
+.et{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#8FB0C2;font-weight:700;margin:16px 0 6px}
+.preg{margin-top:14px;padding:14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12)}
+.preg .q{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin-bottom:10px}
+.preg .q .ic{font-size:26px;line-height:1}
+.op{display:block;width:100%;margin-top:7px;padding:12px 13px;border-radius:12px;border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.05);color:#EAF2F7;font:inherit;font-size:15px;text-align:left;cursor:pointer}
+.op.bien{background:#E7F6EE;border-color:#2FBF71;color:#0E4D2E;font-weight:700}
+.op.mal{background:#FDE8E8;border-color:#E5484D;color:#7A1216}
+.preg .no{margin:8px 0 0;font-size:13.5px;color:#FFB4B6}
+.acepto{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:14px;color:#C9DAE3;line-height:1.4}
+.acepto input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:#F5B700}
+.pase{margin-top:6px;border-radius:20px;overflow:hidden;background:#fff;color:#10222C;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.pase .cab{padding:12px 16px;background:#2FBF71;color:#06331D;font-weight:800;letter-spacing:.08em;font-size:13px;text-align:center}
+.pase.cerrado .cab{background:#8FA9B8;color:#1C2B33}
+.pase .cu{padding:18px 18px 16px;text-align:center}
+.pase .nom{font-size:24px;font-weight:800;line-height:1.2;text-wrap:balance}
+.pase .de{font-size:15px;color:#3C5664;margin-top:4px}
+.pase .cod{display:inline-block;margin:14px 0 6px;padding:8px 16px;border-radius:12px;background:#0B2A3A;color:#F5B700;
+  font:800 32px/1.1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.06em}
+.pase .hora{font-size:14px;color:#3C5664}
+.pase .ob{margin-top:10px;font-size:13px;color:#5D7684;letter-spacing:.03em}
+.alarma{display:flex;gap:12px;align-items:center;margin-top:14px;padding:13px 14px;border-radius:14px;background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.5);font-size:15px}
+.alarma .ic{font-size:28px;line-height:1}
+.nota{font-size:12.5px;color:#7D97A6;text-align:center;margin-top:12px}
+.obra{margin-top:20px;font-size:12.5px;color:#7D97A6;letter-spacing:.04em;text-align:center}
+</style></head><body>
+<div class="caja">
+  <div class="marca">&#9670; OBRASST</div>
+  <div id="cuerpo">
+    <h1>Abriendo&hellip;</h1>
+    <div class="giro"></div>
+  </div>
+  <div class="obra" id="pie"></div>
+</div>
+<script>
+(function(){
+  var SB='https://gwjjkknuiumgysezeatz.supabase.co', KEY='sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx';
+  /* el idioma del celular del visitante: castellano, y si está en inglés, portugués o francés, en ese.
+     Lo que escribe el visitante y las reglas propias de la obra van como se escribieron. */
+  var L='es'; try{ L=String((navigator.languages && navigator.languages[0]) || navigator.language || 'es').slice(0,2).toLowerCase(); }catch(_l){}
+  /* lo de la página en inglés, portugués y francés */
+  var TX={"en":{"Bienvenido a la obra":"Welcome to the site","Antes de entrar: tus datos, las reglas y tres preguntas. Dos minutos.":"Before you go in: your details, the rules and three questions. Two minutes.","Nombre y apellidos":"Full name","Documento de identidad":"ID number","¿De qué empresa vienes?":"What company are you from?","¿A quién visitas?":"Who are you visiting?","Tu celular":"Your phone","(si quieres)":"(optional)","Siguiente":"Next","Escribe tu nombre y apellidos.":"Enter your full name.","Escribe tu documento.":"Enter your ID number.","Las reglas de la obra":"Site rules","Casco, chaleco y zapatos de seguridad todo el tiempo. Si no tienes, pídelos en la puerta.":"Hard hat, vest and safety shoes at all times. If you don't have them, ask at the gate.","Camina con tu acompañante y por las zonas peatonales.":"Walk with your escort and stay on the walkways.","Donde hay cinta, letrero o barrera, no se pasa.":"Where there is tape, a sign or a barrier, do not cross.","Lejos de las máquinas que se mueven y de las cargas colgadas.":"Keep away from moving machines and suspended loads.","Si suena la alarma: deja todo y ve al punto de reunión con tu acompañante.":"If the alarm sounds: leave everything and go to the assembly point with your escort.","Si ves algo peligroso o te sientes mal, avísale a tu acompañante.":"If you see something dangerous or feel unwell, tell your escort.","Las leí":"I read them","Atrás":"Back","Tres preguntas":"Three questions","Suena la alarma. ¿Qué haces?":"The alarm sounds. What do you do?","Me quedo donde estoy":"I stay where I am","Voy al punto de reunión con mi acompañante":"I go to the assembly point with my escort","Vuelvo por mis cosas":"I go back for my things","Hay una cinta de peligro en tu camino. ¿Pasas?":"There is danger tape in your way. Do you cross?","No: donde hay cinta no se pasa":"No: where there is tape, you do not cross","Sí, si voy rápido":"Yes, if I go quickly","Sí, si nadie me ve":"Yes, if nobody sees me","¿Por dónde caminas en la obra?":"Where do you walk on site?","Por donde sea más corto":"Wherever is shortest","Por donde pasan las máquinas":"Where the machines go","Por las zonas peatonales, con mi acompañante":"On the walkways, with my escort","Esa no. Mira la regla otra vez:":"Not that one. Look at the rule again:","Acepto que esta obra guarde mis datos para el control de visitas y para saber quién está adentro en una emergencia. Se guardan 6 meses.":"I agree that this site keeps my details for visitor control and to know who is inside in an emergency. They are kept for 6 months.","Entrando…":"Signing in…","Entrar":"Go in","Ver las reglas":"See the rules","Muchas visitas seguidas desde aquí. Espera un momento y vuelve a intentar.":"Too many visits in a row from here. Wait a moment and try again.","Este QR ya no está activo. Pide en la puerta el QR nuevo.":"This QR is no longer active. Ask at the gate for the new one.","No se pudo registrar. Vuelve a intentar.":"Couldn't sign you in. Try again.","Sin señal: no se pudo registrar. Vuelve a intentar.":"No signal: couldn't sign you in. Try again.","PASE CERRADO · salió a las {0}":"PASS CLOSED · left at {0}","PASE DE VISITA · HOY":"VISITOR PASS · TODAY","Visita a:":"Visiting:","Código del pase":"Pass code","Entró a las {0} · {1}":"In at {0} · {1}","Si suena la alarma: sigue a tu acompañante al punto de reunión.":"If the alarm sounds: follow your escort to the assembly point.","Muestra este pase en la puerta.":"Show this pass at the gate.","Ya me voy":"I'm leaving","Gracias por cuidarte en la obra.":"Thanks for staying safe on site.","No se pudo marcar tu salida. Avísale a la puerta.":"Couldn't record that you left. Tell the gate.","Sin señal: avísale a la puerta que te vas.":"No signal: tell the gate you're leaving.","Este QR está incompleto":"This QR is incomplete","Pide en la puerta que te muestren el QR de visitas de la obra.":"Ask at the gate for the site's visitor QR.","Este QR ya no está activo":"This QR is no longer active","Pide en la puerta el QR nuevo.":"Ask at the gate for the new one.","No se pudo abrir":"It couldn't be opened","Vuelve a escanear el QR en un momento.":"Scan the QR again in a moment.","Sin señal. Vuelve a escanear el QR cuando tengas internet.":"No signal. Scan the QR again when you have internet."},"pt":{"Bienvenido a la obra":"Bem-vindo à obra","Antes de entrar: tus datos, las reglas y tres preguntas. Dos minutos.":"Antes de entrar: seus dados, as regras e três perguntas. Dois minutos.","Nombre y apellidos":"Nome completo","Documento de identidad":"Documento de identidade","¿De qué empresa vienes?":"De qual empresa você vem?","¿A quién visitas?":"Quem você vai visitar?","Tu celular":"Seu celular","(si quieres)":"(se quiser)","Siguiente":"Seguinte","Escribe tu nombre y apellidos.":"Escreva seu nome completo.","Escribe tu documento.":"Escreva seu documento.","Las reglas de la obra":"As regras da obra","Casco, chaleco y zapatos de seguridad todo el tiempo. Si no tienes, pídelos en la puerta.":"Capacete, colete e calçado de segurança o tempo todo. Se não tiver, peça na portaria.","Camina con tu acompañante y por las zonas peatonales.":"Ande com seu acompanhante e pelas áreas de pedestres.","Donde hay cinta, letrero o barrera, no se pasa.":"Onde há fita, placa ou barreira, não se passa.","Lejos de las máquinas que se mueven y de las cargas colgadas.":"Longe das máquinas em movimento e das cargas suspensas.","Si suena la alarma: deja todo y ve al punto de reunión con tu acompañante.":"Se o alarme tocar: deixe tudo e vá ao ponto de encontro com seu acompanhante.","Si ves algo peligroso o te sientes mal, avísale a tu acompañante.":"Se vir algo perigoso ou se sentir mal, avise seu acompanhante.","Las leí":"Já li","Atrás":"Voltar","Tres preguntas":"Três perguntas","Suena la alarma. ¿Qué haces?":"O alarme toca. O que você faz?","Me quedo donde estoy":"Fico onde estou","Voy al punto de reunión con mi acompañante":"Vou ao ponto de encontro com meu acompanhante","Vuelvo por mis cosas":"Volto para pegar minhas coisas","Hay una cinta de peligro en tu camino. ¿Pasas?":"Há uma fita de perigo no seu caminho. Você passa?","No: donde hay cinta no se pasa":"Não: onde há fita, não se passa","Sí, si voy rápido":"Sim, se eu for rápido","Sí, si nadie me ve":"Sim, se ninguém me vir","¿Por dónde caminas en la obra?":"Por onde você anda na obra?","Por donde sea más corto":"Por onde for mais curto","Por donde pasan las máquinas":"Por onde passam as máquinas","Por las zonas peatonales, con mi acompañante":"Pelas áreas de pedestres, com meu acompanhante","Esa no. Mira la regla otra vez:":"Essa não. Veja a regra de novo:","Acepto que esta obra guarde mis datos para el control de visitas y para saber quién está adentro en una emergencia. Se guardan 6 meses.":"Aceito que esta obra guarde meus dados para o controle de visitas e para saber quem está dentro em uma emergência. Eles são guardados por 6 meses.","Entrando…":"Entrando…","Entrar":"Entrar","Ver las reglas":"Ver as regras","Muchas visitas seguidas desde aquí. Espera un momento y vuelve a intentar.":"Muitas visitas seguidas daqui. Espere um momento e tente de novo.","Este QR ya no está activo. Pide en la puerta el QR nuevo.":"Este QR não está mais ativo. Peça na portaria o QR novo.","No se pudo registrar. Vuelve a intentar.":"Não foi possível registrar. Tente de novo.","Sin señal: no se pudo registrar. Vuelve a intentar.":"Sem sinal: não foi possível registrar. Tente de novo.","PASE CERRADO · salió a las {0}":"PASSE ENCERRADO · saiu às {0}","PASE DE VISITA · HOY":"PASSE DE VISITA · HOJE","Visita a:":"Visita a:","Código del pase":"Código do passe","Entró a las {0} · {1}":"Entrou às {0} · {1}","Si suena la alarma: sigue a tu acompañante al punto de reunión.":"Se o alarme tocar: siga seu acompanhante até o ponto de encontro.","Muestra este pase en la puerta.":"Mostre este passe na portaria.","Ya me voy":"Já vou embora","Gracias por cuidarte en la obra.":"Obrigado por se cuidar na obra.","No se pudo marcar tu salida. Avísale a la puerta.":"Não foi possível marcar sua saída. Avise a portaria.","Sin señal: avísale a la puerta que te vas.":"Sem sinal: avise a portaria que você está saindo.","Este QR está incompleto":"Este QR está incompleto","Pide en la puerta que te muestren el QR de visitas de la obra.":"Peça na portaria o QR de visitas da obra.","Este QR ya no está activo":"Este QR não está mais ativo","Pide en la puerta el QR nuevo.":"Peça na portaria o QR novo.","No se pudo abrir":"Não foi possível abrir","Vuelve a escanear el QR en un momento.":"Escaneie o QR de novo em um momento.","Sin señal. Vuelve a escanear el QR cuando tengas internet.":"Sem sinal. Escaneie o QR de novo quando tiver internet."},"fr":{"Bienvenido a la obra":"Bienvenue sur le chantier","Antes de entrar: tus datos, las reglas y tres preguntas. Dos minutos.":"Avant d'entrer : vos coordonnées, les règles et trois questions. Deux minutes.","Nombre y apellidos":"Nom et prénom","Documento de identidad":"Pièce d'identité","¿De qué empresa vienes?":"De quelle entreprise venez-vous ?","¿A quién visitas?":"Qui venez-vous voir ?","Tu celular":"Votre téléphone","(si quieres)":"(facultatif)","Siguiente":"Suivant","Escribe tu nombre y apellidos.":"Indiquez votre nom et prénom.","Escribe tu documento.":"Indiquez votre pièce d'identité.","Las reglas de la obra":"Les règles du chantier","Casco, chaleco y zapatos de seguridad todo el tiempo. Si no tienes, pídelos en la puerta.":"Casque, gilet et chaussures de sécurité en permanence. Si vous n'en avez pas, demandez-les à l'entrée.","Camina con tu acompañante y por las zonas peatonales.":"Marchez avec votre accompagnateur et sur les zones piétonnes.","Donde hay cinta, letrero o barrera, no se pasa.":"Là où il y a un ruban, un panneau ou une barrière, on ne passe pas.","Lejos de las máquinas que se mueven y de las cargas colgadas.":"Restez loin des engins en mouvement et des charges suspendues.","Si suena la alarma: deja todo y ve al punto de reunión con tu acompañante.":"Si l'alarme sonne : laissez tout et allez au point de rassemblement avec votre accompagnateur.","Si ves algo peligroso o te sientes mal, avísale a tu acompañante.":"Si vous voyez quelque chose de dangereux ou si vous vous sentez mal, prévenez votre accompagnateur.","Las leí":"Je les ai lues","Atrás":"Retour","Tres preguntas":"Trois questions","Suena la alarma. ¿Qué haces?":"L'alarme sonne. Que faites-vous ?","Me quedo donde estoy":"Je reste où je suis","Voy al punto de reunión con mi acompañante":"Je vais au point de rassemblement avec mon accompagnateur","Vuelvo por mis cosas":"Je retourne chercher mes affaires","Hay una cinta de peligro en tu camino. ¿Pasas?":"Il y a un ruban de danger sur votre chemin. Vous passez ?","No: donde hay cinta no se pasa":"Non : là où il y a un ruban, on ne passe pas","Sí, si voy rápido":"Oui, si je fais vite","Sí, si nadie me ve":"Oui, si personne ne me voit","¿Por dónde caminas en la obra?":"Où marchez-vous sur le chantier ?","Por donde sea más corto":"Par le plus court chemin","Por donde pasan las máquinas":"Là où passent les engins","Por las zonas peatonales, con mi acompañante":"Sur les zones piétonnes, avec mon accompagnateur","Esa no. Mira la regla otra vez:":"Pas celle-là. Relisez la règle :","Acepto que esta obra guarde mis datos para el control de visitas y para saber quién está adentro en una emergencia. Se guardan 6 meses.":"J'accepte que ce chantier conserve mes données pour le contrôle des visites et pour savoir qui est à l'intérieur en cas d'urgence. Elles sont conservées 6 mois.","Entrando…":"Enregistrement…","Entrar":"Entrer","Ver las reglas":"Voir les règles","Muchas visitas seguidas desde aquí. Espera un momento y vuelve a intentar.":"Trop de visites d'affilée depuis ici. Attendez un instant et réessayez.","Este QR ya no está activo. Pide en la puerta el QR nuevo.":"Ce QR n'est plus actif. Demandez le nouveau à l'entrée.","No se pudo registrar. Vuelve a intentar.":"L'enregistrement n'a pas abouti. Réessayez.","Sin señal: no se pudo registrar. Vuelve a intentar.":"Pas de réseau : l'enregistrement n'a pas abouti. Réessayez.","PASE CERRADO · salió a las {0}":"BADGE CLÔTURÉ · sorti à {0}","PASE DE VISITA · HOY":"BADGE VISITEUR · AUJOURD’HUI","Visita a:":"Visite à :","Código del pase":"Code du badge","Entró a las {0} · {1}":"Entré à {0} · {1}","Si suena la alarma: sigue a tu acompañante al punto de reunión.":"Si l'alarme sonne : suivez votre accompagnateur jusqu'au point de rassemblement.","Muestra este pase en la puerta.":"Montrez ce badge à l'entrée.","Ya me voy":"Je pars","Gracias por cuidarte en la obra.":"Merci d'avoir pris soin de vous sur le chantier.","No se pudo marcar tu salida. Avísale a la puerta.":"Votre sortie n'a pas pu être enregistrée. Prévenez l'entrée.","Sin señal: avísale a la puerta que te vas.":"Pas de réseau : prévenez l'entrée que vous partez.","Este QR está incompleto":"Ce QR est incomplet","Pide en la puerta que te muestren el QR de visitas de la obra.":"Demandez à l'entrée le QR visiteurs du chantier.","Este QR ya no está activo":"Ce QR n'est plus actif","Pide en la puerta el QR nuevo.":"Demandez le nouveau à l'entrée.","No se pudo abrir":"Impossible d'ouvrir","Vuelve a escanear el QR en un momento.":"Scannez à nouveau le QR dans un instant.","Sin señal. Vuelve a escanear el QR cuando tengas internet.":"Pas de réseau. Scannez à nouveau le QR quand vous aurez internet."}};
+  function t(s){ var d=TX[L], v=d && d[s]; v=(v===undefined) ? s : v; for(var i=1;i<arguments.length;i++) v=v.split('{'+(i-1)+'}').join(arguments[i]); return v; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  var cuerpo=document.getElementById('cuerpo'), pie=document.getElementById('pie');
+  var tk=''; try{ var u=new URL(location.href); tk=(u.searchParams.get('t') || (u.hash.match(/[#&]t=([0-9a-f]+)/i)||[])[1] || '').toLowerCase(); }catch(_u){}
+  var LS='obrasst_visita';
+  var REGLAS=[
+    ['🦺','Casco, chaleco y zapatos de seguridad todo el tiempo. Si no tienes, pídelos en la puerta.'],
+    ['🚶','Camina con tu acompañante y por las zonas peatonales.'],
+    ['⛔','Donde hay cinta, letrero o barrera, no se pasa.'],
+    ['🏗️','Lejos de las máquinas que se mueven y de las cargas colgadas.'],
+    ['🚨','Si suena la alarma: deja todo y ve al punto de reunión con tu acompañante.'],
+    ['🗣️','Si ves algo peligroso o te sientes mal, avísale a tu acompañante.']
+  ];
+  /* tres preguntas: la buena es la «b» (y no siempre está en el mismo lugar) */
+  var PREG=[
+    {ic:'🚨', q:'Suena la alarma. ¿Qué haces?', o:[['a','Me quedo donde estoy'],['b','Voy al punto de reunión con mi acompañante'],['c','Vuelvo por mis cosas']], r:4},
+    {ic:'⛔', q:'Hay una cinta de peligro en tu camino. ¿Pasas?', o:[['b','No: donde hay cinta no se pasa'],['a','Sí, si voy rápido'],['c','Sí, si nadie me ve']], r:2},
+    {ic:'🚶', q:'¿Por dónde caminas en la obra?', o:[['a','Por donde sea más corto'],['c','Por donde pasan las máquinas'],['b','Por las zonas peatonales, con mi acompañante']], r:1}
+  ];
+  var S={ obra:'', reglas:[], paso:1, d:{nombre:'',doc:'',de:'',visita_a:'',celular:''}, resp:{}, acepto:false, enviando:false };
+
+  function rpc(fn, body){
+    return fetch(SB+'/rest/v1/rpc/'+fn, { method:'POST', credentials:'omit',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'}, body:JSON.stringify(body) })
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); });
+  }
+  function di(titulo, texto){ cuerpo.innerHTML='<h1>'+esc(t(titulo))+'</h1>'+(texto ? '<div class="tarj"><p style="margin:0;color:#C9DAE3">'+esc(t(texto))+'</p></div>' : ''); }
+  function hoyL(d){ d=d||new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+  function hora(iso){ var d=new Date(iso); return isNaN(d) ? '' : ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+  function fecha(iso){ var d=new Date(iso); return isNaN(d) ? '' : ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
+  function guardado(){ try{ var g=JSON.parse(localStorage.getItem(LS)||'null'); return (g && g.t===tk && g.pase && hoyL(new Date(g.entra))===hoyL()) ? g : null; }catch(_e){ return null; } }
+  function guardar(g){ try{ localStorage.setItem(LS, JSON.stringify(g)); }catch(_e){} }
+  function pasos(n){ var h='<div class="pasos" aria-hidden="true">'; for(var i=1;i<=3;i++) h+='<i'+(i<=n?' class="on"':'')+'></i>'; return h+'</div>'; }
+
+  function pintar(){
+    var h='';
+    if(S.paso===1){
+      h+=pasos(1)+'<h1>'+esc(t('Bienvenido a la obra'))+'</h1><p class="sub">'+esc(t('Antes de entrar: tus datos, las reglas y tres preguntas. Dos minutos.'))+'</p>';
+      h+='<div class="tarj">'+
+        '<label for="v-nombre">'+esc(t('Nombre y apellidos'))+'</label><input type="text" id="v-nombre" autocomplete="name" maxlength="80" value="'+esc(S.d.nombre)+'">'+
+        '<label for="v-doc">'+esc(t('Documento de identidad'))+'</label><input type="text" id="v-doc" inputmode="text" autocomplete="off" maxlength="20" value="'+esc(S.d.doc)+'">'+
+        '<label for="v-de">'+esc(t('¿De qué empresa vienes?'))+'</label><input type="text" id="v-de" maxlength="80" value="'+esc(S.d.de)+'">'+
+        '<label for="v-a">'+esc(t('¿A quién visitas?'))+'</label><input type="text" id="v-a" maxlength="80" value="'+esc(S.d.visita_a)+'">'+
+        '<label for="v-cel">'+esc(t('Tu celular'))+' <span class="opc">'+esc(t('(si quieres)'))+'</span></label><input type="tel" id="v-cel" autocomplete="tel" maxlength="20" value="'+esc(S.d.celular)+'">'+
+        '</div><p class="msg" id="v-msg"></p><button type="button" class="btn" id="v-sig1">'+esc(t('Siguiente'))+'</button>';
+      cuerpo.innerHTML=h;
+      document.getElementById('v-sig1').onclick=function(){
+        S.d.nombre=document.getElementById('v-nombre').value.trim().replace(/\s+/g,' ');
+        S.d.doc=document.getElementById('v-doc').value.trim();
+        S.d.de=document.getElementById('v-de').value.trim();
+        S.d.visita_a=document.getElementById('v-a').value.trim();
+        S.d.celular=document.getElementById('v-cel').value.trim();
+        var m=document.getElementById('v-msg');
+        if(S.d.nombre.length<3){ m.textContent=t('Escribe tu nombre y apellidos.'); return; }
+        if(S.d.doc.replace(/[^0-9A-Za-z]/g,'').length<4){ m.textContent=t('Escribe tu documento.'); return; }
+        S.paso=2; pintar(); window.scrollTo(0,0);
+      };
+      return;
+    }
+    if(S.paso===2){
+      h+=pasos(2)+'<h1>'+esc(t('Las reglas de la obra'))+'</h1>';
+      h+='<div class="reglas">'+REGLAS.map(function(r){ return '<div class="regla"><span class="ic" aria-hidden="true">'+r[0]+'</span><span>'+esc(t(r[1]))+'</span></div>'; }).join('');
+      (S.reglas||[]).forEach(function(r){ h+='<div class="regla propia"><span class="ic" aria-hidden="true">📌</span><span>'+esc(r)+'</span></div>'; });
+      h+='</div><button type="button" class="btn" id="v-sig2">'+esc(t('Las leí'))+'</button><button type="button" class="btn sec" id="v-atr2">'+esc(t('Atrás'))+'</button>';
+      cuerpo.innerHTML=h;
+      document.getElementById('v-sig2').onclick=function(){ S.paso=3; pintar(); window.scrollTo(0,0); };
+      document.getElementById('v-atr2').onclick=function(){ S.paso=1; pintar(); };
+      return;
+    }
+    if(S.paso===3){
+      var todas=PREG.every(function(p, i){ return S.resp[i]==='b'; });
+      h+=pasos(3)+'<h1>'+esc(t('Tres preguntas'))+'</h1>';
+      PREG.forEach(function(p, i){
+        var r=S.resp[i];
+        h+='<div class="preg"><div class="q"><span class="ic" aria-hidden="true">'+p.ic+'</span><span>'+esc(t(p.q))+'</span></div>';
+        p.o.forEach(function(o){
+          var cl=(r===o[0]) ? (o[0]==='b' ? ' bien' : ' mal') : '';
+          h+='<button type="button" class="op'+cl+'" data-p="'+i+'" data-o="'+o[0]+'">'+esc(t(o[1]))+'</button>';
+        });
+        if(r && r!=='b') h+='<p class="no">'+esc(t('Esa no. Mira la regla otra vez:'))+' '+REGLAS[p.r][0]+' '+esc(t(REGLAS[p.r][1]))+'</p>';
+        h+='</div>';
+      });
+      h+='<label class="acepto"><input type="checkbox" id="v-acepto"'+(S.acepto?' checked':'')+'><span>'+esc(t('Acepto que esta obra guarde mis datos para el control de visitas y para saber quién está adentro en una emergencia. Se guardan 6 meses.'))+'</span></label>';
+      h+='<p class="msg" id="v-msg"></p><button type="button" class="btn" id="v-entrar"'+((todas && S.acepto && !S.enviando)?'':' disabled')+'>'+esc(t(S.enviando ? 'Entrando…' : 'Entrar'))+'</button>'+
+         '<button type="button" class="btn sec" id="v-atr3">'+esc(t('Ver las reglas'))+'</button>';
+      cuerpo.innerHTML=h;
+      [].slice.call(cuerpo.querySelectorAll('.op')).forEach(function(b){ b.onclick=function(){ S.resp[+b.getAttribute('data-p')]=b.getAttribute('data-o'); pintar(); }; });
+      document.getElementById('v-acepto').onchange=function(){ S.acepto=this.checked; pintar(); };
+      document.getElementById('v-atr3').onclick=function(){ S.paso=2; pintar(); window.scrollTo(0,0); };
+      document.getElementById('v-entrar').onclick=entrar;
+      return;
+    }
+  }
+  function entrar(){
+    if(S.enviando) return;
+    S.enviando=true; pintar();
+    rpc('sst_visita_entrar', { p_t:tk, p:{ nombre:S.d.nombre, doc:S.d.doc, de:S.d.de, visita_a:S.d.visita_a, celular:S.d.celular, acepto:true, preguntas:true } })
+      .then(function(j){
+        S.enviando=false; j=j||{};
+        if(!j.ok){
+          var m={ sin_nombre:'Escribe tu nombre y apellidos.', sin_doc:'Escribe tu documento.', muy_seguido:'Muchas visitas seguidas desde aquí. Espera un momento y vuelve a intentar.',
+                  no_existe:'Este QR ya no está activo. Pide en la puerta el QR nuevo.' }[j.motivo] || 'No se pudo registrar. Vuelve a intentar.';
+          pintar(); var e=document.getElementById('v-msg'); if(e) e.textContent=t(m); return;
+        }
+        var g={ t:tk, pase:j.pase, nombre:S.d.nombre, de:S.d.de, a:S.d.visita_a, entra:j.entra || new Date().toISOString(), obra:j.obra || S.obra, sale:null };
+        guardar(g); verPase(g); window.scrollTo(0,0);
+      }, function(){
+        S.enviando=false; pintar();
+        var e=document.getElementById('v-msg'); if(e) e.textContent=t('Sin señal: no se pudo registrar. Vuelve a intentar.');
+      });
+  }
+  function verPase(g){
+    if(g.obra) pie.textContent=g.obra;
+    var h='<div class="pase'+(g.sale?' cerrado':'')+'"><div class="cab">'+esc(g.sale ? t('PASE CERRADO · salió a las {0}', hora(g.sale)) : t('PASE DE VISITA · HOY'))+'</div>'+
+      '<div class="cu"><div class="nom">'+esc(g.nombre)+'</div>'+
+      (g.de ? '<div class="de">'+esc(g.de)+'</div>' : '')+
+      (g.a ? '<div class="de">'+esc(t('Visita a:'))+' '+esc(g.a)+'</div>' : '')+
+      '<div class="cod" aria-label="'+esc(t('Código del pase'))+'">'+esc(g.pase)+'</div>'+
+      '<div class="hora">'+esc(t('Entró a las {0} · {1}', hora(g.entra), fecha(g.entra)))+'</div>'+
+      (g.obra ? '<div class="ob">'+esc(g.obra)+'</div>' : '')+'</div></div>';
+    if(!g.sale){
+      h+='<div class="alarma"><span class="ic" aria-hidden="true">🚨</span><span>'+esc(t('Si suena la alarma: sigue a tu acompañante al punto de reunión.'))+'</span></div>';
+      h+='<p class="nota">'+esc(t('Muestra este pase en la puerta.'))+'</p>';
+      h+='<p class="msg" id="v-msg"></p><button type="button" class="btn sec" id="v-voy">👋 '+esc(t('Ya me voy'))+'</button>';
+    } else h+='<p class="nota">'+esc(t('Gracias por cuidarte en la obra.'))+'</p>';
+    cuerpo.innerHTML=h;
+    var b=document.getElementById('v-voy');
+    if(b) b.onclick=function(){
+      b.disabled=true;
+      rpc('sst_visita_salir', { p_t:tk, p_pase:g.pase }).then(function(j){
+        if(j && j.ok){ g.sale=j.sale || new Date().toISOString(); guardar(g); verPase(g); return; }
+        b.disabled=false; var e=document.getElementById('v-msg'); if(e) e.textContent=t('No se pudo marcar tu salida. Avísale a la puerta.');
+      }, function(){ b.disabled=false; var e=document.getElementById('v-msg'); if(e) e.textContent=t('Sin señal: avísale a la puerta que te vas.'); });
+    };
+  }
+
+  /* ── al abrir ── */
+  if(!/^[0-9a-f]{20,32}$/.test(tk)){ di('Este QR está incompleto', 'Pide en la puerta que te muestren el QR de visitas de la obra.'); return; }
+  var g0=guardado(); if(g0){ verPase(g0); return; }
+  rpc('sst_visita_abrir', { p_t:tk }).then(function(j){
+    j=j||{};
+    if(!j.ok){
+      if(j.motivo==='no_existe') di('Este QR ya no está activo', 'Pide en la puerta el QR nuevo.');
+      else di('No se pudo abrir', 'Vuelve a escanear el QR en un momento.');
+      return;
+    }
+    S.obra=j.obra||''; S.reglas=Array.isArray(j.reglas) ? j.reglas.slice(0, 8) : [];
+    if(S.obra) pie.textContent=S.obra;
+    pintar();
+  }, function(){ di('No se pudo abrir', 'Sin señal. Vuelve a escanear el QR cuando tengas internet.'); });
+})();
+</script>
+</body></html>
