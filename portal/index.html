@@ -3026,12 +3026,12 @@ var VISTA = { actual:null, recargar:null, ultimoCambio:null, cache:{} };
 var AREAS = [
   { id:'a-inicio',   n:'Inicio',                 ic:'▦',  v:['obra', 'resumen'] },
   { id:'a-cadena',   n:'Supervisión',            ic:'🔗', v:['cad', 'cad-obs', 'cad-equipo'] },
-  { id:'a-personal', n:'Personal',               ic:'☺',  v:['personal', 'personas', 'cred', 'autor', 'emo', 'sctr', 'tdm', 'amon'] },
+  { id:'a-personal', n:'Personal',               ic:'☺',  v:['personal', 'personas', 'cred', 'autor', 'emo', 'sctr', 'tdm', 'amon', 'visitas'] },
   { id:'a-capac',    n:'Capacitación',           ic:'🎓', v:['prog', 'caphechas', 'charlas', 'induccion', 'constancias', 'cump', 'matriz', 'registro', 'encuestas', 'campanas'] },
-  { id:'a-epp',      n:'EPP',                    ic:'⛑',  v:['kardex', 'epp', 'reqs'] },
+  { id:'a-epp',      n:'EPP',                    ic:'⛑',  v:['kardex', 'epp', 'pedidos', 'reqs'] },
   { id:'a-riesgos',  n:'Riesgos',                ic:'📋', v:['ats', 'quimicos'] },
-  { id:'a-inspec',   n:'Inspecciones y equipos', ic:'🔎', v:['insp', 'equipos', 'inspeq'] },
-  { id:'a-reportes', n:'Reportes',               ic:'🚨', v:['reportes', 'buenas', 'denuncias'] },
+  { id:'a-inspec',   n:'Inspecciones y equipos', ic:'🔎', v:['insp', 'equipos', 'inspeq', 'bloqueos'] },
+  { id:'a-reportes', n:'Reportes',               ic:'🚨', v:['reportes', 'buenas', 'denuncias', 'pulso'] },
   { id:'a-comite',   n:'Comité y emergencias',   ic:'🏛', v:['comite', 'cargos', 'quien', 'simulacros'] },
   { id:'a-docs',     n:'Documentos y avisos',    ic:'☰',  v:['docs', 'escaneos', 'qr', 'senales', 'boletines', 'noticias', 'normas'] },
   { id:'a-indic',    n:'Programas e indicadores', ic:'📈', v:['informe', 'programas', 'objetivos', 'acc', 'hh'] },
@@ -3039,13 +3039,13 @@ var AREAS = [
 ];
 var AREA_MAS = { id:'a-mas', n:'Más', ic:'⋯', v:[] };
 var PESTANAS = {
-  personal:'Personal', personas:'Personal', cred:'Credenciales', autor:'Autorizaciones', emo:'Salud (EMO)', sctr:'SCTR', tdm:'Trabajador del mes', amon:'Amonestaciones',
+  personal:'Personal', personas:'Personal', cred:'Credenciales', autor:'Autorizaciones', emo:'Salud (EMO)', sctr:'SCTR', tdm:'Trabajador del mes', amon:'Amonestaciones', visitas:'Visitas',
   prog:'Programar', charlas:'Charlas del mes', induccion:'Inducción', caphechas:'Realizadas', constancias:'Constancias', cump:'Constancias',
   matriz:'Matriz', registro:'Seguimiento', encuestas:'Encuestas', campanas:'Campañas',
-  kardex:'Entrega de EPP', epp:'Entrega de EPP', reqs:'Requerimientos',
+  kardex:'Entrega de EPP', epp:'Entrega de EPP', pedidos:'Pedidos de la gente', reqs:'Requerimientos',
   ats:'ATS e IPERC', quimicos:'Productos químicos',
-  insp:'Inspecciones', equipos:'Equipos y herramientas', inspeq:'Inspección diaria',
-  reportes:'Actos y condiciones', buenas:'Buenas prácticas', denuncias:'Denuncias',
+  insp:'Inspecciones', equipos:'Equipos y herramientas', inspeq:'Inspección diaria', bloqueos:'Bloqueo y etiquetado',
+  reportes:'Actos y condiciones', buenas:'Buenas prácticas', denuncias:'Denuncias', pulso:'Pulso de seguridad',
   comite:'Comité de SST', cargos:'Brigada y carteles', quien:'¿A quién acudo?', simulacros:'Simulacros',
   docs:'Documentos', escaneos:'Escaneos y fotos', qr:'Carteles QR', senales:'Señalética', boletines:'Boletines', noticias:'Noticias', normas:'Normas',
   informe:'Informe del mes', acc:'Accidentabilidad', hh:'Horas hombre', programas:'Programas del año', objetivos:'Objetivos y metas',
@@ -3374,7 +3374,257 @@ function anioDe(iso){ return String(iso||'').slice(0,4); }
 function mesDe(iso){ return String(iso||'').slice(0,7); }
 var HOY = hoyISO(), MES = HOY.slice(0,7), ANIO = HOY.slice(0,4);
 var ACC_CUENTA = {incap:true, mortal:true};
-var ACC_NOMBRE = {casi:'Casi accidente', primeros:'Primeros auxilios', leve:'Accidente leve', incap:'Incapacitante', mortal:'Mortal'};
+var ACC_NOMBRE = {casi:'Casi accidente', dano:'Daño a la propiedad', primeros:'Primeros auxilios', leve:'Accidente leve', incap:'Incapacitante', mortal:'Mortal'};
+/* >>> RIESGO-BASE-INI (lo re-inyecta armar.py desde ../../riesgo-base.js, no editar a mano) <<< */
+/* ══════════════════════════════════════════════════════════════════
+   EL RIESGO DEL MES · la cuenta (12/10/2026)
+   Lo común de la app y de la web: armar.py lo pone dentro de la app
+   (marca RIESGO-BASE) y dentro de portal/gestion.js (la misma marca).
+   Marcelo: «sabemos que no podemos predecir el futuro pero sí darle una
+   probabilidad, y la más cercana posible si se tiene data».
+   Lo que dice: la probabilidad de que en los próximos 30 días ocurra
+   AL MENOS UN accidente con descanso médico (incapacitante o mortal),
+   con su rango. No adivina: mide el riesgo con lo que la obra registra.
+   1 · La evidencia de la obra, con la pirámide de Bird (1 : 10 : 30 : 600):
+         k = S + (L + PA) / 10 + D / 30 + C / 600
+       S incapacitantes y mortales · L leves · PA primeros auxilios ·
+       D daños a la propiedad · C casi accidentes (los últimos 12 meses).
+   2 · La tasa que aprende (gamma–Poisson): α' = α + k · β' = β + E
+       E = las horas hombre de la obra en esos 12 meses; α y β, el punto
+       de partida: 5 accidentes con descanso por millón de horas hombre,
+       con el peso de 100 000 horas hombre. Con poca data manda el punto
+       de partida; con mucha, manda la obra.
+   3 · La probabilidad del mes: P = 1 − (β' / (β' + H))^α'
+       H = las horas hombre que se esperan en los próximos 30 días: el
+       promedio de las últimas 8 semanas que tienen horas, llevado a 30
+       días (Fase 1; TimesFM la reemplaza en la Fase 2).
+   El rango: los cuantiles 10 % y 90 % de la tasa con los de H. Sin 3
+   meses de horas hombre (o 20 000) no da número: dice que falta data.
+   Reportar no castiga: un casi accidente pesa 1/600 de una lesión, y la
+   pirámide sana suma a favor en lo que se le dice a la obra.
+   No reemplaza el IPERC, las inspecciones ni el ATS.
+   ══════════════════════════════════════════════════════════════════ */
+var RIESGO = { TASA0:5, PESO0:100000, DIAS:365, MIN_DIAS:90, MIN_HHT:20000, SEMANAS:8, BIRD_CASI:55,
+               PESOS:{ S:1, L:10, PA:10, D:30, C:600 } };
+/* la clase de cada evento, en la pirámide */
+var RIESGO_PISO = { incap:'S', mortal:'S', leve:'L', primeros:'PA', dano:'D', casi:'C' };
+
+function _rgDia(s){ return String(s || '').slice(0, 10); }
+function _rgMas(iso, d){
+  var p = String(iso).split('-'), t = Date.UTC(+p[0], +p[1] - 1, +p[2]) + d * 86400000, x = new Date(t);
+  return x.getUTCFullYear() + '-' + ('0' + (x.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + x.getUTCDate()).slice(-2);
+}
+function _rgDif(a, b){
+  var p = String(a).split('-'), q = String(b).split('-');
+  return Math.round((Date.UTC(+q[0], +q[1] - 1, +q[2]) - Date.UTC(+p[0], +p[1] - 1, +p[2])) / 86400000);
+}
+/* ln Γ(z), Lanczos */
+function rgLnGamma(z){
+  var c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059,
+           12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if(z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - rgLnGamma(1 - z);
+  z -= 1;
+  var x = c[0]; for(var i = 1; i < 9; i++) x += c[i] / (z + i);
+  var t = z + 7.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+/* P(a, x): la gamma incompleta regularizada (serie y fracción continua) */
+function rgGammaP(a, x){
+  if(!(x > 0)) return 0;
+  var gln = rgLnGamma(a), i;
+  if(x < a + 1){
+    var ap = a, sum = 1 / a, del = sum;
+    for(i = 0; i < 1000; i++){ ap += 1; del *= x / ap; sum += del; if(Math.abs(del) < Math.abs(sum) * 1e-15) break; }
+    return Math.min(1, sum * Math.exp(-x + a * Math.log(x) - gln));
+  }
+  var b = x + 1 - a, c = 1e300, d = 1 / b, h = d;
+  for(i = 1; i < 1000; i++){
+    var an = -i * (i - a); b += 2;
+    d = an * d + b; if(Math.abs(d) < 1e-300) d = 1e-300;
+    c = b + an / c; if(Math.abs(c) < 1e-300) c = 1e-300;
+    d = 1 / d; var dl = d * c; h *= dl; if(Math.abs(dl - 1) < 1e-15) break;
+  }
+  return Math.max(0, 1 - Math.exp(-x + a * Math.log(x) - gln) * h);
+}
+/* el cuantil p de una gamma de forma a y tasa b */
+function rgGammaQ(p, a, b){
+  var lo = 0, hi = Math.max(1, a) * 10;
+  while(rgGammaP(a, hi) < p && hi < 1e12) hi *= 2;
+  for(var i = 0; i < 200; i++){ var m = (lo + hi) / 2; if(rgGammaP(a, m) < p) lo = m; else hi = m; }
+  return (lo + hi) / 2 / b;
+}
+/* P(al menos uno en H horas) con la tasa gamma(α, β): 1 − (β/(β+H))^α */
+function rgProb(alfa, beta, H){ return H > 0 ? 1 - Math.pow(beta / (beta + H), alfa) : 0; }
+function riesgoEvidencia(c){
+  var P = RIESGO.PESOS;
+  return (c.S || 0) / P.S + ((c.L || 0) + (c.PA || 0)) / P.L + (c.D || 0) / P.D + (c.C || 0) / P.C;
+}
+/* el termómetro del reporte: cuántos casi accidentes por cada lesión (Bird: 55) */
+function riesgoTermometro(c){
+  var les = (c.S || 0) + (c.L || 0) + (c.PA || 0), cc = c.C || 0;
+  if(!les) return { k:(cc ? 'sin_lesion' : 'vacio'), les:0, c:cc, r:null };
+  var r = cc / les;
+  return { k:(r < 10 ? 'flaca' : (r < RIESGO.BIRD_CASI ? 'crece' : 'sana')), les:les, c:cc, r:r };
+}
+/* ev:    [{fecha, clase, pot (true | false | null), medidas}]
+   horas: [{fecha, hht}]   (una o varias por día)
+   hoy:   'aaaa-mm-dd'
+   Sale siempre lo de la pirámide (cuenta, termo, precursores); el número,
+   solo si hay data: listo:true, o listo:false con su motivo. */
+function riesgoCalcular(ev, horas, hoy, op){
+  op = op || {};
+  var tasa0 = op.tasa0 || RIESGO.TASA0, peso = op.peso || RIESGO.PESO0;
+  var fin = _rgDia(hoy), desde = _rgMas(fin, -RIESGO.DIAS);
+  var porDia = {}, E = 0, primero = null;
+  (horas || []).forEach(function(h){
+    var f = _rgDia(h && h.fecha); if(!/^\d{4}-\d\d-\d\d$/.test(f) || f > fin || f <= desde) return;
+    var v = +h.hht || 0; if(!(v > 0)) return;
+    porDia[f] = (porDia[f] || 0) + v; E += v;
+    if(!primero || f < primero) primero = f;
+  });
+  var cuenta = { S:0, L:0, PA:0, D:0, C:0 }, pot = 0, potSin = 0;
+  (ev || []).forEach(function(x){
+    var f = _rgDia(x && x.fecha); if(!f || f > fin || f <= desde) return;
+    var k = RIESGO_PISO[x.clase]; if(!k) return;
+    cuenta[k]++;
+    if(x.pot === true && k !== 'S'){ pot++; if(!String(x.medidas || '').trim()) potSin++; }
+  });
+  var R = { listo:false, motivo:'', hoy:fin, desde:desde, E:E, dias:(primero ? _rgDif(primero, fin) + 1 : 0),
+            cuenta:cuenta, pot:pot, potSin:potSin, termo:riesgoTermometro(cuenta), tasa0:tasa0, peso0:peso };
+  if(!E){ R.motivo = 'sin_horas'; return R; }
+  if(R.dias < RIESGO.MIN_DIAS && E < RIESGO.MIN_HHT){ R.motivo = 'poca_data'; return R; }
+  /* las horas del próximo mes: las últimas semanas completas (hasta ayer) que tienen horas */
+  var sem = [];
+  for(var w = 0; w < RIESGO.SEMANAS; w++){
+    var s = 0, hay = false;
+    for(var d = 0; d < 7; d++){ var f2 = _rgMas(fin, -(w * 7 + d + 1)); if(porDia[f2]){ s += porDia[f2]; hay = true; } }
+    if(hay) sem.push(s);
+  }
+  if(!sem.length){ R.motivo = 'sin_recientes'; return R; }
+  var media = sem.reduce(function(a, b){ return a + b; }, 0) / sem.length;
+  var sd = sem.length > 1 ? Math.sqrt(sem.reduce(function(a, b){ return a + (b - media) * (b - media); }, 0) / (sem.length - 1)) : media * 0.15;
+  var H = media * 30 / 7, sdMes = sd * Math.sqrt(30 / 7);
+  var Hlo = Math.max(0, H - 1.2816 * sdMes), Hhi = H + 1.2816 * sdMes;
+  var prev = 0; for(var d2 = 1; d2 <= 30; d2++) prev += porDia[_rgMas(fin, -d2)] || 0;
+  var k = riesgoEvidencia(cuenta), alfa0 = tasa0 * peso / 1e6, alfa = alfa0 + k, beta = peso + E;
+  var l10 = rgGammaQ(0.1, alfa, beta), l90 = rgGammaQ(0.9, alfa, beta), wE = E / (E + peso);
+  R.listo = true;
+  R.k = k; R.alfa0 = alfa0; R.alfa = alfa; R.beta = beta; R.tasa = alfa / beta * 1e6;
+  R.H = H; R.Hlo = Hlo; R.Hhi = Hhi; R.Hprev = prev; R.semanas = sem.length;
+  R.p = rgProb(alfa, beta, H); R.plo = 1 - Math.exp(-l10 * Hlo); R.phi = 1 - Math.exp(-l90 * Hhi);
+  R.p3 = rgProb(alfa, beta, 3 * H); R.p6 = rgProb(alfa, beta, 6 * H); R.p12 = rgProb(alfa, beta, 12 * H);
+  R.pesoObra = wE; R.conf = wE < 0.3 ? 'baja' : (wE < 0.7 ? 'media' : 'alta');
+  R.varH = prev > 0 ? H / prev - 1 : null;
+  return R;
+}
+/* «5 %», «0.5 %», «12 %»: un decimal debajo de 10, sin «.0» (como escribe la app: punto decimal, coma de miles) */
+function riesgoPct(p){
+  var v = (p || 0) * 100;
+  if(v > 0 && v < 0.1) return '< 0.1 %';
+  if(v > 99) return '> 99 %';
+  return (v < 10 ? v.toFixed(1).replace(/\.0$/, '') : String(Math.round(v))) + ' %';
+}
+/* «132,000», «7.9» */
+function riesgoNum(v, dec){
+  var t = (+v || 0).toFixed(dec || 0), p = t.split('.');
+  p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return p.join('.');
+}
+/* lo que se le dice a la obra esta semana: lo más importante primero, dos como mucho. Cada frase en su propio
+   elemento y los números aparte: el motor de idiomas de la app las encuentra enteras (la web las usa tal cual). */
+function riesgoHacer(R){
+  var l = [], T = R.termo;
+  if(R.potSin > 0)
+    l.push('<span>Investiga</span> <b>' + R.potSin + '</b> <span>' + (R.potSin === 1 ? 'evento que pudo ser grave o mortal y todavía no tiene medidas: es de los que más importan.' : 'eventos que pudieron ser graves o mortales y todavía no tienen medidas: son los que más importan.') + '</span>');
+  if(T.k === 'flaca')
+    l.push('<span>La base de tu pirámide está flaca:</span> <b>' + riesgoNum(T.r, 1) + '</b> <span>casi accidentes por cada lesión (Bird: 55). Lo más probable es que no se estén reportando: refuerza el reporte con la campaña «Reporta y no pasa nada».</span>');
+  else if(T.k === 'crece')
+    l.push('<span>Tu base va creciendo:</span> <b>' + riesgoNum(T.r, 0) + '</b> <span>casi accidentes por cada lesión (Bird: 55). Sigue reforzando el reporte de casi accidentes.</span>');
+  else if(T.k === 'sana')
+    l.push('<span>Pirámide sana:</span> <b>' + riesgoNum(T.r, 0) + '</b> <span>casi accidentes por cada lesión (Bird: 55). La gente avisa antes de que pase algo.</span>');
+  else if(T.k === 'sin_lesion')
+    l.push('<span>Sin lesiones en 12 meses y</span> <b>' + T.c + '</b> <span>' + (T.c === 1 ? 'casi accidente reportado: la gente avisa. Sigue así.' : 'casi accidentes reportados: la gente avisa. Sigue así.') + '</span>');
+  else
+    l.push('<span>Ningún evento en 12 meses. Si de verdad no pasó nada, igual hay que registrar los casi accidentes: son los que avisan antes.</span>');
+  if(R.listo && R.varH !== null && R.varH >= 0.15 && l.length < 2)
+    l.push('<span>El próximo mes se esperan más horas hombre que el último: inducción para los que llegan y el ATS de cada tarea al día.</span>');
+  return l.slice(0, 2);
+}
+
+/* ══ 13/10/2026 · «MENOS LETRAS, MÁS IMÁGENES» ══════════════════════════
+   Marcelo: «menos letras, más imágenes, que sea entendible y fácil de
+   interpretar, fácil de llenar data». Lo mismo de arriba, para mirarlo:
+   · el medidor del mes: verde, amarillo y rojo, con la aguja en el
+     número y el rango dibujado encima (se ve la duda, no se lee);
+   · el termómetro del reporte (casi accidentes por lesión, meta 55);
+   · lo que hay que hacer: una línea cada cosa, con su número aparte.
+   Los límites del semáforo son «de partida»: verde por debajo de 5 %,
+   rojo desde 15 %. El color dice la probabilidad del mes: una obra
+   grande trabaja más horas y por eso tiene más probabilidad, aunque su
+   gente trabaje bien. Reportar no lo mueve: un casi accidente pesa 1/600.
+   La posición en el medidor va con raíz cuadrada, para que los
+   porcentajes chicos (los de casi todas las obras) no queden amontonados
+   en el borde. Los colores los pone la hoja de estilos de cada lado. */
+RIESGO.VERDE = 0.05; RIESGO.ROJO = 0.15; RIESGO.TOPE = 0.30;
+var RIESGO_NIVEL_N = { bajo:'Bajo', medio:'Medio', alto:'Alto' };
+function riesgoNivel(p){ return p >= RIESGO.ROJO ? 'alto' : (p >= RIESGO.VERDE ? 'medio' : 'bajo'); }
+function _rgPos(p){ return Math.sqrt(Math.max(0, Math.min(1, (+p || 0) / RIESGO.TOPE))); }
+function _rgPunto(pos, r){ var a = Math.PI * (1 - pos); return [100 + r * Math.cos(a), 100 - r * Math.sin(a)]; }
+function _rgArco(a, b, r){
+  var p = _rgPunto(a, r), q = _rgPunto(b, r);
+  return 'M' + p[0].toFixed(1) + ' ' + p[1].toFixed(1) + 'A' + r + ' ' + r + ' 0 0 1 ' + q[0].toFixed(1) + ' ' + q[1].toFixed(1);
+}
+/* el medidor, en SVG (op.gris: sin número todavía; op.aria: lo que lee el lector de pantalla) */
+function riesgoMedidorSvg(R, op){
+  op = op || {};
+  var listo = !!(R && R.listo) && !op.gris, v = _rgPos(RIESGO.VERDE), r = _rgPos(RIESGO.ROJO), g = 0.012;
+  var h = '<svg class="rgm' + (listo ? '' : ' rgm-0') + '" viewBox="0 0 200 110" role="img" aria-label="' + String(op.aria || '').replace(/"/g, '') + '">' +
+          '<path class="rgm-v" d="' + _rgArco(0, v - g, 78) + '"/>' +
+          '<path class="rgm-a" d="' + _rgArco(v + g, r - g, 78) + '"/>' +
+          '<path class="rgm-r" d="' + _rgArco(r + g, 1, 78) + '"/>';
+  if(listo){
+    var a = _rgPos(R.plo), b = _rgPos(R.phi);
+    if(b - a > 0.004) h += '<path class="rgm-b" d="' + _rgArco(a, b, 94) + '"/>';
+    var n = _rgPunto(_rgPos(R.p), 60);
+    h += '<line class="rgm-n" x1="100" y1="100" x2="' + n[0].toFixed(1) + '" y2="' + n[1].toFixed(1) + '"/><circle class="rgm-c" cx="100" cy="100" r="7"/>';
+  }
+  return h + '</svg>';
+}
+/* el termómetro del reporte: rojo hasta 10 casi accidentes por lesión, amarillo hasta 55, verde desde 55 */
+function riesgoTermoHtml(T){
+  if(!T || T.r === null || T.r === undefined) return '';
+  var max = RIESGO.BIRD_CASI * 1.25, x = Math.min(100, T.r / max * 100), a = 10 / max * 100, b = RIESGO.BIRD_CASI / max * 100;
+  return '<span class="rgt" aria-hidden="true"><i class="rgt-r" style="width:' + a.toFixed(1) + '%"></i>' +
+         '<i class="rgt-a" style="left:' + a.toFixed(1) + '%;width:' + (b - a).toFixed(1) + '%"></i>' +
+         '<i class="rgt-v" style="left:' + b.toFixed(1) + '%;width:' + (100 - b).toFixed(1) + '%"></i>' +
+         '<b style="left:' + x.toFixed(1) + '%"></b></span>';
+}
+/* lo que hay que hacer, corto: [{k, ic, h, termo}] — k dice qué botón le toca en cada lado */
+function riesgoAcciones(R){
+  var l = [], T = R.termo;
+  if(R.potSin > 0)
+    l.push({ k:'pot', ic:'🔍', h:'<b>' + R.potSin + '</b> <span>' + (R.potSin === 1 ? 'pudo ser grave y no tiene medidas' : 'pudieron ser graves y no tienen medidas') + '</span>' });
+  if(T.k === 'flaca' || T.k === 'crece' || T.k === 'sana')
+    l.push({ k:T.k, ic:(T.k === 'flaca' ? '📣' : (T.k === 'crece' ? '📈' : '✅')), termo:true,
+             h:'<b>' + riesgoNum(T.r, T.r < 10 ? 1 : 0) + '</b> <span>casi accidentes por lesión</span> · <span>meta</span> <b>' + RIESGO.BIRD_CASI + '</b>' });
+  else if(T.k === 'sin_lesion')
+    l.push({ k:'sin_lesion', ic:'✅', h:'<span>Sin lesiones en 12 meses</span> · <b>' + T.c + '</b> <span>' + (T.c === 1 ? 'casi accidente' : 'casi accidentes') + '</span>' });
+  else
+    l.push({ k:'vacio', ic:'📝', h:'<span>Registra los casi accidentes: son los que avisan antes.</span>' });
+  if(R.listo && R.varH !== null && R.varH >= 0.15)
+    l.push({ k:'gente', ic:'👷', h:'<b>+' + Math.round(R.varH * 100) + ' %</b> <span>horas el próximo mes: inducción y ATS al día</span>' });
+  return l.slice(0, 3);
+}
+/* lo que va en «¿Cómo se calcula?»: corto, con la cuenta de la obra */
+function riesgoCuentaPartes(R){
+  var C = R.cuenta;
+  return [
+    { t:'Lo de tu obra, con la pirámide de Bird', f:'k = ' + C.S + ' + ' + (C.L + C.PA) + '/10 + ' + C.D + '/30 + ' + C.C + '/600 = ' + riesgoNum(R.k, 2) },
+    { t:'La tasa: parte de 5 por millón de horas y aprende con las tuyas', f:'(' + riesgoNum(R.alfa0, 2) + ' + ' + riesgoNum(R.k, 2) + ') / (' + riesgoNum(R.peso0) + ' + ' + riesgoNum(R.E) + ') × 1,000,000 = ' + riesgoNum(R.tasa, 1) },
+    { t:'La probabilidad del mes, con las horas que vienen', f:'1 − (' + riesgoNum(R.beta) + ' / ' + riesgoNum(R.beta + R.H) + ')^' + riesgoNum(R.alfa, 2) + ' = ' + riesgoPct(R.p) }
+  ];
+}
+/* <<< RIESGO-BASE-FIN >>> */
 function hhtDe(filas, mes){
   var t=0;
   filas.forEach(function(x){
@@ -3475,6 +3725,8 @@ var COL = {
     {k:'clase', t:'Clase', h:function(f){ var c=f.clase; return '<span class="pill '+(ACC_CUENTA[c]?'mal':(c==='leve'?'ojo':'gris'))+'">'+esc(ACC_NOMBRE[c]||c)+'</span>'; }, v:function(f){ return ACC_NOMBRE[f.clase]||f.clase; }},
     {k:'t_nombre', t:'Trabajador'},
     {k:'dias', t:'Días perdidos', num:true},
+    /* 12/10/2026 · los precursores: lo que no lastimó a nadie, pero pudo ser grave o mortal */
+    {k:'potencial', t:'¿Pudo ser grave?', h:function(f){ return f.potencial===true ? '<span class="pill ojo">Sí</span>' : (f.potencial===false ? 'No' : ''); }, v:function(f){ return f.potencial===true ? 'Sí' : (f.potencial===false ? 'No' : ''); }},
     {k:'medidas', t:'Medidas'}
   ],
   docs: [
@@ -4135,21 +4387,31 @@ function _edPintar(){
       (f.per==='mes' ? ' <button type="button" class="bt-link" id="ed-ver-ant">Ver el mes anterior</button>' : '')+
       (_edHayFiltro() ? ' <button type="button" class="bt-link" id="ed-limpiar2">Limpiar los filtros</button>' : '')+'</div>';
   }
+  /* 13/10/2026 · Marcelo: «análisis de epps, reporte de epps desde supervisor sst»: el análisis va con la llave del Excel y el PDF */
+  var anl=planWebTrae('kardex_export');
+  if(!anl){
+    var xk=INI_VITRINA.filter(function(v){ return v.k==='kardex_export'; })[0], Pk=xk ? planWebPlan(xk.desde) : null;
+    h+='<div class="tarj plan-candado" id="ed-candado"><div class="tarj-cuerpo"><p class="plan-c-ceja">🔒 No está en tu plan '+esc(planWebActual().n)+'</p>'+
+       '<h2><span aria-hidden="true">📊</span> El consumo de EPP, analizado</h2>'+
+       '<p class="plan-c-d">Cuánto se consume mes a mes, qué EPP sale más, quién consume más y por parte del cuerpo, con su Excel y su PDF.</p>'+
+       (Pk ? '<p class="plan-c-desde">Se abre con el plan <b>'+esc(Pk.n)+'</b>'+planWebPrecio(Pk)+' o uno mayor.</p>' : '')+
+       '<p class="ayuda">El kardex con las firmas de cada entrega sigue aquí abajo, en todos los planes.</p></div></div>';
+  }
   /* la gráfica de todos los meses */
-  h+='<div class="tarj"><div class="tarj-cab"><div><h2>Cuánto se consume, mes a mes</h2>'+
+  if(anl) h+='<div class="tarj"><div class="tarj-cab"><div><h2>Cuánto se consume, mes a mes</h2>'+
      '<p class="sub">Unidades entregadas, con los filtros de arriba · en oscuro, el periodo elegido · toca un mes para verlo solo</p></div></div>'+
      '<div class="tarj-cuerpo"><div class="ed-graf" id="ed-graf"></div>'+
      '<details class="ed-num" id="ed-num"'+(EPPD.numAbierto?' open':'')+'><summary>Ver los números de cada mes</summary><div id="ed-num-t"></div></details></div></div>';
   /* qué sale más y quién consume más */
   var gE=_edAgrupar(_edLista('epp', r), function(k){ return k._e; });
   var gP=_edAgrupar(_edLista('trab', r), function(k){ return k._p; });
-  h+='<div class="ed-dos">'+
+  if(anl) h+='<div class="ed-dos">'+
      '<div class="tarj"><div class="tarj-cab"><div><h2>Qué EPP sale más</h2><p class="sub">Unidades en el periodo · toca uno para ver solo ese</p></div></div>'+
      '<div class="tarj-cuerpo"><div class="ed-lista" id="ed-top-epp">'+_edTopEpp(gE)+'</div></div></div>'+
      '<div class="tarj"><div class="tarj-cab"><div><h2>Quién consume más</h2><p class="sub">Lo que recibió cada uno en el periodo · toca a alguien para ver lo suyo</p></div></div>'+
      '<div class="tarj-cuerpo"><div class="ed-lista ed-rank" id="ed-top-trab">'+_edTopTrab(gP)+'</div></div></div></div>';
   /* por parte del cuerpo, por motivo, por ubicación y por empresa */
-  h+='<div class="ed-dos">'+_edTarjParte(r)+_edTarjMotivo(r)+_edTarjUbic(r)+_edTarjEmp(r)+'</div>';
+  if(anl) h+='<div class="ed-dos">'+_edTarjParte(r)+_edTarjMotivo(r)+_edTarjUbic(r)+_edTarjEmp(r)+'</div>';
   h+='<div class="tarj" id="t-kar"></div>';
   if(lista.length>500) h+='<p class="ed-nota">En pantalla, las 500 entregas más recientes. El Excel y el CSV llevan las '+_edN(lista.length)+'.</p>';
   caja.innerHTML=h;
@@ -4176,7 +4438,7 @@ function _edPintar(){
     };
   });
   var nd=$('ed-num'); if(nd) nd.addEventListener('toggle', function(){ EPPD.numAbierto=nd.open; });
-  _edGrafMes();
+  if(anl) _edGrafMes();
   /* el detalle */
   var t=$('t-kar'); if(EPPD.est) t._est=EPPD.est;
   tabla(t, _edCols(), lista, { orden:'fecha', asc:false, unidad:'entregas', archivo:'consumo-epp', csvLlave:'kardex_export', csvQue:'El kardex de EPP en CSV',
@@ -6664,8 +6926,8 @@ function abrirIndP(it){
    al abrir esa carpeta, y lo que se sube en el celular sale aquí solo (el
    vivo mira sst_doc). El archivo va al mismo balde y por el mismo camino
    que en la app (<obra>/docs/…), con el mismo tope: 25 MB y los videos
-   por enlace. Las carpetas del sistema de gestión son del plan Gestión
-   SST, como en la app; las del menú del supervisor, de todos.
+   por enlace. Las carpetas del sistema de gestión se retiraron el 13/10/2026
+   (Marcelo; ahora están «Mis carpetas»); las del menú del supervisor, de todos.
    Los meses (Informe de Medio Ambiente), los simulacros (año, mes y
    tipo) y los certificados de otro tipo arman la hoja igual que la app
    (navClave: «base_año_mes_tema»; los libres, «base_» + _norm(nombre)),
@@ -6776,10 +7038,83 @@ function _dcOrdenPlan(){
 function _dcTieneQR(c){ return !!(c && c.qr) && _dcOrdenPlan() >= (DC_QR_DESDE[c.qr] || 0); }
 /* 08/10/2026 · «Fotos de obra» se ofrece solo si el líder deja ver las fotos en la web */
 function _dcFotosEnWeb(){ return typeof ARC!=='undefined' && !!(ARC.cfg && ARC.cfg.fotos); }
-function _dcCarpetas(){ var gs=_dcGestion(), fw=_dcFotosEnWeb(); return DC_CARPETAS.filter(function(c){ return (c.h!=='fotos' || fw) && (gs || !c.gs || _dcTieneQR(c)); }); }
+/* 13/10/2026 · Marcelo: «Retira las 6 carpetas de gestión» (ya están «Mis carpetas»): las del sistema de gestión ya no se
+   ofrecen, ni en Gestión SST; las que tienen su cartel QR siguen, bajo «Carteles QR», en el plan que trae ese cartel */
+function _dcCarpetas(){ var fw=_dcFotosEnWeb(); return dcMias().concat(DC_CARPETAS.filter(function(c){ return (c.h!=='fotos' || fw) && (!c.gs || _dcTieneQR(c)); })); }
+/* ══ MIS CARPETAS (13/10/2026) ═══════════════════════════════════════════════════════════════════════════
+   Marcelo: «hay que ver el tema de documentos en la web… ver la forma de ordenarlo mejor y tener la opción de editar
+   las carpetas de los documentos, agregarlos, etc.» — desde el plan Gestión SST (13/10; antes, Supervisor). Las carpetas que la obra se arma
+   a su gusto, además de las de siempre: sst_estado «mis_carpetas» = { v:1, c:{ <id>:{ n, o, ts, borrado } } }, y cada
+   documento suyo va en sst_doc con hoja «mia-<id>». El id no cambia nunca: cambiar el nombre no mueve ningún archivo.
+   Se quita solo una carpeta vacía. Cada cambio se hace sobre lo que el servidor tiene en ese momento (lo que agregó la
+   app no se pisa). La app las ve en «📁 Mis carpetas». */
+var DC_MIAS_CLAVE='mis_carpetas', DC_MIAS_G='Mis carpetas';
+function dcMiasTraer(){
+  return estadoLeerP(DC_MIAS_CLAVE).then(function(f){ DC.mias=_dcMiasValor(f && f.valor); return DC.mias; },
+    function(){ DC.mias=DC.mias || { v:1, c:{} }; return DC.mias; });
+}
+function _dcMiasValor(v){ v=(v && typeof v==='object' && !Array.isArray(v)) ? v : { v:1, c:{} }; if(!v.c || typeof v.c!=='object' || Array.isArray(v.c)) v.c={}; return v; }
+function dcMias(){
+  var c=(DC.mias && DC.mias.c) || {}, L=[];
+  Object.keys(c).forEach(function(id){ var x=c[id]; if(x && !x.borrado && String(x.n||'').trim()) L.push({ h:'mia-'+id, id:id, t:String(x.n).trim(), g:DC_MIAS_G, mia:1, o:+x.o||0 }); });
+  L.sort(function(a, b){ return a.o-b.o || a.t.localeCompare(b.t, 'es', {sensitivity:'base'}); });
+  return L;
+}
+/* 13/10/2026 · Marcelo: desde Gestión SST (antes, Supervisor SST) */
+function dcMiasPuede(){ return _dcOrdenPlan() >= 4; }
+function dcMiasDocs(id){ return (DC.filas||[]).filter(function(f){ return f.hoja==='mia-'+id; }).length; }
+function _dcMiasCambiar(mutar){
+  return estadoLeerP(DC_MIAS_CLAVE).then(function(f){
+    var v=_dcMiasValor(f && f.valor);
+    var r=mutar(v); if(r===false) return Promise.reject('nada'); if(typeof r==='string') return Promise.reject(r);
+    return estadoEscribirP(DC_MIAS_CLAVE, v).then(function(){ DC.mias=v; return v; });
+  });
+}
+function _dcMiasNombreMal(v, n, salvo){
+  n=String(n||'').replace(/\s+/g,' ').trim();
+  if(n.length<2) return 'Escribe el nombre de la carpeta.';
+  if(n.length>60) return 'El nombre es muy largo: hasta 60 letras.';
+  var k=_dcNorm(n), rep=false;
+  Object.keys(v.c).forEach(function(id){ var x=v.c[id]; if(id!==salvo && x && !x.borrado && _dcNorm(x.n)===k) rep=true; });
+  return rep ? 'Ya hay una carpeta con ese nombre.' : '';
+}
+function dcMiasNueva(n){
+  n=String(n||'').replace(/\s+/g,' ').trim(); var id='';
+  return _dcMiasCambiar(function(v){
+    var mal=_dcMiasNombreMal(v, n); if(mal) return mal;
+    var o=0; Object.keys(v.c).forEach(function(k){ var x=v.c[k]; if(x && !x.borrado && +x.o>=o) o=(+x.o)+1; });
+    do{ id=Math.random().toString(36).slice(2, 10); }while(v.c[id] || id.length<6);
+    v.c[id]={ n:n, o:o, ts:Date.now() };
+  }).then(function(){ return id; });
+}
+function dcMiasRenombrar(id, n){
+  n=String(n||'').replace(/\s+/g,' ').trim();
+  return _dcMiasCambiar(function(v){ var x=v.c[id]; if(!x || x.borrado) return 'Esa carpeta ya no está.'; var mal=_dcMiasNombreMal(v, n, id); if(mal) return mal; if(x.n===n) return false; x.n=n; x.ts=Date.now(); });
+}
+function dcMiasMover(id, d){
+  return _dcMiasCambiar(function(v){
+    var L=Object.keys(v.c).filter(function(k){ return v.c[k] && !v.c[k].borrado; }).sort(function(a, b){ return (+v.c[a].o||0)-(+v.c[b].o||0) || String(v.c[a].n).localeCompare(String(v.c[b].n), 'es', {sensitivity:'base'}); });
+    var i=L.indexOf(id), j=i+d; if(i<0 || j<0 || j>=L.length) return false;
+    var t=L[i]; L[i]=L[j]; L[j]=t;
+    L.forEach(function(k, o){ if(+v.c[k].o!==o){ v.c[k].o=o; v.c[k].ts=Date.now(); } });
+  });
+}
+function dcMiasQuitar(id){
+  if(dcMiasDocs(id)) return Promise.reject('Tiene documentos: muévelos a otra carpeta o quítalos primero.');
+  return _dcMiasCambiar(function(v){ var x=v.c[id]; if(!x || x.borrado) return false; x.borrado=true; x.ts=Date.now(); });
+}
 /* el grupo que se muestra: sin Gestión SST, las del cartel van juntas */
-function _dcGrupo(c){ return (c.gs && !_dcGestion()) ? 'Carteles QR' : c.g; }
-function _dcCarpeta(h){ var x=null; DC_CARPETAS.forEach(function(c){ if(!x && c.h===h) x=c; }); return x; }
+/* lo que ya se había subido a una carpeta del sistema de gestión se sigue viendo, como «Carpetas anteriores» */
+function _dcGrupo(c){ return c.gs ? (_dcTieneQR(c) ? 'Carteles QR' : 'Carpetas anteriores') : c.g; }
+function _dcCarpeta(h){
+  var x=null; DC_CARPETAS.forEach(function(c){ if(!x && c.h===h) x=c; });
+  if(!x && /^mia-[a-z0-9]{6,12}$/.test(String(h||''))){
+    dcMias().forEach(function(c){ if(!x && c.h===h) x=c; });
+    /* una carpeta propia que alguien quitó y todavía tiene algo adentro: sigue saliendo, para que nada se pierda */
+    if(!x) x={ h:h, id:h.slice(4), t:'Carpeta quitada', g:DC_MIAS_G, mia:1, o:9999, quitada:1 };
+  }
+  return x;
+}
 function _dcAnioHoy(){ return +String(hoyISO()).slice(0,4); }
 function _dcMesHoy(){ return DC_MESES[(+String(hoyISO()).slice(5,7)||1)-1]; }
 function _dcNombreDe(f){ return String(f.name||'').replace(/\.[a-z0-9]{2,5}$/i,'').replace(/[_]+/g,' ').replace(/\s+/g,' ').trim().slice(0,120); }
@@ -7004,11 +7339,11 @@ function vistaDocs(caja, modo){
     if(!DC.filas.length && !silencio) cargando(t);
     /* 08/10/2026 · junto con las filas, el archivo de la web (archivo.js) y lo que el líder deja ver en ella: sin eso
        no se pinta nada, para que lo que el líder ocultó no se asome ni un segundo */
-    Promise.all([traer('sst_doc', '&select=id,hoja,nombre,url,nota,creado&order=creado.desc'+
+    Promise.all([dcMiasTraer(), traer('sst_doc', '&select=id,hoja,nombre,url,nota,creado&order=creado.desc'+
       '&hoja=not.in.(ats,ats-cfg,ats-modelo,temas,temas-hist,empleador,tdm-cfg,quienes,subcarpetas,ges-act,ges-prog,iperc-c,ges-inspm,informe-modelo)', 1000),
       cargarArchivo().then(function(){ return arcCfgTraer(); }).catch(function(){ return null; })])
       .then(function(r){
-        var filas=r[0];
+        var filas=r[1];
         DC.filas=(Array.isArray(filas)?filas:[]).filter(function(f){
           return f && !DC_NO_DOCS[f.hoja] && !_dcEsPapel(f) && !(f.hoja==='sctr' && !f.url) && (dcEsDoc(f.hoja) || !!f.url);
         });
@@ -7026,7 +7361,7 @@ function vistaDocs(caja, modo){
 }
 /* 08/10/2026 · el archivo de la obra (archivo.js): carpetas, vista previa, cambiar el nombre, mover, descargar, quitar y
    unir en un PDF. Si no carga (sin conexión), la tabla de siempre. */
-var ARCHIVO_VER='5863f1b016';                         /* lo pone armar.py: el hash de portal/archivo.js */
+var ARCHIVO_VER='bacf3a518c';                         /* lo pone armar.py: el hash de portal/archivo.js */
 var _ARC_CARGA=null;
 function cargarArchivo(){
   if(typeof arcPintar==='function') return Promise.resolve(true);
@@ -7083,9 +7418,10 @@ function _dcVerDato(u){
 /* ── los archivos soltados: a la cola, cada uno con su carpeta adivinada ── */
 function _dcEncolar(files){
   Array.prototype.forEach.call(files||[], function(f){
-    var err=_dcNoVa(f), st=_dcEstado(err ? '' : _dcAdivina(f.name));
+    var abierta=(typeof ARC!=='undefined' && ARC.carpeta && ARC.carpeta!=='*' && _dcCarpetas().some(function(c){ return c.h===ARC.carpeta && !c.tipo; })) ? ARC.carpeta : '';
+    var err=_dcNoVa(f), st=_dcEstado(err ? '' : (abierta || _dcAdivina(f.name)));
     DC.sec++;
-    DC.cola.push({ n:DC.sec, f:f, st:st, nombre:_dcNombreDe(f), estado: err ? 'mal' : 'lista', msg:err, adivinada:!!st.h });
+    DC.cola.push({ n:DC.sec, f:f, st:st, nombre:_dcNombreDe(f), estado: err ? 'mal' : 'lista', msg:err, adivinada:!!st.h && !abierta, abierta:!!abierta });
   });
   _dcPintarCola();
   var c=$('dc-cola'); if(c && c.scrollIntoView) try{ c.scrollIntoView({block:'nearest', behavior:'smooth'}); }catch(_s){}
@@ -7101,7 +7437,7 @@ function _dcPintarCola(){
     var p='dc'+x.n, bloq=(x.estado!=='lista' && x.estado!=='error');
     var est = x.estado==='ok' ? '<span class="pill ok">subido</span>' : (x.estado==='mal' ? '<span class="pill mal">no va</span>' :
               (x.estado==='sube' ? '<span class="pill azul">subiendo…</span>' : (x.estado==='error' ? '<span class="pill ojo">revisar</span>' :
-              (x.st.h ? (x.adivinada ? '<span class="pill gris">carpeta por el nombre</span>' : '') : '<span class="pill ojo">elige su carpeta</span>'))));
+              (x.st.h ? (x.adivinada ? '<span class="pill gris">carpeta por el nombre</span>' : (x.abierta && x.st.h===ARC.carpeta ? '<span class="pill gris">la carpeta abierta</span>' : '')) : '<span class="pill ojo">elige su carpeta</span>'))));
     h+='<div class="dc-fila" data-n="'+x.n+'"><div class="dc-arch"><span aria-hidden="true">📄</span><b title="'+esc(x.f.name)+'">'+esc(x.f.name)+'</b><small>'+esc(_dcPeso(x.f.size))+'</small>'+est+
        (x.estado==='sube' ? '' : '<button type="button" class="dc-quitar" data-quita="'+x.n+'" aria-label="Sacar «'+esc(x.f.name)+'» de la lista">×</button>')+'</div>';
     if(x.estado==='mal') h+='<div class="msg mal">'+esc(x.msg||'Este archivo no sube.')+'</div>';
@@ -11723,7 +12059,8 @@ function cargarReqBase(){
 var PRQ={ filas:[], n:0, filtro:'', huella:'', reloj:null, r:null, F:null, calc:null, zona:null, equipo:null, equipoDe:'', kx:null, kxDe:'', kxP:null, trab:0, padron:null, recien:'', aviso:null, cfg:null, cfgDe:'', cfgEd:null };
 var PRQ_FILTROS=[['mi','Para autorizar'], ['firmas','Faltan firmas'], ['curso','En curso'], ['cerr','Cerrados'], ['todos','Todos']];
 var LS_PRQ_PREF='sstp_rq_pref';
-function prqPuede(){ return _dcOrdenPlan() >= 1; }
+/* 13/10/2026 · Marcelo: desde Supervisor SST (antes, Prevencionista) */
+function prqPuede(){ return _dcOrdenPlan() >= 2; }
 function prqUid(){ return String((TOK && TOK.uid) || ''); }
 function prqObraId(){ return String((YO.obra||{}).id||''); }
 function prqPref(){ var p=leer(LS_PRQ_PREF, {}); return (p && typeof p==='object' && !Array.isArray(p)) ? p : {}; }
@@ -11788,7 +12125,7 @@ function prqTraer(){
 
 function vistaReqs(caja){
   if(!prqPuede()){
-    caja.innerHTML='<div class="tarj"><div class="vacio"><b>Con el plan Prevencionista o uno mayor</b>'+
+    caja.innerHTML='<div class="tarj"><div class="vacio"><b>Con el plan Supervisor SST o uno mayor</b>'+
       'Los requerimientos de EPP y materiales: se piden desde el celular o desde aquí, con el sustento del consumo de la obra; quien autoriza los firma, y salen en Excel y en PDF.</div></div>';
     return;
   }
@@ -13535,6 +13872,16 @@ var V = {
            pintar:function(caja){ cargando(caja); masIr('masVistaAmon', caja); }, tablas:['sst_amonestacion']},
   buenas: {id:'buenas', g:'Registros', ic:'🌟', n:'Buenas prácticas', s:'Lo que salió bien en la obra, con su foto, para reconocerlo y repetirlo · aquí o en la app, es la misma lista',
            pintar:function(caja){ cargando(caja); masIr('masVistaBuenas', caja); }, tablas:['sst_buena']},
+  /* 12/10/2026 · los pedidos de EPP de la gente (portal/gestion.js): cambio con foto, pérdida o para una tarea */
+  pedidos:{id:'pedidos', g:'EPP', ic:'🦺', n:'Pedidos de EPP', s:'Lo que tu gente pide desde su app: el cambio de un EPP roto o gastado (con su foto), una pérdida o lo que necesita para una tarea · aquí o en la app, es la misma lista',
+           pintar:function(caja){ cargando(caja); gesIr('gesVistaPedEpp', caja); }, tablas:['sst_epp_pedido']},
+  /* 13/10/2026 · las visitas (QR de la puerta), el bloqueo y etiquetado (QR del equipo) y el pulso de seguridad (portal/gestion.js) */
+  visitas:{id:'visitas', g:'Mi obra', ic:'🚪', n:'Visitas', s:'Quién entró por el QR de la puerta, con su inducción de dos minutos: de dónde viene, a quién visita y a qué hora entró y salió · aquí o en la app, es la misma lista',
+           pintar:function(caja){ cargando(caja); gesIr('gesVistaVisitas', caja); }, tablas:['sst_visita']},
+  bloqueos:{id:'bloqueos', g:'Registros', ic:'🔒', n:'Bloqueo y etiquetado', s:'Los candados que se registran con el QR de cada equipo: qué está bloqueado ahora, quién lo puso y quién lo quitó',
+           pintar:function(caja){ cargando(caja); gesIr('gesVistaBloqueos', caja); }, tablas:['sst_bloqueo']},
+  pulso:  {id:'pulso', g:'Mi obra', ic:'💓', n:'Pulso de seguridad', s:'La encuesta de clima de seguridad que tu gente contesta en su app, sin nombre: los resultados por tema, con 5 respuestas o más',
+           pintar:function(caja){ cargando(caja); gesIr('gesVistaPulso', caja); }, tablas:[]},
   /* 01/10/2026 · la biblioteca de normas de la app, del país de la obra */
   normas: {id:'normas', g:'Consulta', ic:'⚖', n:'Normas', s:'Las normas de SST, salud y ambiente del país de la obra: lo que obligan y el texto oficial', pintar:vistaNormas, tablas:[]}
 };
@@ -13546,6 +13893,7 @@ var VISTAS_LIDER = [
   V.empresa, V.cargar, V.informe, V.programas, V.objetivos,
   V.acc, V.hh,
   {id:'epp',     g:'Indicadores', ic:'⛑', n:'Entrega de EPP', s:'El kardex con la firma de quien recibió, y cuánto sale mes a mes', pintar:vistaEPP, tablas:['sst_kardex']},
+  V.pedidos,
   V.matriz, V.reg, V.prog, V.caphechas, V.charlas,
   {id:'cump',    g:'Capacitación', ic:'✔', n:'Constancias', s:'Cada evaluación con su nota y su firma · una por una o todas las de una capacitación', tablas:['sst_constancia'],
    pintar:vistaConstancias},
@@ -13553,9 +13901,10 @@ var VISTAS_LIDER = [
   V.ind,
   {id:'personas', g:'Registros', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
   conGrupo(V.cargos, 'Registros'), conGrupo(V.comite, 'Registros'), conGrupo(V.quien, 'Registros'), conGrupo(V.tdm, 'Registros'),
-  V.reqs, V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.quim, V.ats, V.cred, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.docs, V.esc, V.qr, V.senales,
+  V.reqs, V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.ats, V.cred, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.docs, V.esc, V.qr, V.senales,
+  conGrupo(V.visitas, 'Registros'),
   V.bol, V.noti,
-  V.den,
+  V.den, conGrupo(V.pulso, 'Registros'),
   V.normas
 ];
 var VISTAS_SUP = [
@@ -13571,11 +13920,13 @@ var VISTAS_SUP = [
   V.ind,
   V.ats,
   {id:'kardex',  g:'Registros', ic:'⛑', n:'Entrega de EPP', s:'El kardex con la firma de quien recibió, y cuánto sale mes a mes', pintar:vistaEPP, tablas:['sst_kardex']},
+  V.pedidos,
   V.reqs,
-  V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.quim, V.cred, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.docs, V.esc, V.qr, V.senales,
+  V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.cred, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.docs, V.esc, V.qr, V.senales,
+  V.visitas,
   V.bol, V.noti,
   V.acc, V.hh,
-  V.den,
+  V.den, V.pulso,
   V.normas
 ];
 
@@ -13610,10 +13961,10 @@ var LS_DATOS_OK = 'sstp_datos_ok';
 var LEGAL_VER_WEB = '1.0';
 
 /* >>> INI-PLANES (lo pone armar.py desde PLANES, PUESTO_EXTRA y OBRA_EXTRA de la app: no editar a mano) <<< */
-var INI_PLANES = [{"id":"lite","n":"LITE","m":0,"a":0,"trab":10,"obras":1,"gest":1,"ch":5,"te":4,"gb":1,"para":"Para probarla con tu cuadrilla, sin pagar.","porque":"Gratis para siempre. Es la app entera con poco volumen: registras a tu gente, entregas EPP, haces el ATS y sacas credenciales. Lo que viene de muestra es el contenido.","orden":0,"tope":{"trabajador":10,"kardex":10,"reporte":-1,"credencial":10,"amonestacion":5,"semana":0,"escaneo":10,"ats":5,"ats_modelo":3,"andamio":5,"senal":10,"cartel":0},"mes":["amonestacion","andamio","ats","escaneo","kardex","senal"]},{"id":"prevencionista","n":"Prevencionista de Riesgo","m":59,"a":590,"trab":60,"obras":1,"gest":2,"ch":-1,"te":-1,"sm":"obrasst-prevencionista","sa":"obrasst-prevencionista-anual","gb":5,"para":"Para quien lleva solo la seguridad de una obra.","porque":"Abre todo el contenido de tu sector, las capacitaciones y las charlas, y los registros que se entregan: constancias firmadas, kardex en Excel, reporte semanal y requerimientos.","orden":1,"tope":{"trabajador":60,"kardex":120,"reporte":-1,"credencial":80,"amonestacion":20,"semana":4,"escaneo":60,"ats":60,"ats_modelo":-1,"andamio":-1,"senal":-1,"cartel":2},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"supervisor","n":"Supervisor SST","m":139,"a":1390,"trab":150,"obras":2,"gest":4,"ch":-1,"te":-1,"sm":"obrasst-supervisor","sa":"obrasst-supervisor-anual","gb":15,"para":"Para la obra que inspecciona sus equipos y sus frentes.","porque":"Suma las inspecciones de obra, el QR de cada equipo con su inspección diaria y su etiqueta, la matriz IPERC con QR y tus propias preguntas. Con dos obras y cuatro personas en la gestión.","orden":2,"tope":{"trabajador":150,"kardex":300,"reporte":-1,"credencial":200,"amonestacion":60,"semana":8,"escaneo":150,"ats":200,"ats_modelo":-1,"andamio":-1,"senal":-1,"cartel":4},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"ssoma","n":"SSOMA","m":299,"a":2990,"trab":400,"obras":5,"gest":8,"ch":-1,"te":-1,"sm":"obrasst-ssoma","sa":"obrasst-ssoma-anual","gb":40,"para":"Para el área SSOMA de una empresa con varias obras.","porque":"Suma los productos químicos con su hoja MSDS y su etiqueta, las campañas y los simulacros. Con cinco obras y ocho personas en la gestión.","orden":3,"tope":{"trabajador":400,"kardex":600,"reporte":-1,"credencial":500,"amonestacion":150,"semana":-1,"escaneo":400,"ats":600,"ats_modelo":-1,"andamio":-1,"senal":-1,"cartel":5},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"gestion","n":"Gestión SST","m":590,"a":5900,"trab":1000,"obras":12,"gest":16,"ch":-1,"te":-1,"sm":"obrasst-gestion","sa":"obrasst-gestion-anual","gb":100,"para":"Para la empresa que lleva su sistema de gestión completo.","porque":"Sin tope de ATS, de entregas de EPP ni de credenciales. Trae las carpetas del sistema de gestión y, en la web, el resumen de todas tus obras para la gerencia. Con doce obras y dieciséis personas.","orden":4,"tope":{"trabajador":1000,"kardex":-1,"reporte":-1,"credencial":-1,"amonestacion":-1,"semana":-1,"escaneo":-1,"ats":-1,"ats_modelo":-1,"andamio":-1,"senal":-1,"cartel":-1},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]}];
+var INI_PLANES = [{"id":"lite","n":"LITE","m":0,"a":0,"trab":10,"obras":1,"gest":1,"ch":5,"te":4,"gb":1,"para":"Para probarla con tu cuadrilla, sin pagar.","porque":"Gratis para siempre. Es la app entera con poco volumen: registras a tu gente, entregas EPP, haces el ATS y sacas credenciales. Lo que viene de muestra es el contenido.","orden":0,"tope":{"trabajador":10,"kardex":10,"reporte":-1,"credencial":10,"amonestacion":5,"semana":0,"escaneo":10,"ats":5,"ats_modelo":3,"andamio":5,"senal":10,"cartel":0},"mes":["amonestacion","andamio","ats","escaneo","kardex","senal"]},{"id":"prevencionista","n":"Prevencionista de Riesgo","m":59,"a":590,"trab":60,"obras":1,"gest":2,"ch":-1,"te":-1,"sm":"obrasst-prevencionista","sa":"obrasst-prevencionista-anual","gb":5,"para":"Para quien lleva solo la seguridad de una obra.","porque":"Abre todo el contenido de tu sector, las capacitaciones y las charlas, y los registros que se entregan: constancias firmadas, reporte semanal y el parte del día.","orden":1,"tope":{"trabajador":60,"kardex":120,"reporte":-1,"credencial":80,"amonestacion":20,"semana":4,"escaneo":60,"ats":60,"ats_modelo":-1,"andamio":-1,"senal":-1,"cartel":2},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"supervisor","n":"Supervisor SST","m":139,"a":1390,"trab":150,"obras":2,"gest":4,"ch":-1,"te":-1,"sm":"obrasst-supervisor","sa":"obrasst-supervisor-anual","gb":15,"para":"Para la obra que inspecciona sus equipos y sus frentes.","porque":"Suma las inspecciones de obra, el QR de cada equipo con su inspección diaria, los requerimientos y el consumo de EPP con su Excel, primeros auxilios con el QR de la estación y la matriz IPERC con QR. Con dos obras y cuatro personas en la gestión.","orden":2,"tope":{"trabajador":150,"kardex":300,"reporte":-1,"credencial":200,"amonestacion":60,"semana":8,"escaneo":150,"ats":200,"ats_modelo":-1,"andamio":-1,"senal":-1,"cartel":4},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"ssoma","n":"SSOMA","m":299,"a":2990,"trab":400,"obras":5,"gest":8,"ch":-1,"te":-1,"sm":"obrasst-ssoma","sa":"obrasst-ssoma-anual","gb":40,"para":"Para el área SSOMA de una empresa con varias obras.","porque":"Suma los productos químicos con su hoja MSDS y su etiqueta, los exámenes médicos, las campañas, los simulacros y el legajo SST de cada trabajador. Con cinco obras y ocho personas en la gestión.","orden":3,"tope":{"trabajador":400,"kardex":600,"reporte":-1,"credencial":500,"amonestacion":150,"semana":-1,"escaneo":400,"ats":600,"ats_modelo":-1,"andamio":-1,"senal":-1,"cartel":5},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]},{"id":"gestion","n":"Gestión SST","m":590,"a":5900,"trab":1000,"obras":12,"gest":16,"ch":-1,"te":-1,"sm":"obrasst-gestion","sa":"obrasst-gestion-anual","gb":100,"para":"Para la empresa que lleva su sistema de gestión completo.","porque":"Sin tope de ATS, de entregas de EPP ni de credenciales. Suma el tareo de la puerta, el plan de izaje, la investigación de accidentes y tus propias carpetas, y en la web el resumen de todas tus obras para la gerencia. Con doce obras y dieciséis personas.","orden":4,"tope":{"trabajador":1000,"kardex":-1,"reporte":-1,"credencial":-1,"amonestacion":-1,"semana":-1,"escaneo":-1,"ats":-1,"ats_modelo":-1,"andamio":-1,"senal":-1,"cartel":-1},"mes":["amonestacion","andamio","ats","escaneo","kardex","reporte","semana","senal"]}];
 var INI_EXTRA = {"puesto":49,"obra":79};
 var INI_GRUPOS = [["cap","Capacitación"],["dia","El día a día en la obra"],["gente","La gente"],["doc","Documentos y consulta"],["web","En la computadora"]];
-var INI_VITRINA = [{"k":"temas","g":"cap","ic":"🎓","n":"Capacitación por tema","d":"El trabajador la lee en su celular, rinde su evaluación y firma. La nota queda en su récord.","desde":0,"cupo":"temas"},{"k":"charlas","g":"cap","ic":"🗓️","n":"Charlas de 5 minutos","d":"El programa del mes y el guion de cada charla, listo para dictar.","desde":0,"cupo":"charlas"},{"k":"talleres","g":"cap","ic":"🧰","n":"Talleres prácticos","d":"Para practicar en campo, paso a paso. Se hace, no se lee.","desde":0},{"k":"induccion","g":"cap","ic":"📘","n":"Inducción del personal nuevo","d":"Tema por tema, con la firma del trabajador el día que ingresa.","desde":0},{"k":"programar","g":"cap","ic":"📅","n":"Programar capacitación","d":"Eliges el tema, el día y para quiénes. Ese día les aparece en su app.","desde":0},{"k":"constancias","g":"cap","ic":"📜","n":"Constancias y matriz de capacitación","d":"Cada evaluación con su nota y su firma, en PDF. Y la matriz de quién está al día según su puesto.","desde":1,"web":["constancias","cump","matriz","registro"]},{"k":"preguntas","g":"cap","ic":"✍️","n":"Tus propias preguntas","d":"Agrega a cada capacitación las preguntas de tu obra o de tu cliente.","desde":2},{"k":"ats","g":"dia","ic":"📋","n":"ATS de la tarea","d":"Se llena en el celular, firma la cuadrilla y el supervisor lo libera. En minería, el IPERC continuo.","desde":0,"tope":"ats"},{"k":"kardex","g":"dia","ic":"🦺","n":"Entrega de EPP","d":"Cada entrega con la firma de quien recibe. El kardex se arma solo.","desde":0,"tope":"kardex"},{"k":"kardex_export","g":"dia","ic":"📊","n":"Kardex y consumo de EPP en Excel y PDF","d":"El registro del mes o el total, y cuánto sale mes a mes, para entregar o archivar.","desde":1},{"k":"reqs","g":"dia","ic":"🧾","n":"Requerimientos de EPP y materiales","d":"La app calcula cuánto pedir con el consumo y el personal de la obra. Firman quien pide, Seguridad y los gerentes.","desde":1,"web":["reqs"],"nuevo":1},{"k":"reporte","g":"dia","ic":"🚨","n":"Reportes de actos y condiciones","d":"Con foto, desde el celular. Se les hace seguimiento hasta cerrarlos.","desde":0},{"k":"asisten","g":"dia","ic":"📷","n":"Cámara y escáner de documentos","d":"La lista de asistencia o cualquier hoja firmada pasa del papel al archivo de la obra.","desde":0,"tope":"escaneo"},{"k":"senales","g":"dia","ic":"🔺","n":"Señalética de la obra","d":"Las señales de la norma, listas para imprimir en el tamaño que necesitas.","desde":0,"tope":"senal"},{"k":"andamio","g":"dia","ic":"🪜","n":"Tarjetas de andamio","d":"El semáforo verde, amarillo y rojo que se cuelga en el andamio.","desde":0,"tope":"andamio"},{"k":"accidente","g":"dia","ic":"🚑","n":"Accidentes e incidentes","d":"El registro de cada evento, con sus datos y su seguimiento.","desde":0},{"k":"buenas","g":"dia","ic":"🌟","n":"Buenas prácticas","d":"Lo que se hizo bien, con foto, para reconocerlo y repetirlo.","desde":0},{"k":"semanal","g":"dia","ic":"📈","n":"Reporte semanal de horas hombre","d":"Las horas trabajadas y las de capacitación de la semana, en PDF y en Excel.","desde":1,"tope":"semana"},{"k":"inspec","g":"dia","ic":"✅","n":"Inspecciones de obra","d":"Las listas de verificación de tu sector, llenadas en el celular con sus fotos.","desde":2,"web":["insp"]},{"k":"equipos","g":"dia","ic":"🏷️","n":"Equipos y herramientas con QR","d":"Cada equipo con su etiqueta. El trabajador escanea el QR y hace su inspección diaria antes de usarlo.","desde":2,"web":["equipos","inspeq"],"nuevo":1},{"k":"msds","g":"dia","ic":"🧪","n":"Productos químicos","d":"Cada producto con su hoja MSDS, su etiqueta y su rombo. El cartel con QR va en el almacén.","desde":3,"web":["quimicos"]},{"k":"campanas","g":"dia","ic":"📣","n":"Campañas","d":"Campañas de una semana ya armadas, día por día, con su evidencia en PDF.","desde":3},{"k":"simulacros","g":"dia","ic":"🧯","n":"Simulacros","d":"Se programan, se corren con cronómetro y se cierran con su informe.","desde":3},{"k":"personal","g":"gente","ic":"👷","n":"Tu personal","d":"La ficha de cada trabajador, con su estado, su frente y su historia en la obra.","desde":0,"tope":"trabajador"},{"k":"credencial","g":"gente","ic":"🪪","n":"Credenciales con QR y carné","d":"La credencial de cada trabajador y su carné con los teléfonos de emergencia de la obra.","desde":0,"tope":"credencial"},{"k":"cargos","g":"gente","ic":"🖼️","n":"Brigada, comité y supervisor de SST","d":"Designas a cada uno con su función y su foto, y sale el cartel para la caseta.","desde":0,"web":["cargos"],"nuevo":1},{"k":"comite","g":"gente","ic":"🏛️","n":"Comité de SST","d":"El padrón, el libro de actas y los acuerdos del comité.","desde":1},{"k":"amonesta","g":"gente","ic":"⚠️","n":"Amonestaciones","d":"La papeleta con su descargo y su firma, en PDF o en Word.","desde":0,"tope":"amonestacion"},{"k":"emo","g":"gente","ic":"🩺","n":"Exámenes médicos ocupacionales (EMO)","d":"Las fechas, la aptitud y los días que faltan para el próximo de cada trabajador. El informe lo ven solo salud y el trabajador, que firma en su app que lo recibió.","desde":3,"web":["emo"],"nuevo":1},{"k":"sctr","g":"gente","ic":"🛡️","n":"SCTR del mes","d":"La constancia con su lista de asegurados, sacada del PDF o del Excel de la aseguradora, y quién está en la obra sin SCTR vigente.","desde":0,"web":["sctr"],"nuevo":1},{"k":"boletines","g":"gente","ic":"📰","n":"Boletines y noticias","d":"Lo que pegarías en la caseta llega al celular de cada uno, con acuse de quién lo leyó.","desde":0},{"k":"buzon","g":"gente","ic":"💬","n":"Buzón de sugerencias y canal de denuncias","d":"El trabajador escribe desde su celular. Las denuncias van sin nombre, y la empresa responde.","desde":0},{"k":"risst","g":"doc","ic":"📌","n":"Cartel QR del reglamento interno","d":"El trabajador escanea y lee el documento vigente en su celular.","desde":0},{"k":"qr_pets","g":"doc","ic":"📌","n":"Cartel QR de los procedimientos","d":"Los procedimientos de trabajo, a un escaneo de distancia.","desde":1},{"k":"qr_iperc","g":"doc","ic":"📌","n":"Cartel QR de la matriz IPERC","d":"La matriz de riesgos de cada frente, a la vista de quien la necesita.","desde":2},{"k":"qr_propio","g":"doc","ic":"➕","n":"Carteles QR propios","d":"Además de los que ya vienen, los tuyos: con el título que quieras y los documentos que elijas.","desde":1,"tope":"cartel","nuevo":1},{"k":"proced","g":"doc","ic":"📘","n":"Procedimientos y normas","d":"Los procedimientos de trabajo y la biblioteca de normas, para consultar en la obra.","desde":0},{"k":"carpetas","g":"doc","ic":"🗂️","n":"Las carpetas del sistema de gestión","d":"Todo el sistema de gestión ordenado en carpetas, con cada documento en su lugar.","desde":4},{"k":"portal","g":"web","ic":"💻","n":"Portal web","d":"Lo que registras en el celular se ve al instante en la pantalla de la oficina, para revisar y descargar.","desde":0},{"k":"informe","g":"web","ic":"📑","n":"Informe del mes","d":"Para tu gerencia o tu cliente: eliges qué va y en qué orden, los datos del mes salen solos y le sumas los documentos de la obra. Un solo PDF, numerado.","desde":1,"web":["informe"],"nuevo":1},{"k":"programas","g":"web","ic":"📆","n":"Programas del año","d":"El programa de capacitación y el anual de SST, mes a mes y con lo ejecutado contado solo, y los objetivos y metas del año sacados de él. Desde Supervisor SST, también los de inspecciones, simulacros y campañas.","desde":1,"web":["programas","objetivos"],"nuevo":1},{"k":"resumen","g":"web","ic":"📈","n":"Resumen ejecutivo de todas tus obras","d":"Cómo va cada obra en una pantalla, para la gerencia.","desde":4}];
+var INI_VITRINA = [{"k":"temas","g":"cap","ic":"🎓","n":"Capacitación por tema","d":"El trabajador la lee en su celular, rinde su evaluación y firma. La nota queda en su récord.","desde":0,"cupo":"temas"},{"k":"charlas","g":"cap","ic":"🗓️","n":"Charlas de 5 minutos","d":"El programa del mes y el guion de cada charla, listo para dictar.","desde":0,"cupo":"charlas"},{"k":"talleres","g":"cap","ic":"🧰","n":"Talleres prácticos","d":"Para practicar en campo, paso a paso. Se hace, no se lee.","desde":0},{"k":"peligros","g":"cap","ic":"🔎","n":"«Encuentra los peligros» con fotos de tu obra","d":"Sacas una foto del frente, marcas los peligros y la cuadrilla compite por encontrarlos, en tu celular o cada uno en el suyo, con su ranking.","desde":3,"nuevo":1},{"k":"induccion","g":"cap","ic":"📘","n":"Inducción del personal nuevo","d":"Tema por tema, con la firma del trabajador el día que ingresa.","desde":0},{"k":"programar","g":"cap","ic":"📅","n":"Programar capacitación","d":"Eliges el tema, el día y para quiénes. Ese día les aparece en su app.","desde":0},{"k":"constancias","g":"cap","ic":"📜","n":"Constancias y matriz de capacitación","d":"Cada evaluación con su nota y su firma, en PDF. Y la matriz de quién está al día según su puesto.","desde":1,"web":["constancias","cump","matriz","registro"]},{"k":"preguntas","g":"cap","ic":"✍️","n":"Tus propias preguntas","d":"Agrega a cada capacitación las preguntas de tu obra o de tu cliente.","desde":2},{"k":"ats","g":"dia","ic":"📋","n":"ATS de la tarea","d":"Se llena en el celular, firma la cuadrilla y el supervisor lo libera. En minería, el IPERC continuo.","desde":0,"tope":"ats"},{"k":"kardex","g":"dia","ic":"🦺","n":"Entrega de EPP","d":"Cada entrega con la firma de quien recibe. El kardex se arma solo.","desde":0,"tope":"kardex"},{"k":"kardex_export","g":"dia","ic":"📊","n":"Kardex y consumo de EPP en Excel y PDF","d":"El registro del mes o el total, y cuánto sale mes a mes, para entregar o archivar.","desde":2},{"k":"reqs","g":"dia","ic":"🧾","n":"Requerimientos de EPP y materiales","d":"La app calcula cuánto pedir con el consumo y el personal de la obra. Firman quien pide, Seguridad y los gerentes.","desde":2,"web":["reqs"],"nuevo":1},{"k":"reporte","g":"dia","ic":"🚨","n":"Reportes de actos y condiciones","d":"Con foto, desde el celular. Se les hace seguimiento hasta cerrarlos.","desde":0},{"k":"asisten","g":"dia","ic":"📷","n":"Cámara y escáner de documentos","d":"La lista de asistencia o cualquier hoja firmada pasa del papel al archivo de la obra.","desde":0,"tope":"escaneo"},{"k":"senales","g":"dia","ic":"🔺","n":"Señalética de la obra","d":"Las señales de la norma, listas para imprimir en el tamaño que necesitas.","desde":0,"tope":"senal"},{"k":"andamio","g":"dia","ic":"🪜","n":"Tarjetas de andamio","d":"El semáforo verde, amarillo y rojo que se cuelga en el andamio.","desde":0,"tope":"andamio"},{"k":"accidente","g":"dia","ic":"🚑","n":"Accidentes e incidentes","d":"El registro de cada evento, con sus datos y su seguimiento.","desde":0},{"k":"buenas","g":"dia","ic":"🌟","n":"Buenas prácticas","d":"Lo que se hizo bien, con foto, para reconocerlo y repetirlo.","desde":0},{"k":"semanal","g":"dia","ic":"📈","n":"Reporte semanal de horas hombre","d":"Las horas trabajadas y las de capacitación de la semana, en PDF y en Excel.","desde":1,"tope":"semana"},{"k":"inspec","g":"dia","ic":"✅","n":"Inspecciones de obra","d":"Las listas de verificación de tu sector, llenadas en el celular con sus fotos.","desde":2,"web":["insp"]},{"k":"equipos","g":"dia","ic":"🏷️","n":"Equipos y herramientas con QR","d":"Cada equipo con su etiqueta. El trabajador escanea el QR y hace su inspección diaria antes de usarlo.","desde":2,"web":["equipos","inspeq"],"nuevo":1},{"k":"msds","g":"dia","ic":"🧪","n":"Productos químicos","d":"Cada producto con su hoja MSDS, su etiqueta y su rombo. El cartel con QR va en el almacén.","desde":3,"web":["quimicos"]},{"k":"campanas","g":"dia","ic":"📣","n":"Campañas","d":"Campañas de una semana ya armadas, día por día, con su evidencia en PDF.","desde":3},{"k":"simulacros","g":"dia","ic":"🧯","n":"Simulacros","d":"Se programan, se corren con cronómetro y se cierran con su informe.","desde":3},{"k":"clima","g":"dia","ic":"🌤️","n":"El clima de la obra","d":"UV, calor, viento y tormenta del día, cada uno con su medida, y la charla que va. Para el supervisor y para cada trabajador.","desde":0,"nuevo":1},{"k":"quienfalta","g":"dia","ic":"🆘","n":"¿Quién falta? en una emergencia","d":"La lista de los que estuvieron hoy en la obra: en el punto de reunión se marca con el fotocheck y los que faltan salen arriba, con su último lugar. También en el simulacro.","desde":0,"nuevo":1},{"k":"izaje","g":"dia","ic":"🏗️","n":"Plan de izaje con semáforo","d":"La carga y sus aparejos contra la tabla de la grúa a ese radio: el % de capacidad en verde, amarillo o rojo, con el viento del día, su lista de verificación y las firmas en el celular. En rojo no se firma.","desde":4,"nuevo":1},{"k":"caida","g":"dia","ic":"🧗","n":"Calculadora de caída libre","d":"Con la altura del anclaje, la línea y el absorbedor (o el retráctil), dice si el trabajador golpearía el piso: con su dibujo, en verde, ámbar o rojo, y qué cambiar.","desde":2,"nuevo":1},{"k":"auxilios","g":"dia","ic":"⛑️","n":"Primeros auxilios paso a paso","d":"¿Qué hago si…? Caída, corte, quemadura, descarga, desmayo y golpe de calor, con audio y el botón de llamar, sin señal. Y el cartel de la estación de emergencia con su QR.","desde":2,"nuevo":1},{"k":"apto","g":"dia","ic":"✋","n":"¿Estás apto hoy? al firmar el ATS","d":"Tres preguntas antes de cada firma: descanso, cómo se siente y su EPP. Si alguien dice que no, el supervisor lo ve antes del V°B°. Sin datos médicos.","desde":0,"nuevo":1},{"k":"bloqueo","g":"dia","ic":"🔒","n":"Bloqueo y etiquetado con el QR del equipo","d":"Cada uno registra su candado con el QR del equipo, y el QR dice BLOQUEADO a cualquiera hasta que se quiten todos. La lista sirve en el cambio de turno.","desde":2,"nuevo":1,"web":["bloqueos"]},{"k":"parte","g":"dia","ic":"📋","n":"El parte del día, solo","d":"A la hora del parte, la hoja con lo del día para el jefe: quién trabajó, ATS, charlas, reportes, incidentes y pendientes. En PDF o por WhatsApp, en un toque.","desde":1,"nuevo":1},{"k":"investigacion","g":"dia","ic":"🔍","n":"Investigación guiada de accidentes","d":"Paso a paso: lo que pasó y los testigos, la línea de tiempo, las fotos, los 5 porqués hasta la causa raíz y cada medida con su responsable y su plazo. Con su informe en PDF.","desde":4,"nuevo":1},{"k":"tareo","g":"gente","ic":"🕘","n":"Tareo de la puerta con el fotocheck","d":"Cada uno marca su entrada y su salida con su fotocheck: las horas hombre van solas al Riesgo del mes, se ve quién está adentro, quién acumula muchas horas, y el tareo del mes sale en Excel.","desde":4,"nuevo":1},{"k":"legajo","g":"gente","ic":"📁","n":"Legajo SST de cada trabajador en PDF","d":"Inducción, capacitaciones con su nota, EPP, aptitud del EMO, SCTR y amonestaciones, ordenado y numerado, con su índice. Uno por uno o todos de una vez, para la auditoría.","desde":3,"nuevo":1},{"k":"visitas","g":"gente","ic":"🚪","n":"Visitas con su inducción de dos minutos","d":"El QR de la puerta: la visita deja sus datos, ve las reglas, contesta tres preguntas y sale con su pase del día, sin instalar nada. Y entra en «¿Quién falta?».","desde":1,"nuevo":1,"web":["visitas"]},{"k":"pulso","g":"gente","ic":"💓","n":"Pulso de seguridad","d":"Diez preguntas cada tres meses, sin nombre, desde la app del trabajador. Los resultados por tema salen con 5 respuestas o más.","desde":2,"nuevo":1,"web":["pulso"]},{"k":"personal","g":"gente","ic":"👷","n":"Tu personal","d":"La ficha de cada trabajador, con su estado, su frente y su historia en la obra.","desde":0,"tope":"trabajador"},{"k":"credencial","g":"gente","ic":"🪪","n":"Credenciales con QR y carné","d":"La credencial de cada trabajador y su carné con los teléfonos de emergencia de la obra.","desde":0,"tope":"credencial"},{"k":"cargos","g":"gente","ic":"🖼️","n":"Brigada, comité y supervisor de SST","d":"Designas a cada uno con su función y su foto, y sale el cartel para la caseta.","desde":0,"web":["cargos"],"nuevo":1},{"k":"comite","g":"gente","ic":"🏛️","n":"Comité de SST","d":"El padrón, el libro de actas y los acuerdos del comité.","desde":1},{"k":"amonesta","g":"gente","ic":"⚠️","n":"Amonestaciones","d":"La papeleta con su descargo y su firma, en PDF o en Word.","desde":0,"tope":"amonestacion"},{"k":"emo","g":"gente","ic":"🩺","n":"Exámenes médicos ocupacionales (EMO)","d":"Las fechas, la aptitud y los días que faltan para el próximo de cada trabajador. El informe lo ven solo salud y el trabajador, que firma en su app que lo recibió.","desde":3,"web":["emo"],"nuevo":1},{"k":"sctr","g":"gente","ic":"🛡️","n":"SCTR del mes","d":"La constancia con su lista de asegurados, sacada del PDF o del Excel de la aseguradora, y quién está en la obra sin SCTR vigente.","desde":0,"web":["sctr"],"nuevo":1},{"k":"boletines","g":"gente","ic":"📰","n":"Boletines y noticias","d":"Lo que pegarías en la caseta llega al celular de cada uno, con acuse de quién lo leyó.","desde":0},{"k":"buzon","g":"gente","ic":"💬","n":"Buzón de sugerencias y canal de denuncias","d":"El trabajador escribe desde su celular. Las denuncias van sin nombre, y la empresa responde.","desde":0},{"k":"risst","g":"doc","ic":"📌","n":"Cartel QR del reglamento interno","d":"El trabajador escanea y lee el documento vigente en su celular.","desde":0},{"k":"qr_pets","g":"doc","ic":"📌","n":"Cartel QR de los procedimientos","d":"Los procedimientos de trabajo, a un escaneo de distancia.","desde":1},{"k":"qr_iperc","g":"doc","ic":"📌","n":"Cartel QR de la matriz IPERC","d":"La matriz de riesgos de cada frente, a la vista de quien la necesita.","desde":2},{"k":"qr_propio","g":"doc","ic":"➕","n":"Carteles QR propios","d":"Además de los que ya vienen, los tuyos: con el título que quieras y los documentos que elijas.","desde":1,"tope":"cartel","nuevo":1},{"k":"miscarpetas","g":"doc","ic":"📁","n":"Tus propias carpetas de documentos","d":"Creas, nombras y ordenas carpetas para los documentos de la obra, en la app y en la web: cada archivo va donde lo pongas.","desde":4,"nuevo":1},{"k":"proced","g":"doc","ic":"📘","n":"Procedimientos y normas","d":"Los procedimientos de trabajo y la biblioteca de normas, para consultar en la obra.","desde":0},{"k":"portal","g":"web","ic":"💻","n":"Portal web","d":"Lo que registras en el celular se ve al instante en la pantalla de la oficina, para revisar y descargar.","desde":0},{"k":"informe","g":"web","ic":"📑","n":"Informe del mes","d":"Para tu gerencia o tu cliente: eliges qué va y en qué orden, los datos del mes salen solos y le sumas los documentos de la obra. Un solo PDF, numerado.","desde":1,"web":["informe"],"nuevo":1},{"k":"programas","g":"web","ic":"📆","n":"Programas del año","d":"El programa de capacitación y el anual de SST, mes a mes y con lo ejecutado contado solo, y los objetivos y metas del año sacados de él. Desde Supervisor SST, también los de inspecciones, simulacros y campañas.","desde":1,"web":["programas","objetivos"],"nuevo":1},{"k":"resumen","g":"web","ic":"📈","n":"Resumen ejecutivo de todas tus obras","d":"Cómo va cada obra en una pantalla, para la gerencia.","desde":4}];
 /* <<< INI-PLANES-FIN >>> */
 /* 05/10/2026 · lo que trae cada plan ya no se escribe aquí: sale de la VITRINA de la app (INI_VITRINA, que pone
    armar.py), la misma que la app muestra en «Planes». El espacio de cada plan (lo aprobó Marcelo el 25/09/2026)
@@ -13897,7 +14248,7 @@ function gesCapComoCons(soloFecha){
 function consMasHechas(p, soloFecha){
   return Promise.all([p, gesCapComoCons(soloFecha)]).then(function(r){ return (r[0]||[]).concat(r[1]||[]); });
 }
-var GESTION_VER='6044414e0a';   /* lo pone armar.py: el hash de portal/gestion.js */
+var GESTION_VER='6ae2749a9b';   /* lo pone armar.py: el hash de portal/gestion.js */
 var _GES_CARGA=null;
 function cargarGestion(){
   if(typeof gesPersonalSubir==='function') return Promise.resolve(true);
@@ -13916,8 +14267,8 @@ function gesIr(fn){
    papeles-app.js (lo arma armar.py desde la app: las listas, la base de peligros y el dibujo del ATS «clásico» y del
    IPERC «Anexo 7») y papeles.js (los editores, los otros modelos de formato y la vista previa). Necesitan gestion.js
    (el buscador de personal) y el jsPDF de evaluaciones-pdf.js. */
-var PAPAPP_VER='70e1e932f8';   /* lo pone armar.py: el hash de portal/papeles-app.js */
-var PAPELES_VER='e72be7d7bb';   /* lo pone armar.py: el hash de portal/papeles.js */
+var PAPAPP_VER='defa045c90';   /* lo pone armar.py: el hash de portal/papeles-app.js */
+var PAPELES_VER='4ec2f4104b';   /* lo pone armar.py: el hash de portal/papeles.js */
 var _PAP_CARGA=null;
 /* 07/10/2026 · los programas del año: portal/programas.js llega después de lo de los papeles (usa su dibujo de hojas) */
 var PROGRAMAS_VER='2806d6e46f';   /* lo pone armar.py: el hash de portal/programas.js */
@@ -13988,7 +14339,7 @@ var STK_VER='521cb712ae';                /* lo pone armar.py: el hash de portal/
 var AUT_VER='91131ea382';                /* lo pone armar.py: el hash de portal/autoriza.js (la autorización del grupo sanguíneo) */
 var _AUT_CARGA=null;
 /* 08/10/2026 · los exámenes médicos ocupacionales (portal/emo.js, con lo común de ../emo-base.js adentro) */
-var INFORME_VER='86ccf15212';                                 /* lo pone armar.py: el hash de portal/informe.js */
+var INFORME_VER='f10558d341';                                 /* lo pone armar.py: el hash de portal/informe.js */
 var _INF_CARGA=null;
 function cargarInforme(){
   if(typeof infVista==='function') return Promise.resolve(true);
@@ -16063,7 +16414,7 @@ function pedirClaveNueva(){
 }
 /* 01/10/2026 · OBRASST Central: la obra de ejemplo (portal/?demo=central) y,
    después, las obras con Central. Se carga recién cuando hace falta. */
-var CENTRAL_VER='5802962aa6';   /* lo pone armar.py: el hash de portal/central.js */
+var CENTRAL_VER='a50f25d13a';   /* lo pone armar.py: el hash de portal/central.js */
 var _CENTRAL_CARGA=null;
 function cargarCentral(){
   if(typeof centralDemo==='function') return Promise.resolve(true);

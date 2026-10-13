@@ -20,6 +20,7 @@ var INF_SECC = [
   { k:'inspecciones', n:'Inspecciones',                   d:'Las del mes, por tipo' },
   { k:'epp',          n:'Entrega de EPP',                 d:'Las entregas del mes y lo que más salió' },
   { k:'sctr',         n:'SCTR',                           d:'Las constancias vigentes y quién está en obra sin cobertura completa' },
+  { k:'riesgo',       n:'Riesgo del mes',                 d:'La probabilidad de un accidente con descanso en los 30 días siguientes, con su rango, y la pirámide de los últimos 12 meses', apagado:true },
   { k:'anexos',       n:'Anexos',                         d:'Los documentos que elijas del archivo de la obra', fijo:'ultimo' }
 ];
 var INF_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -45,7 +46,8 @@ function _infMeses(){ var o=[], d=new Date(); d.setDate(1); for(var i=0;i<12;i++
 function _infModeloAplicar(m){
   var orden=[], visto={};
   (m && Array.isArray(m.secc) ? m.secc : []).forEach(function(x){ if(x && _infSeccN(x.k) && !visto[x.k]){ visto[x.k]=1; orden.push({ k:x.k, on:x.on!==false }); } });
-  INF_SECC.forEach(function(s){ if(!visto[s.k]) orden.push({ k:s.k, on:true }); });
+  /* una sección nueva entra al final, prendida; las que vienen «apagadas» (el riesgo del mes) las prende quien las quiera */
+  INF_SECC.forEach(function(s){ if(!visto[s.k]) orden.push({ k:s.k, on:!s.apagado }); });
   /* la portada, primero; los anexos, al final */
   orden=orden.filter(function(x){ return x.k!=='portada' && x.k!=='anexos'; });
   INFW.secc=[{ k:'portada', on:true }].concat(orden, [{ k:'anexos', on:true }]);
@@ -173,7 +175,8 @@ function _infTraer(mes){
     traer('sst_trabajador', '&select=id,nombre,dni,td,estatus&order=nombre.asc', 6000),
     traer('sst_constancia', '&select=fecha,resultado,tema&order=fecha.desc', 4000),
     traer('sst_reporte', '&select=id,fecha,creado,cerrado,estado,clase&order=creado.desc', 3000),
-    traer('sst_accidente', '&select=fecha,clase,dias&order=fecha.desc', 1000),
+    /* con «potencial» (los precursores del riesgo del mes) si el servidor ya la tiene; si no, sin ella */
+    traer('sst_accidente', '&select=fecha,clase,dias,medidas,potencial&order=fecha.desc', 1000).catch(function(){ return traer('sst_accidente', '&select=fecha,clase,dias,medidas&order=fecha.desc', 1000); }),
     traer('sst_hht', '&select=fecha,ob_n,ob_h,st_n,st_h&order=fecha.desc', 4000),
     traer('sst_kardex', '&select=fecha,epp,cantidad&order=fecha.desc', 6000),
     traer('sst_inspeccion', '&select=fecha,tipo&order=fecha.desc', 3000),
@@ -194,6 +197,10 @@ function _infTraer(mes){
     hht.forEach(function(x){ var f=String(x.fecha||''); if(anioDe(f)===anio && f.slice(0, 10)<=fin) hAnio+=(parseFloat(x.ob_n)||0)*(parseFloat(x.ob_h)||0)+(parseFloat(x.st_n)||0)*(parseFloat(x.st_h)||0); });
     var nIF=aa.filter(function(a){ return ACC_CUENTA[a.clase]; }).length, dias=aa.reduce(function(s, a){ return s+(parseInt(a.dias, 10)||0); }, 0);
     D.acc={ mes:am.length, anio:aa.length, nIF:nIF, dias:dias, hMes:hMes, hAnio:hAnio, IF:hAnio ? nIF*1e6/hAnio : null, IS:hAnio ? dias*1e6/hAnio : null };
+    /* el riesgo del mes, al cierre del mes (o a hoy, si el mes no terminó): la cuenta de riesgo-base.js */
+    D.riesgo=(typeof riesgoCalcular==='function') ? riesgoCalcular(
+      accs.map(function(a){ return { fecha:a.fecha, clase:a.clase, pot:(a.potencial===true || a.potencial===false) ? a.potencial : null, medidas:a.medidas }; }),
+      hht.map(function(x){ return { fecha:x.fecha, hht:(parseFloat(x.ob_n)||0)*(parseFloat(x.ob_h)||0)+(parseFloat(x.st_n)||0)*(parseFloat(x.st_h)||0) }; }), dia) : null;
     var km=kar.filter(function(k){ return mesDe(k.fecha)===mes; });
     D.epp={ entregas:km.length, und:km.reduce(function(s, k){ return s+(parseInt(k.cantidad, 10)||1); }, 0), top:_infTop(km, function(k){ return k.epp||'EPP'; }, function(k){ return parseInt(k.cantidad, 10)||1; }, 8) };
     var im=insp.filter(function(i){ return mesDe(i.fecha)===mes; });
@@ -319,6 +326,25 @@ function _infPdfBase(D){
       cab('Entrega de EPP');
       cifras([['Entregas del mes', D.epp.entregas, 'con la firma de quien recibe'], ['Unidades', D.epp.und, 'entregadas']]);
       tabla('Lo que más salió', ['EPP', 'Unidades'], D.epp.top.map(function(t){ return [t[0], t[1]]; }), [W-2*M-110, 110]);
+    }
+    if(x.k==='riesgo'){
+      cab('Riesgo del mes');
+      var R=D.riesgo;
+      if(!R){ nota('No se pudo calcular el riesgo del mes.'); return; }
+      if(R.listo){
+        cifras([['Próximos 30 días', riesgoPct(R.p), 'entre '+riesgoPct(R.plo)+' y '+riesgoPct(R.phi)], ['En 3 meses', riesgoPct(R.p3), 'si nada cambia'],
+                ['En un año', riesgoPct(R.p12), 'si nada cambia'], ['Confianza', R.conf, Math.round(R.pesoObra*100)+' % es de la obra']]);
+        nota('Probabilidad de al menos un accidente con descanso médico en los 30 días siguientes al '+fechaLarga(D.dia)+', con '+riesgoNum(R.H)+' horas hombre esperadas. Sale de lo registrado en los 12 meses anteriores ('+riesgoNum(R.E)+' horas hombre y los eventos por clase), ponderado con la pirámide de Bird, y de un punto de partida de 5 accidentes con descanso por millón de horas hombre.');
+      } else nota(R.motivo==='sin_horas' ? 'Sin horas hombre registradas en los últimos 12 meses no se puede calcular: se registran en «Horas hombre» (la web) o en el reporte semanal (la app).'
+                : (R.motivo==='sin_recientes' ? 'No hubo horas hombre en las 8 semanas anteriores: la probabilidad sale cuando vuelva a haberlas.'
+                : 'Todavía falta data: la probabilidad sale con 3 meses de horas hombre (o 20,000). Van '+riesgoNum(R.E)+' horas hombre.'));
+      var C=R.cuenta;
+      tabla('La pirámide de los últimos 12 meses', ['Nivel', 'Eventos', 'Bird, por cada lesión grave'], [
+        ['Con descanso (incapacitantes y mortales)', C.S, '1'], ['Leves y de primeros auxilios', C.L+C.PA, '10'], ['Daños a la propiedad', C.D, '30'], ['Casi accidentes', C.C, '600']
+      ], [W-2*M-250, 90, 160]);
+      if(R.pot) nota(R.pot+(R.pot===1 ? ' evento pudo ser grave o mortal' : ' eventos pudieron ser graves o mortales')+(R.potSin ? '; '+R.potSin+' todavía sin medidas.' : ', y todos tienen sus medidas.'));
+      riesgoHacer(R).forEach(function(t){ nota('· '+String(t).replace(/<[^>]+>/g, '')); });
+      nota('Es una probabilidad, no una predicción. No reemplaza el IPERC, las inspecciones ni el ATS.');
     }
     if(x.k==='sctr'){
       cab('SCTR');

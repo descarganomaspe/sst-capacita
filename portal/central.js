@@ -209,6 +209,9 @@ function cenArmarDemo(ahora0){
     var quienLev = uSub ? uSub.id : (emp === 'via' ? 'u-s2' : o.por);
     if(vence < ahora || suerte < 0.75){
       var tarde = suerte > 0.86, lev = creado + R.h * 3600000 * (tarde ? (1.15 + r() * 0.8) : (0.25 + r() * 0.6));
+      /* 12/10/2026 · la de relleno que ya venció se levanta (tarde, si toca) antes de ahora: las vencidas que suben al jefe
+         son solo las de la portada (OB-12xx). Si no, según la hora del día una de relleno quedaba abierta y subía también. */
+      if(vence < ahora && lev >= ahora - 1800000) lev = ahora - 1800000 - (1 + r() * 4) * 3600000;
       if(lev < ahora - 1800000){
         o.historia.push({ t:lev, u:quienLev, que:'levanta', nota:tipo.sol });
         var val = lev + (1 + r() * 9) * 3600000;

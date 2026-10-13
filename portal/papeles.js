@@ -86,6 +86,8 @@ function _papCss(){
     '.pap-fila-cab{font-size:11.5px;color:var(--gris);text-transform:uppercase;letter-spacing:.03em;margin:0 0 5px}',
     '.pap-et{display:none}',
     '.pap-fila{margin:0 0 6px;position:relative}.pap-fila textarea{min-height:58px;padding:7px 9px;font-size:13.5px;line-height:1.35;resize:vertical}',
+    '.pap-cont{min-height:58px;display:flex;align-items:center;padding:7px 9px;font-size:12.5px;color:var(--gris);border-left:3px solid var(--raya)}',
+    '.pap-otro{margin:-2px 0 10px}.pap-otro .bt-link{font-size:12.5px}',
     '.pap-fila .pap-x{appearance:none;-webkit-appearance:none;cursor:pointer;border:0;background:transparent;color:var(--gris);font-size:18px;line-height:1;padding:8px 0;border-radius:6px}.pap-fila .pap-x:hover{color:var(--mal);background:#FDECEA}',
     '.pap-mas{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:12.5px;color:var(--gris);padding:0 0 4px}',
     '.pap-mas label{display:inline-flex;gap:6px;align-items:center;margin:0;font-size:12.5px;color:var(--gris)}.pap-mas input[type=text]{width:190px;padding:5px 8px;font-size:13px}',
@@ -423,8 +425,22 @@ function _ppTablaAts(P, d, wN, wA, cols, despues){
     var fs=(a.filas||[]).length ? a.filas : [{}];
     fs.forEach(function(f){ filas.push({ ia:ia, a:a.a||'', f:f, h:0 }); });
   });
+  /* 13/10/2026 · un peligro con varios riesgos: la fila que sigue (en el mismo paso) con el mismo peligro es otro riesgo
+     suyo; su peligro no se mide ni se repite */
+  filas.forEach(function(q, k){ var a=filas[k-1]; q.cont=!!(a && a.ia===q.ia && _papMismoPel(a.f.p, q.f.p)); });
+  function vista(q, c, arriba){ return (q.cont && !arriba && (c.pel || c.conPel)) ? Object.assign({}, q.f, {p:''}) : q.f; }
   filas.forEach(function(q){
-    var hh=hMin; cols.forEach(function(c){ hh=Math.max(hh, c.alto(q.f, c.w)+1.8); }); q.h=hh;
+    var hh=hMin; cols.forEach(function(c){ hh=Math.max(hh, c.alto(vista(q, c), c.w)+1.8); }); q.h=hh;
+  });
+  /* la columna PELIGRO: el grupo entero le tiene que dar el alto a su peligro */
+  cols.forEach(function(c){
+    if(!c.pel) return;
+    var g=0;
+    while(g<filas.length){
+      var g1=g+1, s=filas[g].h; while(g1<filas.length && filas[g1].cont){ s+=filas[g1].h; g1++; }
+      var pide=c.alto(filas[g].f, c.w)+1.8; if(pide>s) filas[g1-1].h+=pide-s;
+      g=g1;
+    }
   });
   /* el nombre del paso tiene que caber en lo alto de su grupo */
   var i0=0;
@@ -455,8 +471,16 @@ function _ppTablaAts(P, d, wN, wA, cols, despues){
     while(j<filas.length && (yy+filas[j].h<=P.fondo+0.01 || j===i)){ yy+=filas[j].h; j++; }
     var y=P.y;
     for(var k=i;k<j;k++){
-      var q=filas[k], x=M+wN+wA;
-      cols.forEach(function(c){ P.caja(x, y, c.w, q.h); if(!q.bl) c.pinta(q.f, x, y, c.w, q.h); else if(c.vacia) c.vacia(x, y, c.w, q.h); x+=c.w; });
+      var q=filas[k], x=M+wN+wA, arriba=(k===i);
+      cols.forEach(function(c){
+        /* el peligro: una celda por grupo en esta hoja (la arma la primera fila del grupo, o la primera de la hoja) */
+        if(c.pel && !q.bl){
+          if(q.cont && !arriba){ x+=c.w; return; }
+          var hg=q.h; for(var k2=k+1;k2<j && filas[k2].cont;k2++) hg+=filas[k2].h;
+          P.caja(x, y, c.w, hg); c.pinta(q.f, x, y, c.w, hg); x+=c.w; return;
+        }
+        P.caja(x, y, c.w, q.h); if(!q.bl) c.pinta(vista(q, c, arriba), x, y, c.w, q.h); else if(c.vacia) c.vacia(x, y, c.w, q.h); x+=c.w;
+      });
       y+=q.h;
     }
     /* la celda del paso, una por grupo */
@@ -476,12 +500,12 @@ function _ppTablaAts(P, d, wN, wA, cols, despues){
 }
 /* celdas de texto corrientes para esa tabla */
 function _ppColTexto(P, t, w, k, b){
-  return { t:t, w:w, alto:function(f, ww){ return P.alto(f[k]||'', ww-2.8, 8, b!==false); }, pinta:function(f, x, y, ww, hh){ P.txt(f[k]||'', x+1.4, y, ww-2.8, {pt:8, b:b!==false, alto:hh}); } };
+  return { t:t, w:w, pel:(k==='p'), alto:function(f, ww){ return P.alto(f[k]||'', ww-2.8, 8, b!==false); }, pinta:function(f, x, y, ww, hh){ P.txt(f[k]||'', x+1.4, y, ww-2.8, {pt:8, b:b!==false, alto:hh}); } };
 }
 /* el peligro en negrita y, debajo, su riesgo y su consecuencia */
 function _ppColPeligro(P, t, w, conPeligro){
   function partes(f){ var l=[]; if(conPeligro && f.p) l.push([f.p, true]); if(f.r) l.push([(conPeligro ? 'Riesgo: ' : '')+f.r, !conPeligro]); if(f.c) l.push(['Consecuencia: '+f.c, false]); return l; }
-  return { t:t, w:w,
+  return { t:t, w:w, conPel:!!conPeligro,
     alto:function(f, ww){ return partes(f).reduce(function(s, q){ return s+P.alto(q[0], ww-2.8, q[1] ? 8 : 7.4, q[1]); }, 0)+(partes(f).length>1 ? 0.5*(partes(f).length-1) : 0); },
     pinta:function(f, x, y, ww, hh){
       var L=partes(f), tot=this.alto(f, ww), yy=y+Math.max(0.9, (hh-tot)/2);
@@ -1009,15 +1033,34 @@ function _papaActHTML(a, ia, conNivel){
     (ia>0 ? '<button type="button" class="bt-link" data-que="sube" data-a="'+ia+'" aria-label="Subir el paso '+(ia+1)+'">↑ subir</button>' : '')+
     '<button type="button" class="bt-link" data-que="quita-paso" data-a="'+ia+'">Quitar el paso</button></div><div class="pap-filas">';
   if((a.filas||[]).length) h+='<div class="pap-fila-cab" aria-hidden="true"><span>Peligro</span><span>Riesgo</span><span>Consecuencia</span><span>Control</span><span></span></div>';
-  (a.filas||[]).forEach(function(f, j){
-    h+='<div class="pap-fila" data-a="'+ia+'" data-f="'+j+'">'+
+  var F=a.filas||[];
+  F.forEach(function(f, j){
+    /* 13/10/2026 · el mismo peligro que la fila de arriba: es otro riesgo suyo, y el peligro no se repite */
+    var cont=j>0 && _papMismoPel(F[j-1].p, f.p), fin=!(j+1<F.length && _papMismoPel(f.p, F[j+1].p));
+    h+='<div class="pap-fila'+(cont ? ' cont' : '')+'" data-a="'+ia+'" data-f="'+j+'"'+(cont ? ' data-cont="1"' : '')+'>'+
       [['p', 'Peligro', 120, 'Andamio sin baranda en el lado de la fachada'], ['r', 'Riesgo', 120, 'Caída a distinto nivel'], ['c', 'Consecuencia', 120, 'Fracturas, muerte'], ['m', 'Control', 220, 'Arnés con doble línea de vida anclado a un punto certificado']].map(function(q){
+        if(q[0]==='p' && cont) return '<span class="pap-et" aria-hidden="true">'+q[1]+'</span><div class="pap-cont">↳ el mismo peligro</div>';
         return '<span class="pap-et" aria-hidden="true">'+q[1]+'</span><textarea data-k="'+q[0]+'" maxlength="'+q[2]+'" placeholder="'+esc(j===0 ? q[3] : q[1])+'" aria-label="'+q[1]+' · paso '+(ia+1)+', fila '+(j+1)+'"'+(q[0]==='p' ? ' autocomplete="off"' : '')+'>'+esc(f[q[0]]||'')+'</textarea>'; }).join('')+
       '<button type="button" class="pap-x" data-que="quita-fila" data-a="'+ia+'" data-f="'+j+'" aria-label="Quitar este peligro">×</button>'+
       (conNivel ? '<div class="pap-mas"><span>Nivel antes '+_papNivHTML('n1', f.n1)+'</span><span>después '+_papNivHTML('n2', f.n2)+'</span><label>Responsable del control <input type="text" data-k="rs" maxlength="60" autocomplete="off" value="'+esc(f.rs||'')+'"></label></div>' : '')+'</div>';
+    /* al final de cada peligro (con texto y con menos de cinco riesgos): «＋ Otro riesgo de este peligro» */
+    if(fin && String(f.p||'').trim()){
+      var n=1; for(var k=j-1; k>=0 && _papMismoPel(F[k].p, f.p); k--) n++;
+      if(n<5) h+='<div class="pap-otro"><button type="button" class="bt-link" data-que="otro-riesgo" data-a="'+ia+'" data-f="'+j+'">＋ Otro riesgo de este peligro</button></div>';
+    }
   });
   h+='<button type="button" class="bt sec chico" data-que="fila" data-a="'+ia+'">＋ Agregar un peligro a este paso</button></div></section>';
   return h;
+}
+function _papNormPel(t){ return String(t||'').replace(/\s+/g,' ').trim().toLowerCase(); }
+function _papMismoPel(a, b){ var x=_papNormPel(a); return x!=='' && x===_papNormPel(b); }
+/* lo escrito en el peligro de la primera fila pasa a las filas que son otros riesgos suyos (las de «↳ el mismo peligro») */
+function _papaPropagar(fila, a, valor){
+  var s=fila && fila.nextElementSibling;
+  while(s && s.classList && s.classList.contains('pap-fila') && s.getAttribute('data-cont')==='1'){
+    var f2=a.filas[+s.getAttribute('data-f')]; if(f2) f2.p=valor;
+    s=s.nextElementSibling;
+  }
 }
 function _papNivHTML(k, v){
   return '<span class="pap-niv" data-nk="'+k+'">'+['A', 'M', 'B'].map(function(x){ return '<button type="button" data-v="'+x+'" class="'+(v===x ? 'on' : '')+'" aria-pressed="'+(v===x ? 'true' : 'false')+'" title="'+esc(PAPD.niv[x].t.charAt(0)+PAPD.niv[x].t.slice(1).toLowerCase())+'">'+x+'</button>'; }).join('')+'</span>';
@@ -1038,8 +1081,8 @@ function _papaAlEscribir(ev){
   if(k && fila){
     var a=d.acts[+fila.getAttribute('data-a')], f=a && a.filas[+fila.getAttribute('data-f')];
     if(!f) return;
-    f[k]=e.value; _papaCambio();
-    if(k==='p' && ev.type==='input') _papSugerir(e, function(x){ f.p=x[2]; f.r=x[3]; f.c=x[4]; _papaCambio(); var T=fila.querySelectorAll('textarea'); T[0].value=f.p; T[1].value=f.r; T[2].value=f.c; try{ T[3].focus(); }catch(e2){} });
+    f[k]=e.value; if(k==='p') _papaPropagar(fila, a, e.value); _papaCambio();
+    if(k==='p' && ev.type==='input') _papSugerir(e, function(x){ f.p=x[2]; f.r=x[3]; f.c=x[4]; _papaPropagar(fila, a, f.p); _papaCambio(); var T=fila.querySelectorAll('textarea'); T[0].value=f.p; T[1].value=f.r; T[2].value=f.c; try{ T[3].focus(); }catch(e2){} });
   }
 }
 function _papaAlTocar(ev){
@@ -1069,6 +1112,12 @@ function _papaAlTocar(ev){
   if(que==='paso'){ d.acts.push({ a:'', filas:[{ p:'', r:'', c:'', m:'' }] }); _papaCambio(); _papaPinta(); var ins=document.querySelectorAll('#papa-acts [data-an]'); try{ ins[ins.length-1].focus(); }catch(e){} return; }
   if(que==='fila' && d.acts[ia]){ d.acts[ia].filas.push({ p:'', r:'', c:'', m:'' }); _papaCambio(); _papaPinta(); var t=document.querySelector('#papa-acts .pap-fila[data-a="'+ia+'"][data-f="'+(d.acts[ia].filas.length-1)+'"] textarea'); try{ t.focus(); }catch(e2){} return; }
   if(que==='quita-fila' && d.acts[ia]){ d.acts[ia].filas.splice(+b.getAttribute('data-f'), 1); _papaCambio(); _papaPinta(); return; }
+  if(que==='otro-riesgo' && d.acts[ia]){
+    var jf=+b.getAttribute('data-f'), base=d.acts[ia].filas[jf]; if(!base) return;
+    d.acts[ia].filas.splice(jf+1, 0, { p:base.p, r:'', c:'', m:'' }); _papaCambio(); _papaPinta();
+    var tr=document.querySelector('#papa-acts .pap-fila[data-a="'+ia+'"][data-f="'+(jf+1)+'"] textarea[data-k="r"]'); try{ tr.focus(); }catch(e3){}
+    return;
+  }
   if(que==='sube' && ia>0){ var x=d.acts.splice(ia, 1)[0]; d.acts.splice(ia-1, 0, x); _papaCambio(); _papaPinta(); return; }
   if(que==='quita-paso' && d.acts[ia]){
     var np=(d.acts[ia].filas||[]).filter(function(z){ return !_papaFilaVacia(z); }).length;

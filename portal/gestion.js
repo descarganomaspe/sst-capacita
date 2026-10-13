@@ -1206,6 +1206,7 @@ function hhExcel(bt){
 /* las clases, las partes del cuerpo y los agentes: los de la app, letra por letra (armar.py se para si cambian) */
 var GES_ACC_CLASES = [
   { k:'casi',     n:'Casi accidente',          ic:'⚠️', cuenta:false, dias:false, d:'Por poco pasa algo. No hubo lesión ni daño, pero pudo haberlo.' },
+  { k:'dano',     n:'Daño a la propiedad',     ic:'🔧', cuenta:false, dias:false, d:'Se dañó un equipo, un material o una instalación, sin heridos. Si alguien se lesionó, elige la clase de la lesión.' },
   { k:'primeros', n:'Primeros auxilios',       ic:'🩹', cuenta:false, dias:false, d:'Se atendió en obra y siguió trabajando el mismo día.' },
   { k:'leve',     n:'Accidente leve',          ic:'🚑', cuenta:false, dias:true,  d:'Necesitó atención médica y volvió sin descanso, o con descanso del mismo día.' },
   { k:'incap',    n:'Accidente incapacitante', ic:'🏥', cuenta:true,  dias:true,  d:'Con descanso médico. Es el que arma el índice de frecuencia.' },
@@ -1233,6 +1234,20 @@ function _accCss(){
     '.acc-clases{display:grid;gap:8px;margin:0 0 14px}',
     '.acc-cl{display:flex;gap:10px;align-items:flex-start;text-align:left;border:1px solid var(--raya2);border-radius:10px;background:var(--panel);padding:10px 12px;cursor:pointer;font:inherit;color:var(--texto)}',
     '.acc-cl:hover{background:var(--fondo)}.acc-cl.on{border-color:var(--tinta);box-shadow:inset 0 0 0 1px var(--tinta);background:#F4F8FB}',
+    /* 13/10/2026 · el riesgo del mes, rehecho: el medidor, barras, íconos y una línea por cosa (riesgo-base.js) */
+    '.rgw .tarj-cuerpo{padding:16px 18px}.rgw-conf{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600;color:var(--gris);white-space:nowrap}.rgw-conf i{width:7px;height:7px;border-radius:50%;background:var(--raya2)}.rgw-conf.baja i:first-child,.rgw-conf.media i:nth-child(-n+2),.rgw-conf.alta i{background:var(--tinta)}',
+    '.rgw-top{display:grid;grid-template-columns:minmax(200px,260px) minmax(0,1fr);gap:22px;align-items:center}.rgw-med{max-width:260px}.rgw-med-tx{display:flex;flex-direction:column;align-items:center;gap:6px;margin:-2px 0 0}.rgw-med-tx b{font-size:42px;font-weight:700;line-height:1;color:var(--tinta);font-variant-numeric:tabular-nums}.rgw-p0{color:var(--gris2)}',
+    '.rgm{display:block;width:100%;height:auto;overflow:visible}.rgm path{fill:none;stroke-width:16}.rgm-v{stroke:var(--ok)}.rgm-a{stroke:var(--casco)}.rgm-r{stroke:var(--mal)}.rgm-0 .rgm-v,.rgm-0 .rgm-a,.rgm-0 .rgm-r{stroke:var(--raya)}.rgm .rgm-b{stroke:var(--tinta);stroke-width:4;stroke-linecap:round;opacity:.45}.rgm-n{stroke:var(--tinta);stroke-width:5;stroke-linecap:round}.rgm-c{fill:var(--tinta)}',
+    '.rgw-niv{display:inline-block;padding:3px 14px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff}.rgw-niv.bajo{background:var(--ok)}.rgw-niv.medio{background:var(--casco);color:var(--tinta)}.rgw-niv.alto{background:var(--mal)}',
+    '.rgw-plazos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.rgw-plazos div{border:1px solid var(--raya);border-radius:10px;padding:9px 10px;text-align:center}.rgw-plazos b{display:block;font-size:19px;color:var(--tinta);font-variant-numeric:tabular-nums}.rgw-plazos small{display:block;font-size:12px;color:var(--gris)}',
+    '.rgw-bar{display:block;height:6px;margin:6px 0 5px;border-radius:3px;background:var(--raya);overflow:hidden}.rgw-bar i{display:block;height:100%;background:var(--tinta);border-radius:3px}.rgw-nota{margin:7px 0 0;font-size:12.5px;color:var(--gris)}.rgw-avance{max-width:340px}.rgw-avance p{margin:6px 0 10px;font-size:13.5px;color:var(--gris)}.rgw-avance b{color:var(--tinta)}.rgw-avance .rgw-bar{height:9px}.rgw-avance .rgw-bar i{background:var(--casco)}',
+    '.rgw-et{margin:18px 0 8px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--gris);font-weight:600}.rgw-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}.rgw-t{display:flex;flex-direction:column;align-items:center;border:1px solid var(--raya);border-radius:10px;padding:9px 6px 8px;text-align:center}.rgw-t span{font-size:19px;line-height:1}.rgw-t b{font-size:19px;color:var(--tinta);margin-top:3px;font-variant-numeric:tabular-nums}.rgw-t small{font-size:11.5px;line-height:1.25;color:var(--gris)}.rgw-t.mal{border-color:var(--mal)}.rgw-t.mal b{color:var(--mal)}.rgw-t.ojo{border-color:var(--ojo)}.rgw-t.ojo b{color:var(--ojo)}',
+    '.rgw-accs{display:grid;gap:8px}.rgw-acc{display:flex;align-items:center;gap:12px;border:1px solid #F1D99A;background:#FFF8E6;border-radius:10px;padding:9px 12px}.rgw-acc.sana,.rgw-acc.sin_lesion{border-color:#BFE3CF;background:var(--ok-f)}.rgw-acc-ic{font-size:20px;line-height:1}.rgw-acc-tx{flex:1;min-width:0;font-size:13.5px;line-height:1.4;color:var(--texto)}.rgw-acc-tx b{color:var(--tinta);font-size:15px}.rgw-acc-l{display:block}',
+    '.rgt{position:relative;display:block;height:7px;margin:7px 2px 2px;border-radius:4px}.rgt>i{position:absolute;top:0;height:100%}.rgt-r{left:0;background:var(--mal);border-radius:4px 0 0 4px}.rgt-a{background:var(--casco)}.rgt-v{background:var(--ok);border-radius:0 4px 4px 0}.rgt>b{position:absolute;top:50%;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;border-radius:50%;background:var(--tinta);border:2px solid #fff}',
+    '.rgw-cuenta{margin:8px 0 0;padding:12px 14px;border-radius:10px;background:var(--fondo);font-size:13px;line-height:1.5;color:var(--texto)}.rgw-cuenta p{margin:0 0 6px}.rgw-cuenta code{display:block;margin:0 0 10px;padding:6px 10px;background:var(--panel);border:1px solid var(--raya);border-radius:7px;font-size:12.5px;overflow-x:auto;white-space:nowrap}.rgw-ley{display:flex;flex-wrap:wrap;gap:4px 14px;margin:4px 0 8px}.rgw-ley span{display:inline-flex;align-items:center;gap:6px}.rgw-ley i{width:10px;height:10px;border-radius:3px}',
+    '.rgw-pie{margin:14px 0 0;font-size:12px;color:var(--gris)}',
+    '@media (max-width:760px){.rgw-top{grid-template-columns:minmax(0,1fr)}.rgw-med{margin:0 auto;max-width:240px}.rgw-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}.rgw-plazos b{font-size:16px}}',
+    '.acc-pot-ops{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 6px}.acc-pot-ops .bt.on{border-color:var(--tinta);box-shadow:inset 0 0 0 1px var(--tinta);background:#F4F8FB}',
     '.acc-cl .ic{font-size:18px;line-height:1.3;flex:0 0 auto}.acc-cl b{display:block;color:var(--tinta);font-weight:600;font-size:14px}.acc-cl small{display:block;color:var(--gris);font-size:12.5px;line-height:1.45}',
     '.acc-foto{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.acc-foto img{width:96px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--raya)}',
     '.acc-hist{border:1px solid var(--raya);border-radius:10px;overflow:auto;background:var(--panel)}',
@@ -1291,16 +1306,16 @@ function accIndices(nCuenta, dias, hht){
 }
 function accMeses(accs, hht, anio){
   var M=[], i;
-  for(i=0;i<12;i++) M.push({ ym:anio+'-'+dos(i+1), hht:0, casi:0, primeros:0, leve:0, incap:0, mortal:0, otros:0, dias:0, n:0, ev:0 });
+  for(i=0;i<12;i++) M.push({ ym:anio+'-'+dos(i+1), hht:0, casi:0, dano:0, primeros:0, leve:0, incap:0, mortal:0, otros:0, dias:0, n:0, ev:0 });
   (hht||[]).forEach(function(x){ var f=String(x.fecha||''); if(f.slice(0,4)!==String(anio)) return; var m=M[+f.slice(5,7)-1]; if(m) m.hht+=(parseFloat(x.ob_n)||0)*(parseFloat(x.ob_h)||0)+(parseFloat(x.st_n)||0)*(parseFloat(x.st_h)||0); });
   (accs||[]).forEach(function(a){
     var f=String(a.fecha||''); if(f.slice(0,4)!==String(anio)) return; var m=M[+f.slice(5,7)-1]; if(!m) return;
     m.ev++; if(m[a.clase]!==undefined && gesAccClase(a.clase)) m[a.clase]++; else m.otros++;
     m.dias+=parseInt(a.dias, 10)||0; if(ACC_CUENTA[a.clase]) m.n++;
   });
-  var T={ ym:'', hht:0, casi:0, primeros:0, leve:0, incap:0, mortal:0, otros:0, dias:0, n:0, ev:0 };
+  var T={ ym:'', hht:0, casi:0, dano:0, primeros:0, leve:0, incap:0, mortal:0, otros:0, dias:0, n:0, ev:0 };
   M.forEach(function(m){
-    ['hht', 'casi', 'primeros', 'leve', 'incap', 'mortal', 'otros', 'dias', 'n', 'ev'].forEach(function(k){ T[k]+=m[k]; });
+    ['hht', 'casi', 'dano', 'primeros', 'leve', 'incap', 'mortal', 'otros', 'dias', 'n', 'ev'].forEach(function(k){ T[k]+=m[k]; });
     var I=accIndices(m.n, m.dias, m.hht); m.IF=I.IF; m.IS=I.IS; m.IA=I.IA;
     var A=accIndices(T.n, T.dias, T.hht); m.aIF=A.IF; m.aIS=A.IS; m.aIA=A.IA; m.aHht=T.hht;
   });
@@ -1328,6 +1343,7 @@ function accPintar(){
     cifra('Índice de accidentabilidad', T.IA===null ? '—' : T.IA.toFixed(2), 'IF × IS / 1000', '')+
     (esHoy ? cifra('Días sin accidente con lesión', racha===null ? '—' : racha, ultimo ? 'desde el '+fechaLarga(ultimo) : 'ninguno registrado este año', racha===null ? 'ok' : '') : '')+
     '</div>';
+  if(esHoy) h+=accRiesgoWebHtml();
   if(!H && anio.length) h+='<div class="aviso ojo" id="acc-sin-hht"><b>Faltan las horas hombre de '+esc(A)+'.</b> Sin ellas los índices no salen: son el divisor de los tres. '+
     '<span class="acciones" style="display:inline-flex;margin:0 0 0 6px"><button type="button" class="bt sec chico" id="acc-ir-hh">Cargarlas en «Horas hombre»</button></span></div>';
   var porClase=Object.keys(ACC_NOMBRE).map(function(k){ return { t:ACC_NOMBRE[k], v:anio.filter(function(a){ return a.clase===k; }).length, cl:ACC_CUENTA[k] ? 'mal' : '' }; });
@@ -1384,12 +1400,199 @@ function accPintar(){
   if($('acc-otros')) $('acc-otros').onclick=function(ev){ var b=ev.target.closest('[data-anio]'); if(b) ir(b.getAttribute('data-anio')); };
   if($('acc-ir-hh')) $('acc-ir-hh').onclick=function(){ HHW.ym=(esHoy ? MES : A+'-01'); navegar('hh'); };
   $('acc-excel').onclick=function(){ accExcel(this); };
+  if($('rgw-ver')) $('rgw-ver').onclick=function(){ ACCW.rgAbierta=!ACCW.rgAbierta; accPintar(); };
+  if($('rgw-hh')) $('rgw-hh').onclick=function(){ HHW.ym=MES; navegar('hh'); };
+  /* 13/10/2026 · «Investigar»: el más reciente que pudo ser grave y no tiene medidas, en su formulario; «Campaña»: las campañas */
+  if($('rgw-inv')) $('rgw-inv').onclick=function(){ var L=(ACCW.accs||[]).filter(function(a){ return a.potencial===true && a.clase!=='incap' && a.clase!=='mortal' && !String(a.medidas||'').trim(); })
+      .sort(function(a, b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); }); if(L.length) accForm(L[0]); };
+  if($('rgw-camp')) $('rgw-camp').onclick=function(){ navegar('campanas'); };
   Array.prototype.forEach.call(caja.querySelectorAll('.acc-est tbody tr.con'), function(tr){
     tr.onclick=function(){ var q=$('t-acc-q'); if(!q) return; var ym=tr.getAttribute('data-ym'); q.value=ym; q.dispatchEvent(new Event('input')); try{ $('t-acc').scrollIntoView({block:'start', behavior:'smooth'}); }catch(e){} };
   });
 }
+/* ── el riesgo del mes (12/10/2026): la cuenta de riesgo-base.js (la misma de la app), con lo de la obra ──────────
+   Las horas de «Horas hombre» y los eventos del registro; el número solo con 3 meses de horas (o 20,000), siempre con su
+   rango y su confianza, y en tinta neutra: reportar más no pinta a nadie de rojo. */
+function accRiesgoWeb(){
+  var horas=(ACCW.hht||[]).map(function(x){ return { fecha:x.fecha, hht:(parseFloat(x.ob_n)||0)*(parseFloat(x.ob_h)||0)+(parseFloat(x.st_n)||0)*(parseFloat(x.st_h)||0) }; });
+  var ev=(ACCW.accs||[]).map(function(a){ return { fecha:a.fecha, clase:a.clase, pot:(a.potencial===true || a.potencial===false) ? a.potencial : null, medidas:a.medidas }; });
+  return riesgoCalcular(ev, horas, hoyISO());
+}
+function _rgwTile(ic, n, et, cl){ return '<div class="rgw-t'+(cl ? ' '+cl : '')+'"><span aria-hidden="true">'+ic+'</span><b>'+n+'</b><small>'+et+'</small></div>'; }
+function accRiesgoWebHtml(){
+  if(typeof riesgoCalcular!=='function') return '';
+  var R=accRiesgoWeb(), C=R.cuenta, h='', niv=R.listo ? riesgoNivel(R.p) : '';
+  h+='<div class="tarj rgw" id="acc-riesgo"><div class="tarj-cab"><div><h2>Riesgo del mes</h2><p class="sub">Accidente con descanso médico · próximos 30 días</p></div>'+
+     (R.listo ? '<span class="rgw-conf '+R.conf+'"><i></i><i></i><i></i>&nbsp;Confianza '+R.conf+'</span>' : '')+'</div><div class="tarj-cuerpo">';
+  h+='<div class="rgw-top"><div class="rgw-med">'+riesgoMedidorSvg(R, { gris:!R.listo, aria:(R.listo ? 'Riesgo del mes: '+riesgoPct(R.p)+', '+RIESGO_NIVEL_N[niv] : 'Riesgo del mes: falta data') })+
+     '<div class="rgw-med-tx">'+(R.listo ? '<b>'+riesgoPct(R.p)+'</b><span class="rgw-niv '+niv+'">'+RIESGO_NIVEL_N[niv]+'</span>' : '<b class="rgw-p0">?</b>')+'</div></div><div>';
+  if(R.listo){
+    h+='<div class="rgw-plazos">'+[[R.p3, 'en 3 meses'], [R.p6, 'en 6 meses'], [R.p12, 'en un año']].map(function(x){
+         return '<div><b>'+riesgoPct(x[0])+'</b><span class="rgw-bar"><i style="width:'+Math.max(3, Math.min(100, Math.round(x[0]*100)))+'%"></i></span><small>'+x[1]+'</small></div>'; }).join('')+'</div>'+
+       '<p class="rgw-nota">Si nada cambia · este mes, entre '+riesgoPct(R.plo)+' y '+riesgoPct(R.phi)+' (la raya sobre el medidor)</p>';
+  } else if(R.motivo==='sin_recientes'){
+    h+='<div class="rgw-avance"><p>Sin horas hombre en las últimas 8 semanas.</p><button type="button" class="bt sec chico" id="rgw-hh">Cargar las horas hombre</button></div>';
+  } else {
+    var sem=Math.min(13, Math.floor(R.dias/7)), frac=Math.min(1, Math.max(R.dias/RIESGO.MIN_DIAS, R.E/RIESGO.MIN_HHT));
+    h+='<div class="rgw-avance"><span class="rgw-bar"><i style="width:'+Math.round(frac*100)+'%"></i></span><p><b>'+sem+'</b> de <b>13</b> semanas con horas hombre (o 20,000 horas): con eso sale el número.</p>'+
+       '<button type="button" class="bt sec chico" id="rgw-hh">Cargar las horas hombre</button></div>';
+  }
+  h+='</div></div>';
+  h+='<h3 class="rgw-et">Últimos 12 meses</h3><div class="rgw-tiles"'+(R.listo ? '' : ' style="grid-template-columns:repeat(5,minmax(0,1fr))"')+'>'+
+     (R.listo ? _rgwTile('⏱️', riesgoNum(R.H), 'horas en 30 días') : '')+
+     _rgwTile('🏥', C.S, 'con descanso', C.S ? 'mal' : '')+_rgwTile('🩹', C.L+C.PA, 'leves')+_rgwTile('🔧', C.D, 'daños')+
+     _rgwTile('⚠️', C.C, 'casi accidentes')+_rgwTile('❗', R.pot, 'pudo ser grave', R.pot ? 'ojo' : '')+'</div>';
+  h+='<h3 class="rgw-et">Esta semana</h3><div class="rgw-accs">'+riesgoAcciones(R).map(function(a){
+       return '<div class="rgw-acc '+a.k+'"><span class="rgw-acc-ic" aria-hidden="true">'+a.ic+'</span><span class="rgw-acc-tx"><span class="rgw-acc-l">'+a.h+'</span>'+(a.termo ? riesgoTermoHtml(R.termo) : '')+'</span>'+
+              (a.k==='pot' ? '<button type="button" class="bt sec chico" id="rgw-inv">Investigar</button>' : (a.k==='flaca' ? '<button type="button" class="bt sec chico" id="rgw-camp">Campaña</button>' : ''))+'</div>';
+     }).join('')+'</div>';
+  if(R.listo){
+    h+='<button type="button" class="bt-link" id="rgw-ver" style="margin-top:12px" aria-expanded="'+(ACCW.rgAbierta ? 'true' : 'false')+'">'+(ACCW.rgAbierta ? '▾' : '▸')+' ¿Cómo se calcula?</button>';
+    if(ACCW.rgAbierta){
+      h+='<div class="rgw-cuenta">'+riesgoCuentaPartes(R).map(function(x, i){ return '<p><b>'+(i+1)+' · '+x.t+'</b></p><code>'+x.f+'</code>'; }).join('')+
+         '<div class="rgw-ley"><span><i style="background:var(--ok)"></i>menos de 5 %</span><span><i style="background:var(--casco)"></i>de 5 % a 15 %</span><span><i style="background:var(--mal)"></i>15 % o más</span></div>'+
+         '<p>La raya sobre el medidor es el rango (del 10 % al 90 %). La confianza dice cuánto pesa lo de la obra frente al punto de partida: '+Math.round(R.pesoObra*100)+'&nbsp;%. Verde no es cero: más gente y más horas, más probabilidad.</p></div>';
+    }
+  }
+  h+='<p class="rgw-pie">No reemplaza el IPERC, las inspecciones ni el ATS.</p></div></div>';
+  return h;
+}
+/* ═══ LOS PEDIDOS DE EPP DE LA GENTE (12/10/2026) ════════════════════════════════════════════════════════════════
+   Lo que el trabajador pide desde su app (pedidos-epp.js · sql/2026-11-04-pedidos-epp.sql): cambio por desgaste o
+   rotura (con foto), pérdida o para una tarea. Aquí el equipo de la obra lo aprueba con el día de entrega, dice que no
+   procede (con el porqué) o lo da por entregado; la entrega con su firma va al kardex, como siempre. Los pedidos no
+   van al kardex ni a sus reportes (PDF, Excel): quedan aquí y en la app, con la foto como evidencia de por qué se
+   cambió. Sin el SQL, la sección lo dice y no se rompe nada. */
+var PEDW = { lista:[], ver:'pendiente', q:'', caja:null, n:0 };
+var PED_TIPOS = { cambio:{ ic:'🔁', n:'Cambio' }, perdida:{ ic:'❓', n:'Pérdida' }, tarea:{ ic:'🛠️', n:'Para una tarea' } };
+var PED_EST = { pendiente:['Por responder', 'ojo'], aprobado:['Aprobado', 'ok'], entregado:['Entregado', 'gris'], rechazado:['No procede', 'mal'], anulado:['Anulado', 'gris'] };
+function _pedCss(){
+  if($('ped-css')) return;
+  var st=document.createElement('style'); st.id='ped-css';
+  st.textContent=[
+    '.ped-filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px}.ped-filtros .chip{cursor:pointer}.ped-filtros input{max-width:260px;margin-left:auto}',
+    /* en el celular, las cuatro cifras de dos en dos: una por renglón se comía la pantalla */
+    '@media (max-width:560px){.rej.ped-cif{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.rej.ped-cif .cifra{padding:12px 12px 11px}.rej.ped-cif .cifra .v{font-size:22px}}',
+    '.ped-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}',
+    '.ped-t{border:1px solid var(--raya);border-radius:12px;background:var(--panel);padding:12px 14px;display:flex;flex-direction:column;gap:8px}',
+    '.ped-t-f{display:flex;gap:12px;align-items:flex-start}.ped-t-img{flex:none;width:96px;height:72px;border-radius:8px;border:1px solid var(--raya);background:var(--fondo);overflow:hidden;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:26px}',
+    '.ped-t-img img{width:100%;height:100%;object-fit:cover;display:block}.ped-t-img.sin{cursor:default}',
+    '.ped-t-tx{flex:1;min-width:0}.ped-t-cab{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.ped-t-cab b{font-size:14.5px;color:var(--tinta)}',
+    '.ped-t-tx small{display:block;color:var(--gris);font-size:12.5px;line-height:1.45}.ped-t-mot{font-style:italic}',
+    '.ped-t-res{font-size:13px;line-height:1.45;padding:7px 10px;border-radius:8px;background:var(--fondo)}.ped-t-res.ok{background:var(--ok-f)}.ped-t-res.mal{background:var(--mal-f)}',
+    '.ped-t-bts{display:flex;gap:8px;flex-wrap:wrap}.ped-dias{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 6px}.ped-dias .bt.on{border-color:var(--tinta);box-shadow:inset 0 0 0 1px var(--tinta);background:#F4F8FB}',
+    '.ped-g{display:block;max-width:100%;max-height:70vh;margin:0 auto;border-radius:10px;background:#111}',
+    '@media (max-width:640px){.ped-lista{grid-template-columns:minmax(0,1fr)}.ped-filtros input{max-width:none;margin-left:0;flex:1 1 100%}}'
+  ].join('\n');
+  document.head.appendChild(st);
+}
+function _pedDia(iso){ if(!iso) return ''; var h=hoyISO(); if(iso===h) return 'hoy'; var m=new Date(h+'T12:00:00'); m.setDate(m.getDate()+1); if(iso===m.toISOString().slice(0,10)) return 'mañana'; return fechaLarga(iso); }
+function _pedMas(n){ var d=new Date(hoyISO()+'T12:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+dos(d.getMonth()+1)+'-'+dos(d.getDate()); }
+function gesVistaPedEpp(caja){
+  _gesCss(); _pedCss();
+  PEDW.caja=caja;
+  var ac=$('acciones'); if(ac) ac.innerHTML='';
+  cargando(caja);
+  function pinta(silencio){
+    var n=++PEDW.n;
+    traer('sst_epp_pedido', '&order=creado.desc', 2000).then(function(r){
+      if(n!==PEDW.n || !document.body.contains(caja)) return;
+      PEDW.lista=r||[]; pedPintar();
+    }, function(cod){
+      if(n!==PEDW.n) return;
+      if(cod===404){ caja.innerHTML='<div class="vacio"><b>Falta activar los pedidos de EPP en el servidor de la obra</b>Cuando se active, aquí llega lo que pide tu gente desde su app.</div>'; return; }
+      if(!silencio) fallo(caja, cod);
+    });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+function pedPintar(){
+  var caja=PEDW.caja; if(!caja || !document.body.contains(caja)) return;
+  var L=PEDW.lista||[], c={ pendiente:0, aprobado:0, entregado:0, rechazado:0, anulado:0 }, hace30=_pedMas(-30);
+  L.forEach(function(r){ c[r.estado]=(c[r.estado]||0)+1; });
+  var ent30=L.filter(function(r){ return r.estado==='entregado' && String(r.entregado_en||r.creado).slice(0,10)>=hace30; }).length;
+  var h='<div class="rej ped-cif">'+cifra('Por responder', c.pendiente, 'lo que pidió tu gente', c.pendiente ? 'mal' : 'ok')+cifra('Aprobados', c.aprobado, 'por entregar', '')+
+        cifra('Entregados', ent30, 'en los últimos 30 días', '')+cifra('No procede', c.rechazado, 'con su porqué', '')+'</div>';
+  /* lo que pide la gente ya lo dice la cabecera de la vista: aquí solo lo que no dice */
+  h+='<p class="sub" style="margin:0 0 14px">No va al kardex ni a sus reportes: queda aquí y en la app, con la foto como evidencia de por qué se cambió.</p>';
+  h+='<div class="ped-filtros">'+[['pendiente', 'Por responder'], ['aprobado', 'Aprobados'], ['entregado', 'Entregados'], ['rechazado', 'No procede'], ['todos', 'Todos']].map(function(o){
+       var n=o[0]==='todos' ? L.length : (c[o[0]]||0);
+       return '<button type="button" class="chip'+(PEDW.ver===o[0] ? ' on' : '')+'" data-ver="'+o[0]+'">'+esc(o[1])+' · '+n+'</button>'; }).join('')+
+     '<input type="search" id="ped-q" placeholder="Buscar por nombre o EPP" value="'+esc(PEDW.q)+'" aria-label="Buscar por nombre o EPP"></div>';
+  var q=nrm(PEDW.q), ver=L.filter(function(r){ return (PEDW.ver==='todos' || r.estado===PEDW.ver) && (!q || nrm((r.t_nombre||'')+' '+(r.epp||'')).indexOf(q)>-1); });
+  if(!ver.length) h+='<div class="vacio"><b>'+(PEDW.ver==='pendiente' && !q ? 'Nada por responder' : 'Ningún pedido')+'</b>'+(L.length ? '' : 'Tu gente pide su EPP desde su app: «Pedir EPP», en su obra.')+'</div>';
+  else h+='<div class="ped-lista">'+ver.slice(0, 200).map(_pedTarjeta).join('')+'</div>';
+  caja.innerHTML=h;
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-ver]'), function(b){ b.onclick=function(){ PEDW.ver=b.getAttribute('data-ver'); pedPintar(); }; });
+  var qi=$('ped-q'); if(qi) qi.oninput=function(){ PEDW.q=this.value; var p=this.selectionStart; pedPintar(); var n=$('ped-q'); if(n){ n.focus(); try{ n.setSelectionRange(p, p); }catch(e){} } };
+  caja.onclick=function(ev){
+    var b=ev.target.closest('[data-acc]'); if(!b) return;
+    var id=b.getAttribute('data-id'), a=b.getAttribute('data-acc'), r=L.filter(function(x){ return x.id===id; })[0]; if(!r) return;
+    if(a==='foto') pedFoto(r); else if(a==='aprobar') pedAprobar(r); else if(a==='rechazar') pedRechazar(r); else if(a==='entregado') pedEntregado(r);
+  };
+}
+function _pedTarjeta(r){
+  var T=PED_TIPOS[r.tipo]||{}, E=PED_EST[r.estado]||[r.estado, 'gris'];
+  var h='<div class="ped-t"><div class="ped-t-f">'+(r.foto_url ? '<button type="button" class="ped-t-img" data-acc="foto" data-id="'+esc(r.id)+'" aria-label="Ver la foto"><img src="'+esc(r.foto_url)+'" alt="" loading="lazy"></button>' : '<span class="ped-t-img sin" aria-hidden="true">'+(T.ic||'🦺')+'</span>')+
+    '<div class="ped-t-tx"><div class="ped-t-cab"><b>'+esc(r.epp)+(r.cantidad>1 ? ' × '+r.cantidad : '')+(r.talla ? ' · '+esc(r.talla) : '')+'</b><span class="pill '+E[1]+'">'+esc(E[0])+'</span></div>'+
+    '<small>'+esc(r.t_nombre||'')+(r.t_puesto ? ' · '+esc(r.t_puesto) : '')+'</small>'+
+    '<small>'+esc(T.n||'')+' · para '+esc(_pedDia(r.para))+' · pedido el '+esc(fechaLarga(String(r.creado).slice(0, 10)))+' '+esc(String(r.creado||'').slice(11, 16) ? new Date(r.creado).toTimeString().slice(0, 5) : '')+'</small>'+
+    (r.motivo ? '<small class="ped-t-mot">«'+esc(r.motivo)+'»</small>' : '')+'</div></div>';
+  if(r.estado==='aprobado') h+='<div class="ped-t-res ok">Se entrega <b>'+esc(_pedDia(r.entrega))+'</b>'+(r.nota ? ': '+esc(r.nota) : '')+(r.resp_nombre ? ' · '+esc(r.resp_nombre) : '')+'</div>';
+  if(r.estado==='rechazado') h+='<div class="ped-t-res mal">No procede: '+esc(r.nota||'')+(r.resp_nombre ? ' · '+esc(r.resp_nombre) : '')+'</div>';
+  if(r.estado==='entregado') h+='<div class="ped-t-res">Entregado el '+esc(fechaLarga(String(r.entregado_en||r.creado).slice(0, 10)))+(r.entregado_por==='almacen' ? ' (almacén)' : '')+(r.kardex_ext ? ' · con su entrega en el kardex' : '')+'</div>';
+  if(r.estado==='pendiente') h+='<div class="ped-t-bts"><button type="button" class="bt chico" data-acc="aprobar" data-id="'+esc(r.id)+'">Aprobar</button><button type="button" class="bt sec chico" data-acc="rechazar" data-id="'+esc(r.id)+'">No procede</button><button type="button" class="bt sec chico" data-acc="entregado" data-id="'+esc(r.id)+'">Ya se entregó</button></div>';
+  if(r.estado==='aprobado') h+='<div class="ped-t-bts"><button type="button" class="bt sec chico" data-acc="entregado" data-id="'+esc(r.id)+'">Ya se entregó</button><button type="button" class="bt sec chico" data-acc="aprobar" data-id="'+esc(r.id)+'">Cambiar el día</button><button type="button" class="bt sec chico" data-acc="rechazar" data-id="'+esc(r.id)+'">No procede</button></div>';
+  return h+'</div>';
+}
+function pedFoto(r){
+  var T=PED_TIPOS[r.tipo]||{};
+  abrirHoja(r.epp+(r.cantidad>1 ? ' × '+r.cantidad : ''), (r.t_nombre||'')+' · '+(T.n||'')+' · pedido el '+fechaLarga(String(r.creado).slice(0, 10)),
+    '<img class="ped-g" src="'+esc(r.foto_url)+'" alt="Foto del EPP">'+(r.motivo ? '<p style="margin:12px 0 0;font-style:italic">«'+esc(r.motivo)+'»</p>' : ''), '', {});
+}
+function _pedResolver(r, estado, entrega, nota){
+  var nom=''; try{ nom=String((YO.perfil||{}).nombre || (YO.nombre||'') || '').trim(); }catch(e){}
+  return sbRpc('sst_epp_pedido_resolver', { p_id:r.id, p_estado:estado, p_entrega:entrega||null, p_nota:nota||null, p_nombre:nom||null, p_kardex:null }).then(function(j){
+    if(j && j.ok){ toast(estado==='aprobado' ? 'Aprobado: lo ve en su app.' : (estado==='rechazado' ? 'Listo: le llega el porqué en su app.' : 'Marcado como entregado.')); cerrarHoja(); if(typeof VISTA.recargar==='function') VISTA.recargar(true); return true; }
+    return Promise.reject({ portal:({ cerrado:'Ese pedido ya se cerró.', entrega:'Elige el día de entrega (de hoy a 14 días).', sin_nota:'Dile por qué no procede.', no_existe:'Ese pedido ya no está o esta cuenta no es de la obra.' })[(j && j.motivo) || ''] || 'No se pudo guardar.' });
+  });
+}
+function pedAprobar(r){
+  var dia=(r.para && r.para>=hoyISO()) ? r.para : _pedMas(1);
+  abrirHoja('Aprobar el pedido', (r.t_nombre||'')+' · '+r.epp,
+    '<div class="campo"><label>¿Cuándo se le entrega?</label><div class="ped-dias" id="ped-dias">'+[[hoyISO(), 'Hoy'], [_pedMas(1), 'Mañana'], [_pedMas(2), 'Pasado mañana']].map(function(o){
+      return '<button type="button" class="bt sec chico'+(o[0]===dia ? ' on' : '')+'" data-dia="'+o[0]+'">'+esc(o[1])+'</button>'; }).join('')+'</div>'+
+    '<input type="date" id="ped-dia" value="'+esc(dia)+'" min="'+esc(hoyISO())+'" max="'+esc(_pedMas(14))+'"></div>'+
+    '<div class="campo"><label for="ped-nota">Nota para él <span class="tenue">· opcional</span></label><input id="ped-nota" maxlength="300" placeholder="Recógelo en almacén a las 7:00" value="'+esc(r.nota||'')+'"></div>'+
+    '<div class="msg" id="ped-msg" role="status"></div>', '<button type="button" class="bt sec" id="ped-no">Cancelar</button><button type="button" class="bt" id="ped-ok">Aprobar</button>', {});
+  $('ped-dias').onclick=function(ev){ var b=ev.target.closest('[data-dia]'); if(!b) return; $('ped-dia').value=b.getAttribute('data-dia');
+    Array.prototype.forEach.call(this.querySelectorAll('[data-dia]'), function(x){ x.className='bt sec chico'+(x===b ? ' on' : ''); }); };
+  $('ped-no').onclick=cerrarHoja;
+  $('ped-ok').onclick=function(){ var bt=this; bt.disabled=true; _pedResolver(r, 'aprobado', $('ped-dia').value, String($('ped-nota').value||'').trim()).catch(function(e){ bt.disabled=false; var m=$('ped-msg'); m.className='msg mal'; m.textContent=porQueFallo(e); }); };
+}
+function pedRechazar(r){
+  abrirHoja('No procede', (r.t_nombre||'')+' · '+r.epp,
+    '<div class="campo"><label for="ped-nota">¿Por qué no procede?</label><div class="ped-dias" id="ped-raz">'+['Todavía está en buen estado', 'No corresponde a tu tarea', 'Ya se te entregó esta semana'].map(function(t){
+      return '<button type="button" class="bt sec chico" data-raz="'+esc(t)+'">'+esc(t)+'</button>'; }).join('')+'</div>'+
+    '<input id="ped-nota" maxlength="300" placeholder="Dile por qué: lo lee en su app"></div><div class="msg" id="ped-msg" role="status"></div>',
+    '<button type="button" class="bt sec" id="ped-no">Cancelar</button><button type="button" class="bt" id="ped-ok">No procede</button>', {});
+  $('ped-raz').onclick=function(ev){ var b=ev.target.closest('[data-raz]'); if(b) $('ped-nota').value=b.getAttribute('data-raz'); };
+  $('ped-no').onclick=cerrarHoja;
+  $('ped-ok').onclick=function(){
+    var n=String($('ped-nota').value||'').trim(), m=$('ped-msg');
+    if(n.length<3){ m.className='msg mal'; m.textContent='Dile por qué no procede: lo lee en su app.'; return; }
+    var bt=this; bt.disabled=true; _pedResolver(r, 'rechazado', null, n).catch(function(e){ bt.disabled=false; m.className='msg mal'; m.textContent=porQueFallo(e); });
+  };
+}
+function pedEntregado(r){
+  confirmar('¿Ya se le entregó?', (r.t_nombre||'')+' · '+r.epp+'. El pedido queda como entregado; la entrega con su firma va en el kardex, como siempre.', { si:'Sí, ya se entregó', no:'Todavía no' }).then(function(si){
+    if(!si) return; _pedResolver(r, 'entregado', null, null).catch(function(e){ toast('No se pudo guardar. '+porQueFallo(e)); });
+  });
+}
 /* ── el evento: registrarlo, abrirlo, completarlo, quitarlo ─────────────────────────────────── */
-var ACCF = { f:null, clase:'casi', mtpe:false, foto:null, fotoUrl:'' };
+var ACCF = { f:null, clase:'casi', mtpe:false, foto:null, fotoUrl:'', pot:null };
+/* las clases que preguntan «¿pudo ser grave o mortal?» (las de la app: ACC_CON_POT) */
+var ACC_CON_POT_W = { casi:1, dano:1, primeros:1, leve:1 };
 function _accGente(){
   if(ACCW.gente) return Promise.resolve(ACCW.gente);
   return traerTodo('sst_trabajador', '&select=id,nombre,dni,td,puesto,estatus&order=nombre.asc', 5000).then(function(l){ ACCW.gente=(l||[]).filter(function(t){ return String(t.estatus||'activo')!=='cesado'; }); return ACCW.gente; }, function(){ return []; });
@@ -1398,12 +1601,16 @@ function accForm(f){
   _gesCss(); _accCss();
   var nuevo=!f, hoy=hoyISO(), d=new Date();
   ACCF.f=f||null; ACCF.clase=(f && gesAccClase(f.clase)) ? f.clase : 'casi'; ACCF.mtpe=!!(f && f.mtpe); ACCF.foto=null; ACCF.fotoUrl=(f && f.foto_url) || '';
+  ACCF.pot=(f && (f.potencial===true || f.potencial===false)) ? f.potencial : null;
   var tipos=[]; try{ tipos=(docPais(paisObraP()).tipos||[]).slice(); }catch(e){ tipos=[['DNI', 'DNI']]; }
   if(f && f.t_tipodoc && !tipos.some(function(t){ return t[0]===f.t_tipodoc; })) tipos.unshift([f.t_tipodoc, f.t_tipodoc]);
   var v=function(k){ return f ? (f[k]==null ? '' : String(f[k])) : ''; };
   var rara=(f && !gesAccClase(f.clase)) ? '<div class="aviso ojo">Este evento vino con una clase que ya no se usa («'+esc(f.clase)+'»). Elige la que le corresponde y guarda.</div>' : '';
   var h=rara+
     '<div class="campo"><label id="accf-cl-t">¿Qué pasó?</label><div class="acc-clases" id="accf-clases" role="radiogroup" aria-labelledby="accf-cl-t"></div></div>'+
+    '<div class="campo" id="accf-pot-c" hidden><label id="accf-pot-t">¿Pudo ser grave o mortal?</label><div class="acc-pot-ops" id="accf-pot" role="radiogroup" aria-labelledby="accf-pot-t">'+
+      '<button type="button" role="radio" class="bt sec chico" data-pot="1">Sí, pudo ser grave</button><button type="button" role="radio" class="bt sec chico" data-pot="0">No</button></div>'+
+      '<small class="tenue">Si las cosas salían un poco distinto. Es lo que dice cuáles hay que investigar primero.</small></div>'+
     '<div class="fila-c"><div class="campo"><label for="accf-fecha">Fecha del evento</label><input type="date" id="accf-fecha" max="'+hoy+'" value="'+esc(f ? String(f.fecha||'').slice(0,10) : hoy)+'"></div>'+
     '<div class="campo"><label for="accf-hora">Hora</label><input type="time" id="accf-hora" value="'+esc(f ? (f.hora||'') : dos(d.getHours())+':'+dos(d.getMinutes()))+'"></div></div>'+
     '<div class="seccion"><h3>A quién le pasó</h3>'+
@@ -1430,6 +1637,7 @@ function accForm(f){
     nuevo ? {sinFoco:true} : {sinFoco:true, id:f.id, tabla:'sst_accidente', alCambio:function(tipo){ if(tipo==='DELETE') hojaAvisar('Este evento se quitó desde la app.'); else if(!ACCF.guardando) hojaAvisar('Alguien acaba de cambiar este evento desde la app.'); }});
   $('accf-clases').onclick=function(ev){ var b=ev.target.closest('[data-k]'); if(!b) return; ACCF.clase=b.getAttribute('data-k'); _accfClases(true); };
   $('accf-mtpe').onchange=function(){ ACCF.mtpe=this.checked; };
+  $('accf-pot').onclick=function(ev){ var b=ev.target.closest('[data-pot]'); if(!b) return; ACCF.pot=(b.getAttribute('data-pot')==='1'); _accfClases(false); };
   $('accf-ok').onclick=_accfGuardar;
   if($('accf-quitar')) $('accf-quitar').onclick=_accfQuitar;
   _accGente().then(function(g){
@@ -1451,6 +1659,12 @@ function _accfClases(cambio){
   var C=gesAccClase(ACCF.clase)||GES_ACC_CLASES[0], av=paisListo() ? accAviso() : null;
   $('accf-dias-c').hidden=!C.dias;
   if(cambio && ACCF.clase==='mortal' && (parseInt($('accf-dias').value, 10)||0)===0) $('accf-dias').value='6000';
+  /* 12/10/2026 · los precursores: lo que no dejó una lesión con descanso, pero pudo ser grave o mortal */
+  var pc=$('accf-pot-c');
+  if(pc){
+    pc.hidden=!ACC_CON_POT_W[ACCF.clase];
+    Array.prototype.forEach.call(pc.querySelectorAll('[data-pot]'), function(b){ var on=(ACCF.pot===(b.getAttribute('data-pot')==='1')); b.className='bt sec chico'+(on ? ' on' : ''); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
+  }
   var m=$('accf-mtpe-c');
   if(av && av.clases[ACCF.clase]){ m.hidden=false; $('accf-mtpe').checked=ACCF.mtpe; $('accf-mtpe-et').textContent=av.et; $('accf-mtpe-sub').textContent='· '+_sinMarca(av.sub); }
   else m.hidden=true;
@@ -1490,7 +1704,8 @@ function _accfGuardar(){
   /* las reglas de la app, una por una */
   if(!fe) return mal('Falta la fecha del evento.', 'accf-fecha');
   if(fe>hoy) return mal('Esa fecha todavía no llega. Revísala.', 'accf-fecha');
-  if(ACCF.clase!=='casi' && nom.length<3) return mal('Falta el nombre del trabajador.', 'accf-nombre');
+  if(ACCF.clase!=='casi' && ACCF.clase!=='dano' && nom.length<3) return mal('Falta el nombre del trabajador.', 'accf-nombre');
+  if(ACC_CON_POT_W[ACCF.clase] && ACCF.pot===null) return mal('Responde si pudo ser grave o mortal: es lo que dice cuáles hay que investigar primero.');
   if(desc.length<15) return mal('Cuenta qué pasó, aunque sea en dos líneas. Es lo que se lee en la investigación.', 'accf-desc');
   var dias=C.dias ? (parseInt($('accf-dias').value, 10)||0) : 0;
   if(dias<0 || dias>6000) return mal('Revisa los días de descanso.', 'accf-dias');
@@ -1501,14 +1716,17 @@ function _accfGuardar(){
           lugar:v('accf-lugar'), descripcion:desc.slice(0, 1500), parte:$('accf-parte').value, agente:$('accf-agente').value, dias:dias,
           causas:String($('accf-causas').value||'').trim(), medidas:String($('accf-medidas').value||'').trim(), responsable:v('accf-resp'), plazo:$('accf-plazo').value||null,
           mtpe:!!(av && av.clases[ACCF.clase] && ACCF.mtpe) };
+  /* «potencial» solo si se respondió; si el servidor todavía no tiene la columna (falta su SQL), se guarda sin ella */
+  p.potencial=ACC_CON_POT_W[ACCF.clase] ? ACCF.pot : null;
+  function conPot(fn){ return fn().catch(function(e){ if(e!==400 || !('potencial' in p)) return Promise.reject(e); delete p.potencial; return fn(); }); }
   bt.disabled=true; m.className='msg gris'; m.textContent=ACCF.foto ? 'Subiendo la foto…' : 'Guardando…';
   ACCF.guardando=true;
   var foto=ACCF.foto ? subirFoto('accidentes', ACCF.foto.blob, 'accidente.jpg') : Promise.resolve(ACCF.fotoUrl||null);
   foto.then(function(url){
     p.foto_url=url||null; m.textContent='Guardando…';
-    if(f) return sbPatch('sst_accidente?id=eq.'+encodeURIComponent(f.id), p);
+    if(f) return conPot(function(){ return sbPatch('sst_accidente?id=eq.'+encodeURIComponent(f.id), p); });
     p.empresa=YO.obra.id; p.ext='x'+Date.now().toString(36)+Math.random().toString(36).slice(2, 5);
-    return sbPostP('sst_accidente', p);
+    return conPot(function(){ return sbPostP('sst_accidente', p); });
   }).then(function(rows){
     ACCF.guardando=false;
     if(Array.isArray(rows) && !rows.length) return Promise.reject({portal:f ? 'No se guardó: el evento ya no está o esta cuenta no puede editarlo.' : 'No se guardó: esta cuenta no puede registrar en esta obra.'});
@@ -3225,4 +3443,195 @@ function gesVistaCargar(caja){
     }).catch(function(cod){ if(n!==CARW.n || VISTA.actual!=='cargar') return; if(!silencio) fallo(caja, cod); });
   }
   VISTA.recargar=pinta; pinta();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   13/10/2026 · LO NUEVO DE LA OBRA, TAMBIÉN EN LA WEB: las visitas (con su
+   inducción de dos minutos), el bloqueo y etiquetado con el QR del equipo y
+   el pulso de seguridad. Es lo mismo que la app (sql/2026-11-05-visitas.sql,
+   sql/2026-11-06-bloqueos.sql y sql/2026-11-07-pulso.sql): aquí se ve, se
+   busca y se marca la salida de una visita.
+   ══════════════════════════════════════════════════════════════════ */
+function _nuevoCss(){
+  if($('nuevo13-css')) return;
+  var st=document.createElement('style'); st.id='nuevo13-css';
+  st.textContent=[
+    '.n13-cif{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}',
+    '@media (max-width:640px){.n13-cif{grid-template-columns:1fr 1fr}}',
+    '.n13-fil{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}',
+    '.n13-fil input{flex:1 1 200px;min-width:0}',
+    '.n13-chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;background:var(--ok-f);color:var(--ok)}',
+    '.n13-chip.fuera{background:#EEF1F3;color:var(--gris)} .n13-chip.mal{background:var(--mal-f);color:var(--mal)}',
+    '.n13-bloq{border:2px solid var(--mal);background:var(--mal-f);border-radius:12px;padding:12px 14px;margin-bottom:10px}',
+    '.n13-bloq h3{margin:0 0 4px;font-size:15px;color:var(--mal)}',
+    '.n13-temas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}',
+    '@media (max-width:760px){.n13-temas{grid-template-columns:1fr 1fr}}',
+    '.n13-tema{border:1px solid var(--raya);border-radius:12px;background:var(--panel);padding:12px 14px}',
+    '.n13-tema b{display:block;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}',
+    '.n13-tema.ok b{color:var(--ok)} .n13-tema.med b{color:var(--ojo)} .n13-tema.mal b{color:var(--mal)}',
+    '.n13-pq{display:grid;grid-template-columns:minmax(0,1fr) 60px 220px;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--raya)}',
+    '@media (max-width:640px){.n13-pq{grid-template-columns:minmax(0,1fr) 50px}.n13-dist{grid-column:1/-1}}',
+    '.n13-pq b{text-align:right;font-variant-numeric:tabular-nums} .n13-pq b.ok{color:var(--ok)} .n13-pq b.med{color:var(--ojo)} .n13-pq b.mal{color:var(--mal)}',
+    '.n13-dist{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--raya);gap:2px}',
+    '.n13-dist i{display:block;height:100%} .n13-v1{background:#C6323A} .n13-v2{background:#E07A4B} .n13-v3{background:#D9A400} .n13-v4{background:#7CBF6E} .n13-v5{background:#1E8E5A}',
+    '.n13-ley{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:12.5px;color:var(--gris)} .n13-ley i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}'
+  ].join('\n');
+  document.head.appendChild(st);
+}
+function _n13Hora(iso){ var d=new Date(iso); return isNaN(d) ? '' : ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+function _n13Dia(iso){ var d=new Date(iso); return isNaN(d) ? '' : d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+
+/* ── las visitas ── */
+var VISW={ caja:null, lista:null, ver:'hoy', q:'', n:0 };
+function gesVistaVisitas(caja){
+  _gesCss(); _nuevoCss();
+  VISW.caja=caja; var ac=$('acciones'); if(ac) ac.innerHTML='';
+  cargando(caja);
+  function pinta(silencio){
+    var n=++VISW.n;
+    traer('sst_visita', '&select=id,pase,nombre,doc,de,visita_a,celular,entra,sale,sale_por&order=entra.desc', 3000).then(function(r){
+      if(n!==VISW.n || !document.body.contains(caja)) return;
+      VISW.lista=r||[]; visWPintar();
+    }, function(cod){
+      if(n!==VISW.n) return;
+      if(cod===404){ caja.innerHTML='<div class="vacio"><b>Falta activar las visitas en el servidor de la obra</b>Cuando se active, aquí sale quién entró por el QR de la puerta.</div>'; return; }
+      if(!silencio) fallo(caja, cod);
+    });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+function visWPintar(){
+  var caja=VISW.caja; if(!caja || !document.body.contains(caja)) return;
+  var L=VISW.lista||[], hoy=HOY, hace7=_n13Dia(new Date(Date.now()-7*86400000).toISOString());
+  var deHoy=L.filter(function(v){ return _n13Dia(v.entra)===hoy; }), adentro=deHoy.filter(function(v){ return !v.sale; }).length;
+  var h='<div class="n13-cif">'+cifra('Hoy', deHoy.length, 'entraron por el QR de la puerta', '')+cifra('Adentro', adentro, 'sin marcar su salida', adentro ? 'ojo' : 'ok')+
+        cifra('Últimos 7 días', L.filter(function(v){ return _n13Dia(v.entra)>=hace7; }).length, 'visitas', '')+'</div>';
+  h+='<p class="sub" style="margin:0 0 12px">El QR de la puerta se crea y se imprime en la app (Mi gente › Visitas). Cada visita deja sus datos, ve las reglas y contesta tres preguntas antes de entrar. Se guardan 180 días.</p>';
+  h+='<div class="n13-fil">'+[['hoy', 'Hoy'], ['7', 'Últimos 7 días'], ['todo', 'Todas']].map(function(o){ return '<button type="button" class="chip'+(VISW.ver===o[0] ? ' on' : '')+'" data-ver="'+o[0]+'">'+esc(o[1])+'</button>'; }).join('')+
+     '<input type="search" id="vis-q" placeholder="Buscar por nombre, documento o empresa" value="'+esc(VISW.q)+'" aria-label="Buscar visitas"></div>';
+  var q=nrm(VISW.q), ver=L.filter(function(v){
+    var d=_n13Dia(v.entra);
+    if(VISW.ver==='hoy' && d!==hoy) return false; if(VISW.ver==='7' && d<hace7) return false;
+    return !q || nrm((v.nombre||'')+' '+(v.doc||'')+' '+(v.de||'')+' '+(v.visita_a||'')).indexOf(q)>-1; });
+  if(!ver.length) h+='<div class="vacio"><b>'+(VISW.ver==='hoy' && !q ? 'Todavía no entró nadie hoy' : 'Ninguna visita')+'</b></div>';
+  else h+='<div class="tabla-caja"><table><thead><tr><th>Día</th><th>Entró</th><th>Salió</th><th>Nombre</th><th>Documento</th><th>De</th><th>Visita a</th><th>Pase</th></tr></thead><tbody>'+
+    ver.slice(0, 500).map(function(v){
+      var hoyV=_n13Dia(v.entra)===hoy;
+      return '<tr><td>'+esc(fechaLarga(_n13Dia(v.entra)))+'</td><td>'+esc(_n13Hora(v.entra))+'</td><td>'+
+        (v.sale ? esc(_n13Hora(v.sale))+(v.sale_por==='equipo' ? ' <span class="n13-chip fuera">la marcó el equipo</span>' : '')
+                : (hoyV ? '<span class="n13-chip">Adentro</span> <button type="button" class="bt sec chico" data-sale="'+esc(v.id)+'">Marcar salida</button>' : '<span class="n13-chip fuera">sin salida</span>'))+'</td>'+
+        '<td>'+esc(v.nombre||'')+'</td><td>'+esc(v.doc||'')+'</td><td>'+esc(v.de||'')+'</td><td>'+esc(v.visita_a||'')+'</td><td>'+esc(v.pase||'')+'</td></tr>'; }).join('')+'</tbody></table></div>';
+  caja.innerHTML=h;
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-ver]'), function(b){ b.onclick=function(){ VISW.ver=b.getAttribute('data-ver'); visWPintar(); }; });
+  var qi=$('vis-q'); if(qi) qi.oninput=function(){ VISW.q=this.value; var p=this.selectionStart; visWPintar(); var n=$('vis-q'); if(n){ n.focus(); try{ n.setSelectionRange(p, p); }catch(e){} } };
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-sale]'), function(b){ b.onclick=function(){
+    b.disabled=true;
+    sbRpc('sst_visita_salida', { p_id:b.getAttribute('data-sale'), p_sale:true }).then(function(j){
+      if(j && j.ok){ var v=(VISW.lista||[]).filter(function(x){ return x.id===b.getAttribute('data-sale'); })[0]; if(v){ v.sale=j.sale; v.sale_por='equipo'; } visWPintar(); }
+      else { b.disabled=false; alert('No se pudo marcar la salida.'); }
+    }, function(){ b.disabled=false; alert('Sin conexión: vuelve a intentarlo.'); });
+  }; });
+}
+
+/* ── el bloqueo y etiquetado ── */
+var BLQW={ caja:null, n:0 };
+var BLQW_EN={ electrica:'⚡ Eléctrica', mecanica:'⚙️ Mecánica', hidraulica:'💧 Hidráulica', neumatica:'💨 Neumática', termica:'🔥 Térmica', quimica:'🧪 Química', gravedad:'⬇️ Por gravedad', otra:'❔ Otra' };
+function gesVistaBloqueos(caja){
+  _gesCss(); _nuevoCss();
+  BLQW.caja=caja; var ac=$('acciones'); if(ac) ac.innerHTML='';
+  cargando(caja);
+  function pinta(silencio){
+    var n=++BLQW.n;
+    Promise.all([traer('sst_bloqueo', '&order=puesto.desc', 2000), traer('sst_equipo_qr', '&select=id,codigo,tipo', 3000)]).then(function(r){
+      if(n!==BLQW.n || !document.body.contains(caja)) return;
+      blqWPintar(r[0]||[], r[1]||[]);
+    }, function(cod){
+      if(n!==BLQW.n) return;
+      if(cod===404){ caja.innerHTML='<div class="vacio"><b>Falta activar el bloqueo y etiquetado en el servidor de la obra</b>Cuando se active, aquí salen los candados que se registran con el QR de cada equipo.</div>'; return; }
+      if(!silencio) fallo(caja, cod);
+    });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+function blqWPintar(L, E){
+  var caja=BLQW.caja; if(!caja || !document.body.contains(caja)) return;
+  var eq={}; E.forEach(function(x){ eq[x.id]=x; });
+  var act=L.filter(function(b){ return !b.quitado; }), hace30=new Date(Date.now()-30*86400000).toISOString();
+  var porEq={}; act.forEach(function(b){ (porEq[b.equipo]=porEq[b.equipo]||[]).push(b); });
+  var h='<div class="n13-cif">'+cifra('Bloqueados ahora', Object.keys(porEq).length, Object.keys(porEq).length===1 ? 'equipo' : 'equipos', Object.keys(porEq).length ? 'mal' : 'ok')+
+        cifra('Candados puestos', act.length, 'cada uno, de quien lo puso', '')+
+        cifra('Quitados en 30 días', L.filter(function(b){ return b.quitado && b.quitado>=hace30; }).length, 'con quién y cómo', '')+'</div>';
+  h+='<p class="sub" style="margin:0 0 12px">Se registran en la app, con el QR del equipo: mientras haya un candado, su QR dice BLOQUEADO. Cada uno quita el suyo; el supervisor quita el de otro solo con su motivo.</p>';
+  Object.keys(porEq).forEach(function(id){
+    var x=eq[id]||{}, l=porEq[id];
+    h+='<div class="n13-bloq"><h3>🔒 '+esc(x.codigo||'—')+' · '+esc(x.tipo||'')+'</h3>'+l.map(function(b){
+      return '<div>'+esc((b.energia||[]).map(function(k){ return BLQW_EN[k]||k; }).join(' · '))+' — <b>'+esc(b.puso_nombre)+'</b>'+(b.candado ? ' · candado '+esc(b.candado) : '')+
+             ' · desde '+esc(fechaLarga(_n13Dia(b.puesto)))+' '+esc(_n13Hora(b.puesto))+(b.motivo ? ' · '+esc(b.motivo) : '')+'</div>'; }).join('')+'</div>';
+  });
+  var hist=L.filter(function(b){ return b.quitado; }).slice(0, 300);
+  if(hist.length) h+='<h3 style="margin:18px 0 8px">Los que ya se quitaron</h3><div class="tabla-caja"><table><thead><tr><th>Equipo</th><th>Lo puso</th><th>Desde</th><th>Se quitó</th><th>Quién</th></tr></thead><tbody>'+
+    hist.map(function(b){ var x=eq[b.equipo]||{};
+      return '<tr><td>'+esc((x.codigo||'—')+' · '+(x.tipo||''))+'</td><td>'+esc(b.puso_nombre)+'</td><td>'+esc(fechaLarga(_n13Dia(b.puesto)))+' '+esc(_n13Hora(b.puesto))+'</td>'+
+             '<td>'+esc(fechaLarga(_n13Dia(b.quitado)))+' '+esc(_n13Hora(b.quitado))+'</td><td>'+esc(b.quito_nombre||'')+
+             (b.quito_es==='supervisor' ? ' <span class="n13-chip mal">el supervisor: '+esc(b.quito_motivo||'')+'</span>' : '')+'</td></tr>'; }).join('')+'</tbody></table></div>';
+  if(!L.length) h+='<div class="vacio"><b>Todavía no se registró ningún candado</b>Se registra en la app, al escanear el QR del equipo.</div>';
+  caja.innerHTML=h;
+}
+
+/* ── el pulso de seguridad (las mismas diez preguntas de la app, pulso.js) ── */
+var PULW_PREG=[['lider','Mi supervisor se preocupa por mi seguridad, no solo por el avance.'],['lider','Cuando hay apuro, la seguridad igual se respeta.'],
+  ['habla','Si veo algo peligroso, lo puedo decir sin miedo.'],['habla','Cuando reportamos algo, se arregla.'],['equipo','Mis compañeros se cuidan entre ellos.'],
+  ['equipo','Si una tarea no es segura, la puedo parar.'],['equipo','Me preguntan mi opinión para el ATS y los controles.'],['medios','Tengo el EPP que necesito, en buen estado.'],
+  ['medios','Me enseñaron a hacer mi trabajo de forma segura.'],['medios','Las charlas y capacitaciones me sirven en el trabajo.']];
+var PULW_TEMAS=[['lider','👷','El supervisor'],['habla','🗣️','Hablar y reportar'],['equipo','🤝','Entre compañeros'],['medios','🦺','EPP y formación']];
+var PULW={ caja:null, periodo:null, n:0 };
+function _pulwCol(p){ return p>=4 ? 'ok' : (p>=3 ? 'med' : 'mal'); }
+function _pulwPer(per){ var m=String(per||'').match(/^(\d{4})-T([1-4])$/); return m ? ['enero a marzo','abril a junio','julio a setiembre','octubre a diciembre'][+m[2]-1]+' de '+m[1] : per; }
+function gesVistaPulso(caja){
+  _gesCss(); _nuevoCss();
+  PULW.caja=caja; var ac=$('acciones'); if(ac) ac.innerHTML='';
+  cargando(caja);
+  function pinta(silencio){
+    var n=++PULW.n;
+    sbRpc('sst_pulso_resultados', { p_emp:YO.obra.id, p_periodo:PULW.periodo||null }).then(function(j){
+      if(n!==PULW.n || !document.body.contains(caja)) return;
+      if(!j || !j.ok){ caja.innerHTML='<div class="vacio"><b>No se pudieron traer los resultados</b></div>'; return; }
+      pulWPintar(j);
+    }, function(cod){
+      if(n!==PULW.n) return;
+      if(cod===404){ caja.innerHTML='<div class="vacio"><b>Falta activar el pulso de seguridad en el servidor de la obra</b>Cuando se active, tu gente lo contesta desde su app, sin su nombre.</div>'; return; }
+      if(!silencio) fallo(caja, cod);
+    });
+  }
+  VISTA.recargar=pinta; pinta();
+}
+function pulWPintar(d){
+  var caja=PULW.caja; if(!caja || !document.body.contains(caja)) return;
+  var h='<div class="n13-cif">'+cifra('Respuestas', d.n, _pulwPer(d.periodo), d.listo ? 'ok' : '')+cifra('Para ver resultados', d.minimo||5, 'respuestas o más, para que nadie sea reconocido', '')+
+        cifra('En la app de tu gente', d.activo ? 'Activo' : 'Pausado', d.activo ? 'le sale para contestar' : 'no le sale', d.activo ? 'ok' : '')+'</div>';
+  h+='<div class="n13-fil"><button type="button" class="bt'+(d.activo ? ' sec' : '')+' chico" id="pulw-act">'+(d.activo ? 'Pausar' : 'Activar')+'</button>';
+  var pers=(d.periodos||[]).map(function(x){ return x.periodo; }); if(pers.indexOf(d.actual)<0) pers.unshift(d.actual);
+  h+=pers.map(function(p){ return '<button type="button" class="chip'+(p===d.periodo ? ' on' : '')+'" data-per="'+esc(p)+'">'+esc(_pulwPer(p))+'</button>'; }).join('')+'</div>';
+  h+='<p class="sub" style="margin:0 0 12px">Diez preguntas cada tres meses, de 1 («para nada») a 5 («totalmente»), desde la app del trabajador y sin su nombre: sus respuestas no se guardan sueltas, solo sumadas.</p>';
+  if(!d.listo){
+    var f=Math.max(0, (d.minimo||5)-d.n);
+    h+='<div class="vacio"><b>Faltan '+f+' '+(f===1 ? 'respuesta' : 'respuestas')+' para ver los resultados</b>Se muestran con 5 o más, para que nadie pueda ser reconocido por lo que contestó.</div>';
+  } else {
+    var P=d.preguntas||[], tema={};
+    P.forEach(function(x){ var t=(PULW_PREG[x.i-1]||[])[0]; if(t && x.prom!=null) (tema[t]=tema[t]||[]).push(+x.prom); });
+    h+='<div class="n13-temas">'+PULW_TEMAS.map(function(t){
+      var l=tema[t[0]]||[], p=l.length ? l.reduce(function(a, b){ return a+b; }, 0)/l.length : null;
+      return '<div class="n13-tema '+(p==null ? '' : _pulwCol(p))+'"><span aria-hidden="true">'+t[1]+'</span> '+esc(t[2])+'<b>'+(p==null ? '—' : p.toFixed(1))+'</b></div>'; }).join('')+'</div>';
+    h+='<div class="tarj"><div class="tarj-cuerpo">'+P.map(function(x){
+      var tot=(x.dist||[]).reduce(function(a, b){ return a+b; }, 0)||1;
+      return '<div class="n13-pq"><span>'+esc((PULW_PREG[x.i-1]||[])[1]||'')+'</span><b class="'+_pulwCol(+x.prom)+'">'+(+x.prom).toFixed(1)+'</b>'+
+             '<div class="n13-dist" title="Cuántos contestaron cada valor, de 1 a 5">'+(x.dist||[]).map(function(n, k){ return n ? '<i class="n13-v'+(k+1)+'" style="width:'+(n/tot*100).toFixed(1)+'%"></i>' : ''; }).join('')+'</div></div>'; }).join('')+
+      '<div class="n13-ley">'+['Para nada','Poco','Más o menos','Bastante','Totalmente'].map(function(n, k){ return '<span><i class="n13-v'+(k+1)+'"></i>'+(k+1)+' · '+esc(n)+'</span>'; }).join('')+'</div></div></div>';
+  }
+  caja.innerHTML=h;
+  var b=$('pulw-act'); if(b) b.onclick=function(){
+    b.disabled=true;
+    sbRpc('sst_pulso_activar', { p_emp:YO.obra.id, p_activo:!d.activo }).then(function(){ if(VISTA.recargar) VISTA.recargar(); }, function(){ b.disabled=false; alert('Sin conexión: vuelve a intentarlo.'); });
+  };
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-per]'), function(x){ x.onclick=function(){ PULW.periodo=x.getAttribute('data-per'); if(VISTA.recargar) VISTA.recargar(); }; });
 }

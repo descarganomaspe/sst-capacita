@@ -55,6 +55,43 @@ function _atsTxt(doc, t, x, y, w, ft, bold, alto){
   lin.slice(0, max).forEach(function(l){ doc.text(l, x, yy); yy += lh; });
   return lin.length*lh;
 }
+/* ══ UN PELIGRO, VARIOS RIESGOS (13/10/2026) ══════════════════════
+   «Habrá peligros que contemplen 3, 4, 5 o 2 riesgos». Se guarda como
+   siempre —una fila por riesgo, con su consecuencia y su control—, y
+   las filas SEGUIDAS con el mismo peligro forman un grupo: en la
+   pantalla, una tarjeta; en la hoja, una sola celda de peligro al lado
+   de sus riesgos. Lo guardado antes se lee igual.                   */
+function _atsNormPel(t){ return String(t||'').replace(/\s+/g,' ').trim().toLowerCase(); }
+function _atsMismoPel(a, b){ var x = _atsNormPel(a); return x !== '' && x === _atsNormPel(b); }
+function atsGruposPel(filas){
+  var g = [];
+  (filas||[]).forEach(function(f, j){
+    var u = g[g.length-1];
+    if(u && _atsMismoPel(u.p, f.p)) u.idx.push(j); else g.push({ p:f.p, idx:[j] });
+  });
+  return g;
+}
+/* «3 peligros» o, si alguno trae más de un riesgo, «3 peligros · 5 riesgos» */
+function _atsCuentaTxt(acts){
+  var pel = 0, rie = 0;
+  (acts||[]).forEach(function(a){ pel += atsGruposPel(a.filas).length; rie += (a.filas||[]).length; });
+  return pel+(pel===1?' peligro':' peligros')+(rie > pel ? ' · '+rie+' riesgos' : '');
+}
+/* lo mismo para la pantalla: cada número con su palabra en su <span> (así el traductor lo reconoce) */
+function _atsCuentaHtml(acts){
+  var pel = 0, rie = 0;
+  (acts||[]).forEach(function(a){ pel += atsGruposPel(a.filas).length; rie += (a.filas||[]).length; });
+  return '<span>'+pel+(pel===1?' peligro':' peligros')+'</span>'+(rie > pel ? ' · <span>'+rie+' riesgos</span>' : '');
+}
+/* una celda de texto centrada en su alto; si no cabe, se corta (solo pasa con un peligro partido entre dos hojas) */
+function _atsCelda(doc, t, x, y, w, h, lh){
+  t = String(t||''); if(!t) return;
+  doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT); doc.setTextColor(24,28,34);
+  var lin = doc.splitTextToSize(t, w-2.8), max = Math.max(1, Math.floor((h-0.4)/lh));
+  if(lin.length > max) lin = lin.slice(0, max);
+  var yb = y + (h - lin.length*lh)/2 + _ATS_PT*0.74*_MMPT;
+  lin.forEach(function(l){ doc.text(l, x+1.4, yb); yb += lh; });
+}
 function _atsCaja(doc, x, y, w, h, relleno){
   if(relleno){ doc.setFillColor(relleno[0],relleno[1],relleno[2]); doc.rect(x,y,w,h,'F'); }
   doc.setDrawColor(70,78,86); doc.setLineWidth(0.22); doc.rect(x,y,w,h,'S');
@@ -93,20 +130,34 @@ function _atsArranque(M){
 function _atsMedir(doc, filas, w, cols){
   var lh = _atsLH();
   doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT);
+  function alto(t, c){ t = String(t||''); return t ? doc.splitTextToSize(t, w*c-2.8).length*lh : 0; }
   filas.forEach(function(f){
-    var alto = 0;
-    [[f.p,cols[1]],[f.r,cols[2]],[f.c,cols[3]],[f.m,cols[4]]].forEach(function(par){
-      var t = String(par[0]||''); if(!t) return;
-      alto = Math.max(alto, doc.splitTextToSize(t, w*par[1]-2.8).length*lh);
-    });
-    f.h = Math.max(_ATS_HFILA, alto + 1.6);
+    f.hp = alto(f.p, cols[1]) + 1.6;
+    f.h = Math.max(_ATS_HFILA, Math.max(alto(f.r, cols[2]), alto(f.c, cols[3]), alto(f.m, cols[4])) + 1.6);
   });
+  /* el peligro va una vez por grupo: si sus riesgos juntos no le dan el alto, el primero crece (con un solo riesgo
+     queda igual que antes: el alto mayor de las cuatro celdas) */
+  var i = 0;
+  while(i < filas.length){
+    var j = i+1, tot = filas[i].h;
+    while(j < filas.length && filas[i].gi !== undefined && filas[j].gi === filas[i].gi){ tot += filas[j].h; j++; }
+    if(filas[i].hp > tot) filas[i].h += filas[i].hp - tot;
+    i = j;
+  }
 }
 /* reparte las filas en hojas sin cortar texto */
 function _atsPaginar(filas, libre){
   var pags = [], act = [], usado = 0;
   filas.forEach(function(f){
-    if(act.length && usado + f.h > libre){ pags.push(act); act = []; usado = 0; }
+    if(act.length && usado + f.h > libre){
+      /* un peligro con varios riesgos no se parte entre dos hojas si entero entra en la siguiente */
+      var k = act.length;
+      while(k > 0 && act[k-1].gi !== undefined && act[k-1].gi === f.gi) k--;
+      var resto = act.slice(k), hr = 0;
+      resto.forEach(function(x){ hr += x.h; });
+      if(k > 0 && resto.length && hr + f.h <= libre){ pags.push(act.slice(0, k)); act = resto; usado = hr; }
+      else { pags.push(act); act = []; usado = 0; }
+    }
     act.push(f); usado += f.h;
   });
   if(act.length) pags.push(act);
@@ -144,6 +195,11 @@ function _atsDibujar(){
     });
   });
   if(!filas.length) filas.push({ act:'', p:'', r:'', c:'', m:'' });
+  /* los grupos de un peligro con varios riesgos (en el mismo paso y seguidos) */
+  for(var _q=0, _gi=0; _q<filas.length; _q++){
+    if(_q && !(filas[_q-1].act === filas[_q].act && _atsMismoPel(filas[_q-1].p, filas[_q].p))) _gi++;
+    filas[_q].gi = _gi;
+  }
 
   var wTabla = W - M*2;
   _atsMedir(doc, filas, wTabla, COLS);
@@ -180,7 +236,8 @@ function _atsDibujar(){
   }
 
   ATS.pdf = { blob: doc.output('blob'),
-              nombre: 'ATS-'+(_senSlug(ATS.trabajo)||'trabajo')+'-'+(ATS.fecha||hoyISO())+'.pdf' };
+              nombre: ATS.modo==='modelo' ? 'ATS-modelo-'+(_senSlug(ATS.trabajo)||'trabajo')+'.pdf'
+                                          : 'ATS-'+(_senSlug(ATS.trabajo)||'trabajo')+'-'+(ATS.fecha||hoyISO())+'.pdf' };
   return { n: hojas+1, filas: filas.length };
 }
 
@@ -324,17 +381,19 @@ function _atsAnverso(doc, W, H, M, emp, obra, logo, filas, pg, nHojas, libre, co
   }
 
   var lh = _atsLH(), yy = y;
-  filas.forEach(function(f){
+  filas.forEach(function(f, q){
     var cx3 = x + w*cols[0];
-    [[f.p,cols[1]],[f.r,cols[2]],[f.c,cols[3]],[f.m,cols[4]]].forEach(function(par){
+    /* el peligro: UNA celda por grupo (en esta hoja), al lado de todos sus riesgos */
+    if(!q || filas[q-1].gi === undefined || filas[q-1].gi !== f.gi){
+      var hg = 0;
+      for(var q2=q; q2<filas.length && (q2===q || (filas[q2].gi !== undefined && filas[q2].gi === f.gi)); q2++) hg += filas[q2].h;
+      _atsCaja(doc, cx3, yy, w*cols[1], hg);
+      _atsCelda(doc, f.p, cx3, yy, w*cols[1], hg, lh);
+    }
+    cx3 += w*cols[1];
+    [[f.r,cols[2]],[f.c,cols[3]],[f.m,cols[4]]].forEach(function(par){
       _atsCaja(doc, cx3, yy, w*par[1], f.h);
-      var t = String(par[0]||'');
-      if(t){
-        doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT); doc.setTextColor(24,28,34);
-        var lin = doc.splitTextToSize(t, w*par[1]-2.8);
-        var yb = yy + (f.h - lin.length*lh)/2 + _ATS_PT*0.74*_MMPT;
-        lin.forEach(function(l){ doc.text(l, cx3+1.4, yb); yb += lh; });
-      }
+      _atsCelda(doc, par[0], cx3, yy, w*par[1], f.h, lh);
       cx3 += w*par[1];
     });
     yy += f.h;
