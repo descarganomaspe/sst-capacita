@@ -1,15 +1,19 @@
-var CACHE = 'sstc-208bf99949-a';
+var CACHE = 'sstc-812ca23dec-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
 var COMP = 'sstc-compartido';
+/* 14/10/2026 · el pdf.js (portal/pdfjs) que dibuja los PDF dentro de la app: en su propia caja, la misma que usa la
+   página de los carteles (d/). Pesa casi 2 MB y no cambia con cada versión de la app: en la caja «sstc-…», que se
+   borra en cada actualización, el primer PDF sin señal después de actualizar no se habría podido ver. */
+var PDFJS = 'obrasst-pdfjs-1';
 /* ══ LO QUE SE GUARDA AL INSTALAR ══
    Antes install no guardaba nada: el SW viejo servia el index nuevo por
    red, lo metia en el cache VIEJO, y al activarse el SW nuevo borraba ese
    cache. La primera apertura sin señal despues de cada publicacion daba
    pantalla en blanco (y la primerisima instalacion tambien). Ahora la app
    entera se guarda en install, antes de activar. */
-var BASE = ['./', './index.html', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=e69898164a', './exige.js?v=35cd514ecd', './idioma-fr.js?v=a8a9ad15e5', './procedimientos.js?v=88b03837ba', './idioma-pt.js?v=c4d22fd5ed', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
+var BASE = ['./', './index.html', './temas.js?v=21bbb5eaab', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=adeb1a0e7a', './exige.js?v=35cd514ecd', './idioma-fr.js?v=f36dd17540', './procedimientos.js?v=88b03837ba', './idioma-pt.js?v=3e232662b5', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
             './intro.mp4'];
 self.addEventListener('install', function(e){
@@ -91,6 +95,16 @@ self.addEventListener('fetch', function(e){
   var _mio; try{ _mio = (new URL(e.request.url)).origin === self.location.origin; }
   catch(_x){ _mio = false; }
   if (!_mio) return;
+  /* el pdf.js: de su caja si ya está; si no, de la red, y queda guardado */
+  if (_u && /\/portal\/pdfjs\/pdf(\.worker)?\.min\.mjs$/.test(_u.pathname)){
+    e.respondWith(caches.open(PDFJS).then(function(c){
+      return c.match(e.request).then(function(r){
+        if (r) return r;
+        return fetch(e.request).then(function(rr){ if (rr && rr.ok){ var copia = rr.clone(); c.put(e.request, copia).catch(function(){}); } return rr; });
+      });
+    }).catch(function(){ return fetch(e.request); }));
+    return;
+  }
   var esNav = (e.request.mode === 'navigate');
   /* ── sw.js NO se guarda ──────────────────────────────────
      La app le pregunta a sw.js cada tanto —con ?_=<hora> pegado, para
@@ -112,7 +126,8 @@ self.addEventListener('fetch', function(e){
          —abria la app entera en la direccion del cartel—, se dice que
          falta señal. (Quien ya abrio un cartel tiene el service worker
          de d/, que atiende antes que este.) */
-      if (esNav && _u && /\/(d|h)\/(index\.html)?$/.test(_u.pathname)) return sinSenalQR();
+      /* 14/10/2026 · y el buzón (b/): sin señal no se puede mandar nada, y tampoco es la app */
+      if (esNav && _u && /\/(d|h|b|m)\/(index\.html)?$/.test(_u.pathname)) return sinSenalQR();
       if (esNav) return caches.match('./index.html');
       return Response.error();
     });
@@ -202,5 +217,14 @@ self.addEventListener('push', function(e){
     data: { ruta: String(d.ruta || ''), ir: String(d.ir || '') }
   };
   try{ op.vibrate = [70, 50, 70]; }catch(_v){}
+  /* 14/10/2026 · la alarma de simulacro (alarma.js): se queda en pantalla hasta que la toquen, vibra largo y abre la
+     alarma en la app. El sonido es el del celular: con el celular en silencio no suena (eso solo lo hace la alerta del
+     Estado); con la app abierta, suena la sirena en pantalla. */
+  if(d.tipo === 'alarma'){
+    op.requireInteraction = true;
+    op.vibrate = [800, 300, 800, 300, 800, 300, 800, 300, 800];
+    op.data = { ruta:'', ir:'alarma:' + String(d.id || '') };
+    op.silent = false;
+  }
   e.waitUntil(self.registration.showNotification(String(d.titulo || 'OBRASST').slice(0, 120), op));
 });
