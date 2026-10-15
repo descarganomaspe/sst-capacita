@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0B2A3A">
+<link rel="icon" href="../icono-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>Buzón de la obra · OBRASST</title>
+<!-- 14/10/2026 · lo que abre el cartel QR del buzón (lote 11): sin instalar la app, cualquiera de la obra
+     escribe una sugerencia, una queja o una denuncia. Llega al mismo buzón y al mismo canal de denuncia
+     de la app (sql/2026-11-13-buzon-qr.sql). El QR lleva una ficha (?t=), nunca el código de la obra. -->
+<style>
+*{box-sizing:border-box}
+:root{--fondo:#0B2A3A;--tinta:#EAF2F7;--suave:#A9C2D0;--tenue:#7D97A6;--oro:#F5B700;--viol:#A98BF0;--viol2:#6A3FB5;--bien:#6FD08C;--mal:#FF9A8B;
+  --caja:rgba(255,255,255,.06);--raya:rgba(255,255,255,.14)}
+html,body{background:var(--fondo)}
+body{margin:0;min-height:100vh;color:var(--tinta);padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px));
+  font:16px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.caja{width:100%;max-width:470px;margin:0 auto}
+.marca{font-size:12px;letter-spacing:.18em;color:var(--oro);font-weight:800;margin-bottom:18px;text-align:center}
+h1{font-size:22px;margin:0 0 8px;line-height:1.3;text-wrap:balance;text-align:center}
+h2{font-size:17px;margin:0 0 6px}
+p{margin:0 0 8px;color:var(--suave);font-size:15px}
+.cab p{text-align:center}
+.giro{width:34px;height:34px;margin:26px auto 0;border-radius:50%;border:3px solid rgba(255,255,255,.18);border-top-color:var(--oro);animation:g .8s linear infinite}
+@keyframes g{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.giro{animation-duration:2.4s}}
+.sellos{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:12px 0 4px}
+.sello{font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--caja);border:1px solid var(--raya);color:var(--tinta)}
+.elige{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0 6px}
+.elige button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:14px;border-radius:14px;cursor:pointer;
+  background:var(--caja);border:1px solid var(--raya);color:var(--tinta);font:inherit}
+.elige button b{font-size:15px}
+.elige button small{font-size:12.5px;color:var(--suave);line-height:1.35}
+.elige button .ic{font-size:22px;line-height:1}
+.elige button.on{border-color:var(--viol);background:rgba(169,139,240,.16)}
+.elige button:focus-visible,.chip:focus-visible,.bt:focus-visible,a.bt:focus-visible,summary:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
+.paso{display:flex;align-items:center;gap:8px;margin:18px 0 8px;font-weight:700;font-size:15px}
+.paso i{font-style:normal;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--viol2);color:#fff;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:999px;cursor:pointer;font:inherit;font-size:14px;
+  background:var(--caja);border:1px solid var(--raya);color:var(--tinta);text-align:left}
+.chip.on{background:rgba(169,139,240,.22);border-color:var(--viol)}
+textarea,input{width:100%;font:inherit;font-size:16px;color:var(--tinta);background:rgba(0,0,0,.18);border:1px solid var(--raya);border-radius:12px;padding:12px}
+textarea{resize:vertical;min-height:128px}
+textarea:focus,input:focus{outline:2px solid var(--viol);outline-offset:1px;border-color:transparent}
+textarea::placeholder,input::placeholder{color:var(--tenue)}
+label{display:block;font-size:14px;font-weight:600;margin:12px 0 6px}
+.cuenta{display:block;text-align:right;font-size:12px;color:var(--tenue);margin-top:4px;font-variant-numeric:tabular-nums}
+.tip{font-size:13px;color:var(--tenue);margin:6px 0 0}
+.bt,a.bt{display:block;width:100%;margin-top:14px;padding:14px;border-radius:12px;border:0;cursor:pointer;background:var(--oro);color:#0B2A3A;
+  font:inherit;font-weight:800;text-align:center;text-decoration:none}
+.bt.sec{background:transparent;color:var(--tinta);border:1px solid var(--raya);font-weight:700}
+.bt:disabled{opacity:.6;cursor:default}
+.msg{min-height:20px;font-size:14px;margin:10px 0 0}
+.msg.mal{color:var(--mal)} .msg.ok{color:var(--bien)}
+.tarj{background:var(--caja);border:1px solid var(--raya);border-radius:16px;padding:18px;margin-top:16px}
+.ok{text-align:center}
+.ok .ic{display:inline-grid;place-items:center;width:56px;height:56px;border-radius:50%;background:rgba(111,208,140,.16);color:var(--bien);font-size:28px;font-weight:800}
+.num{font:800 26px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em;margin:8px 0;color:#fff;font-variant-numeric:tabular-nums}
+.grave{display:flex;gap:12px;align-items:flex-start;margin-top:18px;padding:14px;border-radius:14px;background:rgba(255,154,139,.08);border:1px solid rgba(255,154,139,.3)}
+.grave p{font-size:14px;margin:4px 0 0}
+.urg{font-size:13.5px;color:var(--suave);margin:12px 0 0}
+details{margin-top:18px;border-top:1px solid var(--raya);padding-top:12px}
+summary{cursor:pointer;font-weight:700;font-size:14.5px;color:var(--tinta)}
+.fila{display:flex;gap:8px;margin-top:10px}
+.fila input{text-transform:uppercase;letter-spacing:.08em}
+.fila .bt{width:auto;margin:0;padding:0 18px}
+.res{margin-top:10px;font-size:14px}
+.res b{color:#fff}
+.obra{margin-top:22px;font-size:12.5px;color:var(--tenue);letter-spacing:.04em;text-align:center}
+[hidden]{display:none!important}
+</style></head><body>
+<div class="caja">
+  <div class="marca">&#9670; OBRASST</div>
+  <div id="cuerpo">
+    <h1 id="abriendo">Abriendo el buzón…</h1>
+    <div class="giro"></div>
+  </div>
+  <div class="obra" id="pie"></div>
+</div>
+<script>
+(function(){
+  var SB='https://gwjjkknuiumgysezeatz.supabase.co', KEY='sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx';
+  /* el idioma del celular que escanea: castellano, y si está en inglés, portugués o francés, en ese.
+     Lo que se manda (el tema, el tipo) va siempre en castellano: así lo ve y lo filtra el supervisor. */
+  var L='es'; try{ L=String((navigator.languages && navigator.languages[0]) || navigator.language || 'es').slice(0,2).toLowerCase(); }catch(_l){}
+  var TX={
+    en:{'Buzón de la obra':'Site suggestion box','Abriendo el buzón…':'Opening the suggestion box…','Buzón de {0}':'{0} · suggestion box',
+      'Lo que escribas llega a la obra sin tu nombre. No necesitas instalar nada.':'What you write reaches the site without your name. You don’t need to install anything.',
+      'Sin tu nombre':'Without your name','Sin tu DNI':'Without your ID','Sin instalar nada':'Nothing to install',
+      'Una sugerencia o una queja':'A suggestion or a complaint','Para mejorar algo que ves en la obra.':'To improve something you see on site.',
+      'Una denuncia':'A report','Reservada: para lo que cuesta decir en voz alta.':'Confidential: for what is hard to say out loud.',
+      '¿De qué se trata?':'What is it about?','Cuéntalo con tus palabras':'Tell it in your own words',
+      'Di dónde y desde cuándo: así se arregla más rápido.':'Say where and since when: that way it gets fixed faster.',
+      'Mandarlo sin mi nombre':'Send it without my name','Mandando…':'Sending…',
+      'Escribe un poco más para que se entienda.':'Write a bit more so it can be understood.',
+      'Llegó al buzón':'It reached the box','Está en el buzón de tu obra, sin tu nombre. Gracias por decirlo: así es como se arreglan las cosas.':'It is in your site’s box, without your name. Thanks for saying it: that’s how things get fixed.',
+      'Escribir otra cosa':'Write something else',
+      '¿Es algo grave?':'Is it something serious?','Una represalia, acoso, o que te mandan a trabajar sin seguridad: usa la denuncia, que es más reservada.':'Retaliation, harassment, or being sent to work without safety: use a report, which is more confidential.',
+      'Hacer una denuncia':'Make a report',
+      'No te pide tu nombre ni tu DNI, y no guarda la hora: solo el día. La leen solo el dueño de la obra y quienes él elija, a la mañana siguiente, junto con las demás del día.':'It doesn’t ask for your name or ID, and it doesn’t save the time: only the day. Only the site owner and the people they choose read it, the next morning, together with the others from that day.',
+      '¿Alguien está en peligro ahora mismo? No esperes una respuesta: avisa en el frente o llama a emergencias.':'Is someone in danger right now? Don’t wait for an answer: warn people on site or call emergency services.',
+      '¿Qué quieres denunciar?':'What do you want to report?','Qué pasó, desde cuándo, y qué debería hacerse. No hace falta nombrar a nadie si no quieres.':'What happened, since when, and what should be done. You don’t need to name anyone if you don’t want to.',
+      '¿Dónde? (si quieres)':'Where? (optional)','Frente, piso o zona':'Front, floor or area',
+      'Un lugar muy preciso puede delatar quién lo vio. Pon solo lo necesario.':'A very precise place can reveal who saw it. Write only what’s needed.',
+      'Enviar la denuncia':'Send the report','Enviando…':'Sending…',
+      'Elige primero de qué se trata.':'First choose what it is about.','Cuéntalo con un poco más de detalle, para que se entienda.':'Tell it in a bit more detail, so it can be understood.',
+      'Enviada':'Sent','Llega a la obra mañana a las 7, junto con las demás del día.':'It reaches the site tomorrow at 7 am, together with the others from that day.',
+      'Tu número de seguimiento:':'Your tracking number:',
+      'Con él ves la respuesta, desde este o desde otro celular. No está ligado a tu nombre: si lo pierdes, nadie te lo puede volver a dar. Anótalo ahora.':'With it you can see the answer, from this phone or another. It isn’t linked to your name: if you lose it, nobody can give it back to you. Write it down now.',
+      'Copiar el número':'Copy the number','Copiado':'Copied','Listo, ya lo anoté':'Done, I wrote it down',
+      'Llegó la primera versión que mandaste, antes de que se cortara la señal; la corrección no.':'The first version you sent arrived before the signal dropped; the correction didn’t.',
+      '¿Ya hiciste una? Mira cómo va':'Already made one? See how it’s going','Ver':'See','Buscando…':'Searching…',
+      'Ese número no está. Revisa que esté bien escrito.':'That number isn’t there. Check that it’s written correctly.',
+      'Escribe el número completo: son doce letras y números.':'Write the full number: it’s twelve letters and numbers.',
+      'Enviada · todavía no la leen':'Sent · not read yet','Leída · la están revisando':'Read · being reviewed','Cerrada':'Closed','La respuesta:':'The answer:',
+      'Un riesgo que nadie ve':'A risk nobody sees','Una queja':'A complaint','Algo que se puede mejorar':'Something that could be better','Un EPP que falta':'Missing PPE',
+      'Una máquina o herramienta':'A machine or tool','Trato y convivencia':'How people are treated','Otra cosa':'Something else',
+      'Me mandan a trabajar sin seguridad':'I’m sent to work without safety','Represalia por reportar o por negarme a un trabajo peligroso':'Retaliation for reporting or refusing dangerous work',
+      'Acoso u hostigamiento sexual':'Sexual harassment','Maltrato, insultos o discriminación':'Mistreatment, insults or discrimination','Alcohol o drogas en la obra':'Alcohol or drugs on site',
+      'Esconden un accidente o un incidente':'An accident or incident is being hidden','Robo, coima o fraude':'Theft, bribery or fraud',
+      'Este cartel está incompleto':'This poster is incomplete','Al código QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.':'The QR code is missing its key. Ask your supervisor to print the poster again from OBRASST.',
+      'Este cartel ya no está activo':'This poster is no longer active','Pídele a tu supervisor el cartel nuevo del buzón: se imprime desde OBRASST, en «Los QR de tu obra».':'Ask your supervisor for the new suggestion box poster: it’s printed from OBRASST, under “Your site’s QR codes”.',
+      'Sin señal':'No signal','Necesitas datos o wifi para mandar. Lo que escribiste sigue aquí: inténtalo otra vez en un rato.':'You need data or wifi to send. What you wrote is still here: try again in a while.',
+      'Necesitas datos o wifi para abrir el buzón.':'You need data or wifi to open the box.','Intentar otra vez':'Try again',
+      'El buzón todavía no está activo en el servidor. Avísale a tu supervisor.':'The box isn’t active on the server yet. Tell your supervisor.',
+      'La obra recibió muchas en esta hora. Inténtalo en un rato.':'The site received many in this hour. Try again in a while.',
+      'No se pudo mandar. Inténtalo otra vez.':'It couldn’t be sent. Try again.'},
+    pt:{'Buzón de la obra':'Caixa de sugestões da obra','Abriendo el buzón…':'Abrindo a caixa de sugestões…','Buzón de {0}':'Caixa de sugestões · {0}',
+      'Lo que escribas llega a la obra sin tu nombre. No necesitas instalar nada.':'O que você escrever chega à obra sem o seu nome. Não precisa instalar nada.',
+      'Sin tu nombre':'Sem o seu nome','Sin tu DNI':'Sem o seu documento','Sin instalar nada':'Sem instalar nada',
+      'Una sugerencia o una queja':'Uma sugestão ou uma reclamação','Para mejorar algo que ves en la obra.':'Para melhorar algo que você vê na obra.',
+      'Una denuncia':'Uma denúncia','Reservada: para lo que cuesta decir en voz alta.':'Reservada: para o que é difícil dizer em voz alta.',
+      '¿De qué se trata?':'Do que se trata?','Cuéntalo con tus palabras':'Conte com as suas palavras',
+      'Di dónde y desde cuándo: así se arregla más rápido.':'Diga onde e desde quando: assim se resolve mais rápido.',
+      'Mandarlo sin mi nombre':'Enviar sem o meu nome','Mandando…':'Enviando…',
+      'Escribe un poco más para que se entienda.':'Escreva um pouco mais para que se entenda.',
+      'Llegó al buzón':'Chegou à caixa','Está en el buzón de tu obra, sin tu nombre. Gracias por decirlo: así es como se arreglan las cosas.':'Está na caixa da sua obra, sem o seu nome. Obrigado por dizer: é assim que as coisas se resolvem.',
+      'Escribir otra cosa':'Escrever outra coisa',
+      '¿Es algo grave?':'É algo grave?','Una represalia, acoso, o que te mandan a trabajar sin seguridad: usa la denuncia, que es más reservada.':'Uma represália, assédio, ou se mandam você trabalhar sem segurança: use a denúncia, que é mais reservada.',
+      'Hacer una denuncia':'Fazer uma denúncia',
+      'No te pide tu nombre ni tu DNI, y no guarda la hora: solo el día. La leen solo el dueño de la obra y quienes él elija, a la mañana siguiente, junto con las demás del día.':'Não pede o seu nome nem o seu documento, e não guarda a hora: só o dia. Só o dono da obra e quem ele escolher a leem, na manhã seguinte, junto com as demais do dia.',
+      '¿Alguien está en peligro ahora mismo? No esperes una respuesta: avisa en el frente o llama a emergencias.':'Alguém está em perigo agora? Não espere uma resposta: avise na frente de trabalho ou ligue para a emergência.',
+      '¿Qué quieres denunciar?':'O que você quer denunciar?','Qué pasó, desde cuándo, y qué debería hacerse. No hace falta nombrar a nadie si no quieres.':'O que aconteceu, desde quando, e o que deveria ser feito. Não precisa citar ninguém se não quiser.',
+      '¿Dónde? (si quieres)':'Onde? (se quiser)','Frente, piso o zona':'Frente, andar ou área',
+      'Un lugar muy preciso puede delatar quién lo vio. Pon solo lo necesario.':'Um lugar muito preciso pode revelar quem viu. Coloque só o necessário.',
+      'Enviar la denuncia':'Enviar a denúncia','Enviando…':'Enviando…',
+      'Elige primero de qué se trata.':'Escolha primeiro do que se trata.','Cuéntalo con un poco más de detalle, para que se entienda.':'Conte com um pouco mais de detalhe, para que se entenda.',
+      'Enviada':'Enviada','Llega a la obra mañana a las 7, junto con las demás del día.':'Chega à obra amanhã às 7, junto com as demais do dia.',
+      'Tu número de seguimiento:':'O seu número de acompanhamento:',
+      'Con él ves la respuesta, desde este o desde otro celular. No está ligado a tu nombre: si lo pierdes, nadie te lo puede volver a dar. Anótalo ahora.':'Com ele você vê a resposta, deste ou de outro celular. Não está ligado ao seu nome: se você o perder, ninguém pode dá-lo de novo. Anote agora.',
+      'Copiar el número':'Copiar o número','Copiado':'Copiado','Listo, ya lo anoté':'Pronto, já anotei',
+      'Llegó la primera versión que mandaste, antes de que se cortara la señal; la corrección no.':'Chegou a primeira versão que você enviou, antes de o sinal cair; a correção não.',
+      '¿Ya hiciste una? Mira cómo va':'Já fez uma? Veja como está','Ver':'Ver','Buscando…':'Buscando…',
+      'Ese número no está. Revisa que esté bien escrito.':'Esse número não existe. Confira se está bem escrito.',
+      'Escribe el número completo: son doce letras y números.':'Escreva o número completo: são doze letras e números.',
+      'Enviada · todavía no la leen':'Enviada · ainda não lida','Leída · la están revisando':'Lida · estão analisando','Cerrada':'Encerrada','La respuesta:':'A resposta:',
+      'Un riesgo que nadie ve':'Um risco que ninguém vê','Una queja':'Uma reclamação','Algo que se puede mejorar':'Algo que pode melhorar','Un EPP que falta':'Um EPI que falta',
+      'Una máquina o herramienta':'Uma máquina ou ferramenta','Trato y convivencia':'Tratamento e convivência','Otra cosa':'Outra coisa',
+      'Me mandan a trabajar sin seguridad':'Mandam-me trabalhar sem segurança','Represalia por reportar o por negarme a un trabajo peligroso':'Represália por reportar ou por recusar um trabalho perigoso',
+      'Acoso u hostigamiento sexual':'Assédio sexual','Maltrato, insultos o discriminación':'Maus-tratos, insultos ou discriminação','Alcohol o drogas en la obra':'Álcool ou drogas na obra',
+      'Esconden un accidente o un incidente':'Escondem um acidente ou um incidente','Robo, coima o fraude':'Roubo, suborno ou fraude',
+      'Este cartel está incompleto':'Este cartaz está incompleto','Al código QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.':'Falta a chave no código QR. Peça ao seu supervisor que imprima o cartaz de novo pelo OBRASST.',
+      'Este cartel ya no está activo':'Este cartaz não está mais ativo','Pídele a tu supervisor el cartel nuevo del buzón: se imprime desde OBRASST, en «Los QR de tu obra».':'Peça ao seu supervisor o cartaz novo da caixa de sugestões: ele é impresso pelo OBRASST, em «Os QR da sua obra».',
+      'Sin señal':'Sem sinal','Necesitas datos o wifi para mandar. Lo que escribiste sigue aquí: inténtalo otra vez en un rato.':'Você precisa de dados ou wi-fi para enviar. O que você escreveu continua aqui: tente de novo daqui a pouco.',
+      'Necesitas datos o wifi para abrir el buzón.':'Você precisa de dados ou wi-fi para abrir a caixa.','Intentar otra vez':'Tentar de novo',
+      'El buzón todavía no está activo en el servidor. Avísale a tu supervisor.':'A caixa ainda não está ativa no servidor. Avise o seu supervisor.',
+      'La obra recibió muchas en esta hora. Inténtalo en un rato.':'A obra recebeu muitas nesta hora. Tente daqui a pouco.',
+      'No se pudo mandar. Inténtalo otra vez.':'Não foi possível enviar. Tente de novo.'},
+    fr:{'Buzón de la obra':'Boîte à idées du chantier','Abriendo el buzón…':'Ouverture de la boîte à idées…','Buzón de {0}':'Boîte à idées · {0}',
+      'Lo que escribas llega a la obra sin tu nombre. No necesitas instalar nada.':'Ce que vous écrivez arrive au chantier sans votre nom. Rien à installer.',
+      'Sin tu nombre':'Sans votre nom','Sin tu DNI':'Sans votre pièce d’identité','Sin instalar nada':'Rien à installer',
+      'Una sugerencia o una queja':'Une suggestion ou une plainte','Para mejorar algo que ves en la obra.':'Pour améliorer quelque chose que vous voyez sur le chantier.',
+      'Una denuncia':'Un signalement','Reservada: para lo que cuesta decir en voz alta.':'Confidentiel : pour ce qui est difficile à dire à voix haute.',
+      '¿De qué se trata?':'De quoi s’agit-il ?','Cuéntalo con tus palabras':'Racontez-le avec vos mots',
+      'Di dónde y desde cuándo: así se arregla más rápido.':'Dites où et depuis quand : ainsi c’est réglé plus vite.',
+      'Mandarlo sin mi nombre':'L’envoyer sans mon nom','Mandando…':'Envoi…',
+      'Escribe un poco más para que se entienda.':'Écrivez un peu plus pour que ce soit compris.',
+      'Llegó al buzón':'C’est arrivé dans la boîte','Está en el buzón de tu obra, sin tu nombre. Gracias por decirlo: así es como se arreglan las cosas.':'C’est dans la boîte de votre chantier, sans votre nom. Merci de l’avoir dit : c’est ainsi que les choses s’arrangent.',
+      'Escribir otra cosa':'Écrire autre chose',
+      '¿Es algo grave?':'C’est grave ?','Una represalia, acoso, o que te mandan a trabajar sin seguridad: usa la denuncia, que es más reservada.':'Des représailles, du harcèlement, ou on vous envoie travailler sans sécurité : faites un signalement, plus confidentiel.',
+      'Hacer una denuncia':'Faire un signalement',
+      'No te pide tu nombre ni tu DNI, y no guarda la hora: solo el día. La leen solo el dueño de la obra y quienes él elija, a la mañana siguiente, junto con las demás del día.':'Il ne demande ni votre nom ni votre pièce d’identité, et ne garde pas l’heure : seulement le jour. Seuls le responsable du chantier et les personnes qu’il choisit le lisent, le lendemain matin, avec les autres du jour.',
+      '¿Alguien está en peligro ahora mismo? No esperes una respuesta: avisa en el frente o llama a emergencias.':'Quelqu’un est en danger en ce moment ? N’attendez pas de réponse : prévenez sur place ou appelez les secours.',
+      '¿Qué quieres denunciar?':'Que voulez-vous signaler ?','Qué pasó, desde cuándo, y qué debería hacerse. No hace falta nombrar a nadie si no quieres.':'Ce qui s’est passé, depuis quand, et ce qu’il faudrait faire. Inutile de nommer qui que ce soit si vous ne voulez pas.',
+      '¿Dónde? (si quieres)':'Où ? (facultatif)','Frente, piso o zona':'Front, étage ou zone',
+      'Un lugar muy preciso puede delatar quién lo vio. Pon solo lo necesario.':'Un lieu très précis peut révéler qui l’a vu. N’indiquez que le nécessaire.',
+      'Enviar la denuncia':'Envoyer le signalement','Enviando…':'Envoi…',
+      'Elige primero de qué se trata.':'Choisissez d’abord de quoi il s’agit.','Cuéntalo con un poco más de detalle, para que se entienda.':'Racontez avec un peu plus de détails, pour que ce soit compris.',
+      'Enviada':'Envoyé','Llega a la obra mañana a las 7, junto con las demás del día.':'Il arrive au chantier demain à 7 h, avec les autres du jour.',
+      'Tu número de seguimiento:':'Votre numéro de suivi :',
+      'Con él ves la respuesta, desde este o desde otro celular. No está ligado a tu nombre: si lo pierdes, nadie te lo puede volver a dar. Anótalo ahora.':'Avec lui, vous voyez la réponse, depuis ce téléphone ou un autre. Il n’est pas lié à votre nom : si vous le perdez, personne ne peut vous le redonner. Notez-le maintenant.',
+      'Copiar el número':'Copier le numéro','Copiado':'Copié','Listo, ya lo anoté':'C’est bon, je l’ai noté',
+      'Llegó la primera versión que mandaste, antes de que se cortara la señal; la corrección no.':'C’est la première version envoyée qui est arrivée, avant la coupure du réseau ; la correction non.',
+      '¿Ya hiciste una? Mira cómo va':'Vous en avez déjà fait un ? Voyez où il en est','Ver':'Voir','Buscando…':'Recherche…',
+      'Ese número no está. Revisa que esté bien escrito.':'Ce numéro n’existe pas. Vérifiez qu’il est bien écrit.',
+      'Escribe el número completo: son doce letras y números.':'Écrivez le numéro complet : douze lettres et chiffres.',
+      'Enviada · todavía no la leen':'Envoyé · pas encore lu','Leída · la están revisando':'Lu · en cours d’examen','Cerrada':'Clôturé','La respuesta:':'La réponse :',
+      'Un riesgo que nadie ve':'Un risque que personne ne voit','Una queja':'Une plainte','Algo que se puede mejorar':'Quelque chose à améliorer','Un EPP que falta':'Un EPI qui manque',
+      'Una máquina o herramienta':'Une machine ou un outil','Trato y convivencia':'Respect et vie commune','Otra cosa':'Autre chose',
+      'Me mandan a trabajar sin seguridad':'On m’envoie travailler sans sécurité','Represalia por reportar o por negarme a un trabajo peligroso':'Représailles pour avoir signalé ou refusé un travail dangereux',
+      'Acoso u hostigamiento sexual':'Harcèlement sexuel','Maltrato, insultos o discriminación':'Maltraitance, insultes ou discrimination','Alcohol o drogas en la obra':'Alcool ou drogue sur le chantier',
+      'Esconden un accidente o un incidente':'On cache un accident ou un incident','Robo, coima o fraude':'Vol, pot-de-vin ou fraude',
+      'Este cartel está incompleto':'Cette affiche est incomplète','Al código QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.':'Il manque la clé au code QR. Demandez à votre superviseur de réimprimer l’affiche depuis OBRASST.',
+      'Este cartel ya no está activo':'Cette affiche n’est plus active','Pídele a tu supervisor el cartel nuevo del buzón: se imprime desde OBRASST, en «Los QR de tu obra».':'Demandez à votre superviseur la nouvelle affiche de la boîte à idées : elle s’imprime depuis OBRASST, dans « Les QR de votre chantier ».',
+      'Sin señal':'Pas de réseau','Necesitas datos o wifi para mandar. Lo que escribiste sigue aquí: inténtalo otra vez en un rato.':'Il faut des données ou du wifi pour envoyer. Ce que vous avez écrit est toujours là : réessayez dans un moment.',
+      'Necesitas datos o wifi para abrir el buzón.':'Il faut des données ou du wifi pour ouvrir la boîte.','Intentar otra vez':'Réessayer',
+      'El buzón todavía no está activo en el servidor. Avísale a tu supervisor.':'La boîte n’est pas encore active sur le serveur. Prévenez votre superviseur.',
+      'La obra recibió muchas en esta hora. Inténtalo en un rato.':'Le chantier en a reçu beaucoup cette heure-ci. Réessayez dans un moment.',
+      'No se pudo mandar. Inténtalo otra vez.':'Impossible d’envoyer. Réessayez.'}
+  };
+  if(!TX[L]) L='es';
+  function t(s){ var v=TX[L] && TX[L][s]; v=(v===undefined) ? s : v; for(var i=1;i<arguments.length;i++) v=v.split('{'+(i-1)+'}').join(arguments[i]); return v; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function q(n){ try{ return new URLSearchParams(location.search).get(n)||''; }catch(e){ return ''; } }
+  try{ document.documentElement.lang=L; document.title=t('Buzón de la obra')+' · OBRASST'; }catch(_d){}
+  /* los mismos temas y tipos de la app (el texto en castellano es lo que se guarda) */
+  var TEMAS=[['Un riesgo que nadie ve','⚠️'],['Una queja','📣'],['Algo que se puede mejorar','💡'],['Un EPP que falta','🧤'],
+             ['Una máquina o herramienta','🛠️'],['Trato y convivencia','🤝'],['Otra cosa','✍️']];
+  var TIPOS=[['sin_seguridad','⛑️','Me mandan a trabajar sin seguridad'],['represalia','✋','Represalia por reportar o por negarme a un trabajo peligroso'],
+             ['hostigamiento','🚫','Acoso u hostigamiento sexual'],['maltrato','🗣️','Maltrato, insultos o discriminación'],
+             ['alcohol','🍺','Alcohol o drogas en la obra'],['ocultan','📋','Esconden un accidente o un incidente'],
+             ['fraude','💰','Robo, coima o fraude'],['otro','💬','Otra cosa']];
+  var EST={nueva:'Enviada · todavía no la leen', revision:'Leída · la están revisando', cerrada:'Cerrada'};
+  /* como el canal de denuncia de la app: con la llave pública, sin cookies, sin decir de qué página viene */
+  function rpc(fn, args){
+    var op={ method:'POST', credentials:'omit', cache:'no-store', referrerPolicy:'no-referrer',
+             headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'}, body:JSON.stringify(args||{}) };
+    try{ var ac=new AbortController(); setTimeout(function(){ try{ ac.abort(); }catch(_a){} }, 30000); op.signal=ac.signal; }catch(_e){}
+    return fetch(SB+'/rest/v1/rpc/'+fn, op).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); });
+  }
+  /* doce letras al azar, sin las que se confunden (I, O, 0, 1) */
+  function numero(){
+    var a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789', s='', b=new Uint8Array(12);
+    crypto.getRandomValues(b);
+    for(var i=0;i<12;i++) s+=a.charAt(b[i]%32);
+    return s;
+  }
+  function bonito(n){ n=String(n||'').toUpperCase().replace(/[^A-Z0-9]/g,''); return n.slice(0,4)+'-'+n.slice(4,8)+'-'+n.slice(8,12); }
+  var tk=q('t'), cuerpo=document.getElementById('cuerpo'), pie=document.getElementById('pie');
+  /* «listo» = la sugerencia llegó; «recien» = el número de la denuncia que acaba de llegar (se ve hasta «Listo, ya lo anoté») */
+  var E={ obra:'', modo:'sug', tema:'', tipo:'', txt:'', dtxt:'', lugar:'', num:'', texto1:'', listo:false, recien:'', primera:false, mandando:false };
+  document.getElementById('abriendo').textContent=t('Abriendo el buzón…');
+  function aviso(tit, txt, boton){
+    cuerpo.innerHTML='<h1>'+esc(tit)+'</h1><div class="tarj"><p style="margin:0">'+esc(txt)+'</p></div>'+
+      (boton ? '<button type="button" class="bt" id="b-otra">'+esc(t('Intentar otra vez'))+'</button>' : '');
+    var b=document.getElementById('b-otra'); if(b) b.onclick=abrir;
+  }
+  function msg(cl, s){ var m=document.getElementById('b-msg'); if(m){ m.className='msg'+(cl ? ' '+cl : ''); m.textContent=s||''; } }
+  function cab(){
+    return '<div class="cab"><h1>'+esc(E.obra ? t('Buzón de {0}', E.obra) : t('Buzón de la obra'))+'</h1>'+
+      '<p>'+esc(t('Lo que escribas llega a la obra sin tu nombre. No necesitas instalar nada.'))+'</p>'+
+      '<div class="sellos"><span class="sello">🙈 '+esc(t('Sin tu nombre'))+'</span><span class="sello">🪪 '+esc(t('Sin tu DNI'))+'</span>'+
+      '<span class="sello">📲 '+esc(t('Sin instalar nada'))+'</span></div></div>'+
+      '<div class="elige" role="tablist">'+
+      '<button type="button" role="tab" id="b-m-sug" aria-selected="'+(E.modo==='sug')+'" class="'+(E.modo==='sug' ? 'on' : '')+'"><span class="ic">💬</span><b>'+esc(t('Una sugerencia o una queja'))+'</b><small>'+esc(t('Para mejorar algo que ves en la obra.'))+'</small></button>'+
+      '<button type="button" role="tab" id="b-m-den" aria-selected="'+(E.modo==='den')+'" class="'+(E.modo==='den' ? 'on' : '')+'"><span class="ic">🛡️</span><b>'+esc(t('Una denuncia'))+'</b><small>'+esc(t('Reservada: para lo que cuesta decir en voz alta.'))+'</small></button></div>';
+  }
+  function pintar(){
+    var h=cab();
+    if(E.modo==='sug'){
+      if(E.listo){
+        h+='<div class="tarj ok" role="status"><div class="ic">✓</div><h2 style="margin-top:10px">'+esc(t('Llegó al buzón'))+'</h2>'+
+           '<p>'+esc(t('Está en el buzón de tu obra, sin tu nombre. Gracias por decirlo: así es como se arreglan las cosas.'))+'</p>'+
+           '<button type="button" class="bt sec" id="b-otra-sug">'+esc(t('Escribir otra cosa'))+'</button></div>';
+      } else {
+        h+='<div class="paso"><i>1</i><span>'+esc(t('¿De qué se trata?'))+'</span></div><div class="chips">'+
+          TEMAS.map(function(x, i){ return '<button type="button" class="chip'+(E.tema===x[0] ? ' on' : '')+'" aria-pressed="'+(E.tema===x[0])+'" data-tema="'+i+'"><span aria-hidden="true">'+x[1]+'</span><span>'+esc(t(x[0]))+'</span></button>'; }).join('')+'</div>'+
+          '<div class="paso"><i>2</i><span>'+esc(t('Cuéntalo con tus palabras'))+'</span></div>'+
+          '<textarea id="b-x" rows="5" maxlength="3000" aria-label="'+esc(t('Cuéntalo con tus palabras'))+'">'+esc(E.txt)+'</textarea>'+
+          '<span class="cuenta" id="b-n">'+E.txt.length+' / 3000</span>'+
+          '<p class="tip">'+esc(t('Di dónde y desde cuándo: así se arregla más rápido.'))+'</p>'+
+          '<div class="msg" id="b-msg" role="status"></div>'+
+          '<button type="button" class="bt" id="b-mandar">'+esc(t('Mandarlo sin mi nombre'))+'</button>'+
+          '<div class="grave"><span aria-hidden="true" style="font-size:22px">🛡️</span><div><b>'+esc(t('¿Es algo grave?'))+'</b>'+
+          '<p>'+esc(t('Una represalia, acoso, o que te mandan a trabajar sin seguridad: usa la denuncia, que es más reservada.'))+'</p>'+
+          '<button type="button" class="bt sec" id="b-ir-den" style="margin-top:10px">'+esc(t('Hacer una denuncia'))+'</button></div></div>';
+      }
+    } else {
+      if(E.recien){
+        h+='<div class="tarj ok" role="status"><div class="ic">✓</div><h2 style="margin-top:10px">'+esc(t('Enviada'))+'</h2>'+
+           '<p>'+esc(t('Llega a la obra mañana a las 7, junto con las demás del día.'))+'</p>'+
+           (E.primera ? '<p>'+esc(t('Llegó la primera versión que mandaste, antes de que se cortara la señal; la corrección no.'))+'</p>' : '')+
+           '<p style="margin-top:12px">'+esc(t('Tu número de seguimiento:'))+'</p><div class="num" id="b-num">'+esc(bonito(E.recien))+'</div>'+
+           '<p>'+esc(t('Con él ves la respuesta, desde este o desde otro celular. No está ligado a tu nombre: si lo pierdes, nadie te lo puede volver a dar. Anótalo ahora.'))+'</p>'+
+           '<button type="button" class="bt sec" id="b-copiar">'+esc(t('Copiar el número'))+'</button>'+
+           '<button type="button" class="bt" id="b-listo">'+esc(t('Listo, ya lo anoté'))+'</button></div>';
+      } else {
+        h+='<div class="tarj" style="margin-top:12px"><p style="margin:0">'+esc(t('No te pide tu nombre ni tu DNI, y no guarda la hora: solo el día. La leen solo el dueño de la obra y quienes él elija, a la mañana siguiente, junto con las demás del día.'))+'</p></div>'+
+          '<p class="urg">'+esc(t('¿Alguien está en peligro ahora mismo? No esperes una respuesta: avisa en el frente o llama a emergencias.'))+'</p>'+
+          '<div class="paso"><i>1</i><span>'+esc(t('¿Qué quieres denunciar?'))+'</span></div><div class="chips">'+
+          TIPOS.map(function(x){ return '<button type="button" class="chip'+(E.tipo===x[0] ? ' on' : '')+'" aria-pressed="'+(E.tipo===x[0])+'" data-tipo="'+x[0]+'"><span aria-hidden="true">'+x[1]+'</span><span>'+esc(t(x[2]))+'</span></button>'; }).join('')+'</div>'+
+          '<div class="paso"><i>2</i><span>'+esc(t('Cuéntalo con tus palabras'))+'</span></div>'+
+          '<textarea id="b-dx" rows="6" maxlength="3000" aria-label="'+esc(t('Cuéntalo con tus palabras'))+'" placeholder="'+esc(t('Qué pasó, desde cuándo, y qué debería hacerse. No hace falta nombrar a nadie si no quieres.'))+'">'+esc(E.dtxt)+'</textarea>'+
+          '<label for="b-lugar">'+esc(t('¿Dónde? (si quieres)'))+'</label>'+
+          '<input id="b-lugar" maxlength="120" autocomplete="off" placeholder="'+esc(t('Frente, piso o zona'))+'" value="'+esc(E.lugar)+'">'+
+          '<p class="tip">'+esc(t('Un lugar muy preciso puede delatar quién lo vio. Pon solo lo necesario.'))+'</p>'+
+          '<div class="msg" id="b-msg" role="status"></div>'+
+          '<button type="button" class="bt" id="b-enviar">'+esc(t('Enviar la denuncia'))+'</button>';
+      }
+      h+='<details id="b-seguir"><summary>'+esc(t('¿Ya hiciste una? Mira cómo va'))+'</summary>'+
+         '<div class="fila"><input id="b-num-otro" maxlength="16" autocomplete="off" placeholder="XXXX-XXXX-XXXX" aria-label="'+esc(t('Tu número de seguimiento:'))+'">'+
+         '<button type="button" class="bt" id="b-ver">'+esc(t('Ver'))+'</button></div><div class="res" id="b-res" role="status"></div></details>';
+    }
+    cuerpo.innerHTML=h;
+    atar();
+  }
+  function atar(){
+    function on(id, fn){ var e=document.getElementById(id); if(e) e.onclick=fn; }
+    on('b-m-sug', function(){ if(E.modo==='sug') return; E.modo='sug'; pintar(); });
+    on('b-m-den', function(){ if(E.modo==='den') return; E.modo='den'; pintar(); });
+    on('b-ir-den', function(){ E.modo='den'; pintar(); try{ window.scrollTo(0,0); }catch(_s){} });
+    on('b-otra-sug', function(){ E.listo=false; pintar(); });
+    on('b-mandar', mandar);
+    on('b-enviar', denunciar);
+    on('b-copiar', function(){
+      var n=bonito(E.recien), b=document.getElementById('b-copiar');
+      var fin=function(){ if(b) b.textContent=t('Copiado'); };
+      try{ navigator.clipboard.writeText(n).then(fin, function(){}); }catch(_c){}
+    });
+    on('b-listo', function(){ E.recien=''; E.primera=false; E.tipo=''; E.dtxt=''; E.lugar=''; pintar(); try{ window.scrollTo(0,0); }catch(_s){} });
+    on('b-ver', seguir);
+    [].forEach.call(cuerpo.querySelectorAll('[data-tema]'), function(b){
+      b.onclick=function(){
+        var x=TEMAS[+b.getAttribute('data-tema')][0]; E.tema=(E.tema===x) ? '' : x;
+        [].forEach.call(cuerpo.querySelectorAll('[data-tema]'), function(c){ var si=(TEMAS[+c.getAttribute('data-tema')][0]===E.tema); c.className='chip'+(si ? ' on' : ''); c.setAttribute('aria-pressed', String(si)); });
+        msg('', '');
+      };
+    });
+    [].forEach.call(cuerpo.querySelectorAll('[data-tipo]'), function(b){
+      b.onclick=function(){
+        E.tipo=b.getAttribute('data-tipo');
+        [].forEach.call(cuerpo.querySelectorAll('[data-tipo]'), function(c){ var si=(c.getAttribute('data-tipo')===E.tipo); c.className='chip'+(si ? ' on' : ''); c.setAttribute('aria-pressed', String(si)); });
+        msg('', '');
+      };
+    });
+    var x=document.getElementById('b-x');
+    if(x) x.oninput=function(){ E.txt=String(x.value||''); var n=document.getElementById('b-n'); if(n) n.textContent=E.txt.length+' / 3000'; msg('', ''); };
+    var dx=document.getElementById('b-dx'); if(dx) dx.oninput=function(){ E.dtxt=String(dx.value||''); msg('', ''); };
+    var lg=document.getElementById('b-lugar'); if(lg) lg.oninput=function(){ E.lugar=String(lg.value||''); };
+  }
+  function mandar(){
+    if(E.mandando) return;
+    var x=String(E.txt||'').trim(), b=document.getElementById('b-mandar');
+    if(x.length<8){ msg('mal', t('Escribe un poco más para que se entienda.')); return; }
+    E.mandando=true; if(b) b.disabled=true; msg('', t('Mandando…'));
+    rpc('sst_buzon_mandar', {p_t:tk, p_tema:E.tema||null, p_texto:x}).then(function(r){
+      E.mandando=false; if(b) b.disabled=false;
+      if(r && r.ok===true){ E.tema=''; E.txt=''; E.listo=true; pintar(); try{ window.scrollTo(0,0); }catch(_s){} return; }
+      var mo=r && r.motivo;
+      if(mo==='no_existe'){ aviso(t('Este cartel ya no está activo'), t('Pídele a tu supervisor el cartel nuevo del buzón: se imprime desde OBRASST, en «Los QR de tu obra».')); return; }
+      if(mo==='corto'){ msg('mal', t('Escribe un poco más para que se entienda.')); return; }
+      if(mo==='muy_seguido') { msg('mal', t('La obra recibió muchas en esta hora. Inténtalo en un rato.')); return; }
+      msg('mal', t('No se pudo mandar. Inténtalo otra vez.'));
+    }, function(err){
+      E.mandando=false; if(b) b.disabled=false;
+      msg('mal', err===404 ? t('El buzón todavía no está activo en el servidor. Avísale a tu supervisor.') : t('Necesitas datos o wifi para mandar. Lo que escribiste sigue aquí: inténtalo otra vez en un rato.'));
+    });
+  }
+  function denunciar(){
+    if(E.mandando) return;
+    var x=String(E.dtxt||'').trim(), lugar=String(E.lugar||'').trim(), b=document.getElementById('b-enviar');
+    if(!E.tipo){ msg('mal', t('Elige primero de qué se trata.')); return; }
+    if(x.length<10){ msg('mal', t('Cuéntalo con un poco más de detalle, para que se entienda.')); return; }
+    /* el número se elige una vez: si se corta la señal y se reintenta, va el mismo (y el servidor dice «ya está») */
+    if(!E.num){ E.num=numero(); E.texto1=x; }
+    var num=E.num;
+    E.mandando=true; if(b) b.disabled=true; msg('', t('Enviando…'));
+    rpc('sst_buzon_denunciar', {p_t:tk, p_tipo:E.tipo, p_texto:x, p_lugar:lugar||null, p_seguimiento:num}).then(function(r){
+      E.mandando=false; if(b) b.disabled=false;
+      var mo=r && r.motivo;
+      if((r && r.ok===true) || mo==='seguimiento_repetido'){
+        E.primera=(mo==='seguimiento_repetido' && E.texto1 && E.texto1!==x);
+        E.recien=num; E.num=''; E.texto1=''; pintar(); try{ window.scrollTo(0,0); }catch(_s){} return;
+      }
+      if(mo==='no_existe'){ aviso(t('Este cartel ya no está activo'), t('Pídele a tu supervisor el cartel nuevo del buzón: se imprime desde OBRASST, en «Los QR de tu obra».')); return; }
+      if(mo==='corto'){ msg('mal', t('Cuéntalo con un poco más de detalle, para que se entienda.')); return; }
+      if(mo==='muy_seguido'){ msg('mal', t('La obra recibió muchas en esta hora. Inténtalo en un rato.')); return; }
+      msg('mal', t('No se pudo mandar. Inténtalo otra vez.'));
+    }, function(err){
+      E.mandando=false; if(b) b.disabled=false;
+      msg('mal', err===404 ? t('El buzón todavía no está activo en el servidor. Avísale a tu supervisor.') : t('Necesitas datos o wifi para mandar. Lo que escribiste sigue aquí: inténtalo otra vez en un rato.'));
+    });
+  }
+  function seguir(){
+    var i=document.getElementById('b-num-otro'), res=document.getElementById('b-res');
+    var n=String((i && i.value) || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(!res) return;
+    if(n.length<12){ res.textContent=t('Escribe el número completo: son doce letras y números.'); return; }
+    res.textContent=t('Buscando…');
+    rpc('sst_denuncia_seguir', {p_seguimiento:n}).then(function(r){
+      if(!r || r.ok!==true){ res.textContent=t('Ese número no está. Revisa que esté bien escrito.'); return; }
+      res.innerHTML='<b>'+esc(t(EST[r.estado] || r.estado || ''))+'</b>'+(r.respuesta ? '<p style="margin:6px 0 0">'+esc(t('La respuesta:'))+' '+esc(r.respuesta)+'</p>' : '');
+    }, function(){ res.textContent=t('Necesitas datos o wifi para abrir el buzón.'); });
+  }
+  function abrir(){
+    if(!/^[A-Za-z0-9]{8,64}$/.test(tk)){ aviso(t('Este cartel está incompleto'), t('Al código QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.')); return; }
+    cuerpo.innerHTML='<h1>'+esc(t('Abriendo el buzón…'))+'</h1><div class="giro"></div>';
+    rpc('sst_buzon_abrir', {p_t:tk}).then(function(r){
+      if(r && r.ok===true){ E.obra=String(r.obra||''); pie.textContent=E.obra; pintar(); return; }
+      if(r && r.error==='no_existe'){ aviso(t('Este cartel ya no está activo'), t('Pídele a tu supervisor el cartel nuevo del buzón: se imprime desde OBRASST, en «Los QR de tu obra».')); return; }
+      aviso(t('Este cartel está incompleto'), t('Al código QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.'));
+    }, function(err){
+      if(err===404){ aviso(t('Buzón de la obra'), t('El buzón todavía no está activo en el servidor. Avísale a tu supervisor.')); return; }
+      aviso(t('Sin señal'), t('Necesitas datos o wifi para abrir el buzón.'), true);
+    });
+  }
+  abrir();
+})();
+</script>
+</body></html>
