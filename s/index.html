@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B2A3A">
+<link rel="icon" href="../icono-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>Verificar un acta · OBRASST</title>
+<style>
+/* 15/10/2026 · lote 12 · lo que abre el QR de un acta impresa (cadena-planes.js, cadVerifUrl): quien tiene el papel en la
+   mano comprueba, sin cuenta, que el acta existe, quién la emitió, a quién, cuándo, quién firmó (el papel, no el nombre)
+   y que su huella es la impresa. Nada de lo constatado: ni textos ni fotos (sst_sello_ver, sql/2026-11-20-actas-sellos.sql). */
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;
+  padding:24px 16px 32px;background:#0B2A3A;color:#EAF2F7;
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.caja{width:100%;max-width:460px}
+.marca{font-size:12px;letter-spacing:.18em;color:#F5B700;font-weight:800;margin-bottom:14px;text-align:center}
+h1{font-size:22px;margin:0 0 6px;line-height:1.25;text-wrap:balance;text-align:center}
+.sub{margin:0 0 14px;color:#A9C2D0;font-size:15px;text-align:center}
+.tarj{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:16px;margin-top:12px}
+label{display:block;font-size:13px;color:#A9C2D0;margin:0 0 6px}
+.fila{display:flex;gap:8px}
+input[type=text]{flex:1;min-width:0;padding:13px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.07);color:#fff;font:800 20px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.1em;text-transform:uppercase}
+input:focus{outline:2px solid #F5B700;outline-offset:1px}
+.btn{flex:0 0 auto;padding:13px 16px;border-radius:12px;border:0;background:#F5B700;color:#0B2A3A;font:inherit;font-size:16px;font-weight:800;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.msg{min-height:20px;margin:10px 0 0;color:#FF8A8E;font-size:14px}
+.giro{width:30px;height:30px;margin:18px auto 4px;border-radius:50%;border:3px solid rgba(255,255,255,.18);border-top-color:#F5B700;animation:g .8s linear infinite}
+@keyframes g{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.giro{animation-duration:2.4s}}
+.res{margin-top:14px;border-radius:16px;padding:16px;border:1px solid}
+.res.bien{background:rgba(47,191,113,.1);border-color:rgba(47,191,113,.55)}
+.res.ojo{background:rgba(245,183,0,.1);border-color:rgba(245,183,0,.6)}
+.res.mal{background:rgba(229,72,77,.1);border-color:rgba(229,72,77,.55)}
+.veredicto{display:flex;gap:12px;align-items:center}
+.veredicto .ic{flex:none;font-size:30px;line-height:1}
+.veredicto b{display:block;font-size:18px;line-height:1.25}
+.veredicto small{display:block;color:#C9DAE3;font-size:14px;margin-top:2px}
+.datos{margin:14px 0 0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px}
+.datos dt{color:#A9C2D0}
+.datos dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.firmas{margin:6px 0 0;padding:0;list-style:none;font-size:14.5px}
+.firmas li{padding:7px 0;border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.firmas li span{color:#A9C2D0}
+.huella{margin-top:14px;padding:12px;border-radius:12px;background:#fff;color:#0B2A3A}
+.huella small{display:block;font-size:12.5px;color:#3C5664;margin-bottom:6px}
+.huella code{display:block;font:700 15px/1.6 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;word-spacing:.2em;overflow-wrap:anywhere}
+.nota{font-size:12.5px;color:#7D97A6;text-align:center;margin-top:16px;line-height:1.45}
+</style></head><body>
+<div class="caja">
+  <div class="marca">&#9670; OBRASST</div>
+  <h1 id="tit">Verificar un acta</h1>
+  <p class="sub" id="sub">Escribe el código impreso en el acta, o escanea su QR.</p>
+  <form class="tarj" id="f" autocomplete="off">
+    <label for="cod" id="cod-l">Código del acta (10 letras y números)</label>
+    <div class="fila"><input type="text" id="cod" maxlength="14" inputmode="text" autocapitalize="characters" spellcheck="false"><button class="btn" id="ver" type="submit">Verificar</button></div>
+    <p class="msg" id="msg" role="alert"></p>
+  </form>
+  <div id="res" aria-live="polite"></div>
+  <p class="nota" id="nota">Esta página confirma que el acta existe en OBRASST y que lo registrado no cambió desde que se selló. No muestra lo constatado ni los nombres de nadie: eso lo tienen las empresas.</p>
+</div>
+<script>
+(function(){
+  var SB='https://gwjjkknuiumgysezeatz.supabase.co', KEY='sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx';
+  /* el idioma del celular: castellano, y si está en inglés, portugués o francés, en ese. Los nombres de las empresas van
+     como se escribieron. */
+  var L='es'; try{ L=String((navigator.languages && navigator.languages[0]) || navigator.language || 'es').slice(0,2).toLowerCase(); }catch(_l){}
+  var TX={
+    en:{'Verificar un acta':'Verify minutes','Escribe el código impreso en el acta, o escanea su QR.':'Enter the code printed on the minutes, or scan their QR.',
+      'Código del acta (10 letras y números)':'Minutes code (10 letters and numbers)','Verificar':'Verify','Verificando…':'Verifying…',
+      'Esta página confirma que el acta existe en OBRASST y que lo registrado no cambió desde que se selló. No muestra lo constatado ni los nombres de nadie: eso lo tienen las empresas.':'This page confirms that the minutes exist in OBRASST and that what was recorded has not changed since it was sealed. It does not show what was found or anyone\'s name: the companies have that.',
+      'Revisa el código: son 10 letras y números.':'Check the code: it is 10 letters and numbers.',
+      'No hay ningún acta con ese código.':'There are no minutes with that code.','Revisa que esté bien escrito, letra por letra.':'Check that it is written correctly, letter by letter.',
+      'Demasiadas consultas seguidas.':'Too many checks in a row.','Espera un minuto e inténtalo otra vez.':'Wait a minute and try again.',
+      'No se pudo consultar.':'The check could not be done.','Revisa tu conexión e inténtalo otra vez.':'Check your connection and try again.',
+      'El acta es auténtica':'The minutes are authentic','Existe en OBRASST y no cambió desde que se selló.':'They exist in OBRASST and have not changed since they were sealed.',
+      'Lo registrado no coincide con su sello':'What is recorded does not match its seal','Algo cambió después de sellarse. No la des por buena sin consultarlo con quien la emitió.':'Something changed after it was sealed. Do not accept it without checking with whoever issued it.',
+      'La cadena de sellos está rota cerca de esta acta':'The seal chain is broken near these minutes','El acta coincide con su sello, pero un registro cercano de esa empresa cambió. Consúltalo con quien la emitió.':'The minutes match their seal, but a nearby record of that company changed. Check with whoever issued them.',
+      'Acta de supervisión':'Supervision minutes','Acta de fiscalización':'Oversight minutes','Emitida por':'Issued by','A':'To','Fecha':'Date','Estado':'Status',
+      'Firmada':'Signed','Falta la firma del representante':'The representative\'s signature is missing','El representante se negó a firmar (firmó un testigo)':'The representative refused to sign (a witness signed)',
+      'Firmas':'Signatures','Inspector':'Inspector','Representante':'Representative','Testigo':'Witness','se negó a firmar':'refused to sign',
+      'Huella SHA-256 del contenido':'SHA-256 fingerprint of the content','Compárala con la impresa en el acta: tiene que ser igual, de principio a fin.':'Compare it with the one printed on the minutes: it must be identical, from start to finish.',
+      'Sello n.º {0} · {1}':'Seal no. {0} · {1}','La cadena de sellos alrededor está entera.':'The seal chain around it is intact.'},
+    pt:{'Verificar un acta':'Verificar uma ata','Escribe el código impreso en el acta, o escanea su QR.':'Escreva o código impresso na ata, ou escaneie o QR.',
+      'Código del acta (10 letras y números)':'Código da ata (10 letras e números)','Verificar':'Verificar','Verificando…':'Verificando…',
+      'Esta página confirma que el acta existe en OBRASST y que lo registrado no cambió desde que se selló. No muestra lo constatado ni los nombres de nadie: eso lo tienen las empresas.':'Esta página confirma que a ata existe no OBRASST e que o registrado não mudou desde que foi selado. Não mostra o que foi constatado nem o nome de ninguém: isso fica com as empresas.',
+      'Revisa el código: son 10 letras y números.':'Confira o código: são 10 letras e números.',
+      'No hay ningún acta con ese código.':'Não há nenhuma ata com esse código.','Revisa que esté bien escrito, letra por letra.':'Confira se está bem escrito, letra por letra.',
+      'Demasiadas consultas seguidas.':'Consultas demais seguidas.','Espera un minuto e inténtalo otra vez.':'Espere um minuto e tente de novo.',
+      'No se pudo consultar.':'Não foi possível consultar.','Revisa tu conexión e inténtalo otra vez.':'Confira a sua conexão e tente de novo.',
+      'El acta es auténtica':'A ata é autêntica','Existe en OBRASST y no cambió desde que se selló.':'Existe no OBRASST e não mudou desde que foi selada.',
+      'Lo registrado no coincide con su sello':'O registrado não coincide com o selo','Algo cambió después de sellarse. No la des por buena sin consultarlo con quien la emitió.':'Algo mudou depois de selada. Não a dê por boa sem consultar quem a emitiu.',
+      'La cadena de sellos está rota cerca de esta acta':'A cadeia de selos está quebrada perto desta ata','El acta coincide con su sello, pero un registro cercano de esa empresa cambió. Consúltalo con quien la emitió.':'A ata coincide com o selo, mas um registro próximo dessa empresa mudou. Consulte quem a emitiu.',
+      'Acta de supervisión':'Ata de supervisão','Acta de fiscalización':'Ata de fiscalização','Emitida por':'Emitida por','A':'Para','Fecha':'Data','Estado':'Situação',
+      'Firmada':'Assinada','Falta la firma del representante':'Falta a assinatura do representante','El representante se negó a firmar (firmó un testigo)':'O representante se recusou a assinar (uma testemunha assinou)',
+      'Firmas':'Assinaturas','Inspector':'Inspetor','Representante':'Representante','Testigo':'Testemunha','se negó a firmar':'recusou-se a assinar',
+      'Huella SHA-256 del contenido':'Impressão SHA-256 do conteúdo','Compárala con la impresa en el acta: tiene que ser igual, de principio a fin.':'Compare com a impressa na ata: tem que ser igual, do começo ao fim.',
+      'Sello n.º {0} · {1}':'Selo n.º {0} · {1}','La cadena de sellos alrededor está entera.':'A cadeia de selos ao redor está inteira.'},
+    fr:{'Verificar un acta':'Vérifier un procès-verbal','Escribe el código impreso en el acta, o escanea su QR.':'Saisissez le code imprimé sur le procès-verbal, ou scannez son QR.',
+      'Código del acta (10 letras y números)':'Code du procès-verbal (10 lettres et chiffres)','Verificar':'Vérifier','Verificando…':'Vérification…',
+      'Esta página confirma que el acta existe en OBRASST y que lo registrado no cambió desde que se selló. No muestra lo constatado ni los nombres de nadie: eso lo tienen las empresas.':'Cette page confirme que le procès-verbal existe dans OBRASST et que ce qui a été enregistré n’a pas changé depuis son scellement. Elle ne montre ni les constats ni le nom de personne : ce sont les entreprises qui les ont.',
+      'Revisa el código: son 10 letras y números.':'Vérifiez le code : 10 lettres et chiffres.',
+      'No hay ningún acta con ese código.':'Aucun procès-verbal ne porte ce code.','Revisa que esté bien escrito, letra por letra.':'Vérifiez qu’il est bien écrit, lettre par lettre.',
+      'Demasiadas consultas seguidas.':'Trop de vérifications à la suite.','Espera un minuto e inténtalo otra vez.':'Attendez une minute et réessayez.',
+      'No se pudo consultar.':'La vérification n’a pas pu se faire.','Revisa tu conexión e inténtalo otra vez.':'Vérifiez votre connexion et réessayez.',
+      'El acta es auténtica':'Le procès-verbal est authentique','Existe en OBRASST y no cambió desde que se selló.':'Il existe dans OBRASST et n’a pas changé depuis son scellement.',
+      'Lo registrado no coincide con su sello':'L’enregistrement ne correspond pas à son sceau','Algo cambió después de sellarse. No la des por buena sin consultarlo con quien la emitió.':'Quelque chose a changé après le scellement. Ne le tenez pas pour valable sans consulter celui qui l’a émis.',
+      'La cadena de sellos está rota cerca de esta acta':'La chaîne de sceaux est rompue près de ce procès-verbal','El acta coincide con su sello, pero un registro cercano de esa empresa cambió. Consúltalo con quien la emitió.':'Le procès-verbal correspond à son sceau, mais un enregistrement proche de cette entreprise a changé. Consultez celui qui l’a émis.',
+      'Acta de supervisión':'Procès-verbal de supervision','Acta de fiscalización':'Procès-verbal de contrôle','Emitida por':'Émis par','A':'À','Fecha':'Date','Estado':'État',
+      'Firmada':'Signé','Falta la firma del representante':'Il manque la signature du représentant','El representante se negó a firmar (firmó un testigo)':'Le représentant a refusé de signer (un témoin a signé)',
+      'Firmas':'Signatures','Inspector':'Inspecteur','Representante':'Représentant','Testigo':'Témoin','se negó a firmar':'a refusé de signer',
+      'Huella SHA-256 del contenido':'Empreinte SHA-256 du contenu','Compárala con la impresa en el acta: tiene que ser igual, de principio a fin.':'Comparez-la avec celle imprimée sur le procès-verbal : elle doit être identique, du début à la fin.',
+      'Sello n.º {0} · {1}':'Sceau n° {0} · {1}','La cadena de sellos alrededor está entera.':'La chaîne de sceaux autour est intacte.'}
+  };
+  function t(s){ var d=TX[L], v=d && d[s]; v=(v===undefined) ? s : v; for(var i=1;i<arguments.length;i++) v=v.split('{'+(i-1)+'}').join(arguments[i]); return v; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function $(i){ return document.getElementById(i); }
+  function dos(n){ return (n<10?'0':'')+n; }
+  function fechaYmd(s){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||'')); return m ? m[3]+'/'+m[2]+'/'+m[1] : ''; }
+  function cuando(iso){ var d=new Date(iso); return isNaN(d) ? '' : dos(d.getDate())+'/'+dos(d.getMonth()+1)+'/'+d.getFullYear()+' '+dos(d.getHours())+':'+dos(d.getMinutes()); }
+  function limpio(s){ return String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+  /* la página, en su idioma */
+  try{ document.documentElement.lang = TX[L] ? L : 'es'; }catch(_g){}
+  if(TX[L]){ document.title = t('Verificar un acta')+' · OBRASST';
+    [['tit','Verificar un acta'],['sub','Escribe el código impreso en el acta, o escanea su QR.'],['cod-l','Código del acta (10 letras y números)'],['ver','Verificar'],
+     ['nota','Esta página confirma que el acta existe en OBRASST y que lo registrado no cambió desde que se selló. No muestra lo constatado ni los nombres de nadie: eso lo tienen las empresas.']]
+      .forEach(function(x){ $(x[0]).textContent = t(x[1]); }); }
+
+  function rpc(fn, body){
+    return fetch(SB+'/rest/v1/rpc/'+fn, { method:'POST', credentials:'omit',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'}, body:JSON.stringify(body) })
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); });
+  }
+  var yendo=false;
+  function malo(titulo, texto){
+    $('res').innerHTML='<div class="res mal"><div class="veredicto"><span class="ic" aria-hidden="true">✖</span><span><b>'+esc(t(titulo))+'</b><small>'+esc(t(texto))+'</small></span></div></div>';
+  }
+  function pintar(j){
+    var bien = j.coincide === true && j.cadena !== false, roto = j.coincide === true && j.cadena === false;
+    var h='<div class="res '+(bien?'bien':'ojo')+'" id="res-'+(bien?'bien':(roto?'cadena':'cambio'))+'"><div class="veredicto"><span class="ic" aria-hidden="true">'+(bien?'✅':'⚠️')+'</span><span>';
+    if(bien) h+='<b>'+esc(t('El acta es auténtica'))+'</b><small>'+esc(t('Existe en OBRASST y no cambió desde que se selló.'))+'</small>';
+    else if(roto) h+='<b>'+esc(t('La cadena de sellos está rota cerca de esta acta'))+'</b><small>'+esc(t('El acta coincide con su sello, pero un registro cercano de esa empresa cambió. Consúltalo con quien la emitió.'))+'</small>';
+    else h+='<b>'+esc(t('Lo registrado no coincide con su sello'))+'</b><small>'+esc(t('Algo cambió después de sellarse. No la des por buena sin consultarlo con quien la emitió.'))+'</small>';
+    h+='</span></div>';
+    var est = j.estado==='firmada' ? 'Firmada' : (j.estado==='negada' ? 'El representante se negó a firmar (firmó un testigo)' : 'Falta la firma del representante');
+    h+='<dl class="datos"><dt>'+esc(t(j.tipo==='fiscalizacion'?'Acta de fiscalización':'Acta de supervisión'))+'</dt><dd id="res-n">'+esc(j.n||'')+'</dd>'+
+       '<dt>'+esc(t('Emitida por'))+'</dt><dd>'+esc(j.emisor||'—')+'</dd>'+
+       '<dt>'+esc(t('A'))+'</dt><dd>'+esc(j.empresa||'—')+'</dd>'+
+       '<dt>'+esc(t('Fecha'))+'</dt><dd>'+esc(fechaYmd(j.fecha)+(j.hora?' · '+j.hora:''))+'</dd>'+
+       '<dt>'+esc(t('Estado'))+'</dt><dd id="res-estado">'+esc(t(est))+'</dd></dl>';
+    var F=j.firmas||[];
+    if(F.length){
+      h+='<dl class="datos"><dt>'+esc(t('Firmas'))+'</dt><dd></dd></dl><ul class="firmas">'+F.map(function(f){
+        var rol={inspector:'Inspector',representante:'Representante',testigo:'Testigo'}[f.rol]||f.rol;
+        return '<li><b>'+esc(t(rol))+'</b><span>'+(f.negada ? esc(t('se negó a firmar')) : esc(cuando(f.t)))+'</span></li>'; }).join('')+'</ul>';
+    }
+    if(j.huella){
+      var g=String(j.huella).match(/.{1,4}/g)||[];
+      h+='<div class="huella"><small>'+esc(t('Huella SHA-256 del contenido'))+'</small><code id="res-huella">'+esc(g.join(' '))+'</code><small style="margin:8px 0 0">'+esc(t('Compárala con la impresa en el acta: tiene que ser igual, de principio a fin.'))+'</small></div>';
+    }
+    if(j.sello) h+='<p class="sub" style="margin:12px 0 0;font-size:13.5px">'+esc(t('Sello n.º {0} · {1}', j.sello.n, cuando(j.sello.cuando)))+(j.cadena===true ? '<br>'+esc(t('La cadena de sellos alrededor está entera.')) : '')+'</p>';
+    $('res').innerHTML=h+'</div>';
+  }
+  function verificar(){
+    if(yendo) return;
+    var c=limpio($('cod').value); $('cod').value=c; $('msg').textContent='';
+    if(!/^[A-Z2-9]{10}$/.test(c)){ $('msg').textContent=t('Revisa el código: son 10 letras y números.'); $('res').innerHTML=''; return; }
+    yendo=true; $('ver').disabled=true; $('ver').textContent=t('Verificando…'); $('res').innerHTML='<div class="giro"></div>';
+    try{ var u=new URL(location.href); u.searchParams.set('c', c); history.replaceState(null, '', u.toString()); }catch(_u){}
+    rpc('sst_sello_ver', { p_codigo:c }).then(function(j){
+      if(j && j.ok) pintar(j);
+      else if(j && j.motivo==='muy_seguido') malo('Demasiadas consultas seguidas.', 'Espera un minuto e inténtalo otra vez.');
+      else malo('No hay ningún acta con ese código.', 'Revisa que esté bien escrito, letra por letra.');
+    }, function(){ malo('No se pudo consultar.', 'Revisa tu conexión e inténtalo otra vez.'); })
+    .then(function(){ yendo=false; $('ver').disabled=false; $('ver').textContent=t('Verificar'); });
+  }
+  $('f').addEventListener('submit', function(e){ e.preventDefault(); verificar(); });
+  var c0=''; try{ c0=limpio(new URL(location.href).searchParams.get('c')||''); }catch(_c){}
+  if(c0){ $('cod').value=c0; verificar(); } else { try{ $('cod').focus(); }catch(_f){} }
+})();
+</script>
+</body></html>
