@@ -359,6 +359,10 @@ var DO_FRASES = [
    'El hostigamiento sexual tiene su propio procedimiento. Pásala sin demora a quien lleva estos casos en tu empresa.'],
   /* EPP: la declaración del kardex y la amonestación */
   ['Conforme al D.S. N° 005-2012-TR.', 'Conforme al Decreto 522-06 (arts. 5.1.3 y 7.9).'],
+  /* 15/10/2026 · la Torre de control (app y web), registro de accidentes: el mismo par verificado del art. 33 (DO_ARTS);
+     en los otros países la frase se va entera (antes quedaba «Lo que exige el.») */
+  ['Lo que exige el D.S. 005-2012-TR, art. 33. Sin medidas correctivas escritas, la investigación está a medias.',
+   'Lo que exige el Decreto 522-06, arts. 6.1.3 y 9.6. Sin medidas correctivas escritas, la investigación está a medias.'],
   ['Conforme al D.S. Nº 005-2012-TR.', 'Conforme al Decreto 522-06 (arts. 5.1.3 y 7.9).'],
   /* el comité */
   ['Una ordinaria al mes, en día fijado', 'Por lo menos una reunión al mes'],
@@ -901,6 +905,8 @@ function _otFrases(p){
       'Una represalia por parar un trabajo ante un peligro inminente, o por reportar, hay que pararla y corregirla.',
     'Conforme al D.S. N° 005-2012-TR.': '',
     'Conforme al D.S. Nº 005-2012-TR.': '',
+    'Lo que exige el D.S. 005-2012-TR, art. 33. Sin medidas correctivas escritas, la investigación está a medias.':
+      'Sin medidas correctivas escritas, la investigación está a medias.',
     'Este PDF es para imprimirlo y pegarlo en el libro legalizado, o para mandarlo entero.': 'Este PDF junta todas las actas.',
     'El Libro de Actas': 'Las actas del comité',
     'Descargar el Libro de Actas': 'Descargar las actas de',

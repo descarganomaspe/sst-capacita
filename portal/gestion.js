@@ -3079,10 +3079,13 @@ function simPintar(){
   }
   if(nac.length) h+='<div class="tarj" id="sim-nac"><div class="tarj-cab"><div><h2>Simulacros nacionales que vienen</h2><p class="sub">Los convoca INDECI. Tócalo para dejarlo programado.</p></div></div><div class="tarj-cuerpo"><div class="chips">'+
     nac.map(function(x){ return '<button type="button" class="chip" data-nac="'+esc(x.iso)+'">🚨 '+esc(x.n)+' <i>'+esc(fechaLarga(x.iso))+(x.hora ? ' · '+esc(x.hora) : '')+'</i></button>'; }).join('')+'</div></div></div>';
+  /* 14/10/2026 · la alarma de simulacro en los celulares (portal/campo.js) */
+  h+='<div class="tarj" id="alrw"></div>';
   h+='<div class="tarj" id="t-sim"></div>';
   var est=$('t-sim') ? $('t-sim')._est : null;
   caja.innerHTML=h;
   if(est) $('t-sim')._est=est;
+  if(typeof campoIr==='function') campoIr('alrwVista', $('alrw'));
   Array.prototype.forEach.call(caja.querySelectorAll('[data-nac]'), function(b){ b.onclick=function(){
     var iso=b.getAttribute('data-nac'), x=nac.filter(function(y){ return y.iso===iso; })[0]; if(!x) return;
     simForm(null, { estado:'programado', tipo:'multi', fecha:x.iso, hora:x.hora||'10:00', escenario:x.n, nac:x.iso });

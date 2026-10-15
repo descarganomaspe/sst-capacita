@@ -2320,7 +2320,11 @@ var CARTEL_W = 1240, CARTEL_H = 1754;
 var CARTEL_DISENOS = [
   {k:'clasico', n:'Clásico', d:'Blanco y sobrio, con el título en una franja oscura.'},
   {k:'senal',   n:'Señal',   d:'Como las señales de seguridad: azul para los documentos, verde para las emergencias.'},
-  {k:'obra',    n:'Obra',    d:'Amarillo y negro, de alta visibilidad: se ve de lejos.'}
+  {k:'obra',    n:'Obra',    d:'Amarillo y negro, de alta visibilidad: se ve de lejos.'},
+  /* 14/10/2026 · Marcelo, con la foto del «buzón virtual» de otra obra: «para que no sea solamente un QR vacío»:
+     el cartel dice qué es y cómo se usa, en A4 vertical u horizontal (la orientación va en el mismo valor:
+     «explica» o «explica-h»; una app de antes lee «explica-h» como el primero, el clásico) */
+  {k:'explica', n:'Explicado', d:'Dice qué es y cómo se usa, en tres pasos. En A4 vertical u horizontal.'}
 ];
 /* el nombre completo de cada cartel (en el Perú; afuera va solo el título) */
 var CARTEL_LARGO = {
@@ -2337,10 +2341,53 @@ var CARTEL_LARGO = {
   organigrama:'Quién es quién en la obra',
   comite:'Comité de Seguridad y Salud en el Trabajo',
   brigadistas:'Las brigadas de emergencia de la obra',
-  contactos:'Los teléfonos para llamar en una emergencia'
+  contactos:'Los teléfonos para llamar en una emergencia',
+  /* 14/10/2026 · el periódico mural (mural.js): todos los carteles en uno */
+  mural:'Los documentos de la obra, en un solo lugar',
+  /* 14/10/2026 · el tareo con el celular de cada uno (tareo-cel.js): el cartel de la puerta */
+  tareo:'Con tu celular, al llegar y al irte'
 };
 var CARTEL_VERDE = { emergencia:1, brigadistas:1, contactos:1 };
-function cartelDiseno(k){ var r=CARTEL_DISENOS[0]; CARTEL_DISENOS.forEach(function(d){ if(d.k===k) r=d; }); return r; }
+/* 14/10/2026 · el buzón de sugerencias y denuncias (su QR abre la página b/, no un documento) */
+var CARTEL_VIOLETA = { buzon:1 };
+/* 14/10/2026 · el periódico mural (su QR abre la página m/: la pizarra con los archivos de los carteles) */
+var CARTEL_TURQUESA = { mural:1 };
+/* 14/10/2026 · el tareo (su QR se lee desde la app, con la ubicación: solo vale en la puerta) */
+var CARTEL_NARANJA = { tareo:1 };
+/* qué es cada cartel, para el diseño «Explicado» (sin citar normas: dice para qué sirve) */
+var CARTEL_QUE = {
+  risst:'Las reglas de seguridad de la obra: tus derechos, tus obligaciones y lo que no está permitido.',
+  pets:'Los pasos para hacer cada trabajo de riesgo de forma segura.',
+  iperc:'Los peligros de cada tarea, qué tan riesgosos son y cómo se controlan.',
+  msds:'Los peligros de cada producto químico de la obra, cómo usarlo y qué hacer si hay un derrame o te salpica.',
+  plan:'Lo que la obra hará este año por tu seguridad y tu salud: capacitaciones, inspecciones y simulacros.',
+  objetivos:'Las metas de seguridad y salud de este año y cómo se miden.',
+  mapa:'Dónde están los peligros de la obra y cómo están señalizados.',
+  emergencia:'Qué hacer y a dónde ir si hay un sismo, un incendio o un accidente.',
+  politica:'El compromiso de la empresa con tu seguridad y tu salud.',
+  hostigamiento:'Cómo se previene y se sanciona el hostigamiento sexual, y a quién acudir.',
+  organigrama:'Quién es quién en la obra y a quién reportarle.',
+  comite:'Quiénes velan por la seguridad y la salud de todos en la obra, y cómo buscarlos.',
+  brigadistas:'Quiénes te ayudan en una emergencia: primeros auxilios, incendios y evacuación.',
+  contactos:'A quién llamar en una emergencia: bomberos, ambulancia, policía y la obra.',
+  buzon:'Para sugerir una mejora, dar una queja o hacer una denuncia. Llega a la obra sin tu nombre.',
+  mural:'Los documentos de la obra en un solo lugar: la política, el reglamento, los procedimientos y lo que publique tu supervisor.',
+  tareo:'Para marcar tu entrada y tu salida con tu celular. Tus horas salen solas, sin depender de nadie.',
+  _propio:'Un documento de la obra. Escanéalo para ver siempre la versión vigente.'
+};
+var CARTEL_PASOS = {
+  doc:['Abre la cámara de tu celular', 'Apunta al código QR', 'Toca el enlace que aparece'],
+  buzon:['Abre la cámara de tu celular', 'Apunta al código QR', 'Toca el enlace y escríbelo'],
+  mural:['Abre la cámara de tu celular', 'Apunta al código QR', 'Toca el enlace y mira el mural'],
+  tareo:['Abre OBRASST y toca «Marcar entrada o salida»', 'Apunta al código QR', 'Deja que vea tu ubicación']
+};
+/* lo que va debajo del QR */
+var CARTEL_PIE = { doc:'Siempre abre la versión vigente.', buzon:'Llega a la obra sin tu nombre.', mural:'Siempre con lo vigente.', tareo:'Solo vale junto a la puerta.' };
+function cartelDiseno(k){ var b=String(k||'').replace(/-h$/, ''), r=CARTEL_DISENOS[0]; CARTEL_DISENOS.forEach(function(d){ if(d.k===b) r=d; }); return r; }
+/* solo el «Explicado» tiene versión horizontal */
+function cartelHorizontal(k){ return String(k||'') === 'explica-h'; }
+function cartelValorDiseno(k, horizontal){ var d=cartelDiseno(k).k; return (d==='explica' && horizontal) ? 'explica-h' : d; }
+function cartelColor(hoja){ return CARTEL_VIOLETA[hoja] ? '#6A3FB5' : (CARTEL_TURQUESA[hoja] ? '#0E7C86' : (CARTEL_NARANJA[hoja] ? '#B4540A' : (CARTEL_VERDE[hoja] ? '#1B7F3B' : '#1554B3'))); }
 
 /* ── lo de siempre ── */
 function _cqCaja(g, x, y, w, h, r){
@@ -2417,6 +2464,65 @@ function _cqIconoCel(g, cx, cy, s, color){
   g.fillStyle=color; var q=s*0.09, qx=cx-q*1.5, qy=cy-q*1.2;
   [[0,0],[2,0],[0,2],[1,1],[2,2]].forEach(function(p){ g.fillRect(qx+p[0]*q, qy+p[1]*q, q*0.9, q*0.9); });
 }
+/* 14/10/2026 · un QR chiquito (los tres cuadros de las esquinas y unos puntos), un globo de diálogo y el número de un paso */
+function _cqIconoQR(g, cx, cy, s, color){
+  var m=s/7, x0=cx-s/2, y0=cy-s/2;
+  function ojo(x, y){ g.fillStyle=color; g.fillRect(x, y, m*3, m*3); g.fillStyle='#ffffff'; g.fillRect(x+m*0.7, y+m*0.7, m*1.6, m*1.6); g.fillStyle=color; g.fillRect(x+m*1.1, y+m*1.1, m*0.8, m*0.8); }
+  ojo(x0, y0); ojo(x0+m*4, y0); ojo(x0, y0+m*4);
+  g.fillStyle=color;
+  [[4,4],[5.5,4],[4,5.5],[5.5,5.5],[4.75,4.75]].forEach(function(p){ g.fillRect(x0+p[0]*m, y0+p[1]*m, m*0.9, m*0.9); });
+}
+function _cqIconoBuzon(g, cx, cy, s, color){
+  var w=s, h=s*0.72, x=cx-w/2, y=cy-s/2;
+  g.fillStyle=color; _cqCaja(g, x, y, w, h, s*0.16); g.fill();
+  g.beginPath(); g.moveTo(x+w*0.22, y+h-1); g.lineTo(x+w*0.18, y+s); g.lineTo(x+w*0.46, y+h-1); g.closePath(); g.fill();
+  g.fillStyle='#ffffff';
+  for(var i=0;i<3;i++) g.fillRect(x+w*0.18, y+h*0.24+i*h*0.2, w*(i===2 ? 0.38 : 0.64), h*0.09);
+}
+/* una pizarra con tres hojas clavadas */
+function _cqIconoMural(g, cx, cy, s, color){
+  var w=s, h=s*0.72, x=cx-w/2, y=cy-h/2;
+  g.fillStyle=color; _cqCaja(g, x, y, w, h, s*0.06); g.fill();
+  g.fillStyle='#ffffff'; _cqCaja(g, x+s*0.06, y+s*0.06, w-s*0.12, h-s*0.12, s*0.03); g.fill();
+  g.fillStyle=color;
+  [[0.12,0.14,0.22,0.3],[0.39,0.12,0.22,0.36],[0.66,0.16,0.22,0.26]].forEach(function(p){ g.fillRect(x+w*p[0], y+h*p[1], w*p[2], h*p[3]); });
+  g.fillRect(x+w*0.2, y+h, w*0.06, s*0.2); g.fillRect(x+w*0.74, y+h, w*0.06, s*0.2);
+}
+/* el reloj del tareo y la ubicación (14/10/2026) */
+function _cqIconoReloj(g, cx, cy, s, color){
+  var r=s*0.46;
+  g.fillStyle=color; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI*2); g.fill();
+  g.fillStyle='#ffffff'; g.beginPath(); g.arc(cx, cy, r*0.8, 0, Math.PI*2); g.fill();
+  g.strokeStyle=color; g.lineCap='round'; g.lineWidth=Math.max(3, s*0.08);
+  g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy-r*0.55); g.stroke();
+  g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx+r*0.42, cy+r*0.12); g.stroke();
+  g.lineCap='butt';
+  g.fillStyle=color; for(var i=0; i<12; i++){ var a=i*Math.PI/6; g.beginPath(); g.arc(cx+Math.sin(a)*r*0.66, cy-Math.cos(a)*r*0.66, Math.max(1.5, s*0.025), 0, Math.PI*2); g.fill(); }
+}
+function _cqIconoUbic(g, cx, cy, s, color){
+  var r=s*0.3, top=cy-s*0.42;
+  g.fillStyle=color; g.beginPath(); g.arc(cx, top+r, r, Math.PI, 0); g.lineTo(cx, cy+s*0.42); g.closePath(); g.fill();
+  g.fillStyle='#ffffff'; g.beginPath(); g.arc(cx, top+r, r*0.42, 0, Math.PI*2); g.fill();
+}
+function _cqNum(g, cx, cy, r, n, color){
+  g.fillStyle=color; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI*2); g.fill();
+  g.lineWidth=Math.max(3, r*0.14); g.strokeStyle='#ffffff'; g.stroke();
+  g.fillStyle='#ffffff'; g.font=_cqFuente(Math.round(r*1.15), '900'); g.textAlign='center'; g.textBaseline='middle';
+  g.fillText(String(n), cx, cy+r*0.04); g.textBaseline='alphabetic';
+}
+/* el rótulo de una sección: una barrita de color y el texto en mayúsculas, separado */
+function _cqRotulo(g, x, y, txt, color, s){
+  s=s||26; g.fillStyle=color; _cqCaja(g, x, y-s*0.82, 10, s*0.95, 4); g.fill();
+  g.font=_cqFuente(s, '900'); g.textAlign='left'; g.fillStyle=color;
+  try{ g.letterSpacing=Math.round(s*0.12)+'px'; }catch(e){}
+  g.fillText(String(txt).toUpperCase(), x+26, y);
+  try{ g.letterSpacing='0px'; }catch(e){}
+}
+function _cqTextoIzq(g, lineas, x, y, alto, color){
+  g.fillStyle=color; g.textAlign='left'; g.textBaseline='alphabetic';
+  lineas.forEach(function(l, i){ g.fillText(l, x, y + i*alto); });
+  return y + (lineas.length-1)*alto;
+}
 /* la cinta de peligro (amarillo y negro) */
 function _cqFranjas(g, x, y, w, h){
   g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
@@ -2482,18 +2588,131 @@ function _cqEscanea(g, cy, t1, t2, color, gris){
 /* el primer renglón de un bloque de «n» líneas, centrado en una franja */
 function _cqBase(n, s, lh, top, alto){ var bloque=(n-1)*lh+s*0.74; return top+(alto-bloque)/2+s*0.74; }
 
+/* ══ EL «EXPLICADO» (14/10/2026) ═══════════════════════════════════
+   El logo, el título en su franja, «¿Qué es?» en una o dos frases, y
+   «¿Cómo se usa?»: tres pasos dibujados al lado del QR, que sale de unos
+   9 cm (vertical) u 8 cm (horizontal). Abajo, la obra. El color va por
+   familia: azul los documentos, verde las emergencias, violeta el buzón. */
+function _cqExplica(g, o, L, W, H, hz, tx){
+  var C=cartelColor(o.hoja), OSC='#0B2A3A', GRIS='#4A5A66', esBuzon=(o.hoja==='buzon'), esMural=(o.hoja==='mural'), esTareo=(o.hoja==='tareo');
+  var titulo=String(o.titulo||'Documento'), largo=o.largo ? String(tx(o.largo)||o.largo) : '';
+  var que=String(tx(o.que || CARTEL_QUE[o.hoja] || CARTEL_QUE._propio));
+  var pasos=(esBuzon ? CARTEL_PASOS.buzon : (esMural ? CARTEL_PASOS.mural : (esTareo ? CARTEL_PASOS.tareo : CARTEL_PASOS.doc))).map(function(t){ return String(tx(t)); });
+  /* el mural «solo para su gente» (Prevencionista, Supervisor SST, o la obra lo eligió): se abre con la cuenta de la app */
+  var pie1=String(tx(esBuzon ? CARTEL_PIE.buzon : (esMural ? CARTEL_PIE.mural : (esTareo ? CARTEL_PIE.tareo : CARTEL_PIE.doc))));
+  /* el tareo se marca desde la app, con la cuenta del trabajador */
+  var pie2=String(tx(esTareo ? 'Con tu cuenta de trabajador en OBRASST.' : ((esMural && o.privado) ? 'Solo para el personal de la obra, con su cuenta.' : 'No necesitas instalar nada.')));
+  var empresa=String(o.empresa||''), obra=String(o.obra||''), marca=empresa || obra;
+  var rQue=tx('¿Qué es?'), rUso=tx('¿Cómo se usa?');
+  g.fillStyle='#ffffff'; g.fillRect(0, 0, W, H);
+  g.fillStyle=C; g.fillRect(0, 0, W, 20);
+  function icono(i, cx, cy, s){
+    if(i===0) _cqIconoCel(g, cx, cy, s, OSC);
+    else if(i===1) _cqIconoQR(g, cx, cy, s*0.74, OSC);
+    else if(esBuzon) _cqIconoBuzon(g, cx, cy, s*0.84, OSC);
+    else if(esMural) _cqIconoMural(g, cx, cy, s*0.9, OSC);
+    else if(esTareo) _cqIconoUbic(g, cx, cy, s*0.9, OSC);
+    else _cqIconoDoc(g, cx, cy, s*0.9, OSC);
+  }
+  /* ── arriba: el logo y la franja con el título ── */
+  var X=hz ? 70 : 80, AN=W-2*X, by, ft;
+  if(!hz){ _cqLogo(g, L, W/2, 46, 520, 156, marca, OSC); by=224; ft=_cqAjustar(g, titulo.toUpperCase(), AN, 2, 82, 54, '900', 40); }
+  else { _cqLogo(g, L, X+230, 36, 460, 118, marca, OSC); by=172; ft=_cqAjustar(g, titulo.toUpperCase(), AN, 2, 76, 50, '900', 38); }
+  var lht=ft.s*1.06, fl=largo ? _cqAjustar(g, largo, AN, 2, hz ? 30 : 32, 22, '600') : null, lhl=fl ? fl.s*1.22 : 0;
+  var bh=44 + (ft.l.length-1)*lht + ft.s*0.74 + (fl ? 18 + fl.s*0.74 + (fl.l.length-1)*lhl : 0) + 42;
+  g.fillStyle=C; g.fillRect(0, by, W, bh);
+  g.font=_cqFuente(ft.s, '900');
+  var yt=hz ? _cqTextoIzq(g, ft.l, X, by + 44 + ft.s*0.74, lht, '#ffffff') : _cqTexto(g, ft.l, W/2, by + 44 + ft.s*0.74, ft.s, lht, '#ffffff');
+  if(fl){
+    g.font=_cqFuente(fl.s, '600');
+    if(hz) _cqTextoIzq(g, fl.l, X, yt + 18 + fl.s*0.74 + 4, lhl, 'rgba(255,255,255,.93)');
+    else _cqTexto(g, fl.l, W/2, yt + 18 + fl.s*0.74 + 4, fl.s, lhl, 'rgba(255,255,255,.93)');
+  }
+  var be=by + bh, pieY=H - (hz ? 84 : 104), pad=26;
+  /* ── el cuerpo: se mide primero y después se reparte el aire que sobra ── */
+  var QR, qrBox, colW, anQ;
+  if(hz){ QR=Math.max(400, Math.min(560, pieY - 92 - (be + 40) - 2*pad)); qrBox=QR + 2*pad; colW=W - X - qrBox - X - 64; anQ=colW; }
+  else { QR=Math.max(420, Math.min(600, Math.round(AN*0.58) - 2*pad)); qrBox=QR + 2*pad; colW=AN - qrBox - 40; anQ=AN; }
+  var fq=_cqAjustar(g, que, anQ, 3, hz ? 34 : 40, 26, '600'), lhq=fq.s*1.28;
+  var ic=hz ? 84 : 86, sep=hz ? 40 : 30, tw=colW - ic - sep - 6, fp=null;
+  pasos.forEach(function(t){ var f=_cqAjustar(g, t, tw, hz ? 2 : 3, hz ? 32 : 32, 22, '700'); if(fp===null || f.s<fp) fp=f.s; });
+  g.font=_cqFuente(fp, '700');
+  var filas=pasos.map(function(t){ return _cqLineas(g, t, tw).slice(0, 4); });
+  var altoFila=function(l){ return Math.max(ic + 18, (l.length-1)*fp*1.22 + fp*0.74 + 24); };
+  var sumaF=0; filas.forEach(function(l){ sumaF+=altoFila(l); });
+  var rot=hz ? 24 : 26, hQue=rot + 20 + fq.s*0.92 + (fq.l.length-1)*lhq;
+  var cap=hz ? 46 : 50, hCap=cap + 30 + 34;
+  var hPasosMin=sumaF + 2*16;
+  var y0=be + (hz ? 40 : 52), g1=hz ? 0 : 10, g2=hz ? 58 : 62;
+  var aire=0;
+  if(!hz){
+    var cuerpo=g1 + hQue + g2 + rot + 30 + Math.max(qrBox, hPasosMin) + hCap;
+    aire=Math.max(0, pieY - 36 - y0 - cuerpo);
+    /* con aire, la letra de «qué es» y los pasos pueden crecer un poco, y el resto se reparte */
+    g1+=aire*0.25; g2+=aire*0.25;
+  }
+  /* «¿Qué es?» */
+  var y=y0 + g1 + (hz ? 26 : 0) + rot*0.8;
+  _cqRotulo(g, X, y, rQue, C, rot);
+  g.font=_cqFuente(fq.s, '600');
+  y=_cqTextoIzq(g, fq.l, X, y + 20 + fq.s*0.92, lhq, OSC);
+  y+=g2;
+  _cqRotulo(g, X, y, rUso, C, rot);
+  var area=y + 30 + (hz ? 0 : aire*0.25);
+  var qrX=W - X - qrBox, qrY=hz ? y0 : area;
+  /* los tres pasos, uno debajo del otro, a la izquierda del QR */
+  var finPasos=hz ? (pieY - 40) : (qrY + qrBox), iniPasos=hz ? area : qrY;
+  var gap=Math.max(14, Math.min(hz ? 46 : 60, (finPasos - iniPasos - sumaF)/2));
+  var fy=iniPasos + Math.max(0, (finPasos - iniPasos - sumaF - 2*gap)/2);
+  filas.forEach(function(l, i){
+    var hfila=altoFila(l), cy=fy + hfila/2, cx=X + ic/2 + 6;
+    g.fillStyle='#EEF3F8'; g.beginPath(); g.arc(cx, cy, ic*0.62, 0, Math.PI*2); g.fill();
+    icono(i, cx, cy, ic*0.86);
+    _cqNum(g, cx - ic*0.52, cy - ic*0.46, hz ? 21 : 24, i + 1, C);
+    g.font=_cqFuente(fp, '700');
+    _cqTextoIzq(g, l, X + ic + sep, cy - ((l.length-1)*fp*1.22)/2 + fp*0.36, fp*1.22, OSC);
+    fy+=hfila + gap;
+  });
+  /* el QR con su marco del color del cartel, y lo que dice debajo */
+  g.fillStyle='#ffffff'; _cqCaja(g, qrX, qrY, qrBox, qrBox, 24); g.fill();
+  g.lineWidth=10; g.strokeStyle=C; _cqCaja(g, qrX, qrY, qrBox, qrBox, 24); g.stroke();
+  _cqQR(g, o.enlace, qrX + qrBox/2, qrY + pad, QR);
+  var qcx=qrX + qrBox/2, yc=qrY + qrBox + cap;
+  var f1=_cqAjustar(g, pie1, qrBox + (hz ? 40 : 20), 1, hz ? 28 : 30, 20, '800'); g.font=_cqFuente(f1.s, '800'); _cqTexto(g, f1.l, qcx, yc, f1.s, 0, C);
+  var f2=_cqAjustar(g, pie2, qrBox + (hz ? 40 : 20), 1, hz ? 24 : 26, 18, '600'); g.font=_cqFuente(f2.s, '600'); _cqTexto(g, f2.l, qcx, yc + f1.s*0.5 + f2.s + 8, f2.s, 0, GRIS);
+  /* el pie: la obra y la marca */
+  g.fillStyle=C; g.fillRect(0, pieY, W, H - pieY);
+  var fo=_cqAjustar(g, obra, hz ? W - 520 : W - 260, 1, hz ? 34 : 38, 22, '700'); g.font=_cqFuente(fo.s, '700');
+  if(hz){
+    _cqTextoIzq(g, fo.l, X, pieY + (H - pieY)/2 + fo.s*0.36, 0, '#ffffff');
+    g.font=_cqFuente(22, '800'); g.fillStyle='rgba(255,255,255,.85)'; g.textAlign='right'; g.fillText('◆ OBRASST', W - X, pieY + (H - pieY)/2 + 8);
+  } else {
+    _cqTexto(g, fo.l, W/2, pieY + 52, fo.s, 0, '#ffffff');
+    g.font=_cqFuente(20, '800'); g.fillStyle='rgba(255,255,255,.82)'; g.textAlign='center'; g.fillText('◆ OBRASST', W/2, pieY + 86);
+  }
+}
 /* ══ EL CARTEL ══
    o: { diseno, hoja, titulo, largo, enlace, empresa (razón social), obra,
-        logo (data URL o nada), tx (traducir, si hay) }
-   Devuelve una promesa con el lienzo y su PNG. */
+        logo (data URL o nada), tx (traducir, si hay), que (qué es, si no
+        es el de siempre) }
+   Devuelve una promesa con el lienzo, su PNG y su tamaño (w, h,
+   horizontal: el «Explicado» puede ir apaisado). */
 function cartelDibujar(o){
   o=o||{};
   var tx=o.tx||function(z){ return z; };
   return cartelLogo(o.logo).then(function(L){
-    var cv=document.createElement('canvas'); cv.width=CARTEL_W; cv.height=CARTEL_H;
+    var dis=cartelDiseno(o.diseno).k, hz=(dis==='explica' && cartelHorizontal(o.diseno));
+    var cv=document.createElement('canvas'); cv.width=hz ? CARTEL_H : CARTEL_W; cv.height=hz ? CARTEL_W : CARTEL_H;
     var g=cv.getContext('2d'), W=CARTEL_W, H=CARTEL_H, cx=W/2;
-    var dis=cartelDiseno(o.diseno).k, titulo=String(o.titulo||'Documento'), largo=o.largo ? String(tx(o.largo)||o.largo) : '';
-    var t1=tx('Escanea con la cámara de tu celular'), t2=tx('Abre siempre la versión vigente del documento.');
+    if(dis==='explica'){
+      _cqExplica(g, o, L, cv.width, cv.height, hz, tx);
+      return { canvas:cv, png:cv.toDataURL('image/png'), w:cv.width, h:cv.height, horizontal:hz };
+    }
+    var titulo=String(o.titulo||'Documento'), largo=o.largo ? String(tx(o.largo)||o.largo) : '';
+    var t1=tx(o.hoja==='tareo' ? 'Escanéalo desde OBRASST: «Marcar entrada o salida»' : 'Escanea con la cámara de tu celular'),
+        t2=tx(o.hoja==='buzon' ? 'Escríbelo sin tu nombre: llega a la obra.'
+              : (o.hoja==='mural' ? 'Los documentos de la obra, siempre vigentes.'
+              : (o.hoja==='tareo' ? 'Al llegar y al irte. Solo vale junto a la puerta.' : 'Abre siempre la versión vigente del documento.')));
     var empresa=String(o.empresa||''), obra=String(o.obra||''), marca=empresa || obra;
     g.fillStyle='#ffffff'; g.fillRect(0, 0, W, H);
     /* lo de abajo va fijo: el QR se acomoda en lo que queda (640 px, unos 10 cm; con un título
@@ -2503,14 +2722,15 @@ function cartelDibujar(o){
       return Math.max(440, Math.min(640, libre));
     }
     if(dis==='senal'){
-      var col=CARTEL_VERDE[o.hoja] ? '#1B7F3B' : '#1554B3';
+      var col=cartelColor(o.hoja);
       _cqLogo(g, L, cx, 56, 520, 170, marca, '#0B2A3A');
       var ft=_cqAjustar(g, titulo.toUpperCase(), W-150, 2, 92, 58, '900', 42), lht=ft.s*1.06;
       var fl=largo ? _cqAjustar(g, largo, W-200, 2, 36, 26, '600') : null, lhl=fl ? fl.s*1.24 : 0;
       var py=262, icoH=196, bloque=(ft.l.length-1)*lht+ft.s*0.74+(fl ? 24+fl.l.length*lhl : 0), ph=icoH+bloque+64;
       g.fillStyle=col; g.fillRect(0, py, W, ph);
       g.fillStyle='#ffffff'; g.beginPath(); g.arc(cx, py+100, 74, 0, Math.PI*2); g.fill();
-      _cqIconoDoc(g, cx, py+100, 92, col);
+      if(o.hoja==='buzon') _cqIconoBuzon(g, cx, py+100, 96, col); else if(o.hoja==='mural') _cqIconoMural(g, cx, py+100, 104, col);
+      else if(o.hoja==='tareo') _cqIconoReloj(g, cx, py+100, 120, col); else _cqIconoDoc(g, cx, py+100, 92, col);
       var yb=py+icoH+ft.s*0.74;
       g.font=_cqFuente(ft.s, '900'); var yt=_cqTexto(g, ft.l, cx, yb, ft.s, lht, '#ffffff');
       if(fl){ g.font=_cqFuente(fl.s, '600'); _cqTexto(g, fl.l, cx, yt+24+fl.s, fl.s, lhl, 'rgba(255,255,255,.93)'); }
@@ -2563,6 +2783,165 @@ function cartelDibujar(o){
       var fo3=_cqAjustar(g, obra, W-260, 1, 38, 24, '700'); g.font=_cqFuente(fo3.s, '700'); _cqTexto(g, fo3.l, cx, pie3+58, fo3.s, 0, '#ffffff');
       g.font=_cqFuente(20, '800'); g.fillStyle='#F5B700'; g.textAlign='center'; g.fillText('◆ OBRASST', cx, pie3+96);
     }
-    return { canvas:cv, png:cv.toDataURL('image/png') };
+    return { canvas:cv, png:cv.toDataURL('image/png'), w:cv.width, h:cv.height, horizontal:false };
+  });
+}
+
+/* ══ EL CARTEL DE UN EQUIPO (14/10/2026, lote 11) ═══════════════════
+   Marcelo, con la foto del porta extintor: «se puede colocar tipo un QR y que se escanee para hacerle
+   inspección al extintor y también, quizás, saber cómo se usa… replicar para las demás».
+   Va pegado sobre el equipo (el porta extintor, junto al lavaojos, en el tablero): arriba su señal (la de
+   la NTP, para los de emergencia), qué es, su código y de qué es; al medio CÓMO USARLO (los pasos que
+   escribió la obra; el extintor y el lavaojos traen los de siempre) y, del extintor, para qué fuegos
+   sirve y hasta cuándo vale su recarga; abajo el QR de su etiqueta (/h/): al escanearlo se ve cómo
+   usarlo, si está al día, y se entra a su inspección. A4 vertical, como los demás carteles.
+   o: { codigo, tipo (ya traducido), detalle, enlace, color, picto (el cuerpo SVG de la señal NTP, en su
+        caja de 0 a 100), pasos:[[título, detalle]…], propios (los pasos son de la obra), antes, luego,
+        clases:[[letra, qué es]…], nousar, recarga ('03/2027'), vencida, obra, empresa, logo, tx }
+   Devuelve una promesa con { canvas, png }. Sin la señal (no cargó), va sin ella. */
+function _cqImgSvg(cuerpo, px){
+  if(!cuerpo) return Promise.resolve(null);
+  return new Promise(function(ok){
+    var im=new Image(), hecho=false, fin=function(v){ if(!hecho){ hecho=true; ok(v); } };
+    setTimeout(function(){ fin(null); }, 8000);
+    im.onload=function(){ fin(im); }; im.onerror=function(){ fin(null); };
+    im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="'+px+'" height="'+px+'">'+cuerpo+'</svg>');
+  });
+}
+function cartelEquipo(o){
+  o=o||{};
+  var tx=o.tx||function(z){ return z; };
+  return Promise.all([cartelLogo(o.logo), _cqImgSvg(o.picto, 600)]).then(function(r){
+    var L=r[0], P=r[1], W=CARTEL_W, H=CARTEL_H, X=70, AN=W-2*X;
+    var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    var g=cv.getContext('2d'), C=o.color||'#0B2A3A', OSC='#0B2A3A', GRIS='#4A5A66', ROJO='#B42318';
+    var MONO='ui-monospace,Menlo,Consolas,"Courier New",monospace';
+    g.fillStyle='#ffffff'; g.fillRect(0, 0, W, H);
+    /* ── 1 · la franja: la señal, qué es, su código y de qué es ── */
+    var pic=P ? 260 : 0, x0=P ? X+pic+54 : X, tw=W-X-x0;
+    var tipo=String(o.tipo||'').toUpperCase(), cod=String(o.codigo||''), det=String(o.detalle||'');
+    var ft=_cqAjustar(g, tipo, tw, 1, 112, 76, '900', 44), lht=ft.s*1.04;
+    var fc=78; g.font='800 '+fc+'px '+MONO; while(fc>40 && g.measureText(cod).width>tw){ fc-=4; g.font='800 '+fc+'px '+MONO; }
+    var fd=det ? _cqAjustar(g, det, tw, 1, 42, 30, '700') : null, lhd=fd ? fd.s*1.2 : 0;
+    var alto=ft.s*0.74+(ft.l.length-1)*lht + 28+fc*0.9 + (fd ? 24+fd.s*0.9+(fd.l.length-1)*lhd : 0);
+    var bandaH=Math.round(Math.max(P ? pic+84 : 0, alto+90));
+    g.fillStyle=C; g.fillRect(0, 0, W, bandaH);
+    if(P){ var py=(bandaH-pic)/2; g.fillStyle='#ffffff'; _cqCaja(g, X-10, py-10, pic+20, pic+20, 20); g.fill(); g.drawImage(P, X, py, pic, pic); }
+    var y=(bandaH-alto)/2 + ft.s*0.74;
+    g.font=_cqFuente(ft.s, '900'); y=_cqTextoIzq(g, ft.l, x0, y, lht, '#ffffff');
+    y+=28+fc*0.9; g.font='800 '+fc+'px '+MONO; g.fillStyle='#ffffff'; g.textAlign='left'; g.fillText(cod, x0, y);
+    if(fd){ g.font=_cqFuente(fd.s, '700'); _cqTextoIzq(g, fd.l, x0, y+24+fd.s*0.9, lhd, 'rgba(255,255,255,.93)'); }
+
+    /* ── 2 · el cuerpo: se mide con una escala; si no entra, la letra baja (y, al final, se cortan pasos) ── */
+    var pasos=(o.pasos||[]).filter(function(p){ return p && p[0]; }), grilla=pasos.length===4 && pasos.every(function(p){ return p[1]; });
+    var clases=o.clases||[], pieY=H-84, pad=22, qrMin=300, bloqueQR=qrMin+2*pad+12, colW=(AN-36)/2;
+    /* varios textos con LA MISMA letra (la más grande con la que entran todos): { s, l:[las líneas de cada uno] } */
+    function comun(textos, ancho, maxL, grande, chico, peso){
+      var s0=grande;
+      textos.forEach(function(t){ var f=_cqAjustar(g, t, ancho, maxL, grande, chico, peso); if(f.s<s0) s0=f.s; });
+      g.font=_cqFuente(s0, peso);
+      return { s:s0, l:textos.map(function(t){ var l=_cqLineas(g, t, ancho); if(l.length>maxL+1){ l=l.slice(0, maxL+1); l[maxL]=l[maxL].replace(/\s+\S*$/, '')+'…'; } return l; }) };
+    }
+    function medir(e, n){
+      var M={ e:e, n:n, alto:0 };
+      if(n){
+        M.rot=Math.round(30*e);
+        M.fa=o.antes ? _cqAjustar(g, o.antes, AN, 2, Math.round(28*e), 20, '600') : null;
+        if(grilla){
+          var tW=colW-96, ps=pasos.slice(0, n), A1=comun(ps.map(function(p){ return p[0]; }), tW, 2, Math.round(37*e), 24, '800'),
+              B1=comun(ps.map(function(p){ return p[1]; }), tW, 2, Math.round(27*e), 19, '500');
+          M.cel=ps.map(function(p, i){ var a={ s:A1.s, l:A1.l[i] }, b={ s:B1.s, l:B1.l[i] };
+            return { a:a, b:b, h:Math.max(80, 20+a.s*0.9+(a.l.length-1)*a.s*1.12+12+b.s*0.9+(b.l.length-1)*b.s*1.22+20)+16 }; });
+          M.pasosH=Math.max(M.cel[0] ? M.cel[0].h : 0, M.cel[1] ? M.cel[1].h : 0)+Math.max(M.cel[2] ? M.cel[2].h : 0, M.cel[3] ? M.cel[3].h : 0);
+        } else {
+          var lw=AN-84, F1=comun(pasos.slice(0, n).map(function(p){ return p[0]; }), lw, 2, Math.round(33*e), 22, '700');
+          M.fil=F1.l.map(function(l){ var a={ s:F1.s, l:l };
+            return { a:a, h:Math.max(64, a.s*0.9+(a.l.length-1)*a.s*1.2+20)+12 }; });
+          M.pasosH=0; M.fil.forEach(function(f){ M.pasosH+=f.h; });
+        }
+        M.fl=o.luego ? _cqAjustar(g, o.luego, AN, 2, Math.round(27*e), 19, '700') : null;
+        M.alto+=M.rot+20 + (M.fa ? M.fa.s*0.9+(M.fa.l.length-1)*M.fa.s*1.24+18 : 0) + M.pasosH + (M.fl ? 4+M.fl.s*0.9+(M.fl.l.length-1)*M.fl.s*1.24 : 0) + 34;
+        if(n<pasos.length) M.alto+=40;
+      }
+      if(clases.length){
+        M.rot2=Math.round(28*e);
+        var C1=comun(clases.map(function(c){ return c[1]; }), AN-74, 2, Math.round(28*e), 22, '600');
+        M.cla=C1.l.map(function(l){ return { s:C1.s, l:l }; });
+        M.claH=0; M.cla.forEach(function(f){ M.claH+=Math.max(52, f.s*0.9+(f.l.length-1)*f.s*1.2+18)+8; });
+        M.fno=o.nousar ? _cqAjustar(g, o.nousar, AN, 2, Math.round(27*e), 19, '700') : null;
+        M.alto+=M.rot2+20+M.claH+(M.fno ? 10+M.fno.s*0.9+(M.fno.l.length-1)*M.fno.s*1.24 : 0)+30;
+      }
+      if(o.recarga) M.alto+=50;
+      return M;
+    }
+    /* con aire, la letra crece (hasta 1,3 veces) dejando un QR de al menos 440 px; si no, baja hasta 0,76 con el QR de 300 */
+    var y0=bandaH+40, libre=pieY-30-bloqueQR-y0, libreG=pieY-30-(440+2*pad+12)-y0, M=null, k;
+    for(k=0; k<=5 && !M; k++){ var Mg=medir(1.3-k*0.06, pasos.length); if(Mg.alto<=libreG) M=Mg; }
+    for(k=0; k<=4 && !M; k++){ var Mc=medir(1-k*0.06, pasos.length); if(Mc.alto<=libre || k===4) M=Mc; }
+    for(var n=pasos.length-1; n>=1 && M.alto>libre; n--) M=medir(M.e, n);
+    y=y0;
+    if(M.n){
+      _cqRotulo(g, X, y+M.rot*0.8, tx('Cómo usarlo'), C, M.rot); y+=M.rot+20;
+      if(M.fa){ g.font=_cqFuente(M.fa.s, '600'); y=_cqTextoIzq(g, M.fa.l, X, y+M.fa.s*0.9, M.fa.s*1.24, OSC)+18; }
+      if(M.cel){
+        for(var fi=0; fi<2; fi++){
+          var hf=Math.max(M.cel[fi*2] ? M.cel[fi*2].h : 0, M.cel[fi*2+1] ? M.cel[fi*2+1].h : 0);
+          for(var ci=0; ci<2; ci++){
+            var k=fi*2+ci, c=M.cel[k]; if(!c) continue;
+            var cx0=X+ci*(colW+36);
+            g.fillStyle='#F2F5F8'; _cqCaja(g, cx0, y, colW, hf-16, 18); g.fill();
+            _cqNum(g, cx0+46, y+48, 30, k+1, C);
+            g.font=_cqFuente(c.a.s, '800'); var ya=_cqTextoIzq(g, c.a.l, cx0+92, y+20+c.a.s*0.9, c.a.s*1.12, OSC);
+            g.font=_cqFuente(c.b.s, '500'); _cqTextoIzq(g, c.b.l, cx0+92, ya+12+c.b.s*0.9, c.b.s*1.22, GRIS);
+          }
+          y+=hf;
+        }
+      } else {
+        M.fil.forEach(function(f, i){
+          _cqNum(g, X+30, y+30, 27, i+1, C);
+          g.font=_cqFuente(f.a.s, '700'); _cqTextoIzq(g, f.a.l, X+84, y+10+f.a.s*0.9, f.a.s*1.2, OSC);
+          y+=f.h;
+        });
+      }
+      if(M.n<pasos.length){ g.font=_cqFuente(26, '700'); g.fillStyle=GRIS; g.textAlign='left'; g.fillText(tx('Y más pasos: escanea el QR.'), X, y+26); y+=40; }
+      if(M.fl){ g.font=_cqFuente(M.fl.s, '700'); y=_cqTextoIzq(g, M.fl.l, X, y+4+M.fl.s*0.9, M.fl.s*1.24, o.color==='#C8102E' ? ROJO : OSC); }
+      y+=34;
+    }
+    if(clases.length){
+      _cqRotulo(g, X, y+M.rot2*0.8, tx('Sirve para'), C, M.rot2); y+=M.rot2+20;
+      clases.forEach(function(c, i){
+        var f=M.cla[i], hh=Math.max(52, f.s*0.9+(f.l.length-1)*f.s*1.2+18);
+        g.fillStyle=C; _cqCaja(g, X, y+(hh-52)/2, 52, 52, 10); g.fill();
+        g.fillStyle='#ffffff'; g.font=_cqFuente(34, '900'); g.textAlign='center'; g.textBaseline='middle'; g.fillText(c[0], X+26, y+hh/2+2); g.textBaseline='alphabetic';
+        g.font=_cqFuente(f.s, '600'); _cqTextoIzq(g, f.l, X+74, y+hh/2-((f.l.length-1)*f.s*1.2)/2+f.s*0.36, f.s*1.2, OSC);
+        y+=hh+8;
+      });
+      if(M.fno){ g.font=_cqFuente(M.fno.s, '700'); y=_cqTextoIzq(g, M.fno.l, X, y+10+M.fno.s*0.9, M.fno.s*1.24, ROJO); }
+      y+=30;
+    }
+    if(o.recarga){
+      g.font=_cqFuente(29, '700'); g.textAlign='left'; g.fillStyle=o.vencida ? ROJO : '#14663A';
+      g.fillText((o.vencida ? '⚠ ' : '✓ ')+(o.vencida ? tx('La recarga venció en {0}.').replace('{0}', o.recarga) : tx('Recarga vigente hasta {0}.').replace('{0}', o.recarga)), X, y+24);
+      y+=50;
+    }
+
+    /* ── 3 · el QR (lo que quedó de alto: de 300 a 560 px, de 5 a 9,5 cm) con lo que hace, y el logo ── */
+    var QR=Math.max(qrMin, Math.min(560, pieY-30-y-2*pad)), caja=QR+2*pad, qx=W-X-caja, qy=Math.max(y, pieY-30-caja);
+    g.fillStyle='#ffffff'; _cqCaja(g, qx, qy, caja, caja, 22); g.fill();
+    g.lineWidth=10; g.strokeStyle=C; _cqCaja(g, qx, qy, caja, caja, 22); g.stroke();
+    _cqQR(g, o.enlace, qx+caja/2, qy+pad, QR);
+    var lw2=qx-X-36, fe=_cqAjustar(g, tx('ESCANÉAME'), lw2, 1, 72, 40, '900');
+    var f2=_cqAjustar(g, tx('Con la cámara de tu celular: cómo usarlo, si está al día y su inspección.'), lw2, 4, 33, 22, '700');
+    /* el logo de la empresa (o su razón social); la obra va en el pie, no dos veces */
+    var hayLogo=!!(L || (o.empresa && o.empresa!==o.obra)), hLogo=hayLogo ? Math.min(110, Math.max(0, caja-(fe.s*0.9+20+f2.s*0.9+(f2.l.length-1)*f2.s*1.24)-36)) : 0;
+    var bloque=fe.s*0.9+20+f2.s*0.9+(f2.l.length-1)*f2.s*1.24+(hLogo>=50 ? 36+hLogo : 0), ty=qy+Math.max(0, (caja-bloque)/2)+fe.s*0.9;
+    g.font=_cqFuente(fe.s, '900'); g.fillStyle=C; g.textAlign='left'; g.fillText(fe.l[0]||'', X, ty);
+    g.font=_cqFuente(f2.s, '700'); ty=_cqTextoIzq(g, f2.l, X, ty+20+f2.s*0.9, f2.s*1.24, OSC);
+    if(hLogo>=50) _cqLogo(g, L, X+Math.min(lw2, 420)/2, ty+36, Math.min(lw2, 420), hLogo, o.empresa, OSC);
+    /* ── 4 · el pie: la obra ── */
+    g.fillStyle=C; g.fillRect(0, pieY, W, H-pieY);
+    var fo=_cqAjustar(g, String(o.obra||''), W-300, 1, 32, 20, '700'); g.font=_cqFuente(fo.s, '700'); _cqTexto(g, fo.l, W/2, pieY+42, fo.s, 0, '#ffffff');
+    g.font=_cqFuente(18, '800'); g.fillStyle='rgba(255,255,255,.85)'; g.textAlign='center'; g.fillText('◆ OBRASST', W/2, pieY+70);
+    return { canvas:cv, png:cv.toDataURL('image/png'), w:W, h:H };
   });
 }

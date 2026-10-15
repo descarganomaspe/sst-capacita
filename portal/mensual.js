@@ -614,6 +614,8 @@ function menArmar(d, eqs){
     if(!x || !x.id) return;
     var it=por[x.id];
     if(x.estado==='baja' && !it) return;
+    /* 15/10/2026 · lote 12 · la obra eligió sus inspecciones y la del mes no está */
+    if(!it && typeof eqTieneMensual==='function' && !eqTieneMensual(x)) return;
     var G=menGrupoDe(x), Lh=deHoy(x);
     var f={ id:String(x.id), cod:String(x.codigo||''), tipo:String(x.tipo||''), det:menDetalle(x), resp:gesTxt(x.responsable), g:G.g, fk:G.f, estado:x.estado||'operativo',
             ck:Lh.k, lista:Lh, ck0:Lh.k, lista0:Lh, r:'', p:[], o:'', f:'', d:0, app:0, s:0 };

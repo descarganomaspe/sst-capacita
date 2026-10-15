@@ -147,6 +147,8 @@ function plwHTML(){
   h += '<div id="plw-aviso" data-sin-pais>' + plwAvisoHTML() + '</div>';
   h += '<div id="plw-pago" data-sin-pais>' + plwEsperaHTML() + '</div>';
   h += plwEstadoHTML(E, cad);
+  /* 15/10/2026 · el asistente de plan (portal/asistente.js): lo que le salió y por qué, o la puerta para responderlo */
+  if(due && !cad && typeof aplwMiPlanHTML === 'function') h += aplwMiPlanHTML();
   if(due && !cad) h += plwGuardadosHTML();
   if(!cad) h += plwRegaloHTML(E, due);
   if(cad){
@@ -164,6 +166,7 @@ function plwHTML(){
   h += '</div>';
   c.innerHTML = h;
   plwAtar();
+  if(typeof aplwMiPlanAtar === 'function') aplwMiPlanAtar(c);
 }
 
 /* ── el aviso de arriba: lo que acaba de pasar (activado, no se pudo, falta elegir) ── */
