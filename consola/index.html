@@ -232,6 +232,11 @@ button.cifra:hover{border-color:var(--raya2); box-shadow:var(--sombra)}
 .pill.ok{background:var(--ok-f); color:var(--ok)} .pill.ojo{background:var(--ojo-f); color:var(--ojo)}
 .pill.mal{background:var(--mal-f); color:var(--mal)} .pill.gris{background:var(--fondo); color:var(--gris); box-shadow:inset 0 0 0 1px var(--raya)}
 .pill.azul{background:var(--azul-f); color:var(--azul)} .pill.casco{background:var(--nav-on-bg); color:var(--nav-on-fg)}
+/* 15/10/2026 · el asistente de plan */
+.reu-planes{display:flex; flex-wrap:wrap; gap:6px}
+.reu-t td{vertical-align:top}
+.reu-pasada{opacity:.6}
+.reu-estado{font:inherit; padding:4px 6px; border-radius:6px}
 .seg{display:inline-flex; flex-wrap:wrap; gap:2px; padding:3px; margin:0 0 14px; background:var(--panel); border:1px solid var(--raya); border-radius:10px}
 .seg button{-webkit-appearance:none; appearance:none; cursor:pointer; border:0; background:transparent; color:var(--gris); font-weight:500; font-size:13.5px; padding:7px 13px; border-radius:7px}
 .seg button.on{background:var(--bt-bg); color:var(--bt-fg)}
@@ -392,10 +397,11 @@ table.cen-ped td{vertical-align:top}
     padding:4px 4px calc(4px + env(safe-area-inset-bottom, 0px))}
   /* 05/10/2026 · con «Central» son 9 pestañas: en un celular de 390 px ya no entraban con el ancho repartido por
      igual («Reclamos» pisaba a «Ventas», «Empresas» salía cortada). Ahora cada una ocupa lo que pide su nombre y la
-     letra se achica con la pantalla (10,5 px desde 412 px; 9,7 en 390; 8,9 en 360). */
+     letra se achica con la pantalla (10,5 px desde 412 px; 9,7 en 390; 8,9 en 360).
+     15/10/2026 · lote 12 · con «Citas» (el asistente de plan) son 10: la letra, un poco más (9,7 px desde 430 px; 8,8 en 390; 8,0 en 360). */
   .tab{-webkit-appearance:none; appearance:none; flex:1 1 auto; min-width:0; border:0; background:none; color:var(--gris); cursor:pointer;
     display:flex; flex-direction:column; align-items:center; gap:2px; padding:7px 1px 6px; border-radius:10px;
-    font-size:clamp(8.6px, calc((100vw - 30px) / 37), 10.5px); font-weight:500; position:relative; white-space:nowrap}
+    font-size:clamp(7.8px, calc((100vw - 30px) / 41), 10.5px); font-weight:500; position:relative; white-space:nowrap}
   .tab svg{width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
   .tab.on{color:var(--nav-on-fg); background:var(--nav-on-bg)}
   .tab .n{position:absolute; top:3px; left:calc(50% + 6px); font-size:10px; font-weight:700; color:#fff; background:var(--mal); border-radius:999px; padding:0 5px; line-height:16px}
@@ -685,12 +691,13 @@ var VISTAS = [
   {id:'comprobantes', n:'Boletas y facturas', c:'Boletas', s:'La boleta o la factura de cada venta: lo que pidió el cliente, lista para emitir en SUNAT, y su número y su PDF cuando ya salió'},
   {id:'empresas', n:'Empresas y planes', c:'Empresas', s:'Cada empresa, con el plan que tiene hoy, sus obras y su gente'},
   {id:'central',  n:'Central',           c:'Central',  s:'OBRASST Central se activa por obra: con su código, hasta cuándo y para cuántas subcontratas. Y quién pidió una demo o un piloto'},
+  {id:'reuniones', n:'Asistente de plan', c:'Citas', s:'Quién respondió «¿Qué plan te conviene?», qué le salió, y las reuniones de 15 minutos por Google Meet que pidieron'},
   {id:'codigos',  n:'Códigos',           c:'Códigos',  s:'Créalos cuando los vas a dar, anota para quién y busca el de un cliente'},
   {id:'avisos',   n:'Avisos',            c:'Avisos',   s:'Que cada falla te llegue al celular y a la PC, al instante'}
 ];
 var VISTA = { actual:null, recargar:null };
 function vistaDe(id){ return VISTAS.filter(function(v){ return v.id===id; })[0]; }
-function pintor(id){ return ({resumen:vistaResumen, fallas:vistaFallas, reclamos:vistaReclamos, ventas:vistaVentas, comprobantes:vistaComprobantes, empresas:vistaEmpresas, central:vistaCentral, codigos:vistaCodigos, avisos:vistaAvisos})[id]; }
+function pintor(id){ return ({resumen:vistaResumen, fallas:vistaFallas, reclamos:vistaReclamos, ventas:vistaVentas, comprobantes:vistaComprobantes, empresas:vistaEmpresas, central:vistaCentral, reuniones:vistaReuniones, codigos:vistaCodigos, avisos:vistaAvisos})[id]; }
 function navegar(id, desdeHistoria){
   var v = vistaDe(id); if(!v) v = VISTAS[0];
   var antes = VISTA.actual;
@@ -1907,6 +1914,346 @@ function regPartirNombre(md){
   return { nombres:t.join(' '), apellidos:'' };
 }
 /* <<< CELULAR-BASE-FIN >>> */
+/* >>> APL-BASE-INI (lo re-inyecta armar.py, no editar a mano) <<< */
+/* ══ ASISTENTE DE PLAN · lo común (15/10/2026, lote 12) ══════════════
+   Marcelo: «una nube: responde este breve cuestionario para ayudarte a
+   escoger tu plan… unas preguntas de sí o no y una de cantidad… al
+   final te sale tu plan, y si quieres, una reunión de 15 minutos o un
+   WhatsApp; se responde una sola vez, en la app o en la web, y en
+   «Mi plan» dice por qué te conviene, con un "responder de nuevo"».
+   Lo que decidió (15/10): su WhatsApp 967 991 730, la reunión por
+   Google Meet, turnos de 15 minutos seguidos (sábado 2–6 pm y domingo
+   10 am–6 pm, hora de Perú) y SIN mes gratis desde el resultado.
+
+   Es el MISMO archivo en la app (armar.py lo mete en index.html) y en
+   el portal (dentro de su index): las preguntas, cómo decide, el
+   WhatsApp y los turnos son unos solos. Aquí no hay pantallas: cada
+   lado pinta lo suyo (asistente-plan.js en la app, portal/asistente.js
+   en la web).
+
+   Cómo decide: el plan MÁS CHICO que cubre todo lo respondido (así
+   nunca vende de más), y el porqué sale de esas mismas reglas.
+   La primera pregunta es qué hace en la obra: abre su camino y las
+   demás salen solo si cambian el resultado (de 1 a 7 toques). */
+var APL_WA = '51967991730';            /* el WhatsApp de Marcelo (+51 967 991 730) */
+var APL_VER = 1;                        /* la versión de las preguntas */
+var APL_ZONA = -5;                      /* la hora de Perú (UTC−5, sin horario de verano) */
+/* los turnos de la reunión: [día de la semana (0 = domingo), desde, hasta] en horas de Perú, cada 15 minutos */
+var APL_TURNOS = [[6, 14, 18], [0, 10, 18]];
+var APL_TURNO_MIN = 15;
+var APL_SEMANAS = 3;                    /* hasta cuántas semanas adelante se puede pedir */
+
+/* ── las preguntas ── */
+var APL_PREG = {
+  rol:   { t:'¿Qué haces tú en la obra?', op:[
+           ['ejecuto', 'Mi empresa ejecuta la obra', 'Somos la contratista: llevamos la seguridad de nuestra gente'],
+           ['prevencionista', 'Llevo la seguridad de una obra', 'Soy prevencionista, supervisor o jefe SSOMA'],
+           ['subcontrata', 'Somos subcontrata', 'Trabajamos para una contratista principal'],
+           ['supervisora', 'Supervisamos por contrato', 'Somos la supervisión de un proyecto'],
+           ['dueno', 'Soy el dueño del proyecto', 'O lo represento'],
+           ['estado', 'Fiscalizo por ley', 'Trabajo en una entidad del Estado'],
+           ['trabajador', 'Soy trabajador', 'Entro con el código de mi obra'] ] },
+  central: { t:'¿Tu contratista principal ya usa OBRASST Central?', op:[['si', 'Sí'], ['no', 'No'], ['nose', 'No sé']] },
+  trab:  { t:'¿Cuántos trabajadores tienen tus obras?', ayuda:'Contando a todos los que entran a la obra.', op:[
+           ['10', 'Hasta 10'], ['60', 'De 11 a 60'], ['150', 'De 61 a 150'], ['400', 'De 151 a 400'], ['1000', 'De 401 a 1,000'], ['mas', 'Más de 1,000'] ] },
+  obras: { t:'¿Cuántas obras llevas a la vez?', op:[['1', 'Una'], ['2', 'Dos'], ['5', 'De 3 a 5'], ['12', 'De 6 a 12'], ['mas', 'Más de 12']] },
+  pers:  { t:'¿Cuántas personas registran contigo?', ayuda:'Supervisores, almaceneros o asistentes que usan la app con su cuenta. Tú cuentas.', op:[
+           ['1', 'Solo yo'], ['2', 'Yo y uno más'], ['4', 'De 3 a 4'], ['8', 'De 5 a 8'], ['14', 'De 9 a 14'], ['mas', 'Más de 14'] ] },
+  insp:  { t:'¿Haces inspecciones con formato y pides requerimientos de EPP?', op:[['si', 'Sí'], ['no', 'No']] },
+  ssoma: { t:'¿Manejas productos químicos, haces simulacros o controlas exámenes médicos?', op:[['si', 'Sí'], ['no', 'No']] },
+  sub:   { t:'¿Tienes subcontratas que también deberían usar la app?', op:[['si', 'Sí'], ['no', 'No']] }
+};
+var APL_ORDEN = ['rol', 'central', 'trab', 'obras', 'pers', 'insp', 'ssoma', 'sub'];
+/* lo que pide cada respuesta (trabajadores, obras y personas) y desde qué plan viene cada cosa */
+var APL_N = { trab:{ '10':10, '60':60, '150':150, '400':400, '1000':1000, mas:1001 },
+               obras:{ '1':1, '2':2, '5':5, '12':12, mas:13 },
+               pers:{ '1':1, '2':2, '4':4, '8':8, '14':14, mas:15 } };   /* 15/10: Gestión SST, 14 personas (antes 16) */
+var APL_DESDE = { insp:'supervisor', ssoma:'ssoma' };
+/* el puesto suelto (S/ 49 al mes): el de cada lado (PUESTO_EXTRA en la app, INI_EXTRA en el portal), en su moneda */
+var APL_PUESTO = 49;
+function _aplPuesto(){
+  try{ if(typeof PUESTO_EXTRA !== 'undefined' && PUESTO_EXTRA > 0) return PUESTO_EXTRA; }catch(_e){}
+  try{ if(typeof INI_EXTRA !== 'undefined' && INI_EXTRA && INI_EXTRA.puesto > 0) return INI_EXTRA.puesto; }catch(_e){}
+  return APL_PUESTO;
+}
+
+/* ── los planes que se pagan (los mismos de la app y de la web) ── */
+var APL_PLANES_FIJOS = [
+  { id:'lite', n:'LITE', orden:0, trab:10, obras:1, gest:1, m:0, a:0 },
+  { id:'prevencionista', n:'Prevencionista de Riesgo', orden:1, trab:60, obras:1, gest:1, m:59, a:590 },
+  { id:'supervisor', n:'Supervisor SST', orden:2, trab:150, obras:2, gest:2, m:139, a:1390 },
+  { id:'ssoma', n:'SSOMA', orden:3, trab:400, obras:5, gest:8, m:299, a:2990 },
+  { id:'gestion', n:'Gestión SST', orden:4, trab:1000, obras:12, gest:14, m:590, a:5900 } ];
+/* de la lista de cada lado (PLANES en la app, INI_PLANES en el portal): si cambian sus topes o sus precios, el asistente
+   decide con los de verdad; si no se encuentra, con los de arriba */
+function aplPlanes(){
+  var L = [];
+  try{
+    if(typeof INI_PLANES !== 'undefined' && INI_PLANES && INI_PLANES.length){
+      INI_PLANES.forEach(function(P, i){ L.push({ id:P.id, n:P.n, orden:(P.orden != null ? P.orden : i), trab:P.trab, obras:P.obras, gest:P.gest, m:P.m || 0, a:P.a || 0 }); });
+    } else if(typeof PLANES !== 'undefined' && PLANES && PLANES.length){
+      PLANES.forEach(function(P, i){
+        var f = APL_PLANES_FIJOS.filter(function(x){ return x.id === P.id; })[0] || {};
+        L.push({ id:P.id, n:P.nombre || f.n, orden:(P.orden != null ? P.orden : i), trab:(P.tope && P.tope.trabajador > 0) ? P.tope.trabajador : f.trab,
+                 obras:P.obras || f.obras, gest:P.gestores || f.gest, m:(P.precio != null ? P.precio : f.m), a:f.a });
+      });
+    }
+  }catch(_e){ L = []; }
+  L = L.filter(function(P){ return P && P.id && APL_PLANES_FIJOS.some(function(x){ return x.id === P.id; }) && P.trab > 0; });
+  if(L.length !== APL_PLANES_FIJOS.length) L = APL_PLANES_FIJOS.slice();
+  return L.sort(function(a, b){ return a.orden - b.orden; });
+}
+function aplPlan(id){ return aplPlanes().filter(function(P){ return P.id === id; })[0] || null; }
+
+/* ── el camino: la pregunta que sigue (null = ya está) ── */
+function _aplCaminoPropio(r){ return r.rol === 'ejecuto' || r.rol === 'prevencionista' || (r.rol === 'subcontrata' && r.central && r.central !== 'si'); }
+/* 15/10/2026 · el plan de abajo con puestos sueltos: el más barato de los planes de equipo (más de una persona) que
+   cubre trabajadores, obras y lo pedido (desde), si con los puestos que le faltan sale menos que P. Prevencionista
+   no entra: es de una persona, el líder. */
+function _aplAlterno(L, P, t, o, p, desde){
+  var Q = null, qc = 0, pu = _aplPuesto();
+  if(!P) return null;
+  for(var k = 0; k < L.length; k++){
+    var x = L[k], cx;
+    if(x.orden >= P.orden || x.gest <= 1 || !(x.m > 0) || x.trab < t || x.obras < o || x.orden < (desde || 0) || p <= x.gest) continue;
+    cx = x.m + (p - x.gest) * pu;
+    if(cx < P.m && (!Q || cx < qc)){ Q = x; qc = cx; }
+  }
+  return Q;
+}
+/* el plan mínimo por lo que pide (sin las preguntas de sí o no) */
+function _aplMinimo(r){
+  var L = aplPlanes(), t = APL_N.trab[r.trab] || 1, o = APL_N.obras[r.obras] || 1, p = APL_N.pers[r.pers] || 1;
+  for(var i = 0; i < L.length; i++){ if(L[i].trab >= t && L[i].obras >= o && L[i].gest >= p) return L[i]; }
+  return null;                                   /* más que el plan más grande */
+}
+function aplSiguiente(r){
+  r = r || {};
+  if(!r.rol) return 'rol';
+  if(r.rol === 'subcontrata' && !r.central) return 'central';
+  if(!_aplCaminoPropio(r)) return null;
+  if(!r.trab) return 'trab';
+  if(r.trab === 'mas') return null;
+  if(!r.obras) return 'obras';
+  if(r.obras === 'mas') return null;
+  if(!r.pers) return 'pers';
+  if(r.pers === 'mas') return null;
+  var m = _aplMinimo(r), om = m ? m.orden : 99;
+  var alt = m ? _aplAlterno(aplPlanes(), m, APL_N.trab[r.trab] || 1, APL_N.obras[r.obras] || 1, APL_N.pers[r.pers] || 1, 0) : null;
+  if(alt) om = alt.orden;
+  var ps = aplPlan('supervisor'), pso = aplPlan('ssoma');
+  if(!r.insp && om < (ps ? ps.orden : 2)) return 'insp';
+  if(!r.ssoma && om < (pso ? pso.orden : 3)) return 'ssoma';
+  /* las subcontratas cambian el resultado solo desde 401 trabajadores (OBRASST Central): antes no se pregunta */
+  if(!r.sub && r.rol !== 'subcontrata' && (APL_N.trab[r.trab] || 0) > 400) return 'sub';
+  return null;
+}
+/* las preguntas que ya respondió, en orden (para «‹ Atrás» y para el resumen) */
+function aplRespondidas(r){
+  r = r || {};
+  return APL_ORDEN.filter(function(k){ return r[k] != null && r[k] !== ''; });
+}
+function aplTexto(k, v){
+  var P = APL_PREG[k]; if(!P) return String(v || '');
+  var o = P.op.filter(function(x){ return x[0] === v; })[0];
+  return o ? o[1] : String(v || '');
+}
+/* el avance aproximado (para la barrita): las que faltan, siguiendo el camino con la primera respuesta de cada una */
+function aplAvance(r){
+  var hechas = aplRespondidas(r).length; if(!aplSiguiente(r)) return 1;
+  var r2 = JSON.parse(JSON.stringify(r || {})), k, faltan = 0;
+  while((k = aplSiguiente(r2)) && faltan < 10){ r2[k] = APL_PREG[k].op[0][0]; faltan++; }
+  return hechas / (hechas + faltan);
+}
+
+/* ── cómo decide ──
+   tipo: 'plan' (uno de los cinco, se paga en la app o en la web) · 'reunion' (Central, Corporativo, Mandante o
+   Fiscalización: se conversa) · 'invitado' (subcontrata de una Central: entra gratis) · 'incluida' (la supervisora:
+   la incluye su cliente) · 'trabajador' (su cuenta es gratis) */
+function aplDecidir(r){
+  r = r || {};
+  var R = { tipo:'plan', plan:null, nombre:'', porque:[], nota:'', reunion:'' };
+  if(r.rol === 'trabajador'){
+    R.tipo = 'trabajador'; R.nombre = 'Cuenta de trabajador';
+    R.porque = ['Tu cuenta es gratis: entras con el código de tu obra y tu documento.', 'El plan lo elige tu empresa.'];
+    return R;
+  }
+  if(r.rol === 'supervisora'){
+    R.tipo = 'incluida'; R.nombre = 'Supervisión incluida';
+    R.porque = ['Si tu cliente usa OBRASST Mandante o Fiscalización, te incluye sin costo y ven la obra juntos.',
+                'Si tu cliente no lo usa, conversemos qué te sirve.'];
+    R.reunion = 'supervisora';
+    return R;
+  }
+  if(r.rol === 'dueno'){
+    R.tipo = 'reunion'; R.plan = 'mandante'; R.nombre = 'OBRASST Mandante';
+    R.porque = ['Ves si tus contratistas cumplen en seguridad: cada obra, cada empresa y su supervisión, en un solo lugar.',
+                'Incluye a tu supervisora. Se arma a tu medida en una reunión.'];
+    R.reunion = 'mandante';
+    return R;
+  }
+  if(r.rol === 'estado'){
+    R.tipo = 'reunion'; R.plan = 'fiscalizacion'; R.nombre = 'OBRASST Fiscalización';
+    R.porque = ['Para fiscalizar la seguridad de proyectos de construcción, minería, energía o transporte, con sus contratistas y supervisoras.',
+                'Se arma a la medida de tu entidad en una reunión.'];
+    R.reunion = 'fiscalizacion';
+    return R;
+  }
+  if(r.rol === 'subcontrata' && r.central === 'si'){
+    R.tipo = 'invitado'; R.nombre = 'Gratis, dentro de la Central';
+    R.porque = ['Con OBRASST Central paga la contratista principal: las subcontratas entran gratis.',
+                'Pídele a tu contratista su enlace de invitación.'];
+    return R;
+  }
+  var t = APL_N.trab[r.trab] || 0, o = APL_N.obras[r.obras] || 0, p = APL_N.pers[r.pers] || 0;
+  var L = aplPlanes(), G = L[L.length - 1];
+  /* más grande que el plan más grande: Corporativo (o Central, si tiene subcontratas en una sola obra) */
+  if(r.trab === 'mas' || r.obras === 'mas' || r.pers === 'mas'){
+    R.tipo = 'reunion'; R.plan = 'corporativo'; R.nombre = 'OBRASST Corporativo';
+    if(r.trab === 'mas') R.porque.push('Tienes más de ' + _aplMiles(G.trab) + ' trabajadores: más de lo que trae ' + G.n + '.');
+    if(r.obras === 'mas') R.porque.push('Llevas más de ' + G.obras + ' obras a la vez: más de las que trae ' + G.n + '.');
+    if(r.pers === 'mas') R.porque.push('Registran más de ' + G.gest + ' personas: más de las que trae ' + G.n + '.');
+    R.porque.push('Corporativo junta todas tus obras, lado a lado. Se cobra por trabajador y se arma en una reunión.');
+    R.reunion = 'corporativo';
+    return R;
+  }
+  if(r.sub === 'si' && t > 400){
+    R.tipo = 'reunion'; R.plan = (o > 1 ? 'corporativo' : 'central'); R.nombre = (o > 1 ? 'OBRASST Corporativo' : 'OBRASST Central');
+    R.porque = ['Tienes más de 400 trabajadores y subcontratas: con ' + R.nombre + ' ves a todas las empresas de tu obra en un solo lugar.',
+                'Paga la principal; las subcontratas entran gratis. Se cobra por trabajador y se arma en una reunión.'];
+    R.reunion = R.plan;
+    return R;
+  }
+  /* el plan más chico que cubre todo */
+  var desde = 0, porq = {};
+  if(r.insp === 'si'){ var ps = aplPlan(APL_DESDE.insp); if(ps && ps.orden > desde) desde = ps.orden; }
+  if(r.ssoma === 'si'){ var pq = aplPlan(APL_DESDE.ssoma); if(pq && pq.orden > desde) desde = pq.orden; }
+  var P = null;
+  for(var i = 0; i < L.length; i++){ if(L[i].trab >= t && L[i].obras >= o && L[i].gest >= p && L[i].orden >= desde){ P = L[i]; break; } }
+  if(!P) P = G;
+  R.plan = P.id; R.nombre = P.n;
+  /* el porqué: lo que obliga a este plan (lo que el de abajo no alcanza) */
+  var A = L.filter(function(x){ return x.orden === P.orden - 1; })[0];
+  if(!A){
+    R.porque = ['Con hasta ' + P.trab + ' trabajadores, una obra y solo tú registrando, LITE te alcanza: es gratis para siempre.',
+                'Cuando crezcas, la app te avisa qué plan te toca.'];
+  } else {
+    if(t > A.trab) R.porque.push('Tienes ' + aplTexto('trab', r.trab).toLowerCase() + ' trabajadores: ' + P.n + ' llega hasta ' + _aplMiles(P.trab) + '.');
+    if(o > A.obras) R.porque.push('Llevas ' + aplTexto('obras', r.obras).toLowerCase() + ' obras a la vez: ' + P.n + ' trae ' + P.obras + '.');
+    if(p > A.gest) R.porque.push('Registran ' + _aplPersTexto(r.pers) + ': ' + P.n + ' trae ' + P.gest + ' cuentas para tu equipo.');
+    if(r.insp === 'si' && aplPlan(APL_DESDE.insp) && aplPlan(APL_DESDE.insp).orden === P.orden)
+      R.porque.push('Haces inspecciones con formato y pides requerimientos: vienen desde ' + P.n + '.');
+    if(r.ssoma === 'si' && aplPlan(APL_DESDE.ssoma) && aplPlan(APL_DESDE.ssoma).orden === P.orden)
+      R.porque.push('Manejas químicos, simulacros o exámenes médicos: vienen desde ' + P.n + '.');
+    if(!R.porque.length) R.porque.push(P.n + ' es el plan más chico que cubre todo lo que respondiste.');
+  }
+  if(r.sub === 'si') R.nota = 'Tus subcontratas pueden usar su propia cuenta (LITE es gratis). Con más de 400 trabajadores, OBRASST Central las junta y entran gratis.';
+  /* 15/10/2026 · si lo único que lo sube de plan es la gente, el de abajo con puestos sueltos puede salir menos: se
+     le dice (nunca vender de más) */
+  var Q = _aplAlterno(L, P, t, o, p, desde);
+  if(!R.nota && Q){
+    var falta = p - Q.gest;
+    R.nota = 'Si solo te faltan personas, también puedes quedarte en ' + Q.n + ' y sumar ' +
+             (falta === 1 ? 'un puesto suelto' : falta + ' puestos sueltos') + ': sale menos que ' + P.n + '.';
+  }
+  return R;
+}
+function _aplMiles(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function _aplPersTexto(v){
+  return { '1':'solo tú', '2':'tú y uno más', '4':'de 3 a 4 personas', '8':'de 5 a 8 personas', '14':'de 9 a 14 personas', mas:'más de 14 personas' }[v] || 'varias personas';
+}
+/* lo corto, para «Mi plan»: «Te conviene SSOMA: tienes de 151 a 400 trabajadores y manejas químicos.» */
+function aplResumen(R){
+  if(!R) return '';
+  var p = (R.porque || [])[0] || '';
+  if(R.tipo === 'plan') return 'Te conviene ' + R.nombre + '. ' + p;
+  if(R.tipo === 'reunion') return 'Te conviene ' + R.nombre + '. ' + p;
+  return R.nombre + '. ' + p;
+}
+/* lo respondido, en una línea por pregunta (para el WhatsApp y la Consola) */
+function aplRespuestasTexto(r){
+  return aplRespondidas(r).map(function(k){
+    var q = { rol:'Qué hace', central:'Su principal usa Central', trab:'Trabajadores', obras:'Obras a la vez', pers:'Personas que registran',
+              insp:'Inspecciones y requerimientos', ssoma:'Químicos, simulacros o EMO', sub:'Subcontratas en la app' }[k] || k;
+    return q + ': ' + aplTexto(k, r[k]);
+  });
+}
+/* el WhatsApp, con sus respuestas ya escritas: no tiene que explicar todo de nuevo */
+function aplTextoWA(r, R){
+  var t = 'Hola, vengo de OBRASST. Respondí el asistente de planes:\n' + aplRespuestasTexto(r).map(function(x){ return '• ' + x; }).join('\n');
+  if(R && R.nombre) t += '\nMe salió: ' + R.nombre + '.';
+  t += '\nQuisiera consultar: ';
+  return t;
+}
+function aplEnlaceWA(r, R){ return 'https://wa.me/' + APL_WA + '?text=' + encodeURIComponent(aplTextoWA(r, R)); }
+
+/* ── los turnos de la reunión (hora de Perú) ──
+   inicio: «2026-10-17T14:15:00-05:00». Se ofrecen desde una hora después de ahora y hasta APL_SEMANAS semanas. */
+function _aplDos(n){ return (n < 10 ? '0' : '') + n; }
+function aplTurnos(ahoraMs, semanas){
+  ahoraMs = ahoraMs || Date.now(); semanas = semanas || APL_SEMANAS;
+  var L = [], desde = ahoraMs + 3600000, hasta = ahoraMs + semanas * 7 * 86400000;
+  /* el día de hoy en Perú, a medianoche (en ms UTC) */
+  var lima = new Date(ahoraMs + APL_ZONA * 3600000);
+  var d0 = Date.UTC(lima.getUTCFullYear(), lima.getUTCMonth(), lima.getUTCDate()) - APL_ZONA * 3600000;
+  for(var d = 0; d <= semanas * 7; d++){
+    var dia = d0 + d * 86400000, dl = new Date(dia + APL_ZONA * 3600000), dow = dl.getUTCDay();
+    APL_TURNOS.forEach(function(T){
+      if(T[0] !== dow) return;
+      for(var m = T[1] * 60; m < T[2] * 60; m += APL_TURNO_MIN){
+        var ms = dia + m * 60000;
+        if(ms < desde || ms > hasta) continue;
+        var f = new Date(ms + APL_ZONA * 3600000);
+        L.push({ ms:ms, ini:f.getUTCFullYear() + '-' + _aplDos(f.getUTCMonth() + 1) + '-' + _aplDos(f.getUTCDate()) + 'T' +
+                    _aplDos(f.getUTCHours()) + ':' + _aplDos(f.getUTCMinutes()) + ':00-05:00',
+                 dia:f.getUTCFullYear() + '-' + _aplDos(f.getUTCMonth() + 1) + '-' + _aplDos(f.getUTCDate()), dow:dow,
+                 hora:aplHora(f.getUTCHours(), f.getUTCMinutes()) });
+      }
+    });
+  }
+  return L;
+}
+function aplHora(h, m){ var am = h < 12, h12 = h % 12 === 0 ? 12 : h % 12; return h12 + ':' + _aplDos(m) + (am ? ' am' : ' pm'); }
+var APL_DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+var APL_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
+/* «sábado 17 de octubre» */
+function aplDiaLargo(dia){
+  var p = String(dia || '').slice(0, 10).split('-'); if(p.length < 3) return '';
+  var dw = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay();
+  return APL_DIAS[dw] + ' ' + (+p[2]) + ' de ' + APL_MESES[+p[1] - 1];
+}
+/* «sábado 17 de octubre, 2:15 pm (hora de Perú)», de un inicio ISO o de los milisegundos */
+function aplCuando(ini){
+  var ms = typeof ini === 'number' ? ini : Date.parse(ini); if(isNaN(ms)) return '';
+  var f = new Date(ms + APL_ZONA * 3600000);
+  var dia = f.getUTCFullYear() + '-' + _aplDos(f.getUTCMonth() + 1) + '-' + _aplDos(f.getUTCDate());
+  return aplDiaLargo(dia) + ', ' + aplHora(f.getUTCHours(), f.getUTCMinutes()) + ' (hora de Perú)';
+}
+/* para su Google Calendar: el evento ya armado (15 minutos), en el idioma de la app (el portal no traduce: ahí no hay trad) */
+function _aplT(s){ try{ return (typeof trad === 'function') ? trad(s) : s; }catch(_t){ return s; } }
+function aplEnlaceCalendario(ini, R){
+  var ms = typeof ini === 'number' ? ini : Date.parse(ini); if(isNaN(ms)) return '';
+  var z = function(t){ return new Date(t).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); };
+  var det = _aplT('Reunión de 15 minutos con OBRASST por Google Meet: te escribimos por WhatsApp con el enlace.') +
+            (R && R.nombre ? '\n' + _aplT('Lo que te salió:') + ' ' + _aplT(R.nombre) + '.' : '') +
+            '\nWhatsApp: +51 967 991 730 · obrasstapp.com';
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(_aplT('Reunión OBRASST (15 min)')) +
+         '&dates=' + z(ms) + '/' + z(ms + APL_TURNO_MIN * 60000) + '&details=' + encodeURIComponent(det) + '&location=' + encodeURIComponent('Google Meet');
+}
+/* lo que se guarda en el servidor (respuestas de la empresa, sin datos personales) */
+function aplParaGuardar(r, R){
+  var o = { v:APL_VER };
+  APL_ORDEN.forEach(function(k){ if(r && r[k] != null && r[k] !== '') o[k] = String(r[k]).slice(0, 20); });
+  return { resp:o, plan:(R && (R.plan || R.tipo)) || '', porque:aplResumen(R).slice(0, 400) };
+}
+/* la nube: ¿se muestra? (no respondió; no la cerró dos veces; si la cerró una, vuelve a los 2 días) */
+function aplNubeToca(m, ahoraMs){
+  if(!m || m.respondido) return false;
+  var v = +(m.cerrada_veces || 0); if(v >= 2) return false;
+  if(v === 1){ var t = Date.parse(m.cerrada_en || ''); if(!isNaN(t) && (ahoraMs || Date.now()) - t < 2 * 86400000) return false; }
+  return true;
+}
+/* <<< APL-BASE-FIN >>> */
 /* 29/09/2026 · Marcelo: «Climaxi vence en octubre, cuando activé su plan gratis
    en agosto, no entiendo». La fecha sale de lo que se fue sumando: el mes
    gratis, cada código (si quedaban días, se suman al final), Google Play y lo
@@ -2109,8 +2456,83 @@ function _codWaLink(c){ return 'https://wa.me/'+_codWa(c.para)+'?text='+encodeUR
    activo, esa obra trabaja como Gestión SST, invita a sus subcontratas por su RUC (que también trabajan como
    Gestión SST, sin pagar) y a quien la supervisa (el cliente, la supervisión, el regulador). Al vencer o quitarlo,
    cada espacio vuelve a su plan y lo registrado queda. Servidor: sql/2026-10-25-cadena.sql. */
-var CENP = { lista:[], pedidos:[], cod:'', hasta:'', tope:'', todas:false, nota:'' };
+var CENP = { lista:[], pedidos:[], cod:'', hasta:'', tope:'', todas:false, tipo:'central', sups:'', puestos:'', gb:'', nota:'' };
+/* 15/10/2026 · lote 12: los planes que se activan aquí (los dos de arriba traen a su supervisora incluida) */
+var CEN_TIPOS = [['central', 'Central', 'una obra'], ['corporativo', 'Corporativo', 'la empresa y todas sus obras'], ['mandante', 'Mandante', 'el dueño del proyecto, con su supervisora incluida'],
+                 ['fiscalizacion', 'Fiscalización', 'la entidad del Estado, con sus supervisoras incluidas']];
+function _cenTipoN(t){ var x = CEN_TIPOS.filter(function(y){ return y[0] === t; })[0]; return x ? x[1] : 'Central'; }
 var CEN_PED_EST = [['nueva', 'Nueva'], ['contactada', 'Contactada'], ['demo', 'Demo hecha'], ['piloto', 'En piloto'], ['cliente', 'Cliente'], ['descartada', 'Descartada']];
+/* ══ 15/10/2026 · EL ASISTENTE DE PLAN (sql/2026-11-25-asistente-plan.sql) ══════════════
+   Lo que respondió cada cuenta (en la app o en la web), qué le salió, cuántos abrieron el WhatsApp, y las reuniones
+   de 15 minutos que pidieron, con su WhatsApp para mandarles el enlace de Google Meet. Lo común (las preguntas y los
+   nombres de los planes) es asistente-base.js, el mismo de la app y de la web. */
+var REU = { dias:60 };
+var REU_ESTADOS = [['nueva','Nueva'], ['contactado','Contactado'], ['compro','Compró'], ['no_vino','No vino'], ['cancelada','Cancelada']];
+function _reuPlan(id){
+  var P = (typeof aplPlan === 'function') ? aplPlan(id) : null; if(P) return P.n;
+  return ({ central:'OBRASST Central', corporativo:'OBRASST Corporativo', mandante:'OBRASST Mandante', fiscalizacion:'OBRASST Fiscalización',
+            invitado:'Subcontrata (gratis en la Central)', incluida:'Supervisora (incluida)', trabajador:'Trabajador' })[id] || id || '—';
+}
+function _reuResp(r){ try{ var o = Object.assign({}, r || {}); delete o.v; return aplRespuestasTexto(o).join(' · '); }catch(_e){ return ''; } }
+function _reuWA(x){
+  var t = 'Hola ' + String(x.nombre || '').split(' ')[0] + ', te escribo de OBRASST por tu reunión del ' + aplCuando(x.inicio) + '. Este es el enlace de Google Meet: ';
+  return 'https://wa.me/' + String(x.whatsapp || '').replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(t);
+}
+function vistaReuniones(caja){
+  cargando(caja);
+  function pinta(){
+    sbRpc('sst_admin_reuniones', { p_dias:REU.dias }).then(function(r){
+      if(!r || !r.ok){ noAbre(caja, r && r.error === 'no_admin' ? { motivo:'no_eres_admin' } : r, null, '2026-11-25-asistente-plan'); return; }
+      marcarActualizado();
+      var R = r.resumen || {}, pp = R.por_plan || {}, ahora = Date.now();
+      var h = '<div class="rej">' + cifra('Respondieron', String(R.respondieron || 0), 'el asistente, en la app o en la web', '') +
+        cifra('Cerraron sin responder', String(R.cerraron || 0), 'la nube vuelve una vez a los 2 días', '') +
+        cifra('Abrieron el WhatsApp', String(R.whatsapp || 0), 'desde su resultado', '') +
+        cifra('Reuniones', String(R.reuniones || 0), 'pedidas (sin las canceladas)', '') +
+        cifra('Compraron', String(R.compraron || 0), 'lo marcas tú en cada reunión', (R.compraron ? 'ok' : '')) + '</div>';
+      var planes = Object.keys(pp).sort(function(a, b){ return pp[b] - pp[a]; });
+      if(planes.length) h += '<div class="tarj"><div class="tarj-cab"><h2>Lo que les salió</h2><span class="sub">Cuentas que respondieron, por plan</span></div><div class="tarj-cuerpo reu-planes">' +
+        planes.map(function(k){ return '<span class="pill azul">' + esc(_reuPlan(k)) + ' · ' + pp[k] + '</span>'; }).join(' ') + '</div></div>';
+      var L = (r.reuniones || []).slice().sort(function(a, b){
+        var fa = Date.parse(a.inicio) >= ahora, fb = Date.parse(b.inicio) >= ahora;
+        if(fa !== fb) return fa ? -1 : 1;
+        return fa ? Date.parse(a.inicio) - Date.parse(b.inicio) : Date.parse(b.inicio) - Date.parse(a.inicio); });
+      h += '<div class="tarj"><div class="tarj-cab"><h2>Reuniones</h2><span class="sub">Las próximas arriba. Escríbeles por WhatsApp con el enlace de Google Meet y marca en qué va cada una.</span></div>';
+      if(!L.length) h += '<div class="vacio">Todavía nadie pidió una reunión.</div>';
+      else h += '<div class="tabla-caja"><table class="mini reu-t"><thead><tr><th>Cuándo (Perú)</th><th>Quién</th><th>Le salió</th><th>Lo que respondió</th><th>Estado</th></tr></thead><tbody>' +
+        L.map(function(x){
+          var pas = Date.parse(x.inicio) < ahora;
+          return '<tr' + (pas ? ' class="reu-pasada"' : '') + '><td><b>' + esc(aplCuando(x.inicio).replace(' (hora de Perú)', '')) + '</b>' + (x.origen ? '<span class="sub"> · ' + esc(x.origen === 'web' ? 'web' : 'app') + '</span>' : '') + '</td>' +
+            '<td><b>' + esc(x.nombre) + '</b><br><a href="' + esc(_reuWA(x)) + '" target="_blank" rel="noopener">WhatsApp +' + esc(x.whatsapp) + '</a>' + (x.correo ? '<br><span class="sub">' + esc(x.correo) + '</span>' : '') +
+              (x.nota ? '<br><i>«' + esc(x.nota) + '»</i>' : '') + '</td>' +
+            '<td>' + esc(_reuPlan(x.plan)) + '</td><td class="sub">' + esc(_reuResp(x.respuestas)) + '</td>' +
+            '<td><select class="reu-estado" data-id="' + (+x.id) + '" aria-label="Estado">' + REU_ESTADOS.map(function(e){ return '<option value="' + e[0] + '"' + (e[0] === x.estado ? ' selected' : '') + '>' + e[1] + '</option>'; }).join('') + '</select></td></tr>';
+        }).join('') + '</tbody></table></div>';
+      h += '</div>';
+      var A = r.respuestas || [];
+      h += '<div class="tarj"><div class="tarj-cab"><h2>Respondieron</h2><span class="sub">Los últimos ' + REU.dias + ' días</span></div>';
+      if(!A.length) h += '<div class="vacio">Todavía nadie respondió el asistente.</div>';
+      else h += '<div class="tabla-caja"><table class="mini"><thead><tr><th>Cuándo</th><th>Cuenta</th><th>Le salió</th><th>Lo que respondió</th><th class="num">Veces</th><th class="num">WhatsApp</th></tr></thead><tbody>' +
+        A.map(function(x){ return '<tr><td>' + esc(fechaHora(x.respondido)) + '</td><td>' + esc(x.correo || '—') + '<span class="sub"> · ' + esc(x.origen || '') + '</span></td><td>' + esc(_reuPlan(x.plan)) + '</td>' +
+          '<td class="sub">' + esc(_reuResp(x.respuestas)) + '</td><td class="num">' + (+x.veces || 0) + '</td><td class="num">' + (+x.wa || 0) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+      h += '</div>';
+      caja.innerHTML = h;
+      [].forEach.call(caja.querySelectorAll('.reu-estado'), function(sel){
+        sel.onchange = function(){
+          var id = +sel.getAttribute('data-id'), v = sel.value; sel.disabled = true;
+          sbRpc('sst_admin_reunion_estado', { p_id:id, p_estado:v }).then(function(x){
+            sel.disabled = false;
+            if(!x || !x.ok){ toast(x && x.error === 'ocupado' ? 'Ese turno ya lo tomó otra persona.' : 'No se pudo cambiar.'); pinta(); return; }
+            toast('Listo: ' + (REU_ESTADOS.filter(function(e){ return e[0] === v; })[0] || [0, v])[1] + '.');
+          }, function(){ sel.disabled = false; toast('Sin conexión: no se cambió.'); });
+        };
+      });
+    }, function(cod){ noAbre(caja, null, cod, '2026-11-25-asistente-plan'); });
+  }
+  VISTA.recargar = function(silencio){ if(silencio && document.activeElement && document.activeElement.classList.contains('reu-estado')) return; pinta(); };
+  pinta();
+}
+
 function vistaCentral(caja){
   var armado=false;
   cargando(caja);
@@ -2140,15 +2562,21 @@ function _cenArmazon(){
       '<div class="campo"><label for="cen-hasta">Hasta cuándo <span class="gris-t">(vacío: sin fecha de fin)</span></label><input id="cen-hasta" type="date" value="'+esc(CENP.hasta)+'"></div>'+
       '<div class="campo"><label for="cen-tope">Cuántas subcontratas <span class="gris-t">(vacío o 0: sin tope)</span></label><input id="cen-tope" type="number" min="0" max="500" inputmode="numeric" value="'+esc(CENP.tope)+'"></div>'+
       '<div class="campo"><label for="cen-nota">Nota <span class="gris-t">(opcional: con quién se acordó, qué paga)</span></label><input id="cen-nota" maxlength="300" autocomplete="off" value="'+esc(CENP.nota)+'"></div>'+
-    '</div><label class="cen-check"><input type="checkbox" id="cen-todas"'+(CENP.todas?' checked':'')+'> <span>Corporativo: vale para esa empresa y <b>todas sus obras</b> (el código tiene que ser el de la empresa madre)</span></label>'+
-    '<button type="button" class="bt" id="cen-activar">Activar Central</button><div class="msg" id="cen-msg" aria-live="polite"></div></div></div>'+
+      '<div class="campo"><label for="cen-tipo">Plan</label><select id="cen-tipo">'+CEN_TIPOS.map(function(t){ return '<option value="'+t[0]+'"'+(CENP.tipo===t[0]?' selected':'')+'>'+esc(t[1]+' · '+t[2])+'</option>'; }).join('')+'</select></div>'+
+      '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-sups">Supervisoras incluidas <span class="gris-t">(vacío: 3 en Mandante, 20 en Fiscalización)</span></label><input id="cen-sups" type="number" min="0" max="500" inputmode="numeric" value="'+esc(CENP.sups)+'"></div>'+
+      '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-puestos">Usuarios <span class="gris-t">(vacío: 100 en Mandante; sin límite en Fiscalización)</span></label><input id="cen-puestos" type="number" min="1" max="5000" inputmode="numeric" value="'+esc(CENP.puestos)+'"></div>'+
+      '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-gb">Espacio en GB <span class="gris-t">(vacío: 1,000 en Mandante; 10,000 en Fiscalización)</span></label><input id="cen-gb" type="number" min="1" inputmode="numeric" value="'+esc(CENP.gb)+'"></div>'+
+    '</div><p class="ayuda cen-tipo-ay">Corporativo, Mandante y Fiscalización valen para la empresa y <b>todas sus obras</b>: el código tiene que ser el de la empresa madre.</p>'+
+    '<button type="button" class="bt" id="cen-activar">Activar el plan</button><div class="msg" id="cen-msg" aria-live="polite"></div></div></div>'+
     '<div class="tarj"><div class="tarj-cab"><div><h2>Obras con Central</h2><p class="sub">«Supervisan»: cuántas empresas la miran (cliente, supervisión). «Obs.»: las observaciones que puso. «Gente hoy»: el personal activo de la obra y el de sus subcontratas enlazadas, la base para la cuenta del mes.</p></div></div><div id="t-central"></div></div>'+
     '<div class="tarj"><div class="tarj-cab"><div><h2>Pidieron una demo o un piloto</h2><p class="sub">Lo que llega del formulario de la página de Central. Anota en qué va cada una.</p></div></div><div id="cen-pedidos"><div class="tarj-cuerpo"><span class="gris-t">Cargando…</span></div></div></div>';
 }
 function _cenCablear(){
   $('cen-cod').oninput=function(){ CENP.cod=this.value; }; $('cen-hasta').onchange=function(){ CENP.hasta=this.value; };
   $('cen-tope').oninput=function(){ CENP.tope=this.value; }; $('cen-nota').oninput=function(){ CENP.nota=this.value; };
-  $('cen-todas').onchange=function(){ CENP.todas=this.checked; };
+  var arr=function(){ var v=$('cen-tipo').value; CENP.tipo=v; CENP.todas=(v!=='central'); [].forEach.call(document.querySelectorAll('.cen-arriba'), function(x){ x.hidden=!/^(mandante|fiscalizacion)$/.test(v); }); };
+  $('cen-tipo').onchange=arr;
+  $('cen-sups').oninput=function(){ CENP.sups=this.value; }; $('cen-puestos').oninput=function(){ CENP.puestos=this.value; }; $('cen-gb').oninput=function(){ CENP.gb=this.value; };
   $('cen-activar').onclick=_cenActivar;
   $('cen-cod').onkeydown=function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); _cenActivar(); } };
 }
@@ -2158,26 +2586,29 @@ function _cenActivar(){
   if(cod.replace(/[^A-Z0-9]/g, '').length<5){ m.className='msg mal'; m.textContent='Escribe el código de la obra (el de «Mi empresa», tipo ABC-123).'; $('cen-cod').focus(); return; }
   if(hasta && hasta<hoyLima()){ m.className='msg mal'; m.textContent='Esa fecha ya pasó. Para apagarlo, usa «Quitar» en la lista.'; $('cen-hasta').focus(); return; }
   b.disabled=true; m.textContent='Activando…';
-  sbRpc('sst_admin_central', {p:{codigo:cod, hasta:hasta, tope:String($('cen-tope').value||'').trim(), todas:$('cen-todas').checked, nota:String($('cen-nota').value||'').trim()}}).then(function(r){
+  var tipo=$('cen-tipo').value||'central', arriba=/^(mandante|fiscalizacion)$/.test(tipo);
+  sbRpc('sst_admin_central', {p:{codigo:cod, tipo:tipo, hasta:hasta, tope:String($('cen-tope').value||'').trim(), todas:tipo!=='central', nota:String($('cen-nota').value||'').trim(),
+    supervisoras:arriba ? String($('cen-sups').value||'').trim() : '', puestos:arriba ? String($('cen-puestos').value||'').trim() : '', gb:arriba ? String($('cen-gb').value||'').trim() : ''}}).then(function(r){
     b.disabled=false;
     if(!r || !r.ok){
       m.className='msg mal';
       m.textContent = (r && r.motivo==='codigo_no_existe') ? 'No hay ninguna obra con ese código. Míralo en «Empresas y planes».' : (r && r.motivo==='fecha') ? 'Esa fecha no se entiende.'
-        : (r && r.motivo==='no_eres_admin') ? 'Esta cuenta no es la del creador.' : 'No se pudo activar. Inténtalo otra vez.';
+        : (r && r.motivo==='no_eres_admin') ? 'Esta cuenta no es la del creador.' : (r && /^(puestos|gb|supervisoras)$/.test(r.motivo||'')) ? 'Revisa los números: usuarios de 1 a 5,000, supervisoras hasta 500.'
+        : 'No se pudo activar. Inténtalo otra vez.';
       return;
     }
     var c=r.central||{};
     m.className='msg ok';
-    m.textContent='Central activo en «'+((r.empresa||{}).nombre||cod)+'»'+(c.hasta ? ' hasta el '+fechaLarga(c.hasta) : ', sin fecha de fin')+(c.tope ? ' · hasta '+c.tope+' subcontratas' : ' · sin tope de subcontratas')+(c.todas ? ' · con todas sus obras' : '')+'. Esa obra ya lo ve al volver a entrar.';
-    CENP.cod=''; CENP.hasta=''; CENP.tope=''; CENP.nota=''; CENP.todas=false;
-    $('cen-cod').value=''; $('cen-hasta').value=''; $('cen-tope').value=''; $('cen-nota').value=''; $('cen-todas').checked=false;
+    m.textContent=_cenTipoN(c.tipo||tipo)+' activo en «'+((r.empresa||{}).nombre||cod)+'»'+(c.hasta ? ' hasta el '+fechaLarga(c.hasta) : ', sin fecha de fin')+(c.tope ? ' · hasta '+c.tope+' subcontratas' : ' · sin tope de subcontratas')+(c.todas ? ' · con todas sus obras' : '')+(c.supervisoras!=null ? ' · hasta '+c.supervisoras+(c.supervisoras===1?' supervisora incluida':' supervisoras incluidas') : '')+'. Esa obra ya lo ve al volver a entrar.';
+    CENP.cod=''; CENP.hasta=''; CENP.tope=''; CENP.nota=''; CENP.todas=false; CENP.tipo='central'; CENP.sups=''; CENP.puestos=''; CENP.gb='';
+    $('cen-cod').value=''; $('cen-hasta').value=''; $('cen-tope').value=''; $('cen-nota').value=''; $('cen-tipo').value='central'; $('cen-sups').value=''; $('cen-puestos').value=''; $('cen-gb').value=''; $('cen-tipo').onchange();
     if(typeof VISTA.recargar==='function') VISTA.recargar(false);
   }, function(cod2){ b.disabled=false; m.className='msg mal'; m.textContent = cod2===404 ? 'Falta activarlo en el servidor: se activa con el SQL «2026-10-25-cadena».' : 'No hubo conexión. Inténtalo otra vez.'; });
 }
 function _cenTabla(){
   var c=$('t-central'); if(!c) return;
   tabla(c, [
-    {k:'nombre', t:'Obra', v:function(x){ return (x.nombre||'')+' '+(x.codigo||''); }, h:function(x){ return '<b>'+esc(x.nombre||'(la empresa ya no existe)')+'</b><span class="sub"><span class="cod-t">'+esc(x.codigo||'')+'</span>'+(x.todas?' · con todas sus obras':'')+'</span>'+(x.nota?'<span class="sub cen-nota">'+esc(x.nota)+'</span>':''); }},
+    {k:'nombre', t:'Obra', v:function(x){ return (x.nombre||'')+' '+(x.codigo||''); }, h:function(x){ return '<b>'+esc(x.nombre||'(la empresa ya no existe)')+'</b><span class="sub"><span class="cod-t">'+esc(x.codigo||'')+'</span>'+(x.tipo && x.tipo!=='central' ? ' · '+esc(_cenTipoN(x.tipo)) : '')+(x.todas?' · con todas sus obras':'')+(x.supervisoras!=null ? ' · '+x.supervisoras+(x.supervisoras===1?' supervisora incluida':' supervisoras incluidas') : '')+'</span>'+(x.nota?'<span class="sub cen-nota">'+esc(x.nota)+'</span>':''); }},
     {k:'hasta', t:'Vigencia', v:function(x){ return x.hasta||'9999'; }, h:function(x){
        return '<span class="pill '+(x.vigente?'ok':'mal')+'" title="Desde el '+esc(fechaLarga(x.desde))+'">'+(x.vigente?'Vigente':'Venció')+'</span><span class="sub cen-nw">'+(x.hasta ? (x.vigente?'hasta el ':'el ')+esc(fechaLarga(x.hasta)) : 'sin fecha de fin')+'</span>'; }},
     {k:'subs', t:'Subcontratas', num:true, v:function(x){ return +x.subs||0; }, h:function(x){ return (+x.subs||0)+(x.tope ? ' de '+x.tope : '')+(x.invitadas ? '<span class="sub">'+x.invitadas+(x.invitadas===1?' invitada':' invitadas')+'</span>' : ''); }},
@@ -2189,7 +2620,9 @@ function _cenTabla(){
     accion:function(acc, x){
       if(acc==='cambiar'){
         CENP.cod=x.codigo||''; CENP.hasta=x.hasta||''; CENP.tope=x.tope?String(x.tope):''; CENP.nota=x.nota||''; CENP.todas=!!x.todas;
-        $('cen-cod').value=CENP.cod; $('cen-hasta').value=CENP.hasta; $('cen-tope').value=CENP.tope; $('cen-nota').value=CENP.nota; $('cen-todas').checked=CENP.todas;
+        CENP.tipo=x.tipo||(x.todas?'corporativo':'central'); CENP.sups=x.supervisoras!=null?String(x.supervisoras):''; CENP.puestos=x.puestos?String(x.puestos):''; CENP.gb=x.gb?String(x.gb):'';
+        $('cen-cod').value=CENP.cod; $('cen-hasta').value=CENP.hasta; $('cen-tope').value=CENP.tope; $('cen-nota').value=CENP.nota; $('cen-tipo').value=CENP.tipo;
+        $('cen-sups').value=CENP.sups; $('cen-puestos').value=CENP.puestos; $('cen-gb').value=CENP.gb; $('cen-tipo').onchange();
         $('cen-msg').className='msg'; $('cen-msg').textContent='Cambia lo que haga falta y vuelve a «Activar Central».';
         try{ $('cen-hasta').focus(); $('cen-cod').scrollIntoView({block:'center'}); }catch(e){}
         return;
