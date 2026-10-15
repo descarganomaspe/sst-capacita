@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0B2A3A">
+<link rel="icon" href="../icono-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>Periódico mural · OBRASST</title>
+<!-- 14/10/2026 · lo que abre el cartel QR del periódico mural (lote 11): una pizarra con los archivos de los
+     carteles QR de la obra, en secciones con su título. Nada de QR: el archivo mismo. Según el plan de la obra,
+     lo ve cualquiera o solo su gente (con la app). sql/2026-11-14-mural.sql. El QR lleva una ficha, nunca el código. -->
+<style>
+*{box-sizing:border-box}
+:root{--fondo:#0B2A3A;--tinta:#EAF2F7;--suave:#A9C2D0;--tenue:#7D97A6;--oro:#F5B700;--pizarra:#F3F5F0;--marco:#C9B48A;--papel:#FFFFFF;--osc:#0B2A3A;--gris:#5B7282}
+html,body{background:var(--fondo)}
+body{margin:0;min-height:100vh;color:var(--tinta);padding:20px 16px calc(24px + env(safe-area-inset-bottom,0px));
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.marca{font-size:12px;letter-spacing:.18em;color:var(--oro);font-weight:800;text-align:center;margin-bottom:12px}
+h1{font-size:22px;line-height:1.25;margin:0;text-align:center;text-wrap:balance}
+.obra{color:var(--suave);font-size:14px;text-align:center;margin:4px 0 14px}
+.centro{max-width:460px;margin:0 auto;text-align:center}
+.giro{width:34px;height:34px;margin:26px auto 0;border-radius:50%;border:3px solid rgba(255,255,255,.18);border-top-color:var(--oro);animation:g .8s linear infinite}
+@keyframes g{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.giro{animation-duration:2.4s}}
+.tarj{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:18px;margin-top:16px;text-align:left}
+.tarj p{margin:0;color:var(--suave);font-size:15px}
+a.bt,button.bt{display:block;width:100%;margin-top:14px;padding:14px;border-radius:12px;border:0;cursor:pointer;background:var(--oro);color:#0B2A3A;
+  font:inherit;font-weight:800;text-align:center;text-decoration:none}
+a.bt:focus-visible,button.bt:focus-visible,a.doc:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
+/* la pizarra: el marco de madera clara y las hojas clavadas, en fila (se corre de costado) */
+.pizarra{background:var(--pizarra);border:10px solid var(--marco);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.35), inset 0 0 0 1px rgba(0,0,0,.06);
+  padding:16px 0 14px;max-width:1400px;margin:0 auto}
+.fila{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(250px, 300px);gap:16px;overflow-x:auto;padding:4px 16px 12px;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch}
+@media (max-width:560px){ .fila{grid-auto-columns:84%} }
+.hoja{scroll-snap-align:start;background:var(--papel);color:var(--osc);border-radius:6px;padding:16px 14px 12px;position:relative;
+  box-shadow:0 2px 0 rgba(0,0,0,.05), 0 6px 14px rgba(0,0,0,.12);align-self:start}
+.hoja:nth-child(3n+2){transform:rotate(-.6deg)} .hoja:nth-child(3n){transform:rotate(.5deg)}
+@media(prefers-reduced-motion:reduce){.hoja{transform:none!important}}
+.hoja::before{content:'';position:absolute;top:-7px;left:50%;width:16px;height:16px;margin-left:-8px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#ff8a7a,#C8372D 60%,#8E1E17);box-shadow:0 2px 3px rgba(0,0,0,.35)}
+.hoja h2{font-size:16px;line-height:1.25;margin:2px 0 10px;text-wrap:balance}
+.hoja h2 small{display:block;font-size:12px;font-weight:600;color:var(--gris);margin-top:2px}
+.docs{display:grid;gap:8px}
+a.doc{display:flex;gap:10px;align-items:center;padding:10px;border-radius:10px;background:#F5F8FA;border:1px solid #E1E8ED;color:var(--osc);text-decoration:none}
+a.doc:hover{background:#EDF3F7}
+a.doc .ic{flex:0 0 auto;width:44px;height:44px;border-radius:8px;display:grid;place-items:center;font-size:22px;background:#fff;border:1px solid #E1E8ED;overflow:hidden}
+a.doc .ic img{width:100%;height:100%;object-fit:cover;display:block}
+a.doc .tx{min-width:0;flex:1}
+a.doc b{display:block;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+a.doc small{display:block;font-size:12px;color:var(--gris);margin-top:2px}
+a.doc.nuevo small b{display:inline;color:#B26A00;font-size:12px}
+.ayuda{max-width:640px;margin:14px auto 0;text-align:center;color:var(--tenue);font-size:13px}
+.pista{display:none;text-align:center;color:var(--gris);font-size:12.5px;margin:2px 0 0}
+@media (max-width:560px){ .pista{display:block} }
+[hidden]{display:none!important}
+/* 14/10/2026 · el PDF de la obra se ve aquí mismo, página por página (sin descargarlo) */
+body.ver{padding:0 0 calc(24px + env(safe-area-inset-bottom,0px))}
+body.ver .marca{margin:14px 0 10px}
+.visor{max-width:860px;margin:0 auto}
+.vbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--fondo);border-bottom:1px solid rgba(255,255,255,.12)}
+.vtit{flex:1;min-width:0;font-size:15px;line-height:1.3;overflow-wrap:anywhere}
+.vatras,.vbaja{flex:0 0 auto;font:inherit;font-size:14px;font-weight:800;border-radius:10px;padding:8px 12px;cursor:pointer;text-decoration:none}
+.vatras{background:transparent;color:var(--tinta);border:1px solid rgba(255,255,255,.25)}
+.vbaja{background:var(--oro);color:#0B2A3A;border:0}
+.vatras:focus-visible,.vbaja:focus-visible{outline:2px solid var(--tinta);outline-offset:2px}
+.vpags{display:grid;gap:10px;padding:12px 10px 0}
+.vmsg{text-align:center;color:var(--suave);font-size:14px;margin:6px 0}
+.vpags .bt{max-width:320px;margin:10px auto 0}
+.vpag{position:relative;background:#fff;border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,.35);overflow:hidden;min-height:120px}
+.vpag canvas{display:block;width:100%;height:auto}
+.vpag .vn{position:absolute;right:8px;bottom:6px;font-size:11.5px;color:#4A5A66;background:rgba(255,255,255,.85);border-radius:6px;padding:1px 6px}
+</style></head><body>
+<div class="marca">&#9670; OBRASST</div>
+<div id="cuerpo">
+  <div class="centro"><h1 id="abriendo">Abriendo el mural…</h1><div class="giro"></div></div>
+</div>
+<script>
+(function(){
+  var SB='https://gwjjkknuiumgysezeatz.supabase.co', KEY='sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx';
+  var L='es'; try{ L=String((navigator.languages && navigator.languages[0]) || navigator.language || 'es').slice(0,2).toLowerCase(); }catch(_l){}
+  var TX={
+    en:{'Periódico mural':'Bulletin board','Abriendo el mural…':'Opening the board…','Toca un archivo para abrirlo. Siempre está la versión vigente.':'Tap a file to open it. The current version is always here.',
+      'Desliza para ver más ›':'Swipe to see more ›','Enlace':'Link','Subido el {0}':'Uploaded on {0}','nuevo':'new','{0} archivos':'{0} files','1 archivo':'1 file',
+      'Todavía no hay nada en el mural':'Nothing on the board yet','Cuando la obra suba sus documentos a los carteles QR, aparecen aquí.':'When the site uploads its documents to the QR posters, they show up here.',
+      'Este mural es solo para el personal':'This board is for site staff only','Lo ve la gente de {0} con su cuenta en la app OBRASST.':'People from {0} see it with their account in the OBRASST app.',
+      'Ábrelo en la app':'Open it in the app','Si todavía no tienes tu cuenta, pídele a tu supervisor que te registre.':"If you don't have your account yet, ask your supervisor to register you.",
+      'Este cartel ya no está activo':'This poster is no longer active','Pídele a tu supervisor el cartel nuevo del mural: se imprime desde OBRASST, en «Los QR de tu obra».':'Ask your supervisor for the new board poster: it’s printed from OBRASST, under “Your site’s QR codes”.',
+      'Este mural no está activo':'This board is not active','La obra no tiene el mural en su plan.':"The site's plan doesn't include the board.",
+      'Este cartel está incompleto':'This poster is incomplete','Al código QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.':'The QR code is missing its key. Ask your supervisor to print the poster again from OBRASST.',
+      'Sin señal':'No signal','Necesitas datos o wifi para abrir el mural.':'You need data or wifi to open the board.','Intentar otra vez':'Try again',
+      'El mural todavía no está activo en el servidor. Avísale a tu supervisor.':"The board isn't active on the server yet. Tell your supervisor.",
+      'Reglamento Interno de SST':'Internal H&S rules','Matriz IPERC':'IPERC matrix','Hojas MSDS':'Safety data sheets','Plan anual de SST':'Annual H&S plan','Objetivos y metas':'H&S objectives and targets',
+      'Mapa de riesgos':'Risk map','Plan de emergencia':'Emergency plan','Política de SST':'H&S policy','Política contra el hostigamiento sexual':'Sexual harassment prevention policy',
+      'Organigrama':'Organization chart','Comité de SST':'H&S committee','Brigadistas':'Emergency team','Contactos de emergencia':'Emergency contacts','Documentos':'Documents','Archivo':'File',
+      'Volver':'Back','Descargar':'Download','Trayendo el documento…':'Getting the document…','Preparando el documento…':'Preparing the document…',
+      'Este celular no pudo mostrarlo aquí.':"This phone couldn't show it here.",'Abrir el documento':'Open the document','1 página':'1 page','{0} páginas':'{0} pages',
+      'No se pudo traer el documento. Revisa tu señal e inténtalo otra vez.':"Couldn't get the document. Check your signal and try again.",
+      'Aquí se ven las primeras 150 páginas. El documento entero, con «Descargar».':'The first 150 pages are shown here. For the whole document, use “Download”.'},
+    pt:{'Periódico mural':'Mural de avisos','Abriendo el mural…':'Abrindo o mural…','Toca un archivo para abrirlo. Siempre está la versión vigente.':'Toque num arquivo para abrir. A versão vigente está sempre aqui.',
+      'Desliza para ver más ›':'Deslize para ver mais ›','Enlace':'Link','Subido el {0}':'Enviado em {0}','nuevo':'novo','{0} archivos':'{0} arquivos','1 archivo':'1 arquivo',
+      'Todavía no hay nada en el mural':'Ainda não há nada no mural','Cuando la obra suba sus documentos a los carteles QR, aparecen aquí.':'Quando a obra enviar os documentos aos cartazes QR, eles aparecem aqui.',
+      'Este mural es solo para el personal':'Este mural é só para o pessoal da obra','Lo ve la gente de {0} con su cuenta en la app OBRASST.':'O pessoal de {0} o vê com a sua conta no app OBRASST.',
+      'Ábrelo en la app':'Abra no app','Si todavía no tienes tu cuenta, pídele a tu supervisor que te registre.':'Se ainda não tem a sua conta, peça ao seu supervisor que o cadastre.',
+      'Este cartel ya no está activo':'Este cartaz não está mais ativo','Pídele a tu supervisor el cartel nuevo del mural: se imprime desde OBRASST, en «Los QR de tu obra».':'Peça ao seu supervisor o cartaz novo do mural: ele é impresso pelo OBRASST, em «Os QR da sua obra».',
+      'Este mural no está activo':'Este mural não está ativo','La obra no tiene el mural en su plan.':'O plano da obra não inclui o mural.',
+      'Este cartel está incompleto':'Este cartaz está incompleto','Al código QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.':'Falta a chave no código QR. Peça ao seu supervisor que imprima o cartaz de novo pelo OBRASST.',
+      'Sin señal':'Sem sinal','Necesitas datos o wifi para abrir el mural.':'Você precisa de dados ou wi-fi para abrir o mural.','Intentar otra vez':'Tentar de novo',
+      'El mural todavía no está activo en el servidor. Avísale a tu supervisor.':'O mural ainda não está ativo no servidor. Avise o seu supervisor.',
+      'Reglamento Interno de SST':'Regulamento Interno de SST','Matriz IPERC':'Matriz IPERC','Hojas MSDS':'Fichas FDS (MSDS)','Plan anual de SST':'Plano anual de SST','Objetivos y metas':'Objetivos e metas de SST',
+      'Mapa de riesgos':'Mapa de riscos','Plan de emergencia':'Plano de emergência','Política de SST':'Política de SST','Política contra el hostigamiento sexual':'Política contra o assédio sexual',
+      'Organigrama':'Organograma','Comité de SST':'Comitê de SST','Brigadistas':'Brigadistas','Contactos de emergencia':'Contatos de emergência','Documentos':'Documentos','Archivo':'Arquivo',
+      'Volver':'Voltar','Descargar':'Baixar','Trayendo el documento…':'Trazendo o documento…','Preparando el documento…':'Preparando o documento…',
+      'Este celular no pudo mostrarlo aquí.':'Este celular não conseguiu mostrá-lo aqui.','Abrir el documento':'Abrir o documento','1 página':'1 página','{0} páginas':'{0} páginas',
+      'No se pudo traer el documento. Revisa tu señal e inténtalo otra vez.':'Não foi possível trazer o documento. Verifique o sinal e tente de novo.',
+      'Aquí se ven las primeras 150 páginas. El documento entero, con «Descargar».':'Aqui aparecem as primeiras 150 páginas. O documento inteiro, com «Baixar».'},
+    fr:{'Periódico mural':'Panneau d’affichage','Abriendo el mural…':'Ouverture du panneau…','Toca un archivo para abrirlo. Siempre está la versión vigente.':'Touchez un fichier pour l’ouvrir. La version en vigueur est toujours ici.',
+      'Desliza para ver más ›':'Faites glisser pour voir plus ›','Enlace':'Lien','Subido el {0}':'Ajouté le {0}','nuevo':'nouveau','{0} archivos':'{0} fichiers','1 archivo':'1 fichier',
+      'Todavía no hay nada en el mural':'Rien sur le panneau pour l’instant','Cuando la obra suba sus documentos a los carteles QR, aparecen aquí.':'Quand le chantier ajoutera ses documents aux affiches QR, ils apparaîtront ici.',
+      'Este mural es solo para el personal':'Ce panneau est réservé au personnel','Lo ve la gente de {0} con su cuenta en la app OBRASST.':'Le personnel de {0} le voit avec son compte dans l’appli OBRASST.',
+      'Ábrelo en la app':'L’ouvrir dans l’appli','Si todavía no tienes tu cuenta, pídele a tu supervisor que te registre.':'Si vous n’avez pas encore de compte, demandez à votre superviseur de vous inscrire.',
+      'Este cartel ya no está activo':'Cette affiche n’est plus active','Pídele a tu supervisor el cartel nuevo del mural: se imprime desde OBRASST, en «Los QR de tu obra».':'Demandez à votre superviseur la nouvelle affiche du panneau : elle s’imprime depuis OBRASST, dans « Les QR de votre chantier ».',
+      'Este mural no está activo':'Ce panneau n’est pas actif','La obra no tiene el mural en su plan.':'Le forfait du chantier n’inclut pas le panneau.',
+      'Este cartel está incompleto':'Cette affiche est incomplète','Al código QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.':'Il manque la clé au code QR. Demandez à votre superviseur de réimprimer l’affiche depuis OBRASST.',
+      'Sin señal':'Pas de réseau','Necesitas datos o wifi para abrir el mural.':'Il faut des données ou du wifi pour ouvrir le panneau.','Intentar otra vez':'Réessayer',
+      'El mural todavía no está activo en el servidor. Avísale a tu supervisor.':'Le panneau n’est pas encore actif sur le serveur. Prévenez votre superviseur.',
+      'Reglamento Interno de SST':'Règlement intérieur SST','Matriz IPERC':'Matrice IPERC','Hojas MSDS':'Fiches FDS','Plan anual de SST':'Plan annuel SST','Objetivos y metas':'Objectifs et cibles SST',
+      'Mapa de riesgos':'Carte des risques','Plan de emergencia':"Plan d'urgence",'Política de SST':'Politique SST','Política contra el hostigamiento sexual':'Politique contre le harcèlement sexuel',
+      'Organigrama':'Organigramme','Comité de SST':'Comité SST','Brigadistas':"Équipiers d'urgence",'Contactos de emergencia':"Contacts d'urgence",'Documentos':'Documents','Archivo':'Fichier',
+      'Volver':'Retour','Descargar':'Télécharger','Trayendo el documento…':'Récupération du document…','Preparando el documento…':'Préparation du document…',
+      'Este celular no pudo mostrarlo aquí.':'Ce téléphone n’a pas pu l’afficher ici.','Abrir el documento':'Ouvrir le document','1 página':'1 page','{0} páginas':'{0} pages',
+      'No se pudo traer el documento. Revisa tu señal e inténtalo otra vez.':'Impossible de récupérer le document. Vérifiez le réseau et réessayez.',
+      'Aquí se ven las primeras 150 páginas. El documento entero, con «Descargar».':'Les 150 premières pages s’affichent ici. Pour le document entier, « Télécharger ».'}
+  };
+  if(!TX[L]) L='es';
+  function t(s){ var v=TX[L] && TX[L][s]; v=(v===undefined) ? s : v; for(var i=1;i<arguments.length;i++) v=v.split('{'+(i-1)+'}').join(arguments[i]); return v; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function q(n){ try{ return new URLSearchParams(location.search).get(n)||''; }catch(e){ return ''; } }
+  try{ document.documentElement.lang=L; document.title=t('Periódico mural')+' · OBRASST'; }catch(_d){}
+  var NOMBRE={risst:'Reglamento Interno de SST', pets:'PETS', iperc:'Matriz IPERC', msds:'Hojas MSDS', plan:'Plan anual de SST', objetivos:'Objetivos y metas',
+              mapa:'Mapa de riesgos', emergencia:'Plan de emergencia', politica:'Política de SST', hostigamiento:'Política contra el hostigamiento sexual',
+              organigrama:'Organigrama', comite:'Comité de SST', brigadistas:'Brigadistas', contactos:'Contactos de emergencia'};
+  var MES_EN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fecha(f){ var p=String(f||'').slice(0,10).split('-'); if(p.length!==3) return ''; return L==='en' ? (MES_EN[(+p[1]||1)-1]+' '+(+p[2])+', '+p[0]) : (p[2]+'/'+p[1]+'/'+p[0]); }
+  function web(u){ return /^https?:\/\//i.test(String(u||'')); }
+  /* el tipo del archivo, por su dirección: la foto se ve en chico; lo demás, con su ícono */
+  function tipo(d){
+    var u=String(d.url||'').split('?')[0].split('#')[0].toLowerCase();
+    if(d.enlace) return {ic:'🔗'};
+    if(/\.(jpe?g|png|webp|gif)$/.test(u)) return {img:true, ic:'🖼️'};
+    if(/\.pdf$/.test(u)) return {ic:'📕'};
+    if(/\.docx?$/.test(u)) return {ic:'📘'};
+    if(/\.xlsx?$/.test(u)) return {ic:'📗'};
+    if(/\.pptx?$/.test(u)) return {ic:'📙'};
+    return {ic:'📄'};
+  }
+  function rpc(fn, args){
+    var op={ method:'POST', credentials:'omit', cache:'no-store', referrerPolicy:'no-referrer',
+             headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'}, body:JSON.stringify(args||{}) };
+    try{ var ac=new AbortController(); setTimeout(function(){ try{ ac.abort(); }catch(_a){} }, 30000); op.signal=ac.signal; }catch(_e){}
+    return fetch(SB+'/rest/v1/rpc/'+fn, op).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); });
+  }
+  var tk=q('t'), cuerpo=document.getElementById('cuerpo');
+  document.getElementById('abriendo').textContent=t('Abriendo el mural…');
+  function aviso(tit, txt, extra){
+    cuerpo.innerHTML='<div class="centro"><h1>'+esc(tit)+'</h1><div class="tarj"><p>'+esc(txt)+'</p></div>'+(extra||'')+'</div>';
+    var b=document.getElementById('m-otra'); if(b) b.onclick=abrir;
+  }
+  var HOY=Date.now();
+  function pintar(r){
+    ULT=r;
+    /* solo lo que se puede abrir (una dirección web): eso se muestra y eso se cuenta */
+    var secs=(r.secciones||[]).map(function(s){ return (s && Array.isArray(s.docs)) ? {k:s.k, t:s.t, docs:s.docs.filter(function(d){ return d && web(d.url); })} : null; })
+                              .filter(function(s){ return s && s.docs.length; });
+    var h='<h1>'+esc(r.titulo || t('Periódico mural'))+'</h1><p class="obra">'+esc(r.obra||'')+'</p>';
+    if(!secs.length){
+      cuerpo.innerHTML=h+'<div class="centro"><div class="tarj"><p><b>'+esc(t('Todavía no hay nada en el mural'))+'</b></p><p style="margin-top:6px">'+esc(t('Cuando la obra suba sus documentos a los carteles QR, aparecen aquí.'))+'</p></div></div>';
+      return;
+    }
+    h+='<div class="pizarra"><div class="fila" id="m-fila" role="list">';
+    secs.forEach(function(s){
+      var tit=s.t || (NOMBRE[s.k] ? t(NOMBRE[s.k]) : t('Documentos')), n=s.docs.length;
+      h+='<section class="hoja" role="listitem" data-k="'+esc(s.k)+'"><h2>'+esc(tit)+'<small>'+esc(n===1 ? t('1 archivo') : t('{0} archivos', n))+'</small></h2><div class="docs">';
+      s.docs.forEach(function(d){
+        var ti=tipo(d), f=fecha(d.fecha), nuevo=false;
+        try{ nuevo=!!d.fecha && (HOY - Date.parse(d.fecha+'T12:00:00')) < 8*86400000; }catch(_n){}
+        h+='<a class="doc'+(nuevo ? ' nuevo' : '')+'" href="'+esc(d.url)+'" target="_blank" rel="noopener noreferrer" data-n="'+esc(d.nombre || t('Archivo'))+'">'+
+           '<span class="ic" aria-hidden="true">'+(ti.img ? '<img src="'+esc(d.url)+'" alt="" loading="lazy" referrerpolicy="no-referrer">' : ti.ic)+'</span>'+
+           '<span class="tx"><b>'+esc(d.nombre || (d.enlace ? t('Enlace') : t('Archivo')))+'</b>'+
+           '<small>'+(d.enlace ? esc(t('Enlace')) : (f ? esc(t('Subido el {0}', f)) : ''))+(nuevo ? ' · <b>'+esc(t('nuevo'))+'</b>' : '')+'</small></span></a>';
+      });
+      h+='</div></section>';
+    });
+    h+='</div>'+(secs.length > 1 ? '<p class="pista">'+esc(t('Desliza para ver más ›'))+'</p>' : '')+'</div>'+
+       '<p class="ayuda">'+esc(t('Toca un archivo para abrirlo. Siempre está la versión vigente.'))+'</p>';
+    cuerpo.innerHTML=h;
+  }
+  /* ══ EL PDF SE VE AQUÍ MISMO (14/10/2026) ════════════════════════════
+     Como en la página de los carteles (d/): el lector de QR del celular abre el mural en su propia ventanita,
+     que no descarga archivos, y un PDF en el celular SE DESCARGA: tocarlo no llevaba a nada. Ahora el PDF de la
+     obra (el de su almacén) se dibuja aquí, página por página, con «Descargar» aparte; cada página se dibuja al
+     acercarse a la vista y se suelta al alejarse. Las fotos, los enlaces y lo demás, como antes. */
+  var ALMACEN=SB+'/storage/v1/object/public/', PDFJS_V='6.3.289', _PDFJS=null, VIS={ doc:null, obs:null, url:null, gen:0 }, ULT=null;
+  function nuestra(u){ return String(u||'').indexOf(ALMACEN)===0; }
+  function esPdf(u){ return /\.pdf$/i.test(String(u||'').split('?')[0].split('#')[0]); }
+  function archivoDe(u){ var n=''; try{ n=decodeURIComponent(String(u).split('#')[0].split('?')[0].split('/').pop()||''); }catch(_e){ n=''; } return n.replace(/^\d{10,}-/, '') || 'documento.pdf'; }
+  function pdfjs(){
+    if(_PDFJS) return _PDFJS;
+    var u=function(f){ return new URL('../portal/pdfjs/'+f+'?v='+PDFJS_V, location.href).href; };
+    var imp=null; try{ imp=new Function('u', 'return import(u)'); }catch(_i){ imp=null; }   /* un navegador viejo no rompe la página */
+    if(!imp) return Promise.reject(new Error('sin import'));
+    _PDFJS=imp(u('pdf.min.mjs')).then(function(m){
+      return fetch(u('pdf.worker.min.mjs')).then(function(r){ if(!r.ok) throw new Error('worker '+r.status); return r.blob(); })
+        .then(function(b){ m.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([b], { type:'text/javascript' })); return m; },
+              function(){ m.GlobalWorkerOptions.workerSrc=u('pdf.worker.min.mjs'); return m; });
+    });
+    _PDFJS.catch(function(){ _PDFJS=null; });
+    return _PDFJS;
+  }
+  function cerrarVisor(){
+    if(VIS.obs) try{ VIS.obs.disconnect(); }catch(_o){}
+    if(VIS.doc) try{ VIS.doc.destroy(); }catch(_d){}
+    if(VIS.url) try{ URL.revokeObjectURL(VIS.url); }catch(_u){}
+    VIS.doc=null; VIS.obs=null; VIS.url=null; VIS.gen++;
+    document.body.classList.remove('ver');
+  }
+  function paginas(doc, gen){
+    var pags=document.getElementById('v-pags'); if(!pags) return;
+    var n=doc.numPages||0, ver=Math.min(n, 150);
+    var h='<p class="vmsg">'+esc(n===1 ? t('1 página') : t('{0} páginas', String(n)))+'</p>';
+    for(var i=1;i<=ver;i++) h+='<div class="vpag" data-p="'+i+'"><span class="vn">'+i+' / '+n+'</span></div>';
+    if(n>ver) h+='<p class="vmsg">'+esc(t('Aquí se ven las primeras 150 páginas. El documento entero, con «Descargar».'))+'</p>';
+    pags.innerHTML=h;
+    var hojas=[].slice.call(pags.querySelectorAll('.vpag'));
+    doc.getPage(1).then(function(p1){ var v=p1.getViewport({scale:1}); hojas.forEach(function(el){ if(!el.querySelector('canvas')) el.style.aspectRatio=(v.width/v.height).toFixed(4); }); }).catch(function(){});
+    var pinta=function(el){
+      if(el._vd) return; el._vd=1;
+      doc.getPage(+el.getAttribute('data-p')).then(function(pg){
+        if(gen!==VIS.gen) return;
+        if(!el._quiero){ el._vd=0; return; }
+        var dpr=Math.min(2, Math.max(1.5, window.devicePixelRatio||1)), ancho=el.clientWidth||pags.clientWidth||360;
+        var v0=pg.getViewport({scale:1}), vp=pg.getViewport({scale:(ancho/v0.width)*dpr});
+        var cv=document.createElement('canvas'); cv.width=Math.max(1, Math.floor(vp.width)); cv.height=Math.max(1, Math.floor(vp.height));
+        return pg.render({canvasContext:cv.getContext('2d'), canvas:cv, viewport:vp}).promise.then(function(){
+          if(gen!==VIS.gen || !el._quiero){ cv.width=0; cv.height=0; el._vd=0; return; }
+          el.style.aspectRatio=(cv.width/cv.height).toFixed(4); el.insertBefore(cv, el.firstChild); el._vd=2;
+        });
+      }).catch(function(){ el._vd=3; });
+    };
+    var suelta=function(el){ var cv=el.querySelector('canvas'); if(!cv) return; el.style.aspectRatio=(cv.width/cv.height).toFixed(4); cv.width=0; cv.height=0; el.removeChild(cv); el._vd=0; };
+    if('IntersectionObserver' in window){
+      VIS.obs=new IntersectionObserver(function(es){ es.forEach(function(e){ var el=e.target; el._quiero=e.isIntersecting; if(e.isIntersecting) pinta(el); else if(el._vd===2) suelta(el); }); }, { rootMargin:'1200px 0px' });
+      hojas.forEach(function(el){ VIS.obs.observe(el); });
+    } else hojas.slice(0, 6).forEach(function(el){ el._quiero=true; pinta(el); });
+  }
+  function verPdf(nombre, url){
+    cerrarVisor();
+    var gen=VIS.gen;
+    document.body.classList.add('ver');
+    try{ history.pushState({ ver:1 }, ''); }catch(_h){}
+    try{ window.scrollTo(0, 0); }catch(_s){}
+    cuerpo.innerHTML='<div class="visor"><div class="vbar"><button type="button" class="vatras" id="v-atras">‹ '+esc(t('Volver'))+'</button>'+
+      '<b class="vtit">'+esc(nombre)+'</b><a class="vbaja" id="v-baja" hidden>'+esc(t('Descargar'))+'</a></div>'+
+      '<div class="vpags" id="v-pags"><p class="vmsg">'+esc(t('Trayendo el documento…'))+'</p></div></div>';
+    document.getElementById('v-atras').onclick=function(){ try{ history.back(); }catch(_b){ volver(); } };
+    fetch(url, { mode:'cors', credentials:'omit', referrerPolicy:'no-referrer' }).then(function(r){ return r.ok ? r.blob() : Promise.reject(r.status); }).then(function(b){
+      if(gen!==VIS.gen) return;
+      VIS.url=URL.createObjectURL(b);
+      var bj=document.getElementById('v-baja'); if(bj){ bj.href=VIS.url; bj.setAttribute('download', archivoDe(url)); bj.hidden=false; }
+      var p1=document.getElementById('v-pags'); if(p1) p1.innerHTML='<p class="vmsg">'+esc(t('Preparando el documento…'))+'</p>';
+      return b.arrayBuffer().then(function(ab){ return pdfjs().then(function(lib){ return lib.getDocument({ data:new Uint8Array(ab), isEvalSupported:false }).promise; }); })
+        .then(function(doc){ if(gen!==VIS.gen){ try{ doc.destroy(); }catch(_x){} return; } VIS.doc=doc; paginas(doc, gen); },
+              function(){
+                if(gen!==VIS.gen) return;
+                /* este navegador no puede con pdf.js: el archivo, con su botón */
+                var p2=document.getElementById('v-pags'); if(p2) p2.innerHTML='<p class="vmsg">'+esc(t('Este celular no pudo mostrarlo aquí.'))+'</p><a class="bt" id="v-abrir" href="'+VIS.url+'" rel="noopener">'+esc(t('Abrir el documento'))+'</a>';
+              });
+    }, function(){
+      if(gen!==VIS.gen) return;
+      var p3=document.getElementById('v-pags'); if(p3) p3.innerHTML='<p class="vmsg">'+esc(t('No se pudo traer el documento. Revisa tu señal e inténtalo otra vez.'))+'</p>'+
+        '<a class="bt" id="v-abrir" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(t('Abrir el documento'))+'</a>';
+    });
+  }
+  function volver(){ cerrarVisor(); if(ULT) pintar(ULT); }
+  try{ window.addEventListener('popstate', function(){ if(document.body.classList.contains('ver')) volver(); }); }catch(_pp){}
+  cuerpo.addEventListener('click', function(ev){
+    var a=(ev.target && ev.target.closest) ? ev.target.closest('a.doc') : null; if(!a) return;
+    var u=a.getAttribute('href');
+    if(!nuestra(u) || !esPdf(u)) return;
+    ev.preventDefault();
+    verPdf(a.getAttribute('data-n') || archivoDe(u), u);
+  });
+  function abrir(){
+    if(!/^[A-Za-z0-9]{8,64}$/.test(tk)){ aviso(t('Este cartel está incompleto'), t('Al código QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.')); return; }
+    cuerpo.innerHTML='<div class="centro"><h1>'+esc(t('Abriendo el mural…'))+'</h1><div class="giro"></div></div>';
+    rpc('sst_mural_abrir', {p_t:tk}).then(function(r){
+      if(r && r.ok===true){ pintar(r); return; }
+      var e=r && r.error;
+      if(e==='solo_personal'){
+        aviso(t('Este mural es solo para el personal'), t('Lo ve la gente de {0} con su cuenta en la app OBRASST.', r.obra || ''),
+              '<a class="bt" id="m-app" href="../?mural='+encodeURIComponent(tk)+'">'+esc(t('Ábrelo en la app'))+'</a>'+
+              '<p class="ayuda">'+esc(t('Si todavía no tienes tu cuenta, pídele a tu supervisor que te registre.'))+'</p>');
+        return;
+      }
+      if(e==='no_existe'){ aviso(t('Este cartel ya no está activo'), t('Pídele a tu supervisor el cartel nuevo del mural: se imprime desde OBRASST, en «Los QR de tu obra».')); return; }
+      if(e==='sin_plan'){ aviso(t('Este mural no está activo'), t('La obra no tiene el mural en su plan.')); return; }
+      aviso(t('Este cartel está incompleto'), t('Al código QR le falta su ficha. Pídele a tu supervisor que vuelva a imprimir el cartel desde OBRASST.'));
+    }, function(err){
+      if(err===404){ aviso(t('Periódico mural'), t('El mural todavía no está activo en el servidor. Avísale a tu supervisor.')); return; }
+      aviso(t('Sin señal'), t('Necesitas datos o wifi para abrir el mural.'), '<button type="button" class="bt" id="m-otra">'+esc(t('Intentar otra vez'))+'</button>');
+    });
+  }
+  abrir();
+})();
+</script>
+</body></html>
