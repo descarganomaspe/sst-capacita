@@ -13,6 +13,9 @@
    cambiar de versión: es lo que el trabajador ya bajó con sus datos. */
 var PAGINA = 'obrasst-d-1';
 var DOCS = 'obrasst-docs';
+/* 14/10/2026 · el pdf.js con que la página dibuja los PDF (../portal/pdfjs, el de la app): se guarda la primera vez,
+   para que un PDF guardado se vea también sin señal (cada versión trae su «?v=») */
+var PDFJS = 'obrasst-pdfjs-1';
 var BASE = ['./index.html'];      /* la página, una sola vez: sirve para «./» con cualquier «?t=…» */
 
 self.addEventListener('install', function(e){
@@ -52,6 +55,16 @@ self.addEventListener('fetch', function(e){
   var u; try{ u = new URL(e.request.url); }catch(_x){ return; }
   if(u.origin !== self.location.origin) return;                 /* el servidor de datos y el almacén: directo */
   var raiz; try{ raiz = new URL(self.registration.scope).pathname; }catch(_s){ return; }
+  /* 3 · el pdf.js de la app: de la caja si ya está */
+  if(/\/portal\/pdfjs\/pdf(\.worker)?\.min\.mjs$/.test(u.pathname)){
+    e.respondWith(caches.open(PDFJS).then(function(c){
+      return c.match(e.request).then(function(r){
+        if(r) return r;
+        return fetch(e.request).then(function(rr){ if(rr && rr.ok){ var copia = rr.clone(); c.put(e.request, copia).catch(function(){}); } return rr; });
+      });
+    }).catch(function(){ return fetch(e.request); }));
+    return;
+  }
   if(u.pathname.indexOf(raiz) !== 0) return;                    /* fuera de d/: no es nuestro */
   var resto = u.pathname.slice(raiz.length);
 
