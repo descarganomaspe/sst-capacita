@@ -517,6 +517,7 @@ table.mat th.mat-c.extra{color:var(--gris2)}
 table.mat .mat-p{position:sticky; left:0; z-index:1; background:var(--panel); min-width:210px; box-shadow:1px 0 0 var(--raya)}
 table.mat thead th.mat-p{z-index:3; background:#FAFBFC}
 table.mat td.mat-e{text-align:center; vertical-align:middle}
+table.mat td.mat-e small{display:block; font-size:11px; line-height:1.25; color:var(--gris); margin-top:2px; font-variant-numeric:tabular-nums}
 table.mat .na{color:var(--gris2)}
 table.mat tbody tr:hover td.mat-p{background:#FAFBFC}
 .herr .check{white-space:nowrap}
@@ -3092,7 +3093,7 @@ var AREAS = [
 ];
 var AREA_MAS = { id:'a-mas', n:'Más', ic:'⋯', v:[] };
 var PESTANAS = {
-  personal:'Personal', personas:'Personal', cred:'Credenciales', autor:'Autorizaciones', emo:'Salud (EMO)', sctr:'SCTR', tdm:'Trabajador del mes', amon:'Amonestaciones', visitas:'Visitas', tareo:'Tareo', parte:'Parte del día', auxilios:'Primeros auxilios', caida:'Caída libre', legajo:'Legajo SST', obra:'Hoy en la obra', resumen:'Torre de control',
+  personal:'Personal', personas:'Personal', cred:'Credenciales', autor:'Autorizaciones', emo:'Salud (EMO)', sctr:'SCTR', tdm:'Trabajador del mes', amon:'Amonestaciones', visitas:'Visitas', tareo:'Tareo', parte:'Parte del día', auxilios:'Primeros auxilios', caida:'Caída libre', legajo:'Legajo SST', obra:'Hoy en la obra', resumen:'Resumen',
   prog:'Programar', charlas:'Charlas del mes', induccion:'Inducción', caphechas:'Realizadas', constancias:'Constancias', cump:'Constancias',
   matriz:'Matriz', registro:'Seguimiento', encuestas:'Encuestas', campanas:'Campañas',
   kardex:'Entrega de EPP', epp:'Entrega de EPP', pedidos:'Pedidos de la gente', reqs:'Requerimientos',
@@ -3856,7 +3857,9 @@ function vistaTabla(tablaSb, cols, op){
 
 /* ═══ RESUMEN DEL LÍDER ══════════════════════════════════════════ */
 /* 15/10/2026 · aquí estaba vistaResumenLider: el «Resumen ejecutivo» de UNA obra, con sus propias cuentas (personal activo,
-   constancias del mes, IF e IS con otra suma…). El líder ve ahora la Torre de control de la app, la misma: portal/torre.js. */
+   constancias del mes, IF e IS con otra suma…). El lote 12 puso en su lugar la Torre de control de la app, entera; el lote 13
+   (Marcelo: «quiero que sea como el de antes… con la información de la torre de control… marea eso que has creado») vuelve
+   al «Resumen ejecutivo» de siempre, pintado con las cuentas de la Torre: portal/torre.js. */
 
 /* ═══ OBRAS Y EQUIPO (líder) ═════════════════════════════════════ */
 /* ══ EL ESPACIO DE LA EMPRESA (01/10/2026) ═══════════════════════════
@@ -5418,15 +5421,17 @@ function estadoDe(caps, puesto, plan, exigeSinPlan){
   (caps||[]).forEach(function(c){
     var t=temaLimpio(c.tema); if(!t) return;
     var k=nrm(t), x=por[k];
-    if(!x){ x=por[k]={t:t, k:k, ok:'', ult:'', ultOk:false}; orden.push(k); }
+    if(!x){ x=por[k]={t:t, k:k, ok:'', ult:'', ultOk:false, nota:'', ultNota:''}; orden.push(k); }
     var f=String(c.fecha||'').slice(0,10), ap=esTallerC(c) || esAprobadoR(c.resultado);
-    if(ap && f>=x.ok) x.ok=f;
-    if(f>x.ult || (f===x.ult && ap)){ x.ult=f; x.ultOk=ap; }
+    /* 15/10/2026 · la nota va en la matriz (como en la app): la del aprobado y la del último intento */
+    var nt=(c.puntaje!=null && c.total) ? (c.puntaje+'/'+c.total) : ((String(c.resultado||'').match(/(\d+(?:[.,]\d+)?)\s*\/\s*(\d+)/)||[''])[0].replace(/\s+/g,''));
+    if(ap && f>=x.ok){ x.ok=f; x.nota=nt; }
+    if(f>x.ult || (f===x.ult && ap)){ x.ult=f; x.ultOk=ap; x.ultNota=nt; }
   });
   function fila(x, t, req){
-    var i={t:(x?x.t:t), k:(x?x.k:nrm(t)), req:req, st:'no', vence:'', ok:''};
+    var i={t:(x?x.t:t), k:(x?x.k:nrm(t)), req:req, st:'no', vence:'', ok:'', nota:'', ultF:'', ultNota:''};
     if(!x) return i;
-    i.ok=x.ok; i.vence=x.ok ? masMeses(x.ok, meses) : '';
+    i.ok=x.ok; i.nota=x.nota; i.ultF=x.ult; i.ultNota=x.ultNota; i.vence=x.ok ? masMeses(x.ok, meses) : '';
     if(x.ok && i.vence>=HOY) i.st=(i.vence<=pronto) ? 'pv' : 'si';
     else if(!x.ultOk) i.st='de';
     else i.st='ven';
@@ -5467,12 +5472,19 @@ function matrizDe(trab, cons, plan){
   return {cols:lista, filas:filas};
 }
 var MAT={q:'', solo:''};
+/* 15/10/2026 · lo que va bajo el «Sí» de la matriz: la nota y la fecha (lo aprobado: cuándo aprobó; un desaprobado: su último intento) */
+function matDetP(x){
+  if(!x) return {nota:'', f:''};
+  if(x.st==='si' || x.st==='pv' || x.st==='ven') return {nota:x.nota||'', f:x.ok||''};
+  if(x.st==='de') return {nota:x.ultNota||'', f:x.ultF||''};
+  return {nota:'', f:''};
+}
 function vistaMatriz(caja){
   cargando(caja);
   function pinta(){
     Promise.all([
       traer('sst_trabajador','&select=id,nombre,dni,puesto,estatus&order=nombre.asc',3000),
-      consMasHechas(traer('sst_constancia','&select=fecha,trabajador,dni,tema,tipo,resultado,cargo&order=fecha.desc',5000)),
+      consMasHechas(traer('sst_constancia','&select=fecha,trabajador,dni,tema,tipo,resultado,cargo,puntaje,total&order=fecha.desc',5000)),
       traer('sst_doc','&select=id,hoja,nota&hoja=eq.temas&order=creado.desc',300)
     ]).then(function(r){
       var plan=planDeFilas(r[2]), M=matrizDe(r[0], r[1], plan);
@@ -5518,7 +5530,9 @@ function pintarMatriz(M){
       cols.forEach(function(c){
         var x=p.cel[c.k], st=x?x.st:'na';
         var tit=x ? (ST_TXT[st]+(x.ok?' · aprobada el '+fechaLarga(x.ok):'')+(x.vence?' · vence el '+fechaLarga(x.vence):'')) : 'No lo exige su puesto';
-        h+='<td class="mat-e" title="'+esc(tit)+'">'+(st==='na'?'<span class="na">—</span>':'<span class="pill '+ST_CL[st]+'">'+esc(ST_TXT[st])+'</span>')+'</td>';
+        var dt=matDetP(x);
+        h+='<td class="mat-e" title="'+esc(tit)+'">'+(st==='na'?'<span class="na">—</span>':'<span class="pill '+ST_CL[st]+'">'+esc(ST_TXT[st])+'</span>'+
+           (dt.nota?'<small>'+esc(dt.nota)+'</small>':'')+(dt.f?'<small>'+esc(fechaLarga(dt.f))+'</small>':''))+'</td>';
       });
       h+='</tr>';
     });
@@ -5529,7 +5543,8 @@ function pintarMatriz(M){
   var pe=$('mat-pend'); if(pe) pe.onchange=function(){ MAT.solo=pe.checked?'pend':''; pintarMatriz(M); };
   var cb=$('mat-csv'); if(cb) cb.onclick=function(){
     var cs=[{k:'nombre', t:'Persona'}, {k:'dni', t:'DNI'}, {k:'puesto', t:'Puesto'}, {k:'_al', t:'Al día', v:function(f){ return f.n ? (f.vig+' de '+f.n) : ''; }}]
-      .concat(cols.map(function(c){ return {k:'c_'+c.k, t:c.t, v:function(f){ var x=f.cel[c.k]; if(!x) return '—'; return ST_TXT[x.st]+(x.vence?' (vence '+fechaLarga(x.vence)+')':''); }}; }));
+      .concat(cols.map(function(c){ return {k:'c_'+c.k, t:c.t, v:function(f){ var x=f.cel[c.k]; if(!x) return '—'; var dt=matDetP(x);
+        return [ST_TXT[x.st], dt.nota, dt.f?fechaLarga(dt.f):''].filter(Boolean).join(' · ')+(x.vence?' (vence '+fechaLarga(x.vence)+')':''); }}; }));
     csv(cs, filas, 'matriz-capacitacion');
   };
 }
@@ -9854,7 +9869,7 @@ function hoyProgramadoEn(caja){
      o por nada; DNI, RUC, SUNAT, MTPE, RISST… por su nombre de allá;
    · la accidentabilidad con el aviso de allá, y las normas del país.
    Con una obra del Perú no cambia nada de lo de siempre. */
-var PAIS_VER='dfd56bd89d';     /* lo pone armar.py: el hash de pais.js */
+var PAIS_VER='e615b7e650';     /* lo pone armar.py: el hash de pais.js */
 var NORMAS_VER='9e4c4d78eb';   /* lo pone armar.py: el hash de normas.js */
 var EXIGE_VER='35cd514ecd';             /* lo pone armar.py: el hash de ../exige.js (el mismo de la app) */
 var _PAIS_CARGA=null, _NORMAS_CARGA=null, _EXIGE_CARGA=null;
@@ -14371,12 +14386,15 @@ var V = {
 };
 function conGrupo(v, g){ return Object.assign({}, v, {g:g}); }
 var VISTAS_LIDER = [
-  /* 15/10/2026 · era el «Resumen ejecutivo» de UNA obra, con sus propias cuentas; ahora es la Torre de control de la app, la
+  /* 15/10/2026 (lote 13) · Marcelo: «quiero que sea como el de antes, osea el mismo diseño del de antes pero con la información
+     de la torre de control… marea eso que has creado». Vuelve el «Resumen ejecutivo» de siempre (cifras, «Programado para
+     hoy», barras por mes, tablas), con lo que dice la Torre: todas las obras, las mismas cuentas y metas que la app.
+     Antes (lote 12): era el «Resumen ejecutivo» de UNA obra, con sus propias cuentas; pasó a ser la Torre de control de la app, la
      misma (portal/torre.js abre portal/torre-app.js, que armar.py saca de la app): todas las obras, las mismas cifras, las
      mismas páginas y las mismas metas a los dos lados. Sigue con el id 'resumen' (los enlaces guardados abren lo mismo). */
-  {id:'resumen', g:'Empresa', ic:'▦', n:'Torre de control', s:'Todas tus obras en una pantalla, con las mismas cifras y metas que en la app',
-   pintar:function(caja){ cargando(caja); torreIr('torrewVista', caja); },
-   tablas:['sst_trabajador','sst_constancia','sst_reporte','sst_accidente','sst_hht','sst_kardex','sst_inspeccion']},
+  {id:'resumen', g:'Empresa', ic:'▦', n:'Resumen ejecutivo', s:'Cómo van tus obras, en una pantalla',
+   pintar:function(caja){ cargando(caja); torreIr('torrewResumen', caja); },
+   tablas:['sst_trabajador','sst_constancia','sst_reporte','sst_accidente','sst_hht','sst_kardex','sst_inspeccion','sst_amonestacion','sst_buena','sst_doc']},
   {id:'equipo',  g:'Empresa', ic:'⚑', n:'Obras y equipo', s:'Tus obras, tus supervisores, y quién pidió entrar', pintar:vistaEquipo, tablas:[]},
   conGrupo(V.parte, 'Empresa'),
   V.empresa, V.cargar, V.informe, V.programas, V.objetivos,
@@ -14940,15 +14958,15 @@ function cargarCampoApp(){
   _CAMPOAPP_CARGA.catch(function(){ _CAMPOAPP_CARGA=null; });
   return _CAMPOAPP_CARGA;
 }
-/* 15/10/2026 · la Torre de control (portal/torre.js + portal/torre-app.js, la de la app tal cual) */
-var TORRE_VER='b90636f81e';       /* lo pone armar.py: el hash de portal/torre.js */
-var TORREAPP_VER='270a223d7e';    /* lo pone armar.py: el hash de portal/torre-app.js */
+/* 15/10/2026 · el «Resumen ejecutivo» del líder (portal/torre.js) con las cuentas de la Torre de control de la app (portal/torre-app.js, tal cual) */
+var TORRE_VER='90ba9d0a46';       /* lo pone armar.py: el hash de portal/torre.js */
+var TORREAPP_VER='b688c2c824';    /* lo pone armar.py: el hash de portal/torre-app.js */
 var _TORRE_CARGA=null;
 function cargarTorre(){
-  if(typeof torrewVista==='function' && typeof TORRE_APP==='object') return Promise.resolve(true);
+  if(typeof torrewResumen==='function' && typeof TORRE_APP==='object') return Promise.resolve(true);
   if(_TORRE_CARGA) return _TORRE_CARGA;
   _TORRE_CARGA=((typeof TORRE_APP==='object') ? Promise.resolve(true) : _cargarJS('torre-app.js?v='+(TORREAPP_VER||'0'), function(){ return typeof TORRE_APP==='object'; }))
-    .then(function(){ return (typeof torrewVista==='function') ? true : _cargarJS('torre.js?v='+(TORRE_VER||'0'), function(){ return typeof torrewVista==='function'; }); });
+    .then(function(){ return (typeof torrewResumen==='function') ? true : _cargarJS('torre.js?v='+(TORRE_VER||'0'), function(){ return typeof torrewResumen==='function'; }); });
   _TORRE_CARGA.catch(function(){ _TORRE_CARGA=null; });
   return _TORRE_CARGA;
 }

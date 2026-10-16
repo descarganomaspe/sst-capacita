@@ -363,6 +363,9 @@ var DO_FRASES = [
      en los otros países la frase se va entera (antes quedaba «Lo que exige el.») */
   ['Lo que exige el D.S. 005-2012-TR, art. 33. Sin medidas correctivas escritas, la investigación está a medias.',
    'Lo que exige el Decreto 522-06, arts. 6.1.3 y 9.6. Sin medidas correctivas escritas, la investigación está a medias.'],
+  /* 15/10/2026 (lote 13) · y su aviso «Ningún proyecto lleva registro de accidentes» (app y resumen de la web): el mismo par;
+     en los otros países, una frase sin norma (pais-otros.js, «propio»), en vez de «es obligatorio:» */
+  ['es obligatorio: D.S. 005-2012-TR, art. 33', 'es obligatorio: Decreto 522-06, arts. 6.1.3 y 9.6'],
   ['Conforme al D.S. Nº 005-2012-TR.', 'Conforme al Decreto 522-06 (arts. 5.1.3 y 7.9).'],
   /* el comité */
   ['Una ordinaria al mes, en día fijado', 'Por lo menos una reunión al mes'],
@@ -907,6 +910,9 @@ function _otFrases(p){
     'Conforme al D.S. Nº 005-2012-TR.': '',
     'Lo que exige el D.S. 005-2012-TR, art. 33. Sin medidas correctivas escritas, la investigación está a medias.':
       'Sin medidas correctivas escritas, la investigación está a medias.',
+    /* 15/10/2026 (lote 13) · «Necesita tu decisión» de la Torre (app y resumen de la web): sin la cita del Perú quedaba
+       «es obligatorio:». Aquí no se nombra una norma que no está verificada: se dice lo que pasa sin el registro */
+    'es obligatorio: D.S. 005-2012-TR, art. 33': 'sin ese registro no hay índices ni investigaciones que mostrar',
     'Este PDF es para imprimirlo y pegarlo en el libro legalizado, o para mandarlo entero.': 'Este PDF junta todas las actas.',
     'El Libro de Actas': 'Las actas del comité',
     'Descargar el Libro de Actas': 'Descargar las actas de',
