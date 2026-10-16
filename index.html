@@ -987,6 +987,7 @@ button.tf-dif{cursor:pointer}
 .cn-mat td.no{background:rgba(229,72,77,.12);color:var(--mal)}
 .cn-mat td.de{background:rgba(214,142,26,.18);color:#d68e1a;font-weight:600}
 .cn-mat td.av{font-weight:700;font-variant-numeric:tabular-nums}
+.cn-mat td small{display:block;font-size:11px;font-weight:500;line-height:1.25;opacity:.85;font-variant-numeric:tabular-nums}
 .cn-mat tr.completo th.fijo b::after{content:" ✅"}
 /* ══ 22/09/2026 · lo que exige cada puesto, la vigencia y qué sigue ══ */
 .cn-mat td.pv{background:rgba(47,191,113,.10);color:var(--ok);font-weight:600;box-shadow:inset 0 -2px 0 rgba(214,142,26,.55)}
@@ -21308,6 +21309,19 @@ function matrizDatos(){
 function _matCelda(p,col){ var c=p.cel[col.k]; return c ? c.st : 'na'; }
 function _matExtra(p,col){ var c=p.cel[col.k]; return !!(c && !c.req); }
 var MAT_TXT={si:'Sí', pv:'Por vencer', ven:'Vencida', de:'Desaprobó', no:'No', na:'—'};
+/* 15/10/2026 · Marcelo: en la matriz no basta el «Sí»: la nota y la fecha. Lo aprobado (al día, por vencer o vencido)
+   lleva la nota y el día en que aprobó; un desaprobado, la nota y el día de su último intento. */
+function _matDet(p, col){
+  var c=p.cel[col.k]; if(!c) return {st:'na', nota:'', f:''};
+  if(c.st==='si' || c.st==='pv' || c.st==='ven') return {st:c.st, nota:c.nota||'', f:c.ok||''};
+  if(c.st==='de') return {st:'de', nota:c.ultNota||'', f:c.ultF||''};
+  return {st:c.st, nota:'', f:''};
+}
+function _matCeldaTxt(p, col){ var d=_matDet(p, col); return [MAT_TXT[d.st], d.nota, d.f ? fechaLarga(d.f) : ''].filter(Boolean).join(' · '); }
+function _matCeldaHTML(p, col){
+  var d=_matDet(p, col), f=d.f ? fechaLarga(d.f).replace(/\/(\d{2})(\d{2})$/, '/$2') : '';
+  return '<span>'+MAT_TXT[d.st]+'</span>'+(d.nota ? '<small>'+esc(d.nota)+'</small>' : '')+(f ? '<small>'+f+'</small>' : '');
+}
 var MAT_ULT=[];
 function matrizFiltrada(M){
   var q=_norm((($('cn-busca')||{}).value)||'').trim();
@@ -21350,7 +21364,7 @@ function pintarMatriz(c, r){
     M.cols.forEach(function(col){
       var k=_matCelda(p,col), cel=p.cel[col.k], tit='';
       if(cel && cel.vence) tit=((k==='ven')?'Venció el ':'Vence el ')+(fechaLarga(cel.vence)||cel.vence);
-      h+='<td class="'+k+(_matExtra(p,col)?' extra':'')+'"'+(tit?(' title="'+escA(tit)+'"'):'')+'>'+MAT_TXT[k]+'</td>';
+      h+='<td class="'+k+(_matExtra(p,col)?' extra':'')+'"'+(tit?(' title="'+escA(tit)+'"'):'')+'>'+_matCeldaHTML(p,col)+'</td>';
     });
     h+='<td class="av">'+(p.nReq?(p.aprobadas+'/'+p.nReq):'—')+'</td></tr>';
   });
@@ -21403,8 +21417,8 @@ function matrizExcel(){
             {t:'Documento',w:13,k:function(p){ return p.dni||''; }},
             {t:'Puesto',w:18,k:function(p){ return p.puesto||''; }}];
   M.cols.forEach(function(col){
-    cols.push({t:col.t+((M.conPlan && !col.req)?' (ningún puesto la exige)':''), w:14,
-               k:function(p){ return MAT_TXT[_matCelda(p,col)]; },
+    cols.push({t:col.t+((M.conPlan && !col.req)?' (ningún puesto la exige)':''), w:24,
+               k:function(p){ return _matCeldaTxt(p,col); },
                estilo:function(p){ return EST[_matCelda(p,col)]; }});
   });
   cols.push({t:(M.conPlan?'Al día':'Aprobadas'),w:11,k:function(p){ return p.nReq?(p.aprobadas+' de '+p.nReq):'—'; },estilo:function(){ return 3; }});
@@ -46842,17 +46856,20 @@ function capEstadoDe(caps, puesto, plan, exigeSinPlan){
   (caps || []).forEach(function(c){
     var t = _matTema(c); if(!t) return;
     var k = _pcN(t), x = por[k];
-    if(!x){ x = por[k] = { t:t, k:k, taller:esTaller(c), ok:'', folio:'', nota:'', ult:'', ultOk:false, intentos:0 }; orden.push(k); }
+    if(!x){ x = por[k] = { t:t, k:k, taller:esTaller(c), ok:'', folio:'', nota:'', ult:'', ultOk:false, ultNota:'', intentos:0 }; orden.push(k); }
     x.intentos++;
     var f = String(c.fecha || '').slice(0,10), ap = esTaller(c) || esAprobado(c.resultado);
-    if(ap && f >= x.ok){ x.ok = f; x.folio = c.folio || ''; x.nota = (c.puntaje != null && c.total) ? (c.puntaje+'/'+c.total) : ''; }
-    if(f > x.ult || (f === x.ult && ap)){ x.ult = f; x.ultOk = ap; }
+    /* 15/10/2026 · la nota: puntaje/total, o la que viene escrita en el resultado («APROBADO · 16/20») */
+    var nt = (c.puntaje != null && c.total) ? (c.puntaje+'/'+c.total) : ((String(c.resultado || '').match(/(\d+(?:[.,]\d+)?)\s*\/\s*(\d+)/) || [''])[0].replace(/\s+/g, ''));
+    if(ap && f >= x.ok){ x.ok = f; x.folio = c.folio || ''; x.nota = nt; }
+    /* 15/10/2026 · la nota del último intento (la de un desaprobado también va en la matriz) */
+    if(f > x.ult || (f === x.ult && ap)){ x.ult = f; x.ultOk = ap; x.ultNota = nt; }
   });
   function fila(x, t, req){
     var i = { t:(x ? x.t : t), k:(x ? x.k : _pcN(t)), req:req, st:'no', vence:'', ok:'', folio:'', nota:'', intentos:0,
               taller:(x ? x.taller : _pcEsTaller(t)) };
     if(!x) return i;
-    i.ok = x.ok; i.folio = x.folio; i.nota = x.nota; i.intentos = x.intentos;
+    i.ok = x.ok; i.folio = x.folio; i.nota = x.nota; i.intentos = x.intentos; i.ultF = x.ult; i.ultNota = x.ultNota;
     i.vence = x.ok ? _pcMasMeses(x.ok, meses) : '';
     if(x.ok && i.vence >= hoy) i.st = (i.vence <= pronto) ? 'pv' : 'si';
     else if(!x.ultOk) i.st = 'de';
@@ -94564,8 +94581,8 @@ function tcPagResumen(){
      '<div class="v">'+tcNum(P.hht[0])+'</div>'+
      (P.hht[0] ? tcEst('ok','Reporte semanal al día') : tcEst('cr','Sin reporte semanal: sin HHT no hay índices'))+
      tcDelta(P.hht[0], P.hht[1], false, 'h')+'</div>';
-  /* 4 · EPP que salio */
-  h+='<div class="tc-kpi"><div class="et">EPP entregado esta semana</div>'+
+  /* 4 · EPP que salio (15/10/2026 · «Qué medir» ya traía su casilla y no la escondía: ahora sí) */
+  if(cfg.ver.epp) h+='<div class="tc-kpi"><div class="et">EPP entregado esta semana</div>'+
      '<div class="v">'+tcNum(P.epp[0])+'<small>und</small></div>'+
      (E.tot ? tcEst(pctP<=cfg.metaPerd?'ok':'av', pctP+'% por pérdida en el mes') : tcEst('gr','Nada registrado este mes'))+
      tcDelta(P.epp[0], P.epp[1], false, 'und')+'</div>';
@@ -99180,6 +99197,9 @@ var DO_FRASES = [
      en los otros países la frase se va entera (antes quedaba «Lo que exige el.») */
   ['Lo que exige el D.S. 005-2012-TR, art. 33. Sin medidas correctivas escritas, la investigación está a medias.',
    'Lo que exige el Decreto 522-06, arts. 6.1.3 y 9.6. Sin medidas correctivas escritas, la investigación está a medias.'],
+  /* 15/10/2026 (lote 13) · y su aviso «Ningún proyecto lleva registro de accidentes» (app y resumen de la web): el mismo par;
+     en los otros países, una frase sin norma (pais-otros.js, «propio»), en vez de «es obligatorio:» */
+  ['es obligatorio: D.S. 005-2012-TR, art. 33', 'es obligatorio: Decreto 522-06, arts. 6.1.3 y 9.6'],
   ['Conforme al D.S. Nº 005-2012-TR.', 'Conforme al Decreto 522-06 (arts. 5.1.3 y 7.9).'],
   /* el comité */
   ['Una ordinaria al mes, en día fijado', 'Por lo menos una reunión al mes'],
@@ -100329,6 +100349,9 @@ function _otFrases(p){
     'Conforme al D.S. Nº 005-2012-TR.': '',
     'Lo que exige el D.S. 005-2012-TR, art. 33. Sin medidas correctivas escritas, la investigación está a medias.':
       'Sin medidas correctivas escritas, la investigación está a medias.',
+    /* 15/10/2026 (lote 13) · «Necesita tu decisión» de la Torre (app y resumen de la web): sin la cita del Perú quedaba
+       «es obligatorio:». Aquí no se nombra una norma que no está verificada: se dice lo que pasa sin el registro */
+    'es obligatorio: D.S. 005-2012-TR, art. 33': 'sin ese registro no hay índices ni investigaciones que mostrar',
     'Este PDF es para imprimirlo y pegarlo en el libro legalizado, o para mandarlo entero.': 'Este PDF junta todas las actas.',
     'El Libro de Actas': 'Las actas del comité',
     'Descargar el Libro de Actas': 'Descargar las actas de',
@@ -102208,7 +102231,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='812ca23dec';
+var SELLO_APP='e1fcbae967';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
