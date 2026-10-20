@@ -39,7 +39,7 @@
    ═════════════════════════════════════════════════════════════════════════════════════════════════════════ */
 
 /* los tipos de escaneo de la app (ESC_CLASE_ET): armar.py comprueba que sean los mismos y en el mismo orden */
-var ARC_CLASES=[['charla','Charla de 5 min'], ['capacitacion','Capacitación'], ['induccion','Inducción'], ['liderazgo','Reporte de liderazgo'],
+var ARC_CLASES=[['charla','Charla de 5 min'], ['difusion','Difusión'], ['capacitacion','Capacitación'], ['induccion','Inducción'], ['liderazgo','Reporte de liderazgo'],
   ['inspeccion','Inspección'], ['permiso','Permiso de trabajo'], ['ats','ATS'], ['epp','Entrega de EPP'], ['simulacro','Simulacro'],
   ['reunion','Reunión'], ['acta','Acta'], ['otro','Otro']];
 var ARC_CLAVE='docs_web';
@@ -229,6 +229,12 @@ function _arcCss(){
 
 /* ── lo de cada fila ─────────────────────────────────────────────────────────────────────────────────── */
 function _arcJefe(){ var r=String((YO.obra||{}).rol||''); return r==='dueno' || r==='colider'; }
+/* lote 15 · las hojas que son de una capacitación (y sus minutos de siempre, los de la app: CATALOGO.asisMin) */
+var ARC_CAP={ charla:1, difusion:1, capacitacion:1, induccion:1 };
+function _arcCapMin(k){
+  try{ var M=(typeof CATALOGO!=='undefined' && CATALOGO && CATALOGO.asisMin) || null; if(M && M[k]) return M[k]; }catch(e){}
+  return { charla:10, difusion:15, capacitacion:60, induccion:60 }[k] || 30;
+}
 function _arcClaseEt(k){ for(var i=0;i<ARC_CLASES.length;i++) if(ARC_CLASES[i][0]===k) return ARC_CLASES[i][1]; return 'Otro'; }
 function _arcClaseOk(k){ return ARC_CLASES.some(function(c){ return c[0]===k; }); }
 function _arcFechaOk(s){ return /^\d{4}-\d{2}-\d{2}$/.test(String(s||'')); }
@@ -1531,6 +1537,11 @@ function arcSubirEscaneos(files){
       (ARC.cfg.escaneos ? '' : ' <b>Ojo:</b> hoy los escaneos no se muestran en la web (lo decidió el líder); en la app sí.')+'</p>'+
     '<div class="dos"><div class="campo"><label for="arc-se-clase">Tipo</label><select id="arc-se-clase">'+ARC_CLASES.map(function(c){ return '<option value="'+c[0]+'">'+esc(c[1])+'</option>'; }).join('')+'</select></div>'+
       '<div class="campo"><label for="arc-se-fecha">Fecha de la hoja</label><input type="date" id="arc-se-fecha" value="'+hoyISO()+'" max="'+hoyISO()+'"></div></div>'+
+    /* 17/10/2026 · lote 15 · la hoja firmada de una charla, difusión, capacitación o inducción cuenta sola en capacitaciones */
+    '<div id="arc-se-cap" hidden><div class="campo"><label for="arc-se-tema">Tema</label><input id="arc-se-tema" maxlength="160" autocomplete="off" placeholder="Uso de EPP · Trabajos en altura…"></div>'+
+      '<div class="dos"><div class="campo"><label for="arc-se-min">Duración (minutos)</label><input type="number" id="arc-se-min" inputmode="numeric" min="1" max="1440" step="1"></div>'+
+      '<div class="campo"><label for="arc-se-firmas">Cuántos firmaron</label><input type="number" id="arc-se-firmas" inputmode="numeric" min="1" max="2000" step="1"></div></div>'+
+      '<p class="ayuda" style="margin:0 0 10px">Cuenta sola en «Capacitaciones realizadas», en el programa del año y en las horas hombre capacitadas. Si son varias hojas de la misma charla, súbelas juntas: cuentan como una.</p></div>'+
     '<ul class="arc-se-lista" aria-label="Los archivos">'+L.map(function(x, i){
       return '<li><span class="arc-tipo '+(x.pdf ? 'pdf' : 'img')+'">'+(x.pdf ? 'PDF' : 'JPG')+'</span><input type="text" id="arc-se-n-'+i+'" maxlength="120" value="'+esc(x.n)+'" aria-label="Nombre"><small>'+esc(_dcPeso(x.f.size))+'</small></li>'; }).join('')+'</ul>'+
     (malos.length ? '<p class="arc-u-no">No entran: '+malos.map(esc).join(', ')+'.</p>' : '')+
@@ -1538,9 +1549,24 @@ function arcSubirEscaneos(files){
   abrirHoja(L.length===1 ? 'Subir un escaneo' : 'Subir '+L.length+' escaneos', 'Desde tu computadora', cuerpo,
     '<button type="button" class="bt sec" id="arc-se-no">Cancelar</button><button type="button" class="bt" id="arc-se-si">Subir</button>', {sinFoco:true});
   $('arc-se-no').onclick=cerrarHoja;
+  var capVer=function(){
+    var k=$('arc-se-clase').value, cap=!!ARC_CAP[k], c=$('arc-se-cap'); if(c) c.hidden=!cap;
+    var mi=$('arc-se-min'); if(cap && mi && !mi._tocado) mi.value=_arcCapMin(k);
+  };
+  $('arc-se-clase').onchange=capVer; $('arc-se-min').oninput=function(){ this._tocado=true; };
+  capVer();
   $('arc-se-si').onclick=function(){
     var b=this, m=$('arc-se-msg'), clase=$('arc-se-clase').value, fecha=$('arc-se-fecha').value||hoyISO();
     if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha>hoyISO()){ m.className='msg mal'; m.textContent='Revisa la fecha: no puede ser posterior a hoy.'; return; }
+    var capO=null;
+    if(ARC_CAP[clase]){
+      var tema=String($('arc-se-tema').value||'').replace(/\s+/g, ' ').trim(), min=parseInt($('arc-se-min').value, 10)||0, nf=parseInt($('arc-se-firmas').value, 10)||0;
+      var falta=function(t, id){ m.className='msg mal'; m.textContent=t; try{ $(id).focus(); }catch(e){} };
+      if(tema.length<3) return falta('Escribe el tema: así cuenta en el registro y en el programa del año.', 'arc-se-tema');
+      if(!(min>=1 && min<=1440)) return falta('¿Cuánto duró? Ponlo en minutos.', 'arc-se-min');
+      if(!(nf>=1 && nf<=2000)) return falta('Pon cuántos firmaron: con eso salen las horas hombre capacitadas.', 'arc-se-firmas');
+      capO={ tipo:clase, tema:tema.slice(0, 160), min:min, n:nf };
+    }
     L.forEach(function(x, i){ var v=String(($('arc-se-n-'+i)||{}).value||'').replace(/\s+/g, ' ').trim(); x.n=(v.length>=3 ? v : x.n).slice(0, 120); });
     b.disabled=true; $('arc-se-no').disabled=true; $('arc-se-prog').hidden=false; m.className='msg'; m.textContent='';
     Array.prototype.forEach.call($('hoja-cuerpo').querySelectorAll('input, select'), function(x){ x.disabled=true; });
@@ -1555,7 +1581,8 @@ function arcSubirEscaneos(files){
         $('arc-se-barra').style.width=Math.round(100*i/L.length)+'%'; $('arc-se-t').textContent='Subiendo '+(i+1)+' de '+L.length+' · «'+x.n+'»';
         return paginas(x).then(function(np){
           return subirArchivoP('asistencias', x.f).then(function(url){
-            var nota=fecha+'|'+clase+'|0'+(x.pdf ? '|pdf'+(np||'')+'|' : '');
+            x.url=url;
+            var nota=fecha+'|'+clase+'|'+(capO ? capO.n : 0)+(x.pdf ? '|pdf'+(np||'')+'|' : '');
             return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'asistencia', nombre:x.n, url:url, nota:nota }).then(function(rows){
               if(Array.isArray(rows) && !rows.length) return Promise.reject('sin_fila'); ok++;
             });
@@ -1563,9 +1590,20 @@ function arcSubirEscaneos(files){
         }).catch(function(e){ mal.push('«'+x.n+'» ('+(e==='muy-grande' ? 'pasa de 25 MB' : (e==='sin_fila' || e===401 || e===403 ? 'esta cuenta no puede subir en esta obra' : 'revisa tu conexión'))+')'); });
       });
     }, Promise.resolve()).then(function(){
+      /* lote 15 · y su capacitación, con las hojas que subieron de evidencia */
+      var subidas=L.filter(function(x){ return !!x.url; });
+      if(!capO || !subidas.length) return;
+      var d={ v:1, k:'cap', tipo:capO.tipo, fecha:fecha, hora:'', min:capO.min, tema:capO.tema, dicta:'', cargo:'', lugar:'', obs:'Hoja firmada subida en «Archivo».',
+              sobre:null, minimo:null, gente:[], n:capO.n, ev:subidas.map(function(x){ return { u:x.url, n:x.n+(x.pdf ? '.pdf' : '.jpg') }; }),
+              por:(typeof quienSoy==='function' ? String(YO.nombre || quienSoy() || '') : String(YO.nombre || '')).slice(0, 80), cuando:new Date().toISOString() };
+      var tn=_arcClaseEt(capO.tipo);
+      return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'ges-act', nombre:(tn+' realizada · '+capO.tema+' · '+fecha).slice(0, 180), nota:JSON.stringify(d) }).then(function(){
+        capO.ok=true; try{ if(typeof GESA!=='undefined' && GESA) GESA.filas=null; }catch(e){}
+      }, function(){ mal.push('la capacitación de «'+capO.tema+'» (las hojas sí subieron: regístrala en «Capacitaciones realizadas»)'); });
+    }).then(function(){
       $('arc-se-barra').style.width='100%';
       if(ok){ ARC.carpeta='esc:'+clase; if(VISTA.recargar) VISTA.recargar(true); }
-      if(!mal.length){ cerrarHoja(); toast(ok===1 ? 'Subido a «Escaneos · '+_arcClaseEt(clase)+'»' : ok+' escaneos subidos a «'+_arcClaseEt(clase)+'»'); return; }
+      if(!mal.length){ cerrarHoja(); toast((ok===1 ? 'Subido a «Escaneos · '+_arcClaseEt(clase)+'»' : ok+' escaneos subidos a «'+_arcClaseEt(clase)+'»')+(capO && capO.ok ? ' · y cuenta en capacitaciones' : '')); return; }
       $('arc-se-t').textContent=''; m.className='msg mal'; m.textContent=(ok ? 'Se subieron '+ok+'. ' : '')+'No se pudieron: '+mal.join(', ')+'.';
       $('arc-se-no').disabled=false; $('arc-se-no').textContent='Cerrar';
     });

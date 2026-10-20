@@ -285,7 +285,8 @@ function _senPx(mm){
    ════════════════════════════════════════════════════════════════ */
 /* ── de la app · el estado y los modelos de «personal autorizado» ── */
 var SEN = { tab:'norma', filtro:'', busca:'',
-            k:'', aviso:'', texto:'', sub:'', tam:'A4', orient:'v', porHoja:1, pdf:null };
+            k:'', aviso:'', texto:'', sub:'', tam:'A4', orient:'v', porHoja:1, pdf:null,
+            qr:false, qrSel:{}, qrItems:null, qrIni:false };
 /* el cartel de personal autorizado. Nace en blanco a propósito: el
    área la escribe quien lo pega en la puerta, no la app. */
 var SENP = { titulo:'', pie:'', gente:[], busca:'', tam:'A4', orient:'v', cols:0,
@@ -419,6 +420,16 @@ function senDistancia(ladoMM){
   var L = Math.sqrt(a*2000);
   return L > 50 ? 50 : L;
 }
+
+/* ── 17/10/2026 · lote 15 · la señal con el QR de inspección de SU equipo ─────────────────────
+   Marcelo: «el QR del extintor en la misma figura… en la sección señaléticas, la opción de que sí sale con QR de
+   inspección o no, y elegir qué extintor será… todo el lote de extintores o algunos seleccionados».
+   Las señales de los equipos que tienen su QR en «QR de equipos» (el extintor, el lavaojos, la camilla y el
+   botiquín) pueden salir con el QR de la etiqueta de cada uno: un cartel por equipo, con su código y de qué es, en
+   una franja blanca debajo de la banda. Es el QR de la etiqueta (/h/): nunca el código de la obra. */
+var SEN_QR_EQ = { 'extintor':'Extintor', 'extintor-rodante':'Extintor', 'lavaojos-de-emergencia':'Lavaojos',
+                  'camilla':'Camilla', 'primeros-auxilios':'Botiquín' };
+function senEqTipo(k){ return SEN_QR_EQ.hasOwnProperty(String(k||'')) ? SEN_QR_EQ[String(k)] : ''; }
 /* ── de la app · sin tildes ── */
 function _senNorm(s){
   s = String(s||'').toLowerCase();
@@ -452,7 +463,8 @@ function senLayout(){
   var w = (util.w - hueco*(rej[0]-1)) / rej[0];
   var h = (util.h - hueco*(rej[1]-1)) / rej[1];
   return { T:T, rej:rej, M:M, hueco:hueco, arriba:M, pie:pie,
-           anchoCel:w, altoCel:h, w:w, h:h, lado:_senPicLado(w, h), hCab:0 };
+           anchoCel:w, altoCel:h, w:w, h:h, lado:_senPicLado(w, h), hCab:0,
+           qr: SEN.qr ? _senQRLado(w, h) : 0 };
 }
 
 /* por debajo de 5 mm el logo es una mancha que solo le roba sitio al
@@ -474,7 +486,8 @@ function _senPicLado(w, h){
     var d = new jspdf.jsPDF({ unit:'mm', format:[Math.max(w,10), Math.max(h,10)] });
     hb = _senCaja(d, SEN.aviso, SEN.texto, SEN.sub, w, h).hb;
   }catch(e){}
-  return Math.max(0, Math.min(w - 2*p, (h - p - hb) - w*0.03 - (p + hl)));
+  var hq = SEN.qr ? _senQRFila(w, h) : 0;      /* la franja del QR de su equipo (lote 15) */
+  return Math.max(0, Math.min(w - 2*p, (h - p - hb - hq) - w*0.03 - (p + hl)));
 }
 
 /* ── la banda: cuánto mide y qué texto entra ───────────────────────
@@ -564,11 +577,65 @@ function _senCabeTexto(doc, q, x, y, ancho, alto, al){
   return tot;
 }
 
+/* ── 17/10/2026 · lote 15 · la franja del QR, debajo de la banda ──
+   A la derecha el QR de la etiqueta del equipo (el de «QR de equipos»);
+   a la izquierda su código, grande, de qué es y qué se ve al
+   escanearlo. El QR mide el 19 % del ancho del cartel, sin pasar del
+   13 % del alto ni de 32 mm: en una A4 entera, 32 mm, que se lee de
+   lejos; la letra se achica hasta caber y nada pisa el QR. */
+function _senQRLado(w, h){ return Math.min(w*0.19, h*0.13, 32); }
+function _senQRFila(w, h){ return _senQRLado(w, h) + w*0.04; }
+/* las fuentes del PDF no traen los subíndices («CO₂»): van como número */
+function _senQRTx(t){
+  return String(t||'').replace(/[\u2080-\u2089]/g, function(c){ return String(c.charCodeAt(0) - 0x2080); })
+                      .replace(/\s+/g, ' ').trim();
+}
+function _senQRPDF(doc, q, x, y, wi, w, h){
+  var qs = _senQRLado(w, h), yq = y + w*0.02, xq = x + wi - qs;
+  if(q && q.du){ try{ doc.addImage(q.du, 'PNG', xq, yq, qs, qs); }catch(e){} }
+  var ancho = wi - qs - w*0.04;
+  if(!q || ancho < 8) return;
+  var cod = _senQRTx(q.cod), det = _senQRTx(q.det), pie = _senQRTx(q.pie);
+  var fc = qs*0.30/_MMPT, fd = 0, fp = 0, ld = [], lp = [], alto = 0;
+  for(var v=0; v<30; v++){
+    fd = fc*0.56; fp = fc*0.46;
+    doc.setFont('helvetica','bold'); doc.setFontSize(fc);
+    var wc = cod ? doc.getTextWidth(cod) : 0;
+    doc.setFont('helvetica','normal'); doc.setFontSize(fd);
+    ld = det ? doc.splitTextToSize(det, ancho) : [];
+    doc.setFontSize(fp);
+    lp = pie ? doc.splitTextToSize(pie, ancho) : [];
+    alto = (cod ? fc*1.08*_MMPT : 0) + (ld.length ? fd*0.35*_MMPT + Math.min(2, ld.length)*fd*1.15*_MMPT : 0) +
+           (lp.length ? fp*0.5*_MMPT + Math.min(2, lp.length)*fp*1.18*_MMPT : 0);
+    if(wc <= ancho && alto <= qs && ld.length <= 2 && lp.length <= 2) break;
+    fc *= 0.93;
+  }
+  if(ld.length > 2){ ld = ld.slice(0, 2); ld[1] = String(ld[1]).replace(/\s*\S{0,4}$/, '') + '…'; }
+  if(lp.length > 2){ lp = lp.slice(0, 2); lp[1] = String(lp[1]).replace(/\s*\S{0,4}$/, '') + '…'; }
+  var cy = yq + Math.max(0, (qs - alto)/2);
+  if(cod){
+    doc.setFont('helvetica','bold'); doc.setFontSize(fc); doc.setTextColor(17,17,17);
+    doc.text(cod, x, cy + fc*0.80*_MMPT);
+    cy += fc*1.08*_MMPT;
+  }
+  if(ld.length){
+    cy += fd*0.35*_MMPT;
+    doc.setFont('helvetica','normal'); doc.setFontSize(fd); doc.setTextColor(55,65,75);
+    ld.forEach(function(l, i){ doc.text(l, x, cy + i*fd*1.15*_MMPT + fd*0.80*_MMPT); });
+    cy += ld.length*fd*1.15*_MMPT;
+  }
+  if(lp.length){
+    cy += fp*0.5*_MMPT;
+    doc.setFont('helvetica','normal'); doc.setFontSize(fp); doc.setTextColor(96,106,118);
+    lp.forEach(function(l, i){ doc.text(l, x, cy + i*fp*1.18*_MMPT + fp*0.80*_MMPT); });
+  }
+}
+
 /* ── el cartel dibujado en el PDF ─────────────────────────────────
    Marco negro fino, fondo blanco, el logo de la empresa dentro del
    marco arriba a la izquierda, el pictograma al medio y abajo la banda
    del color de la señal. El cartel ocupa toda su casilla. */
-function _senCartelPDF(doc, png, S, aviso, texto, sub, x, y, w, h, logo){
+function _senCartelPDF(doc, png, S, aviso, texto, sub, x, y, w, h, logo, qr){
   var C = senColor(S.g);
   var t = Math.max(0.4, Math.min(1.6, w*0.008));
   var K = _senCaja(doc, aviso, texto, sub, w, h);
@@ -592,7 +659,9 @@ function _senCartelPDF(doc, png, S, aviso, texto, sub, x, y, w, h, logo){
     yc += hl0 + w*0.035;
   }
 
-  var yb = y + h - p - K.hb, aire = w*0.03;
+  /* con el QR de su equipo, la banda sube y deja debajo la franja del QR (lote 15) */
+  var hq = qr ? _senQRFila(w, h) : 0;
+  var yb = y + h - p - K.hb - hq, aire = w*0.03;
   var s = Math.min(wi, (yb - aire) - yc);
   if(png && s > 0){
     try{ doc.addImage(png, 'PNG', x + (w - s)/2, yc + ((yb - aire) - yc - s)/2,
@@ -629,7 +698,8 @@ function _senCartelPDF(doc, png, S, aviso, texto, sub, x, y, w, h, logo){
       doc.text(l, xi + wi/2, cy + i*lhs + K.fs*CAP*_MMPT, { align:'center' });
     });
   }
-  return { lado: s, hb: K.hb, ft: K.ft };
+  if(qr) _senQRPDF(doc, qr, xi, yb + K.hb, wi, w, h);
+  return { lado: s, hb: K.hb, ft: K.ft, qr: qr ? _senQRLado(w, h) : 0 };
 }
 /* ── de la app · la hoja de una señal ── */
 function _senDibujar(png){
@@ -652,27 +722,38 @@ function _senDibujar(png){
              obra: (typeof nombreDeLaObra==='function') ? nombreDeLaObra() : '' };
   }
 
+  /* con el QR de cada equipo (lote 15): un cartel por equipo, en las hojas que hagan falta */
+  var qrs = (SEN.qr && SEN.qrItems && SEN.qrItems.length) ? SEN.qrItems : null;
+  var total = qrs ? qrs.length : SEN.porHoja, hojas = Math.max(1, Math.ceil(total / SEN.porHoja));
   var ultimo = null;
-  for(var i=0; i<SEN.porHoja; i++){
-    var col = i % rej[0], fil = Math.floor(i / rej[0]);
+  for(var i=0; i<total; i++){
+    var j = i % SEN.porHoja;
+    if(i && !j){
+      _senPieHoja(doc, T, LY, ultimo, Math.floor(i / SEN.porHoja), hojas);
+      doc.addPage([T.w, T.h], (T.w > T.h) ? 'landscape' : 'portrait');
+    }
+    var col = j % rej[0], fil = Math.floor(j / rej[0]);
     var x0 = M + col*(LY.w + hueco);
     var y0 = M + fil*(LY.h + hueco);
-    ultimo = _senCartelPDF(doc, png, S, SEN.aviso, SEN.texto, SEN.sub, x0, y0, LY.w, LY.h, logo);
+    ultimo = _senCartelPDF(doc, png, S, SEN.aviso, SEN.texto, SEN.sub, x0, y0, LY.w, LY.h, logo, qrs ? qrs[i] : null);
   }
+  _senPieHoja(doc, T, LY, ultimo, hojas, hojas);
 
+  SEN.pdf = { blob: doc.output('blob'),
+              nombre: 'senal-'+(_senSlug(SEN.texto||S.n)||'sst')+(qrs?'-con-qr':'')+'-'+T.n+
+                      (T.oh?'-horizontal':'')+'.pdf', hojas: hojas };
+  return ultimo;
+}
+/* el pie de cada hoja: la medida, hasta dónde se lee y cómo imprimirla */
+function _senPieHoja(doc, T, LY, ultimo, n, hojas){
   var lado = (ultimo && ultimo.lado) ? ultimo.lado : LY.lado;
   doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(160,168,176);
   var d = senDistancia(lado);
   doc.text('NTP 399.010-1 · '+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm, símbolo de '+
            Math.round(lado)+' mm, legible '+
            (d<5 ? 'solo de cerca (menos de 5 m)' : 'hasta ~'+Math.round(d)+' m')+
-           ' · imprimir al 100 % · cortar por el marco · OBRASST',
+           ' · imprimir al 100 % · cortar por el marco'+(hojas > 1 ? ' · hoja '+n+' de '+hojas : '')+' · OBRASST',
            T.w/2, T.h - 2.4, { align:'center' });
-
-  SEN.pdf = { blob: doc.output('blob'),
-              nombre: 'senal-'+(_senSlug(SEN.texto||S.n)||'sst')+'-'+T.n+
-                      (T.oh?'-horizontal':'')+'.pdf' };
-  return ultimo;
 }
 
 function _senSlug(t){
@@ -1130,6 +1211,205 @@ function _andCara(doc, T, logo, x, y, w, h, anverso){
     doc.line(tx + tw*0.04, ly, tx + tw*0.96, ly);
   }
 }
+/* ── de la app · los carteles propios de la obra (lote 15) ── */
+/* ── senx · el dibujo ─────────────────────────────────────────────── */
+/* los dos fondos: los colores de las señales de obligación y de evacuación de la app */
+var SENX_FONDOS = {
+  azul:  { k:'azul',  n:'Azul · obligación',   f:[0,89,158], cf:'#00599E' },
+  verde: { k:'verde', n:'Verde · información', f:[0,150,69], cf:'#009645' }
+};
+var SENX_MAX_PICS = 6;
+/* para empezar, los cuatro que nombró Marcelo; se cambia todo */
+var SENX_MODELOS = [
+  { k:'caja', n:'Caja de herramientas', d:'Azul, con guantes y «cuidado con sus manos»',
+    texto:'CAJA DE HERRAMIENTAS', sub:'Cada herramienta, en su sitio al terminar', color:'azul',
+    pics:['uso-obligatorio-de-guantes-de-seguridad', 'cuidado-con-sus-manos'] },
+  { k:'acopio', n:'Acopio de materiales', d:'Azul, con casco, guantes, botas y «caída de objetos»',
+    texto:'ZONA DE ACOPIO DE MATERIALES', sub:'', color:'azul',
+    pics:['uso-obligatorio-de-casco-de-seguridad', 'uso-obligatorio-de-guantes-de-seguridad', 'uso-obligatorio-de-botas-de-seguridad', 'cuidado-caida-de-objetos'] },
+  { k:'sombra', n:'Punto de sombra', d:'Verde, para el descanso y el agua', ic:'⛱️',
+    texto:'PUNTO DE SOMBRA E HIDRATACIÓN', sub:'Descansa a la sombra y toma agua', color:'verde', pics:[] },
+  { k:'arnes', n:'Porta arnés', d:'Azul, con el arnés de seguridad',
+    texto:'PORTA ARNÉS', sub:'Cuelga aquí el arnés y su línea de vida al terminar', color:'azul',
+    pics:['uso-obligatorio-de-arnes-de-seguridad'] }
+];
+function senxFondo(k){ return SENX_FONDOS.hasOwnProperty(String(k)) ? SENX_FONDOS[k] : SENX_FONDOS.azul; }
+function senxHay(k){ for(var i=0;i<NTP_SENALES.length;i++) if(NTP_SENALES[i].k===k) return true; return false; }
+function senxModelo(k){ for(var i=0;i<SENX_MODELOS.length;i++) if(SENX_MODELOS[i].k===k) return SENX_MODELOS[i]; return null; }
+/* lo que se guarda y se dibuja, siempre igual de limpio (venga de la app, de la web o del servidor) */
+function senxLimpio(o){
+  o = o || {};
+  var pics = [], vistos = {};
+  (Array.isArray(o.pics) ? o.pics : []).forEach(function(k){
+    k = String(k || '');
+    if(!vistos[k] && senxHay(k) && pics.length < SENX_MAX_PICS){ vistos[k] = 1; pics.push(k); }
+  });
+  return { id: String(o.id || '').slice(0, 40), texto: String(o.texto || '').replace(/\s+/g, ' ').trim().slice(0, 80),
+           sub: String(o.sub || '').replace(/\s+/g, ' ').trim().slice(0, 90),
+           color: SENX_FONDOS.hasOwnProperty(String(o.color)) ? String(o.color) : 'azul', pics: pics,
+           tam: (o.tam === 'A3') ? 'A3' : 'A4', orient: (o.orient === 'h') ? 'h' : 'v', t: +o.t || 0, b: o.b ? 1 : 0 };
+}
+/* se juntan por id y gana el más nuevo; los quitados quedan marcados (b) para que no vuelvan desde otro celular */
+function senxJuntar(a, b){
+  var por = {}, orden = [];
+  (a || []).concat(b || []).forEach(function(z){
+    z = senxLimpio(z); if(!z.id) return;
+    if(!por[z.id]){ por[z.id] = z; orden.push(z.id); }
+    else if((z.t || 0) > (por[z.id].t || 0)) por[z.id] = z;
+  });
+  return orden.map(function(k){ return por[k]; });
+}
+/* el nombre corto de un pictograma, el que va debajo: sin «USO OBLIGATORIO DE» (lo dice el círculo azul) ni
+   «ATENCIÓN» o «CUIDADO» (lo dice el triángulo). «PROHIBIDO FUMAR» va entero: sin la palabra diría lo contrario.
+   Y «CUIDADO CON SUS MANOS» también: «CON SUS MANOS» solo no se entiende. */
+function senxPicNombre(k){
+  if(!senxHay(k)) return '';
+  var n = String(senalPorK(k).n).replace(/[\u2190-\u21FF]\s*/g, '').replace(/\s+/g, ' ').trim(), pa = _senPartir(n);
+  if(pa.aviso && pa.aviso !== 'PROHIBIDO' && pa.texto && !/^(CON|DE|DEL|AL|EL|LA|LOS|LAS|SUS)\s/i.test(pa.texto)) return String(pa.texto).toUpperCase();
+  return n.toUpperCase();
+}
+/* las fuentes del PDF son las de siempre (Latin-1): lo que no tienen (emojis, subíndices) no se escribe */
+function _senxTx(t){
+  return String(t || '').replace(/[\u2080-\u2089]/g, function(c){ return String(c.charCodeAt(0) - 0x2080); })
+    .replace(/[^\x20-\x7E\u00A0-\u00FF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026\u20AC]/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+/* los pictogramas pasados a imagen: { k: png }. ras(S, px), si quien llama ya tiene los suyos guardados */
+function senxPngs(pics, ras){
+  var ks = (pics || []).filter(senxHay).slice(0, SENX_MAX_PICS), px = _senPx(60);
+  return Promise.all(ks.map(function(k){
+    var S = senalPorK(k);
+    return (ras ? ras(S, px) : senRaster(S.s, px)).then(null, function(){ return null; });
+  })).then(function(r){ var o = {}; ks.forEach(function(k, i){ if(r[i]) o[k] = r[i]; }); return o; });
+}
+/* el logo de la empresa, sin su marco blanco (logoSinMarco ya pasado), y su razón social y la obra */
+function _senxLogoDe(doc){
+  var emp = empleador() || {}, r = 2.2, du = null;
+  if(emp.logo){
+    du = emp.logo;
+    var Lr = logoSinMarcoYa(emp.logo);
+    if(Lr){ du = Lr.du; r = Lr.r; }
+    else { try{ var pr = doc.getImageProperties(emp.logo); if(pr && pr.height) r = pr.width/pr.height; }catch(e){} }
+  }
+  return { du: du, r: r, razon: String(emp.razon || ''), obra: String(nombreDeLaObra() || '') };
+}
+/* la franja de la empresa, como en las señales; sin logo, la razón social y la obra al centro */
+function _senxFranja(doc, logo, xi, yc, wi, w, h){
+  if(!logo) return 0;
+  var hl0 = _senAltoLogo(w, h);
+  if(hl0 < 5 || !(logo.du || logo.razon || logo.obra)) return 0;
+  if(logo.du){
+    var hl = hl0, lw = hl*logo.r, lmax = wi*0.46;
+    if(lw > lmax){ lw = lmax; hl = lw/logo.r; }
+    try{ doc.addImage(logo.du, xi, yc + (hl0 - hl)/2, lw, hl, undefined, 'FAST'); }catch(e){}
+    _senCabeTexto(doc, logo, xi + lw + w*0.03, yc, wi - lw - w*0.03, hl0, 'right');
+  }else{
+    _senCabeTexto(doc, logo, xi, yc, wi, hl0, 'center');
+  }
+  doc.setDrawColor(196,201,208); doc.setLineWidth(Math.max(0.2, w*0.0014));
+  doc.line(xi, yc + hl0 + w*0.013, xi + wi, yc + hl0 + w*0.013);
+  return hl0 + w*0.035;
+}
+/* el panel de color con el texto: la letra más grande que entra sin partir una palabra; el renglón de abajo, más chico */
+function _senxPanel(doc, F, texto, sub, x, y, w, h){
+  doc.setFillColor(F.f[0], F.f[1], F.f[2]); doc.rect(x, y, w, h, 'F');
+  var T = _senxTx(texto).toUpperCase(), S = _senxTx(sub);
+  if(!T && !S) return 0;
+  var ancho = w*0.88, alto = h*0.84, ft = Math.min(h*0.26, w*0.16)/_MMPT, fs = 0, lin = [], ls = [], tot = 0;
+  for(var v=0; v<70; v++){
+    fs = Math.max(ft*0.40, Math.min(ft*0.8, 9));
+    doc.setFont('helvetica','bold'); doc.setFontSize(ft);
+    lin = T ? doc.splitTextToSize(T, ancho) : [];
+    var ancha = 0;
+    T.split(' ').forEach(function(pal){ if(pal){ var a = doc.getTextWidth(pal); if(a > ancha) ancha = a; } });
+    doc.setFont('helvetica','normal'); doc.setFontSize(fs);
+    ls = S ? doc.splitTextToSize(S, ancho) : [];
+    tot = lin.length*ft*1.08*_MMPT + (ls.length ? (lin.length ? ft*0.32*_MMPT : 0) + ls.length*fs*1.18*_MMPT : 0);
+    if((tot <= alto && ancha <= ancho && lin.length <= 5 && ls.length <= 3) || ft < 6) break;
+    ft *= 0.95;
+  }
+  if(ls.length > 3){ ls = ls.slice(0, 3); ls[2] = String(ls[2]).replace(/\s*\S{0,4}$/, '') + '…'; }
+  var cy = y + Math.max(0, (h - tot)/2);
+  doc.setTextColor(255,255,255);
+  if(lin.length){
+    doc.setFont('helvetica','bold'); doc.setFontSize(ft);
+    lin.forEach(function(l, i){ doc.text(l, x + w/2, cy + i*ft*1.08*_MMPT + ft*0.80*_MMPT, { align:'center' }); });
+    cy += lin.length*ft*1.08*_MMPT + ft*0.32*_MMPT;
+  }
+  if(ls.length){
+    doc.setFont('helvetica','normal'); doc.setFontSize(fs);
+    ls.forEach(function(l, i){ doc.text(l, x + w/2, cy + i*fs*1.18*_MMPT + fs*0.80*_MMPT, { align:'center' }); });
+  }
+  return ft;
+}
+/* la fila de los pictogramas: en la hoja parada, hasta 4 en una fila (5 o 6 van en dos); en la echada, los 6 en
+   una. Cada uno con su nombre debajo (dos renglones) */
+function senxPicsReparto(n, echada){
+  var porFila = echada ? 6 : 4, filas = Math.max(1, Math.ceil(n / porFila));
+  return { filas: filas, cols: Math.ceil(n / filas) };
+}
+function _senxPicsMedir(doc, pics, wi, disp, w){
+  var n = pics.length;
+  if(!n) return { n:0, hp:0, sp:0 };
+  var RP = senxPicsReparto(n, wi > disp*1.25), cols = RP.cols, filas = RP.filas;
+  var gx = w*0.035, gy = w*0.025, sep = w*0.012;
+  var cw = (wi - (cols - 1)*gx) / cols;
+  var sp = Math.min(cw*0.78, disp*(filas === 1 ? 0.30 : 0.17));
+  var fc = Math.min(sp*0.12, cw*0.10)/_MMPT, caps = [], noms = pics.map(function(k){ return _senxTx(senxPicNombre(k)); });
+  for(var v=0; v<30; v++){
+    doc.setFont('helvetica','bold'); doc.setFontSize(fc);
+    var bien = true;
+    caps = noms.map(function(t){ var l = doc.splitTextToSize(t, cw); if(l.length > 2) bien = false; return l; });
+    if(bien || fc <= 4.5) break;
+    fc *= 0.92;
+  }
+  caps = caps.map(function(l){ if(l.length <= 2) return l; var c = l.slice(0, 2); c[1] = String(c[1]).replace(/\s*\S{0,4}$/, '') + '…'; return c; });
+  var hc = 2*fc*1.12*_MMPT, hr = sp + sep + hc;
+  return { n:n, cols:cols, filas:filas, gx:gx, gy:gy, sep:sep, cw:cw, sp:sp, fc:fc, caps:caps, hr:hr, wi:wi,
+           hp: filas*hr + (filas - 1)*gy + w*0.035 };
+}
+function _senxPicsPDF(doc, M, pics, pngs, x, y){
+  for(var i=0; i<M.n; i++){
+    var fila = (M.filas === 2 && i >= M.cols) ? 1 : 0;
+    var enFila = (M.filas === 1) ? M.n : (fila ? M.n - M.cols : M.cols);
+    var j = fila ? i - M.cols : i, anchoFila = enFila*M.cw + (enFila - 1)*M.gx;
+    var x0 = x + (M.wi - anchoFila)/2 + j*(M.cw + M.gx), y0 = y + fila*(M.hr + M.gy);
+    var png = pngs[pics[i]];
+    if(png){ try{ doc.addImage(png, 'PNG', x0 + (M.cw - M.sp)/2, y0, M.sp, M.sp, undefined, 'FAST'); }catch(e){} }
+    doc.setFont('helvetica','bold'); doc.setFontSize(M.fc); doc.setTextColor(31,41,51);
+    (M.caps[i] || []).forEach(function(l, k){
+      doc.text(l, x0 + M.cw/2, y0 + M.sp + M.sep + k*M.fc*1.12*_MMPT + M.fc*0.80*_MMPT, { align:'center' });
+    });
+  }
+}
+/* el cartel en su casilla: marco negro fino, fondo blanco, la franja de la empresa, el panel y los pictogramas */
+function _senxCartelPDF(doc, o, x, y, w, h, logo, pngs){
+  var F = senxFondo(o.color);
+  var t = Math.max(0.4, Math.min(1.6, w*0.008)), p = w*0.045, xi = x + p, wi = w - 2*p;
+  doc.setFillColor(255,255,255); doc.rect(x, y, w, h, 'F');
+  doc.setDrawColor(17,17,17); doc.setLineWidth(t); doc.rect(x + t/2, y + t/2, w - t, h - t, 'S');
+  var yc = y + p, yf = y + h - p;
+  yc += _senxFranja(doc, logo, xi, yc, wi, w, h);
+  var pics = (o.pics || []).filter(senxHay).slice(0, SENX_MAX_PICS);
+  var M = _senxPicsMedir(doc, pics, wi, yf - yc, w);
+  var hPanel = (yf - yc) - M.hp;
+  var ft = _senxPanel(doc, F, o.texto, o.sub, xi, yc, wi, hPanel);
+  if(M.n) _senxPicsPDF(doc, M, pics, pngs || {}, xi, yc + hPanel + w*0.035);
+  return { ft: ft, sp: M.sp || 0 };
+}
+/* la hoja: un cartel que la llena, A4 o A3, parada o echada (márgenes de 6 mm, como las señales) */
+function senxDibujo(o, pngs){
+  o = senxLimpio(o);
+  var T = senHoja(o.tam, o.orient);
+  var doc = new jspdf.jsPDF({ unit:'mm', format:[T.w, T.h], orientation:(T.w > T.h) ? 'landscape' : 'portrait' });
+  var M = 6, pie = 6, w = T.w - M*2, h = T.h - M*2 - pie;
+  var r = _senxCartelPDF(doc, o, M, M, w, h, _senxLogoDe(doc), pngs || {});
+  doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(160,168,176);
+  doc.text('Cartel de la obra · '+Math.round(w)+' × '+Math.round(h)+' mm'+(o.pics.length ? ' · pictogramas de la NTP 399.010-1' : '')+
+           ' · imprimir al 100 % · cortar por el marco · OBRASST', T.w/2, T.h - 2.4, { align:'center' });
+  return { blob: doc.output('blob'), nombre: 'cartel-'+(_senSlug(o.texto) || 'obra')+'-'+T.n+(T.oh ? '-horizontal' : '')+'.pdf',
+           hoja: T, w: w, h: h, ft: r.ft, lado: r.sp };
+}
   /* ── lo del portal ─────────────────────────────────────────────────────────────────────────
      El dibujo de la app trabaja sobre lo que tiene en pantalla (SEN, SENP, AND). Aquí se le pone lo que se quiere
      dibujar JUSTO ANTES de dibujar, sin esperas de por medio: dos vistas previas pedidas a la vez no se pisan. */
@@ -1155,8 +1435,11 @@ function _andCara(doc, T, logo, x, y, w, h, anverso){
   function _nom(n){ return String(n || 'senal.pdf').replace(/-{2,}/g, '-'); }
   function _senDe(o){
     o = o || {};
+    /* lote 15: con el QR de cada equipo, o.qr = [{ du (el QR de su etiqueta, data:), cod, det, pie }], uno por cartel */
+    var q = Array.isArray(o.qr) ? o.qr.filter(function(x){ return x && x.du; }).slice(0, 300) : [];
     return { tab:'norma', filtro:'', busca:'', k:o.k, aviso:String(o.aviso || ''), texto:String(o.texto || ''), sub:String(o.sub || ''),
-             tam:senTamPorK(o.tam).k, orient:(o.orient === 'h') ? 'h' : 'v', porHoja:Math.max(1, Math.round(+o.porHoja || 1)), pdf:null };
+             tam:senTamPorK(o.tam).k, orient:(o.orient === 'h') ? 'h' : 'v', porHoja:Math.max(1, Math.round(+o.porHoja || 1)), pdf:null,
+             qr:q.length > 0, qrSel:{}, qrItems:q.length ? q : null, qrIni:false };
   }
   /* el logo con su proporción real y, al lado, la razón social y la obra (como en _senDibujar) */
   function _logoCartel(doc){
@@ -1171,11 +1454,17 @@ function _andCara(doc, T, logo, x, y, w, h, anverso){
     grupos: NTP_GRUPOS, senales: NTP_SENALES, tam: SEN_TAM, modelos: SENP_MODELOS, andTipos: AND_TIPOS,
     hay: _hay, porK: senalPorK, svg: senalSVG, partir: _senPartir, color: senColor, corto: _senCorto, norm: _senNorm,
     hoja: senHoja, distancia: senDistancia, slug: _senSlug, iniciales: _senpIni,
+    /* lote 15: el tipo de equipo («QR de equipos») de una señal, si lo tiene: 'Extintor', 'Lavaojos'… o '' */
+    eqTipo: senEqTipo, qrMin: 16,
+    /* lote 15: los carteles propios (los mismos de la app: modelos, fondos, cómo se guardan y se juntan) */
+    propiosModelos: SENX_MODELOS, fondos: SENX_FONDOS, maxPics: SENX_MAX_PICS, picNombre: senxPicNombre,
+    propioLimpio: senxLimpio, propiosJuntar: senxJuntar,
     /* el logo de la empresa sin su marco blanco: Promise<{ du, r } | null> */
     logo: logoSinMarco,
 
     /* UNA señal de la norma, repetida en la hoja: es _senDibujar de la app.
-       o: { k, aviso, texto, sub, tam:'A3|A4|A5', orient:'v|h', porHoja } → Promise<{ blob, nombre, … }> */
+       o: { k, aviso, texto, sub, tam:'A3|A4|A5', orient:'v|h', porHoja, qr } → Promise<{ blob, nombre, … }>
+       Con o.qr (lote 15): un cartel por equipo, cada uno con el QR de su etiqueta, en las hojas que hagan falta. */
     senal: function(o, C){
       if(!o || !_hay(o.k)) return Promise.reject('sin_senal');
       var S = senalPorK(o.k);
@@ -1184,8 +1473,8 @@ function _andCara(doc, T, logo, x, y, w, h, anverso){
       return Promise.all([_raster(S, px), _logoDe(C)]).then(function(rr){
         _pon(C); SEN = _senDe(o);
         var u = _senDibujar(rr[0]), LY = senLayout(), lado = (u && u.lado) ? u.lado : LY.lado;
-        return { blob:SEN.pdf.blob, nombre:_nom(SEN.pdf.nombre), hojas:1, celdas:SEN.porHoja, hoja:LY.T, rej:LY.rej, w:LY.w, h:LY.h,
-                 lado:lado, ft:(u && u.ft) || 0, metros:senDistancia(lado) };
+        return { blob:SEN.pdf.blob, nombre:_nom(SEN.pdf.nombre), hojas:SEN.pdf.hojas || 1, celdas:SEN.qrItems ? SEN.qrItems.length : SEN.porHoja,
+                 hoja:LY.T, rej:LY.rej, w:LY.w, h:LY.h, lado:lado, ft:(u && u.ft) || 0, metros:senDistancia(lado), qr:(u && u.qr) || 0 };
       });
     },
 
@@ -1249,6 +1538,17 @@ function _andCara(doc, T, logo, x, y, w, h, anverso){
                  senal:(o.senal && _hay(o.senal)) ? o.senal : '', pick:false, qsen:'', pdf:null, modelo:'', prop:[], ver:60 };
         var hojas = _senpDibujar(fotos, r[0]);
         return { blob:SENP.pdf.blob, nombre:_nom(SENP.pdf.nombre), hojas:hojas, hoja:senHoja(SENP.tam, SENP.orient) };
+      });
+    },
+
+    /* lote 15 · un CARTEL PROPIO de la obra: es senxDibujo de la app.
+       o: { texto, sub, color:'azul|verde', pics:[k], tam:'A4|A3', orient:'v|h' } → Promise<{ blob, nombre, hoja, w, h, ft }> */
+    propio: function(o, C){
+      o = senxLimpio(o);
+      return Promise.all([senxPngs(o.pics, _raster), _logoDe(C)]).then(function(rr){
+        _pon(C);
+        var R = senxDibujo(o, rr[0]);
+        return { blob:R.blob, nombre:_nom(R.nombre), hojas:1, hoja:R.hoja, w:R.w, h:R.h, ft:R.ft || 0, pics:o.pics.length };
       });
     },
 

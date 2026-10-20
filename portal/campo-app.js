@@ -61,7 +61,10 @@ var ATS_EST = {
   enviado:   { et:'Esperando al ingeniero',   c:'#00599E', ic:'📤' },
   liberado:  { et:'Esperando V°B° del SSOMA', c:'#FCDB00', ic:'⏳' },
   vigente:   { et:'Liberado · se puede trabajar', c:'#009645', ic:'✅' },
-  observado: { et:'Devuelto con observación',  c:'#D9261C', ic:'↩️' }
+  observado: { et:'Devuelto con observación',  c:'#D9261C', ic:'↩️' },
+  /* 17/10/2026 · lote 14 · el cierre */
+  porcerrar: { et:'Falta el cierre · firma de salida y foto', c:'#D9261C', ic:'🔚' },
+  cerrado:   { et:'Cerrado · firmaron la salida', c:'#0B6E4F', ic:'🔒' }
 };
 function _parT(s){ return (typeof trad === 'function') ? (trad(s) || s) : s; }
 function _parH(x){ return (Math.round(x * 10) / 10).toFixed(1); }

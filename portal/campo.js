@@ -575,7 +575,8 @@ function _parwDatos(dia){
       var g=Array.isArray(n.gente) ? n.gente : [], est=(typeof atsEstadoDe==='function') ? atsEstadoDe(n) : 'borrador';
       g.forEach(function(x){ if(x && x.tr && (x.n || x.d)) firmaron[String(x.d || x.n)]=x.n || x.d; });
       D.ats.push({ t:n.trabajo || n.area || 'ATS', lugar:[n.area, n.ubic].filter(function(x){ return String(x||'').trim(); }).join(' · '), n:g.length,
-                   firmas:g.filter(function(x){ return x && x.tr; }).length, est:est, ok:est==='vigente', no:0 });
+                   /* 17/10/2026 · lote 14 · «liberado» = con el V°B° del SSOMA: también cuando ya le toca el cierre o está cerrado */
+                   firmas:g.filter(function(x){ return x && x.tr; }).length, est:est, ok:(est==='vigente' || est==='porcerrar' || est==='cerrado'), no:0 });
     });
     if(!D.gente.tareo){ var ns=Object.keys(firmaron).map(function(k){ return firmaron[k]; }); D.gente.n=ns.length; D.gente.nombres=ns.sort(function(a, b){ return String(a).localeCompare(String(b), 'es'); }); }
     /* las charlas y capacitaciones, con cuántos marcaron */

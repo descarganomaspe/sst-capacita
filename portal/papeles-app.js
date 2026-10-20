@@ -1,6 +1,243 @@
 /* OBRASST · lo que el ATS y el IPERC continuo del portal toman de la app: las listas, la biblioteca de
    actividades, la base de peligros y el dibujo del ATS «clásico» y del IPERC «Anexo 7» (ats.js, ats-flujo.js,
    iperc.js), para que la hoja que sale en la web sea la misma de la app. Lo arma armar.py. No editar. */
+/* ── 17/10/2026 · lote 14 · las preguntas de antes del ATS (ats-preguntas.js, el mismo de la app) ── */
+/* ══════════════════════════════════════════════════════════════════
+   ATS · LAS PREGUNTAS DE ANTES (17/10/2026, lote 14)
+
+   Marcelo, después de probar el ATS digital en obra: «el colocar los
+   peligros, riesgos, se podría mejorar, porque el trabajador se puede
+   marear, quizás ayudarlo a hacerlo, con preguntas previas: ¿hoy usarás
+   escalera? ¿herramientas manuales? ¿herramientas en altura? ¿estarás
+   en altura? ¿superarás el 1.80 m? ¿estarás en andamio? ¿tu trabajo
+   será a nivel de piso, altura o ambos? ¿habrá sol por dónde estás?
+   Una serie de preguntas de acuerdo a la actividad que elija. Y él
+   elige el peligro: le ayudamos con diferentes peligros y él escoge,
+   pero en secuencia: peligro, riesgo, consecuencias y control.»
+
+   Así funciona (lo mismo en la app y en la web, que trae este archivo
+   tal cual dentro de portal/papeles-app.js):
+     1. ¿Qué se hace en este paso? → tipos de trabajo (se proponen
+        solos con las palabras del paso y del trabajo; se cambian).
+     2. Las preguntas de esos tipos y las de siempre, de SÍ o NO.
+        Lo contestado se recuerda en el ATS (no se pregunta dos veces).
+     3. Los peligros que salen de los «sí», cada uno con su riesgo, su
+        consecuencia y un control para empezar. Nada viene marcado: el
+        que está en el frente marca los que de verdad hay hoy. El
+        control se revisa después, porque depende del frente.
+
+   Nada de esto es norma: son peligros comunes de obra, escritos para
+   que se entiendan. La única cifra es la altura de 1.80 m, la del
+   formato de siempre; afuera del Perú la capa del país la quita.
+   ════════════════════════════════════════════════════════════════ */
+var ATS_PREG = {
+  /* los tipos de trabajo: k, el nombre, un ícono y las palabras que lo delatan (sin tildes, en minúscula) */
+  tipos: [
+    { k:'alt', n:'Trabajo en altura',            ic:'🧗', kw:['altura','techo','cubierta','fachada','arnes','alero','tijeral','parapeto','muro cortina'] },
+    { k:'and', n:'Andamios',                      ic:'🏗️', kw:['andamio'] },
+    { k:'esc', n:'Escaleras',                     ic:'🪜', kw:['escalera'] },
+    { k:'exc', n:'Excavación y zanjas',           ic:'⛏️', kw:['excav','zanja','cimiento','cimentac','movimiento de tierra','relleno','compactac','perfilado'] },
+    { k:'cal', n:'Soldadura, corte y esmerilado', ic:'🔥', kw:['sold','oxicorte','caliente','esmeril','amolad','corte de metal','corte con disco'] },
+    { k:'con', n:'Concreto y vaciado',            ic:'🧱', kw:['concreto','vaciado','vaciar','mixer','vibrad','curado'] },
+    { k:'enc', n:'Encofrado y desencofrado',      ic:'🪵', kw:['encofr','desencofr','puntal','apuntal'] },
+    { k:'ace', n:'Acero de refuerzo (fierro)',     ic:'🔩', kw:['acero','fierro','fierrer','habilitad','varilla','armadura'] },
+    { k:'alb', n:'Albañilería y acabados',        ic:'🧰', kw:['albanil','muro','ladrillo','tarraj','revoque','asentad','enlucid','solaqu','contrapiso','enchap','mayolica','ceramic'] },
+    { k:'ele', n:'Trabajos eléctricos',           ic:'⚡', kw:['electric','tablero','cablead','energi','luminaria','tomacorriente','instalaciones electricas'] },
+    { k:'iza', n:'Izaje de cargas',               ic:'🏋️', kw:['izaje','izar','grua','rigger','eslinga','winche','polipasto','carga suspendida'] },
+    { k:'maq', n:'Maquinaria y vehículos',        ic:'🚜', kw:['excavadora','retroexcavadora','cargador','volquete','camion','montacarga','minicargador','rodillo','maquinaria','tractor','motoniveladora'] },
+    { k:'man', n:'Acarreo y manejo de materiales', ic:'📦', kw:['acarreo','traslado','carga manual','descarga','almacen','acopio','abastecim','transporte de material'] },
+    { k:'dem', n:'Demolición y picado',           ic:'🔨', kw:['demol','picado','picar','rotura','romper'] },
+    { k:'pin', n:'Pintura y químicos',            ic:'🎨', kw:['pint','solvente','impermeab','quimic','resina','sellad','barniz'] },
+    { k:'esp', n:'Espacio confinado',             ic:'🕳️', kw:['confinad','cisterna','buzon','tanque','pozo septico'] },
+    { k:'her', n:'Herramientas eléctricas o de poder', ic:'🛠️', kw:['taladr','amolad','sierra','cortadora','rotomartillo','compresor','martillo neumatico','herramienta electrica','herramientas electricas','disco de corte'] },
+    { k:'lim', n:'Orden, limpieza y residuos',    ic:'🧹', kw:['limpieza','orden','residuo','desmonte','escombro','eliminacion de material'] }
+  ],
+  /* las preguntas: t = los tipos donde sale ('*' = siempre). Si es de SÍ o NO, sus peligros (f) salen con el «sí»; si
+     trae opciones (o), cada opción trae los suyos (of) o ninguno. d = solo se pregunta si otra («k») se contestó con una
+     de «v». */
+  preg: [
+    /* ── las de siempre ── */
+    { k:'g_sol', t:['*'], q:'¿Trabajarás expuesto al sol?', f:[
+      { p:'Radiación solar', r:'Exposición a rayos UV', c:'Quemaduras de piel, insolación, cáncer de piel', m:'Bloqueador solar, lentes con filtro UV, cortaviento o legionario, hidratación y pausas a la sombra' } ] },
+    { k:'g_her', t:['*'], q:'¿Usarás herramientas manuales (martillo, comba, alicate, llaves)?', f:[
+      { p:'Manipulación de herramientas manuales', r:'Contacto con herramientas (golpes, cortes)', c:'Contusiones, cortes, heridas', m:'Herramientas inspeccionadas con la cinta del mes, en buen estado y sin hechizas; guantes de seguridad' } ] },
+    { k:'g_pod', t:['*'], q:'¿Usarás herramientas eléctricas o de poder (amoladora, taladro, sierra)?', f:[
+      { p:'Herramientas eléctricas', r:'Contacto con energía eléctrica', c:'Shock eléctrico, quemaduras', m:'Cables y enchufes inspeccionados, conectadas a tablero con interruptor diferencial, no usarlas en zonas húmedas' },
+      { p:'Herramientas de poder en funcionamiento', r:'Proyección de partículas y contacto con partes móviles', c:'Lesiones oculares, cortes', m:'Guarda colocada, disco o broca adecuados, lentes y careta facial, no retirar la guarda' } ] },
+    { k:'g_car', t:['*'], q:'¿Cargarás materiales a mano?', f:[
+      { p:'Manipulación manual de cargas', r:'Sobreesfuerzo', c:'Lumbalgia, lesiones musculares', m:'Espalda recta y rodillas flexionadas al levantar, respetar el peso máximo por persona; con más peso, entre dos o con carretilla o buggy' } ] },
+    { k:'g_veh', t:['*'], q:'¿Habrá vehículos o maquinaria moviéndose cerca?', f:[
+      { p:'Vehículos y maquinaria en movimiento', r:'Atropello o golpe por equipo móvil', c:'Fracturas, politraumatismos, muerte', m:'Transitar por vías peatonales señalizadas, contacto visual con el operador, vigía o señalero, chaleco reflectivo' } ] },
+    { k:'g_cua', t:['*'], q:'¿Hay otras cuadrillas trabajando cerca o encima de ti?', f:[
+      { p:'Trabajos simultáneos en la zona', r:'Caída de objetos o interferencia entre cuadrillas', c:'Golpes, contusiones, fracturas', m:'Coordinar con las otras cuadrillas, delimitar y señalizar el área, no trabajar debajo de otra cuadrilla' } ] },
+    { k:'g_ord', t:['*'], q:'¿El área tiene desniveles, huecos o materiales en el camino?', f:[
+      { p:'Superficies irregulares, huecos y materiales en el piso', r:'Caídas al mismo nivel, tropiezos', c:'Golpes, esguinces, fracturas', m:'Orden y limpieza, tapar o señalizar los huecos, transitar por accesos despejados' } ] },
+    { k:'g_rui', t:['*'], q:'¿Habrá ruido fuerte (equipos, martillos, cortadoras)?', f:[
+      { p:'Ruido', r:'Exposición a ruido', c:'Pérdida auditiva (hipoacusia)', m:'Protección auditiva (tapones u orejeras) durante toda la tarea, rotación del personal' } ] },
+    { k:'g_pol', t:['*'], q:'¿Se levantará polvo?', f:[
+      { p:'Polvo en suspensión', r:'Inhalación de polvo', c:'Irritación respiratoria y ocular, neumoconiosis', m:'Humedecer el área, respirador para polvo, lentes de seguridad' } ] },
+    { k:'g_luz', t:['*'], q:'¿Trabajarás de noche o con poca luz?', f:[
+      { p:'Iluminación deficiente', r:'Caídas y golpes por baja visibilidad', c:'Contusiones, fracturas', m:'Iluminación suficiente en el frente y en los accesos, linterna, chaleco reflectivo' } ] },
+    { k:'g_cli', t:['*'], q:'¿Puede llover o hay viento fuerte?', f:[
+      { p:'Lluvia o viento fuerte', r:'Caídas por superficies resbaladizas, caída de objetos por el viento', c:'Golpes, fracturas', m:'Suspender los trabajos en altura y los izajes con lluvia o viento fuerte, asegurar los materiales sueltos' } ] },
+
+    /* ── altura, andamios y escaleras ── */
+    { k:'a_niv', t:['alt','and','esc'], q:'¿Tu trabajo será a nivel de piso, en altura o ambos?',
+      o:[['piso','A nivel de piso'],['altura','En altura'],['ambos','Ambos']] },
+    { k:'a_180', t:['alt','and','esc'], d:{ k:'a_niv', v:['altura','ambos'] }, q:'¿Superarás 1.80 m de altura?',
+      o:[['si','Sí, más de 1.80 m'],['no','No, menos de 1.80 m']], of:{
+      si:[ { p:'Trabajo en altura (por encima de 1.80 m)', r:'Caída a distinto nivel', c:'Fracturas, politraumatismos, muerte', m:'Arnés de cuerpo entero con línea de vida anclada a un punto fijo por encima del hombro, permiso de trabajo en altura, equipo inspeccionado' } ],
+      no:[ { p:'Trabajo sobre plataformas o desniveles bajos', r:'Caída a distinto nivel', c:'Golpes, esguinces, fracturas', m:'Plataformas firmes y con baranda, escaleras en buen estado; no improvisar con baldes, cilindros ni cajas' } ] } },
+    { k:'a_and', t:['alt','and'], q:'¿Estarás en un andamio?', f:[
+      { p:'Uso de andamio', r:'Colapso del andamio o caída a distinto nivel', c:'Politraumatismos, fracturas, muerte', m:'Andamio inspeccionado con tarjeta verde, nivelado y con barandas, rodapiés y plataformas completas; con tarjeta roja no se sube' } ] },
+    { k:'a_esc', t:['alt','and','esc'], q:'¿Usarás escalera?', f:[
+      { p:'Uso de escalera', r:'Caída a distinto nivel', c:'Golpes, fracturas', m:'Escalera inspeccionada, amarrada y en ángulo 4:1, que sobresalga del punto de apoyo; subir y bajar con tres puntos de apoyo y sin cargar materiales' } ] },
+    { k:'a_her', t:['alt','and','esc'], d:{ k:'a_niv', v:['altura','ambos'] }, q:'¿Usarás herramientas o materiales en altura?', f:[
+      { p:'Herramientas y materiales en altura', r:'Caída de objetos', c:'Golpes y contusiones a quienes están abajo', m:'Herramientas amarradas con driza, rodapiés, delimitar y señalizar el área de abajo' } ] },
+    { k:'a_bor', t:['alt','and'], q:'¿Hay bordes sin baranda o aberturas en el piso?', f:[
+      { p:'Bordes y aberturas sin protección', r:'Caída a distinto nivel', c:'Fracturas, muerte', m:'Barandas rígidas o tapas en las aberturas, señalización, línea de vida donde no haya baranda' } ] },
+    { k:'a_fra', t:['alt'], q:'¿Caminarás sobre techos o cubiertas frágiles (calaminas, tragaluces)?', f:[
+      { p:'Superficies frágiles (techos, calaminas, tragaluces)', r:'Caída a través de la superficie', c:'Fracturas, muerte', m:'Pasarelas o tablones de reparto, no pisar directo la cubierta, línea de vida' } ] },
+
+    /* ── excavación ── */
+    { k:'e_pro', t:['exc'], q:'¿La excavación o zanja es más profunda que tu cintura?', f:[
+      { p:'Excavación profunda', r:'Derrumbe de las paredes, sepultamiento', c:'Asfixia, aplastamiento, muerte', m:'Talud o entibado según el suelo, permiso de excavación, no acopiar material en el borde, inspección diaria' } ] },
+    { k:'e_bor', t:['exc'], q:'¿Habrá gente o equipos cerca del borde?', f:[
+      { p:'Borde de excavación', r:'Caída a la excavación', c:'Fracturas, contusiones', m:'Barandas o malla en el borde, acceso con escalera, distancia de seguridad para los equipos' } ] },
+    { k:'e_int', t:['exc'], q:'¿Puede haber tuberías o cables enterrados?', f:[
+      { p:'Interferencias enterradas (cables, tuberías de gas o agua)', r:'Contacto eléctrico, fuga o inundación', c:'Shock eléctrico, quemaduras, muerte', m:'Revisar los planos de interferencias, detector de servicios, excavar a mano cerca de las interferencias' } ] },
+    { k:'e_agu', t:['exc'], q:'¿Hay agua en la excavación?', f:[
+      { p:'Agua acumulada en la excavación', r:'Desestabilización del talud, ahogamiento', c:'Sepultamiento, muerte', m:'Bombear el agua antes de ingresar, revisar el talud, no ingresar con agua acumulada' } ] },
+
+    /* ── soldadura, corte y esmerilado ── */
+    { k:'c_sol', t:['cal'], q:'¿Soldarás o harás oxicorte?', f:[
+      { p:'Soldadura u oxicorte', r:'Exposición a radiación y a humos metálicos', c:'Quemaduras en los ojos, intoxicación', m:'Careta de soldar con su filtro, respirador para humos, ventilación' },
+      { p:'Chispas y material incandescente', r:'Incendio, quemaduras', c:'Quemaduras, daños materiales', m:'Permiso de trabajo en caliente, extintor a la mano, retirar lo combustible de alrededor, vigía de fuego' } ] },
+    { k:'c_gas', t:['cal'], q:'¿Usarás cilindros de gas (oxígeno, acetileno, GLP)?', f:[
+      { p:'Cilindros de gas comprimido', r:'Fuga, explosión, golpe por caída del cilindro', c:'Quemaduras, muerte', m:'Cilindros amarrados de pie con cadena, válvulas y arrestallamas en buen estado, lejos del calor' } ] },
+    { k:'c_esm', t:['cal','her'], q:'¿Esmerilarás o cortarás metal con disco?', f:[
+      { p:'Amoladora o esmeril', r:'Proyección de partículas, contacto con el disco', c:'Lesiones en los ojos, cortes graves', m:'Guarda colocada, disco adecuado y sin fisuras, careta de esmerilar y lentes' } ] },
+
+    /* ── concreto ── */
+    { k:'k_vac', t:['con'], q:'¿Habrá vaciado con bomba o mixer?', f:[
+      { p:'Vaciado de concreto con bomba o mixer', r:'Golpe por la manguera, atrapamiento', c:'Contusiones, fracturas', m:'Coordinar con el operador, sujetar bien la manguera, no ponerse en la línea de fuego' } ] },
+    { k:'k_cem', t:['con','alb'], q:'¿Tendrás contacto con concreto, cemento o mezcla fresca?', f:[
+      { p:'Concreto, cemento y mezcla fresca', r:'Contacto con sustancia alcalina', c:'Dermatitis, quemaduras químicas', m:'Guantes de jebe o neopreno, botas de jebe, lentes; lavar la piel que se ensució' } ] },
+    { k:'k_vib', t:['con'], q:'¿Usarás vibradora?', f:[
+      { p:'Uso de vibradora', r:'Vibración mano-brazo, contacto eléctrico', c:'Lesiones musculares y de articulaciones, shock eléctrico', m:'Equipo inspeccionado, rotación del personal, guantes' } ] },
+
+    /* ── encofrado ── */
+    { k:'f_man', t:['enc'], q:'¿Manipularás madera, paneles o puntales?', f:[
+      { p:'Manipulación de encofrados (madera, paneles, puntales)', r:'Golpes, cortes, aplastamiento', c:'Contusiones, cortes, fracturas', m:'Guantes, manipular entre dos, retirar los clavos, acopio ordenado' } ] },
+    { k:'f_des', t:['enc'], q:'¿Desencofrarás?', f:[
+      { p:'Desencofrado', r:'Caída de paneles o de elementos', c:'Golpes, fracturas', m:'Desencofrar en el orden indicado, área delimitada, nadie debajo' } ] },
+    { k:'f_cla', t:['enc','dem','lim'], q:'¿Habrá clavos o puntas expuestas?', f:[
+      { p:'Clavos y puntas expuestas', r:'Punzonamiento', c:'Heridas punzantes, infección', m:'Retirar o doblar los clavos, botas con puntera y plantilla, orden y limpieza' } ] },
+
+    /* ── acero de refuerzo ── */
+    { k:'r_hab', t:['ace'], q:'¿Habilitarás o colocarás fierro?', f:[
+      { p:'Habilitado y colocación de acero', r:'Cortes y golpes con las varillas', c:'Heridas, contusiones', m:'Guantes de cuero, capuchones en las puntas de las varillas, cortadora con su guarda' } ] },
+    { k:'r_pun', t:['ace','con'], q:'¿Quedarán puntas de fierro expuestas?', f:[
+      { p:'Puntas de varillas expuestas', r:'Empalamiento, cortes', c:'Heridas graves, muerte', m:'Capuchones protectores en las puntas, señalizar' } ] },
+
+    /* ── albañilería ── */
+    { k:'b_mur', t:['alb'], q:'¿Levantarás muros o trabajarás junto a muros recién asentados?', f:[
+      { p:'Muros recién asentados', r:'Colapso del muro', c:'Aplastamiento, fracturas', m:'No pasar la altura de asentado de la jornada, apuntalar, no apoyarse en muros frescos' } ] },
+
+    /* ── electricidad ── */
+    { k:'l_ene', t:['ele'], q:'¿Intervendrás tableros o circuitos con energía?', f:[
+      { p:'Equipos o circuitos energizados', r:'Contacto con energía eléctrica', c:'Shock eléctrico, quemaduras, muerte', m:'Bloqueo y etiquetado, verificar ausencia de tensión, personal calificado, guantes dieléctricos' } ] },
+    { k:'l_ext', t:['ele','her'], q:'¿Usarás extensiones o conexiones provisionales?', f:[
+      { p:'Extensiones y conexiones provisionales', r:'Contacto eléctrico, incendio', c:'Shock eléctrico, quemaduras', m:'Extensiones de uso industrial sin empalmes, tablero con interruptor diferencial, cables elevados o protegidos' } ] },
+    { k:'l_lin', t:['ele','iza','maq','alt'], q:'¿Hay líneas eléctricas aéreas cerca?', f:[
+      { p:'Líneas eléctricas aéreas', r:'Contacto o arco eléctrico', c:'Electrocución, muerte', m:'Mantener la distancia de seguridad, vigía, señalizar, coordinar el corte de energía' } ] },
+
+    /* ── izaje ── */
+    { k:'i_car', t:['iza'], q:'¿Habrá izaje de cargas (grúa, winche, polipasto)?', f:[
+      { p:'Carga suspendida', r:'Caída de la carga', c:'Aplastamiento, fracturas, muerte', m:'Plan de izaje, rigger capacitado, área delimitada, nadie bajo la carga, vientos para guiarla' } ] },
+    { k:'i_acc', t:['iza'], q:'¿Usarás eslingas, grilletes o estrobos?', f:[
+      { p:'Accesorios de izaje', r:'Rotura del accesorio', c:'Caída de la carga, muerte', m:'Inspección antes de usarlos con el color del mes, capacidad adecuada, retirar los dañados' } ] },
+
+    /* ── maquinaria ── */
+    { k:'q_ope', t:['maq'], q:'¿Operarás o trabajarás junto a maquinaria pesada?', f:[
+      { p:'Maquinaria pesada en operación', r:'Atropello, aplastamiento, volcadura', c:'Fracturas, muerte', m:'Operador autorizado, alarma de retroceso, vigía, distancia de seguridad, radio de giro delimitado' } ] },
+    { k:'q_ret', t:['maq','man'], q:'¿Habrá retroceso de vehículos o puntos ciegos?', f:[
+      { p:'Retroceso de vehículos', r:'Atropello', c:'Fracturas, muerte', m:'Vigía en el retroceso, alarma y espejos funcionando, no caminar detrás del equipo' } ] },
+
+    /* ── materiales ── */
+    { k:'m_des', t:['man'], q:'¿Descargarás materiales de un camión?', f:[
+      { p:'Descarga de materiales desde camión', r:'Caída de materiales, caída desde la tolva', c:'Golpes, fracturas', m:'Camión estacionado y frenado, escalera para subir, no lanzar materiales, área delimitada' } ] },
+    { k:'m_aco', t:['man','lim'], q:'¿Apilarás o acopiarás materiales?', f:[
+      { p:'Apilamiento de materiales', r:'Caída o deslizamiento del material', c:'Golpes, aplastamiento', m:'Apilar en lugar firme, con altura limitada y estable, lejos de bordes y accesos' } ] },
+
+    /* ── demolición ── */
+    { k:'d_mar', t:['dem','her'], q:'¿Usarás martillo demoledor o rotomartillo?', f:[
+      { p:'Martillo demoledor o rotomartillo', r:'Vibración, ruido y proyección de partículas', c:'Lesiones musculares, hipoacusia, lesiones en los ojos', m:'Protección auditiva, careta facial y lentes, guantes antivibración, rotación' } ] },
+    { k:'d_est', t:['dem'], q:'¿Puede caer parte de la estructura al demoler?', f:[
+      { p:'Estructuras inestables', r:'Colapso de elementos', c:'Aplastamiento, muerte', m:'Evaluar la estructura antes, demoler de arriba hacia abajo, apuntalar, área delimitada' } ] },
+
+    /* ── pintura y químicos ── */
+    { k:'p_qui', t:['pin'], q:'¿Usarás pinturas, solventes u otros químicos?', f:[
+      { p:'Pinturas, solventes y químicos', r:'Inhalación y contacto con químicos', c:'Intoxicación, dermatitis, irritación', m:'Hoja de seguridad (MSDS) a la mano, respirador para vapores, guantes de nitrilo, ventilación' } ] },
+    { k:'p_inf', t:['pin','cal'], q:'¿Habrá productos inflamables cerca?', f:[
+      { p:'Productos inflamables', r:'Incendio', c:'Quemaduras, daños materiales', m:'Lejos de fuentes de calor y chispas, extintor cerca, recipientes cerrados y rotulados' } ] },
+
+    /* ── espacio confinado ── */
+    { k:'s_ent', t:['esp'], q:'¿Entrarás a un espacio confinado (cisterna, buzón, tanque)?', f:[
+      { p:'Espacio confinado', r:'Atmósfera peligrosa (falta de oxígeno, gases)', c:'Asfixia, intoxicación, muerte', m:'Permiso de ingreso, medición de gases antes y durante, ventilación, vigía afuera, equipo de rescate' } ] },
+
+    /* ── herramientas neumáticas ── */
+    { k:'h_neu', t:['her','dem'], q:'¿Usarás compresora o equipos neumáticos?', f:[
+      { p:'Equipos neumáticos (compresora, mangueras)', r:'Latigazo de mangueras, proyección', c:'Golpes, lesiones en los ojos', m:'Mangueras con abrazaderas y cable de seguridad, no apuntar a nadie con el aire' } ] },
+
+    /* ── limpieza ── */
+    { k:'o_res', t:['lim'], q:'¿Manejarás residuos o desmonte?', f:[
+      { p:'Residuos y desmonte', r:'Cortes, golpes y contaminación', c:'Heridas, daño al ambiente', m:'Segregar en el contenedor que corresponde, guantes, no acumular en los accesos' } ] }
+  ]
+};
+/* «Armado de Cuerpos» → «armado de cuerpos» (sin tildes): para buscar las palabras de cada tipo */
+function atsPregNorm(t){
+  var s = String(t || '').toLowerCase();
+  try{ s = s.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(_n){}
+  return s.replace(/\s+/g, ' ').trim();
+}
+/* los tipos que se adivinan con lo escrito (el paso y el trabajo) */
+function atsPregTiposDe(texto){
+  var t = ' ' + atsPregNorm(texto) + ' ', out = [];
+  ATS_PREG.tipos.forEach(function(x){
+    for(var i = 0; i < x.kw.length; i++) if(t.indexOf(x.kw[i]) > -1){ out.push(x.k); break; }
+  });
+  return out;
+}
+function atsPregTipo(k){ for(var i = 0; i < ATS_PREG.tipos.length; i++) if(ATS_PREG.tipos[i].k === k) return ATS_PREG.tipos[i]; return null; }
+/* las preguntas que tocan con estos tipos y lo ya contestado (resp: { k: 'si'|'no'|opción }) */
+function atsPregLista(tipos, resp){
+  var T = {}; (tipos || []).forEach(function(k){ T[k] = 1; });
+  resp = resp || {};
+  return ATS_PREG.preg.filter(function(q){
+    var va = q.t.some(function(k){ return k === '*' || T[k]; });
+    if(!va) return false;
+    if(q.d){ var r = resp[q.d.k]; if(q.d.v.indexOf(r) < 0) return false; }
+    return true;
+  });
+}
+/* los peligros que pide esta respuesta */
+function atsPregFilas(q, r){
+  if(q.o) return (q.of && q.of[r]) ? q.of[r] : [];
+  return (r === 'si') ? (q.f || []) : [];
+}
+/* los peligros que salen de lo contestado, sin repetir (el mismo peligro con el mismo riesgo va una vez) */
+function atsPregSugeridos(tipos, resp){
+  var out = [], visto = {};
+  atsPregLista(tipos, resp).forEach(function(q){
+    atsPregFilas(q, (resp || {})[q.k]).forEach(function(f){
+      var k = atsPregNorm(f.p) + '|' + atsPregNorm(f.r);
+      if(visto[k]) return; visto[k] = 1;
+      out.push({ q:q.k, p:f.p, r:f.r, c:f.c, m:f.m });
+    });
+  });
+  return out;
+}
 var PAPD = {"req":["Permiso de trabajo","Procedimiento específico","Capacitación específica","Monitoreo de gases","Monitoreo de ruido","MSDS"],"epp":["Botas c/puntera acero","Botas dieléctricas","Botas de jebe","Casco de seguridad","Barbiquejo","Tapones auditivos","Protección auditiva tipo copa","Respirador c/humo","Respirador c/gases","Respirador c/polvo","Guantes de cuero/badana","Guantes dieléctricos","Guantes de neopreno","Guantes de jebe","Lentes de seguridad","Chaleco reflectivo","Uniforme","Arnés 1 LV","Arnés 2 LV c/shock abs.","Arnés 2 LV c/cable acero","Linterna minera","Mandil de cuero","Mangas de cuero / escarpines","Guantes caña larga","Careta de soldador","Uniforme jean","Lentes de oxicorte","Careta de esmerilador","Traje Tyvek","Otros"],"epc":["Barandas rígidas","Conos","Tranqueras","Cintas","Malla naranja","Iluminación","Letreros","Línea de vida","Balizas luminosas","Freno vertical","Bloqueo retráctil","Vigías","Extintor","Protector c/ruido","Protector c/polvo","Malla contra caídas","Paletas Pare/Siga","Otros"],"perm":["Trabajo en caliente","Excavación","Trabajo en altura","Izaje de carga","Trabajos eléctricos","Espacios confinados"],"notas":["El ATS deberá incluir el entorno: líneas energizadas, desniveles de suelo, velocidad del viento, baja iluminación, temperatura, etc.","Solo las personas capacitadas y autorizadas como vigías podrán realizar dicha labor.","Antes de iniciar un trabajo siga estos pasos: (1) ¿Qué tengo que hacer? (2) ¿Qué necesito para hacerlo? (3) ¿Cómo lo voy a hacer? (4, 5 y 6) ¿Cómo me podría accidentar? y (7) ¿Qué haré para evitarlo?","El responsable de grupo o supervisor directo no asignará labores de operación de equipos y/o herramientas de poder a personal de categoría inferior a oficial, que además deberá estar capacitado y entrenado en el uso de ese equipo o herramienta."],"oblig":"Cumpliré todas las directivas que me imparta mi empleador para evitar accidentarme o contraer una enfermedad ocupacional.\nNo ejecutaré trabajo alguno:\n· Sin haber elaborado antes el ATS específico de ese trabajo.\n· Si no tengo una orden concreta de mi supervisor inmediato.\n· En labores o cargos de categoría superior a lo que dice mi contrato.\n· Si no cuento con todo el EPP requerido y en buen estado.\n· Si no soy competente para la actividad: no tengo la experiencia, no he sido instruido ni entrenado en ese trabajo.\n· Si el trabajo es de alto riesgo y no están emitidos los permisos que corresponden.\n· Si no cuento con todos los recursos para iniciar mi actividad.\nUsaré correctamente mi EPP en todo momento; no lo alteraré ni lo reemplazaré por otro.\nAnte un accidente o incidente paralizaré el trabajo y lo reportaré de inmediato a mi supervisor.\nNo retiraré ni anularé sistemas, dispositivos o medidas de protección.\nCumpliré los procedimientos de trabajo y el Reglamento Interno de Seguridad y Salud en el Trabajo.\nParalizaré mi actividad ante peligro inminente, y avisaré. Es un derecho que me reconoce la Ley 29783.","reglas":["No se inicia ningún trabajo sin la reunión de inicio de jornada y el ATS firmado por toda la cuadrilla. Si el trabajo es de alto riesgo, además con su permiso emitido.","Cada quien hace solo las tareas para las que fue entrenado y autorizado.","El área se mantiene ordenada, señalizada y limpia. Los residuos se segregan; se evitan los derrames.","No se permanece debajo de una carga suspendida ni en el recorrido de una carga, ni bajo zonas con riesgo de caída de objetos.","No se usa ningún equipo fuera del criterio de diseño o de la especificación del fabricante.","No se usan andamios ni equipos que no hayan sido inspeccionados y autorizados (tarjeta verde).","Antes de intervenir una línea con energía —eléctrica, hidráulica, neumática o mecánica— se bloquea y se etiqueta.","No se conduce, opera ni interviene equipo móvil sin autorización. No se usa el celular mientras se opera o se conduce.","No se retiran ni anulan dispositivos de protección. El EPP se usa completo y en buen estado.","Los accidentes e incidentes se reportan de inmediato, sin excepción y sin represalia.","No se ingresa al área bajo efectos de alcohol o drogas, ni se introducen a la obra ni al campamento.","Pienso y luego actúo. Si veo un acto riesgoso, le hablo a mi compañero: le digo que puede salir lastimado.","Todo trabajador tiene derecho a negarse a trabajar si las condiciones pueden causarle una lesión grave.","Prepárese física y mentalmente para la tarea. Cumpla las indicaciones médicas y cuide su salud."],"notasRev":["Si se incorpora personal nuevo a la cuadrilla, el jefe de grupo o supervisor le comunicará los riesgos de cada tarea y lo hará firmar. Si falta espacio, se anexa otra hoja.","Ninguna labor puede realizarse sin ATS.","El ATS es una orden escrita específica. El incumplimiento del ATS que derive en lesión al trabajador no constituye accidente de trabajo según el D.S. 003-98-SA, art. 2, inciso 2.3, literal c."],"tipos":{"mec":"Mecánico","loc":"Locativo","qui":"Químico","fis":"Físico","erg":"Ergonómico","ele":"Eléctrico","bio":"Biológico","psi":"Psicosocial","otr":"Otros"},"base":[["BIO-001","bio","Agentes Biológicos (Virus, Bacterias, Hongos, parásitos)","Exposición a agentes biológicos","Enfermedades virales, infecciosas o parasitarias"],["BIO-002","bio","Animales / Insectos - Vectores","Mordeduras/Picadura de animales y/o insectos","Lesiones de piel, Envenenamiento"],["BIO-003","bio","Plantas","Exposición cutánea e ingestión de sustancias dañinas","Intoxicación, envenenamiento, lesiones en la piel, heridas"],["BIO-004","bio","COVID-19 (SARS-CoV-2 )","Exposición al virus SARS-CoV-2","Sensación de alza térmica o fiebre, tos, estornudos, dolor de garganta, pérdida del gusto y/o del olfato y dificultad para respirar"],["ELE-001","ele","Líneas eléctricas/Puntos energizados en Baja Tensión","Descarga/Contacto con energía eléctrica en baja tensión","Shock eléctrico, paro cardio-respiratorio, Quemaduras I, II, III, muerte"],["ELE-002","ele","Líneas eléctricas/Puntos energizados en Media Tensión","Descarga/Contacto con energía eléctrica en media tensión","Shock eléctrico, paro cardio-respiratorio, Quemaduras I, II, III, muerte"],["ELE-003","ele","Líneas eléctricas/Puntos energizados en Alta Tensión","Descarga/Contacto con energía eléctrica en alta tensión","Shock eléctrico, paro cardio-respiratorio, Quemaduras I, II, III, muerte"],["ELE-004","ele","Uso de herramientas eléctricas","Descarga/Contacto con energía eléctrica en baja tensión","Shock eléctrico, paro cardio-respiratorio, Quemaduras I, II, III, muerte"],["ELE-005","ele","Energía eléctrica estática acumulada","Descarga/Contacto con energía eléctrica estática","Shock eléctrico, paro cardio-respiratorio, Quemaduras I, II, III, muerte"],["ELE-006","ele","Empalme de cables","Descarga/Contacto con energía eléctrica","Shock eléctrico, paro cardio-respiratorio, Quemaduras I, II, III"],["ELE-007","ele","Fallas Eléctricas de equipos","Contacto con energía eléctrica/Incendio","Shock eléctrico, paro cardio-respiratorio, Quemaduras I, II, III, muerte"],["ERG-001","erg","Movimientos Repetitivos","Ergonómico por movimientos repetitivos","Cervicalgia, Dorsalgia, Escoliosis, Síndrome de Túnel Carpiano, Lumbalgias, Bursitis, Celulitis, Cuello u hombro tensos, Dedo engatillado, Epicondili…"],["ERG-002","erg","Espacio Inadecuado de Trabajo","Ergonómico por espacio inadecuado de trabajo","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["ERG-003","erg","Sobreesfuerzo","Ergonómico por sobreesfuerzo","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["ERG-004","erg","Postura Inadecuada / Forzada","Ergonómico por postura inadecuada / forzada","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["ERG-005","erg","Desplazamiento vertical manual de materiales","Ergonómico por desplazamiento vertical de materiales","Cervicalgia, Dorsalgia, Escoliosis, Fatiga"],["ERG-006","erg","Esfuerzo muscular focalizado","Ergonómico por esfuerzo muscular focalizado","Cervicalgía, Dorsalgía, Escoliosis, Trastornos de huesos y articulaciones, trastornos vasculares, transtornos musculares (sistema nervioso)"],["ERG-007","erg","Exposición a vibraciones de conjunto mano-brazo","Ergonómico por vibraciones mano-brazo","Transtornos de huesos y articulaciones, transtornos vasculares, transtornos musculares (sistema nervioso)"],["ERG-008","erg","Trabajo de pie (y/o andar) más de 4 horas continuas sin descanso","Ergonómico por trabajo de pie","Fatiga, DORT, Parto prematuro"],["FIS-001","fis","Ruido","Exposición a Ruido","Pérdida Auditiva Inducida por Ruido, Hipoacusia o sordera provocada por el ruido en el embrión, infertilidad, prematuridad"],["FIS-002","fis","Vibraciones","Exposición a vibraciones","Afecciones de los músculos, de los tendones, de los huesos, de las articulaciones, de los vasos sanguíneos periféricos o de los nervios periféricos,…"],["FIS-003","fis","Radiaciones No Ionizantes","Exposición a radiaciones no ionizantes","Efecto de la Radiación, Problemas Neurológicos, Lesión de Retina, Enfermedades oftalmológicas a consecuencia de exposiciones a radiaciones ultraviole…"],["FIS-004","fis","Rayos Infrarojos, microondas, ultrasonidos","Exposición a radiaciones infrarrojos, microondas y ultrasonidos","Trabajos con exposición a radiaciones no ionizantes con longitud de onda entre los 100 y 400 nm"],["FIS-005","fis","Frío","Exposición prolongada a temperaturas extremas","Quemaduras, gangrena de extremidad, hipotermia, gripes, molestias en la garganta, faringitis, Alteración en el desarrollo del embrión, feto"],["FIS-006","fis","Calor","Exposición prolongada a temperaturas extremas","Quemaduras, insolación, deshidratación, fatiga, irritación de los ojos, Trastornos vasculares en feto por vasoconstricción"],["FIS-007","fis","Corrientes de aire","Exposición a corrientes de aire","Molestias en la garganta, faringitis, afecciones respiratorias, somnolencia, dolor de cabeza, problemas cutáneos e irritación de los ojos"],["FIS-008","fis","Ventilación inadecuada/deficiente","Exposición a ventilación deficiente","Molestias en la garganta, faringitis, afecciones respiratorias, somnolencia, dolor de cabeza, problemas cutáneos e irritación de los ojos"],["FIS-009","fis","Humedad","Exposición Excesiva a Humedad","Enfermedades Contagiosas o Infecciosas, Dermatosis, Resfriados, Alergias"],["FIS-010","fis","Presión Atmosférica","Exposición a Alta Presión Atmosférica","Aumento de Presión Arterial. Enfermedades provocadas por compresión o descompresión atmosférica"],["FIS-011","fis","Radiaciones Ionizantes","Exposición a radiaciones ionizantes","Quemaduras, Efectos de la Radiación, Lesiones de Retina, Infertilidad, aborto espontáneo, defectos de nacimiento, bajo peso al nacer, afecciones en e…"],["FIS-012","fis","Iluminación Inadecuada/deficiente","Exposición a condiciones de iluminación inadecuadas","Disminución de la agudeza visual, asteopía, miopía, cefalea"],["FIS-013","fis","Detritos","Contacto de detritos","Lesiones a la vista"],["LOC-001","loc","Superficies de trabajo en mal estado","Caída al mismo nivel","Escoriaciones, abrasiones (Lesiones superficiales), Fracturas y Contusiones"],["LOC-002","loc","Uso de escaleras portátiles","Caídas a distinto nivel","Golpes, fracturas, traumatismos"],["LOC-003","loc","Uso de escaleras fijas","Caídas a distinto nivel","Golpes, fracturas, traumatismos"],["LOC-004","loc","Elementos apilados inadecuadamente o mal asegurados","Caída de Objetos","Golpes, politraumatismo, contusiones"],["LOC-005","loc","Falta de orden y limpieza","Caída al mismo nivel","Golpes, politraumatismo, contusiones"],["LOC-006","loc","Uso de andamios y plataformas temporales","Caídas a distinto nivel","Golpes, fracturas muerte"],["LOC-007","loc","Falta de señalización","Caídas al mismo nivel","Golpes, politraumatismo, contusiones"],["LOC-008","loc","Techos debilitados o defectuosos","Caídas a distinto nivel","Golpes, fracturas muerte"],["LOC-009","loc","Material Inflamable","Incendio","Quemaduras, Asfixia, Muerte"],["LOC-010","loc","Material Inflamable; Fluidos a Presión, Equipo Presurizado","Explosión","Quemaduras, Traumatismos, Contusiones, Asfixia, Muerte"],["LOC-011","loc","Uso de escaleras del Erector","Caídas a distinto nivel","Politraumatismo, Contusiones"],["LOC-012","loc","Plataforma de trabajo","Caídas a desnivel y mismo nivel","Golpes, politraumatismo"],["LOC-013","loc","Plataforma de Camión de servicio","Resbalones, caídas","Hematomas, Golpes, fracturas"],["LOC-014","loc","Plataformas en silos y estructuras en Planta Bicomponente","Caídas a distinto nivel","Golpes, politraumatismo"],["LOC-015","loc","Desniveles en el área de trabajo","Caídas a distinto nivel","Golpes, politraumatismo, fractura"],["LOC-016","loc","Áreas con deficiencia de Oxigeno o Gases por encima del Límite máximo permisible","Exposición a deficiencia de oxigeno o gases","Asfixia, Intoxicación"],["LOC-017","loc","Áreas en condiciones Hiperbáricas","Descompresión omitiva","Enfermedades descompresivas"],["LOC-018","loc","Plataforma de equipos","Caídas a distinto nivel","Hematomas, Golpes"],["LOC-019","loc","Trabajos en altura (encima de 1.80 m)","Caídas a distinto nivel","Fractura, Contusiones, Muerte"],["LOC-020","loc","Trabajos en altura en cámara de excavación","Caída de personal","Contusiones, Fracturas,"],["LOC-021","loc","Trabajos en altura (encima de 1.80 m) en cámara de excavación","Caídas a distinto nivel","Fractura, Contusiones, Muerte"],["LOC-022","loc","Superficie en desnivel, excavación, zanja abierta","Caídas a distinto nivel","Golpes , fracturas, muerte"],["MEC-001","mec","Manipulación de objetos y herramientas en altura","Caída de Objetos","Golpes, heridas, politraumatismos, fracturas, muerte"],["MEC-002","mec","Elementos manipulados con grúas/montacargas/tecle eléctrico","Caída de Objetos","Contusión, Aplastamiento (Superficie Cutánea Intacta), Traumatismo, Muerte"],["MEC-003","mec","Transporte de carga","Caída de Objetos","Contusión, Aplastamiento (Superficie Cutánea Intacta), Traumatismo, Fracturas, Muerte"],["MEC-004","mec","Maniobras de Izaje","Caída de Objetos","Golpes, lesiones, aplastamiento por caída de equipos, Muerte"],["MEC-005","mec","Pila de material inestable","Derrumbe/Caída de equipo/caída a distinto nivel/Atrapamiento","Contusión, Aplastamiento (Superficie Cutánea Intacta), Traumatismo, Muerte"],["MEC-006","mec","Tránsito vehicular","Colisión/Atropello/Volcadura","Fractura, Contusiones, Lesiones, Muerte"],["MEC-007","mec","Vías/Pistas en Mal Estado","Colisión/Atropello/Volcadura","Fractura, Contusiones, Lesiones, Muerte"],["MEC-008","mec","Personal de Piso interactuando con equipos móviles","Atropello/Aplastamiento","Fractura, Contusiones, Lesiones, Muerte"],["MEC-009","mec","Maquinas/Objetos en movimiento","Atrapamiento/Contacto con maquinarias u objetos en movimiento","Contusión, heridas politraumatismos, muerte"],["MEC-010","mec","Herramientas neumáticas","Contacto con herramientas neumáticas en movimiento","Heridas, cortes, golpes, fracturas, amputaciones de algún miembro"],["MEC-011","mec","Herramientas neumáticas","Contacto con herramientas neumáticas en movimiento","Heridas, cortes, golpes, fracturas, amputaciones de algún miembro"],["MEC-012","mec","Herramientas para golpear (martillo, combas)","Contacto con herramientas de golpe","Golpes, heridas, politraumatismo, muerte"],["MEC-013","mec","Herramientas/Equipos en mal estado","Atrapamiento/Contacto con herramientas en mal estado","Heridas, cortes, golpes, fracturas, amputaciones de algún miembro"],["MEC-014","mec","Herramientas o maquinarias sin guarda","Atrapamiento/Contacto con herramientas o maquinarias sin guarda","Heridas, cortes, golpes, fracturas, amputaciones de algún miembro"],["MEC-015","mec","Herramientas o maquinarias sin guarda","Atrapamiento/Contacto con herramientas o maquinarias sin guarda","Heridas, cortes, golpes, fracturas, amputaciones de algún miembro"],["MEC-016","mec","Herramientas eléctricas","Atrapamiento/Contacto con herramientas eléctricas","Heridas, cortes, golpes, fracturas, amputaciones de algún miembro"],["MEC-017","mec","Herramientas portátiles eléctricas punzo cortantes","Contacto con herramientas portátiles eléctricas punzo cortantes","Heridas, cortes, golpes, fracturas, amputaciones de algún miembro"],["MEC-018","mec","Herramientas portátiles eléctricas punzo cortantes","Contacto con herramientas portátiles eléctricas punzo cortantes","Heridas, cortes, golpes, fracturas, amputaciones de algún miembro"],["MEC-019","mec","Objetos o superficies punzo cortantes","Contacto con objetos o superficies punzo contantes","Heridas punzo cortantes, heridas contusas"],["MEC-020","mec","Objetos o superficies punzo cortantes","Contacto con objetos o superficies punzo contantes","Heridas punzo cortantes, heridas contusas"],["MEC-021","mec","Fallas Mecánicas en vehículos y equipos","Colisión/Atropello/Volcadura","Golpes, heridas, politraumatismo, muerte"],["MEC-022","mec","Superficies/Material a elevadas/bajas temperaturas","Contacto con superficies/material a elevadas/bajas temperaturas","Quemaduras"],["MEC-023","mec","Fallas Mecánicas en vehículos y equipos","Colisión/Atropello/Volcadura","Golpes, heridas, politraumatismo, muerte"],["MEC-024","mec","Estructuras Inestables","Caída de estructuras","Contusión, Aplastamiento (Superficie Cutánea Intacta), Traumatismo, Muerte"],["MEC-025","mec","Pisos resbaladizos/disparejos","Caída al mismo nivel","Golpes, contusiones, traumatismo, muerte"],["MEC-026","mec","Mecanismos Giratorios","Aplastamiento, atrapamiento","Amputaciones, Fracturas"],["MEC-027","mec","Elementos izados con erector de dovelas","Caída de Dovela","Contusión, Aplastamiento"],["MEC-028","mec","Personal de Piso interactuando con alimentador de dovelas","Aplastamiento, atrapamiento","Fractura, Contusiones"],["MEC-029","mec","Personal de piso interactuando con el desplazamiento del erector","Aplastamiento, atrapamiento","Fractura, Contusiones"],["MEC-030","mec","Manipulación de medios mecánicos (carretilla boogie, estoca)","Colisión, Atropello, Volcadura","Fractura, Contusiones"],["MEC-031","mec","Cinta en movimiento","Atrapamiento","Contusión, heridas, amputaciones de algún miembro"],["MEC-032","mec","Elementos Izados con tecle eléctrico y mecánicos en cintas","Aplastamiento, atrapamiento","Fractura, Contusiones"],["MEC-033","mec","Manipulación de herramientas en cinta transportadora","Atrapamiento","Contusión, heridas, amputaciones de algún miembro"],["MEC-034","mec","Rodillos","Atrapamiento","Contusión, heridas"],["MEC-035","mec","Tránsito de volquetes en superficie","Colisión, Atropello","Contusiones, Fracturas, muerte"],["MEC-036","mec","Operación de Excavadora","Aplastamiento, atrapamiento","Contusiones, Fracturas, muerte"],["MEC-037","mec","Transporte de desmonte en volquetes","Caída de material","Politraumatismo, Contusiones, muerte"],["MEC-038","mec","Equipos en movimiento( Volquetes, Camiones, Bombonas, Cisternas, Plataformas, Mixer, Cama baja y otros)","Atropellos, Aplastamiento","Politraumatismo, Contusiones, Fracturas, Golpes, muerte"],["MEC-039","mec","Tecles, polipastos eléctricos y manuales","Caída de carga","Aplastamiento, Politraumatismo, Contusiones"],["MEC-040","mec","Aparejos o accesorios de izaje","Caída de carga","Aplastamiento, Politraumatismo, Contusiones"],["MEC-041","mec","Equipos y Accesorios para Ajuste o Sujeción de carga","Caída de carga","Aplastamiento, Politraumatismo, Contusiones"],["MEC-042","mec","Herramientas manuales, eléctricas, neumáticas u otros","Caída de herramientas","Colpes, Fracturas, Contusiones"],["MEC-043","mec","Elementos izados con grúa de dovelas","Caída de Materiales","Contusión, Aplastamiento, muerte"],["MEC-044","mec","Personal de piso interactuando con el desplazamiento de la grúa de dovelas","Aplastamiento, atrapamiento","Fractura, Contusiones, muerte"],["MEC-045","mec","Transporte de Carga con Traspaleta","Caída de Objetos","Contusión, Aplastamiento"],["MEC-046","mec","Personal de piso interactuando con el desplazamiento de la carga","Aplastamiento, atrapamiento","Fractura, Contusiones"],["MEC-047","mec","Elementos izados con grúa pórtico","Caída de Materiales","Contusión, Aplastamiento, muerte"],["MEC-048","mec","Personal de piso interactuando con el desplazamiento de la grúa pórtico","Aplastamiento, atrapamiento","Fractura, Contusiones, muerte"],["MEC-049","mec","Espátulas, Combas de jebe, Cutter y botellas de aplicación de terokal","Arañones, Golpes, Contacto con terokal, cortes","Contusiones, cortes, irritaciones"],["MEC-050","mec","Válvulas de aire","Golpes","Cortes, Lesiones en la mano"],["MEC-051","mec","Intervención de equipos por mantenimiento","Encendido inintencionado de los equipos en mantenimiento","Cortes, Amputaciones, Aplastamientos, Fracturas"],["MEC-052","mec","Manipulación de Polipastos","Caída de carga","Fracturas, Golpes, Amputaciones"],["MEC-053","mec","Personal interactuando con piezas izadas con tecles o elevadas con gatas hidráulicas","Atrapamiento de extremidades con piezas en movimiento","Fracturas, Golpes, Amputaciones"],["MEC-054","mec","Manipulación de Esmeril de Banco","Proyección directa de partículas, contacto con disco en movimiento","Cortes, lesiones oculares"],["MEC-055","mec","Manipulación de Taladro de engranaje","Contacto con piezas cortantes","Cortes, Incrustaciones"],["MEC-056","mec","Manipulación de Cierra Cinta para metal","Contacto con piezas cortantes","Amputaciones, Cortes, Fracturas"],["MEC-057","mec","Manipulación de Prensa Hidráulica","Atrapamiento con piezas en movimiento","Amputaciones, Fracturas, Golpes"],["MEC-058","mec","Manipulación del Afilador de Brocas","Contacto con piezas cortantes","Amputaciones, Cortes, Fracturas"],["MEC-059","mec","Materiales de carpintería, tablones, paneles o planchas","Sobreesfuerzo, Aplastamiento","Lumbalgia, Cortes, Golpes"],["MEC-060","mec","Manipulación de Radial","Proyección directa de partículas, contacto con disco en movimiento","Amputaciones, Cortes, Fracturas"],["MEC-061","mec","Manipulación de Amoladora","Proyección directa de partículas, contacto con disco en movimiento","Amputaciones, Cortes, Fracturas"],["MEC-062","mec","Manipulación de Rotomartillo","Exposición a las vibraciones","Lesiones osteoarticulares"],["MEC-063","mec","Manipulación de Taladro","Proyección de partículas, contacto eléctrico","Golpes, cortes, quemadura,"],["MEC-064","mec","Picado con Cizallas y martillos hidráulicos para demolición","Caída de Material picado, Proyección de Partículas","Aplastamiento"],["MEC-065","mec","Nudos de alambre","Atrapamiento","Arañones, Heridas, cortes"],["MEC-066","mec","Extensión de tuberías de producción","Tuberías sin despresurizar","Golpes, Fracturas, Muerte"],["MEC-067","mec","Desprendimiento de fragmentos incandescentes","Proyección de material incandescente","Incendios, Quemaduras"],["MEC-068","mec","Operación de Manlift","Atropello, Volcamiento","Contusiones, Fracturas"],["MEC-069","mec","Superficies incandescentes","Exposición a superficies incandescentes","Quemaduras"],["MEC-070","mec","Operación de Montacarga","Atropello, Volcamiento","Contusiones, Fracturas"],["MEC-071","mec","Transporte de carga con montacarga","Caída de Objetos","Contusión, Aplastamiento"],["MEC-072","mec","Elementos izados con grúa puente","Caída de Materiales","Contusión, Aplastamiento"],["MEC-073","mec","Manipulación del Kit de Oxicorte","Fugas de gas comprimido","Quemaduras, Traumatismos, Asfixia, Muerte"],["MEC-074","mec","Operación de Telehandler","Atropello, Volcamiento","Contusiones, Fracturas"],["MEC-075","mec","Transporte de carga con telehandler","Caída de Objetos","Contusión, Aplastamiento, muerte"],["MEC-076","mec","Operación del Camión de Servicio","Atropello, Volcamiento","Contusiones, Fracturas, muerte"],["MEC-077","mec","Elementos izados con grúa de camión de servicio","Caída de Materiales","Contusión, Aplastamiento, muerte"],["MEC-078","mec","Operación de la cesta elevadora del camión de servicio","Caída del persona, Aplastamiento","Contusiones, Fracturas"],["MEC-079","mec","Manipulación de tuberías","No despresurización (purgado) o activación inintencionado de las tuberías","Cortes, Amputaciones, Fracturas,"],["MEC-080","mec","Elementos izados con camión grúa","Caída de Materiales","Contusión, Aplastamiento, muerte"],["MEC-081","mec","Bombeo de bentonita y/o mortero por las líneas (tuberías)","Caída de tubería(s) de traslado de bentonita y/o mortero","Cortes, Fractura, Aplastamiento"],["MEC-082","mec","Fluidos con temperatura elevada","Contacto con fluidos a elevadas temperaturas","Quemaduras de primer, segundo o tercer grado"],["MEC-083","mec","Desprendimiento de fragmentos incandescentes producto de la operación de equipos de soldadura en cámara","Contacto y proyección de partículas incandescentes","Incendio, quemaduras"],["MEC-084","mec","Manipulación de pistola neumática de impacto","Golpes por contacto con herramienta","Contusiones, Fracturas,"],["MEC-085","mec","Falta de aseguramiento de las líneas de mortero y bentonita","Deslizamiento y/o caída de tubería(s) de las líneas de mortero y/o bentonita","Atrapamiento, aplastamiento, Golpes, Fracturas"],["MEC-086","mec","Maquinas/Objetos en movimiento","Atrapamiento/Contacto con maquinarias u objetos en movimiento","Contusión, heridas politraumatismos, muerte"],["MEC-087","mec","Herramientas neumáticas","Contacto con herramientas neumáticas en movimiento","Golpes, heridas, politraumatismo, Fracturas"],["OTR-001","otr","Sismos","Caída al mismo o distinto nivel/colapso de estructuras","Contusión, Aplastamiento (Superficie Cutánea Intacta), Traumatismo, Muerte"],["OTR-002","otr","Manifestación Publica/Toma de Instalaciones","Golpeado o agredido","Contusiones, Lesiones, Muerte"],["OTR-003","otr","Movilización/Desplazamiento de personal","Accidente","Traumatismo, Contusiones, Muerte"],["OTR-004","otr","Exposición a Radiación Solar","Exposición a rayos UV","Cancer a la piel, disipelas, sarpullido, dermatitis, daño a los ojos"],["OTR-005","otr","Condiciones del terreno","Tropezones, resbalones, caídas al mismo nivel","Golpes, heridas, excoriaciones, contusiones"],["OTR-006","otr","Energías peligrosas (mangueras a presión)","Golpes por movimientos intempestivos de mangueras de fluidos","Laceraciones, traumatismos múltiples"],["OTR-007","otr","Transito (Operación del equipo)","Ingreso a la zona de transito de vehículos y/o equipos","Lesiones, traumatismos múltiples"],["OTR-008","otr","Accesorios, Bombas","Golpes, atrapamiento, atricciones","Contusiones, Lesiones, Fractura,mutilaciones"],["OTR-009","otr","Uso de productos quimicos para desinfección del covid 19 (-Hipoclorito de sodio al 0.1%. - Alcohol al 70 %. - Peróxido de hidrogeno al 0.5 %. - Amoni…","Inhalacion de gases o vapores toxicos, corrosivos, irritantes. Quemaduras Explosion por sustancias usadas para la disen…","Daño al sistema nervioso, pulmones, riñones, higado, mucosa irritadas"],["OTR-010","otr","Manipulación de Aditivo","Inhalación de particulas de aditivos, contacto de aditivo con la piel, caida de polvo en los ojos","Irritación a vías respiratorias, dermatitis, irritación de ojos"],["OTR-011","otr","Exposicion de agentes biologicos en baños y comedores","Potencial contacto con microorganismo que pueden dar lugar a enfermedades","Alergias e infecciones"],["OTR-012","otr","Métales (Partículas)","Exposicion a partículas","Incrustación de partículas al cuerpo (lesiones oculares, lesiones dérmicas)"],["OTR-013","otr","Manipulacion de herramientas manuales (escuadra, marcador metalico, martillo, cincel y flexometro)","Golpes por mala manipulación herramientas","Contusiones, laseraciones"],["OTR-014","otr","Manipulacion de estructuras metalicas (angulos, grating, tuberias) Bordes cortantes de las planchas","Golpes Cortes . Atriccionamiento","Contusiones, Fracturas 'Traumatismo Heridas"],["OTR-015","otr","Interacción con herramientas de poder (Motosoldadora)","Contacto directo/indirecto con energias(mecánica y eléctrica) Contacto con bordes cortantes. Proyección del disco de co…","Golpes, Atriccionamiento, laceraciones, Traumatismo, heridas, fracturas, lumbalgia, quemaduras"],["OTR-016","otr","Uso de productos quimicos para desinfección del covid 19 (-Hipoclorito de sodio al 0.1%. - Alcohol al 70 %. - Peróxido de hidrogeno al 0.5 %. - Amoni…","Inhalacion de gases o vapores toxicos, corrosivos, irritantes. Quemaduras Explosion por sustancias usadas para la disen…","Daño al sistema nervioso, pulmones, riñones, higado, mucosa irritadas"],["OTR-017","otr","Factor Psicosocial por la organiacion y condicion del trabajo","Transtorno biologico y social por las condiciones de trabajo","Ansiedad, nerviosismo, fatiga, irritabilidad, estrés"],["OTR-018","otr","Soldadura de partes y componentes de la central de inyeccion (mezclador, ajitador, plataforma)","Contacto con electricidad, contacto con elementos calientes, proyeccion de particulas,Exposicion a rayos UV, inhalacion…","Quemaduras, irritación a los ojos Irritación al sistema respiratorio. Quemaduras, lesiones, perdida material, Cancer"],["OTR-019","otr","Corte y calentado de partes y componentes de la central de inyeccion (mezclador, ajitador, plataforma)","Proyección de partículas, contacto con partículas calientes, luminosidad intensa, incendio, explosión","Irritación a los ojos Proyecccion de particulas al rostro. Quemaduras, lesiones, perdida material"],["OTR-020","otr","Esmerilado de piezas y componentes de la central de inyeccion (mezclador, ajitador, plataforma)","Contacto con disco de corte en rotacion","Cortes, mutilaciones"],["OTR-021","otr","Soldadura de partes y componentes de los equipos de perforación","Contacto con electricidad, contacto con elementos calientes, proyeccion de particulas,Exposicion a rayos UV, inhalacion…","Quemaduras, irritación a los ojos Irritación al sistema respiratorio. Quemaduras, lesiones, perdida material, Cancer"],["OTR-022","otr","Corte y calentado de partes y componentes de los equipos de perforación (oxicorte)","Proyección de partículas, contacto con partículas calientes, luminosidad intensa, incendio, explosión","Irritación a los ojos Proyecccion de particulas al rostro. Quemaduras, lesiones, perdida material"],["OTR-023","otr","Uso de productos quimicos para desinfección del covid 19 (-Hipoclorito de sodio al 0.1%. - Alcohol al 70 %. - Peróxido de hidrogeno al 0.5 %. - Amoni…","Inhalacion de gases o vapores toxicos, corrosivos, irritantes. Quemaduras Explosion por sustancias usadas para la disen…","Daño al sistema nervioso, pulmones, riñones, higado, mucosa irritadas"],["OTR-024","otr","Factor Psicosocial por la organiacion y condicion del trabajo","Transtorno biologico y social por las condiciones de trabajo","Ansiedad, nerviosismo, fatiga, irritabilidad, estrés"],["OTR-025","otr","Manipulación de engrasadoras (grasa)","Golpes, salpicadura a ojos, contaminación a partes del cuerpo con la grasa. Sobre esfuerzo","Heridas, dermatitis, sensibilización de la piel, irritación de ojo, Lumbalgias"],["OTR-026","otr","Energías peligrosas (Energía eléctrica, mecánica.)","Contacto directo/indirecto con energía eléctrica, Mecánica","Electrocución, quemaduras, Cortes, mutilaciones, atrapamiento, muerte"],["OTR-027","otr","Contacto con equipos, piezas o herramientas que se encuentren sucios con aceites o grasas usadas, o generen exposición a sustancias químicas","Exposición a contaminación del cuerpo con productos","Dermatitis a la piel"],["OTR-028","otr","Energía hidráulica. (energía hidráulica)","Salpicaduras, derrames de fluidos, latigazos","Golpes, laceraciones, traumatismos múltiple. fracturas, dermatitis, contaminación del cuerpo"],["OTR-029","otr","Energías peligrosas (electricidad, presion, mecanica, etc)","Liberación descontrolada de energia durante el mantenimiento o en las pruebas con el equipo energizado","Electrocución, quemaduras, lesiones, mutilaciones, muerte"],["OTR-030","otr","Equipo en transito (Perforadoras)","Atropello a personas, colisión con las estructuras, choques con otras unidades","Lesiones, traumatismos múltiples, daño a la propiedad"],["OTR-031","otr","Herramientas de corte","Cortes, proyeccion de partículas a la vista","Lesiones en las manos y ojos , heridas expuestas"],["OTR-032","otr","Accesorios, Bombas","Golpes, atrapamiento, atricciones","Contusiones, Lesiones, Fractura,mutilaciones"],["OTR-033","otr","Manipulación de tuberías","Atrapamiento de manos, golpes","Contusiones, lesiones, fractura"],["OTR-034","otr","Manipulación y traslado de herramientas manuales","Golpes, caidas, caidas al mismo nivel","Contusiones, cortes, heridas"],["OTR-035","otr","Traslado de tuberías","Sobreesfuerzo, dolores musculares","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["OTR-036","otr","Energia Neumatica. (Compresora)","Ruptura de cilindro por presión excesiva (Explosión)","Contuciones, heridas, fracturas, muerte, daños materiales"],["OTR-037","otr","Manipulación de objetos / equipos","Descarga/Contacto con energía eléctrica en baja tensión. Caida de objetos. Contanto con superficies de corte","Quemaduras. Ex coriaciones, Abrasiones (Lesiones Superficial), y Contusiones. Corte. Golpes"],["OTR-038","otr","Manipulación de válvulas de compresora","Golpes por mala manipulación de válvula","Contusiones, Lesiones, Fractura"],["OTR-039","otr","Operación de Compresora","Incendio por sobrecalentamiento","Lesiones, golpes, traumatismos múltiples"],["OTR-040","otr","Traslado de equipos y accesorios","Sobre esfuerzo, dolores musculares","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["OTR-041","otr","Manipulación de objetos / equipos","Sobre esfuerzo por dimensión ex cesiva del objeto, pérdida de visibilidad o agarre del objeto. Caída de Objetos","Distensión muscular, lesión en tendones o ligamentos articulares por sobre esfuerzo. Lumbalgia u otro dolor articular. Fracturas, Contusiones"],["OTR-042","otr","Sobreesfuerzo (Peligros asociados a levantar / manejar objetos manualmente)","Sobre esfuerzo por dimensión ex cesiva del objeto, pérdida de visibilidad o agarre del objeto","Distensión muscular, lesión en tendones o ligamentos articulares por sobre esfuerzo. Lumbalgia u otro dolor articular"],["OTR-043","otr","Sustancias peligrosas","Contacto químico (por vía: cutánea, respiratoria, digestiva y ocular)","Irritación y quemaduras por contacto directo. Intoxicación"],["OTR-044","otr","Aditivo","Inhalación de particulas de aditivos, contacto de aditivo con la piel, caida de polvo en los ojos","Irritación a vías respiratorias, dermatitis, irritación de ojos"],["OTR-045","otr","Polvo de bentonita (Partículas suspendidas)","Exposición a partículas suspendidas","Irritación a vías respiratorias e irritacion a la vista"],["OTR-046","otr","Herramientas y Materiales","Contusiones, cortes, 'Traumatismo","Colocar las manos bajo materiales en movimiento. No protegerse de los bordes cortantes. No identificar puntos de atriccion. Personal no utiliza los E…"],["OTR-047","otr","Plataforma de Trabajo insegura por presencia de lodo de cemento","Resbalones, caídas al mismo nivel, proyección de lechada","Golpes, esguinse"],["OTR-048","otr","Herramientas de poder (Esmeril)","Manipulación del esmeril. Corte por contacto con disco de corte en rotacion","Cortes, mutilaciones, muerte"],["OTR-049","otr","Falla o mala manipulación de acoples de manguera","Contacto con cemento/aditivos, salpicadura a ojos, exposición a golpes por magueras desacopladas Desemplame de manguera…","Dermatitis, irritación de ojos, cortes, contusiones, fracturas Golpe, fractura, mutilación, cortes"],["OTR-050","otr","Métales (Partículas)","Exposicion a partículas","Incrustación de partículas al cuerpo (lesiones oculares, lesiones dérmicas)"],["OTR-051","otr","Manipulacion de herramientas manuales (escuadra, marcador metalico, martillo, cincel y flexometro)","Golpes por mala manipulación herramientas","Contusiones, laseraciones"],["OTR-052","otr","Manipulación de accesorios (Mangueras, balón de nitrogeno, cuadro registrador, etc)","Atrapamiento de manos, golpes por mala manipulación","Golpes, heridas, excoriaciones, contusiones"],["OTR-053","otr","Interacción con herramientas de poder (Motosoldadora)","Contacto directo/indirecto con energias(mecánica y eléctrica) Contacto con bordes cortantes. Proyección del disco de co…","Golpes, Atriccionamiento, laceraciones, Traumatismo, heridas, fracturas, lumbalgia, quemaduras"],["OTR-054","otr","Personal ajeno a labores, exterior de obra","Asalto, vehiculos en movimiento","Golpes, herida por elemento punzocortante, herida por arma de fuego, atropello"],["OTR-055","otr","Cable de izaje","Atrapamiento,","Cortes, fractura, mutilación"],["OTR-056","otr","Distracciones del conductor por uso de medios de telecomunicaciones (celulares y otros equipos)","Exponer a las distracciones del conductor","Atropello a peatones y choque con otro vehículo"],["OTR-057","otr","Contacto con partículas calientes","Incrustacion de particulas al cuerpo, lesiones, perdida material, Incendio, Explosiones","Quemaduras Perdida material. Material"],["OTR-058","otr","Manipulación de tuberías","Atrapamiento de manos","Contusiones, lesiones, fractura"],["OTR-059","otr","Traslado de tuberías","Sobreesfuerzo, dolores musculares","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["OTR-060","otr","Soldadura de partes y componentes de la central de inyeccion (mezclador, ajitador, plataforma)","Contacto con electricidad, contacto con elementos calientes, proyeccion de particulas,Exposicion a rayos UV, inhalacion…","Quemaduras, irritación a los ojos Irritación al sistema respiratorio. Quemaduras, lesiones, perdida material, Cancer"],["OTR-061","otr","Corte y calentado de partes y componentes de la central de inyeccion (mezclador, ajitador, plataforma)","Proyección de partículas, contacto con partículas calientes, luminosidad intensa, incendio, explosión","Irritación a los ojos Proyecccion de particulas al rostro. Quemaduras, lesiones, perdida material"],["OTR-062","otr","Esmerilado de piezas y componentes de la central de inyeccion (mezclador, ajitador, plataforma)","Contacto con disco de corte en rotacion","Cortes, mutilaciones, muerte"],["OTR-063","otr","Soldadura de partes y componentes de los equipos de perforación","Contacto con electricidad, contacto con elementos calientes, proyeccion de particulas,Exposicion a rayos UV, inhalacion…","Quemaduras, irritación a los ojos Irritación al sistema respiratorio. Quemaduras, lesiones, perdida material, Cancer"],["OTR-064","otr","Corte y calentado de partes y componentes de los equipos de perforación","Proyección de partículas, contacto con partículas calientes, luminosidad intensa, incendio, explosión","Irritación a los ojos Proyecccion de particulas al rostro. Quemaduras, lesiones, perdida material"],["OTR-065","otr","Traslado de muestras de concreto","Sobre esfuerzo, dolores musculares","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["OTR-066","otr","Polimero (Partículas suspendidas)","Exposición a partículas suspendidas","Irritación a vías respiratorias Lesion a la vista"],["OTR-067","otr","Productos químicos (pintura, thinner, etc)","Contacto productos quimicos","Inhalacion de productos quimicos, irritación de vias respiratorias, irritación de piel y ojos"],["OTR-068","otr","Sustancias peligrosas","Inhalación de vapores y gases. Manipulación de sustancias químicas. Contacto con hidrocarburos. Contaminación al cuerpo…","Alergias irritación de la vía respiratoria, piel y ojos. Dermatitis a la piel"],["OTR-069","otr","Herramientas manuales (Manipulación de Herramientas/objetos)","Golpeado por mala manipulación de objetos o herramientas","Traumatismo, contusiones, Fracturas, Cortes"],["OTR-070","otr","Partes en movimiento ( pellizcos, atrapamiento)","Atrapamiento de personas por partes en movimiento","Amputaciones"],["OTR-071","otr","Manipulación de engrasadoras (grasa)","Golpes, salpicadura a ojos, contaminación a partes del cuerpo con la grasa. Sobre esfuerzo","Heridas, dermatitis, sensibilización de la piel, irritación de ojo, Lumbalgias"],["OTR-072","otr","Energías peligrosas (Energía eléctrica, mecánica.)","Contacto directo/indirecto con energía eléctrica, Mecánica","Electrocución, quemaduras, Cortes, mutilaciones, atrapamiento, muerte"],["OTR-073","otr","Sobreesfuerzo(Peligros asociados a levantar / manejar objetos manualmente)","Sobresfuerzo carga a brazo de objetos pesados","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["OTR-074","otr","Contacto con equipos, piezas o herramientas que se encuentren sucios con aceites o grasas usadas, o generen exposición a sustancias químicas","Exposición a contaminación del cuerpo con productos","Dermatitis a la piel"],["OTR-075","otr","Energía hidráulica. (energía hidráulica)","Salpicaduras, derrames de fluidos, chacoteos","Golpes, laceraciones, traumatismos múltiple. fracturas, dermatitis, contaminación del cuerpo, muerte"],["OTR-076","otr","Energías peligrosas (electricidad, presion, mecanica, etc)","Liberación descontrolada de energia durante el mantenimiento o en las pruebas con el equipo energizado","Electrocución, quemaduras, lesiones, mutilaciones, muerte"],["OTR-077","otr","Partes móviles","Atrapamientos, Golpes","Contusiones amputaciones, muerte"],["OTR-078","otr","Equipo en transito (Perforadoras)","Atropello a personas, colisión con las estructuras, choques con otras unidades. Volcaduras, aplastamiento de personas p…","Lesiones, traumatismos múltiples, daño a la propiedad, muerte"],["OTR-079","otr","Terreno desnivelado (equipo)","Volcaduras, aplastamiento de personas por volteo de equipo, muerte","Lesiones, traumatismos múltiples"],["OTR-080","otr","Condiciones del terreno","Tropezones, resbalones, caídas al mismo nivel","Golpes, heridas, excoriaciones, contusiones"],["OTR-081","otr","Instalaciones (Estructuras ajenas a la máquina de perforación)","Choques","Daños a la propiedad"],["OTR-082","otr","Partes en movimiento","Atrapamiento de manos","Contusiones, Lesiones, Fractura,mutilaciones"],["OTR-083","otr","Transito (Equipo en Movimiento)","Atropello, aplastamiento, Choques","Traumatismos múltiples, fracturas, lesiones incapacitantes, muerte, daños materiales"],["OTR-084","otr","Equipo (Perforadora)","Volcaduras, aplastamiento de personas por volteo de equipo, muerte, Atrapamientos","Lesiones, traumatismos múltiples, mutilasiones"],["OTR-085","otr","Partes en movimiento","Atrapamiento de partes del cuerpo","Contusiones, Lesiones, Fractura,mutilaciones"],["OTR-086","otr","Manipulación de mangueras hidraulicas","Golpes con mangueras","Laceraciones, traumatismos múltiples"],["OTR-088","otr","Partículas suspendidas (dedritos)","Exposición a partículas suspendidas","Golpes"],["OTR-089","otr","Manipulación de tuberías","Atrapamiento de manos, golpes","Contusiones, lesiones, fractura"],["OTR-090","otr","Embone / desembone de tubería","Golpes con llaves","Golpes, heridas, excoriaciones, contusiones"],["OTR-091","otr","Traslado de tuberías","Sobreesfuerzo, dolores musculares","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["OTR-092","otr","Productos químicos (grasa)","Contacto con producto químico","Reacciones, dermatitis"],["OTR-093","otr","Oscuridad","Falta de iluminación, puntos de sombra en el área de trabajo","Contusiones, cortes, heridas"],["OTR-094","otr","Fatiga y somnolencia","Sueño","Golpes, atricciones choques"],["OTR-095","otr","Energia Neumatica. (Compresora)","Ruptura de cilindro por presión excesiva (Explosión)","Contuciones, heridas, fracturas, muerte, daños materiales"],["OTR-096","otr","Energia Neumatica. (Mangueras)","Proyección de manguera y elementos de sujeción de las mismas","Contuciones, heridas, fracturas"],["OTR-097","otr","Energía Residual (Aire en mangueras y tuberias)","Proyección de manguera y elementos de sujeción de las mismas","Contuciones, heridas, fracturas"],["OTR-098","otr","Uso de aceites y lubricantes","Inhalacion de gases o vapores toxicos, corrosivos, irritantes. Quemaduras. Caida de aceite y7o lubricante sobre el suel…","Daño al sistema nervioso, pulmones, riñones, higado, mucosa irritadas. Derrame de aceite sobre el suelo y agua"],["OTR-099","otr","Manipulación de válvulas de compresora","Golpes por mala manipulación de válvula","Contusiones, Lesiones, Fractura"],["OTR-100","otr","Ruido emitido por la compresora","Exposición al ruido","Daños a la audición (Hipoacusia)"],["OTR-101","otr","Energia Electrica (Manipulación de tableros eléctricos)","Contacto directo/indirecto con energía eléctrica","Electrocución, quemaduras, atrapamiento, muerte,"],["OTR-102","otr","Operación de Compresora","Incendio por sobrecalentamiento","Lesiones, golpes, traumatismos múltiples"],["OTR-103","otr","Traslado de equipos y accesorios","Sobre esfuerzo, dolores musculares","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["OTR-104","otr","Gases Comprimidos (nitrógeno)","Cilindro de gas en mal estado, fuga de nitrogeno, volcadura del balon","Asfixia, quemaduras, aplastamiento"],["OTR-105","otr","Manipulación de accesorios (mangueras)","Atrapamiento de manos, golpes por mala manipulación","Golpes, heridas, excoriaciones, contusiones"],["OTR-106","otr","Condiciones del terreno","Tropezones, resbalones, caídas al mismo nivel","Golpes, heridas, excoriaciones, contusiones"],["OTR-107","otr","Energías peligrosas (eléctrica, neúmatica, mecánica, etc)","Contacto con energías peligrosas","Electrocución, quemaduras"],["OTR-108","otr","Gases Comprimidos (nitrógeno)","Cilindro de gas en mal estado, fuga de nitrogeno","Asfixia, quemaduras"],["OTR-109","otr","Condiciones del terreno (piso humedo)","Resbalones, caídas al mismo nivel","Golpes, heridas, excoriaciones, contusiones"],["OTR-110","otr","Polvo (Partículas suspendidas)","Exposición a partículas suspendidas","Irritación a vías respiratorias"],["OTR-111","otr","Ruido","Daño auditivo","Hipoacusia inducida por ruido"],["OTR-112","otr","Manguera de Obturar a Presion","Rotura de manguera, explosion","Hipoacusia inducida por ruido, lesiones graves"],["OTR-113","otr","Condiciones del terreno","Tropezones, resbalones, caídas al mismo nivel","Golpes, heridas, excoriaciones, contusiones"],["OTR-114","otr","Abastecimiento de bentonita","Sobreesfuerzo, dolores musculares, caidas a desnivle","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["OTR-115","otr","Polvo de bentonita (Partículas suspendidas)","Exposición a partículas suspendidas","Irritación a vías respiratorias e irritacion a la vista"],["OTR-116","otr","Contacto con aditivos","Contacto con cemento/aditivos, salpicadura a ojos","Dermatitis, irritación de ojos"],["OTR-117","otr","Herramientas manuales","Golpes por mala manipulación de herramientas","Contusiones"],["OTR-118","otr","Energías peligrosas","Contacto indirecto con energia eléctrica","Electrocución, quemaduras"],["OTR-119","otr","Partes en movimiento","Atrapamiento de manos","Contusiones, Lesiones, Fractura,mutilaciones"],["OTR-120","otr","Ruido","Daño auditivo","Hipoacusia inducida por ruido"],["OTR-121","otr","Plataforma de Trabajo insegura por presencia de lodo de cemento","Resbalones, caídas al mismo nivel, proyección de lechada","Golpes, esguinse"],["OTR-122","otr","Ergonomia (movimiento repetitivo, postura inadecuada, sobresfuerzo, etc)","Sobresfuerzo cargio de Cemento","Lumbalgia"],["OTR-123","otr","Polvo de cemento","Inhalación de particulas de polvo de cemento, contacto de polvo de cemento con la piel, caida de polvo en los ojos","Irritación a vías respiratorias, dermatitis, irritación de ojos"],["OTR-124","otr","Bombas Accesorios","Golpes, atrapamiento, atricciones","Amputaciones, lesiones graves"],["OTR-125","otr","Falla o mala manipulación de acoples de manguera","Contacto con cemento/aditivos, salpicadura a ojos, exposición a golpes por magueras desacopladas Desemplame de manguera…","Dermatitis, irritación de ojos, cortes, contusiones, fracturas Golpe, fractura, mutilación, cortes, muerte"],["OTR-126","otr","Energías peligrosas (Manguera hidraulica con energia neúmatica)","Latigazo de manguera","Golpe, fractura, lesiones graves,"],["OTR-127","otr","Manipulación de accesorios (Mangueras)","Atrapamiento de manos, golpes por mala manipulación","Contusiones, Lesiones,"],["OTR-128","otr","Condiciones del terreno (piso humedo)","Resbalones, caídas al mismo nivel","Golpes, heridas, excoriaciones, contusiones"],["OTR-129","otr","Herramientas manuales","Golpes por mala manipulación de herramientas manuales","Contusiones"],["OTR-130","otr","Manipulación de accesorios (Mangueras, balón de nitrogeno, cuadro registrador, etc)","Atrapamiento de manos, golpes por mala manipulación","Golpes, heridas, excoriaciones, contusiones"],["OTR-131","otr","Contacto con mezcla (Cemento)","Contacto con cemento/aditivos, salpicadura a ojos","Dermatitis, irritación de ojos"],["OTR-132","otr","Acoples de manguera","Desemplame de manguera con embone","Golpe, fractura, mutilación"],["OTR-133","otr","Carga suspendida","Caida de carga","Golpe, aplastamiento, fractura, lesiones graves, muerte"],["OTR-134","otr","Personal ajeno a labores, exterior de obra","Asalto, vehiculos en movimiento","Golpes, herida por elemento punzocortante, herida por arma de fuego, atropello, muerte"],["OTR-135","otr","Cable de izaje","Atrapamiento,","Cortes, fractura, mutilación"],["OTR-136","otr","Distracciones del conductor por uso de medios de telecomunicaciones (celulares y otros equipos)","Exponer a las distracciones del conductor","Atropello a peatones y choque con otro vehículo"],["OTR-137","otr","Zanja abierto (Panel de excavacion)","Caidas a distinto nivel","Ahogamiento"],["OTR-138","otr","Condiciones del terreno","Tropezones, resbalones, caídas al mismo nivel","Golpes, heridas, excoriaciones, contusiones"],["OTR-139","otr","Manguera de agua a presión","Proyección de agua a presión","Daños a la vista"],["OTR-140","otr","Ruido","Exposición a ruido","Hipoacusia inducida por ruido"],["OTR-141","otr","Radiación Solar","Exposición a rayos UV","Càncer a la piel, disipelas, sarpullido, dermatitis, daño a los ojos"],["OTR-142","otr","Polimero (Partículas suspendidas)","Exposición a partículas suspendidas","Irritación a vías respiratorias Lesion a la vista"],["OTR-143","otr","Manipulación de tuberías","Atrapamiento de manos","Contusiones, lesiones, fractura"],["OTR-144","otr","Traslado de tuberías","Sobreesfuerzo, dolores musculares","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["OTR-145","otr","Equipo (Perforadora)","Volcaduras, aplastamiento de personas por volteo de equipo, muerte, Atrapamientos","Lesiones, traumatismos múltiples, mutilasiones"],["OTR-146","otr","Agua a presión","Proyección de agua a presión","Daños a la vista y piel"],["OTR-147","otr","Partes en movimiento","Atrapamiento de partes del cuerpo","Contusiones, Lesiones, Fractura,mutilaciones"],["OTR-148","otr","Manipulación de mangueras hidraulicas","Golpes con mangueras","Laceraciones, traumatismos múltiples"],["OTR-149","otr","Excavación abierta","Caidas a distinto nivel","Fracturas, contusiones"],["OTR-150","otr","Valva y baya de excavación en movimiento","Aplastamiento/Contacto con maquina u objeto en movimiento","Fracturas, contusiones"],["OTR-151","otr","Manipulación de listones de madera","Atricción de manos","Fracturas, contusiones"],["OTR-152","otr","Traslado de muestras de concreto","Sobre esfuerzo, dolores musculares","Distensión, Torsión, Fatiga y DORT (disturbios osteo-musculares relacionados al trabajo)"],["OTR-153","otr","Ergonomia (movimiento repetitivo, postura inadecuada, sobresfuerzo, etc)","Sobresfuerzo en cargio de materiales","Lumbalgia"],["PSI-001","psi","Condiciones de trabajo: Tipo de trabajo, grado de autonomía, aislamiento, promoción, estilo de dirección, turnicidad, ritmos y jornadas de trabajo","Trastornos Biológicos y Sociales por Condiciones de Trabajo","Ansiedad, Nerviosismo, Fatiga, Irritabilidad, Estrés, Burnout, Mayor frecuencia de partos prematuros, abortos espontáneos, etc"],["PSI-002","psi","Trabajo en Turno Nocturno, Monotonía y/o Repetitividad, Jornada de Trabajo Prolongada","Trastornos Biológicos y Sociales por Jornada de Trabajo Prolongada","Ansiedad, Nerviosismo, Estrés"],["PSI-003","psi","Hostigamiento sexual y/o acoso laboral (Mobbing)","Transtornos biológicos y sociales","Ansiedad, Nerviosismo, Estrés, Partos prematuros, abortos espontáneos"],["QUI-001","qui","Sustancias Químicas, Vapores, Compuestos o productos químicos en general","Contacto de la vista con sustancias o agentes dañinos","Irritación, Conjuntivitis Química, Quemadura"],["QUI-002","qui","Sustancias Químicas, Vapores, Compuestos o productos químicos en general","Contacto de la piel con sustancias o agentes dañinos. (Absorción cutánea)","Dermatitis de contacto, Quemaduras, Envenenamiento"],["QUI-003","qui","Sustancias Químicas, Vapores, Compuestos o productos químicos en general","Inhalación de sustancias o agentes dañinos","Asfixia, Intoxicación, Irritación, Neumoconiosis, problemas del aparato respiratorio, dolencias hepáticas, renales y neurológicas"],["QUI-004","qui","Sustancias Químicas, Vapores, Compuestos o productos químicos en general","Ingestión de sustancias o agentes dañinos","Intoxicación, Neumonía Química, Dolencias hepáticas, renales y neurológicas"],["QUI-005","qui","Polvo (Material Particulado)","Inhalación de polvo (material particulado)","Neumoconiosis, irritación, intoxicación y problemas alérgicos"],["QUI-006","qui","Concreto","Exposición a proyección, derrame y salpicadura de concreto","Irritaciones, Lesiones, quemaduras en los ojos o cuerpo por contacto con el concreto"],["QUI-007","qui","Lodo (Material Liquido)","Exposición al lodo(material liquido)","irritación, alergias"],["QUI-008","qui","Pegamento ( Terokal)","Contacto con la vista, piel, inhalación o ingesta del terokal","Irritación, Conjuntivitis Química, Dermatitis de contacto, Asfixia, Intoxicación, problemas del aparato respiratorio"],["QUI-009","qui","Sigunit 65 PE (Silicato)","Contacto con la vista, piel, inhalación o ingestión","Irritación, Conjuntivitis Química, Dermatitis de contacto, Asfixia, Intoxicación, problemas del aparato respiratorio"],["QUI-010","qui","Productos Químicos asociados a la inyección del Mortero (Silicato, Agente espumante, Concreto)","Contacto con la vista, piel, inhalación o ingestión","Irritación, Conjuntivitis Química, Dermatitis de contacto, Asfixia, Intoxicación, problemas del aparato respiratorio"],["QUI-011","qui","Productos Químicos asociados al mantenimiento mecánico","Contacto con la vista, piel, inhalación o ingestión","Irritación, Conjuntivitis Química, Dermatitis de contacto, Asfixia, Intoxicación, problemas del aparato respiratorio"],["QUI-012","qui","Productos Químicos asociados al tratamiento de agua residual (Acido Regulador, Coagulante, Antiespumante, Floculante)","Contacto con la vista, piel, inhalación o ingestión","Irritación, Conjuntivitis Química, Dermatitis de contacto, Asfixia, Intoxicación, problemas del aparato respiratorio"],["QUI-013","qui","Agua residual","Contacto con la vista, piel, ingestión","Alergia cutánea, Irritación, Conjuntivitis Química, Dermatitis de contacto, Intoxicación"],["QUI-014","qui","Deshechos contaminados en el decantador","Contacto con la vista, piel, ingestión","Alergia cutánea, Irritación, Conjuntivitis Química, Dermatitis de contacto, Intoxicación"],["QUI-015","qui","Productos Químicos asociados a la Producción de Mortero (Retardante, Cemento, Bentonita)","Contacto con la vista, piel, inhalación o ingestión","Irritación, Conjuntivitis Química, Dermatitis de contacto, Asfixia, Intoxicación, problemas del aparato respiratorio"],["QUI-016","qui","Productos Químicos asociados al mantenimiento y limpieza de los tanques","Contacto con la vista, piel, inhalación o ingestión","Irritación, Conjuntivitis Química, Dermatitis de contacto, Asfixia, Intoxicación, problemas del aparato respiratorio"],["QUI-017","qui","Productos Químicos asociados a la instalación de tuberías","Contacto con la vista, piel, inhalación o ingestión","Irritación, Conjuntivitis Química, Dermatitis de contacto, Asfixia, Intoxicación, problemas del aparato respiratorio"],["QUI-018","qui","Sustancias Químicas, Vapores, Compuestos o productos químicos en general","Contacto con sustancias o agentes dañinos","Cancerígeno, mutagénico, peligroso para la salud reproductiva"]],"bib":[{"a":"Ingreso al área de trabajo","f":[{"p":"Área desordenada y materiales acumulados","r":"Tropezones, cortes","c":"Golpes, contusiones","m":"Transitar por zona delimitada, señalizada y ordenada"},{"p":"Superficies de trabajo en mal estado","r":"Caídas al mismo nivel","c":"Abrasiones, escoriaciones","m":"Transitar por superficie estable"},{"p":"Movimiento de vehículos","r":"Atropello","c":"Contusiones, fracturas, fatalidad","m":"Contacto visual con el operador y su vigía; transitar por zona delimitada y señalizada"},{"p":"Ascenso y descenso por escalera de andamio","r":"Caída a distinto nivel","c":"Golpes, fracturas, fatalidad","m":"Uso de los tres puntos de apoyo"},{"p":"Uso de escalera común","r":"Caída a distinto nivel","c":"Golpes, fracturas, fatalidad","m":"Uso de los tres puntos de apoyo; escalera amarrada y en ángulo 4:1"},{"p":"Clima adverso","r":"Exposición a temperaturas extremas","c":"Enfermedad respiratoria","m":"Uso de chompa polar, cortavientos, bebidas calientes"},{"p":"Radiación solar","r":"Exposición a rayos UV","c":"Cáncer de piel, sarpullido, dermatitis","m":"Bloqueador solar, puntos de hidratación, lentes oscuros, punto de sombra"},{"p":"Carga suspendida","r":"Caída de objetos","c":"Fractura, fatalidad","m":"No exponerse a la línea de fuego, no caminar bajo la carga, comunicarse con el rigger"},{"p":"Agentes biológicos","r":"Exposición a agentes biológicos","c":"Fiebre, dolor de cabeza, secreción nasal","m":"Reporte de síntomas respiratorios a línea de mando, lavado de manos"}]},{"a":"Verificación de herramientas, equipos y piezas","f":[{"p":"Manipulación de herramientas","r":"Contacto con herramientas","c":"Cortes y golpes","m":"Check list de herramientas manuales, cinta del mes, herramienta sin improvisar"},{"p":"Manipulación de piezas de andamio","r":"Contacto con piezas de andamio","c":"Golpes, fracturas","m":"Personal capacitado como andamiero, no cargar más de 25 kg"}]},{"a":"Acarreo de materiales y herramientas","f":[{"p":"Manipulación manual de carga","r":"Sobreesfuerzo","c":"Síndrome del túnel carpiano, escoliosis, lumbalgia","m":"Buenas posturas, uso de hombreras, uso de buggie"},{"p":"Traslado vertical de materiales","r":"Caída de objetos","c":"Fracturas, contusiones","m":"Uso de driza, apoyo de 2 personas, no acumular carga"}]},{"a":"Armado y desarmado de andamios","f":[{"p":"Manipulación de estructura de andamio","r":"Contacto con piezas de andamio","c":"Golpes, fracturas","m":"Personal capacitado como andamiero, espacio liberado"},{"p":"Traslado vertical de estructura de andamio","r":"Sobreesfuerzo","c":"Cervicalgia, dorsalgia, escoliosis, fatiga","m":"Manejo entre 2 o más personas, posturas adecuadas"},{"p":"Traslado vertical de estructura de andamio","r":"Caída de objetos","c":"Golpes, heridas, politraumatismos, fracturas, muerte","m":"Delimitar radio de caída y señalizar, uso de driza 3/8\""},{"p":"Trabajo en altura (por encima de 1.80 m)","r":"Caída a distinto nivel","c":"Fracturas, contusiones, muerte","m":"Arnés de cuerpo entero con sistema anticaídas anclado por encima del hombro"},{"p":"Uso de andamio","r":"Colapso de la estructura","c":"Fatalidad, contusiones, fracturas","m":"Uso de cáncamos, nivelación del terreno, inspección del andamio y tarjeta verde"},{"p":"Manipulación de herramientas manuales en altura","r":"Caída de objetos","c":"Golpes, heridas, politraumatismos, fracturas, muerte","m":"Rodapiés, driza para herramientas, delimitar y señalizar abajo"},{"p":"Manipulación de herramientas manuales","r":"Contacto con herramientas","c":"Cortes, golpes y hemorragias","m":"Personal capacitado, uso de EPP básico"},{"p":"Trabajos en áreas próximas","r":"Interacción con trabajos próximos","c":"Contusiones, heridas","m":"Delimitación y señalización del área, coordinación entre cuadrillas"}]},{"a":"Fin de la jornada","f":[{"p":"Área desordenada","r":"Caídas al mismo nivel","c":"Golpes, lesiones","m":"Orden y limpieza antes de retirarse"},{"p":"Material mal apilado","r":"Caída de objetos","c":"Contusiones, heridas","m":"Acomodar materiales asegurando estabilidad"},{"p":"Pisos mojados","r":"Caídas al mismo nivel","c":"Golpes, lesiones","m":"Secar el área de trabajo y señalizar"},{"p":"Residuos sólidos","r":"Contaminación ambiental","c":"Generación de RRSS","m":"Segregar los residuos y eliminarlos en el contenedor que corresponde"}]}],"niv":{"A":{"t":"ALTO","plazo":"0-24 horas","c":"#D9261C","d":"Riesgo intolerable. Si el peligro no se puede controlar, los trabajos se paralizan."},"M":{"t":"MEDIO","plazo":"0-72 horas","c":"#E8A000","d":"Se corrige dentro del plazo; mientras tanto la tarea sigue con el control puesto."},"B":{"t":"BAJO","plazo":"1 mes","c":"#2E7D32","d":"Riesgo tolerable."}}};
 var PAP_APP = (function(){
   var _MMPT = 25.4/72, ATS = null, IP = null, _ATS_EXT = {};
@@ -23,6 +260,9 @@ var PAP_APP = (function(){
   /* la franja roja de «no habilita el inicio»: en la app la decide lo firmado; aquí, quien llama (una obra que firma
      en papel no la lleva) */
   function atsPuedeTrabajar(){ return !!_C.libre; }
+  /* 17/10/2026 · lote 14 · la franja «SIN CIERRE» (un ATS de otro día sin la salida firmada): la decide quien llama */
+  function atsTocaCierre(){ return !!_C.sinCierre; }
+  function hoyISO(){ return '9999-12-31'; }
   function ipercListo(){ return !!_C.ipListo; }
   function _senSlug(t){ var s = String(t||''); try{ s = s.normalize('NFD').replace(/[\u0300-\u036f]/g,''); }catch(e){} return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,42); }
 /* ── de ats-flujo.js ── */
@@ -84,13 +324,15 @@ function _atsCuentaHtml(acts){
   return '<span>'+pel+(pel===1?' peligro':' peligros')+'</span>'+(rie > pel ? ' · <span>'+rie+' riesgos</span>' : '');
 }
 /* una celda de texto centrada en su alto; si no cabe, se corta (solo pasa con un peligro partido entre dos hojas) */
-function _atsCelda(doc, t, x, y, w, h, lh){
+function _atsCelda(doc, t, x, y, w, h, lh, col){
   t = String(t||''); if(!t) return;
-  doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT); doc.setTextColor(24,28,34);
+  doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PTT);
+  if(col) doc.setTextColor(col[0], col[1], col[2]); else doc.setTextColor(24,28,34);
   var lin = doc.splitTextToSize(t, w-2.8), max = Math.max(1, Math.floor((h-0.4)/lh));
   if(lin.length > max) lin = lin.slice(0, max);
-  var yb = y + (h - lin.length*lh)/2 + _ATS_PT*0.74*_MMPT;
+  var yb = y + (h - lin.length*lh)/2 + _ATS_PTT*0.74*_MMPT;
   lin.forEach(function(l){ doc.text(l, x+1.4, yb); yb += lh; });
+  doc.setTextColor(24,28,34);
 }
 function _atsCaja(doc, x, y, w, h, relleno){
   if(relleno){ doc.setFillColor(relleno[0],relleno[1],relleno[2]); doc.rect(x,y,w,h,'F'); }
@@ -112,11 +354,24 @@ var _ATS_AZUL = [214,232,243], _ATS_GRIS = [238,241,244];
    Antes un control largo se cortaba en silencio — y un control de
    seguridad cortado a la mitad es peor que no ponerlo.              */
 var _ATS_PT    = 7;     /* el cuerpo entero */
+/* 17/10/2026 · lote 14 · la letra de la TABLA de peligros: es la misma, salvo que se pida «en una hoja» y no entre
+   (entonces baja de a poco, hasta 5.2) */
+var _ATS_PTT   = 7;
 var _ATS_HCHK  = 4.9;   /* renglón de las listas A / NA */
 var _ATS_HFILA = 5.8;   /* alto mínimo de una fila de peligro */
 var _ATS_HNOTA = 4.2;   /* renglón de las notas del pie */
 
 function _atsLH(){ return _ATS_PT*1.14*_MMPT; }
+function _atsLHT(){ return _ATS_PTT*1.14*_MMPT; }
+function _atsHFilaT(){ return _ATS_HFILA*_ATS_PTT/_ATS_PT; }
+/* dónde arranca la tabla en las hojas que siguen: una cabecera corta (título, código, hoja) y una línea con el trabajo */
+function _atsArranqueN(M){ return M + 10 + 6 + 5.4; }
+/* «16:42» de una hora guardada en milisegundos */
+function _atsHoraPdf(t){ if(!t) return ''; var d = new Date(t); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+/* ¿hay filas «verificar en el frente» sin verificar? (salen en rojo) */
+function _atsHayVPdf(){ var h = false; (ATS.acts||[]).forEach(function(a){ (a.filas||[]).forEach(function(f){ if(f && f.v === 1) h = true; }); }); return h; }
+/* el color de una fila «verificar»: fondo rojo claro o letra roja (lo elige quien arma el ATS) */
+var _ATS_ROJO_F = [252,214,209], _ATS_ROJO_L = [190,22,22];
 /* lo que ocupa el pie (observaciones + notas + la línea de abajo) */
 function _atsPie(){ return 5.4 + ATS_NOTAS.length*_ATS_HNOTA + 3.4; }
 /* dónde arranca la tabla de peligros: la cabecera es siempre igual */
@@ -128,12 +383,12 @@ function _atsArranque(M){
 }
 /* cuánto mide cada fila con la letra nueva */
 function _atsMedir(doc, filas, w, cols){
-  var lh = _atsLH();
-  doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT);
+  var lh = _atsLHT();
+  doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PTT);
   function alto(t, c){ t = String(t||''); return t ? doc.splitTextToSize(t, w*c-2.8).length*lh : 0; }
   filas.forEach(function(f){
     f.hp = alto(f.p, cols[1]) + 1.6;
-    f.h = Math.max(_ATS_HFILA, Math.max(alto(f.r, cols[2]), alto(f.c, cols[3]), alto(f.m, cols[4])) + 1.6);
+    f.h = Math.max(_atsHFilaT(), Math.max(alto(f.r, cols[2]), alto(f.c, cols[3]), alto(f.m, cols[4])) + 1.6);
   });
   /* el peligro va una vez por grupo: si sus riesgos juntos no le dan el alto, el primero crece (con un solo riesgo
      queda igual que antes: el alto mayor de las cuatro celdas) */
@@ -145,17 +400,19 @@ function _atsMedir(doc, filas, w, cols){
     i = j;
   }
 }
-/* reparte las filas en hojas sin cortar texto */
-function _atsPaginar(filas, libre){
+/* reparte las filas en hojas sin cortar texto. 17/10/2026 · lote 14: la primera hoja tiene «libre» (lleva las listas);
+   las que siguen, «libreN» (solo la tabla) */
+function _atsPaginar(filas, libre, libreN){
   var pags = [], act = [], usado = 0;
+  function cap(){ return pags.length ? (libreN || libre) : libre; }
   filas.forEach(function(f){
-    if(act.length && usado + f.h > libre){
+    if(act.length && usado + f.h > cap()){
       /* un peligro con varios riesgos no se parte entre dos hojas si entero entra en la siguiente */
       var k = act.length;
       while(k > 0 && act[k-1].gi !== undefined && act[k-1].gi === f.gi) k--;
       var resto = act.slice(k), hr = 0;
       resto.forEach(function(x){ hr += x.h; });
-      if(k > 0 && resto.length && hr + f.h <= libre){ pags.push(act.slice(0, k)); act = resto; usado = hr; }
+      if(k > 0 && resto.length && hr + f.h <= (libreN || libre)){ pags.push(act.slice(0, k)); act = resto; usado = hr; }
       else { pags.push(act); act = []; usado = 0; }
     }
     act.push(f); usado += f.h;
@@ -191,7 +448,7 @@ function _atsDibujar(){
   var filas = [];
   (ATS.acts||[]).forEach(function(a){
     (a.filas||[]).forEach(function(f){
-      filas.push({ act:(a.a||''), p:f.p, r:f.r, c:f.c, m:f.m });
+      filas.push({ act:(a.a||''), p:f.p, r:f.r, c:f.c, m:f.m, v:(f.v === 1) ? 1 : 0 });
     });
   });
   if(!filas.length) filas.push({ act:'', p:'', r:'', c:'', m:'' });
@@ -202,17 +459,42 @@ function _atsDibujar(){
   }
 
   var wTabla = W - M*2;
+  /* 17/10/2026 · lote 14 · «son muchos peligros y se expande a 3 o 4 hojas; ¿podría ser en 1 hoja? no repetir eso de
+     marcar en cada una, solo en la primera». Las listas A/NA y los datos van solo en la primera hoja; las que siguen
+     llevan una cabecera corta y la tabla. Con «en una hoja», si no entra, la letra de la tabla baja de a poco (hasta
+     5.2 puntos); si ni así entra, sale como siempre. Las filas «verificar en el frente» se pintan y llevan su leyenda. */
+  var hayV = _atsHayVPdf(), hLey = hayV ? 4.4 : 0;
+  _ATS_PTT = _ATS_PT;
   _atsMedir(doc, filas, wTabla, COLS);
-  var libre = (H - M - _atsPie()) - _atsArranque(M);
-  var pags = _atsPaginar(filas, libre);
+  var libre = (H - M - _atsPie() - hLey) - _atsArranque(M);
+  var libreN = (H - M - 4.6 - hLey) - _atsArranqueN(M);
+  var pags = _atsPaginar(filas, libre, libreN), noEntra = false;
+  if(ATS.una && pags.length > 1){
+    /* de a 0.4 puntos hasta 5.2: la primera letra con la que entra en una hoja; si con ninguna entra, la que deja
+       menos hojas (con la letra más grande entre las que empatan) */
+    var _mejor = { pt:_ATS_PT, n:pags.length };
+    for(var _pt = _ATS_PT - 0.4; _pt >= 5.19 && pags.length > 1; _pt -= 0.4){
+      _ATS_PTT = Math.round(_pt*10)/10; _atsMedir(doc, filas, wTabla, COLS); pags = _atsPaginar(filas, libre, libreN);
+      if(pags.length < _mejor.n) _mejor = { pt:_ATS_PTT, n:pags.length };
+    }
+    if(pags.length > 1){
+      noEntra = true;
+      _ATS_PTT = _mejor.pt; _atsMedir(doc, filas, wTabla, COLS); pags = _atsPaginar(filas, libre, libreN);
+    }
+  }
   var hojas = pags.length;
 
   for(var pg=0; pg<hojas; pg++){
     if(pg) doc.addPage([W,H],'landscape');
-    _atsAnverso(doc, W, H, M, emp, obra, logo, pags[pg], pg+1, hojas, libre, COLS);
+    if(pg) _atsAnversoSigue(doc, W, H, M, emp, obra, logo, pags[pg], pg+1, hojas, libreN, COLS, hayV);
+    else _atsAnverso(doc, W, H, M, emp, obra, logo, pags[pg], pg+1, hojas, libre, COLS, hayV);
   }
+  _ATS_PTT = _ATS_PT;
   doc.addPage([W,H],'landscape');
   _atsReverso(doc, W, H, M, por);
+  /* 17/10/2026 · lote 14 · las fotos del cierre, al final */
+  var _fot = Array.isArray(ATS._fotosPdf) ? ATS._fotosPdf : [], _cf = ATS.cierre || {};
+  if(ATS.modo !== 'modelo' && _fot.length && ((_cf.fotos||[]).length || (_cf.fl||[]).length)) _atsFotosCierre(doc, W, H, M, emp, _fot);
 
   /* ══ LA FRANJA ROJA ═══════════════════════════════════════════
      Un ATS impreso sin el V°B° del SSOMA se ve exactamente igual a uno
@@ -234,14 +516,165 @@ function _atsDibujar(){
     }
     doc.setTextColor(30,34,40);
   }
+  /* 17/10/2026 · lote 14 · un ATS de otro día que habilitó el trabajo y quedó sin cierre: el papel lo dice */
+  else if(_atsSinCierrePdf()){
+    var _np2 = doc.getNumberOfPages();
+    for(var _q2=1; _q2<=_np2; _q2++){
+      doc.setPage(_q2);
+      doc.setFillColor(217,38,28); doc.rect(0, 0.6, W, 4.6, 'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(7.4);
+      doc.text('SIN CIERRE — FALTA LA FIRMA DE SALIDA DE LA CUADRILLA O LA FOTO DE CÓMO QUEDÓ EL ÁREA', W/2, 3.85, {align:'center'});
+    }
+    doc.setTextColor(30,34,40);
+  }
 
   ATS.pdf = { blob: doc.output('blob'),
               nombre: ATS.modo==='modelo' ? 'ATS-modelo-'+(_senSlug(ATS.trabajo)||'trabajo')+'.pdf'
                                           : 'ATS-'+(_senSlug(ATS.trabajo)||'trabajo')+'-'+(ATS.fecha||hoyISO())+'.pdf' };
-  return { n: hojas+1, filas: filas.length };
+  return { n: hojas+1, filas: filas.length, noEntra: noEntra };
+}
+/* ¿la franja «SIN CIERRE»? Solo en la app, que sabe la hora; en la web lo dice quien llama (papeles-app.js) */
+function _atsSinCierrePdf(){
+  if(!ATS || ATS.modo === 'modelo') return false;
+  if(typeof atsTocaCierre !== 'function' || typeof hoyISO !== 'function' || typeof atsPuedeTrabajar !== 'function') return false;
+  return atsPuedeTrabajar(ATS) && atsTocaCierre(ATS) && !!ATS.fecha && ATS.fecha < hoyISO();
+}
+/* las fotos del cierre: dos por fila, cuatro por hoja, con su hora */
+function _atsFotosCierre(doc, W, H, M, emp, fotos){
+  var c = ATS.cierre || {}, por = 4, x = M, w = W - M*2;
+  for(var i0=0; i0<fotos.length; i0+=por){
+    doc.addPage([W,H],'landscape');
+    var y = M;
+    _atsCaja(doc, x, y, w, 10, _ATS_AZUL);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(20,24,30);
+    doc.text('CIERRE DEL TRABAJO · CÓMO QUEDÓ EL ÁREA', x+2, y+6.6);
+    doc.setFont('helvetica','normal'); doc.setFontSize(_ATS_PT);
+    var sub = String(ATS.trabajo||'')+(ATS.fecha ? '  ·  '+fechaLarga(ATS.fecha) : '')+(c.fin ? '  ·  Hora de término: '+c.fin : '');
+    doc.text(doc.splitTextToSize(sub, w*0.5)[0] || '', x+w-2, y+6.4, {align:'right'});
+    y += 13;
+    var cw = (w-6)/2, ch = (H - y - M - 6)/2 - 6;
+    fotos.slice(i0, i0+por).forEach(function(du, k){
+      var cx = x + (k%2)*(cw+6), cy = y + Math.floor(k/2)*(ch+12);
+      _atsCaja(doc, cx, cy, cw, ch);
+      try{
+        var pr = doc.getImageProperties(du), r = (pr && pr.height) ? pr.width/pr.height : 4/3;
+        var iw = cw-2, ih = iw/r; if(ih > ch-2){ ih = ch-2; iw = ih*r; }
+        doc.addImage(du, 'JPEG', cx+(cw-iw)/2, cy+(ch-ih)/2, iw, ih, undefined, 'FAST');
+      }catch(e){}
+      doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT); doc.setTextColor(40,46,54);
+      doc.text('Foto '+(i0+k+1)+' de '+fotos.length, cx, cy+ch+4.2);
+    });
+    doc.setFontSize(_ATS_PT-1.4); doc.setTextColor(150,158,166);
+    doc.text(String(emp.razon||'').toUpperCase()+'  ·  OBRASST', W/2, H-2.6, { align:'center' });
+  }
+  doc.setTextColor(30,34,40);
 }
 
-function _atsAnverso(doc, W, H, M, emp, obra, logo, filas, pg, nHojas, libre, cols){
+/* 17/10/2026 · lote 14 · la tabla de peligros (la de la primera hoja y la de las que siguen): devuelve dónde terminó.
+   Las filas «verificar en el frente» (v = 1) van con fondo rojo claro o con letra roja, y debajo, su leyenda. */
+function _atsTablaPdf(doc, x, y, w, filas, libre, cols, hayV){
+  var hT2 = 5.4, cx2 = x;
+  var tit = ['Secuencia de actividades (3)','Peligros (4)','Riesgos (5)','Consecuencia (6)','Medidas de control (7)'];
+  cols.forEach(function(f, i){
+    _atsCaja(doc, cx2, y, w*f, hT2, _ATS_AZUL);
+    doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT); doc.setTextColor(20,24,30);
+    doc.text(tit[i], cx2 + w*f/2, y+3.8, {align:'center'});
+    cx2 += w*f;
+  });
+  y += hT2;
+
+  /* Lo que sobra de la hoja se reparte entre las filas: así el formato
+     sale lleno, como el de papel, y no con media hoja en blanco. */
+  var usado = 0; filas.forEach(function(f){ usado += f.h; });
+  var vacias = 0, hVacia = _atsHFilaT();
+  if(usado < libre){
+    vacias = Math.floor((libre-usado)/hVacia);
+    var sobra = libre - usado - vacias*hVacia;
+    if(filas.length + vacias > 0) hVacia += sobra/Math.max(1, vacias || 1);
+    if(!vacias && filas.length){
+      var extra = (libre-usado)/filas.length;
+      filas.forEach(function(f){ f.h += extra; });
+    }
+  }
+
+  var lh = _atsLHT(), yy = y, rojoF = (ATS.vm !== 'letra');
+  filas.forEach(function(f, q){
+    var cx3 = x + w*cols[0];
+    /* el peligro: UNA celda por grupo (en esta hoja), al lado de todos sus riesgos */
+    if(!q || filas[q-1].gi === undefined || filas[q-1].gi !== f.gi){
+      var hg = 0;
+      for(var q2=q; q2<filas.length && (q2===q || (filas[q2].gi !== undefined && filas[q2].gi === f.gi)); q2++) hg += filas[q2].h;
+      _atsCaja(doc, cx3, yy, w*cols[1], hg, (f.v && rojoF) ? _ATS_ROJO_F : null);
+      _atsCelda(doc, f.p, cx3, yy, w*cols[1], hg, lh, (f.v && !rojoF) ? _ATS_ROJO_L : null);
+    }
+    cx3 += w*cols[1];
+    [[f.r,cols[2]],[f.c,cols[3]],[f.m,cols[4]]].forEach(function(par){
+      _atsCaja(doc, cx3, yy, w*par[1], f.h, (f.v && rojoF) ? _ATS_ROJO_F : null);
+      _atsCelda(doc, par[0], cx3, yy, w*par[1], f.h, lh, (f.v && !rojoF) ? _ATS_ROJO_L : null);
+      cx3 += w*par[1];
+    });
+    yy += f.h;
+  });
+  for(var v0=0; v0<vacias; v0++){
+    var cx4 = x + w*cols[0];
+    cols.slice(1).forEach(function(fr){ _atsCaja(doc, cx4, yy, w*fr, hVacia); cx4 += w*fr; });
+    yy += hVacia;
+  }
+
+  /* la columna de la actividad va en UNA sola celda alta por grupo, como
+     en el formato de obra: así se ve de un vistazo que esos ocho peligros
+     son de la misma tarea */
+  var yg = y, i0 = 0;
+  while(i0 < filas.length){
+    var nom = filas[i0].act, alto = 0, i1 = i0;
+    while(i1 < filas.length && filas[i1].act === nom){ alto += filas[i1].h; i1++; }
+    _atsCaja(doc, x, yg, w*cols[0], alto);
+    if(nom){
+      doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PTT); doc.setTextColor(24,28,34);
+      var lin2 = doc.splitTextToSize(nom, w*cols[0]-2.8);
+      var yb2 = yg + (alto - lin2.length*lh)/2 + _ATS_PTT*0.74*_MMPT;
+      lin2.forEach(function(l){ doc.text(l, x+1.4, yb2); yb2 += lh; });
+    }
+    yg += alto; i0 = i1;
+  }
+  if(vacias) _atsCaja(doc, x, yg, w*cols[0], vacias*hVacia);
+  y = yy;
+  if(hayV && filas.some(function(f){ return f && f.v; })){
+    doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT-0.6); doc.setTextColor(_ATS_ROJO_L[0], _ATS_ROJO_L[1], _ATS_ROJO_L[2]);
+    doc.text('EN ROJO: verificar en el frente antes de copiarlo o de empezar. Puede no estar hoy: si no está, no se copia.', x+1.4, y+3.2, { maxWidth:w-3 });
+    doc.setTextColor(30,34,40);
+    y += 4.4;
+  }
+  return y;
+}
+/* las hojas que siguen: una cabecera corta (de qué ATS es y qué hoja) y la tabla; sin las listas ni los datos */
+function _atsAnversoSigue(doc, W, H, M, emp, obra, logo, filas, pg, nHojas, libre, cols, hayV){
+  var x = M, y = M, w = W - M*2, hC = 10, cw = 44;
+  _atsCaja(doc, x, y, w, hC);
+  if(logo && logo.du){
+    var hl = hC - 2.6, lw = hl*logo.r; if(lw > 28){ lw = 28; hl = lw/logo.r; }
+    try{ doc.addImage(logo.du, x+2, y+(hC-hl)/2, lw, hl, undefined, 'FAST'); }catch(e){}
+  }
+  doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(20,24,30);
+  doc.text('ANÁLISIS DE TRABAJO SEGURO (A.T.S) · continuación', x+w/2, y+hC/2+1.4, { align:'center' });
+  _atsCaja(doc, x+w-cw, y, cw, hC, _ATS_AZUL);
+  var _fm = (typeof formatoDe==='function') ? formatoDe('ats') : {cod:'',rev:''};
+  doc.setFontSize(_ATS_PT); doc.setFont('helvetica','bold');
+  doc.text('Código: '+((ATS.codigo || _fm.cod) || '________'), x+w-cw+2, y+3.9);
+  doc.text('Hoja '+pg+' de '+nHojas, x+w-cw+2, y+8.1);
+  y += hC;
+  _atsCaja(doc, x, y, w, 6, _ATS_GRIS);
+  doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT); doc.setTextColor(20,24,30);
+  var lin = 'Trabajo: '+String(ATS.trabajo||'')+(ATS.fecha ? '   ·   Fecha: '+fechaLarga(ATS.fecha) : '')+(ATS.area ? '   ·   Área: '+String(ATS.area) : '');
+  doc.text(doc.splitTextToSize(lin, w-4)[0] || '', x+1.6, y+4.2);
+  y += 6;
+  y = _atsTablaPdf(doc, x, y, w, filas, libre, cols, hayV);
+  doc.setFont('helvetica','normal'); doc.setFontSize(_ATS_PT-1.4); doc.setTextColor(150,158,166);
+  doc.text('Hoja '+pg+' de '+nHojas+'  ·  '+String(emp.razon||'').toUpperCase()+'  ·  OBRASST', W/2, Math.max(y+3.2, H-2.6), { align:'center' });
+  doc.setTextColor(30,34,40);
+}
+
+function _atsAnverso(doc, W, H, M, emp, obra, logo, filas, pg, nHojas, libre, cols, hayV){
   var x = M, y = M, w = W - M*2;
 
   /* ── cabecera ── */
@@ -356,72 +789,7 @@ function _atsAnverso(doc, W, H, M, emp, obra, logo, filas, pg, nHojas, libre, co
   bloque('Permisos Adicionales', ATS_PERM, 'perm', 6);
 
   /* ── la tabla: una fila = un peligro ── */
-  var hT2 = 5.4, cx2 = x;
-  var tit = ['Secuencia de actividades (3)','Peligros (4)','Riesgos (5)','Consecuencia (6)','Medidas de control (7)'];
-  cols.forEach(function(f, i){
-    _atsCaja(doc, cx2, y, w*f, hT2, _ATS_AZUL);
-    doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT); doc.setTextColor(20,24,30);
-    doc.text(tit[i], cx2 + w*f/2, y+3.8, {align:'center'});
-    cx2 += w*f;
-  });
-  y += hT2;
-
-  /* Lo que sobra de la hoja se reparte entre las filas: así el formato
-     sale lleno, como el de papel, y no con media hoja en blanco. */
-  var usado = 0; filas.forEach(function(f){ usado += f.h; });
-  var vacias = 0, hVacia = _ATS_HFILA;
-  if(usado < libre){
-    vacias = Math.floor((libre-usado)/hVacia);
-    var sobra = libre - usado - vacias*hVacia;
-    if(filas.length + vacias > 0) hVacia += sobra/Math.max(1, vacias || 1);
-    if(!vacias && filas.length){
-      var extra = (libre-usado)/filas.length;
-      filas.forEach(function(f){ f.h += extra; });
-    }
-  }
-
-  var lh = _atsLH(), yy = y;
-  filas.forEach(function(f, q){
-    var cx3 = x + w*cols[0];
-    /* el peligro: UNA celda por grupo (en esta hoja), al lado de todos sus riesgos */
-    if(!q || filas[q-1].gi === undefined || filas[q-1].gi !== f.gi){
-      var hg = 0;
-      for(var q2=q; q2<filas.length && (q2===q || (filas[q2].gi !== undefined && filas[q2].gi === f.gi)); q2++) hg += filas[q2].h;
-      _atsCaja(doc, cx3, yy, w*cols[1], hg);
-      _atsCelda(doc, f.p, cx3, yy, w*cols[1], hg, lh);
-    }
-    cx3 += w*cols[1];
-    [[f.r,cols[2]],[f.c,cols[3]],[f.m,cols[4]]].forEach(function(par){
-      _atsCaja(doc, cx3, yy, w*par[1], f.h);
-      _atsCelda(doc, par[0], cx3, yy, w*par[1], f.h, lh);
-      cx3 += w*par[1];
-    });
-    yy += f.h;
-  });
-  for(var v0=0; v0<vacias; v0++){
-    var cx4 = x + w*cols[0];
-    cols.slice(1).forEach(function(fr){ _atsCaja(doc, cx4, yy, w*fr, hVacia); cx4 += w*fr; });
-    yy += hVacia;
-  }
-
-  /* la columna de la actividad va en UNA sola celda alta por grupo, como
-     en el formato de obra: así se ve de un vistazo que esos ocho peligros
-     son de la misma tarea */
-  var yg = y, i0 = 0;
-  while(i0 < filas.length){
-    var nom = filas[i0].act, alto = 0, i1 = i0;
-    while(i1 < filas.length && filas[i1].act === nom){ alto += filas[i1].h; i1++; }
-    _atsCaja(doc, x, yg, w*cols[0], alto);
-    if(nom){
-      doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT); doc.setTextColor(24,28,34);
-      var lin2 = doc.splitTextToSize(nom, w*cols[0]-2.8);
-      var yb2 = yg + (alto - lin2.length*lh)/2 + _ATS_PT*0.74*_MMPT;
-      lin2.forEach(function(l){ doc.text(l, x+1.4, yb2); yb2 += lh; });
-    }
-    yg += alto; i0 = i1;
-  }
-  if(vacias) _atsCaja(doc, x, yg, w*cols[0], vacias*hVacia);
-  y = yy;
+  y = _atsTablaPdf(doc, x, y, w, filas, libre, cols, hayV);
 
   /* ── observaciones y notas ── */
   _atsCaja(doc, x, y, w, 5.4, _ATS_AZUL);
@@ -498,6 +866,8 @@ function _atsReverso(doc, W, H, M, por){
     return (t.nombre || '') + ((t.verificado === false) ? '  (pend. verificar)' : '');
   });
   var firmas = ATS.firmas || {};
+  /* 17/10/2026 · lote 14 · el cierre de cada uno (firma de salida con su hora, o el motivo del que no estuvo) */
+  var _ci = ATS.cierre || {}, cSal = _ci.f || {}, cAus = _ci.aus || {};
   var nF = Math.max(10, gente.length);
   var hF = Math.max(6.6, (H - M - 18 - y)/nF);
   for(var i=0;i<nF;i++){
@@ -515,6 +885,18 @@ function _atsReverso(doc, W, H, M, por){
       var fq = firmas[ids[i]];
       if(fq && fq.tr && typeof _atsFirmaPDF==='function')
         _atsFirmaPDF(doc, fq.tr, x+c1+0.6, yy2+0.4, c2-1.2, hF-0.8);
+      var fs = cSal[ids[i]], fa = cAus[ids[i]];
+      if(fs){
+        if(fs.tr && typeof _atsFirmaPDF==='function') _atsFirmaPDF(doc, fs.tr, x+c1+c2+0.6, yy2+0.4, c3-1.2, hF-0.8);
+        doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT); doc.setTextColor(28,32,38);
+        if(fs.t) doc.text(_atsHoraPdf(fs.t), x+c1+c2+c3+c4/2, yy2+hF/2+1.2, { align:'center' });
+        _atsTxt(doc, fs.oc ? String(fs.oc) : 'Sin novedad', x+c1+c2+c3+c4+1.4, yy2+0.5, c5-2.8, _ATS_PT-0.6, !!fs.oc, hF-0.6);
+      }else if(fa){
+        doc.setFont('helvetica','normal'); doc.setFontSize(_ATS_PT-1); doc.setTextColor(120,126,134);
+        doc.text('No firmó', x+c1+c2+c3/2, yy2+hF/2+1, { align:'center' });
+        _atsTxt(doc, 'No firmó la salida'+(fa.m ? ': '+String(fa.m) : ''), x+c1+c2+c3+c4+1.4, yy2+0.5, c5-2.8, _ATS_PT-0.6, false, hF-0.6);
+      }
+      doc.setTextColor(28,32,38);
     }
   }
   y += nF*hF + 2;

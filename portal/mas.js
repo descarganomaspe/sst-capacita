@@ -958,7 +958,7 @@ function masCtx(mas){
       var pais=paisObraP(), o=YO.obra||{};
       var base={ id:oid, obra:String(nombreObraP(o)||''), codigo:String(o.codigo||''), sector:sectorObraP(),
         emp:{ razon:String(em.razon||''), logo:logo, dom:String(em.dom||''), ruc:String(o.ruc||''), formatoCod:String(em.formatoCod||''), formatoRev:String(em.formatoRev||''), formatoFecha:String(em.formatoFecha||''), codKardex:String(em.codKardex||'') },
-        fmt:it, base:appBase(), doc:docPersonaP(), docs:docs, trabs:gente.map(function(t){ return { id:t.id, nombre:t.nombre, dni:t.dni, puesto:t.puesto }; }),
+        fmt:it, base:appBase(), doc:docPersonaP(), docs:docs, trabs:gente.map(function(t){ return { id:t.id, nombre:t.nombre, dni:t.dni, puesto:t.puesto, estatus:t.cesado ? 'cesado' : 'activo' }; }),
         n:masActivos(gente).length, sup:gesQuien(), libre:(_dcOrdenPlan()>0), rd:(pais==='do'), tx:(pais!=='pe') ? txPaisP : null, varias:((YO.empresas||[]).length>1) };
       if((YO.obra||{}).id===oid){ MASC.obra=oid; MASC.base=base; MASC.t=Date.now(); }
       return listo(base);
@@ -2117,6 +2117,8 @@ function comPintar(){
     h+='<div class="com-lados">'+d.miembros.map(function(m){ return '<div class="com-lado"><b data-sin-pais>'+esc(m.nombre)+'</b><small class="tenue" data-sin-pais>'+esc(m.puesto||'—')+(m.dni ? ' · '+esc(docPersonaP())+' '+esc(m.dni) : '')+'</small></div>'; }).join('')+'</div>';
   }
   h+='</div></div>';
+  /* 17/10/2026 · lote 16 · la elección: organizarla, seguirla o ver la que ya se hizo */
+  if(!rd) h+=_comElecHTML(d, toca);
   /* lo que falta para estar en regla */
   var f=M.comiteFaltas();
   if(f.length) h+='<div class="aviso mal" id="com-faltas">⚠️ <b>Lo que te falta para estar en regla</b><ul class="com-ul">'+f.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul></div>';
@@ -2143,7 +2145,9 @@ function comPintar(){
       var e=EST[m.estado]||EST.futura, nom=MAS_APP.MESES_ES[m.mes-1];
       return '<button type="button" class="com-mes '+m.estado+'" data-ym="'+m.ym+'"'+(m.acta ? ' data-acta="'+esc(m.acta.id)+'"' : '')+' title="'+esc(nom.charAt(0).toUpperCase()+nom.slice(1)+': '+e[1]+(m.acta ? ' · acta N° '+(m.acta.n||'—') : '')+(m.extra.length ? ' · '+m.extra.length+' extraordinaria'+(m.extra.length===1 ? '' : 's') : ''))+'">'+
         '<small>'+MAS_APP.MESES_3[m.mes-1]+'</small><b aria-hidden="true">'+e[0]+'</b>'+(m.extra.length ? '<i aria-hidden="true">+'+m.extra.length+'</i>' : '')+'</button>';
-    }).join('')+'</div><p class="ayuda" style="margin:0">✓ hecha · ✕ se pasó · ! toca este mes · · por venir. Toca un mes para abrir su acta o para levantarla.</p></div></div>'+
+    }).join('')+'</div><p class="ayuda" style="margin:0">✓ hecha · ✕ se pasó · ! toca este mes · · por venir. Toca un mes para abrir su acta o para levantarla.</p>'+
+    /* 17/10/2026 · lote 16 · la próxima reunión, la que dejó dicha la última acta */
+    (function(){ var px=M.comiteProxima(); return px ? '<p class="msg ok" id="com-prox" style="margin:10px 0 0">📅 Próxima reunión: <b>'+esc(fechaLarga(px.f)||px.f)+'</b>'+(px.h ? ' · '+esc(px.h) : '')+(px.l ? ' · <span data-sin-pais>'+esc(px.l)+'</span>' : '')+'</p>' : ''; })()+'</div></div>'+
     '<div class="tarj" id="t-com-actas"></div>';
   /* los acuerdos, que es lo único que el comité produce de verdad */
   var ac=M.comiteAcuerdosPendientes(), venc=ac.filter(function(x){ return x.vencido; }).length;
@@ -2156,7 +2160,7 @@ function comPintar(){
   /* el libro */
   h+='<div class="tarj com-sola" id="com-libro"><div class="tarj-cab"><div><h2>El Libro de Actas</h2><p class="sub">La constitución, la instalación, las reuniones y los acuerdos van todos al mismo libro'+_comLey('D.S. 005-2012-TR, arts. 51 y 53')+'. '+
     'Este PDF es para imprimirlo y pegarlo en el libro legalizado, o para mandarlo entero.</p><div class="msg com-msg0" id="com-libro-msg" role="status"></div></div>'+
-    '<div class="acciones"><button type="button" class="bt sec chico" id="com-libro-abrir">Abrir el PDF</button><button type="button" class="bt chico" id="com-libro-bt">Descargar el Libro de Actas '+anio+'</button></div></div></div>';
+    '<div class="acciones"><button type="button" class="bt sec chico" id="com-subir">📎 Subir un acta que ya tengo</button><button type="button" class="bt sec chico" id="com-libro-abrir">Abrir el PDF</button><button type="button" class="bt chico" id="com-libro-bt">Descargar el Libro de Actas '+anio+'</button></div></div></div>';
   h+=_comPieApp(toca);
   var est=$('t-com-actas') ? $('t-com-actas')._est : null;
   caja.innerHTML=h;
@@ -2166,18 +2170,18 @@ function comPintar(){
   var nTit=_comTitulares(d).length, q=M.comiteQuorum();
   var filas=M.comiteActasDe(anio).map(function(a){
     var as=(a.asistentes||[]).length, acs=(a.acuerdos||[]), he=acs.filter(function(x){ return x.hecho; }).length;
-    return { id:a.id, n:String(a.n||''), fecha:String(a.fecha||'').slice(0, 10), tipo:MAS_APP.COMITE_TIPOS[a.tipo]||'Reunión', as:as, quorum:(q>0 ? M.comiteHuboQuorum(a) : null), acs:acs.length, he:he };
+    return { id:a.id, n:String(a.n||''), fecha:String(a.fecha||'').slice(0, 10), tipo:MAS_APP.COMITE_TIPOS[a.tipo]||'Reunión', as:as, quorum:(q>0 && !a.subida ? M.comiteHuboQuorum(a) : null), acs:acs.length, he:he, sub:!!a.subida, url:a.url||'' };
   });
   var cols=[
     {k:'n', t:'N°', h:function(x){ return '<b>'+esc(x.n||'—')+'</b>'; }},
     {k:'fecha', t:'Fecha', h:function(x){ return esc(fechaLarga(x.fecha)||x.fecha); }, csv:function(x){ return fechaLarga(x.fecha)||x.fecha; }},
     {k:'tipo', t:'Tipo'},
-    {k:'as', t:'Asistieron', h:function(x){ return x.as+' de '+nTit+(x.quorum===null ? '' : ' <span class="pill '+(x.quorum ? 'ok' : 'ojo')+'">'+(x.quorum ? 'con quórum' : 'sin quórum')+'</span>'); }, v:function(x){ return x.as; }, csv:function(x){ return x.as+' de '+nTit+(x.quorum===null ? '' : (x.quorum ? ' (con quórum)' : ' (sin quórum)')); }},
+    {k:'as', t:'Asistieron', h:function(x){ if(x.sub) return '<span class="pill gris">📎 escaneada</span>'; return x.as+' de '+nTit+(x.quorum===null ? '' : ' <span class="pill '+(x.quorum ? 'ok' : 'ojo')+'">'+(x.quorum ? 'con quórum' : 'sin quórum')+'</span>'); }, v:function(x){ return x.as; }, csv:function(x){ return x.as+' de '+nTit+(x.quorum===null ? '' : (x.quorum ? ' (con quórum)' : ' (sin quórum)')); }},
     {k:'acs', t:'Acuerdos', h:function(x){ return x.acs ? '<span class="pill '+(x.he===x.acs ? 'ok' : 'gris')+'">'+x.he+' de '+x.acs+' cumplidos</span>' : '<span class="tenue">—</span>'; }, v:function(x){ return x.acs; }, csv:function(x){ return x.acs ? x.he+' de '+x.acs+' cumplidos' : ''; }},
     {k:'_acc', t:'', acc:true, h:function(){ return '<button type="button" class="bt sec chico" data-acc="pdf">PDF</button>'; }}
   ];
   tabla($('t-com-actas'), cols, filas, {orden:'fecha', asc:false, unidad:'actas', archivo:'actas-del-comite-'+anio, vacio:'Ninguna acta en '+anio, vacioSub:'Levanta la primera con «＋ Levantar un acta»: sale numerada, con su quórum y sus acuerdos.',
-    alClic:function(x){ comActaVer(x.id); }, accion:function(acc, x){ if(acc==='pdf') _comBajarActa(x.id); else comActaVer(x.id); }});
+    alClic:function(x){ comActaVer(x.id); }, accion:function(acc, x){ if(acc==='pdf'){ if(x.sub){ if(x.url) window.open(x.url, '_blank', 'noopener'); return; } _comBajarActa(x.id); } else comActaVer(x.id); }});
 }
 /* 07/10/2026 · lo que sale de este padrón, a un clic: el cartel con fotos (que lo trae de aquí: no se escribe dos veces) y
    lo que ve cada trabajador en su celular */
@@ -2203,6 +2207,8 @@ function _comEnchufar(toca){
   on('com-planes', function(){ navegar('plan'); });
   on('com-padron-bt', function(){ comPadron(); });
   on('com-acta-nueva', function(){ comActaForm(null, ''); });
+  on('com-elec-bt', function(){ comEleccion(); });
+  on('com-subir', function(){ comSubirActa(); });
   if($('com-anio')) $('com-anio').onchange=function(){ COMW.anio=this.value; comPintar(); };
   if($('com-meses')) $('com-meses').onclick=function(ev){
     var b=ev.target.closest('.com-mes'); if(!b) return;
@@ -2355,7 +2361,7 @@ function comPadron(){
 /* ── el acta: levantarla o corregirla ── */
 var COMA = null;
 function _comUltimoDia(ym){ var p=ym.split('-'); return new Date(+p[0], +p[1], 0).getDate(); }
-function comActaForm(id, ym){
+function comActaForm(id, ym, tipo0){
   _masCss(); _yaCss();
   var M=_comM(), d=COMW.com, rd=_comRD(), a=id ? M.actaComitePorId(id) : null, hoy=hoyISO();
   if(id && !a){ toast('Esa acta ya no está.'); masRecargar(); return; }
@@ -2365,15 +2371,19 @@ function comActaForm(id, ym){
   /* el día que se propone: el de hoy si el mes es este; a mitad de mes si ya pasó; el mismo día de hoy si todavía no llega */
   var fecha=a ? String(a.fecha||'').slice(0, 10) : (!ym || ym===hoy.slice(0, 7) ? hoy : (ym<hoy.slice(0, 7) ? ym+'-15' : ym+'-'+dos(Math.min(+hoy.slice(8, 10), _comUltimoDia(ym)))));
   var B=COMW.borr, sigue=!!(B && B.id===(id||null) && B.sucio);
-  var S=COMA=sigue ? B : { id:id||null, ym:ym, n:a ? String(a.n||'') : M.comiteNumeroSiguiente(anio), fecha:fecha, tipo:a ? (a.tipo||'ordinaria') : (d.actas.length ? 'ordinaria' : 'instalacion'), hora:a ? (a.hora||'') : '', lugar:a ? (a.lugar||'') : '',
+  var S=COMA=sigue ? B : { id:id||null, ym:ym, n:a ? String(a.n||'') : M.comiteNumeroSiguiente(anio), fecha:fecha, tipo:a ? (a.tipo||'ordinaria') : (tipo0 || (d.actas.length ? 'ordinaria' : 'instalacion')), hora:a ? (a.hora||'') : '', lugar:a ? (a.lugar||'') : '',
     asis:a ? (a.asistentes||[]).slice() : _comTitulares(d).map(function(m){ return m.id; }), agenda:a ? (a.agenda||'') : '', desarrollo:a ? (a.desarrollo||'') : '',
-    acu:a ? (a.acuerdos||[]).map(function(x){ return { t:x.t||'', quien:x.quien||'', plazo:x.plazo||'', hecho:x.hecho ? 1 : 0 }; }) : [], sucio:false };
+    acu:a ? (a.acuerdos||[]).map(function(x){ return { t:x.t||'', quien:x.quien||'', plazo:x.plazo||'', hecho:x.hecho ? 1 : 0 }; }) : [], sucio:false,
+    /* 17/10/2026 · lote 16 · los invitados, el seguimiento de los acuerdos anteriores y la próxima reunión */
+    inv:(a && a.inv) ? a.inv.map(function(x){ return x.n+(x.c ? ' · '+x.c : ''); }).join('\n') : '',
+    seg:a ? (a.seg||[]).map(function(s){ return { a:s.a, i:s.i, t:s.t, n:s.n, hecho:s.hecho ? 1 : 0 }; }) : M.comiteAcuerdosPendientes().map(function(x){ return { a:x.acta, i:x.i, t:x.t, n:x.n, hecho:0 }; }),
+    px:(a && a.prox) ? { f:a.prox.f||'', h:a.prox.h||'', l:a.prox.l||'' } : { f:M.celMesSiguiente(fecha), h:'', l:'' } };
   S.guardando=false;
   var nTit=_comTitulares(d).length, q=M.comiteQuorum();
   var h=(sigue && S.sucio ? '<div class="aviso ojo" id="coma-sigue">Seguimos con lo que habías escrito. <button type="button" class="bt-link" id="coma-cero">Empezar de cero</button></div>' : '')+
     '<div class="seccion" style="margin-top:0"><h3>La reunión</h3>'+
       '<div class="fila-c ya-al"><div class="campo"><label for="coma-n">N° de acta</label><input id="coma-n" maxlength="12" value="'+esc(S.n)+'"></div><div class="campo"><label for="coma-fecha">Fecha</label><input type="date" id="coma-fecha" value="'+esc(S.fecha)+'"></div></div>'+
-      '<div class="campo"><label for="coma-tipo">Tipo de reunión</label><select id="coma-tipo">'+Object.keys(MAS_APP.COMITE_TIPOS).map(function(k){ return '<option value="'+k+'"'+(S.tipo===k ? ' selected' : '')+'>'+esc(MAS_APP.COMITE_TIPOS[k])+'</option>'; }).join('')+'</select>'+
+      '<div class="campo"><label for="coma-tipo">Tipo de reunión</label><select id="coma-tipo">'+Object.keys(MAS_APP.COMITE_TIPOS).filter(function(k){ return k!=='eleccion' || S.tipo==='eleccion'; }).map(function(k){ return '<option value="'+k+'"'+(S.tipo===k ? ' selected' : '')+'>'+esc(MAS_APP.COMITE_TIPOS[k])+'</option>'; }).join('')+'</select>'+
         '<p class="ayuda">'+(rd ? 'Por lo menos una reunión al mes; el acta va a la Dirección General de Higiene y Seguridad Industrial <span class="mas-ley">(Manual-Guía del Comité Mixto)</span>.'
           : 'La ordinaria es una al mes. La extraordinaria la convoca el Presidente, la piden dos miembros, o sale sola cuando hay un accidente mortal'+_comLey('D.S. 005-2012-TR, art. 68')+'.')+'</p></div>'+
       '<div class="fila-c ya-al"><div class="campo"><label for="coma-hora">Hora</label><input type="time" id="coma-hora" value="'+esc(S.hora)+'"></div><div class="campo"><label for="coma-lugar">Lugar</label><input id="coma-lugar" maxlength="90" placeholder="Sala de reuniones / obra" value="'+esc(S.lugar)+'"></div></div></div>'+
@@ -2382,11 +2392,16 @@ function comActaForm(id, ym){
         return '<label class="ges-el-f"><input type="checkbox" class="coma-as" data-id="'+esc(m.id)+'"'+(S.asis.indexOf(m.id)>-1 ? ' checked' : '')+'><span class="ges-el-n"><b data-sin-pais>'+esc(m.nombre)+'</b><small>'+esc(_comRol(m))+'</small></span></label>';
       }).join('')+'</div></div>' : '<div class="aviso ojo" id="coma-sin-padron">⚠️ No hay nadie en el padrón todavía. <button type="button" class="bt-link" id="coma-ir-padron">Armar el padrón</button></div>')+
       '<div class="msg" id="coma-quorum" role="status" style="margin-top:8px"></div></div>'+
+    '<div class="seccion"><h3>Invitados</h3><textarea id="coma-inv" rows="2" maxlength="1200" placeholder="Uno por línea: nombre · cargo (el médico ocupacional, un técnico…)">'+esc(S.inv)+'</textarea></div>'+
     '<div class="seccion"><h3>Agenda</h3><textarea id="coma-agenda" rows="4" maxlength="4000" placeholder="Un punto por línea: lectura del acta anterior, avance del programa anual, accidentes del mes...">'+esc(S.agenda)+'</textarea></div>'+
     '<div class="seccion"><h3>Desarrollo</h3><textarea id="coma-desarrollo" rows="7" maxlength="12000" placeholder="Qué se trató y qué se dijo. Esto es lo que queda en el Libro de Actas.">'+esc(S.desarrollo)+'</textarea></div>'+
+    (S.seg.length ? '<div class="seccion"><h3>Seguimiento de los acuerdos anteriores</h3><p class="ayuda" style="margin:0 0 8px">Los que siguen pendientes de las actas anteriores. Marca los que ya se cumplieron: quedan cumplidos en su acta y dichos en esta.</p>'+
+      '<div class="ges-el"><div class="ges-el-lista" style="max-height:none">'+S.seg.map(function(s, k){ return '<label class="ges-el-f"><input type="checkbox" class="coma-seg" data-k="'+k+'"'+(s.hecho ? ' checked' : '')+'><span class="ges-el-n"><b>'+esc(s.t)+'</b><small>Del acta N° '+esc(s.n||'—')+'</small></span></label>'; }).join('')+'</div></div></div>' : '')+
     '<div class="seccion"><h3>Acuerdos</h3><p class="ayuda" style="margin:0 0 8px">Un acuerdo sin responsable y sin fecha no es un acuerdo. Es lo primero que un inspector cruza con la siguiente acta.</p>'+
       '<div id="coma-acuerdos"></div><div class="acciones" style="margin-top:8px"><button type="button" class="bt sec chico" id="coma-acu-mas">＋ Agregar un acuerdo</button></div>'+
       '<datalist id="coma-gente">'+d.miembros.map(function(m){ return '<option value="'+esc(m.nombre)+'">'; }).join('')+'</datalist></div>'+
+    '<div class="seccion"><h3>Próxima reunión</h3><div class="fila-c ya-al"><div class="campo"><label for="coma-px-f">Fecha</label><input type="date" id="coma-px-f" value="'+esc(S.px.f)+'"></div>'+
+      '<div class="campo"><label for="coma-px-h">Hora</label><input type="time" id="coma-px-h" value="'+esc(S.px.h)+'"></div><div class="campo"><label for="coma-px-l">Lugar</label><input id="coma-px-l" maxlength="90" value="'+esc(S.px.l)+'"></div></div></div>'+
     '<div class="msg" id="coma-msg" role="status"></div>';
   abrirHoja(a ? 'Acta N° '+(a.n||'—') : 'Nueva acta', a ? 'Corrige lo que haga falta: se guarda sobre la misma acta' : 'Queda numerada, con su quórum y sus acuerdos; después sale en PDF con el espacio de cada firma', h,
     '<button type="button" class="bt sec" id="coma-no">Cancelar</button><button type="button" class="bt" id="coma-ok">Guardar el acta</button>', {sinFoco:true});
@@ -2395,6 +2410,9 @@ function comActaForm(id, ym){
     S.n=gesTxt($('coma-n').value).slice(0, 12); S.fecha=$('coma-fecha').value||''; S.tipo=$('coma-tipo').value; S.hora=$('coma-hora').value||''; S.lugar=gesTxt($('coma-lugar').value).slice(0, 90);
     if($('coma-asis')) S.asis=[].map.call(document.querySelectorAll('.coma-as:checked'), function(x){ return x.getAttribute('data-id'); });
     S.agenda=$('coma-agenda').value; S.desarrollo=$('coma-desarrollo').value;
+    if($('coma-inv')) S.inv=$('coma-inv').value;
+    Array.prototype.forEach.call(document.querySelectorAll('.coma-seg'), function(x){ var k=+x.getAttribute('data-k'); if(S.seg[k]) S.seg[k].hecho=x.checked ? 1 : 0; });
+    if($('coma-px-f')) S.px={ f:$('coma-px-f').value||'', h:$('coma-px-h').value||'', l:gesTxt($('coma-px-l').value).slice(0, 90) };
     S.acu.forEach(function(x, i){ if($('coma-at-'+i)){ x.t=$('coma-at-'+i).value; x.quien=$('coma-aq-'+i).value; x.plazo=$('coma-ap-'+i).value; } });
   }
   function quorum(){
@@ -2440,6 +2458,13 @@ function comActaForm(id, ym){
       yo.n=S.n; yo.tipo=MAS_APP.COMITE_TIPOS[S.tipo] ? S.tipo : 'ordinaria'; yo.fecha=S.fecha; yo.hora=S.hora; yo.lugar=S.lugar;
       yo.asistentes=S.asis.filter(function(x){ return dd.miembros.some(function(mm){ return mm.id===x; }); });
       yo.agenda=limpio(S.agenda, 4000); yo.desarrollo=limpio(S.desarrollo, 12000); yo.acuerdos=acu; yo.ts=Date.now();
+      /* 17/10/2026 · lote 16 · los invitados, la próxima reunión y el seguimiento (los cumplidos quedan cumplidos en su acta) */
+      yo.inv=String(S.inv||'').split('\n').map(function(l){ l=gesTxt(l); if(!l) return null; var p=l.split(/\s+[·\-–—]\s+|\s*;\s*/); return { n:gesTxt(p[0]).slice(0, 90), c:gesTxt(p.slice(1).join(' · ')).slice(0, 90) }; }).filter(function(x){ return x && x.n; }).slice(0, 12);
+      yo.prox=/^\d{4}-\d{2}-\d{2}$/.test(S.px.f||'') ? { f:S.px.f, h:/^\d{2}:\d{2}$/.test(S.px.h||'') ? S.px.h : '', l:S.px.l||'' } : null;
+      if(S.seg.length){
+        yo.seg=S.seg.map(function(s){ return { a:s.a, i:s.i, t:s.t, n:s.n, hecho:s.hecho ? 1 : 0 }; });
+        yo.seg.forEach(function(s){ if(!s.hecho) return; dd.actas.forEach(function(x){ if(x.id===s.a && x.acuerdos && x.acuerdos[s.i] && x.acuerdos[s.i].t===s.t && !x.acuerdos[s.i].hecho){ x.acuerdos[s.i].hecho=1; x.ts=Date.now(); } }); });
+      }
       dd.actas.sort(function(x, y){ return String(y.fecha||'').localeCompare(String(x.fecha||'')); });
     }).then(function(){
       S.guardando=false; COMW.borr=null; COMW.anio=S.fecha.slice(0, 4);
@@ -2455,19 +2480,25 @@ function comActaVer(id){
   _masCss(); _yaCss();
   var M=_comM(), d=COMW.com, rd=_comRD(), a=M.actaComitePorId(id), hoy=hoyISO();
   if(!a){ toast('Esa acta ya no está.'); masRecargar(); return; }
+  /* 17/10/2026 · lote 16 · el acta que se subió escaneada: su archivo, y nada que armar */
+  if(a.subida){ _comVerSubida(a); return; }
   var nom={}; d.miembros.forEach(function(m){ nom[m.id]=m; });
   var as=(a.asistentes||[]).map(function(x){ return nom[x]; }).filter(Boolean), n=(a.asistentes||[]).length, nTit=_comTitulares(d).length, q=M.comiteQuorum(), hubo=M.comiteHuboQuorum(a);
   var h=(rd ? '<div class="aviso" id="comv-quorum">👥 Asistieron '+n+' de '+nTit+' titulares.</div>'
             : '<div class="aviso '+(hubo ? 'ok' : 'ojo')+'" id="comv-quorum">'+(hubo ? '✅' : '⚠️')+' Asistieron '+n+' de '+nTit+' titulares. Quórum: '+q+'.</div>')+
     '<div class="seccion" style="margin-top:0"><h3>Asistentes</h3>'+(as.length ? '<div class="com-lados">'+as.map(function(m){ return '<div class="com-lado"><b data-sin-pais>'+esc(m.nombre)+'</b><small class="tenue">'+esc(_comRol(m))+'</small></div>'; }).join('')+'</div>'
       : '<p class="tenue" style="margin:0">No se marcó a nadie.</p>')+'</div>'+
+    ((a.inv||[]).filter(function(x){ return x && x.n; }).length ? '<div class="seccion"><h3>Invitados</h3><div class="com-lados">'+a.inv.filter(function(x){ return x && x.n; }).map(function(x){ return '<div class="com-lado"><b data-sin-pais>'+esc(x.n)+'</b>'+(x.c ? '<small class="tenue" data-sin-pais>'+esc(x.c)+'</small>' : '')+'</div>'; }).join('')+'</div></div>' : '')+
     (a.agenda ? '<div class="seccion"><h3>Agenda</h3><p class="mas-texto">'+esc(a.agenda)+'</p></div>' : '')+
     (a.desarrollo ? '<div class="seccion"><h3>Desarrollo</h3><p class="mas-texto">'+esc(a.desarrollo)+'</p></div>' : '')+
+    ((a.seg||[]).filter(function(x){ return x && x.t; }).length ? '<div class="seccion"><h3>Seguimiento de los acuerdos anteriores</h3><ul class="com-acu">'+a.seg.filter(function(x){ return x && x.t; }).map(function(s){
+      return '<li><span class="com-acu-t"><b>'+(s.hecho ? '✅ ' : '⏳ ')+esc(s.t)+'</b><small>Del acta N° '+esc(s.n||'—')+' · '+(s.hecho ? 'cumplido' : 'sigue pendiente')+'</small></span></li>'; }).join('')+'</ul></div>' : '')+
     '<div class="seccion"><h3>Acuerdos</h3>'+((a.acuerdos||[]).length ? '<ul class="com-acu" id="comv-acu">'+a.acuerdos.map(function(x, i){
       var venc=!!(x.plazo && !x.hecho && x.plazo<hoy);
       return '<li><span class="com-acu-t"><b>'+(x.hecho ? '✅ ' : (venc ? '⛔ ' : '⏳ '))+esc(x.t)+'</b><small>'+(x.quien ? '<span data-sin-pais>'+esc(x.quien)+'</span> · ' : '')+(x.plazo ? (venc ? 'venció el ' : 'para el ')+esc(fechaLarga(x.plazo)||x.plazo) : 'sin plazo')+'</small></span>'+
         '<button type="button" class="bt sec chico" data-cumple="'+i+'">'+(x.hecho ? 'Marcar como pendiente' : 'Marcar cumplido')+'</button></li>';
     }).join('')+'</ul>' : '<p class="tenue" style="margin:0">Esta reunión no dejó acuerdos escritos.</p>')+'</div>'+
+    (a.prox && a.prox.f ? '<div class="aviso ok" id="comv-prox">📅 Próxima reunión: <b>'+esc(fechaLarga(a.prox.f)||a.prox.f)+'</b>'+(a.prox.h ? ' · '+esc(a.prox.h) : '')+(a.prox.l ? ' · <span data-sin-pais>'+esc(a.prox.l)+'</span>' : '')+'</div>' : '')+
     '<div class="seccion"><h3>El papel</h3><p class="ayuda" style="margin:0 0 8px">'+(rd ? 'Sale con el espacio de firma de cada asistente, para imprimirla, firmarla y mandarla a la Dirección General de Higiene y Seguridad Industrial.'
       : 'Sale con el espacio de firma de cada asistente, para imprimirla y pegarla en el Libro de Actas legalizado.')+'</p><div class="pdfv" id="comv-pdf" aria-label="Vista previa del acta"></div></div>'+
     '<div class="msg" id="comv-msg" role="status"></div>';
@@ -2498,6 +2529,730 @@ function comActaVer(id){
   };
 }
 
+/* ── 17/10/2026 · lote 16 · LA ELECCIÓN Y LAS ACTAS QUE YA TENÍAN, TAMBIÉN EN LA WEB ──────────────────────────────
+   Lo mismo que la app (COMITE-ELECCION, que viaja en mas-app.js): la convocatoria, la junta electoral, los
+   candidatos, la votación y el resultado, con su convocatoria y su acta en PDF; y el acta firmada que ya existe, subida
+   al Libro de Actas del comité (y a la carpeta «Comité de SST»). Se guarda en el mismo comité de la obra (comite.elec,
+   con su propio reloj), así la app y la web siguen la misma elección. */
+function _comElecHTML(d, toca){
+  var M=_comM(), E=M.celDe(d, toca), paso=M.celPaso(E), solo=(toca.tipo==='supervisor');
+  var nM=M.comiteDiasDeMandato(), urge=(nM!==null && nM<=60) || !(d.miembros||[]).some(function(m){ return solo || m.lado==='trabajador'; });
+  var P=['Convocatoria', 'Junta electoral', 'Candidatos', 'Votación', 'Resultado'], i=Math.min(4, paso);
+  var txt=paso===0 ? (solo ? 'Al Supervisor de SST lo eligen los trabajadores. ' : 'A los representantes de los trabajadores los eligen los propios trabajadores. ')+'Aquí va paso a paso: la convocatoria, la junta electoral, los candidatos, la votación y el acta.'
+    : (paso<6 ? 'Elección en curso: paso '+(i+1)+' de 5, '+P[i].toLowerCase()+(E.conv.dia ? '. Se vota el '+(fechaLarga(E.conv.dia)||E.conv.dia) : '')+'.'
+              : 'Elegidos el '+(fechaLarga(E.conv.dia)||E.conv.dia||'—')+'. La convocatoria, el acta de la elección y el resultado siguen aquí.');
+  return '<div class="tarj com-sola" id="com-elec"><div class="tarj-cab"><div><h2>🗳 La elección</h2><p class="sub" id="com-elec-s">'+esc(txt)+'</p></div>'+
+    '<div class="acciones"><button type="button" class="bt'+(paso===0 && !urge ? ' sec' : '')+' chico" id="com-elec-bt">'+(paso===0 ? 'Organizar la elección' : (paso<6 ? 'Seguir con la elección' : 'Ver la elección'))+'</button></div></div></div>';
+}
+var COMEL = null;
+/* 20/10/2026 · lote 20 · la elección paso por paso, como en la app: se ve un paso a la vez (los cinco arriba, para
+   saltar); los electores salen del personal; el conteo cédula por cédula (se guarda solo, de a poco) o los totales; y
+   los papeles del día: el padrón de electores, los candidatos aptos y las cédulas */
+var PELW = { paso:null, sel:[], det:false, t:null, sucio:false, guardando:false, reloj:null, gen:0, bloq:[], busca:'', ocupado:false, firmas:{} };
+var PEL_PASOS = ['La convocatoria', 'Los electores y la junta', 'Los candidatos', 'La votación', 'El resultado'];
+function _pelCss(){
+  if($('pel-css')) return;
+  var st=document.createElement('style'); st.id='pel-css';
+  st.textContent=[
+    '.pel-pasos{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}',
+    '.pel-pasos button{font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--raya);background:var(--panel);color:var(--texto);cursor:pointer}',
+    '.pel-pasos button.hecho{border-color:var(--ok);color:var(--ok)}.pel-pasos button.ahora{border-color:var(--tinta);background:var(--tinta);color:#fff;font-weight:600}',
+    '.pel-nav{display:flex;gap:8px;justify-content:space-between;margin:16px 0 0}',
+    '.pel-el{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px;max-height:340px;overflow:auto;margin:8px 0 0}',
+    '.pel-elf{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;text-align:left;font:inherit;color:var(--texto);background:var(--panel);border:1px solid var(--raya);border-radius:9px;padding:7px 10px;cursor:pointer}',
+    '.pel-elf small{grid-column:1;color:var(--gris);font-size:12px}.pel-elf b{grid-row:1/span 2;grid-column:2;align-self:center;font-size:12.5px;color:var(--ok)}.pel-elf.fuera{background:#FAFBFC}.pel-elf.fuera span{color:var(--gris)}.pel-elf.fuera b{color:var(--mal)}',
+    '.pel-cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:10px 0}',
+    '.pel-cand{display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left;font:inherit;color:var(--texto);min-height:84px;padding:12px 14px;border-radius:12px;border:1px solid var(--raya);background:var(--panel);cursor:pointer}',
+    '.pel-cand:hover{border-color:#9FB2BE}.pel-cand span{font-weight:600;color:var(--tinta)}.pel-cand b{font-size:24px;color:var(--tinta);font-variant-numeric:tabular-nums}.pel-cand.on{border-color:var(--casco);box-shadow:0 0 0 2px rgba(245,183,0,.35)}',
+    '.pel-ojo{display:block;color:var(--ojo);font-size:12px;margin-top:3px}',
+    /* 20/10/2026 · lote 21 · la votación en el celular */
+    '.pel-et{margin:0 0 6px;font-weight:600;font-size:13.5px;color:var(--tinta)}#hoja-cuerpo .chip:disabled{opacity:.45;cursor:not-allowed}',
+    '.pel-urna{border:1px solid var(--raya);border-radius:12px;padding:12px 14px;background:var(--panel)}.pel-urna.ok{border-color:var(--ok)}',
+    '.pel-barra{height:8px;border-radius:99px;background:var(--raya);overflow:hidden;margin:9px 0}.pel-barra i{display:block;height:100%;background:var(--ok);border-radius:99px}',
+    '.pel-sello{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.4px;color:var(--tinta);word-break:break-all;margin:0 0 10px}',
+    '.pel-rem{display:flex;flex-direction:column;gap:6px;max-height:440px;overflow:auto;margin:8px 0 0}',
+    '.pel-remf{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;border:1px solid var(--raya);border-radius:10px;padding:8px 10px;background:var(--panel)}',
+    '.pel-remf b{color:var(--tinta)}.pel-remf small{display:block;color:var(--gris);font-size:12px}.pel-remf em{font-style:normal;font-size:12.5px;font-weight:600;color:var(--gris);white-space:nowrap}.pel-remf em.ok{color:var(--ok)}.pel-remf em.mal{color:var(--mal)}',
+    '.pel-remacc{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}',
+    '@media (min-width:900px){.pel-remf{grid-template-columns:minmax(0,1fr) auto 118px}.pel-remf em{grid-column:3;grid-row:1;text-align:right}.pel-remacc{grid-column:2;grid-row:1;justify-content:flex-end}}'
+  ].join('\n');
+  document.head.appendChild(st);
+}
+function comEleccion(){
+  _masCss(); _yaCss(); _pelCss();
+  var M=_comM(), d=COMW.com, toca=M.comiteLoQueToca(COMW.C.n), solo=(toca.tipo==='supervisor'), obra=M.celDeObra(toca), rd=_comRD();
+  if(!solo && !planWebTrae('comite')){ navegar('plan'); return; }
+  var E=COMEL=M.celDe(d, toca);
+  PELW.paso=null; PELW.sel=[]; PELW.det=false; clearTimeout(PELW.t); PELW.sucio=false; PELW.guardando=false;
+  clearInterval(PELW.reloj); PELW.reloj=null; PELW.gen++; PELW.bloq=[]; PELW.busca=''; PELW.ocupado=false; PELW.firmas={};
+  var sel=function(id, ops, v){ return '<select id="'+id+'">'+ops.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===v ? ' selected' : '')+'>'+esc(o[1])+'</option>'; }).join('')+'</select>'; };
+  var campo=function(id, et, inp){ return '<div class="campo"><label for="'+id+'">'+et+'</label>'+inp+'</div>'; };
+  var gente=((COMW.C && COMW.C.trabs) || []).filter(function(t){ return t && t.nombre; });
+  var pasoDe=function(){ return [0, 0, 1, 2, 3, 4, 4][M.celPaso(E)] || 0; };
+  function pinta(){
+    var R=M.celResultado(E), paso=M.celPaso(E), av=paso>0 ? M.celAvisos(E, toca, gente) : [], cv=E.conv, aptos=E.cands.filter(function(x){ return x.apto; });
+    if(PELW.paso===null) PELW.paso=pasoDe();
+    var i0=PELW.paso, EL=MAS_APP.celElectores(gente, E), dentro=EL.filter(function(x){ return !x.fuera; }), fueraL=EL.filter(function(x){ return x.fuera; }), fueraK={}, jeK={};
+    fueraL.forEach(function(x){ fueraK[x.k]=1; }); E.je.forEach(function(j){ if(j.nombre) jeK[MAS_APP.celClave(j)]=1; });
+    var bloque=function(k, html){ return '<div class="pel-paso" data-p="'+k+'"'+(k===i0 ? '' : ' hidden')+'>'+html+'</div>'; };
+    var h='<div class="aviso" id="pel-norma"><b>Cómo se elige.</b> Los trabajadores eligen a sus representantes, titulares y suplentes, por votación secreta y directa, presencial o no presencial. No participa el personal de dirección y de confianza.'+_comLey('D.S. 005-2012-TR, art. 49')+
+      (obra ? '<br>En una obra de construcción rige la guía de elección de su sector, no la R.M. 245-2021-TR (lo dice su art. 2): aquí van los mismos pasos, sin imponerte sus plazos.'+_comLey(toca.ley)
+            : '<br>Convoca el sindicato mayoritario o, si no hay, el más representativo. Si no hay sindicato, o no convoca dentro de los 30 días de pedírselo, lo organiza el empleador. Entre la publicación de los candidatos y la elección median 15 días hábiles; gana la mayoría simple y el empate se resuelve por sorteo. La instalación se convoca dentro de los 10 días hábiles siguientes.'+_comLey('R.M. 245-2021-TR'))+'</div>';
+    var hecho=[!!cv.dia, E.je.some(function(j){ return j.nombre; }), aptos.length>0, R.listo, !!E.pasado];
+    h+='<div class="pel-pasos" id="pel-pasos" role="tablist" aria-label="Los pasos de la elección">'+PEL_PASOS.map(function(p, i){
+      return '<button type="button" role="tab" aria-selected="'+(i===i0)+'" class="'+(i===i0 ? 'ahora' : (hecho[i] ? 'hecho' : ''))+'" data-ir="'+i+'">'+(hecho[i] && i!==i0 ? '✓ ' : (i+1)+' · ')+esc(p)+'</button>'; }).join('')+'</div>';
+    if(av.length) h+='<div class="aviso ojo" id="pel-avisos">⚠️ <b>Para revisar</b><ul class="com-ul">'+av.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul></div>';
+    /* 1 · la convocatoria */
+    h+=bloque(0, '<div class="seccion" style="margin-top:0"><h3>1 · La convocatoria</h3>'+
+      '<div class="fila-c ya-al">'+campo('pel-fecha', 'Fecha de la convocatoria', '<input type="date" id="pel-fecha" value="'+esc(cv.fecha)+'">')+campo('pel-quien', 'Convoca', sel('pel-quien', MAS_APP.CEL_QUIEN, cv.quien))+'</div>'+
+      '<div class="fila-c ya-al">'+(solo ? '' : campo('pel-tit', 'Titulares a elegir', '<input type="number" id="pel-tit" min="1" max="6" value="'+cv.tit+'">'))+campo('pel-sup', solo ? 'Suplentes (si eligen)' : 'Suplentes', '<input type="number" id="pel-sup" min="0" max="'+(solo ? 2 : 6)+'" value="'+cv.sup+'">')+
+        campo('pel-marcas', 'Marcas por cédula', '<input type="number" id="pel-marcas" min="1" max="6" value="'+(cv.marcas||1)+'"'+(vFija() ? ' disabled title="La votación en el celular ya se abrió: las marcas no cambian."' : '')+'>')+'</div>'+
+      '<div class="fila-c ya-al">'+campo('pel-mandato', 'Mandato', sel('pel-mandato', MAS_APP.CEL_MANDATO, cv.mandato))+campo('pel-modo', 'Modalidad', sel('pel-modo', MAS_APP.CEL_MODO, cv.modo))+'</div>'+
+      '<div class="fila-c ya-al">'+campo('pel-insc', 'Inscripción de candidatos hasta', '<input type="date" id="pel-insc" value="'+esc(cv.insc)+'">')+campo('pel-pub', 'Publicación de los aptos', '<input type="date" id="pel-pub" value="'+esc(cv.pub)+'">')+'</div>'+
+      '<div class="fila-c ya-al">'+campo('pel-dia', 'Día de la elección', '<input type="date" id="pel-dia" value="'+esc(cv.dia)+'">')+campo('pel-hora', 'Desde', '<input type="time" id="pel-hora" value="'+esc(cv.hora)+'">')+campo('pel-hasta', 'Hasta', '<input type="time" id="pel-hasta" value="'+esc(cv.hasta)+'">')+'</div>'+
+      campo('pel-lugar', 'Lugar', '<input id="pel-lugar" maxlength="120" placeholder="Comedor de la obra, sala de reuniones…" value="'+esc(cv.lugar)+'">')+
+      '<p class="ayuda" id="pel-plazo" style="margin:0"></p><p class="ayuda" style="margin:6px 0 0">Cuántos recuadros marca cada elector lo dice la convocatoria: sale así en las cédulas.</p></div>');
+    /* 2 · los electores y la junta */
+    var e2='<div class="seccion" style="margin-top:0"><h3>2 · Los electores</h3>';
+    if(EL.length){
+      e2+='<p style="margin:0 0 4px"><b>'+dentro.length+'</b> '+(dentro.length===1 ? 'elector hábil' : 'electores hábiles')+' de '+EL.length+' en tu personal activo.</p>'+
+        '<p class="ayuda" style="margin:0 0 6px">No votan el personal de dirección ni el de confianza. Se marcan solos los puestos que suelen serlo (residente, administrador, gerente…): revísalo con lo que tu empresa tiene designado.</p>'+
+        (fueraL.length ? '<p class="ayuda" style="margin:0 0 6px">No votan: <span data-sin-pais>'+esc(fueraL.map(function(x){ return x.nombre; }).join(', '))+'</span></p>' : '')+
+        '<details id="pel-det"'+(PELW.det ? ' open' : '')+'><summary style="cursor:pointer;font-weight:600">Ver y cambiar quién vota</summary><div class="pel-el">'+EL.map(function(x){
+          return '<button type="button" class="pel-elf'+(x.fuera ? ' fuera' : '')+'" data-elector="'+esc(x.k)+'"><span data-sin-pais>'+esc(x.nombre)+'</span><small data-sin-pais>'+esc(x.puesto||'—')+'</small><b>'+(x.fuera ? 'No vota' : 'Vota')+'</b></button>'; }).join('')+'</div></details>'+
+        '<div class="acciones" style="justify-content:flex-start;margin:10px 0 0"><button type="button" class="bt sec chico" id="pel-padron-pdf">📄 El padrón de electores (para firmar al votar)</button></div>';
+    } else e2+='<p class="tenue" style="margin:0">Carga tu personal y la lista de los electores sale sola.</p>';
+    e2+='</div><div class="seccion"><h3>La junta electoral</h3><p class="ayuda" style="margin:0 0 8px">Conduce la elección hasta proclamar a los elegidos.'+(obra ? '' : ' Son trabajadores de 18 años o más, que no son de dirección ni de confianza, y no pueden ser candidatos ni personeros.'+_comLey('R.M. 245-2021-TR'))+'</p>'+
+      E.je.map(function(j, k){ return '<div class="fila-c ya-al">'+campo('pel-je-'+k, esc(MAS_APP.CEL_JE[k][1]), '<input id="pel-je-'+k+'" list="pel-gente" maxlength="120" value="'+esc(j.nombre)+'">')+
+        campo('pel-jed-'+k, esc(docPersonaP()), '<input id="pel-jed-'+k+'" maxlength="20" value="'+esc(j.dni)+'">')+'</div>'; }).join('')+'</div>';
+    h+=bloque(1, e2);
+    /* 3 · los candidatos */
+    h+=bloque(2, '<div class="seccion" style="margin-top:0"><h3>3 · Los candidatos</h3><p class="ayuda" style="margin:0 0 8px">Los que se inscribieron. La junta electoral revisa cada inscripción y dice si es apta.</p>'+
+      (E.cands.length ? '<ul class="com-acu" id="pel-cands">'+E.cands.map(function(x){
+        var k=MAS_APP.celClave(x), ojo=fueraK[k] ? 'Figura como personal de dirección o de confianza.' : ((jeK[k] && !obra) ? 'Está en la junta electoral.' : '');
+        return '<li><span class="com-acu-t"><b data-sin-pais>'+esc(x.nombre)+'</b><small>'+(x.puesto ? '<span data-sin-pais>'+esc(x.puesto)+'</span> · ' : '')+(x.dni ? esc(docPersonaP())+' '+esc(x.dni) : 'sin documento')+'</small>'+(ojo && x.apto ? '<span class="pel-ojo">⚠️ '+esc(ojo)+'</span>' : '')+'</span>'+
+          '<button type="button" class="bt sec chico" data-apto="'+esc(x.id)+'">'+(x.apto ? '✅ Apto' : '⛔ No apto')+'</button><button type="button" class="bt-link" data-quita="'+esc(x.id)+'">Quitar</button></li>'; }).join('')+'</ul>'
+        : '<p class="tenue" style="margin:0 0 8px">Todavía no hay candidatos.</p>')+
+      '<div class="fila-c ya-al" style="margin-top:8px">'+campo('pel-cn', 'Nombre del candidato', '<input id="pel-cn" list="pel-gente" maxlength="120">')+campo('pel-cd', esc(docPersonaP()), '<input id="pel-cd" maxlength="20">')+campo('pel-cp', 'Puesto', '<input id="pel-cp" maxlength="80">')+'</div>'+
+      '<div class="acciones" style="justify-content:flex-start;margin:0"><button type="button" class="bt sec chico" id="pel-cand-mas">＋ Agregar el candidato</button>'+
+        (aptos.length ? '<button type="button" class="bt sec chico" id="pel-aptos-pdf">📄 Los candidatos aptos (para publicar)</button><button type="button" class="bt sec chico" id="pel-cedulas-pdf">📄 Las cédulas de votación</button>' : '')+'</div></div>');
+    /* 4 · la votación */
+    var v4='<div class="seccion" style="margin-top:0"><h3>4 · La votación</h3>';
+    if(!aptos.length) v4+='<p class="tenue" style="margin:0">Primero, los candidatos aptos.</p>';
+    else {
+      /* 20/10/2026 · lote 21 · cómo se vota: en el celular de la mesa, cada uno en su celular, o en cédulas de papel */
+      var forma=vFormaDe(), uFija=vFija();
+      v4+='<p class="pel-et">Cómo se vota</p><div class="chips" role="radiogroup" aria-label="Cómo se vota" style="margin:0 0 12px">'+MAS_APP.CEL_VOTO.map(function(f){
+        return '<button type="button" role="radio" class="chip'+(forma===f[0] ? ' on' : '')+'" aria-checked="'+(forma===f[0])+'" data-forma="'+f[0]+'"'+(uFija && forma!==f[0] ? ' disabled' : '')+'>'+esc(f[1])+'</button>'; }).join('')+'</div>';
+      if(forma==='mesa') v4+=vMesaHTML();
+      else if(forma==='remoto') v4+=vRemotoHTML();
+      else {
+      var conteo=(E.vot.modo==='conteo');
+      v4+='<p class="pel-et">Cómo se cuenta</p><div class="chips" role="radiogroup" aria-label="Cómo se cuenta" style="margin:0 0 10px"><button type="button" role="radio" class="chip'+(conteo ? ' on' : '')+'" aria-checked="'+conteo+'" data-modo="conteo">🗳 Cédula por cédula</button>'+
+        '<button type="button" role="radio" class="chip'+(conteo ? '' : ' on')+'" aria-checked="'+(!conteo)+'" data-modo="totales">✍ Los totales</button></div>';
+      if(conteo){
+        var C=MAS_APP.celConteo(E), m=cv.marcas||1, elec=E.vot.electores||dentro.length||'';
+        v4+='<p class="ayuda" style="margin:0 0 4px">Al abrir el ánfora, la junta lee cada cédula en voz alta y aquí se toca lo que dice. Se guarda solo.'+(m>1 ? ' Cada cédula lleva hasta '+m+' marcas: toca las de la cédula y regístrala.' : '')+'</p>'+
+          '<div class="pel-cands" id="pel-conteo">'+aptos.map(function(x){ return '<button type="button" class="pel-cand'+(PELW.sel.indexOf(x.id)>-1 ? ' on' : '')+'" data-voto="'+esc(x.id)+'"><span data-sin-pais>'+esc(x.nombre)+'</span><b>'+(C.votos[x.id]||0)+'</b></button>'; }).join('')+'</div>'+
+          '<div class="acciones" style="justify-content:flex-start;margin:0">'+(m>1 ? '<button type="button" class="bt chico" id="pel-cedula"'+(PELW.sel.length ? '' : ' disabled')+'>✓ Registrar la cédula ('+PELW.sel.length+')</button>' : '')+
+            '<button type="button" class="bt sec chico" data-voto="b">En blanco · <b>'+C.blancos+'</b></button><button type="button" class="bt sec chico" data-voto="n">Nula · <b>'+C.nulos+'</b></button>'+
+            '<button type="button" class="bt sec chico" id="pel-deshacer"'+(C.cedulas ? '' : ' disabled')+'>↶ Deshacer la última</button></div>'+
+          '<p style="margin:10px 0 0">Cédulas contadas: <b>'+C.cedulas+'</b>'+(elec ? ' de '+elec+' electores' : '')+' <span class="tenue" id="pel-conteo-est"></span></p>'+
+          '<div class="fila-c ya-al" style="margin-top:8px">'+campo('pel-el', 'Electores hábiles', '<input type="number" id="pel-el" min="0" value="'+(E.vot.electores||'')+'" placeholder="'+(dentro.length||COMW.C.n||'')+'">')+'</div>'+
+          (R.listo ? '<div class="acciones" style="justify-content:flex-start;margin:6px 0 0"><button type="button" class="bt chico" data-ir="4">Ver el resultado ›</button></div>' : '');
+      } else {
+        v4+='<div class="fila-c ya-al">'+campo('pel-el', 'Electores hábiles', '<input type="number" id="pel-el" min="0" value="'+(E.vot.electores||'')+'" placeholder="'+(dentro.length||COMW.C.n||'')+'">')+campo('pel-vt', 'Votaron', '<input type="number" id="pel-vt" min="0" value="'+(E.vot.votantes||'')+'">')+
+          campo('pel-bl', 'En blanco', '<input type="number" id="pel-bl" min="0" value="'+(E.vot.blancos||0)+'">')+campo('pel-nu', 'Nulos', '<input type="number" id="pel-nu" min="0" value="'+(E.vot.nulos||0)+'">')+'</div>'+
+          '<div class="ges-el"><div class="ges-el-lista" style="max-height:none">'+aptos.map(function(x){ return '<label class="ges-el-f"><span class="ges-el-n"><b data-sin-pais>'+esc(x.nombre)+'</b></span><input type="number" min="0" class="pel-voto" data-id="'+esc(x.id)+'" style="width:110px" value="'+(x.votos===null ? '' : x.votos)+'" aria-label="Votos de '+esc(x.nombre)+'"></label>'; }).join('')+'</div></div>';
+      }
+      }
+      R.empates.forEach(function(em){
+        v4+='<div class="aviso ojo" style="margin-top:10px">🎲 <b>Empate en el último puesto de '+(em.en==='titular' ? 'titular' : 'suplente')+'</b> ('+em.votos+' votos). '+(obra ? 'Marca quién quedó adelante.' : 'Se resuelve por sorteo delante de los involucrados. ¿Quién lo ganó?')+
+          '<div class="acciones" style="justify-content:flex-start;margin-top:8px">'+em.ids.map(function(id){ var x=E.cands.filter(function(c){ return c.id===id; })[0]; return '<button type="button" class="bt sec chico" data-sorteo="'+esc(id)+'">'+esc(x ? x.nombre : '')+'</button>'; }).join('')+'</div></div>';
+      });
+    }
+    v4+='</div>';
+    h+=bloque(3, v4);
+    /* 5 · el resultado */
+    var r5='<div class="seccion" style="margin-top:0"><h3>5 · El resultado</h3>';
+    if(!R.listo) r5+='<p class="tenue" style="margin:0">'+(R.empates.length ? 'Sale cuando se resuelva el empate.' : 'Sale cuando estén los votos de todos los candidatos aptos.')+'</p>';
+    else {
+      r5+='<p style="margin:0 0 6px"><b>'+(solo ? 'Elegido:' : 'Titulares:')+'</b> <span data-sin-pais>'+esc(R.tit.map(function(x){ return x.nombre+' ('+x.votos+')'; }).join(', '))+'</span></p>'+
+        (R.sup.length ? '<p style="margin:0 0 6px"><b>Suplentes:</b> <span data-sin-pais>'+esc(R.sup.map(function(x){ return x.nombre+' ('+x.votos+')'; }).join(', '))+'</span></p>' : '')+
+        '<p class="ayuda" style="margin:0 0 8px">Votos válidos: '+R.validos+' · en blanco: '+(E.vot.blancos||0)+' · nulos: '+(E.vot.nulos||0)+'</p>'+
+        campo('pel-sorteo', 'Si hubo empate, cómo se resolvió (va en el acta)', '<input id="pel-sorteo" maxlength="300" value="'+esc(E.vot.sorteo)+'">')+
+        '<div class="acciones" style="justify-content:flex-start;margin:0"><button type="button" class="bt sec chico" id="pel-acta">📄 El acta de la elección</button>'+
+        (MAS_APP.celUrnaCerrada(E) ? '<button type="button" class="bt sec chico" id="pel-acta-vot2">📄 El acta de la votación</button>' : '')+
+        (E.pasado ? (solo ? '' : '<button type="button" class="bt chico" id="pel-inst">Levantar el acta de instalación</button>') : '<button type="button" class="bt chico" id="pel-padron">'+(solo ? 'Registrar al elegido en el padrón' : 'Pasar a los elegidos al padrón')+'</button>')+'</div>'+
+        (E.pasado ? '<p class="msg ok" style="margin:8px 0 0">✅ '+(solo ? 'Ya está en el padrón.' : 'Ya están en el padrón.')+(!solo && !obra && E.conv.dia ? ' El acta de instalación se convoca a más tardar el '+esc(fechaLarga(M.celMasHabiles(E.conv.dia, 10)))+' (10 días hábiles, sin contar feriados).' : '')+'</p>' : '');
+    }
+    r5+='</div>';
+    h+=bloque(4, r5);
+    h+='<div class="pel-nav">'+(i0>0 ? '<button type="button" class="bt sec chico" data-ir="'+(i0-1)+'">‹ Atrás</button>' : '<span></span>')+
+      (i0<4 ? '<button type="button" class="bt chico" id="pel-sig">Siguiente: '+esc(PEL_PASOS[i0+1].toLowerCase())+' ›</button>' : '')+'</div>'+
+      '<div class="msg" id="pel-msg" role="status"></div>'+
+      '<datalist id="pel-gente">'+(dentro.length ? dentro : gente).map(function(t){ return '<option value="'+esc(t.nombre)+'">'; }).join('')+'</datalist>';
+    $('hoja-cuerpo').innerHTML=h;
+    plazo();
+    ['pel-pub', 'pel-dia'].forEach(function(id){ if($(id)) $(id).addEventListener('input', plazo); });
+    var c=$('hoja-cuerpo');
+    var ir=function(i){ leer(); PELW.paso=Math.max(0, Math.min(4, i)); pinta(); try{ $('pel-pasos').scrollIntoView({ block:'nearest' }); }catch(e){} };
+    Array.prototype.forEach.call(c.querySelectorAll('[data-ir]'), function(b){ b.onclick=function(){ ir(+b.getAttribute('data-ir')); }; });
+    if($('pel-det')) $('pel-det').addEventListener('toggle', function(){ PELW.det=this.open; });
+    Array.prototype.forEach.call(c.querySelectorAll('[data-elector]'), function(b){ b.onclick=function(){
+      leer(); var k=b.getAttribute('data-elector'), x=MAS_APP.celElectores(gente, E).filter(function(y){ return y.k===k; })[0]; if(!x) return;
+      var fuera=!x.fuera; if(fuera===x.dir) delete E.excl[k]; else E.excl[k]=fuera ? 1 : 0; PELW.det=true; guardar(fuera ? x.nombre+' no vota.' : x.nombre+' vota.');
+    }; });
+    Array.prototype.forEach.call(c.querySelectorAll('[data-apto]'), function(b){ b.onclick=function(){ if(vUrnaFija()) return; leer(); E.cands.forEach(function(x){ if(x.id===b.getAttribute('data-apto')) x.apto=x.apto ? 0 : 1; }); if(E.vot.modo==='conteo') MAS_APP.celConteoAplicar(E); guardar(); }; });
+    Array.prototype.forEach.call(c.querySelectorAll('[data-quita]'), function(b){ b.onclick=function(){ if(vUrnaFija()) return; leer(); E.cands=E.cands.filter(function(x){ return x.id!==b.getAttribute('data-quita'); }); guardar(); }; });
+    Array.prototype.forEach.call(c.querySelectorAll('[data-sorteo]'), function(b){ b.onclick=function(){
+      leer(); var min=0; E.cands.forEach(function(x){ if(x.s>0 && (!min || x.s<min)) min=x.s; });
+      E.cands.forEach(function(x){ if(x.id===b.getAttribute('data-sorteo') && !x.s) x.s=min ? min-1 : 1000; });
+      if(M.celResultado(E).listo) PELW.paso=4;
+      guardar('Quedó anotado quién ganó el sorteo.');
+    }; });
+    Array.prototype.forEach.call(c.querySelectorAll('[data-modo]'), function(b){ b.onclick=function(){
+      var m=b.getAttribute('data-modo'); if(m===E.vot.modo) return; leer();
+      var cambia=function(){ E.vot.modo=m; if(m==='conteo') MAS_APP.celConteoAplicar(E); PELW.sel=[]; guardar(); };
+      if(m==='conteo' && !E.vot.log.length && E.cands.some(function(x){ return x.votos; }))
+        confirmar('¿Contar cédula por cédula?', 'Los totales escritos se reemplazan por el conteo, que empieza en cero.', {si:'Sí, contar'}).then(function(si){ if(si) cambia(); });
+      else cambia();
+    }; });
+    /* el conteo: cada toque es una cédula; se guarda solo, de a poco */
+    Array.prototype.forEach.call(c.querySelectorAll('[data-voto]'), function(b){ b.onclick=function(){
+      var x=b.getAttribute('data-voto'), m=E.conv.marcas||1;
+      if(x!=='b' && x!=='n' && m>1){
+        var i=PELW.sel.indexOf(x);
+        if(i>-1) PELW.sel.splice(i, 1); else if(PELW.sel.length<m) PELW.sel.push(x); else { toast('Esta cédula ya tiene '+m+' marcas.'); return; }
+        pinta(); return;
+      }
+      E.vot.log.push(x); PELW.sel=[]; MAS_APP.celConteoAplicar(E); pinta(); guardarConteo();
+    }; });
+    if($('pel-cedula')) $('pel-cedula').onclick=function(){ if(!PELW.sel.length) return; E.vot.log.push(PELW.sel.join('+')); PELW.sel=[]; MAS_APP.celConteoAplicar(E); pinta(); guardarConteo(); };
+    if($('pel-deshacer')) $('pel-deshacer').onclick=function(){ if(!E.vot.log.length) return; E.vot.log.pop(); MAS_APP.celConteoAplicar(E); pinta(); guardarConteo(); };
+    var nom=function(idN, idD, idP){ if(!$(idN)) return; $(idN).addEventListener('change', function(){
+      var n=MAS_APP.normNom(this.value), t=gente.filter(function(x){ return MAS_APP.normNom(x.nombre)===n; })[0]; if(!t) return;
+      if(idD && $(idD) && !$(idD).value) $(idD).value=t.dni||''; if(idP && $(idP) && !$(idP).value) $(idP).value=t.puesto||'';
+    }); };
+    E.je.forEach(function(j, k){ nom('pel-je-'+k, 'pel-jed-'+k); }); nom('pel-cn', 'pel-cd', 'pel-cp');
+    if($('pel-cand-mas')) $('pel-cand-mas').onclick=function(){
+      if(vUrnaFija()) return;
+      leer(); var n=gesTxt($('pel-cn').value).slice(0, 120);
+      if(n.length<3) return _masMal($('pel-msg'), 'Escribe el nombre completo del candidato.', 'pel-cn');
+      if(E.cands.some(function(x){ return MAS_APP.normNom(x.nombre)===MAS_APP.normNom(n); })) return _masMal($('pel-msg'), 'Ese nombre ya es candidato.', 'pel-cn');
+      E.cands.push({ id:masId('cc'), nombre:n, dni:gesTxt($('pel-cd').value).slice(0, 20), puesto:gesTxt($('pel-cp').value).slice(0, 80), apto:1, votos:(E.vot.modo==='conteo' ? 0 : null), s:0 });
+      PELW.paso=2; guardar('Candidato agregado.');
+    };
+    if($('pel-sig')) $('pel-sig').onclick=function(){
+      leer();
+      if(PELW.paso===0 && !/^\d{4}-\d{2}-\d{2}$/.test(E.conv.dia)) return _masMal($('pel-msg'), 'Falta el día de la elección.', 'pel-dia');
+      PELW.paso++; guardar();
+    };
+    if($('pel-padron-pdf')) $('pel-padron-pdf').onclick=function(){ leer(); pdf('celPadronPdf'); };
+    if($('pel-aptos-pdf')) $('pel-aptos-pdf').onclick=function(){ leer(); pdf('celAptosPdf'); };
+    if($('pel-cedulas-pdf')) $('pel-cedulas-pdf').onclick=function(){ leer(); pdf('celCedulasPdf', E.vot.electores || dentro.length || COMW.C.n || 0); };
+    if($('pel-acta')) $('pel-acta').onclick=function(){ leer(); pdf('celActaPdf'); };
+    if($('pel-padron')) $('pel-padron').onclick=function(){
+      leer();
+      var antes=(COMW.com.miembros||[]).filter(function(m){ return solo || m.lado==='trabajador'; }).length;
+      confirmar(solo ? '¿Registrar al supervisor elegido?' : '¿Pasar a los elegidos al padrón?', (solo ? 'Queda como el Supervisor de SST.' : 'Entran como representantes de los trabajadores, titulares y suplentes.')+(antes ? ' Los que estaban de ese lado ('+antes+') salen del padrón.' : ''),
+        {si:solo ? 'Sí, registrarlo' : 'Sí, pasarlos'}).then(function(si){
+        if(!si) return;
+        comCambiar('padron', function(dd){ vJunta(dd, E); MAS_APP.celAlPadron(dd, dd.elec, toca); dd.tipo=toca.tipo; }).then(function(dd){
+          E=COMEL=_comM().celDe(dd, toca); PELW.paso=4; toast(solo ? 'Registrado en el padrón.' : 'En el padrón.'); comPintar(); pinta();
+        }, function(e){ _masMal($('pel-msg'), 'No se pudo guardar. '+_comNo(e)); });
+      });
+    };
+    if($('pel-inst')) $('pel-inst').onclick=function(){ cerrarHoja(); COMW.borr=null; comActaForm(null, '', 'instalacion'); };
+    /* 20/10/2026 · lote 21 · la votación en el celular */
+    Array.prototype.forEach.call(c.querySelectorAll('[data-forma]'), function(b){ b.onclick=function(){ vForma(b.getAttribute('data-forma')); }; });
+    if($('pel-rem-abrir')) $('pel-rem-abrir').onclick=vRemAbrir;
+    if($('pel-urna-cerrar')) $('pel-urna-cerrar').onclick=vCerrar;
+    if($('pel-urna-anular')) $('pel-urna-anular').onclick=vAnular;
+    if($('pel-urna-act')) $('pel-urna-act').onclick=function(){ vActualizar(true); };
+    if($('pel-rem-ced')) $('pel-rem-ced').onclick=vCedulas;
+    if($('pel-rem-busca')) $('pel-rem-busca').addEventListener('input', function(){ PELW.busca=this.value; vLista(); });
+    if($('pel-acta-vot')) $('pel-acta-vot').onclick=vActa;
+    if($('pel-acta-vot2')) $('pel-acta-vot2').onclick=vActa;
+    if($('pel-acta-subir')) $('pel-acta-subir').onclick=function(){ vActaSubir(false); };
+    if($('pel-sello-ok')) $('pel-sello-ok').onclick=vSello;
+    vLista(); vReloj();
+  }
+  function plazo(){
+    var p=$('pel-plazo'); if(!p) return;
+    if(obra){ p.textContent=''; return; }
+    var pub=($('pel-pub')||{}).value||'', dia=($('pel-dia')||{}).value||'';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(pub)){ p.textContent='Pon la publicación de los candidatos y te digo desde qué día puede ser la elección.'; return; }
+    var n=/^\d{4}-\d{2}-\d{2}$/.test(dia) ? M.celHabiles(pub, dia) : null;
+    p.textContent='La elección puede ser desde el '+(fechaLarga(M.celMasHabiles(pub, 16))||'')+' (15 días hábiles después de publicar a los candidatos, sin contar feriados).'+(n!==null ? (n>=15 ? ' ✅ ' : ' ⚠️ ')+'Hasta el día elegido: '+n+(n===1 ? ' día hábil.' : ' días hábiles.') : '');
+  }
+  function leer(){
+    var v=function(id){ return $(id) ? $(id).value : ''; }, cv=E.conv;
+    if(!$('pel-fecha')) return;
+    cv.fecha=v('pel-fecha'); cv.quien=v('pel-quien')||cv.quien;
+    if(!solo) cv.tit=Math.min(6, Math.max(1, parseInt(v('pel-tit'), 10)||cv.tit));
+    cv.sup=Math.min(solo ? 2 : 6, Math.max(0, parseInt(v('pel-sup'), 10)||0));
+    if($('pel-marcas') && !vFija()) cv.marcas=Math.min(6, Math.max(1, parseInt(v('pel-marcas'), 10)||1));
+    cv.mandato=v('pel-mandato')||cv.mandato; cv.modo=v('pel-modo')||cv.modo; cv.insc=v('pel-insc'); cv.pub=v('pel-pub'); cv.dia=v('pel-dia');
+    cv.hora=v('pel-hora')||cv.hora; cv.hasta=v('pel-hasta')||cv.hasta; cv.lugar=gesTxt(v('pel-lugar')).slice(0, 120);
+    E.je.forEach(function(j, k){ j.nombre=gesTxt(v('pel-je-'+k)).slice(0, 120); j.dni=gesTxt(v('pel-jed-'+k)).slice(0, 20); });
+    var num=function(id){ return Math.max(0, parseInt(v(id), 10)||0); };
+    if($('pel-el')) E.vot.electores=num('pel-el');
+    if($('pel-vt')){ E.vot.votantes=num('pel-vt'); E.vot.blancos=num('pel-bl'); E.vot.nulos=num('pel-nu'); }
+    Array.prototype.forEach.call(document.querySelectorAll('.pel-voto'), function(inp){ var id=inp.getAttribute('data-id'), x=String(inp.value||'').trim(); E.cands.forEach(function(c){ if(c.id===id) c.votos=(x==='' ? null : Math.max(0, parseInt(x, 10)||0)); }); });
+    if($('pel-sorteo')) E.vot.sorteo=gesTxt(v('pel-sorteo')).slice(0, 300);
+  }
+  function guardar(ok, callado){
+    var m=$('pel-msg'), antesMsg=(callado && m && m.textContent) ? [m.textContent, m.className] : null; if(!callado) _masDice(m, 'Guardando…');
+    var bt=$('pel-ok'); if(bt) bt.disabled=true;
+    clearTimeout(PELW.t); PELW.sucio=false;
+    return comCambiar(null, function(dd){ vJunta(dd, E); }).then(function(dd){
+      if(bt) bt.disabled=false;
+      var antes=PELW.paso, p=pasoDe();
+      E=COMEL=_comM().celDe(dd, toca);
+      /* lo que se guarda en un paso lo deja abierto; si con eso avanzó la elección (los votos, el resultado), se pasa a lo que sigue */
+      if(antes!==null && p>antes && antes>=2) PELW.paso=p;
+      comPintar(); pinta();
+      if(!callado) _masDice($('pel-msg'), ok||'Guardado.', 'ok'); else if(antesMsg && $('pel-msg')){ $('pel-msg').textContent=antesMsg[0]; $('pel-msg').className=antesMsg[1]; }
+    }, function(e){ if(bt) bt.disabled=false; _masMal($('pel-msg'), 'No se pudo guardar. '+_comNo(e)); });
+  }
+  /* el conteo se guarda solo: al dejar de tocar un momento (y otra vez si se siguió tocando mientras subía) */
+  function guardarConteo(){
+    PELW.sucio=true; clearTimeout(PELW.t);
+    var est=$('pel-conteo-est'); if(est) est.textContent='· sin guardar';
+    PELW.t=setTimeout(function sube(){
+      if(PELW.guardando){ PELW.t=setTimeout(sube, 400); return; }
+      PELW.guardando=true; PELW.sucio=false;
+      var foto=JSON.parse(JSON.stringify(E));
+      comCambiar(null, function(dd){ vJunta(dd, foto); }).then(function(){
+        PELW.guardando=false; comPintar();
+        var est2=$('pel-conteo-est'); if(est2) est2.textContent=PELW.sucio ? '· sin guardar' : '· guardado';
+        if(PELW.sucio){ clearTimeout(PELW.t); PELW.t=setTimeout(sube, 300); }
+      }, function(e){ PELW.guardando=false; PELW.sucio=true; _masMal($('pel-msg'), 'No se pudo guardar el conteo. '+_comNo(e)+' Sigue contando: se vuelve a intentar.'); PELW.t=setTimeout(sube, 3000); });
+    }, 900);
+  }
+  /* ── 20/10/2026 · lote 21 · LA VOTACIÓN EN EL CELULAR, DESDE LA WEB ─────────────────────────────────────────────────
+     «En el celular de la mesa»: se vota en ese celular, con la app; aquí se ve cómo va (lo que ese celular ya subió)
+     y, al cerrar, el resultado y el acta. «Cada uno en su celular»: todo desde aquí: abrir (los códigos quedan en este
+     navegador, nunca en el servidor), repartirlos (las cédulas personales con su QR, el enlace por WhatsApp), seguir,
+     cerrar y el acta, con las firmas que guardó el servidor. Mientras se mira la votación abierta, «cómo va» cada 20
+     segundos. Lo que se guarda se junta con lo de la nube (celElecFusion): la urna del celular no se pisa. */
+  function vFija(){ return MAS_APP.celUrnaAbierta(E) || MAS_APP.celUrnaCerrada(E); }
+  function vUrnaFija(){
+    if(!vFija()) return false;
+    _masMal($('pel-msg'), MAS_APP.celUrnaAbierta(E) ? 'La votación está abierta: los candidatos ya no cambian. Para cambiar uno, anúlala primero.' : 'La votación ya se contó: los candidatos ya no cambian.');
+    return true;
+  }
+  function vFormaDe(){ return (E.vot.modo==='mesa' || E.vot.modo==='remoto') ? E.vot.modo : 'papel'; }
+  function vMal(t){ _masMal($('pel-msg'), t); }
+  function vSinT(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+  function vJunta(dd, x){ var foto=JSON.parse(JSON.stringify(x)); foto.ts=Date.now(); dd.elec=MAS_APP.celElecFusion(foto, dd.elec); }
+  /* los códigos de cada elector: solo en este navegador */
+  function vCods(id){ try{ var v=JSON.parse(localStorage.getItem('sstp_vcod_'+id)||'null'); return (v && typeof v==='object') ? v : null; }catch(e){ return null; } }
+  function vCodsGuardar(id, c){ try{ localStorage.setItem('sstp_vcod_'+id, JSON.stringify(c)); return true; }catch(e){ return false; } }
+  /* la llave que conoce el servidor: «e» + el lugar del elector en el padrón del día (y de vuelta) */
+  function vKsDe(u, k){ for(var i=0; i<u.pad.length; i++) if(u.pad[i].k===k) return 'e'+(i+1); return ''; }
+  function vKsA(u, ks){ var m=/^e(\d+)$/.exec(String(ks||'')), x=m ? u.pad[+m[1]-1] : null; return x ? x.k : ''; }
+  function vMotivo(x){
+    var T={ sin_cuenta:'Vuelve a entrar con tu cuenta.', no_eres_miembro:'Tu cuenta no es del equipo de esta obra.', no_esta:'Esa votación no está en el servidor.',
+            cierra_pasado:'La hora de cierre tiene que ser más adelante (por lo menos dentro de 10 minutos).', cierra_lejos:'La hora de cierre puede ser, como mucho, dentro de 30 días.',
+            sin_candidatos:'Faltan los candidatos aptos.', sin_electores:'Falta el padrón.', electores_repetidos:'Hay electores repetidos en el padrón.', electores_raros:'El padrón no se pudo preparar. Inténtalo otra vez.',
+            no_abierta:'La votación ya no está abierta.', ya_voto_o_no_esta:'Esa persona ya votó.', repetido:'Inténtalo otra vez.', anulada:'La votación se anuló.', abierta:'La votación sigue abierta.', cerrada:'La votación ya se cerró.' };
+    if(x===404) return 'La votación desde el celular todavía no está activa en el servidor. Mientras tanto, usa «En el celular de la mesa».';
+    if(x && x.portal) return x.portal;
+    return T[x] || (typeof x==='number' ? porQueFallo(x) : 'No hubo conexión o el servidor no respondió. Inténtalo otra vez.');
+  }
+  /* el cierre que se propone: el día y la hora «hasta» de la convocatoria; si eso ya pasó, dentro de 8 horas */
+  function vCierreDef(){
+    var dia=E.conv.dia, hasta=E.conv.hasta||'17:00', ms=dia ? new Date(dia+'T'+hasta+':00').getTime() : 0;
+    if(!(ms>Date.now()+15*60000)) ms=Date.now()+8*3600000;
+    return ms;
+  }
+  function vAnulHTML(){
+    var x=(E.vot.anul||[]).slice(-1)[0]; if(!x) return '';
+    return '<div class="aviso ojo" style="margin:0 0 10px">⚠️ La votación abierta el '+esc(MAS_APP.celFH(x.ab))+' se anuló: sus cédulas no se cuentan.</div>';
+  }
+  function vEstHTML(u){
+    var n=u.pad.length, v=MAS_APP.celUrnaCuenta(u), pc=n ? Math.round(v*100/n) : 0;
+    return '<div class="pel-urna" id="pel-urna"><p style="margin:0">🗳 <b>Votación abierta</b> · '+(u.modo==='remoto' ? 'cada uno en su celular, hasta el '+esc(MAS_APP.celFH(u.cierra)) : 'en el celular de la mesa, desde las '+esc(MAS_APP.celHora(u.ab)))+'</p>'+
+      '<div class="pel-barra" role="progressbar" aria-label="Votaron" aria-valuemin="0" aria-valuemax="'+n+'" aria-valuenow="'+v+'"><i style="width:'+pc+'%"></i></div>'+
+      '<p style="margin:0">Votaron <b id="pel-urna-v">'+v+'</b> de <b>'+n+'</b> <span class="tenue">· '+(u.modo==='mesa' ? 'lo que el celular de la mesa ya subió' : 'se actualiza solo')+' ·</span> <button type="button" class="bt-link" id="pel-urna-act">↻ Actualizar</button></p></div>';
+  }
+  function vMesaHTML(){
+    var u=(E.vot.urna && E.vot.urna.modo==='mesa') ? E.vot.urna : null;
+    if(!u){
+      var pad=MAS_APP.celPadronDe(gente, E);
+      return vAnulHTML()+'<p class="ayuda" style="margin:0 0 8px">Un celular de la mesa hace de ánfora, con la app: la junta busca a cada elector en el padrón, el elector firma en la pantalla y vota solo, a pantalla completa. Su voto se guarda sin su nombre, sin la hora y en un orden al azar. Funciona sin internet.</p>'+
+        '<p style="margin:0 0 10px"><b>'+pad.length+'</b> '+(pad.length===1 ? 'elector en el padrón.' : 'electores en el padrón.')+'</p>'+
+        '<div class="aviso" id="pel-mesa-como">📱 <b>El día de la elección, en el celular de la mesa:</b> Comité › La elección › 4 · La votación › «Abrir la votación en este celular». Desde aquí ves cómo va y, al cerrar, el resultado y el acta.</div>';
+    }
+    if(u.ce) return vCerradaHTML(u);
+    return vEstHTML(u)+'<p class="ayuda" style="margin:8px 0 0">Las cédulas están en el celular de la mesa: ahí se vota y ahí se cierra la votación.</p>'+
+      '<div class="acciones" style="justify-content:flex-start;margin:10px 0 0"><button type="button" class="bt sec chico" id="pel-urna-anular">Anular la votación</button></div>';
+  }
+  function vRemotoHTML(){
+    var u=(E.vot.urna && E.vot.urna.modo==='remoto') ? E.vot.urna : null;
+    if(!u){
+      var pad=MAS_APP.celPadronDe(gente, E), sinDoc=pad.filter(function(x){ return !x.dni; }).length, ms=vCierreDef();
+      return vAnulHTML()+'<p class="ayuda" style="margin:0 0 8px">Cada elector vota desde su celular con su código personal: escanea el QR de su cédula personal o abre el enlace que le mandas por WhatsApp. No necesita cuenta ni instalar nada. Confirma su documento, firma y vota; su voto se guarda sin su nombre. Se necesita internet.</p>'+
+        '<p style="margin:0 0 10px"><b>'+pad.length+'</b> '+(pad.length===1 ? 'elector en el padrón' : 'electores en el padrón')+(sinDoc ? ' · '+sinDoc+' sin documento: votan solo con su código' : '')+'.</p>'+
+        '<div class="fila-c ya-al">'+campo('pel-cie-d', 'Se vota hasta el', '<input type="date" id="pel-cie-d" value="'+esc(MAS_APP.celDiaDe(ms))+'">')+campo('pel-cie-h', 'a las', '<input type="time" id="pel-cie-h" value="'+esc(MAS_APP.celHora(ms))+'">')+'</div>'+
+        '<div class="acciones" style="justify-content:flex-start;margin:0"><button type="button" class="bt chico" id="pel-rem-abrir">📲 Abrir la votación</button></div>';
+    }
+    if(u.ce) return vCerradaHTML(u);
+    var cods=vCods(u.id);
+    return vEstHTML(u)+
+      (cods ? '<div class="acciones" style="justify-content:flex-start;margin:10px 0 0"><button type="button" class="bt sec chico" id="pel-rem-ced">📄 Las cédulas personales (para imprimir)</button></div>'
+            : '<p class="ayuda" style="margin:10px 0 0">Los códigos están en el equipo donde se abrió la votación. Desde aquí, al que le falte el suyo, dale «Nuevo código».</p>')+
+      '<div class="campo" style="margin:12px 0 0"><label for="pel-rem-busca">Los electores</label><input id="pel-rem-busca" placeholder="Nombre o documento" autocomplete="off" value="'+esc(PELW.busca)+'"></div>'+
+      '<div class="pel-rem" id="pel-rem-lista"></div>'+
+      '<div class="acciones" style="justify-content:flex-start;margin:12px 0 0"><button type="button" class="bt chico" id="pel-urna-cerrar">🔒 Cerrar la votación ahora</button><button type="button" class="bt sec chico" id="pel-urna-anular">Anular la votación</button></div>';
+  }
+  function vCerradaHTML(u){
+    var n=u.pad.length, v=MAS_APP.celUrnaCuenta(u), mesa=(u.modo==='mesa'), acta=/^https:\/\//.test(u.acta||'') ? u.acta : '';
+    return '<div class="pel-urna ok" id="pel-urna"><p style="margin:0">✅ <b>Votación cerrada</b> · '+esc(MAS_APP.celFH(u.ce))+(mesa ? ' · en el celular de la mesa' : ' · cada uno en su celular')+'</p>'+
+        '<p style="margin:6px 0 0">Votaron <b>'+v+'</b> de <b>'+n+'</b> · cédulas en la urna: <b>'+u.ced.length+'</b>'+(u.sola ? ' · se cerró sola, a la hora fijada' : '')+'</p></div>'+
+      '<p class="ayuda" style="margin:10px 0 2px">Código de integridad:</p><p class="pel-sello" id="pel-sello">'+esc(u.sello ? MAS_APP.celSelloLindo(u.sello) : '—')+'</p>'+
+      '<div class="acciones" style="justify-content:flex-start;margin:0">'+
+        (acta ? '<a class="bt chico" id="pel-acta-ver" href="'+esc(acta)+'" target="_blank" rel="noopener">📄 El acta de la votación'+(mesa ? ' (con las firmas)' : '')+'</a>' : '')+
+        '<button type="button" class="bt '+(acta ? 'sec ' : '')+'chico" id="pel-acta-vot">'+(acta ? '📄 Armarla de nuevo' : '📄 El acta de la votación')+'</button>'+
+        '<button type="button" class="bt sec chico" id="pel-sello-ok">🔎 Comprobar el código</button>'+
+        (!acta && !mesa ? '<button type="button" class="bt sec chico" id="pel-acta-subir">☁️ Subir el acta a la carpeta del comité</button>' : '')+'</div>'+
+      (acta ? '<p class="ayuda" style="margin:8px 0 0">✓ El acta está en la carpeta del comité.</p>'
+            : (mesa ? '<p class="ayuda" style="margin:8px 0 0">Las firmas del padrón están en el celular de la mesa: el acta con las firmas sale de ahí (se sube sola al cerrar, si hay señal). Desde aquí sale sin ellas.</p>' : ''))+
+      (M.celResultado(E).listo ? '<div class="acciones" style="justify-content:flex-start;margin:10px 0 0"><button type="button" class="bt chico" data-ir="4">Ver el resultado ›</button></div>' : '');
+  }
+  /* los electores, con lo de cada uno: votó, pendiente o bloqueado (puso mal su documento cinco veces) */
+  function vLista(){
+    var c=$('pel-rem-lista'), u=E.vot.urna; if(!c || !u || u.modo!=='remoto' || u.ce) return;
+    var cods=vCods(u.id)||{}, q=vSinT(PELW.busca).trim();
+    var L=u.pad.filter(function(x){ return !q || vSinT(x.nombre).indexOf(q)>-1 || String(x.dni||'').indexOf(q)>-1; });
+    c.innerHTML=L.slice(0, 150).map(function(x){
+      var t=u.vot[x.k], bl=PELW.bloq.indexOf(x.k)>-1, k=esc(x.k);
+      return '<div class="pel-remf"><span><b data-sin-pais>'+esc(x.nombre)+'</b><small data-sin-pais>'+esc(x.dni ? docPersonaP()+' '+x.dni : 'sin documento')+'</small></span>'+
+        (t ? '<em class="ok">✓ Votó · '+esc(MAS_APP.celHora(t))+'</em>' : (bl ? '<em class="mal" title="Puso mal su documento cinco veces: dale «Nuevo código».">⛔ Bloqueado</em>' : '<em>Pendiente</em>'))+
+        (t ? '' : '<span class="pel-remacc">'+(cods[x.k] && !bl ? '<button type="button" class="bt sec chico" data-rem-wa="'+k+'">💬 WhatsApp</button><button type="button" class="bt sec chico" data-rem-copia="'+k+'">🔗 Copiar el enlace</button>' : '')+
+          '<button type="button" class="bt sec chico" data-rem-nuevo="'+k+'">🔑 Nuevo código</button></span>')+'</div>';
+    }).join('')+(L.length>150 ? '<p class="ayuda" style="margin:4px 0 0">Escribe más para ver al resto.</p>' : '')+(!L.length ? '<p class="ayuda" style="margin:4px 0 0">Nadie con ese nombre en el padrón.</p>' : '');
+    Array.prototype.forEach.call(c.querySelectorAll('[data-rem-wa]'), function(b){ b.onclick=function(){ vWhatsApp(b.getAttribute('data-rem-wa')); }; });
+    Array.prototype.forEach.call(c.querySelectorAll('[data-rem-copia]'), function(b){ b.onclick=function(){ vCopiar(b.getAttribute('data-rem-copia')); }; });
+    Array.prototype.forEach.call(c.querySelectorAll('[data-rem-nuevo]'), function(b){ b.onclick=function(){ vNuevoCod(b.getAttribute('data-rem-nuevo')); }; });
+  }
+  /* mientras se mira la votación abierta: «cómo va», al entrar y cada 20 segundos */
+  function vReloj(){
+    var u=E.vot.urna;
+    if(!u || u.ce || PELW.paso!==3 || !$('pel-urna')){ clearInterval(PELW.reloj); PELW.reloj=null; return; }
+    if(PELW.reloj) return;
+    var gen=PELW.gen;
+    PELW.reloj=setInterval(function(){
+      var u2=E.vot.urna;
+      if(gen!==PELW.gen || !HOJA.abierta || !$('pel-urna') || !u2 || u2.ce || PELW.paso!==3){ clearInterval(PELW.reloj); PELW.reloj=null; return; }
+      vActualizar(false);
+    }, 20000);
+    vActualizar(false);
+  }
+  function vActualizar(aMano){ var u=E.vot.urna; if(!u || u.ce) return Promise.resolve(); return u.modo==='remoto' ? vRemEstado(aMano) : vMesaEstado(aMano); }
+  function vRefrescar(){
+    var b=$('pel-urna'), u=E.vot.urna; if(!b || !u || u.ce){ pinta(); return; }
+    b.outerHTML=vEstHTML(u);
+    if($('pel-urna-act')) $('pel-urna-act').onclick=function(){ vActualizar(true); };
+    vLista();
+  }
+  /* la mesa: lo que ese celular ya subió a la nube (quién votó; si cerró, el resultado) */
+  function vMesaEstado(aMano){
+    var u=E.vot.urna; if(!u || u.modo!=='mesa' || u.ce) return Promise.resolve();
+    return estadoLeerP(_creClaveCom()).then(function(fila){
+      var srv=_comDoc(fila && fila.valor);
+      if(!srv.elec || !E.vot.urna || E.vot.urna.id!==u.id) return;
+      var antes=JSON.stringify([E.vot.urna, E.vot.anul]);
+      E=COMEL=_comM().celDe({ elec:MAS_APP.celElecFusion(JSON.parse(JSON.stringify(E)), srv.elec) }, toca);
+      if(JSON.stringify([E.vot.urna, E.vot.anul])===antes){ if(aMano) toast('Al día.'); return; }
+      COMW.com=srv; comPintar();
+      if(!E.vot.urna || E.vot.urna.ce){ clearInterval(PELW.reloj); PELW.reloj=null; if(E.vot.urna && M.celResultado(E).listo) PELW.paso=4; pinta(); }
+      else vRefrescar();
+    }, function(e){ if(aMano) vMal('No se pudo actualizar. '+_comNo(e)); });
+  }
+  /* cada uno en su celular: lo pregunta al servidor */
+  function vRemEstado(aMano){
+    var u=E.vot.urna; if(!u || u.modo!=='remoto' || u.ce) return Promise.resolve();
+    return sbRpc('sst_votacion_estado', { p_id:u.id }).then(function(j){
+      if(!j || !j.ok){ if(aMano) vMal('No se pudo actualizar. '+vMotivo(j && j.motivo)); return; }
+      var u2=E.vot.urna; if(!u2 || u2.id!==u.id || u2.ce) return;
+      PELW.bloq=(Array.isArray(j.bloqueados) ? j.bloqueados : []).map(function(ks){ return vKsA(u2, ks); }).filter(Boolean);
+      if(j.estado==='vencida' || j.estado==='cerrada') return vRemResultado();
+      if(j.estado==='anulada') return vAnulado(u2, 'La votación se anuló desde otro equipo.');
+      var vot={}; (j.quienes||[]).forEach(function(q){ var t=Date.parse(q.en), k=vKsA(u2, q.k); if(k && t) vot[k]=t; });
+      var cambio=Object.keys(vot).length!==Object.keys(u2.vot).length || Object.keys(vot).some(function(k){ return u2.vot[k]!==vot[k]; });
+      if(!cambio){ if(aMano) toast('Al día.'); vLista(); return; }
+      u2.vot=vot; vRefrescar();
+      return vSubir();
+    }, function(e){ if(aMano) vMal('No se pudo actualizar. '+vMotivo(e)); });
+  }
+  /* quién votó, a la nube (para que el celular también lo vea), sin repintar la hoja */
+  function vSubir(){
+    var foto=JSON.parse(JSON.stringify(E));
+    return comCambiar(null, function(dd){ vJunta(dd, foto); }).then(function(dd){
+      E=COMEL=_comM().celDe(dd, toca); comPintar();
+      var u=E.vot.urna; if(!u || u.ce) pinta(); else vRefrescar();
+    }, function(){ /* se vuelve a intentar en la próxima vuelta */ });
+  }
+  function vRemResultado(){
+    var u=E.vot.urna; if(!u || u.modo!=='remoto' || u.ce) return Promise.resolve();
+    return sbRpc('sst_votacion_resultado', { p_id:u.id }).then(function(j){ if(j && j.ok) return vRemCerrado(j, false); }, function(){});
+  }
+  /* lo que devuelve el servidor al cerrar: quién votó y cuándo, las cédulas en su orden al azar, el código y las firmas */
+  function vRemCerrado(j, subirActa){
+    var u=E.vot.urna; if(!u || u.id!==j.id || u.ce) return;
+    var vot={}, F={};
+    (j.electores||[]).forEach(function(e){ var k=e && vKsA(u, e.k); if(!k) return; var t=Date.parse(e.en); if(t) vot[k]=t; if(e.firma) F[k]=e.firma; });
+    u.vot=vot; u.ce=Date.parse(j.cerrada_en)||Date.now(); u.sola=j.sola ? 1 : 0; u.sello=String(j.sello||'');
+    u.ced=(j.cedulas||[]).slice().sort(function(a, b){ return (a.n||0)-(b.n||0); }).map(function(c){ return c.b ? 'b' : MAS_APP.celCedulaTexto(Array.isArray(c.m) ? c.m : [], false); });
+    MAS_APP.celUrnaAplicar(E); PELW.firmas[u.id]=F;
+    clearInterval(PELW.reloj); PELW.reloj=null;
+    return guardar('Votación cerrada: '+u.ced.length+(u.ced.length===1 ? ' cédula.' : ' cédulas.')).then(function(){
+      var u2=E.vot.urna; if(!u2 || !u2.ce) return;
+      MAS_APP.celSello(u2.id, u2.ced).then(function(hx){ if(hx && hx!==u2.sello) vMal('⚠️ El código de integridad no coincide: las cédulas que llegaron no dan el código que calculó el servidor. Vuelve a abrir la elección; si sigue, avísanos.'); });
+      if(subirActa && !u2.acta) return vActaSubir(true);
+    });
+  }
+  /* cómo se vota: se cambia mientras no haya una votación abierta o ya contada en el celular */
+  function vForma(m){
+    var actual=vFormaDe();
+    if(m===actual) return;
+    if(MAS_APP.celUrnaAbierta(E)) return vMal('Hay una votación abierta: primero ciérrala o anúlala. Después se puede cambiar cómo se vota.');
+    if(MAS_APP.celUrnaCerrada(E)) return vMal('La votación ya se hizo en el celular y ya se contó.');
+    leer();
+    var cambia=function(){
+      if(m==='papel') E.vot.modo='totales';
+      else { E.vot.modo=m; E.vot.log=[]; E.vot.blancos=0; E.vot.nulos=0; E.vot.votantes=0; E.cands.forEach(function(c){ c.votos=null; }); }
+      PELW.sel=[]; guardar();
+    };
+    if(m!=='papel' && (E.vot.log.length || E.cands.some(function(c){ return c.votos; })))
+      confirmar('¿Votar en el celular?', 'Los votos que ya escribiste o contaste se borran: se cuentan los del celular.', {si:'Sí, en el celular'}).then(function(si){ if(si) cambia(); });
+    else cambia();
+  }
+  /* abrir: un código para cada elector (aquí, al azar); al servidor van sus huellas, nunca el código ni el documento */
+  function vRemAbrir(){
+    if(PELW.ocupado) return;
+    var aptos=E.cands.filter(function(c){ return c.apto; }), pad=MAS_APP.celPadronDe(gente, E);
+    if(!pad.length) return vMal('Falta el padrón: carga tu personal y la lista de los que votan sale sola.');
+    var dia=($('pel-cie-d')||{}).value||'', hora=($('pel-cie-h')||{}).value||'', ms=(/^\d{4}-\d{2}-\d{2}$/.test(dia) && /^\d{2}:\d{2}$/.test(hora)) ? new Date(dia+'T'+hora+':00').getTime() : 0;
+    if(!(ms>Date.now()+10*60000)) return _masMal($('pel-msg'), vMotivo('cierra_pasado'), 'pel-cie-h');
+    if(ms>Date.now()+30*864e5) return _masMal($('pel-msg'), vMotivo('cierra_lejos'), 'pel-cie-d');
+    if(!(window.crypto && crypto.subtle && crypto.getRandomValues)) return vMal('Este navegador no puede preparar los códigos. Prueba con Chrome, Edge o Firefox al día.');
+    leer();
+    confirmar('¿Abrir la votación?', 'Cada elector recibe un código personal para votar desde su celular, una sola vez, hasta el '+MAS_APP.celFH(ms)+'. Los códigos quedan solo en este navegador: imprime las cédulas personales o mándaselos desde aquí.', {si:'Sí, abrir'}).then(function(si){
+      if(!si) return;
+      PELW.ocupado=true; _masDice($('pel-msg'), 'Abriendo la votación…');
+      var cods={}, filas=[];
+      /* antes, lo que hay en la nube: si ya se abrió una (en el celular de la mesa, o en otro equipo), no se abre otra */
+      estadoLeerP(_creClaveCom()).then(function(fila){
+        var srv=_comDoc(fila && fila.valor), J=srv.elec ? MAS_APP.celElecFusion(JSON.parse(JSON.stringify(E)), srv.elec) : null, su=J && J.vot && J.vot.urna;
+        if(su && su.id){ E=COMEL=_comM().celDe({ elec:J }, toca); throw { portal:'Ya hay una votación '+(su.ce ? 'hecha' : 'abierta')+(su.modo==='mesa' ? ' en el celular de la mesa' : '')+': está aquí abajo.', pinta:true }; }
+        return Promise.all(pad.map(function(x, i){
+          var cod=MAS_APP.celCodigoNuevo(); cods[x.k]=cod;
+          return Promise.all([MAS_APP.celHuella('cod', cod), x.dni ? MAS_APP.celHuella('doc', x.dni) : Promise.resolve('')]).then(function(hs){ filas[i]={ k:'e'+(i+1), nombre:x.nombre, cod_h:hs[0], doc_h:hs[1] }; });
+        }));
+      }).then(function(){
+        if(filas.some(function(f){ return !f || !f.cod_h; })) throw { portal:'Este navegador no puede preparar los códigos.' };
+        var info={ cuerpo:MAS_APP.celCuerpo(toca), dia:E.conv.dia||'', marcas:Math.min(E.conv.marcas||1, aptos.length), cands:aptos.map(function(c){ return { id:c.id, n:c.nombre }; }) };
+        return sbRpc('sst_votacion_abrir', { p_emp:YO.obra.id, p_info:info, p_electores:filas, p_cierra:new Date(ms).toISOString() });
+      }).then(function(j){
+        if(!j || !j.ok) throw { portal:vMotivo(j && j.motivo) };
+        vCodsGuardar(j.id, cods);
+        E.vot.modo='remoto'; E.vot.urna={ id:j.id, modo:'remoto', ab:Date.now(), ce:0, cierra:ms, pad:pad, vot:{}, ced:[] };
+        E.cands.forEach(function(c){ c.votos=null; });
+        PELW.ocupado=false;
+        return guardar('Votación abierta. Ahora reparte los códigos: imprime las cédulas personales o mándale a cada uno su enlace.');
+      }).catch(function(e){
+        PELW.ocupado=false;
+        if(e && e.pinta) pinta();
+        vMal('No se pudo abrir la votación. '+vMotivo(e));
+      });
+    });
+  }
+  function vCerrar(){
+    var u=E.vot.urna; if(!u || u.ce || u.modo!=='remoto') return;
+    var faltan=u.pad.length-MAS_APP.celUrnaCuenta(u);
+    confirmar('¿Cerrar la votación?', 'Ya nadie más puede votar'+(faltan>0 ? ' (faltan '+faltan+')' : '')+'. Se cuentan los votos y sale el acta de la votación.', {si:'Sí, cerrar y contar', no:'Seguir votando'}).then(function(si){
+      if(!si) return;
+      _masDice($('pel-msg'), 'Cerrando la votación…');
+      return sbRpc('sst_votacion_cerrar', { p_id:u.id }).then(function(j){
+        if(j && j.ok) return vRemCerrado(j, true);
+        vMal('No se pudo cerrar. '+vMotivo(j && j.motivo));
+      }, function(e){ vMal('No se pudo cerrar. '+vMotivo(e)); });
+    });
+  }
+  function vAnular(){
+    var u=E.vot.urna; if(!u || u.ce) return;
+    confirmar('¿Anular la votación?', 'Las cédulas de esta votación no se cuentan. Después puedes abrir otra.'+(u.modo==='mesa' ? ' El celular de la mesa lo ve cuando tenga señal.' : ''), {si:'Sí, anular', no:'Cancelar', mal:true}).then(function(si){
+      if(!si) return;
+      if(u.modo!=='remoto') return vAnulado(u, 'Votación anulada.');
+      return sbRpc('sst_votacion_anular', { p_id:u.id }).then(function(j){
+        if(j && (j.ok || j.motivo==='anulada')) return vAnulado(u, 'Votación anulada.');
+        if(j && j.motivo==='cerrada') return vRemResultado();
+        vMal('No se pudo anular. '+vMotivo(j && j.motivo));
+      }, function(e){ vMal('No se pudo anular. '+vMotivo(e)); });
+    });
+  }
+  function vAnulado(u, txt){
+    if(!E.vot.urna || E.vot.urna.id!==u.id) return;
+    E.vot.anul=(E.vot.anul||[]).concat([{ id:u.id, modo:u.modo, ab:u.ab, ce:Date.now(), n:u.pad.length }]).slice(-10);
+    E.vot.urna=null; clearInterval(PELW.reloj); PELW.reloj=null;
+    return guardar(txt);
+  }
+  function vMensaje(u, x, cod){
+    return 'Hola '+String(x.nombre||'').split(' ')[0]+': vota en la elección '+MAS_APP.celLoQueSeElige(toca)+(COMW.C && COMW.C.obra ? ' de '+COMW.C.obra : '')+'. Tu voto es secreto. Entra aquí: '+
+      MAS_APP.celVotoEnlace(cod)+(u.cierra ? ' (hasta el '+MAS_APP.celFH(u.cierra)+')' : '')+'. Es solo para ti: no lo reenvíes.';
+  }
+  function vElector(k){ var u=E.vot.urna; if(!u) return null; var cod=(vCods(u.id)||{})[k], x=u.pad.filter(function(p){ return p.k===k; })[0]; return (cod && x) ? { u:u, x:x, cod:cod } : null; }
+  function vWhatsApp(k){
+    var X=vElector(k); if(!X) return;
+    try{ window.open('https://wa.me/?text='+encodeURIComponent(vMensaje(X.u, X.x, X.cod)), '_blank', 'noopener'); }catch(e){}
+  }
+  function vCopiar(k){
+    var X=vElector(k); if(!X) return;
+    var enlace=MAS_APP.celVotoEnlace(X.cod), a_mano=function(){ _masDice($('pel-msg'), 'El enlace de '+X.x.nombre+': '+enlace, 'gris'); };
+    try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(enlace).then(function(){ toast('Enlace de '+X.x.nombre.split(' ')[0]+' copiado: pégalo en su chat.'); }, a_mano); else a_mano(); }catch(e){ a_mano(); }
+  }
+  function vNuevoCod(k){
+    var u=E.vot.urna; if(!u || u.ce) return;
+    var x=u.pad.filter(function(p){ return p.k===k; })[0]; if(!x) return;
+    confirmar('¿Un código nuevo para '+x.nombre+'?', 'El que tenía deja de servir. Si estaba bloqueado por poner mal su documento, se desbloquea.', {si:'Sí, código nuevo'}).then(function(si){
+      if(!si) return;
+      var cod=MAS_APP.celCodigoNuevo();
+      MAS_APP.celHuella('cod', cod).then(function(hx){
+        if(!hx) throw { portal:'Este navegador no puede preparar el código.' };
+        return sbRpc('sst_votacion_codigo', { p_id:u.id, p_k:vKsDe(u, k), p_cod_h:hx });
+      }).then(function(j){
+        if(!j || !j.ok) throw { portal:vMotivo(j && j.motivo) };
+        var cods=vCods(u.id)||{}; cods[k]=cod; vCodsGuardar(u.id, cods);
+        PELW.bloq=PELW.bloq.filter(function(b){ return b!==k; });
+        pinta();
+        _masDice($('pel-msg'), 'El código nuevo de '+x.nombre+': '+cod+'. Mándaselo con «WhatsApp» o «Copiar el enlace»; el de antes ya no sirve.', 'ok');
+      }).catch(function(e){ vMal('No se pudo dar el código nuevo. '+vMotivo(e)); });
+    });
+  }
+  /* las cédulas personales: una por elector que todavía no votó (y cuyo código está en este navegador), de a ocho por hoja */
+  function vCedulas(){
+    var u=E.vot.urna; if(!u) return;
+    var cods=vCods(u.id); if(!cods) return;
+    var lista=u.pad.filter(function(x){ return !u.vot[x.k] && cods[x.k]; }).map(function(x){ return { nombre:x.nombre, dni:x.dni, cod:cods[x.k] }; });
+    if(!lista.length) return _masDice($('pel-msg'), 'Ya votaron todos los que tienen su código en este navegador.', 'gris');
+    _masDice($('pel-msg'), 'Armando el PDF…');
+    cargarQRLib().then(function(){ pdf('celCodigosPdf', lista, u.cierra); }, function(){ vMal('No se pudo cargar el generador de los QR. Revisa la conexión e inténtalo otra vez.'); });
+  }
+  /* las firmas: las de esta hoja (al cerrar) o las que guardó el servidor; las de la mesa están en su celular */
+  function vFirmas(u){
+    if(PELW.firmas[u.id]) return Promise.resolve(PELW.firmas[u.id]);
+    if(u.modo!=='remoto') return Promise.resolve({});
+    return sbRpc('sst_votacion_resultado', { p_id:u.id }).then(function(j){
+      var G={}; ((j && j.electores)||[]).forEach(function(e){ var k=e && vKsA(u, e.k); if(k && e.firma) G[k]=e.firma; });
+      if(Object.keys(G).length) PELW.firmas[u.id]=G;
+      return G;
+    }, function(){ return {}; });
+  }
+  function vActa(){
+    var u=E.vot.urna; if(!u || !u.ce) return;
+    _masDice($('pel-msg'), 'Armando el PDF…');
+    leer();
+    vFirmas(u).then(function(F){ pdf('celVotacionPdf', { firmas:F }); });
+  }
+  /* el acta, a la carpeta del comité (la que abre el cartel QR): queda como sustento */
+  function vActaSubir(callado){
+    var u=E.vot.urna; if(!u || !u.ce) return Promise.resolve();
+    if(!callado) _masDice($('pel-msg'), 'Subiendo el acta…');
+    return vFirmas(u).then(function(F){
+      return masCtx({ com:Object.assign({}, COMW.com, { elec:JSON.parse(JSON.stringify(E)) }) }).then(function(C){
+        var doc=MAS_APP.usar(C).celVotacionDoc({ firmas:F });
+        if(!doc) throw { portal:'No se pudo armar.' };
+        var dia=E.conv.dia || MAS_APP.celDiaDe(u.ab), f=new File([doc.output('blob')], 'acta-votacion-'+dia+'.pdf', { type:'application/pdf' });
+        return subirArchivoP('docs', f).then(function(url){
+          sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'comite', nombre:'Acta de la votación · '+(fechaLarga(dia)||dia), url:url, nota:null }).catch(function(){});
+          if(E.vot.urna && E.vot.urna.id===u.id) E.vot.urna.acta=url;
+          return guardar('El acta de la votación está en la carpeta del comité.', callado);
+        });
+      });
+    }).catch(function(e){ if(!callado) vMal('No se pudo subir el acta. '+_comNo(e)); });
+  }
+  function vSello(){
+    var u=E.vot.urna; if(!u || !u.ce) return;
+    MAS_APP.celSello(u.id, u.ced).then(function(hx){
+      if(!hx) vMal('Este navegador no puede calcular el código.');
+      else if(hx===u.sello) _masDice($('pel-msg'), '✅ El código coincide: las cédulas guardadas son las mismas que se contaron al cerrar la votación.', 'ok');
+      else vMal('⚠️ El código no coincide: las cédulas guardadas cambiaron después de cerrar la votación.');
+    });
+  }
+  /* el PDF con lo que está en la hoja, aunque todavía no se haya guardado */
+  function pdf(fn, arg, arg2){
+    var m=$('pel-msg'); _masDice(m, 'Armando el PDF…');
+    masCtx({ com:Object.assign({}, COMW.com, { elec:JSON.parse(JSON.stringify(E)) }) }).then(function(C){
+      var R=MAS_APP.usar(C)[fn](arg, arg2);
+      if(!R || !R.blob) throw { portal:'No se pudo armar.' };
+      _masDice(m, '', ''); bajarBlob(R.blob, R.nombre);
+    }).catch(function(e){ _masMal(m, 'No se pudo armar el PDF. '+_comNo(e)); });
+  }
+  abrirHoja(solo ? (rd ? 'La elección del Coordinador de SST' : 'La elección del Supervisor de SST') : 'La elección de los representantes', 'Paso por paso: la convocatoria, los electores y la junta, los candidatos, la votación y el acta. Lo que guardas aquí se ve igual en la app.', '',
+    '<button type="button" class="bt sec" id="pel-no">Cerrar</button><button type="button" class="bt sec" id="pel-conv">📄 La convocatoria</button><button type="button" class="bt" id="pel-ok">Guardar</button>', {sinFoco:true, ancha:true});
+  pinta();
+  $('pel-no').onclick=function(){ clearInterval(PELW.reloj); PELW.reloj=null; if(PELW.sucio || PELW.guardando){ clearTimeout(PELW.t); PELW.t=null; var foto=JSON.parse(JSON.stringify(E)); comCambiar(null, function(dd){ vJunta(dd, foto); }).then(function(){ comPintar(); }, function(){}); PELW.sucio=false; } cerrarHoja(); };
+  $('pel-ok').onclick=function(){ leer(); if(!/^\d{4}-\d{2}-\d{2}$/.test(E.conv.dia)) return _masMal($('pel-msg'), 'Falta el día de la elección.', 'pel-dia'); guardar(); };
+  $('pel-conv').onclick=function(){ leer(); if(!/^\d{4}-\d{2}-\d{2}$/.test(E.conv.dia)) return _masMal($('pel-msg'), 'Falta el día de la elección.', 'pel-dia'); pdf('celConvocatoriaPdf'); };
+}
+/* «cargar lo que ya tengan»: el acta firmada que ya existe, escaneada o en foto */
+function comSubirActa(){
+  _masCss(); _yaCss();
+  if(!planWebTrae('comite')){ navegar('plan'); return; }
+  var h='<div class="campo"><label for="csa-tipo">Tipo</label><select id="csa-tipo">'+['eleccion', 'instalacion', 'ordinaria', 'extraordinaria'].map(function(k){ return '<option value="'+k+'"'+(k==='ordinaria' ? ' selected' : '')+'>'+esc(MAS_APP.COMITE_TIPOS[k])+'</option>'; }).join('')+'</select></div>'+
+    '<div class="fila-c ya-al"><div class="campo"><label for="csa-n">N° de acta</label><input id="csa-n" maxlength="12" placeholder="Ej.: 007"></div><div class="campo"><label for="csa-f">Fecha</label><input type="date" id="csa-f" value="'+hoyISO()+'"></div></div>'+
+    '<div class="campo"><label for="csa-a">El archivo (PDF o foto)</label><input type="file" id="csa-a" accept="application/pdf,image/*"></div><div class="msg" id="csa-msg" role="status"></div>';
+  abrirHoja('Subir un acta que ya tengo', 'La que ya está firmada, escaneada o en foto. Queda en el Libro de Actas del comité y en la carpeta «Comité de SST».', h,
+    '<button type="button" class="bt sec" id="csa-no">Cancelar</button><button type="button" class="bt" id="csa-ok">Subir</button>', {sinFoco:true});
+  $('csa-no').onclick=function(){ cerrarHoja(); };
+  $('csa-ok').onclick=function(){
+    var m=$('csa-msg'), f=$('csa-a').files && $('csa-a').files[0], tipo=$('csa-tipo').value, n=gesTxt($('csa-n').value).slice(0, 12), fecha=$('csa-f').value||'', bt=this;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return _masMal(m, 'Falta la fecha del acta.', 'csa-f');
+    if(!f) return _masMal(m, 'Elige el archivo.', 'csa-a');
+    if(!/^(application\/pdf|image\/)/i.test(f.type||'')) return _masMal(m, 'Tiene que ser un PDF o una foto.', 'csa-a');
+    bt.disabled=true; _masDice(m, 'Subiendo…');
+    var nom=String(f.name||'acta').replace(/\s+/g, ' ').trim().slice(0, 120), url='';
+    subirArchivoP('docs', f).then(function(u){
+      url=u;
+      return comCambiar(null, function(dd){
+        dd.actas.push({ id:masId('ca'), n:n, tipo:MAS_APP.COMITE_TIPOS[tipo] ? tipo : 'ordinaria', fecha:fecha, subida:1, url:url, archivo:nom, asistentes:[], acuerdos:[], ts:Date.now() });
+        dd.actas.sort(function(x, y){ return String(y.fecha||'').localeCompare(String(x.fecha||'')); });
+        if(tipo==='eleccion' && !dd.eleccion) dd.eleccion=fecha;
+        if(tipo==='instalacion' && !dd.instalacion) dd.instalacion=fecha;
+      });
+    }).then(function(){
+      /* y en la carpeta «Comité de SST», para no subirla dos veces */
+      sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'comite', nombre:'Acta '+(n ? 'N° '+n+' · ' : '')+MAS_APP.COMITE_TIPOS[tipo]+' · '+(fechaLarga(fecha)||fecha), url:url, nota:null }).catch(function(){});
+      toast('Acta subida.'); cerrarHoja(); COMW.anio=fecha.slice(0, 4); comPintar();
+    }, function(e){ bt.disabled=false; _masMal(m, e==='muy-grande' ? 'El archivo pasa de 25 MB.' : 'No se pudo subir. '+_comNo(e)); });
+  };
+}
+
+/* el acta escaneada: el archivo (con su vista, si es PDF o foto) y quitarla */
+function _comVerSubida(a){
+  var id=a.id, esPdf=/\.pdf(\?|#|$)/i.test(String(a.archivo||a.url||'')), esImg=/\.(jpe?g|png|webp|gif)(\?|#|$)/i.test(String(a.archivo||a.url||''));
+  abrirHoja('Acta N° '+(a.n||'—'), [MAS_APP.COMITE_TIPOS[a.tipo]||'Reunión', fechaLarga(a.fecha)||a.fecha, 'escaneada'].filter(Boolean).join(' · '),
+    '<div class="aviso" id="comv-sub">📎 Acta escaneada'+(a.archivo ? ': <b data-sin-pais>'+esc(a.archivo)+'</b>' : '')+'. El documento firmado es el archivo subido.</div>'+
+    (a.url && esImg ? '<img src="'+esc(a.url)+'" alt="El acta escaneada" style="display:block;max-width:100%;border:1px solid var(--raya);border-radius:10px">' : '')+
+    (a.url && esPdf ? '<div class="pdfv" id="comv-pdf" aria-label="Vista previa del acta"></div>' : '')+'<div class="msg" id="comv-msg" role="status"></div>',
+    '<button type="button" class="bt mal" id="comv-quitar">Quitar esta acta</button>'+(a.url ? '<a class="bt" id="comv-archivo" target="_blank" rel="noopener" href="'+esc(a.url)+'">Abrir el archivo</a>' : ''), {sinFoco:true});
+  var caja=$('comv-pdf');
+  if(caja){ caja.innerHTML='<div class="pdfv-msg">Trayendo el acta…</div>'; fetch(a.url).then(function(r){ if(!r.ok) throw r.status; return r.blob(); }).then(function(b){ if(caja.isConnected) pdfVistaP(caja, b); }).catch(function(){ if(caja.isConnected) caja.innerHTML='<div class="pdfv-msg">No se pudo traer el archivo. Ábrelo con el botón de abajo.</div>'; }); }
+  $('comv-quitar').onclick=function(){
+    confirmar('¿Quitar esta acta?', 'Sale del Libro de Actas de aquí y de los celulares del equipo. El archivo sigue en la carpeta «Comité de SST» si también estaba ahí.', {si:'Sí, quitar', mal:true}).then(function(si){
+      if(!si) return;
+      comCambiar(null, function(dd){
+        dd.actas=dd.actas.filter(function(x){ return x.id!==id; });
+        if(!dd.quitadas || typeof dd.quitadas!=='object' || Array.isArray(dd.quitadas)) dd.quitadas={};
+        dd.quitadas[id]=Date.now();
+      }).then(function(){ toast('Acta quitada.'); cerrarHoja(); comPintar(); }, function(e){ _masMal($('comv-msg'), 'No se pudo quitar. '+_comNo(e)); });
+    });
+  };
+}
 /* ══ 8 · «¿A QUIÉN ACUDO?» ════════════════════════════════════════════════════════════════════
    Lo que el trabajador ve en su celular, en «¿A quién acudo?»: los números de emergencia de la obra, el punto de
    reunión, la brigada, la línea de mando y quién lo representa (el comité o el supervisor de SST). Marcelo

@@ -104,7 +104,7 @@ var _OCULTA_FUERA = {
   pantallas: { 'p-comite':1, 'p-comite-acta':1, 'p-comite-armar':1, 'p-comite-ver':1,
                'p-procedimientos':1, 'p-proc':1, 'p-temas':1, 'p-generar':1, 'p-talleres':1, 'p-taller':1,
                'p-taller-fin':1, 'p-ind-armar':1, 'p-ind-avance':1, 'p-ind-ed':1, 'p-ind-trab':1,
-               'p-senales':1, 'p-senal':1, 'p-senal-pers':1, 'p-constancias':1, 'p-plan-cap':1,
+               'p-senales':1, 'p-senal':1, 'p-senal-pers':1, 'p-senal-prop':1, 'p-constancias':1, 'p-plan-cap':1,
                'p-campanas':1, 'p-campana':1,
                /* 08/10 · la autorización del grupo sanguíneo está escrita sobre la Ley 29733 (Perú) */
                'p-aut-lista':1, 'p-aut-trab':1, 'p-aut-firma':1,
@@ -120,7 +120,7 @@ var OBRA_OCULTA = {
     accesos:   { temas:1, talleres:1, induccion:1, senales:1, constancias:1, campanas:1, sctr:1 },
     pantallas: { 'p-temas':1, 'p-generar':1, 'p-talleres':1, 'p-taller':1,
                  'p-taller-fin':1, 'p-ind-armar':1, 'p-ind-avance':1, 'p-ind-ed':1, 'p-ind-trab':1,
-                 'p-senales':1, 'p-senal':1, 'p-senal-pers':1, 'p-constancias':1, 'p-plan-cap':1,
+                 'p-senales':1, 'p-senal':1, 'p-senal-pers':1, 'p-senal-prop':1, 'p-constancias':1, 'p-plan-cap':1,
                  'p-campanas':1, 'p-campana':1,
                  /* 08/10 · la autorización del grupo sanguíneo está escrita sobre la Ley 29733 (Perú) */
                  'p-aut-lista':1, 'p-aut-trab':1, 'p-aut-firma':1,
@@ -400,6 +400,11 @@ var DO_FRASES = [
   [' (por encima de 1.80 m)', ''],
   ['(encima de 1.80 m)', ''],
   ['(por encima de 1.80 m)', ''],
+  /* 17/10/2026 · lote 14 · la pregunta de antes del ATS (ats-preguntas.js): la altura de 1.80 m es la del Perú; afuera se
+     pregunta por la regla de la obra, sin inventar una cifra */
+  ['¿Superarás 1.80 m de altura?', '¿Trabajarás por encima de la altura en que la obra exige arnés?'],
+  ['Sí, más de 1.80 m', 'Sí, por encima'],
+  ['No, menos de 1.80 m', 'No, por debajo'],
   ['(dirección, distrito, provincia, departamento)', '(dirección, sector, municipio, provincia)'],
   ['(Dirección, distrito, departamento, provincia)', '(Dirección, sector, municipio, provincia)'],
   ['(opcional · CIP, CQP…)', '(opcional · CODIA…)'],

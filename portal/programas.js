@@ -43,8 +43,21 @@ var PROG_TIPOS = [
     obj:'Comprobar que el plan de respuesta ante emergencias funciona y que el personal sabe qué hacer cuando ocurre una.' },
   { k:'camp', ic:'🎯', n:'Programa de campañas', tit:'PROGRAMA ANUAL DE CAMPAÑAS DE SEGURIDAD', una:'campaña', varias:'campañas', desde:2,
     d:'Las campañas de seguridad del año, con su mensaje y su responsable. Las realizadas se cuentan solas.',
-    obj:'Reforzar la cultura de prevención con campañas sobre los riesgos más importantes de la obra.' }
+    obj:'Reforzar la cultura de prevención con campañas sobre los riesgos más importantes de la obra.' },
+  /* 19/10/2026 · lote 19 · Marcelo: «El avance de acuerdo a su programa de Monitoreo ocupacional, auditoría, simulacros» */
+  { k:'mon',  ic:'🩺', n:'Programa de monitoreo ocupacional', tit:'PROGRAMA ANUAL DE MONITOREO DE AGENTES OCUPACIONALES', una:'monitoreo', varias:'monitoreos', masc:1, desde:3,
+    d:'Los monitoreos del año —ruido, polvo, iluminación, estrés térmico, vibraciones, ergonomía…— con su frecuencia y quién los hace. Los registrados se cuentan solos.',
+    obj:'Medir los agentes físicos, químicos, biológicos, ergonómicos y psicosociales a los que está expuesto el personal, para controlarlos antes de que causen una enfermedad ocupacional.' },
+  { k:'aud',  ic:'📋', n:'Programa de auditorías', tit:'PROGRAMA ANUAL DE AUDITORÍAS', una:'auditoría', varias:'auditorías', desde:3,
+    d:'Las auditorías del año —la interna, la del cliente, la de certificación— con su alcance y su responsable. Las realizadas se cuentan solas.',
+    obj:'Verificar que el sistema de gestión de seguridad y salud en el trabajo se cumple y mejora, y corregir a tiempo lo que no.' }
 ];
+/* lo sugerido para los programas de monitoreo y de auditorías (se elige o se escribe) */
+var PROG_MON_SUG = [['Agentes físicos', ['Monitoreo de ruido', 'Monitoreo de iluminación', 'Monitoreo de estrés térmico', 'Monitoreo de vibraciones', 'Monitoreo de radiación ultravioleta']],
+  ['Agentes químicos', ['Monitoreo de material particulado (polvo)', 'Monitoreo de sílice cristalina', 'Monitoreo de gases y vapores', 'Monitoreo de humos de soldadura']],
+  ['Agentes biológicos', ['Monitoreo de agentes biológicos (agua y superficies)']],
+  ['Ergonómicos y psicosociales', ['Evaluación ergonómica de puestos', 'Evaluación de riesgo psicosocial']]];
+var PROG_AUD_SUG = ['Auditoría interna del sistema de gestión de SST', 'Auditoría del cliente', 'Auditoría de certificación', 'Auditoría de seguimiento', 'Auditoría a las empresas contratistas'];
 function progTipo(k){ for(var i=0;i<PROG_TIPOS.length;i++) if(PROG_TIPOS[i].k===k) return PROG_TIPOS[i]; return PROG_TIPOS[0]; }
 /* «programada», «cumplidas», «atrasada»… con el género de lo que cuenta ese programa (los simulacros, en masculino) */
 function progGen(tipo, palabra){ return progTipo(tipo).masc ? String(palabra).replace(/a(s?)$/, 'o$1').replace(/A(S?)$/, 'O$1') : palabra; }
@@ -214,9 +227,11 @@ function progHechos(anio, fresco){
     tieneGes ? gesActTraer(true).catch(nada) : Promise.resolve([]),
     traerTodo('sst_inspeccion', '&select=tipo,fecha&fecha=gte.'+anio+'-01-01&fecha=lt.'+sig+'-01-01&order=fecha.desc', 20000).catch(nada),
     traer('sst_doc', '&select=id,hoja,nombre,nota&hoja=eq.temas&order=creado.desc', 800).catch(nada),
-    gesCat().catch(function(){ return {}; })
+    gesCat().catch(function(){ return {}; }),
+    /* 17/10/2026 · lote 16 · el comité de la obra: cada reunión con su acta cuenta sola en el programa anual de SST */
+    ((YO.obra||{}).codigo ? estadoLeerP('comite_emp:'+YO.obra.codigo).then(function(f){ return (f && f.valor) || null; }).catch(nada) : Promise.resolve(null))
   ]).then(function(r){
-    var H={ cap:{}, insp:{}, sim:{}, camp:{}, prog:{ cap:{}, sim:{}, camp:{} }, nom:{ cap:{}, insp:{}, sim:{}, camp:{} } }, cat=r[4]||{};
+    var H={ cap:{}, insp:{}, sim:{}, camp:{}, sst:{}, mon:{}, aud:{}, prog:{ cap:{}, sim:{}, camp:{}, mon:{}, aud:{} }, nom:{ cap:{}, insp:{}, sim:{}, camp:{}, sst:{}, mon:{}, aud:{} } }, cat=r[4]||{};
     var mesDe=function(f){ f=String(f||''); return f.slice(0, 4)===anio ? (+f.slice(5, 7)-1) : -1; };
     var suma=function(caja, tipo, nombre, mes, noms){
       var k=_pgLlave(nombre); if(!k || mes<0 || mes>11) return;
@@ -238,6 +253,8 @@ function progHechos(anio, fresco){
         var ns=(d.tipo && d.tipo!=='otro' && simN(d.tipo)) || d.escenario || 'Simulacro';
         suma(d.estado==='hecho' ? H.sim : H.prog.sim, 'sim', ns, mesDe(d.fecha), H.nom);
       }
+      /* 19/10/2026 · lote 19 · los monitoreos y las auditorías */
+      else if((d.k==='mon' || d.k==='aud') && d.nombre) suma(d.estado==='hecho' ? H[d.k] : H.prog[d.k], d.k, d.nombre, mesDe(d.fecha), H.nom);
       else if(d.k==='camp' && d.nombre){
         /* una campaña cuenta en cada mes que toca (de «desde» a «hasta») */
         var a=String(d.desde||''), b=String(d.hasta||d.desde||''), caja=(d.estado==='hecha') ? H.camp : H.prog.camp;
@@ -248,6 +265,13 @@ function progHechos(anio, fresco){
       }
     });
     (r[2]||[]).forEach(function(i){ if(i && i.tipo) suma(H.insp, 'insp', i.tipo, mesDe(i.fecha), H.nom); });
+    /* la reunión mensual del comité (la ordinaria o la de instalación, como la cuenta la app): con su nombre de siempre y el de afuera */
+    var com=r[5], qt=(com && com.quitadas) || {}, visto2={};
+    ((com && com.actas) || []).forEach(function(a){
+      if(!a || !a.fecha || a.tipo==='extraordinaria' || a.tipo==='eleccion' || (qt[a.id] && +qt[a.id]>=(+a.ts||0))) return;
+      var mm=mesDe(a.fecha), q=String(a.fecha).slice(0, 7); if(mm<0 || visto2[q]) return; visto2[q]=1;
+      PROG_SST_BASE.forEach(function(b){ if(b.cada===1 && /comit/i.test(b.n||'')){ suma(H.sst, 'sst', b.n, mm, H.nom); if(b.fuera) suma(H.sst, 'sst', b.fuera, mm, H.nom); } });
+    });
     /* las capacitaciones que ya tienen día puesto en «Programar capacitación» */
     (r[3]||[]).forEach(function(doc){
       if(!doc || doc.hoja!=='temas') return;
@@ -409,12 +433,17 @@ function progPintar(){
     (esHoy ? '' : '<button type="button" class="bt sec chico" id="pg-hoy">Este año</button>')+
     (otros.length ? '<span class="acc-otros" id="pg-otros">También hay programas de'+otros.map(function(y){ return ' <button type="button" class="bt-link" data-anio="'+esc(y)+'">'+esc(y)+'</button>'; }).join('')+'</span>' : '')+'</div>';
   h+='<div class="aviso" id="pg-que"><b>Cada programa es la hoja del año:</b> las actividades en filas y los doce meses en columnas. Lo programado (P) lo marcas tú; lo ejecutado (E) se cuenta solo con lo que la obra registra en OBRASST '+
-     '—capacitaciones, inspecciones, simulacros y campañas— y también se puede marcar a mano. Cada uno sale en PDF y en Excel, con su bloque de firmas.</div>';
+     '—capacitaciones, inspecciones, simulacros, campañas, monitoreos y auditorías— y también se puede marcar a mano. Cada uno sale en PDF y en Excel, con su bloque de firmas.</div>';
   var falta=PROG_TIPOS.filter(function(T){ return !!_pgPlanDe(T); });
   if(falta.length){
     var Pm=_pgPlanDe(falta[0]), Pa=(typeof planWebActual==='function') ? planWebActual() : null;
-    h+='<div class="aviso ojo" id="pg-plan">Tu plan'+(Pa ? ' <b>'+esc(Pa.n)+'</b>' : '')+' trae <b>dos de los cinco programas</b>: el de capacitación y el anual de SST. Los de inspecciones, simulacros y campañas —y el anual de SST con todo colgado de él— '+
-       'se abren con el plan <b>'+esc(Pm.n||'Supervisor SST')+'</b>'+((typeof planWebPrecio==='function') ? planWebPrecio(Pm) : '')+' o uno mayor. <button type="button" class="bt-link" data-plan="insp">Ver qué trae cada plan</button></div>';
+    /* 19/10/2026 · lote 19 · siete programas: lo que falta, agrupado por el plan que lo abre */
+    var porPlan={}, ordenP=[];
+    falta.forEach(function(T){ var Px=_pgPlanDe(T), n=(Px && Px.n) || ''; if(!porPlan[n]){ porPlan[n]=[]; ordenP.push(n); } porPlan[n].push(T); });
+    var nomL=function(L){ var ns=L.map(function(T){ return T.n.replace(/^Programa (anual )?de /, ''); }); return ns.length>1 ? ns.slice(0, -1).join(', ')+' y '+ns[ns.length-1] : ns[0]; };
+    h+='<div class="aviso ojo" id="pg-plan">Tu plan'+(Pa ? ' <b>'+esc(Pa.n)+'</b>' : '')+' trae '+(PROG_TIPOS.length-falta.length)+' de los '+PROG_TIPOS.length+' programas. '+
+       ordenP.map(function(n, i){ var L=porPlan[n]; return (i ? 'l' : 'L')+(L.length>1 ? 'os de ' : (L[0].masc ? 'el de ' : 'el de '))+esc(nomL(L))+(i ? ', con el plan <b>' : (L.length>1 ? ' se abren con el plan <b>' : ' se abre con el plan <b>'))+esc(n || 'Supervisor SST')+'</b>'; }).join('; ')+
+       ' o uno mayor. <button type="button" class="bt-link" data-plan="insp">Ver qué trae cada plan</button></div>';
   }
   h+='<div class="pg-hub" id="pg-hub">'+PROG_TIPOS.map(function(T){
     var f=progDe(F, T.k, A), plan=_pgPlanDe(T), prev=progDe(F, T.k, String(+A-1));
@@ -422,7 +451,8 @@ function progPintar(){
     if(plan) return '<section class="pg-t cand" data-tipo="'+T.k+'">'+cab+'<p>'+esc(T.d)+'</p><div class="pg-n">🔒 No está en tu plan'+(plan.n ? ': se abre con el plan <b>'+esc(plan.n)+'</b>' : '')+'</div>'+
       '<div class="acciones"><button type="button" class="bt sec chico" data-plan="'+T.k+'">Ver qué trae cada plan</button></div></section>';
     if(!f) return '<section class="pg-t" data-tipo="'+T.k+'">'+cab+'<p>'+esc(T.d)+'</p><div class="pg-n">Todavía no está armado para '+esc(A)+'.</div>'+
-      '<div class="acciones"><button type="button" class="bt chico" data-armar="'+T.k+'">Armar el programa</button>'+(prev ? '<button type="button" class="bt sec chico" data-copiar="'+T.k+'">Copiar el de '+esc(String(+A-1))+'</button>' : '')+'</div></section>';
+      '<div class="acciones"><button type="button" class="bt chico" data-armar="'+T.k+'">Armar el programa</button>'+(prev ? '<button type="button" class="bt sec chico" data-copiar="'+T.k+'">Copiar el de '+esc(String(+A-1))+'</button>' : '')+
+      ((T.k==='mon' || T.k==='aud') ? '<button type="button" class="bt sec chico" data-reg="'+T.k+'">＋ Registrar '+(T.k==='mon' ? 'un monitoreo' : 'una auditoría')+'</button>' : '')+'</div></section>';
     var R=progResumen(f.d, H, F), d=f.d;
     return '<section class="pg-t" data-tipo="'+T.k+'" data-id="'+esc(f.id)+'">'+cab+
       '<div class="pg-n"><b>'+R.n+'</b> '+(R.n===1 ? T.una : T.varias)+' · <b>'+R.prog+'</b> '+progGen(T.k, R.prog===1 ? 'programada' : 'programadas')+' en el año</div>'+
@@ -430,7 +460,8 @@ function progPintar(){
       '<div class="pg-n" data-avance>'+_pgAvance(R, A, T.k)+'</div>'+
       (R.aFecha ? '<div class="pg-barra'+(R.pct>=90 ? '' : (R.pct>=60 ? ' ojo' : ' mal'))+'" role="img" aria-label="'+R.pct+' % cumplido"><i style="width:'+Math.max(2, Math.min(100, R.pct))+'%"></i></div>' : '')+
       '<p>'+(d.aprob ? 'Aprobado el '+esc(fechaLarga(d.aprob))+(d.acta ? ' · '+esc(d.acta) : '') : 'Sin fecha de aprobación todavía')+(d.ver ? ' · versión '+esc(d.ver) : '')+'</p>'+
-      '<div class="acciones"><button type="button" class="bt chico" data-abrir="'+T.k+'">Abrir</button><button type="button" class="bt sec chico" data-pdf="'+T.k+'">PDF</button><button type="button" class="bt sec chico" data-xls="'+T.k+'">Excel</button></div></section>';
+      '<div class="acciones"><button type="button" class="bt chico" data-abrir="'+T.k+'">Abrir</button><button type="button" class="bt sec chico" data-pdf="'+T.k+'">PDF</button><button type="button" class="bt sec chico" data-xls="'+T.k+'">Excel</button>'+
+      ((T.k==='mon' || T.k==='aud') ? '<button type="button" class="bt sec chico" data-reg="'+T.k+'">＋ Registrar '+(T.k==='mon' ? 'un monitoreo' : 'una auditoría')+'</button>' : '')+'</div></section>';
   }).join('')+'</div>';
   caja.innerHTML=h;
   var ir=function(y){ PROGW.anio=String(y); PROGW.firma=''; cargando(caja); PROGW.pinta(); };
@@ -444,6 +475,7 @@ function progPintar(){
   Array.prototype.forEach.call(caja.querySelectorAll('[data-pdf]'), function(b){ b.onclick=function(){ progVer(b.getAttribute('data-pdf'), A); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('[data-xls]'), function(b){ b.onclick=function(){ var f=progDe(PROGW.filas, b.getAttribute('data-xls'), A); if(f) progExcel(f.d, PROGW.H, PROGW.filas, b); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('[data-plan]'), function(b){ b.onclick=function(){ if(typeof planesHoja==='function') planesHoja(); else navegar('plan'); }; });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-reg]'), function(b){ b.onclick=function(){ progRegHoja(b.getAttribute('data-reg'), A); }; });
 }
 
 /* ── la hoja a la vista: «para aprobar» (solo lo programado) o «con el avance» (programado y ejecutado) ──
@@ -530,7 +562,7 @@ function progAbrir(tipo, anio, op){
     yo.filas=filas; yo.H=r[1]; yo.gente=r[2]||[]; yo.X=r[3]; yo.cat=r[4]||{}; yo.des=r[5]||{};
     yo.id=f ? f.id : null; yo.texto=f ? f.texto : ''; yo.nuevo=!f; yo.paso='datos'; yo.sucio=false; yo.guardando=false; yo.prev=prev; yo.cat_abierto=false;
     var base=f ? progLimpio(f.d) : ((op.copiar && prev) ? _pgfCopia(prev.d, anio, yo.des) : progVacio(T.k, anio, yo.des));
-    var B=leer(_pgfLlave(T.k, anio), null), arranca=function(d, sucio){ yo.d=d; yo.sucio=!!sucio; _pgfMontar(); if(op.copiar && !f && prev && !sucio){ yo.sucio=true; _pgfMsg('Copiado del programa de '+(+anio-1)+': las mismas actividades y los mismos meses, sin lo ejecutado. Revísalo y guárdalo.', 'ok'); } return true; };
+    var B=leer(_pgfLlave(T.k, anio), null), arranca=function(d, sucio){ yo.d=d; yo.sucio=!!sucio; _pgfMontar(); if(op.pegar){ _pgfIr('acts'); setTimeout(function(){ if(PGF===yo) progPegar(); }, 60); } if(op.copiar && !f && prev && !sucio){ yo.sucio=true; _pgfMsg('Copiado del programa de '+(+anio-1)+': las mismas actividades y los mismos meses, sin lo ejecutado. Revísalo y guárdalo.', 'ok'); } return true; };
     if(B && B.d && String(B.base||'')===String(yo.texto||'') && JSON.stringify(progLimpio(B.d))!==JSON.stringify(base)){
       return confirmar('Tienes cambios sin guardar en este programa', 'Son de '+(hace(B.t)||'hace un rato')+'. ¿Sigues con ellos?', { si:'Seguir con ellos', no:'Descartarlos' }).then(function(si){
         if(PGF!==yo) return false;
@@ -628,6 +660,8 @@ function _pgfCols(tipo){
   if(tipo==='insp') return { css:'26px minmax(0,2fr) minmax(0,1.1fr) 118px '+M, cab:['N.º', 'Qué se inspecciona', 'Responsable', 'Frecuencia'], n:'Qué se inspecciona' };
   if(tipo==='sim') return { css:'26px minmax(0,1.4fr) minmax(0,1.6fr) minmax(0,1fr) '+M, cab:['N.º', 'Simulacro', 'Escenario', 'Responsable'], n:'Simulacro' };
   if(tipo==='camp') return { css:'26px minmax(0,1.4fr) minmax(0,1.6fr) minmax(0,1fr) '+M, cab:['N.º', 'Campaña', 'Lema o mensaje', 'Responsable'], n:'Campaña' };
+  if(tipo==='mon') return { css:'26px minmax(0,2fr) minmax(0,1.1fr) 118px '+M, cab:['N.º', 'Qué se monitorea', 'Responsable', 'Frecuencia'], n:'Qué se monitorea' };
+  if(tipo==='aud') return { css:'26px minmax(0,1.4fr) minmax(0,1.6fr) minmax(0,1fr) '+M, cab:['N.º', 'Auditoría', 'Alcance', 'Responsable'], n:'Auditoría' };
   return { css:'26px minmax(0,2.3fr) minmax(0,1fr) minmax(0,1.1fr) '+M, cab:['N.º', 'Actividad', 'Línea', 'Responsable'], n:'Actividad' };
 }
 /* un mes de una fila: su clase, su letra y lo que dice */
@@ -663,9 +697,9 @@ function _pgfFilaHTML(it, i){
   }
   else if(t==='cap') h+=inp('n', 'Tema', ' list="pgf-dl-n"')+inp('resp', 'Responsable', ' list="pgf-dl-g"')+inp('a', 'Dirigido a', ' placeholder="Todo el personal"')+
     '<div class="pg-mit">'+et('Horas')+'<input data-k="h" inputmode="decimal" maxlength="5" autocomplete="off" aria-label="Horas, fila '+(i+1)+'" value="'+esc(it.h||'')+'"></div>';
-  else if(t==='insp') h+=inp('n', 'Qué se inspecciona', ' list="pgf-dl-n"')+inp('resp', 'Responsable', ' list="pgf-dl-g"')+
+  else if(t==='insp' || t==='mon') h+=inp('n', t==='mon' ? 'Qué se monitorea' : 'Qué se inspecciona', ' list="pgf-dl-n"')+inp('resp', 'Responsable', ' list="pgf-dl-g"')+
     '<div class="pg-mit">'+et('Frecuencia')+'<select data-k="fr" aria-label="Frecuencia, fila '+(i+1)+'"><option value="">—</option>'+PROG_FREQ.map(function(x){ return '<option value="'+x[0]+'"'+(it.fr===x[0] ? ' selected' : '')+'>'+x[1]+'</option>'; }).join('')+'</select></div>';
-  else h+=inp('n', t==='sim' ? 'Simulacro' : 'Campaña', ' list="pgf-dl-n"')+inp('a', t==='sim' ? 'Escenario' : 'Lema o mensaje')+inp('resp', 'Responsable', ' list="pgf-dl-g"');
+  else h+=inp('n', t==='sim' ? 'Simulacro' : (t==='aud' ? 'Auditoría' : 'Campaña'), ' list="pgf-dl-n"')+inp('a', t==='sim' ? 'Escenario' : (t==='aud' ? 'Alcance' : 'Lema o mensaje'))+inp('resp', 'Responsable', ' list="pgf-dl-g"');
   h+='<div>'+et('Meses · un toque: programado · otro: ejecutado')+'<div class="pg-meses" role="group" aria-label="Los meses de la fila '+(i+1)+'">'+_pgfMesesHTML(it)+'</div></div>'+
      (it.ref ? '<span></span>' : '<button type="button" class="pg-12" data-que="todo" title="Marcar los doce meses (o limpiarlos)" aria-label="Marcar los doce meses de la fila '+(i+1)+'">12</button>')+
      '<span class="pg-cump" data-cump></span>'+
@@ -679,6 +713,7 @@ function _pgfActs(){
     '<div class="pg-herr"><button type="button" class="bt chico" data-que="mas">＋ Agregar una fila</button>'+
       (cat.length ? '<button type="button" class="bt sec chico" data-que="cat" id="pgf-bt-cat">'+(t==='sst' ? 'Lo sugerido…' : 'Elegir de la lista…')+'</button>' : '')+
       (t!=='sst' ? '<button type="button" class="bt sec chico" data-que="traer" id="pgf-bt-traer">Traer lo ya registrado en '+esc(PGF.anio)+'</button>' : '')+
+      '<button type="button" class="bt sec chico" data-que="pegar" id="pgf-bt-pegar">📋 Pegar de mi Excel</button>'+
       ((PGF.prev && !d.items.length) ? '<button type="button" class="bt sec chico" data-que="copiar" id="pgf-bt-copiar">Copiar el de '+(+PGF.anio-1)+'</button>' : '')+'</div>'+
     '<div id="pgf-cat"></div>'+
     '<div class="pg-ley" aria-hidden="true"><span><i style="background:#D6E8F3;border-color:#9CC3DA;color:#12506B">P</i>programado</span><span><i style="background:#CFEBD9;border-color:#7FC79B;color:#0B6B3A">E</i>ejecutado (contado del registro)</span>'+
@@ -744,6 +779,8 @@ function _pgfCatLista(){
     });
   }
   else if(t==='camp') (cat.campanas||[]).forEach(function(c){ out.push({ g:'Campañas', n:tx(c[2]), sub:tx(c[3]||''), a:tx(c[3]||'') }); });
+  else if(t==='mon') PROG_MON_SUG.forEach(function(g){ g[1].forEach(function(n){ out.push({ g:g[0], n:n, sub:'', fr:'anual' }); }); });
+  else if(t==='aud') PROG_AUD_SUG.forEach(function(n){ out.push({ g:'Auditorías', n:n, sub:'', a:'El sistema de gestión de SST de la obra' }); });
   PGF._cat=out; PGF._catT=t;
   return out;
 }
@@ -815,6 +852,78 @@ function _pgfTraer(){
   _pgfCambio(); _pgfPinta();
   _pgfMsg((nuevas ? (nuevas===1 ? 'Traída 1 fila' : 'Traídas '+nuevas+' filas')+' de lo registrado en '+PGF.anio+', con los meses en que se hizo o tiene día puesto.' : '')+
           (marcas ? (nuevas ? ' Y ' : '')+(marcas===1 ? 'quedó programado 1 mes más' : 'quedaron programados '+marcas+' meses más')+' en filas que ya estaban.' : ''), 'ok');
+}
+/* 20/10/2026 · lote 20 · «Cargar mi gestión»: el programa que ya tenías en tu Excel, pegado. Se copian las filas con sus
+   doce meses (con la fila de los títulos —Ene, Feb…— si la tienes) y aquí se lee: el nombre (la columna «Actividad», «Tema»…
+   o la primera con letras), el responsable (la columna «Responsable» o la siguiente) y en cada mes una P, X o 1 =
+   programado; una E, ✓ o «PE» = ejecutado. El formato de dos filas por actividad (una «P» y otra «E») también se lee. */
+var PG_MESES_K = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
+function progPegarFilas(texto){
+  var sinT=function(c){ return String(c==null ? '' : c).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); };
+  var L=String(texto==null ? '' : texto).replace(/\r/g, '').split('\n').filter(function(l){ return /\S/.test(l); });
+  var sep=L.some(function(l){ return l.indexOf('\t')>-1; }) ? '\t' : ';';
+  var C=L.map(function(l){ return l.split(sep).map(function(c){ return String(c).replace(/^"|"$/g, '').replace(/\s+/g, ' ').trim(); }); });
+  /* la fila de los títulos (seis meses o más): en qué columna va cada mes, el nombre y el responsable */
+  var col=null, hi=-1, cN=-1, cR=-1;
+  C.some(function(c, i){
+    var pos={}, n=0;
+    c.forEach(function(x, j){ var m=/^(ene|feb|mar|abr|may|jun|jul|ago|set|sep|oct|nov|dic)[a-z.]*$/.exec(sinT(x)); if(m){ var q=PG_MESES_K.indexOf(m[1]==='sep' ? 'set' : m[1]); if(q>-1 && pos[q]==null){ pos[q]=j; n++; } } });
+    if(n<6) return false;
+    col=pos; hi=i;
+    c.forEach(function(x, j){ var t=sinT(x); if(cN<0 && /^(actividad|tema|descripcion|que se|simulacro|campana|monitoreo|auditoria|inspeccion|capacitacion|curso|objetivo)/.test(t)) cN=j; if(cR<0 && /^responsable/.test(t)) cR=j; });
+    return true;
+  });
+  var marca=function(t){ return /^(p|prog\.?|programad[oa]s?)$/.test(t) ? 'P' : (/^(e|ej\.?|ejec\.?|ejecutad[oa]s?|r|real|realizad[oa]s?)$/.test(t) ? 'E' : ''); };
+  var valor=function(v, esE){ var t=sinT(v).replace(/\s/g, ''); if(!t || t==='-' || t==='0' || t==='—') return 0; if(esE || /e|✓|✔|√|^ok$|^si$|^r$/.test(t)) return 2; return 1; };
+  var titulo=/^(n[°º.o]?|nro\.?|item|total|programad|ejecutad|cumplimiento|%|avance|actividad(es)?$|tema(s)?$|responsable$|frecuencia$|meses?$)/;
+  var out=[], salto=0, ult=null, conMeses=!!col;
+  C.forEach(function(c, i){
+    if(i===hi) return;
+    var mc=[];
+    if(col){ for(var m=0;m<12;m++) mc.push(col[m]!=null ? col[m] : -1); }
+    else if(c.length>=13){ conMeses=true; for(var m2=0;m2<12;m2++) mc.push(c.length-12+m2); }
+    var pm=mc.filter(function(x){ return x>=0; }), ini=pm.length ? Math.min.apply(null, pm) : c.length;
+    var textos=[], tipo='';
+    for(var j=0;j<ini && j<c.length;j++){
+      var x=c[j], t=sinT(x); if(!x) continue;
+      var mk=marca(t); if(mk){ tipo=mk; continue; }
+      if(x.length>=3 && /[a-zñ]/.test(t) && !titulo.test(t)) textos.push({ j:j, x:x });
+    }
+    var nom=(cN>-1) ? (c[cN] || '') : (textos[0] ? textos[0].x : '');
+    if(nom && titulo.test(sinT(nom))) nom='';
+    var resp=(cR>-1) ? (c[cR] || '') : ((textos.filter(function(q){ return q.x!==nom; })[0] || {}).x || '');
+    var meses=mc.map(function(k){ return (k>=0 && k<c.length) ? valor(c[k], tipo==='E') : 0; });
+    if(!nom){
+      /* la fila «E» de la actividad de arriba (o los meses de una fila sin nombre) */
+      if(ult && (tipo==='E' || meses.some(function(v){ return v; }))) meses.forEach(function(v, q){ if(v) ult.m[q]=(tipo==='E' || v===2) ? 2 : Math.max(ult.m[q], v); });
+      else salto++;
+      return;
+    }
+    var it={ n:nom.slice(0, 160), resp:String(resp).slice(0, 100), m:meses };
+    out.push(it); ult=it;
+  });
+  return { filas:out.slice(0, 150), meses:conMeses, saltadas:salto };
+}
+function progPegar(){
+  if(!PGF) return;
+  var T=progTipo(PGF.tipo), yo=PGF;
+  dialogo({ titulo:'Pegar de mi Excel', texto:'Copia de tu Excel las filas de '+(T.masc ? 'los ' : 'las ')+T.varias+' con sus doce meses —con la fila de los títulos (Ene, Feb…) si la tienes— y pégalas aquí. En cada mes, una P, X o 1 es programado; una E, ✓ o «PE», ejecutado. Si tu programa lleva dos filas por '+T.una+' (una P y otra E), también sirve.',
+    si:'Agregar al programa', campo:{ etiqueta:'Las filas de tu Excel', placeholder:'Inspección de andamios\tCapataz\tX\t\tX\t\tX\t…', maximo:60000, minimo:3, corto:'Pega al menos una fila.', crudo:true } }).then(function(t){
+    if(t==null || PGF!==yo) return;
+    var R=progPegarFilas(t);
+    if(!R.filas.length){ _pgfIr('acts'); _pgfMsg('No encontré filas con el nombre de '+(T.masc ? 'un ' : 'una ')+T.una+'. Copia desde la columna del nombre hasta la de diciembre.', 'mal'); return; }
+    var d=PGF.d, por={}, nuevasK={}, nuevas=0, juntas=0;
+    d.items.forEach(function(x){ if(!x.ref && gesTxt(x.n)) por[_pgLlave(x.n)]=x; });
+    R.filas.forEach(function(f){
+      var k=_pgLlave(f.n), it=por[k];
+      if(!it){ it={ id:_pgId(), n:gesTxt(f.n), resp:gesTxt(f.resp), a:'', h:'', fr:'', g:'', obs:'', m:[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }; d.items.push(it); por[k]=it; nuevasK[k]=1; nuevas++; }
+      else { if(!nuevasK[k]) juntas++; if(!gesTxt(it.resp) && f.resp) it.resp=gesTxt(f.resp); }
+      for(var i=0;i<12;i++) if((f.m[i]||0)>(it.m[i]||0)) it.m[i]=f.m[i];
+    });
+    _pgfCambio(); _pgfIr('acts');
+    _pgfMsg((nuevas ? (nuevas===1 ? '1 fila agregada' : nuevas+' filas agregadas') : 'Ninguna fila nueva')+(juntas ? '; '+(juntas===1 ? '1 ya estaba (se sumaron sus meses)' : juntas+' ya estaban (se sumaron sus meses)') : '')+'. '+
+      (R.meses ? '' : 'No vi los doce meses: márcalos aquí con un toque. ')+'Revísalo y guárdalo.', 'ok');
+  });
 }
 /* los números de cada fila y del pie, sin volver a dibujar la tabla */
 function _pgfCuenta(){
@@ -896,6 +1005,7 @@ function _pgfAlTocar(ev){
   if(que==='cat-desde'){ PGF.todoAnio=(b.getAttribute('data-v')==='anio'); Array.prototype.forEach.call($('pgf-cat-desde').querySelectorAll('button'), function(x){ var on=(x===b); x.className=on ? 'on' : ''; x.setAttribute('aria-selected', on ? 'true' : 'false'); }); return; }
   if(que==='cat-ok'){ _pgfCatAgregar(); return; }
   if(que==='traer'){ _pgfTraer(); return; }
+  if(que==='pegar'){ progPegar(); return; }
   if(que==='copiar' && PGF.prev){ PGF.d=_pgfCopia(PGF.prev.d, PGF.anio, PGF.des); _pgfCambio(); _pgfPinta(); _pgfMsg('Copiado del programa de '+(+PGF.anio-1)+': las mismas filas y los mismos meses, sin lo ejecutado.', 'ok'); return; }
   if(que==='mas-firma'){ if(d.firmas.length<6){ d.firmas.push({ rol:'', nombre:'', cargo:'' }); _pgfCambio(); _pgfPinta(); } return; }
   if(que==='quita-firma'){ var fi=b.closest('.pg-firma'); if(fi){ d.firmas.splice(+fi.getAttribute('data-f'), 1); _pgfCambio(); _pgfPinta(); } return; }
@@ -1142,75 +1252,275 @@ function progPdf(d, H, progs, op){
     return S;
   });
 }
-/* ── el Excel: la misma matriz, con dos renglones por actividad (P y E) y los totales con fórmula ── */
+/* ── el Excel (17/10/2026, rehecho) ───────────────────────────────────────────────────────────────────────────
+   Marcelo: «Mejora el tema de capacitación programadas y su reporte, mejor diseño del excel, más ordenado y entendible»
+   y, al ver el del programa anual, «desordenado». Lo que tenía: dos renglones por actividad (P arriba, E abajo), el
+   cumplimiento de cada fila contra TODO el año (lo de diciembre salía en 0 % en octubre) y las firmas en una lista.
+   Ahora, en la hoja «Programa»:
+     · la ficha del programa y «Cómo va»: programadas, las que ya debían hacerse, ejecutadas, atrasadas y el
+       cumplimiento a la fecha (las mismas cuentas que la sección: progResumen);
+     · UN renglón por actividad y una letra por mes: P programada · E ejecutada · X atrasada (su mes ya pasó y no se
+       hizo) · + hecha sin estar en el programa · 1/2 en parte (las filas que salen de otro programa). Los meses
+       cerrados, el mes en curso y los que vienen, cada uno con su color en la cabecera;
+     · al final de cada fila: programadas, ejecutadas, atrasadas y su estado (Al día · Atrasada · Cumplida);
+     · los totales de cada mes y el cumplimiento de los meses cerrados, con su semáforo;
+     · las firmas en recuadros, para firmar el impreso, y debajo la norma que dice quién aprueba.
+   Y una segunda hoja, «Mes a mes», para el informe: lo programado, lo ejecutado y el cumplimiento de cada mes y el
+   acumulado (en el de capacitación, también las horas).
+   Todo con fórmulas: si alguien cambia una letra a mano en el Excel, las cuentas se rehacen solas. */
+function _pgXlsCodigo(c, m, cerr){
+  if(c.parte) return { v:c.parte, k:(m<cerr) ? 'parX' : 'par' };
+  if(c.p && c.e) return { v:'E', k:'E' };
+  if(c.p) return (m<cerr) ? { v:'X', k:'X' } : { v:'P', k:'P' };
+  if(c.e) return { v:'+', k:'mas' };
+  return { v:'', k:'' };
+}
+/* reparte las columnas [c1..c2] en n tramos de ancho parecido (las cajas de «Cómo va» y de las firmas) */
+function _pgXlsTramos(anchos, c1, c2, n){
+  var tot=0, c, out=[], ini=c1, acc=0, k=0;
+  for(c=c1;c<=c2;c++) tot+=anchos[c]||8;
+  for(c=c1;c<=c2;c++){
+    acc+=anchos[c]||8;
+    var quedan=c2-c, faltan=n-k-1;
+    if(k<n-1 && (acc>=tot*(k+1)/n || quedan<=faltan)){ out.push([ini, c]); ini=c+1; k++; }
+  }
+  out.push([ini, c2]);
+  return out;
+}
 function progExcel(d, H, progs, bt){
   if(bt) bt.disabled=true;
   var fuera=(paisObraP()!=='pe');
   return Promise.all([cargarEvPDF(), papCtx().catch(function(){ return {}; }), fuera ? cargarExige().catch(function(){ return null; }) : Promise.resolve(null)]).then(function(r){
     var X=RCAP.xlsx, E=new X.Estilos(), C=X.C, ctx=r[1]||{}, T=progTipo(d.tipo), anio=String(d.anio), obra=String(ctx.obra || nombreObraP() || ''), tx=fuera ? txPaisP : function(s){ return s; };
-    var sTit=E.xf({ b:1, sz:14, c:C.petroleo }), sSub=E.xf({ sz:10, c:C.gris }), sRot=E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, borde:true, v:'top' }), sVal=E.xf({ sz:10, c:C.tinta, borde:true, wrap:1, v:'top' }),
-        sCab=E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'center', v:'center', wrap:1, borde:true }), sTx=E.xf({ sz:10, c:C.tinta, borde:true, wrap:1 }), sTxB=E.xf({ b:1, sz:10, c:C.tinta, borde:true, wrap:1 }),
-        sCen=E.xf({ sz:10, c:C.tinta, h:'center', borde:true }), sPE=E.xf({ b:1, sz:8, c:C.gris, h:'center', borde:true }), sP=E.xf({ b:1, sz:9, c:C.progT, f:C.progF, h:'center', borde:true }), sE=E.xf({ b:1, sz:9, c:C.okT, f:C.okF, h:'center', borde:true }),
-        sPar=E.xf({ b:1, sz:8, c:C.ojoT, f:C.ojoF, h:'center', borde:true }), sVac=E.xf({ sz:9, c:C.tinta, h:'center', borde:true }), sBanda=E.xf({ b:1, sz:9, c:C.petroleo, f:C.fondo, borde:true }),
-        sTot=E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, h:'center', borde:true, fmt:'0' }), sTotR=E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, h:'right', borde:true }), sPct=E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, h:'center', borde:true, fmt:'0%' }), sN0=E.xf({ sz:10, c:C.tinta, h:'center', borde:true, fmt:'0' }), sPc=E.xf({ sz:10, c:C.tinta, h:'center', borde:true, fmt:'0%' });
+    var G=function(w){ return progGen(d.tipo, w); }, cerr=progCerrados(anio), mesHoy=(anio===String(ANIO)) ? (+String(MES).slice(5, 7)-1) : -1, cap=(d.tipo==='cap');
+    var AMBAR='FFD27A', AMBAR_SUAVE='FFF6E0';
+    var sTit=E.xf({ b:1, sz:16, c:C.petroleo }), sSub=E.xf({ sz:10, c:C.gris }), sSec=E.xf({ b:1, sz:10, c:C.petroleo }),
+        sRot=E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, borde:true, v:'top', wrap:1 }), sVal=E.xf({ sz:10, c:C.tinta, borde:true, wrap:1, v:'top' }),
+        sCab=E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'center', wrap:1, borde:true }), sCabVen=E.xf({ b:1, sz:9, c:C.petroleo, f:C.cabSes, h:'center', wrap:1, borde:true }),
+        sCabHoy=E.xf({ b:1, sz:9, c:C.petroleo, f:AMBAR, h:'center', wrap:1, borde:true }),
+        sNum=E.xf({ sz:9, c:C.gris, h:'center', borde:true }), sTx=E.xf({ sz:10, c:C.tinta, borde:true, wrap:1 }), sTxB=E.xf({ b:1, sz:10, c:C.tinta, borde:true, wrap:1 }),
+        sCen=E.xf({ sz:10, c:C.tinta, h:'center', borde:true, wrap:1 }), sObs=E.xf({ sz:9, c:C.gris, borde:true, wrap:1 }),
+        sBanda=E.xf({ b:1, sz:9, c:C.petroleo, f:C.fondo, borde:true }), sCnt=E.xf({ b:1, sz:10, c:C.tinta, h:'center', borde:true, fmt:'0' }),
+        sTotR=E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, h:'right', borde:true }), sTot=E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, h:'center', borde:true, fmt:'0' }),
+        sTotV=E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, borde:true }), sPctT=E.xf({ b:1, sz:9, c:C.petroleo, f:C.pie, h:'center', borde:true, fmt:'0%' }),
+        sKpiN=E.xf({ b:1, sz:18, c:C.petroleo, f:C.fondo, h:'center', borde:true, fmt:'0' }), sKpiP=E.xf({ b:1, sz:18, c:C.petroleo, f:C.fondo, h:'center', borde:true, fmt:'0%' }),
+        sKpiL=E.xf({ sz:9, c:C.gris, f:C.fondo, h:'center', v:'top', wrap:1, borde:true }), sLey=E.xf({ sz:9, c:C.gris, wrap:1 }), sLeyV=E.xf({ sz:9, c:C.gris, wrap:1, v:'top' }),
+        sFiCab=E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'center', borde:true }), sFiCaja=E.xf({ borde:true }), sFiN=E.xf({ b:1, sz:10, c:C.tinta, h:'center', borde:true, wrap:1 }),
+        sFiC=E.xf({ sz:9, c:C.gris, h:'center', borde:true, wrap:1 }), sFiF=E.xf({ sz:9, c:C.gris, borde:true });
+    var sCod={ P:E.xf({ b:1, sz:9, c:C.progT, f:C.progF, h:'center', borde:true }), E:E.xf({ b:1, sz:9, c:C.okT, f:'C9EBD5', h:'center', borde:true }),
+               X:E.xf({ b:1, sz:9, c:C.malT, f:C.malF, h:'center', borde:true }), mas:E.xf({ b:1, sz:9, c:C.okT, f:C.okF, h:'center', borde:true }),
+               par:E.xf({ b:1, sz:8, c:C.ojoT, f:C.ojoF, h:'center', borde:true }), parX:E.xf({ b:1, sz:8, c:C.malT, f:C.malF, h:'center', borde:true }),
+               '':E.xf({ sz:9, c:C.tinta, h:'center', borde:true }), hoy:E.xf({ sz:9, c:C.tinta, f:AMBAR_SUAVE, h:'center', borde:true }) };
+    var sEst={ 'Atrasada':E.xf({ b:1, sz:9, c:C.malT, f:C.malF, h:'center', borde:true }), 'Cumplida':E.xf({ b:1, sz:9, c:C.okT, f:C.okF, h:'center', borde:true }),
+               'Al día':E.xf({ b:1, sz:9, c:C.progT, f:C.progF, h:'center', borde:true }), 'Sin programar':E.xf({ sz:9, c:C.gris, h:'center', borde:true }), '':E.xf({ sz:9, c:C.gris, h:'center', borde:true }) };
+    var DX=[E.dxf(C.malT), E.dxf(C.ojoT), E.dxf(C.okT)];
+    /* las columnas: N.º · lo propio de cada programa · los 12 meses · Programadas · Ejecutadas · Atrasadas · Estado · Observaciones */
     var cols;
-    if(d.tipo==='cap') cols=[['n', 'Tema', 40], ['resp', 'Responsable', 24], ['a', 'Dirigido a', 22], ['h', 'Horas', 8]];
-    else if(d.tipo==='insp') cols=[['n', 'Qué se inspecciona', 42], ['resp', 'Responsable', 26], ['fr', 'Frecuencia', 14]];
-    else if(d.tipo==='sim') cols=[['n', 'Simulacro', 30], ['a', 'Escenario', 38], ['resp', 'Responsable', 24]];
-    else if(d.tipo==='camp') cols=[['n', 'Campaña', 30], ['a', 'Lema o mensaje', 38], ['resp', 'Responsable', 24]];
-    else cols=[['n', 'Actividad', 54], ['resp', 'Responsable', 26]];
+    if(cap) cols=[['n', 'Tema', 40, 'b'], ['resp', 'Responsable', 20], ['a', 'Dirigido a', 20], ['h', 'Horas', 7, 'c']];
+    else if(d.tipo==='insp') cols=[['n', 'Qué se inspecciona', 42, 'b'], ['resp', 'Responsable', 22], ['fr', 'Frecuencia', 12, 'c']];
+    else if(d.tipo==='sim') cols=[['n', 'Simulacro', 30, 'b'], ['a', 'Escenario', 34], ['resp', 'Responsable', 20]];
+    else if(d.tipo==='camp') cols=[['n', 'Campaña', 30, 'b'], ['a', 'Lema o mensaje', 34], ['resp', 'Responsable', 20]];
+    else cols=[['n', 'Actividad', 52, 'b'], ['resp', 'Responsable', 22]];
+    var cM=1+cols.length, cP=cM+12, cEj=cP+1, cAt=cP+2, cEs=cP+3, cOb=cP+4, ult=cOb, cH=cap ? 4 : -1, i;
     var h=new X.Hoja('Programa'); h.activa=true; h.pie=T.n+' '+anio;
-    var cPE=1+cols.length, cM=cPE+1, cFin=cM+12, ult=cFin+2;      /* columnas: N.º · … · P/E · 12 meses · Programadas · Ejecutadas · Cumplimiento */
-    h.unir(0, 1, ult, 1, tx(T.tit)+' '+anio, sTit); h.altos[1]=22;
-    h.unir(0, 2, ult, 2, [ctx.emp && ctx.emp.razon, obra].filter(Boolean).join(' · ')+(d.ver ? ' · versión '+d.ver : '')+(d.cod ? ' · '+d.cod : '')+(d.aprob ? ' · aprobado el '+fechaLarga(d.aprob) : ''), sSub);
-    var fr=4, dato=function(rot, val){ if(!gesTxt(val)) return; h.unir(0, fr, 1, fr, tx(rot), sRot); h.unir(2, fr, ult, fr, tx(val), sVal); h.altos[fr]=Math.max(16, Math.ceil(String(val).length/150)*14); fr++; };
-    dato('Objetivo', d.obj); dato('Alcance', d.alc);
-    if(d.tipo==='sst'){ dato('Meta', d.meta); dato('Indicador', d.ind); dato('Presupuesto', d.pres); dato('Recursos', d.rec); }
-    dato('Acta o documento', d.acta);
+    h.anchos[0]=5; cols.forEach(function(c, k){ h.anchos[1+k]=c[2]; }); for(i=0;i<12;i++) h.anchos[cM+i]=5.4;
+    h.anchos[cP]=11; h.anchos[cEj]=10; h.anchos[cAt]=10; h.anchos[cEs]=12; h.anchos[cOb]=26;
+    var medios=[];
+    /* ── la cabecera: el título, la empresa y la obra (y el logo, si la empresa lo tiene) ── */
+    h.unir(0, 1, ult, 1, tx(T.tit)+' '+anio, sTit); h.altos[1]=30;
+    h.unir(0, 2, ult, 2, [ctx.emp && ctx.emp.razon, obra].filter(Boolean).join(' · '), sSub); h.altos[2]=16;
+    try{
+      var lg=ctx.logo, m0=lg && /^data:image\/(png|jpe?g);base64,(.+)$/i.exec(String(lg.du||''));
+      if(m0){
+        var bin=atob(m0[2]), u8=new Uint8Array(bin.length); for(i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+        medios.push({ b:u8, ext:/png/i.test(m0[1]) ? 'png' : 'jpeg' });
+        var alto=40, ancho=Math.min(150, Math.round(alto*(lg.r||1)));
+        h.imagen(cEs, 1, 0, ancho, alto, 4, 2);
+      }
+    }catch(_l){}
+    /* ── la ficha del programa ── */
+    var fr=4, lineas=function(t, w){ return Math.max(1, Math.ceil(String(t||'').length/Math.max(10, w*1.05))); };
+    var wDe=function(a, b){ var s=0; for(var c=a;c<=b;c++) s+=h.anchos[c]||8; return s; };
+    var dos=function(r1, v1, r2, v2){
+      if(!gesTxt(v1) && !gesTxt(v2)) return;
+      h.unir(0, fr, 1, fr, tx(r1), sRot); h.unir(2, fr, cM+5, fr, tx(v1||''), sVal);
+      h.unir(cM+6, fr, cM+8, fr, tx(r2), sRot); h.unir(cM+9, fr, ult, fr, tx(v2||''), sVal);
+      h.altos[fr]=15*Math.max(lineas(v1, wDe(2, cM+5)), lineas(v2, wDe(cM+9, ult))); fr++;
+    };
+    var una=function(rot, val){ if(!gesTxt(val)) return; h.unir(0, fr, 1, fr, tx(rot), sRot); h.unir(2, fr, ult, fr, tx(val), sVal); h.altos[fr]=15*lineas(val, wDe(2, ult)); fr++; };
+    dos('Empresa', ctx.emp && ctx.emp.razon, 'Código', d.cod);
+    dos('Obra o proyecto', obra, 'Versión', d.ver);
+    dos('Año', anio, 'Aprobado el', d.aprob ? fechaLarga(d.aprob) : '');
+    una('Acta o documento de aprobación', d.acta);
+    una('Objetivo', d.obj); una('Alcance', d.alc);
+    if(d.tipo==='sst'){ dos('Meta', d.meta, 'Indicador', d.ind); dos('Presupuesto', d.pres, 'Recursos', d.rec); }
     fr++;
-    var rCab=fr;
-    h.celda(0, fr, 'N.º', sCab); cols.forEach(function(c, i){ h.celda(1+i, fr, tx(c[1]), sCab); }); h.celda(cPE, fr, '', sCab);
-    for(var i=0;i<12;i++) h.celda(cM+i, fr, progMes(i), sCab);
-    h.celda(cFin, fr, progGen(d.tipo, 'Programadas'), sCab); h.celda(cFin+1, fr, progGen(d.tipo, 'Ejecutadas'), sCab); h.celda(cFin+2, fr, 'Cumplimiento', sCab); h.altos[fr]=26;
-    h.anchos[0]=5; cols.forEach(function(c, i){ h.anchos[1+i]=c[2]; }); h.anchos[cPE]=3.5; for(i=0;i<12;i++) h.anchos[cM+i]=5; h.anchos[cFin]=12; h.anchos[cFin+1]=11; h.anchos[cFin+2]=13;
-    fr++;
-    var r0=fr, num=0, L1=gesLetra(cM), L2=gesLetra(cM+11), filasP=[], filasE=[];
-    _pgOrden(d).forEach(function(q){
-      if(q.banda!==undefined){ h.unir(0, fr, ult, fr, tx(q.banda), sBanda); fr++; return; }
-      var it=q.it, F=progFila(it, d.tipo, H, progs, anio), p=0, e=0; num++;
-      h.unir(0, fr, 0, fr+1, num, sN0);
-      cols.forEach(function(c, k){ var v=(c[0]==='n') ? _pgNombreFila(it, anio, progs, H) : (c[0]==='fr' ? progFreqN(it.fr) : gesTxt(it[c[0]])); h.unir(1+k, fr, 1+k, fr+1, tx(v), c[0]==='n' ? sTxB : (c[0]==='h' || c[0]==='fr' ? sCen : sTx)); });
-      h.celda(cPE, fr, 'P', sPE); h.celda(cPE, fr+1, 'E', sPE);
-      F.forEach(function(c, m){
-        if(c.p) p++; if(c.p && c.e) e++;
-        h.celda(cM+m, fr, c.p ? 'P' : '', c.p ? sP : sVac);
-        if(c.parte) h.celda(cM+m, fr+1, c.parte, sPar); else h.celda(cM+m, fr+1, (c.e && (c.p || c.auto)) ? 'E' : '', (c.e && (c.p || c.auto)) ? sE : sVac);
-      });
-      h.unir(cFin, fr, cFin, fr+1, p, sN0, 'COUNTIF('+L1+fr+':'+L2+fr+',"P")');
-      h.unir(cFin+1, fr, cFin+1, fr+1, e, sN0, 'COUNTIFS('+L1+fr+':'+L2+fr+',"P",'+L1+(fr+1)+':'+L2+(fr+1)+',"E")');
-      h.unir(cFin+2, fr, cFin+2, fr+1, p ? e/p : 0, sPc, 'IF('+gesLetra(cFin)+fr+'=0,0,'+gesLetra(cFin+1)+fr+'/'+gesLetra(cFin)+fr+')');
-      filasP.push(fr); filasE.push(fr+1); fr+=2;
+    /* ── las filas: la matriz ── */
+    var filas=_pgOrden(d), activ=[], extras=0;
+    filas.forEach(function(q){
+      if(q.banda!==undefined) return;
+      var F=progFila(q.it, d.tipo, H, progs, anio);
+      F.forEach(function(c){ if(!c.p && c.e) extras++; });
+      activ.push(q);
     });
+    /* «Cómo va»: las cajas (sus números son fórmulas que suman las columnas del final de cada fila) */
+    var rKpi=fr+1, rCab0=0, kpis=[];
+    var rLey=rKpi+3, ley=[['P', 'P', 'Programada: todavía no llega su mes, o es el mes en curso.'], ['E', 'E', 'Ejecutada: se hizo (lo registrado en OBRASST o lo marcado a mano).'],
+                         ['X', 'X', 'Atrasada: su mes ya pasó y no se hizo.'], ['mas', '+', 'Hecha sin estar en el programa: no cuenta en el cumplimiento.']];
+    if(filas.some(function(q){ return q.it && q.it.ref; })) ley.push(['par', '1/2', 'En parte: de lo programado ese mes en su programa, cuánto se hizo.']);
+    if(mesHoy>=0) ley.push(['hoy', progMes(mesHoy), 'El mes en curso (en la cabecera, en ámbar).']);
+    var dLey=extras ? 1 : 0, rCab=rLey+dLey+ley.length+1;
+    rCab0=rCab;
+    var r0=rCab+1, rr=r0, num=0, rowsAct=[];
+    var L=function(c){ return gesLetra(c); };
+    h.celda(0, rCab, 'N.º', sCab); cols.forEach(function(c, k){ h.celda(1+k, rCab, tx(c[1]), sCab); });
+    for(i=0;i<12;i++) h.celda(cM+i, rCab, progMes(i), i===mesHoy ? sCabHoy : (i<cerr ? sCab : sCabVen));
+    h.celda(cP, rCab, G('Programadas'), sCab); h.celda(cEj, rCab, G('Ejecutadas'), sCab); h.celda(cAt, rCab, G('Atrasadas'), sCab);
+    h.celda(cEs, rCab, 'Estado', sCab); h.celda(cOb, rCab, 'Observaciones', sCab); h.altos[rCab]=28;
+    var cuenta={ p:0, e:0, x:0 };
+    filas.forEach(function(q){
+      if(q.banda!==undefined){ h.unir(0, rr, ult, rr, tx(q.banda), sBanda); h.altos[rr]=16; rr++; return; }
+      var it=q.it, F=progFila(it, d.tipo, H, progs, anio), alto=1; num++;
+      h.celda(0, rr, num, sNum);
+      cols.forEach(function(c, k){
+        var v=(c[0]==='n') ? _pgNombreFila(it, anio, progs, H) : (c[0]==='fr' ? progFreqN(it.fr) : gesTxt(it[c[0]]));
+        if(c[0]==='h'){ var hn=parseFloat(String(v).replace(',', '.')); h.celda(1+k, rr, isFinite(hn) ? hn : (v || ''), sCen); return; }
+        h.celda(1+k, rr, tx(v), c[3]==='b' ? sTxB : (c[3]==='c' ? sCen : sTx));
+        alto=Math.max(alto, lineas(v, c[2]));
+      });
+      var p=0, e=0, x=0, mas=0;
+      F.forEach(function(c, m){
+        var K=_pgXlsCodigo(c, m, cerr);
+        if(K.k==='E'){ p++; e++; } else if(K.k==='P'){ p++; } else if(K.k==='X' || K.k==='parX'){ p++; x++; } else if(K.k==='par'){ p++; } else if(K.k==='mas') mas++;
+        h.celda(cM+m, rr, K.v, K.k ? sCod[K.k] : (m===mesHoy ? sCod.hoy : sCod['']));
+      });
+      var rg=L(cM)+rr+':'+L(cM+11)+rr, rgC=cerr ? (L(cM)+rr+':'+L(cM+cerr-1)+rr) : '';
+      h.celda(cP, rr, p, sCnt, 'COUNTIF('+rg+',"P")+COUNTIF('+rg+',"E")+COUNTIF('+rg+',"X")+COUNTIF('+rg+',"*/*")');
+      h.celda(cEj, rr, e, sCnt, 'COUNTIF('+rg+',"E")');
+      h.celda(cAt, rr, x, sCnt, 'COUNTIF('+rg+',"X")'+(rgC ? '+COUNTIF('+rgC+',"*/*")' : ''));
+      var est=!p ? (mas ? 'Sin programar' : '') : (x ? 'Atrasada' : (e>=p ? 'Cumplida' : 'Al día'));
+      var P_=L(cP)+rr, E_=L(cEj)+rr, A_=L(cAt)+rr;
+      h.celda(cEs, rr, est, sEst[est], 'IF('+P_+'=0,IF(COUNTIF('+rg+',"+")>0,"Sin programar",""),IF('+A_+'>0,"Atrasada",IF('+E_+'>='+P_+',"Cumplida","Al día")))');
+      h.celda(cOb, rr, tx(gesTxt(it.obs)), sObs);
+      alto=Math.max(alto, lineas(it.obs, 26));
+      h.altos[rr]=Math.max(18, 14*alto+4);
+      cuenta.p+=p; cuenta.e+=e; cuenta.x+=x;
+      rowsAct.push(rr); rr++;
+    });
+    if(!num){ h.unir(0, rr, ult, rr, tx('Todavía no tiene actividades.'), sLey); rr++; }
+    var rUlt=rr-1;
+    /* los totales de cada mes */
+    var rTP=rr, rTE=rr+1, rTC=rr+2;
     if(num){
-      /* los totales de cada mes: las P de sus renglones P y las E de sus renglones E */
-      var R=progResumen(d, H, progs), TE=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-      (d.items||[]).forEach(function(it){ if(!it.ref && !gesTxt(it.n)) return; progFila(it, d.tipo, H, progs, anio).forEach(function(c, m){ if(c.p && c.e) TE[m]++; }); });
-      var suma=function(col, rows, letra){ return rows.map(function(rr){ return 'IF('+gesLetra(col)+rr+'="'+letra+'",1,0)'; }).join('+'); };
-      h.unir(0, fr, cPE, fr, progGen(d.tipo, 'Programadas'), sTotR);
-      for(i=0;i<12;i++) h.celda(cM+i, fr, R.meses[i].p, sTot, filasP.length<=60 ? suma(cM+i, filasP, 'P') : null);
-      h.celda(cFin, fr, R.prog, sTot, 'SUM('+L1+fr+':'+L2+fr+')'); h.celda(cFin+1, fr, '', sTot); h.celda(cFin+2, fr, '', sTot); fr++;
-      h.unir(0, fr, cPE, fr, progGen(d.tipo, 'Ejecutadas')+' (de '+progGen(d.tipo, 'las programadas').replace(/^las (programados)/, 'los $1')+')', sTotR);
-      for(i=0;i<12;i++) h.celda(cM+i, fr, TE[i], sTot);
-      var te=TE.reduce(function(s, v){ return s+v; }, 0);
-      h.celda(cFin, fr, '', sTot); h.celda(cFin+1, fr, te, sTot, 'SUM('+L1+fr+':'+L2+fr+')'); h.celda(cFin+2, fr, R.prog ? te/R.prog : 0, sPct, 'IF('+gesLetra(cFin)+(fr-1)+'=0,0,'+gesLetra(cFin+1)+fr+'/'+gesLetra(cFin)+(fr-1)+')'); fr++;
+      h.unir(0, rTP, cM-1, rTP, G('Programadas'), sTotR); h.unir(0, rTE, cM-1, rTE, G('Ejecutadas'), sTotR); h.unir(0, rTC, cM-1, rTC, 'Cumplimiento del mes (meses cerrados)', sTotR);
+      for(i=0;i<12;i++){
+        var cl=L(cM+i), rc=cl+r0+':'+cl+rUlt, np=0, ne=0;
+        activ.forEach(function(q){ var c=progFila(q.it, d.tipo, H, progs, anio)[i], K=_pgXlsCodigo(c, i, cerr); if(K.k && K.k!=='mas') np++; if(K.k==='E') ne++; });
+        h.celda(cM+i, rTP, np, sTot, 'COUNTIF('+rc+',"P")+COUNTIF('+rc+',"E")+COUNTIF('+rc+',"X")+COUNTIF('+rc+',"*/*")');
+        h.celda(cM+i, rTE, ne, sTot, 'COUNTIF('+rc+',"E")');
+        if(i<cerr) h.celda(cM+i, rTC, np ? ne/np : '', sPctT, 'IF('+cl+rTP+'=0,"",'+cl+rTE+'/'+cl+rTP+')');
+        else h.celda(cM+i, rTC, '', sPctT);
+      }
+      h.celda(cP, rTP, cuenta.p, sTot, 'SUM('+L(cP)+r0+':'+L(cP)+rUlt+')'); h.celda(cEj, rTP, '', sTot); h.celda(cAt, rTP, '', sTot); h.unir(cEs, rTP, ult, rTP, '', sTotV);
+      h.celda(cP, rTE, '', sTot); h.celda(cEj, rTE, cuenta.e, sTot, 'SUM('+L(cEj)+r0+':'+L(cEj)+rUlt+')'); h.celda(cAt, rTE, cuenta.x, sTot, 'SUM('+L(cAt)+r0+':'+L(cAt)+rUlt+')'); h.unir(cEs, rTE, ult, rTE, '', sTotV);
+      h.unir(cP, rTC, cAt, rTC, '', sTot); h.unir(cEs, rTC, ult, rTC, '', sTotV);
+      if(cerr) h.semaforo(L(cM)+rTC+':'+L(cM+cerr-1)+rTC, DX);
+      rr=rTC+1;
     }
-    fr++;
-    h.unir(0, fr, ult, fr, 'P: programado · E: ejecutado. Lo ejecutado se cuenta con lo registrado en OBRASST y con lo marcado a mano. Hoja armada el '+fechaLarga(hoyISO())+'.', sSub); fr+=2;
+    /* «Cómo va»: ahora que se sabe dónde quedan las sumas */
+    var sumP=L(cP)+rTP, sumE=L(cEj)+rTE, sumA=L(cAt)+rTE, deb=(cuenta.e+cuenta.x);
+    var tit=(cerr>=12) ? 'CÓMO TERMINÓ EL AÑO' : (cerr<=0 && mesHoy<0 ? 'LO PROGRAMADO PARA EL AÑO' : 'CÓMO VA, AL '+fechaLarga(hoyISO()).toUpperCase());
+    h.unir(0, rKpi-1, ult, rKpi-1, tit, sSec); h.altos[rKpi-1]=18;
+    kpis.push([G('Programadas')+' en el año', cuenta.p, num ? sumP : null, sKpiN]);
+    kpis.push(['Debían hacerse a la fecha', deb, num ? sumE+'+'+sumA : null, sKpiN]);
+    kpis.push([G('Ejecutadas'), cuenta.e, num ? sumE : null, sKpiN]);
+    kpis.push([G('Atrasadas'), cuenta.x, num ? sumA : null, sKpiN]);
+    kpis.push(['Cumplimiento a la fecha', deb ? cuenta.e/deb : '—', num ? 'IF(('+sumE+'+'+sumA+')=0,"—",'+sumE+'/('+sumE+'+'+sumA+'))' : null, sKpiP]);
+    if(cap && num){
+      var hP=0, hE=0, rgH=L(cH)+r0+':'+L(cH)+rUlt, rgPc=L(cP)+r0+':'+L(cP)+rUlt, rgEc=L(cEj)+r0+':'+L(cEj)+rUlt;
+      activ.forEach(function(q){ var hn=parseFloat(String(q.it.h||'').replace(',', '.')); if(!isFinite(hn)) return; var F=progFila(q.it, d.tipo, H, progs, anio);
+        F.forEach(function(c, m){ var K=_pgXlsCodigo(c, m, cerr); if(K.k && K.k!=='mas') hP+=hn; if(K.k==='E') hE+=hn; }); });
+      kpis.push(['Horas programadas', hP, 'SUMPRODUCT('+rgH+','+rgPc+')', sKpiN]);
+      kpis.push(['Horas dictadas', hE, 'SUMPRODUCT('+rgH+','+rgEc+')', sKpiN]);
+    }
+    _pgXlsTramos(h.anchos, 0, ult, kpis.length).forEach(function(t, k){
+      var K=kpis[k];
+      h.unir(t[0], rKpi, t[1], rKpi, K[1], K[3], K[2]);
+      h.unir(t[0], rKpi+1, t[1], rKpi+1, K[0], sKpiL);
+      if(K[3]===sKpiP) h.semaforo(L(t[0])+rKpi+':'+L(t[0])+rKpi, DX);
+    });
+    h.altos[rKpi]=32; h.altos[rKpi+1]=26;
+    if(extras) h.unir(0, rKpi+2, ult, rKpi+2, 'Además, '+extras+(extras===1 ? ' hecha' : ' hechas')+' sin estar en el programa (+): no cuentan en el cumplimiento.', sLey);
+    /* la leyenda */
+    ley.forEach(function(x, k){
+      var rl=rLey+dLey+k;
+      h.celda(0, rl, x[1], x[0]==='hoy' ? sCabHoy : sCod[x[0]]);
+      h.unir(1, rl, cM-1, rl, x[2], sLey);
+    });
+    /* ── cómo se cuenta y las firmas ── */
+    rr++;
+    h.unir(0, rr, ult, rr, 'Cómo se cuenta: lo ejecutado sale de lo registrado en OBRASST'+(cap ? ' (las capacitaciones rendidas en la app y las registradas a mano)' : '')+' y de lo marcado a mano en el programa. '+
+      'Cumplimiento a la fecha = ejecutadas ÷ las que ya debían hacerse (las de los meses cerrados y las que ya se hicieron). Hoja armada el '+fechaLarga(hoyISO())+'.', sLeyV);
+    h.altos[rr]=30; rr+=2;
     var Fm=(d.firmas||[]).filter(function(f){ return gesTxt(f.rol) || gesTxt(f.nombre) || gesTxt(f.cargo); });
-    Fm.forEach(function(f){ h.unir(0, fr, 2, fr, tx(f.rol||''), sRot); h.unir(3, fr, ult, fr, [f.nombre, tx(f.cargo||'')].filter(Boolean).join(' · '), sVal); fr++; });
-    if(d.base!==false) progNorma(d.tipo).filter(function(n){ return n.firma; }).forEach(function(n){ h.unir(0, fr, ult, fr, 'Base: '+n.v+' ('+n.n+')', sSub); fr++; });
-    h.congelar={ c:0, r:rCab };
-    bajarBlob(X.libro([h], E, T.n+' '+anio), _papNombre(T.n+' '+anio+' - '+(obra||'obra'))+'.xlsx');
+    if(Fm.length){
+      h.unir(0, rr, ult, rr, 'FIRMAS', sSec); rr++;
+      _pgXlsTramos(h.anchos, 0, ult, Fm.length).forEach(function(t, k){
+        var f=Fm[k];
+        h.unir(t[0], rr, t[1], rr, tx(String(f.rol||'').toUpperCase()), sFiCab);
+        h.unir(t[0], rr+1, t[1], rr+3, '', sFiCaja);
+        h.unir(t[0], rr+4, t[1], rr+4, f.nombre||'', sFiN);
+        h.unir(t[0], rr+5, t[1], rr+5, tx(f.cargo||''), sFiC);
+        h.unir(t[0], rr+6, t[1], rr+6, 'Fecha:', sFiF);
+      });
+      h.altos[rr]=16; h.altos[rr+1]=18; h.altos[rr+2]=18; h.altos[rr+3]=18; h.altos[rr+4]=16; h.altos[rr+5]=26; h.altos[rr+6]=16;
+      rr+=8;
+    }
+    if(d.base!==false) progNorma(d.tipo).filter(function(n){ return n.firma; }).forEach(function(n){ var t='Base: '+n.v+' ('+n.n+')'; h.unir(0, rr, ult, rr, t, sLeyV); h.altos[rr]=15*lineas(t, wDe(0, ult)); rr++; });
+    h.congelar={ c:2, r:0 };
+    /* la cabecera de la tabla se repite al imprimir solo si la tabla no entra en una hoja (si no, salía sola encima de las firmas) */
+    if(filas.length>14) h.titulos="'Programa'!$"+rCab0+':$'+rCab0;
+    /* ── la hoja «Mes a mes» ── */
+    var m2=new X.Hoja('Mes a mes'); m2.pie=T.n+' '+anio;
+    var c2=cap ? ['Mes', G('Programadas'), G('Ejecutadas'), G('Atrasadas'), 'Cumplimiento del mes', G('Programadas')+' (acumulado)', G('Ejecutadas')+' (acumulado)', 'Cumplimiento acumulado', 'Horas programadas', 'Horas dictadas']
+               : ['Mes', G('Programadas'), G('Ejecutadas'), G('Atrasadas'), 'Cumplimiento del mes', G('Programadas')+' (acumulado)', G('Ejecutadas')+' (acumulado)', 'Cumplimiento acumulado'];
+    var u2=c2.length-1;
+    m2.unir(0, 1, u2, 1, tx(T.tit)+' '+anio+' · MES A MES', sTit); m2.altos[1]=28;
+    m2.unir(0, 2, u2, 2, [ctx.emp && ctx.emp.razon, obra].filter(Boolean).join(' · ')+' · '+(tit.charAt(0)+tit.slice(1).toLowerCase()), sSub);
+    c2.forEach(function(t, k){ m2.celda(k, 4, t, sCab); m2.anchos[k]=k ? 14 : 13; }); m2.altos[4]=30;
+    var Q="'Programa'!", acP=0, acE=0, p2=5, hPT=0, hET=0;
+    for(i=0;i<12;i++){
+      var rw=p2+i, cl2=L(cM+i), rcol=Q+cl2+r0+':'+cl2+Math.max(r0, rUlt), cerrado=(i<cerr);
+      var np2=0, ne2=0, nx2=0, hp2=0, he2=0;
+      activ.forEach(function(q){ var c=progFila(q.it, d.tipo, H, progs, anio)[i], K=_pgXlsCodigo(c, i, cerr), hn=parseFloat(String(q.it.h||'').replace(',', '.'));
+        if(K.k && K.k!=='mas'){ np2++; if(cap && isFinite(hn)) hp2+=hn; } if(K.k==='E'){ ne2++; if(cap && isFinite(hn)) he2+=hn; } if(K.k==='X' || K.k==='parX') nx2++; });
+      acP+=np2; acE+=ne2; hPT+=hp2; hET+=he2;
+      m2.celda(0, rw, progMes(i, true).charAt(0).toUpperCase()+progMes(i, true).slice(1), i===mesHoy ? sCabHoy : sTxB);
+      m2.celda(1, rw, np2, sCnt, num ? (Q+cl2+rTP) : null);
+      m2.celda(2, rw, ne2, sCnt, num ? (Q+cl2+rTE) : null);
+      m2.celda(3, rw, nx2, sCnt, num ? ('COUNTIF('+rcol+',"X")'+(cerrado ? '+COUNTIF('+rcol+',"*/*")' : '')) : null);
+      m2.celda(4, rw, (cerrado && np2) ? ne2/np2 : '', sPctT, cerrado ? 'IF(B'+rw+'=0,"",C'+rw+'/B'+rw+')' : null);
+      m2.celda(5, rw, acP, sCnt, 'SUM(B$'+p2+':B'+rw+')');
+      m2.celda(6, rw, acE, sCnt, 'SUM(C$'+p2+':C'+rw+')');
+      m2.celda(7, rw, (cerrado && acP) ? acE/acP : '', sPctT, cerrado ? 'IF(F'+rw+'=0,"",G'+rw+'/F'+rw+')' : null);
+      if(cap){
+        var rgH2=Q+L(cH)+r0+':'+L(cH)+Math.max(r0, rUlt);
+        m2.celda(8, rw, hp2, sCnt, num ? 'SUMPRODUCT('+rgH2+',('+rcol+'="P")+('+rcol+'="E")+('+rcol+'="X"))' : null);
+        m2.celda(9, rw, he2, sCnt, num ? 'SUMPRODUCT('+rgH2+',--('+rcol+'="E"))' : null);
+      }
+      m2.altos[rw]=17;
+    }
+    var rt=p2+12;
+    m2.celda(0, rt, 'Total', sTotR);
+    m2.celda(1, rt, acP, sTot, 'SUM(B'+p2+':B'+(rt-1)+')'); m2.celda(2, rt, acE, sTot, 'SUM(C'+p2+':C'+(rt-1)+')'); m2.celda(3, rt, cuenta.x, sTot, 'SUM(D'+p2+':D'+(rt-1)+')');
+    m2.celda(4, rt, deb ? cuenta.e/deb : '—', sPctT, 'IF((C'+rt+'+D'+rt+')=0,"—",C'+rt+'/(C'+rt+'+D'+rt+'))');
+    m2.celda(5, rt, '', sTot); m2.celda(6, rt, '', sTot); m2.celda(7, rt, '', sTot);
+    if(cap){ m2.celda(8, rt, hPT, sTot, 'SUM(I'+p2+':I'+(rt-1)+')'); m2.celda(9, rt, hET, sTot, 'SUM(J'+p2+':J'+(rt-1)+')'); }
+    m2.unir(0, rt+2, u2, rt+2, 'En el total, el cumplimiento es a la fecha: ejecutadas ÷ (ejecutadas + atrasadas). El de cada mes y el acumulado se calculan cuando el mes ya cerró.', sLeyV); m2.altos[rt+2]=28;
+    if(cerr){ m2.semaforo('E'+p2+':E'+(p2+cerr-1), DX); m2.semaforo('H'+p2+':H'+(p2+cerr-1), DX); }
+    m2.semaforo('E'+rt+':E'+rt, DX);
+    m2.congelar={ c:1, r:4 };
+    bajarBlob(X.libro([h, m2], E, T.n+' '+anio, medios), _papNombre(T.n+' '+anio+' - '+(obra||'obra'))+'.xlsx');
     if(bt) bt.disabled=false;
     return true;
   }, function(){ if(bt) bt.disabled=false; toast('No se pudo armar el Excel. Revisa tu conexión.'); return false; });
@@ -1230,6 +1540,108 @@ function progExcel(d, H, progs, bt){
      · «Acoplar lo que ya tienes»: pegar las filas de tu Excel, o subir tu documento a la carpeta «Objetivos y metas».
      · El PDF para firmar, y «Publicar en el cartel QR»: el PDF va a la carpeta «Objetivos y metas», la que abre su cartel.
    Sin citar normas: los objetivos de cada línea son de uso general (es mejor un casillero vacío que una norma inventada). */
+/* ══ 19/10/2026 · lote 19 · LOS MONITOREOS Y LAS AUDITORÍAS QUE YA SE HICIERON ═════════════════════════════════════
+   Como los simulacros y las campañas: cada uno es una fila de sst_doc, hoja «ges-act», y cuenta solo en su programa por su
+   nombre (el de la actividad del programa).
+     mon: { v:1, k:'mon', estado:'hecho'|'programado', nombre, fecha, emp (quién lo hizo), areas, puntos, res:'ok'|'fuera'|'', obs, ev:[{u,n}], por, t }
+     aud: { v:1, k:'aud', estado, nombre, fecha, tipo:'interna'|'cliente'|'certificacion'|'otra', emp (auditor), alcance, nc, obsn, om, obs, ev, por, t } */
+var PROG_AUD_TIPOS = [['interna', 'Interna'], ['cliente', 'Del cliente'], ['certificacion', 'De certificación'], ['otra', 'Otra']];
+var PROG_MON_RES = [['ok', 'Dentro de los límites'], ['fuera', 'Algo fuera de los límites'], ['', 'Sin resultado todavía']];
+var PRG = { tipo:'', anio:'', filas:[], f:null, ev:null, guardando:false };
+function progRegHoja(tipo, anio){
+  PRG.tipo=tipo; PRG.anio=String(anio||ANIO);
+  var T=progTipo(tipo);
+  abrirHoja((tipo==='mon' ? 'Los monitoreos' : 'Las auditorías')+' de '+PRG.anio, 'Lo que ya se hizo (y lo que viene, con su fecha): cuenta solo en el '+T.n.charAt(0).toLowerCase()+T.n.slice(1), '<div class="vacio">Cargando…</div>', '', { ancha:true, sinFoco:true });
+  gesActTraer(true).then(function(l){
+    PRG.filas=gesActDe(l, tipo).filter(function(x){ return String(x.d.fecha||'').slice(0, 4)===PRG.anio; }).sort(function(a, b){ return String(b.d.fecha||'').localeCompare(String(a.d.fecha||'')); });
+    _prgLista();
+  }, function(e){ $('hoja-cuerpo').innerHTML='<div class="vacio"><b>No se pudo cargar</b>'+esc(porQueFallo(e))+'</div>'; });
+}
+function _prgLista(){
+  var tipo=PRG.tipo, L=PRG.filas, mon=(tipo==='mon');
+  var resN=function(r){ for(var i=0;i<PROG_MON_RES.length;i++) if(PROG_MON_RES[i][0]===(r||'')) return PROG_MON_RES[i][1]; return ''; };
+  var h=L.length ? '<div class="tabla-caja"><table><thead><tr><th>Fecha</th><th>'+(mon ? 'Qué se monitoreó' : 'Auditoría')+'</th><th>Estado</th><th>'+(mon ? 'Resultado' : 'Hallazgos')+'</th><th>Informe</th><th></th></tr></thead><tbody>'+
+      L.map(function(x, i){ var d=x.d, ev=(d.ev||[])[0];
+        return '<tr><td>'+esc(fechaLarga(d.fecha)||d.fecha||'')+'</td><td><b>'+esc(d.nombre||'')+'</b>'+(d.emp ? '<span class="sub">'+esc(d.emp)+'</span>' : '')+'</td>'+
+          '<td><span class="pill '+(d.estado==='hecho' ? 'ok' : 'azul')+'">'+(d.estado==='hecho' ? (mon ? 'realizado' : 'realizada') : (mon ? 'programado' : 'programada'))+'</span></td>'+
+          '<td>'+(mon ? (d.res ? '<span class="pill '+(d.res==='ok' ? 'ok' : 'mal')+'">'+esc(resN(d.res))+'</span>' : '<span class="tenue">—</span>')
+                     : esc([d.nc ? d.nc+' no conformidades' : '', d.obsn ? d.obsn+' observaciones' : '', d.om ? d.om+' oportunidades de mejora' : ''].filter(Boolean).join(' · ') || '—'))+'</td>'+
+          '<td>'+(ev ? '<a href="'+esc(ev.u)+'" target="_blank" rel="noopener">ver</a>' : '<span class="tenue">—</span>')+'</td>'+
+          '<td><button type="button" class="bt sec chico" data-ed="'+i+'">Editar</button></td></tr>'; }).join('')+'</tbody></table></div>'
+    : '<div class="vacio"><b>'+(mon ? 'Ningún monitoreo registrado en ' : 'Ninguna auditoría registrada en ')+esc(PRG.anio)+'</b>'+(mon ? 'Registra el que ya se hizo, con su informe: cuenta solo en el programa.' : 'Registra la que ya se hizo, con su informe: cuenta sola en el programa.')+'</div>';
+  $('hoja-cuerpo').innerHTML=h;
+  _obsPieP('<button type="button" class="bt sec" id="prg-cerrar">Cerrar</button><button type="button" class="bt ok" id="prg-nuevo">＋ Registrar '+(mon ? 'un monitoreo' : 'una auditoría')+'</button>');
+  $('prg-cerrar').onclick=function(){ cerrarHoja(); if(typeof PROGW==='object' && PROGW.pinta && VISTA.actual==='programas') PROGW.pinta(); };
+  $('prg-nuevo').onclick=function(){ _prgForm(null); };
+  $('hoja-cuerpo').onclick=function(ev){ var b=ev.target.closest('[data-ed]'); if(b) _prgForm(PRG.filas[+b.getAttribute('data-ed')]); };
+}
+function _prgChips(id, L, sel){
+  return '<div class="chips" id="'+id+'" role="radiogroup">'+L.map(function(x){ var on=(x[0]===sel); return '<button type="button" role="radio" class="chip'+(on ? ' on' : '')+'" aria-checked="'+(on ? 'true' : 'false')+'" data-v="'+esc(x[0])+'">'+esc(x[1])+'</button>'; }).join('')+'</div>';
+}
+function _prgChipsAl(id){
+  var c=$(id); if(!c) return;
+  c.onclick=function(ev){ var b=ev.target.closest('[data-v]'); if(!b) return; Array.prototype.forEach.call(c.querySelectorAll('.chip'), function(x){ var on=(x===b); x.className='chip'+(on ? ' on' : ''); x.setAttribute('aria-checked', on ? 'true' : 'false'); }); };
+}
+function _prgChipsV(id, def){ var b=document.querySelector('#'+id+' .chip.on'); return b ? b.getAttribute('data-v') : (def||''); }
+function _prgForm(fila){
+  var tipo=PRG.tipo, mon=(tipo==='mon'), d=(fila && fila.d) || {}, hoy=hoyISO(), prog=(typeof PROGW==='object' && PROGW.filas) ? progDe(PROGW.filas, tipo, PRG.anio) : null;
+  PRG.f=fila || null; PRG.guardando=false;
+  var sug=[]; (prog ? prog.d.items||[] : []).forEach(function(it){ if(gesTxt(it.n)) sug.push(gesTxt(it.n)); });
+  if(mon) PROG_MON_SUG.forEach(function(g){ sug=sug.concat(g[1]); }); else sug=sug.concat(PROG_AUD_SUG);
+  var vis={}; sug=sug.filter(function(n){ var k=_pgLlave(n); if(vis[k]) return false; vis[k]=1; return true; });
+  var h='<div class="campo"><label for="prg-n">'+(mon ? 'Qué se monitoreó' : 'La auditoría')+'</label><input id="prg-n" list="prg-dl" maxlength="160" autocomplete="off" value="'+esc(d.nombre||'')+'" placeholder="'+(mon ? 'Monitoreo de ruido' : 'Auditoría interna del sistema de gestión de SST')+'">'+
+      '<datalist id="prg-dl">'+sug.map(function(n){ return '<option value="'+esc(n)+'">'; }).join('')+'</datalist>'+
+      '<p class="ayuda">Con el mismo nombre de la actividad del programa: así cuenta sola en su mes.</p></div>'+
+    '<div class="fila-c"><div class="campo"><label id="prg-est-t">¿Ya se hizo?</label>'+_prgChips('prg-est', [['hecho', mon ? 'Realizado' : 'Realizada'], ['programado', mon ? 'Programado' : 'Programada']], d.estado || 'hecho')+'</div>'+
+      '<div class="campo"><label for="prg-f">Fecha</label><input type="date" id="prg-f" value="'+esc(String(d.fecha||hoy).slice(0, 10))+'"></div></div>'+
+    (mon ? '' : '<div class="campo"><label id="prg-tipo-t">Tipo</label>'+_prgChips('prg-tipo', PROG_AUD_TIPOS, d.tipo || 'interna')+'</div>')+
+    '<div class="fila-c"><div class="campo"><label for="prg-emp">'+(mon ? 'Quién lo hizo <span class="tenue">· el laboratorio o la empresa</span>' : 'El auditor <span class="tenue">· la empresa o la persona</span>')+'</label><input id="prg-emp" maxlength="120" autocomplete="off" value="'+esc(d.emp||'')+'"></div>'+
+      (mon ? '<div class="campo"><label for="prg-pts">Puntos medidos <span class="tenue">· opcional</span></label><input id="prg-pts" inputmode="numeric" maxlength="4" value="'+esc(d.puntos==null ? '' : d.puntos)+'"></div>'
+           : '<div class="campo"><label for="prg-alc">Alcance <span class="tenue">· opcional</span></label><input id="prg-alc" maxlength="160" value="'+esc(d.alcance||'')+'"></div>')+'</div>'+
+    (mon ? '<div class="campo"><label for="prg-areas">Áreas o puestos <span class="tenue">· opcional</span></label><input id="prg-areas" maxlength="200" value="'+esc(d.areas||'')+'" placeholder="Frente 2, taller de soldadura, almacén"></div>'+
+           '<div class="campo"><label id="prg-res-t">El resultado</label>'+_prgChips('prg-res', PROG_MON_RES, d.res || '')+'</div>'
+         : '<div class="fila-c"><div class="campo"><label for="prg-nc">No conformidades</label><input id="prg-nc" inputmode="numeric" maxlength="3" value="'+esc(d.nc==null ? '' : d.nc)+'"></div>'+
+           '<div class="campo"><label for="prg-obsn">Observaciones</label><input id="prg-obsn" inputmode="numeric" maxlength="3" value="'+esc(d.obsn==null ? '' : d.obsn)+'"></div>'+
+           '<div class="campo"><label for="prg-om">Oportunidades de mejora</label><input id="prg-om" inputmode="numeric" maxlength="3" value="'+esc(d.om==null ? '' : d.om)+'"></div></div>')+
+    '<div class="campo"><label for="prg-obs">'+(mon ? 'Las medidas o lo que se encontró' : 'Lo más importante que se encontró')+' <span class="tenue">· opcional</span></label><textarea id="prg-obs" rows="2" maxlength="600">'+esc(d.obs||'')+'</textarea></div>'+
+    '<div class="seccion"><h3>El informe</h3><div id="prg-ev"></div></div><div class="msg" id="prg-msg" role="status"></div>';
+  $('hoja-cuerpo').innerHTML=h;
+  _obsPieP((fila ? '<button type="button" class="bt mal" id="prg-quitar">Quitar</button>' : '')+'<button type="button" class="bt sec" id="prg-volver">‹ Volver</button><button type="button" class="bt ok" id="prg-ok">Guardar</button>');
+  ['prg-est', 'prg-tipo', 'prg-res'].forEach(_prgChipsAl);
+  PRG.ev=gesEvidencia($('prg-ev'), { id:'prg-evi', lista:d.ev || [], max:2, texto:'Adjuntar el informe (PDF o foto)', ayuda:'El informe '+(mon ? 'del monitoreo' : 'de la auditoría')+' tal como se entregó: hasta 2 archivos de 20 MB.' });
+  $('prg-volver').onclick=_prgLista;
+  $('prg-ok').onclick=_prgGuardar;
+  if($('prg-quitar')) $('prg-quitar').onclick=function(){
+    confirmar('¿Quitar este registro?', '«'+(d.nombre||'')+'» deja de contar en el programa.', { si:'Sí, quitarlo', mal:true }).then(function(si){
+      if(!si) return;
+      gesActQuitar(fila.id).then(function(){ toast('Quitado.'); progRegHoja(PRG.tipo, PRG.anio); }, function(e){ toast('No se pudo quitar. '+porQueFallo(e)); });
+    });
+  };
+}
+function _prgGuardar(){
+  if(PRG.guardando) return;
+  var tipo=PRG.tipo, mon=(tipo==='mon'), m=$('prg-msg'), b=$('prg-ok'), v=function(id){ var e=$(id); return e ? gesTxt(e.value) : ''; };
+  var mal=function(t, foco){ m.className='msg mal'; m.textContent=t; if(foco) try{ $(foco).focus(); }catch(e){} };
+  var n=v('prg-n').slice(0, 160), fe=v('prg-f'), est=_prgChipsV('prg-est', 'hecho'), hoy=hoyISO();
+  if(n.length<3) return mal(mon ? 'Escribe qué se monitoreó.' : 'Escribe qué auditoría es.', 'prg-n');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fe)) return mal('Falta la fecha.', 'prg-f');
+  if(est==='hecho' && fe>hoy) return mal(mon ? 'Si ya se hizo, la fecha es de hoy o de antes. Si viene, márcalo como programado.' : 'Si ya se hizo, la fecha es de hoy o de antes. Si viene, márcala como programada.', 'prg-f');
+  var ent=function(id){ var x=v(id); if(!x) return null; var k=parseInt(x, 10); return (isNaN(k) || k<0) ? NaN : k; };
+  var d={ v:1, k:tipo, estado:est, nombre:n, fecha:fe, emp:v('prg-emp').slice(0, 120), obs:String(($('prg-obs')||{}).value||'').trim().slice(0, 600), por:gesQuien(), t:Date.now() };
+  if(mon){ d.areas=v('prg-areas').slice(0, 200); d.puntos=ent('prg-pts'); d.res=_prgChipsV('prg-res', ''); if(isNaN(d.puntos)) return mal('Los puntos medidos van en número.', 'prg-pts'); }
+  else { d.tipo=_prgChipsV('prg-tipo', 'interna'); d.alcance=v('prg-alc').slice(0, 160); d.nc=ent('prg-nc'); d.obsn=ent('prg-obsn'); d.om=ent('prg-om');
+    if([d.nc, d.obsn, d.om].some(function(x){ return x!==null && isNaN(x); })) return mal('Los hallazgos van en número.'); }
+  PRG.guardando=true; b.disabled=true; m.className='msg gris'; m.textContent=PRG.ev.n() ? 'Subiendo el informe…' : 'Guardando…';
+  PRG.ev.subir().then(function(ev){
+    d.ev=ev; m.textContent='Guardando…';
+    return gesActGuardar(PRG.f ? PRG.f.id : null, d, n);
+  }).then(function(){
+    PRG.guardando=false; toast(mon ? 'Monitoreo guardado: cuenta en su programa.' : 'Auditoría guardada: cuenta en su programa.');
+    if(typeof PROGH==='object') PROGH.H=null;
+    progRegHoja(PRG.tipo, PRG.anio);
+  }).catch(function(e){ PRG.guardando=false; b.disabled=false; mal(e==='muy-grande' ? 'El archivo pesa más de 20 MB: comprímelo.' : 'No se pudo guardar. '+porQueFallo(e)); });
+}
+
 var OBJ_HOJA = 'ges-objetivos';
 var OBJ_LINEA = {
   'Gestión y liderazgo':'Que la línea de mando lidere la seguridad y salud en el trabajo de la obra.',
@@ -1284,14 +1696,14 @@ function objAvance(it, progs, H, anio){
   var f=String(it.fuente||''), sst=progDe(progs, 'sst', anio);
   if(f==='sst' && sst) return progResumen(sst.d, H, progs);
   if(f.indexOf('linea:')===0 && sst) return _objResumenLinea(sst.d, H, progs, f.slice(6));
-  if(/^(cap|insp|sim|camp)$/.test(f)){ var o=progDe(progs, f, anio); return o ? progResumen(o.d, H, progs) : null; }
+  if(/^(cap|insp|sim|camp|mon|aud)$/.test(f)){ var o=progDe(progs, f, anio); return o ? progResumen(o.d, H, progs) : null; }
   return null;
 }
 function objFuenteN(f){
   f=String(f||'');
   if(f==='sst') return 'Del programa anual de SST';
   if(f.indexOf('linea:')===0) return 'Del programa anual de SST · '+f.slice(6);
-  if(/^(cap|insp|sim|camp)$/.test(f)) return 'Del '+progTipo(f).n.charAt(0).toLowerCase()+progTipo(f).n.slice(1);
+  if(/^(cap|insp|sim|camp|mon|aud)$/.test(f)) return 'Del '+progTipo(f).n.charAt(0).toLowerCase()+progTipo(f).n.slice(1);
   return 'Escrito aquí';
 }
 /* lo que se propone desde los programas del año (cada fuente una sola vez) */
@@ -1310,7 +1722,7 @@ function objDesdeProgramas(progs, anio){
                  resp:resp, plazo:plazo, fuente:'linea:'+L });
     });
   }
-  ['cap', 'insp', 'sim', 'camp'].forEach(function(k){
+  ['cap', 'insp', 'sim', 'camp', 'mon', 'aud'].forEach(function(k){
     var o=progDe(progs, k, anio); if(!o) return;
     var T=progTipo(k), n=(o.d.items||[]).filter(function(it){ return gesTxt(it.n); }).length;
     out.push({ obj:gesTxt(o.d.obj) || T.obj, meta:'Cumplir '+(n ? 'los '+n+' '+progGen(k, n===1 ? 'programada' : 'programadas')+' del ' : 'el ')+T.n.charAt(0).toLowerCase()+T.n.slice(1)+'.',

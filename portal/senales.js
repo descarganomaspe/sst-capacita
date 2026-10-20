@@ -71,6 +71,27 @@ function _snCss(){
     '.sn-med .ojo{background:var(--ojo-f);border:1px solid #EED9A8;border-radius:9px;padding:9px 11px}.sn-med .gris{color:var(--gris);font-size:12.5px}',
     '.sn-logo{font-size:12.5px;color:var(--gris);line-height:1.5;margin:4px 0 0}.sn-logo b{color:var(--tinta)}',
     '.sn-pie-msg{margin:0 auto 0 0;min-height:0;align-self:center}',
+    /* lote 15 · los carteles propios */
+    '.sn-sub{font-size:14px;font-weight:600;color:var(--tinta);margin:20px 0 10px}',
+    '.snx-l{display:grid;gap:8px;margin:0 0 6px;max-width:860px}',
+    '.snx-f{display:flex;gap:6px;align-items:stretch}',
+    '.snx-f-b{appearance:none;-webkit-appearance:none;cursor:pointer;font:inherit;text-align:left;flex:1;min-width:0;display:flex;gap:12px;align-items:center;border:1px solid var(--raya);border-radius:10px;background:var(--panel);padding:10px 12px;color:var(--texto)}',
+    '.snx-f-b:hover{border-color:var(--raya2)}.snx-f-b>span{min-width:0}',
+    '.snx-f-b b{display:block;color:var(--tinta);font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.snx-f-b small{display:flex;flex-wrap:wrap;align-items:center;gap:4px;color:var(--gris);font-size:12.5px;margin-top:2px}.snx-f-b small svg{display:inline-block;width:18px;height:18px}',
+    '.snx-sw{flex:0 0 auto;display:block;width:26px;height:26px;border-radius:6px}',
+    '.snx-ic{border-radius:12px}.snx-ic>span{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:#fff}.snx-ic>span svg{width:34px;height:34px}.snx-ic>i{font-style:normal;color:#fff;font-weight:700;font-size:24px}',
+    '.snx-pks{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}',
+    '.snx-pk{display:flex;align-items:center;gap:8px;border:1px solid var(--raya);border-radius:10px;background:var(--panel);padding:4px 4px 4px 6px;max-width:100%}.snx-pk svg{flex:0 0 auto;display:block;width:34px;height:34px}.snx-pk b{font-size:12px;font-weight:600;color:var(--tinta);line-height:1.25;max-width:200px}',
+    '.snx-pick{margin:10px 0 0;display:grid;gap:8px}',
+    /* lote 15 · la señal con el QR de cada equipo */
+    '.sn-qr-sw{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600;color:var(--tinta);cursor:pointer}.sn-qr-sw input{flex:0 0 auto;width:18px;height:18px;margin:0;accent-color:var(--ok)}',
+    '.sn-qr-cab{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:10px 0 6px;font-size:13px}.sn-qr-cab b{font-variant-numeric:tabular-nums;color:var(--tinta);font-weight:600}',
+    '.sn-eqs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;max-height:300px;overflow:auto;padding:2px}',
+    '.sn-eq{appearance:none;-webkit-appearance:none;cursor:pointer;font:inherit;text-align:left;display:grid;grid-template-columns:minmax(0,1fr) 22px;gap:8px;align-items:center;border:1px solid var(--raya);border-radius:10px;background:var(--panel);padding:7px 10px;color:var(--texto)}',
+    '.sn-eq:hover{border-color:var(--raya2)}.sn-eq.on{border-color:var(--ok);background:#F4FBF7}',
+    '.sn-eq b{display:block;font-weight:600;color:var(--tinta);font-size:13.5px}.sn-eq small{display:block;color:var(--gris);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.sn-eq .tic{width:22px;height:22px;border-radius:6px;border:1px solid var(--raya2);display:grid;place-items:center;font-size:13px;font-style:normal;color:#fff;background:var(--panel)}.sn-eq.on .tic{background:var(--ok);border-color:var(--ok)}',
     /* personal autorizado */
     '.sn-mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}',
     '.sn-mod{appearance:none;-webkit-appearance:none;cursor:pointer;font:inherit;text-align:left;display:flex;gap:13px;align-items:center;border:1px solid var(--raya);border-radius:12px;background:var(--panel);padding:13px 14px;color:var(--texto);transition:border-color .12s,box-shadow .12s}',
@@ -298,7 +319,7 @@ function snHojaTxt(T){ return T ? (T.n+(T.oh ? ' horizontal' : ' vertical')) : '
 
 /* ══ 2 · LA SECCIÓN, Y LA PESTAÑA «SEÑALES DE LA NORMA» ═══════════════════════════════════════
    El catálogo se pinta una vez (son 171 dibujos) y al buscar solo se esconden las que no van. */
-var SN_TABS=[['norma', 'Señales de la norma'], ['pers', 'Personal autorizado'], ['and', 'Tarjetas de andamio']];
+var SN_TABS=[['norma', 'Señales de la norma'], ['prop', 'Carteles propios'], ['pers', 'Personal autorizado'], ['and', 'Tarjetas de andamio']];
 var SN_GRUPOS=['adv', 'obl', 'proh', 'fuego', 'emer'];
 var SN_POR_HOJA=[1, 2, 4, 6, 8, 9, 12, 15];
 /* fuera del Perú, como en la app: sin las señales de la NTP ni el cartel de personal autorizado */
@@ -341,7 +362,7 @@ function senVista(caja){
 function snPintarTab(){
   var c=$('sn-cuerpo'); if(!c) return;
   SNW.T=null;
-  if(SNW.tab==='pers') snpPintar(c); else if(SNW.tab==='and') snaPintar(c); else snnPintar(c);
+  if(SNW.tab==='pers') snpPintar(c); else if(SNW.tab==='and') snaPintar(c); else if(SNW.tab==='prop') snxPintar(c); else snnPintar(c);
 }
 
 /* ── el catálogo ─────────────────────────────────────────────────────────────────────────── */
@@ -421,7 +442,9 @@ function snTextoDe(k){
 function snAbrir(k){
   var A=SEN_APP; if(!A.hay(k)) return;
   var S=A.porK(k), pa=snTextoDe(k);
-  SNE={ k:k, aviso:pa.aviso, texto:pa.texto, sub:'', tam:SNW.op.tam, orient:SNW.op.orient, porHoja:SNW.op.porHoja };
+  SNE={ k:k, aviso:pa.aviso, texto:pa.texto, sub:'', tam:SNW.op.tam, orient:SNW.op.orient, porHoja:SNW.op.porHoja, qr:false, qrSel:{}, qrIni:false };
+  var tq=A.eqTipo ? A.eqTipo(k) : '';
+  SNW.eq=null;     /* los equipos se traen de nuevo cada vez que se abre: si registró uno, ya sale */
   var cuerpo='<div class="sn-ed'+(SNE.orient==='h' ? ' echada' : '')+'" id="sn-ed"><div class="sn-form">'+
     '<div class="campo"><label for="sn-a">Palabra de aviso <small>· el renglón grande</small></label>'+
     '<input id="sn-a" maxlength="24" autocomplete="off" placeholder="ATENCIÓN · PELIGRO · PROHIBIDO (vacío, si no lleva)" value="'+esc(SNE.aviso)+'"></div>'+
@@ -433,6 +456,7 @@ function snAbrir(k){
     '<div class="campo"><label>¿Cómo va la hoja?</label>'+snChips('sn-ori', SN_ORI, SNE.orient, 'Orientación de la hoja')+'</div>'+
     '<div class="campo"><label>¿Cuántas por hoja?</label>'+snChips('sn-ph', SN_POR_HOJA.map(function(n){ return { v:n, t:String(n) }; }), SNE.porHoja, 'Cuántas señales por hoja')+
     '<p class="ayuda">La misma señal repetida, para cortar. Si quieres varias señales distintas en una hoja, usa «＋ A la lista».</p></div>'+
+    (tq ? snQRCampoHTML() : '')+
     '<div id="sn-logo-c"></div></div>'+
     '<div class="sn-lado"><div class="sn-prev" id="sn-prev" aria-label="Vista previa de la hoja"><div class="sn-prev-msg">Armando la vista previa…</div></div>'+
     '<div class="sn-med" id="sn-med" aria-live="polite"></div></div></div>';
@@ -442,9 +466,16 @@ function snAbrir(k){
   var prev=$('sn-prev');
   var T=snTaller(prev, function(){
     var o={ k:SNE.k, aviso:SNE.aviso, texto:SNE.texto, sub:SNE.sub, tam:SNE.tam, orient:SNE.orient, porHoja:SNE.porHoja };
+    /* con el QR de cada equipo (lote 15): un cartel por cada uno de los marcados */
+    if(SNE.qr){ var q=snQRItems(); if(!q) return Promise.reject('sin_qr'); o.qr=q; }
     return snCtx().then(function(C){ return SEN_APP.senal(o, C); }).then(function(R){ R.cuenta=1; R.o=o; return R; });
   }, function(R, e){
     var m=$('sn-med'); if(!m) return;
+    if(!R && e==='sin_qr'){
+      if(SNW.eq) snPrevMsg(prev, 'Marca los equipos', 'Elige en la lista cuáles salen: un cartel por cada uno, con su QR.');
+      else snPrevMsg(prev, 'Buscando los equipos de la obra…', '');
+      m.innerHTML=''; return;
+    }
     if(!R){ snPrevMsg(prev, 'No se pudo armar el cartel', 'Revisa tu conexión e inténtalo otra vez.'); m.innerHTML=''; return; }
     m.innerHTML=snMedidaHTML(R);
   });
@@ -455,8 +486,10 @@ function snAbrir(k){
   snChipsAl('sn-ori', function(v){ SNE.orient=v; SNW.op.orient=v; var ed=$('sn-ed'); if(ed) ed.classList.toggle('echada', v==='h'); T.pide(); });
   snChipsAl('sn-ph', function(v){ SNE.porHoja=+v||1; SNW.op.porHoja=SNE.porHoja; T.pide(); });
   $('sn-cerrar').onclick=cerrarHoja;
-  $('sn-pdf').onclick=function(){ snEntregar(T, 'senal', 'señales', 'pdf', this); };
-  $('sn-imp').onclick=function(){ snEntregar(T, 'senal', 'señales', 'imp', this); };
+  $('sn-pdf').onclick=function(){ if(snQRFalta()) return; snEntregar(T, 'senal', 'señales', 'pdf', this); };
+  $('sn-imp').onclick=function(){ if(snQRFalta()) return; snEntregar(T, 'senal', 'señales', 'imp', this); };
+  var qc=$('sn-qr');
+  if(qc) qc.onchange=function(){ SNE.qr=this.checked; if(SNE.qr) SNE.qrIni=true; var mm=$('sn-msg'); if(mm) mm.textContent=''; snQRPinta(); T.pide(); };
   $('sn-ala').onclick=function(){
     var r=snListaPoner({ k:SNE.k, aviso:SNE.aviso, texto:SNE.texto, sub:SNE.sub, n:1 });
     if(!r){ var mm=$('sn-msg'); if(mm){ mm.className='msg mal sn-pie-msg'; mm.textContent='La lista ya tiene '+SN_LISTA_MAX+' señales: imprímela y empieza otra.'; } return; }
@@ -466,10 +499,301 @@ function snAbrir(k){
   snCtx().then(function(C){ var l=$('sn-logo-c'); if(l) l.innerHTML=snLogoNota(C, 'Va arriba, en su franja, con la razón social al lado, fuera del símbolo: la norma no deja taparlo ni alterarlo.'); });
   T.pide();
 }
+/* ══ LOS CARTELES PROPIOS DE LA OBRA (17/10/2026, lote 15) ═════════════════════════════════════
+   Marcelo: «colocar la opción de señaléticas personalizadas… cajas de herramientas, acopio de materiales, punto de
+   sombra, porta arnés… en una hoja A4 o A3, de fondo obligatorio (azul), fondo verde (informativo) y sus respectivas
+   señaléticas de riesgo y EPPs, como opción de colocar, y obviamente con su logo». Los mismos de la app: sst_estado
+   «sen_propias» (se juntan por id y gana el más nuevo), el mismo dibujo (SEN_APP.propio) y los mismos modelos. Lo que
+   se arma aquí aparece en el celular, y al revés. Se guarda solo, como «personal autorizado». */
+var SNX=null;
+var SNX_GRUPOS=[['obl', 'EPP (obligación)'], ['adv', 'Riesgo (advertencia)'], ['proh', 'Prohibición'], ['emer', 'Emergencia'], ['fuego', 'Incendios']];
+function snxLeer(){
+  return estadoLeerP('sen_propias').then(function(f){ var v=f && f.valor; return (v && Array.isArray(v.l)) ? v.l : []; });
+}
+function snxCuando(t){
+  t=+t||0; if(!t) return '';
+  var d=new Date(t); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+}
+function snxPintar(c){
+  var A=SEN_APP;
+  c.innerHTML='<p class="sn-intro">Escribe lo que va —caja de herramientas, acopio de materiales, punto de sombra, porta arnés…—, elige el fondo (azul de obligación o verde de información) y, si quieres, '+
+    'los pictogramas de riesgo y de EPP. Sale con el logo de tu empresa, en A4 o A3, y queda guardado en la obra: también se ve y se imprime desde la app.</p>'+
+    '<p class="sn-cupo" id="sn-cupo" data-clave="senal" hidden></p>'+
+    '<div id="snx-l"><p class="sn-cuantas">Buscando los carteles de la obra…</p></div>'+
+    '<h3 class="sn-sub">Uno nuevo</h3>'+
+    '<div class="sn-mods" id="snx-mods">'+A.propiosModelos.map(function(m){
+      return '<button type="button" class="sn-mod" data-m="'+esc(m.k)+'"><span class="sn-mod-ic snx-ic" style="background:'+A.fondos[m.color].cf+'">'+
+        (m.pics.length ? '<span>'+A.svg(m.pics[0], 34)+'</span>' : '<i>'+(m.ic || '✎')+'</i>')+'</span><span><b>'+esc(m.n)+'</b><small>'+esc(m.d)+'</small></span></button>';
+    }).join('')+'<button type="button" class="sn-mod blanco" data-m=""><span class="sn-mod-ic">✏️</span><span><b>En blanco</b><small>Escribes tú lo que va</small></span></button></div>';
+  $('snx-mods').onclick=function(ev){
+    var b=ev.target.closest ? ev.target.closest('button[data-m]') : null; if(!b) return;
+    var mk=b.getAttribute('data-m'), m=null; A.propiosModelos.forEach(function(x){ if(x.k===mk) m=x; });
+    snxAbrir(m ? { texto:m.texto, sub:m.sub, color:m.color, pics:m.pics.slice(), tam:'A4', orient:'v' } : { color:'azul', pics:[] });
+  };
+  snxListaPinta();
+  snUso().then(snCupoPinta);
+}
+function snxListaPinta(){
+  if(!$('snx-l')) return;
+  var oid=(YO.obra||{}).id;
+  snxLeer().then(function(L){
+    if((YO.obra||{}).id!==oid) return;
+    SNW.prop=L;
+    var c=$('snx-l'); if(!c) return;
+    var V=L.map(SEN_APP.propioLimpio).filter(function(z){ return z.id && !z.b; }).sort(function(a, b){ return (b.t||0)-(a.t||0); });
+    if(!V.length){ c.innerHTML='<p class="sn-cuantas">Todavía no hay carteles propios en esta obra. Elige uno para empezar.</p>'; return; }
+    c.innerHTML='<h3 class="sn-sub">Los de la obra <span class="gris">· '+V.length+'</span></h3><div class="snx-l">'+V.map(function(z){
+      return '<div class="snx-f"><button type="button" class="snx-f-b" data-id="'+esc(z.id)+'"><i class="snx-sw" style="background:'+SEN_APP.fondos[z.color].cf+'"></i>'+
+        '<span><b>'+esc(z.texto||'—')+'</b><small>'+z.tam+' · '+(z.orient==='h' ? 'horizontal' : 'vertical')+
+        (z.pics.length ? ' · '+z.pics.map(function(k){ return SEN_APP.svg(k, 18); }).join('') : '')+(z.t ? ' · '+esc(snxCuando(z.t)) : '')+'</small></span></button>'+
+        '<button type="button" class="sn-x" data-quitar="'+esc(z.id)+'" title="Quitar este cartel" aria-label="Quitar: '+esc(z.texto)+'">✕</button></div>';
+    }).join('')+'</div>';
+    c.onclick=function(ev){
+      var q=ev.target.closest ? ev.target.closest('button[data-quitar]') : null;
+      if(q){ snxQuitar(q.getAttribute('data-quitar')); return; }
+      var b=ev.target.closest ? ev.target.closest('button[data-id]') : null; if(!b) return;
+      var z=null; V.forEach(function(x){ if(x.id===b.getAttribute('data-id')) z=x; });
+      if(z) snxAbrir(z);
+    };
+  }, function(cod){
+    var c3=$('snx-l'); if(c3) c3.innerHTML='<p class="sn-cuantas">No se pudieron traer los carteles de la obra. '+esc(porQueFallo(cod))+'</p>';
+  });
+}
+/* se guarda sobre lo que el servidor tiene EN ESE MOMENTO: lo que otro cambió (en la app o en otra pestaña) no se pisa */
+function snxGuardar(o){
+  var oid=(YO.obra||{}).id;
+  return snxLeer().then(function(L){
+    if((YO.obra||{}).id!==oid) return Promise.reject('otra_obra');
+    var J=SEN_APP.propiosJuntar(L, [o]);
+    return estadoEscribirP('sen_propias', { v:1, l:J.slice(-200) }).then(function(){ SNW.prop=J; return J; });
+  });
+}
+function snxQuitar(id){
+  var z=null; (SNW.prop||[]).forEach(function(x){ if(x && x.id===id) z=x; });
+  if(!z) return;
+  confirmar('¿Quitar este cartel?', 'Sale de la lista de la obra, en la web y en la app. Los que ya imprimiste siguen donde los pegaste.', { si:'Sí, quitarlo', no:'Cancelar' }).then(function(si){
+    if(!si) return;
+    var o=SEN_APP.propioLimpio(z); o.b=1; o.t=Date.now();
+    snxGuardar(o).then(function(){ toast('Se quitó el cartel de la obra.'); snxListaPinta(); }, function(e){ if(e!=='otra_obra') toast('No se pudo quitar. '+porQueFallo(e)); });
+  });
+}
+function _snxEstado(t, cl){ var m=$('snx-est'); if(m){ m.className='msg '+(cl||'gris')+' sn-pie-msg'; m.textContent=t||''; } }
+function snxAbrir(z){
+  var A=SEN_APP, o=A.propioLimpio(z||{});
+  var S={ id:o.id, texto:o.texto, sub:o.sub, color:o.color, pics:o.pics.slice(), tam:o.tam, orient:o.orient, t:o.t,
+          pick:false, qsen:'', g:'obl', T:null, tG:null, guardando:false, otra:false };
+  SNX=S;
+  var cuerpo='<div class="sn-ed'+(S.orient==='h' ? ' echada' : '')+'" id="sn-ed"><div class="sn-form">'+
+    '<div class="campo"><label for="snx-t">Lo que dice el cartel</label><input id="snx-t" maxlength="80" autocomplete="off" placeholder="CAJA DE HERRAMIENTAS · PUNTO DE SOMBRA · PORTA ARNÉS…" value="'+esc(S.texto)+'">'+
+    '<p class="ayuda">Va en blanco y grande, sobre el fondo de color. Se imprime en mayúsculas.</p></div>'+
+    '<div class="campo"><label for="snx-s">Renglón de abajo <small>· opcional</small></label><input id="snx-s" maxlength="90" autocomplete="off" placeholder="Sector B · Solo personal de almacén" value="'+esc(S.sub)+'"></div>'+
+    '<div class="campo"><label>El fondo</label>'+snChips('snx-f', [{ v:'azul', t:'Azul · obligación' }, { v:'verde', t:'Verde · información' }], S.color, 'El fondo del cartel')+
+    '<p class="ayuda">Azul, para lo que es obligatorio; verde, para lo que informa o dice dónde está algo. Son los colores de las señales de la norma.</p></div>'+
+    '<div class="campo"><label>Pictogramas de riesgo y de EPP <small>· opcional, hasta '+A.maxPics+'</small></label><div id="snx-pics"></div></div>'+
+    '<div class="campo"><label>¿De qué tamaño es la hoja?</label>'+snChips('snx-tam', snTamOps().filter(function(t){ return t.v!=='A5'; }), S.tam, 'Tamaño de la hoja')+'</div>'+
+    '<div class="campo"><label>¿Cómo va la hoja?</label>'+snChips('snx-ori', SN_ORI, S.orient, 'Orientación de la hoja')+'</div>'+
+    '<div id="sn-logo-c"></div></div>'+
+    '<div class="sn-lado"><div class="sn-prev" id="sn-prev" aria-label="Vista previa del cartel"><div class="sn-prev-msg">Armando la vista previa…</div></div>'+
+    '<div class="sn-med" id="sn-med" aria-live="polite"></div></div></div>';
+  var pie='<span class="msg gris sn-pie-msg" id="snx-est"></span><button type="button" class="bt sec" id="snx-cerrar">Cerrar</button>'+
+    '<button type="button" class="bt sec" id="snx-imp">🖨 Imprimir</button><button type="button" class="bt" id="snx-pdf">⬇ Descargar PDF</button>';
+  abrirHoja(S.id ? 'Cartel propio' : 'Cartel propio · nuevo', 'Con el logo de tu empresa, en A4 o A3', cuerpo, pie, { ancha:true, clase:'sn-h' });
+  var prev=$('sn-prev');
+  S.T=snTaller(prev, function(){
+    if(!String(S.texto||'').trim()) return null;
+    var o={ texto:S.texto, sub:S.sub, color:S.color, pics:S.pics, tam:S.tam, orient:S.orient };
+    return snCtx().then(function(C){ return SEN_APP.propio(o, C); }).then(function(R){ R.cuenta=1; return R; });
+  }, function(R, e){
+    var med=$('sn-med'), bts=[$('snx-pdf'), $('snx-imp')]; if(!med || SNX!==S) return;
+    bts.forEach(function(b){ if(b) b.disabled=!R; });
+    if(!R){
+      med.innerHTML='';
+      if(!String(S.texto||'').trim()) snPrevMsg(prev, 'El cartel aparece aquí', 'Escribe lo que dice y lo ves armarse.');
+      else snPrevMsg(prev, 'No se pudo armar el cartel', 'Revisa tu conexión e inténtalo otra vez.');
+      return;
+    }
+    med.innerHTML='<p><b>Cartel de '+Math.round(R.w)+' × '+Math.round(R.h)+' mm</b> · hoja '+esc(snHojaTxt(R.hoja))+(R.pics ? ' · '+R.pics+' '+(R.pics===1 ? 'pictograma' : 'pictogramas') : '')+'</p>'+
+      (R.ft && R.ft<16 ? '<p class="ojo"><b>La letra quedó chica.</b> El texto es largo para esta hoja: acórtalo o usa una A3.</p>' : '')+
+      '<p class="gris">Imprime al 100 %, sin «ajustar a la página». Corta por el marco.</p>';
+  });
+  $('snx-t').oninput=function(){ S.texto=this.value; snxCambio(420); };
+  $('snx-s').oninput=function(){ S.sub=this.value; snxCambio(420); };
+  snChipsAl('snx-f', function(v){ S.color=v; snxCambio(); });
+  snChipsAl('snx-tam', function(v){ S.tam=v; snxCambio(); });
+  snChipsAl('snx-ori', function(v){ S.orient=v; var ed=$('sn-ed'); if(ed) ed.classList.toggle('echada', v==='h'); snxCambio(); });
+  $('snx-pics').onclick=function(ev){
+    var b=ev.target.closest ? ev.target.closest('button') : null; if(!b) return;
+    var k=b.getAttribute('data-k'), qu=b.getAttribute('data-quitar'), g=b.getAttribute('data-g');
+    if(g){ S.g=(S.g===g) ? '' : g; S.qsen=''; _snxPicsPinta(); return; }
+    if(qu){ var i=S.pics.indexOf(qu); if(i>-1) S.pics.splice(i, 1); _snxPicsPinta(); snxCambio(); return; }
+    if(k){
+      var j=S.pics.indexOf(k);
+      if(j>-1) S.pics.splice(j, 1);
+      else{ if(S.pics.length>=SEN_APP.maxPics){ toast('Ya van '+SEN_APP.maxPics+': quita uno para poner otro.'); return; } S.pics.push(k); }
+      _snxPicsPinta(); snxCambio(); return;
+    }
+    if(b.getAttribute('data-que')==='elegir'){ S.pick=!S.pick; S.qsen=''; _snxPicsPinta(); if(S.pick){ var i2=$('snx-q'); if(i2) i2.focus(); } }
+  };
+  $('snx-pics').oninput=function(ev){ if(ev.target && ev.target.id==='snx-q'){ S.qsen=ev.target.value; _snxCatPinta(); } };
+  $('snx-cerrar').onclick=function(){ if(S.tG){ clearTimeout(S.tG); snxGuardarEd(S); } cerrarHoja(); };
+  $('snx-pdf').onclick=function(){ snxEntregar(S, 'pdf', this); };
+  $('snx-imp').onclick=function(){ snxEntregar(S, 'imp', this); };
+  _snxPicsPinta();
+  snCtx().then(function(C){ var l=$('sn-logo-c'); if(l && SNX===S) l.innerHTML=snLogoNota(C, 'Va arriba, en su franja, con la razón social y el nombre de la obra.'); });
+  S.T.pide();
+}
+/* cada cambio: la hoja se vuelve a armar y el cartel se guarda en un momento (si ya dice algo) */
+function snxCambio(espera){
+  var S=SNX; if(!S) return;
+  if(String(S.texto||'').trim()){
+    _snxEstado('Guardando…');
+    if(S.tG) clearTimeout(S.tG);
+    S.tG=setTimeout(function(){ snxGuardarEd(S); }, 900);
+  }else _snxEstado('');
+  if(S.T) S.T.pide(espera);
+}
+function snxGuardarEd(S){
+  if(!S) return;
+  S.tG=null;
+  if(!String(S.texto||'').trim()) return;
+  if(S.guardando){ S.otra=true; return; }
+  if(!S.id) S.id='x'+Date.now().toString(36)+Math.random().toString(36).slice(2, 6);
+  S.t=Date.now();
+  var o=SEN_APP.propioLimpio({ id:S.id, texto:S.texto, sub:S.sub, color:S.color, pics:S.pics, tam:S.tam, orient:S.orient, t:S.t });
+  S.guardando=true;
+  snxGuardar(o).then(function(){
+    S.guardando=false;
+    if(S.otra || S.tG){ S.otra=false; if(!S.tG) S.tG=setTimeout(function(){ snxGuardarEd(S); }, 200); return; }
+    if(SNX===S) _snxEstado('Guardado en la obra · también se ve en la app', 'ok');
+    snxListaPinta();
+  }, function(e){
+    S.guardando=false;
+    if(e==='otra_obra') return;
+    if(SNX===S) _snxEstado('No se pudo guardar. '+porQueFallo(e), 'mal');
+  });
+}
+/* bajar o imprimir: el que es nuevo, o tiene cambios por guardar, se guarda en ese momento */
+function snxEntregar(S, como, bt){
+  if(!String(S.texto||'').trim()){ _snxEstado('Escribe lo que dice el cartel.', 'mal'); var i=$('snx-t'); if(i) i.focus(); return; }
+  if(S.tG || !S.id){ if(S.tG) clearTimeout(S.tG); snxGuardarEd(S); }
+  snEntregar(S.T, 'senal', 'señales', como, bt);
+}
+function _snxPicsPinta(){
+  var S=SNX, c=$('snx-pics'); if(!S || !c) return;
+  var A=SEN_APP, h='';
+  if(S.pics.length) h+='<div class="snx-pks">'+S.pics.map(function(k){
+    return '<span class="snx-pk">'+A.svg(k, 34)+'<b>'+esc(A.picNombre(k))+'</b><button type="button" class="sn-x" data-quitar="'+esc(k)+'" aria-label="Quitar: '+esc(A.picNombre(k))+'">✕</button></span>';
+  }).join('')+'</div>';
+  else h+='<p class="ayuda" style="margin:0 0 8px">Van abajo, cada uno con su nombre: el casco, los guantes, «caída de objetos»…</p>';
+  if(S.pics.length<A.maxPics || S.pick) h+='<button type="button" class="bt sec chico" data-que="elegir">'+(S.pick ? 'Cerrar el catálogo' : '＋ Agregar un pictograma')+'</button>';
+  if(S.pick) h+='<div class="snx-pick"><input type="search" id="snx-q" autocomplete="off" placeholder="casco, guantes, caída, eléctrico…" aria-label="Buscar un pictograma" value="'+esc(S.qsen)+'">'+
+    '<div class="chips" id="snx-g" role="group" aria-label="Grupo de pictogramas">'+SNX_GRUPOS.map(function(g){
+      var on=(S.g===g[0]); return '<button type="button" class="chip'+(on ? ' on' : '')+'" data-g="'+g[0]+'" aria-pressed="'+(on ? 'true' : 'false')+'">'+esc(g[1])+'</button>';
+    }).join('')+'</div><div id="snx-cat-c"></div></div>';
+  c.innerHTML=h;
+  if(S.pick) _snxCatPinta();
+}
+function _snxCatPinta(){
+  var S=SNX, c=$('snx-cat-c'); if(!S || !c) return;
+  var A=SEN_APP, q=A.norm(S.qsen).trim(), ps=q ? q.split(/\s+/) : [];
+  var lista=A.senales.filter(function(s){
+    if(!ps.length) return !S.g || s.g===S.g;
+    var t=A.norm(s.n+' '+(A.grupos[s.g]||''));
+    for(var i=0;i<ps.length;i++) if(t.indexOf(ps[i])<0) return false;
+    return true;
+  });
+  if(!lista.length){ c.innerHTML='<p class="ayuda">Ningún pictograma con «'+esc(S.qsen)+'».</p>'; return; }
+  c.innerHTML='<div class="sn-cat">'+lista.map(function(s){
+    var on=S.pics.indexOf(s.k)>-1;
+    return '<button type="button" data-k="'+esc(s.k)+'" class="'+(on ? 'on' : '')+'" aria-pressed="'+(on ? 'true' : 'false')+'" title="'+esc(s.n)+'">'+A.svg(s, 56)+'<b>'+esc(A.corto(s.n))+'</b></button>';
+  }).join('')+'</div>';
+}
+
+/* ── 17/10/2026 · lote 15 · la señal con el QR de inspección de cada equipo ──────────────────────
+   Marcelo: «el QR del extintor en la misma figura… en la sección señaléticas, la opción de que sí sale con QR de
+   inspección o no, y elegir qué extintor será… todo el lote o algunos seleccionados». Igual que en la app: los
+   equipos de «Equipos y herramientas» (sst_equipo_qr) de ese tipo que no están dados de baja; al marcarlo salen
+   todos y se quitan los que no van. Cada cartel lleva el QR de la etiqueta de SU equipo: nunca el código de la obra. */
+function snQRCampoHTML(){
+  return '<div class="campo" id="sn-qr-c"><label class="sn-qr-sw"><input type="checkbox" id="sn-qr"> <span>Con el QR de inspección de cada uno</span></label>'+
+    '<p class="ayuda">Un cartel por equipo, con el QR de su etiqueta —el de «Equipos y herramientas»—, su código y de qué es. Al escanearlo se ve cómo usarlo y se entra a su inspección. No lleva el código de la obra.</p>'+
+    '<div id="sn-qr-l"></div></div>';
+}
+function snQREquipos(){
+  var oid=(YO.obra||{}).id;
+  if(SNW.eq && SNW.eqObra===oid && Date.now()-SNW.eqT<60000) return Promise.resolve(SNW.eq);
+  return Promise.all([cargarEqBase(), cargarQRLib(), traer('sst_equipo_qr', '&select=*&order=codigo.asc', 5000)]).then(function(r){
+    SNW.eq=Array.isArray(r[2]) ? r[2] : []; SNW.eqObra=oid; SNW.eqT=Date.now();
+    return SNW.eq;
+  });
+}
+function _snQRLista(){
+  var tq=SNE ? SEN_APP.eqTipo(SNE.k) : '';
+  if(!tq) return [];
+  return (SNW.eq||[]).filter(function(x){ return x && x.tipo===tq && x.estado!=='baja' && x.token; });
+}
+function _snQRDet(x){
+  try{ if(typeof eqCartelDatosDe==='function') return String(eqCartelDatosDe(x, {}).detalle||''); }catch(e){}
+  return String((x && x.detalle)||'');
+}
+/* los cartelitos de los marcados: el QR de su etiqueta (data:), su código y de qué es; null si no hay ninguno */
+function snQRItems(){
+  if(!SNE || !SNE.qr || !SNW.eq || SNW.eqObra!==(YO.obra||{}).id || typeof _eqQRdato!=='function') return null;
+  var L=_snQRLista().filter(function(x){ return SNE.qrSel[x.id]; });
+  if(!L.length) return null;
+  var q=L.map(function(x){ return { du:_eqQRdato(x, 8), cod:String(x.codigo||''), det:_snQRDet(x), pie:'Escanea el QR: cómo usarlo y su inspección' }; });
+  return q.every(function(z){ return !!z.du; }) ? q : null;
+}
+function snQRFalta(){
+  if(!SNE || !SNE.qr || snQRItems()) return false;
+  var mm=$('sn-msg'); if(mm){ mm.className='msg mal sn-pie-msg'; mm.textContent='Marca al menos un equipo de la lista, o quita «Con el QR de inspección de cada uno».'; }
+  return true;
+}
+function snQRPinta(){
+  var c=$('sn-qr-l'); if(!c || !SNE) return;
+  var ala=$('sn-ala'); if(ala){ ala.disabled=!!SNE.qr; ala.title=SNE.qr ? 'La lista para imprimir junta señales sin QR: con el QR de cada equipo, se baja desde aquí.' : ''; }
+  if(!SNE.qr){ c.innerHTML=''; return; }
+  var oid=(YO.obra||{}).id;
+  if(!SNW.eq || SNW.eqObra!==oid){
+    c.innerHTML='<p class="ayuda">Buscando los equipos de la obra…</p>';
+    snQREquipos().then(function(){ snQRPinta(); if(SNW.T && SNE && SNE.qr) SNW.T.pide(); }, function(cod){
+      var c2=$('sn-qr-l'); if(!c2) return;
+      c2.innerHTML='<p class="ayuda" style="color:var(--mal)">'+(cod===404 ? 'Para los QR de equipos hay que actualizar el servidor. Avísanos y lo dejamos listo.' : 'No se pudieron traer los equipos de la obra. Revisa tu conexión y vuelve a marcarlo.')+'</p>';
+    });
+    return;
+  }
+  var L=_snQRLista();
+  if(SNE.qrIni){ SNE.qrIni=false; if(!Object.keys(SNE.qrSel).length) L.forEach(function(x){ SNE.qrSel[x.id]=true; }); }
+  if(!L.length){
+    c.innerHTML='<div class="aviso ojo" style="margin:8px 0 0">Todavía no hay ninguno en «Equipos y herramientas». Regístralo ahí, con su código y su etiqueta, y sale aquí para elegir. '+
+      '<button type="button" class="bt-link" id="sn-qr-ir">Ir a Equipos y herramientas</button></div>';
+    var ir=$('sn-qr-ir'); if(ir) ir.onclick=function(){ cerrarHoja(); navegar('equipos'); };
+    return;
+  }
+  var n=L.filter(function(x){ return SNE.qrSel[x.id]; }).length;
+  c.innerHTML='<div class="sn-qr-cab"><b>'+n+' de '+L.length+'</b><button type="button" class="bt-link" id="sn-qr-todos"'+(n===L.length ? ' disabled' : '')+'>Marcar todos</button><button type="button" class="bt-link" id="sn-qr-nada"'+(!n ? ' disabled' : '')+'>Quitar todos</button></div>'+
+    '<div class="sn-eqs" id="sn-eqs">'+L.map(function(x){
+      var on=!!SNE.qrSel[x.id];
+      return '<button type="button" class="sn-eq'+(on ? ' on' : '')+'" data-id="'+esc(x.id)+'" aria-pressed="'+(on ? 'true' : 'false')+'"><span><b>'+esc(x.codigo||'')+'</b><small>'+esc(_snQRDet(x)||x.tipo||'')+'</small></span><i class="tic">'+(on ? '✓' : '')+'</i></button>';
+    }).join('')+'</div>'+
+    (n ? '' : '<p class="ayuda" style="color:var(--mal)">Marca al menos uno: un cartel por cada uno, con su QR.</p>');
+  var re=function(){ snQRPinta(); if(SNW.T) SNW.T.pide(); };
+  $('sn-qr-todos').onclick=function(){ SNE.qrSel={}; L.forEach(function(x){ SNE.qrSel[x.id]=true; }); re(); };
+  $('sn-qr-nada').onclick=function(){ SNE.qrSel={}; re(); };
+  $('sn-eqs').onclick=function(ev){
+    var b=ev.target.closest ? ev.target.closest('button[data-id]') : null; if(!b) return;
+    var id=b.getAttribute('data-id'); if(SNE.qrSel[id]) delete SNE.qrSel[id]; else SNE.qrSel[id]=true;
+    var mm=$('sn-msg'); if(mm) mm.textContent='';
+    re();
+  };
+}
+
 /* lo que mide el cartel y hasta dónde se lee (la fórmula de la NTP: A ≥ L²/2000) */
 function snMedidaHTML(R){
   var d=R.metros, n=R.celdas||1, h='';
-  h+='<p><b>'+(n>1 ? n+' señales en una hoja '+esc(snHojaTxt(R.hoja))+' · tarjeta de ' : 'Cartel de ')+Math.round(R.w)+' × '+Math.round(R.h)+' mm</b> · símbolo de '+Math.round(R.lado)+' mm</p>';
+  if(R.qr) h+='<p><b>'+n+' '+(n===1 ? 'cartel' : 'carteles')+' con su QR'+((R.hojas||1)>1 ? ' en '+R.hojas+' hojas '+esc(snHojaTxt(R.hoja)) : ', en una hoja '+esc(snHojaTxt(R.hoja)))+' · tarjeta de '+Math.round(R.w)+' × '+Math.round(R.h)+' mm</b> · símbolo de '+Math.round(R.lado)+' mm · QR de '+Math.round(R.qr)+' mm</p>';
+  else h+='<p><b>'+(n>1 ? n+' señales en una hoja '+esc(snHojaTxt(R.hoja))+' · tarjeta de ' : 'Cartel de ')+Math.round(R.w)+' × '+Math.round(R.h)+' mm</b> · símbolo de '+Math.round(R.lado)+' mm</p>';
+  if(R.qr && R.qr<(SEN_APP.qrMin||16)) h+='<p class="ojo"><b>El QR queda de '+Math.round(R.qr)+' mm:</b> se lee acercando mucho el celular. Para que se lea cómodo, pon menos por hoja o usa una hoja más grande.</p>';
   if(d<5) h+='<p class="ojo"><b>Se lee solo de cerca:</b> no llega a los 5 metros. Pon menos por hoja, una hoja más grande, o acorta el texto: la banda le está quitando sitio al símbolo.</p>';
   else h+='<p>Se lee bien hasta unos <b>'+Math.round(d)+' metros</b>. <span class="gris">Sale de la fórmula de la NTP: el área del símbolo tiene que ser al menos la distancia al cuadrado dividida entre 2000.</span></p>';
   if(R.ft && R.ft<5.4) h+='<p class="ojo"><b>El texto quedó muy chico.</b> A este tamaño casi no se lee: pon menos señales por hoja, usa una hoja más grande o acorta el texto.</p>';

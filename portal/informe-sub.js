@@ -132,8 +132,14 @@ function isbLlave(pre){ var s = pre || 'k'; for(var i = 0; i < 7; i++) s += 'abc
 /* LAS PLANTILLAS: el informe mensual (8 carpetas), el reporte semanal de horas hombre y el pedido con fecha */
 var ISB_PLANTILLAS = {
   mensual:{ nombre:'Informe mensual de SST', cada:'mes', modo:'cierre', cierre:0, suma:true, carpetas:[
-    { k:'panel', n:'Panel fotográfico', items:[{ k:'fotos', n:'Fotos de los trabajos del mes', tipo:'fotos', min:10, desc:true,
-        nom:{ p:'PF', r:true, a:true, m:true, d:false, s:'_' }, ayuda:'Cada una con su descripción: dónde es y qué se ve.' }] },
+    /* 19/10/2026 · lote 19 · el registro fotográfico por tema (Marcelo: «charlas, uso de EPPs, sistema de emergencia, servicios
+       de bienestar… para central, igual decide eso para las subcontratas»): la principal cambia los temas al armar su pedido */
+    { k:'panel', n:'Registro fotográfico', items:[
+      { k:'f-charlas', n:'Charlas y capacitaciones', tipo:'fotos', min:2, desc:true, nom:{ p:'RF-CH', r:true, a:true, m:true, d:false, s:'_' }, ayuda:'Cada una con su descripción: dónde es y qué se ve.' },
+      { k:'f-epp', n:'Uso de EPP', tipo:'fotos', min:2, desc:true, nom:{ p:'RF-EPP', r:true, a:true, m:true, d:false, s:'_' }, ayuda:'La cuadrilla con su EPP completo, o una entrega de EPP.' },
+      { k:'f-emergencia', n:'Sistema de emergencia', tipo:'fotos', min:2, desc:true, nom:{ p:'RF-EM', r:true, a:true, m:true, d:false, s:'_' }, ayuda:'Extintores, botiquín, camilla, rutas de evacuación y punto de reunión.' },
+      { k:'f-bienestar', n:'Servicios de bienestar', tipo:'fotos', min:1, desc:true, nom:{ p:'RF-BI', r:true, a:true, m:true, d:false, s:'_' }, ayuda:'Comedor, servicios higiénicos, vestuarios y agua para beber.' },
+      { k:'fotos', n:'Trabajos del mes', tipo:'fotos', min:4, desc:true, nom:{ p:'PF', r:true, a:true, m:true, d:false, s:'_' }, ayuda:'Los frentes de trabajo: orden y limpieza, señalización y los trabajos de alto riesgo.' }] },
     { k:'cats', n:'ATS', items:[{ k:'ats', n:'ATS del mes', tipo:'app', fuente:'ats', min:20, papel:true, ayuda:'Los de la app entran solos; los de papel, escaneados.' }] },
     { k:'asistencia', n:'Registro de asistencia', items:[
       { k:'charlas', n:'Charlas de inicio de jornada', tipo:'app', fuente:'asis:charla', min:20, papel:true },

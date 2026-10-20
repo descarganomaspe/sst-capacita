@@ -677,7 +677,8 @@ function _gpPlantilla(bt){
    Para lo de antes de usar OBRASST: «Llenar varios días» (el mismo horario, de tal día a tal día) o el total
    del mes repartido en sus días de trabajo. El índice de accidentabilidad los cuenta igual que a los demás. */
 var HHW = { ym:'', filas:null, por:{}, nivel:0, obra:null, n:0, caja:null, activos:null, alAbrir:null };
-var HH_SELS = ['id,fecha,ob_n,ob_h,st_n,st_h,hhc,creado,lugar,ob_entrada,ob_salida,st_entrada,st_salida', 'id,fecha,ob_n,ob_h,st_n,st_h,hhc,creado'];
+/* 19/10/2026 · lote 18 · 0: con la capacitación de obreros y de staff (hhc_ob, hhc_st) · 1: sin ella · 2: lo mínimo */
+var HH_SELS = ['id,fecha,ob_n,ob_h,st_n,st_h,hhc,creado,lugar,ob_entrada,ob_salida,st_entrada,st_salida,hhc_ob,hhc_st', 'id,fecha,ob_n,ob_h,st_n,st_h,hhc,creado,lugar,ob_entrada,ob_salida,st_entrada,st_salida', 'id,fecha,ob_n,ob_h,st_n,st_h,hhc,creado'];
 var HH_EXTRAS = ['lugar', 'ob_entrada', 'ob_salida', 'st_entrada', 'st_salida'];
 var HH_DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 function gesNum(x, dec){ var n=Number(x)||0, k=Math.pow(10, dec==null ? 2 : dec); return (Math.round(n*k)/k).toLocaleString('es-PE', {maximumFractionDigits:(dec==null ? 2 : dec)}); }
@@ -696,8 +697,10 @@ function hhDe(r){
   return { ob:ob, st:st, hht:ob+st, hhc:parseFloat(r.hhc)||0 };
 }
 function hhSumar(filas){
-  var o={ ob:0, st:0, hht:0, hhc:0, dias:0, obN:0, stN:0 };
-  (filas||[]).forEach(function(r){ var x=hhDe(r); o.ob+=x.ob; o.st+=x.st; o.hht+=x.hht; o.hhc+=x.hhc; o.dias++; o.obN+=parseFloat(r.ob_n)||0; o.stN+=parseFloat(r.st_n)||0; });
+  var o={ ob:0, st:0, hht:0, hhc:0, dias:0, obN:0, stN:0, hhcOb:0, hhcSt:0, hhcSin:0 };
+  (filas||[]).forEach(function(r){ var x=hhDe(r); o.ob+=x.ob; o.st+=x.st; o.hht+=x.hht; o.hhc+=x.hhc; o.dias++; o.obN+=parseFloat(r.ob_n)||0; o.stN+=parseFloat(r.st_n)||0;
+    /* 19/10/2026 · lote 18 · la capacitación de obreros y de staff (los días de antes, sin separar) */
+    if(r.hhc_ob!=null || r.hhc_st!=null){ o.hhcOb+=parseFloat(r.hhc_ob)||0; o.hhcSt+=parseFloat(r.hhc_st)||0; } else o.hhcSin+=x.hhc; });
   return o;
 }
 function _hhTraer(){
@@ -735,6 +738,10 @@ function _hhCss(){
     '.hh-dias{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}',
     '.hh-anio td.num,.hh-anio th.num{text-align:right;font-variant-numeric:tabular-nums}.hh-anio tr.sel td{background:var(--azul-f)}.hh-anio tr.tot td{font-weight:600;color:var(--tinta);border-top:2px solid var(--raya2)}.hh-anio tr.vac td{color:var(--gris2)}',
     '.hh-anio tbody tr{cursor:pointer}.hh-anio tbody tr.tot{cursor:default}',
+    /* 19/10/2026 · lote 18 · obreros y staff */
+    '.hh-cat{margin:0 0 16px}.hh-cat-l{display:grid;gap:0}.hh-cat-f{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--raya)}.hh-cat-f:last-child{border-bottom:0}',
+    '.hh-cat-f .tx{flex:1;min-width:0}.hh-cat-f .tx b{display:block;font-size:14px;overflow-wrap:anywhere}.hh-cat-f .tx small{display:block;color:var(--gris);font-size:12.5px}',
+    '.hh-f4{grid-template-columns:repeat(3,minmax(0,1fr)) auto}',
     '@media (max-width:640px){.hh-fila{grid-template-columns:1fr 1fr}.hh-cal .cal-d{min-height:0}.hh-total{margin:6px -16px -20px;padding:12px 16px}#hh-cifras{grid-template-columns:1fr 1fr;gap:10px}#hh-cifras .cifra .v{font-size:21px}#hh-cifras .cifra{padding:12px 13px}}'
   ].join('\n');
   document.head.appendChild(st);
@@ -744,7 +751,12 @@ function gesVistaHH(caja){
   var oid=(YO.obra||{}).id;
   if(HHW.obra!==oid){ HHW.obra=oid; HHW.filas=null; HHW.por={}; HHW.ym=''; HHW.activos=null; }
   /* cuántos activos hay hoy en la obra, para el atajo «Todos los activos» (como en la app) */
-  if(HHW.activos===null) traerTodo('sst_trabajador', '&select=id,estatus', 5000).then(function(l){ if(HHW.obra===oid) HHW.activos=(l||[]).filter(function(t){ return String(t.estatus||'activo')==='activo'; }).length; }, function(){});
+  /* 19/10/2026 · lote 18 · y de ellos, cuántos obreros y cuánto staff (por su puesto) */
+  if(HHW.activos===null) Promise.all([traerTodo('sst_trabajador', '&select=id,estatus,puesto', 5000), catPuestosObraP()]).then(function(r){
+    if(HHW.obra!==oid) return;
+    var act=(r[0]||[]).filter(function(t){ return String(t.estatus||'activo')==='activo'; }), mapa=r[1]||{};
+    HHW.activos=act.length; HHW.actS=act.filter(function(t){ return catPuesto(t.puesto, mapa)==='staff'; }).length; HHW.actO=HHW.activos-HHW.actS;
+  }, function(){});
   if(!HHW.ym) HHW.ym=hoyISO().slice(0,7);
   HHW.caja=caja;
   var ac=$('acciones');
@@ -761,6 +773,46 @@ function gesVistaHH(caja){
   }
   VISTA.recargar=pinta; pinta();
 }
+/* 19/10/2026 · lote 18 · OBREROS Y STAFF: cuántos hay hoy, por su puesto, y los puestos para cambiarlos (vale para toda la
+   obra: la app, la web y el informe). Es la misma tarjeta del «Reporte semanal» de la app. */
+var HHCAT = { abierto:false, gente:null, obra:null };
+function _hhCatPintar(){
+  var c=$('hh-cat'); if(!c) return;
+  var oid=(YO.obra||{}).id;
+  var pG=(HHCAT.obra===oid && HHCAT.gente) ? Promise.resolve(HHCAT.gente) : traerTodo('sst_trabajador', '&select=id,puesto,estatus', 6000).then(function(l){ HHCAT.obra=oid; HHCAT.gente=l||[]; return HHCAT.gente; });
+  Promise.all([pG, catPuestosObraP()]).then(function(r){
+    var c2=$('hh-cat'); if(!c2) return;
+    var mapa=r[1]||{}, L={}, sin=0, nO=0, nS=0;
+    r[0].forEach(function(t){
+      if(String(t.estatus||'activo')!=='activo') return;
+      var p=String(t.puesto||'').trim(), k=catNorm(p);
+      if(!k){ sin++; nO++; return; }
+      var x=L[k]||(L[k]={ k:k, p:p, n:0 }); x.n++;
+    });
+    var l=Object.keys(L).map(function(k){ var x=L[k]; x.cat=catPuesto(x.p, mapa); x.auto=catAuto(x.p); x.mano=!!mapa[k]; if(x.cat==='staff') nS+=x.n; else nO+=x.n; return x; })
+      .sort(function(a, b){ return ((a.cat===b.cat) ? 0 : (a.cat==='staff' ? 1 : -1)) || (b.n-a.n) || a.p.localeCompare(b.p, 'es'); });
+    if(!l.length && !sin){ c2.innerHTML=''; return; }
+    var h='<div class="tarj hh-cat"><div class="tarj-cab"><div><h2>👷 Obreros '+nO+' · 👔 Staff '+nS+'</h2><p class="sub">Según el puesto de cada uno en «Personal». Así se separan las horas hombre trabajadas y las de capacitación, aquí, en la app y en el informe.</p></div>'+
+      '<button type="button" class="bt sec chico" id="hh-cat-bt">'+(HHCAT.abierto ? 'Listo' : 'Revisar los puestos')+'</button></div>';
+    if(HHCAT.abierto){
+      h+='<div class="tarj-cuerpo"><div class="hh-cat-l">'+l.map(function(x){
+        return '<div class="hh-cat-f"><span class="tx"><b>'+esc(x.p)+'</b><small>'+gesPlural(x.n, 'persona', 'personas')+(x.mano ? ' · cambiado en esta obra' : '')+'</small></span>'+
+          '<span class="seg chico" role="radiogroup" aria-label="'+esc(x.p)+'"><button type="button" role="radio" aria-checked="'+(x.cat==='obrero')+'" class="'+(x.cat==='obrero' ? 'on' : '')+'" data-ck="'+esc(x.k)+'" data-cv="obrero">Obrero</button>'+
+          '<button type="button" role="radio" aria-checked="'+(x.cat==='staff')+'" class="'+(x.cat==='staff' ? 'on' : '')+'" data-ck="'+esc(x.k)+'" data-cv="staff">Staff</button></span></div>';
+      }).join('')+'</div>'+(sin ? '<p class="ayuda">'+gesPlural(sin, 'persona sin puesto va como obrero', 'personas sin puesto van como obreros')+'.</p>' : '')+'<p class="msg" id="hh-cat-msg" role="status"></p></div>';
+    }
+    c2.innerHTML=h+'</div>';
+    $('hh-cat-bt').onclick=function(){ HHCAT.abierto=!HHCAT.abierto; _hhCatPintar(); };
+    c2.onclick=function(ev){
+      var b=ev.target.closest('[data-ck]'); if(!b) return;
+      var k=b.getAttribute('data-ck'), v=b.getAttribute('data-cv'), x=l.filter(function(z){ return z.k===k; })[0]; if(!x || x.cat===v) return;
+      var m2={}; for(var q in mapa) if(Object.prototype.hasOwnProperty.call(mapa, q)) m2[q]=mapa[q];
+      if(v===x.auto) delete m2[k]; else m2[k]=v;
+      var msg=$('hh-cat-msg'); if(msg){ msg.className='msg gris'; msg.textContent='Guardando…'; }
+      catPuestosPonerP(m2).then(function(){ _hhCatPintar(); }, function(e){ var m3=$('hh-cat-msg'); if(m3){ m3.className='msg mal'; m3.textContent='No se pudo guardar. '+porQueFallo(e); } });
+    };
+  }, function(){});
+}
 function hhPintar(){
   var caja=HHW.caja; if(!caja || !document.body.contains(caja)) return;
   var ym=HHW.ym, a=+ym.slice(0,4), m=+ym.slice(5,7)-1, hoy=hoyISO();
@@ -775,8 +827,10 @@ function hhPintar(){
   h+='<div class="rej" id="hh-cifras">'+
     cifra('Horas hombre trabajadas', gesNum(S.hht, 0), S.dias ? gesPlural(S.dias, 'día registrado', 'días registrados')+' en '+DC_MESES[m].toLowerCase() : 'ningún día registrado en '+DC_MESES[m].toLowerCase(), '', 'HHT')+
     cifra('Obreros', gesNum(S.ob, 0), S.dias ? 'en promedio '+gesNum(S.obN/S.dias, 1)+' por día' : '', '', 'HHT')+
-    cifra('Empleados', gesNum(S.st, 0), S.dias ? 'en promedio '+gesNum(S.stN/S.dias, 1)+' por día' : '', '', 'HHT')+
-    cifra('Horas hombre de capacitación', gesNum(S.hhc, 1), S.hht ? gesNum(S.hhc/S.hht*100, 2)+' % de las horas trabajadas' : '', '', 'HHC')+'</div>';
+    cifra('Staff', gesNum(S.st, 0), S.dias ? 'en promedio '+gesNum(S.stN/S.dias, 1)+' por día' : '', '', 'HHT')+
+    cifra('Horas hombre de capacitación', gesNum(S.hhc, 1), (S.hhcOb || S.hhcSt) ? 'obreros '+gesNum(S.hhcOb, 1)+' · staff '+gesNum(S.hhcSt, 1)+(S.hhcSin ? ' · sin separar '+gesNum(S.hhcSin, 1) : '') : (S.hht ? gesNum(S.hhc/S.hht*100, 2)+' % de las horas trabajadas' : ''), '', 'HHC')+'</div>'+
+    /* 19/10/2026 · lote 18 · quién es obrero y quién staff: por su puesto */
+    '<div id="hh-cat"></div>';
   h+='<div class="cal hh-cal" id="hh-cal">'+CH_SEMANA.map(function(d){ return '<div class="cal-sem" aria-hidden="true">'+d+'</div>'; }).join('');
   for(var i=0;i<off;i++) h+='<div class="cal-d otro" aria-hidden="true"></div>';
   for(var d=1; d<=ndias; d++){
@@ -786,7 +840,7 @@ function hhPintar(){
        ' aria-label="'+esc(HH_DIAS[dow]+' '+d+(x ? ', '+gesNum(x.hht, 0)+' horas hombre' : (fut ? '' : ', sin registrar')))+'">'+
        '<span class="cal-cab"><span class="cal-n">'+d+'</span><span class="cal-sd">'+esc(HH_DIAS[dow])+'</span></span>'+
        (x ? '<span class="hh-v">'+gesNum(x.hht, 0)+'<small>HHT</small></span>'+
-            '<span class="hh-s">'+[(+r.ob_n ? gesNum(r.ob_n, 0)+' obr.' : ''), (+r.st_n ? gesNum(r.st_n, 0)+' empl.' : '')].filter(Boolean).join(' · ')+'</span>'+
+            '<span class="hh-s">'+[(+r.ob_n ? gesNum(r.ob_n, 0)+' obr.' : ''), (+r.st_n ? gesNum(r.st_n, 0)+' staff' : '')].filter(Boolean).join(' · ')+'</span>'+
             (x.hhc ? '<span class="hh-c">'+gesNum(x.hhc, 1)+' HHC</span>' : '')
           : (fut ? '' : '<span class="hh-falta">'+(dow===0 ? '' : 'sin registrar')+'</span>'))+'</button>';
   }
@@ -801,10 +855,11 @@ function hhPintar(){
   }
   h+='<div class="tarj" style="margin-top:18px"><div class="tarj-cab"><div><h2>'+a+', mes a mes</h2><p class="sub">Las horas hombre de cada mes son las que usa «Accidentabilidad» para los índices</p></div>'+
      '<div class="acciones"><button type="button" class="bt sec chico" id="hh-anio-ant">‹ '+(a-1)+'</button>'+(a<+hoy.slice(0,4) ? '<button type="button" class="bt sec chico" id="hh-anio-sig">'+(a+1)+' ›</button>' : '')+'</div></div>'+
-     '<div class="tabla-caja"><table class="hh-anio"><thead><tr><th>Mes</th><th class="num">Días</th><th class="num">HHT obreros</th><th class="num">HHT empleados</th><th class="num">HHT</th><th class="num">HHC</th></tr></thead><tbody>'+filasA+
+     '<div class="tabla-caja"><table class="hh-anio"><thead><tr><th>Mes</th><th class="num">Días</th><th class="num">HHT obreros</th><th class="num">HHT staff</th><th class="num">HHT</th><th class="num">HHC</th></tr></thead><tbody>'+filasA+
      '<tr class="tot"><td>Total '+a+'</td><td class="num">'+TA.dias+'</td><td class="num">'+gesNum(TA.ob, 0)+'</td><td class="num">'+gesNum(TA.st, 0)+'</td><td class="num">'+gesNum(TA.hht, 0)+'</td><td class="num">'+gesNum(TA.hhc, 1)+'</td></tr></tbody></table></div></div>';
   if(!(HHW.filas||[]).length) h+='<div class="aviso" id="hh-vacio"><b>Todavía no hay horas hombre registradas.</b> Toca un día del calendario para registrarlo. Si vienes con meses anteriores, «Llenar varios días» los carga de una vez.</div>';
   caja.innerHTML=h;
+  _hhCatPintar();
   function ir(ym2){ HHW.ym=ym2; hhPintar(); }
   $('hh-ant').onclick=function(){ ir(_mesMas(ym, -1)); };
   $('hh-sig').onclick=function(){ if(ym<hoy.slice(0,7)) ir(_mesMas(ym, 1)); };
@@ -816,7 +871,7 @@ function hhPintar(){
   $('hh-excel').onclick=function(){ hhExcel(this); };
 }
 /* ── un día ───────────────────────────────────────────────────────────────────────────────── */
-var HHD = { iso:'', fila:null };
+var HHD = { iso:'', fila:null, ch:[] };
 function _hhUlt(){ var u=leer('sstp_hh_ult_'+(YO.obra||{}).id, null); return (u && typeof u==='object') ? u : {}; }
 function _hhBloque(k, tit, ic){
   return '<div class="hh-bloque" data-k="'+k+'"><h3><span aria-hidden="true">'+ic+'</span> '+esc(tit)+'</h3>'+
@@ -835,12 +890,16 @@ function hhAbrirDia(iso){
   HHD.iso=iso;
   var h='<div class="campo"><label for="hhd-fecha">Día</label><input type="date" id="hhd-fecha" value="'+iso+'" max="'+hoy+'"></div>'+
     '<div id="hhd-ya"></div>'+
-    _hhBloque('ob', 'Obreros', '👷')+_hhBloque('st', 'Empleados', '👔')+
+    _hhBloque('ob', 'Obreros', '👷')+_hhBloque('st', 'Staff', '👔')+
     '<div class="hh-bloque"><h3><span aria-hidden="true">🎓</span> Capacitación de ese día</h3>'+
-      '<div class="hh-fila"><div class="campo"><label for="hhd-cn">Asistentes</label><input id="hhd-cn" type="number" inputmode="numeric" min="0" max="9999" step="1"></div>'+
-      '<div class="campo"><label for="hhd-cm">Minutos</label><input id="hhd-cm" type="number" inputmode="numeric" min="0" max="1440" step="5"></div>'+
-      '<div class="campo"><label for="hhd-hhc">Horas hombre de capacitación</label><input id="hhd-hhc" type="number" inputmode="decimal" min="0" step="0.01"></div></div>'+
-      '<div class="hh-rap chips" data-rap="cm"></div><div id="hhd-asis"></div>'+
+      /* 19/10/2026 · lote 18 · cuántos obreros y cuánto staff */
+      '<div class="hh-fila"><div class="campo"><label for="hhd-cn">Obreros</label><input id="hhd-cn" type="number" inputmode="numeric" min="0" max="9999" step="1"></div>'+
+      '<div class="campo"><label for="hhd-cs">Staff</label><input id="hhd-cs" type="number" inputmode="numeric" min="0" max="9999" step="1"></div>'+
+      '<div class="campo"><label for="hhd-cm">Minutos</label><input id="hhd-cm" type="number" inputmode="numeric" min="0" max="1440" step="5"></div></div>'+
+      '<div class="hh-rap chips" data-rap="cm"></div>'+
+      /* 17/10/2026 · lote 17 · varias charlas el mismo día */
+      '<div id="hhd-mas"></div><p style="margin:0 0 10px"><button type="button" class="bt sec chico" id="hhd-otra">＋ Otra charla ese día</button></p><div id="hhd-asis"></div>'+
+      '<div class="hh-fila"><div class="campo"><label for="hhd-hhc">Horas hombre de capacitación</label><input id="hhd-hhc" type="number" inputmode="decimal" min="0" step="0.01"></div></div>'+
       '<p class="hh-res" id="hhd-c-res"></p></div>'+
     '<div class="campo" id="hhd-lugar-c"><label for="hhd-lugar">Lugar <span class="tenue">· opcional</span></label><input id="hhd-lugar" maxlength="80" placeholder="Torre B · Frente 2"></div>'+
     '<div class="msg" id="hhd-msg" role="status"></div><div class="hh-total" id="hhd-total"></div>';
@@ -851,7 +910,11 @@ function hhAbrirDia(iso){
     ['e', 's', 'r'].forEach(function(c){ $('hhd-'+k+'-'+c).oninput=function(){ _hhdDeHorario(k); }; });
     $('hhd-'+k+'-n').oninput=_hhdCalc; $('hhd-'+k+'-h').oninput=function(){ $('hhd-'+k+'-h').setAttribute('data-mano', '1'); _hhdCalc(); };
   });
-  $('hhd-cn').oninput=_hhdDeCharla; $('hhd-cm').oninput=_hhdDeCharla; $('hhd-hhc').oninput=_hhdCalc; $('hhd-lugar').oninput=_hhdCalc;
+  $('hhd-cn').oninput=_hhdDeCharla; $('hhd-cs').oninput=_hhdDeCharla; $('hhd-cm').oninput=_hhdDeCharla; $('hhd-hhc').oninput=_hhdCalc; $('hhd-lugar').oninput=_hhdCalc;
+  /* 17/10/2026 · lote 17 · las otras charlas: cada una con sus asistentes y sus minutos; la HHC del día es la suma */
+  $('hhd-otra').onclick=function(){ HHD.ch.push({ o:'', s:'', m:'' }); _hhdMas(true); };
+  $('hhd-mas').oninput=function(ev){ var t=ev.target, i=+t.getAttribute('data-ch'), k=t.getAttribute('data-k'); if(HHD.ch[i] && k){ HHD.ch[i][k]=t.value; _hhdDeCharla(); } };
+  $('hhd-mas').onclick=function(ev){ var b=ev.target.closest('[data-chq]'); if(!b) return; HHD.ch.splice(+b.getAttribute('data-chq'), 1); _hhdMas(); _hhdDeCharla(); };
   $('hoja-cuerpo').addEventListener('click', function(ev){
     var b=ev.target.closest('[data-pon]'); if(!b) return;
     var id=b.getAttribute('data-pon'), e=$(id); if(!e) return;
@@ -881,9 +944,12 @@ function _hhdLlenar(){
       pon('hhd-'+k+'-h', r ? (hh||'') : (hhHoras(e0, s0, r0)||''));
     }
   });
-  pon('hhd-cn', ''); pon('hhd-cm', ''); pon('hhd-hhc', r && +r.hhc ? gesRed(r.hhc) : '');
+  pon('hhd-cn', ''); pon('hhd-cs', ''); pon('hhd-cm', ''); pon('hhd-hhc', r && +r.hhc ? gesRed(r.hhc) : '');
+  /* 19/10/2026 · lote 18 · lo que ya estaba separado en obreros y staff se respeta si no se toca */
+  HHD.split=(r && (r.hhc_ob!=null || r.hhc_st!=null)) ? { ob:+r.hhc_ob||0, st:+r.hhc_st||0, hhc:+r.hhc||0 } : null; HHD.cat=null;
+  HHD.ch=[]; _hhdMas();
   pon('hhd-lugar', r ? (r.lugar||'') : '');
-  $('hhd-lugar-c').hidden=(HHW.nivel>0);
+  $('hhd-lugar-c').hidden=(HHW.nivel>1);
   $('hhd-quitar').hidden=!r;
   $('hhd-ok').textContent=r ? 'Guardar los cambios' : 'Guardar el día';
   $('hhd-ya').innerHTML=r ? '<div class="aviso">Este día ya está registrado con <b>'+gesNum(hhDe(r).hht, 0)+' HHT</b>. Lo que cambies lo reemplaza, aquí y en la app.</div>' : '';
@@ -891,11 +957,12 @@ function _hhdLlenar(){
   _hhdRapidos(); _hhdCalc(); _hhdAsistencia(iso, !r);
 }
 function _hhdRapidos(){
-  var act=HHW.activos||0;
+  var act=(HHW.actO!=null) ? HHW.actO : (HHW.activos||0), actS=HHW.actS||0;
   function chips(id, vals, suf){ return vals.map(function(v){ return '<button type="button" class="chip" data-pon="'+id+'" data-v="'+v+'">'+v+suf+'</button>'; }).join(''); }
   ['ob', 'st'].forEach(function(k){
     var c=document.querySelector('.hh-rap[data-rap="'+k+'"]'); if(!c) return;
-    c.innerHTML=(k==='ob' && act ? '<button type="button" class="chip" data-pon="hhd-ob-n" data-v="'+act+'">Todos los activos ('+act+')</button>' : '')+
+    c.innerHTML=(k==='ob' && act ? '<button type="button" class="chip" data-pon="hhd-ob-n" data-v="'+act+'">Los obreros activos ('+act+')</button>' : '')+
+      (k==='st' && actS ? '<button type="button" class="chip" data-pon="hhd-st-n" data-v="'+actS+'">El staff activo ('+actS+')</button>' : '')+
       '<span class="tenue" style="font-size:12px;align-self:center;margin:0 2px 0 6px">Refrigerio:</span>'+chips('hhd-'+k+'-r', [0, 30, 45, 60], ' min');
   });
   var cm=document.querySelector('.hh-rap[data-rap="cm"]'); if(cm) cm.innerHTML=chips('hhd-cm', [5, 10, 15, 30, 60], ' min');
@@ -906,32 +973,76 @@ function _hhdDeHorario(k){
   _hhdCalc();
 }
 function _hhdDeCharla(){
-  var n=parseInt($('hhd-cn').value, 10)||0, mi=parseInt($('hhd-cm').value, 10)||0;
-  if(n && mi) $('hhd-hhc').value=gesRed(n*mi/60);
+  /* 19/10/2026 · lote 18 · obreros y staff de cada charla */
+  var o=parseInt($('hhd-cn').value, 10)||0, s=parseInt(($('hhd-cs')||{}).value, 10)||0, mi=parseInt($('hhd-cm').value, 10)||0, uno=!!((o+s) && mi);
+  var pmO=uno ? o*mi : 0, pmS=uno ? s*mi : 0, hay=uno;
+  /* 17/10/2026 · lote 17 · con las otras charlas del día */
+  (HHD.ch||[]).forEach(function(x){ var a=parseInt(x.o, 10)||0, b=parseInt(x.s, 10)||0, c=parseInt(x.m, 10)||0; if((a+b)>0 && c>0){ pmO+=a*c; pmS+=b*c; hay=true; } });
+  if(hay){ $('hhd-hhc').value=gesRed((pmO+pmS)/60); HHD.split={ ob:gesRed(pmO/60), st:gesRed(pmS/60), hhc:gesRed((pmO+pmS)/60) }; }
+  else HHD.split=null;   /* sin charlas puestas, la HHC (la de la asistencia o la escrita) se separa por los que marcaron */
   _hhdCalc();
+}
+/* las otras charlas del día (la primera son los campos de arriba) */
+function _hhdChN(){
+  var c=((parseInt(($('hhd-cn')||{}).value, 10)||0)+(parseInt(($('hhd-cs')||{}).value, 10)||0)) && (parseInt(($('hhd-cm')||{}).value, 10)||0) ? 1 : 0;
+  (HHD.ch||[]).forEach(function(x){ if(((parseInt(x.o, 10)||0)+(parseInt(x.s, 10)||0))>0 && (parseInt(x.m, 10)||0)>0) c++; });
+  return c;
+}
+function _hhdMas(foco){
+  var c=$('hhd-mas'); if(!c) return;
+  c.innerHTML=(HHD.ch||[]).map(function(x, i){
+    return '<div class="hh-fila hh-f4"><div class="campo"><label for="hhd-cn-'+i+'">Obreros · charla '+(i+2)+'</label><input id="hhd-cn-'+i+'" type="number" inputmode="numeric" min="0" max="9999" step="1" value="'+esc(String(x.o))+'" data-ch="'+i+'" data-k="o"></div>'+
+      '<div class="campo"><label for="hhd-cs-'+i+'">Staff</label><input id="hhd-cs-'+i+'" type="number" inputmode="numeric" min="0" max="9999" step="1" value="'+esc(String(x.s))+'" data-ch="'+i+'" data-k="s"></div>'+
+      '<div class="campo"><label for="hhd-cm-'+i+'">Minutos</label><input id="hhd-cm-'+i+'" type="number" inputmode="numeric" min="0" max="1440" step="5" value="'+esc(String(x.m))+'" data-ch="'+i+'" data-k="m"></div>'+
+      '<div class="campo"><button type="button" class="bt sec chico" data-chq="'+i+'" aria-label="Quitar la charla '+(i+2)+'">Quitar</button></div></div>';
+  }).join('');
+  if(foco){ var u=$('hhd-cn-'+(HHD.ch.length-1)); if(u) try{ u.focus(); }catch(e){} }
 }
 function _hhdLeer(){
   function ent(id){ var n=parseInt(($(id)||{}).value, 10); return (isNaN(n) || n<0) ? 0 : n; }
   function dec(id){ var n=parseFloat(String(($(id)||{}).value||'').replace(',', '.')); return (isNaN(n) || n<0) ? 0 : n; }
   var o={ obN:ent('hhd-ob-n'), obH:dec('hhd-ob-h'), stN:ent('hhd-st-n'), stH:dec('hhd-st-h'), hhc:gesRed(dec('hhd-hhc')), lugar:gesTxt(($('hhd-lugar')||{}).value).slice(0, 80) };
   o.hht=o.obN*o.obH+o.stN*o.stH;
+  /* 19/10/2026 · lote 18 · la HHC de obreros y de staff: la de las charlas; si la HHC se cambió a mano, en la misma
+     proporción; sin charlas, la proporción de los que marcaron asistencia ese día (por su puesto) */
+  var sp=HHD.split;
+  if(!sp && HHD.cat && (HHD.cat.o+HHD.cat.s)>0) sp={ ob:HHD.cat.o, st:HHD.cat.s, hhc:HHD.cat.o+HHD.cat.s };
+  if(sp && o.hhc && sp.hhc>0){ o.hhcOb=gesRed(o.hhc*sp.ob/sp.hhc); o.hhcSt=gesRed(o.hhc-o.hhcOb); }
   return o;
 }
 function _hhdCalc(){
   var R=_hhdLeer();
-  [['ob', 'obreros', R.obN, R.obH], ['st', 'empleados', R.stN, R.stH]].forEach(function(x){
+  [['ob', 'obreros', R.obN, R.obH], ['st', 'staff', R.stN, R.stH]].forEach(function(x){
     var k=x[0], e=$('hhd-'+k+'-res'); if(!e) return;
     var mano=$('hhd-'+k+'-h').getAttribute('data-mano')==='1', en=$('hhd-'+k+'-e').value, sa=$('hhd-'+k+'-s').value, re=parseInt($('hhd-'+k+'-r').value, 10)||0;
-    if(!x[2]) e.textContent=(k==='ob') ? 'Pon cuántos obreros hubo y sale la cuenta.' : 'Si ese día no hubo empleados, déjalo vacío.';
+    if(!x[2]) e.textContent=(k==='ob') ? 'Pon cuántos obreros hubo y sale la cuenta.' : 'Si ese día no hubo staff, déjalo vacío.';
     else if(!x[3]) e.textContent='Revisa la entrada y la salida: con esas horas la jornada sale en cero.';
     else e.innerHTML='<b>'+x[2]+' × '+gesNum(x[3])+' h = '+gesNum(x[2]*x[3])+' horas hombre</b>'+
       ((!mano && en && sa) ? ' · de '+esc(en)+' a '+esc(sa)+(re ? ', menos '+re+' min de refrigerio' : ', sin refrigerio descontado') : ' · horas por persona puestas a mano');
   });
   var c=$('hhd-c-res');
-  if(c) c.innerHTML=R.hhc ? '<b>'+gesNum(R.hhc)+' HHC</b>'+(R.hht ? ' · '+gesNum(R.hhc/R.hht*100)+' % de las horas trabajadas de ese día' : '') : 'Si hubo charla o capacitación: cuántos asistieron y cuántos minutos duró.';
+  var nCh=_hhdChN();
+  if(c) c.innerHTML=R.hhc ? '<b>'+gesNum(R.hhc)+' HHC</b>'+(nCh>1 ? ' de '+nCh+' charlas' : '')+(R.hhcOb!=null ? ' · obreros '+gesNum(R.hhcOb)+' · staff '+gesNum(R.hhcSt) : '')+(R.hht ? ' · '+gesNum(R.hhc/R.hht*100)+' % de las horas trabajadas de ese día' : '') : 'Si hubo charla o capacitación: cuántos asistieron y cuántos minutos duró.';
   var t=$('hhd-total');
   if(t) t.innerHTML=R.hht ? 'Ese día: <b>'+gesNum(R.hht)+' HHT</b>'+(R.hhc ? ' · <b>'+gesNum(R.hhc)+' HHC</b>' : '')+(R.lugar ? ' · 📍 '+esc(R.lugar) : '') : 'Cuando pongas cuánta gente hubo y sus horas, aquí sale el total del día.';
   return R;
+}
+/* 19/10/2026 · lote 18 · los que marcaron asistencia ese día: cuántos obreros y cuánto staff (por su documento o su nombre,
+   y su puesto); el que no está en «Personal», como obrero. null si no hubo marcas. */
+function _hhdCatDia(iso){
+  var E=_enc(YO.obra.id), d0=new Date(iso+'T00:00:00'), d1=new Date(d0.getTime()+86400000);
+  return sbGet('sst_asist?empresa=eq.'+E+'&inicio=gte.'+_enc(d0.toISOString())+'&inicio=lt.'+_enc(d1.toISOString())+'&select=id&limit=200').then(function(ses){
+    var ids=(ses||[]).map(function(s){ return s.id; }); if(!ids.length) return null;
+    return Promise.all([
+      sbGet('sst_asist_marca?empresa=eq.'+E+'&sesion=in.('+ids.map(function(id){ return _enc('"'+id+'"'); }).join(',')+')&estado=eq.ok&select=doc,nombre&limit=5000'),
+      traerTodo('sst_trabajador', '&select=nombre,dni,puesto', 6000), catPuestosObraP()
+    ]).then(function(r){
+      var porDoc={}, porNom={}, o=0, s=0, mapa=r[2]||{};
+      (r[1]||[]).forEach(function(t){ if(t.dni) porDoc[String(t.dni).toUpperCase()]=t; if(t.nombre) porNom[catNorm(t.nombre)]=t; });
+      (r[0]||[]).forEach(function(m){ var t=porDoc[String(m.doc||'').toUpperCase()] || porNom[catNorm(m.nombre)]; if(t && catPuesto(t.puesto, mapa)==='staff') s++; else o++; });
+      return (o+s) ? { o:o, s:s } : null;
+    });
+  });
 }
 /* la HHC de ese día según los registros de asistencia de la obra (la misma función que usa la app) */
 function _hhdAsistencia(iso, llenar){
@@ -941,6 +1052,8 @@ function _hhdAsistencia(iso, llenar){
      en el portal (sección 4). Cada una dice lo suyo; si hay de las dos, también la suma */
   var pA=sbRpc('sst_asist_hhc', {p:{empresa:YO.obra.id, desde:d0.toISOString(), hasta:d1.toISOString()}}).then(function(r){ return (r && r.ok && r.temas && +r.hhc) ? r : null; }, function(){ return null; });
   var pW=(typeof gesCapHHCDe==='function') ? gesCapHHCDe(iso).then(function(w){ return (w && w.n && w.hhc>0) ? w : null; }, function(){ return null; }) : Promise.resolve(null);
+  /* 19/10/2026 · lote 18 · los que marcaron, obreros y staff por su puesto (para separar la HHC que se tome de aquí) */
+  _hhdCatDia(iso).then(function(x){ if(HHD.iso===iso){ HHD.cat=x; _hhdCalc(); } }, function(){});
   Promise.all([pA, pW]).then(function(x){
     var r=x[0], w=x[1];
     if(HHD.iso!==iso || !$('hhd-asis') || (!r && !w)) return;
@@ -954,8 +1067,10 @@ function _hhdAsistencia(iso, llenar){
     $('hhd-asis').innerHTML=h;
   });
 }
-function _hhFila(iso, R, conExtras){
+function _hhFila(iso, R, conExtras, conCap){
   var f={ duenio:YO.obra.id, fecha:iso, ob_n:R.obN, ob_h:gesRed(R.obH, 6), st_n:R.stN, st_h:gesRed(R.stH, 6), hhc:gesRed(R.hhc) };
+  /* 19/10/2026 · lote 18 · la capacitación de obreros y de staff */
+  if(conCap && R.hhcOb!=null){ f.hhc_ob=gesRed(R.hhcOb); f.hhc_st=gesRed(R.hhcSt); }
   if(conExtras){
     f.lugar=R.lugar||null;
     f.ob_entrada=R.obE||null; f.ob_salida=R.obS||null; f.st_entrada=R.stE||null; f.st_salida=R.stS||null;
@@ -967,12 +1082,14 @@ function _hhFila(iso, R, conExtras){
 function _hhGuardarDia(iso, R){
   return sbGet('sst_hht?'+filtroObra('sst_hht')+'&fecha=eq.'+iso+'&select=id&order=creado.desc&limit=5').then(function(rows){
     var ya=(rows||[])[0];
-    function intento(conExtras){
-      var f=_hhFila(iso, R, conExtras);
+    function intento(nv){
+      var f=_hhFila(iso, R, nv<=1, nv===0);
       if(ya){ var p={}; for(var k in f) if(k!=='duenio' && k!=='fecha') p[k]=f[k]; return sbPatch('sst_hht?id=eq.'+encodeURIComponent(ya.id), p); }
       return sbPostP('sst_hht', f);
     }
-    return intento(HHW.nivel===0).catch(function(c){ if(c===400 && HHW.nivel===0){ HHW.nivel=1; return intento(false); } throw c; })
+    /* 19/10/2026 · lote 18 · si la base no tiene alguna columna (400), se baja un nivel: sin obreros/staff, y sin lo demás */
+    function prueba(nv){ return intento(nv).catch(function(c){ if(c===400 && nv<2){ HHW.nivel=nv+1; return prueba(nv+1); } throw c; }); }
+    return prueba(HHW.nivel||0)
       .then(function(r){ if(Array.isArray(r) && !r.length) return Promise.reject({portal:'Esta cuenta no puede escribir en esta obra.'}); return r; });
   });
 }
@@ -1126,8 +1243,8 @@ function _hhvGuardar(){
     var hechos=0;
     function avance(k){ hechos+=k; var a=$('hhv-av'), t=$('hhv-av-t'); if(a) a.style.width=Math.round(hechos/P.dias.length*100)+'%'; if(t) t.textContent=hechos+' de '+P.dias.length; }
     var filas=nuevos.map(function(x){ return _hhFila(x.iso, x.R, true); }), antes=0;
-    gesSubirTandas('sst_hht', filas, [HHW.nivel===0 ? [] : HH_EXTRAS, HH_EXTRAS], function(n2){ avance(n2-antes); antes=n2; }, 50).then(function(r){
-      if(r.sinCols.length) HHW.nivel=1;
+    gesSubirTandas('sst_hht', filas, [HHW.nivel<=1 ? [] : HH_EXTRAS, HH_EXTRAS], function(n2){ avance(n2-antes); antes=n2; }, 50).then(function(r){
+      if(r.sinCols.length) HHW.nivel=2;
       /* los que ya estaban: uno por uno, sobre su fila */
       return viejos.reduce(function(cad, x){ return cad.then(function(){ return _hhGuardarDia(x.iso, x.R).then(function(){ avance(1); }); }); }, Promise.resolve());
     }).then(function(){
@@ -2263,7 +2380,10 @@ function capTipos(){ var c=(CAPW.cat && Array.isArray(CAPW.cat.asisTipos) && CAP
 function capTipoN(k){ var t=capTipos().filter(function(x){ return x[0]===k; })[0]; return t ? t[1] : (k||'Capacitación'); }
 function capMinDe(k){ return ((CAPW.cat && CAPW.cat.asisMin)||{})[k] || 60; }
 function capEnMatriz(k){ return !!(typeof GES_CAP_MATRIZ==='object' && GES_CAP_MATRIZ[k]); }
-function capHHC(d){ return ((Array.isArray(d.gente) ? d.gente.length : 0)*(parseFloat(d.min)||0))/60; }
+/* cuántos asistieron: los marcados por su nombre; si no hay nombres, cuántos firmaron la hoja (n: la hoja firmada que se
+   escaneó en la app, lote 15) */
+function capN(d){ var g=Array.isArray(d && d.gente) ? d.gente.length : 0; return g || Math.max(0, parseInt(d && d.n, 10)||0); }
+function capHHC(d){ return (capN(d)*(parseFloat(d.min)||0))/60; }
 /* de quienes tienen nota: cuántos aprobaron y cuántos no */
 function capNotas(d){
   var o={ con:0, ap:0, de:0 };
@@ -2297,7 +2417,7 @@ function capPintar(){
   var caja=CAPW.caja; if(!caja || !document.body.contains(caja)) return;
   var F=CAPW.filas, A=ANIO, del=F.filter(function(f){ return anioDe(f.d.fecha)===A; });
   var asis=0, hhc=0, temas={};
-  del.forEach(function(f){ asis+=(f.d.gente||[]).length; hhc+=capHHC(f.d); temas[nrm(f.d.tema)]=1; });
+  del.forEach(function(f){ asis+=capN(f.d); hhc+=capHHC(f.d); temas[nrm(f.d.tema)]=1; });
   var hay=function(id){ return vistasDe().some(function(v){ return v.id===id; }); };
   var idCons=hay('cump') ? 'cump' : (hay('constancias') ? 'constancias' : '');
   var h='<div class="aviso" id="cap-que"><b>Aquí va lo que ya se dio y no pasó por la app</b>: lo de antes de OBRASST, o lo que se dictó en papel. '+
@@ -2315,7 +2435,7 @@ function capPintar(){
   caja.innerHTML=h;
   if(est) $('t-cap')._est=est;
   Array.prototype.forEach.call(caja.querySelectorAll('[data-ir]'), function(b){ b.onclick=function(){ navegar(b.getAttribute('data-ir')); }; });
-  var filas=F.map(function(f){ var d=f.d; return { id:f.id, fecha:d.fecha||'', tema:d.tema||'', tipo:capTipoN(d.tipo), dicta:d.dicta||'', n:(d.gente||[]).length, min:parseFloat(d.min)||0, hhc:capHHC(d), ev:(d.ev||[]), _f:f }; });
+  var filas=F.map(function(f){ var d=f.d; return { id:f.id, fecha:d.fecha||'', tema:d.tema||'', tipo:capTipoN(d.tipo), dicta:d.dicta||'', n:capN(d), min:parseFloat(d.min)||0, hhc:capHHC(d), ev:(d.ev||[]), _f:f }; });
   var cols=[
     {k:'fecha', t:'Fecha', h:function(x){ return esc(fechaLarga(x.fecha)); }},
     {k:'tema', t:'Qué se dio', h:function(x){ return '<b>'+esc(x.tema)+'</b><span class="sub">'+esc([x.tipo, x.dicta].filter(Boolean).join(' · '))+'</span>'; }, v:function(x){ return x.tema+' '+x.tipo+' '+x.dicta; }, csv:function(x){ return x.tema; }},
@@ -2334,7 +2454,7 @@ function capPintar(){
     accion:function(acc, x){ if(acc==='quitar') capQuitar(x._f); else capForm(x._f); }});
 }
 function capQuitar(f){
-  var d=f.d, n=(d.gente||[]).length;
+  var d=f.d, n=capN(d);
   confirmar('¿Quitar esta capacitación del registro?', '«'+d.tema+'» del '+fechaLarga(d.fecha)+' · '+gesPlural(n, 'asistente', 'asistentes')+'. '+(capEnMatriz(d.tipo) ? 'Deja de contar en la matriz y en el registro de seguimiento. ' : '')+'La lista firmada que subiste no se borra del almacenamiento.', {si:'Sí, quitarla', mal:true}).then(function(si){
     if(!si) return;
     gesActQuitar(f.id).then(function(){ toast('Capacitación quitada.'); cerrarHoja(); if(typeof VISTA.recargar==='function') VISTA.recargar(true); },
@@ -2353,9 +2473,9 @@ function capForm(f, pre){
     {ancha:true, sinFoco:true});
   if($('capf-quitar')) $('capf-quitar').onclick=function(){ capQuitar(f); };
   var pPlan=traer('sst_doc', '&select=id,hoja,nota&hoja=eq.temas&order=creado.desc', 300).then(function(rows){ return planDeFilas(rows); }, function(){ return null; });
-  Promise.all([gesGente(), gesCat(), pPlan, gesActTraer().catch(function(){ return []; })]).then(function(r){
+  Promise.all([gesGente(), gesCat(), pPlan, gesActTraer().catch(function(){ return []; }), _capfAmbVa() ? ambMapaP() : Promise.resolve(null)]).then(function(r){
     if(!$('capf-carga')) return;                       /* se cerró mientras cargaba */
-    CAPW.cat=r[1]; CAPF.plan=r[2];
+    CAPW.cat=r[1]; CAPF.plan=r[2]; CAPF.ambMapa=r[4]; CAPF.ambToco=false; CAPF.amb=0;
     var tipos=capTipos(), tipo=(d.tipo && tipos.some(function(t){ return t[0]===d.tipo; })) ? d.tipo : 'capacitacion';
     /* los temas para elegir: los del plan de la obra, los del catálogo de la app y los que ya se registraron aquí */
     var vistos={}, temas=[];
@@ -2371,11 +2491,18 @@ function capForm(f, pre){
       '<div class="campo"><label for="capf-min">Duración (minutos)</label><input type="number" id="capf-min" inputmode="numeric" min="1" max="1440" step="1" value="'+esc(d.min || capMinDe(tipo))+'"></div></div>'+
       '<div class="campo"><label for="capf-tema">Tema</label><input id="capf-tema" list="capf-temas" maxlength="160" autocomplete="off" placeholder="Escríbelo o elígelo de la lista" value="'+esc(d.tema||'')+'">'+
         '<datalist id="capf-temas">'+temas.slice(0, 400).map(function(t){ return '<option value="'+esc(t)+'"></option>'; }).join('')+'</datalist><p class="ayuda" id="capf-tema-ay"></p></div>'+
+      /* 19/10/2026 · lote 20 · Marcelo: «verificar si es que tema ambiental o tema sst»: de entrada lo dicen sus palabras */
+      (CAPF.ambMapa ? '<div class="campo"><label id="capf-amb-t">El tema es de</label><div class="chips" id="capf-amb" role="radiogroup" aria-labelledby="capf-amb-t">'+
+        '<button type="button" role="radio" class="chip" aria-checked="false" data-v="0">Seguridad y salud</button><button type="button" role="radio" class="chip" aria-checked="false" data-v="1">🌱 Medio ambiente</button></div>'+
+        '<p class="ayuda" id="capf-amb-ay"></p></div>' : '')+
       '<div class="fila-c ya-al">'+
       '<div class="campo"><label for="capf-dicta">Quién la dio</label><input id="capf-dicta" maxlength="120" autocomplete="off" value="'+esc(d.dicta||'')+'"></div>'+
       '<div class="campo"><label for="capf-cargo">Su cargo o empresa <span class="tenue">· opcional</span></label><input id="capf-cargo" maxlength="80" value="'+esc(d.cargo||'')+'"></div>'+
       '<div class="campo"><label for="capf-lugar">Lugar <span class="tenue">· opcional</span></label><input id="capf-lugar" maxlength="120" value="'+esc(d.lugar||'')+'"></div></div>'+
       '<div class="seccion"><h3>Quiénes asistieron</h3><div id="capf-gente"></div>'+
+      '<div class="campo" id="capf-sin" style="margin-top:10px"><label for="capf-n">O, sin los nombres: cuántos firmaron la hoja</label>'+
+        '<input type="number" id="capf-n" inputmode="numeric" min="0" max="2000" step="1" value="'+esc((!(d.gente||[]).length && d.n) ? d.n : '')+'" style="max-width:160px">'+
+        '<p class="ayuda">Cuenta en las horas hombre capacitadas y en el programa. Para que cuente en la matriz de cada uno, márcalos por su nombre.</p></div>'+
       '<label class="chk" style="margin:12px 0 0"><input type="checkbox" id="capf-connota"'+(conNota ? ' checked' : '')+'> <span>Hubo evaluación con nota <small class="tenue">· se anota la de cada uno, al lado de su nombre</small></span></label>'+
       '<div class="fila-c ya-al" id="capf-nota-c" style="margin-top:10px"'+(conNota ? '' : ' hidden')+'><div class="campo"><label for="capf-sobre">Nota máxima</label><input type="number" id="capf-sobre" inputmode="numeric" min="1" max="1000" step="1" value="'+esc(d.sobre||20)+'"></div>'+
         '<div class="campo"><label for="capf-minimo">Mínima para aprobar</label><input type="number" id="capf-minimo" inputmode="decimal" min="0" step="0.5" value="'+esc(d.minimo!=null && d.sobre ? d.minimo : 14)+'"></div></div></div>'+
@@ -2387,12 +2514,31 @@ function capForm(f, pre){
     CAPF.ev=gesEvidencia($('capf-ev'), { id:'capf-evi', lista:d.ev||[], max:4, texto:'Adjuntar la lista firmada (PDF o foto)', ayuda:'La hoja de asistencia con las firmas, escaneada o en foto. Hasta 4 archivos de 20 MB.' });
     $('capf-tipo').onchange=function(){ if(nuevo && !$('capf-min')._tocado) $('capf-min').value=capMinDe(this.value); _capfTema(); _capfCalc(); };
     $('capf-min').oninput=function(){ this._tocado=true; _capfCalc(); };
-    $('capf-tema').oninput=_capfTema;
+    $('capf-n').oninput=_capfCalc;
+    $('capf-tema').oninput=function(){ _capfTema(); _capfAmb(); };
+    if($('capf-amb')) $('capf-amb').onclick=function(ev){ var b=ev.target.closest('[data-v]'); if(!b) return; CAPF.ambToco=true; CAPF.amb=+b.getAttribute('data-v'); _capfAmb(); };
     $('capf-connota').onchange=function(){ $('capf-nota-c').hidden=!this.checked; CAPF.el.ponNota(this.checked, parseFloat($('capf-sobre').value)||20); };
     $('capf-sobre').onchange=function(){ if($('capf-connota').checked) CAPF.el.ponNota(true, parseFloat(this.value)||20); };
     $('capf-ok').disabled=false; $('capf-ok').onclick=_capfGuardar;
-    _capfTema(); _capfCalc();
+    _capfTema(); _capfAmb(); _capfCalc();
   }, function(e){ var c=$('capf-carga'); if(c) c.innerHTML='<b>No se pudo abrir</b>'+esc(porQueFallo(e)); });
+}
+/* el tema: de seguridad y salud o de medio ambiente (con el plan que trae el informe de medio ambiente) */
+function _capfAmbVa(){ return typeof ambTemaEs==='function' && typeof ambMapaP==='function' && (typeof planWebTrae!=='function' || planWebTrae('ambiente')); }
+function _capfAmb(){
+  var c=$('capf-amb'); if(!c) return;
+  if(!CAPF.ambToco) CAPF.amb=ambTemaEs(($('capf-tema')||{}).value, CAPF.ambMapa||{}) ? 1 : 0;
+  Array.prototype.forEach.call(c.querySelectorAll('.chip'), function(b){ var on=(+b.getAttribute('data-v')===CAPF.amb); b.className='chip'+(on ? ' on' : ''); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
+  var a=$('capf-amb-ay'); if(a) a.textContent=CAPF.amb ? 'Sale también en el informe de medio ambiente, con sus horas hombre de capacitación. Vale para la obra: el mismo tema queda así en las demás charlas.' : 'Va en el informe de SST.';
+}
+/* lo que se decidió a mano queda para la obra (solo si no es lo que dirían sus palabras) */
+function _capfAmbGuardar(tema){
+  if(!$('capf-amb') || !CAPF.ambMapa) return Promise.resolve();
+  var k=ambTemaClave(tema); if(!k) return Promise.resolve();
+  var m=JSON.parse(JSON.stringify(CAPF.ambMapa)), auto=ambTemaAuto(tema) ? 1 : 0, quiere=CAPF.amb ? 1 : 0, antes=Object.prototype.hasOwnProperty.call(m, k) ? +m[k] : null;
+  if(quiere===auto){ if(antes===null) return Promise.resolve(); delete m[k]; }
+  else { if(antes===quiere) return Promise.resolve(); m[k]=quiere; }
+  return ambMapaPonerP(m).then(function(mm){ CAPF.ambMapa=mm; });
 }
 function _capfTema(){
   var a=$('capf-tema-ay'); if(!a) return;
@@ -2405,8 +2551,10 @@ function _capfTema(){
 }
 function _capfCalc(){
   var r=$('capf-res'); if(!r || !CAPF.el) return;
-  var n=CAPF.el.n(), min=parseInt($('capf-min').value, 10)||0;
-  r.innerHTML=n ? '<b>'+gesPlural(n, 'asistente', 'asistentes')+'</b>'+(min ? ' × '+min+' min = <b>'+gesNum(n*min/60, 1)+' HHC</b>' : '') : 'Marca a quienes asistieron.';
+  var nNom=CAPF.el.n(), sin=$('capf-sin'), nSin=parseInt(($('capf-n')||{}).value, 10)||0, min=parseInt($('capf-min').value, 10)||0;
+  if(sin) sin.hidden=nNom>0;
+  var n=nNom || nSin;
+  r.innerHTML=n ? '<b>'+gesPlural(n, 'asistente', 'asistentes')+'</b>'+(nNom ? '' : ' <span class="tenue">(sin nombres)</span>')+(min ? ' × '+min+' min = <b>'+gesNum(n*min/60, 1)+' HHC</b>' : '') : 'Marca a quienes asistieron, o pon cuántos firmaron la hoja.';
 }
 function _capfGuardar(){
   if(CAPF.guardando) return;
@@ -2424,8 +2572,8 @@ function _capfGuardar(){
     if(!(minimo>=0 && minimo<=sobre)) return mal('La nota mínima para aprobar tiene que estar entre 0 y '+sobre+'.', 'capf-minimo');
     CAPF.el.ponNota(true, sobre);
   }
-  var gente=CAPF.el.elegidos();
-  if(!gente.length) return mal('Marca a quienes asistieron (al menos una persona).');
+  var gente=CAPF.el.elegidos(), nSin=parseInt(($('capf-n')||{}).value, 10)||0;
+  if(!gente.length && !(nSin>=1 && nSin<=2000)) return mal('Marca a quienes asistieron, o pon cuántos firmaron la hoja.');
   if(gente.length>2000) return mal('Son más de 2000 asistentes en un solo registro: pártelo en dos.');
   if(conNota){
     var fuera=gente.filter(function(g){ return g.nota!=null && (g.nota<0 || g.nota>sobre); })[0];
@@ -2435,16 +2583,22 @@ function _capfGuardar(){
   var d={ v:1, k:'cap', tipo:tipo, fecha:fe, hora:$('capf-hora').value||'', min:min, tema:tema.slice(0, 160), dicta:gesTxt($('capf-dicta').value).slice(0, 120), cargo:gesTxt($('capf-cargo').value).slice(0, 80),
           lugar:gesTxt($('capf-lugar').value).slice(0, 120), obs:String($('capf-obs').value||'').trim().slice(0, 600), sobre:conNota ? sobre : null, minimo:conNota ? minimo : null, gente:gente, ev:[],
           por:(f && f.d.por) || gesQuien(), cuando:(f && f.d.cuando) || new Date().toISOString() };
+  if(!gente.length) d.n=nSin;
+  /* lo que puso la app (la hoja escaneada): se conserva */
+  if(f && f.d.app) d.app=f.d.app;
+  if(f && f.d.esc) d.esc=f.d.esc;
   if(f) d.cambio=new Date().toISOString();
   /* ¿ya está registrada? (el mismo tema, el mismo día): se pregunta antes de contarla dos veces */
   var otra=(CAPW.filas||[]).filter(function(x){ return (!f || x.id!==f.id) && x.d.fecha===fe && nrm(x.d.tema)===nrm(tema) && x.d.tipo===tipo; })[0];
-  var sigue=otra ? confirmar('Ya hay una registrada con ese tema ese día', '«'+otra.d.tema+'» del '+fechaLarga(fe)+' ya está, con '+gesPlural((otra.d.gente||[]).length, 'asistente', 'asistentes')+'. Si es otro grupo u otro turno, guárdala; si es la misma, mejor abre esa y corrígela.', {si:'Guardar esta también'}) : Promise.resolve(true);
+  var sigue=otra ? confirmar('Ya hay una registrada con ese tema ese día', '«'+otra.d.tema+'» del '+fechaLarga(fe)+' ya está, con '+gesPlural(capN(otra.d), 'asistente', 'asistentes')+'. Si es otro grupo u otro turno, guárdala; si es la misma, mejor abre esa y corrígela.', {si:'Guardar esta también'}) : Promise.resolve(true);
   sigue.then(function(si){
     if(!si) return;
     CAPF.guardando=true; bt.disabled=true; m.className='msg gris'; m.textContent=CAPF.ev.n() ? 'Subiendo la lista firmada…' : 'Guardando…';
     return CAPF.ev.subir().then(function(ev){
       d.ev=ev; m.textContent='Guardando…';
       return gesActGuardar(f ? f.id : null, d, capTipoN(tipo)+' realizada · '+d.tema+' · '+fe);
+    }).then(function(){
+      return _capfAmbGuardar(d.tema).catch(function(){});
     }).then(function(){
       CAPF.guardando=false;
       toast((f ? 'Guardado: ' : 'Capacitación registrada: ')+gesPlural(gente.length, 'asistente', 'asistentes')+' · '+gesNum(capHHC(d), 1)+' HHC.');
@@ -2475,12 +2629,19 @@ function capExcel(bt){
     [12, 22, 40, 34, 18, 22, 18, 14, 8, 8, 8].forEach(function(w, i){ g.anchos[i]=w; });
     var fr=5, gr=2;
     F.forEach(function(f){
-      var d=f.d, N=capNotas(d), se=X.serial(String(d.fecha||'').slice(0, 10)), n=(d.gente||[]).length;
+      var d=f.d, N=capNotas(d), se=X.serial(String(d.fecha||'').slice(0, 10)), n=capN(d);
       h.celda(0, fr, se, sFe); h.celda(1, fr, capTipoN(d.tipo), sTx); h.celda(2, fr, d.tema||'', sTxW); h.celda(3, fr, d.dicta||'', sTx); h.celda(4, fr, d.cargo||'', sTx); h.celda(5, fr, d.lugar||'', sTx);
       h.celda(6, fr, parseFloat(d.min)||0, sN0); h.celda(7, fr, n, sN0); h.celda(8, fr, gesRed(capHHC(d), 2), sN1, 'G'+fr+'*H'+fr+'/60');
       if(N.con) h.celda(9, fr, N.ap, sN0); else h.celda(9, fr, '', sTx);
       h.celda(10, fr, (d.ev||[]).map(function(e){ return e.u; }).join('  '), sTx); h.celda(11, fr, d.obs||'', sTxW);
       fr++;
+      /* la hoja firmada sin nombres (escaneada en la app): una fila con cuántos fueron */
+      if(!(d.gente||[]).length && n){
+        g.celda(0, gr, se, sFe); g.celda(1, gr, capTipoN(d.tipo), sTx); g.celda(2, gr, d.tema||'', sTx); g.celda(3, gr, n+' '+(n===1 ? 'asistente' : 'asistentes')+' (hoja firmada, sin nombres)', sTx);
+        for(var z=4; z<10; z++) g.celda(z, gr, '', sTx);
+        g.celda(10, gr, gesRed((parseFloat(d.min)||0)/60, 2), sN1);
+        gr++;
+      }
       (d.gente||[]).forEach(function(p){
         var con=(d.sobre && p.nota!=null && p.nota!=='');
         g.celda(0, gr, se, sFe); g.celda(1, gr, capTipoN(d.tipo), sTx); g.celda(2, gr, d.tema||'', sTx); g.celda(3, gr, p.n||'', sTx); g.celda(4, gr, [p.td, p.d].filter(Boolean).join(' '), sTx);
@@ -2505,7 +2666,7 @@ function capExcel(bt){
 function gesCapHHCDe(iso){
   return gesActTraer().then(function(l){
     var o={ n:0, asis:0, hhc:0 };
-    gesActDe(l, 'cap').forEach(function(f){ if(String(f.d.fecha||'').slice(0, 10)!==iso) return; o.n++; o.asis+=(f.d.gente||[]).length; o.hhc+=capHHC(f.d); });
+    gesActDe(l, 'cap').forEach(function(f){ if(String(f.d.fecha||'').slice(0, 10)!==iso) return; o.n++; o.asis+=capN(f.d); o.hhc+=capHHC(f.d); });
     return o;
   }, function(){ return { n:0, asis:0, hhc:0 }; });
 }
@@ -3370,13 +3531,55 @@ function _camfGuardar(){
    Una sola pantalla para el que llega con su gestión ya andando: qué se puede cargar, cuánto hay cargado de cada
    cosa y la puerta directa a cada una. No guarda nada por su cuenta: cada tarjeta abre lo de su sección. */
 var CARW = { n:0 };
+/* 20/10/2026 · lote 20 · Marcelo: «parte del informe parte de los programas anuales […] que esas se pueden elaborar en la
+   web. Y también pueden subir lo que ya han avanzado quizás, subir su gestión ahí, también como sus charlas y así, pero que
+   sea ordenado y estéticamente ordenado para que el usuario sepa dónde colocar». Cuatro pasos, en el orden en que conviene:
+     1 · lo básico de la obra (la cabecera de cada registro y la gente a la que se une todo lo demás);
+     2 · los programas del año (el informe del mes mide el avance contra ellos): armarlos aquí o pegar el de tu Excel;
+     3 · lo que ya se hizo este año (lo de antes de OBRASST, con su fecha);
+     4 · las evidencias y los documentos.
+   Cada tarjeta dice qué se carga, cuánto hay ya y dónde sale en el informe. Nada se carga dos veces: todo va al mismo
+   registro que usa la app. */
+var CAR_PROGS = [['sst', '🧭', 'Programa anual de SST', 1, 'El paraguas del año: el objetivo, la meta y las actividades de gestión; los otros programas cuelgan de él.'],
+  ['cap', '🎓', 'Programa de capacitación', 1, 'Los temas del año, mes a mes. Lo dictado —en la app o registrado aquí— se cuenta solo.'],
+  ['insp', '🔎', 'Programa de inspecciones', 2, 'Qué se inspecciona y cada cuánto. Las inspecciones registradas se cuentan solas.'],
+  ['sim', '🧯', 'Programa de simulacros', 2, 'Los simulacros del año con su escenario. Los realizados se cuentan solos.'],
+  ['camp', '🎯', 'Programa de campañas', 2, 'Las campañas del año con su mensaje. Las realizadas se cuentan solas.'],
+  ['mon', '🩺', 'Programa de monitoreo ocupacional', 3, 'Ruido, polvo, iluminación, estrés térmico…, con su frecuencia. Los registrados se cuentan solos.'],
+  ['aud', '📋', 'Programa de auditorías', 3, 'La interna, la del cliente, la de certificación. Las realizadas se cuentan solas.']];
+function _carCss(){
+  if($('car-css')) return;
+  var st=document.createElement('style'); st.id='car-css';
+  st.textContent=[
+    '.car-pasos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 20px;padding:0;list-style:none}',
+    '.car-pasos button{width:100%;display:flex;gap:11px;align-items:center;text-align:left;border:1px solid var(--raya);border-radius:11px;background:var(--panel);padding:11px 13px;cursor:pointer;font:inherit;color:var(--texto)}',
+    '.car-pasos button:hover{border-color:#B9C6CF}.car-pasos button:focus-visible{outline:2px solid var(--azul);outline-offset:2px}',
+    '.car-nn{flex:none;width:28px;height:28px;border-radius:50%;background:var(--tinta);color:#fff;display:grid;place-items:center;font-weight:600;font-size:13.5px}',
+    '.car-pasos .listo .car-nn{background:var(--ok)}',
+    '.car-pasos b{display:block;font-size:13.5px;color:var(--tinta);line-height:1.3}.car-pasos small{display:block;font-size:12px;color:var(--gris);font-variant-numeric:tabular-nums}',
+    '.car-g{margin:0 0 26px;scroll-margin-top:16px}.car-g>header{display:flex;gap:12px;align-items:flex-start;margin:0 0 12px}',
+    '.car-g>header .car-nn{margin-top:1px}.car-g h2{margin:0 0 3px;font-size:17px;color:var(--tinta);font-weight:600}.car-g>header p{margin:0;font-size:13px;color:var(--gris);line-height:1.5;max-width:860px}',
+    '.ges-hub-t .car-en{font-size:12px;color:var(--gris);border-top:1px dashed var(--raya);padding-top:8px;margin-top:2px}',
+    '.ges-hub-t.lleno h3::after{content:"✓";margin-left:auto;color:var(--ok);font-size:14px;font-weight:600}',
+    '.car-progs{border:1px solid var(--raya);border-radius:12px;background:var(--panel);overflow:hidden}',
+    '.car-pg{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px 16px;border-top:1px solid var(--raya)}.car-pg:first-child{border-top:0}',
+    '.car-pg .ic{font-size:18px;line-height:1}.car-pg h3{margin:0;font-size:14.5px;color:var(--tinta);font-weight:600}.car-pg p{margin:2px 0 0;font-size:12.5px;color:var(--gris);line-height:1.45}',
+    '.car-pg .est{font-size:12.5px;color:var(--texto);font-variant-numeric:tabular-nums;margin-top:3px}.car-pg .est b{color:var(--tinta)}',
+    '.car-pg .est .ok{color:var(--ok);font-weight:600}.car-pg .acciones{margin:0;flex-wrap:nowrap;justify-content:flex-end}',
+    '.car-pg.cand h3{color:var(--gris)}.car-pg.cand{background:#FAFBFC}',
+    '@media (max-width:900px){.car-pasos{grid-template-columns:1fr 1fr}}',
+    '@media (max-width:640px){.car-pg{grid-template-columns:28px minmax(0,1fr)}.car-pg .acciones{grid-column:2;justify-content:flex-start;flex-wrap:wrap}}'
+  ].join('\n');
+  document.head.appendChild(st);
+}
 function gesVistaCargar(caja){
-  _gesCss(); _yaCss();
+  _gesCss(); _yaCss(); _carCss();
   var ac=$('acciones'); if(ac) ac.innerHTML='';
   cargando(caja);
   var hay=function(id){ return vistasDe().some(function(v){ return v.id===id; }); };
   var idPer=hay('personas') ? 'personas' : (hay('personal') ? 'personal' : '');
   function ir(id, luego){ navegar(id); if(luego) try{ luego(); }catch(e){} }
+  function delAnio(f){ return String(f || '').slice(0, 4)===ANIO; }
   function pinta(silencio){
     var n=++CARW.n, nada=function(){ return null; };
     Promise.all([
@@ -3388,61 +3591,130 @@ function gesVistaCargar(caja){
       traer('sst_reporte', '&select=id&order=creado.desc', 2000).catch(nada),
       /* 07/10/2026 · la entrega de EPP y los datos de la empresa también se cargan aquí (portal/mas.js) */
       traerTodo('sst_kardex', '&select=ext&order=fecha.desc,ext.desc', 30000).catch(nada),
-      traer('sst_doc', '&select=id,nota&hoja=eq.empleador&order=creado.desc', 1).catch(nada)
+      traer('sst_doc', '&select=id,nota&hoja=eq.empleador&order=creado.desc', 1).catch(nada),
+      /* 20/10/2026 · lote 20 · los programas y los objetivos del año, el registro fotográfico y medio ambiente */
+      traer('sst_doc', '&select=id,nota&hoja=eq.ges-prog&order=creado.desc', 400).catch(nada),
+      traer('sst_doc', '&select=id,nota&hoja=eq.ges-objetivos&order=creado.desc', 50).catch(nada),
+      traer('sst_doc', '&select=id,nota,creado&hoja=eq.foto-reg&order=creado.desc', 4000).catch(nada),
+      traer('sst_doc', '&select=id,nota,creado&hoja=eq.amb-reg&order=creado.desc', 4000).catch(nada)
     ]).then(function(r){
       if(n!==CARW.n || VISTA.actual!=='cargar') return;
       var trab=r[0], hht=r[1], acc=r[2], act=r[3]||[], insp=r[4], rep=r[5];
       var activos=trab ? trab.filter(function(t){ return String(t.estatus||'activo')!=='cesado'; }).length : null;
       var dias={}; (hht||[]).forEach(function(x){ dias[String(x.fecha).slice(0, 10)]=1; });
-      var caps=gesActDe(act, 'cap'), sims=gesActDe(act, 'sim'), cams=gesActDe(act, 'camp');
-      var T=[];
-      function tarj(o){ if(!o.id || !hay(o.id)) return; T.push(o); }
+      var caps=gesActDe(act, 'cap'), sims=gesActDe(act, 'sim'), cams=gesActDe(act, 'camp'), mons=gesActDe(act, 'mon'), auds=gesActDe(act, 'aud');
       function nb(n, uno, varios){ return '<b>'+n+'</b> '+(n===1 ? uno : varios); }
       var kar=r[6], idKar=hay('kardex') ? 'kardex' : (hay('epp') ? 'epp' : ''), emp=null;
       try{ emp=(r[7] && r[7][0]) ? nota(r[7][0].nota) : null; }catch(_e){ emp=null; }
-      tarj({ id:'empresa', ic:'🏢', t:'Datos y logo de la empresa', d:'La razón social, los códigos de tus formatos y el logo: salen en la cabecera de cada registro. Conviene dejarlo listo antes que nada.',
+      /* los programas de este año: cuántas actividades con algún mes programado */
+      var PG={}; (r[8]||[]).forEach(function(x){ var d=nota(x.nota); if(!d || d.k!=='prog' || String(d.anio)!==ANIO || PG[d.tipo]) return;
+        PG[d.tipo]={ n:(Array.isArray(d.items) ? d.items : []).filter(function(it){ return it && !it.ref && String(it.n||'').trim() && (it.m||[]).some(function(v){ return +v>0; }); }).length }; });
+      var OB=null; (r[9]||[]).forEach(function(x){ var d=nota(x.nota); if(!OB && d && d.k==='obj' && String(d.anio)===ANIO) OB={ n:(Array.isArray(d.items) ? d.items : []).length }; });
+      var fotos=r[10]===null ? null : (r[10]||[]).filter(function(x){ var d=nota(x.nota)||{}; return delAnio(d.fecha || x.creado); }).length;
+      var ambs=r[11]===null ? null : (r[11]||[]).filter(function(x){ var d=nota(x.nota)||{}; return delAnio(d.fecha || x.creado); }).length;
+      var G=[], g=null;
+      function grupo(id, t, d){ g={ id:id, t:t, d:d, T:[], lista:null }; G.push(g); }
+      function tarj(o){ if(!o.id || !hay(o.id)) return; g.T.push(o); }
+      /* ── 1 · lo básico ── */
+      grupo('car-g1', 'Lo básico de la obra', 'Primero esto: los datos de la empresa van en la cabecera de cada registro, y todo lo demás se une a cada persona por su documento.');
+      tarj({ id:'empresa', ic:'🏢', t:'Datos y logo de la empresa', d:'La razón social, los códigos de tus formatos y el logo: salen en la cabecera de cada registro.', lleno:!!(emp && emp.razon),
         n:r[7]===null ? '' : ((emp && emp.razon) ? '<b>'+esc(String(emp.razon).slice(0, 60))+'</b>'+((emp.logo) ? ' · con logo' : ' · sin logo todavía') : 'Todavía sin cargar'),
+        en:'En el informe: la portada y la cabecera de cada página',
         bts:[['car-emp', (emp && emp.razon) ? 'Revisar los datos' : 'Cargar mis datos', function(){ ir('empresa'); }]] });
-      tarj({ id:idPer, ic:'👷', t:'Tu personal', d:'Sube la relación de tu Excel (o pégala): cada fila, una ficha. Lo demás se une a cada persona por su documento, así que conviene empezar por aquí.',
+      tarj({ id:idPer, ic:'👷', t:'Tu personal', d:'Sube la relación de tu Excel (o pégala): cada fila, una ficha, con su puesto, su empresa y su fecha de ingreso.', lleno:!!activos,
         n:activos===null ? '' : (activos ? '<b>'+activos+'</b> '+(activos===1 ? 'trabajador activo' : 'trabajadores activos') : 'Todavía nadie cargado'),
+        en:'En el informe: el personal del mes (en obra, cesados, trasladados)',
         bts:[['car-per', '⬆ Subir mi lista', function(){ ir(idPer, function(){ gesPersonalSubir(); }); }], ['car-per-ver', 'Ver el personal', function(){ ir(idPer); }, true]] });
-      tarj({ id:idKar, ic:'⛑', t:'Entrega de EPP (kardex)', d:'El kardex que ya llevabas, desde tu Excel: una fila por EPP entregado, con su fecha y a quién. Y las entregas de hoy, con la firma en la pantalla o en papel.',
-        n:kar===null ? '' : (kar.length ? '<b>'+kar.length+'</b> '+(kar.length===1 ? 'entrega en el kardex' : 'entregas en el kardex') : 'Ninguna entrega todavía'),
-        bts:[['car-kar', '⬆ Subir mi kardex', function(){ ir(idKar, function(){ masIr('masEppSubir'); }); }], ['car-kar-una', '＋ Registrar una entrega', function(){ ir(idKar, function(){ masIr('masEppNueva'); }); }, true]] });
-      tarj({ id:'hh', ic:'⏱', t:'Horas hombre', d:'Las trabajadas y las de capacitación de los meses anteriores: un rango de días con su horario, o el total del mes repartido.',
+      /* ── 2 · los programas del año ── */
+      grupo('car-g2', 'Tus programas del año', 'El punto de partida del informe del mes: mide el avance de cada uno contra lo programado. Ármalos aquí o pega el de tu Excel; lo ejecutado se cuenta solo con lo que registras.');
+      if(hay('programas')){
+        var orden=_dcOrdenPlan();
+        g.lista=CAR_PROGS.map(function(p){
+          var k=p[0], P=PG[k], falta=(orden<p[3] && YO && !YO.central) ? planWebPlan(p[3]) : null;
+          return { k:k, ic:p[1], t:p[2], d:p[4], falta:falta, lleno:!!(P && P.n),
+            est:falta ? '🔒 Se abre con el plan <b>'+esc(falta.n)+'</b>' : (P ? (P.n ? '<span class="ok">✓</span> '+nb(P.n, 'actividad programada', 'actividades programadas')+' en '+ANIO : 'Empezado, sin actividades programadas') : 'Sin armar para '+ANIO),
+            bts:falta ? [['car-pg-'+k, 'Ver qué trae', function(){ ir('programas'); }, true]]
+              : [['car-pg-'+k, P ? 'Abrir' : 'Armar', function(){ ir('programas', function(){ progIr('progAbrir', k, ANIO); }); }], ['car-pg-'+k+'-xls', '📋 Pegar de mi Excel', function(){ ir('programas', function(){ progIr('progAbrir', k, ANIO, { pegar:true }); }); }, true]] };
+        });
+        if(hay('objetivos')) g.lista.push({ k:'obj', ic:'🎯', t:'Objetivos y metas', d:'Los objetivos del año con su meta y su indicador: se sacan del programa anual de SST, se pegan de tu Excel o se sube tu documento.', lleno:!!(OB && OB.n),
+          est:OB && OB.n ? '<span class="ok">✓</span> '+nb(OB.n, 'objetivo', 'objetivos')+' en '+ANIO : 'Sin objetivos para '+ANIO, bts:[['car-obj', OB && OB.n ? 'Abrir' : 'Armar', function(){ ir('objetivos'); }]] });
+      }
+      /* ── 3 · lo que ya se hizo este año ── */
+      grupo('car-g3', 'Lo que ya hiciste este año', 'Lo que pasó antes de OBRASST, con su fecha: entra al mismo registro que usa la app (no se carga dos veces), se cuenta solo en los programas y sale en el informe del mes.');
+      tarj({ id:'hh', ic:'⏱', t:'Horas hombre', d:'Las trabajadas y las de capacitación de los meses anteriores: un rango de días con su horario, o el total del mes repartido.', lleno:!!Object.keys(dias).length,
         n:hht===null ? '' : (Object.keys(dias).length ? '<b>'+Object.keys(dias).length+'</b> '+(Object.keys(dias).length===1 ? 'día registrado' : 'días registrados') : 'Ningún día registrado'),
+        en:'En el informe: las horas del mes y lo acumulado del año, y los índices',
         bts:[['car-hh', 'Llenar meses anteriores', function(){ HHW.alAbrir=function(){ hhAbrirVarios(); }; ir('hh'); }], ['car-hh-ver', 'Ver las horas', function(){ ir('hh'); }, true]] });
-      tarj({ id:'acc', ic:'⚠', t:'Accidentabilidad', d:'La estadística que ya llevabas, mes por mes (horas hombre, eventos y días perdidos): con eso los índices del año salen completos.',
-        n:acc===null ? '' : (acc.length ? '<b>'+acc.length+'</b> '+(acc.length===1 ? 'evento registrado' : 'eventos registrados') : 'Ningún evento registrado'),
-        bts:[['car-acc', 'Cargar meses anteriores', function(){ ACCW.alAbrir=function(){ accHistorico(); }; ir('acc'); }], ['car-acc-ev', 'Registrar un evento', function(){ ACCW.alAbrir=function(){ accForm(null); }; ir('acc'); }, true]] });
-      tarj({ id:'caphechas', ic:'🎓', t:'Capacitaciones realizadas', d:'Las que ya se dieron: el tema, el día, quiénes asistieron y la lista firmada. Una por una, o todo tu control de una vez desde el Excel.',
+      tarj({ id:'caphechas', ic:'🎓', t:'Capacitaciones y charlas realizadas', d:'Las que ya se dieron: el tema, el día, quiénes asistieron y la lista firmada. Una por una, o todo tu control de una vez desde el Excel.', lleno:!!caps.length,
         n:caps.length ? '<b>'+caps.length+'</b> '+(caps.length===1 ? 'registrada' : 'registradas') : 'Ninguna registrada a mano',
+        en:'En el informe: las charlas y capacitaciones con su HHC, y el avance del programa de capacitación',
         bts:[['car-cap', '＋ Registrar una', function(){ ir('caphechas', function(){ capForm(null); }); }], ['car-cap-xls', '⬆ Subir desde un Excel', function(){ ir('caphechas', function(){ capSubir(); }); }, true]] });
-      tarj({ id:'insp', ic:'🔎', t:'Inspecciones', d:'Las que se hicieron en papel —la mensual, las del programa—: el formato, el día, quién la hizo y lo que encontró, con la hoja adjunta.',
+      tarj({ id:'insp', ic:'🔎', t:'Inspecciones', d:'Las que se hicieron en papel —la mensual, las del programa—: el formato, el día, quién la hizo y lo que encontró, con la hoja adjunta.', lleno:!!(insp && insp.length),
         n:insp===null ? '' : (insp.length ? '<b>'+insp.length+'</b> '+(insp.length===1 ? 'inspección en el registro' : 'inspecciones en el registro') : 'Ninguna en el registro'),
+        en:'En el informe: las inspecciones y lo que encontraron, y el avance del programa de inspecciones',
         bts:[['car-insp', '＋ Registrar una', function(){ ir('insp', function(){ gesInspForm(null); }); }], ['car-insp-ver', 'Ver las inspecciones', function(){ ir('insp'); }, true]] });
-      tarj({ id:'simulacros', ic:'🧯', t:'Simulacros', d:'Los que ya se hicieron, con sus tiempos, cuántos participaron y lo que se encontró; y los que vienen, programados.',
+      tarj({ id:'simulacros', ic:'🧯', t:'Simulacros', d:'Los que ya se hicieron, con sus tiempos, cuántos participaron y lo que se encontró; y los que vienen, programados.', lleno:!!sims.length,
         n:sims.length ? nb(sims.filter(function(f){ return f.d.estado==='hecho'; }).length, 'realizado', 'realizados')+' · '+nb(sims.filter(function(f){ return f.d.estado!=='hecho'; }).length, 'programado', 'programados') : 'Ninguno todavía',
+        en:'En el informe: el avance del programa de simulacros',
         bts:[['car-sim', '＋ Registrar uno', function(){ ir('simulacros', function(){ simForm(null, { estado:'hecho' }); }); }], ['car-sim-ver', 'Ver los simulacros', function(){ ir('simulacros'); }, true]] });
-      tarj({ id:'campanas', ic:'🎯', t:'Campañas', d:'Las campañas de seguridad ya hechas, con lo que se hizo cada día, cuántos participaron y su evidencia; y las que vienen.',
+      tarj({ id:'campanas', ic:'🎯', t:'Campañas', d:'Las campañas de seguridad ya hechas, con lo que se hizo cada día, cuántos participaron y su evidencia; y las que vienen.', lleno:!!cams.length,
         n:cams.length ? nb(cams.filter(function(f){ return f.d.estado==='hecha'; }).length, 'realizada', 'realizadas')+' · '+nb(cams.filter(function(f){ return f.d.estado!=='hecha'; }).length, 'programada', 'programadas') : 'Ninguna todavía',
+        en:'En el informe: el avance del programa de campañas',
         bts:[['car-cam', '＋ Registrar una', function(){ ir('campanas', function(){ campForm(null, { estado:'hecha' }); }); }], ['car-cam-ver', 'Ver las campañas', function(){ ir('campanas'); }, true]] });
-      tarj({ id:'reportes', ic:'🚨', t:'Reportes de actos y condiciones', d:'Los que ya tenías anotados en papel o en otra hoja: qué se vio, dónde, quién lo reportó y, si ya se levantó, qué se hizo.',
+      if(hay('programas') && _dcOrdenPlan()>=3) tarj({ id:'programas', ic:'🩺', t:'Monitoreos y auditorías', d:'Los monitoreos ocupacionales —ruido, polvo, iluminación…— y las auditorías ya hechas, con su fecha, su resultado y su informe.', lleno:!!(mons.length || auds.length),
+        n:nb(mons.filter(function(f){ return delAnio(f.d.fecha); }).length, 'monitoreo', 'monitoreos')+' · '+nb(auds.filter(function(f){ return delAnio(f.d.fecha); }).length, 'auditoría', 'auditorías')+' en '+ANIO,
+        en:'En el informe: el avance de los programas de monitoreo y de auditorías',
+        bts:[['car-mon', '＋ Un monitoreo', function(){ ir('programas', function(){ progIr('progRegHoja', 'mon', ANIO); }); }], ['car-aud', '＋ Una auditoría', function(){ ir('programas', function(){ progIr('progRegHoja', 'aud', ANIO); }); }, true]] });
+      tarj({ id:idKar, ic:'⛑', t:'Entrega de EPP (kardex)', d:'El kardex que ya llevabas, desde tu Excel: una fila por EPP entregado, con su fecha y a quién. Y las entregas de hoy, con la firma en la pantalla o en papel.', lleno:!!(kar && kar.length),
+        n:kar===null ? '' : (kar.length ? '<b>'+kar.length+'</b> '+(kar.length===1 ? 'entrega en el kardex' : 'entregas en el kardex') : 'Ninguna entrega todavía'),
+        en:'En el informe: el consumo de EPP del mes',
+        bts:[['car-kar', '⬆ Subir mi kardex', function(){ ir(idKar, function(){ masIr('masEppSubir'); }); }], ['car-kar-una', '＋ Registrar una entrega', function(){ ir(idKar, function(){ masIr('masEppNueva'); }); }, true]] });
+      tarj({ id:'reportes', ic:'🚨', t:'Reportes de actos y condiciones', d:'Los que ya tenías anotados en papel o en otra hoja: qué se vio, dónde, quién lo reportó y, si ya se levantó, qué se hizo.', lleno:!!(rep && rep.length),
         n:rep===null ? '' : (rep.length ? '<b>'+rep.length+'</b> '+(rep.length===1 ? 'reporte en el registro' : 'reportes en el registro') : 'Ninguno en el registro'),
+        en:'En el informe: la tabla de observaciones y la pirámide de Bird',
         bts:[['car-rep', '＋ Registrar uno', function(){ ir('reportes', function(){ gesRepForm(); }); }], ['car-rep-ver', 'Ver los reportes', function(){ ir('reportes'); }, true]] });
+      tarj({ id:'acc', ic:'⚠', t:'Accidentabilidad', d:'La estadística que ya llevabas, mes por mes (horas hombre, eventos y días perdidos): con eso los índices del año salen completos.', lleno:!!(acc && acc.length),
+        n:acc===null ? '' : (acc.length ? '<b>'+acc.length+'</b> '+(acc.length===1 ? 'evento registrado' : 'eventos registrados') : 'Ningún evento registrado'),
+        en:'En el informe: la accidentabilidad del mes y del año, y la pirámide de Bird',
+        bts:[['car-acc', 'Cargar meses anteriores', function(){ ACCW.alAbrir=function(){ accHistorico(); }; ir('acc'); }], ['car-acc-ev', 'Registrar un evento', function(){ ACCW.alAbrir=function(){ accForm(null); }; ir('acc'); }, true]] });
+      /* ── 4 · las evidencias ── */
+      grupo('car-g4', 'Evidencias y documentos', 'Las fotos y los papeles que respaldan lo anterior: el informe los anexa solos.');
+      tarj({ id:'fotoreg', ic:'📸', t:'Registro fotográfico', d:'Las fotos del mes por tema —charlas, uso de EPP, sistema de emergencia, bienestar…—: se suben aquí, desde la cámara de la app o se suman las de tus registros.', lleno:!!fotos,
+        n:fotos===null ? '' : (fotos ? nb(fotos, 'foto', 'fotos')+' en '+ANIO : 'Ninguna foto todavía'),
+        en:'En el informe: el registro fotográfico, tema por tema',
+        bts:[['car-foto', '⬆ Subir fotos', function(){ ir('fotoreg'); }]] });
+      tarj({ id:'ambiente', ic:'🌱', t:'Medio ambiente', d:'Los residuos con su certificado o su boleta (lo vendido, con su comprobante), el agua en m³, el combustible con sus boletas de carga y los certificados.', lleno:!!ambs,
+        n:ambs===null ? '' : (ambs ? nb(ambs, 'registro', 'registros')+' en '+ANIO : 'Nada registrado todavía'),
+        en:'En el informe de medio ambiente, con sus papeles en los anexos',
+        bts:[['car-amb', '＋ Registrar', function(){ ir('ambiente', function(){ ambIr('ambFormHoja', 'res'); }); }], ['car-amb-ver', 'Ver medio ambiente', function(){ ir('ambiente'); }, true]] });
       tarj({ id:'docs', ic:'☰', t:'Documentos', d:'El reglamento interno, las políticas, los procedimientos, la matriz IPERC, los planes: arrástralos y cada uno va a su carpeta (y a su cartel QR).',
-        n:'', bts:[['car-docs', 'Ir a Documentos', function(){ ir('docs'); }]] });
-      var h='<div class="aviso" id="car-que"><b>Lo que ya llevabas antes de OBRASST entra aquí, para no empezar en cero.</b> Cada cosa va al mismo registro que usa la app: no se carga dos veces. '+
-        'Y nada de esto es «programar»: es lo que ya pasó, con su fecha. Lo que viene se programa en su sección.</div><div class="ges-hub" id="car-hub">'+
-        T.map(function(o){
-          var falta=(typeof planWebFalta==='function') ? planWebFalta(o.id) : null, P=falta ? planWebPlan(falta.desde) : null;
-          return '<section class="ges-hub-t'+(falta ? ' cand' : '')+'" data-id="'+esc(o.id)+'"><h3><span aria-hidden="true">'+o.ic+'</span>'+esc(o.t)+'</h3><p>'+esc(o.d)+'</p>'+
-            (falta ? '<div class="ges-hub-n">🔒 No está en tu plan'+(P ? ': se abre con el plan <b>'+esc(P.n)+'</b>' : '')+'</div><div class="acciones"><button type="button" class="bt sec chico" data-ver="'+esc(o.id)+'">Ver qué trae</button></div>'
-                   : (o.n ? '<div class="ges-hub-n">'+o.n+'</div>' : '')+'<div class="acciones">'+o.bts.map(function(b){ return '<button type="button" class="bt chico'+(b[3] ? ' sec' : '')+'" id="'+b[0]+'">'+esc(b[1])+'</button>'; }).join('')+'</div>')+'</section>';
-        }).join('')+'</div>';
+        n:'', en:'En sus carteles QR, para consultarlos en la obra', bts:[['car-docs', 'Ir a Documentos', function(){ ir('docs'); }]] });
+      G=G.filter(function(x){ return x.T.length || (x.lista && x.lista.length); });
+      var tarjHTML=function(o){
+        var falta=(typeof planWebFalta==='function') ? planWebFalta(o.id) : null, P=falta ? planWebPlan(falta.desde) : null;
+        return '<section class="ges-hub-t'+(falta ? ' cand' : (o.lleno ? ' lleno' : ''))+'" data-id="'+esc(o.id)+'"><h3><span aria-hidden="true">'+o.ic+'</span>'+esc(o.t)+'</h3><p>'+esc(o.d)+'</p>'+
+          (falta ? '<div class="ges-hub-n">🔒 No está en tu plan'+(P ? ': se abre con el plan <b>'+esc(P.n)+'</b>' : '')+'</div><div class="acciones"><button type="button" class="bt sec chico" data-ver="'+esc(o.id)+'">Ver qué trae</button></div>'
+                 : (o.n ? '<div class="ges-hub-n">'+o.n+'</div>' : '')+'<div class="acciones">'+o.bts.map(function(b){ return '<button type="button" class="bt chico'+(b[3] ? ' sec' : '')+'" id="'+b[0]+'">'+esc(b[1])+'</button>'; }).join('')+'</div>')+
+          (o.en && !falta ? '<div class="car-en">'+esc(o.en)+'</div>' : '')+'</section>';
+      };
+      var filaHTML=function(o){
+        return '<div class="car-pg'+(o.falta ? ' cand' : '')+'" data-pg="'+esc(o.k)+'"><span class="ic" aria-hidden="true">'+o.ic+'</span><div><h3>'+esc(o.t)+'</h3><p>'+esc(o.d)+'</p><div class="est">'+o.est+'</div></div>'+
+          '<div class="acciones">'+o.bts.map(function(b){ return '<button type="button" class="bt chico'+(b[3] ? ' sec' : '')+'" id="'+b[0]+'">'+esc(b[1])+'</button>'; }).join('')+'</div></div>';
+      };
+      var cuenta=function(x){ var L=(x.lista || []).filter(function(o){ return !o.falta; }).concat(x.T.filter(function(o){ return !(typeof planWebFalta==='function' && planWebFalta(o.id)); })); return { n:L.length, si:L.filter(function(o){ return o.lleno; }).length }; };
+      var h='<div class="aviso" id="car-que"><b>Tu gestión de antes de OBRASST, en orden.</b> Cuatro pasos: lo básico, tus programas del año (el informe mide el avance contra ellos), lo que ya hiciste y las evidencias. '+
+        'Cada cosa va al mismo registro que usa la app —no se carga dos veces— y sale sola en el informe del mes.</div>'+
+        '<ol class="car-pasos" id="car-pasos" aria-label="Los pasos">'+G.map(function(x, i){ var c=cuenta(x);
+          return '<li><button type="button" data-ir="'+x.id+'"'+(c.n && c.si===c.n ? ' class="listo"' : '')+'><span class="car-nn">'+(c.n && c.si===c.n ? '✓' : (i+1))+'</span><span><b>'+esc(x.t)+'</b><small>'+c.si+' de '+c.n+' con datos</small></span></button></li>'; }).join('')+'</ol>'+
+        G.map(function(x, i){
+          return '<section class="car-g" id="'+x.id+'"><header><span class="car-nn" aria-hidden="true">'+(i+1)+'</span><div><h2>'+esc(x.t)+'</h2><p>'+esc(x.d)+'</p></div></header>'+
+            (x.lista ? '<div class="car-progs">'+x.lista.map(filaHTML).join('')+'</div>' : '')+
+            (x.T.length ? '<div class="ges-hub"'+(x.lista ? ' style="margin-top:14px"' : '')+'>'+x.T.map(tarjHTML).join('')+'</div>' : '')+'</section>';
+        }).join('');
       caja.innerHTML=h;
-      T.forEach(function(o){ o.bts.forEach(function(b){ var e=$(b[0]); if(e) e.onclick=b[2]; }); });
+      G.forEach(function(x){ (x.lista || []).concat(x.T).forEach(function(o){ o.bts.forEach(function(b){ var e=$(b[0]); if(e) e.onclick=b[2]; }); }); });
       Array.prototype.forEach.call(caja.querySelectorAll('[data-ver]'), function(b){ b.onclick=function(){ navegar(b.getAttribute('data-ver')); }; });
+      Array.prototype.forEach.call(caja.querySelectorAll('[data-ir]'), function(b){ b.onclick=function(){ var s=$(b.getAttribute('data-ir')); if(s) try{ s.scrollIntoView({ behavior:'smooth', block:'start' }); }catch(e){ s.scrollIntoView(); } }; });
     }).catch(function(cod){ if(n!==CARW.n || VISTA.actual!=='cargar') return; if(!silencio) fallo(caja, cod); });
   }
   VISTA.recargar=pinta; pinta();

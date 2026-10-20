@@ -109,6 +109,25 @@ function _papCss(){
     '.pap-ipf label{font-size:11.5px;color:var(--gris);text-transform:uppercase;letter-spacing:.03em;margin:0 0 4px;display:block}.pap-ipf textarea{min-height:56px;padding:7px 9px;font-size:13.5px;line-height:1.35}',
     '.pap-ipf-n{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;margin:8px 0 0;font-size:12.5px;color:var(--gris)}.pap-ipf-n>span{display:inline-flex;gap:7px;align-items:center}',
     '.pap-ipf .pap-x{position:absolute;top:6px;right:8px;appearance:none;-webkit-appearance:none;cursor:pointer;border:0;background:transparent;color:var(--gris);font-size:18px;line-height:1;padding:4px 7px;border-radius:6px}.pap-ipf .pap-x:hover{color:var(--mal);background:#FDECEA}',
+    /* 17/10/2026 · lote 14 */
+    '.pap-pel-bts{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:-2px 0 4px;font-size:12.5px}',
+    '.pap-pel-bts .bt-link{font-size:12.5px}.pap-pel-bts .bt-link[disabled]{opacity:.35;cursor:default;text-decoration:none}',
+    '.pap-fila.verif textarea{border-color:#E3A29C;background:#FDEDEB}.pap-fila.verif .pap-cont{border-left-color:#D9261C}',
+    '.pap-verif-et{color:#B42318;font-weight:600}',
+    '.pap-preg{border:1px solid #E8C800;background:#FFFBE6;border-radius:10px;padding:10px 12px;margin:0 0 10px}',
+    '.pap-preg-cab{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:0 0 8px}.pap-preg-cab>b{font-size:14px;color:var(--tinta)}.pap-preg-cab>span{flex:1;display:flex;flex-wrap:wrap;gap:6px}',
+    '.pap-preg-cab i{font-style:normal;font-size:12px;color:var(--gris);border:1px solid var(--raya);border-radius:999px;padding:2px 9px;background:var(--panel)}.pap-preg-cab i.on{border-color:var(--azul);color:var(--tinta);font-weight:600}.pap-preg-cab i.ok{color:#0B6B3A}',
+    '.pap-preg-tipos{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px}',
+    '.pap-preg-tipos button,.pap-pq span button,.pap-preg-s button{appearance:none;-webkit-appearance:none;cursor:pointer;font:inherit;text-align:left;border:1px solid var(--raya);background:var(--panel);border-radius:8px;color:var(--tinta)}',
+    '.pap-preg-tipos button{display:flex;gap:7px;align-items:center;padding:7px 9px;font-size:13px}.pap-preg-tipos button.on{border-color:var(--azul);background:#EAF3FA;font-weight:600}',
+    '.pap-preg-l{display:grid;gap:6px}.pap-pq{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;padding:7px 9px;border:1px solid var(--raya);border-radius:8px;background:var(--panel)}',
+    '.pap-pq.ok{border-color:#9CCFAE}.pap-pq b{font-size:13.5px;font-weight:600;flex:1 1 280px}.pap-pq span{display:flex;gap:5px;flex-wrap:wrap}',
+    '.pap-pq span button{padding:6px 12px;font-size:13px;font-weight:600;text-align:center}.pap-pq span button.on{background:#FCDB00;border-color:#D9B800;color:#1B2025}',
+    '.pap-preg-s{display:grid;gap:6px}.pap-preg-s button{display:flex;gap:9px;align-items:flex-start;padding:8px 10px}.pap-preg-s button i{font-style:normal;font-size:17px;line-height:1.1}',
+    '.pap-preg-s button b{display:block;font-size:13.5px}.pap-preg-s button small{display:block;font-size:12px;color:var(--gris);margin-top:2px}.pap-preg-s button em{display:block;font-style:normal;font-size:12px;color:#0B6B3A;font-weight:600;margin-top:2px}',
+    '.pap-preg-s button.on{border-color:var(--azul);background:#EAF3FA}.pap-preg-s button.ya{opacity:.6;cursor:default}',
+    '.pap-fin{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}.pap-fin input{width:auto;padding:7px 10px}',
+    '.pap-fmt-op{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin:0 0 12px;font-size:13px;color:var(--gris)}.pap-fmt-op label{display:inline-flex;gap:6px;align-items:center;margin:0;font-size:13px;color:var(--texto)}.pap-fmt-op input[type=checkbox]{width:16px;height:16px;margin:0}',
     '.pap-jer{display:inline-flex;flex-wrap:wrap;gap:4px 12px}.pap-jer label{display:inline-flex;gap:5px;align-items:center;margin:0;text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--texto)}.pap-jer input{width:15px;height:15px;margin:0;padding:0}',
     '@media (max-width:760px){.pap-pref-s{flex:1 1 100%}.pap-pref-s label{flex:1 1 100%;justify-content:space-between}.pap-pref-s select{flex:0 1 230px;min-width:0}.pap-fila-cab{display:none}.pap-fila{grid-template-columns:minmax(0,1fr) 30px;border:1px solid var(--raya);border-radius:10px;padding:8px;background:#FCFDFE}.pap-fila textarea{grid-column:1;min-height:46px}.pap-et{display:block;grid-column:1;font-size:11px;color:var(--gris);text-transform:uppercase;letter-spacing:.03em;margin:2px 0 -3px}.pap-fila .pap-x{grid-column:2;grid-row:1}.pap-ipf-n>span{flex-wrap:wrap}.pap-mas{grid-column:1 / -1}.pap-ipf-g{grid-template-columns:minmax(0,1fr)}.pap-sup-g{grid-template-columns:minmax(0,1fr)}.pap-act-cab{flex-wrap:wrap}.pap-act-cab input{flex:1 1 100%;order:2}.pap-sug{width:86vw}}'
   ].join('\n');
@@ -138,8 +157,16 @@ function papCtx(fresco){
   ]).then(function(r){
     var emp=r[0]||{}, it=(r[1] && r[1].valor && typeof r[1].valor==='object' && r[1].valor.items) || {}, cfg=(r[2]||[])[0]||null;
     return _papLogo(emp.logo).then(function(L){
+      var cn=(cfg && nota(cfg.nota)) || {}, fin=String((cn && cn.atsFin) || ''), pref=_papPref(r[3] && r[3].valor), cfmt=String((cn && cn.atsFmt) || '');
+      /* 19/10/2026 · lote 18 · el formato del ATS: el de la nota de «ats-cfg» (lo eligen la web y la app); si la obra lo
+         eligió antes solo en la web, se pasa a la nota una vez, para que la cuadrilla lo vea igual */
+      if(PAP_MODELOS.ats.some(function(m){ return m.k===cfmt; })) pref.ats=cfmt;
+      else if(pref.ats && cfg) _papCfgNota({ atsFmt:pref.ats }).catch(function(){});
       PAP.ctx={ emp:{ razon:String(emp.razon||''), logo:L ? L.du : null }, logo:L, obra:String(nombreObraP()||''), fmt:{ ats:_papFmt(it.ats), iperc:_papFmt(it.iperc) },
-                modo:(cfg && String(cfg.nombre||'').toLowerCase()==='papel') ? 'papel' : 'digital', cfgId:cfg ? cfg.id : null, pref:_papPref(r[3] && r[3].valor) };
+                modo:(cfg && String(cfg.nombre||'').toLowerCase()==='papel') ? 'papel' : 'digital', cfgId:cfg ? cfg.id : null, pref:pref,
+                /* 17/10/2026 · lote 14 · la hora de término de la jornada (la de la app: ats-cfg, nota.atsFin) */
+                fin:/^([01]\d|2[0-3]):[0-5]\d$/.test(fin) ? fin : '16:30' };
+      try{ window.ATSFIN_P=PAP.ctx.fin; }catch(_w){}
       PAP.ctxObra=oid; PAP.ctxT=Date.now();
       return PAP.ctx;
     });
@@ -159,12 +186,42 @@ function papModoPoner(m){
     return m;
   });
 }
+/* 17/10/2026 · lote 14 · la hora de término de la jornada (el cierre del ATS): en la nota de «ats-cfg», sin tocar lo demás */
+function papFinPoner(v){
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(v||''))) return Promise.reject({portal:'Pon la hora como en el reloj: 16:30.'});
+  return traer('sst_doc', '&select=id,nombre,nota&hoja=eq.ats-cfg&order=creado.desc', 1).then(function(rows){
+    var f=(rows||[])[0], n=(f && nota(f.nota)) || {};
+    if(!n || typeof n!=='object' || Array.isArray(n)) n={};
+    n.atsFin=v;
+    if(f) return sbPatch('sst_doc?id=eq.'+encodeURIComponent(f.id), { nota:JSON.stringify(n) });
+    return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'ats-cfg', nombre:(PAP.ctx && PAP.ctx.modo) || 'digital', nota:JSON.stringify(n) });
+  }).then(function(rows){
+    if(Array.isArray(rows) && !rows.length) return Promise.reject({portal:'Esta cuenta no puede cambiarlo en esta obra.'});
+    if(PAP.ctx && PAP.ctxObra===(YO.obra||{}).id) PAP.ctx.fin=v;
+    try{ window.ATSFIN_P=v; }catch(_w){}
+    return v;
+  });
+}
 /* «¿Con qué formato salen?»: se escribe sobre lo que el servidor tiene en ese momento (otro pudo cambiar el otro papel) */
 function papPrefPoner(tipo, k){
   if(!papModelos(tipo).some(function(m){ return m.k===k; })) return Promise.reject({portal:'Ese formato no está en esta obra.'});
   return estadoLeerP('papeles').then(function(f){
     var v=_papPref(f && f.valor); v[tipo]=k;
-    return estadoEscribirP('papeles', v).then(function(){ if(PAP.ctx && PAP.ctxObra===(YO.obra||{}).id) PAP.ctx.pref=v; return v; });
+    return estadoEscribirP('papeles', v).then(function(){
+      if(PAP.ctx && PAP.ctxObra===(YO.obra||{}).id) PAP.ctx.pref=v;
+      /* 19/10/2026 · lote 18 · y en la nota de «ats-cfg», la que leen los celulares de la cuadrilla */
+      return tipo==='ats' ? _papCfgNota({ atsFmt:k }).then(function(){ return v; }, function(){ return v; }) : v;
+    });
+  });
+}
+/* poner campos en la nota de «ats-cfg» sin tocar lo demás (la crea si la obra no la tiene) */
+function _papCfgNota(campos){
+  return traer('sst_doc', '&select=id,nombre,nota&hoja=eq.ats-cfg&order=creado.desc', 1).then(function(rows){
+    var f=(rows||[])[0], n=(f && nota(f.nota)) || {};
+    if(!n || typeof n!=='object' || Array.isArray(n)) n={};
+    for(var k in campos) if(Object.prototype.hasOwnProperty.call(campos, k)) n[k]=campos[k];
+    if(f) return sbPatch('sst_doc?id=eq.'+encodeURIComponent(f.id), { nota:JSON.stringify(n) });
+    return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'ats-cfg', nombre:(PAP.ctx && PAP.ctx.modo) || 'digital', nota:JSON.stringify(n) });
   });
 }
 /* ── el cupo del plan: los contadores de la app (sst_uso). Sin poder leerlos no se frena (como la app sin señal) ── */
@@ -185,12 +242,28 @@ function papTope(r, que){
 
 /* ── el PDF de un papel ─────────────────────────────────────────────────────────────────────
    tipo: 'ats' | 'ipc' · d: el paquete (el de la nube) · op: { fmt, blanco } → Promise<{ blob, nombre, hojas, fmt, franja }> */
-function _papAtsLocal(d){
-  var gente=[], firmas={}, trabs=[], vb=d.vb||{}, R=d.resp||{};
-  (d.gente||[]).forEach(function(g, i){ var id='g'+i; gente.push(id); trabs.push({ id:id, nombre:(g && g.n)||'', verificado:true }); if(g && g.tr) firmas[id]={ tr:g.tr, t:g.t||0 }; });
-  return { trabs:trabs, a:{ id:d.id||'ats', modo:d.modelo ? 'modelo' : 'dia', codigo:d.codigo||'', rev:d.rev||'', fecha:d.fecha||'', hora:d.hora||'', turno:d.turno||'', area:d.area||'', trabajo:d.trabajo||'', ubic:d.ubic||'',
+function _papAtsLocal(d, C){
+  var gente=[], firmas={}, trabs=[], vb=d.vb||{}, R=d.resp||{}, S=(C && C.salidas) || [], cf={}, ca={};
+  (d.gente||[]).forEach(function(g, i){ var id='g'+i; gente.push(id); trabs.push({ id:id, nombre:(g && g.n)||'', verificado:true }); if(g && g.tr) firmas[id]={ tr:g.tr, t:g.t||0 };
+    /* 17/10/2026 · lote 14 · la salida de cada uno (del celular) */
+    var x=S[i]; if(x && x.aus) ca[id]={ m:x.aus, t:0 }; else if(x && x.t) cf[id]={ tr:x.tr||null, t:x.t, oc:x.oc||'' }; });
+  var a={ id:d.id||'ats', modo:d.modelo ? 'modelo' : 'dia', codigo:d.codigo||'', rev:d.rev||'', fecha:d.fecha||'', hora:d.hora||'', turno:d.turno||'', area:d.area||'', trabajo:d.trabajo||'', ubic:d.ubic||'',
     rGrupo:R.cap || (vb.cap && vb.cap.n) || '', rSuper:R.ing || (vb.ing && vb.ing.n) || '', rSST:R.sst || (vb.sst && vb.sst.n) || '',
-    req:d.req||{}, epp:d.epp||{}, epc:d.epc||{}, perm:d.perm||{}, acts:d.acts||[], gente:gente, firmas:firmas, vb:vb, devuelto:d.devuelto||null, obs:d.obs||'' } };
+    req:d.req||{}, epp:d.epp||{}, epc:d.epc||{}, perm:d.perm||{}, acts:d.acts||[], gente:gente, firmas:firmas, vb:vb, devuelto:d.devuelto||null, obs:d.obs||'',
+    vm:(d.vm==='letra') ? 'letra' : 'fondo', una:!!d.una };
+  if(C && (C.salidas || (C.fotos||[]).length)){ a.cierre={ fin:(d.cierre||{}).fin||'', f:cf, aus:ca, fotos:(d.cierre||{}).fotos||[], fl:[] }; a._fotosPdf=C.fotos||[]; }
+  return { trabs:trabs, a:a };
+}
+/* ¿sale la franja «SIN CIERRE»? Un ATS de otro día que habilitó el trabajo (V°B° del SSOMA) y no tiene su cierre */
+function atsSinCierreDe(d, X){
+  if(!d || d.modelo || !X || X.modo!=='digital' || !(d.vb && d.vb.sst) || d.devuelto) return false;
+  if(!d.fecha || d.fecha>=hoyISO()) return false;
+  return !atsCerradoDe(d);
+}
+/* cerrado: todos con su salida (o el motivo de quien no estaba) y al menos una foto */
+function atsCerradoDe(d){
+  var g=d.gente||[]; if(!g.length) return false;
+  return g.every(function(x){ return x && (x.s || x.x); }) && !!(((d.cierre||{}).fotos||[]).length);
 }
 /* el nombre del archivo, solo con letras corrientes: con un «·», un «º» o una raya larga, algunos navegadores sueltan
    el nombre y lo bajan como «download» */
@@ -205,14 +278,18 @@ function papFranjaAts(d, X, blanco){
 }
 function papPdfDe(tipo, d, op){
   op=op||{}; d=d||{};
-  return Promise.all([cargarEvPDF(), papCtx()]).then(function(r){
-    var X=r[1], M=papModelo(tipo, op.fmt || d.fmt), fuera=(paisObraP()!=='pe');
-    var C={ emp:X.emp, logo:X.logo, obra:X.obra, fmt:X.fmt, tx:fuera ? txPaisP : null, blanco:!!op.blanco, franja:'' }, R;
+  /* 17/10/2026 · lote 14 · el cierre que viene del celular (los trazos y lo que dijo cada uno, en su fila aparte) y sus fotos */
+  return Promise.all([cargarEvPDF(), papCtx(), (tipo==='ats' && !op.blanco) ? papCierreDe(d).catch(function(){ return null; }) : Promise.resolve(null)]).then(function(r){
+    var X=r[1], M=papModelo(tipo, op.fmt || d.fmt), fuera=(paisObraP()!=='pe'), CI=r[2];
+    var C={ emp:X.emp, logo:X.logo, obra:X.obra, fmt:X.fmt, tx:fuera ? txPaisP : null, blanco:!!op.blanco, franja:'', vm:(d.vm==='letra') ? 'letra' : 'fondo' }, R;
     if(tipo==='ats'){
       C.franja=papFranjaAts(d, X, op.blanco);
+      C.cierre=CI; C.salidas=CI ? _papSalidas(d, CI) : null; C.fotos=(CI && CI.fotos) || [];
+      if(!C.franja && !op.blanco && atsSinCierreDe(d, X)) C.franja='SIN CIERRE — FALTA LA FIRMA DE SALIDA DE LA CUADRILLA O LA FOTO DE CÓMO QUEDÓ EL ÁREA';
       if(M.k==='clasico'){
-        var L=_papAtsLocal(d);
-        R=PAP_APP.ats(L.a, { emp:C.emp, logo:C.logo, obra:C.obra, fmt:C.fmt, trabs:L.trabs, tx:C.tx, libre:!C.franja, sinTurno:!d.turno });
+        var L=_papAtsLocal(d, C);
+        R=PAP_APP.ats(L.a, { emp:C.emp, logo:C.logo, obra:C.obra, fmt:C.fmt, trabs:L.trabs, tx:C.tx, libre:!papFranjaAts(d, X, op.blanco), sinTurno:!d.turno,
+                             sinCierre:!op.blanco && !papFranjaAts(d, X, op.blanco) && atsSinCierreDe(d, X) });
       } else R=(M.k==='pasos' ? _papAtsPasos : (M.k==='riesgo' ? _papAtsRiesgo : _papAtsVerifica))(d, C);
       R.nombre=_papNombre(op.blanco ? 'ATS en blanco - '+M.n : 'ATS - '+(d.trabajo||'trabajo')+(d.modelo ? ' (modelo)' : (d.fecha ? ' - '+d.fecha : '')))+'.pdf';
     } else {
@@ -374,20 +451,42 @@ function _ppProt(P, d, medir){
 function _ppCuadrilla(P, d, cols, minimo, medir, titulo){
   var g=d.gente||[], n=Math.max(minimo||6, g.length), filas=Math.ceil(n/cols), hF=8.4, alto=5+4.6+filas*hF+2.2;
   if(medir) return alto;
-  P.titulo(titulo||'LA CUADRILLA', 'conozco los peligros, los riesgos y los controles de esta tarea, y firmo en señal de conformidad');
-  var wC=P.w/cols, a=[7, 0, 21, 0], y0=P.y; a[3]=Math.min(36, (wC-28)*0.44); a[1]=wC-28-a[3];
+  /* 17/10/2026 · lote 14 · el ATS del día lleva la SALIDA de cada uno en su misma fila: su firma al terminar y la hora
+     (la del celular, o el casillero para hacerlo a mano) */
+  var sal=!d.modelo, S=P.C.salidas || [];
+  P.titulo(titulo||'LA CUADRILLA', sal ? 'conozco los peligros, los riesgos y los controles de esta tarea y firmo; al terminar, firmo mi salida' : 'conozco los peligros, los riesgos y los controles de esta tarea, y firmo en señal de conformidad');
+  var wC=P.w/cols, y0=P.y, a;
+  if(sal){ a=[6, 0, 15, 0, 0]; a[3]=Math.min(26, (wC-21)*0.26); a[4]=a[3]; a[1]=wC-21-a[3]-a[4]; }
+  else { a=[7, 0, 21, 0]; a[3]=Math.min(36, (wC-28)*0.44); a[1]=wC-28-a[3]; }
   for(var c=0;c<cols;c++){
     var x=P.M+c*wC, xx=x;
-    ['N.º', 'Apellidos y nombres', 'Documento', 'Firma'].forEach(function(t, i){ P.celda(xx, y0, a[i], 4.6, P.tx(t), {f:_PP_GRIS, b:true, pt:6.6, al:'c'}); xx+=a[i]; });
+    (sal ? ['N.º', 'Apellidos y nombres', 'Documento', 'Firma', 'Salida'] : ['N.º', 'Apellidos y nombres', 'Documento', 'Firma']).forEach(function(t, i){ P.celda(xx, y0, a[i], 4.6, P.tx(t), {f:_PP_GRIS, b:true, pt:6.6, al:'c'}); xx+=a[i]; });
     for(var i=0;i<filas;i++){
       var k=c*filas+i, p=g[k]||{}, y=y0+4.6+i*hF; xx=x;
       P.celda(xx, y, a[0], hF, String(k+1), {pt:6.6, al:'c', c:_PP_TENUE}); xx+=a[0];
       P.celda(xx, y, a[1], hF, p.n||'', {b:true, pt:7.6, max:2}); xx+=a[1];
       P.celda(xx, y, a[2], hF, p.d||'', {pt:7.2, al:'c', max:1}); xx+=a[2];
       P.caja(xx, y, a[3], hF); if(p.tr && typeof PAP_APP==='object') try{ PAP_APP.firma(P.doc, p.tr, xx+0.8, y+0.5, a[3]-1.6, hF-1); }catch(e){}
+      if(sal){
+        xx+=a[3]; P.caja(xx, y, a[4], hF);
+        var s0=S[k]||{};
+        if(s0.tr && typeof PAP_APP==='object') try{ PAP_APP.firma(P.doc, s0.tr, xx+0.8, y+0.4, a[4]-1.6, hF-3.2); }catch(e){}
+        if(s0.t) P.txt(_papHora(s0.t), xx, y+hF-3, a[4]-1, {pt:6.2, b:true, al:'d', max:1});
+        else if(s0.aus) P.txt('No firmó', xx, y, a[4], {pt:6.4, al:'c', alto:hF, c:_PP_TENUE, max:1});
+        else if(!s0.t) P.txt('hora', xx+1, y+hF-3, a[4]-2, {pt:5.6, c:[180, 186, 192], max:1});
+      }
     }
   }
   P.y=y0+4.6+filas*hF+2.2; return alto;
+}
+/* lo que cada uno dijo al salir (y el motivo del que no firmó): debajo de la cuadrilla, solo si hay algo que decir */
+function _ppOcurrencias(P, d, medir){
+  var S=(P.C.salidas||[]).filter(function(x){ return x && (x.oc || x.aus); });
+  if(!S.length) return 0;
+  var t='Al salir: '+S.map(function(x){ return (x.n||'')+' — '+(x.aus ? 'no firmó la salida: '+x.aus : x.oc); }).join('  ·  ');
+  var alto=P.alto(t, P.w, 7.2, false)+2.2;
+  if(medir) return alto;
+  P.txt(t, P.M, P.y, P.w, {pt:7.2}); P.y+=alto; return alto;
 }
 /* los tres que responden por el ATS: nombre y firma (la del V°B° digital, si la hay, con su hora) */
 function _ppResponsables(P, d, medir){
@@ -472,15 +571,19 @@ function _ppTablaAts(P, d, wN, wA, cols, despues){
     var y=P.y;
     for(var k=i;k<j;k++){
       var q=filas[k], x=M+wN+wA, arriba=(k===i);
+      /* 17/10/2026 · lote 14 · «verificar en el frente»: fondo rojo claro o letra roja */
+      var rojo=!q.bl && q.f && q.f.v===1, fondo=rojo && d.vm!=='letra' ? [252, 214, 209] : null;
+      P._rojo=rojo && d.vm==='letra';
       cols.forEach(function(c){
         /* el peligro: una celda por grupo en esta hoja (la arma la primera fila del grupo, o la primera de la hoja) */
         if(c.pel && !q.bl){
           if(q.cont && !arriba){ x+=c.w; return; }
           var hg=q.h; for(var k2=k+1;k2<j && filas[k2].cont;k2++) hg+=filas[k2].h;
-          P.caja(x, y, c.w, hg); c.pinta(q.f, x, y, c.w, hg); x+=c.w; return;
+          P.caja(x, y, c.w, hg, fondo); c.pinta(q.f, x, y, c.w, hg); x+=c.w; return;
         }
-        P.caja(x, y, c.w, q.h); if(!q.bl) c.pinta(vista(q, c, arriba), x, y, c.w, q.h); else if(c.vacia) c.vacia(x, y, c.w, q.h); x+=c.w;
+        P.caja(x, y, c.w, q.h, fondo); if(!q.bl) c.pinta(vista(q, c, arriba), x, y, c.w, q.h); else if(c.vacia) c.vacia(x, y, c.w, q.h); x+=c.w;
       });
+      P._rojo=false;
       y+=q.h;
     }
     /* la celda del paso, una por grupo */
@@ -496,11 +599,17 @@ function _ppTablaAts(P, d, wN, wA, cols, despues){
     i=j;
     if(i<filas.length){ P.salto(); cab(); }
   }
+  /* 17/10/2026 · lote 14 · la leyenda de lo que va en rojo */
+  if(!P.C.blanco && filas.some(function(q){ return !q.bl && q.f && q.f.v===1; })){
+    P.sitio(4.4);
+    P.txt('EN ROJO: verificar en el frente antes de copiarlo o de empezar. Puede no estar hoy: si no está, no se copia.', P.M, P.y+0.6, P.w, {pt:6.8, b:true, c:[190, 22, 22], max:1});
+    P.y+=4.4;
+  }
   P.y+=2.2;
 }
 /* celdas de texto corrientes para esa tabla */
 function _ppColTexto(P, t, w, k, b){
-  return { t:t, w:w, pel:(k==='p'), alto:function(f, ww){ return P.alto(f[k]||'', ww-2.8, 8, b!==false); }, pinta:function(f, x, y, ww, hh){ P.txt(f[k]||'', x+1.4, y, ww-2.8, {pt:8, b:b!==false, alto:hh}); } };
+  return { t:t, w:w, pel:(k==='p'), alto:function(f, ww){ return P.alto(f[k]||'', ww-2.8, 8, b!==false); }, pinta:function(f, x, y, ww, hh){ P.txt(f[k]||'', x+1.4, y, ww-2.8, {pt:8, b:b!==false, alto:hh, c:(P._rojo || (k==='p' && f.v===1 && P.C && P.C.vm==='letra')) ? [190, 22, 22] : null}); } };
 }
 /* el peligro en negrita y, debajo, su riesgo y su consecuencia */
 function _ppColPeligro(P, t, w, conPeligro){
@@ -509,8 +618,24 @@ function _ppColPeligro(P, t, w, conPeligro){
     alto:function(f, ww){ return partes(f).reduce(function(s, q){ return s+P.alto(q[0], ww-2.8, q[1] ? 8 : 7.4, q[1]); }, 0)+(partes(f).length>1 ? 0.5*(partes(f).length-1) : 0); },
     pinta:function(f, x, y, ww, hh){
       var L=partes(f), tot=this.alto(f, ww), yy=y+Math.max(0.9, (hh-tot)/2);
-      L.forEach(function(q){ yy+=P.txt(q[0], x+1.4, yy, ww-2.8, {pt:q[1] ? 8 : 7.4, b:q[1], c:q[1] ? null : [50, 56, 64]})+0.5; });
+      L.forEach(function(q){ yy+=P.txt(q[0], x+1.4, yy, ww-2.8, {pt:q[1] ? 8 : 7.4, b:q[1], c:P._rojo ? [190, 22, 22] : (q[1] ? null : [50, 56, 64])})+0.5; });
     } };
+}
+
+/* las fotos del cierre (las que subió el celular), al final: dos por fila, cuatro por hoja */
+function _ppFotos(P, d){
+  var F=P.C.fotos||[]; if(!F.length || P.C.blanco) return;
+  for(var i0=0;i0<F.length;i0+=4){
+    P.doc.addPage([P.W, P.H], P.W>P.H ? 'landscape' : 'portrait'); P.y=P.M;
+    P.titulo('CIERRE DEL TRABAJO · CÓMO QUEDÓ EL ÁREA', (d.trabajo||'')+(d.fecha ? ' · '+fechaLarga(d.fecha) : '')+((d.cierre||{}).fin ? ' · hora de término '+d.cierre.fin : ''));
+    var cw=(P.w-6)/2, ch=(P.H-P.y-P.M-14)/2-6;
+    F.slice(i0, i0+4).forEach(function(du, k){
+      var cx=P.M+(k%2)*(cw+6), cy=P.y+3+Math.floor(k/2)*(ch+10);
+      P.caja(cx, cy, cw, ch);
+      try{ var pr=P.doc.getImageProperties(du), r=(pr && pr.height) ? pr.width/pr.height : 4/3, iw=cw-2, ih=iw/r; if(ih>ch-2){ ih=ch-2; iw=ih*r; } P.doc.addImage(du, 'JPEG', cx+(cw-iw)/2, cy+(ch-ih)/2, iw, ih, undefined, 'FAST'); }catch(e){}
+      P.txt('Foto '+(i0+k+1)+' de '+F.length, cx, cy+ch+0.8, cw, {pt:7, b:true, c:_PP_TENUE, max:1});
+    });
+  }
 }
 
 /* ── ATS · «Paso a paso» (A4 vertical) ─────────────────────────────────────────────────────── */
@@ -523,9 +648,11 @@ function _papAtsPasos(d, C){
   _ppTablaAts(P, d, 8, 44, [_ppColPeligro(P, 'PELIGROS Y RIESGOS', 62, true), _ppColTexto(P, 'MEDIDAS DE CONTROL', P.w-8-44-62, 'm')], despues);
   P.sitio(_ppProt(P, d, true)); _ppProt(P, d);
   P.sitio(_ppCuadrilla(P, d, 2, 8, true)+_ppResponsables(P, d, true)); _ppCuadrilla(P, d, 2, 8); _ppResponsables(P, d);
+  if(_ppOcurrencias(P, d, true)){ P.sitio(_ppOcurrencias(P, d, true)); _ppOcurrencias(P, d); }
   if(d.obs){ P.sitio(P.alto('Observaciones: '+d.obs, P.w, 7.4)+1.4); P.y+=P.txt('Observaciones: '+d.obs, P.M, P.y, P.w, {pt:7.4, b:true})+1.4; }
   P.sitio(hNota);
   P.txt('Una fila es un peligro con su riesgo y su control. Si cambian las condiciones del trabajo —el clima, el lugar, la gente o el equipo— la tarea se detiene y este análisis se vuelve a revisar con la cuadrilla.', P.M, P.y, P.w, {pt:6.4, c:_PP_TENUE});
+  _ppFotos(P, d);
   return P.listo();
 }
 /* ── ATS · «Con nivel de riesgo» (A4 horizontal) ───────────────────────────────────────────── */
@@ -543,7 +670,9 @@ function _papAtsRiesgo(d, C){
   P.y+=P.txt('NIVEL DE RIESGO · A: alto · M: medio · B: bajo. Se califica antes del control (nivel) y después de aplicarlo (residual). Con riesgo residual alto la tarea no se inicia: se replantea el control. En «Responsable» va quien se encarga de que ese control esté puesto.', P.M, P.y, P.w, {pt:6.4, c:_PP_TENUE})+1.6;
   P.sitio(_ppProt(P, d, true)); _ppProt(P, d);
   P.sitio(_ppCuadrilla(P, d, 3, 9, true)+_ppResponsables(P, d, true)); _ppCuadrilla(P, d, 3, 9); _ppResponsables(P, d);
+  if(_ppOcurrencias(P, d, true)){ P.sitio(_ppOcurrencias(P, d, true)); _ppOcurrencias(P, d); }
   if(d.obs){ P.sitio(P.alto('Observaciones: '+d.obs, P.w, 7.4)+1.4); P.txt('Observaciones: '+d.obs, P.M, P.y, P.w, {pt:7.4, b:true}); }
+  _ppFotos(P, d);
   return P.listo();
 }
 /* ── ATS · «Con verificación previa» (A4 vertical) ─────────────────────────────────────────── */
@@ -583,7 +712,9 @@ function _papAtsVerifica(d, C){
   P.sitio(_ppProt(P, d, true)); _ppProt(P, d);
   P.sitio(_ppCuadrilla(P, d, 2, 8, true)+_ppResponsables(P, d, true)); _ppCuadrilla(P, d, 2, 8); _ppResponsables(P, d);
   P.sitio(_ppCierre(P, true)); _ppCierre(P);
+  if(_ppOcurrencias(P, d, true)){ P.sitio(_ppOcurrencias(P, d, true)); _ppOcurrencias(P, d); }
   if(d.obs){ P.sitio(P.alto('Observaciones: '+d.obs, P.w, 7.4)+1.4); P.txt('Observaciones: '+d.obs, P.M, P.y, P.w, {pt:7.4, b:true}); }
+  _ppFotos(P, d);
   return P.listo();
 }
 
@@ -709,6 +840,9 @@ function papVistaExtra(){
            : 'En papel: se imprime y se firma a mano, al pie de la tarea. En su app el trabajador ve los modelos que publiques, para copiarlos bien; el ATS del día que armes aquí es para imprimirlo.')+'</p>'+
       '<div class="seg" id="pap-modo-b" role="tablist" aria-label="Cómo se firma el ATS en esta obra">'+
       [['digital', 'En el celular'], ['papel', 'En papel']].map(function(x){ var on=(x[0]==='papel')!==dig; return '<button type="button" role="tab" aria-selected="'+(on ? 'true' : 'false')+'" class="'+(on ? 'on' : '')+'" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join('')+'</div></div>'+
+      /* 17/10/2026 · lote 14 · el cierre: la hora en que termina la jornada (la misma de la app) */
+      (dig ? '<div class="pap-modo pap-fin"><p><b>Cierre del ATS.</b> A esta hora termina la jornada: cada uno firma su salida en el celular del capataz y se toma la foto de cómo quedó el área. Pasada la hora, el que no se cerró sale en rojo.</p>'+
+             '<label for="pap-fin" style="margin:0;font-size:12.5px;color:var(--gris)">Hora de término <input type="time" id="pap-fin" value="'+esc(X.fin||'16:30')+'"></label></div>' : '')+
       /* el formato de la obra: se elige una vez */
       '<div class="pap-modo pap-pref"><p><b>¿Con qué formato salen?</b> El que elijas aquí se propone al armar uno, y con él salen los que llegan de los celulares. En cada hoja se puede elegir otro.</p><div class="pap-pref-s">'+
       [['ats', 'ATS'], ['ipc', 'IPERC continuo']].map(function(x){ var def=papModeloDef(x[0]);
@@ -721,6 +855,11 @@ function papVistaExtra(){
                                     function(e){ s.disabled=false; s.value=antes; toast('No se pudo guardar. '+porQueFallo(e)); });
       };
     });
+    if($('pap-fin')) $('pap-fin').onchange=function(){
+      var i=this, v=i.value, antes=X.fin||'16:30'; i.disabled=true;
+      papFinPoner(v).then(function(){ i.disabled=false; toast('Listo: la jornada termina a las '+v+'. Así lo ve también la app.'); if(typeof VISTA.recargar==='function') VISTA.recargar(true); },
+                          function(e){ i.disabled=false; i.value=antes; toast('No se pudo guardar. '+porQueFallo(e)); });
+    };
     $('pap-modo-b').onclick=function(ev){
       var b=ev.target.closest('[data-v]'); if(!b) return;
       var m=b.getAttribute('data-v'); if(m===X.modo) return;
@@ -800,6 +939,160 @@ function _papFranjaTexto(d){
     : '<b>Sale con la franja roja «sin V°B° del SSOMA».</b> En esta obra el ATS se firma en el celular, y este todavía no tiene esa firma. Si tu obra lo firma a mano, cámbialo en «¿Cómo se firma el ATS en esta obra?», arriba de la lista.';
 }
 
+/* ══ LOTE 14 (17/10/2026) · EL ATS DE LA WEB, A LA PAR DE LA APP ══════════════════════════════════════════════
+   Lo que pidió Marcelo (y la app hace igual): (1) las preguntas de antes y elegir de los peligros que salen; (2) mover
+   los peligros (con todos sus riesgos) y los pasos; (3) «Mis peligros» de la obra (sst_estado «ats_mis», el mismo de la
+   app); (4) «verificar en el frente», en rojo (fondo o letra); (5) el cierre: se firma en el celular, aquí se ve y sale
+   en el papel (la salida de cada uno con su hora y lo que pasó, y las fotos); la hora de término de la obra se cambia
+   aquí también; (6) los responsables, de la lista del personal, con su nombre. */
+
+/* ── los responsables ── */
+var PAP_RESP_PISTA = { cap:['capataz','jefe de grupo','maestro','encargado','lider','oficial'],
+                       ing:['ingenier','residente','supervisor','jefe de obra','jefe de frente','produccion','arquitect'],
+                       sst:['ssoma','sst','seguridad','prevencion','hse','sso'] };
+function _papRespEnLista(v){ var n=_papNormPel(v); if(!n) return true; return ((PAPA && PAPA.gente) || []).some(function(t){ return _papNormPel(t.nombre)===n; }); }
+function _papRespResolver(v){
+  v=String(v||'').replace(/\s+/g, ' ').trim();
+  if(/^\d{6,12}$/.test(v)){ var t=((PAPA && PAPA.gente) || []).filter(function(x){ return String(x.dni||'').trim()===v; })[0]; if(t) return t.nombre; }
+  return v;
+}
+function _papRespSelect(id, k, v){
+  var L=(PAPA && PAPA.gente) || [], pista=PAP_RESP_PISTA[k] || [], si=[], resto=[], n0=_papNormPel(v), hay=false;
+  L.forEach(function(t){ var p=_papNormPel(t.puesto||''); (pista.some(function(w){ return nrm(p).indexOf(w)>-1; }) ? si : resto).push(t); });
+  function op(t){ var on=!!n0 && _papNormPel(t.nombre)===n0; if(on) hay=true; return '<option value="'+esc(t.nombre)+'"'+(on ? ' selected' : '')+'>'+esc(t.nombre)+(t.puesto ? ' · '+esc(t.puesto) : '')+'</option>'; }
+  var cuerpo=(si.length ? '<optgroup label="Por su puesto">'+si.map(op).join('')+'</optgroup>' : '')+(resto.length ? '<optgroup label="Todo el personal">'+resto.map(op).join('')+'</optgroup>' : '');
+  return '<select id="'+id+'" data-rs="'+k+'" data-sin-pais><option value="">— Elegir de tu personal —</option>'+cuerpo+'<option value="__otro"'+((!hay && n0) ? ' selected' : '')+'>Otro: escribirlo</option></select>';
+}
+
+/* ── los grupos de un paso: las filas seguidas con el mismo peligro ── */
+function _papGrupos(filas){
+  var g=[];
+  (filas||[]).forEach(function(f, j){ var u=g[g.length-1]; if(u && _papMismoPel(u.p, f.p)) u.idx.push(j); else g.push({ p:f.p, idx:[j] }); });
+  return g;
+}
+function _papGrupoDe(a, j){ return _papGrupos(a.filas).filter(function(g){ return g.idx.indexOf(j)>-1; })[0] || null; }
+function _papaMoverPel(ia, j, d){
+  var a=PAPA.d.acts[ia]; if(!a) return;
+  var G=_papGrupos(a.filas), gi=-1; G.forEach(function(g, k){ if(g.idx.indexOf(j)>-1) gi=k; });
+  var gj=gi+d; if(gi<0 || gj<0 || gj>=G.length) return;
+  var x=G[gi]; G[gi]=G[gj]; G[gj]=x;
+  var nuevas=[]; G.forEach(function(g){ g.idx.forEach(function(k){ nuevas.push(a.filas[k]); }); });
+  a.filas=nuevas; _papaCambio(); _papaPinta();
+}
+
+/* ── «Mis peligros» (la misma lista de la app) ── */
+function _papMisJuntar(a, b){
+  var por={}, orden=[];
+  (a||[]).concat(b||[]).forEach(function(z){ if(!z || !z.k) return; if(!por[z.k]){ por[z.k]=z; orden.push(z.k); } else if((z.t||0)>(por[z.k].t||0)) por[z.k]=z; });
+  return orden.map(function(k){ return por[k]; });
+}
+function papMis(){ return ((PAPA && PAPA.mis) || []).filter(function(z){ return z && !z.b && z.p; }); }
+function _papMisClave(f){ return [f.p, f.r, f.c, f.m].map(_papNormPel).join('|'); }
+function _papMisTiene(f){ var k=_papMisClave(f); return papMis().some(function(z){ return _papMisClave(z)===k; }); }
+/* se lee lo de arriba, se junta y se escribe (si no se pudo leer, no se escribe) */
+function papMisAgregar(filas){
+  var nuevas=(filas||[]).filter(function(f){ return f && gesTxt(f.p) && gesTxt(f.r) && !_papMisTiene(f); }).map(function(f){
+    return { k:'m'+Date.now().toString(36)+Math.random().toString(36).slice(2, 6), p:gesTxt(f.p).slice(0, 120), r:gesTxt(f.r).slice(0, 120), c:gesTxt(f.c).slice(0, 120), m:gesTxt(f.m).slice(0, 220), t:Date.now() };
+  });
+  if(!nuevas.length) return Promise.resolve(0);
+  return estadoLeerP('ats_mis').then(function(fila){
+    var v=fila && fila.valor, L=_papMisJuntar((v && Array.isArray(v.f)) ? v.f : [], nuevas);
+    return estadoEscribirP('ats_mis', { v:1, f:L.slice(-600) }).then(function(){ if(PAPA) PAPA.mis=L; return nuevas.length; });
+  });
+}
+
+/* ── las preguntas de antes, dentro del paso ── */
+function _papaPregHTML(ia){
+  var P=PAPA.preg, a=PAPA.d.acts[ia]||{}, R=PAPA.d.preg||{};
+  var E=[['tipos', 'Qué se hace'], ['preg', 'Preguntas'], ['elige', 'Peligros']], iE=0;
+  E.forEach(function(x, k){ if(x[0]===P.et) iE=k; });
+  var h='<div class="pap-preg" data-a="'+ia+'"><div class="pap-preg-cab"><b>Te ayudo con preguntas</b><span>'+E.map(function(x, k){ return '<i class="'+(k===iE ? 'on' : (k<iE ? 'ok' : ''))+'">'+(k<iE ? '✓' : (k+1))+' · '+x[1]+'</i>'; }).join('')+'</span>'+
+    '<button type="button" class="bt-link" data-que="preg-x" data-a="'+ia+'">Cerrar</button></div>';
+  if(P.et==='tipos'){
+    h+='<p class="ayuda" style="margin:0 0 8px">¿Qué se hace en este paso? Marca uno o varios: según eso pregunto. Ya marqué lo que dice el nombre del paso.</p><div class="pap-preg-tipos">'+
+      ATS_PREG.tipos.map(function(t){ var on=P.tipos.indexOf(t.k)>-1; return '<button type="button" class="'+(on ? 'on' : '')+'" aria-pressed="'+(on ? 'true' : 'false')+'" data-que="preg-tipo" data-k="'+t.k+'" data-a="'+ia+'"><span aria-hidden="true">'+t.ic+'</span>'+esc(t.n)+'</button>'; }).join('')+'</div>'+
+      '<div class="acciones" style="justify-content:flex-end;margin:10px 0 0"><button type="button" class="bt chico" data-que="preg-ir" data-v="preg" data-a="'+ia+'">Siguiente ›</button></div>';
+  } else if(P.et==='preg'){
+    var L=atsPregLista(P.tipos, R), falta=0;
+    h+='<p class="ayuda" style="margin:0 0 8px">Contesta pensando en lo que se va a hacer hoy. Lo que no contestes cuenta como «no».</p><div class="pap-preg-l">'+
+      L.map(function(q){ var r=R[q.k], ops=q.o || [['si', 'Sí'], ['no', 'No']]; if(!r) falta++;
+        return '<div class="pap-pq'+(r ? ' ok' : '')+'"><b>'+esc(q.q)+'</b><span>'+ops.map(function(o){ var on=(r===o[0]); return '<button type="button" class="'+(on ? 'on' : '')+'" aria-pressed="'+(on ? 'true' : 'false')+'" data-que="preg-r" data-k="'+q.k+'" data-v="'+o[0]+'" data-a="'+ia+'">'+esc(o[1])+'</button>'; }).join('')+'</span></div>'; }).join('')+'</div>'+
+      '<div class="acciones" style="justify-content:space-between;margin:10px 0 0"><span class="tenue" style="font-size:12.5px">'+(falta ? 'Te faltan '+falta : '✓ Contestaste todas')+'</span><span><button type="button" class="bt sec chico" data-que="preg-ir" data-v="tipos" data-a="'+ia+'">‹ Atrás</button> <button type="button" class="bt chico" data-que="preg-ir" data-v="elige" data-a="'+ia+'">Ver los peligros ›</button></span></div>';
+  } else {
+    var S=atsPregSugeridos(P.tipos, R), ya={}, cu=0;
+    (a.filas||[]).forEach(function(f){ ya[atsPregNorm(f.p)+'|'+atsPregNorm(f.r)]=1; });
+    for(var k in P.sel) if(P.sel[k]) cu++;
+    if(!S.length) h+='<div class="vacio" style="margin:0"><b>Con lo que contestaste no salió ningún peligro</b>Vuelve atrás y revisa las respuestas, o agrégalos de uno en uno.</div>';
+    else h+='<p class="ayuda" style="margin:0 0 8px">Marca los que <b>sí</b> hay hoy. Cada uno trae su riesgo, su consecuencia y un control para empezar: el control se revisa, depende del frente.</p><div class="pap-preg-s">'+
+      S.map(function(f, n){ var esta=!!ya[atsPregNorm(f.p)+'|'+atsPregNorm(f.r)], on=!!P.sel[n];
+        return '<button type="button" class="'+(on ? 'on' : '')+(esta ? ' ya' : '')+'" aria-pressed="'+(on ? 'true' : 'false')+'"'+(esta ? ' disabled' : ' data-que="preg-sel" data-n="'+n+'" data-a="'+ia+'"')+'><i aria-hidden="true">'+(esta ? '✓' : (on ? '☑' : '☐'))+'</i><span><b>'+esc(f.p)+'</b>'+
+          '<small>Riesgo: '+esc(f.r)+' · Consecuencia: '+esc(f.c)+'</small><small>Control: '+esc(f.m)+'</small>'+(esta ? '<em>Ya está en este paso</em>' : '')+'</span></button>'; }).join('')+'</div>';
+    h+='<div class="acciones" style="justify-content:flex-end;margin:10px 0 0"><button type="button" class="bt sec chico" data-que="preg-ir" data-v="preg" data-a="'+ia+'">‹ Atrás</button> <button type="button" class="bt chico" data-que="preg-ag" data-a="'+ia+'"'+(cu ? '' : ' disabled')+'>'+(cu ? 'Agregar '+gesPlural(cu, 'peligro', 'peligros')+' al paso' : 'Marca los que hay hoy')+'</button></div>';
+  }
+  return h+'</div>';
+}
+function _papaPregTocar(que, b){
+  var d=PAPA.d, ia=+b.getAttribute('data-a'), a=d.acts[ia]; if(!a) return;
+  if(que==='preg'){ PAPA.preg={ ia:ia, et:'tipos', tipos:atsPregTiposDe((a.a||'')+' '+(d.trabajo||'')), sel:{} }; _papaPinta(); _papaPregVer(); return; }
+  var P=PAPA.preg; if(!P || P.ia!==ia) return;
+  if(que==='preg-x'){ PAPA.preg=null; _papaPinta(); return; }
+  if(que==='preg-tipo'){ var k=b.getAttribute('data-k'), i=P.tipos.indexOf(k); if(i>-1) P.tipos.splice(i, 1); else P.tipos.push(k); _papaPinta(); _papaPregVer(); return; }
+  if(que==='preg-ir'){ P.et=b.getAttribute('data-v'); if(P.et==='elige') P.sel={}; _papaPinta(); _papaPregVer(); return; }
+  if(que==='preg-r'){ if(!d.preg || typeof d.preg!=='object') d.preg={}; var qk=b.getAttribute('data-k'), v=b.getAttribute('data-v'); if(d.preg[qk]===v) delete d.preg[qk]; else d.preg[qk]=v; _papaCambio(); _papaPinta(); _papaPregVer(true); return; }
+  if(que==='preg-sel'){ var n=b.getAttribute('data-n'); P.sel[n]=!P.sel[n]; _papaPinta(); _papaPregVer(true); return; }
+  if(que==='preg-ag'){
+    var S=atsPregSugeridos(P.tipos, d.preg||{}), cu=0;
+    S.forEach(function(f, n){
+      if(!P.sel[n]) return;
+      var fila={ p:f.p, r:f.r, c:f.c, m:f.m }, jm=-1;
+      /* la fila vacía con la que nace un paso nuevo se reemplaza */
+      a.filas=(a.filas||[]).filter(function(x){ return !_papaFilaVacia(x); });
+      a.filas.forEach(function(x, j){ if(_papMismoPel(x.p, fila.p)) jm=j; });
+      if(jm>-1) a.filas.splice(jm+1, 0, fila); else a.filas.push(fila);
+      cu++;
+    });
+    PAPA.preg=null; _papaCambio(); _papaPinta();
+    if(cu) _papaMsg('Se agregaron '+gesPlural(cu, 'peligro', 'peligros')+' al paso '+(ia+1)+', cada uno con su riesgo, su consecuencia y un control para empezar. Revísalos: el control es el del frente.', 'ok');
+  }
+}
+/* que el panel quede a la vista después de pintar (y no salte al inicio) */
+function _papaPregVer(quieto){
+  if(quieto) return;
+  var e=document.querySelector('#papa-acts .pap-preg'); if(e && e.scrollIntoView) try{ e.scrollIntoView({ block:'nearest' }); }catch(_s){}
+}
+
+/* ── el cierre que viene del celular: la fila aparte («ats-cierre») y las fotos, para el papel ── */
+var PAPCI = {};
+function _papClaveG(g){ g=g||{}; return String(g.d||'').trim() || ('n:'+_papNormPel(g.n||'')); }
+function papCierreDe(d){
+  if(!d || d.modelo || !d.id) return Promise.resolve(null);
+  var hay=(d.gente||[]).some(function(g){ return g && (g.s || g.x); }) || ((d.cierre||{}).fotos||[]).length;
+  if(!hay) return Promise.resolve(null);
+  var llave=d.id+'|'+JSON.stringify((d.cierre||{}).fotos||[])+'|'+(d.gente||[]).map(function(g){ return (g && (g.s||g.x)) ? 1 : 0; }).join('');
+  if(PAPCI[llave]) return PAPCI[llave];
+  var fila=traer('sst_doc', '&select=nota&hoja=eq.ats-cierre&nombre=eq.'+encodeURIComponent(('cierre '+d.id).slice(0, 90))+'&order=creado.desc', 1).then(function(r){ return nota(((r||[])[0]||{}).nota) || null; }, function(){ return null; });
+  var fotos=Promise.all(((d.cierre||{}).fotos||[]).slice(0, 8).map(function(f){
+    return fetch(f.u).then(function(r){ return r.ok ? r.blob() : null; }).then(function(b){
+      if(!b) return null;
+      return new Promise(function(ok){ var fr=new FileReader(); fr.onload=function(){ ok(fr.result); }; fr.onerror=function(){ ok(null); }; fr.readAsDataURL(b); });
+    }).catch(function(){ return null; });
+  })).then(function(l){ return l.filter(Boolean); });
+  PAPCI[llave]=Promise.all([fila, fotos]).then(function(r){ return { fila:r[0] || { f:{}, aus:{} }, fotos:r[1] }; });
+  return PAPCI[llave];
+}
+/* «16:42» */
+function _papHora(t){ if(!t) return ''; var x=new Date(t); return ('0'+x.getHours()).slice(-2)+':'+('0'+x.getMinutes()).slice(-2); }
+/* la salida de cada uno de la cuadrilla, con lo que trae el paquete y la fila aparte */
+function _papSalidas(d, CI){
+  var F=(CI && CI.fila) || { f:{}, aus:{} };
+  return (d.gente||[]).map(function(g){
+    var k=_papClaveG(g), x=(F.f||{})[k], y=(F.aus||{})[k];
+    if(g && g.s) return { n:g.n, d:g.d, t:(typeof g.s==='number') ? g.s : ((x && x.t)||0), tr:x ? x.tr : null, oc:x ? (x.oc||'') : '' };
+    if(g && g.x) return { n:g.n, d:g.d, aus:(y && y.m) || 'no estaba' };
+    return { n:g && g.n, d:g && g.d };
+  });
+}
+
 /* ══ 4 · ARMAR UN ATS ══════════════════════════════════════════════════════════════════════════
    Los mismos pasos de la app —datos, protección, secuencia, cuadrilla— y uno más: el formato. Guarda la fila que
    guardaría la app; lo que se arma y no se guarda queda de borrador en este navegador (un cierre sin querer no lo tira). */
@@ -807,7 +1100,9 @@ var PAPA = null;
 function _papaLlave(){ return 'sstp_pap_ats_'+((YO.obra||{}).id||''); }
 function _papaVacio(modelo){
   return { v:1, id:'ats'+Date.now(), modelo:!!modelo, fecha:modelo ? '' : hoyISO(), hora:'', turno:modelo ? '' : 'dia', trabajo:'', area:'', ubic:'', obs:'', codigo:'', rev:'',
-           req:{}, epp:{}, epc:{}, perm:{}, acts:[], gente:[], vb:{}, devuelto:null, resp:{ cap:'', ing:'', sst:'' }, fmt:papModeloDef('ats') };
+           req:{}, epp:{}, epc:{}, perm:{}, acts:[], gente:[], vb:{}, devuelto:null, resp:{ cap:'', ing:'', sst:'' }, fmt:papModeloDef('ats'),
+           /* 17/10/2026 · lote 14: cómo salen las filas «verificar en el frente», en una hoja, y lo contestado */
+           vm:'fondo', una:false, preg:{} };
 }
 /* lo que llega de la nube, a la forma del editor (sin tocar lo que no conoce) */
 function _papaDe(n, modelo){
@@ -849,9 +1144,12 @@ function papAtsForm(fila, op){
     {ancha:true, sinFoco:true});
   if($('papa-quitar')) $('papa-quitar').onclick=_papaQuitar;
   var nada=function(){ return []; };
-  return Promise.all([gesGente().catch(nada), papCtx(), fila ? Promise.resolve([]) : traer('sst_doc', '&select=id,nombre,nota,creado&hoja=eq.ats-modelo&order=creado.desc', 200).catch(nada)]).then(function(r){
+  return Promise.all([gesGente().catch(nada), papCtx(), fila ? Promise.resolve([]) : traer('sst_doc', '&select=id,nombre,nota,creado&hoja=eq.ats-modelo&order=creado.desc', 200).catch(nada),
+                      estadoLeerP('ats_mis').catch(function(){ return null; })]).then(function(r){
     if(PAPA!==yo || !$('papa-carga')) return;
     PAPA.gente=r[0]||[]; PAPA.X=r[1];
+    /* 17/10/2026 · lote 14 · «Mis peligros» de la obra (los mismos de la app) */
+    PAPA.mis=(r[3] && r[3].valor && Array.isArray(r[3].valor.f)) ? r[3].valor.f : [];
     var enPapel=_papaEnPapel();
     if(modelo){ if(!fila && enPapel) $('papa-ok').textContent='Guardar y publicar'; }
     else if($('hoja-s')) $('hoja-s').textContent=enPapel ? 'El del día: queda en la lista y se imprime con el formato que elijas, para firmarlo a mano'
@@ -974,10 +1272,13 @@ function _papaDatos(){
       '<div class="campo"><label id="papa-turno-t">Turno</label><div class="chips pap-chips-alto" id="papa-turno" role="radiogroup" aria-labelledby="papa-turno-t">'+
         [['dia', 'Día'], ['noche', 'Noche']].map(function(x){ var on=((d.turno||'dia')===x[0]); return '<button type="button" role="radio" class="chip'+(on ? ' on' : '')+'" aria-checked="'+(on ? 'true' : 'false')+'" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join('')+'</div></div></div>';
   }
-  h+='<div class="seccion"><h3>Quiénes responden por el trabajo <span class="tenue" style="font-weight:400">· opcional: salen con su nombre en la hoja</span></h3><div class="fila-c ya-al">'+
+  /* 17/10/2026 · lote 14 · de la lista del personal (o escrito): al papel va el nombre, no el documento */
+  h+='<div class="seccion"><h3>Quiénes responden por el trabajo <span class="tenue" style="font-weight:400">· elígelos de tu personal: salen con su nombre en la hoja</span></h3><div class="fila-c ya-al">'+
     [['cap', 'Responsable del grupo (capataz)'], ['ing', 'Supervisor o ingeniero'], ['sst', 'Seguridad (SST)']].map(function(x){
-      return '<div class="campo"><label for="papa-r'+x[0]+'">'+x[1]+'</label><input id="papa-r'+x[0]+'" data-r="'+x[0]+'" maxlength="80" list="papa-gente-dl" autocomplete="off" value="'+esc(d.resp[x[0]]||'')+'"></div>'; }).join('')+
-    '</div><datalist id="papa-gente-dl" data-sin-pais>'+PAPA.gente.slice(0, 1500).map(function(t){ return '<option value="'+esc(t.nombre)+'">'+esc(t.puesto||'')+'</option>'; }).join('')+'</datalist></div>'+
+      var v=d.resp[x[0]]||'';
+      return '<div class="campo"><label for="papa-rs'+x[0]+'">'+x[1]+'</label>'+_papRespSelect('papa-rs'+x[0], x[0], v)+
+        '<input id="papa-r'+x[0]+'" data-r="'+x[0]+'" maxlength="80" autocomplete="off" placeholder="Nombre y apellidos" aria-label="'+x[1]+': nombre" value="'+esc(v)+'"'+(_papRespEnLista(v) ? ' hidden' : '')+' style="margin-top:6px"></div>'; }).join('')+
+    '</div></div>'+
     '<div class="campo" style="margin-top:14px"><label for="papa-obs">Observaciones y sugerencias <span class="tenue">· opcional</span></label><textarea id="papa-obs" data-c="obs" rows="2" maxlength="600" placeholder="Lo que la cuadrilla levantó en la charla de inicio: una condición del frente, una herramienta que falta, un cambio de secuencia.">'+esc(d.obs)+'</textarea></div>';
   if(PAPA.nuevo && PAPA.mods.length){
     h+='<div class="campo"><label for="papa-base">Partir de un modelo <span class="tenue">· opcional</span></label><select id="papa-base"><option value="">— no, lo armo desde cero —</option>'+
@@ -1021,6 +1322,9 @@ function _papaActs(){
   var d=PAPA.d, conNivel=(d.fmt==='riesgo');
   var h='<p class="ayuda" style="margin:0 0 12px">Primero la <b>secuencia del trabajo</b>: los pasos, en el orden en que se hacen. En cada paso, sus peligros, uno por fila: <b>una fila = un peligro</b> con su riesgo, su consecuencia y su control. Al escribir el peligro se ofrecen los de la matriz, con su riesgo y su consecuencia.</p>';
   h+='<div id="papa-acts">'+(d.acts||[]).map(function(a, ia){ return _papaActHTML(a, ia, conNivel); }).join('')+'</div>';
+  /* 17/10/2026 · lote 14 */
+  if((d.acts||[]).some(function(a){ return (a.filas||[]).some(function(f){ return f && f.v===1; }); }))
+    h+='<p class="ayuda" style="margin:0 0 10px"><span class="pap-verif-et">⚑ En rojo:</span> verificar en el frente. Sale en rojo en la hoja (fondo o letra, se elige en «Formato»); en el celular, el ATS del día que sale de este pide confirmarlo con la cuadrilla.</p>';
   if(!(d.acts||[]).length) h+='<div class="vacio" id="papa-sin"><b>Todavía no hay pasos</b>Agrega el primero —«Traslado del material», «Armado de cuerpos», «Retiro»— o trae una actividad ya desglosada.</div>';
   h+='<div class="acciones" style="justify-content:flex-start;margin:4px 0 0"><button type="button" class="bt chico" id="papa-mas-paso" data-que="paso">＋ Agregar un paso</button>'+
     '<select id="papa-bib" aria-label="Traer una actividad de la biblioteca" style="width:auto;max-width:100%"><option value="">Traer una actividad de la biblioteca…</option>'+
@@ -1031,13 +1335,28 @@ function _papaActs(){
 function _papaActHTML(a, ia, conNivel){
   var h='<section class="pap-act" data-a="'+ia+'"><div class="pap-act-cab"><b>'+(ia+1)+'</b><input data-an="'+ia+'" maxlength="90" autocomplete="off" placeholder="Paso del trabajo: «Armado de cuerpos»" aria-label="Nombre del paso '+(ia+1)+'" value="'+esc(a.a)+'">'+
     (ia>0 ? '<button type="button" class="bt-link" data-que="sube" data-a="'+ia+'" aria-label="Subir el paso '+(ia+1)+'">↑ subir</button>' : '')+
+    (ia<PAPA.d.acts.length-1 ? '<button type="button" class="bt-link" data-que="baja" data-a="'+ia+'" aria-label="Bajar el paso '+(ia+1)+'">↓ bajar</button>' : '')+
+    '<button type="button" class="bt-link" data-que="preg" data-a="'+ia+'">🧭 Te ayudo con preguntas</button>'+
     '<button type="button" class="bt-link" data-que="quita-paso" data-a="'+ia+'">Quitar el paso</button></div><div class="pap-filas">';
+  /* 17/10/2026 · lote 14 · las preguntas de antes, dentro del paso */
+  if(PAPA.preg && PAPA.preg.ia===ia) h+=_papaPregHTML(ia);
   if((a.filas||[]).length) h+='<div class="pap-fila-cab" aria-hidden="true"><span>Peligro</span><span>Riesgo</span><span>Consecuencia</span><span>Control</span><span></span></div>';
-  var F=a.filas||[];
+  var F=a.filas||[], G=_papGrupos(F);
   F.forEach(function(f, j){
     /* 13/10/2026 · el mismo peligro que la fila de arriba: es otro riesgo suyo, y el peligro no se repite */
     var cont=j>0 && _papMismoPel(F[j-1].p, f.p), fin=!(j+1<F.length && _papMismoPel(f.p, F[j+1].p));
-    h+='<div class="pap-fila'+(cont ? ' cont' : '')+'" data-a="'+ia+'" data-f="'+j+'"'+(cont ? ' data-cont="1"' : '')+'>'+
+    /* 17/10/2026 · lote 14 · al empezar cada peligro: ↑ ↓, «verificar en el frente» y ⭐ «Mis peligros» */
+    if(!cont && gesTxt(f.p)){
+      var gi=-1; G.forEach(function(g, k){ if(g.idx[0]===j) gi=k; });
+      var g0=G[gi] || { idx:[j] }, ver=g0.idx.some(function(k){ return F[k] && F[k].v===1; });
+      var llena=g0.idx.every(function(k){ return _papaFilaLlena(F[k]); }), enMis=llena && g0.idx.every(function(k){ return _papMisTiene(F[k]); });
+      h+='<div class="pap-pel-bts" data-a="'+ia+'" data-f="'+j+'"><span class="tenue">Peligro '+(gi+1)+':</span>'+
+        '<button type="button" class="bt-link" data-que="pel-sube" data-a="'+ia+'" data-f="'+j+'"'+(gi>0 ? '' : ' disabled')+' aria-label="Subir el peligro">↑ subir</button>'+
+        '<button type="button" class="bt-link" data-que="pel-baja" data-a="'+ia+'" data-f="'+j+'"'+(gi<G.length-1 ? '' : ' disabled')+' aria-label="Bajar el peligro">↓ bajar</button>'+
+        '<button type="button" class="bt-link'+(ver ? ' pap-verif-et' : '')+'" data-que="pel-ver" data-a="'+ia+'" data-f="'+j+'" aria-pressed="'+(ver ? 'true' : 'false')+'">'+(ver ? '⚑ Verificar en el frente (quitar)' : '⚑ Marcar «verificar en el frente»')+'</button>'+
+        (llena ? '<button type="button" class="bt-link" data-que="pel-mis" data-a="'+ia+'" data-f="'+j+'"'+(enMis ? ' disabled' : '')+'>'+(enMis ? '⭐ En «Mis peligros»' : '⭐ Guardar en «Mis peligros»')+'</button>' : '')+'</div>';
+    }
+    h+='<div class="pap-fila'+(cont ? ' cont' : '')+(f.v===1 ? ' verif' : '')+'" data-a="'+ia+'" data-f="'+j+'"'+(cont ? ' data-cont="1"' : '')+'>'+
       [['p', 'Peligro', 120, 'Andamio sin baranda en el lado de la fachada'], ['r', 'Riesgo', 120, 'Caída a distinto nivel'], ['c', 'Consecuencia', 120, 'Fracturas, muerte'], ['m', 'Control', 220, 'Arnés con doble línea de vida anclado a un punto certificado']].map(function(q){
         if(q[0]==='p' && cont) return '<span class="pap-et" aria-hidden="true">'+q[1]+'</span><div class="pap-cont">↳ el mismo peligro</div>';
         return '<span class="pap-et" aria-hidden="true">'+q[1]+'</span><textarea data-k="'+q[0]+'" maxlength="'+q[2]+'" placeholder="'+esc(j===0 ? q[3] : q[1])+'" aria-label="'+q[1]+' · paso '+(ia+1)+', fila '+(j+1)+'"'+(q[0]==='p' ? ' autocomplete="off"' : '')+'>'+esc(f[q[0]]||'')+'</textarea>'; }).join('')+
@@ -1073,8 +1392,19 @@ function _papaAlEscribir(ev){
   if(e.id==='papa-base') return;
   var c=e.getAttribute('data-c');
   if(c){ d[c]=e.value; _papaCambio(); return; }
+  var rs=e.getAttribute('data-rs');
+  if(rs && ev.type==='change'){
+    var inp=$('papa-r'+rs);
+    if(e.value==='__otro'){ if(inp){ inp.hidden=false; try{ inp.focus(); }catch(_f){} } return; }
+    d.resp[rs]=e.value; if(inp){ inp.value=e.value; inp.hidden=true; } _papaCambio(); return;
+  }
+  if(rs) return;
   var r=e.getAttribute('data-r');
-  if(r){ d.resp[r]=e.value; _papaCambio(); return; }
+  if(r){
+    /* el que escribe el DNI de alguien del personal: queda su nombre */
+    if(ev.type==='change'){ var vr=_papRespResolver(e.value); if(vr!==e.value){ e.value=vr; var sl=$('papa-rs'+r); if(sl && _papRespEnLista(vr)){ sl.value=vr; e.hidden=true; } } }
+    d.resp[r]=e.value; _papaCambio(); return;
+  }
   var an=e.getAttribute('data-an');
   if(an!==null && d.acts[+an]){ d.acts[+an].a=e.value; _papaCambio(); return; }
   var k=e.getAttribute('data-k'), fila=e.closest('.pap-fila');
@@ -1082,7 +1412,7 @@ function _papaAlEscribir(ev){
     var a=d.acts[+fila.getAttribute('data-a')], f=a && a.filas[+fila.getAttribute('data-f')];
     if(!f) return;
     f[k]=e.value; if(k==='p') _papaPropagar(fila, a, e.value); _papaCambio();
-    if(k==='p' && ev.type==='input') _papSugerir(e, function(x){ f.p=x[2]; f.r=x[3]; f.c=x[4]; _papaPropagar(fila, a, f.p); _papaCambio(); var T=fila.querySelectorAll('textarea'); T[0].value=f.p; T[1].value=f.r; T[2].value=f.c; try{ T[3].focus(); }catch(e2){} });
+    if(k==='p' && ev.type==='input') _papSugerir(e, function(x){ f.p=x[2]; f.r=x[3]; f.c=x[4]; if(x[0]==='mis' && x[5]) f.m=x[5]; _papaPropagar(fila, a, f.p); _papaCambio(); var T=fila.querySelectorAll('textarea'); T[0].value=f.p; T[1].value=f.r; T[2].value=f.c; if(x[0]==='mis' && T[3]) T[3].value=f.m; try{ T[3].focus(); }catch(e2){} });
   }
 }
 function _papaAlTocar(ev){
@@ -1119,6 +1449,24 @@ function _papaAlTocar(ev){
     return;
   }
   if(que==='sube' && ia>0){ var x=d.acts.splice(ia, 1)[0]; d.acts.splice(ia-1, 0, x); _papaCambio(); _papaPinta(); return; }
+  /* 17/10/2026 · lote 14 */
+  if(que==='baja' && ia<d.acts.length-1){ var xb=d.acts.splice(ia, 1)[0]; d.acts.splice(ia+1, 0, xb); _papaCambio(); _papaPinta(); return; }
+  if(que==='pel-sube' || que==='pel-baja'){ _papaMoverPel(ia, +b.getAttribute('data-f'), que==='pel-sube' ? -1 : 1); return; }
+  if(que==='pel-ver' && d.acts[ia]){
+    var gv=_papGrupoDe(d.acts[ia], +b.getAttribute('data-f')); if(!gv) return;
+    var on=!gv.idx.some(function(k){ return d.acts[ia].filas[k].v===1; });
+    gv.idx.forEach(function(k){ if(on) d.acts[ia].filas[k].v=1; else delete d.acts[ia].filas[k].v; });
+    _papaCambio(); _papaPinta(); return;
+  }
+  if(que==='pel-mis' && d.acts[ia]){
+    var gm=_papGrupoDe(d.acts[ia], +b.getAttribute('data-f')); if(!gm) return;
+    b.disabled=true;
+    papMisAgregar(gm.idx.map(function(k){ return d.acts[ia].filas[k]; })).then(function(n){
+      _papaPinta(); _papaMsg(n ? 'Guardado en «Mis peligros»: la próxima vez sale al escribir el peligro, con su riesgo, su consecuencia y su control. Lo ve también la app.' : 'Ya estaba en «Mis peligros».', 'ok');
+    }, function(e){ b.disabled=false; _papaMsg('No se pudo guardar en «Mis peligros». '+porQueFallo(e), 'mal'); });
+    return;
+  }
+  if(que.indexOf('preg')===0){ _papaPregTocar(que, b); return; }
   if(que==='quita-paso' && d.acts[ia]){
     var np=(d.acts[ia].filas||[]).filter(function(z){ return !_papaFilaVacia(z); }).length;
     var quitar=function(){ d.acts.splice(ia, 1); _papaCambio(); _papaPinta(); };
@@ -1140,9 +1488,14 @@ function _papSugerir(campo, alElegir){
     if(ok && N[0]!==val && !visto[N[1]]){ visto[N[1]]=1; (enP ? L : L2).push(PAPD.base[i]); }   /* la matriz trae algunos repetidos: una sola vez */
   }
   L=L.concat(L2).slice(0, 8);
-  if(!L.length) return;
+  /* 17/10/2026 · lote 14 · «Mis peligros» primero: vienen completos, con su control (como 6.º campo) */
+  var M=(PAPA && campo.closest('.pap-fila')) ? papMis().filter(function(z){ var t=nrm(z.p+' '+z.r+' '+z.c+' '+z.m); return pal.every(function(w){ return t.indexOf(w)>-1; }); }).slice(0, 5).map(function(z){ return ['mis', 'mis', z.p, z.r, z.c, z.m]; }) : [];
+  if(!L.length && !M.length) return;
   var s=document.createElement('div'); s.className='pap-sug'; s.id='pap-sug'; s.setAttribute('role', 'listbox'); s.setAttribute('data-sin-pais', '');
-  s.innerHTML='<p>De la matriz de peligros · elige uno y trae su riesgo y su consecuencia</p>'+L.map(function(x, n){ return '<button type="button" role="option" data-n="'+n+'"><b>'+esc(x[2])+'</b><small>'+esc((PAPD.tipos[x[1]]||'')+' · '+x[3])+'</small></button>'; }).join('');
+  var LL=M.concat(L);
+  s.innerHTML=(M.length ? '<p>⭐ De «Mis peligros» · vienen completos, con su control</p>'+M.map(function(x, n){ return '<button type="button" role="option" data-n="'+n+'"><b>'+esc(x[2])+'</b><small>'+esc(x[3]+(x[5] ? ' · '+x[5] : ''))+'</small></button>'; }).join('') : '')+
+    (L.length ? '<p>De la matriz de peligros · elige uno y trae su riesgo y su consecuencia</p>'+L.map(function(x, n){ return '<button type="button" role="option" data-n="'+(n+M.length)+'"><b>'+esc(x[2])+'</b><small>'+esc((PAPD.tipos[x[1]]||'')+' · '+x[3])+'</small></button>'; }).join('') : '');
+  L=LL;
   var caja=campo.closest('.pap-fila') || campo.closest('.pap-ipf') || campo.parentNode;
   caja.appendChild(s);
   s.style.top=(campo.offsetTop+campo.offsetHeight)+'px'; s.style.left=campo.offsetLeft+'px';
@@ -1156,6 +1509,11 @@ function _papFmtHTML(pref, tipo, fmt){
   var L=papModelos(tipo), act=papModelo(tipo, fmt).k;
   return '<div class="pap-fmt" id="'+pref+'-fmt" role="radiogroup" aria-label="Modelo de formato">'+L.map(function(m){ var on=(m.k===act);
       return '<button type="button" role="radio" aria-checked="'+(on ? 'true' : 'false')+'" class="'+(on ? 'on' : '')+'" data-k="'+m.k+'"><b>'+esc(m.n)+'</b><i>'+esc(m.hoja)+'</i><span>'+esc(m.d)+'</span></button>'; }).join('')+'</div>'+
+    /* 17/10/2026 · lote 14 · el ATS: las filas «verificar en el frente» (fondo o letra) y «en una hoja» (el clásico) */
+    (pref==='papa' ? '<div class="pap-fmt-op" id="papa-fmt-op">'+
+       (((PAPA && PAPA.d.acts) || []).some(function(a){ return (a.filas||[]).some(function(f){ return f && f.v===1; }); })
+         ? '<span>Las filas «⚑ verificar en el frente» salen</span><label><input type="radio" name="papa-vm" value="fondo"'+(PAPA.d.vm!=='letra' ? ' checked' : '')+'> con fondo rojo</label><label><input type="radio" name="papa-vm" value="letra"'+(PAPA.d.vm==='letra' ? ' checked' : '')+'> con letra roja</label>' : '')+
+       '<label><input type="checkbox" id="papa-una"'+(PAPA.d.una ? ' checked' : '')+'> En el «Clásico», que salga en una sola hoja (la letra de la tabla se achica si hace falta)</label></div>' : '')+
     '<div class="aviso ojo" id="'+pref+'-franja" hidden></div>'+
     '<div class="acciones" style="justify-content:flex-start;margin:0 0 6px"><button type="button" class="bt chico" id="'+pref+'-pdf">Descargar el PDF</button><button type="button" class="bt sec chico" id="'+pref+'-imp">Imprimir</button></div>'+
     '<p class="ayuda" style="margin:0 0 10px">Al descargar o imprimir se guarda primero, para que quede en la lista.</p>'+
@@ -1186,6 +1544,15 @@ function _papFmtArmar(pref, tipo, paquete, alElegir, guardarP){
     };
   }
   $(pref+'-pdf').onclick=sacar('pdf'); $(pref+'-imp').onclick=sacar('imp');
+  /* 17/10/2026 · lote 14 */
+  var op=$(pref+'-fmt-op');
+  if(op && PAPA) op.onchange=function(ev){
+    var e=ev.target;
+    if(e.name==='papa-vm') PAPA.d.vm=(e.value==='letra') ? 'letra' : 'fondo';
+    else if(e.id==='papa-una') PAPA.d.una=!!e.checked;
+    else return;
+    _papaCambio(); pinta();
+  };
   pinta();
 }
 /* ── guardar ── */
@@ -1206,6 +1573,10 @@ function _papaPaquete(){
   o.resp={ cap:gesTxt(d.resp.cap).slice(0, 80), ing:gesTxt(d.resp.ing).slice(0, 80), sst:gesTxt(d.resp.sst).slice(0, 80) };
   o.vb=d.vb||{}; o.devuelto=d.devuelto||null;
   o.fmt=papModelo('ats', d.fmt).k; o.web=1;
+  /* 17/10/2026 · lote 14 */
+  if(d.vm==='letra') o.vm='letra'; else delete o.vm;
+  if(d.una) o.una=1; else delete o.una;
+  if(!o.preg || typeof o.preg!=='object' || !Object.keys(o.preg).length) delete o.preg;
   if(PAPA.modelo) o.modelo=true; else delete o.modelo;
   o.estado=atsEstadoDe(o);
   return o;

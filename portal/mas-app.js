@@ -677,7 +677,9 @@ var COMITE_LADOS = [
 var COMITE_TIPOS = {
   instalacion:   'Constitución e instalación',
   ordinaria:     'Reunión ordinaria',
-  extraordinaria:'Reunión extraordinaria'
+  extraordinaria:'Reunión extraordinaria',
+  /* 17/10/2026 · lote 16 · el acta de la elección (la que se sube escaneada; la de OBRASST sale de «La elección») */
+  eleccion:      'Elección de representantes'
 };
 function comiteSello(c, bloque){
   var ahora=Date.now(), antes=+c.ts||0;
@@ -725,6 +727,10 @@ function comiteFusion(mio, ajeno){
     var v = (qui[k]!=null) ? qui[k] : quiOtro[k];
     if(v!=null) out[k] = v;
   });
+  /* 17/10/2026 · lote 16 · la elección de los representantes tiene su propio reloj (elec.ts): gana la más nueva */
+  var el = [mio.elec, ajeno.elec].filter(function(x){ return x && typeof x==='object'; })
+             .sort(function(x, y){ return (+y.ts||0) - (+x.ts||0); })[0];
+  if(el) out.elec = celElecFusion(el, (el === mio.elec) ? ajeno.elec : mio.elec);   /* 20/10/2026 · lote 21: la urna no se pisa */
   /* 07/10/2026 · EL ACTA QUITADA VOLVÍA. Las actas se unen por id, así
      que la que se quitaba en un equipo seguía viva en el otro —o en la
      nube— y regresaba en la siguiente bajada. La que se quita deja su
@@ -904,7 +910,7 @@ function comiteMesesDelAnio(anio){
   var act=comiteActasDe(anio), hoy=hoyISO(), ymHoy=hoy.slice(0,7), out=[];
   for(var m=1;m<=12;m++){
     var ym=anio+'-'+dosD(m);
-    var ord=act.filter(function(a){ return String(a.fecha).slice(0,7)===ym && a.tipo!=='extraordinaria'; })[0]||null;
+    var ord=act.filter(function(a){ return String(a.fecha).slice(0,7)===ym && a.tipo!=='extraordinaria' && a.tipo!=='eleccion'; })[0]||null;
     var estado = ord ? 'hecha' : (ym < ymHoy ? 'perdida' : (ym===ymHoy ? 'toca' : 'futura'));
     out.push({ mes:m, ym:ym, acta:ord, estado:estado,
                extra: act.filter(function(a){ return String(a.fecha).slice(0,7)===ym && a.tipo==='extraordinaria'; }) });
@@ -1002,6 +1008,14 @@ function comiteActaPDF(id){
     doc.splitTextToSize(String(t||'—'), W-2*M).forEach(function(l){ salto(14); doc.text(l, M, y); y+=13; });
     y+=6;
   }
+  /* 17/10/2026 · lote 16 · el acta que se subió escaneada: el papel firmado es el archivo; aquí queda su ficha */
+  if(a.subida){
+    titulo('Acta escaneada');
+    parrafo('Esta acta se subió escaneada'+(a.archivo?' ('+a.archivo+')':'')+'. El documento firmado es el archivo subido; esta hoja deja constancia de su número, su tipo y su fecha.');
+    _comPie(doc,W,H,M);
+    entregarPDF(doc, 'acta-comite-'+(a.n||'sn')+'-'+String(a.fecha||'').slice(0,10)+'.pdf');
+    return;
+  }
   /* quórum: el dato que decide si la reunión valió */
   var tit=d.miembros.filter(function(m){ return !m.sup; }).length;
   var asis=(a.asistentes||[]).length, q=comiteQuorum();
@@ -1015,8 +1029,23 @@ function comiteActaPDF(id){
           (comiteHuboQuorum(a) ? 'La sesión se realizó con quórum.'
                                : 'La sesión se realizó SIN quórum; corresponde citar a nueva reunión dentro de los ocho días siguientes.'));
   }
+  /* lote 16 · los invitados de la reunión (el médico ocupacional, un técnico…) */
+  var inv=(a.inv||[]).filter(function(x){ return x && x.n; });
+  if(inv.length){ titulo('Invitados'); parrafo(inv.map(function(x){ return x.n+(x.c?' ('+x.c+')':''); }).join('   ·   ')); }
   if(a.agenda){ titulo('Agenda'); parrafo(a.agenda); }
   if(a.desarrollo){ titulo('Desarrollo'); parrafo(a.desarrollo); }
+  /* lote 16 · el control de los acuerdos anteriores (D.S. 005-2012-TR, art. 42 q): lo que se revisó en esta reunión */
+  var seg=(a.seg||[]).filter(function(x){ return x && x.t; });
+  if(seg.length){
+    titulo('Seguimiento de los acuerdos anteriores');
+    seg.forEach(function(s){
+      salto(30);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(20,20,20);
+      doc.splitTextToSize('· '+String(s.t||''), W-2*M-120).forEach(function(l){ doc.text(l, M, y); y+=13; });
+      doc.setFontSize(8.5); doc.setTextColor(110,110,110);
+      doc.text((s.n?'Del acta N° '+s.n+'     ':'')+'Estado: '+(s.hecho?'CUMPLIDO':'PENDIENTE'), M, y); y+=18;
+    });
+  }
 
   if((a.acuerdos||[]).length){
     titulo('Acuerdos');
@@ -1031,24 +1060,39 @@ function comiteActaPDF(id){
     });
   }
 
-  /* firmas: dos columnas, línea y nombre */
-  titulo('Firmas de los asistentes');
-  var col=0, x0=M, ancho=(W-2*M-24)/2;
-  (a.asistentes||[]).forEach(function(idm){
-    var m=nom[idm]; if(!m) return;
-    salto(64);
-    var x = x0 + col*(ancho+24);
-    doc.setDrawColor(150,150,150); doc.setLineWidth(0.7);
-    doc.line(x, y+34, x+ancho, y+34);
-    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,30,30);
-    doc.splitTextToSize(m.nombre||'', ancho).slice(0,1).forEach(function(l){ doc.text(l, x, y+46); });
-    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
-    doc.text((m.cargo==='presidente'?'Presidente':(m.cargo==='secretario'?'Secretario':'Miembro'))+
-             ' · '+(m.lado==='empleador'?'Del empleador':'De los trabajadores')+(m.dni?' · '+etDoc(m.dni)+' '+m.dni:''), x, y+57);
-    col++;
-    if(col===2){ col=0; y+=78; }
+  /* lote 16 · la próxima reunión, que queda dicha en el acta */
+  if(a.prox && a.prox.f){
+    titulo('Próxima reunión');
+    parrafo((fechaLarga(a.prox.f)||a.prox.f)+(a.prox.h?', a las '+a.prox.h:'')+(a.prox.l?' · '+a.prox.l:'')+'.');
+  }
+
+  /* firmas: dos columnas, línea y nombre; 17/10/2026 · lote 16 · cada representación por su lado (el empleador y los
+     trabajadores firman el acta), y los invitados al final */
+  function firmas(lista){
+    var col=0, x0=M, ancho=(W-2*M-24)/2;
+    lista.forEach(function(f){
+      salto(64);
+      var x = x0 + col*(ancho+24);
+      doc.setDrawColor(150,150,150); doc.setLineWidth(0.7);
+      doc.line(x, y+34, x+ancho, y+34);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,30,30);
+      doc.splitTextToSize(f.n||'', ancho).slice(0,1).forEach(function(l){ doc.text(l, x, y+46); });
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
+      doc.text(doc.splitTextToSize(f.c||'', ancho)[0]||'', x, y+57);
+      col++;
+      if(col===2){ col=0; y+=78; }
+    });
+    if(col===1) y+=78;
+  }
+  var _fm=function(m){ return { n:m.nombre, c:(m.cargo==='presidente'?'Presidente':(m.cargo==='secretario'?'Secretario':'Miembro'))+
+             ' · '+(m.lado==='empleador'?'Del empleador':'De los trabajadores')+(m.dni?' · '+etDoc(m.dni)+' '+m.dni:'') }; };
+  var _asis=(a.asistentes||[]).map(function(idm){ return nom[idm]; }).filter(Boolean);
+  [['empleador','Firmas · representantes del empleador'], ['trabajador','Firmas · representantes de los trabajadores']].forEach(function(L){
+    var g=_asis.filter(function(m){ return (m.lado==='empleador' ? 'empleador' : 'trabajador')===L[0]; });
+    if(!g.length) return;
+    titulo(L[1]); firmas(g.map(_fm));
   });
-  if(col===1) y+=78;
+  if(inv.length){ titulo('Firmas · invitados'); firmas(inv.map(function(x){ return { n:x.n, c:(x.c||'Invitado') }; })); }
   _comPie(doc,W,H,M);
   entregarPDF(doc, 'acta-comite-'+(a.n||'sn')+'-'+String(a.fecha||'').slice(0,10)+'.pdf');
 }
@@ -1116,8 +1160,12 @@ function comiteLibroPDF(anio0){
   actas.slice().sort(function(x,y2){ return String(x.fecha||'').localeCompare(String(y2.fecha||'')); }).forEach(function(a){
     titulo('Acta N° '+(a.n||'—')+' · '+(COMITE_TIPOS[a.tipo]||'Reunión'));
     linea('Fecha', (fechaLarga(a.fecha)||a.fecha)+(a.hora?'  ·  '+a.hora:'')+(a.lugar?'  ·  '+a.lugar:''));
+    /* 17/10/2026 · lote 16 · la que se subió escaneada: el papel firmado es el archivo */
+    if(a.subida){ parrafoLibro('Acta escaneada'+(a.archivo?': '+a.archivo:'')+'. El documento firmado es el archivo subido.'); y+=6; return; }
     linea('Asistencia', (a.asistentes||[]).length+' de '+d.miembros.filter(function(m){return !m.sup;}).length+
                         ((typeof esRD==='function' && esRD()) ? '' : '  ·  '+(comiteHuboQuorum(a)?'con quórum':'SIN quórum')));
+    var _inv=(a.inv||[]).filter(function(x){ return x && x.n; });
+    if(_inv.length) linea('Invitados', _inv.map(function(x){ return x.n+(x.c?' ('+x.c+')':''); }).join(' · '));
     if(a.agenda) parrafoLibro('Agenda: '+a.agenda);
     if(a.desarrollo) parrafoLibro(a.desarrollo);
     (a.acuerdos||[]).forEach(function(ac,i){
@@ -1128,6 +1176,7 @@ function comiteLibroPDF(anio0){
       doc.text('Responsable: '+(ac.quien||'—')+'   Plazo: '+(ac.plazo||'sin plazo')+'   '+(ac.hecho?'CUMPLIDO':'PENDIENTE'), M, y);
       y+=18;
     });
+    if(a.prox && a.prox.f) linea('Próxima reunión', (fechaLarga(a.prox.f)||a.prox.f)+(a.prox.h?'  ·  '+a.prox.h:'')+(a.prox.l?'  ·  '+a.prox.l:''));
     y+=6;
   });
   if(!actas.length) parrafoLibro('No hay actas registradas en '+anio+'.');
@@ -1330,6 +1379,637 @@ function _pdfDiplomaTdm(g, mes, puesto, oficial){
   }
   return doc.output('blob');
 }
+/* >>> COMITE-ELECCION-INI (lote 16 · se edita aquí; su copia va en portal/mas-app.js, herr/copias.py la revisa) <<< */
+/* ══ LA ELECCIÓN DE LOS REPRESENTANTES DE LOS TRABAJADORES (17/10/2026, lote 16) ═════════════════════════════════
+   Marcelo: «el comité o supervisor de SST electo y sus actas: el proceso de elección, las actas de elección, de
+   instalación y las mensuales, la asistencia de las reuniones, los acuerdos con su fecha y la próxima reunión, las
+   firmas de las dos representaciones, y cargar lo que ya tengan».
+   LO QUE DICE LA NORMA (leído en El Peruano el 17/10/2026):
+   · D.S. 005-2012-TR, art. 49 (texto del D.S. 001-2021-TR): los trabajadores eligen a sus representantes, titulares y
+     suplentes; el proceso está a cargo de la organización sindical mayoritaria; es presencial o no presencial, por
+     votación secreta y directa, y no participa el personal de dirección y de confianza.
+   · R.M. 245-2021-TR (publicada el 11/12/2021; derogó la R.M. 148-2012-TR): convoca el sindicato mayoritario —si no
+     hay, el más representativo—; si no hay sindicato, o no convoca dentro de los 30 días calendario de pedírselo, lo
+     organiza el empleador, que lo pide por lo menos 60 días calendario antes de que venza el mandato. Junta electoral:
+     presidente, secretario, primer y segundo vocal (trabajadores de 18 años o más, que no sean de dirección ni de
+     confianza, ni candidatos ni personeros). Entre la publicación de los candidatos inscritos y la elección median
+     15 días hábiles. Gana la mayoría simple y el empate se resuelve por sorteo delante de los involucrados. La junta
+     levanta el acta con los elegidos, titulares y suplentes, y se la manda al empleador. La instalación se convoca
+     dentro de los 10 días hábiles siguientes a la elección; presidente y secretario, por consenso. El mandato dura de
+     1 a 2 años desde la instalación.
+     Su art. 2 la deja FUERA donde rige la guía de elección de los sub-comités en obras de construcción: en el
+     sub-comité y el supervisor de una obra la app guía los mismos pasos, pero no impone esos plazos ni esas reglas.
+   Lo que no está verificado no se escribe (ni cuántas marcas hace cada elector, ni los requisitos del art. 47).
+   Se guarda dentro del comité de la obra (comite.elec), con su propio reloj (elec.ts): la app y la web lo juntan
+   sin pisarse.
+   20/10/2026 · lote 20 · Marcelo: «El proceso de elección del supervisor SST, del subcomité SST, mejóralo, tanto en la web
+   como en la app». Se suma: los electores salen del personal (sin el de dirección y de confianza, que se marca a mano: la
+   app solo sugiere los puestos que suelen serlo), el conteo cédula por cédula (o los totales, como antes) y los papeles del
+   día: el padrón de electores para firmar, la lista de los candidatos aptos para publicar y las cédulas para imprimir.
+   Cuántas marcas lleva cada cédula lo pone la convocatoria (de entrada, una): la app no lo da por norma. ══════════ */
+var CEL_QUIEN = [['sindicato', 'El sindicato mayoritario'], ['sindicato2', 'El sindicato más representativo'], ['empleador', 'El empleador']];
+var CEL_MODO = [['presencial', 'Presencial'], ['no_presencial', 'No presencial (por internet)'], ['semipresencial', 'Semipresencial']];
+var CEL_JE = [['pres', 'Presidente'], ['sec', 'Secretario'], ['voc1', 'Primer vocal'], ['voc2', 'Segundo vocal']];
+var CEL_MANDATO = [['1', '1 año'], ['2', '2 años'], ['obra', 'Lo que dure la obra']];
+function _celN(x){ var n = parseInt(x, 10); return (isFinite(n) && n > 0) ? n : 0; }
+function _celF(x){ var s = String(x || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
+function _celH(x){ var s = String(x || ''); return /^([01]\d|2[0-3]):[0-5]\d$/.test(s) ? s : ''; }
+function _celT(x, n){ return String(x == null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, n || 120); }
+/* ¿la elección es de una obra de construcción? (sub-comité o supervisor de la obra: la R.M. 245-2021-TR no rige) */
+function celDeObra(toca){ return !!(toca && toca.ambito === 'obra'); }
+/* lo que se elige, dicho para el papel */
+function celCuerpo(toca){
+  if(!toca) return 'Comité de Seguridad y Salud en el Trabajo';
+  if(toca.tipo === 'supervisor') return toca.ambito === 'obra' ? 'Supervisor de Seguridad y Salud en el Trabajo de la obra' : 'Supervisor de Seguridad y Salud en el Trabajo';
+  return toca.tipo === 'subcomite' ? 'Sub-comité de Seguridad y Salud en el Trabajo' : 'Comité de Seguridad y Salud en el Trabajo';
+}
+/* la elección guardada, bien formada; si no hay, una nueva con lo que le toca a la obra */
+function celDe(c, toca){
+  var e = (c && c.elec && typeof c.elec === 'object') ? c.elec : null, i;
+  toca = toca || comiteLoQueToca(comiteCuantos());
+  var solo = (toca.tipo === 'supervisor'), titDef = solo ? 1 : Math.max(1, Math.round((toca.min || 4) / 2));
+  var cv = (e && e.conv) || {}, v = (e && e.vot) || {};
+  var o = { ts:(e ? (+e.ts || 0) : 0), eid:((e && e.eid) ? String(e.eid).slice(0, 40) : ''), pasado:(e ? (+e.pasado || 0) : 0), cerrada:(e ? (+e.cerrada || 0) : 0), conv:{}, je:[], cands:[], vot:{}, excl:{} };
+  var ex = (e && e.excl && typeof e.excl === 'object' && !Array.isArray(e.excl)) ? e.excl : {};
+  Object.keys(ex).slice(0, 4000).forEach(function(k){ o.excl[String(k).slice(0, 160)] = ex[k] ? 1 : 0; });
+  o.conv = { fecha:_celF(cv.fecha), quien:(['sindicato', 'sindicato2', 'empleador'].indexOf(cv.quien) > -1 ? cv.quien : 'empleador'),
+             tit:Math.min(6, _celN(cv.tit) || titDef), sup:(cv.sup === 0 || cv.sup === '0') ? 0 : Math.min(6, _celN(cv.sup) || (solo ? 0 : titDef)),
+             mandato:(['1', '2', 'obra'].indexOf(String(cv.mandato)) > -1 ? String(cv.mandato) : (toca.mandato === 'obra' ? 'obra' : '2')),
+             modo:(['presencial', 'no_presencial', 'semipresencial'].indexOf(cv.modo) > -1 ? cv.modo : 'presencial'),
+             insc:_celF(cv.insc), pub:_celF(cv.pub), dia:_celF(cv.dia), hora:_celH(cv.hora) || '08:00', hasta:_celH(cv.hasta) || '17:00', lugar:_celT(cv.lugar),
+             marcas:Math.min(6, Math.max(1, _celN(cv.marcas) || 1)) };
+  for(i = 0; i < CEL_JE.length; i++){
+    var r = CEL_JE[i][0], x = ((e && e.je) || []).filter(function(j){ return j && j.rol === r; })[0] || {};
+    o.je.push({ rol:r, nombre:_celT(x.nombre), dni:_celT(x.dni, 20) });
+  }
+  o.cands = ((e && e.cands) || []).filter(function(x){ return x && _celT(x.nombre); }).slice(0, 60).map(function(x){
+    var vt = (x.votos === '' || x.votos == null) ? null : Math.max(0, parseInt(x.votos, 10) || 0);
+    return { id:String(x.id || ('cc' + Math.random().toString(36).slice(2, 9))), nombre:_celT(x.nombre), dni:_celT(x.dni, 20), puesto:_celT(x.puesto, 80),
+             apto:(x.apto === 0 ? 0 : 1), votos:vt, s:+x.s || 0 };
+  });
+  o.vot = { electores:_celN(v.electores), votantes:_celN(v.votantes), blancos:_celN(v.blancos), nulos:_celN(v.nulos), sorteo:_celT(v.sorteo, 300),
+            modo:(['conteo', 'mesa', 'remoto'].indexOf(v.modo) > -1 ? v.modo : 'totales'), log:(Array.isArray(v.log) ? v.log : []).slice(0, 5000).map(function(x){ return String(x).slice(0, 400); }),
+            /* 20/10/2026 · lote 21 · la votación en el celular (la urna) y las que se anularon */
+            urna:celUrnaLimpia(v.urna), anul:(Array.isArray(v.anul) ? v.anul : []).slice(-10).filter(function(x){ return x && x.id; }).map(function(x){
+              return { id:String(x.id).slice(0, 60), modo:(x.modo === 'remoto' ? 'remoto' : 'mesa'), ab:+x.ab || 0, ce:+x.ce || 0, n:_celN(x.n) }; }) };
+  return o;
+}
+/* ── 20/10/2026 · lote 20 · los electores, el conteo cédula por cédula ── */
+/* los puestos que suelen ser de dirección o de confianza: solo una sugerencia, lo decide quien organiza */
+var CEL_DIR = /(gerente|residente|jefe de obra|jefe de proyecto|jefe de oficina tecnica|jefe de produccion|administrador|superintendente|director|apoderad|representante legal)/;
+function _celSinT(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+function celDirSugerido(puesto){ return CEL_DIR.test(_celSinT(puesto)); }
+/* la llave de una persona en la elección: su documento o, si no lo tiene, su nombre */
+function celClave(t){ var d = _celT(t && t.dni, 20).toUpperCase(); return d ? 'd:' + d : 'n:' + _normNom((t && t.nombre) || ''); }
+/* los electores: el personal activo, cada uno con «fuera» (no vota: dirección o confianza) */
+function celElectores(trabs, E){
+  var vistos = {}, L = [], ex = (E && E.excl) || {};
+  (trabs || []).forEach(function(t){
+    if(!t || !_celT(t.nombre) || t.cesado === true || String(t.estatus || 'activo') === 'cesado') return;
+    var k = celClave(t); if(vistos[k]) return; vistos[k] = 1;
+    var dir = celDirSugerido(t.puesto);
+    L.push({ k:k, nombre:_celT(t.nombre), dni:_celT(t.dni, 20), puesto:_celT(t.puesto, 80), dir:dir, fuera:Object.prototype.hasOwnProperty.call(ex, k) ? !!ex[k] : dir });
+  });
+  return L.sort(function(a, b){ return a.nombre.localeCompare(b.nombre, 'es'); });
+}
+/* el conteo: cada cédula es «b» (en blanco), «n» (nula) o los candidatos marcados (sus id, unidos con «+») */
+function celConteo(E){
+  var R = { cedulas:0, blancos:0, nulos:0, votos:{} };
+  E.cands.forEach(function(c){ R.votos[c.id] = 0; });
+  (E.vot.log || []).forEach(function(x){
+    R.cedulas++;
+    if(x === 'b'){ R.blancos++; return; }
+    if(x === 'n'){ R.nulos++; return; }
+    String(x).split('+').forEach(function(id){ if(Object.prototype.hasOwnProperty.call(R.votos, id)) R.votos[id]++; });
+  });
+  return R;
+}
+/* el conteo pasa a los votos de cada candidato (lo que leen el resultado y el acta) */
+function celConteoAplicar(E){
+  var C = celConteo(E);
+  E.cands.forEach(function(c){ c.votos = c.apto ? (C.votos[c.id] || 0) : null; });
+  E.vot.blancos = C.blancos; E.vot.nulos = C.nulos; E.vot.votantes = C.cedulas;
+  return C;
+}
+/* el mismo día del mes siguiente (o el último, si ese mes es más corto): la próxima reunión que se propone */
+function celMesSiguiente(f){
+  f = _celF(f); if(!f) return '';
+  var y = +f.slice(0, 4), m = +f.slice(5, 7) + 1, dd = +f.slice(8, 10); if(m > 12){ m = 1; y++; }
+  var ult = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return y + '-' + (m < 10 ? '0' : '') + m + '-' + (Math.min(dd, ult) < 10 ? '0' : '') + Math.min(dd, ult);
+}
+/* la próxima reunión del comité: la que dejó dicha el acta más reciente, si todavía no pasó */
+function comiteProxima(){
+  var hoy = hoyISO(), mejor = null;
+  (comiteLocal().actas || []).forEach(function(a){
+    if(!a || !a.prox || !_celF(a.prox.f) || a.prox.f < hoy) return;
+    if(!mejor || String(a.fecha || '') > String(mejor.fecha || '')) mejor = a;
+  });
+  return mejor ? { f:mejor.prox.f, h:_celH(mejor.prox.h), l:_celT(mejor.prox.l, 90), acta:mejor.id, n:mejor.n } : null;
+}
+/* los días hábiles (de lunes a viernes, sin contar feriados) que median entre dos fechas */
+function celHabiles(a, b){
+  a = _celF(a); b = _celF(b); if(!a || !b || b <= a) return 0;
+  var d = new Date(a + 'T12:00:00Z'), fin = new Date(b + 'T12:00:00Z'), n = 0;
+  d.setUTCDate(d.getUTCDate() + 1);
+  while(d < fin){ var w = d.getUTCDay(); if(w !== 0 && w !== 6) n++; d.setUTCDate(d.getUTCDate() + 1); }
+  return n;
+}
+/* la fecha que cae n días hábiles después */
+function celMasHabiles(a, n){
+  a = _celF(a); if(!a) return '';
+  var d = new Date(a + 'T12:00:00Z'), k = 0;
+  while(k < n){ d.setUTCDate(d.getUTCDate() + 1); var w = d.getUTCDay(); if(w !== 0 && w !== 6) k++; }
+  return d.toISOString().slice(0, 10);
+}
+/* el conteo: los aptos ordenados por votos (y por el sorteo, si hubo empate), los titulares y los suplentes */
+function celResultado(E){
+  var aptos = E.cands.filter(function(x){ return x.apto; }), conVotos = aptos.filter(function(x){ return x.votos !== null; });
+  var orden = conVotos.slice().sort(function(a, b){ return (b.votos - a.votos) || (b.s - a.s) || a.nombre.localeCompare(b.nombre); });
+  var nT = E.conv.tit, nS = E.conv.sup, R = { orden:orden, tit:[], sup:[], empates:[], validos:0, emitidos:0, contado:false, listo:false };
+  orden.forEach(function(x){ R.validos += x.votos; });
+  R.emitidos = R.validos + (E.vot.blancos || 0) + (E.vot.nulos || 0);
+  if(!aptos.length || conVotos.length < aptos.length) return R;
+  R.contado = true;
+  R.tit = orden.slice(0, nT); R.sup = orden.slice(nT, nT + nS);
+  /* el empate justo en el corte (el último que entra y el primero que queda fuera, con los mismos votos y sin sorteo) */
+  [[nT, 'titular'], [nT + nS, 'suplente']].forEach(function(c){
+    var k = c[0]; if(k <= 0 || k >= orden.length || (c[1] === 'suplente' && !nS)) return;
+    var a = orden[k - 1], b = orden[k];
+    if(a.votos === b.votos && a.votos > 0 && a.s === b.s)
+      R.empates.push({ en:c[1], votos:a.votos, ids:orden.filter(function(x){ return x.votos === a.votos; }).map(function(x){ return x.id; }) });
+  });
+  R.listo = !R.empates.length && R.tit.length > 0 && R.validos > 0;
+  return R;
+}
+/* en qué va: 0 sin convocar · 1 convocada · 2 con junta · 3 con candidatos · 4 votando · 5 con resultado · 6 en el padrón */
+function celPaso(E){
+  if(E.pasado) return 6;
+  if(celResultado(E).listo) return 5;
+  if(E.cands.some(function(x){ return x.votos !== null; })) return 4;
+  if(E.cands.length) return 3;
+  if(E.je.some(function(j){ return j.nombre; })) return 2;
+  if(E.conv.dia) return 1;
+  return 0;
+}
+/* lo que no cuadra, en cristiano. Las reglas de la R.M. 245-2021-TR solo donde rige (no en las obras) */
+function celAvisos(E, toca, trabs){
+  var a = [], rm = !celDeObra(toca), nT = E.conv.tit;
+  if(!E.conv.dia) a.push('Falta la fecha de la elección.');
+  if(E.conv.insc && E.conv.pub && E.conv.pub < E.conv.insc) a.push('La publicación de los candidatos va después del cierre de la inscripción.');
+  if(E.conv.dia && E.conv.pub && E.conv.dia <= E.conv.pub) a.push('La elección va después de la publicación de los candidatos.');
+  if(rm && E.conv.pub && E.conv.dia && E.conv.dia > E.conv.pub){
+    var h = celHabiles(E.conv.pub, E.conv.dia);
+    if(h < 15) a.push('Entre la publicación de los candidatos y la elección hay ' + h + (h === 1 ? ' día hábil' : ' días hábiles') + ' (sin contar feriados), y la R.M. 245-2021-TR pide 15.');
+  }
+  if(E.conv.fecha && E.conv.dia && E.conv.dia < E.conv.fecha) a.push('La elección no puede ser antes de la convocatoria.');
+  var je = E.je.filter(function(j){ return j.nombre; });
+  if(!je.length) a.push('Falta la junta electoral.');
+  if(rm){
+    var nj = {}; je.forEach(function(j){ nj[_normNom(j.nombre)] = 1; if(j.dni) nj['#' + j.dni] = 1; });
+    E.cands.forEach(function(c){ if(nj[_normNom(c.nombre)] || (c.dni && nj['#' + c.dni])) a.push(c.nombre + ' está en la junta electoral y de candidato: la R.M. 245-2021-TR no lo permite.'); });
+  }
+  /* 20/10/2026 · lote 20 · el candidato que figura como de dirección o de confianza (según la lista de electores) */
+  if(trabs && trabs.length){
+    var fuera = {}; celElectores(trabs, E).forEach(function(x){ if(x.fuera) fuera[x.k] = 1; });
+    E.cands.forEach(function(c){ if(c.apto && fuera[celClave(c)]) a.push(c.nombre + ' figura como personal de dirección o de confianza: no participa en la elección.'); });
+  }
+  var aptos = E.cands.filter(function(c){ return c.apto; }).length;
+  if(E.cands.length && aptos < nT) a.push('Hay ' + aptos + (aptos === 1 ? ' candidato apto' : ' candidatos aptos') + ' para ' + nT + (nT === 1 ? ' puesto de titular.' : ' puestos de titular.'));
+  var R = celResultado(E);
+  if(R.empates.length) a.push('Hay un empate en el último puesto de ' + R.empates[0].en + ': se resuelve por sorteo. Marca quién lo ganó.');
+  if(R.contado && E.vot.votantes && (E.conv.marcas || 1) === 1 && R.emitidos !== E.vot.votantes) a.push('Los votos contados (' + R.emitidos + ') no son los ' + E.vot.votantes + ' de los que votaron.');
+  if(E.vot.electores && E.vot.votantes > E.vot.electores) a.push('Votaron más de los que podían votar.');
+  return a;
+}
+/* los elegidos entran al padrón como representantes de los trabajadores (titulares y suplentes); los que estaban de
+   ese lado salen. Los del empleador no se tocan. Devuelve cuántos entraron. */
+function celAlPadron(d, E, toca){
+  var R = celResultado(E); if(!R.listo) return 0;
+  var solo = (toca && toca.tipo === 'supervisor'), nuevos = [];
+  var poner = function(x, sup){ nuevos.push({ id:'cm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), nombre:x.nombre, dni:x.dni, puesto:x.puesto, lado:'trabajador', sup:sup, cargo:'miembro', elec:1 }); };
+  R.tit.forEach(function(x){ poner(x, 0); });
+  if(!solo) R.sup.forEach(function(x){ poner(x, 1); });
+  d.miembros = (Array.isArray(d.miembros) ? d.miembros : []).filter(function(m){ return solo ? false : m.lado !== 'trabajador'; }).concat(nuevos);
+  d.eleccion = E.conv.dia || d.eleccion || '';
+  if(solo && E.conv.dia && !d.desde) d.desde = E.conv.dia;
+  if(d.elec && typeof d.elec === 'object'){ d.elec.pasado = Date.now(); d.elec.ts = Date.now(); }
+  return nuevos.length;
+}
+/* ── el papel: la convocatoria (para el periódico mural y el grupo) y el acta de la elección ── */
+function _celPdfBase(titulo, sub){
+  var doc = new jspdf.jsPDF({unit:'pt', format:'a4'}), W = 595.28, H = 841.89, M = 46, P = { doc:doc, W:W, H:H, M:M, y:104 };
+  _comHoja(doc, W, M, titulo, sub);
+  P.salto = function(alto){ if(P.y + alto < H - 60) return; _comPie(doc, W, H, M); doc.addPage(); _comHoja(doc, W, M, titulo + ' (continúa)', sub); P.y = 104; };
+  P.tit = function(t){ P.salto(34); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(11, 42, 58); doc.text(String(t).toUpperCase(), M, P.y); P.y += 7;
+    doc.setDrawColor(225, 225, 225); doc.setLineWidth(0.7); doc.line(M, P.y, W - M, P.y); P.y += 15; };
+  P.par = function(t, o){ o = o || {}; doc.setFont('helvetica', o.b ? 'bold' : 'normal'); doc.setFontSize(o.pt || 9.5); doc.setTextColor(35, 35, 35);
+    doc.splitTextToSize(String(t || '—'), W - 2 * M).forEach(function(l){ P.salto(14); doc.text(l, M, P.y); P.y += 13; }); P.y += 6; };
+  P.fila = function(et, val){ P.salto(16); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(130, 130, 130); doc.text(String(et), M, P.y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(30, 30, 30);
+    var l = doc.splitTextToSize(String(val || '—'), W - 2 * M - 150).slice(0, 4); l.forEach(function(x, i){ doc.text(x, M + 150, P.y + i * 12); }); P.y += Math.max(18, l.length * 12 + 6); };
+  /* las firmas, en recuadros de a dos o de a cuatro por renglón */
+  P.firmas = function(L, porFila){
+    porFila = porFila || 2; var g = 16, w = (W - 2 * M - g * (porFila - 1)) / porFila, col = 0;
+    L.forEach(function(f){
+      if(col === 0) P.salto(84);
+      var x = M + col * (w + g);
+      doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.7); doc.line(x, P.y + 40, x + w, P.y + 40);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(30, 30, 30);
+      doc.text(doc.splitTextToSize(String(f.n || ''), w)[0] || '', x, P.y + 52);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(120, 120, 120);
+      doc.text(doc.splitTextToSize(String(f.c || ''), w)[0] || '', x, P.y + 63);
+      col++; if(col === porFila){ col = 0; P.y += 80; }
+    });
+    if(col) P.y += 80;
+  };
+  P.fin = function(nombre){ _comPie(doc, W, H, M); entregarPDF(doc, nombre); };
+  return P;
+}
+function _celFecha(f){ return f ? (fechaLarga(f) || f) : '—'; }
+function _celNorma(toca){ return celDeObra(toca) ? 'D.S. 005-2012-TR, art. 49 · D.S. 011-2019-TR' : 'D.S. 005-2012-TR, art. 49 · R.M. 245-2021-TR'; }
+function celConvocatoriaPDF(){
+  var d = comiteLocal(), toca = comiteLoQueToca(comiteCuantos()), E = celDe(d, toca), e = null;
+  try{ e = empActiva(); }catch(_e){}
+  var obra = (e && e.nombre) || '', emp = (typeof empleador === 'function' ? empleador() : {}) || {}, quien = '';
+  CEL_QUIEN.forEach(function(q){ if(q[0] === E.conv.quien) quien = q[1]; });
+  var P = _celPdfBase('CONVOCATORIA A ELECCIONES', (obra ? obra + '   ·   ' : '') + (E.conv.fecha ? 'Convocada el ' + _celFecha(E.conv.fecha) : ''));
+  var solo = (toca.tipo === 'supervisor');
+  P.par('Se convoca a los trabajadores' + (emp.razon ? ' de ' + emp.razon : '') + (obra ? ' que laboran en ' + obra : '') + ' a la elección de ' +
+        (solo ? 'su Supervisor de Seguridad y Salud en el Trabajo' : 'sus representantes ante el ' + celCuerpo(toca)) + ', por votación secreta y directa. ' +
+        'No participa el personal de dirección y de confianza.', { pt:10.5 });
+  P.tit('Lo que se elige');
+  P.fila('Puestos', solo ? ('1 Supervisor de SST' + (E.conv.sup ? ' y ' + E.conv.sup + (E.conv.sup === 1 ? ' suplente' : ' suplentes') : ''))
+                         : (E.conv.tit + (E.conv.tit === 1 ? ' representante titular' : ' representantes titulares') + (E.conv.sup ? ' y ' + E.conv.sup + (E.conv.sup === 1 ? ' suplente' : ' suplentes') : '')));
+  var md = ''; CEL_MANDATO.forEach(function(m){ if(m[0] === E.conv.mandato) md = m[1]; });
+  P.fila('Mandato', md + (E.conv.mandato === 'obra' ? '' : ', desde la instalación'));
+  var mo = ''; CEL_MODO.forEach(function(m){ if(m[0] === E.conv.modo) mo = m[1]; });
+  P.fila('Modalidad', mo);
+  P.fila('Convoca', quien + (emp.razon && E.conv.quien === 'empleador' ? ' (' + emp.razon + ')' : ''));
+  P.tit('El cronograma');
+  P.fila('Inscripción de candidatos', E.conv.insc ? 'Hasta el ' + _celFecha(E.conv.insc) : '—');
+  P.fila('Publicación de los aptos', _celFecha(E.conv.pub));
+  P.fila('Elección', _celFecha(E.conv.dia) + (E.conv.hora ? ', de ' + E.conv.hora + (E.conv.hasta ? ' a ' + E.conv.hasta : '') : '') + (E.conv.lugar ? ' · ' + E.conv.lugar : ''));
+  var je = E.je.filter(function(j){ return j.nombre; });
+  if(je.length){
+    P.tit('La junta electoral');
+    je.forEach(function(j){ var r = ''; CEL_JE.forEach(function(x){ if(x[0] === j.rol) r = x[1]; }); P.fila(r, j.nombre + (j.dni ? '  ·  ' + etDoc(j.dni) + ' ' + j.dni : '')); });
+  }
+  P.tit('Quiénes votan');
+  P.par('Todos los trabajadores de la ' + (celDeObra(toca) ? 'obra' : 'empresa') + ', salvo el personal de dirección y de confianza. Cada uno vota una sola vez.' +
+        ((!celDeObra(toca) && E.conv.modo !== 'no_presencial') ? ' En la mesa, la firma y la huella digital del elector son requisito para depositar su voto.' : ''));
+  P.par('Base: ' + _celNorma(toca) + '.', { pt:8 });
+  P.y += 30;
+  P.firmas([{ n:(E.conv.quien === 'empleador' ? (emp.razon || 'El empleador') : quien), c:'Convoca' }], 2);
+  P.fin('convocatoria-eleccion-' + (E.conv.dia || 'sin-fecha') + '.pdf');
+}
+function celActaPDF(){
+  var d = comiteLocal(), toca = comiteLoQueToca(comiteCuantos()), E = celDe(d, toca), R = celResultado(E), e = null;
+  try{ e = empActiva(); }catch(_e){}
+  var obra = (e && e.nombre) || '', emp = (typeof empleador === 'function' ? empleador() : {}) || {}, solo = (toca.tipo === 'supervisor');
+  var P = _celPdfBase('ACTA DE ELECCIÓN', (obra ? obra + '   ·   ' : '') + _celFecha(E.conv.dia));
+  P.par('En ' + (E.conv.lugar || (obra || 'el centro de trabajo')) + ', el ' + _celFecha(E.conv.dia) + (E.conv.hora ? ', desde las ' + E.conv.hora + (E.conv.hasta ? ' hasta las ' + E.conv.hasta : '') : '') +
+        ', se llevó a cabo la elección ' + (solo ? 'del Supervisor de Seguridad y Salud en el Trabajo' : 'de los representantes de los trabajadores ante el ' + celCuerpo(toca)) +
+        (emp.razon ? ' de ' + emp.razon : '') + ', por votación secreta y directa, conducida por la junta electoral.', { pt:10 });
+  var je = E.je.filter(function(j){ return j.nombre; });
+  if(je.length){ P.tit('La junta electoral'); je.forEach(function(j){ var r = ''; CEL_JE.forEach(function(x){ if(x[0] === j.rol) r = x[1]; }); P.fila(r, j.nombre + (j.dni ? '  ·  ' + etDoc(j.dni) + ' ' + j.dni : '')); }); }
+  P.tit('La votación');
+  if(E.vot.electores) P.fila('Electores hábiles', String(E.vot.electores));
+  if(E.vot.votantes) P.fila('Votaron', String(E.vot.votantes) + (E.vot.electores ? '  (' + Math.round(E.vot.votantes * 100 / E.vot.electores) + ' %)' : ''));
+  P.fila('Votos válidos', String(R.validos));
+  P.fila('En blanco · nulos', (E.vot.blancos || 0) + ' · ' + (E.vot.nulos || 0));
+  /* 20/10/2026 · lote 21 · si se votó en el celular, el acta lo dice y lleva el código de integridad */
+  var uu = E.vot.urna;
+  if(uu && uu.ce) P.fila('Cómo se votó', (uu.modo === 'mesa' ? 'En el celular de la mesa (presencial)' : 'Cada elector desde su celular (no presencial)') +
+                         '. Va con su acta de la votación' + (uu.sello ? ', código de integridad ' + uu.sello.slice(0, 16) + '…' : '') + '.');
+  P.tit('Los resultados');
+  var doc = P.doc, W = P.W, M = P.M, cx = [M, M + 26, M + 276, M + 366, M + 430];
+  P.salto(30); doc.setFillColor(11, 42, 58); doc.rect(M, P.y - 11, W - 2 * M, 16, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(255, 255, 255);
+  ['N.º', 'CANDIDATO', 'DOCUMENTO', 'VOTOS', 'RESULTADO'].forEach(function(t, i){ doc.text(t, cx[i] + 4, P.y); }); P.y += 16;
+  var tit = {}, sup = {}; R.tit.forEach(function(x){ tit[x.id] = 1; }); R.sup.forEach(function(x){ sup[x.id] = 1; });
+  R.orden.forEach(function(x, i){
+    P.salto(18); doc.setFont('helvetica', (tit[x.id] || sup[x.id]) ? 'bold' : 'normal'); doc.setFontSize(9); doc.setTextColor(30, 30, 30);
+    doc.text(String(i + 1), cx[0] + 4, P.y); doc.text(doc.splitTextToSize(x.nombre, 244)[0], cx[1] + 4, P.y); doc.text(x.dni || '—', cx[2] + 4, P.y); doc.text(String(x.votos), cx[3] + 4, P.y);
+    doc.text(tit[x.id] ? (solo ? 'ELEGIDO' : 'TITULAR') : (sup[x.id] ? 'SUPLENTE' : '—'), cx[4] + 4, P.y);
+    doc.setDrawColor(230, 230, 230); doc.setLineWidth(0.5); doc.line(M, P.y + 5, W - M, P.y + 5); P.y += 17;
+  });
+  var noAptos = E.cands.filter(function(x){ return !x.apto; });
+  if(noAptos.length){ P.y += 4; P.par('No fueron admitidos como candidatos: ' + noAptos.map(function(x){ return x.nombre; }).join(', ') + '.', { pt:8.5 }); }
+  if(E.vot.sorteo){ P.y += 4; P.par('Empate: ' + E.vot.sorteo, { pt:9 }); }
+  P.y += 6;
+  P.par('La junta electoral proclama ' + (solo ? 'elegido como Supervisor de SST a ' + (R.tit[0] ? R.tit[0].nombre : '—') :
+        'elegidos como representantes titulares a ' + (R.tit.map(function(x){ return x.nombre; }).join(', ') || '—') +
+        (R.sup.length ? ', y como suplentes a ' + R.sup.map(function(x){ return x.nombre; }).join(', ') : '')) +
+        (celDeObra(toca) ? '' : ', y entrega esta acta al empleador para que emita las credenciales') + '.', { pt:10 });
+  P.par('Base: ' + _celNorma(toca) + '.', { pt:8 });
+  P.tit('Firmas de la junta electoral');
+  P.firmas(je.length ? je.map(function(j){ var r = ''; CEL_JE.forEach(function(x){ if(x[0] === j.rol) r = x[1]; }); return { n:j.nombre, c:r + ' de la junta electoral' }; })
+                     : [{ n:'', c:'Presidente de la junta electoral' }, { n:'', c:'Secretario de la junta electoral' }], 2);
+  P.fin('acta-eleccion-' + (E.conv.dia || 'sin-fecha') + '.pdf');
+}
+/* ── 20/10/2026 · lote 20 · los papeles del día: el padrón de electores, los candidatos aptos y las cédulas ── */
+function _celLoQueSeElige(toca){ return toca.tipo === 'supervisor' ? 'del Supervisor de Seguridad y Salud en el Trabajo' : 'de los representantes de los trabajadores ante el ' + celCuerpo(toca); }
+function _celJuntaFirmas(E){
+  var je = E.je.filter(function(j){ return j.nombre; });
+  return je.length ? je.map(function(j){ var r = ''; CEL_JE.forEach(function(x){ if(x[0] === j.rol) r = x[1]; }); return { n:j.nombre, c:r + ' de la junta electoral' }; })
+                   : [{ n:'', c:'Presidente de la junta electoral' }, { n:'', c:'Secretario de la junta electoral' }];
+}
+/* una tabla con su cabecera, que se repite en cada hoja */
+function _celTabla(P, cols, filas, alto){
+  var doc = P.doc, M = P.M, W = P.W;
+  var cab = function(){ doc.setFillColor(11, 42, 58); doc.rect(M, P.y - 11, W - 2 * M, 16, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(255, 255, 255);
+    var x = M; cols.forEach(function(c){ doc.text(c[0], x + 4, P.y); x += c[1]; }); P.y += 16; };
+  P.salto(40); cab();
+  filas.forEach(function(f){
+    var hoja = doc.getNumberOfPages(); P.salto(alto + 4); if(doc.getNumberOfPages() !== hoja){ P.y += 4; cab(); }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(30, 30, 30);
+    var x = M; f.forEach(function(v, i){
+      /* 20/10/2026 · lote 21 · una celda puede ser una firma ({tr}: sus trazos) */
+      if(v && typeof v === 'object' && v.tr) celFirmaPDF(doc, v.tr, x + 4, P.y - 9, cols[i][1] - 8, alto - 4);
+      else if(v) doc.text(doc.splitTextToSize(String(v), cols[i][1] - 8)[0] || '', x + 4, P.y + alto / 2 - 4);
+      x += cols[i][1]; });
+    doc.setDrawColor(215, 215, 215); doc.setLineWidth(0.5);
+    var xx = M; cols.forEach(function(c, i){ if(i) doc.line(xx, P.y - 11, xx, P.y + alto - 11); xx += c[1]; });
+    doc.line(M, P.y + alto - 11, W - M, P.y + alto - 11); P.y += alto;
+  });
+  P.y += 10;
+}
+function celPadronPDF(){
+  var d = comiteLocal(), toca = comiteLoQueToca(comiteCuantos()), E = celDe(d, toca), e = null;
+  try{ e = empActiva(); }catch(_e){}
+  var obra = (e && e.nombre) || '', EL = celElectores(trabsLocal(), E).filter(function(x){ return !x.fuera; });
+  var huella = !celDeObra(toca) && E.conv.modo !== 'no_presencial';
+  var P = _celPdfBase('PADRÓN DE ELECTORES', (obra ? obra + '   ·   ' : '') + 'Elección del ' + _celFecha(E.conv.dia));
+  P.par('Los trabajadores que votan en la elección ' + _celLoQueSeElige(toca) + '. Cada elector firma' + (huella ? ' y pone su huella digital' : '') + ' al recibir su cédula. No votan el personal de dirección ni el de confianza.', { pt:9.5 });
+  var W2 = P.W - 2 * P.M, cols = huella ? [['N.º', 26], ['APELLIDOS Y NOMBRES', 190], ['DOCUMENTO', 74], ['PUESTO', 96], ['FIRMA', 74], ['HUELLA', W2 - 460]]
+                                         : [['N.º', 26], ['APELLIDOS Y NOMBRES', 210], ['DOCUMENTO', 80], ['PUESTO', 110], ['FIRMA', W2 - 426]];
+  _celTabla(P, cols, (EL.length ? EL : [{ nombre:'', dni:'', puesto:'' }]).map(function(x, i){ return [EL.length ? String(i + 1) : '', x.nombre, x.dni ? etDoc(x.dni) + ' ' + x.dni : '', x.puesto, '', ''].slice(0, cols.length); }), 28);
+  P.fila('Electores hábiles', String(EL.length));
+  P.fila('Votaron', '');
+  P.y += 24;
+  P.firmas(_celJuntaFirmas(E), 2);
+  P.fin('padron-electores-' + (E.conv.dia || 'sin-fecha') + '.pdf');
+}
+function celAptosPDF(){
+  var d = comiteLocal(), toca = comiteLoQueToca(comiteCuantos()), E = celDe(d, toca), e = null;
+  try{ e = empActiva(); }catch(_e){}
+  var obra = (e && e.nombre) || '', aptos = E.cands.filter(function(x){ return x.apto; });
+  var P = _celPdfBase('CANDIDATOS APTOS', (obra ? obra + '   ·   ' : '') + (E.conv.pub ? 'Publicado el ' + _celFecha(E.conv.pub) : 'Elección del ' + _celFecha(E.conv.dia)));
+  P.par('La junta electoral publica la relación de los candidatos aptos para la elección ' + _celLoQueSeElige(toca) + '.', { pt:10.5 });
+  _celTabla(P, [['N.º', 30], ['CANDIDATO', 300], ['PUESTO', P.W - 2 * P.M - 330]], aptos.map(function(x, i){ return [String(i + 1), x.nombre, x.puesto]; }), 24);
+  P.tit('La elección');
+  P.fila('Día', _celFecha(E.conv.dia) + (E.conv.hora ? ', de ' + E.conv.hora + (E.conv.hasta ? ' a ' + E.conv.hasta : '') : ''));
+  P.fila('Lugar', E.conv.lugar || '—');
+  var mo = ''; CEL_MODO.forEach(function(m){ if(m[0] === E.conv.modo) mo = m[1]; });
+  P.fila('Modalidad', mo);
+  P.par('Votación secreta y directa. Cada elector vota una sola vez.', { pt:9 });
+  P.y += 24;
+  P.firmas(_celJuntaFirmas(E), 2);
+  P.fin('candidatos-aptos-' + (E.conv.dia || 'sin-fecha') + '.pdf');
+}
+/* las cédulas para imprimir y cortar: de a dos por renglón, tantas como electores (llenando la última hoja) */
+function celCedulasPDF(n){
+  var d = comiteLocal(), toca = comiteLoQueToca(comiteCuantos()), E = celDe(d, toca), e = null;
+  try{ e = empActiva(); }catch(_e){}
+  var obra = (e && e.nombre) || '', aptos = E.cands.filter(function(x){ return x.apto; }), marcas = Math.max(1, Math.min(E.conv.marcas || 1, aptos.length || 1));
+  var doc = new jspdf.jsPDF({unit:'pt', format:'a4'}), W = 595.28, H = 841.89, M = 28, g = 12;
+  var cw = (W - 2 * M - g) / 2, ch = 104 + Math.max(1, aptos.length) * 24;
+  var porCol = Math.max(1, Math.floor((H - 2 * M + g) / (ch + g))), porHoja = porCol * 2;
+  var total = Math.min(1200, Math.max(porHoja, Math.ceil((+n || 0) / porHoja) * porHoja));
+  for(var k = 0; k < total; k++){
+    if(k && k % porHoja === 0) doc.addPage();
+    var pos = k % porHoja, x = M + (pos % 2) * (cw + g), y = M + Math.floor(pos / 2) * (ch + g);
+    doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.6); if(doc.setLineDashPattern) doc.setLineDashPattern([3, 3], 0); doc.rect(x, y, cw, ch); if(doc.setLineDashPattern) doc.setLineDashPattern([], 0);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(11, 42, 58); doc.text('CÉDULA DE VOTACIÓN', x + 12, y + 22);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(70, 70, 70);
+    doc.text(doc.splitTextToSize(celCuerpo(toca), cw - 24)[0], x + 12, y + 36);
+    doc.text(doc.splitTextToSize((obra ? obra + ' · ' : '') + _celFecha(E.conv.dia), cw - 24)[0], x + 12, y + 48);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(30, 30, 30);
+    doc.text(marcas === 1 ? 'Marca con una X un solo recuadro.' : 'Marca con una X hasta ' + marcas + ' recuadros.', x + 12, y + 66);
+    aptos.forEach(function(c, i){
+      var yy = y + 80 + i * 24;
+      doc.setDrawColor(40, 40, 40); doc.setLineWidth(0.9); doc.rect(x + 12, yy, 14, 14);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(25, 25, 25); doc.text(doc.splitTextToSize(c.nombre, cw - 52)[0], x + 34, yy + 10.5);
+    });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(130, 130, 130); doc.text('Voto secreto y directo · se dobla antes de depositarla', x + 12, y + ch - 9);
+  }
+  entregarPDF(doc, 'cedulas-votacion-' + (E.conv.dia || 'sin-fecha') + '.pdf');
+}
+/* ── 20/10/2026 · lote 21 · LA VOTACIÓN EN EL CELULAR ─────────────────────────────────────────────────────────────
+   Marcelo: «La votación para la elección del supervisor, del subcomité y del comité que se haga por el mismo celular,
+   anónimo, y se quede como sustento, se realiza un formato de ello». Dos formas, que elige la junta en cada elección:
+   · «mesa» (presencial): un celular de la mesa hace de ánfora. La junta busca al elector, él firma en la pantalla y vota
+     solo, a pantalla completa. Las cédulas quedan en ESE celular (sin el nombre, sin la hora y en un orden al azar)
+     hasta que se cierra la votación: recién ahí suben y se cuentan. Funciona sin internet.
+   · «remoto» (no presencial): cada elector vota desde su celular con su código personal (vota/#CÓDIGO), sin cuenta y sin
+     instalar nada; confirma su documento y firma. El servidor guarda el padrón y las cédulas por separado
+     (sql/2026-10-20-votacion.sql). El código lo inventa este equipo: al servidor va solo su huella.
+   Lo que queda en la elección (vot.urna): el padrón del día (pad), quién votó y cuándo (vot), las cédulas numeradas al
+   azar (ced, al cerrar), el código de integridad (sello: sha256 de «OBRASST-VOTO:<id>» y una línea «n:marcas» por
+   cédula, el mismo texto que arma el servidor) y el acta de la votación (acta: su dirección, cuando se subió). Las firmas
+   no viajan con el comité (pesan): van en el acta. ── */
+var CEL_VOTO = [['mesa', '📱 En el celular de la mesa'], ['remoto', '📲 Cada uno en su celular'], ['papel', '🗳️ En cédulas de papel']];
+var BASE_VOTA = 'https://descarganomaspe.github.io/sst-capacita/vota/';
+var VOTA_CORTA = 'obrasstapp.com/vota';
+var CEL_ALF = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function celUrnaLimpia(u){
+  if(!u || typeof u !== 'object' || !u.id) return null;
+  var o = { id:String(u.id).slice(0, 60), modo:(u.modo === 'remoto' ? 'remoto' : 'mesa'), ab:+u.ab || 0, ce:+u.ce || 0, cierra:+u.cierra || 0, sola:u.sola ? 1 : 0,
+            sello:(/^[0-9a-f]{64}$/.test(String(u.sello || '')) ? String(u.sello) : ''), acta:String(u.acta || '').slice(0, 600), pad:[], vot:{}, ced:[] };
+  (Array.isArray(u.pad) ? u.pad : []).slice(0, 3000).forEach(function(x){ if(x && x.k) o.pad.push({ k:String(x.k).slice(0, 160), nombre:_celT(x.nombre), dni:_celT(x.dni, 20) }); });
+  var v = (u.vot && typeof u.vot === 'object' && !Array.isArray(u.vot)) ? u.vot : {};
+  Object.keys(v).slice(0, 3000).forEach(function(k){ var t = +v[k]; if(t > 0) o.vot[String(k).slice(0, 160)] = t; });
+  o.ced = (Array.isArray(u.ced) ? u.ced : []).slice(0, 5000).map(function(x){ return String(x).slice(0, 400); });
+  return o;
+}
+function celUrnaAbierta(E){ var u = E && E.vot && E.vot.urna; return !!(u && u.ab && !u.ce); }
+function celUrnaCerrada(E){ var u = E && E.vot && E.vot.urna; return !!(u && u.ce); }
+function celUrnaCuenta(u){ return u ? Object.keys(u.vot || {}).length : 0; }
+/* el padrón del día: los electores que votan, con lo justo */
+function celPadronDe(trabs, E){ return celElectores(trabs, E).filter(function(x){ return !x.fuera; }).map(function(x){ return { k:x.k, nombre:x.nombre, dni:x.dni }; }); }
+/* los votos salen de las cédulas de la urna (al cerrar) */
+function celUrnaAplicar(E){
+  var u = E.vot.urna; if(!u) return null;
+  var C = celConteo({ cands:E.cands, vot:{ log:u.ced } });
+  E.cands.forEach(function(c){ c.votos = c.apto ? (C.votos[c.id] || 0) : null; });
+  E.vot.blancos = C.blancos; E.vot.nulos = C.nulos; E.vot.votantes = C.cedulas;
+  if(u.pad.length) E.vot.electores = u.pad.length;
+  return C;
+}
+/* dos copias de la misma elección (la de este equipo y la de la nube, o la de la web): gana la más nueva (elec.ts),
+   pero la votación en el celular no se pisa. Los que votaron se suman (nadie «desvota»); la urna cerrada queda cerrada,
+   con sus cédulas, su código y los votos que dio; el acta subida queda; la urna que la más nueva no conoce (se abrió en
+   otro equipo) se le agrega; y la que alguien anuló queda anulada. Si es otra elección (eid distinto: «Empezar otra
+   elección»), no se mezclan. */
+function celElecFusion(nuevo, otro){
+  if(!nuevo || typeof nuevo !== 'object' || !otro || typeof otro !== 'object' || nuevo === otro) return nuevo;
+  if(String(nuevo.eid || '') !== String(otro.eid || '')) return nuevo;
+  var vn = (nuevo.vot && typeof nuevo.vot === 'object') ? nuevo.vot : {}, vo = (otro.vot && typeof otro.vot === 'object') ? otro.vot : {};
+  var un = (vn.urna && vn.urna.id) ? vn.urna : null, uo = (vo.urna && vo.urna.id) ? vo.urna : null;
+  var an = Array.isArray(vn.anul) ? vn.anul : [], ao = Array.isArray(vo.anul) ? vo.anul : [], ya = {}, anul = [];
+  an.concat(ao).forEach(function(x){ if(x && x.id && !ya[x.id]){ ya[x.id] = 1; anul.push(x); } });
+  var u = un;
+  if(uo && (!u || u.id === uo.id)) u = u ? _celUrnaJunta(u, uo) : uo;
+  if(u && ya[u.id]) u = null;
+  var igual = (u === un) || !!(u && un && JSON.stringify(u) === JSON.stringify(un));
+  if(igual && anul.length === an.length) return nuevo;
+  var out = JSON.parse(JSON.stringify(nuevo));
+  if(!out.vot || typeof out.vot !== 'object') out.vot = {};
+  anul.sort(function(x, y){ return (+x.ce || 0) - (+y.ce || 0); });
+  out.vot.anul = JSON.parse(JSON.stringify(anul.slice(-10)));
+  out.vot.urna = u ? celUrnaLimpia(JSON.parse(JSON.stringify(u))) : null;
+  if(out.vot.urna){
+    out.vot.modo = out.vot.urna.modo;
+    /* cerrada en la otra copia: los votos salen de sus cédulas */
+    if(out.vot.urna.ce && !(un && un.id === out.vot.urna.id && +un.ce) && Array.isArray(out.cands)) celUrnaAplicar(out);
+  }
+  return out;
+}
+function _celUrnaJunta(a, b){
+  var o = JSON.parse(JSON.stringify(a)), va = (a.vot && typeof a.vot === 'object') ? a.vot : {}, vb = (b.vot && typeof b.vot === 'object') ? b.vot : {};
+  if(+b.ce && !+a.ce){ o.ce = +b.ce; o.ced = Array.isArray(b.ced) ? b.ced.slice() : []; o.sello = b.sello || ''; o.sola = b.sola ? 1 : 0; o.vot = JSON.parse(JSON.stringify(vb)); }
+  else if(!+a.ce){ o.vot = JSON.parse(JSON.stringify(va)); Object.keys(vb).forEach(function(k){ var t = +vb[k]; if(t > 0 && !(+o.vot[k] > 0 && +o.vot[k] <= t)) o.vot[k] = t; }); }
+  if(!o.acta && b.acta) o.acta = String(b.acta);
+  if(!+o.cierra && +b.cierra) o.cierra = +b.cierra;
+  return o;
+}
+/* una cédula, como se guarda: «b» (en blanco) o los id marcados, ordenados (el orden en que se tocó no queda) */
+function celCedulaTexto(ids, blanco){ return (blanco || !ids || !ids.length) ? 'b' : ids.slice().sort().join('+'); }
+/* el texto del código de integridad (el mismo que arma el servidor) y su sha256 */
+function celSelloTexto(id, ced){ return 'OBRASST-VOTO:' + id + (ced || []).map(function(x, i){ return '\n' + (i + 1) + ':' + ((x === 'b' || !x) ? 'B' : String(x).split('+').sort().join('+')); }).join(''); }
+function celSha256(txt){
+  try{
+    if(!(typeof crypto !== 'undefined' && crypto.subtle && typeof TextEncoder !== 'undefined')) return Promise.resolve('');
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(txt))).then(function(b){
+      return Array.prototype.map.call(new Uint8Array(b), function(x){ return (x < 16 ? '0' : '') + x.toString(16); }).join('');
+    }, function(){ return ''; });
+  }catch(_e){ return Promise.resolve(''); }
+}
+function celSello(id, ced){ return celSha256(celSelloTexto(id, ced)); }
+/* el sello, legible: de a ocho */
+function celSelloLindo(h){ return String(h || '').replace(/(.{8})/g, '$1 ').trim(); }
+/* el código personal: doce letras y números que no se confunden (sin 0, O, 1, I ni L), de a cuatro */
+function celCodigoNuevo(){
+  var s = '', a = new Uint8Array(16);
+  while(s.length < 12){ crypto.getRandomValues(a); for(var i = 0; i < a.length && s.length < 12; i++) if(a[i] < 248) s += CEL_ALF.charAt(a[i] % 31); }
+  return s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8, 12);
+}
+function celLimpio(s){ return String(s == null ? '' : s).replace(/[^A-Za-z0-9]/g, '').toUpperCase(); }
+function celHuella(tipo, s){ return celSha256(tipo + ':' + celLimpio(s)); }
+function celVotoEnlace(cod){ return BASE_VOTA + '#' + celLimpio(cod); }
+/* un número al azar de 0 a n-1 (el lugar de cada cédula en la urna) */
+function celAzar(n){ try{ var a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }catch(_e){ return Math.floor(Math.random() * n); } }
+function _celDos(n){ return (n < 10 ? '0' : '') + n; }
+function _celFH(ms){ if(!ms) return '—'; var d = new Date(+ms); return _celDos(d.getDate()) + '/' + _celDos(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + _celDos(d.getHours()) + ':' + _celDos(d.getMinutes()); }
+function _celHora(ms){ if(!ms) return ''; var d = new Date(+ms); return _celDos(d.getHours()) + ':' + _celDos(d.getMinutes()); }
+function _celDiaDe(ms){ if(!ms) return ''; var d = new Date(+ms); return d.getFullYear() + '-' + _celDos(d.getMonth() + 1) + '-' + _celDos(d.getDate()); }
+/* la firma (sus trazos: {h, p}, como las de la app) dibujada en el PDF */
+function celFirmaPDF(doc, tr, x, y, w, h){
+  if(!tr || !Array.isArray(tr.p) || !tr.p.length) return;
+  var prop = (+tr.h || 380) / 1000, k = Math.min(w / 1000, h / (1000 * prop)), aw = 1000 * k, ah = 1000 * prop * k, ox = x + (w - aw) / 2, oy = y + (h - ah) / 2;
+  doc.setDrawColor(16, 24, 32); doc.setLineWidth(Math.max(0.16, aw / 260));
+  try{ doc.setLineCap('round'); doc.setLineJoin('round'); }catch(_c){}
+  tr.p.forEach(function(s){
+    if(!Array.isArray(s) || s.length < 4) return;
+    var pasos = [], px = s[0] * k, py = s[1] * k;
+    for(var i = 2; i + 1 < s.length; i += 2){ var nx = s[i] * k, ny = s[i + 1] * k; if(isFinite(nx) && isFinite(ny)){ pasos.push([nx - px, ny - py]); px = nx; py = ny; } }
+    if(pasos.length && isFinite(s[0]) && isFinite(s[1])){ try{ doc.lines(pasos, ox + s[0] * k, oy + s[1] * k); }catch(_l){} }
+  });
+  doc.setLineWidth(0.2); try{ doc.setLineCap('butt'); doc.setLineJoin('miter'); }catch(_c){}
+}
+/* el QR, en cuadritos negros (con el generador de la app: qrcode) */
+function _celQR(doc, txt, x, y, lado){
+  var q = qrcode(0, 'M'); q.addData(txt); q.make();
+  var n = q.getModuleCount(), t = lado / (n + 4);
+  doc.setFillColor(255, 255, 255); doc.rect(x, y, lado, lado, 'F'); doc.setFillColor(0, 0, 0);
+  for(var r = 0; r < n; r++){ var c = 0; while(c < n){ if(!q.isDark(r, c)){ c++; continue; } var c0 = c; while(c < n && q.isDark(r, c)) c++; doc.rect(x + (c0 + 2) * t, y + (r + 2) * t, (c - c0) * t, t, 'F'); } }
+}
+/* el acta de la votación (el sustento): la participación, el resultado, el padrón con la hora y la firma de cada uno, las
+   cédulas sin nombre (en su orden al azar) y el código de integridad. op = { firmas:{k: trazos}, doc:true (devuelve el
+   PDF sin entregarlo) } */
+function celVotacionPDF(op){
+  op = op || {};
+  var d = comiteLocal(), toca = comiteLoQueToca(comiteCuantos()), E = celDe(d, toca), u = E.vot.urna, e = null;
+  if(!u || !u.ce) return null;
+  try{ e = empActiva(); }catch(_e){}
+  var obra = (e && e.nombre) || '', emp = (typeof empleador === 'function' ? empleador() : {}) || {}, solo = (toca.tipo === 'supervisor'), mesa = (u.modo === 'mesa');
+  var R = celResultado(E), C = celConteo({ cands:E.cands, vot:{ log:u.ced } }), firmas = op.firmas || {}, nom = {};
+  E.cands.forEach(function(c){ nom[c.id] = c.nombre; });
+  var P = _celPdfBase('ACTA DE LA VOTACIÓN', (obra ? obra + '   ·   ' : '') + _celFecha(E.conv.dia || _celDiaDe(u.ab)));
+  var doc = P.doc, W = P.W, M = P.M, n = u.pad.length, vt = celUrnaCuenta(u);
+  P.par('Del ' + _celFH(u.ab) + ' al ' + _celFH(u.ce) + ' se votó en la elección ' + _celLoQueSeElige(toca) + (emp.razon ? ' de ' + emp.razon : '') + (obra ? ', en ' + obra : '') + ', ' +
+        (mesa ? 'en forma presencial, en un celular de la mesa que hizo de ánfora: la junta electoral verificó a cada elector, el elector firmó en la pantalla y votó solo.'
+              : 'en forma no presencial: cada elector votó desde su celular, con su código personal, y confirmó su documento.') +
+        ' El voto fue secreto y directo: cada cédula se guardó sin el nombre de quien votó y sin la hora, y al cerrar se numeró al azar.' +
+        (u.sola ? ' La votación se cerró sola, a la hora fijada.' : ''), { pt:10 });
+  var je = E.je.filter(function(j){ return j.nombre; });
+  if(je.length){ P.tit('La junta electoral'); je.forEach(function(j){ var r = ''; CEL_JE.forEach(function(x){ if(x[0] === j.rol) r = x[1]; }); P.fila(r, j.nombre + (j.dni ? '  ·  ' + etDoc(j.dni) + ' ' + j.dni : '')); }); }
+  P.tit('La participación');
+  P.fila('Electores hábiles', String(n));
+  P.fila('Votaron', String(vt) + (n ? '  (' + Math.round(vt * 100 / n) + ' %)' : ''));
+  P.fila('Cédulas en la urna', String(u.ced.length) + (u.ced.length !== vt ? '  · no coincide con los que votaron: revisarlo' : ''));
+  P.fila('Votos válidos · en blanco', R.validos + ' · ' + C.blancos);
+  P.tit('Los resultados');
+  var tit = {}, sup = {}; R.tit.forEach(function(x){ tit[x.id] = 1; }); R.sup.forEach(function(x){ sup[x.id] = 1; });
+  _celTabla(P, [['N.º', 30], ['CANDIDATO', W - 2 * M - 210], ['VOTOS', 80], ['RESULTADO', 100]], R.orden.map(function(x, i){
+    return [String(i + 1), x.nombre, String(x.votos), tit[x.id] ? (solo ? 'ELEGIDO' : 'TITULAR') : (sup[x.id] ? 'SUPLENTE' : '—')]; }), 20);
+  if(E.vot.sorteo) P.par('Empate: ' + E.vot.sorteo, { pt:9 });
+  P.tit('El padrón de votantes');
+  P.par(mesa ? 'Cada elector firmó en el celular de la mesa antes de votar.' : 'Cada elector firmó en su celular al votar.', { pt:8.5 });
+  var hayF = Object.keys(firmas).length > 0;
+  _celTabla(P, [['N.º', 26], ['APELLIDOS Y NOMBRES', 182], ['DOCUMENTO', 78], ['VOTÓ', 86], ['FIRMA', W - 2 * M - 372]], u.pad.map(function(x, i){
+    var t = u.vot[x.k];
+    return [String(i + 1), x.nombre, x.dni ? etDoc(x.dni) + ' ' + x.dni : '—', t ? _celFH(t) : 'no votó', t ? (firmas[x.k] ? { tr:firmas[x.k] } : (hayF ? '' : (mesa ? 'en el celular de la mesa' : 'en su celular'))) : ''];
+  }), hayF ? 30 : 20);
+  P.tit('Las cédulas');
+  P.par('Sin el nombre de quien votó y sin la hora, en el orden al azar en que quedaron al cerrar la votación.', { pt:8.5 });
+  _celTabla(P, [['N.º', 40], ['LO QUE MARCÓ EL ELECTOR', W - 2 * M - 40]], u.ced.map(function(x, i){
+    return [String(i + 1), (x === 'b' || !x) ? 'En blanco' : String(x).split('+').map(function(id){ return nom[id] || id; }).join(' + ')]; }), 18);
+  P.tit('El código de integridad');
+  P.salto(40); doc.setFont('courier', 'bold'); doc.setFontSize(11); doc.setTextColor(11, 42, 58);
+  doc.text(u.sello ? celSelloLindo(u.sello) : '—', M, P.y); P.y += 18;
+  P.par('Se calcula con todas las cédulas, en su orden: si alguien cambia, agrega o quita una, el código ya no es el mismo. Se comprueba en OBRASST, en el paso de la votación de esta elección.', { pt:8.5 });
+  P.par('Base: ' + _celNorma(toca) + ' (votación secreta y directa, presencial o no presencial).', { pt:8 });
+  P.tit('Firmas de la junta electoral');
+  P.firmas(_celJuntaFirmas(E), 2);
+  if(op.doc){ _comPie(doc, W, P.H, M); return doc; }
+  P.fin('acta-votacion-' + (E.conv.dia || _celDiaDe(u.ab) || 'sin-fecha') + '.pdf');
+  return null;
+}
+/* las cédulas personales (votación desde el celular): una por elector, con su QR y su código; de a ocho por hoja.
+   lista = [{ nombre, dni, cod }] */
+function celCodigosPDF(lista, cierra){
+  var d = comiteLocal(), toca = comiteLoQueToca(comiteCuantos()), E = celDe(d, toca), e = null;
+  try{ e = empActiva(); }catch(_e){}
+  var obra = (e && e.nombre) || '', L = (lista || []).filter(function(x){ return x && x.cod; });
+  var doc = new jspdf.jsPDF({unit:'pt', format:'a4'}), W = 595.28, H = 841.89, M = 24, g = 10, cw = (W - 2 * M - g) / 2, ch = (H - 2 * M - 3 * g) / 4;
+  if(!L.length) L = [{ nombre:'', dni:'', cod:'' }];
+  L.forEach(function(x, k){
+    if(k && k % 8 === 0) doc.addPage();
+    var pos = k % 8, cx = M + (pos % 2) * (cw + g), cy = M + Math.floor(pos / 2) * (ch + g);
+    doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.6); if(doc.setLineDashPattern) doc.setLineDashPattern([3, 3], 0); doc.rect(cx, cy, cw, ch); if(doc.setLineDashPattern) doc.setLineDashPattern([], 0);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(11, 42, 58); doc.text('CÉDULA PERSONAL DE VOTACIÓN', cx + 12, cy + 20);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(70, 70, 70);
+    doc.text(doc.splitTextToSize('Elección ' + _celLoQueSeElige(toca), cw - 24).slice(0, 2), cx + 12, cy + 32);
+    doc.text(doc.splitTextToSize((obra ? obra + ' · ' : '') + _celFecha(E.conv.dia), cw - 24)[0] || '', cx + 12, cy + 52);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(25, 25, 25);
+    doc.text(doc.splitTextToSize(x.nombre || '', cw - 24)[0] || '', cx + 12, cy + 68);
+    if(x.dni){ doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 110); doc.text(etDoc(x.dni) + ' ' + x.dni, cx + 12, cy + 79); }
+    var lado = 92;
+    if(x.cod) _celQR(doc, celVotoEnlace(x.cod), cx + 8, cy + 84, lado);
+    var tx = cx + 8 + lado + 6, tw = cw - (tx - cx) - 10;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(110, 110, 110); doc.text('TU CÓDIGO', tx, cy + 94);
+    doc.setFont('courier', 'bold'); doc.setFontSize(13); doc.setTextColor(11, 42, 58); doc.text(x.cod || '', tx, cy + 108);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.1); doc.setTextColor(40, 40, 40);
+    var pasos = ['1. Escanea el QR con la cámara de tu celular.', 'O entra a ' + VOTA_CORTA + ' y escribe tu código.', '2. Confirma tu documento, firma y vota.',
+                 'Tu voto es secreto.', 'Vale una sola vez' + (cierra ? ', hasta el ' + _celFH(cierra) : '') + '.'];
+    var yy = cy + 120; pasos.forEach(function(p){ doc.splitTextToSize(p, tw).forEach(function(l){ if(yy < cy + ch - 14){ doc.text(l, tx, yy); yy += 8.6; } }); });
+    doc.setFontSize(6.6); doc.setTextColor(130, 130, 130); doc.text('Es solo para ti: no la prestes ni la compartas.', cx + 12, cy + ch - 8);
+  });
+  entregarPDF(doc, 'cedulas-personales-' + (E.conv.dia || 'sin-fecha') + '.pdf');
+}
+/* <<< COMITE-ELECCION-FIN >>> */
   function _sale(f){ _SALE = null; f(); var r = _SALE; _SALE = null; return r; }
   return {
     usar: function(C){ _C = C || {}; return this; },
@@ -1354,6 +2034,26 @@ function _pdfDiplomaTdm(g, mes, puesto, oficial){
     comiteQuorum: comiteQuorum, comiteHuboQuorum: comiteHuboQuorum, comiteActasDe: comiteActasDe, comiteMesesDelAnio: comiteMesesDelAnio, comiteAcuerdosPendientes: comiteAcuerdosPendientes,
     comiteNumeroSiguiente: comiteNumeroSiguiente, actaComitePorId: actaComitePorId,
     comiteActaPdf: function(id){ return _sale(function(){ comiteActaPDF(id); }); },
+    /* 17/10/2026 · lote 16 · la elección de los representantes (COMITE-ELECCION, de la app) */
+    CEL_QUIEN: CEL_QUIEN, CEL_MODO: CEL_MODO, CEL_JE: CEL_JE, CEL_MANDATO: CEL_MANDATO,
+    celDe: celDe, celDeObra: celDeObra, celCuerpo: celCuerpo, celHabiles: celHabiles, celMasHabiles: celMasHabiles, celResultado: celResultado,
+    celPaso: celPaso, celAvisos: celAvisos, celAlPadron: celAlPadron, celMesSiguiente: celMesSiguiente, comiteProxima: comiteProxima,
+    celConvocatoriaPdf: function(){ return _sale(function(){ celConvocatoriaPDF(); }); },
+    celActaPdf: function(){ return _sale(function(){ celActaPDF(); }); },
+    /* 20/10/2026 · lote 20 · los electores, el conteo cédula por cédula y los papeles del día */
+    celElectores: celElectores, celClave: celClave, celDirSugerido: celDirSugerido, celConteo: celConteo, celConteoAplicar: celConteoAplicar,
+    celPadronPdf: function(){ return _sale(function(){ celPadronPDF(); }); },
+    celAptosPdf: function(){ return _sale(function(){ celAptosPDF(); }); },
+    celCedulasPdf: function(n){ return _sale(function(){ celCedulasPDF(n); }); },
+    /* 20/10/2026 · lote 21 · la votación en el celular (la urna, el código de integridad, el acta y las cédulas personales) */
+    CEL_VOTO: CEL_VOTO, BASE_VOTA: BASE_VOTA, VOTA_CORTA: VOTA_CORTA,
+    celUrnaLimpia: celUrnaLimpia, celUrnaAbierta: celUrnaAbierta, celUrnaCerrada: celUrnaCerrada, celUrnaCuenta: celUrnaCuenta, celPadronDe: celPadronDe,
+    celUrnaAplicar: celUrnaAplicar, celCedulaTexto: celCedulaTexto, celSelloTexto: celSelloTexto, celSha256: celSha256, celSello: celSello, celSelloLindo: celSelloLindo,
+    celCodigoNuevo: celCodigoNuevo, celLimpio: celLimpio, celHuella: celHuella, celVotoEnlace: celVotoEnlace, celFH: _celFH, celHora: _celHora,
+    celElecFusion: celElecFusion, celDiaDe: _celDiaDe, celLoQueSeElige: _celLoQueSeElige,
+    celVotacionPdf: function(op){ return _sale(function(){ celVotacionPDF(op); }); },
+    celVotacionDoc: function(op){ return celVotacionPDF(Object.assign({}, op || {}, { doc:true })); },
+    celCodigosPdf: function(lista, cierra){ return _sale(function(){ celCodigosPDF(lista, cierra); }); },
     comiteLibroPdf: function(anio){ return _sale(function(){ comiteLibroPDF(anio); }); },
     /* el trabajador del mes */
     TDM_CATALOGO: TDM_CATALOGO, TDM_DE_FABRICA: TDM_DE_FABRICA, TDM_LITE: TDM_LITE, TDM_TOPE: TDM_TOPE, TDM_MINIMO: TDM_MINIMO, PT_MINIMO_DIAS: PT_MINIMO_DIAS,
