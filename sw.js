@@ -1,4 +1,4 @@
-var CACHE = 'sstc-e1fcbae967-a';
+var CACHE = 'sstc-38203bbd58-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -13,7 +13,7 @@ var PDFJS = 'obrasst-pdfjs-1';
    cache. La primera apertura sin señal despues de cada publicacion daba
    pantalla en blanco (y la primerisima instalacion tambien). Ahora la app
    entera se guarda en install, antes de activar. */
-var BASE = ['./', './index.html', './temas.js?v=21bbb5eaab', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=adeb1a0e7a', './exige.js?v=35cd514ecd', './idioma-fr.js?v=f36dd17540', './procedimientos.js?v=88b03837ba', './idioma-pt.js?v=3e232662b5', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
+var BASE = ['./', './index.html', './temas.js?v=21bbb5eaab', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=353720691e', './exige.js?v=35cd514ecd', './idioma-fr.js?v=a9ae239a8b', './procedimientos.js?v=88b03837ba', './idioma-pt.js?v=839d1d0178', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
             './intro.mp4'];
 self.addEventListener('install', function(e){
@@ -127,7 +127,8 @@ self.addEventListener('fetch', function(e){
          falta señal. (Quien ya abrio un cartel tiene el service worker
          de d/, que atiende antes que este.) */
       /* 14/10/2026 · y el buzón (b/): sin señal no se puede mandar nada, y tampoco es la app */
-      if (esNav && _u && /\/(d|h|b|m)\/(index\.html)?$/.test(_u.pathname)) return sinSenalQR();
+      /* 20/10/2026 · lote 21 · y la cédula de votación (vota/): sin señal no se vota, y tampoco es la app */
+      if (esNav && _u && /\/(d|h|b|m|vota)\/(index\.html)?$/.test(_u.pathname)) return sinSenalQR();
       if (esNav) return caches.match('./index.html');
       return Response.error();
     });
