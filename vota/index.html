@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0B2A3A">
+<link rel="icon" href="../icono-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>Votar · OBRASST</title>
+<style>
+/* 20/10/2026 · lote 21 · lo que abre la cédula personal de votación (su QR, o el enlace que manda la junta): el elector
+   ve su cédula, vota (o en blanco), confirma su documento, firma para el padrón y listo. Sin cuenta y sin instalar nada.
+   El código va después del «#»: no viaja al servidor de la página ni queda en su registro. Lo que se vota llega por
+   sst_votar (sql/2026-10-20-votacion.sql): la cédula, sin el nombre; el padrón, aparte. */
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;
+  padding:24px 16px 32px;background:#0B2A3A;color:#EAF2F7;
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.caja{width:100%;max-width:460px}
+.marca{font-size:12px;letter-spacing:.18em;color:#F5B700;font-weight:800;margin-bottom:14px;text-align:center}
+h1{font-size:22px;margin:0 0 6px;line-height:1.25;text-wrap:balance;text-align:center}
+.sub{margin:0 0 14px;color:#A9C2D0;font-size:15px;text-align:center}
+.giro{width:34px;height:34px;margin:26px auto 0;border-radius:50%;
+  border:3px solid rgba(255,255,255,.18);border-top-color:#F5B700;animation:g .8s linear infinite}
+@keyframes g{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.giro{animation-duration:2.4s}}
+.cab{text-align:center;margin:0 0 16px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12)}
+.cab b{display:block;font-size:12px;letter-spacing:.14em;color:#F5B700}
+.cab .cu{display:block;font-size:15px;font-weight:700;margin-top:4px;line-height:1.3}
+.cab small{display:block;font-size:13px;color:#A9C2D0;margin-top:3px}
+.pasos{display:flex;justify-content:center;gap:8px;margin:0 0 16px}
+.pasos i{width:34px;height:6px;border-radius:3px;background:rgba(255,255,255,.18)}
+.pasos i.on{background:#F5B700}
+.cand{display:flex;align-items:center;gap:14px;width:100%;text-align:left;font:inherit;color:#fff;background:rgba(255,255,255,.06);
+  border:2px solid rgba(255,255,255,.18);border-radius:16px;padding:16px;margin:0 0 10px;cursor:pointer;touch-action:manipulation}
+.cand i{flex:none;width:30px;height:30px;border-radius:8px;border:2px solid rgba(255,255,255,.55);display:grid;place-items:center;
+  font-style:normal;font-weight:800;color:#0B2A3A}
+.cand span{font-size:18px;font-weight:700;line-height:1.3}
+.cand.on{border-color:#F5B700;background:rgba(245,183,0,.14)}
+.cand.on i{background:#F5B700;border-color:#F5B700}
+.cand:focus-visible,.btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.lista{margin:8px 0 18px;padding:0;list-style:none}
+.lista li{padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.08);margin-bottom:8px;font-size:18px;font-weight:700;text-align:center}
+.tarj{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:16px;margin-top:12px}
+label{display:block;font-size:13px;color:#A9C2D0;margin:12px 0 5px}
+label:first-child{margin-top:0}
+input[type=text]{width:100%;padding:13px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.07);color:#fff;font:inherit;font-size:18px}
+input.cod{font:800 20px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.1em;text-transform:uppercase}
+input:focus{outline:2px solid #F5B700;outline-offset:1px}
+.pad{background:#fff;border-radius:12px;overflow:hidden;margin:6px 0 0}
+.pad canvas{display:block;width:100%;height:170px;touch-action:none}
+.borrar{display:block;margin:6px 0 0 auto;font:inherit;font-size:13px;color:#A9C2D0;background:none;border:0;text-decoration:underline;cursor:pointer}
+.btn{display:block;width:100%;margin-top:16px;padding:15px;border-radius:14px;border:0;background:#F5B700;color:#0B2A3A;
+  font:inherit;font-size:17px;font-weight:800;cursor:pointer;text-align:center}
+.btn.sec{background:rgba(255,255,255,.08);color:#EAF2F7;border:1px solid rgba(255,255,255,.2);font-weight:700}
+.btn:disabled{opacity:.45;cursor:default}
+.msg{min-height:20px;margin:10px 0 0;color:#FF8A8E;font-size:14.5px;text-align:center}
+.ok{font-size:64px;text-align:center;margin:26px 0 4px}
+.nota{font-size:13px;color:#8FB0C2;text-align:center;margin-top:14px;line-height:1.45}
+.obra{margin-top:22px;font-size:12.5px;color:#7D97A6;letter-spacing:.04em;text-align:center}
+</style></head><body>
+<div class="caja">
+  <div class="marca">&#9670; OBRASST</div>
+  <div id="cuerpo">
+    <h1>Abriendo tu cédula&hellip;</h1>
+    <div class="giro"></div>
+  </div>
+  <div class="obra" id="pie"></div>
+</div>
+<script>
+(function(){
+  var SB='https://gwjjkknuiumgysezeatz.supabase.co', KEY='sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx';
+  /* el idioma del celular: castellano, y si está en inglés, portugués o francés, en ese. Lo de la elección (qué se elige,
+     los nombres) va como lo escribió la junta. */
+  var L='es'; try{ L=String((navigator.languages && navigator.languages[0]) || navigator.language || 'es').slice(0,2).toLowerCase(); }catch(_l){}
+  var TX={
+    en:{'Abriendo tu cédula…':'Opening your ballot…','CÉDULA DE VOTACIÓN':'BALLOT','Para':'For','Hasta el {0}':'Until {0}',
+      'Toca a tu candidato':'Tap your candidate','Toca hasta {0} candidatos':'Tap up to {0} candidates','Tu voto es secreto: se guarda sin tu nombre.':'Your vote is secret: it is saved without your name.',
+      'Votar':'Vote','Votar en blanco':'Vote blank','En blanco':'Blank','Ya marcaste {0}: toca uno para quitarlo.':'You already marked {0}: tap one to remove it.',
+      '¿Confirmas tu voto?':'Do you confirm your vote?','Después ya no se puede cambiar.':'After this it can’t be changed.','Sí, es mi voto':'Yes, that’s my vote','Cambiar':'Change',
+      'Para que tu voto cuente':'For your vote to count','Tu documento y tu firma van al padrón de los que votaron, no a tu voto.':'Your ID and your signature go to the list of those who voted, not to your vote.',
+      'Tu documento de identidad':'Your ID number','Tu firma':'Your signature','Borrar la firma':'Clear the signature','Enviar mi voto':'Send my vote','Enviando…':'Sending…',
+      'Escribe tu documento.':'Enter your ID number.','Falta tu firma.':'Your signature is missing.',
+      'Ese documento no es el del padrón. Te quedan {0} intentos.':'That ID doesn’t match the voter list. You have {0} tries left.',
+      'Ese documento no es el del padrón.':'That ID doesn’t match the voter list.',
+      'Tu voto quedó registrado':'Your vote has been recorded','Es secreto: ni la empresa ni la junta pueden saber por quién votaste.':'It’s secret: neither the company nor the election board can know who you voted for.',
+      'Ya puedes cerrar esta página.':'You can close this page now.',
+      'Ya votaste':'You already voted','Tu voto ya está registrado. Cada código sirve una sola vez.':'Your vote is already recorded. Each code works only once.',
+      'Escribe tu código':'Enter your code','Está en tu cédula personal, debajo del QR: doce letras y números.':'It’s on your personal ballot, below the QR code: twelve letters and numbers.',
+      'Abrir mi cédula':'Open my ballot','Buscando…':'Searching…',
+      'Ese código no está. Revisa que esté bien escrito, o pídele a la junta electoral uno nuevo.':'That code doesn’t exist. Check that it’s written correctly, or ask the election board for a new one.',
+      'Escribe el código completo: son doce letras y números.':'Enter the whole code: twelve letters and numbers.',
+      'La votación ya se cerró':'Voting is closed','Ya no se puede votar con este código.':'You can no longer vote with this code.',
+      'La votación se anuló':'The vote was cancelled','Pregúntale a la junta electoral cómo sigue la elección.':'Ask the election board how the election continues.',
+      'Tu código está bloqueado':'Your code is blocked','Se puso mal el documento cinco veces. Pídele a la junta electoral un código nuevo.':'The ID was entered wrong five times. Ask the election board for a new code.',
+      'Sin señal':'No signal','Necesitas datos o wifi para votar. Inténtalo otra vez en un rato.':'You need data or wifi to vote. Try again in a while.',
+      'Tu voto no se envió: necesitas datos o wifi. Inténtalo otra vez.':'Your vote wasn’t sent: you need data or wifi. Try again.',
+      'Intentar otra vez':'Try again','Hubo muchos intentos en esta hora. Espera un rato y vuelve a abrir tu cédula.':'There were many attempts this hour. Wait a while and open your ballot again.',
+      'La votación desde el celular todavía no está activa. Avísale a la junta electoral.':'Voting from the phone isn’t active yet. Tell the election board.',
+      'Algo no salió bien. Inténtalo otra vez.':'Something went wrong. Try again.','Tu voto ya estaba registrado.':'Your vote was already recorded.',
+      'Es solo para ti: no compartas este enlace.':'It’s only for you: don’t share this link.'},
+    pt:{'Abriendo tu cédula…':'Abrindo sua cédula…','CÉDULA DE VOTACIÓN':'CÉDULA DE VOTAÇÃO','Para':'Para','Hasta el {0}':'Até {0}',
+      'Toca a tu candidato':'Toque no seu candidato','Toca hasta {0} candidatos':'Toque até {0} candidatos','Tu voto es secreto: se guarda sin tu nombre.':'Seu voto é secreto: é salvo sem o seu nome.',
+      'Votar':'Votar','Votar en blanco':'Votar em branco','En blanco':'Em branco','Ya marcaste {0}: toca uno para quitarlo.':'Você já marcou {0}: toque em um para tirá-lo.',
+      '¿Confirmas tu voto?':'Você confirma o seu voto?','Después ya no se puede cambiar.':'Depois não dá mais para mudar.','Sí, es mi voto':'Sim, é o meu voto','Cambiar':'Mudar',
+      'Para que tu voto cuente':'Para o seu voto contar','Tu documento y tu firma van al padrón de los que votaron, no a tu voto.':'Seu documento e sua assinatura vão para a lista dos que votaram, não para o seu voto.',
+      'Tu documento de identidad':'Seu documento de identidade','Tu firma':'Sua assinatura','Borrar la firma':'Apagar a assinatura','Enviar mi voto':'Enviar meu voto','Enviando…':'Enviando…',
+      'Escribe tu documento.':'Escreva o seu documento.','Falta tu firma.':'Falta a sua assinatura.',
+      'Ese documento no es el del padrón. Te quedan {0} intentos.':'Esse documento não é o da lista. Restam {0} tentativas.',
+      'Ese documento no es el del padrón.':'Esse documento não é o da lista.',
+      'Tu voto quedó registrado':'Seu voto foi registrado','Es secreto: ni la empresa ni la junta pueden saber por quién votaste.':'É secreto: nem a empresa nem a junta podem saber em quem você votou.',
+      'Ya puedes cerrar esta página.':'Já pode fechar esta página.',
+      'Ya votaste':'Você já votou','Tu voto ya está registrado. Cada código sirve una sola vez.':'Seu voto já está registrado. Cada código serve uma única vez.',
+      'Escribe tu código':'Escreva o seu código','Está en tu cédula personal, debajo del QR: doce letras y números.':'Está na sua cédula pessoal, embaixo do QR: doze letras e números.',
+      'Abrir mi cédula':'Abrir minha cédula','Buscando…':'Buscando…',
+      'Ese código no está. Revisa que esté bien escrito, o pídele a la junta electoral uno nuevo.':'Esse código não existe. Confira se está bem escrito, ou peça um novo à junta eleitoral.',
+      'Escribe el código completo: son doce letras y números.':'Escreva o código completo: são doze letras e números.',
+      'La votación ya se cerró':'A votação já foi encerrada','Ya no se puede votar con este código.':'Não é mais possível votar com este código.',
+      'La votación se anuló':'A votação foi anulada','Pregúntale a la junta electoral cómo sigue la elección.':'Pergunte à junta eleitoral como segue a eleição.',
+      'Tu código está bloqueado':'Seu código está bloqueado','Se puso mal el documento cinco veces. Pídele a la junta electoral un código nuevo.':'O documento foi digitado errado cinco vezes. Peça um código novo à junta eleitoral.',
+      'Sin señal':'Sem sinal','Necesitas datos o wifi para votar. Inténtalo otra vez en un rato.':'Você precisa de dados ou wi-fi para votar. Tente de novo daqui a pouco.',
+      'Tu voto no se envió: necesitas datos o wifi. Inténtalo otra vez.':'Seu voto não foi enviado: você precisa de dados ou wi-fi. Tente de novo.',
+      'Intentar otra vez':'Tentar de novo','Hubo muchos intentos en esta hora. Espera un rato y vuelve a abrir tu cédula.':'Houve muitas tentativas nesta hora. Espere um pouco e abra sua cédula de novo.',
+      'La votación desde el celular todavía no está activa. Avísale a la junta electoral.':'A votação pelo celular ainda não está ativa. Avise a junta eleitoral.',
+      'Algo no salió bien. Inténtalo otra vez.':'Algo deu errado. Tente de novo.','Tu voto ya estaba registrado.':'Seu voto já estava registrado.',
+      'Es solo para ti: no compartas este enlace.':'É só para você: não compartilhe este link.'},
+    fr:{'Abriendo tu cédula…':'Ouverture de votre bulletin…','CÉDULA DE VOTACIÓN':'BULLETIN DE VOTE','Para':'Pour','Hasta el {0}':'Jusqu’au {0}',
+      'Toca a tu candidato':'Touchez votre candidat','Toca hasta {0} candidatos':'Touchez jusqu’à {0} candidats','Tu voto es secreto: se guarda sin tu nombre.':'Votre vote est secret : il est enregistré sans votre nom.',
+      'Votar':'Voter','Votar en blanco':'Voter blanc','En blanco':'Blanc','Ya marcaste {0}: toca uno para quitarlo.':'Vous en avez déjà coché {0} : touchez-en un pour le retirer.',
+      '¿Confirmas tu voto?':'Confirmez-vous votre vote ?','Después ya no se puede cambiar.':'Ensuite, il ne peut plus être modifié.','Sí, es mi voto':'Oui, c’est mon vote','Cambiar':'Modifier',
+      'Para que tu voto cuente':'Pour que votre vote compte','Tu documento y tu firma van al padrón de los que votaron, no a tu voto.':'Votre pièce d’identité et votre signature vont sur la liste des votants, pas avec votre vote.',
+      'Tu documento de identidad':'Votre numéro de pièce d’identité','Tu firma':'Votre signature','Borrar la firma':'Effacer la signature','Enviar mi voto':'Envoyer mon vote','Enviando…':'Envoi…',
+      'Escribe tu documento.':'Saisissez votre numéro de pièce d’identité.','Falta tu firma.':'Il manque votre signature.',
+      'Ese documento no es el del padrón. Te quedan {0} intentos.':'Ce numéro ne correspond pas à la liste. Il vous reste {0} essais.',
+      'Ese documento no es el del padrón.':'Ce numéro ne correspond pas à la liste.',
+      'Tu voto quedó registrado':'Votre vote est enregistré','Es secreto: ni la empresa ni la junta pueden saber por quién votaste.':'Il est secret : ni l’entreprise ni le bureau de vote ne peuvent savoir pour qui vous avez voté.',
+      'Ya puedes cerrar esta página.':'Vous pouvez fermer cette page.',
+      'Ya votaste':'Vous avez déjà voté','Tu voto ya está registrado. Cada código sirve una sola vez.':'Votre vote est déjà enregistré. Chaque code ne sert qu’une fois.',
+      'Escribe tu código':'Saisissez votre code','Está en tu cédula personal, debajo del QR: doce letras y números.':'Il figure sur votre bulletin personnel, sous le QR code : douze lettres et chiffres.',
+      'Abrir mi cédula':'Ouvrir mon bulletin','Buscando…':'Recherche…',
+      'Ese código no está. Revisa que esté bien escrito, o pídele a la junta electoral uno nuevo.':'Ce code n’existe pas. Vérifiez qu’il est bien écrit, ou demandez-en un nouveau au bureau de vote.',
+      'Escribe el código completo: son doce letras y números.':'Saisissez le code complet : douze lettres et chiffres.',
+      'La votación ya se cerró':'Le vote est clos','Ya no se puede votar con este código.':'On ne peut plus voter avec ce code.',
+      'La votación se anuló':'Le vote a été annulé','Pregúntale a la junta electoral cómo sigue la elección.':'Demandez au bureau de vote comment se poursuit l’élection.',
+      'Tu código está bloqueado':'Votre code est bloqué','Se puso mal el documento cinco veces. Pídele a la junta electoral un código nuevo.':'Le numéro a été mal saisi cinq fois. Demandez un nouveau code au bureau de vote.',
+      'Sin señal':'Pas de réseau','Necesitas datos o wifi para votar. Inténtalo otra vez en un rato.':'Il faut des données ou du wifi pour voter. Réessayez dans un moment.',
+      'Tu voto no se envió: necesitas datos o wifi. Inténtalo otra vez.':'Votre vote n’a pas été envoyé : il faut des données ou du wifi. Réessayez.',
+      'Intentar otra vez':'Réessayer','Hubo muchos intentos en esta hora. Espera un rato y vuelve a abrir tu cédula.':'Il y a eu beaucoup d’essais cette heure-ci. Attendez un moment et rouvrez votre bulletin.',
+      'La votación desde el celular todavía no está activa. Avísale a la junta electoral.':'Le vote par téléphone n’est pas encore actif. Prévenez le bureau de vote.',
+      'Algo no salió bien. Inténtalo otra vez.':'Un problème est survenu. Réessayez.','Tu voto ya estaba registrado.':'Votre vote était déjà enregistré.',
+      'Es solo para ti: no compartas este enlace.':'C’est pour vous seul : ne partagez pas ce lien.'}
+  };
+  var D=TX[L]||null;
+  if(D) try{ document.documentElement.lang=L; }catch(_h){}
+  function t(s, a){ var x=(D && D[s]) || s; return a===undefined ? x : x.replace('{0}', a); }
+  function esc(s){ return String(s==null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function limpio(s){ return String(s==null ? '' : s).replace(/[^A-Za-z0-9]/g, '').toUpperCase(); }
+  function dos(n){ return (n<10 ? '0' : '')+n; }
+  function fh(iso){ var d=new Date(iso); if(isNaN(d)) return ''; return dos(d.getDate())+'/'+dos(d.getMonth()+1)+'/'+d.getFullYear()+' '+dos(d.getHours())+':'+dos(d.getMinutes()); }
+  var cuerpo=document.getElementById('cuerpo'), pie=document.getElementById('pie');
+  var S={ cod:'', C:null, sel:[], blanco:false, paso:'', msg:'', doc:'', pad:null, enviando:false };
+
+  function rpc(fn, args){
+    return fetch(SB+'/rest/v1/rpc/'+fn, { method:'POST', credentials:'omit', cache:'no-store',
+      headers:{ apikey:KEY, Authorization:'Bearer '+KEY, 'Content-Type':'application/json' }, body:JSON.stringify(args) })
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); });
+  }
+  /* la firma: sus trazos, como las firmas de la app ({h, p}: recortada a la tinta, de ancho 1000) */
+  function lienzo(cv){
+    var r=window.devicePixelRatio||1, W=cv.clientWidth||300, H=cv.clientHeight||170, g=cv.getContext('2d'), P={ trazos:[], baja:false };
+    cv.width=Math.round(W*r); cv.height=Math.round(H*r); g.scale(r, r);
+    P.limpiar=function(){ P.trazos=[]; g.fillStyle='#fff'; g.fillRect(0, 0, W, H); };
+    P.limpiar(); g.strokeStyle='#101820'; g.lineWidth=2.4; g.lineCap='round'; g.lineJoin='round';
+    function pos(ev){ var b=cv.getBoundingClientRect(), x=(ev.touches && ev.touches[0]) || ev; return [x.clientX-b.left, x.clientY-b.top]; }
+    cv.onmousedown=cv.ontouchstart=function(ev){ ev.preventDefault(); P.baja=true; var p=pos(ev); P.trazos.push([p]); g.beginPath(); g.moveTo(p[0], p[1]); };
+    cv.onmousemove=cv.ontouchmove=function(ev){ if(!P.baja) return; ev.preventDefault(); var p=pos(ev); P.trazos[P.trazos.length-1].push(p); g.lineTo(p[0], p[1]); g.stroke(); };
+    cv.onmouseup=cv.onmouseleave=cv.ontouchend=cv.ontouchcancel=function(){ P.baja=false; };
+    P.trazo=function(){
+      var n=0, x0=1e9, y0=1e9, x1=-1e9, y1=-1e9;
+      P.trazos.forEach(function(s){ if(s.length<2) return; s.forEach(function(p){ n++; if(p[0]<x0) x0=p[0]; if(p[0]>x1) x1=p[0]; if(p[1]<y0) y0=p[1]; if(p[1]>y1) y1=p[1]; }); });
+      if(n<12) return null;
+      var an=Math.max(1, x1-x0), al=Math.max(1, y1-y0), mg=Math.max(an, al)*0.06;
+      x0-=mg; y0-=mg; an+=mg*2; al+=mg*2;
+      if(al/an<0.13){ var f=(an*0.13-al)/2; y0-=f; al=an*0.13; }
+      var k=1000/an, out=[];
+      P.trazos.forEach(function(s){ if(s.length<2) return; var q=[]; s.forEach(function(p){ q.push(Math.round((p[0]-x0)*k), Math.round((p[1]-y0)*k)); }); out.push(q); });
+      return { h:Math.round(al*k), p:out.slice(0, 300) };
+    };
+    return P;
+  }
+  function cabecera(){
+    var C=S.C;
+    return '<div class="cab"><b>'+esc(t('CÉDULA DE VOTACIÓN'))+'</b><span class="cu">'+esc(C.cuerpo || '')+'</span>'+
+      (C.obra ? '<small>'+esc(C.obra)+'</small>' : '')+'<small>'+esc(t('Para'))+': '+esc(C.nombre || '')+'</small>'+
+      (C.cierra ? '<small>'+esc(t('Hasta el {0}', fh(C.cierra)))+'</small>' : '')+'</div>';
+  }
+  function pasos(n){ return '<div class="pasos" aria-hidden="true">'+[1, 2, 3].map(function(i){ return '<i'+(i<=n ? ' class="on"' : '')+'></i>'; }).join('')+'</div>'; }
+  function aviso(tit, txt, ic, conBoton){
+    cuerpo.innerHTML=(ic ? '<div class="ok">'+ic+'</div>' : '')+'<h1>'+esc(tit)+'</h1><p class="sub">'+esc(txt)+'</p>'+(conBoton ? '<button type="button" class="btn" id="otra">'+esc(t('Intentar otra vez'))+'</button>' : '');
+    if(conBoton) document.getElementById('otra').onclick=conBoton;
+  }
+  function porMotivo(m, reintento){
+    if(m==='no_esta') return S.paso='codigo', S.msg=t('Ese código no está. Revisa que esté bien escrito, o pídele a la junta electoral uno nuevo.'), pintar();
+    if(m==='codigo_raro') return S.paso='codigo', S.msg=t('Escribe el código completo: son doce letras y números.'), pintar();
+    if(m==='cerrada' || m==='vencida') return aviso(t('La votación ya se cerró'), t('Ya no se puede votar con este código.'), '🔒');
+    if(m==='anulada') return aviso(t('La votación se anuló'), t('Pregúntale a la junta electoral cómo sigue la elección.'), '⚠️');
+    if(m==='bloqueado') return aviso(t('Tu código está bloqueado'), t('Se puso mal el documento cinco veces. Pídele a la junta electoral un código nuevo.'), '⛔');
+    if(m==='ya_voto') return aviso(t('Ya votaste'), t('Tu voto ya está registrado. Cada código sirve una sola vez.'), '✅');
+    if(m==='muy_seguido') return aviso(t('Sin señal'), t('Hubo muchos intentos en esta hora. Espera un rato y vuelve a abrir tu cédula.'), '⏳', reintento);
+    if(m===404) return aviso(t('Sin señal'), t('La votación desde el celular todavía no está activa. Avísale a la junta electoral.'), '⚠️');
+    return aviso(t('Sin señal'), t('Necesitas datos o wifi para votar. Inténtalo otra vez en un rato.'), '📶', reintento);
+  }
+  function cargar(){
+    cuerpo.innerHTML='<h1>'+esc(t('Abriendo tu cédula…'))+'</h1><div class="giro"></div>';
+    rpc('sst_votacion_cedula', { p_cod:S.cod }).then(function(j){
+      if(!j || !j.ok) return porMotivo(j && j.motivo, cargar);
+      S.C=j; pie.textContent=j.obra || '';
+      if(j.ya) return porMotivo('ya_voto');
+      if(j.estado!=='abierta') return porMotivo(j.estado);
+      if(j.bloqueado) return porMotivo('bloqueado');
+      S.paso='elegir'; S.sel=[]; S.blanco=false; S.msg=''; pintar();
+    }, function(err){ porMotivo(err, cargar); });
+  }
+  function pintar(){
+    var h='';
+    if(S.paso==='codigo'){
+      h='<h1>'+esc(t('Escribe tu código'))+'</h1><p class="sub">'+esc(t('Está en tu cédula personal, debajo del QR: doce letras y números.'))+'</p>'+
+        '<div class="tarj"><input type="text" class="cod" id="v-cod" autocomplete="off" autocapitalize="characters" maxlength="20" placeholder="XXXX-XXXX-XXXX" value="'+esc(S.cod)+'"></div>'+
+        '<p class="msg" id="v-msg">'+esc(S.msg)+'</p><button type="button" class="btn" id="v-abrir">'+esc(t('Abrir mi cédula'))+'</button>';
+      cuerpo.innerHTML=h;
+      document.getElementById('v-abrir').onclick=function(){
+        var c=limpio(document.getElementById('v-cod').value);
+        if(c.length<10){ document.getElementById('v-msg').textContent=t('Escribe el código completo: son doce letras y números.'); return; }
+        S.cod=c; cargar();
+      };
+      return;
+    }
+    var C=S.C, m=Math.min(+C.marcas || 1, (C.cands || []).length || 1), nom={};
+    (C.cands || []).forEach(function(c){ nom[c.id]=c.n; });
+    if(S.paso==='elegir'){
+      h=pasos(1)+cabecera()+'<h1>'+esc(m===1 ? t('Toca a tu candidato') : t('Toca hasta {0} candidatos', m))+'</h1><p class="sub">'+esc(t('Tu voto es secreto: se guarda sin tu nombre.'))+'</p>'+
+        (C.cands || []).map(function(c){ var on=S.sel.indexOf(c.id)>-1; return '<button type="button" class="cand'+(on ? ' on' : '')+'" data-id="'+esc(c.id)+'" aria-pressed="'+on+'"><i>'+(on ? '✓' : '')+'</i><span>'+esc(c.n)+'</span></button>'; }).join('')+
+        '<p class="msg" id="v-msg">'+esc(S.msg)+'</p>'+
+        '<button type="button" class="btn" id="v-votar"'+(S.sel.length ? '' : ' disabled')+'>'+esc(t('Votar'))+'</button>'+
+        '<button type="button" class="btn sec" id="v-blanco">'+esc(t('Votar en blanco'))+'</button>';
+      cuerpo.innerHTML=h;
+      Array.prototype.forEach.call(cuerpo.querySelectorAll('.cand'), function(b){ b.onclick=function(){
+        var id=b.getAttribute('data-id'), i=S.sel.indexOf(id); S.msg='';
+        if(i>-1) S.sel.splice(i, 1); else if(m===1) S.sel=[id]; else if(S.sel.length<m) S.sel.push(id); else S.msg=t('Ya marcaste {0}: toca uno para quitarlo.', m);
+        pintar();
+      }; });
+      document.getElementById('v-votar').onclick=function(){ if(!S.sel.length) return; S.blanco=false; S.paso='confirmar'; S.msg=''; pintar(); window.scrollTo(0, 0); };
+      document.getElementById('v-blanco').onclick=function(){ S.sel=[]; S.blanco=true; S.paso='confirmar'; S.msg=''; pintar(); window.scrollTo(0, 0); };
+      return;
+    }
+    if(S.paso==='confirmar'){
+      h=pasos(2)+cabecera()+'<h1>'+esc(t('¿Confirmas tu voto?'))+'</h1><p class="sub">'+esc(t('Después ya no se puede cambiar.'))+'</p>'+
+        '<ul class="lista">'+(S.blanco ? '<li>'+esc(t('En blanco'))+'</li>' : S.sel.map(function(id){ return '<li>'+esc(nom[id] || '')+'</li>'; }).join(''))+'</ul>'+
+        '<button type="button" class="btn" id="v-si">'+esc(t('Sí, es mi voto'))+'</button><button type="button" class="btn sec" id="v-cambiar">'+esc(t('Cambiar'))+'</button>';
+      cuerpo.innerHTML=h;
+      document.getElementById('v-si').onclick=function(){ S.paso='firmar'; S.msg=''; pintar(); window.scrollTo(0, 0); };
+      document.getElementById('v-cambiar').onclick=function(){ S.paso='elegir'; S.blanco=false; pintar(); };
+      return;
+    }
+    if(S.paso==='firmar'){
+      h=pasos(3)+cabecera()+'<h1>'+esc(t('Para que tu voto cuente'))+'</h1><p class="sub">'+esc(t('Tu documento y tu firma van al padrón de los que votaron, no a tu voto.'))+'</p><div class="tarj">'+
+        (C.pide_doc ? '<label for="v-doc">'+esc(t('Tu documento de identidad'))+'</label><input type="text" id="v-doc" inputmode="numeric" autocomplete="off" maxlength="20" value="'+esc(S.doc)+'">' : '')+
+        '<label for="v-firma">'+esc(t('Tu firma'))+'</label><div class="pad"><canvas id="v-firma"></canvas></div><button type="button" class="borrar" id="v-borrar">'+esc(t('Borrar la firma'))+'</button></div>'+
+        '<p class="msg" id="v-msg">'+esc(S.msg)+'</p><button type="button" class="btn" id="v-enviar">'+esc(t('Enviar mi voto'))+'</button><button type="button" class="btn sec" id="v-atras">'+esc(t('Cambiar'))+'</button>';
+      cuerpo.innerHTML=h;
+      S.pad=lienzo(document.getElementById('v-firma'));
+      document.getElementById('v-borrar').onclick=function(){ S.pad.limpiar(); };
+      document.getElementById('v-atras').onclick=function(){ if(S.enviando) return; S.paso='elegir'; S.blanco=false; S.msg=''; pintar(); };
+      document.getElementById('v-enviar').onclick=enviar;
+      return;
+    }
+  }
+  function enviar(){
+    if(S.enviando) return;
+    var C=S.C, msg=document.getElementById('v-msg'), bt=document.getElementById('v-enviar'), doc='';
+    if(C.pide_doc){ doc=document.getElementById('v-doc').value; S.doc=doc; if(limpio(doc).length<4){ msg.textContent=t('Escribe tu documento.'); return; } }
+    var f=S.pad && S.pad.trazo(); if(!f){ msg.textContent=t('Falta tu firma.'); return; }
+    S.enviando=true; bt.disabled=true; bt.textContent=t('Enviando…'); msg.textContent='';
+    rpc('sst_votar', { p_cod:S.cod, p_doc:doc, p_marcas:S.blanco ? [] : S.sel.slice(), p_blanco:!!S.blanco, p_firma:JSON.stringify(f) }).then(function(j){
+      S.enviando=false;
+      if(j && j.ok) return listo(false);
+      var m=j && j.motivo;
+      if(m==='doc_no_coincide'){ bt.disabled=false; bt.textContent=t('Enviar mi voto'); msg.textContent=(j.quedan>0) ? t('Ese documento no es el del padrón. Te quedan {0} intentos.', j.quedan) : t('Ese documento no es el del padrón.'); if(!(j.quedan>0)) porMotivo('bloqueado'); return; }
+      if(m==='ya_voto') return listo(true);
+      if(m==='cedula_rara' || m==='firma_rara'){ bt.disabled=false; bt.textContent=t('Enviar mi voto'); msg.textContent=t('Algo no salió bien. Inténtalo otra vez.'); return; }
+      porMotivo(m);
+    }, function(err){
+      S.enviando=false; bt.disabled=false; bt.textContent=t('Enviar mi voto');
+      if(err===404) return porMotivo(404);
+      msg.textContent=t('Tu voto no se envió: necesitas datos o wifi. Inténtalo otra vez.');
+    });
+  }
+  function listo(yaEstaba){
+    S.sel=[]; S.blanco=false; S.pad=null;
+    try{ history.replaceState(null, '', location.pathname); }catch(_r){}
+    cuerpo.innerHTML='<div class="ok">✅</div><h1>'+esc(t('Tu voto quedó registrado'))+'</h1>'+
+      '<p class="sub">'+esc(yaEstaba ? t('Tu voto ya estaba registrado.') : t('Es secreto: ni la empresa ni la junta pueden saber por quién votaste.'))+'</p>'+
+      '<p class="nota">'+esc(t('Ya puedes cerrar esta página.'))+'</p>';
+  }
+  /* el código: después del «#» (el QR y el enlace lo traen así); si no, se escribe */
+  S.cod=limpio(decodeURIComponent(String(location.hash || '').replace(/^#/, '')));
+  if(S.cod.length>=10) cargar(); else { S.cod=''; S.paso='codigo'; pintar(); }
+  window.addEventListener('hashchange', function(){ var c=limpio(decodeURIComponent(String(location.hash || '').replace(/^#/, ''))); if(c.length>=10 && c!==S.cod){ S.cod=c; cargar(); } });
+})();
+</script>
+</body></html>
