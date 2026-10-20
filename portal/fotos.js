@@ -33,7 +33,7 @@ function _fotCss(){
     '.fr-de .fr-f figcaption .campo{margin:6px 0 0}',
     '.fr-grande{display:block; width:100%; max-height:62vh; object-fit:contain; background:var(--fondo); border-radius:10px; border:1px solid var(--raya); margin:0 0 12px}',
     '.fr-temas{list-style:none; margin:0 0 10px; padding:0; display:grid; gap:8px}',
-    '.fr-temas li{display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1.6fr) auto auto; gap:8px; align-items:center}',
+    '.fr-temas li{display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1.6fr) auto auto auto; gap:8px; align-items:center}',
     '.fr-temas li input{margin:0}.fr-temas li .chk{margin:0; white-space:nowrap; font-size:12.5px}',
     '.fr-temas li .fr-mov{display:flex; gap:4px}',
     '@media (max-width:720px){ .fr-temas li{grid-template-columns:minmax(0,1fr)} .fr-q{grid-template-columns:72px minmax(0,1fr)} .fr-q img{width:72px; height:56px} }'
@@ -283,14 +283,15 @@ function fotDeRegistrosHoja(mes){
 /* ═══ LOS TEMAS DE LA OBRA ═══ */
 function fotTemasHoja(){
   abrirHoja('Temas del registro fotográfico', 'Los temas en el orden en que salen en el informe · es la misma lista en la app', '<div class="vacio">Cargando…</div>', '', { ancha:true, sinFoco:true });
-  fotoCatP(true).then(function(L){ FRW.ed=L.map(function(c){ return { k:c.k, n:c.n, ej:c.ej, amb:c.amb }; }); _fotTemasPintar(); });
+  fotoCatP(true).then(function(L){ FRW.ed=L.map(function(c){ return { k:c.k, n:c.n, ej:c.ej, amb:c.amb, sal:c.sal }; }); _fotTemasPintar(); });
 }
 function _fotTemasPintar(){
   var E=FRW.ed; if(!E) return;
-  $('hoja-cuerpo').innerHTML='<p class="ayuda" style="margin:0 0 12px">'+(FRW.propia ? 'Los temas propios de la obra.' : 'Son los temas sugeridos.')+' Pon los que tu obra muestra cada mes —y los que pide tu cliente—: el nombre, un ejemplo de lo que va, y si es de medio ambiente (también sale en el informe ambiental). Las fotos de un tema que se quita pasan a «Otros».</p>'+
+  $('hoja-cuerpo').innerHTML='<p class="ayuda" style="margin:0 0 12px">'+(FRW.propia ? 'Los temas propios de la obra.' : 'Son los temas sugeridos.')+' Pon los que tu obra muestra cada mes —y los que pide tu cliente—: el nombre, un ejemplo de lo que va, y si es de medio ambiente o de salud ocupacional (también sale en ese informe). Las fotos de un tema que se quita pasan a «Otros».</p>'+
     '<ul class="fr-temas">'+E.map(function(c, i){
       return '<li><input value="'+esc(c.n)+'" maxlength="60" data-i="'+i+'" data-c="n" aria-label="Tema"><input value="'+esc(c.ej||'')+'" maxlength="140" data-i="'+i+'" data-c="ej" placeholder="Qué fotos van" aria-label="Qué fotos van">'+
         '<label class="chk" title="Va también al informe de medio ambiente"><input type="checkbox" data-i="'+i+'" data-c="amb"'+(c.amb ? ' checked' : '')+'> <span>Ambiental</span></label>'+
+        '<label class="chk" title="Va también al informe de salud ocupacional"><input type="checkbox" data-i="'+i+'" data-c="sal"'+(c.sal ? ' checked' : '')+'> <span>Salud</span></label>'+
         '<span class="fr-mov"><button type="button" class="bt sec chico" data-sube="'+i+'"'+(i ? '' : ' disabled')+' aria-label="Subir">↑</button><button type="button" class="bt sec chico" data-baja="'+i+'"'+(i<E.length-1 ? '' : ' disabled')+' aria-label="Bajar">↓</button>'+
         '<button type="button" class="bt sec chico" data-quitar="'+i+'" aria-label="Quitar">✕</button></span></li>'; }).join('')+'</ul>'+
     '<div class="fila-c"><div class="campo"><label for="frt-n">Otro tema</label><input id="frt-n" maxlength="60" placeholder="Trabajos en espacios confinados" autocomplete="off"></div><div class="campo" style="align-self:end"><button type="button" class="bt sec" id="frt-mas">＋ Agregar</button></div></div>'+
@@ -298,7 +299,7 @@ function _fotTemasPintar(){
   _obsPieP('<button type="button" class="bt sec" id="frt-sug">Volver a los sugeridos</button><button type="button" class="bt ok" id="frt-ok">Guardar los temas</button>');
   var b=$('hoja-cuerpo');
   b.oninput=function(ev){ var t=ev.target, i=t.getAttribute && t.getAttribute('data-i'); if(i!=null && t.type!=='checkbox') E[+i][t.getAttribute('data-c')]=t.value; };
-  b.onchange=function(ev){ var t=ev.target, i=t.getAttribute && t.getAttribute('data-i'); if(i!=null && t.type==='checkbox') E[+i].amb=t.checked; };
+  b.onchange=function(ev){ var t=ev.target, i=t.getAttribute && t.getAttribute('data-i'); if(i!=null && t.type==='checkbox') E[+i][t.getAttribute('data-c')==='sal' ? 'sal' : 'amb']=t.checked; };
   b.onclick=function(ev){
     var s=ev.target.closest('[data-sube]'), j=ev.target.closest('[data-baja]'), q=ev.target.closest('[data-quitar]');
     if(s){ var i=+s.getAttribute('data-sube'); E.splice(i-1, 0, E.splice(i, 1)[0]); _fotTemasPintar(); }
@@ -308,7 +309,7 @@ function _fotTemasPintar(){
   $('frt-mas').onclick=function(){
     var n=String($('frt-n').value||'').replace(/\s+/g, ' ').trim().slice(0, 60); if(!n) return;
     if(E.some(function(c){ return String(c.n).toLowerCase()===n.toLowerCase(); })){ toast('Ese tema ya está.'); return; }
-    E.push({ k:'t'+Date.now().toString(36), n:n, ej:'', amb:false }); _fotTemasPintar(); try{ $('frt-n').focus(); }catch(e){}
+    E.push({ k:'t'+Date.now().toString(36), n:n, ej:'', amb:false, sal:FOTO_SAL_AUTO.test(n.toLowerCase()) }); _fotTemasPintar(); try{ $('frt-n').focus(); }catch(e){}
   };
   $('frt-n').onkeydown=function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); $('frt-mas').click(); } };
   $('frt-sug').onclick=function(){ FRW.ed=fotoCatLista(null); _fotTemasPintar(); };

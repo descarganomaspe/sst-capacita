@@ -291,10 +291,13 @@ function _emoPintar(){
   var L=R.lista||[], S=eq ? (eq.accesos||[]).filter(function(a){ return a.papel==='salud'; }) : null;
   if(ac){
     ac.innerHTML=(P.salud ? '<button type="button" class="bt" id="emo-nuevo">＋ Registrar un EMO</button><button type="button" class="bt sec" id="emo-todo">📋 Todo lo registrado</button>' : '')+
-      ((P.jefe || P.salud) ? '<button type="button" class="bt sec" id="emo-quien">👥 Quién ve los EMO</button>' : '');
+      ((P.jefe || P.salud) ? '<button type="button" class="bt sec" id="emo-quien">👥 Quién ve los EMO</button>' : '')+
+      /* 20/10/2026 · lote 23 · el informe de salud ocupacional del mes (sin diagnósticos) */
+      '<button type="button" class="bt sec" id="emo-inf">🩺 Informe de salud ocupacional ›</button>';
     if($('emo-nuevo')) $('emo-nuevo').onclick=function(){ emoNuevoHoja(null); };
     if($('emo-todo')) $('emo-todo').onclick=function(){ emoTodoHoja(); };
     if($('emo-quien')) $('emo-quien').onclick=function(){ emoQuienHoja(); };
+    if($('emo-inf')) $('emo-inf').onclick=function(){ navegar('inf-salud'); };
   }
   var K={ vigente:0, por_vencer:0, vencido:0, sin:0, sin_proximo:0 };
   L.forEach(function(x){ K[x.estado]=(K[x.estado]||0)+1; });

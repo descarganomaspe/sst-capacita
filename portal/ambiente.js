@@ -3,7 +3,7 @@
    comprobante de pago), el agua consumida (m³), el combustible con sus boletas de carga y los certificados y constancias. Se
    registra aquí o en la app (la misma hoja «amb-reg»: el módulo AMB del núcleo dice cómo se guarda). Abajo, los temas de las
    charlas del mes: de seguridad o de medio ambiente (lo decide la obra; de entrada lo dicen sus palabras). Y el informe de
-   medio ambiente del mes, en «Informe del mes». */
+   medio ambiente del mes, en «Informe › Medio ambiente» (lote 23). */
 var AMBW = { obra:null, mes:'', filas:null, temas:null, mapa:null, ed:null, guardando:false, ev:[] };
 function _ambCss(){
   if(document.getElementById('amb-css')) return;
@@ -58,7 +58,7 @@ function vistaAmbiente(caja){
   var ac=$('acciones');
   if(ac){
     ac.innerHTML='<button type="button" class="bt sec" id="amb-inf-b">🌱 Informe de medio ambiente</button><button type="button" class="bt" id="amb-nuevo-b">＋ Registrar</button>';
-    $('amb-inf-b').onclick=function(){ window.INFW_PIDE={ tipo:'amb', mes:AMBW.mes }; navegar('informe'); };
+    $('amb-inf-b').onclick=function(){ window.INFW_PIDE={ tipo:'amb', mes:AMBW.mes }; navegar('inf-amb'); };
     $('amb-nuevo-b').onclick=function(){ ambFormHoja('res'); };
   }
   caja.innerHTML='<div id="amb-vista"><div class="vacio">Cargando…</div></div>';

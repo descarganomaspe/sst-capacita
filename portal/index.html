@@ -3145,6 +3145,137 @@ function ambTemaEs(tema, mapa){
   return ambTemaAuto(tema);
 }
 /* <<< AMB-FIN >>> */
+/* >>> SAL-INI (lote 23 · se edita aquí; su copia va en portal/index.html, herr/copias.py la revisa) <<< */
+/* ═════════════════════════════════════════════════════════════════
+   LA SALUD OCUPACIONAL DEL MES (20/10/2026 · lote 23)
+   Marcelo: «el informe … que se tenga de SST, Medio Ambiente y Salud
+   Ocupacional … en la app también tienen que haber esa relación de
+   información … para todos los datos que se necesitan para el informe.
+   Hay secciones en la app que ya por sí solas deberían de subirse en el
+   informe, para no repetir información».
+   Lo que la app ya tiene entra solo: los EMO, los accidentes con lesión
+   y los primeros auxilios, el descanso médico (la situación «De
+   descanso» del trabajador), las charlas de salud, las campañas de
+   salud, las inspecciones de salud e higiene y las observaciones de
+   salud. Lo que faltaba se registra aparte: una fila de sst_doc, hoja
+   «sal-reg», con la nota:
+     mon: { v:1, k:'mon', fecha, agente, lugar, res, emp, obs, ev, por, t }
+          (un monitoreo ocupacional, con el informe del laboratorio)
+     act: { v:1, k:'act', fecha, tipo, tema, n, emp, obs, ev, por, t }
+          (una actividad de salud: pausas activas, vacunación…)
+     (ev.t: 'inf' informe o certificado · 'lista' lista de asistencia ·
+     'foto' una foto).
+   · El tema de cada charla: de SST, de salud ocupacional o de medio
+     ambiente. Lo dicen sus palabras y, si alguien lo cambió, la obra:
+     la nota de «ats-cfg» lleva { temasSal: { <tema>: 1 | 0 } }, como
+     temasAmb (lo de medio ambiente se mira primero).
+   · El descanso de un trabajador lleva su motivo (ev.dm): 'med' es el
+     descanso médico; los de antes, si su nota dice «médico».
+   Nada de diagnósticos: el informe cuenta exámenes, aptitudes, días y
+   personas; el contenido de un EMO lo ven solo salud y el trabajador.
+   ═════════════════════════════════════════════════════════════════ */
+var SAL_HOJA = 'sal-reg';
+var SAL_AGENTES = [['ruido', 'Ruido'], ['polvo', 'Polvo y sílice'], ['ilum', 'Iluminación'], ['vibra', 'Vibración'], ['termico', 'Calor o frío'],
+  ['quimico', 'Agentes químicos'], ['bio', 'Agentes biológicos'], ['ergo', 'Ergonomía'], ['psico', 'Factores psicosociales'], ['otro', 'Otro']];
+var SAL_RES = [['ok', 'Dentro del límite'], ['fuera', 'Supera el límite'], ['pend', 'Falta el resultado']];
+var SAL_ACT_TIPOS = [['pausas', 'Pausas activas'], ['vacuna', 'Vacunación'], ['tamizaje', 'Despistaje o tamizaje'], ['medico', 'Charla del médico o enfermería'],
+  ['nutricion', 'Alimentación saludable'], ['mental', 'Salud mental'], ['adicciones', 'Prevención de alcohol y drogas'], ['otra', 'Otra']];
+var SAL_EV_N = { inf:'Informe o certificado', lista:'Lista de asistencia', foto:'Foto' };
+/* el motivo del descanso de un trabajador */
+var SAL_DESC = [['med', 'Descanso médico'], ['vac', 'Vacaciones'], ['esp', 'En espera']];
+/* las campañas de la app que son de salud (las demás son de seguridad) */
+var SAL_CAMP = { calor:1, espalda:1, ruido:1, mental:1 };
+/* las inspecciones de salud e higiene, por su tipo */
+var SAL_INSP = /(botiqu|primeros auxilios|topico|comedor|servicios? higienic|banos?|vestuario|agua (para beber|potable|de consumo)|bebedero|ergonom|ruido|ilumin|ventila|polvo|silice|higiene|salud|alimento|cocina|campamento|dormitorio|fatiga)/;
+function salNombre(L, k){ for(var i = 0; i < L.length; i++) if(L[i][0] === k) return L[i][1]; return ''; }
+function salNum(v){ var n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isFinite(n) && n >= 0 ? Math.round(n * 1000) / 1000 : null; }
+function salLimpio(d){
+  d = (d && typeof d === 'object' && !Array.isArray(d)) ? d : {};
+  var t = function(v, n){ return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n); };
+  var k = (d.k === 'mon') ? 'mon' : 'act';
+  var f = { v:1, k:k, fecha:/^\d{4}-\d{2}-\d{2}$/.test(String(d.fecha || '')) ? String(d.fecha) : '' };
+  if(k === 'mon'){ f.agente = salNombre(SAL_AGENTES, d.agente) ? d.agente : 'otro'; f.lugar = t(d.lugar, 120); f.res = salNombre(SAL_RES, d.res) ? d.res : 'pend'; f.emp = t(d.emp, 120); }
+  else { f.tipo = salNombre(SAL_ACT_TIPOS, d.tipo) ? d.tipo : 'otra'; f.tema = t(d.tema, 160); var n = parseInt(d.n, 10); f.n = (isFinite(n) && n > 0) ? Math.min(n, 99999) : 0; f.emp = t(d.emp, 120); }
+  f.obs = t(d.obs, 300);
+  f.ev = (Array.isArray(d.ev) ? d.ev : []).filter(function(x){ return x && /^https?:\/\//i.test(String(x.u || '')); }).slice(0, 6)
+    .map(function(x){ return { u:String(x.u), n:t(x.n, 120) || 'archivo', t:SAL_EV_N[x.t] ? x.t : 'foto' }; });
+  if(d.por) f.por = t(d.por, 60);
+  f.t = +d.t || Date.now();
+  return f;
+}
+function salFilas(rows){
+  var out = [];
+  (rows || []).forEach(function(r){
+    if(!r || (r.hoja && r.hoja !== SAL_HOJA)) return;
+    var d = r.nota; if(typeof d === 'string'){ try{ d = JSON.parse(d); }catch(e){ d = null; } }
+    if(!d || typeof d !== 'object') return;
+    var f = salLimpio(d); if(!f.fecha) f.fecha = String(r.creado || '').slice(0, 10);
+    out.push({ id:r.id, d:f });
+  });
+  return out.sort(function(a, b){ return (a.d.fecha + a.d.t).localeCompare(b.d.fecha + b.d.t); });
+}
+function salDelMes(L, mes){ return (L || []).filter(function(x){ return String(x.d.fecha).slice(0, 7) === mes; }); }
+/* lo del mes, sumado: los monitoreos (y cuántos superan el límite) y las actividades con sus personas */
+function salResumen(L){
+  var R = { mon:0, fuera:0, pend:0, ag:{}, act:0, pers:0, tipos:{}, ev:0, sinInf:0 };
+  (L || []).forEach(function(x){
+    var d = x.d; R.ev += d.ev.length;
+    if(d.k === 'mon'){ R.mon++; if(d.res === 'fuera') R.fuera++; if(d.res === 'pend') R.pend++; R.ag[d.agente] = (R.ag[d.agente] || 0) + 1; if(!d.ev.some(function(e){ return e.t === 'inf'; })) R.sinInf++; }
+    else { R.act++; R.pers += d.n || 0; R.tipos[d.tipo] = (R.tipos[d.tipo] || 0) + 1; }
+  });
+  return R;
+}
+/* ¿el tema es de salud ocupacional? Lo decidido por la obra manda; si no, lo dicen sus palabras */
+var SAL_PALABRAS = /(salud|ergonom|postura|manipulacion (manual )?de cargas|levantamiento de cargas|carga manual|lumbalg|espalda|pausas? activas?|fatiga|somnolencia|hidratacion|golpe de calor|estres termico|insolacion|proteccion solar|bloqueador|radiacion (uv|solar)|ruido|hipoacusia|audicion|proteccion auditiva|polvo|silice|silicosis|vibracion|iluminacion|ventilacion|enfermedad|examen(es)? medico|\bemo\b|vacuna|despistaje|tamizaje|presion arterial|diabetes|nutricion|alimentacion|estres|ansiedad|depresion|psicosocial|hostigamiento|acoso|alcohol|drogas|adiccion|tabaco|botiquin|higiene|lavado de manos|servicios higienicos|agua para beber|dengue|tuberculosis|\bvih\b|picadura|mordedura|lactario|gestante|embarazo|primeros auxilios)/;
+/* «seguridad y salud en el trabajo» es todo el SST: esas palabras solas no hacen de salud a un tema */
+function salTemaAuto(tema){ return SAL_PALABRAS.test(ambTemaClave(tema).replace(/seguridad y salud( en el trabajo| ocupacional)?|\bsst\b|ssoma|ssma/g, ' ')); }
+function salTemaEs(tema, mapa){
+  var k = ambTemaClave(tema);
+  if(k && mapa && typeof mapa === 'object' && Object.prototype.hasOwnProperty.call(mapa, k)) return !!mapa[k];
+  return salTemaAuto(tema);
+}
+/* de qué informe es una charla: 'amb' | 'sal' | 'sst' (lo de medio ambiente se mira primero) */
+function salTemaDe(tema, mapaAmb, mapaSal){
+  if(ambTemaEs(tema, mapaAmb)) return 'amb';
+  return salTemaEs(tema, mapaSal) ? 'sal' : 'sst';
+}
+/* ¿la campaña es de salud? Las de la app por su clave; las propias, por sus palabras */
+function salCampEs(c){ return !!(c && (SAL_CAMP[c.kcat] || SAL_CAMP[c.k] || salTemaAuto([c.nombre, c.lema, c.objetivo].join(' ')))); }
+/* el descanso médico de un trabajador, día por día, dentro de [desde, hasta] (fechas ISO, incluidas) */
+function salDescMed(ev){ return !!ev && ev.e === 'descanso' && (ev.dm === 'med' || (!ev.dm && /m[eé]dic/i.test(String(ev.n || '') + ' ' + String(ev.m || '')))); }
+function salDescDias(hist, desde, hasta){
+  var l = (Array.isArray(hist) ? hist : []).filter(function(e){ return e && /^\d{4}-\d{2}-\d{2}$/.test(String(e.f || '')); })
+    .slice().sort(function(a, b){ return a.f < b.f ? -1 : (a.f > b.f ? 1 : (+a.t || 0) - (+b.t || 0)); });
+  var dias = 0, un = 864e5, ms = function(f){ return Date.parse(f + 'T12:00:00Z'); }, ini = ms(desde), fin = ms(hasta);
+  l.forEach(function(e, i){
+    if(!salDescMed(e)) return;
+    var a = Math.max(ms(e.f), ini), sig = l[i + 1], b = Math.min(sig ? ms(sig.f) - un : fin, fin);
+    if(b >= a) dias += Math.round((b - a) / un) + 1;
+  });
+  return dias;
+}
+/* el descanso médico del mes: cuántos trabajadores y cuántos días (sin nombres en el informe) */
+function salDescansos(trab, mes, dia){
+  var d0 = mes + '-01', R = { n:0, dias:0 };
+  (trab || []).forEach(function(t){
+    var h = t && (Array.isArray(t.hist) ? t.hist : t.historial); if(!Array.isArray(h) || !h.length) return;
+    var d = salDescDias(h, d0, dia); if(d > 0){ R.n++; R.dias += d; }
+  });
+  return R;
+}
+/* el EMO del personal, de lo que el equipo puede ver (sst_emo_resumen: fechas, tipo, aptitud y próximo) */
+function salEmo(lista, mes, dia){
+  var R = { n:0, vig:0, por:0, venc:0, sin:0, sinProx:0, mes:0, tipos:{}, apt:{}, entregados:0, recibidos:0, L:[] };
+  (lista || []).forEach(function(x){
+    if(!x) return; R.n++;
+    var f = String(x.fecha || '').slice(0, 10), est = !f ? 'sin' : (typeof emoEstado === 'function' ? emoEstado(x.proximo, dia) : String(x.estado || 'sin'));
+    if(est === 'vigente') R.vig++; else if(est === 'por_vencer') R.por++; else if(est === 'vencido') R.venc++; else if(est === 'sin_proximo') R.sinProx++; else R.sin++;
+    if(f && f.slice(0, 7) === mes){ R.mes++; R.tipos[x.tipo || 'otro'] = (R.tipos[x.tipo || 'otro'] || 0) + 1; R.apt[x.aptitud || 'sin'] = (R.apt[x.aptitud || 'sin'] || 0) + 1; if(x.entregado) R.entregados++; if(x.recibido) R.recibidos++; }
+    if(est === 'vencido' || est === 'por_vencer' || est === 'sin') R.L.push({ nombre:String(x.nombre || ''), est:est, fecha:f, proximo:String(x.proximo || '').slice(0, 10) });
+  });
+  return R;
+}
+/* <<< SAL-FIN >>> */
 /* >>> FOTO-REG-INI (lote 19 · se edita aquí; su copia va en portal/index.html, herr/copias.py la revisa) <<< */
 /* ═════════════════════════════════════════════════════════════════
    EL REGISTRO FOTOGRÁFICO DEL MES (19/10/2026 · lote 19)
@@ -3164,15 +3295,19 @@ var FOTO_CAT_SUG = [
   { k: 'charlas', n: 'Charlas y capacitaciones', ej: 'La charla de inicio de jornada, una capacitación, una inducción' },
   { k: 'epp', n: 'Uso de EPP', ej: 'La cuadrilla con su EPP completo, una entrega de EPP' },
   { k: 'emergencia', n: 'Sistema de emergencia', ej: 'Extintores, botiquín, camilla, rutas de evacuación, punto de reunión, brigada' },
-  { k: 'bienestar', n: 'Servicios de bienestar', ej: 'Comedor, servicios higiénicos, vestuarios, agua para beber' },
+  { k: 'bienestar', n: 'Servicios de bienestar', ej: 'Comedor, servicios higiénicos, vestuarios, agua para beber', sal: 1 },
   { k: 'orden', n: 'Orden y limpieza', ej: 'Zonas de trabajo y accesos ordenados, acopio de materiales' },
   { k: 'senal', n: 'Señalización y delimitación', ej: 'Carteles, cintas, mallas, conos y barreras' },
   { k: 'riesgo', n: 'Trabajos de alto riesgo', ej: 'Altura, en caliente, excavaciones, izajes, espacios confinados, eléctricos' },
   { k: 'equipos', n: 'Equipos y herramientas', ej: 'Inspección de equipos, la cinta del mes, guardas en su sitio' },
   { k: 'simulacro', n: 'Simulacros', ej: 'El simulacro del mes y su evaluación' },
+  /* 20/10/2026 · lote 23 · el tema del informe de salud ocupacional */
+  { k: 'salud', n: 'Salud ocupacional', ej: 'EMO, pausas activas, campañas de salud, el tópico y el botiquín', sal: 1 },
   { k: 'ambiente', n: 'Medio ambiente', ej: 'Segregación y acopio de residuos, control de polvo, kit antiderrames', amb: 1 },
   { k: 'otros', n: 'Otros', ej: 'Lo que el líder de SST quiera mostrar' }
 ];
+/* 20/10/2026 · lote 23 · un tema de antes, sin «sal»: es de salud si sus palabras lo dicen */
+var FOTO_SAL_AUTO = /(salud|bienestar|botiqu|pausas? activas?|higiene|comedor|servicios higi|ergonom|m[eé]dic)/;
 /* los temas de la obra, limpios (sin repetidos); sin lista propia, los sugeridos */
 function fotoCatLista(g){
   var l = Array.isArray(g) && g.length ? g : FOTO_CAT_SUG, out = [], vk = {}, vn = {};
@@ -3183,15 +3318,16 @@ function fotoCatLista(g){
     if(!n || vn[q]) return;
     while(vk[k]) k += 'x';
     vk[k] = 1; vn[q] = 1;
-    out.push({ k: k, n: n, ej: String(c.ej == null ? '' : c.ej).replace(/\s+/g, ' ').trim().slice(0, 140), amb: !!c.amb });
+    out.push({ k: k, n: n, ej: String(c.ej == null ? '' : c.ej).replace(/\s+/g, ' ').trim().slice(0, 140), amb: !!c.amb, sal: ('sal' in c) ? !!c.sal : FOTO_SAL_AUTO.test(q) });
   });
   return out;
 }
-function fotoCatGuardable(L){ return (L || []).map(function(c){ var x = { k: c.k, n: c.n }; if(c.ej) x.ej = c.ej; if(c.amb) x.amb = 1; return x; }); }
+/* 20/10/2026 · lote 23 · «sal: 0» cuando se le quitó a un tema que sus palabras harían de salud (para que quitarla quede) */
+function fotoCatGuardable(L){ return (L || []).map(function(c){ var x = { k: c.k, n: c.n }; if(c.ej) x.ej = c.ej; if(c.amb) x.amb = 1; if(c.sal) x.sal = 1; else if(FOTO_SAL_AUTO.test(String(c.n || '').toLowerCase())) x.sal = 0; return x; }); }
 /* el tema de una foto (el que ya no está en la lista, como «Otros») */
 function fotoCatDe(L, k){
   for(var i = 0; i < (L || []).length; i++) if(L[i].k === k) return L[i];
-  return { k: k || 'otros', n: 'Otros', ej: '', amb: false, fuera: true };
+  return { k: k || 'otros', n: 'Otros', ej: '', amb: false, sal: false, fuera: true };
 }
 function fotoRegLimpia(d){
   d = (d && typeof d === 'object' && !Array.isArray(d)) ? d : {};
@@ -3252,19 +3388,21 @@ var OBS_CAT_SUG = {
   acto: [
     { n: 'No usa el EPP o lo usa mal' }, { n: 'Trabajo en altura sin anclarse' }, { n: 'Opera equipos sin autorización' },
     { n: 'Usa herramientas o equipos defectuosos' }, { n: 'Retira o anula guardas y dispositivos de seguridad' },
-    { n: 'Postura insegura o mala manipulación de cargas' }, { n: 'Ingresa a zonas restringidas o de izaje' },
+    { n: 'Postura insegura o mala manipulación de cargas', sal: 1 }, { n: 'Ingresa a zonas restringidas o de izaje' },
     { n: 'No respeta la señalización ni el bloqueo' }, { n: 'Distracción: celular, bromas o juegos' },
     { n: 'Trabaja sin ATS o sin permiso de trabajo' },
     { n: 'Arroja residuos fuera del punto de acopio', amb: 1 }, { n: 'Desperdicia agua', amb: 1 },
-    { n: 'Mal manejo de combustibles o químicos', amb: 1 }
+    { n: 'Mal manejo de combustibles o químicos', amb: 1 },
+    { n: 'Trabaja con fatiga o sin hidratarse', sal: 1 }
   ],
   condicion: [
     { n: 'Falta de orden y limpieza' }, { n: 'Barandas, protecciones o tapas faltantes' }, { n: 'Andamios o escaleras en mal estado' },
     { n: 'Instalaciones eléctricas expuestas' }, { n: 'Excavación sin entibar o sin señalizar' }, { n: 'Señalización insuficiente' },
-    { n: 'Equipos o herramientas en mal estado' }, { n: 'Iluminación o ventilación deficiente' },
+    { n: 'Equipos o herramientas en mal estado' }, { n: 'Iluminación o ventilación deficiente', sal: 1 },
     { n: 'Materiales mal almacenados o apilados' }, { n: 'Equipos de emergencia faltantes o vencidos' },
     { n: 'Residuos sin segregar o acopio lleno', amb: 1 }, { n: 'Derrame de aceite o combustible', amb: 1 },
-    { n: 'Polvo o emisiones sin control', amb: 1 }
+    { n: 'Polvo o emisiones sin control', amb: 1, sal: 1 },
+    { n: 'Servicios higiénicos, comedor o agua para beber deficientes', sal: 1 }, { n: 'Ruido sin control', sal: 1 }
   ]
 };
 function obsTxt(v, max){ return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max || 120); }
@@ -3281,14 +3419,16 @@ function obsCatLista(g){
     l.forEach(function(c){
       var n = obsTxt(c && typeof c === 'object' ? c.n : c, 80), q = n.toLowerCase();
       if(!n || vistos[q]) return;
-      vistos[q] = 1; out[k].push({ n: n, amb: !!(c && typeof c === 'object' && c.amb) });
+      /* 20/10/2026 · lote 23 · «sal»: lo que diga la lista; una de antes, por sus palabras */
+      vistos[q] = 1; out[k].push({ n: n, amb: !!(c && typeof c === 'object' && c.amb), sal: (c && typeof c === 'object' && ('sal' in c)) ? !!c.sal : (typeof salTemaAuto === 'function' && salTemaAuto(n)) });
     });
   });
   return out;
 }
 /* lo que se guarda en la nota de «ats-cfg» */
 function obsCatGuardable(L){
-  var una = function(c){ return c.amb ? { n: c.n, amb: 1 } : { n: c.n }; };
+  /* 20/10/2026 · lote 23 · «sal: 0» cuando se le quitó a una que sus palabras harían de salud (para que quitarla quede) */
+  var una = function(c){ var x = { n: c.n }; if(c.amb) x.amb = 1; if(c.sal) x.sal = 1; else if(typeof salTemaAuto === 'function' && salTemaAuto(c.n)) x.sal = 0; return x; };
   return { acto: ((L && L.acto) || []).map(una), condicion: ((L && L.condicion) || []).map(una) };
 }
 /* ¿la categoría es de medio ambiente? Según la lista (null: ya no está en la lista) */
@@ -3297,12 +3437,25 @@ function obsCatAmb(L, tipo, n){
   for(var i = 0; i < l.length; i++) if(l[i].n.toLowerCase() === q) return l[i].amb;
   return null;
 }
+/* 20/10/2026 · lote 23 · ¿la categoría es de salud ocupacional? Según la lista (null: ya no está en la lista) */
+function obsCatSal(L, tipo, n){
+  var q = obsTxt(n, 80).toLowerCase(), l = (L && L[tipo]) || [];
+  for(var i = 0; i < l.length; i++) if(l[i].n.toLowerCase() === q) return !!l[i].sal;
+  return null;
+}
+/* ¿la observación va al informe de salud ocupacional? Lo marcado en su ficha, o su categoría */
+function obsEsSal(f, L, tipo){
+  if(!f) return false; if(f.sal) return true; if(!f.cat) return false;
+  var s = obsCatSal(L, tipo, f.cat);
+  return s === null ? (typeof salTemaAuto === 'function' && salTemaAuto(f.cat)) : s;
+}
 function obsFichaLimpia(d){
   d = (d && typeof d === 'object' && !Array.isArray(d)) ? d : {};
   var f = { v: 1 };
   if(obsTipoN(d.tipo)) f.tipo = d.tipo;
   f.cat = obsTxt(d.cat, 80);
   if(d.amb) f.amb = 1;
+  if(d.sal) f.sal = 1;
   f.origen = obsOrigenN(d.origen) ? d.origen : '';
   f.er = obsTxt(d.er, 100); f.eo = obsTxt(d.eo, 100); f.frente = obsTxt(d.frente, 80);
   f.plan = String(d.plan == null ? '' : d.plan).replace(/[ \t]+/g, ' ').trim().slice(0, 600);
@@ -3334,7 +3487,7 @@ function obsClasificada(f){ return !!(f && (f.cat || f.tipo === 'sug' || f.tipo 
 function obsFichaLinea(f){
   if(!f) return '';
   var l = [];
-  if(f.cat) l.push(f.cat + (f.amb ? ' · medio ambiente' : ''));
+  if(f.cat) l.push(f.cat + (f.amb ? ' · medio ambiente' : '') + (f.sal ? ' · salud ocupacional' : ''));
   if(f.origen) l.push(obsOrigenN(f.origen));
   if(f.eo) l.push(f.eo);
   if(f.frente) l.push(f.frente);
@@ -3490,9 +3643,12 @@ var VISTA = { actual:null, recargar:null, ultimoCambio:null, cache:{} };
    «Supervisión» solo sale en la obra que tiene cadena (cadVistasEn) y va SEGUNDA, después de «Inicio»: es lo del día,
    su contador es el único aviso de lo que hay por levantar o por validar, y en el celular —donde los accesos son una
    tira que se desliza— al final quedaba fuera de la pantalla. */
+/* 20/10/2026 · lote 23 · Marcelo: «quiero que sea una sección aparte que se llame informe»: el área «Informe» va después de
+   lo del día (Inicio y Supervisión): el de SST, el de medio ambiente, el de salud ocupacional y el registro fotográfico */
 var AREAS = [
   { id:'a-inicio',   n:'Inicio',                 ic:'▦',  v:['obra', 'resumen', 'parte'] },
   { id:'a-cadena',   n:'Supervisión',            ic:'🔗', v:['cad', 'cad-obs', 'cad-inf', 'cad-est', 'cad-sup', 'cad-cartera', 'cad-fis', 'cad-equipo'] },
+  { id:'a-informe',  n:'Informe',                ic:'📑', v:['informe', 'inf-amb', 'inf-salud', 'fotoreg'] },
   { id:'a-personal', n:'Personal',               ic:'☺',  v:['personal', 'personas', 'tareo', 'cred', 'legajo', 'autor', 'emo', 'sctr', 'tdm', 'amon', 'visitas'] },
   { id:'a-capac',    n:'Capacitación',           ic:'🎓', v:['prog', 'caphechas', 'charlas', 'induccion', 'constancias', 'cump', 'matriz', 'registro', 'encuestas', 'campanas'] },
   { id:'a-epp',      n:'EPP',                    ic:'⛑',  v:['kardex', 'epp', 'eppobra', 'pedidos', 'reqs'] },
@@ -3502,7 +3658,7 @@ var AREAS = [
   { id:'a-comite',   n:'Comité y emergencias',   ic:'🏛', v:['comite', 'cargos', 'quien', 'auxilios', 'simulacros'] },
   { id:'a-ambiente', n:'Medio ambiente',         ic:'🌱', v:['ambiente'] },
   { id:'a-docs',     n:'Documentos y avisos',    ic:'☰',  v:['docs', 'escaneos', 'qr', 'senales', 'boletines', 'noticias', 'normas'] },
-  { id:'a-indic',    n:'Programas e indicadores', ic:'📈', v:['informe', 'fotoreg', 'programas', 'objetivos', 'acc', 'hh'] },
+  { id:'a-indic',    n:'Programas e indicadores', ic:'📈', v:['programas', 'objetivos', 'acc', 'hh'] },
   { id:'a-empresa',  n:'Empresa',                ic:'🏢', v:['empresa', 'equipo', 'plan', 'cargar'] }
 ];
 var AREA_MAS = { id:'a-mas', n:'Más', ic:'⋯', v:[] };
@@ -3516,7 +3672,7 @@ var PESTANAS = {
   reportes:'Actos y condiciones', buenas:'Buenas prácticas', denuncias:'Denuncias', pulso:'Pulso de seguridad', ambiente:'Medio ambiente',
   comite:'Comité de SST', cargos:'Brigada y carteles', quien:'¿A quién acudo?', simulacros:'Simulacros',
   docs:'Documentos', escaneos:'Escaneos y fotos', qr:'Carteles QR', senales:'Señalética', boletines:'Boletines', noticias:'Noticias', normas:'Normas',
-  informe:'Informe del mes', fotoreg:'Registro fotográfico', acc:'Accidentabilidad', hh:'Horas hombre', programas:'Programas del año', objetivos:'Objetivos y metas',
+  informe:'SST', 'inf-amb':'Medio ambiente', 'inf-salud':'Salud ocupacional', fotoreg:'Registro fotográfico', acc:'Accidentabilidad', hh:'Horas hombre', programas:'Programas del año', objetivos:'Objetivos y metas',
   empresa:'Datos y logo', equipo:'Obras y equipo', plan:'Mi plan', cargar:'Cargar mi gestión',
   cad:'Empresas de la obra', 'cad-obs':'Observaciones', 'cad-equipo':'Rangos del equipo', 'cad-sup':'Mi supervisión', 'cad-cartera':'Mi cartera', 'cad-fis':'Fiscalización',
   'cad-inf':'Informes', 'cad-est':'Estándares y boletines'
@@ -14736,13 +14892,18 @@ var V = {
   cargar: {id:'cargar', g:'Empresa', ic:'⬆', n:'Cargar mi gestión', s:'Lo que ya llevabas antes de OBRASST, en orden —lo básico, tus programas del año, lo que ya hiciste y sus evidencias—, para no empezar en cero',
            pintar:function(caja){ cargando(caja); gesIr('gesVistaCargar', caja); }, tablas:[]},
   /* 09/10/2026 · el informe del mes para la gerencia o el cliente (portal/informe.js): qué va, en qué orden, los datos solos y los anexos */
-  informe:{id:'informe', g:'Empresa', ic:'📑', n:'Informe del mes', s:'Para tu gerencia o tu cliente: eliges el mes y qué tan completo, y los datos salen solos. En PDF, Excel o Word',
+  informe:{id:'informe', g:'Empresa', ic:'📑', n:'Informe de SST', s:'El informe del mes para tu gerencia o tu cliente: eliges el mes y qué tan completo, y los datos salen solos. En PDF, Excel o Word',
+           pintar:function(caja){ cargando(caja); infIr('infVista', caja); }, tablas:[]},
+  /* 20/10/2026 · lote 23 · la sección «Informe»: el de medio ambiente y el de salud ocupacional, cada uno en su pestaña (portal/informe.js) */
+  infAmb:{id:'inf-amb', g:'Empresa', ic:'🌱', n:'Informe de medio ambiente', s:'Los residuos, el agua, el combustible, las charlas, las inspecciones y las observaciones ambientales del mes, con sus papeles en los anexos. En PDF y Excel',
+           pintar:function(caja){ cargando(caja); infIr('infVista', caja); }, tablas:[]},
+  infSal:{id:'inf-salud', g:'Empresa', ic:'🩺', n:'Informe de salud ocupacional', s:'Los EMO, el descanso médico, las atenciones por accidente, las charlas y campañas de salud, el monitoreo ocupacional y lo de salud e higiene del mes, sin diagnósticos. En PDF y Excel',
            pintar:function(caja){ cargando(caja); infIr('infVista', caja); }, tablas:[]},
   /* 19/10/2026 · lote 19 · el registro fotográfico del mes, tema por tema (portal/fotos.js): lo anexa el informe */
   fotoreg:{id:'fotoreg', g:'Empresa', ic:'📸', n:'Registro fotográfico', s:'Las fotos del mes por tema —charlas, uso de EPP, sistema de emergencia, bienestar…— con su fecha y lo que se ve: se suben aquí o desde la cámara de la app, y se suman las de tus registros. El informe del mes las anexa',
            pintar:function(caja){ cargando(caja); fotIr('vistaFotoReg', caja); }, tablas:['sst_doc']},
   /* 19/10/2026 · lote 20 · medio ambiente (portal/ambiente.js): los residuos, el agua, el combustible y los certificados del mes,
-     con sus papeles, y de qué es cada tema de las charlas; el informe de medio ambiente sale en «Informe del mes» */
+     con sus papeles, y de qué es cada tema de las charlas; el informe de medio ambiente sale en «Informe › Medio ambiente» */
   ambiente:{id:'ambiente', g:'Registros', ic:'🌱', n:'Medio ambiente', s:'Lo de cada mes con su papel: los residuos con su certificado o su boleta (y lo que se vende, con su comprobante de pago), el agua en m³, el combustible con sus boletas de carga y los certificados y constancias. Y de qué es cada tema de las charlas',
            pintar:function(caja){ cargando(caja); ambIr('vistaAmbiente', caja); }, tablas:['sst_doc']},
   /* 07/10/2026 · los programas del año (portal/programas.js): el anual de SST y los de capacitación, inspecciones, simulacros y campañas */
@@ -14864,7 +15025,7 @@ var VISTAS_LIDER = [
    tablas:['sst_trabajador','sst_constancia','sst_reporte','sst_accidente','sst_hht','sst_kardex','sst_inspeccion','sst_amonestacion','sst_buena','sst_doc']},
   {id:'equipo',  g:'Empresa', ic:'⚑', n:'Obras y equipo', s:'Tus obras, tus supervisores, y quién pidió entrar', pintar:vistaEquipo, tablas:[]},
   conGrupo(V.parte, 'Empresa'),
-  V.empresa, V.cargar, V.informe, V.fotoreg, V.programas, V.objetivos,
+  V.empresa, V.cargar, V.informe, V.infAmb, V.infSal, V.fotoreg, V.programas, V.objetivos,
   V.acc, V.hh,
   {id:'epp',     g:'Indicadores', ic:'⛑', n:'Entrega de EPP', s:'El kardex con la firma de quien recibió, y cuánto sale mes a mes', pintar:vistaEPP, tablas:['sst_kardex']},
   V.pedidos, V.eppobra,
@@ -14887,7 +15048,7 @@ var VISTAS_SUP = [
   {id:'personal', g:'Mi obra', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
   V.parte,
   V.cargos, V.comite, V.quien, V.auxilios, V.tdm,
-  conGrupo(V.empresa, 'Mi obra'), conGrupo(V.cargar, 'Mi obra'), conGrupo(V.informe, 'Mi obra'), conGrupo(V.fotoreg, 'Mi obra'), conGrupo(V.programas, 'Mi obra'), conGrupo(V.objetivos, 'Mi obra'),
+  conGrupo(V.empresa, 'Mi obra'), conGrupo(V.cargar, 'Mi obra'), conGrupo(V.informe, 'Mi obra'), conGrupo(V.infAmb, 'Mi obra'), conGrupo(V.infSal, 'Mi obra'), conGrupo(V.fotoreg, 'Mi obra'), conGrupo(V.programas, 'Mi obra'), conGrupo(V.objetivos, 'Mi obra'),
   V.matriz, V.reg, V.prog, V.caphechas, V.charlas,
   {id:'constancias', g:'Capacitación', ic:'✔', n:'Constancias', s:'Cada evaluación con su nota y su firma · una por una o todas las de una capacitación', tablas:['sst_constancia'],
    pintar:vistaConstancias},
@@ -15135,7 +15296,8 @@ function iniPlanesPintar(){
    de la app al que corresponde (las horas hombre, con el «Reporte semanal»; las capacitaciones realizadas, con las
    constancias y la matriz —es donde cuentan—; los simulacros y las campañas, con los suyos) */
 /* 07/10/2026 · «Programas del año» ya tiene su renglón propio en la vitrina (web:['programas']): no va aquí */
-var PLAN_WEB_MAS = { hh:'semanal', caphechas:'constancias', simulacros:'simulacros', campanas:'campanas' };
+/* 20/10/2026 · lote 23 · el informe de medio ambiente viene con «Medio ambiente», y el de salud ocupacional con los EMO (desde SSOMA) */
+var PLAN_WEB_MAS = { hh:'semanal', caphechas:'constancias', simulacros:'simulacros', campanas:'campanas', 'inf-amb':'ambiente', 'inf-salud':'emo' };
 function planWebDe(id){
   for(var i=0;i<INI_VITRINA.length;i++){ var x=INI_VITRINA[i]; if(x.web && x.web.indexOf(id)>-1) return x; }
   var k=PLAN_WEB_MAS[id];
@@ -15330,9 +15492,9 @@ var STK_VER='521cb712ae';                /* lo pone armar.py: el hash de portal/
 var AUT_VER='91131ea382';                /* lo pone armar.py: el hash de portal/autoriza.js (la autorización del grupo sanguíneo) */
 var _AUT_CARGA=null;
 /* 08/10/2026 · los exámenes médicos ocupacionales (portal/emo.js, con lo común de ../emo-base.js adentro) */
-var INFORME_VER='145db951d3';                                 /* lo pone armar.py: el hash de portal/informe.js */
+var INFORME_VER='6586a23b2a';                                 /* lo pone armar.py: el hash de portal/informe.js */
 /* 19/10/2026 · lote 19 · el registro fotográfico del mes (portal/fotos.js) */
-var FOTOS_VER='fc13486601';                                               /* lo pone herr/huellas.py: el hash de portal/fotos.js */
+var FOTOS_VER='9c70ca1fb0';                                               /* lo pone herr/huellas.py: el hash de portal/fotos.js */
 var _FOT_CARGA=null;
 function cargarFotoRegP(){
   if(typeof vistaFotoReg==='function') return Promise.resolve(true);
@@ -15346,7 +15508,7 @@ function fotIr(fn){
   return cargarFotoRegP().then(function(){ return window[fn].apply(null, a); }, function(){ toast('No se pudo abrir esta parte. Revisa tu conexión e inténtalo otra vez.'); });
 }
 /* 19/10/2026 · lote 20 · medio ambiente (portal/ambiente.js; lo común, en el módulo AMB de arriba) */
-var AMBIENTE_VER='34810d9023';                                                     /* lo pone herr/huellas.py: el hash de portal/ambiente.js */
+var AMBIENTE_VER='ec4212a363';                                                     /* lo pone herr/huellas.py: el hash de portal/ambiente.js */
 var _AMB_CARGA=null;
 function cargarAmbienteP(){
   if(typeof vistaAmbiente==='function') return Promise.resolve(true);
@@ -15403,7 +15565,7 @@ function sctrIr(fn){
   return cargarSctr().then(function(){ return window[fn].apply(null, a); },
                            function(){ if(a[0] && a[0].nodeType===1) fallo(a[0], 0); else toast('No se pudo abrir esta parte. Revisa tu conexión e inténtalo otra vez.'); });
 }
-var EMO_VER='f87da43524';                          /* lo pone armar.py: el hash de portal/emo.js */
+var EMO_VER='c44964f7f5';                          /* lo pone armar.py: el hash de portal/emo.js */
 var _EMO_CARGA=null;
 function cargarEmo(){
   if(typeof emoVista==='function') return Promise.resolve(true);
@@ -16144,8 +16306,9 @@ function iniProveedor(){
 /* 19/10/2026 · lote 20 · el video de la portada (qué es OBRASST, un minuto, con voz). Vive en GitHub Pages, junto a la
    app (así no gasta lo de Netlify), y no se descarga hasta que alguien le da ▶ (preload «none»). Mientras INI_VIDEO esté
    vacío, la portada queda como está: se llena cuando esté la versión con voz. */
-var INI_VIDEO = '';            /* p. ej. 'https://descarganomaspe.github.io/sst-capacita/videos/obrasst-que-es.mp4' */
-var INI_VIDEO_POSTER = '';     /* su primer cuadro, en .jpg */
+/* 20/10/2026 · lote 23 · con el «sí» de Marcelo: «Qué es OBRASST» en la portada (GitHub Pages, no gasta lo de Netlify) */
+var INI_VIDEO = 'https://descarganomaspe.github.io/sst-capacita/videos/obrasst-que-es.mp4';
+var INI_VIDEO_POSTER = 'https://descarganomaspe.github.io/sst-capacita/videos/obrasst-que-es.jpg';   /* su primer cuadro */
 function iniVideo(src, poster){
   var e=$('entrada'), dice=document.querySelector('.ini-dice'), caja=$('acceso');
   if(!src || !e || !dice || !caja || $('ini-video')) return false;
@@ -18803,6 +18966,7 @@ function obsFormHtmlP(it, f, L){
     '<div class="campo" id="obs-otra-c" hidden><label for="obs-otra">La categoría</label><input id="obs-otra" maxlength="80" autocomplete="off">'+
       '<label class="chk" style="margin:8px 0 0"><input type="checkbox" id="obs-alista" checked> <span>Agregarla a la lista de la obra</span></label></div>'+
     '<label class="chk"><input type="checkbox" id="obs-amb"'+((f.amb || (f.cat && obsCatAmb(L, tipo, f.cat))) ? ' checked' : '')+'> <span>Es de medio ambiente: va también al informe ambiental</span></label>'+
+    '<label class="chk"><input type="checkbox" id="obs-sal"'+(obsEsSal(f, L, tipo) ? ' checked' : '')+'> <span>🩺 Es de salud ocupacional: va también al informe de salud</span></label>'+
     '<div class="fila-c"><div class="campo"><label for="obs-er">Empresa que reporta</label><input id="obs-er" list="obs-emps" maxlength="100" autocomplete="off" value="'+esc(f.er || S.propia || '')+'"></div>'+
       '<div class="campo"><label for="obs-eo">Empresa observada</label><input id="obs-eo" list="obs-emps" maxlength="100" autocomplete="off" placeholder="La del personal o del área observada" value="'+esc(f.eo || '')+'"></div></div>'+
     '<datalist id="obs-emps">'+opt(S.emps)+'</datalist>'+
@@ -18816,14 +18980,14 @@ function obsFormHtmlP(it, f, L){
 function _obsCatOpcP(L, tipo, sel){
   if(tipo!=='acto' && tipo!=='condicion') return '<option value="">No lleva categoría</option>';
   var q=String(sel || '').toLowerCase(), hay=false;
-  var h='<option value="">Elige…</option>'+L[tipo].map(function(c){ var on=(c.n.toLowerCase()===q); if(on) hay=true; return '<option value="'+esc(c.n)+'"'+(on ? ' selected' : '')+'>'+esc(c.n)+(c.amb ? ' · medio ambiente' : '')+'</option>'; }).join('');
+  var h='<option value="">Elige…</option>'+L[tipo].map(function(c){ var on=(c.n.toLowerCase()===q); if(on) hay=true; return '<option value="'+esc(c.n)+'"'+(on ? ' selected' : '')+'>'+esc(c.n)+(c.amb ? ' · medio ambiente' : '')+(c.sal ? ' · salud ocupacional' : '')+'</option>'; }).join('');
   if(sel && !hay) h+='<option value="'+esc(sel)+'" selected>'+esc(sel)+' (ya no está en la lista)</option>';
   return h+'<option value="__otra">Otra (escribirla)…</option>';
 }
 /* los botones del formulario (después de pintarlo) */
 function obsFormAlP(L){
   var c=$('obs-cat'); if(!c) return;
-  var amb=function(){ var v=c.value; if(v && v!=='__otra'){ var a=obsCatAmb(L, OBSW.tipo, v); if(a!==null) $('obs-amb').checked=!!a; } };
+  var amb=function(){ var v=c.value; if(v && v!=='__otra'){ var a=obsCatAmb(L, OBSW.tipo, v); if(a!==null) $('obs-amb').checked=!!a; var s=obsCatSal(L, OBSW.tipo, v); if(s!==null && $('obs-sal')) $('obs-sal').checked=!!s; } };
   c.onchange=function(){ $('obs-otra-c').hidden=(c.value!=='__otra'); if(c.value==='__otra') try{ $('obs-otra').focus(); }catch(_f){} amb(); };
   var t=$('obs-tipo');
   if(t) t.onclick=function(ev){
@@ -18838,16 +19002,16 @@ function obsFormLeerP(it, L){
   var v=function(k){ var el=$(k); return el ? el.value : ''; }, tipo=OBSW.tipo || it.tipo, conCat=(tipo==='acto' || tipo==='condicion');
   var cat=conCat ? (v('obs-cat')==='__otra' ? obsTxt(v('obs-otra'), 80) : obsTxt(v('obs-cat'), 80)) : '';
   if(conCat && !cat) return { mal:v('obs-cat')==='__otra' ? 'Escribe la categoría.' : 'Elige una categoría.', foco:v('obs-cat')==='__otra' ? 'obs-otra' : 'obs-cat' };
-  var d=obsFichaLimpia({ tipo:it.insp ? tipo : '', cat:cat, amb:$('obs-amb').checked, origen:v('obs-origen'), er:v('obs-er'), eo:v('obs-eo'), frente:v('obs-frente'),
+  var d=obsFichaLimpia({ tipo:it.insp ? tipo : '', cat:cat, amb:$('obs-amb').checked, sal:!!($('obs-sal') && $('obs-sal').checked), origen:v('obs-origen'), er:v('obs-er'), eo:v('obs-eo'), frente:v('obs-frente'),
                          plan:v('obs-plan'), resp:v('obs-resp'), plazo:v('obs-plazo'), por:(YO.nombre || quienSoy() || ''), t:Date.now() });
-  var nueva=(conCat && v('obs-cat')==='__otra' && $('obs-alista') && $('obs-alista').checked && obsCatAmb(L, tipo, cat)===null) ? { tipo:tipo, n:cat, amb:!!d.amb } : null;
+  var nueva=(conCat && v('obs-cat')==='__otra' && $('obs-alista') && $('obs-alista').checked && obsCatAmb(L, tipo, cat)===null) ? { tipo:tipo, n:cat, amb:!!d.amb, sal:!!d.sal } : null;
   return { d:d, nueva:nueva };
 }
 function _obsGuardarP(it, L){
   var R=obsFormLeerP(it, L), m=$('obs-msg');
   if(R.mal){ m.className='msg mal'; m.textContent=R.mal; try{ $(R.foco).focus(); }catch(_f){} return Promise.reject('form'); }
   m.className='msg gris'; m.textContent='Guardando…';
-  var antes=R.nueva ? obsCatPonerP((function(){ var X={ acto:L.acto.slice(), condicion:L.condicion.slice() }; X[R.nueva.tipo].push({ n:R.nueva.n, amb:R.nueva.amb }); return X; })()).catch(function(){ return null; }) : Promise.resolve(null);
+  var antes=R.nueva ? obsCatPonerP((function(){ var X={ acto:L.acto.slice(), condicion:L.condicion.slice() }; X[R.nueva.tipo].push({ n:R.nueva.n, amb:R.nueva.amb, sal:R.nueva.sal }); return X; })()).catch(function(){ return null; }) : Promise.resolve(null);
   return antes.then(function(){ return obsGuardarFichaP(it.k, R.d); }).then(function(d){ m.className='msg ok'; m.textContent='Guardado para el informe.'; return d; },
     function(e){ m.className='msg mal'; m.textContent='No se pudo guardar. '+porQueFallo(e); throw e; });
 }
@@ -18937,7 +19101,7 @@ function mesLargo(m){ var x=/^(\d{4})-(\d{2})$/.exec(String(m || '')); if(!x) re
 /* ── las categorías de la obra ── */
 function obsCatsP(volver){
   abrirHoja('Categorías de las observaciones', 'Con estas se clasifica cada acto y cada condición de la obra · es la misma lista en la app', '<div class="vacio">Cargando…</div>', '', { ancha:true, sinFoco:true });
-  obsCatP(true).then(function(L){ OBSW.ed={ acto:L.acto.map(function(c){ return { n:c.n, amb:c.amb }; }), condicion:L.condicion.map(function(c){ return { n:c.n, amb:c.amb }; }), propia:L.propia, volver:volver || null }; _obsCatsPintarP(); });
+  obsCatP(true).then(function(L){ OBSW.ed={ acto:L.acto.map(function(c){ return { n:c.n, amb:c.amb, sal:c.sal }; }), condicion:L.condicion.map(function(c){ return { n:c.n, amb:c.amb, sal:c.sal }; }), propia:L.propia, volver:volver || null }; _obsCatsPintarP(); });
 }
 function _obsCatsPintarP(){
   var E=OBSW.ed; if(!E) return;
@@ -18945,22 +19109,24 @@ function _obsCatsPintarP(){
     return '<div class="obs-catc"><h3>'+tit+' <small>'+E[k].length+'</small></h3><ul class="obs-catl">'+E[k].map(function(c, i){
       return '<li><input value="'+esc(c.n)+'" maxlength="80" data-k="'+k+'" data-i="'+i+'" aria-label="Categoría">'+
         '<label class="chk" title="Va también al informe de medio ambiente"><input type="checkbox" data-amb="'+k+'" data-i="'+i+'"'+(c.amb ? ' checked' : '')+'> <span>Ambiental</span></label>'+
+        '<label class="chk" title="Va también al informe de salud ocupacional"><input type="checkbox" data-sal="'+k+'" data-i="'+i+'"'+(c.sal ? ' checked' : '')+'> <span>Salud</span></label>'+
         '<button type="button" class="bt sec chico" data-quitar="'+k+'" data-i="'+i+'" aria-label="Quitar">✕</button></li>'; }).join('')+'</ul>'+
       '<div class="obs-catl-mas"><input id="obsc-'+k+'" maxlength="80" placeholder="Otra categoría" autocomplete="off"><button type="button" class="bt sec chico" data-mas="'+k+'">＋ Agregar</button></div></div>';
   };
-  $('hoja-cuerpo').innerHTML='<p class="ayuda" style="margin:0 0 12px">'+(E.propia ? 'La lista propia de la obra.' : 'Es la lista sugerida: 10 actos y 10 condiciones de obra, y 3 de medio ambiente en cada una. Cámbiala a lo que tu obra controla.')+
-    ' Las marcadas «Ambiental» van también al informe de medio ambiente. Lo que ya se clasificó guarda su categoría aunque se quite de la lista.</p>'+
+  $('hoja-cuerpo').innerHTML='<p class="ayuda" style="margin:0 0 12px">'+(E.propia ? 'La lista propia de la obra.' : 'Es la lista sugerida: 10 actos y 10 condiciones de obra, 3 de medio ambiente en cada una y las de salud ocupacional. Cámbiala a lo que tu obra controla.')+
+    ' Las marcadas «Ambiental» van también al informe de medio ambiente, y las marcadas «Salud», al de salud ocupacional. Lo que ya se clasificó guarda su categoría aunque se quite de la lista.</p>'+
     '<div class="obs-cats2">'+col('acto', 'Actos subestándar')+col('condicion', 'Condiciones subestándar')+'</div><div class="msg" id="obsc-msg" role="status"></div>';
   _obsPieP('<button type="button" class="bt sec" id="obsc-sug">Volver a la sugerida</button>'+(E.volver ? '<button type="button" class="bt sec" id="obsc-volver">Volver</button>' : '')+'<button type="button" class="bt ok" id="obsc-ok">Guardar la lista</button>');
   var cuerpo=$('hoja-cuerpo');
   cuerpo.oninput=function(ev){ var t=ev.target; if(t.getAttribute && t.getAttribute('data-k')) E[t.getAttribute('data-k')][+t.getAttribute('data-i')].n=t.value; };
-  cuerpo.onchange=function(ev){ var t=ev.target; if(t.getAttribute && t.getAttribute('data-amb')) E[t.getAttribute('data-amb')][+t.getAttribute('data-i')].amb=t.checked; };
+  cuerpo.onchange=function(ev){ var t=ev.target; if(t.getAttribute && t.getAttribute('data-amb')) E[t.getAttribute('data-amb')][+t.getAttribute('data-i')].amb=t.checked;
+    else if(t.getAttribute && t.getAttribute('data-sal')) E[t.getAttribute('data-sal')][+t.getAttribute('data-i')].sal=t.checked; };
   cuerpo.onclick=function(ev){
     var q=ev.target.closest('[data-quitar]'), m=ev.target.closest('[data-mas]');
     if(q){ E[q.getAttribute('data-quitar')].splice(+q.getAttribute('data-i'), 1); _obsCatsPintarP(); return; }
     if(m){ var k=m.getAttribute('data-mas'), n=obsTxt($('obsc-'+k).value, 80); if(!n) return;
       if(E[k].some(function(c){ return obsTxt(c.n, 80).toLowerCase()===n.toLowerCase(); })){ toast('Ya está en la lista.'); return; }
-      E[k].push({ n:n, amb:false }); _obsCatsPintarP(); try{ $('obsc-'+k).focus(); }catch(_f){} }
+      E[k].push({ n:n, amb:false, sal:!!(typeof salTemaAuto==='function' && salTemaAuto(n)) }); _obsCatsPintarP(); try{ $('obsc-'+k).focus(); }catch(_f){} }
   };
   Array.prototype.forEach.call(document.querySelectorAll('.obs-catl-mas input'), function(i){ i.onkeydown=function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); i.nextSibling.click(); } }; });
   $('obsc-sug').onclick=function(){ var S=obsCatLista(null); E.acto=S.acto; E.condicion=S.condicion; E.propia=false; _obsCatsPintarP(); };
