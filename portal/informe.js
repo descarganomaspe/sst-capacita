@@ -2572,7 +2572,7 @@ function _infVer(R){
    palabras en su frase, para que la app los alcance con su diccionario.
    ═════════════════════════════════════════════════════════════════ */
 var INFB_TIPOS = [
-  { k:'sst', n:'SST', ic:'🦺', t:'Informe de SST', desde:1 },
+  { k:'sst', n:'SST', ic:'🦺', t:'Informe de SST', desde:3 },   /* 22/10/2026 · hoja 2: el informe del mes, desde SSOMA */
   { k:'amb', n:'Medio ambiente', ic:'🌱', t:'Informe de medio ambiente', desde:3 },
   { k:'sal', n:'Salud ocupacional', ic:'🩺', t:'Informe de salud ocupacional', desde:3 }
 ];
