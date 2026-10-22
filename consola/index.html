@@ -1955,8 +1955,8 @@ var APL_PREG = {
            ['trabajador', 'Soy trabajador', 'Entro con el código de mi obra'] ] },
   central: { t:'¿Tu contratista principal ya usa OBRASST Central?', op:[['si', 'Sí'], ['no', 'No'], ['nose', 'No sé']] },
   trab:  { t:'¿Cuántos trabajadores tienen tus obras?', ayuda:'Contando a todos los que entran a la obra.', op:[
-           ['10', 'Hasta 10'], ['60', 'De 11 a 60'], ['150', 'De 61 a 150'], ['400', 'De 151 a 400'], ['1000', 'De 401 a 1,000'], ['mas', 'Más de 1,000'] ] },
-  obras: { t:'¿Cuántas obras llevas a la vez?', op:[['1', 'Una'], ['2', 'Dos'], ['5', 'De 3 a 5'], ['12', 'De 6 a 12'], ['mas', 'Más de 12']] },
+           ['10', 'Hasta 10'], ['30', 'De 11 a 30'], ['70', 'De 31 a 70'], ['150', 'De 71 a 150'], ['450', 'De 151 a 450'], ['mas', 'Más de 450'] ] },
+  obras: { t:'¿Cuántas obras llevas a la vez?', op:[['1', 'Una'], ['2', 'Dos'], ['4', 'De 3 a 4'], ['8', 'De 5 a 8'], ['mas', 'Más de 8']] },
   pers:  { t:'¿Cuántas personas registran contigo?', ayuda:'Supervisores, almaceneros o asistentes que usan la app con su cuenta. Tú cuentas.', op:[
            ['1', 'Solo yo'], ['2', 'Yo y uno más'], ['4', 'De 3 a 4'], ['8', 'De 5 a 8'], ['14', 'De 9 a 14'], ['mas', 'Más de 14'] ] },
   insp:  { t:'¿Haces inspecciones con formato y pides requerimientos de EPP?', op:[['si', 'Sí'], ['no', 'No']] },
@@ -1965,8 +1965,8 @@ var APL_PREG = {
 };
 var APL_ORDEN = ['rol', 'central', 'trab', 'obras', 'pers', 'insp', 'ssoma', 'sub'];
 /* lo que pide cada respuesta (trabajadores, obras y personas) y desde qué plan viene cada cosa */
-var APL_N = { trab:{ '10':10, '60':60, '150':150, '400':400, '1000':1000, mas:1001 },
-               obras:{ '1':1, '2':2, '5':5, '12':12, mas:13 },
+var APL_N = { trab:{ '10':10, '30':30, '70':70, '150':150, '450':450, mas:451 },   /* 21/10/2026 · topes nuevos */
+               obras:{ '1':1, '2':2, '4':4, '8':8, mas:9 },
                pers:{ '1':1, '2':2, '4':4, '8':8, '14':14, mas:15 } };   /* 15/10: Gestión SST, 14 personas (antes 16) */
 var APL_DESDE = { insp:'supervisor', ssoma:'ssoma' };
 /* el puesto suelto (S/ 49 al mes): el de cada lado (PUESTO_EXTRA en la app, INI_EXTRA en el portal), en su moneda */
@@ -1980,10 +1980,10 @@ function _aplPuesto(){
 /* ── los planes que se pagan (los mismos de la app y de la web) ── */
 var APL_PLANES_FIJOS = [
   { id:'lite', n:'LITE', orden:0, trab:10, obras:1, gest:1, m:0, a:0 },
-  { id:'prevencionista', n:'Prevencionista de Riesgo', orden:1, trab:60, obras:1, gest:1, m:59, a:590 },
-  { id:'supervisor', n:'Supervisor SST', orden:2, trab:150, obras:2, gest:2, m:139, a:1390 },
-  { id:'ssoma', n:'SSOMA', orden:3, trab:400, obras:5, gest:8, m:299, a:2990 },
-  { id:'gestion', n:'Gestión SST', orden:4, trab:1000, obras:12, gest:14, m:590, a:5900 } ];
+  { id:'prevencionista', n:'Prevencionista de Riesgo', orden:1, trab:30, obras:1, gest:1, m:59, a:590 },
+  { id:'supervisor', n:'Supervisor SST', orden:2, trab:70, obras:2, gest:2, m:139, a:1390 },
+  { id:'ssoma', n:'SSOMA', orden:3, trab:150, obras:4, gest:8, m:299, a:2990 },
+  { id:'gestion', n:'Gestión SST', orden:4, trab:450, obras:8, gest:14, m:590, a:5900 } ];
 /* de la lista de cada lado (PLANES en la app, INI_PLANES en el portal): si cambian sus topes o sus precios, el asistente
    decide con los de verdad; si no se encuentra, con los de arriba */
 function aplPlanes(){
@@ -2117,9 +2117,11 @@ function aplDecidir(r){
     R.reunion = 'corporativo';
     return R;
   }
-  if(r.sub === 'si' && t > 400){
+  /* 21/10/2026 · Central o Corporativo cuando pasa el tope de SSOMA (antes 400, ahora 150) */
+  var _ssT = (aplPlan('ssoma') || {}).trab || 150;
+  if(r.sub === 'si' && t > _ssT){
     R.tipo = 'reunion'; R.plan = (o > 1 ? 'corporativo' : 'central'); R.nombre = (o > 1 ? 'OBRASST Corporativo' : 'OBRASST Central');
-    R.porque = ['Tienes más de 400 trabajadores y subcontratas: con ' + R.nombre + ' ves a todas las empresas de tu obra en un solo lugar.',
+    R.porque = ['Tienes más de ' + _aplMiles(_ssT) + ' trabajadores y subcontratas: con ' + R.nombre + ' ves a todas las empresas de tu obra en un solo lugar.',
                 'Paga la principal; las subcontratas entran gratis. Se cobra por trabajador y se arma en una reunión.'];
     R.reunion = R.plan;
     return R;
@@ -2147,7 +2149,7 @@ function aplDecidir(r){
       R.porque.push('Manejas químicos, simulacros o exámenes médicos: vienen desde ' + P.n + '.');
     if(!R.porque.length) R.porque.push(P.n + ' es el plan más chico que cubre todo lo que respondiste.');
   }
-  if(r.sub === 'si') R.nota = 'Tus subcontratas pueden usar su propia cuenta (LITE es gratis). Con más de 400 trabajadores, OBRASST Central las junta y entran gratis.';
+  if(r.sub === 'si') R.nota = 'Tus subcontratas pueden usar su propia cuenta (LITE es gratis). Con más de ' + _aplMiles((aplPlan('ssoma') || {}).trab || 150) + ' trabajadores, OBRASST Central las junta y entran gratis.';
   /* 15/10/2026 · si lo único que lo sube de plan es la gente, el de abajo con puestos sueltos puede salir menos: se
      le dice (nunca vender de más) */
   var Q = _aplAlterno(L, P, t, o, p, desde);
@@ -2162,7 +2164,7 @@ function _aplMiles(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function _aplPersTexto(v){
   return { '1':'solo tú', '2':'tú y uno más', '4':'de 3 a 4 personas', '8':'de 5 a 8 personas', '14':'de 9 a 14 personas', mas:'más de 14 personas' }[v] || 'varias personas';
 }
-/* lo corto, para «Mi plan»: «Te conviene SSOMA: tienes de 151 a 400 trabajadores y manejas químicos.» */
+/* lo corto, para «Mi plan»: «Te conviene SSOMA: tienes de 71 a 150 trabajadores y manejas químicos.» */
 function aplResumen(R){
   if(!R) return '';
   var p = (R.porque || [])[0] || '';
