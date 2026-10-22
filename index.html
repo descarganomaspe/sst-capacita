@@ -14030,7 +14030,7 @@ var PANT_LLAVE={
      o total)». Es un tope de LLAVE, no de cantidad — se usa la
      herramienta, la constancia impresa se paga. */
   'p-kardex-export':['kardex_export','La descarga del kardex del mes'],
-  /* 04/10/2026 · los requerimientos de EPP y materiales (13/10/2026, Marcelo: desde Supervisor SST) */
+  /* 04/10/2026 · los requerimientos de EPP y materiales (13/10/2026, Marcelo: desde Supervisor SST; 22/10/2026, hoja 2: desde SSOMA) */
   'p-req':['requerimientos','Los requerimientos de EPP y materiales'],
   'p-req-nuevo':['requerimientos','Los requerimientos de EPP y materiales'],
   'p-req-ver':['requerimientos','Los requerimientos de EPP y materiales'],
@@ -15123,23 +15123,23 @@ var PLANES = [
   { id:'prevencionista', nombre:'Prevencionista de Riesgo', precio:59, anual:590, tienda:69.99, tiendaAnual:699.99, orden:1,
     compra:'obrasst-prevencionista', compraAnual:'obrasst-prevencionista-anual',
     tope:{ trabajador:30, kardex:120, reporte:-1, doc:-1, credencial:80, amonestacion:20, semana:4, escaneo:60,
-           ats:60, ats_modelo:-1, andamio:-1, senal:-1, cartel:2 },
+           ats:60, ats_modelo:-1, andamio:-1, senal:-1, cartel:0 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true,
              ats:true, andamio:true, senal:true },
     gestores:1, obras:1, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
-            constancias:1, semanal:1, qr_pets:1, comite:1, qr_propio:1, mural:1 } },
+            semanal:1, qr_pets:1, qr_iperc:1 } },   /* 22/10/2026 · hoja 2: el QR de la IPERC baja aquí; constancias, mural y carteles propios a SSOMA; el comité a Gestión */
 
   { id:'supervisor', nombre:'Supervisor SST', precio:139, anual:1390, tienda:163.99, tiendaAnual:1639.99, orden:2,
     compra:'obrasst-supervisor', compraAnual:'obrasst-supervisor-anual',
     tope:{ trabajador:70, kardex:300, reporte:-1, doc:-1, credencial:200, amonestacion:60, semana:8, escaneo:150,
-           ats:200, ats_modelo:-1, andamio:-1, senal:-1, cartel:4 },
+           ats:200, ats_modelo:-1, andamio:-1, senal:-1, cartel:0 },
     porMes:{ kardex:true, reporte:true, escaneo:true, amonestacion:true, semana:true,
              ats:true, andamio:true, senal:true },
     gestores:2, obras:2, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
-            constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1, requerimientos:1, qr_propio:1,
-            qr_iperc:1, inspecciones:1, preguntas:1, mural:1 } },
+            semanal:1, qr_pets:1, kardex_export:1,
+            qr_iperc:1, inspecciones:1, preguntas:1 } },   /* 22/10/2026 · hoja 2: requerimientos y equipos con QR a SSOMA */
 
   { id:'ssoma', nombre:'SSOMA', precio:299, anual:2990, tienda:351.99, tiendaAnual:3519.99, orden:3,
     compra:'sst-capacita', compraAnual:'sst-capacita-anual',
@@ -15150,9 +15150,9 @@ var PLANES = [
              ats:true, andamio:true, senal:true },
     gestores:8, obras:4, charlas:-1, temas:-1,
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
-            constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1, requerimientos:1, qr_propio:1,
+            constancias:1, semanal:1, qr_pets:1, kardex_export:1, requerimientos:1, qr_propio:1,
             qr_iperc:1, inspecciones:1, preguntas:1,
-            msds:1, qr_msds:1, campanas:1, simulacros:1, emo:1, mural:1, epp_obra:1 } },
+            msds:1, qr_msds:1, campanas:1, simulacros:1, emo:1, mural:1, epp_obra:1, equipos:1 } },
 
   { id:'gestion', nombre:'Gestión SST', precio:590, anual:5900, tienda:694.99, tiendaAnual:null, orden:4,
     compra:'obrasst-gestion', compraAnual:'obrasst-gestion-anual',
@@ -15164,7 +15164,7 @@ var PLANES = [
     puede:{ cuadrilla:1, qr_risst:1, qr_credencial:1, amonestaciones:1,
             constancias:1, semanal:1, qr_pets:1, kardex_export:1, comite:1, requerimientos:1, qr_propio:1,
             qr_iperc:1, inspecciones:1, preguntas:1,
-            msds:1, qr_msds:1, campanas:1, simulacros:1, emo:1, mural:1, epp_obra:1 } }
+            msds:1, qr_msds:1, campanas:1, simulacros:1, emo:1, mural:1, epp_obra:1, equipos:1 } }
 ];
 /* ══════ EL TOPE `doc` SALE DE LA VITRINA ══════════════════════════
    Marcelo: «documentos por carpeta, eso sácalo, no sé qué es la
@@ -15241,17 +15241,20 @@ var PLAN_VIEJO = { supervisor:'supervisor', equipo:'ssoma', empresa:'gestion' };
    cupo: 'temas' | 'charlas' (el contenido) · cubre: otros círculos que van en el
    mismo renglón · web: las secciones del portal que abre · nuevo: de este mes. */
 /* >>> PLAN-VITRINA-INI (lo lee armar.py: solo datos) <<< */
+/* 22/10/2026 · hoja 2 «Funciones por plan» de Marcelo: constancias, visitas, mural, carteles propios, informe del mes,
+   requerimientos y equipos con QR (con su bloqueo) desde SSOMA; el comité desde Gestión SST; el QR de la IPERC desde
+   Prevencionista. La copia del portal (INI_VITRINA) va igual. */
 var PLAN_PARA = {
   lite:           { gb:1,   para:'Para probarla con tu cuadrilla, sin pagar.',
                     porque:'Gratis para siempre. Es la app entera con poco volumen: registras a tu gente, entregas EPP, haces el ATS y sacas credenciales. Lo que viene de muestra es el contenido.' },
   prevencionista: { gb:3,   para:'Para quien lleva solo la seguridad de una obra.',
-                    porque:'Abre todo el contenido de tu sector, las capacitaciones y las charlas, y los registros que se entregan: constancias firmadas, reporte semanal y el parte del día.' },
+                    porque:'Abre todo el contenido de tu sector, las capacitaciones y las charlas, y los registros que se entregan: el reporte semanal de horas hombre y el parte del día. Suma los carteles QR de los procedimientos y de la matriz IPERC, y los programas del año.' },
   supervisor:     { gb:6,   para:'Para la obra que inspecciona sus equipos y sus frentes.',
-                    porque:'Suma las inspecciones de obra, el QR de cada equipo con su inspección diaria, los requerimientos y el consumo de EPP con su Excel, primeros auxilios con el QR de la estación y la matriz IPERC con QR. Con dos obras y dos personas en la gestión.' },
+                    porque:'Suma las inspecciones de obra, el kardex y el consumo de EPP en Excel y PDF, tus propias preguntas, la calculadora de caída libre, primeros auxilios con el QR de la estación y el pulso de seguridad. Con dos obras y dos personas en la gestión.' },
   ssoma:          { gb:12,  para:'Para el área SSOMA de una empresa con varias obras.',
-                    porque:'Suma los productos químicos con su hoja MSDS y su etiqueta, los exámenes médicos, las campañas, los simulacros y el legajo SST de cada trabajador. Con cuatro obras y ocho personas en la gestión.' },
+                    porque:'Suma el informe del mes, las constancias y la matriz de capacitación, los requerimientos de EPP, los equipos con QR y su bloqueo, las visitas, el periódico mural y tus carteles QR, los productos químicos con su hoja MSDS, los exámenes médicos, las campañas, los simulacros y el legajo SST de cada trabajador. Con cuatro obras y ocho personas en la gestión.' },
   gestion:        { gb:24,  para:'Para la empresa que lleva su sistema de gestión completo.',
-                    porque:'Sin tope de ATS, de entregas de EPP ni de credenciales. Suma el tareo de la puerta, el plan de izaje, la investigación de accidentes y tus propias carpetas, y en la web el resumen de todas tus obras para la gerencia. Con ocho obras y catorce personas.' }
+                    porque:'Sin tope de ATS, de entregas de EPP ni de credenciales. Suma el comité de SST con su padrón y su libro de actas, el tareo de la puerta, el plan de izaje, la investigación de accidentes y tus propias carpetas, y en la web el resumen de todas tus obras para la gerencia. Con ocho obras y catorce personas.' }
 };
 var PLAN_GRUPOS = [ ['cap', 'Capacitación'], ['dia', 'El día a día en la obra'], ['gente', 'La gente'], ['doc', 'Documentos y consulta'], ['web', 'En la computadora'] ];
 var PLAN_VITRINA = [
@@ -15261,13 +15264,13 @@ var PLAN_VITRINA = [
   { k:'peligros',    g:'cap',   ic:'🔎', n:'«Encuentra los peligros» con fotos de tu obra', d:'Sacas una foto del frente, marcas los peligros y la cuadrilla compite por encontrarlos, en tu celular o cada uno en el suyo, con su ranking.', desde:3, nuevo:1 },
   { k:'induccion',   g:'cap',   ic:'📘', n:'Inducción del personal nuevo',       d:'Tema por tema, con la firma del trabajador el día que ingresa.', desde:0 },
   { k:'programar',   g:'cap',   ic:'📅', n:'Programar capacitación',             d:'Eliges el tema, el día y para quiénes. Ese día les aparece en su app.', desde:0, llave:'cuadrilla' },
-  { k:'constancias', g:'cap',   ic:'📜', n:'Constancias y matriz de capacitación', d:'Cada evaluación con su nota y su firma, en PDF. Y la matriz de quién está al día según su puesto.', desde:1, llave:'constancias', web:['constancias', 'cump', 'matriz', 'registro'] },
+  { k:'constancias', g:'cap',   ic:'📜', n:'Constancias y matriz de capacitación', d:'Cada evaluación con su nota y su firma, en PDF. Y la matriz de quién está al día según su puesto.', desde:3, llave:'constancias', web:['constancias', 'cump', 'matriz', 'registro'] },
   { k:'preguntas',   g:'cap',   ic:'✍️', n:'Tus propias preguntas',              d:'Agrega a cada capacitación las preguntas de tu obra o de tu cliente.', desde:2, llave:'preguntas' },
 
   { k:'ats',         g:'dia',   ic:'📋', n:'ATS de la tarea',                    d:'Se llena en el celular, firma la cuadrilla y el supervisor lo libera. En minería, el IPERC continuo.', desde:0, tope:'ats' },
   { k:'kardex',      g:'dia',   ic:'🦺', n:'Entrega de EPP',                     d:'Cada entrega con la firma de quien recibe. El kardex se arma solo.', desde:0, tope:'kardex' },
   { k:'kardex_export', g:'dia', ic:'📊', n:'Kardex y consumo de EPP en Excel y PDF', d:'El registro del mes o el total, y cuánto sale mes a mes, para entregar o archivar.', desde:2, llave:'kardex_export' },
-  { k:'reqs',        g:'dia',   ic:'🧾', n:'Requerimientos de EPP y materiales', d:'La app calcula cuánto pedir con el consumo y el personal de la obra. Firman quien pide, Seguridad y los gerentes.', desde:2, llave:'requerimientos', web:['reqs'], nuevo:1 },
+  { k:'reqs',        g:'dia',   ic:'🧾', n:'Requerimientos de EPP y materiales', d:'La app calcula cuánto pedir con el consumo y el personal de la obra. Firman quien pide, Seguridad y los gerentes.', desde:3, llave:'requerimientos', web:['reqs'], nuevo:1 },
   /* 17/10/2026 · Marcelo: «EPP de la obra, desde plan SSOMA». La entrega de EPP (el kardex) sigue en todos los planes */
   { k:'eppobra',     g:'dia',   ic:'🦺', n:'EPP de la obra',                     d:'A quién le toca cambiar qué, el EPP de cada puesto, la verificación en campo, el stock con sus ingresos y el costo del mes, en la app y en la web.', desde:3, llave:'epp_obra', web:['eppobra'], nuevo:1 },
   { k:'reporte',     g:'dia',   ic:'🚨', n:'Reportes de actos y condiciones',    d:'Con foto, desde el celular. Se les hace seguimiento hasta cerrarlos.', desde:0 },
@@ -15278,7 +15281,7 @@ var PLAN_VITRINA = [
   { k:'buenas',      g:'dia',   ic:'🌟', n:'Buenas prácticas',                   d:'Lo que se hizo bien, con foto, para reconocerlo y repetirlo.', desde:0 },
   { k:'semanal',     g:'dia',   ic:'📈', n:'Reporte semanal de horas hombre',    d:'Las horas trabajadas y las de capacitación de la semana, en PDF y en Excel.', desde:1, llave:'semanal', tope:'semana' },
   { k:'inspec',      g:'dia',   ic:'✅', n:'Inspecciones de obra',               d:'Las listas de verificación de tu sector, llenadas en el celular con sus fotos.', desde:2, llave:'inspecciones', web:['insp'] },
-  { k:'equipos',     g:'dia',   ic:'🏷️', n:'Equipos y herramientas con QR',      d:'Cada equipo con su etiqueta. El trabajador escanea el QR y hace su inspección diaria antes de usarlo.', desde:2, llave:'inspecciones', web:['equipos', 'inspeq'], nuevo:1 },
+  { k:'equipos',     g:'dia',   ic:'🏷️', n:'Equipos y herramientas con QR',      d:'Cada equipo con su etiqueta. El trabajador escanea el QR y hace su inspección diaria antes de usarlo.', desde:3, llave:'equipos', web:['equipos', 'inspeq'], nuevo:1 },
   { k:'msds',        g:'dia',   ic:'🧪', n:'Productos químicos',                 d:'Cada producto con su hoja MSDS, su etiqueta y su rombo. El cartel con QR va en el almacén.', desde:3, llave:'msds', web:['quimicos'] },
   { k:'ambiente',    g:'dia',   ic:'🌱', n:'Medio ambiente',                     d:'Los residuos con su certificado o su boleta (y lo que se vende, con su comprobante), el agua en m³, el combustible con sus boletas de carga y las charlas ambientales; y el informe de medio ambiente del mes.', desde:3, web:['ambiente'], nuevo:1 },
   { k:'campanas',    g:'dia',   ic:'📣', n:'Campañas',                           d:'Campañas de una semana ya armadas, día por día, con su evidencia en PDF.', desde:3, llave:'campanas' },
@@ -15290,18 +15293,18 @@ var PLAN_VITRINA = [
   { k:'caida',       g:'dia',   ic:'🧗', n:'Calculadora de caída libre',         d:'Con la altura del anclaje, la línea y el absorbedor (o el retráctil), dice si el trabajador golpearía el piso: con su dibujo, en verde, ámbar o rojo, y qué cambiar. En un andamio, por sus cuerpos. Los que compartes, tu cuadrilla los ve en su app; en la web, los preparas y los editas.', desde:2, nuevo:1, web:['caida'] },
   { k:'auxilios',    g:'dia',   ic:'⛑️', n:'Primeros auxilios paso a paso',      d:'¿Qué hago si…? Caída, corte, quemadura, descarga, desmayo y golpe de calor, con audio y el botón de llamar, sin señal. Y el cartel de la estación de emergencia con su QR. En la web, la obra adapta los casos, suma los suyos con su foto y baja el manual en PDF.', desde:2, nuevo:1, web:['auxilios'] },
   { k:'apto',        g:'dia',   ic:'✋', n:'¿Estás apto hoy? al firmar el ATS',    d:'Tres preguntas antes de cada firma: descanso, cómo se siente y su EPP. Si alguien dice que no, el supervisor lo ve antes del V°B°. Sin datos médicos.', desde:0, nuevo:1 },
-  { k:'bloqueo',     g:'dia',   ic:'🔒', n:'Bloqueo y etiquetado con el QR del equipo', d:'Cada uno registra su candado con el QR del equipo, y el QR dice BLOQUEADO a cualquiera hasta que se quiten todos. La lista sirve en el cambio de turno.', desde:2, nuevo:1, web:['bloqueos'] },
+  { k:'bloqueo',     g:'dia',   ic:'🔒', n:'Bloqueo y etiquetado con el QR del equipo', d:'Cada uno registra su candado con el QR del equipo, y el QR dice BLOQUEADO a cualquiera hasta que se quiten todos. La lista sirve en el cambio de turno.', desde:3, nuevo:1, web:['bloqueos'] },
 
   { k:'parte',       g:'dia',   ic:'📋', n:'El parte del día, solo',            d:'A la hora del parte, la hoja con lo del día para el jefe: quién trabajó, ATS, charlas, reportes, incidentes y pendientes. En PDF o por WhatsApp, en un toque.', desde:1, nuevo:1, web:['parte'] },
   { k:'investigacion', g:'dia', ic:'🔍', n:'Investigación guiada de accidentes', d:'Paso a paso: lo que pasó y los testigos, la línea de tiempo, las fotos, los 5 porqués hasta la causa raíz y cada medida con su responsable y su plazo. Con su informe en PDF.', desde:4, nuevo:1 },
   { k:'tareo',       g:'gente', ic:'🕘', n:'Tareo de la puerta con el fotocheck', d:'Cada uno marca su entrada y su salida con su fotocheck: las horas hombre van solas al Riesgo del mes, se ve quién está adentro, quién acumula muchas horas, y el tareo del mes sale en Excel.', desde:4, nuevo:1, web:['tareo'] },
   { k:'legajo',      g:'gente', ic:'📁', n:'Legajo SST de cada trabajador en PDF', d:'Inducción, capacitaciones con su nota, EPP, aptitud del EMO, SCTR y amonestaciones, ordenado y numerado, con su índice. Uno por uno o todos de una vez, para la auditoría. Eliges qué secciones lleva, y cada trabajador ve el suyo en su app.', desde:3, nuevo:1, web:['legajo'] },
-  { k:'visitas',     g:'gente', ic:'🚪', n:'Visitas con su inducción de dos minutos', d:'El QR de la puerta: la visita deja sus datos, ve las reglas, contesta tres preguntas y sale con su pase del día, sin instalar nada. Y entra en «¿Quién falta?».', desde:1, nuevo:1, web:['visitas'] },
+  { k:'visitas',     g:'gente', ic:'🚪', n:'Visitas con su inducción de dos minutos', d:'El QR de la puerta: la visita deja sus datos, ve las reglas, contesta tres preguntas y sale con su pase del día, sin instalar nada. Y entra en «¿Quién falta?».', desde:3, nuevo:1, web:['visitas'] },
   { k:'pulso',       g:'gente', ic:'💓', n:'Pulso de seguridad',                  d:'Diez preguntas cada tres meses, sin nombre, desde la app del trabajador. Los resultados por tema salen con 5 respuestas o más.', desde:2, nuevo:1, web:['pulso'] },
   { k:'personal',    g:'gente', ic:'👷', n:'Tu personal',                        d:'La ficha de cada trabajador, con su estado, su frente y su historia en la obra.', desde:0, tope:'trabajador' },
   { k:'credencial',  g:'gente', ic:'🪪', n:'Credenciales con QR y carné',        d:'La credencial de cada trabajador y su carné con los teléfonos de emergencia de la obra.', desde:0, tope:'credencial' },
   { k:'cargos',      g:'gente', ic:'🖼️', n:'Brigada, comité y supervisor de SST', d:'Designas a cada uno con su función y su foto, y sale el cartel para la caseta.', desde:0, web:['cargos'], nuevo:1 },
-  { k:'comite',      g:'gente', ic:'🏛️', n:'Comité de SST',                      d:'El padrón, el libro de actas y los acuerdos del comité.', desde:1, llave:'comite' },
+  { k:'comite',      g:'gente', ic:'🏛️', n:'Comité de SST',                      d:'El padrón, el libro de actas y los acuerdos del comité.', desde:4, llave:'comite' },
   { k:'amonesta',    g:'gente', ic:'⚠️', n:'Amonestaciones',                     d:'La papeleta con su descargo y su firma, en PDF o en Word.', desde:0, tope:'amonestacion', llave:'amonestaciones' },
   { k:'emo',         g:'gente', ic:'🩺', n:'Exámenes médicos ocupacionales (EMO)', d:'Las fechas, la aptitud y los días que faltan para el próximo de cada trabajador. El informe lo ven solo salud y el trabajador, que firma en su app que lo recibió.', desde:3, llave:'emo', web:['emo'], nuevo:1 },
   { k:'sctr',        g:'gente', ic:'🛡️', n:'SCTR del mes', d:'La constancia con su lista de asegurados, sacada del PDF o del Excel de la aseguradora, y quién está en la obra sin SCTR vigente.', desde:0, web:['sctr'], nuevo:1 },
@@ -15310,15 +15313,15 @@ var PLAN_VITRINA = [
 
   { k:'risst',       g:'doc',   ic:'📌', n:'Cartel QR del reglamento interno',   d:'El trabajador escanea y lee el documento vigente en su celular.', desde:0, llave:'qr_risst' },
   { k:'qr_pets',     g:'doc',   ic:'📌', n:'Cartel QR de los procedimientos',    d:'Los procedimientos de trabajo, a un escaneo de distancia.', desde:1, llave:'qr_pets' },
-  { k:'qr_iperc',    g:'doc',   ic:'📌', n:'Cartel QR de la matriz IPERC',       d:'La matriz de riesgos de cada frente, a la vista de quien la necesita.', desde:2, llave:'qr_iperc' },
-  /* 14/10/2026 · el periódico mural con QR (mural.js): solo su gente hasta Supervisor SST; desde SSOMA, cualquiera que escanee */
-  { k:'mural',       g:'doc',   ic:'📰', n:'Periódico mural con QR',             d:'Un solo cartel cuyo QR abre una pizarra con los archivos de todos tus carteles, en secciones con su título.', desde:1, llave:'mural', nuevo:1 },
-  { k:'qr_propio',   g:'doc',   ic:'➕', n:'Carteles QR propios',                d:'Además de los que ya vienen, los tuyos: con el título que quieras y los documentos que elijas.', desde:1, llave:'qr_propio', tope:'cartel', nuevo:1 },
+  { k:'qr_iperc',    g:'doc',   ic:'📌', n:'Cartel QR de la matriz IPERC',       d:'La matriz de riesgos de cada frente, a la vista de quien la necesita.', desde:1, llave:'qr_iperc' },
+  /* 14/10/2026 · el periódico mural con QR (mural.js) · 22/10/2026: desde SSOMA (hoja 2 de Marcelo): cualquiera que escanee, o solo su gente si la obra lo elige */
+  { k:'mural',       g:'doc',   ic:'📰', n:'Periódico mural con QR',             d:'Un solo cartel cuyo QR abre una pizarra con los archivos de todos tus carteles, en secciones con su título.', desde:3, llave:'mural', nuevo:1 },
+  { k:'qr_propio',   g:'doc',   ic:'➕', n:'Carteles QR propios',                d:'Además de los que ya vienen, los tuyos: con el título que quieras y los documentos que elijas.', desde:3, llave:'qr_propio', tope:'cartel', nuevo:1 },
   { k:'miscarpetas', g:'doc',   ic:'📁', n:'Tus propias carpetas de documentos', d:'Creas, nombras y ordenas carpetas para los documentos de la obra, en la app y en la web: cada archivo va donde lo pongas.', desde:4, nuevo:1 },
   { k:'proced',      g:'doc',   ic:'📘', n:'Procedimientos y normas',            d:'Los procedimientos de trabajo y la biblioteca de normas, para consultar en la obra.', desde:0, cubre:['normas'] },
 
   { k:'portal',      g:'web',   ic:'💻', n:'Portal web',                         d:'Lo que registras en el celular se ve al instante en la pantalla de la oficina, para revisar y descargar.', desde:0 },
-  { k:'informe',     g:'web',   ic:'📑', n:'Informe del mes', d:'Para tu gerencia o tu cliente: eliges el mes y qué tan completo (básico, intermedio o completo) y los datos del mes salen solos. Un PDF numerado, el Excel con los datos y el Word de los temas del mes.', desde:1, web:['informe', 'fotoreg'], nuevo:1 },
+  { k:'informe',     g:'web',   ic:'📑', n:'Informe del mes', d:'Para tu gerencia o tu cliente: eliges el mes y qué tan completo (básico, intermedio o completo) y los datos del mes salen solos. Un PDF numerado, el Excel con los datos y el Word de los temas del mes.', desde:3, web:['informe', 'fotoreg'], nuevo:1 },
   { k:'programas',   g:'web',   ic:'📆', n:'Programas del año',                  d:'El programa de capacitación y el anual de SST, mes a mes y con lo ejecutado contado solo, y los objetivos y metas del año sacados de él. Desde Supervisor SST, también los de inspecciones, simulacros y campañas; desde SSOMA, los de monitoreo ocupacional y auditorías.', desde:1, web:['programas', 'objetivos'], nuevo:1 },
   { k:'resumen',     g:'web',   ic:'📈', n:'Resumen ejecutivo de todas tus obras', d:'Cómo va cada obra en una pantalla, para la gerencia, y el informe del mes de todas tus obras juntas.', desde:4 }
 ];
@@ -18127,7 +18130,7 @@ function abrirQRDoc(k){
   var H = qrHoja(k);
   if(!H) return;
   /* sin el mural en el plan de aquí, el aviso del plan; si el de aquí lo trae y el servidor dice que no, la pantalla lo explica */
-  if(H.mural && typeof muralNivel === 'function' && muralNivel() < 1 && soloConCodigo('El periódico mural', 'mural')) return;
+  if(H.mural && typeof muralNivel === 'function' && (muralNivel() < 1 || !puede('mural')) && soloConCodigo('El periódico mural', 'mural')) return;
   if(!H.propio && !H.buzon && !H.mural && !puede(H.llave)){ soloConCodigo('El QR de «' + H.t + '»', H.llave); return; }
   QR_ACTUAL = k;
   QR_CARTEL.cv = null; QR_CARTEL.png = null;
@@ -19288,7 +19291,8 @@ var NOMBRE_LLAVE=[['constancias','Constancias de capacitación firmadas'],
             ['preguntas','Tus propias preguntas en las capacitaciones'],
             ['msds','Hojas MSDS'],['qr_msds','QR de las hojas MSDS'],
             ['campanas','Campañas'],['simulacros','Simulacros'],
-            ['epp_obra','EPP de la obra: cambios, stock, verificación en campo y costo']];
+            ['epp_obra','EPP de la obra: cambios, stock, verificación en campo y costo'],
+            ['equipos','Equipos y herramientas con QR, con su inspección diaria y su bloqueo']];
 /* ══════ LO QUE GANAS AL SUBIR SE CALCULA, NO SE ESCRIBE ═══════════
    Esto era una lista escrita a mano, y el dia que Marcelo rehizo la
    matriz se quedo mintiendo: le ofrecia al del LITE «el QR del RISST»
@@ -24345,7 +24349,7 @@ function _muralMotivo(j, err){
   if(err === 404) return 'Para el periódico mural falta actualizar el servidor. Avísanos y lo dejamos listo.';
   if(mo === 'no_eres_de_la_obra') return 'Esta cuenta no es de esta obra: no puede armar su mural.';
   if(mo === 'sin_cuenta') return 'Entra con tu cuenta para armar el mural.';
-  if(mo === 'plan') return 'El periódico mural viene desde el plan Prevencionista.';
+  if(mo === 'plan') return 'El periódico mural viene desde el plan SSOMA.';
   if(mo || err) return 'El servidor no pudo con el mural. No es tu señal: avísanos y lo arreglamos.';
   return 'No se pudo: no hay señal. Inténtalo otra vez cuando tengas internet.';
 }
@@ -24409,8 +24413,8 @@ function muralPintaEditor(){
   var pr = $('qr1-propio'); if(pr) pr.innerHTML = '';
   var bz = $('qr1-buzon'); if(bz) bz.innerHTML = '';
   var n = muralNivel();
-  if(n < 1){
-    c.innerHTML = '<div class="aviso">🔒 <span>El periódico mural viene desde el plan Prevencionista.</span></div>';
+  if(n < 1 || !puede('mural')){
+    c.innerHTML = '<div class="aviso">🔒 <span>El periódico mural viene desde el plan SSOMA.</span></div>';
     return;
   }
   if(!MUR.token){
@@ -24522,7 +24526,7 @@ function muralVerYa(){
 }
 /* la fila de «Los QR de tu obra» (la segunda, después del buzón) */
 function muralFila(){
-  var abierto = muralNivel() >= 1;
+  var abierto = muralNivel() >= 1 && puede('mural');
   return '<button type="button" class="tarj vidrio qrd-fila listo qrd-mural" data-k="mural" onclick="abrirQRDoc(\'mural\')">' +
          '<span class="qrd-ic">📰</span>' +
          '<span class="qrd-tx"><b>Periódico mural</b><small>Un solo QR con los archivos de todos tus carteles</small></span>' +
@@ -26402,13 +26406,13 @@ function eqPonerColor(k){
 function eqPedirColor(luego){ EQ.pedirColor=true; EQ.luego=luego||null; eqPintar(); try{ window.scrollTo(0,0); }catch(_s){} }
 
 /* ══ LA LISTA ══ */
-function eqIr(){ if(soloConCodigo('Los QR de equipos y herramientas','inspecciones')) return; ir('p-equipos'); }
+function eqIr(){ if(soloConCodigo('Los QR de equipos y herramientas','equipos')) return; ir('p-equipos'); }
 function eqPintar(){
   var c=$('eq-cuerpo'); if(!c) return;
   var e=empActiva();
   if(!e){ c.innerHTML='<div class="aviso">Entra a tu obra para ver sus equipos.</div>'; return; }
-  if(!puede('inspecciones')){
-    c.innerHTML='<h2>🏷️ Equipos y herramientas</h2><div class="aviso">Los QR de equipos vienen con las inspecciones, desde el plan Supervisor SST.</div>'+
+  if(!puede('equipos')){
+    c.innerHTML='<h2>🏷️ Equipos y herramientas</h2><div class="aviso">Los QR de equipos y herramientas vienen desde el plan SSOMA.</div>'+
       '<button class="btn" onclick="ir(\'p-planes\')">Ver los planes</button>';
     return;
   }
@@ -27996,7 +28000,7 @@ function iqAbrirToken(tk){
     return;
   }
   try{ localStorage.removeItem(LS_IQ_PEND); }catch(_p){}
-  if(iqSoyGestor() && typeof soloConCodigo === 'function' && soloConCodigo('La inspección diaria de equipos', 'inspecciones')) return;
+  if(iqSoyGestor() && typeof soloConCodigo === 'function' && soloConCodigo('La inspección diaria de equipos', 'equipos')) return;
   IQ.tk = tk; IQ.eq = null; IQ.estado = 'cargando'; IQ.enviada = null; IQ.puntos = []; IQ.fotos = []; IQ.apto = ''; IQ.nota = ''; IQ.pad = null; IQ.igual = false;
   var q = iqSoyTrab() ? yo() : (leer(LS_SUP, {}) || {});
   IQ.nombre = iqSoyTrab() ? [q.n, q.a].filter(Boolean).join(' ') : (q.nombre || ''); IQ.cargo = iqSoyTrab() ? (q.c || '') : (q.cargo || '');
@@ -28506,7 +28510,7 @@ function iqBloqueEquipos(){
     (faltan ? ' · <span data-sin-trad>' + faltan + '</span> <span>' + (faltan === 1 ? 'equipo sin la de hoy' : 'equipos sin la de hoy') + '</span>' : '') +
     '</small></span><span class="ch">›</span></button>';
 }
-function iqIrLista(){ if(soloConCodigo('La inspección diaria de equipos', 'inspecciones')) return; ir('p-iq-lista'); }
+function iqIrLista(){ if(soloConCodigo('La inspección diaria de equipos', 'equipos')) return; ir('p-iq-lista'); }
 function iqListaPintar(){
   var c = $('iql-cuerpo'); if(!c) return;
   var e = empActiva();
@@ -28661,7 +28665,7 @@ function iqBloqueFicha(x){
 var LS_IQ_VISTAS = 'sstc_iq_vistas', IQ_TIMER = null, IQ_PIDIENDO = false, IQ_POR_FIRMAR = 0;
 function iqRevisarPorFirmar(silencio){
   var e = iqSoyGestor() ? empActiva() : null;
-  if(!e || IQ_PIDIENDO || IQ.sinSQL || !(typeof puede === 'function' && puede('inspecciones'))) return Promise.resolve(0);
+  if(!e || IQ_PIDIENDO || IQ.sinSQL || !(typeof puede === 'function' && puede('equipos'))) return Promise.resolve(0);
   IQ_PIDIENDO = true;
   var d = new Date(Date.now() - 7 * 86400000), desde = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
   return sbGet('sst_equipo_insp?empresa=eq.' + encodeURIComponent(e.id) + '&fecha=gte.' + desde + '&or=(prod.is.null,sst.is.null)' +
@@ -37406,7 +37410,7 @@ function salEmo(lista, mes, dia){
    palabras en su frase, para que la app los alcance con su diccionario.
    ═════════════════════════════════════════════════════════════════ */
 var INFB_TIPOS = [
-  { k:'sst', n:'SST', ic:'🦺', t:'Informe de SST', desde:1 },
+  { k:'sst', n:'SST', ic:'🦺', t:'Informe de SST', desde:3 },   /* 22/10/2026 · hoja 2: el informe del mes, desde SSOMA */
   { k:'amb', n:'Medio ambiente', ic:'🌱', t:'Informe de medio ambiente', desde:3 },
   { k:'sal', n:'Salud ocupacional', ic:'🩺', t:'Informe de salud ocupacional', desde:3 }
 ];
@@ -44486,7 +44490,7 @@ function _pdfDeKardex(t, regs, mes){
    trabajador\u00bb. Se entregaba a la fiscalizaci\u00f3n sin las firmas que la
    ley pide, y sin un solo aviso. */
 function bajarKardexPDF(){
-  if(soloConCodigo('Generar el registro de EPP en PDF','constancias')) return;
+  if(soloConCodigo('Generar el registro de EPP en PDF','kardex_export')) return;
   var m=$('kx-msg');
   var _P=kardexDelPeriodo(); var mes=_P.mes||'';
   m.style.color='var(--mal)';
@@ -44825,7 +44829,7 @@ function _notasDelLegajo(sinFirma, sueltos){
     '<p class="sub" style="margin-top:10px">Cada archivo trae el formato oficial con el código que pusiste en Datos del empleador, con los datos del trabajador en la fila 12 y sus entregas desde la fila 16. El formato admite 60 líneas: al que tenga más se le arma un segundo archivo, no se le recorta.</p>';
 }
 function exportarKardex(){
-  if(soloConCodigo('Generar el registro de EPP en Excel','constancias')) return;
+  if(soloConCodigo('Generar el registro de EPP en Excel','kardex_export')) return;
   var tid=$('kx-trab').value, m=$('kx-msg');
   m.style.color='var(--mal)';
   $('kx-resultado').innerHTML='';
@@ -44916,7 +44920,7 @@ function consumoDeEpp(regs){
   return out;
 }
 function consumoEppExcel(){
-  if(soloConCodigo('El reporte de consumo de EPP en Excel','constancias')) return;
+  if(soloConCodigo('El reporte de consumo de EPP en Excel','kardex_export')) return;
   var m=$('kx-consumo-msg'); m.style.color='var(--mal)';
   var P=kardexDelPeriodo();
   if(KX_PERIODO==='mes' && !P.mes){ m.textContent='Elige el mes arriba, o pasa a «Todo lo registrado».'; return; }
@@ -44954,7 +44958,7 @@ function kxEnviarExcel(){
     '¿Qué hago con el registro de EPP?');
 }
 function exportarLegajoCompleto(){
-  if(soloConCodigo('Generar el registro de EPP en Excel','constancias')) return;
+  if(soloConCodigo('Generar el registro de EPP en Excel','kardex_export')) return;
   var m=$('kx-legajo-msg');
   function di(t,c){ if(m){ m.style.color=c||'var(--gris)'; m.innerHTML=t; } }
   var con=kardexLocal().filter(function(k){ return String(k.fecha||'').length>=7; });
@@ -45110,7 +45114,7 @@ var CATALOGO_ACCESOS = [
   {k:'peligros',  ic:'🔎', et:'Encuentra<br>los peligros',       fn:'abrirPeligros',   color:'a-verde', desde:3, grupo:1},
   {k:'kardex',    ic:'🦺', et:'Entrega<br>de EPP',             ir:'p-kardex',        color:'a-azul',  desde:0, grupo:1},
   /* 04/10/2026 · pedir EPP y materiales desde el celular, con el sustento del consumo y la firma de quien autoriza */
-  {k:'reqs',      ic:'🧾', et:'Requerimientos',                ir:'p-req',           color:'a-azul',  desde:2, grupo:1},
+  {k:'reqs',      ic:'🧾', et:'Requerimientos',                ir:'p-req',           color:'a-azul',  desde:3, grupo:1},
   /* 05/10/2026 · la cadena de supervisión: las empresas de la obra (subcontratas, cliente, supervisión), observar con
      foto y plazo, levantar y validar. No es de un plan: sale cuando la obra tiene Central o está enlazada con otra
      empresa (lo dice el servidor; sin eso, no aparece). */
@@ -45145,7 +45149,7 @@ var CATALOGO_ACCESOS = [
   {k:'pulso',     ic:'💓', et:'Pulso de<br>seguridad',         fn:'abrirPulsoRes',   color:'a-viol',  desde:2, grupo:2},
   {k:'personal',  ic:'👷', et:'Mi<br>personal',                ir:'p-trabajadores',  color:'a-verde', desde:0, grupo:2},
   /* 13/10/2026 · las visitas: el QR de la puerta con su inducción de dos minutos (visitas.js y /v/) */
-  {k:'visitas',   ic:'🚪', et:'Visitas',                        fn:'abrirVisitas',    color:'a-viol',  desde:1, grupo:2},
+  {k:'visitas',   ic:'🚪', et:'Visitas',                        fn:'abrirVisitas',    color:'a-viol',  desde:3, grupo:2},
   /* 13/10/2026 · el tareo de la puerta: entrada y salida con el fotocheck, y las horas hombre solas (tareo.js) */
   {k:'tareo',     ic:'🕘', et:'Tareo de<br>la puerta',           fn:'abrirTareo',      color:'a-viol',  desde:4, grupo:2},
   /* la inducción del trabajador nuevo (23/09/2026). En todos los planes,
@@ -45187,7 +45191,7 @@ var CATALOGO_ACCESOS = [
          que la ley no le pide.
        · con 20 o más te toca comité paritario (art. 29), y eso —padrón,
          libro de actas, las doce reuniones, los acuerdos— vive desde el
-         plan Prevencionista, que es donde empiezan a caber 20 personas.
+         plan Gestión SST (22/10/2026, hoja 2 de Marcelo; antes, Prevencionista).
      Por eso `desde:0` con llave `comite` adentro: el LITE entra, ve la
      respuesta que le toca y la usa. El día que pase de 20, la app se lo
      dice antes que el inspector.                                     */
@@ -45211,7 +45215,7 @@ var CATALOGO_ACCESOS = [
   {k:'buenas',    ic:'🌟', et:'Buenas<br>prácticas',            ir:'p-buenas',        color:'a-verde', desde:0, grupo:3},
   {k:'semanal',   ic:'📈', et:'Reporte<br>semanal',            ir:'p-semanal',       color:'a-verde', desde:1, grupo:3},
   /* 20/10/2026 · lote 22 · el informe del mes: qué está listo y qué falta, y las fotos por tema */
-  {k:'informe',   ic:'📑', et:'Informe<br>del mes',            ir:'p-informe-mes',   color:'a-oro',   desde:1, grupo:3},
+  {k:'informe',   ic:'📑', et:'Informe<br>del mes',            ir:'p-informe-mes',   color:'a-oro',   desde:3, grupo:3},
   /* 13/10/2026 · el parte del día para el jefe, solo (parte.js) */
   {k:'parte',     ic:'📋', et:'Parte<br>del día',               fn:'abrirParte',      color:'a-azul',  desde:1, grupo:3},
   {k:'msds',      ic:'🧪', et:'Químicos<br>MSDS y SGA',        ir:'p-msds',          color:'a-azul',  desde:3, grupo:3},
@@ -45241,7 +45245,7 @@ var CATALOGO_ACCESOS = [
          SSOMA los tenia listados en su plan y no podia entrar.
      No es un cambio comercial: los tres ya estaban vendidos desde el
      peldaño 3. Lo que cambia es que ahora se pueden abrir.             */
-  {k:'constancias',ic:'🎓', et:'Constancias de<br>capacitación',  ir:'p-constancias',  color:'a-verde', desde:1, grupo:3},
+  {k:'constancias',ic:'🎓', et:'Constancias de<br>capacitación',  ir:'p-constancias',  color:'a-verde', desde:3, grupo:3},
   /* La encuesta entra en todos los planes, incluido el gratis. No es
      contenido: es el termómetro de si la charla sirvió o solo se
      dictó, y cobrar por saber eso sería cobrar por la parte que hace
@@ -59517,7 +59521,7 @@ function bajarReportesExcel(){
   var m=$('rx-msg'); m.style.color='var(--mal)';
   var sel=rxSeleccion();
   if(!sel.length){ m.textContent='No hay reportes en esa selección.'; return; }
-  if(soloConCodigo('El informe de reportes en Excel','constancias')) return;
+  if(soloConCodigo('El informe de reportes en Excel','semanal')) return;   /* 22/10/2026 · sigue desde Prevencionista (antes iba con las constancias, que suben a SSOMA) */
   m.style.color='var(--gris)';
   m.textContent='Armando el Excel con '+sel.length+' fila'+(sel.length===1?'':'s')+'… (las fotos tardan un poco)';
   var nombre='Reportes_'+(nombreDeLaObra()||'obra').replace(/[^A-Za-z0-9]+/g,'-')+'_'+
@@ -72295,7 +72299,7 @@ function visPintar(){
      (el que se fue sin quitarlo), siempre con su motivo.
    · El equipo de la obra ve la lista de los bloqueos puestos: sirve en
      el cambio de turno.
-   · Va con los QR de equipos (desde el plan Supervisor SST).
+   · Va con los QR de equipos (desde el plan SSOMA: 22/10/2026, antes Supervisor SST).
    · Necesita señal: un candado que no llegó a registrarse no debe
      parecer registrado. El candado de verdad es el que manda.
    · Lo de la base: sql/2026-11-06-bloqueos.sql.
@@ -84271,8 +84275,8 @@ var APL_PREG = {
   obras: { t:'¿Cuántas obras llevas a la vez?', op:[['1', 'Una'], ['2', 'Dos'], ['4', 'De 3 a 4'], ['8', 'De 5 a 8'], ['mas', 'Más de 8']] },
   pers:  { t:'¿Cuántas personas registran contigo?', ayuda:'Supervisores, almaceneros o asistentes que usan la app con su cuenta. Tú cuentas.', op:[
            ['1', 'Solo yo'], ['2', 'Yo y uno más'], ['4', 'De 3 a 4'], ['8', 'De 5 a 8'], ['14', 'De 9 a 14'], ['mas', 'Más de 14'] ] },
-  insp:  { t:'¿Haces inspecciones con formato y pides requerimientos de EPP?', op:[['si', 'Sí'], ['no', 'No']] },
-  ssoma: { t:'¿Manejas productos químicos, haces simulacros o controlas exámenes médicos?', op:[['si', 'Sí'], ['no', 'No']] },
+  insp:  { t:'¿Haces inspecciones con formato?', op:[['si', 'Sí'], ['no', 'No']] },
+  ssoma: { t:'¿Pides requerimientos de EPP, manejas productos químicos, haces simulacros o controlas exámenes médicos?', op:[['si', 'Sí'], ['no', 'No']] },
   sub:   { t:'¿Tienes subcontratas que también deberían usar la app?', op:[['si', 'Sí'], ['no', 'No']] }
 };
 var APL_ORDEN = ['rol', 'central', 'trab', 'obras', 'pers', 'insp', 'ssoma', 'sub'];
@@ -84456,9 +84460,9 @@ function aplDecidir(r){
     if(o > A.obras) R.porque.push('Llevas ' + aplTexto('obras', r.obras).toLowerCase() + ' obras a la vez: ' + P.n + ' trae ' + P.obras + '.');
     if(p > A.gest) R.porque.push('Registran ' + _aplPersTexto(r.pers) + ': ' + P.n + ' trae ' + P.gest + ' cuentas para tu equipo.');
     if(r.insp === 'si' && aplPlan(APL_DESDE.insp) && aplPlan(APL_DESDE.insp).orden === P.orden)
-      R.porque.push('Haces inspecciones con formato y pides requerimientos: vienen desde ' + P.n + '.');
+      R.porque.push('Haces inspecciones con formato: vienen desde ' + P.n + '.');
     if(r.ssoma === 'si' && aplPlan(APL_DESDE.ssoma) && aplPlan(APL_DESDE.ssoma).orden === P.orden)
-      R.porque.push('Manejas químicos, simulacros o exámenes médicos: vienen desde ' + P.n + '.');
+      R.porque.push('Pides requerimientos de EPP, manejas químicos, simulacros o exámenes médicos: vienen desde ' + P.n + '.');
     if(!R.porque.length) R.porque.push(P.n + ' es el plan más chico que cubre todo lo que respondiste.');
   }
   if(r.sub === 'si') R.nota = 'Tus subcontratas pueden usar su propia cuenta (LITE es gratis). Con más de ' + _aplMiles((aplPlan('ssoma') || {}).trab || 150) + ' trabajadores, OBRASST Central las junta y entran gratis.';
@@ -84488,7 +84492,7 @@ function aplResumen(R){
 function aplRespuestasTexto(r){
   return aplRespondidas(r).map(function(k){
     var q = { rol:'Qué hace', central:'Su principal usa Central', trab:'Trabajadores', obras:'Obras a la vez', pers:'Personas que registran',
-              insp:'Inspecciones y requerimientos', ssoma:'Químicos, simulacros o EMO', sub:'Subcontratas en la app' }[k] || k;
+              insp:'Inspecciones con formato', ssoma:'Requerimientos, químicos, simulacros o EMO', sub:'Subcontratas en la app' }[k] || k;
     return q + ': ' + aplTexto(k, r[k]);
   });
 }
@@ -95920,11 +95924,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = '49034d93ad';
-var IDIOMA_FR_V = '9e5ba29547';
+var IDIOMA_PT_V = 'dd94a7a27f';
+var IDIOMA_FR_V = 'e861fa76a5';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = '346761a9b4';
+var IDIOMA_EN_V = 'b84268230c';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -97374,10 +97378,10 @@ TRAD_PATRON.en.push(
        var c = cuantos(m[1]); return c ? ('You run ' + c + (m[1] === 'una' ? ' site' : ' sites') + ' at once: ' + plan(m[2]) + ' includes ' + m[3] + '.') : null; }],
     [/^Registran (.+): (.+) trae (\d+) cuentas para tu equipo\.$/, function(m){
        var q = quienes(m[1]); return q ? (q + ': ' + plan(m[2]) + ' includes ' + m[3] + ' accounts for your team.') : null; }],
-    [/^Haces inspecciones con formato y pides requerimientos: vienen desde (.+)\.$/, function(m){
-       return 'You run inspections with forms and place requisitions: they come with ' + plan(m[1]) + ' and up.'; }],
-    [/^Manejas químicos, simulacros o exámenes médicos: vienen desde (.+)\.$/, function(m){
-       return 'You handle chemicals, drills or medical exams: they come with ' + plan(m[1]) + ' and up.'; }],
+    [/^Haces inspecciones con formato: vienen desde (.+)\.$/, function(m){
+       return 'You run inspections with forms: they come with ' + plan(m[1]) + ' and up.'; }],
+    [/^Pides requerimientos de EPP, manejas químicos, simulacros o exámenes médicos: vienen desde (.+)\.$/, function(m){
+       return 'You place PPE requisitions or handle chemicals, drills or medical exams: they come with ' + plan(m[1]) + ' and up.'; }],
     [/^(.+) es el plan más chico que cubre todo lo que respondiste\.$/, function(m){
        var p = plan(m[1]); return p.charAt(0).toUpperCase() + p.slice(1) + ' is the smallest one that covers everything you answered.'; }],
     /* 15/10/2026 · el plan de abajo con puestos sueltos, cuando lo único que falta es gente */
@@ -99595,8 +99599,8 @@ function infmPintar(fresco){
   if(!e || typeof hayCuenta !== 'function' || !hayCuenta()){
     c.innerHTML = '<h2>📑 Informe del mes</h2><p class="sub">Entra con tu cuenta de la obra para ver cómo va tu informe.</p>'; return;
   }
-  if(planActual().orden < 1){
-    c.innerHTML = '<h2>📑 Informe del mes</h2><p class="sub">' + esc('Desde el plan ' + infmPlanN(1) + ': ves qué parte está lista y qué falta, y el informe sale solo con lo que registras.') + '</p>' +
+  if(planActual().orden < INFB_TIPOS[0].desde){
+    c.innerHTML = '<h2>📑 Informe del mes</h2><p class="sub">' + esc('Desde el plan ' + infmPlanN(INFB_TIPOS[0].desde) + ': ves qué parte está lista y qué falta, y el informe sale solo con lo que registras.') + '</p>' +
       '<button class="btn" onclick="ir(\'p-planes\')">Ver los planes</button>'; return;
   }
   if(!INFB_TIPOS.some(function(t){ return t.k === INFM.tipo; })) INFM.tipo = 'sst';
@@ -99682,7 +99686,7 @@ function infmTrasFoto(){
 /* ── la tarjeta del inicio: «Informe de octubre · 9 de 12 listos» (con SSOMA, lo de cada informe) ── */
 var INFM_REVISADO = {};
 function infmCardDom(){
-  if(planActual().orden < 1 || !empActiva() || typeof hayCuenta !== 'function' || !hayCuenta()) return null;
+  if(planActual().orden < INFB_TIPOS[0].desde || !empActiva() || typeof hayCuenta !== 'function' || !hayCuenta()) return null;
   var ym = infmMesDefecto(), c = infmCache(ym), tipos = infmTipos();
   var b = document.createElement('button'); b.type = 'button'; b.className = 'infm-card'; b.id = 'infm-card';
   var det = (c && c.por && tipos.length > 1) ? tipos.filter(function(t){ return c.por[t.k]; }).map(function(t){ return '<span>' + esc(t.n) + '</span> <span data-sin-trad>' + c.por[t.k][0] + '/' + c.por[t.k][1] + '</span>'; }).join(' · ') : '';
@@ -99709,7 +99713,7 @@ function infmCardDom(){
 function abrirInformeWeb(tipo){
   /* 20/10/2026 · lote 23 · la sección «Informe» de la web: SST, medio ambiente y salud ocupacional, cada uno en su pestaña */
   var u=portalURL()+'#'+({ amb:'inf-amb', sal:'inf-salud' }[tipo] || 'informe');
-  if(planActual().orden<1){ aviso('El informe del mes', 'Viene desde el plan Prevencionista: eliges el mes y qué tan completo, y sale solo con lo que registras en la app.', '📑'); return; }
+  if(planActual().orden < INFB_TIPOS[0].desde){ aviso('El informe del mes', 'Viene desde el plan SSOMA: eliges el mes y qué tan completo, y sale solo con lo que registras en la app.', '📑'); return; }
   aviso('El informe del mes', ' ', '📑');
   var cu=$('avisof-txt'); if(!cu) return;
   cu.style.display='';
@@ -109685,7 +109689,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='a5648c9bc3';
+var SELLO_APP='a8ca4d6106';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
