@@ -1959,8 +1959,8 @@ var APL_PREG = {
   obras: { t:'¿Cuántas obras llevas a la vez?', op:[['1', 'Una'], ['2', 'Dos'], ['4', 'De 3 a 4'], ['8', 'De 5 a 8'], ['mas', 'Más de 8']] },
   pers:  { t:'¿Cuántas personas registran contigo?', ayuda:'Supervisores, almaceneros o asistentes que usan la app con su cuenta. Tú cuentas.', op:[
            ['1', 'Solo yo'], ['2', 'Yo y uno más'], ['4', 'De 3 a 4'], ['8', 'De 5 a 8'], ['14', 'De 9 a 14'], ['mas', 'Más de 14'] ] },
-  insp:  { t:'¿Haces inspecciones con formato y pides requerimientos de EPP?', op:[['si', 'Sí'], ['no', 'No']] },
-  ssoma: { t:'¿Manejas productos químicos, haces simulacros o controlas exámenes médicos?', op:[['si', 'Sí'], ['no', 'No']] },
+  insp:  { t:'¿Haces inspecciones con formato?', op:[['si', 'Sí'], ['no', 'No']] },
+  ssoma: { t:'¿Pides requerimientos de EPP, manejas productos químicos, haces simulacros o controlas exámenes médicos?', op:[['si', 'Sí'], ['no', 'No']] },
   sub:   { t:'¿Tienes subcontratas que también deberían usar la app?', op:[['si', 'Sí'], ['no', 'No']] }
 };
 var APL_ORDEN = ['rol', 'central', 'trab', 'obras', 'pers', 'insp', 'ssoma', 'sub'];
@@ -2144,9 +2144,9 @@ function aplDecidir(r){
     if(o > A.obras) R.porque.push('Llevas ' + aplTexto('obras', r.obras).toLowerCase() + ' obras a la vez: ' + P.n + ' trae ' + P.obras + '.');
     if(p > A.gest) R.porque.push('Registran ' + _aplPersTexto(r.pers) + ': ' + P.n + ' trae ' + P.gest + ' cuentas para tu equipo.');
     if(r.insp === 'si' && aplPlan(APL_DESDE.insp) && aplPlan(APL_DESDE.insp).orden === P.orden)
-      R.porque.push('Haces inspecciones con formato y pides requerimientos: vienen desde ' + P.n + '.');
+      R.porque.push('Haces inspecciones con formato: vienen desde ' + P.n + '.');
     if(r.ssoma === 'si' && aplPlan(APL_DESDE.ssoma) && aplPlan(APL_DESDE.ssoma).orden === P.orden)
-      R.porque.push('Manejas químicos, simulacros o exámenes médicos: vienen desde ' + P.n + '.');
+      R.porque.push('Pides requerimientos de EPP, manejas químicos, simulacros o exámenes médicos: vienen desde ' + P.n + '.');
     if(!R.porque.length) R.porque.push(P.n + ' es el plan más chico que cubre todo lo que respondiste.');
   }
   if(r.sub === 'si') R.nota = 'Tus subcontratas pueden usar su propia cuenta (LITE es gratis). Con más de ' + _aplMiles((aplPlan('ssoma') || {}).trab || 150) + ' trabajadores, OBRASST Central las junta y entran gratis.';
@@ -2176,7 +2176,7 @@ function aplResumen(R){
 function aplRespuestasTexto(r){
   return aplRespondidas(r).map(function(k){
     var q = { rol:'Qué hace', central:'Su principal usa Central', trab:'Trabajadores', obras:'Obras a la vez', pers:'Personas que registran',
-              insp:'Inspecciones y requerimientos', ssoma:'Químicos, simulacros o EMO', sub:'Subcontratas en la app' }[k] || k;
+              insp:'Inspecciones con formato', ssoma:'Requerimientos, químicos, simulacros o EMO', sub:'Subcontratas en la app' }[k] || k;
     return q + ': ' + aplTexto(k, r[k]);
   });
 }
