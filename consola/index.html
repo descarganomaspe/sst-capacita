@@ -687,7 +687,7 @@ var VISTAS = [
   {id:'resumen',  n:'Resumen',           c:'Resumen',  s:'Hoy y el mes, de un vistazo'},
   {id:'fallas',   n:'Fallas',            c:'Fallas',   s:'Lo que la gente reporta desde la app. «No puede entrar» con el plan vencido no es una falla: se contesta con el plan.'},
   {id:'reclamos', n:'Reclamos',          c:'Reclamos', s:'El Libro de Reclamaciones: cada hoja con su plazo de quince días hábiles, tu respuesta y la copia que se le manda al consumidor'},
-  {id:'ventas',   n:'Ventas',            c:'Ventas',   s:'Los pagos de OBRASST: la web, la tienda de Descarga Nomás y Google Play'},
+  {id:'ventas',   n:'Ventas',            c:'Ventas',   s:'Los pagos de OBRASST: la web, la tienda online y Google Play'},
   {id:'comprobantes', n:'Boletas y facturas', c:'Boletas', s:'La boleta o la factura de cada venta: lo que pidió el cliente, lista para emitir en SUNAT, y su número y su PDF cuando ya salió'},
   {id:'empresas', n:'Empresas y planes', c:'Empresas', s:'Cada empresa, con el plan que tiene hoy, sus obras y su gente'},
   {id:'central',  n:'Central',           c:'Central',  s:'OBRASST Central se activa por obra: con su código, hasta cuándo y para cuántas subcontratas. Y quién pidió una demo o un piloto'},
@@ -933,7 +933,7 @@ var PLAN_N = { prevencionista:'Prevencionista de Riesgo', supervisor:'Supervisor
 function planN(p){ return PLAN_N[p] || p || '—'; }
 function productoN(slug){
   slug = String(slug||'');
-  if(slug==='sst-capacita') return 'SSOMA · mensual (tienda Descarga Nomás)';
+  if(slug==='sst-capacita') return 'SSOMA · mensual (tienda online)';
   var m = slug.match(/^obrasst-([a-z]+)(-anual)?$/);
   if(!m) return slug || '—';
   return planN(m[1]) + ' · ' + (m[2] ? 'anual' : 'mensual');
@@ -1296,7 +1296,7 @@ function _recMonto(b){
 function _recTexto(h){
   var c=h.consumidor||{}, b=h.bien||{}, p=h.proveedor||{}, L=[];
   /* la hoja lleva el proveedor como figuraba ese día; la que entró antes de ponerlo, el de hoy */
-  if(!p.razon) p=(REC.r && REC.r.proveedor && REC.r.proveedor.razon) ? REC.r.proveedor : {razon:'OBRASST · Descarga Nomás'};
+  if(!p.razon) p=(REC.r && REC.r.proveedor && REC.r.proveedor.razon) ? REC.r.proveedor : {razon:'Marcelo Fabián Lamas Anicama', ruc:'10720504435', domicilio:'Puga, Rímac, Lima'};
   L.push('LIBRO DE RECLAMACIONES · HOJA DE RECLAMACIÓN N.° '+h.numero);
   L.push('Fecha: '+fechaHora(h.fecha));
   L.push('Proveedor: '+[p.razon, p.ruc ? 'RUC '+p.ruc : '', p.domicilio].filter(Boolean).join(' · '));
@@ -1471,7 +1471,7 @@ function vistaVentas(caja){
       var soloPen = +montos.PEN||0, prom = t.aprobadas ? soloPen/t.aprobadas : 0;
       var PER=[['mes','Este mes'],['antes','El mes pasado'],['90','Últimos 90 días'],['todo','Todo']];
       var EST=[['aprobadas','Aprobadas'],['pendientes','Sin terminar'],['rechazadas','Rechazadas'],['todas','Todas']];
-      var h='<div class="aviso" style="margin:0 0 16px"><b>Cómo le llega el plan al que paga.</b> Web y tienda de Descarga Nomás (Mercado Pago): al aprobarse el pago, '+
+      var h='<div class="aviso" style="margin:0 0 16px"><b>Cómo le llega el plan al que paga.</b> Web y tienda online (Mercado Pago): al aprobarse el pago, '+
           'el servidor crea en ese momento un código nuevo con el plan y los días que pagó, y se lo muestra en la página de pago; por correo también, si en Supabase ▸ Edge Functions ▸ Secrets '+
           'están <b>RESEND_API_KEY</b> y <b>CORREO_DE</b>. Google Play no lleva código: el plan se activa solo en su empresa. '+
           'La boleta o la factura de cada venta queda en <a href="#comprobantes" data-ir-v="comprobantes">Boletas y facturas</a>.</div>'+
@@ -1513,7 +1513,7 @@ function vistaVentas(caja){
       ];
       tabla($('t-ventas'), cols, L, {orden:'fecha', asc:false, unidad:'pagos', archivo:'ventas-obrasst', alClic:abrirVenta,
         vacio: VEN.est==='aprobadas' ? 'Ningún pago aprobado en este periodo' : 'Nada en esta lista',
-        vacioSub:'Los pagos de la web (Mercado Pago) y de la tienda de Descarga Nomás aparecen aquí al aprobarse.'});
+        vacioSub:'Los pagos de la web (Mercado Pago) y de la tienda online aparecen aquí al aprobarse.'});
     }, function(cod){ noAbre(caja, null, cod, '2026-10-12-consola'); });
   }
   VISTA.recargar=function(silencio){ if(silencio && HOJA.abierta) return; pinta(); }; pinta();
