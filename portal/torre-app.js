@@ -3,7 +3,7 @@
    con estas cuentas y pone las funciones _tor… de la web. Lo arma armar.py. No editar. */
 var TORRE_APP = (function(){
 /* ── de la app · lo que la Torre usa ── */
-function esc(t){var d=document.createElement('div');d.textContent=t||'';return d.innerHTML;}
+function esc(t){ /* 26/10/2026 · seguridad: también comillas */ return String(t||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function escA(t){ return esc(t).replace(/"/g,'&quot;'); }
 function fechaLarga(iso){
   /* Una fecha que no existe llegaba igual hasta aqui: String(undefined)

@@ -29,7 +29,10 @@
      ni se reescribe: la última decisión es la que vale.
    No toca la pantalla ni el servidor: recibe datos, devuelve el texto y el PDF.
    ══════════════════════════════════════════════════════════════════ */
-var AUT_VERSION = 'GS-1';
+var AUT_VERSION = 'GS-2';
+/* 26/10/2026 · GS-2: el encargado del tratamiento con su nombre y su RUC (pedido de Marcelo). Lo firmado con GS-1 se
+   vuelve a mostrar con el texto que se leyó entonces, palabra por palabra: si no, su huella dejaría de cuadrar. */
+var AUT_ENC = { 'GS-1':'Descarga Nomás (la empresa que hace OBRASST)', 'GS-2':'OBRASST, servicio de Marcelo Fabián Lamas Anicama (RUC 10720504435),' };
 var AUT_GRUPOS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 var AUT_CANAL = { app:'En su celular (app OBRASST)', pantalla:'En la pantalla del supervisor', papel:'En papel' };
 var AUT_ESTADO = { firmada:'Autorizó', negada:'No autorizó', revocada:'Revocó', pedida:'Se le pidió' };
@@ -50,6 +53,7 @@ function autFaltaEmpresa(d){ var f=[]; if(!d.razon) f.push('la razón social'); 
    → { titulo, intro, puntos:[{ t, x }], base } ; con «blanco» (el formato para llenar a mano) van rayas */
 function autTexto(d, op){
   d=autDatos(d); op=op||{};
+  var ENC=AUT_ENC[op.ver] || AUT_ENC[AUT_VERSION];
   var R=d.razon || 'la empresa', Rp=/\.$/.test(R) ? R : R+'.';
   var quien=d.nombre || (op.blanco ? '______________________________________' : 'el trabajador');
   var doc=d.doc ? (d.td+' N.° '+d.doc) : (op.blanco ? d.td+' N.° ____________' : '');
@@ -62,7 +66,7 @@ function autTexto(d, op){
     puntos:[
       { t:'Para qué', x:'Para que, si sufro un accidente o una emergencia en el trabajo, la brigada, quien me dé los primeros auxilios y el servicio de salud que me atienda sepan mi grupo sanguíneo de inmediato.' },
       { t:'Dónde va y quién lo verá', x:'Va en mi ficha de personal, en mi credencial (dentro de su código QR y en el carné) y en el sticker de mi casco. Lo verán el área de seguridad y salud en el trabajo de '+R+', la brigada de emergencia, el servicio de salud que me atienda y cualquier persona que mire mi casco o escanee mi QR: está hecho para que se vea rápido en una emergencia.' },
-      { t:'Dónde se guarda', x:'En el banco de datos de personal de '+R+(d.banco ? ' (código de inscripción '+d.banco+')' : '')+', que la empresa lleva con el aplicativo OBRASST. Los datos se guardan en servidores de Supabase en São Paulo, Brasil, que Descarga Nomás (la empresa que hace OBRASST) usa por encargo de '+R+': es un flujo transfronterizo de datos. No se entregan a otras empresas.' },
+      { t:'Dónde se guarda', x:'En el banco de datos de personal de '+R+(d.banco ? ' (código de inscripción '+d.banco+')' : '')+', que la empresa lleva con el aplicativo OBRASST. Los datos se guardan en servidores de Supabase en São Paulo, Brasil, que '+ENC+' usa por encargo de '+R+': es un flujo transfronterizo de datos. No se entregan a otras empresas.' },
       { t:'Es voluntario', x:'Darlo es voluntario. Si no lo autorizo, no se registra ni se imprime y en esos lugares dirá «sin dato». Eso no afecta mi trabajo, mi credencial ni ningún otro registro.' },
       { t:'Nada automático', x:'Mi grupo sanguíneo no se usa para tomar decisiones automáticas ni para hacer perfiles sobre mí.' },
       { t:'Cuánto tiempo', x:'Se conserva mientras trabaje en '+R+' o hasta que revoque esta autorización, lo que ocurra primero. Después se quita de mi ficha, de mi credencial y de los stickers nuevos. La constancia de esta autorización, y la de su revocación, se guardan como prueba de lo que decidí.' },
@@ -72,9 +76,9 @@ function autTexto(d, op){
     base:'El grupo sanguíneo es un dato sensible: se trata solo con mi autorización por escrito (Ley N.° 29733, Ley de Protección de Datos Personales, y su Reglamento, D.S. N.° 016-2024-JUS).'
   };
 }
-function autTextoPlano(d){
-  var T=autTexto(d);
-  return [AUT_VERSION, T.titulo, T.intro].concat(T.puntos.map(function(p){ return p.t+': '+p.x; })).concat([T.base]).join('\n');
+function autTextoPlano(d, ver){
+  var v=ver || AUT_VERSION, T=autTexto(d, { ver:v });
+  return [v, T.titulo, T.intro].concat(T.puntos.map(function(p){ return p.t+': '+p.x; })).concat([T.base]).join('\n');
 }
 /* la huella del texto que leyó (FNV-1a de 64 bits, en hexadecimal): si el texto cambia, cambia */
 function autHuella(s){
@@ -149,7 +153,8 @@ function _autHoja(doc, p, ctx, emp, op, W, H, M){
   var cons=op.modo==='constancia', reg=p.reg||null, blanco=!cons && !p.nombre;
   var d=autDatos({ razon:emp.razon, ruc:emp.ruc, dom:emp.dom, obra:ctx.obra, banco:emp.banco, contacto:emp.contacto,
                    nombre:p.nombre, doc:p.doc, td:p.td, cargo:p.cargo, sangre:cons && reg ? reg.sangre : p.sangre });
-  var T=autTexto(d, { blanco:blanco }), AZUL=[11,42,58], ORO=[245,183,0], ROJO=[198,40,40], GRIS=[95,105,114], NEGRO=[28,34,40];
+  var VER=(cons && reg && reg.version) ? reg.version : AUT_VERSION;   /* la constancia, con el texto que se firmó */
+  var T=autTexto(d, { blanco:blanco, ver:VER }), AZUL=[11,42,58], ORO=[245,183,0], ROJO=[198,40,40], GRIS=[95,105,114], NEGRO=[28,34,40];
   /* la cabecera de la empresa (la de los formatos de la app) */
   doc.setFillColor(AZUL[0], AZUL[1], AZUL[2]); doc.rect(0, 0, W, 24, 'F');
   doc.setFillColor(ORO[0], ORO[1], ORO[2]); doc.rect(0, 24, W, 1.3, 'F');
@@ -174,7 +179,7 @@ function _autHoja(doc, p, ctx, emp, op, W, H, M){
   doc.setTextColor(NEGRO[0], NEGRO[1], NEGRO[2]); doc.setFont('helvetica', 'bold'); doc.setFontSize(13.2);
   doc.text(T.titulo.toUpperCase(), W/2, y, { align:'center' });
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7.8); doc.setTextColor(GRIS[0], GRIS[1], GRIS[2]);
-  doc.text(cons ? 'Constancia · dato sensible · texto '+AUT_VERSION : 'Formato · dato sensible · texto '+AUT_VERSION, W/2, y+4.6, { align:'center' });
+  doc.text(cons ? 'Constancia · dato sensible · texto '+VER : 'Formato · dato sensible · texto '+VER, W/2, y+4.6, { align:'center' });
   /* los datos del trabajador */
   y+=9;
   doc.setDrawColor(214, 221, 227); doc.setLineWidth(0.3); doc.setFillColor(246, 248, 250);
@@ -279,5 +284,5 @@ function _autHoja(doc, p, ctx, emp, op, W, H, M){
   }
   /* el pie */
   doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6); doc.setTextColor(140, 140, 140);
-  doc.text('Responsable del tratamiento: '+(d.razon || '—')+(d.ruc ? ' · RUC '+d.ruc : '')+' · Hecho con OBRASST · '+AUT_VERSION, W/2, H-7, { align:'center' });
+  doc.text('Responsable del tratamiento: '+(d.razon || '—')+(d.ruc ? ' · RUC '+d.ruc : '')+' · Hecho con OBRASST · '+VER, W/2, H-7, { align:'center' });
 }

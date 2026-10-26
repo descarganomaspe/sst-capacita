@@ -293,7 +293,7 @@ function plwRegaloHTML(E, due){
   if(!due) return '<p class="plw-chico plw-regalo-no" id="plw-regalo-no">🎁 Tu empresa todavía no usó su mes gratis del plan SSOMA: lo activa quien la registró.</p>';
   if(usada) return '<p class="plw-chico plw-regalo-no" id="plw-regalo-no">🎁 Tu mes gratis ya se usó: es uno por persona. Elige el plan que te sirva y sigues con todo; tus datos no se tocan.</p>';
   return '<div class="plw-regalo" id="plw-regalo"><div><b>🎁 Tu primer mes es gratis</b>' +
-    '<p>30 días del plan SSOMA completo, sin tarjeta y sin cobro automático. Al terminar, la cuenta vuelve sola a LITE y tus documentos no se borran.</p></div>' +
+    '<p>30 días del plan SSOMA completo y sin cobro automático. Al terminar, la cuenta vuelve sola a LITE y tus documentos no se borran.</p></div>' +
     '<button type="button" class="bt casco" id="plw-regalo-bt" data-plw="regalo">Activar mi mes gratis</button></div>';
 }
 
