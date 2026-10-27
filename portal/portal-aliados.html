@@ -228,7 +228,7 @@ td .sub, .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px
 <footer class="pie"><a href="aliados.html">OBRASST Aliados</a> · <a href="../?legal=terminos" target="_blank" rel="noopener">Términos</a> · <a href="../?legal=privacidad" target="_blank" rel="noopener">Privacidad</a> · <a href="mailto:info@obrasstapp.com">info@obrasstapp.com</a></footer>
 <div id="toast" role="status" hidden></div>
 
-<script src="cotizar.js?v=334c8716f2"></script>
+<script src="cotizar.js?v=341a6ca045"></script>
 <script>
 'use strict';
 /* en https://obrasstapp.com los enlaces «../…» (los términos) van a GitHub Pages, como en las otras páginas */
@@ -451,11 +451,14 @@ function pintarPedidos(){
   if(!AL.filtro || !c[AL.filtro]) AL.filtro = c.pend ? 'pend' : 'todos';
   var F = L.filter(function(f){ return AL.filtro === 'todos' || grupo(f) === AL.filtro; });
   var h = '';
-  if(AL.yo && AL.yo.aliado && AL.yo.aliado.rubro === 'salud') h += '<div class="aviso">Los resultados de los exámenes se suben como siempre: en <a href="index.html">obrasstapp.com</a>, con esta misma cuenta, en «Soy un centro médico» y con el código de clínica (CLI-) de cada empresa. Las solicitudes de citas llegan aquí desde diciembre.</div>';
+  /* 27/10/2026 · cada rubro ve lo suyo: qué ya tiene hoy y desde cuándo le llegan sus solicitudes (COT.RUBRO_INFO) */
+  var rub = (AL.yo && AL.yo.aliado && AL.yo.aliado.rubro) || '', info = COT.rubroInfo(rub);
+  if(rub && rub !== 'epp' && COT.rubroAviso(rub)) h += '<div class="aviso" id="p-rubro">' + esc(COT.rubroAviso(rub)) + (info.hoy ? ' <a href="index.html">Ir a obrasstapp.com</a>' : '') + '</div>';
   h += '<div class="filtros" role="group" aria-label="Qué solicitudes ver">' + FILTROS.map(function(x){
     return '<button type="button" data-f="' + x[0] + '" class="' + (AL.filtro === x[0] ? 'on' : '') + '" aria-pressed="' + (AL.filtro === x[0]) + '">' + esc(x[1]) + ' · ' + c[x[0]] + '</button>';
   }).join('') + '</div>';
-  if(!L.length) h += '<div class="vacio"><b>Todavía no te llegó ninguna solicitud</b>Cuando una empresa de tu zona pida algo de tu rubro, aparece aquí y te llega su correo.</div>';
+  if(!L.length) h += '<div class="vacio"><b>Todavía no te llegó ninguna solicitud</b>' + esc(rub === 'epp' ? 'Cuando una empresa de tu zona pida cotización de EPP, aparece aquí y te llega su correo.' :
+    (info.desde ? 'Las de tu rubro empiezan a llegar desde ' + info.desde + '.' : 'Cuando una empresa de tu zona pida algo de tu rubro, aparece aquí y te llega su correo.')) + '</div>';
   else if(!F.length) h += '<div class="vacio"><b>Ninguna aquí</b>Prueba con otro filtro de arriba.</div>';
   else h += '<div class="lista">' + F.map(function(f){
     var E = COT.estadoAliado(f), lug = COT.lugarTxt(f.lugar);
@@ -631,7 +634,7 @@ function vistaPrograma(){
   rpc('sst_ali_programa', {}).then(function(j){
     if(AL.vista !== 'programa') return;
     if(!j || !j.ok){ $('vista').innerHTML = '<div class="aviso mal">' + esc(motivo(j && j.motivo)) + '</div>'; return; }
-    var E = j.empresas || [], hoy = COT.hoy();
+    var E = j.empresas || [], hoy = COT.hoy(), rub = (AL.yo && AL.yo.aliado && AL.yo.aliado.rubro) || '';
     var h = '<div class="dos-col"><div><div class="tarj"><h2>Tu código de aliado</h2><p class="ayuda" style="margin:0 0 10px">La empresa que crea su cuenta con tu enlace o con tu código queda como traída por ti.</p>' +
       '<p class="codigo" id="g-cod">' + esc(j.codigo) + '</p><div class="copia" style="margin-top:12px"><input id="g-enl" readonly value="' + esc(j.enlace) + '" aria-label="Tu enlace">' +
       '<button type="button" class="bt sec chico" id="g-copiar">Copiar el enlace</button></div></div>' +
@@ -639,8 +642,9 @@ function vistaPrograma(){
         E.map(function(e){ return '<tr><td><b>' + esc(e.nombre || '—') + '</b></td><td>' + esc(PLAN_N[e.plan] || String(e.plan || '—').replace(/^\w/, function(c){ return c.toUpperCase(); })) + '</td><td>' +
           esc(e.plan_vence ? COT.dma(e.plan_vence) : '—') + (e.plan_vence && e.plan_vence < hoy ? '<span class="sub">vencido</span>' : '') + '</td><td>' + esc(COT.diaDe(e.desde)) + '</td></tr>'; }).join('') +
         '</tbody></table></div>' : '<p class="ayuda" style="margin-top:6px">Todavía ninguna. Comparte tu enlace con las empresas a las que les vendes.</p>') + '</div></div>' +
-      '<div><div class="tarj"><h2>Tus 12 meses gratis</h2><p style="margin-top:4px">' + (j.gratis_hasta ? 'Hasta el <b>' + esc(COT.dma(j.gratis_hasta)) + '</b>.' : 'Empiezan el día que te unes.') + '</p>' +
-      '<p class="ayuda" style="margin-top:8px">Después eliges un plan: Aliado o Consultor, S/ 49 al mes; Aliado Pro o Consultor Pro, S/ 149. Lo que ganes en comisiones se descuenta primero del plan. En el mes 11 te llega tu resumen. <a href="aliados.html#precio">Ver los planes</a>.</p></div>' +
+      (rub === 'medico' ? '<div><div class="tarj" id="g-plan"><h2>Sin plan que pagar</h2><p style="margin-top:4px">' + esc(COT.planesTxt(rub)) + '</p></div>' :
+      '<div><div class="tarj" id="g-plan"><h2>Tus 12 meses gratis</h2><p style="margin-top:4px">' + (j.gratis_hasta ? 'Hasta el <b>' + esc(COT.dma(j.gratis_hasta)) + '</b>.' : 'Empiezan el día que te unes.') + '</p>' +
+      '<p class="ayuda" style="margin-top:8px">' + esc(COT.planesTxt(rub)) + ' En el mes 11 te llega tu resumen. <a href="aliados.html#precio">Ver los planes</a>.</p></div>') +
       '<div class="tarj"><h2>Tu comisión</h2><p style="margin-top:4px">' + esc(String(+j.comision)) + ' % de lo que paga cada empresa que llegó contigo, durante ' + esc(String(j.meses)) + ' meses, liquidado cada mes.</p>' +
       '<p class="ayuda" style="margin-top:8px">La empresa prueba OBRASST 30 días gratis; la comisión corre desde que paga. Si no paga, no hay comisión.</p></div></div></div>';
     $('vista').innerHTML = h;

@@ -19,6 +19,36 @@ var COT = (function(){
   var RUBROS = { epp:'EPP y seguridad', salud:'Centro de salud ocupacional', consultor:'Consultor SSOMA', medico:'Médico ocupacional',
     capacitacion:'Centro de capacitación', residuos:'Gestor de residuos', sctr:'Corredor de seguros (SCTR)', otro:'Otro' };
   var PAGOS = ['Contado', 'Contra entrega', 'Crédito 15 días', 'Crédito 30 días', 'Crédito 45 días', 'Crédito 60 días'];
+  /* 27/10/2026 · Marcelo: «la web de aliados da a entender que considera a todos? los comandos, funciones da entender ello?».
+     Qué tiene HOY cada rubro y desde cuándo le llegan sus solicitudes: lo mismo en el Portal de Aliados, la página y el correo de
+     invitación (la Consola lleva su copia en ALI_INFO). El médico ocupacional no tiene plan: trabaja con el de cada empresa. */
+  var RUBRO_INFO = {
+    epp:          { grupo:'proveedor', desde:'', luego:'',
+                    hoy:'Te llegan las solicitudes de cotización de EPP de las empresas de tu zona: respondes con tu precio por ítem y ves si ganaste.' },
+    salud:        { grupo:'proveedor', desde:'diciembre de 2026', luego:'Desde diciembre de 2026 te llegan aquí las solicitudes de citas.',
+                    hoy:'Hoy subes los resultados con el código de clínica (CLI-) de cada empresa, con esta misma cuenta, en «Soy un centro médico».' },
+    consultor:    { grupo:'profesional', desde:'diciembre de 2026', luego:'Desde diciembre de 2026 tienes aquí el panel de todas tus empresas y te llegan las empresas que buscan consultor.',
+                    hoy:'Hoy trabajas dentro de cada empresa cliente con tu propia cuenta: te invita a su equipo y pasas de una a otra desde el selector de obras.' },
+    medico:       { grupo:'medico', desde:'2027', luego:'Desde 2027 te llegan aquí las empresas que necesitan médico ocupacional, y entras a cada una sin ocupar un puesto de su plan.',
+                    hoy:'Hoy trabajas dentro de cada empresa que te invita a su equipo, con el plan de esa empresa: tú no pagas plan, ni ahora ni después.' },
+    capacitacion: { grupo:'proveedor', desde:'enero de 2027', luego:'Desde enero de 2027 te llegan aquí las solicitudes de cursos. Mientras, completa tu ficha.', hoy:'' },
+    residuos:     { grupo:'proveedor', desde:'enero de 2027', luego:'Desde enero de 2027 te llegan aquí las solicitudes de recojo. Mientras, completa tu ficha.', hoy:'' },
+    sctr:         { grupo:'proveedor', desde:'enero de 2027', luego:'Desde enero de 2027 te llegan aquí las empresas con el SCTR por vencer. Mientras, completa tu ficha.', hoy:'' },
+    otro:         { grupo:'proveedor', desde:'', luego:'', hoy:'' }
+  };
+  function rubroInfo(k){ return RUBRO_INFO[k] || RUBRO_INFO.otro; }
+  /* «qué tienes hoy» + «desde cuándo te llega lo tuyo», en una o dos frases */
+  function rubroAviso(k){
+    var r = rubroInfo(k);
+    return [r.hoy, r.luego].filter(Boolean).join(' ');
+  }
+  /* el plan de después de los 12 meses, según el rubro */
+  function planesTxt(k){
+    var g = rubroInfo(k).grupo;
+    if(g === 'medico') return 'Para ti no hay plan: trabajas con el plan de cada empresa, ahora y después. Igual ganas tu comisión por las empresas que traigas.';
+    if(g === 'profesional') return 'Después eliges un plan: Consultor, S/ 49 al mes (hasta 2 empresas), o Consultor Pro, S/ 149 (hasta 10). Lo que ganes en comisiones se descuenta primero del plan.';
+    return 'Después eliges un plan: Aliado, S/ 49 al mes, o Aliado Pro, S/ 149. Lo que ganes en comisiones se descuenta primero del plan.';
+  }
 
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
   function dos(n){ return ('0' + n).slice(-2); }
@@ -218,7 +248,7 @@ var COT = (function(){
     pinta();
   }
 
-  return { IGV:IGV, PORTAL:PORTAL, DEPS:DEPS, RUBROS:RUBROS, PAGOS:PAGOS,
+  return { IGV:IGV, PORTAL:PORTAL, DEPS:DEPS, RUBROS:RUBROS, PAGOS:PAGOS, RUBRO_INFO:RUBRO_INFO, rubroInfo:rubroInfo, rubroAviso:rubroAviso, planesTxt:planesTxt,
            esc:esc, hoy:hoy, fechaMas:fechaMas, dma:dma, cuando:cuando, diaDe:diaDe, num:num, soles:soles, titulo:titulo,
            depNombre:depNombre, zonasTxt:zonasTxt, lugarTxt:lugarTxt, rubroNombre:rubroNombre,
            precio:precio, factor:factor, unitCon:unitCon, totales:totales, validar:validar, comparativo:comparativo,

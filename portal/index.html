@@ -13757,7 +13757,7 @@ function prqExcelLista(){
        ganador lo ve como «Ganaste» y, cuando el almacén anota lo que llegó, como «Recibido».
      · Solo viajan las líneas, las cantidades y para cuándo: ningún dato de la gente.
    Lo común con el Portal de Aliados (las cuentas, los nombres, los estados, el texto del correo) está en portal/cotizar.js. */
-var COTIZAR_VER='334c8716f2';   /* lo pone huellas.py: el md5 de portal/cotizar.js */
+var COTIZAR_VER='341a6ca045';   /* lo pone huellas.py: el md5 de portal/cotizar.js */
 var _COT_CARGA=null;
 function cargarCotizar(){
   if(typeof COT!=='undefined') return Promise.resolve(true);
@@ -13811,7 +13811,7 @@ function prqCotSePuede(r){ return !!r && r.estado==='autorizado' && prqCotItems(
 function prqCotMotivo(m){
   return ({ sin_proveedores:'Elige al menos un aliado o escribe el correo de un proveedor.', aliado_no_disponible:'Ese aliado ya no está disponible: elige otro o escribe un correo.',
     correo:'Revisa los correos: alguno está mal escrito.', items:'Revisa las líneas: alguna no tiene cantidad.', fechas:'La fecha de respuesta va de hoy a 60 días.',
-    muchos:'Son demasiados proveedores para un pedido (hasta 15 aliados y 10 correos).', req_cerrado:'Ese requerimiento ya no está vigente.', no_existe:'Ese pedido ya no está.',
+    muchos:'Son demasiados proveedores para una solicitud (hasta 15 aliados y 10 correos).', req_cerrado:'Ese requerimiento ya no está vigente.', no_existe:'Esa solicitud ya no está.',
     no_eres_de_la_obra:'Esta cuenta no es de esta obra.', sin_cuenta:'Tu sesión se cerró. Vuelve a entrar.', muy_seguido:'Espera un momento y vuelve a intentarlo.',
     respuesta:'Revisa la respuesta: los precios, el plazo y la validez.', razon:'Escribe el nombre del proveedor.', es_aliado:'Eso lo responde el aliado en su portal.',
     cerrada:'Esta cotización ya se cerró.', solo_quien_pidio:'Adjudica quien pidió la cotización o el dueño de la obra.', sin_respuesta:'Ese proveedor todavía no respondió.',
@@ -13837,7 +13837,7 @@ function prqCotizar(){
   var ent=String((YO.obra && YO.obra.direccion) || r.ubicacion || '').slice(0, 160);
   c.innerHTML='<div class="tarj piq-form" id="prq-f-cot"><div class="tarj-cuerpo"><b>'+(ab ? 'Pedir a más proveedores' : 'Pedir cotización')+' · requerimiento '+esc(r.numero)+'</b>'+
     '<p class="ayuda" style="margin:2px 0 10px">'+(ab ? 'Se suman a la misma cotización: verás todas las respuestas juntas en el cuadro comparativo.' :
-      'El pedido se guarda en OBRASST: los aliados lo reciben en su Portal de Aliados y tú comparas aquí lo que respondan. Va lo autorizado ('+items.length+
+      'La solicitud se guarda en OBRASST: los aliados la reciben en su Portal de Aliados y tú comparas aquí lo que respondan. Va lo autorizado ('+items.length+
       (items.length===1 ? ' línea' : ' líneas')+') y para cuándo; ningún dato de tu gente.')+'</p>'+
     '<div id="prqc-aliados" class="cot-aliados"><div class="vacio">Cargando los aliados de OBRASST…</div></div>'+
     '<div class="seccion" style="margin-top:14px"><h3>Otros proveedores</h3><div id="prqc-ext"></div>'+
@@ -13847,7 +13847,7 @@ function prqCotizar(){
       '<div class="campo"><label for="prqc-ent">Lugar de entrega</label><input id="prqc-ent" maxlength="160" autocomplete="off" value="'+esc(ent)+'" placeholder="Por ejemplo: almacén de la obra"></div></div>'+
       '<div class="campo"><label for="prqc-nota">Nota para los proveedores <span class="gris-t">(opcional)</span></label><textarea id="prqc-nota" rows="2" maxlength="500" placeholder="Por ejemplo: con certificado de calidad de cada lote"></textarea></div>')+
     '<p class="msg" id="prqc-msg"></p><div class="acciones"><button type="button" class="bt sec chico" id="prqc-no">Cerrar</button>'+
-    '<button type="button" class="bt sec chico" id="prqc-copiar">📋 Copiar el pedido</button><button type="button" class="bt" id="prqc-si">Enviar el pedido</button></div></div></div>';
+    '<button type="button" class="bt sec chico" id="prqc-copiar">📋 Copiar la solicitud</button><button type="button" class="bt" id="prqc-si">Enviar la solicitud</button></div></div></div>';
   var m=$('prqc-msg'), ext=$('prqc-ext');
   var fila=function(){
     if(ext.children.length>=10) return;
@@ -13863,7 +13863,7 @@ function prqCotizar(){
   $('prqc-no').onclick=prqZona;
   $('prqc-copiar').onclick=function(){
     var t=COT.correo({numero:r.numero, obra:nombreObraP()||'', items:items, para:r.para, hasta:($('prqc-hasta')||{}).value||'', entrega:($('prqc-ent')||{}).value||'', nota:($('prqc-nota')||{}).value||''}, YO.nombre).completo;
-    var ok=function(){ toast('Pedido copiado: pégalo en el WhatsApp o en el correo de tu proveedor.'); };
+    var ok=function(){ toast('Solicitud copiada: pégala en el WhatsApp o en el correo de tu proveedor.'); };
     try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, function(){ toast('No se pudo copiar.'); }); else toast('No se pudo copiar.'); }catch(_c){ toast('No se pudo copiar.'); }
   };
   $('prqc-si').onclick=function(){ prqCotEnviar(r, items); };
@@ -13879,7 +13879,7 @@ function prqCotizar(){
       var esta=!!ya[a.id];
       return '<label class="chk cot-ali'+(esta ? ' ya' : '')+'"><input type="checkbox" value="'+esc(a.id)+'"'+(esta ? ' checked disabled' : '')+'>'+
         '<span class="cot-logo" aria-hidden="true">'+(a.logo ? '<img src="'+esc(a.logo)+'" alt="">' : esc(ini||'·'))+'</span>'+
-        '<span class="cot-ali-tx"><b>'+esc(a.razon)+'</b> <span class="pill ok">Aliado verificado</span>'+(esta ? ' <span class="pill gris">Ya tiene el pedido</span>' : '')+
+        '<span class="cot-ali-tx"><b>'+esc(a.razon)+'</b> <span class="pill ok">Aliado verificado</span>'+(esta ? ' <span class="pill gris">Ya tiene la solicitud</span>' : '')+
         '<small>'+esc(['Atiende '+COT.zonasTxt(a.zonas), (a.horas!=null && a.respondidas>0) ? 'responde en unas '+(a.horas<1 ? 'pocas horas' : (a.horas<48 ? Math.round(a.horas)+' h' : Math.round(a.horas/24)+' días')) : ''].filter(Boolean).join(' · '))+'</small>'+
         (a.vende ? '<small class="cot-vende">'+esc(String(a.vende).split('\n')[0].slice(0, 140))+'</small>' : '')+'</span></label>';
     };
@@ -13914,9 +13914,9 @@ function prqCotEnviar(r, items){
     var D=j.destinos||[], nA=D.filter(function(d){ return !d.externo; }).length, nE=D.length-nA;
     var c=$('prq-zona'); PRQ.zona='cotizar-listo';
     if(!D.length){ c.innerHTML='<div class="aviso ok" id="prqc-listo"><b>Ya estaban en la lista.</b> No se agregó a nadie nuevo.</div>'; prqCotsPintar(r); return; }
-    c.innerHTML='<div class="aviso ok" id="prqc-listo"><b>Pedido guardado'+(j.omitidos ? ' (un aliado ya no estaba disponible)' : '')+'.</b> '+
-      (nA ? (nA===1 ? 'Un aliado ya lo tiene' : nA+' aliados ya lo tienen')+' en su Portal de Aliados. ' : '')+
-      'Ahora avísales por correo: se abre tu correo con el pedido escrito y '+(D.length===1 ? 'el proveedor' : 'los '+D.length+' proveedores')+' en copia oculta.'+
+    c.innerHTML='<div class="aviso ok" id="prqc-listo"><b>Solicitud guardada'+(j.omitidos ? ' (un aliado ya no estaba disponible)' : '')+'.</b> '+
+      (nA ? (nA===1 ? 'Un aliado ya la tiene' : nA+' aliados ya la tienen')+' en su Portal de Aliados. ' : '')+
+      'Ahora avísales por correo: se abre tu correo con la solicitud escrita y '+(D.length===1 ? 'el proveedor' : 'los '+D.length+' proveedores')+' en copia oculta.'+
       (nE ? ' Lo que te respondan '+(nE===1 ? 'el que no es aliado' : 'los que no son aliados')+' lo anotas aquí.' : '')+
       '<div class="acciones"><button type="button" class="bt" id="prqc-avisar">✉️ Abrir el correo</button><button type="button" class="bt sec" id="prqc-fin">Listo</button></div></div>';
     $('prqc-avisar').onclick=function(){ prqCotAvisar(j.cot, D); };
@@ -13925,14 +13925,14 @@ function prqCotEnviar(r, items){
     if(VISTA.actual==='reqs' && $('vista')) prqPintar($('vista'));
   }, function(e){ bt.disabled=false; m.className='msg mal'; m.textContent=prqCotFallo(e); });
 }
-/* el aviso: el pedido escrito, desde el correo de quien pide, a todos en copia oculta */
+/* el aviso: la solicitud escrita, desde el correo de quien pide, a todos en copia oculta */
 function prqCotAvisar(cot, destinos){
   if(!cot) return;
   var C=(destinos || (cot.destinos||[]).filter(function(d){ return ['enviado', 'visto'].indexOf(d.estado)>-1; })).map(function(d){ return d.correo; }).filter(Boolean);
-  if(!C.length){ toast('Ninguno tiene correo: copia el pedido y mándalo por donde siempre.'); return; }
+  if(!C.length){ toast('Ninguno tiene correo: copia la solicitud y mándala por donde siempre.'); return; }
   var t=COT.correo(cot, YO.nombre);
   prqAbrirCorreo(COT.mailto(C, t.asunto, t.cuerpo));
-  if(t.cortado) toast('El pedido es largo: en el correo van las primeras líneas. Usa «Copiar el pedido» para mandarlo completo.');
+  if(t.cortado) toast('La solicitud es larga: en el correo van las primeras líneas. Usa «Copiar la solicitud» para mandarla completa.');
 }
 
 /* ── en el cajón: las cotizaciones del requerimiento y su cuadro comparativo ── */
@@ -14060,8 +14060,8 @@ function prqCotAdjudicar(k, destinoId){
       (K.mejor && K.mejor!==d.id ? '<div class="aviso ojo">No es el total más bajo entre los que cotizaron todo.</div>' : ''))+
     '<div class="campo-dos"><div class="campo"><label for="pj-oc">Orden de compra <span class="gris-t">(opcional)</span></label><input id="pj-oc" maxlength="40" autocomplete="off" placeholder="Por ejemplo, OC-2026-118"></div>'+
     '<div class="campo"><label for="pj-nota">Nota para el proveedor <span class="gris-t">(opcional)</span></label><input id="pj-nota" maxlength="300" autocomplete="off" placeholder="Por ejemplo: entregar el lunes"></div></div>'+
-    '<p class="ayuda">'+(d.externo ? 'Al proveedor le avisas tú, por correo (el botón queda en la cotización).' : 'El aliado lo verá como «Ganaste el pedido», con la orden de compra.')+
-      ' Los demás que seguían lo verán como «No adjudicado». No se puede deshacer.</p>'+
+    '<p class="ayuda">'+(d.externo ? 'Al proveedor le avisas tú, por correo (el botón queda en la cotización).' : 'El aliado lo verá como «Ganaste», con la orden de compra.')+
+      ' Los demás que seguían lo verán como «No adjudicada». No se puede deshacer.</p>'+
     '<p class="msg" id="pj-msg"></p><div class="acciones"><button type="button" class="bt sec chico" id="pj-no">Cerrar</button><button type="button" class="bt ok" id="pj-si">🏆 Adjudicar</button></div></div></div>';
   $('pj-no').onclick=prqZona;
   $('pj-si').onclick=function(){
@@ -14080,7 +14080,7 @@ function prqCotAvisarGanador(k){
   var g=prqCotGanador(k); if(!g) return;
   if(!g.correo){ toast('Ese proveedor no tiene correo anotado.'); return; }
   var t=COT.totales(g.resp, k.items||[]);
-  var cuerpo='Buenos días:\n\nLes adjudicamos el pedido de cotización'+(k.numero ? ' del requerimiento '+k.numero : '')+(k.obra ? ' (obra '+k.obra+')' : '')+
+  var cuerpo='Buenos días:\n\nLes adjudicamos la solicitud de cotización'+(k.numero ? ' del requerimiento '+k.numero : '')+(k.obra ? ' (obra '+k.obra+')' : '')+
     ' por '+COT.soles(t.total)+' con IGV, según su oferta.\n'+(k.oc ? 'Orden de compra: '+k.oc+'.\n' : '')+(k.adj_nota ? 'Nota: '+k.adj_nota+'\n' : '')+
     (k.entrega ? 'Entrega en: '+k.entrega+'.\n' : '')+'\nQuedo atento para coordinar la entrega.\n'+(YO.nombre ? YO.nombre+'\n' : '');
   prqAbrirCorreo('mailto:'+encodeURIComponent(g.correo).replace(/%40/g, '@')+'?subject='+encodeURIComponent('Adjudicación'+(k.numero ? ' · RQ '+k.numero : '')+(k.obra ? ' · '+k.obra : ''))+'&body='+encodeURIComponent(cuerpo));
