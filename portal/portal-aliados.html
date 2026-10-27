@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portal de Aliados · OBRASST</title>
+<meta name="description" content="El Portal de Aliados de OBRASST: las solicitudes de las empresas, tu respuesta, tu ficha y tu programa.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   OBRASST · el Portal de Aliados (27/10/2026)
+   Marcelo: «…cómo se entera que han pedido de sus unidades el aliado?» y «que todo sea parte de un sistema, que no se
+   confundan». Es el mismo para todos los rubros y para todas las empresas cliente del aliado: sus pedidos, su cotización
+   (precio por línea, plazo, validez), si ganó y cuándo ingresó a almacén, su ficha y su programa (código, empresas
+   traídas, los 12 meses gratis). La cuenta es la misma de obrasstapp.com (la sesión se comparte en este navegador).
+   Lo común con el portal de la empresa (cuentas, estados, el formulario de la respuesta) está en cotizar.js.
+   ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+:root{
+  --fondo:#F6F8FA; --panel:#FFFFFF; --raya:#E3E8EC; --raya2:#CBD4DB; --tinta:#0B2A3A; --tinta2:#123B50; --tinta3:#1B4B63;
+  --texto:#22323D; --gris:#6B7C88; --gris2:#98A7B1; --casco:#F5B700;
+  --ok:#1E8E5A; --ok-f:#E8F5EE; --ojo:#8A5200; --ojo-f:#FBF3E4; --mal:#C6323A; --mal-f:#FBE9EA; --azul:#2563A8; --azul-f:#E9F0FA;
+  --f:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; --mono:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; background:var(--fondo); color:var(--texto); font:15px/1.55 var(--f); -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0; color:var(--tinta); font-weight:600; letter-spacing:-.01em; text-wrap:balance}
+p{margin:0}
+a{color:var(--azul)}
+:focus-visible{outline:2px solid var(--casco); outline-offset:2px; border-radius:4px}
+[hidden]{display:none !important}
+.ancho{max-width:980px; margin:0 auto; padding-inline:16px}
+@media (min-width:760px){ .ancho{padding-inline:28px} }
+
+/* la barra */
+.barra{position:sticky; top:0; z-index:10; background:var(--tinta); color:#fff}
+.barra .ancho{display:flex; align-items:center; gap:14px; min-height:58px}
+.marca{display:flex; align-items:center; gap:10px; text-decoration:none; color:#fff; min-width:0}
+.marca-ic{width:30px; height:30px; border-radius:8px; background:var(--tinta3); display:grid; place-items:center; flex:none}
+.marca-ic i{display:block; width:14px; height:4px; background:var(--casco); border-radius:2px}
+.marca b{font-size:14.5px; letter-spacing:.05em}
+.marca span{font-size:12.5px; color:#9FB6C4; border-left:1px solid rgba(255,255,255,.18); padding-left:10px; white-space:nowrap}
+.barra .quien{margin-left:auto; display:flex; align-items:center; gap:10px; min-width:0}
+.barra .quien span{font-size:13px; color:#C8D7E0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:38vw}
+.barra button{font:500 13px/1 var(--f); color:#fff; background:transparent; border:1px solid rgba(255,255,255,.3); border-radius:8px; padding:8px 12px; cursor:pointer}
+.barra button:hover{background:rgba(255,255,255,.08)}
+
+/* botones, campos, mensajes */
+.bt{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:0 18px; border-radius:9px; font:600 14.5px/1 var(--f);
+  text-decoration:none; cursor:pointer; border:1px solid transparent; background:var(--tinta); color:#fff}
+.bt:hover{background:var(--tinta2)}
+.bt:disabled{opacity:.55; cursor:default}
+.bt.sec{background:var(--panel); color:var(--tinta); border-color:var(--raya2)}
+.bt.sec:hover{background:var(--fondo)}
+.bt.casco{background:var(--casco); color:var(--tinta)}
+.bt.mal{background:var(--panel); color:var(--mal); border-color:#E7B9BC}
+.bt.chico{min-height:34px; padding:0 12px; font-size:13.5px; border-radius:8px}
+.bt-link{background:none; border:0; padding:0; color:var(--azul); font:inherit; cursor:pointer; text-decoration:underline}
+.acciones{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.campo{display:grid; gap:5px; margin:0 0 14px}
+.campo label{font-size:13.5px; font-weight:500}
+.campo-dos{display:grid; gap:0 12px}
+@media (min-width:560px){ .campo-dos{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+input, select, textarea{width:100%; font:inherit; font-size:15px; color:var(--texto); background:var(--panel); border:1px solid var(--raya2); border-radius:8px; padding:9px 11px}
+textarea{resize:vertical}
+input:focus, select:focus, textarea:focus{outline:none; border-color:var(--tinta3); box-shadow:0 0 0 3px rgba(27,75,99,.14)}
+input[type=checkbox]{width:17px; height:17px; padding:0; flex:none; margin-top:3px; accent-color:var(--tinta)}
+.chk{display:flex; gap:9px; align-items:flex-start; font-size:13.5px; margin:0 0 10px; cursor:pointer}
+.ayuda{font-size:13px; color:var(--gris)}
+.gris-t{color:var(--gris2)}
+.msg{font-size:13.5px; margin:10px 0 0; min-height:18px}
+.msg.mal{color:var(--mal)} .msg.ok{color:var(--ok)} .msg.gris{color:var(--gris)}
+.aviso{border-radius:10px; padding:12px 14px; font-size:14px; background:var(--azul-f); border:1px solid #CFDDF0; margin:0 0 14px}
+.aviso.ok{background:var(--ok-f); border-color:#BFE3CE}
+.aviso.ojo{background:var(--ojo-f); border-color:#EED9A8}
+.aviso.mal{background:var(--mal-f); border-color:#F0C9CC}
+.aviso.neu{background:var(--fondo); border-color:var(--raya2)}
+.aviso b{color:var(--tinta)}
+.pill{display:inline-block; font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:999px; white-space:nowrap; background:var(--fondo); color:var(--gris)}
+.pill.ok{background:var(--ok-f); color:var(--ok)} .pill.med{background:var(--ojo-f); color:var(--ojo)} .pill.mal{background:var(--mal-f); color:var(--mal)}
+.pill.nuevo{background:var(--casco); color:var(--tinta)}
+.tarj{background:var(--panel); border:1px solid var(--raya); border-radius:12px; padding:18px; margin:0 0 16px}
+.tarj h2{font-size:17px; margin:0 0 4px}
+.seccion-t{font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); font-weight:600; margin:18px 0 8px}
+.tabla-caja{overflow-x:auto; border:1px solid var(--raya); border-radius:10px; background:var(--panel)}
+table{width:100%; border-collapse:collapse; font-size:14px}
+th{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--gris); text-align:left; font-weight:600; padding:9px 10px; border-bottom:1px solid var(--raya); background:#FAFBFC}
+td{padding:9px 10px; border-bottom:1px solid #EEF2F5; vertical-align:top}
+tr:last-child td{border-bottom:0}
+.num{text-align:right}
+td .sub, .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px}
+.cot-resp-t input{min-width:86px; font-size:14px; padding:7px 9px}
+.cot-resp-t td:first-child{min-width:150px}
+.cot-resp-t input.cot-precio{text-align:right}
+.cot-ayuda{margin:6px 0 12px}
+.cot-tot{margin:2px 0 12px; font-size:14.5px}
+#toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:var(--tinta); color:#fff; padding:11px 16px; border-radius:10px; font-size:14px;
+  box-shadow:0 10px 30px -12px rgba(0,0,0,.5); z-index:50; max-width:calc(100vw - 32px)}
+
+/* la entrada */
+.entrada{display:grid; gap:24px; padding-block:34px 60px}
+@media (min-width:900px){ .entrada{grid-template-columns:1fr 1fr; align-items:start; padding-block:56px} }
+.entrada .lado h1{font-size:clamp(26px,3.6vw,34px); line-height:1.12}
+.entrada .lado p{color:var(--gris); margin-top:10px; font-size:15.5px}
+.entrada .lado ul{margin:16px 0 0; padding:0; list-style:none; display:grid; gap:8px; font-size:14.5px}
+.entrada .lado li{display:grid; grid-template-columns:16px 1fr; gap:8px}
+.entrada .lado li::before{content:''; width:7px; height:7px; border-radius:2px; background:var(--casco); margin-top:8px}
+.caja-ent{background:var(--panel); border:1px solid var(--raya); border-radius:14px; padding:22px}
+.pest-ent{display:flex; gap:6px; margin:0 0 18px; background:var(--fondo); border-radius:10px; padding:4px}
+.pest-ent button{flex:1; border:0; background:transparent; font:600 14px/1 var(--f); color:var(--gris); padding:10px; border-radius:8px; cursor:pointer}
+.pest-ent button.on{background:var(--panel); color:var(--tinta); box-shadow:0 1px 2px rgba(11,42,58,.12)}
+.inv{background:#FFFBEF; border:1px solid #F1DFA6; border-radius:10px; padding:12px 14px; font-size:14px; margin:0 0 16px}
+
+/* el portal */
+.cab{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:flex-end; justify-content:space-between; padding-block:22px 6px}
+.cab h1{font-size:22px}
+.cab p{color:var(--gris); font-size:14px; margin-top:2px}
+.pestanas{display:flex; gap:4px; overflow-x:auto; border-bottom:1px solid var(--raya); margin:10px 0 18px; scrollbar-width:none}
+.pestanas button{border:0; background:transparent; font:600 14px/1 var(--f); color:var(--gris); padding:12px 12px 13px; border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap}
+.pestanas button.on{color:var(--tinta); border-bottom-color:var(--casco)}
+.pestanas .n{display:inline-block; min-width:20px; padding:2px 6px; margin-left:6px; border-radius:999px; background:var(--casco); color:var(--tinta); font-size:11.5px}
+.filtros{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 14px}
+.filtros button{border:1px solid var(--raya2); background:var(--panel); color:var(--texto); font:500 13px/1 var(--f); padding:8px 12px; border-radius:999px; cursor:pointer}
+.filtros button.on{background:var(--tinta); color:#fff; border-color:var(--tinta)}
+.lista{display:grid; gap:10px}
+.ped{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 14px; text-align:left; width:100%; background:var(--panel); border:1px solid var(--raya); border-radius:12px;
+  padding:14px 16px; cursor:pointer; font:inherit; color:inherit}
+.ped:hover{border-color:var(--raya2)}
+.ped.nuevo{border-color:#EDD48A; background:#FFFDF5}
+.ped .cod{font:500 12.5px/1.4 var(--mono); color:var(--tinta)}
+.ped .emp{font-weight:600; color:var(--tinta); font-size:15.5px}
+.ped .det{font-size:13px; color:var(--gris)}
+.ped .der{display:grid; justify-items:end; gap:6px; align-content:start}
+.ped .tot{font-weight:600; font-size:14px}
+.vacio{text-align:center; padding:34px 18px; color:var(--gris); background:var(--panel); border:1px dashed var(--raya2); border-radius:12px}
+.vacio b{display:block; color:var(--tinta); font-size:16px; margin-bottom:4px}
+.atras{margin:0 0 12px}
+.datos{display:grid; grid-template-columns:auto 1fr; gap:6px 16px; font-size:14px; margin:4px 0 0}
+.datos dt{color:var(--gris)} .datos dd{margin:0}
+.ficha-prev{display:flex; gap:12px; align-items:flex-start; padding:12px; border:1px solid var(--raya); border-radius:10px; background:var(--panel)}
+.logo{flex:0 0 44px; width:44px; height:44px; border-radius:9px; background:var(--fondo); border:1px solid var(--raya); display:grid; place-items:center; overflow:hidden; font:600 13px/1 var(--f); color:var(--tinta)}
+.logo img{width:100%; height:100%; object-fit:contain; background:#fff}
+.codigo{font:600 18px/1.2 var(--mono); color:var(--tinta); letter-spacing:.04em}
+.copia{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.copia input{max-width:420px; font-family:var(--mono); font-size:13.5px}
+.dos-col{display:grid; gap:16px}
+@media (min-width:860px){ .dos-col{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr); align-items:start} }
+.pie{color:var(--gris); font-size:12.5px; padding-block:26px 34px; text-align:center}
+.pie a{color:var(--gris)}
+</style>
+</head>
+<body>
+<header class="barra">
+  <div class="ancho">
+    <a class="marca" href="portal-aliados.html" aria-label="Portal de Aliados de OBRASST, inicio"><span class="marca-ic"><i></i></span><b>OBRASST</b><span>Portal de Aliados</span></a>
+    <div class="quien" id="b-quien" hidden><span id="b-nombre"></span><button type="button" id="b-salir">Salir</button></div>
+  </div>
+</header>
+
+<main>
+  <!-- cargando -->
+  <section id="v-carga" class="ancho"><p class="ayuda" style="padding:40px 0">Cargando…</p></section>
+
+  <!-- la entrada: entrar o crear la cuenta -->
+  <section id="v-entrar" class="ancho entrada" hidden>
+    <div class="lado">
+      <h1>Las solicitudes de las empresas que usan OBRASST, en un solo lugar</h1>
+      <p>Con una cuenta ves las solicitudes de todas tus empresas cliente, respondes con tu precio y tus condiciones, y sabes si ganaste.</p>
+      <ul>
+        <li>Te llega la solicitud completa: qué, cuánto, para cuándo y dónde.</li>
+        <li>Tu respuesta llega al cuadro comparativo de la empresa.</li>
+        <li>Ves si ganaste y cuándo la empresa registró lo que recibió.</li>
+      </ul>
+      <p class="ayuda" style="margin-top:18px">¿Todavía no eres aliado? <a href="aliados.html">Así funciona el programa</a>.</p>
+    </div>
+    <div class="caja-ent">
+      <div class="inv" id="e-inv" hidden><b>Te invitaron a OBRASST Aliados.</b> Entra o crea tu cuenta y la invitación se acepta sola.</div>
+      <div class="pest-ent" role="tablist" aria-label="Entrar o crear la cuenta">
+        <button type="button" role="tab" id="t-entrar" class="on" aria-selected="true">Entrar</button>
+        <button type="button" role="tab" id="t-crear" aria-selected="false">Crear mi cuenta</button>
+      </div>
+      <form id="f-entrar" novalidate>
+        <div class="campo"><label for="e-correo">Correo</label><input id="e-correo" type="email" autocomplete="email" maxlength="160" required></div>
+        <div class="campo"><label for="e-clave">Contraseña</label><input id="e-clave" type="password" autocomplete="current-password" maxlength="72" required></div>
+        <div class="acciones"><button class="bt" type="submit" id="e-bt">Entrar</button><button type="button" class="bt-link" id="e-olvido">¿Olvidaste tu contraseña?</button></div>
+        <p class="msg" id="e-msg" role="alert"></p>
+        <p class="ayuda" style="margin-top:8px">Es la misma cuenta de obrasstapp.com: si ya tienes una, entra con ella.</p>
+      </form>
+      <form id="f-crear" novalidate hidden>
+        <div class="campo"><label for="c-nombre">Tu nombre y apellido</label><input id="c-nombre" autocomplete="name" maxlength="120" required></div>
+        <div class="campo"><label for="c-correo">Correo de tu empresa</label><input id="c-correo" type="email" autocomplete="email" maxlength="160" required></div>
+        <div class="campo"><label for="c-clave">Contraseña</label><input id="c-clave" type="password" autocomplete="new-password" maxlength="72" required aria-describedby="c-clave-a">
+          <p class="ayuda" id="c-clave-a">8 caracteres o más, con letras y números.</p></div>
+        <label class="chk" for="c-legal-1"><input type="checkbox" id="c-legal-1"><span>He leído y acepto los <a href="../?legal=terminos" target="_blank" rel="noopener">Términos y condiciones</a>.</span></label>
+        <label class="chk" for="c-legal-2"><input type="checkbox" id="c-legal-2"><span>Entiendo cómo se tratan los datos. <a href="../?legal=privacidad" target="_blank" rel="noopener">Ver la política</a>.</span></label>
+        <button class="bt" type="submit" id="c-bt">Crear mi cuenta</button>
+        <p class="msg" id="c-msg" role="alert"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- una cuenta que no es de un aliado -->
+  <section id="v-no" class="ancho" hidden>
+    <div class="tarj" style="margin-top:34px; max-width:640px">
+      <h2 id="no-t">Esta cuenta no es de un aliado de OBRASST</h2>
+      <p class="ayuda" id="no-p" style="margin-top:6px">Para entrar aquí, abre el enlace de invitación que te mandamos al firmar el acuerdo.</p>
+      <div class="acciones" style="margin-top:14px"><a class="bt sec" href="aliados.html">Cómo ser aliado</a><a class="bt sec" href="index.html">Ir al portal de mi empresa</a><button type="button" class="bt" id="no-salir">Entrar con otra cuenta</button></div>
+    </div>
+  </section>
+
+  <!-- el portal -->
+  <section id="v-portal" class="ancho" hidden>
+    <div class="cab"><div><h1 id="p-razon"></h1><p id="p-sub"></p></div></div>
+    <nav class="pestanas" role="tablist" aria-label="Secciones del portal" id="p-pest">
+      <button type="button" role="tab" data-v="pedidos">Solicitudes<span class="n" id="p-n" hidden></span></button>
+      <button type="button" role="tab" data-v="ficha">Mi ficha</button>
+      <button type="button" role="tab" data-v="programa">Mi programa</button>
+      <button type="button" role="tab" data-v="cuenta">Mi cuenta</button>
+    </nav>
+    <div id="vista"></div>
+  </section>
+</main>
+<footer class="pie"><a href="aliados.html">OBRASST Aliados</a> · <a href="../?legal=terminos" target="_blank" rel="noopener">Términos</a> · <a href="../?legal=privacidad" target="_blank" rel="noopener">Privacidad</a> · <a href="mailto:info@obrasstapp.com">info@obrasstapp.com</a></footer>
+<div id="toast" role="status" hidden></div>
+
+<script src="cotizar.js?v=334c8716f2"></script>
+<script>
+'use strict';
+/* en https://obrasstapp.com los enlaces «../…» (los términos) van a GitHub Pages, como en las otras páginas */
+(function(){
+  var APP = 'https://descarganomaspe.github.io/sst-capacita/';
+  if(/\/portal\/([a-z-]+\.html)?$/.test(location.pathname)) return;
+  Array.prototype.forEach.call(document.querySelectorAll('a[href^="../"]'), function(a){ a.setAttribute('href', APP + a.getAttribute('href').slice(3)); });
+})();
+
+var SB = { url:'https://gwjjkknuiumgysezeatz.supabase.co', key:'sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx' };
+var APP_FIJA = 'https://descarganomaspe.github.io/sst-capacita/';
+var LS_TOK = 'sstp_cuenta';           /* la misma sesión que obrasstapp.com: una sola cuenta */
+var SS_INV = 'sstp_ali_inv';          /* la invitación que llegó en el enlace, hasta usarla */
+var LEGAL_VER_WEB = '3.0';
+var TOK = null;
+var AL = { yo:null, lista:null, filtro:'', vista:'pedidos', pedido:null, prog:null, reloj:null };
+var $ = function(id){ return document.getElementById(id); };
+var esc = COT.esc;
+function leer(k, d){ try{ var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
+function guardar(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function toast(t){ var c = $('toast'); c.textContent = t; c.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(function(){ c.hidden = true; }, 3400); }
+function ver(id){ ['v-carga', 'v-entrar', 'v-no', 'v-portal'].forEach(function(x){ $(x).hidden = (x !== id); }); window.scrollTo(0, 0); }
+
+/* ── la sesión (la misma lógica del portal: si otra pestaña la renovó, se usa esa) ── */
+function guardarToken(j){
+  if(!j || !j.access_token) return null;
+  TOK = { access_token:j.access_token, refresh_token:j.refresh_token || '', expira:Date.now() + ((j.expires_in || 3600) - 60) * 1000,
+          correo:(j.user && j.user.email) || (TOK && TOK.correo) || '', uid:(j.user && j.user.id) || (TOK && TOK.uid) || '' };
+  try{ var m = j.user && j.user.user_metadata; if(m){ if(m.nombre) TOK.nombre = m.nombre; if(m.cap) TOK.cap = m.cap; } }catch(_m){}
+  guardar(LS_TOK, TOK); return TOK;
+}
+function borrarToken(){ TOK = null; try{ localStorage.removeItem(LS_TOK); }catch(e){} }
+function authPost(ruta, cuerpo){
+  return fetch(SB.url + '/auth/v1/' + ruta, { method:'POST', headers:{ apikey:SB.key, 'Content-Type':'application/json' }, body:JSON.stringify(cuerpo) })
+    .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return r.ok ? j : Promise.reject(j); }); });
+}
+var _REFR = null;
+function _tokDeOtra(usado){
+  var o = leer(LS_TOK, null), uid = TOK && TOK.uid;
+  return (o && o.access_token && o.refresh_token && o.refresh_token !== usado && (!uid || !o.uid || o.uid === uid)) ? o : null;
+}
+function refrescarToken(){
+  if(!TOK || !TOK.refresh_token) return Promise.reject('sin_token');
+  var otra = _tokDeOtra(TOK.refresh_token);
+  if(otra){ TOK = otra; if(!(otra.expira && Date.now() > otra.expira)) return Promise.resolve(TOK); }
+  if(_REFR) return _REFR;
+  var usado = TOK.refresh_token;
+  _REFR = authPost('token?grant_type=refresh_token', { refresh_token:usado }).then(function(j){ _REFR = null; return guardarToken(j); }, function(e){
+    _REFR = null; var o = _tokDeOtra(usado); if(o){ TOK = o; return TOK; }
+    if(e && typeof e === 'object' && (e.error || e.msg || e.error_code)) borrarToken(); return Promise.reject(e);
+  });
+  return _REFR;
+}
+function sbFetch(url, opt, otra){
+  opt = opt || {}; opt.headers = { apikey:SB.key, 'Content-Type':'application/json', Authorization:'Bearer ' + ((TOK && TOK.access_token) || SB.key) };
+  return fetch(url, opt).then(function(r){
+    if(r.status === 401 && !otra && TOK && TOK.refresh_token) return refrescarToken().then(function(){ return sbFetch(url, opt, true); }, function(){ return r; });
+    return r;
+  });
+}
+function rpc(fn, args){
+  return sbFetch(SB.url + '/rest/v1/rpc/' + fn, { method:'POST', body:JSON.stringify(args || {}) }).then(function(r){
+    if(r.status === 401){ sesionVencida(); return Promise.reject(401); }
+    return r.ok ? r.json() : Promise.reject(r.status);
+  });
+}
+function sesionVencida(){ borrarToken(); ver('v-entrar'); entrarMsg('Tu sesión se cerró. Vuelve a entrar.'); }
+function fallo(e){ return e === 404 ? 'Falta actualizar el servidor. Avísanos a info@obrasstapp.com.' : (typeof e === 'number' ? 'El servidor contestó ' + e + '. Inténtalo otra vez.' : 'No hubo conexión. Inténtalo otra vez.'); }
+function motivo(m){
+  return ({ no_eres_aliado:'Esta cuenta no es de un aliado de OBRASST.', sin_cuenta:'Tu sesión se cerró. Vuelve a entrar.', no_existe:'Esa solicitud ya no está.',
+    cerrada:'Esta solicitud ya se cerró: la empresa la adjudicó o la anuló.', respuesta:'Revisa tu cotización: los precios, el plazo y la validez.',
+    muy_seguido:'Espera un momento y vuelve a intentarlo.', datos:'No se pudo leer lo enviado. Recarga la página.', solo_admin:'La ficha la cambia el administrador de tu empresa.',
+    web:'La web tiene que empezar con https://', telefono:'Revisa el teléfono: solo números, espacios, + y guiones.', logo:'El logo tiene que ser una imagen PNG, JPG o WEBP liviana.',
+    invitacion_no_vale:'Ese enlace de invitación ya se usó o no es válido. Pídenos uno nuevo a info@obrasstapp.com.',
+    invitacion_vencida:'Ese enlace de invitación venció (dura 30 días). Pídenos uno nuevo a info@obrasstapp.com.',
+    ya_eres_de_otro:'Esta cuenta ya está unida a otro aliado. Para aceptar esta invitación, entra con otra cuenta.' })[m] || 'No se pudo guardar. Inténtalo otra vez.';
+}
+function authMsg(e){
+  var t = ((e && (e.error_code || e.error || '')) + ' ' + (e && (e.msg || e.message || e.error_description || ''))).toLowerCase();
+  if(/already|exists|registered/.test(t)) return 'Ese correo ya tiene cuenta. Pasa a «Entrar».';
+  if(/not.?confirmed/.test(t)) return 'Te mandamos un correo para confirmar la cuenta: ábrelo y después entra aquí.';
+  if(/invalid.?login|invalid_credentials|invalid grant|bad_credential/.test(t)) return 'El correo o la contraseña no coinciden.';
+  if(/weak|password/.test(t)) return 'La contraseña necesita 8 caracteres o más, con letras y números.';
+  if(/rate|too many|over_/.test(t)) return 'Muchos intentos seguidos. Espera un minuto y vuelve a probar.';
+  if(/email/.test(t)) return 'Ese correo no parece válido.';
+  return 'No se pudo. Revisa tu conexión e inténtalo otra vez.';
+}
+
+/* ── la invitación del enlace: se guarda en la pestaña y se quita de la dirección ── */
+(function(){
+  try{
+    var m = /[?&]i=([0-9a-f]{32})(&|$)/.exec(location.search || '');
+    if(m){ sessionStorage.setItem(SS_INV, m[1]); history.replaceState(null, '', location.pathname); }
+  }catch(_i){}
+})();
+function invitacion(){ try{ return sessionStorage.getItem(SS_INV) || ''; }catch(_i){ return ''; } }
+function invitacionUsada(){ try{ sessionStorage.removeItem(SS_INV); }catch(_i){} }
+
+/* ── entrar y crear la cuenta ── */
+function entrarMsg(t, ok){ var m = $('e-msg'); m.className = 'msg ' + (ok ? 'ok' : 'mal'); m.textContent = t || ''; }
+function pestEnt(c){
+  $('t-entrar').className = c ? '' : 'on'; $('t-crear').className = c ? 'on' : '';
+  $('t-entrar').setAttribute('aria-selected', String(!c)); $('t-crear').setAttribute('aria-selected', String(!!c));
+  $('f-entrar').hidden = !!c; $('f-crear').hidden = !c;
+}
+function mostrarEntrada(){
+  ver('v-entrar'); $('b-quien').hidden = true;
+  var inv = !!invitacion(); $('e-inv').hidden = !inv; pestEnt(inv && !leer(LS_TOK, null));
+}
+$('t-entrar').onclick = function(){ pestEnt(false); };
+$('t-crear').onclick = function(){ pestEnt(true); };
+$('f-entrar').onsubmit = function(ev){
+  ev.preventDefault();
+  var correo = String($('e-correo').value || '').trim().toLowerCase(), clave = $('e-clave').value || '';
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)){ entrarMsg('Escribe tu correo.'); $('e-correo').focus(); return; }
+  if(!clave){ entrarMsg('Escribe tu contraseña.'); $('e-clave').focus(); return; }
+  var bt = $('e-bt'); bt.disabled = true; entrarMsg('');
+  authPost('token?grant_type=password', { email:correo, password:clave }).then(function(j){
+    bt.disabled = false; guardarToken(j); $('e-clave').value = ''; arrancar();
+  }, function(e){ bt.disabled = false; entrarMsg(authMsg(e)); });
+};
+$('e-olvido').onclick = function(){
+  var correo = String($('e-correo').value || '').trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)){ entrarMsg('Escribe arriba tu correo y vuelve a tocar «¿Olvidaste tu contraseña?».'); $('e-correo').focus(); return; }
+  entrarMsg('Mandando el correo…', true);
+  /* la contraseña nueva se pone en la app de OBRASST (como en el portal); después se vuelve aquí */
+  fetch(SB.url + '/auth/v1/recover', { method:'POST', headers:{ apikey:SB.key, 'Content-Type':'application/json' }, body:JSON.stringify({ email:correo, redirect_to:APP_FIJA }) })
+    .then(function(r){ entrarMsg(r.ok ? 'Listo: revisa tu correo y crea una contraseña nueva. Después vuelve aquí y entra.' : 'No se pudo mandar el correo ahora. Escríbenos a info@obrasstapp.com.', r.ok); },
+          function(){ entrarMsg('No hubo conexión. Inténtalo otra vez.'); });
+};
+$('f-crear').onsubmit = function(ev){
+  ev.preventDefault();
+  var m = $('c-msg'), mal = function(t, id){ m.className = 'msg mal'; m.textContent = t; if(id) $(id).focus(); };
+  var nombre = String($('c-nombre').value || '').replace(/\s+/g, ' ').trim(), correo = String($('c-correo').value || '').trim().toLowerCase(), clave = $('c-clave').value || '';
+  if(nombre.length < 5 || nombre.split(' ').length < 2) return mal('Escribe tu nombre y apellido.', 'c-nombre');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return mal('Escribe un correo válido.', 'c-correo');
+  if(clave.length < 8 || !(/[0-9]/.test(clave) && /[a-zA-Z]/.test(clave))) return mal('La contraseña necesita 8 caracteres o más, con letras y números.', 'c-clave');
+  if(!$('c-legal-1').checked || !$('c-legal-2').checked) return mal('Para crear la cuenta hay que marcar las dos casillas.', $('c-legal-1').checked ? 'c-legal-2' : 'c-legal-1');
+  var bt = $('c-bt'); bt.disabled = true; m.className = 'msg gris'; m.textContent = 'Creando tu cuenta…';
+  authPost('signup', { email:correo, password:clave, data:{ nombre:nombre.split(' ')[0], cap:nombre, reg:new Date().toISOString(), reg_por:'aliados' } }).then(function(j){
+    if(j && j.access_token) return guardarToken(j);
+    return authPost('token?grant_type=password', { email:correo, password:clave }).then(guardarToken);
+  }).then(function(){
+    sbFetch(SB.url + '/rest/v1/sst_consentimiento', { method:'POST', body:JSON.stringify({ version:LEGAL_VER_WEB, aceptado:new Date().toISOString() }) }).catch(function(){});
+    bt.disabled = false; $('c-clave').value = ''; m.textContent = ''; arrancar();
+  }, function(e){ bt.disabled = false; mal(authMsg(e)); });
+};
+function salir(){ borrarToken(); AL.yo = null; AL.lista = null; AL.prog = null; if(AL.reloj){ clearInterval(AL.reloj); AL.reloj = null; } mostrarEntrada(); }
+$('b-salir').onclick = salir;
+$('no-salir').onclick = salir;
+
+/* ── al abrir: con la invitación, se une; sin ella, se mira si la cuenta es de un aliado ── */
+function arrancar(){
+  TOK = TOK || leer(LS_TOK, null);
+  if(!TOK || !TOK.access_token){ mostrarEntrada(); return; }
+  ver('v-carga');
+  var inv = invitacion();
+  var p = inv ? rpc('sst_ali_unirse', { p_token:inv }) : rpc('sst_ali_yo', {});
+  p.then(function(j){
+    if(inv && j && (j.ok || /invitacion|ya_eres/.test(j.motivo || ''))) invitacionUsada();
+    if(j && j.ok){ AL.yo = j; if(inv) toast('Listo: ya eres parte de OBRASST Aliados.'); mostrarPortal(); return; }
+    if(inv && j && j.motivo && j.motivo !== 'no_eres_aliado'){ noAliado(motivo(j.motivo)); return; }
+    noAliado(null);
+  }, function(e){ if(e !== 401) noAliado(fallo(e)); });
+}
+function noAliado(t){
+  ver('v-no'); $('b-quien').hidden = false; $('b-nombre').textContent = (TOK && (TOK.cap || TOK.correo)) || '';
+  $('no-t').textContent = t ? 'No se pudo aceptar la invitación' : 'Esta cuenta no es de un aliado de OBRASST';
+  $('no-p').textContent = t || 'Para entrar aquí, abre el enlace de invitación que te mandamos al firmar el acuerdo. Si tu empresa ya es aliada, pídele a su administrador que te pida un enlace para ti.';
+}
+
+/* ── el portal ── */
+function mostrarPortal(){
+  ver('v-portal');
+  var a = AL.yo.aliado;
+  $('b-quien').hidden = false; $('b-nombre').textContent = (TOK && (TOK.cap || TOK.correo)) || '';
+  $('p-razon').textContent = a.razon;
+  $('p-sub').textContent = [COT.rubroNombre(a.rubro), a.zonas && a.zonas.length ? 'Atiende ' + COT.zonasTxt(a.zonas) : '', a.estado === 'pausado' ? 'Ficha en pausa' : 'Aliado verificado'].filter(Boolean).join(' · ');
+  $('p-pest').onclick = function(ev){ var b = ev.target.closest('[data-v]'); if(b){ AL.pedido = null; irA(b.getAttribute('data-v')); } };
+  irA(AL.vista || 'pedidos');
+  if(AL.reloj) clearInterval(AL.reloj);
+  /* lo nuevo se ve sin recargar: un repaso por minuto mientras la pestaña esté a la vista */
+  AL.reloj = setInterval(function(){ if(!document.hidden && AL.yo && AL.vista === 'pedidos' && !AL.pedido) traerPedidos(true); }, 60000);
+}
+function irA(v){
+  AL.vista = v;
+  [].forEach.call(document.querySelectorAll('#p-pest [data-v]'), function(b){ var on = b.getAttribute('data-v') === v; b.className = on ? 'on' : ''; b.setAttribute('aria-selected', String(on)); });
+  ({ pedidos:vistaPedidos, ficha:vistaFicha, programa:vistaPrograma, cuenta:vistaCuenta })[v]();
+}
+function contar(n){ var b = $('p-n'); b.hidden = !n; b.textContent = n || ''; document.title = (n ? '(' + n + ') ' : '') + 'Portal de Aliados · OBRASST'; }
+
+/* ── los pedidos ── */
+var FILTROS = [['pend', 'Por responder'], ['resp', 'Respondidas'], ['gan', 'Ganadas'], ['todos', 'Todas']];
+function grupo(f){
+  var k = COT.estadoAliado(f).k;
+  if(k === 'nuevo' || k === 'pendiente' || k === 'vencido') return 'pend';
+  if(k === 'respondido') return 'resp';
+  if(k === 'ganado' || k === 'recibido') return 'gan';
+  return 'otros';
+}
+function traerPedidos(callado){
+  return rpc('sst_ali_bandeja', {}).then(function(j){
+    if(!j || !j.ok){ if(!callado) $('vista').innerHTML = '<div class="aviso mal">' + esc(motivo(j && j.motivo)) + '</div>'; return; }
+    var firma = function(L){ return L.map(function(x){ return [x.id, x.estado, x.cot_estado, x.total, x.recibido && x.recibido.k].join('|'); }).join(); };
+    var antes = AL.lista ? firma(AL.lista) : null;
+    AL.lista = j.lista || [];
+    contar(AL.lista.filter(function(f){ return COT.estadoAliado(f).k === 'nuevo'; }).length);
+    if(AL.vista === 'pedidos' && !AL.pedido && (!callado || antes !== firma(AL.lista))) pintarPedidos();
+  }, function(e){ if(!callado && e !== 401) $('vista').innerHTML = '<div class="aviso mal">' + esc(fallo(e)) + '</div>'; });
+}
+function vistaPedidos(){
+  if(AL.pedido){ abrirPedido(AL.pedido); return; }
+  if(AL.lista) pintarPedidos(); else $('vista').innerHTML = '<p class="ayuda">Cargando tus solicitudes…</p>';
+  traerPedidos(!!AL.lista);
+}
+function pintarPedidos(){
+  var L = AL.lista || [], c = { pend:0, resp:0, gan:0, todos:L.length };
+  L.forEach(function(f){ var g = grupo(f); if(c[g] !== undefined) c[g]++; });
+  /* el filtro que quedó vacío (el pedido pasó a otro grupo) vuelve a lo que haya */
+  if(!AL.filtro || !c[AL.filtro]) AL.filtro = c.pend ? 'pend' : 'todos';
+  var F = L.filter(function(f){ return AL.filtro === 'todos' || grupo(f) === AL.filtro; });
+  var h = '';
+  if(AL.yo && AL.yo.aliado && AL.yo.aliado.rubro === 'salud') h += '<div class="aviso">Los resultados de los exámenes se suben como siempre: en <a href="index.html">obrasstapp.com</a>, con esta misma cuenta, en «Soy un centro médico» y con el código de clínica (CLI-) de cada empresa. Las solicitudes de citas llegan aquí desde diciembre.</div>';
+  h += '<div class="filtros" role="group" aria-label="Qué solicitudes ver">' + FILTROS.map(function(x){
+    return '<button type="button" data-f="' + x[0] + '" class="' + (AL.filtro === x[0] ? 'on' : '') + '" aria-pressed="' + (AL.filtro === x[0]) + '">' + esc(x[1]) + ' · ' + c[x[0]] + '</button>';
+  }).join('') + '</div>';
+  if(!L.length) h += '<div class="vacio"><b>Todavía no te llegó ninguna solicitud</b>Cuando una empresa de tu zona pida algo de tu rubro, aparece aquí y te llega su correo.</div>';
+  else if(!F.length) h += '<div class="vacio"><b>Ninguna aquí</b>Prueba con otro filtro de arriba.</div>';
+  else h += '<div class="lista">' + F.map(function(f){
+    var E = COT.estadoAliado(f), lug = COT.lugarTxt(f.lugar);
+    return '<button type="button" class="ped' + (E.k === 'nuevo' ? ' nuevo' : '') + '" data-id="' + esc(f.id) + '"><span>' +
+      '<span class="cod">' + esc(f.numero ? 'RQ ' + f.numero : 'Solicitud del ' + COT.diaDe(f.creado)) + ' · ' + esc(COT.rubroNombre(f.rubro)) + '</span><br>' +
+      '<span class="emp">' + esc(f.empresa || '') + '</span><br><span class="det">' + esc([f.obra, lug].filter(Boolean).join(' · ')) + '</span><br>' +
+      '<span class="det">' + esc([f.lineas + (f.lineas === 1 ? ' línea' : ' líneas'), f.para ? 'se necesita el ' + COT.dma(f.para) : '', f.hasta && (E.k === 'nuevo' || E.k === 'pendiente') ? 'responder hasta el ' + COT.dma(f.hasta) : ''].filter(Boolean).join(' · ')) + '</span>' +
+      '</span><span class="der"><span class="pill ' + esc(E.c) + '">' + esc(E.n) + '</span>' + (f.total != null ? '<span class="tot">' + esc(COT.soles(f.total)) + '</span>' : '') + '</span></button>';
+  }).join('') + '</div>';
+  $('vista').innerHTML = h;
+  [].forEach.call(document.querySelectorAll('#vista .filtros [data-f]'), function(b){ b.onclick = function(){ AL.filtro = b.getAttribute('data-f'); pintarPedidos(); }; });
+  [].forEach.call(document.querySelectorAll('#vista .ped'), function(b){ b.onclick = function(){ abrirPedido(b.getAttribute('data-id')); }; });
+}
+
+/* ── un pedido: lo que pide la empresa, y la cotización ── */
+function abrirPedido(id){
+  AL.pedido = id;
+  $('vista').innerHTML = '<p class="ayuda">Abriendo la solicitud…</p>';
+  rpc('sst_ali_pedido', { p_id:id }).then(function(j){
+    if(AL.pedido !== id) return;
+    if(!j || !j.ok){ $('vista').innerHTML = '<div class="aviso mal">' + esc(motivo(j && j.motivo)) + '</div><button type="button" class="bt sec chico" id="d-atras">← Solicitudes</button>'; $('d-atras').onclick = volver; return; }
+    pintarPedido(j.pedido);
+    traerPedidos(true);
+  }, function(e){ if(e !== 401) $('vista').innerHTML = '<div class="aviso mal">' + esc(fallo(e)) + '</div>'; });
+}
+function volver(){ AL.pedido = null; pintarPedidos(); traerPedidos(true); window.scrollTo(0, 0); }
+function pintarPedido(f){
+  var E = COT.estadoAliado(f), items = f.items || [], abierta = f.cot_estado === 'abierta' && ['ganado', 'no_adjudicado'].indexOf(f.estado) < 0;
+  var h = '<div class="atras"><button type="button" class="bt sec chico" id="d-atras">← Solicitudes</button></div>';
+  h += '<div class="tarj"><div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:flex-start"><div><h2>' + (f.rubro === 'epp' ? 'Solicitud de cotización' : 'Solicitud') + (f.numero ? ' · RQ ' + esc(f.numero) : '') + '</h2>' +
+    '<p class="ayuda">' + esc(COT.rubroNombre(f.rubro)) + ' · recibido el ' + esc(COT.cuando(f.creado)) + '</p></div><span class="pill ' + esc(E.c) + '">' + esc(E.n) + '</span></div>';
+  if(E.k === 'ganado' || E.k === 'recibido'){
+    h += '<div class="aviso ok" style="margin-top:12px"><b>🏆 Ganaste.</b>' + (f.oc ? ' Orden de compra: <b>' + esc(f.oc) + '</b>.' : '') +
+      (f.ruc ? ' RUC de la empresa: ' + esc(f.ruc) + '.' : '') + (f.adj_nota ? '<br>Nota de la empresa: ' + esc(f.adj_nota) : '') +
+      (f.recibido ? '<br>' + (f.recibido.k === 'atendido' ? 'Su almacén registró el ingreso de todo' : 'Su almacén registró el ingreso de una parte') + (f.recibido.t ? ' el ' + esc(COT.diaDe(f.recibido.t)) : '') + '.' : '<br>Cuando su almacén registre el ingreso, lo verás aquí como «Recibido en almacén».') + '</div>';
+  } else if(E.k === 'no') h += '<div class="aviso neu" style="margin-top:12px">La empresa eligió otra oferta. Gracias por cotizar: la próxima vez puede ser la tuya.</div>';
+  else if(E.k === 'anulado') h += '<div class="aviso neu" style="margin-top:12px">La empresa anuló esta solicitud: ya no se responde.</div>';
+  else if(E.k === 'vencido') h += '<div class="aviso ojo" style="margin-top:12px">Ya pasó la fecha para responder (' + esc(COT.dma(f.hasta)) + '). Todavía puedes mandar tu cotización mientras la empresa no adjudique.</div>';
+  h += '<dl class="datos" style="margin-top:14px"><dt>Empresa</dt><dd>' + esc(f.empresa || '—') + '</dd><dt>Obra</dt><dd>' + esc(f.obra || '—') + '</dd>' +
+    (COT.lugarTxt(f.lugar) ? '<dt>Lugar</dt><dd>' + esc(COT.lugarTxt(f.lugar)) + '</dd>' : '') + (f.entrega ? '<dt>Entrega en</dt><dd>' + esc(f.entrega) + '</dd>' : '') +
+    (f.para ? '<dt>Se necesita para</dt><dd>' + esc(COT.dma(f.para)) + '</dd>' : '') + (f.hasta ? '<dt>Responder hasta</dt><dd>' + esc(COT.dma(f.hasta)) + '</dd>' : '') +
+    (f.por_nombre ? '<dt>Pidió</dt><dd>' + esc(f.por_nombre) + '</dd>' : '') + '</dl>' +
+    (f.nota ? '<p style="margin-top:12px"><b>Nota de la empresa:</b> ' + esc(f.nota) + '</p>' : '') + '</div>';
+  if(abierta){
+    h += '<div class="tarj" id="d-form"><h2>' + (f.estado === 'respondido' ? 'Tu cotización' : 'Tu cotización') + '</h2><p class="ayuda" style="margin:0 0 12px">' +
+      (f.estado === 'respondido' ? 'Ya la mandaste' + (f.respondido ? ' el ' + esc(COT.cuando(f.respondido)) : '') + '. Puedes cambiarla mientras la empresa no adjudique.' :
+        'Precio unitario de cada línea, en soles. La empresa la ve en su cuadro comparativo, junto a las demás.') + '</p>' +
+      COT.respFormHTML(items, 'r-', f.resp) + '<p class="msg" id="r-msg"></p><div class="acciones"><button type="button" class="bt" id="r-si">' +
+      (f.estado === 'respondido' ? 'Actualizar mi cotización' : 'Enviar mi cotización') + '</button>' +
+      (f.estado !== 'declinado' ? '<button type="button" class="bt sec" id="r-no">No cotizo</button>' : '') + '</div>' +
+      '<div id="r-dec" hidden style="margin-top:12px"><div class="campo"><label for="r-dec-n">¿Por qué no cotizas? <span class="gris-t">(opcional, lo ve la empresa)</span></label>' +
+      '<input id="r-dec-n" maxlength="300" placeholder="Por ejemplo: sin stock de esa talla"></div><div class="acciones"><button type="button" class="bt mal" id="r-dec-si">No cotizo esta solicitud</button>' +
+      '<button type="button" class="bt-link" id="r-dec-no">Mejor cotizo</button></div></div></div>';
+    if(f.estado === 'declinado') h = h.replace('<div class="tarj" id="d-form">', '<div class="aviso neu">Marcaste que no cotizas' + (f.mi_nota ? ': ' + esc(f.mi_nota) : '') + '. Si cambias de idea, manda tu cotización abajo.</div><div class="tarj" id="d-form">');
+  } else {
+    /* lo que pidieron y, si respondió, lo que cotizó */
+    var r = f.resp, t = r ? COT.totales(r, items) : null;
+    h += '<div class="tarj"><h2>' + (r ? 'Tu cotización' : 'Lo que pidieron') + '</h2>' + (t ? '<p class="ayuda" style="margin:0 0 10px">' + COT.totTxt(t) + ' · entrega en ' + esc(r.dias) + (r.dias === 1 ? ' día' : ' días') +
+      ' · vale hasta el ' + esc(COT.dma(r.validez)) + (r.pago ? ' · ' + esc(r.pago) : '') + '</p>' : '') +
+      '<div class="tabla-caja"><table><thead><tr><th>Línea</th><th class="num">Cantidad</th>' + (r ? '<th class="num">Precio unitario</th><th>Marca o norma</th>' : '') + '</tr></thead><tbody>' +
+      items.map(function(it, i){ var l = r && r.l && r.l[i] || {};
+        return '<tr><td><b>' + esc(it.d) + '</b>' + (it.e ? '<span class="sub">' + esc(it.e) + '</span>' : '') + '</td><td class="num">' + esc(COT.num(it.c)) + ' <span class="gris-t">' + esc(it.u || 'und') + '</span></td>' +
+          (r ? '<td class="num">' + (l.p != null ? esc(COT.soles(l.p)) + (r.igv === 'mas' ? '<span class="sub">más IGV</span>' : '') : '<span class="gris-t">No cotizó</span>') + '</td><td>' + esc(l.m || '') + '</td>' : '') + '</tr>';
+      }).join('') + '</tbody></table></div></div>';
+  }
+  $('vista').innerHTML = h;
+  $('d-atras').onclick = volver;
+  if(abierta){
+    COT.respVivo('r-', items);
+    $('d-form').oninput = function(){ var m = $('r-msg'); m.className = 'msg'; m.textContent = ''; };
+    $('r-si').onclick = function(){
+      var m = $('r-msg'), bt = $('r-si'), v = COT.validar(COT.respLeer('r-', items), items);
+      if(!v.ok){ m.className = 'msg mal'; m.textContent = v.msg; var x = $('r-' + v.campo.replace(/^validez$/, 'val')); if(x) x.focus(); return; }
+      bt.disabled = true; m.className = 'msg gris'; m.textContent = 'Enviando…';
+      rpc('sst_ali_responder', { p:{ id:f.id, resp:v.resp } }).then(function(j){
+        bt.disabled = false;
+        if(!j || !j.ok){ m.className = 'msg mal'; m.textContent = motivo(j && j.motivo); return; }
+        toast('Cotización enviada: ' + COT.soles(j.total) + ' con IGV. La empresa ya la ve.');
+        pintarPedido(j.pedido); traerPedidos(true); window.scrollTo(0, 0);
+      }, function(e){ bt.disabled = false; m.className = 'msg mal'; m.textContent = fallo(e); });
+    };
+    if($('r-no')){
+      $('r-no').onclick = function(){ $('r-dec').hidden = false; $('r-dec-n').focus(); };
+      $('r-dec-no').onclick = function(){ $('r-dec').hidden = true; };
+      $('r-dec-si').onclick = function(){
+        var bt = $('r-dec-si'); bt.disabled = true;
+        rpc('sst_ali_declinar', { p:{ id:f.id, nota:$('r-dec-n').value } }).then(function(j){
+          bt.disabled = false;
+          if(!j || !j.ok){ toast(motivo(j && j.motivo)); return; }
+          toast('Listo: la empresa sabe que no cotizas esta solicitud.'); pintarPedido(j.pedido); traerPedidos(true);
+        }, function(e){ bt.disabled = false; toast(fallo(e)); });
+      };
+    }
+  }
+}
+
+/* ── mi ficha: lo que ven las empresas al pedir cotización ── */
+function iniciales(s){ return String(s || '?').replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9 ]/g, '').split(/\s+/).filter(Boolean).slice(0, 2).map(function(w){ return w.charAt(0).toUpperCase(); }).join('') || '·'; }
+function vistaFicha(){
+  var y = AL.yo, a = y.aliado, F = a.ficha || {}, admin = y.papel === 'admin', LOGO = { v:F.logo || '' };
+  var adminDe = ((y.usuarios || []).filter(function(u){ return u.papel === 'admin'; })[0] || {}).correo || '';
+  var prev = function(){
+    return '<div class="ficha-prev"><span class="logo" aria-hidden="true">' + (LOGO.v ? '<img src="' + esc(LOGO.v) + '" alt="">' : esc(iniciales(a.razon))) + '</span><span><b>' + esc(a.razon) +
+      '</b> <span class="pill ok">Aliado verificado</span><span class="sub">Atiende ' + esc(COT.zonasTxt(a.zonas) || '—') + '</span>' +
+      ($('f-vende') && $('f-vende').value ? '<span class="sub" style="color:var(--texto)">' + esc(String($('f-vende').value).split('\n')[0].slice(0, 140)) + '</span>' : (F.vende ? '<span class="sub" style="color:var(--texto)">' + esc(String(F.vende).split('\n')[0].slice(0, 140)) + '</span>' : '')) + '</span></div>';
+  };
+  var h = '<div class="dos-col"><div class="tarj"><h2>Mi ficha</h2><p class="ayuda" style="margin:0 0 14px">Es lo que ven las empresas de tu zona cuando piden algo de tu rubro.' +
+    (admin ? '' : ' La cambia el administrador de tu empresa' + (adminDe ? ' (' + esc(adminDe) + ')' : '') + '.') + '</p>';
+  h += '<div class="campo"><label>Logo</label><div class="acciones"><span class="logo" id="f-logo-v">' + (LOGO.v ? '<img src="' + esc(LOGO.v) + '" alt="Tu logo">' : esc(iniciales(a.razon))) + '</span>' +
+    (admin ? '<input type="file" id="f-logo" accept="image/png,image/jpeg,image/webp" hidden><button type="button" class="bt sec chico" id="f-logo-bt">' + (LOGO.v ? 'Cambiar' : 'Subir') + ' el logo</button>' +
+      '<button type="button" class="bt-link" id="f-logo-q"' + (LOGO.v ? '' : ' hidden') + '>Quitar</button>' : '') + '</div></div>';
+  var dis = admin ? '' : ' disabled';
+  h += '<div class="campo"><label for="f-vende">Qué vendes</label><textarea id="f-vende" rows="3" maxlength="600"' + dis + ' placeholder="Por ejemplo: cascos, guantes, arneses y líneas de vida certificados; marcas 3M, Steelpro, MSA">' + esc(F.vende || '') + '</textarea></div>' +
+    '<div class="campo-dos"><div class="campo"><label for="f-horario">Horario de atención</label><input id="f-horario" maxlength="160"' + dis + ' value="' + esc(F.horario || '') + '" placeholder="L-V 8:00-18:00, S 8:00-13:00"></div>' +
+    '<div class="campo"><label for="f-tel">Teléfono</label><input id="f-tel" inputmode="tel" maxlength="30"' + dis + ' value="' + esc(F.telefono || '') + '"></div></div>' +
+    '<div class="campo-dos"><div class="campo"><label for="f-web">Web</label><input id="f-web" inputmode="url" maxlength="160"' + dis + ' value="' + esc(F.web || '') + '" placeholder="https://"></div>' +
+    '<div class="campo"><label for="f-contacto">Contacto</label><input id="f-contacto" maxlength="120"' + dis + ' value="' + esc(a.contacto || '') + '"></div></div>';
+  if(admin) h += '<p class="msg" id="f-msg"></p><button type="button" class="bt" id="f-si">Guardar mi ficha</button>';
+  h += '</div><div><div class="tarj"><h2>Así te ven</h2><p class="ayuda" style="margin:0 0 12px">Cuando la empresa te elige (en EPP, en «Pedir cotización»), arriba de los proveedores que escribe ella.</p><div id="f-prev">' + prev() + '</div></div>' +
+    '<div class="tarj"><h2>Lo pone OBRASST, según tu acuerdo</h2><dl class="datos"><dt>Razón social</dt><dd>' + esc(a.razon) + '</dd><dt>RUC</dt><dd>' + esc(a.ruc || '—') + '</dd>' +
+    '<dt>Rubro</dt><dd>' + esc(COT.rubroNombre(a.rubro)) + '</dd><dt>Atiende</dt><dd>' + esc(COT.zonasTxt(a.zonas) || '—') + '</dd></dl>' +
+    '<p class="ayuda" style="margin-top:10px">Para cambiar algo de esto, escríbenos a <a href="mailto:info@obrasstapp.com">info@obrasstapp.com</a>.</p></div></div></div>';
+  $('vista').innerHTML = h;
+  var repinta = function(){ $('f-prev').innerHTML = prev(); var v = $('f-logo-v'); v.innerHTML = LOGO.v ? '<img src="' + esc(LOGO.v) + '" alt="Tu logo">' : esc(iniciales(a.razon)); if($('f-logo-q')) $('f-logo-q').hidden = !LOGO.v; };
+  if(!admin) return;
+  $('f-vende').oninput = repinta;
+  $('f-logo-bt').onclick = function(){ $('f-logo').click(); };
+  $('f-logo-q').onclick = function(){ LOGO.v = ''; repinta(); };
+  $('f-logo').onchange = function(){
+    var f = this.files && this.files[0]; this.value = ''; if(!f) return;
+    if(!/^image\/(png|jpeg|webp)$/.test(f.type)){ toast('El logo tiene que ser PNG, JPG o WEBP.'); return; }
+    achicarLogo(f).then(function(u){ LOGO.v = u; repinta(); }, function(){ toast('No se pudo leer esa imagen. Prueba con otra.'); });
+  };
+  $('f-si').onclick = function(){
+    var m = $('f-msg'), bt = $('f-si'); bt.disabled = true; m.className = 'msg gris'; m.textContent = 'Guardando…';
+    rpc('sst_ali_ficha_guardar', { p:{ vende:$('f-vende').value, horario:$('f-horario').value, telefono:$('f-tel').value, web:$('f-web').value, contacto:$('f-contacto').value, logo:LOGO.v } }).then(function(j){
+      bt.disabled = false;
+      if(!j || !j.ok){ m.className = 'msg mal'; m.textContent = motivo(j && j.motivo); return; }
+      AL.yo = j; repinta(); m.className = 'msg ok'; m.textContent = 'Ficha guardada: así la ven las empresas desde ahora.';
+    }, function(e){ bt.disabled = false; m.className = 'msg mal'; m.textContent = fallo(e); });
+  };
+}
+/* el logo, chico y liviano (cabe en la ficha): hasta 240 px por lado */
+function achicarLogo(f){
+  return new Promise(function(ok, mal){
+    var lec = new FileReader();
+    lec.onerror = mal;
+    lec.onload = function(){
+      var img = new Image();
+      img.onerror = mal;
+      img.onload = function(){
+        var prueba = function(lado, tipo, cal){
+          var k = Math.min(1, lado / Math.max(img.width, img.height)), w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
+          var c = document.createElement('canvas'); c.width = w; c.height = h;
+          var x = c.getContext('2d'); if(tipo === 'image/jpeg'){ x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); } x.drawImage(img, 0, 0, w, h);
+          return c.toDataURL(tipo, cal);
+        };
+        var u = prueba(240, 'image/png');
+        if(u.length > 80000) u = prueba(240, 'image/jpeg', .86);
+        if(u.length > 80000) u = prueba(160, 'image/jpeg', .8);
+        u.length > 80000 ? mal('grande') : ok(u);
+      };
+      img.src = lec.result;
+    };
+    lec.readAsDataURL(f);
+  });
+}
+
+/* ── mi programa: el código, las empresas que llegaron y los 12 meses gratis ── */
+var PLAN_N = { lite:'LITE', prevencionista:'Prevencionista de Riesgo', supervisor:'Supervisor SST', ssoma:'SSOMA', gestion:'Gestión SST', central:'Central', corporativo:'Corporativo' };
+function vistaPrograma(){
+  $('vista').innerHTML = '<p class="ayuda">Cargando tu programa…</p>';
+  rpc('sst_ali_programa', {}).then(function(j){
+    if(AL.vista !== 'programa') return;
+    if(!j || !j.ok){ $('vista').innerHTML = '<div class="aviso mal">' + esc(motivo(j && j.motivo)) + '</div>'; return; }
+    var E = j.empresas || [], hoy = COT.hoy();
+    var h = '<div class="dos-col"><div><div class="tarj"><h2>Tu código de aliado</h2><p class="ayuda" style="margin:0 0 10px">La empresa que crea su cuenta con tu enlace o con tu código queda como traída por ti.</p>' +
+      '<p class="codigo" id="g-cod">' + esc(j.codigo) + '</p><div class="copia" style="margin-top:12px"><input id="g-enl" readonly value="' + esc(j.enlace) + '" aria-label="Tu enlace">' +
+      '<button type="button" class="bt sec chico" id="g-copiar">Copiar el enlace</button></div></div>' +
+      '<div class="tarj"><h2>Empresas que llegaron contigo · ' + E.length + '</h2>' + (E.length ? '<div class="tabla-caja" style="margin-top:10px"><table><thead><tr><th>Empresa</th><th>Plan</th><th>Vigente hasta</th><th>Desde</th></tr></thead><tbody>' +
+        E.map(function(e){ return '<tr><td><b>' + esc(e.nombre || '—') + '</b></td><td>' + esc(PLAN_N[e.plan] || String(e.plan || '—').replace(/^\w/, function(c){ return c.toUpperCase(); })) + '</td><td>' +
+          esc(e.plan_vence ? COT.dma(e.plan_vence) : '—') + (e.plan_vence && e.plan_vence < hoy ? '<span class="sub">vencido</span>' : '') + '</td><td>' + esc(COT.diaDe(e.desde)) + '</td></tr>'; }).join('') +
+        '</tbody></table></div>' : '<p class="ayuda" style="margin-top:6px">Todavía ninguna. Comparte tu enlace con las empresas a las que les vendes.</p>') + '</div></div>' +
+      '<div><div class="tarj"><h2>Tus 12 meses gratis</h2><p style="margin-top:4px">' + (j.gratis_hasta ? 'Hasta el <b>' + esc(COT.dma(j.gratis_hasta)) + '</b>.' : 'Empiezan el día que te unes.') + '</p>' +
+      '<p class="ayuda" style="margin-top:8px">Después eliges un plan: Aliado o Consultor, S/ 49 al mes; Aliado Pro o Consultor Pro, S/ 149. Lo que ganes en comisiones se descuenta primero del plan. En el mes 11 te llega tu resumen. <a href="aliados.html#precio">Ver los planes</a>.</p></div>' +
+      '<div class="tarj"><h2>Tu comisión</h2><p style="margin-top:4px">' + esc(String(+j.comision)) + ' % de lo que paga cada empresa que llegó contigo, durante ' + esc(String(j.meses)) + ' meses, liquidado cada mes.</p>' +
+      '<p class="ayuda" style="margin-top:8px">La empresa prueba OBRASST 30 días gratis; la comisión corre desde que paga. Si no paga, no hay comisión.</p></div></div></div>';
+    $('vista').innerHTML = h;
+    $('g-copiar').onclick = function(){
+      var t = j.enlace, ok = function(){ toast('Enlace copiado.'); }, no = function(){ try{ $('g-enl').select(); }catch(_s){} toast('Ya está marcado: cópialo con Ctrl + C.'); };
+      try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, no); else no(); }catch(_c){ no(); }
+    };
+  }, function(e){ if(e !== 401) $('vista').innerHTML = '<div class="aviso mal">' + esc(fallo(e)) + '</div>'; });
+}
+
+/* ── mi cuenta ── */
+function vistaCuenta(){
+  var y = AL.yo, U = y.usuarios || [];
+  $('vista').innerHTML = '<div class="tarj" style="max-width:680px"><h2>Mi cuenta</h2><p style="margin-top:4px">Entraste como <b>' + esc((TOK && TOK.correo) || ((U.filter(function(u){ return u.yo; })[0] || {}).correo) || '') + '</b> (' +
+    (y.papel === 'admin' ? 'administrador' : 'usuario') + ').</p>' +
+    '<p class="seccion-t">Las cuentas de ' + esc(y.aliado.razon) + '</p><div class="tabla-caja"><table><tbody>' + U.map(function(u){
+      return '<tr><td>' + esc(u.correo || '—') + (u.yo ? ' <span class="gris-t">(tú)</span>' : '') + '</td><td>' + (u.papel === 'admin' ? 'Administrador' : 'Usuario') + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+    '<p class="ayuda" style="margin-top:10px">Todos ven las solicitudes y pueden responder; la ficha la cambia el administrador. Para sumar a alguien de tu empresa, pídenos otro enlace de invitación a <a href="mailto:info@obrasstapp.com">info@obrasstapp.com</a>.</p>' +
+    '<div class="acciones" style="margin-top:16px"><button type="button" class="bt sec" id="k-salir">Salir</button></div></div>';
+  $('k-salir').onclick = salir;
+}
+
+arrancar();
+</script>
+</body>
+</html>

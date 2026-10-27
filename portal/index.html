@@ -2027,6 +2027,41 @@ html[data-equipo="app"] .app-banda, html[data-equipo="app"] .ini-llevala, html[d
 /* con la sesión guardada no se muestra la página de inicio mientras se abre el portal */
 html.con-sesion #entrada{display:none !important}
 html.con-sesion #abriendo[hidden]{display:grid !important}
+
+/* ══ 27/10/2026 · Aliados fase 1: pedir cotización, el cuadro comparativo y adjudicar ══ */
+.cot-aliados .chk{margin:0}
+.cot-ali{display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--raya)}
+.cot-ali:last-child{border-bottom:0}
+.cot-ali.ya{opacity:.75}
+.cot-logo{flex:0 0 36px; width:36px; height:36px; border-radius:8px; background:var(--fondo); border:1px solid var(--raya); display:grid; place-items:center; overflow:hidden; font:600 12px/1 var(--f); color:var(--tinta)}
+.cot-logo img{width:100%; height:100%; object-fit:contain; background:#fff}
+.cot-ali-tx{min-width:0}
+.cot-ali-tx small{display:block; color:var(--gris); font-size:12.5px; margin-top:2px}
+.cot-ali-tx .cot-vende{color:var(--texto)}
+.cot-fuera{margin-top:8px}
+.cot-ext{display:grid; grid-template-columns:1.2fr 1fr; gap:8px; margin:0 0 8px}
+@media (max-width:560px){ .cot-ext{grid-template-columns:1fr} }
+.cot{border-top:1px solid var(--raya); padding-top:14px}
+.cot h3 .pill{text-transform:none; letter-spacing:0; margin-left:6px; vertical-align:1px}
+.cot-cab{margin:0 0 10px}
+.cot-tabla td{vertical-align:top}
+.cot-tabla th, .cot-det th{white-space:normal}
+.cot-tabla td:first-child{min-width:150px}
+.cot-cond{display:block; white-space:nowrap}
+.cot-acc{display:block; margin-top:6px}
+.cot-det td:first-child{min-width:150px}
+.cot-det td.num{min-width:100px}
+.cot-tabla tr.cot-g td{background:var(--ok-f)}
+.cot-tabla tr.cot-nota td{padding-top:0; font-size:12.5px}
+.cot-min{color:var(--ok); font-weight:600}
+.cot-det{margin-top:10px}
+.cot-det .tabla-caja{margin-top:8px}
+.cot-gano .acciones{margin-top:8px}
+.cot-sub{color:var(--tinta)}
+.cot-resp-t input{width:100%; min-width:84px; font:inherit; font-size:13.5px; padding:6px 8px; border:1px solid var(--raya2); border-radius:7px}
+.cot-resp-t input.cot-precio{text-align:right; font-variant-numeric:tabular-nums}
+.cot-ayuda{margin:6px 0 12px}
+.cot-tot{margin:4px 0 0; font-size:14px; color:var(--texto)}
 </style>
 </head>
 <body>
@@ -2172,7 +2207,7 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
             </div>
             <div class="campo">
               <label for="c-aliado">Código de aliado <span class="gris-t">(opcional: si alguien te recomendó OBRASST)</span></label>
-              <input id="c-aliado" maxlength="20" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Ejemplo: EPP-LIMA">
+              <input id="c-aliado" maxlength="20" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Ejemplo: ALI-EPPLIMA">
             </div>
             <label class="acc-check" for="c-legal-1"><input type="checkbox" id="c-legal-1"><span>He leído y acepto los <a href="../?legal=terminos" target="_blank" rel="noopener">Términos y condiciones</a>.</span></label>
             <label class="acc-check" for="c-legal-2"><input type="checkbox" id="c-legal-2"><span>Entiendo cómo se tratan los datos y que mi empresa es la responsable de los de su personal. <a href="../?legal=privacidad" target="_blank" rel="noopener">Ver la política</a>.</span></label>
@@ -13215,7 +13250,7 @@ function prqLimpiaMsg(id){ var m=$(id); if(m && /\bmal\b/.test(m.className)) m.t
 function prqSoltar(c){ try{ var a=document.activeElement; if(a && c && c.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) a.blur(); }catch(_b){} }
 function prqHuellaDe(l){ return (l||[]).map(function(x){ return x.id+'|'+x.estado+'|'+(x.actualizado||''); }).join(','); }
 function prqTraer(){
-  return Promise.all([cargarReqBase(), traerTodo('sst_requerimiento', '&select=*&order=creado.desc', 2000)]).then(function(r){
+  return Promise.all([cargarReqBase(), traerTodo('sst_requerimiento', '&select=*&order=creado.desc', 2000), prqCotTraer().catch(function(){ return false; })]).then(function(r){
     var filas=Array.isArray(r[1]) ? r[1] : [];
     PRQ.huella=prqHuellaDe(filas); PRQ.filas=filas.map(prqNormal); PRQ.aviso=null;
     return prqCargarCfg().then(function(){ return PRQ.filas; });
@@ -13241,10 +13276,13 @@ function vistaReqs(caja){
     var n=++PRQ.n;
     /* el repaso callado solo mira si algo cambió (tres columnas); lo demás se baja recién si cambió */
     var p = (silencio && PRQ.huella!==null && PRQ.cargado)
-      ? traerTodo('sst_requerimiento', '&select=id,estado,actualizado&order=creado.desc', 2000).then(function(l){ return prqHuellaDe(l)===PRQ.huella ? null : prqTraer(); })
+      ? traerTodo('sst_requerimiento', '&select=id,estado,actualizado&order=creado.desc', 2000).then(function(l){
+          return prqHuellaDe(l)===PRQ.huella ? prqCotTraer().then(function(c){ return c ? 'cot' : null; }) : prqTraer(); })
       : prqTraer();
     p.then(function(L){
       if(n!==PRQ.n || VISTA.actual!=='reqs' || L===null) return;
+      /* 27/10/2026 · solo cambiaron las cotizaciones: la lista y, si nadie está llenando nada, el cajón abierto */
+      if(L==='cot'){ prqPintar(caja); if(HOJA.abierta && HOJA.tabla==='sst_requerimiento' && PRQ.r && !PRQ.zona) prqCotsPintar(PRQ.r); return; }
       PRQ.cargado=true;
       prqPintar(caja);
       prqRefrescarHoja();
@@ -13325,8 +13363,9 @@ function prqPintar(caja){
      h:function(r){ if(r.res && r.res.accion==='autorizar') return esc(r.res.n||'')+(r.res.como==='enlace' ? '<span class="sub">por enlace</span>' : '');
        return (r.a && r.a.n) ? '<span class="gris-t">→ '+esc(r.a.n)+'</span>' : '<span class="gris-t">—</span>'; }},
     {k:'para', t:'Para', v:function(r){ return r.para||''; }, h:function(r){ return r.para ? esc(RQB.dma(r.para)) : '<span class="gris-t">—</span>'; }},
-    {k:'estado', t:'Estado', v:function(r){ var fl=prqFaltanFirmas(r); return RQB.estado(r).n+(fl.length ? ' · falta: '+fl.map(function(p){ return p.t; }).join(', ') : ''); },
-     h:function(r){ var fl=prqFaltanFirmas(r); return prqPill(r)+(fl.length ? '<span class="sub">falta: '+esc(fl.map(function(p){ return p.t; }).join(', '))+'</span>' : ''); }}
+    {k:'estado', t:'Estado', v:function(r){ var fl=prqFaltanFirmas(r), cs=prqCotSub(r); return RQB.estado(r).n+(fl.length ? ' · falta: '+fl.map(function(p){ return p.t; }).join(', ') : '')+(cs ? ' · '+cs : ''); },
+     h:function(r){ var fl=prqFaltanFirmas(r), cs=prqCotSub(r); return prqPill(r)+(fl.length ? '<span class="sub">falta: '+esc(fl.map(function(p){ return p.t; }).join(', '))+'</span>' : '')+
+       (cs ? '<span class="sub cot-sub">🧾 '+esc(cs)+'</span>' : ''); }}
   ], filas, {orden:'fecha', asc:false, unidad:'requerimientos', vacio:'Ninguno aquí', vacioSub:'Prueba con otro filtro de arriba.', archivo:'requerimientos',
     alClic:function(r){ prqAbrir(r.id); }});
 }
@@ -13414,7 +13453,7 @@ function prqDetalle(r){
   if(r.motivo) h+='<div class="seccion"><h3>Motivo</h3><p class="prq-motivo">'+esc(r.motivo)+'</p></div>';
   var at=RQB.analisisTxt(r.analisis);
   if(at.length) h+='<div class="seccion"><h3>Sustento: el consumo de EPP de la obra</h3><div class="prq-analisis" id="prq-sustento">'+at.map(function(l){ return '<p>'+esc(l)+'</p>'; }).join('')+'</div></div>';
-  h+='<div id="prq-zona"></div>';
+  h+='<div id="prq-zona"></div><div id="prq-cots"></div>';
   var Fs=RQB.firmantes(r);
   h+='<div class="seccion" id="prq-firmas-sec"><h3>Firmas</h3><div class="piq-firmas'+(Fs.length===4 ? ' de4' : '')+'" id="prq-firmas">'+Fs.map(function(k){ return prqFirmaCajaDe(k, r); }).join('')+'</div>'+
      '<div id="prq-pend">'+prqPendHTML(r)+'</div>'+
@@ -13443,6 +13482,9 @@ function prqDetalle(r){
     else if(b.hasAttribute('data-quitar')) prqVisarQuitar(b.getAttribute('data-quitar'));
   };
   prqZona();
+  /* 27/10/2026 · las cotizaciones de este requerimiento (y frescas del servidor: un aliado pudo responder recién) */
+  prqCotsPintar(r);
+  prqCotTraer().then(function(){ if(PRQ.r && PRQ.r.id===r.id && (!PRQ.zona || PRQ.zona==='cotizar-listo')){ prqCotsPintar(PRQ.r); if(!PRQ.zona) prqZona(); } }, function(){});
 }
 /* ── la firma de un gerente: su enlace, aquí mismo, o en el impreso ── */
 function prqCopiarFirma(k){
@@ -13524,7 +13566,8 @@ function prqZona(){
   var bts='';
   if(r.estado==='observado' && mio) bts+='<button type="button" class="bt" id="prq-corregir">✏️ Corregir y reenviar</button>';
   if(r.estado==='autorizado') bts+='<button type="button" class="bt" id="prq-recibir">📦 Anotar lo que llegó</button>';
-  if(r.estado!=='rechazado' && r.estado!=='anulado' && prqCotLineas(r).length) bts+='<button type="button" class="bt sec" id="prq-cotizar">✉️ Pedir cotización</button>';
+  /* 27/10/2026 · Aliados fase 1: se cotiza lo autorizado; si ya hay una cotización abierta, se suman proveedores a esa */
+  if(prqCotSePuede(r)) bts+='<button type="button" class="bt sec" id="prq-cotizar">'+(prqCotAbierta(r) ? '＋ Pedir a más proveedores' : '🧾 Pedir cotización')+'</button>';
   if((r.estado==='enviado' || r.estado==='observado') && (mio || YO.dueno===true)) bts+='<button type="button" class="bt mal" id="prq-anular">Anular</button>';
   if(bts) h+='<div class="acciones" style="margin:16px 0 0">'+bts+'</div>';
   c.innerHTML=h;
@@ -13702,52 +13745,356 @@ function prqExcelLista(){
     if(b) b.disabled=false;
   }).catch(function(){ if(b) b.disabled=false; toast('No se pudo armar el Excel. Revisa tu conexión e inténtalo otra vez.'); });
 }
-/* ── pedir cotización (26/10/2026 · OBRASST Aliados) ────────────────────
-   Marcelo: «hay que hacer que nos necesiten». El requerimiento le llega listo al proveedor que elige la empresa: las líneas
-   con lo autorizado (o lo pedido, si todavía no se autoriza) y para cuándo. Sale del correo de quien lo pide, así OBRASST no
-   le pasa datos a nadie; y al pie el proveedor ve de dónde vino y cómo recibir más pedidos así (aliados.html). */
-function prqCotLineas(r){
+/* ── pedir cotización · OBRASST Aliados (26/10/2026; 27/10/2026, fase 1: guardada en OBRASST) ──────────────────────────
+   Marcelo: «hay que hacer que nos necesiten» y «Todo ello ya armarlo… simple, y que no se puedan confundir los usuarios,
+   que todo sea parte de un sistema».
+     · Con el requerimiento autorizado, quien compra (logística, o SSOMA en una empresa chica) toca «Pedir cotización»:
+       elige a los aliados de OBRASST de su zona y escribe el correo de otros proveedores. El pedido se GUARDA
+       (sst_cot_nueva): los aliados lo ven en su Portal de Aliados y responden ahí; lo de los demás se anota aquí.
+     · El aviso por correo sale del correo de quien pide, con todos en copia oculta: OBRASST no manda correos por nadie.
+     · El cuadro comparativo lleva todo a «con IGV», marca el precio más bajo de cada línea y el mejor total entre los que
+       cotizaron todo. Adjudica quien pidió la cotización (o el dueño de la obra), con su orden de compra si quiere: el
+       ganador lo ve como «Ganaste» y, cuando el almacén anota lo que llegó, como «Recibido».
+     · Solo viajan las líneas, las cantidades y para cuándo: ningún dato de la gente.
+   Lo común con el Portal de Aliados (las cuentas, los nombres, los estados, el texto del correo) está en portal/cotizar.js. */
+var COTIZAR_VER='334c8716f2';   /* lo pone huellas.py: el md5 de portal/cotizar.js */
+var _COT_CARGA=null;
+function cargarCotizar(){
+  if(typeof COT!=='undefined') return Promise.resolve(true);
+  if(_COT_CARGA) return _COT_CARGA;
+  _COT_CARGA=new Promise(function(res, rej){
+    var s=document.createElement('script'); s.src='cotizar.js?v='+(COTIZAR_VER||'0');
+    s.onload=function(){ (typeof COT!=='undefined') ? res(true) : (_COT_CARGA=null, rej('sin_cot')); };
+    s.onerror=function(){ _COT_CARGA=null; rej('sin_cot'); };
+    document.head.appendChild(s);
+  });
+  return _COT_CARGA;
+}
+var PCOT={ porReq:{}, de:'', huella:'', sinServidor:false };
+/* el correo se abre por aquí (las pruebas lo cambian para ver qué salió) */
+function prqAbrirCorreo(url){ location.href=url; }
+/* las cotizaciones de la obra, por requerimiento: una sola consulta. Sin el SQL de la fase 1 no hay ninguna y no pasa
+   nada (el requerimiento sigue igual). Devuelve si algo cambió desde la última vez. */
+function prqCotTraer(){
+  var id=prqObraId();
+  return Promise.all([cargarCotizar(), sbRpc('sst_cot_de', {p_emp:id, p_req:null})]).then(function(r){
+    var j=r[1], m={};
+    if(j && j.ok) (j.lista||[]).forEach(function(c){ if(c.req) (m[c.req]=m[c.req]||[]).push(c); });
+    var h=JSON.stringify((j && j.lista || []).map(function(c){ return [c.id, c.estado, (c.destinos||[]).map(function(d){ return d.id+d.estado+(d.respondido||''); })]; }));
+    var cambio=(PCOT.de!==id || PCOT.huella!==h);
+    PCOT.porReq=m; PCOT.de=id; PCOT.huella=h; PCOT.sinServidor=false;
+    return cambio;
+  }, function(e){ PCOT.porReq={}; PCOT.de=id; PCOT.huella=''; PCOT.sinServidor=(e===404); return false; });
+}
+function prqCotsDe(r){ return (r && PCOT.de===prqObraId() && PCOT.porReq[r.id]) || []; }
+function prqCotAbierta(r){ return prqCotsDe(r).filter(function(c){ return c.estado==='abierta'; })[0]||null; }
+function prqCotGanador(c){ return (c && c.ganador) ? ((c.destinos||[]).filter(function(d){ return d.id===c.ganador; })[0]||null) : null; }
+/* lo que dice la lista: «Cotización: 2 de 3 respondieron» o «Adjudicado a …» */
+function prqCotSub(r){
+  if(typeof COT==='undefined') return '';
+  var c=prqCotsDe(r).filter(function(x){ return x.estado!=='anulada'; })[0]; if(!c) return '';
+  if(c.estado==='adjudicada'){ var g=prqCotGanador(c); return 'Adjudicado a '+((g && g.razon) || 'un proveedor'); }
+  return 'Cotización: '+COT.estadoCot(c).n;
+}
+/* las líneas que se cotizan: lo autorizado de cada una (la que quedó en 0 no va) */
+function prqCotItems(r){
   var L=[];
   (r && r.items || []).forEach(function(it, i){
     var a=RQB.cantAut(r, i), c=(a!==null ? a : +it.c);
-    if(c>0 && it.d) L.push('- '+RQB.num(c)+' '+(it.u||'und')+' · '+it.d+(it.e ? ' ('+it.e+')' : ''));
+    if(c>0 && it.d){ var o={d:String(it.d), u:it.u||'und', c:c}; if(it.e) o.e=String(it.e); L.push(o); }
   });
   return L;
 }
-function prqCotTexto(r){
-  var aut=!!(r.res && r.res.accion==='autorizar');
-  return 'Buenos días:\n\nLes pedimos cotización de lo siguiente'+(aut ? '' : ' (cantidades por confirmar)')+':\n\n'+prqCotLineas(r).join('\n')+'\n\n'+
-    (r.para ? 'Se necesita para el '+RQB.dma(r.para)+'.\n' : '')+(r.obra ? 'Obra: '+r.obra+'.\n' : '')+
-    '\nQuedo atento a su respuesta.\n'+(YO.nombre ? YO.nombre+'\n' : '')+
-    '\n—\nPedido armado con OBRASST, la app de seguridad y salud en el trabajo. ¿Su empresa quiere recibir pedidos como este? https://obrasstapp.com/aliados.html';
+function prqCotLineas(r){ return prqCotItems(r).map(function(it){ return '- '+RQB.num(it.c)+' '+(it.u||'und')+' · '+it.d+(it.e ? ' ('+it.e+')' : ''); }); }
+/* se cotiza lo autorizado (mientras no haya llegado todo) */
+function prqCotSePuede(r){ return !!r && r.estado==='autorizado' && prqCotItems(r).length>0; }
+function prqCotMotivo(m){
+  return ({ sin_proveedores:'Elige al menos un aliado o escribe el correo de un proveedor.', aliado_no_disponible:'Ese aliado ya no está disponible: elige otro o escribe un correo.',
+    correo:'Revisa los correos: alguno está mal escrito.', items:'Revisa las líneas: alguna no tiene cantidad.', fechas:'La fecha de respuesta va de hoy a 60 días.',
+    muchos:'Son demasiados proveedores para un pedido (hasta 15 aliados y 10 correos).', req_cerrado:'Ese requerimiento ya no está vigente.', no_existe:'Ese pedido ya no está.',
+    no_eres_de_la_obra:'Esta cuenta no es de esta obra.', sin_cuenta:'Tu sesión se cerró. Vuelve a entrar.', muy_seguido:'Espera un momento y vuelve a intentarlo.',
+    respuesta:'Revisa la respuesta: los precios, el plazo y la validez.', razon:'Escribe el nombre del proveedor.', es_aliado:'Eso lo responde el aliado en su portal.',
+    cerrada:'Esta cotización ya se cerró.', solo_quien_pidio:'Adjudica quien pidió la cotización o el dueño de la obra.', sin_respuesta:'Ese proveedor todavía no respondió.',
+    datos:'No se pudo leer lo enviado. Recarga la página.' })[m] || 'No se pudo guardar. Inténtalo otra vez.';
 }
+function prqCotFallo(e){ return e===404 ? 'Falta actualizar el servidor para las cotizaciones. Avísanos y lo dejamos listo.' : porQueFallo(e); }
+function prqCotPill(e){ return '<span class="pill '+({ok:'ok', med:'ojo', mal:'mal', neu:'gris', nuevo:'azul'}[e.c]||'gris')+'">'+esc(e.n)+'</span>'; }
+function prqCotGuardar(r, cot){
+  if(!r || !cot) return;
+  var L=(PCOT.porReq[r.id]||[]).filter(function(c){ return c.id!==cot.id; });
+  L.unshift(cot); PCOT.porReq[r.id]=L; PCOT.de=prqObraId();
+}
+function prqCotIr(id){ setTimeout(function(){ try{ var e=$(id); if(e) e.scrollIntoView({block:'start', behavior:'smooth'}); }catch(_s){} }, 30); }
+
+/* ── el formulario: a quiénes ── */
 function prqCotizar(){
   var c=$('prq-zona'), r=PRQ.r; if(!c || !r) return;
+  if(!prqCotSePuede(r)){ toast('Se cotiza lo autorizado: primero se autoriza el requerimiento.'); return; }
   PRQ.zona='cotizar';
-  var A=ALIADOS.filter(function(x){ return x && x.rubro==='epp' && x.correo; });
-  c.innerHTML='<div class="tarj piq-form" id="prq-f-cot"><div class="tarj-cuerpo"><b>Pedir cotización · requerimiento '+esc(r.numero)+'</b>'+
-    '<p class="ayuda" style="margin:2px 0 10px">Se abre tu correo con el pedido ya escrito: '+prqCotLineas(r).length+' líneas, sus cantidades y para cuándo se necesita. Solo le llega a quien tú elijas.</p>'+
-    (A.length ? '<div class="campo"><label for="prqc-al">Distribuidores aliados de OBRASST</label><select id="prqc-al"><option value="">Elige uno…</option>'+
-      A.map(function(x, i){ return '<option value="'+i+'">'+esc(x.razon+((x.zonas && x.zonas.length) ? ' · '+x.zonas.join(', ') : ''))+'</option>'; }).join('')+'</select></div>' : '')+
-    '<div class="campo"><label for="prqc-m">'+(A.length ? 'U otro proveedor: su correo' : 'El correo de tu proveedor')+'</label><input id="prqc-m" type="email" maxlength="120" autocomplete="off" placeholder="ventas@proveedor.com"></div>'+
+  var ab=prqCotAbierta(r), items=prqCotItems(r), hoy=hoyISO();
+  var hasta=r.para ? (RQB.fechaMas(r.para, -2) > RQB.fechaMas(hoy, 1) ? RQB.fechaMas(r.para, -2) : RQB.fechaMas(hoy, 1)) : RQB.fechaMas(hoy, 3);
+  if(hasta > RQB.fechaMas(hoy, 7)) hasta=RQB.fechaMas(hoy, 7);
+  var ent=String((YO.obra && YO.obra.direccion) || r.ubicacion || '').slice(0, 160);
+  c.innerHTML='<div class="tarj piq-form" id="prq-f-cot"><div class="tarj-cuerpo"><b>'+(ab ? 'Pedir a más proveedores' : 'Pedir cotización')+' · requerimiento '+esc(r.numero)+'</b>'+
+    '<p class="ayuda" style="margin:2px 0 10px">'+(ab ? 'Se suman a la misma cotización: verás todas las respuestas juntas en el cuadro comparativo.' :
+      'El pedido se guarda en OBRASST: los aliados lo reciben en su Portal de Aliados y tú comparas aquí lo que respondan. Va lo autorizado ('+items.length+
+      (items.length===1 ? ' línea' : ' líneas')+') y para cuándo; ningún dato de tu gente.')+'</p>'+
+    '<div id="prqc-aliados" class="cot-aliados"><div class="vacio">Cargando los aliados de OBRASST…</div></div>'+
+    '<div class="seccion" style="margin-top:14px"><h3>Otros proveedores</h3><div id="prqc-ext"></div>'+
+      '<button type="button" class="bt-link" id="prqc-ext-mas">＋ Otro proveedor</button></div>'+
+    (ab ? '' :
+      '<div class="campo-dos" style="margin-top:14px"><div class="campo"><label for="prqc-hasta">Responder hasta</label><input id="prqc-hasta" type="date" min="'+esc(hoy)+'" max="'+esc(RQB.fechaMas(hoy, 60))+'" value="'+esc(hasta)+'"></div>'+
+      '<div class="campo"><label for="prqc-ent">Lugar de entrega</label><input id="prqc-ent" maxlength="160" autocomplete="off" value="'+esc(ent)+'" placeholder="Por ejemplo: almacén de la obra"></div></div>'+
+      '<div class="campo"><label for="prqc-nota">Nota para los proveedores <span class="gris-t">(opcional)</span></label><textarea id="prqc-nota" rows="2" maxlength="500" placeholder="Por ejemplo: con certificado de calidad de cada lote"></textarea></div>')+
     '<p class="msg" id="prqc-msg"></p><div class="acciones"><button type="button" class="bt sec chico" id="prqc-no">Cerrar</button>'+
-    '<button type="button" class="bt sec chico" id="prqc-copiar">📋 Copiar el pedido</button><button type="button" class="bt" id="prqc-si">✉️ Abrir el correo</button></div></div></div>';
-  var m=$('prqc-msg'), al=$('prqc-al'), em=$('prqc-m');
-  if(al) al.onchange=function(){ var x=A[+al.value]; if(x) em.value=x.correo; };
-  em.oninput=function(){ m.className='msg'; m.textContent=''; };
+    '<button type="button" class="bt sec chico" id="prqc-copiar">📋 Copiar el pedido</button><button type="button" class="bt" id="prqc-si">Enviar el pedido</button></div></div></div>';
+  var m=$('prqc-msg'), ext=$('prqc-ext');
+  var fila=function(){
+    if(ext.children.length>=10) return;
+    var d=document.createElement('div'); d.className='cot-ext';
+    var k=ext.children.length;
+    d.innerHTML='<input type="email" maxlength="160" autocomplete="off" placeholder="ventas@proveedor.com" aria-label="Correo del proveedor '+(k+1)+'" data-c>'+
+      '<input maxlength="120" autocomplete="off" placeholder="Nombre (opcional)" aria-label="Nombre del proveedor '+(k+1)+'" data-r>';
+    ext.appendChild(d);
+  };
+  fila();
+  $('prqc-ext-mas').onclick=function(){ fila(); var x=ext.lastChild && ext.lastChild.querySelector('[data-c]'); if(x) x.focus(); };
+  c.oninput=function(){ m.className='msg'; m.textContent=''; };
   $('prqc-no').onclick=prqZona;
   $('prqc-copiar').onclick=function(){
-    var t=prqCotTexto(r), ok=function(){ toast('Pedido copiado: pégalo en el WhatsApp o en el correo de tu proveedor.'); };
+    var t=COT.correo({numero:r.numero, obra:nombreObraP()||'', items:items, para:r.para, hasta:($('prqc-hasta')||{}).value||'', entrega:($('prqc-ent')||{}).value||'', nota:($('prqc-nota')||{}).value||''}, YO.nombre).completo;
+    var ok=function(){ toast('Pedido copiado: pégalo en el WhatsApp o en el correo de tu proveedor.'); };
     try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, function(){ toast('No se pudo copiar.'); }); else toast('No se pudo copiar.'); }catch(_c){ toast('No se pudo copiar.'); }
   };
-  $('prqc-si').onclick=function(){
-    var para=String(em.value||'').trim();
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(para)){ m.className='msg mal'; m.textContent='Escribe el correo del proveedor (por ejemplo, ventas@proveedor.com).'; em.focus(); return; }
-    var asunto='Pedido de cotización · '+(r.numero||'')+' · '+RQB.clase(r.clase).n+(r.obra ? ' · '+r.obra : '');
-    location.href='mailto:'+encodeURIComponent(para).replace(/%40/g, '@')+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(prqCotTexto(r));
-    m.className='msg ok'; m.textContent='Se abrió tu correo con el pedido. Revísalo y envíalo desde ahí.';
+  $('prqc-si').onclick=function(){ prqCotEnviar(r, items); };
+  /* los aliados: primero los del departamento de la obra */
+  sbRpc('sst_cot_aliados', {p_emp:prqObraId(), p_rubro:'epp'}).then(function(j){
+    var caja=$('prqc-aliados'); if(!caja || PRQ.r!==r) return;
+    if(!j || !j.ok){ caja.innerHTML='<p class="ayuda">'+esc(prqCotMotivo(j && j.motivo))+'</p>'; return; }
+    var ya={}; if(ab) (ab.destinos||[]).forEach(function(d){ if(d.aliado) ya[d.aliado]=1; });
+    var L=j.lista||[], dentro=L.filter(function(a){ return a.en_zona; }), fuera=L.filter(function(a){ return !a.en_zona; });
+    var dep=j.dep ? COT.depNombre(j.dep) : '';
+    var uno=function(a){
+      var ini=String(a.razon||'?').replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9 ]/g, '').split(/\s+/).filter(Boolean).slice(0, 2).map(function(w){ return w.charAt(0).toUpperCase(); }).join('');
+      var esta=!!ya[a.id];
+      return '<label class="chk cot-ali'+(esta ? ' ya' : '')+'"><input type="checkbox" value="'+esc(a.id)+'"'+(esta ? ' checked disabled' : '')+'>'+
+        '<span class="cot-logo" aria-hidden="true">'+(a.logo ? '<img src="'+esc(a.logo)+'" alt="">' : esc(ini||'·'))+'</span>'+
+        '<span class="cot-ali-tx"><b>'+esc(a.razon)+'</b> <span class="pill ok">Aliado verificado</span>'+(esta ? ' <span class="pill gris">Ya tiene el pedido</span>' : '')+
+        '<small>'+esc(['Atiende '+COT.zonasTxt(a.zonas), (a.horas!=null && a.respondidas>0) ? 'responde en unas '+(a.horas<1 ? 'pocas horas' : (a.horas<48 ? Math.round(a.horas)+' h' : Math.round(a.horas/24)+' días')) : ''].filter(Boolean).join(' · '))+'</small>'+
+        (a.vende ? '<small class="cot-vende">'+esc(String(a.vende).split('\n')[0].slice(0, 140))+'</small>' : '')+'</span></label>';
+    };
+    var h='<div class="seccion" style="margin-top:6px"><h3>Aliados de OBRASST'+(dep ? ' en '+esc(dep) : '')+'</h3>';
+    h+=dentro.length ? dentro.map(uno).join('') : '<p class="ayuda" style="margin:0">Todavía no hay aliados de EPP que atiendan '+(dep ? esc(dep) : 'tu zona')+'. Escribe abajo el correo de tus proveedores.</p>';
+    h+='</div>';
+    if(fuera.length) h+='<details class="piq-det cot-fuera"><summary>De otros departamentos · '+fuera.length+'</summary>'+fuera.map(uno).join('')+'</details>';
+    caja.innerHTML=h;
+  }, function(e){ var caja=$('prqc-aliados'); if(caja) caja.innerHTML='<p class="ayuda">'+esc(prqCotFallo(e))+'</p>'; });
+  prqCotIr('prq-f-cot');
+}
+function prqCotEnviar(r, items){
+  var m=$('prqc-msg'), bt=$('prqc-si'); if(!m || !bt) return;
+  var al=[].map.call(document.querySelectorAll('#prqc-aliados input[type=checkbox]:checked:not(:disabled)'), function(x){ return x.value; });
+  var ext=[], mal=null;
+  [].forEach.call(document.querySelectorAll('#prqc-ext .cot-ext'), function(f){
+    var co=String(f.querySelector('[data-c]').value||'').trim(), ra=String(f.querySelector('[data-r]').value||'').replace(/\s+/g, ' ').trim();
+    if(!co && !ra) return;
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(co)){ if(!mal) mal=f.querySelector('[data-c]'); return; }
+    ext.push(ra ? {correo:co, razon:ra} : {correo:co});
+  });
+  if(mal){ m.className='msg mal'; m.textContent='Revisa el correo del proveedor (por ejemplo, ventas@proveedor.com).'; mal.focus(); return; }
+  if(!al.length && !ext.length){ m.className='msg mal'; m.textContent='Elige al menos un aliado o escribe el correo de un proveedor.'; return; }
+  var hasta=$('prqc-hasta'), ent=$('prqc-ent'), nota=$('prqc-nota');
+  if(hasta && hasta.value && (hasta.value<hoyISO() || hasta.value>RQB.fechaMas(hoyISO(), 60))){ m.className='msg mal'; m.textContent='La fecha de respuesta va de hoy a 60 días.'; hasta.focus(); return; }
+  bt.disabled=true; m.className='msg gris'; m.textContent='Enviando…';
+  sbRpc('sst_cot_nueva', {p:{empresa:prqObraId(), req:r.id, items:items, para:r.para||null, hasta:hasta ? (hasta.value||null) : null,
+      entrega:ent ? ent.value : null, nota:nota ? nota.value : null, aliados:al, externos:ext}}).then(function(j){
+    bt.disabled=false;
+    if(!j || !j.ok){ m.className='msg mal'; m.textContent=prqCotMotivo(j && j.motivo); return; }
+    if(j.cot) prqCotGuardar(r, j.cot);
+    var D=j.destinos||[], nA=D.filter(function(d){ return !d.externo; }).length, nE=D.length-nA;
+    var c=$('prq-zona'); PRQ.zona='cotizar-listo';
+    if(!D.length){ c.innerHTML='<div class="aviso ok" id="prqc-listo"><b>Ya estaban en la lista.</b> No se agregó a nadie nuevo.</div>'; prqCotsPintar(r); return; }
+    c.innerHTML='<div class="aviso ok" id="prqc-listo"><b>Pedido guardado'+(j.omitidos ? ' (un aliado ya no estaba disponible)' : '')+'.</b> '+
+      (nA ? (nA===1 ? 'Un aliado ya lo tiene' : nA+' aliados ya lo tienen')+' en su Portal de Aliados. ' : '')+
+      'Ahora avísales por correo: se abre tu correo con el pedido escrito y '+(D.length===1 ? 'el proveedor' : 'los '+D.length+' proveedores')+' en copia oculta.'+
+      (nE ? ' Lo que te respondan '+(nE===1 ? 'el que no es aliado' : 'los que no son aliados')+' lo anotas aquí.' : '')+
+      '<div class="acciones"><button type="button" class="bt" id="prqc-avisar">✉️ Abrir el correo</button><button type="button" class="bt sec" id="prqc-fin">Listo</button></div></div>';
+    $('prqc-avisar').onclick=function(){ prqCotAvisar(j.cot, D); };
+    $('prqc-fin').onclick=prqZona;
+    prqCotsPintar(r);
+    if(VISTA.actual==='reqs' && $('vista')) prqPintar($('vista'));
+  }, function(e){ bt.disabled=false; m.className='msg mal'; m.textContent=prqCotFallo(e); });
+}
+/* el aviso: el pedido escrito, desde el correo de quien pide, a todos en copia oculta */
+function prqCotAvisar(cot, destinos){
+  if(!cot) return;
+  var C=(destinos || (cot.destinos||[]).filter(function(d){ return ['enviado', 'visto'].indexOf(d.estado)>-1; })).map(function(d){ return d.correo; }).filter(Boolean);
+  if(!C.length){ toast('Ninguno tiene correo: copia el pedido y mándalo por donde siempre.'); return; }
+  var t=COT.correo(cot, YO.nombre);
+  prqAbrirCorreo(COT.mailto(C, t.asunto, t.cuerpo));
+  if(t.cortado) toast('El pedido es largo: en el correo van las primeras líneas. Usa «Copiar el pedido» para mandarlo completo.');
+}
+
+/* ── en el cajón: las cotizaciones del requerimiento y su cuadro comparativo ── */
+function prqCotsPintar(r){
+  var c=$('prq-cots'); if(!c || !r || typeof COT==='undefined') return;
+  var L=prqCotsDe(r);
+  if(!L.length){ c.innerHTML=''; return; }
+  c.innerHTML=L.map(function(k, i){ return prqCotHTML(k, i===0); }).join('');
+  c.onclick=function(ev){
+    var b=ev.target.closest('[data-q]'); if(!b) return;
+    var k=L.filter(function(x){ return x.id===b.getAttribute('data-cot'); })[0]; if(!k) return;
+    var q=b.getAttribute('data-q'), d=b.getAttribute('data-d')||'';
+    if(q==='adj') prqCotAdjudicar(k, d);
+    else if(q==='anotar') prqCotAnotar(k, d);
+    else if(q==='mas') prqCotizar();
+    else if(q==='avisar') prqCotAvisar(k, null);
+    else if(q==='ganador') prqCotAvisarGanador(k);
+    else if(q==='anular') prqCotAnular(k);
   };
-  setTimeout(function(){ try{ $('prq-f-cot').scrollIntoView({block:'start', behavior:'smooth'}); em.focus(); }catch(_s){} }, 30);
+}
+function prqCotHTML(k, abierta){
+  var E=COT.estadoCot(k), K=COT.comparativo(k), items=k.items||[], D=k.destinos||[], viva=k.estado==='abierta', g=prqCotGanador(k);
+  var h='<div class="seccion cot" id="cot-'+esc(k.id)+'"><h3>Cotización · '+esc(COT.diaDe(k.creado))+' '+prqCotPill(E)+'</h3>';
+  h+='<p class="ayuda cot-cab">Pidió '+esc(k.por_nombre||'—')+' el '+esc(COT.cuando(k.creado))+(k.hasta ? ' · respuesta hasta el '+esc(COT.dma(k.hasta)) : '')+
+     (k.entrega ? ' · entrega en '+esc(k.entrega) : '')+'</p>';
+  if(k.estado==='adjudicada' && g){
+    var tg=COT.totales(g.resp, items);
+    h+='<div class="aviso ok cot-gano"><b>🏆 Adjudicado a '+esc(g.razon)+'</b> · '+esc(COT.soles(tg.total))+' con IGV'+(k.oc ? ' · orden de compra '+esc(k.oc) : '')+
+       '<br><span class="gris-t">'+esc([k.adjudico_nombre, COT.cuando(k.adjudicada)].filter(Boolean).join(' · '))+'</span>'+(k.adj_nota ? '<br>'+esc(k.adj_nota) : '')+
+       '<div class="acciones"><button type="button" class="bt sec chico" data-q="ganador" data-cot="'+esc(k.id)+'">✉️ Avisar al ganador por correo</button></div></div>';
+  }
+  if(k.estado==='anulada') h+='<div class="aviso prq-neu"><b>Anulada</b> el '+esc(COT.cuando(k.anulada))+(k.adj_nota ? ': '+esc(k.adj_nota) : '.')+'</div>';
+  /* quién respondió qué: proveedor, estado, total con IGV y sus condiciones (entrega, vigencia y pago) */
+  h+='<div class="tabla-caja prq-tabla cot-tabla"><table><thead><tr><th>Proveedor</th><th>Estado</th><th class="num">Total con IGV</th><th>Condiciones</th></tr></thead><tbody>'+D.map(function(d){
+       var t=d.resp ? COT.totales(d.resp, items) : null, mejor=(K.mejor===d.id);
+       var acc='';
+       if(viva && k.puede && d.estado==='respondido') acc='<button type="button" class="bt chico" data-q="adj" data-cot="'+esc(k.id)+'" data-d="'+esc(d.id)+'">Adjudicar</button>';
+       else if(viva && d.externo && d.estado!=='respondido') acc='<button type="button" class="bt sec chico" data-q="anotar" data-cot="'+esc(k.id)+'" data-d="'+esc(d.id)+'">Anotar respuesta</button>';
+       var cond=d.resp ? '<span class="cot-cond">'+esc(d.resp.dias===0 ? 'Entrega inmediata' : 'Entrega en '+d.resp.dias+(d.resp.dias===1 ? ' día' : ' días'))+'</span>'+
+           '<span class="sub">Vale hasta el '+esc(COT.dma(d.resp.validez))+(d.resp.pago ? ' · '+esc(d.resp.pago) : '')+'</span>' : '<span class="gris-t">—</span>';
+       return '<tr'+(d.id===k.ganador ? ' class="cot-g"' : '')+'><td><b>'+esc(d.razon||d.correo||'—')+'</b><span class="sub">'+
+           (d.externo ? (d.correo ? esc(d.correo) : 'Sin correo')+(d.resp && d.resp_nombre ? ' · anotada por '+esc(d.resp_nombre) : '') : 'Aliado de OBRASST')+'</span></td>'+
+         '<td>'+prqCotPill(COT.estadoEmpresa(d))+(d.estado==='declinado' && d.nota ? '<span class="sub">'+esc(d.nota)+'</span>' : '')+'</td>'+
+         '<td class="num">'+(t ? '<b'+(mejor ? ' class="cot-min"' : '')+'>'+esc(COT.soles(t.total))+'</b>'+(t.todo ? (mejor ? '<span class="sub">el más bajo</span>' : '') : '<span class="sub">cotizó '+t.cot+' de '+items.length+'</span>') : '<span class="gris-t">—</span>')+
+           (acc ? '<span class="cot-acc">'+acc+'</span>' : '')+'</td>'+
+         '<td>'+cond+'</td></tr>'+
+         (d.resp && d.resp.nota ? '<tr class="cot-nota"><td colspan="4"><span class="gris-t">Nota de '+esc(d.razon||'')+':</span> '+esc(d.resp.nota)+'</td></tr>' : '');
+     }).join('')+'</tbody></table></div>';
+  /* el precio de cada línea, de cada uno (con IGV), con el más bajo marcado */
+  if(K.destinos.length){
+    h+='<details class="piq-det cot-det"'+(abierta ? ' open' : '')+'><summary>Precio por línea · unitario con IGV</summary><div class="tabla-caja prq-tabla"><table><thead><tr><th>Línea</th><th class="num">Cant.</th>'+
+       K.destinos.map(function(d){ return '<th class="num">'+esc(d.razon||d.correo||'')+'</th>'; }).join('')+'</tr></thead><tbody>'+
+       items.map(function(it, i){
+         return '<tr><td><b>'+esc(it.d)+'</b>'+(it.e ? '<span class="sub">'+esc(it.e)+'</span>' : '')+'</td><td class="num">'+esc(COT.num(it.c))+' <span class="gris-t">'+esc(it.u||'und')+'</span></td>'+
+           K.destinos.map(function(d){
+             var u=COT.unitCon(d.resp, i), l=(d.resp.l||[])[i]||{};
+             if(u===null) return '<td class="num"><span class="gris-t">No cotiza</span></td>';
+             return '<td class="num"><span'+(K.min[i]!==null && Math.abs(u-K.min[i])<0.005 ? ' class="cot-min"' : '')+'>'+esc(COT.soles(u))+'</span>'+(l.m ? '<span class="sub">'+esc(l.m)+'</span>' : '')+'</td>';
+           }).join('')+'</tr>';
+       }).join('')+'</tbody></table></div><p class="ayuda" style="margin:6px 0 0">En verde, el más bajo de cada línea. Los precios «más IGV» se pasaron a «con IGV» (18 %) para comparar lo mismo.</p></details>';
+  }
+  if(viva){
+    h+='<div class="acciones" style="margin:12px 0 0"><button type="button" class="bt sec chico" data-q="mas" data-cot="'+esc(k.id)+'">＋ Pedir a más proveedores</button>'+
+       '<button type="button" class="bt sec chico" data-q="anotar" data-cot="'+esc(k.id)+'" data-d="">✍️ Anotar una respuesta</button>'+
+       '<button type="button" class="bt sec chico" data-q="avisar" data-cot="'+esc(k.id)+'">✉️ Recordar por correo</button>'+
+       (k.puede ? '<button type="button" class="bt mal chico" data-q="anular" data-cot="'+esc(k.id)+'">Anular</button>' : '')+'</div>';
+    if(!k.puede) h+='<p class="ayuda">Adjudica '+esc(k.por_nombre||'quien pidió la cotización')+' o el dueño de la obra.</p>';
+  }
+  return h+'</div>';
+}
+/* anotar lo que respondió un proveedor que no es aliado (por correo, por teléfono…) */
+function prqCotAnotar(k, destinoId){
+  var c=$('prq-zona'), r=PRQ.r; if(!c || !r || !k) return;
+  PRQ.zona='cot-anotar';
+  var items=k.items||[], ext=(k.destinos||[]).filter(function(d){ return d.externo; });
+  var sel=ext.filter(function(d){ return d.id===destinoId; })[0] || ext.filter(function(d){ return d.estado!=='respondido'; })[0] || null;
+  c.innerHTML='<div class="tarj piq-form" id="prq-f-anotar"><div class="tarj-cuerpo"><b>Anotar una respuesta</b>'+
+    '<p class="ayuda" style="margin:2px 0 10px">Lo que te respondió un proveedor que no es aliado, por correo o por teléfono. Los aliados responden solos, en su portal.</p>'+
+    '<div class="campo"><label for="pa-quien">Proveedor</label><select id="pa-quien">'+ext.map(function(d){
+      return '<option value="'+esc(d.id)+'"'+(sel && sel.id===d.id ? ' selected' : '')+'>'+esc((d.razon||d.correo)+(d.estado==='respondido' ? ' (cambiar su respuesta)' : ''))+'</option>'; }).join('')+
+      '<option value=""'+(sel ? '' : ' selected')+'>Otro proveedor…</option></select></div>'+
+    '<div class="campo-dos" id="pa-nuevo"'+(sel ? ' hidden' : '')+'><div class="campo"><label for="pa-razon">Nombre del proveedor</label><input id="pa-razon" maxlength="120" autocomplete="off"></div>'+
+      '<div class="campo"><label for="pa-correo">Su correo <span class="gris-t">(opcional)</span></label><input id="pa-correo" type="email" maxlength="160" autocomplete="off"></div></div>'+
+    '<div id="pa-form"></div><p class="msg" id="pa-msg"></p><div class="acciones"><button type="button" class="bt sec chico" id="pa-no">Cerrar</button><button type="button" class="bt" id="pa-si">Guardar la respuesta</button></div></div></div>';
+  var pinta=function(){
+    var id=$('pa-quien').value, d=ext.filter(function(x){ return x.id===id; })[0]||null;
+    $('pa-nuevo').hidden=!!d;
+    $('pa-form').innerHTML=COT.respFormHTML(items, 'pa-', d && d.resp);
+    COT.respVivo('pa-', items);
+  };
+  pinta();
+  $('pa-quien').onchange=pinta;
+  c.oninput=function(){ var m=$('pa-msg'); m.className='msg'; m.textContent=''; };
+  $('pa-no').onclick=prqZona;
+  $('pa-si').onclick=function(){
+    var m=$('pa-msg'), bt=$('pa-si'), id=$('pa-quien').value, v=COT.validar(COT.respLeer('pa-', items), items);
+    if(!v.ok){ m.className='msg mal'; m.textContent=v.msg; var f=$('pa-'+v.campo.replace(/^validez$/, 'val')); if(f) f.focus(); return; }
+    var p={cot:k.id, resp:v.resp};
+    if(id) p.destino=id;
+    else {
+      p.razon=String($('pa-razon').value||'').replace(/\s+/g, ' ').trim(); p.correo=String($('pa-correo').value||'').trim();
+      if(p.razon.length<2){ m.className='msg mal'; m.textContent='Escribe el nombre del proveedor.'; $('pa-razon').focus(); return; }
+      if(p.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.correo)){ m.className='msg mal'; m.textContent='Revisa su correo.'; $('pa-correo').focus(); return; }
+    }
+    bt.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    sbRpc('sst_cot_anotar', {p:p}).then(function(j){
+      bt.disabled=false;
+      if(!j || !j.ok){ m.className='msg mal'; m.textContent=prqCotMotivo(j && j.motivo); return; }
+      prqCotGuardar(r, j.cot); toast('Respuesta anotada: ya está en el cuadro comparativo.');
+      prqZona(); prqCotsPintar(r); prqCotIr('cot-'+k.id);
+    }, function(e){ bt.disabled=false; m.className='msg mal'; m.textContent=prqCotFallo(e); });
+  };
+  prqCotIr('prq-f-anotar');
+}
+/* adjudicar: el ganador lo ve como «Ganaste»; los demás que seguían, como «No adjudicado» */
+function prqCotAdjudicar(k, destinoId){
+  var c=$('prq-zona'), r=PRQ.r; if(!c || !r || !k) return;
+  var d=(k.destinos||[]).filter(function(x){ return x.id===destinoId; })[0]; if(!d || !d.resp) return;
+  PRQ.zona='cot-adjudicar';
+  var K=COT.comparativo(k), t=COT.totales(d.resp, k.items||[]);
+  c.innerHTML='<div class="tarj piq-form" id="prq-f-adj"><div class="tarj-cuerpo"><b>Adjudicar a '+esc(d.razon||d.correo)+'</b>'+
+    '<p class="ayuda" style="margin:2px 0 10px">'+esc(COT.soles(t.total))+' con IGV ('+esc(COT.soles(t.sub))+' sin IGV) · entrega en '+esc(d.resp.dias===0 ? 'el día' : d.resp.dias+(d.resp.dias===1 ? ' día' : ' días'))+
+      ' · la oferta vale hasta el '+esc(COT.dma(d.resp.validez))+(d.resp.pago ? ' · '+esc(d.resp.pago) : '')+'</p>'+
+    (!t.todo ? '<div class="aviso ojo">Cotizó '+t.cot+' de '+(k.items||[]).length+' líneas: lo que falta se pide aparte.</div>' :
+      (K.mejor && K.mejor!==d.id ? '<div class="aviso ojo">No es el total más bajo entre los que cotizaron todo.</div>' : ''))+
+    '<div class="campo-dos"><div class="campo"><label for="pj-oc">Orden de compra <span class="gris-t">(opcional)</span></label><input id="pj-oc" maxlength="40" autocomplete="off" placeholder="Por ejemplo, OC-2026-118"></div>'+
+    '<div class="campo"><label for="pj-nota">Nota para el proveedor <span class="gris-t">(opcional)</span></label><input id="pj-nota" maxlength="300" autocomplete="off" placeholder="Por ejemplo: entregar el lunes"></div></div>'+
+    '<p class="ayuda">'+(d.externo ? 'Al proveedor le avisas tú, por correo (el botón queda en la cotización).' : 'El aliado lo verá como «Ganaste el pedido», con la orden de compra.')+
+      ' Los demás que seguían lo verán como «No adjudicado». No se puede deshacer.</p>'+
+    '<p class="msg" id="pj-msg"></p><div class="acciones"><button type="button" class="bt sec chico" id="pj-no">Cerrar</button><button type="button" class="bt ok" id="pj-si">🏆 Adjudicar</button></div></div></div>';
+  $('pj-no').onclick=prqZona;
+  $('pj-si').onclick=function(){
+    var m=$('pj-msg'), bt=$('pj-si'); bt.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    sbRpc('sst_cot_adjudicar', {p:{cot:k.id, destino:d.id, oc:$('pj-oc').value, nota:$('pj-nota').value}}).then(function(j){
+      bt.disabled=false;
+      if(!j || !j.ok){ m.className='msg mal'; m.textContent=prqCotMotivo(j && j.motivo); return; }
+      prqCotGuardar(r, j.cot); toast('Adjudicado a '+(d.razon||d.correo)+'.');
+      prqZona(); prqCotsPintar(r); prqCotIr('cot-'+k.id);
+      if(VISTA.actual==='reqs' && $('vista')) prqPintar($('vista'));
+    }, function(e){ bt.disabled=false; m.className='msg mal'; m.textContent=prqCotFallo(e); });
+  };
+  prqCotIr('prq-f-adj');
+}
+function prqCotAvisarGanador(k){
+  var g=prqCotGanador(k); if(!g) return;
+  if(!g.correo){ toast('Ese proveedor no tiene correo anotado.'); return; }
+  var t=COT.totales(g.resp, k.items||[]);
+  var cuerpo='Buenos días:\n\nLes adjudicamos el pedido de cotización'+(k.numero ? ' del requerimiento '+k.numero : '')+(k.obra ? ' (obra '+k.obra+')' : '')+
+    ' por '+COT.soles(t.total)+' con IGV, según su oferta.\n'+(k.oc ? 'Orden de compra: '+k.oc+'.\n' : '')+(k.adj_nota ? 'Nota: '+k.adj_nota+'\n' : '')+
+    (k.entrega ? 'Entrega en: '+k.entrega+'.\n' : '')+'\nQuedo atento para coordinar la entrega.\n'+(YO.nombre ? YO.nombre+'\n' : '');
+  prqAbrirCorreo('mailto:'+encodeURIComponent(g.correo).replace(/%40/g, '@')+'?subject='+encodeURIComponent('Adjudicación'+(k.numero ? ' · RQ '+k.numero : '')+(k.obra ? ' · '+k.obra : ''))+'&body='+encodeURIComponent(cuerpo));
+}
+function prqCotAnular(k){
+  var r=PRQ.r; if(!k || !r) return;
+  confirmar('¿Anular esta cotización?', 'Los aliados la verán como «Anulada por la empresa» y ya no podrán responder. El requerimiento sigue igual.', {si:'Sí, anular', mal:true}).then(function(si){
+    if(!si) return;
+    sbRpc('sst_cot_anular', {p:{cot:k.id}}).then(function(j){
+      if(!j || !j.ok){ toast(prqCotMotivo(j && j.motivo)); return; }
+      prqCotGuardar(r, j.cot); toast('Cotización anulada.'); prqZona(); prqCotsPintar(r);
+      if(VISTA.actual==='reqs' && $('vista')) prqPintar($('vista'));
+    }, function(e){ toast(prqCotFallo(e)); });
+  });
 }
 function prqCopiar(){
   var r=PRQ.r, i=$('prq-url'); if(!r || !r.token) return;
