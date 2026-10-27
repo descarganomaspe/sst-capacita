@@ -2696,6 +2696,18 @@ var ALP = { lista:null, deps:[] };
 var ALI_RUBROS = [['epp', 'Distribuidor de EPP'], ['salud', 'Centro de salud ocupacional'], ['consultor', 'Consultor SSOMA'], ['medico', 'Médico ocupacional'],
   ['capacitacion', 'Centro de capacitación'], ['residuos', 'Gestor de residuos o municipalidad'], ['sctr', 'Corredor de seguros (SCTR)'], ['otro', 'Otro']];
 var ALI_ESTADOS = { invitado:['Invitado', 'azul'], activo:['Activo', 'ok'], pausado:['En pausa', 'ojo'], baja:['De baja', 'gris'] };
+/* 27/10/2026 · lo que tiene hoy cada rubro y desde cuándo le llegan sus solicitudes, para el correo de invitación (la misma idea que
+   COT.RUBRO_INFO del Portal de Aliados): no se le promete a nadie lo que todavía no está. El médico ocupacional no tiene plan. */
+var ALI_INFO = {
+  epp:'Ahí te llegan las solicitudes de cotización de EPP de las empresas de tu zona: respondes con tu precio por ítem y ves si ganaste.',
+  salud:'Hoy subes los resultados con el código de clínica (CLI-) de cada empresa, con esta misma cuenta, en «Soy un centro médico». Desde diciembre de 2026 te llegan ahí las solicitudes de citas.',
+  consultor:'Hoy trabajas dentro de cada empresa cliente con tu propia cuenta: te invita a su equipo. Desde diciembre de 2026 tendrás ahí el panel de todas tus empresas y te llegarán las empresas que buscan consultor.',
+  medico:'Hoy trabajas dentro de cada empresa que te invita a su equipo, con el plan de esa empresa: tú no pagas plan, ni ahora ni después. Desde 2027 te llegan ahí las empresas que necesitan médico ocupacional.',
+  capacitacion:'Desde enero de 2027 te llegan ahí las solicitudes de cursos de las empresas de tu zona.',
+  residuos:'Desde enero de 2027 te llegan ahí las solicitudes de recojo de las empresas de tu zona.',
+  sctr:'Desde enero de 2027 te llegan ahí las empresas de tu zona con el SCTR por vencer.',
+  otro:'Ahí te llegan las solicitudes de las empresas de tu zona, según tu rubro.'
+};
 var ALI_DEPS = ['AMAZONAS', 'ANCASH', 'APURIMAC', 'AREQUIPA', 'AYACUCHO', 'CAJAMARCA', 'CALLAO', 'CUSCO', 'HUANCAVELICA', 'HUANUCO', 'ICA', 'JUNIN',
   'LA LIBERTAD', 'LAMBAYEQUE', 'LIMA', 'LORETO', 'MADRE DE DIOS', 'MOQUEGUA', 'PASCO', 'PIURA', 'PUNO', 'SAN MARTIN', 'TACNA', 'TUMBES', 'UCAYALI'];
 var ALI_DEP_N = { ANCASH:'Áncash', APURIMAC:'Apurímac', HUANUCO:'Huánuco', JUNIN:'Junín', 'SAN MARTIN':'San Martín', 'LA LIBERTAD':'La Libertad', 'MADRE DE DIOS':'Madre de Dios' };
@@ -2728,9 +2740,9 @@ function vistaAliados(caja){
         var e = ALI_ESTADOS[a.estado] || ['—', 'gris'], n = (a.usuarios || []).length;
         return '<span class="pill ' + e[1] + '">' + esc(e[0]) + '</span><span class="sub">' +
           esc(a.invitacion_vence ? 'enlace vigente hasta el ' + aliFecha(a.invitacion_vence) : (n ? n + (n === 1 ? ' cuenta' : ' cuentas') : 'sin enlace todavía')) + '</span>'; } },
-    { k:'pedidos', t:'Pedidos', num:true, h:function(a){ return num(a.pedidos) + '<span class="sub">' + num(a.respondidos) + ' resp. · ' + num(a.ganados) + ' ganados</span>'; } },
+    { k:'pedidos', t:'Solicitudes', num:true, h:function(a){ return num(a.pedidos) + '<span class="sub">' + num(a.respondidos) + ' respondidas · ' + num(a.ganados) + ' ganadas</span>'; } },
     { k:'empresas', t:'Empresas traídas', num:true },
-    { k:'gratis_hasta', t:'Gratis hasta', v:function(a){ return a.gratis_hasta || ''; }, h:function(a){ return a.gratis_hasta ? esc(aliFecha(a.gratis_hasta)) : '<span class="gris-t">desde que entra</span>'; } },
+    { k:'gratis_hasta', t:'Gratis hasta', v:function(a){ return a.rubro === 'medico' ? '9999' : (a.gratis_hasta || ''); }, h:function(a){ return a.rubro === 'medico' ? '<span class="gris-t">siempre: el médico no tiene plan</span>' : (a.gratis_hasta ? esc(aliFecha(a.gratis_hasta)) : '<span class="gris-t">desde que entra</span>'); } },
     { k:'creado', t:'Alta', v:function(a){ return a.creado || ''; }, h:function(a){ return esc(aliFecha(a.creado)); } }
   ];
   function pinta(){
@@ -2744,7 +2756,7 @@ function vistaAliados(caja){
         '<a href="https://obrasstapp.com/aliados.html" target="_blank" rel="noopener">aliados.html</a>; ellos trabajan en su ' +
         '<a href="https://obrasstapp.com/portal-aliados.html" target="_blank" rel="noopener">Portal de Aliados</a>.</div>' +
         '<div class="rej">' + cifra('Activos', num(act), 'salen a las empresas de su zona', act ? 'ok' : '') + cifra('Invitados', num(inv), 'todavía sin entrar') +
-        cifra('Pedidos', num(s('pedidos')), 'les llegaron') + cifra('Ganados', num(s('ganados')), 'adjudicados a un aliado', s('ganados') ? 'ok' : '') +
+        cifra('Solicitudes', num(s('pedidos')), 'les llegaron') + cifra('Ganadas', num(s('ganados')), 'adjudicadas a un aliado', s('ganados') ? 'ok' : '') +
         cifra('Empresas traídas', num(s('empresas')), 'con su código o su enlace') + '</div><div class="tarj" id="t-aliados"></div>';
       var t = $('t-aliados'); if(est) t._est = est;
       tabla(t, cols, L, { orden:'creado', asc:false, unidad:'aliados', vacio:'Todavía no hay aliados', vacioSub:'Cuando alguien firme el acuerdo, dalo de alta con «Nuevo aliado».',
@@ -2822,8 +2834,8 @@ function aliHoja(a){
       b.disabled = false;
       if(!r || !r.ok){ toast(aliMotivo(r && r.motivo)); return; }
       var cuerpo = 'Hola' + (a.contacto ? ', ' + a.contacto : '') + ':\n\nGracias por sumarte a OBRASST Aliados. Con este enlace entras al Portal de Aliados y creas tu cuenta ' +
-        '(vale 30 días y sirve una vez):\n' + r.enlace + '\n\nAhí te llegan los pedidos de las empresas de tu zona, respondes con tu precio por línea y ves si ganaste. ' +
-        'Completa tu ficha (logo, qué vendes y horario) para que las empresas te conozcan.\n\nTu código de aliado: ' + a.codigo +
+        '(vale 30 días y sirve una vez):\n' + r.enlace + '\n\n' + (ALI_INFO[a.rubro] || ALI_INFO.otro) + ' ' +
+        'Completa tu ficha (logo, qué ofreces y horario) para que las empresas te conozcan.\n\nTu código de aliado: ' + a.codigo +
         '\nTu enlace para traer empresas: https://obrasstapp.com/?aliado=' + a.codigo + '\n\nCualquier duda, responde este correo.\n\nEquipo OBRASST';
       var mt = 'mailto:' + (a.correo ? encodeURIComponent(a.correo).replace(/%40/g, '@') : '') + '?subject=' + encodeURIComponent('Tu acceso al Portal de Aliados de OBRASST') + '&body=' + encodeURIComponent(cuerpo);
       $('al-enlace-r').innerHTML = '<div class="aviso ok" style="margin-top:10px"><b>Enlace creado.</b> Vence el ' + esc(aliFecha(r.vence)) + ' y sirve una vez.' +
