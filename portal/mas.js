@@ -1324,7 +1324,50 @@ function _creLimpia(l, tumbas){
   (Array.isArray(l) ? l : []).forEach(function(c){ var k=String((c && c.cod)||''); if(!k || vistos[k] || (tumbas && tumbas[k])) return; vistos[k]=1; out.push(c); });
   return out;
 }
-function _creTraer(){
+/* ══ LA FIRMA DE OBRASST (27/10/2026) ══════════════════════════════════
+   Cada credencial la firma el servidor (función «firma») con una llave que nunca sale del Vault; la puerta la verifica
+   sin señal con la llave pública que lleva la app. Aquí: una credencial nueva o reemitida no se guarda con la firma
+   provisional, y las que ya estaban se pasan solas a la firma de OBRASST al abrir Credenciales (el código de antes queda
+   enterrado, como en cualquier reemisión). Las que el servidor no firma (por ejemplo, porque dicen el nombre de otra
+   empresa) no se vuelven a pedir en esta sesión. */
+var _CRE_E1=/^E1[A-Za-z0-9_-]{86}$/, _CRE_NO={};
+function _crePartes(cod){ var m=/^OBRASST-CRED:([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/.exec(String(cod||'')); return m ? { pl:m[1], fi:m[2] } : null; }
+function _creFirmada(cod){ var p=_crePartes(cod); return !!(p && _CRE_E1.test(p.fi)); }
+/* las firma de a 60 → { cods: los mismos, con la firma de OBRASST donde se pudo; mal: el primer motivo por el que no } */
+function masFirmar(cods){
+  var out=cods.slice(), pend=[], mal='';
+  cods.forEach(function(c, i){ var p=_crePartes(c); if(p && !_CRE_E1.test(p.fi)) pend.push({ i:i, pl:p.pl }); });
+  if(!pend.length) return Promise.resolve({ cods:out, mal:'' });
+  var lotes=[]; for(var k=0; k<pend.length; k+=60) lotes.push(pend.slice(k, k+60));
+  var MOT={ no_eres_de_la_empresa:'Tu cuenta no puede firmar credenciales de esta empresa.', sin_sesion:'Tu sesión venció: vuelve a entrar.',
+            otra_empresa:'La credencial dice el nombre de otra empresa: revisa el nombre de la obra.' };
+  return lotes.reduce(function(pr, L){ return pr.then(function(){
+    return sbFetch(SB.url+'/functions/v1/firma', { method:'POST',
+        body:JSON.stringify({ empresa:(YO.obra||{}).id, items:L.map(function(x){ return { tipo:'CRED', payload:x.pl }; }) }) })
+      .then(function(r){ return r.json().catch(function(){ return null; }).then(function(j){
+        if(!r.ok || !j || !j.ok){ mal=mal || MOT[j && j.motivo] || 'No se pudo poner la firma de OBRASST. Revisa tu conexión e inténtalo otra vez.'; return; }
+        L.forEach(function(x, q){
+          var f=(j.firmas||[])[q];
+          if(f && f.ok && _CRE_E1.test(String(f.firma||''))) out[x.i]='OBRASST-CRED:'+x.pl+'.'+f.firma;
+          else { _CRE_NO[x.pl]=1; mal=mal || MOT[f && f.motivo] || 'No se pudo poner la firma de OBRASST a una credencial.'; }
+        });
+      }); }, function(){ mal=mal || 'No hubo conexión para poner la firma de OBRASST. Inténtalo otra vez.'; });
+  }); }, Promise.resolve()).then(function(){ return { cods:out, mal:mal }; });
+}
+/* las que todavía tienen la firma de antes: se firman y se guardan (si no se puede, se sigue como estaba) */
+function _creAlDiaFirma(R){
+  var viejas=[]; (R.lista||[]).forEach(function(c, i){ var p=_crePartes(c && c.cod); if(p && !_CRE_E1.test(p.fi) && !_CRE_NO[p.pl]) viejas.push(i); });
+  if(!viejas.length) return Promise.resolve(R);
+  return masFirmar(viejas.map(function(i){ return R.lista[i].cod; })).then(function(F){
+    var tumbas=Object.assign({}, R.tumbas), lista=R.lista.slice(), n=0;
+    viejas.forEach(function(i, k){ if(F.cods[k]!==lista[i].cod){ tumbas[String(lista[i].cod)]=Date.now(); lista[i]=Object.assign({}, lista[i], { cod:F.cods[k] }); n++; } });
+    if(!n) return R;
+    return estadoEscribirP('credenciales_anuladas', MAS_APP.tumbasVivas(tumbas)).then(function(){ return estadoEscribirP('credenciales', lista); })
+      .then(function(){ R.lista=lista; R.tumbas=tumbas; CREW.firma=''; return R; });
+  }).catch(function(){ return R; });
+}
+function _creTraer(){ return _creTraerSolo().then(_creAlDiaFirma); }
+function _creTraerSolo(){
   var nada=function(){ return null; };
   return Promise.all([cargarMasApp(), cargarQRLib().catch(nada), estadoLeerP('credenciales'), estadoLeerP('credenciales_anuladas').catch(nada), masGente().catch(function(){ return []; }),
                       (YO.obra||{}).codigo ? estadoLeerP(_creClaveCom()).catch(nada) : Promise.resolve(null)]).then(function(r){
@@ -1496,7 +1539,7 @@ function _crefGuardar(){
   _creTraer().then(function(R){
     return masCupo('credencial', 1, R.lista.length-(anula ? 1 : 0)).then(function(r){
       if(!r.ok){ S.guardando=false; bt.disabled=false; _masDice(m, '', ''); return masTopeAviso(r, 'credenciales').then(function(){ return 'tope'; }); }
-      return Promise.all([masCtx({ com:R.com, tumbas:R.tumbas }), _creCap().catch(function(){ return null; })]).then(function(rr){
+      return Promise.all([masCtx({ com:R.com, tumbas:R.tumbas, lista:R.lista }), _creCap().catch(function(){ return null; })]).then(function(rr){
         var C=rr[0], D=rr[1];
         var datos={ n:n, d:d, c:c, v:v, o:String(nombreObraP()||'') };
         if(conSos){ if(t.sangre) datos.s=t.sangre; if(t.emergencia) datos.e=t.emergencia; if(t.emerQuien) datos.q=t.emerQuien.slice(0, 40); }
@@ -1504,7 +1547,9 @@ function _crefGuardar(){
         /* el sello «Capacitación al día»: la fecha hasta la que está al día con lo que exige su puesto, firmada con lo demás */
         try{ var T=D ? _creSelloDe({ dni:d, nombre:n, puesto:c }, D) : null; if(T && T.k) datos.k=T.k; }catch(e){}
         try{ var mc=MAS_APP.usar(C).comiteRolCod(d, n); if(mc) datos.m=mc; }catch(e){}
-        cod=MAS_APP.usar(C).credCodUnico(datos);
+        return masFirmar([MAS_APP.usar(C).credCodUnico(datos)]).then(function(F){
+        if(F.mal) throw { portal:F.mal };
+        cod=F.cods[0];
         var tumbas=R.tumbas, lista=R.lista.slice();
         if(anula){ tumbas=Object.assign({}, tumbas); tumbas[String(anula.cod)]=Date.now(); lista=lista.filter(function(x){ return x.cod!==anula.cod; }); }
         lista.unshift({ n:n, d:d, v:v, cod:cod, h:(datos.h||[]), c:c, trab:(t && t.ext) ? t.ext : null, hecho:new Date().toISOString() });
@@ -1514,6 +1559,7 @@ function _crefGuardar(){
           toast('Credencial emitida'+(datos.k ? ' con el sello «Capacitación al día»' : '')+(anula ? ', y la anterior quedó anulada.' : '.'));
           crePintar(); masRecargar();
           creVer(cod);
+        });
         });
       });
     });
@@ -1564,18 +1610,23 @@ function creSello(cod, poner){
       var v=MAS_APP.credDatos(cod); if(!v) return Promise.reject({ portal:'Esa credencial no se puede leer.' });
       var s=_creSelloInfo(c), kk=(s.toca && s.toca.k) || '';
       if(poner && !kk) return Promise.reject({ portal:'Ya no está al día con lo que exige su puesto: el sello no se le puede poner.', fuera:true });
-      return masCtx({ com:R.com, tumbas:R.tumbas }).then(function(C){
+      return masCtx({ com:R.com, tumbas:R.tumbas, lista:R.lista }).then(function(C){
         var M=MAS_APP.usar(C), d=JSON.parse(JSON.stringify(v));
         if(poner) d.k=kk; else delete d.k;
         /* ya que se vuelve a emitir, lo del comité va al día (como en la app) */
         try{ var mc=M.comiteRolCod(d.d, d.n); if(mc!==null){ if(mc) d.m=mc; else delete d.m; } }catch(e){}
-        var nuevo=M.credCodUnico(d);
+        var nuevo0=M.credCodUnico(d), p0=_crePartes(nuevo0), pc=_crePartes(cod);
+        if(p0 && pc && p0.pl===pc.pl && _CRE_E1.test(pc.fi)) return { cod:cod, igual:true };
+        return masFirmar([nuevo0]).then(function(F){
+        if(F.mal) throw { portal:F.mal };
+        var nuevo=F.cods[0];
         if(nuevo===cod) return { cod:cod, igual:true };
         var tumbas=Object.assign({}, R.tumbas); tumbas[String(cod)]=Date.now();
         var lista=R.lista.map(function(x){ return x.cod===cod ? Object.assign({}, x, { cod:nuevo, n:d.n||x.n, d:d.d||'', c:d.c||'', h:(d.h||[]) }) : x; });
         return estadoEscribirP('credenciales_anuladas', MAS_APP.tumbasVivas(tumbas)).then(function(){ return estadoEscribirP('credenciales', lista); }).then(function(){
           CREW.lista=lista; CREW.tumbas=tumbas; CREW.firma='';
           return { cod:nuevo };
+        });
         });
       });
     }).then(function(X){
@@ -1600,7 +1651,8 @@ function creVer(cod){
     '<div class="mas-cred-d"><b data-sin-pais>'+esc(d.n||'')+'</b><small data-sin-pais>'+esc([d.c, d.d ? docPersonaP()+' '+d.d : ''].filter(Boolean).join(' · '))+'</small><small>'+esc(d.o||'')+'</small>'+
       '<span class="pill '+E.cl+'">'+(E.k==='ven' ? 'Vencida: '+esc(E.t) : 'Habilitado '+esc(E.t))+'</span>'+
       (sello ? '<span class="pill '+(sello.vig ? 'ok' : 'ojo')+'">🎓 '+(sello.vig ? 'Capacitación al día hasta el ' : 'Capacitación vencida el ')+esc(fechaLarga(sello.f))+'</span>' : '')+
-      (rol ? '<span class="pill azul">'+esc(rol[0])+' · '+esc(rol[1])+'</span>' : '')+'</div></div>'+
+      (rol ? '<span class="pill azul">'+esc(rol[0])+' · '+esc(rol[1])+'</span>' : '')+
+      (_creFirmada(cod) ? '<span class="pill ok">🔏 Con la firma de OBRASST</span>' : '<span class="pill ojo">⏳ Firma provisional: vale hasta el 26 de noviembre de 2026</span>')+'</div></div>'+
     (hab.length ? '<div class="seccion"><h3>Habilitaciones</h3><div class="chips">'+hab.map(function(x){ return '<span class="pill '+(x.bri ? 'azul' : 'gris')+'">'+x.ic+' '+esc(x.n)+'</span>'; }).join(' ')+'</div></div>' : '')+
     _creCapHTML(c)+
     ((d.s || d.e || d.q) ? '<div class="seccion"><h3>En caso de emergencia <span class="tenue" style="font-weight:400">· sale al escanear el QR</span></h3><dl class="datos" data-sin-pais>'+
@@ -4030,17 +4082,24 @@ function _autwAlDia(D){
   confirmar('¿Poner al día '+(D.length===1 ? 'su credencial' : 'estas '+D.length+' credenciales')+'?', 'Se vuelven a emitir con el grupo sanguíneo que dice su autorización (al que revocó o no autorizó, sin grupo). Su QR cambia: el carné y el sticker que tengan impresos dejan de valer y hay que cambiarlos.', { si:'Sí, ponerlas al día' }).then(function(si){
     if(!si) return;
     _creTraer().then(function(R){
-      return masCtx({ com:R.com, tumbas:R.tumbas }).then(function(C){
-        var M=MAS_APP.usar(C), tumbas=Object.assign({}, R.tumbas), lista=R.lista.slice(), n=0;
+      return masCtx({ com:R.com, tumbas:R.tumbas, lista:R.lista }).then(function(C){
+        var M=MAS_APP.usar(C), tumbas=Object.assign({}, R.tumbas), lista=R.lista.slice(), cambios=[];
         D.forEach(function(x){
           var i=-1; lista.forEach(function(c, k){ if(c.cod===x.c.cod) i=k; }); if(i<0) return;
           var v=M.credDatos(x.c.cod); if(!v) return;
           var d=JSON.parse(JSON.stringify(v)); if(x.s) d.s=x.s; else delete d.s;
-          var nuevo=M.credCodUnico(d); if(nuevo===x.c.cod) return;
-          tumbas[String(x.c.cod)]=Date.now(); lista[i]=Object.assign({}, lista[i], { cod:nuevo }); n++;
+          var nuevo=M.credCodUnico(d), p0=_crePartes(nuevo), pc=_crePartes(x.c.cod);
+          if(p0 && pc && p0.pl===pc.pl && _CRE_E1.test(pc.fi)) return;
+          cambios.push({ i:i, viejo:x.c.cod, nuevo:nuevo });
         });
+        if(!cambios.length) return 0;
+        return masFirmar(cambios.map(function(c){ return c.nuevo; })).then(function(F){
+        if(F.mal) throw { portal:F.mal };
+        var n=0;
+        cambios.forEach(function(c, k){ if(F.cods[k]===c.viejo) return; tumbas[String(c.viejo)]=Date.now(); lista[c.i]=Object.assign({}, lista[c.i], { cod:F.cods[k] }); n++; });
         if(!n) return 0;
         return estadoEscribirP('credenciales_anuladas', MAS_APP.tumbasVivas(tumbas)).then(function(){ return estadoEscribirP('credenciales', lista); }).then(function(){ CREW.firma=''; return n; });
+        });
       });
     }).then(function(n){ toast(n ? (n===1 ? 'Listo: 1 credencial al día. Cámbiale el carné y el sticker.' : 'Listo: '+n+' credenciales al día. Cámbiales el carné y el sticker.') : 'Ya estaban al día.'); masRecargar(); },
       function(e){ toast('No se pudo. '+porQueFallo(e)); });

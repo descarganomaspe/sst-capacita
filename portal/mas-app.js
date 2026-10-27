@@ -325,12 +325,23 @@ function _hhBruto(s){
   return h1.toString(16)+'-'+h2.toString(16);
 }
 function credFirma(payload){ return _hhBruto(payload+'|OBRASST-2026').slice(0,10).toUpperCase(); }
+function _credPartes(cod){
+  var c = String(cod || ''), i = c.indexOf(':'); if(i < 0) return null;
+  var r = c.slice(i + 1), j = r.lastIndexOf('.'); if(j < 1) return null;
+  return { pl:r.slice(0, j), fi:r.slice(j + 1) };
+}
+function fqrEsE1(firma){ return /^E1[A-Za-z0-9_-]{86}$/.test(String(firma || '')); }
 function credCodUnico(datos){
+  /* 27/10/2026 · adaptador del portal: las lápidas se miran por sus datos (la firma de OBRASST no se conoce hasta que la
+     pone el servidor; al pasar a ella se entierra el código de antes, pero ese carné sigue vivo con la nueva). El código
+     sale con la firma provisional: mas.js le pone la de OBRASST (masFirmar) antes de guardarlo. */
   var tb={}; try{ tb=credTumbas(); }catch(_t){}
-  var payload=b64u(JSON.stringify(datos)), cod='OBRASST-CRED:'+payload+'.'+credFirma(payload);
-  var r=(+datos.r||0), n=0;
-  while(tb[cod] && n<50){ n++; r++; datos.r=r; payload=b64u(JSON.stringify(datos)); cod='OBRASST-CRED:'+payload+'.'+credFirma(payload); }
-  return cod;
+  var vivos={}, muertos={}, k;
+  (_C.lista||[]).forEach(function(c){ var p=_credPartes(c && c.cod); if(p) vivos[p.pl]=1; });
+  for(k in tb) if(Object.prototype.hasOwnProperty.call(tb,k)){ var q=_credPartes(k); if(q && !vivos[q.pl]) muertos[q.pl]=1; }
+  var payload=b64u(JSON.stringify(datos)), r=(+datos.r||0), n=0;
+  while(muertos[payload] && n<50){ n++; r++; datos.r=r; payload=b64u(JSON.stringify(datos)); }
+  return 'OBRASST-CRED:'+payload+'.'+credFirma(payload);
 }
 var HABIL = [
   {k:'al', n:'Trabajo en altura',        ic:'🧗', bri:false},
@@ -435,7 +446,11 @@ function credPDF(cod, _sos, _sinPreguntar){
   doc.text(esTrab ? 'OBRASST \u00b7 TRABAJADOR' : 'OBRASST', cx+9, cy+16);
   doc.setTextColor(255,255,255); doc.setFontSize(6.5);
   doc.text(doc.splitTextToSize((d.o||'').toUpperCase(), CW-92)[0], cx+62, cy+16);
-  try{ doc.addImage(img,'GIF', cx+CW-78, cy+36, 66, 66); }catch(e){}
+  /* 27/10/2026 · 72 en vez de 66: con la firma de OBRASST el QR tiene más cuadritos; así cada uno queda del tamaño de antes */
+  try{ doc.addImage(img,'GIF', cx+CW-82, cy+32, 72, 72); }catch(e){}
+  if(!esTrab){ var _fp=_credPartes(cod); if(_fp && !fqrEsE1(_fp.fi)){
+    doc.setFont('helvetica','bold'); doc.setFontSize(5); doc.setTextColor(168,98,0);
+    doc.text('FIRMA PROVISIONAL', cx+CW-46, cy+30.5, {align:'center'}); } }
   doc.setTextColor(20,20,20); doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
   doc.splitTextToSize(d.n||'\u2014', CW-96).slice(0,2).forEach(function(l,i){
     doc.text(l, cx+9, cy+50+i*13);
@@ -457,9 +472,9 @@ function credPDF(cod, _sos, _sinPreguntar){
      de este carne que alguien va a leer con prisa de verdad */
   if(d.s){
     doc.setFillColor(208,59,59);
-    doc.roundedRect(cx+CW-78, cy+104, 30, 15, 3, 3, 'F');
+    doc.roundedRect(cx+CW-82, cy+106, 30, 15, 3, 3, 'F');
     doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-    doc.text(String(d.s), cx+CW-63, cy+114.5, {align:'center'});
+    doc.text(String(d.s), cx+CW-67, cy+116.5, {align:'center'});
   }
   var hs=(d.h||[]).map(function(k){ var x=habilDe(k); return x? x.n : null; })
                   .filter(function(x){ return !!x; });
