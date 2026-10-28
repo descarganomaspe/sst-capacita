@@ -1997,8 +1997,8 @@ var APL_PREG = {
            ['prevencionista', 'Llevo la seguridad de una obra', 'Soy prevencionista, supervisor o jefe SSOMA'],
            ['subcontrata', 'Somos subcontrata', 'Trabajamos para una contratista principal'],
            ['supervisora', 'Supervisamos por contrato', 'Somos la supervisión de un proyecto'],
-           ['dueno', 'Soy el dueño del proyecto', 'O lo represento'],
-           ['estado', 'Fiscalizo por ley', 'Trabajo en una entidad del Estado'],
+           ['dueno', 'Mi empresa contrata la obra', 'Empresa privada: minera, concesionaria o industria'],
+           ['estado', 'Trabajo en el Estado', 'Ministerio, entidad que contrata obra o regulador'],
            ['trabajador', 'Soy trabajador', 'Entro con el código de mi obra'] ] },
   central: { t:'¿Tu contratista principal ya usa OBRASST Central?', op:[['si', 'Sí'], ['no', 'No'], ['nose', 'No sé']] },
   trab:  { t:'¿Cuántos trabajadores tienen tus obras?', ayuda:'Contando a todos los que entran a la obra.', op:[
@@ -2127,7 +2127,7 @@ function aplDecidir(r){
   }
   if(r.rol === 'supervisora'){
     R.tipo = 'incluida'; R.nombre = 'Supervisión incluida';
-    R.porque = ['Si tu cliente usa OBRASST Mandante o Fiscalización, te incluye sin costo y ven la obra juntos.',
+    R.porque = ['Si tu cliente usa OBRASST Mandante o Estado, te incluye sin costo y ven la obra juntos.',
                 'Si tu cliente no lo usa, conversemos qué te sirve.'];
     R.reunion = 'supervisora';
     return R;
@@ -2140,8 +2140,8 @@ function aplDecidir(r){
     return R;
   }
   if(r.rol === 'estado'){
-    R.tipo = 'reunion'; R.plan = 'fiscalizacion'; R.nombre = 'OBRASST Fiscalización';
-    R.porque = ['Para fiscalizar la seguridad de proyectos de construcción, minería, energía o transporte, con sus contratistas y supervisoras.',
+    R.tipo = 'reunion'; R.plan = 'fiscalizacion'; R.nombre = 'OBRASST Estado';
+    R.porque = ['Un solo plan para la entidad pública: cada obra con su supervisora, el contratista con su Central y sus subcontratas, todo incluido.',
                 'Se arma a la medida de tu entidad en una reunión.'];
     R.reunion = 'fiscalizacion';
     return R;
@@ -2507,8 +2507,8 @@ function _codWaLink(c){ return 'https://wa.me/'+_codWa(c.para)+'?text='+encodeUR
    cada espacio vuelve a su plan y lo registrado queda. Servidor: sql/2026-10-25-cadena.sql. */
 var CENP = { lista:[], pedidos:[], cod:'', hasta:'', tope:'', todas:false, tipo:'central', sups:'', puestos:'', gb:'', nota:'' };
 /* 15/10/2026 · lote 12: los planes que se activan aquí (los dos de arriba traen a su supervisora incluida) */
-var CEN_TIPOS = [['central', 'Central', 'una obra'], ['corporativo', 'Corporativo', 'la empresa y todas sus obras'], ['mandante', 'Mandante', 'el dueño del proyecto, con su supervisora incluida'],
-                 ['fiscalizacion', 'Fiscalización', 'la entidad del Estado, con sus supervisoras incluidas']];
+var CEN_TIPOS = [['central', 'Central', 'una obra'], ['corporativo', 'Corporativo', 'la empresa y todas sus obras'], ['mandante', 'Mandante', 'la empresa privada que contrata la obra, con su supervisora incluida'],
+                 ['fiscalizacion', 'Estado', 'la entidad pública: todo incluido por obra']];
 function _cenTipoN(t){ var x = CEN_TIPOS.filter(function(y){ return y[0] === t; })[0]; return x ? x[1] : 'Central'; }
 var CEN_PED_EST = [['nueva', 'Nueva'], ['contactada', 'Contactada'], ['demo', 'Demo hecha'], ['piloto', 'En piloto'], ['cliente', 'Cliente'], ['descartada', 'Descartada']];
 /* ══ 15/10/2026 · EL ASISTENTE DE PLAN (sql/2026-11-25-asistente-plan.sql) ══════════════
@@ -2519,7 +2519,7 @@ var REU = { dias:60 };
 var REU_ESTADOS = [['nueva','Nueva'], ['contactado','Contactado'], ['compro','Compró'], ['no_vino','No vino'], ['cancelada','Cancelada']];
 function _reuPlan(id){
   var P = (typeof aplPlan === 'function') ? aplPlan(id) : null; if(P) return P.n;
-  return ({ central:'OBRASST Central', corporativo:'OBRASST Corporativo', mandante:'OBRASST Mandante', fiscalizacion:'OBRASST Fiscalización',
+  return ({ central:'OBRASST Central', corporativo:'OBRASST Corporativo', mandante:'OBRASST Mandante', fiscalizacion:'OBRASST Estado',
             invitado:'Subcontrata (gratis en la Central)', incluida:'Supervisora (incluida)', trabajador:'Trabajador' })[id] || id || '—';
 }
 function _reuResp(r){ try{ var o = Object.assign({}, r || {}); delete o.v; return aplRespuestasTexto(o).join(' · '); }catch(_e){ return ''; } }
@@ -2612,10 +2612,10 @@ function _cenArmazon(){
       '<div class="campo"><label for="cen-tope">Cuántas subcontratas <span class="gris-t">(vacío o 0: sin tope)</span></label><input id="cen-tope" type="number" min="0" max="500" inputmode="numeric" value="'+esc(CENP.tope)+'"></div>'+
       '<div class="campo"><label for="cen-nota">Nota <span class="gris-t">(opcional: con quién se acordó, qué paga)</span></label><input id="cen-nota" maxlength="300" autocomplete="off" value="'+esc(CENP.nota)+'"></div>'+
       '<div class="campo"><label for="cen-tipo">Plan</label><select id="cen-tipo">'+CEN_TIPOS.map(function(t){ return '<option value="'+t[0]+'"'+(CENP.tipo===t[0]?' selected':'')+'>'+esc(t[1]+' · '+t[2])+'</option>'; }).join('')+'</select></div>'+
-      '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-sups">Supervisoras incluidas <span class="gris-t">(vacío: 3 en Mandante, 20 en Fiscalización)</span></label><input id="cen-sups" type="number" min="0" max="500" inputmode="numeric" value="'+esc(CENP.sups)+'"></div>'+
-      '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-puestos">Usuarios <span class="gris-t">(vacío: 100 en Mandante; sin límite en Fiscalización)</span></label><input id="cen-puestos" type="number" min="1" max="5000" inputmode="numeric" value="'+esc(CENP.puestos)+'"></div>'+
-      '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-gb">Espacio en GB <span class="gris-t">(vacío: 1,000 en Mandante; 10,000 en Fiscalización)</span></label><input id="cen-gb" type="number" min="1" inputmode="numeric" value="'+esc(CENP.gb)+'"></div>'+
-    '</div><p class="ayuda cen-tipo-ay">Corporativo, Mandante y Fiscalización valen para la empresa y <b>todas sus obras</b>: el código tiene que ser el de la empresa madre.</p>'+
+      '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-sups">Supervisoras incluidas <span class="gris-t">(vacío: 3 en Mandante, 20 en Estado · en Estado, una por obra)</span></label><input id="cen-sups" type="number" min="0" max="500" inputmode="numeric" value="'+esc(CENP.sups)+'"></div>'+
+      '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-puestos">Usuarios <span class="gris-t">(vacío: 100 en Mandante; sin límite en Estado)</span></label><input id="cen-puestos" type="number" min="1" max="5000" inputmode="numeric" value="'+esc(CENP.puestos)+'"></div>'+
+      '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-gb">Espacio en GB <span class="gris-t">(vacío: 1,000 en Mandante; 10,000 en Estado)</span></label><input id="cen-gb" type="number" min="1" inputmode="numeric" value="'+esc(CENP.gb)+'"></div>'+
+    '</div><p class="ayuda cen-tipo-ay">Corporativo, Mandante y Estado valen para la empresa y <b>todas sus obras</b> (en Estado, la entidad y sus unidades): el código tiene que ser el de la empresa madre. <b>Estado va todo incluido por obra:</b> por cada obra, activa aquí también la Central de su contratista (con el código de esa obra) y, si es concesión, Mandante para el concesionario; en la nota, «incluida en el plan Estado de …».</p>'+
     '<button type="button" class="bt" id="cen-activar">Activar el plan</button><div class="msg" id="cen-msg" aria-live="polite"></div></div></div>'+
     '<div class="tarj"><div class="tarj-cab"><div><h2>Obras con Central</h2><p class="sub">«Supervisan»: cuántas empresas la miran (cliente, supervisión). «Obs.»: las observaciones que puso. «Gente hoy»: el personal activo de la obra y el de sus subcontratas enlazadas, la base para la cuenta del mes.</p></div></div><div id="t-central"></div></div>'+
     '<div class="tarj"><div class="tarj-cab"><div><h2>Pidieron una demo o un piloto</h2><p class="sub">Lo que llega del formulario de la página de Central. Anota en qué va cada una.</p></div></div><div id="cen-pedidos"><div class="tarj-cuerpo"><span class="gris-t">Cargando…</span></div></div></div>';
