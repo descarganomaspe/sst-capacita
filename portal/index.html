@@ -2443,7 +2443,7 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
         <a href="../instalar/" class="app-en-pie" data-instalar>Instalar la app</a>
         <a href="central.html">OBRASST Central</a>
         <a href="mandante.html">OBRASST Mandante</a>
-        <a href="fiscalizacion.html">OBRASST Fiscalización</a>
+        <a href="estado.html">OBRASST Estado</a>
       </nav>
       <nav aria-label="Ayuda">
         <h3>Ayuda</h3>
@@ -3786,7 +3786,7 @@ var CUENTA_CENN = {
   'cad-equipo':{ n:'Equipo y rangos', tab:'Equipo y rangos' }
 };
 var CUENTAS = {
-  fis:{ n:'Fiscalización', gn:'OBRASST Fiscalización', propia:false,
+  fis:{ n:'Estado', gn:'OBRASST Estado', propia:false,
         areas:[ { id:'a-casa', n:'Inicio', ic:'▦', v:['arr-ini'] },
                 { id:'a-cum', n:'Cumplimiento', ic:'✅', v:CUENTA_CUM },
                 { id:'a-fis', n:'Fiscalización', ic:'⚖', v:['fis-prior', 'fis-ord', 'fis-med', 'fis-ctl', 'fis-exp'] },
@@ -3794,8 +3794,8 @@ var CUENTAS = {
                 { id:'a-cartera', n:'Cartera', ic:'🗂', v:['car-rank', 'car-reten', 'car-aud'] },
                 { id:'a-cadena', n:'Observaciones', ic:'📌', v:['cad-obs'] },
                 { id:'a-empresa', n:'Empresa y equipo', ic:'🏢', v:['equipo', 'cad-equipo', 'empresa', 'plan'] } ],
-        nom:{ 'arr-ini':{ n:'Hoy en lo que fiscalizas', s:'Lo más riesgoso primero, las alertas tempranas y las cifras de todas las empresas que fiscalizas' },
-              'sup-emp':{ n:'Empresas que fiscalizas', s:'Sus cifras de hoy, lo que les pides en documentos, sus requisitos de ingreso y los requerimientos por aceptar' },
+        nom:{ 'arr-ini':{ n:'Hoy en tus obras', s:'Lo más riesgoso primero, las alertas tempranas y las cifras de todas las empresas de tus obras' },
+              'sup-emp':{ n:'Empresas de tus obras', s:'Sus cifras de hoy, lo que les pides en documentos, sus requisitos de ingreso y los requerimientos por aceptar' },
               'cad-obs':CUENTA_OBS } },
   man:{ n:'Mandante', gn:'OBRASST Mandante', propia:false,
         areas:[ { id:'a-casa', n:'Inicio', ic:'▦', v:['arr-ini'] },
@@ -17675,8 +17675,8 @@ var APL_PREG = {
            ['prevencionista', 'Llevo la seguridad de una obra', 'Soy prevencionista, supervisor o jefe SSOMA'],
            ['subcontrata', 'Somos subcontrata', 'Trabajamos para una contratista principal'],
            ['supervisora', 'Supervisamos por contrato', 'Somos la supervisión de un proyecto'],
-           ['dueno', 'Soy el dueño del proyecto', 'O lo represento'],
-           ['estado', 'Fiscalizo por ley', 'Trabajo en una entidad del Estado'],
+           ['dueno', 'Mi empresa contrata la obra', 'Empresa privada: minera, concesionaria o industria'],
+           ['estado', 'Trabajo en el Estado', 'Ministerio, entidad que contrata obra o regulador'],
            ['trabajador', 'Soy trabajador', 'Entro con el código de mi obra'] ] },
   central: { t:'¿Tu contratista principal ya usa OBRASST Central?', op:[['si', 'Sí'], ['no', 'No'], ['nose', 'No sé']] },
   trab:  { t:'¿Cuántos trabajadores tienen tus obras?', ayuda:'Contando a todos los que entran a la obra.', op:[
@@ -17805,7 +17805,7 @@ function aplDecidir(r){
   }
   if(r.rol === 'supervisora'){
     R.tipo = 'incluida'; R.nombre = 'Supervisión incluida';
-    R.porque = ['Si tu cliente usa OBRASST Mandante o Fiscalización, te incluye sin costo y ven la obra juntos.',
+    R.porque = ['Si tu cliente usa OBRASST Mandante o Estado, te incluye sin costo y ven la obra juntos.',
                 'Si tu cliente no lo usa, conversemos qué te sirve.'];
     R.reunion = 'supervisora';
     return R;
@@ -17818,8 +17818,8 @@ function aplDecidir(r){
     return R;
   }
   if(r.rol === 'estado'){
-    R.tipo = 'reunion'; R.plan = 'fiscalizacion'; R.nombre = 'OBRASST Fiscalización';
-    R.porque = ['Para fiscalizar la seguridad de proyectos de construcción, minería, energía o transporte, con sus contratistas y supervisoras.',
+    R.tipo = 'reunion'; R.plan = 'fiscalizacion'; R.nombre = 'OBRASST Estado';
+    R.porque = ['Un solo plan para la entidad pública: cada obra con su supervisora, el contratista con su Central y sus subcontratas, todo incluido.',
                 'Se arma a la medida de tu entidad en una reunión.'];
     R.reunion = 'fiscalizacion';
     return R;
@@ -18787,7 +18787,7 @@ var LS_CAD_FICHA='sstp_cad_ficha';
 /* 15/10/2026 · lote 12 · LOS PLANES DE ARRIBA EN LA WEB (portal/arriba.js, que necesita portal/cadena.js): «Mi supervisión»
    (peldaño 2: la supervisora incluida, y Mandante y Fiscalización), «Mi cartera» (peldaño 3) y el «Centro de fiscalización»
    (peldaño 4). Salen según el peldaño que dice el servidor (sst_cad_inicio → grado). */
-var ARRIBA_VER='bdc2594ff2';   /* lo pone armar.py: el hash de portal/arriba.js */
+var ARRIBA_VER='6fcf63a9d8';   /* lo pone armar.py: el hash de portal/arriba.js */
 var _ARR_CARGA=null;
 function cargarArriba(){
   if(typeof arrPintar==='function') return Promise.resolve(true);
@@ -18842,7 +18842,7 @@ function arrVistasDe(i){ var g=(i && typeof i==='object') ? (i.grado || 0) : (+i
    la app»: lo que cada contratista y sus subcontratas cumplen hoy, de sus propios registros (capacitación, EMO, inducción, ATS,
    charla, PETAR, papeletas y observaciones), el QR del casco del trabajador, la matriz de capacitación, el informe consolidado y,
    para Corporativo, cada contratista en todas sus obras. Servidor: sql/2026-10-28-cumplimiento.sql (sst_cad_cumple…) */
-var CUMPLE_VER='9fd990f122';   /* lo pone herr/huellas.py: el md5 de portal/cumple.js */
+var CUMPLE_VER='dc201ebb4c';   /* lo pone herr/huellas.py: el md5 de portal/cumple.js */
 var _CUM_CARGA=null;
 function cargarCumple(){
   if(typeof cumPintar==='function') return Promise.resolve(true);
@@ -19033,7 +19033,7 @@ function cadEnAlta(){
 function esDemoCentral(){ return /[?&]demo=central(&|$)/.test(location.search||''); }
 /* 28/10/2026 · #183 · las obras de ejemplo de Fiscalización y de Mandante (portal/?demo=fiscalizacion, ?demo=mandante): el mismo
    portal de una cuenta de verdad, con los datos de portal/demo-arriba.js (no toca ningún servidor) */
-var DEMOARR_VER='77eb7c1c41';   /* lo pone herr/huellas.py: el hash de portal/demo-arriba.js */
+var DEMOARR_VER='18491700c0';   /* lo pone herr/huellas.py: el hash de portal/demo-arriba.js */
 var _DMA_CARGA=null;
 function cargarDemoArriba(){
   if(typeof demoArribaAbrir==='function') return Promise.resolve(true);
@@ -19046,7 +19046,7 @@ function cargarDemoArriba(){
   });
   return _DMA_CARGA;
 }
-function esDemoArribaDir(){ var m=/[?&]demo=(fiscalizacion|mandante)(&|$)/.exec(location.search||''); return m ? (m[1]==='fiscalizacion' ? 'fis' : 'man') : ''; }
+function esDemoArribaDir(){ var m=/[?&]demo=(estado|fiscalizacion|mandante)(&|$)/.exec(location.search||''); return m ? (m[1]==='mandante' ? 'man' : 'fis') : ''; }
 function arrancar(){
   var _da=esDemoArribaDir();
   if(_da){
