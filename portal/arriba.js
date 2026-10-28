@@ -24,8 +24,8 @@ var ARR_MOT = { programada:'Programada', prioridad:'Por prioridad de riesgo', de
 var ARR_VER = { en_obra:['En la obra', 'ok'], lejos:['Lejos de la obra', 'mal'], sin_ubicacion:['Sin ubicación', 'ojo'], sin_punto:['La obra sin su punto', 'gris'] };
 var ARR_REQ = { pendiente:['Pendiente', 'ojo'], entregado:['Por revisar', 'azul'], aprobado:['Aprobado', 'ok'], observado:['Observado', 'mal'], anulado:['Anulado', 'gris'], no_entregado:['No entregado', 'mal'] };
 var ARR_MOTIVO = {
-  sin_plan_sup:'Eso lo tienen Mandante y Fiscalización, y la supervisora que ellos incluyen.', sin_plan_mandante:'Eso es del plan Mandante (o Fiscalización).',
-  sin_plan_fiscalizacion:'Eso es del plan Fiscalización.', homologacion:'Los requisitos de ingreso (homologación) son del plan Mandante.',
+  sin_plan_sup:'Eso lo tienen Mandante y Estado, y la supervisora que ellos incluyen.', sin_plan_mandante:'Eso es del plan Mandante (o Estado).',
+  sin_plan_fiscalizacion:'Eso es del plan Estado.', homologacion:'Los requisitos de ingreso (homologación) son del plan Mandante.',
   mes:'Revisa el mes.', fecha:'Revisa las fechas (hasta 3 meses de una vez).', items:'Revisa lo escrito: cada línea, con unas palabras.', enlace:'Esa empresa ya no está en tu cartera.',
   inspector:'Esa persona ya no es de tu equipo.', motivo:'Elige el motivo.', plazo:'Revisa el plazo: desde hoy y hasta un año.', monto:'Revisa los montos.',
   valorizacion:'Revisa la valorización.', no_entregado:'Todavía no lo entregan.', anulado:'Ese pedido fue anulado.', cerrada:'Eso ya está cerrado.', nota:'Escribe un poco más.',
@@ -88,8 +88,8 @@ function arrPintar(cual, caja, tab){
   var g = arrGrado(), hace = { sup:2, cartera:3, fis:4 }[cual] || 2;
   if(g < hace){
     caja.innerHTML = '<div class="tarj"><div class="tarj-cuerpo arr-falta"><h2>' + esc({ sup:'Mi supervisión', cartera:'Mi cartera', fis:'Centro de fiscalización' }[cual]) + '</h2><p>' +
-      esc({ sup:'Lo usa la supervisora que su cliente incluye, y lo traen Mandante y Fiscalización.', cartera:'Empieza en el plan Mandante (y lo trae Fiscalización).',
-            fis:'Es del plan Fiscalización: para las entidades del Estado que fiscalizan.' }[cual]) + '</p></div></div>';
+      esc({ sup:'Lo usa la supervisora que su cliente incluye, y lo traen Mandante y Estado.', cartera:'Empieza en el plan Mandante (y lo trae Estado).',
+            fis:'Es del plan Estado: para las entidades públicas que contratan, supervisan o fiscalizan obras.' }[cual]) + '</p></div></div>';
     if(typeof _cadAcc === 'function') _cadAcc('');
     return;
   }
@@ -148,7 +148,7 @@ function arrEmpresasV(c){
     /* 28/10/2026 · las supervisoras que incluye van aparte: no son empresas que se fiscalizan */
     var nSup = L.filter(function(x){ return x.incluida && x.estado === 'activa'; }).length, nEmp = L.filter(function(x){ return !x.incluida && x.estado === 'activa'; }).length;
     var h = '<div class="rej">' +
-      cifra(g >= 4 ? 'Empresas que fiscalizas' : 'Empresas que supervisas', String(nEmp), (t.invitadas ? t.invitadas + ' sin aceptar' : 'todas aceptaron') + (t.rechazaron ? ' · ' + t.rechazaron + ' rechazaron' : '') + (nSup ? ' · ' + nSup + (nSup === 1 ? ' supervisora incluida' : ' supervisoras incluidas') : ''), t.no_atendieron ? 'ojo' : '') +
+      cifra(g >= 4 ? 'Empresas de tus obras' : 'Empresas que supervisas', String(nEmp), (t.invitadas ? t.invitadas + ' sin aceptar' : 'todas aceptaron') + (t.rechazaron ? ' · ' + t.rechazaron + ' rechazaron' : '') + (nSup ? ' · ' + nSup + (nSup === 1 ? ' supervisora incluida' : ' supervisoras incluidas') : ''), t.no_atendieron ? 'ojo' : '') +
       cifra('Personas hoy', arrN(L.filter(function(x){ return !x.incluida && x.estado === 'activa'; }).reduce(function(a, x){ return a + ((x.ind || {}).gente || 0); }, 0)), 'de las que aceptaron', '') +
       cifra('Observaciones abiertas', String(t.ab || 0), t.ven ? t.ven + (t.ven === 1 ? ' vencida' : ' vencidas') : 'ninguna vencida', t.ven ? 'mal' : '') +
       cifra('Documentos', (t.req_total ? Math.round(100 * (t.req_ok || 0) / t.req_total) + ' %' : '—'), t.req_total ? (t.req_ok || 0) + ' de ' + t.req_total + ' aprobados' + (t.req_por_revisar ? ' · ' + t.req_por_revisar + ' por revisar' : '') : 'nada pedido', t.req_por_revisar ? 'ojo' : '') +
@@ -193,7 +193,7 @@ function arrMotivoReq(j, e){
   var m = j && j.motivo;
   if(m === 'tope') return 'Llegaste al máximo de empresas de tu plan' + (j.tope ? ' (' + j.tope + ')' : '') + '. Para sumar más, escríbenos.';
   if(m === 'tope_incluidas') return 'Ya incluiste a todas las supervisoras de tu plan' + (j.tope ? ' (' + j.tope + ')' : '') + '.';
-  if(m === 'incluir') return 'Solo un Mandante o una Fiscalización incluye a su supervisora.';
+  if(m === 'incluir') return 'Solo una cuenta Mandante o Estado incluye a su supervisora.';
   if(m === 'ya_esta') return 'Esa empresa ya tiene un requerimiento vivo o ya está en tu cartera.';
   if(m && ARR_MOTIVO[m]) return ARR_MOTIVO[m];
   return cadMotivo(j, e);
@@ -209,7 +209,7 @@ function arrAccSupervisar(extra){
 }
 function arrVacioSupervisar(g){
   var puede = arrPuedeSupervisar();
-  return '<div class="vacio arr-vacio-sup"><b>' + esc(g >= 4 ? 'Todavía no fiscalizas a ninguna empresa' : 'Todavía no supervisas a ninguna empresa') + '</b>' +
+  return '<div class="vacio arr-vacio-sup"><b>' + esc(g >= 4 ? 'Todavía no hay empresas en tus obras' : 'Todavía no supervisas a ninguna empresa') + '</b>' +
     esc(puede ? (g >= 4 ? 'Mándale el requerimiento a la empresa que vas a fiscalizar: la acepta con su cuenta (o crea una, gratis). Mientras tanto trabajas con tu registro propio.'
                         : 'Mándale el requerimiento a la empresa que vas a supervisar: lo acepta con su cuenta (o crea una, gratis). Mientras tanto trabajas con tu registro propio.')
               : 'El requerimiento lo manda el jefe o el gerente de tu equipo.') +
@@ -748,7 +748,7 @@ function arrInicio(c){
   arrAccSupervisar(g >= 3 ? '<button type="button" class="bt sec" id="arr-i-imp">Imprimir</button>' : '');
   if($('arr-i-imp')) $('arr-i-imp').onclick = function(){ window.print(); };
   var pat = i.patrocinio || null;
-  c.innerHTML = (t === 'sup' && pat ? '<div class="aviso azul arr-pat">Te incluye <b>' + esc(cadCorto(pat.cliente || '')) + '</b> (' + esc(pat.tipo === 'fiscalizacion' ? 'Fiscalización' : 'Mandante') + ')' +
+  c.innerHTML = (t === 'sup' && pat ? '<div class="aviso azul arr-pat">Te incluye <b>' + esc(cadCorto(pat.cliente || '')) + '</b> (' + esc(pat.tipo === 'fiscalizacion' ? 'Estado' : 'Mandante') + ')' +
       (pat.hasta ? ' hasta el ' + esc(arrFecha(pat.hasta)) : '') + ': trabajas sin pagar en su proyecto, con lo de supervisión, y ve cómo supervisas.</div>' : '') +
     (i.cuenta && i.cuenta.subio ? '<button type="button" class="cad-subio" id="arr-i-subio"><span class="cad-subio-n">' + i.cuenta.subio + '</span><span><b>' +
       (i.cuenta.subio === 1 ? 'Subió a ti una observación vencida' : 'Subieron a ti ' + i.cuenta.subio + ' observaciones vencidas') + '</b><small>' +
