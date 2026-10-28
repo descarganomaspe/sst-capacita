@@ -31066,7 +31066,7 @@ function cadMotivo(j){
     foto:'La foto no subió bien. Vuelve a tomarla.', nota:'Escribe un poco más.', ya_levantada:'Ya estaba levantada: espera la validación.', cerrada:'Esa observación ya está cerrada.',
     no_levantada:'Todavía no la levantan.', muchas:'Esa observación ya tiene demasiadas notas.', vencida:'Esa invitación venció: pide que te manden otra.',
     ya_aceptada:'Esa invitación ya fue aceptada por otra cuenta.', anulada:'Esa invitación fue retirada.', es_tu_obra:'Eres del equipo de la obra que invita: nadie se supervisa a sí mismo.',
-    no_eres_dueno:'Para enlazar esa obra tienes que ser su dueño.', sin_plan_sup:'Para supervisar a una empresa necesitas Mandante o Fiscalización, o que uno de ellos te incluya como su supervisora.',
+    no_eres_dueno:'Para enlazar esa obra tienes que ser su dueño.', sin_plan_sup:'Para supervisar a una empresa necesitas Mandante o Estado, o que uno de ellos te incluya como su supervisora.',
     homologacion:'Los requisitos de ingreso (homologación) son del plan Mandante.', no_se_rechaza:'Esta invitación no se rechaza: si no te sirve, déjala vencer.', vuelta:'Esa obra ya está del otro lado de esta misma relación.', sin_red:'Sin señal: inténtalo cuando vuelva.' }[m] || 'No se pudo guardar. Inténtalo otra vez.');
 }
 
@@ -31800,7 +31800,7 @@ try{ window.addEventListener('online', function(){ try{ cadSubirCola(); }catch(_
    El servidor: sql/2026-11-17 … 2026-11-24 (lote 12).
    ══════════════════════════════════════════════════════════════════ */
 var CADP = { rec:null, recT:0, recPid:false, acta:null, actas:null, actasLado:'', actaVer:null, insp:null, prog:null, sup:null, supT:0, pads:{} };
-var CADP_PLAN = { mandante:'Mandante', fiscalizacion:'Fiscalización' };
+var CADP_PLAN = { mandante:'OBRASST Mandante', fiscalizacion:'OBRASST Estado' };
 var CADP_ACT = { recorrido:'Recorrido', inspeccion:'Inspección', acta:'Acta' };
 var CADP_EST = { cumplida:['Cumplida', 'ok'], no_cumplida:['No cumplida', 'mal'], pendiente:['Pendiente', 'neu'], anulada:['Anulada', 'neu'] };
 var CADP_MOT = { programada:'Programada', prioridad:'Por prioridad de riesgo', denuncia:'Por denuncia', accidente:'Por accidente', seguimiento:'De seguimiento', otro:'Otro motivo' };
@@ -31851,12 +31851,12 @@ function cadUbicar(){
 function cadpMotivo(j){
   var m = (j && j.motivo) || j || '';
   if(m === 'tope_incluidas') return cadTx('Ya incluiste todas las supervisoras de tu contrato') + ' (' + ((j && j.tope) || 0) + ').';
-  var t = { sin_plan_sup:'Eso lo tienen Mandante y Fiscalización, y la supervisora que ellos incluyen.', sin_plan_mandante:'Eso es del plan Mandante (o Fiscalización).',
-    incluir:'Solo un Mandante o una Fiscalización incluye a su supervisora.', del_cliente:'El estándar de plazos lo pone tu cliente.',
-    sin_plan_fiscalizacion:'Eso es del plan Fiscalización.', homologacion:'Los requisitos de ingreso (homologación) son del plan Mandante.',
+  var t = { sin_plan_sup:'Eso lo tienen Mandante y Estado, y la supervisora que ellos incluyen.', sin_plan_mandante:'Eso es del plan Mandante (o Estado).',
+    incluir:'Solo una cuenta Mandante o Estado incluye a su supervisora.', del_cliente:'El estándar de plazos lo pone tu cliente.',
+    sin_plan_fiscalizacion:'Eso es del plan Estado.', homologacion:'Los requisitos de ingreso (homologación) son del plan Mandante.',
     firma:'Falta tu firma.', firma_rep:'La firma del representante no salió bien: vuelve a firmar.', representante:'Escribe el nombre del representante de la empresa.',
     testigo:'Si se negó a firmar, escribe el nombre del testigo y que firme.', hechos:'Escribe al menos un hecho constatado.', reqs:'Revisa los requerimientos: cada uno con su texto.',
-    plazo:'Revisa los plazos.', medidas:'Las medidas (paralizar o prohibir) son de la Fiscalización.', orden:'Esa orden de inspección no es tuya o ya se cerró.',
+    plazo:'Revisa los plazos.', medidas:'Las medidas (paralizar o prohibir) son del plan Estado.', orden:'Esa orden de inspección no es tuya o ya se cerró.',
     abierto:'Ya tienes un recorrido abierto: termínalo primero.', no_se_rechaza:'Esta invitación no se rechaza: si no te sirve, déjala vencer.',
     items:'Revisa los puntos de la lista.', formato:'Elige el formato.', fecha:'Revisa la fecha.', muchas_obs:'Son demasiadas observaciones en una sola inspección.',
     nota:'Escribe el motivo (unas palabras).', cerrada:'Eso ya está cerrado.' }[m];
@@ -86343,8 +86343,8 @@ var APL_PREG = {
            ['prevencionista', 'Llevo la seguridad de una obra', 'Soy prevencionista, supervisor o jefe SSOMA'],
            ['subcontrata', 'Somos subcontrata', 'Trabajamos para una contratista principal'],
            ['supervisora', 'Supervisamos por contrato', 'Somos la supervisión de un proyecto'],
-           ['dueno', 'Soy el dueño del proyecto', 'O lo represento'],
-           ['estado', 'Fiscalizo por ley', 'Trabajo en una entidad del Estado'],
+           ['dueno', 'Mi empresa contrata la obra', 'Empresa privada: minera, concesionaria o industria'],
+           ['estado', 'Trabajo en el Estado', 'Ministerio, entidad que contrata obra o regulador'],
            ['trabajador', 'Soy trabajador', 'Entro con el código de mi obra'] ] },
   central: { t:'¿Tu contratista principal ya usa OBRASST Central?', op:[['si', 'Sí'], ['no', 'No'], ['nose', 'No sé']] },
   trab:  { t:'¿Cuántos trabajadores tienen tus obras?', ayuda:'Contando a todos los que entran a la obra.', op:[
@@ -86473,7 +86473,7 @@ function aplDecidir(r){
   }
   if(r.rol === 'supervisora'){
     R.tipo = 'incluida'; R.nombre = 'Supervisión incluida';
-    R.porque = ['Si tu cliente usa OBRASST Mandante o Fiscalización, te incluye sin costo y ven la obra juntos.',
+    R.porque = ['Si tu cliente usa OBRASST Mandante o Estado, te incluye sin costo y ven la obra juntos.',
                 'Si tu cliente no lo usa, conversemos qué te sirve.'];
     R.reunion = 'supervisora';
     return R;
@@ -86486,8 +86486,8 @@ function aplDecidir(r){
     return R;
   }
   if(r.rol === 'estado'){
-    R.tipo = 'reunion'; R.plan = 'fiscalizacion'; R.nombre = 'OBRASST Fiscalización';
-    R.porque = ['Para fiscalizar la seguridad de proyectos de construcción, minería, energía o transporte, con sus contratistas y supervisoras.',
+    R.tipo = 'reunion'; R.plan = 'fiscalizacion'; R.nombre = 'OBRASST Estado';
+    R.porque = ['Un solo plan para la entidad pública: cada obra con su supervisora, el contratista con su Central y sus subcontratas, todo incluido.',
                 'Se arma a la medida de tu entidad en una reunión.'];
     R.reunion = 'fiscalizacion';
     return R;
@@ -99516,11 +99516,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = 'a1acae00d6';
-var IDIOMA_FR_V = '9f0e4c382e';
+var IDIOMA_PT_V = 'ed444d4c8a';
+var IDIOMA_FR_V = '9ea0edac0a';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = 'aed67ef703';
+var IDIOMA_EN_V = 'bb25bc24a2';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -113296,7 +113296,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='0633d0dfba';
+var SELLO_APP='6bea6aa26a';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
