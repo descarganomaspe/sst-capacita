@@ -1,4 +1,4 @@
-var CACHE = 'sstc-0633d0dfba-a';
+var CACHE = 'sstc-6bea6aa26a-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -13,7 +13,7 @@ var PDFJS = 'obrasst-pdfjs-1';
    cache. La primera apertura sin señal despues de cada publicacion daba
    pantalla en blanco (y la primerisima instalacion tambien). Ahora la app
    entera se guarda en install, antes de activar. */
-var BASE = ['./', './index.html', './temas.js?v=21bbb5eaab', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=aed67ef703', './exige.js?v=35cd514ecd', './idioma-fr.js?v=9f0e4c382e', './procedimientos.js?v=fdf355c008', './idioma-pt.js?v=a1acae00d6', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
+var BASE = ['./', './index.html', './temas.js?v=21bbb5eaab', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=bb25bc24a2', './exige.js?v=35cd514ecd', './idioma-fr.js?v=9ea0edac0a', './procedimientos.js?v=fdf355c008', './idioma-pt.js?v=ed444d4c8a', './imagenes.js?v=552133afc8', './manifest.webmanifest', './icono-192.png', './icono-512.png',
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
             './intro.mp4'];
 self.addEventListener('install', function(e){
