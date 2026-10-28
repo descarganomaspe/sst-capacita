@@ -22,7 +22,7 @@ var CUM_VIA = { propia:'Tu empresa', directa:'Contratista', subcontrata:'Subcont
 var CUM_VIA_CHIP = { propia:'Tu empresa', directa:'Contratistas', subcontrata:'Subcontratas', supervisora:'De sus supervisoras' };
 var CUM_MOTIVO = {
   sin_sesion:'Tu sesión venció: vuelve a entrar.', no_eres_de_la_obra:'Esta cuenta no es de esta obra.',
-  sin_plan_cumple:'El cumplimiento por empresa lo traen Central, Corporativo, la supervisora incluida, Mandante y Fiscalización.',
+  sin_plan_cumple:'El cumplimiento por empresa lo traen Central, Corporativo, la supervisora incluida, Mandante y Estado.',
   no_existe:'Eso ya no existe.', enlace:'Esa empresa ya no está entre las que ves.', datos:'Revisa lo escrito.',
   rango:'Eso lo pone el jefe o el gerente de tu equipo.',
   solo_cifras:'Esta empresa comparte contigo solo sus cifras: su gente no se abre. Sus números sí cuentan en el cumplimiento por empresa y en el informe consolidado.',

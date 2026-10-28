@@ -24,8 +24,8 @@ var DMA_LS = 'sstp_demo_arr_v1_', DMA_LS_ROL = 'sstp_demo_arr_rol_';
 
 /* ── lo fijo: la entidad, los proyectos, las empresas, el equipo ── */
 var DMA_ENT = {
-  fis:{ id:'demo-fis', nombre:'Agencia de Fiscalización de Obras (ejemplo)', codigo:'DEM-F01', tipo:'fiscalizacion', papel:'Fiscalización', puestos:5000, incl:20 },
-  man:{ id:'demo-man', nombre:'Programa de Infraestructura Valle Alto (ejemplo)', codigo:'DEM-M01', tipo:'mandante', papel:'Mandante', puestos:100, incl:3 }
+  fis:{ id:'demo-fis', nombre:'Proyecto Especial de Obras (ejemplo)', codigo:'DEM-F01', tipo:'fiscalizacion', papel:'Estado', puestos:5000, incl:20 },
+  man:{ id:'demo-man', nombre:'Inversiones Valle Alto S.A.C. (ejemplo)', codigo:'DEM-M01', tipo:'mandante', papel:'Mandante', puestos:100, incl:3 }
 };
 var DMA_PROY = [
   { id:'p1', n:'Carretera tramo norte', reg:'Piura', lug:['Km 12+300 · desvío', 'Km 14+050', 'Km 9+800 · cantera', 'Campamento', 'Km 16+400 · alcantarilla'], tipos:['zanja', 'senal', 'epp', 'cable', 'orden', 'extintor'] },
@@ -55,10 +55,10 @@ var DMA_EQUIPO = {
         { uid:'u3', n:'Milagros Quispe Rojas', c:'Inspectora', rango:'supervisor', correo:'mquispe@entidad.ejemplo' },
         { uid:'u4', n:'Renzo Huamán Vega', c:'Inspector', rango:'supervisor', correo:'rhuaman@entidad.ejemplo' },
         { uid:'u5', n:'Carla Mendoza Ríos', c:'Inspectora', rango:'supervisor', correo:'cmendoza@entidad.ejemplo' } ],
-  man:[ { uid:'u0', n:'Óscar Valdivia Torres', c:'Gerente de proyectos', rango:'gerente', correo:'gerencia@programa.ejemplo', rol:'dueno' },
-        { uid:'u1', n:'Lucía Paredes Ramírez', c:'Jefa de SSOMA del programa', rango:'jefe', correo:'lparedes@programa.ejemplo' },
-        { uid:'u2', n:'Jorge Salinas Cárdenas', c:'Supervisor SSOMA', rango:'supervisor', correo:'jsalinas@programa.ejemplo' },
-        { uid:'u3', n:'Milagros Quispe Rojas', c:'Supervisora SSOMA', rango:'supervisor', correo:'mquispe@programa.ejemplo' } ]
+  man:[ { uid:'u0', n:'Óscar Valdivia Torres', c:'Gerente de proyectos', rango:'gerente', correo:'gerencia@empresa.ejemplo', rol:'dueno' },
+        { uid:'u1', n:'Lucía Paredes Ramírez', c:'Jefa de SSOMA de la empresa', rango:'jefe', correo:'lparedes@empresa.ejemplo' },
+        { uid:'u2', n:'Jorge Salinas Cárdenas', c:'Supervisor SSOMA', rango:'supervisor', correo:'jsalinas@empresa.ejemplo' },
+        { uid:'u3', n:'Milagros Quispe Rojas', c:'Supervisora SSOMA', rango:'supervisor', correo:'mquispe@empresa.ejemplo' } ]
 };
 var DMA_ROLES = {
   fis:[ { k:'gerente', u:'u0', o:'Gerente de fiscalización' }, { k:'jefe', u:'u1', o:'Jefa de fiscalización' }, { k:'supervisor', u:'u2', o:'Inspector' } ],
@@ -1072,7 +1072,7 @@ function dmaFetch(url, opt){
 }
 
 /* ══ ABRIR EL EJEMPLO ════════════════════════════════════════════════ */
-function esDemoArriba(){ var m = /[?&]demo=(fiscalizacion|mandante)(&|$)/.exec(location.search || ''); return m ? (m[1] === 'fiscalizacion' ? 'fis' : 'man') : ''; }
+function esDemoArriba(){ var m = /[?&]demo=(estado|fiscalizacion|mandante)(&|$)/.exec(location.search || ''); return m ? (m[1] === 'mandante' ? 'man' : 'fis') : ''; }
 function demoArribaAbrir(t){
   _dmaCss();
   var r = null; try{ r = localStorage.getItem(DMA_LS_ROL + t); }catch(e){}
