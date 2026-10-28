@@ -33,6 +33,8 @@ var INF_SECC = [
   { k:'resumen',      n:'Resumen del mes',                d:'Personal activo, horas hombre de obreros y staff (trabajadas y de capacitación) del mes y acumuladas en el año, accidentes e incidentes y los índices del año' },
   /* 19/10/2026 · lote 19 · el personal, las horas del año, los programas y los objetivos */
   { k:'personal',     n:'Personal de la obra',            d:'Cuántos hay en obra al cierre del mes, los que ingresaron, los cesados, los trasladados y los de descanso, por empresa; y la relación del personal' },
+  /* 27/10/2026 · los frentes de trabajo (portal/frentes.js): un solo informe por obra, con su corte por frente */
+  { k:'frentes',      n:'Frentes de trabajo',             d:'Cada frente de la obra: su personal al cierre del mes, sus observaciones del mes (y cuántas se levantaron) y lo que tiene para una emergencia (plan de respuesta, mapas y punto de reunión). Solo si la obra tiene frentes', vit:'frentes' },
   { k:'hhanio',       n:'Horas hombre del año',           d:'Mes a mes, las trabajadas y las de capacitación de obreros y staff, con lo acumulado en el año y sus gráficos' },
   { k:'programas',    n:'Avance de los programas del año', d:'El anual de SST y los de capacitación, inspecciones, simulacros, campañas, monitoreo ocupacional y auditorías: lo programado al mes, lo ejecutado y el cumplimiento, con sus gráficos' },
   { k:'objetivos',    n:'Objetivos y metas',              d:'Cada objetivo del año con su meta, su indicador y su avance al cierre del mes' },
@@ -61,12 +63,12 @@ var INF_NIVELES = [
   { k:'intermedio', n:'Intermedio', pag:'10 a 20 páginas', pagT:'8 a 14 páginas',
     d:'Lo de cada mes: además, las horas del año mes a mes, el avance de los programas y de los objetivos, los temas uno por uno, la tabla de observaciones con sus fotos, la pirámide de Bird, las inspecciones, el consumo de EPP, el SCTR, el comité y el registro fotográfico.',
     dT:'Además, por obra: los temas del mes, las inspecciones, el EPP y el comité.',
-    secc:['resumen', 'personal', 'hhanio', 'programas', 'objetivos', 'charlas', 'capacitacion', 'ats', 'reportes', 'obstabla', 'bird', 'inspecciones', 'epp', 'sctr', 'comite', 'fotoreg'],
+    secc:['resumen', 'personal', 'frentes', 'hhanio', 'programas', 'objetivos', 'charlas', 'capacitacion', 'ats', 'reportes', 'obstabla', 'bird', 'inspecciones', 'epp', 'sctr', 'comite', 'fotoreg'],
     todas:['resumen', 'hh', 'personal', 'charlas', 'temas', 'ats', 'reportes', 'inspecciones', 'epp', 'comite'], temas:'desglose' },
   { k:'completo', n:'Completo', pag:'20 páginas o más', pagT:'una página más por obra',
     d:'Todo, cada parte en su hoja: además, la relación del personal uno por uno, el riesgo del mes, el panel fotográfico de los registros y los documentos que elijas como anexos.',
     dT:'Todo: además, una página por obra con su resumen.',
-    secc:['resumen', 'personal', 'hhanio', 'programas', 'objetivos', 'charlas', 'capacitacion', 'ats', 'reportes', 'obstabla', 'bird', 'inspecciones', 'epp', 'sctr', 'comite', 'fotoreg', 'riesgo', 'fotos'],
+    secc:['resumen', 'personal', 'frentes', 'hhanio', 'programas', 'objetivos', 'charlas', 'capacitacion', 'ats', 'reportes', 'obstabla', 'bird', 'inspecciones', 'epp', 'sctr', 'comite', 'fotoreg', 'riesgo', 'fotos'],
     todas:['resumen', 'hh', 'personal', 'charlas', 'temas', 'ats', 'reportes', 'inspecciones', 'epp', 'comite', 'fichas'], temas:'desglose' }
 ];
 var INF_TODAS_N = { resumen:'Resumen de las obras', hh:'Horas hombre de obreros y staff', personal:'El personal de cada obra', charlas:'Charlas y capacitaciones', temas:'Los temas del mes', ats:'ATS del mes',
@@ -417,7 +419,9 @@ function _infTraer(mes, O, op){
   var tr=function(t, e, l){ return _infTr(O, t, e, l); };
   var P=[
     /* 19/10/2026 · lote 19 · con su empresa, su ingreso y su historia (para el personal del mes), si la base las tiene */
-    tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto,contrata,ingreso,historial,estatus_desde,creado&order=nombre.asc', 6000)
+    /* 27/10/2026 · con su frente (area): el corte por frente de trabajo */
+    tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto,area,contrata,ingreso,historial,estatus_desde,creado&order=nombre.asc', 6000)
+      .catch(function(){ return tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto,contrata,ingreso,historial,estatus_desde,creado&order=nombre.asc', 6000); })
       .catch(function(){ return tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto,contrata,ingreso,historial,estatus_desde&order=nombre.asc', 6000); })
       .catch(function(){ return tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto,contrata,ingreso&order=nombre.asc', 6000); })
       .catch(function(){ return tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto&order=nombre.asc', 6000); }),
@@ -454,7 +458,12 @@ function _infTraer(mes, O, op){
     /* 20/10/2026 · lote 23 · la salud ocupacional: lo registrado aparte (sal-reg) del año y los EMO de la obra (fechas, tipo y aptitud) */
     op.ligero ? Promise.resolve(null) : tr('sst_doc', '&hoja=eq.'+SAL_HOJA+'&creado=gte.'+_enc(new Date(mes.slice(0, 4)+'-01-01T00:00:00').toISOString())+'&select=id,hoja,nombre,url,nota,creado&order=creado.asc', 2000),
     (op.ligero || (typeof planWebTrae==='function' && !planWebTrae('emo'))) ? Promise.resolve(null)
-      : sbRpc('sst_emo_resumen', { p_emp:O.id }).then(function(j){ return (j && j.ok!==false && Array.isArray(j.lista)) ? j.lista : null; })
+      : sbRpc('sst_emo_resumen', { p_emp:O.id }).then(function(j){ return (j && j.ok!==false && Array.isArray(j.lista)) ? j.lista : null; }),
+    /* 27/10/2026 · los frentes de trabajo y sus documentos de emergencia (portal/frentes.js trae cómo se leen) */
+    (op.ligero || typeof cargarFrentes!=='function') ? Promise.resolve(null) : cargarFrentes().then(function(){
+      return Promise.all([tr('sst_doc', '&hoja=eq.frentes&select=id,hoja,nombre,nota,creado&order=creado.asc', 40),
+                          tr('sst_doc', '&hoja=in.('+FRE_DOCS.map(function(t){ return t.h; }).join(',')+')&select=id,hoja,nombre,url,nota,creado&order=creado.desc', 600)]);
+    }).then(function(x){ var L=freDeFilas(x[0]||[]); return L.length ? { L:L, docs:(x[1]||[]).filter(function(d){ return d && /^Frente:/.test(String(d.nota||'')); }) } : null; })
   ];
   return Promise.all(P.map(function(p){ return Promise.resolve(p).catch(function(){ return null; }); })).then(function(r){
     var trab=r[0]||[], cons=r[1]||[], reps=r[2]||[], accs=r[3]||[], hht=r[4]||[], kar=r[5]||[], insp=r[6]||[], mapa=(r[13] && r[13].cat) || {}, cfgN=(r[13] && r[13].n) || {};
@@ -511,6 +520,7 @@ function _infTraer(mes, O, op){
     D.activos=D.per.act; D.cat={ o:D.per.ob, s:D.per.st };
     D.hhA=_infHHAnio(hh, mes);
     D.obs=_infObs(reps, insp, r[14], r[15], r[16], mes, dia, obsCatLista(cfgN.obsCat));
+    D.fre=r[22] ? _infFrentes(r[22], trab, D.obs, dia) : null;
     D.bird=_infBird(accs, reps, insp, r[14], mes, fin);
     D.freg={ L:fotoCatLista(cfgN.fotoCat), del:fotoRegDelMes(fotoRegFilas(r[17]||[]), mes), fallan:0 };
     D.prog=(r[18]===undefined) ? undefined : (r[18] ? _infProgramas(r[18].progs, r[18].H, r[18].objs, mes, fin<hoy) : null);
@@ -891,6 +901,8 @@ function _infPdfBase(D, op){
     }
     /* 19/10/2026 · lote 19 · la tabla de observaciones va en hojas horizontales */
     if(x.k==='obstabla'){ var pgO=_infObsTabla(P, D); if(pgO){ indice.push({ t:s.n, p:pgO }); return; } }
+    /* 27/10/2026 · la obra sin frentes de trabajo no lleva esa parte */
+    if(x.k==='frentes' && !(D.fre && D.fre.filas.length)) return;
     P.sec(s.n); indice.push({ t:s.n, p:doc.getNumberOfPages() });
     if(_infSecc19(P, D, x.k, { basico:basico, completo:INFW.nivel==='completo', desglose:desglose })) return;
     if(x.k==='obstabla'){ P.nota('No hubo actos ni condiciones en el mes.'); return; }
@@ -1520,6 +1532,29 @@ function _infSit(t, iso){
   return st;
 }
 var INF_SIT_N = { activo:'En obra', descanso:'De descanso', cesado:'Cesado', traslado:'Trasladado' };
+/* 27/10/2026 · el frente de alguien ese día: el de su ficha y su historia («pasa a otro frente») */
+function _infAreaEn(t, iso){
+  var l=_infHist(t), a=l.length ? String((l[0].de && l[0].de.a) || '') : String(t.area||'');
+  if(!l.length) return String(t.area||'');
+  l.forEach(function(ev){ if(ev.f<=iso && ev.a!=null) a=String(ev.a||''); });
+  return a || String(t.area||'');
+}
+/* 27/10/2026 · el corte por frente de trabajo: su personal al cierre, sus observaciones del mes y lo de emergencia */
+function _infFrentes(F, trab, obs, dia){
+  var L=F.L, filas=L.map(function(f){ return { f:f, gente:0, obs:0, cerr:0, T:freDocsDe(f, F.docs, L) }; }), sin=0;
+  (trab||[]).forEach(function(t){
+    if(_infSit(t, dia).e!=='activo') return;
+    var ing=String(t.ingreso||'').slice(0, 10); if(ing && ing>dia) return;
+    var a=_infAreaEn(t, dia), hit=null;
+    filas.forEach(function(x){ if(!hit && freEsNombre(x.f, a)) hit=x; });
+    if(hit) hit.gente++; else sin++;
+  });
+  ((obs && obs.porFrente) || []).forEach(function(o){
+    var hit=null; filas.forEach(function(x){ if(!hit && freEsNombre(x.f, o.n)) hit=x; });
+    if(hit){ hit.obs+=o.n2; hit.cerr+=o.cerr; }
+  });
+  return { filas:filas, sinFrente:sin };
+}
 function _infDiaAntes(iso){ var d=new Date(Date.parse(iso+'T12:00:00')-864e5); return d.getFullYear()+'-'+dos(d.getMonth()+1)+'-'+dos(d.getDate()); }
 function _infPersonal(trab, mes, dia, mapa, propia){
   var d0=mes+'-01', antes=_infDiaAntes(d0), P={ act:0, desc:0, ob:0, st:0, ing:0, ces:0, tras:0, descM:0, rein:0, bajasAntes:0, emp:{}, L:[], mov:[] };
@@ -1947,6 +1982,22 @@ function _infObsTabla(P, D){
 function _infSecc19(P, D, k, cx){
   var doc=P.doc, C=P.C, W=P.W, M=P.M, mesN=_infMesN(D.mes), cap=function(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1); };
   var tot=function(v){ return { v:v, t:'tot' }; }, cerrado=(D.dia===_infMesFin(D.mes) && D.dia<hoyISO());
+  /* 27/10/2026 · el corte por frente de trabajo */
+  if(k==='frentes'){
+    var Fr=D.fre; if(!Fr || !Fr.filas.length){ P.nota('La obra no tiene frentes de trabajo.'); return true; }
+    var si=function(x, h){ return (x.T[h]||[]).length ? 'Sí' : 'Falta'; };
+    P.tabla('Cada frente al cierre del mes', ['Frente', 'Personal', 'Observaciones', 'Levantadas', 'Plan de respuesta', 'Mapa de riesgos', 'Mapa de evacuación', 'Punto de reunión'],
+      Fr.filas.map(function(x){ return [x.f.n, x.gente, x.obs, x.obs ? x.cerr+' ('+Math.round(x.cerr*100/x.obs)+' %)' : '—', si(x, 'plan-emergencia'), si(x, 'mapa-riesgos'), si(x, 'mapa-evacuacion'), x.f.punto ? 'Sí' : 'Falta']; })
+        .concat([tot(['Toda la obra', Fr.filas.reduce(function(a, x){ return a+x.gente; }, 0)+Fr.sinFrente, Fr.filas.reduce(function(a, x){ return a+x.obs; }, 0), '', '', '', '', ''])]),
+      [W-2*M-388, 46, 58, 58, 56, 54, 62, 54], { num:{ 1:1, 2:1 } });
+    if(Fr.sinFrente) P.nota(Fr.sinFrente+(Fr.sinFrente===1 ? ' persona en obra no tiene' : ' personas en obra no tienen')+' frente en su ficha (o tiene uno que no es de la lista): se asigna en su ficha, «Pasa a otro frente».');
+    var donde=Fr.filas.filter(function(x){ return x.f.ref || x.f.dist || x.f.dep; });
+    if(donde.length) P.tabla('Dónde está cada frente y quién responde', ['Frente', 'Ubicación', 'Responsable', 'Punto de reunión'],
+      donde.map(function(x){ return [x.f.n, [x.f.ref, x.f.dist, x.f.dep].filter(Boolean).join(' · '), [x.f.resp, x.f.cargo].filter(Boolean).join(' · ') || '—', x.f.punto || '—']; }),
+      [100, W-2*M-370, 130, 140], {});
+    P.nota('Un solo informe por obra: el personal, las horas hombre y los índices son de toda la obra. El frente de cada persona sale de su ficha y de su historia en la obra al '+fechaLarga(D.dia)+'; el de cada observación, de su ficha.');
+    return true;
+  }
   if(k==='personal'){
     var Pe=D.per;
     if(!Pe){ P.nota('No se pudo leer el personal de la obra.'); return true; }

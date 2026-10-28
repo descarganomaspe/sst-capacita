@@ -146,6 +146,10 @@ function cenArmarDemo(ahora0){
   });
   /* su capacitación: lo que le exige su puesto, con fecha; cada empresa con su nivel */
   var exige = function(p){ return CEN_CURSOS.filter(function(c){ return c.todos || (c.pues && c.pues.test(p.puesto)) || (c.emp && c.emp.indexOf(p.emp) > -1); }); };
+  /* 28/10/2026 · el que tiene algo pendiente no tiene NINGUNA capacitación vigente (nuevo sin capacitar, o todo vencido): así
+     «al día» es lo mismo que en la cuenta de verdad («alguna aprobada en los últimos 12 meses») y el tablero y el comparativo
+     dicen lo mismo. Con su propio azar, para no mover lo demás del ejemplo. */
+  var r2 = _cenAzar(20261029);
   personal.forEach(function(p){
     var e = cenEmp(p.emp), malo = r() > e.cap;
     p.caps = {};
@@ -157,6 +161,10 @@ function cenArmarDemo(ahora0){
       var req = Object.keys(p.caps), k = pick(req), cual = r();
       if(cual < 0.45) p.caps[k] = { f:_cenDia(hoy, -(366 + Math.floor(r() * 60))), ok:false, vencida:true };
       else delete p.caps[k];
+      req.forEach(function(k2){
+        if(k2 === k || !p.caps[k2]) return;
+        if(r2() < 0.5) p.caps[k2] = { f:_cenDia(hoy, -(366 + Math.floor(r2() * 90))), ok:false, vencida:true }; else delete p.caps[k2];
+      });
     }
     p.req = exige(p).map(function(c){ return c.k; });
     p.falta = p.req.filter(function(k){ return !p.caps[k] || !p.caps[k].ok; });
@@ -263,7 +271,7 @@ function cenYo(){ return cenUsuario(cenRol().u); }
 function _cenEstLeer(){ try{ var v = JSON.parse(localStorage.getItem(CEN_LS_EST) || 'null'); return (v && v.dia === _cenISO(new Date())) ? v : null; }catch(e){ return null; } }
 function _cenEstGuardar(){
   if(!CEN.demo) return;
-  var ext = { dia:CEN.d.hoy, ahora0:CEN.d.ahora0, hist:{}, nuevas:[], invitadas:CEN.d.invitadas };
+  var ext = { dia:CEN.d.hoy, ahora0:CEN.d.ahora0, hist:{}, nuevas:[], invitadas:CEN.d.invitadas, cumVer:CEN.d.cumVer || [], cumEst:CEN.d.cumEst || null };
   CEN.d.obs.forEach(function(o){ if(o.extra) ext.hist[o.id] = o.historia.slice(o.base); if(o.nueva) ext.nuevas.push(o); });
   try{ localStorage.setItem(CEN_LS_EST, JSON.stringify(ext)); }catch(e){}
 }
@@ -273,6 +281,7 @@ function _cenEstAplicar(ext){
   (ext.nuevas || []).forEach(function(o){ CEN.d.obs.unshift(o); });
   CEN.d.obs.forEach(function(o){ var h = ext.hist[o.id]; if(h && h.length && !o.nueva){ o.historia = o.historia.concat(h); o.extra = true; } });
   CEN.d.invitadas = ext.invitadas || [];
+  CEN.d.cumVer = ext.cumVer || []; if(ext.cumEst) CEN.d.cumEst = ext.cumEst;
 }
 /* la obra de ejemplo: la de hoy, con lo que ya se hizo en este navegador */
 function cenCargarDemo(){
@@ -328,38 +337,97 @@ function cenIndicadores(empId){
            delMes:delMes.length, aTiempo:cerradasMes.length ? aTiempo / cerradasMes.length : 1, estado:estado };
 }
 
-/* ══ LAS SECCIONES, SEGÚN EL RANGO ═══════════════════════════════════ */
+/* ══ LAS SECCIONES, SEGÚN EL RANGO ═══════════════════════════════════
+   28/10/2026 · #183 · Marcelo: «corrígelo». La obra de ejemplo tenía su propio menú (Tablero, Subió a ti, Subcontratas,
+   Personal de la obra, Capacitación por empresa, Uso del mes, El estándar…) y la cuenta de verdad, otro. Ahora el ejemplo
+   lleva EL MISMO MENÚ que la cuenta de verdad (la casa de cada cuenta: CUENTAS en portal/index.html):
+     · arriba, «OBRASST Central» (o «Corporativo», con «Tus obras» primero) y su área «Central»: Tablero de la obra ·
+       Observaciones · Informes de las subcontratas · Estándares y boletines · Equipo y rangos;
+     · abajo, «Tu empresa en la obra»: las áreas de siempre. En el ejemplo cada una dice qué trae (en la cuenta de verdad es
+       la gestión SST de la principal, la de los planes de siempre);
+     · la subcontrata, su menú de siempre con «Supervisión»: Empresas de la obra · Observaciones · Informes · Estándares y
+       boletines · Rangos del equipo.
+   Lo que solo existía en el ejemplo y no en la cuenta (el uso del mes, la capacitación por empresa, el comparativo de
+   contratistas, el informe consolidado, «Mis pendientes») ya no se ofrece: el ejemplo no promete lo que la cuenta no tiene.
+   «Subió a ti» es un filtro de «Observaciones» (como en la cuenta), y el personal de cada empresa va en su ficha. */
 var CEN_V = {
-  obras:    { id:'cen-obras', g:'Corporativo', ic:'◫', n:'Tus obras', s:'Todas las obras de la empresa, lado a lado, con lo de hoy y lo del mes' },
-  contratistas: { id:'cen-contratistas', g:'Corporativo', ic:'⇄', n:'Contratistas', s:'Cada subcontrata en todas tus obras: cómo cumple, para decidir a quién llamas en la próxima' },
-  tablero:  { id:'cen-tablero', g:'La obra', ic:'▦', n:'Tablero de la obra', s:'Cada empresa, hoy: su gente, su capacitación, su ATS y lo que tiene abierto' },
-  subio:    { id:'cen-subio', g:'La obra', ic:'⤴', n:'Subió a ti', s:'Lo que venció sin levantarse y llegó a tu rango, con el teléfono de quien lo tiene que levantar' },
-  obs:      { id:'cen-obs', g:'La obra', ic:'◉', n:'Observaciones', s:'Con foto, plazo por riesgo y escalamiento · la subcontrata levanta con foto, el supervisor valida' },
-  pend:     { id:'cen-pend', g:'Mi día', ic:'☑', n:'Mis pendientes', s:'Lo que te toca validar y lo tuyo que vence hoy' },
-  levantar: { id:'cen-levantar', g:'Mi empresa', ic:'⚒', n:'Por levantar', s:'Lo que la principal le observó a tu empresa, con su plazo y su foto' },
-  miemp:    { id:'cen-miemp', g:'Mi empresa', ic:'▦', n:'Mi empresa en la obra', s:'Lo mismo que la principal ve de tu empresa. Las otras empresas no lo ven' },
-  empresas: { id:'cen-empresas', g:'Empresas', ic:'▣', n:'Subcontratas', s:'Las empresas de la obra, su supervisor y su invitación · entran gratis' },
-  personal: { id:'cen-personal', g:'Empresas', ic:'☺', n:'Personal de la obra', s:'La gente de todas las empresas, con su capacitación al día' },
-  matriz:   { id:'cen-matriz', g:'Empresas', ic:'▤', n:'Capacitación por empresa', s:'El estándar de la obra y cuánto lo cumple cada empresa' },
-  informe:  { id:'cen-informe', g:'Gestión', ic:'▧', n:'Informe del mes', s:'El consolidado de todas las empresas, en PDF, sin armar nada' },
-  uso:      { id:'cen-uso', g:'Gestión', ic:'↗', n:'Uso del mes', s:'La gente de cada día de la obra: se cobra el día de más gente' },
-  equipo:   { id:'cen-equipo', g:'Gestión', ic:'⚑', n:'Equipo y rangos', s:'Quién ve qué y a quién le sube cada cosa' },
-  estandar: { id:'cen-estandar', g:'Gestión', ic:'⚙', n:'El estándar de la obra', s:'Plazos por riesgo, escalamiento y la capacitación que exige cada puesto' }
+  obras:    { id:'cen-obras', ic:'◫', n:'Tus obras', s:'Todas las obras de la empresa, lado a lado, con lo de hoy y lo del mes' },
+  contratistas: { id:'cen-contratistas', ic:'⇄', n:'Contratistas', s:'Cada subcontrata en todas tus obras: cómo cumple, para decidir a quién llamas en la próxima' },
+  tablero:  { id:'cen-tablero', ic:'▦', n:'Tablero de la obra', s:'Cada empresa de la obra, hoy: su gente, su capacitación, su ATS y lo que tiene abierto; las invitaciones' },
+  subio:    { id:'cen-subio', ic:'⤴', n:'Subió a ti', s:'Lo que venció sin levantarse y llegó a tu rango, con el teléfono de quien lo tiene que levantar' },
+  obs:      { id:'cen-obs', ic:'◉', n:'Observaciones', s:'Con foto, riesgo y plazo: la subcontrata levanta con foto y tú validas. Lo vencido sube solo al jefe y, un día después, al gerente' },
+  infsub:   { id:'cen-infsub', ic:'▧', n:'Informes de las subcontratas', s:'Lo que pides a tus subcontratas: las carpetas, lo que va en cada una, el avance de cada una, la revisión y el ZIP' },
+  estsub:   { id:'cen-estsub', ic:'▤', n:'Estándares y boletines', s:'Los de la principal para cada subcontrata: el acuse, la difusión a su gente con su firma y quién vio el boletín' },
+  equipo:   { id:'cen-equipo', ic:'⚑', n:'Equipo y rangos', s:'Supervisor, jefe y gerente: a quién le sube lo vencido y quién puede invitar o anular' },
+  pend:     { id:'cen-pend', ic:'☑', n:'Mis pendientes', s:'Lo que te toca validar y lo tuyo que vence hoy' },
+  levantar: { id:'cen-levantar', ic:'⚒', n:'Observaciones', s:'Las que te puso la principal, con su plazo y su foto: levántalas con la foto del después' },
+  miemp:    { id:'cen-miemp', ic:'▦', n:'Empresas de la obra', s:'Quién te supervisa y lo mismo que ve de tu empresa. Las otras empresas no lo ven' },
+  infpide:  { id:'cen-infpide', ic:'▧', n:'Informes', s:'Lo que te pide la principal: las carpetas del informe del mes, lo que va en cada una y cuánto llevas' },
+  estllega: { id:'cen-estllega', ic:'▤', n:'Estándares y boletines', s:'Lo que te mandó la principal: confirmas el estándar y lo difundes a tu gente' },
+  empresas: { id:'cen-empresas', ic:'▣', n:'Subcontratas', s:'Las empresas de la obra, su supervisor y su invitación · entran gratis' },
+  personal: { id:'cen-personal', ic:'☺', n:'Personal de la obra', s:'La gente de todas las empresas, con su capacitación al día' },
+  matriz:   { id:'cen-matriz', ic:'▤', n:'Capacitación por empresa', s:'El estándar de la obra y cuánto lo cumple cada empresa' },
+  informe:  { id:'cen-informe', ic:'▧', n:'Informe del mes', s:'El consolidado de todas las empresas, en PDF, sin armar nada' },
+  uso:      { id:'cen-uso', ic:'↗', n:'Uso del mes', s:'La gente de cada día de la obra: se cobra el día de más gente' },
+  estandar: { id:'cen-estandar', ic:'⚙', n:'El estándar de la obra', s:'Plazos por riesgo, escalamiento y la capacitación que exige cada puesto' },
+  /* 28/10/2026 · el cumplimiento: las mismas pantallas de la cuenta de verdad (portal/cumple.js), con los datos de esta obra (cenCumRpc) */
+  cumemp:   { id:'cum-emp', ic:'✅', n:'Comparativo de contratistas', tab:'Comparativo de contratistas', s:'Cada empresa de tu obra, lado a lado: lo que cumple hoy de sus propios registros (capacitación, EMO, inducción, ATS, charla, PETAR, papeletas y observaciones) y su nota' },
+  cummatriz:{ id:'cum-matriz', ic:'▦', n:'Matriz de capacitación', s:'Cada trabajador, tema por tema: lo que pide su puesto, lo que tiene al día, lo que vence y lo que falta' },
+  cumconsol:{ id:'cum-consol', ic:'📈', n:'Informe consolidado', s:'Todas las empresas juntas, mes a mes: la tendencia, cada empresa, el IF y el IG, y su PDF' },
+  cumqr:    { id:'cum-qr', ic:'🪪', n:'Verificar a un trabajador', s:'Por el QR de su casco o de su carné, o por su documento: su EMO, su SCTR, su capacitación, el alto riesgo, la charla y el ATS de hoy y sus papeletas' },
+  cumcomp:  { id:'cum-comp', ic:'⇄', n:'Comparativo de contratistas de todas tus obras', tab:'Contratistas en todas tus obras', s:'Cada contratista en todas tus obras, lado a lado: lo que cumple en cada una y su nota' }
 };
-var CEN_POR_ROL = {
-  corp:       ['obras', 'contratistas', 'tablero', 'obs', 'empresas', 'personal', 'matriz', 'informe', 'equipo'],
-  gerente:    ['tablero', 'subio', 'obs', 'empresas', 'personal', 'matriz', 'informe', 'uso', 'equipo', 'estandar'],
-  jefe:       ['tablero', 'subio', 'obs', 'empresas', 'personal', 'matriz', 'informe', 'equipo', 'estandar'],
-  supervisor: ['pend', 'tablero', 'obs', 'personal', 'matriz'],
-  sub:        ['levantar', 'miemp', 'personal', 'matriz']
-};
-function centralVistas(){
-  return (CEN_POR_ROL[CEN.rol] || CEN_POR_ROL.jefe).map(function(k){
-    var v = CEN_V[k], g = v.g;
-    /* el corporativo ve sus obras arriba y, abajo, la obra que tiene abierta */
-    if(CEN.rol === 'corp' && v.g !== 'Corporativo') g = 'Obra abierta · ' + CEN.d.obra.nombre.replace(/^Centro Comercial /, '');
-    return { id:v.id, g:g, ic:v.ic, n:v.n, s:v.s, tablas:[], pintar:function(caja){ CEN.d.ahora = Date.now(); CEN_PINTA[k](caja); } };
+var CEN_CENTRAL = ['tablero', 'cumemp', 'cummatriz', 'cumconsol', 'cumqr', 'obs', 'infsub', 'estsub', 'equipo'];
+var CEN_POR_ROL = { corp:1, gerente:1, jefe:1, supervisor:1, sub:1 };
+/* las áreas del ejemplo, en el orden de la cuenta de verdad (la de abajo, de AREAS del portal) */
+function cenAreasOrden(){
+  var sub = CEN.rol === 'sub', A = [], gn = CEN.rol === 'corp' ? 'OBRASST Corporativo' : 'OBRASST Central';
+  if(!sub){
+    if(CEN.rol === 'corp') A.push({ id:'a-corp', n:'Tus obras', ic:'◫', v:['cen-obras', 'cum-comp'], gk:'casa', gn:gn });
+    A.push({ id:'a-cadena', n:'Central', ic:'🏗', v:CEN_CENTRAL.map(function(k){ return CEN_V[k].id; }), gk:'casa', gn:gn });
+  }
+  (typeof AREAS !== 'undefined' ? AREAS : []).forEach(function(R){
+    if(R.id === 'a-cadena'){ if(sub) A.push({ id:'a-cadena', n:'Supervisión', ic:'🔗', v:['cen-miemp', 'cen-levantar', 'cen-infpide', 'cen-estllega', 'cen-x-rangos'] }); return; }
+    A.push({ id:R.id, n:(R.id === 'a-inicio' && !sub) ? 'Hoy en tu obra' : R.n, ic:R.ic, v:['cen-x-' + R.id], gk:sub ? '' : 'propia', gn:sub ? '' : 'Tu empresa en la obra' });
   });
+  return A;
+}
+var CEN_KEY = {}; Object.keys(CEN_V).forEach(function(k){ CEN_KEY[CEN_V[k].id] = k; });
+function centralVistas(){
+  var out = [];
+  cenAreasOrden().forEach(function(A){
+    A.v.forEach(function(id){
+      var k = CEN_KEY[id];
+      if(k){ var v = CEN_V[k]; out.push({ id:v.id, a:A.id, g:A.n, ic:v.ic, n:v.n, tab:v.tab || v.n, s:v.s, tablas:[], mira:true, pintar:function(caja){ CEN.d.ahora = Date.now(); CEN_PINTA[k](caja); } }); return; }
+      /* lo que en la cuenta de verdad es de la principal (o de la subcontrata) y en el ejemplo se explica */
+      var nx = id === 'cen-x-rangos' ? 'Rangos del equipo' : A.n;
+      out.push({ id:id, a:A.id, g:A.n, ic:A.ic, n:nx, tab:nx, s:'En la cuenta de verdad', tablas:[], mira:true, explica:true, pintar:function(caja){ cenVistaExplica(caja, id, A); } });
+    });
+  });
+  return out;
+}
+/* la primera sección que el ejemplo sí muestra (la subcontrata empieza por «Supervisión») */
+function cenInicio(){ var vs = centralVistas(); return (vs.filter(function(v){ return !v.explica; })[0] || vs[0]).id; }
+/* lo de abajo, en el ejemplo: qué trae en la cuenta de verdad */
+function cenVistaExplica(caja, id, A){
+  _cenAcc('');
+  var R = (typeof AREAS !== 'undefined' ? AREAS : []).filter(function(x){ return x.id === A.id; })[0], sub = CEN.rol === 'sub';
+  var trae = (R ? R.v : []).map(function(k){ return (typeof PESTANAS !== 'undefined' && PESTANAS[k]) || ''; }).filter(function(t, i, l){ return t && l.indexOf(t) === i; });
+  var h = id === 'cen-x-rangos'
+    ? '<p>El rango de cada persona de tu equipo (supervisor, jefe o gerente): a quién le sube lo que vence y quién puede invitar o anular. En el ejemplo, mira «Equipo y rangos» de la principal.</p>'
+    : '<p>' + (sub ? 'Aquí va lo de tu propia empresa, como en los planes de siempre' : 'Aquí va la gestión SST de tu propia empresa en la obra, como en los planes de siempre') + (trae.length ? ': <b>' + esc(trae.join(' · ')) + '</b>.' : '.') + '</p>' +
+      '<p>' + (sub ? 'La subcontrata lo tiene completo y gratis mientras trabaje en la obra con Central.' : 'Debajo de «Central» la principal sigue con todo lo suyo; arriba, lo de todas las empresas de la obra.') + '</p>';
+  caja.innerHTML = '<div class="tarj"><div class="tarj-cuerpo cen-explica"><h2>' + esc(id === 'cen-x-rangos' ? 'Rangos del equipo' : A.n) + '</h2>' + h + '<p class="sub">Obra de ejemplo: esta parte no se llena con datos inventados. ' +
+    (sub ? 'La que se recorre es «Supervisión».' : 'La que se recorre es «Central».') + '</p></div></div>';
+}
+/* el número al lado del área y de la pestaña: lo que te espera (como cadCuenta en la cuenta de verdad) */
+function cenInsignia(id){
+  try{
+    var d = CEN.d, yo = cenYo(), n = 0;
+    if(id === 'cen-obs') n = cenSubioAMi().length + d.obs.filter(function(o){ return o.por === yo.id && cenEstado(o).est === 'levantada'; }).length;
+    else if(id === 'cen-levantar') n = d.obs.filter(function(o){ return o.emp === yo.emp && CEN.rol === 'sub' && cenEstado(o).est === 'abierta'; }).length;
+    return n ? '<span class="n cad-n' + (cenSubioAMi().length ? ' mal' : '') + '">' + n + '</span>' : '';
+  }catch(e){ return ''; }
 }
 function cenEsPrincipal(){ return CEN.rol !== 'sub'; }
 function cenMiEmp(){ var u = cenYo(); return u ? u.emp : null; }
@@ -392,7 +460,7 @@ function cenVistaTablero(caja){
     tot.aT += x.aTiempo * x.delMes; tot.nT += x.delMes;
     return { e:e, x:x };
   });
-  _cenAcc(cenEsPrincipal() ? '<button type="button" class="bt sec" id="cen-t-informe">Informe del mes</button><button type="button" class="bt" id="cen-t-obs">＋ Nueva observación</button>' : '');
+  _cenAcc(cenEsPrincipal() ? ((CEN.rol === 'jefe' || CEN.rol === 'gerente' || CEN.rol === 'corp') ? '<button type="button" class="bt sec" id="cen-t-inv">Invitar a una subcontrata</button>' : '') + '<button type="button" class="bt" id="cen-t-obs">＋ Nueva observación</button>' : '');
   var h = '';
   var sub = cenSubioAMi();
   if(sub.length) h += '<button type="button" class="cen-subio" id="cen-subio-ir"><span class="cen-subio-n">' + sub.length + '</span><span><b>' +
@@ -400,7 +468,7 @@ function cenVistaTablero(caja){
     esc(cenEmp(sub[0].emp).corto + ' · ' + sub[0].titulo.toLowerCase() + ' · venció hace ' + _cenHace(d.ahora - sub[0].vence)) + '</small></span><span class="cen-subio-ir">Ver ›</span></button>';
   h += '<div class="rej cen-cifras">' +
     cifra('Gente hoy', _cenN(tot.gente), emps.length + (emps.length === 1 ? ' empresa' : ' empresas') + ' en la obra', '') +
-    cifra('Capacitación al día', _cenPct(tot.gente ? tot.alDia / tot.gente : 1), _cenN(tot.gente - tot.alDia) + ' con algo pendiente', tot.alDia / Math.max(1, tot.gente) < 0.9 ? 'ojo' : 'ok') +
+    cifra('Capacitación vigente', _cenPct(tot.gente ? tot.alDia / tot.gente : 1), _cenN(tot.gente - tot.alDia) + ' sin capacitación en 12 meses', tot.alDia / Math.max(1, tot.gente) < 0.9 ? 'ojo' : 'ok') +
     cifra('ATS de hoy', tot.ok + ' de ' + tot.fr, tot.ok < tot.fr ? (tot.fr - tot.ok) + (tot.fr - tot.ok === 1 ? ' frente sin ATS' : ' frentes sin ATS') : 'todos los frentes', tot.ok < tot.fr ? 'ojo' : 'ok') +
     cifra('Observaciones abiertas', String(tot.ab), tot.ven ? tot.ven + (tot.ven === 1 ? ' vencida' : ' vencidas') + ' · ' + tot.lev + ' por validar' : tot.lev + ' por validar', tot.ven ? 'mal' : '') +
     cifra('Levantadas a tiempo', _cenPct(tot.nT ? tot.aT / tot.nT : 1), 'últimos 30 días', '') + '</div>';
@@ -438,12 +506,17 @@ function cenVistaTablero(caja){
         esc(cenEmp(o.emp).corto + ' · ' + o.lugar) + '</small></span>' + cenEstadoHTML(o) + '</button></li>'; }).join('') + '</ul>'
     : '<p class="cen-nada">Nada vence en las próximas 24 horas.</p>';
   h += '</div></div></div>';
+  if(cenEsPrincipal() && d.invitadas.length) h += '<div class="tarj"><div class="tarj-cab"><div><h2>Invitaciones por aceptar</h2><p class="sub">Cuando acepte, entra con su gente y aparece en el tablero</p></div></div><div class="tarj-cuerpo"><ul class="cen-plana">' +
+    d.invitadas.map(function(e){ return '<li><span><b>' + esc(e.nombre) + '</b><small class="cen-ol">RUC ' + esc(e.ruc) + ' · se la mandaste a ' + esc(e.sup) + ' · ' + esc(hace(new Date(e.t).toISOString())) + '</small></span>' +
+      ((CEN.rol === 'jefe' || CEN.rol === 'gerente' || CEN.rol === 'corp') ? '<button type="button" class="bt mal chico" data-inv-quitar="' + esc(e.id) + '">Retirar</button>' : '') + '</li>'; }).join('') + '</ul></div></div>';
   caja.innerHTML = h;
   Array.prototype.forEach.call(caja.querySelectorAll('tr[data-emp]'), function(tr){ tr.onclick = function(){ cenVerEmpresa(tr.getAttribute('data-emp')); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('[data-obs]'), function(b){ b.onclick = function(){ cenVerObs(b.getAttribute('data-obs')); }; });
-  if($('cen-subio-ir')) $('cen-subio-ir').onclick = function(){ navegar('cen-subio'); };
+  if($('cen-subio-ir')) $('cen-subio-ir').onclick = function(){ CEN.filtro.obs = 'subio'; navegar('cen-obs'); };
   if($('cen-t-obs')) $('cen-t-obs').onclick = function(){ cenNuevaObs(); };
-  if($('cen-t-informe')) $('cen-t-informe').onclick = function(){ navegar('cen-informe'); };
+  if($('cen-t-inv')) $('cen-t-inv').onclick = cenInvitar;
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-inv-quitar]'), function(b){ b.onclick = function(){
+    CEN.d.invitadas = CEN.d.invitadas.filter(function(x){ return x.id !== b.getAttribute('data-inv-quitar'); }); _cenEstGuardar(); toast('Invitación retirada.'); _cenRepintar(); }; });
 }
 /* la ficha de una empresa: sus cifras, su supervisor, lo abierto y lo que le falta */
 function cenVerEmpresa(id){
@@ -454,7 +527,7 @@ function cenVerEmpresa(id){
   var porCurso = {}; falta.forEach(function(p){ p.falta.forEach(function(k){ porCurso[k] = (porCurso[k] || 0) + 1; }); });
   var at = d.ats[id] || [], t = at[at.length - 1] || { fr:0, ok:0 };
   var h = '<div class="rej cen-cifras cen-3">' +
-    cifra('Gente hoy', _cenN(x.gente), '', '') + cifra('Capacitación al día', _cenPct(x.cap), x.gente - x.alDia + ' con algo pendiente', x.cap < 0.85 ? 'ojo' : 'ok') +
+    cifra('Gente hoy', _cenN(x.gente), '', '') + cifra('Capacitación vigente', _cenPct(x.cap), x.gente - x.alDia + ' sin capacitación en 12 meses', x.cap < 0.85 ? 'ojo' : 'ok') +
     cifra('ATS de hoy', x.atsOk + ' de ' + x.atsFr, x.atsOk < x.atsFr ? 'falta en ' + (x.atsFr - x.atsOk) + ' frente' + (x.atsFr - x.atsOk === 1 ? '' : 's') : 'todos sus frentes', x.atsOk < x.atsFr ? 'ojo' : 'ok') + '</div>';
   h += '<dl class="datos"><dt>RUC</dt><dd>' + esc(e.ruc) + '</dd><dt>Rubro</dt><dd>' + esc(e.rubro) + '</dd>' +
     (sup ? '<dt>' + (e.principal ? 'Jefe SSOMA' : 'Su supervisor') + '</dt><dd>' + esc(sup.nombre) + ' · <a href="tel:+51' + sup.cel.replace(/\D/g, '') + '">' + esc(sup.cel) + '</a></dd>' : '') +
@@ -471,7 +544,14 @@ function cenVerEmpresa(id){
       _cenWA(sup.cel, 'Hola ' + sup.nombre.split(' ')[0] + ', te escribo de ' + cenEmp('via').corto + ' por lo pendiente de ' + e.corto + ' en ' + d.obra.nombre + '.') + '">Escribirle por WhatsApp</a>' : ''),
     { ancha:false });
   Array.prototype.forEach.call(document.querySelectorAll('#hoja [data-obs]'), function(b){ b.onclick = function(){ cenVerObs(b.getAttribute('data-obs')); }; });
-  if($('cen-e-pers')) $('cen-e-pers').onclick = function(){ CEN.filtro.personalEmp = id; cerrarHoja(); navegar('cen-personal'); };
+  if($('cen-e-pers')) $('cen-e-pers').onclick = function(){
+    var L = d.personal.filter(function(p){ return p.emp === id; }), c = $('hoja-cuerpo'); if(!c || $('cen-e-pl')) return;
+    c.insertAdjacentHTML('beforeend', '<h3 class="cen-h3" id="cen-e-pl">Su personal (' + L.length + ')</h3><div class="tarj" id="cen-e-pt"></div>');
+    tabla($('cen-e-pt'), [{ k:'nombre', t:'Trabajador' }, { k:'dni', t:'DNI' }, { k:'puesto', t:'Puesto' },
+      { k:'alDia', t:'Capacitación', v:function(p){ return p.alDia ? 'al día' : 'le falta'; }, h:function(p){ return p.alDia ? '<span class="pill ok">Al día</span>' : '<span class="pill ojo">Le falta ' + p.falta.length + '</span>'; } }],
+      L, { orden:'nombre', unidad:'personas', archivo:'personal-' + id });
+    this.disabled = true; try{ $('cen-e-pl').scrollIntoView({ behavior:'smooth', block:'start' }); }catch(e){}
+  };
 }
 
 /* ══ SUBIÓ A TI ══════════════════════════════════════════════════════ */
@@ -499,9 +579,10 @@ function cenVistaSubio(caja){
 }
 
 /* ══ LAS OBSERVACIONES ═══════════════════════════════════════════════ */
-var CEN_FILTROS = [['todas', 'Todas'], ['abiertas', 'Abiertas'], ['vencidas', 'Vencidas'], ['validar', 'Por validar'], ['cerradas', 'Cerradas']];
+var CEN_FILTROS = [['abiertas', 'Abiertas'], ['vencidas', 'Vencidas'], ['validar', 'Por validar'], ['subio', 'Subió a ti'], ['cerradas', 'Cerradas'], ['todas', 'Todas']];
 function _cenPasaFiltro(o, f){
   var s = cenEstado(o);
+  if(f === 'subio') return cenSubioAMi().indexOf(o) > -1;
   if(f === 'abiertas') return s.est === 'abierta';
   if(f === 'vencidas') return s.vencida;
   if(f === 'validar') return s.est === 'levantada';
@@ -512,8 +593,10 @@ function cenVistaObs(caja){
   var f = CEN.filtro.obs || 'abiertas', fe = CEN.filtro.obsEmp || '', fr = CEN.filtro.obsRiesgo || '';
   _cenAcc(cenEsPrincipal() ? '<button type="button" class="bt" id="cen-o-nueva">＋ Nueva observación</button>' : '');
   var todas = cenObsVisibles();
-  var cuenta = {}; CEN_FILTROS.forEach(function(x){ cuenta[x[0]] = todas.filter(function(o){ return _cenPasaFiltro(o, x[0]); }).length; });
-  var h = '<div class="cen-filtros"><div class="cen-chips" role="radiogroup" aria-label="Estado">' + CEN_FILTROS.map(function(x){
+  var FS = CEN_FILTROS.filter(function(x){ return x[0] !== 'subio' || CEN.rol === 'jefe' || CEN.rol === 'gerente'; });
+  if(!FS.some(function(x){ return x[0] === f; })) f = CEN.filtro.obs = 'abiertas';
+  var cuenta = {}; FS.forEach(function(x){ cuenta[x[0]] = todas.filter(function(o){ return _cenPasaFiltro(o, x[0]); }).length; });
+  var h = '<div class="cen-filtros"><div class="cen-chips" role="radiogroup" aria-label="Estado">' + FS.map(function(x){
       return '<button type="button" role="radio" aria-checked="' + (f === x[0]) + '" class="cen-chip' + (f === x[0] ? ' on' : '') + '" data-f="' + x[0] + '">' + x[1] + ' <b>' + cuenta[x[0]] + '</b></button>'; }).join('') + '</div>';
   if(cenEsPrincipal()) h += '<select id="cen-o-emp" aria-label="Empresa"><option value="">Todas las empresas</option>' + CEN_EMPRESAS.map(function(e){
       return '<option value="' + e.id + '"' + (fe === e.id ? ' selected' : '') + '>' + esc(e.corto) + '</option>'; }).join('') + '</select>';
@@ -663,13 +746,12 @@ function cenVistaMiEmp(caja){
   var e = cenEmp(cenMiEmp()), x = cenIndicadores(e.id);
   _cenAcc('');
   caja.innerHTML = '<div class="rej cen-cifras">' + cifra('Gente hoy', _cenN(x.gente), '', '') +
-    cifra('Capacitación al día', _cenPct(x.cap), (x.gente - x.alDia) + ' con algo pendiente', x.cap < 0.85 ? 'ojo' : 'ok') +
+    cifra('Capacitación vigente', _cenPct(x.cap), (x.gente - x.alDia) + ' sin capacitación en 12 meses', x.cap < 0.85 ? 'ojo' : 'ok') +
     cifra('ATS de hoy', x.atsOk + ' de ' + x.atsFr, x.atsOk < x.atsFr ? 'falta en ' + (x.atsFr - x.atsOk) + ' frente' : 'todos tus frentes', x.atsOk < x.atsFr ? 'ojo' : 'ok') +
     cifra('Abiertas', String(x.abiertas), x.vencidas ? x.vencidas + ' vencidas' : 'ninguna vencida', x.vencidas ? 'mal' : '') +
     cifra('Levantadas a tiempo', _cenPct(x.aTiempo), 'últimos 30 días', '') + '</div>' +
-    '<div class="tarj"><div class="tarj-cuerpo cen-priv"><b>Lo que ve la principal de tu empresa</b><p>Esto mismo: tu gente, tu capacitación, tus ATS, tu EPP y las observaciones de esta obra. ' +
-    'Nada de tus otras obras. Ninguna otra subcontrata ve lo tuyo. Los reportes de tu gente los resuelves tú: a la principal le sube solo lo de riesgo alto que no se levanta a tiempo, ' +
-    'el peligro inminente —al instante— y lo que es de otra empresa.</p></div></div>';
+    '<div class="tarj"><div class="tarj-cuerpo cen-priv"><b>Lo que ve la principal de tu empresa</b><p>Tus cifras del día en esta obra (gente, capacitación, ATS, EPP, reportes abiertos), la lista de tu personal ' +
+    'y tus ATS de las dos últimas semanas, y las observaciones que te deja. Nada de tus otras obras. Ninguna otra subcontrata ve lo tuyo. Los reportes de tu gente los resuelves tú.</p></div></div>';
 }
 
 /* ══ LAS SUBCONTRATAS Y LA INVITACIÓN ════════════════════════════════ */
@@ -719,8 +801,8 @@ function cenInvitar(){
     var sup = String($('cen-i-sup').value || '').trim().split(' ')[0] || 'hola';
     $('cen-i-msg').innerHTML = '<p>Hola ' + esc(sup) + ', soy ' + esc(cenYo().nombre.split(' ')[0]) + ', ' + esc(cenYo().cargo) + ' de <b>' + esc(cenEmp('via').corto) + '</b>. ' +
       'Te invito a registrar a ' + esc(razon || 'tu empresa') + ' en <b>' + esc(CEN.d.obra.nombre) + '</b> con OBRASST. Entras gratis, con tu gente: ATS, charlas, capacitación y EPP en la app, y aquí ves lo que te observamos.</p>' +
-      '<p class="cen-wa-link">descarganomaspe.github.io/sst-capacita/?unirse=' + (razon ? 'AH7Q-K2M9' : '····-····') + '</p>' +
-      '<p class="cen-wa-nota">El enlace es solo para esa empresa y vence en 7 días.</p>';
+      '<p class="cen-wa-link">obrasstapp.com/?cad=' + (razon ? '3f9c…e21a' : '····') + '</p>' +
+      '<p class="cen-wa-nota">El enlace es solo para esa empresa y vence en 14 días.</p>';
   };
   ['cen-i-ruc', 'cen-i-sup', 'cen-i-cel'].forEach(function(id){ $(id).oninput = pinta; }); pinta();
   $('cen-i-no').onclick = cerrarHoja;
@@ -826,16 +908,16 @@ function cenVistaUso(caja){
 
 /* ══ EL EQUIPO Y SUS RANGOS ══════════════════════════════════════════ */
 var CEN_RECIBE = {
-  corp:'El consolidado de todas las obras, el comparativo de contratistas y todo accidente, al instante.',
-  gerente:'El consolidado, el informe del mes y lo que lleva más de un día vencido.',
-  jefe:'Lo que vence sin levantarse, el peligro inminente al instante y el estándar de la obra.',
+  corp:'Lo que lleva más de un día vencido en sus obras, como el gerente.',
+  gerente:'Lo que lleva más de un día vencido sin levantarse.',
+  jefe:'Lo que vence sin levantarse.',
   supervisor:'Lo que levantan las subcontratas, para validar; lo suyo que vence.',
   sub:'Lo que la principal le observa a su empresa, con su plazo.'
 };
 var CEN_VE = {
-  corp:'Todas las obras de la empresa y el comparativo de contratistas',
-  gerente:'Toda la obra: todas las empresas, el informe y el uso del mes',
-  jefe:'Toda la obra: todas las empresas, invita y fija el estándar',
+  corp:'Todas las obras de la empresa, lado a lado, y Central en cada una',
+  gerente:'Toda la obra: todas las empresas, sus informes y sus estándares',
+  jefe:'Toda la obra: todas las empresas; invita a las subcontratas',
   supervisor:'Toda la obra; observa y valida lo que levantan',
   sub:'Solo su empresa en esta obra: lo que le observan y su gente'
 };
@@ -843,7 +925,7 @@ function cenVistaEquipo(caja){
   _cenAcc('<button type="button" class="bt sec" id="cen-q-inv">＋ Invitar a alguien de tu equipo</button>');
   var rg = { corp:'Corporativo', gerente:'Gerente', jefe:'Jefe', supervisor:'Supervisor', sub:'Subcontrata' };
   var h = '<div class="tarj" id="cen-q-t"></div><div class="tarj"><div class="tarj-cuerpo cen-priv"><b>Cómo sube lo que vence</b><p>Riesgo alto, 24 horas; medio, 72; bajo, 7 días. ' +
-    'Si vence sin levantarse, le llega al jefe SSOMA con el teléfono del supervisor de la subcontrata. Si pasa un día más, al gerente. El peligro inminente, al instante.</p></div></div>';
+    'Si vence sin levantarse, le llega al jefe SSOMA con el teléfono del supervisor de la subcontrata. Si pasa un día más, al gerente.</p></div></div>';
   caja.innerHTML = h;
   tabla($('cen-q-t'), [
     { k:'nombre', t:'Nombre', v:function(u){ return u.nombre + ' · ' + u.cargo; },
@@ -877,7 +959,7 @@ function cenVistaEstandar(caja){
     ['alto', 'medio', 'bajo'].map(function(k){ var R = CEN_RIESGO[k]; return '<li><span>' + cenRiesgoHTML(k) + ' Riesgo ' + R.t.toLowerCase() + '</span><b>' + (R.h < 48 ? R.h + ' horas' : (R.h / 24) + ' días') + '</b></li>'; }).join('') +
     '</ul></div></div><div class="tarj"><div class="tarj-cab"><div><h2>Escalamiento</h2><p class="sub">Si vence sin levantarse, sube solo</p></div></div><div class="tarj-cuerpo"><ol class="cen-escala">' +
     '<li><b>Al vencer</b><span>Al jefe SSOMA de la principal, con el teléfono del supervisor de la subcontrata.</span></li>' +
-    '<li><b>Un día después</b><span>Al gerente SSOMA.</span></li><li><b>Peligro inminente</b><span>Al jefe, al instante, aunque no haya vencido.</span></li></ol></div></div></div>';
+    '<li><b>Un día después</b><span>Al gerente SSOMA.</span></li></ol></div></div></div>';
   h += '<div class="tarj"><div class="tarj-cab"><div><h2>La capacitación que exige la obra</h2><p class="sub">Vigencia de 12 meses · se cumple en la app de cada empresa</p></div></div><div class="tabla-caja"><table><thead><tr><th>Curso</th><th>A quién se le exige</th></tr></thead><tbody>' +
     CEN_CURSOS.map(function(c){ return '<tr><td>' + esc(c.t) + '</td><td>' + (c.todos ? 'A todos' : (c.emp ? 'A todo ' + c.emp.map(function(x){ return cenEmp(x).corto; }).join(', ') :
       { alt:'Encofradores, andamieros, operarios y capataces', ele:'Electricistas', iza:'Riggers y operadores de grúa' }[c.k] || '')) + '</td></tr>'; }).join('') + '</tbody></table></div></div>' +
@@ -1218,9 +1300,8 @@ function cenDondeMirar(obras){
   var l = [];
   obras.filter(function(o){ return o.acc; }).forEach(function(o){ l.push({ t:'<b>' + esc(o.nombre) + '</b>: accidente incapacitante este mes', s:'Días sin accidentes: ' + o.diasSin + ' · la investigación y sus medidas, en su obra', p:'Accidente', cl:'mal' }); });
   obras.filter(function(o){ return o.ven >= 2; }).sort(function(a, b){ return b.ven - a.ven; }).forEach(function(o){ l.push({ t:'<b>' + esc(o.nombre) + '</b>: ' + o.ven + ' observaciones vencidas', s:'Ya le subieron a su jefe SSOMA', p:'Vencidas', cl:'ojo' }); });
-  var C = cenContratistas().filter(function(c){ return c.obras.length > 1 && c.cap < 0.85; });
-  C.forEach(function(c){ l.push({ t:'<b>' + esc(c.corto) + '</b>: capacitación baja en ' + c.obras.length + ' obras', s:'Al día: ' + _cenPct(c.cap) + ' · levantadas a tiempo: ' + _cenPct(c.aT), p:'Contratista', cl:'ojo' }); });
-  if(!l.length) l.push({ t:'Nada que salte a la vista', s:'Todas las obras y contratistas dentro del estándar', p:'Bien', cl:'ok' });
+  /* 28/10/2026 · sin el comparativo de contratistas entre obras: la cuenta de verdad no lo tiene */
+  if(!l.length) l.push({ t:'Nada que salte a la vista', s:'Todas las obras dentro de lo esperado', p:'Bien', cl:'ok' });
   return l.slice(0, 5);
 }
 function cenVerObra(id){
@@ -1286,14 +1367,365 @@ function cenVistaContratistas(caja){
   ], C, { unidad:'empresas', archivo:'contratistas-' + new Date().getFullYear(), alClic:function(c){ if(cenEmp(c.id) && !cenEmp(c.id).principal && CEN_EMPRESAS.some(function(e){ return e.id === c.id; })) cenVerEmpresa(c.id); else toast('En la obra de ejemplo, el detalle se abre solo para las empresas de Los Álamos.'); } });
 }
 
+/* ══ 28/10/2026 · EL CUMPLIMIENTO, EN EL EJEMPLO DE CENTRAL ═══════════════════════════════════════════════════════
+   Marcelo: «construye funciones». Lo que en la cuenta de verdad son el comparativo de contratistas, la matriz de capacitación,
+   el informe consolidado, verificar a un trabajador por su QR y, en Corporativo, cada contratista en todas sus obras
+   (portal/cumple.js, las mismas pantallas), aquí lo contesta cenCumRpc con la obra de ejemplo: su gente, sus capacitaciones
+   (el estándar de la obra es CEN_CURSOS), su ATS por frente y sus observaciones. Lo que el ejemplo no traía (el EMO, el SCTR,
+   la charla de hoy, el PETAR, las papeletas) se inventa con su propio azar; lo de antes no cambia. Lo que se hace aquí (el
+   estándar por puesto, las verificaciones) queda en este navegador, como lo demás del ejemplo. */
+var CEN_CUM_PERF = { via:{ emo:0.03, ats:0.97, ch:0.95 }, rimac:{ emo:0.12, ats:0.86, ch:0.74 }, sur:{ emo:0.06, ats:0.9, ch:0.86 }, pacif:{ emo:0.03, ats:0.96, ch:0.93 }, chavin:{ emo:0.15, ats:0.82, ch:0.66 } };
+var CEN_CUM_ALTO = { alt:['altura', 'Trabajo en altura'], exc:['excavacion', 'Excavación'], ele:['electrico', 'Trabajo eléctrico'], iza:['izaje', 'Izaje'] };
+var CEN_CUM_COMO = 'La nota de 0 a 100 sale de la capacitación al día (20 %), el EMO vigente (15 %), la inducción (10 %), los que firmaron su ATS de hoy (15 %), los que estuvieron en la charla de hoy (10 %), lo levantado a tiempo en 30 días (20 %) y no tener riesgo alto vencido (10 %). Lo que no tiene datos no cuenta; el ATS y la charla, de lunes a sábado.';
+var CEN_CUM_RUC = { drywall:'20999100078', ascensor:'20999100086', metal:'20999100094', misti:'20999100108', chachani:'20999100116' };
+function _cenTapa(d){ d = String(d || ''); return d ? '••••' + d.slice(-4) : ''; }
+function _cenNorm(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+function _cenSemilla(s){ var h = 2166136261; s = String(s); for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function _cenCurso(k){ return CEN_CURSOS.filter(function(c){ return c.k === k; })[0] || { k:k, t:k }; }
+function cenCum(){
+  var d = CEN.d; if(d.cum) return d.cum;
+  var hoy = d.hoy, habil = new Date(hoy + 'T12:00:00').getDay() !== 0, r = _cenAzar(20261028);
+  var finMes = _cenISO(new Date(+hoy.slice(0, 4), +hoy.slice(5, 7), 0)), finAnt = _cenISO(new Date(+hoy.slice(0, 4), +hoy.slice(5, 7) - 1, 0));
+  var T = {};
+  d.personal.forEach(function(p){
+    var pf = CEN_CUM_PERF[p.emp] || {}, x = r(), malo = pf.emo != null ? pf.emo : 0.05;
+    var t = { p:p };
+    t.emo = x < malo * 0.3 ? { e:'sin' } : (x < malo ? { e:'ven', hasta:_cenDia(hoy, -(3 + Math.floor(r() * 70))) } : (x < malo + 0.05 ? { e:'vence', hasta:_cenDia(hoy, 2 + Math.floor(r() * 27)) } : { e:'ok', hasta:_cenDia(hoy, 35 + Math.floor(r() * 300)) }));
+    t.sctr = r() < 0.008 ? { e:'ven', hasta:finAnt } : { e:'ok', hasta:finMes };
+    t.ind = !!(p.caps.ind && p.caps.ind.ok);
+    t.ats = habil && r() < (pf.ats || 0.92);
+    t.charla = habil && r() < (pf.ch || 0.88) ? '07:' + _cenDos(5 + Math.floor(r() * 40)) : null;
+    var xa = r(); t.amon = xa < 0.022 ? [_cenDia(hoy, -Math.floor(r() * 28))] : (xa < 0.027 ? [_cenDia(hoy, -Math.floor(r() * 12)), _cenDia(hoy, -(14 + Math.floor(r() * 14)))] : []);
+    t.petar = null;
+    T[p.id] = t;
+  });
+  /* el PETAR de hoy: las cuadrillas de altura, excavación e izaje */
+  if(habil){
+    [['rimac', 'alt', 22], ['chavin', 'alt', 14], ['sur', 'exc', 12], ['via', 'iza', 6], ['pacif', 'ele', 6]].forEach(function(z){
+      d.personal.filter(function(p){ return p.emp === z[0] && p.req.indexOf(z[1]) > -1; }).slice(0, z[2]).forEach(function(p){ T[p.id].petar = { k:z[1], tipo:CEN_CUM_ALTO[z[1]][1] }; });
+    });
+    /* a propósito: en Andamios Chavín, dos en altura hoy con el EMO vencido; en Encofrados Rímac, uno sin su capacitación de altura */
+    var enAlt = d.personal.filter(function(p){ return p.emp === 'chavin' && T[p.id].petar; });
+    if(enAlt[0]) T[enAlt[0].id].emo = { e:'ven', hasta:_cenDia(hoy, -9) };
+    if(enAlt[1]) T[enAlt[1].id].emo = { e:'ven', hasta:_cenDia(hoy, -33) };
+  }
+  d.cum = { T:T, hoy:hoy, habil:habil };
+  return d.cum;
+}
+/* un trabajador del ejemplo, con las formas del contrato (sst_cad_cumple_trabs) */
+function _cenCumTrab(p){
+  var C = cenCum(), t = C.T[p.id];
+  /* como el contrato: capacitación vigente = alguna aprobada en 12 meses; «por vencer», si la más reciente vence en 30 días (lo que
+     le falta de su puesto, tema por tema, va en la matriz) */
+  var oks = p.req.filter(function(k){ return p.caps[k] && p.caps[k].ok; }), ult = oks.map(function(k){ return p.caps[k].f; }).sort().pop() || null;
+  var capE = !oks.length ? 'falta' : (ult <= _cenDia(C.hoy, -335) ? 'vence' : 'ok');
+  var alto = [];
+  Object.keys(CEN_CUM_ALTO).forEach(function(k){
+    if(p.req.indexOf(k) < 0 && !(t.petar && t.petar.k === k)) return;
+    var falta = [];
+    if(!(p.caps[k] && p.caps[k].ok)) falta.push('capacitación vigente');
+    if(t.emo.e === 'ven' || t.emo.e === 'sin') falta.push('EMO vigente');
+    alto.push({ k:CEN_CUM_ALTO[k][0], n:CEN_CUM_ALTO[k][1], e:falta.length ? 'mal' : 'ok', falta:falta, hoy:!!(t.petar && t.petar.k === k) });
+  });
+  /* lo que impide trabajar hoy y lo que hay que mirar, en el orden y con las palabras del servidor (_cad_trab_eval) */
+  var mal = [], ojo = [];
+  if(t.emo.e === 'ven') mal.push('EMO vencido'); else if(t.emo.e === 'sin') mal.push('Sin EMO');
+  if(t.sctr.e === 'ven') mal.push('SCTR vencido'); else if(t.sctr.e === 'sin') mal.push('Sin SCTR');
+  alto.forEach(function(a){ if(a.e !== 'mal') return; if(a.hoy) mal.push(a.n + ' hoy: falta ' + a.falta.join(', ')); else ojo.push(a.n + ': falta ' + a.falta.join(', ')); });
+  if(capE === 'falta') ojo.push('Sin capacitación vigente');
+  if(!t.ind) ojo.push('Sin inducción');
+  if(t.emo.e === 'vence') ojo.push('EMO por vencer');
+  if(capE === 'vence') ojo.push('Capacitación por vencer');
+  if(t.amon.length) ojo.push(t.amon.length === 1 ? '1 papeleta en 30 días' : t.amon.length + ' papeletas en 30 días');
+  return { id:'t-' + p.id, nombre:p.nombre, doc:_cenTapa(p.dni), puesto:p.puesto, estado:mal.length ? 'mal' : (ojo.length ? 'ojo' : 'ok'), faltan:mal.concat(ojo),
+    cap:{ e:capE, n:oks.length, ult:ult, temas:oks.map(function(k){ return _cenCurso(k).t; }) }, ind:{ e:t.ind ? 'ok' : 'falta' },
+    emo:{ e:t.emo.e, hasta:t.emo.hasta || null }, sctr:{ e:t.sctr.e, hasta:t.sctr.hasta || null },
+    ats:{ hoy:!!t.ats }, charla:{ hoy:!!t.charla, hora:t.charla || null }, petar:{ hoy:!!t.petar, tipo:t.petar ? t.petar.tipo : null, aut:t.petar ? true : null },
+    amon:{ d30:t.amon.length, ult:t.amon.slice().sort().pop() || null }, alto:alto.map(function(a){ return { k:a.k, n:a.n, e:a.e, falta:a.falta, hoy:!!a.hoy }; }) };
+}
+function _cenCumNota(P){
+  var W = { capacitacion:20, emo:15, induccion:10, ats:15, charla:10, a_tiempo:20, sin_alto_vencido:10 }, s = 0, w = 0;
+  Object.keys(P).forEach(function(k){ if(P[k] != null){ s += P[k] * W[k]; w += W[k]; } });
+  return w ? Math.round(s / w) : null;
+}
+/* una empresa de la obra, hoy (sst_cad_cumple) */
+function _cenCumEmp(e){
+  var d = CEN.d, C = cenCum(), J = d.personal.filter(function(p){ return p.emp === e.id; }).map(_cenCumTrab), g = J.length;
+  var c = function(f){ return J.filter(f).length; }, at = d.ats[e.id] || [], hoyA = at[at.length - 1] || { fr:0, ok:0 };
+  var mias = d.obs.filter(function(o){ return o.emp === e.id; }), desde = d.ahora - 30 * 86400000, ab = 0, ven = 0, alto = 0, val = 0, lev = 0, aT = 0, mes = 0, altoV = 0;
+  mias.forEach(function(o){ var s = cenEstado(o); if(s.est === 'abierta'){ ab++; if(o.riesgo === 'alto') alto++; } if(s.vencida){ ven++; if(o.riesgo === 'alto') altoV++; } if(s.est === 'levantada') val++;
+    if(o.creado >= desde){ mes++; if(s.aTiempo !== null){ lev++; if(s.aTiempo) aT++; } } });
+  var A = { enlace:e.principal ? null : 'L-' + e.id, emp:e.id, nombre:e.nombre, ruc:e.ruc, proyecto:d.obra.nombre, via:e.principal ? 'propia' : 'subcontrata', detalle:true, padre:e.principal ? null : cenEmp('via').nombre, gente:g,
+    cap:{ ok:c(function(t){ return t.cap.e !== 'falta'; }), tot:g }, ind:{ ok:c(function(t){ return t.ind.e === 'ok'; }), tot:g },
+    emo:{ ok:c(function(t){ return t.emo.e === 'ok' || t.emo.e === 'vence'; }), vence:c(function(t){ return t.emo.e === 'vence'; }), ven:c(function(t){ return t.emo.e === 'ven'; }), sin:c(function(t){ return t.emo.e === 'sin'; }), tot:g },
+    sctr:{ ok:c(function(t){ return t.sctr.e === 'ok'; }), ven:c(function(t){ return t.sctr.e === 'ven'; }), sin:0, tot:g },
+    ats:{ hoy:C.habil ? hoyA.ok : 0, ok:C.habil ? hoyA.ok : 0, firmaron:c(function(t){ return t.ats.hoy; }) },
+    petar:{ hoy:Math.ceil(c(function(t){ return t.petar.hoy; }) / 6), ok:Math.ceil(c(function(t){ return t.petar.hoy; }) / 6) }, charla:{ hoy:C.habil ? 1 : 0, asist:c(function(t){ return t.charla.hoy; }) },
+    amon:{ d30:J.reduce(function(s, t){ return s + t.amon.d30; }, 0) },
+    obs:e.principal ? null : { ab:ab, ven:ven, alto:alto, val:val, lev:lev, a_tiempo:aT, mes:mes }, insp_mes:(d.mes.capas[e.id] || 2) + 1, acc_anio:0, rep_ab:Math.round((d.mes.reportes[e.id] || 0) * (1 - (d.mes.resueltos[e.id] || 1))), ult:new Date(d.ahora - 3600000).toISOString() };
+  var pc = function(a, b){ return b ? Math.round(100 * a / b) : null; }, P = { capacitacion:pc(A.cap.ok, g), emo:pc(A.emo.ok, g), induccion:pc(A.ind.ok, g) };
+  if(C.habil){ P.ats = pc(A.ats.firmaron, g); P.charla = pc(A.charla.asist, g); }
+  if(lev) P.a_tiempo = pc(aT, lev);
+  if(!e.principal) P.sin_alto_vencido = Math.max(0, 100 - 25 * altoV);
+  Object.keys(P).forEach(function(k){ if(P[k] == null) delete P[k]; });
+  A.nota = _cenCumNota(P); A.partes = P;
+  return { A:A, J:J };
+}
+/* las subcontratas de las otras obras del Corporativo (su resumen inventado: CEN_EN_OBRAS) */
+function _cenCumOtra(oid){
+  var en = CEN_EN_OBRAS[oid] || {}, ob = CEN_OBRAS.filter(function(o){ return o.id === oid; })[0] || {}, habil = cenCum().habil;
+  return Object.keys(en).map(function(k){
+    var x = en[k], e = cenEmp(k) || CEN_OTRAS_EMP[k] || { nombre:k }, r = _cenAzar(_cenSemilla(oid + k)), g = x.gente;
+    var lev = Math.round(x.obs * 0.8), aT = Math.round(lev * x.aT), emo = Math.round(g * (0.86 + r() * 0.12)), fir = Math.round(g * (0.84 + r() * 0.14)), ch = Math.round(g * (0.74 + r() * 0.22));
+    var A = { enlace:'L-' + oid + '-' + k, emp:k, nombre:e.nombre, ruc:e.ruc || CEN_CUM_RUC[k] || '', proyecto:ob.nombre, via:'subcontrata', detalle:true, padre:cenEmp('via').nombre, gente:g,
+      cap:{ ok:Math.round(g * x.cap), tot:g }, ind:{ ok:Math.round(g * (0.94 + r() * 0.06)), tot:g }, emo:{ ok:emo, vence:Math.round(g * 0.03), ven:Math.round((g - emo) * 0.7), sin:g - emo - Math.round((g - emo) * 0.7), tot:g },
+      sctr:{ ok:g, ven:0, sin:0, tot:g }, ats:{ hoy:habil ? Math.ceil(g / 9) : 0, ok:habil ? Math.ceil(g / 9) : 0, firmaron:habil ? fir : 0 }, petar:{ hoy:Math.floor(r() * 3), ok:0 }, charla:{ hoy:habil ? 1 : 0, asist:habil ? ch : 0 },
+      amon:{ d30:Math.floor(r() * 4) }, obs:{ ab:x.ven + Math.floor(r() * 3), ven:x.ven, alto:x.ven ? 1 : 0, val:Math.floor(r() * 2), lev:lev, a_tiempo:aT, mes:x.obs }, insp_mes:2 + Math.floor(r() * 3), acc_anio:0, rep_ab:Math.floor(r() * 3), ult:new Date(CEN.d.ahora - 7200000).toISOString() };
+    A.petar.ok = A.petar.hoy;
+    var P = { capacitacion:Math.round(100 * x.cap), emo:Math.round(100 * emo / g), induccion:Math.round(100 * A.ind.ok / g), a_tiempo:lev ? Math.round(100 * aT / lev) : null, sin_alto_vencido:Math.max(0, 100 - 25 * (x.ven ? 1 : 0)) };
+    if(habil){ P.ats = Math.round(100 * fir / g); P.charla = Math.round(100 * ch / g); }
+    Object.keys(P).forEach(function(z){ if(P[z] == null) delete P[z]; });
+    A.nota = _cenCumNota(P); A.partes = P;
+    return A;
+  });
+}
+function _cenCumLista(j, habil){
+  /* las mismas palabras y llaves que sst_cad_trab_qr */
+  var F = function(iso){ var p = String(iso || '').split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : ''; }, L = [], e = j.emo.e, tipo = j.petar.tipo || 'trabajo de alto riesgo';
+  L.push(e === 'ok' ? { k:'emo', e:'ok', tx:'EMO vigente hasta el ' + F(j.emo.hasta) } : (e === 'vence' ? { k:'emo', e:'ojo', tx:'EMO por vencer: vence el ' + F(j.emo.hasta) } :
+    (e === 'ven' ? { k:'emo', e:'mal', tx:'EMO vencido: venció el ' + F(j.emo.hasta) } : { k:'emo', e:'mal', tx:'Sin EMO registrado' })));
+  L.push(j.sctr.e === 'ok' ? { k:'sctr', e:'ok', tx:'SCTR vigente (salud y pensión) hasta el ' + F(j.sctr.hasta) } :
+    (j.sctr.e === 'ven' ? { k:'sctr', e:'mal', tx:'SCTR vencido: venció el ' + F(j.sctr.hasta) } : { k:'sctr', e:'mal', tx:'Sin SCTR registrado' }));
+  L.push(j.ind.e === 'ok' ? { k:'ind', e:'ok', tx:'Inducción completa' } : { k:'ind', e:'ojo', tx:'Sin inducción completa' });
+  L.push(j.cap.e === 'ok' ? { k:'cap', e:'ok', tx:j.cap.n + (j.cap.n === 1 ? ' capacitación vigente' : ' capacitaciones vigentes') + '; la última el ' + F(j.cap.ult) } :
+    (j.cap.e === 'vence' ? { k:'cap', e:'ojo', tx:'Su capacitación más reciente vence pronto (la última el ' + F(j.cap.ult) + ')' } : { k:'cap', e:'ojo', tx:'Sin capacitación vigente (últimos 12 meses)' }));
+  j.alto.forEach(function(a){ L.push({ k:'alto:' + a.k, e:a.e, tx:(a.e === 'ok' ? a.n + ': cumple (capacitación vigente y EMO vigente)' : a.n + ': le falta ' + a.falta.join(', ')) + (a.hoy ? ' · está en un PETAR de hoy' : '') }); });
+  L.push(j.charla.hoy ? { k:'charla', e:'ok', tx:'Estuvo en la charla de hoy (' + j.charla.hora + ')' } : { k:'charla', e:habil ? 'ojo' : 'gris', tx:habil ? 'No figura en la charla de hoy' : 'Hoy su empresa no registró charla' });
+  L.push(j.ats.hoy ? { k:'ats', e:'ok', tx:'Firmó el ATS de hoy' } : { k:'ats', e:habil ? 'ojo' : 'gris', tx:'No firmó un ATS hoy' });
+  L.push(j.petar.hoy && j.petar.aut !== false ? { k:'petar', e:'ok', tx:'En el PETAR de hoy: ' + tipo } :
+    (j.petar.hoy ? { k:'petar', e:'mal', tx:'En un PETAR de hoy que todavía no está autorizado: ' + tipo } : { k:'petar', e:'gris', tx:'No está en un PETAR hoy' }));
+  L.push(j.amon.d30 ? { k:'amon', e:'ojo', tx:(j.amon.d30 === 1 ? '1 papeleta' : j.amon.d30 + ' papeletas') + ' en los últimos 30 días (la última el ' + F(j.amon.ult) + ')' } : { k:'amon', e:'ok', tx:'Sin papeletas en los últimos 30 días' });
+  return L;
+}
+/* el estándar de la obra de ejemplo: CEN_CURSOS (lo de todos y lo que pide cada puesto), o el que se ponga aquí */
+function _cenCumEst(){
+  var d = CEN.d; if(d.cumEst) return d.cumEst;
+  var P = {}, pues = {};
+  d.personal.forEach(function(p){ pues[_cenNorm(p.puesto)] = p.puesto; });
+  Object.keys(pues).forEach(function(k){
+    var L = CEN_CURSOS.filter(function(c){ return !c.todos && ((c.pues && c.pues.test(pues[k])) || (c.emp && c.emp.indexOf('sur') > -1 && /excavadora|retroexcavadora|vigia/.test(k))); }).map(function(c){ return c.t; });
+    if(L.length) P[k] = L;
+  });
+  return { puestos:P, comun:CEN_CURSOS.filter(function(c){ return c.todos; }).map(function(c){ return c.t; }), vigencia:12, inicial:true };
+}
+function _cenCumMatriz(enl){
+  var d = CEN.d, est = _cenCumEst(), cols = est.comun.slice(), hoy = d.hoy;
+  Object.keys(est.puestos).forEach(function(k){ est.puestos[k].forEach(function(t){ if(cols.indexOf(t) < 0) cols.push(t); }); });
+  var desde = _cenDia(hoy, -Math.round((est.vigencia || 12) * 30.4)), avisa = _cenDia(desde, 30), R = { ok:0, vence:0, falta:0 }, filas = [];
+  d.personal.forEach(function(p){
+    var e = cenEmp(p.emp), enlace = e.principal ? null : 'L-' + e.id;
+    if(enl && String(enlace || 'propia') !== String(enl)) return;
+    var pide = est.comun.concat(est.puestos[_cenNorm(p.puesto)] || []), c = {};
+    cols.forEach(function(t){
+      if(!pide.some(function(q){ var a = _cenNorm(q), b = _cenNorm(t); return a.indexOf(b) > -1 || b.indexOf(a) > -1; })){ c[t] = { e:'na' }; return; }
+      var f = null;
+      Object.keys(p.caps).forEach(function(k){ var n = _cenCurso(k).t, a = _cenNorm(n), b = _cenNorm(t); if((a.indexOf(b) > -1 || b.indexOf(a) > -1) && (!f || p.caps[k].f > f)) f = p.caps[k].f; });
+      var es = (f && f >= desde) ? (f < avisa ? 'vence' : 'ok') : 'falta';
+      c[t] = f ? { e:es, f:f } : { e:'falta' }; R[es]++;
+    });
+    filas.push({ enlace:enlace, empresa:e.nombre, id:'t-' + p.id, nombre:p.nombre, doc:_cenTapa(p.dni), puesto:p.puesto, c:c });
+  });
+  return { ok:true, estandar:{ puestos:est.puestos, comun:est.comun, vigencia:est.vigencia || 12, propio:true }, temas:cols, filas:filas, resumen:R, sin_detalle:[], tope:false };
+}
+function _cenCumConsol(p){
+  var d = CEN.d, hoy = d.hoy, mesHoy = hoy.slice(0, 7), n = Math.max(1, Math.min(12, parseInt(p.meses, 10) || 6));
+  var hasta = /^\d{4}-\d{2}$/.test(String(p.hasta || '')) && p.hasta <= mesHoy ? p.hasta : mesHoy, M = [];
+  for(var i = n - 1; i >= 0; i--){ var dt = new Date(+hasta.slice(0, 4), +hasta.slice(5, 7) - 1 - i, 1); M.push(dt.getFullYear() + '-' + _cenDos(dt.getMonth() + 1)); }
+  var enMes = function(t, mm){ return _cenISO(new Date(t)).slice(0, 7) === mm; };
+  var E = CEN_EMPRESAS.map(function(e){
+    var serie = M.map(function(mm){
+      var r = _cenAzar(_cenSemilla(e.id + mm)), parte = 1;
+      if(mm === mesHoy){ parte = (+hoy.slice(8, 10)) / new Date(+mm.slice(0, 4), +mm.slice(5, 7), 0).getDate(); }
+      var dias = d.dias.filter(function(x){ return x.dia.slice(0, 7) === mm; }), hht, gente;
+      if(dias.length){ hht = Math.round(dias.reduce(function(s, x){ return s + (x.por[e.id] || 0); }, 0) * 8.5); gente = Math.max.apply(null, dias.map(function(x){ return x.por[e.id] || 0; })); }
+      else { gente = Math.round(e.gente * (0.8 + r() * 0.15)); hht = Math.round(gente * 8.5 * 26 * (0.95 + r() * 0.05)); }
+      var at = (d.ats[e.id] || []).filter(function(x){ return x.dia.slice(0, 7) === mm; });
+      var s = { m:mm, gente:gente, hht:hht, acc:0, acc_leve:0, dias:0, cap:Math.round((mm === mesHoy ? (d.mes.capas[e.id] || 2) : (2 + r() * 5)) * Math.max(1, gente / 30)),
+                ats:at.length ? at.reduce(function(s2, x){ return s2 + x.ok; }, 0) : Math.round(e.frentes * 25 * (0.93 + r() * 0.06)), charlas:Math.round(26 * parte * (0.92 + r() * 0.08)),
+                obs:0, lev:0, a_tiempo:0, insp:Math.round((3 + r() * 4) * parte), epp:mm === mesHoy ? (d.mes.epp[e.id] || 0) : Math.round(gente * (2.4 + r() * 0.8)), amon:Math.floor(r() * 3 * parte) };
+      var O = d.obs.filter(function(o){ return o.emp === e.id && enMes(o.creado, mm); });
+      if(O.length || mm >= d.antIni.slice(0, 7)){ s.obs = O.length; O.forEach(function(o){ var st = cenEstado(o); if(st.aTiempo !== null){ s.lev++; if(st.aTiempo) s.a_tiempo++; } }); }
+      else { s.obs = Math.round(8 + r() * 22); s.lev = s.obs - Math.floor(r() * 3); s.a_tiempo = s.lev - Math.floor(r() * 4); }
+      if(mm === mesHoy){ var C = cenCum(); s.amon = d.personal.filter(function(p2){ return p2.emp === e.id; }).reduce(function(z, p2){ return z + C.T[p2.id].amon.length; }, 0); }
+      if(e.id === 'rimac' && mm === M[Math.max(0, M.length - 2)]) s.acc_leve = 1;
+      if(e.id === 'chavin' && mm === M[Math.max(0, M.length - 4)]){ s.acc = 1; s.dias = 9; }
+      return s;
+    });
+    return { enlace:e.principal ? null : 'L-' + e.id, nombre:e.nombre, ruc:e.ruc, proyecto:d.obra.nombre, via:e.principal ? 'propia' : 'subcontrata', serie:serie };
+  });
+  var K = ['gente', 'hht', 'acc', 'acc_leve', 'dias', 'cap', 'ats', 'charlas', 'obs', 'lev', 'a_tiempo', 'insp', 'epp', 'amon'];
+  var tot = M.map(function(mm, k){ var t = { m:mm }; K.forEach(function(z){ t[z] = E.reduce(function(s, x){ return s + (x.serie[k][z] || 0); }, 0); });
+    t['if'] = t.hht ? Math.round(t.acc * 1000000 / t.hht * 100) / 100 : null; t.ig = t.hht ? Math.round(t.dias * 1000000 / t.hht * 100) / 100 : null; return t; });
+  return { ok:true, meses:M, empresas:E, total:tot };
+}
+/* las funciones del servidor, aquí (cumple.js las pide con cumRpc) */
+function cenCumRpc(fn, p){
+  var d = CEN.d, C = cenCum(); d.ahora = Date.now(); p = p || {};
+  var hora = new Date(d.ahora), dos = function(n){ return (n < 10 ? '0' : '') + n; };
+  if(fn === 'sst_cad_cumple'){
+    if(p.emp && p.emp !== d.obra.id){
+      var otra = _cenCumOtra(p.emp);
+      return { ok:true, hoy:C.hoy, hora:dos(hora.getHours()) + ':' + dos(hora.getMinutes()), dia_habil:C.habil, como:CEN_CUM_COMO,
+               empresas:otra.sort(function(a, b){ return (a.nota == null ? 999 : a.nota) - (b.nota == null ? 999 : b.nota); }) };
+    }
+    var L = CEN_EMPRESAS.map(function(e){ return _cenCumEmp(e).A; }).sort(function(a, b){ return (a.nota == null ? 999 : a.nota) - (b.nota == null ? 999 : b.nota) || String(a.nombre).localeCompare(String(b.nombre)); });
+    return { ok:true, hoy:C.hoy, hora:dos(hora.getHours()) + ':' + dos(hora.getMinutes()), dia_habil:C.habil, empresas:L, como:CEN_CUM_COMO };
+  }
+  if(fn === 'sst_cad_cumple_trabs'){
+    var e = CEN_EMPRESAS.filter(function(x){ return (x.principal ? 'propia' : 'L-' + x.id) === String(p.enlace || ''); })[0];
+    if(!e) return { ok:false, motivo:'enlace' };
+    var o = { mal:0, ojo:1, ok:2 }, R = _cenCumEmp(e);
+    return { ok:true, hoy:C.hoy, dia_habil:C.habil, empresa:{ nombre:e.nombre, ruc:e.ruc, proyecto:d.obra.nombre, via:R.A.via, padre:R.A.padre },
+             trabajadores:R.J.sort(function(a, b){ return (o[a.estado] - o[b.estado]) || String(a.nombre).localeCompare(String(b.nombre)); }) };
+  }
+  if(fn === 'sst_cad_trab_qr'){
+    var doc = String(p.doc || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+    if(doc.length < 4 || doc.length > 20) return { ok:false, motivo:'datos' };
+    var per = d.personal.filter(function(x){ return x.dni === doc; })[0];
+    if(!per) return { ok:true, encontrado:false };
+    var j = _cenCumTrab(per), em = cenEmp(per.emp);
+    var out = Object.assign({ ok:true, encontrado:true, t:{ nombre:j.nombre, doc:j.doc, puesto:j.puesto, empresa:em.nombre, ruc:em.ruc, proyecto:d.obra.nombre, via:em.principal ? 'propia' : 'subcontrata' } }, j);
+    delete out.id; delete out.nombre; delete out.doc; delete out.puesto;
+    out.lista = _cenCumLista(j, C.habil);
+    d.cumVer = (d.cumVer || []).concat([{ cuando:new Date().toISOString(), nombre:j.nombre, empresa:em.nombre, estado:j.estado, quien_nombre:(cenYo() || {}).nombre || '' }]);
+    _cenEstGuardar();
+    return out;
+  }
+  if(fn === 'sst_cad_verifs'){
+    var V = (d.cumVer || []).filter(function(v){ return _cenISO(new Date(v.cuando)) === C.hoy; });
+    return { ok:true, lista:V.slice().sort(function(a, b){ return Date.parse(b.cuando) - Date.parse(a.cuando); }) };
+  }
+  if(fn === 'sst_cad_matriz') return _cenCumMatriz(p.enlace || null);
+  if(fn === 'sst_cad_matriz_poner'){
+    if(!/^(jefe|gerente|corp)$/.test(CEN.rol)) return { ok:false, motivo:'rango' };
+    var limpia = function(L2){ return (Array.isArray(L2) ? L2 : []).map(function(t){ return String(t || '').replace(/\s+/g, ' ').trim(); }).filter(function(t, i, l){ return t.length >= 3 && t.length <= 80 && l.indexOf(t) === i; }).slice(0, 20); };
+    var P = {}; Object.keys(p.puestos || {}).slice(0, 60).forEach(function(k){ var L3 = limpia(p.puestos[k]); if(L3.length && _cenNorm(k)) P[_cenNorm(k)] = L3; });
+    d.cumEst = { puestos:P, comun:limpia(p.comun), vigencia:Math.max(1, Math.min(36, parseInt(p.vigencia, 10) || 12)) };
+    _cenEstGuardar();
+    return { ok:true };
+  }
+  if(fn === 'sst_cad_consolidado') return _cenCumConsol(p);
+  return { ok:false, motivo:'demo' };
+}
+/* para probar cum-qr en el ejemplo: uno al día, uno con pendientes y uno que no cumple (de la gente inventada) */
+function cenCumEjemplos(){
+  var L = CEN.d.personal.map(function(p){ var j = _cenCumTrab(p); return { doc:p.dni, nombre:p.nombre, estado:j.estado, petar:j.petar.hoy }; });
+  var uno = function(e, conPetar){ return L.filter(function(t){ return t.estado === e && (!conPetar || t.petar); })[0] || L.filter(function(t){ return t.estado === e; })[0]; };
+  return [uno('ok'), uno('ojo'), uno('mal', true)].filter(Boolean);
+}
+/* las secciones del cumplimiento, en el ejemplo: las mismas pantallas de la cuenta de verdad (portal/cumple.js) */
+function cenCumPintar(cual, caja){
+  cargando(caja);
+  (typeof cargarCumple === 'function' ? cargarCumple() : Promise.reject('sin_cumple')).then(function(){ if(caja.isConnected) cumPintar(cual, caja); }, function(){ fallo(caja); });
+}
+
 /* ══ EL PORTAL DE LA OBRA DE EJEMPLO ═════════════════════════════════
    portal/?demo=central: sin cuenta y sin servidor. Arriba, «Ver como»
    cambia de rango (lo que en la obra real es la cuenta de cada uno). */
+/* ══ 28/10/2026 · #183 · LOS INFORMES Y LOS ESTÁNDARES DE LAS SUBCONTRATAS, EN EL EJEMPLO ═══════════════════
+   Lo que en la cuenta de verdad hacen «Informes de las subcontratas» y «Estándares y boletines» (portal/informe-sub.js): la
+   principal arma las carpetas del informe y se lo publica a sus subcontratas, ve el avance de cada una y lo revisa; publica
+   sus estándares (cada subcontrata confirma y los difunde a su gente con su firma) y sus boletines. Aquí, para mirar. */
+var CEN_INF_CARPETAS = [['Charlas y capacitaciones', 'De la app'], ['ATS del mes', 'De la app'], ['Entregas de EPP', 'De la app'], ['Inspecciones de obra', 'De la app'],
+  ['Horas hombre trabajadas', 'Un dato'], ['Panel fotográfico', 'Fotos · mínimo 10'], ['Lo programado del mes', 'De la app']];
+var CEN_INF_AVANCE = { rimac:[7, 'presentada'], sur:[6, 'abierta'], pacif:[7, 'aprobada'], chavin:[4, 'observada'] };
+var CEN_ESTS = [
+  { t:'Estándar de trabajos en altura', tipo:'estandar', hace:9, acuse:{ rimac:1, sur:1, pacif:1, chavin:0 }, dif:{ rimac:[118, 140], sur:[60, 95], pacif:[71, 90], chavin:[0, 65] } },
+  { t:'Estándar de excavaciones y zanjas', tipo:'estandar', hace:16, acuse:{ rimac:1, sur:1, pacif:1, chavin:1 }, dif:{ rimac:[121, 140], sur:[93, 95], pacif:[80, 90], chavin:[52, 65] } },
+  { t:'Boletín: lo que aprendimos del corte de energía del sótano', tipo:'boletin', hace:4, vistos:214 }
+];
+function _cenSubs(){ return CEN_EMPRESAS.filter(function(e){ return !e.principal; }); }
+function _cenMesTx(){ var d = new Date(CEN.d.ahora); return CEN_MESES_N[d.getMonth()] + ' ' + d.getFullYear(); }
+var CEN_INF_EST = { abierta:['Abierta', 'azul'], presentada:['Presentada', 'ojo'], observada:['Observada', 'mal'], aprobada:['Aprobada', 'ok'] };
+function cenVistaInfSub(caja){
+  _cenAcc('<button type="button" class="bt" id="cen-is-nuevo">＋ Pedir un informe</button>');
+  var n = CEN_INF_CARPETAS.length;
+  var h = '<div class="tarj"><div class="tarj-cab"><div><h2>Informe mensual de SST</h2><p class="sub">Lo pides a todas tus subcontratas · cada mes · se presenta el último día del mes · ' + n + ' carpetas</p></div><span class="pill ok">Publicado</span></div>' +
+    '<div class="tarj-cuerpo"><ol class="cen-carpetas">' + CEN_INF_CARPETAS.map(function(c){ return '<li><b>' + esc(c[0]) + '</b><small>' + esc(c[1]) + '</small></li>'; }).join('') + '</ol>' +
+    '<p class="cen-nota">Lo «de la app» entra solo: lo que cada subcontrata ya registra (sus charlas, sus ATS, su EPP, sus inspecciones). Lo demás lo sube ella, con el nombre que pone OBRASST.</p></div></div>';
+  h += '<div class="tarj"><div class="tarj-cab"><div><h2>El avance de cada una · ' + esc(_cenMesTx()) + '</h2><p class="sub">Toca una para revisar sus carpetas: aprobar, observar o sacar el ZIP con todo</p></div></div>' +
+    '<div class="tabla-caja"><table class="cen-emps"><thead><tr><th>Subcontrata</th><th>Avance</th><th class="num">Carpetas</th><th>Estado</th></tr></thead><tbody>' +
+    _cenSubs().map(function(e){ var a = CEN_INF_AVANCE[e.id] || [0, 'abierta'], E = CEN_INF_EST[a[1]];
+      return '<tr class="clic" data-is="' + e.id + '"><td><b class="cen-emp-n">' + esc(e.corto) + '</b><small class="cen-emp-r">' + esc(e.rubro) + '</small></td><td>' + _cenBarra(a[0] / n, 0.99) + '</td>' +
+        '<td class="num">' + a[0] + ' de ' + n + '</td><td><span class="pill ' + E[1] + '">' + E[0] + '</span></td></tr>'; }).join('') + '</tbody></table></div></div>';
+  caja.innerHTML = h;
+  $('cen-is-nuevo').onclick = function(){ toast('En la obra de ejemplo se mira. En la tuya lo armas con una plantilla (informe mensual, horas hombre semanales o un pedido con fecha) o desde cero.'); };
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-is]'), function(tr){ tr.onclick = function(){ cenInfCarpetas(tr.getAttribute('data-is'), true); }; });
+}
+function cenInfCarpetas(emp, principal){
+  var e = cenEmp(emp), a = CEN_INF_AVANCE[emp] || [0, 'abierta'], E = CEN_INF_EST[a[1]];
+  var h = '<ul class="cen-plana">' + CEN_INF_CARPETAS.map(function(c, i){ var ok = i < a[0];
+    return '<li><span>' + esc(c[0]) + '<small class="cen-ol">' + esc(c[1]) + '</small></span><b class="pill ' + (ok ? 'ok' : 'ojo') + '">' + (ok ? 'Completa' : 'Falta') + '</b></li>'; }).join('') + '</ul>' +
+    (a[1] === 'observada' ? '<div class="aviso mal">Observada: «El panel fotográfico trae 4 fotos; faltan las de la charla del lunes».</div>' : '');
+  abrirHoja(principal ? e.nombre : 'Informe mensual de SST', 'Informe mensual de SST · ' + _cenMesTx() + ' · ' + E[0].toLowerCase(), h,
+    principal ? '<button type="button" class="bt sec" id="cen-ic-zip">Bajar el ZIP</button><button type="button" class="bt mal" id="cen-ic-obs">Observar</button><button type="button" class="bt ok" id="cen-ic-ok">Aprobar</button>'
+              : '<button type="button" class="bt" id="cen-ic-pres">Presentar</button>');
+  var dice = function(){ toast('En la obra de ejemplo no se cambia nada. En la tuya, le llega a ' + (principal ? 'la subcontrata' : 'la principal') + ' al instante.'); };
+  ['cen-ic-zip', 'cen-ic-obs', 'cen-ic-ok', 'cen-ic-pres'].forEach(function(id){ if($(id)) $(id).onclick = dice; });
+}
+function cenVistaEstSub(caja){
+  _cenAcc('<button type="button" class="bt" id="cen-es-nuevo">＋ Publicar</button>');
+  var subs = _cenSubs();
+  var h = CEN_ESTS.map(function(x){
+    if(x.tipo === 'boletin') return '<div class="tarj"><div class="tarj-cab"><div><h2>' + esc(x.t) + '</h2><p class="sub">Boletín · en el mural de cada subcontrata · hace ' + x.hace + ' días</p></div><span class="pill azul">Lo vieron ' + x.vistos + ' personas</span></div></div>';
+    var ac = subs.filter(function(e){ return x.acuse[e.id]; }).length;
+    return '<div class="tarj"><div class="tarj-cab"><div><h2>' + esc(x.t) + '</h2><p class="sub">Estándar · publicado hace ' + x.hace + ' días · confirmado por ' + ac + ' de ' + subs.length + '</p></div></div>' +
+      '<div class="tabla-caja"><table class="cen-emps"><thead><tr><th>Subcontrata</th><th>Acuse</th><th>Difusión a su gente</th></tr></thead><tbody>' + subs.map(function(e){ var dfs = x.dif[e.id] || [0, 0];
+        return '<tr><td><b class="cen-emp-n">' + esc(e.corto) + '</b></td><td>' + (x.acuse[e.id] ? '<span class="pill ok">Confirmó</span>' : '<span class="pill ojo">Falta confirmar</span>') + '</td>' +
+          '<td>' + _cenBarra(dfs[1] ? dfs[0] / dfs[1] : 0, 0.85) + ' <small class="cen-ol">' + dfs[0] + ' de ' + dfs[1] + ' firmaron que lo leyeron</small></td></tr>'; }).join('') + '</tbody></table></div></div>';
+  }).join('');
+  caja.innerHTML = h;
+  $('cen-es-nuevo').onclick = function(){ toast('En la obra de ejemplo se mira. En la tuya publicas un estándar (lo confirman y lo difunden con firma) o un boletín (sale en su mural).'); };
+}
+function cenVistaInfPide(caja){
+  _cenAcc('');
+  var e = cenMiEmp(), a = CEN_INF_AVANCE[e] || [0, 'abierta'], n = CEN_INF_CARPETAS.length, E = CEN_INF_EST[a[1]];
+  caja.innerHTML = '<div class="aviso">Te lo pide <b>' + esc(cenEmp('via').nombre) + '</b>, la principal. Lo «de la app» entra solo; lo demás lo subes tú y lo presentas antes del último día del mes.</div>' +
+    '<div class="tarj clic" id="cen-ip-abrir"><div class="tarj-cab"><div><h2>Informe mensual de SST · ' + esc(_cenMesTx()) + '</h2><p class="sub">' + a[0] + ' de ' + n + ' carpetas completas · toca para verlas</p></div>' +
+    '<span class="pill ' + E[1] + '">' + E[0] + '</span></div><div class="tarj-cuerpo">' + _cenBarra(a[0] / n, 0.99) + '</div></div>';
+  $('cen-ip-abrir').onclick = function(){ cenInfCarpetas(e, false); };
+}
+function cenVistaEstLlega(caja){
+  _cenAcc('');
+  var e = cenMiEmp();
+  caja.innerHTML = CEN_ESTS.map(function(x, k){
+    if(x.tipo === 'boletin') return '<div class="tarj"><div class="tarj-cab"><div><h2>' + esc(x.t) + '</h2><p class="sub">Boletín de la principal · en el mural de tu gente · hace ' + x.hace + ' días</p></div></div></div>';
+    var dfs = x.dif[e] || [0, 0];
+    return '<div class="tarj"><div class="tarj-cab"><div><h2>' + esc(x.t) + '</h2><p class="sub">Estándar de la principal · hace ' + x.hace + ' días</p></div>' +
+      (x.acuse[e] ? '<span class="pill ok">Confirmaste</span>' : '<button type="button" class="bt chico" data-el="' + k + '">Confirmar que lo recibí</button>') + '</div>' +
+      '<div class="tarj-cuerpo">' + _cenBarra(dfs[1] ? dfs[0] / dfs[1] : 0, 0.85) + ' <small class="cen-ol">' + dfs[0] + ' de ' + dfs[1] + ' de tu gente firmaron que lo leyeron</small>' +
+      '<p><button type="button" class="bt sec chico" data-el="' + k + '">Difundirlo a mi gente</button></p></div></div>';
+  }).join('');
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-el]'), function(b){ b.onclick = function(){ toast('En la obra de ejemplo no se cambia nada. En la tuya, tu gente lo lee en su celular y firma.'); }; });
+}
+/* en el ejemplo, ningún botón llama ni escribe a un número de verdad */
+function _cenLinksDemo(){
+  if(document._cenLinks) return; document._cenLinks = true;
+  document.addEventListener('click', function(ev){
+    if(!CEN.demo) return;
+    var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null; if(!a) return;
+    var h = a.getAttribute('href') || '';
+    if(/^tel:|wa\.me|api\.whatsapp/.test(h)){ ev.preventDefault(); toast(/^tel:/.test(h) ? 'En la obra real, aquí llamas a esa persona.' : 'En la obra real se abre WhatsApp con el mensaje.'); }
+  }, true);
+}
 var CEN_PINTA = { obras:cenVistaObras, contratistas:cenVistaContratistas, tablero:cenVistaTablero, subio:cenVistaSubio, obs:cenVistaObs,
   pend:cenVistaPend, levantar:cenVistaLevantar, miemp:cenVistaMiEmp, empresas:cenVistaEmpresas, personal:cenVistaPersonal,
-  matriz:cenVistaMatriz, informe:cenVistaInforme, uso:cenVistaUso, equipo:cenVistaEquipo, estandar:cenVistaEstandar };
+  matriz:cenVistaMatriz, informe:cenVistaInforme, uso:cenVistaUso, equipo:cenVistaEquipo, estandar:cenVistaEstandar,
+  infsub:cenVistaInfSub, estsub:cenVistaEstSub, infpide:cenVistaInfPide, estllega:cenVistaEstLlega,
+  cumemp:function(c){ cenCumPintar('emp', c); }, cummatriz:function(c){ cenCumPintar('matriz', c); }, cumconsol:function(c){ cenCumPintar('consol', c); },
+  cumqr:function(c){ cenCumPintar('qr', c); }, cumcomp:function(c){ cenCumPintar('comp', c); } };
 function centralDemo(){
-  CEN.demo = true;
+  CEN.demo = true; _cenLinksDemo();
   /* ?como=corp|gerente|jefe|supervisor|sub abre con ese rango (los enlaces de central.html) */
   var como = ((location.search || '').match(/[?&]como=([a-z]+)/) || [])[1];
   if(como && CEN_POR_ROL[como]) guardar(CEN_LS_ROL, como);
@@ -1309,7 +1741,7 @@ function centralDemo(){
   cenPintarBarra();
   var hash = (location.hash || '').slice(1), vs = vistasDe();
   VISTA.actual = null;
-  navegar(vs.some(function(v){ return v.id === hash; }) ? hash : vs[0].id, true);
+  navegar(vs.some(function(v){ return v.id === hash && !v.explica; }) ? hash : cenInicio(), true);
 }
 function cenPintarBarra(){
   var caja = $('obra-sel'), sel = $('sel-obra'), rol = cenRol(), yo = cenYo();
@@ -1343,20 +1775,12 @@ function cenCambiarRol(k){
   CEN.rol = k; guardar(CEN_LS_ROL, k); CEN.filtro = {};
   try{ cerrarHoja(); }catch(e){}
   cenPintarBarra();
-  var vs = vistasDe(), ir = vs.some(function(v){ return v.id === antes; }) ? antes : vs[0].id;
+  var vs = vistasDe(), ir = vs.some(function(v){ return v.id === antes && !v.explica; }) ? antes : cenInicio();
   VISTA.actual = null; navegar(ir, true);
   var yo = cenYo(); toast('Ahora ves la obra como ' + yo.nombre + ', ' + yo.cargo + (k === 'sub' ? ' de ' + cenEmp(yo.emp).corto : '') + '.');
 }
 /* el costado: lo que pide acción lleva su número; abajo, el aviso de que es un ejemplo */
 function cenRailPie(r){
-  var yo = cenYo(), d = CEN.d;
-  var n = {
-    'cen-subio':cenSubioAMi().length,
-    'cen-pend':d.obs.filter(function(o){ return o.por === yo.id && cenEstado(o).est === 'levantada'; }).length,
-    'cen-levantar':d.obs.filter(function(o){ return o.emp === yo.emp && CEN.rol === 'sub' && cenEstado(o).est === 'abierta'; }).length
-  };
-  Object.keys(n).forEach(function(id){ if(!n[id]) return; var b = r.querySelector('.nav[data-v="' + id + '"]');
-    if(b) b.insertAdjacentHTML('beforeend', '<span class="n cen-n">' + n[id] + '</span>'); });
   var pie = document.createElement('div'); pie.className = 'cen-rail-pie';
   pie.innerHTML = '<b>Obra de ejemplo</b><span>Empresas, personas, RUC y fotos inventados. Lo que hagas aquí queda solo en este navegador.</span>' +
     '<button type="button" class="bt sec chico" id="cen-reini">Reiniciar el ejemplo</button>';

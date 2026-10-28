@@ -491,7 +491,7 @@ function _pgHojaArmar(pref, datos, op){
   var E={ modo:'', R:null, n:0 };
   var D0=datos(), R0=progResumen(D0.d, D0.H, D0.progs);
   E.modo=(R0.cumpl>0 || R0.extra>0 || R0.atras>0) ? 'avance' : 'aprobar';
-  var bts=function(si){ ['pdf', 'imp'].forEach(function(k){ var b=$(pref+'-'+k); if(b) b.disabled=!si; }); };
+  var bts=function(si){ ['pdf', 'imp', 'qr'].forEach(function(k){ var b=$(pref+'-'+k); if(b) b.disabled=!si; }); };
   function pinta(){
     var n=++E.n, D=datos(); E.R=null; bts(false);
     Array.prototype.forEach.call($(pref+'-modo').querySelectorAll('button'), function(b){ var on=(b.getAttribute('data-v')===E.modo); b.className=on ? 'on' : ''; b.setAttribute('aria-selected', on ? 'true' : 'false'); });
@@ -508,15 +508,47 @@ function _pgHojaArmar(pref, datos, op){
   if($(pref+'-pdf')) $(pref+'-pdf').onclick=antes(function(D){ progPdf(D.d, D.H, D.progs, { avance:E.modo==='avance' }).then(function(R){ papBajar(R); }, function(){ toast('No se pudo armar el PDF. Revisa tu conexión.'); }); });
   if($(pref+'-imp')) $(pref+'-imp').onclick=antes(function(D){ progPdf(D.d, D.H, D.progs, { avance:E.modo==='avance' }).then(function(R){ papImprimir(R); }, function(){ toast('No se pudo armar la hoja. Revisa tu conexión.'); }); });
   if($(pref+'-xls')) $(pref+'-xls').onclick=antes(function(D, bt){ progExcel(D.d, D.H, D.progs, bt); });
+  if($(pref+'-qr')) $(pref+'-qr').onclick=antes(function(D, bt){ progPublicarQR(D, E.modo==='avance', bt); });
   pinta();
   return { pinta:pinta, modo:function(){ return E.modo; } };
+}
+/* 28/10/2026 · #186 · Marcelo: «la creación de los documentos así como PETS, IPERC, Objetivos y metas, RISST, Políticas,
+   plan anual, programa anual, programa de inspecciones, programa de capacitaciones, programa monitoreos, programa
+   simulacros, programa de auditoría, debe de estar en su QR… Y si son 2 iperc, o 3 pets? entonces el QR se convierte en
+   carpeta». «▣ Publicar en el cartel QR»: la hoja que se ve (para aprobar o con el avance) va a la carpeta «prog-anual»,
+   la que abre el cartel «Plan y programas anuales de SST». Cada programa del año es su propio documento (lo marca su nota
+   «Armado en OBRASST · programa <tipo> <año>»): al volver a publicarlo reemplaza solo al suyo; los demás —y lo que la obra
+   subió a mano a esa carpeta— se quedan, y el cartel los lista como carpeta. */
+var PROG_QR_CARPETA='prog-anual';
+function _pgQrMarca(d){ return 'Armado en OBRASST · programa '+d.tipo+' '+d.anio; }
+function _pgQrAyuda(){ return '<p class="ayuda" style="margin-top:10px">«Publicar en el cartel QR» deja esta hoja en la carpeta «Plan y programas anuales de SST»: es lo que abre su cartel, junto a los demás programas del año.</p>'; }
+function progPublicarQR(D, avance, bt){
+  var d=D && D.d; if(!d || !(d.items||[]).length){ toast('El programa todavía no tiene actividades.'); return; }
+  if(bt) bt.disabled=true;
+  toast('Armando la hoja y publicándola…');
+  var marca=_pgQrMarca(d), hoy=hoyISO();
+  var nom=(progNombre(d.tipo, d.anio)+(avance ? ' · avance al '+hoy.slice(8, 10)+'/'+hoy.slice(5, 7)+'/'+hoy.slice(0, 4) : '')).slice(0, 120);
+  progPdf(d, D.H, D.progs, { avance:avance }).then(function(R){
+    var f=null; try{ f=new File([R.blob], R.nombre, { type:'application/pdf' }); }catch(e){ f=R.blob; f.name=R.nombre; }
+    return subirArchivoP(PROG_QR_CARPETA, f);
+  }).then(function(url){
+    return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:PROG_QR_CARPETA, nombre:nom, url:url, nota:marca });
+  }).then(function(rows){
+    var row=Array.isArray(rows) ? rows[0] : null;
+    if(!row || !row.id) return Promise.reject(403);
+    /* la publicación anterior de este mismo programa sale de la carpeta; las de los otros programas se quedan */
+    return sbDelP('sst_doc?empresa=eq.'+_enc(YO.obra.id)+'&hoja=eq.'+PROG_QR_CARPETA+'&nota=eq.'+_enc(marca)+'&id=neq.'+_enc(row.id)).catch(function(){ return null; });
+  }).then(function(){
+    if(bt) bt.disabled=false;
+    toast('Publicado: está en la carpeta «Plan y programas anuales de SST» y lo abre su cartel QR.');
+  }, function(e){ if(bt) bt.disabled=false; toast('No se pudo publicar. '+porQueFallo(e)); });
 }
 /* la hoja de un programa ya guardado, desde su tarjeta */
 function progVer(tipo, anio){
   _papCss(); _pgCss();
   var f=progDe(PROGW.filas, tipo, anio); if(!f){ toast('Ese programa ya no está.'); return; }
-  abrirHoja(progNombre(tipo, anio), 'La hoja para firmar, imprimir o mandar', _pgHojaHTML('pgv'),
-    '<button type="button" class="bt sec" id="pgv-xls">Excel</button><button type="button" class="bt sec" id="pgv-imp" disabled>Imprimir</button><button type="button" class="bt" id="pgv-pdf" disabled>Descargar el PDF</button>', {clase:'pdf', sinFoco:true});
+  abrirHoja(progNombre(tipo, anio), 'La hoja para firmar, imprimir o mandar', _pgHojaHTML('pgv')+_pgQrAyuda(),
+    '<button type="button" class="bt sec" id="pgv-xls">Excel</button><button type="button" class="bt sec" id="pgv-imp" disabled>Imprimir</button><button type="button" class="bt sec" id="pgv-qr" disabled>▣ Publicar en el cartel QR</button><button type="button" class="bt" id="pgv-pdf" disabled>Descargar el PDF</button>', {clase:'pdf', sinFoco:true});
   _pgHojaArmar('pgv', function(){ return { d:f.d, H:PROGW.H, progs:PROGW.filas }; });
 }
 
@@ -1038,8 +1070,8 @@ function _pgfFirmas(){
 }
 /* ── paso 4 · la hoja ── */
 function _pgfHoja(){
-  return '<div class="acciones" style="justify-content:flex-start;margin:0 0 6px"><button type="button" class="bt chico" id="pgf-pdf" disabled>Descargar el PDF</button><button type="button" class="bt sec chico" id="pgf-xls">Excel</button><button type="button" class="bt sec chico" id="pgf-imp" disabled>Imprimir</button></div>'+
-    '<p class="ayuda" style="margin:0 0 12px">Al descargar o imprimir se guarda primero, para que quede en la sección.</p>'+_pgHojaHTML('pgf');
+  return '<div class="acciones" style="justify-content:flex-start;margin:0 0 6px"><button type="button" class="bt chico" id="pgf-pdf" disabled>Descargar el PDF</button><button type="button" class="bt sec chico" id="pgf-xls">Excel</button><button type="button" class="bt sec chico" id="pgf-imp" disabled>Imprimir</button><button type="button" class="bt sec chico" id="pgf-qr" disabled>▣ Publicar en el cartel QR</button></div>'+
+    '<p class="ayuda" style="margin:0 0 12px">Al descargar, imprimir o publicar se guarda primero, para que quede en la sección.</p>'+_pgHojaHTML('pgf')+_pgQrAyuda();
 }
 /* lo que se guarda (borrador:true → tal cual está, para la vista previa; sin él, limpio) */
 function _pgfPaquete(borrador){
@@ -1940,8 +1972,14 @@ function objHoja(){
     if(!R) return; var bt=this; bt.disabled=true;
     var m=$('objh-msg'); m.className='msg gris'; m.textContent='Publicando…';
     var f=null; try{ f=new File([R.blob], R.nombre, { type:'application/pdf' }); }catch(e){ f=R.blob; f.name=R.nombre; }
+    /* 28/10/2026 · #186 · como los programas: la hoja de ese año reemplaza a la que se publicó antes (lo que se subió a
+       mano a la carpeta se queda) */
+    var marca='Armado en OBRASST · objetivos '+d.anio;
     subirArchivoP('objetivos', f).then(function(url){
-      return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'objetivos', nombre:('Objetivos y metas de SST '+d.anio).slice(0, 120), url:url, nota:null });
+      return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'objetivos', nombre:('Objetivos y metas de SST '+d.anio).slice(0, 120), url:url, nota:marca });
+    }).then(function(rows){
+      var row=Array.isArray(rows) ? rows[0] : null;
+      if(row && row.id) return sbDelP('sst_doc?empresa=eq.'+_enc(YO.obra.id)+'&hoja=eq.objetivos&nota=eq.'+_enc(marca)+'&id=neq.'+_enc(row.id)).catch(function(){ return null; });
     }).then(function(){
       bt.disabled=false; m.className='msg ok'; m.textContent='Publicado: está en la carpeta «Objetivos y metas» y lo abre su cartel QR (imprímelo en «Carteles QR»).';
     }, function(e){ bt.disabled=false; m.className='msg mal'; m.textContent='No se pudo publicar. '+porQueFallo(e); });

@@ -76,12 +76,15 @@ function arrSelEmpresas(id, op){
     L.map(function(l){ return '<option value="' + esc(l.id) + '"' + (op.valor === l.id ? ' selected' : '') + '>' + esc(l.n) + (l.estado !== 'activa' ? ' · registro propio' : '') + '</option>'; }).join('');
 }
 
-/* ══ la puerta ═══════════════════════════════════════════════════════════════════════════════ */
-function arrPintar(cual, caja){
-  _arrCss();
-  ARR.caja = caja; ARR.cual = cual;
+/* ══ la puerta ═══════════════════════════════════════════════════════════════════════════════
+   28/10/2026 · cada herramienta es su propia sección del portal (la casa de cada cuenta): arrPintar(cual, caja, tab) pinta
+   esa sola, sin la tira de pestañas de adentro. Sin «tab», como antes (tres secciones con sus pestañas). «ini»: el inicio. */
+function arrPintar(cual, caja, tab){
+  _arrCss(); if(typeof _cadCss === 'function') _cadCss();
+  ARR.caja = caja; ARR.cual = cual; ARR.solo = !!tab || cual === 'ini';
   var i = arrIni();
   if(!i){ caja.innerHTML = arrVacio('No se pudo cargar', 'Revisa tu conexión y vuelve a abrir esta sección.'); return; }
+  if(cual === 'ini'){ arrInicio(caja); return; }
   var g = arrGrado(), hace = { sup:2, cartera:3, fis:4 }[cual] || 2;
   if(g < hace){
     caja.innerHTML = '<div class="tarj"><div class="tarj-cuerpo arr-falta"><h2>' + esc({ sup:'Mi supervisión', cartera:'Mi cartera', fis:'Centro de fiscalización' }[cual]) + '</h2><p>' +
@@ -90,6 +93,7 @@ function arrPintar(cual, caja){
     if(typeof _cadAcc === 'function') _cadAcc('');
     return;
   }
+  if(tab){ ARR.tab[cual] = tab; caja.innerHTML = '<div id="arr-cuerpo"></div>'; arrTab(cual, tab, $('arr-cuerpo')); return; }
   var T = ARR_TABS[cual] || [], t = ARR.tab[cual] || T[0][0];
   var h = '<div class="seg arr-seg" role="tablist" aria-label="Qué ver">' + T.map(function(x){
     return '<button type="button" role="tab" data-arr-tab="' + x[0] + '" aria-selected="' + (x[0] === t) + '" class="' + (x[0] === t ? 'on' : '') + '">' + esc(x[1]) + '</button>'; }).join('') + '</div><div id="arr-cuerpo"></div>';
@@ -104,7 +108,16 @@ function arrTab(cual, t, c){
             prior:arrPrior, ordenes:arrOrdenes, medidas:arrMedidas, control:arrControl, expediente:arrExpediente }[t];
   if(F) F(c);
 }
-function arrRepintar(){ if(ARR.caja && ARR.caja.isConnected) arrPintar(ARR.cual, ARR.caja); }
+function arrRepintar(){ if(ARR.caja && ARR.caja.isConnected) arrPintar(ARR.cual, ARR.caja, (ARR.solo && ARR.cual !== 'ini') ? ARR.tab[ARR.cual] : null); }
+/* ir a otra herramienta: con la casa de cada cuenta, a su sección; si no, a su pestaña */
+function arrIrA(cual, tab){
+  var id = (typeof ARR_VISTA_ID !== 'undefined' && ARR_VISTA_ID[cual]) ? ARR_VISTA_ID[cual][tab] : null;
+  if(ARR.solo && id && typeof vistasDe === 'function' && vistasDe().some(function(v){ return v.id === id; })){
+    if(VISTA.actual === id) arrRepintar(); else navegar(id);
+    return;
+  }
+  ARR.tab[cual] = tab; arrRepintar();
+}
 /* pedir y pintar, sin pisar si mientras tanto se cambió de pestaña */
 function arrPedir(c, fn, args, pinta){
   var cual = ARR.cual, tab = ARR.tab[cual];
@@ -128,31 +141,174 @@ function arrMesAtar(c, alCambiar){
 /* ══ MI SUPERVISIÓN ══════════════════════════════════════════════════════════════════════════ */
 /* las empresas que supervisa: sus cifras, lo que se les pide en documentos y si están homologadas */
 function arrEmpresasV(c){
+  /* 28/10/2026 · en la web también: mandar el requerimiento a una empresa (antes, solo desde la app) */
+  arrAccSupervisar();
   arrPedir(c, 'sst_cad_cartera', { p_emp:YO.obra.id }, function(j){
     var t = j.tot || {}, L = j.lista || [], g = arrGrado();
+    /* 28/10/2026 · las supervisoras que incluye van aparte: no son empresas que se fiscalizan */
+    var nSup = L.filter(function(x){ return x.incluida && x.estado === 'activa'; }).length, nEmp = L.filter(function(x){ return !x.incluida && x.estado === 'activa'; }).length;
     var h = '<div class="rej">' +
-      cifra('Empresas que supervisas', String(t.empresas || 0), (t.invitadas ? t.invitadas + ' sin aceptar' : 'todas aceptaron') + (t.rechazaron ? ' · ' + t.rechazaron + ' rechazaron' : ''), t.no_atendieron ? 'ojo' : '') +
-      cifra('Personas hoy', arrN(t.gente), 'de las que aceptaron', '') +
+      cifra(g >= 4 ? 'Empresas que fiscalizas' : 'Empresas que supervisas', String(nEmp), (t.invitadas ? t.invitadas + ' sin aceptar' : 'todas aceptaron') + (t.rechazaron ? ' · ' + t.rechazaron + ' rechazaron' : '') + (nSup ? ' · ' + nSup + (nSup === 1 ? ' supervisora incluida' : ' supervisoras incluidas') : ''), t.no_atendieron ? 'ojo' : '') +
+      cifra('Personas hoy', arrN(L.filter(function(x){ return !x.incluida && x.estado === 'activa'; }).reduce(function(a, x){ return a + ((x.ind || {}).gente || 0); }, 0)), 'de las que aceptaron', '') +
       cifra('Observaciones abiertas', String(t.ab || 0), t.ven ? t.ven + (t.ven === 1 ? ' vencida' : ' vencidas') : 'ninguna vencida', t.ven ? 'mal' : '') +
       cifra('Documentos', (t.req_total ? Math.round(100 * (t.req_ok || 0) / t.req_total) + ' %' : '—'), t.req_total ? (t.req_ok || 0) + ' de ' + t.req_total + ' aprobados' + (t.req_por_revisar ? ' · ' + t.req_por_revisar + ' por revisar' : '') : 'nada pedido', t.req_por_revisar ? 'ojo' : '') +
       cifra('Inspecciones del mes', String(t.insp_mes || 0), 'con lista', '') + '</div>';
-    if(!L.length){ c.innerHTML = h + arrVacio('Todavía no supervisas a ninguna empresa', 'Desde la app: «Supervisión» → «Supervisar a una empresa».'); return; }
-    h += '<div class="tarj"><div class="tarj-cab"><div><h2>Tu cartera</h2><p class="sub">Toca una empresa para ver y pedir sus documentos' + (g >= 3 ? ' (y los requisitos de ingreso: la homologación)' : '') + '</p></div></div>' +
-      '<div class="tabla-caja"><table class="arr-t"><thead><tr><th>Empresa</th><th>Estado</th><th class="num">Gente</th><th class="num">Abiertas</th><th class="num">Vencidas</th><th>Documentos</th>' + (g >= 3 ? '<th>Homologada</th>' : '') + '<th class="num">Insp. del mes</th></tr></thead><tbody>' +
+    if(!L.length){ c.innerHTML = h + arrVacioSupervisar(g); arrVacioAtar(c); return; }
+    /* 28/10/2026 · cada empresa, su ficha (sus cifras, su personal, sus ATS: lo que da el mandato) y sus documentos. Antes la ficha
+       solo se abría desde «Empresas de la obra», que la casa de los planes de arriba ya no lleva */
+    h += '<div class="tarj"><div class="tarj-cab"><div><h2>Tu cartera</h2><p class="sub">Toca una empresa para ver su ficha (sus cifras de hoy, su personal y sus ATS) · «Documentos» para pedirle y revisar lo que entrega' + (g >= 3 ? ', con los requisitos de ingreso (la homologación)' : '') + '</p></div></div>' +
+      '<div class="tabla-caja"><table class="arr-t"><thead><tr><th>Empresa</th><th>Estado</th><th class="num">Gente</th><th class="num">Abiertas</th><th class="num">Vencidas</th><th>Documentos</th>' + (g >= 3 ? '<th>Homologada</th>' : '') + '<th class="num">Insp. del mes</th><th></th></tr></thead><tbody>' +
       L.map(function(x){
-        var o = x.obs || {}, r = x.req || {}, ind = x.ind || {}, est = x.estado === 'activa' ? arrPill('Acepta', 'ok') : (x.estado === 'rechazada' ? arrPill('Rechazó', 'mal') : (x.vencida ? arrPill('No atendió', 'mal') : arrPill('Sin aceptar', 'ojo')));
-        return '<tr class="clic" data-arr-emp="' + esc(x.id) + '" tabindex="0"><td><b>' + esc(cadCorto(x.nombre || x.razon || '')) + '</b><small class="arr-sub">' + esc(x.obra || '') + (x.ruc ? ' · ' + esc(cadDocN()) + ' ' + esc(x.ruc) : '') + (x.registro_propio ? ' · registro propio' : '') + '</small></td>' +
-          '<td>' + est + '</td><td class="num">' + (x.estado === 'activa' ? arrN(ind.gente) : '—') + '</td><td class="num">' + (o.ab || 0) + '</td><td class="num' + (o.ven ? ' arr-mal' : '') + '">' + (o.ven || 0) + '</td>' +
+        var o = x.obs || {}, r = x.req || {}, ind = x.ind || {}, est = x.estado === 'activa' ? (x.incluida ? arrPill('Tu supervisora', 'azul') : arrPill('Acepta', 'ok')) : (x.estado === 'rechazada' ? arrPill('Rechazó', 'mal') : (x.vencida ? arrPill('No atendió', 'mal') : arrPill('Sin aceptar', 'ojo')));
+        return '<tr class="clic" data-arr-emp="' + esc(x.id) + '" data-arr-act="' + (x.estado === 'activa' ? '1' : '') + '" tabindex="0"><td><b>' + esc(cadCorto(x.nombre || x.razon || '')) + '</b><small class="arr-sub">' + esc(x.obra || '') + (x.ruc ? ' · ' + esc(cadDocN()) + ' ' + esc(x.ruc) : '') + (x.registro_propio ? ' · registro propio' : '') + '</small></td>' +
+          '<td>' + est + (x.rechazo ? '<small class="arr-sub">«' + esc(x.rechazo) + '»</small>' : '') + '</td><td class="num">' + (x.estado === 'activa' ? arrN(ind.gente) : '—') + '</td><td class="num">' + (o.ab || 0) + '</td><td class="num' + (o.ven ? ' arr-mal' : '') + '">' + (o.ven || 0) + '</td>' +
           '<td>' + (r.total ? (r.ok || 0) + ' / ' + r.total + (r.por_revisar ? ' · <span class="arr-ojo">' + r.por_revisar + ' por revisar</span>' : '') : '<span class="arr-gris">nada pedido</span>') + '</td>' +
           (g >= 3 ? '<td>' + (r.ingreso ? (r.homologada ? arrPill('Sí', 'ok') : arrPill('Falta', 'mal')) : '<span class="arr-gris">sin requisitos</span>') + '</td>' : '') +
-          '<td class="num">' + ((x.insp || {}).mes || 0) + '</td></tr>';
+          '<td class="num">' + ((x.insp || {}).mes || 0) + '</td><td class="arr-acc"><button type="button" class="bt sec chico" data-arr-docs="' + esc(x.id) + '">Documentos</button></td></tr>';
       }).join('') + '</tbody></table></div></div>';
+    /* 28/10/2026 · los requerimientos que todavía no aceptan: su enlace, WhatsApp, uno nuevo o retirarlo (antes, solo en la app) */
+    var pend = L.filter(function(x){ return x.estado === 'invitada' && x.invite_yo; });
+    if(pend.length) h += '<div class="tarj"><div class="tarj-cab"><div><h2>Requerimientos por aceptar</h2><p class="sub">Mientras no aceptan trabajas igual con tu registro propio: observas, inspeccionas y levantas actas. Al aceptar, la empresa recibe esa historia</p></div></div>' +
+      '<div class="tarj-cuerpo cad-invs">' + pend.map(arrReqHTML).join('') + '</div></div>';
     c.innerHTML = h;
+    var abre = function(tr){
+      var id = tr.getAttribute('data-arr-emp'), en = ((arrIni() || {}).abajo || []).some(function(l){ return l.id === id && l.estado === 'activa'; });
+      if(tr.getAttribute('data-arr-act') && en && typeof cadVerEmpresa === 'function') cadVerEmpresa(id); else arrDocs(id);
+    };
     Array.prototype.forEach.call(c.querySelectorAll('[data-arr-emp]'), function(tr){
-      tr.onclick = function(){ arrDocs(tr.getAttribute('data-arr-emp')); };
-      tr.onkeydown = function(ev){ if(ev.key === 'Enter') arrDocs(tr.getAttribute('data-arr-emp')); };
+      tr.onclick = function(ev){ if(ev.target && ev.target.closest && ev.target.closest('[data-arr-docs]')) return; abre(tr); };
+      tr.onkeydown = function(ev){ if(ev.key === 'Enter' && ev.target === tr) abre(tr); };
     });
+    Array.prototype.forEach.call(c.querySelectorAll('[data-arr-docs]'), function(b){ b.onclick = function(ev){ ev.stopPropagation(); arrDocs(b.getAttribute('data-arr-docs')); }; });
+    arrReqAtar(c, pend);
   });
+}
+/* ══ SUPERVISAR A UNA EMPRESA, TAMBIÉN EN LA WEB (28/10/2026) ═════════════════════════════════════════════════════
+   Marcelo: «¿Funcionan bien sus flujos?». Una entidad que fiscaliza trabaja en la computadora, y mandar el requerimiento a
+   la empresa que va a fiscalizar (o incluir a su supervisora) solo se podía desde la app («Supervisión» → «Supervisar a
+   una empresa»). Ahora también aquí, con la misma función del servidor y lo mismo que dice la app (cadPintarRequerimiento):
+   sst_cad_invitar {clase:'supervision', hacia:'abajo', incluir}. Lo que ve lo da el mandato: la empresa no elige. */
+/* lo que dice el servidor al mandar (o rehacer) un requerimiento, en palabras de este caso */
+function arrMotivoReq(j, e){
+  var m = j && j.motivo;
+  if(m === 'tope') return 'Llegaste al máximo de empresas de tu plan' + (j.tope ? ' (' + j.tope + ')' : '') + '. Para sumar más, escríbenos.';
+  if(m === 'tope_incluidas') return 'Ya incluiste a todas las supervisoras de tu plan' + (j.tope ? ' (' + j.tope + ')' : '') + '.';
+  if(m === 'incluir') return 'Solo un Mandante o una Fiscalización incluye a su supervisora.';
+  if(m === 'ya_esta') return 'Esa empresa ya tiene un requerimiento vivo o ya está en tu cartera.';
+  if(m && ARR_MOTIVO[m]) return ARR_MOTIVO[m];
+  return cadMotivo(j, e);
+}
+function arrPuedeSupervisar(){ var i = arrIni(); return !!(i && (i.puedo || {}).supervisar); }
+function arrAccSupervisar(extra){
+  if(typeof _cadAcc !== 'function') return;
+  var g = arrGrado();
+  _cadAcc((arrPuedeSupervisar() ? '<button type="button" class="bt" id="arr-sup-nueva">＋ ' + esc(g >= 4 ? 'Fiscalizar a una empresa' : 'Supervisar a una empresa') + '</button>' : '') + (extra || '') +
+    '<button type="button" class="bt sec" id="arr-sup-pegar">Tengo una invitación</button>');
+  if($('arr-sup-nueva')) $('arr-sup-nueva').onclick = function(){ arrSupervisar(false); };
+  if($('arr-sup-pegar')) $('arr-sup-pegar').onclick = function(){ if(typeof cadPegarInvitacion === 'function') cadPegarInvitacion(); };
+}
+function arrVacioSupervisar(g){
+  var puede = arrPuedeSupervisar();
+  return '<div class="vacio arr-vacio-sup"><b>' + esc(g >= 4 ? 'Todavía no fiscalizas a ninguna empresa' : 'Todavía no supervisas a ninguna empresa') + '</b>' +
+    esc(puede ? (g >= 4 ? 'Mándale el requerimiento a la empresa que vas a fiscalizar: la acepta con su cuenta (o crea una, gratis). Mientras tanto trabajas con tu registro propio.'
+                        : 'Mándale el requerimiento a la empresa que vas a supervisar: lo acepta con su cuenta (o crea una, gratis). Mientras tanto trabajas con tu registro propio.')
+              : 'El requerimiento lo manda el jefe o el gerente de tu equipo.') +
+    (puede ? '<span class="arr-vacio-bt"><button type="button" class="bt" data-arr-sup="1">＋ ' + esc(g >= 4 ? 'Fiscalizar a una empresa' : 'Supervisar a una empresa') + '</button></span>' : '') + '</div>';
+}
+function arrVacioAtar(c){ Array.prototype.forEach.call(c.querySelectorAll('[data-arr-sup]'), function(b){ b.onclick = function(){ arrSupervisar(b.getAttribute('data-arr-sup') === 'incluir'); }; }); }
+function arrSupervisar(incluir){
+  var i = arrIni(); if(!i) return;
+  if(!arrPuedeSupervisar()){ toast('El requerimiento lo manda el jefe o el gerente de tu equipo.'); return; }
+  var g = arrGrado(), p = i.puedo || {}, sv = (i.tier || {}).supervisoras || null, doc = cadDocN();
+  var h = (p.incluir ? '<div class="cad-ops" role="radiogroup" aria-label="Qué es para tu proyecto">' +
+      '<label class="cad-op"><input type="radio" name="arr-r-inc" value=""' + (incluir ? '' : ' checked') + '><b>' + esc(g >= 4 ? 'Una empresa que fiscalizas' : 'Una contratista que supervisas') + '</b><small>' +
+        esc(g >= 4 ? 'Le llega a la empresa que vas a fiscalizar, con su plazo.' : 'Le llega a la empresa que vas a supervisar, con su plazo.') + '</small></label>' +
+      '<label class="cad-op"><input type="radio" name="arr-r-inc" value="1"' + (incluir ? ' checked' : '') + '><b>Tu supervisora</b><small>La incluyes en tu plan: trabaja sin pagar en tu proyecto, con el programa, los recorridos, las actas y el informe del mes; tú ves cómo supervisa.' +
+        (sv ? ' Incluidas: ' + (sv.usadas || 0) + ' de ' + (sv.tope || 0) + '.' : '') + '</small></label></div>' : '') +
+    '<p class="ayuda cad-ay" id="arr-r-ay"></p>' +
+    '<div class="campo"><label for="arr-r-ruc">' + esc(doc) + ' de la empresa (opcional)</label><input id="arr-r-ruc" inputmode="numeric" maxlength="20" autocomplete="off"></div>' +
+    '<div class="campo"><label for="arr-r-nombre">Razón social o nombre</label><input id="arr-r-nombre" maxlength="140" autocomplete="off"></div>' +
+    '<div class="cad-dos"><div class="campo"><label for="arr-r-contacto">A quién le llega (su nombre)</label><input id="arr-r-contacto" maxlength="80" autocomplete="off"></div>' +
+    '<div class="campo"><label for="arr-r-cel">Su celular (para mandárselo por WhatsApp)</label><input id="arr-r-cel" inputmode="tel" maxlength="20" autocomplete="off"></div></div>' +
+    '<div class="msg mal" id="arr-r-msg" role="alert"></div>';
+  abrirHoja(g >= 4 ? 'Fiscalizar a una empresa' : 'Supervisar a una empresa', 'El requerimiento de vinculación: vence en 14 días', h,
+    '<button type="button" class="bt sec" id="arr-r-no">Cancelar</button><button type="button" class="bt" id="arr-r-ok">Crear el requerimiento</button>', { id:'arr-requerimiento' });
+  var inc = function(){ var r = document.querySelector('input[name="arr-r-inc"]:checked'); return !!(r && r.value); };
+  var ayuda = function(){
+    $('arr-r-ay').textContent = inc() ? 'Al aceptarlo, tu supervisora trabaja sin pagar en tu proyecto mientras la tengas incluida (lo cubre tu plan).'
+      : 'Lo que ves lo da tu mandato (el contrato o la ley): sus cifras y el detalle de SST de esa obra. La empresa no elige qué esconder. No paga por responder.';
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="arr-r-inc"]'), function(r){ r.onchange = ayuda; });
+  ayuda();
+  $('arr-r-no').onclick = cerrarHoja;
+  $('arr-r-ok').onclick = function(){
+    var m = $('arr-r-msg'), bt = $('arr-r-ok'); m.textContent = '';
+    var d = { emp:YO.obra.id, clase:'supervision', hacia:'abajo', ruc:String($('arr-r-ruc').value || '').trim(), nombre:String($('arr-r-nombre').value || '').trim(),
+              contacto:String($('arr-r-contacto').value || '').trim(), cel:String($('arr-r-cel').value || '').trim() };
+    if(inc()) d.incluir = true;
+    if(d.nombre.length < 3){ m.textContent = 'Escribe la razón social o el nombre de la empresa.'; $('arr-r-nombre').focus(); return; }
+    bt.disabled = true; bt.textContent = 'Creando…';
+    sbRpc('sst_cad_invitar', { p:d }).then(function(j){
+      if(!j || !j.ok){ bt.disabled = false; bt.textContent = 'Crear el requerimiento'; m.textContent = arrMotivoReq(j); return; }
+      arrReqListo(j.enlace || {});
+      if(typeof cadTraer === 'function') cadTraer(true).then(function(){ if(VISTA.actual === 'sup-emp' || VISTA.actual === 'arr-ini') arrRepintar(); });
+    }, function(e){ bt.disabled = false; bt.textContent = 'Crear el requerimiento'; m.textContent = arrMotivoReq(null, e); });
+  };
+  setTimeout(function(){ try{ $('arr-r-nombre').focus(); }catch(e){} }, 60);
+}
+/* el mensaje que se le manda a la empresa (o a la supervisora) */
+function arrTextoReq(l){
+  var de = (YO.obra || {}).nombre || '', g = arrGrado();
+  return 'Hola' + (l.contacto ? ' ' + String(l.contacto).split(' ')[0] : '') + ': ' +
+    (l.incluida ? de + ' te incluye en OBRASST como su supervisora: trabajas sin pagar en su proyecto. '
+                : de + ' te envía en OBRASST un requerimiento de vinculación para ' + (g >= 4 ? 'fiscalizar' : 'supervisar') + ' la seguridad de tu obra. ') +
+    'Abre este enlace, entra con tu cuenta o crea una (es gratis) y acéptalo: ' + cadEnlaceDe(l.token) + ' — vence el ' + arrFecha(l.vence) + '.';
+}
+function arrReqListo(l){
+  var url = l.token ? cadEnlaceDe(l.token) : '', txt = l.token ? arrTextoReq(l) : '';
+  var h = '<div class="aviso ok"><b>Requerimiento creado para ' + esc(l.razon || l.nombre || 'la empresa') + '.</b> ' +
+    esc(l.incluida ? 'Mándale el enlace a tu supervisora: al aceptarlo, trabaja sin pagar en tu proyecto (lo cubre tu plan).'
+                   : 'Mándale el enlace: al abrirlo, la empresa lo acepta (o lo rechaza con su motivo). Si no responde, queda como «no atendió».') +
+    (l.vence ? ' Vence el ' + esc(arrFecha(l.vence)) + '.' : '') + '</div>' +
+    (url ? '<div class="campo"><label for="arr-l-url">El enlace del requerimiento</label><input id="arr-l-url" readonly value="' + esc(url) + '"></div>' : '') +
+    '<p class="ayuda">Mientras tanto trabajas igual con tu registro propio: observas, inspeccionas y levantas actas. Cuando acepte, recibe esa historia. El enlace es la llave: mándalo solo a esa empresa.</p>';
+  abrirHoja('Requerimiento listo', l.razon || l.nombre || '', h,
+    '<button type="button" class="bt sec" id="arr-l-cerrar">Cerrar</button>' + (url ? '<button type="button" class="bt sec" id="arr-l-copiar">Copiar enlace</button>' : '') +
+    (url ? (l.cel ? '<a class="bt" id="arr-l-wa" target="_blank" rel="noopener" href="' + esc(_cadWA(l.cel, txt)) + '">Enviar por WhatsApp</a>' : '<button type="button" class="bt" id="arr-l-texto">Copiar el mensaje</button>') : ''),
+    { id:'arr-req-listo' });
+  $('arr-l-cerrar').onclick = cerrarHoja;
+  if($('arr-l-copiar')) $('arr-l-copiar').onclick = function(){ cadCopiar(url, 'Enlace copiado.'); };
+  if($('arr-l-texto')) $('arr-l-texto').onclick = function(){ cadCopiar(txt, 'Mensaje copiado: pégalo en WhatsApp o en un correo.'); };
+  if($('arr-l-url')) $('arr-l-url').onfocus = function(){ this.select(); };
+}
+/* un requerimiento que todavía no aceptan, en la lista */
+function arrReqHTML(l){
+  var manda = arrManda(), txt = l.token ? arrTextoReq(l) : '';
+  return '<div class="cad-inv-f' + (l.vencida ? ' vencida' : '') + '"><div><b>' + esc(l.razon || l.nombre || '') + '</b><small>' +
+    esc(l.incluida ? 'Tu supervisora (incluida)' : (arrGrado() >= 4 ? 'Por fiscalizar' : 'Por supervisar')) + (l.ruc ? ' · ' + esc(cadDocN()) + ' ' + esc(l.ruc) : '') + (l.contacto ? ' · ' + esc(l.contacto) : '') +
+    ' · ' + (l.vencida ? 'no atendió (venció el ' + esc(arrFecha(l.vence)) + ')' : 'vence el ' + esc(arrFecha(l.vence))) + '</small></div><div class="acciones">' +
+    (l.token && !l.vencida ? '<button type="button" class="bt sec chico" data-req-copiar="' + esc(l.token) + '">Copiar enlace</button>' +
+      (l.cel ? '<a class="bt sec chico" target="_blank" rel="noopener" href="' + esc(_cadWA(l.cel, txt)) + '">WhatsApp</a>' : '') : '') +
+    (manda ? '<button type="button" class="bt sec chico" data-req-otra="' + esc(l.id) + '">' + (l.vencida ? 'Mandarlo otra vez' : 'Enlace nuevo') + '</button>' +
+      '<button type="button" class="bt mal chico" data-req-quitar="' + esc(l.id) + '">Retirar</button>' : '') + '</div></div>';
+}
+function arrReqAtar(c, L){
+  var q = function(sel, fn){ Array.prototype.forEach.call(c.querySelectorAll(sel), fn); };
+  q('[data-req-copiar]', function(b){ b.onclick = function(){ cadCopiar(cadEnlaceDe(b.getAttribute('data-req-copiar')), 'Enlace copiado.'); }; });
+  var otra = function(id, quitar){
+    var pide = quitar ? confirmar('¿Retirar el requerimiento?', 'El enlace que mandaste deja de servir. Lo de tu registro propio se queda. Puedes mandarlo otra vez después.', { si:'Retirar', mal:true })
+                      : confirmar('¿Sacar un enlace nuevo?', 'El enlace anterior deja de servir y este vale por 14 días.', { si:'Sacar enlace nuevo' });
+    pide.then(function(si){
+      if(!si) return;
+      sbRpc('sst_cad_reinvitar', { p:{ enlace:id, quitar:!!quitar } }).then(function(j){
+        if(!j || !j.ok){ toast(arrMotivoReq(j)); return; }
+        if(quitar) toast('Requerimiento retirado.'); else arrReqListo(Object.assign({}, (L || []).filter(function(x){ return x.id === id; })[0] || {}, j.enlace || {}));
+        if(typeof cadTraer === 'function') cadTraer(true).then(function(){ arrRepintar(); });
+      }, function(e){ toast(arrMotivoReq(null, e)); });
+    });
+  };
+  q('[data-req-otra]', function(b){ b.onclick = function(){ otra(b.getAttribute('data-req-otra'), false); }; });
+  q('[data-req-quitar]', function(b){ b.onclick = function(){ otra(b.getAttribute('data-req-quitar'), true); }; });
 }
 /* lo que se le pide a una empresa en documentos: pedir, revisar lo entregado, anular */
 function arrDocs(enlace){
@@ -509,16 +665,167 @@ function arrAlertas(L){
 function arrTablero(c){
   if(typeof _cadAcc === 'function') _cadAcc('<button type="button" class="bt sec" id="arr-tab-imp">Imprimir</button>');
   if($('arr-tab-imp')) $('arr-tab-imp').onclick = function(){ window.print(); };
-  arrPedir(c, 'sst_cad_tablero', { p:{ emp:YO.obra.id } }, function(j){
-    var k = j.cifras || {}, A = j.alertas || [];
-    var h = '<div class="rej">' + cifra('Proyectos', String(k.proyectos || 0), (k.empresas || 0) + (k.empresas === 1 ? ' empresa' : ' empresas') + ' · ' + (k.supervisoras || 0) + (k.supervisoras === 1 ? ' supervisora' : ' supervisoras'), '') +
-      cifra('Personas hoy', arrN(k.gente), 'en todas sus obras', '') +
+  arrPedir(c, 'sst_cad_tablero', { p:{ emp:YO.obra.id } }, function(j){ c.innerHTML = arrTableroCifras(j) + arrTableroAlertas(j); });
+}
+function arrTableroCifras(j){
+  var k = j.cifras || {};
+  return '<div class="rej arr-seis">' + cifra('Proyectos', String(k.proyectos || 0), (k.empresas || 0) + (k.empresas === 1 ? ' empresa' : ' empresas') + ' · ' + (k.supervisoras || 0) + (k.supervisoras === 1 ? ' supervisora' : ' supervisoras'), '') +
+    cifra('Personas hoy', arrN(k.gente), 'en todas sus obras', '') +
+    cifra('Observaciones abiertas', String(k.ab || 0), k.ven ? k.ven + (k.ven === 1 ? ' vencida' : ' vencidas') : 'ninguna vencida', k.ven ? 'mal' : '') +
+    cifra('Levantadas a tiempo', k.lev ? Math.round(100 * (k.a_tiempo || 0) / k.lev) + ' %' : '—', 'últimos 30 días', '') +
+    cifra('Homologadas', k.con_ingreso ? (k.homologadas || 0) + ' / ' + k.con_ingreso : '—', 'de las que tienen requisitos de ingreso', k.con_ingreso && (k.homologadas || 0) < k.con_ingreso ? 'ojo' : '') +
+    cifra('Accidentes del año', String(k.acc || 0), 'se muestran aparte: no restan', k.acc ? 'mal' : '') + '</div>';
+}
+function arrTableroAlertas(j){
+  return '<div class="tarj"><div class="tarj-cab"><div><h2>Alertas tempranas</h2><p class="sub">De la más grave a la más leve · al ' + esc(arrHora(j.ahora || new Date().toISOString())) + '</p></div></div><div class="tarj-cuerpo">' + arrAlertas(j.alertas || []) + '</div></div>';
+}
+
+/* ══ EL INICIO DE CADA PLAN DE ARRIBA (28/10/2026, #182) ══════════════════════════════════════════════════════════
+   Marcelo: «¿Hay su inicio?». Lo primero que ve cada uno al entrar, con las mismas funciones del servidor que sus pestañas:
+     · Fiscalización: las cifras y las alertas tempranas de todo lo que fiscaliza, y lo más riesgoso primero (la prioridad);
+     · Mandante: el tablero para el directorio (las mismas cifras y alertas) y las contratistas con la nota más baja;
+     · la supervisora incluida: quién la incluye y hasta cuándo, sus empresas con sus cifras y lo de hoy en su programa.
+   Abajo, sus herramientas a un toque (las mismas pestañas del carril). */
+var ARR_ACCESOS = {
+  fis:[['cum-emp', '✅', 'Cumplimiento por empresa', 'Capacitación, EMO, ATS, charla, PETAR y papeletas'], ['cum-qr', '🪪', 'Verificar a un trabajador', 'Por el QR de su casco o su documento'],
+       ['fis-prior', '🎯', 'Prioridad', 'A quién inspeccionar primero'], ['fis-ord', '📋', 'Órdenes de inspección', 'Asignar una empresa a un inspector'],
+       ['fis-med', '⛔', 'Medidas', 'Paralizaciones y prohibiciones'], ['fis-exp', '🗃', 'Expediente probatorio', 'Todo de una empresa, en PDF'],
+       ['cum-consol', '📈', 'Informe consolidado', 'Todas las empresas, mes a mes'], ['sup-inf', '📑', 'Informe del mes', 'Con su PDF']],
+  man:[['cum-emp', '✅', 'Cumplimiento por empresa', 'Capacitación, EMO, ATS, charla, PETAR y papeletas'], ['cum-qr', '🪪', 'Verificar a un trabajador', 'Por el QR de su casco o su documento'],
+       ['car-rank', '🏆', 'Ranking de contratistas', 'La nota de 0 a 100'], ['car-reten', '💰', 'Retenciones', 'Por incumplimiento, caso por caso'],
+       ['car-aud', '🧭', 'Auditoría de la supervisora', 'Cómo supervisa'], ['sup-emp', '🏢', 'Empresas', 'Documentos y homologación'],
+       ['cum-consol', '📈', 'Informe consolidado', 'Todas las empresas, mes a mes'], ['sup-inf', '📑', 'Informe del mes', 'Con su PDF']],
+  sup:[['cum-emp', '✅', 'Cumplimiento por empresa', 'Lo que cumple hoy cada una'], ['sup-emp', '🏢', 'Empresas', 'Sus cifras y sus documentos'], ['sup-prog', '🗓', 'Programa', 'Lo de tu equipo'],
+       ['sup-campo', '🚶', 'Recorridos', 'Con prueba de presencia'], ['sup-actas', '📝', 'Actas', 'Con firmas y código'],
+       ['sup-insp', '🔎', 'Inspecciones', 'Con lista'], ['sup-inf', '📑', 'Informe del mes', 'Con su PDF']]
+};
+function arrAccesosHTML(t){
+  var L = (ARR_ACCESOS[t] || []).filter(function(a){ return typeof vistasDe !== 'function' || vistasDe().some(function(v){ return v.id === a[0]; }); });
+  if(!L.length) return '';
+  return '<div class="arr-accesos" role="list" aria-label="Tus herramientas">' + L.map(function(a){
+    return '<button type="button" class="arr-acceso" role="listitem" data-arr-ir="' + esc(a[0]) + '"><span class="arr-acc-ic" aria-hidden="true">' + a[1] + '</span><span><b>' + esc(a[2]) + '</b><small>' + esc(a[3]) + '</small></span></button>';
+  }).join('') + '</div>';
+}
+function arrIrAtar(c){ Array.prototype.forEach.call(c.querySelectorAll('[data-arr-ir]'), function(b){ b.onclick = function(){ navegar(b.getAttribute('data-arr-ir')); }; }); }
+/* 28/10/2026 · «Cumplimiento de hoy» en el inicio de Fiscalización y de Mandante (Marcelo: «véndele toda la app»): de todas
+   las empresas que ve, cuánta gente tiene la capacitación y el EMO al día, cuántos firmaron su ATS y estuvieron en la charla de
+   hoy, y las papeletas; y las tres que más preocupan (la nota más baja; el servidor ya las manda primero) */
+function arrCumHoy(j){
+  var E = j.empresas || []; if(!E.length) return '';
+  var t = { gente:0, capOk:0, capTot:0, emoOk:0, emoTot:0, firm:0, asist:0, amon:0, emo:false };
+  E.forEach(function(x){
+    t.gente += +x.gente || 0;
+    if(x.cap){ t.capOk += +x.cap.ok || 0; t.capTot += +x.cap.tot || 0; }
+    if(x.emo){ t.emo = true; t.emoOk += +x.emo.ok || 0; t.emoTot += +x.emo.tot || 0; }
+    if(x.ats) t.firm += +x.ats.firmaron || 0;
+    if(x.charla) t.asist += +x.charla.asist || 0;
+    if(x.amon) t.amon += +x.amon.d30 || 0;
+  });
+  var pc = function(a, b){ return b ? Math.round(100 * a / b) : null; }, cl = function(v){ return v == null ? 'gris' : (v >= 90 ? 'ok' : (v >= 75 ? 'ojo' : 'mal')); };
+  var habil = j.dia_habil !== false, P = [['Capacitación vigente', pc(t.capOk, t.capTot)], ['EMO vigente', t.emo ? pc(t.emoOk, t.emoTot) : null],
+    ['Firmaron su ATS hoy', habil ? pc(t.firm, t.gente) : null], ['En la charla de hoy', habil ? pc(t.asist, t.gente) : null]];
+  var L = E.filter(function(x){ return x.nota != null; }).sort(function(a, b){ return a.nota - b.nota; }).slice(0, 3);
+  var p = function(o){ return (o && +o.tot > 0) ? Math.round(100 * (+o.ok || 0) / +o.tot) : null; };
+  var cel = function(v){ return v == null ? '<span class="arr-gris">—</span>' : '<span class="arr-cum-' + cl(v) + '">' + v + ' %</span>'; };
+  return '<div class="tarj"><div class="tarj-cab"><div><h2>Cumplimiento de hoy</h2><p class="sub">' + esc(arrN(t.gente)) + ' personas de ' + E.length + (E.length === 1 ? ' empresa' : ' empresas') + ' (contratistas y sus subcontratas), de sus propios registros en OBRASST' + (habil ? '' : ' · hoy es domingo: el ATS y la charla no cuentan') + '</p></div>' +
+    '<button type="button" class="bt sec chico" data-arr-ir="cum-emp">Ver cada empresa ›</button></div><div class="tarj-cuerpo">' +
+    '<div class="arr-cum-l">' + P.map(function(x){ return '<span class="arr-cum-' + cl(x[1]) + '"><b>' + (x[1] == null ? '—' : x[1] + ' %') + '</b>' + esc(x[0]) + '</span>'; }).join('') +
+      '<span class="arr-cum-' + (t.amon ? 'ojo' : 'ok') + '"><b>' + t.amon + '</b>' + (t.amon === 1 ? 'papeleta en 30 días' : 'papeletas en 30 días') + '</span></div>' +
+    (L.length ? '<h3 class="arr-h3">Las que más preocupan</h3><div class="tabla-caja"><table class="arr-t"><thead><tr><th>Empresa</th><th>Nota de hoy</th><th class="num">Capacitación</th><th class="num">EMO vigente</th><th class="num">ATS hoy</th><th class="num">Papeletas</th></tr></thead><tbody>' +
+      L.map(function(x){
+        var pa = (x.ats && x.gente) ? Math.round(100 * (x.ats.firmaron || 0) / x.gente) : null;
+        return '<tr><td><b>' + esc(cadCorto(x.nombre || '')) + '</b><small class="arr-sub">' + esc([x.proyecto, x.via === 'subcontrata' && x.padre ? 'subcontrata de ' + cadCorto(x.padre) : ''].filter(Boolean).join(' · ')) + '</small></td>' +
+          '<td class="arr-nota-c">' + arrBarra(x.nota, x.nota < 60) + '</td><td class="num">' + cel(p(x.cap)) + '</td><td class="num">' + (x.emo ? cel(p(x.emo)) : '<span class="arr-gris">sin dato</span>') + '</td>' +
+          '<td class="num">' + (habil ? cel(pa) : '<span class="arr-gris">—</span>') + '</td><td class="num' + (x.amon && x.amon.d30 ? ' arr-ojo' : '') + '">' + ((x.amon || {}).d30 || 0) + '</td></tr>';
+      }).join('') + '</tbody></table></div>' : '') + '</div></div>';
+}
+/* pide sin pisar: si mientras tanto se fue del inicio, no se pinta */
+function arrIniPedir(c, fn, args, pinta){
+  return sbRpc(fn, args).then(function(j){ if(c.isConnected && ARR.cual === 'ini') pinta(j && j.ok ? j : null); }, function(){ if(c.isConnected && ARR.cual === 'ini') pinta(null); });
+}
+function arrInicio(c){
+  var g = arrGrado(), i = arrIni() || {}, t = g >= 4 ? 'fis' : (g === 3 ? 'man' : 'sup');
+  arrAccSupervisar(g >= 3 ? '<button type="button" class="bt sec" id="arr-i-imp">Imprimir</button>' : '');
+  if($('arr-i-imp')) $('arr-i-imp').onclick = function(){ window.print(); };
+  var pat = i.patrocinio || null;
+  c.innerHTML = (t === 'sup' && pat ? '<div class="aviso azul arr-pat">Te incluye <b>' + esc(cadCorto(pat.cliente || '')) + '</b> (' + esc(pat.tipo === 'fiscalizacion' ? 'Fiscalización' : 'Mandante') + ')' +
+      (pat.hasta ? ' hasta el ' + esc(arrFecha(pat.hasta)) : '') + ': trabajas sin pagar en su proyecto, con lo de supervisión, y ve cómo supervisas.</div>' : '') +
+    (i.cuenta && i.cuenta.subio ? '<button type="button" class="cad-subio" id="arr-i-subio"><span class="cad-subio-n">' + i.cuenta.subio + '</span><span><b>' +
+      (i.cuenta.subio === 1 ? 'Subió a ti una observación vencida' : 'Subieron a ti ' + i.cuenta.subio + ' observaciones vencidas') + '</b><small>' +
+      (i.rango === 'gerente' ? (i.cuenta.subio === 1 ? 'Lleva más de un día vencida sin levantarse.' : 'Llevan más de un día vencidas sin levantarse.') : (i.cuenta.subio === 1 ? 'Venció sin levantarse.' : 'Vencieron sin levantarse.')) +
+      '</small></span><span class="cad-subio-ir">Ver ›</span></button>' : '') +
+    '<div id="arr-i-uno"><div class="vacio">Cargando…</div></div><div id="arr-i-cum"></div><div id="arr-i-dos"></div>' +
+    '<div class="tarj arr-i-ir"><div class="tarj-cab"><div><h2>Tus herramientas</h2><p class="sub">Las mismas del menú de la izquierda, a un toque</p></div></div><div class="tarj-cuerpo">' + arrAccesosHTML(t) + '</div></div>';
+  arrIrAtar(c);
+  if($('arr-i-subio')) $('arr-i-subio').onclick = function(){ CAD.f = { lado:'arriba', est:'subio', enlace:'', riesgo:'' }; navegar('cad-obs'); };
+  if(g >= 3){
+    arrIniPedir(c, 'sst_cad_tablero', { p:{ emp:YO.obra.id } }, function(j){
+      var u = $('arr-i-uno'); if(!u) return;
+      u.innerHTML = j ? arrTableroCifras(j) + arrTableroAlertas(j) : arrVacio('No se pudo cargar el tablero', 'Revisa tu conexión y vuelve a abrir el inicio.');
+    });
+    /* 28/10/2026 · el cumplimiento de hoy: las cifras de todas las empresas y las tres que más preocupan (el detalle, en cum-emp) */
+    arrIniPedir(c, 'sst_cad_cumple', { p:{ emp:YO.obra.id } }, function(j){
+      var k = $('arr-i-cum'); if(!k) return;
+      k.innerHTML = j ? arrCumHoy(j) : ''; arrIrAtar(k);
+    });
+    if(g >= 4) arrIniPedir(c, 'sst_cad_prioridad', { p:{ emp:YO.obra.id, region:null } }, function(j){
+      var d = $('arr-i-dos'); if(!d) return;
+      var L = ((j && j.lista) || []).slice(0, 5), manda = arrManda();
+      if(!j){ d.innerHTML = ''; return; }
+      if(!L.length){ d.innerHTML = '<div class="tarj"><div class="tarj-cuerpo">' + arrVacioSupervisar(4) + '</div></div>'; arrVacioAtar(d); return; }
+      d.innerHTML = '<div class="tarj"><div class="tarj-cab"><div><h2>Primero lo más riesgoso</h2><p class="sub">Las ' + L.length + ' empresas con el índice más alto · ' + esc(j.como || '') + '</p></div>' +
+        '<button type="button" class="bt sec chico" data-arr-ir="fis-prior">Ver toda la prioridad ›</button></div><div class="tabla-caja"><table class="arr-t"><thead><tr><th>Empresa</th><th>Región</th><th>Índice</th><th>Por qué</th><th>Última visita</th><th></th></tr></thead><tbody>' +
+        L.map(function(x){
+          var por = Object.keys(x.por || {}).filter(function(k){ return (x.por[k] || 0) > 0; }).sort(function(a, b){ return x.por[b] - x.por[a]; }).slice(0, 3).map(function(k){ return ARR_POR[k] + ' ' + x.por[k]; });
+          return '<tr><td><b>' + esc(cadCorto(x.nombre || '')) + '</b></td><td>' + esc(x.region || '') + '</td><td class="arr-nota-c">' + arrBarra(x.indice, x.indice >= 50) + '</td><td><small>' + esc(por.join(' · ') || 'nada en contra') + '</small></td>' +
+            '<td>' + (x.ultima ? esc(hace(x.ultima)) : '<span class="arr-mal">nunca</span>') + '</td><td class="arr-acc">' + (manda ? '<button type="button" class="bt sec chico" data-ord-a="' + esc(x.enlace) + '">Ordenar inspección</button>' : '') + '</td></tr>';
+        }).join('') + '</tbody></table></div></div>';
+      arrIrAtar(d);
+      Array.prototype.forEach.call(d.querySelectorAll('[data-ord-a]'), function(b){ b.onclick = function(){ arrOrdenNueva(b.getAttribute('data-ord-a'), 'prioridad'); }; });
+    });
+    else arrIniPedir(c, 'sst_cad_ranking', { p:{ emp:YO.obra.id } }, function(j){
+      var d = $('arr-i-dos'); if(!d) return;
+      if(!j){ d.innerHTML = ''; return; }
+      var L = (j.lista || []).filter(function(x){ return x.nota != null; }).slice(-5).reverse();
+      if(!(j.lista || []).length){ d.innerHTML = '<div class="tarj"><div class="tarj-cuerpo">' + arrVacioSupervisar(3) + '</div></div>'; arrVacioAtar(d); return; }
+      if(!L.length){ d.innerHTML = ''; return; }
+      d.innerHTML = '<div class="tarj"><div class="tarj-cab"><div><h2>Las contratistas que más preocupan</h2><p class="sub">Las de nota más baja entre todos tus proyectos · ' + esc(j.como || '') + '</p></div>' +
+        '<button type="button" class="bt sec chico" data-arr-ir="car-rank">Ver el ranking ›</button></div><div class="tabla-caja"><table class="arr-t"><thead><tr><th>Contratista</th><th>Nota</th><th class="num">Abiertas</th><th class="num">Accidentes</th><th>Homologada</th></tr></thead><tbody>' +
+        L.map(function(x){
+          return '<tr><td><b>' + esc(cadCorto(x.nombre || '')) + '</b>' + ((x.donde || []).length ? '<small class="arr-sub">' + esc(x.donde.map(function(d0){ return d0.proyecto; }).join(' · ')) + '</small>' : '') + '</td>' +
+            '<td class="arr-nota-c">' + arrBarra(x.nota, x.nota < 60) + '</td><td class="num">' + (x.ab || 0) + (x.ven ? ' <small class="arr-mal">(' + x.ven + ' venc.)</small>' : '') + '</td>' +
+            '<td class="num' + (x.acc ? ' arr-mal' : '') + '">' + (x.acc || 0) + '</td><td>' + (x.homologada == null ? '<span class="arr-gris">—</span>' : (x.homologada ? arrPill('Sí', 'ok') : arrPill('Falta', 'mal'))) + '</td></tr>';
+        }).join('') + '</tbody></table></div></div>';
+      arrIrAtar(d);
+    });
+    return;
+  }
+  /* la supervisora incluida: sus empresas y lo de hoy en su programa */
+  arrIniPedir(c, 'sst_cad_cartera', { p_emp:YO.obra.id }, function(j){
+    var u = $('arr-i-uno'); if(!u) return;
+    if(!j){ u.innerHTML = arrVacio('No se pudo cargar', 'Revisa tu conexión y vuelve a abrir el inicio.'); return; }
+    var k = j.tot || {};
+    u.innerHTML = '<div class="rej">' +
+      cifra('Empresas que supervisas', String(k.empresas || 0), (k.invitadas ? k.invitadas + ' sin aceptar' : 'todas aceptaron') + (k.rechazaron ? ' · ' + k.rechazaron + ' rechazaron' : ''), k.no_atendieron ? 'ojo' : '') +
+      cifra('Personas hoy', arrN(k.gente), 'de las que aceptaron', '') +
       cifra('Observaciones abiertas', String(k.ab || 0), k.ven ? k.ven + (k.ven === 1 ? ' vencida' : ' vencidas') : 'ninguna vencida', k.ven ? 'mal' : '') +
-      cifra('Levantadas a tiempo', k.lev ? Math.round(100 * (k.a_tiempo || 0) / k.lev) + ' %' : '—', 'últimos 30 días', '') +
-      cifra('Homologadas', k.con_ingreso ? (k.homologadas || 0) + ' / ' + k.con_ingreso : '—', 'de las que tienen requisitos de ingreso', k.con_ingreso && (k.homologadas || 0) < k.con_ingreso ? 'ojo' : '') +
-      cifra('Accidentes del año', String(k.acc || 0), 'se muestran aparte: no restan', k.acc ? 'mal' : '') + '</div>' +
-      '<div class="tarj"><div class="tarj-cab"><div><h2>Alertas tempranas</h2><p class="sub">De la más grave a la más leve · al ' + esc(arrHora(j.ahora || new Date().toISOString())) + '</p></div></div><div class="tarj-cuerpo">' + arrAlertas(A) + '</div></div>';
-    c.innerHTML = h;
+      cifra('Por validar', String((i.cuenta || {}).por_validar || 0), (i.cuenta || {}).por_validar ? 'ya las levantaron: falta tu visto bueno' : 'nada esperando', (i.cuenta || {}).por_validar ? 'ojo' : '') +
+      cifra('Inspecciones del mes', String(k.insp_mes || 0), 'con lista', '') + '</div>' +
+      (!(j.lista || []).length ? '<div class="tarj"><div class="tarj-cuerpo">' + arrVacioSupervisar(2) + '</div></div>' : '');
+    arrVacioAtar(u);
+  });
+  var hoy = arrHoy();
+  arrIniPedir(c, 'sst_cad_prog', { p:{ emp:YO.obra.id, desde:hoy, hasta:hoy } }, function(j){
+    var d = $('arr-i-dos'); if(!d || !j) return;
+    var L = (j.lista || []).filter(function(x){ return x.estado !== 'anulada'; });
+    d.innerHTML = '<div class="tarj"><div class="tarj-cab"><div><h2>Hoy en tu programa</h2><p class="sub">Lo cumplido lo dicen los registros: el recorrido, la inspección o el acta de hoy, en esa empresa</p></div>' +
+      '<button type="button" class="bt sec chico" data-arr-ir="sup-prog">Ver el programa ›</button></div>' +
+      (L.length ? '<div class="tabla-caja"><table class="arr-t"><thead><tr><th>Qué</th><th>Empresa</th><th>Quién</th><th>Estado</th></tr></thead><tbody>' + L.map(function(x){
+          var E = ARR_EST[x.estado] || [x.estado, 'gris'];
+          return '<tr><td>' + esc(ARR_ACT[x.actividad] || x.actividad) + (x.nota ? '<small class="arr-sub">' + esc(x.nota) + '</small>' : '') + '</td><td>' + esc(cadCorto(x.empresa || '')) + '</td>' +
+            '<td>' + (x.inspector_nombre ? esc(x.inspector_nombre) : '<span class="arr-gris">cualquiera del equipo</span>') + '</td><td>' + arrPill(E[0], E[1]) + '</td></tr>';
+        }).join('') + '</tbody></table></div>' : '<div class="tarj-cuerpo"><p class="arr-gris">Nada programado para hoy.</p></div>') + '</div>';
+    arrIrAtar(d);
   });
 }
 /* el ranking de contratistas, entre todos sus proyectos */
@@ -598,7 +905,12 @@ function arrAudit(c){
   arrPedir(c, 'sst_cad_auditoria', { p:{ emp:YO.obra.id, mes:m } }, function(j){
     var L = j.lista || [], SEM = { verde:['Verde', 'ok'], ambar:['Ámbar', 'ojo'], rojo:['Rojo', 'mal'], sin_datos:['Sin datos', 'gris'] };
     var h = arrMesSel('arr-aud-mes') + '<div class="aviso">' + esc(j.como || '') + ' Son cifras de su trabajo: nada del detalle de las empresas que ella supervisa.</div>';
-    if(!L.length){ c.innerHTML = h + arrVacio('No tienes una supervisora incluida', 'Desde la app: «Supervisar a una empresa» → «Mi supervisora».'); arrMesAtar(c, function(){ arrAudit(c); }); return; }
+    if(!L.length){
+      var inc = arrPuedeSupervisar() && ((arrIni() || {}).puedo || {}).incluir;
+      c.innerHTML = h + '<div class="vacio arr-vacio-sup"><b>No tienes una supervisora incluida</b>' + esc(inc ? 'Inclúyela en tu plan: trabaja sin pagar en tu proyecto y aquí ves cómo supervisa.' : 'La incluye el jefe o el gerente de tu equipo.') +
+        (inc ? '<span class="arr-vacio-bt"><button type="button" class="bt" data-arr-sup="incluir">＋ Incluir a tu supervisora</button></span>' : '') + '</div>';
+      arrVacioAtar(c); arrMesAtar(c, function(){ arrAudit(c); }); return;
+    }
     h += '<div class="arr-auds">' + L.map(function(s){
       var S = SEM[s.semaforo] || SEM.sin_datos;
       return '<div class="tarj arr-aud"><div class="tarj-cab"><div><h2>' + esc(cadCorto(s.nombre || '')) + '</h2><p class="sub">' + esc(s.proyecto || '') + ' · supervisa a ' + (s.empresas || 0) + (s.empresas === 1 ? ' empresa' : ' empresas') + '</p></div>' + arrPill(S[0], S[1]) + '</div>' +
@@ -622,8 +934,8 @@ function arrPrior(c){
     var L = j.lista || [], RG = j.regiones || [], manda = arrManda();
     var h = '<div class="aviso">' + esc(j.como || '') + '</div>';
     if(RG.length > 1 || reg) h += '<div class="seg chico arr-regs" role="tablist" aria-label="Región"><button type="button" data-reg=""' + (!reg ? ' class="on"' : '') + '>Todas</button>' +
-      RG.map(function(r){ return '<button type="button" data-reg="' + esc(r.region) + '"' + (reg === r.region ? ' class="on"' : '') + '>' + esc(r.region) + ' <b>' + r.empresas + (r.urgentes ? ' · ' + r.urgentes + ' urgentes' : '') + '</b></button>'; }).join('') + '</div>';
-    if(!L.length){ c.innerHTML = h + arrVacio('Todavía no fiscalizas a ninguna empresa', 'Desde la app: «Supervisión» → «Supervisar a una empresa».'); arrRegAtar(c); return; }
+      RG.map(function(r){ return '<button type="button" data-reg="' + esc(r.region) + '"' + (reg === r.region ? ' class="on"' : '') + '>' + esc(r.region) + ' <b>' + r.empresas + (r.urgentes ? ' · ' + r.urgentes + (r.urgentes === 1 ? ' urgente' : ' urgentes') : '') + '</b></button>'; }).join('') + '</div>';
+    if(!L.length){ c.innerHTML = h + arrVacioSupervisar(4); arrVacioAtar(c); arrRegAtar(c); return; }
     h += '<div class="tarj"><div class="tabla-caja"><table class="arr-t"><thead><tr><th>Empresa</th><th>Región</th><th>Índice</th><th>Por qué</th><th class="num">Gente</th><th>Última visita</th><th></th></tr></thead><tbody>' + L.map(function(x){
       var por = Object.keys(x.por || {}).filter(function(k){ return (x.por[k] || 0) > 0; }).sort(function(a, b){ return x.por[b] - x.por[a]; }).map(function(k){ return ARR_POR[k] + ' ' + x.por[k]; });
       return '<tr><td><b>' + esc(cadCorto(x.nombre || '')) + '</b>' + (x.ruc ? '<small class="arr-sub">' + esc(cadDocN()) + ' ' + esc(x.ruc) + '</small>' : '') + '</td><td>' + esc(x.region || '') + '</td>' +
@@ -686,7 +998,7 @@ function arrOrdenNueva(enlace, motivo){
       $('arr-on-si').disabled = false;
       if(!r || !r.ok){ $('arr-on-msg').textContent = arrMotivo(r); return; }
       cerrarHoja(); toast('Orden ' + ((r.orden || {}).n || '') + ' asignada: le aparece en su celular.');
-      ARR.ordEst = 'asignada'; ARR.tab.fis = 'ordenes'; arrRepintar();
+      ARR.ordEst = 'asignada'; arrIrA('fis', 'ordenes');
     }, function(e){ $('arr-on-si').disabled = false; $('arr-on-msg').textContent = arrMotivo(null, e); });
   };
 }
@@ -845,6 +1157,20 @@ function _arrCss(){
     '.arr-lista{margin:0;padding-left:18px}.arr-lista li{margin:4px 0}' +
     '.arr-cod{margin-top:16px;padding:12px;border:1px solid var(--raya);border-radius:12px;display:flex;flex-direction:column;gap:4px;align-items:flex-start}.arr-cod b{font:800 20px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.08em}' +
     '.arr-cod small{color:var(--gris)}.arr-auds{display:grid;gap:14px}.arr-falta p{color:var(--gris)}.arr-exp-ver{margin:12px 0}' +
-    '@media print{.arr-seg,.acciones{display:none!important}}';
+    /* 28/10/2026 · el inicio de cada plan: sus herramientas a un toque, y el vacío que ya trae su botón */
+    '.arr-accesos{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}' +
+    '.arr-acceso{-webkit-appearance:none;appearance:none;cursor:pointer;font:inherit;text-align:left;display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--raya);border-radius:10px;background:var(--panel);color:var(--texto)}' +
+    '.arr-acceso:hover{border-color:var(--azul)}.arr-acceso:focus-visible{outline:2px solid var(--azul);outline-offset:2px}' +
+    '.arr-acc-ic{flex:none;width:34px;height:34px;border-radius:9px;background:var(--fondo);display:grid;place-items:center;font-size:17px}' +
+    '.arr-acceso b{display:block;color:var(--tinta);font-weight:600;font-size:14px;line-height:1.3}.arr-acceso small{display:block;color:var(--gris);font-size:12.5px;margin-top:2px;line-height:1.35}' +
+    '.arr-vacio-sup .arr-vacio-bt{display:block;margin-top:12px}.arr-pat{margin-bottom:16px}.arr-i-ir{margin-top:4px}' +
+    '.rej.arr-seis{grid-template-columns:repeat(6,minmax(0,1fr))}@media (max-width:1280px){.rej.arr-seis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:640px){.rej.arr-seis{grid-template-columns:repeat(2,minmax(0,1fr))}}' +
+    /* 28/10/2026 · el cumplimiento de hoy, en el inicio */
+    '.arr-cum-l{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}@media (max-width:1100px){.arr-cum-l{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:640px){.arr-cum-l{grid-template-columns:repeat(2,minmax(0,1fr))}}' +
+    '.arr-cum-l span{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:10px;background:var(--fondo);font-size:12.5px;color:var(--gris);line-height:1.35}' +
+    '.arr-cum-l b{font-size:20px;line-height:1.15;color:var(--tinta);font-variant-numeric:tabular-nums}.arr-cum-l .arr-cum-ok b{color:var(--ok)}.arr-cum-l .arr-cum-ojo b{color:var(--ojo)}.arr-cum-l .arr-cum-mal b{color:var(--mal)}' +
+    '#arr-i-cum .arr-t td:first-child{min-width:170px}' +
+    '.arr-cum-ok{color:var(--ok)}.arr-cum-ojo{color:var(--ojo)}.arr-cum-mal{color:var(--mal)}.arr-cum-gris{color:var(--gris)}' +
+    '@media print{.arr-seg,.acciones,.arr-i-ir{display:none!important}}';
   document.head.appendChild(s);
 }

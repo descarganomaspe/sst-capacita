@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OBRASST Fiscalización · para quien fiscaliza obras</title>
+<meta name="description" content="OBRASST Fiscalización: el cumplimiento de cada contratista y subcontratista de sus obras, en línea —capacitación, EMO, ATS, PETAR, charla de hoy y papeletas—, el QR del casco en el frente, observaciones con foto y plazo, recorridos, actas, órdenes, medidas y el expediente.">
+<link rel="canonical" href="https://obrasstapp.com/fiscalizacion.html">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="favicon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* OBRASST Fiscalización · la página para quien fiscaliza obra pública y concesiones (28/10/2026). Marcelo: «vendele toda la app… osea, no solo es observar condiciones». El estilo es el de central.html, copiado tal cual (comun.py). */
+:root{
+  --petroleo:#0B2A3A; --petroleo2:#123B50; --petroleo3:#1B4B63;
+  --casco:#F5B700; --papel:#FFFFFF; --mesa:#F4F6F8; --raya:#E1E7EC; --raya2:#C9D3DA;
+  --texto:#22323D; --gris:#5E717E; --gris2:#8D9DA8;
+  --ok:#1C8A55; --ok-f:#E6F4EC; --ojo:#9A5B00; --ojo-f:#FBF1E0; --mal:#C23A40; --mal-f:#FBE8E9;
+  --f:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; -webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{transition:none !important; animation:none !important} }
+body{margin:0; background:var(--papel); color:var(--texto); font:16px/1.6 var(--f); -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0; color:var(--petroleo); font-weight:600; letter-spacing:-.015em; text-wrap:balance}
+p{margin:0}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--casco); outline-offset:3px; border-radius:4px}
+.ancho{max-width:1120px; margin:0 auto; padding-inline:20px}
+@media (min-width:760px){ .ancho{padding-inline:32px} }
+.ceja{font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--gris)}
+/* en el celular cada rejilla es UNA columna que no se estira: sin esto,
+   la tabla de muestra (min-width) ensanchaba la portada y el texto quedaba
+   cortado bajo el overflow:hidden. Las media queries de abajo la parten. */
+.portada .ancho, .calc, .pedir, .planes, .dp, .dolores, .pasos, .roles, .dos{grid-template-columns:minmax(0,1fr)}
+.portada .ancho > *, .calc > *, .pedir > *{min-width:0}
+
+/* ── botones ── */
+.bt{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:0 20px; border-radius:10px;
+  font:600 15px/1 var(--f); text-decoration:none; cursor:pointer; border:1px solid transparent; transition:background .12s, border-color .12s}
+.bt.casco{background:var(--casco); color:var(--petroleo)}
+.bt.casco:hover{background:#FFC72B}
+.bt.claro{background:transparent; color:#fff; border-color:rgba(255,255,255,.4)}
+.bt.claro:hover{background:rgba(255,255,255,.08)}
+.bt.tinta{background:var(--petroleo); color:#fff}
+.bt.tinta:hover{background:var(--petroleo2)}
+.bt.linea{background:var(--papel); color:var(--petroleo); border-color:var(--raya2)}
+.bt.linea:hover{background:var(--mesa)}
+.bt.chico{min-height:38px; padding:0 14px; font-size:14px; border-radius:8px}
+.aviso-datos{font-size:12.5px; color:var(--gris); margin:10px 0 0; line-height:1.5}
+.aviso-datos a{color:var(--petroleo)}
+.bt.wa{background:#1F7A4D; color:#fff; flex-direction:column; gap:3px; padding-block:9px; line-height:1.15}
+.bt.wa .num{font-weight:500; font-size:13.5px; opacity:.92; white-space:nowrap}
+.bt.wa:hover{background:#18643F}
+.contacto{display:grid; gap:10px; justify-items:start}
+.contacto .dato{font-size:14.5px}
+
+/* ── la barra ── */
+.barra{position:sticky; top:0; z-index:10; background:var(--petroleo); border-bottom:1px solid rgba(255,255,255,.08)}
+.barra .ancho{display:flex; align-items:center; gap:18px; min-height:62px}
+.marca{display:flex; align-items:center; gap:10px; text-decoration:none; color:#fff}
+.marca-ic{width:32px; height:32px; border-radius:9px; background:var(--petroleo3); display:grid; place-items:center; flex:none}
+.marca-ic i{display:block; width:15px; height:4px; background:var(--casco); border-radius:2px}
+.marca b{font-size:15px; letter-spacing:.05em}
+.marca span{font-size:12.5px; color:#9FB6C4; border-left:1px solid rgba(255,255,255,.18); padding-left:10px}
+.nav{display:none; gap:22px; margin-left:auto}
+.nav a{color:#C8D7E0; text-decoration:none; font-size:14px}
+.nav a:hover{color:#fff}
+.barra .acc{display:flex; gap:8px; margin-left:auto}
+@media (min-width:980px){ .nav{display:flex} .barra .acc{margin-left:10px} }
+@media (max-width:560px){ .marca span{display:none} .barra .bt.linea-o{display:none} }
+.barra .bt.linea-o{background:transparent; color:#fff; border-color:rgba(255,255,255,.3)}
+
+/* ── la portada ── */
+.portada{background:var(--petroleo); color:#D5E2EA; padding-block:56px 72px; overflow:hidden}
+.portada .ancho{display:grid; gap:44px; align-items:center}
+@media (min-width:980px){ .portada .ancho{grid-template-columns:1.12fr .88fr} }
+.sello{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; letter-spacing:.06em; color:var(--petroleo);
+  background:var(--casco); padding:5px 10px; border-radius:999px; margin-bottom:18px}
+.portada h1{color:#fff; font-size:clamp(34px,4.8vw,52px); line-height:1.05; letter-spacing:-.025em}
+.portada .lede{margin-top:18px; font-size:18.5px; line-height:1.55; max-width:36em}
+.portada .lede b{color:#fff; font-weight:600}
+.portada .ctas{display:flex; gap:10px; flex-wrap:wrap; margin-top:28px}
+.pruebas{display:grid; gap:10px; margin-top:30px; font-size:14px; color:#AFC3CF}
+@media (min-width:640px) and (max-width:979px){ .pruebas{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.pruebas span{display:flex; gap:9px; align-items:flex-start}
+.pruebas span::before{content:''; width:7px; height:7px; border-radius:2px; background:var(--casco); flex:none; margin-top:8px}
+
+/* la pantalla de muestra: la oficina, clara, como la Torre */
+.tablero{background:var(--papel); color:var(--texto); border-radius:14px; box-shadow:0 30px 60px -30px rgba(0,0,0,.6); overflow:hidden; font-size:13px}
+.tablero .top{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:11px 14px; background:#0E3143; color:#E6EEF2}
+.tablero .top b{color:var(--casco); letter-spacing:.04em; font-size:12.5px}
+.tablero .top .obra{font-weight:600}
+.tablero .top .tag{background:var(--casco); color:var(--petroleo); font:700 9.5px/1 var(--f); letter-spacing:.1em; padding:3px 6px; border-radius:4px}
+.tablero .top .yo{margin-left:auto; font:600 10px/1 var(--f); letter-spacing:.1em; padding:5px 7px; border-radius:4px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
+.tablero .cu{padding:12px}
+.alerta{padding:8px 11px; border-radius:8px; background:var(--mal-f); color:#7D1E22; font-size:12.5px; margin-bottom:10px}
+.alerta b{color:var(--mal)}
+.tabla-ov{overflow-x:auto; border:1px solid var(--raya); border-radius:8px}
+.tablero table{width:100%; border-collapse:collapse; min-width:520px}
+.tablero th{font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--gris); text-align:left; padding:8px 9px; border-bottom:1px solid var(--raya); font-weight:600; white-space:nowrap; background:#FAFBFC}
+.tablero td{padding:7px 9px; border-bottom:1px solid #EEF2F5; white-space:nowrap}
+.tablero tr:last-child td{border-bottom:0}
+.tablero .n{text-align:right}
+.sem{display:inline-flex; align-items:center; gap:6px; font-weight:600}
+.sem::before{content:''; width:8px; height:8px; border-radius:50%; background:currentColor}
+.v{color:var(--ok)} .a{color:var(--ojo)} .r{color:var(--mal)}
+/* 28/10/2026 · la pantalla de muestra entera, sin deslizarla: la portada parte en dos mitades y la tabla va más justa */
+@media (min-width:980px){ .portada.ancha .ancho{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+.tablero.compacta table{min-width:470px; font-size:12.5px}
+.tablero.compacta th{padding:8px 6px}
+.tablero.compacta td{padding:7px 6px}
+.tablero.compacta td:first-child{white-space:normal; min-width:118px}
+.pie-muestra{font-size:12px; color:#8FAAB9; margin-top:10px}
+/* 01/10/2026 · la obra de ejemplo, a un toque (portal/?demo=central) */
+.pie-muestra a{color:var(--casco); font-weight:600; text-decoration:none; white-space:nowrap}
+.pie-muestra a:hover{text-decoration:underline}
+.portada .ver-ej{margin:16px 0 0; font-size:14px; color:#B9CCD7; display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline}
+.portada .ver-ej a{color:var(--casco); font-weight:600; text-decoration:none}
+.portada .ver-ej a:hover{text-decoration:underline}
+.dp .ver-ej2,.plan .ver-ej2{margin:10px 0 0}
+.dp .ver-ej2 a,.plan .ver-ej2 a{color:var(--petroleo); font-weight:600}
+
+/* ── secciones ── */
+.sec{padding-block:68px}
+.sec.mesa{background:var(--mesa)}
+.sec h2{font-size:clamp(26px,3.4vw,36px); line-height:1.12}
+.sec .intro{margin-top:12px; font-size:17.5px; color:var(--gris); max-width:40em}
+.cab-sec{margin-bottom:34px}
+
+/* el dolor */
+.dolores{display:grid; gap:14px}
+@media (min-width:760px){ .dolores{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.dolor{display:flex; gap:14px; align-items:flex-start; padding:18px 20px; border-radius:12px; background:var(--papel); border:1px solid var(--raya)}
+.dolor .x{flex:none; width:26px; height:26px; border-radius:50%; background:var(--mal-f); color:var(--mal); display:grid; place-items:center; font-weight:700; font-size:14px}
+.dolor b{display:block; color:var(--petroleo); font-weight:600}
+.dolor p{color:var(--gris); font-size:15px; margin-top:2px}
+.vuelta{margin-top:22px; padding:18px 20px; border-radius:12px; background:var(--petroleo); color:#D5E2EA; font-size:16.5px}
+.vuelta b{color:#fff}
+
+/* los pasos (son una secuencia de verdad: van numerados) */
+.pasos{display:grid; gap:16px; counter-reset:p}
+@media (min-width:760px){ .pasos{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (min-width:1080px){ .pasos{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.paso{counter-increment:p; padding:22px 20px; border-radius:12px; border:1px solid var(--raya); background:var(--papel); display:grid; gap:8px; align-content:start}
+.paso::before{content:counter(p); width:34px; height:34px; border-radius:9px; background:var(--petroleo); color:var(--casco); display:grid; place-items:center; font-weight:700; font-size:16px}
+.paso h3{font-size:17.5px; line-height:1.25}
+.paso p{color:var(--gris); font-size:15px}
+.paso small{font-size:13px; color:var(--gris2)}
+
+/* quién ve qué */
+.roles{display:grid; gap:12px}
+@media (min-width:760px){ .roles{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (min-width:1080px){ .roles{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.rol{padding:18px 20px; border-radius:12px; background:var(--papel); border:1px solid var(--raya); display:grid; gap:8px; align-content:start}
+.rol .quien{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+.rol .quien b{color:var(--petroleo); font-size:16.5px}
+.rol .quien span{font-size:12.5px; color:var(--gris)}
+.rol p{color:var(--gris); font-size:15px}
+.split{display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--gris)}
+.split .b{display:flex; width:110px; height:8px; border-radius:4px; overflow:hidden; background:#B7C7D2; flex:none}
+.split .b i{display:block; height:100%; background:var(--casco)}
+.leyenda{display:flex; gap:16px; margin-top:14px; font-size:13px; color:var(--gris)}
+.leyenda span{display:inline-flex; gap:7px; align-items:center}
+.leyenda i{width:11px; height:11px; border-radius:3px; display:inline-block}
+
+/* la calculadora */
+.calc{display:grid; gap:22px}
+@media (min-width:980px){ .calc{grid-template-columns:1.05fr 1fr; align-items:start} }
+.calc-in{padding:22px; border-radius:14px; background:var(--papel); border:1px solid var(--raya)}
+.campo{display:grid; gap:6px; margin-bottom:16px}
+.campo label{font-size:14px; font-weight:500; color:var(--texto)}
+.campo small{font-size:12.5px; color:var(--gris)}
+.campo .fila{display:flex; align-items:center; gap:12px}
+input[type=range]{flex:1; accent-color:var(--petroleo); min-width:0}
+input[type=number], input[type=text], input[type=email], input[type=tel], select, textarea{
+  width:100%; font:inherit; font-size:15px; color:var(--texto); background:var(--papel); border:1px solid var(--raya2); border-radius:9px; padding:10px 12px}
+.campo .fila input[type=number]{width:104px; flex:none; text-align:right}
+input:focus, select:focus, textarea:focus{outline:none; border-color:var(--petroleo3); box-shadow:0 0 0 3px rgba(27,75,99,.15)}
+details.supuestos{margin-top:4px; border-top:1px solid var(--raya); padding-top:12px}
+details.supuestos summary{cursor:pointer; font-size:14px; font-weight:600; color:var(--petroleo)}
+details.supuestos .campo{margin-top:14px}
+.calc-out{padding:24px; border-radius:14px; background:var(--petroleo); color:#CFDDE6; display:grid; gap:4px}
+.calc-out .fila{display:flex; justify-content:space-between; align-items:baseline; gap:14px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,.12)}
+.calc-out .fila span{font-size:14.5px}
+.calc-out .fila b{font-size:20px; color:#fff; font-weight:600; white-space:nowrap}
+.calc-out .gran{padding:16px 0 6px; border:0}
+.calc-out .gran b{font-size:clamp(28px,4vw,38px); color:var(--casco)}
+.calc-out .gran.neg b{color:#FFB4B8}
+.calc-out .nota{font-size:13.5px; color:#9DB5C3; margin-top:10px; line-height:1.55}
+.calc-out .punto{margin-top:12px; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,.06); font-size:14.5px; color:#E3ECF1}
+.calc-out .punto b{color:#fff}
+
+/* precios */
+.planes{display:grid; gap:16px}
+@media (min-width:860px){ .planes{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.plan{padding:26px 24px; border-radius:14px; border:1px solid var(--raya); background:var(--papel); display:grid; gap:12px; align-content:start}
+.plan.central{border:2px solid var(--petroleo); box-shadow:0 20px 40px -28px rgba(11,42,58,.45)}
+.plan .nom{display:flex; align-items:center; gap:10px}
+.plan .nom h3{font-size:22px}
+.plan .nom .tag{font:700 10px/1 var(--f); letter-spacing:.1em; text-transform:uppercase; padding:5px 8px; border-radius:999px; background:var(--casco); color:var(--petroleo)}
+.plan .precio{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.plan .precio b{font-size:40px; color:var(--petroleo); letter-spacing:-.02em; line-height:1}
+.plan .precio span{color:var(--gris); font-size:15px}
+.plan .piso{font-size:15px; color:var(--texto)}
+.plan ul{margin:4px 0 0; padding:0; list-style:none; display:grid; gap:8px; font-size:15px}
+.plan li{display:grid; grid-template-columns:18px 1fr; gap:8px}
+.plan li::before{content:'✓'; color:var(--ok); font-weight:700}
+.plan .impl{font-size:14px; color:var(--gris); padding-top:10px; border-top:1px solid var(--raya)}
+.letra{margin-top:18px; font-size:14.5px; color:var(--gris); max-width:60em}
+.solo{margin-top:16px; padding:14px 18px; border-radius:12px; background:var(--mesa); font-size:15px}
+.solo a{color:var(--petroleo); font-weight:600}
+
+/* demo y piloto */
+.dp{display:grid; gap:14px}
+@media (min-width:760px){ .dp{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.dp div{padding:20px 22px; border-radius:12px; background:var(--papel); border:1px solid var(--raya)}
+.dp .cuanto{font:600 13px/1 var(--f); letter-spacing:.08em; text-transform:uppercase; color:var(--gris)}
+.dp h3{font-size:19px; margin:8px 0 6px}
+.dp p{color:var(--gris); font-size:15px}
+
+/* el formulario */
+.pedir{display:grid; gap:26px}
+@media (min-width:980px){ .pedir{grid-template-columns:.9fr 1.1fr; align-items:start} }
+.form{padding:24px; border-radius:14px; background:var(--papel); border:1px solid var(--raya)}
+.dos{display:grid; gap:0 14px}
+@media (min-width:560px){ .dos{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.opciones{display:flex; gap:8px; flex-wrap:wrap}
+.opciones label{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--raya2); border-radius:10px; cursor:pointer; font-weight:500}
+.opciones input{accent-color:var(--petroleo)}
+.opciones label:has(input:checked){border-color:var(--petroleo); background:#EEF3F6}
+.trampa{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden}
+.msg{font-size:14px; margin-top:12px; min-height:20px}
+.msg.mal{color:var(--mal)} .msg.ok{color:var(--ok)}
+.listo{padding:26px 24px; border-radius:14px; background:var(--ok-f); border:1px solid #BFE0CD}
+.listo b{display:block; color:var(--ok); font-size:18px; margin-bottom:6px}
+.aparte{color:var(--gris); font-size:15px; display:grid; gap:12px}
+.aparte b{color:var(--petroleo)}
+
+/* preguntas */
+.faq{display:grid; gap:10px; max-width:860px}
+.faq details{border:1px solid var(--raya); border-radius:12px; background:var(--papel); padding:0 18px}
+.faq summary{cursor:pointer; padding:16px 0; font-weight:600; color:var(--petroleo); list-style:none; display:flex; justify-content:space-between; gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+'; color:var(--gris); font-weight:500; font-size:20px; line-height:1}
+.faq details[open] summary::after{content:'–'}
+.faq details p{padding:0 0 16px; color:var(--gris); font-size:15.5px}
+
+/* pie */
+.pie{background:var(--petroleo); color:#9FB6C4; padding-block:36px; font-size:14px}
+.pie .ancho{display:flex; gap:18px 28px; flex-wrap:wrap; align-items:center}
+.pie a{color:#DCE7EE}
+.pie .der{margin-left:auto}
+
+/* ── lo que se suma (28/10/2026): las funciones, el QR del casco y el pedido de quien fiscaliza o contrata ── */
+.funcs, .qr .ancho, .chequeo{grid-template-columns:minmax(0,1fr)}
+.funcs{display:grid; gap:14px}
+@media (min-width:760px){ .funcs{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (min-width:1080px){ .funcs{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.func{padding:20px 20px 18px; border-radius:12px; background:var(--papel); border:1px solid var(--raya); display:grid; gap:8px; align-content:start}
+.func .donde{justify-self:start; font:600 11.5px/1 var(--f); letter-spacing:.08em; text-transform:uppercase; padding:5px 8px; border-radius:999px; background:#E6EDF2; color:var(--petroleo)}
+.func .donde.frente{background:#FFF1C7; color:#6B4F00}
+.func h3{font-size:17px; line-height:1.3}
+.func p{color:var(--gris); font-size:15px}
+.exige{margin-top:22px; display:grid; gap:6px; padding:20px 22px; border-radius:12px; background:var(--petroleo); color:#D5E2EA}
+.exige b{color:#fff; font-size:17.5px; font-weight:600}
+.exige p{font-size:15.5px}
+
+/* el QR del casco: el texto y el celular de muestra */
+.qr .ancho{display:grid; gap:36px; align-items:center}
+@media (min-width:980px){ .qr .ancho{grid-template-columns:1.05fr .95fr} }
+.qr .ancho > *{min-width:0}
+.chequeo{list-style:none; margin:18px 0 0; padding:0; display:grid; gap:10px; font-size:15.5px}
+.chequeo li{display:grid; grid-template-columns:20px 1fr; gap:10px; align-items:start}
+.chequeo li::before{content:''; width:10px; height:10px; margin-top:7px; border-radius:3px; background:var(--casco); box-shadow:0 0 0 3px #FFF1C7}
+.qr .nota-priv{margin-top:16px; font-size:14px; color:var(--gris); padding:12px 14px; border-radius:10px; background:var(--mesa)}
+.cel{justify-self:center; width:min(100%, 340px); padding:12px; border-radius:30px; background:#0E3143; box-shadow:0 30px 60px -32px rgba(11,42,58,.55)}
+.cel-pant{border-radius:20px; overflow:hidden; background:var(--papel); color:var(--texto); font-size:13.5px}
+.cel-top{display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--petroleo); color:#CFDDE6; font-size:11.5px; letter-spacing:.06em}
+.cel-top b{color:var(--casco); letter-spacing:.08em}
+.qv-banda{padding:10px 14px; font-weight:600; font-size:13.5px; display:flex; gap:8px; align-items:center}
+.qv-banda.mal{background:var(--mal-f); color:#8E2328}
+.qv-banda.mal::before{content:''; width:9px; height:9px; border-radius:50%; background:var(--mal); flex:none}
+.qv-quien{padding:14px 14px 10px; display:grid; gap:2px; border-bottom:1px solid var(--raya)}
+.qv-quien b{font-size:16.5px; color:var(--petroleo)}
+.qv-quien span{font-size:12.5px; color:var(--gris)}
+.qv-lista{display:grid}
+.qv-f{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:baseline; padding:8px 14px; border-bottom:1px solid #EEF2F5}
+.qv-f span{color:var(--gris); font-size:12.5px}
+.qv-f b{font-weight:600; font-size:13px; text-align:right}
+.qv-f b.v{color:var(--ok)} .qv-f b.a{color:var(--ojo)} .qv-f b.r{color:var(--mal)}
+.qv-pie{padding:10px 14px 12px; font-size:11.5px; color:var(--gris2)}
+.qr figcaption{margin-top:12px; text-align:center; font-size:12.5px; color:var(--gris)}
+@media (min-width:980px){ .portada.ancha .ancho{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+.tablero.compacta table{min-width:470px}
+.tablero.compacta th{padding:8px 7px}
+.tablero.compacta td{padding:7px 7px}
+.tablero.compacta td:first-child{white-space:normal; min-width:118px}
+.cotiza{margin-top:16px; font-size:15px; color:var(--gris)}
+.cotiza b{color:var(--petroleo)}
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="ancho">
+    <a class="marca" href="#arriba" aria-label="OBRASST Fiscalización, inicio"><span class="marca-ic"><i></i></span><b>OBRASST</b><span>Fiscalización</span></a>
+    <nav class="nav" aria-label="Secciones">
+      <a href="#que-ve">Qué ve</a><a href="#qr">El QR del casco</a><a href="#como">Cómo funciona</a><a href="#preguntas">Preguntas</a>
+    </nav>
+    <div class="acc">
+      <a class="bt chico linea-o" href="index.html">Entrar</a>
+      <a class="bt chico casco" href="#demo">Pedir demo</a>
+    </div>
+  </div>
+</header>
+
+<main id="arriba">
+<section class="portada ancha">
+  <div class="ancho">
+    <div>
+      <span class="sello">Piloto de 30 días · con devolución</span>
+      <h1>Cada obra que fiscaliza, en línea y con evidencia.</h1>
+      <p class="lede">No solo las observaciones: el cumplimiento de cada contratista y subcontratista, hoy. Su gente capacitada, su EMO vigente, sus ATS firmados, sus PETAR y la charla de hoy; los recorridos de sus inspectores con su ubicación, las actas, las órdenes y las medidas. <b>Exíjalo en sus bases y contratos: cada contratista registra en OBRASST y su entidad lo ve sin pedirle nada a nadie.</b></p>
+      <div class="ctas">
+        <a class="bt casco" href="#demo">Pedir una demo de 30 minutos</a>
+        <a class="bt claro" href="#demo" data-quiere="piloto">Piloto de 30 días</a>
+      </div>
+      <p class="ver-ej"><a href="index.html?demo=fiscalizacion">Recorra la obra de ejemplo ›</a> <span>Sin cuenta: como la entidad que fiscaliza cuatro proyectos.</span></p>
+      <div class="pruebas">
+        <span>Sin instalar nada: en el celular y en la PC</span>
+        <span>Funciona sin señal en el frente</span>
+        <span>Pensado para la Ley N.° 29783, el D.S. N.° 011-2019-TR y la Norma G.050</span>
+      </div>
+    </div>
+    <figure style="margin:0">
+      <div class="tablero compacta" role="img" aria-label="Pantalla de ejemplo de una entidad que fiscaliza: el cumplimiento de hoy de cinco contratistas con su gente, sus capacitados, su EMO vigente, sus ATS de hoy, la charla de hoy y una nota de 0 a 100, la más baja primero.">
+        <div class="top"><b>◆ OBRASST</b><span class="obra">Cumplimiento de hoy</span><span class="tag">FISCALIZACIÓN</span><span class="yo">JEFATURA</span></div>
+        <div class="cu">
+          <div class="alerta"><b>Riesgo alto vencido</b> · Estructuras Metálicas Los Sauces · puente Los Sauces · hace 26 h</div>
+          <div class="tabla-ov">
+            <table>
+              <thead><tr><th>Contratista</th><th class="n">Gente</th><th class="n">Capac.</th><th class="n">EMO</th><th class="n">ATS hoy</th><th class="n">Charla</th><th>Nota</th></tr></thead>
+              <tbody>
+                <tr><td>Estructuras Los Sauces</td><td class="n">72</td><td class="n">79 %</td><td class="n">81 %</td><td class="n">4/5</td><td class="n">68 %</td><td><span class="sem r">64</span></td></tr>
+                <tr><td>Redes Valle Alto</td><td class="n">96</td><td class="n">83 %</td><td class="n">88 %</td><td class="n">5/6</td><td class="n">74 %</td><td><span class="sem a">72</span></td></tr>
+                <tr><td>Vial Norte Grande</td><td class="n">186</td><td class="n">86 %</td><td class="n">90 %</td><td class="n">8/9</td><td class="n">81 %</td><td><span class="sem a">78</span></td></tr>
+                <tr><td>Constructora Ayllu</td><td class="n">154</td><td class="n">90 %</td><td class="n">94 %</td><td class="n">8/8</td><td class="n">88 %</td><td><span class="sem v">86</span></td></tr>
+                <tr><td>Pavimentos del Pacífico</td><td class="n">64</td><td class="n">95 %</td><td class="n">97 %</td><td class="n">4/4</td><td class="n">92 %</td><td><span class="sem v">91</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <figcaption class="pie-muestra">Pantalla de ejemplo: empresas y cifras inventadas. <a href="index.html?demo=fiscalizacion">Ábrala y recórrala ›</a></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="sec mesa">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Hoy</p><h2>Así se fiscaliza hoy</h2></div>
+    <div class="dolores">
+      <div class="dolor"><span class="x" aria-hidden="true">×</span><div><b>Cada contratista reporta a su manera</b><p>Correos, WhatsApp, Excel y papeles, en su formato y cuando puede. Su equipo junta, ordena y vuelve a pedir.</p></div></div>
+      <div class="dolor"><span class="x" aria-hidden="true">×</span><div><b>El levantamiento se da de palabra</b><p>La observación queda en un chat, sin plazo y sin la foto del después. Lo que nadie sigue, se repite.</p></div></div>
+      <div class="dolor"><span class="x" aria-hidden="true">×</span><div><b>En el frente, nadie sabe quién es quién</b><p>El trabajador sin EMO vigente o sin capacitación para altura se descubre en la auditoría, no en la puerta.</p></div></div>
+      <div class="dolor"><span class="x" aria-hidden="true">×</span><div><b>El expediente se arma después</b><p>Actas, fotos y órdenes en cuadernos y carpetas distintas: cuando se necesita la prueba, hay que reconstruirla.</p></div></div>
+    </div>
+    <p class="vuelta">Con OBRASST, cada contratista y subcontratista registra su seguridad y salud en la misma app, desde la obra, y su entidad lo ve en línea, proyecto por proyecto. <b>No le pide nada a nadie: la información llega sola.</b></p>
+  </div>
+</section>
+
+<section class="sec" id="que-ve">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Qué ve su entidad</p><h2>No solo observaciones: toda la seguridad de sus obras</h2>
+      <p class="intro">Lo que sus contratistas y subcontratistas registran en la obra, ordenado para quien fiscaliza: en la oficina, lo que más preocupa primero; en el frente, lo que su inspector necesita a la mano.</p></div>
+    <div class="funcs">
+      <div class="func"><span class="donde">Oficina</span><h3>El cumplimiento de cada contratista, hoy</h3><p>Por proyecto y por empresa: trabajadores capacitados, inducción, EMO vigente, SCTR, ATS hechos y firmados, PETAR, charla de hoy y papeletas, con una nota de 0 a 100. Lo que más preocupa, primero.</p></div>
+      <div class="func"><span class="donde">Oficina</span><h3>Trabajador por trabajador</h3><p>De cada empresa, su gente con su semáforo y lo que le falta a cada uno —EMO vencido, capacitación por vencer, sin inducción—, antes de que pase algo.</p></div>
+      <div class="func"><span class="donde frente">Frente</span><h3>El QR del casco</h3><p>Su inspector escanea el casco o el carné y ve si tiene papeletas, si cumple para altura y si su EMO venció. Cada verificación queda en su recorrido.</p></div>
+      <div class="func"><span class="donde frente">Frente</span><h3>Observaciones con foto y plazo</h3><p>Riesgo alto, 24 horas; medio, 72; bajo, 7 días. La contratista levanta con foto, su equipo valida y lo vencido sube solo.</p></div>
+      <div class="func"><span class="donde frente">Frente</span><h3>Recorridos, actas e inspecciones</h3><p>Cada recorrido con su ubicación —en la obra o lejos—, las inspecciones con su puntaje y las actas firmadas, con un sello que cualquiera verifica.</p></div>
+      <div class="func"><span class="donde">Oficina</span><h3>Prioridad, órdenes y medidas</h3><p>La prioridad por riesgo, región por región; las órdenes de inspección a sus inspectores; las medidas con su plazo y su levantamiento.</p></div>
+      <div class="func"><span class="donde">Oficina</span><h3>El expediente probatorio</h3><p>Por empresa y por fechas, en PDF: actas, observaciones, inspecciones, órdenes, medidas, recorridos y pedidos, cada uno con su sello y si sigue igual hoy.</p></div>
+      <div class="func"><span class="donde">Oficina</span><h3>Matriz de capacitación y consolidado</h3><p>Qué capacitación exige cada puesto y quién la tiene; el consolidado de todas sus contratistas, mes a mes, con su tendencia, el IF y el IG.</p></div>
+      <div class="func"><span class="donde">Oficina</span><h3>El control de su equipo</h3><p>El programa de cada inspector, lo cumplido y lo que no, y la productividad de cada uno.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec qr" id="qr">
+  <div class="ancho">
+    <div>
+      <p class="ceja">En el frente</p>
+      <h2>El QR del casco dice cómo está hoy</h2>
+      <p class="intro">Su inspector apunta la cámara del celular al casco o al carné del trabajador. Ve quién es y de qué empresa, y lo que su empresa registró de él hasta hoy: no lo que dice el trabajador.</p>
+      <ul class="chequeo">
+        <li>Si tiene papeletas en los últimos 30 días.</li>
+        <li>Si cumple para trabajo en altura: su capacitación vigente y su EMO.</li>
+        <li>Si su EMO está vigente, por vencer o vencido.</li>
+        <li>Si tiene SCTR, inducción y capacitación al día.</li>
+        <li>Si firmó el ATS de hoy, si está en un PETAR y si estuvo en la charla.</li>
+      </ul>
+      <p class="nota-priv">Cada verificación queda con su hora en el recorrido del inspector. Del examen médico solo se ve si está vigente —nunca el diagnóstico ni las restricciones— y el documento del trabajador va tapado. Sin señal, el QR igual dice quién es y si su credencial es válida; el estado de hoy se trae cuando vuelve la señal.</p>
+    </div>
+    <figure style="margin:0">
+      <div class="cel" role="img" aria-label="Celular de ejemplo con el resultado de escanear el QR del casco: Huamán Quispe, Luis, Operario, de Estructuras Metálicas Los Sauces. No cumple para trabajo en altura hoy.">
+        <div class="cel-pant">
+          <div class="cel-top"><b>◆ OBRASST</b><span>QR del casco</span></div>
+          <div class="qv-banda mal">No cumple para trabajo en altura hoy</div>
+          <div class="qv-quien"><b>Huamán Quispe, Luis</b><span>Operario · Estructuras Metálicas Los Sauces</span><span>Puente vehicular Los Sauces</span></div>
+          <div class="qv-lista"><div class="qv-f"><span>EMO</span><b class="v">Vigente hasta el 14/03/2027</b></div><div class="qv-f"><span>SCTR</span><b class="v">Vigente</b></div><div class="qv-f"><span>Inducción</span><b class="v">Completa</b></div><div class="qv-f"><span>Trabajo en altura</span><b class="r">Falta capacitación vigente</b></div><div class="qv-f"><span>Charla de hoy</span><b class="v">Asistió · 07:32</b></div><div class="qv-f"><span>ATS de hoy</span><b class="v">Firmó</b></div><div class="qv-f"><span>PETAR de hoy</span><b class="a">Trabajo en altura</b></div><div class="qv-f"><span>Papeletas</span><b class="a">1 en los últimos 30 días</b></div></div>
+          <p class="qv-pie">Verificado hoy a las 09:14 · queda en el recorrido del inspector</p>
+        </div>
+      </div>
+      <figcaption>Pantalla de ejemplo: trabajador, empresa y datos inventados.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="sec mesa" id="como">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Cómo funciona</p><h2>Cuatro pasos, y el primero está en sus bases</h2></div>
+    <div class="pasos">
+      <div class="paso"><h3>Lo exige en sus bases y contratos</h3><p>Que cada contratista y subcontratista lleve su seguridad y salud en OBRASST, con su gente, desde el primer día de obra.</p><small>Antes de empezar</small></div>
+      <div class="paso"><h3>Invita a cada contratista con su RUC</h3><p>Le llega su requerimiento. Acepta con su cuenta y su obra queda enlazada a la suya; si lo rechaza, tiene que decir por qué.</p><small>Semana 1</small></div>
+      <div class="paso"><h3>Ellas registran; su entidad lo ve</h3><p>ATS, charlas, capacitaciones, EMO, PETAR, EPP y observaciones: lo que registran en la obra le llega en línea, por proyecto y por empresa.</p><small>Todos los días</small></div>
+      <div class="paso"><h3>Sus inspectores salen al frente</h3><p>Recorren con su programa, observan con foto, escanean el QR del casco y levantan actas. El expediente se arma solo.</p><small>En campo</small></div>
+    </div>
+    <div class="exige"><b>Usted no persigue a nadie.</b><p>La contratista principal invita a sus subcontratas y cada una registra lo suyo. Lo que está fuera de plazo, lo que falta y el trabajador que no cumple aparecen solos, en el proyecto que corresponde.</p></div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Quién hace qué</p><h2>Cada uno ve lo suyo, donde trabaja</h2>
+      <p class="intro">La jefatura decide en la oficina y el inspector trabaja en el frente. OBRASST está pensado para eso: lo de campo en el celular y lo de gestión en la PC.</p></div>
+    <div class="roles">
+      <div class="rol"><div class="quien"><b>Jefatura de la entidad</b><span>oficina</span></div><div class="split"><span class="b"><i style="width:10%"></i></span>10 % campo · 90 % oficina</div><p>La prioridad por riesgo, los proyectos y las contratistas que más preocupan, el consolidado del mes y el expediente.</p></div>
+      <div class="rol"><div class="quien"><b>Coordinador de fiscalización</b><span>oficina y campo</span></div><div class="split"><span class="b"><i style="width:40%"></i></span>40 % campo · 60 % oficina</div><p>Programa a sus inspectores, emite órdenes y medidas y controla que se cumplan.</p></div>
+      <div class="rol"><div class="quien"><b>Inspector</b><span>campo</span></div><div class="split"><span class="b"><i style="width:80%"></i></span>80 % campo · 20 % oficina</div><p>Recorre con su ubicación, observa con foto, escanea el QR del casco y levanta actas, desde el celular.</p></div>
+      <div class="rol"><div class="quien"><b>Supervisora</b><span>si la tiene</span></div><p>Supervisa con OBRASST, y usted ve cómo lo hace: su programa, sus recorridos, sus inspecciones y lo que tiene por validar.</p></div>
+      <div class="rol"><div class="quien"><b>Contratista principal</b><span>en su obra</span></div><p>Lleva su obra en OBRASST: levanta con foto lo que se le observa y entrega lo que se le pide.</p></div>
+      <div class="rol"><div class="quien"><b>Subcontratistas y trabajadores</b><span>de todas las empresas</span></div><p>Registran en la app desde la obra. Cada trabajador, con su credencial con QR en el casco o en el carné.</p></div>
+    </div>
+    <div class="leyenda"><span><i style="background:var(--casco)"></i>campo</span><span><i style="background:#B7C7D2"></i>oficina</span></div>
+  </div>
+</section>
+
+<section class="sec mesa">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Antes de decidir</p><h2>Demo y piloto no son lo mismo</h2></div>
+    <div class="dp">
+      <div><p class="cuanto">30 minutos</p><h3>La demo</h3><p>Una videollamada. Recorremos con usted una obra de ejemplo —una entidad que fiscaliza una carretera, un puente, un hospital y un sistema de saneamiento—: qué ve la oficina, qué hace el inspector en el frente y cómo se arma el expediente. Sin compromiso.</p>
+        <p class="ver-ej2"><a href="index.html?demo=fiscalizacion">Si quiere, mírela antes por su cuenta ›</a></p></div>
+      <div><p class="cuanto">30 días · con devolución</p><h3>El piloto</h3><p>En un proyecto real, con sus contratistas. Se paga el primer mes al empezar y, si a los 30 días no le sirvió, se le devuelve el 100 %. Si sigue, ese pago es su primer mes.</p></div>
+    </div>
+    <p class="cotiza"><b>El precio va a la medida</b>, por proyectos y contratistas: se lo cotizamos después de la demo.</p>
+  </div>
+</section>
+
+<section class="sec mesa" id="demo">
+  <div class="ancho pedir">
+    <div class="aparte">
+      <p class="ceja">Pedir</p>
+      <h2>Cuéntenos de sus obras</h2>
+      <p>Le escribimos en menos de un día hábil para coordinar la demo o el piloto.</p>
+      <p><b>Lo que nos sirve saber:</b> cuántos proyectos tiene, cuántas contratistas y subcontratistas trabajan en ellos y qué le cuesta más controlar hoy.</p>
+      <div class="contacto">
+        <p><b>¿Prefiere hablar directo?</b></p>
+        <a class="bt wa" id="bt-wa" href="https://wa.me/51967991730?text=Hola%2C%20quiero%20saber%20de%20OBRASST%20Fiscalizaci%C3%B3n%20para%20nuestras%20obras." target="_blank" rel="noopener"><span>Escribir por WhatsApp</span><span class="num">967 991 730</span></a>
+        <p class="dato">O al correo <a href="mailto:info@obrasstapp.com?subject=OBRASST%20Fiscalizaci%C3%B3n"><b>info@obrasstapp.com</b></a></p>
+      </div>
+    </div>
+    <div>
+      <form class="form" id="f-pedir" novalidate>
+        <div class="campo"><label>¿Qué quiere?</label>
+          <div class="opciones">
+            <label><input type="radio" name="quiere" value="demo" checked> Demo de 30 minutos</label>
+            <label><input type="radio" name="quiere" value="piloto"> Piloto de 30 días</label>
+          </div></div>
+        <div class="dos">
+          <div class="campo"><label for="p-nombre">Nombre y apellido</label><input id="p-nombre" type="text" autocomplete="name" maxlength="120" required></div>
+          <div class="campo"><label for="p-cargo">Cargo</label><input id="p-cargo" type="text" autocomplete="organization-title" maxlength="80" placeholder="Jefe de fiscalización"></div>
+          <div class="campo"><label for="p-empresa">Entidad o empresa</label><input id="p-empresa" type="text" autocomplete="organization" maxlength="160" placeholder="Su entidad" required></div>
+          <div class="campo"><label for="p-ruc">RUC</label><input id="p-ruc" type="text" inputmode="numeric" maxlength="11" placeholder="11 dígitos"></div>
+          <div class="campo"><label for="p-correo">Correo</label><input id="p-correo" type="email" autocomplete="email" maxlength="160" required></div>
+          <div class="campo"><label for="p-wa">Teléfono o WhatsApp</label><input id="p-wa" type="tel" autocomplete="tel" maxlength="20" placeholder="9•• ••• •••"></div>
+          <div class="campo"><label for="p-subs">Contratistas y subcontratistas</label><input id="p-subs" type="number" min="0" max="500" inputmode="numeric" placeholder="Aproximado"></div>
+          <div class="campo"><label for="p-trab">Trabajadores en esas obras</label><input id="p-trab" type="number" min="1" max="100000" inputmode="numeric" placeholder="Aproximado"></div>
+        </div>
+        <div class="campo"><label for="p-proy">Proyectos u obras que fiscaliza</label><input id="p-proy" type="text" maxlength="160" placeholder="Cuántos y de qué tipo"></div>
+        <div class="campo"><label for="p-msg">¿Qué le cuesta más fiscalizar hoy?</label><textarea id="p-msg" rows="3" maxlength="800"></textarea></div>
+        <div class="trampa" aria-hidden="true"><label for="p-web">No llenar</label><input id="p-web" type="text" tabindex="-1" autocomplete="off"></div>
+        <button class="bt tinta" type="submit" id="p-bt">Enviar</button>
+        <p class="aviso-datos">Usamos estos datos solo para escribirle por la demo o el piloto; no los compartimos. <a href="../?legal=privacidad" target="_blank" rel="noopener">Cómo tratamos los datos</a>.</p>
+        <p class="msg" id="p-msg-e" role="status"></p>
+      </form>
+      <div class="listo" id="p-listo" hidden><b>Listo, ya lo tenemos.</b><p>Le escribimos en menos de un día hábil para coordinar. Si es urgente, escríbanos por WhatsApp al <a href="https://wa.me/51967991730?text=Hola%2C%20quiero%20saber%20de%20OBRASST%20Fiscalizaci%C3%B3n%20para%20nuestras%20obras." target="_blank" rel="noopener"><b>967 991 730</b></a>.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="preguntas">
+  <div class="ancho">
+    <div class="cab-sec"><p class="ceja">Preguntas</p><h2>Lo que suelen preguntar</h2></div>
+    <div class="faq">
+      <details><summary>¿Qué tienen que hacer sus contratistas?</summary><p>Llevar su seguridad y salud en OBRASST —ATS, charlas, capacitaciones, EMO, PETAR, EPP y observaciones— y aceptar su requerimiento con su cuenta. Si la contratista principal tiene OBRASST Central, sus subcontratas entran gratis dentro de su obra.</p></details>
+      <details><summary>¿Qué ve su entidad de cada contratista?</summary><p>Lo que esa empresa registra en la obra que usted fiscaliza: sus cifras de hoy, su gente con su estado, sus observaciones y lo que usted le pide. Nada de sus otras obras.</p></details>
+      <details><summary>¿Y los datos de los trabajadores?</summary><p>Se ve lo que hace falta para fiscalizar: su nombre, su puesto, su empresa y si cumple. Del examen médico, solo si está vigente —nunca el diagnóstico ni las restricciones—; el documento va tapado, y nunca se ven su celular, sus contactos ni su grupo sanguíneo.</p></details>
+      <details><summary>¿Sirve como evidencia?</summary><p>Cada observación guarda su foto, su fecha y su hora; cada recorrido, su ubicación. Las actas llevan un sello que cualquiera verifica, y el expediente sale en PDF por empresa y por fechas, con el sello de cada cosa y si sigue igual hoy.</p></details>
+      <details><summary>¿Funciona donde no hay señal?</summary><p>Lo del frente se registra en el celular sin señal y sube solo cuando vuelve. El QR del casco igual dice quién es y si su credencial es válida; el estado de hoy se trae cuando hay señal.</p></details>
+      <details><summary>¿Cómo es el piloto?</summary><p>Treinta días en un proyecto real, con sus contratistas. Se paga el primer mes al empezar; si a los 30 días no le sirvió, se le devuelve el 100 %. Si sigue, ese pago es su primer mes.</p></details>
+      <details><summary>¿Cómo se contrata?</summary><p>Con una cotización a la medida, por proyectos y contratistas, después de la demo. Factura electrónica mensual; se paga por transferencia o con un enlace de pago.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="pie">
+  <div class="ancho">
+    <a class="marca" href="#arriba"><span class="marca-ic"><i></i></span><b>OBRASST</b></a>
+    <a href="index.html">Entrar a mi cuenta</a>
+    <a href="central.html">Para contratistas</a>
+    <a href="mandante.html">Para mandantes</a>
+    <a href="../">Abrir la app</a>
+    <a href="../?legal=terminos" target="_blank" rel="noopener">Términos</a>
+    <a href="../?legal=privacidad" target="_blank" rel="noopener">Privacidad</a>
+    <span class="der"><a href="mailto:info@obrasstapp.com">info@obrasstapp.com</a> · WhatsApp <a href="https://wa.me/51967991730?text=Hola%2C%20quiero%20saber%20de%20OBRASST%20Fiscalizaci%C3%B3n%20para%20nuestras%20obras." target="_blank" rel="noopener">967 991 730</a></span>
+  </div>
+</footer>
+
+
+<script>
+'use strict';
+/* en https://obrasstapp.com (el portal solo, en la raíz del dominio) la app sigue en GitHub Pages:
+   los enlaces «../…» (la app, los términos) se llevan allá (como central.html) */
+(function(){
+  var APP = 'https://descarganomaspe.github.io/sst-capacita/';
+  if(/\/portal\/([a-z-]+\.html)?$/.test(location.pathname)) return;
+  function arregla(a){ try{ if(a && /^\.\.\//.test(a.getAttribute('href') || '')) a.setAttribute('href', APP + a.getAttribute('href').slice(3)); }catch(_e){} }
+  Array.prototype.forEach.call(document.querySelectorAll('a[href^="../"]'), arregla);
+  ['pointerdown', 'mouseover', 'focusin', 'touchstart'].forEach(function(ev){
+    document.addEventListener(ev, function(e){ arregla(e.target && e.target.closest ? e.target.closest('a[href^="../"]') : null); }, true);
+  });
+})();
+var SB = { url:'https://gwjjkknuiumgysezeatz.supabase.co', key:'sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx' };
+var $ = function(id){ return document.getElementById(id); };
+var ORIGEN = "fiscalizacion.html", PRODUCTO = "OBRASST Fiscalización", WA = "https://wa.me/51967991730?text=";
+
+/* ── los botones de la portada eligen demo o piloto ── */
+Array.prototype.forEach.call(document.querySelectorAll('[data-quiere]'), function(a){
+  a.addEventListener('click', function(){ var r = document.querySelector('input[name=quiere][value="'+a.getAttribute('data-quiere')+'"]'); if(r) r.checked = true; });
+});
+
+/* ── pedir la demo o el piloto: al servidor (el mismo pedido de central.html, con su origen); si no se puede, por
+   WhatsApp o por correo con todo escrito ── */
+$('f-pedir').addEventListener('submit', function(ev){
+  ev.preventDefault();
+  var m = $('p-msg-e'), bt = $('p-bt');
+  function mal(t, foco){ m.className = 'msg mal'; m.textContent = t; if(foco) try{ $(foco).focus(); }catch(e){} }
+  var proy = $('p-proy').value.trim();
+  var d = {
+    quiere: (document.querySelector('input[name=quiere]:checked')||{}).value || 'demo',
+    nombre: $('p-nombre').value.trim(), cargo: $('p-cargo').value.trim(), empresa: $('p-empresa').value.trim(),
+    ruc: $('p-ruc').value.replace(/\D/g,''), correo: $('p-correo').value.trim().toLowerCase(), whatsapp: $('p-wa').value.trim(),
+    trabajadores: $('p-trab').value.trim(), subcontratas: $('p-subs').value.trim(),
+    mensaje: [PRODUCTO, proy ? 'Proyectos u obras: ' + proy : '', $('p-msg').value.trim()].filter(Boolean).join('\n'),
+    web: $('p-web').value, origen: ORIGEN
+  };
+  if(d.nombre.length < 3) return mal('Escriba su nombre.', 'p-nombre');
+  if(d.empresa.length < 2) return mal('Escriba el nombre de su entidad o empresa.', 'p-empresa');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.correo)) return mal('Revise su correo: así no le podemos escribir.', 'p-correo');
+  if(d.ruc && d.ruc.length !== 11) return mal('El RUC tiene 11 dígitos. Si no lo tiene a la mano, déjelo vacío.', 'p-ruc');
+  bt.disabled = true; m.className = 'msg'; m.textContent = 'Enviando…';
+  fetch(SB.url+'/rest/v1/rpc/sst_pedir_central', {method:'POST', headers:{'apikey':SB.key, 'Authorization':'Bearer '+SB.key, 'Content-Type':'application/json'},
+    body: JSON.stringify({p:d})})
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(j){
+      if(!j || !j.ok) return Promise.reject(j && j.motivo || 'raro');
+      $('f-pedir').hidden = true; $('p-listo').hidden = false;
+    })
+    .catch(function(){
+      /* sin servidor, igual llega: se abre el WhatsApp o el correo con todo escrito */
+      var cuerpo = 'Quiero: '+(d.quiere==='piloto'?'Piloto de 30 días':'Demo de 30 minutos')+'\n'+
+        'Nombre: '+d.nombre+'\nCargo: '+d.cargo+'\nEntidad o empresa: '+d.empresa+'\nRUC: '+d.ruc+'\nCorreo: '+d.correo+'\nTeléfono: '+d.whatsapp+
+        (proy ? '\nProyectos u obras: '+proy : '')+'\nTrabajadores: '+d.trabajadores+'\nContratistas y subcontratistas: '+d.subcontratas+'\n\n'+$('p-msg').value.trim();
+      bt.disabled = false;
+      m.className = 'msg mal';
+      m.innerHTML = 'No se pudo enviar desde aquí. Mándelo con todo escrito: '+
+        '<a href="'+WA+encodeURIComponent(PRODUCTO+'\n'+cuerpo)+'" target="_blank" rel="noopener">por WhatsApp</a> o '+
+        '<a href="mailto:info@obrasstapp.com?subject='+encodeURIComponent(PRODUCTO+' · '+d.empresa)+
+        '&body='+encodeURIComponent(cuerpo)+'">por correo</a>, y solo dele Enviar.';
+    });
+});
+</script>
+</body>
+</html>

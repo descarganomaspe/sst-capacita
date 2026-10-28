@@ -3329,7 +3329,8 @@ function _quiGente(fresco){
   if(QUIG.obra!==oid){ QUIG.obra=oid; QUIG.lista=null; QUIG.t=0; QUIG.pide=null; }
   if(!fresco && QUIG.lista && Date.now()-QUIG.t<60000) return Promise.resolve(QUIG.lista);
   if(QUIG.pide) return QUIG.pide;
-  var base='id,ext,nombre,dni,puesto,estatus';
+  /* 27/10/2026 · con su frente (area): los brigadistas de cada frente de trabajo */
+  var base='id,ext,nombre,dni,puesto,area,estatus';
   function pedir(sel){ return traerTodo('sst_trabajador', '&select='+sel+'&order=nombre.asc', 6000); }
   var p=pedir(base+',foto_url').catch(function(c){ if(c!==400) throw c; return pedir(base); }).then(function(l){
     if(QUIG.pide===p) QUIG.pide=null;
@@ -3342,27 +3343,35 @@ function _quiGente(fresco){
 function _quiTraer(fresco){
   if(!(YO.obra||{}).codigo) return Promise.reject(404);
   var oid=(YO.obra||{}).id, nada=function(){ return null; };
+  /* 27/10/2026 · y los frentes de trabajo con sus documentos (portal/frentes.js): también se publican */
+  var freH=['plan-emergencia', 'mapa-riesgos', 'mapa-evacuacion', 'contactos-emergencia', 'brigadistas', 'estacion-emergencia'].join(',');
   return Promise.all([masCtx(), estadoLeerP(_creClaveCom()), estadoLeerP('credenciales'), estadoLeerP('credenciales_anuladas').catch(nada), _quiGente(fresco),
-                      sbGet('sst_doc?empresa=eq.'+_enc(oid)+'&hoja=eq.quienes&select=id,nota,creado&order=creado.desc&limit=4')]).then(function(r){
+                      sbGet('sst_doc?empresa=eq.'+_enc(oid)+'&hoja=eq.quienes&select=id,nota,creado&order=creado.desc&limit=4'),
+                      sbGet('sst_doc?empresa=eq.'+_enc(oid)+'&hoja=eq.frentes&select=id,hoja,nombre,nota,creado&order=creado.asc&limit=40').catch(nada),
+                      sbGet('sst_doc?empresa=eq.'+_enc(oid)+'&hoja=in.('+freH+')&select=id,hoja,nombre,url,nota,creado&order=creado.desc&limit=600').catch(nada),
+                      (typeof cargarMasApp==='function' ? cargarMasApp() : Promise.resolve(true)).catch(nada)]).then(function(r){
     var t=(r[3] && r[3].valor && typeof r[3].valor==='object' && !Array.isArray(r[3].valor)) ? MAS_APP.tumbasVivas(r[3].valor) : {};
     var filas=Array.isArray(r[5]) ? r[5] : [], pub=null;
     if(filas[0]){ try{ pub=(typeof filas[0].nota==='string') ? JSON.parse(filas[0].nota) : filas[0].nota; }catch(e){ pub=null; } }
+    var fre=(typeof MAS_APP==='object' && typeof MAS_APP.freDeFilas==='function') ? MAS_APP.freDeFilas(r[6]||[]) : [];
     return { C:r[0], com:_comDoc(r[1] && r[1].valor), creds:_creLimpia(r[2] && r[2].valor, t), gente:r[4]||[],
-             pub:(pub && typeof pub==='object' && !Array.isArray(pub)) ? pub : null, pubIds:filas.map(function(f){ return f && f.id; }).filter(Boolean) };
+             pub:(pub && typeof pub==='object' && !Array.isArray(pub)) ? pub : null, pubIds:filas.map(function(f){ return f && f.id; }).filter(Boolean),
+             fre:fre, freDocs:(r[7]||[]).filter(function(d){ return d && /^Frente:/.test(String(d.nota||'')); }) };
   });
 }
-function _quiPon(R){ var W=QUIW; W.C=R.C; W.com=R.com; W.creds=R.creds; W.gente=R.gente; W.pub=R.pub; W.pubIds=R.pubIds; }
+function _quiPon(R){ var W=QUIW; W.C=R.C; W.com=R.com; W.creds=R.creds; W.gente=R.gente; W.pub=R.pub; W.pubIds=R.pubIds; W.fre=R.fre||[]; W.freDocs=R.freDocs||[]; }
 /* la app, con lo de esta obra: el comité guardado, las credenciales (de ahí sale la brigada) y el personal con su foto
    (su id es el «ext» de la ficha: con él la credencial encuentra a su dueño) */
 function _quiM(com){
   var W=QUIW;
-  return MAS_APP.usar(Object.assign({}, W.C, { com:com||W.com, creds:W.creds,
-    trabs:(W.gente||[]).map(function(t){ return { id:String(t.ext||''), nombre:gesTxt(t.nombre), dni:gesTxt(t.dni), puesto:gesTxt(t.puesto), fotoUrl:String(t.foto_url||'') }; }) }));
+  return MAS_APP.usar(Object.assign({}, W.C, { com:com||W.com, creds:W.creds, fre:W.fre||[], freDocs:W.freDocs||[],
+    trabs:(W.gente||[]).map(function(t){ return { id:String(t.ext||''), nombre:gesTxt(t.nombre), dni:gesTxt(t.dni), puesto:gesTxt(t.puesto), fotoUrl:String(t.foto_url||''),
+                                                   area:gesTxt(t.area), estatus:t.estatus||'activo' }; }) }));
 }
 function _quiPaquete(){ return _quiM().quienesPaquete(); }
 function _quiSos(p){ var s=MAS_APP.emergsLimpios(p && p.emergs); if(!s.length && p && p.emerg) s=MAS_APP.emergsLimpios([{ t:'Emergencia de la obra', tel:p.emerg }]); return s; }
 /* «nada que publicar» es lo que la app llama así: sin números, sin comité, sin brigada y sin línea de mando */
-function _quiVacio(p){ return !p || (!(p.org||[]).length && !(p.brig||[]).length && !(p.mando||[]).length && !_quiSos(p).length); }
+function _quiVacio(p){ return !p || (!(p.org||[]).length && !(p.brig||[]).length && !(p.mando||[]).length && !_quiSos(p).length && !(p.frentes||[]).length); }
 function _quiCanon(v){
   if(Array.isArray(v)) return '['+v.map(_quiCanon).join(',')+']';
   if(v && typeof v==='object') return '{'+Object.keys(v).sort().map(function(k){ return JSON.stringify(k)+':'+_quiCanon(v[k]); }).join(',')+'}';
@@ -3370,7 +3379,8 @@ function _quiCanon(v){
 }
 function _quiPartes(p){
   p=p||{};
-  return { emergs:_quiCanon(_quiSos(p)), punto:String(p.punto||''), brig:_quiCanon(p.brig||[]), mando:_quiCanon(p.mando||[]), org:_quiCanon([p.tipo||'', p.titulo||'', p.org||[], p.periodo||null]) };
+  return { emergs:_quiCanon(_quiSos(p)), punto:String(p.punto||''), brig:_quiCanon(p.brig||[]), mando:_quiCanon(p.mando||[]), org:_quiCanon([p.tipo||'', p.titulo||'', p.org||[], p.periodo||null]),
+           frentes:_quiCanon(p.frentes||[]) };
 }
 function _quiLista(a){ a=(a||[]).filter(Boolean); return a.length<2 ? (a[0]||'') : a.slice(0, -1).join(', ')+' y '+a[a.length-1]; }
 /* qué pasa con lo publicado: nada · nunca · igual · cambio (y qué partes) · retirar (está publicado y aquí ya no hay nada) */
@@ -3380,7 +3390,7 @@ function _quiEstado(p){
   if(!hayPub) return { k:'nunca' };
   if(!hay) return { k:'retirar', al:String(pub.al||'') };
   var a=_quiPartes(p), b=_quiPartes(pub), dif=[];
-  ['emergs', 'punto', 'brig', 'mando', 'org'].forEach(function(k){ if(a[k]!==b[k]) dif.push(k); });
+  ['emergs', 'punto', 'brig', 'mando', 'org', 'frentes'].forEach(function(k){ if(a[k]!==b[k]) dif.push(k); });
   return dif.length ? { k:'cambio', dif:dif, al:String(pub.al||'') } : { k:'igual', al:String(pub.al||'') };
 }
 function _quiParteN(k, toca){
@@ -3388,6 +3398,7 @@ function _quiParteN(k, toca){
   if(k==='punto') return 'el punto de reunión';
   if(k==='brig') return 'la brigada';
   if(k==='mando') return 'la línea de mando';
+  if(k==='frentes') return 'los frentes de trabajo';
   return _comEsCuerpo(toca) ? 'el '+_comCuerpo(toca) : 'el supervisor de SST';
 }
 /* dónde está un renglón en la lista que el servidor tiene ahora (por lo que dice) */
@@ -3531,6 +3542,12 @@ function _quiFuentesHTML(M, p, toca){
 function _quiCelHTML(p){
   var sos=_quiSos(p), h='<h3>🆘 ¿A quién acudo?</h3>';
   if(_quiVacio(p)) return h+'<div class="qui-vacio" id="qui-cel-vacio"><b>Todavía no hay nada.</b><br>Lo que cargues aparece aquí, tal como lo va a ver tu gente.</div>';
+  /* 27/10/2026 · los frentes de trabajo: cada uno elige el suyo y ve lo de ese punto (portal/frentes.js) */
+  if((p.frentes||[]).length){
+    h+='<p class="qui-st">Tu frente</p><div class="qui-fr" id="qui-cel-fr">'+p.frentes.map(function(f){
+      return '<div class="qui-p"><span data-sin-pais><b>🚧 '+esc(f.n)+'</b><small>'+esc(f.punto ? 'Punto de reunión: '+f.punto : 'Sin punto de reunión')+
+        ' · '+(f.docs||[]).length+((f.docs||[]).length===1 ? ' documento' : ' documentos')+((f.brig||[]).length ? ' · '+f.brig.length+((f.brig.length===1) ? ' brigadista' : ' brigadistas') : '')+'</small></span></div>'; }).join('')+'</div>';
+  }
   if(sos.length || p.punto){
     h+='<p class="qui-st">Emergencia en la obra</p>';
     if(sos.length) h+='<div class="qui-sos">'+sos.map(function(x, i){
@@ -3689,6 +3706,8 @@ function quiPublicar(retirar){
     if(p.org.length) partes.push(p.tipo==='supervisor' ? 'tu supervisor de SST' : p.org.length+' integrante'+(p.org.length===1 ? '' : 's')+' del '+String(p.titulo||'comité').replace(/^./, function(c){ return c.toLowerCase(); }));
     if(p.brig.length) partes.push(p.brig.length===1 ? '1 brigadista' : p.brig.length+' brigadistas');
     if(p.mando.length) partes.push(p.mando.length===1 ? 'la línea de mando (1 persona)' : 'la línea de mando ('+p.mando.length+' personas)');
+    /* 27/10/2026 · los frentes de trabajo, cada uno con lo suyo */
+    if((p.frentes||[]).length) partes.push(p.frentes.length===1 ? 'el frente de trabajo, con su punto de reunión y sus documentos' : 'los '+p.frentes.length+' frentes de trabajo, cada uno con su punto de reunión y sus documentos');
     var texto=retirar ? 'Tu gente deja de ver lo que estaba publicado: en su celular, «¿A quién acudo?» vuelve a decir que la obra todavía no lo publicó.'
       : 'Cualquiera con el código de esta obra lo va a ver en «¿A quién acudo?»: '+_quiLista(partes)+'.'+
         (gente.length ? (conFoto ? ' De cada persona va su nombre, su puesto y su foto (la de su ficha), para que la reconozcan; su documento no viaja.' : ' De cada persona va su nombre y su puesto; su documento no viaja.') : '')+

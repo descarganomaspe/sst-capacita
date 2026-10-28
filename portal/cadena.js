@@ -688,6 +688,9 @@ function cadPegarInvitacion(){
 }
 /* qué significa aceptar, dicho antes de aceptar */
 function cadInvitacionHTML(j){
+  /* 28/10/2026 · el requerimiento de vinculación (una Fiscalización, un Mandante o una supervisora va a supervisar a esta
+     empresa, o la incluye como su supervisora): antes la web lo leía como «te invita a supervisar su obra», al revés */
+  if(j.te_supervisan) return cadReqLlegoHTML(j);
   var sub = j.clase === 'subcontrata', h = '';
   h += '<div class="cad-acepta"><p class="cad-acepta-de">' + esc(j.obra || 'Una obra') + (j.madre ? ' <small>· ' + esc(j.madre) + '</small>' : '') + '</p>' +
     '<h2>' + (sub ? 'Te invita a trabajar en su obra como subcontrata' : (j.papel === 'regulador' ? 'Te invita a fiscalizar su obra' : 'Te invita a supervisar su obra' + (j.papel === 'cliente' ? ' como su cliente' : ''))) + '</h2>' +
@@ -699,6 +702,32 @@ function cadInvitacionHTML(j){
     '<li>' + (j.modo === 'observa' ? '<b>Le dejas observaciones</b> con foto, riesgo y plazo; ella las levanta con foto y tú validas. Lo que vence sube solo.' : '<b>Solo lectura</b>: miras, no escribes. Si después te dan permiso de observar, aparece el botón.') + '</li>' +
     '<li><b>Es sin costo para ti.</b> Tu equipo puede entrar a tu espacio (hasta 6 personas).</li>';
   return h + '</ul></div>';
+}
+/* lo mismo que dice la app (cadReqLlegoHtml): quién te va a supervisar, por qué y qué ve; o que te incluye como su supervisora */
+function cadReqLlegoHTML(j){
+  var fis = j.mandato === 'fiscalizacion' || j.papel === 'regulador';
+  var h = '<div class="cad-acepta"><p class="cad-acepta-de">' + esc(j.obra || 'Una empresa') + (j.madre ? ' <small>· ' + esc(j.madre) + '</small>' : '') + '</p>';
+  var para = '<p class="cad-acepta-para">Para <b>' + esc(j.para || '') + '</b>' + (j.ruc ? ' · ' + esc(cadDocN()) + ' ' + esc(j.ruc) : '') + (j.vence ? ' · vence el ' + esc(_cadFechaD(j.vence)) : '') + '</p>';
+  if(j.incluida) return h + '<h2>Te incluye como su supervisora</h2>' + para + '<ul class="cad-acepta-l">' +
+    '<li><b>Trabajas sin pagar en su proyecto</b>: lo cubre su plan mientras te tenga incluida. Tu espacio trabaja como Gestión SST; si termina, vuelves a tu plan.</li>' +
+    '<li><b>Tienes lo de supervisión</b>: el programa, los recorridos con prueba de presencia, las actas firmadas, la inspección con lista y el informe del mes.</li>' +
+    '<li><b>Supervisas a las contratistas de su proyecto</b>, y ' + esc(j.obra || 'quien te incluye') + ' ve cómo supervisas: cifras, plazos y programa.</li></ul></div>';
+  h += '<h2>' + (fis ? 'Te va a fiscalizar en esta obra' : (j.papel === 'cliente' ? 'Te va a supervisar como tu cliente' : 'Te va a supervisar en esta obra')) + '</h2>' + para + '<ul class="cad-acepta-l">' +
+    '<li><b>Lo hace por su mandato</b> (el contrato o la ley): ve tus cifras y el detalle de SST de esta obra —tu personal con su capacitación y tus ATS—. No ve tus otras obras.</li>' +
+    '<li><b>Te deja observaciones y requerimientos con plazo</b>; tú los levantas con foto. Las actas las firmas desde tu cuenta.</li>' +
+    '<li><b>No pagas por responder</b>: si no usas OBRASST, recibes gratis tu espacio para esta obra.</li></ul>';
+  if(j.obs) h += '<div class="aviso ojo">' + (j.obs === 1 ? 'Una observación ya te espera (la dejó en su registro propio).' : j.obs + ' observaciones ya te esperan (las dejó en su registro propio).') + '</div>';
+  return h + '</div>';
+}
+/* rechazar el requerimiento, con el motivo: queda registrado y quien te quiere supervisar lo ve (como en la app) */
+function cadRechazarReq(token, alListo){
+  preguntar('Rechazar el requerimiento', 'Queda registrado, con tu motivo, y quien te quiere supervisar lo ve.', { etiqueta:'Por qué lo rechazas', minimo:8, corto:'Escribe unas palabras: es lo que va a leer la otra empresa.' }, { si:'Rechazar', mal:true }).then(function(v){
+    if(!v) return;
+    sbRpc('sst_cad_rechazar', { p:{ token:token, motivo:String(v).trim() } }).then(function(r){
+      if(!r || !r.ok){ toast(cadMotivo(r)); return; }
+      cadFichaPoner(null); toast('Requerimiento rechazado: quedó registrado con tu motivo.'); if(alListo) alListo();
+    }, function(e){ toast(cadMotivo(null, e)); });
+  });
 }
 function cadInvitacionMal(j){
   if(!j || !j.ok) return 'Esta invitación no existe. Revisa que el enlace esté completo, o pide que te lo manden otra vez.';
@@ -715,8 +744,8 @@ function cadAceptarForm(j){
   if(mias.length) h += '<div class="campo"><label>Dónde lo vas a llevar</label><div class="cad-ops cad-ops-2"><label class="cad-op"><input type="radio" name="cad-a-donde" value="" checked><b>En un espacio nuevo para esta obra</b><small>Lo más ordenado: lo de esta obra queda aparte.</small></label>' +
     '<label class="cad-op"><input type="radio" name="cad-a-donde" value="mia"><b>En una obra que ya llevo en OBRASST</b><small>Si ya registras ahí a la gente de esta obra.</small></label></div></div>' +
     '<div class="campo" id="cad-a-mia-c" hidden><label for="cad-a-mia">Cuál</label><select id="cad-a-mia">' + mias.map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nombre) + (e.codigo ? ' · ' + esc(e.codigo) : '') + '</option>'; }).join('') + '</select>' +
-    '<small class="ayuda">' + (sub ? 'La principal verá las cifras, el personal y los ATS de esa obra.' : 'Desde esa obra verás el tablero de quien te invita.') + '</small></div>';
-  if(!sub && !j.ruc) h += '<div class="campo"><label for="cad-a-ruc">' + esc(cadDocN()) + ' de tu empresa (opcional)</label><input id="cad-a-ruc" inputmode="numeric" maxlength="20" autocomplete="off"><small class="ayuda">Con él podrás sumar a tu equipo a este espacio.</small></div>';
+    '<small class="ayuda">' + (sub ? 'La principal verá las cifras, el personal y los ATS de esa obra.' : (j.te_supervisan ? (j.incluida ? 'Desde esa obra supervisas su proyecto.' : 'Quien te supervisa verá las cifras y el detalle de SST de esa obra.') : 'Desde esa obra verás el tablero de quien te invita.')) + '</small></div>';
+  if(!sub && !j.ruc) h += '<div class="campo"><label for="cad-a-ruc">' + esc(cadDocN()) + ' de tu empresa (opcional)</label><input id="cad-a-ruc" inputmode="numeric" maxlength="20" autocomplete="off"><small class="ayuda">' + (j.te_supervisan && !j.incluida ? 'Así queda claro qué empresa es la que se supervisa.' : 'Con él podrás sumar a tu equipo a este espacio.') + '</small></div>';
   return h + '<div class="msg mal" id="cad-a-msg" role="alert"></div>';
 }
 function cadAceptarAtar(){
@@ -744,9 +773,12 @@ function cadAceptarHoja(token){
     if(!cp){ $('hoja').insertAdjacentHTML('beforeend', '<div class="hoja-pie" id="hoja-pie"></div>'); cp = $('hoja-pie'); }
     if(mal){ cadFichaPoner(null); $('hoja-cuerpo').innerHTML = (j && j.ok ? cadInvitacionHTML(j) : '') + '<div class="aviso ojo">' + esc(mal) + '</div>'; cp.innerHTML = '<button type="button" class="bt" id="cad-a-cerrar">Cerrar</button>'; $('cad-a-cerrar').onclick = cerrarHoja; return; }
     $('hoja-cuerpo').innerHTML = cadInvitacionHTML(j) + cadAceptarForm(j);
-    cp.innerHTML = '<button type="button" class="bt sec" id="cad-a-luego">Ahora no</button><button type="button" class="bt" id="cad-a-ok">Aceptar la invitación</button>';
+    var req = j.te_supervisan && !j.incluida;
+    cp.innerHTML = '<button type="button" class="bt sec" id="cad-a-luego">Ahora no</button>' + (req ? '<button type="button" class="bt sec" id="cad-a-no">Rechazar, con mi motivo</button>' : '') +
+      '<button type="button" class="bt" id="cad-a-ok">' + (j.te_supervisan ? 'Aceptar el requerimiento' : 'Aceptar la invitación') + '</button>';
     cadAceptarAtar();
     $('cad-a-luego').onclick = function(){ cadFichaPoner(null); cerrarHoja(); };
+    if($('cad-a-no')) $('cad-a-no').onclick = function(){ cadRechazarReq(token, function(){ cerrarHoja(); }); };
     $('cad-a-ok').onclick = function(){ cadAceptarEnviar(token, this, function(r){ cerrarHoja(); cadYaAcepte(r); }); };
   }, function(e){ if(HOJA.abierta) $('hoja-cuerpo').innerHTML = '<div class="aviso mal">' + esc(cadMotivo(null, e)) + '</div>'; });
 }
@@ -758,10 +790,13 @@ function cadAceptarEnAlta(caja, token){
   sbRpc('sst_cad_invitacion', { p_token:token }).then(function(j){
     var mal = cadInvitacionMal(j);
     if(mal){ caja.innerHTML = '<h1>Tu invitación</h1>' + (j && j.ok ? cadInvitacionHTML(j) : '') + '<div class="aviso ojo">' + esc(mal) + '</div><div class="acciones"><button type="button" class="bt" id="cad-a-fuera">Crear mi propia obra</button></div>'; $('cad-a-fuera').onclick = fuera; return; }
-    caja.innerHTML = '<h1>Tu cuenta ya está. Acepta tu invitación.</h1>' + cadInvitacionHTML(j) + cadAceptarForm(j) +
-      '<div class="acciones cad-a-bts"><button type="button" class="bt" id="cad-a-ok">Aceptar la invitación</button><button type="button" class="bt sec" id="cad-a-fuera">No es para mí: crear mi propia obra</button></div>';
+    var req = j.te_supervisan && !j.incluida;
+    caja.innerHTML = '<h1>' + (j.te_supervisan ? 'Tu cuenta ya está. Revisa el requerimiento.' : 'Tu cuenta ya está. Acepta tu invitación.') + '</h1>' + cadInvitacionHTML(j) + cadAceptarForm(j) +
+      '<div class="acciones cad-a-bts"><button type="button" class="bt" id="cad-a-ok">' + (j.te_supervisan ? 'Aceptar el requerimiento' : 'Aceptar la invitación') + '</button>' +
+      (req ? '<button type="button" class="bt sec" id="cad-a-no">Rechazar, con mi motivo</button>' : '') + '<button type="button" class="bt sec" id="cad-a-fuera">No es para mí: crear mi propia obra</button></div>';
     cadAceptarAtar();
     $('cad-a-fuera').onclick = fuera;
+    if($('cad-a-no')) $('cad-a-no').onclick = function(){ cadRechazarReq(token, fuera); };
     $('cad-a-ok').onclick = function(){ cadAceptarEnviar(token, this, function(r){ cadYaAcepte(r); }); };
   }, function(){ caja.innerHTML = '<h1>Tu invitación</h1><div class="aviso mal">No se pudo abrir la invitación. Revisa tu conexión.</div><div class="acciones"><button type="button" class="bt" id="cad-a-otra">Reintentar</button><button type="button" class="bt sec" id="cad-a-fuera">Crear mi propia obra</button></div>';
     $('cad-a-otra').onclick = function(){ cadAceptarEnAlta(caja, token); }; $('cad-a-fuera').onclick = fuera; });
