@@ -1704,6 +1704,34 @@ function _empGuardado(g){
   var k=Object.keys(g||{}); if(!k.length) return 'Solo la empresa';
   return k.map(function(t){ return g[t]+' en '+String(t).replace(/^sst_/,'').replace(/_/g,' '); }).join(' · ');
 }
+/* ══ LOS FRENTES DE TRABAJO, VISTOS DESDE LA CONSOLA (27/10/2026) ══════════════════════════════════════════════
+   Marcelo: «que no se pasen de vivos». La app, la web y el servidor ya frenan el cupo de cada plan (1 · 1 · 1 · 2 · 4
+   frentes por obra); aquí se ve lo que igual merece una mirada: los frentes de una obra en departamentos distintos (¿es
+   un solo proyecto, o son varios metidos en una obra?) y la obra con más frentes que los de su plan (la que bajó de
+   plan, por ejemplo). Es un aviso para revisar, no un bloqueo: una línea de metro o una carretera son largas. */
+function empFrentes(){
+  var c=$('t-frentes'); if(!c) return;
+  sbRpc('sst_admin_frentes', {}).then(function(r){
+    if(!r || !r.ok){ c.innerHTML='<div class="vacio"><b>Frentes de trabajo</b>No se pudo leer: '+esc((r && r.motivo) || 'sin respuesta')+'.</div>'; return; }
+    var L=r.lista||[], al=L.filter(function(x){ return x.alerta; });
+    var h='<div class="tarj-cab"><div><h2>Frentes de trabajo</h2><p class="sub">'+(L.length ? num(L.length)+(L.length===1 ? ' obra con frentes' : ' obras con frentes')+(al.length ? ' · <b>'+num(al.length)+' para revisar</b>' : ' · nada que revisar') : 'Ninguna obra tiene frentes todavía')+'</p></div></div>';
+    if(L.length){
+      h+='<div class="tabla-caja"><table class="mini"><thead><tr><th>Obra</th><th>Plan</th><th>Frentes</th><th>Dónde</th><th>Aviso</th></tr></thead><tbody>'+
+        L.map(function(x){
+          var deps=(x.frentes||[]).map(function(f){ return f.dep; }).filter(Boolean), unicos=deps.filter(function(d, i){ return deps.indexOf(d)===i; });
+          var por=[]; if(+x.n > +x.cupo) por.push('más frentes que su plan ('+num(x.n)+' de '+num(x.cupo)+')'); if(+x.deps > 1) por.push('en '+num(x.deps)+' departamentos');
+          return '<tr><td><b>'+esc(x.obra||'—')+'</b><span class="sub">'+esc([x.empresa, x.codigo].filter(Boolean).join(' · '))+'</span></td>'+
+            '<td>'+esc(planN(x.plan))+'<span class="sub">cupo '+num(x.cupo)+'</span></td>'+
+            '<td>'+num(x.n)+'<span class="sub">'+esc((x.frentes||[]).map(function(f){ return f.n; }).join(' · '))+'</span></td>'+
+            '<td>'+esc(unicos.join(' · ') || '—')+'</td>'+
+            '<td>'+(x.alerta ? '<span class="pill ojo">Revisar</span><span class="sub">'+esc(por.join(' · '))+'</span>' : '<span class="gris-t">—</span>')+'</td></tr>';
+        }).join('')+'</tbody></table></div>';
+    }
+    c.innerHTML=h;
+  }, function(cod){
+    c.innerHTML='<div class="vacio"><b>Frentes de trabajo</b>'+(cod===404 ? 'Se activa con el SQL «2026-10-27-frentes».' : 'No se pudo leer. Revisa tu conexión.')+'</div>';
+  });
+}
 function vistaEmpresas(caja){
   cargando(caja);
   function pinta(){
@@ -1715,7 +1743,9 @@ function vistaEmpresas(caja){
       if(!armado){
         caja.innerHTML =
           '<div class="herr" style="margin:0 0 14px"><input type="search" id="emp-q" placeholder="Buscar por nombre, RUC, código, dueño, correo, celular o lugar" aria-label="Buscar empresas" style="width:min(520px,100%)" value="'+esc(EMP.q)+'"></div>'+
-          '<div class="rej" id="emp-cifras" style="margin-bottom:18px"></div><div class="tarj" id="t-empresas"></div>';
+          '<div class="rej" id="emp-cifras" style="margin-bottom:18px"></div><div class="tarj" id="t-empresas"></div>'+
+          /* 27/10/2026 · los frentes de trabajo: las obras que los tienen, y el aviso si algo no calza */
+          '<div class="tarj" id="t-frentes" style="margin-top:18px"></div>';
         $('emp-q').oninput=function(){
           var v=this.value; clearTimeout(EMP.tBusca);
           EMP.tBusca=setTimeout(function(){ EMP.q=v.trim(); pinta(); }, 350);
@@ -1757,6 +1787,7 @@ function vistaEmpresas(caja){
         vacio: EMP.q ? 'Ninguna empresa con «'+EMP.q+'»' : 'Ninguna empresa en esta lista',
         vacioSub: EMP.q ? 'Prueba con parte del nombre, el RUC sin guiones, el apellido o el celular del dueño, o el distrito.' : ''});
       var bx=$('emp-xlsx'); if(bx){ bx.disabled=!L.length; bx.onclick=function(){ empExcel(L); }; }
+      empFrentes();
     }, function(cod){ noAbre(caja, null, cod, '2026-10-12-consola'); });
   }
   /* las dadas de baja: se guardó todo y se pueden devolver */
