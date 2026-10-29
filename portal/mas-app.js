@@ -710,12 +710,16 @@ function freDocsDe(f, docs, frentes){
 }
 function freDeTrab(t, frentes, iso){
   if(!t) return null;
-  var a = '';
-  try{ a = (typeof sitEn === 'function' && Array.isArray(t.hist)) ? (sitEn(t, iso || hoyISO()).a || '') : ''; }catch(_s){ a = ''; }
+  var u = '', a = '';
+  try{ if(typeof sitEn === 'function' && Array.isArray(t.hist)){ var st = sitEn(t, iso || hoyISO()); u = st.u || ''; a = st.a || ''; } }catch(_s){ u = ''; a = ''; }
+  if(!u) u = t.ubicacion || '';
   if(!a) a = t.area || t.frente || '';
-  var k = freNorm(a); if(!k) return null;
+  return freDeNombre(u, frentes) || freDeNombre(a, frentes);
+}
+function freDeNombre(nom, frentes){
+  var k = freNorm(nom); if(!k) return null;
   var hit = null; (frentes || []).forEach(function(f){ if(!hit && f && freNorm(f.n) === k) hit = f; });
-  (frentes || []).forEach(function(f){ if(!hit && freEsNombre(f, a)) hit = f; });
+  (frentes || []).forEach(function(f){ if(!hit && freEsNombre(f, nom)) hit = f; });
   return hit;
 }
 function frePaquete(frentes, docs, brig, trabs){

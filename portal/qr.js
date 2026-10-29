@@ -2376,7 +2376,7 @@ var CARTEL_QUE = {
   _propio:'Un documento de la obra. Escanéalo para ver siempre la versión vigente.'
 };
 var CARTEL_PASOS = {
-  doc:['Abre la cámara de tu celular', 'Apunta al código QR', 'Toca el enlace que aparece'],
+  doc:['Abre OBRASST y toca «Escanear QR»', 'Apunta al código QR', 'Se abre de frente: el documento o su carpeta'],
   buzon:['Abre la cámara de tu celular', 'Apunta al código QR', 'Toca el enlace y escríbelo'],
   mural:['Abre la cámara de tu celular', 'Apunta al código QR', 'Toca el enlace y mira el mural'],
   tareo:['Abre OBRASST y toca «Marcar entrada o salida»', 'Apunta al código QR', 'Deja que vea tu ubicación']
@@ -2601,7 +2601,8 @@ function _cqExplica(g, o, L, W, H, hz, tx){
   /* el mural «solo para su gente» (Prevencionista, Supervisor SST, o la obra lo eligió): se abre con la cuenta de la app */
   var pie1=String(tx(esBuzon ? CARTEL_PIE.buzon : (esMural ? CARTEL_PIE.mural : (esTareo ? CARTEL_PIE.tareo : CARTEL_PIE.doc))));
   /* el tareo se marca desde la app, con la cuenta del trabajador */
-  var pie2=String(tx(esTareo ? 'Con tu cuenta de trabajador en OBRASST.' : ((esMural && o.privado) ? 'Solo para el personal de la obra, con su cuenta.' : 'No necesitas instalar nada.')));
+  var pie2=String(tx(esTareo ? 'Con tu cuenta de trabajador en OBRASST.' : ((esMural && o.privado) ? 'Solo para el personal de la obra, con su cuenta.'
+    : ((esBuzon || esMural) ? 'No necesitas instalar nada.' : 'Sin OBRASST, con la cámara del celular.'))));
   var empresa=String(o.empresa||''), obra=String(o.obra||''), marca=empresa || obra;
   var rQue=tx('¿Qué es?'), rUso=tx('¿Cómo se usa?');
   g.fillStyle='#ffffff'; g.fillRect(0, 0, W, H);
@@ -2709,10 +2710,12 @@ function cartelDibujar(o){
       return { canvas:cv, png:cv.toDataURL('image/png'), w:cv.width, h:cv.height, horizontal:hz };
     }
     var titulo=String(o.titulo||'Documento'), largo=o.largo ? String(tx(o.largo)||o.largo) : '';
-    var t1=tx(o.hoja==='tareo' ? 'Escanéalo desde OBRASST: «Marcar entrada o salida»' : 'Escanea con la cámara de tu celular'),
+    /* 28/10/2026 · el de un documento se escanea desde OBRASST («Escanear QR»): entra de frente a su carpeta; con la cámara también abre */
+    var esDoc=!(o.hoja==='tareo' || o.hoja==='buzon' || o.hoja==='mural');
+    var t1=tx(o.hoja==='tareo' ? 'Escanéalo desde OBRASST: «Marcar entrada o salida»' : (esDoc ? 'Escanéalo desde OBRASST: «Escanear QR»' : 'Escanea con la cámara de tu celular')),
         t2=tx(o.hoja==='buzon' ? 'Escríbelo sin tu nombre: llega a la obra.'
               : (o.hoja==='mural' ? 'Los documentos de la obra, siempre vigentes.'
-              : (o.hoja==='tareo' ? 'Al llegar y al irte. Solo vale junto a la puerta.' : 'Abre siempre la versión vigente del documento.')));
+              : (o.hoja==='tareo' ? 'Al llegar y al irte. Solo vale junto a la puerta.' : 'O con la cámara del celular. Siempre la versión vigente.')));
     var empresa=String(o.empresa||''), obra=String(o.obra||''), marca=empresa || obra;
     g.fillStyle='#ffffff'; g.fillRect(0, 0, W, H);
     /* lo de abajo va fijo: el QR se acomoda en lo que queda (640 px, unos 10 cm; con un título

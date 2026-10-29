@@ -1520,7 +1520,7 @@ var IPETS_T = {
         carpeta:'pets', carpetaN:'PETS', limpio:petsLimpio, pdf:petsPdf, todos:'Todos los PETS',
         tabs:[['datos', 'Datos'], ['recursos', 'Personal, EPP y equipos'], ['proc', 'Procedimiento'], ['firmas', 'Firmas'], ['versiones', 'Versiones']] }
 };
-var IPW = { k:'ipl', caja:null, n:0, obra:null, t:{}, filas:{}, ctx:null, ed:null };
+var IPW = { k:'ipl', caja:null, n:0, obra:null, t:{}, filas:{}, ctx:null, ed:null, sub:{}, subT:{} };
 function _ipwCss(){
   if(document.getElementById('ipw-css')) return;
   var st = document.createElement('style'); st.id = 'ipw-css';
@@ -1604,7 +1604,16 @@ function _ipwCss(){
     '.ipw-mas{font-size:12.5px; margin:6px 0 0}',
     '.ipw-mas summary{cursor:pointer; color:var(--azul)}',
     '.ipw-cand{font-size:13px}',
-    '.ipw-sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}'
+    '.ipw-sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}',
+    /* 28/10/2026 · lo que está en su carpeta y en su cartel QR */
+    '.ipw-sub .tarj-cuerpo{display:grid; gap:0; padding-top:4px}',
+    '.ipw-subf{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--raya)}',
+    '.ipw-subf:last-child{border-bottom:0}',
+    '.ipw-subf .ic{font:600 10.5px/1 var(--mono); letter-spacing:.04em; padding:6px 7px; border-radius:6px; color:#fff; background:var(--gris)}',
+    '.ipw-subf .ic.pdf{background:#B42318} .ipw-subf .ic.img{background:#0F766E} .ipw-subf .ic.word{background:#1D4ED8} .ipw-subf .ic.excel{background:#15803D} .ipw-subf .ic.enlace{background:#475569}',
+    '.ipw-subf b{display:block; font-weight:500; color:var(--tinta); overflow-wrap:anywhere}',
+    '.ipw-subf small{display:block; color:var(--gris); font-size:12.5px; margin-top:2px}',
+    '.ipw-subf .acciones{margin:0; flex-wrap:nowrap}'
   ].join('\n');
   document.head.appendChild(st);
 }
@@ -1638,6 +1647,83 @@ function ipwTraer(k, fresco){
     });
     return IPW.filas[k];
   });
+}
+/* 28/10/2026 · lo que está en su carpeta («iperc» / «pets»: la que abre su cartel QR), subido aquí, en «Documentos», en la
+   app o en el cartel; y lo que se publicó desde aquí (su nota dice «Armado en OBRASST…») */
+function ipwTraerCarpeta(k, fresco){
+  var oid = (YO.obra || {}).id, T = IPETS_T[k];
+  if(!fresco && IPW.sub[k] && IPW.obra === oid && Date.now() - (IPW.subT[k] || 0) < 15000) return Promise.resolve(IPW.sub[k]);
+  return traer('sst_doc', '&hoja=eq.' + T.carpeta + '&select=id,hoja,nombre,url,nota,creado&order=creado.desc', 200).then(function(r){
+    if((YO.obra || {}).id !== oid) return [];
+    IPW.subT[k] = Date.now();
+    IPW.sub[k] = (Array.isArray(r) ? r : []).filter(function(f){ return f && /^https?:\/\//i.test(String(f.url || '')); });
+    return IPW.sub[k];
+  });
+}
+function _ipwSubTipo(u){
+  var p = String(u || '').split(/[?#]/)[0].toLowerCase();
+  if(/\.pdf$/.test(p)) return ['pdf', 'PDF'];
+  if(/\.(jpe?g|png|webp|gif|heic|heif)$/.test(p)) return ['img', 'JPG'];
+  if(/\.docx?$/.test(p)) return ['word', 'DOC'];
+  if(/\.xlsx?$/.test(p)) return ['excel', 'XLS'];
+  if(!/\/storage\/v1\/object\//.test(String(u || ''))) return ['enlace', 'URL'];
+  return ['', 'ARCH'];
+}
+function _ipwSubHTML(k){
+  var T = IPETS_T[k], L = IPW.sub[k] || [];
+  if(!L.length) return '';
+  var h = '<div class="tarj ipw-sub" id="ipw-sub"><div class="tarj-cab"><div><h2><span aria-hidden="true">📎</span> En la carpeta «' + esc(T.carpetaN) + '» y en su cartel QR</h2>' +
+    '<p class="sub">' + (k === 'ipl' ? 'Los IPERC' : 'Los PETS') + ' que subiste aquí, en «Documentos», en la app o en su cartel: ' + (L.length === 1 ? 'es el que abre' : 'son los que abre') + ' el cartel QR ' + (k === 'ipl' ? 'de la matriz IPERC' : 'de los procedimientos') + ', y tu gente los ve en la app.</p></div>' +
+    '<div class="acciones"><button type="button" class="bt sec chico" id="ipw-sub-enl">🔗 Con un enlace</button></div></div><div class="tarj-cuerpo">';
+  L.forEach(function(f){
+    var ti = _ipwSubTipo(f.url), arm = /^Armado en OBRASST/i.test(String(f.nota || ''));
+    h += '<div class="ipw-subf" data-ipw-sub="' + esc(String(f.id)) + '"><span class="ic ' + ti[0] + '">' + ti[1] + '</span>' +
+      '<div><b>' + esc(f.nombre || T.uno) + '</b><small>' + (f.creado ? 'Subido el ' + esc(fechaLarga(f.creado)) : '') + (arm ? ' · armado aquí, en OBRASST' : '') + '</small></div>' +
+      '<div class="acciones"><a class="bt sec chico" href="' + esc(f.url) + '" target="_blank" rel="noopener">Abrir</a>' +
+      '<button type="button" class="bt sec chico" data-ipw-subq="' + esc(String(f.id)) + '" style="color:var(--mal)">Quitar</button></div></div>';
+  });
+  return h + '</div></div>';
+}
+/* subir uno a su carpeta: lo abre su cartel QR y sale en la app (no cuenta en el cupo: eso es para los que se arman aquí) */
+function ipwSubir(k, f){
+  var T = IPETS_T[k];
+  var no = (typeof _dcNoVa === 'function') ? _dcNoVa(f) : '';
+  if(no){ toast(no); return; }
+  var nom = ((typeof _dcNombreDe === 'function') ? _dcNombreDe(f) : String(f.name || '')) || T.uno;
+  toast('Subiendo «' + f.name + '»…');
+  subirArchivoP('docs', f).then(function(url){
+    return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:T.carpeta, nombre:nom.slice(0, 120), url:url, nota:null }).then(function(rows){
+      if(Array.isArray(rows) && !rows.length) return Promise.reject({ fila:'sin_fila' });
+    }, function(e){ return Promise.reject({ fila:e }); });
+  }).then(function(){
+    toast('Subido: ya lo abre su cartel QR y está en la app, en «' + T.carpetaN + '»');
+    if(VISTA.actual === T.vista && VISTA.recargar) VISTA.recargar(true);
+  }, function(e){
+    var enFila = !!(e && typeof e === 'object' && Object.prototype.hasOwnProperty.call(e, 'fila'));
+    toast((typeof _dcMotivo === 'function') ? _dcMotivo(enFila ? e.fila : e, enFila ? 'fila' : 'archivo') : 'No se pudo subir. Revisa tu conexión.');
+  });
+}
+/* o un enlace (Drive, OneDrive): no ocupa espacio y el cartel lo abre igual */
+function ipwEnlace(k){
+  var T = IPETS_T[k];
+  var cuerpo = '<p class="ayuda" style="margin:0 0 14px">Para ' + (k === 'ipl' ? 'el IPERC' : 'el PETS') + ' que ya está en Drive o en OneDrive: ponlo en «cualquiera con el enlace puede ver», si no tu gente no lo va a poder abrir.</p>' +
+    '<div class="campo"><label for="ipwe-nom">Cómo se llama</label><input id="ipwe-nom" maxlength="120" placeholder="' + esc(k === 'ipl' ? 'IPERC de línea base 2026' : 'PETS · Excavación manual de zanjas') + '"></div>' +
+    '<div class="campo"><label for="ipwe-url">Enlace</label><input id="ipwe-url" type="url" placeholder="https://drive.google.com/file/d/…/view"></div>' +
+    '<div class="msg" id="ipwe-msg"></div>';
+  abrirHoja(k === 'ipl' ? 'Agregar un IPERC con su enlace' : 'Agregar un PETS con su enlace', 'Va a la carpeta «' + T.carpetaN + '» y a su cartel QR', cuerpo, '<button type="button" class="bt" id="ipwe-si">Guardar</button>', { sinFoco:true });
+  /* sin quitarle el foco a un campo de esta hoja en el que ya se está escribiendo */
+  setTimeout(function(){ try{ var a = document.activeElement; if(!(a && /^ipwe-/.test(a.id || ''))) $('ipwe-nom').focus(); }catch(_f){} }, 30);
+  $('ipwe-si').onclick = function(){
+    var b = this, m = $('ipwe-msg'), nom = String($('ipwe-nom').value || '').replace(/\s+/g, ' ').trim(), url = String($('ipwe-url').value || '').trim();
+    if(!nom){ m.className = 'msg mal'; m.textContent = 'Ponle un nombre.'; $('ipwe-nom').focus(); return; }
+    if(!/^https?:\/\/\S+\.\S+/i.test(url)){ m.className = 'msg mal'; m.textContent = 'El enlace tiene que empezar con https://'; $('ipwe-url').focus(); return; }
+    b.disabled = true; m.className = 'msg gris'; m.textContent = 'Guardando…';
+    sbPostP('sst_doc', { empresa:YO.obra.id, hoja:T.carpeta, nombre:nom.slice(0, 120), url:url, nota:null }).then(function(rows){
+      if(Array.isArray(rows) && !rows.length) return Promise.reject('sin_fila');
+      cerrarHoja(); toast('Guardado: ya lo abre su cartel QR y está en la app');
+      if(VISTA.actual === T.vista && VISTA.recargar) VISTA.recargar(true);
+    }).catch(function(e){ b.disabled = false; m.className = 'msg mal'; m.textContent = (typeof _dcMotivo === 'function') ? _dcMotivo(e, 'fila').replace('El archivo subió, pero no', 'No') : 'No se pudo guardar. Revisa tu conexión.'; });
+  };
 }
 function ipwCupo(){
   if(YO && YO.central) return IPETS_CUPO.gestion;
@@ -1673,7 +1759,8 @@ function _ipwVista(k, caja){
   function pinta(fresco){
     var n = ++IPW.n;
     cargando(caja);
-    Promise.all([ipwTraer(k, fresco), ipwCtx(false).catch(function(){ return null; })]).then(function(){
+    Promise.all([ipwTraer(k, fresco), ipwCtx(false).catch(function(){ return null; }),
+                 ipwTraerCarpeta(k, fresco).catch(function(){ IPW.sub[k] = IPW.sub[k] || []; return null; })]).then(function(){
       if(n !== IPW.n || VISTA.actual !== T.vista) return;
       _ipwLista();
     }, function(cod){ if(n === IPW.n && VISTA.actual === T.vista) fallo(caja, cod); });
@@ -1715,19 +1802,23 @@ function _ipwLista(){
   var k = IPW.k, T = IPETS_T[k], caja = IPW.caja; if(!caja || !document.body.contains(caja)) return;
   var L = IPW.filas[k] || [], cupo = ipwCupo(), lleno = L.length >= cupo, A = (typeof planWebActual === 'function') ? planWebActual() : { n:'' };
   var ac = $('acciones');
+  /* 28/10/2026 · «⬆ Agregar IPERC de línea base» / «⬆ Agregar PETS»: el archivo que ya tienen, a su carpeta y a su cartel QR */
   if(ac) ac.innerHTML = '<span class="ipw-cupo"><b>' + L.length + ' / ' + cupo + '</b>' + esc(T.cupoTx) + ' por obra en tu plan' + (A && A.n ? ' ' + esc(A.n) : '') + '</span>' +
+    '<label class="bt sec" for="ipw-sube" id="ipw-sube-b">' + (k === 'ipl' ? '⬆ Agregar IPERC de línea base' : '⬆ Agregar PETS') + '</label>' +
+    '<input type="file" class="pi-oculto" id="ipw-sube" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx">' +
     '<button type="button" class="bt" id="ipw-nuevo"' + (lleno ? ' disabled' : '') + '>' + esc(T.nuevo) + '</button>';
-  var h = '';
+  var subidos = IPW.sub[k] || [];
+  var h = _ipwSubHTML(k);
   if(lleno && L.length){
     h += '<p class="ayuda" style="margin:0 0 14px">' + (L.length > cupo ? '<b>Tienes más que los de tu plan.</b> Siguen a la vista y se pueden abrir, pero no se puede agregar otro hasta quitar los que sobran o cambiar de plan.'
       : (cupo < IPETS_CUPO.gestion ? 'Ya usas los ' + esc(T.cupoTx) + ' de tu plan en esta obra. Con SSOMA son 4 por obra, y con Gestión SST, 8.' : 'Ya usas los ' + esc(T.cupoTx) + ' de tu plan en esta obra.')) + '</p>';
   }
   if(!L.length){
     h += k === 'ipl'
-      ? '<div class="tarj"><div class="vacio"><b>Todavía no hay un IPERC de línea base en esta obra</b>La matriz de peligros y riesgos de la obra, por proceso, actividad y tarea: cada peligro con su evaluación, sus medidas de control y el riesgo que queda. ' +
+      ? '<div class="tarj"><div class="vacio"><b>' + (subidos.length ? 'Todavía no armaste un IPERC de línea base en OBRASST' : 'Todavía no hay un IPERC de línea base en esta obra') + '</b>La matriz de peligros y riesgos de la obra, por proceso, actividad y tarea: cada peligro con su evaluación, sus medidas de control y el riesgo que queda. ' +
         'Sale en PDF y en Excel, con el logo de tu empresa y sus firmas, en el modelo que elijas: la matriz de obra en una sola tabla A3, o el documento completo con su portada y su índice. Aprobado, lo publicas en «Documentos»: tu gente lo lee y firma en su celular, y va al cartel QR de la matriz IPERC.' +
         '<div class="acciones" style="justify-content:center; margin-top:14px"><button type="button" class="bt" id="ipw-nuevo2"' + (cupo ? '' : ' disabled') + '>' + esc(T.nuevo) + '</button></div></div></div>'
-      : '<div class="tarj"><div class="vacio"><b>Todavía no hay PETS en esta obra</b>El procedimiento escrito de cada tarea, paso a paso: el personal, el EPP, los equipos, el procedimiento y las restricciones, con sus firmas. ' +
+      : '<div class="tarj"><div class="vacio"><b>' + (subidos.length ? 'Todavía no armaste un PETS en OBRASST' : 'Todavía no hay PETS en esta obra') + '</b>El procedimiento escrito de cada tarea, paso a paso: el personal, el EPP, los equipos, el procedimiento y las restricciones, con sus firmas. ' +
         'Sale en PDF con el logo de tu empresa y su índice. Aprobado, lo publicas en «Documentos»: tu gente lo lee y firma en su celular, y va al cartel QR de los procedimientos.' +
         '<div class="acciones" style="justify-content:center; margin-top:14px"><button type="button" class="bt" id="ipw-nuevo2"' + (cupo ? '' : ' disabled') + '>' + esc(T.nuevo) + '</button></div></div></div>';
   }
@@ -1736,6 +1827,15 @@ function _ipwLista(){
     '<div class="msg" id="ipw-msg" role="status"></div>';
   caja.innerHTML = h;
   [$('ipw-nuevo'), $('ipw-nuevo2')].forEach(function(b){ if(b) b.onclick = ipwNuevo; });
+  var sube = $('ipw-sube');
+  if(sube) sube.onchange = function(){ var f = this.files && this.files[0]; this.value = ''; if(f) ipwSubir(k, f); };
+  if($('ipw-sub-enl')) $('ipw-sub-enl').onclick = function(){ ipwEnlace(k); };
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-ipw-subq]'), function(b){
+    b.onclick = function(){
+      var id = b.getAttribute('data-ipw-subq'), f = (IPW.sub[k] || []).filter(function(x){ return String(x.id) === id; })[0];
+      if(f) quitarDocP({ id:f.id, hoja:f.hoja, nombre:f.nombre });
+    };
+  });
   var on = function(sel, fn){ Array.prototype.forEach.call(caja.querySelectorAll('[' + sel + ']'), function(b){ b.onclick = function(){ fn(b.getAttribute(sel)); }; }); };
   on('data-ipw-abrir', function(id){ ipwAbrir(id); });
   on('data-ipw-pdf', function(id){ ipwBajar(id, 'pdf'); });
