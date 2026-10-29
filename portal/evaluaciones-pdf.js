@@ -1624,7 +1624,7 @@ var RCAP = (function(){
 
     /* ══ SEGUIMIENTO: la matriz ══ */
     var H = new Hoja('Seguimiento');
-    var fijas = ['N°', 'Trabajador', 'DNI / doc.', 'Cargo'].concat(conEmpresa ? ['Empresa'] : []).concat(['Frente / área']).concat(conUbic ? ['Ubicación'] : []).concat(['Situación']);
+    var fijas = ['N°', 'Trabajador', 'DNI / doc.', 'Cargo'].concat(conEmpresa ? ['Empresa'] : []).concat(['Área']).concat(conUbic ? ['Frente de trabajo'] : []).concat(['Situación']);
     var anchosF = [5, 32, 11, 18].concat(conEmpresa ? [18] : []).concat([16]).concat(conUbic ? [16] : []).concat([21]);
     var FIJAS = fijas.length, cEmp = conEmpresa ? 4 : -1, cFr = conEmpresa ? 5 : 4, cUb = conUbic ? cFr + 1 : -1, cSit = FIJAS - 1;
     var nS = D.ses.length, c0 = FIJAS, cR = FIJAS + nS;   /* cR: la primera de las de cumplimiento */
@@ -1718,12 +1718,12 @@ var RCAP = (function(){
 
     /* ══ DETALLE: una fila por evaluación ══ */
     var DT = new Hoja('Detalle');
-    var cabD = ['Fecha', 'Capacitación', 'Tipo', 'Trabajador', 'DNI / doc.', 'Cargo', 'Frente / área'].concat(conUbic ? ['Ubicación'] : []).concat(['Resultado', 'Nota (0–20)', 'Correctas', 'Folio', 'Evaluador', 'Horas']);
+    var cabD = ['Fecha', 'Capacitación', 'Tipo', 'Trabajador', 'DNI / doc.', 'Cargo', 'Área'].concat(conUbic ? ['Frente de trabajo'] : []).concat(['Resultado', 'Nota (0–20)', 'Correctas', 'Folio', 'Evaluador', 'Horas']);
     [11, 38, 11, 30, 11, 18, 16].concat(conUbic ? [16] : []).concat([13, 10, 10, 16, 24, 7]).forEach(function(w, i){ DT.anchos[i] = w; });
     var dU = conUbic ? 1 : 0;   /* lo que se corre a la derecha si va la ubicación */
     DT.unir(0, 1, cabD.length - 1, 1, 'DETALLE DE LAS EVALUACIONES', S.tit); DT.altos[1] = 26;
     DT.unir(0, 2, cabD.length - 1, 2, (linea ? linea + '  ·  ' : '') + 'Periodo: ' + periodo + '  ·  Emitido: ' + emitido, S.sub);
-    DT.unir(0, 3, cabD.length - 1, 3, 'Una fila por cada evaluación rendida. Usa los filtros del encabezado para ver una capacitación, una fecha, un frente' + (conUbic ? ', una ubicación (la de ese día)' : '') + ' o solo los desaprobados.', S.ley);
+    DT.unir(0, 3, cabD.length - 1, 3, 'Una fila por cada evaluación rendida. Usa los filtros del encabezado para ver una capacitación, una fecha, un área' + (conUbic ? ', un frente de trabajo (el de ese día)' : '') + ' o solo los desaprobados.', S.ley);
     cabD.forEach(function(t, i){ DT.celda(i, 4, t, i === 1 || i === 3 ? S.cabIzq : S.cab); });
     DT.altos[4] = 30;
     var rd = 5;
@@ -1798,8 +1798,8 @@ var RCAP = (function(){
     else R.semaforo(ref(B + 7, r0) + ':' + ref(B + 7, r0 + X.porSes.length - 1), DX);
     /* por frente */
     var rf = r0 + Math.max(1, X.porSes.length) + 1;
-    R.celda(B, rf, 'Por frente / área', S.sec); R.unir(B + 3, rf, M, rf, 'Según dónde está cada uno hoy.', S.secN); R.altos[rf] = 20; rf++;
-    var colsF = [['Frente / área', 3], ['Trabajadores', 1], ['Programadas', 1], ['Rindieron', 1], ['Faltaron', 1], ['Cumplimiento', 1], ['Aprobaron', 1], ['Promedio', 1]];
+    R.celda(B, rf, 'Por área', S.sec); R.unir(B + 3, rf, M, rf, 'Según dónde está cada uno hoy.', S.secN); R.altos[rf] = 20; rf++;
+    var colsF = [['Área', 3], ['Trabajadores', 1], ['Programadas', 1], ['Rindieron', 1], ['Faltaron', 1], ['Cumplimiento', 1], ['Aprobaron', 1], ['Promedio', 1]];
     fila(rf, colsF, colsF.map(function(k, j){ return [k[0], j === 0 ? S.cabIzq : S.cab]; }));
     R.altos[rf] = 28;
     X.porFrente.forEach(function(x, j){
@@ -1812,7 +1812,7 @@ var RCAP = (function(){
     /* quién debe qué */
     var rp = rf + 1 + Math.max(1, X.porFrente.length) + 1;
     R.celda(B, rp, 'Pendientes: quién no rindió lo que le tocaba', S.sec); R.altos[rp] = 20; rp++;
-    var colsP = [['Trabajador', 3], ['Cargo', 2], ['Frente / área', 2], ['Faltó a', 1], ['Las que no rindió', 4]];
+    var colsP = [['Trabajador', 3], ['Cargo', 2], ['Área', 2], ['Faltó a', 1], ['Las que no rindió', 4]];
     fila(rp, colsP, colsP.map(function(k, j){ return [k[0], (j === 3) ? S.cab : S.cabIzq]; }));
     R.altos[rp] = 24;
     X.pendientes.forEach(function(x, j){
@@ -1834,7 +1834,7 @@ var RCAP = (function(){
      ['✓', S.si, 'Taller completado o constancia sin nota.']].forEach(function(x, j){
       R.celda(B, rl + j, x[0], x[1]); R.unir(B + 1, rl + j, M, rl + j, x[2], S.leyTx);
     });
-    R.unir(B, rl + 8, M, rl + 8, 'Le tocaba = estaba programada para toda la obra, para su puesto, para su frente o para él con nombre (se programa en la app, en Capacitación por tema, o en el portal). Cumplimiento = las que rindió entre las que le tocaban hasta hoy. Los totales de «Seguimiento» son fórmulas: si corriges una nota, se recalculan.', S.ley);
+    R.unir(B, rl + 8, M, rl + 8, 'Le tocaba = estaba programada para toda la obra, para su puesto, para su área o para él con nombre (se programa en la app, en Capacitación por tema, o en el portal). Cumplimiento = las que rindió entre las que le tocaban hasta hoy. Los totales de «Seguimiento» son fórmulas: si corriges una nota, se recalculan.', S.ley);
     R.altos[rl + 8] = 38;
 
     /* ══ el libro ══ */

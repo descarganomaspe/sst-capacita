@@ -507,7 +507,7 @@ function legPdfDe(D, meta){
   nueva();
   titulo(num++, 'Datos del trabajador');
   texto((typeof docCortoDe === 'function' ? docCortoDe(t) : (t.td || 'DNI')) + ': ' + (t.dni || '—') + ' · Puesto: ' + (t.puesto || '—') + (t.area ? ' · Área: ' + t.area : ''));
-  texto('Ingreso: ' + (t.ingreso ? _legF(t.ingreso) : 'no registrado') + ' · Situación: ' + (D.sit || '—') + (t.ubicacion ? ' · Ubicación: ' + t.ubicacion : ''));
+  texto('Ingreso: ' + (t.ingreso ? _legF(t.ingreso) : 'no registrado') + ' · Situación: ' + (D.sit || '—') + (t.ubicacion ? ' · Frente de trabajo: ' + t.ubicacion : ''));
   if(D.tar && legSecOn(cfg, 'tar')) texto('Tareo de los últimos 30 días: ' + D.tar.dias + (D.tar.dias === 1 ? ' día · ' : ' días · ') + D.tar.h + ' horas.');
   if(on('ind')){ titulo(num++, 'Inducción');
     if(D.ind === null) nota(D.cuenta ? 'No se pudo consultar: sin señal. Vuelve a sacar el legajo con internet.' : 'No se pudo consultar: entra a tu cuenta para traer lo que registró la obra.');

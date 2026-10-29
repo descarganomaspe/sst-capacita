@@ -61,7 +61,9 @@ function arcPeso(k){ for(var i=0;i<ARC_PESOS.length;i++) if(ARC_PESOS[i].k===k) 
 var ARC_ESC_POR_PAG=110*1024;
 
 var _ARC_CSS_MIAS='.arc-mias{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:10px 12px;border:1px dashed var(--raya);border-radius:10px;background:var(--panel)}'+
-  '.arc-mias .bt{margin:0}.arc-mias-t{font-size:12.5px;color:var(--gris);flex:1 1 220px}';
+  '.arc-mias .bt{margin:0}.arc-mias-t{font-size:12.5px;color:var(--gris);flex:1 1 220px}'+
+  /* 28/10/2026 · las subcarpetas, con su sangría (MIS-CARPETAS) */
+  '.arc-c.arc-n2{padding-left:24px}.arc-c.arc-n3{padding-left:38px}.arc-c .arc-sub{flex:0 0 auto;color:var(--gris);margin-right:-2px}';
 function _arcCss(){
   if($('arc-css')) return;
   var s=document.createElement('style'); s.id='arc-css';
@@ -293,6 +295,7 @@ function arcInfo(f){
     var d=dcCarpetaDe(h);
     if(d.c){
       I.k='doc'; I.key=d.base; I.t=d.c.t; I.g=_dcGrupo(d.c); I.editable=true;
+      if(d.c.mia && d.c.tr) I.tr=d.c.tr;       /* 28/10/2026 · la subcarpeta, con su camino («Permisos › Octubre») */
       if(d.base==='ma-informe' || d.base==='simulacro') I.det=d.sub;
       else if(d.base==='certificados' && h!=='certificados') I.det=String(d.t).replace(/^Certificados · /, '');
     } else if(d.propio){ I.k='propio'; I.key=h; I.t=d.t; I.g='Carteles QR propios'; I.editable=true; }
@@ -306,7 +309,7 @@ function arcFila(id){ var x=null; (DC.filas||[]).forEach(function(f){ if(!x && S
 function _arcSeUne(f){ var t=arcInfo(f).tipo; return (t==='pdf' || t==='img') && !!f.url; }
 function _arcSub(f){
   var I=arcInfo(f), p=[];
-  p.push(I.k==='esc' ? 'Escaneo · '+I.t : I.t);
+  p.push(I.k==='esc' ? 'Escaneo · '+I.t : (I.tr || I.t));
   if(I.det) p.push(I.det);
   if(I.fecha) p.push(fechaLarga(I.fecha));
   p.push(ARC_TIPO_ET[I.tipo]||'Archivo');
@@ -372,8 +375,14 @@ function _arcOrdenGrupo(I){
   if(I.k==='esc') return 0;
   if(I.k==='foto') return 1;
   if(typeof DC_MIAS_G!=='undefined' && I.g===DC_MIAS_G) return 5;
-  if(I.k==='doc'){ var i=0; for(;i<DC_CARPETAS.length;i++) if(_dcGrupo(DC_CARPETAS[i])===I.g) break; return 10+i; }
+  if(I.k==='doc') return _arcOrdenDeGrupo(I.g);
   return I.k==='propio' ? 900 : 950;
+}
+/* el lugar de un grupo de carpetas: el de las carpetas de siempre; los de las secciones del menú sin carpetas de siempre, después */
+function _arcOrdenDeGrupo(g){
+  for(var i=0;i<DC_CARPETAS.length;i++) if(_dcGrupo(DC_CARPETAS[i])===g) return 10+i;
+  if(typeof DC_SUP_SECC!=='undefined') for(var j=0;j<DC_SUP_SECC.length;j++) if(DC_SUP_SECC[j].g===g) return 10+DC_CARPETAS.length+j;
+  return 10+DC_CARPETAS.length+50;
 }
 function _arcOrdenItem(I){
   if(I.k==='esc'){ for(var i=0;i<ARC_CLASES.length;i++) if('esc:'+ARC_CLASES[i][0]===I.key) return i; return 99; }
@@ -389,7 +398,7 @@ function _arcArbol(vis){
     var I=arcInfo(f);
     if(!G[I.g]){ G[I.g]={ g:I.g, o:_arcOrdenGrupo(I), items:[], por:{}, n:0 }; L.push(G[I.g]); existe['g:'+I.g]=1; }
     var g=G[I.g]; g.n++;
-    if(!g.por[I.key]){ g.por[I.key]={ key:I.key, t:I.t, n:0, o:_arcOrdenItem(I) }; g.items.push(g.por[I.key]); existe[I.key]=1; }
+    if(!g.por[I.key]){ g.por[I.key]={ key:I.key, t:I.t, n:0, o:_arcOrdenItem(I), nivel:_arcNivelDe(I.key) }; g.items.push(g.por[I.key]); existe[I.key]=1; }
     g.por[I.key].n++;
   });
   /* 09/10/2026 · «Escaneos de la app» (y «Fotos de obra», si el líder las deja ver) salen aunque todavía no tengan nada:
@@ -404,12 +413,27 @@ function _arcArbol(vis){
       var gM=G[DC_MIAS_G];
       if(!gM){ gM=G[DC_MIAS_G]={ g:DC_MIAS_G, o:5, items:[], por:{}, n:0, vacia:true, mias:true }; L.push(gM); existe['g:'+DC_MIAS_G]=1; }
       gM.mias=true;
-      M.forEach(function(c, i){ if(!gM.por[c.h]){ gM.por[c.h]={ key:c.h, t:c.t, n:0, o:i }; gM.items.push(gM.por[c.h]); existe[c.h]=1; } });
     }
+    /* 28/10/2026 · también las subcarpetas y las de las secciones del menú (en el grupo de su sección), aunque estén vacías */
+    M.forEach(function(c){
+      var gx=G[c.g];
+      if(!gx){
+        if(c.g===DC_MIAS_G && !gM) return;
+        gx=G[c.g]={ g:c.g, o:(c.g===DC_MIAS_G ? 5 : _arcOrdenDeGrupo(c.g)), items:[], por:{}, n:0, vacia:true }; L.push(gx); existe['g:'+c.g]=1;
+      }
+      if(c.g===DC_MIAS_G) gx.mias=true; else gx.secc=true;
+      if(!gx.por[c.h]){ gx.por[c.h]={ key:c.h, t:c.t, n:0, o:c.o, nivel:c.nivel||1 }; gx.items.push(gx.por[c.h]); existe[c.h]=1; }
+      else { gx.por[c.h].o=c.o; gx.por[c.h].nivel=c.nivel||1; }
+    });
   }
   L.sort(function(a, b){ return a.o-b.o || a.g.localeCompare(b.g, 'es'); });
   L.forEach(function(g){ g.items.sort(function(a, b){ return a.o-b.o || String(a.t).localeCompare(String(b.t), 'es', {sensitivity:'base'}); }); });
   return { grupos:L, existe:existe };
+}
+/* el nivel de una carpeta propia en el árbol (1 = la de arriba); las demás, 1 */
+function _arcNivelDe(key){
+  if(!/^mia-/.test(String(key||'')) || typeof dcMiasDe!=='function') return 1;
+  var c=dcMiasDe(String(key).slice(4)); return (c && c.nivel) || 1;
 }
 /* ¿es de la app (escaneo o foto de obra)? En la pestaña «Escaneos y fotos» (DC.modo 'esc') solo sale eso */
 function _arcDeLaApp(f){ var k=arcInfo(f).k; return k==='esc' || k==='foto'; }
@@ -477,7 +501,7 @@ function arcPintar(){
   var arbol='<button type="button" class="arc-c g-todo'+(ARC.carpeta==='*'?' on':'')+'" data-k="*"><span>'+tTodo+'</span><small>'+vis.length+'</small></button>';
   var menu='<option value="*">'+tTodo+' ('+vis.length+')</option>';
   A.grupos.forEach(function(g){
-    var solo=!g.mias && (g.items.length===1 && g.items[0].t===g.g);
+    var solo=!g.mias && !g.secc && (g.items.length===1 && g.items[0].t===g.g);
     if(solo){
       var it0=g.items[0];
       arbol+='<button type="button" class="arc-c arc-solo'+(ARC.carpeta===it0.key?' on':'')+'" data-k="'+esc(it0.key)+'"><span>'+esc(it0.t)+'</span><small>'+it0.n+'</small></button>';
@@ -487,8 +511,10 @@ function arcPintar(){
     arbol+='<button type="button" class="arc-c arc-g'+(ARC.carpeta==='g:'+g.g?' on':'')+(g.vacia?' vacia':'')+'" data-k="g:'+esc(g.g)+'" title="Todo lo de «'+esc(g.g)+'»"><span>'+esc(g.g)+'</span><small>'+g.n+'</small></button>';
     menu+='<optgroup label="'+esc(g.g)+'"><option value="g:'+esc(g.g)+'"'+(ARC.carpeta==='g:'+g.g?' selected':'')+'>Todo · '+esc(g.g)+' ('+g.n+')</option>';
     g.items.forEach(function(it){
-      arbol+='<button type="button" class="arc-c'+(ARC.carpeta===it.key?' on':'')+'" data-k="'+esc(it.key)+'"><span>'+esc(it.t)+'</span><small>'+it.n+'</small></button>';
-      menu+='<option value="'+esc(it.key)+'"'+(ARC.carpeta===it.key?' selected':'')+'>'+esc(it.t)+' ('+it.n+')</option>';
+      /* 28/10/2026 · las subcarpetas, con sangría */
+      var nv=Math.min(3, Math.max(1, it.nivel||1));
+      arbol+='<button type="button" class="arc-c'+(nv>1 ? ' arc-n'+nv : '')+(ARC.carpeta===it.key?' on':'')+'" data-k="'+esc(it.key)+'" data-nivel="'+nv+'">'+(nv>1 ? '<i class="arc-sub" aria-hidden="true">└</i>' : '')+'<span>'+esc(it.t)+'</span><small>'+it.n+'</small></button>';
+      menu+='<option value="'+esc(it.key)+'"'+(ARC.carpeta===it.key?' selected':'')+'>'+(nv>1 ? new Array(nv).join('\u00a0\u00a0')+'└ ' : '')+esc(it.t)+' ('+it.n+')</option>';
     });
     menu+='</optgroup>';
   });
@@ -540,43 +566,85 @@ function arcPintar(){
   _arcMiasBarra();
   if(busca){ var bi=$('arc-buscar'); try{ bi.focus(); bi.setSelectionRange(busca[0], busca[1]); }catch(_b){} }
 }
-/* la barra de «Mis carpetas»: con el grupo o una de sus carpetas abierta */
+/* la barra de las carpetas propias (28/10/2026: también en las secciones del menú y dentro de cada carpeta, con sus
+   subcarpetas): con «Mis carpetas», una sección del menú o una carpeta propia abierta */
 function _arcMiasBarra(){
   var c=$('arc-mias'); if(!c) return;
-  var k=String(ARC.carpeta||''), enMias=(typeof DC_MIAS_G!=='undefined') && (k==='g:'+DC_MIAS_G || /^mia-/.test(k));
-  if(_arcModoEsc() || !enMias){ c.innerHTML=''; c.hidden=true; return; }
+  var k=String(ARC.carpeta||''), enMias=(typeof DC_MIAS_G!=='undefined') && k==='g:'+DC_MIAS_G;
+  var S=(k.indexOf('g:')===0 && typeof _dcSeccDeGrupo==='function') ? _dcSeccDeGrupo(k.slice(2)) : null;
+  var X=(/^mia-/.test(k) && typeof dcMiasDe==='function') ? dcMiasDe(k.slice(4)) : null;
+  /* una carpeta de siempre de una de esas secciones (por ejemplo «Difusiones»): también se le agrega una al lado */
+  if(!S && !X && k.indexOf(':')<0 && typeof _dcCarpeta==='function' && typeof _dcSeccDeGrupo==='function'){ var cc=_dcCarpeta(k); if(cc && !cc.mia) S=_dcSeccDeGrupo(_dcGrupo(cc)); }
+  if(_arcModoEsc() || !(enMias || S || X)){ c.innerHTML=''; c.hidden=true; return; }
   c.hidden=false;
-  var M=dcMias(), i=-1; M.forEach(function(x, j){ if(x.h===k) i=j; });
   if(!dcMiasPuede()){
-    c.innerHTML='<div class="arc-mias"><span class="arc-mias-t">🔒 Crear, nombrar y ordenar tus propias carpetas: desde el plan Gestión SST. Lo que ya tienen adentro se sigue viendo.</span></div>';
+    c.innerHTML='<div class="arc-mias"><span class="arc-mias-t">🔒 Crear, nombrar y ordenar tus propias carpetas (y sus subcarpetas): desde el plan Gestión SST. Lo que ya tienen adentro se sigue viendo.</span></div>';
     return;
   }
-  var h='<div class="arc-mias"><button type="button" class="bt chico" data-mia="nueva">＋ Nueva carpeta</button>';
-  if(i>-1){
-    h+='<button type="button" class="bt sec chico" data-mia="nombre">Cambiar el nombre</button>'+
-       '<button type="button" class="bt sec chico" data-mia="sube" aria-label="Subir la carpeta"'+(i===0 ? ' disabled' : '')+'>↑</button>'+
-       '<button type="button" class="bt sec chico" data-mia="baja" aria-label="Bajar la carpeta"'+(i===M.length-1 ? ' disabled' : '')+'>↓</button>'+
-       '<button type="button" class="bt sec chico" data-mia="quita">Quitar la carpeta</button>';
-  }else h+='<span class="arc-mias-t">'+(M.length ? 'Abre una para cambiarle el nombre, ordenarla o quitarla.' :
-           'Tus propias carpetas, con el nombre que quieras. Lo que subas con una abierta va a ella, y salen también en la app.')+'</span>';
+  var h='<div class="arc-mias">';
+  if(X){
+    var her=dcMiasHijas(X.p), i=-1; her.forEach(function(x, j){ if(x.id===X.id) i=j; });
+    h+=(X.nivel<DC_MIAS_NIVELES ? '<button type="button" class="bt chico" data-mia="sub">＋ Subcarpeta</button>' : '')+
+       '<button type="button" class="bt sec chico" data-mia="nombre">Cambiar el nombre</button>'+
+       '<button type="button" class="bt sec chico" data-mia="sube" aria-label="Subir la carpeta"'+(i<=0 ? ' disabled' : '')+'>↑</button>'+
+       '<button type="button" class="bt sec chico" data-mia="baja" aria-label="Bajar la carpeta"'+(i<0 || i===her.length-1 ? ' disabled' : '')+'>↓</button>'+
+       '<button type="button" class="bt sec chico" data-mia="quita">Quitar la carpeta</button>'+
+       (X.tr!==X.t ? '<span class="arc-mias-t">'+esc(X.tr)+'</span>' : '');
+  } else if(S){
+    h+='<button type="button" class="bt chico" data-mia="nueva">＋ Nueva carpeta en «'+esc(S.n)+'»</button>'+
+       '<span class="arc-mias-t">Sale también en la app, en «Mis carpetas», dentro de «'+esc(S.n)+'».</span>';
+  } else {
+    var M=dcMiasHijas('');
+    h+='<button type="button" class="bt chico" data-mia="nueva">＋ Nueva carpeta</button>'+
+       '<span class="arc-mias-t">'+(M.length ? 'Abre una para crearle subcarpetas, cambiarle el nombre, ordenarla o quitarla.' :
+         'Tus propias carpetas, con el nombre que quieras, y dentro de cada una sus subcarpetas. Lo que subas con una abierta va a ella, y salen también en la app.')+'</span>';
+  }
   c.innerHTML=h+'</div>';
-  var id=i>-1 ? M[i].id : '';
   function falla(e){ toast(typeof e==='string' && e!=='nada' ? e : 'No se pudo guardar. Revisa tu conexión.'); }
   Array.prototype.forEach.call(c.querySelectorAll('[data-mia]'), function(b){
     b.onclick=function(){
       var q=b.getAttribute('data-mia');
-      if(q==='nueva') preguntar('Nueva carpeta', 'Cómo se va a llamar. Sale en la web y en la app de todo el equipo.', { etiqueta:'Nombre', maximo:60, placeholder:'Permisos de trabajo de octubre', minimo:2, corto:'Escribe el nombre de la carpeta.' }, { si:'Crear' }).then(function(n){
-        if(!n) return; dcMiasNueva(n).then(function(nid){ ARC.carpeta='mia-'+nid; arcPintar(); toast('Carpeta «'+String(n).trim()+'» creada. Lo que subas ahora va a ella.'); }, falla); });
-      if(q==='nombre') preguntar('Cambiar el nombre', 'Los documentos se quedan donde están.', { etiqueta:'Nombre', maximo:60, valor:M[i].t, minimo:2, corto:'Escribe el nombre de la carpeta.' }).then(function(n){
-        if(!n) return; dcMiasRenombrar(id, n).then(function(){ arcPintar(); toast('Listo: ahora se llama «'+String(n).trim()+'».'); }, falla); });
-      if(q==='sube' || q==='baja') dcMiasMover(id, q==='sube' ? -1 : 1).then(function(){ arcPintar(); }, falla);
+      if(q==='nueva'){ arcMiasNueva(S ? 's:'+S.k : ''); return; }
+      if(!X) return;
+      if(q==='sub'){ arcMiasNueva(X.id); return; }
+      if(q==='nombre') preguntar('Cambiar el nombre', 'Los documentos se quedan donde están.', { etiqueta:'Nombre', maximo:60, valor:X.t, minimo:2, corto:'Escribe el nombre de la carpeta.' }).then(function(n){
+        if(!n) return; dcMiasRenombrar(X.id, n).then(function(){ arcPintar(); toast('Listo: ahora se llama «'+String(n).trim()+'».'); }, falla); });
+      if(q==='sube' || q==='baja') dcMiasMover(X.id, q==='sube' ? -1 : 1).then(function(){ arcPintar(); }, falla);
       if(q==='quita'){
-        if(dcMiasDocs(id)){ toast('«'+M[i].t+'» tiene documentos: muévelos a otra carpeta o quítalos primero.'); return; }
-        confirmar('¿Quitar «'+M[i].t+'»?', 'Está vacía. Se quita de la web y de la app.', { si:'Sí, quitarla', mal:true }).then(function(ok){
-          if(!ok) return; dcMiasQuitar(id).then(function(){ ARC.carpeta='g:'+DC_MIAS_G; arcPintar(); toast('Carpeta quitada.'); }, falla); });
+        if(dcMiasHijas(X.id).length){ toast('«'+X.t+'» tiene subcarpetas: quita primero las de adentro.'); return; }
+        if(dcMiasDocs(X.id)){ toast('«'+X.t+'» tiene documentos: muévelos a otra carpeta o quítalos primero.'); return; }
+        confirmar('¿Quitar «'+X.t+'»?', 'Está vacía. Se quita de la web y de la app.', { si:'Sí, quitarla', mal:true }).then(function(ok){
+          if(!ok) return;
+          dcMiasQuitar(X.id).then(function(){ ARC.carpeta=X.p ? (X.p.indexOf('s:')===0 ? 'g:'+X.g : 'mia-'+X.p) : 'g:'+DC_MIAS_G; arcPintar(); toast('Carpeta quitada.'); }, falla); });
       }
     };
   });
+}
+/* «Nueva carpeta»: su nombre y dónde va (Mis carpetas, dentro de otra, o una sección del menú del supervisor) */
+function arcMiasNueva(pDef){
+  pDef=String(pDef||'');
+  var M=dcMias(), ops=[['', 'Mis carpetas']];
+  M.forEach(function(c){ if(c.nivel<DC_MIAS_NIVELES) ops.push([c.id, (c.sec ? (_dcSecc(c.sec)||{}).g+' › ' : 'Mis carpetas › ')+c.tr]); });
+  var secs=DC_SUP_SECC.map(function(S){ return ['s:'+S.k, S.g]; });
+  var opt=function(x){ return '<option value="'+esc(x[0])+'"'+(x[0]===pDef ? ' selected' : '')+'>'+esc(x[1])+'</option>'; };
+  var cuerpo='<div class="campo"><label for="arcmn-n">Nombre</label><input id="arcmn-n" maxlength="60" autocomplete="off" placeholder="Permisos de trabajo de octubre"></div>'+
+    '<div class="campo"><label for="arcmn-p">Dónde va</label><select id="arcmn-p"><optgroup label="Mis carpetas">'+ops.map(opt).join('')+'</optgroup>'+
+    '<optgroup label="En una sección de siempre">'+secs.map(opt).join('')+'</optgroup></select></div>'+
+    '<p class="ayuda" style="margin:0">Sale en la web y en la app de todo el equipo. Dentro de una carpeta, es su subcarpeta (hasta 3 niveles).</p>'+
+    '<div class="msg" id="arcmn-msg"></div>';
+  abrirHoja('Nueva carpeta', 'Carpetas de la obra', cuerpo, '<button type="button" class="bt" id="arcmn-si">Crear</button>', {sinFoco:true});
+  /* sin quitarle el foco a un campo de esta hoja en el que ya se está escribiendo */
+  setTimeout(function(){ try{ var a=document.activeElement; if(!(a && /^arcmn-/.test(a.id||''))) $('arcmn-n').focus(); }catch(_f){} }, 30);
+  $('arcmn-n').onkeydown=function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); $('arcmn-si').click(); } };
+  $('arcmn-si').onclick=function(){
+    var b=this, m=$('arcmn-msg'), n=String($('arcmn-n').value||'').replace(/\s+/g,' ').trim(), p=String($('arcmn-p').value||'');
+    if(n.length<2){ m.className='msg mal'; m.textContent='Escribe el nombre de la carpeta.'; $('arcmn-n').focus(); return; }
+    b.disabled=true; m.className='msg gris'; m.textContent='Creando…';
+    dcMiasNueva(n, p).then(function(nid){
+      cerrarHoja(); ARC.carpeta='mia-'+nid; arcPintar();
+      toast('Carpeta «'+n+'» creada. Lo que subas ahora va a ella.');
+    }, function(e){ b.disabled=false; m.className='msg mal'; m.textContent=(typeof e==='string' && e!=='nada') ? e : 'No se pudo crear. Revisa tu conexión.'; });
+  };
 }
 function _arcLista(){
   var mEsc=_arcModoEsc(), vis=(DC.filas||[]).filter(function(f){ return !mEsc || _arcDeLaApp(f); }).filter(arcVisible).filter(_arcDeCarpeta), L=vis.filter(_arcCalza);
@@ -711,7 +779,7 @@ function arcVer(id){
     (I.tipo==='enlace' ? 'Es un enlace: se abre en su sitio (Drive, YouTube…).' : (I.tipo==='nada' ? 'Este registro no tiene archivo.' :
      'La vista previa no está disponible para '+(I.tipo==='otro' ? 'este tipo de archivo' : 'un '+ARC_TIPO_ET[I.tipo])+': descárgalo para abrirlo.'))+'</span>'+
     (u ? (I.tipo==='enlace' ? '<a class="bt sec chico" href="'+esc(u)+'" target="_blank" rel="noopener">Abrir el enlace ↗</a>' : '<button type="button" class="bt sec chico" id="arc-ver-bajar2">Descargar</button>') : '')+'</div>';
-  var dl=[['Carpeta', (I.g!==I.t ? I.g+' › ' : '')+I.t+(I.det ? ' · '+I.det : '')]];
+  var dl=[['Carpeta', (I.g!==I.t ? I.g+' › ' : '')+(I.tr || I.t)+(I.det ? ' · '+I.det : '')]];
   if(I.fecha) dl.push([I.k==='esc' ? 'Fecha de la hoja' : 'Fecha', fechaLarga(I.fecha)]);
   dl.push(['Tipo', ARC_TIPO_ET[I.tipo]+(I.k==='esc' && I.esc.pdf && I.esc.pags ? ' de '+I.esc.pags+' página'+(I.esc.pags===1?'':'s') : '')]);
   if(f.creado) dl.push(['Subido', fechaLarga(f.creado)+' · '+hace(f.creado)]);
@@ -773,7 +841,7 @@ function _arcSelDestino(id, val, op){
   var grupos=[], por={};
   _dcCarpetas().forEach(function(c){ if(op.sinFotos && c.h==='fotos') return; var g=_dcGrupo(c); if(!por[g]){ por[g]=[]; grupos.push(g); } por[g].push(c); });
   h+=grupos.map(function(g){ return '<optgroup label="'+esc(g)+'">'+por[g].map(function(c){
-    return '<option value="'+esc(c.h)+'"'+(c.h===val?' selected':'')+'>'+esc(c.t)+'</option>'; }).join('')+'</optgroup>'; }).join('');
+    return '<option value="'+esc(c.h)+'"'+(c.h===val?' selected':'')+'>'+esc(c.tr||c.t)+'</option>'; }).join('')+'</optgroup>'; }).join('');
   return h+'</select>';
 }
 /* la nota que lleva un escaneo cuando sale a una carpeta de documentos: legible en la app («Escaneo · Charla de 5 min · 02/10/2026») */
