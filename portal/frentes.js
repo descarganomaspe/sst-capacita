@@ -129,15 +129,21 @@ function freFalta(f, porTipo){
   if(!(f && f.punto)) falta.push('Punto de reunión');
   return falta;
 }
-/* ¿en qué frente está hoy este trabajador? Por el frente o área de su ficha (el de su historia, ese día) */
+/* ¿en qué frente está hoy este trabajador? 29/10/2026 · por el «Frente de trabajo» de su ficha (la ubicación: la de su
+   historia, ese día); si no tiene, por su área, como hasta el 28/10 */
 function freDeTrab(t, frentes, iso){
   if(!t) return null;
-  var a = '';
-  try{ a = (typeof sitEn === 'function' && Array.isArray(t.hist)) ? (sitEn(t, iso || hoyISO()).a || '') : ''; }catch(_s){ a = ''; }
+  var u = '', a = '';
+  try{ if(typeof sitEn === 'function' && Array.isArray(t.hist)){ var st = sitEn(t, iso || hoyISO()); u = st.u || ''; a = st.a || ''; } }catch(_s){ u = ''; a = ''; }
+  if(!u) u = t.ubicacion || '';
   if(!a) a = t.area || t.frente || '';
-  var k = freNorm(a); if(!k) return null;
+  return freDeNombre(u, frentes) || freDeNombre(a, frentes);
+}
+/* el frente que lleva ese nombre (el de hoy o uno de antes) */
+function freDeNombre(nom, frentes){
+  var k = freNorm(nom); if(!k) return null;
   var hit = null; (frentes || []).forEach(function(f){ if(!hit && f && freNorm(f.n) === k) hit = f; });
-  (frentes || []).forEach(function(f){ if(!hit && freEsNombre(f, a)) hit = f; });
+  (frentes || []).forEach(function(f){ if(!hit && freEsNombre(f, nom)) hit = f; });
   return hit;
 }
 /* lo que viaja en «¿A quién acudo?» (la hoja «quienes» que publica el supervisor): cada frente con su punto de
@@ -283,7 +289,9 @@ function freTraerW(fresco){
   return Promise.all([
     traer('sst_doc', '&hoja=eq.'+FRE_HOJA+'&select=id,hoja,nombre,nota,creado&order=creado.asc', 40),
     traer('sst_doc', '&hoja=in.('+FRE_HOJAS_IN+')&select=id,hoja,nombre,url,nota,creado&order=creado.desc', 600),
-    traerTodo('sst_trabajador', '&select=id,ext,nombre,dni,puesto,area,estatus&order=nombre.asc', 6000).catch(nada)
+    /* 29/10/2026 · con su frente de trabajo (ubicacion, con su historia); si la base no lo tiene, como antes */
+    traerTodo('sst_trabajador', '&select=id,ext,nombre,dni,puesto,area,estatus,ubicacion,historial&order=nombre.asc', 6000)
+      .catch(function(){ return traerTodo('sst_trabajador', '&select=id,ext,nombre,dni,puesto,area,estatus&order=nombre.asc', 6000); }).catch(nada)
   ]).then(function(r){
     if((YO.obra||{}).id!==oid) return FREW;
     FREW.obra=oid; FREW.t=Date.now();
@@ -303,7 +311,9 @@ function _freBrigW(){
     return (M.brigadaDeLaObra() || []).filter(function(p){ return p && p.vig; });
   }).catch(function(){ return []; });
 }
-function _freTrabsW(){ return (FREW.gente||[]).map(function(t){ return { id:String(t.ext||''), dni:String(t.dni||''), nombre:t.nombre, area:String(t.area||''), estatus:t.estatus||'activo' }; }); }
+function _freTrabsW(){ var hoy=hoyISO(); return (FREW.gente||[]).map(function(t){ return { id:String(t.ext||''), dni:String(t.dni||''), nombre:t.nombre, area:String(t.area||''), estatus:t.estatus||'activo',
+  /* 29/10/2026 · su frente de trabajo de hoy (la ubicación de su ficha, con su historia) */
+  ubicacion:(typeof ubicEnP==='function') ? ubicEnP(t, hoy) : String(t.ubicacion||'') }; }); }
 function _freGenteW(f){
   if(!FREW.gente) return null;
   return _freTrabsW().filter(function(t){ if((t.estatus||'activo')!=='activo') return false; var g=freDeTrab(t, FREW.lista); return !!(g && g.id===f.id); });
@@ -392,7 +402,7 @@ function _freTarjW(f){
   h+='</div>';
   /* hoy en el frente */
   h+='<div><h3>Hoy en este frente</h3>'+
-    '<div class="frew-d"><span class="ic">👷</span><span class="tx"><b>'+(gente ? gente.length+(gente.length===1 ? ' persona' : ' personas') : '—')+'</b><small>Por el frente de su ficha («Pasa a otro frente» en la ficha de cada uno).</small></span></div>'+
+    '<div class="frew-d"><span class="ic">👷</span><span class="tx"><b>'+(gente ? gente.length+(gente.length===1 ? ' persona' : ' personas') : '—')+'</b><small>Por el «Frente de trabajo» de su ficha (en «Personal», o «Pasa a otro frente de trabajo» en la app).</small></span></div>'+
     (paq ? (paq.brig.length ? '<div class="frew-d"><span class="ic">🧯</span><span class="tx"><small>Brigadistas en este frente</small>'+paq.brig.map(function(b){ return '<b>'+esc(b.n)+'</b>'; }).join('')+'</span></div>'
                             : '<p class="ayuda">Ningún brigadista está hoy en este frente.</p>') : '<p class="ayuda">Viendo los brigadistas…</p>')+'</div>';
   h+='</div></div></div>';

@@ -419,8 +419,9 @@ function _infTraer(mes, O, op){
   var tr=function(t, e, l){ return _infTr(O, t, e, l); };
   var P=[
     /* 19/10/2026 · lote 19 · con su empresa, su ingreso y su historia (para el personal del mes), si la base las tiene */
-    /* 27/10/2026 · con su frente (area): el corte por frente de trabajo */
-    tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto,area,contrata,ingreso,historial,estatus_desde,creado&order=nombre.asc', 6000)
+    /* 27/10/2026 · con su frente (area): el corte por frente de trabajo. 29/10/2026 · y su frente de trabajo (ubicacion) */
+    tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto,area,ubicacion,contrata,ingreso,historial,estatus_desde,creado&order=nombre.asc', 6000)
+      .catch(function(){ return tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto,area,contrata,ingreso,historial,estatus_desde,creado&order=nombre.asc', 6000); })
       .catch(function(){ return tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto,contrata,ingreso,historial,estatus_desde,creado&order=nombre.asc', 6000); })
       .catch(function(){ return tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto,contrata,ingreso,historial,estatus_desde&order=nombre.asc', 6000); })
       .catch(function(){ return tr('sst_trabajador', '&select=id,nombre,dni,td,estatus,puesto,contrata,ingreso&order=nombre.asc', 6000); })
@@ -1539,14 +1540,16 @@ function _infAreaEn(t, iso){
   l.forEach(function(ev){ if(ev.f<=iso && ev.a!=null) a=String(ev.a||''); });
   return a || String(t.area||'');
 }
+/* 29/10/2026 · la fila del frente que lleva ese nombre (el de hoy o uno de antes) */
+function _infFrenteDe(filas, nom){ var hit=null; if(!String(nom||'').trim()) return null; filas.forEach(function(x){ if(!hit && freEsNombre(x.f, nom)) hit=x; }); return hit; }
 /* 27/10/2026 · el corte por frente de trabajo: su personal al cierre, sus observaciones del mes y lo de emergencia */
 function _infFrentes(F, trab, obs, dia){
   var L=F.L, filas=L.map(function(f){ return { f:f, gente:0, obs:0, cerr:0, T:freDocsDe(f, F.docs, L) }; }), sin=0;
   (trab||[]).forEach(function(t){
     if(_infSit(t, dia).e!=='activo') return;
     var ing=String(t.ingreso||'').slice(0, 10); if(ing && ing>dia) return;
-    var a=_infAreaEn(t, dia), hit=null;
-    filas.forEach(function(x){ if(!hit && freEsNombre(x.f, a)) hit=x; });
+    /* 29/10/2026 · por su frente de trabajo (la ubicación de su ficha ese día); si no tiene, por su área */
+    var hit=_infFrenteDe(filas, (typeof ubicEnP==='function') ? ubicEnP(t, dia) : String(t.ubicacion||'')) || _infFrenteDe(filas, _infAreaEn(t, dia));
     if(hit) hit.gente++; else sin++;
   });
   ((obs && obs.porFrente) || []).forEach(function(o){

@@ -316,8 +316,9 @@ var GES_PER_CAMPOS = [
   { k:'dni',      t:'Documento (número)', sin:['numero de documento', 'nro de documento', 'n de documento', 'nro documento', 'num documento', 'numero documento', 'documento de identidad', 'doc identidad', 'documento', 'dni', 'cedula', 'ci', 'run', 'rut', 'curp', 'cuil', 'carnet de extranjeria', 'pasaporte', 'identificacion', 'nro doc', 'n doc', 'doc'] },
   { k:'td',       t:'Tipo de documento', sin:['tipo de documento', 'tipo documento', 'tipo doc', 'tipo de doc', 't doc'] },
   { k:'puesto',   t:'Puesto', sin:['puesto de trabajo', 'puesto', 'cargo', 'ocupacion', 'categoria', 'especialidad', 'oficio', 'funcion'] },
-  { k:'area',     t:'Área o frente', sin:['area o frente', 'area de trabajo', 'area', 'frente', 'cuadrilla', 'seccion', 'departamento', 'gerencia'] },
-  { k:'ubicacion',t:'Ubicación (sede o lugar)', sin:['ubicacion', 'sede', 'lugar de trabajo', 'lugar', 'local', 'campamento'] },
+  /* 29/10/2026 · el frente va en «Frente de trabajo» (la ubicación de la ficha); el área, aparte */
+  { k:'area',     t:'Área', sin:['area de trabajo', 'area', 'area o frente', 'cuadrilla', 'seccion', 'departamento', 'gerencia'] },
+  { k:'ubicacion',t:'Frente de trabajo', sin:['frente de trabajo', 'frente', 'ubicacion', 'sede', 'lugar de trabajo', 'lugar', 'local', 'campamento'] },
   { k:'contrata', t:'Empresa (si es de una contrata)', sin:['empresa contratista', 'razon social', 'contratista', 'subcontratista', 'subcontrata', 'contrata', 'empresa', 'empleador'] },
   { k:'ingreso',  t:'Fecha de ingreso', sin:['fecha de ingreso a obra', 'fecha de ingreso', 'fecha ingreso', 'f ingreso', 'ingreso', 'fecha de inicio', 'fecha inicio', 'inicio'] },
   { k:'emergencia', t:'Teléfono de emergencia', sin:['telefono de emergencia', 'telefono emergencia', 'celular de emergencia', 'tel emergencia', 'numero de emergencia', 'emergencia'] },
@@ -620,7 +621,7 @@ function _gpListo(n, de, sinCols, err){
   var h='';
   if(n) h+='<div class="aviso ok" id="gp-hecho"><b>'+(n===1 ? 'Se agregó 1 trabajador.' : 'Se agregaron '+n+' trabajadores.')+'</b> Ya están en «Personal», y la app de la obra los recibe al sincronizar. El QR para el casco de cada uno sale desde su ficha en el celular.</div>';
   if(err) h+='<div class="aviso mal" id="gp-fallo"><b>'+(n ? 'Faltaron '+(de-n)+' por subir.' : 'No se pudo subir la lista.')+'</b> '+esc(porQueFallo(err && err.cod!==undefined ? err.cod : err))+(n ? ' Vuelve a subir el mismo archivo: los que ya entraron se reconocen y no se repiten.' : '')+'</div>';
-  if(sinCols && sinCols.length) h+='<div class="aviso ojo">Entraron con lo esencial: falta un paso en el servidor para guardar '+esc(sinCols.map(function(k){ return {ind_previa:'si son nuevos', ubicacion:'la ubicación', ingreso:'la fecha de ingreso', td:'el tipo de documento', emergencia:'el contacto de emergencia', contrata:'la empresa'}[k]||''; }).filter(Boolean).join(', '))+'.</div>';
+  if(sinCols && sinCols.length) h+='<div class="aviso ojo">Entraron con lo esencial: falta un paso en el servidor para guardar '+esc(sinCols.map(function(k){ return {ind_previa:'si son nuevos', ubicacion:'el frente de trabajo', ingreso:'la fecha de ingreso', td:'el tipo de documento', emergencia:'el contacto de emergencia', contrata:'la empresa'}[k]||''; }).filter(Boolean).join(', '))+'.</div>';
   function lista(tit, l, f){ return l.length ? '<div class="seccion"><h3>'+esc(tit)+' · '+l.length+'</h3><ul class="ges-lista-chica">'+l.slice(0, 40).map(function(o){ return '<li>'+esc(o.nombre||'Fila '+o.fila+' de tu lista')+' <small>'+esc(f(o))+'</small></li>'; }).join('')+(l.length>40 ? '<li><small>y '+(l.length-40)+' más</small></li>' : '')+'</ul></div>' : ''; }
   h+=lista('Entraron sin documento: complétalo en su ficha', sinDoc, function(o){ return '· en tu lista decía «'+o.docCrudo+'»'; });
   h+=lista('No entraron: documento por revisar', fuera, function(o){ return '· fila '+o.fila+' · «'+o.docCrudo+'»'; });
@@ -638,7 +639,7 @@ function _gpPlantilla(bt){
     var X=RCAP.xlsx, E=new X.Estilos(), C=X.C, per=docPersonaP();
     var sCab=E.xf({ b:1, sz:10, c:C.blanco, f:C.petroleo, h:'left', borde:true }), sTx=E.xf({ sz:10, c:C.tinta, borde:true }), sAy=E.xf({ sz:9, c:C.gris });
     var hoja=new X.Hoja('Personal'); hoja.activa=true; hoja.pie='Lista de personal';
-    var cols=['Apellidos y nombres', 'Tipo de documento', 'Documento', 'Puesto', 'Área', 'Ubicación', 'Empresa', 'Fecha de ingreso', 'Teléfono de emergencia', 'Contacto de emergencia'];
+    var cols=['Apellidos y nombres', 'Tipo de documento', 'Documento', 'Puesto', 'Área', 'Frente de trabajo', 'Empresa', 'Fecha de ingreso', 'Teléfono de emergencia', 'Contacto de emergencia'];
     var tipos=[]; try{ tipos=docPais(paisObraP()).tipos||[]; }catch(e){}
     var ph=''; try{ ph=docPais(paisObraP()).perPh||''; }catch(e2){}
     cols.forEach(function(c, i){ hoja.celda(i, 1, c, sCab); });
@@ -653,8 +654,8 @@ function _gpPlantilla(bt){
            ['Tipo de documento', 'Si lo dejas vacío, se toma '+per+'.'+(tipos.length>1 ? ' Los que hay: '+tipos.map(function(t){ return t[0]; }).join(', ')+'.' : ''), per],
            ['Documento', 'El número, sin puntos ni espacios.', ph],
            ['Puesto', 'Su puesto de trabajo.', 'Operaria'],
-           ['Área', 'El área o el frente donde trabaja.', 'Estructuras'],
-           ['Ubicación', 'La sede o el lugar, si tu obra tiene varios.', 'Torre A'],
+           ['Área', 'El área o la especialidad en la que trabaja.', 'Estructuras'],
+           ['Frente de trabajo', 'El frente donde trabaja, como se llama en «Frentes de trabajo», si tu obra tiene varios.', 'Estación Norte'],
            ['Empresa', 'Solo si es de una contrata. Vacío si es de tu empresa.', 'Servicios Ejemplo S.A.C.'],
            ['Fecha de ingreso', 'Día/mes/año.', '03/02/2026'],
            ['Teléfono de emergencia', 'A qué número llamar si le pasa algo.', ''],
