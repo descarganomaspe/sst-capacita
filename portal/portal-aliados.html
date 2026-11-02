@@ -389,7 +389,13 @@ function arrancar(){
   var p = inv ? rpc('sst_ali_unirse', { p_token:inv }) : rpc('sst_ali_yo', {});
   p.then(function(j){
     if(inv && j && (j.ok || /invitacion|ya_eres/.test(j.motivo || ''))) invitacionUsada();
-    if(j && j.ok){ AL.yo = j; if(inv) toast('Listo: ya eres parte de OBRASST Aliados.'); mostrarPortal(); return; }
+    if(j && j.ok){
+      AL.yo = j;
+      /* 2/11/2026 · los distribuidores de EPP tienen su ERP (erp.html): la misma cuenta y la misma bandeja, con su almacén, ventas,
+         despachos y comprobantes. Los demás rubros (consultor, centro médico, capacitación…) siguen aquí. El ERP avisa que se unió. */
+      if(j.aliado && j.aliado.rubro === 'epp'){ try{ if(inv) sessionStorage.setItem('sstp_erp_unido', '1'); }catch(_e){} location.replace('erp.html'); return; }
+      if(inv) toast('Listo: ya eres parte de OBRASST Aliados.'); mostrarPortal(); return;
+    }
     if(inv && j && j.motivo && j.motivo !== 'no_eres_aliado'){ noAliado(motivo(j.motivo)); return; }
     noAliado(null);
   }, function(e){ if(e !== 401) noAliado(fallo(e)); });
@@ -580,8 +586,10 @@ function vistaFicha(){
   h += '</div><div><div class="tarj"><h2>Así te ven</h2><p class="ayuda" style="margin:0 0 12px">Cuando la empresa te elige (en EPP, en «Pedir cotización»), arriba de los proveedores que escribe ella.</p><div id="f-prev">' + prev() + '</div></div>' +
     '<div class="tarj"><h2>Lo pone OBRASST, según tu acuerdo</h2><dl class="datos"><dt>Razón social</dt><dd>' + esc(a.razon) + '</dd><dt>RUC</dt><dd>' + esc(a.ruc || '—') + '</dd>' +
     '<dt>Rubro</dt><dd>' + esc(COT.rubroNombre(a.rubro)) + '</dd><dt>Atiende</dt><dd>' + esc(COT.zonasTxt(a.zonas) || '—') + '</dd></dl>' +
-    '<p class="ayuda" style="margin-top:10px">Para cambiar algo de esto, escríbenos a <a href="mailto:info@obrasstapp.com">info@obrasstapp.com</a>.</p></div></div></div>';
+    '<p class="ayuda" style="margin-top:10px">Para cambiar algo de esto, escríbenos a <a href="mailto:info@obrasstapp.com">info@obrasstapp.com</a>.</p></div>' +
+    '<div class="tarj" id="f-rnp"><h2>Tu RNP, para las compras del Estado</h2><p class="ayuda">Cargando…</p></div></div></div>';
   $('vista').innerHTML = h;
+  rnpFicha(admin);
   var repinta = function(){ $('f-prev').innerHTML = prev(); var v = $('f-logo-v'); v.innerHTML = LOGO.v ? '<img src="' + esc(LOGO.v) + '" alt="Tu logo">' : esc(iniciales(a.razon)); if($('f-logo-q')) $('f-logo-q').hidden = !LOGO.v; };
   if(!admin) return;
   $('f-vende').oninput = repinta;
@@ -600,6 +608,30 @@ function vistaFicha(){
       AL.yo = j; repinta(); m.className = 'msg ok'; m.textContent = 'Ficha guardada: así la ven las empresas desde ahora.';
     }, function(e){ bt.disabled = false; m.className = 'msg mal'; m.textContent = fallo(e); });
   };
+}
+/* 2/11/2026 · OBRASST OS · Plan Estado: el RNP del aliado. Lo declara él; OBRASST lo revisa en el registro público y lo marca
+   verificado. Sale en el cuadro comparativo de las compras de hasta 8 UIT de las entidades. */
+var RNP_MAL = { rnp:'Revisa el número: solo letras, números y guiones.', vence:'Pon la fecha hasta la que vale.', solo_admin:'Lo cambia el administrador de tu empresa.' };
+function rnpFicha(admin){
+  rpc('sst_ali_rnp', { p:{} }).then(function(j){
+    var c = $('f-rnp'); if(!c) return;
+    if(!j || !j.ok){ c.querySelector('.ayuda').textContent = 'Todavía no se puede ver aquí.'; return; }
+    var r = j.rnp || {}, dis = admin ? '' : ' disabled';
+    c.innerHTML = '<h2>Tu RNP, para las compras del Estado</h2><p class="ayuda" style="margin:0 0 10px">Las entidades ven tu RNP en el cuadro comparativo de sus compras de hasta 8 UIT. Lo declaras tú y OBRASST lo revisa en el registro público.</p>' +
+      (r.numero ? '<p style="margin:0 0 10px">' + (r.verificado ? '<span class="pill ok">Verificado por OBRASST</span>' : '<span class="pill">Declarado · por verificar</span>') + '</p>' : '') +
+      '<div class="campo-dos"><div class="campo"><label for="f-rnp-n">Número de tu constancia del RNP</label><input id="f-rnp-n" maxlength="20" autocomplete="off"' + dis + ' value="' + esc(r.numero || '') + '"></div>' +
+      '<div class="campo"><label for="f-rnp-v">Vale hasta</label><input id="f-rnp-v" type="date"' + dis + ' value="' + esc(r.vence || '') + '"></div></div>' +
+      (admin ? '<p class="msg" id="f-rnp-m"></p><button type="button" class="bt sec" id="f-rnp-si">Guardar mi RNP</button>' : '');
+    if(!admin) return;
+    $('f-rnp-si').onclick = function(){
+      var m = $('f-rnp-m'), bt = this; bt.disabled = true;
+      rpc('sst_ali_rnp_guardar', { p:{ numero:$('f-rnp-n').value, vence:$('f-rnp-v').value } }).then(function(k){
+        bt.disabled = false;
+        if(!k || !k.ok){ m.className = 'msg mal'; m.textContent = RNP_MAL[k && k.motivo] || motivo(k && k.motivo); return; }
+        m.className = 'msg ok'; m.textContent = k.rnp ? 'Guardado: OBRASST lo revisa y lo marca verificado.' : 'Quitado.'; rnpFicha(true);
+      }, function(e){ bt.disabled = false; m.className = 'msg mal'; m.textContent = fallo(e); });
+    };
+  }, function(){ var c = $('f-rnp'); if(c) c.querySelector('.ayuda').textContent = 'No se pudo cargar. Revisa tu conexión.'; });
 }
 /* el logo, chico y liviano (cabe en la ficha): hasta 240 px por lado */
 function achicarLogo(f){
