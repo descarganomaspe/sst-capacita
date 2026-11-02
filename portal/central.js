@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════
-   OBRASST Central · la principal y sus subcontratas, en el portal
+   Contractor Hub™ · la principal y sus subcontratas, en el portal
    (01/10/2026). Marcelo: «el portal web para los planes de Central y
    Corporativo… tienen que ser mejores, con visión de que tendrán sus
    propios accesos» y «la demo: una obra de ejemplo con sus subcontratas».
@@ -341,7 +341,7 @@ function cenIndicadores(empId){
    28/10/2026 · #183 · Marcelo: «corrígelo». La obra de ejemplo tenía su propio menú (Tablero, Subió a ti, Subcontratas,
    Personal de la obra, Capacitación por empresa, Uso del mes, El estándar…) y la cuenta de verdad, otro. Ahora el ejemplo
    lleva EL MISMO MENÚ que la cuenta de verdad (la casa de cada cuenta: CUENTAS en portal/index.html):
-     · arriba, «OBRASST Central» (o «Corporativo», con «Tus obras» primero) y su área «Central»: Tablero de la obra ·
+     · arriba, «Contractor Hub™» (o «Corporativo», con «Tus obras» primero) y su área «Central»: Tablero de la obra ·
        Observaciones · Informes de las subcontratas · Estándares y boletines · Equipo y rangos;
      · abajo, «Tu empresa en la obra»: las áreas de siempre. En el ejemplo cada una dice qué trae (en la cuenta de verdad es
        la gestión SST de la principal, la de los planes de siempre);
@@ -381,10 +381,10 @@ var CEN_CENTRAL = ['tablero', 'cumemp', 'cummatriz', 'cumconsol', 'cumqr', 'obs'
 var CEN_POR_ROL = { corp:1, gerente:1, jefe:1, supervisor:1, sub:1 };
 /* las áreas del ejemplo, en el orden de la cuenta de verdad (la de abajo, de AREAS del portal) */
 function cenAreasOrden(){
-  var sub = CEN.rol === 'sub', A = [], gn = CEN.rol === 'corp' ? 'OBRASST Corporativo' : 'OBRASST Central';
+  var sub = CEN.rol === 'sub', A = [], gn = CEN.rol === 'corp' ? 'OBRASST Corporativo' : 'Contractor Hub™';
   if(!sub){
     if(CEN.rol === 'corp') A.push({ id:'a-corp', n:'Tus obras', ic:'◫', v:['cen-obras', 'cum-comp'], gk:'casa', gn:gn });
-    A.push({ id:'a-cadena', n:'Central', ic:'🏗', v:CEN_CENTRAL.map(function(k){ return CEN_V[k].id; }), gk:'casa', gn:gn });
+    A.push({ id:'a-cadena', n:'Control de contratistas', ic:'🏗', v:CEN_CENTRAL.map(function(k){ return CEN_V[k].id; }), gk:'casa', gn:gn });
   }
   (typeof AREAS !== 'undefined' ? AREAS : []).forEach(function(R){
     if(R.id === 'a-cadena'){ if(sub) A.push({ id:'a-cadena', n:'Supervisión', ic:'🔗', v:['cen-miemp', 'cen-levantar', 'cen-infpide', 'cen-estllega', 'cen-x-rangos'] }); return; }
@@ -416,9 +416,9 @@ function cenVistaExplica(caja, id, A){
   var h = id === 'cen-x-rangos'
     ? '<p>El rango de cada persona de tu equipo (supervisor, jefe o gerente): a quién le sube lo que vence y quién puede invitar o anular. En el ejemplo, mira «Equipo y rangos» de la principal.</p>'
     : '<p>' + (sub ? 'Aquí va lo de tu propia empresa, como en los planes de siempre' : 'Aquí va la gestión SST de tu propia empresa en la obra, como en los planes de siempre') + (trae.length ? ': <b>' + esc(trae.join(' · ')) + '</b>.' : '.') + '</p>' +
-      '<p>' + (sub ? 'La subcontrata lo tiene completo y gratis mientras trabaje en la obra con Central.' : 'Debajo de «Central» la principal sigue con todo lo suyo; arriba, lo de todas las empresas de la obra.') + '</p>';
+      '<p>' + (sub ? 'La subcontrata lo tiene completo y gratis mientras trabaje en la obra con Contractor Hub.' : 'Debajo de «Control de contratistas» la principal sigue con todo lo suyo; arriba, lo de todas las empresas de la obra.') + '</p>';
   caja.innerHTML = '<div class="tarj"><div class="tarj-cuerpo cen-explica"><h2>' + esc(id === 'cen-x-rangos' ? 'Rangos del equipo' : A.n) + '</h2>' + h + '<p class="sub">Obra de ejemplo: esta parte no se llena con datos inventados. ' +
-    (sub ? 'La que se recorre es «Supervisión».' : 'La que se recorre es «Central».') + '</p></div></div>';
+    (sub ? 'La que se recorre es «Supervisión».' : 'La que se recorre es «Control de contratistas».') + '</p></div></div>';
 }
 /* el número al lado del área y de la pestaña: lo que te espera (como cadCuenta en la cuenta de verdad) */
 function cenInsignia(id){
@@ -887,7 +887,7 @@ function cenVistaUso(caja){
   h += '<div class="rej cen-cifras cen-4">' + cifra('El día de más gente', _cenN(pico.total), 'el ' + fechaLarga(pico.dia) + ' · es lo que se cobra', '') +
     cifra('Promedio', _cenN(prom), 'de lunes a sábado' + (cerrado ? '' : ', hasta hoy'), '') +
     cifra('Días con gente', String(lab.length), cerrado ? 'en el mes' : 'en lo que va del mes', '') +
-    cifra(cerrado ? 'Central, ese mes' : 'Central, hasta hoy', 'S/ ' + _cenN(Math.round(monto)),
+    cifra(cerrado ? 'Contractor Hub, ese mes' : 'Contractor Hub, hasta hoy', 'S/ ' + _cenN(Math.round(monto)),
       (monto === 2400 ? 'el piso del plan · ' + _cenN(pico.total) + ' × S/ 3.90 no llega' : _cenN(pico.total) + ' × S/ 3.90') + ' · más IGV' + (cerrado ? '' : ' · puede subir'), '') + '</div>';
   var max = Math.max.apply(null, dias.map(function(x){ return x.total; }).concat([1]));
   h += '<div class="tarj"><div class="tarj-cab"><div><h2>La gente de cada día</h2><p class="sub">Todas las empresas juntas · en amarillo, el día de más gente</p></div></div><div class="tarj-cuerpo"><div class="cen-uso">';
@@ -915,7 +915,7 @@ var CEN_RECIBE = {
   sub:'Lo que la principal le observa a su empresa, con su plazo.'
 };
 var CEN_VE = {
-  corp:'Todas las obras de la empresa, lado a lado, y Central en cada una',
+  corp:'Todas las obras de la empresa, lado a lado, y Contractor Hub en cada una',
   gerente:'Toda la obra: todas las empresas, sus informes y sus estándares',
   jefe:'Toda la obra: todas las empresas; invita a las subcontratas',
   supervisor:'Toda la obra; observa y valida lo que levantan',
@@ -1206,7 +1206,7 @@ function cenInformePDF(I, yo){
     doc.setPage(i);
     R(RAYA); doc.setLineWidth(0.6); doc.line(M, H - 34, W - M, H - 34);
     L('normal', 6.8, GRIS);
-    doc.text(Tx('OBRASST Central · ' + d.obra.nombre + ' · ' + _cenMesNom(m.k) + (CEN.demo ? ' · Obra de ejemplo: empresas, personas y cifras inventadas' : '')), M, H - 22);
+    doc.text(Tx('OBRASST Contractor Hub · ' + d.obra.nombre + ' · ' + _cenMesNom(m.k) + (CEN.demo ? ' · Obra de ejemplo: empresas, personas y cifras inventadas' : '')), M, H - 22);
     doc.text(Tx('Página ' + i + ' de ' + n), W - M, H - 22, { align:'right' });
   }
   doc.save('informe-ssoma-' + _cenSlug() + '-' + m.k + '.pdf');
@@ -1737,7 +1737,7 @@ function centralDemo(){
   YO = { empresas:[CEN.d.obra], obra:CEN.d.obra, rol:'central', nombre:'', dueno:false, admin:false, central:true, demo:true };
   TOK = { correo:'', demo:true };
   $('entrada').hidden = true; $('portal').className = 'on cen-demo';
-  try{ document.title = 'OBRASST Central · Obra de ejemplo'; }catch(e){}
+  try{ document.title = 'Contractor Hub™ · Obra de ejemplo'; }catch(e){}
   cenPintarBarra();
   var hash = (location.hash || '').slice(1), vs = vistasDe();
   VISTA.actual = null;

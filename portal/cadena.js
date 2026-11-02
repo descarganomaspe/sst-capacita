@@ -11,13 +11,13 @@
    No editar la versión: la sella armar.py (CADENA_VER). */
 var CAD = { caja:null, cual:'', f:{ lado:'', est:'', enlace:'', riesgo:'' }, obs:{}, reloj:null, enviando:false };
 var CAD_RIESGO = { alto:{ t:'Alto', cl:'mal' }, medio:{ t:'Medio', cl:'ojo' }, bajo:{ t:'Bajo', cl:'gris' } };
-var CAD_PAPEL = { principal:'Contratista principal', cliente:'Cliente', supervision:'Supervisión', regulador:'Regulador' };
+var CAD_PAPEL = { principal:'Contratista principal', cliente:'Cliente', supervision:'Supervisión', regulador:'Entidad del Estado' };   /* 29/10/2026 · antes «Regulador»: la entidad que contrata la obra no regula */
 var CAD_RANGO = { supervisor:'Supervisor', jefe:'Jefe', gerente:'Gerente' };
 var CAD_QUE = { observa:'Observó', levanta:'Levantó', rechaza:'No la dio por levantada', valida:'Validó y cerró', nota:'Nota', anula:'Anuló' };
 var CAD_MOTIVO = {
   sin_sesion:'Tu sesión venció: vuelve a entrar.', no_eres_de_la_obra:'Esta cuenta no es de esta obra.', no_existe:'Eso ya no existe o no es de tu empresa.',
   rango:'Eso lo hace el jefe o el gerente de tu empresa (se ve en «Rangos del equipo»).', nombre:'Escribe el nombre de la empresa (al menos 3 letras).',
-  sin_central:'Para invitar empresas, esta obra necesita OBRASST Central activo.', ya_esta:'Esa empresa ya está invitada o ya está en la obra.',
+  sin_central:'Para invitar empresas, esta obra necesita Contractor Hub™ activo.', ya_esta:'Esa empresa ya está invitada o ya está en la obra.',
   muy_seguido:'Demasiadas veces seguidas. Espera un minuto y vuelve a intentar.', no_activa:'Ese enlace ya no está activo.',
   solo_lectura:'A esa empresa la ves en modo de solo lectura: no puedes dejarle observaciones.', riesgo:'Elige el riesgo.',
   titulo:'Escribe qué viste (al menos unas palabras).', foto:'La foto no subió bien. Vuelve a elegirla.', ext:'No se pudo guardar. Vuelve a intentar.',
@@ -142,8 +142,8 @@ function cadVistaInicio(caja){
       'Cada una lleva su propio OBRASST; la que supervisa ve las cifras del día de la otra, le deja observaciones con foto y plazo, y valida cuando las levanta. Lo que vence sube solo al jefe y al gerente.</p>' +
       '<div class="cad-que-2"><div><b>¿Te invitaron a una obra?</b><span>Abre el enlace que te mandaron, o pégalo aquí. Tu empresa recibe su espacio para esa obra.</span>' +
       '<button type="button" class="bt" id="cad-q-pegar">Tengo una invitación</button></div>' +
-      '<div><b>¿Eres la contratista principal?</b><span>Con OBRASST Central invitas a tus subcontratas por su ' + esc(cadDocN()) + ' (entran gratis) y a quien te supervisa. Se activa por obra.</span>' +
-      '<a class="bt sec" href="central.html" target="_blank" rel="noopener">Ver OBRASST Central</a></div></div></div></div>';
+      '<div><b>¿Eres la contratista principal?</b><span>Con Contractor Hub™ invitas a tus subcontratas por su ' + esc(cadDocN()) + ' (entran gratis) y a quien te supervisa. Se activa por obra.</span>' +
+      '<a class="bt sec" href="central.html" target="_blank" rel="noopener">Ver Contractor Hub™</a></div></div></div></div>';
     caja.innerHTML = h;
     $('cad-q-pegar').onclick = cadPegarInvitacion; $('cad-b-pegar').onclick = cadPegarInvitacion;
     return;
@@ -163,6 +163,8 @@ function cadVistaInicio(caja){
     cifra('Levantadas a tiempo', _cadPct(tot.at, tot.lev), 'últimos 30 días', '');
   if(arriba.length) h += cifra('Por levantar', String(c.por_levantar || 0), c.vencidas_mias ? c.vencidas_mias + (c.vencidas_mias === 1 ? ' vencida' : ' vencidas') : (c.por_levantar ? 'en plazo' : 'nada pendiente'), c.vencidas_mias ? 'mal' : (c.por_levantar ? 'ojo' : 'ok'));
   h += '</div>';
+  /* 29/10/2026 · lo que me piden, en una sola bandeja y arriba de todo (se llena sola: cadPide) */
+  if(arriba.length) h += '<div id="cad-pide"></div>';
   /* a quién superviso */
   if(abajo.length || invAb.length || cen.activo){
     h += '<div class="tarj"><div class="tarj-cab"><div><h2>Empresas que supervisas</h2><p class="sub">Las cifras salen de lo que cada empresa registra en su OBRASST · toca una para ver su ficha</p></div>' +
@@ -194,9 +196,10 @@ function cadVistaInicio(caja){
         return '<li data-enl="' + esc(l.id) + '"><div class="cad-ar-1"><b>' + esc(cadCorto(l.nombre)) + '</b><span class="pill azul">' + esc(cadClaseArriba(l)) + '</span></div>' +
           '<div class="cad-ar-2"><span>' + (l.modo === 'observa' ? 'Te deja observaciones' : 'Solo mira') + '</span><span>' + (l.ve === 'detalle' ? 'Ve tus cifras, tu personal y tus ATS' : 'Ve solo tus cifras') + '</span>' +
           '<span' + (o.ven ? ' class="cad-mal"' : '') + '>' + (o.ab || 0) + (o.ab === 1 ? ' observación abierta' : ' observaciones abiertas') + (o.ven ? ' · ' + o.ven + (o.ven === 1 ? ' vencida' : ' vencidas') : '') + '</span></div>' +
+          (l.mandato ? '<div class="cad-ar-2 cad-mandato"><span>Es su mandato: lo que ve y el enlace no se cambian desde aquí. Si termina la obra, lo cierra quien te supervisa.</span></div>' : '') +
           '<div class="cad-ar-3">' + ((o.ab || o.val) ? '<button type="button" class="bt chico" data-ar-obs="' + esc(l.id) + '">Ver sus observaciones</button>' : '') +
-          (l.clase === 'supervision' && i.rango !== 'supervisor' ? '<button type="button" class="bt sec chico" data-ar-cambiar="' + esc(l.id) + '">Cambiar lo que ve</button>' : '') +
-          (i.rango !== 'supervisor' ? '<button type="button" class="bt sec chico" data-ar-fin="' + esc(l.id) + '">Terminar</button>' : '') + '</div></li>';
+          (l.clase === 'supervision' && i.rango !== 'supervisor' && !l.mandato ? '<button type="button" class="bt sec chico" data-ar-cambiar="' + esc(l.id) + '">Cambiar lo que ve</button>' : '') +
+          (i.rango !== 'supervisor' && !l.mandato ? '<button type="button" class="bt sec chico" data-ar-fin="' + esc(l.id) + '">Terminar</button>' : '') + '</div></li>';
       }).join('') + '</ul>';
     } else h += '<div class="vacio"><b>Nadie te supervisa todavía en esta obra</b>' + (puedo.invitar_arriba ? 'Puedes invitar a tu cliente o a la supervisión: ven tus cifras sin pedirte reportes.' : '') + '</div>';
     if(invAr.length) h += '<div class="tarj-cuerpo cad-invs"><h3 class="cad-h3">Invitaciones por aceptar</h3>' + invAr.map(cadInvHTML).join('') + '</div>';
@@ -205,7 +208,7 @@ function cadVistaInicio(caja){
   /* Central */
   if(cen.activo){
     var pz = cen.plazos || {};
-    h += '<p class="cad-pie">OBRASST Central activo' + (cen.hasta ? ' hasta el ' + esc(_cadFechaD(cen.hasta)) : '') + ' · plazos de esta obra: riesgo alto ' + _cadPlazo(pz.alto || 24) + ', medio ' + _cadPlazo(pz.medio || 72) +
+    h += '<p class="cad-pie">Contractor Hub™ activo' + (cen.hasta ? ' hasta el ' + esc(_cadFechaD(cen.hasta)) : '') + ' · plazos de esta obra: riesgo alto ' + _cadPlazo(pz.alto || 24) + ', medio ' + _cadPlazo(pz.medio || 72) +
       ', bajo ' + _cadPlazo(pz.bajo || 168) + ' · tu rango: ' + esc(CAD_RANGO[i.rango] || '') + '</p>';
   } else h += '<p class="cad-pie">Tu rango en esta empresa: ' + esc(CAD_RANGO[i.rango] || '') + '</p>';
   caja.innerHTML = h;
@@ -221,6 +224,84 @@ function cadVistaInicio(caja){
   if($('cad-b-obs')) $('cad-b-obs').onclick = function(){ cadNuevaObs(); };
   if($('cad-b-inv')) $('cad-b-inv').onclick = function(){ cadInvitar(); };
   $('cad-b-pegar').onclick = cadPegarInvitacion;
+  if(arriba.length) cadPide(arriba);
+}
+/* ══ 29/10/2026 · ESTADO 3.0 · LO QUE TE PIDE QUIEN TE SUPERVISA ══════════════════════════════════════════════════
+   Marcelo: «una línea de arriba hacia abajo y viceversa». La empresa supervisada ve en un solo lugar todo lo que le llegó
+   de arriba y lo resuelve desde aquí: los documentos por entregar (sube el archivo y queda para su revisión), los comunicados
+   y directivas por confirmar, las medidas vigentes y las actas por firmar (se firman en la app). */
+/* lo que se pide al servidor, una vez por tanda: el tablero se pinta dos veces al entrar (lo guardado y lo de ahora) y no hace
+   falta pedirlo todo dos veces; después de entregar o confirmar, sí (forzar) */
+var CAD_PIDE = { k:'', t:0, R:null, yendo:null };
+function cadPideTraer(arriba, forzar){
+  var emp = YO.obra.id, sup = arriba.filter(function(l){ return l.clase === 'supervision'; }), k = emp + '|' + sup.map(function(l){ return l.id; }).join(',');
+  if(!forzar && CAD_PIDE.k === k){ if(CAD_PIDE.yendo) return CAD_PIDE.yendo; if(CAD_PIDE.R && Date.now() - CAD_PIDE.t < 20000) return Promise.resolve(CAD_PIDE.R); }
+  var ok = function(j){ return (j && j.ok) ? j : null; }, nada = function(){ return null; };
+  CAD_PIDE.k = k; CAD_PIDE.R = null;
+  CAD_PIDE.yendo = Promise.all([
+    Promise.all(sup.map(function(l){ return sbRpc('sst_cad_reqs', { p:{ enlace:l.id } }).then(function(j){ return (j && j.ok) ? { l:l, j:j } : null; }, nada); })),
+    sbRpc('sst_est_lista', { p:{ emp:emp } }).then(ok, nada),
+    sbRpc('sst_cad_medidas', { p:{ emp:emp, lado:'abajo', vigentes:true } }).then(ok, nada),
+    sbRpc('sst_cad_actas', { p:{ emp:emp, lado:'abajo' } }).then(ok, nada)
+  ]).then(function(R){ if(CAD_PIDE.k === k){ CAD_PIDE.R = R; CAD_PIDE.t = Date.now(); CAD_PIDE.yendo = null; } return R; });
+  return CAD_PIDE.yendo;
+}
+function cadPide(arriba, forzar){
+  var caja = $('cad-pide'); if(!caja) return;
+  cadPideTraer(arriba, forzar).then(function(R){
+    var c = $('cad-pide'); if(!c || !c.isConnected) return;
+    var docs = [], espera = [];
+    (R[0] || []).forEach(function(x){ if(!x) return; (x.j.lista || []).forEach(function(q){
+      var h = q.hoy || q.estado; if(h === 'pendiente' || h === 'observado') docs.push({ q:q, l:x.l }); else if(h === 'entregado') espera.push({ q:q, l:x.l }); }); });
+    var coms = ((R[1] && R[1].abajo) || []).filter(function(s){ return !s.recibido; });
+    var meds = ((R[2] && R[2].lista) || []).filter(function(m){ return m.estado === 'vigente'; });
+    var actas = ((R[3] && R[3].lista) || []).filter(function(a){ return a.estado === 'abierta'; });
+    var n = docs.length + coms.length + actas.length, h = '';
+    if(docs.length) h += '<h3 class="cad-h3">Documentos por entregar</h3><ul class="cad-pide-l">' + docs.map(function(x){
+      var q = x.q;
+      return '<li><div class="cad-pide-t"><b>' + esc(q.item) + '</b><small>' + esc(['Lo pide ' + cadCorto(x.l.nombre), q.cada === 'mes' ? 'cada mes' : '', q.ingreso ? 'requisito para trabajar en la obra' : ''].filter(Boolean).join(' · ')) + '</small>' +
+        ((q.hoy || q.estado) === 'observado' && q.nota ? '<small class="cad-mal">Observado: ' + esc(q.nota) + '</small>' : '') + '</div>' +
+        '<label class="bt chico cad-pide-sube">Entregar<input type="file" accept=".pdf,image/*" hidden data-pide-req="' + esc(q.id) + '" data-pide-de="' + esc(cadCorto(x.l.nombre)) + '"></label></li>';
+    }).join('') + '</ul>';
+    if(coms.length) h += '<h3 class="cad-h3">Comunicados y estándares por confirmar</h3><ul class="cad-pide-l">' + coms.map(function(s){
+      return '<li><div class="cad-pide-t"><b>' + (s.urgente ? '⚠ ' : '') + esc((s.codigo ? s.codigo + ' · ' : '') + s.titulo) + '</b><small>' +
+        esc('De ' + (s.de || 'quien te supervisa') + (s.por_medio ? ', por medio de ' + cadCorto(s.por_medio) : '') + ' · ' + _cadHora(s.creado) + (s.tipo === 'estandar' ? (s.difundido ? ' · ya está en las difusiones de tu gente (lee y firma)' : '') : ' · ya sale en tu mural')) + '</small>' +
+        (s.texto ? '<small class="cad-pide-x">' + esc(s.texto) + '</small>' : '') + (s.base ? '<small>Sustento: ' + esc(s.base) + '</small>' : '') +
+        (s.n_reit ? '<small class="cad-mal">Te lo recordaron ' + (s.n_reit === 1 ? '1 vez' : s.n_reit + ' veces') + ': confírmalo</small>' : '') + '</div><div class="cad-pide-b">' +
+        (s.url ? '<a class="bt sec chico" href="' + esc(s.url) + '" target="_blank" rel="noopener" data-pide-ver="' + esc(s.id) + '">Ver</a>' : '') +
+        '<button type="button" class="bt chico" data-pide-rec="' + esc(s.id) + '|' + esc(s.enlace) + '"' + (s.url ? ' disabled title="Ábrelo primero con «Ver»"' : '') + '>Recibido</button></div></li>';
+    }).join('') + '</ul>';
+    if(actas.length) h += '<h3 class="cad-h3">Actas por firmar</h3><ul class="cad-pide-l">' + actas.map(function(a){
+      return '<li><div class="cad-pide-t"><b>Acta ' + esc(a.n || '') + (a.fecha ? ' del ' + esc(_cadFechaD(a.fecha)) : '') + '</b><small>Se firma desde la app: Quién te supervisa › Actas.</small></div></li>';
+    }).join('') + '</ul>';
+    if(meds.length) h += '<h3 class="cad-h3">Medidas vigentes</h3><ul class="cad-pide-l">' + meds.map(function(m){
+      return '<li class="cad-pide-med"><div class="cad-pide-t"><b>' + esc(m.tipo === 'paralizacion' ? 'Paralización' : 'Prohibición') + ': ' + esc(m.detalle || '') + '</b><small>' +
+        esc((m.acta ? 'Acta ' + m.acta.n + ' · ' : '') + 'La levanta quien la dictó, cuando verifica en campo que se corrigió.') + '</small></div></li>';
+    }).join('') + '</ul>';
+    if(espera.length) h += '<p class="cad-pie">' + espera.length + (espera.length === 1 ? ' documento entregado espera' : ' documentos entregados esperan') + ' su revisión.</p>';
+    c.innerHTML = '<div class="tarj"><div class="tarj-cab"><div><h2>Lo que te pide quien te supervisa' + (n ? ' <span class="pill ' + (meds.length || docs.some(function(x){ return x.q.ingreso; }) ? 'mal' : 'ojo') + '">' + n + '</span>' : '') + '</h2>' +
+      '<p class="sub">Todo lo que te llegó de arriba, en un solo lugar: lo resuelves desde aquí y le llega al instante</p></div></div><div class="tarj-cuerpo cad-pide">' +
+      (h || '<p class="cad-gris">Nada pendiente con quien te supervisa: todo entregado y confirmado.</p>') + '</div></div>';
+    Array.prototype.forEach.call(c.querySelectorAll('[data-pide-req]'), function(inp){ inp.onchange = function(){
+      var f = inp.files && inp.files[0]; if(!f) return;
+      var lab = inp.parentNode; lab.classList.add('cargando'); toast('Subiendo «' + f.name + '»…');
+      subirArchivoP('requerimientos', f).then(function(url){
+        return sbRpc('sst_cad_req_entregar', { p:{ id:inp.getAttribute('data-pide-req'), url:url, archivo:f.name, n:cadYo() } });
+      }).then(function(r){
+        lab.classList.remove('cargando');
+        if(r && r.ok){ toast('Entregado: ' + inp.getAttribute('data-pide-de') + ' ya lo puede revisar'); cadPide(arriba, true); }
+        else toast(cadMotivo(r));
+      }, function(x){ lab.classList.remove('cargando'); toast(x === 'muy-grande' ? 'El archivo pesa más de 25 MB: comprímelo.' : cadMotivo(null, x)); });
+    }; });
+    /* lo que va con archivo se confirma después de abrirlo */
+    Array.prototype.forEach.call(c.querySelectorAll('[data-pide-ver]'), function(a){ a.addEventListener('click', function(){
+      var b = c.querySelector('[data-pide-rec^="' + a.getAttribute('data-pide-ver') + '|"]'); if(b){ b.disabled = false; b.removeAttribute('title'); } }); });
+    Array.prototype.forEach.call(c.querySelectorAll('[data-pide-rec]'), function(b){ b.onclick = function(){
+      var p = b.getAttribute('data-pide-rec').split('|'); b.disabled = true;
+      sbRpc('sst_est_recibir', { p:{ id:p[0], enlace:p[1], n:cadYo() } }).then(function(r){ if(r && r.ok){ toast('Recibido: quien te supervisa ya lo ve'); cadPide(arriba, true); } else { b.disabled = false; toast(cadMotivo(r)); } },
+        function(x){ b.disabled = false; toast(cadMotivo(null, x)); });
+    }; });
+  });
 }
 /* una invitación que todavía no aceptan: su enlace, WhatsApp, otra ficha o retirarla */
 function cadInvHTML(l){
@@ -257,7 +338,7 @@ function cadInvitar(){
     '<label class="cad-op"><input type="radio" name="cad-i-clase" value="subcontrata" checked><b>Una subcontrata</b><small>Trabaja para ti en esta obra. Ves su tablero y le dejas observaciones.</small></label>' +
     '<label class="cad-op"><input type="radio" name="cad-i-clase" value="supervision"><b>Quien te supervisa</b><small>Tu cliente, la supervisión o el regulador. Ve tus cifras sin pedirte reportes.</small></label></div>';
   h += '<div id="cad-i-sub"' + (clase === 'subcontrata' ? '' : ' hidden') + '>' +
-    '<p class="ayuda cad-ay">Entra gratis: lo cubre el Central de esta obra. Su empresa recibe su propio espacio para <b>' + esc(obra) + '</b>, con todas las herramientas de OBRASST mientras dure. ' +
+    '<p class="ayuda cad-ay">Entra gratis: lo cubre el Contractor Hub de esta obra. Su empresa recibe su propio espacio para <b>' + esc(obra) + '</b>, con todas las herramientas de OBRASST mientras dure. ' +
     'Tú ves sus cifras del día, su personal y sus ATS.' + (quedan !== null ? ' Te ' + (quedan === 1 ? 'queda 1 lugar' : 'quedan ' + quedan + ' lugares') + ' de ' + cen.tope + '.' : '') + '</p></div>' +
     '<div id="cad-i-sup"' + (clase === 'supervision' ? '' : ' hidden') + '>' +
     '<div class="campo"><label for="cad-i-papel">Quién es</label><select id="cad-i-papel"><option value="cliente">El cliente (el dueño de la obra)</option><option value="supervision">La supervisión de la obra</option><option value="regulador">Una entidad que regula o fiscaliza</option></select></div>' +
@@ -844,6 +925,12 @@ function _cadCss(){
     '.cad-arriba{list-style:none;margin:0;padding:0}.cad-arriba li{display:grid;gap:6px;padding:14px 18px;border-bottom:1px solid var(--raya)}.cad-arriba li:last-child{border-bottom:0}',
     '.cad-ar-1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cad-ar-1 b{color:var(--tinta);font-weight:600;font-size:15px}',
     '.cad-ar-2{display:flex;gap:6px 18px;flex-wrap:wrap;color:var(--gris);font-size:13px}.cad-ar-3{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}',
+    /* 29/10/2026 · la bandeja de lo que me piden y el mandato */
+    '.cad-mandato span{color:var(--texto)}.cad-pide{display:grid;gap:8px}.cad-pide-l{list-style:none;margin:0 0 6px;padding:0;display:grid;gap:8px}',
+    '.cad-pide-l li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--raya);border-radius:10px;background:var(--fondo)}',
+    '.cad-pide-l li.cad-pide-med{border-color:#efc2c5;background:var(--mal-f)}.cad-pide-t{display:grid;gap:2px;min-width:0}.cad-pide-t small{color:var(--gris);font-size:12.5px;line-height:1.4}',
+    '.cad-pide-x{white-space:pre-line;color:var(--texto)!important}.cad-pide-b{display:flex;gap:6px;flex:none}.cad-pide-sube{cursor:pointer;flex:none}.cad-pide-sube.cargando{opacity:.6;pointer-events:none}',
+    '@media (max-width:640px){.cad-pide-l li{flex-direction:column;align-items:stretch}}',
     '.cad-pie{color:var(--gris);font-size:12.5px;line-height:1.6;margin:0 0 18px}',
     /* opciones */
     '.cad-ops{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 14px}.campo .cad-ops{margin:0}',
