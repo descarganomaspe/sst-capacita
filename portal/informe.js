@@ -464,7 +464,8 @@ function _infTraer(mes, O, op){
     (op.ligero || typeof cargarFrentes!=='function') ? Promise.resolve(null) : cargarFrentes().then(function(){
       return Promise.all([tr('sst_doc', '&hoja=eq.frentes&select=id,hoja,nombre,nota,creado&order=creado.asc', 40),
                           tr('sst_doc', '&hoja=in.('+FRE_DOCS.map(function(t){ return t.h; }).join(',')+')&select=id,hoja,nombre,url,nota,creado&order=creado.desc', 600)]);
-    }).then(function(x){ var L=freDeFilas(x[0]||[]); return L.length ? { L:L, docs:(x[1]||[]).filter(function(d){ return d && /^Frente:/.test(String(d.nota||'')); }) } : null; })
+    /* 30/10/2026 · todo lo de esas carpetas: lo que no dice de qué frente es, es de toda la obra (freDocsObra) */
+    }).then(function(x){ var L=freDeFilas(x[0]||[]); return L.length ? { L:L, docs:(x[1]||[]).filter(function(d){ return d && d.url; }) } : null; })
   ];
   return Promise.all(P.map(function(p){ return Promise.resolve(p).catch(function(){ return null; }); })).then(function(r){
     var trab=r[0]||[], cons=r[1]||[], reps=r[2]||[], accs=r[3]||[], hht=r[4]||[], kar=r[5]||[], insp=r[6]||[], mapa=(r[13] && r[13].cat) || {}, cfgN=(r[13] && r[13].n) || {};
@@ -1544,7 +1545,7 @@ function _infAreaEn(t, iso){
 function _infFrenteDe(filas, nom){ var hit=null; if(!String(nom||'').trim()) return null; filas.forEach(function(x){ if(!hit && freEsNombre(x.f, nom)) hit=x; }); return hit; }
 /* 27/10/2026 · el corte por frente de trabajo: su personal al cierre, sus observaciones del mes y lo de emergencia */
 function _infFrentes(F, trab, obs, dia){
-  var L=F.L, filas=L.map(function(f){ return { f:f, gente:0, obs:0, cerr:0, T:freDocsDe(f, F.docs, L) }; }), sin=0;
+  var L=F.L, O=(typeof freDocsObra==='function') ? freDocsObra(F.docs) : {}, filas=L.map(function(f){ return { f:f, gente:0, obs:0, cerr:0, T:freDocsDe(f, F.docs, L), O:O }; }), sin=0;
   (trab||[]).forEach(function(t){
     if(_infSit(t, dia).e!=='activo') return;
     var ing=String(t.ingreso||'').slice(0, 10); if(ing && ing>dia) return;
@@ -1988,7 +1989,8 @@ function _infSecc19(P, D, k, cx){
   /* 27/10/2026 · el corte por frente de trabajo */
   if(k==='frentes'){
     var Fr=D.fre; if(!Fr || !Fr.filas.length){ P.nota('La obra no tiene frentes de trabajo.'); return true; }
-    var si=function(x, h){ return (x.T[h]||[]).length ? 'Sí' : 'Falta'; };
+    /* 30/10/2026 · sin uno propio, el de toda la obra le sirve (y así se dice) */
+    var si=function(x, h){ return (x.T[h]||[]).length ? 'Sí' : (((x.O||{})[h]||[]).length ? 'El de la obra' : 'Falta'); };
     P.tabla('Cada frente al cierre del mes', ['Frente', 'Personal', 'Observaciones', 'Levantadas', 'Plan de respuesta', 'Mapa de riesgos', 'Mapa de evacuación', 'Punto de reunión'],
       Fr.filas.map(function(x){ return [x.f.n, x.gente, x.obs, x.obs ? x.cerr+' ('+Math.round(x.cerr*100/x.obs)+' %)' : '—', si(x, 'plan-emergencia'), si(x, 'mapa-riesgos'), si(x, 'mapa-evacuacion'), x.f.punto ? 'Sí' : 'Falta']; })
         .concat([tot(['Toda la obra', Fr.filas.reduce(function(a, x){ return a+x.gente; }, 0)+Fr.sinFrente, Fr.filas.reduce(function(a, x){ return a+x.obs; }, 0), '', '', '', '', ''])]),

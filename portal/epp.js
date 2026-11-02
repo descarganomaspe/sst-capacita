@@ -413,6 +413,7 @@ function epwPintarTab(){
   var c = $('epw-cuerpo'); if(!c) return;
   var f = { cambios:_epwCambios, puestos:_epwPuestos, verif:_epwVerif, stock:_epwStock, tallas:_epwTallas, cat:_epwCatHTML, costo:_epwCosto }[EPW.tab] || _epwCambios;
   c.innerHTML = f();
+  if(EPW.tab === 'stock' && typeof erpePintar === 'function') erpePintar();
 }
 function _epwIrCat(txt){ return '<div class="aviso ojo">' + txt + ' <button type="button" class="bt sec" data-acc="tab:cat" style="margin-left:6px">Ir al catálogo</button></div>'; }
 
@@ -435,7 +436,7 @@ function _epwCambios(){
 /* (1) la matriz del EPP por puesto, y a quién le falta */
 function _epwPuestos(){
   var D = EPW.d, C = _epwUsables(), T = EPPB.activos(EPW.gente);
-  if(!C.length) return _epwIrCat('<b>Todavía no hay EPP en la obra.</b> Salen solos de las entregas del kardex, o se agregan en «Catálogo».');
+  if(!C.length) return '<div id="epw-erp"></div>' + _epwIrCat('<b>Todavía no hay EPP en la obra.</b> Salen solos de las entregas del kardex, o se agregan en «Catálogo».');
   var P = {}, orden = [];
   T.forEach(function(t){ var q = EPPB.nrm(t.puesto); if(!q) return; if(!P[q]){ P[q] = { p:t.puesto, n:0 }; orden.push(q); } P[q].n++; });
   orden.sort(function(a, b){ return P[b].n - P[a].n || P[a].p.localeCompare(P[b].p, 'es'); });
@@ -496,10 +497,10 @@ function _epwVerif(){
 /* (7) el stock, con los ingresos al almacén */
 function _epwStock(){
   var D = EPW.d, C = _epwUsables();
-  if(!C.length) return _epwIrCat('<b>Todavía no hay EPP en la obra.</b> Salen solos de las entregas del kardex, o se agregan en «Catálogo».');
+  if(!C.length) return '<div id="epw-erp"></div>' + _epwIrCat('<b>Todavía no hay EPP en la obra.</b> Salen solos de las entregas del kardex, o se agregan en «Catálogo».');
   var S = EPPB.stock(C, D.ing, EPW.kardex), bajos = S.filter(function(r){ return r.bajo; }), mes = _epwHoy().slice(0, 7);
   var ingMes = EPPB.vivos(D.ing).filter(function(x){ return String(x.f).slice(0, 7) === mes; }).length;
-  var h = '<div class="rej epw-rej">' + cifra('Por debajo de su mínimo', bajos.length, bajos.length === 1 ? 'EPP para reponer' : 'EPP para reponer', bajos.length ? 'mal' : 'ok') +
+  var h = '<div id="epw-erp"></div><div class="rej epw-rej">' + cifra('Por debajo de su mínimo', bajos.length, bajos.length === 1 ? 'EPP para reponer' : 'EPP para reponer', bajos.length ? 'mal' : 'ok') +
           cifra('Con inventario', S.filter(function(r){ return r.conIng; }).length, 'de ' + S.length + ' EPP de la obra', '') + cifra('Ingresos de este mes', ingMes, 'al almacén', '') + '</div>';
   h += '<p class="epw-sub">El stock empieza con el primer ingreso de cada EPP (lo que hay ese día en el almacén) y descuenta, solo, lo que se entrega en el kardex.</p>';
   if(bajos.length && typeof prqPuede === 'function' && prqPuede()) h += '<div class="epw-acc"><button type="button" class="bt" data-acc="req" id="epw-req">🧾 Pedir la reposición (' + bajos.length + ' EPP)</button>' +
@@ -651,6 +652,10 @@ function _epwClic(ev){
   else if(k === 'req') epwPedir();
   else if(k === 'cat-agregar') epwCatAgregar();
   else if(k === 'cat-sug'){ EPW.listaAbierta = true; _epwAsegurar(v); epwPintarTab(); }
+  else if(k === 'erpe-aceptar') erpeAceptar(v);
+  else if(k === 'erpe-confirmar') erpeConfirmar(v);
+  else if(k === 'erpe-cerrar') erpeCerrar();
+  else if(k === 'erpe-con'){ var q = v.indexOf(':'); if(q > 0) erpeConsignacion(v.slice(0, q), v.slice(q + 1)); }
 }
 function _epwCambio(ev){
   var t = ev.target; if(!t || !t.getAttribute) return;
@@ -658,6 +663,7 @@ function _epwCambio(ev){
   else if(t.hasAttribute('data-cat')) epwCatCampo(t.getAttribute('data-cat'), t.getAttribute('data-k'), t.value);
   else if(t.hasAttribute('data-ta')) epwTalla(t.getAttribute('data-ta'), t.getAttribute('data-k'), t.value);
   else if(t.id === 'epw-i-e') EPW.ingE = t.value;
+  else if(t.hasAttribute('data-erpe')) ERPE.sel[t.getAttribute('data-erpe')] = t.value;
 }
 function _epwEscribe(ev){
   var t = ev.target; if(!t) return;
@@ -699,4 +705,104 @@ function epwCsv(){
   }
   if(!filas.length){ toast('Esta lista está vacía.'); return; }
   csv(cols, filas, n);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LO DEL ERP DE LOS ALIADOS, EN LA EMPRESA (2/11/2026)
+   · «Aceptar ingreso» en un clic: la guía de un proveedor aliado entra a
+     los ingresos de EPP de la obra (cada línea con su guía, su lote y su
+     precio), con el mismo guardado de siempre (epwPoner). Cada línea se
+     junta con un EPP del catálogo de la obra o crea uno nuevo.
+   · Consignación: el aliado deja su stock en la obra; cada entrega del
+     kardex de un EPP del acuerdo se le descuenta. Al aliado le llega solo
+     un código cifrado de la entrega, el SKU, la talla, el lote, la
+     cantidad y la hora: nunca el nombre, el DNI ni la firma de nadie. La
+     empresa acepta o corta el acceso cuando quiera.
+   ════════════════════════════════════════════════════════════════ */
+var ERPE = { ing:null, con:null, obra:null, t:0, abierta:'', ocupado:false, sel:{} };
+function erpePintar(){
+  var caja = $('epw-erp'); if(!caja || !EPW.obra) return;
+  if(ERPE.obra !== EPW.obra){ ERPE.obra = EPW.obra; ERPE.ing = null; ERPE.con = null; ERPE.abierta = ''; ERPE.sel = {}; }
+  if(ERPE.ing) caja.innerHTML = _erpeHTML();
+  if(ERPE.ing && Date.now() - ERPE.t < 60000) return;
+  var oid = EPW.obra;
+  Promise.all([sbRpc('sst_erp_ingresos', { p_emp:oid }).catch(function(){ return null; }), sbRpc('sst_erp_consignaciones', { p_emp:oid }).catch(function(){ return null; })]).then(function(r){
+    if(EPW.obra !== oid) return;
+    ERPE.ing = (r[0] && r[0].ok && r[0].lista) || []; ERPE.con = (r[1] && r[1].ok && r[1].lista) || []; ERPE.t = Date.now();
+    var c = $('epw-erp'); if(c) c.innerHTML = _erpeHTML();
+  });
+}
+function _erpeRepintar(){ var c = $('epw-erp'); if(c) c.innerHTML = _erpeHTML(); }
+function _erpeLinea(l){ return l.c + ' ' + (l.u || '') + ' ' + l.n + (l.lote ? ' (lote ' + l.lote + ')' : ''); }
+function _erpeHTML(){
+  var P = (ERPE.ing || []).filter(function(g){ return g.ingreso !== 'aceptado'; }), A = (ERPE.ing || []).filter(function(g){ return g.ingreso === 'aceptado'; }), h = '';
+  if(P.length) h += '<div class="tarj"><div class="tarj-cab"><h2>Guías de tus proveedores aliados</h2></div><div class="tarj-cuerpo">' + P.map(function(g){
+    var abierta = ERPE.abierta === g.id, L = g.lineas || [], C = abierta ? _epwUsables() : [];
+    return '<div class="aviso" style="margin:0 0 10px"><b>' + esc(g.distribuidor) + '</b> · guía ' + esc(g.guia) + ' · ' + esc(fechaLarga(g.fecha)) + (g.estado === 'entregada' || g.estado === 'observada' ? ' · entregada' : ' · en camino') +
+      (g.modo === 'prueba' ? ' · <span class="pill gris">prueba</span>' : '') +
+      (abierta ? '<p class="epw-sub" style="margin:8px 0">Cada línea entra a «Ingresos al almacén» con la guía ' + esc(g.guia) + '. Elige con qué EPP de tu catálogo se junta, o deja que se cree.</p>' +
+        L.map(function(l, i){ var k = g.id + ':' + i, d = ERPE.sel[k] !== undefined ? ERPE.sel[k] : _erpeCatDe(l.n);
+          return '<div class="campo"><label for="erpe-c' + i + '">' + esc(_erpeLinea(l)) + '</label><select id="erpe-c' + i + '" data-erpe="' + esc(k) + '"><option value="">Nuevo en el catálogo: ' + esc(l.n) + '</option>' +
+            C.map(function(z){ return '<option value="' + esc(z.id) + '"' + (z.id === d ? ' selected' : '') + '>' + esc(z.n) + '</option>'; }).join('') + '</select></div>'; }).join('') +
+        '<div class="epw-acc" style="margin-top:8px"><button type="button" class="bt" data-acc="erpe-confirmar:' + esc(g.id) + '">Confirmar ingreso</button><button type="button" class="bt sec" data-acc="erpe-cerrar">Cancelar</button></div>'
+      : '<br>' + L.map(function(l){ return esc(_erpeLinea(l)); }).join(' · ') +
+        '<div class="epw-acc" style="margin-top:8px"><button type="button" class="bt" data-acc="erpe-aceptar:' + esc(g.id) + '">Aceptar ingreso</button>' +
+        (g.dossier ? '<a class="bt sec" href="erp-dossier.html?k=' + encodeURIComponent(g.dossier) + '" target="_blank" rel="noopener">Dossier de calidad</a>' : '') + '</div>') + '</div>';
+  }).join('') + '</div></div>';
+  if(A.length) h += '<p class="epw-sub">Guías ya aceptadas: ' + A.slice(0, 6).map(function(g){ return esc(g.guia) + (g.dossier ? ' (<a href="erp-dossier.html?k=' + encodeURIComponent(g.dossier) + '" target="_blank" rel="noopener">dossier</a>)' : ''); }).join(', ') + '</p>';
+  (ERPE.con || []).forEach(function(x){
+    if(x.estado === 'cerrada') return;
+    h += '<div class="tarj"><div class="tarj-cab"><h2>Consignación de ' + esc(x.distribuidor) + '</h2></div><div class="tarj-cuerpo"><p class="epw-sub" style="margin:0 0 8px">' +
+      (x.estado === 'propuesta' ? 'Te propone dejar su stock en esta obra y cobrarte solo lo que entregues a tu gente:' : x.estado === 'activa' ? 'Activa en esta obra. Este mes se entregaron ' + esc(x.consumido_mes) + ' unidades de lo suyo:' : 'Cortada:') + ' ' +
+      (x.items || []).map(function(i){ return esc(i.epp) + ' (' + _epwPlata(i.p) + ' + IGV)'; }).join(' · ') + '</p>' +
+      '<p class="epw-sub" style="margin:0 0 10px"><b>Qué le llega:</b> solo un código cifrado de cada entrega, el EPP, la talla, el lote, la cantidad y la hora. <b>Nunca</b> el nombre, el DNI, la firma ni la foto del trabajador.</p>' +
+      '<div class="epw-acc">' + (x.estado === 'propuesta' || x.estado === 'revocada' ? '<button type="button" class="bt" data-acc="erpe-con:aceptar:' + esc(x.id) + '">Aceptar en esta obra</button>' : '') +
+      (x.estado === 'activa' ? '<button type="button" class="bt sec" data-acc="erpe-con:cortar:' + esc(x.id) + '" style="color:var(--mal)">Cortar el acceso</button>' : '') + '</div></div></div>';
+  });
+  return h;
+}
+function _erpeCatDe(n){
+  var q = EPPB.nrm(n), C = _epwUsables(), z = C.filter(function(x){ return EPPB.nrm(x.n) === q; })[0];
+  if(!z) z = C.filter(function(x){ var k = EPPB.nrm(x.n); return k.length > 3 && (q.indexOf(k) === 0 || k.indexOf(q) === 0); })[0];
+  return z ? z.id : '';
+}
+/* «Aceptar ingreso» abre, en la misma tarjeta, con qué EPP del catálogo se junta cada línea; «Confirmar ingreso» lo pasa */
+function erpeAceptar(gid){
+  ERPE.abierta = gid; _erpeRepintar();
+  var s = $('erpe-c0'); if(s){ try{ s.focus({ preventScroll:true }); s.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(_f){} }
+}
+function erpeCerrar(){ ERPE.abierta = ''; ERPE.sel = {}; _erpeRepintar(); }
+function erpeConfirmar(gid){
+  var g = (ERPE.ing || []).filter(function(x){ return x.id === gid; })[0]; if(!g || ERPE.ocupado) return;
+  var L = g.lineas || [], sel = L.map(function(l, i){ var s = $('erpe-c' + i); return s ? s.value : _erpeCatDe(l.n); }), oid = EPW.obra;
+  /* los precios del aliado están en soles: en una obra de otro país no se ponen */
+  var soles = _epwMon() === EPPB.moneda('pe');
+  ERPE.ocupado = true;
+  sbRpc('sst_erp_ingreso_aceptar', { p_emp:oid, p_guia:gid }).then(function(j){
+    ERPE.ocupado = false;
+    if(!j || !j.ok){ toast(j && j.motivo === 'no_existe' ? 'Esa guía ya no está disponible.' : 'No se pudo aceptar. Inténtalo otra vez.'); return; }
+    if(EPW.obra !== oid) return;
+    if(!j.ya) L.forEach(function(l, i){
+      var e = sel[i];
+      if(!e || !_epwAsegurar(e)){ e = EPPB.idDe(l.n); if(!e) return; if(!EPPB.porId(EPW.d.cat)[e]) epwPoner('cat', { id:e, n:String(l.n).slice(0, 80), cambio:0, min:0, precio:soles ? (l.pu || 0) : 0, talla:'' }); }
+      epwPoner('ing', { id:EPPB.nuevoId('i'), f:_epwHoy(), e:e, c:+l.c || 0, pu:soles ? (l.pu || 0) : 0, doc:('GRE ' + g.guia + (l.lote ? ' · lote ' + l.lote : '')).slice(0, 80), quien:String(YO.nombre || (TOK && TOK.correo) || '').slice(0, 80) });
+    });
+    g.ingreso = 'aceptado'; ERPE.abierta = ''; ERPE.sel = {};
+    toast(j.ya ? 'Esa guía ya estaba aceptada.' : 'Ingreso aceptado: ' + L.length + (L.length === 1 ? ' línea' : ' líneas') + ' al almacén.');
+    epwPintarTab();
+  }, function(){ ERPE.ocupado = false; toast('No hubo conexión. Inténtalo otra vez.'); });
+}
+function erpeConsignacion(accion, id){
+  var x = (ERPE.con || []).filter(function(c){ return c.id === id; })[0]; if(!x) return;
+  confirmar(accion === 'cortar' ? '¿Cortar el acceso de ' + x.distribuidor + '?' : '¿Aceptar la consignación de ' + x.distribuidor + '?',
+    accion === 'cortar' ? 'Desde ahora ninguna entrega del kardex le llega. Lo ya entregado queda como está para su liquidación.' : 'Cada entrega de un EPP del acuerdo en el kardex de esta obra se le descontará (solo código cifrado, EPP, talla, lote, cantidad y hora).',
+    { si:accion === 'cortar' ? 'Sí, cortar' : 'Sí, aceptar', mal:accion === 'cortar' }).then(function(si){
+    if(!si) return;
+    var oid = EPW.obra;
+    sbRpc('sst_erp_consignacion_responder', { p_emp:oid, p_id:id, p_accion:accion }).then(function(j){
+      if(!j || !j.ok){ toast(j && j.motivo === 'ya_hay_otra' ? 'Ese proveedor ya tiene otra consignación en esta obra.' : 'No se pudo. Inténtalo otra vez.'); return; }
+      if(EPW.obra !== oid) return;
+      ERPE.con = j.lista || []; toast(accion === 'cortar' ? 'Acceso cortado.' : 'Consignación aceptada en esta obra.'); epwPintarTab();
+    }, function(){ toast('No hubo conexión. Inténtalo otra vez.'); });
+  });
 }

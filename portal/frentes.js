@@ -23,6 +23,8 @@
    <nombre>» en la nota y el nombre del frente adelante: así los ven la carpeta, el portal, el trabajador en sus
    documentos y el cartel QR de la obra. Lo que el trabajador necesita en una emergencia (el punto de reunión, los
    números, el responsable, los documentos y los brigadistas que hoy están ahí) viaja en «¿A quién acudo?».
+   30/10/2026 · lo que ya estaba en esas carpetas sin decir de qué frente es, es de toda la obra: cada frente lo ve en su
+   lugar (freDocsObra); y cada cartel QR de emergencia puede ser uno para toda la obra o uno por frente (freEnlaceCartel).
    ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
 var FRE_HOJA = 'frentes';
 var FRE_CUPO = { lite:1, prevencionista:1, supervisor:1, ssoma:2, gestion:4 };
@@ -103,6 +105,55 @@ function freDeDoc(d, frentes){
   return hit;
 }
 function freDocTipo(h){ for(var i = 0; i < FRE_DOCS.length; i++) if(FRE_DOCS[i].h === h) return FRE_DOCS[i]; return null; }
+/* ── 30/10/2026 · LO QUE YA ESTABA SUBIDO ES DE TODA LA OBRA ──
+   Marcelo, en «Frentes de trabajo» de la web: «otra vez el problema de jalar automáticamente los documentos que ya
+   estaban subidos, no los hace como planes de emergencia, mapa de riesgos, y así». Lo que ya está en la carpeta de la obra
+   (subido en «Documentos», en el cartel QR o en la app) y no dice de qué frente es, es DE TODA LA OBRA: cada frente lo
+   muestra en su lugar (su plan de respuesta, su mapa de riesgos…) y le cuenta para lo que se pide, hasta que alguien diga
+   de qué frente es («Es de este frente»). Lo que dice OTRO frente no se mezcla. */
+/* el frente que dice la nota de un documento, tal cual (o '') */
+function freDocFrente(d){ var m = /^Frente:\s*(.+)$/.exec(String((d && d.nota) || '').trim()); return m ? freTxt(m[1], 60) : ''; }
+/* lo de toda la obra, por tipo: lo que no dice de qué frente es y se abre desde cualquier celular (lo más nuevo primero) */
+function freDocsObra(docs){
+  var out = {}; FRE_DOCS.forEach(function(t){ out[t.h] = []; });
+  (docs || []).forEach(function(d){
+    if(!d || !out[d.hoja] || freDocFrente(d) || !/^https?:\/\//i.test(String(d.url || ''))) return;
+    out[d.hoja].push(d);
+  });
+  Object.keys(out).forEach(function(k){ out[k].sort(function(a, b){ return String(b.creado || '').localeCompare(String(a.creado || '')); }); });
+  return out;
+}
+/* el nombre de un documento cuando vuelve a ser de toda la obra: sin el frente adelante */
+function freNombreSinFrente(d){
+  var n = freDocFrente(d), nom = freTxt(d && d.nombre, 160);
+  if(n && nom.indexOf(n + ' · ') === 0 && nom.length > n.length + 3) return nom.slice(n.length + 3);
+  return nom;
+}
+/* ── 30/10/2026 · EL CARTEL QR DE CADA FRENTE ──
+   Marcelo: «lo que subo en los carteles QR es para un frente… y cuando escanea el QR, se ven los 2 o 4 planes de
+   emergencia… a un jefe o supervisor no le gustará porque querrá para su frente. Colócalo como opción, cada QR para todos
+   los frentes o diferentes QR para cada frente».
+   El cartel de toda la obra sigue como siempre: abre todo lo de su carpeta. El de un frente es el MISMO cartel (la misma
+   ficha, sst_hoja_qr.token) con el frente en el enlace («&f=<nombre>»): abre lo de ese frente y lo de toda la obra, nunca
+   lo de los otros frentes. Lo separa quien lo abre (la página d/ y la app) con lo que el servidor dice de cada documento
+   (sql/2026-10-30-qr-frentes.sql); el frente que cambió de nombre se sigue encontrando por el de antes. Se elige cartel por
+   cartel (sst_estado «cartel_frente»: { <cartel>: 1 }) y solo en los de emergencia, que son los que cambian de un punto a
+   otro: el plan de respuesta, el mapa de riesgos, los brigadistas y los contactos de emergencia. */
+var FRE_CARTEL_CARPETAS = { 'plan-emergencia':1, 'mapa-riesgos':1, 'brigadistas':1, 'contactos-emergencia':1 };
+function freCartelDeFrente(c){ return FRE_CARTEL_CARPETAS.hasOwnProperty(String(c || '')); }
+/* el enlace del cartel de un frente: el de la obra con «&f=<nombre del frente>» */
+function freEnlaceCartel(enlace, f){ var n = freTxt(f && f.n, 60); return n ? String(enlace || '') + '&f=' + encodeURIComponent(n) : String(enlace || ''); }
+/* lo que abre el cartel de un frente, de los documentos de su carpeta: lo suyo y lo de toda la obra */
+function freDocsCartel(f, docs, frentes){
+  var s = [], o = [], L = (frentes && frentes.length) ? frentes : (f ? [f] : []);
+  (docs || []).forEach(function(d){
+    if(!d) return;
+    if(!freDocFrente(d)){ o.push(d); return; }
+    var g = freDeDoc(d, L);
+    if(g && f && g.id === f.id) s.push(d);
+  });
+  return { suyo:s, obra:o };
+}
 /* el nombre de un documento del frente: «<frente> · <lo que es>» (así se lee en la carpeta y en el cartel de la obra) */
 function freNombreDoc(f, nombre){
   var fn = freTxt(f && f.n, 60), n = freTxt(nombre, 120);
@@ -123,9 +174,10 @@ function freDocsDe(f, docs, frentes){
   return out;
 }
 /* lo que le falta a un frente para una emergencia: los tres documentos que se piden siempre y su punto de reunión */
-function freFalta(f, porTipo){
+function freFalta(f, porTipo, obra){
   var falta = [];
-  FRE_DOCS.forEach(function(t){ if(t.pide && !((porTipo || {})[t.h] || []).length) falta.push(t.t); });
+  /* 30/10/2026 · obra: lo de toda la obra (freDocsObra) también le sirve */
+  FRE_DOCS.forEach(function(t){ if(t.pide && !((porTipo || {})[t.h] || []).length && !((obra || {})[t.h] || []).length) falta.push(t.t); });
   if(!(f && f.punto)) falta.push('Punto de reunión');
   return falta;
 }
@@ -151,10 +203,15 @@ function freDeNombre(nom, frentes){
    de esa hoja. brig: los de brigadaDeLaObra() (con su trab y su documento, para saber en qué frente están) */
 function frePaquete(frentes, docs, brig, trabs){
   return (frentes || []).filter(function(f){ return f && f.n; }).map(function(f){
-    var T = freDocsDe(f, docs, frentes), d = [];
+    var T = freDocsDe(f, docs, frentes), O = freDocsObra(docs), d = [];
     FRE_DOCS.forEach(function(t){
-      (T[t.h] || []).slice(0, 3).forEach(function(x){
-        if(x && /^https:\/\//.test(String(x.url || ''))) d.push({ h:t.h, t:t.t, n:String(x.nombre || t.t).slice(0, 160), u:String(x.url).slice(0, 600) });
+      /* 30/10/2026 · sin uno propio, el de toda la obra (o:1) */
+      var propio = (T[t.h] || []).length > 0;
+      ((propio ? T[t.h] : O[t.h]) || []).slice(0, 3).forEach(function(x){
+        if(!x || !/^https:\/\//.test(String(x.url || ''))) return;
+        var y = { h:t.h, t:t.t, n:String(x.nombre || t.t).slice(0, 160), u:String(x.url).slice(0, 600) };
+        if(!propio) y.o = 1;
+        d.push(y);
       });
     });
     var b = (brig || []).filter(function(p){
@@ -170,7 +227,7 @@ function frePaquete(frentes, docs, brig, trabs){
 /* ── la ficha del frente, en una hoja A4 para la caseta del frente: el proyecto y el frente arriba, dónde está, su
    responsable, su punto de reunión, a quién llamar (lo del frente y lo de la obra), sus brigadistas y sus documentos
    con su fecha. ctx: { razon, proyecto, codigo, emergs:[{t,tel}], brig:[{n,c,tel}], gente (cuántos hoy), docs:{tipo:[d]},
-   pie } ── */
+   obra:{tipo:[d]} (30/10/2026: lo de toda la obra, freDocsObra), pie } ── */
 function freFichaPdf(J, f, ctx){
   ctx = ctx || {};
   var doc = new J({ unit:'mm', format:'a4' }), W = 210, M = 16, y = 18, ancho = W - 2 * M;
@@ -219,15 +276,16 @@ function freFichaPdf(J, f, ctx){
   if(typeof ctx.gente === 'number') { y += 1; linea('Personal en este frente hoy: ' + ctx.gente + (ctx.gente === 1 ? ' persona' : ' personas') + '.', { s:9.5, c:[89, 100, 111] }); }
   titulo('Documentos del frente');
   FRE_DOCS.forEach(function(t){
-    var L = (ctx.docs && ctx.docs[t.h]) || [];
-    var fe = L[0] && L[0].creado ? String(L[0].creado).slice(0, 10) : '';
+    var L = (ctx.docs && ctx.docs[t.h]) || [], O = L.length ? [] : ((ctx.obra && ctx.obra[t.h]) || []), X = L.length ? L : O;
+    var fe = X[0] && X[0].creado ? String(X[0].creado).slice(0, 10) : '';
     var f2 = fe ? fe.slice(8, 10) + '/' + fe.slice(5, 7) + '/' + fe.slice(0, 4) : '';
     if(y > 280){ doc.addPage(); y = 18; }
-    doc.setFont('helvetica', L.length ? 'normal' : 'bold'); doc.setFontSize(10.5);
-    doc.setTextColor.apply(doc, L.length ? [20, 25, 31] : (t.pide ? [180, 35, 26] : [120, 130, 140]));
-    doc.text(T((L.length ? '[x] ' : '[ ] ') + t.t), M, y);
+    doc.setFont('helvetica', X.length ? 'normal' : 'bold'); doc.setFontSize(10.5);
+    doc.setTextColor.apply(doc, X.length ? [20, 25, 31] : (t.pide ? [180, 35, 26] : [120, 130, 140]));
+    doc.text(T((X.length ? '[x] ' : '[ ] ') + t.t), M, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(T(L.length ? (L.length > 1 ? L.length + ' documentos · el último del ' + f2 : 'Subido el ' + f2) : (t.pide ? 'Falta' : 'No subido')), W - M, y, { align:'right' });
+    var cuanto = function(Z, uno){ return Z.length > 1 ? Z.length + ' documentos · el último del ' + f2 : uno + f2; };
+    doc.text(T(L.length ? cuanto(L, 'Subido el ') : (O.length ? 'De toda la obra · ' + cuanto(O, 'subido el ') : (t.pide ? 'Falta' : 'No subido'))), W - M, y, { align:'right' });
     y += 6;
   });
   y += 2;
@@ -268,8 +326,9 @@ function _freCssW(){
     '.frew-doc-c .tx{flex:1; min-width:0; display:flex; flex-direction:column}',
     '.frew-doc-c .tx b{font-size:13.5px}',
     '.frew-doc-c .tx small{color:var(--gris); font-size:12px}',
-    '.frew-doc-f{display:flex; align-items:center; gap:8px; margin-top:7px; padding-top:7px; border-top:1px dashed var(--raya); font-size:13px}',
-    '.frew-doc-f a{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}',
+    '.frew-doc-f{display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; margin-top:7px; padding-top:7px; border-top:1px dashed var(--raya); font-size:13px}',
+    /* 30/10/2026 · el nombre entero (con el frente adelante y lo de la obra al lado no cabía): baja de renglón si hace falta */
+    '.frew-doc-f a{flex:1 1 180px; min-width:0; overflow-wrap:anywhere}',
     '.frew-doc-f small{color:var(--gris); white-space:nowrap}',
     '.frew-subir{position:relative; overflow:hidden}',
     '.frew-subir input{position:absolute; inset:0; opacity:0; cursor:pointer}',
@@ -277,7 +336,11 @@ function _freCssW(){
     '.frew-chip{font-size:12px; font-weight:600; border:1px solid currentColor; border-radius:999px; padding:2px 9px}',
     '.frew-chip.ok{color:var(--ok)}.frew-chip.mal{color:var(--mal)}',
     '.frew-nums{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,.8fr) auto; gap:8px; align-items:end}',
-    '.frew-nums .campo{margin:0}'
+    '.frew-nums .campo{margin:0}',
+    /* 30/10/2026 · lo de toda la obra, en el lugar de cada frente */
+    '.frew-doc-f.obra a{color:var(--tinta)}',
+    '.frew-obra{font-size:11.5px; font-weight:600; color:var(--gris); border:1px solid var(--raya2); border-radius:999px; padding:1px 8px; white-space:nowrap}',
+    '.frew-doc-f .enlace{white-space:nowrap; font-size:12.5px}'
   ].join('\n');
   document.head.appendChild(st);
 }
@@ -296,7 +359,9 @@ function freTraerW(fresco){
     if((YO.obra||{}).id!==oid) return FREW;
     FREW.obra=oid; FREW.t=Date.now();
     FREW.lista=freDeFilas(r[0]||[]);
-    FREW.docs=(r[1]||[]).filter(function(d){ return d && /^Frente:/.test(String(d.nota||'')); });
+    /* 30/10/2026 · todo lo de esas carpetas, no solo lo que dice «Frente:»: lo que ya estaba subido es de toda la obra
+       (freDocsObra) y cada frente lo ve en su lugar. Las filas sin archivo no son documentos. */
+    FREW.docs=(r[1]||[]).filter(function(d){ return d && d.url; });
     FREW.gente=Array.isArray(r[2]) ? r[2] : null;
     return FREW;
   });
@@ -366,13 +431,18 @@ function _frePintarW(){
   Array.prototype.forEach.call(caja.querySelectorAll('[data-fre-pdf]'), function(x){ x.onclick=function(){ freFichaW(x.getAttribute('data-fre-pdf')); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('[data-fre-dq]'), function(x){ x.onclick=function(){ freQuitarDocW(x.getAttribute('data-fre-dq')); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('input[data-fre-sube]'), function(x){ x.onchange=function(){ var p=x.getAttribute('data-fre-sube').split('|'); freSubirW(x, p[0], p[1]); }; });
+  /* 30/10/2026 · lo de toda la obra: «Es de este frente»; lo del frente: «Es de toda la obra» */
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-fre-es]'), function(x){ x.onclick=function(){ var p=x.getAttribute('data-fre-es').split('|'); freDocFrenteW(p[0], p[1], x); }; });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-fre-todo]'), function(x){ x.onclick=function(){ freDocFrenteW(x.getAttribute('data-fre-todo'), '', x); }; });
 }
 function _freTarjW(f){
-  var L=FREW.lista||[], T=freDocsDe(f, FREW.docs||[], L), falta=freFalta(f, T), gente=_freGenteW(f);
+  var L=FREW.lista||[], T=freDocsDe(f, FREW.docs||[], L), O=freDocsObra(FREW.docs||[]), falta=freFalta(f, T, O), gente=_freGenteW(f), varios=L.length>1;
   var paq=FREW.brig ? (frePaquete(L, FREW.docs||[], FREW.brig, _freTrabsW()).filter(function(p){ return p.id===f.id; })[0] || { brig:[] }) : null;
   var donde=[f.ref, f.dist, f.dep].filter(Boolean).join(' · ');
   var h='<div class="tarj frew" data-fre="'+esc(f.id)+'"><div class="tarj-cab"><div><h2>🚧 '+esc(f.n)+'</h2><p class="sub">'+(donde ? esc(donde) : 'Sin dirección todavía')+'</p>'+
-    '<div class="frew-chips">'+FRE_DOCS.filter(function(t){ return t.pide; }).map(function(t){ var ok=(T[t.h]||[]).length>0; return '<span class="frew-chip '+(ok ? 'ok' : 'mal')+'">'+(ok ? '✓ ' : '✗ ')+esc(t.c||t.t)+'</span>'; }).join('')+
+    '<div class="frew-chips">'+FRE_DOCS.filter(function(t){ return t.pide; }).map(function(t){
+      var suyo=(T[t.h]||[]).length>0, ok=suyo || (O[t.h]||[]).length>0;
+      return '<span class="frew-chip '+(ok ? 'ok' : 'mal')+'"'+(ok && !suyo ? ' title="El de toda la obra"' : '')+'>'+(ok ? '✓ ' : '✗ ')+esc(t.c||t.t)+(ok && !suyo ? ' · de la obra' : '')+'</span>'; }).join('')+
     '<span class="frew-chip '+(f.punto ? 'ok' : 'mal')+'">'+(f.punto ? '✓ ' : '✗ ')+'Punto de reunión</span></div></div>'+
     '<div class="acciones"><button type="button" class="bt sec chico" data-fre-pdf="'+esc(f.id)+'">📄 Ficha en PDF</button>'+
     '<button type="button" class="bt sec chico" data-fre-ed="'+esc(f.id)+'">Editar</button>'+
@@ -388,14 +458,22 @@ function _freTarjW(f){
   /* sus documentos */
   h+='<div><h3>Documentos del frente</h3>';
   FRE_DOCS.forEach(function(t){
-    var D=T[t.h]||[], sube=(FREW.sube===f.id+'|'+t.h);
+    var D=T[t.h]||[], Ob=O[t.h]||[], sube=(FREW.sube===f.id+'|'+t.h);
+    var cuantos=function(n){ return n+(n===1 ? ' documento' : ' documentos'); };
     h+='<div class="frew-doc"><div class="frew-doc-c"><span aria-hidden="true">'+t.ic+'</span><span class="tx"><b>'+esc(t.t)+'</b><small>'+
-      (D.length ? D.length+(D.length===1 ? ' documento' : ' documentos') : (t.pide ? '<span class="frew-falta">Falta</span>' : 'Todavía nada'))+'</small></span>'+
+      (D.length ? cuantos(D.length)+(Ob.length ? ' · y '+cuantos(Ob.length)+' de toda la obra' : '')
+                : (Ob.length ? 'El de toda la obra'+(Ob.length>1 ? ' · '+cuantos(Ob.length) : '') : (t.pide ? '<span class="frew-falta">Falta</span>' : 'Todavía nada')))+'</small></span>'+
       '<span class="bt sec chico frew-subir"'+(sube ? ' aria-busy="true"' : '')+'>'+(sube ? 'Subiendo…' : '⬆ Subir')+
       (sube ? '' : '<input type="file" accept="application/pdf,image/*" aria-label="'+esc('Subir '+t.t+' de '+f.n)+'" data-fre-sube="'+esc(f.id)+'|'+esc(t.h)+'">')+'</span></div>';
     D.forEach(function(d){
       h+='<div class="frew-doc-f"><a href="'+esc(d.url||'#')+'" target="_blank" rel="noopener">'+esc(d.nombre||t.t)+'</a><small>'+esc(fechaLarga(String(d.creado||'').slice(0, 10))||'')+'</small>'+
+        (varios ? '<button type="button" class="enlace" data-fre-todo="'+esc(String(d.id))+'" title="Que lo vean todos los frentes">Es de toda la obra</button>' : '')+
         '<button type="button" class="bt sec chico" data-fre-dq="'+esc(String(d.id))+'" aria-label="'+esc('Quitar '+(d.nombre||t.t))+'">Quitar</button></div>';
+    });
+    /* 30/10/2026 · lo que ya estaba en la carpeta de la obra sin frente: sale aquí solo */
+    Ob.forEach(function(d){
+      h+='<div class="frew-doc-f obra"><a href="'+esc(d.url||'#')+'" target="_blank" rel="noopener">'+esc(d.nombre||t.t)+'</a><span class="frew-obra">De toda la obra</span><small>'+esc(fechaLarga(String(d.creado||'').slice(0, 10))||'')+'</small>'+
+        (varios ? '<button type="button" class="bt sec chico" data-fre-es="'+esc(String(d.id))+'|'+esc(f.id)+'" aria-label="'+esc('«'+(d.nombre||t.t)+'» es de '+f.n)+'">Es de este frente</button>' : '')+'</div>';
     });
     h+='</div>';
   });
@@ -532,6 +610,20 @@ function freQuitarDocW(id){
         .catch(function(e){ _freMsgW(_freMotivoW(e), 'mal'); });
     });
 }
+/* 30/10/2026 · de qué frente es un documento de la carpeta: fid el del frente, o '' para que sea de toda la obra. Se
+   reescriben su nota y su nombre (con el frente adelante, o sin él), igual que al subirlo desde el frente */
+function freDocFrenteW(id, fid, boton){
+  var d=null; (FREW.docs||[]).forEach(function(x){ if(String(x.id)===String(id)) d=x; });
+  var f=fid ? _frePorId(fid) : null;
+  if(!d || (fid && !f)) return Promise.resolve(false);
+  var cambio=f ? { nota:freNotaDoc(f), nombre:freNombreDoc(f, freNombreSinFrente(d)) } : { nota:null, nombre:freNombreSinFrente(d) };
+  if(boton) boton.disabled=true;
+  return _freEscribirW('PATCH', 'sst_doc?id=eq.'+_enc(id), cambio).then(function(rows){
+    if(Array.isArray(rows) && !rows.length) return Promise.reject({ status:403 });
+    toast(f ? 'Listo: «'+cambio.nombre+'» es del frente '+f.n : 'Listo: «'+cambio.nombre+'» es de toda la obra');
+    return freTraerW(true).then(_frePintarW).then(function(){ return true; });
+  }).catch(function(e){ if(boton) boton.disabled=false; _freMsgW(_freMotivoW(e), 'mal'); return false; });
+}
 /* la ficha del frente en PDF, para la caseta */
 function freFichaW(id){
   var f=_frePorId(id); if(!f) return;
@@ -543,7 +635,7 @@ function freFichaW(id){
     var L=FREW.lista||[], paq=FREW.brig ? (frePaquete(L, FREW.docs||[], FREW.brig, _freTrabsW()).filter(function(p){ return p.id===f.id; })[0] || { brig:[] }) : { brig:[] };
     var g=_freGenteW(f);
     var doc=freFichaPdf(J, f, { razon:(typeof empresaDeObraP==='function' ? empresaDeObraP() : '') || o.nombre || '', proyecto:String(o.obra_nombre||'').trim() || o.nombre || '',
-      codigo:o.codigo || '', emergs:emergs, brig:paq.brig, gente:g ? g.length : undefined, docs:freDocsDe(f, FREW.docs||[], L) });
+      codigo:o.codigo || '', emergs:emergs, brig:paq.brig, gente:g ? g.length : undefined, docs:freDocsDe(f, FREW.docs||[], L), obra:freDocsObra(FREW.docs||[]) });
     bajarBlob(doc.output('blob'), nombreArchivo('Ficha del frente '+f.n)+'.pdf');
     toast('Ficha descargada: imprímela y déjala a la vista en el frente');
   }).catch(function(){ toast('No se pudo armar el PDF'); });
