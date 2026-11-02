@@ -28,7 +28,7 @@ ACC.banFiltro = function(b){ BAN.filtro = b.getAttribute('data-id'); PINTAR.band
 ACC.banAbrir = function(b){ irA('bandeja', b.getAttribute('data-id')); };
 function abrirSolicitud(id){
   $('vista').innerHTML = '<div class="acciones" style="margin:0 0 12px"><button type="button" class="bt sec mini" data-ir="bandeja">← Bandeja</button></div><p class="ayuda" id="cargando">Abriendo la solicitud…</p>';
-  var conErp = tieneModulo('ventas') && ERP.yo.activo;
+  var conErp = tieneModulo('ventas') && ERP.yo.activo && !esSrv();   /* el cotizador con el almacén es de EPP; los servicios responden con su precio */
   Promise.all([rpcCrudo('sst_ali_pedido', { p_id:id }), conErp ? rpc('erp_bandeja_sugerir', { id:id }) : Promise.resolve(null), conErp ? catVariantes() : Promise.resolve(null),
                conErp ? rpc('erp_cotizaciones', {}) : Promise.resolve(null)]).then(function(r){
     var j = r[0], sg = r[1];
@@ -69,7 +69,7 @@ function abrirSolicitud(id){
       h += '<div class="tarj"><h2>Tu cotización</h2><p class="ayuda" style="margin:0 0 10px">Precio unitario de cada línea, en soles. La empresa la ve en su cuadro comparativo.</p>' + COT.respFormHTML(items, 'r-', f.resp) +
         '<div class="acciones"><button type="button" class="bt" data-a="banResponderSimple">' + (f.estado === 'respondido' ? 'Actualizar mi cotización' : 'Enviar mi cotización') + '</button>' +
         (f.estado !== 'declinado' ? '<button type="button" class="bt sec" data-a="banDeclinar">No cotizo</button>' : '') + '</div><p class="msg" id="bc-msg"></p>' +
-        (!tieneModulo('ventas') ? '<p class="ayuda" style="margin-top:10px">Con un plan ERP, esta solicitud se cotiza sola con lo que tienes en tu almacén.</p>' : '') + '</div>';
+        (!tieneModulo('ventas') && !esSrv() ? '<p class="ayuda" style="margin-top:10px">Con un plan ERP, esta solicitud se cotiza sola con lo que tienes en tu almacén.</p>' : '') + '</div>';
     } else {
       var rr = f.resp;
       h += '<div class="tarj"><h2>' + (rr ? 'Tu cotización' : 'Lo que pidieron') + '</h2>' + tabla([{ t:'Línea', k:function(it){ return '<b>' + esc(it.d) + '</b>' + (it.e ? '<span class="sub">' + esc(it.e) + '</span>' : ''); } },
@@ -257,7 +257,8 @@ function formCliente(c){
       var p = { tipo_doc:val('cf-td'), num_doc:val('cf-nd'), razon_social:val('cf-rs'), direccion:val('cf-dir'), ubigeo:val('cf-ubi'), distrito:val('cf-dist'), correo:val('cf-correo'), telefono:val('cf-tel') };
       if(c) p.id = c.id;
       if(adm){ p.linea_credito = val('cf-linea'); p.dias_credito = val('cf-dc'); p.agente_retencion = val('cf-ret'); if(c){ p.bloqueado = val('cf-bloq'); } }
-      guarda(api, rpc('erp_cliente_guardar', p), 'Cliente guardado.', function(){ ERP.cache.cli = null; if(ERP.sec === 'ventas' && ERP.sub === 'clientes') PINTAR.ventas('clientes'); }); } }]) });
+      guarda(api, rpc('erp_cliente_guardar', p), 'Cliente guardado.', function(){ ERP.cache.cli = null; if(ERP.sec === 'ventas' && ERP.sub === 'clientes') PINTAR.ventas('clientes');
+        else if(ERP.sec === 'srv_clientes' && PINTAR.srv_clientes) PINTAR.srv_clientes('clientes'); }); } }]) });
 }
 ACC.cliSunat = function(b){
   var ruc = val('cf-nd').replace(/\D/g, '');
