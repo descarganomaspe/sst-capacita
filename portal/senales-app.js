@@ -370,14 +370,14 @@ function senHoja(tamK, orient){
 /* la repartija no es fija: se elige la que deja las tarjetas con la
    proporción de una señal (algo más altas que anchas) llenando la hoja.
    Así 9 en una A4 vertical salen 3×3 y 15 en una A3 echada salen 5×3. */
-function senRejilla(porHoja, W, H){
-  var n = porHoja || 1;
+function senRejilla(porHoja, W, H, razon){
+  var n = porHoja || 1, rz = razon || 0.76;
   if(!W || !H) return [n<=1?1:(n<=2?1:(n<=6?2:3)), Math.ceil(n/(n<=1?1:(n<=2?1:(n<=6?2:3))))];
   var mejor = null;
   for(var c=1; c<=n; c++){
     var f = Math.ceil(n/c);
     if(c*(f-1) >= n) continue;            /* dejaría una fila vacía */
-    var r = (W/c)/(H/f), d = Math.abs(Math.log(r/0.76));
+    var r = (W/c)/(H/f), d = Math.abs(Math.log(r/rz));
     if(!mejor || d < mejor.d) mejor = { c:c, f:f, d:d };
   }
   return mejor ? [mejor.c, mejor.f] : [1,1];
@@ -459,11 +459,15 @@ function senLayout(){
   var T = senHoja(SEN.tam, SEN.orient);
   var M = 6, hueco = 4, pie = 6;
   var util = { w: T.w - M*2, h: T.h - M*2 - pie };
-  var rej = senRejilla(SEN.porHoja, util.w, util.h);
+  /* 30/10/2026 · doble cara: la casilla es la tira entera (las dos caras y el doblez), el doble de alta que una cara */
+  var doble = !!(SEN.doble && !SEN.qr && senDobleSe(SEN.k));
+  var rej = senRejilla(SEN.porHoja, util.w, util.h, doble ? 0.37 : 0);
   var w = (util.w - hueco*(rej[0]-1)) / rej[0];
   var h = (util.h - hueco*(rej[1]-1)) / rej[1];
+  var ph = h, pl = 0;
+  if(doble){ pl = Math.max(2, Math.min(4, w*0.05)); h = (ph - pl)/2; }
   return { T:T, rej:rej, M:M, hueco:hueco, arriba:M, pie:pie,
-           anchoCel:w, altoCel:h, w:w, h:h, lado:_senPicLado(w, h), hCab:0,
+           anchoCel:w, altoCel:ph, w:w, h:h, lado:_senPicLado(w, h), hCab:0, doble:doble, ph:ph, pl:pl,
            qr: SEN.qr ? _senQRLado(w, h) : 0 };
 }
 
@@ -734,26 +738,52 @@ function _senDibujar(png){
     }
     var col = j % rej[0], fil = Math.floor(j / rej[0]);
     var x0 = M + col*(LY.w + hueco);
-    var y0 = M + fil*(LY.h + hueco);
-    ultimo = _senCartelPDF(doc, png, S, SEN.aviso, SEN.texto, SEN.sub, x0, y0, LY.w, LY.h, logo, qrs ? qrs[i] : null);
+    var y0 = M + fil*((LY.doble ? LY.ph : LY.h) + hueco);
+    ultimo = LY.doble ? _senDobleCara(doc, png, S, x0, y0, LY, logo)
+                      : _senCartelPDF(doc, png, S, SEN.aviso, SEN.texto, SEN.sub, x0, y0, LY.w, LY.h, logo, qrs ? qrs[i] : null);
   }
   _senPieHoja(doc, T, LY, ultimo, hojas, hojas);
 
   SEN.pdf = { blob: doc.output('blob'),
-              nombre: 'senal-'+(_senSlug(SEN.texto||S.n)||'sst')+(qrs?'-con-qr':'')+'-'+T.n+
+              nombre: 'senal-'+(_senSlug(SEN.texto||S.n)||'sst')+(qrs?'-con-qr':'')+(LY.doble?'-doble-cara':'')+'-'+T.n+
                       (T.oh?'-horizontal':'')+'.pdf', hojas: hojas };
   return ultimo;
 }
 /* el pie de cada hoja: la medida, hasta dónde se lee y cómo imprimirla */
+function senDobleSe(k){ return ({ 'atencion-riesgo-electrico-o-peligro-de-muerte-alto-volta':1, 'riesgo-de-descargas-electricas':1 }).hasOwnProperty(String(k || '')); }
+function _senGirado(doc, x, y, w, h, fn){
+  var k = doc.internal.scaleFactor, H = doc.internal.pageSize.getHeight();
+  var cx = (x + w/2) * k, cy = (H - (y + h/2)) * k;
+  doc.internal.write('q');
+  doc.internal.write('-1 0 0 -1 ' + (2*cx).toFixed(3) + ' ' + (2*cy).toFixed(3) + ' cm');
+  try{ fn(); } finally { doc.internal.write('Q'); }
+}
+function _senDobleCara(doc, png, S, x, y, LY, logo){
+  var w = LY.w, h = LY.h, pl = LY.pl, t = Math.max(0.4, Math.min(1.6, w*0.008));
+  _senGirado(doc, x, y, w, h, function(){ _senCartelPDF(doc, png, S, SEN.aviso, SEN.texto, SEN.sub, x, y, w, h, logo, null); });
+  var u = _senCartelPDF(doc, png, S, SEN.aviso, SEN.texto, SEN.sub, x, y + h + pl, w, h, logo, null);
+  /* la franja del doblez, blanca; el borde de la tira sigue de una cara a la otra, para cortarla de un tirón */
+  doc.setFillColor(255,255,255); doc.rect(x, y + h, w, pl, 'F');
+  doc.setDrawColor(17,17,17); doc.setLineWidth(t);
+  doc.line(x + t/2, y + h - t/2, x + t/2, y + h + pl + t/2);
+  doc.line(x + w - t/2, y + h - t/2, x + w - t/2, y + h + pl + t/2);
+  /* la línea de doblez: punteada, y asoma un poco a los lados para verla al cortar */
+  var yd = y + h + pl/2;
+  doc.setDrawColor(120,128,136); doc.setLineWidth(0.3);
+  doc.setLineDashPattern([1.4, 1.2], 0); doc.line(x - 2, yd, x + w + 2, yd); doc.setLineDashPattern([], 0);
+  return u;
+}
 function _senPieHoja(doc, T, LY, ultimo, n, hojas){
   var lado = (ultimo && ultimo.lado) ? ultimo.lado : LY.lado;
   doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(160,168,176);
   var d = senDistancia(lado);
-  doc.text('NTP 399.010-1 · '+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm, símbolo de '+
+  /* 30/10/2026 · doble cara: la medida de cada cara y cómo se arma */
+  var txt = 'NTP 399.010-1 · '+(LY.doble ? 'doble cara, cada cara de ' : '')+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm, símbolo de '+
            Math.round(lado)+' mm, legible '+
            (d<5 ? 'solo de cerca (menos de 5 m)' : 'hasta ~'+Math.round(d)+' m')+
-           ' · imprimir al 100 % · cortar por el marco'+(hojas > 1 ? ' · hoja '+n+' de '+hojas : '')+' · OBRASST',
-           T.w/2, T.h - 2.4, { align:'center' });
+           ' · imprimir al 100 % · '+(LY.doble ? 'cortar por el borde, doblar por la punteada y enmicar' : 'cortar por el marco')+(hojas > 1 ? ' · hoja '+n+' de '+hojas : '')+' · OBRASST';
+  for(var fs = 6; fs > 4 && doc.getTextWidth(txt) > T.w - 8; ){ fs -= 0.25; doc.setFontSize(fs); }
+  doc.text(txt, T.w/2, T.h - 2.4, { align:'center' });
 }
 
 function _senSlug(t){
@@ -1439,7 +1469,9 @@ function senxDibujo(o, pngs){
     var q = Array.isArray(o.qr) ? o.qr.filter(function(x){ return x && x.du; }).slice(0, 300) : [];
     return { tab:'norma', filtro:'', busca:'', k:o.k, aviso:String(o.aviso || ''), texto:String(o.texto || ''), sub:String(o.sub || ''),
              tam:senTamPorK(o.tam).k, orient:(o.orient === 'h') ? 'h' : 'v', porHoja:Math.max(1, Math.round(+o.porHoja || 1)), pdf:null,
-             qr:q.length > 0, qrSel:{}, qrItems:q.length ? q : null, qrIni:false };
+             qr:q.length > 0, qrSel:{}, qrItems:q.length ? q : null, qrIni:false,
+             /* 30/10/2026 · las de riesgo eléctrico, a doble cara (para doblar y enmicar) */
+             doble:!!o.doble && !q.length && senDobleSe(o.k) };
   }
   /* el logo con su proporción real y, al lado, la razón social y la obra (como en _senDibujar) */
   function _logoCartel(doc){
@@ -1456,6 +1488,8 @@ function senxDibujo(o, pngs){
     hoja: senHoja, distancia: senDistancia, slug: _senSlug, iniciales: _senpIni,
     /* lote 15: el tipo de equipo («QR de equipos») de una señal, si lo tiene: 'Extintor', 'Lavaojos'… o '' */
     eqTipo: senEqTipo, qrMin: 16,
+    /* 30/10/2026 · ¿puede salir a doble cara? (las de riesgo eléctrico) */
+    doble: senDobleSe,
     /* lote 15: los carteles propios (los mismos de la app: modelos, fondos, cómo se guardan y se juntan) */
     propiosModelos: SENX_MODELOS, fondos: SENX_FONDOS, maxPics: SENX_MAX_PICS, picNombre: senxPicNombre,
     propioLimpio: senxLimpio, propiosJuntar: senxJuntar,
@@ -1463,7 +1497,8 @@ function senxDibujo(o, pngs){
     logo: logoSinMarco,
 
     /* UNA señal de la norma, repetida en la hoja: es _senDibujar de la app.
-       o: { k, aviso, texto, sub, tam:'A3|A4|A5', orient:'v|h', porHoja, qr } → Promise<{ blob, nombre, … }>
+       o: { k, aviso, texto, sub, tam:'A3|A4|A5', orient:'v|h', porHoja, qr, doble } → Promise<{ blob, nombre, … }>
+       Con o.doble (30/10/2026, las de riesgo eléctrico): cada una en una tira a doble cara, para doblar y enmicar.
        Con o.qr (lote 15): un cartel por equipo, cada uno con el QR de su etiqueta, en las hojas que hagan falta. */
     senal: function(o, C){
       if(!o || !_hay(o.k)) return Promise.reject('sin_senal');
@@ -1474,7 +1509,8 @@ function senxDibujo(o, pngs){
         _pon(C); SEN = _senDe(o);
         var u = _senDibujar(rr[0]), LY = senLayout(), lado = (u && u.lado) ? u.lado : LY.lado;
         return { blob:SEN.pdf.blob, nombre:_nom(SEN.pdf.nombre), hojas:SEN.pdf.hojas || 1, celdas:SEN.qrItems ? SEN.qrItems.length : SEN.porHoja,
-                 hoja:LY.T, rej:LY.rej, w:LY.w, h:LY.h, lado:lado, ft:(u && u.ft) || 0, metros:senDistancia(lado), qr:(u && u.qr) || 0 };
+                 hoja:LY.T, rej:LY.rej, w:LY.w, h:LY.h, lado:lado, ft:(u && u.ft) || 0, metros:senDistancia(lado), qr:(u && u.qr) || 0,
+                 doble:!!LY.doble, ph:LY.ph };
       });
     },
 
