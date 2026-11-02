@@ -17,11 +17,12 @@
 /* 17/10/2026 · lote 14 · el QR de los carteles abre la app («#cartel=FICHA», cartel-app.js). El que nunca usó
    OBRASST en este celular no carga la app entera para leer un documento: va a la página liviana del cartel (d/). */
 (function(){ try{
-  var m = String(location.hash || '').match(/^#cartel=([A-Za-z0-9_-]{6,64})$/);
+  /* 30/10/2026 · el cartel de un frente lleva «&f=<frente>» y va con él */
+  var m = String(location.hash || '').match(/^#cartel=([A-Za-z0-9_-]{6,64})(&f=[^&#]{0,240})?$/);
   if(!m) return;
   var rol = null; try{ rol = localStorage.getItem('sstc_rol'); }catch(_l){ rol = null; }
   if(rol && rol !== 'null') return;
-  location.replace(location.pathname.replace(/[^\/]*$/, '') + 'd/?t=' + m[1] + '&w=1');
+  location.replace(location.pathname.replace(/[^\/]*$/, '') + 'd/?t=' + m[1] + (m[2] || '') + '&w=1');
 }catch(_e){} })();
 </script>
 <link rel="manifest" href="manifest.webmanifest">
@@ -2564,6 +2565,11 @@ html.t-alto .t-ind-op.on{background:#FFE17A;border-color:#000}
 .qr1-tx{flex:1;min-width:0}
 .qr1-tx b{display:block;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
 .qr1-tx small{display:block;color:var(--gris);font-size:12px;margin-top:2px}
+/* 30/10/2026 · de qué frente es cada documento del cartel, y a dónde va lo que se sube */
+.qr1-doc.con-fre{flex-wrap:wrap}
+.qr1-fre{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:7px 0 0;font-size:12.5px;color:var(--gris)}
+.qr1-fre select{width:auto;max-width:100%;min-width:0;margin:0;padding:6px 30px 6px 10px;font-size:13px}
+.qr1-sube-fre{margin:12px 0 0;padding-top:10px;border-top:1px dashed rgba(255,255,255,.12)}
 .qr1-enl summary{cursor:pointer;font-weight:600;font-size:14.5px}
 
 /* ══ LENGUAJE DE PANTALLA TIPO iOS ═══════════════════════════════════
@@ -5921,6 +5927,9 @@ input.gt-q{margin:0 0 var(--e2)}
 .fre-doc-f .tx b{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fre-doc-f .tx small{color:var(--gris);font-size:11.5px}
 .fre-mini{width:auto!important;margin:0!important;padding:6px 10px!important;font-size:13px!important;flex:none}
+/* 30/10/2026 · lo de toda la obra, en el lugar de cada frente */
+.fre-obra{font-weight:700;color:var(--tinta)}
+.fre-es{font-size:12px;padding:0;margin:0}
 .qui-fr-chips{display:flex;flex-wrap:wrap;gap:7px}
 .qui-fr-docs{display:flex;flex-direction:column;gap:7px;margin-top:10px}
 .qui-fr-doc{margin:0!important;text-align:left}
@@ -18506,8 +18515,9 @@ function cargarHojasQR(){
     /* las carpetas de los trece y las de los carteles propios (qr-<hoja>) */
     var hojas = HOJAS_QR.map(function(H){ return H.c; })
       .concat(filas.filter(function(x){ return x && qrEsPropio(x.hoja); }).map(function(x){ return 'qr-' + x.hoja; })).join(',');
+    /* 30/10/2026 · con su nota: de qué frente es cada documento (el cartel de cada frente) */
     return sbGet('sst_doc?empresa=eq.' + encodeURIComponent(e.id) + '&hoja=in.(' + hojas + ')' +
-                 '&select=id,hoja,nombre,url,creado&order=creado.desc&limit=300')
+                 '&select=id,hoja,nombre,url,nota,creado&order=creado.desc&limit=300')
       .catch(function(){ return null; }).then(function(docs){ return [filas, docs]; });
   }).then(function(r){
     QR_HOJAS = r[0] || [];
@@ -18529,6 +18539,114 @@ function hojaQRde(k){
   return r;
 }
 function qrDocsDe(H){ return (H && QR_DOCS && QR_DOCS[H.c]) || []; }
+/* ══ UN QR PARA TODA LA OBRA O UNO POR FRENTE (30/10/2026) ══════════
+   Marcelo: «lo que subo en los carteles QR es para un frente, y tengo
+   que subir otro PDF para el otro frente… cuando escanea el QR, se ven
+   los 2 o 4 planes de emergencia… a un jefe o supervisor no le gustará
+   porque querrá para su frente. Colócalo como opción, cada QR para
+   todos los frentes o diferentes QR para cada frente».
+   En los carteles de emergencia (plan, mapa de riesgos, brigadistas y
+   contactos: FRENTES-BASE, freCartelDeFrente) de una obra con dos
+   frentes o más:
+     · cada documento dice de qué frente es («¿De qué frente es?»), y lo
+       que se sube aquí va al frente que se elija (o a toda la obra);
+     · el cartel es uno para toda la obra (como siempre: abre todo) o uno
+       por frente: un cartel por frente, con el frente en el título y en
+       el QR («&f=»), que abre lo de ese frente y lo de toda la obra.
+   Lo que se elige es de la obra (sst_estado «cartel_frente»: sale igual
+   en la web y en el otro celular). */
+var QR_FRE = { emp:null, modo:{}, pide:false, ver:{}, sube:{} };
+var LS_QR_FRE = 'sstc_cartel_frente_';
+function _qrFreSitio(){
+  var e = empActiva() || {}, id = String(e.id || '');
+  if(QR_FRE.emp === id) return;
+  QR_FRE.emp = id; QR_FRE.ver = {}; QR_FRE.sube = {}; QR_FRE.pide = false;
+  var g = null; try{ g = leer(LS_QR_FRE + (id || 'x'), null); }catch(_l){ g = null; }
+  QR_FRE.modo = (g && typeof g === 'object' && !Array.isArray(g)) ? g : {};
+}
+function qrFrentes(){ try{ return (typeof freLista === 'function') ? freLista() : []; }catch(_f){ return []; } }
+/* ¿este cartel puede ir por frente? Los de emergencia, en una obra con dos frentes o más */
+function qrPorFrentePuede(H){
+  return !!(H && !H.propio && !H.buzon && !H.mural && typeof freCartelDeFrente === 'function' && freCartelDeFrente(H.c) && qrFrentes().length >= 2);
+}
+function qrModoFrente(k){ _qrFreSitio(); return !!QR_FRE.modo[k] && qrPorFrentePuede(qrHojaBase(k)); }
+/* el frente del cartel que se está viendo: el elegido, o el primero */
+function qrFrenteVer(k){
+  _qrFreSitio();
+  var L = qrFrentes(), id = QR_FRE.ver[k], f = null;
+  L.forEach(function(x){ if(x.id === id) f = x; });
+  return f || L[0] || null;
+}
+function qrVerFrente(k, id){ _qrFreSitio(); QR_FRE.ver[k] = String(id || ''); QR_CARTEL.cv = null; QR_CARTEL.png = null; pintarCartelQR(true); }
+function _qrModoGuardar(m){ QR_FRE.modo = m; try{ guardar(LS_QR_FRE + (QR_FRE.emp || 'x'), m); }catch(_g){} }
+function _qrModoLimpio(v){ var m = {}; if(v && typeof v === 'object' && !Array.isArray(v)) Object.keys(v).forEach(function(k){ if(v[k] && /^[a-z0-9-]{2,40}$/.test(k)) m[k] = 1; }); return m; }
+/* lo que eligió la obra en otro celular o en la web; true si cambió */
+function qrTraerModo(){
+  _qrFreSitio();
+  if(QR_FRE.pide || typeof estadoBajarEstricto !== 'function' || !hayCuenta()) return Promise.resolve(false);
+  QR_FRE.pide = true; var emp = QR_FRE.emp;
+  return estadoBajarEstricto('cartel_frente').then(function(v){
+    if(QR_FRE.emp !== emp) return false;
+    var m = _qrModoLimpio(v), cambio = JSON.stringify(m) !== JSON.stringify(QR_FRE.modo || {});
+    _qrModoGuardar(m);
+    return cambio;
+  }, function(){ QR_FRE.pide = false; return false; });
+}
+/* «Uno para toda la obra» / «Uno por frente». Se escribe sobre lo que tiene el servidor (otro cartel pudo cambiar en
+   otro celular); sin poder leerlo, queda en este celular y se dice */
+function qrElegirModo(k, porFrente){
+  _qrFreSitio();
+  var emp = QR_FRE.emp, poner = function(m){ m = _qrModoLimpio(m); if(porFrente) m[k] = 1; else delete m[k]; return m; };
+  _qrModoGuardar(poner(QR_FRE.modo));
+  QR_CARTEL.cv = null; QR_CARTEL.png = null; pintarCartelQR(true);
+  if(typeof estadoBajarEstricto !== 'function' || !hayCuenta()) return Promise.resolve(false);
+  return estadoBajarEstricto('cartel_frente').then(function(v){
+    if(QR_FRE.emp !== emp) return false;
+    var m = poner(v); _qrModoGuardar(m);
+    return estadoSubir('cartel_frente', m);
+  }).then(function(ok){ return !!ok; }, function(){ return false; }).then(function(ok){
+    if(!ok && QR_ACTUAL === k){ var m2 = $('qr1-msg'); if(m2){ m2.style.color = 'var(--gris)'; m2.textContent = 'Quedó en este celular: cuando tengas señal, vuelve a elegirlo para que salga igual en la web.'; } }
+    return ok;
+  });
+}
+/* «¿De qué frente es?» de un documento del cartel (lo cambia freDocEsDe, de los frentes) */
+function _qrDocFrenteHTML(x){
+  var L = qrFrentes(), g = (typeof freDeDoc === 'function') ? freDeDoc(x, L) : null, n = (typeof freDocFrente === 'function') ? freDocFrente(x) : '';
+  return '<label class="qr1-fre"><span>¿De qué frente es?</span><select onchange="qrDocFrente(\'' + escA(String(x.id)) + '\', this.value, this)">' +
+    '<option value=""' + (!n ? ' selected' : '') + '>Toda la obra</option>' +
+    L.map(function(f){ return '<option value="' + escA(f.id) + '"' + (g && g.id === f.id ? ' selected' : '') + ' data-sin-trad>' + esc(f.n) + '</option>'; }).join('') +
+    (n && !g ? '<option value="-" disabled selected data-sin-trad>' + esc(n) + '</option>' : '') + '</select></label>';
+}
+function qrDocFrente(id, fid, sel){
+  var k = QR_ACTUAL, m = $('qr1-msg');
+  if(sel) sel.disabled = true;
+  if(m){ m.style.color = 'var(--gris)'; m.textContent = 'Guardando…'; }
+  return freDocEsDe(id, fid, function(ok, err){
+    cargarHojasQR().then(function(){
+      if(QR_ACTUAL !== k) return;
+      QR_CARTEL.cv = null; QR_CARTEL.png = null; prepQRDoc();
+      var m2 = $('qr1-msg'); if(!m2) return;
+      m2.style.color = ok ? 'var(--ok)' : 'var(--mal)';
+      m2.textContent = ok ? FRE.msg : (err === 'sin_fila' ? 'Esta cuenta no puede cambiar los documentos de esta obra.' : 'No se pudo guardar. Revisa la señal e inténtalo otra vez.');
+    });
+  });
+}
+/* a dónde va lo que se sube aquí: el frente que se elija, o toda la obra (en «uno por frente», el del cartel que se ve) */
+function _qrSubeFrenteHTML(H){
+  _qrFreSitio();
+  var L = qrFrentes(), sel = QR_FRE.sube[H.k];
+  if(sel === undefined) sel = qrModoFrente(H.k) ? ((qrFrenteVer(H.k) || {}).id || '') : '';
+  return '<label class="qr1-fre qr1-sube-fre"><span>Lo que subas es de:</span><select id="qr1-sube-fre" onchange="QR_FRE.sube[QR_ACTUAL]=this.value">' +
+    '<option value=""' + (!sel ? ' selected' : '') + '>Toda la obra</option>' +
+    L.map(function(f){ return '<option value="' + escA(f.id) + '"' + (sel === f.id ? ' selected' : '') + ' data-sin-trad>' + esc(f.n) + '</option>'; }).join('') + '</select></label>';
+}
+/* lo que abre el cartel de un frente: { suyo, obra } (el enlace a mano es de toda la obra) */
+function qrDocsFrente(H, f){ return (typeof freDocsCartel === 'function') ? freDocsCartel(f, qrDocsDe(H), qrFrentes()) : { suyo:[], obra:qrDocsDe(H) }; }
+function _qrSlug(t){
+  var s = String(t || '').toLowerCase();
+  try{ s = s.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(_n){}
+  return s.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+}
 /* lo que abre el cartel: el enlace a mano (si hay) y lo de su carpeta */
 function qrCuantos(H){ var d = hojaQRde(H.k); return qrDocsDe(H).length + ((d && d.url) ? 1 : 0); }
 function _qrFilaHTML(H){
@@ -18538,6 +18656,8 @@ function _qrFilaHTML(H){
   var abierto = H.propio || puede(H.llave);
   var que = !hay ? 'sin documento cargado'
     : (n === 1 ? ('✓ ' + esc(docs[0] ? (docs[0].nombre || H.t) : ((d && d.titulo) || H.t))) : ('✓ ' + n + ' documentos'));
+  /* 30/10/2026 · el que va uno por frente lo dice */
+  if(hay && typeof qrModoFrente === 'function' && qrModoFrente(H.k)) que += ' · <span>uno por frente</span>';
   return '<button type="button" class="tarj vidrio qrd-fila' + (hay ? ' listo' : '') + (H.propio ? ' propio' : '') + '" data-k="' + escA(H.k) + '" onclick="abrirQRDoc(\'' + escA(H.k) + '\')">' +
          '<span class="qrd-ic">' + H.ic + '</span>' +
          '<span class="qrd-tx"><b' + ((H.propio || H.titPropio) ? ' data-sin-trad' : '') + '>' + esc(H.t) + '</b><small' + ((H.propio && n === 1) ? ' data-sin-trad' : '') + '>' + que + '</small></span>' +
@@ -18733,23 +18853,36 @@ function prepQRDoc(){
   pintarQRLista();
   qrPropioPinta();
   pintarCartelQR(qrCuantos(H) > 0);
+  /* 30/10/2026 · los de emergencia: los frentes de la obra y si el cartel va uno por frente (lo de la web o del otro
+     celular); si algo cambió, se repinta */
+  if(typeof freCartelDeFrente === 'function' && freCartelDeFrente(H.c)){
+    var k0 = H.k, antes = JSON.stringify([qrFrentes().map(function(f){ return f.id + f.n; }), QR_FRE.modo]);
+    Promise.all([(typeof freTraer === 'function' && !(FRE && FRE.pide)) ? freTraer().catch(function(){ return null; }) : null, qrTraerModo()]).then(function(){
+      if(QR_ACTUAL !== k0) return;
+      if(JSON.stringify([qrFrentes().map(function(f){ return f.id + f.n; }), QR_FRE.modo]) === antes) return;
+      QR_CARTEL.cv = null; QR_CARTEL.png = null; pintarQRLista(); pintarCartelQR(qrCuantos(H) > 0);
+    });
+  }
 }
 /* lo que abre el QR, con «Abrir» y «Quitar» */
 function pintarQRLista(){
   var c = $('qr1-docs'), H = qrHoja(QR_ACTUAL); if(!c || !H) return;
-  var d = hojaQRde(H.k), docs = qrDocsDe(H), h = '';
+  var d = hojaQRde(H.k), docs = qrDocsDe(H), h = '', porF = qrPorFrentePuede(H);
   if(d && d.url){
-    h += '<div class="qr1-doc"><span class="qr1-ic">🔗</span><span class="qr1-tx"><b' + (H.propio ? ' data-sin-trad' : '') + '>' + esc(d.titulo || H.t) + '</b><small>Enlace</small></span>' +
+    h += '<div class="qr1-doc"><span class="qr1-ic">🔗</span><span class="qr1-tx"><b' + (H.propio ? ' data-sin-trad' : '') + '>' + esc(d.titulo || H.t) + '</b><small>Enlace' + (porF ? ' · <span>de toda la obra</span>' : '') + '</small></span>' +
          '<a class="btn sec" style="margin:0;width:auto;padding:8px 12px" target="_blank" rel="noopener" href="' + escA(d.url) + '">Abrir</a></div>';
   }
   docs.forEach(function(x){
-    h += '<div class="qr1-doc"><span class="qr1-ic">📄</span><span class="qr1-tx"><b' + ((H.propio && x.nombre) ? ' data-sin-trad' : '') + '>' + esc(x.nombre || H.t) + '</b><small>Subido el ' + esc(_qrFecha(x.creado)) + '</small></span>' +
+    /* 30/10/2026 · en los de emergencia, con dos frentes o más: de qué frente es cada uno */
+    h += '<div class="qr1-doc' + (porF ? ' con-fre' : '') + '"><span class="qr1-ic">📄</span><span class="qr1-tx"><b' + ((H.propio && x.nombre) ? ' data-sin-trad' : '') + '>' + esc(x.nombre || H.t) + '</b><small>Subido el ' + esc(_qrFecha(x.creado)) + '</small>' +
+         (porF ? _qrDocFrenteHTML(x) : '') + '</span>' +
          '<a class="btn sec" style="margin:0;width:auto;padding:8px 12px" target="_blank" rel="noopener" href="' + escA(x.url) + '" data-nombre="' + escA(x.nombre || H.t) + '" onclick="return (typeof verDocAppA===\'function\') ? verDocAppA(this) : true">Abrir</a>' +
          '<button type="button" class="btn sec" style="margin:0;width:auto;padding:8px 12px" onclick="qrQuitarDoc(\'' + escA(String(x.id)) + '\')">Quitar</button></div>';
   });
-  c.innerHTML = h || ('<p class="sub" style="margin:0">' + (H.propio
+  c.innerHTML = (h || ('<p class="sub" style="margin:0">' + (H.propio
     ? 'Todavía nada. Sube el archivo aquí o en el portal web («Carteles QR»), o pega un enlace.'
-    : 'Todavía nada. Sube el archivo aquí o en el portal web («Documentos»), o pega un enlace.') + '</p>');
+    : 'Todavía nada. Sube el archivo aquí o en el portal web («Documentos»), o pega un enlace.') + '</p>')) +
+    (porF ? _qrSubeFrenteHTML(H) : '');
 }
 /* subir el archivo desde aquí: va a la carpeta de la empresa, igual que en la carpeta y en el portal */
 function qrSubirArchivo(inp){
@@ -18760,12 +18893,15 @@ function qrSubirArchivo(inp){
   if(noVa){ m.style.color = 'var(--mal)'; m.textContent = noVa; return; }
   if(!e || !hayCuenta()){ m.style.color = 'var(--mal)'; m.textContent = 'Primero entra a tu obra.'; return; }
   var nombre = String(f.name || H.t).replace(/\.[a-z0-9]{2,5}$/i, '').replace(/_+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || H.t;
+  /* 30/10/2026 · en los de emergencia con dos frentes o más: al frente elegido en «Lo que subas es de:» */
+  var fr = null;
+  if(qrPorFrentePuede(H)){ var fs = $('qr1-sube-fre'), v = fs ? fs.value : ''; qrFrentes().forEach(function(x){ if(x.id === v) fr = x; }); }
   m.style.color = 'var(--gris)'; m.textContent = 'Subiendo «' + nombre + '»…';
   subirFoto('docs', f).then(function(url){
-    return sbPost('sst_doc', {empresa:e.id, hoja:H.c, nombre:nombre, url:url, nota:null});
-  }).then(function(){ return cargarHojasQR(); }).then(function(){
+    return sbPost('sst_doc', {empresa:e.id, hoja:H.c, nombre:fr ? freNombreDoc(fr, nombre) : nombre, url:url, nota:fr ? freNotaDoc(fr) : null});
+  }).then(function(){ if(fr && typeof freTraer === 'function') freTraer().catch(function(){}); return cargarHojasQR(); }).then(function(){
     prepQRDoc();
-    m = $('qr1-msg'); if(m){ m.style.color = 'var(--ok)'; m.textContent = 'Subido: ya lo abre el cartel.'; }
+    m = $('qr1-msg'); if(m){ m.style.color = 'var(--ok)'; m.textContent = fr ? ('Subido para el frente ' + fr.n + ': ya lo abre su cartel.') : 'Subido: ya lo abre el cartel.'; }
   }, function(err){
     m = $('qr1-msg');
     if(m){ m.style.color = 'var(--mal)'; m.textContent = (err === 'muy-grande' || err === 'video') ? porQue(err) : 'No se pudo subir el archivo. Revisa la señal e inténtalo otra vez.'; }
@@ -18858,10 +18994,44 @@ function cartelDatos(k){
   try{ if(!(d && d.titulo) && H && typeof trad === 'function'){ tr = trad(H.t); if(tr === H.t) tr = null; } }catch(_tt){}
   if(tr) titulo = tr;
   else try{ if(typeof txPais === 'function') titulo = txPais(titulo); }catch(_tp){}
-  return { diseno:cartelDisenoGuardado(), hoja:k, titulo:titulo, largo:afuera ? '' : (CARTEL_LARGO[k] || ''), enlace:enlaceDelQR(k),
+  /* 30/10/2026 · uno por frente: el del frente que se está viendo, con su nombre en el título y en el QR («&f=») */
+  var fv = (typeof qrModoFrente === 'function' && qrModoFrente(k)) ? qrFrenteVer(k) : null, enlace = enlaceDelQR(k);
+  if(fv && enlace){ titulo = titulo + ' · ' + fv.n; enlace = freEnlaceCartel(enlace, fv); }
+  return { diseno:cartelDisenoGuardado(), hoja:k, titulo:titulo, largo:afuera ? '' : (CARTEL_LARGO[k] || ''), enlace:enlace,
            empresa:emp.razon || '', obra:e.nombre || '', logo:emp.logo || null, tx:(typeof trad === 'function' ? trad : null),
            /* 14/10/2026 · el mural solo para su gente: el cartel dice que se abre con la cuenta */
-           privado:(k === 'mural' && typeof muralPrivado === 'function') ? muralPrivado() : false };
+           privado:(k === 'mural' && typeof muralPrivado === 'function') ? muralPrivado() : false, frente:fv };
+}
+/* 30/10/2026 · «¿Un QR para toda la obra o uno por frente?», arriba del cartel (los de emergencia, con dos frentes o más) */
+function _qrFreBloqueHTML(H, o){
+  if(!qrPorFrentePuede(H)) return '';
+  var k = H.k, porF = qrModoFrente(k), fv = o && o.frente, L = qrFrentes();
+  var h = '<div class="sec-tit" style="margin:0 0 8px">¿Un QR para toda la obra o uno por frente?</div>' +
+    '<div class="ch-chips" role="radiogroup" aria-label="Un QR para toda la obra o uno por frente">' +
+    '<button type="button" role="radio" class="ch-chip' + (!porF ? ' on' : '') + '" aria-checked="' + (!porF) + '" data-qr-modo="obra" onclick="qrElegirModo(\'' + escA(k) + '\', false)">🏗️ <span>Uno para toda la obra</span></button>' +
+    '<button type="button" role="radio" class="ch-chip' + (porF ? ' on' : '') + '" aria-checked="' + porF + '" data-qr-modo="frente" onclick="qrElegirModo(\'' + escA(k) + '\', true)">🚧 <span>Uno por frente</span></button></div>';
+  if(!porF){
+    var n = qrDocsDe(H).length;
+    h += '<p class="sub" style="margin:8px 0 16px;font-size:12.5px"><span>Abre todo lo de su carpeta, de todos los frentes.</span>' +
+      (n > 1 ? ' <span>Si cada frente tiene el suyo, elige «Uno por frente»: cada jefe pega el de su frente.</span>' : '') + '</p>';
+    return h;
+  }
+  var X = fv ? qrDocsFrente(H, fv) : { suyo:[], obra:[] }, d = hojaQRde(k), obra = X.obra.length + ((d && d.url) ? 1 : 0);
+  h += '<div class="ch-chips" role="radiogroup" aria-label="El cartel de qué frente" style="margin-top:10px">' + L.map(function(f){
+      var on = !!(fv && fv.id === f.id);
+      return '<button type="button" role="radio" class="ch-chip' + (on ? ' on' : '') + '" aria-checked="' + on + '" data-qr-fre="' + escA(f.id) + '" onclick="qrVerFrente(\'' + escA(k) + '\',\'' + escA(f.id) + '\')" data-sin-trad>' + esc(f.n) + '</button>';
+    }).join('') + '</div>';
+  if(!fv) return h + '<div style="height:14px"></div>';
+  var cuantos = function(n){ return '<span data-sin-trad>' + n + '</span> <span>' + (n === 1 ? 'documento' : 'documentos') + '</span>'; };
+  if(!X.suyo.length && !obra){
+    h += '<div class="aviso" style="margin:10px 0 16px"><b><span>Todavía no hay nada para este frente.</span></b> ' +
+      '<span>Sube su documento arriba y elige su frente en «Lo que subas es de:».</span></div>';
+  } else {
+    h += '<p class="sub qr1-fre-res" style="margin:8px 0 16px;font-size:12.5px"><span>El cartel de</span> <b data-sin-trad>' + esc(fv.n) + '</b> <span>abre</span> ' +
+      (X.suyo.length ? cuantos(X.suyo.length) + ' <span>de ese frente</span>' : '<span>nada propio todavía</span>') +
+      (obra ? ' <span>y</span> ' + cuantos(obra) + ' <span>de toda la obra</span>' : '') + '. <span>Lo de los otros frentes, no.</span></p>';
+  }
+  return h;
 }
 function pintarCartelQR(hayAlgo){
   var c = $('qr1-cartel'); if(!c) return;
@@ -18880,7 +19050,7 @@ function pintarCartelQR(hayAlgo){
       if(QR_ACTUAL !== k) return;
       QR_CARTEL.cv = r.canvas; QR_CARTEL.png = r.png;
       var dis = cartelDiseno(o.diseno).k, hz = !!r.horizontal, emp = empleador(), esBuz = (k === 'buzon');
-      c.innerHTML =
+      c.innerHTML = _qrFreBloqueHTML(H, o) +
         '<div class="sec-tit" style="margin:0 0 8px">El cartel</div>' +
         '<div class="cq-dis" role="radiogroup" aria-label="Diseño del cartel">' + CARTEL_DISENOS.map(function(x){
           var v = (x.k === 'explica' && hz) ? 'explica-h' : x.k;
@@ -18980,11 +19150,16 @@ function _cortarTexto(ctx, txt, ancho){
   if(act) lin.push(act);
   return lin;
 }
+/* 30/10/2026 · el archivo del cartel de un frente lleva su frente: «cartel-emergencia-estacion-norte.png» */
+function _qrArchivoCartel(){
+  var fv = (typeof qrModoFrente === 'function' && qrModoFrente(QR_ACTUAL)) ? qrFrenteVer(QR_ACTUAL) : null, sl = fv ? _qrSlug(fv.n) : '';
+  return 'cartel-' + qrNombreArchivo(QR_ACTUAL) + (sl ? '-' + sl : '');
+}
 function bajarCartelQR(){
   var cv = cartelQRaLienzo(); if(!cv){ aviso('Falta el cartel','Arma primero el cartel de arriba.','📌'); return; }
   cv.toBlob(function(bl){
     var u = URL.createObjectURL(bl), a = document.createElement('a');
-    a.href = u; a.download = 'cartel-' + qrNombreArchivo(QR_ACTUAL) + '.png';
+    a.href = u; a.download = _qrArchivoCartel() + '.png';
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); }, 1200);
   }, 'image/png');
@@ -18993,7 +19168,7 @@ function compartirCartelQR(){
   var cv = cartelQRaLienzo(); if(!cv){ aviso('Falta el cartel','Arma primero el cartel de arriba.','📌'); return; }
   cv.toBlob(function(bl){
     var f = null;
-    try{ f = new File([bl], 'cartel-' + qrNombreArchivo(QR_ACTUAL) + '.png', {type:'image/png'}); }catch(e){}
+    try{ f = new File([bl], _qrArchivoCartel() + '.png', {type:'image/png'}); }catch(e){}
     var puedeArch = false;
     try{ puedeArch = !!(f && navigator.canShare && navigator.canShare({files:[f]})); }catch(e){}
     if(puedeArch){ navigator.share({files:[f], title:'Cartel QR · ' + nombreDeLaObra()}).catch(function(){}); return; }
@@ -25428,7 +25603,7 @@ function _vdocEstilos(){
    Los carteles ya pegados (…/d/?t=FICHA) siguen sirviendo: d/ los manda
    aquí cuando en ese celular se usa la app.
    ══════════════════════════════════════════════════════════════════ */
-var CARTEL_APP = { tk:'', j:null, estado:'', sinRed:false, cuando:0, gen:0, arranque:false };
+var CARTEL_APP = { tk:'', f:'', j:null, estado:'', sinRed:false, cuando:0, gen:0, arranque:false };
 var LS_CARTEL_R = 'sstc_cartel_r';       /* { ficha: { t:ms, j:{ obra, hoja, titulo, url, docs } } } · los últimos 30 carteles */
 var CARTEL_D_CAJA = 'obrasst-docs';      /* la caja de la página d/ (lo que guardó cuando el cartel se abría por ahí) */
 
@@ -25436,6 +25611,30 @@ var CARTEL_D_CAJA = 'obrasst-docs';      /* la caja de la página d/ (lo que gua
 function cartelDeTexto(t){
   var m = String(t || '').match(/[#?&]cartel=([A-Za-z0-9_-]{6,64})(?=$|[&#])/);
   return m ? m[1] : null;
+}
+/* 30/10/2026 · el cartel de un FRENTE: la misma ficha con «&f=<frente>» (FRENTES-BASE, freEnlaceCartel) → el frente, o '' */
+function cartelFrenteDeTexto(t){
+  var m = String(t || '').match(/[#?&]f=([^&#]*)/); if(!m) return '';
+  var v = m[1]; try{ v = decodeURIComponent(v); }catch(_d){}
+  return String(v).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+}
+function _ctNorm(s){ var x = String(s || '').toLowerCase(); try{ x = x.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(_n){} return x.replace(/[^a-z0-9]+/g, ' ').trim(); }
+/* lo de un frente en lo que contestó el servidor: { n, suyo, obra, seguro } (seguro: el servidor dice de qué frente es
+   cada documento, sql/2026-10-30-qr-frentes.sql) o null. Lo mismo que hace la página d/. */
+function _ctDelFrente(j, fNom){
+  var F = _ctNorm(fNom); if(!F) return null;
+  var docs = (Array.isArray(j && j.docs) ? j.docs : []).filter(function(d){ return d && _ctWeb(d.url); });
+  if(Array.isArray(j && j.frentes)){
+    var fr = null;
+    j.frentes.forEach(function(x){ if(!fr && x && _ctNorm(x.n) === F) fr = x; });
+    j.frentes.forEach(function(x){ if(!fr && x && (Array.isArray(x.antes) ? x.antes : []).some(function(a){ return _ctNorm(a) === F; })) fr = x; });
+    var noms = (fr ? [fr.n].concat(Array.isArray(fr.antes) ? fr.antes : []) : [fNom]).map(_ctNorm);
+    return { n:fr ? String(fr.n) : String(fNom), seguro:true,
+             suyo:docs.filter(function(d){ return d.frente && noms.indexOf(_ctNorm(d.frente)) > -1; }),
+             obra:docs.filter(function(d){ return !d.frente; }) };
+  }
+  /* el servidor de antes no dice de qué frente es cada uno: por el nombre (el del frente va adelante) */
+  return { n:String(fNom), seguro:false, obra:[], suyo:docs.filter(function(d){ var n = _ctNorm(d.nombre); return n === F || n.indexOf(F + ' ') === 0; }) };
 }
 /* la dirección que va en el QR del cartel: la de la app, como el QR del químico */
 function cartelEnlaceQR(tk){
@@ -25449,10 +25648,19 @@ function _ctEnPantalla(){ return ((document.querySelector('.pantalla.activa') ||
 function _ctResps(){ var o = null; try{ o = leer(LS_CARTEL_R, null); }catch(_l){ o = null; } return (o && typeof o === 'object' && !Array.isArray(o)) ? o : {}; }
 function _ctLimpio(j){
   j = j || {};
-  return { obra:String(j.obra || '').slice(0, 160), hoja:String(j.hoja || '').slice(0, 40), titulo:j.titulo ? String(j.titulo).slice(0, 160) : null,
+  var o = { obra:String(j.obra || '').slice(0, 160), hoja:String(j.hoja || '').slice(0, 40), titulo:j.titulo ? String(j.titulo).slice(0, 160) : null,
            url:_ctWeb(j.url) ? String(j.url) : null,
            docs:(Array.isArray(j.docs) ? j.docs : []).filter(function(d){ return d && _ctWeb(d.url); }).slice(0, 40)
-             .map(function(d){ return { nombre:String(d.nombre || '').slice(0, 160), url:String(d.url), fecha:String(d.fecha || '').slice(0, 10) }; }) };
+             .map(function(d){
+               var x = { nombre:String(d.nombre || '').slice(0, 160), url:String(d.url), fecha:String(d.fecha || '').slice(0, 10) };
+               if(d.frente) x.frente = String(d.frente).slice(0, 60);     /* 30/10/2026 · de qué frente es */
+               return x;
+             }) };
+  /* 30/10/2026 · los frentes de la obra (solo su nombre y los que tuvo antes): el cartel de un frente, también sin señal */
+  if(Array.isArray(j.frentes)) o.frentes = j.frentes.filter(function(x){ return x && x.n; }).slice(0, 12).map(function(x){
+    return { n:String(x.n).slice(0, 60), antes:(Array.isArray(x.antes) ? x.antes : []).slice(0, 5).map(function(a){ return String(a).slice(0, 60); }) };
+  });
+  return o;
 }
 function _ctGuardarResp(tk, j){
   var o = _ctResps();
@@ -25472,21 +25680,32 @@ function _ctTitulo(j){
   try{ if(typeof txPais === 'function') t = txPais(t); }catch(_p){}
   return { t:t, propio:false };
 }
-/* lo que abre el cartel: el enlace puesto a mano primero y después lo de su carpeta (lo más nuevo arriba) */
+/* lo que abre el cartel: el enlace puesto a mano primero y después lo de su carpeta (lo más nuevo arriba).
+   30/10/2026 · el cartel de un frente: lo suyo primero y después lo de toda la obra (obra:true). Con el servidor de antes,
+   que no dice de qué frente es cada uno, y nada con el nombre del frente: todo, como siempre. */
 function _ctItems(j){
   j = j || {};
-  var it = [], nom = _ctTitulo(j).t;
+  var it = [], nom = _ctTitulo(j).t, X = CARTEL_APP.f ? _ctDelFrente(j, CARTEL_APP.f) : null;
+  var uno = function(d, deObra){ var o = { nombre:String(d.nombre || nom), url:String(d.url), fecha:String(d.fecha || '') }; if(deObra) o.obra = true; return o; };
+  if(X && (X.suyo.length || X.seguro)){
+    X.suyo.forEach(function(d){ it.push(uno(d)); });
+    if(_ctWeb(j.url)) it.push({ nombre:nom, url:String(j.url), enlace:true, obra:true });
+    X.obra.forEach(function(d){ it.push(uno(d, true)); });
+    return it;
+  }
   if(_ctWeb(j.url)) it.push({ nombre:nom, url:String(j.url), enlace:true });
-  (Array.isArray(j.docs) ? j.docs : []).forEach(function(d){ if(d && _ctWeb(d.url)) it.push({ nombre:String(d.nombre || nom), url:String(d.url), fecha:String(d.fecha || '') }); });
+  (Array.isArray(j.docs) ? j.docs : []).forEach(function(d){ if(d && _ctWeb(d.url)) it.push(uno(d)); });
   return it;
 }
 
 /* ── llegó por la cámara del celular: al arrancar la app (arranque) o con la app ya abierta ── */
-function cartelDesdeEnlace(tk, arranque){
+function cartelDesdeEnlace(tk, arranque, frente){
   if(!tk) return false;
   try{ if(!ROL) ROL = leer(LS_ROL, null); }catch(_r){}
   var S = CARTEL_APP;
   S.gen++; S.tk = String(tk); S.j = null; S.sinRed = false; S.cuando = 0; S.estado = 'cargando';
+  /* 30/10/2026 · el cartel de un frente («&f=») */
+  S.f = String(frente || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
   S.arranque = !!arranque || S.arranque;
   if(arranque){ try{ document.documentElement.lang = idiomaActual(); arrancarVigiaIdioma(); }catch(_vi){} }
   ir('p-cartel');
@@ -25549,11 +25768,13 @@ function _ctSinSenal(tk, gen){
     if(_ctEnPantalla()) pintarCartelApp();
   });
 }
-function _ctPaginaD(tk){ return baseURL() + 'd/?t=' + encodeURIComponent(tk) + '&w=1'; }
+function _ctPaginaD(tk){ var f = CARTEL_APP.f; return baseURL() + 'd/?t=' + encodeURIComponent(tk) + (f ? '&f=' + encodeURIComponent(f) : '') + '&w=1'; }
 function _ctHayEnD(tk){
   try{
     if(!(window.caches && caches.has && caches.open)) return Promise.resolve(false);
-    var k = baseURL() + 'd/r/' + encodeURIComponent('t-' + tk);
+    /* la llave del cartel en la página d/: la de cada frente lleva el suyo (como CLAVE allá) */
+    var fk = _ctNorm(CARTEL_APP.f).replace(/ /g, '-').slice(0, 40);
+    var k = baseURL() + 'd/r/' + encodeURIComponent('t-' + tk + (fk ? '.f-' + fk : ''));
     return caches.has(CARTEL_D_CAJA).then(function(si){ return si ? caches.open(CARTEL_D_CAJA).then(function(c){ return c.match(k); }).then(function(r){ return !!r; }) : false; })
       .then(function(x){ return !!x; }, function(){ return false; });
   }catch(_e){ return Promise.resolve(false); }
@@ -25571,7 +25792,7 @@ function cartelAbrir(i){
 /* salir del cartel. Si la app arrancó por el QR, el resto del arranque no corrió: se vuelve a abrir, limpia */
 function cartelSalir(){
   var S = CARTEL_APP, vuelve = S.arranque;
-  S.gen++; S.tk = ''; S.j = null; S.estado = ''; S.sinRed = false; S.arranque = false;
+  S.gen++; S.tk = ''; S.f = ''; S.j = null; S.estado = ''; S.sinRed = false; S.arranque = false;
   if(vuelve){ try{ location.replace(baseURL()); }catch(_r){ location.href = baseURL(); } return; }
   try{ HIST = HIST.filter(function(x){ return x !== 'p-cartel' && x !== 'p-doc-ver'; }); }catch(_h){}
   var casa = (typeof inicioDelModo === 'function') ? inicioDelModo() : 'p-cuenta', prev = null;
@@ -25584,9 +25805,12 @@ function pintarCartelApp(){
   var c = $('cartel-cuerpo'); if(!c) return;
   _ctEstilos();
   var S = CARTEL_APP, j = S.j || {}, T = _ctTitulo(j), h = '';
+  /* 30/10/2026 · el cartel de un frente: el frente va en el título */
+  var X = S.f ? _ctDelFrente(j, S.f) : null;
   var cab = function(){
     return '<div class="ct-cab"><span class="ct-ic" aria-hidden="true">' + (S.estado === 'lista' ? '📂' : '📄') + '</span><div class="ct-cab-tx">' +
       '<h2 class="ct-h"' + (T.propio ? ' data-sin-trad' : '') + '>' + esc(T.t) + '</h2>' +
+      (X ? '<p class="ct-fre">🚧 <span data-sin-trad>' + esc(X.n) + '</span></p>' : '') +
       (j.obra ? '<p class="ct-obra" data-sin-trad>' + esc(j.obra) + '</p>' : '') + '</div></div>';
   };
   var salir = '<button type="button" class="btn sec ct-salir" onclick="cartelSalir()">' + (S.arranque ? '<span>Ir al inicio de OBRASST</span>' : '<span>Volver</span>') + '</button>';
@@ -25602,7 +25826,8 @@ function pintarCartelApp(){
   }
   if(S.estado === 'sin_documento'){
     c.innerHTML = cab() + '<div class="tarj vidrio ct-tarj"><b><span>Todavía no está cargado</span></b>' +
-      '<p class="sub"><span>Esta obra aún no sube este documento a OBRASST.</span></p>' +
+      (X ? '<p class="sub"><span>Esta obra aún no sube este documento para su frente:</span> <b data-sin-trad>' + esc(X.n) + '</b>.</p>'
+         : '<p class="sub"><span>Esta obra aún no sube este documento a OBRASST.</span></p>') +
       '<p class="sub"><span>Pídeselo a tu supervisor SSOMA: se sube una vez, en la app o en la web, y este mismo cartel empieza a funcionar.</span></p></div>' +
       ((typeof qrLeerBoton === 'function') ? qrLeerBoton('Escanear otro QR') : '') + salir;
     return;
@@ -25625,11 +25850,18 @@ function pintarCartelApp(){
       (S.cuando ? '<br><span>Guardado el</span> <span data-sin-trad>' + esc(_ctFecha(S.cuando)) + '</span>' : '') +
       '<br><span>Puede haber versiones más nuevas: cuando tengas señal, escanea el cartel otra vez.</span></div>';
   }
+  /* 30/10/2026 · el cartel de un frente sin nada propio: se dice, y van los de toda la obra */
+  if(X && !X.suyo.length){
+    h += '<div class="aviso ct-aviso">' + (X.seguro
+      ? '<span>Todavía no hay un documento propio de este frente: estos son los de toda la obra.</span>'
+      : '<span>No encontré los documentos de este frente: van todos los de la obra.</span>') + '</div>';
+  }
   h += '<p class="sub ct-pide">' + (items.length > 1 ? '<span>Toca el que necesitas.</span>' : '<span>Toca para abrirlo.</span>') + '</p><div class="ct-lista">';
   items.forEach(function(it, i){
     var tipo = it.enlace ? 'enlace' : vdocTipo(it.url), aqui = vdocSeVe(it.url), ya = aqui && vdocGuardado(it.url);
     var ic = it.enlace ? '🔗' : (tipo === 'img' ? '🖼️' : (tipo === 'pdf' ? '📄' : '📎'));
     var sub = it.enlace ? '<span>Enlace</span>' : ((it.fecha ? '<span>Subido el</span> <span data-sin-trad>' + esc(_qrFecha(it.fecha)) + '</span>' : '<span>Archivo</span>'));
+    if(it.obra) sub += ' · <span class="ct-obra-l">De toda la obra</span>';
     if(!it.enlace && primero){ if(items.length > 1) sub += ' · <span class="ct-nuevo">el más reciente</span>'; primero = false; }
     if(ya) sub += ' · <span class="ct-ya">✓ <span>guardado en este celular</span></span>';
     var cuerpo = '<span class="ct-di" aria-hidden="true">' + ic + '</span><span class="ct-tx"><b data-sin-trad>' + esc(it.nombre) + '</b><small>' + sub + '</small></span>';
@@ -25651,6 +25883,7 @@ function _ctEstilos(){
     '.ct-cab{display:flex;align-items:center;gap:12px;margin:4px 0 12px}.ct-ic{font-size:30px;line-height:1;flex:0 0 auto}' +
     '.ct-cab-tx{flex:1;min-width:0}.ct-h{font-size:19px;line-height:1.3;margin:0;overflow-wrap:anywhere;text-wrap:balance}' +
     '.ct-obra{margin:3px 0 0;font-size:13px;color:var(--gris)}' +
+    '.ct-fre{margin:4px 0 0;font-size:14.5px;font-weight:800;color:var(--oro);overflow-wrap:anywhere}.ct-obra-l{font-weight:700;color:var(--tinta)}' +
     '.ct-pide{margin:4px 0 10px}.ct-lista{display:grid;gap:10px}' +
     '.ct-doc{display:flex;align-items:center;gap:12px;width:100%;padding:14px 14px;border-radius:14px;text-align:left;text-decoration:none;font:inherit;color:var(--tinta);' +
       'background:rgba(var(--w),.06);border:1px solid rgba(var(--w),.14);cursor:pointer}' +
@@ -25762,7 +25995,8 @@ function qrRuta(txt){
   /* el cartel de un documento: «…/#cartel=FICHA», o el impreso antes, «…/d/?t=FICHA» */
   var tk = (typeof cartelDeTexto === 'function') ? cartelDeTexto(t) : null;
   if(!tk && _lqrNuestra(t)){ var md = t.match(/\/d\/(?:index\.html)?\?(?:[^#]*&)?t=([A-Za-z0-9_-]{6,64})(?=$|[&#])/); if(md) tk = md[1]; }
-  if(tk) return function(){ cartelDesdeEnlace(tk, false); };
+  /* 30/10/2026 · el cartel de un frente («&f=»), con su frente */
+  if(tk){ var fr = (typeof cartelFrenteDeTexto === 'function') ? cartelFrenteDeTexto(t) : ''; return function(){ cartelDesdeEnlace(tk, false, fr); }; }
   /* el químico: su etiqueta viaja dentro del código */
   var q = (typeof quimDeEnlace === 'function') ? quimDeEnlace(t) : null;
   if(!q && /^OBRASST-QUIM:[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+$/.test(t)) q = t;
@@ -80475,7 +80709,7 @@ function _senPx(mm){
    ════════════════════════════════════════════════════════════════ */
 var SEN = { tab:'norma', filtro:'', busca:'',
             k:'', aviso:'', texto:'', sub:'', tam:'A4', orient:'v', porHoja:1, pdf:null,
-            qr:false, qrSel:{}, qrItems:null, qrIni:false };
+            qr:false, qrSel:{}, qrItems:null, qrIni:false, doble:false };
 /* el cartel de personal autorizado. Nace en blanco a propósito: el
    área la escribe quien lo pega en la puerta, no la app. */
 var SENP = { titulo:'', pie:'', gente:[], busca:'', tam:'A4', orient:'v', cols:0,
@@ -80601,14 +80835,14 @@ function senHoja(tamK, orient){
 /* la repartija no es fija: se elige la que deja las tarjetas con la
    proporción de una señal (algo más altas que anchas) llenando la hoja.
    Así 9 en una A4 vertical salen 3×3 y 15 en una A3 echada salen 5×3. */
-function senRejilla(porHoja, W, H){
-  var n = porHoja || 1;
+function senRejilla(porHoja, W, H, razon){
+  var n = porHoja || 1, rz = razon || 0.76;
   if(!W || !H) return [n<=1?1:(n<=2?1:(n<=6?2:3)), Math.ceil(n/(n<=1?1:(n<=2?1:(n<=6?2:3))))];
   var mejor = null;
   for(var c=1; c<=n; c++){
     var f = Math.ceil(n/c);
     if(c*(f-1) >= n) continue;            /* dejaría una fila vacía */
-    var r = (W/c)/(H/f), d = Math.abs(Math.log(r/0.76));
+    var r = (W/c)/(H/f), d = Math.abs(Math.log(r/rz));
     if(!mejor || d < mejor.d) mejor = { c:c, f:f, d:d };
   }
   return mejor ? [mejor.c, mejor.f] : [1,1];
@@ -80661,6 +80895,16 @@ function senDistancia(ladoMM){
 var SEN_QR_EQ = { 'extintor':'Extintor', 'extintor-rodante':'Extintor', 'lavaojos-de-emergencia':'Lavaojos',
                   'camilla':'Camilla', 'primeros-auxilios':'Botiquín' };
 function senEqTipo(k){ return SEN_QR_EQ.hasOwnProperty(String(k||'')) ? SEN_QR_EQ[String(k)] : ''; }
+/* ── 30/10/2026 · LA SEÑAL A DOBLE CARA ───────────────────────────
+   Marcelo: «en las señaléticas, quiero que para riesgo eléctrico,
+   coloques la opción para que sea de doble cara, tipo para que se
+   doble al filo y se puede tener para enmicar y tener doble cara…
+   cuando es pequeño, para colocar en las extensiones eléctricas».
+   Las de riesgo eléctrico pueden salir en una tira con las dos caras
+   cabeza con cabeza (la de arriba de cabeza) y la línea de doblez al
+   medio: se corta por el borde, se dobla por la línea y se enmica;
+   colgada del cable se lee derecha de los dos lados. */
+function senDobleSe(k){ return ({ 'atencion-riesgo-electrico-o-peligro-de-muerte-alto-volta':1, 'riesgo-de-descargas-electricas':1 }).hasOwnProperty(String(k || '')); }
 
 function abrirSenales(){ ir('p-senales'); }
 function senTab(t){ SEN.tab = t; pintarSenales(); }
@@ -80787,7 +81031,7 @@ function abrirSenal(k){
      en pantalla sí, en el papel va la palabra */
   var pa = _senPartir(S.n.replace(/[\u2190-\u21FF]\s*/g, ''));
   SEN.k = k; SEN.aviso = pa.aviso; SEN.texto = pa.texto; SEN.sub = ''; SEN.tam = 'A4'; SEN.porHoja = 1; SEN.pdf = null;
-  SEN.qr = false; SEN.qrSel = {}; SEN.qrItems = null; SEN.qrIni = false;
+  SEN.qr = false; SEN.qrSel = {}; SEN.qrItems = null; SEN.qrIni = false; SEN.doble = false;
   ir('p-senal');
 }
 
@@ -80829,19 +81073,32 @@ function pintarSenal(){
   h += '</div>';
   /* 17/10/2026 · lote 15 · con el QR de inspección de cada equipo (extintor, lavaojos, camilla, botiquín) */
   if(senEqTipo(SEN.k)) h += '<div id="sen-qr-zona">'+_senQRZonaHTML()+'</div>';
+  /* 30/10/2026 · las de riesgo eléctrico: una cara o doble cara, para doblar y enmicar */
+  if(senDobleSe(SEN.k)){
+    h += '<div class="sec-tit" style="margin-top:16px">¿Una cara o doble cara?</div><div class="ch-chips">'+
+         '<button type="button" class="ch-chip'+(!SEN.doble?' on':'')+'" id="sen-una" onclick="senDoble(false)">Una cara</button>'+
+         '<button type="button" class="ch-chip'+(SEN.doble?' on':'')+'" id="sen-dob" onclick="senDoble(true)">Doble cara · para doblar y enmicar</button></div>'+
+         '<p class="sub" style="margin:6px 0 0;font-size:12.5px">'+(SEN.doble
+           ? 'Las dos caras salen unidas, cabeza con cabeza, con la línea de doblez al medio. Corta la tira por su borde, dóblala por la línea punteada y enmícala: colgada del cable o de la extensión, se lee derecha de los dos lados. «¿Cuántas por hoja?» cuenta las tiras.'
+           : 'Para las extensiones eléctricas y los cables: chica, en una tira que se dobla y se enmica, con la señal a los dos lados.')+'</p>';
+  }
 
   var d = senDistancia(LY.lado);
-  h += '<div class="aviso'+(d<5?' ojo':'')+'" style="margin-top:14px">'+
-       '<b><span>Cartel de</span> <span>'+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm</span></b> · '+
+  h += '<div class="aviso'+((d<5 && !LY.doble)?' ojo':'')+'" style="margin-top:14px">'+
+       (LY.doble ? '<b><span>Cada cara de</span> <span>'+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm</span></b> · <span>la tira de</span> <span>'+Math.round(LY.w)+' × '+Math.round(LY.ph)+' mm</span> · '
+                 : '<b><span>Cartel de</span> <span>'+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm</span></b> · ')+
        '<span>símbolo de</span> <span>'+Math.round(LY.lado)+' mm</span>'+
        (SEN.qr ? ' · <span>QR de</span> <span>'+Math.round(LY.qr)+' mm</span>' : '')+
        '<p class="sub" style="margin:6px 0 0;line-height:1.6">'+
+       /* 30/10/2026 · la de doble cara es chica a propósito: se lee de cerca, en el cable */
+       ((LY.doble && d<5) ? '<span>Es para leer de cerca, en el cable o la extensión:</span> <b><span>hasta unos</span> <span>'+Math.max(1, Math.round(d))+'</span> <span>metros</span></b>. '+
+              '<span>Para una señal que se vea de lejos, usa una cara y menos por hoja.</span>' :
        (d<5 ? 'Se lee <b>solo de cerca</b>: no llega a los 5 metros. La norma pide 125 cm² como mínimo '+
               'para 5 m y este símbolo queda por debajo. Pon menos por hoja, una hoja más grande, o '+
               'acorta el texto: la banda le está comiendo sitio al símbolo.'
             : '<span>Se lee bien hasta unos</span> <b><span>'+Math.round(d)+'</span> <span>metros</span></b>. '+
               '<span>Sale de la fórmula de la NTP: el área tiene que ser al menos la distancia al cuadrado '+
-              'dividida entre 2000.</span>')+
+              'dividida entre 2000.</span>'))+
        '</p></div>';
   if(SEN.qr && LY.qr < SEN_QR_MIN) h += _senQRChicoHTML(LY.qr);
 
@@ -80856,6 +81113,8 @@ function pintarSenal(){
 function senTam(k){ SEN.tam=k; SEN.pdf=null; pintarSenal(); }
 function senPorHoja(n){ SEN.porHoja=n; SEN.pdf=null; pintarSenal(); }
 function senOrient(o){ SEN.orient=o; SEN.pdf=null; pintarSenal(); }
+/* 30/10/2026 · doble cara: chica de por sí (si estaba en 1 o 2 por hoja, pasa a 8 tiras) */
+function senDoble(on){ SEN.doble = !!on && senDobleSe(SEN.k); if(SEN.doble && SEN.porHoja < 4) SEN.porHoja = 8; SEN.pdf = null; pintarSenal(); }
 function senAviso(v){ SEN.aviso=v; SEN.pdf=null; _senRefrescarVista(); }
 function senTexto(v){ SEN.texto=v; SEN.pdf=null; _senRefrescarVista(); }
 function senSub(v){ SEN.sub=v; SEN.pdf=null; _senRefrescarVista(); }
@@ -81051,11 +81310,15 @@ function senLayout(){
   var T = senHoja(SEN.tam, SEN.orient);
   var M = 6, hueco = 4, pie = 6;
   var util = { w: T.w - M*2, h: T.h - M*2 - pie };
-  var rej = senRejilla(SEN.porHoja, util.w, util.h);
+  /* 30/10/2026 · doble cara: la casilla es la tira entera (las dos caras y el doblez), el doble de alta que una cara */
+  var doble = !!(SEN.doble && !SEN.qr && senDobleSe(SEN.k));
+  var rej = senRejilla(SEN.porHoja, util.w, util.h, doble ? 0.37 : 0);
   var w = (util.w - hueco*(rej[0]-1)) / rej[0];
   var h = (util.h - hueco*(rej[1]-1)) / rej[1];
+  var ph = h, pl = 0;
+  if(doble){ pl = Math.max(2, Math.min(4, w*0.05)); h = (ph - pl)/2; }
   return { T:T, rej:rej, M:M, hueco:hueco, arriba:M, pie:pie,
-           anchoCel:w, altoCel:h, w:w, h:h, lado:_senPicLado(w, h), hCab:0,
+           anchoCel:w, altoCel:ph, w:w, h:h, lado:_senPicLado(w, h), hCab:0, doble:doble, ph:ph, pl:pl,
            qr: SEN.qr ? _senQRLado(w, h) : 0 };
 }
 
@@ -81326,12 +81589,13 @@ function senArmar(){
     var cuanto = nq
       ? '<span>'+nq+'</span> <span>'+(nq===1?'cartel con su QR':'carteles con su QR')+'</span> · <span>'+hj+'</span> <span>'+
         (hj===1?'hoja':'hojas')+'</span> <span>'+T.n+'</span>'
-      : '<span>'+SEN.porHoja+'</span> <span>'+(SEN.porHoja===1?'señal en una hoja':'señales en una hoja')+'</span> <span>'+T.n+'</span>';
+      : '<span>'+SEN.porHoja+'</span> <span>'+(SEN.porHoja===1?'señal en una hoja':'señales en una hoja')+'</span> <span>'+T.n+'</span>'+
+        (LY.doble ? ' · <span>a doble cara</span>' : '');
     if(c) c.innerHTML =
       '<div class="aviso ok" style="margin-top:14px">✅ <b data-sin-trad>'+esc(SEN.texto||S.n)+'</b>'+
       '<p class="sub" style="margin:6px 0 0">'+cuanto+
       (T.oh?' <span>horizontal</span>':'')+' · <span>'+LY.rej[0]+' × '+LY.rej[1]+'</span>'+
-      ' · <span>tarjeta de</span> <span>'+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm</span></p></div>'+
+      ' · <span>'+(LY.doble ? 'cada cara de' : 'tarjeta de')+'</span> <span>'+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm</span></p></div>'+
       (nq && r && r.qr && r.qr < SEN_QR_MIN ? _senQRChicoHTML(r.qr) : '')+
       (chico ? '<div class="aviso ojo" style="margin-top:10px"><b>El texto quedó muy chico.</b>'+
         '<p class="sub" style="margin:6px 0 0">A este tamaño casi no se lee. Pon menos señales '+
@@ -81340,7 +81604,7 @@ function senArmar(){
       '<button class="btn" style="margin:0" onclick="senCompartir()">📲 Compartir</button>'+
       '<button class="btn sec" style="margin:0" onclick="senImprimir()">🖨️ Imprimir</button></div>'+
       '<p class="sub" style="margin:9px 0 0;font-size:12.5px">Imprime al 100 %, sin «ajustar a la página»: '+
-      'si la impresora la encoge, el tamaño deja de cumplir la norma. Corta por el marco.</p>';
+      'si la impresora la encoge, el tamaño deja de cumplir la norma. '+(LY.doble ? 'Corta cada tira por su borde, dóblala por la línea punteada y enmícala.' : 'Corta por el marco.')+'</p>';
   }).catch(function(e){
     if(m){ m.style.color='var(--mal)'; m.textContent='No se pudo armar: '+String(e && e.message || e); }
   });
@@ -81378,26 +81642,56 @@ function _senDibujar(png){
     }
     var col = j % rej[0], fil = Math.floor(j / rej[0]);
     var x0 = M + col*(LY.w + hueco);
-    var y0 = M + fil*(LY.h + hueco);
-    ultimo = _senCartelPDF(doc, png, S, SEN.aviso, SEN.texto, SEN.sub, x0, y0, LY.w, LY.h, logo, qrs ? qrs[i] : null);
+    var y0 = M + fil*((LY.doble ? LY.ph : LY.h) + hueco);
+    ultimo = LY.doble ? _senDobleCara(doc, png, S, x0, y0, LY, logo)
+                      : _senCartelPDF(doc, png, S, SEN.aviso, SEN.texto, SEN.sub, x0, y0, LY.w, LY.h, logo, qrs ? qrs[i] : null);
   }
   _senPieHoja(doc, T, LY, ultimo, hojas, hojas);
 
   SEN.pdf = { blob: doc.output('blob'),
-              nombre: 'senal-'+(_senSlug(SEN.texto||S.n)||'sst')+(qrs?'-con-qr':'')+'-'+T.n+
+              nombre: 'senal-'+(_senSlug(SEN.texto||S.n)||'sst')+(qrs?'-con-qr':'')+(LY.doble?'-doble-cara':'')+'-'+T.n+
                       (T.oh?'-horizontal':'')+'.pdf', hojas: hojas };
   return ultimo;
+}
+/* 30/10/2026 · lo que se dibuja dentro de fn sale girado 180° sobre el centro de la casilla (x, y, w, h): en el PDF, el
+   giro va en la matriz de la página (q … cm … Q), así el texto y el símbolo siguen siendo vectores nítidos */
+function _senGirado(doc, x, y, w, h, fn){
+  var k = doc.internal.scaleFactor, H = doc.internal.pageSize.getHeight();
+  var cx = (x + w/2) * k, cy = (H - (y + h/2)) * k;
+  doc.internal.write('q');
+  doc.internal.write('-1 0 0 -1 ' + (2*cx).toFixed(3) + ' ' + (2*cy).toFixed(3) + ' cm');
+  try{ fn(); } finally { doc.internal.write('Q'); }
+}
+/* 30/10/2026 · una tira a doble cara: la cara de abajo derecha, la de arriba de cabeza (las dos con la cabeza en el doblez)
+   y la franja del doblez al medio, con su línea punteada. Se corta por el borde de la tira, se dobla por la punteada (las
+   caras hacia afuera) y se enmica: colgada del cable, cada lado se lee derecho. */
+function _senDobleCara(doc, png, S, x, y, LY, logo){
+  var w = LY.w, h = LY.h, pl = LY.pl, t = Math.max(0.4, Math.min(1.6, w*0.008));
+  _senGirado(doc, x, y, w, h, function(){ _senCartelPDF(doc, png, S, SEN.aviso, SEN.texto, SEN.sub, x, y, w, h, logo, null); });
+  var u = _senCartelPDF(doc, png, S, SEN.aviso, SEN.texto, SEN.sub, x, y + h + pl, w, h, logo, null);
+  /* la franja del doblez, blanca; el borde de la tira sigue de una cara a la otra, para cortarla de un tirón */
+  doc.setFillColor(255,255,255); doc.rect(x, y + h, w, pl, 'F');
+  doc.setDrawColor(17,17,17); doc.setLineWidth(t);
+  doc.line(x + t/2, y + h - t/2, x + t/2, y + h + pl + t/2);
+  doc.line(x + w - t/2, y + h - t/2, x + w - t/2, y + h + pl + t/2);
+  /* la línea de doblez: punteada, y asoma un poco a los lados para verla al cortar */
+  var yd = y + h + pl/2;
+  doc.setDrawColor(120,128,136); doc.setLineWidth(0.3);
+  doc.setLineDashPattern([1.4, 1.2], 0); doc.line(x - 2, yd, x + w + 2, yd); doc.setLineDashPattern([], 0);
+  return u;
 }
 /* el pie de cada hoja: la medida, hasta dónde se lee y cómo imprimirla */
 function _senPieHoja(doc, T, LY, ultimo, n, hojas){
   var lado = (ultimo && ultimo.lado) ? ultimo.lado : LY.lado;
   doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(160,168,176);
   var d = senDistancia(lado);
-  doc.text('NTP 399.010-1 · '+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm, símbolo de '+
+  /* 30/10/2026 · doble cara: la medida de cada cara y cómo se arma */
+  var txt = 'NTP 399.010-1 · '+(LY.doble ? 'doble cara, cada cara de ' : '')+Math.round(LY.w)+' × '+Math.round(LY.h)+' mm, símbolo de '+
            Math.round(lado)+' mm, legible '+
            (d<5 ? 'solo de cerca (menos de 5 m)' : 'hasta ~'+Math.round(d)+' m')+
-           ' · imprimir al 100 % · cortar por el marco'+(hojas > 1 ? ' · hoja '+n+' de '+hojas : '')+' · OBRASST',
-           T.w/2, T.h - 2.4, { align:'center' });
+           ' · imprimir al 100 % · '+(LY.doble ? 'cortar por el borde, doblar por la punteada y enmicar' : 'cortar por el marco')+(hojas > 1 ? ' · hoja '+n+' de '+hojas : '')+' · OBRASST';
+  for(var fs = 6; fs > 4 && doc.getTextWidth(txt) > T.w - 8; ){ fs -= 0.25; doc.setFontSize(fs); }
+  doc.text(txt, T.w/2, T.h - 2.4, { align:'center' });
 }
 
 function _senSlug(t){
@@ -95025,6 +95319,8 @@ function brigadaDeLaObra(){
    <nombre>» en la nota y el nombre del frente adelante: así los ven la carpeta, el portal, el trabajador en sus
    documentos y el cartel QR de la obra. Lo que el trabajador necesita en una emergencia (el punto de reunión, los
    números, el responsable, los documentos y los brigadistas que hoy están ahí) viaja en «¿A quién acudo?».
+   30/10/2026 · lo que ya estaba en esas carpetas sin decir de qué frente es, es de toda la obra: cada frente lo ve en su
+   lugar (freDocsObra); y cada cartel QR de emergencia puede ser uno para toda la obra o uno por frente (freEnlaceCartel).
    ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
 var FRE_HOJA = 'frentes';
 var FRE_CUPO = { lite:1, prevencionista:1, supervisor:1, ssoma:2, gestion:4 };
@@ -95105,6 +95401,55 @@ function freDeDoc(d, frentes){
   return hit;
 }
 function freDocTipo(h){ for(var i = 0; i < FRE_DOCS.length; i++) if(FRE_DOCS[i].h === h) return FRE_DOCS[i]; return null; }
+/* ── 30/10/2026 · LO QUE YA ESTABA SUBIDO ES DE TODA LA OBRA ──
+   Marcelo, en «Frentes de trabajo» de la web: «otra vez el problema de jalar automáticamente los documentos que ya
+   estaban subidos, no los hace como planes de emergencia, mapa de riesgos, y así». Lo que ya está en la carpeta de la obra
+   (subido en «Documentos», en el cartel QR o en la app) y no dice de qué frente es, es DE TODA LA OBRA: cada frente lo
+   muestra en su lugar (su plan de respuesta, su mapa de riesgos…) y le cuenta para lo que se pide, hasta que alguien diga
+   de qué frente es («Es de este frente»). Lo que dice OTRO frente no se mezcla. */
+/* el frente que dice la nota de un documento, tal cual (o '') */
+function freDocFrente(d){ var m = /^Frente:\s*(.+)$/.exec(String((d && d.nota) || '').trim()); return m ? freTxt(m[1], 60) : ''; }
+/* lo de toda la obra, por tipo: lo que no dice de qué frente es y se abre desde cualquier celular (lo más nuevo primero) */
+function freDocsObra(docs){
+  var out = {}; FRE_DOCS.forEach(function(t){ out[t.h] = []; });
+  (docs || []).forEach(function(d){
+    if(!d || !out[d.hoja] || freDocFrente(d) || !/^https?:\/\//i.test(String(d.url || ''))) return;
+    out[d.hoja].push(d);
+  });
+  Object.keys(out).forEach(function(k){ out[k].sort(function(a, b){ return String(b.creado || '').localeCompare(String(a.creado || '')); }); });
+  return out;
+}
+/* el nombre de un documento cuando vuelve a ser de toda la obra: sin el frente adelante */
+function freNombreSinFrente(d){
+  var n = freDocFrente(d), nom = freTxt(d && d.nombre, 160);
+  if(n && nom.indexOf(n + ' · ') === 0 && nom.length > n.length + 3) return nom.slice(n.length + 3);
+  return nom;
+}
+/* ── 30/10/2026 · EL CARTEL QR DE CADA FRENTE ──
+   Marcelo: «lo que subo en los carteles QR es para un frente… y cuando escanea el QR, se ven los 2 o 4 planes de
+   emergencia… a un jefe o supervisor no le gustará porque querrá para su frente. Colócalo como opción, cada QR para todos
+   los frentes o diferentes QR para cada frente».
+   El cartel de toda la obra sigue como siempre: abre todo lo de su carpeta. El de un frente es el MISMO cartel (la misma
+   ficha, sst_hoja_qr.token) con el frente en el enlace («&f=<nombre>»): abre lo de ese frente y lo de toda la obra, nunca
+   lo de los otros frentes. Lo separa quien lo abre (la página d/ y la app) con lo que el servidor dice de cada documento
+   (sql/2026-10-30-qr-frentes.sql); el frente que cambió de nombre se sigue encontrando por el de antes. Se elige cartel por
+   cartel (sst_estado «cartel_frente»: { <cartel>: 1 }) y solo en los de emergencia, que son los que cambian de un punto a
+   otro: el plan de respuesta, el mapa de riesgos, los brigadistas y los contactos de emergencia. */
+var FRE_CARTEL_CARPETAS = { 'plan-emergencia':1, 'mapa-riesgos':1, 'brigadistas':1, 'contactos-emergencia':1 };
+function freCartelDeFrente(c){ return FRE_CARTEL_CARPETAS.hasOwnProperty(String(c || '')); }
+/* el enlace del cartel de un frente: el de la obra con «&f=<nombre del frente>» */
+function freEnlaceCartel(enlace, f){ var n = freTxt(f && f.n, 60); return n ? String(enlace || '') + '&f=' + encodeURIComponent(n) : String(enlace || ''); }
+/* lo que abre el cartel de un frente, de los documentos de su carpeta: lo suyo y lo de toda la obra */
+function freDocsCartel(f, docs, frentes){
+  var s = [], o = [], L = (frentes && frentes.length) ? frentes : (f ? [f] : []);
+  (docs || []).forEach(function(d){
+    if(!d) return;
+    if(!freDocFrente(d)){ o.push(d); return; }
+    var g = freDeDoc(d, L);
+    if(g && f && g.id === f.id) s.push(d);
+  });
+  return { suyo:s, obra:o };
+}
 /* el nombre de un documento del frente: «<frente> · <lo que es>» (así se lee en la carpeta y en el cartel de la obra) */
 function freNombreDoc(f, nombre){
   var fn = freTxt(f && f.n, 60), n = freTxt(nombre, 120);
@@ -95125,9 +95470,10 @@ function freDocsDe(f, docs, frentes){
   return out;
 }
 /* lo que le falta a un frente para una emergencia: los tres documentos que se piden siempre y su punto de reunión */
-function freFalta(f, porTipo){
+function freFalta(f, porTipo, obra){
   var falta = [];
-  FRE_DOCS.forEach(function(t){ if(t.pide && !((porTipo || {})[t.h] || []).length) falta.push(t.t); });
+  /* 30/10/2026 · obra: lo de toda la obra (freDocsObra) también le sirve */
+  FRE_DOCS.forEach(function(t){ if(t.pide && !((porTipo || {})[t.h] || []).length && !((obra || {})[t.h] || []).length) falta.push(t.t); });
   if(!(f && f.punto)) falta.push('Punto de reunión');
   return falta;
 }
@@ -95153,10 +95499,15 @@ function freDeNombre(nom, frentes){
    de esa hoja. brig: los de brigadaDeLaObra() (con su trab y su documento, para saber en qué frente están) */
 function frePaquete(frentes, docs, brig, trabs){
   return (frentes || []).filter(function(f){ return f && f.n; }).map(function(f){
-    var T = freDocsDe(f, docs, frentes), d = [];
+    var T = freDocsDe(f, docs, frentes), O = freDocsObra(docs), d = [];
     FRE_DOCS.forEach(function(t){
-      (T[t.h] || []).slice(0, 3).forEach(function(x){
-        if(x && /^https:\/\//.test(String(x.url || ''))) d.push({ h:t.h, t:t.t, n:String(x.nombre || t.t).slice(0, 160), u:String(x.url).slice(0, 600) });
+      /* 30/10/2026 · sin uno propio, el de toda la obra (o:1) */
+      var propio = (T[t.h] || []).length > 0;
+      ((propio ? T[t.h] : O[t.h]) || []).slice(0, 3).forEach(function(x){
+        if(!x || !/^https:\/\//.test(String(x.url || ''))) return;
+        var y = { h:t.h, t:t.t, n:String(x.nombre || t.t).slice(0, 160), u:String(x.url).slice(0, 600) };
+        if(!propio) y.o = 1;
+        d.push(y);
       });
     });
     var b = (brig || []).filter(function(p){
@@ -95172,7 +95523,7 @@ function frePaquete(frentes, docs, brig, trabs){
 /* ── la ficha del frente, en una hoja A4 para la caseta del frente: el proyecto y el frente arriba, dónde está, su
    responsable, su punto de reunión, a quién llamar (lo del frente y lo de la obra), sus brigadistas y sus documentos
    con su fecha. ctx: { razon, proyecto, codigo, emergs:[{t,tel}], brig:[{n,c,tel}], gente (cuántos hoy), docs:{tipo:[d]},
-   pie } ── */
+   obra:{tipo:[d]} (30/10/2026: lo de toda la obra, freDocsObra), pie } ── */
 function freFichaPdf(J, f, ctx){
   ctx = ctx || {};
   var doc = new J({ unit:'mm', format:'a4' }), W = 210, M = 16, y = 18, ancho = W - 2 * M;
@@ -95221,15 +95572,16 @@ function freFichaPdf(J, f, ctx){
   if(typeof ctx.gente === 'number') { y += 1; linea('Personal en este frente hoy: ' + ctx.gente + (ctx.gente === 1 ? ' persona' : ' personas') + '.', { s:9.5, c:[89, 100, 111] }); }
   titulo('Documentos del frente');
   FRE_DOCS.forEach(function(t){
-    var L = (ctx.docs && ctx.docs[t.h]) || [];
-    var fe = L[0] && L[0].creado ? String(L[0].creado).slice(0, 10) : '';
+    var L = (ctx.docs && ctx.docs[t.h]) || [], O = L.length ? [] : ((ctx.obra && ctx.obra[t.h]) || []), X = L.length ? L : O;
+    var fe = X[0] && X[0].creado ? String(X[0].creado).slice(0, 10) : '';
     var f2 = fe ? fe.slice(8, 10) + '/' + fe.slice(5, 7) + '/' + fe.slice(0, 4) : '';
     if(y > 280){ doc.addPage(); y = 18; }
-    doc.setFont('helvetica', L.length ? 'normal' : 'bold'); doc.setFontSize(10.5);
-    doc.setTextColor.apply(doc, L.length ? [20, 25, 31] : (t.pide ? [180, 35, 26] : [120, 130, 140]));
-    doc.text(T((L.length ? '[x] ' : '[ ] ') + t.t), M, y);
+    doc.setFont('helvetica', X.length ? 'normal' : 'bold'); doc.setFontSize(10.5);
+    doc.setTextColor.apply(doc, X.length ? [20, 25, 31] : (t.pide ? [180, 35, 26] : [120, 130, 140]));
+    doc.text(T((X.length ? '[x] ' : '[ ] ') + t.t), M, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(T(L.length ? (L.length > 1 ? L.length + ' documentos · el último del ' + f2 : 'Subido el ' + f2) : (t.pide ? 'Falta' : 'No subido')), W - M, y, { align:'right' });
+    var cuanto = function(Z, uno){ return Z.length > 1 ? Z.length + ' documentos · el último del ' + f2 : uno + f2; };
+    doc.text(T(L.length ? cuanto(L, 'Subido el ') : (O.length ? 'De toda la obra · ' + cuanto(O, 'subido el ') : (t.pide ? 'Falta' : 'No subido'))), W - M, y, { align:'right' });
     y += 6;
   });
   y += 2;
@@ -95280,7 +95632,9 @@ function freTraer(){
   ]).then(function(r){
     if(FRE.cod !== cod) return freLista();
     FRE.lista = freDeFilas(r[0] || []);
-    FRE.docs = (r[1] || []).filter(function(d){ return d && /^Frente:/.test(String(d.nota || '')); });
+    /* 30/10/2026 · todo lo de esas carpetas, no solo lo que dice «Frente:»: lo que ya estaba subido es de toda la obra
+       (freDocsObra) y cada frente lo ve en su lugar. Las filas sin archivo no son documentos. */
+    FRE.docs = (r[1] || []).filter(function(d){ return d && d.url; });
     FRE.cargando = null; FRE.pide = true;
     try{ guardar(LS_FRE + cod, { lista:FRE.lista, docs:FRE.docs, t:Date.now() }); }catch(_g){}
     return FRE.lista;
@@ -95339,13 +95693,15 @@ function pintarFrentes(){
     if(L.length > cupo) h += '<div class="aviso" style="margin-top:10px"><b>Tienes más frentes que los de tu plan.</b><p class="sub" style="margin:6px 0 0">Siguen a la vista, pero no se puede agregar otro hasta quitar los que sobran o cambiar de plan.</p></div>';
   }
   if(FRE.cargando && !L.length) h += '<p class="sub" style="margin-top:14px">Cargando…</p>';
+  var O = freDocsObra(D);
   L.forEach(function(f){
-    var T = freDocsDe(f, D, L), falta = freFalta(f, T), n = freGenteHoy(f).length;
+    var T = freDocsDe(f, D, L), falta = freFalta(f, T, O), n = freGenteHoy(f).length;
     h += '<button type="button" class="tarj vidrio fre-t" onclick="freAbrir(\'' + escA(f.id) + '\')">' +
       '<b data-sin-trad>' + esc(f.n) + '</b>' +
       ([f.ref, f.dist, f.dep].filter(Boolean).length ? '<small data-sin-trad>' + esc([f.ref, f.dist, f.dep].filter(Boolean).join(' · ')) + '</small>' : '') +
       '<span class="fre-chips">' + FRE_DOCS.filter(function(t){ return t.pide; }).map(function(t){
-        var ok = (T[t.h] || []).length > 0;
+        /* 30/10/2026 · lo de toda la obra también le sirve */
+        var ok = (T[t.h] || []).length > 0 || (O[t.h] || []).length > 0;
         return '<i class="fre-chip ' + (ok ? 'ok' : 'mal') + '">' + (ok ? '✓' : '✗') + ' <span>' + esc(t.c || t.t) + '</span></i>';
       }).join('') + '<i class="fre-chip ' + (f.punto ? 'ok' : 'mal') + '">' + (f.punto ? '✓' : '✗') + ' <span>Punto de reunión</span></i></span>' +
       '<small class="fre-gente">👷 <span data-sin-trad>' + n + '</span> <span>' + (n === 1 ? 'persona hoy' : 'personas hoy') + '</span>' +
@@ -95382,7 +95738,7 @@ function pintarFrente(){
   if(FRE.ed){ c.innerHTML = _freFormHTML(FRE.ed); return; }
   var f = _freVer();
   if(!f){ c.innerHTML = '<p class="sub">Este frente ya no está.</p><button class="btn sec" onclick="abrirFrentes()">Volver a los frentes</button>'; return; }
-  var T = freDocsDe(f, freDocsCache(), freLista()), gente = freGenteHoy(f), paq = _frePaqDe(f), falta = freFalta(f, T);
+  var T = freDocsDe(f, freDocsCache(), freLista()), O = freDocsObra(freDocsCache()), gente = freGenteHoy(f), paq = _frePaqDe(f), falta = freFalta(f, T, O), varios = freLista().length > 1;
   var h = '<button class="btn sec" style="margin:0 0 12px" onclick="abrirFrentes()">‹ <span>Los frentes de la obra</span></button>' +
     '<h2>🚧 <span data-sin-trad>' + esc(f.n) + '</span></h2>';
   var donde = [f.ref, f.dist, f.dep].filter(Boolean).join(' · ');
@@ -95403,15 +95759,24 @@ function pintarFrente(){
   h += '<div class="sec-tit" style="margin-top:22px">Documentos del frente</div>' +
     '<p class="sub" style="margin:0 0 8px">Van a la carpeta de la obra con el nombre del frente adelante: los ve tu equipo, la web, tu gente en sus documentos y el cartel QR de la obra.</p>';
   FRE_DOCS.forEach(function(t){
-    var L = T[t.h] || [], sube = (FRE.sube === t.h);
+    var L = T[t.h] || [], Ob = O[t.h] || [], sube = (FRE.sube === t.h);
+    var cuantos = function(n){ return '<span data-sin-trad>' + n + '</span> <span>' + (n === 1 ? 'documento' : 'documentos') + '</span>'; };
     h += '<div class="tarj vidrio fre-doc" id="fre-doc-' + escA(t.h) + '"><div class="fre-doc-c"><span class="ic" aria-hidden="true">' + t.ic + '</span><span class="tx"><b>' + esc(t.t) + '</b>' +
-      '<small>' + (L.length ? '<span data-sin-trad>' + L.length + '</span> <span>' + (L.length === 1 ? 'documento' : 'documentos') + '</span>' : (t.pide ? '<span class="fre-falta">Falta</span>' : '<span>Todavía nada</span>')) + '</small></span>' +
+      '<small>' + (L.length ? cuantos(L.length) + (Ob.length ? ' · <span>y</span> ' + cuantos(Ob.length) + ' <span>de toda la obra</span>' : '')
+                            : (Ob.length ? '<span>El de toda la obra</span>' + (Ob.length > 1 ? ' · ' + cuantos(Ob.length) : '') : (t.pide ? '<span class="fre-falta">Falta</span>' : '<span>Todavía nada</span>'))) + '</small></span>' +
       '<label class="btn sec fre-subir' + (sube ? ' sube' : '') + '"><input type="file" accept="application/pdf,image/*" hidden onchange="freSubir(this,\'' + escA(t.h) + '\')"' + (sube ? ' disabled' : '') + '>' +
       (sube ? '<span>Subiendo…</span>' : '⬆️ <span>Subir</span>') + '</label></div>';
     L.forEach(function(d){
-      h += '<div class="fre-doc-f"><span class="tx"><b data-sin-trad>' + esc(d.nombre || t.t) + '</b><small><span>Subido el</span> <span data-sin-trad>' + esc(fechaLarga(String(d.creado || '').slice(0, 10)) || '') + '</span></small></span>' +
+      h += '<div class="fre-doc-f"><span class="tx"><b data-sin-trad>' + esc(d.nombre || t.t) + '</b><small><span>Subido el</span> <span data-sin-trad>' + esc(fechaLarga(String(d.creado || '').slice(0, 10)) || '') + '</span>' +
+        (varios ? ' · <button type="button" class="eq-link fre-es" onclick="freDocEsDe(\'' + escA(String(d.id)) + '\',\'\')">Es de toda la obra</button>' : '') + '</small></span>' +
         '<a class="btn sec fre-mini" target="_blank" rel="noopener" href="' + escA(d.url || '#') + '" data-nombre="' + escA(d.nombre || t.t) + '" onclick="return (typeof verDocAppA===\'function\') ? verDocAppA(this) : true;">Abrir</a>' +
         '<button type="button" class="btn sec fre-mini" onclick="freQuitarDoc(\'' + escA(String(d.id)) + '\')">Quitar</button></div>';
+    });
+    /* 30/10/2026 · lo que ya estaba en la carpeta de la obra sin frente: sale aquí solo */
+    Ob.forEach(function(d){
+      h += '<div class="fre-doc-f obra"><span class="tx"><b data-sin-trad>' + esc(d.nombre || t.t) + '</b><small><span class="fre-obra">De toda la obra</span> · <span>Subido el</span> <span data-sin-trad>' + esc(fechaLarga(String(d.creado || '').slice(0, 10)) || '') + '</span>' +
+        (varios ? ' · <button type="button" class="eq-link fre-es" onclick="freDocEsDe(\'' + escA(String(d.id)) + '\',\'' + escA(f.id) + '\')">Es de este frente</button>' : '') + '</small></span>' +
+        '<a class="btn sec fre-mini" target="_blank" rel="noopener" href="' + escA(d.url || '#') + '" data-nombre="' + escA(d.nombre || t.t) + '" onclick="return (typeof verDocAppA===\'function\') ? verDocAppA(this) : true;">Abrir</a></div>';
     });
     h += '</div>';
   });
@@ -95560,6 +95925,31 @@ function freQuitarDoc(id){
       .then(function(){ pintarFrente(); }, function(err){ _freMsg(_freMotivo(err), 'mal'); });
   }, { si:'Sí, quitar', no:'Cancelar', icono:'📄' });
 }
+/* 30/10/2026 · de qué frente es un documento de la carpeta: fid el del frente, o '' para que sea de toda la obra. Se
+   reescriben su nota y su nombre (con el frente adelante, o sin él), igual que al subirlo desde el frente. Lo usan el
+   frente y el cartel QR («¿De qué frente es?»); alListo: lo que se repinta después (si no, el frente abierto) */
+function freDocEsDe(id, fid, alListo){
+  var d = null; freDocsCache().concat((typeof QR_DOCS === 'object' && QR_DOCS) ? Object.keys(QR_DOCS).reduce(function(a, k){ return a.concat(QR_DOCS[k] || []); }, []) : [])
+    .forEach(function(x){ if(!d && x && String(x.id) === String(id)) d = x; });
+  var f = null; if(fid) freLista().forEach(function(x){ if(x.id === fid) f = x; });
+  if(!d || (fid && !f)) return Promise.resolve(false);
+  if(typeof hayCuenta !== 'function' || !hayCuenta()){ _freMsg('Entra con tu cuenta para cambiarlo.', 'mal'); return Promise.resolve(false); }
+  var cambio = f ? { nota:freNotaDoc(f), nombre:freNombreDoc(f, freNombreSinFrente(d)) } : { nota:null, nombre:freNombreSinFrente(d) };
+  return sbPatch('sst_doc?id=eq.' + encodeURIComponent(id), cambio).then(function(){
+    return freTraer().catch(function(){ return null; });
+  }).then(function(){
+    /* lo que quedó de verdad: sin permiso, el servidor no cambia nada y tampoco avisa */
+    var ya = null; freDocsCache().forEach(function(x){ if(x && String(x.id) === String(id)) ya = x; });
+    if(ya && freNorm(freDocFrente(ya)) !== freNorm(f ? f.n : '')) return Promise.reject('sin_fila');
+    FRE.msg = f ? ('Listo: «' + cambio.nombre + '» es del frente ' + f.n + '.') : ('Listo: «' + cambio.nombre + '» es de toda la obra.'); FRE.msgCl = 'ok';
+    if(typeof alListo === 'function') alListo(true); else if(_frePant() === 'p-frente') pintarFrente();
+    return true;
+  }).catch(function(err){
+    if(err === 'sin_fila'){ FRE.msg = 'Esta cuenta no puede cambiar los documentos de esta obra.'; FRE.msgCl = 'mal'; }
+    if(typeof alListo === 'function') alListo(false, err); else if(err === 'sin_fila') _freMsg(FRE.msg, 'mal'); else _freMsg(_freMotivo(err), 'mal');
+    return false;
+  });
+}
 /* la ficha del frente en PDF: para la caseta del frente */
 function freFicha(que){
   var f = _freVer(); if(!f) return;
@@ -95571,7 +95961,7 @@ function freFicha(que){
   try{
     var doc = freFichaPdf(J, f, { razon:emp.razon || e.nombre || '', proyecto:proy || e.obra_nombre || e.nombre || '', codigo:e.codigo || '',
       emergs:(typeof emergsLocal === 'function') ? emergsLocal() : [], brig:_frePaqDe(f).brig, gente:freGenteHoy(f).length,
-      docs:freDocsDe(f, freDocsCache(), freLista()) });
+      docs:freDocsDe(f, freDocsCache(), freLista()), obra:freDocsObra(freDocsCache()) });
     R = { blob:doc.output('blob'), nombre:('Ficha del frente ' + f.n).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) + '.pdf' };
   }catch(err){ _freMsg('No se pudo armar el PDF.', 'mal'); return; }
   if(que === 'compartir'){
@@ -100031,11 +100421,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = '069e72e4ad';
-var IDIOMA_FR_V = '777c0dcd26';
+var IDIOMA_PT_V = '9f9b768a4f';
+var IDIOMA_FR_V = 'ec001a7a3f';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = 'eaa18cda3e';
+var IDIOMA_EN_V = '85ea59856f';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -113113,7 +113503,8 @@ function dispositivoCerrarOtro(disp){
       if(_qt){ try{ history.replaceState(null,'',baseURL()); }catch(_h){} tcDesdeEnlace(_qt); return; }
       /* 17/10/2026 · lote 14 · el QR de un cartel de la obra (cartel-app.js) */
       var _qct=(typeof cartelDeTexto==='function') ? cartelDeTexto(location.hash||'') : null;
-      if(_qct){ try{ history.replaceState(null,'',baseURL()); }catch(_h){} cartelDesdeEnlace(_qct, false); return; }
+      if(_qct){ var _qcf=(typeof cartelFrenteDeTexto==='function') ? cartelFrenteDeTexto(location.hash||'') : '';   /* 30/10/2026 · el de un frente */
+        try{ history.replaceState(null,'',baseURL()); }catch(_h){} cartelDesdeEnlace(_qct, false, _qcf); return; }
       var _q=quimDeEnlace(location.hash||'');
       if(_q){
         try{ history.replaceState(null,'',baseURL()); }catch(_h){}
@@ -113178,9 +113569,11 @@ function dispositivoCerrarOtro(disp){
          antes de todo y sin cuenta: es para leer un documento de la obra (cartel-app.js). */
   try{
     var _mct=(typeof cartelDeTexto==='function') ? cartelDeTexto(location.hash||'') : null;
+    /* 30/10/2026 · el cartel de un frente («&f=»): se lee antes de limpiar la dirección */
+    var _mcf=(_mct && typeof cartelFrenteDeTexto==='function') ? cartelFrenteDeTexto(location.hash||'') : '';
     if(_mct){
       try{ history.replaceState(null,'',baseURL()); }catch(_h){}
-      if(cartelDesdeEnlace(_mct, true)) return;
+      if(cartelDesdeEnlace(_mct, true, _mcf)) return;
     }
   }catch(_ect){}
   try{
@@ -113836,7 +114229,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='bcaea1f6d6';
+var SELLO_APP='61ba910af5';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
