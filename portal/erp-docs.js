@@ -280,6 +280,67 @@ window.ERPDOC = (function(){
       img.src = u;
     });
   }
+  /* ── ERP de servicios (2/11/2026): el certificado con su QR de verificación y su huella, la valorización y las etiquetas QR
+     de los activos. Lo que dice cada certificado lo arma erp-servicios.js desde el contenido que firmó el servidor:
+     E = { pares:[[etiqueta, texto]], tablas:[{ titulo, cols:[{ t, k, n }], filas }], nota } ── */
+  function paresPdf(doc, x, y, P, ancho, lw, H){
+    doc.setFontSize(9);
+    P.forEach(function(p){
+      if(p[1] == null || p[1] === '') return;
+      var l1 = doc.splitTextToSize(tx(p[0]), lw - 8), l2 = doc.splitTextToSize(tx(p[1]), ancho - lw);
+      if(y + 12 * Math.max(l1.length, l2.length) > H - 80){ doc.addPage(); y = 50; }
+      doc.setFont('helvetica', 'bold'); doc.text(l1, x, y); doc.setFont('helvetica', 'normal'); doc.text(l2, x + lw, y);
+      y += 12 * Math.max(l1.length, l2.length) + 3;
+    });
+    return y;
+  }
+  function certificado(x, E){
+    return libs().then(function(J){
+      var doc = new J({ unit:'pt', format:'a4' }), W = 595.28, H = 841.89, c = x.contenido || {}, em = c.emisor || {}, titulo = c.titulo || x.tipo_n || 'Certificado';
+      var y = cabecera(doc, W, { razon:em.razon || '', ruc:em.ruc }, String(titulo.split(' ')[0]).toUpperCase(), x.numero, 'Emitido el ' + dmy(String(x.creado || x.desde || '').slice(0, 10)));
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor.apply(doc, TINTA); doc.text(doc.splitTextToSize(tx(titulo), 380), 36, y + 6); doc.setTextColor(0, 0, 0);
+      qrPdf(doc, x.enlace, W - 36 - 100, y - 4, 100);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor.apply(doc, GRIS);
+      doc.text(doc.splitTextToSize(tx('Escanéalo para ver en obrasstapp.com si está vigente, vencido o anulado.'), 100), W - 36 - 100, y + 106); doc.setTextColor(0, 0, 0);
+      y = paresPdf(doc, 36, y + 30, E.pares || [], 380, 150, H) + 18;
+      (E.tablas || []).forEach(function(t){
+        if(!t.filas || !t.filas.length) return;
+        if(y > H - 140){ doc.addPage(); y = 50; }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text(tx(t.titulo), 36, y); y += 16;
+        var w = (W - 72) / t.cols.length;
+        y = tablaPdf(doc, y, t.cols.map(function(k){ return { t:k.t, w:w, n:k.n, k:k.k }; }), t.filas, W, H) + 8;
+      });
+      if(E.nota){ if(y > H - 120){ doc.addPage(); y = 50; } doc.setFontSize(8.5); doc.setTextColor.apply(doc, GRIS); var ln = doc.splitTextToSize(tx(E.nota), W - 72); doc.text(ln, 36, y); y += ln.length * 11 + 8; doc.setTextColor(0, 0, 0); }
+      if(x.profesional && x.profesional.nombre){
+        if(y > H - 130){ doc.addPage(); y = 50; }
+        y = Math.max(y + 40, H - 150);
+        doc.setDrawColor(120, 130, 140); doc.line(36, y, 236, y);
+        doc.setFontSize(9); doc.text(tx(x.profesional.nombre), 36, y + 13); doc.setTextColor.apply(doc, GRIS); doc.text(tx(x.profesional.colegiatura || ''), 36, y + 25); doc.text('Firma y sello', 36, y + 37); doc.setTextColor(0, 0, 0);
+      }
+      pie(doc, W, H, x.numero + ' · huella SHA-256 ' + x.huella + ' · si el contenido cambia, la huella ya no coincide con la que muestra el QR.');
+      guardarPdf(doc, x.numero + '.pdf');
+    });
+  }
+  function valorizacion(v, al){
+    return libs().then(function(J){
+      var doc = new J({ unit:'pt', format:'a4' }), W = 595.28, H = 841.89;
+      var y = cabecera(doc, W, al, 'VALORIZACIÓN', v.numero, 'Del ' + dmy(v.desde) + ' al ' + dmy(v.hasta));
+      y = bloque(doc, 36, y, [['Cliente', v.cliente_n], ['Órdenes', String(v.ordenes || '')]], 400) + 8;
+      y = tablaPdf(doc, y, [{ t:'Descripción', w:263, k:function(l){ return l.d; } }, { t:'Unid.', w:40, k:function(l){ return l.u; } }, { t:'Cant.', w:60, n:1, k:function(l){ return nn(l.c); } },
+        { t:'P. unit.', w:80, n:1, k:function(l){ return sol(l.p); } }, { t:'Subtotal', w:80, n:1, k:function(l){ return sol(l.sub); } }], v.lineas || [], W, H);
+      if(y > H - 120){ doc.addPage(); y = 50; }
+      doc.setFontSize(10);
+      [['Subtotal (sin IGV)', sol(v.subtotal)]].concat(Number(v.a_favor_cliente) ? [['A favor del cliente', '- ' + sol(v.a_favor_cliente)], ['Neto', sol(v.neto)]] : []).forEach(function(r){
+        doc.setFont('helvetica', 'bold'); doc.text(tx(r[0]), W - 36 - 180, y); doc.setFont('helvetica', 'normal'); doc.text(tx(r[1]), W - 36, y, { align:'right' }); y += 15; });
+      doc.setFontSize(8.5); doc.setTextColor.apply(doc, GRIS);
+      doc.text(doc.splitTextToSize(tx('Montos sin IGV: la factura lo suma.' + (Number(v.a_favor_cliente) ? ' Lo que va a favor del cliente (lo que se le compró) se liquida aparte: no se factura.' : '')), W - 72), 36, y + 8);
+      doc.setTextColor(0, 0, 0);
+      pie(doc, W, H, 'Valorización ' + v.numero + ' generada en OBRASST. No es un comprobante de pago.');
+      guardarPdf(doc, 'Valorizacion-' + v.numero + '.pdf');
+    });
+  }
+  function etiquetasActivos(L){ return etiquetas(L.map(function(a){ return { qr:a.qr, t1:a.codigo, t2:[a.tipo_n, a.nombre].filter(Boolean).join(' · ') + ' · Escanéalo para ver si está habilitado' }; }), 'Etiquetas-QR.pdf'); }
   return { cotizacion:cotizacion, guia:guia, comprobante:comprobante, estadoCuenta:estadoCuenta, dossier:dossier, etiquetasLotes:etiquetasLotes, etiquetasProducto:etiquetasProducto,
+           certificado:certificado, valorizacion:valorizacion, etiquetasActivos:etiquetasActivos,
            xlsx:xlsx, leerTabla:leerTabla, firmaPad:firmaPad, achicarFoto:achicarFoto, _zip:zip, _leerXlsx:leerXlsx, _leerCsv:leerCsv, _tx:tx };
 })();

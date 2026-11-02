@@ -14,7 +14,9 @@ function facComprobantes(){
   rpc('erp_facturas', {}).then(function(j){
     if(!j || !j.ok) return fuera(j);
     ERP.cache.cpes = j.lista;
-    $('cargando').outerHTML = '<div class="filtros"><button type="button" class="bt" data-a="facDePedido">Facturar un pedido</button></div>' +
+    /* los rubros de servicios facturan sus valorizaciones (erp-servicios.js), no pedidos */
+    $('cargando').outerHTML = '<div class="filtros">' + (esSrv() ? (puede('srv_valorizar') ? '<button type="button" class="bt" data-ir="srv_valorizar">Facturar una valorización</button>' : '') :
+      '<button type="button" class="bt" data-a="facDePedido">Facturar un pedido</button>') + '</div>' +
       tabla([{ t:'Comprobante', k:function(f){ return '<span class="mono">' + esc(f.codigo) + '</span><span class="sub">' + esc(TIPO_CPE[f.tipo]) + ' · ' + fecha(f.fecha) + (f.referencia_codigo ? ' · sobre ' + esc(f.referencia_codigo) : '') + '</span>'; } },
         { t:'Cliente', k:function(f){ return esc(f.cliente_nombre); } }, { t:'Total', n:1, k:function(f){ return soles(f.total) + (f.detraccion ? '<span class="sub">detracción ' + soles(f.detraccion.monto) + '</span>' : '') + (f.retencion ? '<span class="sub">retención ' + soles(f.retencion.monto) + '</span>' : ''); } },
         { t:'Saldo', n:1, k:function(f){ return f.saldo != null ? soles(f.saldo) : '—'; } }, { t:'SUNAT', k:function(f){ return sunatTxt(f.sunat); } }], j.lista, { a:'verComprobante', vacio:'Sin comprobantes' });
