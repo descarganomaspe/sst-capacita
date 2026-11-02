@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERP Distribuidor · OBRASST Aliados</title>
+<meta name="description" content="El ERP de los distribuidores aliados de OBRASST: almacén, cotizaciones, despacho, facturación, cobranzas y las solicitudes de las empresas.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* ═══ OBRASST · ERP Distribuidor (2/11/2026): la evolución del Portal de Aliados. Todo el JS va en erp.js (sin scripts en línea). ═══ */
+:root{
+  --fondo:#F4F6F8; --panel:#FFFFFF; --raya:#E3E8EC; --raya2:#CBD4DB; --tinta:#0B2A3A; --tinta2:#123B50; --tinta3:#1B4B63;
+  --texto:#22323D; --gris:#62737F; --gris2:#98A7B1; --casco:#F5B700; --casco-f:#FFF7DD;
+  --ok:#1E8E5A; --ok-f:#E8F5EE; --ojo:#8A5200; --ojo-f:#FBF3E4; --mal:#C6323A; --mal-f:#FBE9EA; --azul:#2563A8; --azul-f:#E9F0FA;
+  --f:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; --mono:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; background:var(--fondo); color:var(--texto); font:14.5px/1.5 var(--f); -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0; color:var(--tinta); font-weight:600; letter-spacing:-.01em; text-wrap:balance}
+p{margin:0} a{color:var(--azul)}
+:focus-visible{outline:2px solid var(--casco); outline-offset:2px; border-radius:4px}
+[hidden]{display:none !important}
+.mono{font-family:var(--mono)} .num{text-align:right} .gris{color:var(--gris)} .chico{font-size:12.5px}
+/* barra de arriba */
+.barra{position:sticky; top:0; z-index:20; background:var(--tinta); color:#fff; display:flex; align-items:center; gap:12px; min-height:54px; padding:0 14px}
+.marca{display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none; min-width:0}
+.marca-ic{width:28px; height:28px; border-radius:7px; background:var(--tinta3); display:grid; place-items:center; flex:none}
+.marca-ic i{display:block; width:13px; height:4px; background:var(--casco); border-radius:2px}
+.marca b{font-size:14px; letter-spacing:.05em} .marca span{font-size:12.5px; color:#9FB6C4; border-left:1px solid rgba(255,255,255,.18); padding-left:10px; white-space:nowrap}
+.barra .der{margin-left:auto; display:flex; align-items:center; gap:10px; min-width:0}
+.barra .der span{font-size:12.5px; color:#C8D7E0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:34vw}
+.barra button{font:500 13px/1 var(--f); color:#fff; background:transparent; border:1px solid rgba(255,255,255,.3); border-radius:8px; padding:8px 11px; cursor:pointer}
+.barra .menu-bt{display:none}
+.prueba{background:var(--casco); color:var(--tinta); font:600 11px/1 var(--f); letter-spacing:.06em; padding:5px 8px; border-radius:6px; text-transform:uppercase}
+/* el armazón: menú a la izquierda */
+.app{display:grid; grid-template-columns:232px minmax(0,1fr); min-height:calc(100vh - 54px)}
+.lado{background:var(--panel); border-right:1px solid var(--raya); padding:14px 10px; position:sticky; top:54px; height:calc(100vh - 54px); overflow:auto}
+.lado .quien{padding:6px 10px 12px; border-bottom:1px solid var(--raya); margin-bottom:10px}
+.lado .quien b{display:block; color:var(--tinta); font-size:14px; line-height:1.3} .lado .quien small{color:var(--gris); font-size:12px}
+.lado nav{display:grid; gap:2px}
+.lado nav button{display:flex; align-items:center; gap:10px; text-align:left; border:0; background:transparent; font:500 14px/1.2 var(--f); color:var(--texto);
+  padding:10px 10px; border-radius:8px; cursor:pointer; border-left:3px solid transparent}
+.lado nav button:hover{background:var(--fondo)}
+.lado nav button.on{background:var(--casco-f); color:var(--tinta); font-weight:600; border-left-color:var(--casco)}
+.lado nav .n{margin-left:auto; min-width:20px; padding:2px 6px; border-radius:999px; background:var(--casco); color:var(--tinta); font-size:11px; text-align:center}
+.principal{padding:18px 22px 60px; min-width:0}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .lado{position:fixed; left:0; top:54px; bottom:0; width:260px; z-index:30; transform:translateX(-102%); transition:transform .18s; box-shadow:0 20px 40px -20px rgba(0,0,0,.4)}
+  .lado.abierto{transform:none}
+  .barra .menu-bt{display:inline-block}
+  .principal{padding:14px 16px 60px}
+}
+/* piezas */
+.cab{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:flex-end; justify-content:space-between; margin:0 0 12px}
+.cab h1{font-size:21px} .cab p{color:var(--gris); font-size:13.5px; margin-top:2px}
+.pestanas{display:flex; gap:2px; overflow-x:auto; border-bottom:1px solid var(--raya); margin:0 0 16px; scrollbar-width:none}
+.pestanas button{border:0; background:transparent; font:600 13.5px/1 var(--f); color:var(--gris); padding:11px 11px 12px; border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap}
+.pestanas button.on{color:var(--tinta); border-bottom-color:var(--casco)}
+.bt{display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:38px; padding:0 15px; border-radius:8px; font:600 13.5px/1 var(--f);
+  text-decoration:none; cursor:pointer; border:1px solid transparent; background:var(--tinta); color:#fff; white-space:nowrap}
+.bt:hover{background:var(--tinta2)} .bt:disabled{opacity:.55; cursor:default}
+.bt.sec{background:var(--panel); color:var(--tinta); border-color:var(--raya2)} .bt.sec:hover{background:var(--fondo)}
+.bt.casco{background:var(--casco); color:var(--tinta)} .bt.mal{background:var(--panel); color:var(--mal); border-color:#E7B9BC}
+.bt.mini{min-height:30px; padding:0 10px; font-size:12.5px; border-radius:7px}
+.bt-link{background:none; border:0; padding:0; color:var(--azul); font:inherit; cursor:pointer; text-decoration:underline}
+.acciones{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.tarj{background:var(--panel); border:1px solid var(--raya); border-radius:12px; padding:16px; margin:0 0 14px}
+.tarj h2{font-size:16px; margin:0 0 8px}
+.grilla{display:grid; gap:12px; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); margin:0 0 14px}
+.kpi{background:var(--panel); border:1px solid var(--raya); border-radius:12px; padding:14px}
+.kpi small{display:block; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--gris); font-weight:600}
+.kpi b{display:block; font-size:22px; color:var(--tinta); margin-top:4px; font-weight:600} .kpi span{font-size:12.5px; color:var(--gris)}
+.dos{display:grid; gap:14px} @media (min-width:1100px){ .dos{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+.campo{display:grid; gap:4px; margin:0 0 12px} .campo label{font-size:13px; font-weight:500}
+.campos{display:grid; gap:0 12px; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr))}
+input, select, textarea{width:100%; font:inherit; font-size:14.5px; color:var(--texto); background:var(--panel); border:1px solid var(--raya2); border-radius:8px; padding:8px 10px}
+textarea{resize:vertical}
+input:focus, select:focus, textarea:focus{outline:none; border-color:var(--tinta3); box-shadow:0 0 0 3px rgba(27,75,99,.14)}
+input[type=checkbox]{width:17px; height:17px; padding:0; accent-color:var(--tinta)}
+.chk{display:flex; gap:8px; align-items:center; font-size:13.5px; margin:0 0 10px; cursor:pointer}
+.ayuda{font-size:12.5px; color:var(--gris)}
+.msg{font-size:13px; margin:8px 0 0; min-height:17px} .msg.mal{color:var(--mal)} .msg.ok{color:var(--ok)}
+.aviso{border-radius:10px; padding:11px 13px; font-size:13.5px; background:var(--azul-f); border:1px solid #CFDDF0; margin:0 0 12px}
+.aviso.ok{background:var(--ok-f); border-color:#BFE3CE} .aviso.ojo{background:var(--ojo-f); border-color:#EED9A8} .aviso.mal{background:var(--mal-f); border-color:#F0C9CC}
+.aviso.neu{background:var(--fondo); border-color:var(--raya2)} .aviso b{color:var(--tinta)}
+.pill{display:inline-block; font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px; white-space:nowrap; background:var(--fondo); color:var(--gris)}
+.pill.ok{background:var(--ok-f); color:var(--ok)} .pill.med{background:var(--ojo-f); color:var(--ojo)} .pill.mal{background:var(--mal-f); color:var(--mal)} .pill.az{background:var(--azul-f); color:var(--azul)}
+.tabla-caja{overflow-x:auto; border:1px solid var(--raya); border-radius:10px; background:var(--panel); margin:0 0 14px}
+table{width:100%; border-collapse:collapse; font-size:13.5px}
+th{font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--gris); text-align:left; font-weight:600; padding:8px 9px; border-bottom:1px solid var(--raya); background:#FAFBFC; white-space:nowrap}
+td{padding:8px 9px; border-bottom:1px solid #EEF2F5; vertical-align:top} tr:last-child td{border-bottom:0}
+td .sub{display:block; font-size:12px; color:var(--gris); margin-top:1px}
+tr.clic{cursor:pointer} tr.clic:hover td{background:#FAFBFC}
+td input, td select{padding:6px 8px; font-size:13.5px; min-width:70px}
+.filtros{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px; align-items:center}
+.filtros button{border:1px solid var(--raya2); background:var(--panel); color:var(--texto); font:500 12.5px/1 var(--f); padding:7px 11px; border-radius:999px; cursor:pointer}
+.filtros button.on{background:var(--tinta); color:#fff; border-color:var(--tinta)}
+.filtros input{max-width:260px}
+.vacio{text-align:center; padding:28px 16px; color:var(--gris); background:var(--panel); border:1px dashed var(--raya2); border-radius:12px; margin:0 0 14px}
+.vacio b{display:block; color:var(--tinta); font-size:15px; margin-bottom:4px}
+.barras{display:flex; align-items:flex-end; gap:10px; height:150px; padding:8px 4px 0; border-bottom:1px solid var(--raya)}
+.barras div{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:4px; height:100%}
+.barras i{display:block; width:70%; max-width:46px; background:var(--tinta3); border-radius:4px 4px 0 0; min-height:2px}
+.barras i.m{background:var(--casco)} .barras small{font-size:11px; color:var(--gris)}
+.margen-alto{color:var(--ok); font-weight:600} .margen-medio{color:var(--ojo); font-weight:600} .margen-bajo{color:var(--mal); font-weight:600}
+/* la hoja (modal) */
+.velo{position:fixed; inset:0; background:rgba(11,42,58,.45); z-index:40; display:flex; align-items:flex-start; justify-content:center; padding:5vh 12px; overflow:auto}
+.hoja{background:var(--panel); border-radius:14px; width:100%; max-width:760px; box-shadow:0 30px 60px -20px rgba(0,0,0,.45)}
+.hoja.ancha{max-width:1040px}
+.hoja .h-cab{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 16px; border-bottom:1px solid var(--raya)}
+.hoja .h-cab h2{font-size:16px} .hoja .h-cuerpo{padding:16px} .hoja .h-pie{padding:12px 16px; border-top:1px solid var(--raya); display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
+.x{border:0; background:transparent; font-size:22px; line-height:1; color:var(--gris); cursor:pointer; padding:4px 8px}
+#toast{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--tinta); color:#fff; padding:10px 15px; border-radius:10px; font-size:13.5px;
+  box-shadow:0 10px 30px -12px rgba(0,0,0,.5); z-index:60; max-width:calc(100vw - 32px)}
+/* entrada y 2FA */
+.entrada{max-width:980px; margin:0 auto; padding:34px 16px 60px; display:grid; gap:24px}
+@media (min-width:900px){ .entrada{grid-template-columns:1fr 1fr; align-items:start; padding-top:56px} }
+.entrada h1{font-size:clamp(24px,3.4vw,32px); line-height:1.15} .entrada .lado-t p{color:var(--gris); margin-top:10px}
+.caja-ent{background:var(--panel); border:1px solid var(--raya); border-radius:14px; padding:20px}
+.pest-ent{display:flex; gap:6px; margin:0 0 16px; background:var(--fondo); border-radius:10px; padding:4px}
+.pest-ent button{flex:1; border:0; background:transparent; font:600 14px/1 var(--f); color:var(--gris); padding:10px; border-radius:8px; cursor:pointer}
+.pest-ent button.on{background:var(--panel); color:var(--tinta); box-shadow:0 1px 2px rgba(11,42,58,.12)}
+.qr-2fa{display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap} .qr-2fa img{width:180px; height:180px; border:1px solid var(--raya); border-radius:8px; background:#fff}
+.firma{border:1px dashed var(--raya2); border-radius:10px; background:#fff; touch-action:none; width:100%; height:180px; display:block}
+.pie{color:var(--gris); font-size:12px; padding:22px 16px 30px; text-align:center} .pie a{color:var(--gris)}
+@media print{ .barra, .lado, .acciones, .filtros, .pestanas{display:none !important} .app{display:block} }
+</style>
+</head>
+<body>
+<header class="barra">
+  <button type="button" class="menu-bt" id="b-menu" aria-label="Abrir el menú" hidden>Menú</button>
+  <a class="marca" href="erp" aria-label="ERP de OBRASST Aliados, inicio"><span class="marca-ic"><i></i></span><b>OBRASST</b><span id="b-sub">Aliados · ERP</span></a>
+  <div class="der"><span class="prueba" id="b-prueba" hidden title="Los comprobantes y guías salen en prueba: sin valor tributario hasta conectar un PSE">SUNAT en prueba</span><span id="b-nombre"></span><button type="button" id="b-salir" hidden>Salir</button></div>
+</header>
+<div id="v-carga" class="entrada"><p class="ayuda">Cargando…</p></div>
+
+<section id="v-entrar" class="entrada" hidden>
+  <div class="lado-t">
+    <h1>Tu distribuidora, en orden: almacén, ventas, guías, facturas y cobranzas</h1>
+    <p>Las solicitudes de las empresas que usan OBRASST llegan a tu bandeja y se cotizan con lo que tienes en tu almacén.</p>
+    <p class="ayuda" style="margin-top:14px">¿Todavía no eres aliado? <a href="aliados.html">Así funciona el programa</a>.</p>
+  </div>
+  <div class="caja-ent">
+    <div class="aviso" id="e-inv" hidden><b>Te invitaron.</b> Entra o crea tu cuenta y la invitación se acepta sola.</div>
+    <div class="pest-ent" role="tablist" aria-label="Entrar o crear la cuenta">
+      <button type="button" role="tab" id="t-entrar" class="on" aria-selected="true">Entrar</button>
+      <button type="button" role="tab" id="t-crear" aria-selected="false">Crear mi cuenta</button>
+    </div>
+    <form id="f-entrar" novalidate>
+      <div class="campo"><label for="e-correo">Correo</label><input id="e-correo" type="email" autocomplete="email" maxlength="160" required></div>
+      <div class="campo"><label for="e-clave">Contraseña</label><input id="e-clave" type="password" autocomplete="current-password" maxlength="72" required></div>
+      <div class="acciones"><button class="bt" type="submit" id="e-bt">Entrar</button><button type="button" class="bt-link" id="e-olvido">¿Olvidaste tu contraseña?</button></div>
+      <p class="msg" id="e-msg" role="alert"></p>
+      <p class="ayuda" style="margin-top:6px">Es la misma cuenta de obrasstapp.com.</p>
+    </form>
+    <form id="f-crear" novalidate hidden>
+      <div class="campo"><label for="c-nombre">Tu nombre y apellido</label><input id="c-nombre" autocomplete="name" maxlength="120" required></div>
+      <div class="campo"><label for="c-correo">Correo de tu empresa</label><input id="c-correo" type="email" autocomplete="email" maxlength="160" required></div>
+      <div class="campo"><label for="c-clave">Contraseña</label><input id="c-clave" type="password" autocomplete="new-password" maxlength="72" required aria-describedby="c-clave-a">
+        <p class="ayuda" id="c-clave-a">8 caracteres o más, con letras y números.</p></div>
+      <label class="chk" for="c-legal-1"><input type="checkbox" id="c-legal-1"><span>He leído y acepto los <a href="../?legal=terminos" target="_blank" rel="noopener">Términos y condiciones</a>.</span></label>
+      <label class="chk" for="c-legal-2"><input type="checkbox" id="c-legal-2"><span>Entiendo cómo se tratan los datos. <a href="../?legal=privacidad" target="_blank" rel="noopener">Ver la política</a>.</span></label>
+      <button class="bt" type="submit" id="c-bt">Crear mi cuenta</button>
+      <p class="msg" id="c-msg" role="alert"></p>
+    </form>
+  </div>
+</section>
+
+<section id="v-2fa" class="entrada" hidden>
+  <div class="lado-t"><h1>Verificación en dos pasos</h1><p>El administrador del ERP entra con su contraseña y un código de 6 dígitos que da una app de autenticación (Google Authenticator, Microsoft Authenticator u otra).</p></div>
+  <div class="caja-ent"><div id="d-2fa"></div><button type="button" class="bt sec" id="d-2fa-volver" hidden style="margin-top:12px">Volver</button></div>
+</section>
+
+<section id="v-no" class="entrada" hidden>
+  <div class="caja-ent" style="grid-column:1/-1; max-width:640px">
+    <h2 id="no-t">Esta cuenta no es de un aliado de OBRASST</h2>
+    <p class="ayuda" id="no-p" style="margin-top:6px"></p>
+    <div class="acciones" style="margin-top:14px"><a class="bt sec" href="aliados.html">Cómo ser aliado</a><a class="bt sec" href="index.html">Ir al portal de mi empresa</a><button type="button" class="bt" id="no-salir">Entrar con otra cuenta</button></div>
+  </div>
+</section>
+
+<div class="app" id="v-app" hidden>
+  <aside class="lado" id="lado"><div class="quien"><b id="l-razon"></b><small id="l-plan"></small></div><nav id="menu" aria-label="Secciones del ERP"></nav></aside>
+  <main class="principal" id="vista"></main>
+</div>
+<footer class="pie" id="pie"><a href="aliados.html">OBRASST Aliados</a> · <a href="../?legal=terminos" target="_blank" rel="noopener">Términos</a> · <a href="../?legal=privacidad" target="_blank" rel="noopener">Privacidad</a> · <a href="mailto:info@obrasstapp.com">info@obrasstapp.com</a></footer>
+<div id="hojas"></div>
+<div id="toast" role="status" hidden></div>
+<script src="cotizar.js?v=341a6ca045"></script>
+<script src="erp.js?v=erp1"></script>
+<script src="erp-ventas.js?v=erp1"></script>
+<script src="erp-operacion.js?v=erp1"></script>
+<script src="erp-finanzas.js?v=erp1"></script>
+</body>
+</html>
