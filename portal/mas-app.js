@@ -696,6 +696,16 @@ function freDeDoc(d, frentes){
   (frentes || []).forEach(function(f){ if(!hit && freEsNombre(f, m[1])) hit = f; });
   return hit;
 }
+function freDocFrente(d){ var m = /^Frente:\s*(.+)$/.exec(String((d && d.nota) || '').trim()); return m ? freTxt(m[1], 60) : ''; }
+function freDocsObra(docs){
+  var out = {}; FRE_DOCS.forEach(function(t){ out[t.h] = []; });
+  (docs || []).forEach(function(d){
+    if(!d || !out[d.hoja] || freDocFrente(d) || !/^https?:\/\//i.test(String(d.url || ''))) return;
+    out[d.hoja].push(d);
+  });
+  Object.keys(out).forEach(function(k){ out[k].sort(function(a, b){ return String(b.creado || '').localeCompare(String(a.creado || '')); }); });
+  return out;
+}
 function freDocsDe(f, docs, frentes){
   var out = {}; FRE_DOCS.forEach(function(t){ out[t.h] = []; });
   if(!f) return out;
@@ -724,10 +734,15 @@ function freDeNombre(nom, frentes){
 }
 function frePaquete(frentes, docs, brig, trabs){
   return (frentes || []).filter(function(f){ return f && f.n; }).map(function(f){
-    var T = freDocsDe(f, docs, frentes), d = [];
+    var T = freDocsDe(f, docs, frentes), O = freDocsObra(docs), d = [];
     FRE_DOCS.forEach(function(t){
-      (T[t.h] || []).slice(0, 3).forEach(function(x){
-        if(x && /^https:\/\//.test(String(x.url || ''))) d.push({ h:t.h, t:t.t, n:String(x.nombre || t.t).slice(0, 160), u:String(x.url).slice(0, 600) });
+      /* 30/10/2026 · sin uno propio, el de toda la obra (o:1) */
+      var propio = (T[t.h] || []).length > 0;
+      ((propio ? T[t.h] : O[t.h]) || []).slice(0, 3).forEach(function(x){
+        if(!x || !/^https:\/\//.test(String(x.url || ''))) return;
+        var y = { h:t.h, t:t.t, n:String(x.nombre || t.t).slice(0, 160), u:String(x.url).slice(0, 600) };
+        if(!propio) y.o = 1;
+        d.push(y);
       });
     });
     var b = (brig || []).filter(function(p){

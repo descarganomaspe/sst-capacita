@@ -442,8 +442,10 @@ function snTextoDe(k){
 function snAbrir(k){
   var A=SEN_APP; if(!A.hay(k)) return;
   var S=A.porK(k), pa=snTextoDe(k);
-  SNE={ k:k, aviso:pa.aviso, texto:pa.texto, sub:'', tam:SNW.op.tam, orient:SNW.op.orient, porHoja:SNW.op.porHoja, qr:false, qrSel:{}, qrIni:false };
+  SNE={ k:k, aviso:pa.aviso, texto:pa.texto, sub:'', tam:SNW.op.tam, orient:SNW.op.orient, porHoja:SNW.op.porHoja, qr:false, qrSel:{}, qrIni:false, doble:false };
   var tq=A.eqTipo ? A.eqTipo(k) : '';
+  /* 30/10/2026 · las de riesgo eléctrico: una cara o doble cara (una tira para doblar y enmicar, para las extensiones) */
+  var dob=!!(A.doble && A.doble(k));
   SNW.eq=null;     /* los equipos se traen de nuevo cada vez que se abre: si registró uno, ya sale */
   var cuerpo='<div class="sn-ed'+(SNE.orient==='h' ? ' echada' : '')+'" id="sn-ed"><div class="sn-form">'+
     '<div class="campo"><label for="sn-a">Palabra de aviso <small>· el renglón grande</small></label>'+
@@ -456,6 +458,8 @@ function snAbrir(k){
     '<div class="campo"><label>¿Cómo va la hoja?</label>'+snChips('sn-ori', SN_ORI, SNE.orient, 'Orientación de la hoja')+'</div>'+
     '<div class="campo"><label>¿Cuántas por hoja?</label>'+snChips('sn-ph', SN_POR_HOJA.map(function(n){ return { v:n, t:String(n) }; }), SNE.porHoja, 'Cuántas señales por hoja')+
     '<p class="ayuda">La misma señal repetida, para cortar. Si quieres varias señales distintas en una hoja, usa «＋ A la lista».</p></div>'+
+    (dob ? '<div class="campo"><label>¿Una cara o doble cara?</label>'+snChips('sn-dob', [{ v:'1', t:'Una cara' }, { v:'2', t:'Doble cara · para doblar y enmicar' }], '1', 'Una cara o doble cara')+
+      '<p class="ayuda" id="sn-dob-ay">Para las extensiones eléctricas y los cables: chica, en una tira que se dobla y se enmica, con la señal a los dos lados.</p></div>' : '')+
     (tq ? snQRCampoHTML() : '')+
     '<div id="sn-logo-c"></div></div>'+
     '<div class="sn-lado"><div class="sn-prev" id="sn-prev" aria-label="Vista previa de la hoja"><div class="sn-prev-msg">Armando la vista previa…</div></div>'+
@@ -465,7 +469,7 @@ function snAbrir(k){
   abrirHoja(S.n, (A.grupos[S.g]||'')+' · NTP 399.010-1, Anexo B', cuerpo, pie, { ancha:true, clase:'sn-h' });
   var prev=$('sn-prev');
   var T=snTaller(prev, function(){
-    var o={ k:SNE.k, aviso:SNE.aviso, texto:SNE.texto, sub:SNE.sub, tam:SNE.tam, orient:SNE.orient, porHoja:SNE.porHoja };
+    var o={ k:SNE.k, aviso:SNE.aviso, texto:SNE.texto, sub:SNE.sub, tam:SNE.tam, orient:SNE.orient, porHoja:SNE.porHoja, doble:SNE.doble };
     /* con el QR de cada equipo (lote 15): un cartel por cada uno de los marcados */
     if(SNE.qr){ var q=snQRItems(); if(!q) return Promise.reject('sin_qr'); o.qr=q; }
     return snCtx().then(function(C){ return SEN_APP.senal(o, C); }).then(function(R){ R.cuenta=1; R.o=o; return R; });
@@ -485,6 +489,18 @@ function snAbrir(k){
   snChipsAl('sn-tam', function(v){ SNE.tam=v; SNW.op.tam=v; T.pide(); });
   snChipsAl('sn-ori', function(v){ SNE.orient=v; SNW.op.orient=v; var ed=$('sn-ed'); if(ed) ed.classList.toggle('echada', v==='h'); T.pide(); });
   snChipsAl('sn-ph', function(v){ SNE.porHoja=+v||1; SNW.op.porHoja=SNE.porHoja; T.pide(); });
+  /* 30/10/2026 · doble cara: chica de por sí (si estaba en 1 o 2 por hoja, pasa a 8 tiras) */
+  snChipsAl('sn-dob', function(v){
+    SNE.doble=(v==='2');
+    if(SNE.doble && SNE.porHoja<4){
+      SNE.porHoja=8;
+      Array.prototype.forEach.call(document.querySelectorAll('#sn-ph button[data-v]'), function(x){ var on=(x.getAttribute('data-v')==='8'); x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+    }
+    var ay=$('sn-dob-ay');
+    if(ay) ay.textContent=SNE.doble ? 'Las dos caras salen unidas, cabeza con cabeza, con la línea de doblez al medio. Corta la tira por su borde, dóblala por la línea punteada y enmícala: colgada del cable o de la extensión, se lee derecha de los dos lados. «¿Cuántas por hoja?» cuenta las tiras.'
+                          : 'Para las extensiones eléctricas y los cables: chica, en una tira que se dobla y se enmica, con la señal a los dos lados.';
+    T.pide();
+  });
   $('sn-cerrar').onclick=cerrarHoja;
   $('sn-pdf').onclick=function(){ if(snQRFalta()) return; snEntregar(T, 'senal', 'señales', 'pdf', this); };
   $('sn-imp').onclick=function(){ if(snQRFalta()) return; snEntregar(T, 'senal', 'señales', 'imp', this); };
@@ -792,12 +808,15 @@ function snQRPinta(){
 function snMedidaHTML(R){
   var d=R.metros, n=R.celdas||1, h='';
   if(R.qr) h+='<p><b>'+n+' '+(n===1 ? 'cartel' : 'carteles')+' con su QR'+((R.hojas||1)>1 ? ' en '+R.hojas+' hojas '+esc(snHojaTxt(R.hoja)) : ', en una hoja '+esc(snHojaTxt(R.hoja)))+' · tarjeta de '+Math.round(R.w)+' × '+Math.round(R.h)+' mm</b> · símbolo de '+Math.round(R.lado)+' mm · QR de '+Math.round(R.qr)+' mm</p>';
+  else if(R.doble) h+='<p><b>'+n+' '+(n===1 ? 'señal' : 'señales')+' a doble cara en una hoja '+esc(snHojaTxt(R.hoja))+' · cada cara de '+Math.round(R.w)+' × '+Math.round(R.h)+' mm</b> · la tira de '+Math.round(R.w)+' × '+Math.round(R.ph)+' mm · símbolo de '+Math.round(R.lado)+' mm</p>';
   else h+='<p><b>'+(n>1 ? n+' señales en una hoja '+esc(snHojaTxt(R.hoja))+' · tarjeta de ' : 'Cartel de ')+Math.round(R.w)+' × '+Math.round(R.h)+' mm</b> · símbolo de '+Math.round(R.lado)+' mm</p>';
   if(R.qr && R.qr<(SEN_APP.qrMin||16)) h+='<p class="ojo"><b>El QR queda de '+Math.round(R.qr)+' mm:</b> se lee acercando mucho el celular. Para que se lea cómodo, pon menos por hoja o usa una hoja más grande.</p>';
-  if(d<5) h+='<p class="ojo"><b>Se lee solo de cerca:</b> no llega a los 5 metros. Pon menos por hoja, una hoja más grande, o acorta el texto: la banda le está quitando sitio al símbolo.</p>';
+  /* 30/10/2026 · la de doble cara es chica a propósito: se lee de cerca, en el cable */
+  if(d<5 && R.doble) h+='<p>Es para leer de cerca, en el cable o la extensión: <b>hasta unos '+Math.max(1, Math.round(d))+' metros</b>. <span class="gris">Para una señal que se vea de lejos, usa una cara y menos por hoja.</span></p>';
+  else if(d<5) h+='<p class="ojo"><b>Se lee solo de cerca:</b> no llega a los 5 metros. Pon menos por hoja, una hoja más grande, o acorta el texto: la banda le está quitando sitio al símbolo.</p>';
   else h+='<p>Se lee bien hasta unos <b>'+Math.round(d)+' metros</b>. <span class="gris">Sale de la fórmula de la NTP: el área del símbolo tiene que ser al menos la distancia al cuadrado dividida entre 2000.</span></p>';
   if(R.ft && R.ft<5.4) h+='<p class="ojo"><b>El texto quedó muy chico.</b> A este tamaño casi no se lee: pon menos señales por hoja, usa una hoja más grande o acorta el texto.</p>';
-  h+='<p class="gris">Imprime al 100 %, sin «ajustar a la página»: si la impresora la encoge, el tamaño cambia. Corta por el marco.</p>';
+  h+='<p class="gris">Imprime al 100 %, sin «ajustar a la página»: si la impresora la encoge, el tamaño cambia. '+(R.doble ? 'Corta cada tira por su borde, dóblala por la línea punteada y enmícala.' : 'Corta por el marco.')+'</p>';
   return h;
 }
 

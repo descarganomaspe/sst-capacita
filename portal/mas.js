@@ -3356,7 +3356,8 @@ function _quiTraer(fresco){
     var fre=(typeof MAS_APP==='object' && typeof MAS_APP.freDeFilas==='function') ? MAS_APP.freDeFilas(r[6]||[]) : [];
     return { C:r[0], com:_comDoc(r[1] && r[1].valor), creds:_creLimpia(r[2] && r[2].valor, t), gente:r[4]||[],
              pub:(pub && typeof pub==='object' && !Array.isArray(pub)) ? pub : null, pubIds:filas.map(function(f){ return f && f.id; }).filter(Boolean),
-             fre:fre, freDocs:(r[7]||[]).filter(function(d){ return d && /^Frente:/.test(String(d.nota||'')); }) };
+             /* 30/10/2026 · todo lo de esas carpetas: sin uno propio, cada frente publica el de toda la obra (frePaquete) */
+             fre:fre, freDocs:(r[7]||[]).filter(function(d){ return d && d.url; }) };
   });
 }
 function _quiPon(R){ var W=QUIW; W.C=R.C; W.com=R.com; W.creds=R.creds; W.gente=R.gente; W.pub=R.pub; W.pubIds=R.pubIds; W.fre=R.fre||[]; W.freDocs=R.freDocs||[]; }
