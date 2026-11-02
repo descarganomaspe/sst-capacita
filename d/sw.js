@@ -45,7 +45,10 @@ function falta(u, raiz){
   try{ tk = u.searchParams.get('t') || ''; }catch(_t){}
   var o = '', h = '';
   try{ o = u.searchParams.get('o') || ''; h = u.searchParams.get('h') || ''; }catch(_o){}
-  var q = tk ? ('?t=' + encodeURIComponent(tk) + '&falta=1')
+  /* 30/10/2026 · el cartel de un frente vuelve a su frente («&f=») */
+  var f = '';
+  try{ f = u.searchParams.get('f') || ''; }catch(_f){}
+  var q = tk ? ('?t=' + encodeURIComponent(tk) + (f ? '&f=' + encodeURIComponent(f) : '') + '&falta=1')
              : (o && h ? ('?o=' + encodeURIComponent(o) + '&h=' + encodeURIComponent(h) + '&falta=1') : '?falta=1');
   return Response.redirect(raiz + q, 302);
 }

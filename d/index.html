@@ -4,14 +4,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script>
 /* 17/10/2026 · lote 14 · en el celular que usa la app, el cartel se abre en la app, como el QR del químico
-   («../#cartel=FICHA»). «&w=1» es la vuelta de la app (el que nunca la usó, o sin señal): ahí se queda aquí. */
+   («../#cartel=FICHA»). «&w=1» es la vuelta de la app (el que nunca la usó, o sin señal): ahí se queda aquí.
+   30/10/2026 · el cartel de un frente lleva «&f=<frente>»: va también a la app. */
 (function(){ try{
-  var s = new URLSearchParams(location.search), tk = s.get('t') || '';
+  var s = new URLSearchParams(location.search), tk = s.get('t') || '', f = String(s.get('f') || '').slice(0, 60);
   if(!/^[A-Za-z0-9_-]{6,64}$/.test(tk) || s.get('w') === '1' || s.get('falta') === '1') return;
   if(navigator.onLine === false) return;
   var rol = null; try{ rol = localStorage.getItem('sstc_rol'); }catch(_l){ rol = null; }
   if(!rol || rol === 'null') return;
-  location.replace('../#cartel=' + tk);
+  location.replace('../#cartel=' + tk + (f ? '&f=' + encodeURIComponent(f) : ''));
 }catch(_e){} })();
 </script>
 <meta name="robots" content="noindex">
@@ -53,6 +54,7 @@ a.doc:focus-visible{outline:2px solid #F5B700;outline-offset:2px}
 .doc .ir{flex:0 0 auto;color:#F5B700;font-weight:800;font-size:14px;font-variant-numeric:tabular-nums}
 /* 02/10/2026 · lo que este celular ya tiene guardado, y lo que necesita señal */
 .doc .ya{color:#6FD08C;font-weight:700}
+.doc .obra{color:#CFE0EA;font-weight:600}
 div.doc.off{opacity:.55}
 div.doc.off .ir{color:#8FB0C2;font-weight:600}
 .baja{margin:18px auto 0;max-width:300px}
@@ -129,7 +131,11 @@ body.ver .nota{padding:0 14px;text-align:center}
       'Reglamento Interno de SST':'Internal H&S rules','Matriz IPERC':'IPERC matrix','Hojas MSDS':'Safety data sheets','Plan y programas anuales de SST':'Annual H&S plan and programs','Objetivos y metas':'H&S objectives and targets',
       'Mapa de riesgos':'Risk map','Plan de emergencia':'Emergency plan','Política de SST':'H&S policy',
       'Política contra el hostigamiento sexual':'Sexual harassment prevention policy','Organigrama':'Organization chart','Comité de SST':'H&S committee',
-      'Brigadistas':'Emergency team','Contactos de emergencia':'Emergency contacts'},
+      'Brigadistas':'Emergency team','Contactos de emergencia':'Emergency contacts',
+      'De toda la obra':'For the whole site',
+      'Todavía no hay un documento propio de «{0}»: estos son los de toda la obra.':'There is no document of its own for “{0}” yet: these are the ones for the whole site.',
+      'Este cartel es de «{0}», pero no encontré sus documentos: van todos los de la obra.':"This poster is for “{0}”, but I couldn't find its documents: here are all of the site's.",
+      'Esta obra aún no subió su <b>{0}</b> para «{1}».':"This site hasn't uploaded this document for “{1}” yet: <b>{0}</b>."},
     pt:{'Documento de la obra':'Documento da obra','Abriendo el documento…':'Abrindo o documento…','Toca para abrirlo':'Toque para abrir',
       'Tu navegador no dejó abrirlo solo.':'O seu navegador não deixou abrir sozinho.','Abrir el documento':'Abrir o documento',
       'Sin internet':'Sem internet','Sin señal':'Sem sinal',
@@ -161,7 +167,11 @@ body.ver .nota{padding:0 14px;text-align:center}
       'Reglamento Interno de SST':'Regulamento Interno de SST','Matriz IPERC':'Matriz IPERC','Hojas MSDS':'Fichas FDS (MSDS)','Plan y programas anuales de SST':'Plano e programas anuais de SST','Objetivos y metas':'Objetivos e metas de SST',
       'Mapa de riesgos':'Mapa de riscos','Plan de emergencia':'Plano de emergência','Política de SST':'Política de SST',
       'Política contra el hostigamiento sexual':'Política contra o assédio sexual','Organigrama':'Organograma','Comité de SST':'Comitê de SST',
-      'Brigadistas':'Brigadistas','Contactos de emergencia':'Contatos de emergência'},
+      'Brigadistas':'Brigadistas','Contactos de emergencia':'Contatos de emergência',
+      'De toda la obra':'De toda a obra',
+      'Todavía no hay un documento propio de «{0}»: estos son los de toda la obra.':'Ainda não há um documento próprio de «{0}»: estes são os de toda a obra.',
+      'Este cartel es de «{0}», pero no encontré sus documentos: van todos los de la obra.':'Este cartaz é de «{0}», mas não encontrei os documentos dele: vão todos os da obra.',
+      'Esta obra aún no subió su <b>{0}</b> para «{1}».':'Esta obra ainda não enviou este documento para «{1}»: <b>{0}</b>.'},
     fr:{'Documento de la obra':'Document du chantier','Abriendo el documento…':'Ouverture du document…','Toca para abrirlo':'Touchez pour l’ouvrir',
       'Tu navegador no dejó abrirlo solo.':'Votre navigateur ne l’a pas laissé s’ouvrir tout seul.','Abrir el documento':'Ouvrir le document',
       'Sin internet':'Pas d’internet','Sin señal':'Pas de réseau',
@@ -193,7 +203,11 @@ body.ver .nota{padding:0 14px;text-align:center}
       'Reglamento Interno de SST':'Règlement intérieur SST','Matriz IPERC':'Matrice IPERC','Hojas MSDS':'Fiches FDS','Plan y programas anuales de SST':'Plan et programmes annuels SST','Objetivos y metas':'Objectifs et cibles SST',
       'Mapa de riesgos':'Carte des risques','Plan de emergencia':"Plan d'urgence",'Política de SST':'Politique SST',
       'Política contra el hostigamiento sexual':'Politique contre le harcèlement sexuel','Organigrama':'Organigramme','Comité de SST':'Comité SST',
-      'Brigadistas':"Équipiers d'urgence",'Contactos de emergencia':"Contacts d'urgence"}
+      'Brigadistas':"Équipiers d'urgence",'Contactos de emergencia':"Contacts d'urgence",
+      'De toda la obra':'Pour tout le chantier',
+      'Todavía no hay un documento propio de «{0}»: estos son los de toda la obra.':'Il n’y a pas encore de document propre à « {0} » : voici ceux de tout le chantier.',
+      'Este cartel es de «{0}», pero no encontré sus documentos: van todos los de la obra.':'Cette affiche est pour « {0} », mais je n’ai pas trouvé ses documents : voici tous ceux du chantier.',
+      'Esta obra aún no subió su <b>{0}</b> para «{1}».':'Ce chantier n’a pas encore ajouté ce document pour « {1} » : <b>{0}</b>.'}
   };
   if(!TX[L]) L='es';
   function t(s){ var v=TX[L] && TX[L][s]; v=(v===undefined) ? s : v; for(var i=1;i<arguments.length;i++) v=v.split('{'+(i-1)+'}').join(arguments[i]); return v; }
@@ -222,6 +236,27 @@ body.ver .nota{padding:0 14px;text-align:center}
      la obra: el código es la llave para entrar a la obra y un cartel está a
      la vista de cualquiera. Los de antes (?o=&h=) siguen funcionando. */
   var tk=q('t'), cod=q('o'), hoja=q('h');
+  /* 30/10/2026 · el cartel de un FRENTE: la misma ficha con «&f=<frente>». Abre lo de ese frente y lo de toda la obra,
+     nunca lo de los otros frentes (Marcelo: «a un jefe o supervisor no le gustará porque querrá para su frente»). */
+  var FR=String(q('f')||'').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+  function normF(s){ var x=String(s||'').toLowerCase(); try{ x=x.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(_n){} return x.replace(/[^a-z0-9]+/g, ' ').trim(); }
+  var FRK=normF(FR).replace(/ /g, '-').slice(0, 40);
+  /* lo de un frente: { n, suyo, obra, seguro } (seguro: el servidor dice de qué frente es cada documento) o null */
+  function delFrente(j){
+    if(!FRK) return null;
+    var F=normF(FR), docs=(Array.isArray(j && j.docs) ? j.docs : []).filter(function(d){ return d && web(d.url); });
+    if(Array.isArray(j && j.frentes)){
+      var fr=null;
+      j.frentes.forEach(function(x){ if(!fr && x && normF(x.n)===F) fr=x; });
+      j.frentes.forEach(function(x){ if(!fr && x && (Array.isArray(x.antes) ? x.antes : []).some(function(a){ return normF(a)===F; })) fr=x; });
+      var noms=(fr ? [fr.n].concat(Array.isArray(fr.antes) ? fr.antes : []) : [FR]).map(normF);
+      return { n:fr ? String(fr.n) : FR, seguro:true,
+               suyo:docs.filter(function(d){ return d.frente && noms.indexOf(normF(d.frente))>-1; }),
+               obra:docs.filter(function(d){ return !d.frente; }) };
+    }
+    /* el servidor de antes no dice de qué frente es cada uno: por el nombre (el del frente va adelante) */
+    return { n:FR, seguro:false, obra:[], suyo:docs.filter(function(d){ var n=normF(d.nombre); return n===F || n.indexOf(F+' ')===0; }) };
+  }
   /* «&falta=1»: el service worker no encontró el documento guardado y
      manda de vuelta acá. Esa vez se abre directo: sin vueltas. */
   var FALTA=(q('falta')==='1');
@@ -269,7 +304,8 @@ body.ver .nota{padding:0 14px;text-align:center}
      tiempo no se abren. (window.__D_TOPE: solo para las pruebas.) */
   var TOPE=window.__D_TOPE || { n:60, b:300*1048576, uno:60*1048576 };
   var RAIZ=''; try{ RAIZ=new URL('./', location.href).href; }catch(_r){}
-  var CLAVE = tk ? ('t-'+tk) : ((cod && hoja) ? ('o-'+cod+'-'+hoja) : '');
+  /* 30/10/2026 · el cartel de cada frente, su propia llave: abrir el de un frente no borra lo guardado del otro */
+  var CLAVE = tk ? ('t-'+tk+(FRK ? '.f-'+FRK : '')) : ((cod && hoja) ? ('o-'+cod+'-'+hoja) : '');
   var PUEDE=false;
   try{ PUEDE = !!(RAIZ && window.caches && navigator.serviceWorker && window.isSecureContext!==false && window.Response && window.Blob); }catch(_p){}
 
@@ -354,7 +390,9 @@ body.ver .nota{padding:0 14px;text-align:center}
   function guardarResp(j){
     if(!CLAVE) return Promise.resolve();
     return caja().then(function(c){
-      return c.put(kResp(CLAVE), json({ t:Date.now(), j:{ ok:true, obra:j.obra||'', hoja:j.hoja||hoja||'', titulo:j.titulo||null, url:j.url||null, docs:Array.isArray(j.docs) ? j.docs : [] } }));
+      var g={ ok:true, obra:j.obra||'', hoja:j.hoja||hoja||'', titulo:j.titulo||null, url:j.url||null, docs:Array.isArray(j.docs) ? j.docs : [] };
+      if(Array.isArray(j.frentes)) g.frentes=j.frentes;     /* 30/10/2026 · para el cartel de un frente, también sin señal */
+      return c.put(kResp(CLAVE), json({ t:Date.now(), j:g }));
     }).then(function(){}, function(){});
   }
   function leerResp(){
@@ -372,6 +410,7 @@ body.ver .nota{padding:0 14px;text-align:center}
     var registro=navigator.serviceWorker.register('sw.js');
     swHay=conTope(registro, 5000).then(function(){ return true; }, function(){ return false; });
     swActivo=registro.then(function(reg){
+      if(!reg) return false;      /* 30/10/2026 · un navegador que no da el registro (o lo bloquea): como si no hubiera */
       return new Promise(function(ok){
         function mira(){ var w=reg.active; if(w && w.state==='activated'){ ok(true); return true; } return false; }
         if(mira()) return;
@@ -415,7 +454,7 @@ body.ver .nota{padding:0 14px;text-align:center}
               'Content-Disposition':"inline; filename*=UTF-8''"+encodeURIComponent(nombre), 'X-Guardado':new Date().toISOString() };
     return c.put(k, new Response(r.blob, { status:200, headers:cab })).then(function(){ return anotar(c, k, r.blob.size); });
   }
-  function colaDe(){ return tk ? ('?t='+encodeURIComponent(tk)) : ((cod && hoja) ? ('?o='+encodeURIComponent(cod)+'&h='+encodeURIComponent(hoja)) : ''); }
+  function colaDe(){ return tk ? ('?t='+encodeURIComponent(tk)+(FR ? '&f='+encodeURIComponent(FR) : '')) : ((cod && hoja) ? ('?o='+encodeURIComponent(cod)+'&h='+encodeURIComponent(hoja)) : ''); }
   function saltar(u, reemplazar){ if(reemplazar) location.replace(u); else location.href=u; }
   /* muestra un documento que ya está en la caja: por el service worker
      (con su nombre) o, si no está activo, directo desde la caja */
@@ -569,7 +608,7 @@ body.ver .nota{padding:0 14px;text-align:center}
     });
   }
   /* «atrás» del celular, desde un PDF que se abrió de la lista: vuelve a la lista */
-  function volverALista(){ cerrarVisor(); if(LISTA) pintarLista(LISTA.nombre, LISTA.items, LISTA.sinRed, LISTA.cuando); }
+  function volverALista(){ cerrarVisor(); if(LISTA) pintarLista(LISTA.nombre, LISTA.items, LISTA.sinRed, LISTA.cuando, LISTA.nota); }
   try{ window.addEventListener('popstate', function(){ if(document.body.classList.contains('ver')) volverALista(); }); }catch(_pp){}
   /* un PDF: aquí mismo. Devuelve una promesa; si no se pudo ni bajar, «directo» como antes */
   function verAqui(it, op, directo){
@@ -584,10 +623,27 @@ body.ver .nota{padding:0 14px;text-align:center}
 
   /* ── lo que abre el cartel ── */
   function armar(j, nombre){
-    var items=[];
+    var items=[], X=delFrente(j||{});
+    /* 30/10/2026 · el cartel de un frente: lo suyo primero y después lo de toda la obra («De toda la obra»). Con el
+       servidor de antes, que no dice de qué frente es cada uno, y nada con el nombre del frente: todo, como siempre */
+    if(X && (X.suyo.length || X.seguro)){
+      X.suyo.forEach(function(d){ items.push({ nombre:d.nombre||nombre, url:d.url, fecha:d.fecha }); });
+      if(web(j.url)) items.push({ nombre:nombre, url:j.url, enlace:true, obra:true });
+      X.obra.forEach(function(d){ items.push({ nombre:d.nombre||nombre, url:d.url, fecha:d.fecha, obra:true }); });
+      return items;
+    }
     if(web(j.url)) items.push({ nombre:nombre, url:j.url, enlace:true });
     (Array.isArray(j.docs) ? j.docs : []).forEach(function(d){ if(d && web(d.url)) items.push({ nombre:d.nombre||nombre, url:d.url, fecha:d.fecha }); });
     return items;
+  }
+  /* el nombre del cartel: el suyo, y el del frente si es el cartel de un frente */
+  function nombreCartel(j){ return (j && j.titulo) || nombreDe(j && j.hoja) || t('Documento de la obra'); }
+  function tituloDe(j){ var X=delFrente(j||{}); return nombreCartel(j)+(X ? ' · '+X.n : ''); }
+  /* lo que se dice arriba de la lista del cartel de un frente, si no tiene nada propio */
+  function notaFrente(j){
+    var X=delFrente(j||{}); if(!X || X.suyo.length) return '';
+    return '<div class="tarj" style="padding:14px 18px">'+esc(X.seguro ? t('Todavía no hay un documento propio de «{0}»: estos son los de toda la obra.', X.n)
+                                                                   : t('Este cartel es de «{0}», pero no encontré sus documentos: van todos los de la obra.', X.n))+'</div>';
   }
   /* cuáles de estos ya están en este celular: { ruta: true } */
   function guardados(items){
@@ -602,14 +658,15 @@ body.ver .nota{padding:0 14px;text-align:center}
     }).then(function(){ return out; }, function(){ return out; });
   }
   var LISTA=null;     /* lo que está pintado: para rehacerlo al volver con «atrás» */
-  function pintarLista(nombre, items, sinRed, cuando){
-    LISTA={ nombre:nombre, items:items, sinRed:sinRed, cuando:cuando };
+  function pintarLista(nombre, items, sinRed, cuando, nota){
+    LISTA={ nombre:nombre, items:items, sinRed:sinRed, cuando:cuando, nota:nota||'' };
+    nota=nota||'';
     return guardados(items).then(function(ya){
       var primero=true;
       var filas=items.map(function(it, i){
         var marca='', k=nuestra(it.url) ? rutaDoc(it.url) : '', esta=!!(k && ya[k]);
         if(!it.enlace && primero){ marca=' · <span class="nuevo">'+esc(t('el más reciente'))+'</span>'; primero=false; }
-        var sub = it.enlace ? esc(t('Enlace')) : esc(t('Subido el {0}', fecha(it.fecha)));
+        var sub = (it.enlace ? esc(t('Enlace')) : esc(t('Subido el {0}', fecha(it.fecha))))+(it.obra ? ' · <span class="obra">'+esc(t('De toda la obra'))+'</span>' : '');
         if(sinRed){
           if(!esta) return '<div class="doc off"><span class="ic" aria-hidden="true">'+(it.enlace?'🔗':'📄')+'</span>'+
             '<span class="tx"><b>'+esc(it.nombre)+'</b><small>'+sub+'</small></span><span class="ir">'+esc(t('Necesita señal'))+'</span></div>';
@@ -624,8 +681,8 @@ body.ver .nota{padding:0 14px;text-align:center}
       cuerpo.innerHTML = sinRed
         ? '<h1>'+esc(t('Sin señal'))+'</h1><p><b style="color:#EAF2F7">'+esc(nombre)+'</b></p>'+
           '<div class="tarj" style="padding:16px 18px">'+esc(t('Lo que este celular tiene guardado, al {0}. Puede haber versiones más nuevas: cuando tengas señal, escanea el cartel otra vez.', fechaDeMs(cuando)))+'</div>'+
-          '<div class="lista">'+filas+'</div>'
-        : '<h1>'+esc(nombre)+'</h1><p>'+esc(t('Toca el que necesitas.'))+'</p><div class="lista">'+filas+'</div>';
+          nota+'<div class="lista">'+filas+'</div>'
+        : '<h1>'+esc(nombre)+'</h1>'+nota+'<p>'+esc(t('Toca el que necesitas.'))+'</p><div class="lista">'+filas+'</div>';
       [].forEach.call(cuerpo.querySelectorAll('a.doc'), function(a){
         a.addEventListener('click', function(ev){
           var it=items[+a.getAttribute('data-i')];
@@ -638,7 +695,7 @@ body.ver .nota{padding:0 14px;text-align:center}
           a.setAttribute('data-va', '1');
           var ir=a.querySelector('.ir');
           abrirDoc(it, { reemplazar:false, lista:true, alAvance:function(n, total){ if(ir) ir.textContent = total>0 ? Math.min(99, Math.floor(n*100/total))+' %' : (n/1048576).toFixed(1)+' MB'; } })
-            .then(function(){ if(!document.body.classList.contains('ver')) setTimeout(function(){ if(LISTA && !document.body.classList.contains('ver')) pintarLista(LISTA.nombre, LISTA.items, LISTA.sinRed, LISTA.cuando); }, 2500); });
+            .then(function(){ if(!document.body.classList.contains('ver')) setTimeout(function(){ if(LISTA && !document.body.classList.contains('ver')) pintarLista(LISTA.nombre, LISTA.items, LISTA.sinRed, LISTA.cuando, LISTA.nota); }, 2500); });
         });
       });
     });
@@ -647,7 +704,7 @@ body.ver .nota{padding:0 14px;text-align:center}
      que ahora sí está guardado) */
   try{
     window.addEventListener('pageshow', function(ev){
-      if(ev && ev.persisted && LISTA) pintarLista(LISTA.nombre, LISTA.items, LISTA.sinRed, LISTA.cuando);
+      if(ev && ev.persisted && LISTA) pintarLista(LISTA.nombre, LISTA.items, LISTA.sinRed, LISTA.cuando, LISTA.nota);
     });
   }catch(_ps){}
 
@@ -667,7 +724,7 @@ body.ver .nota{padding:0 14px;text-align:center}
     function nada(){ if(!soloSiHay) sinInternet(); return false; }
     return conTope(leerResp(), 5000).then(function(g){
       if(!g) return nada();
-      var j=g.j, nombre=j.titulo || nombreDe(j.hoja) || t('Documento de la obra');
+      var j=g.j, nombre=nombreCartel(j);
       var items=armar(j, nombre);
       return guardados(items).then(function(ya){
         var hay=items.filter(function(it){ return nuestra(it.url) && ya[rutaDoc(it.url)]; });
@@ -688,7 +745,7 @@ body.ver .nota{padding:0 14px;text-align:center}
           });
           return true;
         }
-        return pintarLista(nombre, items, true, g.t).then(function(){ return true; });
+        return pintarLista(tituloDe(j), items, true, g.t, notaFrente(j)).then(function(){ return true; });
       });
     }).then(function(r){ return r; }, nada);
   }
@@ -708,10 +765,12 @@ body.ver .nota{padding:0 14px;text-align:center}
   if(tk){
     conServidor(rpc('sst_qr_abrir', {p_t:tk}), function(j){
       j = j || {};
-      var nombre = j.titulo || nombreDe(j.hoja) || t('Documento de la obra');
+      var nombre = nombreCartel(j), X = delFrente(j);
       if(j.obra) pie.textContent = j.obra;
+      if(FRK) document.getElementById('quien').textContent = tituloDe(j);
       if(j.ok){
-        /* lo que abre: el enlace puesto a mano y lo que haya en la carpeta */
+        /* lo que abre: el enlace puesto a mano y lo que haya en la carpeta (en el cartel de un frente: lo suyo y lo de
+           toda la obra) */
         var items=armar(j, nombre);
         var anotado=null;
         if(items.length){
@@ -720,16 +779,17 @@ body.ver .nota{padding:0 14px;text-align:center}
           });
         }
         if(items.length===1){ document.getElementById('quien').textContent = items[0].nombre; abrirDoc(items[0], { reemplazar:true, alAvance:avance, antes:anotado }); return; }
-        if(items.length>1){ pintarLista(nombre, items, false, 0); return; }
+        if(items.length>1){ pintarLista(tituloDe(j), items, false, 0, notaFrente(j)); return; }
       }
-      var e=j.error||'';
+      /* 30/10/2026 · el cartel de un frente que todavía no tiene nada (ni de toda la obra): «todavía no está cargado» */
+      var e=j.error||(j.ok ? 'sin_documento' : '');
       if(e==='no_existe'){
         olvidar();
         di(t('Este cartel ya no está activo'), esc(t('Pídele a tu supervisor que imprima el cartel nuevo desde OBRASST, en «Los QR de tu obra».')));
       } else if(e==='sin_documento'){
         olvidar();
         di(t('Todavía no está cargado'),
-           t('Esta obra aún no subió su <b>{0}</b> a OBRASST.', esc(nombre))+'<br><br>'+
+           (X ? t('Esta obra aún no subió su <b>{0}</b> para «{1}».', esc(nombre), esc(X.n)) : t('Esta obra aún no subió su <b>{0}</b> a OBRASST.', esc(nombre)))+'<br><br>'+
            esc(t('Pídeselo a tu supervisor SSOMA: se sube una vez, en la app o en la web, y este mismo cartel empieza a funcionar.')));
       } else {
         di(t('No se pudo abrir'), esc(t('Vuelve a escanear el cartel en un momento. Si sigue igual, avísale a tu supervisor.')));
