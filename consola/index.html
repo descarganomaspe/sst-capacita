@@ -186,6 +186,8 @@ textarea{line-height:1.5; resize:vertical; min-height:84px}
 .bloque-cab h2{font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); font-weight:600}
 .bloque-cab .sub{font-size:13px; color:var(--gris2)}
 .rej{display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr))}
+/* 2/11/2026 · OBRASST OS */
+.os-h{font-size:15px; margin:22px 0 10px} .os-log{margin:10px 0 0; font-size:13px; color:var(--gris)} .os-log ul{margin:6px 0 0; padding-left:18px}
 /* 29/09/2026 · boletas y facturas */
 .mal-t{color:var(--mal)}
 .msg.ojo{color:var(--ojo)}
@@ -693,6 +695,7 @@ var IC = {
   /* 27/10/2026 · «Asistente de plan» salía como «undefined» en el menú: le faltaba su ícono */
   reuniones:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M8 13.5h3M8 16.5h6"/></svg>',
   aliados:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><path d="M14.6 14.6c.6-.2 1.2-.3 1.9-.3 2.2 0 3.9 1.5 4.4 4.2"/></svg>',
+  os:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="7" rx="3.5"/><circle cx="16.5" cy="7.5" r="1.8"/><rect x="3.5" y="13" width="17" height="7" rx="3.5"/><circle cx="7.5" cy="16.5" r="1.8"/></svg>',
   codigos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v1.8a2.2 2.2 0 0 0 0 4.4V16a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-1.8a2.2 2.2 0 0 0 0-4.4z"/><path d="M14.5 7v1.6M14.5 11.2v1.6M14.5 15.4V17"/></svg>',
   comprobantes:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h8l3.5 3.5v13.5h-11.5z"/><path d="M14.5 3.5V7H18"/><path d="M9.5 11h6M9.5 14.5h6M9.5 18h3.5"/></svg>',
   avisos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5v-5a6 6 0 1 1 12 0v5l1.8 2H4.2z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg>',
@@ -707,13 +710,14 @@ var VISTAS = [
   {id:'empresas', n:'Empresas y planes', c:'Empresas', s:'Cada empresa, con el plan que tiene hoy, sus obras y su gente'},
   {id:'central',  n:'Central',           c:'Central',  s:'OBRASST Central se activa por obra: con su código, hasta cuándo y para cuántas subcontratas. Y quién pidió una demo o un piloto'},
   {id:'aliados',  n:'Aliados',           c:'Aliados',  s:'Los proveedores que firmaron el acuerdo: su alta, su enlace de invitación, lo que les llega y las empresas que traen'},
+  {id:'os',       n:'OBRASST OS',        c:'OS',       s:'Los interruptores de cada módulo (lo que no está construido no se enciende), los pedidos del Marketplace SST y el RNP que declara cada aliado'},
   {id:'reuniones', n:'Asistente de plan', c:'Citas', s:'Quién respondió «¿Qué plan te conviene?», qué le salió, y las reuniones de 15 minutos por Google Meet que pidieron'},
   {id:'codigos',  n:'Códigos',           c:'Códigos',  s:'Créalos cuando los vas a dar, anota para quién y busca el de un cliente'},
   {id:'avisos',   n:'Avisos',            c:'Avisos',   s:'Que cada falla te llegue al celular y a la PC, al instante'}
 ];
 var VISTA = { actual:null, recargar:null };
 function vistaDe(id){ return VISTAS.filter(function(v){ return v.id===id; })[0]; }
-function pintor(id){ return ({resumen:vistaResumen, fallas:vistaFallas, reclamos:vistaReclamos, ventas:vistaVentas, comprobantes:vistaComprobantes, empresas:vistaEmpresas, central:vistaCentral, aliados:vistaAliados, reuniones:vistaReuniones, codigos:vistaCodigos, avisos:vistaAvisos})[id]; }
+function pintor(id){ return ({resumen:vistaResumen, fallas:vistaFallas, reclamos:vistaReclamos, ventas:vistaVentas, comprobantes:vistaComprobantes, empresas:vistaEmpresas, central:vistaCentral, aliados:vistaAliados, os:vistaOs, reuniones:vistaReuniones, codigos:vistaCodigos, avisos:vistaAvisos})[id]; }
 function navegar(id, desdeHistoria){
   var v = vistaDe(id); if(!v) v = VISTAS[0];
   var antes = VISTA.actual;
@@ -2892,6 +2896,121 @@ function aliHoja(a){
       });
     };
   });
+}
+
+/* ══ OBRASST OS (2/11/2026): los interruptores de cada módulo (obrasst_os_feature_flags), los pedidos del Marketplace SST
+   y el RNP de los aliados. SQL: 2026-11-02-obrasst-os. Lo que no está construido no se puede encender (el servidor tampoco deja). ══ */
+var OSC_CAT = { CEO_TOP_5_PILLAR:'Pilar', NETWORK_MONOPOLY_ENGINE:'Red', ALLY_VERTICAL_ERP:'Aliados', PUBLIC_WEB_SECTION:'Web y gerencia' };
+var OSC_RUB = { epp:'EPP', sctr:'SCTR', emo:'Exámenes médicos', consultor:'Consultoría', residuos:'Residuos', maquinaria:'Maquinaria', izaje:'Izaje y andamios', laboratorio:'Laboratorio', transporte:'Transporte', saneamiento:'Saneamiento' };
+var OSC_EST = { nueva:['Nueva', 'casco'], conectada:['Conectada', 'ok'], cerrada:['Cerrada', 'gris'] };
+var OSC = { flags:[], log:[], nec:[], rnp:[] };
+function oscMotivo(m){ return ({ no_construido:'Ese módulo todavía no está construido: no se puede encender.', rollout:'El porcentaje va de 0 a 100.', empresas:'Revisa los ID de las empresas (uno por línea).',
+  estado:'Elige un estado.', no_existe:'Ya no está.', no_eres_admin:'Esta cuenta no es la del creador.' })[m] || 'No se pudo guardar. Inténtalo otra vez.'; }
+function vistaOs(caja){
+  cargando(caja);
+  function pinta(){
+    Promise.all([sbRpc('sst_admin_os_flags', { p:{} }), sbRpc('sst_admin_os_necesidades', { p:{} }), sbRpc('sst_admin_os_rnp', { p:{} })]).then(function(R){
+      var f = R[0], n = R[1], r = R[2];
+      if(!f || !f.ok){ noAbre(caja, f, null, '2026-11-02-obrasst-os'); return; }
+      marcarActualizado(); OSC.flags = f.flags || []; OSC.log = f.log || []; OSC.nec = (n && n.ok && n.lista) || []; OSC.rnp = (r && r.ok && r.lista) || [];
+      var on = OSC.flags.filter(function(x){ return x.enabled; }).length, por = OSC.flags.filter(function(x){ return !x.construido; }).length;
+      var nuevas = OSC.nec.filter(function(x){ return x.estado === 'nueva'; }).length, sinv = OSC.rnp.filter(function(x){ return !(x.rnp && x.rnp.verificado); }).length;
+      var e1 = ($('t-osf') || {})._est, e2 = ($('t-osn') || {})._est, e3 = ($('t-osr') || {})._est;
+      caja.innerHTML = '<div class="rej">' + cifra('Encendidos', num(on), 'de ' + num(OSC.flags.length) + ' módulos', on ? 'ok' : '') + cifra('Por construir', num(por), 'no se pueden encender') +
+        cifra('Pedidos nuevos', num(nuevas), 'del Marketplace SST') + cifra('RNP por verificar', num(sinv), 'declarados por los aliados') + '</div>' +
+        '<h2 class="os-h">Interruptores</h2><div class="tarj" id="t-osf"></div>' +
+        (OSC.log.length ? '<details class="os-log"><summary>Últimos cambios (' + OSC.log.length + ')</summary><ul>' + OSC.log.map(function(l){
+          return '<li><b>' + esc(l.key) + '</b> · ' + esc(fechaCorta(String(l.cuando || '').slice(0, 10))) + ' · ' + (l.antes && l.antes.enabled ? 'encendido' : 'apagado') + ' → ' + (l.despues && l.despues.enabled ? 'encendido' : 'apagado') +
+            (l.despues && l.despues.rollout !== 100 ? ' (' + num(l.despues.rollout) + ' %)' : '') + '</li>'; }).join('') + '</ul></details>' : '') +
+        '<h2 class="os-h">Pedidos del Marketplace SST</h2><div class="tarj" id="t-osn"></div>' +
+        '<h2 class="os-h">RNP de los aliados</h2><div class="tarj" id="t-osr"></div>';
+      var t1 = $('t-osf'), t2 = $('t-osn'), t3 = $('t-osr'); if(e1) t1._est = e1; if(e2) t2._est = e2; if(e3) t3._est = e3;
+      tabla(t1, [
+        { k:'nombre', t:'Módulo', h:function(x){ return '<b>' + esc(x.nombre) + '</b><span class="sub mono">' + esc(x.key) + '</span>'; } },
+        { k:'categoria', t:'Tipo', v:function(x){ return OSC_CAT[x.categoria] || x.categoria; } },
+        { k:'enabled', t:'Estado', v:function(x){ return !x.construido ? 'Por construir' : x.enabled ? 'Encendido' : 'Apagado'; }, h:function(x){
+            return !x.construido ? '<span class="pill gris">Por construir</span>' : x.enabled ? '<span class="pill ok">Encendido</span>' : '<span class="pill mal">Apagado</span>'; } },
+        { k:'rollout', t:'Alcance', num:true, h:function(x){ return !x.construido ? '—' : num(x.rollout) + ' %' + (x.empresas ? '<span class="sub">solo ' + num(x.empresas) + (x.empresas === 1 ? ' empresa' : ' empresas') + '</span>' : ''); } }
+      ], OSC.flags, { unidad:'módulos', archivo:'obrasst-os-interruptores', vacio:'Sin módulos', alClic:function(x){ oscFlag(x); } });
+      tabla(t2, [
+        { k:'empresa', t:'Empresa', h:function(x){ return '<b>' + esc(x.empresa) + '</b><span class="sub">' + esc(aliDep(x.departamento)) + '</span>'; } },
+        { k:'_rub', t:'Necesita', v:function(x){ return (x.rubros || []).map(function(k){ return OSC_RUB[k] || k; }).join(', '); } },
+        { k:'estado', t:'Estado', v:function(x){ return (OSC_EST[x.estado] || [x.estado])[0]; }, h:function(x){ var e = OSC_EST[x.estado] || [x.estado, 'gris']; return '<span class="pill ' + e[1] + '">' + esc(e[0]) + '</span>'; } },
+        { k:'_cand', t:'Aliados de su zona', num:true, v:function(x){ return (x.candidatos || []).length; } },
+        { k:'creado', t:'Pedido', v:function(x){ return x.creado || ''; }, h:function(x){ return esc(aliFecha(x.creado)); } }
+      ], OSC.nec, { orden:'creado', asc:false, unidad:'pedidos', archivo:'marketplace-pedidos', vacio:'Todavía no hay pedidos', vacioSub:'Llegan desde el portal de cada empresa (OBRASST OS → Marketplace SST).', alClic:function(x){ oscNec(x); } });
+      tabla(t3, [
+        { k:'razon', t:'Aliado', h:function(x){ return '<b>' + esc(x.razon) + '</b><span class="sub mono">' + esc(x.ruc || '') + '</span>'; } },
+        { k:'_num', t:'RNP', v:function(x){ return (x.rnp || {}).numero || ''; }, h:function(x){ return '<span class="mono">' + esc((x.rnp || {}).numero || '') + '</span><span class="sub">vence el ' + esc(aliFecha((x.rnp || {}).vence)) + (x.vigente ? '' : ' · vencido') + '</span>'; } },
+        { k:'_ver', t:'Verificado', v:function(x){ return (x.rnp || {}).verificado ? 'Sí' : 'No'; }, h:function(x){ return (x.rnp || {}).verificado ? '<span class="pill ok">Verificado</span>' : '<span class="pill casco">Por verificar</span>'; } }
+      ], OSC.rnp, { unidad:'aliados', archivo:'aliados-rnp', vacio:'Ningún aliado declaró su RNP', vacioSub:'Lo declaran en su Portal de Aliados (Mi plan → ficha).', alClic:function(x){ oscRnp(x); } });
+    }, function(cod){ noAbre(caja, null, cod, '2026-11-02-obrasst-os'); });
+  }
+  VISTA.recargar = function(silencio){ if(silencio && HOJA.abierta) return; pinta(); }; pinta();
+}
+function oscRecarga(){ if(VISTA.actual === 'os' && typeof VISTA.recargar === 'function') VISTA.recargar(false); }
+function oscFlag(x){
+  var cuerpo = '<p class="ayuda" style="margin-top:0">' + esc(x.descripcion || '') + '</p>' +
+    (x.construido ? '' : '<div class="aviso">Este módulo todavía no está construido: queda registrado, pero no se puede encender.</div>') +
+    '<div class="campo"><label><input type="checkbox" id="osf-on"' + (x.enabled ? ' checked' : '') + (x.construido ? '' : ' disabled') + '> Encendido</label>' +
+      '<p class="ayuda">Apagado: el módulo no se ve en el portal ni en la web, y su servidor no responde.</p></div>' +
+    '<div class="campo"><label for="osf-ro">Para qué porcentaje de las empresas</label><input id="osf-ro" type="number" min="0" max="100" inputmode="numeric" value="' + esc(x.rollout) + '"' + (x.construido ? '' : ' disabled') + '>' +
+      '<p class="ayuda">100: todas. Menos de 100: a cada empresa le toca siempre lo mismo (no cambia al recargar).</p></div>' +
+    '<div class="campo"><label><input type="checkbox" id="osf-cam"' + (x.construido ? '' : ' disabled') + '> Cambiar la lista de empresas' + (x.empresas ? ' (hoy: solo ' + num(x.empresas) + ')' : ' (hoy: todas)') + '</label>' +
+      '<textarea id="osf-ids" rows="3" hidden placeholder="Un ID de empresa por línea. Vacío: todas."></textarea></div><p class="msg" id="osf-msg"></p>';
+  abrirHoja(x.nombre, (OSC_CAT[x.categoria] || x.categoria) + ' · ' + x.key, cuerpo, '<button type="button" class="bt sec" id="osf-cerrar">Cerrar</button>' + (x.construido ? '<button type="button" class="bt" id="osf-guardar">Guardar</button>' : ''));
+  $('osf-cerrar').onclick = cerrarHoja;
+  if(!x.construido) return;
+  $('osf-cam').onchange = function(){ $('osf-ids').hidden = !this.checked; };
+  $('osf-guardar').onclick = function(){
+    var m = $('osf-msg'), bt = this, p = { key:x.key, enabled:$('osf-on').checked, rollout:parseInt($('osf-ro').value, 10) };
+    if(!(p.rollout >= 0 && p.rollout <= 100)){ m.className = 'msg mal'; m.textContent = oscMotivo('rollout'); return; }
+    if($('osf-cam').checked) p.empresas = String($('osf-ids').value || '').split(/[\s,;]+/).filter(Boolean);
+    bt.disabled = true;
+    sbRpc('sst_admin_os_flag_guardar', { p:p }).then(function(r){
+      bt.disabled = false;
+      if(!r || !r.ok){ m.className = 'msg mal'; m.textContent = oscMotivo(r && r.motivo); return; }
+      toast(p.enabled ? 'Encendido: ' + x.nombre + '.' : 'Apagado: ' + x.nombre + '.'); cerrarHoja(); oscRecarga();
+    }, function(){ bt.disabled = false; m.className = 'msg mal'; m.textContent = 'No hubo conexión. Inténtalo otra vez.'; });
+  };
+}
+function oscNec(x){
+  var al = x.aliados || [];
+  var cuerpo = '<p style="margin:0 0 6px"><b>Necesita:</b> ' + esc((x.rubros || []).map(function(k){ return OSC_RUB[k] || k; }).join(', ')) + '</p>' +
+    (x.detalle ? '<p class="ayuda" style="margin:0 0 10px">«' + esc(x.detalle) + '»</p>' : '') +
+    '<div class="campo"><label for="osn-est">Estado</label><select id="osn-est">' + Object.keys(OSC_EST).map(function(k){ return '<option value="' + k + '"' + (x.estado === k ? ' selected' : '') + '>' + OSC_EST[k][0] + '</option>'; }).join('') + '</select></div>' +
+    '<div class="campo"><span class="lbl">Aliados con los que se le conecta</span>' + ((x.candidatos || []).length ? (x.candidatos || []).map(function(c){
+        return '<label style="display:block"><input type="checkbox" data-osn-al="' + esc(c.id) + '"' + (al.indexOf(c.id) > -1 ? ' checked' : '') + '> ' + esc(c.razon) + ' <span class="gris-t">· ' + esc(aliRubro(c.rubro)) + '</span></label>'; }).join('') :
+      '<p class="ayuda">No hay aliados activos de ese rubro en ' + esc(aliDep(x.departamento)) + '. Se atiende con la red de OBRASST.</p>') + '</div>' +
+    '<div class="campo"><label for="osn-nota">Nota para la empresa <span class="gris-t">(la ve en su portal)</span></label><textarea id="osn-nota" rows="2" maxlength="400">' + esc(x.nota || '') + '</textarea></div><p class="msg" id="osn-msg"></p>';
+  abrirHoja(x.empresa, aliDep(x.departamento) + ' · pedido del ' + aliFecha(x.creado), cuerpo, '<button type="button" class="bt sec" id="osn-cerrar">Cerrar</button><button type="button" class="bt" id="osn-guardar">Guardar</button>');
+  $('osn-cerrar').onclick = cerrarHoja;
+  $('osn-guardar').onclick = function(){
+    var m = $('osn-msg'), bt = this, p = { id:x.id, estado:$('osn-est').value, nota:$('osn-nota').value };
+    if((x.candidatos || []).length) p.aliados = [].map.call(document.querySelectorAll('[data-osn-al]:checked'), function(c){ return c.getAttribute('data-osn-al'); });
+    bt.disabled = true;
+    sbRpc('sst_admin_os_necesidad_poner', { p:p }).then(function(r){
+      bt.disabled = false;
+      if(!r || !r.ok){ m.className = 'msg mal'; m.textContent = oscMotivo(r && r.motivo); return; }
+      toast('Pedido guardado.'); cerrarHoja(); oscRecarga();
+    }, function(){ bt.disabled = false; m.className = 'msg mal'; m.textContent = 'No hubo conexión. Inténtalo otra vez.'; });
+  };
+}
+function oscRnp(x){
+  var r = x.rnp || {};
+  var cuerpo = '<p style="margin:0 0 6px"><b>RNP declarado:</b> <span class="mono">' + esc(r.numero || '') + '</span> · vence el ' + esc(aliFecha(r.vence)) + (x.vigente ? '' : ' <span class="pill mal">vencido</span>') + '</p>' +
+    '<p class="ayuda">Revísalo en la consulta pública del Registro Nacional de Proveedores con el RUC ' + esc(x.ruc || '') + ' antes de marcarlo. En el cuadro comparativo sale «verificado» solo si lo marcas aquí.</p>' +
+    '<div class="campo"><label><input type="checkbox" id="osr-ver"' + (r.verificado ? ' checked' : '') + '> Lo revisé: el RNP es de este RUC y está vigente</label></div><p class="msg" id="osr-msg"></p>';
+  abrirHoja(x.razon, aliRubro(x.rubro) + ' · RNP', cuerpo, '<button type="button" class="bt sec" id="osr-cerrar">Cerrar</button><button type="button" class="bt" id="osr-guardar">Guardar</button>');
+  $('osr-cerrar').onclick = cerrarHoja;
+  $('osr-guardar').onclick = function(){
+    var m = $('osr-msg'), bt = this; bt.disabled = true;
+    sbRpc('sst_admin_ali_rnp', { p:{ aliado:x.id, verificado:$('osr-ver').checked } }).then(function(q){
+      bt.disabled = false;
+      if(!q || !q.ok){ m.className = 'msg mal'; m.textContent = oscMotivo(q && q.motivo); return; }
+      toast($('osr-ver').checked ? 'RNP verificado.' : 'RNP sin verificar.'); cerrarHoja(); oscRecarga();
+    }, function(){ bt.disabled = false; m.className = 'msg mal'; m.textContent = 'No hubo conexión. Inténtalo otra vez.'; });
+  };
 }
 
 function vistaCodigos(caja){
