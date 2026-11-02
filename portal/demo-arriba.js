@@ -286,6 +286,7 @@ function dmaArmar(t){
   renum(d.obs, 'OB', function(o){ return o.creado; }); renum(d.actas, 'AC', function(a){ return a.t; });
   renum(d.insps, 'IN', function(i){ return i.creado; }); renum(d.ordenes, 'OI', function(o){ return o.creado; });
   d.ordenes.forEach(function(o){ if(o.sigue){ var ac = d.actas.filter(function(a){ return a.id === o.sigue; })[0]; if(ac) o.detalle = 'Seguimiento del acta ' + ac.n; } });
+  dmaLinArmar(d);
   return d;
 }
 function dmaContacto(emp, d){ var e = (d || DMA.d).emps.filter(function(x){ return x.id === emp; })[0]; return e ? e.contacto : ''; }
@@ -396,7 +397,7 @@ var DMA_RPC = {
   sst_cad_cartera:function(){
     var d = DMA.d, L = d.emps.map(function(e){
       var j = dmaEnlaceJson(e, false), P = dmaProy(e.p);
-      return Object.assign(j, { obra:P.n, obra_id:d.ent.id, mia:true, ind:dmaInd(e), obs:dmaObsRes(e.enl), req:dmaReqRes(e.enl), insp:dmaInspRes(e.enl), registro_propio:e.estado !== 'activa',
+      return Object.assign(j, { obra:P.n, obra_id:'demo-' + e.p, mia:true, ind:dmaInd(e), obs:dmaObsRes(e.enl), req:dmaReqRes(e.enl), insp:dmaInspRes(e.enl), registro_propio:e.estado !== 'activa',
         homologada:e.estado === 'activa' ? dmaReqRes(e.enl).homologada : null });
     }).concat(d.sups.map(function(s){ var j = dmaEnlaceJson(s, true); return Object.assign(j, { obra:s.ps.map(function(p){ return dmaProy(p).n; }).join(' · '), mia:true, ind:dmaInd(s), obs:dmaObsRes(s.enl), req:dmaReqRes(s.enl), insp:dmaInspRes(s.enl) }); }));
     var act = L.filter(function(x){ return x.estado === 'activa'; }), sum = function(f){ return L.reduce(function(s, x){ return s + (f(x) || 0); }, 0); };
@@ -1029,6 +1030,70 @@ function dmaAplicar(op, repaso){
       d.cumEst = { puestos:Pz, comun:limpia(op.comun), vigencia:Math.max(1, Math.min(36, parseInt(op.vigencia, 10) || 12)) };
       return { ok:true };
     }
+    /* 29/10/2026 · Estado 3.0: los comunicados en cascada */
+    case 'com': {
+      if(!manda) return { ok:false, motivo:'solo_jefes' };
+      var tipo = (op.tipo === 'estandar' || op.tipo === 'directiva') ? 'estandar' : (op.tipo === 'comunicado' ? 'boletin' : null); if(!tipo) return { ok:false, motivo:'tipo' };
+      var tit = String(op.titulo || '').replace(/\s+/g, ' ').trim(), tx = String(op.texto || '').trim().slice(0, 1200);
+      if(tit.length < 3) return { ok:false, motivo:'titulo' };
+      if(tipo === 'estandar' && !op.url) return { ok:false, motivo:'archivo' };
+      if(tipo === 'boletin' && !op.url && tx.length < 10) return { ok:false, motivo:'texto' };
+      if(op.hasta && op.hasta < d.hoy) return { ok:false, motivo:'fechas' };
+      var pr = op.proy ? String(op.proy).replace(/^demo-/, '') : null;
+      if(pr && !d.proy.some(function(p){ return p.id === pr; })) return { ok:false, motivo:'proy' };
+      var cad = dmaLinCadena(d, pr); if(!cad.length) return { ok:false, motivo:'sin_empresas' };
+      d.n.cm = (d.n.cm || 0) + 1;
+      var cm = { id:'cm' + d.n.cm + '-' + op.t, tipo:tipo, titulo:tit.slice(0, 140), texto:tx || null, url:op.url ? (/\/storage\/v1\//.test(op.url) ? 'central-demo/documento-ejemplo.pdf' : op.url) : null,
+                 archivo:op.archivo || null, codigo:op.codigo || null, version:op.version || null, urgente:!!op.urgente && tipo === 'boletin', difundir:tipo === 'estandar' && op.firmar !== false,
+                 hasta:op.hasta || null, proy:pr, creado:op.t, por:yo.n, estado:'vigente', rapido:true, base:String(op.base || '').replace(/\s+/g, ' ').trim().slice(0, 200) || null };
+      d.coms.push(cm);
+      return { ok:true, est:{ id:cm.id, tipo:cm.tipo, titulo:cm.titulo, creado:_dmaT(cm.creado) }, empresas:cad.length, gente:cad.reduce(function(s2, x){ return s2 + x.gente; }, 0) };
+    }
+    case 'com_retirar': {
+      if(!manda) return { ok:false, motivo:'solo_jefes' };
+      var cr = d.coms.filter(function(x){ return x.id === op.id; })[0]; if(!cr) return { ok:false, motivo:'no_existe' };
+      if(cr.estado !== 'vigente') return { ok:false, motivo:'ya_retirado' };
+      var mot = String(op.motivo || '').replace(/\s+/g, ' ').trim().slice(0, 300); if(mot.length < 5) return { ok:false, motivo:'falta_motivo' };
+      cr.estado = 'retirado'; cr.motivo = mot; cr.retirado = op.t; cr.retirado_por = yo.n;
+      return { ok:true };
+    }
+    /* 29/10/2026 · prototipo 2: reiterar a las que no confirmaron (una vez cada 6 horas) */
+    case 'com_reiterar': {
+      if(!manda) return { ok:false, motivo:'solo_jefes' };
+      var ci = d.coms.filter(function(x){ return x.id === op.id; })[0]; if(!ci) return { ok:false, motivo:'no_existe' };
+      if(ci.estado !== 'vigente') return { ok:false, motivo:'no_vigente' };
+      var ult = (ci.reit || []).length ? ci.reit[ci.reit.length - 1].t : 0;
+      if(ult && op.t - ult < 6 * 3600000) return { ok:false, motivo:'reiterado_hace_poco' };
+      var faltan = dmaLinCadena(d, ci.proy).filter(function(x){ return !dmaLinAcuse(ci, x, op.t).recibido; }).map(function(x){ return x.emp; });
+      if(!faltan.length) return { ok:false, motivo:'todas_confirmaron' };
+      ci.reit = (ci.reit || []).concat([{ t:op.t, emps:faltan }]);
+      return { ok:true, empresas:faltan.length };
+    }
+    /* la bitácora de gestión: lo que hizo el equipo con cada alerta */
+    case 'gest': {
+      var QUE = ['asiento', 'carta', 'informe', 'observacion', 'orden', 'reunion', 'otro'];
+      var clave = String(op.clave || '').trim(), tit = String(op.titulo || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+      if(clave.length > 160 || !/^[a-z_]{2,20}(:[A-Za-z0-9._-]{1,80}){0,3}$/.test(clave)) return { ok:false, motivo:'clave' };
+      if(tit.length < 3) return { ok:false, motivo:'titulo' };
+      if(QUE.indexOf(op.que) < 0) return { ok:false, motivo:'que' };
+      var doc = String(op.documento || '').replace(/\s+/g, ' ').trim().slice(0, 80), det = String(op.detalle || '').trim().slice(0, 600);
+      if(['asiento', 'carta', 'informe'].indexOf(op.que) > -1 && !doc) return { ok:false, motivo:'documento' };
+      if(['reunion', 'otro'].indexOf(op.que) > -1 && det.length < 5) return { ok:false, motivo:'detalle' };
+      if(op.plazo && (op.plazo < d.hoy || op.plazo > _dmaDia(d.hoy, 365))) return { ok:false, motivo:'fechas' };
+      var pg = op.proy ? String(op.proy).replace(/^demo-/, '') : null; if(pg && !d.proy.some(function(p){ return p.id === pg; })) return { ok:false, motivo:'proy' };
+      d.n.gs = (d.n.gs || 0) + 1;
+      var gs = { id:'gs' + d.n.gs + '-' + op.t, clave:clave, titulo:tit, empresa:String(op.empresa || '').slice(0, 160) || null, proy:pg, que:op.que, documento:doc || null,
+                 detalle:det || null, plazo:op.plazo || null, estado:'abierta', por:yo.n, creado:op.t };
+      d.gest.push(gs);
+      return { ok:true, gestion:dmaGestJson(gs) };
+    }
+    case 'gest_cerrar': {
+      var gc = d.gest.filter(function(x){ return x.id === op.id; })[0]; if(!gc) return { ok:false, motivo:'no_existe' };
+      if(gc.estado !== 'abierta') return { ok:false, motivo:'ya_cerrada' };
+      var cie = String(op.cierre || '').replace(/\s+/g, ' ').trim().slice(0, 400); if(cie.length < 3) return { ok:false, motivo:'cierre' };
+      gc.estado = 'cerrada'; gc.cierre = cie; gc.cerrado = op.t; gc.cerrado_por = yo.n;
+      return { ok:true, gestion:dmaGestJson(gc) };
+    }
     case 'reinvitar': {
       if(!manda) return { ok:false, motivo:'rango' };
       var x3 = d.emps.filter(function(e4){ return e4.enl === op.enlace; })[0]; if(!x3 || x3.estado !== 'invitada') return { ok:false, motivo:'no_activa' };
@@ -1148,8 +1213,8 @@ function dmaRailPie(r){
 /* en el ejemplo, «Tu propia gestión SST» se explica (la cuenta de verdad la abre y la esconde) */
 function dmaPropiaExplicar(){
   abrirHoja('Tu propia gestión SST', 'En la cuenta de verdad, aquí se abre', '<p>Además de lo que fiscalizas o supervisas, tu cuenta trae la gestión SST de tu propia entidad: tu personal, sus capacitaciones, el EPP, las inspecciones, los documentos y el informe del mes —lo mismo que usan las constructoras—.</p>' +
-    '<p>Como tu trabajo es lo de arriba, va escondida al pie del menú y la abres cuando la necesitas. En la obra de ejemplo de Central puedes recorrer esa parte.</p>',
-    '<a class="bt sec" href="?demo=central">Ver la obra de ejemplo de Central</a><button type="button" class="bt" id="dma-pr-ok">Entendido</button>');
+    '<p>Como tu trabajo es lo de arriba, va escondida al pie del menú y la abres cuando la necesitas. En la obra de ejemplo de Contractor Hub puedes recorrer esa parte.</p>',
+    '<a class="bt sec" href="?demo=central">Ver la obra de ejemplo de Contractor Hub</a><button type="button" class="bt" id="dma-pr-ok">Entendido</button>');
   $('dma-pr-ok').onclick = cerrarHoja;
 }
 function _dmaCss(){
@@ -1166,7 +1231,7 @@ function _dmaCss(){
   document.head.appendChild(st);
 }
 /* lo que la obra de ejemplo no lleva (los datos de tu entidad, tu equipo, tu plan): la sección dice qué es, sin servidor */
-var DMA_VISTAS_SI = /^(arr-ini|sup-|car-|fis-|cum-|cad-obs$|cad-equipo$)/;
+var DMA_VISTAS_SI = /^(arr-ini|sup-|car-|fis-|cum-|est-|cad-obs$|cad-equipo$)/;
 var DMA_EXPLICA = {
   equipo:['Tu equipo', 'En la cuenta de verdad, aquí sumas a tu equipo con su correo (jefes e inspectores) y ves quién pidió entrar. Cada uno entra con su cuenta, en la app y en la web; sus rangos van en «Rangos del equipo».'],
   empresa:['Los datos y el logo de tu entidad', 'Tu razón social, tu RUC y tu logo: salen en las actas, en el expediente probatorio y en el informe del mes.'],
@@ -1180,3 +1245,128 @@ function dmaVistaDemo(v){
     caja.innerHTML = '<div class="tarj"><div class="tarj-cuerpo dma-explica"><h2>' + esc(x[0]) + '</h2><p>' + esc(x[1]) + '</p><p class="sub">Obra de ejemplo: esta parte no se llena con datos inventados.</p></div></div>';
   } });
 }
+
+/* ══ 29/10/2026 · ESTADO 3.0 · LA LÍNEA, EN EL EJEMPLO (portal/linea.js) ════════════════════════════════════════════
+   Lo que contestarían sst_est_lista, sst_est_bajar, sst_est_retirar y sst_cad_accidentes (sql/2026-10-30-estado-linea.sql),
+   con las mismas formas. La cadena de cada obra es la del cumplimiento: la supervisora, cada contratista y sus subcontratas.
+   Cada empresa confirma el comunicado a su hora (unas tardan, dos no lo confirman) y su gente lo ve en el mural o firma la
+   directiva de a pocos, como pasaría de verdad; lo que se envía aquí se va confirmando en minutos. Los accidentes: los dos
+   del año de siempre (el consorcio grande y la de las vigas, ya investigados), un casi accidente de ayer que pudo ser grave,
+   uno leve de la que comparte solo cifras y uno mortal de hoy en una subcontrata, con el aviso al MTPE todavía sin marcar
+   (el reloj de las 24 horas). Todo inventado. */
+function dmaLinCadena(d, proy){
+  var L = [], act = d.emps.filter(function(e){ return e.estado === 'activa'; });
+  d.sups.forEach(function(s){ if(proy && s.ps.indexOf(proy) < 0) return; L.push({ enlace:s.enl, emp:s.id, nombre:s.n, via:'supervisora', nivel:1, padre:null, gente:s.gente, detalle:true }); });
+  act.forEach(function(e){ if(proy && e.p !== proy) return; L.push({ enlace:e.enl, emp:e.id, nombre:e.n, via:'contratista', nivel:1, padre:null, gente:e.gente, detalle:true, p:e.p, enlace1:e.enl }); });
+  DMA_SUBS.forEach(function(k){
+    var de = act.filter(function(e){ return e.id === k.de; })[0]; if(!de || (proy && de.p !== proy)) return;
+    L.push({ enlace:'L-' + k.id, emp:k.id, nombre:k.n, via:'subcontrata', nivel:2, padre:de.n, gente:k.gente, detalle:!k.solo, p:de.p, enlace1:de.enl });
+  });
+  return L;
+}
+function dmaLinArmar(d){
+  var ahora = d.ahora, hoy = d.hoy, quien = function(uid){ return ((d.equipo || []).filter(function(u){ return u.uid === uid; })[0] || {}).n || ''; };
+  d.coms = []; d.accs = []; d.gest = [];
+  d.coms.push({ id:'cm-lluvia', tipo:'boletin', titulo:'Lluvias intensas: medidas desde hoy', urgente:true, difundir:false, url:null, codigo:null, version:null, hasta:_dmaDia(hoy, 6), proy:null,
+    texto:'Se pronostican lluvias intensas esta semana. Apliquen los criterios de suspensión y reinicio de su Plan de SST y de su IPERC para los trabajos en altura, el izaje y las excavaciones: la evaluación es del residente y del responsable de SST de cada empresa, y queda en su inspección del día.',
+    base:'Plan de SST de cada obra', creado:ahora - 30 * 3600000, por:quien('u1'), estado:'vigente', mudos:['k2', 'e7'] });
+  d.coms.push({ id:'cm-altura', tipo:'estandar', titulo:'Estándar de trabajos en altura', urgente:false, difundir:true, url:'central-demo/documento-ejemplo.pdf', archivo:'estandar-trabajos-en-altura.pdf',
+    codigo:'EST-SST-03', version:'2', hasta:null, proy:null,
+    texto:'Los trabajos en altura se hacen como lo dice el Plan de SST de la obra: con arnés de cuerpo completo, línea de anclaje y punto de anclaje adecuado, y con su PETAR autorizado. Cada trabajador lo lee y lo firma en su celular.',
+    base:'Plan de SST de cada obra y su PETAR', creado:ahora - 9 * 86400000 - 4 * 3600000, por:quien('u0'), estado:'vigente', mudos:[] });
+  /* los accidentes: los de siempre (dos meses atrás, como en el consolidado), los de ahora */
+  var mes2 = new Date(+hoy.slice(0, 4), +hoy.slice(5, 7) - 3, 1), dia = function(n){ return _dmaISO(new Date(mes2.getFullYear(), mes2.getMonth(), n)); };
+  var hace5 = new Date(ahora - 5 * 3600000), hHoy = _dmaISO(hace5) === hoy ? _dmaDos(hace5.getHours()) + ':' + _dmaDos(hace5.getMinutes()) : '00:40';
+  var A = [
+    { emp:'e1', ext:'ac-e1', fecha:dia(9), hora:'10:20', clase:'incap', t_nombre:'Ruiz Paucar, Elmer', t_doc:'41827364', t_puesto:'Operario', lugar:'Km 14+050', descripcion:'Golpe en la mano izquierda con el martillo hidráulico al cambiar la punta.', parte:'Mano izquierda', agente:'Martillo hidráulico', dias:12, causas:'Cambio de punta con el equipo encendido.', medidas:'Bloqueo y etiquetado antes de cambiar la punta; charla a la cuadrilla.' },
+    { emp:'e3', ext:'ac-e3', fecha:dia(21), hora:'15:40', clase:'incap', t_nombre:'Huamán Inga, Freddy', t_doc:'42938475', t_puesto:'Fierrero', lugar:'Patio de prefabricados', descripcion:'Caída al mismo nivel con esguince de tobillo, en un pasadizo con fierro suelto.', parte:'Tobillo derecho', agente:'Superficie irregular', dias:8, causas:'Fierro suelto en la vía de tránsito.', medidas:'Orden y limpieza diaria del patio; vía demarcada.' },
+    { emp:'k2', ext:'ac-k2', fecha:_dmaDia(hoy, -1), hora:'16:10', clase:'casi', potencial:true, t_nombre:'', t_doc:'', lugar:'Km 9+800 · cantera', descripcion:'La tolva de la volquete se levantó con un ayudante detrás; no lo alcanzó.', parte:'', agente:'Tolva de volquete', dias:0, causas:null, medidas:null },
+    { emp:'k5', ext:'ac-k5', fecha:_dmaDia(hoy, -20), hora:'11:05', clase:'leve', t_nombre:'Apaza Coaquira, Hugo', t_doc:'43049586', t_puesto:'Ayudante', lugar:'Reservorio R-2', descripcion:'Corte en el antebrazo al manipular una tubería.', parte:'Antebrazo', agente:'Tubería', dias:0, causas:'Sin guantes de cuero.', medidas:'Guantes para manipular tubería.' },
+    { emp:'k1', ext:'ac-k1', fecha:hoy, hora:hHoy, clase:'mortal', mtpe:false, t_nombre:'Chunga Purizaca, Santos', t_doc:'44150697', t_puesto:'Vigía', lugar:'Km 12+300 · desvío', descripcion:'Atropello por un vehículo particular en el desvío de la vía, durante la colocación de conos.', parte:'Múltiples', agente:'Vehículo en tránsito', dias:6000, causas:null, medidas:null }
+  ];
+  var hay = function(id){ return d.emps.some(function(e){ return e.id === id && e.estado === 'activa'; }) || DMA_SUBS.some(function(k){ return k.id === id && d.emps.some(function(e){ return e.id === k.de && e.estado === 'activa'; }); }); };
+  d.accs = A.filter(function(a){ return hay(a.emp); });
+  /* la bitácora de gestión (prototipo 2): la carta de ayer por la observación de riesgo alto vencida del consorcio grande (abierta,
+     con su plazo) y el asiento del accidente de agosto, ya cerrado */
+  if(d.emps.some(function(e){ return e.id === 'e1' && e.estado === 'activa'; }))
+    d.gest.push({ id:'gs-carta', clave:'obs:consorcio-vial-norte-grande', titulo:'Consorcio Vial Norte Grande: 1 observación de riesgo alto vencida', empresa:'Consorcio Vial Norte Grande',
+                  proy:'p1', que:'carta', documento:'Carta N.° 087-2026-PEO/USO', detalle:'Se le pide levantar la observación de riesgo alto con su foto en 48 horas.',
+                  plazo:_dmaDia(hoy, 2), estado:'abierta', por:quien('u1'), creado:ahora - 20 * 3600000 });
+  var a3 = d.accs.filter(function(a){ return a.ext === 'ac-e3'; })[0];
+  if(a3){ var t3 = Date.parse(a3.fecha + 'T17:30:00');
+    d.gest.push({ id:'gs-asiento', clave:'acc:ac-e3', titulo:'Accidente incapacitante en Estructuras Metálicas Los Sauces S.A.C.: falta la investigación', empresa:'Estructuras Metálicas Los Sauces S.A.C.',
+                  proy:'p2', que:'asiento', documento:'Asiento N.° 231 del cuaderno de obra', detalle:'Se anotó el accidente y se pidió la investigación con sus causas y medidas en 5 días.',
+                  plazo:_dmaISO(new Date(t3 + 5 * 86400000)), estado:'cerrada', cierre:'La contratista registró la investigación y sus medidas; la supervisora lo verificó en campo.',
+                  cerrado:t3 + 4 * 86400000, cerrado_por:quien('u0'), por:quien('u1'), creado:t3 + 3600000 }); }
+}
+/* el acuse de una empresa, a la hora de hoy (cada una confirma a su hora; su gente firma o lo ve de a pocos) */
+function dmaLinAcuse(cm, x, cuando){
+  var r = _dmaAzar(_dmaSemilla(cm.id + '|' + x.emp)), ahora = cuando || DMA.d.ahora, t0 = cm.creado, pasa = ahora - t0;
+  var dRec = cm.rapido ? (1 + r() * 24) * 60000 : (10 + r() * 60 * 26) * 60000, mudo = (cm.mudos || []).indexOf(x.emp) > -1;
+  /* prototipo 2: lo reiterado (las que callaban confirman entre 25 y 70 minutos después del primer recordatorio que les llegó) */
+  var reit = (cm.reit || []).filter(function(z){ return z.t <= ahora && z.emps.indexOf(x.emp) > -1; });
+  var rec = !mudo && pasa >= dRec ? t0 + dRec : null, out = { enlace:x.enlace, emp:x.emp, nombre:x.nombre, via:x.via, nivel:x.nivel, padre:x.padre || null, gente:x.gente };
+  if(!rec && reit.length){ var tr = reit[0].t + (25 + r() * 45) * 60000; if(ahora >= tr) rec = tr; }
+  if(reit.length){ out.reiterado = _dmaT(reit[reit.length - 1].t); out.n_reit = reit.length; }
+  if(rec){ out.recibido = _dmaT(rec); out.por = x.via === 'supervisora' ? 'Jefe de supervisión' : 'Responsable de SST'; }
+  var fact = 0.7 + r() * 0.28, tau = cm.tipo === 'estandar' ? 20 : 9, avance = 1 - Math.exp(-(pasa / 3600000) / tau);
+  if(cm.tipo === 'estandar' && cm.difundir){ out.difundido = _dmaT(t0 + 20000); out.firmas = Math.min(x.gente, Math.floor(x.gente * fact * avance)); }
+  if(cm.tipo === 'boletin') out.vistos = Math.min(x.gente, Math.floor(x.gente * (fact - 0.1) * avance));
+  return out;
+}
+function dmaLinCom(cm){
+  var d = DMA.d, E = dmaLinCadena(d, cm.proy).map(function(x){ return dmaLinAcuse(cm, x); });
+  E.sort(function(a, b){ return a.nivel - b.nivel || String(a.padre || '').localeCompare(String(b.padre || '')) || String(a.nombre).localeCompare(String(b.nombre)); });
+  var sum = function(k){ return E.reduce(function(s2, e){ return s2 + (e[k] || 0); }, 0); };
+  var pr = cm.proy ? dmaProy(cm.proy) : null;
+  return { id:cm.id, tipo:cm.tipo, titulo:cm.titulo, codigo:cm.codigo, version:cm.version, url:cm.url, archivo:cm.archivo || null, texto:cm.texto, difundir:cm.difundir, desde:_dmaISO(new Date(cm.creado)),
+    hasta:cm.hasta, estado:cm.estado, creado:_dmaT(cm.creado), por:cm.por, cascada:true, urgente:cm.urgente || undefined, proy:cm.proy ? 'demo-' + cm.proy : undefined, proyecto:pr ? pr.n : undefined,
+    sello:'demo', empresas:E, base:cm.base || undefined, retiro_motivo:cm.motivo || undefined, retirado:cm.retirado ? _dmaT(cm.retirado) : undefined, retirado_por:cm.retirado_por || undefined,
+    tot:{ empresas:E.length, recibidas:E.filter(function(e){ return e.recibido; }).length, difundidas:E.filter(function(e){ return e.difundido; }).length, gente:sum('gente'), firmas:sum('firmas'), vistos:sum('vistos') } };
+}
+DMA_RPC.sst_est_lista = function(){
+  var d = DMA.d, L = d.coms.slice().sort(function(a, b){ return (a.estado === 'vigente' ? 0 : 1) - (b.estado === 'vigente' ? 0 : 1) || (b.urgente ? 1 : 0) - (a.urgente ? 1 : 0) || b.creado - a.creado; });
+  return { ok:true, arriba:L.map(dmaLinCom), abajo:[], manda:dmaYo().rango !== 'supervisor' };
+};
+DMA_RPC.sst_est_bajar = function(a){
+  var p = a.p || {};
+  return dmaHacer({ op:'com', tipo:p.tipo, titulo:p.titulo, texto:p.texto, base:p.base || null, url:p.url, archivo:p.archivo, codigo:p.codigo, version:p.version, urgente:!!p.urgente, firmar:p.firmar !== false, hasta:p.hasta || null, proy:p.proy || null });
+};
+DMA_RPC.sst_est_retirar = function(a){ return dmaHacer({ op:'com_retirar', id:(a.p || {}).id, motivo:(a.p || {}).motivo }); };
+DMA_RPC.sst_est_reiterar = function(a){ return dmaHacer({ op:'com_reiterar', id:(a.p || {}).id }); };
+/* la bitácora de gestión (prototipo 2) */
+function dmaGestJson(g){
+  var pr = g.proy ? dmaProy(g.proy) : null, d = DMA.d;
+  return { id:g.id, clave:g.clave, titulo:g.titulo, empresa:g.empresa || undefined, proy:g.proy ? 'demo-' + g.proy : undefined, proyecto:pr ? pr.n : undefined, que:g.que,
+           documento:g.documento || undefined, detalle:g.detalle || undefined, plazo:g.plazo || undefined, estado:g.estado, cierre:g.cierre || undefined,
+           cerrado:g.cerrado ? _dmaT(g.cerrado) : undefined, cerrado_por:g.cerrado_por || undefined, por:g.por, creado:_dmaT(g.creado), sello:'demo',
+           vencida:g.estado === 'abierta' && g.plazo && g.plazo < d.hoy ? true : undefined };
+}
+DMA_RPC.sst_est_gestion_poner = function(a){ var p = a.p || {}; return dmaHacer({ op:'gest', clave:p.clave, titulo:p.titulo, empresa:p.empresa, proy:p.proy, que:p.que, documento:p.documento, detalle:p.detalle, plazo:p.plazo || null }); };
+DMA_RPC.sst_est_gestion_cerrar = function(a){ var p = a.p || {}; return dmaHacer({ op:'gest_cerrar', id:p.id, cierre:p.cierre }); };
+DMA_RPC.sst_est_gestion_lista = function(a){
+  var d = DMA.d, p = a.p || {}, desde = p.desde || _dmaDia(d.hoy, -400), hasta = p.hasta || d.hoy;
+  if(hasta < desde) return { ok:false, motivo:'fechas' };
+  var L = d.gest.filter(function(g){ var f = _dmaISO(new Date(g.creado)); return f >= desde && f <= hasta; }).sort(function(x, y){ return y.creado - x.creado; });
+  return { ok:true, hoy:d.hoy, desde:desde, hasta:hasta, lista:L.map(dmaGestJson), abiertas:d.gest.filter(function(g){ return g.estado === 'abierta'; }).length,
+           vencidas:d.gest.filter(function(g){ return g.estado === 'abierta' && g.plazo && g.plazo < d.hoy; }).length };
+};
+DMA_RPC.sst_cad_accidentes = function(a){
+  var d = DMA.d, p = a.p || {}, dias = Math.max(1, Math.min(365, parseInt(p.dias, 10) || 90)), desde = _dmaDia(d.hoy, -dias), cad = {};
+  dmaLinCadena(d, null).forEach(function(x){ cad[x.emp] = x; });
+  var L = d.accs.filter(function(x){ return x.fecha >= desde && cad[x.emp]; }).filter(function(x){ return ['casi', 'dano', 'primeros'].indexOf(x.clase) < 0 || x.potencial; }).map(function(x){
+    var c = cad[x.emp], det = c.detalle !== false, ve = det || x.clase === 'mortal' || x.clase === 'incap', t = Date.parse(x.fecha + 'T' + (x.hora || '00:00') + ':00');
+    var o = { id:x.ext, emp:x.emp, empresa:c.nombre, via:c.via, padre:c.padre || undefined, proyecto:dmaProy(c.p).n, nivel:c.nivel, enlace1:c.enlace1, fecha:x.fecha, hora:x.hora, clase:x.clase,
+              potencial:x.potencial && x.clase !== 'mortal' && x.clase !== 'incap' ? true : undefined, dias:x.dias || 0, investigado:!!(x.causas && x.medidas), detalle:det,
+              doc:x.t_doc ? _dmaTapa(x.t_doc) : undefined };
+    if(x.clase === 'mortal'){ o.mtpe = !!x.mtpe; o.plazo = _dmaT(t + 86400000); }
+    /* prototipo 2: el nombre del trabajador no sube (su nombre con su lesión es dato de salud); lo grave se ve aunque comparta solo cifras */
+    if(ve){ o.puesto = x.t_puesto || undefined; o.lugar = x.lugar || undefined; o.descripcion = x.descripcion || undefined; o.parte = x.parte || undefined; o.agente = x.agente || undefined; }
+    return o;
+  });
+  L.sort(function(a2, b2){ var u = function(z){ return z.clase === 'mortal' && !z.mtpe ? 0 : 1; }; return u(a2) - u(b2) || (b2.fecha + (b2.hora || '')).localeCompare(a2.fecha + (a2.hora || '')); });
+  var R = { mortal:0, incap:0, leve:0, potencial:0, sin_aviso:0, sin_investigar:0, dias_perdidos:0 };
+  L.forEach(function(x){ if(R[x.clase] != null) R[x.clase]++; if(x.potencial) R.potencial++; if(x.clase === 'mortal' && !x.mtpe) R.sin_aviso++;
+    if((x.clase === 'incap' || x.clase === 'mortal') && !x.investigado) R.sin_investigar++; if(x.clase === 'incap' || x.clase === 'leve') R.dias_perdidos += x.dias || 0; });
+  return { ok:true, hoy:d.hoy, dias:dias, ahora:_dmaT(d.ahora), lista:L, resumen:R };
+};

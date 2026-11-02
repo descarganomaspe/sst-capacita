@@ -17,7 +17,10 @@ var COT = (function(){
     LAMBAYEQUE:'Lambayeque', LIMA:'Lima', LORETO:'Loreto', 'MADRE DE DIOS':'Madre de Dios', MOQUEGUA:'Moquegua', PASCO:'Pasco',
     PIURA:'Piura', PUNO:'Puno', 'SAN MARTIN':'San Martín', TACNA:'Tacna', TUMBES:'Tumbes', UCAYALI:'Ucayali' };
   var RUBROS = { epp:'EPP y seguridad', salud:'Centro de salud ocupacional', consultor:'Consultor SSOMA', medico:'Médico ocupacional',
-    capacitacion:'Centro de capacitación', residuos:'Gestor de residuos', sctr:'Corredor de seguros (SCTR)', otro:'Otro' };
+    capacitacion:'Centro de capacitación', residuos:'Gestor de residuos', sctr:'Corredor de seguros (SCTR)',
+    /* 2/11/2026 · los rubros nuevos del ERP de servicios */
+    maquinaria:'Alquiler de maquinaria y equipos', izaje:'Inspección de izaje, andamios y extintores', laboratorio:'Laboratorio de monitoreo y calibración',
+    transporte:'Transporte de personal', saneamiento:'Saneamiento ambiental y catering', otro:'Otro' };
   var PAGOS = ['Contado', 'Contra entrega', 'Crédito 15 días', 'Crédito 30 días', 'Crédito 45 días', 'Crédito 60 días'];
   /* 27/10/2026 · Marcelo: «la web de aliados da a entender que considera a todos? los comandos, funciones da entender ello?».
      Qué tiene HOY cada rubro y desde cuándo le llegan sus solicitudes: lo mismo en el Portal de Aliados, la página y el correo de
@@ -47,7 +50,7 @@ var COT = (function(){
     var g = rubroInfo(k).grupo;
     if(g === 'medico') return 'Para ti no hay plan: trabajas con el plan de cada empresa, ahora y después. Igual ganas tu comisión por las empresas que traigas.';
     if(g === 'profesional') return 'Después eliges un plan: Consultor, S/ 49 al mes (hasta 2 empresas), o Consultor Pro, S/ 149 (hasta 10). Lo que ganes en comisiones se descuenta primero del plan.';
-    return 'Después eliges un plan: Aliado, S/ 49 al mes, o Aliado Pro, S/ 149. Lo que ganes en comisiones se descuenta primero del plan.';
+    return 'Después eliges un plan: Aliado, S/ 49 al mes, o Aliado Pro, S/ 169; con el sistema de tu rubro, tu página web y la app, Aliado ERP + Web + App, S/ 390, o Aliado ERP Full 360°, S/ 690. Lo que ganes en comisiones se descuenta primero del plan.';
   }
 
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
