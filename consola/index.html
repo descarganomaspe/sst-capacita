@@ -708,7 +708,7 @@ var VISTAS = [
   {id:'ventas',   n:'Ventas',            c:'Ventas',   s:'Los pagos de OBRASST: la web, la tienda online y Google Play'},
   {id:'comprobantes', n:'Boletas y facturas', c:'Boletas', s:'La boleta o la factura de cada venta: lo que pidió el cliente, lista para emitir en SUNAT, y su número y su PDF cuando ya salió'},
   {id:'empresas', n:'Empresas y planes', c:'Empresas', s:'Cada empresa, con el plan que tiene hoy, sus obras y su gente'},
-  {id:'central',  n:'Central',           c:'Central',  s:'OBRASST Central se activa por obra: con su código, hasta cuándo y para cuántas subcontratas. Y quién pidió una demo o un piloto'},
+  {id:'central',  n:'Contractor Hub',    c:'Contractor Hub', s:'Contractor Hub™ se activa por obra: con su código, hasta cuándo y para cuántas subcontratas. Y quién pidió una demo o un piloto'},
   {id:'aliados',  n:'Aliados',           c:'Aliados',  s:'Los proveedores que firmaron el acuerdo: su alta, su enlace de invitación, lo que les llega y las empresas que traen'},
   {id:'os',       n:'OBRASST OS',        c:'OS',       s:'Los interruptores de cada módulo (lo que no está construido no se enciende), los pedidos del Marketplace SST y el RNP que declara cada aliado'},
   {id:'reuniones', n:'Asistente de plan', c:'Citas', s:'Quién respondió «¿Qué plan te conviene?», qué le salió, y las reuniones de 15 minutos por Google Meet que pidieron'},
@@ -2004,7 +2004,7 @@ var APL_PREG = {
            ['dueno', 'Mi empresa contrata la obra', 'Empresa privada: minera, concesionaria o industria'],
            ['estado', 'Trabajo en el Estado', 'Ministerio, entidad que contrata obra o regulador'],
            ['trabajador', 'Soy trabajador', 'Entro con el código de mi obra'] ] },
-  central: { t:'¿Tu contratista principal ya usa OBRASST Central?', op:[['si', 'Sí'], ['no', 'No'], ['nose', 'No sé']] },
+  central: { t:'¿Tu contratista principal ya usa Contractor Hub™?', op:[['si', 'Sí'], ['no', 'No'], ['nose', 'No sé']] },
   trab:  { t:'¿Cuántos trabajadores tienen tus obras?', ayuda:'Contando a todos los que entran a la obra.', op:[
            ['10', 'Hasta 10'], ['30', 'De 11 a 30'], ['70', 'De 31 a 70'], ['150', 'De 71 a 150'], ['450', 'De 151 a 450'], ['mas', 'Más de 450'] ] },
   obras: { t:'¿Cuántas obras llevas a la vez?', op:[['1', 'Una'], ['2', 'Dos'], ['4', 'De 3 a 4'], ['8', 'De 5 a 8'], ['mas', 'Más de 8']] },
@@ -2095,7 +2095,7 @@ function aplSiguiente(r){
   var ps = aplPlan('supervisor'), pso = aplPlan('ssoma');
   if(!r.insp && om < (ps ? ps.orden : 2)) return 'insp';
   if(!r.ssoma && om < (pso ? pso.orden : 3)) return 'ssoma';
-  /* las subcontratas cambian el resultado solo desde 401 trabajadores (OBRASST Central): antes no se pregunta */
+  /* las subcontratas cambian el resultado solo desde 401 trabajadores (Contractor Hub™): antes no se pregunta */
   if(!r.sub && r.rol !== 'subcontrata' && (APL_N.trab[r.trab] || 0) > 400) return 'sub';
   return null;
 }
@@ -2145,14 +2145,14 @@ function aplDecidir(r){
   }
   if(r.rol === 'estado'){
     R.tipo = 'reunion'; R.plan = 'fiscalizacion'; R.nombre = 'OBRASST Estado';
-    R.porque = ['Un solo plan para la entidad pública: cada obra con su supervisora, el contratista con su Central y sus subcontratas, todo incluido.',
+    R.porque = ['Un solo plan para la entidad pública: cada obra con su supervisora, el contratista con su Contractor Hub y sus subcontratas, todo incluido.',
                 'Se arma a la medida de tu entidad en una reunión.'];
     R.reunion = 'fiscalizacion';
     return R;
   }
   if(r.rol === 'subcontrata' && r.central === 'si'){
-    R.tipo = 'invitado'; R.nombre = 'Gratis, dentro de la Central';
-    R.porque = ['Con OBRASST Central paga la contratista principal: las subcontratas entran gratis.',
+    R.tipo = 'invitado'; R.nombre = 'Gratis, dentro del Contractor Hub';
+    R.porque = ['Con Contractor Hub™ paga la contratista principal: las subcontratas entran gratis.',
                 'Pídele a tu contratista su enlace de invitación.'];
     return R;
   }
@@ -2171,7 +2171,7 @@ function aplDecidir(r){
   /* 21/10/2026 · Central o Corporativo cuando pasa el tope de SSOMA (antes 400, ahora 150) */
   var _ssT = (aplPlan('ssoma') || {}).trab || 150;
   if(r.sub === 'si' && t > _ssT){
-    R.tipo = 'reunion'; R.plan = (o > 1 ? 'corporativo' : 'central'); R.nombre = (o > 1 ? 'OBRASST Corporativo' : 'OBRASST Central');
+    R.tipo = 'reunion'; R.plan = (o > 1 ? 'corporativo' : 'central'); R.nombre = (o > 1 ? 'OBRASST Corporativo' : 'Contractor Hub™');
     R.porque = ['Tienes más de ' + _aplMiles(_ssT) + ' trabajadores y subcontratas: con ' + R.nombre + ' ves a todas las empresas de tu obra en un solo lugar.',
                 'Paga la principal; las subcontratas entran gratis. Se cobra por trabajador y se arma en una reunión.'];
     R.reunion = R.plan;
@@ -2200,7 +2200,7 @@ function aplDecidir(r){
       R.porque.push('Pides requerimientos de EPP, manejas químicos, simulacros o exámenes médicos: vienen desde ' + P.n + '.');
     if(!R.porque.length) R.porque.push(P.n + ' es el plan más chico que cubre todo lo que respondiste.');
   }
-  if(r.sub === 'si') R.nota = 'Tus subcontratas pueden usar su propia cuenta (LITE es gratis). Con más de ' + _aplMiles((aplPlan('ssoma') || {}).trab || 150) + ' trabajadores, OBRASST Central las junta y entran gratis.';
+  if(r.sub === 'si') R.nota = 'Tus subcontratas pueden usar su propia cuenta (LITE es gratis). Con más de ' + _aplMiles((aplPlan('ssoma') || {}).trab || 150) + ' trabajadores, Contractor Hub™ las junta y entran gratis.';
   /* 15/10/2026 · si lo único que lo sube de plan es la gente, el de abajo con puestos sueltos puede salir menos: se
      le dice (nunca vender de más) */
   var Q = _aplAlterno(L, P, t, o, p, desde);
@@ -2226,7 +2226,7 @@ function aplResumen(R){
 /* lo respondido, en una línea por pregunta (para el WhatsApp y la Consola) */
 function aplRespuestasTexto(r){
   return aplRespondidas(r).map(function(k){
-    var q = { rol:'Qué hace', central:'Su principal usa Central', trab:'Trabajadores', obras:'Obras a la vez', pers:'Personas que registran',
+    var q = { rol:'Qué hace', central:'Su principal usa Contractor Hub', trab:'Trabajadores', obras:'Obras a la vez', pers:'Personas que registran',
               insp:'Inspecciones con formato', ssoma:'Requerimientos, químicos, simulacros o EMO', sub:'Subcontratas en la app' }[k] || k;
     return q + ': ' + aplTexto(k, r[k]);
   });
@@ -2505,15 +2505,15 @@ function _codMensaje(c){
 }
 function _codWaLink(c){ return 'https://wa.me/'+_codWa(c.para)+'?text='+encodeURIComponent(_codMensaje(c)); }
 /* ══ CENTRAL (05/10/2026) ═════════════════════════════════════════════
-   OBRASST Central no se compra en la app: se conversa, y se activa aquí, por obra, con su código. Mientras esté
+   Contractor Hub™ no se compra en la app: se conversa, y se activa aquí, por obra, con su código. Mientras esté
    activo, esa obra trabaja como Gestión SST, invita a sus subcontratas por su RUC (que también trabajan como
    Gestión SST, sin pagar) y a quien la supervisa (el cliente, la supervisión, el regulador). Al vencer o quitarlo,
    cada espacio vuelve a su plan y lo registrado queda. Servidor: sql/2026-10-25-cadena.sql. */
 var CENP = { lista:[], pedidos:[], cod:'', hasta:'', tope:'', todas:false, tipo:'central', sups:'', puestos:'', gb:'', nota:'' };
 /* 15/10/2026 · lote 12: los planes que se activan aquí (los dos de arriba traen a su supervisora incluida) */
-var CEN_TIPOS = [['central', 'Central', 'una obra'], ['corporativo', 'Corporativo', 'la empresa y todas sus obras'], ['mandante', 'Mandante', 'la empresa privada que contrata la obra, con su supervisora incluida'],
+var CEN_TIPOS = [['central', 'Contractor Hub', 'una obra'], ['corporativo', 'Corporativo', 'la empresa y todas sus obras'], ['mandante', 'Mandante', 'la empresa privada que contrata la obra, con su supervisora incluida'],
                  ['fiscalizacion', 'Estado', 'la entidad pública: todo incluido por obra']];
-function _cenTipoN(t){ var x = CEN_TIPOS.filter(function(y){ return y[0] === t; })[0]; return x ? x[1] : 'Central'; }
+function _cenTipoN(t){ var x = CEN_TIPOS.filter(function(y){ return y[0] === t; })[0]; return x ? x[1] : 'Contractor Hub'; }
 var CEN_PED_EST = [['nueva', 'Nueva'], ['contactada', 'Contactada'], ['demo', 'Demo hecha'], ['piloto', 'En piloto'], ['cliente', 'Cliente'], ['descartada', 'Descartada']];
 /* ══ 15/10/2026 · EL ASISTENTE DE PLAN (sql/2026-11-25-asistente-plan.sql) ══════════════
    Lo que respondió cada cuenta (en la app o en la web), qué le salió, cuántos abrieron el WhatsApp, y las reuniones
@@ -2523,8 +2523,8 @@ var REU = { dias:60 };
 var REU_ESTADOS = [['nueva','Nueva'], ['contactado','Contactado'], ['compro','Compró'], ['no_vino','No vino'], ['cancelada','Cancelada']];
 function _reuPlan(id){
   var P = (typeof aplPlan === 'function') ? aplPlan(id) : null; if(P) return P.n;
-  return ({ central:'OBRASST Central', corporativo:'OBRASST Corporativo', mandante:'OBRASST Mandante', fiscalizacion:'OBRASST Estado',
-            invitado:'Subcontrata (gratis en la Central)', incluida:'Supervisora (incluida)', trabajador:'Trabajador' })[id] || id || '—';
+  return ({ central:'Contractor Hub™', corporativo:'OBRASST Corporativo', mandante:'OBRASST Mandante', fiscalizacion:'OBRASST Estado',
+            invitado:'Subcontrata (gratis en el Contractor Hub)', incluida:'Supervisora (incluida)', trabajador:'Trabajador' })[id] || id || '—';
 }
 function _reuResp(r){ try{ var o = Object.assign({}, r || {}); delete o.v; return aplRespuestasTexto(o).join(' · '); }catch(_e){ return ''; } }
 function _reuWA(x){
@@ -2606,10 +2606,10 @@ function vistaCentral(caja){
 }
 function _cenEscribiendo(){ var a=document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest && a.closest('#vista')); }
 function _cenArmazon(){
-  return '<div class="aviso">Central se activa en <b>una obra</b>, con su código (el que sale en «Mi empresa», tipo ABC-123). Mientras esté activo, esa obra trabaja como '+
+  return '<div class="aviso">Contractor Hub se activa en <b>una obra</b>, con su código (el que sale en «Mi empresa», tipo ABC-123). Mientras esté activo, esa obra trabaja como '+
     '<b>Gestión SST</b>, invita a sus subcontratas por su RUC —que también trabajan como Gestión SST, sin pagar— y a quien la supervisa (cliente, supervisión, regulador). '+
     'Al vencer o quitarlo, cada espacio vuelve a su plan; las observaciones y su historia quedan.</div>'+
-    '<div class="tarj"><div class="tarj-cab"><div><h2>Activar Central en una obra</h2><p class="sub">Si la obra ya lo tiene, esto cambia su fecha, su tope o su nota.</p></div></div>'+
+    '<div class="tarj"><div class="tarj-cab"><div><h2>Activar Contractor Hub en una obra</h2><p class="sub">Si la obra ya lo tiene, esto cambia su fecha, su tope o su nota.</p></div></div>'+
     '<div class="tarj-cuerpo"><div class="cod-form">'+
       '<div class="campo"><label for="cen-cod">Código de la obra</label><input id="cen-cod" maxlength="12" autocomplete="off" spellcheck="false" placeholder="ABC-123" value="'+esc(CENP.cod)+'"></div>'+
       '<div class="campo"><label for="cen-hasta">Hasta cuándo <span class="gris-t">(vacío: sin fecha de fin)</span></label><input id="cen-hasta" type="date" value="'+esc(CENP.hasta)+'"></div>'+
@@ -2619,10 +2619,10 @@ function _cenArmazon(){
       '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-sups">Supervisoras incluidas <span class="gris-t">(vacío: 3 en Mandante, 20 en Estado · en Estado, una por obra)</span></label><input id="cen-sups" type="number" min="0" max="500" inputmode="numeric" value="'+esc(CENP.sups)+'"></div>'+
       '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-puestos">Usuarios <span class="gris-t">(vacío: 100 en Mandante; sin límite en Estado)</span></label><input id="cen-puestos" type="number" min="1" max="5000" inputmode="numeric" value="'+esc(CENP.puestos)+'"></div>'+
       '<div class="campo cen-arriba"'+(/^(mandante|fiscalizacion)$/.test(CENP.tipo)?'':' hidden')+'><label for="cen-gb">Espacio en GB <span class="gris-t">(vacío: 1,000 en Mandante; 10,000 en Estado)</span></label><input id="cen-gb" type="number" min="1" inputmode="numeric" value="'+esc(CENP.gb)+'"></div>'+
-    '</div><p class="ayuda cen-tipo-ay">Corporativo, Mandante y Estado valen para la empresa y <b>todas sus obras</b> (en Estado, la entidad y sus unidades): el código tiene que ser el de la empresa madre. <b>Estado va todo incluido por obra:</b> por cada obra, activa aquí también la Central de su contratista (con el código de esa obra) y, si es concesión, Mandante para el concesionario; en la nota, «incluida en el plan Estado de …».</p>'+
+    '</div><p class="ayuda cen-tipo-ay">Corporativo, Mandante y Estado valen para la empresa y <b>todas sus obras</b> (en Estado, la entidad y sus unidades): el código tiene que ser el de la empresa madre. <b>Estado va todo incluido por obra:</b> por cada obra, activa aquí también el Contractor Hub de su contratista (con el código de esa obra) y, si es concesión, Mandante para el concesionario; en la nota, «incluida en el plan Estado de …».</p>'+
     '<button type="button" class="bt" id="cen-activar">Activar el plan</button><div class="msg" id="cen-msg" aria-live="polite"></div></div></div>'+
-    '<div class="tarj"><div class="tarj-cab"><div><h2>Obras con Central</h2><p class="sub">«Supervisan»: cuántas empresas la miran (cliente, supervisión). «Obs.»: las observaciones que puso. «Gente hoy»: el personal activo de la obra y el de sus subcontratas enlazadas, la base para la cuenta del mes.</p></div></div><div id="t-central"></div></div>'+
-    '<div class="tarj"><div class="tarj-cab"><div><h2>Pidieron una demo o un piloto</h2><p class="sub">Lo que llega del formulario de la página de Central. Anota en qué va cada una.</p></div></div><div id="cen-pedidos"><div class="tarj-cuerpo"><span class="gris-t">Cargando…</span></div></div></div>';
+    '<div class="tarj"><div class="tarj-cab"><div><h2>Obras con Contractor Hub</h2><p class="sub">«Supervisan»: cuántas empresas la miran (cliente, supervisión). «Obs.»: las observaciones que puso. «Gente hoy»: el personal activo de la obra y el de sus subcontratas enlazadas, la base para la cuenta del mes.</p></div></div><div id="t-central"></div></div>'+
+    '<div class="tarj"><div class="tarj-cab"><div><h2>Pidieron una demo o un piloto</h2><p class="sub">Lo que llega del formulario de la página de Contractor Hub. Anota en qué va cada una.</p></div></div><div id="cen-pedidos"><div class="tarj-cuerpo"><span class="gris-t">Cargando…</span></div></div></div>';
 }
 function _cenCablear(){
   $('cen-cod').oninput=function(){ CENP.cod=this.value; }; $('cen-hasta').onchange=function(){ CENP.hasta=this.value; };
@@ -2669,23 +2669,23 @@ function _cenTabla(){
     {k:'obs', t:'Obs.', num:true, v:function(x){ return +x.obs||0; }},
     {k:'gente', t:'Gente hoy', num:true, v:function(x){ return +x.gente||0; }, h:function(x){ return '<span title="El personal activo de la obra y de sus subcontratas enlazadas">'+num(x.gente||0)+'</span>'; }},
     {k:'acc', t:'', acc:true, v:function(){ return ''; }, h:function(){ return '<button type="button" class="bt sec chico" data-acc="cambiar">Cambiar</button> <button type="button" class="bt mal chico" data-acc="quitar">Quitar</button>'; }}
-  ], CENP.lista, {orden:'nombre', asc:true, unidad:'obras', archivo:'central-obras', sinBuscar:CENP.lista.length<8, vacio:'Ninguna obra tiene Central todavía', vacioSub:'Actívalo arriba, con el código de la obra.',
+  ], CENP.lista, {orden:'nombre', asc:true, unidad:'obras', archivo:'central-obras', sinBuscar:CENP.lista.length<8, vacio:'Ninguna obra tiene Contractor Hub todavía', vacioSub:'Actívalo arriba, con el código de la obra.',
     accion:function(acc, x){
       if(acc==='cambiar'){
         CENP.cod=x.codigo||''; CENP.hasta=x.hasta||''; CENP.tope=x.tope?String(x.tope):''; CENP.nota=x.nota||''; CENP.todas=!!x.todas;
         CENP.tipo=x.tipo||(x.todas?'corporativo':'central'); CENP.sups=x.supervisoras!=null?String(x.supervisoras):''; CENP.puestos=x.puestos?String(x.puestos):''; CENP.gb=x.gb?String(x.gb):'';
         $('cen-cod').value=CENP.cod; $('cen-hasta').value=CENP.hasta; $('cen-tope').value=CENP.tope; $('cen-nota').value=CENP.nota; $('cen-tipo').value=CENP.tipo;
         $('cen-sups').value=CENP.sups; $('cen-puestos').value=CENP.puestos; $('cen-gb').value=CENP.gb; $('cen-tipo').onchange();
-        $('cen-msg').className='msg'; $('cen-msg').textContent='Cambia lo que haga falta y vuelve a «Activar Central».';
+        $('cen-msg').className='msg'; $('cen-msg').textContent='Cambia lo que haga falta y vuelve a «Activar Contractor Hub».';
         try{ $('cen-hasta').focus(); $('cen-cod').scrollIntoView({block:'center'}); }catch(e){}
         return;
       }
-      confirmar('¿Quitar Central de «'+(x.nombre||x.codigo)+'»?', 'La obra y sus subcontratas vuelven a su plan de siempre y ya no se invitan empresas. Los enlaces, las observaciones y su historia quedan guardados, y se siguen viendo.', {si:'Quitar Central', mal:true})
+      confirmar('¿Quitar Contractor Hub de «'+(x.nombre||x.codigo)+'»?', 'La obra y sus subcontratas vuelven a su plan de siempre y ya no se invitan empresas. Los enlaces, las observaciones y su historia quedan guardados, y se siguen viendo.', {si:'Quitar Contractor Hub', mal:true})
         .then(function(si){
           if(!si) return;
           sbRpc('sst_admin_central', {p:{codigo:x.codigo, quitar:true}}).then(function(r){
             if(!r || !r.ok){ toast('No se pudo quitar.'); return; }
-            toast('Central quitado de «'+(x.nombre||x.codigo)+'».'); if(typeof VISTA.recargar==='function') VISTA.recargar(false);
+            toast('Contractor Hub quitado de «'+(x.nombre||x.codigo)+'».'); if(typeof VISTA.recargar==='function') VISTA.recargar(false);
           }, function(){ toast('No hubo conexión.'); });
         });
     }});
@@ -2700,7 +2700,7 @@ function _cenPedidos(){
 }
 function _cenPedidosPinta(){
   var c=$('cen-pedidos'), L=CENP.pedidos; if(!c) return;
-  if(!L.length){ c.innerHTML='<div class="vacio"><b>Nadie ha pedido una demo todavía</b>Cuando alguien llene el formulario de la página de Central, aparece aquí.</div>'; return; }
+  if(!L.length){ c.innerHTML='<div class="vacio"><b>Nadie ha pedido una demo todavía</b>Cuando alguien llene el formulario de la página de Contractor Hub, aparece aquí.</div>'; return; }
   c.innerHTML='<div class="tabla-caja"><table class="mini cen-ped"><thead><tr><th>Cuándo</th><th>Quiere</th><th>Empresa</th><th>Quién</th><th>Contacto</th><th class="num">Gente</th><th class="num">Subcontratas</th><th>En qué va</th></tr></thead><tbody>'+
     L.map(function(x){
       var wa=String(x.whatsapp||'').replace(/\D/g, ''); if(wa && wa.length<=9) wa='51'+wa;
@@ -2729,7 +2729,10 @@ function _cenPedidosPinta(){
    que trajo y hasta cuándo es gratis. A los aliados no se les hace propaganda: se les contacta directo. */
 var ALP = { lista:null, deps:[] };
 var ALI_RUBROS = [['epp', 'Distribuidor de EPP'], ['salud', 'Centro de salud ocupacional'], ['consultor', 'Consultor SSOMA'], ['medico', 'Médico ocupacional'],
-  ['capacitacion', 'Centro de capacitación'], ['residuos', 'Gestor de residuos o municipalidad'], ['sctr', 'Corredor de seguros (SCTR)'], ['otro', 'Otro']];
+  ['capacitacion', 'Centro de capacitación'], ['residuos', 'Gestor de residuos o municipalidad'], ['sctr', 'Corredor de seguros (SCTR)'],
+  /* 2/11/2026 · los rubros nuevos del ERP de servicios (cada uno se enciende en OBRASST OS) */
+  ['maquinaria', 'Alquiler de maquinaria y equipos'], ['izaje', 'Inspección de izaje, andamios y extintores'], ['laboratorio', 'Laboratorio de monitoreo y calibración'],
+  ['transporte', 'Transporte de personal'], ['saneamiento', 'Saneamiento ambiental y catering'], ['otro', 'Otro']];
 var ALI_ESTADOS = { invitado:['Invitado', 'azul'], activo:['Activo', 'ok'], pausado:['En pausa', 'ojo'], baja:['De baja', 'gris'] };
 /* 27/10/2026 · lo que tiene hoy cada rubro y desde cuándo le llegan sus solicitudes, para el correo de invitación (la misma idea que
    COT.RUBRO_INFO del Portal de Aliados): no se le promete a nadie lo que todavía no está. El médico ocupacional no tiene plan. */
@@ -2741,6 +2744,11 @@ var ALI_INFO = {
   capacitacion:'Desde enero de 2027 te llegan ahí las solicitudes de cursos de las empresas de tu zona.',
   residuos:'Desde enero de 2027 te llegan ahí las solicitudes de recojo de las empresas de tu zona.',
   sctr:'Desde enero de 2027 te llegan ahí las empresas de tu zona con el SCTR por vencer.',
+  maquinaria:'Ahí te llegan las solicitudes de las empresas de tu zona y, cuando OBRASST lo active para tu rubro, tu sistema: equipos con su QR, pre-uso, partes diarios, fichas para el ingreso a obra y valorizaciones.',
+  izaje:'Ahí te llegan las solicitudes de las empresas de tu zona y, cuando OBRASST lo active para tu rubro, tu sistema: elementos con su QR, inspecciones con la carga segura y certificados que la empresa verifica.',
+  laboratorio:'Ahí te llegan las solicitudes de las empresas de tu zona y, cuando OBRASST lo active para tu rubro, tu sistema: instrumentos con su QR, monitoreos, calibraciones e informes que la empresa verifica.',
+  transporte:'Ahí te llegan las solicitudes de las empresas de tu zona y, cuando OBRASST lo active para tu rubro, tu sistema: vehículos con su QR, inspección antes de salir, viajes con su conformidad y valorizaciones.',
+  saneamiento:'Ahí te llegan las solicitudes de las empresas de tu zona y, cuando OBRASST lo active para tu rubro, tu sistema: servicios con su dosificación, estaciones cebaderas, raciones y certificados que la empresa verifica.',
   otro:'Ahí te llegan las solicitudes de las empresas de tu zona, según tu rubro.'
 };
 var ALI_DEPS = ['AMAZONAS', 'ANCASH', 'APURIMAC', 'AREQUIPA', 'AYACUCHO', 'CAJAMARCA', 'CALLAO', 'CUSCO', 'HUANCAVELICA', 'HUANUCO', 'ICA', 'JUNIN',
