@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Marketplace SST · OBRASST</title>
-<meta name="description" content="Marketplace SST de OBRASST: marca lo que necesita cumplir tu empresa (EPP, SCTR, exámenes médicos, consultoría, residuos y más) y te conectamos con los aliados de tu departamento.">
+<meta name="description" content="Marketplace SST de OBRASST: proveedores verificados de tu departamento en 10 rubros (EPP, SCTR, EMO, consultoría, residuos, maquinaria, izaje, laboratorio, transporte y saneamiento) y tu requerimiento en 1 clic.">
 <link rel="canonical" href="https://obrasstapp.com/marketplace.html">
 <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
 <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
@@ -32,62 +32,103 @@ h1,h2,h3{margin:0;color:var(--petroleo);font-weight:600;letter-spacing:-.015em;t
 @media (max-width:560px){ .barra nav a:not(:last-child){display:none} }
 </style>
 <style>
-.rubros{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin:14px 0}
-.rubro{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--raya2);border-radius:12px;padding:12px;background:#fff;cursor:pointer}
-.rubro input{margin-top:5px;width:18px;height:18px;accent-color:var(--petroleo)} .rubro b{display:block;font-size:15px;color:var(--petroleo)}
-.rubro small{display:block;font-size:12.5px;color:var(--gris)} .rubro[data-activo="si"] .est{color:var(--ok)} .rubro[data-activo="no"] .est{color:var(--ojo)}
+.pasos{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;margin:0 0 14px}
+.paso-t{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);margin:14px 0 4px}
+.rubros{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin:8px 0}
+.rubro{border:1px solid var(--raya2);border-radius:12px;padding:12px;background:#fff;display:flex;flex-direction:column;gap:4px}
+.rubro:has(input:checked){border-color:var(--petroleo);box-shadow:0 0 0 1px var(--petroleo)}
+.rubro label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.rubro input{margin-top:5px;width:18px;height:18px;accent-color:var(--petroleo);flex:none} .rubro b{display:block;font-size:15px;color:var(--petroleo)}
+.rubro small{display:block;font-size:12.5px;color:var(--gris)} .rubro .est{padding-left:28px;font-weight:500}
+.rubro[data-n="si"] .est{color:var(--ok)} .rubro[data-n="no"] .est{color:var(--ojo)}
+.rubro .pub{padding-left:28px;font-size:13px;display:flex;flex-wrap:wrap;gap:4px 10px} .rubro .pub a{color:var(--petroleo)}
 .fila{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:8px} label.campo{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--gris)}
 select,textarea{font:inherit;padding:9px 11px;border-radius:10px;border:1px solid var(--raya2);color:var(--texto);background:#fff} textarea{width:100%;min-height:72px}
 .dos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.nota{background:var(--mesa);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--gris);margin-top:12px}
+@media (max-width:560px){ .fila .bt{flex:1 1 100%} }
 </style>
 </head>
 <body>
 <header class="barra"><div class="ancho"><a class="marca" href="index.html"><span class="marca-ic"><i></i></span><b>OBRASST</b></a>
-  <nav><a href="index.html#os-motor">Compliance Engine</a><a href="estado.html">OBRASST Estado</a><a href="aliados.html">Soy proveedor</a></nav></div></header>
+  <nav><a href="central.html">Contractor Hub™</a><a href="estado.html">Plan Estado™</a><a href="aliados.html">Soy proveedor</a></nav></div></header>
 <main>
-<section class="portada"><div class="ancho"><p class="ceja">Marketplace SST</p><h1>¿Qué necesita cumplir tu empresa hoy?</h1>
-  <p>Marca lo que necesitas resolver y OBRASST te conecta con los aliados de tu departamento. No es un catálogo suelto: lo que pides queda en tu cuenta y ves cuándo te conectamos.</p></div></section>
+<section class="portada"><div class="ancho"><p class="ceja">Marketplace SST · para la empresa que compra</p><h1>Proveedores verificados de tu zona, y tu requerimiento en 1 clic</h1>
+  <p>Elige el rubro y tu departamento: ves cuántos aliados verificados por OBRASST atienden ahí y les envías tu requerimiento (RQ) desde tu cuenta. Lo que pides queda guardado y ves cuándo te conectamos.</p></div></section>
 <section class="sec" id="mkt" data-os-flag="marketplace_sst"><div class="ancho">
   <div class="tarj">
-    <h2 style="font-size:22px">Lo que necesito</h2>
+    <h2 style="font-size:22px">Tu requerimiento</h2>
+    <p class="paso-t">1 · Tu departamento</p>
+    <div class="fila" style="margin-top:0"><label class="campo" for="mkt-dep">Departamento<select id="mkt-dep"></select></label></div>
+    <p class="paso-t">2 · Lo que necesitas (uno o varios de los 10 rubros)</p>
     <div class="rubros" id="mkt-rubros"></div>
-    <div class="fila"><label class="campo" for="mkt-dep">Departamento<select id="mkt-dep"></select></label></div>
-    <label class="campo" for="mkt-det" style="margin-top:10px">Detalle (opcional)<textarea id="mkt-det" maxlength="600" placeholder="Por ejemplo: 40 cascos, EMO de ingreso para 12 personas y el recojo de residuos peligrosos de la obra"></textarea></label>
-    <p class="fila"><a class="bt wa" id="mkt-wa" href="#" target="_blank" rel="noopener">Conectarme por WhatsApp</a>
-      <a class="bt tinta" href="index.html#acceso">Pedirlo desde mi cuenta</a></p>
-    <p class="gris chico" style="margin-top:10px">Desde tu cuenta (portal → OBRASST OS → Marketplace SST) el pedido queda guardado y ves su estado. Los rubros «Próximamente» se atienden con la red de OBRASST mientras se suman aliados de ese rubro.</p>
+    <p class="paso-t">3 · Detalle y envío</p>
+    <label class="campo" for="mkt-det">Detalle (opcional)<textarea id="mkt-det" maxlength="600" placeholder="Por ejemplo: 40 cascos, EMO de ingreso para 12 personas y el recojo de residuos peligrosos de la obra"></textarea></label>
+    <p class="fila"><a class="bt casco" id="mkt-rq" href="index.html?mkt=1#acceso">Enviar mi RQ desde mi cuenta</a>
+      <a class="bt wa" id="mkt-wa" href="#" target="_blank" rel="noopener">Conectarme por WhatsApp</a></p>
+    <p class="gris chico" style="margin-top:10px">Con tu cuenta, el portal se abre en OBRASST OS › Marketplace SST con todo marcado: revisas y tocas «Pedir que me conecten». ¿Aún no tienes cuenta? Créala ahí mismo.</p>
+    <p class="nota" id="mkt-nota"><b>Verificado</b> = aliado activo, con RUC y con su acuerdo firmado con OBRASST. El RNP, cuando OBRASST lo revisó y está vigente. Los nombres salen solo de los aliados que publicaron su página.</p>
   </div>
   <div class="dos" style="margin-top:14px">
-    <div class="tarj"><h3>¿Cómo funciona?</h3><ol class="gris" style="margin:8px 0 0;padding-left:20px"><li>Marcas lo que necesitas y tu departamento.</li><li>OBRASST revisa los aliados de esa zona y rubro.</li><li>Te conectamos con ellos.</li></ol></div>
-    <div class="tarj"><h3>¿Eres proveedor?</h3><p class="gris" style="margin-top:8px">Distribuidores de EPP, corredores de SCTR, clínicas, consultoras, gestores de residuos y más: <a href="aliados.html">súmate como aliado</a>.</p></div>
+    <div class="tarj"><h3>¿Cómo funciona?</h3><ol class="gris" style="margin:8px 0 0;padding-left:20px"><li>Eliges tu departamento y lo que necesitas.</li><li>Envías tu RQ desde tu cuenta (o por WhatsApp).</li><li>OBRASST lo pasa a los aliados verificados de tu zona y te conecta; el estado lo ves en tu cuenta.</li></ol></div>
+    <div class="tarj"><h3>¿Eres proveedor?</h3><p class="gris" style="margin-top:8px">Distribuidores de EPP, corredores de SCTR, clínicas, consultoras, gestores de residuos, maquinaria, izaje, laboratorios, transporte y saneamiento: <a href="aliados.html">súmate como aliado</a>.</p></div>
   </div>
 </div></section>
 </main>
-<footer class="pie"><div class="ancho">OBRASST · <a href="index.html">obrasstapp.com</a> · <a href="mailto:info@obrasstapp.com">info@obrasstapp.com</a></div></footer>
+<footer class="pie"><div class="ancho">OBRASST · <a href="index.html">obrasstapp.com</a> · <a href="central.html">Contractor Hub™ (Control de Contratistas)</a> · <a href="estado.html">OBRASST Estado — Plan Estado™</a> · <a href="mailto:info@obrasstapp.com">info@obrasstapp.com</a></div></footer>
 <script>
 var SB = { url:'https://gwjjkknuiumgysezeatz.supabase.co', key:'sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx' };
 var MKT_WA = '51967991730';
-var MKT_RUBROS = [['epp', 'EPP y consignación en obra', 'Distribuidores de EPP', 'aliado_epp'], ['sctr', 'SCTR', 'Corredores de seguros', 'aliado_sctr'], ['emo', 'Exámenes médicos (EMO)', 'Clínicas ocupacionales', 'aliado_emo'],
-  ['consultor', 'Consultoría y capacitación SSOMA', 'Consultoras y capacitadoras', 'aliado_consultor'], ['residuos', 'Residuos (EO-RS) y reciclaje', 'Gestores autorizados', 'aliado_residuos'],
-  ['maquinaria', 'Maquinaria pesada', 'Alquiler de equipos', 'aliado_maquinaria'], ['izaje', 'Izajes, andamios y extintores', 'Inspección y certificación', 'aliado_izaje'],
-  ['laboratorio', 'Monitoreos y calibración', 'Laboratorios', 'aliado_laboratorio'], ['transporte', 'Transporte de personal', 'Buses y camionetas', 'aliado_transporte'],
-  ['saneamiento', 'Saneamiento y catering', 'Saneamiento ambiental', 'aliado_saneamiento']];
+var MKT_RUBROS = [['epp', 'EPP y consignación en obra', 'Distribuidores de EPP'], ['sctr', 'SCTR', 'Corredores de seguros'], ['emo', 'Exámenes médicos (EMO)', 'Clínicas ocupacionales'],
+  ['consultor', 'Consultoría y capacitación SSOMA', 'Consultoras y capacitadoras'], ['residuos', 'Residuos (EO-RS) y reciclaje', 'Gestores autorizados'],
+  ['maquinaria', 'Maquinaria pesada', 'Alquiler de equipos con su pre-uso y parte diario'], ['izaje', 'Izajes, andamios y extintores', 'Inspección y certificación'],
+  ['laboratorio', 'Monitoreos y calibración', 'Multigás, ruido, iluminación'], ['transporte', 'Transporte de personal', 'Buses, minibuses y camionetas'],
+  ['saneamiento', 'Saneamiento y catering', 'Reservorios, cebaderas y comedores']];
 var MKT_DEPS = ['Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca', 'Callao', 'Cusco', 'Huancavelica', 'Huánuco', 'Ica', 'Junín', 'La Libertad', 'Lambayeque', 'Lima', 'Loreto', 'Madre de Dios', 'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín', 'Tacna', 'Tumbes', 'Ucayali'];
 (function(){
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
-  var R = document.getElementById('mkt-rubros'), D = document.getElementById('mkt-dep');
-  /* ?r=emo,sctr llega del Camino C de estado.html (lo que le falta a la empresa) y ?d= el departamento */
+  /* el departamento como lo guardan las zonas de los aliados y OBRASST OS: «ANCASH», «LIMA» */
+  function clave(d){ return String(d).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase(); }
+  var R = document.getElementById('mkt-rubros'), D = document.getElementById('mkt-dep'), DET = document.getElementById('mkt-det');
+  /* ?r=emo,sctr llega del Camino C de estado.html o de la página de un aliado; ?d= el departamento; ?ali= el aliado elegido */
   var q = new URLSearchParams(location.search), pide = String(q.get('r') || '').split(',').filter(function(k){ return MKT_RUBROS.some(function(r){ return r[0] === k; }); }), dq = q.get('d');
-  R.innerHTML = MKT_RUBROS.map(function(r, i){ var on = pide.length ? pide.indexOf(r[0]) >= 0 : i < 3; return '<label class="rubro" data-os-rubro-flag="' + r[3] + '" data-activo="' + (r[0] === 'epp' ? 'si' : 'no') + '"><input type="checkbox" value="' + r[0] + '"' + (on ? ' checked' : '') + '><span><b>' + esc(r[1]) + '</b><small>' + esc(r[2]) + '</small><small class="est"></small></span></label>'; }).join('');
+  var ali = /^[A-Za-z0-9-]{3,20}$/.test(q.get('ali') || '') ? q.get('ali').toUpperCase() : '';
+  R.innerHTML = MKT_RUBROS.map(function(r, i){ var on = pide.length ? pide.indexOf(r[0]) >= 0 : i < 3;
+    return '<div class="rubro" data-rubro="' + r[0] + '"><label><input type="checkbox" value="' + r[0] + '"' + (on ? ' checked' : '') + '><span><b>' + esc(r[1]) + '</b><small>' + esc(r[2]) + '</small></span></label><small class="est"></small><div class="pub"></div></div>'; }).join('');
   D.innerHTML = MKT_DEPS.map(function(d){ return '<option' + (d === (MKT_DEPS.indexOf(dq) >= 0 ? dq : 'Lima') ? ' selected' : '') + '>' + esc(d) + '</option>'; }).join('');
-  function estados(){ [].forEach.call(R.querySelectorAll('.rubro'), function(l){ l.querySelector('.est').textContent = l.getAttribute('data-activo') === 'si' ? 'Con aliados en OBRASST' : 'Próximamente'; }); }
-  function wa(){
-    var sel = [].map.call(R.querySelectorAll('input:checked'), function(x){ return MKT_RUBROS.filter(function(r){ return r[0] === x.value; })[0][1]; });
-    var t = 'Hola OBRASST, quiero que me conecten con aliados en ' + D.value + ' para: ' + (sel.join(', ') || '(elegir)') + '.' + (document.getElementById('mkt-det').value ? ' Detalle: ' + document.getElementById('mkt-det').value : '');
-    document.getElementById('mkt-wa').href = 'https://wa.me/' + MKT_WA + '?text=' + encodeURIComponent(t);
+  if(ali) DET.value = 'Quiero la cotización del aliado ' + ali + '.';
+  function elegidos(){ return [].map.call(R.querySelectorAll('input:checked'), function(x){ return x.value; }); }
+  /* cuántos aliados verificados hay en el departamento (sin sesión: solo cifras; nombres, de los que publicaron su página) */
+  var pedidoN = 0;
+  function cifras(){
+    var n = ++pedidoN, dep = D.value;
+    [].forEach.call(R.querySelectorAll('.rubro'), function(c){ c.removeAttribute('data-n'); c.querySelector('.est').textContent = ''; c.querySelector('.pub').innerHTML = ''; });
+    if(!window.fetch) return;
+    fetch(SB.url + '/rest/v1/rpc/os_mkt_publico', { method:'POST', headers:{ apikey:SB.key, Authorization:'Bearer ' + SB.key, 'Content-Type':'application/json' }, body:JSON.stringify({ p:{ departamento:clave(dep) } }) })
+      .then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+        if(n !== pedidoN || !j || !j.ok || !j.rubros) return;
+        [].forEach.call(R.querySelectorAll('.rubro'), function(c){
+          var x = j.rubros[c.getAttribute('data-rubro')] || { aliados:0, rnp:0, publicos:[] }, a = Number(x.aliados) || 0;
+          c.setAttribute('data-n', a ? 'si' : 'no');
+          c.querySelector('.est').textContent = a ? a + (a === 1 ? ' aliado verificado en ' : ' aliados verificados en ') + dep + (x.rnp ? ' · ' + x.rnp + ' con RNP vigente' : '')
+                                                  : 'Aún sin aliados verificados en ' + dep + ': lo atiende la red de OBRASST';
+          c.querySelector('.pub').innerHTML = (x.publicos || []).filter(function(p){ return /^[A-Z0-9][A-Z0-9-]{2,19}$/.test(p.codigo || ''); })
+            .map(function(p){ return '<a href="a/' + encodeURIComponent(p.codigo) + '">' + esc(p.nombre) + '</a>'; }).join('');
+        });
+      }).catch(function(){});
   }
-  document.getElementById('mkt').addEventListener('input', wa); document.getElementById('mkt').addEventListener('change', wa);
-  document.addEventListener('os-flags', estados); estados(); wa();
+  /* «Enviar mi RQ»: lo elegido viaja en esta pestaña (sessionStorage, no en la dirección) y el portal lo abre en OBRASST OS › Marketplace SST */
+  function guardar(){ try{ sessionStorage.setItem('sstp_mkt_pide', JSON.stringify({ r:elegidos(), d:clave(D.value), det:DET.value.slice(0, 600), t:Date.now() })); }catch(e){} }
+  function enlaces(){
+    var sel = elegidos().map(function(k){ return MKT_RUBROS.filter(function(r){ return r[0] === k; })[0][1]; });
+    var t = 'Hola OBRASST, quiero que me conecten con aliados en ' + D.value + ' para: ' + (sel.join(', ') || '(elegir)') + '.' + (DET.value ? ' Detalle: ' + DET.value : '');
+    document.getElementById('mkt-wa').href = 'https://wa.me/' + MKT_WA + '?text=' + encodeURIComponent(t);
+    document.getElementById('mkt-rq').href = 'index.html?mkt=1&r=' + encodeURIComponent(elegidos().join(',')) + '&d=' + encodeURIComponent(clave(D.value)) + '#acceso';
+  }
+  document.getElementById('mkt-rq').addEventListener('click', function(ev){ if(!elegidos().length){ ev.preventDefault(); R.querySelector('input').focus(); return; } guardar(); });
+  document.getElementById('mkt').addEventListener('input', enlaces); document.getElementById('mkt').addEventListener('change', enlaces);
+  D.addEventListener('change', cifras);
+  enlaces(); cifras();
 })();
 </script>
 <script src="os-web.js?v=cf14b9f8b2"></script>
