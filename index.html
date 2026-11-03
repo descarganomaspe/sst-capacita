@@ -5490,6 +5490,10 @@ html.t-alto .eq-cod{background:#000;color:#fff} html.t-alto .eq-link{color:#000}
   font-size:13.5px;line-height:1.45}
 .iq-hoy > b{display:block;font-size:14.5px} .iq-hoy > span{display:block;color:var(--gris);margin-top:2px}
 .iq-hoy.ok{border-color:rgba(47,191,113,.45)} .iq-hoy.med{border-color:rgba(245,183,0,.5)} .iq-hoy.mal{border-color:rgba(229,72,77,.5)}
+/* 2/11/2026 · sin la diaria: «esta cuenta como la del mes» (antes de empezar y al enviarla) */
+.iq-periodo{border-radius:var(--r2);padding:10px 12px;border:1px solid rgba(245,183,0,.5);background:rgba(245,183,0,.08);margin:12px 0 0;font-size:13.5px;line-height:1.45}
+.iq-periodo > b{display:block;font-size:14.5px} .iq-periodo > span{display:block;color:var(--gris);margin-top:2px} .iq-periodo-ya{margin-top:6px}
+.iq-cuenta{margin:10px 0 0;font-size:14px}
 .iq-paso{display:flex;align-items:center;gap:8px}
 .iq-paso > i{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--oro);color:var(--fondo);font-style:normal;
   font-weight:800;font-size:12.5px;display:inline-flex;align-items:center;justify-content:center;letter-spacing:0}
@@ -5647,6 +5651,7 @@ html.t-claro .rq-sem.med{color:#8A6100}
 html.t-alto .rq-item,html.t-alto .rq-clase,html.t-alto .rq-sug{background:#fff;border:2px solid #000;color:#000}
 html.t-alto .rq-clase.on,html.t-alto .rq-sug.on{background:#FFF3C4} html.t-alto .rq-sug-n b,html.t-alto .rq-sem.med,html.t-alto .rq-rec{color:#000}
 html.t-claro .iq-firma-f,html.t-claro .iq-fc,html.t-claro .iq-chip,html.t-claro .iq-chk-ed,html.t-claro .iq-hoy{background:#fff;border-color:rgba(16,26,34,.13)}
+html.t-claro .iq-periodo{background:#FFF8E1;border-color:rgba(138,97,0,.35)}
 html.t-claro .iq-n{color:#8A6100}
 html.t-alto .iq-firma-f,html.t-alto .iq-fc,html.t-alto .iq-chip,html.t-alto .iq-chk-ed,html.t-alto .iq-hoy,html.t-alto .iq-det{background:#fff;border:2px solid #000;color:#000}
 html.t-alto .iq-chip.on{background:#000;color:#fff} html.t-alto .iq-chip.on i{color:#fff}
@@ -26754,6 +26759,16 @@ function eqCinta(k){ var c=eqColor(k); return c ? c.c : (k ? 'cinta '+String(k).
 function eqColor(k){ for(var i=0;i<EQ_COLORES.length;i++) if(EQ_COLORES[i].k===String(k||'').toLowerCase()) return EQ_COLORES[i]; return null; }
 function eqFecha(f){ var p=String(f||'').split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : ''; }
 function eqEnlace(x){ return BASE_EQ + '?t=' + encodeURIComponent(x.token); }
+/* 2/11/2026 · Marcelo: «¿cómo le voy a colocar candado a un extintor, a un botiquín?». El bloqueo y etiquetado es para
+   lo que tiene energía peligrosa que se aísla (eléctrica, mecánica, hidráulica, neumática…): las herramientas eléctricas,
+   las grúas, los equipos y el tecle. El extintor, el botiquín, el lavaojos, la camilla, el arnés, la línea de vida, la
+   escalera, el andamio, las herramientas manuales, las cajas y los accesorios de izaje no tienen candado. Lo que escribe
+   la obra («Otro»), por si acaso, sí. */
+function eqConEnergia(tipo){
+  var T=eqTipoDe(tipo); if(!T) return true;
+  if(T.g==='Herramientas eléctricas' || T.g==='Grúas' || T.g==='Equipos') return true;
+  return T.n==='Tecle';
+}
 function eqTipoDe(nombre){
   var n=String(nombre||'').toLowerCase();
   for(var g=0; g<EQ_TIPOS.length; g++) for(var i=0; i<EQ_TIPOS[g].l.length; i++){
@@ -27071,11 +27086,21 @@ function eqNuevoId(){
 var EQ_FRECS = [
   {k:'diaria', n:'Diaria', d:'Antes de usarlo, con su QR'},
   {k:'semanal', n:'Semanal', d:'Una vez por semana'},
-  {k:'mensual', n:'Mensual', d:'La revisión del mes, con la cinta del color'},
+  {k:'mensual', n:'Mensual', d:'Una vez al mes: con su QR o con la cinta del color'},
   {k:'trimestral', n:'Trimestral', d:'Cada tres meses'},
   {k:'semestral', n:'Semestral', d:'Cada seis meses'},
   {k:'anual', n:'Anual', d:'Una vez al año: la certificación o el mantenimiento'}
 ];
+/* 2/11/2026 · Marcelo: «al extintor le toca la inspección mensual, no la diaria». Las de siempre según el tipo: el
+   extintor, el botiquín, el lavaojos, la camilla y el tablero eléctrico, solo la del mes (su formato de inspección es
+   mensual); los demás, la diaria antes de usarlo y la del mes. El servidor hace lo mismo (_sst_equipo_frec_base). */
+var EQ_FREC_BASE = { 'Extintor':['mensual'], 'Botiquín':['mensual'], 'Lavaojos':['mensual'], 'Camilla':['mensual'], 'Tablero eléctrico':['mensual'] };
+function eqFrecsBase(tipo){ var T=(typeof eqTipoDe==='function') ? eqTipoDe(tipo) : null, l=T && EQ_FREC_BASE[T.n]; return l ? l.slice() : null; }
+/* sin la diaria, la inspección con su QR cuenta como la de la semana o la del mes (la que le toque) */
+function eqQrCuentaComo(frecs){
+  if(!Array.isArray(frecs) || !frecs.length || frecs.indexOf('diaria')>-1) return null;
+  return frecs.indexOf('semanal')>-1 ? 'semanal' : (frecs.indexOf('mensual')>-1 ? 'mensual' : null);
+}
 /* cómo se nombra en una frase: «la anual», «la del mes» */
 var EQ_FREC_LA = { diaria:'la diaria', semanal:'la semanal', mensual:'la del mes', trimestral:'la trimestral', semestral:'la semestral', anual:'la anual' };
 function eqFrecDe(k){ for(var i=0;i<EQ_FRECS.length;i++) if(EQ_FRECS[i].k===k) return EQ_FRECS[i]; return null; }
@@ -27120,6 +27145,8 @@ function eqFrecEstado(frecs, revs, ultMes, ultDia, hoy){
       return {f:String(r.fecha).slice(0, 10), r:r.resultado||null, papel:!!r.papel, u:r.url||null, a:r.archivo||null, cr:String(r.creado||'')}; });
     if(q==='diaria' && ultDia) c.push({f:String(ultDia).slice(0, 10), r:null, papel:false, cr:''});
     if(q==='mensual' && ultMes) c.push({f:String(ultMes).slice(0, 10), r:null, papel:false, cr:''});
+    /* 2/11/2026 · sin la diaria, la inspección con su QR vale para la semanal y la del mes (como el servidor) */
+    if((q==='semanal' || q==='mensual') && ultDia && (frecs||[]).indexOf('diaria')<0) c.push({f:String(ultDia).slice(0, 10), r:null, papel:false, cr:''});
     c.sort(function(a, b){
       if(a.f!==b.f) return a.f<b.f ? 1 : -1;
       if(a.papel!==b.papel) return a.papel ? -1 : 1;
@@ -27569,7 +27596,7 @@ function eqPintarFicha(){
   var h='<div class="eq-estado '+k+'"><b>'+C.ic+' '+esc(C.n)+'</b><span>'+est+'</span></div>';
   h+='<div class="eq-cab"><span class="eq-cod grande">'+esc(x.codigo)+'</span><div><b>'+esc(x.tipo)+'</b>'+(x.detalle ? '<small>'+esc(x.detalle)+'</small>' : '')+'</div></div>';
   /* 13/10/2026 · sus candados (bloqueo.js) */
-  if(x.estado!=='baja' && x.token && typeof bloqueoCajaHtml==='function') h+=bloqueoCajaHtml(x.token);
+  if(x.estado!=='baja' && x.token && typeof bloqueoCajaHtml==='function') h+=bloqueoCajaHtml(x.token, !eqConEnergia(x.tipo));
   if(x.estado!=='baja'){
     h+='<div class="esc-acc" style="margin:14px 0 0">'+
        '<button class="btn" style="margin:0" onclick="eqRevisar([\''+escA(x.id)+'\'])">'+(x.estado==='fuera' ? '✅ Revisar para volver a servicio' : '✅ Revisar ahora')+'</button>'+
@@ -27712,6 +27739,8 @@ function eqFormTipo(v){
     if(!E0.id) E0.etiqueta=T.e;
     if(!E0._codigoTocado || !E0.codigo) E0.codigo=eqSiguienteCodigo(T.p);
   }
+  /* 2/11/2026 · un equipo nuevo trae las de siempre de su tipo (el extintor, solo la del mes) */
+  if(!E0.id && !E0._frecTocado) E0.frecs=eqFrecsBase(v);
   eqPintarForm();
 }
 function eqFormEtiq(k){ if(EQ.edit){ var antes=EQ.edit.etiqueta; EQ.edit.etiqueta=k; if(k==='caja' || antes==='caja') eqPintarForm(); else eqFormEtiqPintar(); } }
@@ -28387,17 +28416,23 @@ try{ window.addEventListener('online', function(){ setTimeout(eqPapelSubir, 1500
 /* ── en el formulario: las que le tocan ── */
 function eqFrecFormHTML(E0){
   _eqfEstilos();
-  var sel=E0.frecs || ['diaria', 'mensual'];
+  /* 2/11/2026 · las de siempre dependen del tipo: el extintor, el botiquín, el lavaojos, la camilla y el tablero, la del mes */
+  var base=eqFrecsBase(E0.tipo), sel=E0.frecs || base || ['diaria', 'mensual'];
+  var esBase=base ? (!E0.frecs || E0.frecs.join(',')===base.join(',')) : !E0.frecs;
   var h='<div class="sec-tit" style="margin-top:18px" id="eqn-frecs-t">Sus inspecciones</div>'+
-    '<p class="sub" style="margin:-4px 0 8px;font-size:12.5px">'+(E0.frecs ? 'Las que le tocan: salen en su QR con lo que falta y hasta cuándo vale cada una.'
-      : 'Sin elegir, las de siempre: la diaria antes de usarlo y la revisión del mes. Toca para elegir las suyas.')+'</p>'+
+    '<p class="sub" style="margin:-4px 0 8px;font-size:12.5px">'+(!esBase ? 'Las que le tocan: salen en su QR con lo que falta y hasta cuándo vale cada una.'
+      : (base ? 'Las de siempre para este tipo: solo la del mes. Toca para cambiarlas.'
+              : 'Sin elegir, las de siempre: la diaria antes de usarlo y la revisión del mes. Toca para elegir las suyas.'))+'</p>'+
     '<div class="eq-frecs-el" id="eqn-frecs" role="group" aria-labelledby="eqn-frecs-t">'+EQ_FRECS.map(function(F){
       var on=sel.indexOf(F.k)>-1;
-      return '<button type="button" class="eq-frec-op'+(on ? ' on' : '')+(E0.frecs ? '' : ' base')+'" data-frec="'+F.k+'" aria-pressed="'+(on ? 'true' : 'false')+'" onclick="eqFormFrec(\''+F.k+'\')">'+
+      return '<button type="button" class="eq-frec-op'+(on ? ' on' : '')+(esBase ? ' base' : '')+'" data-frec="'+F.k+'" aria-pressed="'+(on ? 'true' : 'false')+'" onclick="eqFormFrec(\''+F.k+'\')">'+
         '<b>'+esc(F.n)+'</b><small>'+esc(F.d)+'</small></button>';
     }).join('')+'</div>'+
+    (eqQrCuentaComo(sel) ? '<p class="sub" id="eqn-frecs-qr" style="margin:6px 0 0;font-size:12.5px">'+
+       (eqQrCuentaComo(sel)==='semanal' ? 'Sin la diaria, la inspección que se hace con su QR cuenta como la de la semana.'
+                                        : 'Sin la diaria, la inspección que se hace con su QR cuenta como la del mes.')+'</p>' : '')+
     '<p class="sub" id="eqn-frecs-msg" style="margin:6px 0 0;font-size:12.5px"></p>'+
-    (E0.frecs ? '<button type="button" class="eq-link" id="eqn-frecs-base" onclick="eqFormFrecBase()">Volver a las de siempre</button>' : '');
+    (!esBase ? '<button type="button" class="eq-link" id="eqn-frecs-base" onclick="eqFormFrecBase()">Volver a las de siempre</button>' : '');
   return h;
 }
 function _eqfFormPintar(foco){
@@ -28407,15 +28442,15 @@ function _eqfFormPintar(foco){
 }
 function eqFormFrec(k){
   var E0=EQ.edit; if(!E0) return;
-  var l=(E0.frecs || ['diaria', 'mensual']).slice(), i=l.indexOf(k);
+  var l=(E0.frecs || eqFrecsBase(E0.tipo) || ['diaria', 'mensual']).slice(), i=l.indexOf(k);
   if(i>-1){
     if(l.length===1){ var m=$('eqn-frecs-msg'); if(m){ m.style.color='var(--mal)'; m.textContent='Deja al menos una.'; } return; }
     l.splice(i, 1);
   } else l.push(k);
-  E0.frecs=EQ_FRECS.map(function(F){ return F.k; }).filter(function(q){ return l.indexOf(q)>-1; });
+  E0.frecs=EQ_FRECS.map(function(F){ return F.k; }).filter(function(q){ return l.indexOf(q)>-1; }); E0._frecTocado=true;
   _eqfFormPintar('[data-frec="'+k+'"]');
 }
-function eqFormFrecBase(){ var E0=EQ.edit; if(!E0) return; E0.frecs=null; _eqfFormPintar('[data-frec="diaria"]'); }
+function eqFormFrecBase(){ var E0=EQ.edit; if(!E0) return; E0.frecs=eqFrecsBase(E0.tipo); E0._frecTocado=true; _eqfFormPintar('[data-frec="'+((E0.frecs || ['diaria'])[0])+'"]'); }
 
 function _eqfEstilos(){
   if($('eq-frec-css')) return;
@@ -28898,14 +28933,14 @@ function iqAbrirToken(tk){
     iqArmar();
     try{ var m = leer(LS_IQ_EQ, {}) || {};
          m[tk] = { codigo:j.codigo, tipo:j.tipo, detalle:j.detalle, etiqueta:j.etiqueta, estado:j.estado, checklist:j.checklist || null,
-                   ex:((j.extras || {})[(IQ.F || {}).k] || null), fu:((j.fuera || {})[(IQ.F || {}).k] || null), obra:j.obra, ts:Date.now() };
+                   ex:((j.extras || {})[(IQ.F || {}).k] || null), fu:((j.fuera || {})[(IQ.F || {}).k] || null), obra:j.obra, fr:(Array.isArray(j.frec) ? j.frec : null), ts:Date.now() };
          var ks = Object.keys(m); if(ks.length > 60){ ks.sort(function(a, b){ return (m[a].ts || 0) - (m[b].ts || 0); }); delete m[ks[0]]; } guardar(LS_IQ_EQ, m); }catch(_g){}
     iqPintar();
   }, function(){
     if(IQ.tk !== tk) return;
     /* sin señal: si este celular ya conoce el equipo, se inspecciona igual y sube después */
     var m = (leer(LS_IQ_EQ, {}) || {})[tk];
-    if(m){ IQ.eq = { ok:true, codigo:m.codigo, tipo:m.tipo, detalle:m.detalle, etiqueta:m.etiqueta, estado:m.estado, checklist:m.checklist, ex:m.ex, fu:m.fu || null, obra:m.obra, sinRed:true }; IQ.estado = 'listo'; iqArmar(); }
+    if(m){ IQ.eq = { ok:true, codigo:m.codigo, tipo:m.tipo, detalle:m.detalle, etiqueta:m.etiqueta, estado:m.estado, checklist:m.checklist, ex:m.ex, fu:m.fu || null, obra:m.obra, frec:m.fr || null, sinRed:true }; IQ.estado = 'listo'; iqArmar(); }
     else IQ.estado = 'sin_red';
     iqPintar();
   });
@@ -28968,9 +29003,10 @@ function iqPintar(){
     c.innerHTML = h + '<div class="eq-estado baja" style="margin-top:14px"><b>🗃️ Dado de baja</b><span>Ya no se usa en la obra.</span></div><button class="btn sec" onclick="ir(iqInicio())">Volver</button>';
     return;
   }
-  /* 13/10/2026 · el bloqueo y etiquetado (bloqueo.js): con candados puestos, no se usa; la inspección, después */
+  /* 13/10/2026 · el bloqueo y etiquetado (bloqueo.js): con candados puestos, no se usa; la inspección, después.
+     2/11/2026 · solo en lo que tiene energía peligrosa (eqConEnergia): en el extintor o el botiquín no se ofrece */
   if(typeof bloqueoCajaHtml === 'function' && !e.sinRed){
-    h += bloqueoCajaHtml(IQ.tk);
+    h += bloqueoCajaHtml(IQ.tk, !eqConEnergia(e.tipo));
     if(bloqueado() && !IQ.igual){
       c.innerHTML = h + '<p class="sub" style="margin:14px 0 4px">La inspección del día, cuando quiten todos los candados.</p>' +
                     '<button class="btn sec" onclick="IQ.igual=true;iqPintar()">Inspeccionar igual</button><button class="btn sec" onclick="ir(iqInicio())">Volver</button>';
@@ -28985,13 +29021,24 @@ function iqPintar(){
       return;
     }
     h += '<p class="sub" style="margin:-6px 0 12px">Si lo inspeccionas y queda conforme, vuelve al servicio.</p>';
-  } else if(e.insp_hoy){
+  } else if(e.insp_hoy && !eqQrCuentaComo(e.frec)){
     var R0 = IQB.res(e.insp_hoy.r);
     h += '<div class="iq-hoy ' + R0.c + '"><b>' + R0.ic + ' <span>Hoy ya tiene inspección</span></b><span>' +
          (e.insp_hoy.h ? '<span data-sin-trad>' + esc(e.insp_hoy.h) + '</span> · ' : '') + '<span>' + esc(R0.n) + '</span> · <span>' + esc(IQB.faltanTxt(e.insp_hoy)) + '</span>. ' +
          '<span>Puedes hacer otra si cambió el turno o el lugar.</span></span></div>';
   }
   if(e.sinRed) h += '<div class="aviso" style="margin-top:12px">Sin señal: se guarda en el celular y sube sola cuando vuelva.</div>';
+  /* 2/11/2026 · Marcelo: «al extintor le toca la mensual, no la diaria». Sin la diaria, esta inspección es la del mes
+     (o la de la semana): se dice antes de empezar, y si ya tiene la de este periodo */
+  var cuenta = eqQrCuentaComo(e.frec);
+  if(cuenta){
+    var rvC = (Array.isArray(e.revs) ? e.revs : []).filter(function(x){ return x && x.q === cuenta; })[0];
+    h += '<div class="iq-periodo" id="iq-periodo"><b>🗓️ <span>' + (cuenta === 'semanal' ? 'Su inspección de la semana' : 'Su inspección del mes') + '</span></b>' +
+         '<span>' + (cuenta === 'semanal' ? 'A este equipo le toca la inspección semanal, no la diaria: esta cuenta como la de la semana.'
+                                          : 'A este equipo le toca la inspección mensual, no la diaria: esta cuenta como la del mes.') + '</span>' +
+         ((rvC && rvC.al_dia && rvC.f) ? '<span class="iq-periodo-ya"><span>' + (cuenta === 'semanal' ? 'Ya tiene la de esta semana, del' : 'Ya tiene la de este mes, del') + '</span> ' +
+            '<span data-sin-trad>' + esc(eqFecha(rvC.f)) + '</span>. <span>Si haces otra, queda como la última.</span></span>' : '') + '</div>';
+  }
 
   h += '<div class="sec-tit iq-paso" style="margin-top:18px"><i>1</i><span>Revisa cada punto</span> <small id="iq-avance"></small></div>';
   h += '<p class="sub" style="margin:-2px 0 10px"><b class="iq-fmt">' + (IQ.F && IQ.F.k === 'propio' ? 'El checklist propio de este equipo.' : esc((IQ.F || {}).n || '')) + '</b>' +
@@ -29156,7 +29203,7 @@ function iqEnviar(){
 }
 function iqYaEsta(x){
   IQ.enviada = { ext:x.ext, resultado:(x.no_apto ? 'no_apto' : (x.puntos.some(function(p){ return p.e === 'NC'; }) ? 'observado' : 'conforme')),
-                 t:x.t, codigo:x.codigo, tipo:x.tipo, gestor:x.gestor, firma:x.firma, nombre:x.nombre, cargo:x.cargo };
+                 t:x.t, codigo:x.codigo, tipo:x.tipo, gestor:x.gestor, firma:x.firma, nombre:x.nombre, cargo:x.cargo, fecha:x.fecha };
   iqPintarEnviada();
   try{ window.scrollTo(0, 0); }catch(_s){}
 }
@@ -29233,6 +29280,11 @@ function iqPintarEnviada(){
        '<b>' + R.ic + ' ' + (enCola ? 'Inspección guardada en el celular' : 'Inspección enviada') + '</b><span>' +
        '<span>' + esc(E.resultado === 'no_apto' ? 'El equipo queda fuera de servicio: no lo uses.' : (E.resultado === 'observado' ? 'Queda con observación: tu supervisor la va a ver.' : 'Todo conforme.')) + '</span> ' +
        (enCola ? '<span>Sube sola cuando haya señal.</span>' : '') + '</span></div>';
+  /* 2/11/2026 · sin la diaria, esta fue la del mes (o la de la semana): hasta cuándo vale */
+  var cuentaE = (E.resultado !== 'no_apto') ? eqQrCuentaComo((IQ.eq || {}).frec) : null;
+  if(cuentaE)
+    h += '<p class="sub iq-cuenta" id="iq-cuenta">✅ <span>' + (cuentaE === 'semanal' ? 'Cuenta como su inspección de la semana:' : 'Cuenta como su inspección del mes:') + '</span> ' +
+         '<span>al día hasta el</span> <span data-sin-trad>' + esc(eqFecha(eqFrecHasta(cuentaE, E.fecha || hoyISO()))) + '</span>.</p>';
   var fp = !!((enCola && enCola.prod) || (mia && mia.prod)), fs = !!((enCola && enCola.sst) || (mia && mia.sst));
   h += '<div class="sec-tit" style="margin-top:18px">Las otras dos firmas</div>';
   h += '<p class="sub" style="margin:-2px 0 10px">Producción y SST la firman desde su app o desde la web. Si están contigo, que firmen aquí mismo.</p>';
@@ -74941,8 +74993,9 @@ function bloqueoCargar(tk){
   });
 }
 /* la caja: en la inspección (lo que abre el QR en la app) y en la ficha del equipo */
-function bloqueoCajaHtml(tk){
+function bloqueoCajaHtml(tk, sinEnergia){
   tk = String(tk || '').toLowerCase();
+  BLQ.sinEnergia = !!sinEnergia;   /* 2/11/2026 · el extintor, el botiquín…: sin «Poner mi candado» */
   if(BLQ.tk !== tk || (BLQ.lista === null && !BLQ.cargando && !BLQ.sinRed && !BLQ.sinSQL)) setTimeout(function(){ bloqueoCargar(tk); }, 0);
   BLQ.pintado = (BLQ.tk === tk) && bloqueado();
   return '<div id="blq-caja" class="blq-caja">' + _blqCuerpo() + '</div>';
@@ -74956,6 +75009,8 @@ function _blqRepintar(cambio){
 function _blqCuerpo(){
   if(BLQ.sinSQL) return '';
   var L = BLQ.lista, h = '';
+  /* 2/11/2026 · sin energía peligrosa (extintor, botiquín, arnés…): nada, salvo los candados que ya tuviera */
+  if(BLQ.sinEnergia && !(L && L.length)) return '';
   if(L === null) return BLQ.sinRed ? '<p class="sub blq-sin">Sin señal: no se sabe si tiene candados. Mira el equipo.</p>' : '<p class="sub blq-sin">Viendo si tiene candados…</p>';
   if(L.length){
     h += '<div class="blq-alto"><span class="blq-ic" aria-hidden="true">🔒</span><div><b>BLOQUEADO</b><small><span>No lo uses ni lo enciendas.</span> <span>Candados puestos:</span> <b>' + L.length + '</b></small></div></div>';
@@ -74972,7 +75027,7 @@ function _blqCuerpo(){
     h += '<div class="blq-libre"><span aria-hidden="true">🔓</span> <span>Sin candados puestos</span></div>';
   }
   if(BLQ.form) h += _blqFormHtml();
-  else if(BLQ.deObra || _blqGestor()) h += '<button type="button" class="btn ' + (L.length ? 'sec' : 'sec') + ' blq-poner" onclick="bloqueoNuevo()">🔒 <span>' + (L.length ? 'Poner también mi candado' : 'Poner mi candado') + '</span></button>';
+  else if(!BLQ.sinEnergia && (BLQ.deObra || _blqGestor())) h += '<button type="button" class="btn ' + (L.length ? 'sec' : 'sec') + ' blq-poner" onclick="bloqueoNuevo()">🔒 <span>' + (L.length ? 'Poner también mi candado' : 'Poner mi candado') + '</span></button>';
   if(BLQ.msg) h += '<p class="sub blq-msg">' + esc(BLQ.msg) + '</p>';
   return h;
 }
@@ -100421,11 +100476,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = 'd0d9bed31c';
-var IDIOMA_FR_V = '4357f283bd';
+var IDIOMA_PT_V = '96a74997d3';
+var IDIOMA_FR_V = '8fad81bcbc';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = '1b42d7e9bf';
+var IDIOMA_EN_V = '058d3f81f9';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -114229,7 +114284,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='c7e7b50de2';
+var SELLO_APP='842af27208';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
