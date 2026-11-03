@@ -454,7 +454,7 @@ function eqNuevoId(){
 var EQ_FRECS = [
   {k:'diaria', n:'Diaria', d:'Antes de usarlo, con su QR'},
   {k:'semanal', n:'Semanal', d:'Una vez por semana'},
-  {k:'mensual', n:'Mensual', d:'La revisión del mes, con la cinta del color'},
+  {k:'mensual', n:'Mensual', d:'Una vez al mes: con su QR o con la cinta del color'},
   {k:'trimestral', n:'Trimestral', d:'Cada tres meses'},
   {k:'semestral', n:'Semestral', d:'Cada seis meses'},
   {k:'anual', n:'Anual', d:'Una vez al año: la certificación o el mantenimiento'}
@@ -503,6 +503,8 @@ function eqFrecEstado(frecs, revs, ultMes, ultDia, hoy){
       return {f:String(r.fecha).slice(0, 10), r:r.resultado||null, papel:!!r.papel, u:r.url||null, a:r.archivo||null, cr:String(r.creado||'')}; });
     if(q==='diaria' && ultDia) c.push({f:String(ultDia).slice(0, 10), r:null, papel:false, cr:''});
     if(q==='mensual' && ultMes) c.push({f:String(ultMes).slice(0, 10), r:null, papel:false, cr:''});
+    /* 2/11/2026 · sin la diaria, la inspección con su QR vale para la semanal y la del mes (como el servidor y la app) */
+    if((q==='semanal' || q==='mensual') && ultDia && (frecs||[]).indexOf('diaria')<0) c.push({f:String(ultDia).slice(0, 10), r:null, papel:false, cr:''});
     c.sort(function(a, b){
       if(a.f!==b.f) return a.f<b.f ? 1 : -1;
       if(a.papel!==b.papel) return a.papel ? -1 : 1;
