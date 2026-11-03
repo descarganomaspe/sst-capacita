@@ -160,6 +160,20 @@ input::placeholder{color:var(--gris2)}
 .vivo i{width:8px; height:8px; border-radius:50%; background:var(--gris2)}
 .vivo.on i{background:var(--ok); box-shadow:0 0 0 3px rgba(30,142,90,.18)}
 .vivo.sondeo i{background:var(--ojo)}
+/* 2/11/2026 · V7 · la vista App de la empresa: si se cortó la conexión, y en el celular, abajo, 4 accesos con lo que ya trae la cuenta */
+.vivo.sin i{background:var(--mal)}
+.p-abajo{display:none}
+@media (max-width:900px){
+  .p-abajo:not([hidden]){display:grid; grid-template-columns:repeat(var(--n, 4), minmax(0, 1fr)); gap:2px; position:fixed; left:0; right:0; bottom:0; z-index:25;
+    background:var(--panel); border-top:1px solid var(--raya); padding:4px 4px calc(4px + env(safe-area-inset-bottom, 0px)); box-shadow:0 -10px 24px -20px rgba(11,42,58,.55)}
+  .p-abajo button{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border:0; background:transparent; font:500 11.5px/1.15 var(--f);
+    color:var(--gris); padding:6px 2px; border-radius:10px; cursor:pointer; min-height:52px; text-align:center}
+  .p-abajo svg{width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+  .p-abajo button.on{color:var(--tinta); background:#FFF7DD; font-weight:600}
+  body.con-abajo .main{padding-bottom:96px}
+  body.con-abajo .toast{bottom:84px}
+}
+@media print{ .p-abajo{display:none !important} }
 .cuenta{display:flex; align-items:center; gap:10px; font-size:13px; color:var(--gris); min-width:0}
 .cuenta b{color:var(--texto); font-weight:500; min-width:0; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 /* 01/10/2026 · en una laptop de 1152 o de 1024 la barra no entraba: «Salir»
@@ -2161,7 +2175,10 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
        a supervisores ni jefes SST, pero sí a los aliados». Es una cinta de servicio, como el «Proveedores» de las webs de las
        empresas: chica, gris y sobre la barra (se va al bajar). Lleva a aliados.html, que sigue fuera de los buscadores. -->
   <div class="ini-util" id="ini-util"><div class="ini-env ini-util-in">
-    <a href="aliados.html" id="ini-proveedores" rel="nofollow" title="Para proveedores de EPP, salud ocupacional, capacitación, residuos y SCTR, consultores SSOMA y médicos ocupacionales">Proveedores</a>
+    <!-- 2/11/2026 · V7: «Proveedores» confundía al que compra con el que vende. El que compra va al Marketplace SST; el que
+         vende, a «Soy proveedor» (aliados.html). obrasstapp.com/proveedores también lleva al Marketplace (netlify.toml). -->
+    <a href="marketplace.html" id="ini-marketplace" title="Encuentra proveedores verificados de EPP, SCTR, EMO, capacitación y más, en tu departamento">Marketplace SST</a>
+    <a href="aliados.html" id="ini-proveedores" rel="nofollow" title="Para proveedores de EPP, SCTR, salud ocupacional, capacitación, residuos, maquinaria, izaje, laboratorio, transporte y saneamiento">Soy proveedor</a>
   </div></div>
   <header class="ini-barra" id="ini-barra">
     <div class="ini-env ini-barra-in">
@@ -2376,8 +2393,8 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
         <article data-os-flag="compliance_engine"><b>Compliance Engine</b><p>Lo que exige cada cargo y a quién le falta.</p></article>
         <article data-os-flag="risk_engine"><b>Risk Engine</b><p>El riesgo de multa con la escala oficial y quién no debe empezar hoy.</p></article>
         <article data-os-flag="obrasst_score"><b>OBRASST Score</b><p>Tu nota de 0 a 100 frente a empresas parecidas.</p></article>
-        <article data-os-flag="contractor_hub"><b>Contractor Hub</b><p>Todas tus contratistas en una pantalla. <a href="#central">Ver</a></p></article>
-        <article data-os-flag="plan_estado"><b>Plan Estado</b><p>Obras públicas, contrataciones de hasta 8 UIT y lo que te falta para contratar. <a href="estado.html">Ver</a></p></article>
+        <article data-os-flag="contractor_hub"><b>Contractor Hub™</b><p>Todas tus contratistas en una pantalla. <a href="#central">Ver</a></p></article>
+        <article data-os-flag="plan_estado"><b>Plan Estado™</b><p>Para las entidades del Estado: sus obras públicas y las contrataciones de hasta 8 UIT. <a href="estado.html">Ver</a></p></article>
       </div>
       <p class="os-mkt" data-os-flag="marketplace_sst">¿Necesitas EPP, SCTR, exámenes médicos o un consultor? <a href="marketplace.html">Marketplace SST ›</a></p>
     </div>
@@ -2475,16 +2492,16 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
     <div class="ini-env">
       <div class="cen-grid">
         <div class="cen-dice">
-          <p class="ini-ceja oscura"><i></i>Contractor Hub · OBRASST Central y Corporativo</p>
+          <p class="ini-ceja oscura"><i></i>Contractor Hub™ (Control de Contratistas) y Corporativo</p>
           <h2 id="cen-h">Controla a todas tus contratistas desde una sola pantalla</h2>
-          <p class="cen-lead">No hace falta ser un consorcio: si contratas a otras empresas para tu obra o tu proyecto, Central junta lo de todas en un solo lugar. Tú ves el cumplimiento de cada una al instante, y ellas trabajan con la app completa, <b>gratis</b>. Gana la obra entera.</p>
+          <p class="cen-lead">No hace falta ser un consorcio: si contratas a otras empresas para tu obra o tu proyecto, Contractor Hub junta lo de todas —SCTR, EMO, IPERC, capacitación y homologación— en un solo lugar. Tú ves el cumplimiento de cada una al instante, y ellas trabajan con la app completa, <b>gratis</b>. Gana la obra entera.</p>
           <div class="cen-tres">
             <article><h3><i></i>La principal</h3><ul><li>Cada subcontrata con su capacitación, su ATS, su EPP y sus observaciones, al día</li><li>Lo que vence le avisa solo, antes de la auditoría</li><li>El informe del mes, sin armarlo a mano</li></ul></article>
             <article><h3><i></i>Cada subcontrata</h3><ul><li>Entra gratis, con su gente y la app completa</li><li>Deja de mandar Excel y fotos por WhatsApp</li><li>Lo que cumple queda a la vista de su cliente</li></ul></article>
             <article><h3><i></i>La gerencia</h3><ul><li>Con Corporativo, todas sus obras lado a lado</li><li>El comparativo entre obras y entre contratistas</li><li>Un solo contrato y una sola factura</li></ul></article>
           </div>
-          <p class="cen-bts"><a class="bt casco" href="central.html">Conocer Central y Corporativo</a> <a class="bt sec" href="?demo=central">Recorrer la obra de ejemplo ›</a></p>
-          <p class="cen-nota">Paga la principal; las subcontratas entran gratis. Central es para una obra y Corporativo, para dos o más. Se contratan aparte de los planes de abajo.</p>
+          <p class="cen-bts"><a class="bt casco" href="central.html">Conocer Contractor Hub™ y Corporativo</a> <a class="bt sec" href="?demo=central">Recorrer la obra de ejemplo ›</a></p>
+          <p class="cen-nota">Paga la principal; las subcontratas entran gratis. Contractor Hub es para una obra y Corporativo, para dos o más. Se contratan aparte de los planes de abajo.</p>
         </div>
         <figure class="cen-red">
           <svg viewBox="0 0 360 300" role="img" aria-labelledby="cen-red-t">
@@ -2525,8 +2542,8 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
       <div class="ini-letra" id="ini-letra"></div>
       <a class="ent-central" href="central.html">
         <span class="ent-central-t">¿Tu empresa trabaja con subcontratas?</span>
-        <span>Con <b>OBRASST Central</b> ves a todas las empresas de tu obra en un solo lugar. Las subcontratas entran gratis.</span>
-        <span class="ent-central-ir">Conocer Central y Corporativo ›</span>
+        <span>Con <b>Contractor Hub™ (Control de Contratistas)</b> ves a todas las empresas de tu obra en un solo lugar. Las subcontratas entran gratis.</span>
+        <span class="ent-central-ir">Conocer Contractor Hub™ y Corporativo ›</span>
       </a>
     </div>
   </section>
@@ -2572,9 +2589,9 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
         <a href="#planes">Planes y precios</a>
         <a href="../">Abrir la app</a>
         <a href="../instalar/" class="app-en-pie" data-instalar>Instalar la app</a>
-        <a href="central.html">OBRASST Central</a>
+        <a href="central.html">Contractor Hub™ (Control de Contratistas)</a>
         <a href="mandante.html">OBRASST Mandante</a>
-        <a href="estado.html">OBRASST Estado</a>
+        <a href="estado.html">OBRASST Estado — Plan Estado™</a>
       </nav>
       <nav aria-label="Ayuda">
         <h3>Ayuda</h3>
@@ -2646,6 +2663,7 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
   </header>
   <nav class="rail" id="rail" aria-label="Secciones"></nav>
   <main class="main" id="main"></main>
+  <nav class="p-abajo" id="p-abajo" aria-label="Accesos rápidos" hidden></nav>
 </div>
 <!-- el cajón lateral donde se decide: ficha, reporte, ATS -->
 <div id="hoja-fondo" class="hoja-fondo" hidden role="dialog" aria-modal="true" aria-labelledby="hoja-t">
@@ -3917,19 +3935,24 @@ var CUENTA_CENN = {
   'cad-equipo':{ n:'Equipo y rangos', tab:'Equipo y rangos' }
 };
 var CUENTAS = {
+  /* 29/10/2026 · Estado 3.0: su inicio es la mesa de control (portal/linea.js) y su casa habla como el Estado */
   fis:{ n:'Estado', gn:'OBRASST Estado', propia:false,
-        areas:[ { id:'a-casa', n:'Inicio', ic:'▦', v:['arr-ini'] },
+        areas:[ { id:'a-casa', n:'Inicio', ic:'▦', v:['arr-ini', 'est-arbol', 'est-bit'] },
+                { id:'a-linea', n:'Comunicados y accidentes', ic:'📣', v:['est-com', 'est-acc'] },
                 { id:'a-cum', n:'Cumplimiento', ic:'✅', v:CUENTA_CUM },
                 { id:'a-fis', n:'Fiscalización', ic:'⚖', v:['fis-prior', 'fis-ord', 'fis-med', 'fis-ctl', 'fis-exp'] },
                 { id:'a-supv', n:'Supervisión', ic:'🗓', v:CUENTA_SUP },
-                { id:'a-cartera', n:'Cartera', ic:'🗂', v:['car-rank', 'car-reten', 'car-aud'] },
+                { id:'a-cartera', n:'Contratistas', ic:'🗂', v:['car-rank', 'car-reten', 'car-aud'] },
                 { id:'a-cadena', n:'Observaciones', ic:'📌', v:['cad-obs'] },
-                { id:'a-empresa', n:'Empresa y equipo', ic:'🏢', v:['equipo', 'cad-equipo', 'empresa', 'plan'] } ],
-        nom:{ 'arr-ini':{ n:'Hoy en tus obras', s:'Lo más riesgoso primero, las alertas tempranas y las cifras de todas las empresas de tus obras' },
+                { id:'a-empresa', n:'Entidad y equipo', ic:'🏢', v:['equipo', 'cad-equipo', 'empresa', 'plan'] } ],
+        nom:{ 'arr-ini':{ n:'Mesa de control', tab:'Mesa de control', s:'Lo que necesita tu atención hoy, las cifras de todas tus obras con sus subcontratas y tus informes en un botón',
+                          pintar:function(caja){ vistaLin('mesa')(caja); } },
               'sup-emp':{ n:'Empresas de tus obras', s:'Sus cifras de hoy, lo que les pides en documentos, sus requisitos de ingreso y los requerimientos por aceptar' },
+              'car-aud':{ n:'Desempeño de la supervisora', tab:'Desempeño de la supervisora', s:'Cómo supervisa la supervisora que incluyes: su programa, sus horas en la obra, sus inspecciones y lo que deja sin validar' },
               'cad-obs':CUENTA_OBS } },
   man:{ n:'Mandante', gn:'OBRASST Mandante', propia:false,
-        areas:[ { id:'a-casa', n:'Inicio', ic:'▦', v:['arr-ini'] },
+        areas:[ { id:'a-casa', n:'Inicio', ic:'▦', v:['arr-ini', 'est-arbol', 'est-bit'] },
+                { id:'a-linea', n:'Comunicados y accidentes', ic:'📣', v:['est-com', 'est-acc'] },
                 { id:'a-cum', n:'Cumplimiento', ic:'✅', v:CUENTA_CUM },
                 { id:'a-cartera', n:'Cartera', ic:'🗂', v:['car-rank', 'car-reten', 'car-aud'] },
                 { id:'a-supv', n:'Supervisión', ic:'🗓', v:CUENTA_SUP },
@@ -3943,10 +3966,10 @@ var CUENTAS = {
                 { id:'a-supv', n:'Supervisión', ic:'🗓', v:CUENTA_SUP },
                 { id:'a-cadena', n:'Observaciones', ic:'📌', v:['cad-obs'] } ],
         nom:{ 'arr-ini':{ n:'Hoy en tu supervisión', s:'Quién te incluye, tus empresas con sus cifras de hoy y lo de hoy en tu programa' }, 'cad-obs':CUENTA_OBS } },
-  cen:{ n:'Central', gn:'OBRASST Central', propia:true, propiaN:'Tu empresa en la obra',
-        areas:[ { id:'a-cadena', n:'Central', ic:'🏗', v:CUENTA_CEN } ], nom:CUENTA_CENN },
+  cen:{ n:'Contractor Hub', gn:'Contractor Hub™', propia:true, propiaN:'Tu empresa en la obra',
+        areas:[ { id:'a-cadena', n:'Control de contratistas', ic:'🏗', v:CUENTA_CEN } ], nom:CUENTA_CENN },
   corp:{ n:'Corporativo', gn:'OBRASST Corporativo', propia:true, propiaN:'Tu empresa en la obra',
-        areas:[ { id:'a-corp', n:'Tus obras', ic:'◫', v:['resumen', 'cum-comp'] }, { id:'a-cadena', n:'Central', ic:'🏗', v:CUENTA_CEN } ],
+        areas:[ { id:'a-corp', n:'Tus obras', ic:'◫', v:['resumen', 'cum-comp'] }, { id:'a-cadena', n:'Control de contratistas', ic:'🏗', v:CUENTA_CEN } ],
         nom:Object.assign({ resumen:{ n:'Tus obras', tab:'Tus obras', s:'Todas las obras de la empresa, lado a lado: las mismas cifras y metas que la app' } }, CUENTA_CENN) }
 };
 var LS_CUENTA = 'sstp_cuenta_tipo', LS_PROPIA = 'sstp_ver_propia';
@@ -4055,7 +4078,7 @@ function navInsignia(id){
 }
 function vistasDe(){
   var v;
-  /* 01/10/2026 · OBRASST Central (portal/central.js): las secciones según el rango */
+  /* 01/10/2026 · Contractor Hub™ (portal/central.js): las secciones según el rango */
   if(YO && YO.central && typeof centralVistas==='function') return centralVistas();
   if(YO.rol==='lider') v = VISTAS_LIDER;
   /* el dueño sin Gestión SST: lo del supervisor y su equipo. 07/10/2026 · «Obras y equipo» (y «Mi plan», que va pegado) va
@@ -4167,9 +4190,36 @@ function filaALaVista(fila, b){
   }catch(e){}
 }
 function railALaVista(){ var r=$('rail'); if(r) filaALaVista(r, r.querySelector('.nav.on')); }
+/* 2/11/2026 · V7 · la vista App de la empresa: en el celular, abajo, 4 accesos con lo que ya trae su cuenta (lo que no trae, no sale):
+   su inicio, pedir a los aliados (OBRASST OS › Marketplace SST), el EPP de la obra y verificar a un trabajador por su QR (garita) */
+var P_ABAJO_IC = {
+  ini:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4l8 7"/><path d="M6 10v10h12V10"/></svg>',
+  pedir:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/><path d="M11 8v6M8 11h6"/></svg>',
+  epp:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16a8 8 0 0 1 16 0"/><path d="M3 16h18v2H3z"/><path d="M12 8V5"/></svg>',
+  qr:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 19h2M19 14h1"/></svg>' };
+function pintarAbajoP(L){
+  var nav=$('p-abajo'); if(!nav) return;
+  var hay=function(id){ return L.some(function(v){ return v.id===id && !planWebFalta(id); }); };
+  var B=[[L[0] ? L[0].id : '', 'Inicio', 'ini'], [hay('os') ? 'os' : '', 'Pedir', 'pedir'], [hay('eppobra') ? 'eppobra' : '', 'EPP', 'epp'], [hay('cum-qr') ? 'cum-qr' : '', 'Verificar QR', 'qr']]
+    .filter(function(b){ return b[0]; });
+  if(B.length<2 || (YO && YO.demo)){ nav.hidden=true; document.body.classList.remove('con-abajo'); return; }
+  var h=B.map(function(b){ var on=b[0]===VISTA.actual; return '<button type="button" data-p="'+esc(b[0])+'"'+(b[2]==='pedir' ? ' data-tab="mkt"' : '')+(on ? ' class="on" aria-current="page"' : '')+'>'+P_ABAJO_IC[b[2]]+'<span>'+esc(b[1])+'</span></button>'; }).join('');
+  if(nav._h!==h){ nav._h=h; nav.innerHTML=h; nav.style.setProperty('--n', B.length); }
+  nav.hidden=false; document.body.classList.add('con-abajo');
+  nav.onclick=function(ev){
+    var b=ev.target.closest ? ev.target.closest('[data-p]') : null; if(!b) return;
+    var id=b.getAttribute('data-p'), tab=b.getAttribute('data-tab');
+    if(tab){ window.OS_TAB_IR=tab; if(VISTA.actual===id && typeof osPintar==='function' && window.OS){ OS.tab=tab; window.OS_TAB_IR=null; osPintar(); return; } }
+    navegar(id);
+  };
+}
+/* sin conexión: lo dice arriba (lo que se guarde, espera a que vuelva) */
+window.addEventListener('offline', function(){ try{ vivoEstado('sin', 'Sin conexión'); toast('Sin conexión: lo que guardes espera a que vuelva.'); }catch(_o){} });
+window.addEventListener('online', function(){ try{ vivoEstado(VIVO && VIVO.ok ? 'on' : 'sondeo', VIVO && VIVO.ok ? 'En vivo' : 'Sondeo cada 20 s'); }catch(_o){} });
 function pintarRail(sinTabs){
   var r=$('rail'); if(!r) return;
   var h='', L=vistasDe();
+  pintarAbajoP(L);
   /* 28/10/2026 · #183 · la obra de ejemplo de Central ya no tiene su propio carril: lleva el de la cuenta de verdad (cenAreasOrden) */
   /* 07/10/2026 · las áreas: una por renglón. Abre su primera sección; el candado, solo si el plan no trae ninguna */
   var act=(L.filter(function(v){ return v.id===VISTA.actual; })[0] || {}).a, gk0='';
@@ -4852,7 +4902,7 @@ var ESP_CARPETA={ reportes:'fotos', inspecciones:'fotos', trabajadores:'fotos', 
                   docs:'docs', boletines:'docs', induccion:'docs', msds:'docs', asistencias:'esc' };
 var ESP_GRUPOS=[['fotos','Fotos','c-fotos'],['docs','Documentos','c-docs'],['esc','Escaneos','c-esc'],['base','Registros y firmas','c-base']];
 var ESP_PLAN={ lite:'LITE', prevencionista:'Prevencionista de Riesgo', supervisor:'Supervisor SST', ssoma:'SSOMA',
-               equipo:'SSOMA', gestion:'Gestión SST', empresa:'Gestión SST', central:'Central', corporativo:'Corporativo' };
+               equipo:'SSOMA', gestion:'Gestión SST', empresa:'Gestión SST', central:'Contractor Hub', corporativo:'Corporativo' };
 function _espTam(b){
   b=+b||0;
   if(b < 1048576) return Math.round(b/1024)+' KB';
@@ -11601,7 +11651,7 @@ function abrirNormaPE(i){
    etiqueta que sale de la impresora de la oficina es igual a la del
    celular. La revisión se hace en la obra, con la app y la inspección de
    siempre; aquí se puede dejar uno fuera de servicio o darlo de baja. */
-var EQBASE_VER='5fd70da7e9';   /* lo pone armar.py: el hash de portal/equipos.js */
+var EQBASE_VER='682066b80a';   /* lo pone armar.py: el hash de portal/equipos.js */
 var _EQB_CARGA=null;
 function cargarEqBase(){
   if(typeof EQ_TIPOS!=='undefined' && typeof eqArmarPDF==='function') return Promise.resolve(true);
@@ -14332,7 +14382,7 @@ function prqExcelLista(){
        ganador lo ve como «Ganaste» y, cuando el almacén anota lo que llegó, como «Recibido».
      · Solo viajan las líneas, las cantidades y para cuándo: ningún dato de la gente.
    Lo común con el Portal de Aliados (las cuentas, los nombres, los estados, el texto del correo) está en portal/cotizar.js. */
-var COTIZAR_VER='341a6ca045';   /* lo pone huellas.py: el md5 de portal/cotizar.js */
+var COTIZAR_VER='031232660d';   /* lo pone huellas.py: el md5 de portal/cotizar.js */
 var _COT_CARGA=null;
 function cargarCotizar(){
   if(typeof COT!=='undefined') return Promise.resolve(true);
@@ -16100,13 +16150,24 @@ var ALIADOS = [];
    viaja con la cuenta (user_metadata.aliado) para saber qué empresas trajo cada uno. En esta pestaña, hasta crear la cuenta. */
 var ALIADO_LS = 'sstp_aliado';
 (function(){ try{ var m=/[?&]aliado=([A-Za-z0-9-]{2,20})(&|$)/.exec(location.search || ''); if(m) sessionStorage.setItem(ALIADO_LS, m[1].toUpperCase()); }catch(_a){} })();
+/* 2/11/2026 · V7 · el RQ que llega del Marketplace SST (marketplace.html → index.html?mkt=1&r=…&d=…): al entrar, el portal abre
+   OBRASST OS › Marketplace SST con todo marcado (os.js: _osMktPide). El detalle viaja en esta pestaña (sessionStorage), no en la dirección. */
+var OS_PIDE = null;
+(function(){ try{
+  var q = new URLSearchParams(location.search || ''); if(q.get('mkt') !== '1') return;
+  var x = null; try{ x = JSON.parse(sessionStorage.getItem('sstp_mkt_pide') || 'null'); }catch(_j){}
+  if(!x || typeof x !== 'object' || !(Date.now() - (x.t || 0) < 36e5)) x = null;
+  var r = (x && Array.isArray(x.r) ? x.r : String(q.get('r') || '').split(',')).filter(function(k){ return /^[a-z]{2,12}$/.test(k); }).slice(0, 10);
+  var d = String((x && x.d) || q.get('d') || '').toUpperCase(); if(!/^[A-Z ]{3,20}$/.test(d)) d = '';
+  OS_PIDE = { r:r, d:d, det:x && typeof x.det === 'string' ? x.det.slice(0, 600) : '' };
+}catch(_m){} })();
 document.addEventListener('DOMContentLoaded', function(){ try{ var i=document.getElementById('c-aliado'), v=sessionStorage.getItem(ALIADO_LS); if(i && v && !i.value) i.value=v; }catch(_a){} });
 function aliadoCodigo(){
   var i=document.getElementById('c-aliado'), v=String((i && i.value) || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 20);
   if(!v){ try{ v=String(sessionStorage.getItem(ALIADO_LS) || '').slice(0, 20); }catch(_a){} }
   return v;
 }
-/* el WhatsApp de contacto (el mismo que está en la página de OBRASST Central). Lo usa «Mi plan»: avisar de un pago que
+/* el WhatsApp de contacto (el mismo que está en la página de Contractor Hub™). Lo usa «Mi plan»: avisar de un pago que
    no se activó solo (06/10/2026) */
 var SOPORTE_WA = '51967991730';
 var LS_DATOS_OK = 'sstp_datos_ok';
@@ -16472,7 +16533,7 @@ function cargarEpw(){
   return _EPW_CARGA;
 }
 /* 2/11/2026 · OBRASST OS (portal/os.js): se pide al abrir la sección */
-var OS_VER='b05026d75c';   /* lo pone huellas.py: el md5 de portal/os.js */
+var OS_VER='0d8c68da57';   /* lo pone huellas.py: el md5 de portal/os.js */
 var _OS_CARGA=null;
 function cargarOs(){
   if(typeof osVista==='function') return Promise.resolve(true);
@@ -16800,7 +16861,7 @@ function papIr(fn){
    · los pagos empezados en este navegador (LS_PAGO): al volver a entrar se miran, y el plan pagado se activa solo.
    Nada nuevo en el servidor: sst_mi_plan, sst_prueba_gratis, sst_comprobante_preparar, sst_mis_comprobantes y
    sst_activar_licencia son las mismas funciones que usa la app. */
-var PLAN_VER='0a1af719a1';   /* lo pone armar.py: el hash de portal/plan.js */
+var PLAN_VER='fb6d034b6b';   /* lo pone armar.py: el hash de portal/plan.js */
 var LS_PAGO='sstp_pago', LS_PLAN_AVISO='sstp_plan_aviso';
 var PAQUETE_APP='pe.descarganomas.obrasst';
 var PLANW={ mi:null, de:'', t:0, yendo:null, yendoDe:'', regalo:0 };
@@ -17174,13 +17235,13 @@ var FAQ = [
   { t:'Planes y pagos', q:'Si dejo de pagar, ¿pierdo mis registros?', k:'borrar perder documentos vencido no pago',
     r:'<p>No se borra nada. La cuenta vuelve a LITE y sigues usando lo que LITE trae. Lo de los accesos de tu plan anterior —por ejemplo, las constancias o las inspecciones— queda guardado y vuelve a abrirse, con todo lo registrado, cuando retomas un plan que los incluya.</p>' },
   { t:'Planes y pagos', q:'¿Sirve para varias obras?', k:'obras proyectos multiples sedes adicional',
-    r:function(){ var T=_faqTopes(); return '<p>Sí. Cada plan de pago trae sus obras incluidas, de '+T.oMin+' a '+T.oMax+', y puedes sumar más por '+_plata(INI_EXTRA.obra)+' al mes cada una.</p><p>Para constructoras con subcontratas está <a href="central.html">OBRASST Central</a>.</p>'; } },
+    r:function(){ var T=_faqTopes(); return '<p>Sí. Cada plan de pago trae sus obras incluidas, de '+T.oMin+' a '+T.oMax+', y puedes sumar más por '+_plata(INI_EXTRA.obra)+' al mes cada una.</p><p>Para constructoras con subcontratas está <a href="central.html">Contractor Hub™ (Control de Contratistas)</a>.</p>'; } },
   { t:'Planes y pagos', q:'¿Qué pasa si llego al tope de trabajadores de mi plan?', k:'limite maximo tope trabajadores subir plan',
     r:'<p>La app te avisa y no deja registrar más hasta que pases a un plan con más trabajadores. Lo que ya está registrado no se toca.</p>' },
   { t:'Planes y pagos', q:'¿Qué hago si pagué y no me llegó el código, o pagué por error?', k:'reembolso devolucion codigo no llego error pago',
     r:'<p>Escríbenos a <a href="mailto:'+SOPORTE+'">'+SOPORTE+'</a> con el correo de tu cuenta y lo resolvemos. Los reembolsos de lo pagado por Google Play siguen las condiciones de Google Play.</p>' },
-  { t:'Planes y pagos', q:'¿Qué es OBRASST Central?', k:'subcontratas contratistas constructora corporativo varias empresas',
-    r:'<p>Es para la empresa principal que trabaja con subcontratas —no tiene que ser un consorcio—: ve a todas las empresas de su obra en un solo lugar, y las subcontratas entran gratis, con la app completa. Central es para una obra; Corporativo, para dos o más, con el consolidado de la gerencia. Se contratan aparte de los planes. <a href="central.html">Conocer Central</a>.</p>' },
+  { t:'Planes y pagos', q:'¿Qué es Contractor Hub™ (Control de Contratistas)?', k:'contractor hub central control de contratistas subcontratas contratistas constructora corporativo varias empresas',
+    r:'<p>Es para la empresa principal que trabaja con subcontratas —no tiene que ser un consorcio—: ve a todas las empresas de su obra en un solo lugar, y las subcontratas entran gratis, con la app completa. Contractor Hub es para una obra; Corporativo, para dos o más, con el consolidado de la gerencia. Se contratan aparte de los planes. <a href="central.html">Conocer Contractor Hub™</a>.</p>' },
 
   /* ── datos y legal ── */
   { t:'Datos y legal', q:'¿Dónde se guardan los datos?', k:'servidor nube seguridad supabase brasil cifrado',
@@ -18087,7 +18148,7 @@ var APL_PREG = {
            ['dueno', 'Mi empresa contrata la obra', 'Empresa privada: minera, concesionaria o industria'],
            ['estado', 'Trabajo en el Estado', 'Ministerio, entidad que contrata obra o regulador'],
            ['trabajador', 'Soy trabajador', 'Entro con el código de mi obra'] ] },
-  central: { t:'¿Tu contratista principal ya usa OBRASST Central?', op:[['si', 'Sí'], ['no', 'No'], ['nose', 'No sé']] },
+  central: { t:'¿Tu contratista principal ya usa Contractor Hub™?', op:[['si', 'Sí'], ['no', 'No'], ['nose', 'No sé']] },
   trab:  { t:'¿Cuántos trabajadores tienen tus obras?', ayuda:'Contando a todos los que entran a la obra.', op:[
            ['10', 'Hasta 10'], ['30', 'De 11 a 30'], ['70', 'De 31 a 70'], ['150', 'De 71 a 150'], ['450', 'De 151 a 450'], ['mas', 'Más de 450'] ] },
   obras: { t:'¿Cuántas obras llevas a la vez?', op:[['1', 'Una'], ['2', 'Dos'], ['4', 'De 3 a 4'], ['8', 'De 5 a 8'], ['mas', 'Más de 8']] },
@@ -18178,7 +18239,7 @@ function aplSiguiente(r){
   var ps = aplPlan('supervisor'), pso = aplPlan('ssoma');
   if(!r.insp && om < (ps ? ps.orden : 2)) return 'insp';
   if(!r.ssoma && om < (pso ? pso.orden : 3)) return 'ssoma';
-  /* las subcontratas cambian el resultado solo desde 401 trabajadores (OBRASST Central): antes no se pregunta */
+  /* las subcontratas cambian el resultado solo desde 401 trabajadores (Contractor Hub™): antes no se pregunta */
   if(!r.sub && r.rol !== 'subcontrata' && (APL_N.trab[r.trab] || 0) > 400) return 'sub';
   return null;
 }
@@ -18228,14 +18289,14 @@ function aplDecidir(r){
   }
   if(r.rol === 'estado'){
     R.tipo = 'reunion'; R.plan = 'fiscalizacion'; R.nombre = 'OBRASST Estado';
-    R.porque = ['Un solo plan para la entidad pública: cada obra con su supervisora, el contratista con su Central y sus subcontratas, todo incluido.',
+    R.porque = ['Un solo plan para la entidad pública: cada obra con su supervisora, el contratista con su Contractor Hub y sus subcontratas, todo incluido.',
                 'Se arma a la medida de tu entidad en una reunión.'];
     R.reunion = 'fiscalizacion';
     return R;
   }
   if(r.rol === 'subcontrata' && r.central === 'si'){
-    R.tipo = 'invitado'; R.nombre = 'Gratis, dentro de la Central';
-    R.porque = ['Con OBRASST Central paga la contratista principal: las subcontratas entran gratis.',
+    R.tipo = 'invitado'; R.nombre = 'Gratis, dentro del Contractor Hub';
+    R.porque = ['Con Contractor Hub™ paga la contratista principal: las subcontratas entran gratis.',
                 'Pídele a tu contratista su enlace de invitación.'];
     return R;
   }
@@ -18254,7 +18315,7 @@ function aplDecidir(r){
   /* 21/10/2026 · Central o Corporativo cuando pasa el tope de SSOMA (antes 400, ahora 150) */
   var _ssT = (aplPlan('ssoma') || {}).trab || 150;
   if(r.sub === 'si' && t > _ssT){
-    R.tipo = 'reunion'; R.plan = (o > 1 ? 'corporativo' : 'central'); R.nombre = (o > 1 ? 'OBRASST Corporativo' : 'OBRASST Central');
+    R.tipo = 'reunion'; R.plan = (o > 1 ? 'corporativo' : 'central'); R.nombre = (o > 1 ? 'OBRASST Corporativo' : 'Contractor Hub™');
     R.porque = ['Tienes más de ' + _aplMiles(_ssT) + ' trabajadores y subcontratas: con ' + R.nombre + ' ves a todas las empresas de tu obra en un solo lugar.',
                 'Paga la principal; las subcontratas entran gratis. Se cobra por trabajador y se arma en una reunión.'];
     R.reunion = R.plan;
@@ -18283,7 +18344,7 @@ function aplDecidir(r){
       R.porque.push('Pides requerimientos de EPP, manejas químicos, simulacros o exámenes médicos: vienen desde ' + P.n + '.');
     if(!R.porque.length) R.porque.push(P.n + ' es el plan más chico que cubre todo lo que respondiste.');
   }
-  if(r.sub === 'si') R.nota = 'Tus subcontratas pueden usar su propia cuenta (LITE es gratis). Con más de ' + _aplMiles((aplPlan('ssoma') || {}).trab || 150) + ' trabajadores, OBRASST Central las junta y entran gratis.';
+  if(r.sub === 'si') R.nota = 'Tus subcontratas pueden usar su propia cuenta (LITE es gratis). Con más de ' + _aplMiles((aplPlan('ssoma') || {}).trab || 150) + ' trabajadores, Contractor Hub™ las junta y entran gratis.';
   /* 15/10/2026 · si lo único que lo sube de plan es la gente, el de abajo con puestos sueltos puede salir menos: se
      le dice (nunca vender de más) */
   var Q = _aplAlterno(L, P, t, o, p, desde);
@@ -18309,7 +18370,7 @@ function aplResumen(R){
 /* lo respondido, en una línea por pregunta (para el WhatsApp y la Consola) */
 function aplRespuestasTexto(r){
   return aplRespondidas(r).map(function(k){
-    var q = { rol:'Qué hace', central:'Su principal usa Central', trab:'Trabajadores', obras:'Obras a la vez', pers:'Personas que registran',
+    var q = { rol:'Qué hace', central:'Su principal usa Contractor Hub', trab:'Trabajadores', obras:'Obras a la vez', pers:'Personas que registran',
               insp:'Inspecciones con formato', ssoma:'Requerimientos, químicos, simulacros o EMO', sub:'Subcontratas en la app' }[k] || k;
     return q + ': ' + aplTexto(k, r[k]);
   });
@@ -19101,6 +19162,11 @@ function mostrarPortal(){
   elegirObra(guardada);
   hash = vistaAlias(hash);
   if(hash && hash!==VISTA.actual && vistasDe().some(function(v){ return v.id===hash; })){ navegar(hash, true); CADP.irA = null; }
+  /* 2/11/2026 · V7 · un RQ del Marketplace SST: directo a OBRASST OS › Marketplace SST (si la cuenta lo tiene) */
+  if(OS_PIDE && VISTA.actual!=='os'){
+    if(vistasDe().some(function(v){ return v.id==='os'; })) navegar('os', true);
+    else { OS_PIDE=null; toast('El Marketplace SST se pide desde la cuenta de la empresa: el dueño, el jefe o el supervisor SST.'); }
+  }
   /* 05/10/2026 · llegó con una invitación de la cadena (…/?cad=…): se abre encima, y la guía espera */
   var _inv=false; try{ _inv=cadSiToca(); }catch(_cd){}
   if(_inv) return;
@@ -19118,6 +19184,7 @@ function limpiarSesion(){
   /* el que entra después empieza por el principio, no por la sección
      donde el anterior se quedó */
   VISTA.actual=null; VISTA.cache={}; try{ history.replaceState(null,'',location.pathname); }catch(e){}
+  document.body.classList.remove('con-abajo'); if($('p-abajo')) $('p-abajo').hidden=true;
 }
 var _VENCIDA=false;
 function sesionVencida(){
@@ -19154,9 +19221,9 @@ function pedirClaveNueva(){
       : 'Listo. Mandamos un enlace a '+correo+'. Ábrelo: se abre la app para poner tu contraseña nueva. Luego entras aquí con ella. Si no llega, revisa «Spam».';
   }).catch(function(e){ m.className='msg mal'; m.textContent=(e&&e.portal)||'No se pudo (¿sin internet?). Inténtalo en un momento.'; });
 }
-/* 01/10/2026 · OBRASST Central: la obra de ejemplo (portal/?demo=central) y,
+/* 01/10/2026 · Contractor Hub™: la obra de ejemplo (portal/?demo=central) y,
    después, las obras con Central. Se carga recién cuando hace falta. */
-var CENTRAL_VER='219752ebeb';   /* lo pone armar.py: el hash de portal/central.js */
+var CENTRAL_VER='44e81a300f';   /* lo pone armar.py: el hash de portal/central.js */
 var _CENTRAL_CARGA=null;
 function cargarCentral(){
   if(typeof centralDemo==='function') return Promise.resolve(true);
@@ -19178,7 +19245,7 @@ function cargarCentral(){
    Aquí va solo lo que hace falta desde el arranque: saber si esta obra tiene algo en la cadena (para el menú y sus
    contadores), y la invitación que llega en la dirección (…/?cad=<ficha>). Lo demás es portal/cadena.js, que se
    pide al abrir sus secciones. Sin el SQL en el servidor (sql/2026-10-25-cadena.sql), nada de esto aparece. */
-var CADENA_VER='92e6185e6a';   /* lo pone armar.py: el hash de portal/cadena.js */
+var CADENA_VER='ba021c0eca';   /* lo pone armar.py: el hash de portal/cadena.js */
 var _CAD_CARGA=null;
 function cargarCadena(){
   if(typeof cadPintar==='function') return Promise.resolve(true);
@@ -19251,7 +19318,7 @@ function arrVistasDe(i){ var g=(i && typeof i==='object') ? (i.grado || 0) : (+i
    la app»: lo que cada contratista y sus subcontratas cumplen hoy, de sus propios registros (capacitación, EMO, inducción, ATS,
    charla, PETAR, papeletas y observaciones), el QR del casco del trabajador, la matriz de capacitación, el informe consolidado y,
    para Corporativo, cada contratista en todas sus obras. Servidor: sql/2026-10-28-cumplimiento.sql (sst_cad_cumple…) */
-var CUMPLE_VER='dc201ebb4c';   /* lo pone herr/huellas.py: el md5 de portal/cumple.js */
+var CUMPLE_VER='f7e87acf20';   /* lo pone herr/huellas.py: el md5 de portal/cumple.js */
 var _CUM_CARGA=null;
 function cargarCumple(){
   if(typeof cumPintar==='function') return Promise.resolve(true);
@@ -19280,10 +19347,41 @@ var CUM_VISTAS = [
   {id:'cum-comp', g:'Tus obras', ic:'⇄', n:'Comparativo de contratistas de todas tus obras', s:'Cada contratista en todas tus obras, lado a lado: lo que cumple en cada una y su nota', pintar:vistaCum('comp'), tablas:[], mira:true, corp:true}
 ];
 function cumVistasDe(t){ if(!t) return []; return CUM_VISTAS.filter(function(v){ return !v.corp || t==='corp'; }); }
+/* 29/10/2026 · ESTADO 3.0 · LA LÍNEA (portal/linea.js, se pide al abrir una de sus secciones; necesita cadena.js y arriba.js).
+   Marcelo: «que se acople a las subcontratas… una línea de arriba hacia abajo y viceversa… aprieta un botón y listo»: la mesa
+   de control (el inicio del Estado), el árbol de la obra, los comunicados que llegan solos hasta el último trabajador de la
+   última subcontrata y los accidentes de toda la cadena con el reloj de las 24 horas. Servidor: sql/2026-10-30-estado-linea.sql */
+var LINEA_VER='a35fb18280';   /* lo pone herr/huellas.py: el md5 de portal/linea.js */
+var _LIN_CARGA=null;
+function cargarLinea(){
+  if(typeof linPintar==='function') return Promise.resolve(true);
+  if(_LIN_CARGA) return _LIN_CARGA;
+  _LIN_CARGA=new Promise(function(res, rej){
+    var s=document.createElement('script'); s.src='linea.js?v='+(LINEA_VER||'0');
+    s.onload=function(){ (typeof linPintar==='function') ? res(true) : (_LIN_CARGA=null, rej('sin_linea')); };
+    s.onerror=function(){ _LIN_CARGA=null; rej('sin_linea'); };
+    document.head.appendChild(s);
+  });
+  return _LIN_CARGA;
+}
+function vistaLin(cual){
+  return function(caja){
+    cargando(caja);
+    cargarCadena().then(cargarArriba).then(cadIniListo).then(cargarLinea).then(function(){ if(caja.isConnected) linPintar(cual, caja); }, function(){ fallo(caja); });
+  };
+}
+var LIN_VISTAS = [
+  {id:'est-arbol', g:'Inicio', ic:'⑃', n:'Árbol de la obra', s:'La entidad, la supervisora, cada contratista y sus subcontratas, con lo de hoy de cada una', pintar:vistaLin('arbol'), tablas:[], mira:true, grado:3},
+  {id:'est-com', g:'Comunicados y accidentes', ic:'📣', n:'Comunicados', s:'Lo que envías llega solo a todas las empresas de tus obras y a su gente, con el acuse de cada una', pintar:vistaLin('com'), tablas:[], mira:true, grado:3},
+  {id:'est-acc', g:'Comunicados y accidentes', ic:'✚', n:'Accidentes', s:'Lo que registró cada empresa de tus obras, subcontratas incluidas, con el reloj de las 24 horas del aviso al MTPE', pintar:vistaLin('acc'), tablas:[], mira:true, grado:3},
+  /* 29/10/2026 · prototipo 2: la constancia de lo que hizo el equipo de la entidad con cada alerta */
+  {id:'est-bit', g:'Inicio', ic:'🗒', n:'Bitácora de gestión', s:'Lo que hizo tu equipo con cada alerta: qué hizo, con qué documento, con qué plazo y cómo se cerró, con la hora del servidor', pintar:vistaLin('bit'), tablas:[], mira:true, grado:3}
+];
+function linVistasDe(g){ g = +g || 0; return LIN_VISTAS.filter(function(v){ return g >= v.grado; }); }
 /* 15/10/2026 · lote 12 · EL INFORME DE LAS SUBCONTRATAS Y LOS ESTÁNDARES (portal/informe-sub.js, que necesita portal/cadena.js):
    lo que pido (armar, publicar, el tablero, revisar, el ZIP, el año) y lo que me piden (llenar y presentar); los estándares y
    boletines de la principal (acuse, difusión con firma, quién lo vio). Servidor: sql/2026-11-26-informe.sql */
-var INFSUB_VER='d80fb29541';   /* lo pone armar.py: el hash de portal/informe-sub.js */
+var INFSUB_VER='0b969de049';   /* lo pone armar.py: el hash de portal/informe-sub.js */
 var _INFSUB_CARGA=null;
 function cargarInfSub(){
   if(typeof iswPintar==='function') return Promise.resolve(true);
@@ -19322,7 +19420,7 @@ function cadVistasEn(v){
   var m=cadMenuInfo(); if(!m || !v.length) return v;
   /* 28/10/2026 · la cuenta con su casa: sus secciones van todas; porAreas las ordena (areasOrden) y deja afuera las que su
      casa no usa */
-  if(m.t) return CAD_VISTAS.concat(arrVistasDe(m.grado), cumVistasDe(m.t), v);
+  if(m.t) return CAD_VISTAS.concat(arrVistasDe(m.grado), cumVistasDe(m.t), linVistasDe(m.grado), v);
   if(!m.hay) return v;
   var g0=v[0].g, k=0; while(k<v.length && v[k].g===g0) k++;
   return v.slice(0, k).concat(CAD_VISTAS, v.slice(k));
@@ -19442,7 +19540,7 @@ function cadEnAlta(){
 function esDemoCentral(){ return /[?&]demo=central(&|$)/.test(location.search||''); }
 /* 28/10/2026 · #183 · las obras de ejemplo de Fiscalización y de Mandante (portal/?demo=fiscalizacion, ?demo=mandante): el mismo
    portal de una cuenta de verdad, con los datos de portal/demo-arriba.js (no toca ningún servidor) */
-var DEMOARR_VER='18491700c0';   /* lo pone herr/huellas.py: el hash de portal/demo-arriba.js */
+var DEMOARR_VER='ac1e43a1b5';   /* lo pone herr/huellas.py: el hash de portal/demo-arriba.js */
 var _DMA_CARGA=null;
 function cargarDemoArriba(){
   if(typeof demoArribaAbrir==='function') return Promise.resolve(true);
@@ -21046,8 +21144,8 @@ var GUIA_RAIL_TX = {
   fis:'Arriba, tu casa: el inicio con lo de hoy, el cumplimiento de cada empresa (su gente capacitada, su EMO, su ATS, la charla, el PETAR y sus papeletas, y el QR del casco de cada trabajador), la fiscalización (la prioridad, las órdenes, las medidas, el control de tus inspectores y el expediente), la supervisión, tu cartera, las observaciones y tu empresa y equipo. Lo de tu propia obra se abre al pie. Toca uno y se abre; adentro, arriba, tiene sus pestañas.',
   man:'Arriba, tu casa: el inicio con lo de hoy en tus proyectos, el cumplimiento de cada contratista (su gente capacitada, su EMO, su ATS, la charla, el PETAR y sus papeletas, y el QR del casco), tu cartera (el ranking, las retenciones y la auditoría de tu supervisora), la supervisión, las observaciones y tu empresa y equipo. Lo de tu propia obra se abre al pie. Toca uno y se abre; adentro, arriba, tiene sus pestañas.',
   sup:'Arriba, tu supervisión: el inicio con lo de hoy, el cumplimiento de cada empresa, tus herramientas de supervisión y las observaciones. Abajo, tu propia gestión SST: personal, capacitación, EPP, riesgos y lo demás. Toca uno y se abre; adentro, arriba, tiene sus pestañas.',
-  cen:'Arriba, OBRASST Central: el tablero de la obra, el comparativo de contratistas, la matriz de capacitación, el informe consolidado, verificar a un trabajador por su QR, las observaciones, los informes de las subcontratas, los estándares y boletines y tu equipo con sus rangos. Abajo, lo de tu empresa en la obra: personal, capacitación, EPP, riesgos y lo demás. Toca uno y se abre; adentro, arriba, tiene sus pestañas.',
-  corp:'Arriba, tus obras lado a lado (y cada contratista en todas ellas) y Central de la obra elegida: su tablero, el comparativo de contratistas, la matriz de capacitación, el informe consolidado, sus observaciones, sus informes, sus estándares y su equipo. Abajo, lo de tu empresa en esa obra. Toca uno y se abre; adentro, arriba, tiene sus pestañas.'
+  cen:'Arriba, Contractor Hub™: el tablero de la obra, el comparativo de contratistas, la matriz de capacitación, el informe consolidado, verificar a un trabajador por su QR, las observaciones, los informes de las subcontratas, los estándares y boletines y tu equipo con sus rangos. Abajo, lo de tu empresa en la obra: personal, capacitación, EPP, riesgos y lo demás. Toca uno y se abre; adentro, arriba, tiene sus pestañas.',
+  corp:'Arriba, tus obras lado a lado (y cada contratista en todas ellas) y el Contractor Hub de la obra elegida: su tablero, el comparativo de contratistas, la matriz de capacitación, el informe consolidado, sus observaciones, sus informes, sus estándares y su equipo. Abajo, lo de tu empresa en esa obra. Toca uno y se abre; adentro, arriba, tiene sus pestañas.'
 };
 function guiaTxRail(tx){ var t = ''; try{ t = (typeof cuentaTipo === 'function') ? cuentaTipo() : ''; }catch(e){} return GUIA_RAIL_TX[t] || tx; }
 var GUIA = { i:0, pasos:[], abierta:false, foco:null };
