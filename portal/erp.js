@@ -23,7 +23,7 @@ function leer(k, d){ try{ var v = localStorage.getItem(k); return v === null ? d
 function guardar(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 function toast(t){ var c = $('toast'); c.textContent = t; try{ (window.__avisos = window.__avisos || []).push(t); }catch(_a){} c.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(function(){ c.hidden = true; }, 3800); }
 function ver(id){ ['v-carga', 'v-entrar', 'v-2fa', 'v-no', 'v-app'].forEach(function(x){ $(x).hidden = (x !== id); }); $('pie').hidden = id === 'v-app'; window.scrollTo(0, 0); }
-function puede(sec){ return !!(ERP.yo && ERP.yo.menu && ERP.yo.menu.indexOf(sec) >= 0); }
+function puede(sec){ return sec === 'web' ? !!ERP.yo : !!(ERP.yo && ERP.yo.menu && ERP.yo.menu.indexOf(sec) >= 0); }   /* «Mi QR y web» la ve todo el equipo */
 function esAdmin(){ return !!(ERP.yo && ERP.yo.papel === 'admin'); }
 function soloBandeja(y){ return !(y.menu || []).some(function(k){ return k !== 'bandeja' && k !== 'plan'; }); }
 /* una acción que pide la 2FA (cambiar de plan, por ejemplo): se activa ahí mismo y se vuelve */
@@ -36,7 +36,7 @@ function tieneModulo(m){ return !!(ERP.yo && ERP.yo.plan && (ERP.yo.plan.modulos
 })();
 
 /* ── lo que dice el servidor, en palabras ── */
-var MOTIVOS = { sin_cuenta:'Tu sesión se cerró. Vuelve a entrar.', solo_admin:'Eso lo cambia el administrador de tu empresa.', web:'La web tiene que empezar con https://',
+var MOTIVOS = { sin_cuenta:'Tu sesión se cerró. Vuelve a entrar.', solo_admin:'Eso lo cambia el administrador de tu empresa.', plan_sin_web:'Tu página web viene con los planes Aliado ERP + Web + App y Aliado ERP Full 360°.', web:'La web tiene que empezar con https://',
   logo:'El logo tiene que ser una imagen PNG, JPG o WEBP liviana.', no_eres_aliado:'Esta cuenta no es de un aliado de OBRASST.', usuario_cortado:'El administrador cortó el acceso de esta cuenta.',
   aliado_pausado:'La ficha de tu empresa está en pausa. Escríbenos a info@obrasstapp.com.', suspendido:'OBRASST suspendió el ERP de tu empresa. Escríbenos a info@obrasstapp.com.',
   erp_apagado:'El ERP está en mantenimiento. Vuelve en unos minutos.', erp_aun_no:'El ERP todavía no abre.', plan_no_incluye:'Tu plan no incluye esta parte. Míralo en «Mi plan».',
@@ -47,7 +47,7 @@ var MOTIVOS = { sin_cuenta:'Tu sesión se cerró. Vuelve a entrar.', solo_admin:
   detraccion:'La detracción solo va en servicios, con un código de la lista.', unidad:'La unidad va como en SUNAT (NIU, PR, ZZ…).', barras:'Revisa el código de barras.',
   cantidad:'Revisa la cantidad.', falta_vence:'Ese producto lleva fecha de vencimiento: ponla.', no_es_bien:'Solo los productos (no servicios ni kits) tienen stock.', almacen:'Elige el almacén.',
   variante:'Elige un producto de la lista.', motivo:'Escribe el motivo.', reservado:'No puedes dejar menos de lo que ya está reservado para pedidos.', sin_stock:'No hay stock suficiente.',
-  tope_almacenes:'Tu plan tiene una sola sede. Pasa a ERP Full para más almacenes.', codigo_usado:'Ese código ya existe.', ubigeo:'El ubigeo son 6 números (INEI).',
+  tope_almacenes:'Tu plan tiene una sola sede. Pasa a Aliado ERP Full 360° para más almacenes.', codigo_usado:'Ese código ya existe.', ubigeo:'El ubigeo son 6 números (INEI).',
   ruc:'Ese RUC no pasa el dígito verificador de SUNAT.', dni:'El DNI son 8 números.', razon_social:'Escribe la razón social.', correo:'Revisa el correo.', telefono:'Revisa el teléfono.',
   doc_usado:'Ya tienes un cliente con ese documento.', cliente:'Elige un cliente tuyo.', condicion:'Elige la condición de pago.', lineas:'Revisa las líneas.', muchas_lineas:'Máximo 200 líneas.',
   precio:'Revisa el precio.', desc:'Revisa el descuento.', sin_precio:'Ese producto no tiene precio: ponlo en su ficha o en la lista.', desc_max:'Ese descuento pasa tu tope.',
@@ -114,7 +114,7 @@ function sbFetch(url, opt, otra){
 }
 /* rpc: siempre resuelve con el JSON del servidor ({ok:false, motivo} incluido); 401 → la sesión se cerró.
    rpc('erp_x', p) manda {p}; las del ERP sin argumentos van vacías; rpcCrudo manda los argumentos tal cual (fase 1 y empresa) */
-var SIN_ARG = /^(erp_yo|erp_config_ver|erp_usuarios|erp_almacenes|erp_listas|erp_consignaciones|erp_taller|erp_mis_entregas|erp_proveedores|erp_compra_sugerencias|erp_compra_sugerir_oc|erp_grupal|erp_equivalencias|erp_factoring_ops|erp_plan|erp_ssoma_pedir|erp_boveda_permiso)$/;
+var SIN_ARG = /^(erp_yo|erp_config_ver|erp_usuarios|erp_almacenes|erp_listas|erp_consignaciones|erp_taller|erp_mis_entregas|erp_proveedores|erp_compra_sugerencias|erp_compra_sugerir_oc|erp_grupal|erp_equivalencias|erp_factoring_ops|erp_plan|erp_ssoma_pedir|erp_boveda_permiso|erp_web)$/;
 function rpc(fn, p){ return llamarRpc(fn, SIN_ARG.test(fn) ? {} : { p:p === undefined ? {} : p }); }
 function rpcCrudo(fn, args){ return llamarRpc(fn, args || {}); }
 /* lo que pide una pantalla al pintarse queda marcado con su «generación»: si mientras tanto se pintó otra, la respuesta se descarta
@@ -225,6 +225,13 @@ function arrancar(){
     return rpc('erp_yo').then(function(y){
       if(!y || !y.ok){ noAliado(err ? mensaje(err) : (y && y.motivo !== 'no_eres_aliado' ? mensaje(y) : null)); return; }
       ERP.yo = y;
+      /* 2/11/2026 · los 9 rubros de servicios tienen su sistema aquí mismo (erp-servicios.js) cuando OBRASST lo enciende;
+         apagado, siguen en el Portal de Aliados como antes (lo mismo los rubros sin sistema) */
+      if(y.vertical && y.srv_encendido){
+        cargarSrv().then(function(){ if(y.falta_2fa && soloBandeja(y) === false){ pantalla2FA(); return; } mostrarApp(); },
+          function(){ noAliado('No se pudo cargar el sistema de tu rubro. Revisa tu conexión y recarga la página.'); });
+        return;
+      }
       if(y.aliado && y.aliado.rubro && y.aliado.rubro !== 'epp'){ location.replace('portal-aliados.html'); return; }
       if(y.falta_2fa && soloBandeja(y) === false){ pantalla2FA(); return; }
       mostrarApp();
@@ -286,16 +293,37 @@ var SECCIONES = {
   despachos:{ t:'Despachos y guías', h:'Guías de remisión, ruta y dossier de calidad' }, entregas:{ t:'Mis entregas', h:'Tu ruta y la prueba de entrega' },
   facturacion:{ t:'Facturación y cobranzas', h:'Comprobantes, cuentas por cobrar, estados de cuenta y adelanto de cobro' },
   compras:{ t:'Compras', h:'Reorden, órdenes de compra, importaciones y compra grupal' }, plan:{ t:'Mi plan', h:'Tu plan, tu billetera de comisiones y tu ficha' },
-  seguridad:{ t:'Seguridad', h:'Registro, equipo, 2FA, bóveda del PSE y configuración' } };
+  seguridad:{ t:'Seguridad', h:'Registro, equipo, 2FA, bóveda del PSE y configuración' },
+  /* 2/11/2026 · el ERP de servicios (erp-servicios.js pone el nombre de cada una según el rubro) */
+  srv_ordenes:{ t:'Órdenes', h:'Lo programado, lo que está en campo y lo cerrado' }, srv_campo:{ t:'Campo', h:'Lo que se llena en la obra' },
+  srv_activos:{ t:'Activos', h:'Lo que controlas, con su QR y sus documentos' }, srv_certificados:{ t:'Certificados', h:'Emitidos con su huella y su QR de verificación' },
+  srv_clientes:{ t:'Clientes y tarifas', h:'Tus clientes y lo que cobras a cada uno' }, srv_valorizar:{ t:'Valorizaciones', h:'Lo cerrado del periodo, listo para facturar' },
+  /* V7 (2/11/2026) · tu página pública, su QR y la app en el celular */
+  web:{ t:'Mi QR y web', h:'Tu página pública, su QR y la app en tu celular' } };
 var PINTAR = {};   /* cada módulo pone aquí su función: PINTAR.ventas = function(sub){…} */
+/* el sistema de los rubros de servicios: su catálogo y sus pantallas, solo para esos aliados */
+var SRV_JS = 'srv2';
+function cargarSrv(){
+  if(window.SRV && window.SRV_CATALOGO){ SRV.iniciar(); return Promise.resolve(); }
+  return cargarJs('erp-srv-catalogo.js?v=' + SRV_JS).then(function(){ return cargarJs('erp-servicios.js?v=' + SRV_JS); }).then(function(){ SRV.iniciar(); });
+}
+function esSrv(){ return !!(ERP.yo && ERP.yo.vertical && ERP.yo.srv_encendido && window.SRV); }
+/* los papeles: en EPP, los de siempre; en servicios, los mismos permisos con su nombre en el rubro (el de campo: Operador, Inspector…) */
+function papeles(){
+  if(esSrv()) return SRV.papeles();
+  return [['admin', 'Administrador', 'todo (con 2FA)'], ['vendedor', 'Vendedor', 'cotiza y vende a su cartera, sin costos'], ['almacenero', 'Almacenero', 'stock y despachos, sin precios'],
+          ['chofer', 'Chofer', 'solo sus entregas']];
+}
+function papelN(k){ var p = papeles().filter(function(x){ return x[0] === k; })[0]; return p ? p[1] : k; }
 function mostrarApp(){
   ver('v-app');
   var y = ERP.yo;
   $('b-salir').hidden = false; $('b-menu').hidden = false; $('b-nombre').textContent = (y.yo && y.yo.nombre) || (TOK && TOK.correo) || '';
   $('b-prueba').hidden = !(y.pse && y.pse.modo === 'prueba' && tieneModulo('facturacion'));
   $('l-razon').textContent = y.aliado.razon;
-  $('l-plan').textContent = 'Plan ' + y.plan.n + (y.plan.fundador ? ' · fundador' : '') + ' · ' + ({ admin:'Administrador', vendedor:'Vendedor', almacenero:'Almacenero', chofer:'Chofer' })[y.papel];
-  $('menu').innerHTML = y.menu.map(function(k){ return '<button type="button" data-sec="' + k + '"><span>' + esc(SECCIONES[k].t) + '</span><span class="n" id="n-' + k + '" hidden></span></button>'; }).join('');
+  $('l-plan').textContent = 'Plan ' + y.plan.n + (y.plan.fundador ? ' · fundador' : '') + ' · ' + papelN(y.papel);
+  $('b-sub').textContent = esSrv() ? 'Aliados · ' + SRV.nombre() : 'Aliados · ERP';
+  $('menu').innerHTML = y.menu.concat(y.menu.indexOf('web') < 0 ? ['web'] : []).filter(function(k){ return SECCIONES[k]; }).map(function(k){ return '<button type="button" data-sec="' + k + '"><span>' + esc(SECCIONES[k].t) + '</span><span class="n" id="n-' + k + '" hidden></span></button>'; }).join('');
   $('menu').onclick = function(ev){ var b = ev.target.closest('[data-sec]'); if(b){ $('lado').classList.remove('abierto'); irA(b.getAttribute('data-sec')); } };
   if(y.apagado){
     $('vista').innerHTML = '<div class="aviso ojo"><b>El ERP está en mantenimiento.</b> Mientras tanto están tu Bandeja y Mi plan.</div>';
@@ -304,19 +332,22 @@ function mostrarApp(){
   }
   try{ if(sessionStorage.getItem('sstp_erp_unido')){ sessionStorage.removeItem('sstp_erp_unido'); toast('Listo: ya eres parte de OBRASST Aliados.'); } }catch(_u){}
   if(ERP.pagoVuelta){ toast(ERP.pagoVuelta === 'ok' ? 'Pago recibido: tu plan se activa en cuanto Mercado Pago lo confirme.' : 'El pago no se completó.'); ERP.pagoVuelta = ''; }
-  if(!ERP.envuelto){ ERP.envuelto = true;
-    /* repintar desde una acción solo si la persona sigue en esa pantalla (si ya se fue a otra, no se la pisa) */
-    Object.keys(PINTAR).forEach(function(k){ var f = PINTAR[k]; PINTAR[k] = function(sub){
-      if(!ERP.desdeNav){ var h = /^#\/([a-z]+)(?:\/([a-z_0-9-]+))?/.exec(location.hash || '') || []; if(k !== ERP.sec || (sub && h[2] && h[2] !== sub)) return; }
-      ERP.gen++; ERP.enPintado = true; try{ return f(sub); } finally{ ERP.enPintado = false; } }; }); }
+  /* repintar desde una acción solo si la persona sigue en esa pantalla (si ya se fue a otra, no se la pisa); cada función se
+     envuelve una sola vez (las del ERP de servicios llegan después, al cargarse) */
+  Object.keys(PINTAR).forEach(function(k){ var f = PINTAR[k]; if(f._envuelta) return; var w = function(sub){
+      if(!ERP.desdeNav){ var h = RE_HASH.exec(location.hash || '') || []; if(k !== ERP.sec || (sub && h[2] && h[2] !== sub)) return; }
+      ERP.gen++; ERP.enPintado = true; try{ return f(sub); } finally{ ERP.enPintado = false; } }; w._envuelta = true; PINTAR[k] = w; });
+  pintarAbajo(); red();
   window.onhashchange = desdeHash;
   desdeHash();
   if(ERP.reloj) clearInterval(ERP.reloj);
   ERP.reloj = setInterval(function(){ if(!document.hidden) contarBandeja(); }, 90000);
   contarBandeja();
 }
+/* #/seccion/sub (las del ERP de servicios llevan guion bajo: #/srv_ordenes/abiertas) */
+var RE_HASH = /^#\/([a-z][a-z_]*)(?:\/([a-z_0-9-]+))?/;
 function desdeHash(){
-  var m = /^#\/([a-z]+)(?:\/([a-z_0-9-]+))?/.exec(location.hash || ''), y = ERP.yo;
+  var m = RE_HASH.exec(location.hash || ''), y = ERP.yo;
   var sec = m && puede(m[1]) ? m[1] : (y.menu[0] || 'plan');
   pintarSec(sec, m && m[2] || '');
 }
@@ -324,6 +355,7 @@ function irA(sec, sub){ var h = '#/' + sec + (sub ? '/' + sub : ''); if(location
 function pintarSec(sec, sub){
   ERP.sec = sec; ERP.sub = sub;
   [].forEach.call(document.querySelectorAll('#menu [data-sec]'), function(b){ b.className = b.getAttribute('data-sec') === sec ? 'on' : ''; });
+  [].forEach.call(document.querySelectorAll('#abajo [data-ir]'), function(b){ var on = b.getAttribute('data-ir').split('/')[0] === sec; b.className = on ? 'on' : ''; if(on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   ERP.titulo = SECCIONES[sec].t + ' · ERP OBRASST'; ponerTitulo();
   var f = PINTAR[sec];
   if(f){ ERP.desdeNav = true; try{ f(sub); } finally{ ERP.desdeNav = false; } return; }
@@ -371,7 +403,7 @@ function hoja(o){
     '<button type="button" class="x" aria-label="Cerrar">×</button></div><div class="h-cuerpo">' + (o.html || '') + '<p class="msg" id="' + id + '-msg" role="alert"></p></div>' +
     (o.botones && o.botones.length ? '<div class="h-pie">' + o.botones.map(function(b, i){ return '<button type="button" class="bt ' + (b.c || '') + '" data-hb="' + i + '">' + esc(b.t) + '</button>'; }).join('') + '</div>' : '') + '</div>';
   $('hojas').appendChild(velo);
-  var api = { el:velo, cerrar:function(){ velo.remove(); document.removeEventListener('keydown', tecla); }, msg:function(t, ok){ var m = $(id + '-msg'); m.className = 'msg ' + (ok ? 'ok' : 'mal'); m.textContent = t || ''; },
+  var api = { el:velo, cerrar:function(){ velo.remove(); document.removeEventListener('keydown', tecla); }, msg:function(t, ok){ var m = $(id + '-msg'); if(!m) return; m.className = 'msg ' + (ok ? 'ok' : 'mal'); m.textContent = t || ''; },
               ocupado:function(s){ [].forEach.call(velo.querySelectorAll('[data-hb]'), function(b){ b.disabled = !!s; }); } };
   function tecla(e){ if(e.key === 'Escape') api.cerrar(); }
   document.addEventListener('keydown', tecla);
@@ -419,7 +451,7 @@ function listaCli(id){ return '<datalist id="' + id + '">' + (ERP.cache.cli || [
 function varDe(txt){ var sku = String(txt || '').split(' · ')[0].trim().toUpperCase(); return (ERP.cache.var || []).filter(function(v){ return v.sku === sku; })[0] || null; }
 function cliDe(txt){ var t = String(txt || '').trim(); return (ERP.cache.cli || []).filter(function(c){ return ((c.num_doc || 's/d') + ' · ' + c.razon_social) === t || c.num_doc === t; })[0] || null; }
 function cargarJs(src){ return new Promise(function(ok, mal){ if(document.querySelector('script[data-src="' + src + '"]')) return ok(); var s = document.createElement('script'); s.src = src; s.setAttribute('data-src', src); s.onload = ok; s.onerror = mal; document.body.appendChild(s); }); }
-function docs(){ return cargarJs('erp-docs.js?v=erp1').then(function(){ return window.ERPDOC; }); }
+function docs(){ return cargarJs('erp-docs.js?v=erp2').then(function(){ return window.ERPDOC; }); }
 function wa(texto, tel){ var t = String(tel || '').replace(/\D/g, ''); if(t.length === 9) t = '51' + t; window.open('https://wa.me/' + (t.length >= 11 ? t : '') + '?text=' + encodeURIComponent(texto), '_blank', 'noopener'); }
 
 /* ══ TABLERO DE RENTABILIDAD ══ */
@@ -469,14 +501,15 @@ PINTAR.plan = function(sub){
       var orden = ['aliado', 'pro', 'erp_basico', 'erp_full'], pend = (p.cargos || []).filter(function(c){ return c.estado === 'por_pagar'; })[0];
       if(pend) h += '<div class="aviso ojo"><b>Cargo por pagar:</b> ' + esc(p.planes[pend.plan] ? p.planes[pend.plan].n : pend.plan) + ' · ' + esc(pend.periodo) + ' · ' + soles(pend.monto) +
         ' <button type="button" class="bt casco mini" data-a="pagarCargo" data-id="' + esc(pend.id) + '">Pagar con Mercado Pago</button></div>';
-      if(p.gratis_hasta && p.gratis_hasta >= hoyLima()) h += '<div class="aviso ok">Tus meses gratis (Aliado y Pro) van hasta el <b>' + fecha(p.gratis_hasta) + '</b>.</div>';
+      ERP.planes = p.planes;
+      if(p.gratis_hasta && p.gratis_hasta >= hoyLima()) h += '<div class="aviso ok">Tus meses gratis (Aliado y Aliado Pro) van hasta el <b>' + fecha(p.gratis_hasta) + '</b>.</div>';
       h += '<div class="grilla">' + orden.map(function(k){ var x = p.planes[k]; if(!x) return ''; var es = k === p.plan;
         return '<div class="kpi" style="' + (es ? 'border-color:var(--casco); box-shadow:0 0 0 2px var(--casco-f)' : '') + '"><small>' + esc(x.n) + (es ? ' · tu plan' : '') + '</small><b>' + soles(x.precio_final) + '<span style="font-size:13px; font-weight:500"> /mes</span></b>' +
           (x.precio_final !== x.precio ? '<span>antes ' + soles(x.precio) + ' (fundador −30 %)</span>' : '<span>' + (x.meses_gratis ? x.meses_gratis + ' meses gratis' : 'sin meses gratis') + '</span>') +
           '<p class="ayuda" style="margin:8px 0">' + esc(textoPlan(k, x)) + '</p>' + (es ? '' : '<button type="button" class="bt ' + (orden.indexOf(k) > orden.indexOf(p.plan) ? '' : 'sec') + ' mini" data-a="elegirPlan" data-id="' + k + '">' +
           (orden.indexOf(k) > orden.indexOf(p.plan) ? 'Subir a ' : 'Pasar a ') + esc(x.n) + '</button>') + '</div>'; }).join('') + '</div>';
       h += '<p class="ayuda">Lo que tienes en tu billetera de comisiones se descuenta solo del cargo de cada mes.</p>';
-      if(p.plan === 'erp_full') h += '<div class="tarj" style="margin-top:14px"><h2>Tu cuenta SSOMA interna</h2><p class="ayuda" style="margin:0 0 10px">El ERP Full incluye OBRASST para la seguridad y salud de tu propio equipo. Crea la empresa de tu distribuidora en la app con esta misma cuenta y pídenos activarla.</p>' +
+      if(p.plan === 'erp_full') h += '<div class="tarj" style="margin-top:14px"><h2>Tu cuenta SSOMA interna</h2><p class="ayuda" style="margin:0 0 10px">Aliado ERP Full 360° incluye OBRASST para la seguridad y salud de tu propio equipo. Crea la empresa de tu distribuidora en la app con esta misma cuenta y pídenos activarla.</p>' +
         (ERP.yo.ssoma ? '<div class="aviso ok">Pedida para <b>' + esc(ERP.yo.ssoma.nombre) + '</b> el ' + fecha(ERP.yo.ssoma.pedido) + '. OBRASST la activa y te avisa.</div>' : '<button type="button" class="bt sec" data-a="pedirSsoma">Pedir la activación</button>') + '</div>';
       h += '<h2 style="font-size:15px; margin:16px 0 8px">Cargos</h2>' + tabla([{ t:'Periodo', k:function(c){ return esc(c.periodo); } }, { t:'Plan', k:function(c){ return esc(p.planes[c.plan] ? p.planes[c.plan].n : c.plan); } },
         { t:'Precio', n:1, k:function(c){ return soles(c.precio); } }, { t:'Fundador', n:1, k:function(c){ return c.desc_fundador ? '−' + soles(c.desc_fundador) : '—'; } },
@@ -497,19 +530,95 @@ PINTAR.plan = function(sub){
   });
 };
 function textoPlan(k, x){
+  if(esSrv() && (k === 'erp_basico' || k === 'erp_full')) return SRV.textoPlan(k);
   return ({ aliado:'Bandeja de solicitudes: 1 departamento, hasta 30 al mes, 1 usuario.', pro:'Todos los departamentos, sin tope, prioridad, estadísticas, 3 usuarios.',
-            erp_basico:'Almacén (1 sede), ventas externas, comprobantes y guías, cobranzas, compras, 5 usuarios.',
-            erp_full:'Multialmacén, importaciones, consignación, taller, recompra, equivalencias, dossier, adelanto de cobro, usuarios sin tope y cuenta SSOMA.' })[k] || '';
+            erp_basico:'Almacén (1 sede), ventas externas, comprobantes y guías, cobranzas, compras, 5 usuarios, tu página web con QR y la app en tu celular.',
+            erp_full:'Multialmacén, importaciones, consignación, taller, recompra, equivalencias, dossier, adelanto de cobro, usuarios sin tope, cuenta SSOMA, tu página web con QR y la app.' })[k] || '';
 }
 ACC.elegirPlan = function(b){
   var k = b.getAttribute('data-id');
-  hoja({ titulo:'Cambiar de plan', html:'<p>¿Pasar al plan <b>' + esc(k.replace('erp_', 'ERP ').replace('basico', 'Básico').replace('full', 'Full')) + '</b>?</p><p class="ayuda" style="margin-top:6px">Si es un plan de pago, se crea el cargo del mes (con tu descuento de fundador y tu billetera). Se activa al pagarlo.</p>',
+  var nom = (ERP.planes && ERP.planes[k] && ERP.planes[k].n) || k;
+  hoja({ titulo:'Cambiar de plan', html:'<p>¿Pasar al plan <b>' + esc(nom) + '</b>?</p><p class="ayuda" style="margin-top:6px">Si es un plan de pago, se crea el cargo del mes (con tu descuento de fundador y tu billetera). Se activa al pagarlo.</p>',
     botones:[{ t:'Cancelar', c:'sec' }, { t:'Sí, cambiar', a:function(api){ guarda(api, rpc('erp_plan_elegir', { plan:k }), null, function(j){ toast(j.activo ? 'Listo: tu plan cambió.' : 'Se creó el cargo: págalo para activar el plan.');
       rpc('erp_yo').then(function(y){ if(y && y.ok){ ERP.yo = y; mostrarApp(); irA('plan', 'plan'); } }); }); } }] });
 };
 ACC.pagarCargo = function(b){ b.disabled = true; edge('/pagar', { cargo:b.getAttribute('data-id') }).then(function(j){ b.disabled = false; if(j && j.ok && j.url) location.href = j.url; else toast(mensaje(j)); }); };
 ACC.pedirSsoma = function(b){ b.disabled = true; rpc('erp_ssoma_pedir').then(function(j){ b.disabled = false; if(!j || !j.ok){ toast(mensaje(j)); return; } toast('Pedido: OBRASST la activa y te avisa.'); rpc('erp_yo').then(function(y){ if(y && y.ok){ ERP.yo = y; PINTAR.plan('plan'); } }); }); };
 ACC.copiar = function(b){ var e = $(b.getAttribute('data-id')); try{ navigator.clipboard.writeText(e.value).then(function(){ toast('Copiado.'); }, function(){ e.select(); document.execCommand('copy'); toast('Copiado.'); }); }catch(x){ e.select(); document.execCommand('copy'); toast('Copiado.'); } };
+/* ── V7 (2/11/2026) · la vista App: la barra de abajo en el celular, la conexión y «Mi QR y web» ── */
+var ABAJO_IC = {
+  bandeja:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4.5l1.5 3h4l1.5-3H20"/><path d="M6 5h12l2 8v6H4v-6z"/></svg>',
+  campo:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.5h6v3H9z"/><path d="m9 13 2 2 4-4"/></svg>',
+  despacho:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h11v10H3z"/><path d="M14 9h4l3 3v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+  caja:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 9.5h.01M17.5 14.5h.01"/></svg>',
+  web:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 19h2M19 14h1"/></svg>' };
+/* los 4 accesos según el papel (lo que el servidor deja ver): lo que no tiene, no sale */
+function pintarAbajo(){
+  var nav = $('abajo'); if(!nav || !ERP.yo) return;
+  var primero = function(L){ return L.filter(function(s){ return SECCIONES[s] && puede(s); })[0]; };
+  var srv = esSrv(), ini = primero(['bandeja', 'tablero']), acc = primero(srv ? ['srv_campo', 'srv_ordenes'] : ['entregas', 'despachos', 'ventas', 'almacen']);
+  var B = [[ini, ini === 'bandeja' ? 'Bandeja' : 'Inicio', 'bandeja'],
+           [acc, srv ? (acc === 'srv_campo' ? 'Campo' : 'Órdenes') : ({ entregas:'Entregas', despachos:'Despachos', ventas:'Ventas', almacen:'Almacén' })[acc], srv ? 'campo' : 'despacho'],
+           [primero(['facturacion', 'srv_valorizar']), 'Caja', 'caja'], ['web', 'Mi QR y web', 'web']].filter(function(b){ return b[0]; });
+  nav.style.setProperty('--n', B.length);
+  nav.innerHTML = B.map(function(b){ return '<button type="button" data-ir="' + b[0] + '">' + ABAJO_IC[b[2]] + '<span>' + esc(b[1]) + '</span></button>'; }).join('');
+  nav.hidden = false;
+}
+/* arriba, si hay conexión (el ERP guarda en el servidor: sin conexión no se guarda nada, y lo dice) */
+function red(){
+  var b = $('b-red'); if(!b) return;
+  var on = navigator.onLine !== false;
+  b.hidden = false; b.className = 'red' + (on ? '' : ' sin'); b.querySelector('em').textContent = on ? 'En línea' : 'Sin conexión';
+  b.title = on ? 'Con conexión: lo que guardas va al servidor.' : 'Sin conexión: espera a que vuelva para guardar.';
+}
+window.addEventListener('online', function(){ red(); if(ERP.yo) toast('Volvió la conexión.'); });
+window.addEventListener('offline', function(){ red(); if(ERP.yo) toast('Sin conexión: espera a que vuelva para guardar.'); });
+window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); ERP.instalar = e; if(ERP.sec === 'web' && $('web-app')) $('web-app').innerHTML = webApp(); });
+window.addEventListener('appinstalled', function(){ ERP.instalar = null; toast('Listo: la app quedó en tu celular.'); if($('web-app')) $('web-app').innerHTML = webApp(); });
+function webApp(){
+  var dentro = false; try{ dentro = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }catch(_m){}
+  return '<h2>La app en tu celular</h2><p class="ayuda" style="margin:0 0 10px">El ERP se instala como app: su ícono en tu pantalla de inicio y a pantalla completa, con esta barra de abajo. Para guardar necesita internet.</p>' +
+    (dentro ? '<div class="aviso ok">Ya la estás usando como app.</div>' : ERP.instalar ? '<button type="button" class="bt" data-a="instalarApp">Instalar la app</button>' :
+      '<p class="ayuda" style="margin:0">En Android (Chrome): menú ⋮ › «Instalar app» o «Agregar a la pantalla principal». En iPhone (Safari): Compartir › «Agregar a inicio».</p>');
+}
+PINTAR.web = function(){
+  $('vista').innerHTML = cabecera('web', [], '') + '<p class="ayuda" id="cargando">Cargando…</p>';
+  Promise.all([rpc('erp_web'), cargarJs('qr.js').then(function(){ return true; }, function(){ return false; })]).then(function(r){
+    var w = r[0], c = $('cargando'); if(!c) return;
+    if(!w || !w.ok){ c.outerHTML = '<div class="aviso mal">' + esc(mensaje(w)) + '</div>'; return; }
+    var pub = !!(w.publica && w.con_web && w.activo), f = w.ficha || {}, qr = '';
+    if(pub && window.qrcode){ try{ var q = qrcode(0, 'M'); q.addData(w.url); q.make(); qr = q.createSvgTag({ cellSize:4, margin:2, scalable:true, alt:'QR de tu página' }); }catch(_q){ qr = ''; } }
+    var sale = [['Nombre', w.nombre || w.razon], ['Lo que ofreces', f.vende], ['Horario', f.horario], ['Web', f.web], ['Teléfono', w.mostrar_telefono ? f.telefono : ''], ['Logo', w.con_logo ? 'Sí' : '']]
+      .filter(function(x){ return x[1]; });
+    c.outerHTML = '<div class="dos">' +
+      '<div class="tarj"><h2>Tu página pública</h2>' +
+        (!w.con_web ? '<div class="aviso ojo">Tu página web propia, con su QR, viene con los planes <b>Aliado ERP + Web + App</b> y <b>Aliado ERP Full 360°</b>.</div>' +
+            (w.admin ? '<button type="button" class="bt sec" data-ir="plan/plan">Ver los planes</button>' : '')
+         : pub ? '<div class="aviso ok">Publicada: la ve cualquiera en <a href="' + esc(w.url) + '" target="_blank" rel="noopener">' + esc(w.url.replace('https://', '')) + '</a>.</div>'
+         : '<div class="aviso ojo">Todavía no está publicada' + (w.activo ? '' : ': tu cuenta de aliado no está activa') + '.</div>') +
+        (w.admin && w.con_web ? '<div class="campos" style="margin-top:12px">' + campo('web-nombre', 'Nombre que se ve (si lo dejas vacío, tu razón social)', inp('web-nombre', w.nombre, ' maxlength="80" placeholder="' + esc(w.razon) + '"')) + '</div>' +
+            '<label class="ayuda" style="display:flex; gap:8px; align-items:center; margin:8px 0"><input type="checkbox" id="web-tel"' + (w.mostrar_telefono ? ' checked' : '') + '> Mostrar el teléfono de mi ficha</label>' +
+            '<label style="display:flex; gap:8px; align-items:center; margin:8px 0 12px; font-weight:600"><input type="checkbox" id="web-pub"' + (w.publica ? ' checked' : '') + '> Publicar mi página</label>' +
+            '<button type="button" class="bt" data-a="guardarWeb">Guardar</button><p class="msg" id="web-msg"></p>' : '') +
+        '<h3 style="font-size:14px; margin:14px 0 6px">Lo que sale (de «Mi ficha»)</h3>' +
+        (sale.length ? '<dl style="display:grid; grid-template-columns:auto 1fr; gap:4px 12px; margin:0">' + sale.map(function(x){ return '<dt class="gris">' + esc(x[0]) + '</dt><dd style="margin:0">' + esc(x[1]) + '</dd>'; }).join('') + '</dl>' : '<p class="ayuda">Todavía nada: llena tu ficha.</p>') +
+        '<p class="ayuda" style="margin-top:8px">También salen tu rubro, tus zonas, tu RUC y, si OBRASST lo verificó, tu RNP. Nunca tus precios, tus clientes ni tus costos.</p>' +
+        (w.admin ? '<button type="button" class="bt sec mini" data-ir="plan/ficha">Editar mi ficha</button>' : '') + '</div>' +
+      '<div class="tarj"><h2>Tu QR</h2>' + (pub && qr ? '<div class="qr-web" id="web-qr">' + qr + '</div><p class="ayuda" style="margin:10px 0">Ponlo en tu local, tus guías y tus cotizaciones: lleva a tu página.</p>' +
+          '<div class="acciones"><input readonly value="' + esc(w.url) + '" id="web-url" class="mono" style="max-width:320px"><button type="button" class="bt sec mini" data-a="copiar" data-id="web-url">Copiar</button></div>'
+        : '<p class="ayuda" style="margin:0">Cuando tu página esté publicada, aquí sale su QR.</p>') + '</div>' +
+      '<div class="tarj" id="web-app">' + webApp() + '</div></div>';
+  });
+};
+ACC.guardarWeb = function(b){
+  var m = $('web-msg'); b.disabled = true;
+  rpc('erp_web_guardar', { publica:$('web-pub').checked, nombre:val('web-nombre'), mostrar_telefono:$('web-tel').checked }).then(function(j){
+    b.disabled = false;
+    if(!j || !j.ok){ m.className = 'msg mal'; m.textContent = mensaje(j); return; }
+    toast(j.publica ? 'Listo: tu página está publicada.' : 'Listo: tu página no se muestra.'); PINTAR.web();
+  }, function(){ b.disabled = false; m.className = 'msg mal'; m.textContent = mensaje(null); });
+};
+ACC.instalarApp = function(){ var e = ERP.instalar; if(!e) return; ERP.instalar = null; e.prompt(); try{ e.userChoice.then(function(){ if($('web-app')) $('web-app').innerHTML = webApp(); }); }catch(_u){} };
 function pintarFicha(){
   rpcCrudo('sst_ali_yo', {}).then(function(j){
     if(!j || !j.ok){ $('cargando').outerHTML = '<div class="aviso mal">' + esc(mensaje(j)) + '</div>'; return; }
@@ -581,15 +690,15 @@ function segEquipo(){
     if(!j || !j.ok) return fuera(j);
     $('cargando').outerHTML = '<div class="acciones" style="margin:0 0 12px"><button type="button" class="bt" data-a="invitar">Invitar a alguien</button><span class="ayuda">' + (j.max ? 'Tu plan: hasta ' + j.max + ' usuarios.' : 'Tu plan: usuarios sin tope.') + '</span></div>' +
       tabla([{ t:'Nombre', k:function(u){ return esc(u.nombre || '—') + (u.yo ? ' ' + pill('tú', 'az') : '') + '<span class="sub">' + esc(u.correo || '') + '</span>'; } },
-        { t:'Papel', k:function(u){ return u.yo ? esc(u.papel) : sel('pa-' + u.uid, [['admin', 'Administrador'], ['vendedor', 'Vendedor'], ['almacenero', 'Almacenero'], ['chofer', 'Chofer']], u.papel, ' data-uid="' + esc(u.uid) + '" class="cambia-papel"'); } },
+        { t:'Papel', k:function(u){ return u.yo ? esc(papelN(u.papel)) : sel('pa-' + u.uid, papeles().map(function(x){ return [x[0], x[1]]; }), u.papel, ' data-uid="' + esc(u.uid) + '" class="cambia-papel"'); } },
         { t:'Acceso', k:function(u){ return u.yo ? pill('activo', 'ok') : '<button type="button" class="bt mini ' + (u.activo ? 'mal' : 'sec') + '" data-a="cortar" data-id="' + esc(u.uid) + '" data-v="' + (u.activo ? '0' : '1') + '">' + (u.activo ? 'Cortar acceso' : 'Devolver acceso') + '</button>'; } }], j.lista) +
       (j.invitaciones.length ? '<p class="ayuda">Invitaciones abiertas: ' + j.invitaciones.map(function(i){ return esc(i.papel) + ' (…' + esc(i.token4) + ', vence ' + fecha(i.vence) + ')'; }).join(', ') + '</p>' : '');
     [].forEach.call(document.querySelectorAll('.cambia-papel'), function(s){ s.onchange = function(){ rpc('erp_usuario_cambiar', { uid:s.getAttribute('data-uid'), papel:s.value }).then(function(r){ toast(r && r.ok ? 'Papel cambiado.' : mensaje(r)); }); }; });
   });
 }
 ACC.invitar = function(){
-  hoja({ titulo:'Invitar a alguien de tu equipo', html:campo('in-papel', 'Papel', sel('in-papel', [['vendedor', 'Vendedor: cotiza y vende a su cartera, sin costos'], ['almacenero', 'Almacenero: stock y despachos, sin precios'],
-    ['chofer', 'Chofer: solo sus entregas'], ['admin', 'Administrador: todo (con 2FA)']], 'vendedor')) + '<div id="in-res"></div>',
+  var P = papeles(), ord = P.slice(1).concat(P.slice(0, 1));   /* el administrador, al final */
+  hoja({ titulo:'Invitar a alguien de tu equipo', html:campo('in-papel', 'Papel', sel('in-papel', ord.map(function(x){ return [x[0], x[1] + ': ' + x[2]]; }), esSrv() ? 'chofer' : 'vendedor')) + '<div id="in-res"></div>',
     botones:[{ t:'Cerrar', c:'sec' }, { t:'Crear el enlace', a:function(api){ api.ocupado(true); rpc('erp_usuario_invitar', { papel:val('in-papel') }).then(function(j){ api.ocupado(false);
       if(!j || !j.ok){ api.msg(mensaje(j)); return; }
       $('in-res').innerHTML = '<div class="aviso ok">Mándale este enlace (vale 7 días y una sola vez):</div><div class="acciones"><input readonly id="in-enlace" class="mono" value="' + esc(j.enlace) + '"><button type="button" class="bt sec mini" data-a="copiar" data-id="in-enlace">Copiar</button></div>'; }); } }] });
@@ -630,15 +739,17 @@ ACC.guardarBoveda = function(b){
 function segConfig(){
   rpc('erp_config_ver').then(function(j){
     if(!j || !j.ok) return fuera(j);
-    var c = j.config, s = c.series || {};
-    $('cargando').outerHTML = '<div class="tarj"><h2>Series de tus comprobantes y guías</h2><div class="campos">' + [['01', 'Factura'], ['03', 'Boleta'], ['07F', 'Nota de crédito (factura)'], ['07B', 'Nota de crédito (boleta)'],
-        ['08F', 'Nota de débito (factura)'], ['08B', 'Nota de débito (boleta)'], ['09', 'Guía de remisión remitente'], ['31', 'Guía transportista']].map(function(x){ return campo('se-' + x[0], x[1], inp('se-' + x[0], s[x[0]], ' maxlength="4" class="mono"')); }).join('') + '</div></div>' +
-      '<div class="tarj"><h2>Punto de partida de las guías</h2><div class="campos">' + campo('cf-pubi', 'Ubigeo (INEI, 6 números)', inp('cf-pubi', c.partida && c.partida.ubigeo, ' maxlength="6" inputmode="numeric"')) + '</div>' +
-      campo('cf-pdir', 'Dirección', inp('cf-pdir', c.partida && c.partida.direccion, ' maxlength="200"')) + '</div>' +
+    var c = j.config, s = c.series || {}, srv = esSrv();
+    /* los rubros de servicios no emiten guías de remisión: sin sus series ni el punto de partida (lo guardado no se toca) */
+    $('cargando').outerHTML = '<div class="tarj"><h2>Series de tus comprobantes' + (srv ? '' : ' y guías') + '</h2><div class="campos">' + [['01', 'Factura'], ['03', 'Boleta'], ['07F', 'Nota de crédito (factura)'], ['07B', 'Nota de crédito (boleta)'],
+        ['08F', 'Nota de débito (factura)'], ['08B', 'Nota de débito (boleta)'], ['09', 'Guía de remisión remitente'], ['31', 'Guía transportista']].filter(function(x){ return !srv || (x[0] !== '09' && x[0] !== '31'); })
+        .map(function(x){ return campo('se-' + x[0], x[1], inp('se-' + x[0], s[x[0]], ' maxlength="4" class="mono"')); }).join('') + '</div></div>' +
+      (srv ? '' : '<div class="tarj"><h2>Punto de partida de las guías</h2><div class="campos">' + campo('cf-pubi', 'Ubigeo (INEI, 6 números)', inp('cf-pubi', c.partida && c.partida.ubigeo, ' maxlength="6" inputmode="numeric"')) + '</div>' +
+      campo('cf-pdir', 'Dirección', inp('cf-pdir', c.partida && c.partida.direccion, ' maxlength="200"')) + '</div>') +
       '<div class="tarj"><h2>Reglas de venta</h2><div class="campos">' + campo('cf-desc', 'Descuento máximo del vendedor (%)', inp('cf-desc', c.desc_max && c.desc_max.vendedor, ' inputmode="decimal"')) +
       campo('cf-cred', 'Costo del dinero (% mensual)', inp('cf-cred', c.costo_credito, ' inputmode="decimal"'), 'Para el margen neto de las ventas a crédito.') +
       campo('cf-bloq', 'Bloquear crédito con deuda vencida de más de (días)', inp('cf-bloq', c.dias_bloqueo, ' inputmode="numeric"')) + '</div>' +
-      campo('cf-fletes', 'Flete por distrito (uno por línea: DEPARTAMENTO/PROVINCIA/DISTRITO = monto sin IGV)', '<textarea id="cf-fletes" rows="4" class="mono">' + esc(Object.keys(c.fletes || {}).map(function(k){ return k + ' = ' + c.fletes[k]; }).join('\n')) + '</textarea>') + '</div>' +
+      (srv ? '' : campo('cf-fletes', 'Flete por distrito (uno por línea: DEPARTAMENTO/PROVINCIA/DISTRITO = monto sin IGV)', '<textarea id="cf-fletes" rows="4" class="mono">' + esc(Object.keys(c.fletes || {}).map(function(k){ return k + ' = ' + c.fletes[k]; }).join('\n')) + '</textarea>')) + '</div>' +
       '<button type="button" class="bt" data-a="guardarConfig">Guardar la configuración</button><p class="msg" id="cf-msg"></p>';
   });
 }
@@ -646,14 +757,15 @@ ACC.guardarConfig = function(b){
   var series = {}, fletes = {};
   ['01', '03', '07F', '07B', '08F', '08B', '09', '31'].forEach(function(k){ var v = val('se-' + k).toUpperCase(); if(v) series[k] = v; });
   val('cf-fletes').split('\n').forEach(function(l){ var p = l.split('='); if(p.length === 2 && p[0].trim()) fletes[p[0].trim().toUpperCase()] = p[1].trim().replace(',', '.'); });
-  var p = { series:series, fletes:fletes, desc_max:{ vendedor:val('cf-desc') }, costo_credito:val('cf-cred'), dias_bloqueo:val('cf-bloq') };
+  var p = { series:series, desc_max:{ vendedor:val('cf-desc') }, costo_credito:val('cf-cred'), dias_bloqueo:val('cf-bloq') };
+  if($('cf-fletes')) p.fletes = fletes;   /* sin el campo (servicios), los fletes guardados no se tocan */
   if(val('cf-pubi') || val('cf-pdir')) p.partida = { ubigeo:val('cf-pubi'), direccion:val('cf-pdir') };
   b.disabled = true;
   rpc('erp_config_guardar', p).then(function(j){ b.disabled = false; var m = $('cf-msg'); m.className = 'msg ' + (j && j.ok ? 'ok' : 'mal'); m.textContent = j && j.ok ? 'Guardado.' : mensaje(j); });
 };
 function segExportar(){
   $('cargando').outerHTML = '<div class="tarj"><h2>Exportar a Excel</h2><p class="ayuda" style="margin:0 0 12px">Solo el administrador exporta, y cada exportación queda en el registro. Los textos que empiezan con = + − @ se guardan como texto (sin fórmulas).</p>' +
-    '<div class="acciones"><button type="button" class="bt sec" data-a="exportar" data-id="stock">Stock por lote</button><button type="button" class="bt sec" data-a="exportar" data-id="ventas">Ventas (31 días)</button><button type="button" class="bt sec" data-a="exportar" data-id="cxc">Cuentas por cobrar</button></div></div>';
+    '<div class="acciones">' + (esSrv() ? '' : '<button type="button" class="bt sec" data-a="exportar" data-id="stock">Stock por lote</button>') + '<button type="button" class="bt sec" data-a="exportar" data-id="ventas">Ventas (31 días)</button><button type="button" class="bt sec" data-a="exportar" data-id="cxc">Cuentas por cobrar</button></div></div>';
 }
 ACC.exportar = function(b){
   var q = b.getAttribute('data-id'); b.disabled = true;
