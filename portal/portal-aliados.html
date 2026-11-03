@@ -228,7 +228,7 @@ td .sub, .sub{display:block; font-size:12.5px; color:var(--gris); margin-top:1px
 <footer class="pie"><a href="aliados.html">OBRASST Aliados</a> · <a href="../?legal=terminos" target="_blank" rel="noopener">Términos</a> · <a href="../?legal=privacidad" target="_blank" rel="noopener">Privacidad</a> · <a href="mailto:info@obrasstapp.com">info@obrasstapp.com</a></footer>
 <div id="toast" role="status" hidden></div>
 
-<script src="cotizar.js?v=341a6ca045"></script>
+<script src="cotizar.js?v=031232660d"></script>
 <script>
 'use strict';
 /* en https://obrasstapp.com los enlaces «../…» (los términos) van a GitHub Pages, como en las otras páginas */
@@ -381,6 +381,7 @@ $('b-salir').onclick = salir;
 $('no-salir').onclick = salir;
 
 /* ── al abrir: con la invitación, se une; sin ella, se mira si la cuenta es de un aliado ── */
+var SRV_RUBROS = ['sctr', 'consultor', 'capacitacion', 'residuos', 'salud', 'medico', 'maquinaria', 'izaje', 'laboratorio', 'transporte', 'saneamiento'];
 function arrancar(){
   TOK = TOK || leer(LS_TOK, null);
   if(!TOK || !TOK.access_token){ mostrarEntrada(); return; }
@@ -394,6 +395,14 @@ function arrancar(){
       /* 2/11/2026 · los distribuidores de EPP tienen su ERP (erp.html): la misma cuenta y la misma bandeja, con su almacén, ventas,
          despachos y comprobantes. Los demás rubros (consultor, centro médico, capacitación…) siguen aquí. El ERP avisa que se unió. */
       if(j.aliado && j.aliado.rubro === 'epp'){ try{ if(inv) sessionStorage.setItem('sstp_erp_unido', '1'); }catch(_e){} location.replace('erp.html'); return; }
+      /* 2/11/2026 · los 9 rubros de servicios también van a su sistema (erp.html) cuando OBRASST lo enciende; apagado, siguen aquí */
+      if(j.aliado && SRV_RUBROS.indexOf(j.aliado.rubro) >= 0){
+        rpc('erp_yo', {}).then(function(y){
+          if(y && y.ok && y.srv_encendido){ try{ if(inv) sessionStorage.setItem('sstp_erp_unido', '1'); }catch(_e){} location.replace('erp.html'); return; }
+          if(inv) toast('Listo: ya eres parte de OBRASST Aliados.'); mostrarPortal();
+        }, function(e){ if(e === 401) return; if(inv) toast('Listo: ya eres parte de OBRASST Aliados.'); mostrarPortal(); });
+        return;
+      }
       if(inv) toast('Listo: ya eres parte de OBRASST Aliados.'); mostrarPortal(); return;
     }
     if(inv && j && j.motivo && j.motivo !== 'no_eres_aliado'){ noAliado(motivo(j.motivo)); return; }
