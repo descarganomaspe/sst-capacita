@@ -6,7 +6,7 @@
    · Fase 1, a mano: «＋ Nuevo pedido», y desde la carpeta de auditoría («Pedir» deja el pendiente además de copiar el
      mensaje; la evidencia que se sube lo cierra).
    · Fase 2, lo que falta en la obra: «Buscar pendientes en la obra» arma la lista —químicos sin hoja MSDS → Logística;
-     equipos fuera de servicio o con observación → Mantenimiento; los que no tienen su revisión del mes → Producción; EMO
+     equipos fuera de servicio o con observación, y extintores con la recarga vencida o por vencer (V7.9h) → Mantenimiento; los que no tienen su revisión del mes → Producción; EMO
      vencidos o por vencer → Salud; gente sin SCTR vigente o la constancia por vencer → Administración— y se elige qué
      mandar. Lo que ya está pedido y abierto no se repite (el servidor lo reconoce por su referencia).
    · El servidor: sst_area_pend, con sst_area_pend_crear, _varios, _visto y _cerrar (sql/2026-11-04-v79-areas-pendientes.sql;
@@ -271,6 +271,15 @@ function penCandidatos(){
         items.push(_penItem('mantenimiento', 'equipo', 'Fuera de servicio: '+nom, 'Está fuera de servicio en «Equipos y herramientas»: repararlo o reemplazarlo. Mientras tanto no se usa.', 'eq:'+x.id+':fuera', _penMas(7)));
         return;
       }
+      /* 4/11/2026 · V7.9h · el extintor con la recarga vencida o por vencer (15 días, como su ficha) → Mantenimiento */
+      if(typeof eqUsoDe==='function' && typeof eqRecargaEstado==='function'){
+        var U=eqUsoDe(x), RE=(U.ext && U.r) ? eqRecargaEstado(U.r, hoy) : null;
+        if(RE && (RE.k==='vencida' || RE.k==='pronto'))
+          items.push(_penItem('mantenimiento', 'equipo', (RE.k==='vencida' ? 'Recarga vencida: ' : 'Recarga por vencer: ')+nom,
+            (RE.k==='vencida' ? 'Su recarga venció el '+_penF(RE.hasta)+'.' : 'Su recarga vence el '+_penF(RE.hasta)+'.')+
+            ' Recargarlo con un proveedor y anotar el mes de la nueva recarga en su ficha («Equipos y herramientas» › «Cómo se usa»). Mientras tanto, otro extintor en su lugar.',
+            'eq:'+x.id+':recarga:'+U.r, RE.k==='vencida' ? _penMas(3) : RE.hasta));
+      }
       if(x.ult_resultado==='observado')
         items.push(_penItem('mantenimiento', 'equipo', 'Con observación: '+nom, 'Su última revisión salió «con observación»'+(x.ult_fecha ? ' ('+_penF(x.ult_fecha)+')' : '')+': levantarla y volver a revisarlo.', 'eq:'+x.id+':obs:'+String(x.ult_fecha||'').slice(0, 10), _penMas(7)));
       if((typeof eqTieneMensual!=='function' || eqTieneMensual(x)) && String(x.ult_fecha||'').slice(0, 7)!==mes) sinMes.push(nom);
@@ -338,7 +347,7 @@ function _penBuscarPintar(){
   C.items.forEach(function(it){ (por[it.area]=por[it.area]||[]).push(it); });
   var h='<p class="ayuda" style="margin:0 0 10px">'+(C.items.length ?
       'Lo que falta en la obra, con lo que ya registra. Marca lo que quieres pedir: a cada área le aparece en sus pendientes. Lo que ya está pedido y abierto no se repite.' :
-      'No se encontró nada pendiente: químicos con su hoja MSDS, equipos en servicio y revisados este mes, EMO y SCTR al día.')+'</p>';
+      'No se encontró nada pendiente: químicos con su hoja MSDS, equipos en servicio y revisados este mes, extintores con su recarga al día, EMO y SCTR al día.')+'</p>';
   AREAS_TRABAJO.forEach(function(A){
     var l=por[A.k]; if(!l) return;
     h+='<div class="pen-b-area"><div class="pen-b-cab"><b>'+esc(A.n)+'</b> <span class="tenue">'+esc(_penN(l.length, 'pendiente', 'pendientes'))+'</span></div><ul>'+l.map(function(it){
