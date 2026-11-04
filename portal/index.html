@@ -903,6 +903,16 @@ textarea::placeholder{color:var(--gris2)}
 .peq-frec-op:focus-visible{outline:3px solid var(--tinta); outline-offset:2px}
 .peq-p-sin{display:flex; gap:8px; align-items:center; margin:0 0 14px; font-size:14px; cursor:pointer}
 .peq-p-sin input{width:18px; height:18px; margin:0}
+/* 4/11/2026 · V7.9k · los certificados del equipo y la hoja del mes */
+.peq-cert-it{align-items:center}
+.peq-cert-it b{overflow-wrap:anywhere}
+.peq-cert-it small.mal{color:var(--mal); font-weight:700}
+.peq-cert-it small.ok{color:var(--ok)}
+.peq-cert-acc{display:flex; gap:6px; flex:0 0 auto}
+.peq-cert-sw{margin:10px 0 0}
+.peq-cert-sw input:disabled+span{opacity:.55}
+.piq-hm-op{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px 14px}
+.piq-hm-res{margin:4px 0 10px}
 .peq-2{display:grid; gap:0 14px; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr))}
 .peq-tip{font-size:13px}
 .peq-tip .bt-link{margin-left:4px; font-weight:600}
@@ -8509,6 +8519,7 @@ var DC_CARPETAS=[
   {h:'cert-rigger', t:'Certificado de Rigger', g:'Certificados', gs:1},
   {h:'cert-operador', t:'Certificado de Operador', g:'Certificados', gs:1},
   {h:'cert-izaje', t:'Certificado de aparejos de izaje', g:'Certificados', gs:1},
+  {h:'cert-arneses', t:'Certificado de arneses y líneas de vida', g:'Certificados', gs:1},   /* 4/11/2026 · V7.9k · salen en el QR de cada arnés */
   {h:'cert-extintores', t:'Certificado de extintores', g:'Certificados', gs:1},
   {h:'certificados', t:'Otro tipo de certificado', g:'Certificados', gs:1, tipo:'libre'},
   {h:'pma', t:'Plan de Manejo Ambiental (PMA)', g:'Medio Ambiente', gs:1},
@@ -8555,6 +8566,7 @@ var DC_ADIVINA=[
   [/registro de evaluacion|\bevaluaciones\b/, 'registro-evaluaciones'], [/politica/, 'politicas'],
   [/subcomite/, 'subcomite'], [/comite/, 'comite'], [/estandar/, 'estandares'], [/campana/, 'campanas'],
   [/andami/, 'cert-andamiero'], [/rigger/, 'cert-rigger'], [/\boperador/, 'cert-operador'],
+  [/\barnes(es)?\b|lineas? de vida|tambor(es)? retractil/, 'cert-arneses'],   /* V7.9k */
   [/izaje|aparejo|eslinga|grillete/, 'cert-izaje'], [/extintor/, 'cert-extintores'],
   [/\bpma\b|manejo ambiental/, 'pma'], [/residuos? solidos|\beo ?rs\b|\brrss\b/, 'rrss'],
   [/ieaia|aspectos? (e impactos? )?ambientales?/, 'ieaia'], [/informe (de )?(medio )?ambient|monitoreo ambiental/, 'ma-informe'],
@@ -12217,10 +12229,12 @@ function vistaEquipos(caja){
       cargarEqBase(),
       traer('sst_equipo_qr', '&select=*&order=codigo.asc', 5000),
       estadoLeerP('color_herramientas').catch(function(){ return null; }),
-      peqFrecTraer()
+      peqFrecTraer(),
+      estadoLeerP('equipo_quien').catch(function(){ return null; })   /* 4/11/2026 · V7.9j · quién inspecciona */
     ]).then(function(r){
       if(n!==PEQ.n || VISTA.actual!=='equipos') return;
       PEQ.sinSQL=false; PEQ.filas=Array.isArray(r[1]) ? r[1] : []; PEQ.frec=r[3] || {};
+      var vq=r[4] && r[4].valor; PEQ.quien=(vq && typeof vq==='object' && !Array.isArray(vq)) ? vq : {};
       var v=r[2] && r[2].valor; PEQ.colores=(v && typeof v==='object' && !Array.isArray(v)) ? v : {};
       peqPintar(caja);
     }).catch(function(cod){
@@ -12263,6 +12277,8 @@ function peqPintar(caja){
   h+='<div class="tarj peq-mes" id="peq-mes"><div class="tarj-cuerpo"><div><b>Inspección de '+esc(nomMes)+': '+rev+' de '+act.length+' '+(act.length===1 ? 'equipo' : 'equipos')+' con su revisión del mes</b>'+
      '<p class="ayuda" style="margin:2px 0 0">'+(rev>=act.length ? 'Completa. La hoja queda para verla, firmarla e imprimirla.' : 'La hoja se arma sola con todos los equipos: a cada uno, conforme, con observación o fuera de servicio. Firman Producción y Seguridad.')+'</p></div>'+
      '<button type="button" class="bt'+(rev>=act.length ? ' sec' : '')+'" id="peq-mes-ir">'+(rev ? (rev>=act.length ? 'Ver la hoja del mes' : 'Seguir con la inspección') : 'Hacer la inspección del mes')+'</button></div></div>';
+  /* 4/11/2026 · V7.9j · quién puede inspeccionar cada clase (la emergencia, sin elegir: solo el equipo de SST) */
+  h+=peqQuienTarjeta();
   var cuenta={activos:L.length-c.baja, toca:c.toca, obs:c.obs, fuera:c.fuera, ok:c.ok, baja:c.baja};
   if(!cuenta[PEQ.filtro] && PEQ.filtro!=='activos') PEQ.filtro='activos';
   h+='<div class="seg peq-seg" role="group" aria-label="Qué equipos ver">'+PEQ_FILTROS.filter(function(f){ return f[0]==='activos' || cuenta[f[0]]; }).map(function(f){
@@ -12271,6 +12287,7 @@ function peqPintar(caja){
   caja.innerHTML=h;
   peqCintaEventos(caja);
   if($('peq-mes-ir')) $('peq-mes-ir').onclick=function(){ menIr('menAbrir'); };
+  if($('peq-quien-ir')) $('peq-quien-ir').onclick=peqQuienAbrir;   /* V7.9j */
   Array.prototype.forEach.call(caja.querySelectorAll('.seg [data-f]'), function(b){
     b.onclick=function(){ PEQ.filtro=b.getAttribute('data-f'); peqPintar(caja); };
   });
@@ -12282,6 +12299,7 @@ function peqPintar(caja){
     {k:'marca', t:'Marca', soloCsv:true}, {k:'modelo', t:'Modelo', soloCsv:true}, {k:'serie', t:'N.° de serie', soloCsv:true},
     {k:'detalle', t:'Detalle', soloCsv:true},
     {k:'responsable', t:'Responsable'},
+    {k:'ubicacion', t:'Ubicación'},   /* 4/11/2026 · V7.9j */
     {k:'etiqueta', t:'Etiqueta', v:function(x){ return (EQ_ETIQ[x.etiqueta]||{}).n || x.etiqueta || ''; },
      csv:function(x){ return ((EQ_ETIQ[x.etiqueta]||{}).n || x.etiqueta || '')+' · '+peqDisenoTxt(x); }},
     {k:'ult_fecha', t:'Última revisión', v:function(x){
@@ -12292,6 +12310,75 @@ function peqPintar(caja){
      h:function(x){ var ft=peqClase(x)==='toca' ? peqFrecFaltaTx(x) : ''; return peqPill(x)+(ft ? '<small class="peq-obs">'+esc(ft)+'</small>' : '')+(x.ult_obs && (x.estado==='fuera' || x.ult_resultado==='observado') ? '<small class="peq-obs">'+esc(x.ult_obs)+'</small>' : ''); }}
   ], filas, {orden:'codigo', asc:true, unidad:'equipos', vacio:'Ninguno aquí', vacioSub:'Prueba con otro filtro de arriba.', archivo:'equipos-y-herramientas',
     alClic:function(x){ peqFicha(x.id); }});
+}
+/* ── 4/11/2026 · V7.9j · QUIÉN INSPECCIONA CADA EQUIPO ──────────────────────────────────────────────────
+   Marcelo: «solo el que es supervisor sst, o parte del equipo SSOMA o si es que el usuario escoge, brigadistas también
+   quizás, podrá inspeccionar los ítems de emergencia (extintor, botiquín, lavaojos, etc.) y así para las demás
+   inspecciones». La regla de la obra, por clase (sst_estado 'equipo_quien'): 'equipo' (solo el equipo de SST), 'habilitados'
+   (el equipo de SST y quien tiene su credencial vigente con esa habilitación) o 'todos' (como hasta hoy). La cumple el
+   servidor (sst_equipo_insp_nueva) y la cambia solo el equipo de SST (un disparador). Sin elegir: la emergencia, solo SST. */
+var PEQ_QUIEN_CL = [
+  {k:'emergencia', ic:'🧯', n:'Emergencia', d:'Extintores, botiquines, lavaojos, camillas, luces y alarmas de emergencia.', hab:'Los brigadistas de la obra, con su credencial vigente de brigadista.', base:'equipo'},
+  {k:'altura', ic:'🧗', n:'Trabajo en altura', d:'Arneses, líneas de vida, tambores retráctiles, escaleras y andamios.', hab:'Los habilitados en trabajo en altura o en armado de andamios, con su credencial vigente.', base:'todos'},
+  {k:'izaje', ic:'🪝', n:'Izaje', d:'Eslingas, estrobos, grilletes, tecles y grúas.', hab:'Los habilitados en izaje y maniobras, o los operadores de maquinaria, con su credencial vigente.', base:'todos'},
+  {k:'herramientas', ic:'🛠️', n:'Herramientas', d:'Las eléctricas, las manuales y sus cajas.', hab:null, base:'todos'},
+  {k:'equipos', ic:'⚙️', n:'Equipos', d:'Tableros eléctricos, montacargas, compresoras, grupos electrógenos y los demás.', hab:'Los operadores de maquinaria o los habilitados en riesgo eléctrico, con su credencial vigente.', base:'todos'}
+];
+var PEQ_QUIEN_R = {equipo:'Solo el equipo de SST', habilitados:'El equipo de SST y los habilitados', todos:'Todos los de la obra'};
+/* la clase de cada tipo, como la cuenta el servidor (_sst_equipo_clase) */
+function peqClaseDe(tp){
+  var T=(typeof eqTipoDe==='function') ? eqTipoDe(tp) : null, g=T ? T.g : '';
+  if(g==='Emergencia') return 'emergencia';
+  if(g==='Trabajo en altura') return 'altura';
+  if(g==='Izaje' || g==='Grúas') return 'izaje';
+  if(g==='Herramientas eléctricas' || g==='Herramientas manuales' || g==='Cajas y maletines') return 'herramientas';
+  return 'equipos';
+}
+function peqQuienDe(k){
+  var C=PEQ_QUIEN_CL.filter(function(c){ return c.k===k; })[0] || PEQ_QUIEN_CL[4], r=(PEQ.quien || {})[k];
+  return (r==='equipo' || r==='todos' || (r==='habilitados' && C.hab)) ? r : C.base;
+}
+function peqQuienFrase(tp){
+  var r=peqQuienDe(peqClaseDe(tp));
+  return r==='equipo' ? 'La hace solo el equipo de SST de la obra.' : (r==='habilitados' ? 'La hacen el equipo de SST y los habilitados, con su credencial vigente.' : 'La hace quien lo va a usar.');
+}
+function peqQuienTarjeta(){
+  var res=PEQ_QUIEN_CL.map(function(C){ return C.ic+' '+C.n+': '+PEQ_QUIEN_R[peqQuienDe(C.k)].toLowerCase(); }).join(' · ');
+  return '<div class="tarj peq-mes" id="peq-quien"><div class="tarj-cuerpo"><div><b>Quién inspecciona cada equipo</b>'+
+         '<p class="ayuda" style="margin:2px 0 0" id="peq-quien-res">'+esc(res)+'.</p></div>'+
+         '<button type="button" class="bt sec" id="peq-quien-ir">Cambiar</button></div></div>';
+}
+function peqQuienAbrir(){
+  var V={}; PEQ_QUIEN_CL.forEach(function(C){ V[C.k]=peqQuienDe(C.k); });
+  function cuerpo(){
+    return '<p class="ayuda" style="margin:0 0 12px">Para cada clase de equipo, quién puede hacer su inspección con el QR. El que no puede, al escanearlo, ve su ficha y «avísale a tu supervisor».</p>'+
+      PEQ_QUIEN_CL.map(function(C){
+        var ops=[['equipo', 'El supervisor de SST y su equipo, con su cuenta.']];
+        if(C.hab) ops.push(['habilitados', C.hab]);
+        ops.push(['todos', 'Cualquiera que entre a la obra con su código y su documento (como hasta hoy).']);
+        return '<fieldset class="campo peq-quien-cl" id="peq-q-'+C.k+'" style="border:1px solid var(--borde,#d9e1e6);border-radius:10px;padding:10px 12px;margin:0 0 10px">'+
+               '<legend style="font-weight:700;padding:0 4px">'+C.ic+' '+esc(C.n)+'</legend><p class="ayuda" style="margin:0 0 6px">'+esc(C.d)+'</p>'+
+               ops.map(function(o){
+                 return '<label style="display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-weight:500;cursor:pointer"><input type="radio" name="peq-q-'+C.k+'" value="'+o[0]+'"'+(V[C.k]===o[0] ? ' checked' : '')+' style="margin-top:3px">'+
+                        '<span><b>'+esc(PEQ_QUIEN_R[o[0]])+'</b>'+(o[0]===C.base ? ' <span class="gris-t">· así viene</span>' : '')+'<br><span class="ayuda">'+esc(o[1])+'</span></span></label>';
+               }).join('')+'</fieldset>';
+      }).join('')+'<p class="msg" id="peq-q-m"></p>';
+  }
+  abrirHoja('Quién inspecciona cada equipo', 'La regla de la obra: la cumple la app al escanear cada QR', cuerpo(),
+    '<button type="button" class="bt sec" id="peq-q-no">Cancelar</button><button type="button" class="bt" id="peq-q-si">Guardar</button>', {sinFoco:true});
+  $('peq-q-no').onclick=cerrarHoja;
+  $('peq-q-si').onclick=function(){
+    var v={}, m=$('peq-q-m'), b=$('peq-q-si');
+    PEQ_QUIEN_CL.forEach(function(C){ var r=document.querySelector('input[name="peq-q-'+C.k+'"]:checked'); v[C.k]=r ? r.value : C.base; });
+    b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    estadoEscribirP('equipo_quien', v).then(function(){
+      PEQ.quien=v; cerrarHoja(); toast('Guardado: vale desde la próxima inspección.');
+      if(VISTA.actual==='equipos') peqPintar($('vista'));
+    }, function(e){
+      b.disabled=false; m.className='msg mal';
+      m.textContent=(e===401 || e===403) ? 'Esto lo cambia solo el equipo de SST de la obra.' : porQueFallo(e);
+    });
+  };
 }
 function peqCintaEventos(caja){
   Array.prototype.forEach.call(caja.querySelectorAll('.peq-col'), function(b){
@@ -12309,6 +12396,162 @@ function peqPonerCinta(k){
     PEQ.colores=o; toast('Cinta de '+eqMesNombre(MES)+': '+((eqColor(k)||{}).n||k).toLowerCase()+'. Ya la ve la app.');
     if(VISTA.actual==='equipos') peqPintar($('vista'));
   }, function(e){ if(m){ m.className='msg mal'; m.textContent=porQueFallo(e); } });
+}
+
+/* ── 4/11/2026 · V7.9k · SUS CERTIFICADOS ────────────────────────────────────────────────────────────────────
+   Marcelo: «para los extintores, arneses, sus certificados, que haya un botón ahí que diga certificados, se aprieta y se
+   vaya a los certificados… (el usuario puede agregar o quitar esa opción)». Los mismos de la app (sst_equipo_qr.certificados:
+   {qr, obra, l:[{n, u, v}]}, hasta 10, del almacén de la obra): al escanear su QR sale «📄 Certificados» con los suyos y,
+   si su tipo tiene carpeta en Documentos (extintores, arneses y líneas de vida, aparejos de izaje), los de esa carpeta.
+   Antes de guardar se lee lo que tiene AHORA y se cambia solo lo de este clic. Sin el SQL del 4/11: lo dice. */
+var PEQ_CARPETA_N={ 'cert-extintores':'Certificado de extintores', 'cert-arneses':'Certificado de arneses y líneas de vida', 'cert-izaje':'Certificado de aparejos de izaje' };
+var PEQ_IZAJE=['eslinga', 'estrobo', 'grillete', 'tecle', 'grúa torre', 'grua torre', 'grúa móvil', 'grua movil', 'camión grúa', 'camion grua', 'puente grúa', 'puente grua', 'otra grúa', 'otra grua'];
+var PEQ_CERT_OK=/^https:\/\/[A-Za-z0-9.-]+\/storage\/v1\/object\/public\/[^\s"'<>\\]+$/;
+var PEQ_CERT_DOCS={};
+/* la carpeta de su tipo (la misma cuenta del servidor: _sst_equipo_cert_carpeta) */
+function peqCertCarpeta(tp){
+  var t=String(tp||'').trim().toLowerCase();
+  if(t==='extintor') return 'cert-extintores';
+  if(['arnés', 'arnes', 'línea de vida', 'linea de vida', 'tambor retráctil', 'tambor retractil'].indexOf(t)>-1) return 'cert-arneses';
+  return PEQ_IZAJE.indexOf(t)>-1 ? 'cert-izaje' : '';
+}
+function peqCertDe(x){
+  var C=(x && x.certificados && typeof x.certificados==='object' && !Array.isArray(x.certificados)) ? x.certificados : {};
+  var l=(Array.isArray(C.l) ? C.l : []).filter(function(c){ return c && typeof c==='object' && String(c.n||'').trim() && typeof c.u==='string' && PEQ_CERT_OK.test(c.u); })
+          .slice(0, 10).map(function(c){ var o={ n:String(c.n).trim().slice(0, 120), u:c.u }; if(/^\d{4}-\d{2}-\d{2}$/.test(String(c.v||''))) o.v=c.v; return o; });
+  return { qr:C.qr!==false, obra:C.obra!==false, l:l };
+}
+function _peqCertPdf(u){ return /\.pdf($|[?#%])/i.test(u) || !/\.(jpe?g|png|webp|gif|heic)($|[?#%])/i.test(u); }
+function peqCertSeccion(x){
+  var C=peqCertDe(x), carp=peqCertCarpeta(x.tipo);
+  var h='<div class="seccion" id="peq-cert"><h3>Certificados'+(C.l.length ? ' · '+C.l.length : '')+'</h3>'+
+    '<p class="ayuda" style="margin:0 0 8px" id="peq-cert-ay">'+(C.qr ? 'Salen al escanear su QR, con el botón «📄 Certificados»: quien lo escanea los abre.'
+                                                                     : 'El botón «📄 Certificados» está apagado: al escanear su QR no sale.')+'</p>';
+  if(C.l.length) h+=C.l.map(function(c){
+    var est=c.v ? (c.v<HOY ? '<small class="mal">Venció el '+esc(fechaLarga(c.v))+'</small>' : '<small class="ok">Vigente hasta el '+esc(fechaLarga(c.v))+'</small>') : '<small>Sin fecha de vencimiento</small>';
+    return '<div class="peq-rev peq-cert-it"><div><b>'+(_peqCertPdf(c.u) ? '📄 ' : '🖼️ ')+esc(c.n)+'</b>'+est+'</div><span class="peq-cert-acc">'+
+           '<a class="bt sec chico" href="'+esc(c.u)+'" target="_blank" rel="noopener">Abrir ↗</a>'+
+           '<button type="button" class="bt sec chico" data-cert-quitar="'+esc(c.u)+'">Quitar</button></span></div>';
+  }).join('');
+  else h+='<p class="ayuda" style="margin:0 0 8px" id="peq-cert-nada">Todavía no tiene. Súbele el PDF o la foto de su certificado (de recarga, de prueba, de fábrica…).</p>';
+  h+=(C.l.length<10 ? '<button type="button" class="bt sec chico" id="peq-cert-nuevo" style="margin:6px 0 0">＋ Agregar un certificado</button>'
+                    : '<p class="ayuda" style="margin:6px 0 0" id="peq-cert-tope">Tiene 10, el máximo: quita uno para subir otro.</p>');
+  h+='<label class="peq-p-sin peq-cert-sw"><input type="checkbox" id="peq-cert-qr"'+(C.qr ? ' checked' : '')+'> <span>Botón «Certificados» al escanear su QR</span></label>';
+  if(carp){
+    var nD=PEQ_CERT_DOCS[((YO.obra||{}).id||'')+':'+carp];
+    h+='<label class="peq-p-sin peq-cert-sw"><input type="checkbox" id="peq-cert-obra"'+(C.obra ? ' checked' : '')+(C.qr ? '' : ' disabled')+'> '+
+       '<span>Sumar los de la carpeta «'+esc(PEQ_CARPETA_N[carp])+'» de Documentos <span class="gris-t" id="peq-cert-obra-n">'+(typeof nD==='number' ? '· hay '+(nD>=20 ? '20 o más' : nD) : '')+'</span></span></label>';
+  }
+  return h+'<p class="msg" id="peq-cert-m" style="min-height:0"></p></div>';
+}
+function peqCertEventos(x){
+  if(!$('peq-cert')) return;
+  var carp=peqCertCarpeta(x.tipo);
+  if($('peq-cert-nuevo')) $('peq-cert-nuevo').onclick=function(){ peqCertNuevo(x); };
+  Array.prototype.forEach.call(document.querySelectorAll('#peq-cert [data-cert-quitar]'), function(b){ b.onclick=function(){ peqCertQuitar(x, b.getAttribute('data-cert-quitar')); }; });
+  if($('peq-cert-qr')) $('peq-cert-qr').onchange=function(){ peqCertPoner(x, 'qr', this.checked); };
+  if($('peq-cert-obra')) $('peq-cert-obra').onchange=function(){ peqCertPoner(x, 'obra', this.checked); };
+  /* cuántos hay en la carpeta de su tipo: salen los 20 más nuevos */
+  var k=((YO.obra||{}).id||'')+':'+carp;
+  if(carp && typeof PEQ_CERT_DOCS[k]!=='number' && !PEQ_CERT_DOCS['_'+k]){
+    PEQ_CERT_DOCS['_'+k]=1;
+    traer('sst_doc', '&hoja=eq.'+encodeURIComponent(carp)+'&url=not.is.null&select=id', 20).then(function(r){
+      PEQ_CERT_DOCS[k]=Array.isArray(r) ? r.length : 0;
+      var el=$('peq-cert-obra-n'); if(el) el.textContent='· hay '+(PEQ_CERT_DOCS[k]>=20 ? '20 o más' : PEQ_CERT_DOCS[k]);
+    }, function(){ delete PEQ_CERT_DOCS['_'+k]; });
+  }
+}
+function _peqCertMal(e){
+  if(e && e.portal) return e.portal;
+  if(e===400) return 'Para los certificados falta actualizar el servidor. Avísanos y lo dejamos listo.';
+  if(e==='no_existe') return 'Ese equipo ya no está en la obra.';
+  return porQueFallo(e);
+}
+/* lee lo que tiene AHORA, le aplica el cambio y lo guarda */
+function peqCertCambiar(id, cambio){
+  return traerUna('sst_equipo_qr', id, 'id,certificados').then(function(f){
+    if(!f) return Promise.reject('no_existe');
+    var C=peqCertDe(f), no=cambio(C); if(no) return Promise.reject({portal:no});
+    var nuevo={ qr:C.qr, obra:C.obra, l:C.l };
+    return sbPatch('sst_equipo_qr?id=eq.'+encodeURIComponent(id), { certificados:nuevo, actualizado:new Date().toISOString() }).then(function(rows){
+      if(Array.isArray(rows) && !rows.length) return Promise.reject({portal:'Esta cuenta no puede cambiar los equipos de esta obra.'});
+      var x=peqPorId(id); if(x) x.certificados=nuevo;
+      return nuevo;
+    });
+  });
+}
+function peqCertPoner(x, k, v){
+  var m=$('peq-cert-m'), a=$('peq-cert-qr'), b=$('peq-cert-obra');
+  if(a) a.disabled=true; if(b) b.disabled=true;
+  if(m){ m.className='msg gris'; m.textContent='Guardando…'; }
+  peqCertCambiar(x.id, function(C){ C[k]=!!v; return ''; }).then(function(C){
+    toast(k==='qr' ? (C.qr ? 'Listo: al escanear su QR sale el botón «Certificados».' : 'Listo: al escanear su QR ya no sale el botón «Certificados».')
+                   : (C.obra ? 'Listo: también salen los de la carpeta de la obra.' : 'Listo: solo salen los suyos.'));
+    peqFicha(x.id);
+    try{ var el=$(k==='qr' ? 'peq-cert-qr' : 'peq-cert-obra'); if(el) el.focus({preventScroll:true}); }catch(_f){}
+  }, function(e){
+    if(a){ a.disabled=false; if(k==='qr') a.checked=!v; } if(b){ b.disabled=!(a ? a.checked : true); if(k==='obra') b.checked=!v; }
+    if(m){ m.className='msg mal'; m.textContent=_peqCertMal(e); }
+  });
+}
+function peqCertQuitar(x, u){
+  var c=peqCertDe(x).l.filter(function(z){ return z.u===u; })[0]; if(!c) return;
+  confirmar('¿Quitar «'+c.n+'»?', 'Deja de salir al escanear su QR.', {si:'Sí, quitarlo', mal:true}).then(function(si){
+    if(!si) return;
+    return peqCertCambiar(x.id, function(C){ C.l=C.l.filter(function(z){ return z.u!==u; }); return ''; }).then(function(){ toast('Quitado: ya no sale en su QR.'); peqFicha(x.id); });
+  }).catch(function(e){ var m=$('peq-cert-m'); if(m){ m.className='msg mal'; m.textContent=_peqCertMal(e); } else toast(_peqCertMal(e)); });
+}
+/* subir uno: el archivo, su nombre y, si tiene, cuándo vence */
+function peqCertNuevo(x){
+  var cuerpo='<p class="ayuda" style="margin:0 0 12px">El PDF o la foto del certificado (de recarga, de prueba, de fábrica…): sale al escanear su QR, con el botón «📄 Certificados».</p>'+
+    '<div class="campo"><label for="peq-c-arch">El archivo <span class="gris-t">(PDF o foto)</span></label><input id="peq-c-arch" type="file" accept="application/pdf,image/*"></div>'+
+    '<div class="peq-2"><div class="campo"><label for="peq-c-n">Nombre del certificado</label><input id="peq-c-n" maxlength="120" placeholder="Certificado de recarga 2026"></div>'+
+    '<div class="campo"><label for="peq-c-v">Vence <span class="gris-t">(si tiene fecha)</span></label><input id="peq-c-v" type="date"></div></div>'+
+    '<p class="msg" id="peq-c-m"></p>';
+  abrirHoja('Certificado · '+x.codigo, x.tipo+(x.detalle ? ' · '+x.detalle : ''), cuerpo,
+    '<button type="button" class="bt sec" id="peq-c-no">Cancelar</button><button type="button" class="bt" id="peq-c-si">Subir el certificado</button>', {sinFoco:true, id:'cert-'+x.id});
+  var noVa=function(f){
+    if(!f) return 'Elige el archivo: el PDF o la foto del certificado.';
+    var t=String(f.type||'').toLowerCase(), n=String(f.name||'').toLowerCase();
+    if(!(t==='application/pdf' || /^image\//.test(t) || /\.(pdf|jpe?g|png|webp|heic|heif)$/.test(n))) return 'Ese archivo no va: sube el PDF o una foto del certificado.';
+    if((f.size||0)>25*1024*1024) return 'Pesa más de 25 MB: sácale una foto, o pásalo a un PDF más liviano.';
+    return '';
+  };
+  $('peq-c-arch').onchange=function(){
+    var f=this.files && this.files[0], m=$('peq-c-m'), no=noVa(f);
+    m.className='msg mal'; m.textContent=no; if(no){ this.value=''; return; }
+    var nm=$('peq-c-n'); if(nm && !nm.value.trim()) nm.value=String(f.name||'').replace(/\.[A-Za-z0-9]{2,5}$/, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+  };
+  $('peq-c-no').onclick=function(){ peqFicha(x.id); };
+  $('peq-c-si').onclick=function(){
+    var m=$('peq-c-m'), bt=this, f=$('peq-c-arch').files && $('peq-c-arch').files[0], n=String($('peq-c-n').value||'').replace(/\s+/g, ' ').trim().slice(0, 120), v=String($('peq-c-v').value||'');
+    m.className='msg mal';
+    var no=noVa(f); if(no){ m.textContent=no; $('peq-c-arch').focus(); return; }
+    if(!n){ m.textContent='Ponle un nombre: «Certificado de recarga 2026».'; $('peq-c-n').focus(); return; }
+    if(v && !/^20\d{2}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(v)){ m.textContent='Revisa la fecha de vencimiento.'; $('peq-c-v').focus(); return; }
+    bt.disabled=true; m.className='msg gris'; m.textContent='Subiendo el certificado…';
+    /* primero, que el servidor ya tenga dónde guardarlo (sin el SQL del 4/11, ni se sube el archivo) */
+    traerUna('sst_equipo_qr', x.id, 'id,certificados').then(function(r0){
+      if(!r0) return Promise.reject('no_existe');
+      if(peqCertDe(r0).l.length>=10) return Promise.reject({portal:'Ya tiene 10, el máximo: quita uno para subir otro.'});
+      return eqPapelAchicar(f);
+    }).then(function(b){
+      var nom=eqPapelNombre(f.name || n);
+      if(String(b.type||'')==='image/jpeg' && !/\.jpe?g$/i.test(nom)) nom=nom.replace(/\.[A-Za-z0-9]+$/, '')+'.jpg';
+      var ruta=(YO.obra ? YO.obra.id : 'x')+'/equipos/cert-'+Date.now()+'-'+nom;
+      return sbFetch(SB.url+'/storage/v1/object/msds/'+encodeURIComponent(ruta), {method:'POST', body:b, extra:{'Content-Type':b.type || 'application/octet-stream'}})
+        .then(function(rr){ return rr.ok ? (SB.url+'/storage/v1/object/public/msds/'+encodeURIComponent(ruta)) : Promise.reject(rr.status); });
+    }).then(function(url){
+      return peqCertCambiar(x.id, function(C){
+        if(C.l.length>=10) return 'Ya tiene 10, el máximo: quita uno para subir otro.';
+        var c={ n:n, u:url }; if(v) c.v=v; C.l.push(c); return '';
+      });
+    }).then(function(C){
+      toast(C.qr ? 'Subido: ya sale al escanear su QR.' : 'Subido. El botón «Certificados» de su QR está apagado.');
+      peqFicha(x.id);
+    }).catch(function(e){ bt.disabled=false; m.className='msg mal'; m.textContent=_peqCertMal(e); });
+  };
+  setTimeout(function(){ try{ $('peq-c-arch').focus(); }catch(_f){} }, 40);
 }
 
 /* ── la ficha de un equipo ── */
@@ -12335,11 +12578,14 @@ function peqFicha(id){
      (x.marca ? '<dt>Marca</dt><dd id="peq-fi-marca">'+esc(x.marca)+'</dd>' : '')+
      (x.modelo ? '<dt>Modelo</dt><dd id="peq-fi-modelo">'+esc(x.modelo)+'</dd>' : '')+
      (x.serie ? '<dt>N.° de serie</dt><dd id="peq-fi-serie">'+esc(x.serie)+'</dd>' : '')+
+     (x.ubicacion ? '<dt>Ubicación</dt><dd id="peq-fi-ubic">'+esc(x.ubicacion)+'</dd>' : '')+   /* V7.9j */
      ((x.detalle && !hayMMS) ? '<dt>Marca, modelo o serie</dt><dd>'+esc(x.detalle)+'</dd>' : '')+
      (x.responsable ? '<dt>Responsable</dt><dd>'+esc(x.responsable)+'</dd>' : '')+
      '<dt>Etiqueta</dt><dd>'+esc((X.ic ? X.ic+' ' : '')+(X.n||x.etiqueta||''))+'</dd>'+
      '<dt>Escaneado</dt><dd>'+(+x.escaneos||0)+(+x.escaneos===1?' vez':' veces')+(x.ultimo_escaneo ? ' · la última el '+esc(fechaLarga(String(x.ultimo_escaneo).slice(0,10))) : '')+'</dd>'+
      (x.creado ? '<dt>Registrado</dt><dd>'+esc(fechaLarga(String(x.creado).slice(0,10)))+'</dd>' : '')+'</dl></div>';
+  /* 4/11/2026 · V7.9k · sus certificados: salen al escanear su QR, con el botón «Certificados» */
+  if(x.estado!=='baja') h+=peqCertSeccion(x);
   /* 15/10/2026 · lote 12 · las que le tocan, cómo va cada una y las anotadas en papel */
   if(typeof eqFrecsDe==='function') h+=peqFrecSeccion(x);
   /* 05/10/2026 · su etiqueta, a la vista: el mismo dibujo que sale impreso */
@@ -12348,7 +12594,7 @@ function peqFicha(id){
        '<p class="ayuda" id="peq-fi-etq-m">'+esc(peqDisenoTxt(x))+' · '+esc(peqMedidaTxt(EQ_ETIQ[x.etiqueta] ? x.etiqueta : 'placa', eqDis(x).g))+'</p></div>';
   /* 03/10/2026 · la inspección diaria: con qué checklist, y dónde verlas */
   var chk=Array.isArray(x.checklist) ? x.checklist.filter(Boolean) : [];
-  h+='<div class="seccion"><h3>Inspección diaria</h3><p class="ayuda" style="margin:0 0 8px">La hace quien lo va a usar, escaneando este QR con la app: checklist, fotos y firma. '+
+  h+='<div class="seccion"><h3>Inspección diaria</h3><p class="ayuda" style="margin:0 0 8px">'+esc(peqQuienFrase(x.tipo))+' Se hace escaneando este QR con la app: checklist, fotos y firma. '+
      (chk.length ? 'Usa su checklist propio, de '+chk.length+(chk.length===1 ? ' punto.' : ' puntos.') : 'Usa el checklist de su tipo, el mismo de «Inspecciones».')+'</p>'+
      (chk.length ? '<ol class="peq-ul" id="peq-chk-ver">'+chk.map(function(c){ return '<li>'+esc(c)+'</li>'; }).join('')+'</ol>' : '')+
      '<button type="button" class="bt sec chico" id="peq-ver-insp">Ver sus inspecciones diarias</button></div>';
@@ -12380,6 +12626,7 @@ function peqFicha(id){
   if($('peq-revs')) peqRevsPintar(x);
   if(x.estado==='baja') return;
   if($('peq-papel')) $('peq-papel').onclick=function(){ peqPapel(x); };
+  peqCertEventos(x);   /* V7.9k */
   peqConDibujo(function(){ var ce=$('peq-fi-etq'); if(ce && HOJA.abierta && String(HOJA.id)===String(x.id)) ce.innerHTML=eqSVG(x, {px:3.2}); });
   $('peq-editar').onclick=function(){ peqForm(x); };
   $('peq-imp').onclick=function(){ peqEtiquetas([x.id]); };
@@ -12672,7 +12919,7 @@ function peqForm(x){
   var D0=x ? eqDis(x) : {d:'', g:false};
   var E0=PEQ.edit=x ? {id:x.id, token:x.token, tipo:x.tipo, codigo:x.codigo, detalle:x.detalle||'', marca:x.marca||'', modelo:x.modelo||'', serie:x.serie||'',
                        dis:D0.d, grande:D0.g, teniaMMS:!!(x.marca || x.modelo || x.serie), teniaExtra:!!(x.marca || x.modelo || x.serie || x.diseno),
-                       responsable:x.responsable||'', etiqueta:x.etiqueta||'placa',
+                       responsable:x.responsable||'', etiqueta:x.etiqueta||'placa', ubicacion:x.ubicacion||'', teniaUbic:!!x.ubicacion,
                        contenido:(Array.isArray(x.contenido)?x.contenido.slice():[]), tocado:true, otro:!eqTipoDe(x.tipo),
                        checklist:(Array.isArray(x.checklist)?x.checklist.slice():[]), teniaChk:!!(Array.isArray(x.checklist) && x.checklist.length),
                        /* 14/10/2026 · cómo se usa (sql/2026-11-16-equipo-uso.sql) */
@@ -12680,7 +12927,7 @@ function peqForm(x){
                        /* 15/10/2026 · lote 12 · las que le tocan (sql/2026-11-18-equipo-frecuencias.sql) */
                        frecs:eqFrecsDe(x), teniaFrec:!!eqFrecsDe(x)}
                      : {id:null, token:'', tipo:'', codigo:'', detalle:'', marca:'', modelo:'', serie:'', dis:'', grande:false, teniaMMS:false, teniaExtra:false,
-                        responsable:'', etiqueta:'', contenido:[], tocado:false, otro:false, checklist:[], teniaChk:false, uso:{p:'', a:'', kg:'', r:''}, teniaUso:false,
+                        responsable:'', etiqueta:'', ubicacion:'', teniaUbic:false, contenido:[], tocado:false, otro:false, checklist:[], teniaChk:false, uso:{p:'', a:'', kg:'', r:''}, teniaUso:false,
                         frecs:null, teniaFrec:false};
   abrirHoja(x ? 'Editar '+x.codigo : 'Registrar un equipo', x ? x.tipo : 'Cada uno con su código y la etiqueta que le calza', '<div id="peq-form"></div>',
     '<button type="button" class="bt sec" id="peq-f-no">Cancelar</button><button type="button" class="bt" id="peq-f-si">'+(x ? 'Guardar los cambios' : 'Registrar')+'</button>', {sinFoco:true, ancha:true});
@@ -12708,6 +12955,9 @@ function peqFormPintar(){
      '<div class="peq-3"><div class="campo"><label for="peq-marca">Marca <span class="gris-t">(si quieres)</span></label><input id="peq-marca" maxlength="60" value="'+esc(E0.marca)+'" placeholder="Bosch, Makita, Truper…"></div>'+
      '<div class="campo"><label for="peq-modelo">Modelo <span class="gris-t">(si quieres)</span></label><input id="peq-modelo" maxlength="60" value="'+esc(E0.modelo)+'" placeholder="GWS 850"></div>'+
      '<div class="campo"><label for="peq-serie">N.° de serie <span class="gris-t">(si quieres)</span></label><input id="peq-serie" maxlength="60" autocapitalize="characters" value="'+esc(E0.serie)+'" placeholder="El que trae en su placa"></div></div>';
+  /* 4/11/2026 · V7.9j · dónde está: sale en su ficha al escanear su QR */
+  h+='<div class="campo"><label for="peq-ubic">Ubicación <span class="gris-t">(si quieres)</span></label><input id="peq-ubic" maxlength="120" value="'+esc(E0.ubicacion||'')+'" placeholder="Almacén, junto a la puerta · Torre B, piso 3">'+
+     '<p class="ayuda">Dónde está: sale en su ficha al escanear su QR.</p></div>';
   if(E0.id && E0.detalle && !E0.teniaMMS)
     h+='<p class="ayuda" id="peq-antes" style="margin:-8px 0 14px">Antes tenía anotado: <b>'+esc(E0.detalle)+'</b>. Repártelo en los tres casilleros; si los dejas vacíos, se queda como está.</p>';
   h+='<div id="peq-etq-zona"></div>';
@@ -12724,6 +12974,7 @@ function peqFormPintar(){
   h+='<p class="msg" id="peq-f-m"></p></div><aside class="peq-lado" id="peq-lado" aria-label="Así queda su etiqueta"></aside></div>';
   c.innerHTML=h;
   $('peq-chk').oninput=function(){ E0.checklist=this.value.split(/\n/); };
+  if($('peq-ubic')) $('peq-ubic').oninput=function(){ E0.ubicacion=this.value; };   /* V7.9j */
   if(!E0.uso) E0.uso={p:'', a:'', kg:'', r:''};
   [['peq-uso-p', 'p'], ['peq-uso-a', 'a'], ['peq-uso-kg', 'kg'], ['peq-uso-r', 'r']].forEach(function(z){ var el=$(z[0]); if(el){ el.oninput=el.onchange=function(){ E0.uso[z[1]]=this.value; }; } });
   $('peq-tipo').onchange=function(){
@@ -12830,6 +13081,10 @@ function peqGuardar(){
   var FR=(E0.frecs && E0.frecs.length) ? EQ_FRECS.map(function(F){ return F.k; }).filter(function(q){ return E0.frecs.indexOf(q)>-1; }) : null;
   var conFrec=!!(FR || E0.teniaFrec), sinFrec=false;
   if(conFrec) fila.frecuencias=FR;
+  /* 4/11/2026 · V7.9j · la ubicación: viaja solo si hay algo que guardar (o que quitar); la base sin
+     sql/2026-11-04-v79j-inspecciones.sql sigue registrando equipos igual que antes */
+  var ubic=String(E0.ubicacion||'').trim().replace(/\s+/g, ' ').slice(0,120), conUbic=!!(ubic || E0.teniaUbic), sinUbic=false;
+  if(conUbic) fila.ubicacion=ubic||null;
   m.className='msg gris'; m.textContent='Guardando…'; bt.disabled=true;
   var id=E0.id || eqNuevoId();
   if(!E0.id){ fila.id=id; fila.empresa=YO.obra.id; fila.token=eqNuevaFicha(); }
@@ -12838,7 +13093,11 @@ function peqGuardar(){
                  : sbPostP('sst_equipo_qr', fila);
   }
   manda().catch(function(e){
-    /* la base sin el SQL del 15/10 (lo más nuevo, se prueba primero): se guarda sin las que le tocan */
+    /* V7.9j · la base sin el SQL del 4/11 (lo más nuevo, se prueba primero): se guarda sin su ubicación */
+    if(e===400 && conUbic){ delete fila.ubicacion; sinUbic=true; return manda(); }
+    return Promise.reject(e);
+  }).catch(function(e){
+    /* la base sin el SQL del 15/10: se guarda sin las que le tocan */
     if(e===400 && conFrec){ delete fila.frecuencias; sinFrec=true; return manda(); }
     return Promise.reject(e);
   }).catch(function(e){
@@ -12853,7 +13112,8 @@ function peqGuardar(){
     if(e===400 && conChk){ delete fila.checklist; sinChk=true; return manda(); }
     return Promise.reject(e);
   }).then(function(){
-    toast((sinFrec && FR) ? cod+' se guardó, pero sin las inspecciones que le tocan: falta actualizar el servidor. Avísanos y lo dejamos listo.'
+    toast((sinUbic && ubic) ? cod+' se guardó, pero sin su ubicación: falta actualizar el servidor. Avísanos y lo dejamos listo.'
+          : (sinFrec && FR) ? cod+' se guardó, pero sin las inspecciones que le tocan: falta actualizar el servidor. Avísanos y lo dejamos listo.'
           : (sinUso && U.uso) ? cod+' se guardó, pero sin «Cómo se usa»: falta actualizar el servidor. Avísanos y lo dejamos listo.'
           : (sinChk && chk) ? cod+' se guardó, pero sin su checklist propio: falta actualizar el servidor. Avísanos y lo dejamos listo.'
           : (sinExtra && dis) ? cod+' se guardó con la etiqueta clásica: para el diseño y el tamaño falta actualizar el servidor. Avísanos y lo dejamos listo.'
@@ -13109,8 +13369,10 @@ function vistaInspEq(caja){
     var meses=[];
     for(var k=0;k<12;k++){ var d=new Date(+HOY.slice(0,4), +HOY.slice(5,7)-1-k, 1); meses.push(d.getFullYear()+'-'+dos(d.getMonth()+1)); }
     ac.innerHTML='<select id="piq-mes" aria-label="Mes del Excel" style="width:auto">'+meses.map(function(m){ return '<option value="'+m+'">'+esc(_edMesL(m))+'</option>'; }).join('')+'</select>'+
+      '<button type="button" class="bt sec" id="piq-hm">📄 Hoja del mes (A4)</button>'+   /* 4/11/2026 · V7.9k */
       '<button type="button" class="bt" id="piq-xlsx">⬇ Excel del mes</button>';
     $('piq-xlsx').onclick=piqExcel;
+    $('piq-hm').onclick=function(){ piqHojaMes(($('piq-mes')||{}).value||MES); };
   }
   function pinta(silencio){
     var n=++PIQ.n;
@@ -13324,6 +13586,242 @@ function piqVerHoja(){
     return pdfVistaP($('piq-prev'), H.blob);
   }).catch(function(){ if($('piq-prev') && PIQ.r && PIQ.r.id===id) $('piq-prev').innerHTML='<div class="pdfv-msg">No se pudo armar la hoja. Revisa tu conexión e inténtalo otra vez.</div>'; });
 }
+/* ══ 4/11/2026 · V7.9k · LA HOJA DEL MES: LAS INSPECCIONES CON QR, JUNTAS EN A4 ════════════════════════════════════
+   Marcelo: «tener la opción por web de armar en una hoja las inspecciones de extintores, arneses, herramientas, o sea
+   juntarlas en una hoja A4, o lo que alcancen, para tener tipo formato de inspección mensual y ahí salen todos». Del mes
+   elegido, cada equipo en una fila con su última inspección con el QR (la fecha, cada punto con C, NC o NA, el resultado,
+   lo que no cumple, quién la hizo y cuántas firmas tiene), agrupados por su checklist; los que no tienen ninguna ese mes,
+   también («Sin inspección»). Al final, el total y los casilleros de Seguridad y Producción, para firmarla en papel. Se ve
+   antes de bajarla (el mismo PDF), se imprime o se baja. Todo, con lo que ya está en el servidor: no necesita SQL. */
+var PIQ_HM={ datos:{}, R:null, n:0 };
+var PIQ_HM_MAX=14;   /* hasta cuántos puntos van como columnas; con más, en «Observación» va el número de los que no cumple */
+var PIQ_HM_COLS='id,equipo,fecha,hora,resultado,origen,op_nombre,op_cargo,formato_n,puntos,nota,pn:prod->>n,sn:sst->>n,creado';
+var PIQ_HM_CL=[['emergencia', 'Emergencia'], ['altura', 'Trabajo en altura'], ['izaje', 'Izaje'], ['herramientas', 'Herramientas'], ['equipos', 'Equipos']];
+function _piqHmSig(mes){ var d=new Date(+mes.slice(0, 4), +mes.slice(5, 7), 1); return d.getFullYear()+'-'+dos(d.getMonth()+1)+'-01'; }
+function _piqHmTraer(mes){
+  var D=PIQ_HM.datos[mes];
+  if(D && Date.now()-D.t<60000) return Promise.resolve(D);
+  return Promise.all([cargarPapeles(), cargarEqBase()]).then(function(){
+    return Promise.all([
+      traerTodo('sst_equipo_insp', '&fecha=gte.'+mes+'-01&fecha=lt.'+_piqHmSig(mes)+'&select='+PIQ_HM_COLS+'&order=creado.asc', 20000),
+      traerTodo('sst_equipo_qr', '&select=*&order=codigo.asc', 5000),
+      papCtx().catch(function(){ return null; })   /* el logo y la razón social de la empresa */
+    ]);
+  }).then(function(r){
+    var D2={ t:Date.now(), insp:Array.isArray(r[0]) ? r[0] : [], eq:Array.isArray(r[1]) ? r[1] : [], ctx:r[2] || null };
+    PIQ_HM.datos[mes]=D2; return D2;
+  });
+}
+function _piqHmEntra(x, f){
+  if(!f || f==='*') return true;
+  if(f.slice(0, 2)==='c:') return peqClaseDe(x.tipo)===f.slice(2);
+  if(f.slice(0, 2)==='t:') return String(x.tipo||'')===f.slice(2);
+  return true;
+}
+function _piqHmNombreSel(f){
+  if(!f || f==='*') return 'Todos los equipos';
+  if(f.slice(0, 2)==='c:'){ var c=PIQ_HM_CL.filter(function(z){ return z[0]===f.slice(2); })[0]; return c ? c[1] : f.slice(2); }
+  return f.slice(2);
+}
+/* las filas: cada equipo de la selección con su última inspección del mes; por secciones (su checklist) */
+function piqHmArmar(D, mes, f, conSin){
+  var por={}, n=0;
+  D.insp.forEach(function(i){ if(String(i.fecha||'').slice(0, 7)!==mes) return; (por[i.equipo]=por[i.equipo]||[]).push(i); });
+  var clave=function(i){ return String(i.fecha||'')+' '+String(i.hora||'')+' '+String(i.creado||''); };
+  var eqs=D.eq.filter(function(x){ return _piqHmEntra(x, f) && (x.estado!=='baja' || por[x.id]); });
+  var filas=eqs.map(function(x){
+    var l=(por[x.id]||[]).slice().sort(function(a, b){ return clave(b).localeCompare(clave(a)); });
+    if(l.length) n+=l.length;
+    return { x:x, i:l[0] || null, n:l.length };
+  }).filter(function(z){ return z.i || conSin; });
+  /* la sección: el checklist de su última; el que no tiene, el que más usó su tipo ese mes */
+  var deTipo={};
+  filas.forEach(function(z){ if(!z.i) return; var t=String(z.x.tipo||''), k=String(z.i.formato_n||'Inspección del equipo'); deTipo[t]=deTipo[t]||{}; deTipo[t][k]=(deTipo[t][k]||0)+1; });
+  var secs=[], porS={};
+  filas.forEach(function(z){
+    var k=z.i ? String(z.i.formato_n||'Inspección del equipo') : null;
+    if(!k){ var dt=deTipo[String(z.x.tipo||'')]; if(dt) k=Object.keys(dt).sort(function(a, b){ return dt[b]-dt[a]; })[0]; }
+    if(!k) k='\u0000sin';
+    if(!porS[k]){ porS[k]={ k:k, n:k==='\u0000sin' ? 'Sin inspección con QR en '+_edMesL(mes) : k, filas:[], p:[], pv:{} }; secs.push(porS[k]); }
+    porS[k].filas.push(z);
+  });
+  /* los puntos de cada sección: todos los que salieron en sus inspecciones, en el orden en que salieron */
+  secs.forEach(function(S){
+    S.filas.forEach(function(z){ ((z.i && Array.isArray(z.i.puntos)) ? z.i.puntos : []).forEach(function(p){
+      var t=String((p && p.t)||'').trim(); if(!t || S.pv[t]!==undefined) return; S.pv[t]=S.p.length; S.p.push({ t:t, b:String(p.b||'') });
+    }); });
+    S.filas.sort(function(a, b){ return String(a.x.codigo||'').localeCompare(String(b.x.codigo||''), 'es', {numeric:true}); });
+  });
+  secs.sort(function(a, b){ return (a.k==='\u0000sin') - (b.k==='\u0000sin') || a.n.localeCompare(b.n, 'es'); });
+  var c={ c:0, o:0, x:0, sin:0 };
+  filas.forEach(function(z){ if(!z.i) c.sin++; else if(z.i.resultado==='conforme') c.c++; else if(z.i.resultado==='observado') c.o++; else c.x++; });
+  return { secs:secs, filas:filas, n:n, c:c, eqs:eqs.length };
+}
+/* el PDF: A4 apaisado, con el dibujante de los papeles (papeles.js) */
+function piqHmPdf(D, mes, f, conSin){
+  var A=piqHmArmar(D, mes, f, conSin), Cx=D.ctx || {}, obra=String(nombreObraP()||''), mesT=_edMesL(mes);
+  var P=_ppDoc('h', { emp:Cx.emp || {}, logo:Cx.logo || null, obra:obra, rotulo:obra+' · '+mesT, fmt:{ inspqr:{ cod:'', rev:'', fecha:'' } } },
+               'INSPECCIÓN MENSUAL DE EQUIPOS CON QR', (mesT+' · '+_piqHmNombreSel(f)).toUpperCase(), 'inspqr');
+  var doc=P.doc, M=P.M, W=P.w, hF=6.2;
+  P.cabecera();
+  var y=P.y, w1=W*0.40, w2=W*0.22, w3=W*0.20, w4=W-w1-w2-w3;
+  P.par(M, y, 18, w1-18, hF, 'Obra', obra);
+  P.par(M+w1, y, 14, w2-14, hF, 'Mes', mesT);
+  P.par(M+w1+w2, y, 20, w3-20, hF, 'Equipos', _piqHmNombreSel(f));
+  P.par(M+w1+w2+w3, y, 20, w4-20, hF, 'Armada el', fechaLarga(HOY));
+  P.y=y+hF;
+  P.celda(M, P.y, W, 5, 'De cada equipo, su última inspección del mes hecha con su QR. C = cumple · NC = no cumple · NA = no aplica · en blanco: ese punto no estaba en su checklist.', { pt:6.8, c:_PP_TENUE });
+  P.y+=5+2;
+  var FONDO={ conforme:[232, 245, 238], observado:[255, 243, 214], no_apto:[253, 232, 230], sin:[241, 243, 245] }, TINTA={ conforme:[11, 107, 58], observado:[138, 87, 0], no_apto:[168, 32, 26], sin:[96, 104, 112] };
+  var RES={ conforme:'CONFORME', observado:'CON OBSERVACIÓN', no_apto:'NO APTO', sin:'SIN INSPECCIÓN' };
+  if(!A.filas.length){ P.celda(M, P.y, W, 9, 'En '+mesT+' no hay equipos'+(conSin ? '' : ' con su inspección con QR')+' en esta selección.', { pt:7.6, al:'c', c:_PP_TENUE }); P.y+=9; }
+  var num=0;
+  A.secs.forEach(function(S){
+    var N=S.p.length, conCol=(N>0 && N<=PIQ_HM_MAX), nP=conCol ? N : 0, wP=conCol ? Math.max(6, Math.min(8, 84/N)) : 0;
+    var Wc=[7, 20, 44, 15], q;
+    for(q=0;q<nP;q++) Wc.push(wP);
+    var fijo=7+20+44+15+nP*wP+22+34+11, wO=Math.max(30, W-fijo);
+    Wc.push(22, wO, 34, 11);
+    var X=[M]; for(q=0;q<Wc.length;q++) X.push(X[q]+Wc[q]);
+    var iR=4+nP, iO=5+nP, iI=6+nP, iF=7+nP;
+    var cab=function(){
+      var hc=6.4, T=['N.°', 'Código', 'Equipo y ubicación', 'Fecha'], j;
+      for(j=0;j<nP;j++) T.push(String(j+1));
+      T.push('Resultado', 'Observación', 'Inspeccionó', 'Firmas');
+      T.forEach(function(tt, i){ P.celda(X[i], P.y, Wc[i], hc, tt, { f:_PP_AZUL, b:true, pt:6.8, al:(i>=4 && i<=iR) || i===iF ? 'c' : '' }); });
+      P.y+=hc;
+    };
+    /* la leyenda: los puntos numerados */
+    var ley=S.p.map(function(p, i){ return (i+1)+'. '+p.t; }).join('   ');
+    var hLey=N ? P.alto(ley, W-3.2, 6.6)+1.8 : 0;
+    if(!P.cabe(5+Math.min(hLey, 40)+6.4+8)) P.salto();
+    var nf=S.filas.length, ni=S.filas.filter(function(z){ return z.i; }).length;
+    P.titulo(String(S.n).toUpperCase(), nf+' '+(nf===1 ? 'equipo' : 'equipos')+(S.k==='\u0000sin' ? '' : ' · '+ni+' con su inspección · '+N+' puntos')+(N>PIQ_HM_MAX ? ' · en «Observación» va el número de los que no cumple' : ''));
+    if(N){
+      var lin=P.parte(ley, W-3.2, 6.6), lh=P.lh(6.6), i0=0;
+      while(i0<lin.length){
+        var cab2=Math.max(1, Math.floor((P.fondo-P.y-1.8)/lh));
+        if(cab2<2 && i0<lin.length){ P.salto(); continue; }
+        var tr=lin.slice(i0, i0+cab2), alto=tr.length*lh+1.8;
+        P.caja(M, P.y, W, alto); P.fuente(6.6, false); doc.setTextColor(_PP_TINTA[0], _PP_TINTA[1], _PP_TINTA[2]);
+        tr.forEach(function(l, k){ doc.text(l, M+1.6, P.y+0.9+6.6*0.76*_PP_MMPT+k*lh); });
+        P.y+=alto; i0+=tr.length;
+        if(i0<lin.length) P.salto();
+      }
+    }
+    if(!P.cabe(6.4+8)) P.salto();
+    cab();
+    S.filas.forEach(function(z){
+      var x=z.x, I=z.i, r=I ? (RES[I.resultado] ? I.resultado : 'no_apto') : 'sin';
+      var mms=[x.marca, x.modelo, x.serie ? 'N.° '+x.serie : ''].filter(Boolean).join(' · ') || x.detalle || '';
+      var eqT=[x.tipo, mms].filter(Boolean).join(' · ')+(x.ubicacion ? '\nUbicación: '+x.ubicacion : '');
+      var fe=I ? IQB.dma(I.fecha).slice(0, 5)+(I.hora ? '\n'+I.hora : '')+(z.n>1 ? '\n'+z.n+' en el mes' : '') : '';
+      var pts=(I && Array.isArray(I.puntos)) ? I.puntos : [], marca={}, nc=[];
+      pts.forEach(function(p){ var t=String((p && p.t)||'').trim(), k=S.pv[t]; if(k===undefined) return; marca[k]=p.e; if(p.e==='NC') nc.push({ k:k, o:String(p.o||'').trim() }); });
+      var obs=[];
+      if(I){
+        if(nc.length) obs.push(((conCol ? '' : 'No cumple: '+nc.map(function(z2){ return z2.k+1; }).join(', ')+'. ')+nc.filter(function(z2){ return z2.o; }).map(function(z2){ return (z2.k+1)+': '+z2.o; }).join(' · ')).trim());
+        if(I.nota) obs.push('Nota: '+String(I.nota));
+      } else {
+        var rv=(x.ult_fecha && String(x.ult_fecha).slice(0, 7)===mes);
+        if(rv) obs.push('Su revisión del mes, sin el QR: '+({conforme:'conforme', observado:'con observación', fuera:'fuera de servicio'}[x.ult_resultado] || String(x.ult_resultado||''))+' ('+IQB.dma(x.ult_fecha).slice(0, 5)+')'+(x.ult_obs && x.ult_resultado!=='conforme' ? ': '+x.ult_obs : '')+'.');
+        if(x.estado==='fuera' && !(rv && x.ult_resultado==='fuera')) obs.push('Está fuera de servicio.');
+      }
+      var ob=obs.filter(Boolean).join(' · ').replace(/\s+/g, ' ').trim();
+      var ins=I ? [I.op_nombre, I.op_cargo].filter(Boolean).join('\n') : '';
+      var fir=I ? (1+(I.pn ? 1 : 0)+(I.sn ? 1 : 0))+'/3' : '';
+      var hr=Math.max(7, P.alto(eqT, Wc[2]-2.8, 7)+1.6, P.alto(ob, Wc[iO]-2.8, 6.8)+1.6, P.alto(ins, Wc[iI]-2.8, 6.8)+1.6, P.alto(fe, Wc[3]-2.8, 6.6)+1.6);
+      if(!P.cabe(hr)){ P.salto(); cab(); }
+      var yy=P.y; num++;
+      P.celda(X[0], yy, Wc[0], hr, String(num), { pt:6.8, al:'c', c:_PP_TENUE });
+      P.celda(X[1], yy, Wc[1], hr, x.codigo || '', { pt:7.2, b:true });
+      P.celda(X[2], yy, Wc[2], hr, eqT, { pt:7 });
+      P.celda(X[3], yy, Wc[3], hr, fe, { pt:6.6, al:'c' });
+      for(var j=0;j<nP;j++){
+        var e=marca[j] || '', o2={ pt:6.8, al:'c' };
+        if(e==='NC'){ o2.b=true; o2.c=TINTA.no_apto; o2.f=FONDO.no_apto; } else if(e==='NA') o2.c=_PP_TENUE; else if(e==='C') o2.c=TINTA.conforme;
+        P.celda(X[4+j], yy, Wc[4+j], hr, e, o2);
+      }
+      P.celda(X[iR], yy, Wc[iR], hr, RES[r], { pt:r==='observado' || r==='sin' ? 5.8 : 6.4, b:true, al:'c', c:TINTA[r], f:FONDO[r], max:2 });
+      P.celda(X[iO], yy, Wc[iO], hr, ob, { pt:6.8 });
+      P.celda(X[iI], yy, Wc[iI], hr, ins, { pt:6.8 });
+      P.celda(X[iF], yy, Wc[iF], hr, fir, { pt:6.8, al:'c', b:fir==='3/3', c:fir==='3/3' ? TINTA.conforme : _PP_TINTA });
+      P.y+=hr;
+    });
+    P.y+=2;
+  });
+  /* el total */
+  P.sitio(8);
+  var c=A.c, tot='TOTAL: '+A.filas.length+' '+(A.filas.length===1 ? 'equipo' : 'equipos')+' · '+c.c+' '+(c.c===1 ? 'conforme' : 'conformes')+' · '+c.o+' con observación · '+c.x+' no '+(c.x===1 ? 'apto' : 'aptos')+
+          (conSin ? ' · '+c.sin+' sin inspección en el mes' : '')+' · '+A.n+' '+(A.n===1 ? 'inspección' : 'inspecciones')+' con QR en el mes';
+  P.celda(M, P.y, W, 6.4, tot, { f:_PP_GRIS, b:true, pt:7.4 });
+  P.y+=6.4+3;
+  /* las firmas: Seguridad y Producción, en papel */
+  var hS=27; P.sitio(hS);
+  var wS=(W-6)/2;
+  [['SEGURIDAD (SST)'], ['PRODUCCIÓN']].forEach(function(z, i){
+    var x0=M+i*(wS+6), y0=P.y;
+    P.celda(x0, y0, wS, 5, z[0], { f:_PP_AZUL, b:true, pt:7.2, al:'c' });
+    P.caja(x0, y0+5, wS, hS-5);
+    doc.setDrawColor(120, 128, 136); doc.setLineWidth(0.2); doc.line(x0+wS*0.2, y0+19.5, x0+wS*0.8, y0+19.5);
+    P.txt('Nombre, cargo y firma', x0+2, y0+20.6, wS-4, { pt:6.6, al:'c', c:_PP_TENUE, max:1 });
+  });
+  P.y+=hS;
+  var R=P.listo();
+  R.nombre=_papNombre('Inspeccion mensual con QR - '+mes+' - '+(f==='*' ? 'todos' : _piqHmNombreSel(f))+' - '+obra)+'.pdf';
+  R.A=A;
+  return R;
+}
+function piqHojaMes(mes){
+  mes=/^\d{4}-\d{2}$/.test(String(mes||'')) ? mes : MES;
+  var meses=[];
+  for(var k=0;k<12;k++){ var d=new Date(+HOY.slice(0, 4), +HOY.slice(5, 7)-1-k, 1); meses.push(d.getFullYear()+'-'+dos(d.getMonth()+1)); }
+  if(meses.indexOf(mes)<0) mes=meses[0];
+  var cuerpo='<div class="piq-hm-op"><div class="campo"><label for="piq-hm-mes">Mes</label><select id="piq-hm-mes">'+meses.map(function(m){ return '<option value="'+m+'"'+(m===mes ? ' selected' : '')+'>'+esc(_edMesL(m))+'</option>'; }).join('')+'</select></div>'+
+    '<div class="campo"><label for="piq-hm-que">Qué equipos</label><select id="piq-hm-que"><option value="*">Todos los equipos</option></select></div></div>'+
+    '<label class="peq-p-sin"><input type="checkbox" id="piq-hm-sin" checked> <span>Con los que no tienen su inspección ese mes</span></label>'+
+    '<p class="ayuda piq-hm-res" id="piq-hm-res">Juntando las inspecciones del mes…</p>'+
+    '<div class="pdfv" id="piq-hm-prev"></div><p class="msg" id="piq-hm-m" style="min-height:0"></p>';
+  abrirHoja('Hoja del mes (A4)', 'Las inspecciones con QR del mes, juntas como un formato de inspección mensual: todos los equipos, con su última del mes', cuerpo,
+    '<button type="button" class="bt sec" id="piq-hm-x">Cerrar</button><button type="button" class="bt sec" id="piq-hm-imp" disabled>🖨 Imprimir</button><button type="button" class="bt" id="piq-hm-pdf" disabled>⬇ PDF</button>',
+    {ancha:true, sinFoco:true, id:'piq-hm'});
+  $('piq-hm-x').onclick=cerrarHoja;
+  $('piq-hm-imp').onclick=function(){ if(PIQ_HM.R) papImprimir(PIQ_HM.R); };
+  $('piq-hm-pdf').onclick=function(){ if(PIQ_HM.R){ papBajar(PIQ_HM.R); toast('PDF descargado: '+PIQ_HM.R.nombre); } };
+  var pinta=function(nuevoMes){
+    var n=++PIQ_HM.n, m=$('piq-hm-mes').value, sel=$('piq-hm-que'), res=$('piq-hm-res'), msg=$('piq-hm-m');
+    PIQ_HM.R=null; $('piq-hm-imp').disabled=true; $('piq-hm-pdf').disabled=true; msg.textContent='';
+    res.textContent='Juntando las inspecciones de '+_edMesL(m)+'…';
+    _piqHmTraer(m).then(function(D){
+      if(n!==PIQ_HM.n || !$('piq-hm-prev')) return;
+      /* qué equipos: todos, por clase o por tipo (los que hay en la obra) */
+      var f0=sel.value, act=D.eq.filter(function(x){ return x.estado!=='baja'; }), cl={}, tp={};
+      act.forEach(function(x){ var k=peqClaseDe(x.tipo); cl[k]=(cl[k]||0)+1; var t=String(x.tipo||''); if(t) tp[t]=(tp[t]||0)+1; });
+      var ops='<option value="*">Todos los equipos · '+act.length+'</option><optgroup label="Por clase">'+PIQ_HM_CL.filter(function(z){ return cl[z[0]]; }).map(function(z){
+          return '<option value="c:'+z[0]+'">'+esc(z[1])+' · '+cl[z[0]]+'</option>'; }).join('')+'</optgroup>'+
+        '<optgroup label="Por tipo">'+Object.keys(tp).sort(function(a, b){ return a.localeCompare(b, 'es'); }).map(function(t){ return '<option value="t:'+esc(t)+'">'+esc(t)+' · '+tp[t]+'</option>'; }).join('')+'</optgroup>';
+      sel.innerHTML=ops;
+      if(Array.prototype.some.call(sel.options, function(o){ return o.value===f0; })) sel.value=f0; else sel.value='*';
+      var f=sel.value, conSin=$('piq-hm-sin').checked;
+      var R=piqHmPdf(D, m, f, conSin), A=R.A;
+      PIQ_HM.R=R;
+      res.textContent=_edMesL(m).replace(/^./, function(c){ return c.toUpperCase(); })+': '+A.filas.length+' '+(A.filas.length===1 ? 'equipo' : 'equipos')+', '+(A.filas.length-A.c.sin)+' con su inspección con QR'+
+                      (A.c.sin ? ' y '+A.c.sin+' sin ninguna' : '')+' · '+R.hojas+' '+(R.hojas===1 ? 'hoja' : 'hojas')+' A4.';
+      $('piq-hm-imp').disabled=false; $('piq-hm-pdf').disabled=false;
+      return pdfVistaP($('piq-hm-prev'), R.blob);
+    }).catch(function(e){
+      if(n!==PIQ_HM.n || !$('piq-hm-res')) return;
+      res.textContent='';
+      msg.className='msg mal'; msg.textContent=(e===404) ? 'Falta actualizar el servidor para la inspección diaria. Avísanos y lo dejamos listo.' : 'No se pudo armar la hoja: '+porQueFallo(e);
+    });
+  };
+  $('piq-hm-mes').onchange=function(){ pinta(true); };
+  $('piq-hm-que').onchange=function(){ pinta(false); };
+  $('piq-hm-sin').onchange=function(){ pinta(false); };
+  pinta(true);
+  setTimeout(function(){ try{ $('piq-hm-mes').focus(); }catch(_f){} }, 40);
+}
+
 /* ── el Excel del mes: cada equipo en una fila, cada día en una columna ── */
 function piqExcel(){
   var mes=($('piq-mes')||{}).value||MES, b=$('piq-xlsx');
@@ -17598,7 +18096,7 @@ function ergoIr(fn){
                           function(){ if(a[0] && a[0].nodeType===1) fallo(a[0], 0); else toast('No se pudo abrir esta parte. Revisa tu conexión e inténtalo otra vez.'); });
 }
 /* 4/11/2026 · V7.9c · los pendientes por área (portal/pendientes.js), recién cuando alguien abre su sección */
-var PEND_VER='e3ff7ab614';   /* lo pone herr/huellas.py: el md5 de portal/pendientes.js */
+var PEND_VER='073b4f09fe';   /* lo pone herr/huellas.py: el md5 de portal/pendientes.js */
 var _PEND_CARGA=null;
 function cargarPend(){
   if(typeof vistaPend==='function') return Promise.resolve(true);
