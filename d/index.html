@@ -392,6 +392,7 @@ body.ver .nota{padding:0 14px;text-align:center}
     return caja().then(function(c){
       var g={ ok:true, obra:j.obra||'', hoja:j.hoja||hoja||'', titulo:j.titulo||null, url:j.url||null, docs:Array.isArray(j.docs) ? j.docs : [] };
       if(Array.isArray(j.frentes)) g.frentes=j.frentes;     /* 30/10/2026 · para el cartel de un frente, también sin señal */
+      if(Array.isArray(j.quim)) g.quim=j.quim.slice(0, 300); /* 4/11/2026 · la hoja de cada producto (cartel «Hojas MSDS») */
       return c.put(kResp(CLAVE), json({ t:Date.now(), j:g }));
     }).then(function(){}, function(){});
   }
@@ -630,11 +631,18 @@ body.ver .nota{padding:0 14px;text-align:center}
       X.suyo.forEach(function(d){ items.push({ nombre:d.nombre||nombre, url:d.url, fecha:d.fecha }); });
       if(web(j.url)) items.push({ nombre:nombre, url:j.url, enlace:true, obra:true });
       X.obra.forEach(function(d){ items.push({ nombre:d.nombre||nombre, url:d.url, fecha:d.fecha, obra:true }); });
-      return items;
+      return items.concat(deQuim(j));
     }
     if(web(j.url)) items.push({ nombre:nombre, url:j.url, enlace:true });
     (Array.isArray(j.docs) ? j.docs : []).forEach(function(d){ if(d && web(d.url)) items.push({ nombre:d.nombre||nombre, url:d.url, fecha:d.fecha }); });
-    return items;
+    return items.concat(deQuim(j));
+  }
+  /* 4/11/2026 · el cartel «Hojas MSDS» (el QR de la lista del almacén): también la hoja de cada producto químico de la obra
+     (sst_qr_abrir «quim»: nombre, marca y enlace), después de lo de su carpeta y por nombre */
+  function deQuim(j){
+    var q=(Array.isArray(j && j.quim) ? j.quim : []).filter(function(m){ return m && m.n && web(m.u); }).slice(0, 300);
+    q.sort(function(a, b){ return String(a.n).localeCompare(String(b.n), 'es', { sensitivity:'base', numeric:true }) || String(a.m||'').localeCompare(String(b.m||''), 'es'); });
+    return q.map(function(m){ return { nombre:String(m.n)+(m.m ? ' · '+m.m : ''), url:String(m.u), quim:true }; });
   }
   /* el nombre del cartel: el suyo, y el del frente si es el cartel de un frente */
   function nombreCartel(j){ return (j && j.titulo) || nombreDe(j && j.hoja) || t('Documento de la obra'); }
