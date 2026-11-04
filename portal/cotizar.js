@@ -187,13 +187,13 @@ var COT = (function(){
     var pie = '\n' + (cot.para ? 'Se necesita para el ' + dma(cot.para) + '.\n' : '') + (cot.hasta ? 'Respuesta hasta el ' + dma(cot.hasta) + '.\n' : '') +
       (cot.obra ? 'Obra: ' + cot.obra + (lugar ? ' (' + lugar + ')' : '') + '.\n' : '') + (cot.entrega ? 'Entrega en: ' + cot.entrega + '.\n' : '') +
       (cot.nota ? 'Nota: ' + cot.nota + '\n' : '') +
-      '\nAliados de OBRASST: respondan en su Portal de Aliados (ya está en su bandeja): ' + PORTAL +
+      '\nAliados de OBRASST: respondan en su Portal del proveedor (ya está en su bandeja): ' + PORTAL +
       '\nLos demás: respondan a este correo con el precio unitario de cada línea, la marca o norma, el plazo de entrega y la validez.\n' +
       '\nQuedo atento.\n' + (nombre ? nombre + '\n' : '') + '\n—\nSolicitud armada con OBRASST, la app de seguridad y salud en el trabajo.';
     var cab = 'Buenos días:\n\nLes pedimos cotización de lo siguiente:\n\n';
     /* un mailto largo se corta en algunos correos: se mandan las líneas que entran y se avisa cuántas faltan */
     var cuerpo = cab + L.join('\n') + '\n' + pie, falta = 0;
-    while(cuerpo.length > 1300 && L.length > 3){ L.pop(); falta++; cuerpo = cab + L.join('\n') + '\n- (y ' + falta + (falta === 1 ? ' línea más' : ' líneas más') + ': pídanos el detalle o véanlo en el Portal de Aliados)\n' + pie; }
+    while(cuerpo.length > 1300 && L.length > 3){ L.pop(); falta++; cuerpo = cab + L.join('\n') + '\n- (y ' + falta + (falta === 1 ? ' línea más' : ' líneas más') + ': pídanos el detalle o véanlo en el Portal del proveedor)\n' + pie; }
     return { asunto:asunto, cuerpo:cuerpo, cortado:falta, completo:cab + lineasTxt(cot.items).join('\n') + '\n' + pie };
   }
   function mailto(correos, asunto, cuerpo){

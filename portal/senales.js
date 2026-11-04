@@ -319,7 +319,7 @@ function snHojaTxt(T){ return T ? (T.n+(T.oh ? ' horizontal' : ' vertical')) : '
 
 /* ══ 2 · LA SECCIÓN, Y LA PESTAÑA «SEÑALES DE LA NORMA» ═══════════════════════════════════════
    El catálogo se pinta una vez (son 171 dibujos) y al buscar solo se esconden las que no van. */
-var SN_TABS=[['norma', 'Señales de la norma'], ['prop', 'Carteles propios'], ['pers', 'Personal autorizado'], ['and', 'Tarjetas de andamio']];
+var SN_TABS=[['norma', 'Señales de la norma'], ['prop', 'Carteles propios'], ['pers', 'Personal autorizado'], ['and', 'Tarjetas de andamio'], ['cas', 'Casilleros y archivadores']];
 var SN_GRUPOS=['adv', 'obl', 'proh', 'fuego', 'emer'];
 var SN_POR_HOJA=[1, 2, 4, 6, 8, 9, 12, 15];
 /* fuera del Perú, como en la app: sin las señales de la NTP ni el cartel de personal autorizado */
@@ -362,7 +362,7 @@ function senVista(caja){
 function snPintarTab(){
   var c=$('sn-cuerpo'); if(!c) return;
   SNW.T=null;
-  if(SNW.tab==='pers') snpPintar(c); else if(SNW.tab==='and') snaPintar(c); else if(SNW.tab==='prop') snxPintar(c); else snnPintar(c);
+  if(SNW.tab==='pers') snpPintar(c); else if(SNW.tab==='and') snaPintar(c); else if(SNW.tab==='prop') snxPintar(c); else if(SNW.tab==='cas') snkPintar(c); else snnPintar(c);
 }
 
 /* ── el catálogo ─────────────────────────────────────────────────────────────────────────── */
@@ -1402,4 +1402,162 @@ function snaPintar(c){
   });
   T.pide();
   snUso().then(snCupoPinta);
+}
+
+
+/* ══ CASILLEROS Y ARCHIVADORES (4/11/2026 · revisión de Gemini, bloque 3) ═══════════════════════════════════════════
+   · Casilleros: las etiquetas de un número a otro, cada una con su número grande y, si se quiere, una frase de seguridad
+     (veinte, una por casillero, y se repiten). Chicas (6 × 4 cm, 18 por hoja), medianas (9 × 5,5 cm, 8) o grandes
+     (18 × 8 cm, 3), con su línea de corte.
+   · Lomos de archivadores: el título, su tomo (1, 2, 3…; I, II, III…; o un mes) y lo de abajo (la obra, el año); y un QR
+     si se pega un enlace (el del cartel de esa carpeta, por ejemplo). Angostos (5 cm) o anchos (7,5 cm), del alto de la hoja.
+   En PDF (jsPDF, letra de verdad): se imprime al 100 %. Lo elegido se recuerda en esta computadora. */
+var SNK_FRASES=['Tu EPP, limpio y en su sitio.', 'Revisa tu EPP antes de salir al frente.', 'Aquí, lo tuyo; en el frente, lo del trabajo.', 'Nada de comida en el casillero.',
+  'Lávate las manos antes de comer.', 'Si tu EPP está dañado, pide el cambio.', 'Tu casco tiene fecha: revísala.', 'La ropa de trabajo, aparte de la de casa.',
+  'Ningún producto químico se guarda aquí.', 'Llega descansado: el cansancio también es un riesgo.', 'Toma agua durante toda la jornada.', 'Si ves algo inseguro, avisa.',
+  'Tu firma en el ATS es tu palabra.', 'Nadie trabaja si no está apto.', 'Cuida tus manos: no se reemplazan.', 'Orden y limpieza, también aquí.',
+  'Tu familia te espera en casa.', 'Respeta las señales: están por algo.', 'Pregunta antes de hacer lo que no sabes.', 'Primero la seguridad; después, la prisa.'];
+var SNK_TAM={ ch:{ n:'Chicas · 6 × 4 cm', w:60, h:40, col:3, fil:6 }, me:{ n:'Medianas · 9 × 5,5 cm', w:90, h:55, col:2, fil:4 }, gr:{ n:'Grandes · 18 × 8 cm', w:180, h:80, col:1, fil:3 } };
+var SNK_MESES=['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SETIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+var LS_SNK='sstp_casilleros';
+function _snkEstado(){
+  if(SNW.k) return SNW.k;
+  var g=null; try{ g=JSON.parse(localStorage.getItem(LS_SNK)||'null'); }catch(_l){ g=null; }
+  g=(g && typeof g==='object') ? g : {};
+  SNW.k={ c:{ desde:+((g.c||{}).desde)||1, hasta:+((g.c||{}).hasta)||40, pre:String((g.c||{}).pre==null ? 'CASILLERO' : g.c.pre).slice(0, 20), tam:SNK_TAM[(g.c||{}).tam] ? g.c.tam : 'ch', frase:(g.c||{}).frase!==false },
+          l:{ tit:String((g.l||{}).tit||'REGISTROS OBLIGATORIOS DE SST').slice(0, 60), sub:String((g.l||{}).sub||'').slice(0, 60), modo:/^(num|rom|mes)$/.test((g.l||{}).modo) ? g.l.modo : 'num',
+              n:Math.min(24, Math.max(1, +((g.l||{}).n)||4)), m1:Math.min(11, Math.max(0, +((g.l||{}).m1)||0)), m2:Math.min(11, Math.max(0, (g.l||{}).m2==null ? 11 : +g.l.m2)), ancho:(g.l||{}).ancho==='75' ? '75' : '50', qr:String((g.l||{}).qr||'').slice(0, 300) } };
+  return SNW.k;
+}
+function _snkGuardar(){ try{ localStorage.setItem(LS_SNK, JSON.stringify(SNW.k)); }catch(_g){} }
+function snkRomano(n){
+  var v=[[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']], s='';
+  v.forEach(function(x){ while(n>=x[0]){ s+=x[1]; n-=x[0]; } });
+  return s;
+}
+/* los tomos que salen: «TOMO 1», «TOMO IV» o el mes */
+function snkTomos(L){
+  if(L.modo==='mes'){ var a=[], i=L.m1; for(var k=0;k<12;k++){ a.push(SNK_MESES[i]); if(i===L.m2) break; i=(i+1)%12; } return a; }
+  var out=[]; for(var j=1;j<=L.n;j++) out.push('TOMO '+(L.modo==='rom' ? snkRomano(j) : String(j)));
+  return out;
+}
+/* el QR en el PDF, con rectángulos (nítido a cualquier tamaño) */
+function _snkQR(doc, txt, x, y, lado){
+  var qr=qrcode(0, 'M'); qr.addData(txt); qr.make();
+  var n=qr.getModuleCount(), t=lado/(n+4);
+  doc.setFillColor(255, 255, 255); doc.rect(x, y, lado, lado, 'F'); doc.setFillColor(0, 0, 0);
+  for(var r=0;r<n;r++){ var c=0; while(c<n){ if(!qr.isDark(r, c)){ c++; continue; } var c0=c; while(c<n && qr.isDark(r, c)) c++; doc.rect(x+(c0+2)*t, y+(r+2)*t, (c-c0)*t+0.02, t+0.02, 'F'); } }
+}
+/* la letra más grande que entra en «ancho» (mm) */
+function _snkAjusta(doc, txt, max, min, ancho){
+  var px=max; doc.setFontSize(px);
+  while(px>min && doc.getTextWidth(txt)>ancho){ px-=0.5; doc.setFontSize(px); }
+  return px;
+}
+function snkCasillerosPDF(o){
+  var J=window.jspdf && window.jspdf.jsPDF; if(!J) return null;
+  var T=SNK_TAM[o.tam]||SNK_TAM.ch, d=Math.min(o.desde, o.hasta), h=Math.max(o.desde, o.hasta), L=[];
+  for(var n=d;n<=h && L.length<500;n++) L.push(n);
+  var doc=new J({ unit:'mm', format:'a4', orientation:'portrait' }), porH=T.col*T.fil;
+  var gx=(210-T.col*T.w)/(T.col+1), gy=(297-T.fil*T.h)/(T.fil+1);
+  L.forEach(function(num, i){
+    if(i && i%porH===0) doc.addPage();
+    var j=i%porH, x=gx+(j%T.col)*(T.w+gx), y=gy+Math.floor(j/T.col)*(T.h+gy);
+    doc.setDrawColor(170, 180, 188); doc.setLineWidth(0.2); doc.setLineDashPattern([1.2, 1.2], 0); doc.roundedRect(x, y, T.w, T.h, 2.5, 2.5, 'S'); doc.setLineDashPattern([], 0);
+    doc.setDrawColor(11, 42, 58); doc.setLineWidth(0.6); doc.roundedRect(x+2, y+2, T.w-4, T.h-4, 2, 2, 'S');
+    doc.setTextColor(11, 42, 58); doc.setFont('helvetica', 'bold');
+    var pre=String(o.pre||'').trim(), conF=o.frase, fr=SNK_FRASES[(num-1+SNK_FRASES.length*100)%SNK_FRASES.length];
+    var tN=String(num), alto=T.h-4, top=y+2;
+    if(pre){ var pp=_snkAjusta(doc, pre, T.h*0.2, 6, T.w-10); doc.setFontSize(pp); doc.text(pre, x+T.w/2, top+alto*0.2, { align:'center' }); }
+    var pn=_snkAjusta(doc, tN, T.h*(conF ? 1.05 : 1.35), 10, T.w-12); doc.setFontSize(pn);
+    doc.text(tN, x+T.w/2, top+alto*(conF ? 0.66 : 0.76), { align:'center' });
+    if(conF){
+      doc.setFont('helvetica', 'normal'); var pf=Math.max(5.5, Math.min(T.h*0.17, 11)); doc.setFontSize(pf);
+      var lin=doc.splitTextToSize(fr, T.w-10).slice(0, 2), lh=pf*0.42;
+      lin.forEach(function(l, k){ doc.text(l, x+T.w/2, top+alto-3.2-(lin.length-1-k)*lh, { align:'center' }); });
+    }
+  });
+  return { doc:doc, n:L.length, hojas:Math.ceil(L.length/porH) };
+}
+function snkLomosPDF(o){
+  var J=window.jspdf && window.jspdf.jsPDF; if(!J) return null;
+  var tomos=snkTomos(o), W=o.ancho==='75' ? 75 : 50, H=275, por=Math.floor((210-10)/(W+6)), gx=(210-por*W)/(por+1), y=(297-H)/2;
+  var doc=new J({ unit:'mm', format:'a4', orientation:'portrait' }), url=/^https?:\/\/\S+$/i.test(o.qr) && typeof qrcode==='function' ? o.qr : '';
+  tomos.forEach(function(tomo, i){
+    if(i && i%por===0) doc.addPage();
+    var x=gx+(i%por)*(W+gx), cx=x+W/2;
+    doc.setDrawColor(170, 180, 188); doc.setLineWidth(0.2); doc.setLineDashPattern([1.2, 1.2], 0); doc.rect(x, y, W, H, 'S'); doc.setLineDashPattern([], 0);
+    /* arriba, el tomo: en blanco sobre la franja oscura (se ve de lejos en el estante) */
+    doc.setFillColor(11, 42, 58); doc.rect(x, y, W, 16, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); var pk=_snkAjusta(doc, tomo, W>60 ? 20 : 15, 7, W-6); doc.setFontSize(pk); doc.text(tomo, cx, y+8+pk*0.13, { align:'center' });
+    /* el título y lo de abajo, de abajo hacia arriba (como se lee en el lomo) */
+    var qrL=url ? Math.min(W-12, 32) : 0, yBase=y+H-(url ? qrL+16 : 12), largo=yBase-(y+22);
+    doc.setTextColor(11, 42, 58); doc.setFont('helvetica', 'bold');
+    var pt=_snkAjusta(doc, o.tit, W>60 ? 30 : 22, 9, largo); doc.setFontSize(pt);
+    var sub=String(o.sub||'').trim(), wt=doc.getTextWidth(o.tit);
+    /* centrado a lo largo del lomo */
+    doc.text(o.tit, cx+(sub ? -W*0.12 : pt*0.14), yBase-(largo-wt)/2, { angle:90 });
+    if(sub){ doc.setFont('helvetica', 'normal'); var ps=_snkAjusta(doc, sub, W>60 ? 15 : 12, 7, largo); doc.setFontSize(ps); doc.setTextColor(74, 91, 104); doc.text(sub, cx+W*0.24, yBase-(largo-doc.getTextWidth(sub))/2, { angle:90 }); }
+    if(url){ _snkQR(doc, url, cx-qrL/2, y+H-qrL-12, qrL); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(74, 91, 104); doc.text('Escanea: lo que guarda', cx, y+H-6, { align:'center' }); }
+  });
+  return { doc:doc, n:tomos.length, hojas:Math.ceil(tomos.length/por) };
+}
+function _snkNum(id, v, a){ return '<input id="'+id+'" type="number" inputmode="numeric" min="'+a[0]+'" max="'+a[1]+'" value="'+esc(String(v))+'" style="max-width:110px">'; }
+function snkPintar(c){
+  var K=_snkEstado(), C=K.c, L=K.l;
+  c.innerHTML='<p class="sn-intro">Las etiquetas de los <b>casilleros</b>, numeradas y con una frase de seguridad, y el <b>lomo de cada archivador</b>, con su título, su tomo y un QR si quieres. Salen en PDF para imprimir al 100 %.</p>'+
+    '<div class="sn-panel"><div class="sn-ed" id="snk-c"><div class="sn-form"><h3 class="snk-h">🔢 Casilleros</h3>'+
+      '<div class="campo"><label>Del número al número</label><div style="display:flex;gap:8px;align-items:center">'+_snkNum('snk-d', C.desde, [1, 9999])+'<span>al</span>'+_snkNum('snk-h', C.hasta, [1, 9999])+'</div><p class="ayuda">Hasta 500 de una vez.</p></div>'+
+      '<div class="campo"><label for="snk-pre">Arriba del número <small>· opcional</small></label><input id="snk-pre" maxlength="20" value="'+esc(C.pre)+'" placeholder="CASILLERO"></div>'+
+      '<div class="campo"><label>Tamaño</label>'+snChips('snk-tam', Object.keys(SNK_TAM).map(function(k){ return { v:k, t:SNK_TAM[k].n }; }), C.tam, 'Tamaño de las etiquetas')+'</div>'+
+      '<label class="check"><input type="checkbox" id="snk-fr"'+(C.frase ? ' checked' : '')+'> <span>Con una frase de seguridad: veinte, una por casillero («Tu EPP, limpio y en su sitio», «Si ves algo inseguro, avisa»…).</span></label>'+
+      '<div class="sn-acc" style="margin-top:12px"><button type="button" class="bt" id="snk-c-pdf">⬇ Descargar las etiquetas</button></div><p class="ayuda" id="snk-c-est"></p>'+
+    '</div><div class="sn-lado"><div class="sn-prev" id="snk-c-prev" aria-label="Vista previa de las etiquetas"></div></div></div></div>'+
+    '<div class="sn-panel" style="margin-top:16px"><div class="sn-ed" id="snk-l"><div class="sn-form"><h3 class="snk-h">🗂️ Lomos de archivadores</h3>'+
+      '<div class="campo"><label for="snk-tit">Título</label><input id="snk-tit" maxlength="60" value="'+esc(L.tit)+'"></div>'+
+      '<div class="campo"><label for="snk-sub">Debajo <small>· opcional: la obra, el año</small></label><input id="snk-sub" maxlength="60" value="'+esc(L.sub)+'" placeholder="'+esc((nombreObraP()||'Edificio')+' · '+hoyISO().slice(0, 4))+'"></div>'+
+      '<div class="campo"><label>Los tomos</label>'+snChips('snk-modo', [{ v:'num', t:'1, 2, 3…' }, { v:'rom', t:'I, II, III…' }, { v:'mes', t:'Uno por mes' }], L.modo, 'Cómo se numeran los tomos')+'</div>'+
+      (L.modo==='mes' ? '<div class="campo"><label>De qué mes a qué mes</label><div style="display:flex;gap:8px;align-items:center"><select id="snk-m1">'+SNK_MESES.map(function(m, i){ return '<option value="'+i+'"'+(i===L.m1 ? ' selected' : '')+'>'+m.charAt(0)+m.slice(1).toLowerCase()+'</option>'; }).join('')+'</select><span>a</span>'+
+                        '<select id="snk-m2">'+SNK_MESES.map(function(m, i){ return '<option value="'+i+'"'+(i===L.m2 ? ' selected' : '')+'>'+m.charAt(0)+m.slice(1).toLowerCase()+'</option>'; }).join('')+'</select></div></div>'
+                      : '<div class="campo"><label for="snk-n">Cuántos tomos</label>'+_snkNum('snk-n', L.n, [1, 24])+'</div>')+
+      '<div class="campo"><label>El lomo</label>'+snChips('snk-an', [{ v:'50', t:'Angosto · 5 cm' }, { v:'75', t:'Ancho · 7,5 cm' }], L.ancho, 'Ancho del lomo')+'</div>'+
+      '<div class="campo"><label for="snk-qr">Enlace para el QR <small>· opcional: el del cartel de esa carpeta, por ejemplo</small></label><input id="snk-qr" maxlength="300" value="'+esc(L.qr)+'" placeholder="https://…"></div>'+
+      '<div class="sn-acc" style="margin-top:12px"><button type="button" class="bt" id="snk-l-pdf">⬇ Descargar los lomos</button></div><p class="ayuda" id="snk-l-est"></p>'+
+    '</div><div class="sn-lado"><div class="sn-prev" id="snk-l-prev" aria-label="Vista previa de los lomos"></div></div></div></div>';
+  var nom=_audLimpioNombre();
+  var TC=snTaller($('snk-c-prev'), function(){ return Promise.resolve(typeof cargarEvPDF==='function' ? cargarEvPDF() : null).then(function(){ var r=snkCasillerosPDF(K.c); if(!r) return null;
+        var e=$('snk-c-est'); if(e) e.textContent=r.n+(r.n===1 ? ' etiqueta' : ' etiquetas')+' en '+r.hojas+(r.hojas===1 ? ' hoja A4.' : ' hojas A4.');
+        return { blob:r.doc.output('blob'), nombre:'casilleros-'+nom+'.pdf', max:2 }; }); });
+  var TCv=SNW.T;
+  var TL=snTaller($('snk-l-prev'), function(){ return Promise.resolve(typeof cargarEvPDF==='function' ? cargarEvPDF() : null).then(function(){ return (K.l.qr && typeof cargarQRLib==='function') ? cargarQRLib().catch(function(){ return null; }) : null; }).then(function(){
+        var r=snkLomosPDF(K.l); if(!r) return null;
+        var e=$('snk-l-est'); if(e) e.textContent=r.n+(r.n===1 ? ' lomo' : ' lomos')+' en '+r.hojas+(r.hojas===1 ? ' hoja A4.' : ' hojas A4.')+(K.l.qr && !/^https?:\/\/\S+$/i.test(K.l.qr) ? ' El enlace del QR no se ve bien: tiene que empezar con https://' : '');
+        return { blob:r.doc.output('blob'), nombre:'lomos-'+nom+'.pdf', max:2 }; }); });
+  var leer=function(){
+    var g=function(id){ var x=$(id); return x ? x.value : null; };
+    if(g('snk-d')!==null) K.c.desde=Math.max(1, Math.min(9999, parseInt(g('snk-d'), 10)||1));
+    if(g('snk-h')!==null) K.c.hasta=Math.max(1, Math.min(9999, parseInt(g('snk-h'), 10)||1));
+    if(g('snk-pre')!==null) K.c.pre=String(g('snk-pre')).slice(0, 20);
+    var fr=$('snk-fr'); if(fr) K.c.frase=!!fr.checked;
+    if(g('snk-tit')!==null) K.l.tit=String(g('snk-tit')).replace(/\s+/g, ' ').trim().slice(0, 60) || 'ARCHIVADOR';
+    if(g('snk-sub')!==null) K.l.sub=String(g('snk-sub')).replace(/\s+/g, ' ').trim().slice(0, 60);
+    if(g('snk-n')!==null) K.l.n=Math.max(1, Math.min(24, parseInt(g('snk-n'), 10)||1));
+    if(g('snk-m1')!==null) K.l.m1=+g('snk-m1'); if(g('snk-m2')!==null) K.l.m2=+g('snk-m2');
+    if(g('snk-qr')!==null) K.l.qr=String(g('snk-qr')).trim().slice(0, 300);
+    _snkGuardar();
+  };
+  ['snk-d', 'snk-h', 'snk-pre'].forEach(function(id){ var x=$(id); if(x) x.oninput=function(){ leer(); TC.pide(450); }; });
+  var fr=$('snk-fr'); if(fr) fr.onchange=function(){ leer(); TC.pide(); };
+  ['snk-tit', 'snk-sub', 'snk-n', 'snk-qr'].forEach(function(id){ var x=$(id); if(x) x.oninput=function(){ leer(); TL.pide(450); }; });
+  ['snk-m1', 'snk-m2'].forEach(function(id){ var x=$(id); if(x) x.onchange=function(){ leer(); TL.pide(); }; });
+  snChipsAl('snk-tam', function(v){ K.c.tam=SNK_TAM[v] ? v : 'ch'; _snkGuardar(); TC.pide(); });
+  snChipsAl('snk-modo', function(v){ leer(); K.l.modo=v; _snkGuardar(); snkPintar(c); });
+  snChipsAl('snk-an', function(v){ K.l.ancho=v==='75' ? '75' : '50'; _snkGuardar(); TL.pide(); });
+  $('snk-c-pdf').onclick=function(){ leer(); TC.listo().then(function(R){ if(R && R.blob){ bajarBlob(R.blob, R.nombre); toast('Etiquetas descargadas: imprímelas al 100 % y corta por la línea punteada.'); } }); };
+  $('snk-l-pdf').onclick=function(){ leer(); TL.listo().then(function(R){ if(R && R.blob){ bajarBlob(R.blob, R.nombre); toast('Lomos descargados: imprímelos al 100 %, córtalos y mételos en el lomo del archivador.'); } }); };
+  TC.pide(); TL.pide();
+}
+function _audLimpioNombre(){
+  var n=String(nombreObraP()||'obra'); try{ n=n.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(_n){}
+  return n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'obra';
 }

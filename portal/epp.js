@@ -425,6 +425,15 @@ function _epwCambios(){
   var h = '<div class="rej epw-rej">' + cifra('Con el cambio vencido', venc, venc === 1 ? 'un EPP que ya pasó su tiempo' : 'EPP que ya pasaron su tiempo', venc ? 'mal' : 'ok') +
           cifra('Vencen en 15 días', L.length - venc, 'para ir preparando la entrega', '') + cifra('EPP con cambio programado', conCambio, 'en el catálogo', '') + '</div>';
   if(!L.length) return h + '<div class="vacio"><b>Nadie tiene un cambio pendiente en los próximos 15 días</b>Cuando a alguien le toque, sale aquí y en la app (con su número rojo en el kardex).</div>';
+  /* 3/11/2026 · Gemini (mejora 3): los cambios que tocan, a un toque de pedírselos a los aliados de su zona (cuántas personas y
+     qué EPP, sin nombres) */
+  if(typeof pedirBarraHTML === 'function'){
+    var pers = {}, porEpp = {}; L.forEach(function(x){ pers[x.tr] = 1; porEpp[x.n] = (porEpp[x.n] || 0) + 1; });
+    var np = Object.keys(pers).length, lista = Object.keys(porEpp).map(function(k){ return k + ' ×' + porEpp[k]; }).join(', ');
+    h += pedirBarraHTML({ r:'epp', n:np, id:'pedir-epp',
+      tx:'A <b>' + np + '</b> ' + (np === 1 ? 'trabajador le toca' : 'trabajadores les toca') + ' cambiar EPP en los próximos 15 días' + (venc ? ' (' + venc + ' ya ' + (venc === 1 ? 'vencido' : 'vencidos') + ')' : '') + '.',
+      bt:'Pedir estos EPP a proveedores de mi zona', det:('Cambio de EPP para ' + np + (np === 1 ? ' trabajador: ' : ' trabajadores: ') + lista + '.').slice(0, 600) });
+  }
   h += '<div class="tarj"><div class="tabla-caja"><table><thead><tr><th>Trabajador</th><th>Puesto</th><th>EPP</th><th>Se le dio</th><th>Vence</th><th>Estado</th></tr></thead><tbody>';
   L.forEach(function(x){
     h += '<tr><td>' + esc(x.nom) + '</td><td>' + esc(_epwPuestoDe(x.tr)) + '</td><td>' + esc(x.n) + '</td><td>' + esc(fechaLarga(x.ult)) + '</td><td>' + esc(fechaLarga(x.vence)) + '</td><td>' +
@@ -505,6 +514,12 @@ function _epwStock(){
   h += '<p class="epw-sub">El stock empieza con el primer ingreso de cada EPP (lo que hay ese día en el almacén) y descuenta, solo, lo que se entrega en el kardex.</p>';
   if(bajos.length && typeof prqPuede === 'function' && prqPuede()) h += '<div class="epw-acc"><button type="button" class="bt" data-acc="req" id="epw-req">🧾 Pedir la reposición (' + bajos.length + ' EPP)</button>' +
     '<span class="epw-sub" style="margin:0">Se abre el requerimiento con lo que falta para llegar al doble del mínimo, y con las tallas de la gente.</span></div>';
+  /* 3/11/2026 · Gemini (mejora 3): y conseguirlo con los aliados de su zona, con lo que falta para llegar al doble del mínimo */
+  if(bajos.length && typeof pedirBarraHTML === 'function')
+    h += pedirBarraHTML({ r:'epp', n:0, id:'pedir-epp-stock',
+      tx:'<b>' + bajos.length + '</b> ' + (bajos.length === 1 ? 'EPP está' : 'EPP están') + ' por debajo de su mínimo.',
+      bt:'Pedir la reposición a proveedores de mi zona',
+      det:('Reposición de EPP (para llegar al doble del mínimo): ' + bajos.map(function(r){ return r.n + ' ' + EPPB.pedirPara(r); }).join(', ') + '.').slice(0, 600) });
   var ing = EPW.ingE || (C[0] && C[0].id) || '';
   h += '<div class="tarj"><div class="tarj-cab"><h2>Ingreso al almacén</h2></div><div class="tarj-cuerpo"><div class="epw-form">' +
        '<div class="campo ancho"><label for="epw-i-e">EPP</label><select id="epw-i-e">' + C.map(function(z){ return '<option value="' + esc(z.id) + '"' + (z.id === ing ? ' selected' : '') + '>' + esc(z.n) + '</option>'; }).join('') + '</select></div>' +

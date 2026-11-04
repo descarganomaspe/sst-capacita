@@ -1101,6 +1101,644 @@ function qtPDF(){
   });
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   LA LISTA DEL ALMACÉN (3/11/2026)
+
+   Marcelo: «darle la opción de sacar una lista de productos químicos…
+   una simple hoja con los nombres… El usuario podrá marcar y desmarcar
+   qué productos desean que salgan en esa lista, la lista debe de salir
+   con su rombo y su SGA. No debe de pasar 1 hoja, y si pasa, acomódalo
+   de la mejor manera, y agrégale cierta información para mejorarlo».
+
+   Una hoja A4 vertical. Arriba: el almacén, la fecha y cuántos hay con
+   PELIGRO, con ATENCIÓN y con su hoja MSDS. En el medio, un renglón por
+   producto: sus pictogramas y su palabra, el producto y su marca, sus
+   peligros más graves y su EPP, el rombo, dónde está y si tiene su hoja.
+   Abajo: los cuidados de ESE almacén (de lo más grave a lo menos, cada
+   uno con los números de sus productos), qué sección de la hoja MSDS
+   leer si pasa algo, qué es cada pictograma que sale y cada color del
+   rombo, y el responsable con su firma.
+
+   Para que entre en una hoja se va acortando, de a poco: primero se
+   achica; luego van 2 frases H y después 1, luego solo los códigos,
+   luego sin el EPP, y al final en dos columnas (los pictogramas, el
+   producto con su palabra, sus códigos H mientras entren, el rombo y
+   la hoja). Si ni así entra, salen las hojas que hagan falta en dos
+   columnas, parejas, cada una con su cabecera y su leyenda («Hoja 1
+   de 2»). Con «Con todo el detalle» sale completa, en las hojas que
+   hagan falta.
+
+   Se dibuja en SVG, como el cartel y las tarjetas: lo que se ve en la
+   pantalla es lo que sale impreso. El texto se mide de verdad (_qtAncho).
+   ══════════════════════════════════════════════════════════════════ */
+var QL_A4 = {W:794, H:1123, M:30, arriba:28, abajo:22};   /* A4 a 96 ppp: 1 = 0,265 mm */
+/* de lo más completo a lo más corto: sale la primera que entra en una hoja.
+   h: cuántas frases H con su texto (0 = solo los códigos; -1 = sin la columna); cod: en dos columnas, los códigos H
+   debajo del nombre; epp: el lado de las señales del EPP (0 = sin ellas). Abajo, la leyenda larga (con qué es cada
+   pictograma) si entra, y si no la corta. */
+var QL_MODOS = [
+  {k:1.00, col:1, h:3, epp:18, pic:30, nf:40},
+  {k:0.94, col:1, h:2, epp:16, pic:28, nf:36},
+  {k:0.90, col:1, h:1, epp:15, pic:26, nf:34},
+  {k:0.86, col:1, h:0, epp:15, pic:24, nf:31},
+  {k:0.82, col:1, h:0, epp:0,  pic:22, nf:28},
+  {k:0.78, col:1, h:0, epp:0,  pic:20, nf:26},
+  {k:0.92, col:2, h:-1, cod:1, epp:0, pic:22, nf:30},
+  {k:0.86, col:2, h:-1, cod:1, epp:0, pic:20, nf:27},
+  {k:0.80, col:2, h:-1, epp:0, pic:18, nf:25},
+  {k:0.74, col:2, h:-1, epp:0, pic:16, nf:22}
+];
+var QL_TINTA = '#0B2A3A', QL_GRIS = '#4A5B68', QL_GRIS2 = '#6B7C88', QL_RAYA = '#D5DDE3', QL_ORO = '#8a6b00', QL_ROJO = '#C81E1E', QL_AMBAR = '#B98200', QL_VERDE = '#1E6B45';
+/* 4/11/2026 · revisión de Gemini: lo que hay en ese almacén para una emergencia (lo marca el usuario: en la hoja sale con su
+   casilla marcada lo que hay y vacía lo que no), y los dos QR: el de la lista, arriba a la derecha (abre el cartel «Hojas
+   MSDS» de la obra), y con todo el detalle el de cada producto (el mismo de su tarjeta: lleva su etiqueta y sirve sin señal) */
+var QL_EQUIPOS = [['bandeja', 'Bandeja antiderrame'], ['kit', 'Kit antiderrame'], ['extintor', 'Extintor adecuado'], ['lavaojos', 'Lavaojos o ducha'], ['ventila', 'Ventilación']];
+var QL_QR_LISTA = 82;   /* 21,7 mm: la dirección del cartel (unas 75 letras) sale con módulos de 0,5 mm */
+var QL_QR_PROD = 72;    /* 19 mm: el del producto lleva más (su etiqueta) y necesita ese tamaño para que un celular lo lea */
+function _qlT(x, y, s, px, peso, col, ancla, extra){
+  return '<text x="' + (+x).toFixed(1) + '" y="' + (+y).toFixed(1) + '" font-family="Arial,Helvetica,sans-serif" font-size="' + (+px).toFixed(2) + '"' +
+         (peso && peso !== 400 ? ' font-weight="' + peso + '"' : '') + ' fill="' + (col || QL_TINTA) + '"' + (ancla ? ' text-anchor="' + ancla + '"' : '') + (extra || '') + '>' + esc(s) + '</text>';
+}
+/* renglones con tope: lo que no entra termina en «…» */
+function _qlLineas(partes, px, ancho, max){
+  var l = _qtPartir(partes, px, ancho);
+  if(!max || l.length <= max) return l;
+  l = l.slice(0, max);
+  var u = l[max - 1], esp = _qtAncho(' ', px, 400);
+  function mide(L){ var w = 0; L.forEach(function(k, i){ w += (i ? esp : 0) + _qtAncho(k.t, px, k.b ? 700 : 400); }); return w; }
+  var ult = u[u.length - 1];
+  u[u.length - 1] = ult = {t:ult.t.replace(/[,;:.]$/, '') + '…', b:ult.b, c:ult.c};
+  while(mide(u) > ancho){
+    if(ult.t.length > 2) ult.t = ult.t.slice(0, -2) + '…';
+    else if(u.length > 1){ u.pop(); var a = u[u.length - 1]; u[u.length - 1] = ult = {t:a.t.replace(/[,;:.]$/, '') + '…', b:a.b, c:a.c}; }
+    else break;
+  }
+  return l;
+}
+/* 1, 2, 3, 5, 7, 8 → «1–3, 5, 7, 8» */
+function _qlRangos(ns){
+  var out = [], i = 0;
+  while(i < ns.length){
+    var j = i; while(j + 1 < ns.length && ns[j + 1] === ns[j] + 1) j++;
+    out.push(j - i >= 2 ? ns[i] + '–' + ns[j] : (j > i ? ns[i] + ', ' + ns[j] : String(ns[i])));
+    i = j + 1;
+  }
+  return out.join(', ');
+}
+function _qlMin(t){ t = String(t || ''); return t.charAt(0).toLowerCase() + t.slice(1); }
+function _qlGrave(q){ var hs = (q.sga && q.sga.h) || []; return hs.length ? Math.min.apply(null, hs.map(quimGravedad)) : 999; }
+function _qlLugar(q){ return String((q && q.nota) || '').replace(/\s+/g, ' ').trim(); }
+function _qlClave(g){ var t = String(g || '').toLowerCase(); try{ t = t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }catch(_n){} return t; }
+/* el orden: por nombre, por lugar (juntos los de cada lugar) o los más peligrosos primero */
+function quimListaOrden(L, orden){
+  function nom(a, b){ return String(a.producto || '').localeCompare(String(b.producto || ''), 'es', {sensitivity:'base', numeric:true}); }
+  function pal(q){ var w = q.sga && q.sga.sw; return w === 'peligro' ? 0 : (w === 'atencion' ? 1 : 2); }
+  var l = (L || []).slice();
+  if(orden === 'lugar') l.sort(function(a, b){
+    var x = _qlLugar(a), y = _qlLugar(b);
+    if(!x !== !y) return x ? -1 : 1;
+    return x.localeCompare(y, 'es', {sensitivity:'base', numeric:true}) || nom(a, b);
+  });
+  else if(orden === 'peligro') l.sort(function(a, b){ return (_qlGrave(a) - _qlGrave(b)) || (pal(a) - pal(b)) || nom(a, b); });
+  else l.sort(nom);
+  return l;
+}
+/* los cuidados del almacén: lo que separa, lo que no lleva agua y, de lo más grave a lo menos, el cuidado de cada
+   peligro (el mismo de las tarjetas, QUIM_CORTO) con los números de sus productos */
+function quimListaCuidados(L){
+  function nums(f){ var r = []; L.forEach(function(q, i){ if(f(q)) r.push(i + 1); }); return r; }
+  function conP(k){ return function(q){ return ((q.sga && q.sga.p) || []).indexOf(k) > -1; }; }
+  var N = _qt('N.º'), out = [];
+  var ox = nums(conP('GHS03')), inf = nums(conP('GHS02'));
+  if(ox.length && inf.length)
+    out.push({rojo:1, t:_qt('Comburentes') + ' (' + N + ' ' + _qlRangos(ox) + ') ' + _qt('separados de los inflamables') + ' (' + N + ' ' + _qlRangos(inf) + '): ' + _qt('el comburente aviva el fuego.')});
+  var agua = nums(function(q){ return (q.nf && q.nf.e === 'W') || ((q.sga && q.sga.h) || []).some(function(c){ return c === 'H260' || c === 'H261'; }); });
+  if(agua.length) out.push({rojo:1, t:_qt('No usar agua') + ' (' + N + ' ' + _qlRangos(agua) + '): ' + _qlMin(_qt(QUIM_CORTO.agua[0]))});
+  var hs = {}; L.forEach(function(q){ ((q.sga && q.sga.h) || []).forEach(function(c){ hs[c] = 1; }); });
+  var ya = {};
+  quimGruposGraves(Object.keys(hs)).forEach(function(x){
+    var c = QUIM_CORTO[x.g.k];
+    if(!c || !c[0] || x.g.k === 'agua') return;
+    if(ya[c[0]]){ ya[c[0]].h = ya[c[0]].h.concat(x.h); return; }
+    ya[c[0]] = {t:c[0], h:x.h.slice()}; out.push(ya[c[0]]);
+  });
+  out.forEach(function(e){
+    if(!e.h) return;
+    var ns = nums(function(q){ return ((q.sga && q.sga.h) || []).some(function(c){ return e.h.indexOf(c) > -1; }); });
+    e.t = _qt(e.t) + ' — ' + N + ' ' + _qlRangos(ns);
+  });
+  return out;
+}
+/* ── las columnas: el SGA tan ancho como los pictogramas que trae la lista (hasta 5 en fila) ── */
+function _qlColumnas(M, ancho, conLugar, maxP, ex){
+  ex = ex || {};
+  /* con el QR de cada producto el renglón es alto: los pictogramas van de a 3 por fila */
+  var k = M.k, c = {}, dos = M.col === 2, gp = dos ? 1.5 : 2, nP = Math.max(2, Math.min((ex.qr && !dos) ? 3 : 5, maxP || 2));
+  c.n = Math.round((dos ? 18 : 22) * k) + 4;
+  c.sga = nP * M.pic + (nP - 1) * gp + 10;
+  if(dos){
+    c.pal = 0; c.pel = 0; c.lugar = 0; c.env = 0; c.qr = 0; c.nf = M.nf + 8; c.msds = Math.round(30 * k) + 2;
+    c.prod = ancho - c.n - c.sga - c.nf - c.msds;
+  } else {
+    var pxP = 8.4 * k;
+    c.pal = Math.ceil(Math.max(_qtAncho(_qt('ATENCIÓN'), pxP, 700), _qtAncho(_qt('PELIGRO'), pxP, 700)) + 8 * k + 10);
+    c.nf = M.nf + 14; c.msds = Math.round(40 * k) + 6; c.lugar = conLugar ? Math.round(86 * k) + 8 : 0;
+    c.env = ex.envase ? Math.round(70 * k) + 8 : 0;
+    c.qr = ex.qr ? QL_QR_PROD + 12 : 0; if(c.qr) c.msds = 0;
+    var resto = ancho - c.n - c.sga - c.pal - c.nf - c.msds - c.lugar - c.env - c.qr;
+    c.prod = Math.round(resto * (M.h > 0 ? 0.4 : 0.52)); c.pel = resto - c.prod;
+  }
+  var x = 0;
+  ['n', 'sga', 'pal', 'prod', 'pel', 'nf', 'lugar', 'env', 'msds', 'qr'].forEach(function(key){ c['x' + key] = x; x += c[key] || 0; });
+  c.ancho = ancho; c.nP = nP; c.gp = gp; c.porLugar = !conLugar; c.envDe = ex.envase || null;
+  return c;
+}
+/* ── un renglón: {alto, svg(x, y, n, fondo)}; cada celda, centrada en el alto del renglón ── */
+function _qlFila(q, M, C){
+  var k = M.k, pad = Math.max(3, Math.round(5 * k)), g = 6 * k;
+  var sga = q.sga || {p:[], sw:'', h:[], pp:[]}, nf = q.nf || {s:0, i:0, r:0, e:''};
+  var dos = M.col === 2;
+  var pxN = (dos ? 11.2 : 12.2) * k, pxS = 9.6 * k, pxH = 9.2 * k, pxL = 9.6 * k;
+  var lhN = pxN * 1.2, lhS = pxS * 1.25, lhH = pxH * 1.3;
+  /* los pictogramas, en fila */
+  var pics = (sga.p || []).slice(0, 9), porF = C.nP, gp = C.gp;
+  var fP = Math.ceil(pics.length / porF), aP = fP ? fP * M.pic + (fP - 1) * gp : 0;
+  var npL = sga.np ? _qlLineas([{t:_qt('No clasificado como peligroso'), b:1}], pxS * 0.88, C.sga - 8, 3) : null;
+  var altoSga = sga.np ? npL.length * pxS * 1.12 : (aP || lhS);
+  /* la palabra (en dos columnas va con la marca, debajo del nombre) */
+  var pal = sga.sw === 'peligro' ? _qt('PELIGRO') : (sga.sw === 'atencion' ? _qt('ATENCIÓN') : '');
+  var colPal = sga.sw === 'peligro' ? QL_ROJO : QL_AMBAR, pxP = 8.4 * k, aPal = pxP + 6 * k;
+  /* el producto: nombre (hasta 3 renglones; 2 en dos columnas), marca y su aviso */
+  var wP = C.prod - 2 * g;
+  var nomL = _qlLineas([{t:q.producto || '', b:1}], pxN, wP, dos ? 2 : 3);
+  var sub = [];
+  if(dos && pal) sub.push({t:pal, b:1, c:colPal});
+  var envT = C.envDe ? String(C.envDe[String(q.id)] || '').replace(/\s+/g, ' ').trim() : '';
+  var resto = (dos && !C.porLugar ? [q.proveedor, _qlLugar(q)] : [q.proveedor]).concat(dos ? [envT] : []).filter(Boolean).join(' · ');
+  if(resto) sub.push({t:(sub.length ? '· ' : '') + resto});
+  var pxSub = pxS * (dos ? 0.9 : 0.95);
+  var subL = sub.length ? _qlLineas(sub, pxSub, wP, 1) : [];
+  var avL = (!dos && q.aviso) ? _qlLineas([{t:'⚠ ' + q.aviso, b:1, c:QL_ROJO}], pxS * 0.92, wP, 2) : [];
+  /* los peligros: las frases más graves con su texto, o solo los códigos; y el EPP */
+  var orden = []; quimGruposGraves(sga.h || []).forEach(function(x){ orden = orden.concat(x.h); });
+  var codL = (dos && M.cod && orden.length) ? _qlLineas([{t:orden.join(' · '), b:1, c:QL_ORO}], pxSub, wP, 1) : [];
+  var altoProd = nomL.length * lhN + (subL.length ? pxSub * 1.3 : 0) + (codL.length ? pxSub * 1.3 : 0) + avL.length * pxS * 0.92 * 1.25;
+  var wH = C.pel - 2 * g, pelL = [], restoL = [], eppL = [];
+  if(M.h >= 0 && C.pel){
+    if(M.h > 0){
+      orden.slice(0, M.h).forEach(function(cod){ pelL = pelL.concat(_qlLineas([{t:cod, b:1, c:QL_ORO}, {t:_qt(SGA.fh[cod] || '')}], pxH, wH, M.h > 2 ? 3 : 2)); });
+      if(orden.length > M.h) restoL = _qlLineas([{t:'+ ' + orden.slice(M.h).join(' · '), c:QL_GRIS2}], pxH * 0.95, wH, 1);
+    } else if(orden.length) pelL = _qlLineas([{t:orden.join(' · '), b:1, c:QL_ORO}], pxH, wH, 2);
+    if(M.epp) eppL = _qtEppQueEntra(quimEppDe(sga), Math.max(1, Math.floor((wH + 3 * k) / (M.epp + 3 * k))));
+  }
+  var nT = pelL.length + restoL.length;
+  var altoPel = nT * lhH + (eppL.length ? (nT ? 3 * k : 0) + M.epp : 0);
+  if(!altoPel) altoPel = lhH;
+  var lugL = (C.lugar && _qlLugar(q)) ? _qlLineas([{t:_qlLugar(q)}], pxL, C.lugar - 2 * g, 3) : [];
+  var altoLug = lugL.length ? lugL.length * pxL * 1.25 : lhS;
+  var envL = (C.env && envT) ? _qlLineas([{t:envT}], pxL, C.env - 2 * g, 3) : [];
+  var altoEnv = envL.length ? envL.length * pxL * 1.25 : lhS;
+  var altoQR = C.qr ? QL_QR_PROD + 12 : 0;
+  var hayNf = _hayNf(nf);
+  var alto = Math.ceil(2 * pad + Math.max(altoSga, pal && !dos ? aPal : 0, altoProd, C.pel ? altoPel : 0, C.lugar ? altoLug : 0, C.env ? altoEnv : 0, altoQR, hayNf ? M.nf : 0, lhN));
+  return {alto:alto, q:q, svg:function(x0, y0, n, fondo){
+    var s = '<rect x="' + x0.toFixed(1) + '" y="' + y0.toFixed(1) + '" width="' + C.ancho.toFixed(1) + '" height="' + alto + '" fill="' + fondo + '"/>' +
+            '<line x1="' + x0.toFixed(1) + '" y1="' + (y0 + alto).toFixed(1) + '" x2="' + (x0 + C.ancho).toFixed(1) + '" y2="' + (y0 + alto).toFixed(1) + '" stroke="' + QL_RAYA + '" stroke-width="0.8"/>';
+    var ym = y0 + alto / 2;
+    function arriba(h){ return ym - h / 2; }
+    /* número */
+    s += _qlT(x0 + C.xn + C.n / 2, ym + pxN * 0.34, String(n), pxN * 0.9, 700, QL_GRIS, 'middle');
+    /* los pictogramas */
+    var cx = x0 + C.xsga + C.sga / 2;
+    if(sga.np){
+      var yn = arriba(altoSga);
+      npL.forEach(function(l, i){ s += _qtRenglones([l], cx, yn + pxS * 0.88 * 0.92 + i * pxS * 1.12, pxS * 0.88, pxS * 1.12, QL_VERDE, 'middle'); });
+    } else if(pics.length){
+      var yP = arriba(aP);
+      for(var f = 0; f < fP; f++){
+        var fila = pics.slice(f * porF, f * porF + porF), tot = fila.length * M.pic + (fila.length - 1) * gp, xp = cx - tot / 2;
+        fila.forEach(function(kp, i){
+          if(SGA.sim[kp]) s += '<g transform="translate(' + (xp + i * (M.pic + gp)).toFixed(1) + ',' + (yP + f * (M.pic + gp)).toFixed(1) + ') scale(' + (M.pic / 100).toFixed(4) + ')">' + SGA.sim[kp] + '</g>';
+        });
+      }
+    } else s += _qlT(cx, ym + pxS * 0.34, _qt(_haySga(sga) ? 'Sin pictogramas' : 'Sin etiqueta SGA'), pxS * 0.86, 400, QL_GRIS2, 'middle');
+    /* la palabra */
+    if(!dos && C.pal){
+      var cp = x0 + C.xpal + C.pal / 2;
+      if(pal){
+        var wPal = _qtAncho(pal, pxP, 700) + 8 * k, yp = arriba(aPal);
+        s += '<rect x="' + (cp - wPal / 2).toFixed(1) + '" y="' + yp.toFixed(1) + '" width="' + wPal.toFixed(1) + '" height="' + aPal.toFixed(1) + '" rx="' + (2.5 * k).toFixed(1) + '" fill="' + colPal + '"/>' +
+             _qlT(cp, ym + pxP * 0.35, pal, pxP, 700, '#fff', 'middle');
+      } else s += _qlT(cp, ym + pxS * 0.34, '—', pxS, 400, QL_GRIS2, 'middle');
+    }
+    /* el producto */
+    var xp0 = x0 + C.xprod + g, y1 = arriba(altoProd) + pxN * 0.92;
+    s += _qtRenglones(nomL, xp0, y1, pxN, lhN, QL_TINTA);
+    y1 += (nomL.length - 1) * lhN;
+    if(subL.length){ y1 += pxSub * 1.3; s += _qtRenglones(subL, xp0, y1, pxSub, pxSub * 1.3, QL_GRIS); }
+    if(codL.length){ y1 += pxSub * 1.3; s += _qtRenglones(codL, xp0, y1, pxSub, pxSub * 1.3, QL_ORO); }
+    if(avL.length){ y1 += pxS * 0.92 * 1.25; s += _qtRenglones(avL, xp0, y1, pxS * 0.92, pxS * 0.92 * 1.25, QL_ROJO); }
+    /* los peligros y el EPP */
+    if(C.pel){
+      var xh = x0 + C.xpel + g, yh0 = arriba(altoPel), yh = yh0 + pxH * 0.95;
+      if(pelL.length){ s += _qtRenglones(pelL, xh, yh, pxH, lhH, QL_TINTA); yh += pelL.length * lhH; }
+      if(restoL.length){ s += _qtRenglones(restoL, xh, yh, pxH * 0.95, lhH, QL_GRIS2); yh += lhH; }
+      if(!nT && !eppL.length) s += _qlT(xh, ym + pxH * 0.34, sga.np ? '—' : _qt('Sin frases H'), pxH, 400, QL_GRIS2);
+      if(eppL.length){
+        var ye = yh0 + nT * lhH + (nT ? 3 * k : 0);
+        eppL.forEach(function(ke, i){
+          var se = _quimSenal(ke); if(!se) return;
+          s += '<g transform="translate(' + (xh + i * (M.epp + 3 * k)).toFixed(1) + ',' + ye.toFixed(1) + ') scale(' + (M.epp / 100).toFixed(4) + ')"><circle cx="50" cy="50" r="49" fill="#fff"/>' + se.s + '</g>';
+        });
+      }
+    }
+    /* el rombo */
+    var cn = x0 + C.xnf + C.nf / 2;
+    if(hayNf) s += '<g transform="translate(' + (cn - M.nf / 2).toFixed(1) + ',' + arriba(M.nf).toFixed(1) + ') scale(' + (M.nf / 100).toFixed(4) + ')">' +
+                   romboSVG(nf, 100).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '') + '</g>';
+    else s += _qlT(cn, ym + pxN * 0.34, '—', pxN, 400, QL_GRIS2, 'middle');
+    /* dónde está */
+    if(C.lugar){
+      if(lugL.length) s += _qtRenglones(lugL, x0 + C.xlugar + g, arriba(altoLug) + pxL * 0.95, pxL, pxL * 1.25, QL_TINTA);
+      else s += _qlT(x0 + C.xlugar + g, ym + pxL * 0.34, '—', pxL, 400, QL_GRIS2);
+    }
+    /* el envase y la cantidad máxima */
+    if(C.env){
+      if(envL.length) s += _qtRenglones(envL, x0 + C.xenv + g, arriba(altoEnv) + pxL * 0.95, pxL, pxL * 1.25, QL_TINTA);
+      else s += _qlT(x0 + C.xenv + g, ym + pxL * 0.34, '—', pxL, 400, QL_GRIS2);
+    }
+    /* el QR del producto (el de su tarjeta) y, debajo, si tiene su hoja MSDS */
+    if(C.qr){
+      var lq = QL_QR_PROD, cq = x0 + C.xqr + C.qr / 2, yq = arriba(altoQR);
+      try{ var tq = _qtQRTexto(q, lq * 0.2646); s += _qtQR(tq.txt, cq - lq / 2, yq, lq, tq.ecc); }catch(_q){ }
+      var pxq = 7.6, yt = yq + lq + 9;
+      if(q.ficha){
+        var tH = _qt('Hoja MSDS'), wH2 = _qtAncho(tH, pxq, 700), lv = pxq, xv = cq - (lv + 3 + wH2) / 2;
+        s += '<path d="M' + (xv + lv * 0.1).toFixed(1) + ' ' + (yt - lv * 0.36).toFixed(1) + ' l' + (lv * 0.3).toFixed(1) + ' ' + (lv * 0.32).toFixed(1) + ' l' + (lv * 0.55).toFixed(1) + ' ' + (-lv * 0.66).toFixed(1) +
+             '" fill="none" stroke="' + QL_VERDE + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' + _qlT(xv + lv + 3, yt, tH, pxq, 700, QL_VERDE);
+      } else s += _qlT(cq, yt, _qt('Falta la hoja MSDS'), pxq, 700, QL_ROJO, 'middle');
+      return s;
+    }
+    /* la hoja MSDS */
+    var cm = x0 + C.xmsds + C.msds / 2;
+    if(q.ficha){
+      var tSi = dos ? '' : _qt('Sí'), wSi = tSi ? _qtAncho(tSi, pxS, 700) : 0, lado = pxS * 1.0, xc = cm - (lado + (tSi ? 3 * k + wSi : 0)) / 2;
+      s += '<path d="M' + (xc + lado * 0.1).toFixed(1) + ' ' + (ym - lado * 0.02).toFixed(1) + ' l' + (lado * 0.3).toFixed(1) + ' ' + (lado * 0.32).toFixed(1) + ' l' + (lado * 0.55).toFixed(1) + ' ' + (-lado * 0.66).toFixed(1) +
+           '" fill="none" stroke="' + QL_VERDE + '" stroke-width="' + (1.9 * k).toFixed(2) + '" stroke-linecap="round" stroke-linejoin="round"/>';
+      if(tSi) s += _qlT(xc + lado + 3 * k, ym + pxS * 0.34, tSi, pxS, 700, QL_VERDE);
+    } else s += _qlT(cm, ym + pxS * 0.34, _qt('Falta'), pxS * (dos ? 0.82 : 0.95), 700, QL_ROJO, 'middle');
+    return s;
+  }};
+}
+/* el renglón de un lugar (orden «por lugar») */
+function _qlGrupo(nombre, cuantos, M, C, sigue){
+  var k = M.k, px = 9.6 * k, alto = Math.ceil(px * 1.9);
+  var t = (nombre || _qt('Sin lugar anotado')) + (sigue ? ' (' + _qt('sigue') + ')' : '');
+  var tx = _qtAjustar(t, [px], 700, C.ancho * 0.7);
+  return {alto:alto, grupo:1, sigue:!!sigue, nombre:nombre, n:cuantos, svg:function(x0, y0){
+    return '<rect x="' + x0.toFixed(1) + '" y="' + y0.toFixed(1) + '" width="' + C.ancho.toFixed(1) + '" height="' + alto + '" fill="#E6EDF2"/>' +
+           _qlT(x0 + 6 * k, y0 + alto / 2 + px * 0.36, tx.t, px, 700, QL_TINTA) +
+           _qlT(x0 + C.ancho - 6 * k, y0 + alto / 2 + px * 0.36, cuantos + ' ' + _qt(cuantos === 1 ? 'producto' : 'productos'), px * 0.92, 400, QL_GRIS, 'end');
+  }};
+}
+/* la cabecera de la tabla */
+function _qlCabTabla(M, C){
+  var k = M.k, px = 7.6 * k, lh = px * 1.2;
+  var T = [['n', _qt('N.º')], ['sga', _qt('PICTOGRAMAS')], ['pal', _qt('PALABRA')], ['prod', _qt('PRODUCTO')],
+           ['pel', M.epp ? (M.h > 0 ? _qt('PELIGROS MÁS GRAVES Y EPP') : _qt('FRASES H Y EPP')) : _qt('FRASES H')],
+           ['nf', _qt('ROMBO')], ['lugar', _qt('DÓNDE ESTÁ')], ['env', _qt('ENVASE Y CANT. MÁX.')], ['msds', M.col === 2 ? _qt('MSDS') : _qt('HOJA MSDS')], ['qr', _qt('QR Y HOJA MSDS')]];
+  var L = T.map(function(t){ return C[t[0]] ? {k:t[0], l:_qlLineas([{t:t[1], b:1}], px, C[t[0]] - 5 * k, 2)} : null; }).filter(Boolean);
+  var n = Math.max.apply(null, L.map(function(x){ return x.l.length; })), alto = Math.ceil(n * lh + 9 * k);
+  return {alto:alto, svg:function(x0, y0){
+    var s = '<rect x="' + x0.toFixed(1) + '" y="' + y0.toFixed(1) + '" width="' + C.ancho.toFixed(1) + '" height="' + alto + '" fill="' + QL_TINTA + '"/>';
+    L.forEach(function(x){
+      var cen = (x.k === 'n' || x.k === 'sga' || x.k === 'pal' || x.k === 'nf' || x.k === 'msds' || x.k === 'qr'), xx = x0 + C['x' + x.k] + (cen ? C[x.k] / 2 : 6 * k);
+      var y = y0 + (alto - x.l.length * lh) / 2 + px * 0.95;
+      s += _qtRenglones(x.l, xx, y, px, lh, '#FFFFFF', cen ? 'middle' : '');
+    });
+    return s;
+  }};
+}
+/* arriba: el título, la obra, la fecha, la hoja y los números */
+function _qlCabeza(L, op, hoja, hojas){
+  var W = QL_A4.W, M = QL_A4.M, y = QL_A4.arriba, s = '';
+  /* 4/11/2026 · el QR de la lista (op.qr: el cartel «Hojas MSDS» de la obra), arriba a la derecha; lo de la derecha va a su lado */
+  var Q = (op.qr && typeof qrcode === 'function') ? QL_QR_LISTA : 0, xD = W - M - (Q ? Q + 12 : 0);
+  var der = 200, tit = _qtAjustar(_qt('PRODUCTOS QUÍMICOS DEL ALMACÉN'), [20, 18, 16], 800, xD - M - der);
+  s += _qlT(M, y + 18, tit.t, tit.px, 800, QL_TINTA);
+  s += _qlT(xD, y + 8, '◆ OBRASST', 9.5, 800, QL_ORO, 'end', ' letter-spacing="2"');
+  s += _qlT(xD, y + 23, _qt('Actualizada al') + ' ' + op.fecha, 10.5, 400, QL_GRIS, 'end');
+  y += 26;
+  if(op.obra){ var ob = _qtAjustar(op.obra, [13, 12], 400, xD - M - der); s += _qlT(M, y + 12, ob.t, ob.px, 400, QL_GRIS); }
+  s += _qlT(xD, y + 12, _qt('Hoja') + ' ' + hoja + ' ' + _qt('de') + ' ' + hojas, 10.5, 700, QL_TINTA, 'end');
+  y += 22;
+  var anCap = 0, finQ = 0;
+  if(Q){
+    var yQ = QL_A4.arriba - 4, xQ = W - M - Q;
+    try{ s += _qtQR(String(op.qr), xQ, yQ, Q, 'M'); }catch(_q){ }
+    s += '<rect x="' + (xQ - 0.5) + '" y="' + (yQ - 0.5) + '" width="' + (Q + 1) + '" height="' + (Q + 1) + '" rx="3" fill="none" stroke="' + QL_RAYA + '" stroke-width="0.8"/>';
+    var c1 = _qt('Escanea el QR:'), c2 = _qt('las hojas MSDS'), c3 = _qt('de este almacén'), yc = yQ + Q - 23;
+    anCap = Math.ceil(Math.max(_qtAncho(c1, 8.6, 700), _qtAncho(c2, 8.6, 400), _qtAncho(c3, 8.6, 400))) + 12;
+    s += _qlT(xD - 9, yc, c1, 8.6, 700, QL_TINTA, 'end') + _qlT(xD - 9, yc + 10.5, c2, 8.6, 400, QL_GRIS, 'end') + _qlT(xD - 9, yc + 21, c3, 8.6, 400, QL_GRIS, 'end');
+    s += '<path d="M' + (xD - 5) + ' ' + (yc + 3.5) + ' l5 4.5 l-5 4.5 z" fill="' + QL_ORO + '"/>';
+    finQ = yQ + Q + 5;
+  }
+  /* los números de la lista entera */
+  var c = {pel:0, ate:0, np:0, sin:0, msds:0};
+  L.forEach(function(q){ var g = q.sga || {}; if(g.np) c.np++; else if(g.sw === 'peligro') c.pel++; else if(g.sw === 'atencion') c.ate++; else if(!_haySga(g)) c.sin++; if(q.ficha) c.msds++; });
+  var partes = [{t:L.length + ' ' + _qt(L.length === 1 ? 'producto' : 'productos'), b:1}];
+  if(c.pel) partes.push({t:'· ' + c.pel + ' ' + _qt('con PELIGRO'), c:QL_ROJO, b:1});
+  if(c.ate) partes.push({t:'· ' + c.ate + ' ' + _qt('con ATENCIÓN'), c:QL_AMBAR, b:1});
+  if(c.np) partes.push({t:'· ' + c.np + ' ' + _qt(c.np === 1 ? 'no clasificado como peligroso' : 'no clasificados como peligrosos'), c:QL_VERDE});
+  if(c.sin) partes.push({t:'· ' + c.sin + ' ' + _qt('sin etiqueta SGA'), c:QL_GRIS});
+  partes.push({t:'· ' + _qt('Con su hoja MSDS:') + ' ' + c.msds + ' ' + _qt('de') + ' ' + L.length, c:(c.msds === L.length ? QL_VERDE : QL_TINTA)});
+  var anN = Q ? (xD - anCap - 10 - M) : (W - 2 * M);
+  var ln = _qlLineas(partes, 11, anN, 2);
+  s += '<line x1="' + M + '" y1="' + (y - 5) + '" x2="' + (Q ? M + anN : W - M) + '" y2="' + (y - 5) + '" stroke="' + QL_RAYA + '"/>';
+  s += _qtRenglones(ln, M, y + 10, 11, 14.5, QL_TINTA);
+  y += ln.length * 14.5 + 6;
+  y = Math.max(y, finQ);
+  return {svg:s, alto:y - QL_A4.arriba};
+}
+/* abajo: los cuidados, qué leer si pasa algo, la leyenda y el responsable */
+function _qlPie(L, op, largo){
+  var W = QL_A4.W, X = QL_A4.M, CW = W - 2 * X, s = '', y = 0;
+  var px = largo ? 8.8 : 8.4, lh = px * 1.28;
+  /* los cuidados, en dos columnas */
+  var cu = quimListaCuidados(L), tope = largo ? 10 : 8, mas = cu.length > tope;
+  if(cu.length){
+    var t1 = _qt('CUIDADOS EN ESTE ALMACÉN');
+    s += _qlT(X, y + 10, t1, 9, 800, QL_TINTA, '', ' letter-spacing="1"');
+    s += _qlT(X + _qtAncho(t1, 9, 800) + t1.length * 1 + 12, y + 10, _qt('De lo más grave a lo menos. N.º es el número del producto en la lista.'), 8.2, 400, QL_GRIS2);
+    y += 16;
+    var it = cu.slice(0, tope), mitad = Math.ceil(it.length / 2), anCol = (CW - 18) / 2, yc = [y, y];
+    it.forEach(function(e, i){
+      var c = i < mitad ? 0 : 1, xx = X + c * (anCol + 18);
+      var l = _qlLineas([{t:e.t, b:e.rojo ? 1 : 0, c:e.rojo ? QL_ROJO : ''}], px, anCol - 10, 2);
+      s += '<circle cx="' + (xx + 3) + '" cy="' + (yc[c] + px * 0.6).toFixed(1) + '" r="1.8" fill="' + (e.rojo ? QL_ROJO : QL_TINTA) + '"/>';
+      s += _qtRenglones(l, xx + 10, yc[c] + px * 0.95, px, lh, QL_TINTA);
+      yc[c] += l.length * lh + 2;
+    });
+    y = Math.max(yc[0], yc[1]);
+    if(mas){ s += _qlT(X + 10, y + px * 0.95, _qt('Y lo demás, en la hoja MSDS de cada producto.'), px, 400, QL_GRIS2); y += lh; }
+    y += 4;
+  }
+  /* 4/11/2026 · lo que hay en este almacén para una emergencia: la casilla marcada lo que hay; vacía, lo que no */
+  var eq = _qlEquipos(op, CW);
+  if(eq){ s += eq.svg(X, y); y += eq.alto; }
+  /* si pasa algo */
+  var sp = _qlLineas([{t:_qt('Si pasa algo:'), b:1, c:QL_ROJO}, {t:_qt('la hoja MSDS del producto dice qué hacer. Primeros auxilios: sección 4 · Incendio: sección 5 · Derrame o fuga: sección 6.')}], px, CW, 2);
+  s += _qtRenglones(sp, X, y + px * 0.95, px, lh, QL_TINTA);
+  y += sp.length * lh + 3;
+  /* 4/11/2026 · los teléfonos de emergencia: los de la obra y, en el Perú, los Bomberos (116) y el SAMU (106) */
+  var tl = _qlTels(op);
+  if(tl.length){
+    var pt = [{t:_qt('Teléfonos de emergencia:'), b:1, c:QL_ROJO}];
+    tl.forEach(function(x, i){ pt.push({t:(i ? '· ' : '') + x.t}); pt.push({t:x.tel, b:1}); });
+    var lt = _qlLineas(pt, px + 0.6, CW, 1);
+    s += _qtRenglones(lt, X, y + (px + 0.6) * 0.95, px + 0.6, lh, QL_TINTA);
+    y += lh + 2;
+  }
+  y += 4;
+  /* la leyenda: los pictogramas que salen en la lista, y el rombo */
+  var pres = {}; L.forEach(function(q){ ((q.sga && q.sga.p) || []).forEach(function(kp){ pres[kp] = 1; }); });
+  var pics = SGA.pic.filter(function(p){ return pres[p.k]; });
+  var anR = 236, anP = CW - anR - 18, yL = y;
+  s += '<line x1="' + X + '" y1="' + (y - 3) + '" x2="' + (W - X) + '" y2="' + (y - 3) + '" stroke="' + QL_RAYA + '"/>';
+  y += 4;
+  if(pics.length){
+    var cols = largo ? 2 : 3, ic = largo ? 18 : 15, an = (anP - (cols - 1) * 10) / cols, filas = Math.ceil(pics.length / cols), fh = ic + 3;
+    pics.forEach(function(p, i){
+      var c = Math.floor(i / filas), f = i % filas, xx = X + c * (an + 10), yy = y + f * fh;
+      s += '<g transform="translate(' + xx.toFixed(1) + ',' + yy.toFixed(1) + ') scale(' + (ic / 100) + ')">' + SGA.sim[p.k] + '</g>';
+      var tx = largo ? [{t:_qt(p.n), b:1}, {t:_qt(p.d), c:QL_GRIS}] : [{t:_qt(p.n), b:1}];
+      s += _qtRenglones(_qlLineas(tx, 8, an - ic - 6, 1), xx + ic + 5, yy + ic / 2 + 3, 8, 10, QL_TINTA);
+    });
+    y += filas * fh;
+  } else {
+    s += _qlT(X, y + 10, _qt('Ningún producto de la lista lleva pictogramas SGA.'), 8.4, 400, QL_GRIS2);
+    y += 14;
+  }
+  /* el rombo: qué es cada color y qué dicen los números */
+  var xr = W - X - anR, rr = 38, yr = yL + 3;
+  s += '<g transform="translate(' + xr + ',' + yr + ') scale(' + (rr / 100) + ')">' + romboSVG({s:0, i:0, r:0, e:''}, 100).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '').replace(/<text[\s\S]*?<\/text>/g, '') + '</g>';
+  var ley = [['#0047BB', _qt('Azul: salud')], ['#EE0000', _qt('Rojo: inflamabilidad')], ['#FFD400', _qt('Amarillo: reactividad')], ['#FFFFFF', _qt('Blanco: especial')]];
+  var xl = xr + rr + 9, anL = anR - rr - 9, yl = yr + 8;
+  ley.forEach(function(x, i){
+    var cx2 = xl + (i % 2) * (anL / 2), cy2 = yl + Math.floor(i / 2) * 11;
+    s += '<rect x="' + cx2 + '" y="' + (cy2 - 6.5) + '" width="7.5" height="7.5" rx="1" fill="' + x[0] + '" stroke="#111" stroke-width="0.6"/>' + _qlT(cx2 + 10.5, cy2, x[1], 7.6, 400, QL_TINTA);
+  });
+  var l2 = _qlLineas([{t:_qt('De 0 (mínimo) a 4 (grave).'), b:1}, {t:'W: ' + _qt('no usar agua') + ' · OX: ' + _qt('comburente') + ' · SA: ' + _qt('gas asfixiante')}], 7.6, anL, 2);
+  s += _qtRenglones(l2, xl, yl + 24, 7.6, 9.6, QL_TINTA);
+  y = Math.max(y, yr + rr + 2, yl + 24 + l2.length * 9.6 - 6) + 9;
+  /* el responsable y su firma, y de dónde sale */
+  var ancho1 = CW * 0.6;
+  s += '<line x1="' + X + '" y1="' + (y - 3) + '" x2="' + (W - X) + '" y2="' + (y - 3) + '" stroke="' + QL_RAYA + '"/>';
+  var resp = String(op.resp || '').trim(), et1 = _qt('Responsable del almacén:'), et2 = _qt('Firma:');
+  var w1 = _qtAncho(et1, 9, 700), w2 = _qtAncho(et2, 9, 700), yF = y + 20;
+  s += _qlT(X, yF, et1, 9, 700, QL_TINTA);
+  var xr1 = X + w1 + 6, finR = X + ancho1 * 0.64;
+  if(resp){ var rr1 = _qtAjustar(resp, [9.4, 8.6], 400, finR - xr1 - 4); s += _qlT(xr1 + 2, yF - 1, rr1.t, rr1.px, 400, QL_TINTA); }
+  s += '<line x1="' + xr1 + '" y1="' + (yF + 3) + '" x2="' + finR + '" y2="' + (yF + 3) + '" stroke="' + QL_GRIS2 + '" stroke-width="0.7"/>';
+  s += _qlT(finR + 12, yF, et2, 9, 700, QL_TINTA);
+  s += '<line x1="' + (finR + 16 + w2) + '" y1="' + (yF + 3) + '" x2="' + (X + ancho1) + '" y2="' + (yF + 3) + '" stroke="' + QL_GRIS2 + '" stroke-width="0.7"/>';
+  var nota = _qlLineas([{t:_qt('Hecha con OBRASST el') + ' ' + op.fecha + '. ' + _qt('Resume la hoja MSDS de cada producto: si algo no coincide, manda la hoja.')}], 7.4, CW - ancho1 - 16, 2);
+  s += _qtRenglones(nota, W - X, y + (nota.length > 1 ? 11 : 17), 7.4, 9.4, QL_GRIS2, 'end');
+  y += 27;
+  return {svg:s, alto:y};
+}
+/* lo que hay para una emergencia (op.equipos: las claves de QL_EQUIPOS que el usuario marcó). Sin nada marcado no sale. */
+function _qlEquipos(op, ancho){
+  var hay = {}; (Array.isArray(op && op.equipos) ? op.equipos : []).forEach(function(k){ hay[String(k)] = 1; });
+  if(!QL_EQUIPOS.some(function(e){ return hay[e[0]]; })) return null;
+  var et = _qt('EN ESTE ALMACÉN:'), it = QL_EQUIPOS.map(function(e){ return {k:e[0], t:_qt(e[1]), si:!!hay[e[0]]}; });
+  var px = 8.8, mide = function(p){ var w = _qtAncho(et, p, 800) + 10; it.forEach(function(x){ w += p + 4 + _qtAncho(x.t, p, x.si ? 700 : 400) + 13; }); return w; };
+  while(px > 6.6 && mide(px) > ancho) px -= 0.2;
+  var alto = Math.ceil(px * 1.6) + 4;
+  return {alto:alto, svg:function(x0, y0){
+    var yb = y0 + px * 1.05, x = x0, s = _qlT(x, yb, et, px, 800, QL_TINTA, '', ' letter-spacing="0.5"');
+    x += _qtAncho(et, px, 800) + 10;
+    it.forEach(function(e){
+      var lc = px, yc = yb - px * 0.82;
+      s += '<rect x="' + x.toFixed(1) + '" y="' + yc.toFixed(1) + '" width="' + lc.toFixed(1) + '" height="' + lc.toFixed(1) + '" rx="1.2" fill="#fff" stroke="' + (e.si ? QL_VERDE : QL_GRIS2) + '" stroke-width="0.9"/>';
+      if(e.si) s += '<path d="M' + (x + lc * 0.2).toFixed(1) + ' ' + (yc + lc * 0.52).toFixed(1) + ' l' + (lc * 0.24).toFixed(1) + ' ' + (lc * 0.24).toFixed(1) + ' l' + (lc * 0.38).toFixed(1) + ' ' + (-lc * 0.5).toFixed(1) +
+                    '" fill="none" stroke="' + QL_VERDE + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+      x += lc + 4;
+      s += _qlT(x, yb, e.t, px, e.si ? 700 : 400, e.si ? QL_TINTA : QL_GRIS2);
+      x += _qtAncho(e.t, px, e.si ? 700 : 400) + 13;
+    });
+    return s;
+  }};
+}
+/* los teléfonos de emergencia (op.tels: [{t, tel}], los de la obra) y, en el Perú (op.pais), los Bomberos y el SAMU si la
+   obra no los tiene ya. Hasta 4 de la obra. */
+function _qlTels(op){
+  var out = [], ya = {}, bomb = false, samu = false;
+  (Array.isArray(op && op.tels) ? op.tels : []).forEach(function(x){
+    var t = String((x && x.t) || '').replace(/\s+/g, ' ').trim().slice(0, 28), tel = String((x && x.tel) || '').replace(/\s+/g, ' ').trim().slice(0, 22);
+    var dig = tel.replace(/[^0-9]/g, '');
+    if(!t || dig.length < 3 || ya[dig] || out.length >= 4) return;
+    ya[dig] = 1; out.push({t:t, tel:tel});
+    if(/bomber/i.test(t)) bomb = true;
+    if(/samu/i.test(t)) samu = true;
+  });
+  if(op && op.pais === 'pe'){
+    if(!bomb && !ya['116']) out.push({t:_qt('Bomberos'), tel:'116'});
+    if(!samu && !ya['106']) out.push({t:'SAMU', tel:'106'});
+  }
+  return out;
+}
+/* ── la lista: las hojas, el modo que entró y cuántas ──
+   op = {orden:'nombre'|'lugar'|'peligro', ajuste:'una'|'detalle', obra, fecha, resp,
+         4/11/2026: equipos [claves de QL_EQUIPOS], envase {id: texto}, tels [{t, tel}], pais, qr (la dirección del QR de la
+         lista), qrProd (con todo el detalle: el QR de cada producto)} */
+function quimListaArmar(lista, op){
+  op = op || {};
+  var L = quimListaOrden(lista, op.orden), W = QL_A4.W, X = QL_A4.M, CW = W - 2 * X, gap = 14;
+  var porLugar = op.orden === 'lugar', maxP = 0;
+  L.forEach(function(q){ maxP = Math.max(maxP, ((q.sga && q.sga.p) || []).length); });
+  var modos = op.ajuste === 'detalle' ? [QL_MODOS[0]] : QL_MODOS;
+  var env = (op.envase && typeof op.envase === 'object') ? op.envase : {}, hayEnv = L.some(function(q){ return String(env[String(q.id)] || '').trim(); });
+  var qrP = op.ajuste === 'detalle' && !!op.qrProd && typeof qrcode === 'function';
+  var plan = null, cab1 = _qlCabeza(L, op, 1, 1), pies = [_qlPie(L, op, true), _qlPie(L, op, false)];
+  for(var mi = 0; mi < modos.length && !plan; mi++){
+    var M = modos[mi], ultimo = (mi === modos.length - 1);
+    var anC = M.col === 2 ? (CW - gap) / 2 : CW;
+    var C = _qlColumnas(M, anC, !porLugar, maxP, {envase:hayEnv ? env : null, qr:qrP && M.col === 1}), ct = _qlCabTabla(M, C);
+    /* los bloques: los renglones y, por lugar, el renglón de cada lugar */
+    var B = [], nG = {};
+    if(porLugar) L.forEach(function(q){ var g = _qlClave(_qlLugar(q)); nG[g] = (nG[g] || 0) + 1; });
+    var gAct = null;
+    L.forEach(function(q, i){
+      if(porLugar){
+        var g = _qlLugar(q);
+        if(gAct === null || _qlClave(g) !== _qlClave(gAct)){ gAct = g; B.push(_qlGrupo(g, nG[_qlClave(g)], M, C)); }
+      }
+      var f = _qlFila(q, M, C); f.n = i + 1; f.lugar = porLugar ? _qlLugar(q) : null; B.push(f);
+    });
+    var sigue = (function(M, C, nG){ return function(f){ return _qlGrupo(f.lugar, nG[_qlClave(f.lugar)], M, C, true); }; })(M, C, nG);
+    for(var pi = 0; pi < 2 && !plan; pi++){
+      var cap = QL_A4.H - QL_A4.arriba - cab1.alto - 4 - ct.alto - pies[pi].alto - QL_A4.abajo - 8;
+      var hojas = _qlFluir(B, cap, M.col, sigue);
+      if(hojas.length === 1 || (ultimo && pi === 1) || op.ajuste === 'detalle'){
+        /* si son varias hojas, parejas: el alto más chico que da las mismas hojas */
+        if(hojas.length > 1){
+          var lo = cap / 2, hi = cap;
+          for(var it = 0; it < 14; it++){ var mid = (lo + hi) / 2; if(_qlFluir(B, mid, M.col, sigue).length === hojas.length) hi = mid; else lo = mid; }
+          hojas = _qlFluir(B, hi, M.col, sigue);
+        }
+        plan = {M:M, C:C, hojas:hojas, ct:ct, pie:pi === 0, entra:hojas.length === 1, modo:mi};
+      }
+    }
+  }
+  /* las hojas, dibujadas */
+  var out = [], n = plan.hojas.length;
+  plan.hojas.forEach(function(cols, h){
+    var cab = _qlCabeza(L, op, h + 1, n), pie = _qlPie(L, op, plan.pie);
+    var y0 = QL_A4.arriba + cab.alto + 4, cuerpo = cab.svg, anC = plan.C.ancho;
+    cols.forEach(function(col, ci){
+      if(!col.length && ci) return;
+      var x0 = X + ci * (anC + gap), y = y0;
+      cuerpo += plan.ct.svg(x0, y); y += plan.ct.alto;
+      var par = 0;
+      col.forEach(function(b){
+        if(b.grupo){ cuerpo += b.svg(x0, y); par = 0; }
+        else { cuerpo += b.svg(x0, y, b.n, par % 2 ? '#F4F7F9' : '#FFFFFF'); par++; }
+        y += b.alto;
+      });
+    });
+    var yPie = QL_A4.H - QL_A4.abajo - pie.alto;
+    cuerpo += '<g transform="translate(0,' + yPie.toFixed(1) + ')">' + pie.svg + '</g>';
+    out.push(('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + QL_A4.H + '" viewBox="0 0 ' + W + ' ' + QL_A4.H + '">' +
+              '<rect width="' + W + '" height="' + QL_A4.H + '" fill="#ffffff"/>' + cuerpo + '</svg>').replace(/&nbsp;/g, '&#160;'));
+  });
+  return {hojas:out, entra:plan.entra, modo:plan.modo, col:plan.M.col, frases:plan.M.h, cod:!!plan.M.cod, epp:!!plan.M.epp, n:L.length, orden:L,
+          qr:!!(op.qr && typeof qrcode === 'function'), qrProd:!!plan.C.qr, envase:hayEnv, equipos:!!_qlEquipos(op, 9999), tels:_qlTels(op).length};
+}
+/* los bloques, en columnas de alto «cap»: un lugar no queda solo al pie de una columna; la columna que empieza a
+   mitad de un lugar lo repite («sigue»); y en la última hoja de dos columnas, las dos quedan parejas */
+function _qlFluir(B, cap, cols, sigue){
+  var hojas = [], hoja = null, ci = 0, usado = 0;
+  function nueva(){
+    if(!hoja || ci >= cols - 1){ hoja = []; for(var i = 0; i < cols; i++) hoja.push([]); hojas.push(hoja); ci = 0; }
+    else ci++;
+    usado = 0;
+  }
+  nueva();
+  B.forEach(function(b, i){
+    var sig = B[i + 1], pide = b.alto + (b.grupo && sig && !sig.grupo ? sig.alto : 0);
+    if(usado + pide > cap && hoja[ci].length){
+      nueva();
+      if(!b.grupo && b.lugar !== null && b.lugar !== undefined){ var r = sigue(b); hoja[ci].push(r); usado += r.alto; }
+    }
+    hoja[ci].push(b); usado += b.alto;
+  });
+  /* las dos columnas de la última hoja, parejas */
+  if(cols === 2){
+    var u = hojas[hojas.length - 1], todo = u[0].concat(u[1]).filter(function(b){ return !b.sigue; });
+    if(todo.length > 1){
+      var tot = 0; todo.forEach(function(b){ tot += b.alto; });
+      var mejor = null, acc = 0;
+      for(var k = 1; k < todo.length; k++){
+        acc += todo[k - 1].alto;
+        if(todo[k - 1].grupo) continue;                     /* un lugar no se separa de su primer producto */
+        var der = todo.slice(k), extra = (!der[0].grupo && der[0].lugar !== null && der[0].lugar !== undefined) ? sigue(der[0]) : null;
+        var h2 = tot - acc + (extra ? extra.alto : 0);
+        if(acc > cap || h2 > cap) continue;
+        var m = Math.max(acc, h2);
+        if(!mejor || m < mejor.m) mejor = {m:m, k:k, extra:extra};
+      }
+      if(mejor){ u[0] = todo.slice(0, mejor.k); u[1] = (mejor.extra ? [mejor.extra] : []).concat(todo.slice(mejor.k)); }
+    }
+  }
+  return hojas;
+}
+/* lo que dice la pantalla debajo de la hoja: si entra en una y con qué (en castellano: la app lo traduce en la pantalla) */
+var QL_LLEVA = ['con 3 frases H y el EPP de cada producto.', 'con 2 frases H y el EPP de cada producto.', 'con la frase H más grave y el EPP de cada producto.',
+                'con los códigos H y el EPP de cada producto.', 'con los códigos H de cada producto.', 'con los códigos H de cada producto.', 'en dos columnas, con los códigos H de cada producto.',
+                'en dos columnas, con los códigos H de cada producto.', 'en dos columnas: pictogramas, palabra, rombo y hoja MSDS.', 'en dos columnas: pictogramas, palabra, rombo y hoja MSDS.'];
+function quimListaQueLleva(r, ajuste){
+  var n = r.hojas.length;
+  if(ajuste === 'detalle') return (r.qrProd ? '<b>Con todo el detalle y el QR de cada producto:</b> ' : '<b>Con todo el detalle:</b> ') +
+                                  (n === 1 ? '<span>entra en 1 hoja A4.</span>' : '<span>sale en</span> <b>' + n + '</b> <span>hojas A4.</span>');
+  if(r.entra) return '<b>Entra en 1 hoja A4,</b> <span>' + QL_LLEVA[r.modo] + '</span>';
+  return '<b>No entra en 1 hoja:</b> <span>sale en</span> <b>' + n + '</b> <span>hojas A4, en dos columnas, cada una con su cabecera y su leyenda.</span>';
+}
+/* ── en PDF: cada hoja dibujada a ~290 ppp, en JPEG (sale liviana y rápida, como el cartel), a su medida A4 ── */
+function _qlJPG(svg){
+  return new Promise(function(ok, mal){
+    var im = new Image();
+    im.onload = function(){
+      try{
+        var e = 3, cv = document.createElement('canvas');
+        cv.width = Math.round(QL_A4.W * e); cv.height = Math.round(QL_A4.H * e);
+        var cx = cv.getContext('2d');
+        cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+        cx.drawImage(im, 0, 0, cv.width, cv.height);
+        ok(cv.toDataURL('image/jpeg', 0.92));
+      }catch(err){ mal(err); }
+    };
+    im.onerror = function(){ mal('svg'); };
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+function quimListaPDF(lista, op){
+  var J = window.jspdf && window.jspdf.jsPDF;
+  if(!J) return Promise.reject('sin-pdf');
+  if(!lista || !lista.length) return Promise.reject('vacia');
+  op = op || {};
+  var r = quimListaArmar(lista, op), doc = new J({unit:'mm', format:'a4', orientation:'portrait'}), p = Promise.resolve();
+  r.hojas.forEach(function(svg, i){
+    p = p.then(function(){ return _qlJPG(svg); }).then(function(du){ if(i) doc.addPage(); doc.addImage(du, 'JPEG', 0, 0, 210, 297, 'ql-' + i, 'FAST'); });
+  });
+  return p.then(function(){
+    try{ doc.setProperties({title:_qt('Lista de productos químicos') + (op.obra ? ' · ' + op.obra : ''), creator:'OBRASST'}); }catch(_p){}
+    var nom = String(op.obra || '').split(' · ').pop();
+    try{ nom = nom.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(_n){}
+    nom = nom.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+    return {doc:doc, hojas:r.hojas.length, entra:r.entra, archivo:'lista-quimicos' + (nom ? '-' + nom : '') + '.pdf', armado:r};
+  });
+}
 /* ── estilos ─────────────────────────────────────────────────────── */
 (function(){
   try{
@@ -1249,7 +1887,11 @@ function nombrePicto(k){ var n=''; SGA.pic.forEach(function(p){ if(p.k===k) n=p.
 function descPicto(k){ var n=''; SGA.pic.forEach(function(p){ if(p.k===k) n=p.d; }); return n; }
 
 /* NFPA 704: arriba rojo (se prende), izquierda azul (te hace daño),
-   derecha amarillo (reacciona), abajo blanco (el aviso especial). */
+   derecha amarillo (reacciona), abajo blanco (el aviso especial).
+   3/11/2026 · las rayas de adentro van en diagonal, entre un color y el
+   otro: así son los cuatro rombos chicos del NFPA 704. Antes iban en
+   cruz, de punta a punta, y partían cada color por la mitad y pasaban
+   por encima de su número. */
 function romboSVG(nf, tam){
   nf=_nfNormal(nf);
   function num(x,y,t,col,gr){
@@ -1270,8 +1912,8 @@ function romboSVG(nf, tam){
     '<path d="M1 50 L26 25 L51 50 L26 75 Z" fill="#0047BB"/>'+
     '<path d="M99 50 L74 25 L49 50 L74 75 Z" fill="#FFD400"/>'+
     '<path d="M50 99 L75 74 L50 49 L25 74 Z" fill="#FFFFFF"/>'+
+    '<path d="M25.5 25.5 L74.5 74.5 M74.5 25.5 L25.5 74.5" stroke="#111" stroke-width="2.2"/>'+
     '<path d="M50 1 L99 50 L50 99 L1 50 Z" fill="none" stroke="#111" stroke-width="2.4" stroke-linejoin="round"/>'+
-    '<path d="M50 1 L50 99 M1 50 L99 50" stroke="#111" stroke-width="2.2"/>'+
     num(50,26,nf.i,'#fff',28)+num(26,50,nf.s,'#fff',28)+num(74,50,nf.r,'#111',28)+esp+
     '</svg>';
 }

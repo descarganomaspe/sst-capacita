@@ -17,7 +17,7 @@ var CAD_QUE = { observa:'Observó', levanta:'Levantó', rechaza:'No la dio por l
 var CAD_MOTIVO = {
   sin_sesion:'Tu sesión venció: vuelve a entrar.', no_eres_de_la_obra:'Esta cuenta no es de esta obra.', no_existe:'Eso ya no existe o no es de tu empresa.',
   rango:'Eso lo hace el jefe o el gerente de tu empresa (se ve en «Rangos del equipo»).', nombre:'Escribe el nombre de la empresa (al menos 3 letras).',
-  sin_central:'Para invitar empresas, esta obra necesita Contractor Hub™ activo.', ya_esta:'Esa empresa ya está invitada o ya está en la obra.',
+  sin_central:'Para invitar empresas, esta obra necesita el Control de contratistas activo.', ya_esta:'Esa empresa ya está invitada o ya está en la obra.',
   muy_seguido:'Demasiadas veces seguidas. Espera un minuto y vuelve a intentar.', no_activa:'Ese enlace ya no está activo.',
   solo_lectura:'A esa empresa la ves en modo de solo lectura: no puedes dejarle observaciones.', riesgo:'Elige el riesgo.',
   titulo:'Escribe qué viste (al menos unas palabras).', foto:'La foto no subió bien. Vuelve a elegirla.', ext:'No se pudo guardar. Vuelve a intentar.',
@@ -142,8 +142,8 @@ function cadVistaInicio(caja){
       'Cada una lleva su propio OBRASST; la que supervisa ve las cifras del día de la otra, le deja observaciones con foto y plazo, y valida cuando las levanta. Lo que vence sube solo al jefe y al gerente.</p>' +
       '<div class="cad-que-2"><div><b>¿Te invitaron a una obra?</b><span>Abre el enlace que te mandaron, o pégalo aquí. Tu empresa recibe su espacio para esa obra.</span>' +
       '<button type="button" class="bt" id="cad-q-pegar">Tengo una invitación</button></div>' +
-      '<div><b>¿Eres la contratista principal?</b><span>Con Contractor Hub™ invitas a tus subcontratas por su ' + esc(cadDocN()) + ' (entran gratis) y a quien te supervisa. Se activa por obra.</span>' +
-      '<a class="bt sec" href="central.html" target="_blank" rel="noopener">Ver Contractor Hub™</a></div></div></div></div>';
+      '<div><b>¿Eres la contratista principal?</b><span>Con el Control de contratistas invitas a tus subcontratas por su ' + esc(cadDocN()) + ' (entran gratis) y a quien te supervisa. Se activa por obra.</span>' +
+      '<a class="bt sec" href="central.html" target="_blank" rel="noopener">Ver el Control de contratistas</a></div></div></div></div>';
     caja.innerHTML = h;
     $('cad-q-pegar').onclick = cadPegarInvitacion; $('cad-b-pegar').onclick = cadPegarInvitacion;
     return;
@@ -208,7 +208,7 @@ function cadVistaInicio(caja){
   /* Central */
   if(cen.activo){
     var pz = cen.plazos || {};
-    h += '<p class="cad-pie">Contractor Hub™ activo' + (cen.hasta ? ' hasta el ' + esc(_cadFechaD(cen.hasta)) : '') + ' · plazos de esta obra: riesgo alto ' + _cadPlazo(pz.alto || 24) + ', medio ' + _cadPlazo(pz.medio || 72) +
+    h += '<p class="cad-pie">Control de contratistas activo' + (cen.hasta ? ' hasta el ' + esc(_cadFechaD(cen.hasta)) : '') + ' · plazos de esta obra: riesgo alto ' + _cadPlazo(pz.alto || 24) + ', medio ' + _cadPlazo(pz.medio || 72) +
       ', bajo ' + _cadPlazo(pz.bajo || 168) + ' · tu rango: ' + esc(CAD_RANGO[i.rango] || '') + '</p>';
   } else h += '<p class="cad-pie">Tu rango en esta empresa: ' + esc(CAD_RANGO[i.rango] || '') + '</p>';
   caja.innerHTML = h;
@@ -338,7 +338,7 @@ function cadInvitar(){
     '<label class="cad-op"><input type="radio" name="cad-i-clase" value="subcontrata" checked><b>Una subcontrata</b><small>Trabaja para ti en esta obra. Ves su tablero y le dejas observaciones.</small></label>' +
     '<label class="cad-op"><input type="radio" name="cad-i-clase" value="supervision"><b>Quien te supervisa</b><small>Tu cliente, la supervisión o el regulador. Ve tus cifras sin pedirte reportes.</small></label></div>';
   h += '<div id="cad-i-sub"' + (clase === 'subcontrata' ? '' : ' hidden') + '>' +
-    '<p class="ayuda cad-ay">Entra gratis: lo cubre el Contractor Hub de esta obra. Su empresa recibe su propio espacio para <b>' + esc(obra) + '</b>, con todas las herramientas de OBRASST mientras dure. ' +
+    '<p class="ayuda cad-ay">Entra gratis: lo cubre el Control de contratistas de esta obra. Su empresa recibe su propio espacio para <b>' + esc(obra) + '</b>, con todas las herramientas de OBRASST mientras dure. ' +
     'Tú ves sus cifras del día, su personal y sus ATS.' + (quedan !== null ? ' Te ' + (quedan === 1 ? 'queda 1 lugar' : 'quedan ' + quedan + ' lugares') + ' de ' + cen.tope + '.' : '') + '</p></div>' +
     '<div id="cad-i-sup"' + (clase === 'supervision' ? '' : ' hidden') + '>' +
     '<div class="campo"><label for="cad-i-papel">Quién es</label><select id="cad-i-papel"><option value="cliente">El cliente (el dueño de la obra)</option><option value="supervision">La supervisión de la obra</option><option value="regulador">Una entidad que regula o fiscaliza</option></select></div>' +

@@ -34,9 +34,11 @@ var EQ_TIPOS = [
   {g:'Grúas', e:'sticker', f:'gruas', l:[
     ['Grúa torre','GRT'],['Grúa móvil','GRM'],['Camión grúa','CGR'],['Puente grúa','PGR'],['Otra grúa','GRU']]},
   {g:'Trabajo en altura', e:'placa', f:null, l:[
-    ['Arnés','ARN'],['Línea de vida','LDV'],['Escalera','ESC','escaleras-portatiles','sticker'],['Andamio','AND','andamios','sticker']]},
+    ['Arnés','ARN'],['Línea de vida','LDV'],['Tambor retráctil','RET'],['Escalera','ESC','escaleras-portatiles','sticker'],['Andamio','AND','andamios','sticker']]},
+  /* 3/11/2026 · V7.3 · Gemini y Copilot pidieron «cómo usarlo» de las luces de emergencia y la alarma: entran como tipos
+     (su revisión es la del mes, como el extintor: EQ_FREC_BASE y _sst_equipo_frec_base) */
   {g:'Emergencia', e:'sticker', f:null, l:[
-    ['Extintor','EXT','extintores'],['Botiquín','BOT'],['Lavaojos','LAV'],['Camilla','CAM']]},
+    ['Extintor','EXT','extintores'],['Botiquín','BOT'],['Lavaojos','LAV'],['Camilla','CAM'],['Luz de emergencia','LUZ'],['Alarma de emergencia','ALA']]},
   {g:'Equipos', e:'sticker', f:null, l:[
     ['Tablero eléctrico','TEL','tableros-electricos'],['Montacargas','MON','montacargas'],['Compresora','CMP'],
     ['Grupo electrógeno','GEN'],['Mezcladora','MEZ'],['Vibradora','VIB'],['Otro equipo','EQU']]}
@@ -49,9 +51,43 @@ var EQ_ETIQ = {
   caja:   {n:'QR en la caja o maletín', ic:'🧰', d:'Un solo QR para la caja, con la lista de lo que tiene. Cada herramienta lleva su código escrito y la cinta del mes.',
            imp:'Caja o maletín: pégala en la tapa, por fuera.', w:60, h:40, cols:3, filas:6},
   sticker:{n:'Sticker directo', ic:'🟨', d:'Solo en una cara plana y grande: extintor, escalera, equipos.',
-           imp:'Sticker: en una cara plana y limpia (extintor, escalera, equipo).', w:45, h:52, cols:4, filas:5}
+           imp:'Sticker: en una cara plana y limpia (extintor, escalera, equipo).', w:45, h:52, cols:4, filas:5},
+  /* 4/11/2026 · V7.8g · la tarjeta doble cara (revisión de Gemini): el QR de un lado y la revisión antes de usar del otro,
+     con los doce meses; se dobla por el medio y se enmica. Se elige «para esta impresión» (op.forma) y, desde V7.9 (con
+     su SQL: la regla sst_equipo_qr_etiqueta_check la acepta), también se guarda en el equipo. Tiene un solo tamaño. */
+  tarjeta:{n:'Tarjeta doble cara', ic:'🪪', d:'El QR de un lado y la revisión antes de usar del otro, con los doce meses. Se dobla por el medio y se enmica: para el arnés, la línea de vida o la eslinga.',
+           imp:'Tarjeta doble cara: córtala, dóblala por la línea del medio (la de las marcas), enmícala, perfora los dos círculos juntos y sujétala con un cintillo. En el arnés, nunca en las argollas de conexión.', w:92, h:64, cols:2, filas:4}
 };
-var EQ_ORDEN_ETIQ = ['bandera', 'placa', 'caja', 'sticker'];
+/* la forma con que sale: la de «esta impresión» (op.forma) o la guardada en el equipo */
+function _eqEt(x, op){ return (op && op.forma && EQ_ETIQ[op.forma]) ? op.forma : ((x && EQ_ETIQ[x.etiqueta]) ? x.etiqueta : 'placa'); }
+/* lo que se revisa antes de usarlo, en el reverso de la tarjeta: cuatro cosas que se ven a simple vista.
+   4/11/2026 · V7.9a · las de cada familia, de la respuesta de Gemini (arnés y línea de vida, tambor retráctil, eslinga y
+   estrobo, escalera, herramientas eléctricas); el grillete y el tecle, y la extensión y la soldadora, con las suyas */
+var EQ_TARJ_REVISA = {
+  altura:['Cintas y costuras sin cortes, hebras rotas ni quemaduras', 'Argollas y hebillas sin deformación, fisuras ni corrosión',
+          'Ganchos con doble seguro que cierra y traba solo', 'Absorbedor cerrado (sin desplegar) y etiqueta legible'],
+  retractil:['Carcasa y argolla de arriba sin golpes ni rajaduras', 'Cable o cinta sin hilos rotos, dobleces ni deshilachado',
+             'Gancho con su seguro e indicador de caída sin marca roja', 'Al jalarlo fuerte frena en seco y se recoge solo'],
+  eslinga:['Etiqueta de capacidad (WLL) presente y legible', 'Sin cortes ni hilo testigo a la vista (ni alambres rotos)',
+           'Sin nudos, quemaduras, chispas de soldadura ni químicos', 'Ojales, guardacabos y accesorios sin aplastar ni deformar'],
+  izaje:['Carga máxima (WLL) marcada y legible', 'Sin deformaciones, fisuras ni desgaste', 'Pasador o gancho con su seguro', 'Sin óxido ni soldaduras hechizas'],
+  escalera:['Largueros y peldaños sin rajaduras, golpes ni amarres hechizos', 'Zapatas antideslizantes completas y firmes',
+            'Tijeras o trabas y cuerda (si es extensible) que funcionan', 'Peldaños limpios: sin grasa, aceite, barro ni pintura'],
+  electrica:['Cable y enchufe sin cortes, empalmes ni cinta aislante', 'Guarda original puesta y completa (si la trae)',
+             'Gatillo que corta al soltarlo, sin trabas', 'Carcasa sana; disco o broca sin fisuras y apto para sus RPM'],
+  otro:['Sin golpes ni piezas sueltas', 'Protecciones completas', 'Limpio y en buen estado', 'Escanea: su última revisión']
+};
+function eqTarjRevisa(x){
+  var T=eqTipoDe(x && x.tipo), n=T ? T.n : '', g=T ? T.g : '';
+  if(n==='Arnés' || n==='Línea de vida') return EQ_TARJ_REVISA.altura;
+  if(n==='Tambor retráctil') return EQ_TARJ_REVISA.retractil;
+  if(n==='Escalera') return EQ_TARJ_REVISA.escalera;
+  if(n==='Eslinga' || n==='Estrobo') return EQ_TARJ_REVISA.eslinga;
+  if(g==='Izaje') return EQ_TARJ_REVISA.izaje;
+  if(g==='Herramientas eléctricas' && n!=='Extensión eléctrica' && n!=='Soldadora') return EQ_TARJ_REVISA.electrica;
+  return EQ_TARJ_REVISA.otro;
+}
+var EQ_ORDEN_ETIQ = ['bandera', 'placa', 'caja', 'sticker', 'tarjeta'];   /* 4/11/2026 · V7.9 · con «tarjeta» (su SQL ya corrió) */
 
 /* ══ CÓMO SE USA CADA EQUIPO (14/10/2026, lote 11) ═══════════════════
    Marcelo, con la foto del porta extintor: «se puede colocar tipo un QR y que se escanee para hacerle
@@ -64,10 +100,39 @@ var EQ_PASOS = {
   'Extintor':[['Hala el seguro', 'Rompe el precinto y saca el pasador.'], ['Apunta a la base del fuego', 'La boquilla, a la base de las llamas, no a las llamas.'],
               ['Aprieta la manija', 'Con firmeza y de forma pareja.'], ['Barre de lado a lado', 'Hasta que se apague.']],
   'Lavaojos':[['Lleva a la persona al lavaojos', 'Sin frotarle los ojos.'], ['Abre el agua', 'Empuja la paleta o la palanca.'],
-              ['Ojos abiertos bajo el agua', 'Sostén los párpados abiertos y enjuaga por lo menos 15 minutos.'], ['Busca atención médica', 'Avisa a tu supervisor y lleva la hoja MSDS del producto.']]
+              ['Ojos abiertos bajo el agua', 'Sostén los párpados abiertos y enjuaga por lo menos 15 minutos.'], ['Busca atención médica', 'Avisa a tu supervisor y lleva la hoja MSDS del producto.']],
+  /* 3/11/2026 · V7.3 · Gemini y Copilot: los de siempre de más equipos (cuatro pasos cada uno, sin citar normas). La
+     camilla, solo con la brigada; el andamio, con la tarjeta como lo dice el curso de andamios de la app */
+  'Botiquín':[['Ponte guantes', 'Antes de tocar una herida o la sangre de otra persona.'], ['Limpia y cubre', 'Lava la herida con agua limpia y tápala con una gasa.'],
+              ['Avisa lo que usaste', 'Para que lo repongan: el botiquín siempre completo.'], ['Déjalo en su sitio', 'Cerrado, a la vista y sin nada que lo tape.']],
+  'Camilla':[['La usa la brigada', 'O quien está capacitado, y nunca una persona sola.'], ['Cabeza y cuello alineados', 'Uno sostiene la cabeza; los demás mueven al herido en bloque, sin doblarlo.'],
+             ['Ajusta las correas', 'Todas, antes de levantarla.'], ['Levanten a la vez', 'A la voz de uno, con las piernas y la espalda recta; caminen despacio.']],
+  'Arnés':[['Revísalo antes de ponértelo', 'Sin cortes, quemaduras, costuras rotas ni hebillas dañadas.'], ['Ajústalo bien', 'Piernas, pecho y hombros: que entre la mano plana, no el puño.'],
+           ['Engánchate de la argolla de la espalda', 'A un punto de anclaje firme o a la línea de vida, de preferencia por encima de tu cabeza.'],
+           ['Si detuvo una caída, no se usa más', 'Sepáralo y avísale a tu supervisor.']],
+  'Línea de vida':[['Revísala antes de engancharte', 'El cable o la cuerda sin cortes ni hilos rotos, y sus anclajes firmes.'], ['Engánchate bien', 'Con la línea de anclaje de tu arnés y el mosquetón cerrado, con su seguro.'],
+                   ['Solo para personas', 'No cuelgues cargas ni herramientas de ella.'], ['Si detuvo una caída, no se usa más', 'Avísale a tu supervisor para que la revisen.']],
+  'Escalera':[['Revísala antes de subir', 'Peldaños completos y firmes, sin rajaduras, barro ni grasa.'], ['Apóyala bien', 'En piso firme; por cada 4 m de alto, la base a 1 m de la pared. Si es de tijera, ábrela del todo.'],
+              ['Que pase 1 m arriba', 'Si subes a otro nivel, y amárrala arriba.'], ['Tres puntos de apoyo', 'Sube de frente: dos manos y un pie, o dos pies y una mano. Las herramientas, en un portaherramientas.']],
+  'Andamio':[['Mira su base', 'Sobre piso firme y nivelado; si tiene ruedas, trabadas.'], ['Plataforma y barandas completas', 'Sin tablones sueltos ni huecos, con baranda y rodapié.'],
+             ['Sube por dentro, por su escalera', 'Nunca trepando por los travesaños ni por fuera.'], ['No le quites nada', 'Ni barandas ni tablones: si algo falta o se movió, baja y avisa.']],
+  'Tablero eléctrico':[['Tapa cerrada', 'Y el tablero seco, señalizado y sin cosas encima ni delante.'], ['Enchufa con el equipo apagado', 'Con las manos secas, en un tomacorriente en buen estado.'],
+                       ['Si salta un interruptor, avisa', 'No lo subas a la fuerza ni lo puentees: puede haber una falla.'], ['Si huele a quemado o ves chispas, aléjate', 'Y avisa al electricista para que corte la energía.']],
+  'Luz de emergencia':[['Siempre enchufada', 'Así su batería está cargada para cuando se corte la luz.'], ['Pruébala con su botón', 'Si tiene botón de prueba, al apretarlo debe encender. Si no prende, avisa.'],
+                       ['Que nada la tape', 'Tiene que alumbrar la salida y el camino de evacuación.'], ['Si se corta la luz, sal con calma', 'Por el camino que alumbra, hasta la salida y el punto de reunión.']],
+  'Alarma de emergencia':[['Da la alarma', 'Acciona el pulsador o la sirena y avisa en voz alta qué pasa.'], ['Avisa a la brigada', 'Di qué pasó y dónde.'],
+                          ['Ve al punto de reunión', 'Por la ruta señalizada, sin correr y sin volver por tus cosas.'], ['Espera ahí', 'Hasta que la brigada diga que se puede volver.']]
 };
-var EQ_USO_ANTES = { 'Extintor':'Úsalo solo si el fuego es pequeño y tienes la salida a tu espalda. Primero da la alarma y avisa a tu supervisor.' };
-var EQ_USO_LUEGO = { 'Extintor':'Si el fuego no se apaga en unos segundos o crece, aléjate y llama a los bomberos. Si lo usaste, aunque sea un poco, avisa: hay que recargarlo.' };
+var EQ_USO_ANTES = { 'Extintor':'Úsalo solo si el fuego es pequeño y tienes la salida a tu espalda. Primero da la alarma y avisa a tu supervisor.',
+  'Botiquín':'Si es grave (mucha sangre, un golpe en la cabeza o alguien que no responde), primero llama a la brigada.',
+  'Camilla':'Si se cayó de altura o se golpeó la espalda, el cuello o la cabeza, no lo muevas, salvo que corra peligro: llama a la brigada.',
+  'Escalera':'Una persona a la vez. Si es de metal, no la uses cerca de cables con corriente.',
+  'Andamio':'Sube solo con su tarjeta verde vigente, firmada y con fecha. Con tarjeta roja o sin tarjeta, no subas; con la amarilla, solo como dice la tarjeta.',
+  'Tablero eléctrico':'Solo lo abre o lo arregla un electricista autorizado.',
+  'Alarma de emergencia':'Actívala solo en una emergencia de verdad o en un simulacro avisado.' };
+var EQ_USO_LUEGO = { 'Extintor':'Si el fuego no se apaga en unos segundos o crece, aléjate y llama a los bomberos. Si lo usaste, aunque sea un poco, avisa: hay que recargarlo.',
+  'Camilla':'Después, límpiala y déjala en su lugar con todas sus correas.',
+  'Arnés':'Guárdalo colgado, limpio y seco, lejos del sol y de los químicos.' };
 var EQ_AGENTES = [
   {k:'pqs-abc', n:'Polvo químico seco ABC', c:'ABC'}, {k:'pqs-bc', n:'Polvo químico seco BC', c:'BC'},
   {k:'co2', n:'Dióxido de carbono (CO₂)', c:'BC', no:'En un lugar cerrado y chico, sal apenas lo uses: desplaza el aire.'},
@@ -112,6 +177,14 @@ function eqCartelDatosDe(x, op){
 /* «03/2027», y si ya venció (contra el mes de hoy, «2027-04») */
 function eqRecargaTxt(r){ return r ? r.slice(5, 7)+'/'+r.slice(0, 4) : ''; }
 function eqRecargaVencida(r, mes){ return !!(r && mes && r < mes); }
+/* 3/11/2026 · V7.3 · Gemini y Copilot: «⚠️ Recarga vencida» o «⚠️ Próxima a vencer» (15 días). r ('AAAA-MM') vale hasta el
+   último día de ese mes (como eqRecargaVencida). Devuelve null (sin anotar) o {k:'vencida'|'pronto'|'ok', hasta:'AAAA-MM-DD', dias} */
+function eqRecargaEstado(r, hoy){
+  r=String(r||''); var H=_eqFd(hoy);
+  if(!/^20\d{2}-(0[1-9]|1[0-2])$/.test(r) || !H) return null;
+  var fin=new Date(+r.slice(0, 4), +r.slice(5, 7), 0), dias=Math.round((fin-H)/864e5);
+  return { k:dias<0 ? 'vencida' : (dias<=15 ? 'pronto' : 'ok'), hasta:_eqFiso(fin), dias:dias };
+}
 /* lo que se guarda: null si no hay nada; si no, solo lo que tiene. Devuelve {uso} o {error} */
 function eqUsoLimpio(f){
   f=f||{};
@@ -232,7 +305,7 @@ function _eqParte(t, tam, negrita, max, lineas){
 function eqDibujo(x, op){
   op=op||{};
   var tx=op.tx || function(z){ return z; };
-  var D=eqDis(x, op), et=EQ_ETIQ[x.etiqueta] ? x.etiqueta : 'placa', M=eqMedida(et, D.g), s=M.s, o=[];
+  var D=eqDis(x, op), et=_eqEt(x, op), M=eqMedida(et, D.g), s=M.s, o=[];
   var AZ='#0B2A3A', GR='#6B7C88', CL='#8FA9B8', AM='#F5B700';
   function R(x0, y0, w, h, p){ p=p||{}; o.push({t:'r', x:x0*s, y:y0*s, w:w*s, h:h*s, f:p.f||null, s:p.s||null, sw:(p.sw||0)*Math.sqrt(s), raya:p.raya||null}); }
   function C(x0, y0, r){ o.push({t:'c', x:x0*s, y:y0*s, r:r*s, s:'#5A646A', sw:0.25*Math.sqrt(s)}); }
@@ -284,6 +357,29 @@ function eqDibujo(x, op){
     } else {
       Q(4, 10, 22); T(cod, 15, 38, 9, {b:1, max:27}); T(tipo, 15, 43, 6.5, {max:27}); T(obrasst, 15, 49, 5, {b:1, c:CL});
     }
+  } else if(et==='tarjeta'){
+    /* 4/11/2026 · V7.8g · dos caras de 46 × 64 lado a lado: se dobla por x = 46 y el círculo de las dos (arriba, al centro
+       de cada cara) queda en el mismo sitio; el reverso queda derecho al voltearla */
+    C(23, 5, 2.2); C(69, 5, 2.2);
+    if(D.d==='franja'){
+      R(0, 9, 46, 6.2, {f:AZ}); T(tx('ESCANÉAME ANTES DE USAR'), 23, 13.2, 5.2, {b:1, c:AM, max:43});
+      Q(9, 17, 28); T(cod, 23, 50.6, 10, {b:1, max:42}); T(tipo, 23, 55.2, 7, {max:42});
+    } else if(D.d==='datos'){
+      Q(9.5, 9.5, 27); T(cod, 23, 41.8, 9.5, {b:1, max:42}); T(tipo, 23, 46.2, 6.5, {max:42});
+      datos.forEach(function(l, i){ T(l, 23, 50.4+i*3.2, 5.4, {c:GR, max:42}); });
+    } else {
+      Q(8, 9.5, 30); T(cod, 23, 45.6, 10, {b:1, max:42}); T(tipo, 23, 50.3, 7, {max:42}); T(tx('ESCANÉAME ANTES DE USAR'), 23, 55, 5.2, {b:1, c:GR, max:42});
+    }
+    T(obrasst, 23, 61.4, 4.6, {b:1, c:CL});
+    T(tx('REVÍSALO ANTES DE USARLO'), 69, 11.8, 6.2, {b:1, max:42});
+    /* V7.9a · cada punto en hasta dos renglones */
+    eqTarjRevisa(x).forEach(function(l, i){ var y=15.6+i*5.2; R(49.4, y-1.95, 2.3, 2.3, {s:AZ, sw:0.25}); TT(tx(l), 52.6, y, 5, {al:'l', max:37}, 2, 2.15); });
+    T(tx('SI ALGO FALLA, NO LO USES'), 69, 37, 5.6, {b:1, c:'#C6323A', max:42}); T(tx('Sepáralo y avisa a tu supervisor'), 69, 39.9, 4.8, {c:GR, max:42});
+    T(tx('Revisión del mes: márcala o pon la cinta'), 69, 43.6, 4.4, {c:GR, max:42});
+    var meses=String(tx('EFMAMJJASOND')||'EFMAMJJASOND');
+    for(var k=0;k<12;k++){ var bx=50.4+(k%6)*6.2, by=45+Math.floor(k/6)*6.4; R(bx, by, 6.2, 6.4, {s:GR, sw:0.2}); T(meses.charAt(k), bx+1.1, by+2.1, 4.2, {al:'l', c:GR}); }
+    T(cod, 69, 61.6, 5.2, {b:1, max:42});
+    L(46, 0, 46, H0); R(45.8, 0, 0.4, 2.8, {f:'#5A646A'}); R(45.8, H0-2.8, 0.4, 2.8, {f:'#5A646A'});
   } else if(et==='caja'){
     if(D.d==='franja'){
       R(0, 0, 60, 6.6, {f:AZ}); T(tx('ESCANÉAME: AQUÍ ESTÁ LO QUE TIENE'), 30, 4.3, 5.2, {b:1, c:AM, max:56});
@@ -348,13 +444,15 @@ function eqSVG(x, op){
 function eqHojas(sel, obra, op){
   op=op||{};
   var tx=op.tx || function(z){ return z; }, hojas=[];
-  EQ_ORDEN_ETIQ.forEach(function(k){
+  /* 4/11/2026 · V7.8g · con una forma «para esta impresión» (la tarjeta doble cara), todas en esa; la tarjeta no tiene grande */
+  ((op.forma && EQ_ETIQ[op.forma]) ? [op.forma] : EQ_ORDEN_ETIQ).forEach(function(k){
     [false, true].forEach(function(g){
-      var l=(sel||[]).filter(function(x){ return (EQ_ETIQ[x.etiqueta] ? x.etiqueta : 'placa')===k && eqDis(x, op).g===g; }); if(!l.length) return;
+      if(k==='tarjeta' && g) return;
+      var l=(sel||[]).filter(function(x){ return _eqEt(x, op)===k && (k==='tarjeta' || eqDis(x, op).g===g); }); if(!l.length) return;
       var X=EQ_ETIQ[k], M=eqMedida(k, g);
       for(var i=0;i<l.length;i+=M.porHoja){
         hojas.push({ et:k, g:g, M:M, titulo:tx(X.n)+(g ? ' · '+tx('grande') : '')+(obra ? ' · '+obra : ''),
-                     pie:tx(X.imp)+' '+tx('Imprime al 100 % (tamaño real), en papel adhesivo vinil, y fórrala con cinta transparente.'), items:l.slice(i, i+M.porHoja) });
+                     pie:tx(X.imp)+' '+tx(k==='tarjeta' ? 'Imprime al 100 % (tamaño real), en cartulina o en papel grueso.' : 'Imprime al 100 % (tamaño real), en papel adhesivo vinil, y fórrala con cinta transparente.'), items:l.slice(i, i+M.porHoja) });
       }
     });
   });

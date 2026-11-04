@@ -252,6 +252,14 @@ function _sctrwPintar(){
     cifra('Les falta algo', R.falta.length, R.falta.length ? 'sin SCTR o con una sola cobertura' : 'nadie', R.falta.length ? 'mal' : 'ok')+
     cifra('Constancias vigentes', C.constancias, (C.conSalud ? 'salud ✓' : 'salud ✗')+' · '+(C.conPension ? 'pensión ✓' : 'pensión ✗'), (C.conSalud && C.conPension) ? 'ok' : 'ojo')+
     cifra('Sin documento', R.sinDoc.length, R.sinDoc.length ? 'en su ficha: no se puede cruzar' : 'todos lo tienen', R.sinDoc.length ? 'ojo' : 'ok')+'</div>';
+  /* 3/11/2026 · Gemini (mejora 3): los que hoy no lo tienen completo, a un toque de cotizarlo con los aliados de su zona */
+  var nPide=R.falta.length;
+  if(nPide && typeof pedirBarraHTML==='function')
+    h+=pedirBarraHTML({ r:'sctr', n:nPide, id:'pedir-sctr',
+      tx:C.constancias ? 'Hay <b>'+nPide+'</b> '+(nPide===1 ? 'trabajador' : 'trabajadores')+' en obra sin SCTR completo hoy (sin SCTR o con una sola cobertura).'
+                       : '¿Todavía no tienes el SCTR de tu gente? Si ya lo tienes, sube su constancia; si no, cotízalo aquí.',
+      bt:nPide===1 ? 'Cotizar el SCTR para esta persona' : 'Cotizar el SCTR para estas '+nPide+' personas',
+      det:'SCTR (salud y pensión) para '+nPide+(nPide===1 ? ' trabajador que hoy no lo tiene completo.' : ' trabajadores que hoy no lo tienen completo.') });
   h+='<div class="tarj" id="t-sctr-falta"></div><div class="tarj" id="t-sctr-const" style="margin-top:16px"></div>';
   var e1=$('t-sctr-falta') ? $('t-sctr-falta')._est : null, e2=$('t-sctr-const') ? $('t-sctr-const')._est : null;
   caja.innerHTML=h; if(e1) $('t-sctr-falta')._est=e1; if(e2) $('t-sctr-const')._est=e2;

@@ -1213,8 +1213,8 @@ function dmaRailPie(r){
 /* en el ejemplo, «Tu propia gestión SST» se explica (la cuenta de verdad la abre y la esconde) */
 function dmaPropiaExplicar(){
   abrirHoja('Tu propia gestión SST', 'En la cuenta de verdad, aquí se abre', '<p>Además de lo que fiscalizas o supervisas, tu cuenta trae la gestión SST de tu propia entidad: tu personal, sus capacitaciones, el EPP, las inspecciones, los documentos y el informe del mes —lo mismo que usan las constructoras—.</p>' +
-    '<p>Como tu trabajo es lo de arriba, va escondida al pie del menú y la abres cuando la necesitas. En la obra de ejemplo de Contractor Hub puedes recorrer esa parte.</p>',
-    '<a class="bt sec" href="?demo=central">Ver la obra de ejemplo de Contractor Hub</a><button type="button" class="bt" id="dma-pr-ok">Entendido</button>');
+    '<p>Como tu trabajo es lo de arriba, va escondida al pie del menú y la abres cuando la necesitas. En la obra de ejemplo del Control de contratistas puedes recorrer esa parte.</p>',
+    '<a class="bt sec" href="?demo=central">Ver la obra de ejemplo del Control de contratistas</a><button type="button" class="bt" id="dma-pr-ok">Entendido</button>');
   $('dma-pr-ok').onclick = cerrarHoja;
 }
 function _dmaCss(){

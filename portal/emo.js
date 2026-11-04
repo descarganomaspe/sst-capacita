@@ -312,6 +312,14 @@ function _emoPintar(){
     cifra('Por vencer', K.por_vencer, 'en 30 días o menos', K.por_vencer ? 'ojo' : '')+
     cifra('Vencidos', K.vencido, K.vencido ? 'hay que programarlos' : 'ninguno', K.vencido ? 'mal' : 'ok')+
     cifra('Sin examen', K.sin, K.sin ? 'sin ninguno registrado' : 'todos tienen uno', K.sin ? 'ojo' : 'ok')+'</div>';
+  /* 3/11/2026 · Gemini (mejora 3): los que necesitan examen (vencido, por vencer o sin ninguno), a un toque de pedírselo a las
+     clínicas de su zona, con la cantidad puesta. Sin nombres: el pedido lleva solo las cifras */
+  var nPide=K.vencido+K.por_vencer+K.sin;
+  if(nPide && typeof pedirBarraHTML==='function')
+    h+=pedirBarraHTML({ r:'emo', n:nPide, id:'pedir-emo',
+      tx:'Tienes <b>'+nPide+'</b> '+(nPide===1 ? 'trabajador que necesita' : 'trabajadores que necesitan')+' examen médico (vencido, por vencer o sin ninguno).',
+      bt:nPide===1 ? 'Pedir su examen a clínicas de mi zona' : 'Pedir estos '+nPide+' exámenes a clínicas de mi zona',
+      det:'Exámenes médicos ocupacionales para '+nPide+(nPide===1 ? ' trabajador' : ' trabajadores')+': '+K.vencido+' vencidos, '+K.por_vencer+' por vencer y '+K.sin+' sin ninguno.' });
   var F=[['todos', 'Todos', L.length], ['vencido', 'Vencidos', K.vencido], ['por_vencer', 'Por vencer', K.por_vencer], ['sin', 'Sin examen', K.sin]];
   if(K.sin_proximo) F.push(['sin_proximo', 'Sin próximo', K.sin_proximo]);
   F.push(['vigente', 'Vigentes', K.vigente]);

@@ -22,7 +22,7 @@ var CUM_VIA = { propia:'Tu empresa', directa:'Contratista', subcontrata:'Subcont
 var CUM_VIA_CHIP = { propia:'Tu empresa', directa:'Contratistas', subcontrata:'Subcontratas', supervisora:'De sus supervisoras' };
 var CUM_MOTIVO = {
   sin_sesion:'Tu sesión venció: vuelve a entrar.', no_eres_de_la_obra:'Esta cuenta no es de esta obra.',
-  sin_plan_cumple:'El cumplimiento por empresa lo traen Contractor Hub, Corporativo, la supervisora incluida, Mandante y Estado.',
+  sin_plan_cumple:'El cumplimiento por empresa lo traen el Control de contratistas, Corporativo, la supervisora incluida, Mandante y Estado.',
   no_existe:'Eso ya no existe.', enlace:'Esa empresa ya no está entre las que ves.', datos:'Revisa lo escrito.',
   rango:'Eso lo pone el jefe o el gerente de tu equipo.',
   solo_cifras:'Esta empresa comparte contigo solo sus cifras: su gente no se abre. Sus números sí cuentan en el cumplimiento por empresa y en el informe consolidado.',
@@ -720,7 +720,7 @@ function cumCompPintar(caja, K){
   /* las obras, lado a lado */
   var h = '<div class="tarj"><div class="tarj-cab"><div><h2>Tus obras, lado a lado</h2><p class="sub">Lo que cumplen hoy las empresas de cada obra, de sus propios registros</p></div></div><div class="tabla-caja"><table class="cum-t cum-obras cum-fija"><thead><tr><th>Obra</th><th class="num">Empresas</th><th class="num">Gente</th><th class="num">Nota</th><th class="num">Capacitación vigente</th><th class="num">EMO vigente</th><th class="num">ATS de hoy</th><th class="num">Charla de hoy</th><th class="num">Obs. vencidas</th></tr></thead><tbody>' +
     O.map(function(o, i){
-      var j = K.R[i]; if(!j) return '<tr><td><b class="cum-en">' + esc(o.nombre) + '</b><small class="cum-sub">No se pudo traer: sin Contractor Hub o sin conexión</small></td><td colspan="8" class="cum-gris">—</td></tr>';
+      var j = K.R[i]; if(!j) return '<tr><td><b class="cum-en">' + esc(o.nombre) + '</b><small class="cum-sub">No se pudo traer: sin el Control de contratistas o sin conexión</small></td><td colspan="8" class="cum-gris">—</td></tr>';
       var E = (j.empresas || []), S = _cumSuma(E), nG = 0, nN = 0;
       E.forEach(function(x){ if(x.nota != null){ var w = Math.max(1, +x.gente || 0); nG += x.nota * w; nN += w; } });
       var pa = S.gente ? Math.round(100 * S.ats.firmaron / S.gente) : null, pc = S.gente ? Math.round(100 * S.charla.asist / S.gente) : null;

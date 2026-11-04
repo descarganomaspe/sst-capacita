@@ -152,7 +152,7 @@ function plwHTML(){
   if(due && !cad) h += plwGuardadosHTML();
   if(!cad) h += plwRegaloHTML(E, due);
   if(cad){
-    h += '<p class="ayuda plw-quien">Mientras esta obra esté en Contractor Hub™ no hace falta un plan para ella. El plan de tu empresa —el de tus otras obras— se ve y se paga abriendo una de esas obras, arriba.</p>';
+    h += '<p class="ayuda plw-quien">Mientras esta obra tenga el Control de contratistas no hace falta un plan para ella. El plan de tu empresa —el de tus otras obras— se ve y se paga abriendo una de esas obras, arriba.</p>';
   } else {
     h += plwPlanesHTML(E, L, due, dentro);
   }
@@ -236,9 +236,9 @@ function plwEsperaHTML(){
 function plwEstadoHTML(E, cad){
   var d = PLW.d, mi = d.mi || {}, P = E.plan, o = YO.obra || {}, h = '', pill = '', vale = '';
   if(cad){
-    pill = '<span class="pill azul">por Contractor Hub™</span>';
-    vale = 'Esta obra trabaja con <b>todo abierto</b>, como en Gestión SST, porque está en Contractor Hub™' + (E.vence ? ' hasta el ' + esc(fechaLarga(E.vence)) : '') +
-           '. Contractor Hub se contrata aparte, con nosotros.';
+    pill = '<span class="pill azul">por el Control de contratistas</span>';
+    vale = 'Esta obra trabaja con <b>todo abierto</b>, como en Gestión SST, porque tiene el Control de contratistas' + (E.vence ? ' hasta el ' + esc(fechaLarga(E.vence)) : '') +
+           '. El Control de contratistas se contrata aparte, con nosotros.';
   } else if(E.orden > 0 && E.dias !== null){
     pill = '<span class="pill ' + (E.dias <= 3 ? 'mal' : (E.dias <= 7 ? 'ojo' : 'ok')) + '">' + (E.dias === 0 ? 'vence hoy' : (E.dias === 1 ? 'vence mañana' : 'te quedan ' + _plwDias(E.dias))) + '</span>';
     vale = 'Vale hasta el <b>' + esc(fechaLarga(E.vence)) + '</b>. Si renuevas antes, los días se suman. Si no, ese día la cuenta vuelve sola a LITE, que es gratis: nada se borra, y lo de tu plan vuelve a abrirse cuando lo retomas.';

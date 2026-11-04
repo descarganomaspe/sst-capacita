@@ -8,9 +8,9 @@
    (sql/2026-11-02-obrasst-os.sql): aquí no se calcula nada que importe.
    ════════════════════════════════════════════════════════════════ */
 var OS = { caja:null, tab:'ger', cfg:null, obra:null, cat:null, n:0, cot:null };
-var OS_TABS = [['ger', 'Para Gerencia', 'executive_ceo_dashboard'], ['score', 'OBRASST Score', 'obrasst_score'], ['riesgo', 'Riesgo SUNAFIL', 'risk_engine'],
-  ['comp', 'Compliance Engine', 'compliance_engine'], ['cont', 'Contratistas', 'contractor_hub'], ['pas', 'Pasaporte SST', 'pasaporte_sst'],
-  ['mkt', 'Marketplace SST', 'marketplace_sst'], ['est', 'Plan Estado™', 'plan_estado'], ['prov', 'Proveedores', 'ally_10_verticals_erp'], ['aj', 'Ajustes', null]];
+var OS_TABS = [['ger', 'Para Gerencia', 'executive_ceo_dashboard'], ['score', 'Nota de cumplimiento', 'obrasst_score'], ['riesgo', 'Riesgo de multa', 'risk_engine'],
+  ['comp', 'Qué exige la ley por puesto', 'compliance_engine'], ['cont', 'Contratistas', 'contractor_hub'], ['pas', 'Historial del trabajador', 'pasaporte_sst'],
+  ['mkt', 'Pedir a proveedores', 'marketplace_sst'], ['est', 'Supervisión de obra pública', 'plan_estado'], ['prov', 'Proveedores', 'ally_10_verticals_erp'], ['aj', 'Ajustes', null]];
 /* 2/11/2026 · los 9 rubros con ERP de servicios: la pestaña «Proveedores» sale cuando al menos uno está encendido */
 var OS_SRV = ['sctr', 'consultor', 'residuos', 'emo', 'maquinaria', 'izaje', 'laboratorio', 'transporte', 'saneamiento'];
 var OS_RUBROS = [['epp', 'EPP y consignación'], ['sctr', 'SCTR'], ['emo', 'Exámenes médicos (EMO)'], ['consultor', 'Consultoría y capacitación SSOMA'],
@@ -18,9 +18,9 @@ var OS_RUBROS = [['epp', 'EPP y consignación'], ['sctr', 'SCTR'], ['emo', 'Exá
   ['laboratorio', 'Monitoreos y calibración'], ['transporte', 'Transporte de personal'], ['saneamiento', 'Saneamiento y catering']];
 var OS_DEPS = ['AMAZONAS', 'ANCASH', 'APURIMAC', 'AREQUIPA', 'AYACUCHO', 'CAJAMARCA', 'CALLAO', 'CUSCO', 'HUANCAVELICA', 'HUANUCO', 'ICA', 'JUNIN',
   'LA LIBERTAD', 'LAMBAYEQUE', 'LIMA', 'LORETO', 'MADRE DE DIOS', 'MOQUEGUA', 'PASCO', 'PIURA', 'PUNO', 'SAN MARTIN', 'TACNA', 'TUMBES', 'UCAYALI'];
-var OS_MOTIVO = { sin_sesion:'Tu sesión se cerró. Vuelve a entrar.', no_eres_de_la_obra:'No eres parte de esta obra.', modulo_apagado:'Esta parte de OBRASST OS no está activa para tu empresa.',
-  solo_gestor:'Eso lo cambia el dueño o el gestor de la obra.', sin_plan_cumple:'El control de contratistas viene con Contractor Hub™ (y con Mandante y Estado).',
-  sin_plan_estado:'Esto viene con el Plan Estado™, el plan para las entidades del Estado.',
+var OS_MOTIVO = { sin_sesion:'Tu sesión se cerró. Vuelve a entrar.', no_eres_de_la_obra:'No eres parte de esta obra.', modulo_apagado:'Esta parte de «Para Gerencia» no está activa para tu empresa.',
+  solo_gestor:'Eso lo cambia el dueño o el gestor de la obra.', sin_plan_cumple:'El control de contratistas viene con el Control de contratistas (y con Mandante y Estado).',
+  sin_plan_estado:'Esto viene con la Supervisión de obra pública, el plan para las entidades del Estado.',
   falta_consentimiento:'Marca que el trabajador aceptó: sin su consentimiento no se emite.', no_existe:'Eso ya no está.', muy_seguido:'Espera un momento y vuelve a intentarlo.',
   rubros:'Elige al menos un rubro.', departamento:'Elige el departamento.', cargo:'Elige un cargo de la lista.', tamano:'Elige el tamaño.', accion:'No se pudo: recarga la página.' };
 /* V7.1 (2/11/2026) · Marcelo: «Plan Estado, ¿no debería salir solo cuando nos contraten?». Sí: la pestaña «Plan Estado™»
@@ -43,6 +43,11 @@ function _osCss(){
     '.os-kpi b{display:block;font-size:24px;margin:4px 0 2px;font-variant-numeric:tabular-nums}.os-kpi span{font-size:12px;color:var(--gris,#6b7c88)}.os-ok{color:#1e8e5a}.os-ojo{color:#8a5200}.os-mal{color:#c6323a}' +
     '.os-chip{display:inline-block;border-radius:999px;padding:2px 8px;font-size:12px;margin:2px 4px 2px 0;background:#fbe9ea;color:#8f1d24}.os-chip.ojo{background:#fbf3e4;color:#8a5200}' +
     '.os-nota{font-size:56px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}.os-barra{height:8px;border-radius:4px;background:#e3e8ec;overflow:hidden}.os-barra i{display:block;height:100%;background:#1e8e5a}' +
+    '.os-tres{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:0 0 10px}' +
+    '.os-tres-c{border:1px solid var(--raya,#d6dde3);border-radius:14px;padding:14px 16px;background:var(--panel,#fff);display:flex;flex-direction:column;gap:6px;min-width:0}' +
+    '.os-tres-c small{color:var(--gris,#6b7c88);font-size:12.5px;letter-spacing:.02em}.os-tres-c b{font-size:28px;line-height:1.15;font-variant-numeric:tabular-nums}' +
+    '.os-tres-c span{font-size:13px;color:var(--gris,#6b7c88)}.os-tres-c .bt{align-self:flex-start;margin:4px 0 0}' +
+    '.os-calzan{margin:4px 0 6px;padding-left:18px;font-size:13.5px;line-height:1.5}.os-calzan li{margin:0 0 2px}' +
     '.os-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.os-sub{color:var(--gris,#6b7c88);font-size:13px;margin:4px 0 10px}' +
     '@media print{body *{visibility:hidden}#os-cuadro,#os-cuadro *{visibility:visible}#os-cuadro{position:absolute;left:0;top:0;width:100%}}';
   document.head.appendChild(s);
@@ -58,9 +63,15 @@ function osVista(caja){
     if(!c || !c.ok){ caja.innerHTML = '<div class="aviso">' + esc(_osMsg(c)) + '</div>'; return; }
     OS.cfg = c;
     var T = OS_TABS.filter(function(t){ return (!t[2] || (c.modulos || {})[t[2]]) && (t[0] !== 'prov' || OS_SRV.some(function(v){ return (c.modulos || {})['aliado_' + v]; })) && (t[0] !== 'est' || _osEstadoOk(c)); });
+    /* 3/11/2026 · Gemini (mejora 3): un pedido que llegó de «pedirlo donde falta», sin el Marketplace SST para esta empresa:
+       la página pública del Marketplace con lo mismo (en otra pestaña) */
+    var P0 = null;
+    if(window.OS_PIDE && window.OS_PIDE.desde && !T.some(function(t){ return t[0] === 'mkt'; })){ P0 = window.OS_PIDE; window.OS_PIDE = null; if(OS.tab === 'mkt') OS.tab = 'ger'; }
     if(!T.some(function(t){ return t[0] === OS.tab; })) OS.tab = T[0][0];
     caja.innerHTML = '<div class="os-tabs" role="tablist">' + T.map(function(t){ return '<button type="button" role="tab" data-os-tab="' + t[0] + '" class="' + (OS.tab === t[0] ? 'on' : '') + '" aria-selected="' + (OS.tab === t[0]) + '">' + esc(t[1]) + '</button>'; }).join('') +
       '</div><div id="os-cuerpo"></div>';
+    if(P0 && typeof pedirPublicoUrl === 'function') caja.insertAdjacentHTML('afterbegin', '<div class="aviso ojo" id="os-pide-pub">El pedido a los aliados todavía no está activo para tu empresa. ' +
+      'Puedes hacerlo en la página pública de OBRASST: <a href="' + esc(pedirPublicoUrl(P0)) + '" target="_blank" rel="noopener">Pedir a proveedores de mi zona ›</a></div>');
     caja.onclick = _osClic; caja.onchange = _osCambio;
     osPintar();
   }, function(){ caja.innerHTML = '<div class="aviso">' + esc(_osMsg(null)) + '</div>'; });
@@ -80,27 +91,93 @@ function _osMktPide(){
   [].forEach.call(document.querySelectorAll('[data-os-rubro]'), function(c){ c.checked = (P.r || []).indexOf(c.getAttribute('data-os-rubro')) >= 0; });
   if(P.d && OS_DEPS.indexOf(P.d) >= 0) $('os-dep').value = P.d;
   if(P.det) $('os-det').value = P.det;
-  var m = $('os-mkt-msg'); if(m){ m.className = 'msg'; m.textContent = 'Llegó del Marketplace SST: revisa y toca «Pedir que me conecten».'; }
+  if(P.n && typeof P.n === 'object'){ ['hoy', 'mas', 'ya'].forEach(function(k){ var v = parseInt(P.n[k], 10); if($('os-' + k) && v > 0) $('os-' + k).value = Math.min(v, 100000); }); _osCalcPintar(); }
+  var m = $('os-mkt-msg'); if(m){ m.className = 'msg'; m.textContent = P.desde ? 'Listo para pedir: revisa y toca «Pedir que me conecten».' : 'Llegó de «Pedir a proveedores»: revisa y toca «Pedir que me conecten».'; }
   var b = document.querySelector('[data-os-acc="mkt-pedir"]'); if(b) b.focus();
+  _osCalzan();
 }
+/* 3/11/2026 · Gemini (mejora 3): los aliados que calzan con lo que se marcó, en el departamento elegido: hasta 3 por rubro,
+   en el orden del servidor (V7.4: primero RNP vigente, después los del departamento); con un servidor de antes, por nombre.
+   Sale de os_mkt_publico (lo mismo que ve cualquiera en la página pública del Marketplace) */
+function _osDepTit(d){ return String(d || '').toLowerCase().replace(/(^|\s)(\S)/g, function(a, b, c){ return b + c.toUpperCase(); }).replace(/\bDe\b/g, 'de'); }
+function _osCalzan(){
+  var c = $('os-calzan'); if(!c) return;
+  var rs = [].map.call(document.querySelectorAll('[data-os-rubro]:checked'), function(x){ return x.getAttribute('data-os-rubro'); }), dep = ($('os-dep') || {}).value || '', n = OS.nCal = (OS.nCal || 0) + 1;
+  if(!rs.length || !dep){ c.innerHTML = ''; return; }
+  sbRpc('os_mkt_publico', { p:{ departamento:dep } }).then(function(j){
+    if(n !== OS.nCal || !$('os-calzan')) return;
+    if(!j || !j.ok || !j.rubros){ c.innerHTML = ''; return; }
+    var conOrden = false;
+    var h = rs.map(function(r){
+      var x = j.rubros[r] || { aliados:0, publicos:[] }, a = Number(x.aliados) || 0, P = (x.publicos || []).slice(0, 3), nom = (OS_RUBROS.filter(function(y){ return y[0] === r; })[0] || [r, r])[1];
+      if(P.some(function(p){ return 'rnp' in p; })) conOrden = true;
+      return '<li><b>' + esc(nom) + '</b>: ' + (a ? a + (a === 1 ? ' aliado verificado' : ' aliados verificados') + ' en ' + esc(_osDepTit(dep)) +
+        (P.length ? ' · ' + (P.length === 1 ? 'el que calza' : 'los que calzan') + ': ' + P.map(function(p){ return esc(p.nombre) + (p.rnp ? ' (RNP vigente)' : ''); }).join(', ') : '')
+        : 'todavía ningún aliado en ' + esc(_osDepTit(dep)) + ': el pedido le llega igual a OBRASST') + '</li>';
+    }).join('');
+    c.innerHTML = '<ul class="os-calzan">' + h + '</ul>' + (conOrden ? '<p class="os-sub" style="margin:2px 0 8px">Primero los que tienen el RNP vigente, después los que atienden tu departamento.</p>' : '');
+  }, function(){ if(n === OS.nCal && $('os-calzan')) $('os-calzan').innerHTML = ''; });
+}
+/* 3/11/2026 · V7.4 · la calculadora del pedido: los de hoy + los que se suman − los que ya lo tienen (nunca menos de cero) */
+function _osNum(id){ var v = parseInt(String(($(id) || {}).value || '').replace(/[^0-9]/g, ''), 10); return isNaN(v) ? 0 : Math.min(v, 100000); }
+function _osCalc(){ var hoy = _osNum('os-hoy'), mas = _osNum('os-mas'), ya = _osNum('os-ya'); if(!hoy && !mas) return null; return { hoy:hoy, mas:mas, ya:ya, n:Math.max(0, hoy + mas - ya) }; }
+function _osCalcTxt(c){ return (c && c.n) ? 'Para ' + c.n + (c.n === 1 ? ' persona' : ' personas') + ' (' + c.hoy + ' hoy + ' + c.mas + ' que se suman − ' + c.ya + ' que ya lo tienen).' : ''; }
+function _osCalcPintar(){
+  var r = $('os-calc-r'); if(!r) return;
+  var c = _osCalc();
+  r.innerHTML = !c ? '' : (c.n ? 'Necesitas para <b>' + c.n + '</b> ' + (c.n === 1 ? 'persona' : 'personas') + ' · ' + c.hoy + ' hoy + ' + c.mas + ' que se suman − ' + c.ya + ' que ya lo tienen.'
+                               : 'No necesitas más: ya lo tienen todos.');
+}
+document.addEventListener('input', function(ev){ if(ev.target && /^os-(hoy|mas|ya)$/.test(ev.target.id || '')) _osCalcPintar(); });
 function _osFuera(j){ return '<div class="aviso">' + esc(_osMsg(j)) + '</div>'; }
 function _osKpi(t, v, s, cl){ return '<div class="os-kpi"><small>' + esc(t) + '</small><b class="' + (cl || '') + '">' + v + '</b><span>' + esc(s || '') + '</span></div>'; }
 var OS_NIVEL = { alto:['ALTO', 'os-mal'], medio:['MEDIO', 'os-ojo'], bajo:['BAJO', 'os-ok'], sin_datos:['SIN DATOS', ''] };
 
 /* Para Gerencia: los 6 indicadores */
 function _osGer(listo){
-  _osRpc('os_gerencia').then(function(j){
+  /* 3/11/2026 · Gemini (mejora 10), elegida por Marcelo: arriba, los 3 números del gerente en lenguaje de negocio (el riesgo de
+     multa de hoy, su gente al día y sus contratistas), cada uno con el detalle a un toque; debajo, la nota con quiénes se
+     compara; y lo demás, como antes. Todo sale del servidor (os_gerencia, os_riesgo, os_brechas). */
+  var M = (OS.cfg && OS.cfg.modulos) || {};
+  Promise.all([_osRpc('os_gerencia'), M.risk_engine ? _osRpc('os_riesgo').catch(function(){ return null; }) : null, M.compliance_engine ? _osRpc('os_brechas').catch(function(){ return null; }) : null]).then(function(r){
+    var j = r[0], rg = (r[1] && r[1].ok) ? r[1] : null, br = (r[2] && r[2].ok) ? r[2] : null;
     if(!j || !j.ok) return listo(_osFuera(j));
-    var s = j.score, pc = s && s.percentil, ct = j.contratistas, ri = j.riesgo, nv = OS_NIVEL[(ri || {}).nivel] || ['—', ''];
-    listo('<p class="os-sub">Hoy, ' + esc(fechaLarga(j.hoy)) + ' · con lo que tu empresa registra en OBRASST (' + (j.gente || 0) + ' personas activas).</p><div class="os-kpis">' +
-      _osKpi('OBRASST Score', s && s.nota != null ? s.nota + ' / 100' : '—', pc ? 'Top ' + pc.top + ' % de ' + pc.n + ' empresas' : 'Sin comparativo todavía', s && s.nota >= 80 ? 'os-ok' : s && s.nota >= 60 ? 'os-ojo' : 'os-mal') +
-      _osKpi('Contratistas al día', ct ? ct.ok + ' / ' + ct.tot : '—', ct ? _osPct(ct.ok, ct.tot) + ' habilitadas' : 'Viene con Contractor Hub™', ct && ct.ok === ct.tot ? 'os-ok' : 'os-ojo') +
+    var s = j.score, pc = s && s.percentil, ct = j.contratistas, ri = j.riesgo || {}, nv = OS_NIVEL[ri.nivel] || ['—', ''];
+    var soles = rg ? rg.soles : ri.soles, P = rg ? (rg.partidas || []) : [], R = br ? (br.resumen || {}) : null;
+    /* 1 · el riesgo de multa de hoy */
+    var b1 = '<div class="os-tres-c" id="os-g-multa"><small>Riesgo de multa hoy</small><b class="' + (soles ? 'os-mal' : 'os-ok') + '">' + (soles ? _osSoles(soles) : 'S/ 0') + '</b>' +
+      '<span>' + (rg && rg.uit ? esc(String(rg.uit)) + ' UIT · ' : '') + esc(soles ? 'nivel ' + nv[0].toLowerCase() : 'por lo que registras, hoy no hay multa posible') + '</span>' +
+      (P.length ? '<button type="button" class="bt chico" data-os-ir="riesgo">Ver ' + (P.length === 1 ? 'la causa' : 'las ' + P.length + ' causas') + ' y qué hacer ›</button>' +
+                  '<a class="bt sec chico" id="os-g-encargar" target="_blank" rel="noopener" href="' + esc(_osEncargarUrl(soles, rg, P)) + '">📲 Encargárselo a mi supervisor</a>' : '') + '</div>';
+    /* 2 · su gente al día (lo que exige el cargo de cada uno: EMO, SCTR, capacitación, habilitaciones y EPP) */
+    var tot = R ? (R.total || 0) : 0, ok = R ? Math.max(0, tot - (R.con_brecha || 0)) : 0;
+    var b2 = '<div class="os-tres-c" id="os-g-gente"><small>Tu gente al día hoy</small><b class="' + (R ? (ok === tot ? 'os-ok' : 'os-ojo') : '') + '">' + (R ? ok + ' de ' + tot : '—') + '</b>' +
+      '<span>' + (R ? 'con su EMO, SCTR, capacitación, habilitaciones y EPP según su cargo' : 'Viene con «Qué exige la ley por puesto»') + '</span>' +
+      (R && R.con_brecha ? '<button type="button" class="bt chico" data-os-ir="comp">Ver a quién le falta ›</button>' : '') + '</div>';
+    /* 3 · sus contratistas */
+    var mal = ct ? Math.max(0, ct.tot - ct.ok) : 0;
+    var b3 = '<div class="os-tres-c" id="os-g-cont"><small>Tus contratistas</small><b class="' + (ct ? (mal ? 'os-ojo' : 'os-ok') : '') + '">' + (ct ? ct.ok + ' al día · ' + mal + ' con faltas' : '—') + '</b>' +
+      '<span>' + (ct ? (ct.tot ? ct.tot + (ct.tot === 1 ? ' contratista en tu obra' : ' contratistas en tu obra') : 'todavía ninguna en tu obra') : 'Viene con el control de contratistas') + '</span>' +
+      (ct && mal && M.contractor_hub ? '<button type="button" class="bt chico" data-os-ir="cont">Ver cuáles y qué les falta ›</button>' : '') + '</div>';
+    /* la nota, con quiénes se compara */
+    var base = pc && { sector_tamano:'de tu sector y tamaño', sector:'de tu sector', todas:'en OBRASST' }[pc.base];
+    var nota = '<p class="os-sub" id="os-g-nota" style="margin:2px 0 14px"><b>Nota de la empresa: ' + (s && s.nota != null ? s.nota + ' / 100' : '—') + '</b>' +
+      (pc ? ' · Top ' + pc.top + ' % de ' + pc.n + ' empresas' + (base ? ' ' + esc(base) : '') : ' · el comparativo aparece cuando hay al menos 5 empresas para comparar') + '.</p>';
+    listo('<p class="os-sub">Hoy, ' + esc(fechaLarga(j.hoy)) + ' · con lo que tu empresa registra en OBRASST (' + (j.gente || 0) + ' personas activas).</p>' +
+      '<div class="os-tres">' + b1 + b2 + b3 + '</div>' + nota +
+      '<div class="os-kpis">' +
       _osKpi('EMO vigentes', j.emo ? _osPct(j.emo.ok, j.emo.tot) : '—', j.emo ? j.emo.ok + ' de ' + j.emo.tot + ' personas' : 'No se lleva en OBRASST', j.emo && j.emo.ok === j.emo.tot ? 'os-ok' : 'os-ojo') +
       _osKpi('SCTR vigentes', j.sctr ? _osPct(j.sctr.ok, j.sctr.tot) : '—', j.sctr ? j.sctr.ok + ' de ' + j.sctr.tot + ' personas' : 'No se lleva en OBRASST', j.sctr && j.sctr.ok === j.sctr.tot ? 'os-ok' : 'os-ojo') +
-      _osKpi('Incidentes del mes', String(j.incidentes.total), j.incidentes.incap + (j.incidentes.incap === 1 ? ' incapacitante' : ' incapacitantes'), j.incidentes.incap ? 'os-mal' : 'os-ok') +
-      _osKpi('Riesgo SUNAFIL', nv[0], ri && ri.soles ? 'Multa posible hoy: ' + _osSoles(ri.soles) : 'Sin multa posible por lo registrado', nv[1]) + '</div>' +
+      _osKpi('Incidentes del mes', String(j.incidentes.total), j.incidentes.incap + (j.incidentes.incap === 1 ? ' incapacitante' : ' incapacitantes'), j.incidentes.incap ? 'os-mal' : 'os-ok') + '</div>' +
       '<p class="os-sub">Toca cada pestaña para ver el detalle y qué resolver primero.</p>');
   }, function(){ listo(_osFuera(null)); });
+}
+/* «Encargárselo a mi supervisor»: lo que hay que corregir hoy, por WhatsApp (sin nombres: cuántas personas por causa) */
+function _osEncargarUrl(soles, rg, P){
+  var t = 'Riesgo de multa hoy: ' + _osSoles(soles) + (rg && rg.uit ? ' (' + rg.uit + ' UIT)' : '') + '. Para corregir hoy:\n' +
+    P.slice(0, 12).map(function(p){ return '· ' + p.t + ' (' + p.afectados + (p.afectados === 1 ? ' persona' : ' personas') + ')'; }).join('\n') +
+    '\nEl detalle está en OBRASST › «Para Gerencia» › Riesgo de multa.';
+  return 'https://wa.me/?text=' + encodeURIComponent(t.slice(0, 1500));
 }
 /* OBRASST Score */
 function _osScore(listo){
@@ -170,11 +247,11 @@ function _osPas(listo){
     var con = {}; (j.lista || []).forEach(function(x){ con[x.trab] = x; });
     var puede = OS.cfg && OS.cfg.puede;
     listo('<p class="os-sub">Un QR por trabajador: quien lo escanea ve sus capacitaciones, la vigencia de su EMO y su SCTR, y sus habilitaciones. Del examen médico solo sale la vigencia. ' +
-      'Se emite con el consentimiento del trabajador (Ley 29733) y se puede revocar cuando él lo pida.</p><div class="tabla-caja"><table><thead><tr><th>Trabajador</th><th>Pasaporte</th></tr></thead><tbody>' +
+      'Se emite con el consentimiento del trabajador (Ley 29733) y se puede revocar cuando él lo pida.</p><div class="tabla-caja"><table><thead><tr><th>Trabajador</th><th>Historial</th></tr></thead><tbody>' +
       ((b && b.ok && b.gente) || []).map(function(w){ var p = con[w.id];
-        return '<tr><td><b>' + esc(w.nombre) + '</b></td><td>' + (p ? '<a href="' + esc(p.enlace) + '" target="_blank" rel="noopener">Abrir su pasaporte</a> <button type="button" class="bt sec chico" data-os-qr="' + esc(p.enlace) + '">Ver QR</button>' +
+        return '<tr><td><b>' + esc(w.nombre) + '</b></td><td>' + (p ? '<a href="' + esc(p.enlace) + '" target="_blank" rel="noopener">Abrir su historial</a> <button type="button" class="bt sec chico" data-os-qr="' + esc(p.enlace) + '">Ver QR</button>' +
           (puede ? ' <button type="button" class="bt sec chico" data-os-revocar="' + esc(w.id) + '">Revocar</button>' : '') :
-          (puede ? '<label style="font-size:13px"><input type="checkbox" data-os-cons="' + esc(w.id) + '"> El trabajador aceptó</label> <button type="button" class="bt chico" data-os-emitir="' + esc(w.id) + '">Emitir</button>' : '<span class="os-sub">Sin pasaporte</span>')) +
+          (puede ? '<label style="font-size:13px"><input type="checkbox" data-os-cons="' + esc(w.id) + '"> El trabajador aceptó</label> <button type="button" class="bt chico" data-os-emitir="' + esc(w.id) + '">Emitir</button>' : '<span class="os-sub">Sin emitir</span>')) +
           '<div id="os-qr-' + esc(w.id) + '"></div></td></tr>'; }).join('') + '</tbody></table></div>');
   }, function(){ listo(_osFuera(null)); });
 }
@@ -187,6 +264,14 @@ function _osMkt(listo){
       '<div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 10px">' + OS_RUBROS.map(function(r){ return '<label style="font-size:14px"><input type="checkbox" data-os-rubro="' + r[0] + '"> ' + esc(r[1]) + '</label>'; }).join('') + '</div>' +
       '<div class="campo-dos"><div class="campo"><label for="os-dep">Departamento</label><select id="os-dep">' + OS_DEPS.map(function(d){ return '<option' + (d === 'LIMA' ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></div>' +
       '<div class="campo"><label for="os-det">Detalle (opcional)</label><input id="os-det" maxlength="600" placeholder="Por ejemplo: 40 cascos y EMO de ingreso para 12 personas"></div></div>' +
+      /* 3/11/2026 · Gemini (mejora 3): los que calzan, a la vista */
+      '<div id="os-calzan" aria-live="polite"></div>' +
+      /* 3/11/2026 · V7.4 · cuántos necesita (la calculadora del pedido): hoy + los que se suman − los que ya lo tienen */
+      '<p class="os-sub" style="margin:12px 0 4px">¿Para cuántas personas? (opcional: si lo que pides es por persona, como EPP, EMO, SCTR, capacitación o transporte)</p>' +
+      '<div class="campo-dos" id="os-calc"><div class="campo"><label for="os-hoy">Trabajadores hoy</label><input id="os-hoy" type="number" min="0" max="100000" step="1" inputmode="numeric"></div>' +
+      '<div class="campo"><label for="os-mas">Se suman pronto</label><input id="os-mas" type="number" min="0" max="100000" step="1" inputmode="numeric"></div>' +
+      '<div class="campo"><label for="os-ya">Ya lo tienen (vigente o en stock)</label><input id="os-ya" type="number" min="0" max="100000" step="1" inputmode="numeric"></div></div>' +
+      '<p class="os-sub" id="os-calc-r" aria-live="polite" style="margin:6px 0 10px"></p>' +
       '<button type="button" class="bt" data-os-acc="mkt-pedir">Pedir que me conecten</button><p class="msg" id="os-mkt-msg"></p></div>' +
       ((j.lista || []).length ? '<div class="tabla-caja"><table><thead><tr><th>Lo que pediste</th><th>Estado</th><th>Aliados</th></tr></thead><tbody>' + j.lista.map(function(n){
         return '<tr><td>' + esc(n.rubros.map(function(r){ var x = OS_RUBROS.filter(function(y){ return y[0] === r; })[0]; return x ? x[1] : r; }).join(', ')) + ' · ' + esc(n.departamento) +
@@ -275,30 +360,33 @@ function _osAj(listo){
         return '<option value="' + esc(s.k) + '"' + (c.sector === s.k ? ' selected' : '') + '>' + esc(s.n) + '</option>'; }).join('') + '</select></div>' +
       '<div class="campo"><label for="os-sctr">¿Tu actividad está en el Anexo 5 del D.S. 003-98-SA (SCTR obligatorio)?</label><select id="os-sctr"' + dis + '><option value="">Según el sector</option><option value="si"' + (c.sctr === true ? ' selected' : '') +
         '>Sí, para todo el personal</option><option value="no"' + (c.sctr === false ? ' selected' : '') + '>No</option></select></div>' +
-      '<label style="display:block;margin:0 0 12px"><input type="checkbox" id="os-red"' + (c.pasaporte_red ? ' checked' : '') + dis + '> Mis registros se pueden ver en el Pasaporte SST de mi gente cuando trabaja en otra empresa (con su consentimiento)</label>' +
+      '<label style="display:block;margin:0 0 12px"><input type="checkbox" id="os-red"' + (c.pasaporte_red ? ' checked' : '') + dis + '> Mis registros se pueden ver en el historial de mi gente cuando trabaja en otra empresa (con su consentimiento)</label>' +
       (c.puede ? '<button type="button" class="bt" data-os-acc="aj-guardar">Guardar</button>' : '<p class="os-sub">Esto lo cambia el dueño o el gestor de la obra.</p>') + '<p class="msg" id="os-aj-msg"></p></div>');
   });
 }
 function _osClic(ev){
-  var t = ev.target.closest ? ev.target.closest('[data-os-tab],[data-os-acc],[data-os-emitir],[data-os-revocar],[data-os-qr],[data-os-cuadro],[data-os-doc],[data-os-desbloquear]') : null; if(!t) return;
+  var t = ev.target.closest ? ev.target.closest('[data-os-tab],[data-os-ir],[data-os-acc],[data-os-emitir],[data-os-revocar],[data-os-qr],[data-os-cuadro],[data-os-doc],[data-os-desbloquear]') : null; if(!t) return;
   if(t.hasAttribute('data-os-tab')){ OS.tab = t.getAttribute('data-os-tab'); osPintar(); return; }
+  /* 3/11/2026 · desde «Para Gerencia», el detalle de cada número (la pestaña, arriba) */
+  if(t.hasAttribute('data-os-ir')){ OS.tab = t.getAttribute('data-os-ir'); osPintar(); try{ (OS.caja || document.body).scrollIntoView({ block:'start' }); }catch(_s){} return; }
   if(t.hasAttribute('data-os-doc')){ _osDoc(t.getAttribute('data-os-doc'), t.getAttribute('data-os-doc-acc')); return; }
   if(t.hasAttribute('data-os-desbloquear')){ _osRpc('os_doc_proveedor_responder', { accion:'desbloquear', aliado:t.getAttribute('data-os-desbloquear') }).then(function(j){
     if(!j || !j.ok) return toast(_osMsg(j)); toast('Listo: vuelves a recibir sus documentos.'); osPintar(); }); return; }
   if(t.hasAttribute('data-os-cuadro')){ osCuadro(t.getAttribute('data-os-cuadro')); return; }
   if(t.hasAttribute('data-os-qr')){ var u = t.getAttribute('data-os-qr'), id = t.closest('td').querySelector('[id^="os-qr-"]');
-    cargarQRLib().then(function(){ var q = qrcode(0, 'M'); q.addData(u); q.make(); id.innerHTML = '<img alt="QR del pasaporte" width="150" height="150" src="' + q.createDataURL(4, 2) + '">'; }, function(){ toast('No se pudo dibujar el QR.'); }); return; }
+    cargarQRLib().then(function(){ var q = qrcode(0, 'M'); q.addData(u); q.make(); id.innerHTML = '<img alt="QR del historial" width="150" height="150" src="' + q.createDataURL(4, 2) + '">'; }, function(){ toast('No se pudo dibujar el QR.'); }); return; }
   if(t.hasAttribute('data-os-emitir')){ var w = t.getAttribute('data-os-emitir'), cb = document.querySelector('[data-os-cons="' + w + '"]');
-    _osRpc('os_pasaporte_emitir', { trab:w, consiente:!!(cb && cb.checked) }).then(function(j){ if(!j || !j.ok) return toast(_osMsg(j)); toast('Pasaporte emitido.'); osPintar(); }); return; }
+    _osRpc('os_pasaporte_emitir', { trab:w, consiente:!!(cb && cb.checked) }).then(function(j){ if(!j || !j.ok) return toast(_osMsg(j)); toast('QR del historial emitido.'); osPintar(); }); return; }
   if(t.hasAttribute('data-os-revocar')){ var r = t.getAttribute('data-os-revocar');
-    confirmar('¿Revocar el pasaporte?', 'Su QR deja de mostrar sus datos desde ahora.', { si:'Sí, revocar', mal:true }).then(function(si){ if(!si) return;
-      _osRpc('os_pasaporte_revocar', { trab:r }).then(function(j){ if(!j || !j.ok) return toast(_osMsg(j)); toast('Pasaporte revocado.'); osPintar(); }); }); return; }
+    confirmar('¿Revocar su QR?', 'Su QR deja de mostrar sus datos desde ahora.', { si:'Sí, revocar', mal:true }).then(function(si){ if(!si) return;
+      _osRpc('os_pasaporte_revocar', { trab:r }).then(function(j){ if(!j || !j.ok) return toast(_osMsg(j)); toast('QR revocado.'); osPintar(); }); }); return; }
   var a = t.getAttribute('data-os-acc');
   if(a === 'imprimir') window.print();
   else if(a === 'mkt-pedir'){
     var rs = [].map.call(document.querySelectorAll('[data-os-rubro]:checked'), function(x){ return x.getAttribute('data-os-rubro'); }), m = $('os-mkt-msg');
     t.disabled = true;
-    _osRpc('os_necesidad_crear', { rubros:rs, departamento:$('os-dep').value, detalle:$('os-det').value }).then(function(j){
+    var det = [_osCalcTxt(_osCalc()), String($('os-det').value || '').trim()].filter(Boolean).join(' ').slice(0, 600);
+    _osRpc('os_necesidad_crear', { rubros:rs, departamento:$('os-dep').value, detalle:det }).then(function(j){
       t.disabled = false;
       if(!j || !j.ok){ m.className = 'msg mal'; m.textContent = _osMsg(j); return; }
       toast('Listo: OBRASST te conecta con ' + (j.aliados_hoy ? 'los ' + j.aliados_hoy + ' aliados de tu zona.' : 'los aliados de tu zona.')); osPintar();
@@ -314,6 +402,8 @@ function _osClic(ev){
 }
 function _osCambio(ev){
   var t = ev.target;
+  /* 3/11/2026 · al marcar un rubro o cambiar el departamento, los que calzan */
+  if(t && t.hasAttribute && (t.hasAttribute('data-os-rubro') || t.id === 'os-dep')){ _osCalzan(); return; }
   if(t && t.id === 'os-solo-rnp'){ OS.soloRnp = !!t.checked; osCuadroPinta(); return; }
   if(!t || !t.hasAttribute || !t.hasAttribute('data-os-puesto') || !t.value) return;
   _osRpc('os_puesto_cargo_guardar', { puesto:t.getAttribute('data-os-puesto'), cargo:t.value }).then(function(j){

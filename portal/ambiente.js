@@ -78,7 +78,11 @@ function _ambPintar(){
       tarj('res', '♻️', 'Residuos', esc(_ambNw(kg))+' kg'+(m3 ? ' · '+esc(_ambNw(m3))+' m³' : ''), R.resN+(R.resN===1 ? ' salida' : ' salidas')+(R.venta ? ' · '+R.venta+(R.venta===1 ? ' vendida' : ' vendidas') : '')+' · con su certificado o su boleta')+
       tarj('agua', '💧', 'Agua', esc(_ambNw(R.agua))+' m³', R.aguaN+(R.aguaN===1 ? ' registro' : ' registros')+' · del recibo o del medidor')+
       tarj('comb', '⛽', 'Combustible', esc(_ambNw(R.combGal))+' gal', R.combN+(R.combN===1 ? ' carga' : ' cargas')+' · con su boleta')+
-      tarj('doc', '📄', 'Certificados y constancias', String(R.docs), 'documentos ambientales del mes')+'</div>';
+      tarj('doc', '📄', 'Certificados y constancias', String(R.docs), 'documentos ambientales del mes')+'</div>'+
+    /* 3/11/2026 · Gemini (mejora 3): sacar los residuos con su certificado, pedido a las empresas autorizadas de su zona */
+    (typeof pedirBarraHTML==='function' ? pedirBarraHTML({ r:'residuos', n:0, id:'pedir-residuos',
+      tx:'¿Tienes residuos para sacar con su certificado (peligrosos, aceite usado, desmonte)?', bt:'Pedir el recojo a empresas autorizadas de mi zona',
+      det:'Recojo de residuos con su certificado.' }) : '');
   h+='<div class="tarj"><div class="tarj-cab"><div><h2>Lo registrado en '+esc(mesLargo(AMBW.mes))+'</h2><p class="sub">Cada registro con sus papeles; se corrige o se quita desde aquí</p></div></div>'+
     (L.length ? '<div class="tabla-caja"><table><thead><tr><th>Fecha</th><th>Qué</th><th>Empresa</th><th>Papeles</th><th></th></tr></thead><tbody>'+L.slice().reverse().map(function(x){ var d=x.d;
         return '<tr><td>'+esc(fechaLarga(d.fecha))+'</td><td>'+esc(_ambLineaP(d))+(d.por ? '<span class="sub">'+esc(d.por)+'</span>' : '')+'</td><td>'+esc(d.emp || '—')+'</td>'+

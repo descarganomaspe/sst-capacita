@@ -25,6 +25,12 @@ function _tarUnir(a, b){
         if(!z.m.some(function(w){ return w[0] === +q[0] && w[1] === q[1]; })) z.m.push([+q[0], q[1], String(q[2] || '').slice(0, 10)]);
       });
       (Array.isArray(y.x) ? y.x : []).forEach(function(t){ t = +t; if(t && z.x.indexOf(t) < 0) z.x.push(t); });
+      /* 3/11/2026 · mejora 9: las autorizaciones del residente (una por entrada autorizada; la firma, en trazos) */
+      (Array.isArray(y.au) ? y.au : []).forEach(function(u){
+        if(!u || !(+u.ms) || (z.au || []).some(function(w){ return w.ms === +u.ms; })) return;
+        (z.au = z.au || []).push({ ms:+u.ms, motivo:String(u.motivo || '').slice(0, 200), quien:String(u.quien || '').slice(0, 80), f:u.f || null,
+                                  faltan:(Array.isArray(u.faltan) ? u.faltan : []).slice(0, 6).map(function(t){ return String(t || '').slice(0, 80); }) });
+      });
     });
   });
   Object.keys(out.p).forEach(function(k){ out.p[k].m.sort(function(p, q){ return p[0] - q[0]; }); });
@@ -52,7 +58,7 @@ function tarHorasDe(z, cfg, ahora){
   var e = null, s = null;
   ms.forEach(function(q){ if(q[1] === 'e' && e === null) e = q[0]; if(q[1] === 's') s = q[0]; });
   return { h:Math.max(0, Math.round(h * 100) / 100), adentro:adentro, sinSalida:sinSalida, e:e, s:s, ab:pp.ab, marcas:ms.length,
-           mano:ms.some(function(q){ return q[2] === 'mano'; }) };
+           mano:ms.some(function(q){ return q[2] === 'mano'; }), aut:ms.some(function(q){ return q[2] === 'aut'; }) };
 }
 /* ── de la app · el parte del día ── */
 var ATS_EST = {

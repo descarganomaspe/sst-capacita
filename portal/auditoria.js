@@ -47,8 +47,18 @@ var AUD_ORDEN_EST=['falta', 'ojo', 'subir', 'info', 'ok'];
 var AUD_SECC=[
   { k:'ley', n:'Ley 29783 y su reglamento', corto:'Ley 29783' },
   { k:'i45', n:'ISO 45001:2018', corto:'ISO 45001' },
-  { k:'i14', n:'ISO 14001:2015', corto:'ISO 14001' }
+  { k:'i14', n:'ISO 14001:2015', corto:'ISO 14001' },
+  /* 4/11/2026 · revisión de Gemini (bloque 1): antisoborno (con el modelo de prevención de la Ley 30424) y calidad */
+  { k:'i37', n:'ISO 37001:2016 y Ley 30424', corto:'Antisoborno' },
+  { k:'i9',  n:'ISO 9001:2015', corto:'ISO 9001' }
 ];
+/* 4/11/2026 · las áreas de la empresa: a cada requisito le toca una (la de la norma, de entrada; la obra la cambia), se le
+   pide lo que falta y su evidencia dice de qué área es. Se guarda en la obra (sst_estado «aud_areas»). */
+/* 4/11/2026 · V7.9c · las mismas 11 áreas de «Pendientes» (AREAS_TRABAJO, en portal/index.html): suma mantenimiento, almacén
+   y salud ocupacional */
+var AUD_AREAS=(typeof AREAS_TRABAJO!=='undefined') ? AREAS_TRABAJO.map(function(a){ return [a.k, a.n]; }) :
+              [['sst', 'SST'], ['calidad', 'Calidad'], ['produccion', 'Producción'], ['logistica', 'Logística'], ['administracion', 'Administración y finanzas'],
+               ['rrhh', 'Recursos humanos'], ['legal', 'Legal y cumplimiento'], ['gerencia', 'Gerencia']];
 /* ── LO QUE PIDE LA LEY (D.S. 005-2012-TR y Ley 29783), con los títulos de la norma ──────────────────────────────── */
 var AUD_LEY=[
   { g:'Documentos del sistema de gestión', cita:'D.S. 005-2012-TR, art. 32', zip:'01 Documentos del sistema (art 32)', s:[
@@ -152,14 +162,124 @@ var AUD_I14=[
     { cl:'10.2', t:'No conformidad y acción correctiva', ev:'nc14' },
     { cl:'10.3', t:'Mejora continua', ev:'mejora14' } ] }
 ];
+/* ── ISO 37001:2016 y la Ley 30424 (4/11/2026) ─────────────────────────────────────────────────────────────────────
+   La Ley 30424 (art. 17.2, texto vigente) pide al modelo de prevención cinco elementos mínimos; su reglamento es el D.S.
+   002-2019-JUS. De la ISO 37001, los números y los títulos de su índice (verificados en la muestra oficial de la norma,
+   cdn.standards.iteh.ai, ISO-37001-2016); como en las otras, el texto de cada requisito no va: va qué evidencia le toca. */
+var AUD_I37=[
+  { g:'Ley 30424 · El modelo de prevención', cita:'Ley 30424, art. 17.2 (elementos mínimos) · D.S. 002-2019-JUS', s:[
+    { cl:'17.2.1', t:'Un encargado de prevención, designado por el máximo órgano de administración, que ejerce su función con autonomía', ev:'subir', a:'gerencia', pista:'El acta o el documento que lo designa, con sus funciones y su autonomía.' },
+    { cl:'17.2.2', t:'Identificación, evaluación y mitigación de riesgos para prevenir los delitos de la ley', ev:'subir', a:'legal', pista:'La matriz de riesgos penales (soborno y los demás delitos de la ley) con sus controles.' },
+    { cl:'17.2.3', t:'Implementación de procedimientos de denuncia', ev:'subir', a:'legal', pista:'El procedimiento y el canal de denuncias, con cómo se protege a quien denuncia.' },
+    { cl:'17.2.4', t:'Difusión y capacitación periódica del modelo de prevención', ev:'subir', a:'rrhh', pista:'Las capacitaciones del modelo, con su lista de asistencia, y cómo se difunde.' },
+    { cl:'17.2.5', t:'Evaluación y monitoreo continuo del modelo de prevención', ev:'subir', a:'legal', pista:'Los informes del encargado de prevención y las revisiones del modelo.' } ] },
+  { g:'4 Contexto de la organización', s:[
+    { cl:'4.1', t:'Comprensión de la organización y de su contexto', ev:'subir', a:'gerencia', pista:'El análisis del contexto: dónde opera la empresa, con quién y qué la expone al soborno.' },
+    { cl:'4.2', t:'Comprensión de las necesidades y expectativas de las partes interesadas', ev:'subir', a:'gerencia', pista:'La matriz de partes interesadas para el sistema antisoborno.' },
+    { cl:'4.3', t:'Determinación del alcance del sistema de gestión antisoborno', ev:'subir', a:'legal', pista:'El documento del alcance: qué sedes, obras y actividades abarca.' },
+    { cl:'4.4', t:'Sistema de gestión antisoborno', ev:'subir', a:'legal', pista:'El manual o la descripción del sistema y sus procesos.' },
+    { cl:'4.5', t:'Evaluación del riesgo de soborno', ev:'subir', a:'legal', pista:'La evaluación del riesgo de soborno, con su fecha y cuándo se revisa.' } ] },
+  { g:'5 Liderazgo', s:[
+    { cl:'5.1.1', p:'5.1 Liderazgo y compromiso', t:'Órgano de gobierno', ev:'subir', a:'gerencia', pista:'Las actas del directorio (u órgano de gobierno) que aprueban la política y supervisan el sistema.' },
+    { cl:'5.1.2', p:'5.1 Liderazgo y compromiso', t:'Alta dirección', ev:'subir', a:'gerencia', pista:'Lo que muestra el compromiso de la gerencia: comunicaciones, recursos asignados, revisiones.' },
+    { cl:'5.2', t:'Política antisoborno', ev:'subir', a:'gerencia', pista:'La política antisoborno firmada, fechada y difundida.' },
+    { cl:'5.3.1', p:'5.3 Roles, responsabilidades y autoridades en la organización', t:'Roles y responsabilidades', ev:'subir', a:'rrhh', pista:'Los perfiles de puesto con sus responsabilidades antisoborno.' },
+    { cl:'5.3.2', p:'5.3 Roles, responsabilidades y autoridades en la organización', t:'Función de cumplimiento antisoborno', ev:'subir', a:'legal', pista:'La designación de la función de cumplimiento, su independencia y sus recursos.' },
+    { cl:'5.3.3', p:'5.3 Roles, responsabilidades y autoridades en la organización', t:'Delegación de la toma de decisiones', ev:'subir', a:'gerencia', pista:'Los poderes y límites de aprobación delegados.' } ] },
+  { g:'6 Planificación', s:[
+    { cl:'6.1', t:'Acciones para tratar riesgos y oportunidades', ev:'subir', a:'legal', pista:'El plan de tratamiento de los riesgos de soborno.' },
+    { cl:'6.2', t:'Objetivos antisoborno y planificación para lograrlos', ev:'subir', a:'gerencia', pista:'Los objetivos antisoborno con sus metas, responsables y plazos.' } ] },
+  { g:'7 Apoyo', s:[
+    { cl:'7.1', t:'Recursos', ev:'subir', a:'gerencia', pista:'Lo asignado al sistema: personas, presupuesto y herramientas.' },
+    { cl:'7.2.1', p:'7.2 Competencia', t:'Generalidades', ev:'subir', a:'rrhh', pista:'La competencia requerida para los puestos con riesgo de soborno y cómo se asegura.' },
+    { cl:'7.2.2', p:'7.2 Competencia', t:'Proceso de contratación', ev:'subir', a:'rrhh', pista:'La debida diligencia del personal al contratarlo y las declaraciones de cumplimiento firmadas.' },
+    { cl:'7.3', t:'Toma de conciencia y formación', ev:'subir', a:'rrhh', pista:'Las capacitaciones antisoborno, con su asistencia y su evaluación.' },
+    { cl:'7.4', t:'Comunicación', ev:'subir', a:'legal', pista:'Qué se comunica del sistema, a quién, cuándo y cómo.' },
+    { cl:'7.5', t:'Información documentada', ev:'subir', a:'administracion', pista:'Cómo se controlan y guardan los documentos y registros del sistema.' } ] },
+  { g:'8 Operación', s:[
+    { cl:'8.1', t:'Planificación y control operacional', ev:'subir', a:'legal', pista:'Los procedimientos con sus controles antisoborno.' },
+    { cl:'8.2', t:'Debida diligencia', ev:'subir', a:'logistica', pista:'La debida diligencia de proveedores, subcontratistas y socios de negocios, con su resultado.' },
+    { cl:'8.3', t:'Controles financieros', ev:'subir', a:'administracion', pista:'Los niveles de aprobación de pagos, la separación de funciones y la conciliación.' },
+    { cl:'8.4', t:'Controles no financieros', ev:'subir', a:'logistica', pista:'Los controles en compras, licitaciones, contratos y entregas.' },
+    { cl:'8.5', t:'Implementación de los controles antisoborno por organizaciones controladas y por socios de negocios', ev:'subir', a:'logistica', pista:'Lo que se pide a las empresas controladas y a los socios de negocios, y su evidencia.' },
+    { cl:'8.6', t:'Compromisos antisoborno', ev:'subir', a:'logistica', pista:'Las cláusulas antisoborno en los contratos y los compromisos firmados por los socios.' },
+    { cl:'8.7', t:'Regalos, hospitalidad, donaciones y beneficios similares', ev:'subir', a:'administracion', pista:'La política de regalos y hospitalidad y su registro.' },
+    { cl:'8.8', t:'Gestión de los controles antisoborno inadecuados', ev:'subir', a:'legal', pista:'Qué se hace cuando un control no basta: los casos y las medidas.' },
+    { cl:'8.9', t:'Planteamiento de inquietudes', ev:'subir', a:'legal', pista:'El canal de denuncias y su registro (sin datos de quien denuncia).' },
+    { cl:'8.10', t:'Investigar y abordar el soborno', ev:'subir', a:'legal', pista:'El procedimiento de investigación y los informes de los casos.' } ] },
+  { g:'9 Evaluación del desempeño', s:[
+    { cl:'9.1', t:'Seguimiento, medición, análisis y evaluación', ev:'subir', a:'legal', pista:'Los indicadores del sistema y su seguimiento.' },
+    { cl:'9.2', t:'Auditoría interna', ev:'subir', a:'legal', pista:'El programa y los informes de auditoría interna del sistema antisoborno.' },
+    { cl:'9.3.1', p:'9.3 Revisión por la dirección', t:'Revisión por la alta dirección', ev:'subir', a:'gerencia', pista:'El acta de la revisión por la alta dirección.' },
+    { cl:'9.3.2', p:'9.3 Revisión por la dirección', t:'Revisión por el órgano de gobierno', ev:'subir', a:'gerencia', pista:'El acta de la revisión del órgano de gobierno.' },
+    { cl:'9.4', t:'Revisión por la función de cumplimiento antisoborno', ev:'subir', a:'legal', pista:'El informe de la función de cumplimiento al órgano de gobierno y a la alta dirección.' } ] },
+  { g:'10 Mejora', s:[
+    { cl:'10.1', t:'No conformidades y acciones correctivas', ev:'subir', a:'legal', pista:'Las no conformidades del sistema con su acción correctiva y su cierre.' },
+    { cl:'10.2', t:'Mejora continua', ev:'subir', a:'gerencia', pista:'Lo que se mejoró del sistema y por qué.' } ] }
+];
+/* ── ISO 9001:2015 (4/11/2026): los números y los títulos de su índice en la traducción oficial al español ─────────── */
+var AUD_I9=[
+  { g:'4 Contexto de la organización', s:[
+    { cl:'4.1', t:'Comprensión de la organización y de su contexto', ev:'subir', a:'calidad', pista:'El análisis del contexto interno y externo de la empresa.' },
+    { cl:'4.2', t:'Comprensión de las necesidades y expectativas de las partes interesadas', ev:'subir', a:'calidad', pista:'La matriz de partes interesadas y sus requisitos.' },
+    { cl:'4.3', t:'Determinación del alcance del sistema de gestión de la calidad', ev:'subir', a:'calidad', pista:'El alcance del sistema y lo que no aplica, con su justificación.' },
+    { cl:'4.4', t:'Sistema de gestión de la calidad y sus procesos', ev:'subir', a:'calidad', pista:'El mapa de procesos con sus entradas, salidas, responsables e indicadores.' } ] },
+  { g:'5 Liderazgo', s:[
+    { cl:'5.1.1', p:'5.1 Liderazgo y compromiso', t:'Generalidades', ev:'subir', a:'gerencia', pista:'Lo que muestra el compromiso de la gerencia con el sistema.' },
+    { cl:'5.1.2', p:'5.1 Liderazgo y compromiso', t:'Enfoque al cliente', ev:'subir', a:'gerencia', pista:'Cómo se determinan y se cumplen los requisitos del cliente.' },
+    { cl:'5.2.1', p:'5.2 Política', t:'Establecimiento de la política de la calidad', ev:'subir', a:'gerencia', pista:'La política de la calidad firmada y fechada.' },
+    { cl:'5.2.2', p:'5.2 Política', t:'Comunicación de la política de la calidad', ev:'subir', a:'gerencia', pista:'Cómo se difunde la política (y a quién).' },
+    { cl:'5.3', t:'Roles, responsabilidades y autoridades en la organización', ev:'subir', a:'rrhh', pista:'El organigrama y los perfiles de puesto.' } ] },
+  { g:'6 Planificación', s:[
+    { cl:'6.1', t:'Acciones para abordar riesgos y oportunidades', ev:'subir', a:'calidad', pista:'La matriz de riesgos y oportunidades con sus acciones.' },
+    { cl:'6.2', t:'Objetivos de la calidad y planificación para lograrlos', ev:'subir', a:'gerencia', pista:'Los objetivos de la calidad con su meta, responsable y plazo.' },
+    { cl:'6.3', t:'Planificación de los cambios', ev:'subir', a:'calidad', pista:'Cómo se planifican los cambios del sistema.' } ] },
+  { g:'7 Apoyo', s:[
+    { cl:'7.1.1', p:'7.1 Recursos', t:'Generalidades', ev:'subir', a:'gerencia', pista:'Los recursos que se asignan al sistema.' },
+    { cl:'7.1.2', p:'7.1 Recursos', t:'Personas', ev:'subir', a:'rrhh', pista:'El personal necesario para los procesos.' },
+    { cl:'7.1.3', p:'7.1 Recursos', t:'Infraestructura', ev:'subir', a:'logistica', pista:'El inventario y el mantenimiento de equipos e instalaciones.' },
+    { cl:'7.1.4', p:'7.1 Recursos', t:'Ambiente para la operación de los procesos', ev:'subir', a:'produccion', pista:'Las condiciones de trabajo que necesitan los procesos.' },
+    { cl:'7.1.5', p:'7.1 Recursos', t:'Recursos de seguimiento y medición', ev:'subir', a:'calidad', pista:'Los equipos de medición con sus certificados de calibración vigentes.' },
+    { cl:'7.1.6', p:'7.1 Recursos', t:'Conocimientos de la organización', ev:'subir', a:'calidad', pista:'Cómo se guarda y se comparte lo que la empresa sabe hacer (lecciones aprendidas).' },
+    { cl:'7.2', t:'Competencia', ev:'subir', a:'rrhh', pista:'Los perfiles, la formación y la evaluación de la competencia del personal.' },
+    { cl:'7.3', t:'Toma de conciencia', ev:'subir', a:'rrhh', pista:'Cómo el personal conoce la política, los objetivos y su aporte.' },
+    { cl:'7.4', t:'Comunicación', ev:'subir', a:'calidad', pista:'Qué se comunica, cuándo, a quién y cómo.' },
+    { cl:'7.5', t:'Información documentada', ev:'subir', a:'administracion', pista:'La lista maestra de documentos y registros y cómo se controlan.' } ] },
+  { g:'8 Operación', s:[
+    { cl:'8.1', t:'Planificación y control operacional', ev:'subir', a:'produccion', pista:'El plan de calidad de la obra o del servicio.' },
+    { cl:'8.2.1', p:'8.2 Requisitos para los productos y servicios', t:'Comunicación con el cliente', ev:'subir', a:'administracion', pista:'Cómo se atiende al cliente: consultas, contratos y reclamos.' },
+    { cl:'8.2.2', p:'8.2 Requisitos para los productos y servicios', t:'Determinación de los requisitos para los productos y servicios', ev:'subir', a:'administracion', pista:'Los requisitos de lo que se ofrece, legales incluidos.' },
+    { cl:'8.2.3', p:'8.2 Requisitos para los productos y servicios', t:'Revisión de los requisitos para los productos y servicios', ev:'subir', a:'administracion', pista:'La revisión del contrato o del pedido antes de aceptarlo.' },
+    { cl:'8.2.4', p:'8.2 Requisitos para los productos y servicios', t:'Cambios en los requisitos para los productos y servicios', ev:'subir', a:'administracion', pista:'Cómo se registran los cambios del cliente (adicionales, deductivos).' },
+    { cl:'8.3', t:'Diseño y desarrollo de los productos y servicios', ev:'subir', a:'produccion', pista:'Si se diseña: su planificación, revisiones, verificaciones y cambios. Si no aplica, decirlo en el alcance.' },
+    { cl:'8.4', t:'Control de los procesos, productos y servicios suministrados externamente', ev:'subir', a:'logistica', pista:'La evaluación de proveedores y subcontratistas y el control de lo que entregan.' },
+    { cl:'8.5.1', p:'8.5 Producción y provisión del servicio', t:'Control de la producción y de la provisión del servicio', ev:'subir', a:'produccion', pista:'Los procedimientos e instructivos de trabajo y sus protocolos de control.' },
+    { cl:'8.5.2', p:'8.5 Producción y provisión del servicio', t:'Identificación y trazabilidad', ev:'subir', a:'produccion', pista:'Cómo se identifica cada material, lote o partida y se sigue su rastro.' },
+    { cl:'8.5.3', p:'8.5 Producción y provisión del servicio', t:'Propiedad perteneciente a los clientes o proveedores externos', ev:'subir', a:'logistica', pista:'El registro de lo que el cliente o un proveedor entrega en custodia.' },
+    { cl:'8.5.4', p:'8.5 Producción y provisión del servicio', t:'Preservación', ev:'subir', a:'logistica', pista:'Cómo se almacenan y protegen los materiales y el producto.' },
+    { cl:'8.5.5', p:'8.5 Producción y provisión del servicio', t:'Actividades posteriores a la entrega', ev:'subir', a:'produccion', pista:'Las garantías, la postventa y su registro.' },
+    { cl:'8.5.6', p:'8.5 Producción y provisión del servicio', t:'Control de los cambios', ev:'subir', a:'produccion', pista:'El registro de los cambios en la producción o el servicio, con su aprobación.' },
+    { cl:'8.6', t:'Liberación de los productos y servicios', ev:'subir', a:'calidad', pista:'Los protocolos de liberación firmados por quien los aprueba.' },
+    { cl:'8.7', t:'Control de las salidas no conformes', ev:'subir', a:'calidad', pista:'El registro de lo no conforme y qué se hizo con ello.' } ] },
+  { g:'9 Evaluación del desempeño', s:[
+    { cl:'9.1.1', p:'9.1 Seguimiento, medición, análisis y evaluación', t:'Generalidades', ev:'subir', a:'calidad', pista:'Los indicadores de los procesos y su seguimiento.' },
+    { cl:'9.1.2', p:'9.1 Seguimiento, medición, análisis y evaluación', t:'Satisfacción del cliente', ev:'subir', a:'administracion', pista:'Las encuestas o la medición de la satisfacción del cliente.' },
+    { cl:'9.1.3', p:'9.1 Seguimiento, medición, análisis y evaluación', t:'Análisis y evaluación', ev:'subir', a:'calidad', pista:'El análisis de los datos del sistema.' },
+    { cl:'9.2', t:'Auditoría interna', ev:'subir', a:'calidad', pista:'El programa y los informes de auditoría interna de la calidad.' },
+    { cl:'9.3', t:'Revisión por la dirección', ev:'subir', a:'gerencia', pista:'El acta de la revisión por la dirección, con sus entradas y sus salidas.' } ] },
+  { g:'10 Mejora', s:[
+    { cl:'10.1', t:'Generalidades', ev:'subir', a:'calidad', pista:'Cómo la empresa elige sus oportunidades de mejora.' },
+    { cl:'10.2', t:'No conformidad y acción correctiva', ev:'subir', a:'calidad', pista:'Las no conformidades con su análisis de causa, su acción y su cierre.' },
+    { cl:'10.3', t:'Mejora continua', ev:'subir', a:'calidad', pista:'Lo que se mejoró y su resultado.' } ] }
+];
 /* cada requisito con su llave ('i45:6.1.2'), su norma y su carpeta del ZIP */
 (function(){
   AUD_LEY.forEach(function(G){ G.s.forEach(function(r){ r.norma='ley'; r.g=G.g; r.gz=G.zip; }); });
-  [['i45', AUD_I45, '04 ISO 45001'], ['i14', AUD_I14, '05 ISO 14001']].forEach(function(x){
+  [['i45', AUD_I45, '04 ISO 45001'], ['i14', AUD_I14, '05 ISO 14001'], ['i37', AUD_I37, '06 ISO 37001 y Ley 30424'], ['i9', AUD_I9, '07 ISO 9001']].forEach(function(x){
     x[1].forEach(function(G){ G.zip=x[2]+'/'+_audAscii(G.g); G.s.forEach(function(r){ r.k=x[0]+':'+r.cl; r.norma=x[0]; r.g=G.g; r.gz=G.zip; r.z=r.cl+' '+_audAscii(r.t).slice(0, 60); }); });
   });
 })();
-function _audCatalogo(k){ return k==='i45' ? AUD_I45 : (k==='i14' ? AUD_I14 : AUD_LEY); }
+function _audCatalogo(k){ return k==='i45' ? AUD_I45 : (k==='i14' ? AUD_I14 : (k==='i37' ? AUD_I37 : (k==='i9' ? AUD_I9 : AUD_LEY))); }
 function _audTodos(){ var L=[]; AUD_SECC.forEach(function(S){ _audCatalogo(S.k).forEach(function(G){ G.s.forEach(function(r){ L.push(r); }); }); }); return L; }
 function _audReq(k){ var L=_audTodos(); for(var i=0;i<L.length;i++) if(L[i].k===k) return L[i]; return null; }
 function _audAscii(s){ return String(s==null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim(); }
@@ -168,7 +288,7 @@ function _audCss(){
   if(document.getElementById('aud-css')) return;
   var st=document.createElement('style'); st.id='aud-css';
   st.textContent=[
-    '.aud-res-g{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:12px 0 0}',
+    '.aud-res-g{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:12px 0 0}',
     '@media (max-width:760px){ .aud-res-g{grid-template-columns:minmax(0,1fr)} }',
     '.aud-res-c{display:flex; flex-direction:column; gap:6px; border:1px solid var(--raya); border-radius:10px; padding:10px 12px; background:var(--panel); cursor:pointer; text-align:left; font:inherit; color:inherit; min-width:0}',
     '.aud-res-c:hover{border-color:var(--raya2)} .aud-res-c.on{border-color:var(--azul); box-shadow:inset 0 0 0 1px var(--azul)}',
@@ -199,7 +319,15 @@ function _audCss(){
     '.aud-nota{font-size:12.5px; color:var(--gris); border-left:3px solid var(--raya2); padding:2px 0 2px 9px; margin:4px 0 0}',
     '.aud-pie{font-size:12.5px; color:var(--gris); margin:4px 0 0}',
     '.aud-prog{display:block; height:6px; border-radius:99px; background:var(--fondo); overflow:hidden} .aud-prog i{display:block; height:100%; background:var(--ok)}',
-    '#aud-per{width:auto; max-width:300px; min-width:0}'
+    '#aud-per{width:auto; max-width:300px; min-width:0}',
+    /* 4/11/2026 · las áreas */
+    '.aud-area{display:flex; flex-wrap:wrap; align-items:center; gap:6px}',
+    '.aud-area select{width:auto; min-width:0; max-width:220px; padding:2px 6px; font-size:12px; margin:0 0 0 4px}',
+    '.aud-de{color:var(--ok)} .aud-pedido{color:var(--ojo)}',
+    '.aud-pedir-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; padding:10px 12px; border:1px dashed var(--raya2); border-radius:10px; font-size:13px; color:var(--gris)}',
+    '.aud-pa{border:1px solid var(--raya); border-radius:10px; padding:10px 12px; margin:0 0 10px}',
+    '.aud-pa-cab{display:flex; gap:10px; align-items:baseline; flex-wrap:wrap} .aud-pa-cab button{margin-left:auto}',
+    '.aud-pa ul{margin:8px 0 0 18px; padding:0; font-size:13px; line-height:1.55}'
   ].join('\n');
   document.head.appendChild(st);
 }
@@ -241,12 +369,15 @@ function audTraer(fresco){
     traer('sst_sugerencia', '&select=id,creado&order=creado.desc', 3000).catch(nada),
     traer('sst_requerimiento', '&select=id,creado,estado&order=creado.desc', 2000).catch(nada),
     traer('sst_msds', '&select=id,producto,ficha_url&order=producto.asc', 3000).catch(nada),
-    traerTodo('sst_doc', '&hoja=in.(ats,petar)&creado=gte.'+t0+'&select=id,hoja,creado&order=creado.desc', 20000).catch(nada)
+    traerTodo('sst_doc', '&hoja=in.(ats,petar)&creado=gte.'+t0+'&select=id,hoja,creado&order=creado.desc', 20000).catch(nada),
+    /* 4/11/2026 · el área de cada requisito y lo que se le pidió (sst_estado «aud_areas») */
+    estadoLeerP('aud_areas').then(function(f){ return (f && f.valor) || null; }).catch(nada)
   ];
   var pr=Promise.all(P).then(function(r){
     var D={ obra:oid, trab:r[0]||[], acc:r[1]||[], rep:r[2]||[], insp:r[3]||[], hht:r[4]||[], cons:r[5]||[], asis:r[6]||[], kar:r[7]||[],
             docs:r[8]||[], notas:r[9]||[], com:r[10], emo:r[11], ind:r[12]||[], bol:r[13]||[], dif:r[14]||[], eq:r[15]||[], eqi:r[16]||[],
             buena:r[17]||[], sug:r[18]||[], req:r[19]||[], msds:r[20]||[], atsPetar:r[21]||[], desdeDatos:d0, sinEmo:r[11]===null };
+    AUDW.areas=_audAreasLimpias(r[22]);
     if((YO.obra||{}).id===oid){ AUDW.obra=oid; AUDW.D=D; AUDW.t=Date.now(); AUDW.C=null; }
     AUDW.cargando=null;
     return D;
@@ -742,7 +873,7 @@ function audEvaluar(C, r){
   var f=AUD_EV[r.ev] || AUD_EV.subir, R;
   try{ R=f(C, r); }catch(e){ R=_audRes('ojo', 'No se pudo revisar esto ('+String((e && e.message) || e).slice(0, 80)+').', []); }
   var ev=(C.evid[r.k]||[]).slice().sort(function(a, b){ return String(b.creado||'').localeCompare(String(a.creado||'')); });
-  R.ev=ev.map(function(x){ return { id:x.id, t:x.nombre||'Archivo', f:String(x.creado||'').slice(0, 10), u:x.url }; });
+  R.ev=ev.map(function(x){ var d=_audNota(x)||{}; return { id:x.id, t:x.nombre||'Archivo', f:String(x.creado||'').slice(0, 10), u:x.url, a:_audAreaN(d.a) ? d.a : '' }; });
   R.st0=R.st;
   if(ev.length && (R.st==='subir' || R.st==='falta' || R.st==='info')){ R.st='ok'; R.lin=(R.st0==='info' ? R.lin+' · ' : '')+'Con tu evidencia: '+_audN(ev.length, 'archivo', 'archivos')+' (el último, del '+_audF(ev[0].creado)+')'; }
   else if(ev.length) R.lin+=' · '+_audN(ev.length, 'archivo tuyo', 'archivos tuyos');
@@ -827,9 +958,15 @@ function _audEnchufar(caja){
   Array.prototype.forEach.call(caja.querySelectorAll('[data-aud-ir]'), function(b){ b.onclick=function(){ navegar(b.getAttribute('data-aud-ir')); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('input[data-aud-sube]'), function(x){ x.onchange=function(){ audSubir(x, x.getAttribute('data-aud-sube')); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('[data-aud-quita]'), function(b){ b.onclick=function(){ audQuitarEvid(b.getAttribute('data-aud-quita')); }; });
+  Array.prototype.forEach.call(caja.querySelectorAll('select[data-aud-area]'), function(x){ x.onchange=function(){ audPonerArea(x.getAttribute('data-aud-area'), x.value); }; });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-aud-pedir]'), function(b){ b.onclick=function(){ audPedir([b.getAttribute('data-aud-pedir')], b); }; });
+  var pa=caja.querySelector('#aud-pedir-areas'); if(pa) pa.onclick=function(){ audPedirAreas(); };
 }
 function _audSeccionHTML(k, R){
-  var h='<div class="tarj" id="aud-sec" data-sec="'+esc(k)+'"><div class="tarj-cuerpo">';
+  var pend=_audPendientes(k, R).length;
+  var h='<div class="tarj" id="aud-sec" data-sec="'+esc(k)+'"><div class="tarj-cuerpo">'+
+    (pend ? '<div class="aud-pedir-bar"><span>'+esc(_audN(pend, 'requisito', 'requisitos'))+' sin evidencia. Cada uno tiene su área: pídele a cada área lo suyo.</span>'+
+            '<button type="button" class="bt chico" id="aud-pedir-areas">📨 Pedir a las áreas lo que falta</button></div>' : '');
   _audCatalogo(k).forEach(function(G){
     h+='<div class="aud-g"><h3>'+esc(G.g)+'</h3>'+(G.cita ? '<p class="aud-cita">'+esc(G.cita)+'</p>' : '');
     var p='';
@@ -845,20 +982,25 @@ function _audSeccionHTML(k, R){
 }
 function _audFilaHTML(r, x){
   var E=AUD_EST[x.st]||AUD_EST.subir, v=_audIrV(x.ir), n=x.det.length+x.ev.length;
+  /* 4/11/2026 · el área del requisito, lo que se le pidió y de quién es lo último que se subió */
+  var ar=_audAreaDe(r), ped=(AUDW.areas && AUDW.areas.p[r.k]) || null, pend=(x.st==='falta' || x.st==='subir') && !x.ev.length, ult=x.ev[0];
+  var area='<small class="aud-area"><label>Área <select data-aud-area="'+esc(r.k)+'" aria-label="'+esc('Área de '+r.cl+' '+r.t)+'">'+AUD_AREAS.map(function(A){ return '<option value="'+A[0]+'"'+(A[0]===ar ? ' selected' : '')+'>'+esc(A[1])+'</option>'; }).join('')+'</select></label>'+
+    (ult && ult.a ? ' <span class="aud-de">· Lo entregó '+esc(_audAreaN(ult.a))+', el '+esc(_audF(ult.f))+'</span>' : (pend && ped ? ' <span class="aud-pedido">· Pedido a '+esc(_audAreaN(ped.a))+' el '+esc(_audF(ped.f))+'</span>' : ''))+'</small>';
   return '<div class="aud-r" data-k="'+esc(r.k)+'" data-st="'+esc(x.st)+'">'+
     '<span class="aud-st '+E.cl+'">'+E.ic+' '+esc(E.n)+'</span>'+
     '<div class="aud-tx"><b><span class="aud-cl">'+esc(r.cl)+'</span>'+esc(r.t)+'</b>'+(r.sub ? '<small>'+esc(r.sub)+'</small>' : '')+
-      '<small class="aud-lin">'+esc(x.lin)+'</small>'+(x.nota ? '<p class="aud-nota">'+esc(x.nota)+'</p>' : '')+
+      '<small class="aud-lin">'+esc(x.lin)+'</small>'+area+(x.nota ? '<p class="aud-nota">'+esc(x.nota)+'</p>' : '')+
       (n ? '<details><summary>Ver lo que hay ('+n+')</summary><ul class="aud-det">'+x.det.map(function(d){ return _audDetLi(d, false); }).join('')+x.ev.map(function(d){ return _audDetLi(d, true); }).join('')+'</ul></details>' : '')+
     '</div>'+
     '<div class="aud-bt">'+(v ? '<button type="button" class="bt sec chico" data-aud-ir="'+esc(v.id)+'">'+esc('Ir a «'+((typeof PESTANAS==='object' && PESTANAS[v.id]) || v.n)+'»')+'</button>' : '')+
+      (pend ? '<button type="button" class="bt sec chico" data-aud-pedir="'+esc(r.k)+'">📨 '+(ped ? 'Pedir otra vez' : 'Pedir')+'</button>' : '')+
       '<label class="bt sec chico aud-subir">＋ Adjuntar<input type="file" data-aud-sube="'+esc(r.k)+'" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx" multiple aria-label="'+esc('Adjuntar evidencia a '+r.cl+' '+r.t)+'"></label></div>'+
   '</div>';
 }
 function _audDetLi(d, propio){
   var t=d.u ? '<a href="'+esc(d.u)+'" target="_blank" rel="noopener">'+esc(d.t)+'</a>'
             : ((d.ir && _audIrV([d.ir])) ? '<button type="button" class="bt-link" data-aud-ir="'+esc(d.ir)+'">'+esc(d.t)+'</button>' : esc(d.t));
-  return '<li'+(d.mal ? ' class="mal"' : '')+'><span class="f">'+(d.f ? esc(_audF(d.f)) : '')+'</span><span class="t">'+(propio ? '📎 ' : '')+t+'</span>'+
+  return '<li'+(d.mal ? ' class="mal"' : '')+'><span class="f">'+(d.f ? esc(_audF(d.f)) : '')+'</span><span class="t">'+(propio ? '📎 ' : '')+t+(propio && d.a ? ' <span class="aud-de">· '+esc(_audAreaN(d.a))+'</span>' : '')+'</span>'+
     (propio ? '<button type="button" class="bt-link" data-aud-quita="'+esc(d.id)+'">Quitar</button>' : '')+'</li>';
 }
 function _audMsg(t, cl){ AUDW.msg=t||''; AUDW.msgCl=cl||''; var m=$('aud-msg'); if(m){ m.className='msg '+(cl||''); m.textContent=t||''; } }
@@ -880,11 +1022,16 @@ function audSubir(inp, k){
     if(i>=files.length) return Promise.resolve();
     var f=files[i++];
     return subirArchivoP('auditoria', f).then(function(url){
-      return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:AUD_EVID, nombre:String(f.name||'archivo').replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[_]+/g, ' ').trim().slice(0, 160) || 'Archivo', url:url, nota:JSON.stringify({ v:1, k:k }) });
+      return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:AUD_EVID, nombre:String(f.name||'archivo').replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[_]+/g, ' ').trim().slice(0, 160) || 'Archivo', url:url, nota:JSON.stringify({ v:1, k:k, a:_audAreaDe(r) }) });
     }).then(function(){ hechos++; return sig(); });
   }
   return sig().then(function(){
     _audMsg('', ''); toast(hechos===1 ? 'Evidencia guardada en «'+r.cl+' '+r.t+'».' : hechos+' archivos guardados en «'+r.cl+' '+r.t+'».');
+    /* 4/11/2026 · V7.9c · el pendiente de ese requisito (si se le pidió a un área) queda cerrado: se entregó */
+    if(typeof areaActiva==='function' && areaActiva() && typeof penIr==='function')
+      penIr('penCerrarRef', 'aud:'+k, 'Se subió la evidencia a la carpeta de auditoría ('+_audN(hechos, 'archivo', 'archivos')+').').then(function(n){
+        if(n && typeof areaContar==='function') areaContar().then(function(){ try{ pintarRail(true); }catch(_r){} });
+      }, function(){});
     return _audRecargar().then(function(){ return true; });
   }, function(e){
     _audMsg(e==='muy-grande' ? 'Un archivo pesa demasiado: comprímelo.' : 'No se pudo subir. '+porQueFallo(e), 'mal');
@@ -897,6 +1044,91 @@ function audQuitarEvid(id){
     if(!si) return false;
     return sbDelP('sst_doc?id=eq.'+encodeURIComponent(id)).then(function(){ toast('Quitado de la carpeta.'); return _audRecargar(); }, function(e){ toast('No se pudo quitar. '+porQueFallo(e)); });
   });
+}
+
+/* ══ LAS ÁREAS (4/11/2026 · revisión de Gemini, bloque 1: la auditoría entre todas las áreas) ════════════════════
+   A cada requisito le toca un área (la de la norma, de entrada; la obra la cambia aquí). Lo que falta se le pide a su
+   área: un mensaje para pegar en WhatsApp o en un correo, por área, y queda anotado que se pidió y cuándo. Lo que se sube
+   dice de qué área es. Todo en la obra: sst_estado «aud_areas» = { a:{ llave:área }, p:{ llave:{ a:área, f:'AAAA-MM-DD' } } }. */
+function _audAreasLimpias(v){
+  var o={ a:{}, p:{} }; v=(v && typeof v==='object' && !Array.isArray(v)) ? v : {};
+  Object.keys(v.a||{}).forEach(function(k){ if(_audAreaN(v.a[k])) o.a[k]=v.a[k]; });
+  Object.keys(v.p||{}).forEach(function(k){ var x=v.p[k]; if(x && _audAreaN(x.a) && /^\d{4}-\d{2}-\d{2}$/.test(String(x.f||''))) o.p[k]={ a:x.a, f:x.f }; });
+  return o;
+}
+function _audAreaN(a){ var n=''; AUD_AREAS.forEach(function(A){ if(A[0]===a) n=A[1]; }); return n; }
+function _audAreaDe(r){ var o=AUDW.areas && AUDW.areas.a[r.k]; return o || r.a || 'sst'; }
+/* lo que todavía no tiene evidencia (le falta o se sube aquí) */
+function _audPendientes(k, R){
+  var L=[]; _audCatalogo(k).forEach(function(G){ G.s.forEach(function(r){ var x=R[r.k]; if(x && (x.st==='falta' || x.st==='subir') && !x.ev.length) L.push(r); }); });
+  return L;
+}
+/* cambiar lo de las áreas: sobre lo que el servidor tiene en ese momento */
+function _audAreasCambiar(mutar){
+  return estadoLeerP('aud_areas').then(function(f){
+    var v=_audAreasLimpias(f && f.valor); mutar(v);
+    return estadoEscribirP('aud_areas', v).then(function(){ AUDW.areas=v; return v; });
+  });
+}
+function audPonerArea(k, a){
+  if(!_audAreaN(a)) return Promise.resolve(false);
+  var r=_audReq(k); if(!r) return Promise.resolve(false);
+  return _audAreasCambiar(function(v){ if(a===(r.a || 'sst')) delete v.a[k]; else v.a[k]=a; })
+    .then(function(){ toast('«'+r.cl+' '+r.t+'» es de '+_audAreaN(a)+'.'); _audPintar(); return true; },
+          function(e){ toast('No se pudo guardar el área. '+porQueFallo(e)); _audPintar(); return false; });
+}
+/* el pedido a un área: el mensaje, y que se pidió hoy */
+function audTextoPedido(area, L){
+  var S=AUD_SECC.filter(function(x){ return L[0] && x.k===L[0].norma; })[0];
+  return 'Hola, equipo de '+_audAreaN(area)+'. Para la carpeta de auditoría de '+(nombreObraP()||'la obra')+(S ? ' ('+S.n+')' : '')+' necesitamos:\n'+
+    L.map(function(r){ return '• '+r.cl+' '+r.t+(r.pista ? ': '+r.pista : ''); }).join('\n')+
+    '\nEnvíenlo por favor a quien lleva la carpeta. Gracias.';
+}
+function audPedir(ks, b){
+  var L=ks.map(_audReq).filter(Boolean); if(!L.length) return Promise.resolve(false);
+  var a=_audAreaDe(L[0]), hoy=hoyISO(), t=audTextoPedido(a, L);
+  var copia=function(){ try{ return navigator.clipboard.writeText(t).then(function(){ return true; }, function(){ return false; }); }catch(_c){ return Promise.resolve(false); } };
+  if(b) b.disabled=true;
+  return copia().then(function(ok){
+    return _audAreasCambiar(function(v){ L.forEach(function(r){ v.p[r.k]={ a:_audAreaDe(r), f:hoy }; }); }).then(function(){
+      return audPedirPendientes(L).then(function(n){
+        toast((ok ? 'Pedido copiado: pégalo en WhatsApp o en un correo a '+_audAreaN(a)+'.' : 'Quedó anotado que se le pidió a '+_audAreaN(a)+'.')+
+              (n ? ' Y le aparece en sus pendientes en OBRASST.' : ''));
+        _audPintar(); return true;
+      });
+    });
+  }).catch(function(e){ if(b) b.disabled=false; toast('No se pudo anotar el pedido. '+porQueFallo(e)); return false; });
+}
+/* 4/11/2026 · V7.9c · con las áreas (el SQL V7.9), «Pedir» deja además el pendiente en la bandeja del área: uno por requisito,
+   con la referencia del requisito (el mismo pedido abierto no se repite; la evidencia que se sube lo cierra). Cuántos. */
+function audPedirPendientes(L){
+  if(typeof areaJefe!=='function' || !areaJefe() || typeof penIr!=='function') return Promise.resolve(0);
+  var S=AUD_SECC.filter(function(x){ return L[0] && x.k===L[0].norma; })[0];
+  var items=L.map(function(r){
+    return { area:_audAreaDe(r), tipo:'auditoria', titulo:String(r.cl+' '+r.t).slice(0, 140), ref:'aud:'+r.k,
+             cuerpo:('Para la carpeta de auditoría'+(S ? ' ('+S.n+')' : '')+'. '+(r.pista || '')+' Se sube en «Carpeta de auditoría», en su requisito.').replace(/\s+/g, ' ').trim() };
+  });
+  return penIr('penMandarVarios', items).then(function(R){ return R ? (R.creados+R.ya) : 0; }, function(){ return 0; });
+}
+/* «Pedir a las áreas lo que falta»: lo de esta norma, por área, con su mensaje */
+function audPedirAreas(){
+  var R=AUDW.R; if(!R) return;
+  var L=_audPendientes(AUDW.sec, R), por={};
+  L.forEach(function(r){ var a=_audAreaDe(r); (por[a]=por[a]||[]).push(r); });
+  var S=AUD_SECC.filter(function(x){ return x.k===AUDW.sec; })[0] || { n:'' };
+  var h='<p class="ayuda" style="margin:0 0 10px">Lo que falta de <b>'+esc(S.n)+'</b>, por área. Copia el pedido de cada una y pégalo en WhatsApp o en un correo: queda anotado que se le pidió.</p>'+
+    AUD_AREAS.filter(function(A){ return por[A[0]]; }).map(function(A){
+      var l=por[A[0]];
+      return '<div class="aud-pa"><div class="aud-pa-cab"><b>'+esc(A[1])+'</b> <span class="tenue">'+esc(_audN(l.length, 'requisito', 'requisitos'))+'</span>'+
+        '<button type="button" class="bt sec chico" data-aud-pa="'+A[0]+'">📋 Copiar el pedido</button></div><ul>'+
+        l.map(function(r){ var p=AUDW.areas && AUDW.areas.p[r.k]; return '<li><b>'+esc(r.cl)+'</b> '+esc(r.t)+(p ? ' <span class="aud-pedido">· pedido el '+esc(_audF(p.f))+'</span>' : '')+'</li>'; }).join('')+'</ul></div>';
+    }).join('');
+  abrirHoja('Pedir a las áreas lo que falta', S.n, h, '<button type="button" class="bt sec" id="aud-pa-no">Cerrar</button>', { sinFoco:true, ancha:true });
+  $('aud-pa-no').onclick=cerrarHoja;
+  Array.prototype.forEach.call(document.querySelectorAll('[data-aud-pa]'), function(b){ b.onclick=function(){
+    var a=b.getAttribute('data-aud-pa');
+    audPedir((por[a]||[]).map(function(r){ return r.k; }), b).then(function(ok){ if(ok){ b.disabled=false; b.textContent='✓ Copiado y anotado'; } });
+  }; });
 }
 
 /* ══ EXPORTAR: EL ÍNDICE EN PDF, EL ÍNDICE EN EXCEL, LOS REGISTROS Y EL ZIP POR CARPETAS ══════════════════════════ */

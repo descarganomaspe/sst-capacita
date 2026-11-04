@@ -21,6 +21,12 @@
    · INSST (España), NTP 223 «Trabajos en recintos confinados»: nunca se ventila con oxígeno; si el gas pesa más que el aire,
      la extracción va al fondo; si pesa igual o menos, se insufla al fondo y sale por arriba.
    El caudal que vale es el del ventilador con su manga puesta (la curva del fabricante): cada metro y cada codo le quitan. */
+/* 4/11/2026 · revisión de Gemini (sección 6, aprobada): en un colegio, una oficina o una clínica, el izaje, la excavación y
+   el trabajo en caliente son de obras o de mantenimiento mayor. No se esconden: van al final, plegados, con «Ver permisos
+   para obras o mantenimiento mayor (izaje, excavación, caliente…)». Lo que ya está marcado en un permiso no se pliega. */
+var PERMISOS_MAYOR = ['izaje', 'excavacion', 'caliente'];
+var SECTORES_SIN_OBRA_MAYOR = { educacion:1, oficinas:1, salud:1 };
+function permisosPlegados(sector){ return SECTORES_SIN_OBRA_MAYOR[sector] ? PERMISOS_MAYOR.slice() : []; }
 var AR_TIPOS = [
   { k:'confinado', ic:'🕳️', n:'Espacio confinado', d:'Tanques, cisternas, buzones, pozos, ductos: el aire se mide y se ventila antes de entrar.' },
   { k:'altura',    ic:'🧗', n:'Trabajo en altura', d:'Desde 1,8 m: el anclaje, la línea, el absorbedor y el espacio para detener la caída.' },
@@ -136,6 +142,7 @@ var VEN_FUENTE = 'La cuenta: tiempo = K × (volumen ÷ caudal) × ln(C₁ ÷ C�
      50 kV (1910.333(c)(3)(i)(A); la norma usa el voltaje a tierra: con el de la línea, la distancia sale mayor). */
 var AR_HERR = {
   ven:{ tipo:'confinado', ic:'🌬️', t:'Ventilación: cuánto ventilar antes de entrar', n:'Ventilación de un espacio confinado' },
+  gas:{ tipo:'confinado', ic:'📟', t:'Medición de gases: ¿se puede entrar?', n:'Medición de gases de un espacio confinado', s:'Lo que marcó el detector —oxígeno, explosividad, monóxido de carbono y sulfuro de hidrógeno— contra sus límites, con su semáforo; y cada medición que guardes, con su gráfico.' },
   fac:{ tipo:'altura', ic:'📐', t:'Factor de caída: dónde anclarse', n:'Factor de caída', s:'Qué tan larga sería la caída libre con tu línea y tu anclaje, y si conviene anclarse más arriba.' },
   esl:{ tipo:'izaje', ic:'⛓️', t:'Eslingas: cuánto carga cada ramal', n:'Carga en cada ramal de las eslingas', s:'Con el peso de la carga y el ángulo de las eslingas: cuánto jala cada ramal y si la eslinga lo aguanta.' },
   exc:{ tipo:'excavacion', ic:'📏', t:'Talud, borde y escaleras', n:'Talud, borde y escaleras de una excavación', s:'Con la profundidad y el tipo de suelo: cuánto se abre el talud, cuántas escaleras van y lo que pide la norma.' },
@@ -261,9 +268,123 @@ var ELE_REGLAS = [
 
 /* ── lo que se ve de cada resultado: { big:{a, v, b}, lis:[partes], avisos:[{t, mal | ojo}], reglas, fuente } ──
    una parte es un texto (se traduce) o {n:'número'} (no se traduce) */
+/* ══ LA MEDICIÓN DE GASES DE UN ESPACIO CONFINADO (4/11/2026 · revisión de Gemini, bloque 4) ══════════════════════
+   Lo que marcó el detector (oxígeno, explosividad, CO y H2S) contra sus límites, con su semáforo; y cada medición que
+   se guarda, en su historial (en este celular o esta computadora, por obra) con su gráfico. Los límites, de su norma:
+   · oxígeno de 19,5 % a 23,5 %, y lo inflamable por debajo del 10 % de su límite inferior de explosividad (LIE):
+     OSHA 29 CFR 1910.146 (b), definición de «atmósfera peligrosa»;
+   · monóxido de carbono 25 ppm en 8 horas; sulfuro de hidrógeno 10 ppm en 8 horas y 15 ppm en 15 minutos:
+     D.S. 015-2005-SA (valores límite permisibles de agentes químicos en el ambiente de trabajo).
+   Verde: los cuatro medidos y dentro. Ámbar: lo medido está dentro, pero falta medir alguno. Rojo: alguno fuera: no
+   se entra. Lo mismo vale en el permiso (PETAR). */
+var GAS_LIM = [
+  { k:'o2',  n:'Oxígeno',                  c:'O₂',  u:'%',         min:19.5, max:23.5, tope:100 },
+  { k:'lel', n:'Explosividad',             c:'LIE', u:'% del LIE', max:10,             tope:100 },
+  { k:'co',  n:'Monóxido de carbono',      c:'CO',  u:'ppm',       max:25,             tope:5000 },
+  { k:'h2s', n:'Sulfuro de hidrógeno',     c:'H₂S', u:'ppm',       max:10, stel:15,    tope:2000 }
+];
+var GAS_REGLAS = [
+  { t:'El oxígeno, entre 19,5 % y 23,5 %; lo inflamable, por debajo del 10 % de su límite inferior de explosividad.', f:'OSHA 29 CFR 1910.146 (b)' },
+  { t:'Monóxido de carbono: 25 ppm en 8 horas. Sulfuro de hidrógeno: 10 ppm en 8 horas y 15 ppm en 15 minutos.', f:'D.S. 015-2005-SA (anexo de 2005)' },
+  /* 4/11/2026 · V7.9a · el MINSA actualizó esos anexos (R.M. 733-2024-MINSA, El Peruano del 27/10/2024): hasta confirmar los
+     valores nuevos de cada gas, se dice */
+  { t:'El MINSA actualizó en 2024 los anexos de valores límite: confirma el valor vigente de cada gas antes de usar estos.', f:'R.M. 733-2024-MINSA' },
+  { t:'Se mide primero el oxígeno, después lo inflamable y al final lo tóxico.', f:'OSHA 29 CFR 1910.146, apéndice B' },
+  { t:'Se sigue midiendo mientras haya gente adentro.', f:'OSHA 29 CFR 1910.146 (d)(5)(ii)' }
+];
+var GAS_FALTA = { o2:'Falta medir el oxígeno: se mide primero, antes de entrar.', lel:'Falta medir la explosividad: se mide antes de entrar.',
+                  co:'Falta medir el monóxido de carbono: se mide antes de entrar.', h2s:'Falta medir el sulfuro de hidrógeno: se mide antes de entrar.' };
+/* el estado de un gas: '' sin medir · 'ok' · 'bajo' / 'alto' (oxígeno) · 'mal' (sobre su límite) · 'stel' (sobre el de 15 minutos) */
+function gasEstado(g, n){
+  if(n === null || n === undefined || isNaN(n)) return '';
+  if(g.min !== undefined && n < g.min) return 'bajo';
+  if(g.k === 'o2') return n > g.max ? 'alto' : 'ok';
+  if(g.stel !== undefined && n >= g.stel) return 'stel';
+  return n >= g.max ? 'mal' : 'ok';
+}
+function gasCalcular(o){
+  o = o || {};
+  var v = {}, est = {}, hay = 0, fuera = [], falta = [], raro = false;
+  GAS_LIM.forEach(function(g){
+    var n = _arNum0(o[g.k]);
+    if(n !== null && (n < 0 || n > g.tope)) raro = true;
+    v[g.k] = n; est[g.k] = gasEstado(g, n);
+    if(n === null) falta.push(g.k); else { hay++; if(est[g.k] !== 'ok') fuera.push(g.k); }
+  });
+  if(raro) return { mal:'gas_rango' };
+  if(!hay) return { mal:'gas' };
+  return { v:v, est:est, fuera:fuera, falta:falta, nivel:fuera.length ? 2 : (falta.length ? 1 : 0) };
+}
+function _gasFmt(g, n){ return venFmt(n, g.k === 'o2' || g.k === 'lel' ? 1 : 0) + ' ' + g.u; }
+function _gasLim(g){ return g.k === 'o2' ? 'de 19,5 a 23,5 %' : (g.k === 'lel' ? 'menos del 10 %' : 'menos de ' + g.max + ' ppm' + (g.stel ? ' (15 min: ' + g.stel + ')' : '')); }
+function gasResumen(R){
+  var o = { lis:[], avisos:[], reglas:GAS_REGLAS, fuente:'' };
+  o.big = R.nivel === 2 ? { a:'El aire', v:'No se entra', b:'ventila y vuelve a medir' }
+        : (R.nivel === 1 ? { a:'Lo medido está bien', v:'Falta medir', b:'los cuatro, antes de entrar' } : { a:'El aire', v:'Se puede entrar', b:'con el permiso firmado y midiendo mientras haya gente adentro' });
+  o.nivel = R.nivel;
+  GAS_LIM.forEach(function(g){
+    var n = R.v[g.k], e = R.est[g.k];
+    o.lis.push([g.n + ':', { n:(n === null ? '—' : _gasFmt(g, n)) }, '·', (e === '' ? 'sin medir' : (e === 'ok' ? 'bien' : 'fuera')), '(' + _gasLim(g) + ')']);
+  });
+  GAS_LIM.forEach(function(g){
+    var e = R.est[g.k];
+    if(e === 'bajo') o.avisos.push({ t:'Oxígeno por debajo de 19,5 %: falta aire. No se entra: ventila con aire limpio y vuelve a medir.', mal:true });
+    else if(e === 'alto') o.avisos.push({ t:'Oxígeno por encima de 23,5 %: lo que arda, arde más fuerte. No se entra: busca de dónde sale y ventila.', mal:true });
+    else if(e === 'stel') o.avisos.push({ t:'Sulfuro de hidrógeno de 15 ppm o más (su límite de 15 minutos): no se entra.', mal:true });
+    else if(e === 'mal') o.avisos.push({ t:(g.k === 'lel' ? 'Explosividad de 10 % del LIE o más: no se entra.' : (g.k === 'co' ? 'Monóxido de carbono de 25 ppm o más (su límite de 8 horas): no se entra.' : 'Sulfuro de hidrógeno de 10 ppm o más (su límite de 8 horas): no se entra.')), mal:true });
+  });
+  /* lo que falta, cada uno en su frase (cada frase se traduce entera) */
+  if(R.nivel === 1) R.falta.forEach(function(k){ o.avisos.push({ t:GAS_FALTA[k], ojo:true }); });
+  if(R.nivel === 0) o.avisos.push({ t:'Los cuatro dentro de su límite. Se sigue midiendo mientras haya gente adentro.' });
+  return o;
+}
+/* el historial: lo que se guardó, de lo más nuevo a lo más viejo (hasta 200) */
+function gasLimpio(x){
+  x = x || {};
+  var o = { t:+x.t || 0, lugar:String(x.lugar || '').slice(0, 80) };
+  GAS_LIM.forEach(function(g){ var n = _arNum0(x[g.k]); o[g.k] = (n === null || n < 0 || n > g.tope) ? null : n; });
+  return o.t ? o : null;
+}
+/* el gráfico: un cuadro por gas, con su límite en rojo (y su rango, en el oxígeno), lo más viejo a la izquierda */
+function gasGraficoSVG(L, ancho){
+  L = (L || []).map(gasLimpio).filter(Boolean).sort(function(a, b){ return a.t - b.t; }).slice(-24);
+  if(L.length < 2) return '';
+  var W = ancho || 640, cw = (W - 30) / 2, ch = 132, gap = 10, H = 2 * ch + gap + 8, s = '';
+  var hora = function(t){ var d = new Date(t); return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); };
+  GAS_LIM.forEach(function(g, gi){
+    var x0 = 10 + (gi % 2) * (cw + gap), y0 = 4 + Math.floor(gi / 2) * (ch + gap), px = x0 + 34, pw = cw - 44, py = y0 + 22, ph = ch - 44;
+    var vals = L.map(function(x){ return x[g.k]; }).filter(function(n){ return n !== null; });
+    var lo = g.k === 'o2' ? Math.min(18, Math.min.apply(null, vals.concat([19.5]))) : 0;
+    var hi = g.k === 'o2' ? Math.max(24.5, Math.max.apply(null, vals.concat([23.5]))) : Math.max(g.stel || g.max, Math.max.apply(null, vals.concat([0]))) * 1.15;
+    var Y = function(n){ return py + ph - (n - lo) / (hi - lo) * ph; }, X = function(i){ return px + (L.length === 1 ? pw / 2 : i * pw / (L.length - 1)); };
+    s += '<rect x="' + x0 + '" y="' + y0 + '" width="' + cw.toFixed(1) + '" height="' + ch + '" rx="8" fill="#ffffff" stroke="#D5DDE3"/>';
+    s += '<text x="' + (x0 + 10) + '" y="' + (y0 + 15) + '" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#0B2A3A">' + _arEsc(g.c) + ' <tspan font-weight="400" fill="#4A5B68">· ' + _arEsc(g.u) + '</tspan></text>';
+    /* el límite (y el rango del oxígeno) */
+    var lim = g.k === 'o2' ? [g.min, g.max] : [g.max].concat(g.stel ? [g.stel] : []);
+    lim.forEach(function(n, li){
+      s += '<line x1="' + px + '" y1="' + Y(n).toFixed(1) + '" x2="' + (px + pw) + '" y2="' + Y(n).toFixed(1) + '" stroke="#C81E1E" stroke-width="1" stroke-dasharray="' + (li ? '2 3' : '5 3') + '"/>' +
+           '<text x="' + (px - 4) + '" y="' + (Y(n) + 3.5).toFixed(1) + '" font-family="Arial,Helvetica,sans-serif" font-size="9" fill="#C81E1E" text-anchor="end">' + String(n).replace('.', ',') + '</text>';
+    });
+    s += '<line x1="' + px + '" y1="' + (py + ph) + '" x2="' + (px + pw) + '" y2="' + (py + ph) + '" stroke="#D5DDE3"/>';
+    /* la línea y sus puntos: verde dentro, rojo fuera */
+    var d = '', pts = '';
+    L.forEach(function(x, i){
+      var n = x[g.k]; if(n === null) return;
+      d += (d ? ' L' : 'M') + X(i).toFixed(1) + ' ' + Y(n).toFixed(1);
+      var e = gasEstado(g, n), ok = e === 'ok';
+      pts += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(n).toFixed(1) + '" r="' + (ok ? 3 : 4) + '" fill="' + (ok ? '#1E6B45' : '#C81E1E') + '" stroke="#ffffff" stroke-width="1.2"/>';
+    });
+    if(d) s += '<path d="' + d + '" fill="none" stroke="#0B2A3A" stroke-width="1.6" stroke-linejoin="round"/>' + pts;
+    else s += '<text x="' + (px + pw / 2) + '" y="' + (py + ph / 2) + '" font-family="Arial,Helvetica,sans-serif" font-size="10" fill="#6B7C88" text-anchor="middle">—</text>';
+    s += '<text x="' + px + '" y="' + (y0 + ch - 8) + '" font-family="Arial,Helvetica,sans-serif" font-size="9" fill="#6B7C88">' + hora(L[0].t) + '</text>' +
+         '<text x="' + (px + pw) + '" y="' + (y0 + ch - 8) + '" font-family="Arial,Helvetica,sans-serif" font-size="9" fill="#6B7C88" text-anchor="end">' + hora(L[L.length - 1].t) + '</text>';
+  });
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Gráfico de las mediciones">' + s + '</svg>';
+}
 function arResumen(k, R, S){
   S = S || {};
   if(!R || R.mal) return null;
+  if(k === 'gas') return gasResumen(R);
   var o = { lis:[], avisos:[], reglas:[], fuente:'' };
   if(k === 'fac'){
     o.big = { a:'Factor de caída', v:venFmt(R.fc, 2), b:R.nivel === 0 ? 'lo mejor: anclaje arriba y sin juego' : (R.nivel === 1 ? 'anclaje a la altura del anillo D o más arriba' : 'anclaje por debajo del anillo D') };
@@ -358,6 +479,11 @@ function arCampos(k, S){
     if(su.k === 'a') E.push({ chk:['corto', 'Va a estar abierta 24 horas o menos'] });
     return E;
   }
+  if(k === 'gas') return [
+    { t:'Lo que marca el detector' },
+    { c:[['o2', 'Oxígeno', '%', '20,9'], ['lel', 'Explosividad', '% del LIE', '0'], ['co', 'Monóxido de carbono (CO)', 'ppm', '0'], ['h2s', 'Sulfuro de hidrógeno (H₂S)', 'ppm', '0']] },
+    { nota:'Mide primero el oxígeno, después la explosividad y al final lo tóxico. Desde afuera, antes de entrar, y a la altura donde se va a trabajar (arriba, al medio y abajo).' }
+  ];
   if(k === 'ele') {
     var V = [{ t:'1 · La línea' }, { ch:['sabe', [['si', 'Sé el voltaje'], ['no', 'No sé el voltaje']], 'El voltaje'] }];
     if(S.sabe !== 'no') V.push({ c:[['kv', 'Voltaje de la línea', 'kV', '22,9']] }, { nota:'El que figura en el poste o el que da la empresa eléctrica, entre fases.' });
@@ -399,10 +525,12 @@ function arResultado(k, R, Rr, P, pie){
   if(!Rr){
     var t = { linea:'Escribe el largo de tu línea.', anclaje:'Escribe la altura del anclaje: 0 si está a la altura de tus pies.', anillo:'Escribe la altura de tu anillo D: entre 0,8 y 2,5 m.',
               peso:'Escribe el peso de la carga.', medidas:'Escribe el largo de cada ramal y el alto.', alto:'El alto no puede ser mayor que el largo del ramal.', angulo:'Escribe el ángulo: de 1 a 90°.',
-              prof:'Escribe la profundidad de la excavación.', kv:'Escribe el voltaje de la línea, en kV.' }[R && R.mal] || 'Faltan datos.';
+              prof:'Escribe la profundidad de la excavación.', kv:'Escribe el voltaje de la línea, en kV.',
+              gas:'Escribe lo que marcó el detector: al menos uno de los cuatro.', gas_rango:'Revisa lo escrito: un porcentaje va de 0 a 100, y las ppm no pueden ser negativas.' }[R && R.mal] || 'Faltan datos.';
     return '<div class="' + (P.vacio || '') + '"><span>' + _arEsc(t) + '</span></div>';
   }
-  var h = '<div class="' + (P.caja || '') + '">';
+  /* 4/11/2026 · con semáforo (la medición de gases): ar-sem0 verde, ar-sem1 ámbar, ar-sem2 rojo */
+  var h = '<div class="' + (P.caja || '') + (Rr.nivel === 0 || Rr.nivel === 1 || Rr.nivel === 2 ? ' ar-sem' + Rr.nivel : '') + '">';
   if(Rr.big) h += '<div class="' + (P.big || '') + '"><small><span>' + _arEsc(Rr.big.a) + '</span></small><b data-sin-trad>' + _arEsc(Rr.big.v) + '</b><small><span>' + _arEsc(Rr.big.b || '') + '</span></small></div>';
   if(Rr.lis.length) h += '<ul class="' + (P.ul || '') + '">' + Rr.lis.map(function(L){ return '<li>' + arPartes(L) + '</li>'; }).join('') + '</ul>';
   h += Rr.avisos.map(function(a){ return '<div class="' + (a.mal ? (P.malo || '') : (a.ojo ? (P.ojo || '') : (P.aviso || ''))) + '">' + (a.mal ? '⛔ ' : (a.ojo ? '⚠️ ' : '✔️ ')) + '<span>' + _arEsc(a.t) + '</span></div>'; }).join('');
@@ -417,6 +545,7 @@ function arCalcular(k, S){
   if(k === 'esl') return eslCalcular(S);
   if(k === 'exc') return excCalcular(S);
   if(k === 'ele') return eleCalcular(S);
+  if(k === 'gas') return gasCalcular(S);
   return null;
 }
 /* trabajo en caliente: la lista (con las clases de quien la dibuja: P = { lista, item }) y el vigía */
@@ -473,6 +602,13 @@ function _arCssW(){
     '.arw-av{margin:10px 0 0}',
     '.arw-vacio{padding:18px; text-align:left}',
     '.arw-cal{display:grid; gap:8px}',
+    /* 4/11/2026 · la medición de gases: el semáforo, el gráfico y lo guardado */
+    '.ar-sem0 .venw-min b{color:var(--ok)} .ar-sem1 .venw-min b{color:var(--oro, #8a6b00)} .ar-sem2 .venw-min b{color:var(--mal)}',
+    '.arw-gas-graf{margin:6px 0 12px} .arw-gas-graf svg{display:block; width:100%; height:auto}',
+    '.arw-gas-t td,.arw-gas-t th{white-space:nowrap; font-variant-numeric:tabular-nums}',
+    '.arw-gas-t td.arw-gas-mal{color:var(--mal); font-weight:700}',
+    '.arw-gas-sem{display:inline-block; width:11px; height:11px; border-radius:50%; vertical-align:middle}',
+    '.arw-gas-sem.s0{background:var(--ok)} .arw-gas-sem.s1{background:#B98200} .arw-gas-sem.s2{background:var(--mal)}',
     '.arw-cal-i{display:grid; grid-template-columns:20px minmax(0,1fr); gap:2px 10px; align-items:start; padding:10px 12px; border:1px solid var(--raya); border-radius:10px; font-size:13.5px; line-height:1.45; color:var(--tinta); cursor:pointer}',
     '.arw-cal-i input{margin:2px 0 0}',
     '.arw-cal-i small{grid-column:2; color:var(--gris); font-size:11.5px}',
@@ -505,13 +641,19 @@ function arwHerramientas(k){
 function vistaAlto(caja){
   _arCssW(); ARW.caja=caja;
   var ac=$('acciones'); if(ac) ac.innerHTML='';
-  var h='<div class="arw-g">'+AR_TIPOS.map(function(T){
+  /* 4/11/2026 · en un colegio, una oficina o una clínica: los de obras o mantenimiento mayor, al final y plegados */
+  var pleg=permisosPlegados(((typeof YO==='object' && YO.obra) ? YO.obra.sector : '') || (typeof sectorObraP==='function' ? sectorObraP() : ''));
+  var tipos=AR_TIPOS.filter(function(T){ return pleg.indexOf(T.k)<0; });
+  if(pleg.length && ARW.mayor) tipos=tipos.concat(AR_TIPOS.filter(function(T){ return pleg.indexOf(T.k)>-1; }));
+  var h='<div class="arw-g">'+tipos.map(function(T){
     return '<div class="arw-t" id="arw-'+T.k+'"><h3><span aria-hidden="true">'+T.ic+'</span>'+esc(T.n)+'</h3><p>'+esc(T.d)+'</p><div class="acciones">'+
       arwHerramientas(T.k).map(function(x){ return '<button type="button" class="bt sec chico" data-arw="'+esc(x.ir)+'">'+x.ic+' '+esc(x.t)+'</button>'; }).join('')+'</div></div>';
   }).join('')+'</div>'+
+  (pleg.length ? '<p style="margin:10px 0 0"><button type="button" class="bt-link" id="arw-mayor" data-sin-sector>'+(ARW.mayor ? 'Ocultar los de obras o mantenimiento mayor' : 'Ver permisos para obras o mantenimiento mayor (izaje, excavación, caliente…)')+'</button></p>' : '')+
   '<p class="ayuda" style="margin:10px 0 0">El permiso de trabajo de alto riesgo (PETAR) se llena y se firma en la app, en la obra.</p>'+
   '<div class="tarj" id="arw-panel" style="margin-top:16px"></div>';
   caja.innerHTML=h;
+  var bm=$('arw-mayor'); if(bm) bm.onclick=function(){ ARW.mayor=!ARW.mayor; vistaAlto(caja); };
   Array.prototype.forEach.call(caja.querySelectorAll('[data-arw]'), function(b){ b.onclick=function(){
     var d=b.getAttribute('data-arw');
     if(d.charAt(0)==='#'){
@@ -578,11 +720,46 @@ function _arwRes(){
     _arwVigia(); return;
   }
   var R=arCalcular(k, S), Rr=arResumen(k, R, S);
-  c.innerHTML=arResultado(k, R, Rr, AR_R_WEB, Rr ? '<div class="acciones" style="margin-top:10px"><button type="button" class="bt sec" id="arw-copiar">📋 Copiar el resultado</button></div>' : '');
+  c.innerHTML=arResultado(k, R, Rr, AR_R_WEB, Rr ? '<div class="acciones" style="margin-top:10px">'+(k==='gas' ? '<button type="button" class="bt" id="arw-gas-guardar">💾 Guardar la medición</button>' : '')+
+                                                   '<button type="button" class="bt sec" id="arw-copiar">📋 Copiar el resultado</button></div>' : '')+
+               (k==='gas' ? '<div class="arw-tit" style="margin-top:16px">Las mediciones guardadas</div><div id="arw-gas-hist">'+_gasHistW()+'</div>' : '');
+  var bg=$('arw-gas-guardar'); if(bg) bg.onclick=function(){
+    var x=gasLimpio({ t:Date.now(), lugar:S.lugar, o2:S.o2, lel:S.lel, co:S.co, h2s:S.h2s }), g=_gasTodoW(), ob=_gasObraW(), L=Array.isArray(g[ob]) ? g[ob] : [];
+    L.unshift(x); g[ob]=L.slice(0, 200);
+    try{ localStorage.setItem(LS_GAS_W, JSON.stringify(g)); }catch(_g){}
+    var h=$('arw-gas-hist'); if(h){ h.innerHTML=_gasHistW(); _gasAtarW(); }
+    toast('Medición guardada en esta computadora.');
+  };
+  _gasAtarW();
   var b=$('arw-copiar'); if(b) b.onclick=function(){
     var t=arTextoDe(k, Rr, S.lugar||'');
     try{ navigator.clipboard.writeText(t).then(function(){ toast('Copiado: ya se puede pegar en WhatsApp o en el PETAR.'); }, function(){ toast('No se pudo copiar.'); }); }catch(_c){ toast('No se pudo copiar.'); }
   };
+}
+/* 4/11/2026 · el historial de la medición de gases: en esta computadora, por obra (hasta 200) */
+var LS_GAS_W='sstp_gases';
+function _gasObraW(){ return String(((typeof YO==='object' && YO.obra) ? (YO.obra.id || YO.obra.codigo) : '') || 'x'); }
+function _gasTodoW(){ var g=null; try{ g=JSON.parse(localStorage.getItem(LS_GAS_W)||'null'); }catch(_l){ g=null; } return (g && typeof g==='object' && !Array.isArray(g)) ? g : {}; }
+function _gasHistW(){
+  var L=(_gasTodoW()[_gasObraW()]||[]).map(gasLimpio).filter(Boolean);
+  if(!L.length) return '<p class="ayuda">Todavía no hay mediciones guardadas en esta computadora. Escribe lo que marca el detector y toca «Guardar la medición».</p>';
+  var svg=gasGraficoSVG(L, 720), dia=function(t){ var d=new Date(t); return fechaLarga(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2))+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); };
+  return (svg ? '<div class="arw-gas-graf">'+svg+'</div>' : '<p class="ayuda">Con dos mediciones o más, sale su gráfico.</p>')+
+    '<div class="tabla-caja"><table class="arw-gas-t"><thead><tr><th></th><th>Cuándo</th><th>Dónde</th>'+GAS_LIM.map(function(g){ return '<th>'+esc(g.c)+' <span class="tenue">'+esc(g.u)+'</span></th>'; }).join('')+'<th></th></tr></thead><tbody>'+
+    L.slice(0, 30).map(function(x){
+      var R=gasCalcular(x), n=R.mal ? 1 : R.nivel;
+      return '<tr><td><span class="arw-gas-sem s'+n+'" title="'+(n===2 ? 'No se entra' : (n===1 ? 'Falta medir' : 'Se puede entrar'))+'"></span></td><td>'+esc(dia(x.t))+'</td><td>'+esc(x.lugar||'—')+'</td>'+
+        GAS_LIM.map(function(g){ var v=x[g.k], e=gasEstado(g, v); return '<td class="'+(e && e!=='ok' ? 'arw-gas-mal' : '')+'">'+(v===null ? '—' : venFmt(v, g.k==='o2' || g.k==='lel' ? 1 : 0))+'</td>'; }).join('')+
+        '<td><button type="button" class="bt-link" data-gas-q="'+x.t+'" aria-label="Quitar">Quitar</button></td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
+function _gasAtarW(){
+  Array.prototype.forEach.call(document.querySelectorAll('[data-gas-q]'), function(b){ b.onclick=function(){
+    var t=+b.getAttribute('data-gas-q'), g=_gasTodoW(), ob=_gasObraW();
+    g[ob]=(Array.isArray(g[ob]) ? g[ob] : []).filter(function(x){ return !x || +x.t!==t; });
+    try{ localStorage.setItem(LS_GAS_W, JSON.stringify(g)); }catch(_g){}
+    var h=$('arw-gas-hist'); if(h){ h.innerHTML=_gasHistW(); _gasAtarW(); }
+  }; });
 }
 /* el vigía de fuego: la media hora después de terminar, con su cuenta regresiva mientras la sección está abierta */
 function _arwVigia(){

@@ -3810,11 +3810,19 @@ function visWPintar(){
 }
 
 /* ── el bloqueo y etiquetado ── */
-var BLQW={ caja:null, n:0 };
+var BLQW={ caja:null, n:0, timer:null, tab:null };
 var BLQW_EN={ electrica:'⚡ Eléctrica', mecanica:'⚙️ Mecánica', hidraulica:'💧 Hidráulica', neumatica:'💨 Neumática', termica:'🔥 Térmica', quimica:'🧪 Química', gravedad:'⬇️ Por gravedad', otra:'❔ Otra' };
 function gesVistaBloqueos(caja){
   _gesCss(); _nuevoCss();
   BLQW.caja=caja; var ac=$('acciones'); if(ac) ac.innerHTML='';
+  /* 4/11/2026 · V7.9d · el tablero en vivo, para la pantalla de la caseta o de la sala de control */
+  if(ac){ ac.innerHTML='<button type="button" class="bt" id="blq-tab-abrir">📺 Tablero en vivo</button>'; $('blq-tab-abrir').onclick=function(){ blqTablero(); }; }
+  /* y la lista se pone al día sola cada 30 s mientras esté abierta (los candados no van por el aviso «en vivo») */
+  if(BLQW.timer) clearInterval(BLQW.timer);
+  BLQW.timer=setInterval(function(){
+    if(VISTA.actual!=='bloqueos' || !document.body.contains(caja)){ clearInterval(BLQW.timer); BLQW.timer=null; return; }
+    if(!document.hidden && typeof VISTA.recargar==='function') VISTA.recargar(true);
+  }, 30000);
   cargando(caja);
   function pinta(silencio){
     var n=++BLQW.n;
@@ -3852,6 +3860,112 @@ function blqWPintar(L, E){
              (b.quito_es==='supervisor' ? ' <span class="n13-chip mal">el supervisor: '+esc(b.quito_motivo||'')+'</span>' : '')+'</td></tr>'; }).join('')+'</tbody></table></div>';
   if(!L.length) h+='<div class="vacio"><b>Todavía no se registró ningún candado</b>Se registra en la app, al escanear el QR del equipo.</div>';
   caja.innerHTML=h;
+}
+
+/* ── 4/11/2026 · V7.9d · LOTO EN VIVO (revisión de Gemini): el tablero de los bloqueos que siguen puestos ─────────────────
+   Para la pantalla de la caseta, de la sala de control o del cambio de turno: cada equipo bloqueado, en grande, con cada
+   candado (de quién, qué energía, desde cuándo). Se pone al día solo cada 30 s; si no hay red, lo dice y deja lo último.
+   Lo de un día anterior se marca: en el cambio de turno se confirma con quien lo puso. Sin servidor nuevo: lee
+   sst_bloqueo (lo mismo que la sección). Se cierra con «Salir» o con Esc. */
+function _blqDura(iso){
+  var t=Date.parse(iso); if(isNaN(t)) return '';
+  var m=Math.max(0, Math.round((Date.now()-t)/60000));
+  if(m<60) return m===1 ? 'hace 1 minuto' : 'hace '+m+' minutos';
+  var h=Math.floor(m/60), r=m%60;
+  if(h<48) return 'hace '+h+(h===1 ? ' hora' : ' horas')+(r ? ' '+r+' min' : '');
+  return 'hace '+Math.floor(h/24)+' días';
+}
+function blqTablero(){
+  if($('blq-tablero')) return;
+  _blqTabCss();
+  var d=document.createElement('div'); d.id='blq-tablero'; d.className='blq-tab'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-label', 'Tablero de bloqueos en vivo');
+  d.innerHTML='<div class="blq-tab-cab"><div><h2>🔒 Bloqueos puestos ahora</h2><p id="blq-tab-sub">'+esc((typeof nombreObraP==='function' ? nombreObraP() : '') || '')+'</p></div>'+
+    '<div class="blq-tab-bts"><span id="blq-tab-hora" aria-live="polite"></span><button type="button" id="blq-tab-full">Pantalla completa</button><button type="button" id="blq-tab-salir">Salir</button></div></div>'+
+    '<div class="blq-tab-cuerpo" id="blq-tab-cuerpo"><p class="blq-tab-nada">Cargando…</p></div>'+
+    '<p class="blq-tab-pie">Cada uno quita su candado con el QR del equipo, en la app. Mientras quede uno, el QR del equipo dice BLOQUEADO.</p>';
+  document.body.appendChild(d); document.body.style.overflow='hidden';
+  BLQW.tab={ L:null, E:null, t:0, foco:document.activeElement };
+  $('blq-tab-salir').onclick=blqTableroCerrar;
+  var bf=$('blq-tab-full');
+  if(!d.requestFullscreen) bf.hidden=true;
+  else bf.onclick=function(){ try{ if(document.fullscreenElement) document.exitFullscreen(); else d.requestFullscreen().catch(function(){}); }catch(_f){} };
+  document.addEventListener('keydown', _blqTabTecla);
+  setTimeout(function(){ try{ $('blq-tab-salir').focus(); }catch(_e){} }, 30);
+  blqTableroRefrescar();
+  BLQW.tab.timer=setInterval(function(){ if(!document.hidden) blqTableroRefrescar(); else _blqTabPintar(); }, 30000);
+}
+function _blqTabTecla(ev){ if(ev.key==='Escape' && $('blq-tablero') && !document.fullscreenElement){ ev.preventDefault(); blqTableroCerrar(); } }
+function blqTableroCerrar(){
+  var d=$('blq-tablero'); if(!d) return;
+  try{ if(document.fullscreenElement) document.exitFullscreen(); }catch(_f){}
+  if(BLQW.tab && BLQW.tab.timer) clearInterval(BLQW.tab.timer);
+  document.removeEventListener('keydown', _blqTabTecla);
+  d.remove(); document.body.style.overflow='';
+  try{ if(BLQW.tab && BLQW.tab.foco) BLQW.tab.foco.focus(); }catch(_e){}
+  BLQW.tab=null;
+}
+/* lo puesto ahora (sin quitar), con sus equipos; si falla la red, se queda lo último y se dice desde cuándo */
+function blqTableroRefrescar(){
+  var T=BLQW.tab; if(!T) return Promise.resolve(false);
+  return Promise.all([traer('sst_bloqueo', '&quitado=is.null&order=puesto.asc', 2000), traer('sst_equipo_qr', '&select=id,codigo,tipo', 3000)]).then(function(r){
+    if(BLQW.tab!==T) return false;
+    T.L=(r[0]||[]).filter(function(b){ return !b.quitado; }); T.E=r[1]||[]; T.t=Date.now(); T.mal=false;
+    _blqTabPintar(); return true;
+  }, function(){ if(BLQW.tab!==T) return false; T.mal=true; _blqTabPintar(); return false; });
+}
+function _blqTabPintar(){
+  var T=BLQW.tab, c=$('blq-tab-cuerpo'), hr=$('blq-tab-hora'); if(!T || !c) return;
+  var dd=function(n){ return (n<10 ? '0' : '')+n; }, ah=new Date(T.t || Date.now());
+  if(hr) hr.textContent=T.L===null ? '' : (T.mal ? 'Sin conexión: lo de las '+dd(ah.getHours())+':'+dd(ah.getMinutes()) : 'Al día a las '+dd(ah.getHours())+':'+dd(ah.getMinutes())+':'+dd(ah.getSeconds())+' · cada 30 s');
+  if(T.L===null){ c.innerHTML='<p class="blq-tab-nada">'+(T.mal ? 'No se pudo leer: revisa la conexión. Se vuelve a intentar en 30 s.' : 'Cargando…')+'</p>'; return; }
+  var eq={}; (T.E||[]).forEach(function(x){ eq[x.id]=x; });
+  var por={}, orden=[];
+  T.L.forEach(function(b){ if(!por[b.equipo]){ por[b.equipo]=[]; orden.push(b.equipo); } por[b.equipo].push(b); });
+  if(!orden.length){ c.innerHTML='<div class="blq-tab-ok" id="blq-tab-ok">✅ Ningún equipo bloqueado ahora</div>'; return; }
+  var hoy=(typeof hoyISO==='function') ? hoyISO() : '';
+  c.innerHTML='<p class="blq-tab-cuenta" id="blq-tab-cuenta">'+(orden.length===1 ? '1 equipo bloqueado' : orden.length+' equipos bloqueados')+' · '+(T.L.length===1 ? '1 candado' : T.L.length+' candados')+'</p>'+
+    '<div class="blq-tab-grilla">'+orden.map(function(id){
+      var x=eq[id]||{}, l=por[id], viejo=l.some(function(b){ return _n13Dia(b.puesto) && _n13Dia(b.puesto)<hoy; });
+      return '<div class="blq-tab-eq'+(viejo ? ' viejo' : '')+'" data-eq="'+esc(id)+'"><div class="blq-tab-cod">🔒 '+esc(x.codigo||'—')+'</div><div class="blq-tab-tipo">'+esc(x.tipo||'')+'</div>'+
+        l.map(function(b){
+          var dia=_n13Dia(b.puesto), antes=dia && dia<hoy;
+          return '<div class="blq-tab-cand'+(antes ? ' antes' : '')+'"><div class="blq-tab-quien"><b>'+esc(b.puso_nombre||'—')+'</b>'+(b.candado ? ' · candado '+esc(b.candado) : '')+'</div>'+
+            '<span>'+esc((b.energia||[]).map(function(k){ return BLQW_EN[k]||k; }).join(' · '))+'</span>'+
+            '<span>'+(antes ? 'Desde el '+esc(fechaLarga(dia))+' '+esc(_n13Hora(b.puesto))+' · de un día anterior' : 'Desde las '+esc(_n13Hora(b.puesto)))+' · '+esc(_blqDura(b.puesto))+'</span>'+
+            (b.motivo ? '<span>'+esc(b.motivo)+'</span>' : '')+'</div>';
+        }).join('')+'</div>';
+    }).join('')+'</div>';
+}
+function _blqTabCss(){
+  if($('blq-tab-css')) return;
+  var st=document.createElement('style'); st.id='blq-tab-css';
+  /* una pantalla de control: fondo oscuro y letra grande, a propósito en los dos temas */
+  st.textContent=[
+    '.blq-tab{position:fixed;inset:0;z-index:2000;background:#0e1620;color:#eef3f8;display:flex;flex-direction:column;padding:max(16px,env(safe-area-inset-top,0px)) 24px max(16px,env(safe-area-inset-bottom,0px));overflow:auto}',
+    '.blq-tab-cab{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-start;justify-content:space-between;border-bottom:1px solid #2a3a4c;padding-bottom:12px}',
+    '.blq-tab-cab h2{margin:0;font-size:clamp(22px,3vw,34px);color:#fff}',
+    '.blq-tab-cab p{margin:4px 0 0;color:#a9bacb;font-size:15px}',
+    '.blq-tab-bts{display:flex;flex-wrap:wrap;gap:10px;align-items:center}',
+    '.blq-tab-bts span{color:#a9bacb;font-size:14px;font-variant-numeric:tabular-nums}',
+    '.blq-tab-bts button{background:#1d2b3a;color:#fff;border:1px solid #3a4f66;border-radius:8px;padding:9px 14px;font:inherit;font-size:14px;cursor:pointer}',
+    '.blq-tab-bts button:focus-visible{outline:3px solid #7fb4ff;outline-offset:2px}',
+    '.blq-tab-cuerpo{flex:1 0 auto;padding:16px 0}',
+    '.blq-tab-cuenta{margin:0 0 14px;font-size:18px;color:#ffb3b3;font-weight:600}',
+    '.blq-tab-grilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:14px}',
+    '.blq-tab-eq{border:3px solid #e5484d;background:#2a1418;border-radius:14px;padding:14px 16px;display:grid;gap:10px;min-width:0}',
+    '.blq-tab-eq.viejo{border-color:#f5a524}',
+    '.blq-tab-cod{font-size:clamp(24px,3.2vw,36px);font-weight:700;color:#fff;overflow-wrap:anywhere}',
+    '.blq-tab-tipo{font-size:17px;color:#d6dde5;margin-top:-6px}',
+    '.blq-tab-cand{background:#1a0e11;border-radius:10px;padding:10px 12px;display:grid;gap:3px;font-size:15px;overflow-wrap:anywhere}',
+    '.blq-tab-cand b{font-size:17px;color:#fff}',
+    '.blq-tab-quien{color:#d6dde5}',
+    '.blq-tab-cand span{color:#d6dde5}',
+    '.blq-tab-cand.antes span:nth-child(3){color:#ffd27a;font-weight:600}',
+    '.blq-tab-ok{font-size:clamp(26px,4vw,44px);font-weight:700;color:#7ee2a8;text-align:center;padding:12vh 0}',
+    '.blq-tab-nada{font-size:20px;color:#a9bacb;text-align:center;padding:10vh 0}',
+    '.blq-tab-pie{margin:8px 0 0;color:#a9bacb;font-size:14px;border-top:1px solid #2a3a4c;padding-top:10px}'
+  ].join('\n');
+  document.head.appendChild(st);
 }
 
 /* ── el pulso de seguridad (las mismas diez preguntas de la app, pulso.js) ── */

@@ -19,7 +19,7 @@
               transporte:'Transporte de personal', saneamiento:'Saneamiento y catering' };
   var cod = ((/^\/a\/([A-Za-z0-9-]{3,20})\/?$/.exec(location.pathname) || [])[1] || (/[?&]c=([A-Za-z0-9-]{3,20})(&|$)/.exec(location.search) || [])[1] || '').toUpperCase();
   function nada(t, p){ m.innerHTML = '<main class="ancho"><div class="tarj"><h1 style="font-size:22px">' + esc(t) + '</h1><p class="gris" style="margin-top:6px">' + esc(p) + '</p>' +
-    '<p class="bts" style="margin-top:14px"><a class="bt casco" href="/marketplace.html">Buscar proveedores en el Marketplace SST</a></p></div></main>'; }
+    '<p class="bts" style="margin-top:14px"><a class="bt casco" href="/marketplace.html">Buscar otros proveedores verificados</a></p></div></main>'; }
   if(!cod){ nada('Enlace no válido', 'Revisa la dirección: es obrasstapp.com/a/ y el código del aliado.'); return; }
   /* lo que hace, con el mismo catálogo de su sistema (EPP tiene el suyo) */
   function hace(d){
@@ -31,7 +31,7 @@
   }
   fetch(SB.url + '/rest/v1/rpc/sst_ali_web', { method:'POST', headers:{ apikey:SB.key, Authorization:'Bearer ' + SB.key, 'Content-Type':'application/json' }, body:JSON.stringify({ p_codigo:cod }) })
     .then(function(r){ return r.json().catch(function(){ return null; }); }).then(function(d){
-      if(!d || !d.ok){ nada('Esta página no está publicada', 'El aliado no la tiene publicada en este momento. En el Marketplace SST encuentras a los proveedores verificados de tu zona.'); return; }
+      if(!d || !d.ok){ nada('Esta página no está publicada', 'El aliado no la tiene publicada en este momento. En OBRASST encuentras a otros proveedores verificados de tu zona.'); return; }
       var rk = MKT[d.rubro] || '', z = d.zonas || [], todo = z.indexOf('*') >= 0, deps = todo ? 'Todo el Perú' : z.map(depN).join(', ');
       var dep = todo ? '' : (z[0] || ''), web = /^https?:\/\/[^\s]+\.[^\s]+$/i.test(d.web || '') ? d.web : '', tel = /^[0-9+() -]{6,30}$/.test(d.telefono || '') ? d.telefono : '';
       var logo = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(d.logo || '') ? d.logo : '', L = hace(d);
@@ -50,7 +50,7 @@
           (web ? '<dt>Web</dt><dd><a href="' + esc(web) + '" target="_blank" rel="noopener nofollow">' + esc(web.replace(/^https?:\/\//i, '')) + '</a></dd>' : '') +
           (d.rnp ? '<dt>RNP</dt><dd>' + esc(d.rnp.numero) + ' · vigente hasta el ' + f(d.rnp.vence) + ' (verificado por OBRASST)</dd>' : '') +
           (d.desde ? '<dt>Aliado desde</dt><dd>' + f(d.desde) + '</dd>' : '') + '</dl></div>' +
-        '<div class="tarj"><h2>Pedirle una cotización</h2><p class="gris" style="margin-bottom:12px">El pedido va por el Marketplace SST de OBRASST: queda en tu cuenta y ves cuándo te conectamos.</p>' +
+        '<div class="tarj"><h2>Pedirle una cotización</h2><p class="gris" style="margin-bottom:12px">El pedido va por OBRASST: queda en tu cuenta y ves cuándo te conectamos.</p>' +
           '<p class="bts"><a class="bt casco" href="' + esc(pedir) + '" id="al-pedir">Pedir cotización</a><a class="bt linea" href="/index.html?aliado=' + encodeURIComponent(d.codigo) + '#crear">Crear la cuenta de mi empresa</a></p></div>' +
         '</main>';
     }, function(){ nada('No se pudo cargar', 'Revisa tu conexión y vuelve a intentarlo.'); });

@@ -1261,7 +1261,17 @@ var SENX_MODELOS = [
     texto:'PUNTO DE SOMBRA E HIDRATACIÓN', sub:'Descansa a la sombra y toma agua', color:'verde', pics:[] },
   { k:'arnes', n:'Porta arnés', d:'Azul, con el arnés de seguridad',
     texto:'PORTA ARNÉS', sub:'Cuelga aquí el arnés y su línea de vida al terminar', color:'azul',
-    pics:['uso-obligatorio-de-arnes-de-seguridad'] }
+    pics:['uso-obligatorio-de-arnes-de-seguridad'] },
+  /* 4/11/2026 · revisión de Gemini (bloque 3): el rótulo de cada ambiente, su aforo, su horario y el lavado de manos (de 40
+     a 60 segundos, como lo enseña la OMS) */
+  { k:'rotulo', n:'Rótulo de un ambiente', d:'Verde, con el nombre del ambiente', ic:'🚪',
+    texto:'OFICINA DE SEGURIDAD Y SALUD EN EL TRABAJO', sub:'', color:'verde', pics:[] },
+  { k:'aforo', n:'Aforo del ambiente', d:'Verde, con cuántas personas caben a la vez', ic:'👥',
+    texto:'AFORO MÁXIMO: 20 PERSONAS', sub:'Cuentan todos: también quienes trabajan aquí', color:'verde', pics:[] },
+  { k:'horario', n:'Horario de atención', d:'Verde, con los días y las horas', ic:'🕘',
+    texto:'HORARIO DE ATENCIÓN', sub:'Lunes a viernes, de 8:00 a 17:00', color:'verde', pics:[] },
+  { k:'manos', n:'Lavado de manos', d:'Azul, con «es obligatorio lavarse las manos»',
+    texto:'LÁVATE LAS MANOS', sub:'Con agua y jabón, de 40 a 60 segundos', color:'azul', pics:['es-obligatorio-lavarse-las-manos'] }
 ];
 function senxFondo(k){ return SENX_FONDOS.hasOwnProperty(String(k)) ? SENX_FONDOS[k] : SENX_FONDOS.azul; }
 function senxHay(k){ for(var i=0;i<NTP_SENALES.length;i++) if(NTP_SENALES[i].k===k) return true; return false; }

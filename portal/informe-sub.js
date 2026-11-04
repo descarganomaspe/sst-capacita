@@ -44,7 +44,7 @@ var ISB_CADA = { mes:'Mensual', semana:'Semanal', una:'Con fecha' };
 var ISB_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
 var ISB_MOTIVO = {
   sin_sesion:'Tu sesión venció: vuelve a entrar.', no_existe:'Eso ya no está (o no es de tu empresa).', solo_jefes:'Eso lo hace un jefe o un gerente de la obra.',
-  sin_plan:'Pedir informes a tus subcontratas viene con Contractor Hub™ (o un plan de arriba).', estructura:'Revisa las carpetas: cada una con su nombre y algo que pedir.',
+  sin_plan:'Pedir informes a tus subcontratas viene con el Control de contratistas (o un plan de arriba).', estructura:'Revisa las carpetas: cada una con su nombre y algo que pedir.',
   nombre:'Ponle un nombre (3 letras o más).', limite:'Revisa la fecha límite: desde hoy y hasta un año.', cierre:'Revisa el día de cierre.', para:'Elige al menos una subcontrata.',
   cada:'Lo mensual, lo semanal y lo que va con fecha no se cambian entre sí: arma uno nuevo.', tope:'Ya tienes muchos informes vivos: archiva los que ya no pides.',
   cerrada:'Ya se presentó: no se cambia.', item:'Eso no se puede subir ahí.', url:'El archivo no subió bien: vuelve a intentarlo.', conforme:'Esa carpeta ya está conforme: no se toca.',
@@ -317,7 +317,7 @@ function iswLista(c){
 function iswPido(c, j){
   var L = j.arriba || [], m = !!j.manda;
   if(!j.puede_pedir && !L.length){
-    c.innerHTML = '<div class="tarj"><div class="tarj-cuerpo isw-cuerpo"><h2>Pedir informes a tus subcontratas</h2><p>Con Contractor Hub™ (o un plan de arriba) armas las carpetas y lo que va en cada una, se lo publicas a tus subcontratas y ves el avance de cada una, mes a mes.</p></div></div>';
+    c.innerHTML = '<div class="tarj"><div class="tarj-cuerpo isw-cuerpo"><h2>Pedir informes a tus subcontratas</h2><p>Con el Control de contratistas (o un plan de arriba) armas las carpetas y lo que va en cada una, se lo publicas a tus subcontratas y ves el avance de cada una, mes a mes.</p></div></div>';
     return;
   }
   var h = '<div class="tarj"><div class="tarj-cab"><div><h2>Lo que pides a tus subcontratas</h2><p class="sub">Arma las carpetas y lo que va en cada una; publícalo y les sale a sus supervisores y jefes, en la app y en la web. Lo de la app entra solo.</p></div>' +
