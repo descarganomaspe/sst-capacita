@@ -8,11 +8,13 @@
    30/10/2026 · el cartel de un frente lleva «&f=<frente>»: va también a la app. */
 (function(){ try{
   var s = new URLSearchParams(location.search), tk = s.get('t') || '', f = String(s.get('f') || '').slice(0, 60);
+  /* 5/11/2026 · el QR de un producto químico («&m=<clave>»): va con él */
+  var m = String(s.get('m') || ''); if(!/^[a-z0-9]{4,10}$/.test(m)) m = '';
   if(!/^[A-Za-z0-9_-]{6,64}$/.test(tk) || s.get('w') === '1' || s.get('falta') === '1') return;
   if(navigator.onLine === false) return;
   var rol = null; try{ rol = localStorage.getItem('sstc_rol'); }catch(_l){ rol = null; }
   if(!rol || rol === 'null') return;
-  location.replace('../#cartel=' + tk + (f ? '&f=' + encodeURIComponent(f) : ''));
+  location.replace('../#cartel=' + tk + (f ? '&f=' + encodeURIComponent(f) : '') + (m ? '&m=' + m : ''));
 }catch(_e){} })();
 </script>
 <meta name="robots" content="noindex">
@@ -239,6 +241,24 @@ body.ver .nota{padding:0 14px;text-align:center}
   /* 30/10/2026 · el cartel de un FRENTE: la misma ficha con «&f=<frente>». Abre lo de ese frente y lo de toda la obra,
      nunca lo de los otros frentes (Marcelo: «a un jefe o supervisor no le gustará porque querrá para su frente»). */
   var FR=String(q('f')||'').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+  /* 5/11/2026 · el QR de UN producto químico (la lista del almacén, el reverso de su tarjeta): «&m=<clave>» abre directo su
+     hoja MSDS (la lista queda debajo, para volver). La clave sale del nombre y la marca, como en la app (quimClaveMsds). */
+  var PM=String(q('m')||''); if(!/^[a-z0-9]{4,10}$/.test(PM)) PM='';
+  function claveMsds(n, m){
+    function nor(s, max){ var x=String(s==null ? '' : s).trim().slice(0, max).toLowerCase(); try{ x=x.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }catch(_n){} return x.replace(/[^a-z0-9]+/g, ' ').trim(); }
+    var s=nor(n, 120)+'|'+nor(m, 80), h=0x811c9dc5;
+    for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h, 16777619)>>>0; }
+    return ('0000000'+h.toString(36)).slice(-7);
+  }
+  /* el producto del QR entre lo del cartel: el item de la lista o null */
+  function delProducto(j, items){
+    if(!PM) return null;
+    var x=null;
+    (Array.isArray(j && j.quim) ? j.quim : []).forEach(function(m){ if(!x && m && m.n && web(m.u) && claveMsds(m.n, m.m)===PM) x=m; });
+    if(!x) return null;
+    for(var i=0;i<items.length;i++) if(items[i].quim && items[i].url===String(x.u)) return items[i];
+    return null;
+  }
   function normF(s){ var x=String(s||'').toLowerCase(); try{ x=x.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(_n){} return x.replace(/[^a-z0-9]+/g, ' ').trim(); }
   var FRK=normF(FR).replace(/ /g, '-').slice(0, 40);
   /* lo de un frente: { n, suyo, obra, seguro } (seguro: el servidor dice de qué frente es cada documento) o null */
@@ -753,7 +773,12 @@ body.ver .nota{padding:0 14px;text-align:center}
           });
           return true;
         }
-        return pintarLista(tituloDe(j), items, true, g.t, notaFrente(j)).then(function(){ return true; });
+        var pit=delProducto(j, items), pk=pit && nuestra(pit.url) ? rutaDoc(pit.url) : '';
+        return pintarLista(tituloDe(j), items, true, g.t, notaFrente(j)).then(function(){
+          /* 5/11/2026 · el QR de un producto, sin señal: su hoja, si este celular la guardó */
+          if(pit && pk && ya[pk]) abrirDoc(pit, { reemplazar:false, lista:true });
+          return true;
+        });
       });
     }).then(function(r){ return r; }, nada);
   }
@@ -787,6 +812,9 @@ body.ver .nota{padding:0 14px;text-align:center}
           });
         }
         if(items.length===1){ document.getElementById('quien').textContent = items[0].nombre; abrirDoc(items[0], { reemplazar:true, alAvance:avance, antes:anotado }); return; }
+        /* 5/11/2026 · el QR de un producto: la lista y, encima, su hoja */
+        var pit=delProducto(j, items);
+        if(items.length>1 && pit){ pintarLista(tituloDe(j), items, false, 0, notaFrente(j)).then(function(){ abrirDoc(pit, { reemplazar:false, lista:true, alAvance:avance, antes:anotado }); }); return; }
         if(items.length>1){ pintarLista(tituloDe(j), items, false, 0, notaFrente(j)); return; }
       }
       /* 30/10/2026 · el cartel de un frente que todavía no tiene nada (ni de toda la obra): «todavía no está cargado» */
