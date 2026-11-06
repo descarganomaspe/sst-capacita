@@ -2874,7 +2874,7 @@ function cartelEquipo(o){
         M.fno=o.nousar ? _cqAjustar(g, o.nousar, AN, 2, Math.round(27*e), 19, '700') : null;
         M.alto+=M.rot2+20+M.claH+(M.fno ? 10+M.fno.s*0.9+(M.fno.l.length-1)*M.fno.s*1.24 : 0)+30;
       }
-      if(o.recarga) M.alto+=50;
+      if(o.fechas && o.fechas.length) M.alto+=148; else if(o.recarga) M.alto+=50;
       return M;
     }
     /* con aire, la letra crece (hasta 1,3 veces) dejando un QR de al menos 440 px; si no, baja hasta 0,76 con el QR de 300 */
@@ -2922,7 +2922,19 @@ function cartelEquipo(o){
       if(M.fno){ g.font=_cqFuente(M.fno.s, '700'); y=_cqTextoIzq(g, M.fno.l, X, y+10+M.fno.s*0.9, M.fno.s*1.24, ROJO); }
       y+=30;
     }
-    if(o.recarga){
+    if(o.fechas && o.fechas.length){
+      /* V7.10 · las 3 fechas del extintor, en tres cajas (la vencida, en rojo con ⚠) */
+      var nF=o.fechas.length, gF=18, bwF=(AN-gF*(nF-1))/nF, bhF=118;
+      o.fechas.forEach(function(F, i){
+        var bxF=X+i*(bwF+gF), malF=!!F[2];
+        g.fillStyle=malF ? '#FDECEC' : '#F2F5F8'; _cqCaja(g, bxF, y, bwF, bhF, 16); g.fill();
+        g.lineWidth=3; g.strokeStyle=malF ? ROJO : '#CBD6DD'; _cqCaja(g, bxF, y, bwF, bhF, 16); g.stroke();
+        var fF=_cqAjustar(g, String(F[0]||''), bwF-28, 2, 25, 17, '700'); g.font=_cqFuente(fF.s, '700'); _cqTextoIzq(g, fF.l, bxF+14, y+16+fF.s*0.9, fF.s*1.15, GRIS);
+        var vF=(malF ? '⚠ ' : '')+String(F[1]||''), sF=44; g.font='800 '+sF+'px '+MONO; while(sF>26 && g.measureText(vF).width>bwF-28){ sF-=2; g.font='800 '+sF+'px '+MONO; }
+        g.fillStyle=malF ? ROJO : OSC; g.textAlign='left'; g.fillText(vF, bxF+14, y+bhF-24);
+      });
+      y+=bhF+30;
+    } else if(o.recarga){
       g.font=_cqFuente(29, '700'); g.textAlign='left'; g.fillStyle=o.vencida ? ROJO : '#14663A';
       g.fillText((o.vencida ? '⚠ ' : '✓ ')+(o.vencida ? tx('La recarga venció en {0}.').replace('{0}', o.recarga) : tx('Recarga vigente hasta {0}.').replace('{0}', o.recarga)), X, y+24);
       y+=50;
@@ -2946,5 +2958,98 @@ function cartelEquipo(o){
     var fo=_cqAjustar(g, String(o.obra||''), W-300, 1, 32, 20, '700'); g.font=_cqFuente(fo.s, '700'); _cqTexto(g, fo.l, W/2, pieY+42, fo.s, 0, '#ffffff');
     g.font=_cqFuente(18, '800'); g.fillStyle='rgba(255,255,255,.85)'; g.textAlign='center'; g.fillText('◆ OBRASST', W/2, pieY+70);
     return { canvas:cv, png:cv.toDataURL('image/png'), w:W, h:H };
+  });
+}
+/* ══ LA HOJA 2 DEL CARTEL: EL REVERSO A4 (5/11/2026 · V7.10) ═══════════
+   Marcelo (paquete V7.10): «agrega la casilla "Incluir reverso en Hoja 2 (check list mensual con casilleros
+   para plumón — impresión A4 a doble cara)". Si la marca, salen 2 páginas A4 completas: la 1 es el cartel con
+   su QR y la 2 el cuadro de los 12 meses con cuadrados grandes para marcar con plumón en campo y firmar».
+   Para el extintor y el botiquín. Sin líneas de corte ni doblez: es la otra cara de la misma hoja.
+   o: { tipo ('Extintor' | 'Botiquín'), codigo, obra, anio, fechas ([[qué, valor, vencida]…], del extintor),
+        ubicacion, tx }. Devuelve una promesa con { canvas, png }. */
+var EQ_REVERSO_ITEMS = {
+  'Extintor':['Ubicación visible, accesible y libre de obstáculos', 'Presión en el manómetro dentro de la zona verde', 'Precinto de seguridad y pasador (anilla) intactos',
+              'Manguera, tobera o corneta sin grietas ni obstrucciones', 'Cilindro limpio, sin golpes, abolladuras ni corrosión', 'Manija de acarreo y palanca de disparo en buen estado',
+              'Etiqueta de instrucciones y clase de fuego legible', 'Tarjeta y collarín de mantenimiento / recarga vigentes', 'Soporte de pared o gabinete firme y señalizado arriba'],
+  'Botiquín':['Botiquín limpio, seco, señalizado y de fácil acceso', 'Gasas estériles, vendas elásticas y esparadrapo completos', 'Antisépticos (alcohol, yodopovidona, agua oxigenada) vigentes',
+              'Guantes descartables (quirúrgicos o de nitrilo) y mascarillas', 'Tijera punta roma, pinza y vendas triangulares completas', 'Solución salina para lavado ocular y apósitos sin abrir',
+              'Ningún insumo con la fecha de vencimiento pasada', 'Sin medicamentos no autorizados (pastillas sueltas)', 'Cartilla de control de consumo y teléfonos de emergencia visibles']
+};
+var EQ_MESES_CORTOS = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SET', 'OCT', 'NOV', 'DIC'];
+function eqConReverso(tipo){ return !!EQ_REVERSO_ITEMS[String(tipo||'')]; }
+function cartelReversoEquipo(o){
+  o=o||{};
+  var tx=o.tx||function(z){ return z; }, tipo=String(o.tipo||''), items=EQ_REVERSO_ITEMS[tipo] || EQ_REVERSO_ITEMS['Extintor'];
+  return new Promise(function(ok){
+    var W=CARTEL_W, H=CARTEL_H, X=70, AN=W-2*X, OSC='#0B2A3A', GRIS='#4A5A66', LIN='#0B2A3A';
+    var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    var g=cv.getContext('2d'); g.fillStyle='#ffffff'; g.fillRect(0, 0, W, H);
+    var y=78;
+    /* ── la cabecera: la obra, qué es y el año ── */
+    var cab=(String(o.obra||'').trim() || 'OBRASST')+' · '+tx('Control físico en campo (reverso A4)');
+    var fc=_cqAjustar(g, cab.toUpperCase(), AN, 1, 22, 16, '800'); g.font=_cqFuente(fc.s, '800'); _cqTextoIzq(g, fc.l, X, y, fc.s*1.2, GRIS);
+    y+=18;
+    var tit=tx('Cartilla anual de inspección mensual')+' — '+tx(tipo || 'Extintor').toUpperCase()+(o.codigo ? ' ('+o.codigo+')' : '')+' · '+tx('Año')+' '+(o.anio || new Date().getFullYear());
+    var ft=_cqAjustar(g, tit.toUpperCase(), AN, 2, 38, 26, '900'); g.font=_cqFuente(ft.s, '900');
+    y=_cqTextoIzq(g, ft.l, X, y+ft.s*0.9, ft.s*1.12, OSC)+18;
+    g.fillStyle=OSC; g.fillRect(X, y, AN, 5); y+=26;
+    /* ── cómo se marca ── */
+    var ley=tx('Marcar con plumón:')+'   [ ✓ ] '+tx('Conforme')+'   [ X ] '+tx('Observado');
+    g.font=_cqFuente(24, '800'); var lw=Math.min(AN, g.measureText(ley).width+40);
+    g.lineWidth=3; g.strokeStyle=LIN; _cqCaja(g, X, y, lw, 52, 10); g.stroke();
+    g.fillStyle=OSC; g.textAlign='left'; g.fillText(ley, X+20, y+35); y+=52+20;
+    /* ── sus datos: las 3 fechas del extintor; del botiquín, dónde está y quién responde ── */
+    var cajas=tipo==='Botiquín'
+      ? [[tx('Ubicación / área'), String(o.ubicacion||'').trim() || '________________'], [tx('Responsable (SST / tópico)'), '________________']]
+      : ((o.fechas && o.fechas.length) ? o.fechas.map(function(F){ return [F[0], (F[1] && F[1] !== '—') ? F[1] : '____ / ______']; })
+                                       : [[tx('Mantenimiento anual'), '____ / ______'], [tx('Vence su recarga'), '____ / ______'], [tx('Prueba hidrostática'), '____ / ______']]);
+    var gC=16, bwC=(AN-gC*(cajas.length-1))/cajas.length, bhC=96;
+    cajas.forEach(function(c, i){
+      var bx=X+i*(bwC+gC);
+      g.fillStyle='#F4F7F9'; _cqCaja(g, bx, y, bwC, bhC, 12); g.fill();
+      g.lineWidth=2.5; g.strokeStyle=LIN; _cqCaja(g, bx, y, bwC, bhC, 12); g.stroke();
+      var fl=_cqAjustar(g, c[0], bwC-24, 1, 21, 15, '800'); g.font=_cqFuente(fl.s, '800'); _cqTextoIzq(g, fl.l, bx+12, y+30, fl.s*1.1, GRIS);
+      var fv=_cqAjustar(g, c[1], bwC-24, 1, 32, 18, '800'); g.font=_cqFuente(fv.s, '800'); _cqTextoIzq(g, fv.l, bx+12, y+bhC-22, fv.s, OSC);
+    });
+    y+=bhC+26;
+    /* ── el cuadro: cada punto, en sus 12 meses, con su cuadrado para el plumón ── */
+    var mW=56, iW=AN-12*mW, hCab=46, hDia=58, hIni=72, x0=X, xm=X+iW;
+    var hIt=Math.max(72, Math.min(100, Math.floor((H-110-y-(hCab+hDia+hIni+28+170))/items.length)));   /* las filas llenan la hoja */
+    g.lineWidth=2.5; g.strokeStyle=LIN;
+    g.fillStyle='#E3E9ED'; g.fillRect(x0, y, AN, hCab);
+    g.font=_cqFuente(19, '900'); g.fillStyle=OSC; g.textAlign='left'; g.fillText(tx('Puntos a verificar cada mes').toUpperCase(), x0+12, y+30);
+    g.textAlign='center';
+    EQ_MESES_CORTOS.forEach(function(m, i){ g.fillText(tx(m), xm+i*mW+mW/2, y+30); });
+    var yT=y; y+=hCab;
+    items.forEach(function(t0, k){
+      var t=(k+1)+'. '+tx(t0), fi=_cqAjustar(g, t, iW-24, 2, 21, 15, '700');
+      g.font=_cqFuente(fi.s, '700'); var nl=fi.l.length;
+      _cqTextoIzq(g, fi.l, x0+12, y+hIt/2-((nl-1)*fi.s*1.15)/2+fi.s*0.36, fi.s*1.15, OSC);
+      for(var i=0; i<12; i++){ var cx=xm+i*mW+mW/2, cy=y+hIt/2, q=34; g.lineWidth=3; _cqCaja(g, cx-q/2, cy-q/2, q, q, 4); g.stroke(); }
+      y+=hIt; g.lineWidth=2; g.beginPath(); g.moveTo(x0, y); g.lineTo(x0+AN, y); g.stroke();
+    });
+    /* el día y quién lo inspeccionó */
+    g.fillStyle='#F1F4F7'; g.fillRect(x0, y, iW, hDia+hIni);
+    g.font=_cqFuente(19, '900'); g.fillStyle=OSC; g.textAlign='left';
+    g.fillText(tx('Día / mes de la inspección'), x0+12, y+hDia/2+7);
+    g.fillText(tx('Iniciales o V° B° de quien inspecciona'), x0+12, y+hDia+hIni/2+7);
+    g.font=_cqFuente(16, '700'); g.fillStyle='#7A8A96'; g.textAlign='center';
+    for(var i2=0; i2<12; i2++) g.fillText('__/__', xm+i2*mW+mW/2, y+hDia-14);
+    g.lineWidth=2; g.beginPath(); g.moveTo(x0, y+hDia); g.lineTo(x0+AN, y+hDia); g.stroke();
+    y+=hDia+hIni;
+    /* las rayas del cuadro */
+    g.lineWidth=2.5; g.strokeRect(x0, yT, AN, y-yT);
+    g.beginPath(); g.moveTo(xm, yT); g.lineTo(xm, y); for(var c2=1; c2<12; c2++){ g.moveTo(xm+c2*mW, yT); g.lineTo(xm+c2*mW, y); } g.stroke();
+    y+=28;
+    /* ── observaciones del año ── */
+    var hObs=Math.max(150, Math.min(220, H-80-y));
+    g.lineWidth=2.5; _cqCaja(g, X, y, AN, hObs, 12); g.stroke();
+    g.font=_cqFuente(19, '900'); g.fillStyle=OSC; g.textAlign='left'; g.fillText(tx('Observaciones o reposiciones del año:').toUpperCase(), X+16, y+34);
+    g.save(); g.setLineDash([8, 7]); g.strokeStyle='#9AA8B2'; g.lineWidth=1.6;
+    for(var yy=y+78; yy<y+hObs-14; yy+=44){ g.beginPath(); g.moveTo(X+16, yy); g.lineTo(X+AN-16, yy); g.stroke(); }
+    g.restore();
+    /* ── el pie ── */
+    g.font=_cqFuente(20, '800'); g.fillStyle='#8A7400'; g.textAlign='center'; g.fillText('◆ OBRASST', W/2, H-46);
+    ok({ canvas:cv, png:cv.toDataURL('image/png'), w:W, h:H });
   });
 }

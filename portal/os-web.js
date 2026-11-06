@@ -117,7 +117,9 @@
     var visto = {};
     (s.cargos || []).forEach(function(c){ (c.cap || []).forEach(function(x){
       if(!x.k || x.k === 'induc' || visto[x.t]) return; visto[x.t] = 1;
-      L.push({ k:'cap-' + Object.keys(visto).length, g:'sec', t:'Capacitación en ' + x.t.charAt(0).toLowerCase() + x.t.slice(1) + ' (' + c.n.replace(/\s*\(.*\)\s*$/, '').toLowerCase() + ')', n:x.n, r:'consultor' }); }); });
+      /* V7.10 · si el tema ya trae su paréntesis (25 kg…), el cargo va con una raya */
+      var quien = c.n.replace(/\s*\(.*\)\s*$/, '').toLowerCase();
+      L.push({ k:'cap-' + Object.keys(visto).length, g:'sec', t:'Capacitación en ' + x.t.charAt(0).toLowerCase() + x.t.slice(1) + (/\)$/.test(x.t) ? ' — ' + quien : ' (' + quien + ')'), n:x.n, r:'consultor' }); }); });
     return L;
   }
   function homologa(){

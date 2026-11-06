@@ -932,7 +932,11 @@ function _audPintar(){
   if(ac){
     var ops=[['12', 'Los últimos 12 meses'], ['anio', 'Este año'], ['pasado', 'El año pasado']].concat(AUDW.ult ? [['aud', 'Desde la última auditoría ('+_audF(AUDW.ult)+')']] : []);
     ac.innerHTML='<select id="aud-per" aria-label="Periodo de la carpeta">'+ops.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===AUDW.per ? ' selected' : '')+'>'+esc(o[1])+'</option>'; }).join('')+'</select>'+
-      '<button type="button" class="bt" id="aud-zip">📦 Descargar la carpeta</button><button type="button" class="bt sec" id="aud-pdf">📄 Índice en PDF</button>';
+      '<button type="button" class="bt" id="aud-zip">📦 Descargar la carpeta</button><button type="button" class="bt sec" id="aud-pdf">📄 Índice en PDF</button>'+
+      /* 5/11/2026 · V7.10 · Módulo 5: su guía de cinco burbujas (y su video de 45 s, cuando lo tenga) */
+      (typeof guiaSeccion==='function' ? '<button type="button" class="bt sec" id="aud-guia">💡 Guía paso a paso</button>' : '')+(typeof video45Boton==='function' ? video45Boton('aud') : '');
+    if($('aud-guia')) $('aud-guia').onclick=function(){ guiaSeccion('aud'); };
+    if(typeof video45Enchufar==='function') video45Enchufar(ac);
     $('aud-per').onchange=function(){ AUDW.per=this.value; _audPintar(); };
     $('aud-zip').onclick=function(){ audExportar('zip', this); };
     $('aud-pdf').onclick=function(){ audExportar('pdf', this); };

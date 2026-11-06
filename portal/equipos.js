@@ -152,7 +152,9 @@ function eqUsoDe(x){
   var base=EQ_PASOS[tp] || null;
   return { propios:propios.length>0, pasos:propios.length ? propios.map(function(s){ return [s, '']; }) : (base ? base.map(function(p){ return p.slice(); }) : []),
            antes:EQ_USO_ANTES[tp] || '', luego:EQ_USO_LUEGO[tp] || '', ext:(tp==='Extintor'), agente:eqAgente(U.a),
-           kg:/^[0-9]{1,3}([.,][0-9]{1,2})?$/.test(String(U.kg||'')) ? String(U.kg).replace('.', ',') : '', r:/^20\d{2}-(0[1-9]|1[0-2])$/.test(String(U.r||'')) ? String(U.r) : '' };
+           kg:/^[0-9]{1,3}([.,][0-9]{1,2})?$/.test(String(U.kg||'')) ? String(U.kg).replace('.', ',') : '', r:/^20\d{2}-(0[1-9]|1[0-2])$/.test(String(U.r||'')) ? String(U.r) : '',
+           /* 5/11/2026 · V7.10 · del extintor: m, el mes de su último mantenimiento anual; h, el de su próxima prueba hidrostática */
+           m:/^20\d{2}-(0[1-9]|1[0-2])$/.test(String(U.m||'')) ? String(U.m) : '', h:/^20\d{2}-(0[1-9]|1[0-2])$/.test(String(U.h||'')) ? String(U.h) : '' };
 }
 /* el dibujo de su señal (el cuerpo SVG, en su caja de 0 a 100): en la app, del catálogo de la NTP (NTP_SENALES);
    en el portal, EQ_SENAL_SVG, que armar.py pone en portal/equipos.js con solo estas cuatro */
@@ -172,11 +174,23 @@ function eqCartelDatosDe(x, op){
            pasos:u.pasos.map(function(p){ return u.propios ? p : [tr(p[0]), tr(p[1])]; }), propios:u.propios,
            antes:u.antes ? tr(u.antes) : '', luego:u.luego ? tr(u.luego) : '',
            clases:A ? A.c.split('').map(function(c){ return [c, tr(EQ_CLASES_FUEGO[c])]; }) : [], nousar:(A && A.no) ? tr(A.no) : '',
-           recarga:eqRecargaTxt(u.r), vencida:eqRecargaVencida(u.r, op.mes || ''), obra:op.obra || '', empresa:op.empresa || '', logo:op.logo || null, tx:tr };
+           recarga:eqRecargaTxt(u.r), vencida:eqRecargaVencida(u.r, op.mes || ''), obra:op.obra || '', empresa:op.empresa || '', logo:op.logo || null, tx:tr,
+           fechas:u.ext ? eqFechasExt(u, op.mes || '', tr) : [] };
 }
 /* «03/2027», y si ya venció (contra el mes de hoy, «2027-04») */
 function eqRecargaTxt(r){ return r ? r.slice(5, 7)+'/'+r.slice(0, 4) : ''; }
 function eqRecargaVencida(r, mes){ return !!(r && mes && r < mes); }
+/* 5/11/2026 · V7.10 · Marcelo: «en la cartilla A4 del Extintor, muestra claramente las 3 fechas clave». [qué, «MM/AAAA»,
+   ¿vencida?] de su mantenimiento anual (vale 12 meses desde el mes en que se hizo), su recarga y su próxima prueba
+   hidrostática. Sin ninguna anotada, nada: el cartel queda como antes. */
+function eqFechasExt(u, mes, tr){
+  tr=tr || function(z){ return z; };
+  if(!u || !(u.m || u.r || u.h)) return [];
+  var mv=u.m ? (+u.m.slice(0, 4)+1)+'-'+u.m.slice(5, 7) : '';
+  return [[tr('Mantenimiento anual'), eqRecargaTxt(u.m) || '—', eqRecargaVencida(mv, mes)],
+          [tr('Vence su recarga'), eqRecargaTxt(u.r) || '—', eqRecargaVencida(u.r, mes)],
+          [tr('Prueba hidrostática'), eqRecargaTxt(u.h) || '—', eqRecargaVencida(u.h, mes)]];
+}
 /* 3/11/2026 · V7.3 · Gemini y Copilot: «⚠️ Recarga vencida» o «⚠️ Próxima a vencer» (15 días). r ('AAAA-MM') vale hasta el
    último día de ese mes (como eqRecargaVencida). Devuelve null (sin anotar) o {k:'vencida'|'pronto'|'ok', hasta:'AAAA-MM-DD', dias} */
 function eqRecargaEstado(r, hoy){
@@ -195,11 +209,17 @@ function eqUsoLimpio(f){
   var kg=String(f.kg||'').trim().replace(/\s*kg$/i, ''), r=String(f.r||'').trim(), a=String(f.a||'').trim(), u={};
   if(kg && !/^[0-9]{1,3}([.,][0-9]{1,2})?$/.test(kg)) return {error:'La capacidad, en kilos: 6, 4,5…'};
   if(r && !/^20\d{2}-(0[1-9]|1[0-2])$/.test(r)) return {error:'El mes de la recarga no se ve bien: por ejemplo, 2027-03.'};
+  /* 5/11/2026 · V7.10 · el extintor: el mes de su último mantenimiento anual y el de su próxima prueba hidrostática */
+  var mt=String(f.m||'').trim(), ph=String(f.h||'').trim();
+  if(mt && !/^20\d{2}-(0[1-9]|1[0-2])$/.test(mt)) return {error:'El mes del mantenimiento no se ve bien: por ejemplo, 2026-11.'};
+  if(ph && !/^20\d{2}-(0[1-9]|1[0-2])$/.test(ph)) return {error:'El mes de la prueba hidrostática no se ve bien: por ejemplo, 2029-05.'};
   if(a && !eqAgente(a)) a='';
   if(lineas.length) u.p=lineas;
   if(a) u.a=a;
   if(kg) u.kg=kg;
   if(r) u.r=r;
+  if(mt) u.m=mt;
+  if(ph) u.h=ph;
   return {uso:Object.keys(u).length ? u : null};
 }
 

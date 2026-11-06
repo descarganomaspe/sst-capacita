@@ -63,7 +63,23 @@ var ARC_ESC_POR_PAG=110*1024;
 var _ARC_CSS_MIAS='.arc-mias{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:10px 12px;border:1px dashed var(--raya);border-radius:10px;background:var(--panel)}'+
   '.arc-mias .bt{margin:0}.arc-mias-t{font-size:12.5px;color:var(--gris);flex:1 1 220px}'+
   /* 28/10/2026 · las subcarpetas, con su sangría (MIS-CARPETAS) */
-  '.arc-c.arc-n2{padding-left:24px}.arc-c.arc-n3{padding-left:38px}.arc-c .arc-sub{flex:0 0 auto;color:var(--gris);margin-right:-2px}';
+  '.arc-c.arc-n2{padding-left:24px}.arc-c.arc-n3{padding-left:38px}.arc-c .arc-sub{flex:0 0 auto;color:var(--gris);margin-right:-2px}'+
+  /* 5/11/2026 · V7.10 · dónde estás, la cuadrícula de subcarpetas (con su color y su ⋮) y el menú de cada una */
+  '.arc-migas{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:center;margin:0 0 10px;font-size:13.5px;color:var(--gris)}'+
+  '.arc-migas button{border:0;background:none;color:var(--azul);cursor:pointer;font:inherit;padding:3px 5px;border-radius:6px}'+
+  '.arc-migas button:hover{background:var(--fondo)}.arc-migas b{color:var(--texto);font-weight:600;padding:3px 5px}'+
+  '.arc-subs{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin:0 0 12px}'+
+  '.arc-sub-c{display:flex;align-items:stretch;min-width:0;border:1px solid var(--raya);border-left:5px solid var(--arc-col,var(--raya2));border-radius:10px;background:var(--panel);overflow:hidden}'+
+  '.arc-sub-a{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:0;background:none;padding:10px 12px;cursor:pointer;font:inherit;color:var(--texto);text-align:left}'+
+  '.arc-sub-a span{font-weight:600;max-width:100%;overflow-wrap:anywhere}.arc-sub-a small{color:var(--gris);font-size:12px}'+
+  '.arc-sub-a:hover,.arc-sub-m:hover{background:var(--fondo)}'+
+  '.arc-sub-m{flex:0 0 auto;width:38px;border:0;border-left:1px solid var(--raya);background:none;cursor:pointer;font-size:18px;color:var(--gris)}'+
+  '.arc-sub-a:focus-visible,.arc-sub-m:focus-visible,.arc-migas button:focus-visible,.arc-pop button:focus-visible{outline:2px solid var(--azul);outline-offset:-2px}'+
+  '.arc-pop{position:absolute;z-index:60;width:240px;max-width:calc(100vw - 16px);display:flex;flex-direction:column;padding:6px;border:1px solid var(--raya);border-radius:10px;background:var(--panel);box-shadow:var(--sombra)}'+
+  '.arc-pop button{border:0;background:none;text-align:left;padding:9px 10px;border-radius:7px;cursor:pointer;font:inherit;color:var(--texto)}'+
+  '.arc-pop button:hover{background:var(--fondo)}'+
+  '.arc-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 10px}'+
+  '.arc-col-m{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid var(--raya2);vertical-align:-2px}';
 function _arcCss(){
   if($('arc-css')) return;
   var s=document.createElement('style'); s.id='arc-css';
@@ -566,6 +582,72 @@ function arcPintar(){
   _arcMiasBarra();
   if(busca){ var bi=$('arc-buscar'); try{ bi.focus(); bi.setSelectionRange(busca[0], busca[1]); }catch(_b){} }
 }
+/* 5/11/2026 · V7.10 · Módulo 6 (Marcelo): «muestra una barra de ruta arriba (📁 Documentos raíz › 📂 02. Seguridad › 📂 Charlas
+   Firmadas)» y «dentro de cualquier carpeta, primero la cuadrícula de sus subcarpetas (con ⋮ en cada una: ✏️ Cambiar nombre,
+   🎨 Cambiar color/etiqueta, 📂 Mover dentro de otra carpeta o 🗑️ Eliminar), y debajo los archivos de esa carpeta». */
+function _arcMigas(X, S, F){
+  var cad=[], x=X, n=0;
+  while(x && n++<10){ cad.unshift(x); x=(x.p && x.p.indexOf('s:')!==0) ? dcMiasDe(x.p) : null; }
+  var S2=X ? (X.sec ? _dcSecc(X.sec) : null) : S, g=S2 ? S2.g : DC_MIAS_G;
+  var P=[['*', '📁 Documentos'], ['g:'+g, '📂 '+g]];
+  if(F && !X) P.push([F.h, '📂 '+F.t]);
+  cad.forEach(function(c2){ P.push(['mia-'+c2.id, '📂 '+c2.t]); });
+  return '<nav class="arc-migas" aria-label="Dónde estás">'+P.map(function(q, i){
+    return (i ? '<span aria-hidden="true">›</span>' : '')+(i===P.length-1 ? '<b aria-current="page">'+esc(q[1])+'</b>' :
+      '<button type="button" data-k="'+esc(q[0])+'">'+esc(q[1])+'</button>'); }).join('')+'</nav>';
+}
+function _arcSubsHTML(L){
+  if(!L || !L.length) return '';
+  return '<div class="arc-subs" id="arc-subs">'+L.map(function(x){
+    var col=dcMiasColorHex(x.col||''), n=dcMiasDocs(x.id), hs=dcMiasHijas(x.id).length;
+    return '<div class="arc-sub-c"'+(col ? ' style="--arc-col:'+col+'"' : '')+'><button type="button" class="arc-sub-a" data-k="mia-'+esc(x.id)+'"><span>📂 '+esc(x.t)+'</span>'+
+      '<small>'+n+' '+(n===1 ? 'documento' : 'documentos')+(hs ? ' · '+hs+' '+(hs===1 ? 'subcarpeta' : 'subcarpetas') : '')+'</small></button>'+
+      (dcMiasPuede() ? '<button type="button" class="arc-sub-m" data-mia-m="'+esc(x.id)+'" aria-label="Opciones de «'+esc(x.t)+'»" aria-haspopup="menu">⋮</button>' : '')+'</div>';
+  }).join('')+'</div>';
+}
+function _arcMiaMenu(b, id){
+  var X=dcMiasDe(id); if(!X) return;
+  var pop=$('arc-mia-pop'); if(pop) pop.remove();
+  pop=document.createElement('div'); pop.id='arc-mia-pop'; pop.className='arc-pop'; pop.setAttribute('role', 'menu');
+  pop.innerHTML=[['nombre', '✏️ Cambiar nombre'], ['color', '🎨 Cambiar color/etiqueta'], ['mover', '📂 Mover dentro de otra carpeta'], ['quita', '🗑️ Eliminar']].map(function(o){
+    return '<button type="button" role="menuitem" data-q="'+o[0]+'">'+o[1]+'</button>'; }).join('');
+  document.body.appendChild(pop);
+  var r=b.getBoundingClientRect();
+  pop.style.top=(r.bottom+window.scrollY+4)+'px'; pop.style.left=Math.max(8, Math.min(window.innerWidth-250, r.right+window.scrollX-240))+'px';
+  var cerrar=function(){ pop.remove(); document.removeEventListener('click', fuera, true); document.removeEventListener('keydown', tecla, true); };
+  var fuera=function(ev){ if(!pop.contains(ev.target) && ev.target!==b) cerrar(); };
+  var tecla=function(ev){ if(ev.key==='Escape'){ ev.stopPropagation(); cerrar(); try{ b.focus(); }catch(_f){} } };
+  setTimeout(function(){ document.addEventListener('click', fuera, true); document.addEventListener('keydown', tecla, true); }, 0);
+  pop.onclick=function(ev){ var q=ev.target.closest ? ev.target.closest('[data-q]') : null; if(!q) return; cerrar(); _arcMiaAccion(X, q.getAttribute('data-q')); };
+  try{ pop.querySelector('button').focus(); }catch(_f){}
+}
+function _arcMiaAccion(X, q){
+  function falla(e){ toast(typeof e==='string' && e!=='nada' ? e : 'No se pudo guardar. Revisa tu conexión.'); }
+  if(q==='nombre') preguntar('Cambiar el nombre', 'Los documentos se quedan donde están.', { etiqueta:'Nombre', maximo:60, valor:X.t, minimo:2, corto:'Escribe el nombre de la carpeta.' }).then(function(n){
+    if(!n) return; dcMiasRenombrar(X.id, n).then(function(){ arcPintar(); toast('Listo: ahora se llama «'+String(n).trim()+'».'); }, falla); });
+  if(q==='quita'){
+    if(dcMiasHijas(X.id).length){ toast('«'+X.t+'» tiene subcarpetas: quita primero las de adentro.'); return; }
+    if(dcMiasDocs(X.id)){ toast('«'+X.t+'» tiene documentos: muévelos a otra carpeta o quítalos primero.'); return; }
+    confirmar('¿Quitar «'+X.t+'»?', 'Está vacía. Se quita de la web y de la app.', { si:'Sí, quitarla', mal:true }).then(function(ok){
+      if(!ok) return;
+      dcMiasQuitar(X.id).then(function(){ if(ARC.carpeta==='mia-'+X.id) ARC.carpeta=X.p ? (X.p.indexOf('s:')===0 ? 'g:'+X.g : 'mia-'+X.p) : 'g:'+DC_MIAS_G; arcPintar(); toast('Carpeta quitada.'); }, falla); });
+  }
+  if(q==='color'){
+    abrirHoja('Color · '+X.t, 'Para encontrarla rápido: el color sale en su borde', '<div class="arc-cols">'+DC_MIAS_COLORES.map(function(c){
+      return '<label class="chk"><input type="radio" name="arc-col" value="'+esc(c[0])+'"'+((X.col||'')===c[0] ? ' checked' : '')+'><span><i class="arc-col-m" style="background:'+(c[2] || 'transparent')+'"></i> '+esc(c[1])+'</span></label>'; }).join('')+'</div>',
+      '<button type="button" class="bt" id="arc-col-ok">Guardar</button>', {sinFoco:true});
+    $('arc-col-ok').onclick=function(){ var v=(document.querySelector('input[name=arc-col]:checked') || {}).value || '';
+      dcMiasColor(X.id, v).then(function(){ cerrarHoja(); arcPintar(); toast('Listo: el color quedó.'); }, function(e){ if(e==='nada'){ cerrarHoja(); return; } falla(e); }); };
+  }
+  if(q==='mover'){
+    var D=dcMiasDestinos(X.id);
+    abrirHoja('Mover · '+X.t, 'Con sus documentos y sus subcarpetas (hasta '+DC_MIAS_NIVELES+' niveles)', '<div class="campo"><label for="arc-mover-a">A dónde</label><select id="arc-mover-a">'+
+      D.map(function(d){ return '<option value="'+esc(d.p)+'"'+(d.p===(X.p || '') ? ' selected' : '')+'>'+esc(d.t)+'</option>'; }).join('')+'</select></div>',
+      '<button type="button" class="bt" id="arc-mover-ok">Mover aquí</button>', {sinFoco:true});
+    $('arc-mover-ok').onclick=function(){ dcMiasReubicar(X.id, $('arc-mover-a').value).then(function(){ cerrarHoja(); arcPintar(); toast('Listo: «'+X.t+'» se movió.'); },
+      function(e){ if(e==='nada'){ cerrarHoja(); return; } falla(e); }); };
+  }
+}
 /* la barra de las carpetas propias (28/10/2026: también en las secciones del menú y dentro de cada carpeta, con sus
    subcarpetas): con «Mis carpetas», una sección del menú o una carpeta propia abierta */
 function _arcMiasBarra(){
@@ -574,22 +656,31 @@ function _arcMiasBarra(){
   var S=(k.indexOf('g:')===0 && typeof _dcSeccDeGrupo==='function') ? _dcSeccDeGrupo(k.slice(2)) : null;
   var X=(/^mia-/.test(k) && typeof dcMiasDe==='function') ? dcMiasDe(k.slice(4)) : null;
   /* una carpeta de siempre de una de esas secciones (por ejemplo «Difusiones»): también se le agrega una al lado */
-  if(!S && !X && k.indexOf(':')<0 && typeof _dcCarpeta==='function' && typeof _dcSeccDeGrupo==='function'){ var cc=_dcCarpeta(k); if(cc && !cc.mia) S=_dcSeccDeGrupo(_dcGrupo(cc)); }
+  var F=null;
+  if(!S && !X && k.indexOf(':')<0 && typeof _dcCarpeta==='function' && typeof _dcSeccDeGrupo==='function'){ var cc=_dcCarpeta(k); if(cc && !cc.mia){ S=_dcSeccDeGrupo(_dcGrupo(cc)); if(S) F=cc; } }
   if(_arcModoEsc() || !(enMias || S || X)){ c.innerHTML=''; c.hidden=true; return; }
   c.hidden=false;
+  /* V7.10 · la ruta (📁 Documentos › 📂 la sección › 📂 la carpeta…) y, adentro, primero sus subcarpetas (cada una con su ⋮) */
+  var mg=_arcMigas(X, S, F), subs=F ? '' : _arcSubsHTML(dcMiasHijas(X ? X.id : (S ? 's:'+S.k : '')));
+  c.onclick=function(ev){
+    var b=ev.target.closest ? ev.target.closest('[data-k],[data-mia-m]') : null; if(!b || !c.contains(b)) return;
+    if(b.hasAttribute('data-mia-m')){ _arcMiaMenu(b, b.getAttribute('data-mia-m')); return; }
+    ARC.carpeta=b.getAttribute('data-k'); arcPintar();
+  };
   if(!dcMiasPuede()){
-    c.innerHTML='<div class="arc-mias"><span class="arc-mias-t">🔒 Crear, nombrar y ordenar tus propias carpetas (y sus subcarpetas): desde el plan Gestión SST. Lo que ya tienen adentro se sigue viendo.</span></div>';
+    c.innerHTML=mg+'<div class="arc-mias"><span class="arc-mias-t">🔒 Crear, nombrar y ordenar tus propias carpetas (y sus subcarpetas): desde el plan Gestión SST. Lo que ya tienen adentro se sigue viendo.</span></div>'+subs;
     return;
   }
-  var h='<div class="arc-mias">';
+  var h=mg+'<div class="arc-mias">';
   if(X){
     var her=dcMiasHijas(X.p), i=-1; her.forEach(function(x, j){ if(x.id===X.id) i=j; });
     h+=(X.nivel<DC_MIAS_NIVELES ? '<button type="button" class="bt chico" data-mia="sub">＋ Subcarpeta</button>' : '')+
        '<button type="button" class="bt sec chico" data-mia="nombre">Cambiar el nombre</button>'+
+       '<button type="button" class="bt sec chico" data-mia="color">🎨 Color</button>'+
+       '<button type="button" class="bt sec chico" data-mia="mover">📂 Mover</button>'+
        '<button type="button" class="bt sec chico" data-mia="sube" aria-label="Subir la carpeta"'+(i<=0 ? ' disabled' : '')+'>↑</button>'+
        '<button type="button" class="bt sec chico" data-mia="baja" aria-label="Bajar la carpeta"'+(i<0 || i===her.length-1 ? ' disabled' : '')+'>↓</button>'+
-       '<button type="button" class="bt sec chico" data-mia="quita">Quitar la carpeta</button>'+
-       (X.tr!==X.t ? '<span class="arc-mias-t">'+esc(X.tr)+'</span>' : '');
+       '<button type="button" class="bt sec chico" data-mia="quita">Quitar la carpeta</button>';
   } else if(S){
     h+='<button type="button" class="bt chico" data-mia="nueva">＋ Nueva carpeta en «'+esc(S.n)+'»</button>'+
        '<span class="arc-mias-t">Sale también en la app, en «Mis carpetas», dentro de «'+esc(S.n)+'».</span>';
@@ -599,7 +690,7 @@ function _arcMiasBarra(){
        '<span class="arc-mias-t">'+(M.length ? 'Abre una para crearle subcarpetas, cambiarle el nombre, ordenarla o quitarla.' :
          'Tus propias carpetas, con el nombre que quieras, y dentro de cada una sus subcarpetas. Lo que subas con una abierta va a ella, y salen también en la app.')+'</span>';
   }
-  c.innerHTML=h+'</div>';
+  c.innerHTML=h+'</div>'+subs;
   function falla(e){ toast(typeof e==='string' && e!=='nada' ? e : 'No se pudo guardar. Revisa tu conexión.'); }
   Array.prototype.forEach.call(c.querySelectorAll('[data-mia]'), function(b){
     b.onclick=function(){
@@ -607,6 +698,7 @@ function _arcMiasBarra(){
       if(q==='nueva'){ arcMiasNueva(S ? 's:'+S.k : ''); return; }
       if(!X) return;
       if(q==='sub'){ arcMiasNueva(X.id); return; }
+      if(q==='color' || q==='mover'){ _arcMiaAccion(X, q); return; }
       if(q==='nombre') preguntar('Cambiar el nombre', 'Los documentos se quedan donde están.', { etiqueta:'Nombre', maximo:60, valor:X.t, minimo:2, corto:'Escribe el nombre de la carpeta.' }).then(function(n){
         if(!n) return; dcMiasRenombrar(X.id, n).then(function(){ arcPintar(); toast('Listo: ahora se llama «'+String(n).trim()+'».'); }, falla); });
       if(q==='sube' || q==='baja') dcMiasMover(X.id, q==='sube' ? -1 : 1).then(function(){ arcPintar(); }, falla);

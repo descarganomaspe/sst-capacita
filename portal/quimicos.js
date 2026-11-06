@@ -625,6 +625,8 @@ function _qtAjustar(t, tams, peso, ancho){
   while(k > 1 && _qtAncho(t.slice(0, k) + '…', px, peso) > ancho) k--;
   return {t:t.slice(0, k).replace(/\s+$/, '') + '…', px:px};
 }
+/* 5/11/2026 · si es una lista, cada QR que se dibuja se anota (la lista del almacén los dibuja también en vector en el PDF) */
+var _QT_QR_LOG = null;
 /* el QR dibujado con rectángulos: nítido a cualquier tamaño */
 /* 27/09/2026 · lo que decide si un celular lee un QR impreso es el
    tamaño de cada cuadradito (módulo): con menos de 0,3 mm cuesta. En la
@@ -643,6 +645,7 @@ function _qtQRTexto(q, mm){
 }
 function _qtQR(txt, x, y, lado, ecc){
   var qr = qrcode(0, ecc || 'M'); qr.addData(txt); qr.make();
+  if(_QT_QR_LOG) _QT_QR_LOG.push({txt:txt, x:x, y:y, lado:lado, ecc:ecc || 'M'});
   var n = qr.getModuleCount(), t = lado / (n + 4), d = '';
   for(var r = 0; r < n; r++){
     var c = 0;
@@ -694,7 +697,9 @@ function _qtAviso(texto, px, ancho, maxL){
   return _qtPartir([{t:'⚠', b:1}], px, ancho);
 }
 /* la tarjeta de un producto: {svg, w, h, grupos, fuera} */
-function quimTarjetaSVG(q, tam){
+function quimTarjetaSVG(q, tam, cara, cartel){
+  if(cara === 'b') return quimTarjetaReversoSVG(q, tam, cartel);
+  var dosCaras = (cara === 'a');
   var T = QT_TAM[tam] || QT_TAM.chica, W = T.w, H = T.h, M = T.M;
   var sga = (q && q.sga) || {p:[], sw:'', h:[], pp:[]}, nf = (q && q.nf) || {s:0, i:0, r:0, e:''};
   var F = 'font-family="Arial,Helvetica,sans-serif"', out = '';
@@ -760,20 +765,20 @@ function quimTarjetaSVG(q, tam){
     }
   }
 
-  /* ── a la derecha: el QR, qué se ve al escanearlo y el EPP ── */
-  var wr = T.wr, xr = W - M - wr, yr = y0, qrInfo = null;
-  if(q && typeof quimEnlace === 'function'){
+  /* ── a la derecha: el QR, qué se ve al escanearlo y el EPP (en la de doble cara van atrás) ── */
+  var wr = dosCaras ? 0 : T.wr, xr = dosCaras ? (W - M + T.gap) : (W - M - wr), yr = y0, qrInfo = null;
+  if(!dosCaras && q && typeof quimEnlace === 'function'){
     try{ var qt = _qtQRTexto(q, T.qrMM); out += _qtQR(qt.txt, xr, yr, wr, qt.ecc); qrInfo = qt; yr += wr + Math.round(T.gap * 0.25); }catch(_q){}
   }
   /* en la chica no sobra lugar: la invitación va en corto */
   var capT = tam === 'chica' ? 'Escanéame para ver todo' : (q && q.ficha ? 'Escanea el QR: el producto completo y su hoja MSDS' : 'Escanea el QR: el producto completo');
-  var capL = _qtPartir([{t:_qt(capT)}], T.cap, wr);
+  var capL = dosCaras ? [] : _qtPartir([{t:_qt(capT)}], T.cap, wr);
   var lhc = Math.round(T.cap * 1.18);
-  out += _qtRenglones(capL, xr + wr / 2, yr + T.cap, T.cap, lhc, '#4A5B68', 'middle');
+  if(capL.length) out += _qtRenglones(capL, xr + wr / 2, yr + T.cap, T.cap, lhc, '#4A5B68', 'middle');
   yr += capL.length * lhc + Math.round(T.gap * 0.45);
-  var obra = tam === 'grande' ? (((typeof _quimEmp === 'function' ? _quimEmp() : null) || {}).nombre || '') : '';
+  var obra = (tam === 'grande' && !dosCaras) ? (((typeof _quimEmp === 'function' ? _quimEmp() : null) || {}).nombre || '') : '';
   var yObra = yFin - 4, reservaObra = obra ? 34 : 0;
-  var epp = typeof quimEppDe === 'function' ? quimEppDe(sga) : [];
+  var epp = (!dosCaras && typeof quimEppDe === 'function') ? quimEppDe(sga) : [];
   var filasEpp = Math.max(0, Math.min(2, Math.floor((yFin - reservaObra - yr + T.eppSep) / (T.eppLado + T.eppSep))));
   var eppV = _qtEppQueEntra(epp, T.eppFila * filasEpp);
   eppV.forEach(function(k, i){
@@ -824,13 +829,14 @@ function quimTarjetaSVG(q, tam){
       parr([{t:_qt('Según el SGA: sección 2 de su hoja MSDS.')}]);
       parr([{t:_qt('No lleva pictogramas ni palabra de advertencia.')}], '#4A5B68');
     }
-    else if(!gsTodos.length) parr([{t:_qt(_haySga(sga) ? 'Sin frases H cargadas.' : 'Sin etiqueta SGA cargada: escanea el QR o pide la hoja MSDS.')}], '#4A5B68');
-    if(fuera > 0) parr([{t:_qt(fuera === 1 ? '+1 peligro más en el QR' : '+' + fuera + ' peligros más en el QR'), b:1}], '#4A5B68');
+    else if(!gsTodos.length) parr([{t:_qt(_haySga(sga) ? 'Sin frases H cargadas.' : (dosCaras ? 'Sin etiqueta SGA cargada: escanea el QR del reverso o pide la hoja MSDS.' : 'Sin etiqueta SGA cargada: escanea el QR o pide la hoja MSDS.'))}], '#4A5B68');
+    if(fuera > 0) parr([{t:dosCaras ? (fuera === 1 ? _qt('+1 peligro más en su hoja MSDS') : '+' + fuera + ' ' + _qt('peligros más en su hoja MSDS'))
+                                    : _qt(fuera === 1 ? '+1 peligro más en el QR' : '+' + fuera + ' peligros más en el QR'), b:1}], '#4A5B68');
     var hubo = y > y0 + px;
     return {svg:svg, alto:hubo ? (y - lh - pa + px * 0.25 - y0) : 0, fuera:fuera, k:Math.min(k, gs.length)};
   }
   var r = null;
-  for(var kk = Math.min(T.maxG, gs.length); kk >= 0 && !r; kk--){
+  for(var kk = Math.min(T.maxG + (dosCaras ? 1 : 0), gs.length); kk >= 0 && !r; kk--){
     for(var t = 0; t < T.texto.length; t++){
       var b = bloques(kk, T.texto[t]);
       if(b.alto <= alto){ r = b; break; }
@@ -844,17 +850,144 @@ function quimTarjetaSVG(q, tam){
   return {svg:svg, w:W, h:H, grupos:r.k, fuera:r.fuera, qr:qrInfo};
 }
 
+function quimClaveMsds(n, m){
+  function _qcNor(s, max){ var x = String(s == null ? '' : s).trim().slice(0, max).toLowerCase(); try{ x = x.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(_n){} return x.replace(/[^a-z0-9]+/g, ' ').trim(); }
+  var s = _qcNor(n, 120) + '|' + _qcNor(m, 80), h = 0x811c9dc5;
+  for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return ('0000000' + h.toString(36)).slice(-7);
+}
+function quimEnlaceMsds(q, cartel){
+  var u = String((q && q.ficha) || '').trim();
+  if(!/^https?:\/\//i.test(u)) return '';
+  if(cartel && /#cartel=[A-Za-z0-9_-]{6,64}$/.test(String(cartel))) return String(cartel) + '&m=' + quimClaveMsds(q.producto, q.proveedor);
+  return u;
+}
+function _qtEccCorta(txt, maxMod){
+  try{ var qr = qrcode(0, 'M'); qr.addData(txt); qr.make(); return qr.getModuleCount() > (maxMod || 49) ? 'L' : 'M'; }catch(_e){ return 'M'; }
+}
+/* 5/11/2026 · el reverso de la tarjeta a doble cara: sus tamaños (ver la app) */
+var QT_REV = {
+  chica:  {nombre:[30, 27, 24, 22], sello:20, cap:19, tit:16, lab:15, circ:[96, 86, 78, 70, 62, 56, 50], sep:12, obra:0},
+  grande: {nombre:[46, 42, 38, 34], sello:28, cap:27, tit:23, lab:21, circ:[136, 122, 110, 100, 90, 80, 72], sep:16, obra:21}
+};
+function quimTarjetaReversoSVG(q, tam, cartel){
+  var T = QT_TAM[tam] || QT_TAM.chica, R = QT_REV[tam] || QT_REV.chica, W = T.w, H = T.h, M = T.M, gap = T.gap;
+  var sga = (q && q.sga) || {p:[], sw:'', h:[], pp:[]};
+  var F = 'font-family="Arial,Helvetica,sans-serif"', out = '<rect width="' + W + '" height="' + H + '" fill="#fff"/>';
+  /* ── arriba: el producto y su palabra de advertencia ── */
+  var sello = '', anchoSello = 0, hh = Math.round(R.nombre[0] * 1.45);
+  if(sga.sw){
+    var esP = sga.sw === 'peligro', ts = _qt(esP ? 'PELIGRO' : 'ATENCIÓN');
+    anchoSello = Math.round(_qtAncho(ts, R.sello, 700) + ts.length * 2 + R.sello * 1.2);
+    var hs0 = Math.round(R.sello * 1.7), xs = W - M - anchoSello, ys = M + Math.round((hh - hs0) / 2);
+    sello = '<rect x="' + xs + '" y="' + ys + '" width="' + anchoSello + '" height="' + hs0 + '" rx="' + Math.round(hs0 * 0.22) + '" fill="' + (esP ? '#C81E1E' : '#B98200') + '"/>' +
+            '<text x="' + (xs + anchoSello / 2) + '" y="' + (ys + hs0 * 0.69).toFixed(1) + '" text-anchor="middle" ' + F + ' font-size="' + R.sello +
+            '" font-weight="800" letter-spacing="2" fill="#fff">' + esc(ts) + '</text>';
+  }
+  var nom = _qtAjustar((q && q.producto) || '', R.nombre, 700, W - 2 * M - (anchoSello ? anchoSello + gap : 0));
+  out += '<text x="' + M + '" y="' + (M + Math.round(hh / 2 + nom.px * 0.36)) + '" ' + F + ' font-size="' + nom.px + '" font-weight="800" fill="#0B2A3A">' + esc(nom.t) + '</text>' + sello;
+  var yLinea = M + hh + 2;
+  out += '<line x1="' + M + '" y1="' + yLinea + '" x2="' + (W - M) + '" y2="' + yLinea + '" stroke="#D5DDE3" stroke-width="2"/>';
+  var y0 = yLinea + Math.round(gap * 0.8), yFin = H - M;
+  var obra = R.obra ? (((typeof _quimEmp === 'function' ? _quimEmp() : null) || {}).nombre || '') : '';
+  if(obra){
+    var ob = _qtAjustar(obra, [R.obra], 400, W - 2 * M);
+    out += '<text x="' + (W / 2) + '" y="' + (yFin - 2) + '" text-anchor="middle" ' + F + ' font-size="' + R.obra + '" fill="#8FA9B8">' + esc(ob.t) + '</text>';
+    yFin -= Math.round(R.obra * 1.6);
+  }
+  /* ── a la izquierda: el QR de su hoja MSDS, tan grande como entre ── */
+  var u = (typeof quimEnlaceMsds === 'function') ? quimEnlaceMsds(q, cartel) : '', deMsds = !!u, ecc = 'M';
+  var lhc = Math.round(R.cap * 1.18), anchoQ = Math.round((W - 2 * M) * 0.46);
+  var capL = _qtPartir([{t:_qt(deMsds ? 'Escanéame: su hoja MSDS' : 'Escanéame: el producto completo'), b:1}], R.cap, anchoQ);
+  var lado = Math.min(yFin - y0 - capL.length * lhc - Math.round(gap * 0.3), anchoQ), qrInfo = null;
+  if(!deMsds && q && typeof quimEnlace === 'function'){ try{ var qt = _qtQRTexto(q, lado / 10); u = qt.txt; ecc = qt.ecc; }catch(_t){ u = ''; } }
+  else if(u) ecc = _qtEccCorta(u, 57);
+  if(u && typeof qrcode === 'function'){ try{ out += _qtQR(u, M, y0, lado, ecc); qrInfo = {txt:u, ecc:ecc, msds:deMsds}; }catch(_q){} }
+  out += _qtRenglones(capL, M + lado / 2, y0 + lado + Math.round(gap * 0.15) + R.cap, R.cap, lhc, deMsds ? '#1E6B45' : '#4A5B68', 'middle');
+  /* ── a la derecha: lo obligatorio y lo prohibido, cada uno con su nombre ── */
+  var xr = M + lado + Math.round(gap * 1.4), wr = W - M - xr, alto = yFin - y0;
+  var todo = (typeof quimEppDe === 'function') ? quimEppDe(sga) : [];
+  var usa = todo.filter(function(k){ return !_quimEsProh(k) && _quimSenal(k); }), proh = todo.filter(function(k){ return _quimEsProh(k) && _quimSenal(k); });
+  var lhl = Math.round(R.lab * 1.15), alT = Math.round(R.tit * 1.45);
+  function _rvPlan(c){
+    var porF = Math.max(1, Math.floor((wr + R.sep) / (c + R.sep)));
+    function _rvSeccion(L){
+      var filas = [];
+      for(var i = 0; i < L.length; i += porF){
+        var ks = L.slice(i, i + porF), maxL = 1;
+        var labs = ks.map(function(k){ var it = _quimItem(k), l = _qtPartir([{t:_qt(it ? it.corto : k)}], R.lab, c + R.sep - 4); if(l.length > 2) l = l.slice(0, 2); maxL = Math.max(maxL, l.length); return l; });
+        filas.push({ks:ks, labs:labs, h:c + 6 + maxL * lhl});
+      }
+      var a = filas.length ? alT : 0; filas.forEach(function(f){ a += f.h + Math.round(R.sep * 0.7); });
+      return {filas:filas, alto:a};
+    }
+    var A = _rvSeccion(usa), B = _rvSeccion(proh);
+    return {c:c, A:A, B:B, alto:A.alto + B.alto + (A.alto && B.alto ? Math.round(gap * 0.4) : 0)};
+  }
+  var P = null;
+  for(var i = 0; i < R.circ.length && !P; i++){ var pl = _rvPlan(R.circ[i]); if(pl.alto <= alto) P = pl; }
+  if(!P) P = _rvPlan(R.circ[R.circ.length - 1]);
+  var y = y0, cortado = 0;
+  function _rvDibujar(S, titulo, col){
+    if(!S.filas.length) return;
+    out += '<text x="' + xr + '" y="' + (y + R.tit).toFixed(1) + '" ' + F + ' font-size="' + R.tit + '" font-weight="800" letter-spacing="1.5" fill="' + col + '">' + esc(titulo) + '</text>';
+    y += alT;
+    S.filas.forEach(function(f){
+      if(y + f.h > yFin + 2){ cortado += f.ks.length; return; }
+      f.ks.forEach(function(k, j){
+        var sn = _quimSenal(k), xe = xr + j * (P.c + R.sep);
+        out += '<g transform="translate(' + xe.toFixed(1) + ',' + y.toFixed(1) + ') scale(' + (P.c / 100).toFixed(4) + ')"><circle cx="50" cy="50" r="49" fill="#fff"/>' + sn.s + '</g>';
+        out += _qtRenglones(f.labs[j], xe + P.c / 2, y + P.c + 4 + R.lab, R.lab, lhl, '#0B2A3A', 'middle');
+      });
+      y += f.h + Math.round(R.sep * 0.7);
+    });
+  }
+  _rvDibujar(P.A, _qt('OBLIGATORIO'), '#0B5CAB');
+  if(P.A.filas.length && P.B.filas.length) y += Math.round(gap * 0.4);
+  _rvDibujar(P.B, _qt('PROHIBIDO'), '#C81E1E');
+  if(!usa.length && !proh.length){
+    var nl = _qtPartir([{t:_qt('Sin EPP cargado: revisa la sección 8 de su hoja MSDS.')}], R.lab + 2, wr);
+    out += _qtRenglones(nl, xr, y0 + R.lab + 2, R.lab + 2, Math.round((R.lab + 2) * 1.25), '#4A5B68');
+  }
+  var svg = ('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + out + '</svg>')
+            .replace(/&nbsp;/g, '&#160;');
+  return {svg:svg, w:W, h:H, qr:qrInfo, epp:usa.length + proh.length - cortado, cortado:cortado};
+}
 /* ── LA PANTALLA DE LAS TARJETAS ─────────────────────────────────── */
-var QT = {tam:'chica', ver:null, hoja:[], de:'producto', eligiendo:false, busca:'', guardando:null};
+var QT = {tam:'chica', ver:null, hoja:[], de:'producto', eligiendo:false, busca:'', guardando:null, caras:1, qrUrl:'', qrEstado:''};
 var LS_QT_TAM = 'sstc_quim_tarjeta';
+var LS_QT_CARAS = 'sstc_quim_tarjeta_caras';   /* 5/11/2026 · una cara o doble cara (para enmicar), en este celular */
 function abrirTarjetasQuim(id){
   if(typeof soloConCodigo === 'function' && soloConCodigo('Los productos químicos', 'msds')) return;
   QT.hoja = []; QT.eligiendo = false; QT.busca = '';
   if(id && quimPorId(id)){ QT.hoja = [{id:String(id), n:1}]; QT.ver = String(id); QT.de = 'producto'; }
   else { QT.ver = null; QT.de = 'lista'; QT.eligiendo = true; }
   try{ QT.tam = (localStorage.getItem(LS_QT_TAM) === 'grande') ? 'grande' : 'chica'; }catch(_l){ QT.tam = 'chica'; }
+  try{ QT.caras = (localStorage.getItem(LS_QT_CARAS) === '2') ? 2 : 1; }catch(_c){ QT.caras = 1; }
   ir('p-quim-tar');
   qtPintar();
+  if(QT.caras === 2) qtTraerQR();
+}
+function qtTraerQR(){
+  if(QT.qrUrl || QT.qrEstado === 'pidiendo') return;
+  var H = (typeof qrHojaBase === 'function') ? qrHojaBase('msds') : null;
+  if(!H || typeof qrFicha !== 'function' || typeof cartelEnlaceQR !== 'function') return;
+  if(typeof puede === 'function' && !puede(H.llave)) return;
+  if(!(typeof hayCuenta === 'function' && hayCuenta())) return;
+  QT.qrEstado = 'pidiendo';
+  var obra = function(){ var e = (typeof _quimEmp === 'function') ? _quimEmp() : null; return String((e && (e.id || e.codigo)) || ''); }, ob = obra();
+  qrFicha(H).then(function(tk){
+    QT.qrEstado = '';
+    if(obra() !== ob) return;
+    QT.qrUrl = cartelEnlaceQR(tk);
+    if(((document.querySelector('.pantalla.activa') || {}).id || '') === 'p-quim-tar') qtPintar();
+  }, function(){ QT.qrEstado = ''; });
+}
+function qtCaras(n){
+  QT.caras = (+n === 2) ? 2 : 1;
+  try{ localStorage.setItem(LS_QT_CARAS, String(QT.caras)); }catch(_l){}
+  qtPintar();
+  if(QT.caras === 2) qtTraerQR();
 }
 function salirTarjetasQuim(){
   if(QT.de === 'producto' && QUIM_VER){ ir('p-quimico'); try{ pintarQuimico(); }catch(_p){} }
@@ -877,11 +1010,24 @@ function qtPintar(){
              '" onclick="qtTam(\'' + x[0] + '\')">' + x[1] + '</button>';
     }).join('');
   }
+  /* 5/11/2026 · una cara o doble cara, para enmicar */
+  var sc = document.getElementById('qt-caras');
+  if(sc){
+    sc.innerHTML = [[1, 'Una cara'], [2, 'Doble cara · para enmicar']].map(function(x){
+      return '<button type="button" role="tab" aria-selected="' + (QT.caras === x[0]) + '" class="' + (QT.caras === x[0] ? 'on' : '') +
+             '" onclick="qtCaras(' + x[0] + ')">' + x[1] + '</button>';
+    }).join('');
+  }
   var vis = document.getElementById('qt-vista');
   if(vis){
-    if(q){
+    if(q && QT.caras === 2){
+      var ra = quimTarjetaSVG(q, QT.tam, 'a'), rb = quimTarjetaSVG(q, QT.tam, 'b', QT.qrUrl);
+      vis.innerHTML = '<p class="qt-cara-t"><span>Adelante</span></p><div class="qt-tarjeta qt-' + QT.tam + '" data-sin-trad>' + ra.svg + '</div>' +
+                      '<p class="qt-cara-t"><span>Atrás · el reverso</span></p><div class="qt-tarjeta qt-' + QT.tam + '" data-sin-trad>' + rb.svg + '</div>' +
+                      '<p class="io-pie qt-cara-n"><span>Sale en dos páginas: la de atrás lleva los reversos al revés, para que al imprimir a doble cara (volteando por el borde largo) cada uno caiga detrás de su tarjeta. Recórtala por el borde y enmícala.</span></p>';
+    } else if(q){
       var r = quimTarjetaSVG(q, QT.tam);
-      vis.innerHTML = '<div class="qt-tarjeta qt-' + QT.tam + '">' + r.svg + '</div>';
+      vis.innerHTML = '<div class="qt-tarjeta qt-' + QT.tam + '" data-sin-trad>' + r.svg + '</div>';
     } else {
       vis.innerHTML = '<div class="io-grupo"><div class="io-vacio" style="padding:22px 16px"><b>Elige un producto</b>' +
                       '<p>Agrégalo abajo y aquí ves su tarjeta tal como sale impresa.</p></div></div>';
@@ -1041,7 +1187,9 @@ function _qtPNG(svg, w, h, escala, girar){
         cv.width = girar ? H : W; cv.height = girar ? W : H;
         var cx = cv.getContext('2d');
         cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
-        if(girar){ cx.translate(H, 0); cx.rotate(Math.PI / 2); }
+        /* 5/11/2026 · «ccw»: el reverso de la grande, girado al otro lado (al voltear la hoja cae derecho detrás de su tarjeta) */
+        if(girar === 'ccw'){ cx.translate(0, W); cx.rotate(-Math.PI / 2); }
+        else if(girar){ cx.translate(H, 0); cx.rotate(Math.PI / 2); }
         cx.drawImage(im, 0, 0, W, H);
         ok(cv.toDataURL('image/png'));
       }catch(e){ mal(e); }
@@ -1060,41 +1208,55 @@ function qtPDF(){
   var J = window.jspdf && window.jspdf.jsPDF;
   if(!J){ if(msg){ msg.style.color = 'var(--mal)'; msg.textContent = 'No se pudo armar el PDF en este celular.'; } return Promise.resolve(null); }
   if(msg){ msg.style.color = 'var(--gris)'; msg.textContent = 'Armando la hoja…'; }
-  var tam = QT.tam, L = QT_HOJA[tam], cual = {};
+  /* 5/11/2026 · a doble cara, para enmicar: cada tarjeta con su adelante y su reverso */
+  var tam = QT.tam, L = QT_HOJA[tam], cual = {}, dos = (QT.caras === 2);
   var ps = QT.hoja.map(function(x){
     var q = quimPorId(x.id); if(!q) return Promise.resolve(null);
-    var r = quimTarjetaSVG(q, tam);
-    return _qtPNG(r.svg, r.w, r.h, 2, L.girar).then(function(du){ cual[String(x.id)] = du; });
+    if(!dos){ var r = quimTarjetaSVG(q, tam); return _qtPNG(r.svg, r.w, r.h, 2, L.girar).then(function(du){ cual[String(x.id)] = {a:du}; }); }
+    var ra = quimTarjetaSVG(q, tam, 'a'), rb = quimTarjetaSVG(q, tam, 'b', QT.qrUrl || '');
+    return Promise.all([_qtPNG(ra.svg, ra.w, ra.h, 2, L.girar), _qtPNG(rb.svg, rb.w, rb.h, 2, L.girar ? 'ccw' : false)])
+      .then(function(d){ cual[String(x.id)] = {a:d[0], b:d[1]}; });
   });
   return Promise.all(ps).then(function(){
     var doc = new J({unit:'mm', format:'a4', orientation:'portrait'});
     var porHoja = L.cols * L.filas;
     var x0 = (210 - (L.cols * L.cw + (L.cols - 1) * L.gx)) / 2, y0 = (297 - (L.filas * L.ch + (L.filas - 1) * L.gy)) / 2;
-    var k = 0;
-    QT.hoja.forEach(function(x){
-      var du = cual[String(x.id)]; if(!du) return;
-      for(var i = 0; i < x.n; i++){
-        if(k && k % porHoja === 0) doc.addPage();
-        var pos = k % porHoja, c = pos % L.cols, f = Math.floor(pos / L.cols);
-        doc.addImage(du, 'PNG', x0 + c * (L.cw + L.gx), y0 + f * (L.ch + L.gy), L.cw, L.ch, 'qt-' + tam + '-' + x.id, 'FAST');
-        k++;
-      }
-    });
+    var todas = [];
+    QT.hoja.forEach(function(x){ var du = cual[String(x.id)]; if(!du) return; for(var i = 0; i < x.n; i++) todas.push({id:String(x.id), du:du}); });
+    var k = todas.length, pag = 0;
+    /* con doble cara, cada hoja de adelante va seguida de la de atrás con las columnas al revés: al voltear la hoja por su
+       borde largo, cada reverso cae detrás de su tarjeta */
+    function _qtPagina(parte, atras){
+      if(pag) doc.addPage();
+      pag++;
+      parte.forEach(function(t, pos){
+        var c = pos % L.cols, f = Math.floor(pos / L.cols);
+        if(atras) c = L.cols - 1 - c;
+        doc.addImage(atras ? t.du.b : t.du.a, 'PNG', x0 + c * (L.cw + L.gx), y0 + f * (L.ch + L.gy), L.cw, L.ch, 'qt-' + tam + '-' + t.id + (dos ? (atras ? '-b' : '-a') : ''), 'FAST');
+      });
+    }
+    for(var h0 = 0; h0 * porHoja < k; h0++){
+      var parte = todas.slice(h0 * porHoja, (h0 + 1) * porHoja);
+      _qtPagina(parte, false);
+      if(dos) _qtPagina(parte, true);
+    }
     var uno = QT.hoja.length === 1 ? quimPorId(QT.hoja[0].id) : null, nom = 'quimicos';
     if(uno){
       nom = String(uno.producto || 'producto');
       try{ nom = nom.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(_n){}
       nom = nom.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'producto';
     }
-    var archivo = 'tarjetas-' + nom + '.pdf';
+    var archivo = 'tarjetas-' + nom + (dos ? '-doble-cara' : '') + '.pdf';
     if(typeof entregarPDF === 'function') entregarPDF(doc, archivo); else doc.save(archivo);
     var hojas = Math.ceil(k / porHoja);
     if(msg){
       msg.style.color = 'var(--ok)';
-      msg.textContent = (k === 1 ? '1 tarjeta' : k + ' tarjetas') + (hojas === 1 ? ' en 1 hoja A4.' : ' en ' + hojas + ' hojas A4.') +
-                        ' Imprímela a tamaño real (100 %).';
+      msg.textContent = dos ? (k === 1 ? '1 tarjeta' : k + ' tarjetas') + ' a doble cara, en ' + pag + ' páginas (adelante y atrás).' +
+                              ' Imprímela a doble cara, volteando por el borde largo, a tamaño real (100 %).'
+                            : (k === 1 ? '1 tarjeta' : k + ' tarjetas') + (hojas === 1 ? ' en 1 hoja A4.' : ' en ' + hojas + ' hojas A4.') +
+                              ' Imprímela a tamaño real (100 %).';
     }
-    return {doc:doc, tarjetas:k, hojas:hojas, archivo:archivo};
+    return {doc:doc, tarjetas:k, hojas:hojas, paginas:pag, caras:dos ? 2 : 1, archivo:archivo};
   }).catch(function(e){
     if(msg){ msg.style.color = 'var(--mal)'; msg.textContent = 'No se pudo armar el PDF. Vuelve a intentarlo.'; }
     return null;
@@ -1154,7 +1316,7 @@ var QL_TINTA = '#0B2A3A', QL_GRIS = '#4A5B68', QL_GRIS2 = '#6B7C88', QL_RAYA = '
    MSDS» de la obra), y con todo el detalle el de cada producto (el mismo de su tarjeta: lleva su etiqueta y sirve sin señal) */
 var QL_EQUIPOS = [['bandeja', 'Bandeja antiderrame'], ['kit', 'Kit antiderrame'], ['extintor', 'Extintor adecuado'], ['lavaojos', 'Lavaojos o ducha'], ['ventila', 'Ventilación']];
 var QL_QR_LISTA = 82;   /* 21,7 mm: la dirección del cartel (unas 75 letras) sale con módulos de 0,5 mm */
-var QL_QR_PROD = 72;    /* 19 mm: el del producto lleva más (su etiqueta) y necesita ese tamaño para que un celular lo lea */
+var QL_QR_PROD = 80;    /* 21 mm. 5/11/2026: lleva la dirección corta de su hoja MSDS (quimEnlaceMsds): módulos de 0,45 mm */
 function _qlT(x, y, s, px, peso, col, ancla, extra){
   return '<text x="' + (+x).toFixed(1) + '" y="' + (+y).toFixed(1) + '" font-family="Arial,Helvetica,sans-serif" font-size="' + (+px).toFixed(2) + '"' +
          (peso && peso !== 400 ? ' font-weight="' + peso + '"' : '') + ' fill="' + (col || QL_TINTA) + '"' + (ancla ? ' text-anchor="' + ancla + '"' : '') + (extra || '') + '>' + esc(s) + '</text>';
@@ -1245,6 +1407,7 @@ function _qlColumnas(M, ancho, conLugar, maxP, ex){
     c.nf = M.nf + 14; c.msds = Math.round(40 * k) + 6; c.lugar = conLugar ? Math.round(86 * k) + 8 : 0;
     c.env = ex.envase ? Math.round(70 * k) + 8 : 0;
     c.qr = ex.qr ? QL_QR_PROD + 12 : 0; if(c.qr) c.msds = 0;
+    c.cartel = ex.cartel || '';   /* 5/11/2026 · el cartel «Hojas MSDS» de la obra: el QR de cada producto abre su hoja por él */
     var resto = ancho - c.n - c.sga - c.pal - c.nf - c.msds - c.lugar - c.env - c.qr;
     c.prod = Math.round(resto * (M.h > 0 ? 0.4 : 0.52)); c.pel = resto - c.prod;
   }
@@ -1298,7 +1461,9 @@ function _qlFila(q, M, C){
   var altoLug = lugL.length ? lugL.length * pxL * 1.25 : lhS;
   var envL = (C.env && envT) ? _qlLineas([{t:envT}], pxL, C.env - 2 * g, 3) : [];
   var altoEnv = envL.length ? envL.length * pxL * 1.25 : lhS;
-  var altoQR = C.qr ? QL_QR_PROD + 12 : 0;
+  /* 5/11/2026 · el QR de su hoja MSDS (corto, para que se lea); sin hoja, no lleva QR y el renglón no crece por él */
+  var uQR = (C.qr && typeof quimEnlaceMsds === 'function') ? quimEnlaceMsds(q, C.cartel) : '';
+  var altoQR = C.qr ? (uQR ? QL_QR_PROD + 12 : lhS) : 0;
   var hayNf = _hayNf(nf);
   var alto = Math.ceil(2 * pad + Math.max(altoSga, pal && !dos ? aPal : 0, altoProd, C.pel ? altoPel : 0, C.lugar ? altoLug : 0, C.env ? altoEnv : 0, altoQR, hayNf ? M.nf : 0, lhN));
   return {alto:alto, q:q, svg:function(x0, y0, n, fondo){
@@ -1367,16 +1532,15 @@ function _qlFila(q, M, C){
       if(envL.length) s += _qtRenglones(envL, x0 + C.xenv + g, arriba(altoEnv) + pxL * 0.95, pxL, pxL * 1.25, QL_TINTA);
       else s += _qlT(x0 + C.xenv + g, ym + pxL * 0.34, '—', pxL, 400, QL_GRIS2);
     }
-    /* el QR del producto (el de su tarjeta) y, debajo, si tiene su hoja MSDS */
+    /* el QR de su hoja MSDS y, debajo, que la tiene (sin hoja: «Falta la hoja MSDS», sin QR) */
     if(C.qr){
       var lq = QL_QR_PROD, cq = x0 + C.xqr + C.qr / 2, yq = arriba(altoQR);
-      try{ var tq = _qtQRTexto(q, lq * 0.2646); s += _qtQR(tq.txt, cq - lq / 2, yq, lq, tq.ecc); }catch(_q){ }
       var pxq = 7.6, yt = yq + lq + 9;
-      if(q.ficha){
-        var tH = _qt('Hoja MSDS'), wH2 = _qtAncho(tH, pxq, 700), lv = pxq, xv = cq - (lv + 3 + wH2) / 2;
-        s += '<path d="M' + (xv + lv * 0.1).toFixed(1) + ' ' + (yt - lv * 0.36).toFixed(1) + ' l' + (lv * 0.3).toFixed(1) + ' ' + (lv * 0.32).toFixed(1) + ' l' + (lv * 0.55).toFixed(1) + ' ' + (-lv * 0.66).toFixed(1) +
-             '" fill="none" stroke="' + QL_VERDE + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' + _qlT(xv + lv + 3, yt, tH, pxq, 700, QL_VERDE);
-      } else s += _qlT(cq, yt, _qt('Falta la hoja MSDS'), pxq, 700, QL_ROJO, 'middle');
+      if(!uQR){ s += _qlT(cq, ym + pxq * 0.34, _qt('Falta la hoja MSDS'), pxq, 700, QL_ROJO, 'middle'); return s; }
+      try{ s += _qtQR(uQR, cq - lq / 2, yq, lq, _qtEccCorta(uQR, 49)); }catch(_q){ }
+      var tH = _qt('Hoja MSDS'), wH2 = _qtAncho(tH, pxq, 700), lv = pxq, xv = cq - (lv + 3 + wH2) / 2;
+      s += '<path d="M' + (xv + lv * 0.1).toFixed(1) + ' ' + (yt - lv * 0.36).toFixed(1) + ' l' + (lv * 0.3).toFixed(1) + ' ' + (lv * 0.32).toFixed(1) + ' l' + (lv * 0.55).toFixed(1) + ' ' + (-lv * 0.66).toFixed(1) +
+           '" fill="none" stroke="' + QL_VERDE + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' + _qlT(xv + lv + 3, yt, tH, pxq, 700, QL_VERDE);
       return s;
     }
     /* la hoja MSDS */
@@ -1604,7 +1768,7 @@ function quimListaArmar(lista, op){
   for(var mi = 0; mi < modos.length && !plan; mi++){
     var M = modos[mi], ultimo = (mi === modos.length - 1);
     var anC = M.col === 2 ? (CW - gap) / 2 : CW;
-    var C = _qlColumnas(M, anC, !porLugar, maxP, {envase:hayEnv ? env : null, qr:qrP && M.col === 1}), ct = _qlCabTabla(M, C);
+    var C = _qlColumnas(M, anC, !porLugar, maxP, {envase:hayEnv ? env : null, qr:qrP && M.col === 1, cartel:op.qrCartel || op.qr || ''}), ct = _qlCabTabla(M, C);
     /* los bloques: los renglones y, por lugar, el renglón de cada lugar */
     var B = [], nG = {};
     if(porLugar) L.forEach(function(q){ var g = _qlClave(_qlLugar(q)); nG[g] = (nG[g] || 0) + 1; });
@@ -1631,9 +1795,11 @@ function quimListaArmar(lista, op){
       }
     }
   }
-  /* las hojas, dibujadas */
-  var out = [], n = plan.hojas.length;
+  /* las hojas, dibujadas (5/11/2026: con dónde quedó cada QR, para dibujarlos también en vector en el PDF) */
+  var out = [], qrs = [], n = plan.hojas.length;
   plan.hojas.forEach(function(cols, h){
+    _QT_QR_LOG = [];
+    try{
     var cab = _qlCabeza(L, op, h + 1, n), pie = _qlPie(L, op, plan.pie);
     var y0 = QL_A4.arriba + cab.alto + 4, cuerpo = cab.svg, anC = plan.C.ancho;
     cols.forEach(function(col, ci){
@@ -1651,8 +1817,9 @@ function quimListaArmar(lista, op){
     cuerpo += '<g transform="translate(0,' + yPie.toFixed(1) + ')">' + pie.svg + '</g>';
     out.push(('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + QL_A4.H + '" viewBox="0 0 ' + W + ' ' + QL_A4.H + '">' +
               '<rect width="' + W + '" height="' + QL_A4.H + '" fill="#ffffff"/>' + cuerpo + '</svg>').replace(/&nbsp;/g, '&#160;'));
+    } finally { qrs.push(_QT_QR_LOG || []); _QT_QR_LOG = null; }
   });
-  return {hojas:out, entra:plan.entra, modo:plan.modo, col:plan.M.col, frases:plan.M.h, cod:!!plan.M.cod, epp:!!plan.M.epp, n:L.length, orden:L,
+  return {hojas:out, qrs:qrs, entra:plan.entra, modo:plan.modo, col:plan.M.col, frases:plan.M.h, cod:!!plan.M.cod, epp:!!plan.M.epp, n:L.length, orden:L,
           qr:!!(op.qr && typeof qrcode === 'function'), qrProd:!!plan.C.qr, envase:hayEnv, equipos:!!_qlEquipos(op, 9999), tels:_qlTels(op).length};
 }
 /* los bloques, en columnas de alto «cap»: un lugar no queda solo al pie de una columna; la columna que empieza a
@@ -1722,6 +1889,25 @@ function _qlJPG(svg){
     im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   });
 }
+function _qlQRVector(doc, L){
+  var k = 210 / QL_A4.W, sol = 0.02;
+  (L || []).forEach(function(z){
+    try{
+      var qr = qrcode(0, z.ecc || 'M'); qr.addData(z.txt); qr.make();
+      var n = qr.getModuleCount(), t = z.lado / (n + 4);
+      doc.setFillColor(255, 255, 255); doc.rect(z.x * k, z.y * k, z.lado * k, z.lado * k, 'F');
+      doc.setFillColor(0, 0, 0);
+      for(var r = 0; r < n; r++){
+        var c = 0;
+        while(c < n){
+          if(!qr.isDark(r, c)){ c++; continue; }
+          var c0 = c; while(c < n && qr.isDark(r, c)) c++;
+          doc.rect((z.x + (c0 + 2) * t) * k, (z.y + (r + 2) * t) * k, (c - c0) * t * k + sol, t * k + sol, 'F');
+        }
+      }
+    }catch(_e){}
+  });
+}
 function quimListaPDF(lista, op){
   var J = window.jspdf && window.jspdf.jsPDF;
   if(!J) return Promise.reject('sin-pdf');
@@ -1729,7 +1915,7 @@ function quimListaPDF(lista, op){
   op = op || {};
   var r = quimListaArmar(lista, op), doc = new J({unit:'mm', format:'a4', orientation:'portrait'}), p = Promise.resolve();
   r.hojas.forEach(function(svg, i){
-    p = p.then(function(){ return _qlJPG(svg); }).then(function(du){ if(i) doc.addPage(); doc.addImage(du, 'JPEG', 0, 0, 210, 297, 'ql-' + i, 'FAST'); });
+    p = p.then(function(){ return _qlJPG(svg); }).then(function(du){ if(i) doc.addPage(); doc.addImage(du, 'JPEG', 0, 0, 210, 297, 'ql-' + i, 'FAST'); _qlQRVector(doc, (r.qrs || [])[i]); });
   });
   return p.then(function(){
     try{ doc.setProperties({title:_qt('Lista de productos químicos') + (op.obra ? ' · ' + op.obra : ''), creator:'OBRASST'}); }catch(_p){}
@@ -1767,6 +1953,9 @@ function quimListaPDF(lista, op){
       '.qt-tarjeta{margin:14px auto 8px;max-width:440px;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 6px 22px rgba(0,0,0,.28)}' +
       '.qt-tarjeta.qt-grande{max-width:520px}' +
       '.qt-tarjeta svg{display:block;width:100%;height:auto}' +
+      /* 5/11/2026 · la tarjeta a doble cara: adelante y atrás, con su nombre */
+      '.qt-cara-t{margin:16px 0 -6px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gris,#8FA9B8)}' +
+      '.qt-cara-n{text-align:center;margin:8px 0 0}' +
       '.qt-h .qt-caja{flex:0 0 24px;height:24px;border-radius:7px;border:1.5px solid rgba(var(--w),.3);display:flex;align-items:center;' +
         'justify-content:center;font-size:15px;font-weight:700;color:var(--fondo)}' +
       '.qt-h.on .qt-caja{background:var(--oro);border-color:var(--oro)}' +

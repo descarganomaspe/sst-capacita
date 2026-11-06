@@ -671,6 +671,15 @@ function freNuevoId(){
   for(var i = 0; i < 8; i++) s += a.charAt(Math.floor(Math.random() * a.length));
   return s;
 }
+function freGpsLimpio(g){
+  if(!g || typeof g !== 'object') return null;
+  var lat = +g.lat, lng = +g.lng;
+  if(g.lat === '' || g.lng === '' || g.lat == null || g.lng == null || !isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) return null;
+  var r = Math.round(+g.r || 80); r = Math.max(20, Math.min(2000, r));
+  return { lat:Math.round(lat * 1e6) / 1e6, lng:Math.round(lng * 1e6) / 1e6, r:r,
+           ini:_freHora(g.ini, '07:30'), fin:_freHora(g.fin, '17:00'), ai:_freHora(g.ai, '12:30'), af:_freHora(g.af, '13:30') };
+}
+function _freHora(v, def){ var m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(v || '').trim()); return m ? (m[1].length < 2 ? '0' + m[1] : m[1]) + ':' + m[2] : def; }
 function freLimpio(o, idSi){
   o = (o && typeof o === 'object') ? o : {};
   var nums = (Array.isArray(o.nums) ? o.nums : []).map(function(x){ return { t:freTxt(x && x.t, 28), tel:freTel(x && x.tel) }; })
@@ -679,10 +688,13 @@ function freLimpio(o, idSi){
   var n = freTxt(o.n, 60), vistos = {}; vistos[freNorm(n)] = 1;
   var antes = (Array.isArray(o.antes) ? o.antes : []).map(function(x){ return freTxt(x, 60); })
     .filter(function(x){ var k = freNorm(x); if(!k || vistos[k]) return false; vistos[k] = 1; return true; }).slice(0, 5);
-  return { v:1, id:/^f-[a-z0-9]{4,16}$/.test(String(o.id || '')) ? String(o.id) : (idSi || freNuevoId()),
+  var out = { v:1, id:/^f-[a-z0-9]{4,16}$/.test(String(o.id || '')) ? String(o.id) : (idSi || freNuevoId()),
            n:n, antes:antes, ref:freTxt(o.ref, 140), dep:freTxt(o.dep, 40), dist:freTxt(o.dist, 60),
            resp:freTxt(o.resp, 80), cargo:freTxt(o.cargo, 60), tel:freTel(o.tel), punto:freTxt(o.punto, 140), nums:nums,
            al:/^\d{4}-\d{2}-\d{2}$/.test(String(o.al || '')) ? String(o.al) : '', por:freTxt(o.por, 80) };
+  /* 5/11/2026 · V7.10 · el GPS del frente (opcional): solo si está bien */
+  var gps = freGpsLimpio(o.gps); if(gps) out.gps = gps;
+  return out;
 }
 function freEsNombre(f, nom){
   var k = freNorm(nom); if(!k || !f) return false;
@@ -751,8 +763,11 @@ function frePaquete(frentes, docs, brig, trabs){
       var g = t ? freDeTrab(t, frentes) : null;
       return !!(g && g.id === f.id);
     }).map(function(p){ var o = { n:p.n, c:p.c || '', tel:p.tel || '', roles:p.roles || [] }; if(p.f) o.f = p.f; return o; });
-    return { id:f.id, n:f.n, ref:f.ref, dep:f.dep, dist:f.dist, punto:f.punto,
-             resp:f.resp ? { n:f.resp, cargo:f.cargo, tel:f.tel } : null, nums:f.nums, docs:d, brig:b };
+    var o = { id:f.id, n:f.n, ref:f.ref, dep:f.dep, dist:f.dist, punto:f.punto,
+              resp:f.resp ? { n:f.resp, cargo:f.cargo, tel:f.tel } : null, nums:f.nums, docs:d, brig:b };
+    /* 5/11/2026 · V7.10 · el GPS del frente (dónde está, su radio y su horario), para el celular de quien dio su permiso */
+    if(f.gps) o.g = f.gps;
+    return o;
   });
 }
 function quienesPaquete(){

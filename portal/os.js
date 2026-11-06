@@ -22,7 +22,19 @@ var OS_MOTIVO = { sin_sesion:'Tu sesión se cerró. Vuelve a entrar.', no_eres_d
   solo_gestor:'Eso lo cambia el dueño o el gestor de la obra.', sin_plan_cumple:'El control de contratistas viene con el Control de contratistas (y con Mandante y Estado).',
   sin_plan_estado:'Esto viene con la Supervisión de obra pública, el plan para las entidades del Estado.',
   falta_consentimiento:'Marca que el trabajador aceptó: sin su consentimiento no se emite.', no_existe:'Eso ya no está.', muy_seguido:'Espera un momento y vuelve a intentarlo.',
-  rubros:'Elige al menos un rubro.', departamento:'Elige el departamento.', cargo:'Elige un cargo de la lista.', tamano:'Elige el tamaño.', accion:'No se pudo: recarga la página.' };
+  rubros:'Elige al menos un rubro.', departamento:'Elige el departamento.', cargo:'Elige un cargo de la lista.', tamano:'Elige el tamaño.', accion:'No se pudo: recarga la página.',
+  nombre:'Escribe el nombre del cargo (de 3 a 80 letras, sin < > { }).', respuestas:'Revisa las respuestas.', nombre_repetido:'Ya tienes un cargo propio con ese nombre.',
+  maximo:'Llegaste a 60 cargos propios: quita alguno que ya no uses.', sector:'Elige el sector.', puesto:'El nombre del puesto es muy largo.' };
+/* 5/11/2026 · V7.10 · Módulo 1 (Marcelo): «filtra el select de "Qué exige la ley por puesto" por obra.sector, incluye Jefe de
+   SSOMA y Asistente de producción, corrige el cruce de Oficial dentro de Construcción y activa ➕ Agregar un cargo propio con las
+   5 preguntas filtro para multa SUNAFIL y EPP». La lista es la del sector de la empresa, por grupos (jefatura, cuadrillas,
+   equipos y apoyo), con sus cargos propios arriba; los de otros sectores, a pedido. Lo que se le exige a un cargo propio y su
+   multa los arma el servidor (os_cargo_propio_guardar, con vista previa): aquí solo se pregunta y se muestra. */
+var OS_HAB = { al:'Trabajo en altura', an:'Armado de andamios', iz:'Izaje de cargas', ec:'Espacio confinado', tc:'Trabajo en caliente', el:'Trabajo eléctrico', ex:'Manejo de explosivos', mq:'Operador de maquinaria' };
+var OS_TIPO = [['epp', 'EPP'], ['emo', 'Exámenes médicos'], ['sctr', 'SCTR'], ['capacitacion', 'Capacitaciones'], ['hab', 'Habilitaciones de alto riesgo'], ['permiso', 'Permisos'], ['insp', 'Verificaciones'], ['reg', 'Registros']];
+var OS_RIESGOS = [['altura', 'Altura (más de 1.80 m o andamio)'], ['caliente', 'En caliente (soldadura o corte)'], ['electrico', 'Eléctrico (bloqueo de energías)'],
+  ['confinado', 'Espacio confinado (gases)'], ['izaje', 'Izaje de cargas (grúas)']];
+var OS_GRAV = { grave:'Grave', muy_grave:'Muy grave', leve:'Leve' };
 /* V7.1 (2/11/2026) · Marcelo: «Plan Estado, ¿no debería salir solo cuando nos contraten?». Sí: la pestaña «Plan Estado™»
    es de quien contrató el Plan Estado™ (las entidades del Estado: el peldaño 4 de la cadena), no de toda empresa. Lo dice
    el servidor en os_cfg (plan_estado_ok); con un servidor de antes, vale el tipo de cuenta del portal ('fis'). */
@@ -49,13 +61,22 @@ function _osCss(){
     '.os-tres-c span{font-size:13px;color:var(--gris,#6b7c88)}.os-tres-c .bt{align-self:flex-start;margin:4px 0 0}' +
     '.os-calzan{margin:4px 0 6px;padding-left:18px;font-size:13.5px;line-height:1.5}.os-calzan li{margin:0 0 2px}' +
     '.os-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.os-sub{color:var(--gris,#6b7c88);font-size:13px;margin:4px 0 10px}' +
+    /* V7.10 · el cargo propio: las 5 preguntas y lo que se le exige */
+    '.dialogo.os-cp{max-width:620px;max-height:calc(100vh - 32px);overflow:auto}.os-cp .chk{color:var(--texto,#1d2b33);font-size:14px;line-height:1.45;margin:0 0 10px}' +
+    '.os-cp .chk small{color:var(--gris,#6b7c88);font-size:12.5px}.os-cp fieldset{border:1px solid var(--raya,#d6dde3);border-radius:10px;padding:8px 12px 4px;margin:0 0 12px}' +
+    '.os-cp legend{font-size:14px;padding:0 4px;color:var(--texto,#1d2b33)}.os-cp-ri{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:0 14px}.os-cp-ri .chk{font-size:13.5px;margin:0 0 8px}' +
+    '.os-cp-vista{border-top:1px solid var(--raya,#d6dde3);margin:6px 0 0;padding:10px 0 0;font-size:13.5px}.os-req b{display:block;font-size:13px;margin:6px 0 2px}' +
+    '.os-req ul{margin:0 0 6px 18px;padding:0}.os-req li{margin:0 0 2px;line-height:1.4}.os-req small{color:var(--gris,#6b7c88)}' +
+    '.os-multa{margin:8px 0 0}.os-multa table{width:100%;border-collapse:collapse;font-size:13px}.os-multa td{border-top:1px solid var(--raya,#d6dde3);padding:5px 6px 5px 0;vertical-align:top}' +
+    '.os-multa td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.os-propios{margin:16px 0 0}.os-propios details{border:1px solid var(--raya,#d6dde3);border-radius:10px;padding:8px 12px;margin:0 0 8px;background:var(--panel,#fff)}' +
+    '.os-propios summary{cursor:pointer;font-weight:600}.os-propios .acc{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 2px}' +
     '@media print{body *{visibility:hidden}#os-cuadro,#os-cuadro *{visibility:visible}#os-cuadro{position:absolute;left:0;top:0;width:100%}}';
   document.head.appendChild(s);
 }
 function osVista(caja){
   _osCss(); OS.caja = caja;
   var oid = (YO.obra || {}).id;
-  if(OS.obra !== oid){ OS.obra = oid; OS.cfg = null; OS.tab = 'ger'; OS.cot = null; }
+  if(OS.obra !== oid){ OS.obra = oid; OS.cfg = null; OS.tab = 'ger'; OS.cot = null; OS.compOtros = false; OS.comp = null; }
   if(window.OS_PIDE) OS.tab = 'mkt';   /* V7 · llegó un RQ del Marketplace SST (index.html: OS_PIDE) */
   if(window.OS_TAB_IR){ OS.tab = window.OS_TAB_IR; window.OS_TAB_IR = null; }   /* V7 · «Pedir» de la barra de abajo del celular */
   caja.innerHTML = '<div class="vacio">Cargando…</div>';
@@ -213,20 +234,126 @@ function _osRiesgo(listo){
 function _osComp(listo){
   Promise.all([_osRpc('os_brechas'), OS.cat ? Promise.resolve(OS.cat) : sbRpc('os_catalogo', { p:{} })]).then(function(r){
     var j = r[0]; OS.cat = r[1]; if(!j || !j.ok) return listo(_osFuera(j));
-    var R = j.resumen || {}, T = R.por_tipo || {}, puede = OS.cfg && OS.cfg.puede, cargos = [];
-    ((OS.cat || {}).sectores || []).forEach(function(s){ s.cargos.forEach(function(c){ cargos.push([c.k, s.n + ' · ' + c.n]); }); });
+    OS.comp = j;
+    var R = j.resumen || {}, T = R.por_tipo || {}, puede = OS.cfg && OS.cfg.puede, sec = _osSecDe(j), conPropios = Array.isArray(j.propios);
     var h = '<div class="os-kpis">' + _osKpi('Personas', String(R.total || 0), (R.con_brecha || 0) + ' con algo pendiente', R.con_brecha ? 'os-ojo' : 'os-ok') +
       [['emo', 'EMO'], ['sctr', 'SCTR'], ['capacitacion', 'Capacitación'], ['hab', 'Habilitaciones'], ['epp', 'EPP']].map(function(x){ return _osKpi(x[1], String(T[x[0]] || 0), 'pendientes', T[x[0]] ? 'os-mal' : 'os-ok'); }).join('') + '</div>';
-    if(R.sin_cargo) h += '<div class="aviso">' + R.sin_cargo + (R.sin_cargo === 1 ? ' persona tiene un puesto' : ' personas tienen un puesto') + ' que no se reconoce: elige su cargo en la tabla y se usa para todos los de ese puesto.</div>';
+    if(R.sin_cargo) h += '<div class="aviso">' + R.sin_cargo + (R.sin_cargo === 1 ? ' persona tiene un puesto' : ' personas tienen un puesto') + ' que no se reconoce: elige su cargo en la tabla y se usa para todos los de ese puesto' +
+      (puede && conPropios ? '. Si no está en la lista, «➕ Agregar un cargo propio…».' : '.') + '</div>';
+    if(puede && !sec) h += '<div class="aviso ojo">Elige el sector de tu empresa en «Ajustes»: la lista de cargos muestra primero los de tu sector.</div>';
     h += '<div class="tabla-caja"><table><thead><tr><th>Trabajador</th><th>Cargo</th><th>Le falta</th></tr></thead><tbody>' + (j.gente || []).map(function(w){
       return '<tr><td><b>' + esc(w.nombre) + '</b><div class="os-sub" style="margin:0">' + esc(w.puesto || '') + '</div></td><td>' +
-        (puede ? '<select data-os-puesto="' + esc(w.puesto || '') + '" aria-label="Cargo de ' + esc(w.puesto || '') + '"><option value="">' + (w.cargo ? '(sin cambiar)' : 'Elegir cargo…') + '</option>' +
-          cargos.map(function(c){ return '<option value="' + esc(c[0]) + '"' + (w.cargo && w.cargo.k === c[0] ? ' selected' : '') + '>' + esc(c[1]) + '</option>'; }).join('') + '</select>'
+        (puede ? '<select data-os-puesto="' + esc(w.puesto || '') + '" data-os-antes="' + esc(w.cargo ? w.cargo.k : '') + '" aria-label="Cargo de ' + esc(w.puesto || '') + '"><option value="">' + (w.cargo ? '(sin cambiar)' : 'Elegir cargo…') + '</option>' +
+          _osCargoOpts(w.cargo, sec, j.propios, conPropios) + '</select>'
           : esc(w.cargo ? w.cargo.n : 'Sin cargo')) + '</td><td>' +
         ((w.faltan || []).length ? w.faltan.map(function(f){ return '<span class="os-chip' + (f.tipo === 'epp' ? ' ojo' : '') + '" title="' + esc(f.norma || '') + '">' + esc(f.t.split(' · ')[0]) + '</span>'; }).join('') : '<span class="os-ok">Al día</span>') +
         '</td></tr>'; }).join('') + '</tbody></table></div><p class="os-sub">' + esc(j.como) + '</p>';
+    /* los cargos propios de la empresa: lo que exige cada uno, a qué puestos se asignó, y quitarlo */
+    if(conPropios && (j.propios.length || puede)) h += '<div class="os-propios"><h3 style="font-size:15px;margin:0 0 8px">Cargos propios de tu empresa</h3>' +
+      (j.propios.length ? j.propios.map(function(p){
+        return '<details><summary>' + esc(p.n) + '</summary><p class="os-sub">' + ((p.puestos || []).length ? 'Asignado a: ' + esc(p.puestos.join(', ')) : 'Todavía sin puesto asignado (o se usa por su nombre exacto).') + '</p>' +
+          '<div class="os-req">' + _osReqLista(p.req) + '</div>' + (puede ? '<div class="acc"><button type="button" class="bt sec chico" data-os-acc="cp-quitar" data-os-k="' + esc(p.k) + '" data-os-n="' + esc(p.n) + '">Quitar</button></div>' : '') + '</details>'; }).join('')
+        : '<p class="os-sub">¿Un puesto que no está en la lista? Agrégalo con 5 preguntas y OBRASST arma lo que la ley le exige.</p>') +
+      (puede ? '<button type="button" class="bt sec" data-os-acc="cp-nuevo">➕ Agregar un cargo propio</button>' : '') + '</div>';
     listo(h);
   }, function(){ listo(_osFuera(null)); });
+}
+function _osSecDe(j){ return (j && j.sector) || (OS.cfg || {}).sector || ''; }
+/* las opciones de cargo: los propios, los del sector de la empresa por grupos, el que ya tenía de otro sector y, a pedido, los demás */
+function _osCargoOpts(cur, sec, propios, conPropios){
+  var S = (OS.cat || {}).sectores || [], k = cur && cur.k, esta = false, h = '';
+  function op(v, t){ var s = (v === k); if(s) esta = true; return '<option value="' + esc(v) + '"' + (s ? ' selected' : '') + '>' + esc(t) + '</option>'; }
+  function sinNum(g){ return String(g || '').replace(/^\d+\.\s*/, ''); }
+  if((propios || []).length) h += '<optgroup label="Cargos propios de tu empresa">' + propios.map(function(p){ return op(p.k, p.n); }).join('') + '</optgroup>';
+  S.forEach(function(s){
+    var suyo = sec && s.k === sec;
+    if(sec && !suyo && !OS.compOtros) return;
+    var gr = {}, orden = [];
+    (s.cargos || []).forEach(function(c){ var g = c.g || ''; if(!gr[g]){ gr[g] = []; orden.push(g); } gr[g].push(c); });
+    orden.forEach(function(g){
+      var lab = suyo ? (g ? sinNum(g) : s.n) : s.n + (g ? ' · ' + sinNum(g) : '');
+      h += '<optgroup label="' + esc(lab) + '">' + gr[g].map(function(c){ return op(c.k, c.n); }).join('') + '</optgroup>';
+    });
+  });
+  if(k && !esta){
+    var f = null; S.forEach(function(s){ (s.cargos || []).forEach(function(c){ if(c.k === k) f = s.n + ' · ' + c.n; }); });
+    h = '<optgroup label="Su cargo de ahora">' + op(k, f || cur.n || k) + '</optgroup>' + h;
+  }
+  var mas = (sec && !OS.compOtros ? '<option value="__otros">Ver cargos de otros sectores…</option>' : '') + (conPropios ? '<option value="__nuevo">➕ Agregar un cargo propio…</option>' : '');
+  return h + (mas ? '<optgroup label="Más">' + mas + '</optgroup>' : '');
+}
+/* lo que se exige, por tipo (los mismos tipos del catálogo) */
+function _osReqLista(req){
+  var gr = {}; (req || []).forEach(function(q){ (gr[q.tipo] = gr[q.tipo] || []).push(q); });
+  return OS_TIPO.filter(function(t){ return gr[t[0]]; }).map(function(t){
+    return '<b>' + esc(t[1]) + '</b><ul>' + gr[t[0]].map(function(q){
+      return '<li>' + esc(q.tipo === 'hab' ? (OS_HAB[q.t] || q.t) : q.t) + (q.norma ? ' <small>· ' + esc(q.norma) + '</small>' : '') + '</li>'; }).join('') + '</ul>'; }).join('');
+}
+function _osMultaTabla(m){
+  if(!m || !(m.partidas || []).length) return '';
+  return '<div class="os-multa"><b>Riesgo de multa SUNAFIL (por 1 trabajador)</b><table><tbody>' + m.partidas.map(function(p){
+    return '<tr><td>' + esc(p.t) + '</td><td>art. ' + esc(p.art) + '</td><td>' + esc(OS_GRAV[p.grav] || p.grav) + '</td><td class="num">' + _osSoles(p.soles) + '</td></tr>'; }).join('') +
+    '</tbody></table><p class="os-sub">' + esc(m.como || '') + '</p></div>';
+}
+/* ➕ Agregar un cargo propio: las 5 preguntas, la vista previa del servidor y guardar (con el puesto, si vino de la tabla) */
+function _osCpFondo(){
+  var f = $('os-cp-fondo');
+  if(!f){
+    f = document.createElement('div'); f.id = 'os-cp-fondo'; f.className = 'dialogo-fondo'; f.hidden = true;
+    f.setAttribute('role', 'dialog'); f.setAttribute('aria-modal', 'true'); f.setAttribute('aria-labelledby', 'os-cp-t');
+    f.innerHTML = '<div class="dialogo os-cp" id="os-cp-caja"></div>';
+    document.body.appendChild(f);
+  }
+  return f;
+}
+function _osCargoPropio(puesto){
+  var f = _osCpFondo(), d = $('os-cp-caja'), foco = document.activeElement, sec = _osSecDe(OS.comp), S = (OS.cat || {}).sectores || [], t0 = 0, n = 0;
+  d.innerHTML = '<h2 id="os-cp-t">➕ Agregar un cargo propio</h2>' +
+    '<p>Responde 5 preguntas y OBRASST arma lo que la ley le exige (EPP, exámenes médicos, SCTR, capacitaciones y habilitaciones) y la multa que podría proponer una inspección.</p>' +
+    '<div class="campo"><label for="os-cp-n">1. Nombre del cargo o puesto</label><input id="os-cp-n" type="text" maxlength="80" autocomplete="off" value="' + esc(puesto || '') + '" placeholder="Ej.: Pintor, Topógrafo, Vigía de obra"></div>' +
+    (sec ? '' : '<div class="campo"><label for="os-cp-sec">Sector</label><select id="os-cp-sec">' + S.map(function(s){ return '<option value="' + esc(s.k) + '"' + (s.k === 'construccion' ? ' selected' : '') + '>' + esc(s.n) + '</option>'; }).join('') + '</select></div>') +
+    '<label class="chk"><input type="checkbox" id="os-cp-campo" checked><span>2. ¿Entra a campo, obra, planta, taller o almacén? <small>Desmárcalo si trabaja solo en oficina.</small></span></label>' +
+    '<fieldset><legend>3. ¿Hace o supervisa alguno de estos trabajos de alto riesgo?</legend><div class="os-cp-ri">' + OS_RIESGOS.map(function(x){
+      return '<label class="chk"><input type="checkbox" data-os-cp-ri="' + x[0] + '"><span>' + esc(x[1]) + '</span></label>'; }).join('') + '</div></fieldset>' +
+    '<label class="chk"><input type="checkbox" id="os-cp-maq"><span>4. ¿Opera maquinaria pesada o montacargas, o maneja vehículos de la empresa?</span></label>' +
+    '<label class="chk"><input type="checkbox" id="os-cp-qui"><span>5. ¿Manipula productos químicos, pinturas, combustibles o residuos peligrosos?</span></label>' +
+    '<div class="os-cp-vista" id="os-cp-vista" aria-live="polite"></div><p class="msg" id="os-cp-msg"></p>' +
+    '<div class="acciones"><button type="button" class="bt sec" id="os-cp-no">Cancelar</button><button type="button" class="bt" id="os-cp-si">' + (puesto ? 'Guardar y asignar' : 'Guardar') + '</button></div>';
+  function datos(){
+    var p = { nombre:String($('os-cp-n').value || '').trim(), campo:$('os-cp-campo').checked, maquinaria:$('os-cp-maq').checked, quimicos:$('os-cp-qui').checked,
+      riesgos:[].map.call(d.querySelectorAll('[data-os-cp-ri]:checked'), function(x){ return x.getAttribute('data-os-cp-ri'); }) };
+    if($('os-cp-sec')) p.sector = $('os-cp-sec').value;
+    return p;
+  }
+  function vista(){
+    var p = datos(), v = $('os-cp-vista'), k = ++n;
+    if(p.nombre.length < 3){ v.innerHTML = '<p class="os-sub">Escribe el nombre y verás aquí lo que le exige la ley.</p>'; return; }
+    _osRpc('os_cargo_propio_guardar', Object.assign(p, { vista:true })).then(function(j){
+      if(k !== n || f.hidden) return;
+      if(!j || !j.ok){ v.innerHTML = '<p class="msg mal">' + esc(_osMsg(j)) + '</p>'; return; }
+      v.innerHTML = '<div class="os-req">' + _osReqLista((j.cargo || {}).req) + '</div>' + _osMultaTabla(j.multa);
+    }, function(){ if(k === n) v.innerHTML = '<p class="msg mal">' + esc(_osMsg(null)) + '</p>'; });
+  }
+  function luego(){ clearTimeout(t0); t0 = setTimeout(vista, 350); }
+  function cerrar(){ f.hidden = true; clearTimeout(t0); window.removeEventListener('keydown', tecla, true); try{ if(foco) foco.focus(); }catch(_f){} }
+  function tecla(ev){ if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); cerrar(); } }
+  d.oninput = luego; d.onchange = luego;
+  $('os-cp-no').onclick = cerrar;
+  f.onclick = function(ev){ if(ev.target === f) cerrar(); };
+  $('os-cp-si').onclick = function(){
+    var b = this, p = datos(), m = $('os-cp-msg');
+    if(p.nombre.length < 3){ m.className = 'msg mal'; m.textContent = OS_MOTIVO.nombre; $('os-cp-n').focus(); return; }
+    if(puesto) p.puesto = puesto;
+    b.disabled = true; m.className = 'msg'; m.textContent = 'Guardando…';
+    _osRpc('os_cargo_propio_guardar', p).then(function(j){
+      b.disabled = false;
+      if(!j || !j.ok){ m.className = 'msg mal'; m.textContent = _osMsg(j); return; }
+      cerrar(); toast(puesto ? 'Cargo propio guardado y asignado a «' + puesto + '».' : 'Cargo propio guardado.'); osPintar();
+    }, function(){ b.disabled = false; m.className = 'msg mal'; m.textContent = _osMsg(null); });
+  };
+  window.addEventListener('keydown', tecla, true);
+  f.hidden = false; vista();
+  setTimeout(function(){ try{ $('os-cp-n').focus(); }catch(_e){} }, 30);
 }
 /* Contractor Hub */
 function _osCont(listo){
@@ -381,6 +508,10 @@ function _osClic(ev){
     confirmar('¿Revocar su QR?', 'Su QR deja de mostrar sus datos desde ahora.', { si:'Sí, revocar', mal:true }).then(function(si){ if(!si) return;
       _osRpc('os_pasaporte_revocar', { trab:r }).then(function(j){ if(!j || !j.ok) return toast(_osMsg(j)); toast('QR revocado.'); osPintar(); }); }); return; }
   var a = t.getAttribute('data-os-acc');
+  if(a === 'cp-nuevo'){ _osCargoPropio(''); return; }
+  if(a === 'cp-quitar'){ var kq = t.getAttribute('data-os-k');
+    confirmar('¿Quitar el cargo propio «' + (t.getAttribute('data-os-n') || '') + '»?', 'Los puestos que lo usaban vuelven a juntarse con un cargo del catálogo por sus palabras (o quedan sin cargo).', { si:'Sí, quitar', mal:true }).then(function(si){ if(!si) return;
+      _osRpc('os_cargo_propio_quitar', { k:kq }).then(function(j){ if(!j || !j.ok) return toast(_osMsg(j)); toast('Cargo propio quitado.'); osPintar(); }, function(){ toast(_osMsg(null)); }); }); return; }
   if(a === 'imprimir') window.print();
   else if(a === 'mkt-pedir'){
     var rs = [].map.call(document.querySelectorAll('[data-os-rubro]:checked'), function(x){ return x.getAttribute('data-os-rubro'); }), m = $('os-mkt-msg');
@@ -406,6 +537,12 @@ function _osCambio(ev){
   if(t && t.hasAttribute && (t.hasAttribute('data-os-rubro') || t.id === 'os-dep')){ _osCalzan(); return; }
   if(t && t.id === 'os-solo-rnp'){ OS.soloRnp = !!t.checked; osCuadroPinta(); return; }
   if(!t || !t.hasAttribute || !t.hasAttribute('data-os-puesto') || !t.value) return;
+  /* V7.10 · «Ver cargos de otros sectores…» y «➕ Agregar un cargo propio…»: la lista vuelve a lo que tenía */
+  if(t.value === '__otros' || t.value === '__nuevo'){
+    var v = t.value; t.value = t.getAttribute('data-os-antes') || '';
+    if(v === '__otros'){ OS.compOtros = true; osPintar(); } else _osCargoPropio(t.getAttribute('data-os-puesto') || '');
+    return;
+  }
   _osRpc('os_puesto_cargo_guardar', { puesto:t.getAttribute('data-os-puesto'), cargo:t.value }).then(function(j){
     if(!j || !j.ok) return toast(_osMsg(j)); toast('Cargo guardado para ese puesto.'); osPintar();
   });

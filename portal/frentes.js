@@ -65,10 +65,13 @@ function freLimpio(o, idSi){
   var n = freTxt(o.n, 60), vistos = {}; vistos[freNorm(n)] = 1;
   var antes = (Array.isArray(o.antes) ? o.antes : []).map(function(x){ return freTxt(x, 60); })
     .filter(function(x){ var k = freNorm(x); if(!k || vistos[k]) return false; vistos[k] = 1; return true; }).slice(0, 5);
-  return { v:1, id:/^f-[a-z0-9]{4,16}$/.test(String(o.id || '')) ? String(o.id) : (idSi || freNuevoId()),
+  var out = { v:1, id:/^f-[a-z0-9]{4,16}$/.test(String(o.id || '')) ? String(o.id) : (idSi || freNuevoId()),
            n:n, antes:antes, ref:freTxt(o.ref, 140), dep:freTxt(o.dep, 40), dist:freTxt(o.dist, 60),
            resp:freTxt(o.resp, 80), cargo:freTxt(o.cargo, 60), tel:freTel(o.tel), punto:freTxt(o.punto, 140), nums:nums,
            al:/^\d{4}-\d{2}-\d{2}$/.test(String(o.al || '')) ? String(o.al) : '', por:freTxt(o.por, 80) };
+  /* 5/11/2026 · V7.10 · el GPS del frente (opcional): solo si está bien */
+  var gps = freGpsLimpio(o.gps); if(gps) out.gps = gps;
+  return out;
 }
 /* lo que va en la fila de sst_doc: sin los datos de la fila (_fila, _creado) */
 function freNota(f){ var o = freLimpio(f); return JSON.stringify(o); }
@@ -220,9 +223,65 @@ function frePaquete(frentes, docs, brig, trabs){
       var g = t ? freDeTrab(t, frentes) : null;
       return !!(g && g.id === f.id);
     }).map(function(p){ var o = { n:p.n, c:p.c || '', tel:p.tel || '', roles:p.roles || [] }; if(p.f) o.f = p.f; return o; });
-    return { id:f.id, n:f.n, ref:f.ref, dep:f.dep, dist:f.dist, punto:f.punto,
-             resp:f.resp ? { n:f.resp, cargo:f.cargo, tel:f.tel } : null, nums:f.nums, docs:d, brig:b };
+    var o = { id:f.id, n:f.n, ref:f.ref, dep:f.dep, dist:f.dist, punto:f.punto,
+              resp:f.resp ? { n:f.resp, cargo:f.cargo, tel:f.tel } : null, nums:f.nums, docs:d, brig:b };
+    /* 5/11/2026 · V7.10 · el GPS del frente (dónde está, su radio y su horario), para el celular de quien dio su permiso */
+    if(f.gps) o.g = f.gps;
+    return o;
   });
+}
+/* ══ 5/11/2026 · V7.10 · Módulo 3 · EL FRENTE DE HOY POR GPS ══════════════════════════════════════════════════════════
+   Marcelo: «el GPS del celular solo actualiza el frente de trabajo del obrero cuando está dentro del horario laboral
+   activo… si pasa a las 17:20 caminando frente al Frente Sur rumbo a la calle, el sistema ignora el cambio y conserva su
+   frente real del día» y «sí, con consentimiento». Cada frente puede tener dónde está (lat, lng), su radio en metros y su
+   horario (ingreso, salida y refrigerio). El celular del trabajador que dio su permiso, con la app abierta, sabe en qué
+   frente está: el más cercano que lo tiene dentro de su radio, solo en su horario. En el celular queda el frente de hoy;
+   no se guardan ni se mandan su recorrido ni sus coordenadas. */
+var FRE_GPS_R = 80;
+function _freHora(v, def){ var m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(v || '').trim()); return m ? (m[1].length < 2 ? '0' + m[1] : m[1]) + ':' + m[2] : def; }
+function freGpsLimpio(g){
+  if(!g || typeof g !== 'object') return null;
+  var lat = +g.lat, lng = +g.lng;
+  if(g.lat === '' || g.lng === '' || g.lat == null || g.lng == null || !isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) return null;
+  var r = Math.round(+g.r || 80); r = Math.max(20, Math.min(2000, r));
+  return { lat:Math.round(lat * 1e6) / 1e6, lng:Math.round(lng * 1e6) / 1e6, r:r,
+           ini:_freHora(g.ini, '07:30'), fin:_freHora(g.fin, '17:00'), ai:_freHora(g.ai, '12:30'), af:_freHora(g.af, '13:30') };
+}
+/* «-12.046374, -77.042793» (lo que se copia de Google Maps) */
+function freGpsDeTexto(s){ var m = /(-?\d{1,2}(?:\.\d+)?)\s*[,;]?\s+(-?\d{1,3}(?:\.\d+)?)|(-?\d{1,2}(?:\.\d+)?)\s*[,;]\s*(-?\d{1,3}(?:\.\d+)?)/.exec(String(s || '').trim());
+  if(!m) return null; return freGpsLimpio({ lat:m[1] || m[3], lng:m[2] || m[4] }); }
+function freDistM(lat1, lng1, lat2, lng2){
+  var R = 6371000, rad = Math.PI / 180, dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function _freMin(hhmm){ var p = String(hhmm || '').split(':'); return (+p[0] || 0) * 60 + (+p[1] || 0); }
+/* ¿es horario de trabajo en ese frente? De su ingreso a su salida, sin su refrigerio */
+function freEnHorario(g, d){
+  g = freGpsLimpio(g); if(!g) return { si:false, motivo:'sin_gps' };
+  d = d || new Date();
+  var m = d.getHours() * 60 + d.getMinutes(), a = _freMin(g.ini), b = _freMin(g.fin), ai = _freMin(g.ai), af = _freMin(g.af);
+  if(m < a) return { si:false, motivo:'antes' };
+  if(m >= b) return { si:false, motivo:'salida' };
+  if(af > ai && m >= ai && m < af) return { si:false, motivo:'refrigerio' };
+  return { si:true, motivo:'' };
+}
+/* el frente donde está: el más cercano que lo tiene dentro de su radio y está en su horario. Dentro de uno pero fuera de
+   su horario, nada cambia (motivo: antes, salida o refrigerio); lejos de todos, tampoco (motivo: lejos) */
+function freDetectar(lat, lng, frentes, d, actual){
+  var mejor = null, dm = Infinity, fuera = '';
+  if(actual){
+    var fa = (frentes || []).filter(function(f){ return f && f.id === actual; })[0], ga = fa ? freGpsLimpio(fa.gps || fa.g) : null;
+    var ha = ga ? freEnHorario(ga, d) : null;
+    if(ha && !ha.si && ha.motivo !== 'antes') return { f:null, dist:null, motivo:ha.motivo };
+  }
+  (frentes || []).forEach(function(f){
+    var g = f ? freGpsLimpio(f.gps || f.g) : null; if(!g) return;
+    var x = freDistM(lat, lng, g.lat, g.lng); if(x > g.r) return;
+    var h = freEnHorario(g, d); if(!h.si){ if(!fuera) fuera = h.motivo; return; }
+    if(x < dm){ dm = x; mejor = f; }
+  });
+  return mejor ? { f:mejor, dist:Math.round(dm), motivo:'' } : { f:null, dist:null, motivo:fuera || 'lejos' };
 }
 /* ── la ficha del frente, en una hoja A4 para la caseta del frente: el proyecto y el frente arriba, dónde está, su
    responsable, su punto de reunión, a quién llamar (lo del frente y lo de la obra), sus brigadistas y sus documentos
@@ -482,9 +541,18 @@ function _freTarjW(f){
   h+='<div><h3>Hoy en este frente</h3>'+
     '<div class="frew-d"><span class="ic">👷</span><span class="tx"><b>'+(gente ? gente.length+(gente.length===1 ? ' persona' : ' personas') : '—')+'</b><small>Por el «Frente de trabajo» de su ficha (en «Personal», o «Pasa a otro frente de trabajo» en la app).</small></span></div>'+
     (paq ? (paq.brig.length ? '<div class="frew-d"><span class="ic">🧯</span><span class="tx"><small>Brigadistas en este frente</small>'+paq.brig.map(function(b){ return '<b>'+esc(b.n)+'</b>'; }).join('')+'</span></div>'
-                            : '<p class="ayuda">Ningún brigadista está hoy en este frente.</p>') : '<p class="ayuda">Viendo los brigadistas…</p>')+'</div>';
+                            : '<p class="ayuda">Ningún brigadista está hoy en este frente.</p>') : '<p class="ayuda">Viendo los brigadistas…</p>')+
+    _freGpsTarjW(f.gps)+'</div>';
   h+='</div></div></div>';
   return h;
+}
+/* 5/11/2026 · V7.10 módulo 3: el GPS del frente, en la tarjeta (solo lo que se configuró; nada del trabajador) */
+function _freGpsTarjW(g){
+  g=freGpsLimpio(g);
+  if(!g) return '<p class="ayuda">📍 Sin GPS: cada uno elige su frente a mano en «¿A quién acudo?».</p>';
+  return '<div class="frew-d"><span class="ic">📍</span><span class="tx"><small>GPS del frente</small><b>Radio de '+g.r+' m</b>'+
+    '<small>'+esc('Ingreso '+g.ini+' · salida '+g.fin+(_freMin(g.af)>_freMin(g.ai) ? ' · refrigerio '+g.ai+'–'+g.af : ''))+'</small>'+
+    '<small>Con su permiso, la app de cada trabajador marca este frente si está aquí en ese horario. No guarda su recorrido.</small></span></div>';
 }
 function _freMsgW(t, cl){ FREW.msg=t||''; FREW.msgCl=cl||''; var m=$('frew-msg'); if(m){ m.textContent=FREW.msg; m.className='msg '+FREW.msgCl; } }
 function _freDepsW(){
@@ -513,6 +581,8 @@ function freFormW(id){
     '<p class="peq-lbl" style="margin:6px 0 6px">Números propios del frente (hasta '+FRE_NUM_MAX+')</p><p class="ayuda" style="margin:0 0 8px">Los que cambian por estar en ese punto: la clínica o la comisaría más cercana, la central del cliente. Los de la obra ya salen en «¿A quién acudo?».</p>'+
     '<div id="frew-nums">'+nums.slice(0, FRE_NUM_MAX).map(function(x, i){ return _freNumW(x, i); }).join('')+'</div>'+
     (nums.length<FRE_NUM_MAX ? '<button type="button" class="bt sec chico" id="frew-num-mas" style="margin-top:8px">＋ Otro número</button>' : '')+
+    /* 5/11/2026 · V7.10 · Módulo 3 · el GPS del frente (opcional) */
+    _freGpsFormW(f.gps)+
     '<div class="msg" id="frew-f-msg" role="status" style="margin-top:12px"></div>';
   abrirHoja(f0 ? 'Editar el frente' : 'Un frente nuevo', f0 ? f0.n : 'Con lo suyo para una emergencia', cuerpo,
     '<button type="button" class="bt sec" id="frew-no">Cancelar</button><button type="button" class="bt" id="frew-ok">'+(f0 ? 'Guardar' : 'Agregar el frente')+'</button>');
@@ -521,6 +591,20 @@ function freFormW(id){
   if(mas) mas.onclick=function(){ var c=$('frew-nums'), n=c.querySelectorAll('.frew-nums').length; if(n<FRE_NUM_MAX) c.insertAdjacentHTML('beforeend', _freNumW({ t:'', tel:'' }, n)); if(n+1>=FRE_NUM_MAX) mas.remove(); };
   $('frew-ok').onclick=function(){ _freGuardarW(f, f0); };
   setTimeout(function(){ try{ $('frew-n').focus(); }catch(e){} }, 40);
+}
+/* 5/11/2026 · V7.10 · Módulo 3 · dónde está el frente, su radio y su horario: con eso, el celular de quien dio su permiso
+   sabe en qué frente está hoy, solo dentro del horario (no se guarda su recorrido) */
+function _freGpsFormW(g){
+  var x=g || {};
+  return '<details class="frew-gps"'+(g ? ' open' : '')+' style="margin-top:14px"><summary class="peq-lbl" style="cursor:pointer">📍 El GPS del frente (opcional)</summary>'+
+    '<p class="ayuda" style="margin:8px 0 10px">Con esto, el celular de cada trabajador que dé su permiso sabe en qué frente está hoy, solo dentro del horario y con la app abierta: no se guarda su recorrido ni sus coordenadas. Las coordenadas se copian de Google Maps (clic derecho en el punto). Le llega a tu gente cuando se publica «¿A quién acudo?».</p>'+
+    '<div class="campo-dos"><div class="campo"><label for="frew-gps">Coordenadas</label><input id="frew-gps" maxlength="60" autocomplete="off" inputmode="decimal" placeholder="-12.046374, -77.042793" value="'+(g ? esc(g.lat+', '+g.lng) : '')+'"></div>'+
+    '<div class="campo"><label for="frew-gr">Radio (metros)</label><input id="frew-gr" type="number" min="20" max="2000" step="10" value="'+esc(x.r || 80)+'"></div></div>'+
+    '<div class="campo-dos"><div class="campo"><label for="frew-gi">Ingreso</label><input id="frew-gi" type="time" value="'+esc(x.ini || '07:30')+'"></div>'+
+    '<div class="campo"><label for="frew-gf">Salida</label><input id="frew-gf" type="time" value="'+esc(x.fin || '17:00')+'"></div></div>'+
+    '<div class="campo-dos"><div class="campo"><label for="frew-gai">Refrigerio, desde</label><input id="frew-gai" type="time" value="'+esc(x.ai || '12:30')+'"></div>'+
+    '<div class="campo"><label for="frew-gaf">Refrigerio, hasta</label><input id="frew-gaf" type="time" value="'+esc(x.af || '13:30')+'"></div></div>'+
+    '<p class="ayuda" style="margin:0">Fuera de ese horario (antes del ingreso, en el refrigerio o después de la salida) el GPS no cambia el frente de nadie.</p></details>';
 }
 function _freNumW(x, i){
   return '<div class="frew-nums"><div class="campo"><label for="frew-nt-'+i+'">¿De quién es?</label><input id="frew-nt-'+i+'" maxlength="28" autocomplete="off" placeholder="Clínica más cercana" value="'+esc(x.t)+'"></div>'+
@@ -544,8 +628,13 @@ function _freMotivoW(err){
 function _freGuardarW(f, f0){
   var v=function(id){ var x=$(id); return x ? x.value : ''; }, m=$('frew-f-msg'), b=$('frew-ok');
   var nums=[]; for(var i=0;i<FRE_NUM_MAX;i++) if($('frew-nt-'+i)) nums.push({ t:v('frew-nt-'+i), tel:v('frew-nn-'+i) });
+  /* 5/11/2026 · V7.10 · el GPS del frente: sin coordenadas, el frente queda sin GPS */
+  var gtx=String(v('frew-gps')||'').trim(), gp=gtx ? freGpsDeTexto(gtx) : null;
+  if(gtx && !gp){ m.className='msg mal'; m.textContent='Las coordenadas no se leen bien: por ejemplo, -12.046374, -77.042793.'; return; }
+  if(gp) gp=freGpsLimpio(Object.assign(gp, { r:v('frew-gr'), ini:v('frew-gi'), fin:v('frew-gf'), ai:v('frew-gai'), af:v('frew-gaf') }));
+  if(gp && _freMin(gp.fin)<=_freMin(gp.ini)){ m.className='msg mal'; m.textContent='La salida tiene que ser después del ingreso.'; return; }
   var x=freLimpio(Object.assign({}, f, { n:v('frew-n'), dep:v('frew-dep'), dist:v('frew-dist'), ref:v('frew-ref'), punto:v('frew-punto'),
-    resp:v('frew-resp'), cargo:v('frew-cargo'), tel:v('frew-tel'), nums:nums, al:hoyISO(), por:String((TOK && TOK.correo) || '').slice(0, 80) }));
+    resp:v('frew-resp'), cargo:v('frew-cargo'), tel:v('frew-tel'), nums:nums, al:hoyISO(), por:String((TOK && TOK.correo) || '').slice(0, 80), gps:gp }));
   var L=FREW.lista||[];
   /* si cambia de nombre, el de antes queda como alias: la ficha de quien ya estaba ahí lo sigue encontrando */
   if(f0 && freNorm(f0.n)!==freNorm(x.n)) x=freLimpio(Object.assign({}, x, { antes:[f0.n].concat(f0.antes||[]) }));
