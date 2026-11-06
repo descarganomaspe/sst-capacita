@@ -18,11 +18,12 @@
    OBRASST en este celular no carga la app entera para leer un documento: va a la página liviana del cartel (d/). */
 (function(){ try{
   /* 30/10/2026 · el cartel de un frente lleva «&f=<frente>» y va con él */
-  var m = String(location.hash || '').match(/^#cartel=([A-Za-z0-9_-]{6,64})(&f=[^&#]{0,240})?$/);
+  /* 5/11/2026 · el QR de un producto químico lleva «&m=<clave>»: abre directo su hoja MSDS */
+  var m = String(location.hash || '').match(/^#cartel=([A-Za-z0-9_-]{6,64})(&f=[^&#]{0,240})?(&m=[a-z0-9]{4,10})?$/);
   if(!m) return;
   var rol = null; try{ rol = localStorage.getItem('sstc_rol'); }catch(_l){ rol = null; }
   if(rol && rol !== 'null') return;
-  location.replace(location.pathname.replace(/[^\/]*$/, '') + 'd/?t=' + m[1] + (m[2] || '') + '&w=1');
+  location.replace(location.pathname.replace(/[^\/]*$/, '') + 'd/?t=' + m[1] + (m[2] || '') + (m[3] || '') + '&w=1');
 }catch(_e){} })();
 </script>
 <link rel="manifest" href="manifest.webmanifest">
@@ -1021,6 +1022,9 @@ button.tf-dif{cursor:pointer}
 .cn-mat td.no{background:rgba(229,72,77,.12);color:var(--mal)}
 .cn-mat td.de{background:rgba(214,142,26,.18);color:#d68e1a;font-weight:600}
 .cn-mat td.av{font-weight:700;font-variant-numeric:tabular-nums}
+.cn-mat td.si>span:first-child::before{content:"\2705\00a0"}
+.cn-mat td.pv>span:first-child::before{content:"\23F3\00a0"}
+.cn-mat td.ven>span:first-child::before{content:"\26D4\00a0"}
 .cn-mat td small{display:block;font-size:11px;font-weight:500;line-height:1.25;opacity:.85;font-variant-numeric:tabular-nums}
 .cn-mat tr.completo th.fijo b::after{content:" ✅"}
 /* ══ 22/09/2026 · lo que exige cada puesto, la vigencia y qué sigue ══ */
@@ -6055,6 +6059,15 @@ input.gt-q{margin:0 0 var(--e2)}
 .qui-fr-docs{display:flex;flex-direction:column;gap:7px;margin-top:10px}
 .qui-fr-doc{margin:0!important;text-align:left}
 .qui-fr-doc small{display:block;font-size:11.5px;color:var(--gris);font-weight:500;margin-top:2px}
+/* 5/11/2026 · V7.10 módulo 3 · el GPS del frente: el permiso del trabajador y lo que marcó hoy */
+.qui-gps{margin-top:12px;padding:14px 15px;text-align:left}
+.qui-gps > b{display:block;font-size:15px}
+.qui-gps > p{margin:6px 0 0;font-size:13px;line-height:1.55;color:var(--gris)}
+.qui-gps .btn{margin-top:10px}
+.qui-gps-est{display:flex;align-items:flex-start;gap:9px;margin-top:10px;font-size:13.5px;line-height:1.45}
+.qui-gps-est .ic{flex:none;font-size:17px;line-height:1.2}
+.qui-gps-est small{display:block;color:var(--gris);font-size:12.5px;margin-top:2px}
+.qui-gps-q{font-size:12.5px;margin-top:10px;padding:0}
 
 /* ══ TRABAJOS DE ALTO RIESGO (27/10/2026) · la sección por tipo de trabajo y la calculadora de ventilación ══ */
 .ar-tipo{margin-top:11px;text-align:left}
@@ -8369,7 +8382,8 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
   <h1 class="io-h1">Tarjetas para el envase</h1>
   <p class="io-h2">Para los envases chicos: lo esencial en una tarjeta que va pegada al producto o en una mica. Lo dem&#225;s se ve escaneando su QR.</p>
   <div class="io-seg" id="qt-tam" role="tablist" aria-label="Tama&#241;o de la tarjeta"></div>
-  <div id="qt-vista" data-sin-trad></div>
+  <div class="io-seg" id="qt-caras" role="tablist" aria-label="Caras de la tarjeta" style="margin-top:8px"></div>
+  <div id="qt-vista"></div>
   <div id="qt-frases"></div>
   <div id="qt-hoja"></div>
   <div id="qt-elegir"></div>
@@ -13685,6 +13699,8 @@ function _qtAjustar(t, tams, peso, ancho){
   while(k > 1 && _qtAncho(t.slice(0, k) + '…', px, peso) > ancho) k--;
   return {t:t.slice(0, k).replace(/\s+$/, '') + '…', px:px};
 }
+/* 5/11/2026 · si es una lista, cada QR que se dibuja se anota (la lista del almacén los dibuja también en vector en el PDF) */
+var _QT_QR_LOG = null;
 /* el QR dibujado con rectángulos: nítido a cualquier tamaño */
 /* 27/09/2026 · lo que decide si un celular lee un QR impreso es el
    tamaño de cada cuadradito (módulo): con menos de 0,3 mm cuesta. En la
@@ -13703,6 +13719,7 @@ function _qtQRTexto(q, mm){
 }
 function _qtQR(txt, x, y, lado, ecc){
   var qr = qrcode(0, ecc || 'M'); qr.addData(txt); qr.make();
+  if(_QT_QR_LOG) _QT_QR_LOG.push({txt:txt, x:x, y:y, lado:lado, ecc:ecc || 'M'});
   var n = qr.getModuleCount(), t = lado / (n + 4), d = '';
   for(var r = 0; r < n; r++){
     var c = 0;
@@ -13753,8 +13770,12 @@ function _qtAviso(texto, px, ancho, maxL){
   }
   return _qtPartir([{t:'⚠', b:1}], px, ancho);
 }
-/* la tarjeta de un producto: {svg, w, h, grupos, fuera} */
-function quimTarjetaSVG(q, tam){
+/* la tarjeta de un producto: {svg, w, h, grupos, fuera}. 5/11/2026 · a doble cara, para enmicar (cara 'a' y 'b'): adelante
+   lo mismo sin la columna del QR (los peligros tienen más lugar) y atrás el QR de su hoja MSDS con su EPP (quimTarjetaReversoSVG;
+   cartel: la dirección del cartel «Hojas MSDS» de la obra, si la hay) */
+function quimTarjetaSVG(q, tam, cara, cartel){
+  if(cara === 'b') return quimTarjetaReversoSVG(q, tam, cartel);
+  var dosCaras = (cara === 'a');
   var T = QT_TAM[tam] || QT_TAM.chica, W = T.w, H = T.h, M = T.M;
   var sga = (q && q.sga) || {p:[], sw:'', h:[], pp:[]}, nf = (q && q.nf) || {s:0, i:0, r:0, e:''};
   var F = 'font-family="Arial,Helvetica,sans-serif"', out = '';
@@ -13820,20 +13841,20 @@ function quimTarjetaSVG(q, tam){
     }
   }
 
-  /* ── a la derecha: el QR, qué se ve al escanearlo y el EPP ── */
-  var wr = T.wr, xr = W - M - wr, yr = y0, qrInfo = null;
-  if(q && typeof quimEnlace === 'function'){
+  /* ── a la derecha: el QR, qué se ve al escanearlo y el EPP (en la de doble cara van atrás) ── */
+  var wr = dosCaras ? 0 : T.wr, xr = dosCaras ? (W - M + T.gap) : (W - M - wr), yr = y0, qrInfo = null;
+  if(!dosCaras && q && typeof quimEnlace === 'function'){
     try{ var qt = _qtQRTexto(q, T.qrMM); out += _qtQR(qt.txt, xr, yr, wr, qt.ecc); qrInfo = qt; yr += wr + Math.round(T.gap * 0.25); }catch(_q){}
   }
   /* en la chica no sobra lugar: la invitación va en corto */
   var capT = tam === 'chica' ? 'Escanéame para ver todo' : (q && q.ficha ? 'Escanea el QR: el producto completo y su hoja MSDS' : 'Escanea el QR: el producto completo');
-  var capL = _qtPartir([{t:_qt(capT)}], T.cap, wr);
+  var capL = dosCaras ? [] : _qtPartir([{t:_qt(capT)}], T.cap, wr);
   var lhc = Math.round(T.cap * 1.18);
-  out += _qtRenglones(capL, xr + wr / 2, yr + T.cap, T.cap, lhc, '#4A5B68', 'middle');
+  if(capL.length) out += _qtRenglones(capL, xr + wr / 2, yr + T.cap, T.cap, lhc, '#4A5B68', 'middle');
   yr += capL.length * lhc + Math.round(T.gap * 0.45);
-  var obra = tam === 'grande' ? (((typeof _quimEmp === 'function' ? _quimEmp() : null) || {}).nombre || '') : '';
+  var obra = (tam === 'grande' && !dosCaras) ? (((typeof _quimEmp === 'function' ? _quimEmp() : null) || {}).nombre || '') : '';
   var yObra = yFin - 4, reservaObra = obra ? 34 : 0;
-  var epp = typeof quimEppDe === 'function' ? quimEppDe(sga) : [];
+  var epp = (!dosCaras && typeof quimEppDe === 'function') ? quimEppDe(sga) : [];
   var filasEpp = Math.max(0, Math.min(2, Math.floor((yFin - reservaObra - yr + T.eppSep) / (T.eppLado + T.eppSep))));
   var eppV = _qtEppQueEntra(epp, T.eppFila * filasEpp);
   eppV.forEach(function(k, i){
@@ -13884,13 +13905,14 @@ function quimTarjetaSVG(q, tam){
       parr([{t:_qt('Según el SGA: sección 2 de su hoja MSDS.')}]);
       parr([{t:_qt('No lleva pictogramas ni palabra de advertencia.')}], '#4A5B68');
     }
-    else if(!gsTodos.length) parr([{t:_qt(_haySga(sga) ? 'Sin frases H cargadas.' : 'Sin etiqueta SGA cargada: escanea el QR o pide la hoja MSDS.')}], '#4A5B68');
-    if(fuera > 0) parr([{t:_qt(fuera === 1 ? '+1 peligro más en el QR' : '+' + fuera + ' peligros más en el QR'), b:1}], '#4A5B68');
+    else if(!gsTodos.length) parr([{t:_qt(_haySga(sga) ? 'Sin frases H cargadas.' : (dosCaras ? 'Sin etiqueta SGA cargada: escanea el QR del reverso o pide la hoja MSDS.' : 'Sin etiqueta SGA cargada: escanea el QR o pide la hoja MSDS.'))}], '#4A5B68');
+    if(fuera > 0) parr([{t:dosCaras ? (fuera === 1 ? _qt('+1 peligro más en su hoja MSDS') : '+' + fuera + ' ' + _qt('peligros más en su hoja MSDS'))
+                                    : _qt(fuera === 1 ? '+1 peligro más en el QR' : '+' + fuera + ' peligros más en el QR'), b:1}], '#4A5B68');
     var hubo = y > y0 + px;
     return {svg:svg, alto:hubo ? (y - lh - pa + px * 0.25 - y0) : 0, fuera:fuera, k:Math.min(k, gs.length)};
   }
   var r = null;
-  for(var kk = Math.min(T.maxG, gs.length); kk >= 0 && !r; kk--){
+  for(var kk = Math.min(T.maxG + (dosCaras ? 1 : 0), gs.length); kk >= 0 && !r; kk--){
     for(var t = 0; t < T.texto.length; t++){
       var b = bloques(kk, T.texto[t]);
       if(b.alto <= alto){ r = b; break; }
@@ -13903,18 +13925,159 @@ function quimTarjetaSVG(q, tam){
             .replace(/&nbsp;/g, '&#160;');
   return {svg:svg, w:W, h:H, grupos:r.k, fuera:r.fuera, qr:qrInfo};
 }
+/* 5/11/2026 · el QR de la hoja MSDS de UN producto (Marcelo: «el QR de las hojas MSDS que aparecen en la lista de productos
+   químicos no funciona… excepto el QR que está en la parte superior derecha»). El de antes era el de su tarjeta: llevaba
+   toda su etiqueta y en la lista (19 mm, en JPEG) sus cuadraditos quedaban de 0,27 mm: el celular no lo leía. Ahora es
+   corto: el cartel «Hojas MSDS» de la obra (el de arriba, que sí funciona) con la clave del producto («&m=»), que abre
+   directo su hoja; sin ese cartel, la dirección de su hoja. Sin hoja MSDS, nada. La clave sale del nombre y la marca tal
+   como los manda el servidor (sst_qr_abrir «quim»: hasta 120 y 80 letras); la página d/ la calcula igual. */
+function quimClaveMsds(n, m){
+  function _qcNor(s, max){ var x = String(s == null ? '' : s).trim().slice(0, max).toLowerCase(); try{ x = x.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(_n){} return x.replace(/[^a-z0-9]+/g, ' ').trim(); }
+  var s = _qcNor(n, 120) + '|' + _qcNor(m, 80), h = 0x811c9dc5;
+  for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return ('0000000' + h.toString(36)).slice(-7);
+}
+function quimEnlaceMsds(q, cartel){
+  var u = String((q && q.ficha) || '').trim();
+  if(!/^https?:\/\//i.test(u)) return '';
+  if(cartel && /#cartel=[A-Za-z0-9_-]{6,64}$/.test(String(cartel))) return String(cartel) + '&m=' + quimClaveMsds(q.producto, q.proveedor);
+  return u;
+}
+/* la corrección del QR: la media, y la baja si con la media sale muy tupido */
+function _qtEccCorta(txt, maxMod){
+  try{ var qr = qrcode(0, 'M'); qr.addData(txt); qr.make(); return qr.getModuleCount() > (maxMod || 49) ? 'L' : 'M'; }catch(_e){ return 'M'; }
+}
+/* 5/11/2026 · el reverso de la tarjeta a doble cara (Marcelo: «un lado la información esencial tipo SGA… y al otro lado su
+   QR de la hoja MSDS… con los círculos que salen, qué EPP usar, qué está prohibido… tiene que ser doble cara»). Arriba el
+   producto (para saber de cuál es al voltearla); a la izquierda el QR de su hoja MSDS, grande (sin hoja, el de siempre, con
+   su etiqueta); a la derecha lo obligatorio (azul) y lo prohibido (rojo), cada uno con su nombre. Sin borde: la línea de
+   corte es la de adelante (si la impresora corre un milímetro la hoja de atrás, no se nota). */
+var QT_REV = {
+  chica:  {nombre:[30, 27, 24, 22], sello:20, cap:19, tit:16, lab:15, circ:[96, 86, 78, 70, 62, 56, 50], sep:12, obra:0},
+  grande: {nombre:[46, 42, 38, 34], sello:28, cap:27, tit:23, lab:21, circ:[136, 122, 110, 100, 90, 80, 72], sep:16, obra:21}
+};
+function quimTarjetaReversoSVG(q, tam, cartel){
+  var T = QT_TAM[tam] || QT_TAM.chica, R = QT_REV[tam] || QT_REV.chica, W = T.w, H = T.h, M = T.M, gap = T.gap;
+  var sga = (q && q.sga) || {p:[], sw:'', h:[], pp:[]};
+  var F = 'font-family="Arial,Helvetica,sans-serif"', out = '<rect width="' + W + '" height="' + H + '" fill="#fff"/>';
+  /* ── arriba: el producto y su palabra de advertencia ── */
+  var sello = '', anchoSello = 0, hh = Math.round(R.nombre[0] * 1.45);
+  if(sga.sw){
+    var esP = sga.sw === 'peligro', ts = _qt(esP ? 'PELIGRO' : 'ATENCIÓN');
+    anchoSello = Math.round(_qtAncho(ts, R.sello, 700) + ts.length * 2 + R.sello * 1.2);
+    var hs0 = Math.round(R.sello * 1.7), xs = W - M - anchoSello, ys = M + Math.round((hh - hs0) / 2);
+    sello = '<rect x="' + xs + '" y="' + ys + '" width="' + anchoSello + '" height="' + hs0 + '" rx="' + Math.round(hs0 * 0.22) + '" fill="' + (esP ? '#C81E1E' : '#B98200') + '"/>' +
+            '<text x="' + (xs + anchoSello / 2) + '" y="' + (ys + hs0 * 0.69).toFixed(1) + '" text-anchor="middle" ' + F + ' font-size="' + R.sello +
+            '" font-weight="800" letter-spacing="2" fill="#fff">' + esc(ts) + '</text>';
+  }
+  var nom = _qtAjustar((q && q.producto) || '', R.nombre, 700, W - 2 * M - (anchoSello ? anchoSello + gap : 0));
+  out += '<text x="' + M + '" y="' + (M + Math.round(hh / 2 + nom.px * 0.36)) + '" ' + F + ' font-size="' + nom.px + '" font-weight="800" fill="#0B2A3A">' + esc(nom.t) + '</text>' + sello;
+  var yLinea = M + hh + 2;
+  out += '<line x1="' + M + '" y1="' + yLinea + '" x2="' + (W - M) + '" y2="' + yLinea + '" stroke="#D5DDE3" stroke-width="2"/>';
+  var y0 = yLinea + Math.round(gap * 0.8), yFin = H - M;
+  var obra = R.obra ? (((typeof _quimEmp === 'function' ? _quimEmp() : null) || {}).nombre || '') : '';
+  if(obra){
+    var ob = _qtAjustar(obra, [R.obra], 400, W - 2 * M);
+    out += '<text x="' + (W / 2) + '" y="' + (yFin - 2) + '" text-anchor="middle" ' + F + ' font-size="' + R.obra + '" fill="#8FA9B8">' + esc(ob.t) + '</text>';
+    yFin -= Math.round(R.obra * 1.6);
+  }
+  /* ── a la izquierda: el QR de su hoja MSDS, tan grande como entre ── */
+  var u = (typeof quimEnlaceMsds === 'function') ? quimEnlaceMsds(q, cartel) : '', deMsds = !!u, ecc = 'M';
+  var lhc = Math.round(R.cap * 1.18), anchoQ = Math.round((W - 2 * M) * 0.46);
+  var capL = _qtPartir([{t:_qt(deMsds ? 'Escanéame: su hoja MSDS' : 'Escanéame: el producto completo'), b:1}], R.cap, anchoQ);
+  var lado = Math.min(yFin - y0 - capL.length * lhc - Math.round(gap * 0.3), anchoQ), qrInfo = null;
+  if(!deMsds && q && typeof quimEnlace === 'function'){ try{ var qt = _qtQRTexto(q, lado / 10); u = qt.txt; ecc = qt.ecc; }catch(_t){ u = ''; } }
+  else if(u) ecc = _qtEccCorta(u, 57);
+  if(u && typeof qrcode === 'function'){ try{ out += _qtQR(u, M, y0, lado, ecc); qrInfo = {txt:u, ecc:ecc, msds:deMsds}; }catch(_q){} }
+  out += _qtRenglones(capL, M + lado / 2, y0 + lado + Math.round(gap * 0.15) + R.cap, R.cap, lhc, deMsds ? '#1E6B45' : '#4A5B68', 'middle');
+  /* ── a la derecha: lo obligatorio y lo prohibido, cada uno con su nombre ── */
+  var xr = M + lado + Math.round(gap * 1.4), wr = W - M - xr, alto = yFin - y0;
+  var todo = (typeof quimEppDe === 'function') ? quimEppDe(sga) : [];
+  var usa = todo.filter(function(k){ return !_quimEsProh(k) && _quimSenal(k); }), proh = todo.filter(function(k){ return _quimEsProh(k) && _quimSenal(k); });
+  var lhl = Math.round(R.lab * 1.15), alT = Math.round(R.tit * 1.45);
+  function _rvPlan(c){
+    var porF = Math.max(1, Math.floor((wr + R.sep) / (c + R.sep)));
+    function _rvSeccion(L){
+      var filas = [];
+      for(var i = 0; i < L.length; i += porF){
+        var ks = L.slice(i, i + porF), maxL = 1;
+        var labs = ks.map(function(k){ var it = _quimItem(k), l = _qtPartir([{t:_qt(it ? it.corto : k)}], R.lab, c + R.sep - 4); if(l.length > 2) l = l.slice(0, 2); maxL = Math.max(maxL, l.length); return l; });
+        filas.push({ks:ks, labs:labs, h:c + 6 + maxL * lhl});
+      }
+      var a = filas.length ? alT : 0; filas.forEach(function(f){ a += f.h + Math.round(R.sep * 0.7); });
+      return {filas:filas, alto:a};
+    }
+    var A = _rvSeccion(usa), B = _rvSeccion(proh);
+    return {c:c, A:A, B:B, alto:A.alto + B.alto + (A.alto && B.alto ? Math.round(gap * 0.4) : 0)};
+  }
+  var P = null;
+  for(var i = 0; i < R.circ.length && !P; i++){ var pl = _rvPlan(R.circ[i]); if(pl.alto <= alto) P = pl; }
+  if(!P) P = _rvPlan(R.circ[R.circ.length - 1]);
+  var y = y0, cortado = 0;
+  function _rvDibujar(S, titulo, col){
+    if(!S.filas.length) return;
+    out += '<text x="' + xr + '" y="' + (y + R.tit).toFixed(1) + '" ' + F + ' font-size="' + R.tit + '" font-weight="800" letter-spacing="1.5" fill="' + col + '">' + esc(titulo) + '</text>';
+    y += alT;
+    S.filas.forEach(function(f){
+      if(y + f.h > yFin + 2){ cortado += f.ks.length; return; }
+      f.ks.forEach(function(k, j){
+        var sn = _quimSenal(k), xe = xr + j * (P.c + R.sep);
+        out += '<g transform="translate(' + xe.toFixed(1) + ',' + y.toFixed(1) + ') scale(' + (P.c / 100).toFixed(4) + ')"><circle cx="50" cy="50" r="49" fill="#fff"/>' + sn.s + '</g>';
+        out += _qtRenglones(f.labs[j], xe + P.c / 2, y + P.c + 4 + R.lab, R.lab, lhl, '#0B2A3A', 'middle');
+      });
+      y += f.h + Math.round(R.sep * 0.7);
+    });
+  }
+  _rvDibujar(P.A, _qt('OBLIGATORIO'), '#0B5CAB');
+  if(P.A.filas.length && P.B.filas.length) y += Math.round(gap * 0.4);
+  _rvDibujar(P.B, _qt('PROHIBIDO'), '#C81E1E');
+  if(!usa.length && !proh.length){
+    var nl = _qtPartir([{t:_qt('Sin EPP cargado: revisa la sección 8 de su hoja MSDS.')}], R.lab + 2, wr);
+    out += _qtRenglones(nl, xr, y0 + R.lab + 2, R.lab + 2, Math.round((R.lab + 2) * 1.25), '#4A5B68');
+  }
+  var svg = ('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + out + '</svg>')
+            .replace(/&nbsp;/g, '&#160;');
+  return {svg:svg, w:W, h:H, qr:qrInfo, epp:usa.length + proh.length - cortado, cortado:cortado};
+}
 
 /* ── LA PANTALLA DE LAS TARJETAS ─────────────────────────────────── */
-var QT = {tam:'chica', ver:null, hoja:[], de:'producto', eligiendo:false, busca:'', guardando:null};
+var QT = {tam:'chica', ver:null, hoja:[], de:'producto', eligiendo:false, busca:'', guardando:null, caras:1, qrUrl:'', qrEstado:''};
 var LS_QT_TAM = 'sstc_quim_tarjeta';
+var LS_QT_CARAS = 'sstc_quim_tarjeta_caras';   /* 5/11/2026 · una cara o doble cara (para enmicar), en este celular */
 function abrirTarjetasQuim(id){
   if(typeof soloConCodigo === 'function' && soloConCodigo('Los productos químicos', 'msds')) return;
   QT.hoja = []; QT.eligiendo = false; QT.busca = '';
   if(id && quimPorId(id)){ QT.hoja = [{id:String(id), n:1}]; QT.ver = String(id); QT.de = 'producto'; }
   else { QT.ver = null; QT.de = 'lista'; QT.eligiendo = true; }
   try{ QT.tam = (localStorage.getItem(LS_QT_TAM) === 'grande') ? 'grande' : 'chica'; }catch(_l){ QT.tam = 'chica'; }
+  try{ QT.caras = (localStorage.getItem(LS_QT_CARAS) === '2') ? 2 : 1; }catch(_c){ QT.caras = 1; }
   ir('p-quim-tar');
   qtPintar();
+  if(QT.caras === 2) qtTraerQR();
+}
+/* 5/11/2026 · el QR del reverso abre la hoja MSDS del producto por el cartel «Hojas MSDS» de la obra (el mismo de la lista
+   del almacén; si no existía, el servidor lo crea). Sin cuenta, sin ese cartel en el plan o sin conexión: va la dirección
+   de su hoja */
+function qtTraerQR(){
+  if(QT.qrUrl || QT.qrEstado === 'pidiendo') return;
+  var H = (typeof qrHojaBase === 'function') ? qrHojaBase('msds') : null;
+  if(!H || typeof qrFicha !== 'function' || typeof cartelEnlaceQR !== 'function') return;
+  if(typeof puede === 'function' && !puede(H.llave)) return;
+  if(!(typeof hayCuenta === 'function' && hayCuenta())) return;
+  QT.qrEstado = 'pidiendo';
+  var obra = function(){ var e = (typeof _quimEmp === 'function') ? _quimEmp() : null; return String((e && (e.id || e.codigo)) || ''); }, ob = obra();
+  qrFicha(H).then(function(tk){
+    QT.qrEstado = '';
+    if(obra() !== ob) return;
+    QT.qrUrl = cartelEnlaceQR(tk);
+    if(((document.querySelector('.pantalla.activa') || {}).id || '') === 'p-quim-tar') qtPintar();
+  }, function(){ QT.qrEstado = ''; });
+}
+function qtCaras(n){
+  QT.caras = (+n === 2) ? 2 : 1;
+  try{ localStorage.setItem(LS_QT_CARAS, String(QT.caras)); }catch(_l){}
+  qtPintar();
+  if(QT.caras === 2) qtTraerQR();
 }
 function salirTarjetasQuim(){
   if(QT.de === 'producto' && QUIM_VER){ ir('p-quimico'); try{ pintarQuimico(); }catch(_p){} }
@@ -13937,11 +14100,24 @@ function qtPintar(){
              '" onclick="qtTam(\'' + x[0] + '\')">' + x[1] + '</button>';
     }).join('');
   }
+  /* 5/11/2026 · una cara o doble cara, para enmicar */
+  var sc = document.getElementById('qt-caras');
+  if(sc){
+    sc.innerHTML = [[1, 'Una cara'], [2, 'Doble cara · para enmicar']].map(function(x){
+      return '<button type="button" role="tab" aria-selected="' + (QT.caras === x[0]) + '" class="' + (QT.caras === x[0] ? 'on' : '') +
+             '" onclick="qtCaras(' + x[0] + ')">' + x[1] + '</button>';
+    }).join('');
+  }
   var vis = document.getElementById('qt-vista');
   if(vis){
-    if(q){
+    if(q && QT.caras === 2){
+      var ra = quimTarjetaSVG(q, QT.tam, 'a'), rb = quimTarjetaSVG(q, QT.tam, 'b', QT.qrUrl);
+      vis.innerHTML = '<p class="qt-cara-t"><span>Adelante</span></p><div class="qt-tarjeta qt-' + QT.tam + '" data-sin-trad>' + ra.svg + '</div>' +
+                      '<p class="qt-cara-t"><span>Atrás · el reverso</span></p><div class="qt-tarjeta qt-' + QT.tam + '" data-sin-trad>' + rb.svg + '</div>' +
+                      '<p class="io-pie qt-cara-n"><span>Sale en dos páginas: la de atrás lleva los reversos al revés, para que al imprimir a doble cara (volteando por el borde largo) cada uno caiga detrás de su tarjeta. Recórtala por el borde y enmícala.</span></p>';
+    } else if(q){
       var r = quimTarjetaSVG(q, QT.tam);
-      vis.innerHTML = '<div class="qt-tarjeta qt-' + QT.tam + '">' + r.svg + '</div>';
+      vis.innerHTML = '<div class="qt-tarjeta qt-' + QT.tam + '" data-sin-trad>' + r.svg + '</div>';
     } else {
       vis.innerHTML = '<div class="io-grupo"><div class="io-vacio" style="padding:22px 16px"><b>Elige un producto</b>' +
                       '<p>Agrégalo abajo y aquí ves su tarjeta tal como sale impresa.</p></div></div>';
@@ -14101,7 +14277,9 @@ function _qtPNG(svg, w, h, escala, girar){
         cv.width = girar ? H : W; cv.height = girar ? W : H;
         var cx = cv.getContext('2d');
         cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
-        if(girar){ cx.translate(H, 0); cx.rotate(Math.PI / 2); }
+        /* 5/11/2026 · «ccw»: el reverso de la grande, girado al otro lado (al voltear la hoja cae derecho detrás de su tarjeta) */
+        if(girar === 'ccw'){ cx.translate(0, W); cx.rotate(-Math.PI / 2); }
+        else if(girar){ cx.translate(H, 0); cx.rotate(Math.PI / 2); }
         cx.drawImage(im, 0, 0, W, H);
         ok(cv.toDataURL('image/png'));
       }catch(e){ mal(e); }
@@ -14120,41 +14298,55 @@ function qtPDF(){
   var J = window.jspdf && window.jspdf.jsPDF;
   if(!J){ if(msg){ msg.style.color = 'var(--mal)'; msg.textContent = 'No se pudo armar el PDF en este celular.'; } return Promise.resolve(null); }
   if(msg){ msg.style.color = 'var(--gris)'; msg.textContent = 'Armando la hoja…'; }
-  var tam = QT.tam, L = QT_HOJA[tam], cual = {};
+  /* 5/11/2026 · a doble cara, para enmicar: cada tarjeta con su adelante y su reverso */
+  var tam = QT.tam, L = QT_HOJA[tam], cual = {}, dos = (QT.caras === 2);
   var ps = QT.hoja.map(function(x){
     var q = quimPorId(x.id); if(!q) return Promise.resolve(null);
-    var r = quimTarjetaSVG(q, tam);
-    return _qtPNG(r.svg, r.w, r.h, 2, L.girar).then(function(du){ cual[String(x.id)] = du; });
+    if(!dos){ var r = quimTarjetaSVG(q, tam); return _qtPNG(r.svg, r.w, r.h, 2, L.girar).then(function(du){ cual[String(x.id)] = {a:du}; }); }
+    var ra = quimTarjetaSVG(q, tam, 'a'), rb = quimTarjetaSVG(q, tam, 'b', QT.qrUrl || '');
+    return Promise.all([_qtPNG(ra.svg, ra.w, ra.h, 2, L.girar), _qtPNG(rb.svg, rb.w, rb.h, 2, L.girar ? 'ccw' : false)])
+      .then(function(d){ cual[String(x.id)] = {a:d[0], b:d[1]}; });
   });
   return Promise.all(ps).then(function(){
     var doc = new J({unit:'mm', format:'a4', orientation:'portrait'});
     var porHoja = L.cols * L.filas;
     var x0 = (210 - (L.cols * L.cw + (L.cols - 1) * L.gx)) / 2, y0 = (297 - (L.filas * L.ch + (L.filas - 1) * L.gy)) / 2;
-    var k = 0;
-    QT.hoja.forEach(function(x){
-      var du = cual[String(x.id)]; if(!du) return;
-      for(var i = 0; i < x.n; i++){
-        if(k && k % porHoja === 0) doc.addPage();
-        var pos = k % porHoja, c = pos % L.cols, f = Math.floor(pos / L.cols);
-        doc.addImage(du, 'PNG', x0 + c * (L.cw + L.gx), y0 + f * (L.ch + L.gy), L.cw, L.ch, 'qt-' + tam + '-' + x.id, 'FAST');
-        k++;
-      }
-    });
+    var todas = [];
+    QT.hoja.forEach(function(x){ var du = cual[String(x.id)]; if(!du) return; for(var i = 0; i < x.n; i++) todas.push({id:String(x.id), du:du}); });
+    var k = todas.length, pag = 0;
+    /* con doble cara, cada hoja de adelante va seguida de la de atrás con las columnas al revés: al voltear la hoja por su
+       borde largo, cada reverso cae detrás de su tarjeta */
+    function _qtPagina(parte, atras){
+      if(pag) doc.addPage();
+      pag++;
+      parte.forEach(function(t, pos){
+        var c = pos % L.cols, f = Math.floor(pos / L.cols);
+        if(atras) c = L.cols - 1 - c;
+        doc.addImage(atras ? t.du.b : t.du.a, 'PNG', x0 + c * (L.cw + L.gx), y0 + f * (L.ch + L.gy), L.cw, L.ch, 'qt-' + tam + '-' + t.id + (dos ? (atras ? '-b' : '-a') : ''), 'FAST');
+      });
+    }
+    for(var h0 = 0; h0 * porHoja < k; h0++){
+      var parte = todas.slice(h0 * porHoja, (h0 + 1) * porHoja);
+      _qtPagina(parte, false);
+      if(dos) _qtPagina(parte, true);
+    }
     var uno = QT.hoja.length === 1 ? quimPorId(QT.hoja[0].id) : null, nom = 'quimicos';
     if(uno){
       nom = String(uno.producto || 'producto');
       try{ nom = nom.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(_n){}
       nom = nom.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'producto';
     }
-    var archivo = 'tarjetas-' + nom + '.pdf';
+    var archivo = 'tarjetas-' + nom + (dos ? '-doble-cara' : '') + '.pdf';
     if(typeof entregarPDF === 'function') entregarPDF(doc, archivo); else doc.save(archivo);
     var hojas = Math.ceil(k / porHoja);
     if(msg){
       msg.style.color = 'var(--ok)';
-      msg.textContent = (k === 1 ? '1 tarjeta' : k + ' tarjetas') + (hojas === 1 ? ' en 1 hoja A4.' : ' en ' + hojas + ' hojas A4.') +
-                        ' Imprímela a tamaño real (100 %).';
+      msg.textContent = dos ? (k === 1 ? '1 tarjeta' : k + ' tarjetas') + ' a doble cara, en ' + pag + ' páginas (adelante y atrás).' +
+                              ' Imprímela a doble cara, volteando por el borde largo, a tamaño real (100 %).'
+                            : (k === 1 ? '1 tarjeta' : k + ' tarjetas') + (hojas === 1 ? ' en 1 hoja A4.' : ' en ' + hojas + ' hojas A4.') +
+                              ' Imprímela a tamaño real (100 %).';
     }
-    return {doc:doc, tarjetas:k, hojas:hojas, archivo:archivo};
+    return {doc:doc, tarjetas:k, hojas:hojas, paginas:pag, caras:dos ? 2 : 1, archivo:archivo};
   }).catch(function(e){
     if(msg){ msg.style.color = 'var(--mal)'; msg.textContent = 'No se pudo armar el PDF. Vuelve a intentarlo.'; }
     return null;
@@ -14214,7 +14406,7 @@ var QL_TINTA = '#0B2A3A', QL_GRIS = '#4A5B68', QL_GRIS2 = '#6B7C88', QL_RAYA = '
    MSDS» de la obra), y con todo el detalle el de cada producto (el mismo de su tarjeta: lleva su etiqueta y sirve sin señal) */
 var QL_EQUIPOS = [['bandeja', 'Bandeja antiderrame'], ['kit', 'Kit antiderrame'], ['extintor', 'Extintor adecuado'], ['lavaojos', 'Lavaojos o ducha'], ['ventila', 'Ventilación']];
 var QL_QR_LISTA = 82;   /* 21,7 mm: la dirección del cartel (unas 75 letras) sale con módulos de 0,5 mm */
-var QL_QR_PROD = 72;    /* 19 mm: el del producto lleva más (su etiqueta) y necesita ese tamaño para que un celular lo lea */
+var QL_QR_PROD = 80;    /* 21 mm. 5/11/2026: lleva la dirección corta de su hoja MSDS (quimEnlaceMsds): módulos de 0,45 mm */
 function _qlT(x, y, s, px, peso, col, ancla, extra){
   return '<text x="' + (+x).toFixed(1) + '" y="' + (+y).toFixed(1) + '" font-family="Arial,Helvetica,sans-serif" font-size="' + (+px).toFixed(2) + '"' +
          (peso && peso !== 400 ? ' font-weight="' + peso + '"' : '') + ' fill="' + (col || QL_TINTA) + '"' + (ancla ? ' text-anchor="' + ancla + '"' : '') + (extra || '') + '>' + esc(s) + '</text>';
@@ -14305,6 +14497,7 @@ function _qlColumnas(M, ancho, conLugar, maxP, ex){
     c.nf = M.nf + 14; c.msds = Math.round(40 * k) + 6; c.lugar = conLugar ? Math.round(86 * k) + 8 : 0;
     c.env = ex.envase ? Math.round(70 * k) + 8 : 0;
     c.qr = ex.qr ? QL_QR_PROD + 12 : 0; if(c.qr) c.msds = 0;
+    c.cartel = ex.cartel || '';   /* 5/11/2026 · el cartel «Hojas MSDS» de la obra: el QR de cada producto abre su hoja por él */
     var resto = ancho - c.n - c.sga - c.pal - c.nf - c.msds - c.lugar - c.env - c.qr;
     c.prod = Math.round(resto * (M.h > 0 ? 0.4 : 0.52)); c.pel = resto - c.prod;
   }
@@ -14358,7 +14551,9 @@ function _qlFila(q, M, C){
   var altoLug = lugL.length ? lugL.length * pxL * 1.25 : lhS;
   var envL = (C.env && envT) ? _qlLineas([{t:envT}], pxL, C.env - 2 * g, 3) : [];
   var altoEnv = envL.length ? envL.length * pxL * 1.25 : lhS;
-  var altoQR = C.qr ? QL_QR_PROD + 12 : 0;
+  /* 5/11/2026 · el QR de su hoja MSDS (corto, para que se lea); sin hoja, no lleva QR y el renglón no crece por él */
+  var uQR = (C.qr && typeof quimEnlaceMsds === 'function') ? quimEnlaceMsds(q, C.cartel) : '';
+  var altoQR = C.qr ? (uQR ? QL_QR_PROD + 12 : lhS) : 0;
   var hayNf = _hayNf(nf);
   var alto = Math.ceil(2 * pad + Math.max(altoSga, pal && !dos ? aPal : 0, altoProd, C.pel ? altoPel : 0, C.lugar ? altoLug : 0, C.env ? altoEnv : 0, altoQR, hayNf ? M.nf : 0, lhN));
   return {alto:alto, q:q, svg:function(x0, y0, n, fondo){
@@ -14427,16 +14622,15 @@ function _qlFila(q, M, C){
       if(envL.length) s += _qtRenglones(envL, x0 + C.xenv + g, arriba(altoEnv) + pxL * 0.95, pxL, pxL * 1.25, QL_TINTA);
       else s += _qlT(x0 + C.xenv + g, ym + pxL * 0.34, '—', pxL, 400, QL_GRIS2);
     }
-    /* el QR del producto (el de su tarjeta) y, debajo, si tiene su hoja MSDS */
+    /* el QR de su hoja MSDS y, debajo, que la tiene (sin hoja: «Falta la hoja MSDS», sin QR) */
     if(C.qr){
       var lq = QL_QR_PROD, cq = x0 + C.xqr + C.qr / 2, yq = arriba(altoQR);
-      try{ var tq = _qtQRTexto(q, lq * 0.2646); s += _qtQR(tq.txt, cq - lq / 2, yq, lq, tq.ecc); }catch(_q){ }
       var pxq = 7.6, yt = yq + lq + 9;
-      if(q.ficha){
-        var tH = _qt('Hoja MSDS'), wH2 = _qtAncho(tH, pxq, 700), lv = pxq, xv = cq - (lv + 3 + wH2) / 2;
-        s += '<path d="M' + (xv + lv * 0.1).toFixed(1) + ' ' + (yt - lv * 0.36).toFixed(1) + ' l' + (lv * 0.3).toFixed(1) + ' ' + (lv * 0.32).toFixed(1) + ' l' + (lv * 0.55).toFixed(1) + ' ' + (-lv * 0.66).toFixed(1) +
-             '" fill="none" stroke="' + QL_VERDE + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' + _qlT(xv + lv + 3, yt, tH, pxq, 700, QL_VERDE);
-      } else s += _qlT(cq, yt, _qt('Falta la hoja MSDS'), pxq, 700, QL_ROJO, 'middle');
+      if(!uQR){ s += _qlT(cq, ym + pxq * 0.34, _qt('Falta la hoja MSDS'), pxq, 700, QL_ROJO, 'middle'); return s; }
+      try{ s += _qtQR(uQR, cq - lq / 2, yq, lq, _qtEccCorta(uQR, 49)); }catch(_q){ }
+      var tH = _qt('Hoja MSDS'), wH2 = _qtAncho(tH, pxq, 700), lv = pxq, xv = cq - (lv + 3 + wH2) / 2;
+      s += '<path d="M' + (xv + lv * 0.1).toFixed(1) + ' ' + (yt - lv * 0.36).toFixed(1) + ' l' + (lv * 0.3).toFixed(1) + ' ' + (lv * 0.32).toFixed(1) + ' l' + (lv * 0.55).toFixed(1) + ' ' + (-lv * 0.66).toFixed(1) +
+           '" fill="none" stroke="' + QL_VERDE + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' + _qlT(xv + lv + 3, yt, tH, pxq, 700, QL_VERDE);
       return s;
     }
     /* la hoja MSDS */
@@ -14664,7 +14858,7 @@ function quimListaArmar(lista, op){
   for(var mi = 0; mi < modos.length && !plan; mi++){
     var M = modos[mi], ultimo = (mi === modos.length - 1);
     var anC = M.col === 2 ? (CW - gap) / 2 : CW;
-    var C = _qlColumnas(M, anC, !porLugar, maxP, {envase:hayEnv ? env : null, qr:qrP && M.col === 1}), ct = _qlCabTabla(M, C);
+    var C = _qlColumnas(M, anC, !porLugar, maxP, {envase:hayEnv ? env : null, qr:qrP && M.col === 1, cartel:op.qrCartel || op.qr || ''}), ct = _qlCabTabla(M, C);
     /* los bloques: los renglones y, por lugar, el renglón de cada lugar */
     var B = [], nG = {};
     if(porLugar) L.forEach(function(q){ var g = _qlClave(_qlLugar(q)); nG[g] = (nG[g] || 0) + 1; });
@@ -14691,9 +14885,11 @@ function quimListaArmar(lista, op){
       }
     }
   }
-  /* las hojas, dibujadas */
-  var out = [], n = plan.hojas.length;
+  /* las hojas, dibujadas (5/11/2026: con dónde quedó cada QR, para dibujarlos también en vector en el PDF) */
+  var out = [], qrs = [], n = plan.hojas.length;
   plan.hojas.forEach(function(cols, h){
+    _QT_QR_LOG = [];
+    try{
     var cab = _qlCabeza(L, op, h + 1, n), pie = _qlPie(L, op, plan.pie);
     var y0 = QL_A4.arriba + cab.alto + 4, cuerpo = cab.svg, anC = plan.C.ancho;
     cols.forEach(function(col, ci){
@@ -14711,8 +14907,9 @@ function quimListaArmar(lista, op){
     cuerpo += '<g transform="translate(0,' + yPie.toFixed(1) + ')">' + pie.svg + '</g>';
     out.push(('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + QL_A4.H + '" viewBox="0 0 ' + W + ' ' + QL_A4.H + '">' +
               '<rect width="' + W + '" height="' + QL_A4.H + '" fill="#ffffff"/>' + cuerpo + '</svg>').replace(/&nbsp;/g, '&#160;'));
+    } finally { qrs.push(_QT_QR_LOG || []); _QT_QR_LOG = null; }
   });
-  return {hojas:out, entra:plan.entra, modo:plan.modo, col:plan.M.col, frases:plan.M.h, cod:!!plan.M.cod, epp:!!plan.M.epp, n:L.length, orden:L,
+  return {hojas:out, qrs:qrs, entra:plan.entra, modo:plan.modo, col:plan.M.col, frases:plan.M.h, cod:!!plan.M.cod, epp:!!plan.M.epp, n:L.length, orden:L,
           qr:!!(op.qr && typeof qrcode === 'function'), qrProd:!!plan.C.qr, envase:hayEnv, equipos:!!_qlEquipos(op, 9999), tels:_qlTels(op).length};
 }
 /* los bloques, en columnas de alto «cap»: un lugar no queda solo al pie de una columna; la columna que empieza a
@@ -14782,6 +14979,28 @@ function _qlJPG(svg){
     im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   });
 }
+/* 5/11/2026 · los QR de la hoja, también en vector encima de la imagen: nítidos a cualquier resolución de la impresora
+   (en el JPEG los bordes de sus cuadraditos quedaban borrosos). Mismo dibujo que _qtQR, con un pelo de solape entre
+   renglones para que el visor no deje rayas blancas */
+function _qlQRVector(doc, L){
+  var k = 210 / QL_A4.W, sol = 0.02;
+  (L || []).forEach(function(z){
+    try{
+      var qr = qrcode(0, z.ecc || 'M'); qr.addData(z.txt); qr.make();
+      var n = qr.getModuleCount(), t = z.lado / (n + 4);
+      doc.setFillColor(255, 255, 255); doc.rect(z.x * k, z.y * k, z.lado * k, z.lado * k, 'F');
+      doc.setFillColor(0, 0, 0);
+      for(var r = 0; r < n; r++){
+        var c = 0;
+        while(c < n){
+          if(!qr.isDark(r, c)){ c++; continue; }
+          var c0 = c; while(c < n && qr.isDark(r, c)) c++;
+          doc.rect((z.x + (c0 + 2) * t) * k, (z.y + (r + 2) * t) * k, (c - c0) * t * k + sol, t * k + sol, 'F');
+        }
+      }
+    }catch(_e){}
+  });
+}
 function quimListaPDF(lista, op){
   var J = window.jspdf && window.jspdf.jsPDF;
   if(!J) return Promise.reject('sin-pdf');
@@ -14789,7 +15008,7 @@ function quimListaPDF(lista, op){
   op = op || {};
   var r = quimListaArmar(lista, op), doc = new J({unit:'mm', format:'a4', orientation:'portrait'}), p = Promise.resolve();
   r.hojas.forEach(function(svg, i){
-    p = p.then(function(){ return _qlJPG(svg); }).then(function(du){ if(i) doc.addPage(); doc.addImage(du, 'JPEG', 0, 0, 210, 297, 'ql-' + i, 'FAST'); });
+    p = p.then(function(){ return _qlJPG(svg); }).then(function(du){ if(i) doc.addPage(); doc.addImage(du, 'JPEG', 0, 0, 210, 297, 'ql-' + i, 'FAST'); _qlQRVector(doc, (r.qrs || [])[i]); });
   });
   return p.then(function(){
     try{ doc.setProperties({title:_qt('Lista de productos químicos') + (op.obra ? ' · ' + op.obra : ''), creator:'OBRASST'}); }catch(_p){}
@@ -14827,6 +15046,9 @@ function quimListaPDF(lista, op){
       '.qt-tarjeta{margin:14px auto 8px;max-width:440px;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 6px 22px rgba(0,0,0,.28)}' +
       '.qt-tarjeta.qt-grande{max-width:520px}' +
       '.qt-tarjeta svg{display:block;width:100%;height:auto}' +
+      /* 5/11/2026 · la tarjeta a doble cara: adelante y atrás, con su nombre */
+      '.qt-cara-t{margin:16px 0 -6px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gris,#8FA9B8)}' +
+      '.qt-cara-n{text-align:center;margin:8px 0 0}' +
       '.qt-h .qt-caja{flex:0 0 24px;height:24px;border-radius:7px;border:1.5px solid rgba(var(--w),.3);display:flex;align-items:center;' +
         'justify-content:center;font-size:15px;font-weight:700;color:var(--fondo)}' +
       '.qt-h.on .qt-caja{background:var(--oro);border-color:var(--oro)}' +
@@ -16184,7 +16406,7 @@ function _ir(p){
   if(p==='p-camara')pintarCamaraSello();
   if(p==='p-sello')pintarAjustesSello();
   if(p==='p-idioma')pintarAjustesIdioma();
-  if(p==='p-scan')pintarScan();
+  if(p==='p-scan'){ if(typeof _esc2AlEntrar==='function') _esc2AlEntrar(); pintarScan(); }
   if(p==='p-scan-pdf')prepScanPdf();
   if(p==='p-cargos')pintarCartel();
   if(p==='p-stickers')stkPintar();
@@ -23582,7 +23804,18 @@ function matrizDatos(){
 }
 function _matCelda(p,col){ var c=p.cel[col.k]; return c ? c.st : 'na'; }
 function _matExtra(p,col){ var c=p.cel[col.k]; return !!(c && !c.req); }
-var MAT_TXT={si:'Sí', pv:'Por vencer', ven:'Vencida', de:'Desaprobó', no:'No', na:'—'};
+/* 4/11/2026 · V7.10 · Marcelo: la matriz con «su nota 18/20 o 20/20» y el estado «✅ Al día / ⏳ Por vencer». La nota va
+   en la escala vigesimal (de 0 a 20, la misma del Registro de seguimiento: aprueba con 14 = 70 %); la evaluación de 10
+   preguntas con 9 buenas sale 18/20. Los íconos van por CSS (.cn-mat td.si > span::before): no cambian las traducciones. */
+var MAT_TXT={si:'Al día', pv:'Por vencer', ven:'Vencida', de:'Desaprobó', no:'Falta', na:'—'};
+function _matNota20(nt){
+  var m=String(nt||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)\s*$/); if(!m) return String(nt||'');
+  var b=parseFloat(m[1].replace(',','.')), n=parseFloat(m[2].replace(',','.'));
+  if(!(n>0) || !(b>=0) || b>n) return String(nt||'');
+  if(n===20) return (Math.round(b*10)/10)+'/20';
+  var v=Math.round(b*20/n*10)/10;
+  return v+'/20';
+}
 /* 15/10/2026 · Marcelo: en la matriz no basta el «Sí»: la nota y la fecha. Lo aprobado (al día, por vencer o vencido)
    lleva la nota y el día en que aprobó; un desaprobado, la nota y el día de su último intento. */
 function _matDet(p, col){
@@ -23591,10 +23824,10 @@ function _matDet(p, col){
   if(c.st==='de') return {st:'de', nota:c.ultNota||'', f:c.ultF||''};
   return {st:c.st, nota:'', f:''};
 }
-function _matCeldaTxt(p, col){ var d=_matDet(p, col); return [MAT_TXT[d.st], d.nota, d.f ? fechaLarga(d.f) : ''].filter(Boolean).join(' · '); }
+function _matCeldaTxt(p, col){ var d=_matDet(p, col); return [MAT_TXT[d.st], _matNota20(d.nota), d.f ? fechaLarga(d.f) : ''].filter(Boolean).join(' · '); }
 function _matCeldaHTML(p, col){
   var d=_matDet(p, col), f=d.f ? fechaLarga(d.f).replace(/\/(\d{2})(\d{2})$/, '/$2') : '';
-  return '<span>'+MAT_TXT[d.st]+'</span>'+(d.nota ? '<small>'+esc(d.nota)+'</small>' : '')+(f ? '<small>'+f+'</small>' : '');
+  return '<span>'+MAT_TXT[d.st]+'</span>'+(d.nota ? '<small data-sin-trad title="'+escA(d.nota)+'">'+esc(_matNota20(d.nota))+'</small>' : '')+(f ? '<small>'+f+'</small>' : '');
 }
 var MAT_ULT=[];
 function matrizFiltrada(M){
@@ -25995,7 +26228,7 @@ function cartelEquipo(o){
         M.fno=o.nousar ? _cqAjustar(g, o.nousar, AN, 2, Math.round(27*e), 19, '700') : null;
         M.alto+=M.rot2+20+M.claH+(M.fno ? 10+M.fno.s*0.9+(M.fno.l.length-1)*M.fno.s*1.24 : 0)+30;
       }
-      if(o.recarga) M.alto+=50;
+      if(o.fechas && o.fechas.length) M.alto+=148; else if(o.recarga) M.alto+=50;
       return M;
     }
     /* con aire, la letra crece (hasta 1,3 veces) dejando un QR de al menos 440 px; si no, baja hasta 0,76 con el QR de 300 */
@@ -26043,7 +26276,19 @@ function cartelEquipo(o){
       if(M.fno){ g.font=_cqFuente(M.fno.s, '700'); y=_cqTextoIzq(g, M.fno.l, X, y+10+M.fno.s*0.9, M.fno.s*1.24, ROJO); }
       y+=30;
     }
-    if(o.recarga){
+    if(o.fechas && o.fechas.length){
+      /* V7.10 · las 3 fechas del extintor, en tres cajas (la vencida, en rojo con ⚠) */
+      var nF=o.fechas.length, gF=18, bwF=(AN-gF*(nF-1))/nF, bhF=118;
+      o.fechas.forEach(function(F, i){
+        var bxF=X+i*(bwF+gF), malF=!!F[2];
+        g.fillStyle=malF ? '#FDECEC' : '#F2F5F8'; _cqCaja(g, bxF, y, bwF, bhF, 16); g.fill();
+        g.lineWidth=3; g.strokeStyle=malF ? ROJO : '#CBD6DD'; _cqCaja(g, bxF, y, bwF, bhF, 16); g.stroke();
+        var fF=_cqAjustar(g, String(F[0]||''), bwF-28, 2, 25, 17, '700'); g.font=_cqFuente(fF.s, '700'); _cqTextoIzq(g, fF.l, bxF+14, y+16+fF.s*0.9, fF.s*1.15, GRIS);
+        var vF=(malF ? '⚠ ' : '')+String(F[1]||''), sF=44; g.font='800 '+sF+'px '+MONO; while(sF>26 && g.measureText(vF).width>bwF-28){ sF-=2; g.font='800 '+sF+'px '+MONO; }
+        g.fillStyle=malF ? ROJO : OSC; g.textAlign='left'; g.fillText(vF, bxF+14, y+bhF-24);
+      });
+      y+=bhF+30;
+    } else if(o.recarga){
       g.font=_cqFuente(29, '700'); g.textAlign='left'; g.fillStyle=o.vencida ? ROJO : '#14663A';
       g.fillText((o.vencida ? '⚠ ' : '✓ ')+(o.vencida ? tx('La recarga venció en {0}.').replace('{0}', o.recarga) : tx('Recarga vigente hasta {0}.').replace('{0}', o.recarga)), X, y+24);
       y+=50;
@@ -26067,6 +26312,99 @@ function cartelEquipo(o){
     var fo=_cqAjustar(g, String(o.obra||''), W-300, 1, 32, 20, '700'); g.font=_cqFuente(fo.s, '700'); _cqTexto(g, fo.l, W/2, pieY+42, fo.s, 0, '#ffffff');
     g.font=_cqFuente(18, '800'); g.fillStyle='rgba(255,255,255,.85)'; g.textAlign='center'; g.fillText('◆ OBRASST', W/2, pieY+70);
     return { canvas:cv, png:cv.toDataURL('image/png'), w:W, h:H };
+  });
+}
+/* ══ LA HOJA 2 DEL CARTEL: EL REVERSO A4 (5/11/2026 · V7.10) ═══════════
+   Marcelo (paquete V7.10): «agrega la casilla "Incluir reverso en Hoja 2 (check list mensual con casilleros
+   para plumón — impresión A4 a doble cara)". Si la marca, salen 2 páginas A4 completas: la 1 es el cartel con
+   su QR y la 2 el cuadro de los 12 meses con cuadrados grandes para marcar con plumón en campo y firmar».
+   Para el extintor y el botiquín. Sin líneas de corte ni doblez: es la otra cara de la misma hoja.
+   o: { tipo ('Extintor' | 'Botiquín'), codigo, obra, anio, fechas ([[qué, valor, vencida]…], del extintor),
+        ubicacion, tx }. Devuelve una promesa con { canvas, png }. */
+var EQ_REVERSO_ITEMS = {
+  'Extintor':['Ubicación visible, accesible y libre de obstáculos', 'Presión en el manómetro dentro de la zona verde', 'Precinto de seguridad y pasador (anilla) intactos',
+              'Manguera, tobera o corneta sin grietas ni obstrucciones', 'Cilindro limpio, sin golpes, abolladuras ni corrosión', 'Manija de acarreo y palanca de disparo en buen estado',
+              'Etiqueta de instrucciones y clase de fuego legible', 'Tarjeta y collarín de mantenimiento / recarga vigentes', 'Soporte de pared o gabinete firme y señalizado arriba'],
+  'Botiquín':['Botiquín limpio, seco, señalizado y de fácil acceso', 'Gasas estériles, vendas elásticas y esparadrapo completos', 'Antisépticos (alcohol, yodopovidona, agua oxigenada) vigentes',
+              'Guantes descartables (quirúrgicos o de nitrilo) y mascarillas', 'Tijera punta roma, pinza y vendas triangulares completas', 'Solución salina para lavado ocular y apósitos sin abrir',
+              'Ningún insumo con la fecha de vencimiento pasada', 'Sin medicamentos no autorizados (pastillas sueltas)', 'Cartilla de control de consumo y teléfonos de emergencia visibles']
+};
+var EQ_MESES_CORTOS = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SET', 'OCT', 'NOV', 'DIC'];
+function eqConReverso(tipo){ return !!EQ_REVERSO_ITEMS[String(tipo||'')]; }
+function cartelReversoEquipo(o){
+  o=o||{};
+  var tx=o.tx||function(z){ return z; }, tipo=String(o.tipo||''), items=EQ_REVERSO_ITEMS[tipo] || EQ_REVERSO_ITEMS['Extintor'];
+  return new Promise(function(ok){
+    var W=CARTEL_W, H=CARTEL_H, X=70, AN=W-2*X, OSC='#0B2A3A', GRIS='#4A5A66', LIN='#0B2A3A';
+    var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    var g=cv.getContext('2d'); g.fillStyle='#ffffff'; g.fillRect(0, 0, W, H);
+    var y=78;
+    /* ── la cabecera: la obra, qué es y el año ── */
+    var cab=(String(o.obra||'').trim() || 'OBRASST')+' · '+tx('Control físico en campo (reverso A4)');
+    var fc=_cqAjustar(g, cab.toUpperCase(), AN, 1, 22, 16, '800'); g.font=_cqFuente(fc.s, '800'); _cqTextoIzq(g, fc.l, X, y, fc.s*1.2, GRIS);
+    y+=18;
+    var tit=tx('Cartilla anual de inspección mensual')+' — '+tx(tipo || 'Extintor').toUpperCase()+(o.codigo ? ' ('+o.codigo+')' : '')+' · '+tx('Año')+' '+(o.anio || new Date().getFullYear());
+    var ft=_cqAjustar(g, tit.toUpperCase(), AN, 2, 38, 26, '900'); g.font=_cqFuente(ft.s, '900');
+    y=_cqTextoIzq(g, ft.l, X, y+ft.s*0.9, ft.s*1.12, OSC)+18;
+    g.fillStyle=OSC; g.fillRect(X, y, AN, 5); y+=26;
+    /* ── cómo se marca ── */
+    var ley=tx('Marcar con plumón:')+'   [ ✓ ] '+tx('Conforme')+'   [ X ] '+tx('Observado');
+    g.font=_cqFuente(24, '800'); var lw=Math.min(AN, g.measureText(ley).width+40);
+    g.lineWidth=3; g.strokeStyle=LIN; _cqCaja(g, X, y, lw, 52, 10); g.stroke();
+    g.fillStyle=OSC; g.textAlign='left'; g.fillText(ley, X+20, y+35); y+=52+20;
+    /* ── sus datos: las 3 fechas del extintor; del botiquín, dónde está y quién responde ── */
+    var cajas=tipo==='Botiquín'
+      ? [[tx('Ubicación / área'), String(o.ubicacion||'').trim() || '________________'], [tx('Responsable (SST / tópico)'), '________________']]
+      : ((o.fechas && o.fechas.length) ? o.fechas.map(function(F){ return [F[0], (F[1] && F[1] !== '—') ? F[1] : '____ / ______']; })
+                                       : [[tx('Mantenimiento anual'), '____ / ______'], [tx('Vence su recarga'), '____ / ______'], [tx('Prueba hidrostática'), '____ / ______']]);
+    var gC=16, bwC=(AN-gC*(cajas.length-1))/cajas.length, bhC=96;
+    cajas.forEach(function(c, i){
+      var bx=X+i*(bwC+gC);
+      g.fillStyle='#F4F7F9'; _cqCaja(g, bx, y, bwC, bhC, 12); g.fill();
+      g.lineWidth=2.5; g.strokeStyle=LIN; _cqCaja(g, bx, y, bwC, bhC, 12); g.stroke();
+      var fl=_cqAjustar(g, c[0], bwC-24, 1, 21, 15, '800'); g.font=_cqFuente(fl.s, '800'); _cqTextoIzq(g, fl.l, bx+12, y+30, fl.s*1.1, GRIS);
+      var fv=_cqAjustar(g, c[1], bwC-24, 1, 32, 18, '800'); g.font=_cqFuente(fv.s, '800'); _cqTextoIzq(g, fv.l, bx+12, y+bhC-22, fv.s, OSC);
+    });
+    y+=bhC+26;
+    /* ── el cuadro: cada punto, en sus 12 meses, con su cuadrado para el plumón ── */
+    var mW=56, iW=AN-12*mW, hCab=46, hDia=58, hIni=72, x0=X, xm=X+iW;
+    var hIt=Math.max(72, Math.min(100, Math.floor((H-110-y-(hCab+hDia+hIni+28+170))/items.length)));   /* las filas llenan la hoja */
+    g.lineWidth=2.5; g.strokeStyle=LIN;
+    g.fillStyle='#E3E9ED'; g.fillRect(x0, y, AN, hCab);
+    g.font=_cqFuente(19, '900'); g.fillStyle=OSC; g.textAlign='left'; g.fillText(tx('Puntos a verificar cada mes').toUpperCase(), x0+12, y+30);
+    g.textAlign='center';
+    EQ_MESES_CORTOS.forEach(function(m, i){ g.fillText(tx(m), xm+i*mW+mW/2, y+30); });
+    var yT=y; y+=hCab;
+    items.forEach(function(t0, k){
+      var t=(k+1)+'. '+tx(t0), fi=_cqAjustar(g, t, iW-24, 2, 21, 15, '700');
+      g.font=_cqFuente(fi.s, '700'); var nl=fi.l.length;
+      _cqTextoIzq(g, fi.l, x0+12, y+hIt/2-((nl-1)*fi.s*1.15)/2+fi.s*0.36, fi.s*1.15, OSC);
+      for(var i=0; i<12; i++){ var cx=xm+i*mW+mW/2, cy=y+hIt/2, q=34; g.lineWidth=3; _cqCaja(g, cx-q/2, cy-q/2, q, q, 4); g.stroke(); }
+      y+=hIt; g.lineWidth=2; g.beginPath(); g.moveTo(x0, y); g.lineTo(x0+AN, y); g.stroke();
+    });
+    /* el día y quién lo inspeccionó */
+    g.fillStyle='#F1F4F7'; g.fillRect(x0, y, iW, hDia+hIni);
+    g.font=_cqFuente(19, '900'); g.fillStyle=OSC; g.textAlign='left';
+    g.fillText(tx('Día / mes de la inspección'), x0+12, y+hDia/2+7);
+    g.fillText(tx('Iniciales o V° B° de quien inspecciona'), x0+12, y+hDia+hIni/2+7);
+    g.font=_cqFuente(16, '700'); g.fillStyle='#7A8A96'; g.textAlign='center';
+    for(var i2=0; i2<12; i2++) g.fillText('__/__', xm+i2*mW+mW/2, y+hDia-14);
+    g.lineWidth=2; g.beginPath(); g.moveTo(x0, y+hDia); g.lineTo(x0+AN, y+hDia); g.stroke();
+    y+=hDia+hIni;
+    /* las rayas del cuadro */
+    g.lineWidth=2.5; g.strokeRect(x0, yT, AN, y-yT);
+    g.beginPath(); g.moveTo(xm, yT); g.lineTo(xm, y); for(var c2=1; c2<12; c2++){ g.moveTo(xm+c2*mW, yT); g.lineTo(xm+c2*mW, y); } g.stroke();
+    y+=28;
+    /* ── observaciones del año ── */
+    var hObs=Math.max(150, Math.min(220, H-80-y));
+    g.lineWidth=2.5; _cqCaja(g, X, y, AN, hObs, 12); g.stroke();
+    g.font=_cqFuente(19, '900'); g.fillStyle=OSC; g.textAlign='left'; g.fillText(tx('Observaciones o reposiciones del año:').toUpperCase(), X+16, y+34);
+    g.save(); g.setLineDash([8, 7]); g.strokeStyle='#9AA8B2'; g.lineWidth=1.6;
+    for(var yy=y+78; yy<y+hObs-14; yy+=44){ g.beginPath(); g.moveTo(X+16, yy); g.lineTo(X+AN-16, yy); g.stroke(); }
+    g.restore();
+    /* ── el pie ── */
+    g.font=_cqFuente(20, '800'); g.fillStyle='#8A7400'; g.textAlign='center'; g.fillText('◆ OBRASST', W/2, H-46);
+    ok({ canvas:cv, png:cv.toDataURL('image/png'), w:W, h:H });
   });
 }
 /* <<< CARTELES-QR-FIN >>> */
@@ -26768,7 +27106,7 @@ function _vdocEstilos(){
    Los carteles ya pegados (…/d/?t=FICHA) siguen sirviendo: d/ los manda
    aquí cuando en ese celular se usa la app.
    ══════════════════════════════════════════════════════════════════ */
-var CARTEL_APP = { tk:'', f:'', j:null, estado:'', sinRed:false, cuando:0, gen:0, arranque:false };
+var CARTEL_APP = { tk:'', f:'', m:'', j:null, estado:'', sinRed:false, cuando:0, gen:0, arranque:false };
 var LS_CARTEL_R = 'sstc_cartel_r';       /* { ficha: { t:ms, j:{ obra, hoja, titulo, url, docs } } } · los últimos 30 carteles */
 var CARTEL_D_CAJA = 'obrasst-docs';      /* la caja de la página d/ (lo que guardó cuando el cartel se abría por ahí) */
 
@@ -26778,6 +27116,8 @@ function cartelDeTexto(t){
   return m ? m[1] : null;
 }
 /* 30/10/2026 · el cartel de un FRENTE: la misma ficha con «&f=<frente>» (FRENTES-BASE, freEnlaceCartel) → el frente, o '' */
+/* 5/11/2026 · el QR de un producto en la lista del almacén o en el reverso de su tarjeta: «&m=<clave>» (quimClaveMsds) */
+function cartelProdDeTexto(t){ var m = String(t || '').match(/[#?&]m=([a-z0-9]{4,10})(?=$|[&#])/); return m ? m[1] : ''; }
 function cartelFrenteDeTexto(t){
   var m = String(t || '').match(/[#?&]f=([^&#]*)/); if(!m) return '';
   var v = m[1]; try{ v = decodeURIComponent(v); }catch(_d){}
@@ -26875,13 +27215,15 @@ function _ctQuim(j){
 }
 
 /* ── llegó por la cámara del celular: al arrancar la app (arranque) o con la app ya abierta ── */
-function cartelDesdeEnlace(tk, arranque, frente){
+function cartelDesdeEnlace(tk, arranque, frente, prod){
   if(!tk) return false;
   try{ if(!ROL) ROL = leer(LS_ROL, null); }catch(_r){}
   var S = CARTEL_APP;
   S.gen++; S.tk = String(tk); S.j = null; S.sinRed = false; S.cuando = 0; S.estado = 'cargando';
   /* 30/10/2026 · el cartel de un frente («&f=») */
   S.f = String(frente || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+  /* 5/11/2026 · el de un producto («&m=»): su hoja, directo */
+  S.m = /^[a-z0-9]{4,10}$/.test(String(prod || '')) ? String(prod) : '';
   S.arranque = !!arranque || S.arranque;
   if(arranque){ try{ document.documentElement.lang = idiomaActual(); arrancarVigiaIdioma(); }catch(_vi){} }
   ir('p-cartel');
@@ -26903,7 +27245,7 @@ function _ctPedir(tk, gen){
   var lento = setTimeout(function(){
     if(hecho || gen !== CARTEL_APP.gen || CARTEL_APP.estado !== 'cargando') return;
     var g = _ctResps()[tk];
-    if(g && g.j){ CARTEL_APP.j = g.j; CARTEL_APP.sinRed = true; CARTEL_APP.cuando = g.t || 0; CARTEL_APP.estado = 'lista'; if(_ctEnPantalla()) pintarCartelApp(); }
+    if(g && g.j){ CARTEL_APP.j = g.j; CARTEL_APP.sinRed = true; CARTEL_APP.cuando = g.t || 0; CARTEL_APP.estado = 'lista'; if(_ctEnPantalla()){ pintarCartelApp(); _ctProdAbrir(); } }
   }, 7000);
   _ctRpc(tk).then(function(j){ hecho = true; clearTimeout(lento); if(gen === CARTEL_APP.gen) _ctLlego(tk, j, gen); },
                   function(){ hecho = true; clearTimeout(lento); if(gen === CARTEL_APP.gen) _ctSinSenal(tk, gen); });
@@ -26916,6 +27258,8 @@ function _ctLlego(tk, j, gen){
     _ctGuardarResp(tk, j);
     S.j = _ctLimpio(j); S.sinRed = false; S.cuando = Date.now(); S.estado = 'lista';
     if(!_ctEnPantalla()) return;
+    /* 5/11/2026 · el QR de un producto: la lista y, encima, su hoja (con «Atrás» se vuelve a la lista) */
+    if(!yaMostraba && S.m && _ctProdDe(S.j, S.m)){ pintarCartelApp(); _ctProdAbrir(); return; }
     /* uno solo, de la obra, y que se ve aquí: se abre directo (con «Atrás» se vuelve al cartel) */
     if(!yaMostraba && items.length === 1 && typeof vdocSeVe === 'function' && vdocSeVe(items[0].url)){ verDocApp(items[0].url, items[0].nombre); return; }
     pintarCartelApp(); return;
@@ -26933,7 +27277,7 @@ function _ctSinSenal(tk, gen){
   var S = CARTEL_APP, g = _ctResps()[tk];
   if(g && g.j){
     S.j = g.j; S.sinRed = true; S.cuando = g.t || 0; S.estado = 'lista';
-    if(_ctEnPantalla()) pintarCartelApp();
+    if(_ctEnPantalla()){ pintarCartelApp(); _ctProdAbrir(); }
     return;
   }
   /* si el cartel se abría antes por la página d/ y la copia la tiene ella, se va a ella */
@@ -26944,7 +27288,23 @@ function _ctSinSenal(tk, gen){
     if(_ctEnPantalla()) pintarCartelApp();
   });
 }
-function _ctPaginaD(tk){ var f = CARTEL_APP.f; return baseURL() + 'd/?t=' + encodeURIComponent(tk) + (f ? '&f=' + encodeURIComponent(f) : '') + '&w=1'; }
+function _ctPaginaD(tk){ var f = CARTEL_APP.f, m = CARTEL_APP.m; return baseURL() + 'd/?t=' + encodeURIComponent(tk) + (f ? '&f=' + encodeURIComponent(f) : '') + (m ? '&m=' + m : '') + '&w=1'; }
+/* el producto del QR («&m=») en lo que contestó el servidor: {nombre, url} o null */
+function _ctProdDe(j, clave){
+  if(!clave || typeof quimClaveMsds !== 'function') return null;
+  var x = null;
+  (Array.isArray(j && j.quim) ? j.quim : []).forEach(function(m){ if(!x && m && m.n && _ctWeb(m.u) && quimClaveMsds(m.n, m.m) === clave) x = m; });
+  return x ? { nombre:String(x.n) + (x.m ? ' · ' + x.m : ''), url:String(x.u) } : null;
+}
+/* abre una vez la hoja del producto del QR, si está en el cartel */
+function _ctProdAbrir(){
+  var S = CARTEL_APP, it = S.m ? _ctProdDe(S.j, S.m) : null;
+  S.m = '';
+  if(!it) return false;
+  if(typeof vdocSeVe === 'function' && vdocSeVe(it.url)){ verDocApp(it.url, it.nombre); return true; }
+  try{ window.open(it.url, '_blank', 'noopener'); }catch(_o){ location.href = it.url; }
+  return true;
+}
 function _ctHayEnD(tk){
   try{
     if(!(window.caches && caches.has && caches.open)) return Promise.resolve(false);
@@ -26968,7 +27328,7 @@ function cartelAbrir(i){
 /* salir del cartel. Si la app arrancó por el QR, el resto del arranque no corrió: se vuelve a abrir, limpia */
 function cartelSalir(){
   var S = CARTEL_APP, vuelve = S.arranque;
-  S.gen++; S.tk = ''; S.f = ''; S.j = null; S.estado = ''; S.sinRed = false; S.arranque = false;
+  S.gen++; S.tk = ''; S.f = ''; S.m = ''; S.j = null; S.estado = ''; S.sinRed = false; S.arranque = false;
   if(vuelve){ try{ location.replace(baseURL()); }catch(_r){ location.href = baseURL(); } return; }
   try{ HIST = HIST.filter(function(x){ return x !== 'p-cartel' && x !== 'p-doc-ver'; }); }catch(_h){}
   var casa = (typeof inicioDelModo === 'function') ? inicioDelModo() : 'p-cuenta', prev = null;
@@ -27172,7 +27532,8 @@ function qrRuta(txt){
   var tk = (typeof cartelDeTexto === 'function') ? cartelDeTexto(t) : null;
   if(!tk && _lqrNuestra(t)){ var md = t.match(/\/d\/(?:index\.html)?\?(?:[^#]*&)?t=([A-Za-z0-9_-]{6,64})(?=$|[&#])/); if(md) tk = md[1]; }
   /* 30/10/2026 · el cartel de un frente («&f=»), con su frente */
-  if(tk){ var fr = (typeof cartelFrenteDeTexto === 'function') ? cartelFrenteDeTexto(t) : ''; return function(){ cartelDesdeEnlace(tk, false, fr); }; }
+  if(tk){ var fr = (typeof cartelFrenteDeTexto === 'function') ? cartelFrenteDeTexto(t) : '', pr = (typeof cartelProdDeTexto === 'function') ? cartelProdDeTexto(t) : '';
+          return function(){ cartelDesdeEnlace(tk, false, fr, pr); }; }
   /* el químico: su etiqueta viaja dentro del código */
   var q = (typeof quimDeEnlace === 'function') ? quimDeEnlace(t) : null;
   if(!q && /^OBRASST-QUIM:[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+$/.test(t)) q = t;
@@ -27980,7 +28341,9 @@ function eqUsoDe(x){
   var base=EQ_PASOS[tp] || null;
   return { propios:propios.length>0, pasos:propios.length ? propios.map(function(s){ return [s, '']; }) : (base ? base.map(function(p){ return p.slice(); }) : []),
            antes:EQ_USO_ANTES[tp] || '', luego:EQ_USO_LUEGO[tp] || '', ext:(tp==='Extintor'), agente:eqAgente(U.a),
-           kg:/^[0-9]{1,3}([.,][0-9]{1,2})?$/.test(String(U.kg||'')) ? String(U.kg).replace('.', ',') : '', r:/^20\d{2}-(0[1-9]|1[0-2])$/.test(String(U.r||'')) ? String(U.r) : '' };
+           kg:/^[0-9]{1,3}([.,][0-9]{1,2})?$/.test(String(U.kg||'')) ? String(U.kg).replace('.', ',') : '', r:/^20\d{2}-(0[1-9]|1[0-2])$/.test(String(U.r||'')) ? String(U.r) : '',
+           /* 5/11/2026 · V7.10 · del extintor: m, el mes de su último mantenimiento anual; h, el de su próxima prueba hidrostática */
+           m:/^20\d{2}-(0[1-9]|1[0-2])$/.test(String(U.m||'')) ? String(U.m) : '', h:/^20\d{2}-(0[1-9]|1[0-2])$/.test(String(U.h||'')) ? String(U.h) : '' };
 }
 /* el dibujo de su señal (el cuerpo SVG, en su caja de 0 a 100): en la app, del catálogo de la NTP (NTP_SENALES);
    en el portal, EQ_SENAL_SVG, que armar.py pone en portal/equipos.js con solo estas cuatro */
@@ -28000,11 +28363,23 @@ function eqCartelDatosDe(x, op){
            pasos:u.pasos.map(function(p){ return u.propios ? p : [tr(p[0]), tr(p[1])]; }), propios:u.propios,
            antes:u.antes ? tr(u.antes) : '', luego:u.luego ? tr(u.luego) : '',
            clases:A ? A.c.split('').map(function(c){ return [c, tr(EQ_CLASES_FUEGO[c])]; }) : [], nousar:(A && A.no) ? tr(A.no) : '',
-           recarga:eqRecargaTxt(u.r), vencida:eqRecargaVencida(u.r, op.mes || ''), obra:op.obra || '', empresa:op.empresa || '', logo:op.logo || null, tx:tr };
+           recarga:eqRecargaTxt(u.r), vencida:eqRecargaVencida(u.r, op.mes || ''), obra:op.obra || '', empresa:op.empresa || '', logo:op.logo || null, tx:tr,
+           fechas:u.ext ? eqFechasExt(u, op.mes || '', tr) : [] };
 }
 /* «03/2027», y si ya venció (contra el mes de hoy, «2027-04») */
 function eqRecargaTxt(r){ return r ? r.slice(5, 7)+'/'+r.slice(0, 4) : ''; }
 function eqRecargaVencida(r, mes){ return !!(r && mes && r < mes); }
+/* 5/11/2026 · V7.10 · Marcelo: «en la cartilla A4 del Extintor, muestra claramente las 3 fechas clave». [qué, «MM/AAAA»,
+   ¿vencida?] de su mantenimiento anual (vale 12 meses desde el mes en que se hizo), su recarga y su próxima prueba
+   hidrostática. Sin ninguna anotada, nada: el cartel queda como antes. */
+function eqFechasExt(u, mes, tr){
+  tr=tr || function(z){ return z; };
+  if(!u || !(u.m || u.r || u.h)) return [];
+  var mv=u.m ? (+u.m.slice(0, 4)+1)+'-'+u.m.slice(5, 7) : '';
+  return [[tr('Mantenimiento anual'), eqRecargaTxt(u.m) || '—', eqRecargaVencida(mv, mes)],
+          [tr('Vence su recarga'), eqRecargaTxt(u.r) || '—', eqRecargaVencida(u.r, mes)],
+          [tr('Prueba hidrostática'), eqRecargaTxt(u.h) || '—', eqRecargaVencida(u.h, mes)]];
+}
 /* 3/11/2026 · V7.3 · Gemini y Copilot: «⚠️ Recarga vencida» o «⚠️ Próxima a vencer» (15 días). r ('AAAA-MM') vale hasta el
    último día de ese mes (como eqRecargaVencida). Devuelve null (sin anotar) o {k:'vencida'|'pronto'|'ok', hasta:'AAAA-MM-DD', dias} */
 function eqRecargaEstado(r, hoy){
@@ -28023,11 +28398,17 @@ function eqUsoLimpio(f){
   var kg=String(f.kg||'').trim().replace(/\s*kg$/i, ''), r=String(f.r||'').trim(), a=String(f.a||'').trim(), u={};
   if(kg && !/^[0-9]{1,3}([.,][0-9]{1,2})?$/.test(kg)) return {error:'La capacidad, en kilos: 6, 4,5…'};
   if(r && !/^20\d{2}-(0[1-9]|1[0-2])$/.test(r)) return {error:'El mes de la recarga no se ve bien: por ejemplo, 2027-03.'};
+  /* 5/11/2026 · V7.10 · el extintor: el mes de su último mantenimiento anual y el de su próxima prueba hidrostática */
+  var mt=String(f.m||'').trim(), ph=String(f.h||'').trim();
+  if(mt && !/^20\d{2}-(0[1-9]|1[0-2])$/.test(mt)) return {error:'El mes del mantenimiento no se ve bien: por ejemplo, 2026-11.'};
+  if(ph && !/^20\d{2}-(0[1-9]|1[0-2])$/.test(ph)) return {error:'El mes de la prueba hidrostática no se ve bien: por ejemplo, 2029-05.'};
   if(a && !eqAgente(a)) a='';
   if(lineas.length) u.p=lineas;
   if(a) u.a=a;
   if(kg) u.kg=kg;
   if(r) u.r=r;
+  if(mt) u.m=mt;
+  if(ph) u.h=ph;
   return {uso:Object.keys(u).length ? u : null};
 }
 
@@ -29182,8 +29563,9 @@ function eqPintarForm(){
     h+='<div class="eq-tip" id="eqn-tip"><b>¿Es chica y anda en una caja o maletín?</b>'+
        '<span>No le pegues nada en el mango. Registra la caja (un solo QR en la tapa), anota ahí lo que tiene, y a cada herramienta escríbele su código con plumón indeleble y ponle la cinta del mes.</span>'+
        '<button type="button" class="eq-link" onclick="eqFormTipo(\'Caja de herramientas\')">Registrar la caja ▸</button></div>';
-  /* 05/10/2026 · Marcelo: «marca, modelo, N.° de serie (todos opcionales, pero que estén ahí sus cuadritos)» */
-  h+='<div class="eq-mms"><div><label for="eqn-marca">Marca <small>(si quieres)</small></label><input id="eqn-marca" maxlength="60" placeholder="Bosch, Makita, Truper…" value="'+escA(E0.marca||'')+'" oninput="eqFormDato(\'marca\',this.value)"></div>'+
+  /* 05/10/2026 · Marcelo: «marca, modelo, N.° de serie (todos opcionales, pero que estén ahí sus cuadritos)».
+     5/11/2026 · V7.10 · el botiquín no pide ni muestra serie ni marca (solo código, ubicación y responsable) */
+  if(String(E0.tipo||'')!=='Botiquín') h+='<div class="eq-mms"><div><label for="eqn-marca">Marca <small>(si quieres)</small></label><input id="eqn-marca" maxlength="60" placeholder="Bosch, Makita, Truper…" value="'+escA(E0.marca||'')+'" oninput="eqFormDato(\'marca\',this.value)"></div>'+
      '<div><label for="eqn-modelo">Modelo <small>(si quieres)</small></label><input id="eqn-modelo" maxlength="60" placeholder="GWS 850" value="'+escA(E0.modelo||'')+'" oninput="eqFormDato(\'modelo\',this.value)"></div></div>'+
      '<label for="eqn-serie">N.° de serie <small>(si quieres)</small></label><input id="eqn-serie" maxlength="60" autocapitalize="characters" placeholder="El que trae en su placa" value="'+escA(E0.serie||'')+'" oninput="eqFormDato(\'serie\',this.value)">';
   /* 4/11/2026 · V7.9j · dónde está: sale en su ficha al escanear su QR */
@@ -29303,6 +29685,7 @@ function eqGuardarForm(){
   /* marca, modelo y serie van cada uno en su casillero y, juntos, en «detalle» (lo que ya leen la
      página del QR, las inspecciones y los Excel). El equipo de antes, sin casilleros, queda como estaba. */
   var marca=String(E0.marca||'').trim().slice(0,60), modelo=String(E0.modelo||'').trim().slice(0,60), serie=String(E0.serie||'').trim().slice(0,60);
+  if(tipo==='Botiquín'){ marca=''; modelo=''; serie=''; }   /* V7.10 · sin serie ni marca */
   var hayMMS=!!(marca || modelo || serie), dis=eqDisTxt(E0.dis, E0.grande);
   var fila={codigo:cod, tipo:tipo.slice(0,60), detalle:(hayMMS ? eqDetalleDe(marca, modelo, serie) : (E0._teniaMMS ? '' : String(E0.detalle||'').trim().slice(0,200)))||null,
             responsable:String(E0.responsable||'').trim().slice(0,80)||null, etiqueta:et, contenido:cont, actualizado:new Date().toISOString()};
@@ -29387,11 +29770,11 @@ function eqGuardarForm(){
 var EQC = { cv:null, id:null };
 function eqUsoAForm(u){
   u=(u && typeof u==='object' && !Array.isArray(u)) ? u : {};
-  return { p:Array.isArray(u.p) ? u.p.join('\n') : '', a:u.a || '', kg:u.kg || '', r:u.r || '' };
+  return { p:Array.isArray(u.p) ? u.p.join('\n') : '', a:u.a || '', kg:u.kg || '', r:u.r || '', m:u.m || '', h:u.h || '' };
 }
 function eqUsoForm(E0){
   _eqUsoEstilos();
-  if(!E0.uso) E0.uso={p:'', a:'', kg:'', r:''};
+  if(!E0.uso) E0.uso={p:'', a:'', kg:'', r:'', m:'', h:''};
   var U=E0.uso, tn=String(E0.tipo||''), ext=(tn==='Extintor'), base=EQ_PASOS[tn] || null;
   var h='<div class="sec-tit" style="margin-top:18px">Cómo se usa</div>'+
         '<p class="sub" style="margin:-4px 0 8px;font-size:12.5px">Lo ve cualquiera que escanee su QR, aunque no tenga la app, y sale en su cartel.</p>';
@@ -29399,7 +29782,10 @@ function eqUsoForm(E0){
     h+='<label for="eqn-agente">Agente extintor</label><select id="eqn-agente" onchange="EQ.edit.uso.a=this.value"><option value="">No lo pongo</option>'+
        EQ_AGENTES.map(function(a){ return '<option value="'+escA(a.k)+'"'+(U.a===a.k?' selected':'')+'>'+esc(a.n)+'</option>'; }).join('')+'</select>'+
        '<div class="eq-mms"><div><label for="eqn-kg">Capacidad <small>(kg)</small></label><input id="eqn-kg" inputmode="decimal" maxlength="6" placeholder="6" value="'+escA(U.kg||'')+'" oninput="EQ.edit.uso.kg=this.value"></div>'+
-       '<div><label for="eqn-recarga">Vence su recarga</label><input id="eqn-recarga" type="month" placeholder="2027-03" value="'+escA(U.r||'')+'" oninput="EQ.edit.uso.r=this.value" onchange="EQ.edit.uso.r=this.value"></div></div>';
+       '<div><label for="eqn-recarga">Vence su recarga</label><input id="eqn-recarga" type="month" placeholder="2027-03" value="'+escA(U.r||'')+'" oninput="EQ.edit.uso.r=this.value" onchange="EQ.edit.uso.r=this.value"></div></div>'+
+       /* 5/11/2026 · V7.10 · las otras dos fechas clave del extintor (salen en su cartilla A4 y al escanearlo) */
+       '<div class="eq-mms"><div><label for="eqn-mant">Último mantenimiento anual</label><input id="eqn-mant" type="month" placeholder="2026-11" value="'+escA(U.m||'')+'" oninput="EQ.edit.uso.m=this.value" onchange="EQ.edit.uso.m=this.value"></div>'+
+       '<div><label for="eqn-hidro">Próxima prueba hidrostática</label><input id="eqn-hidro" type="month" placeholder="2029-05" value="'+escA(U.h||'')+'" oninput="EQ.edit.uso.h=this.value" onchange="EQ.edit.uso.h=this.value"></div></div>';
   }
   /* el ejemplo, en una línea (se traduce entero): el primer paso de siempre, o uno de una herramienta */
   var ej=base ? base[0][0]+'…' : 'Revisa que la guarda esté puesta…';
@@ -29427,9 +29813,18 @@ function eqUsoFicha(x){
        ((A && A.no) ? '<p class="sub eq-uso-no">'+esc(A.no)+'</p>' : '')+
        /* V7.3 · por vencer (15 días): en ámbar, con el día */
        (u.r ? '<p class="sub eq-recarga '+(venc ? 'mal' : (pronto ? 'med' : 'ok'))+'"><span>'+(venc ? 'La recarga venció en' : (pronto ? 'Recarga próxima a vencer: vence el' : 'Recarga vigente hasta'))+'</span> <b data-sin-trad>'+(pronto ? eqFecha(RE.hasta) : eqRecargaTxt(u.r))+'</b></p>'
-            : '<p class="sub">Anota cuándo vence su recarga: sale al escanearlo.</p>')+'</div>';
+            : '<p class="sub">Anota cuándo vence su recarga: sale al escanearlo.</p>')+eqFechasFicha(u)+'</div>';
   }
   h+='<button type="button" class="eq-link" style="margin-top:10px" onclick="eqEditar(\''+id+'\')">'+(u.propios ? 'Cambiar los pasos ▸' : (u.ext ? 'Cambiar sus datos o escribir sus pasos ▸' : 'Escribir los suyos ▸'))+'</button></div>';
+  return h;
+}
+/* 5/11/2026 · V7.10 · en la ficha: su mantenimiento anual y su próxima prueba hidrostática (las de la recarga ya van arriba) */
+function eqFechasFicha(u){
+  var mes=eqMes(), h='';
+  if(u.m){ var mv=(+u.m.slice(0, 4)+1)+'-'+u.m.slice(5, 7), ya=eqRecargaVencida(mv, mes);
+    h+='<p class="sub eq-recarga '+(ya ? 'mal' : 'ok')+'"><span>'+(ya ? 'El mantenimiento anual venció: el último fue en' : 'Mantenimiento anual')+'</span> <b data-sin-trad>'+eqRecargaTxt(u.m)+'</b></p>'; }
+  if(u.h){ var yh=eqRecargaVencida(u.h, mes);
+    h+='<p class="sub eq-recarga '+(yh ? 'mal' : 'ok')+'"><span>'+(yh ? 'La prueba hidrostática venció en' : 'Próxima prueba hidrostática')+'</span> <b data-sin-trad>'+eqRecargaTxt(u.h)+'</b></p>'; }
   return h;
 }
 /* lo que lleva su cartel (ya traducido, si la app está en otro idioma): eqCartelDatosDe, el mismo del portal */
@@ -29443,19 +29838,55 @@ function eqCartel(id){
   if(typeof cartelEquipo!=='function'){ c.innerHTML='<p class="sub">No se pudo armar el cartel.</p>'; return; }
   c.innerHTML='<p class="sub" style="margin:10px 0 0">Armando el cartel…</p>';
   cartelEquipo(eqCartelDatos(x)).then(function(r){
-    EQC.cv=r.canvas; EQC.id=id;
+    if(EQC.id!==id){ EQC.conRev=false; }
+    EQC.cv=r.canvas; EQC.id=id; EQC.rev=null;
     var c2=$('eqd-cartel'); if(!c2) return;
-    var ext=(x.tipo==='Extintor');
+    var ext=(x.tipo==='Extintor'), conRev=(typeof eqConReverso==='function') && eqConReverso(x.tipo);
     c2.innerHTML='<figure class="eq-cartel"><img src="'+r.png+'" alt="'+escA(x.codigo)+'"></figure>'+
+      /* 5/11/2026 · V7.10 · la hoja 2 (el reverso): el cuadro de los 12 meses para marcar con plumón */
+      (conRev ? '<label class="eq-rev-chk"><input type="checkbox" id="eqd-rev" onchange="eqCartelReverso(this.checked)"'+(EQC.conRev ? ' checked' : '')+'>'+
+                '<span><b>Incluir reverso en Hoja 2</b> <small>Check list mensual con casilleros para plumón · impresión A4 a doble cara</small></span></label><div id="eqd-rev-vista"></div>' : '')+
       '<div class="esc-acc" style="margin-top:10px"><button type="button" class="btn" style="margin:0" onclick="eqCartelBajar()">⬇️ Descargar</button>'+
       '<button type="button" class="btn sec" style="margin:0" onclick="eqCartelCompartir()">📲 Compartirlo</button></div>'+
       '<p class="sub" style="margin:8px 0 0;font-size:12.5px"><span>Hoja A4 vertical: imprímelo al 100 %.</span> <span>'+
       (ext ? 'Pégalo sobre el porta extintor, a la vista.' : 'Pégalo junto al equipo, a la vista.')+'</span> <span>Su QR es el de la etiqueta: no lleva el código de tu obra.</span></p>';
+    if(conRev && EQC.conRev) eqCartelReverso(true);
   }, function(){ var c3=$('eqd-cartel'); if(c3) c3.innerHTML='<p class="sub">No se pudo armar el cartel.</p>'; });
+}
+/* V7.10 · la hoja 2: se arma al marcar la casilla; con ella, el cartel se descarga y se comparte como un PDF de 2 páginas A4 */
+function eqReversoDatos(x){
+  var D=eqCartelDatos(x);
+  return { tipo:x.tipo, codigo:x.codigo, obra:D.obra || D.empresa || '', anio:new Date().getFullYear(), fechas:D.fechas, ubicacion:x.ubicacion || '', tx:D.tx };
+}
+function eqCartelReverso(si){
+  EQC.conRev=!!si; EQC.rev=null;
+  var v=$('eqd-rev-vista'), x=eqPorId(EQC.id); if(!v || !x) return;
+  if(!si){ v.innerHTML=''; return; }
+  v.innerHTML='<p class="sub" style="margin:10px 0 0">Armando la hoja 2…</p>';
+  cartelReversoEquipo(eqReversoDatos(x)).then(function(r){
+    if(!EQC.conRev) return;
+    EQC.rev=r.canvas;
+    var v2=$('eqd-rev-vista'); if(v2) v2.innerHTML='<figure class="eq-cartel"><img src="'+r.png+'" alt="Hoja 2 · '+escA(x.codigo)+'"></figure>'+
+      '<p class="sub" style="margin:8px 0 0;font-size:12.5px">Hoja 2: va al reverso. Al descargar o compartir sale un PDF de 2 páginas A4: imprímelo a doble cara, al 100 %.</p>';
+  }, function(){ var v3=$('eqd-rev-vista'); if(v3) v3.innerHTML='<p class="sub">No se pudo armar la hoja 2.</p>'; });
+}
+function _eqCartelPdf(){
+  var J=window.jspdf && window.jspdf.jsPDF; if(!J || !EQC.cv || !EQC.rev) return null;
+  try{
+    var d=new J({unit:'mm', format:'a4', orientation:'portrait', compress:true});
+    d.addImage(EQC.cv.toDataURL('image/png'), 'PNG', 0, 0, 210, 297);
+    d.addPage('a4', 'portrait'); d.addImage(EQC.rev.toDataURL('image/png'), 'PNG', 0, 0, 210, 297);
+    return d.output('blob');
+  }catch(_p){ return null; }
 }
 function _eqCartelArchivo(){ var x=eqPorId(EQC.id); return 'cartel-'+(String((x && x.codigo) || 'equipo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'equipo')+'.png'; }
 function eqCartelBajar(){
   if(!EQC.cv) return;
+  if(EQC.conRev && EQC.rev){
+    var bp=_eqCartelPdf();
+    if(bp){ var up=URL.createObjectURL(bp), ap=document.createElement('a'); ap.href=up; ap.download=_eqCartelArchivo().replace(/\.png$/, '-2-caras.pdf');
+      document.body.appendChild(ap); ap.click(); setTimeout(function(){ document.body.removeChild(ap); URL.revokeObjectURL(up); }, 1200); return; }
+  }
   EQC.cv.toBlob(function(bl){
     var u=URL.createObjectURL(bl), a=document.createElement('a');
     a.href=u; a.download=_eqCartelArchivo(); document.body.appendChild(a); a.click();
@@ -29464,6 +29895,13 @@ function eqCartelBajar(){
 }
 function eqCartelCompartir(){
   if(!EQC.cv) return;
+  if(EQC.conRev && EQC.rev){
+    var bp=_eqCartelPdf(), fp=null, pu=false;
+    try{ fp=bp ? new File([bp], _eqCartelArchivo().replace(/\.png$/, '-2-caras.pdf'), {type:'application/pdf'}) : null; }catch(_f){}
+    try{ pu=!!(fp && navigator.canShare && navigator.canShare({files:[fp]})); }catch(_c){}
+    if(pu){ navigator.share({files:[fp], title:'Cartel con QR (2 caras)'}).catch(function(){}); return; }
+    if(bp){ eqCartelBajar(); return; }
+  }
   EQC.cv.toBlob(function(bl){
     var f=null, puede=false;
     try{ f=new File([bl], _eqCartelArchivo(), {type:'image/png'}); }catch(_f){}
@@ -29482,7 +29920,9 @@ function _eqUsoEstilos(){
     '.eq-clases{display:grid;gap:6px;margin:8px 0 0}.eq-clase{display:flex;gap:8px;align-items:center;font-size:13.5px}'+
     '.eq-clase i{flex:0 0 auto;width:26px;height:26px;border-radius:6px;background:#C8102E;color:#fff;font-style:normal;font-weight:900;line-height:26px;text-align:center}'+
     '.eq-uso-no{margin:8px 0 0;color:var(--mal,#FF8A8E)}.eq-recarga{margin:8px 0 0}.eq-recarga.ok{color:var(--ok,#6FD08C)}.eq-recarga.mal{color:var(--mal,#FF8A8E)}'+
-    '.eq-cartel{margin:12px 0 0}.eq-cartel img{display:block;width:100%;max-width:420px;margin:0 auto;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.35);background:#fff}';
+    '.eq-cartel{margin:12px 0 0}.eq-cartel img{display:block;width:100%;max-width:420px;margin:0 auto;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.35);background:#fff}'+
+    '.eq-rev-chk{display:flex;gap:10px;align-items:flex-start;margin:12px auto 0;max-width:420px;font-size:14px;cursor:pointer}.eq-rev-chk input{width:20px;height:20px;flex:0 0 auto;margin:2px 0 0}'+
+    '.eq-rev-chk small{display:block;font-size:12.5px;opacity:.8;margin-top:2px}';
   document.head.appendChild(st);
 }
 
@@ -51584,11 +52024,13 @@ GUIAS['p-generar'] = {
   ]
 };
 GUIAS['p-inspec'] = {
+  /* 5/11/2026 · V7.10 · Módulo 5 (Marcelo): las 5 burbujas de «Inspecciones», con las 3 pestañas */
   s: [
-    { sel:"#insp-sector", tit:"Elige tu sector", tx:"Construcción, minería, hidrocarburos o industria. Según lo que elijas cambian los formatos de la lista y la norma en que se basan." },
-    { sel:".sec-tit", tit:"Agrupados por frecuencia", tx:"Van agrupados por frecuencia, lo más seguido primero. Debajo de cada grupo dice cuándo toca: antes de cada trabajo, a diario, cada semana o cada mes." },
-    { sel:".tarj|puntos", tit:"Llena el formato", tx:"Toca uno y marca cada punto C, NC o NA; lo NC pide qué encontraste. Al final firmas y guardas; si quieres, sale el PDF." },
-    { sel:".sub|observación abierta", tit:"Lo NC queda pendiente", tx:"Cada NC queda como observación abierta y aparece aquí como «sin levantar». La cierras con lo que se hizo, quién lo levantó y la foto del después." }
+    { sel:"#ins-tab-equipos", tit:"1. Registra tu equipo una sola vez", tx:"Agrega tu extintor, botiquín (sin serie ni marca), arnés o máquina y elige si su inspección es diaria, semanal o mensual." },
+    { sel:"#ins-tab-equipos", tit:"2. Imprime su cartilla QR (1 o 2 caras)", tx:"Imprime su cartel A4 —con la opción de la tabla de plumón atrás, a doble cara— o su etiqueta para pegar." },
+    { sel:"#ins-tab-qr", tit:"3. Escanea el QR desde el celular", tx:"Apunta con la cámara de la app al QR del equipo para hacer su inspección con fotos y firmas." },
+    { sel:"#ins-qr-leer", tit:"4. Si ya fue inspeccionado, te avisa al instante", tx:"Escanéalo con la cámara del celular: su página dice si está al día, la cinta del mes, cómo usarlo y el historial de los meses anteriores." },
+    { sel:"#ins-tab-listas", tit:"5. Tus listas, al día", tx:"En «Mis listas» ves lo de hoy, de la semana y del mes con «✅ Al día» o «⏳ Falta». Cada inspección queda guardada y sale en el informe del mes." }
   ]
 };
 GUIAS['p-invitar'] = {
@@ -58650,8 +59092,8 @@ function quitarUnaDelDia(i){
    7 familias, para sugerirlos al escribir el puesto de un trabajador. Solo los nombres: lo que exige cada puesto (EPP, EMO,
    cursos) lo dice el Compliance Engine de OBRASST OS con normas verificadas, no esta lista. Igual en la app y en el portal. */
 var PUESTOS_FAMILIAS = [
-  ['Línea SSOMA', ['Gerente SSOMA', 'Jefe SSOMA', 'Coordinador SSOMA', 'Supervisor SST', 'Prevencionista de riesgos', 'Inspector SST']],
-  ['Oficina técnica y dirección', ['Gerente de proyecto', 'Residente de obra', 'Ingeniero de producción', 'Ingeniero de oficina técnica', 'Planner', 'Control documentario', 'Administrador de obra']],
+  ['Línea SSOMA', ['Gerente SSOMA', 'Jefe de SSOMA', 'Coordinador SSOMA', 'Supervisor SST', 'Prevencionista de riesgos', 'Inspector SST']],
+  ['Oficina técnica y dirección', ['Gerente de proyecto', 'Residente de obra', 'Ingeniero de producción', 'Asistente de producción', 'Ingeniero de oficina técnica', 'Planner', 'Control documentario', 'Administrador de obra']],
   ['Línea de campo', ['Maestro de obra', 'Capataz', 'Operario', 'Oficial', 'Peón']],
   ['Alto riesgo', ['Soldador', 'Soldador TIG', 'Oxicortador', 'Esmerilador', 'Electricista', 'Andamiero', 'Operario de trabajos en altura', 'Operario de espacios confinados', 'Operario de excavaciones']],
   ['Equipos y maquinaria', ['Operador de grúa torre', 'Operador de grúa móvil', 'Operador de camión grúa', 'Operador de puente grúa', 'Operador de montacargas', 'Operador de retroexcavadora',
@@ -63545,22 +63987,74 @@ function quitarPuntoDelFormato(clave, idx){
 }
 
 /* ── La lista de formatos, agrupada por cada cuánto se hacen ────────── */
+/* 5/11/2026 · V7.10 · Módulo 4 (Marcelo): «Hoy el usuario entra a "Inspecciones" y ve botones enormes mezclados que
+   confunden. Reemplaza la portada por una barra limpia de 3 pestañas: 📷 1. Escanear QR, 📋 2. Mis listas del día / mes y
+   🏷️ 3. Equipos y cartillas QR». Lo de adentro es lo de siempre (los mismos formatos, la misma inspección): cambia el orden. */
+var LS_INSP_TAB='sstc_insp_tab', INSP_TABS=[['qr', '📷', '1. Escanear QR'], ['listas', '📋', '2. Mis listas del día / mes'], ['equipos', '🏷️', '3. Equipos y cartillas QR']];
+function inspTab(k){ INSPV.tab=k; try{ localStorage.setItem(LS_INSP_TAB, k); }catch(_t){} pintarInspec(); try{ window.scrollTo(0, 0); }catch(_s){} }
+function _inspTabsEstilos(){
+  if($('ins-tabs-css')) return;
+  var st=document.createElement('style'); st.id='ins-tabs-css';
+  st.textContent='.ins-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 16px}'+
+    '.ins-tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border-radius:12px;border:1px solid rgba(var(--w),.16);background:rgba(var(--w),.05);color:inherit;font:inherit;font-size:12.5px;font-weight:700;line-height:1.2;cursor:pointer;text-align:center}'+
+    '.ins-tabs button>span:first-child{font-size:20px}.ins-tabs button.on{background:var(--oro,#F5B700);border-color:var(--oro,#F5B700);color:#0B2A3A}'+
+    '.ins-qr{text-align:center;padding:22px 16px;border-radius:16px;border:1px solid rgba(var(--w),.14);background:rgba(var(--w),.04);margin:0 0 14px}'+
+    '.ins-qr-ic{font-size:56px;line-height:1;margin:0 0 10px}.ins-qr .btn{max-width:340px;margin:0 auto}'+
+    '.ins-gru{margin:18px 0 6px;font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;opacity:.85}'+
+    '.ins-fila{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 12px;margin:0 0 7px;border-radius:12px;border:1px solid rgba(var(--w),.12);background:rgba(var(--w),.04);color:inherit;font:inherit;cursor:pointer}'+
+    '.ins-fila b{display:block;font-size:14.5px}.ins-fila small{display:block;font-size:12.5px;opacity:.78;margin-top:2px}.ins-fila>span:last-child{flex:1;min-width:0}'+
+    '.ins-tag{flex:0 0 auto;font-size:11.5px;font-weight:800;padding:4px 8px;border-radius:999px;white-space:nowrap}.ins-tag.ok{background:rgba(111,208,140,.18);color:var(--ok,#6FD08C)}'+
+    '.ins-tag.falta{background:rgba(245,183,0,.18);color:var(--oro,#F5B700)}';
+  document.head.appendChild(st);
+}
 function pintarInspec(){
   var c=$('inspec-cuerpo'); if(!c) return;
+  _inspTabsEstilos();
+  if(!INSPV.tab){ try{ INSPV.tab=localStorage.getItem(LS_INSP_TAB) || ''; }catch(_t){} }
+  if(!INSP_TABS.some(function(t){ return t[0]===INSPV.tab; })) INSPV.tab='qr';
+  var h='<div class="ins-tabs" role="tablist" aria-label="Inspecciones">'+INSP_TABS.map(function(t){ var on=INSPV.tab===t[0];
+    return '<button type="button" role="tab" id="ins-tab-'+t[0]+'" aria-selected="'+on+'" class="'+(on ? 'on' : '')+'" onclick="inspTab(\''+t[0]+'\')"><span aria-hidden="true">'+t[1]+'</span><span>'+esc(t[2])+'</span></button>'; }).join('')+'</div>';
+  if(INSPV.tab==='qr') h+=_inspTabQR();
+  else if(INSPV.tab==='equipos') h+=_inspTabEquipos();
+  else h+=_inspTabListas();
+  c.innerHTML=h;
+}
+/* 📷 1 · un solo botón: el QR del equipo → su ficha (al día y su historial) o su inspección */
+function _inspTabQR(){
+  return '<div class="ins-qr"><div class="ins-qr-ic" aria-hidden="true">📷</div>'+
+    '<h2 style="margin:0 0 6px">Escanea el QR del equipo</h2>'+
+    '<p class="sub" style="margin:0 auto 16px;max-width:30em">Apunta al sticker del extintor, botiquín, arnés o máquina. Si ya se inspeccionó este mes, ves su ficha al día y el historial de los meses anteriores; si no, entras a su inspección.</p>'+
+    '<button type="button" class="btn" id="ins-qr-leer" onclick="inspLeerQR()">📷 Escanear el QR</button></div>'+
+    '<button type="button" class="tarj vidrio" id="ins-papel" onclick="inspPapel()"><b>📷 La hice en papel: escanear la hoja</b>'+
+    '<small>Queda en Documentos y cuenta como inspección hecha, aquí y en la web</small></button>';
+}
+function inspLeerQR(){
+  if(typeof asisLector!=='function' || !lectorQrHay()){
+    aviso('Este celular no lee QR desde la app', 'Escanea la etiqueta con la cámara del celular: se abre su página y ahí tocas «Inspeccionarlo en OBRASST».', '📷');
+    return;
+  }
+  asisLector({ titulo:'Apunta al QR del equipo', pie:'Un equipo a la vez: su ficha se abre sola.', seguir:true,
+    sinCamara:'Escanea la etiqueta con la cámara del celular: se abre su página y ahí tocas «Inspeccionarlo en OBRASST».',
+    alLeer:function(txt){
+      var t=(typeof eqTokenDeTexto==='function') ? eqTokenDeTexto(txt) : '';
+      if(!t) return 'Ese QR no es de un equipo de OBRASST.';
+      setTimeout(function(){ try{ asisLectorCerrar(); }catch(_c){} inspAbrirToken(t); }, 150);
+      return '✓';
+    } });
+}
+function inspAbrirToken(tk){
+  if(typeof iqSoyTrab==='function' && iqSoyTrab()){ iqAbrirToken(tk); return; }
+  if(soloConCodigo('Los QR de equipos y herramientas','equipos')) return;
+  EQ.pendTok=tk; ir('p-equipos');
+}
+/* 📋 2 · lo que haces, por cuándo toca, con «✅ Al día» o «⏳ Falta»; los formatos, debajo */
+function _inspTabListas(){
   var sec=sectorInspec(), cat=INSP_CAT[sec], abiertos=hallazgosAbiertos(), hechas=inspecGuardadas();
-  var h='<h2>✅ Inspecciones</h2>';
-  h+='<p class="sub">Formatos técnicos de campo. Cada punto se marca <b>C</b>, <b>NC</b> o <b>NA</b>; lo que salga NC queda como observación abierta hasta que la levantes.</p>';
-  /* 17/10/2026 · lote 15 · Marcelo: «mejora el tema de inspecciones, más ordenado y fácil de entrar». Arriba lo que
-     espera por ti (lo que falta levantar, lo guardado) y la hoja de papel; después el buscador y «Las que haces», con
-     lo que te toca según su frecuencia; los equipos y los formatos de tu empresa; y la lista entera al final, plegada
-     por frecuencia. El sector, abajo: se elige una vez. */
-  h+='<div class="ins-res">'+
+  var h='<div class="ins-res">'+
      '<button type="button" class="ins-t'+(abiertos?' mal':' ok')+'" id="ins-t-lev" onclick="ir(\'p-inspec-hallaz\')"><b data-sin-trad>'+abiertos+'</b>'+
        '<span>'+(abiertos===1?'observación por levantar':'observaciones por levantar')+'</span></button>'+
      '<button type="button" class="ins-t" id="ins-t-hechas" onclick="ir(\'p-inspec-hechas\')"><b data-sin-trad>'+hechas.length+'</b>'+
        '<span>'+(hechas.length===1?'inspección guardada':'inspecciones guardadas')+'</span></button></div>';
-  h+='<button type="button" class="tarj vidrio" id="ins-papel" onclick="inspPapel()"><b>📷 La hice en papel: escanear la hoja</b>'+
-     '<small>Queda en Documentos y cuenta como inspección hecha, aquí y en la web</small></button>';
   h+='<div class="cart-busca" style="margin-top:14px"><span>🔎</span><input id="ins-q" placeholder="Buscar un formato: andamio, extintor, eléctrico…" '+
      'autocomplete="off" value="'+escA(INSPV.q)+'" oninput="inspBuscar(this.value)"></div>';
   h+='<div id="ins-lista">'+_inspListaHTML()+'</div>';
@@ -63569,7 +64063,25 @@ function pintarInspec(){
     if(!INSP_CAT[k]) return;
     h+='<option value="'+escA(k)+'"'+(k===sec?' selected':'')+'>'+esc(INSP_CAT[k].n)+'</option>'; });
   h+='</select><p class="sub" style="margin:6px 0 0;font-size:12.5px">'+esc(cat.norma)+'</p></div>';
-  c.innerHTML=h;
+  return h;
+}
+/* una fila de «Mis listas»: su etiqueta, su nombre, cuándo toca y la última */
+function _inspFilaHTML(t, est, ult){
+  var falta=!est || est.k==='toca';
+  return '<button type="button" class="ins-fila" data-k="'+escA(t.k)+'" onclick="abrirInspec(\''+escA(t.k)+'\')">'+
+    '<span class="ins-tag '+(falta ? 'falta' : 'ok')+'">'+(falta ? '⏳ Falta' : '✅ Al día')+'</span>'+
+    '<span><b>'+esc(t.n)+'</b><small>'+(FREQ_IC[t.f]||'')+' <span>'+esc(FREQ_N[t.f]||'')+'</span>'+
+    (ult ? ' · <span>Última:</span> <span data-sin-trad>'+esc(String(ult).slice(8,10)+'/'+String(ult).slice(5,7))+'</span>' : '')+'</small></span></button>';
+}
+/* 🏷️ 3 · el padrón de equipos: registrar, su etiqueta, su cartilla A4 (a 1 o 2 caras) y la inspección diaria con QR */
+function _inspTabEquipos(){
+  var n=((EQ && EQ.lista) || []).filter(function(x){ return x && x.estado!=='baja'; }).length;
+  var h='<button class="tarj vidrio" id="insp-equipos" onclick="eqIr()"><b><span>🏷️ Equipos y herramientas con QR</span>'+(n ? ' · <span data-sin-trad>'+n+'</span>' : '')+'</b>'+
+     '<small>El padrón: extintores, botiquines, arneses, tableros y máquinas. Agrega uno nuevo, imprime su etiqueta y su cartilla A4 (a una o a dos caras) y mira quién está al día</small></button>';
+  try{ if(typeof iqPuertaInspec==='function') h+=iqPuertaInspec(); }catch(_iq){}
+  h+='<div class="caja vidrio" style="padding:14px 15px;margin-top:12px"><b>La cartilla A4 a doble cara</b>'+
+     '<p class="sub" style="margin:6px 0 0;font-size:13px">Abre el equipo en la lista y toca «Cartel con su QR». Del extintor y del botiquín, marca «Incluir reverso en Hoja 2»: sale un PDF de 2 páginas A4, la del QR y la de los 12 meses para marcar con plumón.</p></div>';
+  return h;
 }
 var INSPV={ q:'' };
 function inspBuscar(v){ INSPV.q=String(v||''); var l=$('ins-lista'); if(l) l.innerHTML=_inspListaHTML(); }
@@ -63614,7 +64126,7 @@ function _inspMias(sec, cat){
   });
   var L=Object.keys(porK).map(function(k){ var x=porK[k]; x.est=inspEstado(x.t.f, x.ult, hoy); return x; });
   L.sort(function(a, b){ var ta=(a.est && a.est.k==='toca')?0:1, tb=(b.est && b.est.k==='toca')?0:1; return ta-tb || String(b.ult).localeCompare(String(a.ult)); });
-  return L.slice(0, 8);
+  return L.slice(0, 30);
 }
 function _inspListaHTML(){
   var sec=sectorInspec(), cat=INSP_CAT[sec], h='', q=_insN(INSPV.q);
@@ -63629,16 +64141,21 @@ function _inspListaHTML(){
     return h;
   }
   var mias=_inspMias(sec, cat), vistos={};
+  /* V7.10 · «Mis listas del día / mes»: para hacer hoy (diarias), de esta semana, de este mes y más adelante */
   if(mias.length){
-    h+='<div class="sec-tit" style="margin-top:20px">Las que haces</div>';
-    h+='<p class="sub" style="margin:-6px 0 9px;font-size:12.5px">Las que se llenaron en los últimos meses, aquí o en el equipo. Primero lo que te toca, según su frecuencia.</p>';
-    mias.forEach(function(m){ vistos[m.t.k]=1; h+=_inspBotonHTML(m.t, m.est); });
+    var GR=[['Para hacer hoy (diarias)', function(f){ return f==='diaria'; }], ['De esta semana', function(f){ return f==='semanal'; }],
+            ['De este mes', function(f){ return f==='mensual'; }], ['Más adelante', function(f){ return ['diaria','semanal','mensual'].indexOf(f)<0; }]];
+    GR.forEach(function(G){
+      var l=mias.filter(function(m){ return G[1](m.t.f); }); if(!l.length) return;
+      h+='<div class="ins-gru">'+esc(G[0])+'</div>';
+      l.forEach(function(m){ vistos[m.t.k]=1; h+=_inspFilaHTML(m.t, m.est, m.ult); });
+    });
+    h+='<p class="sub" style="margin:4px 0 0;font-size:12.5px">Las que se llenaron en los últimos meses, aquí o en el equipo.</p>';
+  } else {
+    h+='<div class="caja vidrio" style="padding:14px 15px;margin-top:14px"><b>Tus listas salen aquí</b>'+
+       '<p class="sub" style="margin:6px 0 0;font-size:13px">Llena una inspección de abajo y aparece en su lista (del día, de la semana o del mes), con «✅ Al día» o «⏳ Falta».</p></div>';
   }
-  h+='<div class="sec-tit" style="margin-top:20px">Equipos</div>';
-  h+='<button class="tarj vidrio" id="insp-equipos" onclick="eqIr()"><b>🏷️ Equipos y herramientas con QR</b>'+
-     '<small>La etiqueta de cada uno, la cinta del mes y quién está al día</small></button>';
-  try{ if(typeof iqPuertaInspec==='function') h+=iqPuertaInspec(); }catch(_iq){}
-  try{ if(typeof inspPropiasHtml==='function') h+=inspPropiasHtml(); }catch(_ip){}
+  try{ if(typeof inspPropiasHtml==='function' && INSPV.tab!=='equipos') h+=inspPropiasHtml(); }catch(_ip){}
   /* todos los formatos de la app, por frecuencia y plegados (abiertos si todavía no hay «Las que haces») */
   var porFreq={}, total=0;
   cat.i.forEach(function(t){ if(t.oculto) return; (porFreq[t.f]=porFreq[t.f]||[]).push(t); total++; });
@@ -93778,7 +94295,7 @@ function _esc2DocNuevo(){ return { nombre:_esc2NombreAuto(), creado:Date.now(), 
 function _esc2Cambio(){
   ESC2.pdf = null;
   if(ESC2.panel === 'pdf') ESC2.panel = null;
-  if(!ESC2.pedido && ESC2.doc) ESC2.doc.guardado = null;
+  if(!ESC2.pedido && ESC2.doc){ ESC2.doc.guardado = null; ESC2.doc.entregado = 0; ESC2.doc.viejo = false; }
 }
 
 /* ══ EL WORKER ═════════════════════════════════════════════════════
@@ -93913,8 +94430,11 @@ function _esc2Guardar(){
   _E2_GUARDAR_T = setTimeout(function(){
     var d = ESC2.doc;
     if(!d || !d.pags.length){ _esc2Put('meta', 'doc', null); return; }
+    /* 5/11/2026 · V7.10 · Marcelo: «que al terminar o descartar un documento de 1 hoja nunca se quede pegado el documento
+       anterior». Se anota también si ya se guardó en Documentos o se compartió: antes no, y al volver a abrir la app ese
+       documento aparecía como «a medio hacer» y las hojas nuevas se le sumaban. */
     _esc2Put('meta', 'doc', {
-      nombre:d.nombre, creado:d.creado,
+      nombre:d.nombre, creado:d.creado, guardado:d.guardado || '', entregado:d.entregado || 0,
       pags:d.pags.map(function(p){
         return { id:p.id, sw:p.sw, sh:p.sh, q:p.q, qAuto:p.qAuto, giro:p.giro, filtro:p.filtro,
                  ow:p.ow || 0, oh:p.oh || 0, mini:p.mini || '', hecho:p.hecho || '', conf:p.conf || 0 };
@@ -93932,7 +94452,9 @@ function _esc2Recuperar(){
     ESC2.cargado = true;
     if(!m || !m.pags || !m.pags.length){ if(!ESC2.doc) ESC2.doc = null; return ESC2.doc; }
     if(ESC2.doc && ESC2.doc.pags.length) return ESC2.doc;
-    ESC2.doc = { nombre:m.nombre || _esc2NombreAuto(), creado:m.creado || Date.now(), pags:[] };
+    /* V7.10 · ya está en Documentos: el escáner empieza en blanco (y se borran sus hojas del celular) */
+    if(m.guardado){ m.pags.forEach(function(pm){ _esc2BorrarBlobs(pm); }); _esc2Put('meta', 'doc', null); if(!ESC2.doc) ESC2.doc = null; return ESC2.doc; }
+    ESC2.doc = { nombre:m.nombre || _esc2NombreAuto(), creado:m.creado || Date.now(), pags:[], viejo:true, entregado:m.entregado || 0 };
     return Promise.all(m.pags.map(function(pm){
       return Promise.all([_esc2Get('blob', pm.id + ':src'), _esc2Get('blob', pm.id + ':out')]).then(function(b){
         if(!b[0]) return null;
@@ -94149,6 +94671,11 @@ function _esc2Estilos(){
     '.esc2-todas input{width:18px;height:18px;accent-color:#F5B700;margin:0}',
     /* el documento, dentro de la app (sigue el tema claro/oscuro) */
     '.e2d-cab{display:flex;align-items:center;gap:10px;margin:2px 0 14px}',
+    /* 5/11/2026 · V7.10 · la barra de decisión después de cada hoja: terminar, sumar otra o empezar aparte */
+    '.e2d-decide{background:#0f172a;border:1px solid rgba(56,189,248,.35);border-radius:14px;padding:14px;margin:0 0 14px;display:flex;flex-direction:column;gap:8px}',
+    '.e2d-decide .t{margin:0;font-size:13.5px;font-weight:800;text-align:center;color:#7DD3FC}',
+    '.e2d-decide .btn{margin:0}.e2d-decide .dos{display:grid;grid-template-columns:1fr 1fr;gap:8px}.e2d-decide .dos .btn{font-size:13px;padding:10px 8px}',
+    '.e2d-decide .e2d-otro{border-color:rgba(244,63,94,.55);color:#FECDD3}',
     '.e2d-nom{flex:1;min-width:0;text-align:left;border:0;background:transparent;color:var(--tinta);padding:4px 0;font:inherit;cursor:pointer}',
     '.e2d-nom b{display:block;font-size:19px;line-height:1.25;word-break:break-word}',
     '.e2d-nom small{display:block;color:var(--gris);font-size:13px;margin-top:2px}',
@@ -95309,6 +95836,8 @@ function esc2Desde(modo){
   _esc2Estilos(); _esc2Dom();
   var seguir = function(){
     if(ESC2.doc && ESC2.doc.guardado){ _esc2Vaciar(); }
+    /* V7.10 · hay uno sin guardar: se ve con su barra (terminar, sumar o empezar aparte), no se le suman hojas a ciegas */
+    if(ESC2.doc && ESC2.doc.pags.length){ ir('p-scan'); return; }
     ir('p-scan');
     /* vino de Documentos a guardar una hoja: al terminar, el panel de
        guardar ya abierto (es a lo que vino) */
@@ -95395,6 +95924,16 @@ function _pintarScan(c){
          '<p class="sub" style="margin:6px 0 10px">Quedó en la carpeta de la obra. Si agregas o cambias hojas, guárdalo otra vez.</p>' +
          '<div class="dos"><button class="btn sec" style="margin:0" onclick="ir(\'p-escaneos\')">📁 Ver en Documentos</button>' +
          '<button class="btn" style="margin:0" onclick="esc2Nuevo()">📷 Escanear otro</button></div></div>';
+  }
+  /* 5/11/2026 · V7.10 · Marcelo: «nunca se quede pegado el documento anterior»: después de cada hoja, tres salidas claras */
+  if(!D.guardado && !ESC2.ordenar && ESC2.panel !== 'guardar'){
+    h += '<div class="e2d-decide" id="e2d-decide"><p class="t">' +
+         (D.viejo ? '<span>📄 Tienes un documento sin guardar</span> · <span data-sin-trad>' + esc(_esc2FechaCorta(D.creado)) + '</span> · <b data-sin-trad>' + n + '</b> <span>' + (n === 1 ? 'hoja' : 'hojas') + '</span>'
+                  : '<span>📄 Llevas</span> <b data-sin-trad>' + n + '</b> <span>' + (n === 1 ? 'hoja escaneada' : 'hojas en este documento') + '</span>') +
+         (D.entregado ? '<br><span>Ya lo compartiste, pero no está guardado en Documentos.</span>' : '') + '</p>' +
+         '<button type="button" class="btn" onclick="esc2Panel(\'guardar\')"><span>✅ Terminar y guardar este PDF</span> <span data-sin-trad>(' + n + ')</span></button>' +
+         '<div class="dos"><button type="button" class="btn sec" onclick="esc2Añadir()">➕ Añadir otra hoja a este mismo PDF</button>' +
+         '<button type="button" class="btn sec e2d-otro" onclick="esc2Aparte()">🔄 Descartar y escanear documento aparte</button></div></div>';
   }
   if(ESC2.ordenar) h += '<p class="sub" style="margin:-4px 0 12px">Mueve cada hoja con las flechas. Toca «Listo» cuando quede en orden.</p>';
   h += '<div class="e2d-rej">';
@@ -95561,6 +96100,23 @@ function esc2Nuevo(){
     return;
   }
   hacer();
+}
+/* V7.10 · «🔄 Descartar y escanear documento aparte»: limpia el escáner sin salir de él y abre la cámara en blanco.
+   Con una hoja, de una (es lo que se pidió); con más, se pregunta antes: no se pierden hojas por un toque. */
+function esc2Aparte(){
+  var D = ESC2.doc;
+  var hacer = function(){ _esc2Vaciar(); ESC2.pdf = null; pintarScan(); esc2Abrir('una'); };
+  if(D && D.pags.length > 1 && !D.guardado && !D.entregado){
+    confirmar('¿Descartar este documento?', 'Se borran sus ' + D.pags.length + ' hojas del escáner y empiezas uno aparte. Si lo necesitas, guárdalo primero.',
+              hacer, { si:'Sí, descartar', no:'Cancelar', icono:'🔄' });
+    return;
+  }
+  hacer();
+}
+/* V7.10 · al entrar al escáner: lo ya guardado en Documentos no se queda; el escáner empieza en blanco */
+function _esc2AlEntrar(){
+  if(ESC2.pedido) return;
+  if(ESC2.doc && ESC2.doc.guardado) _esc2Vaciar();
 }
 function esc2Botar(){
   var D = ESC2.doc; if(!D) return;
@@ -95808,7 +96364,7 @@ function esc2CompartirYa(){
     return;
   }
   var f = new File([r.blob], r.nombre, { type:'application/pdf' });
-  navigator.share({ files:[f], title:r.nombre }).catch(function(e){
+  navigator.share({ files:[f], title:r.nombre }).then(function(){ if(ESC2.doc && !ESC2.pedido){ ESC2.doc.entregado = Date.now(); _esc2Guardar(); } }, function(e){
     if(e && e.name === 'NotAllowedError'){ ESC2.panel = 'pdf'; pintarScan(); }
   });
 }
@@ -95820,6 +96376,7 @@ function esc2Descargar(){
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       setTimeout(function(){ try{ URL.revokeObjectURL(u); }catch(e){} }, 5000);
       if(typeof tostada === 'function') tostada(_esc2T('Descargado: ' + r.nombre));
+      if(ESC2.doc && !ESC2.pedido){ ESC2.doc.entregado = Date.now(); _esc2Guardar(); }
     }catch(e){}
   };
   if(ESC2.pdf){ go(ESC2.pdf); return; }
@@ -98207,10 +98764,13 @@ function freLimpio(o, idSi){
   var n = freTxt(o.n, 60), vistos = {}; vistos[freNorm(n)] = 1;
   var antes = (Array.isArray(o.antes) ? o.antes : []).map(function(x){ return freTxt(x, 60); })
     .filter(function(x){ var k = freNorm(x); if(!k || vistos[k]) return false; vistos[k] = 1; return true; }).slice(0, 5);
-  return { v:1, id:/^f-[a-z0-9]{4,16}$/.test(String(o.id || '')) ? String(o.id) : (idSi || freNuevoId()),
+  var out = { v:1, id:/^f-[a-z0-9]{4,16}$/.test(String(o.id || '')) ? String(o.id) : (idSi || freNuevoId()),
            n:n, antes:antes, ref:freTxt(o.ref, 140), dep:freTxt(o.dep, 40), dist:freTxt(o.dist, 60),
            resp:freTxt(o.resp, 80), cargo:freTxt(o.cargo, 60), tel:freTel(o.tel), punto:freTxt(o.punto, 140), nums:nums,
            al:/^\d{4}-\d{2}-\d{2}$/.test(String(o.al || '')) ? String(o.al) : '', por:freTxt(o.por, 80) };
+  /* 5/11/2026 · V7.10 · el GPS del frente (opcional): solo si está bien */
+  var gps = freGpsLimpio(o.gps); if(gps) out.gps = gps;
+  return out;
 }
 /* lo que va en la fila de sst_doc: sin los datos de la fila (_fila, _creado) */
 function freNota(f){ var o = freLimpio(f); return JSON.stringify(o); }
@@ -98362,9 +98922,67 @@ function frePaquete(frentes, docs, brig, trabs){
       var g = t ? freDeTrab(t, frentes) : null;
       return !!(g && g.id === f.id);
     }).map(function(p){ var o = { n:p.n, c:p.c || '', tel:p.tel || '', roles:p.roles || [] }; if(p.f) o.f = p.f; return o; });
-    return { id:f.id, n:f.n, ref:f.ref, dep:f.dep, dist:f.dist, punto:f.punto,
-             resp:f.resp ? { n:f.resp, cargo:f.cargo, tel:f.tel } : null, nums:f.nums, docs:d, brig:b };
+    var o = { id:f.id, n:f.n, ref:f.ref, dep:f.dep, dist:f.dist, punto:f.punto,
+              resp:f.resp ? { n:f.resp, cargo:f.cargo, tel:f.tel } : null, nums:f.nums, docs:d, brig:b };
+    /* 5/11/2026 · V7.10 · el GPS del frente (dónde está, su radio y su horario), para el celular de quien dio su permiso */
+    if(f.gps) o.g = f.gps;
+    return o;
   });
+}
+/* ══ 5/11/2026 · V7.10 · Módulo 3 · EL FRENTE DE HOY POR GPS ══════════════════════════════════════════════════════════
+   Marcelo: «el GPS del celular solo actualiza el frente de trabajo del obrero cuando está dentro del horario laboral
+   activo… si pasa a las 17:20 caminando frente al Frente Sur rumbo a la calle, el sistema ignora el cambio y conserva su
+   frente real del día» y «sí, con consentimiento». Cada frente puede tener dónde está (lat, lng), su radio en metros y su
+   horario (ingreso, salida y refrigerio). El celular del trabajador que dio su permiso, con la app abierta, sabe en qué
+   frente está: el más cercano que lo tiene dentro de su radio, solo en su horario. En el celular queda el frente de hoy;
+   no se guardan ni se mandan su recorrido ni sus coordenadas. */
+var FRE_GPS_R = 80;
+function _freHora(v, def){ var m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(v || '').trim()); return m ? (m[1].length < 2 ? '0' + m[1] : m[1]) + ':' + m[2] : def; }
+function freGpsLimpio(g){
+  if(!g || typeof g !== 'object') return null;
+  var lat = +g.lat, lng = +g.lng;
+  if(g.lat === '' || g.lng === '' || g.lat == null || g.lng == null || !isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) return null;
+  var r = Math.round(+g.r || 80); r = Math.max(20, Math.min(2000, r));
+  return { lat:Math.round(lat * 1e6) / 1e6, lng:Math.round(lng * 1e6) / 1e6, r:r,
+           ini:_freHora(g.ini, '07:30'), fin:_freHora(g.fin, '17:00'), ai:_freHora(g.ai, '12:30'), af:_freHora(g.af, '13:30') };
+}
+/* «-12.046374, -77.042793» (lo que se copia de Google Maps) */
+function freGpsDeTexto(s){ var m = /(-?\d{1,2}(?:\.\d+)?)\s*[,;]?\s+(-?\d{1,3}(?:\.\d+)?)|(-?\d{1,2}(?:\.\d+)?)\s*[,;]\s*(-?\d{1,3}(?:\.\d+)?)/.exec(String(s || '').trim());
+  if(!m) return null; return freGpsLimpio({ lat:m[1] || m[3], lng:m[2] || m[4] }); }
+function freDistM(lat1, lng1, lat2, lng2){
+  var R = 6371000, rad = Math.PI / 180, dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function _freMin(hhmm){ var p = String(hhmm || '').split(':'); return (+p[0] || 0) * 60 + (+p[1] || 0); }
+/* ¿es horario de trabajo en ese frente? De su ingreso a su salida, sin su refrigerio */
+function freEnHorario(g, d){
+  g = freGpsLimpio(g); if(!g) return { si:false, motivo:'sin_gps' };
+  d = d || new Date();
+  var m = d.getHours() * 60 + d.getMinutes(), a = _freMin(g.ini), b = _freMin(g.fin), ai = _freMin(g.ai), af = _freMin(g.af);
+  if(m < a) return { si:false, motivo:'antes' };
+  if(m >= b) return { si:false, motivo:'salida' };
+  if(af > ai && m >= ai && m < af) return { si:false, motivo:'refrigerio' };
+  return { si:true, motivo:'' };
+}
+/* el frente donde está: el más cercano que lo tiene dentro de su radio y está en su horario. Dentro de uno pero fuera de
+   su horario, nada cambia (motivo: antes, salida o refrigerio); lejos de todos, tampoco (motivo: lejos). actual: el id
+   de su frente de hoy; si ese ya salió o está en su refrigerio, nada cambia aunque pase por otro que sigue trabajando
+   (el ejemplo de Marcelo: a las 17:20, caminando frente al Frente Sur rumbo a la calle) */
+function freDetectar(lat, lng, frentes, d, actual){
+  var mejor = null, dm = Infinity, fuera = '';
+  if(actual){
+    var fa = (frentes || []).filter(function(f){ return f && f.id === actual; })[0], ga = fa ? freGpsLimpio(fa.gps || fa.g) : null;
+    var ha = ga ? freEnHorario(ga, d) : null;
+    if(ha && !ha.si && ha.motivo !== 'antes') return { f:null, dist:null, motivo:ha.motivo };
+  }
+  (frentes || []).forEach(function(f){
+    var g = f ? freGpsLimpio(f.gps || f.g) : null; if(!g) return;
+    var x = freDistM(lat, lng, g.lat, g.lng); if(x > g.r) return;
+    var h = freEnHorario(g, d); if(!h.si){ if(!fuera) fuera = h.motivo; return; }
+    if(x < dm){ dm = x; mejor = f; }
+  });
+  return mejor ? { f:mejor, dist:Math.round(dm), motivo:'' } : { f:null, dist:null, motivo:fuera || 'lejos' };
 }
 /* ── la ficha del frente, en una hoja A4 para la caseta del frente: el proyecto y el frente arriba, dónde está, su
    responsable, su punto de reunión, a quién llamar (lo del frente y lo de la obra), sus brigadistas y sus documentos
@@ -98493,7 +99111,9 @@ function freTraer(){
   return p;
 }
 function _freVer(){ var id = FRE.ver, hit = null; freLista().forEach(function(f){ if(f.id === id) hit = f; }); return hit; }
-function _freMsg(t, cl){ FRE.msg = t || ''; FRE.msgCl = cl || ''; var m = $('fre-msg'); if(m){ m.textContent = FRE.msg; m.className = 'fre-msg ' + FRE.msgCl; } }
+/* 5/11/2026 · el aviso va a la pantalla que se ve: el frente (y su formulario) tiene el suyo, fre1-msg; antes caía en el
+   de la lista, escondido, y en el formulario no se veía «Ponle un nombre al frente» ni «Guardando…» */
+function _freMsg(t, cl){ FRE.msg = t || ''; FRE.msgCl = cl || ''; var m = $(_frePant() === 'p-frente' ? 'fre1-msg' : 'fre-msg'); if(m){ m.textContent = FRE.msg; m.className = 'fre-msg ' + FRE.msgCl; } }
 /* quiénes están hoy en ese frente (activos, por el frente de su ficha) */
 function freGenteHoy(f){
   var hoy = hoyISO(), L = freLista();
@@ -98634,12 +99254,19 @@ function pintarFrente(){
     h += '<div class="tarj vidrio fre-dato" style="display:block"><b>🧯 <span>Brigadistas en este frente</span></b><ul class="fre-ul">' +
       paq.brig.map(function(b){ return '<li><span data-sin-trad>' + esc(b.n) + '</span>' + (b.c ? ' · <span data-sin-trad>' + esc(b.c) + '</span>' : '') + '</li>'; }).join('') + '</ul></div>';
   }else h += '<p class="sub" style="margin:4px 0 0">Ningún brigadista está hoy en este frente.</p>';
+  /* 5/11/2026 · V7.10 · su GPS (lo que se configuró; nada de los trabajadores) */
+  var gF = freGpsLimpio(f.gps);
+  h += gF ? '<div class="tarj vidrio fre-dato"><span class="ic" aria-hidden="true">📍</span><span class="tx"><small>GPS del frente</small><b><span>Radio de</span> <span data-sin-trad>' + gF.r + ' m</span></b>' +
+      '<small><span>Ingreso</span> <span data-sin-trad>' + esc(gF.ini) + '</span> · <span>salida</span> <span data-sin-trad>' + esc(gF.fin) + '</span>' +
+      (_freMin(gF.af) > _freMin(gF.ai) ? ' · <span>refrigerio</span> <span data-sin-trad>' + esc(gF.ai + '–' + gF.af) + '</span>' : '') + '</small>' +
+      '<small>Con su permiso, la app de cada trabajador marca este frente si está aquí en ese horario. No guarda su recorrido.</small></span></div>'
+    : '<p class="sub" style="margin:8px 0 0">📍 Sin GPS: cada uno elige su frente a mano en «¿A quién acudo?». Ponlo en «Editar el frente».</p>';
   h += '<div class="sec-tit" style="margin-top:22px">Para la caseta del frente</div>' +
     '<button class="btn" onclick="freFicha(\'compartir\')">📄 <span>Ficha del frente en PDF</span></button>' +
     '<p class="sub" style="margin:6px 0 0">Una hoja con el proyecto y el frente, el punto de reunión, a quién llamar, sus brigadistas y sus documentos. Para imprimirla y dejarla a la vista.</p>' +
     '<button class="btn sec" style="margin-top:12px" onclick="quienesPublicar()">📣 <span>Publicar en «¿A quién acudo?»</span></button>' +
     '<button class="btn sec" style="margin-top:22px;color:var(--mal)" onclick="freQuitar()">Quitar este frente</button>';
-  h += '<div class="fre-msg ' + esc(FRE.msgCl) + '" id="fre-msg" role="status">' + esc(FRE.msg) + '</div>';
+  h += '<div class="fre-msg ' + esc(FRE.msgCl) + '" id="fre1-msg" role="status">' + esc(FRE.msg) + '</div>';
   c.innerHTML = h;
 }
 /* el formulario (uno nuevo o editar) */
@@ -98673,7 +99300,8 @@ function _freFormHTML(f){
       '<div><label for="fre-nn-' + i + '">Número</label><input id="fre-nn-' + i + '" type="tel" inputmode="tel" maxlength="22" autocomplete="off" value="' + escA(x.tel) + '"></div></div>';
   });
   if(nums.length < FRE_NUM_MAX) h += '<button type="button" class="btn sec" style="margin:4px 0 0" onclick="freMasNumero()">➕ <span>Otro número</span></button>';
-  h += '<div class="fre-msg ' + esc(FRE.msgCl) + '" id="fre-msg" role="status">' + esc(FRE.msg) + '</div>' +
+  h += _freGpsFormHTML(f);
+  h += '<div class="fre-msg ' + esc(FRE.msgCl) + '" id="fre1-msg" role="status">' + esc(FRE.msg) + '</div>' +
     '<button class="btn" style="margin-top:16px" onclick="freGuardar()">' + (f._nuevo ? 'Agregar el frente' : 'Guardar') + '</button>' +
     '<button class="btn sec" style="margin-top:9px" onclick="freCancelar()">Cancelar</button>';
   return h;
@@ -98686,7 +99314,44 @@ function _freLeerForm(){
   var nums = [];
   for(var i = 0; i < FRE_NUM_MAX; i++){ if($('fre-nt-' + i)) nums.push({ t:v('fre-nt-' + i), tel:v('fre-nn-' + i) }); }
   f.nums = nums;
+  /* 5/11/2026 · V7.10 · el GPS del frente, como está escrito (se lee bien al guardar) */
+  if($('fre-gps')){ f._gpsTx = v('fre-gps'); f._gpsF = { r:v('fre-gr'), ini:v('fre-gi'), fin:v('fre-gf'), ai:v('fre-gai'), af:v('fre-gaf') }; }
   return f;
+}
+/* 5/11/2026 · V7.10 · Módulo 3 · el GPS del frente en el formulario: dónde está (de Google Maps, o «Usar dónde estoy»
+   parado en el frente), su radio y su horario. Sin coordenadas, el frente queda sin GPS */
+function _freGpsFormHTML(f){
+  var g = freGpsLimpio(f.gps) || {}, x = f._gpsF || g;
+  var tx = (f._gpsTx != null) ? f._gpsTx : (g.lat != null ? g.lat + ', ' + g.lng : '');
+  return '<div class="sec-tit" style="margin-top:16px">📍 <span>El GPS del frente</span> <span class="sub">· <span>opcional</span></span></div>' +
+    '<p class="sub" style="margin:0 0 6px">Con esto, el celular de cada trabajador que dé su permiso marca su frente de hoy, solo dentro del horario. No se guarda su recorrido ni dónde está.</p>' +
+    '<button type="button" class="btn sec" style="margin:4px 0 0" onclick="freGpsAqui()">📍 <span>Usar dónde estoy ahora</span></button>' +
+    '<label for="fre-gps">Coordenadas <span class="sub">· <span>o cópialas de Google Maps</span></span></label><input id="fre-gps" maxlength="60" autocomplete="off" inputmode="decimal" placeholder="-12.046374, -77.042793" value="' + escA(tx) + '">' +
+    '<div class="dos"><div><label for="fre-gr">Radio (metros)</label><input id="fre-gr" type="number" inputmode="numeric" min="20" max="2000" step="10" value="' + escA(x.r || FRE_GPS_R) + '"></div><div></div></div>' +
+    '<div class="dos"><div><label for="fre-gi">Ingreso</label><input id="fre-gi" type="time" value="' + escA(x.ini || '07:30') + '"></div>' +
+    '<div><label for="fre-gf">Salida</label><input id="fre-gf" type="time" value="' + escA(x.fin || '17:00') + '"></div></div>' +
+    '<div class="dos"><div><label for="fre-gai">Refrigerio, desde</label><input id="fre-gai" type="time" value="' + escA(x.ai || '12:30') + '"></div>' +
+    '<div><label for="fre-gaf">Refrigerio, hasta</label><input id="fre-gaf" type="time" value="' + escA(x.af || '13:30') + '"></div></div>' +
+    '<p class="sub" style="margin:6px 0 0">Fuera de ese horario el GPS no cambia el frente de nadie. Sin coordenadas, cada uno elige su frente a mano.</p>';
+}
+/* el supervisor, parado en el frente: su ubicación de ahora va a las coordenadas del frente (no se guarda en otro lado) */
+function freGpsAqui(){
+  var f = _freLeerForm(); if(!f) return;
+  if(!(navigator.geolocation && navigator.geolocation.getCurrentPosition)){ _freMsg('Este celular no da su ubicación. Copia las coordenadas de Google Maps.', 'mal'); return; }
+  _freMsg('Viendo dónde estás…', '');
+  navigator.geolocation.getCurrentPosition(function(p){
+    if(!FRE.ed) return;
+    var g = freGpsLimpio({ lat:p.coords.latitude, lng:p.coords.longitude }), acc = Math.round(p.coords.accuracy || 0);
+    if(!g){ _freMsg('No se pudo leer tu ubicación. Inténtalo otra vez.', 'mal'); return; }
+    FRE.ed._gpsTx = g.lat + ', ' + g.lng;
+    FRE.msg = acc > 60 ? 'Listo, pero la señal está débil: si puedes, sal al aire libre y vuelve a tocar. Guarda para que quede.'
+                       : 'Listo: es dónde estás ahora. Guarda para que quede.';
+    FRE.msgCl = acc > 60 ? '' : 'ok';
+    pintarFrente();
+  }, function(err){
+    _freMsg(err && err.code === 1 ? 'Tu celular no le dio permiso de ubicación a la app. Puedes copiar las coordenadas de Google Maps.'
+                                  : 'No se pudo saber dónde estás (sin señal de GPS). Inténtalo otra vez o copia las coordenadas de Google Maps.', 'mal');
+  }, { enableHighAccuracy:true, timeout:20000, maximumAge:0 });
 }
 function freMasNumero(){ var f = _freLeerForm(); if(!f) return; if((f.nums || []).length < FRE_NUM_MAX) f.nums.push({ t:'', tel:'' }); pintarFrente(); }
 function freCancelar(){ var nuevo = FRE.ed && FRE.ed._nuevo; FRE.ed = null; FRE.msg = ''; if(nuevo) abrirFrentes(); else pintarFrente(); }
@@ -98707,6 +99372,14 @@ function _freEscribir(met, ruta, obj){
 }
 function freGuardar(){
   var f = _freLeerForm(); if(!f) return;
+  /* 5/11/2026 · V7.10 · el GPS del frente: sin coordenadas, el frente queda sin GPS */
+  if(f._gpsTx != null){
+    var gtx = String(f._gpsTx || '').trim(), gp = gtx ? freGpsDeTexto(gtx) : null;
+    if(gtx && !gp){ _freMsg('Las coordenadas no se leen bien: por ejemplo, -12.046374, -77.042793.', 'mal'); return; }
+    if(gp) gp = freGpsLimpio(Object.assign(gp, f._gpsF || {}));
+    if(gp && _freMin(gp.fin) <= _freMin(gp.ini)){ _freMsg('La salida tiene que ser después del ingreso.', 'mal'); return; }
+    f.gps = gp;
+  }
   var e = _freEmp(), L = freLista();
   var limpio = freLimpio(f), nuevo = !!f._nuevo;
   if(!limpio.n){ _freMsg('Ponle un nombre al frente.', 'mal'); return; }
@@ -100122,8 +100795,107 @@ function _quiIni(n){
 var LS_QUI_FRENTE = 'sstc_qui_frente_';
 function quiFrenteElegir(id){
   var e = (typeof empDeTrabajo==='function') ? empDeTrabajo() : null; if(!e || !e.codigo) return;
+  /* 5/11/2026 · V7.10 · si lo elige a mano (y no es el que marcó el GPS), hoy el GPS ya no se lo cambia */
+  try{
+    var hoy = _quiGpsHoy(e.codigo), per = _quiGpsPermiso(e.codigo);
+    if(per && per.ok && !(hoy && !hoy.manual && hoy.id === String(id || '')))
+      guardar(LS_QUI_GPS_HOY + e.codigo, { fecha:hoyISO(), hora:_quiHora(), id:String(id || ''), manual:1 });
+  }catch(_m){}
   try{ guardar(LS_QUI_FRENTE + e.codigo, String(id || '')); }catch(_g){}
   pintarQuienes();
+}
+/* ── 5/11/2026 · V7.10 · Módulo 3 · EL FRENTE DE HOY POR GPS, con el permiso de cada trabajador (Ley 29733) ──
+   Solo si la obra le puso GPS a sus frentes. Con su permiso, cuando abre «¿A quién acudo?» en el horario de trabajo, el
+   celular mira dónde está en ese momento (una vez; otra, a los 5 minutos si vuelve a abrirla) y marca el frente donde
+   está (freDetectar). Fuera del horario —antes del ingreso, en el refrigerio, después de la salida— no mira nada y su
+   frente del día se queda como está. Si lo elige a mano, ese día manda lo que eligió. En el celular queda solo cuál es
+   su frente de hoy y a qué hora se marcó: sus coordenadas no se guardan ni se mandan a nadie. */
+var LS_QUI_GPS = 'sstc_qui_gps_';          /* su permiso: { ok:1, al } o { no:1, al } */
+var LS_QUI_GPS_HOY = 'sstc_qui_gps_hoy_';  /* hoy: { fecha, hora, id, n, dist } (por GPS) o { fecha, hora, id, manual:1 } */
+var QUI_GPS = { ult:0, busca:false, msg:'', neg:false };
+var QUI_GPS_CADA = 5 * 60 * 1000;
+function _quiGpsPermiso(cod){ var x = null; try{ x = leer(LS_QUI_GPS + cod, null); }catch(_l){ x = null; } return (x && typeof x === 'object' && (x.ok || x.no)) ? x : null; }
+function _quiGpsHoy(cod){ var x = null; try{ x = leer(LS_QUI_GPS_HOY + cod, null); }catch(_l){ x = null; } return (x && typeof x === 'object' && x.fecha === hoyISO()) ? x : null; }
+function _quiHora(d){ d = d || new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+function _quiGpsFrentes(frs){ return (frs || []).filter(function(f){ return f && typeof freGpsLimpio === 'function' && freGpsLimpio(f.g || f.gps); }); }
+function quiGpsAceptar(si){
+  var e = (typeof empDeTrabajo==='function') ? empDeTrabajo() : null; if(!e || !e.codigo) return;
+  try{ guardar(LS_QUI_GPS + e.codigo, si ? { ok:1, al:hoyISO() } : { no:1, al:hoyISO() }); }catch(_g){}
+  if(!si) borrar(LS_QUI_GPS_HOY + e.codigo);
+  QUI_GPS.ult = 0; QUI_GPS.neg = false;
+  QUI_GPS.msg = si ? '' : 'Listo: la app no mira dónde estás. Elige tu frente a mano.';
+  pintarQuienes();
+}
+/* volver a preguntarle (si dijo que no y cambió de idea) */
+function quiGpsPreguntar(){ var e = (typeof empDeTrabajo==='function') ? empDeTrabajo() : null; if(!e || !e.codigo) return; borrar(LS_QUI_GPS + e.codigo); QUI_GPS.msg = ''; pintarQuienes(); }
+/* lo eligió a mano y ahora quiere que lo marque el GPS */
+function quiGpsOtraVez(){ var e = (typeof empDeTrabajo==='function') ? empDeTrabajo() : null; if(!e || !e.codigo) return; borrar(LS_QUI_GPS_HOY + e.codigo); QUI_GPS.ult = 0; QUI_GPS.neg = false; QUI_GPS.msg = ''; pintarQuienes(); }
+function _quiGpsRepinta(){ if(((document.querySelector('.pantalla.activa') || {}).id || '') === 'p-quienes') pintarQuienes(); }
+/* ¿toca mirar? Si su frente de hoy (el) ya salió o está en su refrigerio, no (conserva su frente real del día); si no,
+   cuando alguno de los frentes está en su horario. Si no toca, por qué */
+function _quiGpsHorario(gfrs, el, d){
+  d = d || new Date();
+  var fa = gfrs.filter(function(x){ return x.id === el; })[0];
+  if(fa){ var ha = freEnHorario(fa.g || fa.gps, d); if(!ha.si && ha.motivo !== 'antes') return { si:false, motivo:ha.motivo }; }
+  if(gfrs.some(function(f){ return freEnHorario(f.g || f.gps, d).si; })) return { si:true, motivo:'' };
+  return { si:false, motivo:freEnHorario((fa || gfrs[0]).g || (fa || gfrs[0]).gps, d).motivo };
+}
+function _quiFrenteActual(cod){ var el = ''; try{ el = String(leer(LS_QUI_FRENTE + cod, '') || ''); }catch(_l){ el = ''; } return el; }
+function _quiGpsMirar(gfrs, cod){
+  /* solo con «¿A quién acudo?» a la vista (no si se pintó por detrás) */
+  if(((document.querySelector('.pantalla.activa') || {}).id || '') !== 'p-quienes') return;
+  if(QUI_GPS.busca || QUI_GPS.neg || Date.now() - QUI_GPS.ult < QUI_GPS_CADA) return;
+  var hoy = _quiGpsHoy(cod); if(hoy && hoy.manual) return;
+  if(!_quiGpsHorario(gfrs, _quiFrenteActual(cod), new Date()).si) return;
+  if(!(navigator.geolocation && navigator.geolocation.getCurrentPosition)){ QUI_GPS.neg = true; QUI_GPS.msg = 'Este celular no da su ubicación: elige tu frente a mano.'; _quiGpsRepinta(); return; }
+  QUI_GPS.busca = true; QUI_GPS.ult = Date.now(); QUI_GPS.msg = '';
+  navigator.geolocation.getCurrentPosition(function(p){
+    QUI_GPS.busca = false;
+    /* sus coordenadas se usan aquí y nada más: no se guardan ni se mandan */
+    var r = freDetectar(p.coords.latitude, p.coords.longitude, gfrs, new Date(), _quiFrenteActual(cod));
+    var ya = _quiGpsHoy(cod);
+    if(ya && ya.manual){ _quiGpsRepinta(); return; }   /* mientras buscaba, lo eligió a mano */
+    if(r.f){
+      try{ guardar(LS_QUI_FRENTE + cod, r.f.id); guardar(LS_QUI_GPS_HOY + cod, { fecha:hoyISO(), hora:_quiHora(), id:r.f.id, n:String(r.f.n || '').slice(0, 60), dist:r.dist }); }catch(_g){}
+    }else{
+      QUI_GPS.msg = (r.motivo === 'lejos') ? 'No estás dentro de ningún frente de la obra: tu frente de hoy no cambió.' : 'Fuera del horario de trabajo: tu frente de hoy no cambió.';
+    }
+    _quiGpsRepinta();
+  }, function(err){
+    QUI_GPS.busca = false;
+    if(err && err.code === 1){ QUI_GPS.neg = true; QUI_GPS.msg = 'Tu celular no le dio permiso de ubicación a la app: elige tu frente a mano. Si quieres usarlo, permite la ubicación para esta app en los ajustes de tu celular.'; }
+    else QUI_GPS.msg = 'No se pudo saber dónde estás (sin señal de GPS): elige tu frente a mano o vuelve a abrir esta pantalla.';
+    _quiGpsRepinta();
+  }, { enableHighAccuracy:true, timeout:15000, maximumAge:60000 });
+}
+function _quiGpsHTML(frs, cod, el){
+  var gfrs = _quiGpsFrentes(frs); if(!gfrs.length) return '';
+  var per = _quiGpsPermiso(cod);
+  if(!per){
+    return '<div class="caja vidrio qui-gps" id="qui-gps"><b>📍 <span>¿Que la app marque tu frente sola?</span></b>'+
+      '<p>Tu obra le puso GPS a sus frentes. Si aceptas, cuando abras esta pantalla en tu horario de trabajo la app mira dónde estás en ese momento y marca tu frente. '+
+      'No mira nada antes del ingreso, en el refrigerio ni después de la salida.</p>'+
+      '<p>No se guarda tu recorrido ni dónde estás: en tu celular queda solo cuál es tu frente de hoy, y no se manda a nadie. Puedes quitar tu permiso cuando quieras.</p>'+
+      '<p style="font-size:12px"><span class="ley">Tus datos personales: Ley 29733</span></p>'+
+      '<button type="button" class="btn" onclick="quiGpsAceptar(true)">✅ <span>Sí, acepto</span></button>'+
+      '<button type="button" class="btn sec" style="margin-top:8px" onclick="quiGpsAceptar(false)">Prefiero elegirlo yo</button></div>';
+  }
+  if(per.no){
+    return (QUI_GPS.msg ? '<p class="sub" style="margin:8px 0 0" role="status">'+esc(QUI_GPS.msg)+'</p>' : '')+
+      '<button type="button" class="eq-link qui-gps-q" onclick="quiGpsPreguntar()">📍 <span>Que la app marque mi frente sola</span></button>';
+  }
+  var hoy = _quiGpsHoy(cod), hor = _quiGpsHorario(gfrs, el, new Date()), est = '';
+  if(QUI_GPS.busca) est = '<span class="ic" aria-hidden="true">📍</span><span>Viendo en qué frente estás…</span>';
+  else if(hoy && hoy.manual) est = '<span class="ic" aria-hidden="true">✋</span><span><span>Hoy lo elegiste tú: la app no lo cambia sola.</span><small><button type="button" class="eq-link qui-gps-q" style="margin:4px 0 0" onclick="quiGpsOtraVez()">Que lo marque el GPS</button></small></span>';
+  else if(hoy && hoy.id) est = '<span class="ic" aria-hidden="true">📍</span><span><span>El GPS marcó tu frente a las</span> <b data-sin-trad>'+esc(hoy.hora || '')+'</b>.'+
+    (!hor.si ? '<small>'+esc(hor.motivo === 'refrigerio' ? 'Es la hora del refrigerio: tu frente no cambia.' : (hor.motivo === 'antes' ? 'Todavía no es la hora de ingreso: tu frente no cambia.' : 'Ya pasó la hora de salida: tu frente de hoy se queda como está.'))+'</small>' : '')+'</span>';
+  else if(!hor.si) est = '<span class="ic" aria-hidden="true">🕒</span><span>'+esc(hor.motivo === 'refrigerio' ? 'Es la hora del refrigerio: el GPS no cambia tu frente.' : (hor.motivo === 'antes' ? 'Todavía no es la hora de ingreso: el GPS marca tu frente cuando empiece tu horario.' : 'Ya pasó la hora de salida: el GPS no cambia tu frente.'))+'</span>';
+  var h = '<div class="qui-gps-est" role="status">'+est+'</div>';
+  if(QUI_GPS.msg && !QUI_GPS.busca) h += '<p class="sub" style="margin:6px 0 0">'+esc(QUI_GPS.msg)+'</p>';
+  h += '<button type="button" class="eq-link qui-gps-q" onclick="quiGpsAceptar(false)">Quitar mi permiso de ubicación</button>';
+  /* después de pintar, una mirada (si toca) */
+  setTimeout(function(){ _quiGpsMirar(gfrs, cod); }, 0);
+  return h;
 }
 function _quiFrenteHTML(frs, cod){
   var el = ''; try{ el = String(leer(LS_QUI_FRENTE + cod, '') || ''); }catch(_l){ el = ''; }
@@ -100133,6 +100905,7 @@ function _quiFrenteHTML(frs, cod){
       var on = !!(f && x.id === f.id);
       return '<button type="button" class="ch-chip'+(on?' on':'')+'" role="radio" aria-checked="'+(on?'true':'false')+'" onclick="quiFrenteElegir(\''+escA(x.id)+'\')" data-sin-trad>'+esc(x.n)+'</button>';
     }).join('')+'</div>';
+  h += _quiGpsHTML(frs, cod, el);
   if(!f) return h+'<p class="sub" style="margin:8px 0 0">Elige el frente donde trabajas hoy: te sale su punto de reunión, a quién llamar y sus documentos.</p>';
   h += '<div class="qui-fr">';
   if(f.punto) h += '<div class="aviso" style="margin-top:10px">📍 <b>Punto de reunión de tu frente:</b> <span data-sin-trad>'+esc(f.punto)+'</span></div>';
@@ -103614,11 +104387,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = '5a2b0534d7';
-var IDIOMA_FR_V = '1ca4dde574';
+var IDIOMA_PT_V = '83e67a043e';
+var IDIOMA_FR_V = '71419636a3';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = 'a0fdd1f50c';
+var IDIOMA_EN_V = 'fee2a9bb48';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -111246,7 +112019,8 @@ function _qliPais(){ try{ return (typeof paisActual === 'function') ? paisActual
    la pantalla lo dice. */
 function qliTraerQR(){
   QLI.qrUrl = ''; QLI.qrEstado = '';
-  if(!QLI.qr) return;
+  /* 5/11/2026 · también para el QR de cada producto: abre su hoja por este cartel */
+  if(!QLI.qr && !QLI.qrProd) return;
   var H = (typeof qrHojaBase === 'function') ? qrHojaBase('msds') : null;
   if(!H || typeof qrFicha !== 'function' || typeof cartelEnlaceQR !== 'function'){ QLI.qrEstado = 'error'; qliPintarQR(); return; }
   if(typeof puede === 'function' && !puede(H.llave)){ QLI.qrEstado = 'plan'; qliPintarQR(); return; }
@@ -111280,7 +112054,8 @@ function _qliGuardar(){
 function qliElegidos(){ return quimLocal().filter(function(q){ return !QLI.fuera[String(q.id)]; }); }
 function qliOpciones(){
   return {orden:QLI.orden, ajuste:QLI.ajuste, resp:QLI.resp, obra:_qliObraNombre(), fecha:fechaLarga(hoyISO()),
-          equipos:Object.keys(QLI.equipos), envase:QLI.envase, tels:_qliTels(), pais:_qliPais(), qr:(QLI.qr && QLI.qrUrl) || '', qrProd:!!QLI.qrProd};
+          equipos:Object.keys(QLI.equipos), envase:QLI.envase, tels:_qliTels(), pais:_qliPais(), qr:(QLI.qr && QLI.qrUrl) || '', qrProd:!!QLI.qrProd,
+          qrCartel:QLI.qrUrl || ''};
 }
 function qliPintar(){
   var todos = quimLocal(), el = qliElegidos();
@@ -111359,7 +112134,7 @@ function _qliEnvTexto(n){
 function qliPintarQR(){
   var c = $('ql-qrs'); if(!c) return;
   c.innerHTML = _qliFila(QLI.qr, 'qliQR()', 'El QR de las hojas MSDS', 'Arriba, a la derecha: abre las hojas MSDS de este almacén.') +
-                _qliFila(QLI.qrProd, 'qliQRProd()', 'El QR de cada producto', 'Con todo el detalle: el de su tarjeta, que sirve sin señal.');
+                _qliFila(QLI.qrProd, 'qliQRProd()', 'El QR de cada producto', 'Con todo el detalle: abre la hoja MSDS de ese producto.');
   var p = $('ql-qr-pie'); if(!p) return;
   var e = QLI.qr ? QLI.qrEstado : '';
   p.style.color = (e === 'error' || e === 'cuenta' || e === 'plan') ? 'var(--mal)' : '';
@@ -111371,8 +112146,8 @@ function qliPintarQR(){
               : '';
 }
 function qliEquipo(k){ if(QLI.equipos[k]) delete QLI.equipos[k]; else QLI.equipos[k] = 1; _qliGuardar(); qliPintar(); }
-function qliQR(){ QLI.qr = !QLI.qr; _qliGuardar(); if(QLI.qr) qliTraerQR(); else { QLI.qrUrl = ''; QLI.qrEstado = ''; } qliPintar(); }
-function qliQRProd(){ QLI.qrProd = !QLI.qrProd; QLI.hoja = 0; _qliGuardar(); qliPintar(); }
+function qliQR(){ QLI.qr = !QLI.qr; _qliGuardar(); if(QLI.qr || QLI.qrProd){ if(!QLI.qrUrl) qliTraerQR(); } else { QLI.qrUrl = ''; QLI.qrEstado = ''; } qliPintar(); }
+function qliQRProd(){ QLI.qrProd = !QLI.qrProd; QLI.hoja = 0; _qliGuardar(); if(QLI.qrProd && !QLI.qrUrl && QLI.qrEstado !== 'pidiendo') qliTraerQR(); qliPintar(); }
 function qliEnvAbrir(){ QLI.envAbierto = !QLI.envAbierto; qliPintar(); }
 var _QLI_TE = null;
 function qliEnv(inp){
@@ -116982,7 +117757,8 @@ function dispositivoCerrarOtro(disp){
       /* 17/10/2026 · lote 14 · el QR de un cartel de la obra (cartel-app.js) */
       var _qct=(typeof cartelDeTexto==='function') ? cartelDeTexto(location.hash||'') : null;
       if(_qct){ var _qcf=(typeof cartelFrenteDeTexto==='function') ? cartelFrenteDeTexto(location.hash||'') : '';   /* 30/10/2026 · el de un frente */
-        try{ history.replaceState(null,'',baseURL()); }catch(_h){} cartelDesdeEnlace(_qct, false, _qcf); return; }
+        var _qcm=(typeof cartelProdDeTexto==='function') ? cartelProdDeTexto(location.hash||'') : '';                  /* 5/11/2026 · el de un producto */
+        try{ history.replaceState(null,'',baseURL()); }catch(_h){} cartelDesdeEnlace(_qct, false, _qcf, _qcm); return; }
       var _q=quimDeEnlace(location.hash||'');
       if(_q){
         try{ history.replaceState(null,'',baseURL()); }catch(_h){}
@@ -117049,9 +117825,10 @@ function dispositivoCerrarOtro(disp){
     var _mct=(typeof cartelDeTexto==='function') ? cartelDeTexto(location.hash||'') : null;
     /* 30/10/2026 · el cartel de un frente («&f=»): se lee antes de limpiar la dirección */
     var _mcf=(_mct && typeof cartelFrenteDeTexto==='function') ? cartelFrenteDeTexto(location.hash||'') : '';
+    var _mcm=(_mct && typeof cartelProdDeTexto==='function') ? cartelProdDeTexto(location.hash||'') : '';   /* 5/11/2026 · el de un producto */
     if(_mct){
       try{ history.replaceState(null,'',baseURL()); }catch(_h){}
-      if(cartelDesdeEnlace(_mct, true, _mcf)) return;
+      if(cartelDesdeEnlace(_mct, true, _mcf, _mcm)) return;
     }
   }catch(_ect){}
   try{
@@ -117703,7 +118480,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='caad8d32c2';
+var SELLO_APP='1ec1c1f591';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
