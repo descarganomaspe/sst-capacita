@@ -1205,6 +1205,10 @@ td .prq-sus,.prq-sus{font-style:italic}
 .pqu-nf-g .ayuda{margin:6px 0 4px; min-height:2.6em}
 .pqu-tar{border:1px solid var(--raya); border-radius:12px; overflow:hidden; background:#fff; box-shadow:0 2px 10px rgba(11,42,58,.10)}
 .pqu-tar svg{display:block; width:100%; height:auto}
+/* 6/11/2026 · la tarjeta a doble cara: una tira con las dos caras (se corre de lado si no entra) */
+.pqu-form.pqu-d{grid-template-columns:minmax(0,1fr) 520px}
+.pqu-tira{overflow-x:auto; padding-bottom:6px}
+.pqu-tira .pqu-tar{min-width:720px}
 .pqu-lado .pqu-lbl{margin-top:0}
 .pqu-aviso-c{margin-top:18px}
 .pqu-lado .ayuda{margin:0}
@@ -1455,6 +1459,54 @@ td .prq-sus,.prq-sus{font-style:italic}
   .cal-t{-webkit-line-clamp:4}
 }
 @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important} }
+/* ══ MOVIMIENTO (9/11/2026) · Marcelo: «más animación, efectos… profesional pero que enganche». Sobrio y con sentido: cada
+   efecto responde a algo que la persona hizo o tiene que mirar, dura menos de medio segundo y pasa una sola vez. Con
+   «reducir movimiento» no se mueve nada (la regla de arriba). ══ */
+@media (prefers-reduced-motion: no-preference){
+  /* 1 · la sección llega: su título y, en cascada corta, lo que trae (solo al llegar, no en cada refresco: wmVista) */
+  @keyframes wm-sube{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+  #main.wm-nav > .cab{animation:wm-sube .3s cubic-bezier(.22,.9,.3,1) both}
+  #vista.wm-in > *:not(.rej), #vista.wm-in > .rej > *{animation:wm-sube .38s cubic-bezier(.22,.9,.3,1) both}
+  #vista.wm-in > *:not(.rej){animation-delay:calc(60ms + var(--wi, 0) * 55ms)}
+  #vista.wm-in > .rej > *{animation-delay:calc(40ms + var(--wj, 0) * 45ms)}
+  /* 2 · las cifras cuentan desde cero (wmCuenta: el número de verdad no se toca, se pinta encima) y sus barras se llenan */
+  .cifra .v.wm-cuenta{position:relative; -webkit-text-fill-color:transparent}
+  .cifra .v.wm-cuenta > small{-webkit-text-fill-color:currentColor}
+  .cifra .v.wm-cuenta::before{content:var(--wmt); position:absolute; left:0; top:0; -webkit-text-fill-color:currentColor}
+  @keyframes wm-llena{from{transform:scaleX(0)} to{transform:scaleX(1)}}
+  #vista.wm-in .cifra .barra-p i{transform-origin:left center; animation:wm-llena .8s cubic-bezier(.22,.9,.3,1) .2s both}
+  /* 3 · los botones responden: suben un pelo al pasar y se hunden al presionar */
+  .bt{transition:background .14s, border-color .14s, color .14s, box-shadow .18s, transform .18s cubic-bezier(.22,.9,.3,1)}
+  .bt:not(:disabled):hover{transform:translateY(-1px); box-shadow:0 6px 16px -10px rgba(11,42,58,.55)}
+  .bt:not(:disabled):active{transform:scale(.98); box-shadow:none; transition-duration:.06s}
+  /* 4 · el menú: el fondo llega suave y la sección abierta lleva su marca, que crece */
+  .nav{transition:background .16s, color .16s}
+  .nav.on{position:relative}
+  .nav.on::before{content:''; position:absolute; left:0; top:9px; bottom:9px; width:3px; border-radius:3px; background:var(--azul); animation:wm-marca .32s cubic-bezier(.22,.9,.3,1) both}
+  @keyframes wm-marca{from{transform:scaleY(0)} to{transform:scaleY(1)}}
+  /* 5 · las pestañas: la abierta se subraya desde el centro */
+  .tab{transition:color .15s, background .15s}
+  .tab.on{position:relative; border-bottom-color:transparent}
+  .tab.on::after{content:''; position:absolute; left:8px; right:8px; bottom:-1px; height:2px; border-radius:2px; background:var(--azul); animation:wm-raya .3s cubic-bezier(.22,.9,.3,1) both}
+  @keyframes wm-raya{from{transform:scaleX(0)} to{transform:scaleX(1)}}
+  /* 6 · lo que carga: una luz pasa sobre «Cargando…» */
+  .vacio.carga{position:relative; overflow:hidden}
+  .vacio.carga::after{content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(100deg, transparent 25%, rgba(37,99,168,.08) 50%, transparent 75%); transform:translateX(-100%); animation:wm-luz 1.4s ease-in-out infinite}
+  @keyframes wm-luz{to{transform:translateX(100%)}}
+  /* 7 · el cajón: el fondo se oscurece suave y el cajón llega con más cuerpo */
+  .hoja-fondo{animation:wm-fondo .22s ease-out both}
+  @keyframes wm-fondo{from{background-color:rgba(11,42,58,0)}}
+  .hoja{animation:entra .26s cubic-bezier(.22,.9,.3,1)}
+  /* 8 · el aviso de abajo sube */
+  .toast:not([hidden]){animation:wm-toast .3s cubic-bezier(.22,.9,.3,1) both}
+  @keyframes wm-toast{from{opacity:0; transform:translateY(14px) scale(.97)}}
+  /* 9 · lo que se elige (tarjetas de opción): se levanta al pasar */
+  .insf button{transition:border-color .15s, box-shadow .18s, transform .18s cubic-bezier(.22,.9,.3,1)}
+  .insf button:hover{transform:translateY(-1px); box-shadow:0 8px 20px -14px rgba(11,42,58,.45)}
+  /* 10 · las filas y los campos: el fondo y el borde llegan suave */
+  tbody td{transition:background-color .12s}
+  input, select{transition:border-color .12s, box-shadow .12s}
+}
 @media print{ .rail,.barra,.acciones,.herr{display:none !important} #portal.on{display:block} .main{padding:0} }
 
 /* ══ 01/10/2026 · el consumo de EPP, tipo tablero ══ */
@@ -1925,6 +1977,13 @@ td .prq-sus,.prq-sus{font-style:italic}
 .alta-caja > .sub{margin:0 0 18px; color:var(--gris); font-size:14px}
 .alta-rubros{display:grid; grid-template-columns:1fr 1fr; gap:8px}
 .alta-paso{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); margin:18px 0 8px; padding-top:12px; border-top:1px solid var(--raya)}
+/* 9/11/2026 · el registro en dos pasos: la razón social que trae el RUC (SUNAT) y el código de aliado plegado */
+.al-sun-ok{display:flex; flex-direction:column; gap:2px; margin:10px 0 0; padding:10px 12px; border-radius:10px; border:1px solid var(--ok); background:var(--ok-f)}
+.al-sun-ok b{font-size:14.5px; font-weight:600; color:var(--tinta)}
+.al-sun-ok span{font-size:12.5px; color:var(--gris)}
+.al-sun-ok .enlace{margin:0; font-size:12.5px}
+.acc-aliado{margin:0 0 14px}
+.acc-aliado > summary{cursor:pointer; font-size:13px; color:var(--azul); width:max-content; max-width:100%; padding:4px 0}
 .alta-rubro{-webkit-appearance:none; appearance:none; cursor:pointer; text-align:left; display:flex; gap:10px; align-items:center; padding:10px 12px;
   background:var(--panel); border:1px solid var(--raya2); border-radius:10px; color:var(--texto)}
 .alta-rubro .e{font-size:20px; line-height:1}
@@ -2333,24 +2392,10 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
 
         <div id="acc-crear" role="tabpanel" aria-labelledby="acc-t-crear" hidden>
           <h2 class="acc-h">Crea tu cuenta</h2>
-          <p class="sub">Tus datos, tu correo y una contraseña. Es una sola cuenta: sirve aquí y en la app.</p>
+          <p class="sub">Tu correo y una contraseña: lo demás te lo pedimos cuando haga falta. Es una sola cuenta: sirve aquí y en la app.</p>
           <p class="acc-plan" id="c-plan" aria-live="polite" hidden></p>
           <form id="f-crear" autocomplete="on" novalidate>
-            <!-- 08/10/2026 · los mismos datos que en la app: nombres, apellidos y celular (celular-base.js) -->
-            <div class="campo-dos">
-              <div class="campo">
-                <label for="c-nombres">Nombres</label>
-                <input id="c-nombres" name="given-name" autocomplete="given-name" maxlength="60" placeholder="Como en tu documento">
-              </div>
-              <div class="campo">
-                <label for="c-apellidos">Apellidos</label>
-                <input id="c-apellidos" name="family-name" autocomplete="family-name" maxlength="60">
-              </div>
-            </div>
-            <div class="campo">
-              <label for="c-cel">Celular</label>
-              <div class="cel-fila"><select id="c-cel-pais" aria-label="País del celular"></select><input id="c-cel" name="tel-national" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="20" placeholder="987 654 321"></div>
-            </div>
+            <!-- 9/11/2026 · el registro en dos pasos: los nombres, los apellidos y el celular se piden después («Completa tus datos») -->
             <div class="campo">
               <label for="c-correo">Tu correo</label>
               <input id="c-correo" name="email" type="email" autocomplete="email" inputmode="email" maxlength="120" placeholder="tu@correo.com">
@@ -2360,14 +2405,17 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
               <input id="c-clave" name="new-password" type="password" autocomplete="new-password" maxlength="72" aria-describedby="c-clave-a">
               <p class="ayuda" id="c-clave-a">8 caracteres o más, con letras y números.</p>
             </div>
-            <div class="campo">
-              <label for="c-aliado">Código de aliado <span class="gris-t">(opcional: si alguien te recomendó OBRASST)</span></label>
-              <input id="c-aliado" maxlength="20" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Ejemplo: ALI-EPPLIMA">
-            </div>
+            <!-- 9/11/2026 · el código de aliado, plegado: se abre si lo tocan (con el enlace del aliado, el código va solo) -->
+            <details class="acc-aliado" id="c-aliado-d">
+              <summary>¿Te recomendaron OBRASST? Pon el código</summary>
+              <div class="campo" style="margin-top:8px">
+                <label for="c-aliado">Código de aliado</label>
+                <input id="c-aliado" maxlength="20" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Ejemplo: ALI-EPPLIMA">
+              </div>
+            </details>
             <label class="acc-check" for="c-legal-1"><input type="checkbox" id="c-legal-1"><span>He leído y acepto los <a href="../?legal=terminos" target="_blank" rel="noopener">Términos y condiciones</a>.</span></label>
             <label class="acc-check" for="c-legal-2"><input type="checkbox" id="c-legal-2"><span>Entiendo cómo se tratan los datos y que mi empresa es la responsable de los de su personal. <a href="../?legal=privacidad" target="_blank" rel="noopener">Ver la política</a>.</span></label>
             <label class="acc-check" for="c-promos"><input type="checkbox" id="c-promos"><span>Quiero recibir novedades y promociones de OBRASST por correo o WhatsApp. Es opcional.</span></label>
-            <p class="ayuda" style="margin:-2px 0 12px">Tu nombre y tu celular son para atenderte: soporte y avisos de tu cuenta y de tu plan. No se publican ni se venden.</p>
             <div id="c-error" class="error" hidden role="alert"></div>
             <button class="bt casco" type="submit" id="c-bt" style="width:100%;padding:12px">Crear mi cuenta</button>
             <button class="bt sec acc-google" type="button" id="c-google" hidden>Continuar con Google</button>
@@ -4124,7 +4172,7 @@ var AREAS = [
   { id:'a-reportes', n:'Reportes',               ic:'🚨', v:['reportes', 'buenas', 'denuncias', 'pulso'] },
   { id:'a-comite',   n:'Comité y emergencias',   ic:'🏛', v:['comite', 'cargos', 'quien', 'frentes', 'auxilios', 'simulacros'] },
   { id:'a-ambiente', n:'Medio ambiente',         ic:'🌱', v:['ambiente'] },
-  { id:'a-docs',     n:'Documentos y avisos',    ic:'☰',  v:['docs', 'escaneos', 'util', 'qr', 'senales', 'boletines', 'noticias', 'normas'] },
+  { id:'a-docs',     n:'Documentos y avisos',    ic:'☰',  v:['docs', 'formatos', 'escaneos', 'util', 'qr', 'senales', 'boletines', 'noticias', 'normas'] },   /* 9/11/2026 · «Formatos» */
   { id:'a-indic',    n:'Programas e indicadores', ic:'📈', v:['programas', 'objetivos', 'acc', 'hh'] },
   /* 27/10/2026 · la carpeta de auditoría (SSOMA) y el ciclo de auditoría (Gestión SST): portal/auditoria.js */
   { id:'a-audit',    n:'Auditoría',              ic:'🗂', v:['aud', 'aud-int', 'aud-acc', 'aud-rev'] },
@@ -4141,7 +4189,7 @@ var PESTANAS = {
   reportes:'Actos y condiciones', buenas:'Buenas prácticas', denuncias:'Denuncias', pulso:'Pulso de seguridad', ambiente:'Medio ambiente',
   aud:'Carpeta de auditoría', 'aud-int':'Auditoría interna', 'aud-acc':'Hallazgos y acciones', 'aud-rev':'Revisión por la dirección',
   comite:'Comité de SST', cargos:'Brigada y carteles', quien:'¿A quién acudo?', frentes:'Frentes de trabajo', simulacros:'Simulacros',
-  docs:'Documentos', escaneos:'Escaneos y fotos', util:'Utilitarios', qr:'Carteles QR', senales:'Señalética', boletines:'Boletines', noticias:'Noticias', normas:'Normas',
+  docs:'Documentos', formatos:'Formatos', escaneos:'Escaneos y fotos', util:'Utilitarios', qr:'Carteles QR', senales:'Señalética', boletines:'Boletines', noticias:'Noticias', normas:'Normas',
   informe:'SST', 'inf-amb':'Medio ambiente', 'inf-salud':'Salud ocupacional', fotoreg:'Registro fotográfico', acc:'Accidentabilidad', hh:'Horas hombre', programas:'Programas del año', objetivos:'Objetivos y metas',
   empresa:'Datos y logo', equipo:'Obras y equipo', plan:'Mi plan', cargar:'Cargar mi gestión',
   cad:'Empresas de la obra', 'cad-obs':'Observaciones', 'cad-equipo':'Rangos del equipo',
@@ -4384,8 +4432,9 @@ function navegar(id, desdeHistoria){
   try{ planwAvisoPintar(); }catch(_pa){}
   /* 05/10/2026 · la sección que el plan de la obra no trae: su candado (v.mira: la sección se encarga sola) */
   var falta = v.mira ? null : planWebFalta(id);
-  if(falta){ planWebCandado($('vista'), falta); return; }
+  if(falta){ planWebCandado($('vista'), falta); try{ wmVista(); }catch(_wm){} return; }
   v.pintar($('vista'));
+  try{ wmVista(); }catch(_wm){}   /* 9/11/2026 · lo que trae la sección entra (MOVIMIENTO) */
 }
 window.addEventListener('popstate', function(){
   if(!YO.obra || !TOK) return;
@@ -4816,7 +4865,51 @@ function barras(series, cl){
     return '<div class="b'+(s.cl?' '+s.cl:'')+'"><b>'+esc(s.v)+'</b><i style="height:'+Math.max(2, Math.round(s.v/max*84))+'px"></i><small>'+esc(s.t)+'</small></div>';
   }).join('')+'</div>';
 }
-function cargando(caja){ caja.innerHTML='<div class="vacio">Cargando…</div>'; }
+function cargando(caja){ caja.innerHTML='<div class="vacio carga">Cargando…</div>'; }
+/* ══ 9/11/2026 · EL MOVIMIENTO DE LA WEB (el CSS «MOVIMIENTO»): al llegar a una sección, lo que trae entra en cascada corta y
+   las cifras cuentan desde cero. Solo al llegar (no en cada refresco) y nunca con «reducir movimiento». ══ */
+var WM = { obs:null, t:0, t2:0 };
+function wmQuieto(){ try{ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){ return true; } }
+function wmVista(){
+  var m = $('main'), v = $('vista'); if(!m || !v || wmQuieto()) return;
+  if(WM.obs){ try{ WM.obs.disconnect(); }catch(e){} WM.obs = null; }
+  clearTimeout(WM.t); clearTimeout(WM.t2);
+  m.classList.add('wm-nav');
+  var listo = function(){ var c = v.firstElementChild; return !!c && !(v.children.length === 1 && c.classList.contains('carga')); };
+  var anima = function(){
+    if(WM.obs){ try{ WM.obs.disconnect(); }catch(e){} WM.obs = null; }
+    clearTimeout(WM.t);
+    Array.prototype.forEach.call(v.children, function(x, i){ x.style.setProperty('--wi', String(Math.min(i, 7))); });
+    Array.prototype.forEach.call(v.querySelectorAll(':scope > .rej'), function(r){ Array.prototype.forEach.call(r.children, function(x, j){ x.style.setProperty('--wj', String(Math.min(j, 7))); }); });
+    v.classList.add('wm-in');
+    wmCuenta(v);
+    WM.t2 = setTimeout(function(){ v.classList.remove('wm-in'); m.classList.remove('wm-nav'); }, 1300);
+  };
+  if(listo()) anima();
+  else if(window.MutationObserver){
+    WM.obs = new MutationObserver(function(){ if(listo()) anima(); });
+    WM.obs.observe(v, { childList:true });
+    WM.t = setTimeout(function(){ if(WM.obs){ try{ WM.obs.disconnect(); }catch(e){} WM.obs = null; } m.classList.remove('wm-nav'); }, 8000);
+  }
+}
+/* las cifras (.cifra .v) cuentan desde cero en 0,7 s. El número de verdad no se toca (lo lee quien copia o un lector de
+   pantalla): se esconde y encima se pinta el que va contando (::before, con --wmt). */
+function wmCuenta(raiz){
+  Array.prototype.slice.call(raiz.querySelectorAll('.cifra .v')).slice(0, 12).forEach(function(el){
+    var t = el.firstChild; if(!t || t.nodeType !== 3) return;
+    var s = String(t.nodeValue || '').trim(); if(!/^\d{1,6}$/.test(s)) return;
+    var fin = parseInt(s, 10); if(fin < 2) return;
+    var t0 = 0, dur = 700;
+    el.classList.add('wm-cuenta'); el.style.setProperty('--wmt', '"0"');
+    var paso = function(ts){
+      if(!t0) t0 = ts;
+      var k = Math.min(1, (ts - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      if(k < 1 && document.body.contains(el)){ el.style.setProperty('--wmt', '"' + Math.round(fin * e) + '"'); requestAnimationFrame(paso); }
+      else { el.classList.remove('wm-cuenta'); el.style.removeProperty('--wmt'); }
+    };
+    requestAnimationFrame(paso);
+  });
+}
 function fallo(caja, cod){
   caja.innerHTML='<div class="vacio"><b>No se pudo cargar</b>'+
     (cod===403||cod===401 ? 'Esta cuenta no tiene permiso sobre esta obra.' : 'Revisa tu conexión. Se reintenta solo.')+'</div>';
@@ -6830,6 +6923,312 @@ function vistaMiObra(caja){
 var PAPEL_NOMBRE = { ats:'ATS', 'ats-modelo':'Modelo de ATS', iperc:'IPERC', 'iperc-c':'IPERC continuo' };
 /* el día (aaaa-mm-dd) de un «creado», contado aquí y no en UTC: a las 8 p. m. de Lima ya es mañana en UTC */
 function _papDiaDe(iso){ var t=new Date(iso||''); return isNaN(t) ? String(iso||'').slice(0,10) : t.getFullYear()+'-'+dos(t.getMonth()+1)+'-'+dos(t.getDate()); }
+
+/* ══ 9/11/2026 · ⚡ UN PELIGRO A VARIOS MODELOS DE ATS (lo mismo en la app y en la web) ══════════════════════════════════
+   Marcelo: «en todos los modelos de ATS tengo que abrir uno por uno y agregarlo… tener la opción de hacerlo más simple».
+   atsLoteAgregar(paquete o modelo, fila {p,r,c,m}, modo, paso): modo 'todos' (en cada paso), 'palabra' (en los pasos cuyo
+   nombre tenga «paso») o 'nuevo' (en un paso con ese nombre: si ya existe, ahí; si no, se crea al final). Mismo peligro y
+   mismo riesgo no se repiten. Devuelve { n: en cuántos pasos se agregó, ya: en cuántos ya estaba }. */
+/* >>> FEN-INI · 9/11/2026 · EL FENÓMENO EL NIÑO 2026 - 2027 (R.M. N.° 790-2026/MINSA), COMO OPCIÓN (igual en la app y en la web)
+   Marcelo: «considerarlo en la gestión de seguridad… IPERC, PETS, modelos de ATS, simulacros, campañas… que salga como opción o
+   información adicional… y que ya no salga como opción hasta que termine su derogatoria».
+   De la norma va solo lo verificado en El Peruano (04/09/2026): la R.M. N.° 790-2026/MINSA aprueba el Documento Técnico «Plan de
+   acciones del Ministerio de Salud frente a los efectos del Fenómeno El Niño y peligros asociados 2026 - 2027». Es un plan del
+   sector Salud: los peligros de obra de abajo NO salen de la norma; son sugerencias de OBRASST para que cada obra los evalúe.
+   Sale solo en el Perú y mientras rija: hasta el fin de 2027 (el plan es 2026 - 2027) o hasta el día de «derogada», si la dejan
+   sin efecto antes (se pone aquí y deja de salir en la app y en la web). Lo ya agregado a un ATS, un IPERC o un PETS se queda.
+   9/11/2026 (2) · Marcelo: «hacerlo más fácil al supervisor… los peligros directos, los riesgos de ello, consecuencias, y
+   controles… pero coloquemos controles generales». Por situación (grupos: cada obra marca las que le tocan): cada peligro con UN
+   riesgo por fila, su consecuencia y controles generales; m = los controles en una línea (el ATS y el PETS), ctl = los mismos en
+   la jerarquía (el IPERC de línea base: ingeniería, administrativos, EPP; uno por línea). t = los tipos de trabajo del ATS donde
+   aplica ('*' = en todos). antes = el riesgo que tenía la fila (para no repetirla en lo que ya se agregó). */
+var FEN = {
+  norma:'R.M. N.° 790-2026/MINSA', pub:'2026-09-04', hasta:'2027-12-31', derogada:'',
+  plan:'Plan de acciones del Ministerio de Salud frente a los efectos del Fenómeno El Niño y peligros asociados 2026 - 2027',
+  paso:'Lluvias intensas (Fenómeno El Niño)', proc:'Condiciones del entorno', act:'Trabajos a la intemperie con lluvias intensas (Fenómeno El Niño)',
+  restr:'Con alerta por lluvias intensas, huaico o inundación en la zona, la tarea se suspende y el personal va a la zona segura.',
+  claves:{ sim:'inundacion', camp:'fen-dengue' },
+  grupos:[ { k:'lluvia', ic:'🌧️', n:'Lluvias intensas' }, { k:'huaico', ic:'🌊', n:'Huaicos, inundaciones y vías' },
+           { k:'calor', ic:'🌡️', n:'Calor intenso' }, { k:'salud', ic:'🦟', n:'Zancudos y enfermedades' } ],
+  filas:[
+    /* ── lluvias intensas ── */
+    { g:'lluvia', t:['exc'], p:'Lluvia intensa en taludes y excavaciones', r:'Derrumbe o deslizamiento de tierra', c:'Atrapamiento, lesiones graves o la muerte',
+      m:'Suspender la excavación con lluvia intensa; revisar taludes, entibado y drenaje antes de reanudar; nadie entra a una zanja con agua',
+      ctl:{ ing:'Entibado o talud según el tipo de suelo\nCunetas y drenaje que desvíen el agua de la excavación\nTaludes cubiertos con plástico',
+            adm:'Suspender la excavación con lluvia intensa\nRevisar taludes, entibado y drenaje antes de reanudar\nNadie entra a una zanja con agua\nNo acopiar material en el borde', epp:'' } },
+    { g:'lluvia', t:['*'], p:'Pisos, accesos y escaleras mojados o con barro', r:'Caída al mismo nivel', c:'Golpes, torceduras, fracturas',
+      m:'Limpiar el barro de accesos y escaleras; pasarelas y superficies antideslizantes; calzado con suela antideslizante',
+      ctl:{ ing:'Pasarelas y superficies antideslizantes\nDrenaje en los accesos', adm:'Limpiar el barro de accesos y escaleras\nSeñalizar las zonas resbaladizas',
+            epp:'Calzado de seguridad con suela antideslizante' } },
+    { g:'lluvia', t:['*'], p:'Agua cerca de tableros, extensiones y equipos eléctricos', r:'Contacto eléctrico', c:'Quemaduras, electrocución',
+      m:'Tableros cerrados y elevados; extensiones fuera del agua; probar el interruptor diferencial; cortar la energía del frente que se inunde',
+      ctl:{ ing:'Tableros cerrados, elevados y con interruptor diferencial\nExtensiones elevadas y fuera del agua\nPuesta a tierra',
+            adm:'Probar el interruptor diferencial\nCortar la energía del frente que se inunde\nNo operar equipos eléctricos con las manos o los pies mojados',
+            epp:'Guantes y botas dieléctricas para el electricista' } },
+    { g:'lluvia', t:['alt', 'and', 'esc'], p:'Lluvia intensa en trabajos en altura (techos, andamios, estructuras)', r:'Caída a distinto nivel', c:'Fracturas, politraumatismos, muerte',
+      m:'Suspender los trabajos en altura con lluvia intensa; secar y revisar el andamio antes de volver a subir; arnés con línea de vida',
+      ctl:{ ing:'Barandas y plataformas completas\nLínea de vida', adm:'Suspender los trabajos en altura con lluvia intensa\nSecar y revisar el andamio antes de volver a subir',
+            epp:'Arnés de cuerpo entero con línea de vida\nCalzado con suela antideslizante' } },
+    { g:'lluvia', t:['*'], p:'Agua acumulada sobre techos, toldos y coberturas provisionales', r:'Colapso de la cobertura', c:'Golpes, aplastamiento',
+      m:'Coberturas con pendiente y canaletas; retirar el agua acumulada sin subirse a la cobertura; revisar los techos después de cada lluvia',
+      ctl:{ ing:'Coberturas con pendiente y canaletas\nTechos provisionales reforzados',
+            adm:'Retirar el agua acumulada sin subirse a la cobertura\nRevisar los techos del campamento y del almacén después de cada lluvia', epp:'' } },
+    { g:'lluvia', t:['*'], p:'Tormenta eléctrica', r:'Descarga eléctrica de un rayo', c:'Quemaduras, paro cardiorrespiratorio, muerte',
+      m:'Suspender los trabajos a la intemperie, en altura y los izajes con tormenta; refugiarse en un lugar seguro, lejos de árboles y estructuras metálicas aisladas',
+      ctl:{ ing:'Pararrayos en las instalaciones de la obra, donde corresponda',
+            adm:'Suspender los trabajos a la intemperie, en altura y los izajes con tormenta\nRefugiarse en un lugar seguro, lejos de árboles y estructuras metálicas aisladas', epp:'' } },
+    /* ── huaicos, inundaciones y vías ── */
+    { g:'huaico', t:['*'], p:'Inundación o huaico en la zona de trabajo', r:'Arrastre por el agua o el lodo', antes:'Arrastre por el agua o el lodo; personal aislado',
+      c:'Ahogamiento, lesiones graves o la muerte',
+      m:'Seguir los avisos oficiales de lluvias; ruta de evacuación y zona segura en alto, señalizadas; no trabajar cerca de cauces o quebradas con alerta',
+      ctl:{ ing:'Zona segura en alto\nDefensas y drenaje donde corresponda',
+            adm:'Seguir los avisos oficiales de lluvias\nRuta de evacuación y zona segura señalizadas\nNo trabajar cerca de cauces o quebradas con alerta\nSimulacro de evacuación', epp:'' } },
+    { g:'huaico', t:['*'], p:'Inundación o huaico en la zona de trabajo', r:'Personal aislado por las vías bloqueadas', c:'Demora en la atención de emergencias, falta de agua y alimentos',
+      m:'Plan de contingencia con agua, alimentos y botiquín para varios días; radio o teléfono satelital donde no hay señal; no salir por vías con huaico',
+      ctl:{ ing:'', adm:'Plan de contingencia con agua, alimentos y botiquín para varios días\nRadio o teléfono satelital donde no hay señal\nNo salir por vías con huaico o inundadas', epp:'' } },
+    { g:'huaico', t:['*'], p:'Vías de acceso con lodo, agua o huaicos', r:'Accidente vehicular', c:'Lesiones graves, muerte',
+      m:'Revisar el estado de la vía antes de salir; velocidad reducida y cinturón; no cruzar agua o lodo en movimiento; sin traslados con alerta roja',
+      ctl:{ ing:'Mantenimiento de los accesos de la obra',
+            adm:'Revisar el estado de la vía antes de salir\nVelocidad reducida y cinturón de seguridad\nNo cruzar agua o lodo en movimiento\nSuspender los traslados con alerta roja', epp:'' } },
+    { g:'huaico', t:['iza', 'maq', 'and'], p:'Suelo saturado por la lluvia', r:'Hundimiento del terreno bajo grúas, andamios o maquinaria', c:'Volcadura del equipo, lesiones graves, muerte',
+      m:'Evaluar el terreno antes de ubicar grúas, andamios y maquinaria; placas o tablones de reparto; suspender el izaje si el terreno cede',
+      ctl:{ ing:'Placas o tablones de reparto bajo los apoyos y los estabilizadores',
+            adm:'Evaluar el terreno antes de ubicar grúas, andamios y maquinaria\nSuspender el izaje si el terreno cede', epp:'' } },
+    { g:'huaico', t:['*'], p:'Laderas y cerros sobre la obra o el campamento', r:'Caída de rocas y material de la ladera', c:'Golpes, aplastamiento, muerte',
+      m:'Revisar las laderas después de cada lluvia; no ubicar el campamento ni el acopio al pie de laderas inestables; señalizar y restringir la zona',
+      ctl:{ ing:'Mallas o barreras de protección donde corresponda',
+            adm:'Revisar las laderas después de cada lluvia\nNo ubicar el campamento ni el acopio al pie de laderas inestables\nSeñalizar y restringir la zona', epp:'Casco con barbiquejo' } },
+    /* ── calor intenso ── */
+    { g:'calor', t:['*'], so:1, p:'Temperaturas altas y calor intenso', r:'Estrés térmico por calor', c:'Golpe de calor, deshidratación, agotamiento',
+      m:'Agua fresca a libre disposición; pausas a la sombra; trabajos pesados en las horas más frescas; ropa ligera de manga larga',
+      ctl:{ ing:'Sombra o toldos en los frentes y en las zonas de descanso',
+            adm:'Agua fresca a libre disposición\nPausas a la sombra\nTrabajos pesados en las horas más frescas\nAtención a los trabajadores nuevos y a quien tenga mareos o calambres',
+            epp:'Ropa ligera de manga larga\nCortaviento o sombrero que cubra la nuca' } },
+    /* ── zancudos y enfermedades ── */
+    { g:'salud', t:['*'], so:1, p:'Agua estancada en la obra (criaderos de zancudos)', r:'Picadura del zancudo Aedes aegypti, que transmite el dengue', c:'Dengue',
+      m:'Eliminar el agua estancada: tapar cilindros y tanques, voltear baldes y llantas, limpiar canaletas; repelente y manga larga',
+      ctl:{ ing:'Cilindros y tanques tapados\nCharcos drenados', adm:'Eliminar el agua estancada cada semana: voltear baldes y llantas, limpiar canaletas\nAvisar si alguien tiene fiebre',
+            epp:'Repelente y ropa de manga larga' } },
+    { g:'salud', t:['*'], so:1, p:'Agua de inundación y barro contaminados', r:'Contacto con agua contaminada por orina de roedores', c:'Leptospirosis',
+      m:'No trabajar en agua de inundación sin botas de jebe y guantes; cubrir las heridas; control de roedores en el almacén y el campamento',
+      ctl:{ ing:'', adm:'Cubrir las heridas antes de entrar al agua\nControl de roedores en el almacén y el campamento\nAvisar si alguien tiene fiebre o dolor muscular después de una inundación',
+            epp:'Botas de jebe y guantes impermeables' } },
+    { g:'salud', t:['*'], so:1, p:'Agua para beber y alimentos expuestos a la inundación', r:'Consumo de agua o alimentos contaminados', c:'Enfermedades diarreicas, intoxicación',
+      m:'Agua potable o hervida para el personal; alimentos protegidos; lavado de manos antes de comer; baños limpios y lejos del agua de consumo',
+      ctl:{ ing:'Puntos de lavado de manos con agua y jabón', adm:'Agua potable o hervida para el personal\nAlimentos protegidos\nLavado de manos antes de comer\nBaños limpios y lejos del agua de consumo', epp:'' } }
+  ]
+};
+/* ¿sale hoy? hoy: 'aaaa-mm-dd'; pais: el de la obra ('pe', 'cl'…) */
+function fenVigente(hoy, pais){
+  var h = String(hoy || '').slice(0, 10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(h) || (pais && pais !== 'pe')) return false;
+  if(FEN.derogada && h >= FEN.derogada) return false;
+  return h >= FEN.pub && h <= FEN.hasta;
+}
+/* una opción de un catálogo (el simulacro o la campaña de El Niño) sale mientras rija, o si ya es la elegida */
+function fenSeVe(k, hoy, pais, elegida){
+  var esFen = false;
+  Object.keys(FEN.claves).forEach(function(x){ if(FEN.claves[x] === k) esFen = true; });
+  return !esFen || (!!elegida && k === elegida) || fenVigente(hoy, pais);
+}
+/* las filas de unas situaciones (gs: ['lluvia', …]; sin gs, todas) */
+function fenDeGrupos(gs){
+  if(!gs || !gs.length) return FEN.filas.slice();
+  return FEN.filas.filter(function(f){ return gs.indexOf(f.g) > -1; });
+}
+function fenGrupo(k){ var r = null; FEN.grupos.forEach(function(g){ if(g.k === k) r = g; }); return r; }
+/* las filas de El Niño (o las de «filas») que todavía no están en una lista (mismo peligro y mismo riesgo, o el riesgo que
+   tenía antes, sin mirar tildes ni mayúsculas) */
+function fenFaltan(lista, campoP, campoR, filas){
+  var nor = function(t){ var s = String(t || '').replace(/\s+/g, ' ').trim().toLowerCase(); try{ s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }catch(_n){} return s; };
+  var hay = {};
+  (lista || []).forEach(function(f){ if(f) hay[nor(f[campoP || 'p']) + '|' + nor(f[campoR || 'r'])] = 1; });
+  return (filas || FEN.filas).filter(function(f){ return !hay[nor(f.p) + '|' + nor(f.r)] && !(f.antes && hay[nor(f.p) + '|' + nor(f.antes)]); });
+}
+/* los tipos de trabajo del ATS (ATS_PREG.tipos) a los que aplica una fila */
+function fenAplica(f, tipos){
+  var t = f.t || ['*'];
+  if(t.indexOf('*') > -1) return true;
+  return (tipos || []).some(function(k){ return t.indexOf(k) > -1; });
+}
+/* <<< FEN-FIN >>> */
+/* ══ 9/11/2026 · EL NIÑO EN LA WEB (FEN, arriba): la tarjeta de «ATS / IPERC» con «⭐ A Mis peligros» y «⚡ A mis modelos»;
+   el IPERC de línea base y el PETS lo traen en portal/iperc-pets.js; el simulacro y la campaña, del catálogo. Solo mientras rija. ══ */
+function fenHoyWeb(){ try{ return fenVigente(hoyISO(), (typeof paisObraP === 'function') ? paisObraP() : 'pe'); }catch(_f){ return false; } }
+var FENW = { ver:false };
+function _fenWebOculto(){ try{ return localStorage.getItem('sstp_fen_oculto') === '1'; }catch(_l){ return false; } }
+/* 9/11/2026 (2) · las situaciones que le tocan a la obra (lluvias, huaicos e inundaciones, calor, zancudos): se recuerdan en este
+   navegador, por obra; sin marcar nada todavía, todas. Es lo que va a «Mis peligros» y a los modelos */
+function _fenWebGrLlave(){ return 'sstp_fen_g_' + ((typeof YO === 'object' && YO && YO.obra && YO.obra.id) || 'x'); }
+function fenGruposWeb(){
+  var g = null; try{ g = JSON.parse(localStorage.getItem(_fenWebGrLlave()) || 'null'); }catch(_l){ g = null; }
+  var ks = FEN.grupos.map(function(x){ return x.k; });
+  return Array.isArray(g) ? g.filter(function(k){ return ks.indexOf(k) > -1; }) : ks;
+}
+function fenGruposWebPoner(g){ try{ localStorage.setItem(_fenWebGrLlave(), JSON.stringify(g)); }catch(_l){} }
+function fenSelWeb(){ var g = fenGruposWeb(); return g.length ? fenDeGrupos(g) : []; }
+function _fenWebChips(id){
+  var g = fenGruposWeb();
+  return '<div class="fenw-gs" id="' + id + '" role="group" aria-label="Situaciones de El Niño">' + FEN.grupos.map(function(x){
+    var on = g.indexOf(x.k) > -1;
+    return '<button type="button" class="fenw-g' + (on ? ' on' : '') + '" aria-pressed="' + (on ? 'true' : 'false') + '" data-fen-g="' + esc(x.k) + '">' + x.ic + ' ' + esc(x.n) + ' <span>' + fenDeGrupos([x.k]).length + '</span></button>'; }).join('') + '</div>';
+}
+function _fenWebCss(){
+  if(document.getElementById('fenw-css')) return;
+  var st = document.createElement('style'); st.id = 'fenw-css';
+  st.textContent = '.fenw{position:relative;border-left:4px solid #0E7C86;padding-right:46px}.fenw h3{margin:0 0 2px;font-size:15px}' +
+    '.fenw .sub{margin:0;color:var(--gris,#4A5B68)}.fenw .acciones{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}' +
+    '.fenw-x{position:absolute;top:6px;right:6px;width:36px;height:36px;border:0;background:none;font-size:20px;line-height:1;color:inherit;opacity:.55;cursor:pointer;border-radius:8px}' +
+    '.fenw-x:hover,.fenw-x:focus-visible{opacity:1;background:rgba(14,124,134,.08)}' +
+    '.fenw-l{margin:10px 0 0;display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}.fenw-l>div{background:rgba(255,255,255,.65);border:1px solid #CFE3E6;border-radius:8px;padding:9px 11px}' +
+    '.fenw-l b{display:block;font-size:13.5px}.fenw-l small{display:block;font-size:12.5px;color:var(--gris,#4A5B68);margin-top:2px}.fenw-n{font-size:12.5px;margin:10px 0 0;color:var(--gris,#4A5B68)}' +
+    '.fenw-q{margin:10px 0 6px;font-size:13px;color:var(--tinta)}.fenw-gs{display:flex;flex-wrap:wrap;gap:6px}' +
+    '.fenw-g{-webkit-appearance:none;appearance:none;cursor:pointer;border:1px solid #CFE3E6;background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;color:var(--texto)}' +
+    '.fenw-g span{font-weight:700;opacity:.6;margin-left:2px}.fenw-g.on{background:#E3F2F3;border-color:#0E7C86;color:#0B5F66}.fenw-g:focus-visible{outline:2px solid #0E7C86;outline-offset:2px}' +
+    '.fenw-gt{grid-column:1/-1;margin:6px 0 -2px;font-size:13px;font-weight:700;color:#0B5F66}';
+  document.head.appendChild(st);
+}
+function _fenWebLista(){
+  var gs = fenGruposWeb();
+  return '<div class="fenw-l">' + FEN.grupos.filter(function(x){ return gs.indexOf(x.k) > -1; }).map(function(x){
+      return '<div class="fenw-gt">' + x.ic + ' ' + esc(x.n) + '</div>' + fenDeGrupos([x.k]).map(function(f){
+        return '<div><b>' + esc(f.p) + '</b><small>' + esc(f.r) + ' → ' + esc(f.c) + '</small><small>Control: ' + esc(f.m) + '</small></div>'; }).join(''); }).join('') + '</div>' +
+    '<p class="fenw-n">La ' + esc(FEN.norma) + ' (El Peruano, 04/09/2026) aprueba el «' + esc(FEN.plan) + '». ' +
+    'Estos peligros de obra son sugerencias de OBRASST: revísalos con tu equipo. Dejan de salir cuando termine su vigencia.</p>';
+}
+/* en «ATS / IPERC» (vistaATS): la caja #pap-fen */
+function fenAtsWebPintar(){
+  var c = $('pap-fen'); if(!c) return;
+  if(!fenHoyWeb() || _fenWebOculto()){ c.innerHTML = ''; return; }
+  _fenWebCss();
+  c.innerHTML = '<div class="aviso fenw" id="fenw"><button type="button" class="fenw-x" id="fenw-x" aria-label="Ocultar" title="Ocultar">×</button>' +
+    '<h3>🌊 Fenómeno El Niño 2026 - 2027</h3><p class="sub">Opcional · ' + esc(FEN.norma) + ' · Peligros directos, cada uno con su riesgo, su consecuencia y controles generales, listos para tus ATS. También están en el IPERC de línea base y en el PETS.</p>' +
+    '<p class="fenw-q">¿Qué le puede tocar a tu obra?</p>' + _fenWebChips('fenw-gs') +
+    '<div class="acciones"><button type="button" class="bt sec chico" id="fenw-mis"' + (fenSelWeb().length ? '' : ' disabled') + '>⭐ A «Mis peligros» (' + fenSelWeb().length + ')</button><button type="button" class="bt sec chico" id="fenw-mod"' + (fenSelWeb().length ? '' : ' disabled') + '>⚡ A mis modelos de ATS (' + fenSelWeb().length + ')</button>' +
+    '<button type="button" class="bt sec chico" id="fenw-ver" aria-expanded="' + (FENW.ver ? 'true' : 'false') + '">' + (FENW.ver ? 'Ocultar la lista' : 'Ver los peligros') + '</button></div>' +
+    (FENW.ver ? _fenWebLista() : '') + '<p class="msg" id="fenw-msg" role="status"></p></div>';
+  var msg = function(t, cl){ var m = $('fenw-msg'); if(m){ m.className = 'msg ' + (cl || ''); m.textContent = t; } };
+  $('fenw-x').onclick = function(){ try{ localStorage.setItem('sstp_fen_oculto', '1'); }catch(_l){} c.innerHTML = ''; toast('Listo. Los peligros por El Niño siguen en el IPERC de línea base y en el PETS.'); };
+  $('fenw-ver').onclick = function(){ FENW.ver = !FENW.ver; fenAtsWebPintar(); };
+  Array.prototype.forEach.call(c.querySelectorAll('[data-fen-g]'), function(b){ b.onclick = function(){
+    var g = fenGruposWeb(), k = b.getAttribute('data-fen-g'), i = g.indexOf(k);
+    if(i > -1) g.splice(i, 1); else g.push(k);
+    fenGruposWebPoner(g); fenAtsWebPintar();
+  }; });
+  $('fenw-mis').onclick = function(){
+    var bt = this; bt.disabled = true; msg('Guardando…', 'gris');
+    fenWebMis().then(function(n){ bt.disabled = false; msg(n ? 'Están en «Mis peligros»: salen al armar el ATS, aquí y en la app.' : 'Ya estaban en «Mis peligros».', 'ok'); },
+                     function(){ bt.disabled = false; msg('No se pudo guardar. Revisa tu conexión e inténtalo otra vez.', 'mal'); });
+  };
+  $('fenw-mod').onclick = function(){
+    var bt = this;
+    confirmar('¿Agregarlos a tus modelos de ATS?', 'Van en un paso nuevo, «' + FEN.paso + '», al final de cada modelo. Lo que ya estaba no se repite. Los ATS del día que ya salieron no cambian.', { si:'Sí, agregarlos' }).then(function(si){
+      if(!si) return;
+      bt.disabled = true; msg('Guardando…', 'gris');
+      fenWebModelos().then(function(r){
+        bt.disabled = false;
+        msg(r.total ? (r.n ? (r.n === 1 ? 'Agregados a 1 modelo.' : 'Agregados a ' + r.n + ' modelos.') + ' La app los recibe sola.' : 'Ya estaban en todos tus modelos.') : 'Todavía no hay modelos de ATS: arma el primero con «＋ Modelo de ATS».', r.n ? 'ok' : '');
+        if(r.n && typeof VISTA === 'object' && typeof VISTA.recargar === 'function') setTimeout(function(){ if(VISTA.actual === 'ats') VISTA.recargar(); }, 900);
+      }, function(){ bt.disabled = false; msg('No se pudo guardar. Revisa tu conexión e inténtalo otra vez.', 'mal'); });
+    });
+  };
+}
+/* «Mis peligros» (sst_estado «ats_mis», la misma lista de la app): se lee lo de arriba, se suma lo que falta y se escribe */
+function fenWebMis(){
+  return estadoLeerP('ats_mis').then(function(fila){
+    var v = fila && fila.valor, L = (v && Array.isArray(v.f)) ? v.f.slice() : [];
+    var F = fenFaltan(L.filter(function(z){ return z && !z.b; }), 'p', 'r', fenSelWeb());
+    if(!F.length) return 0;
+    F.forEach(function(f){ L.push({ k:'m' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), p:f.p, r:f.r, c:f.c, m:f.m, t:Date.now() }); });
+    return estadoEscribirP('ats_mis', { v:1, f:L.slice(-600) }).then(function(){ if(typeof PAPA === 'object' && PAPA) PAPA.mis = L; return F.length; });
+  });
+}
+/* los modelos de ATS (sst_doc «ats-modelo»): cada uno con el paso de El Niño al final (atsLoteAgregar, modo «nuevo») */
+function fenWebModelos(){
+  return traer('sst_doc', '&select=id,nombre,nota&hoja=eq.ats-modelo&order=creado.desc', 300).then(function(rows){
+    var mods = (rows || []).map(function(r){ var n = null; try{ n = JSON.parse(r.nota || 'null'); }catch(_e){ n = null; } return (n && typeof n === 'object') ? { id:r.id, paq:n } : null; }).filter(Boolean);
+    var F = fenSelWeb();
+    var cambios = mods.filter(function(x){ var t = 0; F.forEach(function(f){ t += atsLoteAgregar(x.paq, f, 'nuevo', FEN.paso).n; }); return t > 0; });
+    return Promise.all(cambios.map(function(x){ return sbPatch('sst_doc?id=eq.' + encodeURIComponent(x.id), { nota:JSON.stringify(x.paq) }); }))
+      .then(function(){ return { n:cambios.length, total:mods.length }; });
+  });
+}
+
+function atsLoteNorm(t){ var s = String(t || '').replace(/\s+/g, ' ').trim().toLowerCase(); try{ s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }catch(_n){} return s; }
+function atsLoteAgregar(m, fila, modo, paso){
+  var o = { n:0, ya:0 };
+  if(!m || !fila || !String(fila.p || '').trim() || !String(fila.r || '').trim()) return o;
+  m.acts = Array.isArray(m.acts) ? m.acts : [];
+  var F = { p:String(fila.p).trim().slice(0, 120), r:String(fila.r).trim().slice(0, 120), c:String(fila.c || '').trim().slice(0, 120), m:String(fila.m || '').trim().slice(0, 220) };
+  var tiene = function(a){ return (a.filas || []).some(function(f){ return atsLoteNorm(f.p) === atsLoteNorm(F.p) && atsLoteNorm(f.r) === atsLoteNorm(F.r); }); };
+  var pone = function(a){ a.filas = Array.isArray(a.filas) ? a.filas : []; if(tiene(a)){ o.ya++; return; } a.filas.push({ p:F.p, r:F.r, c:F.c, m:F.m }); o.n++; };
+  if(modo === 'palabra'){
+    var k = atsLoteNorm(paso); if(!k) return o;
+    m.acts.forEach(function(a){ if(atsLoteNorm(a.a).indexOf(k) > -1) pone(a); });
+  } else if(modo === 'nuevo'){
+    var nom = String(paso || '').replace(/\s+/g, ' ').trim().slice(0, 120) || 'Condiciones del entorno';
+    var ex = m.acts.filter(function(a){ return atsLoteNorm(a.a) === atsLoteNorm(nom); })[0];
+    if(!ex){ ex = { a:nom, filas:[] }; m.acts.push(ex); }
+    pone(ex);
+  } else m.acts.forEach(pone);
+  return o;
+}
+
+/* ── en la web: el panel, sobre los modelos que están en la nube (sst_doc «ats-modelo») ── */
+var ATSLW = { p:'', r:'', c:'', m:'', modo:'todos', paso:'', sel:null, mods:null };
+function atsLoteWeb(){
+  var caja = $('vista'); if(!caja) return;
+  var ac = $('acciones'); if(ac) ac.innerHTML = '<button type="button" class="bt sec" id="atlw-volver">‹ Volver a los ATS</button>';
+  $('atlw-volver').onclick = function(){ navegar('ats'); };
+  cargando(caja);
+  traer('sst_doc', '&select=id,nombre,nota,creado&hoja=eq.ats-modelo&order=creado.desc', 300).then(function(rows){
+    ATSLW.mods = (rows || []).map(function(r){ var n = null; try{ n = JSON.parse(r.nota || 'null'); }catch(_e){ n = null; } return n && typeof n === 'object' ? { id:r.id, nombre:r.nombre || n.trabajo || 'Modelo sin nombre', paq:n } : null; }).filter(Boolean);
+    _atlwPintar(caja);
+  }).catch(function(cod){ fallo(caja, cod); });
+}
+function _atlwPintar(caja, hecho){
+  var L = ATSLW, ms = L.mods || [];
+  var sel = function(id){ return !L.sel || L.sel[id] !== false; };
+  caja.innerHTML = '<div class="tarj"><div class="tarj-cab"><div><h2>⚡ Un peligro a varios modelos</h2><p class="sub">Escríbelo una vez y va a todos los modelos que marques, en el paso que elijas. Los ATS del día que ya salieron no cambian.</p></div></div><div class="tarj-cuerpo">' +
+    (hecho ? '<div class="aviso ok" id="atlw-hecho">✅ ' + esc(hecho) + '</div>' : '') +
+    (!ms.length ? '<div class="aviso">Todavía no hay modelos de ATS: arma el primero con «＋ Modelo de ATS».</div>' :
+    '<div class="form" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">' +
+      '<div class="campo"><label for="atlw-p">Peligro</label><input id="atlw-p" maxlength="120" value="' + esc(L.p) + '" placeholder="Lluvia intensa y suelo saturado"></div>' +
+      '<div class="campo"><label for="atlw-r">Riesgo</label><input id="atlw-r" maxlength="120" value="' + esc(L.r) + '" placeholder="Deslizamiento de tierra en la excavación"></div>' +
+      '<div class="campo"><label for="atlw-c">Consecuencia <small>· opcional</small></label><input id="atlw-c" maxlength="120" value="' + esc(L.c) + '" placeholder="Atrapamiento, lesiones graves"></div>' +
+      '<div class="campo"><label for="atlw-m">Control</label><input id="atlw-m" maxlength="220" value="' + esc(L.m) + '" placeholder="Suspender con lluvia; revisar taludes antes de reanudar"></div></div>' +
+    '<div class="campo" style="margin-top:6px"><label>¿En qué paso de cada modelo?</label><div class="chips" id="atlw-modo">' +
+      [['todos', 'En todos sus pasos'], ['palabra', 'En los pasos que digan…'], ['nuevo', 'En un paso nuevo']].map(function(x){ return '<button type="button" class="chip' + (L.modo === x[0] ? ' on' : '') + '" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+      (L.modo !== 'todos' ? '<input id="atlw-paso" maxlength="120" style="margin-top:8px;max-width:420px" value="' + esc(L.paso) + '" placeholder="' + (L.modo === 'palabra' ? 'excavación, izaje, altura…' : 'Condiciones del entorno') + '">' : '') + '</div>' +
+    '<div class="campo"><label>¿A qué modelos? <button type="button" class="bt chico sec" id="atlw-todos">Todos</button> <button type="button" class="bt chico sec" id="atlw-ninguno">Ninguno</button></label>' +
+      '<div id="atlw-mods" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px">' + ms.map(function(x){
+        return '<label class="check" style="margin:0"><input type="checkbox" data-id="' + esc(x.id) + '"' + (sel(x.id) ? ' checked' : '') + '> <span><b>' + esc(x.nombre) + '</b> · ' + ((x.paq.acts || []).length) + ' pasos</span></label>'; }).join('') + '</div></div>' +
+    '<p class="msg" id="atlw-msg"></p><div class="acciones"><button type="button" class="bt" id="atlw-ir">⚡ Agregarlo a los modelos marcados</button></div>') +
+    '</div></div>';
+  if(!ms.length) return;
+  var lee = function(){ ['p', 'r', 'c', 'm', 'paso'].forEach(function(k){ var x = $('atlw-' + k); if(x) L[k] = x.value; }); };
+  $('atlw-modo').onclick = function(ev){ var b = ev.target.closest ? ev.target.closest('button[data-v]') : null; if(!b) return; lee(); L.modo = b.getAttribute('data-v'); _atlwPintar(caja); };
+  $('atlw-todos').onclick = function(){ lee(); L.sel = null; _atlwPintar(caja); };
+  $('atlw-ninguno').onclick = function(){ lee(); L.sel = {}; ms.forEach(function(x){ L.sel[x.id] = false; }); _atlwPintar(caja); };
+  $('atlw-mods').onchange = function(ev){ var t = ev.target; if(!t || !t.getAttribute('data-id')) return; if(!L.sel) L.sel = {}; L.sel[t.getAttribute('data-id')] = !!t.checked; };
+  $('atlw-ir').onclick = function(){
+    lee();
+    var msg = $('atlw-msg'), mal = function(t){ msg.className = 'msg mal'; msg.textContent = t; };
+    if(String(L.p).trim().length < 3) return mal('Escribe el peligro.');
+    if(String(L.r).trim().length < 3) return mal('Escribe el riesgo.');
+    if(String(L.m).trim().length < 3) return mal('Escribe el control.');
+    if(L.modo === 'palabra' && String(L.paso || '').trim().length < 3) return mal('Escribe la palabra del paso.');
+    var el = ms.filter(function(x){ return sel(x.id); }); if(!el.length) return mal('Marca al menos un modelo.');
+    var bt = this; bt.disabled = true; msg.className = 'msg gris'; msg.textContent = 'Guardando…';
+    var fila = { p:L.p, r:L.r, c:L.c, m:L.m }, tot = { mod:0, n:0, ya:0 }, cambios = [];
+    el.forEach(function(x){ var r = atsLoteAgregar(x.paq, fila, L.modo, L.paso); tot.n += r.n; tot.ya += r.ya; if(r.n){ tot.mod++; cambios.push(x); } });
+    Promise.all(cambios.map(function(x){ return sbPatch('sst_doc?id=eq.' + encodeURIComponent(x.id), { nota:JSON.stringify(x.paq) }); })).then(function(){
+      L.p = L.r = L.c = L.m = '';
+      _atlwPintar(caja, tot.mod ? ('Agregado a ' + tot.mod + (tot.mod === 1 ? ' modelo' : ' modelos') + ' (' + tot.n + (tot.n === 1 ? ' paso' : ' pasos') + ')' + (tot.ya ? '; en ' + tot.ya + ' ya estaba' : '') + '. La app lo recibe sola.')
+                                : (tot.ya ? 'Ya estaba en todos los modelos marcados: no se cambió nada.' : 'Ningún modelo tiene un paso con esa palabra: no se cambió nada.'));
+    }, function(){ bt.disabled = false; mal('No se pudo guardar. Revisa tu conexión e inténtalo otra vez.'); });
+  };
+}
 function vistaATS(caja){
   cargando(caja);
   function pinta(){
@@ -6867,16 +7266,18 @@ function vistaATS(caja){
       ];
       var ac=$('acciones');
       if(ac && !$('pap-ats')){
-        ac.innerHTML='<button type="button" class="bt sec" id="pap-blancos">Formatos en blanco</button><button type="button" class="bt sec" id="pap-ipc">＋ IPERC continuo</button>'+
+        ac.innerHTML='<button type="button" class="bt sec" id="pap-lote" title="Un peligro a varios modelos de una vez">⚡ Peligro a varios modelos</button><button type="button" class="bt sec" id="pap-blancos">Formatos en blanco</button><button type="button" class="bt sec" id="pap-ipc">＋ IPERC continuo</button>'+
           '<button type="button" class="bt sec" id="pap-modelo">＋ Modelo de ATS</button><button type="button" class="bt" id="pap-ats">＋ ATS del día</button>';
         $('pap-ats').onclick=function(){ papIr('papAtsNuevo', 'dia'); };
         $('pap-modelo').onclick=function(){ papIr('papAtsNuevo', 'modelo'); };
         $('pap-ipc').onclick=function(){ papIr('papIpcNuevo'); };
         $('pap-blancos').onclick=function(){ papIr('papBlancos'); };
+        $('pap-lote').onclick=function(){ atsLoteWeb(); };   /* 9/11/2026 */
       }
       var est=$('t-ats') ? $('t-ats')._est : null;
       caja.innerHTML='<div class="aviso" id="pap-que">Los ATS que la cuadrilla firmó en el celular y los papeles que armas aquí: el ATS del día, el modelo de una actividad y el IPERC continuo. Desde aquí se da el V°B° —capataz, ingeniero, SSOMA— con la misma firma y las mismas reglas que en la app, o se devuelve con observación. Cada papel sale en PDF con el modelo de formato que elijas.</div>'+
-        '<div id="pap-modo"></div><div class="tarj" id="t-ats"></div>';
+        '<div id="pap-fen"></div><div id="pap-modo"></div><div class="tarj" id="t-ats"></div>';
+      if(typeof fenAtsWebPintar==='function') fenAtsWebPintar();   /* 9/11/2026 · El Niño 2026 - 2027, mientras rija */
       if(est) $('t-ats')._est=est;
       tabla($('t-ats'), cols, filas, {orden:'fecha', asc:false, unidad:'papeles', vacio:'Ningún ATS ni IPERC todavía', vacioSub:'Arma el primero aquí, con «＋ ATS del día». Los que el supervisor suba desde la app también aparecen aquí.', archivo:'ats-iperc',
         alClic:function(f){ if(f.hoja==='ats') abrirATS(f.id); else if(f.hoja==='ats-modelo' || f.hoja==='iperc-c') papIr('papAbrir', f.id); },
@@ -9247,7 +9648,7 @@ function quitarDocP(f){
    Los temas y las charlas salen de catalogo.js, que armar.py saca de la
    app: los mismos identificadores que viajan en lo programado.
    ══════════════════════════════════════════════════════════════ */
-var CATALOGO_VER='522be53f58';   /* lo pone armar.py: el hash de catalogo.js */
+var CATALOGO_VER='f2e5ba12da';   /* lo pone armar.py: el hash de catalogo.js */
 var _CAT_CARGA=null;
 function cargarCatalogo(){
   if(typeof CATALOGO !== 'undefined') return Promise.resolve(CATALOGO);
@@ -10902,7 +11303,7 @@ function quitarNoticiaP(f){
    escanearon, y el cartel para imprimir: el mismo diseño de la app, con
    la ficha del cartel (sst_qr_cartel) y nunca el código de la obra. La
    impresora de la oficina hace lo que el celular no. */
-var QR_VER='ecf7798e8d';   /* lo pone armar.py: el hash de qr.js */
+var QR_VER='7c32457873';   /* lo pone armar.py: el hash de qr.js */
 var _QR_CARGA=null;
 function cargarQRLib(){
   if(typeof qrcode === 'function' && typeof BASE_QR_APP === 'string' && typeof cartelDibujar === 'function') return Promise.resolve(qrcode);
@@ -12206,7 +12607,7 @@ function abrirNormaPE(i){
    etiqueta que sale de la impresora de la oficina es igual a la del
    celular. La revisión se hace en la obra, con la app y la inspección de
    siempre; aquí se puede dejar uno fuera de servicio o darlo de baja. */
-var EQBASE_VER='9f61f301f5';   /* lo pone armar.py: el hash de portal/equipos.js */
+var EQBASE_VER='84fdc3f7ab';   /* lo pone armar.py: el hash de portal/equipos.js */
 var _EQB_CARGA=null;
 function cargarEqBase(){
   if(typeof EQ_TIPOS!=='undefined' && typeof eqArmarPDF==='function') return Promise.resolve(true);
@@ -12296,7 +12697,7 @@ function peqPintar(caja){
   L.forEach(function(x){ c[peqClase(x)]++; });
   var cm=eqColor(PEQ.colores[MES]), nomMes=eqMesNombre(MES);
   var h='<div class="tarj peq-cinta"><div class="tarj-cuerpo"><div class="peq-cinta-tx"><b>Cinta de '+esc(nomMes)+': '+(cm ? peqCinta(cm.k) : '<span class="gris-t">sin elegir</span>')+'</b>'+
-    '<p class="ayuda" style="margin:2px 0 0">El color que lleva cada equipo revisado este mes. Es el de la obra: lo ve la app de todos y sale al escanear el QR.</p></div>'+
+    '<p class="ayuda" style="margin:2px 0 0">Color del mes de los equipos revisados: lo ve toda la obra y sale en su QR.</p></div>'+
     '<div class="peq-colores" role="group" aria-label="Color de la cinta de '+esc(nomMes)+'">'+EQ_COLORES.map(function(k){
       var on=!!(cm && cm.k===k.k);
       return '<button type="button" class="peq-col'+(on?' on':'')+'" data-color="'+k.k+'" aria-pressed="'+on+'" title="'+esc(k.n)+'"><i style="background:'+k.h+'"></i><span>'+esc(k.n)+'</span></button>';
@@ -12314,7 +12715,7 @@ function peqPintar(caja){
   /* 07/10/2026 · la inspección del mes: cuántos equipos ya tienen su revisión de este mes, y la hoja para hacerla aquí */
   var act=L.filter(function(x){ return x.estado!=='baja' && (typeof eqTieneMensual!=='function' || eqTieneMensual(x)); }), rev=act.filter(function(x){ return String(x.ult_fecha||'').slice(0,7)===MES; }).length;
   h+='<div class="tarj peq-mes" id="peq-mes"><div class="tarj-cuerpo"><div><b>Inspección de '+esc(nomMes)+': '+rev+' de '+act.length+' '+(act.length===1 ? 'equipo' : 'equipos')+' con su revisión del mes</b>'+
-     '<p class="ayuda" style="margin:2px 0 0">'+(rev>=act.length ? 'Completa. La hoja queda para verla, firmarla e imprimirla.' : 'La hoja se arma sola con todos los equipos: a cada uno, conforme, con observación o fuera de servicio. Firman Producción y Seguridad.')+'</p></div>'+
+     '<p class="ayuda" style="margin:2px 0 0">'+(rev>=act.length ? 'Completa. La hoja queda para verla, firmarla e imprimirla.' : 'Hoja del mes con todos los equipos y su estado. Firman Producción y Seguridad.')+'</p></div>'+
      '<button type="button" class="bt'+(rev>=act.length ? ' sec' : '')+'" id="peq-mes-ir">'+(rev ? (rev>=act.length ? 'Ver la hoja del mes' : 'Seguir con la inspección') : 'Hacer la inspección del mes')+'</button></div></div>';
   /* 4/11/2026 · V7.9j · quién puede inspeccionar cada clase (la emergencia, sin elegir: solo el equipo de SST) */
   h+=peqQuienTarjeta();
@@ -13108,6 +13509,20 @@ function peqRepetido(cod, menosId){
   var k=cod.toLowerCase();
   return PEQ.filas.some(function(x){ return String(x.id)!==String(menosId||'') && x.estado!=='baja' && String(x.codigo).trim().toLowerCase()===k; });
 }
+/* 7/11/2026 · lo que contestó el servidor al último 400 al guardar un equipo (para quitar solo lo que tuvo la culpa).
+   peqMandaFila: lo mismo que sbPatch (y «la cuenta no puede» si no tocó ninguna fila) o sbPostP, y además guarda eso. */
+var PEQ_400='';
+function peqMandaFila(id, fila, nuevo){
+  PEQ_400='';
+  var v=nuevo ? sbPostRuta('sst_equipo_qr', fila) : { ruta:'sst_equipo_qr?id=eq.'+encodeURIComponent(id), prefer:'return=representation' };
+  return sbFetch(SB.url+'/rest/v1/'+v.ruta, {method:nuevo ? 'POST' : 'PATCH', body:JSON.stringify(fila), extra:{'Prefer':v.prefer}}).then(function(r){
+    if(!r.ok) return r.text().then(function(t){ PEQ_400=String(t||'').slice(0, 600); }, function(){}).then(function(){ return Promise.reject(r.status); });
+    return r.json().catch(function(){ return nuevo ? [fila] : []; });
+  }).then(function(rows){
+    if(!nuevo && Array.isArray(rows) && !rows.length) return Promise.reject({portal:'Esta cuenta no puede cambiar los equipos de esta obra.'});
+    return rows;
+  });
+}
 function peqGuardar(){
   var E0=PEQ.edit, m=$('peq-f-m'), bt=$('peq-f-si'); if(!E0 || !m) return;
   m.className='msg mal';
@@ -13140,6 +13555,8 @@ function peqGuardar(){
   if(U.error){ m.textContent=U.error; try{ $('peq-uso-p').focus(); }catch(_f){} return; }
   var conUso=!!(U.uso || E0.teniaUso), sinUso=false;
   if(conUso) fila.uso=U.uso;
+  /* 7/11/2026 · el mantenimiento anual (m) y la próxima prueba hidrostática (h) del extintor */
+  var conFechas=!!(U.uso && (U.uso.m || U.uso.h)), sinFechas=false;
   /* 15/10/2026 · lote 12 · las que le tocan: viajan solo si hay algo que guardar (o que quitar); la base sin
      sql/2026-11-18-equipo-frecuencias.sql sigue registrando equipos igual que antes */
   var FR=(E0.frecs && E0.frecs.length) ? EQ_FRECS.map(function(F){ return F.k; }).filter(function(q){ return E0.frecs.indexOf(q)>-1; }) : null;
@@ -13152,31 +13569,35 @@ function peqGuardar(){
   m.className='msg gris'; m.textContent='Guardando…'; bt.disabled=true;
   var id=E0.id || eqNuevoId();
   if(!E0.id){ fila.id=id; fila.empresa=YO.obra.id; fila.token=eqNuevaFicha(); }
-  function manda(){
-    return E0.id ? sbPatch('sst_equipo_qr?id=eq.'+encodeURIComponent(id), fila).then(function(rows){ if(Array.isArray(rows) && !rows.length) return Promise.reject({portal:'Esta cuenta no puede cambiar los equipos de esta obra.'}); })
-                 : sbPostP('sst_equipo_qr', fila);
-  }
+  /* 7/11/2026 · por peqMandaFila: guarda lo que contesta el servidor a un 400 (PEQ_400), para quitar solo lo que tuvo la culpa */
+  function manda(){ return peqMandaFila(id, fila, !E0.id); }
   manda().catch(function(e){
-    /* V7.9j · la base sin el SQL del 4/11 (lo más nuevo, se prueba primero): se guarda sin su ubicación */
-    if(e===400 && conUbic){ delete fila.ubicacion; sinUbic=true; return manda(); }
+    /* 7/11/2026 · la base sin sql/2026-11-07-uso-fechas.sql (lo más nuevo, se prueba primero): su regla de «uso» todavía no
+       acepta las dos fechas del extintor. Se guarda todo lo demás de «Cómo se usa», sin ellas. */
+    if(e===400 && conFechas && eqCulpaEs(PEQ_400, 'uso')){ fila.uso=eqUsoSinFechas(fila.uso); sinFechas=true; return manda(); }
+    return Promise.reject(e);
+  }).catch(function(e){
+    /* V7.9j · la base sin el SQL del 4/11: se guarda sin su ubicación */
+    if(e===400 && conUbic && eqCulpaEs(PEQ_400, 'ubicacion')){ delete fila.ubicacion; sinUbic=true; return manda(); }
     return Promise.reject(e);
   }).catch(function(e){
     /* la base sin el SQL del 15/10: se guarda sin las que le tocan */
-    if(e===400 && conFrec){ delete fila.frecuencias; sinFrec=true; return manda(); }
+    if(e===400 && conFrec && eqCulpaEs(PEQ_400, 'frecuencias')){ delete fila.frecuencias; sinFrec=true; return manda(); }
     return Promise.reject(e);
   }).catch(function(e){
     /* la base sin el SQL del 14/10: se guarda sin «cómo se usa» */
-    if(e===400 && conUso){ delete fila.uso; sinUso=true; return manda(); }
+    if(e===400 && conUso && eqCulpaEs(PEQ_400, 'uso')){ delete fila.uso; sinUso=true; return manda(); }
     return Promise.reject(e);
   }).catch(function(e){
     /* la base sin el SQL del 05/10: se guarda igual, con la marca, el modelo y la serie en «detalle» y la etiqueta clásica */
-    if(e===400 && conExtra){ delete fila.marca; delete fila.modelo; delete fila.serie; delete fila.diseno; sinExtra=true; return manda(); }
+    if(e===400 && conExtra && eqCulpaEs(PEQ_400, 'extra')){ delete fila.marca; delete fila.modelo; delete fila.serie; delete fila.diseno; sinExtra=true; return manda(); }
     return Promise.reject(e);
   }).catch(function(e){
-    if(e===400 && conChk){ delete fila.checklist; sinChk=true; return manda(); }
+    if(e===400 && conChk && eqCulpaEs(PEQ_400, 'checklist')){ delete fila.checklist; sinChk=true; return manda(); }
     return Promise.reject(e);
   }).then(function(){
-    toast((sinUbic && ubic) ? cod+' se guardó, pero sin su ubicación: falta actualizar el servidor. Avísanos y lo dejamos listo.'
+    toast((sinFechas && !sinUso) ? cod+' se guardó, pero sin su mantenimiento anual ni su próxima prueba hidrostática: falta actualizar el servidor. Avísanos y lo dejamos listo.'
+          : (sinUbic && ubic) ? cod+' se guardó, pero sin su ubicación: falta actualizar el servidor. Avísanos y lo dejamos listo.'
           : (sinFrec && FR) ? cod+' se guardó, pero sin las inspecciones que le tocan: falta actualizar el servidor. Avísanos y lo dejamos listo.'
           : (sinUso && U.uso) ? cod+' se guardó, pero sin «Cómo se usa»: falta actualizar el servidor. Avísanos y lo dejamos listo.'
           : (sinChk && chk) ? cod+' se guardó, pero sin su checklist propio: falta actualizar el servidor. Avísanos y lo dejamos listo.'
@@ -13410,7 +13831,8 @@ function peqEtiqPDF(){
    resultados, qué firmas faltan, el PDF y el Excel) está en portal/equipos.js. */
 var PIQ={ filas:[], eq:[], filtro:'firmar', n:0, r:null, rol:null, huella:'', reloj:null, buscar:'', miCambio:0, hoja:null };
 var PIQ_COLS='id,equipo,fecha,hora,resultado,origen,op_nombre,op_cargo,fotos,formato_n,pn:prod->>n,sn:sst->>n,creado';
-var PIQ_FILTROS=[['firmar','Por firmar'], ['hoy','Hoy'], ['obs','Con observación'], ['todas','Últimos 31 días']];
+/* 7/11/2026 · «Falta Producción» y «Falta SST»: el ingeniero de producción y el supervisor ven cada uno lo suyo */
+var PIQ_FILTROS=[['firmar','Por firmar'], ['prod','Falta Producción'], ['sst','Falta SST'], ['hoy','Hoy'], ['obs','Con observación'], ['todas','Últimos 31 días']];
 function piqEq(id){ return PIQ.eq.filter(function(x){ return String(x.id)===String(id); })[0]||null; }
 function piqDesde(dias){ var d=new Date(Date.now()-dias*86400000); return d.getFullYear()+'-'+dos(d.getMonth()+1)+'-'+dos(d.getDate()); }
 function piqPill(r){ var R=IQB.res(r); return '<span class="pill '+({ok:'ok', med:'ojo', mal:'mal'}[R.c])+'">'+esc(R.n)+'</span>'; }
@@ -13432,12 +13854,15 @@ function vistaInspEq(caja){
   if(ac){
     var meses=[];
     for(var k=0;k<12;k++){ var d=new Date(+HOY.slice(0,4), +HOY.slice(5,7)-1-k, 1); meses.push(d.getFullYear()+'-'+dos(d.getMonth()+1)); }
-    ac.innerHTML='<select id="piq-mes" aria-label="Mes del Excel" style="width:auto">'+meses.map(function(m){ return '<option value="'+m+'">'+esc(_edMesL(m))+'</option>'; }).join('')+'</select>'+
+    ac.innerHTML='<button type="button" class="bt sec" id="piq-arch" title="Lo liberado, por tipo de equipo y por mes">🗂️ Archivo</button>'+   /* 9/11/2026 */
+      '<select id="piq-mes" aria-label="Mes del Excel" style="width:auto">'+meses.map(function(m){ return '<option value="'+m+'">'+esc(_edMesL(m))+'</option>'; }).join('')+'</select>'+
       '<button type="button" class="bt sec" id="piq-hm">📄 Hoja del mes (A4)</button>'+   /* 4/11/2026 · V7.9k */
       '<button type="button" class="bt" id="piq-xlsx">⬇ Excel del mes</button>';
     $('piq-xlsx').onclick=piqExcel;
     $('piq-hm').onclick=function(){ piqHojaMes(($('piq-mes')||{}).value||MES); };
+    $('piq-arch').onclick=piqArchivo;
   }
+  PIQA.activo=false; PIQA.carpeta='';
   function pinta(silencio){
     var n=++PIQ.n;
     Promise.all([
@@ -13451,6 +13876,7 @@ function vistaInspEq(caja){
       var huella=JSON.stringify(filas)+'|'+eq.length+'|'+HOY;
       if(silencio && huella===PIQ.huella) return;
       PIQ.huella=huella; PIQ.filas=filas; PIQ.eq=eq;
+      if(PIQA.activo) return;   /* 9/11/2026 · con el archivo abierto, el repaso no lo pisa */
       piqPintar(caja);
     }).catch(function(cod){
       if(n!==PIQ.n || VISTA.actual!=='inspeq') return;
@@ -13480,13 +13906,14 @@ function piqPintar(caja){
     cifra('Con observación', conObs.length, 'en los últimos 31 días', conObs.length?'ojo':'')+'</div>';
   if(faltan.length) h+='<div class="aviso ojo piq-faltan" id="piq-faltan"><b>Hoy todavía sin inspección:</b> '+
      faltan.slice(0,40).map(function(x){ return '<span class="peq-cod" title="'+esc([x.tipo, x.detalle].filter(Boolean).join(' · '))+'">'+esc(x.codigo)+'</span>'; }).join(' ')+(faltan.length>40 ? ' …' : '')+
-     '<p class="ayuda" style="margin:6px 0 0">Son las grúas, los andamios, las escaleras, los montacargas y los equipos con checklist propio que están en servicio. La inspección la hace quien lo va a usar, escaneando su QR con la app.</p></div>';
+     '<p class="ayuda" style="margin:6px 0 0">Equipos de inspección diaria en servicio. La hace el operador con su QR, desde la app.</p></div>';
   if(!L.length){
-    h+='<div class="tarj"><div class="vacio"><b>Todavía no llega ninguna inspección</b>La hace cada trabajador antes de usar el equipo: escanea su QR con la app, responde el checklist, le toma foto y firma. '+
-       'Aquí aparece sola, para que Producción y SST la firmen.</div></div>';
+    h+='<div class="tarj"><div class="vacio"><b>Todavía no llega ninguna inspección</b>Pre-uso del operador con el QR (checklist, foto y firma). '+
+       'Llega aquí para la firma de Producción y SST.</div></div>';
     caja.innerHTML=h; return;
   }
-  var cuenta={firmar:porFirmar.length, hoy:deHoy.length, obs:conObs.length, todas:L.length};
+  var sinProd=L.filter(function(i){ return !(i.prod || i.pn); }), sinSST=L.filter(function(i){ return !(i.sst || i.sn); });
+  var cuenta={firmar:porFirmar.length, prod:sinProd.length, sst:sinSST.length, hoy:deHoy.length, obs:conObs.length, todas:L.length};
   if(PIQ.buscar) PIQ.filtro='todas';
   if(!cuenta[PIQ.filtro]) PIQ.filtro = cuenta.firmar ? 'firmar' : 'todas';
   h+='<div class="seg peq-seg" role="group" aria-label="Qué inspecciones ver">'+PIQ_FILTROS.map(function(f){
@@ -13496,7 +13923,7 @@ function piqPintar(caja){
   Array.prototype.forEach.call(caja.querySelectorAll('.seg [data-f]'), function(b){
     b.onclick=function(){ PIQ.filtro=b.getAttribute('data-f'); piqPintar(caja); };
   });
-  var filas={firmar:porFirmar, hoy:deHoy, obs:conObs, todas:L}[PIQ.filtro], t=$('t-inspeq');
+  var filas={firmar:porFirmar, prod:sinProd, sst:sinSST, hoy:deHoy, obs:conObs, todas:L}[PIQ.filtro], t=$('t-inspeq');
   /* desde la ficha de un equipo: «Ver sus inspecciones diarias» llega con su código ya buscado */
   if(PIQ.buscar){ t._est={q:PIQ.buscar, ord:'fecha', asc:false}; PIQ.buscar=''; }
   tabla(t, [
@@ -13511,6 +13938,81 @@ function piqPintar(caja){
     {k:'resultado', t:'Resultado', v:function(i){ return IQB.res(i).n; }, h:function(i){ return piqPill(i); }}
   ], filas, {orden:'fecha', asc:false, unidad:'inspecciones', vacio:'Ninguna aquí', vacioSub:'Prueba con otro filtro de arriba.', archivo:'inspeccion-diaria-de-equipos',
     alClic:function(i){ piqAbrir(i.id); }});
+}
+
+/* ══ 9/11/2026 · «🗂️ ARCHIVO»: lo liberado (las tres firmas) de cada año, en una carpeta por tipo de equipo y, adentro, por
+   mes; cada una abre su hoja con su PDF (piqAbrir). Lo que espera una firma sigue en «Por firmar». ══ */
+var PIQA = { activo:false, anio:'', carpeta:'', filas:null, n:0 };
+function _piqaCss(){
+  if($('piqa-css')) return;
+  var st=document.createElement('style'); st.id='piqa-css';
+  st.textContent='.piqa-cab{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 14px}'+
+    '.piqa-anio{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--gris)}.piqa-anio select{width:auto}'+
+    '.piqa-carpetas button b{font-size:14px}.piqa-tit{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 4px;font-size:16px}'+
+    '.piqa-mes{margin:18px 0 8px;font-size:14px;color:var(--tinta)}.piqa-mes span{color:var(--gris);font-weight:400}';
+  document.head.appendChild(st);
+}
+function piqArchivo(){
+  var caja=$('vista'); if(!caja) return;
+  PIQA.activo=true; PIQA.carpeta=''; if(!PIQA.anio) PIQA.anio=HOY.slice(0, 4);
+  piqArchivoTraer(caja);
+}
+function piqArchivoSalir(){ PIQA.activo=false; PIQA.carpeta=''; var caja=$('vista'); if(caja) piqPintar(caja); }
+function piqArchivoTraer(caja){
+  var n=++PIQA.n, a=PIQA.anio;
+  cargando(caja);
+  Promise.all([
+    traerTodo('sst_equipo_insp', '&fecha=gte.'+a+'-01-01&fecha=lte.'+a+'-12-31&select='+PIQ_COLS+'&order=fecha.desc', 8000),
+    (PIQ.eq && PIQ.eq.length) ? Promise.resolve(PIQ.eq) : piqTraerEquipos()
+  ]).then(function(r){
+    if(n!==PIQA.n || !PIQA.activo || VISTA.actual!=='inspeq') return;
+    if(Array.isArray(r[1])) PIQ.eq=r[1];
+    PIQA.filas=(Array.isArray(r[0]) ? r[0] : []).filter(function(i){ return IQB.completa(i); });
+    piqArchivoPintar(caja);
+  }).catch(function(cod){ if(n===PIQA.n && PIQA.activo) fallo(caja, cod); });
+}
+function _piqaTipo(i){ var x=piqEq(i.equipo); return (x && x.tipo) || i.formato_n || 'Otros'; }
+function piqArchivoPintar(caja){
+  _piqaCss();
+  var L=PIQA.filas || [], por={}, anios=[];
+  for(var y=+HOY.slice(0, 4); y>=2026; y--) anios.push(String(y));
+  if(anios.indexOf(PIQA.anio)<0) anios.push(PIQA.anio);
+  L.forEach(function(i){ var t=_piqaTipo(i); (por[t]=por[t]||[]).push(i); });
+  var tipos=Object.keys(por).sort(function(a, b){ return a.localeCompare(b, 'es'); });
+  var h='<div class="piqa-cab"><button type="button" class="bt sec chico" id="piqa-volver">‹ Inspección diaria</button>'+
+    '<label class="piqa-anio" for="piqa-anio">Año <select id="piqa-anio">'+anios.map(function(x){ return '<option value="'+x+'"'+(x===PIQA.anio ? ' selected' : '')+'>'+x+'</option>'; }).join('')+'</select></label></div>'+
+    '<div class="aviso">Aquí queda lo <b>liberado</b>: cada inspección con sus tres firmas (quien inspeccionó, Producción y SST), en la carpeta de su equipo. Lo que espera una firma sigue en «Por firmar».</div>';
+  if(!PIQA.carpeta || !por[PIQA.carpeta]){
+    PIQA.carpeta='';
+    if(!tipos.length) h+='<div class="tarj"><div class="vacio"><b>Nada liberado en '+esc(PIQA.anio)+'</b>Cuando una inspección tenga sus tres firmas, se guarda aquí sola, en la carpeta de su equipo.</div></div>';
+    else h+='<div class="insf piqa-carpetas" id="piqa-carpetas">'+tipos.map(function(t){
+      var l=por[t], u=l[0] ? l[0].fecha : '';
+      return '<button type="button" data-t="'+esc(t)+'"><b>🗂️ '+esc(t)+'</b><small>'+l.length+(l.length===1 ? ' inspección' : ' inspecciones')+(u ? ' · la última, el '+esc(IQB.dma(u)) : '')+'</small></button>';
+    }).join('')+'</div>';
+    caja.innerHTML=h; enchufar(); return;
+  }
+  var l=por[PIQA.carpeta], meses={}, orden=[];
+  l.forEach(function(i){ var m=String(i.fecha||'').slice(0, 7); if(!meses[m]){ meses[m]=[]; orden.push(m); } meses[m].push(i); });
+  h+='<h3 class="piqa-tit">🗂️ '+esc(PIQA.carpeta)+' · '+esc(PIQA.anio)+' <button type="button" class="bt sec chico" id="piqa-todas">‹ Todas las carpetas</button></h3>';
+  orden.forEach(function(m, k){ h+='<div class="piqa-mes"><b>'+esc(_edMesL(m))+'</b> <span>· '+meses[m].length+(meses[m].length===1 ? ' inspección' : ' inspecciones')+'</span></div><div class="tarj" id="piqa-m'+k+'"></div>'; });
+  caja.innerHTML=h; enchufar();
+  orden.forEach(function(m, k){
+    tabla($('piqa-m'+k), [
+      {k:'fecha', t:'Fecha', v:function(i){ return i.fecha+(i.hora ? ' '+i.hora : ''); },
+       h:function(i){ return esc(IQB.dma(i.fecha))+(i.hora ? ' <span class="gris-t">'+esc(i.hora)+'</span>' : ''); }},
+      {k:'_cod', t:'Código', v:function(i){ return (piqEq(i.equipo)||{}).codigo||''; }, h:function(i){ var x=piqEq(i.equipo); return x ? '<span class="peq-cod">'+esc(x.codigo)+'</span>' : '—'; }},
+      {k:'formato_n', t:'Formato'},
+      {k:'op_nombre', t:'Inspeccionó', v:function(i){ return [i.op_nombre, i.op_cargo].filter(Boolean).join(' · '); }},
+      {k:'resultado', t:'Resultado', v:function(i){ return IQB.res(i).n; }, h:function(i){ return piqPill(i); }}
+    ], meses[m], {orden:'fecha', asc:false, unidad:'inspecciones', archivo:'archivo-'+String(PIQA.carpeta).toLowerCase().replace(/[^a-z0-9]+/g, '-')+'-'+m,
+      alClic:function(i){ piqAbrir(i.id); }});
+  });
+  function enchufar(){
+    $('piqa-volver').onclick=piqArchivoSalir;
+    $('piqa-anio').onchange=function(){ PIQA.anio=this.value; PIQA.carpeta=''; piqArchivoTraer(caja); };
+    var t=$('piqa-todas'); if(t) t.onclick=function(){ PIQA.carpeta=''; piqArchivoPintar(caja); };
+    Array.prototype.forEach.call(caja.querySelectorAll('#piqa-carpetas [data-t]'), function(b){ b.onclick=function(){ PIQA.carpeta=b.getAttribute('data-t'); piqArchivoPintar(caja); try{ window.scrollTo(0, 0); }catch(_s){} }; });
+  }
 }
 
 /* ── una inspección, entera ── */
@@ -13927,7 +14429,7 @@ function piqExcel(){
    Planes SSOMA y Gestión SST, como en la app; si la obra bajó de plan,
    lo cargado se ve (y su cartel se imprime), pero no se cambia.
    ══════════════════════════════════════════════════════════════════ */
-var QUIM_VER='93c158dfdd';   /* lo pone armar.py: el hash de portal/quimicos.js */
+var QUIM_VER='5614da0fdb';   /* lo pone armar.py: el hash de portal/quimicos.js */
 var _QUIM_CARGA=null;
 function cargarQuim(){
   if(typeof quimTarjetaSVG==='function' && typeof quimLeerTexto==='function' && typeof qrcode==='function') return Promise.resolve(true);
@@ -14714,23 +15216,25 @@ function pquTarQR(){
 }
 function pquTarPintar(){
   var T=PQU.tar, c=$('pqu-t'); if(!T || !c) return;
-  var L=QT_TAM[T.tam], tot=0; T.hoja.forEach(function(x){ tot+=x.n; });
-  var hojas=Math.max(1, Math.ceil(tot/L.porHoja)), q=T.ver ? pquPorId(T.ver) : null;
+  var tot=0; T.hoja.forEach(function(x){ tot+=x.n; });
+  var PH=qtPorHoja(T.tam, T.caras), hojas=Math.max(1, Math.ceil(tot/PH)), q=T.ver ? pquPorId(T.ver) : null;
   var izq='<div class="seg" role="group" aria-label="Tamaño de la tarjeta">'+[['chica','Chica · 8,5 × 5,4 cm'], ['grande','Grande · 13 × 9 cm']].map(function(x){
       return '<button type="button" data-tam="'+x[0]+'" class="'+(T.tam===x[0] ? 'on' : '')+'" aria-pressed="'+(T.tam===x[0])+'">'+x[1]+'</button>'; }).join('')+'</div>'+
-    '<p class="ayuda" style="margin:-6px 0 14px">'+(T.tam==='chica' ? 'La de una tarjeta de crédito: 10 por hoja A4 y entra en una mica de fotocheck. Para frascos y aerosoles.' : '4 por hoja A4. Para galoneras y baldes.')+'</p>'+
+    '<p class="ayuda" style="margin:-6px 0 14px">'+(T.tam==='chica' ? (T.caras===2 ? 'La de una tarjeta de crédito: a doble cara salen 5 por hoja A4 y, doblada, entra en una mica de fotocheck. Para frascos y aerosoles.'
+                                     : 'La de una tarjeta de crédito: 10 por hoja A4 y entra en una mica de fotocheck. Para frascos y aerosoles.')
+                   : (T.caras===2 ? 'A doble cara salen 2 por hoja A4. Para galoneras y baldes.' : '4 por hoja A4. Para galoneras y baldes.'))+'</p>'+
     '<div class="seg" role="group" aria-label="Caras de la tarjeta">'+[[1,'Una cara'], [2,'Doble cara · para enmicar']].map(function(x){
       return '<button type="button" data-caras="'+x[0]+'" class="'+(T.caras===x[0] ? 'on' : '')+'" aria-pressed="'+(T.caras===x[0])+'">'+x[1]+'</button>'; }).join('')+'</div>'+
-    '<p class="ayuda" style="margin:-6px 0 14px">'+(T.caras===2 ? 'Adelante, lo esencial del SGA; atrás, el QR de su hoja MSDS, lo obligatorio y lo prohibido. Imprímela a doble cara, volteando por el borde largo.'
+    '<p class="ayuda" style="margin:-6px 0 14px">'+(T.caras===2 ? 'Adelante, los pictogramas, el rombo con su leyenda y los peligros; atrás, el QR de su hoja MSDS, lo obligatorio, lo prohibido y qué hacer si te pasa. Las dos caras salen juntas: se corta por el borde, se dobla por la punteada y se enmica.'
                                                           : 'Todo en una cara: lo esencial, su QR y su EPP.')+'</p>'+
-    '<p class="pqu-lbl">En la hoja <span>'+(tot<=L.porHoja ? tot+' de '+L.porHoja : tot+' en '+hojas+' hojas')+'</span></p>';
+    '<p class="pqu-lbl">En la hoja <span>'+(tot<=PH ? tot+' de '+PH : tot+' en '+hojas+' hojas')+'</span></p>';
   izq+=T.hoja.length ? '<div class="pqu-th">'+T.hoja.map(function(x){
       var p=pquPorId(x.id); if(!p) return '';
       return '<div class="pqu-th-f'+(String(T.ver)===String(x.id) ? ' on' : '')+'"><button type="button" class="pqu-th-v" data-ver="'+esc(x.id)+'">'+(pquPics(p, 22, 3) || '<span class="pqu-pics-t pqu-sinp">—</span>')+
         '<span><b>'+esc(p.producto)+'</b><small>'+esc(p.proveedor||'')+'</small></span></button>'+
         '<span class="pqu-cant"><button type="button" data-cant="'+esc(x.id)+'" data-d="-1" aria-label="Una menos">−</button><b>'+x.n+'</b><button type="button" data-cant="'+esc(x.id)+'" data-d="1" aria-label="Una más">+</button></span></div>';
     }).join('')+'</div>' : '<p class="ayuda" style="margin:0 0 8px">Todavía ninguna: agrega los productos abajo.</p>';
-  if(tot && tot<L.porHoja) izq+='<p class="ayuda">'+(L.porHoja-tot===1 ? 'Queda 1 lugar en la hoja.' : 'Quedan '+(L.porHoja-tot)+' lugares en la hoja: suma más de este o de otros productos.')+'</p>';
+  if(tot && tot<PH) izq+='<p class="ayuda">'+(PH-tot===1 ? 'Queda 1 lugar en la hoja.' : 'Quedan '+(PH-tot)+' lugares en la hoja: suma más de este o de otros productos.')+'</p>';
   var ya={}; T.hoja.forEach(function(x){ ya[String(x.id)]=1; });
   var resto=PQU.filas.filter(function(p){ return !ya[String(p.id)]; });
   if(resto.length){
@@ -14743,10 +15247,10 @@ function pquTarPintar(){
   var der='';
   if(q){
     if(T.caras===2){
-      var ra=quimTarjetaSVG(q, T.tam, 'a'), rb=quimTarjetaSVG(q, T.tam, 'b', T.qrUrl);
-      der+='<p class="pqu-lbl">'+esc(q.producto)+' <span>adelante</span></p><div class="pqu-tar">'+ra.svg+'</div>'+
-           '<p class="pqu-lbl" style="margin-top:12px">Atrás <span>el reverso</span></p><div class="pqu-tar">'+rb.svg+'</div>'+
-           '<p class="ayuda">En el PDF, la hoja de atrás lleva los reversos al revés: al imprimir a doble cara (volteando por el borde largo) cada uno cae detrás de su tarjeta. Recórtala por el borde y enmícala.</p>';
+      /* 6/11/2026 · como la señal de riesgo eléctrico a doble cara: las dos caras juntas, en una tira que se dobla */
+      var rd=quimTarjetaDobleSVG(q, T.tam, T.qrUrl);
+      der+='<p class="pqu-lbl">'+esc(q.producto)+' <span>adelante y atrás, así sale impresa</span></p><div class="pqu-tira"><div class="pqu-tar">'+rd.svg+'</div></div>'+
+           '<p class="ayuda">Recórtala por el borde, dóblala por la línea punteada (el reverso queda detrás) y enmícala. No hace falta imprimir a doble cara.</p>';
     } else {
       var r=quimTarjetaSVG(q, T.tam);
       der+='<p class="pqu-lbl">'+esc(q.producto)+' <span>así sale impresa</span></p><div class="pqu-tar">'+r.svg+'</div>';
@@ -14754,14 +15258,14 @@ function pquTarPintar(){
     if(q.sga.h.length){
       var sel=quimTarDe(q.sga), manual=quimTarManual(q.sga), orden=[];
       quimGruposGraves(q.sga.h).forEach(function(x){ orden=orden.concat(x.h); });
-      der+='<p class="pqu-lbl" style="margin-top:14px">Peligros en la tarjeta <span>la chica lleva los 2 primeros; la grande, 3</span></p><div class="pqu-th">'+orden.map(function(cod){
+      der+='<p class="pqu-lbl" style="margin-top:14px">Peligros en la tarjeta <span>'+(T.caras===2 ? 'a doble cara, la chica lleva hasta 3; la grande, hasta 4' : 'la chica lleva los 2 primeros; la grande, 3')+'</span></p><div class="pqu-th">'+orden.map(function(cod){
           var on=sel.indexOf(cod)>-1;
           return '<button type="button" class="pqu-tf'+(on ? ' on' : '')+'" aria-pressed="'+on+'" data-tf="'+cod+'"><span class="pqu-caja" aria-hidden="true">'+(on ? '✓' : '')+'</span><span><b>'+cod+'</b> '+esc(SGA.fh[cod]||'')+'</span></button>';
         }).join('')+'</div><p class="ayuda">'+(manual ? 'Elegidos a mano: se guardan en el producto, también para la app. <button type="button" class="bt-link" id="pqu-tf-auto">Volver a los más graves</button>'
                                                      : 'Elegidos por la app: los más graves primero. Los demás se ven escaneando el QR.')+'</p>';
     }
   } else der+='<div class="vacio" style="padding:30px 10px"><b>Elige un producto</b>Agrégalo a la izquierda y aquí ves su tarjeta tal como sale impresa.</div>';
-  c.innerHTML='<div class="pqu-form"><div class="pqu-col">'+izq+'</div><aside class="pqu-lado">'+der+'</aside></div>';
+  c.innerHTML='<div class="pqu-form'+(T.caras===2 && q ? ' pqu-d' : '')+'"><div class="pqu-col">'+izq+'</div><aside class="pqu-lado">'+der+'</aside></div>';
   Array.prototype.forEach.call(c.querySelectorAll('[data-tam]'), function(b){ b.onclick=function(){ T.tam=b.getAttribute('data-tam'); guardar(LS_PQU_TAR, T.tam); pquTarPintar(); }; });
   Array.prototype.forEach.call(c.querySelectorAll('[data-caras]'), function(b){ b.onclick=function(){ T.caras=+b.getAttribute('data-caras')===2 ? 2 : 1; guardar(LS_PQU_TAR_CARAS, T.caras); pquTarPintar(); if(T.caras===2) pquTarQR(); }; });
   Array.prototype.forEach.call(c.querySelectorAll('[data-ver]'), function(b){ b.onclick=function(){ T.ver=b.getAttribute('data-ver'); pquTarPintar(); }; });
@@ -14808,7 +15312,7 @@ function pquTarPDF(){
     return qtPDF();
   }).then(function(r){
     if(b) b.disabled=false;
-    if(r) toast('PDF descargado: '+r.archivo+(r.caras===2 ? '. Imprímelo a doble cara (volteando por el borde largo), a tamaño real (100 %).' : '. Imprímelo a tamaño real (100 %).'));
+    if(r) toast('PDF descargado: '+r.archivo+(r.caras===2 ? '. Imprímelo a tamaño real (100 %); corta cada tarjeta por el borde, dóblala por la punteada y enmícala.' : '. Imprímelo a tamaño real (100 %).'));
   }, function(){
     if(b) b.disabled=false;
     var m=$('qt-msg'); if(m){ m.className='msg mal pqu-pie-m'; m.textContent='No se pudo armar el PDF. Revisa tu conexión e inténtalo otra vez.'; }
@@ -17274,11 +17778,14 @@ var V = {
   noti:   {id:'noticias', g:'Comunicación', ic:'📣', n:'Noticias', s:'Avisos cortos para toda la obra: les sale en su app, en «Noticias»', pintar:vistaNoticias, tablas:['sst_doc']},
   qr:     {id:'qr', g:'Registros', ic:'▣', n:'Carteles QR', s:'El cartel de cada documento, para imprimir: el QR abre lo que está en su carpeta, subido aquí o en la app', pintar:vistaQR, tablas:['sst_doc']},
   /* 07/10/2026 · la señalética de la app (portal/senales.js y senales-app.js): las señales de la NTP, el cartel de personal autorizado y las tarjetas de andamio */
+  /* 9/11/2026 · los formatos en blanco (portal/formatos.js): los registros, los check list de equipos y las inspecciones de obra, con el logo y el código */
+  formatos:{id:'formatos', g:'Registros', ic:'📑', n:'Formatos', s:'En blanco, para imprimir: ATS, asistencia, acta de reunión de SST, el check list de cada equipo y las inspecciones de obra, con tu logo, su código, su versión y su fecha',
+           pintar:function(caja){ cargando(caja); fmtIr('fmtVista', caja); }, tablas:[]},
   senales:{id:'senales', g:'Registros', ic:'🔺', n:'Señalética', s:'Las señales de la norma, el cartel de «personal autorizado» con las caras de tu gente y las tarjetas de andamio: listos para imprimir, con tu logo',
            pintar:function(caja){ cargando(caja); senIr('senVista', caja); }, tablas:[]},
   enc:    {id:'encuestas', g:'Capacitación', ic:'★', n:'Encuestas', s:'Cómo calificaron tus capacitaciones', tablas:['sst_encuesta'],
            pintar:vistaTabla('sst_encuesta', COL.encuestas, {ordenSb:'creado', ordenPor:'fecha', unidad:'encuestas', vacio:'Ninguna encuesta', vacioSub:'Salen solas después de cada evaluación y cada taller.', archivo:'encuestas'})},
-  insp:   {id:'insp', g:'Registros', ic:'🔎', n:'Inspecciones', s:'Las que se llenaron en el celular y las que se hicieron en papel y se registraron aquí, con lo que encontraron', tablas:['sst_inspeccion'],
+  insp:   {id:'insp', g:'Registros', ic:'🔎', n:'Inspecciones', s:'Las del celular y las de papel registradas aquí, con sus hallazgos', tablas:['sst_inspeccion'],
            pintar:vistaTabla('sst_inspeccion', COL.inspecciones, {ordenSb:'fecha', ordenPor:'fecha', unidad:'inspecciones', vacio:'Ninguna inspección todavía', vacioSub:'Se llenan en la app, en «Inspecciones». La que ya se hizo en papel se registra aquí, con «＋ Registrar una inspección».', archivo:'inspecciones',
              /* 07/10/2026 · la que ya se hizo en papel (la mensual, la del programa) se registra aquí: portal/gestion.js */
              acciones:function(ac){ ac.innerHTML='<button type="button" class="bt" id="insp-nueva">＋ Registrar una inspección</button>'; $('insp-nueva').onclick=function(){ gesIr('gesInspForm', null); }; },
@@ -17286,7 +17793,7 @@ var V = {
   /* 01/10/2026 · el QR de cada equipo y herramienta, como en la app */
   equipos:{id:'equipos', g:'Registros', ic:'🏷', n:'Equipos y herramientas', s:'El QR de cada uno: quién está al día este mes, la cinta del mes y las etiquetas para imprimir', pintar:vistaEquipos, tablas:['sst_equipo_qr']},
   /* 03/10/2026 · la inspección diaria que hace quien usa el equipo, con su QR */
-  inspeq: {id:'inspeq', g:'Registros', ic:'☑', n:'Inspección diaria', s:'Lo que cada trabajador inspeccionó con el QR del equipo antes de usarlo: su checklist, sus fotos y las tres firmas', pintar:vistaInspEq, tablas:['sst_equipo_insp']},
+  inspeq: {id:'inspeq', g:'Registros', ic:'☑', n:'Inspección diaria', s:'Pre-uso de cada equipo con su QR: checklist, fotos y las tres firmas', pintar:vistaInspEq, tablas:['sst_equipo_insp']},
   /* 04/10/2026 · los requerimientos de EPP y materiales: la misma lista de la app */
   reqs:   {id:'reqs', g:'Registros', ic:'🧾', n:'Requerimientos', s:'Los pedidos de EPP y materiales: se arman con el consumo de la obra, se autorizan con firma y salen en Excel y en PDF · aquí o en la app, es la misma lista', pintar:vistaReqs, tablas:['sst_requerimiento']},
   /* 01/10/2026 · los productos químicos, como en la app: la misma lista */
@@ -17419,7 +17926,7 @@ var VISTAS_LIDER = [
   V.ind,
   {id:'personas', g:'Registros', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
   conGrupo(V.cargos, 'Registros'), conGrupo(V.comite, 'Registros'), conGrupo(V.quien, 'Registros'), conGrupo(V.frentes, 'Registros'), conGrupo(V.auxilios, 'Registros'), conGrupo(V.tdm, 'Registros'),
-  V.reqs, V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.ats, V.ipercLb, V.pets, V.caida, V.alto, V.ergo, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.docs, V.esc, V.util, V.qr, V.senales,
+  V.reqs, V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.ats, V.ipercLb, V.pets, V.caida, V.alto, V.ergo, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.docs, V.esc, V.util, V.qr, V.senales, V.formatos,
   conGrupo(V.visitas, 'Registros'), conGrupo(V.tareo, 'Registros'),
   V.bol, V.noti,
   V.den, conGrupo(V.pulso, 'Registros'),
@@ -17444,7 +17951,7 @@ var VISTAS_SUP = [
   {id:'kardex',  g:'Registros', ic:'⛑', n:'Entrega de EPP', s:'El kardex con la firma de quien recibió, y cuánto sale mes a mes', pintar:vistaEPP, tablas:['sst_kardex']},
   V.pedidos, V.eppobra,
   V.reqs,
-  V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.docs, V.esc, V.util, V.qr, V.senales,
+  V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.docs, V.esc, V.util, V.qr, V.senales, V.formatos,
   V.visitas, V.tareo,
   V.bol, V.noti,
   V.acc, V.hh,
@@ -17548,7 +18055,7 @@ document.addEventListener('click', function(ev){
   var b = ev.target && ev.target.closest ? ev.target.closest('[data-pedir]') : null; if(!b) return;
   pedirDondeFalta(b.getAttribute('data-pedir'), parseInt(b.getAttribute('data-n'), 10) || 0, b.getAttribute('data-det') || '');
 });
-document.addEventListener('DOMContentLoaded', function(){ try{ var i=document.getElementById('c-aliado'), v=sessionStorage.getItem(ALIADO_LS); if(i && v && !i.value) i.value=v; }catch(_a){} });
+document.addEventListener('DOMContentLoaded', function(){ try{ var i=document.getElementById('c-aliado'), v=sessionStorage.getItem(ALIADO_LS); if(i && v && !i.value){ i.value=v; var d=document.getElementById('c-aliado-d'); if(d) d.open=true; } }catch(_a){} });   /* 9/11/2026 · con el código, el plegable abierto */
 function aliadoCodigo(){
   var i=document.getElementById('c-aliado'), v=String((i && i.value) || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 20);
   if(!v){ try{ v=String(sessionStorage.getItem(ALIADO_LS) || '').slice(0, 20); }catch(_a){} }
@@ -17851,7 +18358,7 @@ function gesCapComoCons(soloFecha){
 function consMasHechas(p, soloFecha){
   return Promise.all([p, gesCapComoCons(soloFecha)]).then(function(r){ return (r[0]||[]).concat(r[1]||[]); });
 }
-var GESTION_VER='724fbecc8f';   /* lo pone armar.py: el hash de portal/gestion.js */
+var GESTION_VER='e9e7c24d04';   /* lo pone armar.py: el hash de portal/gestion.js */
 var _GES_CARGA=null;
 function cargarGestion(){
   if(typeof gesPersonalSubir==='function') return Promise.resolve(true);
@@ -17870,11 +18377,11 @@ function gesIr(fn){
    papeles-app.js (lo arma armar.py desde la app: las listas, la base de peligros y el dibujo del ATS «clásico» y del
    IPERC «Anexo 7») y papeles.js (los editores, los otros modelos de formato y la vista previa). Necesitan gestion.js
    (el buscador de personal) y el jsPDF de evaluaciones-pdf.js. */
-var PAPAPP_VER='86fb195676';   /* lo pone armar.py: el hash de portal/papeles-app.js */
+var PAPAPP_VER='55f380b679';   /* lo pone armar.py: el hash de portal/papeles-app.js */
 var PAPELES_VER='d920d1a68e';   /* lo pone armar.py: el hash de portal/papeles.js */
 var _PAP_CARGA=null;
 /* 07/10/2026 · los programas del año: portal/programas.js llega después de lo de los papeles (usa su dibujo de hojas) */
-var PROGRAMAS_VER='d9fa3fba4d';   /* lo pone armar.py: el hash de portal/programas.js */
+var PROGRAMAS_VER='911d5913d0';   /* lo pone armar.py: el hash de portal/programas.js */
 var _PROG_CARGA=null;
 function cargarProgramas(){
   if(typeof progVista==='function') return Promise.resolve(true);
@@ -17890,8 +18397,8 @@ function progIr(fn){
 }
 /* 07/10/2026 · la señalética: senales-app.js (lo arma armar.py desde la app: las 171 señales de la NTP y el dibujo de
    cada hoja) y senales.js (las pantallas). El catálogo pesa: se pide a la vez que el jsPDF, y solo al abrir la sección */
-var SENAPP_VER='7a03d965c6';   /* lo pone armar.py: el hash de portal/senales-app.js */
-var SENALES_VER='1e678d0cc7';   /* lo pone armar.py: el hash de portal/senales.js */
+var SENAPP_VER='0f8223187f';   /* lo pone armar.py: el hash de portal/senales-app.js */
+var SENALES_VER='9d878f4e0c';   /* lo pone armar.py: el hash de portal/senales.js */
 var _SEN_CARGA=null;
 function cargarSenales(){
   if(typeof senVista==='function' && typeof SEN_APP==='object') return Promise.resolve(true);
@@ -17902,6 +18409,21 @@ function cargarSenales(){
   });
   _SEN_CARGA.catch(function(){ _SEN_CARGA=null; });
   return _SEN_CARGA;
+}
+/* 9/11/2026 · los formatos en blanco: formatos.js (el motor de la app, sus datos y la pantalla). Se pide con el jsPDF */
+var FORMATOS_VER='1f21275635';   /* lo pone herr/huellas.py: el hash de portal/formatos.js */
+var _FMT_CARGA=null;
+function cargarFormatos(){
+  if(typeof fmtVista==='function' && typeof FMT==='object') return Promise.resolve(true);
+  if(_FMT_CARGA) return _FMT_CARGA;
+  _FMT_CARGA=Promise.all([cargarEvPDF(), _cargarJS('formatos.js?v='+(FORMATOS_VER||'0'), function(){ return typeof fmtVista==='function'; })]);
+  _FMT_CARGA.catch(function(){ _FMT_CARGA=null; });
+  return _FMT_CARGA;
+}
+function fmtIr(fn){
+  var a=Array.prototype.slice.call(arguments, 1);
+  return cargarFormatos().then(function(){ return window[fn].apply(null, a); },
+                               function(){ if(a[0] && a[0].nodeType===1) fallo(a[0], 0); else toast('No se pudo abrir esta parte. Revisa tu conexión e inténtalo otra vez.'); });
 }
 function senIr(fn){
   var a=Array.prototype.slice.call(arguments, 1);
@@ -17964,7 +18486,7 @@ function menIr(fn){
    · mas-app.js (lo arma armar.py DESDE LA APP): la papeleta de la amonestación, el carné y la firma de la credencial,
      las reglas y las actas del comité y el ranking y el diploma del trabajador del mes. Así lo que sale de la web es lo
      mismo que sale del celular, y si la app cambia, la web cambia con ella. Se pide recién cuando hace falta. */
-var MAS_VER='32e96d1d2a';      /* lo pone armar.py: el hash de portal/mas.js */
+var MAS_VER='2ce3b33863';      /* lo pone armar.py: el hash de portal/mas.js */
 var MASAPP_VER='fb55536770';   /* lo pone armar.py: el hash de portal/mas-app.js */
 var MASWORD_VER='fef088f3e5';             /* lo pone armar.py: el hash de portal/mas-word.js (la papeleta en Word) */
 var _MAS_CARGA=null, _MASAPP_CARGA=null, _MASWORD_CARGA=null;
@@ -18222,7 +18744,7 @@ function altoIr(fn){
                           function(){ if(a[0] && a[0].nodeType===1) fallo(a[0], 0); else toast('No se pudo abrir esta parte. Revisa tu conexión e inténtalo otra vez.'); });
 }
 /* 27/10/2026 · el IPERC de línea base y los PETS (portal/iperc-pets.js), recién cuando alguien abre su sección (con el jsPDF) */
-var IPETS_VER='6a5a8c06f4';   /* lo pone herr/huellas.py: el md5 de portal/iperc-pets.js */
+var IPETS_VER='ac83b95ef4';   /* lo pone herr/huellas.py: el md5 de portal/iperc-pets.js */
 var _IPETS_CARGA=null;
 function cargarIpets(){
   if(typeof vistaIpercLB==='function') return Promise.resolve(true);
@@ -18424,7 +18946,7 @@ function planwAvisoPintar(){
   if(a){ var g=(leer(LS_PLAN_AVISO, {})||{})[id]; if(g && g.k===a.k && g.h>hoyISO()) a=null; }
   /* 06/10/2026 · si del plan no hay nada que decir y el portal se usa desde el celular: instalar la app (se cierra un mes) */
   /* 08/10/2026 · si a la cuenta le faltan sus datos (la de antes, o la que entró con Google): «Completa tus datos» (se cierra una semana) */
-  if(!a){ a=datosAvisoQue(); if(a){ id=a.id; var g3=(leer(LS_PLAN_AVISO, {})||{})[id]; if(g3 && g3.k===a.k && g3.h>hoyISO()) a=null; } }
+  if(!a){ a=datosAvisoQue(); if(a){ id=a.id; var g3=(leer(LS_PLAN_AVISO, {})||{})[id]; if(!a.fijo && g3 && g3.k===a.k && g3.h>hoyISO()) a=null; } }
   if(!a){ a=instAvisoQue(); if(a){ id=a.id; var g2=(leer(LS_PLAN_AVISO, {})||{})[id]; if(g2 && g2.k===a.k && g2.h>hoyISO()) a=null; } }
   /* 15/10/2026 · «¿Qué plan te conviene?» (portal/asistente.js): la cuenta que no respondió, el último (en el celular, primero instalar la app);
      la × también lo dice al servidor */
@@ -18432,14 +18954,14 @@ function planwAvisoPintar(){
   if(!a){ c.hidden=true; c.innerHTML=''; return; }
   c.className='plan-av '+a.cl; c.setAttribute('data-k', a.k);
   c.innerHTML=(a.cl==='app' ? '<span class="plan-av-app"><img src="favicon-192.png" alt="" width="30" height="30"><span>'+a.h+'</span></span>' : '<span class="plan-av-t">'+a.h+'</span>')+'<button type="button" class="bt chico'+(a.cl==='regalo' ? ' casco' : '')+'" id="plan-av-ir">'+esc(a.bt)+'</button>'+
-    '<button type="button" class="plan-av-x" id="plan-av-x" aria-label="Ocultar este aviso" title="Ocultar este aviso">×</button>';
+    (a.fijo ? '' : '<button type="button" class="plan-av-x" id="plan-av-x" aria-label="Ocultar este aviso" title="Ocultar este aviso">×</button>');
   c.hidden=false;
   /* el del mes gratis dice «Activar mi mes gratis» y eso hace: lleva a «Mi plan» y, apenas carga, lo activa ahí
      (plan.js: plwCargar), donde se ve el resultado o el motivo. Los otros dos solo llevan */
   /* 15/10/2026 · lote 12 · cerrado o usado otro aviso, «¿Qué plan te conviene?» no sale detrás en esta sesión (portal/asistente.js) */
   var callarApl=function(){ if(a.k!=='apl' && typeof APLW!=='undefined') APLW.callar=true; };
   $('plan-av-ir').onclick=function(){ callarApl(); if(a.ir){ a.ir(); return; } PLANW.regalo=(a.k==='c') ? Date.now() : 0; navegar('plan'); };
-  $('plan-av-x').onclick=function(){
+  if($('plan-av-x')) $('plan-av-x').onclick=function(){
     callarApl();
     if(a.alCerrar){ try{ a.alCerrar(); }catch(_ac){} }
     var t=leer(LS_PLAN_AVISO, {})||{}, d=new Date(Date.now()+a.dura*86400000);
@@ -18777,7 +19299,7 @@ function accTab(cual, enfocar){
   $('acc-entrar').hidden = cr; $('acc-crear').hidden = !cr;
   if(enfocar){
     iniIrAcceso();
-    setTimeout(function(){ try{ (cr ? $('c-nombres') : $('e-quien')).focus({preventScroll:true}); }catch(_e){} }, 350);
+    setTimeout(function(){ try{ (cr ? $('c-correo') : $('e-quien')).focus({preventScroll:true}); }catch(_e){} }, 350);
   }
   /* 08/10/2026 · la lista de países del celular (celular-base.js), la primera vez que se abre */
   if(cr){ try{ celListaWeb('c'); }catch(_c){} }
@@ -18838,7 +19360,7 @@ function datosDetalle(){
     '<ul><li><b>Supabase</b>: aloja la base de datos y el inicio de sesión, en São Paulo, Brasil.</li>'+
     '<li><b>Google Fonts</b>: de ahí toma el portal su tipografía; tu navegador se la pide a Google.</li>'+
     '<li><b>Mercado Pago</b> o <b>Google Play</b>: solo cuando pagas un plan, con sus propias políticas.</li>'+
-    '<li>El servicio que busca el <b>RUC</b> en el padrón público (openruc.com): solo si pides factura y tocas «Buscar en SUNAT»; recibe el RUC que escribiste.</li>'+
+    '<li>El servicio que busca el <b>RUC</b> en el padrón público (openruc.com): al registrar tu empresa, para traer su razón social, y si pides factura y tocas «Buscar en SUNAT»; recibe solo el RUC que escribiste.</li>'+
     '<li><b>OpenStreetMap</b>, en la app: solo si prendes el sello de la foto con dirección o mapa.</li>'+
     '<li><b>Netlify</b>: aloja este sitio, obrasstapp.com; recibe la dirección IP de tu navegador al abrir sus páginas.</li>'+
     '<li><b>GitHub Pages</b>: aloja la app web y el video de la portada; recibe la dirección IP de tu navegador al abrirlos.</li></ul>'+
@@ -19076,7 +19598,9 @@ function celListaWeb(pre, pais){
 }
 function datosAvisoQue(){
   if(!TOK || !TOK.uid || !TOK.md || !regFaltan(TOK.md).length) return null;
-  return { k:'d', id:'datos-'+TOK.uid, cl:'datos', dura:7, ir:verMisDatos, bt:'Completar mis datos',
+  /* 9/11/2026 · el registro en dos pasos: a los 3 días de creada la cuenta, el aviso ya no se cierra (sí o sí) */
+  var _t=Date.parse(TOK.md.reg||'')||0, fijo=!!(_t && Date.now()-_t>=3*86400000);
+  return { k:'d', id:'datos-'+TOK.uid, cl:'datos', dura:7, ir:verMisDatos, bt:'Completar mis datos', fijo:fijo,
     h:'<b>Completa tus datos:</b> tus nombres, tus apellidos y tu celular. Así te atendemos rápido si algo pasa con tu cuenta o tu plan.' };
 }
 function _mdFondo(){
@@ -19921,14 +20445,10 @@ function _crearError(t, campo){
 var CREANDO=false, CREAR_CORREO_VISTO='';
 function crearCuentaWeb(){
   if(CREANDO) return;
-  try{ celListaWeb('c'); }catch(_cl){}
-  var reg={ nombres:$('c-nombres').value, apellidos:$('c-apellidos').value, pais:$('c-cel-pais').value||'pe', numero:$('c-cel').value, promos:$('c-promos').checked };
+  /* 9/11/2026 · el registro en dos pasos: la cuenta nace con el correo y la contraseña (y si quiere promociones) */
   var correo=String($('c-correo').value||'').trim().toLowerCase();
   var clave=String($('c-clave').value||'');
   _crearError('');
-  /* 08/10/2026 · nombres, apellidos y celular, con las reglas de la app (celular-base.js) */
-  var regOk=regValidar(reg);
-  if(!regOk.ok){ _crearError(regOk.msg, regOk.campo==='cel' ? 'c-cel' : 'c-'+regOk.campo); return; }
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)){ _crearError('Escribe un correo válido.', 'c-correo'); return; }
   if(clave.length<8){ _crearError('La contraseña necesita 8 caracteres o más.', 'c-clave'); return; }
   if(!(/[0-9]/.test(clave) && /[a-zA-Z]/.test(clave))){ _crearError('La contraseña necesita letras y números.', 'c-clave'); return; }
@@ -19946,7 +20466,7 @@ function crearCuentaWeb(){
     var listo=function(){ CREANDO=false; bt.disabled=false; bt.textContent='Crear mi cuenta'; };
     /* el nombre viaja con la cuenta, como en la app: «nombre» para el saludo, «cap» para los documentos; y desde
        el 08/10/2026 también los nombres, los apellidos, el celular y la casilla de las promociones */
-    var meta=regMeta(reg, regOk.cel, {reg:new Date().toISOString(), reg_por:'web'}), _al=aliadoCodigo();
+    var _ahora=new Date().toISOString(), meta={ promos:!!$('c-promos').checked, promos_f:_ahora, reg:_ahora, reg_por:'web', reg2:1 }, _al=aliadoCodigo();
     if(_al) meta.aliado=_al;   /* 26/10/2026 · OBRASST Aliados */
     authPost('signup', {email:correo, password:clave, data:meta}).then(function(j){
       if(j && j.access_token) return guardarToken(j);
@@ -20036,15 +20556,17 @@ function altaPintar(){
     /* 09/10/2026 · la empresa (su nombre y su documento) por un lado; la obra o proyecto (su nombre, su sector y su lugar),
        por otro: «no te confundas entre empresa con obra y/o proyectos… es el proyecto el cual se clasifica» (Marcelo) */
     h+='<h2>Tu empresa y tu obra</h2>'+
-      '<p class="sub">Quedas como su titular. Primero la empresa; después la obra o el proyecto donde vas a trabajar: el sector y el lugar son de la obra, no de la empresa. Más adelante sumas otras obras de esta empresa, cada una con lo suyo.</p>'+
+      '<p class="sub">Quedas como su titular. Con el RUC traemos de SUNAT el nombre de tu empresa; tú pones el nombre de la obra y eliges su sector. Es un minuto: lo demás, después.</p>'+
       '<form id="al-f">'+
       (hayPais ? '<div class="campo"><label for="al-pais">¿Dónde está la obra?</label><select id="al-pais">'+
         PAISES_OBRA.map(function(k){ var P=paisPorId(k); return P ? '<option value="'+esc(k)+'"'+(k===p?' selected':'')+'>'+esc((P.b ? P.b+' ' : '')+P.n)+'</option>' : ''; }).join('')+
         '</select><p class="ayuda">El país donde se trabaja, no tu nacionalidad: de ahí salen las normas, los formatos y el documento que se le pide a la empresa.</p></div>' : '')+
       '<h3 class="alta-paso">1 · Tu empresa</h3>'+
-      '<div class="campo"><label for="al-nombre">Nombre de la empresa (razón social)</label><input id="al-nombre" maxlength="120" autocomplete="organization" placeholder="'+esc((typeof EMP_CREAR_NOMBRE_PH!=='undefined' && EMP_CREAR_NOMBRE_PH[p]) || 'Constructora Los Andes S.A.C.')+'"></div>'+
       '<div class="campo"><label for="al-doc">'+esc(x.largo)+'</label><input id="al-doc" maxlength="'+(+x.max||15)+'" inputmode="'+esc(x.im||'text')+'" autocomplete="off" autocapitalize="characters" placeholder="'+esc(x.ph||'')+'">'+
-        '<p class="ayuda">Es obligatorio. Con el '+esc(x.n)+' la empresa es una sola: si ya está registrada, no se crea otra y te decimos quién la tiene.</p></div>'+
+        (p==='pe' ? '<p class="ayuda">Con el RUC traemos de SUNAT el nombre de tu empresa. Es obligatorio: con él la empresa es una sola.</p>'
+                  : '<p class="ayuda">Es obligatorio. Con el '+esc(x.n)+' la empresa es una sola: si ya está registrada, no se crea otra y te decimos quién la tiene.</p>')+
+        '<div id="al-sun">'+_altaSunHTML(p)+'</div></div>'+
+      '<div class="campo" id="al-nombre-c"'+(_altaNombreOculto(p, escrito['al-nombre']) ? ' hidden' : '')+'><label for="al-nombre">Nombre de la empresa (razón social)</label><input id="al-nombre" maxlength="120" autocomplete="organization" placeholder="'+esc((typeof EMP_CREAR_NOMBRE_PH!=='undefined' && EMP_CREAR_NOMBRE_PH[p]) || 'Constructora Los Andes S.A.C.')+'"></div>'+
       '<h3 class="alta-paso">2 · Tu obra o proyecto</h3>'+
       '<div class="campo"><label for="al-obra">Nombre de la obra o proyecto</label><input id="al-obra" maxlength="140" placeholder="Edificio Las Gardenias · Torre B">'+
         '<p class="ayuda">Como lo llama tu equipo. Sale en los registros, los carteles y los informes de esa obra.</p></div>'+
@@ -20052,8 +20574,7 @@ function altaPintar(){
         sectores.map(function(s){ var on=(ALTA.sector===s.id);
           return '<button type="button" class="alta-rubro'+(on?' on':'')+'" role="radio" aria-checked="'+(on?'true':'false')+'" data-rubro="'+esc(s.id)+'"><span class="e" aria-hidden="true">'+esc(s.icono||'')+'</span><span><b>'+esc(s.nombre)+'</b><small>'+esc(s.pie||'')+'</small></span></button>'; }).join('')+
         '</div><p class="ayuda">De esto dependen sus capacitaciones, sus charlas y sus inspecciones. Es de esta obra: otra obra de la misma empresa puede ser de otro sector.</p></div>' : '')+
-            /* 08/10/2026 · el lugar de la obra */
-      '<div id="al-ubi"></div>'+
+      /* 9/11/2026 · el lugar de la obra ya no se pide al crearla: se pone después en «Datos y logo» */
       '<div id="alta-msg" class="error" hidden role="alert"></div>'+
       '<button class="bt casco" type="submit" id="al-bt">Crear mi empresa y mi obra</button>'+
       '<p class="ayuda" style="margin-top:12px">Al crearla se activan 30 días del plan SSOMA completo, sin pagar nada. Después la cuenta vuelve sola a LITE, que es gratis.</p>'+
@@ -20063,7 +20584,10 @@ function altaPintar(){
   Object.keys(escrito).forEach(function(id){ var el=$(id); if(el && escrito[id]) el.value=escrito[id]; });
   [].forEach.call(c.querySelectorAll('[data-alta]'), function(b){ b.onclick=function(){ ALTA.modo=b.getAttribute('data-alta'); ALTA.acceso=null; ALTA.avisado=''; altaPintar(); }; });
   [].forEach.call(c.querySelectorAll('[data-rubro]'), function(b){ b.onclick=function(){ ALTA.sector=b.getAttribute('data-rubro'); altaPintar(); }; });
-  var sp=$('al-pais'); if(sp) sp.onchange=function(){ ALTA.pais=sp.value; ALTA.avisado=''; var d=$('al-doc'); if(d) d.value=''; altaPintar(); };
+  var sp=$('al-pais'); if(sp) sp.onchange=function(){ ALTA.pais=sp.value; ALTA.avisado=''; ALTA.sun={}; var d=$('al-doc'); if(d) d.value=''; altaPintar(); };
+  /* 9/11/2026 · con el RUC, la razón social de SUNAT */
+  var ad=$('al-doc'); if(ad) ad.oninput=altaRucCambio;
+  var am=$('al-sun-mano'); if(am) am.onclick=altaRazonMano;
   /* 08/10/2026 · el lugar de la obra, con los niveles del país elegido */
   try{ if($('al-ubi')) ubiwAltaPintar(altaPais()); }catch(_u){}
   var f=$('al-f'); if(f) f.onsubmit=function(ev){ ev.preventDefault();
@@ -20083,6 +20607,43 @@ function _altaAdentro(){
     _altaMsg('Se guardó, pero el portal todavía no ve tu obra. Vuelve a cargar la página.'); return false;
   });
 }
+/* ── 9/11/2026 · el RUC trae la razón social (openruc.com, el mismo padrón de la factura; ver la política de datos) ── */
+var ALTA_SUNAT='https://openruc.com/api/ruc/';
+/* el casillero de la razón social se ve si la escribe él (Corregir), si SUNAT no la dio, o si tiene algo que no vino de SUNAT */
+function _altaNombreOculto(p, val){
+  val=String(val||'').trim();
+  return p==='pe' && !ALTA.mano && !(ALTA.sun && ALTA.sun.falla) && (!val || val===ALTA.sunNombre);
+}
+function altaRazonMano(){ ALTA.mano=true; var cc=$('al-nombre-c'); if(cc) cc.hidden=false; try{ $('al-nombre').focus(); }catch(_e){} }
+function _altaSunHTML(p){
+  var S=ALTA.sun||{};
+  if(p!=='pe' || !S.ruc) return '';
+  if(S.yendo) return '<p class="ayuda" id="al-sun-yendo">Buscando en SUNAT…</p>';
+  if(S.razon) return '<div class="al-sun-ok" id="al-sun-ok"><b>✓ '+esc(S.razon)+'</b><span>De SUNAT · <button type="button" class="enlace" id="al-sun-mano">Corregir</button></span></div>';
+  if(S.falla) return '<p class="ayuda" id="al-sun-falla">'+esc(S.falla)+'</p>';
+  return '';
+}
+function altaRucCambio(){
+  var p=altaPais(); if(p!=='pe') return;
+  var d=$('al-doc'), ruc=String((d && d.value) || '').replace(/\D/g, ''), S=ALTA.sun=ALTA.sun||{};
+  var pinta=function(){ var x=$('al-sun'); if(x) x.innerHTML=_altaSunHTML(p); var cc=$('al-nombre-c'); if(cc) cc.hidden=_altaNombreOculto(p, ($('al-nombre')||{}).value); var am=$('al-sun-mano'); if(am) am.onclick=altaRazonMano; };
+  if(ruc.length<11){ ALTA.sun={}; pinta(); return; }
+  if(S.ruc===ruc) return;
+  /* el nombre que SUNAT trajo para otro RUC no se queda */
+  var n0=$('al-nombre'); if(n0 && ALTA.sunNombre && n0.value.trim()===ALTA.sunNombre) n0.value='';
+  ALTA.sun={ ruc:ruc, yendo:true }; pinta();
+  fetch(ALTA_SUNAT+encodeURIComponent(ruc)).then(function(r){ return r.ok ? r.json() : (r.status===404 ? {} : Promise.reject(r.status)); }).then(function(j){
+    if((ALTA.sun||{}).ruc!==ruc) return;
+    var razon=String((j && (j.razon_social || j.razonSocial || j.nombre)) || '').trim();
+    if(!razon){ ALTA.sun={ ruc:ruc, falla:'Ese RUC no figura en el padrón de SUNAT: revísalo o escribe el nombre de tu empresa.' }; pinta(); return; }
+    ALTA.sun={ ruc:ruc, razon:razon };
+    var n=$('al-nombre'); if(n && (!ALTA.mano || !n.value.trim())){ n.value=razon; ALTA.sunNombre=razon; }
+    pinta();
+  }, function(){
+    if((ALTA.sun||{}).ruc!==ruc) return;
+    ALTA.sun={ ruc:ruc, falla:'No pudimos consultar SUNAT ahora. Escribe el nombre de tu empresa.' }; pinta();
+  });
+}
 /* ── crear ── */
 function altaCrear(){
   if(ALTA.yendo) return;
@@ -20091,7 +20652,13 @@ function altaCrear(){
   var sectores=(typeof ALTA_SECTORES!=='undefined') ? ALTA_SECTORES : [];
   _altaMsg('');
   /* 09/10/2026 · en el orden del formulario: la empresa (nombre y documento), después la obra (nombre, sector y lugar) */
-  if(!nombre){ _altaMsg('Ponle el nombre de tu empresa.'); try{ $('al-nombre').focus(); }catch(_e){} return; }
+  /* 9/11/2026 · el documento primero (de ahí sale la razón social en el Perú) */
+  if(!escrito){ _altaMsg('Escribe el '+((typeof empDoc==='function') ? empDoc(p).n : 'RUC')+' de tu empresa.'); try{ $('al-doc').focus(); }catch(_e){} return; }
+  if(!nombre){
+    if(ALTA.sun && ALTA.sun.yendo){ _altaMsg('Un momento: estamos trayendo de SUNAT el nombre de tu empresa.', 'gris'); return; }
+    var cc=$('al-nombre-c'); if(cc) cc.hidden=false; ALTA.mano=true;
+    _altaMsg('Escribe el nombre de tu empresa (razón social).'); try{ $('al-nombre').focus(); }catch(_e){} return;
+  }
   var doc;
   if(typeof empDocRevisar==='function'){
     var r=empDocRevisar(p, escrito);
