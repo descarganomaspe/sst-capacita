@@ -674,9 +674,13 @@ function _qtEppQueEntra(l, cuantos){
 
 var QT_TAM = {
   chica:  {w:856,  h:540, M:30, hh:54,  wl:190, wr:210, gap:18, porHoja:10, maxG:2, eppFila:3, eppLado:56, eppSep:9, qrMM:21,
-           nombre:[38, 34, 30, 27], prov:0, sello:25, texto:[23, 22, 21, 20], cap:18, aviso:21, avisoL:2},
+           nombre:[38, 34, 30, 27], prov:0, sello:25, texto:[23, 22, 21, 20], cap:18, aviso:21, avisoL:2,
+           /* 6/11/2026 · la de doble cara: la columna de la izquierda (pictogramas, y el rombo con su leyenda), el pictograma
+              más grande, el rombo, la letra de la leyenda y el doblez entre las dos caras */
+           wlA:350, picA:104, romboA:160, ley:17, pliegue:30},
   grande: {w:1300, h:900, M:40, hh:112, wl:260, wr:280, gap:30, porHoja:4, maxG:3, eppFila:4, eppLado:62, eppSep:10, qrMM:28,
-           nombre:[60, 54, 48, 42], prov:30, sello:38, texto:[30, 28, 26, 24], cap:24, aviso:28, avisoL:2}
+           nombre:[60, 54, 48, 42], prov:30, sello:38, texto:[30, 28, 26, 24], cap:24, aviso:28, avisoL:2,
+           wlA:520, picA:150, romboA:236, ley:25, pliegue:40}
 };
 /* el aviso propio va entero si entra; si no, las oraciones que entren,
    y si ni la primera entra, cortada con «…» */
@@ -696,6 +700,38 @@ function _qtAviso(texto, px, ancho, maxL){
   }
   return _qtPartir([{t:'⚠', b:1}], px, ancho);
 }
+/* 6/11/2026 · la leyenda del rombo en la tarjeta a doble cara (Marcelo: «que el rombo sea un poco más grande y con su
+   leyenda»): cada color con su nombre y su número, su aviso especial si tiene, y la escala de 0 a 4. Va al lado del rombo,
+   centrada en su alto; la letra se achica (hasta 3 puntos menos) para que la línea más ancha entre. */
+function _qtLeyendaRombo(nf, x, y, ancho, alto, px){
+  nf = (typeof _nfNormal === 'function') ? _nfNormal(nf) : (nf || {s:0, i:0, r:0, e:''});
+  if(ancho < 40) return '';
+  var F = 'font-family="Arial,Helvetica,sans-serif"';
+  var L = [['#0047BB', _qt('Salud'), String(nf.s)], ['#EE0000', _qt('Inflamabilidad'), String(nf.i)],
+           ['#FFD400', _qt('Reactividad'), String(nf.r)], ['#FFFFFF', _qt('Especial'), nf.e ? String(nf.e) : '—']];
+  function cabe(t){
+    var lado = Math.round(t * 0.82), g = Math.round(t * 0.45);
+    return L.every(function(f){ return lado + g + _qtAncho(f[1] + ' ', t, 400) + _qtAncho(f[2], t, 800) <= ancho; });
+  }
+  var t = px;
+  while(t > px - 3 && !cabe(t)) t--;
+  var lado = Math.round(t * 0.82), g = Math.round(t * 0.45), lh = Math.round(t * 1.36), pc = t - 2, lhc = Math.round(pc * 1.2);
+  var esca = _qtPartir([{t:_qt('De 0 (mínimo) a 4 (grave).')}], pc, ancho);
+  var espe = (nf.e && typeof NF_CORTO === 'object' && NF_CORTO[nf.e]) ? _qtPartir([{t:nf.e + ':', b:1}, {t:_qt(NF_CORTO[nf.e])}], pc, ancho) : [];
+  var hT = L.length * lh + Math.round(t * 0.25) + (esca.length + espe.length) * lhc;
+  var y0 = y + Math.max(0, Math.round((alto - hT) / 2)), s = '';
+  L.forEach(function(f, i){
+    var yb = y0 + i * lh + t;
+    s += '<rect x="' + x + '" y="' + (yb - lado + Math.round(t * 0.06)) + '" width="' + lado + '" height="' + lado + '" rx="' +
+         Math.max(1, Math.round(lado * 0.14)) + '" fill="' + f[0] + '" stroke="#111" stroke-width="1.6"/>';
+    s += '<text x="' + (x + lado + g) + '" y="' + yb + '" ' + F + ' font-size="' + t + '" fill="#0B2A3A">' + esc(f[1]) +
+         ' <tspan font-weight="800">' + esc(f[2]) + '</tspan></text>';
+  });
+  var yy = y0 + L.length * lh + Math.round(t * 0.25) + pc;
+  if(espe.length){ s += _qtRenglones(espe, x, yy, pc, lhc, '#0B2A3A'); yy += espe.length * lhc; }
+  s += _qtRenglones(esca, x, yy, pc, lhc, '#4A5B68');
+  return s;
+}
 /* la tarjeta de un producto: {svg, w, h, grupos, fuera} */
 function quimTarjetaSVG(q, tam, cara, cartel){
   if(cara === 'b') return quimTarjetaReversoSVG(q, tam, cartel);
@@ -703,8 +739,9 @@ function quimTarjetaSVG(q, tam, cara, cartel){
   var T = QT_TAM[tam] || QT_TAM.chica, W = T.w, H = T.h, M = T.M;
   var sga = (q && q.sga) || {p:[], sw:'', h:[], pp:[]}, nf = (q && q.nf) || {s:0, i:0, r:0, e:''};
   var F = 'font-family="Arial,Helvetica,sans-serif"', out = '';
-  /* el borde es la línea de corte */
-  out += '<rect x="2" y="2" width="' + (W - 4) + '" height="' + (H - 4) + '" rx="' + Math.round(M * 1.1) + '" fill="#fff" stroke="#AAB7C0" stroke-width="3"/>';
+  /* el borde es la línea de corte (6/11/2026 · en la de doble cara lo dibuja la tira entera: quimTarjetaDobleSVG) */
+  out += dosCaras ? '<rect width="' + W + '" height="' + H + '" fill="#fff"/>'
+                  : '<rect x="2" y="2" width="' + (W - 4) + '" height="' + (H - 4) + '" rx="' + Math.round(M * 1.1) + '" fill="#fff" stroke="#AAB7C0" stroke-width="3"/>';
 
   /* ── arriba: el nombre y la palabra de advertencia ── */
   var sello = '', anchoSello = 0;
@@ -742,8 +779,33 @@ function quimTarjetaSVG(q, tam, cara, cartel){
   var alto = yFin - y0;
 
   /* ── a la izquierda: los pictogramas y el rombo ── */
-  var xl = M, wl = T.wl, pics = sga.p || [], n = pics.length, sep = Math.round(T.gap * 0.3), cel = 0, cols = 1, yl = y0;
-  if(n){
+  var xl = M, wl = dosCaras ? T.wlA : T.wl, pics = sga.p || [], n = pics.length, sep = Math.round(T.gap * 0.3), cel = 0, cols = 1, yl = y0;
+  if(dosCaras){
+    /* 6/11/2026 · la de doble cara: arriba los pictogramas; abajo el rombo, más grande, y a su lado su leyenda */
+    var conR = (typeof _hayNf === 'function' && _hayNf(nf)), gapP = Math.round(T.gap * 0.6), minR = Math.round(T.romboA * 0.78);
+    if(n){
+      cols = n === 1 ? 1 : ((n === 2 || n === 4) ? 2 : 3);
+      cel = Math.min(T.picA, Math.floor((wl - (cols - 1) * sep) / cols));
+      var filasA = Math.ceil(n / cols), topeA = conR ? alto - gapP - minR : alto;
+      if(filasA * cel + (filasA - 1) * sep > topeA) cel = Math.floor((topeA - (filasA - 1) * sep) / filasA);
+      for(var ia = 0; ia < n; ia++){
+        var fa = Math.floor(ia / cols), enFa = Math.min(cols, n - fa * cols);
+        var xa = xl + (wl - (enFa * cel + (enFa - 1) * sep)) / 2 + (ia % cols) * (cel + sep);
+        out += '<g transform="translate(' + xa.toFixed(1) + ',' + (yl + fa * (cel + sep)).toFixed(1) + ') scale(' + (cel / 100).toFixed(4) + ')">' + (SGA.sim[pics[ia]] || '') + '</g>';
+      }
+      yl += filasA * cel + (filasA - 1) * sep + gapP;
+    }
+    if(conR){
+      var trA = Math.min(n ? T.romboA : Math.round(T.romboA * 1.12), yFin - yl, Math.round(wl * 0.6));
+      if(trA > 40){
+        out += '<g transform="translate(' + xl + ',' + yl.toFixed(1) + ') scale(' + (trA / 100).toFixed(4) + ')">' +
+               romboSVG(nf, 100).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '') + '</g>';
+        var gL = Math.round(T.gap * 0.55);
+        out += _qtLeyendaRombo(nf, xl + trA + gL, yl, wl - trA - gL, trA, T.ley);
+      }
+    }
+  }
+  else if(n){
     cols = n === 1 ? 1 : (n <= 4 ? 2 : 3);
     cel = n === 1 ? Math.round(wl * 0.72) : Math.floor((wl - (cols - 1) * sep) / cols);
     var filas = Math.ceil(n / cols);
@@ -757,7 +819,7 @@ function quimTarjetaSVG(q, tam, cara, cartel){
     }
     yl += filas * cel + (filas - 1) * sep + T.gap * 0.6;
   }
-  if(typeof _hayNf === 'function' && _hayNf(nf)){
+  if(!dosCaras && typeof _hayNf === 'function' && _hayNf(nf)){
     var tr = Math.min(Math.round(wl * (n ? 0.74 : 0.9)), yFin - yl);
     if(tr > 40){
       out += '<g transform="translate(' + (xl + (wl - tr) / 2).toFixed(1) + ',' + yl.toFixed(1) + ') scale(' + (tr / 100).toFixed(4) + ')">' +
@@ -820,7 +882,8 @@ function quimTarjetaSVG(q, tam, cara, cartel){
       var co = QUIM_CORTO[x.g.k] || ['', ''];
       if(co[0]) parr([{t:_qt('Cuídate:'), b:1, c:'#1E6B45'}, {t:_qt(co[0])}]);
       else parr([{t:_qt('Sus controles están en la hoja MSDS.')}]);
-      if(co[1]) parr([{t:_qt('Si te pasa:'), b:1, c:'#C81E1E'}, {t:_qt(co[1])}]);
+      /* 6/11/2026 · en la de doble cara, «Si te pasa» va atrás, con lo obligatorio y lo prohibido */
+      if(co[1] && !dosCaras) parr([{t:_qt('Si te pasa:'), b:1, c:'#C81E1E'}, {t:_qt(co[1])}]);
     });
     var fuera = gsTodos.length - Math.min(k, gs.length);
     /* 04/10/2026 · no clasificado como peligroso: en la tarjeta se dice con todas sus letras */
@@ -867,8 +930,8 @@ function _qtEccCorta(txt, maxMod){
 }
 /* 5/11/2026 · el reverso de la tarjeta a doble cara: sus tamaños (ver la app) */
 var QT_REV = {
-  chica:  {nombre:[30, 27, 24, 22], sello:20, cap:19, tit:16, lab:15, circ:[96, 86, 78, 70, 62, 56, 50], sep:12, obra:0},
-  grande: {nombre:[46, 42, 38, 34], sello:28, cap:27, tit:23, lab:21, circ:[136, 122, 110, 100, 90, 80, 72], sep:16, obra:21}
+  chica:  {nombre:[30, 27, 24, 22], sello:20, cap:19, tit:16, lab:15, circ:[96, 86, 78, 70, 62, 56, 50], sep:12, obra:0, aux:18},
+  grande: {nombre:[46, 42, 38, 34], sello:28, cap:27, tit:23, lab:21, circ:[136, 122, 110, 100, 90, 80, 72], sep:16, obra:21, aux:26}
 };
 function quimTarjetaReversoSVG(q, tam, cartel){
   var T = QT_TAM[tam] || QT_TAM.chica, R = QT_REV[tam] || QT_REV.chica, W = T.w, H = T.h, M = T.M, gap = T.gap;
@@ -897,7 +960,8 @@ function quimTarjetaReversoSVG(q, tam, cartel){
   }
   /* ── a la izquierda: el QR de su hoja MSDS, tan grande como entre ── */
   var u = (typeof quimEnlaceMsds === 'function') ? quimEnlaceMsds(q, cartel) : '', deMsds = !!u, ecc = 'M';
-  var lhc = Math.round(R.cap * 1.18), anchoQ = Math.round((W - 2 * M) * 0.46);
+  /* 6/11/2026 · el QR, un poco más chico (sigue de más de 28 mm en la chica): a su lado entra «Si te pasa» */
+  var lhc = Math.round(R.cap * 1.18), anchoQ = Math.round((W - 2 * M) * 0.36);
   var capL = _qtPartir([{t:_qt(deMsds ? 'Escanéame: su hoja MSDS' : 'Escanéame: el producto completo'), b:1}], R.cap, anchoQ);
   var lado = Math.min(yFin - y0 - capL.length * lhc - Math.round(gap * 0.3), anchoQ), qrInfo = null;
   if(!deMsds && q && typeof quimEnlace === 'function'){ try{ var qt = _qtQRTexto(q, lado / 10); u = qt.txt; ecc = qt.ecc; }catch(_t){ u = ''; } }
@@ -924,9 +988,34 @@ function quimTarjetaReversoSVG(q, tam, cartel){
     var A = _rvSeccion(usa), B = _rvSeccion(proh);
     return {c:c, A:A, B:B, alto:A.alto + B.alto + (A.alto && B.alto ? Math.round(gap * 0.4) : 0)};
   }
-  var P = null;
-  for(var i = 0; i < R.circ.length && !P; i++){ var pl = _rvPlan(R.circ[i]); if(pl.alto <= alto) P = pl; }
-  if(!P) P = _rvPlan(R.circ[R.circ.length - 1]);
+  /* 6/11/2026 · «Si te pasa»: lo que hacer de cada peligro (el más grave primero, sin repetir), que antes iba adelante */
+  var aux = [], vistos = {};
+  if(!sga.np) quimGruposGraves(sga.h || []).forEach(function(x){
+    var co = QUIM_CORTO[x.g.k], t = (co && co[1]) ? _qt(co[1]) : '';
+    if(t && !vistos[t]){ vistos[t] = 1; aux.push(t); }
+  });
+  var sinEpp = !usa.length && !proh.length;
+  var nl = sinEpp ? _qtPartir([{t:_qt('Sin EPP cargado: revisa la sección 8 de su hoja MSDS.')}], R.lab + 2, wr) : [];
+  var altoNl = nl.length ? nl.length * Math.round((R.lab + 2) * 1.25) + Math.round(gap * 0.4) : 0;
+  function _rvAux(px, cuantos){
+    var lh = Math.round(px * 1.18), filas = [], a = 0;
+    aux.slice(0, cuantos === undefined ? aux.length : cuantos).forEach(function(t){
+      var k = t.indexOf(':'), partes = (k > 0 && k < t.length - 1) ? [{t:t.slice(0, k + 1), b:1}, {t:t.slice(k + 1).trim()}] : [{t:t}];
+      var l = _qtPartir(partes, px, wr); filas.push(l); a += l.length * lh + Math.round(px * 0.3);
+    });
+    return {px:px, lh:lh, filas:filas, alto:filas.length ? alT + a : 0};
+  }
+  /* el tamaño de los círculos: el más grande con el que entra todo, sin cortar las palabras de las etiquetas («Guante-s»);
+     si «Si te pasa» no entra entero ni con la letra más chica, quedan fuera sus líneas menos graves (están en su hoja MSDS) */
+  function _rvRoto(pl){ return [pl.A, pl.B].some(function(S){ return S.filas.some(function(f){ return f.labs.some(function(l){ return l.some(function(ln){ return ln.some(function(w){ return /-$/.test(w.t); }); }); }); }); }); }
+  function _rvEntra(pl, xa){ var entre = (pl.alto || altoNl) && xa.alto ? Math.round(gap * 0.4) : 0; return pl.alto + altoNl + entre + xa.alto <= alto; }
+  var cands = R.circ.map(_rvPlan), sanos = cands.filter(function(pl){ return !_rvRoto(pl); }), P = null, X = null;
+  if(!sanos.length) sanos = [cands[cands.length - 1]];
+  for(var i = 0; i < sanos.length && !P; i++){
+    for(var ja = 0; ja < 3 && !P; ja++){ var xa = _rvAux(R.aux - ja); if(_rvEntra(sanos[i], xa)){ P = sanos[i]; X = xa; } }
+  }
+  for(var na = aux.length - 1; na >= 0 && !P; na--){ var xb = _rvAux(R.aux - 2, na); if(_rvEntra(sanos[sanos.length - 1], xb)){ P = sanos[sanos.length - 1]; X = xb; } }
+  if(!P){ P = sanos[sanos.length - 1]; X = _rvAux(R.aux - 2, 0); }
   var y = y0, cortado = 0;
   function _rvDibujar(S, titulo, col){
     if(!S.filas.length) return;
@@ -945,13 +1034,43 @@ function quimTarjetaReversoSVG(q, tam, cartel){
   _rvDibujar(P.A, _qt('OBLIGATORIO'), '#0B5CAB');
   if(P.A.filas.length && P.B.filas.length) y += Math.round(gap * 0.4);
   _rvDibujar(P.B, _qt('PROHIBIDO'), '#C81E1E');
-  if(!usa.length && !proh.length){
-    var nl = _qtPartir([{t:_qt('Sin EPP cargado: revisa la sección 8 de su hoja MSDS.')}], R.lab + 2, wr);
-    out += _qtRenglones(nl, xr, y0 + R.lab + 2, R.lab + 2, Math.round((R.lab + 2) * 1.25), '#4A5B68');
+  if(sinEpp){
+    out += _qtRenglones(nl, xr, y + R.lab + 2, R.lab + 2, Math.round((R.lab + 2) * 1.25), '#4A5B68');
+    y += altoNl;
+  }
+  var auxV = 0;
+  if(X && X.filas.length){
+    if(P.A.filas.length || P.B.filas.length) y += Math.round(gap * 0.4);
+    if(y + alT + X.px <= yFin){
+      out += '<text x="' + xr + '" y="' + (y + R.tit).toFixed(1) + '" ' + F + ' font-size="' + R.tit + '" font-weight="800" letter-spacing="1.5" fill="#C81E1E">' +
+             esc(_qt('Si te pasa:').replace(/\s*:\s*$/, '').toUpperCase()) + '</text>';
+      y += alT;
+      X.filas.forEach(function(l){
+        if(y + (l.length - 1) * X.lh + X.px > yFin + 2) return;
+        out += _qtRenglones(l, xr, y + X.px, X.px, X.lh, '#0B2A3A');
+        y += l.length * X.lh + Math.round(X.px * 0.3); auxV++;
+      });
+    }
   }
   var svg = ('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + out + '</svg>')
             .replace(/&nbsp;/g, '&#160;');
-  return {svg:svg, w:W, h:H, qr:qrInfo, epp:usa.length + proh.length - cortado, cortado:cortado};
+  return {svg:svg, w:W, h:H, qr:qrInfo, epp:usa.length + proh.length - cortado, cortado:cortado, aux:auxV, auxTodos:aux.length};
+}
+/* 6/11/2026 · la tarjeta a doble cara en UNA tira, como la señal de riesgo eléctrico a doble cara (Marcelo: «me lo das en dos
+   PDF, no, así no es»): adelante | el doblez | atrás, con el borde de corte alrededor de las dos y la línea punteada del
+   doblez al medio. Se corta por el borde, se dobla por la punteada (el reverso queda detrás, derecho, al voltearla) y se
+   enmica. {svg, w, h, frente, reverso, doblez (dónde va la punteada, en px desde la izquierda)} */
+function quimTarjetaDobleSVG(q, tam, cartel){
+  var T = QT_TAM[tam] || QT_TAM.chica, W = T.w, H = T.h, P = T.pliegue || 30, WT = 2 * W + P, xd = W + P / 2;
+  var ra = quimTarjetaSVG(q, tam, 'a'), rb = quimTarjetaSVG(q, tam, 'b', cartel);
+  function dentro(s){ return String(s).replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, ''); }
+  var t = Math.max(2, Math.round(H * 0.0045)), out = '<rect width="' + WT + '" height="' + H + '" fill="#fff"/>' +
+          '<g>' + dentro(ra.svg) + '</g><g transform="translate(' + (W + P) + ',0)">' + dentro(rb.svg) + '</g>' +
+          '<rect x="2" y="2" width="' + (WT - 4) + '" height="' + (H - 4) + '" rx="' + Math.round(T.M * 1.1) + '" fill="none" stroke="#AAB7C0" stroke-width="3"/>' +
+          '<line x1="' + xd + '" y1="' + (t * 3) + '" x2="' + xd + '" y2="' + (H - t * 3) + '" stroke="#8C979F" stroke-width="' + t +
+          '" stroke-dasharray="' + (t * 6) + ' ' + (t * 5) + '"/>';
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + WT + '" height="' + H + '" viewBox="0 0 ' + WT + ' ' + H + '">' + out + '</svg>';
+  return {svg:svg, w:WT, h:H, frente:ra, reverso:rb, doblez:xd};
 }
 /* ── LA PANTALLA DE LAS TARJETAS ─────────────────────────────────── */
 var QT = {tam:'chica', ver:null, hoja:[], de:'producto', eligiendo:false, busca:'', guardando:null, caras:1, qrUrl:'', qrEstado:''};
@@ -1021,10 +1140,11 @@ function qtPintar(){
   var vis = document.getElementById('qt-vista');
   if(vis){
     if(q && QT.caras === 2){
-      var ra = quimTarjetaSVG(q, QT.tam, 'a'), rb = quimTarjetaSVG(q, QT.tam, 'b', QT.qrUrl);
-      vis.innerHTML = '<p class="qt-cara-t"><span>Adelante</span></p><div class="qt-tarjeta qt-' + QT.tam + '" data-sin-trad>' + ra.svg + '</div>' +
-                      '<p class="qt-cara-t"><span>Atrás · el reverso</span></p><div class="qt-tarjeta qt-' + QT.tam + '" data-sin-trad>' + rb.svg + '</div>' +
-                      '<p class="io-pie qt-cara-n"><span>Sale en dos páginas: la de atrás lleva los reversos al revés, para que al imprimir a doble cara (volteando por el borde largo) cada uno caiga detrás de su tarjeta. Recórtala por el borde y enmícala.</span></p>';
+      /* 6/11/2026 · como la señal de riesgo eléctrico a doble cara: las dos caras juntas, en una tira que se dobla */
+      var rd = quimTarjetaDobleSVG(q, QT.tam, QT.qrUrl);
+      vis.innerHTML = '<div class="qt-tira"><div class="qt-tira-in qt-' + QT.tam + '"><p class="qt-tira-cab"><span>Adelante</span><span>Atrás · el reverso</span></p>' +
+                      '<div class="qt-tira-svg" data-sin-trad>' + rd.svg + '</div></div></div>' +
+                      '<p class="io-pie qt-cara-n"><span>Sale con su adelante y su atrás juntos, en una sola hoja: recórtala por el borde, dóblala por la línea punteada y enmícala. No hace falta imprimir a doble cara.</span></p>';
     } else if(q){
       var r = quimTarjetaSVG(q, QT.tam);
       vis.innerHTML = '<div class="qt-tarjeta qt-' + QT.tam + '" data-sin-trad>' + r.svg + '</div>';
@@ -1057,7 +1177,8 @@ function qtPintarFrases(q){
          '<span class="qt-caja" aria-hidden="true">' + (on ? '&#10003;' : '') + '</span>' +
          '<span class="io-tx"><b>' + cod + '</b><small>' + esc(SGA.fh[cod] || '') + '</small></span></button>';
   });
-  h += '</div><p class="io-pie"><span>La chica lleva los 2 primeros peligros y la grande, 3. Los demás se ven escaneando el QR.</span> ' +
+  h += '</div><p class="io-pie"><span>' + (QT.caras === 2 ? 'A doble cara, la chica lleva hasta 3 peligros y la grande, hasta 4. Los demás están en su hoja MSDS (el QR de atrás).'
+                                                : 'La chica lleva los 2 primeros peligros y la grande, 3. Los demás se ven escaneando el QR.') + '</span> ' +
        (manual ? '<button type="button" class="qc-link" onclick="qtFrasesAuto()">Volver a los más graves</button>'
                : '<span>Elegidos por la app: los más graves primero.</span>') + '</p>';
   c.innerHTML = h;
@@ -1104,8 +1225,8 @@ function quimGuardarTar(q){
 }
 function qtPintarHoja(){
   var c = document.getElementById('qt-hoja'); if(!c) return;
-  var T = QT_TAM[QT.tam], tot = qtTotal(), hojas = Math.max(1, Math.ceil(tot / T.porHoja));
-  var h = '<div class="io-cab">En la hoja <span>' + (tot <= T.porHoja ? (tot + ' de ' + T.porHoja) : (tot + ' en ' + hojas + ' hojas')) + '</span></div>';
+  var tot = qtTotal(), PH = qtPorHoja(QT.tam, QT.caras), hojas = Math.max(1, Math.ceil(tot / PH));
+  var h = '<div class="io-cab">En la hoja <span>' + (tot <= PH ? (tot + ' de ' + PH) : (tot + ' en ' + hojas + ' hojas')) + '</span></div>';
   if(QT.hoja.length){
     h += '<div class="io-grupo">';
     QT.hoja.forEach(function(x){
@@ -1121,7 +1242,7 @@ function qtPintarHoja(){
     h += '</div>';
   }
   if(QT.hoja.length > 1) h += '<p class="io-pie">Toca un producto para ver su tarjeta y elegir sus peligros.</p>';
-  if(tot && tot < T.porHoja) h += '<p class="io-pie">' + (T.porHoja - tot === 1 ? 'Queda 1 lugar en la hoja.' : 'Quedan ' + (T.porHoja - tot) + ' lugares en la hoja: puedes sumar más de este u otros productos.') + '</p>';
+  if(tot && tot < PH) h += '<p class="io-pie">' + (PH - tot === 1 ? 'Queda 1 lugar en la hoja.' : 'Quedan ' + (PH - tot) + ' lugares en la hoja: puedes sumar más de este u otros productos.') + '</p>';
   c.innerHTML = h;
   qtPintarElegir();
 }
@@ -1202,20 +1323,44 @@ var QT_HOJA = {
   chica:  {cw:85.6, ch:54, cols:2, filas:5, gx:6, gy:3, girar:false},
   grande: {cw:90, ch:130, cols:2, filas:2, gx:6, gy:6, girar:true}
 };
+/* 6/11/2026 · a doble cara, cada tarjeta es una tira (adelante | doblez | atrás): la chica, de 174,2 × 54 mm, 5 por hoja;
+   la grande, de 264 × 90 mm, girada, 2 por hoja */
+var QT_HOJA2 = {
+  chica:  {cw:174.2, ch:54, cols:1, filas:5, gx:0, gy:3, girar:false, escala:2},
+  grande: {cw:90, ch:264, cols:2, filas:1, gx:8, gy:0, girar:true, escala:1.5}
+};
+function qtPorHoja(tam, caras){ var L = ((caras === 2) ? QT_HOJA2 : QT_HOJA)[tam] || QT_HOJA.chica; return L.cols * L.filas; }
+/* la línea del doblez asoma por fuera de la tira, como en la señal de riesgo eléctrico: se ve al cortar */
+function _qtDoblezPDF(doc, x, y, L, dz){
+  doc.setDrawColor(120, 128, 136); doc.setLineWidth(0.3); doc.setLineDashPattern([1.4, 1.2], 0);
+  if(L.girar){ var yd = y + dz; doc.line(x - 3, yd, x - 0.6, yd); doc.line(x + L.cw + 0.6, yd, x + L.cw + 3, yd); }
+  else { var xd = x + dz; doc.line(xd, y - 2.6, xd, y - 0.6); doc.line(xd, y + L.ch + 0.6, xd, y + L.ch + 2.6); }
+  doc.setLineDashPattern([], 0);
+}
+/* el pie de cada hoja: la medida de cada cara y cómo se arma */
+function _qtPieDoble(doc, tam){
+  var TT = QT_TAM[tam] || QT_TAM.chica, mm = function(v){ return String(Math.round(v) / 10).replace('.', ','); };
+  var txt = _qt('Tarjetas a doble cara') + ' · ' + _qt('cada cara de') + ' ' + mm(TT.w) + ' × ' + mm(TT.h) + ' mm · ' + _qt('imprimir al 100 %') +
+            ' · ' + _qt('cortar por el borde, doblar por la punteada y enmicar') + ' · OBRASST';
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(160, 168, 176);
+  for(var fs = 6; fs > 4 && doc.getTextWidth(txt) > 200; ){ fs -= 0.25; doc.setFontSize(fs); }
+  doc.text(txt, 105, 297 - 2.6, {align:'center'});
+}
 function qtPDF(){
   var msg = document.getElementById('qt-msg'), tot = qtTotal();
   if(!tot){ if(msg){ msg.style.color = 'var(--mal)'; msg.textContent = 'La hoja está vacía: agrega al menos un producto.'; } return Promise.resolve(null); }
   var J = window.jspdf && window.jspdf.jsPDF;
   if(!J){ if(msg){ msg.style.color = 'var(--mal)'; msg.textContent = 'No se pudo armar el PDF en este celular.'; } return Promise.resolve(null); }
   if(msg){ msg.style.color = 'var(--gris)'; msg.textContent = 'Armando la hoja…'; }
-  /* 5/11/2026 · a doble cara, para enmicar: cada tarjeta con su adelante y su reverso */
-  var tam = QT.tam, L = QT_HOJA[tam], cual = {}, dos = (QT.caras === 2);
+  /* 6/11/2026 · a doble cara, para enmicar: cada tarjeta en una tira con su adelante y su atrás juntos (se corta por el borde,
+     se dobla por la punteada y se enmica), como la señal de riesgo eléctrico. Antes salían en dos páginas para imprimir a
+     doble cara; Marcelo: «así no es» */
+  var tam = QT.tam, dos = (QT.caras === 2), L = (dos ? QT_HOJA2 : QT_HOJA)[tam], cual = {};
   var ps = QT.hoja.map(function(x){
     var q = quimPorId(x.id); if(!q) return Promise.resolve(null);
     if(!dos){ var r = quimTarjetaSVG(q, tam); return _qtPNG(r.svg, r.w, r.h, 2, L.girar).then(function(du){ cual[String(x.id)] = {a:du}; }); }
-    var ra = quimTarjetaSVG(q, tam, 'a'), rb = quimTarjetaSVG(q, tam, 'b', QT.qrUrl || '');
-    return Promise.all([_qtPNG(ra.svg, ra.w, ra.h, 2, L.girar), _qtPNG(rb.svg, rb.w, rb.h, 2, L.girar ? 'ccw' : false)])
-      .then(function(d){ cual[String(x.id)] = {a:d[0], b:d[1]}; });
+    var rd = quimTarjetaDobleSVG(q, tam, QT.qrUrl || '');
+    return _qtPNG(rd.svg, rd.w, rd.h, L.escala || 2, L.girar).then(function(du){ cual[String(x.id)] = {d:du, dz:rd.doblez / 10}; });
   });
   return Promise.all(ps).then(function(){
     var doc = new J({unit:'mm', format:'a4', orientation:'portrait'});
@@ -1224,21 +1369,15 @@ function qtPDF(){
     var todas = [];
     QT.hoja.forEach(function(x){ var du = cual[String(x.id)]; if(!du) return; for(var i = 0; i < x.n; i++) todas.push({id:String(x.id), du:du}); });
     var k = todas.length, pag = 0;
-    /* con doble cara, cada hoja de adelante va seguida de la de atrás con las columnas al revés: al voltear la hoja por su
-       borde largo, cada reverso cae detrás de su tarjeta */
-    function _qtPagina(parte, atras){
+    for(var h0 = 0; h0 * porHoja < k; h0++){
       if(pag) doc.addPage();
       pag++;
-      parte.forEach(function(t, pos){
-        var c = pos % L.cols, f = Math.floor(pos / L.cols);
-        if(atras) c = L.cols - 1 - c;
-        doc.addImage(atras ? t.du.b : t.du.a, 'PNG', x0 + c * (L.cw + L.gx), y0 + f * (L.ch + L.gy), L.cw, L.ch, 'qt-' + tam + '-' + t.id + (dos ? (atras ? '-b' : '-a') : ''), 'FAST');
+      todas.slice(h0 * porHoja, (h0 + 1) * porHoja).forEach(function(t, pos){
+        var c = pos % L.cols, f = Math.floor(pos / L.cols), x = x0 + c * (L.cw + L.gx), y = y0 + f * (L.ch + L.gy);
+        doc.addImage(dos ? t.du.d : t.du.a, 'PNG', x, y, L.cw, L.ch, 'qt-' + tam + '-' + t.id + (dos ? '-d' : ''), 'FAST');
+        if(dos) _qtDoblezPDF(doc, x, y, L, t.du.dz);
       });
-    }
-    for(var h0 = 0; h0 * porHoja < k; h0++){
-      var parte = todas.slice(h0 * porHoja, (h0 + 1) * porHoja);
-      _qtPagina(parte, false);
-      if(dos) _qtPagina(parte, true);
+      if(dos) _qtPieDoble(doc, tam);
     }
     var uno = QT.hoja.length === 1 ? quimPorId(QT.hoja[0].id) : null, nom = 'quimicos';
     if(uno){
@@ -1251,8 +1390,8 @@ function qtPDF(){
     var hojas = Math.ceil(k / porHoja);
     if(msg){
       msg.style.color = 'var(--ok)';
-      msg.textContent = dos ? (k === 1 ? '1 tarjeta' : k + ' tarjetas') + ' a doble cara, en ' + pag + ' páginas (adelante y atrás).' +
-                              ' Imprímela a doble cara, volteando por el borde largo, a tamaño real (100 %).'
+      msg.textContent = dos ? (k === 1 ? '1 tarjeta' : k + ' tarjetas') + ' a doble cara' + (hojas === 1 ? ' en 1 hoja A4.' : ' en ' + hojas + ' hojas A4.') +
+                              ' Imprímela a tamaño real (100 %), recórtala por el borde, dóblala por la punteada y enmícala.'
                             : (k === 1 ? '1 tarjeta' : k + ' tarjetas') + (hojas === 1 ? ' en 1 hoja A4.' : ' en ' + hojas + ' hojas A4.') +
                               ' Imprímela a tamaño real (100 %).';
     }
@@ -1956,6 +2095,14 @@ function quimListaPDF(lista, op){
       /* 5/11/2026 · la tarjeta a doble cara: adelante y atrás, con su nombre */
       '.qt-cara-t{margin:16px 0 -6px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gris,#8FA9B8)}' +
       '.qt-cara-n{text-align:center;margin:8px 0 0}' +
+      /* 6/11/2026 · la tira a doble cara: en el celular se corre de lado para ver el atrás */
+      '.qt-tira{margin:14px -4px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 4px 10px}' +
+      '.qt-tira-in{min-width:660px;max-width:900px;margin:0 auto}' +
+      '.qt-tira-in.qt-grande{min-width:720px;max-width:1000px}' +
+      '.qt-tira-cab{display:flex;margin:0 0 6px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gris,#8FA9B8)}' +
+      '.qt-tira-cab span{flex:1;text-align:center}' +
+      '.qt-tira-svg{border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 6px 22px rgba(0,0,0,.28)}' +
+      '.qt-tira-svg svg{display:block;width:100%;height:auto}' +
       '.qt-h .qt-caja{flex:0 0 24px;height:24px;border-radius:7px;border:1.5px solid rgba(var(--w),.3);display:flex;align-items:center;' +
         'justify-content:center;font-size:15px;font-weight:700;color:var(--fondo)}' +
       '.qt-h.on .qt-caja{background:var(--oro);border-color:var(--oro)}' +

@@ -2180,6 +2180,8 @@ function comPintar(){
         'ahí toca elegir a los representantes de los trabajadores y armar el Comité Mixto.</div>'
       : '<div class="aviso" id="com-pie-sup">ℹ️ El Supervisor de SST tiene las mismas funciones que el comité y las mismas facilidades'+_comLey('Ley 29783, art. 32')+'. El día que pases de 20 trabajadores, esta pantalla te lo va a decir sola: '+
         'ahí toca convocar a elecciones y armar el comité paritario.</div>';
+    /* 9/11/2026 · también el Supervisor de SST tiene su acta de reunión en blanco (con el logo y su código) */
+    h+='<div class="acciones" style="margin:12px 0 0"><button type="button" class="bt sec" id="com-acta-blanco" title="Con tu logo y su código">⬇ Acta de reunión en blanco</button></div>';
     h+=_comPieApp(toca);
     caja.innerHTML=h; _comEnchufar(toca); return;
   }
@@ -2192,7 +2194,7 @@ function comPintar(){
   var EST={ hecha:['✓', 'hecha'], perdida:['✕', 'se pasó'], toca:['!', 'toca este mes'], futura:['·', 'por venir'] };
   h+='<div class="tarj" id="com-reun"><div class="tarj-cab"><div><h2>Las reuniones de '+(LA.length>1 ? '<select id="com-anio" aria-label="Año" class="com-anio">'+LA.map(function(y){ return '<option'+(y===anio ? ' selected' : '')+'>'+y+'</option>'; }).join('')+'</select>' : anio)+'</h2>'+
     '<p class="sub" id="com-reun-s">Una ordinaria al mes, en día fijado'+_comLey('D.S. 005-2012-TR, art. 68')+'. Llevas <b>'+hechas+' de 12</b>'+(perdidas ? ' y se te pasaron <b class="com-rojo">'+perdidas+'</b>' : '')+'.</p></div>'+
-    '<div class="acciones"><button type="button" class="bt chico" id="com-acta-nueva">＋ Levantar un acta</button></div></div><div class="tarj-cuerpo">'+
+    '<div class="acciones"><button type="button" class="bt chico sec" id="com-acta-blanco" title="Con tu logo y su código">⬇ Acta en blanco</button><button type="button" class="bt chico" id="com-acta-nueva">＋ Levantar un acta</button></div></div><div class="tarj-cuerpo">'+
     '<div class="com-meses" id="com-meses">'+meses.map(function(m){
       var e=EST[m.estado]||EST.futura, nom=MAS_APP.MESES_ES[m.mes-1];
       return '<button type="button" class="com-mes '+m.estado+'" data-ym="'+m.ym+'"'+(m.acta ? ' data-acta="'+esc(m.acta.id)+'"' : '')+' title="'+esc(nom.charAt(0).toUpperCase()+nom.slice(1)+': '+e[1]+(m.acta ? ' · acta N° '+(m.acta.n||'—') : '')+(m.extra.length ? ' · '+m.extra.length+' extraordinaria'+(m.extra.length===1 ? '' : 's') : ''))+'">'+
@@ -2259,6 +2261,8 @@ function _comEnchufar(toca){
   on('com-planes', function(){ navegar('plan'); });
   on('com-padron-bt', function(){ comPadron(); });
   on('com-acta-nueva', function(){ comActaForm(null, ''); });
+  /* 9/11/2026 · el acta en blanco (la de la sección «Formatos»), con el logo y su código */
+  on('com-acta-blanco', function(){ fmtIr('fmtWebBajar', 'acta-comite', $('com-acta-blanco')); });
   on('com-elec-bt', function(){ comEleccion(); });
   on('com-subir', function(){ comSubirActa(); });
   if($('com-anio')) $('com-anio').onchange=function(){ COMW.anio=this.value; comPintar(); };

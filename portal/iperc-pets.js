@@ -1335,12 +1335,23 @@ function _iplXlsObra(d, C){
   };
   iplProcesos(d).forEach(function(p, pi){
     h.unir(0, fr, ult, fr, (pi + 1) + '. ' + String(p.n || 'Sin proceso').toUpperCase(), O.sec); h.altos[fr] = 18; fr++;
-    p.filas.forEach(function(x){
-      var f = x.f; if(iplFilaVacia(f)) return;
+    /* 9/11/2026 · un peligro con varios riesgos: cada riesgo en su fila, con sus controles; la actividad y el peligro, en una
+       sola celda unida (las filas seguidas con la misma actividad, tarea y peligro) */
+    var vis = p.filas.filter(function(x){ return !iplFilaVacia(x.f); }), corre = [];
+    var mismo = function(a, b){ return !!a.f.pel && ipNorm(a.f.pel) === ipNorm(b.f.pel) && ipNorm(a.f.act + '|' + a.f.tar) === ipNorm(b.f.act + '|' + b.f.tar); };
+    vis.forEach(function(x, qi){
+      if(qi && mismo(vis[qi - 1], x)){ corre[qi] = 0; var ini = qi; while(corre[ini] === 0) ini--; corre[ini]++; } else corre[qi] = 1;
+    });
+    vis.forEach(function(x, qi){
+      var f = x.f;
       n++;
       var cel = iplCeldasObra(f, n, d), fi = evF('i', fr), fre = evF('r', fr), lineas = 1;
       cols.forEach(function(c, j){
         var v = cel[c.k], k = c.k;
+        if(k === 'act' || k === 'pel'){
+          if(corre[qi] === 0) return;
+          if(corre[qi] > 1){ h.unir(j, fr, j, fr + corre[qi] - 1, v, O.tx); return; }
+        }
         if(c.niv){ var e = c.niv === 'i' ? cel.a : cel.b, fo = c.niv === 'i' ? fi : fre; h.celda(j, fr, v || '', e ? O.niv[e.niv.k] : O.num, fo ? fo.niv : null); return; }
         if(/^[ir][abcds]$/.test(k)){ h.celda(j, fr, v ? +v : '', O.num); return; }
         if(/^[ir]p$/.test(k)){ h.celda(j, fr, v ? +v : '', O.num, (k[0] === 'i' ? fi : fre).p); return; }
@@ -1592,7 +1603,16 @@ function _ipwCss(){
     '.ipw-sugs label{display:grid; grid-template-columns:auto minmax(0,1fr); gap:8px; align-items:start; font-size:13.5px; color:var(--texto); font-weight:400; margin:0; padding:6px; border-radius:8px; cursor:pointer}',
     '.ipw-sugs label:hover{background:var(--fondo)}',
     '.ipw-sugs input{width:17px; height:17px; margin:2px 0 0}',
-    '.ipw-sugs small{display:block; color:var(--gris); font-size:12px}',
+    '.ipw-sugs small{display:block; color:var(--gris); font-size:12px}\n' +
+    '.ipw-sugs .ipw-fen-gt{background:#E3F2F3; margin-top:4px}.ipw-sugs .ipw-fen-gt b{color:#0B5F66}.ipw-sugs .ipw-fen-f{padding-left:22px}',
+    /* 9/11/2026 · 🧭 Elaboración guiada */
+    '.gu-pasos{display:flex; gap:6px; list-style:none; margin:0 0 16px; padding:0; flex-wrap:wrap}.gu-pasos li{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--gris); padding:5px 12px 5px 5px; border:1px solid var(--raya); border-radius:999px}',
+    '.gu-pasos li span{display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--fondo); font-weight:700; font-size:12px}',
+    '.gu-pasos li.on{border-color:var(--tinta); color:var(--tinta); font-weight:600}.gu-pasos li.on span{background:var(--tinta); color:#fff}.gu-pasos li.ok span{background:var(--ok); color:#fff}',
+    '.gu-q{margin:14px 0 8px; font-size:14px; font-weight:600; color:var(--tinta)}.gu-q .gris-t{font-weight:400; font-size:12.5px}.gu-doc{margin:0 0 12px; font-size:14px}',
+    '.gu-op{display:grid; grid-template-columns:auto minmax(0,1fr); gap:9px; align-items:start; margin:10px 0 0; font-weight:400; cursor:pointer}.gu-op input{width:17px; height:17px; margin:2px 0 0}.gu-op small{display:block; color:var(--gris); font-size:12.5px}',
+    '.gu-sec{margin:0 0 16px}.gu-sec h4{margin:0 0 6px; font-size:14px; color:var(--tinta)}.gu-lista{max-height:none}.gu-n{color:var(--gris)}',
+    '.gu-fin ul{margin:8px 0 12px; padding-left:20px; line-height:1.7}.gu-fin p{margin:0}',
     '.ipw-tipos{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px}',
     '.ipw-tipos button{border:1px solid var(--raya2); background:var(--panel); border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer; color:var(--texto)}',
     '.ipw-tipos button.on{background:var(--tinta); border-color:var(--tinta); color:#fff}',
@@ -1806,7 +1826,8 @@ function _ipwLista(){
   if(ac) ac.innerHTML = '<span class="ipw-cupo"><b>' + L.length + ' / ' + cupo + '</b>' + esc(T.cupoTx) + ' por obra en tu plan' + (A && A.n ? ' ' + esc(A.n) : '') + '</span>' +
     '<label class="bt sec" for="ipw-sube" id="ipw-sube-b">' + (k === 'ipl' ? '⬆ Agregar IPERC de línea base' : '⬆ Agregar PETS') + '</label>' +
     '<input type="file" class="pi-oculto" id="ipw-sube" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx">' +
-    '<button type="button" class="bt" id="ipw-nuevo"' + (lleno ? ' disabled' : '') + '>' + esc(T.nuevo) + '</button>';
+    '<button type="button" class="bt sec" id="ipw-nuevo"' + (lleno ? ' disabled' : '') + ' title="Solo con el nombre: lo llenas tú">' + esc(T.nuevo) + '</button>' +
+    '<button type="button" class="bt" id="ipw-guiada"' + (lleno ? ' disabled' : '') + ' title="Eliges la actividad y se arma el borrador: tú desmarcas lo que no aplica">🧭 Elaboración guiada</button>';   /* 9/11/2026 */
   var subidos = IPW.sub[k] || [];
   var h = _ipwSubHTML(k);
   if(lleno && L.length){
@@ -1817,16 +1838,19 @@ function _ipwLista(){
     h += k === 'ipl'
       ? '<div class="tarj"><div class="vacio"><b>' + (subidos.length ? 'Todavía no armaste un IPERC de línea base en OBRASST' : 'Todavía no hay un IPERC de línea base en esta obra') + '</b>La matriz de peligros y riesgos de la obra, por proceso, actividad y tarea: cada peligro con su evaluación, sus medidas de control y el riesgo que queda. ' +
         'Sale en PDF y en Excel, con el logo de tu empresa y sus firmas, en el modelo que elijas: la matriz de obra en una sola tabla A3, o el documento completo con su portada y su índice. Aprobado, lo publicas en «Documentos»: tu gente lo lee y firma en su celular, y va al cartel QR de la matriz IPERC.' +
-        '<div class="acciones" style="justify-content:center; margin-top:14px"><button type="button" class="bt" id="ipw-nuevo2"' + (cupo ? '' : ' disabled') + '>' + esc(T.nuevo) + '</button></div></div></div>'
+        '<div class="acciones" style="justify-content:center; margin-top:14px"><button type="button" class="bt" id="ipw-guiada2"' + (cupo ? '' : ' disabled') + '>🧭 Elaboración guiada</button><button type="button" class="bt sec" id="ipw-nuevo2"' + (cupo ? '' : ' disabled') + '>' + esc(T.nuevo) + ' en blanco</button></div>' +
+        '<p class="ayuda" style="margin-top:10px">Con la elaboración guiada escribes el nombre, eliges las actividades y se arma el borrador: tú desmarcas lo que no aplica.</p></div></div>'
       : '<div class="tarj"><div class="vacio"><b>' + (subidos.length ? 'Todavía no armaste un PETS en OBRASST' : 'Todavía no hay PETS en esta obra') + '</b>El procedimiento escrito de cada tarea, paso a paso: el personal, el EPP, los equipos, el procedimiento y las restricciones, con sus firmas. ' +
         'Sale en PDF con el logo de tu empresa y su índice. Aprobado, lo publicas en «Documentos»: tu gente lo lee y firma en su celular, y va al cartel QR de los procedimientos.' +
-        '<div class="acciones" style="justify-content:center; margin-top:14px"><button type="button" class="bt" id="ipw-nuevo2"' + (cupo ? '' : ' disabled') + '>' + esc(T.nuevo) + '</button></div></div></div>';
+        '<div class="acciones" style="justify-content:center; margin-top:14px"><button type="button" class="bt" id="ipw-guiada2"' + (cupo ? '' : ' disabled') + '>🧭 Elaboración guiada</button><button type="button" class="bt sec" id="ipw-nuevo2"' + (cupo ? '' : ' disabled') + '>' + esc(T.nuevo) + ' en blanco</button></div>' +
+        '<p class="ayuda" style="margin-top:10px">Con la elaboración guiada escribes el nombre, eliges las actividades y se arma el borrador: tú desmarcas lo que no aplica.</p></div></div>';
   }
   L.forEach(function(d){ h += _ipwTarj(k, d); });
   h += '<p class="ayuda">OBRASST ordena y le da el formato; el contenido lo define y lo aprueba tu equipo.' + (k === 'ipl' ? ' El IPERC se actualiza una vez al año como mínimo, y antes si cambian las condiciones de trabajo.' : '') + '</p>' +
     '<div class="msg" id="ipw-msg" role="status"></div>';
   caja.innerHTML = h;
   [$('ipw-nuevo'), $('ipw-nuevo2')].forEach(function(b){ if(b) b.onclick = ipwNuevo; });
+  [$('ipw-guiada'), $('ipw-guiada2')].forEach(function(b){ if(b) b.onclick = function(){ ipwGuiada(false); }; });   /* 9/11/2026 · 🧭 */
   var sube = $('ipw-sube');
   if(sube) sube.onchange = function(){ var f = this.files && this.files[0]; this.value = ''; if(f) ipwSubir(k, f); };
   if($('ipw-sub-enl')) $('ipw-sub-enl').onclick = function(){ ipwEnlace(k); };
@@ -1952,7 +1976,8 @@ function _ipwEditor(){
   var ed = IPW.ed, T = IPETS_T[ed.k], caja = IPW.caja, d = ed.d; if(!caja || !document.body.contains(caja)) return;
   var est = ipetsEstado(d, T.roles), E = IPETS_EST[est], bloq = _ipwBloqueo(ed);
   var ac = $('acciones');
-  if(ac) ac.innerHTML = '<button type="button" class="bt sec" id="ipw-ver">Vista previa (PDF)</button>' + (ed.k === 'ipl' ? '<button type="button" class="bt sec" id="ipw-xls">Excel</button>' : '') +
+  if(ac) ac.innerHTML = (bloq ? '' : '<button type="button" class="bt sec" id="ipw-guiada-ed" title="Agrega actividades con sus peligros' + (ed.k === 'pets' ? ', pasos, EPP y lo demás' : '') + ': tú desmarcas lo que no aplica">🧭 Elaboración guiada</button>') +   /* 9/11/2026 */
+    '<button type="button" class="bt sec" id="ipw-ver">Vista previa (PDF)</button>' + (ed.k === 'ipl' ? '<button type="button" class="bt sec" id="ipw-xls">Excel</button>' : '') +
     '<button type="button" class="bt" id="ipw-guardar"' + (bloq ? ' disabled' : '') + '>Guardar</button>';
   var h = '<div class="ipw-barra-ed"><button type="button" class="bt sec chico" id="ipw-volver">← ' + esc(T.todos) + '</button>' +
     '<div class="t"><b id="ipw-tit">' + esc(d.tit) + '</b><span class="pill ' + E.cl + '">' + esc(E.n) + '</span><span class="ipw-gu" id="ipw-gu" role="status"></span></div></div>';
@@ -1974,6 +1999,7 @@ function _ipwEditor(){
   if($('ipw-xls')) $('ipw-xls').onclick = function(){ ipwBajar(null, 'xls', T.limpio(ed.d)); };
   $('ipw-guardar').onclick = function(){ _ipwGuardar(ed, true).then(function(ok){ if(ok) toast('Guardado'); }); };
   if($('ipw-desfirmar')) $('ipw-desfirmar').onclick = ipwDesfirmar;
+  if($('ipw-guiada-ed')) $('ipw-guiada-ed').onclick = function(){ ipwGuiada(true); };
   if($('ipw-nver')) $('ipw-nver').onclick = ipwNuevaVersion;
   if($('ipw-pub2')) $('ipw-pub2').onclick = ipwPublicar;
   Array.prototype.forEach.call(caja.querySelectorAll('[data-ipw-tab]'), function(b){ b.onclick = function(){ ed.tab = b.getAttribute('data-ipw-tab'); _ipwEditor(); }; });
@@ -2196,7 +2222,8 @@ function _iplCtlResumen(f){
 function _iplMatriz(ed){
   var d = ed.d, R = iplResumen(d), P = iplProcesos(d), filtro = ed.filtroProc || '';
   var h = '<div class="ipw-herr" data-ipw-edita><button type="button" class="bt" id="ipl-f-nueva">＋ Agregar un peligro</button>' +
-    '<button type="button" class="bt sec" id="ipl-f-sug">Sugerir peligros de la base del ATS</button></div>';
+    '<button type="button" class="bt sec" id="ipl-f-sug">Sugerir peligros de la base del ATS</button>' +
+    (_ipwFen() ? '<button type="button" class="bt sec" id="ipl-f-fen" title="Opcional · ' + esc(FEN.norma) + '">🌊 Peligros por El Niño</button>' : '') + '</div>';
   if(P.length > 1) h += '<div class="ipw-herr"><select id="ipl-f-proc" aria-label="Proceso"><option value="">Todos los procesos</option>' + P.map(function(p){ return '<option value="' + esc(p.k) + '"' + (filtro === p.k ? ' selected' : '') + '>' + esc(p.n) + ' (' + p.filas.length + ')</option>'; }).join('') + '</select>' +
     '<span class="ayuda" style="margin:0">' + R.n + (R.n === 1 ? ' peligro' : ' peligros') + ' · ' + R.sig + (R.sig === 1 ? ' significativo' : ' significativos') + ' al inicio → ' + R.sigRes + ' con los controles' + (R.sinIni || R.sinRes ? ' · <b class="ipw-falta">' + Math.max(R.sinIni, R.sinRes) + ' por evaluar</b>' : '') + '</span></div>';
   if(!d.filas.length){
@@ -2231,6 +2258,7 @@ function _iplMatrizEnchufar(ed, c, bloq){
   var nueva = $('ipl-f-nueva');
   if(nueva) nueva.onclick = function(){ var P = iplProcesos(d), fp = ed.filtroProc && P.filter(function(p){ return p.k === ed.filtroProc; })[0], u = fp ? fp.filas[fp.filas.length - 1].f : d.filas[d.filas.length - 1]; iplFilaForm(-1, u ? { proc:u.proc, act:u.act } : {}); };
   var sug = $('ipl-f-sug'); if(sug) sug.onclick = function(){ iplSugerir(); };
+  var fen = $('ipl-f-fen'); if(fen) fen.onclick = function(){ iplFen(); };   /* 9/11/2026 */
   Array.prototype.forEach.call(c.querySelectorAll('[data-ipl-mas]'), function(b){ b.onclick = function(){ var p = iplProcesos(d)[+b.getAttribute('data-ipl-mas')], u = p.filas[p.filas.length - 1].f; iplFilaForm(-1, { proc:u.proc, act:u.act }); }; });
   var en = function(sel, fn){ Array.prototype.forEach.call(c.querySelectorAll('[' + sel + ']'), function(b){ b.onclick = function(ev){ ev.stopPropagation(); fn(+b.getAttribute(sel)); }; }); };
   /* subir y bajar dentro de su proceso: se cambia con la fila de al lado del mismo proceso */
@@ -2385,6 +2413,91 @@ function iplSugerir(){
   }).catch(function(){ $('hoja-cuerpo').innerHTML = '<p class="msg mal">No se pudo cargar la base de peligros. Revisa tu conexión e inténtalo otra vez.</p>'; });
 }
 
+/* 9/11/2026 · el Fenómeno El Niño 2026 - 2027 (FEN, en portal/index.html): opcional y solo mientras rija */
+function _ipwFen(){ return typeof fenVigente === 'function' && typeof FEN === 'object' && fenVigente(hoyISO(), ((IPW.ctx || {}).pais || 'pe')); }
+/* 9/11/2026 (2) · la hoja de El Niño, la misma para el IPERC de línea base y el PETS: por situación (lluvias, huaicos e
+   inundaciones, calor, zancudos), cada peligro con UN riesgo, su consecuencia y controles generales. Vienen marcadas las
+   situaciones que la obra eligió en «ATS / IPERC» (todas, si no eligió) y nunca lo que ya está. op: { lista, campoP, campoR,
+   iperc (con proceso, actividad y tarea), alAgregar(filas, campos) } */
+function _ipwFenHoja(op){
+  var gs = (typeof fenGruposWeb === 'function') ? fenGruposWeb() : FEN.grupos.map(function(x){ return x.k; });
+  var falta = fenFaltan(op.lista, op.campoP, op.campoR), marcados = {};
+  FEN.filas.forEach(function(f, i){ marcados[i] = falta.indexOf(f) > -1 && gs.indexOf(f.g) > -1; });
+  var cuerpo = '<p class="ayuda" style="margin:0 0 10px">Opcional. La ' + esc(FEN.norma) + ' (El Peruano, 04/09/2026) aprueba el «' + esc(FEN.plan) + '». ' +
+    'Estos peligros de obra son sugerencias de OBRASST: cada uno con su riesgo, su consecuencia y controles generales' + (op.iperc ? ', ya repartidos en la jerarquía' : '') +
+    '. Marca los que le tocan a tu obra; después los revisas' + (op.iperc ? ' y los evalúas' : '') + '.</p>' +
+    '<div class="ipw-sugs" id="ipl-fen-lista">' + FEN.grupos.map(function(g){
+      return '<label class="ipw-fen-gt"><input type="checkbox" data-g="' + esc(g.k) + '"><span><b>' + g.ic + ' ' + esc(g.n) + '</b></span></label>' +
+        FEN.filas.map(function(f, i){
+          if(f.g !== g.k) return '';
+          var ya = falta.indexOf(f) < 0;
+          return '<label class="ipw-fen-f"><input type="checkbox" data-i="' + i + '" data-gg="' + esc(g.k) + '"' + (marcados[i] ? ' checked' : '') + (ya ? ' disabled' : '') + '><span><b>' + esc(f.p) + '</b>' +
+            (ya ? ' <span class="gris-t">· ya está ' + (op.iperc ? 'en la matriz' : 'en el PETS') + '</span>' : '') +
+            '<small>' + esc(f.r) + ' → ' + esc(f.c) + '</small><small>Control: ' + esc(f.m) + '</small></span></label>';
+        }).join('');
+    }).join('') + '</div>' +
+    (op.iperc ? '<div class="ipw-g3" style="margin-top:14px">' + _ipwCampo('ipl-fen-proc', 'Proceso', FEN.proc, { max:90 }) + _ipwCampo('ipl-fen-act', 'Actividad', FEN.act, { max:140 }) +
+      _ipwCampo('ipl-fen-tar', 'Tarea', '', { max:180, opcional:true }) + '</div>' : '') + '<div class="msg" id="ipl-fen-msg" role="status"></div>';
+  abrirHoja('Peligros por el Fenómeno El Niño', FEN.norma + ' · 2026 - 2027', cuerpo,
+    '<button type="button" class="bt sec" id="ipl-fen-no">Cancelar</button><button type="button" class="bt" id="ipl-fen-ok">Agregar los marcados</button>', { ancha:true });
+  $('ipl-fen-no').onclick = cerrarHoja;
+  var cajas = function(g){ return Array.prototype.filter.call(document.querySelectorAll('#ipl-fen-lista input[data-gg="' + g + '"]'), function(x){ return !x.disabled; }); };
+  var cuenta = function(){
+    var n = Object.keys(marcados).filter(function(k){ return marcados[k]; }).length, b = $('ipl-fen-ok');
+    if(b){ b.disabled = !n; b.textContent = n ? 'Agregar ' + n + (n === 1 ? ' peligro' : ' peligros') : 'Agregar los marcados'; }
+    FEN.grupos.forEach(function(g){
+      var h = document.querySelector('#ipl-fen-lista input[data-g="' + g.k + '"]'), L = cajas(g.k), on = L.filter(function(x){ return x.checked; }).length;
+      if(h){ h.disabled = !L.length; h.checked = !!L.length && on === L.length; h.indeterminate = on > 0 && on < L.length; }
+    });
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('#ipl-fen-lista input[data-i]'), function(x){ x.onchange = function(){ marcados[x.getAttribute('data-i')] = x.checked; cuenta(); }; });
+  Array.prototype.forEach.call(document.querySelectorAll('#ipl-fen-lista input[data-g]'), function(h){ h.onchange = function(){
+    cajas(h.getAttribute('data-g')).forEach(function(x){ x.checked = h.checked; marcados[x.getAttribute('data-i')] = h.checked; }); cuenta(); }; });
+  cuenta();
+  $('ipl-fen-ok').onclick = function(){
+    var v = function(id){ var x = $(id); return x ? x.value : ''; }, m = $('ipl-fen-msg');
+    var campos = op.iperc ? { proc:ipTx(v('ipl-fen-proc'), 90), act:ipTx(v('ipl-fen-act'), 140), tar:ipTx(v('ipl-fen-tar'), 180) } : null;
+    if(campos && !campos.act && !campos.tar){ m.className = 'msg mal'; m.textContent = 'Escribe la actividad (o la tarea) de estos peligros.'; $('ipl-fen-act').focus(); return; }
+    var F = FEN.filas.filter(function(f, i){ return marcados[i]; });
+    var r = op.alAgregar(F, campos);
+    if(r){ m.className = 'msg mal'; m.textContent = r; return; }
+    cerrarHoja();
+  };
+}
+/* una fila de El Niño en la matriz: sus controles generales ya vienen en la jerarquía (f.ctl) */
+function iplDesdeFen(f, base){
+  var x = iplDesdeAts(f, base); if(f.so) x.tipo = 'SO';
+  if(f.ctl) x.ctl = { eli:'', sus:'', ing:ipArea(f.ctl.ing, 500), adm:ipArea(f.ctl.adm, 700), epp:ipArea(f.ctl.epp, 500) };
+  return x;
+}
+function iplFen(){
+  var ed = IPW.ed, d = ed.d;
+  _ipwFenHoja({ lista:d.filas, campoP:'pel', campoR:'rie', iperc:true, alAgregar:function(F, cp){
+    var nuevos = F.map(function(f){ return iplDesdeFen(f, { proc:cp.proc, act:cp.act, tar:cp.tar, rut:'NR' }); });
+    nuevos = nuevos.slice(0, Math.max(0, IPL_TOPE - d.filas.length));
+    if(!nuevos.length) return 'La matriz ya llegó a su tope de ' + IPL_TOPE + ' peligros.';
+    var k = ipNorm(cp.proc) || '~', pos = -1;
+    d.filas.forEach(function(y, j){ if((ipNorm(y.proc) || '~') === k) pos = j; });
+    if(pos > -1) Array.prototype.splice.apply(d.filas, [pos + 1, 0].concat(nuevos)); else d.filas = d.filas.concat(nuevos);
+    _ipwCambio(ed); setTimeout(function(){ ed.tab = 'matriz'; _ipwEditor(); }, 0);
+    toast(nuevos.length + (nuevos.length === 1 ? ' peligro agregado' : ' peligros agregados') + ': revisa cada uno y evalúalo');
+    return '';
+  } });
+}
+function petsFen(){
+  var ed = IPW.ed, d = ed.d;
+  if(!fenFaltan(d.pel, 'p', 'r').length){ toast('Ya están en este PETS'); return; }
+  _ipwFenHoja({ lista:d.pel, campoP:'p', campoR:'r', iperc:false, alAgregar:function(F){
+    var cabe = Math.max(0, 60 - d.pel.length);
+    if(!cabe) return 'El PETS ya llegó a su tope de 60 peligros.';
+    F = F.slice(0, cabe);
+    d.pel = d.pel.concat(F.map(function(f){ return { p:f.p, r:f.r, c:f.m }; }));
+    _ipwCambio(ed); setTimeout(_ipwTab, 0);
+    toast(F.length + (F.length === 1 ? ' peligro agregado' : ' peligros agregados') + ' (Fenómeno El Niño): revísalos');
+    return '';
+  } });
+}
+
 /* ══ EL PETS: DATOS ══ */
 var PETS_DEFS = [
   { t:'PETS', d:'Procedimiento escrito de trabajo seguro: describe paso a paso cómo hacer la tarea de manera correcta y segura.' },
@@ -2479,7 +2592,8 @@ function _petsProc(ed){
       _ipwCampo('pets-pl-r-' + i, 'Riesgo', x.r, { c:'pel.' + i + '.r', max:220 }) + _ipwCampo('pets-pl-c-' + i, 'Medidas de control', x.c, { c:'pel.' + i + '.c', area:true, filas:2, max:700 }) +
       _ipwFilasBotones('pel', i, d.pel.length) + '</div>';
   });
-  h += '</div><div class="acciones" data-ipw-edita style="margin-top:10px"><button type="button" class="bt sec chico" id="pets-pl-mas">＋ Agregar un peligro</button><button type="button" class="bt sec chico" id="pets-pl-ipl">Traer del IPERC de línea base</button></div></div>';
+  h += '</div><div class="acciones" data-ipw-edita style="margin-top:10px"><button type="button" class="bt sec chico" id="pets-pl-mas">＋ Agregar un peligro</button><button type="button" class="bt sec chico" id="pets-pl-ipl">Traer del IPERC de línea base</button>' +
+    (_ipwFen() ? '<button type="button" class="bt sec chico" id="pets-pl-fen" title="Opcional · ' + esc(FEN.norma) + '">🌊 Peligros por El Niño</button>' : '') + '</div></div>';
   h += '<div class="ipw-sec ipw-pasos"><h3>Procedimiento, paso a paso</h3><div class="ipw-filas">';
   d.pasos.forEach(function(x, i){
     h += '<div class="ipw-fila"><div class="ipw-n">' + (i + 1) + '</div><div>' + _ipwCampo('pets-ps-t-' + i, 'Qué se hace', x.t, { c:'pasos.' + i + '.t', area:true, filas:2, max:900 }) +
@@ -2489,7 +2603,7 @@ function _petsProc(ed){
   });
   if(!d.pasos.length) h += '<p class="gris-t" style="font-size:13px; margin:0">Desde la preparación (el ATS, la señalización) hasta el orden y la limpieza del final.</p>';
   h += '</div><button type="button" class="bt sec chico" id="pets-ps-mas" data-ipw-edita style="margin-top:10px">＋ Agregar un paso</button>' + (d.pasos.length >= PETS_TOPE ? '<p class="ayuda">Llegaste a ' + PETS_TOPE + ' pasos: es el tope de un PETS.</p>' : '') + '</div>';
-  var sugR = PETS_RESTR.map(function(s){ return pe ? s : s.replace(' (PETAR)', ''); }).filter(function(s){ return d.restr.indexOf(s) < 0; });
+  var sugR = PETS_RESTR.concat(_ipwFen() ? [FEN.restr] : []).map(function(s){ return pe ? s : s.replace(' (PETAR)', ''); }).filter(function(s){ return d.restr.indexOf(s) < 0; });
   h += '<div class="ipw-sec"><h3>Restricciones</h3>' + _ipwCampo('pets-restr', 'Lo que no se hace (una por línea)', d.restr.join('\n'), { c:'restr', t:'lineas', area:true, filas:5 }) +
     (sugR.length ? '<div class="ipw-chips" data-ipw-edita>' + sugR.map(function(s, i){ return '<button type="button" class="ipw-chip ipw-sugc" data-pets-rsg="' + i + '">＋ ' + esc(s) + '</button>'; }).join('') + '</div>' : '') + '</div>';
   h += '<div class="ipw-sec"><h3>Registros y formatos relacionados</h3>' + _ipwChips(ed, 'regs', PETS_REGS.map(function(s){ return pe ? s : s.replace(' (PETAR)', ''); }), 'Check list de la excavadora…') + '</div>';
@@ -2503,6 +2617,7 @@ function _petsProcEnchufar(ed, c, bloq){
   _ipwChipsEnchufar(ed, c, re);
   $('pets-pl-mas').onclick = function(){ d.pel.push({ p:'', r:'', c:'' }); _ipwCambio(ed); re(); var x = $('pets-pl-p-' + (d.pel.length - 1)); if(x) x.focus(); };
   $('pets-pl-ipl').onclick = petsTraerIpl;
+  var pf = $('pets-pl-fen'); if(pf) pf.onclick = petsFen;   /* 9/11/2026 */
   $('pets-ps-mas').onclick = function(){ if(d.pasos.length >= PETS_TOPE) return toast('Llegaste al tope de ' + PETS_TOPE + ' pasos'); d.pasos.push({ t:'', rie:'', ctl:'' }); _ipwCambio(ed); re(); var x = $('pets-ps-t-' + (d.pasos.length - 1)); if(x) x.focus(); };
   Array.prototype.forEach.call(c.querySelectorAll('[data-pets-rsg]'), function(b){ b.onclick = function(){ var s = (ed._sugR || [])[+b.getAttribute('data-pets-rsg')]; if(s && d.restr.indexOf(s) < 0) d.restr.push(s); _ipwCambio(ed); re(); }; });
 }
@@ -2540,6 +2655,413 @@ function petsTraerIpl(){
       _ipwCambio(ed); cerrarHoja(); _ipwTab(); toast(nuevos.length + (nuevos.length === 1 ? ' peligro traído' : ' peligros traídos'));
     };
   }, function(){ toast('No se pudo traer el IPERC. Revisa tu conexión.'); });
+}
+
+/* ══ 9/11/2026 · 🧭 ELABORACIÓN GUIADA (el IPERC de línea base y el PETS) ════════════════════════════════════════════════
+   Marcelo: «hacerlo más fácil, darle la opción que el usuario mismo lo haga o en otro botón… "ayuda con la elaboración"… pero
+   de forma que él te coloque el tema primero, o el título, o que ya haya preestablecido, porque… hacer preguntas serán
+   muchas… para que no se aburra». Eligió: plantilla y revisar (3 pasos, sin preguntas), «Elaboración guiada», en la web.
+     1. El título (y en el IPERC, el proceso): con sus palabras se proponen solas las actividades (los tipos de trabajo del ATS,
+        ATS_PREG.tipos); se cambian con un toque. Lo de siempre (sol, ruido, polvo…) y, mientras rija, El Niño.
+     2. Todo viene marcado; se desmarca lo que no aplica. IPERC: los peligros de cada actividad (de la base del ATS, cada uno
+        con UN riesgo, su consecuencia y sus controles, que entran repartidos en la jerarquía). PETS: los pasos, los peligros,
+        el EPP, los equipos y herramientas, el personal y las restricciones (IPETS_GUIA, abajo).
+     3. Lo que queda: crear el borrador (o agregarlo al documento abierto). La evaluación, los responsables y lo propio de la
+        obra se completan después: OBRASST ordena; el contenido lo define y lo aprueba el equipo.
+   Nada de esto es norma: son prácticas generales de obra para empezar, que la empresa revisa. ══ */
+var IPETS_GUIA = {
+  base:{
+    ini:['Charla de inicio de jornada y ATS llenado y firmado por la cuadrilla, en el frente de trabajo.',
+         'Verificar que el personal esté capacitado en este PETS y tenga su EPP completo y en buen estado.',
+         'Inspeccionar los equipos y las herramientas; retirar lo que esté en mal estado.',
+         'Delimitar y señalizar el área de trabajo.'],
+    fin:['Al terminar: orden y limpieza del área, segregar los residuos y guardar los equipos y las herramientas.',
+         'Reportar al supervisor los incidentes y las condiciones o actos subestándar de la jornada.'],
+    epp:['Casco de seguridad', 'Lentes de seguridad', 'Zapatos de seguridad con puntera', 'Guantes de cuero', 'Chaleco con cintas reflectivas', 'Ropa de trabajo'],
+    pers:[{ c:'Capataz o supervisor de la tarea', req:'Capacitado en este PETS; dirige la tarea y llena el ATS con la cuadrilla' },
+          { c:'Trabajadores', req:'Capacitados en este PETS y con aptitud médica vigente' }]
+  },
+  alt:{ pasos:['Verificar el permiso de trabajo en altura y la aptitud médica del personal para trabajar en altura.',
+               'Inspeccionar el arnés, la línea de vida y los puntos de anclaje antes de usarlos.',
+               'Instalar la línea de vida o el punto de anclaje y proteger los bordes y las aberturas con barandas o tapas.',
+               'Subir con tres puntos de apoyo y mantenerse anclado todo el tiempo que se esté en altura.',
+               'Subir y bajar las herramientas y los materiales con driza; nunca lanzarlos.'],
+        epp:['Arnés de cuerpo entero con línea de vida y absorbedor', 'Barbiquejo'], eq:['Línea de vida', 'Puntos de anclaje'], her:['Driza para herramientas'],
+        pers:[{ c:'Trabajadores en altura', req:'Capacitados en trabajos en altura y con aptitud médica para altura' }],
+        restr:['No se trabaja en altura sin el arnés anclado, ni con lluvia, viento fuerte o tormenta eléctrica.'], permiso:1 },
+  and:{ pasos:['Verificar la tarjeta del andamio: con tarjeta verde se usa; con tarjeta roja o sin tarjeta, no se sube.',
+               'Armar el andamio sobre base firme y nivelada, con sus crucetas, plataformas completas, barandas y rodapiés.',
+               'Inspeccionar el andamio antes de cada uso y después de una lluvia o de viento fuerte.',
+               'Subir por la escalera del andamio con tres puntos de apoyo, nunca por las crucetas.',
+               'No sobrecargar la plataforma ni mover el andamio con personas encima; si tiene ruedas, frenadas.'],
+        epp:['Arnés de cuerpo entero con línea de vida y absorbedor', 'Barbiquejo'], eq:['Andamio certificado', 'Tarjeta de inspección del andamio'], her:['Llaves para el armado'],
+        pers:[{ c:'Andamiero', req:'Capacitado en el armado y desarmado de andamios' }],
+        restr:['No se sube a un andamio con tarjeta roja o sin tarjeta.'] },
+  esc:{ pasos:['Inspeccionar la escalera: peldaños, largueros y zapatas antideslizantes.',
+               'Ubicarla sobre base firme, en ángulo 4:1, que sobresalga del punto de apoyo, y amarrarla arriba.',
+               'Subir y bajar de frente, con tres puntos de apoyo y sin cargar materiales en las manos.'],
+        eq:['Escalera en buen estado'], restr:['No se usan escaleras improvisadas o dañadas.'] },
+  exc:{ pasos:['Revisar los planos de interferencias y detectar los servicios enterrados (cables, tuberías) antes de excavar.',
+               'Verificar el permiso de excavación.',
+               'Delimitar el borde de la excavación con barandas o malla y señalizarlo.',
+               'Excavar por capas; cerca de las interferencias, a mano.',
+               'Hacer el talud o colocar el entibado según el tipo de suelo y la profundidad.',
+               'Acopiar el material excavado lejos del borde.',
+               'Instalar el acceso con escalera e inspeccionar la excavación al inicio de cada jornada y después de cada lluvia.'],
+        eq:['Detector de servicios enterrados', 'Entibado', 'Bomba de achique'], her:['Pico', 'Lampa', 'Barreta'],
+        pers:[{ c:'Vigía', req:'Permanece en el borde mientras haya personal dentro de la excavación' }],
+        restr:['No se ingresa a una excavación con agua acumulada, sin talud o entibado, ni sin la inspección del día.'], permiso:1 },
+  cal:{ pasos:['Verificar el permiso de trabajo en caliente.',
+               'Retirar o cubrir los materiales combustibles del área y ubicar el extintor a la mano.',
+               'Inspeccionar la máquina de soldar, sus cables, la pinza y la puesta a tierra, o el equipo de oxicorte con sus mangueras, reguladores y arrestallamas.',
+               'Colocar biombos para proteger a los demás de la radiación y de las chispas.',
+               'Soldar o cortar con la ventilación adecuada, con el vigía de fuego atento.',
+               'Al terminar, revisar el área en busca de focos de fuego antes de retirarse.'],
+        epp:['Careta de soldar', 'Mandil, mangas y escarpines de cuero', 'Respirador para humos metálicos', 'Careta facial'],
+        eq:['Máquina de soldar o equipo de oxicorte', 'Extintor', 'Biombos'], her:['Amoladora', 'Escobilla de acero'],
+        pers:[{ c:'Soldador', req:'Calificado y capacitado en trabajos en caliente' }, { c:'Vigía de fuego', req:'Capacitado en el uso del extintor' }],
+        restr:['No se suelda ni se corta sin el permiso de trabajo en caliente, sin extintor ni sin vigía de fuego.'], permiso:1 },
+  con:{ pasos:['Verificar que el encofrado y el apuntalamiento estén revisados y liberados antes del vaciado.',
+               'Coordinar con el operador de la bomba o del mixer la ubicación del equipo y las señales.',
+               'Ubicar el equipo en terreno firme, con el área de maniobra delimitada.',
+               'Vaciar con la manguera sujeta entre dos personas; nadie en la línea de fuego.',
+               'Vibrar el concreto con la vibradora inspeccionada.',
+               'Al terminar, lavar los equipos en el lugar designado.'],
+        epp:['Botas de jebe con puntera', 'Guantes de nitrilo o neopreno'], eq:['Bomba de concreto o mixer', 'Vibradora'], her:['Regla', 'Plancha', 'Badilejo'],
+        pers:[{ c:'Operador de bomba o mixer', req:'Autorizado para operar el equipo' }],
+        restr:['No se vacía sobre un encofrado que no fue revisado y liberado.'] },
+  enc:{ pasos:['Habilitar la madera o los paneles en un área ordenada, retirando los clavos y las astillas.',
+               'Trasladar los paneles y los puntales entre dos personas.',
+               'Armar el encofrado y apuntalarlo según el diseño; verificar plomos y niveles.',
+               'Revisar el encofrado y el apuntalamiento antes del vaciado.',
+               'Desencofrar en el orden indicado y cuando lo autorice el responsable, con el área delimitada y nadie debajo.',
+               'Retirar los clavos y acopiar el material ordenado.'],
+        eq:['Puntales'], her:['Martillo', 'Serrucho', 'Sierra circular', 'Barreta'],
+        restr:['No se desencofra antes del tiempo indicado ni sin la autorización del responsable.'] },
+  ace:{ pasos:['Habilitar el acero en el banco de trabajo: cortar y doblar con las herramientas y los equipos inspeccionados.',
+               'Trasladar las varillas largas entre dos personas, avisando al pasar.',
+               'Colocar y amarrar el acero según los planos.',
+               'Colocar capuchones en todas las puntas de varilla expuestas.'],
+        eq:['Banco de habilitado'], her:['Cizalla', 'Dobladora de fierro', 'Tortol', 'Cortadora de fierro'],
+        restr:['No quedan puntas de fierro expuestas sin su capuchón.'] },
+  alb:{ pasos:['Preparar la mezcla en un área delimitada, con los guantes y los lentes puestos.',
+               'Asentar los muros sin pasar la altura de la jornada indicada; apuntalar si hace falta.',
+               'Trabajar sobre andamios o plataformas en buen estado cuando la altura lo pida.',
+               'Retirar los desperdicios y la mezcla sobrante al terminar.'],
+        epp:['Guantes de nitrilo o neopreno'], eq:['Mezcladora'], her:['Badilejo', 'Plancha', 'Nivel', 'Plomada'],
+        restr:['Nadie se apoya ni se sube a un muro recién asentado.'] },
+  ele:{ pasos:['Identificar el circuito que se va a intervenir y coordinar el corte de energía.',
+               'Bloquear y etiquetar el tablero o el interruptor, cada trabajador con su candado.',
+               'Verificar la ausencia de tensión con un instrumento probado.',
+               'Hacer el trabajo con herramientas aisladas.',
+               'Al terminar, retirar las herramientas y cerrar los tableros; cada bloqueo lo retira quien lo puso.'],
+        epp:['Guantes dieléctricos', 'Botas dieléctricas', 'Careta facial'], eq:['Candados y tarjetas de bloqueo', 'Detector de tensión o multímetro'], her:['Herramientas con aislamiento'],
+        pers:[{ c:'Electricista', req:'Calificado y autorizado para trabajos eléctricos' }],
+        restr:['No se interviene un circuito sin bloqueo y sin verificar la ausencia de tensión.'], permiso:1 },
+  iza:{ pasos:['Elaborar el plan de izaje: peso de la carga, radio, capacidad del equipo y de los accesorios.',
+               'Inspeccionar la grúa y los accesorios de izaje (eslingas, grilletes, estrobos).',
+               'Ubicar el equipo en terreno firme, con los estabilizadores extendidos y sobre placas de reparto.',
+               'Delimitar el área de izaje; nadie bajo la carga.',
+               'Estrobar la carga y hacer un izaje de prueba a poca altura.',
+               'Guiar la carga con vientos (cuerdas); el rigger da las señales al operador.'],
+        eq:['Grúa', 'Eslingas', 'Grilletes', 'Vientos (cuerdas guía)'],
+        pers:[{ c:'Operador de grúa', req:'Certificado y autorizado para el equipo' }, { c:'Rigger', req:'Capacitado en maniobras de izaje y en señales' }],
+        restr:['No se iza sin plan de izaje, con viento fuerte ni con personas bajo la carga.'], permiso:1 },
+  maq:{ pasos:['Inspección de pre-uso de la máquina por el operador, con su check list.',
+               'Delimitar el área de operación y el radio de giro.',
+               'Coordinar con el vigía las maniobras y los retrocesos.',
+               'Operar a velocidad controlada; el personal de piso fuera del radio de giro y con contacto visual con el operador.',
+               'Al terminar, estacionar en el lugar designado, con el implemento apoyado en el suelo y el freno puesto.'],
+        eq:['Maquinaria con alarma de retroceso', 'Check list de pre-uso'],
+        pers:[{ c:'Operador', req:'Autorizado y con licencia para el equipo' }, { c:'Vigía', req:'Capacitado en señales y maniobras' }],
+        restr:['Solo opera la máquina el operador autorizado para ese equipo.'] },
+  man:{ pasos:['Planificar la ruta de traslado y despejar los accesos.',
+               'Evaluar el peso: si pasa el máximo por persona, entre dos o con carretilla o buggy.',
+               'Levantar con la espalda recta y las rodillas flexionadas.',
+               'Apilar en lugar firme, con altura limitada y lejos de bordes y accesos.'],
+        eq:['Carretilla o buggy'], restr:['No se carga a mano más que el peso máximo por persona.'] },
+  dem:{ pasos:['Evaluar la estructura antes de demoler y apuntalar si hace falta.',
+               'Delimitar y señalizar el área; nadie debajo ni alrededor.',
+               'Demoler de arriba hacia abajo.',
+               'Humedecer para controlar el polvo.',
+               'Retirar el desmonte de forma continua, sin acumularlo en los accesos.'],
+        epp:['Protección auditiva (tapones u orejeras)', 'Careta facial', 'Respirador con filtro para polvo'], her:['Martillo demoledor', 'Rotomartillo', 'Comba', 'Cincel'],
+        restr:['No se demuele sin evaluar la estructura ni con personas debajo.'] },
+  pin:{ pasos:['Revisar la hoja de seguridad (MSDS) de cada producto.',
+               'Ventilar el área y retirar las fuentes de calor y de chispas.',
+               'Preparar y aplicar el producto con el EPP que indica su hoja de seguridad.',
+               'Mantener los envases cerrados y rotulados.',
+               'Al terminar, disponer los envases y los residuos según el producto.'],
+        epp:['Respirador con filtro para gases y vapores', 'Guantes de nitrilo o neopreno'], eq:['Extintor'], her:['Brochas', 'Rodillos'],
+        restr:['No se usan productos químicos sin su hoja de seguridad (MSDS) ni sin ventilación.'] },
+  esp:{ pasos:['Verificar el permiso de ingreso a espacio confinado.',
+               'Ventilar y medir la atmósfera (oxígeno, gases inflamables y tóxicos) antes de ingresar.',
+               'Ubicar al vigía en la entrada, en comunicación permanente con quienes están adentro.',
+               'Ingresar con el equipo de rescate listo y medir la atmósfera durante todo el trabajo.',
+               'Salir de inmediato si suena la alarma del detector o cambian las condiciones.'],
+        eq:['Detector de gases', 'Ventilador o extractor', 'Trípode y equipo de rescate'],
+        pers:[{ c:'Vigía de espacio confinado', req:'Capacitado; no ingresa y mantiene la comunicación' }, { c:'Supervisor de entrada', req:'Autoriza el ingreso y verifica las mediciones' }],
+        restr:['No se ingresa sin permiso, sin medir los gases ni sin vigía afuera.'], permiso:1 },
+  her:{ pasos:['Inspeccionar la herramienta, el cable y el enchufe, y verificar que tenga su guarda.',
+               'Conectarla a un tablero con interruptor diferencial; los cables, fuera del agua y del tránsito.',
+               'Usar el disco o la broca adecuados para el material y la herramienta.',
+               'Sujetar la herramienta con las dos manos y esperar a que se detenga antes de soltarla.',
+               'Desconectarla para cambiar el disco o la broca y al terminar.'],
+        epp:['Careta facial', 'Protección auditiva (tapones u orejeras)'], her:['Amoladora', 'Taladro', 'Sierra circular'],
+        restr:['No se usa una herramienta sin su guarda o con el cable dañado.'] },
+  lim:{ pasos:['Retirar los desperdicios y los materiales sobrantes del frente de trabajo.',
+               'Segregar los residuos en los contenedores que corresponden.',
+               'Trasladar el desmonte con carretilla a la zona de acopio.',
+               'Dejar los accesos y las vías de evacuación despejados.'],
+        eq:['Contenedores de residuos', 'Carretilla'], her:['Escoba', 'Lampa'] }
+};
+var GUIA = null;
+function _guiaNorm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+/* las actividades que delatan las palabras del título (las mismas palabras del ATS) */
+function _guiaTiposDe(texto){
+  var t = _guiaNorm(texto), r = [];
+  if(!t.trim()) return r;
+  ((typeof ATS_PREG === 'object' && ATS_PREG.tipos) || []).forEach(function(x){ if((x.kw || []).some(function(w){ return t.indexOf(w) > -1; })) r.push(x.k); });
+  return r;
+}
+function _guiaTipo(k){ var r = null; ((typeof ATS_PREG === 'object' && ATS_PREG.tipos) || []).forEach(function(x){ if(x.k === k) r = x; }); return r; }
+function ipwGuiada(enDoc){
+  var k = IPW.k, ed = enDoc ? IPW.ed : null, T = IPETS_T[k];
+  if(ed && _ipwBloqueo(ed)) return;
+  if(!ed && (IPW.filas[k] || []).length >= ipwCupo()){ toast('Ya usas los ' + T.cupoTx + ' de tu plan en esta obra'); return; }
+  GUIA = { k:k, ed:ed, paso:1, tit:ed ? ed.d.tit : (k === 'ipl' && !(IPW.filas.ipl || []).length ? 'IPERC de línea base' : ''), proc:'', tipos:[], auto:true,
+           siempre:true, fen:false, fuera:{}, base:null };
+  abrirHoja('🧭 Elaboración guiada', (k === 'ipl' ? 'IPERC de línea base' : 'PETS') + ' · Paso 1 de 3', '<p class="ayuda">Cargando la base de peligros…</p>',
+    '<button type="button" class="bt sec" id="gu-no">Cancelar</button>', { ancha:true, id:'guia' });
+  $('gu-no').onclick = cerrarHoja;
+  (typeof cargarPapeles === 'function' ? cargarPapeles() : Promise.reject('sin')).then(function(){
+    if(typeof ATS_PREG !== 'object' || !GUIA) return Promise.reject('sin');
+    GUIA.base = _iplBaseAts();
+    if(ed){ GUIA.tipos = _guiaTiposDe(ed.d.tit + ' ' + (k === 'pets' ? '' : (ed.d.area || ''))); }
+    _guiaPintar();
+  }).catch(function(){ var c = $('hoja-cuerpo'); if(c) c.innerHTML = '<p class="msg mal">No se pudo cargar la base de peligros. Revisa tu conexión e inténtalo otra vez.</p>'; });
+}
+/* los grupos de peligros: cada actividad marcada (en su orden), lo de siempre y El Niño; un peligro sale una sola vez */
+function _guiaGrupos(){
+  var G = GUIA, vistos = {}, L = [];
+  var pon = function(g, filas){ var f = filas.filter(function(h){ var c = ipNorm(h.p + '|' + h.r); if(vistos[c]) return false; vistos[c] = 1; return true; }); if(f.length) L.push({ k:g.k, ic:g.ic, n:g.n, act:g.act, fen:!!g.fen, filas:f }); };
+  G.tipos.forEach(function(t){ var x = _guiaTipo(t); if(x) pon({ k:'t:' + t, ic:x.ic, n:x.n, act:x.n }, G.base.filter(function(h){ return h.t.indexOf(t) > -1; })); });
+  if(G.siempre) pon({ k:'siempre', ic:'⭐', n:'Lo de siempre', act:'Condiciones generales del frente de trabajo' }, G.base.filter(function(h){ return h.t.indexOf('*') > -1; }));
+  if(G.fen && _ipwFen()){
+    var gs = (typeof fenGruposWeb === 'function') ? fenGruposWeb() : FEN.grupos.map(function(x){ return x.k; });
+    pon({ k:'fen', ic:'🌊', n:'Fenómeno El Niño (opcional)', act:FEN.act, fen:true }, fenDeGrupos(gs).filter(function(f){ return fenAplica(f, G.tipos); }));
+  }
+  return L;
+}
+function _guiaClave(g, h){ return g.k + '|' + ipNorm(h.p + '|' + h.r); }
+/* lo que ya está en el documento abierto (no se repite) */
+function _guiaYa(h){
+  var ed = GUIA.ed; if(!ed) return false;
+  var c = ipNorm(h.p + '|' + h.r);
+  return GUIA.k === 'ipl' ? ed.d.filas.some(function(f){ return ipNorm(f.pel + '|' + f.rie) === c; }) : ed.d.pel.some(function(f){ return ipNorm(f.p + '|' + f.r) === c; });
+}
+/* el PETS: lo que trae cada actividad marcada (pasos, EPP, equipos, herramientas, personal, restricciones) */
+function _guiaPets(){
+  var G = GUIA, B = IPETS_GUIA.base, pe = ((IPW.ctx || {}).pais || 'pe') === 'pe', o = { pasos:[], epp:[], eq:[], her:[], pers:[], restr:[] };
+  var add = function(k, v){ if(!v) return; var c = ipNorm(typeof v === 'string' ? v : v.c); if(!o[k].some(function(x){ return ipNorm(typeof x === 'string' ? x : x.c) === c; })) o[k].push(v); };
+  B.ini.forEach(function(x){ add('pasos', x); });
+  G.tipos.forEach(function(t){ (IPETS_GUIA[t] && IPETS_GUIA[t].pasos || []).forEach(function(x){ add('pasos', x); }); });
+  B.fin.forEach(function(x){ add('pasos', x); });
+  B.epp.forEach(function(x){ add('epp', x); }); B.pers.forEach(function(x){ add('pers', x); });
+  G.tipos.forEach(function(t){ var g = IPETS_GUIA[t] || {}; ['epp', 'eq', 'her', 'pers', 'restr'].forEach(function(k){ (g[k] || []).forEach(function(x){ add(k, x); }); }); });
+  if(G.siempre){ add('epp', 'Bloqueador solar'); add('epp', 'Protección auditiva (tapones u orejeras)'); }
+  if(G.fen && _ipwFen()) add('restr', FEN.restr);
+  o.permiso = G.tipos.some(function(t){ return IPETS_GUIA[t] && IPETS_GUIA[t].permiso; });
+  if(!pe) o.restr = o.restr.map(function(s){ return s.replace(' (PETAR)', ''); });
+  return o;
+}
+function _guiaPie(){
+  var G = GUIA, T = IPETS_T[G.k], n = 0;
+  if(G.paso === 2 || G.paso === 3) n = _guiaCuenta().pel;
+  var sig = G.paso === 1 ? 'Siguiente ▸' : (G.paso === 2 ? 'Siguiente ▸' : (G.ed ? (G.k === 'ipl' ? 'Agregar a la matriz' : 'Agregar al PETS') : (G.k === 'ipl' ? 'Crear el IPERC' : 'Crear el PETS')));
+  return (G.paso > 1 ? '<button type="button" class="bt sec" id="gu-atras">◂ Atrás</button>' : '<button type="button" class="bt sec" id="gu-no">Cancelar</button>') +
+    '<button type="button" class="bt" id="gu-sig">' + esc(sig) + '</button>';
+}
+function _guiaCuenta(){
+  var G = GUIA, o = { pel:0, so:0, grupos:0 };
+  _guiaGrupos().forEach(function(g){ var m = 0; g.filas.forEach(function(h){ if(!G.fuera[_guiaClave(g, h)] && !_guiaYa(h)){ o.pel++; m++; if(IPL_KW_SO.test(h.p + ' ' + h.r) || h.so) o.so++; } }); if(m) o.grupos++; });
+  return o;
+}
+function _guiaChips(){
+  var G = GUIA;
+  return ((ATS_PREG && ATS_PREG.tipos) || []).map(function(t){ var on = G.tipos.indexOf(t.k) > -1;
+    return '<button type="button" data-gu-t="' + esc(t.k) + '" class="' + (on ? 'on' : '') + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + esc(t.ic + ' ' + t.n) + '</button>'; }).join('');
+}
+function _guiaPintar(){
+  var G = GUIA; if(!G || !HOJA.abierta || HOJA.id !== 'guia') return;
+  var T = IPETS_T[G.k], ipl = G.k === 'ipl', h = '';
+  var s = $('hoja-s'); if(s) s.textContent = (ipl ? 'IPERC de línea base' : 'PETS') + ' · Paso ' + G.paso + ' de 3';
+  h += '<ol class="gu-pasos" aria-label="Pasos">' + [ipl ? 'El área y sus actividades' : 'La tarea', ipl ? 'Los peligros' : 'Lo que lleva', 'Crear'].map(function(t, i){
+    return '<li class="' + (i + 1 === G.paso ? 'on' : (i + 1 < G.paso ? 'ok' : '')) + '"><span>' + (i + 1) + '</span>' + esc(t) + '</li>'; }).join('') + '</ol>';
+  if(G.paso === 1){
+    if(!G.ed) h += _ipwCampo('gu-tit', ipl ? 'Nombre del IPERC' : 'Nombre de la tarea', G.tit, { max:140, ph:ipl ? 'IPERC de línea base · Estructuras' : 'Excavación manual de zanjas' });
+    else h += '<p class="gu-doc"><b>' + esc(G.ed.d.tit) + '</b> · lo que elijas se agrega a ' + (ipl ? 'su matriz' : 'este PETS') + '; lo que ya está no se repite.</p>';
+    if(ipl) h += _ipwCampo('gu-proc', 'Proceso o área', G.proc, { max:90, ph:'Estructuras' });
+    h += '<p class="gu-q">' + (ipl ? '¿Qué actividades tiene?' : '¿Qué se hace en esta tarea?') + ' <span class="gris-t">Se proponen solas con las palabras del nombre; toca para cambiarlas.</span></p>' +
+      '<div class="ipw-tipos" id="gu-tipos">' + _guiaChips() + '</div>' +
+      '<label class="gu-op"><input type="checkbox" id="gu-siempre"' + (G.siempre ? ' checked' : '') + '><span><b>Lo de siempre</b><small>Sol, ruido, polvo, cargas, vehículos cerca, orden y clima: lo que hay en casi todo frente.</small></span></label>' +
+      (_ipwFen() ? '<label class="gu-op"><input type="checkbox" id="gu-fen"' + (G.fen ? ' checked' : '') + '><span><b>🌊 Los peligros por El Niño</b><small>Opcional · ' + esc(FEN.norma) + ' · las situaciones que marcaste en «ATS / IPERC».</small></span></label>' : '') +
+      '<div class="msg" id="gu-msg" role="status"></div>';
+  } else if(G.paso === 2){
+    var grupos = _guiaGrupos();
+    h += '<p class="ayuda" style="margin:0 0 10px">' + (ipl ? 'Todo viene marcado: desmarca lo que no hay en tu obra. Cada peligro entra con su riesgo, su consecuencia y sus controles, repartidos en la jerarquía.'
+      : 'Todo viene marcado: desmarca lo que no aplica a esta tarea. Después lo completas con lo propio de tu obra.') + '</p>';
+    if(!ipl){
+      var P = _guiaPets();
+      G._pets = P;
+      h += _guiaLista('Procedimiento, paso a paso', 'pasos', P.pasos.map(function(x){ return { t:x }; }));
+    }
+    h += '<div class="gu-sec"><h4>' + (ipl ? 'Peligros, riesgos y controles' : 'Peligros, riesgos y medidas de control') + '</h4><div class="ipw-sugs gu-lista" id="gu-pel">' + grupos.map(function(g){
+      return '<label class="ipw-fen-gt"><input type="checkbox" data-gu-g="' + esc(g.k) + '"><span><b>' + esc(g.ic + ' ' + g.n) + '</b></span></label>' + g.filas.map(function(hh){
+        var c = _guiaClave(g, hh), ya = _guiaYa(hh);
+        return '<label class="ipw-fen-f"><input type="checkbox" data-gu-k="' + esc(c) + '" data-gu-gg="' + esc(g.k) + '"' + (!ya && !G.fuera[c] ? ' checked' : '') + (ya ? ' disabled' : '') + '><span><b>' + esc(hh.p) + '</b>' + (ya ? ' <span class="gris-t">· ya está</span>' : '') +
+          '<small>' + esc(hh.r) + (hh.c ? ' → ' + esc(hh.c) : '') + '</small><small>Control: ' + esc(hh.m) + '</small></span></label>';
+      }).join('');
+    }).join('') + '</div></div>';
+    if(!ipl){
+      var Q = G._pets;
+      h += _guiaLista('Equipos de protección personal', 'epp', Q.epp.map(function(x){ return { t:x }; })) +
+        _guiaLista('Equipos', 'eq', Q.eq.map(function(x){ return { t:x }; })) + _guiaLista('Herramientas', 'her', Q.her.map(function(x){ return { t:x }; })) +
+        _guiaLista('Personal', 'pers', Q.pers.map(function(x){ return { t:x.c, s:x.req }; })) + _guiaLista('Restricciones', 'restr', Q.restr.map(function(x){ return { t:x }; }));
+    }
+  } else {
+    var n = _guiaCuenta(), Ps = G.k === 'pets' ? _guiaPetsElegido() : null;
+    h += '<div class="gu-fin"><p><b>' + esc(G.ed ? G.ed.d.tit : (ipTx(G.tit, 140) || (ipl ? 'IPERC de línea base' : 'PETS'))) + '</b></p><ul>' +
+      (ipl ? '<li>Proceso: <b>' + esc(ipTx(G.proc, 90) || 'Sin proceso') + '</b></li><li>' + n.grupos + (n.grupos === 1 ? ' actividad' : ' actividades') + '</li>' +
+             '<li><b>' + n.pel + (n.pel === 1 ? ' peligro' : ' peligros') + '</b>' + (n.so ? ' (' + n.so + ' de salud ocupacional)' : '') + ', cada uno con su riesgo, su consecuencia y sus controles en la jerarquía</li>'
+           : '<li><b>' + Ps.pasos.length + ' pasos</b> del procedimiento</li><li>' + n.pel + (n.pel === 1 ? ' peligro' : ' peligros') + ' con sus medidas de control</li>' +
+             '<li>' + Ps.epp.length + ' EPP, ' + (Ps.eq.length + Ps.her.length) + ' equipos y herramientas, ' + Ps.pers.length + (Ps.pers.length === 1 ? ' cargo' : ' cargos') + ' y ' + Ps.restr.length + (Ps.restr.length === 1 ? ' restricción' : ' restricciones') + '</li>') +
+      '</ul><p class="ayuda">' + (ipl ? 'Lo que sigue, en la matriz: evaluar cada peligro (antes y después del control), poner los puestos y los responsables, y ajustar los controles a tu obra.'
+        : 'Lo que sigue: revisar cada paso y completar lo propio de tu obra (las cantidades, los equipos exactos, los responsables).') +
+      ' OBRASST ordena y da el formato; el contenido lo define y lo aprueba tu equipo.</p></div><div class="msg" id="gu-msg" role="status"></div>';
+  }
+  $('hoja-cuerpo').innerHTML = h;
+  $('hoja-pie').innerHTML = _guiaPie();
+  _guiaEnchufar();
+}
+/* una lista de casillas (PETS): lo marcado es lo que va */
+function _guiaLista(tit, k, items){
+  if(!items.length) return '';
+  var G = GUIA;
+  return '<div class="gu-sec"><h4>' + esc(tit) + '</h4><div class="ipw-sugs gu-lista" data-gu-l="' + k + '">' + items.map(function(x, i){
+    var c = k + '|' + ipNorm(x.t);
+    return '<label><input type="checkbox" data-gu-k="' + esc(c) + '"' + (!G.fuera[c] ? ' checked' : '') + '><span>' + (k === 'pasos' ? '<b class="gu-n">' + (i + 1) + '.</b> ' : '') + esc(x.t) + (x.s ? '<small>' + esc(x.s) + '</small>' : '') + '</span></label>';
+  }).join('') + '</div></div>';
+}
+function _guiaPetsElegido(){
+  var G = GUIA, P = G._pets || _guiaPets(), fuera = function(k, t){ return !!G.fuera[k + '|' + ipNorm(t)]; };
+  return { pasos:P.pasos.filter(function(t){ return !fuera('pasos', t); }), epp:P.epp.filter(function(t){ return !fuera('epp', t); }), eq:P.eq.filter(function(t){ return !fuera('eq', t); }),
+    her:P.her.filter(function(t){ return !fuera('her', t); }), pers:P.pers.filter(function(x){ return !fuera('pers', x.c); }), restr:P.restr.filter(function(t){ return !fuera('restr', t); }), permiso:P.permiso };
+}
+function _guiaEnchufar(){
+  var G = GUIA, m = function(t){ var x = $('gu-msg'); if(x){ x.className = 'msg mal'; x.textContent = t; } };
+  if($('gu-no')) $('gu-no').onclick = cerrarHoja;
+  if($('gu-atras')) $('gu-atras').onclick = function(){ G.paso--; _guiaPintar(); };
+  if(G.paso === 1){
+    var auto = function(){ if(!G.auto) return; G.tipos = _guiaTiposDe(G.tit + ' ' + G.proc); var c = $('gu-tipos'); if(c){ c.innerHTML = _guiaChips(); chips(); } };
+    var chips = function(){ Array.prototype.forEach.call(document.querySelectorAll('#gu-tipos [data-gu-t]'), function(b){ b.onclick = function(){
+      var k = b.getAttribute('data-gu-t'), i = G.tipos.indexOf(k); G.auto = false;
+      if(i > -1) G.tipos.splice(i, 1); else G.tipos.push(k);
+      b.classList.toggle('on', i < 0); b.setAttribute('aria-pressed', i < 0 ? 'true' : 'false'); }; }); };
+    chips();
+    if($('gu-tit')) $('gu-tit').oninput = function(){ G.tit = this.value; auto(); };
+    if($('gu-proc')) $('gu-proc').oninput = function(){ G.proc = this.value; auto(); };
+    $('gu-siempre').onchange = function(){ G.siempre = this.checked; };
+    if($('gu-fen')) $('gu-fen').onchange = function(){ G.fen = this.checked; };
+    $('gu-sig').onclick = function(){
+      if(!G.ed && ipTx(G.tit, 140).length < 3){ m(G.k === 'ipl' ? 'Escribe el nombre del IPERC.' : 'Escribe el nombre de la tarea.'); $('gu-tit').focus(); return; }
+      if(G.k === 'ipl' && !ipTx(G.proc, 90)){ m('Escribe el proceso o el área: así se ordena la matriz.'); $('gu-proc').focus(); return; }
+      if(!G.tipos.length){ m('Elige al menos una actividad.'); return; }
+      G.paso = 2; _guiaPintar();
+    };
+  } else if(G.paso === 2){
+    var cuenta = function(){
+      Array.prototype.forEach.call(document.querySelectorAll('#gu-pel input[data-gu-g]'), function(hd){
+        var L = Array.prototype.filter.call(document.querySelectorAll('#gu-pel input[data-gu-gg="' + hd.getAttribute('data-gu-g') + '"]'), function(x){ return !x.disabled; }), on = L.filter(function(x){ return x.checked; }).length;
+        hd.disabled = !L.length; hd.checked = !!L.length && on === L.length; hd.indeterminate = on > 0 && on < L.length;
+      });
+      var n = _guiaCuenta().pel, b = $('gu-sig');
+      if(b){ b.disabled = G.k === 'ipl' && !n; b.textContent = 'Siguiente ▸' + (G.k === 'ipl' ? ' · ' + n + (n === 1 ? ' peligro' : ' peligros') : ''); }
+    };
+    Array.prototype.forEach.call(document.querySelectorAll('#hoja-cuerpo input[data-gu-k]'), function(x){ x.onchange = function(){ G.fuera[x.getAttribute('data-gu-k')] = !x.checked; cuenta(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('#gu-pel input[data-gu-g]'), function(hd){ hd.onchange = function(){
+      Array.prototype.forEach.call(document.querySelectorAll('#gu-pel input[data-gu-gg="' + hd.getAttribute('data-gu-g') + '"]'), function(x){ if(x.disabled) return; x.checked = hd.checked; G.fuera[x.getAttribute('data-gu-k')] = !hd.checked; });
+      cuenta(); }; });
+    cuenta();
+    $('gu-sig').onclick = function(){ G.paso = 3; _guiaPintar(); };
+  } else {
+    $('gu-sig').onclick = function(){ var b = this; b.disabled = true; _guiaCrear().catch(function(e){ b.disabled = false; m((e && e.msg) ? e.msg : _ipwMotivo(e)); }); };
+  }
+}
+/* las filas de la matriz (IPERC) */
+function _guiaFilasIpl(){
+  var G = GUIA, proc = ipTx(G.proc, 90), L = [];
+  _guiaGrupos().forEach(function(g){ g.filas.forEach(function(h){
+    if(G.fuera[_guiaClave(g, h)] || _guiaYa(h)) return;
+    L.push(g.fen ? iplDesdeFen(h, { proc:proc, act:g.act, rut:'NR' }) : iplDesdeAts(h, { proc:proc, act:g.act }));
+  }); });
+  return L;
+}
+function _guiaPelPets(){
+  var G = GUIA, L = [];
+  _guiaGrupos().forEach(function(g){ g.filas.forEach(function(h){ if(!G.fuera[_guiaClave(g, h)] && !_guiaYa(h)) L.push({ p:h.p, r:h.r, c:h.m }); }); });
+  return L;
+}
+function _guiaCrear(){
+  var G = GUIA, ed = G.ed, k = G.k;
+  if(k === 'ipl'){
+    var filas = _guiaFilasIpl();
+    if(ed){
+      var d = ed.d, nuevos = filas.slice(0, Math.max(0, IPL_TOPE - d.filas.length));
+      if(!nuevos.length) return Promise.reject({ msg:'La matriz ya llegó a su tope de ' + IPL_TOPE + ' peligros.' });
+      var kp = ipNorm(G.proc) || '~', pos = -1;
+      d.filas.forEach(function(y, j){ if((ipNorm(y.proc) || '~') === kp) pos = j; });
+      if(pos > -1) Array.prototype.splice.apply(d.filas, [pos + 1, 0].concat(nuevos)); else d.filas = d.filas.concat(nuevos);
+      _ipwCambio(ed); cerrarHoja(); GUIA = null; ed.tab = 'matriz'; _ipwEditor();
+      toast(nuevos.length + (nuevos.length === 1 ? ' peligro agregado' : ' peligros agregados') + ': evalúa cada uno');
+      return Promise.resolve(true);
+    }
+    return ipwCtx(false).then(function(C){
+      var c = Object.assign({}, C, { n:_ipwCodigoLibre('ipl') }), d = iplNuevo(c, ipTx(G.tit, 140));
+      d.filas = filas.slice(0, IPL_TOPE); d.area = ipTx(G.proc, 160);
+      return _ipwCrear('ipl', d);
+    }).then(function(d){
+      cerrarHoja(); GUIA = null;
+      toast('IPERC creado con ' + d.filas.length + ' peligros: evalúa cada uno en su matriz');
+      ipwAbrir(d._fila, 'matriz'); return true;
+    });
+  }
+  var P = _guiaPetsElegido(), pel = _guiaPelPets(), pe = ((IPW.ctx || {}).pais || 'pe') === 'pe';
+  var junta = function(a, b, max){ var r = (a || []).slice(), vis = {}; r.forEach(function(x){ vis[ipNorm(typeof x === 'string' ? x : (x.c || x.t || x.p + '|' + x.r))] = 1; });
+    (b || []).forEach(function(x){ var c = ipNorm(typeof x === 'string' ? x : (x.c || x.t || x.p + '|' + x.r)); if(!vis[c]){ vis[c] = 1; r.push(x); } }); return r.slice(0, max || 60); };
+  var llena = function(d){
+    d.pasos = junta(d.pasos, P.pasos.map(function(t){ return { t:t, rie:'', ctl:'' }; }), PETS_TOPE);
+    d.pel = junta(d.pel, pel, 60);
+    d.epp = junta(d.epp, P.epp, 40); d.eq = junta(d.eq, P.eq, 40); d.her = junta(d.her, P.her, 40);
+    d.pers = junta(d.pers, P.pers.map(function(x){ return { c:x.c, n:0, req:x.req }; }), 20);
+    d.restr = junta(d.restr, P.restr, 30);
+    if(P.permiso) d.regs = junta(d.regs, [pe ? PETS_REGS[1] : PETS_REGS[1].replace(' (PETAR)', '')], 20);
+    d.regs = junta(d.regs, [PETS_REGS[2]], 20);
+    return d;
+  };
+  if(ed){
+    llena(ed.d); _ipwCambio(ed); cerrarHoja(); GUIA = null; ed.tab = 'proc'; _ipwEditor();
+    toast('Listo: revisa los pasos, los peligros y lo demás, y complétalo con lo de tu obra');
+    return Promise.resolve(true);
+  }
+  return ipwCtx(false).then(function(C){
+    var c = Object.assign({}, C, { n:_ipwCodigoLibre('pets') }), d = llena(petsNuevo(c, ipTx(G.tit, 140)));
+    return _ipwCrear('pets', d);
+  }).then(function(d){
+    cerrarHoja(); GUIA = null;
+    toast('PETS creado: revisa cada paso y complétalo con lo de tu obra');
+    ipwAbrir(d._fila, 'proc'); return true;
+  });
 }
 
 /* ══ LAS FIRMAS (las mismas para los dos) ══ */

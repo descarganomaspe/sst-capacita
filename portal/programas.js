@@ -803,6 +803,7 @@ function _pgfCatLista(){
     var nac=pe ? (((cat.simulacros||{})[PGF.anio])||[]) : [];
     (Array.isArray(cat.simTipos) ? cat.simTipos : GES_SIM_BASE).forEach(function(s){
       if(s[0]==='otro') return;
+      if(typeof fenSeVe==='function' && !fenSeVe(s[0], hoyISO(), paisObraP(), '')) return;   /* 9/11/2026 · el de El Niño, mientras rija */
       if(s[0]==='multi'){
         if(!pe) return;
         var mm=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; nac.forEach(function(x){ var i=+String(x.iso).slice(5, 7)-1; if(i>=0 && i<12) mm[i]=1; });
@@ -810,7 +811,7 @@ function _pgfCatLista(){
       } else out.push({ g:'Simulacros de la obra', n:tx(s[2]), sub:tx(s[4]||''), a:tx(s[4]||'') });
     });
   }
-  else if(t==='camp') (cat.campanas||[]).forEach(function(c){ out.push({ g:'Campañas', n:tx(c[2]), sub:tx(c[3]||''), a:tx(c[3]||'') }); });
+  else if(t==='camp') (cat.campanas||[]).forEach(function(c){ if(typeof fenSeVe==='function' && !fenSeVe(c[0], hoyISO(), paisObraP(), '')) return; out.push({ g:'Campañas', n:tx(c[2]), sub:tx(c[3]||''), a:tx(c[3]||'') }); });
   else if(t==='mon') PROG_MON_SUG.forEach(function(g){ g[1].forEach(function(n){ out.push({ g:g[0], n:n, sub:'', fr:'anual' }); }); });
   else if(t==='aud') PROG_AUD_SUG.forEach(function(n){ out.push({ g:'Auditorías', n:n, sub:'', a:'El sistema de gestión de SST de la obra' }); });
   PGF._cat=out; PGF._catT=t;

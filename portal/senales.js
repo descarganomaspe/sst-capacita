@@ -109,8 +109,16 @@ function _snCss(){
     '.sn-per .ini{width:40px;height:40px;border-radius:50%;background:var(--fondo);color:var(--gris);display:grid;place-items:center;font-size:13px;font-weight:600;overflow:hidden}.sn-per .ini img{width:100%;height:100%;object-fit:cover;display:block}',
     '.sn-per b{display:block;font-weight:500;color:var(--tinta);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sn-per small{display:block;color:var(--gris);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '.sn-per small.pr{color:var(--azul);font-weight:500}.sn-per .ord{font-size:12px;font-weight:600;color:var(--ok);font-variant-numeric:tabular-nums}.sn-per .tic{width:22px;height:22px;border-radius:6px;border:1px solid var(--raya2);display:grid;place-items:center;font-size:13px;color:#fff;background:var(--panel)}.sn-per.on .tic{background:var(--ok);border-color:var(--ok)}',
+    /* 9/11/2026 · casilleros y lomos: el color, las frases y los nombres */
+    '.snk-col{display:flex;flex-wrap:wrap;gap:8px;align-items:center}',
+    '.snk-col button{appearance:none;-webkit-appearance:none;width:30px;height:30px;border-radius:50%;border:2px solid #fff;background:var(--c);box-shadow:0 0 0 1px var(--raya2);cursor:pointer;padding:0;transition:transform .15s ease,box-shadow .15s ease}',
+    '.snk-col button:hover{transform:scale(1.08)}.snk-col button.on{box-shadow:0 0 0 2px var(--tinta)}',
+    '.snk-otro{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--gris);cursor:pointer;border:1px solid var(--raya);border-radius:999px;padding:2px 10px 2px 3px}',
+    '.snk-otro.on{border-color:var(--tinta);color:var(--tinta)}.snk-otro input{width:26px;height:26px;border:0;border-radius:50%;padding:0;background:none;cursor:pointer}',
+    '.snk-ta{display:block;width:100%;min-height:84px;margin:8px 0 0;resize:vertical;font:inherit;font-size:13px;line-height:1.5;border:1px solid var(--raya);border-radius:9px;padding:8px 10px;background:var(--panel);color:var(--texto)}',
+    '.sn-form .campo>input#snk-f1{margin-top:8px}',
     /* tarjetas de andamio */
-    '.sn-and{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 8px}',
+    '.sn-and{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 8px}',
     '.sn-and button{appearance:none;-webkit-appearance:none;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:7px;border:1px solid var(--raya);border-radius:11px;background:var(--panel);padding:0 0 9px;overflow:hidden;color:var(--tinta);text-align:center}',
     '.sn-and button i{display:block;height:34px;background:var(--c);border-bottom:1px solid rgba(0,0,0,.14)}.sn-and button b{font-size:12.5px;font-weight:600;padding:0 8px;line-height:1.3}',
     '.sn-and button:hover{border-color:var(--raya2)}.sn-and button.on{border-color:var(--tinta);box-shadow:0 0 0 2px var(--tinta)}',
@@ -319,30 +327,31 @@ function snHojaTxt(T){ return T ? (T.n+(T.oh ? ' horizontal' : ' vertical')) : '
 
 /* ══ 2 · LA SECCIÓN, Y LA PESTAÑA «SEÑALES DE LA NORMA» ═══════════════════════════════════════
    El catálogo se pinta una vez (son 171 dibujos) y al buscar solo se esconden las que no van. */
-var SN_TABS=[['norma', 'Señales de la norma'], ['prop', 'Carteles propios'], ['pers', 'Personal autorizado'], ['and', 'Tarjetas de andamio'], ['cas', 'Casilleros y archivadores']];
+var SN_TABS=[['norma', 'Señales de la norma'], ['prop', 'Carteles propios'], ['pers', 'Personal autorizado'], ['and', 'Tarjetas de andamio'], ['def', 'Equipo defectuoso'], ['cas', 'Casilleros y archivadores']];
 var SN_GRUPOS=['adv', 'obl', 'proh', 'fuego', 'emer'];
 var SN_POR_HOJA=[1, 2, 4, 6, 8, 9, 12, 15];
 /* fuera del Perú, como en la app: sin las señales de la NTP ni el cartel de personal autorizado */
-function snTabsDe(){ return (paisObraP()==='pe') ? SN_TABS : SN_TABS.filter(function(t){ return t[0]==='and'; }); }
+function snTabsDe(){ return (paisObraP()==='pe') ? SN_TABS : SN_TABS.filter(function(t){ return t[0]==='and' || t[0]==='def'; }); }   /* 9/11/2026 · y la de equipo defectuoso */
 
 function senVista(caja){
   _snCss();
   var oid=(YO.obra||{}).id;
   if(SNW.obra!==oid){
-    SNW.obra=oid; SNW.tab=''; SNW.filtro=''; SNW.busca=''; SNW.gente=null; SNW.ctx=null; SNW.and=null; SNW.uso=null;
+    SNW.obra=oid; SNW.tab=''; SNW.filtro=''; SNW.busca=''; SNW.gente=null; SNW.ctx=null; SNW.and=null; SNW.def=null; SNW.uso=null;
     SNW.op={ tam:'A4', orient:'v', porHoja:1 };
     snListaLeer();
   }
   SNW.caja=caja;
   var ac=$('acciones'); if(ac) ac.innerHTML='';
-  var tabs=snTabsDe(), fuera=(tabs.length===1);
+  var tabs=snTabsDe(), fuera=(paisObraP()!=='pe');   /* 9/11/2026 · fuera del Perú son dos: andamio y equipo defectuoso */
   if(!tabs.some(function(t){ return t[0]===SNW.tab; })) SNW.tab=tabs[0][0];
   var h='';
   if(fuera){
     var x=paisInfoP(), sub=document.querySelector('#main .cab .sub');
-    if(sub) sub.textContent='Las tarjetas de andamio —el semáforo verde, amarillo y rojo, y la de equipo defectuoso—, listas para imprimir con tu logo';
-    h+='<div class="aviso" id="sn-fuera" data-sin-pais>La obra está en '+esc(x.n)+': las señales que trae OBRASST son las de la norma del Perú (NTP 399.010-1) y se esconden hasta que tengan su versión '+esc(paisDeP(x.id))+'. Las tarjetas de andamio se usan igual.</div>';
-  }else{
+    if(sub) sub.textContent='Las tarjetas de andamio —el semáforo verde, amarillo y rojo— y la de equipo defectuoso, listas para imprimir con tu logo';
+    h+='<div class="aviso" id="sn-fuera" data-sin-pais>La obra está en '+esc(x.n)+': las señales que trae OBRASST son las de la norma del Perú (NTP 399.010-1) y se esconden hasta que tengan su versión '+esc(paisDeP(x.id))+'. Las tarjetas de andamio y la de equipo defectuoso se usan igual.</div>';
+  }
+  if(tabs.length>1){
     h+='<div class="seg sn-tabs" id="sn-tabs" role="tablist" aria-label="Qué se va a imprimir">'+tabs.map(function(t){
       var on=(t[0]===SNW.tab);
       return '<button type="button" role="tab" data-tab="'+t[0]+'" class="'+(on ? 'on' : '')+'" aria-selected="'+(on ? 'true' : 'false')+'">'+esc(t[1])+'</button>';
@@ -362,7 +371,7 @@ function senVista(caja){
 function snPintarTab(){
   var c=$('sn-cuerpo'); if(!c) return;
   SNW.T=null;
-  if(SNW.tab==='pers') snpPintar(c); else if(SNW.tab==='and') snaPintar(c); else if(SNW.tab==='prop') snxPintar(c); else if(SNW.tab==='cas') snkPintar(c); else snnPintar(c);
+  if(SNW.tab==='pers') snpPintar(c); else if(SNW.tab==='and') snaPintar(c); else if(SNW.tab==='def') sndPintar(c); else if(SNW.tab==='prop') snxPintar(c); else if(SNW.tab==='cas') snkPintar(c); else snnPintar(c);
 }
 
 /* ── el catálogo ─────────────────────────────────────────────────────────────────────────── */
@@ -444,8 +453,9 @@ function snAbrir(k){
   var S=A.porK(k), pa=snTextoDe(k);
   SNE={ k:k, aviso:pa.aviso, texto:pa.texto, sub:'', tam:SNW.op.tam, orient:SNW.op.orient, porHoja:SNW.op.porHoja, qr:false, qrSel:{}, qrIni:false, doble:false };
   var tq=A.eqTipo ? A.eqTipo(k) : '';
-  /* 30/10/2026 · las de riesgo eléctrico: una cara o doble cara (una tira para doblar y enmicar, para las extensiones) */
-  var dob=!!(A.doble && A.doble(k));
+  /* 30/10/2026 · las de riesgo eléctrico: una cara o doble cara (una tira para doblar y enmicar, para las extensiones).
+     6/11/2026 · también las de los equipos de emergencia y contra incendio, tipo bandera (sin el QR de cada equipo) */
+  var dob=!!(A.doble && A.doble(k)), cable=!!(A.dobleCable && A.dobleCable(k));
   SNW.eq=null;     /* los equipos se traen de nuevo cada vez que se abre: si registró uno, ya sale */
   var cuerpo='<div class="sn-ed'+(SNE.orient==='h' ? ' echada' : '')+'" id="sn-ed"><div class="sn-form">'+
     '<div class="campo"><label for="sn-a">Palabra de aviso <small>· el renglón grande</small></label>'+
@@ -459,7 +469,8 @@ function snAbrir(k){
     '<div class="campo"><label>¿Cuántas por hoja?</label>'+snChips('sn-ph', SN_POR_HOJA.map(function(n){ return { v:n, t:String(n) }; }), SNE.porHoja, 'Cuántas señales por hoja')+
     '<p class="ayuda">La misma señal repetida, para cortar. Si quieres varias señales distintas en una hoja, usa «＋ A la lista».</p></div>'+
     (dob ? '<div class="campo"><label>¿Una cara o doble cara?</label>'+snChips('sn-dob', [{ v:'1', t:'Una cara' }, { v:'2', t:'Doble cara · para doblar y enmicar' }], '1', 'Una cara o doble cara')+
-      '<p class="ayuda" id="sn-dob-ay">Para las extensiones eléctricas y los cables: chica, en una tira que se dobla y se enmica, con la señal a los dos lados.</p></div>' : '')+
+      '<p class="ayuda" id="sn-dob-ay">'+(cable ? 'Para las extensiones eléctricas y los cables: chica, en una tira que se dobla y se enmica, con la señal a los dos lados.'
+                                            : 'Tipo bandera, para que se vea de los dos lados del pasillo: en una tira que se dobla y se enmica, con la señal a los dos lados.')+'</p></div>' : '')+
     (tq ? snQRCampoHTML() : '')+
     '<div id="sn-logo-c"></div></div>'+
     '<div class="sn-lado"><div class="sn-prev" id="sn-prev" aria-label="Vista previa de la hoja"><div class="sn-prev-msg">Armando la vista previa…</div></div>'+
@@ -492,20 +503,28 @@ function snAbrir(k){
   /* 30/10/2026 · doble cara: chica de por sí (si estaba en 1 o 2 por hoja, pasa a 8 tiras) */
   snChipsAl('sn-dob', function(v){
     SNE.doble=(v==='2');
-    if(SNE.doble && SNE.porHoja<4){
+    /* 6/11/2026 · a doble cara va sin el QR de cada equipo */
+    if(SNE.doble && SNE.qr){ SNE.qr=false; var q0=$('sn-qr'); if(q0) q0.checked=false; snQRPinta(); }
+    if(SNE.doble && cable && SNE.porHoja<4){
       SNE.porHoja=8;
       Array.prototype.forEach.call(document.querySelectorAll('#sn-ph button[data-v]'), function(x){ var on=(x.getAttribute('data-v')==='8'); x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
     }
     var ay=$('sn-dob-ay');
-    if(ay) ay.textContent=SNE.doble ? 'Las dos caras salen unidas, cabeza con cabeza, con la línea de doblez al medio. Corta la tira por su borde, dóblala por la línea punteada y enmícala: colgada del cable o de la extensión, se lee derecha de los dos lados. «¿Cuántas por hoja?» cuenta las tiras.'
-                          : 'Para las extensiones eléctricas y los cables: chica, en una tira que se dobla y se enmica, con la señal a los dos lados.';
+    if(ay) ay.textContent=cable ? (SNE.doble ? 'Las dos caras salen unidas, cabeza con cabeza, con la línea de doblez al medio. Corta la tira por su borde, dóblala por la línea punteada y enmícala: colgada del cable o de la extensión, se lee derecha de los dos lados. «¿Cuántas por hoja?» cuenta las tiras.'
+                                           : 'Para las extensiones eléctricas y los cables: chica, en una tira que se dobla y se enmica, con la señal a los dos lados.')
+                                : (SNE.doble ? 'Las dos caras salen unidas, cabeza con cabeza, con la línea de doblez al medio. Corta la tira por su borde, dóblala por la línea punteada y enmícala: tipo bandera, colgada o fijada de canto, se lee derecha de los dos lados. A doble cara va sin el QR de cada equipo. «¿Cuántas por hoja?» cuenta las tiras.'
+                                             : 'Tipo bandera, para que se vea de los dos lados del pasillo: en una tira que se dobla y se enmica, con la señal a los dos lados.');
     T.pide();
   });
   $('sn-cerrar').onclick=cerrarHoja;
   $('sn-pdf').onclick=function(){ if(snQRFalta()) return; snEntregar(T, 'senal', 'señales', 'pdf', this); };
   $('sn-imp').onclick=function(){ if(snQRFalta()) return; snEntregar(T, 'senal', 'señales', 'imp', this); };
   var qc=$('sn-qr');
-  if(qc) qc.onchange=function(){ SNE.qr=this.checked; if(SNE.qr) SNE.qrIni=true; var mm=$('sn-msg'); if(mm) mm.textContent=''; snQRPinta(); T.pide(); };
+  if(qc) qc.onchange=function(){ SNE.qr=this.checked; if(SNE.qr) SNE.qrIni=true; var mm=$('sn-msg'); if(mm) mm.textContent='';
+    /* 6/11/2026 · con el QR de cada equipo, la señal va a una cara */
+    if(SNE.qr && SNE.doble){ SNE.doble=false; Array.prototype.forEach.call(document.querySelectorAll('#sn-dob button[data-v]'), function(x){ var on=(x.getAttribute('data-v')==='1'); x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+      var ay2=$('sn-dob-ay'); if(ay2) ay2.textContent='Tipo bandera, para que se vea de los dos lados del pasillo: en una tira que se dobla y se enmica, con la señal a los dos lados.'; }
+    snQRPinta(); T.pide(); };
   $('sn-ala').onclick=function(){
     var r=snListaPoner({ k:SNE.k, aviso:SNE.aviso, texto:SNE.texto, sub:SNE.sub, n:1 });
     if(!r){ var mm=$('sn-msg'); if(mm){ mm.className='msg mal sn-pie-msg'; mm.textContent='La lista ya tiene '+SN_LISTA_MAX+' señales: imprímela y empieza otra.'; } return; }
@@ -812,7 +831,7 @@ function snMedidaHTML(R){
   else h+='<p><b>'+(n>1 ? n+' señales en una hoja '+esc(snHojaTxt(R.hoja))+' · tarjeta de ' : 'Cartel de ')+Math.round(R.w)+' × '+Math.round(R.h)+' mm</b> · símbolo de '+Math.round(R.lado)+' mm</p>';
   if(R.qr && R.qr<(SEN_APP.qrMin||16)) h+='<p class="ojo"><b>El QR queda de '+Math.round(R.qr)+' mm:</b> se lee acercando mucho el celular. Para que se lea cómodo, pon menos por hoja o usa una hoja más grande.</p>';
   /* 30/10/2026 · la de doble cara es chica a propósito: se lee de cerca, en el cable */
-  if(d<5 && R.doble) h+='<p>Es para leer de cerca, en el cable o la extensión: <b>hasta unos '+Math.max(1, Math.round(d))+' metros</b>. <span class="gris">Para una señal que se vea de lejos, usa una cara y menos por hoja.</span></p>';
+  if(d<5 && R.doble && R.cable) h+='<p>Es para leer de cerca, en el cable o la extensión: <b>hasta unos '+Math.max(1, Math.round(d))+' metros</b>. <span class="gris">Para una señal que se vea de lejos, usa una cara y menos por hoja.</span></p>';
   else if(d<5) h+='<p class="ojo"><b>Se lee solo de cerca:</b> no llega a los 5 metros. Pon menos por hoja, una hoja más grande, o acorta el texto: la banda le está quitando sitio al símbolo.</p>';
   else h+='<p>Se lee bien hasta unos <b>'+Math.round(d)+' metros</b>. <span class="gris">Sale de la fórmula de la NTP: el área del símbolo tiene que ser al menos la distancia al cuadrado dividida entre 2000.</span></p>';
   if(R.ft && R.ft<5.4) h+='<p class="ojo"><b>El texto quedó muy chico.</b> A este tamaño casi no se lee: pon menos señales por hoja, usa una hoja más grande o acorta el texto.</p>';
@@ -1339,7 +1358,7 @@ function _snpListaPinta(){
 }
 
 /* ══ 4 · LAS TARJETAS DE ANDAMIO ══════════════════════════════════════════════════════════════
-   El semáforo que se cuelga en el andamio, y la de equipo defectuoso. Son las de la app (AND_TIPOS y su dibujo):
+   El semáforo que se cuelga en el andamio (la de equipo defectuoso, desde el 9/11, en su pestaña). Son las de la app (AND_TIPOS y su dibujo):
    aquí se eligen las mismas opciones, con la hoja a la vista. Lo que se va eligiendo se recuerda mientras dure la
    sesión (el número del andamio cambia de una tarjeta a la siguiente; el resto casi nunca). */
 var SNA_FIRMAS=[6, 9, 12, 15], SNA_POR_HOJA=[1, 2, 3, 4, 6];
@@ -1347,7 +1366,7 @@ function snaPintar(c){
   var A=SEN_APP;
   if(!SNW.and) SNW.and={ tipo:'verde', rotulo:'', ubic:'', firmas:9, porHoja:2, tam:'A4', orient:'v', reverso:true };
   var o=SNW.and, tipoDe=function(k){ var t=A.andTipos[0]; A.andTipos.forEach(function(x){ if(x.k===k) t=x; }); return t; };
-  c.innerHTML='<p class="sn-intro">El semáforo que se cuelga en el andamio —<b>verde</b>, operativo; <b>amarilla</b>, con arnés obligatorio; <b>roja</b>, prohibido el uso— y la tarjeta de equipo defectuoso. '+
+  c.innerHTML='<p class="sn-intro">El semáforo que se cuelga en el andamio —<b>verde</b>, operativo; <b>amarilla</b>, con arnés obligatorio; <b>roja</b>, prohibido el uso—. '+
     'Salen con el anverso y el reverso uno al lado del otro: se corta, se dobla y se plastifica.</p>'+
     '<p class="sn-cupo" id="sn-cupo" data-clave="andamio" hidden></p>'+
     '<div class="sn-panel"><div class="sn-ed'+(o.orient==='h' ? ' echada' : '')+'" id="sn-ed"><div class="sn-form">'+
@@ -1405,12 +1424,75 @@ function snaPintar(c){
 }
 
 
-/* ══ CASILLEROS Y ARCHIVADORES (4/11/2026 · revisión de Gemini, bloque 3) ═══════════════════════════════════════════
-   · Casilleros: las etiquetas de un número a otro, cada una con su número grande y, si se quiere, una frase de seguridad
-     (veinte, una por casillero, y se repiten). Chicas (6 × 4 cm, 18 por hoja), medianas (9 × 5,5 cm, 8) o grandes
-     (18 × 8 cm, 3), con su línea de corte.
+/* ══ 4b · LA TARJETA DE EQUIPO DEFECTUOSO (9/11/2026) ════════════════════════════════════════════════
+   Marcelo: «"equipo defectuoso" no debería de estar ahí [en las tarjetas de andamio]… debería de ser roja, y sin
+   firma, solo una vez». Es la de la app (DEF_TIPO y _defDibujar): roja, sin la tabla de firmas; el equipo, la falla,
+   dónde está y la fecha van una sola vez (lo que se deja en blanco sale con su raya, para escribirlo a mano). Usa el
+   mismo cupo que las de andamio. */
+function sndPintar(c){
+  var A=SEN_APP;
+  if(!SNW.def) SNW.def={ equipo:'', falla:'', ubic:'', fecha:'', porHoja:2, tam:'A4', orient:'v', reverso:true };
+  var o=SNW.def, T=A.defTipo;
+  c.innerHTML='<p class="sn-intro">La tarjeta <b>roja</b> que se cuelga en la máquina, el equipo o la herramienta que sale de servicio. Se pone una vez y no se firma: '+
+    'lleva qué equipo es, qué falla tiene, dónde está y la fecha. Sale con el anverso y el reverso uno al lado del otro.</p>'+
+    '<p class="sn-cupo" id="sn-cupo" data-clave="andamio" hidden></p>'+
+    '<div class="sn-panel"><div class="sn-ed'+(o.orient==='h' ? ' echada' : '')+'" id="sn-ed"><div class="sn-form">'+
+    '<div class="campo"><label for="snd-e">¿Qué equipo? <small>· opcional</small></label><input id="snd-e" maxlength="60" autocomplete="off" placeholder="Amoladora · AM-03" value="'+esc(o.equipo)+'"></div>'+
+    '<div class="campo"><label for="snd-f">¿Qué falla tiene? <small>· opcional</small></label><input id="snd-f" maxlength="140" autocomplete="off" placeholder="Guarda rota · cable empalmado" value="'+esc(o.falla)+'"></div>'+
+    '<div class="campo"><label for="snd-u">¿Dónde está? <small>· opcional</small></label><input id="snd-u" maxlength="48" autocomplete="off" placeholder="Almacén · nivel 3" value="'+esc(o.ubic)+'"></div>'+
+    '<div class="campo"><label for="snd-d">Fecha <small>· opcional</small></label><input id="snd-d" type="date" value="'+esc(o.fecha)+'" style="max-width:200px">'+
+    '<p class="ayuda">Lo que dejes en blanco sale con su raya, para escribirlo a mano.</p></div>'+
+    '<div class="campo"><label>¿De qué tamaño es la hoja?</label>'+snChips('snd-tam', snTamOps(), o.tam, 'Tamaño de la hoja')+'</div>'+
+    '<div class="campo"><label>¿Cómo va la hoja?</label>'+snChips('snd-ori', SN_ORI, o.orient, 'Orientación de la hoja')+'</div>'+
+    '<div class="campo"><label>¿Cuántas tarjetas por hoja?</label>'+snChips('snd-ph', SNA_POR_HOJA.map(function(n){ return { v:n, t:String(n) }; }), o.porHoja, 'Cuántas tarjetas por hoja')+'</div>'+
+    '<div class="campo"><label>¿Con reverso?</label>'+snChips('snd-rev', [{ v:'1', t:'Anverso y reverso' }, { v:'0', t:'Solo el anverso' }], o.reverso ? '1' : '0', 'Con reverso o sin él')+'</div>'+
+    '<div id="sn-logo-c"></div>'+
+    '</div><div class="sn-lado"><div class="sn-prev" id="sn-prev" aria-label="Vista previa de la hoja"><div class="sn-prev-msg">Armando la vista previa…</div></div>'+
+    '<div class="sn-med" id="sn-med" aria-live="polite"></div>'+
+    '<div class="sn-acc"><button type="button" class="bt" id="snd-pdf">⬇ Descargar PDF</button><button type="button" class="bt sec" id="snd-imp">🖨 Imprimir</button></div></div></div></div>';
+  var prev=$('sn-prev');
+  var TT=snTaller(prev, function(){
+    var x={ equipo:o.equipo, falla:o.falla, ubic:o.ubic, fecha:o.fecha, porHoja:o.porHoja, tam:o.tam, orient:o.orient, reverso:o.reverso };
+    return snCtx().then(function(C){ return SEN_APP.defectuoso(x, C); }).then(function(R){ R.cuenta=1; R.x=x; return R; });
+  }, function(R){
+    var m=$('sn-med'); if(!m) return;
+    if(!R){ snPrevMsg(prev, 'No se pudo armar la hoja', 'Revisa tu conexión e inténtalo otra vez.'); m.innerHTML=''; return; }
+    var x=R.x;
+    m.innerHTML='<p><b>'+esc(T.n)+'</b> · '+x.porHoja+' '+(x.porHoja===1 ? 'tarjeta' : 'tarjetas')+' en una hoja '+esc(snHojaTxt(R.hoja))+' · '+(x.reverso ? 'anverso y reverso' : 'solo el anverso')+'</p>'+
+      '<p class="gris">Corta por el marco, dobla por el medio y plastifícala. Cuélgala en el mando o en el enchufe, donde nadie la pase por alto.</p>';
+  });
+  $('snd-e').oninput=function(){ o.equipo=this.value; TT.pide(380); };
+  $('snd-f').oninput=function(){ o.falla=this.value; TT.pide(380); };
+  $('snd-u').oninput=function(){ o.ubic=this.value; TT.pide(380); };
+  $('snd-d').onchange=function(){ o.fecha=this.value; TT.pide(); };
+  snChipsAl('snd-tam', function(v){ o.tam=v; TT.pide(); });
+  snChipsAl('snd-ori', function(v){ o.orient=v; var ed=$('sn-ed'); if(ed) ed.classList.toggle('echada', v==='h'); TT.pide(); });
+  snChipsAl('snd-ph', function(v){ o.porHoja=+v||2; TT.pide(); });
+  snChipsAl('snd-rev', function(v){ o.reverso=(v==='1'); TT.pide(); });
+  $('snd-pdf').onclick=function(){ snEntregar(TT, 'andamio', 'hojas de tarjetas', 'pdf', this); };
+  $('snd-imp').onclick=function(){ snEntregar(TT, 'andamio', 'hojas de tarjetas', 'imp', this); };
+  snCtx().then(function(C){
+    var l=$('sn-logo-c'); if(!l) return;
+    l.innerHTML=(C.emp && C.emp.logo) ? snLogoNota(C, 'Va sobre un recuadro blanco, para que se vea sobre el rojo.')
+      : '<p class="sn-logo" id="sn-logo"><b>Sin logo de la empresa.</b> La tarjeta sale igual, pero sin logo no se sabe de quién es el equipo cuando hay varios contratistas en la misma obra. Se carga en la app, en «Datos de mi empresa».</p>';
+  });
+  TT.pide();
+  snUso().then(snCupoPinta);
+}
+
+/* ══ CASILLEROS Y ARCHIVADORES (4/11/2026 · revisión de Gemini, bloque 3 · 9/11/2026 · con color, logo y nombres) ══════
+   · Casilleros: las etiquetas de un número a otro, cada una con su número grande, lo que va arriba («CASILLERO») y, si se
+     quiere, una frase de seguridad. Chicas (6 × 4 cm, 18 por hoja), medianas (9 × 5,5 cm, 8) o grandes (18 × 8 cm, 3),
+     con su línea de corte.
    · Lomos de archivadores: el título, su tomo (1, 2, 3…; I, II, III…; o un mes) y lo de abajo (la obra, el año); y un QR
      si se pega un enlace (el del cartel de esa carpeta, por ejemplo). Angostos (5 cm) o anchos (7,5 cm), del alto de la hoja.
+   9/11/2026 · Marcelo: «tiene que tener el logo de la empresa, la frase de seguridad más grande, más color (a elección del
+   usuario), más editable… falta la opción de agregar el nombre de cada trabajador en los diferentes stickers en los
+   casilleros. Se podría agregar franjas de colores… como opción del usuario». Ahora:
+   · el color lo elige cada uno (ocho de la casa o el que quiera), con franja arriba, arriba y abajo, franjas diagonales o
+     sin franjas; con el logo de la empresa; la frase, más grande: una de las veinte, una para todos o las propias;
+   · el nombre de cada uno: los de su personal (en orden), escritos aquí (uno por línea) o una raya para escribirlo;
+   · los lomos: el color (o uno por tomo, para reconocerlos en el estante), el logo y una franja abajo.
    En PDF (jsPDF, letra de verdad): se imprime al 100 %. Lo elegido se recuerda en esta computadora. */
 var SNK_FRASES=['Tu EPP, limpio y en su sitio.', 'Revisa tu EPP antes de salir al frente.', 'Aquí, lo tuyo; en el frente, lo del trabajo.', 'Nada de comida en el casillero.',
   'Lávate las manos antes de comer.', 'Si tu EPP está dañado, pide el cambio.', 'Tu casco tiene fecha: revísala.', 'La ropa de trabajo, aparte de la de casa.',
@@ -1419,14 +1501,31 @@ var SNK_FRASES=['Tu EPP, limpio y en su sitio.', 'Revisa tu EPP antes de salir a
   'Tu familia te espera en casa.', 'Respeta las señales: están por algo.', 'Pregunta antes de hacer lo que no sabes.', 'Primero la seguridad; después, la prisa.'];
 var SNK_TAM={ ch:{ n:'Chicas · 6 × 4 cm', w:60, h:40, col:3, fil:6 }, me:{ n:'Medianas · 9 × 5,5 cm', w:90, h:55, col:2, fil:4 }, gr:{ n:'Grandes · 18 × 8 cm', w:180, h:80, col:1, fil:3 } };
 var SNK_MESES=['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SETIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+/* 9/11/2026 · los colores de la casa (el último lo elige cada uno) y lo demás que se puede escoger */
+var SNK_COLORES=[['#0B2A3A', 'Azul petróleo'], ['#1F5FA8', 'Azul'], ['#0F7B3F', 'Verde'], ['#F5B700', 'Amarillo'], ['#E8730C', 'Naranja'],
+  ['#C62828', 'Rojo'], ['#6A3FA0', 'Morado'], ['#4A5B68', 'Gris']];
+var SNK_ESTILOS=[{ v:'borde', t:'Sin franjas' }, { v:'banda', t:'Franja arriba' }, { v:'dos', t:'Arriba y abajo' }, { v:'rayas', t:'Franjas diagonales' }];
+var SNK_FRASE_MODOS=[{ v:'obrasst', t:'Las 20 de OBRASST' }, { v:'una', t:'Una para todos' }, { v:'mias', t:'Las mías' }, { v:'no', t:'Sin frase' }];
+var SNK_NOMBRE_MODOS=[{ v:'raya', t:'Raya para escribirlo' }, { v:'personal', t:'De mi personal' }, { v:'mano', t:'Escribirlos aquí' }, { v:'no', t:'Sin nombre' }];
 var LS_SNK='sstp_casilleros';
+function _snkColor(v){ return /^#[0-9a-f]{6}$/i.test(String(v||'')) ? String(v).toUpperCase() : '#0B2A3A'; }
+function _snkRGB(hex){ var n=parseInt(_snkColor(hex).slice(1), 16); return [(n>>16)&255, (n>>8)&255, n&255]; }
+/* un color claro (el amarillo) lleva la letra oscura encima; uno oscuro, la blanca */
+function _snkClaro(rgb){ return (0.2126*rgb[0]+0.7152*rgb[1]+0.0722*rgb[2])/255>0.6; }
 function _snkEstado(){
   if(SNW.k) return SNW.k;
   var g=null; try{ g=JSON.parse(localStorage.getItem(LS_SNK)||'null'); }catch(_l){ g=null; }
   g=(g && typeof g==='object') ? g : {};
-  SNW.k={ c:{ desde:+((g.c||{}).desde)||1, hasta:+((g.c||{}).hasta)||40, pre:String((g.c||{}).pre==null ? 'CASILLERO' : g.c.pre).slice(0, 20), tam:SNK_TAM[(g.c||{}).tam] ? g.c.tam : 'ch', frase:(g.c||{}).frase!==false },
-          l:{ tit:String((g.l||{}).tit||'REGISTROS OBLIGATORIOS DE SST').slice(0, 60), sub:String((g.l||{}).sub||'').slice(0, 60), modo:/^(num|rom|mes)$/.test((g.l||{}).modo) ? g.l.modo : 'num',
-              n:Math.min(24, Math.max(1, +((g.l||{}).n)||4)), m1:Math.min(11, Math.max(0, +((g.l||{}).m1)||0)), m2:Math.min(11, Math.max(0, (g.l||{}).m2==null ? 11 : +g.l.m2)), ancho:(g.l||{}).ancho==='75' ? '75' : '50', qr:String((g.l||{}).qr||'').slice(0, 300) } };
+  var c=g.c||{}, l=g.l||{};
+  /* lo guardado antes del 9/11 («frase»: sí o no) sigue valiendo */
+  var fm=/^(obrasst|una|mias|no)$/.test(c.fraseModo) ? c.fraseModo : (c.frase===false ? 'no' : 'obrasst');
+  SNW.k={ c:{ desde:+c.desde||1, hasta:+c.hasta||40, pre:String(c.pre==null ? 'CASILLERO' : c.pre).slice(0, 20), tam:SNK_TAM[c.tam] ? c.tam : 'me',
+              fraseModo:fm, frase:fm!=='no', fraseUna:String(c.fraseUna||'').slice(0, 90), frasesMias:String(c.frasesMias||'').slice(0, 3000),
+              nombres:/^(no|raya|personal|mano)$/.test(c.nombres) ? c.nombres : 'raya', nombresTxt:String(c.nombresTxt||'').slice(0, 12000),
+              color:_snkColor(c.color), estilo:/^(borde|banda|dos|rayas)$/.test(c.estilo) ? c.estilo : 'banda', logo:c.logo!==false },
+          l:{ tit:String(l.tit||'REGISTROS OBLIGATORIOS DE SST').slice(0, 60), sub:String(l.sub||'').slice(0, 60), modo:/^(num|rom|mes)$/.test(l.modo) ? l.modo : 'num',
+              n:Math.min(24, Math.max(1, +l.n||4)), m1:Math.min(11, Math.max(0, +l.m1||0)), m2:Math.min(11, Math.max(0, l.m2==null ? 11 : +l.m2)), ancho:l.ancho==='75' ? '75' : '50', qr:String(l.qr||'').slice(0, 300),
+              color:_snkColor(l.color), porTomo:l.porTomo===true, logo:l.logo!==false, franja:l.franja===true } };
   return SNW.k;
 }
 function _snkGuardar(){ try{ localStorage.setItem(LS_SNK, JSON.stringify(SNW.k)); }catch(_g){} }
@@ -1441,6 +1540,26 @@ function snkTomos(L){
   var out=[]; for(var j=1;j<=L.n;j++) out.push('TOMO '+(L.modo==='rom' ? snkRomano(j) : String(j)));
   return out;
 }
+/* las frases que salen (9/11/2026): las veinte, una para todos o las propias (una por línea) */
+function snkFrasesDe(C){
+  var limpia=function(x){ return String(x||'').replace(/\s+/g, ' ').trim().slice(0, 90); };
+  if(C.fraseModo==='no') return [];
+  if(C.fraseModo==='una'){ var u=limpia(C.fraseUna); return u ? [u] : []; }
+  if(C.fraseModo==='mias') return String(C.frasesMias||'').split(/\n/).map(limpia).filter(Boolean);
+  return SNK_FRASES;
+}
+/* los nombres, en el orden de los casilleros: los del personal de la obra o los escritos (uno por línea; una línea en
+   blanco deja ese casillero sin nombre) */
+function snkNombresDe(C, gente){
+  if(C.nombres==='personal') return ((gente && gente.trabs)||[]).map(function(t){ return String(t.nombre||'').replace(/\s+/g, ' ').trim(); }).filter(Boolean)
+    .sort(function(a, b){ return a.localeCompare(b, 'es', { sensitivity:'base' }); });
+  if(C.nombres==='mano'){
+    var a=String(C.nombresTxt||'').split(/\n/).map(function(x){ return x.replace(/\s+/g, ' ').trim().slice(0, 60); });
+    while(a.length && !a[a.length-1]) a.pop();
+    return a;
+  }
+  return [];
+}
 /* el QR en el PDF, con rectángulos (nítido a cualquier tamaño) */
 function _snkQR(doc, txt, x, y, lado){
   var qr=qrcode(0, 'M'); qr.addData(txt); qr.make();
@@ -1454,63 +1573,193 @@ function _snkAjusta(doc, txt, max, min, ancho){
   while(px>min && doc.getTextWidth(txt)>ancho){ px-=0.5; doc.setFontSize(px); }
   return px;
 }
-function snkCasillerosPDF(o){
+/* 9/11/2026 · un polígono recortado al rectángulo (para las franjas diagonales) */
+function _snkRecorta(pts, x0, y0, x1, y1){
+  var dentro=[function(p){ return p[0]>=x0; }, function(p){ return p[0]<=x1; }, function(p){ return p[1]>=y0; }, function(p){ return p[1]<=y1; }];
+  var corte=[function(a, b){ var t=(x0-a[0])/(b[0]-a[0]); return [x0, a[1]+t*(b[1]-a[1])]; }, function(a, b){ var t=(x1-a[0])/(b[0]-a[0]); return [x1, a[1]+t*(b[1]-a[1])]; },
+             function(a, b){ var t=(y0-a[1])/(b[1]-a[1]); return [a[0]+t*(b[0]-a[0]), y0]; }, function(a, b){ var t=(y1-a[1])/(b[1]-a[1]); return [a[0]+t*(b[0]-a[0]), y1]; }];
+  var out=pts;
+  for(var e=0;e<4 && out.length;e++){
+    var ent=out; out=[];
+    for(var i=0;i<ent.length;i++){
+      var cur=ent[i], ant=ent[(i+ent.length-1)%ent.length], ci=dentro[e](cur), ai=dentro[e](ant);
+      if(ci){ if(!ai) out.push(corte[e](ant, cur)); out.push(cur); }
+      else if(ai) out.push(corte[e](ant, cur));
+    }
+  }
+  return out;
+}
+function _snkPoli(doc, pts){
+  if(pts.length<3) return;
+  var seg=[]; for(var i=1;i<pts.length;i++) seg.push([pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]]);
+  doc.lines(seg, pts[0][0], pts[0][1], [1, 1], 'F', true);
+}
+/* la franja diagonal, como la cinta de seguridad: el color y el blanco */
+function _snkRayas(doc, x, y, w, h, col){
+  doc.setFillColor(255, 255, 255); doc.rect(x, y, w, h, 'F');
+  doc.setFillColor(col[0], col[1], col[2]);
+  var p=Math.max(2.4, h*0.62);
+  for(var k=-Math.ceil(h/p)-2; k*2*p<w+h; k++){
+    var a=x+k*2*p;
+    _snkPoli(doc, _snkRecorta([[a, y+h], [a+p, y+h], [a+p+h, y], [a+h, y]], x, y, x+w, y+h));
+  }
+}
+/* una etiqueta de casillero (x, y: la esquina, en mm) */
+function _snkEtiqueta(doc, T, x, y, num, nombre, frase, o, logo){
+  var col=_snkRGB(o.color), claro=_snkClaro(col), tinta=claro ? [26, 26, 26] : col, sobre=claro ? [20, 20, 20] : [255, 255, 255];
+  var W=T.w, H=T.h, ix=x+2, iy=y+2, iw=W-4, ih=H-4, r=1.6, est=o.estilo||'banda', MM=0.3528;
+  doc.setDrawColor(170, 180, 188); doc.setLineWidth(0.2); doc.setLineDashPattern([1.2, 1.2], 0); doc.roundedRect(x, y, W, H, 2.5, 2.5, 'S'); doc.setLineDashPattern([], 0);
+  /* las franjas */
+  var bh=(est==='borde') ? 0 : Math.max(6, ih*0.22), bs=(est==='dos') ? Math.max(2.2, ih*0.07) : 0;
+  if(bh){
+    if(est==='rayas') _snkRayas(doc, ix+0.3, iy+0.3, iw-0.6, bh-0.3, col);
+    else { doc.setFillColor(col[0], col[1], col[2]); doc.roundedRect(ix, iy, iw, bh, r, r, 'F'); doc.rect(ix, iy+bh-r, iw, r, 'F'); }
+  }
+  if(bs){ var rb=Math.min(r, bs/2); doc.setFillColor(col[0], col[1], col[2]); doc.roundedRect(ix, iy+ih-bs, iw, bs, rb, rb, 'F'); doc.rect(ix, iy+ih-bs, iw, rb, 'F'); }
+  doc.setDrawColor(col[0], col[1], col[2]); doc.setLineWidth(est==='borde' ? 0.8 : 0.5); doc.roundedRect(ix, iy, iw, ih, r, r, 'S');
+  /* arriba: el logo (a la derecha, sobre blanco) y lo que va arriba del número */
+  var pre=String(o.pre||'').trim().toUpperCase(), fila=bh || ((pre || logo) ? Math.max(5, ih*0.17) : 0), lg=0;
+  if(logo && fila){
+    var lhM=fila*0.7, lw=Math.min(iw*0.34, lhM*logo.r), lh=lw/logo.r;
+    if(lh>lhM){ lh=lhM; lw=lh*logo.r; }
+    var cw=lw+2, ch=lh+1.4, cx0=ix+iw-cw-1.4, cy0=iy+(fila-ch)/2;
+    if(bh){ doc.setFillColor(255, 255, 255); doc.roundedRect(cx0, cy0, cw, ch, 1, 1, 'F'); }
+    try{ doc.addImage(logo.du, cx0+1, cy0+0.7, lw, lh, undefined, 'FAST'); }catch(_e){}
+    lg=cw+2.6;
+  }
+  if(pre && fila){
+    doc.setFont('helvetica', 'bold');
+    var centrado=(iw-6-lg*2)>=iw*0.45, anchoP=centrado ? iw-6-lg*2 : iw-6-lg;
+    var pp=_snkAjusta(doc, pre, Math.min(16, fila*0.5/MM), 5, anchoP); doc.setFontSize(pp);
+    var cxP=centrado ? ix+iw/2 : ix+3+anchoP/2, yP=iy+fila/2+pp*MM*0.36;
+    if(est==='rayas'){ var tw=doc.getTextWidth(pre)+4; doc.setFillColor(255, 255, 255); doc.roundedRect(cxP-tw/2, iy+fila*0.17, tw, fila*0.66, 1.2, 1.2, 'F'); doc.setTextColor(tinta[0], tinta[1], tinta[2]); }
+    else if(bh) doc.setTextColor(sobre[0], sobre[1], sobre[2]);
+    else doc.setTextColor(tinta[0], tinta[1], tinta[2]);
+    doc.text(pre, cxP, yP, { align:'center' });
+  }
+  /* abajo: la frase; encima, el nombre; y el número en lo que queda */
+  var abajo=iy+ih-bs, pad=Math.max(1.2, ih*0.035);
+  if(frase){
+    doc.setFont('helvetica', 'normal');
+    var fz=Math.min(18, Math.max(8, ih*0.28)), fmin=Math.max(5.5, fz*0.6), lin;   /* «la frase de seguridad más grande» */
+    for(;;){ doc.setFontSize(fz); lin=doc.splitTextToSize(frase, iw-7); if(lin.length<=2 || fz<=fmin) break; fz-=0.5; }
+    lin=lin.slice(0, 2);
+    var lhF=fz*MM*1.18, ultima=abajo-pad-fz*MM*0.22, primera=ultima-(lin.length-1)*lhF;
+    doc.setTextColor(52, 64, 74);
+    lin.forEach(function(l, k){ doc.text(l, ix+iw/2, primera+k*lhF, { align:'center' }); });
+    abajo=primera-fz*MM*0.78-pad*0.7;
+    doc.setDrawColor(208, 214, 219); doc.setLineWidth(0.25); doc.line(ix+iw*0.22, abajo+pad*0.35, ix+iw*0.78, abajo+pad*0.35);
+  }
+  if(o.nombres && o.nombres!=='no'){
+    var nh=Math.max(4.6, ih*0.15), nb=abajo-nh*0.32;
+    if(nombre){
+      doc.setFont('helvetica', 'bold');
+      var nm=String(nombre).toUpperCase(), fn=_snkAjusta(doc, nm, Math.min(15, nh*0.78/MM), 5, iw-8);
+      doc.setFontSize(fn); doc.setTextColor(26, 26, 26); doc.text(nm, ix+iw/2, nb, { align:'center' });
+    }else{
+      doc.setFont('helvetica', 'bold'); var fr=Math.max(5, Math.min(8.5, nh*0.42/MM)); doc.setFontSize(fr); doc.setTextColor(120, 132, 142);
+      var et='NOMBRE:', ew=doc.getTextWidth(et), xn=ix+4;
+      doc.text(et, xn, nb);
+      doc.setDrawColor(150, 160, 168); doc.setLineWidth(0.25); doc.line(xn+ew+1.5, nb+0.4, ix+iw-4, nb+0.4);
+    }
+    abajo-=nh;
+  }
+  var arriba=iy+(fila || pad)+pad, alto=Math.max(4, abajo-arriba);
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(tinta[0], tinta[1], tinta[2]);
+  var tN=String(num), pn=_snkAjusta(doc, tN, Math.max(10, alto*0.92/(0.72*MM)), 8, iw-10);
+  doc.setFontSize(pn);
+  doc.text(tN, ix+iw/2, arriba+alto/2+pn*MM*0.36, { align:'center' });
+}
+/* o: el estado de los casilleros; C: lo de la obra (el logo); nombres: en el orden de los casilleros */
+function snkCasillerosPDF(o, C, nombres){
   var J=window.jspdf && window.jspdf.jsPDF; if(!J) return null;
-  var T=SNK_TAM[o.tam]||SNK_TAM.ch, d=Math.min(o.desde, o.hasta), h=Math.max(o.desde, o.hasta), L=[];
+  var T=SNK_TAM[o.tam]||SNK_TAM.me, d=Math.min(o.desde, o.hasta), h=Math.max(o.desde, o.hasta), L=[];
   for(var n=d;n<=h && L.length<500;n++) L.push(n);
   var doc=new J({ unit:'mm', format:'a4', orientation:'portrait' }), porH=T.col*T.fil;
   var gx=(210-T.col*T.w)/(T.col+1), gy=(297-T.fil*T.h)/(T.fil+1);
+  var frases=snkFrasesDe(o), nom=nombres||[], logo=(o.logo!==false && C && C.logo && C.logo.du) ? C.logo : null;
   L.forEach(function(num, i){
     if(i && i%porH===0) doc.addPage();
     var j=i%porH, x=gx+(j%T.col)*(T.w+gx), y=gy+Math.floor(j/T.col)*(T.h+gy);
-    doc.setDrawColor(170, 180, 188); doc.setLineWidth(0.2); doc.setLineDashPattern([1.2, 1.2], 0); doc.roundedRect(x, y, T.w, T.h, 2.5, 2.5, 'S'); doc.setLineDashPattern([], 0);
-    doc.setDrawColor(11, 42, 58); doc.setLineWidth(0.6); doc.roundedRect(x+2, y+2, T.w-4, T.h-4, 2, 2, 'S');
-    doc.setTextColor(11, 42, 58); doc.setFont('helvetica', 'bold');
-    var pre=String(o.pre||'').trim(), conF=o.frase, fr=SNK_FRASES[(num-1+SNK_FRASES.length*100)%SNK_FRASES.length];
-    var tN=String(num), alto=T.h-4, top=y+2;
-    if(pre){ var pp=_snkAjusta(doc, pre, T.h*0.2, 6, T.w-10); doc.setFontSize(pp); doc.text(pre, x+T.w/2, top+alto*0.2, { align:'center' }); }
-    var pn=_snkAjusta(doc, tN, T.h*(conF ? 1.05 : 1.35), 10, T.w-12); doc.setFontSize(pn);
-    doc.text(tN, x+T.w/2, top+alto*(conF ? 0.66 : 0.76), { align:'center' });
-    if(conF){
-      doc.setFont('helvetica', 'normal'); var pf=Math.max(5.5, Math.min(T.h*0.17, 11)); doc.setFontSize(pf);
-      var lin=doc.splitTextToSize(fr, T.w-10).slice(0, 2), lh=pf*0.42;
-      lin.forEach(function(l, k){ doc.text(l, x+T.w/2, top+alto-3.2-(lin.length-1-k)*lh, { align:'center' }); });
-    }
+    var fr=frases.length ? frases[((num-1)%frases.length+frases.length)%frases.length] : '';
+    _snkEtiqueta(doc, T, x, y, num, nom[i]||'', fr, o, logo);
   });
   return { doc:doc, n:L.length, hojas:Math.ceil(L.length/porH) };
 }
-function snkLomosPDF(o){
+function snkLomosPDF(o, C){
   var J=window.jspdf && window.jspdf.jsPDF; if(!J) return null;
   var tomos=snkTomos(o), W=o.ancho==='75' ? 75 : 50, H=275, por=Math.floor((210-10)/(W+6)), gx=(210-por*W)/(por+1), y=(297-H)/2;
   var doc=new J({ unit:'mm', format:'a4', orientation:'portrait' }), url=/^https?:\/\/\S+$/i.test(o.qr) && typeof qrcode==='function' ? o.qr : '';
+  var logo=(o.logo!==false && C && C.logo && C.logo.du) ? C.logo : null;
   tomos.forEach(function(tomo, i){
     if(i && i%por===0) doc.addPage();
     var x=gx+(i%por)*(W+gx), cx=x+W/2;
+    /* 9/11/2026 · el color elegido (o uno por tomo, para reconocerlos en el estante) */
+    var col=_snkRGB(o.porTomo ? SNK_COLORES[i%SNK_COLORES.length][0] : o.color), claro=_snkClaro(col), sobre=claro ? [20, 20, 20] : [255, 255, 255], tinta=claro ? [26, 26, 26] : col;
     doc.setDrawColor(170, 180, 188); doc.setLineWidth(0.2); doc.setLineDashPattern([1.2, 1.2], 0); doc.rect(x, y, W, H, 'S'); doc.setLineDashPattern([], 0);
-    /* arriba, el tomo: en blanco sobre la franja oscura (se ve de lejos en el estante) */
-    doc.setFillColor(11, 42, 58); doc.rect(x, y, W, 16, 'F');
-    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); var pk=_snkAjusta(doc, tomo, W>60 ? 20 : 15, 7, W-6); doc.setFontSize(pk); doc.text(tomo, cx, y+8+pk*0.13, { align:'center' });
+    /* arriba, el tomo: sobre la franja del color (se ve de lejos en el estante) */
+    doc.setFillColor(col[0], col[1], col[2]); doc.rect(x, y, W, 16, 'F');
+    doc.setTextColor(sobre[0], sobre[1], sobre[2]); doc.setFont('helvetica', 'bold'); var pk=_snkAjusta(doc, tomo, W>60 ? 20 : 15, 7, W-6); doc.setFontSize(pk); doc.text(tomo, cx, y+8+pk*0.13, { align:'center' });
+    /* el logo, debajo de la franja */
+    var yIni=y+16;
+    if(logo){
+      var lhM=W>60 ? 20 : 15, lw=Math.min(W-12, lhM*logo.r), lh=lw/logo.r;
+      if(lh>lhM){ lh=lhM; lw=lh*logo.r; }
+      try{ doc.addImage(logo.du, cx-lw/2, yIni+4+(lhM-lh)/2, lw, lh, undefined, 'FAST'); }catch(_e){}
+      yIni+=lhM+6;
+    }
+    /* abajo, la franja (si se quiere) */
+    var fr=o.franja ? 10 : 0;
+    if(fr){ doc.setFillColor(col[0], col[1], col[2]); doc.rect(x, y+H-fr, W, fr, 'F'); }
     /* el título y lo de abajo, de abajo hacia arriba (como se lee en el lomo) */
-    var qrL=url ? Math.min(W-12, 32) : 0, yBase=y+H-(url ? qrL+16 : 12), largo=yBase-(y+22);
-    doc.setTextColor(11, 42, 58); doc.setFont('helvetica', 'bold');
+    var qrL=url ? Math.min(W-12, 32) : 0, yBase=y+H-fr-(url ? qrL+16 : 12), largo=yBase-(yIni+6);
+    doc.setTextColor(tinta[0], tinta[1], tinta[2]); doc.setFont('helvetica', 'bold');
     var pt=_snkAjusta(doc, o.tit, W>60 ? 30 : 22, 9, largo); doc.setFontSize(pt);
     var sub=String(o.sub||'').trim(), wt=doc.getTextWidth(o.tit);
     /* centrado a lo largo del lomo */
     doc.text(o.tit, cx+(sub ? -W*0.12 : pt*0.14), yBase-(largo-wt)/2, { angle:90 });
     if(sub){ doc.setFont('helvetica', 'normal'); var ps=_snkAjusta(doc, sub, W>60 ? 15 : 12, 7, largo); doc.setFontSize(ps); doc.setTextColor(74, 91, 104); doc.text(sub, cx+W*0.24, yBase-(largo-doc.getTextWidth(sub))/2, { angle:90 }); }
-    if(url){ _snkQR(doc, url, cx-qrL/2, y+H-qrL-12, qrL); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(74, 91, 104); doc.text('Escanea: lo que guarda', cx, y+H-6, { align:'center' }); }
+    if(url){ _snkQR(doc, url, cx-qrL/2, y+H-fr-qrL-12, qrL); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(74, 91, 104); doc.text('Escanea: lo que guarda', cx, y+H-fr-6, { align:'center' }); }
   });
   return { doc:doc, n:tomos.length, hojas:Math.ceil(tomos.length/por) };
 }
 function _snkNum(id, v, a){ return '<input id="'+id+'" type="number" inputmode="numeric" min="'+a[0]+'" max="'+a[1]+'" value="'+esc(String(v))+'" style="max-width:110px">'; }
+/* 9/11/2026 · el color: los ocho de la casa y el que se quiera */
+function _snkColores(id, actual){
+  var hay=SNK_COLORES.some(function(c){ return c[0]===actual; });
+  return '<div class="snk-col" id="'+id+'" role="group" aria-label="Color">'+SNK_COLORES.map(function(c){
+      var on=(c[0]===actual);
+      return '<button type="button" data-v="'+c[0]+'" style="--c:'+c[0]+'" class="'+(on ? 'on' : '')+'" aria-pressed="'+(on ? 'true' : 'false')+'" title="'+esc(c[1])+'" aria-label="'+esc(c[1])+'"></button>';
+    }).join('')+
+    '<label class="snk-otro'+(hay ? '' : ' on')+'"><input type="color" id="'+id+'-o" value="'+esc(actual)+'"> <span>Otro</span></label></div>';
+}
+function _snkColoresAl(id, fn){
+  var c=$(id); if(!c) return;
+  var pon=function(v){
+    Array.prototype.forEach.call(c.querySelectorAll('button[data-v]'), function(b){ var on=(b.getAttribute('data-v')===v); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+    var o=c.querySelector('.snk-otro'); if(o) o.classList.toggle('on', !SNK_COLORES.some(function(x){ return x[0]===v; }));
+    fn(v);
+  };
+  c.onclick=function(ev){ var b=ev.target.closest ? ev.target.closest('button[data-v]') : null; if(b && c.contains(b)) pon(b.getAttribute('data-v')); };
+  var inp=$(id+'-o'); if(inp) inp.oninput=function(){ pon(_snkColor(this.value)); };
+}
 function snkPintar(c){
   var K=_snkEstado(), C=K.c, L=K.l;
-  c.innerHTML='<p class="sn-intro">Las etiquetas de los <b>casilleros</b>, numeradas y con una frase de seguridad, y el <b>lomo de cada archivador</b>, con su título, su tomo y un QR si quieres. Salen en PDF para imprimir al 100 %.</p>'+
+  c.innerHTML='<p class="sn-intro">Las etiquetas de los <b>casilleros</b> —con su número, el nombre de cada uno, una frase de seguridad y el logo de tu empresa, en el color que elijas— y el <b>lomo de cada archivador</b>, con su título, su tomo y un QR si quieres. Salen en PDF para imprimir al 100 %.</p>'+
     '<div class="sn-panel"><div class="sn-ed" id="snk-c"><div class="sn-form"><h3 class="snk-h">🔢 Casilleros</h3>'+
-      '<div class="campo"><label>Del número al número</label><div style="display:flex;gap:8px;align-items:center">'+_snkNum('snk-d', C.desde, [1, 9999])+'<span>al</span>'+_snkNum('snk-h', C.hasta, [1, 9999])+'</div><p class="ayuda">Hasta 500 de una vez.</p></div>'+
+      '<div class="campo"><label>Del número al número</label><div style="display:flex;gap:8px;align-items:center">'+_snkNum('snk-d', C.desde, [1, 9999])+'<span>al</span>'+_snkNum('snk-h', C.hasta, [1, 9999])+'</div><p class="ayuda" id="snk-rango">Hasta 500 de una vez.</p></div>'+
+      '<div class="campo"><label>El nombre de cada uno</label>'+snChips('snk-nom', SNK_NOMBRE_MODOS, C.nombres, 'El nombre de cada uno')+
+        '<textarea id="snk-nt" class="snk-ta" rows="5" maxlength="12000" placeholder="Uno por línea, en el orden de los casilleros"'+(C.nombres==='mano' ? '' : ' hidden')+'>'+esc(C.nombresTxt)+'</textarea>'+
+        '<p class="ayuda" id="snk-nom-a"></p></div>'+
       '<div class="campo"><label for="snk-pre">Arriba del número <small>· opcional</small></label><input id="snk-pre" maxlength="20" value="'+esc(C.pre)+'" placeholder="CASILLERO"></div>'+
+      '<div class="campo"><label>Color</label>'+_snkColores('snk-col', C.color)+'</div>'+
+      '<div class="campo"><label>Franjas</label>'+snChips('snk-est', SNK_ESTILOS, C.estilo, 'Franjas')+'</div>'+
+      '<label class="check"><input type="checkbox" id="snk-logo"'+(C.logo ? ' checked' : '')+'> <span>Con el logo de la empresa</span></label><p class="ayuda" id="snk-logo-a"></p>'+
+      '<div class="campo"><label>La frase de seguridad</label>'+snChips('snk-fm', SNK_FRASE_MODOS, C.fraseModo, 'La frase de seguridad')+
+        '<input id="snk-f1" maxlength="90" value="'+esc(C.fraseUna)+'" placeholder="Tu familia te espera en casa."'+(C.fraseModo==='una' ? '' : ' hidden')+'>'+
+        '<textarea id="snk-fs" class="snk-ta" rows="4" maxlength="3000" placeholder="Una por línea: van en orden, una por casillero"'+(C.fraseModo==='mias' ? '' : ' hidden')+'>'+esc(C.frasesMias)+'</textarea>'+
+        '<p class="ayuda" id="snk-fm-a"></p></div>'+
       '<div class="campo"><label>Tamaño</label>'+snChips('snk-tam', Object.keys(SNK_TAM).map(function(k){ return { v:k, t:SNK_TAM[k].n }; }), C.tam, 'Tamaño de las etiquetas')+'</div>'+
-      '<label class="check"><input type="checkbox" id="snk-fr"'+(C.frase ? ' checked' : '')+'> <span>Con una frase de seguridad: veinte, una por casillero («Tu EPP, limpio y en su sitio», «Si ves algo inseguro, avisa»…).</span></label>'+
       '<div class="sn-acc" style="margin-top:12px"><button type="button" class="bt" id="snk-c-pdf">⬇ Descargar las etiquetas</button></div><p class="ayuda" id="snk-c-est"></p>'+
     '</div><div class="sn-lado"><div class="sn-prev" id="snk-c-prev" aria-label="Vista previa de las etiquetas"></div></div></div></div>'+
     '<div class="sn-panel" style="margin-top:16px"><div class="sn-ed" id="snk-l"><div class="sn-form"><h3 class="snk-h">🗂️ Lomos de archivadores</h3>'+
@@ -1521,40 +1770,87 @@ function snkPintar(c){
                         '<select id="snk-m2">'+SNK_MESES.map(function(m, i){ return '<option value="'+i+'"'+(i===L.m2 ? ' selected' : '')+'>'+m.charAt(0)+m.slice(1).toLowerCase()+'</option>'; }).join('')+'</select></div></div>'
                       : '<div class="campo"><label for="snk-n">Cuántos tomos</label>'+_snkNum('snk-n', L.n, [1, 24])+'</div>')+
       '<div class="campo"><label>El lomo</label>'+snChips('snk-an', [{ v:'50', t:'Angosto · 5 cm' }, { v:'75', t:'Ancho · 7,5 cm' }], L.ancho, 'Ancho del lomo')+'</div>'+
+      '<div class="campo"><label>Color</label>'+_snkColores('snk-lcol', L.color)+
+        '<label class="check" style="margin-top:8px"><input type="checkbox" id="snk-ptomo"'+(L.porTomo ? ' checked' : '')+'> <span>Un color por tomo, para reconocerlos en el estante</span></label></div>'+
+      '<label class="check"><input type="checkbox" id="snk-lfr"'+(L.franja ? ' checked' : '')+'> <span>Con una franja de color abajo</span></label>'+
+      '<label class="check"><input type="checkbox" id="snk-llogo"'+(L.logo ? ' checked' : '')+'> <span>Con el logo de la empresa</span></label>'+
       '<div class="campo"><label for="snk-qr">Enlace para el QR <small>· opcional: el del cartel de esa carpeta, por ejemplo</small></label><input id="snk-qr" maxlength="300" value="'+esc(L.qr)+'" placeholder="https://…"></div>'+
       '<div class="sn-acc" style="margin-top:12px"><button type="button" class="bt" id="snk-l-pdf">⬇ Descargar los lomos</button></div><p class="ayuda" id="snk-l-est"></p>'+
     '</div><div class="sn-lado"><div class="sn-prev" id="snk-l-prev" aria-label="Vista previa de los lomos"></div></div></div></div>';
   var nom=_audLimpioNombre();
-  var TC=snTaller($('snk-c-prev'), function(){ return Promise.resolve(typeof cargarEvPDF==='function' ? cargarEvPDF() : null).then(function(){ var r=snkCasillerosPDF(K.c); if(!r) return null;
-        var e=$('snk-c-est'); if(e) e.textContent=r.n+(r.n===1 ? ' etiqueta' : ' etiquetas')+' en '+r.hojas+(r.hojas===1 ? ' hoja A4.' : ' hojas A4.');
-        return { blob:r.doc.output('blob'), nombre:'casilleros-'+nom+'.pdf', max:2 }; }); });
-  var TCv=SNW.T;
-  var TL=snTaller($('snk-l-prev'), function(){ return Promise.resolve(typeof cargarEvPDF==='function' ? cargarEvPDF() : null).then(function(){ return (K.l.qr && typeof cargarQRLib==='function') ? cargarQRLib().catch(function(){ return null; }) : null; }).then(function(){
-        var r=snkLomosPDF(K.l); if(!r) return null;
-        var e=$('snk-l-est'); if(e) e.textContent=r.n+(r.n===1 ? ' lomo' : ' lomos')+' en '+r.hojas+(r.hojas===1 ? ' hoja A4.' : ' hojas A4.')+(K.l.qr && !/^https?:\/\/\S+$/i.test(K.l.qr) ? ' El enlace del QR no se ve bien: tiene que empezar con https://' : '');
-        return { blob:r.doc.output('blob'), nombre:'lomos-'+nom+'.pdf', max:2 }; }); });
+  /* los nombres del personal (solo si se piden), y lo que dice debajo de cada opción */
+  var gente=function(){ return (C.nombres==='personal' && typeof snGente==='function') ? snGente().then(null, function(){ return null; }) : Promise.resolve(null); };
+  var avisos=function(G){
+    var a=$('snk-nom-a'), n=snkNombresDe(C, G).length;
+    if(a) a.textContent=C.nombres==='personal' ? (G ? (n ? 'Los '+n+' de tu personal activo, por orden alfabético: del casillero '+C.desde+' al '+(C.desde+n-1)+'.' : 'Tu personal todavía no tiene trabajadores activos.') : 'Cargando tu personal…')
+      : C.nombres==='mano' ? (n ? n+(n===1 ? ' nombre' : ' nombres')+': del casillero '+C.desde+' al '+(C.desde+n-1)+'. Una línea en blanco deja ese casillero sin nombre.' : 'Uno por línea, en el orden de los casilleros.')
+      : C.nombres==='raya' ? 'Cada etiqueta lleva una raya para escribir el nombre a mano.' : '';
+    var f=$('snk-fm-a'), nf=snkFrasesDe(C).length;
+    if(f) f.textContent=C.fraseModo==='mias' ? (nf ? nf+(nf===1 ? ' frase: va en todos.' : ' frases: van en orden, una por casillero, y se repiten.') : 'Escribe una por línea.')
+      : C.fraseModo==='una' ? (nf ? '' : 'Escribe la frase que va en todos.') : C.fraseModo==='obrasst' ? 'Veinte frases cortas, una por casillero, y se repiten.' : '';
+  };
+  var TC=snTaller($('snk-c-prev'), function(){
+    return Promise.all([typeof cargarEvPDF==='function' ? cargarEvPDF() : null, snCtx().then(null, function(){ return null; }), gente()]).then(function(r){
+      var Ctx=r[1], G=r[2]; avisos(G);
+      var la=$('snk-logo-a'); if(la) la.textContent=(Ctx && Ctx.logo && Ctx.logo.du) ? '' : 'Tu empresa todavía no tiene logo: se carga en la app, en «Datos de mi empresa».';
+      var R=snkCasillerosPDF(K.c, Ctx, snkNombresDe(K.c, G)); if(!R) return null;
+      var e=$('snk-c-est'); if(e) e.textContent=R.n+(R.n===1 ? ' etiqueta' : ' etiquetas')+' en '+R.hojas+(R.hojas===1 ? ' hoja A4.' : ' hojas A4.');
+      return { blob:R.doc.output('blob'), nombre:'casilleros-'+nom+'.pdf', max:2 };
+    }); });
+  var TL=snTaller($('snk-l-prev'), function(){ return Promise.all([typeof cargarEvPDF==='function' ? cargarEvPDF() : null, snCtx().then(null, function(){ return null; }),
+      (K.l.qr && typeof cargarQRLib==='function') ? cargarQRLib().catch(function(){ return null; }) : null]).then(function(r){
+        var R=snkLomosPDF(K.l, r[1]); if(!R) return null;
+        var e=$('snk-l-est'); if(e) e.textContent=R.n+(R.n===1 ? ' lomo' : ' lomos')+' en '+R.hojas+(R.hojas===1 ? ' hoja A4.' : ' hojas A4.')+(K.l.qr && !/^https?:\/\/\S+$/i.test(K.l.qr) ? ' El enlace del QR no se ve bien: tiene que empezar con https://' : '');
+        return { blob:R.doc.output('blob'), nombre:'lomos-'+nom+'.pdf', max:2 }; }); });
   var leer=function(){
     var g=function(id){ var x=$(id); return x ? x.value : null; };
     if(g('snk-d')!==null) K.c.desde=Math.max(1, Math.min(9999, parseInt(g('snk-d'), 10)||1));
     if(g('snk-h')!==null) K.c.hasta=Math.max(1, Math.min(9999, parseInt(g('snk-h'), 10)||1));
     if(g('snk-pre')!==null) K.c.pre=String(g('snk-pre')).slice(0, 20);
-    var fr=$('snk-fr'); if(fr) K.c.frase=!!fr.checked;
+    if(g('snk-nt')!==null) K.c.nombresTxt=String(g('snk-nt')).slice(0, 12000);
+    if(g('snk-f1')!==null) K.c.fraseUna=String(g('snk-f1')).slice(0, 90);
+    if(g('snk-fs')!==null) K.c.frasesMias=String(g('snk-fs')).slice(0, 3000);
+    var lo=$('snk-logo'); if(lo) K.c.logo=!!lo.checked;
     if(g('snk-tit')!==null) K.l.tit=String(g('snk-tit')).replace(/\s+/g, ' ').trim().slice(0, 60) || 'ARCHIVADOR';
     if(g('snk-sub')!==null) K.l.sub=String(g('snk-sub')).replace(/\s+/g, ' ').trim().slice(0, 60);
     if(g('snk-n')!==null) K.l.n=Math.max(1, Math.min(24, parseInt(g('snk-n'), 10)||1));
     if(g('snk-m1')!==null) K.l.m1=+g('snk-m1'); if(g('snk-m2')!==null) K.l.m2=+g('snk-m2');
     if(g('snk-qr')!==null) K.l.qr=String(g('snk-qr')).trim().slice(0, 300);
+    var pt=$('snk-ptomo'); if(pt) K.l.porTomo=!!pt.checked;
+    var lf=$('snk-lfr'); if(lf) K.l.franja=!!lf.checked;
+    var ll=$('snk-llogo'); if(ll) K.l.logo=!!ll.checked;
     _snkGuardar();
   };
-  ['snk-d', 'snk-h', 'snk-pre'].forEach(function(id){ var x=$(id); if(x) x.oninput=function(){ leer(); TC.pide(450); }; });
-  var fr=$('snk-fr'); if(fr) fr.onchange=function(){ leer(); TC.pide(); };
+  /* con nombres, los casilleros van del primero al último nombre (se puede cambiar después) */
+  var alRango=function(G){
+    var n=snkNombresDe(K.c, G).length; if(!n) return;
+    K.c.hasta=Math.min(9999, K.c.desde+n-1); var hh=$('snk-h'); if(hh) hh.value=String(K.c.hasta); _snkGuardar();
+  };
+  ['snk-d', 'snk-h', 'snk-pre', 'snk-f1', 'snk-fs'].forEach(function(id){ var x=$(id); if(x) x.oninput=function(){ leer(); TC.pide(450); }; });
+  var nt=$('snk-nt'); if(nt) nt.oninput=function(){ leer(); alRango(null); TC.pide(450); };
+  var lo=$('snk-logo'); if(lo) lo.onchange=function(){ leer(); TC.pide(); };
   ['snk-tit', 'snk-sub', 'snk-n', 'snk-qr'].forEach(function(id){ var x=$(id); if(x) x.oninput=function(){ leer(); TL.pide(450); }; });
-  ['snk-m1', 'snk-m2'].forEach(function(id){ var x=$(id); if(x) x.onchange=function(){ leer(); TL.pide(); }; });
-  snChipsAl('snk-tam', function(v){ K.c.tam=SNK_TAM[v] ? v : 'ch'; _snkGuardar(); TC.pide(); });
+  ['snk-m1', 'snk-m2', 'snk-ptomo', 'snk-lfr', 'snk-llogo'].forEach(function(id){ var x=$(id); if(x) x.onchange=function(){ leer(); TL.pide(); }; });
+  snChipsAl('snk-tam', function(v){ K.c.tam=SNK_TAM[v] ? v : 'me'; _snkGuardar(); TC.pide(); });
+  snChipsAl('snk-est', function(v){ K.c.estilo=/^(borde|banda|dos|rayas)$/.test(v) ? v : 'banda'; _snkGuardar(); TC.pide(); });
+  snChipsAl('snk-nom', function(v){
+    leer(); K.c.nombres=/^(no|raya|personal|mano)$/.test(v) ? v : 'raya'; _snkGuardar();
+    var t=$('snk-nt'); if(t) t.hidden=(v!=='mano');
+    if(v==='personal') gente().then(function(G){ avisos(G); alRango(G); TC.pide(); });
+    else { if(v==='mano') alRango(null); TC.pide(); }
+  });
+  snChipsAl('snk-fm', function(v){
+    leer(); K.c.fraseModo=/^(obrasst|una|mias|no)$/.test(v) ? v : 'obrasst'; K.c.frase=(K.c.fraseModo!=='no'); _snkGuardar();
+    var a=$('snk-f1'), b=$('snk-fs'); if(a) a.hidden=(v!=='una'); if(b) b.hidden=(v!=='mias');
+    TC.pide();
+  });
+  _snkColoresAl('snk-col', function(v){ K.c.color=_snkColor(v); _snkGuardar(); TC.pide(250); });
+  _snkColoresAl('snk-lcol', function(v){ K.l.color=_snkColor(v); _snkGuardar(); TL.pide(250); });
   snChipsAl('snk-modo', function(v){ leer(); K.l.modo=v; _snkGuardar(); snkPintar(c); });
   snChipsAl('snk-an', function(v){ K.l.ancho=v==='75' ? '75' : '50'; _snkGuardar(); TL.pide(); });
   $('snk-c-pdf').onclick=function(){ leer(); TC.listo().then(function(R){ if(R && R.blob){ bajarBlob(R.blob, R.nombre); toast('Etiquetas descargadas: imprímelas al 100 % y corta por la línea punteada.'); } }); };
   $('snk-l-pdf').onclick=function(){ leer(); TL.listo().then(function(R){ if(R && R.blob){ bajarBlob(R.blob, R.nombre); toast('Lomos descargados: imprímelos al 100 %, córtalos y mételos en el lomo del archivador.'); } }); };
+  avisos(null);
   TC.pide(); TL.pide();
 }
 function _audLimpioNombre(){

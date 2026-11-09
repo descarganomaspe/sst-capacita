@@ -750,7 +750,17 @@ function _senDibujar(png){
   return ultimo;
 }
 /* el pie de cada hoja: la medida, hasta dónde se lee y cómo imprimirla */
-function senDobleSe(k){ return ({ 'atencion-riesgo-electrico-o-peligro-de-muerte-alto-volta':1, 'riesgo-de-descargas-electricas':1 }).hasOwnProperty(String(k || '')); }
+function senDobleSe(k){ return senDobleCable(k) || SEN_DOBLE_EQ.hasOwnProperty(String(k || '')); }
+/* 6/11/2026 · Marcelo: «también aplique para el lavaojos, extintor, camilla, etc.»: las señales de los equipos de
+   emergencia y contra incendio también salen a doble cara, tipo bandera (colgada o fijada de canto, se lee derecha de los
+   dos lados). Las de ruta o salida con flecha no: al otro lado la flecha apuntaría al revés. Las de riesgo eléctrico son
+   las del cable (senDobleCable): esas van chicas, 8 por hoja. */
+var SEN_DOBLE_EQ = { 'extintor':1, 'extintor-rodante':1, 'manguera-contra-incendios':1, 'hidrante':1, 'alarma-contra-incendios':1,
+  'avisador-sonoro-en-caso-de-incendio':1, 'telefono-de-emergencia-llamada-directa-a-la-central-cont':1, 'escalera-portatil-en-caso-de-incendio':1,
+  'cubeta-de-arena-para-casos-de-incendio':1, 'manta-apagafuegos':1, 'equipo-autonomo':1, 'valvula-para-el-corte-de-gas':1,
+  'panel-electrico-para-el-cierre-de-energia':1, 'lavaojos-de-emergencia':1, 'ducha-de-emergencia':1, 'camilla':1, 'telefono-de-emergencia':1,
+  'primeros-auxilios':1, 'sala-de-primeros-auxilios':1, 'enfermeria':1, 'punto-de-reunion-en-caso-de-emergencia':1, 'zona-segura-en-caso-de-sismo':1 };
+function senDobleCable(k){ return ({ 'atencion-riesgo-electrico-o-peligro-de-muerte-alto-volta':1, 'riesgo-de-descargas-electricas':1 }).hasOwnProperty(String(k || '')); }
 function _senGirado(doc, x, y, w, h, fn){
   var k = doc.internal.scaleFactor, H = doc.internal.pageSize.getHeight();
   var cx = (x + w/2) * k, cy = (H - (y + h/2)) * k;
@@ -1089,18 +1099,124 @@ var AND_TIPOS = [
     cf:'#D9261C', ct:'#FFFFFF',
     msg:'NO USE ESTE ANDAMIO. NO SE ACERQUE. ESTE ANDAMIO SE ESTÁ ARMANDO, DESARMANDO O ES DEFECTUOSO',
     sello:'PROHIBIDO EL USO',
-    pie:'Va puesta desde el primer cuerpo montado hasta que alguien firme el verde.' },
-  { k:'equipo', n:'Equipo defectuoso', ic:'⛔',
-    t1:'PELIGRO', t2:'EQUIPO DEFECTUOSO',
-    fondo:[252,219,0], texto:[26,26,26],
-    cf:'#FCDB00', ct:'#1A1A1A',
-    msg:'NO USE ESTE EQUIPO. ESTÁ FUERA DE SERVICIO HASTA QUE LO REPARE PERSONAL AUTORIZADO',
-    sello:'NO OPERAR',
-    pie:'Para la máquina o la herramienta que hay que sacar de servicio hoy mismo.' }
+    pie:'Va puesta desde el primer cuerpo montado hasta que alguien firme el verde.' }
 ];
 function andTipo(k){
   for(var i=0;i<AND_TIPOS.length;i++) if(AND_TIPOS[i].k===k) return AND_TIPOS[i];
   return AND_TIPOS[0];
+}
+
+/* ══ 9/11/2026 · LA TARJETA DE EQUIPO DEFECTUOSO, aparte de las de andamio ══
+   Marcelo: «"equipo defectuoso" no debería de estar ahí [en las tarjetas de andamio]… debería de ser roja, y sin
+   firma, solo una vez, porque una vez se menciona que está defectuoso».
+   Es la de la máquina, el equipo o la herramienta que sale de servicio: ROJA y sin la tabla de NOMBRE · FIRMA ·
+   FECHA. En el anverso, PELIGRO · EQUIPO DEFECTUOSO, el logo y, una sola vez, qué equipo es, qué falla tiene,
+   dónde está y la fecha (lo que se deja en blanco sale con su raya, para escribirlo a mano). En el reverso, el
+   mensaje y el sello NO OPERAR: el mismo dibujo del reverso de las de andamio (_andCara). */
+var DEF_TIPO = { k:'defectuoso', n:'Equipo defectuoso', ic:'⛔',
+  t1:'PELIGRO', t2:'EQUIPO DEFECTUOSO',
+  fondo:[217,38,28], texto:[255,255,255],
+  cf:'#D9261C', ct:'#FFFFFF',
+  msg:'NO USE ESTE EQUIPO. ESTÁ FUERA DE SERVICIO HASTA QUE LO REPARE PERSONAL AUTORIZADO',
+  sello:'NO OPERAR',
+  pie:'Para la máquina, el equipo o la herramienta que sale de servicio hoy mismo. Se cuelga una vez y no se firma.' };
+/* lo que se escribe una sola vez: [clave, rótulo, renglones] */
+var DEF_CAMPOS = [['equipo', 'EQUIPO', 1], ['falla', 'FALLA', 2], ['ubic', 'UBICACIÓN', 1], ['fecha', 'FECHA', 1]];
+var DEF = { equipo:'', falla:'', ubic:'', fecha:'', porHoja:2, tam:'A4', orient:'v', reverso:true, pdf:null };
+function _defFecha(f){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(f || '')); return m ? m[3]+'/'+m[2]+'/'+m[1] : ''; }
+function _defValores(){
+  var limpio = function(v){ return String(v || '').replace(/\s+/g, ' ').trim(); };
+  return { equipo:limpio(DEF.equipo), falla:limpio(DEF.falla), ubic:limpio(DEF.ubic), fecha:_defFecha(DEF.fecha) };
+}
+function _defDibujar(){
+  var T = DEF_TIPO, H = senHoja(DEF.tam, DEF.orient), V = _defValores();
+  var doc = new jspdf.jsPDF({ unit:'mm', format:[H.w, H.h],
+                              orientation:(H.w > H.h) ? 'landscape' : 'portrait' });
+  var emp = (typeof empleador==='function') ? empleador() : {};
+  var logo = null;
+  if(emp.logo){
+    var r = 2.2, Lr = logoSinMarcoYa(emp.logo);
+    if(Lr) logo = { du: Lr.du, r: Lr.r };
+    else {
+      try{ var pr = doc.getImageProperties(emp.logo); if(pr && pr.height) r = pr.width/pr.height; }catch(e){}
+      logo = { du: emp.logo, r: r };
+    }
+  }
+  var M = 6, hueco = 4, caras = DEF.reverso ? 2 : 1, filas = Math.max(1, Math.round(+DEF.porHoja || 2));
+  var altoFila = (H.h - M*2 - hueco*(filas-1)) / filas;
+  var anchoCara = (H.w - M*2 - (caras>1 ? hueco : 0)) / caras;
+  for(var i=0; i<filas; i++){
+    var y = M + i*(altoFila + hueco);
+    _defCara(doc, T, logo, M, y, anchoCara, altoFila, V);
+    if(caras > 1) _andCara(doc, T, logo, M + anchoCara + hueco, y, anchoCara, altoFila, false);
+  }
+  doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(160,168,176);
+  doc.text(String(emp.razon||'').toUpperCase()+'  ·  cortar por el marco y doblar por el medio  ·  OBRASST',
+           H.w/2, H.h - 2.4, { align:'center' });
+  DEF.pdf = { blob: doc.output('blob'),
+              nombre: 'tarjeta-equipo-defectuoso'+(V.equipo ? '-'+_senSlug(V.equipo) : '')+'-'+H.n+'.pdf' };
+  return DEF.pdf;
+}
+/* el anverso: PELIGRO, EQUIPO DEFECTUOSO, el logo y los datos del equipo, cada uno una vez (sin firmas) */
+function _defCara(doc, T, logo, x, y, w, h, V){
+  var pad = w*0.055;
+  doc.setFillColor(T.fondo[0], T.fondo[1], T.fondo[2]);
+  doc.rect(x, y, w, h, 'F');
+  doc.setDrawColor(20,20,20); doc.setLineWidth(Math.max(0.4, Math.min(1.2, w*0.006)));
+  doc.rect(x, y, w, h, 'S');
+  doc.setTextColor(T.texto[0], T.texto[1], T.texto[2]);
+  var yy = y + pad, f1 = w*0.13/_MMPT;
+  doc.setFont('helvetica','bold'); doc.setFontSize(f1);
+  while(doc.getTextWidth(T.t1) > w - pad*2 && f1 > 6){ f1 -= 0.4; doc.setFontSize(f1); }
+  doc.text(T.t1, x + w/2, yy + f1*0.78*_MMPT, { align:'center' });
+  yy += f1*1.12*_MMPT;
+  var f2 = w*0.095/_MMPT, l2;
+  for(;;){
+    doc.setFontSize(f2);
+    l2 = doc.splitTextToSize(T.t2, w - pad*2);
+    if(l2.length <= 2 || f2 <= 6) break;
+    f2 -= 0.4;
+  }
+  l2.slice(0,2).forEach(function(l){
+    doc.text(l, x + w/2, yy + f2*0.78*_MMPT, { align:'center' });
+    yy += f2*1.12*_MMPT;
+  });
+  yy += h*0.015;
+  /* el logo, sobre un recuadro blanco para que se vea sobre el rojo */
+  if(logo && logo.du){
+    var hl = Math.min(h*0.10, w*0.16), lw = hl*logo.r, lmax = w - pad*2;
+    if(lw > lmax){ lw = lmax; hl = lw/logo.r; }
+    var cajaW = lw + w*0.05, cajaH = hl + h*0.018;
+    doc.setFillColor(255,255,255);
+    doc.rect(x + (w - cajaW)/2, yy, cajaW, cajaH, 'F');
+    try{ doc.addImage(logo.du, x + (w - lw)/2, yy + h*0.009, lw, hl, undefined, 'FAST'); }catch(e){}
+    yy += cajaH + h*0.02;
+  }
+  /* los datos, sobre blanco: una sola vez cada uno */
+  var tx = x + pad, tw = w - pad*2, ty = yy, th = (y + h - pad) - ty;
+  if(th < h*0.16) return;
+  doc.setFillColor(255,255,255); doc.rect(tx, ty, tw, th, 'F');
+  doc.setDrawColor(40,40,40); doc.setLineWidth(0.3); doc.rect(tx, ty, tw, th, 'S');
+  var unidades = 0; DEF_CAMPOS.forEach(function(F){ unidades += F[2]; });
+  var paso = th*0.9/unidades, fl = Math.max(4.5, Math.min(14, paso*0.40/_MMPT));
+  var lx = tx + tw*0.045, fin = tx + tw*0.955, u = 0, ew = 0;
+  doc.setFont('helvetica','bold'); doc.setFontSize(fl);
+  DEF_CAMPOS.forEach(function(F){ ew = Math.max(ew, doc.getTextWidth(F[1]+':')); });
+  var vx = lx + ew + tw*0.03, vw = fin - vx;
+  DEF_CAMPOS.forEach(function(F){
+    var base = ty + th*0.05 + paso*(u + 0.72), val = V[F[0]] || '';
+    doc.setFont('helvetica','bold'); doc.setFontSize(fl); doc.setTextColor(20,20,20);
+    doc.text(F[1]+':', lx, base);
+    doc.setDrawColor(150,156,162); doc.setLineWidth(0.22);
+    for(var k=0; k<F[2]; k++) doc.line(vx, base + k*paso + 0.9, fin, base + k*paso + 0.9);
+    if(val){
+      var fv = fl; doc.setFont('helvetica','normal'); doc.setFontSize(fv);
+      var lv = doc.splitTextToSize(val, vw);
+      while(lv.length > F[2] && fv > 4.5){ fv -= 0.3; doc.setFontSize(fv); lv = doc.splitTextToSize(val, vw); }
+      lv.slice(0, F[2]).forEach(function(l, j){ doc.text(l, vx, base + j*paso); });
+    }
+    u += F[2];
+  });
 }
 
 var AND = { tipo:'verde', rotulo:'', ubic:'', firmas:9, porHoja:2,
@@ -1493,13 +1609,13 @@ function senxDibujo(o, pngs){
   }
 
   return {
-    grupos: NTP_GRUPOS, senales: NTP_SENALES, tam: SEN_TAM, modelos: SENP_MODELOS, andTipos: AND_TIPOS,
+    grupos: NTP_GRUPOS, senales: NTP_SENALES, tam: SEN_TAM, modelos: SENP_MODELOS, andTipos: AND_TIPOS, defTipo: DEF_TIPO, defCampos: DEF_CAMPOS,
     hay: _hay, porK: senalPorK, svg: senalSVG, partir: _senPartir, color: senColor, corto: _senCorto, norm: _senNorm,
     hoja: senHoja, distancia: senDistancia, slug: _senSlug, iniciales: _senpIni,
     /* lote 15: el tipo de equipo («QR de equipos») de una señal, si lo tiene: 'Extintor', 'Lavaojos'… o '' */
     eqTipo: senEqTipo, qrMin: 16,
-    /* 30/10/2026 · ¿puede salir a doble cara? (las de riesgo eléctrico) */
-    doble: senDobleSe,
+    /* 30/10/2026 · ¿puede salir a doble cara? (las de riesgo eléctrico y, desde el 6/11, las de los equipos, tipo bandera) */
+    doble: senDobleSe, dobleCable: senDobleCable,
     /* lote 15: los carteles propios (los mismos de la app: modelos, fondos, cómo se guardan y se juntan) */
     propiosModelos: SENX_MODELOS, fondos: SENX_FONDOS, maxPics: SENX_MAX_PICS, picNombre: senxPicNombre,
     propioLimpio: senxLimpio, propiosJuntar: senxJuntar,
@@ -1520,7 +1636,7 @@ function senxDibujo(o, pngs){
         var u = _senDibujar(rr[0]), LY = senLayout(), lado = (u && u.lado) ? u.lado : LY.lado;
         return { blob:SEN.pdf.blob, nombre:_nom(SEN.pdf.nombre), hojas:SEN.pdf.hojas || 1, celdas:SEN.qrItems ? SEN.qrItems.length : SEN.porHoja,
                  hoja:LY.T, rej:LY.rej, w:LY.w, h:LY.h, lado:lado, ft:(u && u.ft) || 0, metros:senDistancia(lado), qr:(u && u.qr) || 0,
-                 doble:!!LY.doble, ph:LY.ph };
+                 doble:!!LY.doble, ph:LY.ph, cable:!!LY.doble && senDobleCable(o.k) };
       });
     },
 
@@ -1609,6 +1725,21 @@ function senxDibujo(o, pngs){
                 reverso:o.reverso !== false, pdf:null };
         var P = _andDibujar();
         return { blob:P.blob, nombre:_nom(P.nombre), hojas:1, hoja:senHoja(AND.tam, AND.orient) };
+      });
+    },
+
+    /* 9/11/2026 · la TARJETA DE EQUIPO DEFECTUOSO: es _defDibujar de la app (roja, sin firmas).
+       o: { equipo, falla, ubic, fecha (AAAA-MM-DD), porHoja, tam, orient, reverso } */
+    defectuoso: function(o, C){
+      o = o || {};
+      return _logoDe(C).then(function(){
+        _pon(C);
+        DEF = { equipo:String(o.equipo || '').slice(0, 60), falla:String(o.falla || '').slice(0, 140), ubic:String(o.ubic || '').slice(0, 48),
+                fecha:/^\d{4}-\d{2}-\d{2}$/.test(String(o.fecha || '')) ? String(o.fecha) : '',
+                porHoja:Math.max(1, Math.round(+o.porHoja || 2)), tam:senTamPorK(o.tam).k, orient:(o.orient === 'h') ? 'h' : 'v',
+                reverso:o.reverso !== false, pdf:null };
+        var P = _defDibujar();
+        return { blob:P.blob, nombre:_nom(P.nombre), hojas:1, hoja:senHoja(DEF.tam, DEF.orient) };
       });
     }
   };

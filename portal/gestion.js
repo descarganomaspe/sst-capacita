@@ -3288,7 +3288,7 @@ function simForm(f, pre){
   /* el que ya quedó como realizado no vuelve a «se va a hacer» (se perdería lo anotado): sin el interruptor */
   var h='<div class="seg ya-estado" id="simf-estado" role="tablist" aria-label="¿Ya se hizo?"'+((f && f.d.estado==='hecho') ? ' hidden' : '')+'>'+
       [['hecho', 'Ya se hizo'], ['programado', 'Se va a hacer']].map(function(x){ var on=(x[0]===SIMF.estado); return '<button type="button" role="tab" aria-selected="'+(on ? 'true' : 'false')+'" class="'+(on ? 'on' : '')+'" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join('')+'</div>'+
-    '<div class="campo"><label id="simf-t-t">De qué</label><div class="chips" id="simf-tipo" role="radiogroup" aria-labelledby="simf-t-t">'+simTipos().map(function(x){ var on=(x[0]===t[0]);
+    '<div class="campo"><label id="simf-t-t">De qué</label><div class="chips" id="simf-tipo" role="radiogroup" aria-labelledby="simf-t-t">'+simTipos().filter(function(x){ return typeof fenSeVe!=='function' || fenSeVe(x[0], hoy, paisObraP(), t[0]); }).map(function(x){ var on=(x[0]===t[0]);
       return '<button type="button" role="radio" class="chip'+(on ? ' on' : '')+'" aria-checked="'+(on ? 'true' : 'false')+'" data-v="'+esc(x[0])+'"><span aria-hidden="true">'+x[1]+'</span> '+esc(x[2])+'</button>'; }).join('')+'</div></div>'+
     '<div class="fila-c ya-al"><div class="campo"><label for="simf-fecha" id="simf-fecha-t">Día</label><input type="date" id="simf-fecha" value="'+esc(String(d.fecha||(SIMF.estado==='hecho' ? hoy : '')).slice(0, 10))+'"></div>'+
       '<div class="campo"><label for="simf-hora">Hora</label><input type="time" id="simf-hora" value="'+esc(d.hora||'')+'"></div>'+
@@ -3451,7 +3451,7 @@ function campForm(f, pre){
   var h='<div class="seg ya-estado" id="camf-estado" role="tablist" aria-label="¿Ya se hizo?"'+((f && f.d.estado==='hecha') ? ' hidden' : '')+'>'+
       [['hecha', 'Ya se hizo'], ['programada', 'Se va a hacer']].map(function(x){ var on=(x[0]===CAMF.estado); return '<button type="button" role="tab" aria-selected="'+(on ? 'true' : 'false')+'" class="'+(on ? 'on' : '')+'" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join('')+'</div>'+
     '<div class="campo"><label for="camf-cat">Qué campaña</label><select id="camf-cat"><option value=""'+(kcat==='' ? ' selected' : '')+'>— elige una —</option>'+
-      C.map(function(x){ return '<option value="'+esc(x[0])+'"'+(x[0]===kcat ? ' selected' : '')+'>'+esc(x[1]+' '+x[2])+'</option>'; }).join('')+
+      C.filter(function(x){ return typeof fenSeVe!=='function' || fenSeVe(x[0], hoy, paisObraP(), kcat); }).map(function(x){ return '<option value="'+esc(x[0])+'"'+(x[0]===kcat ? ' selected' : '')+'>'+esc(x[1]+' '+x[2])+'</option>'; }).join('')+
       '<option value="_otra"'+(kcat==='_otra' ? ' selected' : '')+'>Otra: la escribo yo</option></select></div>'+
     '<div id="camf-cuerpo"'+(kcat ? '' : ' hidden')+'>'+
     '<div class="fila-c ya-al"><div class="campo"><label for="camf-nombre">Nombre de la campaña</label><input id="camf-nombre" maxlength="120" value="'+esc(d.nombre||'')+'"></div>'+

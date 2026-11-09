@@ -2999,6 +2999,22 @@ function cartelReversoEquipo(o){
     g.lineWidth=3; g.strokeStyle=LIN; _cqCaja(g, X, y, lw, 52, 10); g.stroke();
     g.fillStyle=OSC; g.textAlign='left'; g.fillText(ley, X+20, y+35); y+=52+20;
     /* ── sus datos: las 3 fechas del extintor; del botiquín, dónde está y quién responde ── */
+    /* 9/11/2026 · Marcelo: «falta en esa cartilla la ubicación»: la del extintor va arriba, a todo lo ancho (la del botiquín
+       ya iba en su cajita). Sale la que se escribió en el equipo (en la app o en la web) o la raya para escribirla. */
+    if(tipo!=='Botiquín'){
+      var bhU=70, ub=String(o.ubicacion||'').trim(), eU=tx('Ubicación').toUpperCase()+':';
+      g.fillStyle='#F4F7F9'; _cqCaja(g, X, y, AN, bhU, 12); g.fill();
+      g.lineWidth=2.5; g.strokeStyle=LIN; _cqCaja(g, X, y, AN, bhU, 12); g.stroke();
+      g.font=_cqFuente(21, '800'); g.fillStyle=GRIS; g.textAlign='left';
+      var wU=g.measureText(eU).width, xU=X+16+wU+16;
+      g.fillText(eU, X+16, y+bhU/2+8);
+      if(ub){
+        var fU=_cqAjustar(g, ub, X+AN-20-xU, 1, 30, 16, '800');
+        g.font=_cqFuente(fU.s, '800'); g.fillStyle=OSC; g.textAlign='left';
+        g.fillText(fU.l[0]+(fU.l.length>1 ? '…' : ''), xU, y+bhU/2+fU.s*0.36);
+      }else{ g.lineWidth=2; g.strokeStyle='#9AA8B2'; g.beginPath(); g.moveTo(xU, y+bhU/2+14); g.lineTo(X+AN-20, y+bhU/2+14); g.stroke(); }
+      y+=bhU+14;
+    }
     var cajas=tipo==='Botiquín'
       ? [[tx('Ubicación / área'), String(o.ubicacion||'').trim() || '________________'], [tx('Responsable (SST / tópico)'), '________________']]
       : ((o.fechas && o.fechas.length) ? o.fechas.map(function(F){ return [F[0], (F[1] && F[1] !== '—') ? F[1] : '____ / ______']; })
@@ -3013,8 +3029,13 @@ function cartelReversoEquipo(o){
     });
     y+=bhC+26;
     /* ── el cuadro: cada punto, en sus 12 meses, con su cuadrado para el plumón ── */
-    var mW=56, iW=AN-12*mW, hCab=46, hDia=58, hIni=72, x0=X, xm=X+iW;
-    var hIt=Math.max(72, Math.min(100, Math.floor((H-110-y-(hCab+hDia+hIni+28+170))/items.length)));   /* las filas llenan la hoja */
+    /* 9/11/2026 · Marcelo: «día/mes de la inspección e iniciales o V° B° de quién inspecciona debería ser un poco más grande
+       para colocar la fecha y el nombre casi completo». En vez de las dos filas angostas de abajo (una columna de 56 px por
+       mes), el REGISTRO de cada mes, en dos mitades (enero a junio y julio a diciembre): el mes, el día, el nombre de quien
+       inspecciona y su firma o V° B°, con espacio para escribirlos a mano. */
+    var mW=56, iW=AN-12*mW, hCab=46, x0=X, xm=X+iW;
+    var hRegT=40, hRegC=50, hRegF=54, hReg=hRegT+hRegC+6*hRegF;
+    var hIt=Math.max(56, Math.min(100, Math.floor((H-110-y-(hCab+28+hReg+28+120))/items.length)));   /* las filas llenan la hoja */
     g.lineWidth=2.5; g.strokeStyle=LIN;
     g.fillStyle='#E3E9ED'; g.fillRect(x0, y, AN, hCab);
     g.font=_cqFuente(19, '900'); g.fillStyle=OSC; g.textAlign='left'; g.fillText(tx('Puntos a verificar cada mes').toUpperCase(), x0+12, y+30);
@@ -3028,21 +3049,43 @@ function cartelReversoEquipo(o){
       for(var i=0; i<12; i++){ var cx=xm+i*mW+mW/2, cy=y+hIt/2, q=34; g.lineWidth=3; _cqCaja(g, cx-q/2, cy-q/2, q, q, 4); g.stroke(); }
       y+=hIt; g.lineWidth=2; g.beginPath(); g.moveTo(x0, y); g.lineTo(x0+AN, y); g.stroke();
     });
-    /* el día y quién lo inspeccionó */
-    g.fillStyle='#F1F4F7'; g.fillRect(x0, y, iW, hDia+hIni);
-    g.font=_cqFuente(19, '900'); g.fillStyle=OSC; g.textAlign='left';
-    g.fillText(tx('Día / mes de la inspección'), x0+12, y+hDia/2+7);
-    g.fillText(tx('Iniciales o V° B° de quien inspecciona'), x0+12, y+hDia+hIni/2+7);
-    g.font=_cqFuente(16, '700'); g.fillStyle='#7A8A96'; g.textAlign='center';
-    for(var i2=0; i2<12; i2++) g.fillText('__/__', xm+i2*mW+mW/2, y+hDia-14);
-    g.lineWidth=2; g.beginPath(); g.moveTo(x0, y+hDia); g.lineTo(x0+AN, y+hDia); g.stroke();
-    y+=hDia+hIni;
     /* las rayas del cuadro */
     g.lineWidth=2.5; g.strokeRect(x0, yT, AN, y-yT);
     g.beginPath(); g.moveTo(xm, yT); g.lineTo(xm, y); for(var c2=1; c2<12; c2++){ g.moveTo(xm+c2*mW, yT); g.lineTo(xm+c2*mW, y); } g.stroke();
     y+=28;
+    /* ── el registro de cada mes (9/11/2026): el día, el nombre de quien inspeccionó y su firma o V° B° ── */
+    g.font=_cqFuente(19, '900'); g.fillStyle=OSC; g.textAlign='left';
+    g.fillText(tx('Registro de cada inspección mensual').toUpperCase(), x0, y+26);
+    y+=hRegT;
+    var gR=20, wR=(AN-gR)/2, cR=[0.11, 0.17, 0.47, 0.25],
+        tR=[tx('Mes'), tx('Día / mes'), tx('Nombre de quien inspecciona'), tx('Firma o V° B°')];
+    [0, 1].forEach(function(mitad){
+      var bx=x0+mitad*(wR+gR), xs=[bx], acc=bx;
+      cR.forEach(function(f){ acc+=wR*f; xs.push(acc); });
+      g.fillStyle='#E3E9ED'; g.fillRect(bx, y, wR, hRegC);
+      tR.forEach(function(t, k){
+        var fh=_cqAjustar(g, t.toUpperCase(), xs[k+1]-xs[k]-12, 1, 16, 12, '900');   /* en una línea, si entra */
+        g.font=_cqFuente(fh.s, '900'); g.fillStyle=OSC; g.textAlign='center';
+        var y0=y+hRegC/2-((fh.l.length-1)*fh.s*1.08)/2+fh.s*0.36;
+        fh.l.forEach(function(l, j){ g.fillText(l, (xs[k]+xs[k+1])/2, y0+j*fh.s*1.08); });
+      });
+      for(var r=0; r<6; r++){
+        var ry=y+hRegC+r*hRegF;
+        if(r%2){ g.fillStyle='#F7F9FA'; g.fillRect(bx, ry, wR, hRegF); }
+        g.font=_cqFuente(19, '900'); g.fillStyle=OSC; g.textAlign='center';
+        g.fillText(tx(EQ_MESES_CORTOS[mitad*6+r]), (xs[0]+xs[1])/2, ry+hRegF/2+7);
+        g.font=_cqFuente(24, '600'); g.fillStyle='#B4C0C8';
+        g.fillText('/', (xs[1]+xs[2])/2, ry+hRegF/2+9);
+      }
+      g.lineWidth=2.5; g.strokeStyle=LIN; g.strokeRect(bx, y, wR, hRegC+6*hRegF);
+      g.lineWidth=1.6; g.beginPath();
+      for(var k2=1; k2<4; k2++){ g.moveTo(xs[k2], y); g.lineTo(xs[k2], y+hRegC+6*hRegF); }
+      for(var r2=0; r2<6; r2++){ g.moveTo(bx, y+hRegC+r2*hRegF); g.lineTo(bx+wR, y+hRegC+r2*hRegF); }
+      g.stroke();
+    });
+    y+=hRegC+6*hRegF+28;
     /* ── observaciones del año ── */
-    var hObs=Math.max(150, Math.min(220, H-80-y));
+    var hObs=Math.max(110, Math.min(220, H-80-y));
     g.lineWidth=2.5; _cqCaja(g, X, y, AN, hObs, 12); g.stroke();
     g.font=_cqFuente(19, '900'); g.fillStyle=OSC; g.textAlign='left'; g.fillText(tx('Observaciones o reposiciones del año:').toUpperCase(), X+16, y+34);
     g.save(); g.setLineDash([8, 7]); g.strokeStyle='#9AA8B2'; g.lineWidth=1.6;

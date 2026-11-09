@@ -222,6 +222,29 @@ function eqUsoLimpio(f){
   if(ph) u.h=ph;
   return {uso:Object.keys(u).length ? u : null};
 }
+/* 7/11/2026 · Marcelo: «coloco el último mantenimiento anual y la próxima prueba hidrostática, guardo, pero no se guarda».
+   La regla del servidor del 14/10 (sst_equipo_qr_uso_ok) no aceptaba m ni h: sql/2026-11-07-uso-fechas.sql las acepta.
+   Mientras no esté, el equipo se guarda con todo lo demás de «Cómo se usa» (pasos, agente, kilos, recarga), sin las dos
+   fechas. Devuelve el mismo «uso» sin m ni h (null si no queda nada). */
+function eqUsoSinFechas(u){
+  if(!u || typeof u!=='object' || Array.isArray(u)) return null;
+  var c={}; Object.keys(u).forEach(function(k){ if(k!=='m' && k!=='h') c[k]=u[k]; });
+  return Object.keys(c).length ? c : null;
+}
+/* ¿qué tuvo la culpa de un 400 al guardar un equipo? Según lo que contesta el servidor: 'uso' (su regla o su columna),
+   'frecuencias', 'ubicacion', 'checklist', 'extra' (marca, modelo, serie o diseño)… o '' si no se sabe. Antes se iba
+   quitando de lo más nuevo a lo más viejo, aunque la culpa no fuera de eso (y se perdían la ubicación y las inspecciones
+   que le tocan por culpa de «uso»). Con '' se sigue haciendo así. */
+function eqCulpa400(t){
+  t=String(t||'');
+  if(/sst_equipo_qr_uso_ok|'uso' column/.test(t)) return 'uso';
+  if(/sst_equipo_qr_frec_ok|'frecuencias' column/.test(t)) return 'frecuencias';
+  var m=/'([a-z_]+)' column/.exec(t);
+  if(m) return (m[1]==='marca' || m[1]==='modelo' || m[1]==='serie' || m[1]==='diseno') ? 'extra' : m[1];
+  return '';
+}
+/* ¿se quita «k» por este 400? Sí si la culpa es suya o si no se sabe de quién es (como antes) */
+function eqCulpaEs(t, k){ var c=eqCulpa400(t); return !c || c===k; }
 
 function eqMesNombre(iso){ var M=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];
   var p=String(iso||'').split('-'); return M[(parseInt(p[1],10)||1)-1]||''; }
