@@ -673,7 +673,8 @@ function _atsTablaPdf(doc, x, y, w, filas, libre, cols, hayV){
     }
     yg += alto; i0 = i1;
   }
-  if(vacias) _atsCaja(doc, x, yg, w*cols[0], vacias*hVacia);
+  /* 10/11/2026 · en blanco (Formatos), cada fila con su casilla también en la actividad */
+  if(vacias){ if(ATS.blanco){ for(var v1=0; v1<vacias; v1++) _atsCaja(doc, x, yg+v1*hVacia, w*cols[0], hVacia); } else _atsCaja(doc, x, yg, w*cols[0], vacias*hVacia); }
   y = yy;
   if(hayV && filas.some(function(f){ return f && f.v; })){
     doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT-0.6); doc.setTextColor(_ATS_ROJO_L[0], _ATS_ROJO_L[1], _ATS_ROJO_L[2]);

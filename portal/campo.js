@@ -1177,7 +1177,7 @@ function _legwPintar(){
   h+='<div class="tarj" style="margin:0 0 14px"><div class="tarj-cuerpo" id="legw-cfg"><h2 style="margin:0 0 4px;font-size:16px">Qué lleva el legajo</h2>'+
      '<p class="ayuda" style="margin:0">Los datos del trabajador van siempre. Lo que apagues no sale en el PDF (ni en la web ni en la app) ni en lo que ve el trabajador.</p><div class="legw-secs">'+
      A.LEG_SECS.map(function(x){ return '<label><input type="checkbox" data-sec="'+x.k+'"'+(A.legSecOn(cfg, x.k) ? ' checked' : '')+'> '+esc(x.n)+'</label>'; }).join('')+'</div>'+
-     '<p class="ayuda" style="margin:0 0 8px">Las habilitaciones y el SCTR salen en el legajo que se saca desde la app: se arman con lo que tiene el celular del supervisor.</p>'+
+     '<p class="ayuda" style="margin:0 0 8px">Las habilitaciones, el SCTR y la Vida Ley salen en el legajo que se saca desde la app: se arman con lo que tiene el celular del supervisor.</p>'+
      '<label class="legw-trab"><input type="checkbox" id="legw-ver"'+(cfg.trab ? ' checked' : '')+'> Cada trabajador ve el suyo en su app, en «Mi legajo» (con estas mismas secciones)</label>'+
      (cfg.quien ? '<p class="cam-hist" style="margin:8px 0 0">Último cambio: '+esc(cfg.quien)+(cfg.cuando ? ' · '+esc(new Date(cfg.cuando).toLocaleDateString('es-PE', { day:'numeric', month:'short', year:'numeric' })) : '')+'.</p>' : '')+
      '<p class="msg" id="legw-msg"></p><div class="acciones" style="justify-content:flex-start"><button type="button" class="bt" id="legw-guardar">Guardar</button></div></div></div>';

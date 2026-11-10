@@ -7,7 +7,7 @@
      mensaje; la evidencia que se sube lo cierra).
    · Fase 2, lo que falta en la obra: «Buscar pendientes en la obra» arma la lista —químicos sin hoja MSDS → Logística;
      equipos fuera de servicio o con observación, y extintores con la recarga vencida o por vencer (V7.9h) → Mantenimiento; los que no tienen su revisión del mes → Producción; EMO
-     vencidos o por vencer → Salud; gente sin SCTR vigente o la constancia por vencer → Administración— y se elige qué
+     vencidos o por vencer → Salud; gente sin SCTR o sin Vida Ley vigentes, o la constancia por vencer → Administración— y se elige qué
      mandar. Lo que ya está pedido y abierto no se repite (el servidor lo reconoce por su referencia).
    · El servidor: sst_area_pend, con sst_area_pend_crear, _varios, _visto y _cerrar (sql/2026-11-04-v79-areas-pendientes.sql;
      «sst_aviso» es la cola de los avisos al celular y «sst_pendiente», la lista de la app: no se tocan). Nadie escribe
@@ -15,7 +15,7 @@
      del próximo examen.
    Las pruebas: pruebas/v79c.js (todo inventado). */
 var PENW={ obra:null, caja:null, n:0, L:null, filtro:'abiertos', vista:'', cand:null, sel:{} };
-var PEN_TIPOS={ auditoria:['🗂️', 'Carpeta de auditoría'], quimico:['🧪', 'Productos químicos'], emo:['🩺', 'Salud (EMO)'], sctr:['🛡️', 'SCTR'],
+var PEN_TIPOS={ auditoria:['🗂️', 'Carpeta de auditoría'], quimico:['🧪', 'Productos químicos'], emo:['🩺', 'Salud (EMO)'], sctr:['🛡️', 'SCTR y Vida Ley'],
                 equipo:['🏷️', 'Equipos y herramientas'], capacitacion:['🎓', 'Capacitación'], otro:['📌', 'Pedido'] };
 /* de dónde viene cada pendiente: la sección donde se resuelve */
 var PEN_IR={ auditoria:'aud', quimico:'quimicos', emo:'emo', sctr:'sctr', equipo:'equipos' };
@@ -167,7 +167,7 @@ function penAbrir(id){
   abrirHoja(a.titulo, areaN(a.area)+(a.cerrado ? ' · cerrado' : ''), h, pie, { sinFoco:true, id:a.id, tabla:'sst_area_pend' });
   $('pen-h-no').onclick=cerrarHoja;
   $('pen-h-copiar').onclick=function(){ _penCopiar(penTexto(a)); };
-  var bi=$('pen-h-ir'); if(bi) bi.onclick=function(){ cerrarHoja(); navegar(ir); };
+  var bi=$('pen-h-ir'); if(bi) bi.onclick=function(){ cerrarHoja(); if(a.tipo==='sctr' && typeof sctrSegIr==='function'){ sctrSegIr(/^vida:/.test(String(a.ref||'')) ? 'vida' : 'sctr'); return; } navegar(ir); };
   var bc=$('pen-h-cerrar'); if(bc) bc.onclick=function(){ penCerrar(a.id, bc); };
   /* lo vio: queda anotado si lo abre alguien de su vista (no el jefe que lo mandó). No espera; si falla, no pasa nada */
   if(!a.cerrado && !_penLoVi(a) && _penUid() && AREAW.grupo && areaGrupoDe(a.area)===AREAW.grupo){
@@ -310,16 +310,30 @@ function penCandidatos(){
     if(R.falta.length){
       var nombres=R.falta.map(function(f){ return (f.t.nombre||'')+(f.e==='no' ? '' : ' ('+String(SCTR_ESTADO_N[f.e]||'').toLowerCase()+')'); });
       items.push(_penItem('administracion', 'sctr', _penN(R.falta.length, 'persona', 'personas')+' del personal sin SCTR vigente hoy',
-        'Según las constancias cargadas en «SCTR», a estas personas les falta el SCTR (o una de sus dos coberturas, salud y pensión): '+nombres.slice(0, 40).join('; ')+(nombres.length>40 ? '; y '+(nombres.length-40)+' más' : '')+'. Incluirlas en la póliza y subir la constancia.',
+        'Según las constancias cargadas en «SCTR y Vida Ley», a estas personas les falta el SCTR (o una de sus dos coberturas, salud y pensión): '+nombres.slice(0, 40).join('; ')+(nombres.length>40 ? '; y '+(nombres.length-40)+' más' : '')+'. Incluirlas en la póliza y subir la constancia.',
         'sctr:falta:'+mes, _penMas(3)));
     }
     var vig=regs.filter(function(r){ return sctrVigente(r, hoy); }), fin=vig.map(function(r){ return r.a; }).sort().pop();
     if(fin && !regs.some(function(r){ return r.de && r.de>hoy; })){
       var d=_penDias(fin);
       if(d!==null && d<=7) items.push(_penItem('administracion', 'sctr', 'Renovar el SCTR: la constancia vence el '+_penF(fin),
-        'La constancia del SCTR que vale hoy termina el '+_penF(fin)+' y no hay otra cargada para después. Renovarla con la aseguradora y subirla en «SCTR».', 'sctr:vence:'+fin, fin));
+        'La constancia del SCTR que vale hoy termina el '+_penF(fin)+' y no hay otra cargada para después. Renovarla con la aseguradora y subirla en «SCTR y Vida Ley».', 'sctr:vence:'+fin, fin));
     }
-  }, function(){ notas.push('el SCTR (no se pudo leer)'); });
+    /* 10/11/2026 · la Vida Ley (D. Leg. 688): quién está en la obra sin póliza vigente hoy, y la póliza por vencer → Administración */
+    var vreg=(W && W.vida) || [], Rv=vidaRevisar(per, vreg, hoy);
+    if(Rv.falta.length){
+      var nomV=Rv.falta.map(function(f){ return f.t.nombre||''; });
+      items.push(_penItem('administracion', 'sctr', _penN(Rv.falta.length, 'persona', 'personas')+' del personal sin Vida Ley vigente hoy',
+        'Según las pólizas cargadas en «SCTR y Vida Ley», estas personas no están en una póliza de Vida Ley vigente: '+nomV.slice(0, 40).join('; ')+(nomV.length>40 ? '; y '+(nomV.length-40)+' más' : '')+
+        '. Incluirlas en la póliza y subir la constancia. La Vida Ley va desde el primer día de trabajo ('+VIDA_NORMA+').', 'vida:falta:'+mes, _penMas(3)));
+    }
+    var finV=vreg.filter(function(r){ return sctrVigente(r, hoy); }).map(function(r){ return r.a; }).sort().pop();
+    if(finV && !vreg.some(function(r){ return r.de && r.de>hoy; })){
+      var dV=_penDias(finV);
+      if(dV!==null && dV<=7) items.push(_penItem('administracion', 'sctr', 'Renovar la Vida Ley: la póliza vence el '+_penF(finV),
+        'La póliza de Vida Ley que vale hoy termina el '+_penF(finV)+' y no hay otra cargada para después. Renovarla con la aseguradora y subirla en «SCTR y Vida Ley».', 'vida:vence:'+finV, finV));
+    }
+  }, function(){ notas.push('el SCTR y la Vida Ley (no se pudieron leer)'); });
   return Promise.all([pQ, pE, pM, pS]).then(function(){
     var orden={}; AREAS_TRABAJO.forEach(function(a, i){ orden[a.k]=i; });
     items.sort(function(x, y){ return (orden[x.area]-orden[y.area]) || x.titulo.localeCompare(y.titulo, 'es'); });

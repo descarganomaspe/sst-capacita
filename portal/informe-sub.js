@@ -213,6 +213,108 @@ function isbZip(entradas){
 }
 /* un nombre que sirve de carpeta o de archivo en cualquier sistema */
 function isbCarpetaN(s){ return String(s || '').replace(/[\\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Carpeta'; }
+/* >>> PANEL-SUB-BASE-INI (lo pone parches/panel-sub-1011.py; el mismo en la app y en portal/informe-sub.js) <<< */
+/* 10/11/2026 · el panel fotográfico del informe de la subcontrata, más ordenado. Marcelo: «hazlo más ordenado, dónde se
+   puede agregar más fotos con sus descripciones (editadas por el usuario), y tener la opción de agregar y editar».
+   Por pedido (su título arriba), «Foto N» seguido en todo el panel, de a dos por fila y hasta tres filas por hoja, cada una
+   en su recuadro con su descripción, su fecha y su nombre (el mismo del ZIP). Las fotos van chicas (no hace falta más y el
+   PDF no pesa de más); la que no baja, no entra y se dice cuántas. Lo mismo en la app y en la web. */
+function isbEsImg(a){ return /^image\//.test((a && a.tipo) || '') || /\.(jpe?g|png|webp|gif)$/i.test((a && a.nombre) || ''); }
+/* las fotos del panel, en el orden del informe: carpeta por carpeta, pedido por pedido, como están ordenadas */
+function isbPanelLista(e){
+  var L = [], A = (e && e.archivos) || [];
+  ((e && e.estructura || {}).carpetas || []).forEach(function(cp){
+    (cp.items || []).forEach(function(it){
+      A.forEach(function(a){ if(a.i === it.k && isbEsImg(a)) L.push({ a:a, cp:cp, it:it }); });
+    });
+  });
+  return L;
+}
+function isbPanelNombre(e){ return isbCarpetaN('Panel fotográfico - ' + ((e && e.abajo_nombre) || '') + ' - ' + isbPeriodoTx((e && e.periodo) || '')) + '.pdf'; }
+/* la foto, chica y en JPEG (sin transparencias: fondo blanco) */
+function isbFotoChica(u, max){
+  max = max || 1100;
+  return fetch(u).then(function(r){ return r.ok ? r.blob() : Promise.reject(r.status); }).then(function(b){
+    return new Promise(function(ok, no){
+      var url = URL.createObjectURL(b), im = new Image();
+      im.onload = function(){
+        try{
+          var w = im.naturalWidth || 4, h = im.naturalHeight || 3, k = Math.min(1, max / Math.max(w, h)), cv = document.createElement('canvas');
+          cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k));
+          var g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(im, 0, 0, cv.width, cv.height);
+          URL.revokeObjectURL(url); ok({ d:cv.toDataURL('image/jpeg', 0.8), w:cv.width, h:cv.height });
+        }catch(x){ URL.revokeObjectURL(url); no(x); }
+      };
+      im.onerror = function(){ URL.revokeObjectURL(url); no('img'); };
+      im.src = url;
+    });
+  });
+}
+/* arma el PDF con jsPDF (J): avance(k, n) mientras bajan las fotos. 'sin_fotos' si no hay; 'no_bajan' si ninguna bajó */
+function isbPanelArmar(J, e, avance){
+  var L = isbPanelLista(e), n = L.length;
+  if(!n) return Promise.reject('sin_fotos');
+  return L.reduce(function(cad, x, k){ return cad.then(function(){
+    return isbFotoChica(x.a.u).then(function(im){ x.im = im; }, function(){ x.im = null; }).then(function(){ if(avance) try{ avance(k + 1, n); }catch(_a){} });
+  }); }, Promise.resolve()).then(function(){
+    if(!L.some(function(x){ return x.im; })) throw 'no_bajan';
+    return isbPanelDoc(J, e, L);
+  });
+}
+function isbPanelDoc(J, e, L){
+  var doc = new J({ unit:'mm', format:'a4' }), W = 210, H = 297, M = 14, ABAJO = H - 14, gx = 6, gy = 5, cw = (W - 2 * M - gx) / 2, ih = 60, capH = 20, ch = ih + capH;
+  var TINTA = [16, 42, 60], TEXTO = [33, 41, 48], GRIS = [104, 116, 126], RAYA = [200, 208, 214], FONDO = [243, 245, 247];
+  function tinta(c){ doc.setTextColor(c[0], c[1], c[2]); }
+  function relleno(c){ doc.setFillColor(c[0], c[1], c[2]); }
+  function raya(c){ doc.setDrawColor(c[0], c[1], c[2]); }
+  var ok = L.filter(function(x){ return x.im; }), fallan = L.length - ok.length;
+  /* la cabecera, en la primera hoja */
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(15); tinta(TINTA); doc.text('PANEL FOTOGRÁFICO', M, 20);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); tinta(TEXTO);
+  var cab = [String(e.nombre || 'Informe') + ' · ' + isbPeriodoTx(e.periodo),
+    String(e.abajo_nombre || '') + (e.ruc ? ' · RUC ' + e.ruc : ''),
+    'Para: ' + String(e.arriba_nombre || ''),
+    ok.length + (ok.length === 1 ? ' foto' : ' fotos') + (fallan ? ' (' + fallan + (fallan === 1 ? ' no se pudo bajar y no entra)' : ' no se pudieron bajar y no entran)') : '')];
+  cab.forEach(function(t, k){ doc.text(String(t).slice(0, 120), M, 27 + k * 5); });
+  var y = 27 + cab.length * 5 - 1;
+  raya(RAYA); doc.setLineWidth(0.3); doc.line(M, y, W - M, y); y += 5;
+  var num = 0, grupo = null, col = 0;
+  function cabGrupo(x, sigue){
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); tinta(TINTA);
+    var t = String(x.it.n || x.cp.n || '') + (sigue ? ' (continúa)' : '');
+    doc.text(t, M, y + 4);
+    if((x.cp.items || []).length > 1 && x.cp.n && x.cp.n !== x.it.n){
+      var wt = doc.getTextWidth(t); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); tinta(GRIS); doc.text('· ' + String(x.cp.n), M + wt + 2, y + 4);
+    }
+    y += 8;
+  }
+  ok.forEach(function(x){
+    if(x.it.k !== grupo){
+      if(col){ y += ch + gy; col = 0; }
+      if(y + 8 + ch > ABAJO){ doc.addPage(); y = 14; }
+      grupo = x.it.k; cabGrupo(x, false);
+    } else if(col === 0 && y + ch > ABAJO){ doc.addPage(); y = 14; cabGrupo(x, true); }
+    num++;
+    var x0 = M + col * (cw + gx), im = x.im, k = Math.min((cw - 4) / im.w, (ih - 4) / im.h), iw = im.w * k, ihh = im.h * k;
+    relleno(FONDO); doc.rect(x0, y, cw, ih, 'F');
+    try{ doc.addImage(im.d, 'JPEG', x0 + (cw - iw) / 2, y + (ih - ihh) / 2, iw, ihh); }catch(_i){}
+    raya(RAYA); doc.setLineWidth(0.3); doc.rect(x0, y, cw, ch); doc.line(x0, y + ih, x0 + cw, y + ih);
+    relleno(TINTA); doc.rect(x0, y, 17, 5.6, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(255, 255, 255); doc.text('Foto ' + num, x0 + 8.5, y + 3.9, { align:'center' });
+    var d = String(x.a.d || '').replace(/\s+/g, ' ').trim();
+    if(d){ doc.setFont('helvetica', 'bold'); doc.setFontSize(8.3); tinta(TEXTO); doc.text(doc.splitTextToSize(d, cw - 5).slice(0, 3), x0 + 2.5, y + ih + 4.4); }
+    var pie = [x.a.f ? isbFecha(x.a.f) : '', String(x.a.nombre || '')].filter(Boolean).join(' · ');
+    if(pie){ doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); tinta(GRIS); doc.text(doc.splitTextToSize(pie, cw - 5)[0] || '', x0 + 2.5, y + ch - 2); }
+    col++; if(col === 2){ col = 0; y += ch + gy; }
+  });
+  var n = doc.getNumberOfPages(), pieH = (String(e.abajo_nombre || '') + ' · ' + isbPeriodoTx(e.periodo)).slice(0, 90);
+  for(var i = 1; i <= n; i++){
+    doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); tinta(GRIS);
+    doc.text(pieH, M, H - 7); doc.text('OBRASST · ' + i + ' de ' + n, W - M, H - 7, { align:'right' });
+  }
+  return doc;
+}
+/* <<< PANEL-SUB-BASE-FIN >>> */
 /* <<< INFSUB-BASE-FIN >>> */
 
 var ISW = { caja:null, cual:'', tab:'', pant:'lista', p:{}, hist:[], ed:null, sube:0, zip:false, estTipo:'estandar', estArch:null };
@@ -261,7 +363,11 @@ function _iswCss(){
     '.isw-hh td,.isw-hh th{text-align:right;font-variant-numeric:tabular-nums}.isw-hh td:first-child,.isw-hh th:first-child{text-align:left}.isw-curva{display:block;width:100%;max-width:640px;height:auto}' +
     '.isw-hist{list-style:none;padding:0;margin:0;font-size:13px}.isw-hist li{padding:6px 0;border-top:1px solid var(--raya)}.isw-hist li:first-child{border-top:0}' +
     '.isw-emp-l{display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 0 0 24px}.isw-emp-l label{font-size:13.5px;display:flex;gap:6px;align-items:center}' +
-    '.isw-sello{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--gris)}.isw-cifras{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px}';
+    '.isw-sello{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--gris)}.isw-cifras{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px}' +
+    /* 10/11/2026 · las fotos por subir y las descripciones (PANEL-SUB) */
+    '.isw-pend{margin:10px 0 0;padding:12px 14px;border:1px dashed var(--raya2);border-radius:10px;background:var(--fondo)}.isw-pend>b{font-size:13.5px}' +
+    '.isw-a-ed textarea{display:block;width:100%;box-sizing:border-box;min-height:64px;margin:4px 0 0;font:inherit;font-size:12.5px;line-height:1.35;padding:6px 7px;border:1px solid var(--raya2);border-radius:7px;resize:vertical;background:var(--panel);color:var(--texto)}' +
+    '.isw-a-tx span.isw-d{color:var(--texto);font-size:12.5px;line-height:1.35}';
   document.head.appendChild(s);
 }
 
@@ -284,7 +390,7 @@ function iswRender(){
 function iswIr(pant, p){ ISW.hist.push({ pant:ISW.pant, p:ISW.p }); ISW.pant = pant; ISW.p = p || {}; iswRender(); }
 function iswVolver(){ var h = ISW.hist.pop() || { pant:'lista', p:{} }; ISW.pant = h.pant; ISW.p = h.p; iswRender(); }
 function iswVolverBt(){ return '<div class="isw-volver"><button type="button" class="bt sec chico" id="isw-volver">← Volver</button></div>'; }
-function iswAtarVolver(c){ var b = c.querySelector('#isw-volver'); if(b) b.onclick = function(){ if(ISW.ed && ISW.ed.cambio && ISW.pant === 'editor'){ confirmar('¿Sales sin guardar?', 'Lo que cambiaste en este informe se pierde.', { si:'Salir', mal:true }).then(function(s){ if(s){ ISW.ed = null; iswVolver(); } }); return; } iswVolver(); }; }
+function iswAtarVolver(c){ var b = c.querySelector('#isw-volver'); if(b) b.onclick = function(){ if(ISW.pant === 'entrega' && typeof iswPendHay === 'function' && iswPendHay()){ confirmar('¿Sales sin subir las fotos?', 'Las que elegiste y no subiste se descartan.', { si:'Salir', mal:true }).then(function(s){ if(s){ iswPendSoltar(); ISW.edDesc = null; iswVolver(); } }); return; } if(ISW.ed && ISW.ed.cambio && ISW.pant === 'editor'){ confirmar('¿Sales sin guardar?', 'Lo que cambiaste en este informe se pierde.', { si:'Salir', mal:true }).then(function(s){ if(s){ ISW.ed = null; iswVolver(); } }); return; } iswVolver(); }; }
 function iswPedir(c, fn, args, pinta){
   var pant = ISW.pant, cual = ISW.cual;
   c.innerHTML = '<div class="vacio">Cargando…</div>';
@@ -658,6 +764,7 @@ function iswEntrega(c){
   iswPedir(c, 'sst_inf_ver', { p:args }, function(j){ P.entrega = j.entrega.id; ISW.ent = j.entrega; iswPintarEnt(c, j.entrega); });
 }
 function iswPintarEnt(c, e){
+  iswPendDe(e);   /* 10/11/2026 · las fotos por subir son de esta entrega (PANEL-SUB) */
   var cu = e.cuenta || {}, items = cu.items || {}, carp = cu.carpetas || {}, A = e.archivos || [], abajo = e.lado === 'abajo';
   var h = iswVolverBt() + '<div class="tarj"><div class="isw-ent-cab"><div><h2>' + esc(e.nombre) + ' · ' + esc(isbPeriodoTx(e.periodo)) + '</h2>' +
     '<p class="sub" style="margin:4px 0 0">' + esc(e.abajo_nombre || '') + (e.ruc ? ' · RUC ' + esc(e.ruc) : '') + ' · para ' + esc(e.arriba_nombre || 'la principal') + '</p>' +
@@ -748,22 +855,7 @@ function iswItemVer(e, cp, it, x, A, bloqueada){
       '<button type="button" class="bt sec chico" data-dato-g="' + esc(it.k) + '">Guardar</button>';
     h += '</div>';
   }
-  if(it.tipo !== 'dato'){
-    if(A.length) h += '<div class="isw-arch">' + A.map(function(a, k){
-      var img = iswEsImg(a);
-      return '<div class="isw-a" data-a="' + esc(a.id) + '">' + (img ? '<a href="' + esc(a.u) + '" target="_blank" rel="noopener"><img class="isw-img" src="' + esc(a.u) + '" alt="' + esc(a.d || a.nombre) + '" loading="lazy"></a>'
-        : '<a class="isw-doc" href="' + esc(a.u) + '" target="_blank" rel="noopener" aria-label="Abrir ' + esc(a.nombre) + '">📄</a>') +
-        '<div class="isw-a-tx"><b>' + esc(a.nombre) + '</b>' + (a.d ? '<span>' + esc(a.d) + '</span>' : (abre && it.desc ? '<span style="color:var(--mal)">Falta su descripción</span>' : '')) + '</div>' +
-        (abre ? '<div class="isw-a-acc"><button type="button" data-mv="-1" aria-label="Antes"' + (k ? '' : ' disabled') + '>◀</button><button type="button" data-mv="1" aria-label="Después"' + (k < A.length - 1 ? '' : ' disabled') + '>▶</button>' +
-          '<button type="button" data-de aria-label="Descripción">✎</button><button type="button" data-qu aria-label="Quitar">×</button></div>' : '') + '</div>';
-    }).join('') + '</div>';
-    if(abre && (it.tipo !== 'app' || it.papel !== false)){
-      var acc = it.tipo === 'fotos' ? 'image/*' : (it.tipo === 'archivos' ? isbAccept(it.formatos) : 'image/*,.pdf');
-      h += '<div class="isw-fila" style="margin:8px 0 0"><label class="bt sec chico" style="cursor:pointer">' + (it.tipo === 'fotos' ? '+ Subir fotos' : (it.tipo === 'app' ? '+ Subir en papel (escaneado)' : '+ Subir archivo')) +
-        '<input type="file" data-sube="' + esc(it.k) + '"' + (acc ? ' accept="' + esc(acc) + '"' : '') + ' multiple hidden></label>' +
-        (it.plantilla ? '<a class="bt sec chico" href="' + esc(it.plantilla.url) + '" target="_blank" rel="noopener">Descargar el formato de la principal</a>' : '') + '</div>';
-    } else if(it.plantilla && e.lado === 'abajo') h += '<p class="isw-ayuda"><a href="' + esc(it.plantilla.url) + '" target="_blank" rel="noopener">Descargar el formato de la principal</a></p>';
-  }
+  if(it.tipo !== 'dato') h += iswArchHtml(e, it, A, abre);   /* 10/11/2026 · PANEL-SUB */
   return h + '</div>';
 }
 function iswEntAtar(c, e){
@@ -773,24 +865,14 @@ function iswEntAtar(c, e){
     var k = inp.getAttribute('data-sube'), ref = inp.getAttribute('data-ref') || null, fs = Array.prototype.slice.call(inp.files || []); if(!fs.length) return;
     var it = iswItemDe(e, k); if(!it) return;
     if(it.tipo === 'archivos'){ var malos = fs.filter(function(f){ return !isbFormatoOk(it.formatos, f.name); }); if(malos.length){ var t = '«' + malos[0].name + '» no es del formato que piden (' + (it.formatos || []).join(', ') + ').'; iswMsg('isw-emsg', t, true); toast(t); inp.value = ''; return; } }
-    var desc = '';
-    var seguir = Promise.resolve();
-    if(it.tipo === 'fotos' && it.desc && fs.length === 1) seguir = preguntar('La descripción de la foto', 'Dónde es y qué se ve (sale en el panel fotográfico).', { etiqueta:'Descripción', maximo:200 }, { si:'Subir' }).then(function(v){ if(v === null) throw 'no'; desc = v || ''; });
-    seguir.then(function(){
-      var hechos = 0, ultimo = null;
-      iswMsg('isw-emsg', 'Subiendo ' + fs.length + (fs.length === 1 ? ' archivo…' : ' archivos…'));
-      return fs.reduce(function(cad, f){ return cad.then(function(){
-        var esImg = /^image\/(jpeg|png|webp)/.test(f.type || '');
-        var listo = esImg ? achicarFoto(f, 1800, 0.82).then(function(b){ return new File([b], String(f.name || 'foto.jpg').replace(/\.[A-Za-z0-9]+$/, '') + '.jpg', { type:'image/jpeg' }); }, function(){ return f; }) : Promise.resolve(f);
-        return listo.then(function(ff){ return subirArchivoP('informes', ff).then(function(url){
-          var fe = f.lastModified ? new Date(f.lastModified) : null, fecha = fe ? fe.getFullYear() + '-' + isbDos(fe.getMonth() + 1) + '-' + isbDos(fe.getDate()) : null;
-          return sbRpc('sst_inf_subir', { p:{ entrega:e.id, item:k, url:url, original:ff.name, descripcion:desc || null, fecha:fecha, peso:ff.size, tipo:ff.type, ref:ref } }).then(function(j){
-            if(!j || !j.ok) throw { j:j }; hechos++; ultimo = j; iswMsg('isw-emsg', 'Subido ' + hechos + ' de ' + fs.length + '…');
-          });
-        }); });
-      }); }, Promise.resolve()).then(function(){ if(ultimo) rehacer(ultimo); toast(hechos === 1 ? 'Subido: ' + (ultimo.nombre || '') : 'Subidos: ' + hechos); },
-        function(x){ if(ultimo) rehacer(ultimo); err(x && x.j, x && !x.j ? x : null); });
-    }, function(){});
+    /* 10/11/2026 · las fotos con descripción quedan «por subir», cada una con su casilla (PANEL-SUB) */
+    if(it.tipo === 'fotos' && it.desc && !ref){ iswPendPoner(c, e, k, fs); inp.value = ''; return; }
+    var hechos = 0, ultimo = null;
+    iswMsg('isw-emsg', 'Subiendo ' + fs.length + (fs.length === 1 ? ' archivo…' : ' archivos…'));
+    fs.reduce(function(cad, f){ return cad.then(function(){
+      return iswSubirUno(e, k, f, '', ref).then(function(j){ hechos++; ultimo = j; iswMsg('isw-emsg', 'Subido ' + hechos + ' de ' + fs.length + '…'); });
+    }); }, Promise.resolve()).then(function(){ if(ultimo) rehacer(ultimo); toast(hechos === 1 ? 'Subido: ' + (ultimo.nombre || '') : 'Subidos: ' + hechos); },
+      function(x){ if(ultimo) rehacer(ultimo); err(x && x.j, x && !x.j ? x : null); });
   }; });
   Array.prototype.forEach.call(c.querySelectorAll('.isw-a[data-a]'), function(d){
     var id = d.getAttribute('data-a');
@@ -835,7 +917,8 @@ function iswEntAtar(c, e){
     confirmar('¿Todo conforme?', 'Se aprueba y se sella: ya no se cambia. Si algo falta, mejor observa esa carpeta.', { si:'Aprobar' }).then(function(s){ if(s) revisar({ todas:true, e:'conforme' }); });
   };
   var z = $('isw-zip'); if(z) z.onclick = function(){ iswZipVarios([e.id], null, 'isw-emsg', e); };
-  var pn = $('isw-panel'); if(pn) pn.onclick = function(){ iswPanelPdf(e); };
+  var pn = $('isw-panel'); if(pn) pn.onclick = function(){ iswPanelPedir(e); };
+  iswPendAtar(c, e, rehacer, err);   /* 10/11/2026 · las fotos por subir y las descripciones (PANEL-SUB) */
   var an = $('isw-anio'); if(an) an.onclick = function(){ iswIr('anual', { inf:e.inf, enlace:e.enlace, anio:String(e.periodo).slice(0, 4) }); };
 }
 function iswItemDe(e, k){ var r = null; ((e.estructura || {}).carpetas || []).forEach(function(cp){ (cp.items || []).forEach(function(it){ if(it.k === k) r = it; }); }); return r; }
@@ -879,36 +962,208 @@ function iswZipVarios(ids, nombre, msg, una){
     iswMsg(msg, 'Listo: se bajó el ZIP.'); ISW.zip = false;
   }, function(x){ ISW.zip = false; iswMsg(msg, iswMotivo(null, x), true); });
 }
-/* el panel fotográfico: 2 fotos por hoja, con su nombre, su descripción y su fecha; la portada con la empresa */
+/* >>> PANEL-SUB-WEB-INI (lo pone parches/panel-sub-1011.py) <<< */
+/* 10/11/2026 · las fotos con su descripción. Marcelo: «dónde se puede agregar más fotos con sus descripciones (editadas por
+   el usuario), y tener la opción de agregar y editar». En un pedido de fotos con descripción, las que se eligen quedan «por
+   subir», cada una con su casilla para escribir dónde es y qué se ve, y se suben juntas; se pueden sumar otras o quitar
+   alguna antes. Las ya subidas se describen todas de una vez («Escribir las descripciones que faltan» / «Editar las
+   descripciones»), y una por una con ✎ como siempre. */
+var ISW_DESC_PH = 'Dónde es y qué se ve. Ej.: charla de 5 minutos en el frente 2, antes del vaciado';
+function iswPendDe(e){
+  if(!ISW.pend || ISW.pend.e !== e.id){ iswPendSoltar(); ISW.pend = { e:e.id, m:{} }; ISW.edDesc = null; ISW.edVal = {}; }
+  return ISW.pend;
+}
+function iswPendSoltar(k){
+  if(!ISW.pend) return;
+  Object.keys(ISW.pend.m).forEach(function(q){
+    if(k != null && q !== k) return;
+    (ISW.pend.m[q] || []).forEach(function(p){ try{ if(p.u) URL.revokeObjectURL(p.u); }catch(_u){} });
+    delete ISW.pend.m[q];
+  });
+}
+function iswPendHay(){ return !!(ISW.pend && Object.keys(ISW.pend.m).some(function(q){ return (ISW.pend.m[q] || []).length; })); }
+/* lo escrito en las casillas, al estado (antes de volver a pintar) */
+function iswPendLeer(c){
+  Array.prototype.forEach.call(c.querySelectorAll('textarea[data-pd]'), function(t){
+    var L = ISW.pend && ISW.pend.m[t.getAttribute('data-pk')], i = +t.getAttribute('data-pd'); if(L && L[i]) L[i].d = t.value;
+  });
+  Array.prototype.forEach.call(c.querySelectorAll('textarea[data-ed]'), function(t){ ISW.edVal = ISW.edVal || {}; ISW.edVal[t.getAttribute('data-ed')] = t.value; });
+}
+function iswRepintar(c, e, foco){
+  var y = window.scrollY; iswPintarEnt(c, ISW.ent || e); try{ window.scrollTo(0, y); }catch(_e){}
+  if(!foco) return;
+  var L = c.querySelectorAll(foco), t = null;
+  for(var i = 0; i < L.length; i++){ if(!L[i].value){ t = L[i]; break; } }
+  t = t || L[0];
+  if(t){ try{ t.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(_s){} try{ t.focus({ preventScroll:true }); }catch(_f){} }
+}
+/* los archivos de un pedido: las fotos (o su casilla para describirlas), las por subir y los botones */
+function iswArchHtml(e, it, A, abre){
+  var h = '', P = abre && ISW.pend && ISW.pend.e === e.id ? (ISW.pend.m[it.k] || []) : [], ed = abre && it.desc && ISW.edDesc === it.k && A.length;
+  if(A.length) h += '<div class="isw-arch">' + A.map(function(a, k){
+    var img = iswEsImg(a);
+    var vista = img ? '<a href="' + esc(a.u) + '" target="_blank" rel="noopener"><img class="isw-img" src="' + esc(a.u) + '" alt="' + esc(a.d || a.nombre) + '" loading="lazy"></a>'
+      : '<a class="isw-doc" href="' + esc(a.u) + '" target="_blank" rel="noopener" aria-label="Abrir ' + esc(a.nombre) + '">📄</a>';
+    if(ed){
+      var v = ISW.edVal && ISW.edVal[a.id] != null ? ISW.edVal[a.id] : (a.d || '');
+      return '<div class="isw-a isw-a-ed" data-a="' + esc(a.id) + '">' + vista + '<div class="isw-a-tx"><b>' + esc(a.nombre) + '</b>' +
+        '<textarea data-ed="' + esc(a.id) + '" maxlength="200" rows="3" aria-label="La descripción de ' + esc(a.nombre) + '" placeholder="' + esc(ISW_DESC_PH) + '">' + esc(v) + '</textarea></div></div>';
+    }
+    return '<div class="isw-a" data-a="' + esc(a.id) + '">' + vista +
+      '<div class="isw-a-tx"><b>' + esc(a.nombre) + '</b>' + (a.d ? '<span class="isw-d">' + esc(a.d) + '</span>' : (abre && it.desc ? '<span style="color:var(--mal)">Falta su descripción</span>' : '')) + '</div>' +
+      (abre ? '<div class="isw-a-acc"><button type="button" data-mv="-1" aria-label="Antes"' + (k ? '' : ' disabled') + '>◀</button><button type="button" data-mv="1" aria-label="Después"' + (k < A.length - 1 ? '' : ' disabled') + '>▶</button>' +
+        '<button type="button" data-de aria-label="Descripción">✎</button><button type="button" data-qu aria-label="Quitar">×</button></div>' : '') + '</div>';
+  }).join('') + '</div>';
+  if(ed) return h + '<div class="isw-fila" style="margin:8px 0 0;align-items:center"><button type="button" class="bt sec chico" data-ed-no>Cancelar</button>' +
+    '<button type="button" class="bt chico" data-ed-si>Guardar las descripciones</button><span class="msg" id="isw-ed-msg" role="status"></span></div>';
+  if(P.length) return h + iswPendHtml(it, P);
+  if(abre && (it.tipo !== 'app' || it.papel !== false)){
+    var acc = it.tipo === 'fotos' ? 'image/*' : (it.tipo === 'archivos' ? isbAccept(it.formatos) : 'image/*,.pdf');
+    var sin = it.desc ? A.filter(function(a){ return !String(a.d || '').trim(); }).length : 0;
+    h += '<div class="isw-fila" style="margin:8px 0 0"><label class="bt sec chico" style="cursor:pointer">' +
+      (it.tipo === 'fotos' ? (it.desc ? '+ Agregar fotos' : '+ Subir fotos') : (it.tipo === 'app' ? '+ Subir en papel (escaneado)' : '+ Subir archivo')) +
+      '<input type="file" data-sube="' + esc(it.k) + '"' + (acc ? ' accept="' + esc(acc) + '"' : '') + ' multiple hidden></label>' +
+      (it.desc && A.length ? '<button type="button" class="bt sec chico" data-ed-ir="' + esc(it.k) + '">' + (sin ? '✎ Escribir las descripciones que faltan (' + sin + ')' : '✎ Editar las descripciones') + '</button>' : '') +
+      (it.plantilla ? '<a class="bt sec chico" href="' + esc(it.plantilla.url) + '" target="_blank" rel="noopener">Descargar el formato de la principal</a>' : '') + '</div>';
+  } else if(it.plantilla && e.lado === 'abajo') h += '<p class="isw-ayuda"><a href="' + esc(it.plantilla.url) + '" target="_blank" rel="noopener">Descargar el formato de la principal</a></p>';
+  return h;
+}
+function iswPendHtml(it, P){
+  var n = P.length, k = esc(it.k);
+  return '<div class="isw-pend" data-pend="' + k + '"><b>' + n + (n === 1 ? ' foto por subir' : ' fotos por subir') + '</b>' +
+    '<p class="isw-ayuda">Escribe en cada una dónde es y qué se ve: sale debajo de la foto en el panel fotográfico. La que no sepas ahora, la escribes después.</p>' +
+    '<div class="isw-arch">' + P.map(function(p, i){
+      return '<div class="isw-a isw-a-ed">' + (p.u ? '<img class="isw-img" src="' + esc(p.u) + '" alt="">' : '<span class="isw-doc">🖼️</span>') +
+        '<div class="isw-a-tx"><b>' + esc(p.f.name || 'foto') + '</b><textarea data-pk="' + k + '" data-pd="' + i + '" maxlength="200" rows="3" aria-label="La descripción de ' + esc(p.f.name || 'la foto') + '" placeholder="' + esc(ISW_DESC_PH) + '">' + esc(p.d || '') + '</textarea></div>' +
+        '<div class="isw-a-acc"><button type="button" data-pk="' + k + '" data-pq="' + i + '">Quitar</button></div></div>';
+    }).join('') + '</div>' +
+    '<div class="isw-fila" style="margin:10px 0 0;align-items:center"><label class="bt sec chico" style="cursor:pointer">+ Otras fotos<input type="file" data-sube="' + k + '" accept="image/*" multiple hidden></label>' +
+    '<span style="flex:1"></span><button type="button" class="bt sec chico" data-pend-no="' + k + '">Cancelar</button>' +
+    '<button type="button" class="bt chico" data-pend-si="' + k + '">' + (n === 1 ? 'Subir la foto' : 'Subir las ' + n + ' fotos') + '</button></div>' +
+    '<span class="msg" data-pend-msg="' + k + '" role="status"></span></div>';
+}
+/* las elegidas, a «por subir» (hasta 40 a la vez) */
+function iswPendPoner(c, e, k, fs){
+  iswPendLeer(c);
+  var P = iswPendDe(e), L = P.m[k] || (P.m[k] = []), malos = 0, mas = 0;
+  fs.forEach(function(f){
+    if(!/^image\//.test(f.type || '') && !/\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name || '')){ malos++; return; }
+    if(L.length >= 40){ mas++; return; }
+    var u = ''; try{ u = URL.createObjectURL(f); }catch(_u){}
+    L.push({ f:f, u:u, d:'' });
+  });
+  if(!L.length) delete P.m[k];
+  if(malos) toast(malos === 1 ? 'Un archivo no era una foto: no entra.' : malos + ' archivos no eran fotos: no entran.');
+  else if(mas) toast('Hasta 40 fotos a la vez: sube estas y después las otras.');
+  iswRepintar(c, e, '[data-pend="' + k + '"] textarea');
+}
+/* subir una (la foto, más chica) y anotarla en la entrega */
+function iswSubirUno(e, k, f, desc, ref){
+  var esImg = /^image\/(jpeg|png|webp)/.test(f.type || '');
+  var listo = esImg ? achicarFoto(f, 1800, 0.82).then(function(b){ return new File([b], String(f.name || 'foto.jpg').replace(/\.[A-Za-z0-9]+$/, '') + '.jpg', { type:'image/jpeg' }); }, function(){ return f; }) : Promise.resolve(f);
+  return listo.then(function(ff){ return subirArchivoP('informes', ff).then(function(url){
+    var fe = f.lastModified ? new Date(f.lastModified) : null, fecha = fe ? fe.getFullYear() + '-' + isbDos(fe.getMonth() + 1) + '-' + isbDos(fe.getDate()) : null;
+    return sbRpc('sst_inf_subir', { p:{ entrega:e.id, item:k, url:url, original:ff.name, descripcion:desc || null, fecha:fecha, peso:ff.size, tipo:ff.type, ref:ref || null } }).then(function(j){
+      if(!j || !j.ok) throw { j:j };
+      return j;
+    });
+  }); });
+}
+function iswPendSubir(c, e, k, rehacer, err){
+  iswPendLeer(c);
+  var L = (ISW.pend && ISW.pend.m[k]) || []; if(!L.length || ISW.pendSube) return;
+  var caja = c.querySelector('[data-pend="' + k + '"]'), msg = caja ? caja.querySelector('[data-pend-msg]') : null;
+  if(caja) Array.prototype.forEach.call(caja.querySelectorAll('button, input, textarea'), function(x){ x.disabled = true; });
+  var tot = L.length, hechos = 0, ultimo = null;
+  function dice(t){ if(msg){ msg.className = 'msg gris'; msg.textContent = t; } }
+  ISW.pendSube = true; dice(tot === 1 ? 'Subiendo la foto…' : 'Subiendo 1 de ' + tot + '…');
+  L.slice().reduce(function(cad, p){ return cad.then(function(){
+    return iswSubirUno(e, k, p.f, String(p.d || '').replace(/\s+/g, ' ').trim().slice(0, 200), null).then(function(j){
+      hechos++; ultimo = j;
+      var i = L.indexOf(p); if(i >= 0){ try{ if(p.u) URL.revokeObjectURL(p.u); }catch(_u){} L.splice(i, 1); }
+      if(hechos < tot) dice('Subiendo ' + (hechos + 1) + ' de ' + tot + '…');
+    });
+  }); }, Promise.resolve()).then(function(){
+    ISW.pendSube = false; if(ISW.pend) delete ISW.pend.m[k];
+    if(!ultimo || !rehacer(ultimo)) iswRepintar(c, e);
+    toast(hechos === 1 ? 'Subida la foto' : 'Subidas las ' + hechos + ' fotos');
+  }, function(x){
+    ISW.pendSube = false; if(!L.length && ISW.pend) delete ISW.pend.m[k];
+    if(!ultimo || !rehacer(ultimo)) iswRepintar(c, e);
+    err(x && x.j, x && !x.j ? x : null);
+  });
+}
+/* las descripciones de las ya subidas, todas de una vez: solo se guardan las que cambiaron */
+function iswDescGuardar(c, e, b, rehacer, err){
+  iswPendLeer(c);
+  var A = e.archivos || [], cambios = [];
+  Object.keys(ISW.edVal || {}).forEach(function(id){
+    var a = A.filter(function(x){ return x.id === id; })[0]; if(!a) return;
+    var v = String(ISW.edVal[id] || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if(v !== String(a.d || '').trim()) cambios.push({ id:id, v:v });
+  });
+  if(!cambios.length){ ISW.edDesc = null; ISW.edVal = {}; iswRepintar(c, e); toast('No cambiaste nada'); return; }
+  var m = $('isw-ed-msg'); b.disabled = true; if(m){ m.className = 'msg gris'; m.textContent = 'Guardando…'; }
+  var ultimo = null, hechos = 0;
+  cambios.reduce(function(cad, x){ return cad.then(function(){
+    return sbRpc('sst_inf_archivo_cambiar', { p:{ entrega:e.id, id:x.id, descripcion:x.v } }).then(function(j){ if(!j || !j.ok) throw { j:j }; ultimo = j; hechos++; });
+  }); }, Promise.resolve()).then(function(){
+    ISW.edDesc = null; ISW.edVal = {};
+    if(!rehacer(ultimo)) iswRepintar(c, e);
+    toast(hechos === 1 ? 'Guardada la descripción' : 'Guardadas ' + hechos + ' descripciones');
+  }, function(x){
+    b.disabled = false;
+    if(ultimo) rehacer(ultimo);
+    err(x && x.j, x && !x.j ? x : null);
+  });
+}
+function iswPendAtar(c, e, rehacer, err){
+  Array.prototype.forEach.call(c.querySelectorAll('[data-pq]'), function(b){ b.onclick = function(){
+    iswPendLeer(c);
+    var k = b.getAttribute('data-pk'), L = ISW.pend && ISW.pend.m[k], i = +b.getAttribute('data-pq'); if(!L || !L[i]) return;
+    try{ if(L[i].u) URL.revokeObjectURL(L[i].u); }catch(_u){}
+    L.splice(i, 1); if(!L.length) delete ISW.pend.m[k];
+    iswRepintar(c, e);
+  }; });
+  Array.prototype.forEach.call(c.querySelectorAll('[data-pend-no]'), function(b){ b.onclick = function(){
+    iswPendLeer(c);
+    var k = b.getAttribute('data-pend-no'), L = (ISW.pend && ISW.pend.m[k]) || [];
+    var fuera = function(){ iswPendSoltar(k); iswRepintar(c, e); };
+    if(L.length > 1 || L.some(function(p){ return String(p.d || '').trim(); }))
+      confirmar('¿Descartas estas fotos?', 'No se suben. Las que ya estaban subidas quedan como están.', { si:'Descartar', mal:true }).then(function(s){ if(s) fuera(); });
+    else fuera();
+  }; });
+  Array.prototype.forEach.call(c.querySelectorAll('[data-pend-si]'), function(b){ b.onclick = function(){ iswPendSubir(c, e, b.getAttribute('data-pend-si'), rehacer, err); }; });
+  Array.prototype.forEach.call(c.querySelectorAll('[data-ed-ir]'), function(b){ b.onclick = function(){
+    iswPendLeer(c); ISW.edDesc = b.getAttribute('data-ed-ir'); ISW.edVal = {}; iswRepintar(c, e, '[data-ed]');
+  }; });
+  var en = c.querySelector('[data-ed-no]'); if(en) en.onclick = function(){ ISW.edDesc = null; ISW.edVal = {}; iswRepintar(c, e); };
+  var es = c.querySelector('[data-ed-si]'); if(es) es.onclick = function(){ iswDescGuardar(c, e, es, rehacer, err); };
+}
+/* el panel fotográfico en PDF: lo arma isbPanelArmar (lo mismo que la app); se ve primero y desde ahí se baja */
 function iswPanelPdf(e){
-  var F = (e.archivos || []).filter(iswEsImg);
-  if(!F.length) return;
-  iswMsg('isw-emsg', 'Armando el panel fotográfico…');
+  if(ISW.panel || !isbPanelLista(e).length) return;
+  ISW.panel = true; iswMsg('isw-emsg', 'Armando el panel fotográfico…');
   cargarEvPDF().then(function(){
     var J = window.jspdf && window.jspdf.jsPDF; if(!J) throw 'sin_pdf';
-    var doc = new J({ unit:'mm', format:'a4' }), W = 210, M = 14;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('Panel fotográfico', M, 22);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
-    [e.nombre + ' · ' + isbPeriodoTx(e.periodo), (e.abajo_nombre || '') + (e.ruc ? ' · RUC ' + e.ruc : ''), 'Para: ' + (e.arriba_nombre || ''), F.length + (F.length === 1 ? ' foto' : ' fotos')].forEach(function(t, k){ doc.text(String(t), M, 32 + k * 6); });
-    var y = 62, enHoja = 0;
-    return F.reduce(function(cad, a, k){ return cad.then(function(){
-      return fetch(a.u).then(function(r){ return r.ok ? r.blob() : Promise.reject(r.status); }).then(function(b){ return new Promise(function(ok, no){ var fr = new FileReader(); fr.onload = function(){ ok(fr.result); }; fr.onerror = no; fr.readAsDataURL(b); }); })
-        .then(function(durl){ return new Promise(function(ok){ var im = new Image(); im.onload = function(){ ok({ d:durl, w:im.naturalWidth, h:im.naturalHeight }); }; im.onerror = function(){ ok({ d:durl, w:4, h:3 }); }; im.src = durl; }); })
-        .then(function(im){
-          if(enHoja === 2 || (k === 0 && y > 60)){ doc.addPage(); y = 16; enHoja = 0; }
-          var mw = W - 2 * M, mh = 108, r = Math.min(mw / im.w, mh / im.h), w = im.w * r, h = im.h * r;
-          try{ doc.addImage(im.d, /png/i.test(im.d.slice(0, 30)) ? 'PNG' : 'JPEG', M + (mw - w) / 2, y, w, h); }catch(_i){}
-          doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.text(String(a.nombre), M, y + h + 5);
-          doc.setFont('helvetica', 'normal'); doc.text(doc.splitTextToSize(String((a.d || '') + (a.f ? '  ·  ' + isbFecha(a.f) : '')), mw), M, y + h + 10);
-          y += h + 22; enHoja++;
-        }, function(){});
-    }); }, Promise.resolve()).then(function(){
-      var n = doc.getNumberOfPages(); for(var i = 1; i <= n; i++){ doc.setPage(i); doc.setFontSize(8); doc.text('OBRASST · ' + i + ' de ' + n, W - M, 290, { align:'right' }); }
-      bajarBlob(doc.output('blob'), isbCarpetaN('Panel fotográfico - ' + (e.abajo_nombre || '') + ' - ' + isbPeriodoTx(e.periodo)) + '.pdf');
-      iswMsg('isw-emsg', 'Listo: se bajó el panel fotográfico.');
-    });
-  }).catch(function(x){ iswMsg('isw-emsg', iswMotivo(null, x), true); });
+    return isbPanelArmar(J, e, function(k, n){ iswMsg('isw-emsg', 'Bajando las fotos: ' + k + ' de ' + n + '…'); });
+  }).then(function(doc){
+    ISW.panel = false;
+    bajarBlob(doc.output('blob'), isbPanelNombre(e));
+    iswMsg('isw-emsg', 'Listo: el panel fotográfico.');
+  }).catch(function(x){
+    ISW.panel = false;
+    iswMsg('isw-emsg', x === 'no_bajan' ? 'Las fotos no se pudieron bajar: revisa tu conexión e inténtalo otra vez.' : iswMotivo(null, x), true);
+  });
 }
+/* antes de armarlo, si a la que lo presenta le faltan descripciones, se le dice */
+function iswPanelPedir(e){
+  var sin = e.puede ? isbPanelLista(e).filter(function(x){ return x.it.desc && !String(x.a.d || '').trim(); }).length : 0;
+  if(!sin) return iswPanelPdf(e);
+  confirmar(sin === 1 ? 'Una foto no tiene su descripción' : sin + ' fotos no tienen su descripción', 'Salen en el panel sin ella. Puedes escribirlas antes con «Escribir las descripciones que faltan» en su pedido.', { si:'Armar el panel igual' })
+    .then(function(s){ if(s) iswPanelPdf(e); });
+}
+/* <<< PANEL-SUB-WEB-FIN >>> */
 
 /* ══ 6 · EL AÑO: cada mes con su estado y su avance (la curva), lo de la app sumado y el ZIP del año ══════════════ */
 function iswAnual(c){

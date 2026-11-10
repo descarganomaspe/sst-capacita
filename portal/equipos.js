@@ -1,5 +1,153 @@
 /* OBRASST · lo común de los equipos y herramientas con QR, para el portal.
    Lo arma armar.py desde equipos-base.js e inspeq-base.js (los mismos de la app). No editar. */
+/* >>> HOJA-A4-INI (10/11/2026 · lo mismo en la app, en portal/equipos.js y en portal/formatos.js; se copia con herr/copiar-bloque.py) <<< */
+/* ══════════════════════════════════════════════════════════════════
+   UNA HOJA, O DOS LLENAS (10/11/2026)
+   Marcelo: «Los formatos de inspección tiene que ser una hoja A4 (1
+   cara), si es que pasa más, que ocupen el total de las dos caras sí
+   o sí, y no que vaya solamente la firma en la siguiente cara».
+   Quien arma el PDF describe lo que va como una lista de bloques (una
+   fila, un título, la tabla de firmas…) a una escala s, y aquí se
+   decide cómo sale:
+     1. Si entra en UNA hoja (con la letra hasta un 18 % más chica),
+        sale en una.
+     2. Si no, en DOS: con la letra más grande que entre en dos, las
+        tablas en blanco suman filas hasta llenar la segunda y lo que
+        sobra en cada hoja se reparte entre las filas. Nunca queda la
+        firma sola: va con las últimas filas de lo de arriba.
+     3. Solo si ni con la letra mínima entra en dos, salen las que
+        hagan falta, cada una llena.
+   Un bloque: { h: alto, est: cuánto puede crecer, sig: va pegado al
+   que sigue, ant: n (se lleva los n de antes si cae primero en una
+   hoja), salto: empieza hoja nueva, cab: la cabecera de su tabla (se
+   repite si la tabla sigue en otra hoja), crece: la tabla en blanco a
+   la que pertenece (se le pueden sumar filas), fila: el alto de una
+   fila de esa tabla }. El alto útil de cada hoja lo da U(i, s).
+   Sin DOM y sin jsPDF: solo cuentas.
+   ══════════════════════════════════════════════════════════════════ */
+var HojaA4 = (function(){
+  'use strict';
+  function _hjSuma(L){ var t = 0; L.forEach(function(b){ t += b.h; }); return t; }
+  /* reparte los bloques en hojas: pegados, cabeceras repetidas y la firma acompañada */
+  function _hjPaginar(B, U, s){
+    var pags = [], act = [], usado = 0, pi = 0;
+    function cerrar(){ pags.push(act); act = []; usado = 0; pi++; }
+    for(var i = 0; i < B.length; i++){
+      var b = B[i];
+      if(b.salto && act.length){ cerrar(); }
+      /* lo que va pegado al que sigue: entra junto o se va junto */
+      var grupo = [b], j = i;
+      while(B[j] && B[j].sig && B[j + 1] && !B[j + 1].salto){ j++; grupo.push(B[j]); }
+      var hg = _hjSuma(grupo);
+      if(act.length && usado + hg > U(pi, s)){
+        /* la firma (o lo que pide compañía) no empieza sola una hoja: se lleva los de antes */
+        var lleva = [], ant = b.ant || 0;
+        if(ant){
+          var k = act.length;
+          var cuenta = 0;
+          while(k > 0 && cuenta < ant && !act[k - 1].cabRep && !act[k - 1].noMover){ k--; lleva.unshift(act[k]); if(!act[k].esp) cuenta++; }
+          act = act.slice(0, k);
+        }
+        cerrar();
+        /* la tabla sigue: su cabecera otra vez arriba */
+        var primero = lleva[0] || grupo[0];
+        if(primero && primero.cab && !(lleva[0] && lleva[0].cabRep)){ var c = {}; for(var x in primero.cab) c[x] = primero.cab[x]; c.cabRep = true; act.push(c); usado += c.h; }
+        lleva.forEach(function(z){ act.push(z); usado += z.h; });
+      }
+      grupo.forEach(function(z){ act.push(z); usado += z.h; });
+      i = j;
+    }
+    if(act.length || !pags.length) pags.push(act);
+    return pags;
+  }
+  /* lo que sobra en cada hoja: a las filas que pueden crecer, en proporción */
+  function _hjEstirar(pags, U, s){
+    pags.forEach(function(P, pi){
+      var gap = U(pi, s) - _hjSuma(P);
+      P.forEach(function(b){ b.hf = b.h; });
+      if(gap <= 0.01) return;
+      var est = 0; P.forEach(function(b){ est += (b.est || 0); });
+      if(est <= 0) return;
+      /* hasta lo que cada uno puede crecer; si igual sobra (la última hoja de dos), un poco más: nunca media hoja en blanco */
+      var k = Math.min(3, gap / est);
+      P.forEach(function(b){ if(b.est) b.hf = b.h + b.est * k; });
+    });
+    return pags;
+  }
+  /* cuántas filas en blanco le caben a cada tabla que crece, en la hoja donde termina */
+  function _hjSumarFilas(pags, U, s, extra, tope){
+    var cambio = false;
+    pags.forEach(function(P, pi){
+      var gap = U(pi, s) - _hjSuma(P);
+      if(gap <= 0) return;
+      /* la última tabla que crece en esta hoja */
+      var t = null;
+      for(var q = P.length - 1; q >= 0; q--) if(P[q].crece && !P[q].cabRep){ t = P[q]; break; }
+      if(!t || !t.fila) return;
+      var n = Math.floor((gap + 0.001) / t.fila);
+      if(tope && tope[t.crece] !== undefined) n = Math.min(n, Math.max(0, tope[t.crece] - (extra[t.crece] || 0)));
+      if(n > 0){ extra[t.crece] = (extra[t.crece] || 0) + n; cambio = true; }
+    });
+    return cambio;
+  }
+  /* armar(s, extra) → bloques; U(i, s) → alto útil de la hoja i; op: { s1:[máx, mín] para una hoja, s2:[máx, mín] para dos, sMin, tope:{tabla: filas extra máximas}, hojas: 2 si va siempre en dos (anverso y reverso) } */
+  function ajustar(armar, U, op){
+    op = op || {};
+    var s1 = op.s1 || [1.08, 0.82], s2 = op.s2 || [1.25, 0.72], paso = 0.02, m = null, s, B, P;
+    if(op.hojas !== 2){
+      for(s = s1[0]; s >= s1[1] - 1e-9; s -= paso){
+        B = armar(s, {}); P = _hjPaginar(B, U, s);
+        if(P.length === 1){ m = { s:s, extra:{} }; break; }
+      }
+    }
+    if(!m){
+      for(s = s2[0]; s >= s2[1] - 1e-9; s -= paso){
+        B = armar(s, {}); P = _hjPaginar(B, U, s);
+        if(P.length <= 2){ m = { s:s, extra:{} }; break; }
+      }
+    }
+    if(!m) m = { s:op.sMin || s2[1], extra:{} };
+    m.s = Math.round(m.s * 100) / 100;
+    /* las tablas en blanco crecen hasta llenar (sin pasar de las hojas que ya salieron) */
+    B = armar(m.s, m.extra); P = _hjPaginar(B, U, m.s);
+    var n0 = P.length;
+    for(var it = 0; it < 4; it++){
+      var ex = {}; for(var x in m.extra) ex[x] = m.extra[x];
+      if(!_hjSumarFilas(P, U, m.s, ex, op.tope)) break;
+      var B2 = armar(m.s, ex), P2 = _hjPaginar(B2, U, m.s);
+      if(P2.length > n0){ break; }
+      m.extra = ex; B = B2; P = P2;
+    }
+    m.pags = _hjEstirar(P, U, m.s);
+    return m;
+  }
+  /* para los PDF que se dibujan de arriba abajo con su propio salto (la inspección hecha, con sus fotos): prueba(k, e)
+     dibuja de prueba con la letra k y el aire e (sin fotos) y dice { hojas, firmaSola }; aquí se elige: una hoja si entra
+     con k ≥ 0.82 (y el aire que la llene); si no, dos hojas con la firma acompañada y el aire que llene la segunda */
+  function _hjElegir(prueba, op){
+    op = op || {};
+    var eMax = op.eMax || 14, k, r;
+    function masAire(k, ok){
+      var lo = 0, hi = eMax, mejor = 0;
+      for(var i = 0; i < 6; i++){ var m = (lo + hi) / 2; if(ok(prueba(k, m))){ mejor = m; lo = m; } else hi = m; }
+      /* 10/11/2026 · hacia abajo: redondear para arriba daba un aire que no se probó, y la firma se iba sola a la hoja siguiente */
+      return Math.floor(mejor * 10) / 10;
+    }
+    for(k = op.k1 || 1.0; k >= 0.82 - 1e-9; k -= 0.04){
+      r = prueba(k, 0);
+      if(r.hojas === 1) return { k:k, e:masAire(k, function(x){ return x.hojas === 1; }), hojas:1 };
+    }
+    for(k = op.k2 || 1.15; k >= 0.72 - 1e-9; k -= 0.04){
+      r = prueba(k, 0);
+      if(r.hojas <= 2 && !r.firmaSola) return { k:k, e:masAire(k, function(x){ return x.hojas <= 2 && !x.firmaSola; }), hojas:r.hojas };
+    }
+    /* no entra en dos: la letra mínima y la firma, igual, acompañada si se puede */
+    for(var e2 = 0; e2 <= eMax; e2 += 2){ r = prueba(0.72, e2); if(!r.firmaSola) return { k:0.72, e:e2, hojas:r.hojas }; }
+    return { k:0.72, e:0, hojas:r ? r.hojas : 0 };
+  }
+  return { ajustar:ajustar, paginar:_hjPaginar, estirar:_hjEstirar, elegir:_hjElegir };
+})();
+/* <<< HOJA-A4-FIN >>> */
 /* ══════════════════════════════════════════════════════════════════
    EQUIPOS Y HERRAMIENTAS CON QR · LO COMÚN (01/10/2026)
    Lo mismo en la app y en el portal (armar.py lo pone en la app y arma
@@ -824,132 +972,146 @@ var IQB = (function(){
   function pdf(r, C){
     C = C || {};
     var tx = C.tx || function(z){ return z; };
-    var doc = new jspdf.jsPDF({ unit:'pt', format:'a4' });
-    var W = 595.28, H = 841.89, M = 38, y = 0, eq = C.eq || {};
+    var eq = C.eq || {};
     var R = res(r), cu = cuenta(r);
-    function pie(){
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(140, 146, 152);
-      /* la fecha de la obra, no la de Greenwich: de 7 pm a medianoche (hora de Lima) toISOString ya dice «mañana» */
-      var hoyD = new Date(), hoyL = hoyD.getFullYear() + '-' + ('0' + (hoyD.getMonth() + 1)).slice(-2) + '-' + ('0' + hoyD.getDate()).slice(-2);
-      doc.text(tx('Generado con OBRASST el') + ' ' + dma(hoyL) + ' · ' +
-               tx('La app deja constancia de quién dijo ser, a qué hora firmó y desde dónde.'), M, H - 22);
-    }
-    function salto(alto){ if(y + alto > H - 50){ pie(); doc.addPage(); y = 50; return true; } return false; }
-    /* cabecera */
-    doc.setFillColor(11, 42, 58); doc.rect(0, 0, W, 92, 'F');
-    doc.setTextColor(245, 183, 0); doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-    doc.text('OBRASST · ' + tx('INSPECCIÓN DIARIA DE EQUIPO'), M, 30);
-    if(C.sello && C.sello.length){
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(190, 205, 215);
-      doc.text(C.sello.join('   ·   '), W - M, 30, { align:'right' });
-    }
-    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
-    doc.text(doc.splitTextToSize(String(tx(r.formato_n || 'Inspección del equipo')), W - 2 * M)[0], M, 57);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(200, 215, 225);
-    doc.text([C.obra || '', dma(r.fecha) + (r.hora ? ' ' + r.hora : ''), C.base || ''].filter(Boolean).join('   ·   ').slice(0, 130), M, 75);
-    y = 116;
-    /* el equipo y el resultado */
-    doc.setDrawColor(215, 222, 228); doc.setLineWidth(0.8); doc.roundedRect(M, y - 14, W - 2 * M, 62, 6, 6, 'S');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.setTextColor(11, 42, 58);
-    doc.text(String(eq.codigo || ''), M + 12, y + 8);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(50, 60, 68);
-    doc.text(doc.splitTextToSize([tx(eq.tipo || ''), eq.detalle || ''].filter(Boolean).join(' · '), W - 2 * M - 190)[0] || '', M + 12, y + 25);
-    doc.setFontSize(8.5); doc.setTextColor(110, 120, 128);
-    doc.text(cu.C + ' C   ·   ' + cu.NC + ' NC   ·   ' + cu.NA + ' NA', M + 12, y + 39);
-    doc.setFillColor(R.rgb[0], R.rgb[1], R.rgb[2]); doc.roundedRect(W - M - 168, y - 4, 156, 26, 5, 5, 'F');
-    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5);
-    doc.text(String(tx(r.resultado === 'no_apto' ? 'NO APTO · FUERA DE SERVICIO' : (r.resultado === 'observado' ? 'CON OBSERVACIÓN' : 'CONFORME'))), W - M - 90, y + 13, { align:'center' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(110, 120, 128);
-    doc.text(String(tx(completa(r) ? 'Con sus tres firmas' : faltanTxt(r))), W - M - 90, y + 36, { align:'center' });
-    y += 70;
-    /* el checklist */
-    var bloque = null, n = 0;
-    (r.puntos || []).forEach(function(p){
-      if((p.b || '') !== bloque){
-        bloque = p.b || '';
-        if(bloque){
-          salto(30); y += 8;
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(11, 42, 58);
-          doc.text(String(tx(bloque)).toUpperCase(), M, y); y += 12;
+    /* 10/11/2026 · Marcelo: «una hoja A4 (1 cara); si pasa, que ocupen el total de las dos caras sí o sí, y no que vaya
+       solamente la firma en la siguiente cara». Se dibuja de prueba (sin fotos) con la letra k y el aire e, y HojaA4.elegir
+       decide: una hoja si entra; si no, dos llenas, con la firma acompañada. */
+    function dibujar(doc, K, E, conFotos){
+      var W = 595.28, H = 841.89, M = 38, y = 0, saltos = 0;
+      function pie(){
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(140, 146, 152);
+        /* la fecha de la obra, no la de Greenwich: de 7 pm a medianoche (hora de Lima) toISOString ya dice «mañana» */
+        var hoyD = new Date(), hoyL = hoyD.getFullYear() + '-' + ('0' + (hoyD.getMonth() + 1)).slice(-2) + '-' + ('0' + hoyD.getDate()).slice(-2);
+        doc.text(tx('Generado con OBRASST el') + ' ' + dma(hoyL) + ' · ' +
+                 tx('La app deja constancia de quién dijo ser, a qué hora firmó y desde dónde.'), M, H - 22);
+      }
+      function salto(alto){ if(y + alto > H - 50){ pie(); doc.addPage(); y = 50; saltos++; return true; } return false; }
+      /* cabecera */
+      doc.setFillColor(11, 42, 58); doc.rect(0, 0, W, 92 * K, 'F');
+      doc.setTextColor(245, 183, 0); doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      doc.text('OBRASST · ' + tx('INSPECCIÓN DIARIA DE EQUIPO'), M, 30 * K);
+      if(C.sello && C.sello.length){
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(190, 205, 215);
+        doc.text(C.sello.join('   ·   '), W - M, 30 * K, { align:'right' });
+      }
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(16 * Math.min(1, K));
+      doc.text(doc.splitTextToSize(String(tx(r.formato_n || 'Inspección del equipo')), W - 2 * M)[0], M, 57 * K);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(200, 215, 225);
+      doc.text([C.obra || '', dma(r.fecha) + (r.hora ? ' ' + r.hora : ''), C.base || ''].filter(Boolean).join('   ·   ').slice(0, 130), M, 75 * K);
+      y = 116 * K;
+      /* el equipo y el resultado */
+      var hE = 62 * K;
+      doc.setDrawColor(215, 222, 228); doc.setLineWidth(0.8); doc.roundedRect(M, y - 14 * K, W - 2 * M, hE, 6, 6, 'S');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(17 * K); doc.setTextColor(11, 42, 58);
+      doc.text(String(eq.codigo || ''), M + 12, y + 8 * K);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5 * K); doc.setTextColor(50, 60, 68);
+      doc.text(doc.splitTextToSize([tx(eq.tipo || ''), eq.detalle || ''].filter(Boolean).join(' · '), W - 2 * M - 190)[0] || '', M + 12, y + 25 * K);
+      doc.setFontSize(8.5 * K); doc.setTextColor(110, 120, 128);
+      doc.text(cu.C + ' C   ·   ' + cu.NC + ' NC   ·   ' + cu.NA + ' NA', M + 12, y + 39 * K);
+      doc.setFillColor(R.rgb[0], R.rgb[1], R.rgb[2]); doc.roundedRect(W - M - 168, y - 4 * K, 156, 26 * K, 5, 5, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5 * K);
+      doc.text(String(tx(r.resultado === 'no_apto' ? 'NO APTO · FUERA DE SERVICIO' : (r.resultado === 'observado' ? 'CON OBSERVACIÓN' : 'CONFORME'))), W - M - 90, y + 13 * K, { align:'center' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8 * K); doc.setTextColor(110, 120, 128);
+      doc.text(String(tx(completa(r) ? 'Con sus tres firmas' : faltanTxt(r))), W - M - 90, y + 36 * K, { align:'center' });
+      y += 70 * K;
+      /* el checklist */
+      var bloque = null, n = 0, lh = 11 * K;
+      (r.puntos || []).forEach(function(p){
+        if((p.b || '') !== bloque){
+          bloque = p.b || '';
+          if(bloque){
+            salto(30 * K + E); y += 8 * K;
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5 * K); doc.setTextColor(11, 42, 58);
+            doc.text(String(tx(bloque)).toUpperCase(), M, y); y += 12 * K;
+          }
         }
-      }
-      n++;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-      var t = doc.splitTextToSize(n + '. ' + tx(p.t), W - 2 * M - 46);
-      var ob = p.o ? doc.splitTextToSize(String(p.o), W - 2 * M - 60) : [];
-      salto(t.length * 11 + ob.length * 10 + 9);
-      doc.setTextColor(40, 46, 52); doc.text(t, M, y + 8);
-      if(p.e === 'C') doc.setTextColor(18, 122, 71); else if(p.e === 'NC') doc.setTextColor(183, 47, 43); else doc.setTextColor(140, 146, 152);
-      doc.setFont('helvetica', 'bold'); doc.text(String(p.e || ''), W - M, y + 8, { align:'right' });
-      y += t.length * 11;
-      if(ob.length){
-        doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); doc.setTextColor(183, 47, 43);
-        doc.text(ob, M + 12, y + 8); y += ob.length * 10;
-      }
-      y += 5; doc.setDrawColor(232, 236, 240); doc.setLineWidth(0.5); doc.line(M, y, W - M, y); y += 3;
-    });
-    if(r.nota){
-      var nt = doc.splitTextToSize(String(r.nota), W - 2 * M);
-      salto(nt.length * 11 + 26); y += 10;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(11, 42, 58); doc.text(String(tx('NOTA')), M, y); y += 12;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40, 46, 52); doc.text(nt, M, y); y += nt.length * 11;
-    }
-    /* las fotos: de dos en dos */
-    var F = fotosDe(r).filter(function(f){ return C.fotos && C.fotos[f.u]; });
-    var total = fotosDe(r).length;
-    if(total){
-      salto(46); y += 14;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(11, 42, 58);
-      doc.text(String(tx('REGISTRO FOTOGRÁFICO')) + ' · ' + total, M, y); y += 10;
-      if(F.length < total){
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(140, 146, 152);
-        doc.text(String(tx('Algunas fotos no se pudieron traer al armar este PDF: están en la app.')), M, y + 8); y += 14;
-      }
-      var cw = (W - 2 * M - 12) / 2, ch = cw * 0.75;
-      F.forEach(function(f, i){
-        var col = i % 2;
-        if(col === 0){ if(salto(ch + 26)){ /* página nueva */ } }
-        var im = C.fotos[f.u], k = Math.min(cw / im.w, ch / im.h), w = im.w * k, h = im.h * k;
-        var x = M + col * (cw + 12);
-        doc.setFillColor(244, 246, 248); doc.rect(x, y, cw, ch, 'F');
-        try{ doc.addImage(im.du, 'JPEG', x + (cw - w) / 2, y + (ch - h) / 2, w, h); }catch(_e){}
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110, 120, 128);
-        doc.text(String(tx('Foto') + ' ' + (i + 1) + ' · ' + tx(f.de === 'sst' ? 'de SST' : 'de quien inspeccionó')), x, y + ch + 10);
-        if(col === 1 || i === F.length - 1) y += ch + 20;
+        n++;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9 * K);
+        var t = doc.splitTextToSize(n + '. ' + tx(p.t), W - 2 * M - 46);
+        var ob = p.o ? doc.splitTextToSize(String(p.o), W - 2 * M - 60) : [];
+        salto(t.length * lh + ob.length * 10 * K + 9 * K + E);
+        doc.setTextColor(40, 46, 52); doc.text(t, M, y + 8 * K + E / 2);
+        if(p.e === 'C') doc.setTextColor(18, 122, 71); else if(p.e === 'NC') doc.setTextColor(183, 47, 43); else doc.setTextColor(140, 146, 152);
+        doc.setFont('helvetica', 'bold'); doc.text(String(p.e || ''), W - M, y + 8 * K + E / 2, { align:'right' });
+        y += t.length * lh + E / 2;
+        if(ob.length){
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5 * K); doc.setTextColor(183, 47, 43);
+          doc.text(ob, M + 12, y + 8 * K); y += ob.length * 10 * K;
+        }
+        y += 5 * K + E / 2; doc.setDrawColor(232, 236, 240); doc.setLineWidth(0.5); doc.line(M, y, W - M, y); y += 3 * K;
       });
-    }
-    /* las tres firmas */
-    salto(158); y += 16;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(11, 42, 58); doc.text(String(tx('FIRMAS')), M, y); y += 8;
-    var fw = (W - 2 * M - 20) / 3, fh = 116;
-    var cajas = [
-      { t:'Inspeccionó', n:r.op_nombre, c:r.op_cargo, f:r.op_firma, cuando:(dma(r.fecha) + (r.hora ? ' ' + r.hora : '')), como:(r.origen === 'gestor' ? 'cuenta' : 'trab') },
-      { t:'Producción', n:(r.prod || {}).n, c:(r.prod || {}).c, f:(r.prod || {}).f, cuando:(r.prod && r.prod.t ? dma(r.prod.t) + ' ' + horaDe(r.prod.t) : ''), como:(r.prod || {}).como },
-      { t:'Seguridad (SST)', n:(r.sst || {}).n, c:(r.sst || {}).c, f:(r.sst || {}).f, cuando:(r.sst && r.sst.t ? dma(r.sst.t) + ' ' + horaDe(r.sst.t) : ''), como:(r.sst || {}).como }
-    ];
-    cajas.forEach(function(k, i){
-      var x = M + i * (fw + 10);
-      doc.setDrawColor(200, 208, 214); doc.setLineWidth(0.7); doc.roundedRect(x, y, fw, fh, 5, 5, 'S');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(110, 120, 128);
-      doc.text(String(tx(k.t)).toUpperCase(), x + 8, y + 13);
-      if(k.f && k.f.p){
-        try{ firmaPDF(doc, k.f, x + 14, y + 19, fw - 28, 45); }catch(_f){}
-        doc.setDrawColor(170, 178, 184); doc.setLineWidth(0.5); doc.line(x + 10, y + 68, x + fw - 10, y + 68);
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(30, 36, 42);
-        doc.text(doc.splitTextToSize(String(k.n || ''), fw - 16)[0] || '', x + fw / 2, y + 79, { align:'center' });
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(90, 100, 108);
-        doc.text(doc.splitTextToSize(String(k.c || ''), fw - 16)[0] || '', x + fw / 2, y + 89, { align:'center' });
-        doc.setFontSize(6.8); doc.setTextColor(140, 146, 152);
-        doc.text(String(k.cuando || ''), x + fw / 2, y + 99, { align:'center' });
-        var como = k.como === 'cuenta' ? 'con su cuenta' : (k.como === 'aqui' ? 'en el celular de quien inspeccionó' : '');
-        if(como) doc.text(String(tx(como)), x + fw / 2, y + 108, { align:'center' });
-      } else {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(183, 47, 43);
-        doc.text(String(tx('FALTA FIRMAR')), x + fw / 2, y + 64, { align:'center' });
+      if(r.nota){
+        doc.setFontSize(9 * K);
+        var nt = doc.splitTextToSize(String(r.nota), W - 2 * M);
+        salto(nt.length * lh + 26 * K); y += 10 * K;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5 * K); doc.setTextColor(11, 42, 58); doc.text(String(tx('NOTA')), M, y); y += 12 * K;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9 * K); doc.setTextColor(40, 46, 52); doc.text(nt, M, y); y += nt.length * lh;
       }
-    });
-    y += fh + 10;
-    pie();
+      /* las fotos: de dos en dos */
+      var todas = fotosDe(r), F = todas.filter(function(f){ return !conFotos || (C.fotos && C.fotos[f.u]); }), total = todas.length;
+      if(total){
+        salto(46 * K); y += 14 * K;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5 * K); doc.setTextColor(11, 42, 58);
+        doc.text(String(tx('REGISTRO FOTOGRÁFICO')) + ' · ' + total, M, y); y += 10 * K;
+        if(conFotos && F.length < total){
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8 * K); doc.setTextColor(140, 146, 152);
+          doc.text(String(tx('Algunas fotos no se pudieron traer al armar este PDF: están en la app.')), M, y + 8 * K); y += 14 * K;
+        }
+        var cw = (W - 2 * M - 12) / 2, ch = cw * 0.75 * K;
+        F.forEach(function(f, i){
+          var col = i % 2;
+          if(col === 0) salto(ch + 26 * K);
+          var x = M + col * (cw + 12);
+          doc.setFillColor(244, 246, 248); doc.rect(x, y, cw, ch, 'F');
+          var im = conFotos ? C.fotos[f.u] : null;
+          if(im){ var kk = Math.min(cw / im.w, ch / im.h), w = im.w * kk, h = im.h * kk; try{ doc.addImage(im.du, 'JPEG', x + (cw - w) / 2, y + (ch - h) / 2, w, h); }catch(_e){} }
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5 * K); doc.setTextColor(110, 120, 128);
+          doc.text(String(tx('Foto') + ' ' + (i + 1) + ' · ' + tx(f.de === 'sst' ? 'de SST' : 'de quien inspeccionó')), x, y + ch + 10 * K);
+          if(col === 1 || i === F.length - 1) y += ch + 20 * K;
+        });
+      }
+      /* las tres firmas: nunca solas en la hoja siguiente (lo vigila HojaA4.elegir) */
+      var fh = 116 * K, antes = saltos;
+      salto(fh + 42 * K); var firmaSola = saltos > antes;
+      y += 16 * K;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5 * K); doc.setTextColor(11, 42, 58); doc.text(String(tx('FIRMAS')), M, y); y += 8 * K;
+      var fw = (W - 2 * M - 20) / 3;
+      var cajas = [
+        { t:'Inspeccionó', n:r.op_nombre, c:r.op_cargo, f:r.op_firma, cuando:(dma(r.fecha) + (r.hora ? ' ' + r.hora : '')), como:(r.origen === 'gestor' ? 'cuenta' : 'trab') },
+        { t:'Producción', n:(r.prod || {}).n, c:(r.prod || {}).c, f:(r.prod || {}).f, cuando:(r.prod && r.prod.t ? dma(r.prod.t) + ' ' + horaDe(r.prod.t) : ''), como:(r.prod || {}).como },
+        { t:'Seguridad (SST)', n:(r.sst || {}).n, c:(r.sst || {}).c, f:(r.sst || {}).f, cuando:(r.sst && r.sst.t ? dma(r.sst.t) + ' ' + horaDe(r.sst.t) : ''), como:(r.sst || {}).como }
+      ];
+      cajas.forEach(function(k, i){
+        var x = M + i * (fw + 10);
+        doc.setDrawColor(200, 208, 214); doc.setLineWidth(0.7); doc.roundedRect(x, y, fw, fh, 5, 5, 'S');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5 * K); doc.setTextColor(110, 120, 128);
+        doc.text(String(tx(k.t)).toUpperCase(), x + 8, y + 13 * K);
+        if(k.f && k.f.p){
+          if(conFotos) try{ firmaPDF(doc, k.f, x + 14, y + 19 * K, fw - 28, 45 * K); }catch(_f){}
+          doc.setDrawColor(170, 178, 184); doc.setLineWidth(0.5); doc.line(x + 10, y + 68 * K, x + fw - 10, y + 68 * K);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5 * K); doc.setTextColor(30, 36, 42);
+          doc.text(doc.splitTextToSize(String(k.n || ''), fw - 16)[0] || '', x + fw / 2, y + 79 * K, { align:'center' });
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5 * K); doc.setTextColor(90, 100, 108);
+          doc.text(doc.splitTextToSize(String(k.c || ''), fw - 16)[0] || '', x + fw / 2, y + 89 * K, { align:'center' });
+          doc.setFontSize(6.8 * K); doc.setTextColor(140, 146, 152);
+          doc.text(String(k.cuando || ''), x + fw / 2, y + 99 * K, { align:'center' });
+          var como = k.como === 'cuenta' ? 'con su cuenta' : (k.como === 'aqui' ? 'en el celular de quien inspeccionó' : '');
+          if(como) doc.text(String(tx(como)), x + fw / 2, y + 108 * K, { align:'center' });
+        } else {
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10 * K); doc.setTextColor(183, 47, 43);
+          doc.text(String(tx('FALTA FIRMAR')), x + fw / 2, y + 64 * K, { align:'center' });
+        }
+      });
+      y += fh + 10 * K;
+      pie();
+      return { hojas:doc.getNumberOfPages(), firmaSola:firmaSola };
+    }
+    var nuevo = function(){ return new jspdf.jsPDF({ unit:'pt', format:'a4' }); };
+    var A = (typeof HojaA4 === 'object' && HojaA4.elegir) ? HojaA4.elegir(function(k, e){ return dibujar(nuevo(), k, e, false); }) : { k:1, e:0 };
+    var doc = nuevo(), R = dibujar(doc, A.k, A.e, true);
+    /* por si con el aire elegido no sale como se probó (una foto que no llegó, un redondeo): otra vez, sin aire */
+    if(A.e && A.hojas && (R.hojas > A.hojas || R.firmaSola)){ doc = nuevo(); dibujar(doc, A.k, 0, true); }
     return doc;
   }
   function nombrePDF(r, eq){

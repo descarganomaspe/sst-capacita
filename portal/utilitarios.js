@@ -87,7 +87,7 @@ function utPintarTab(){
 
 /* ── piezas de todas las pestañas ────────────────────────────────────────────────────────────────────────────────────── */
 function _utIntro(html){ return '<p class="ut-intro">'+html+'</p>'; }
-function _utMsg(el, t, mal){ if(!el) return; el.className='msg'+(mal ? ' mal' : ''); el.textContent=t||''; }
+function _utMsg(el, t, mal){ if(!el) return; el.className='msg'+(mal ? ' mal' : ''); el.textContent=(typeof txDescarga==='function' ? txDescarga(t||'') : (t||'')); }   /* 10/11/2026 · «listo» si se abrió la vista */
 function _utChips(id, ops, actual, nombre){
   return '<div class="chips" id="'+id+'" role="group" aria-label="'+esc(nombre||'')+'">'+ops.map(function(o){
     var on=String(o.v)===String(actual);

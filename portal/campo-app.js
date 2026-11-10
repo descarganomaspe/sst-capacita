@@ -421,7 +421,7 @@ function emoEstado(proximo, hoy){
 }
 var LEG_SECS = [
   { k:'ind', n:'Inducción' }, { k:'difu', n:'Documentos difundidos y firmados' }, { k:'caps', n:'Capacitaciones y evaluaciones' },
-  { k:'hab', n:'Habilitaciones' }, { k:'epp', n:'EPP entregado' }, { k:'emo', n:'Examen médico ocupacional (aptitud)' }, { k:'sctr', n:'SCTR' },
+  { k:'hab', n:'Habilitaciones' }, { k:'epp', n:'EPP entregado' }, { k:'emo', n:'Examen médico ocupacional (aptitud)' }, { k:'sctr', n:'SCTR y Vida Ley' },
   { k:'amon', n:'Amonestaciones' }, { k:'acc', n:'Incidentes y accidentes' }, { k:'ats', n:'ATS firmados' }, { k:'tar', n:'Tareo de los últimos 30 días' }
 ];
 function legCfgLimpio(v){
@@ -528,9 +528,12 @@ function legPdfDe(D, meta){
     else if(D.emo === null) nota(D.cuenta ? 'No se pudo consultar: sin señal.' : 'No se pudo consultar: entra a tu cuenta.');
     else if(!D.emo.f) nota('Sin examen registrado.');
     else { texto(D.emo.tipo + ' · ' + _legF(D.emo.f) + (D.emo.apt ? ' · ' + D.emo.apt : ''), true); texto('Próximo: ' + (D.emo.prox ? _legF(D.emo.prox) : 'sin fecha') + (D.emo.est ? ' · ' + D.emo.est : '')); } }
-  if(on('sctr')){ titulo(num++, 'SCTR');
+  if(on('sctr')){ titulo(num++, D.vida !== undefined ? 'SCTR y Vida Ley' : 'SCTR');
   if(D.sctr === null) nota(D.cuenta ? 'No se pudo consultar el SCTR: sin señal.' : 'No se pudo consultar el SCTR: entra a tu cuenta.');
-  else { texto('Hoy: ' + D.sctr.est, true); if(D.sctr.r) texto([D.sctr.r.aseg, D.sctr.r.pol ? 'póliza ' + D.sctr.r.pol : '', (D.sctr.r.de && D.sctr.r.a) ? 'vigente del ' + _legF(D.sctr.r.de) + ' al ' + _legF(D.sctr.r.a) : ''].filter(Boolean).join(' · ')); } }
+  else { texto((D.vida !== undefined ? 'SCTR hoy: ' : 'Hoy: ') + D.sctr.est, true); if(D.sctr.r) texto([D.sctr.r.aseg, D.sctr.r.pol ? 'póliza ' + D.sctr.r.pol : '', (D.sctr.r.de && D.sctr.r.a) ? 'vigente del ' + _legF(D.sctr.r.de) + ' al ' + _legF(D.sctr.r.a) : ''].filter(Boolean).join(' · ')); }
+  /* 10/11/2026 · la Vida Ley (D. Leg. 688) */
+  if(D.vida === null) nota(D.cuenta ? 'No se pudo consultar la Vida Ley: sin señal.' : 'No se pudo consultar la Vida Ley: entra a tu cuenta.');
+  else if(D.vida){ texto('Vida Ley hoy: ' + D.vida.est, true); if(D.vida.r) texto([D.vida.r.aseg, D.vida.r.pol ? 'póliza ' + D.vida.r.pol : '', (D.vida.r.de && D.vida.r.a) ? 'vigente del ' + _legF(D.vida.r.de) + ' al ' + _legF(D.vida.r.a) : ''].filter(Boolean).join(' · ')); } }
   if(on('amon')) seccion(num++, 'Amonestaciones', D.amon, true, 'Ninguna.');
   if(on('acc')) seccion(num++, 'Incidentes y accidentes', D.acc, true, 'No estuvo en ningún incidente ni accidente registrado.');
   if(on('ats')){ titulo(num++, 'ATS firmados');

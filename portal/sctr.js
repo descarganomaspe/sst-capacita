@@ -10,7 +10,8 @@
      (gesPersonalDesdeFilas): se ve quién es nuevo y quién ya estaba, y vale el tope del plan.
    · Arriba, lo que nos juega a favor: quién está hoy en la obra sin SCTR vigente, o con una sola de las dos coberturas.
    Cada constancia es una fila de sst_doc (hoja «sctr») y su archivo va al balde de la obra: es lo mismo que ve y sube
-   la app (sctr.js). Lo común de las dos está entre las marcas de abajo (sctr-base.js). */
+   la app (sctr.js). Lo común de las dos está entre las marcas de abajo (sctr-base.js).
+   10/11/2026 · y la Vida Ley (D. Leg. 688): la otra pestaña, con su póliza (hoja «vidaley»): se sube, se revisa y se cruza igual. */
 /* >>> SCTR-BASE-INI (lo re-inyecta armar.py desde ../../sctr-base.js, no editar a mano) <<< */
 /* ══ EL SCTR · lo común de la app y de la web (09/10/2026) ══════════════════════════════════════════════════════
    Marcelo: «No veo la parte del SCTR, para que se agregue, y quizás, de ahí sacar los datos del personal: su nombre,
@@ -26,7 +27,7 @@
 var SCTR_HOJA = 'sctr';
 var SCTR_COB = [['ambas', 'Salud y pensión'], ['salud', 'Salud'], ['pension', 'Pensión']];
 var SCTR_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
-function sctrCobN(k){ for(var i = 0; i < SCTR_COB.length; i++) if(SCTR_COB[i][0] === k) return SCTR_COB[i][1]; return SCTR_COB[0][1]; }
+function sctrCobN(k){ if(k === 'vida') return 'Vida Ley'; for(var i = 0; i < SCTR_COB.length; i++) if(SCTR_COB[i][0] === k) return SCTR_COB[i][1]; return SCTR_COB[0][1]; }
 function _sctrFechaOk(s){ return /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')); }
 function _sctrDos(n){ return (n < 10 ? '0' : '') + n; }
 /* el mes de un día: del 1 al último */
@@ -54,7 +55,7 @@ function _sctrTipo(td){
 /* la nota: de la constancia a la fila, y de vuelta */
 function sctrNota(o){
   var visto = {};
-  return JSON.stringify({ v:1, cob:(o.cob === 'salud' || o.cob === 'pension') ? o.cob : 'ambas',
+  return JSON.stringify({ v:1, cob:(o.cob === 'salud' || o.cob === 'pension' || o.cob === 'vida') ? o.cob : 'ambas',
     aseg:String(o.aseg || '').replace(/\s+/g, ' ').trim().slice(0, 80), pol:String(o.pol || '').replace(/\s+/g, ' ').trim().slice(0, 40),
     de:_sctrFechaOk(o.de) ? o.de : '', a:_sctrFechaOk(o.a) ? o.a : '', por:String(o.por || '').slice(0, 80),
     l:(o.l || []).map(function(p){ var td = _sctrTipo(p.td); return [td, sctrDoc(td, p.doc), String(p.n || '').replace(/\s+/g, ' ').trim().slice(0, 120), p.lugar === 'f' ? 'f' : 'o']; })
@@ -62,10 +63,10 @@ function sctrNota(o){
 }
 function sctrLeer(f){
   var o = null; try{ o = JSON.parse(String((f && f.nota) || '')); }catch(e){}
-  var r = { id:f && f.id, nombre:(f && f.nombre) || 'SCTR', url:(f && f.url) || '', creado:(f && f.creado) || '', cob:'ambas', aseg:'', pol:'', de:'', a:'', por:'', l:[], conLista:false, suelta:true };
+  var r = { id:f && f.id, hoja:(f && f.hoja) || '', nombre:(f && f.nombre) || 'SCTR', url:(f && f.url) || '', creado:(f && f.creado) || '', cob:'ambas', aseg:'', pol:'', de:'', a:'', por:'', l:[], conLista:false, suelta:true };
   if(o && typeof o === 'object' && o.v){
     r.suelta = false;
-    r.cob = (o.cob === 'salud' || o.cob === 'pension') ? o.cob : 'ambas';
+    r.cob = (o.cob === 'salud' || o.cob === 'pension' || o.cob === 'vida') ? o.cob : 'ambas';
     r.aseg = String(o.aseg || ''); r.pol = String(o.pol || ''); r.por = String(o.por || '');
     r.de = _sctrFechaOk(o.de) ? o.de : ''; r.a = _sctrFechaOk(o.a) ? o.a : '';
     r.l = (Array.isArray(o.l) ? o.l : []).map(function(x){ var td = _sctrTipo(x && x[0]); return { td:td, doc:sctrDoc(td, x && x[1]), n:String((x && x[2]) || ''), lugar:(x && x[3]) === 'f' ? 'f' : 'o' }; })
@@ -175,14 +176,61 @@ function sctrListaDeTexto(t){
   String(t || '').split(/\r?\n/).forEach(function(l){ var f = sctrFilaDeLinea(l); if(f && !visto[f.doc]){ visto[f.doc] = 1; out.push(f); } });
   return out;
 }
-/* el nombre de la fila en sst_doc: «SCTR salud y pensión · octubre 2026» */
+/* el nombre de la fila en sst_doc: «SCTR salud y pensión · octubre 2026» (o «Vida Ley · octubre 2026») */
 function sctrNombreFila(o){
   var m = _sctrFechaOk(o.de) ? sctrMes(o.de) : null;
-  return 'SCTR ' + sctrCobN(o.cob).toLowerCase() + (m ? ' · ' + m.n : '');
+  return (o.cob === 'vida' ? 'Vida Ley' : 'SCTR ' + sctrCobN(o.cob).toLowerCase()) + (m ? ' · ' + m.n : '');
+}
+/* ══ 10/11/2026 · LA VIDA LEY · lo común de la app y de la web ═══════════════════════════════════════════════════
+   Marcelo: «Recuerda que también hay que tener la vida ley para las obras, que es obligatorio en el régimen peruano,
+   aparte del SCTR, la vida ley es obligatorio».
+   El seguro de vida a cargo del empleador desde el inicio de la relación laboral: D. Leg. 688, art. 1, modificado por el
+   D.U. 044-2019 (El Peruano, 30/12/2019); su reglamento, el D.S. 009-2020-TR (El Peruano, 10/02/2020), alcanza a todo
+   trabajador del sector privado, sea cual sea su régimen o su modalidad. Es otra póliza, aparte del SCTR, con una sola
+   cobertura: cada constancia es una fila de sst_doc (hoja «vidaley») con la misma nota (cob:'vida'), y se cruza igual
+   con el personal activo de la obra. */
+var VIDA_HOJA = 'vidaley';
+var VIDA_NORMA = 'D. Leg. 688, art. 1 (modificado por el D.U. 044-2019) · D.S. 009-2020-TR';
+var VIDA_ESTADO_N = { ok:'Con Vida Ley', no:'Sin Vida Ley vigente', sin_doc:'Sin documento en su ficha' };
+/* cómo se llama una constancia: «SCTR salud y pensión», «Vida Ley» o el nombre de la suelta */
+function segEtq(o){ return (o && o.suelta) ? String(o.nombre || '') : (o && o.cob === 'vida') ? 'Vida Ley' : 'SCTR ' + sctrCobN(o && o.cob).toLowerCase(); }
+/* las filas de sst_doc de las dos hojas, ya leídas y ordenadas: { sctr:[…], vida:[…] } */
+function segPartir(filas){
+  var s = [], v = [];
+  (filas || []).forEach(function(f){
+    var r = sctrLeer(f);
+    if((f && f.hoja) === VIDA_HOJA || r.cob === 'vida'){ r.cob = 'vida'; v.push(r); } else s.push(r);
+  });
+  return { sctr:sctrOrdenar(s), vida:sctrOrdenar(v) };
+}
+/* de las pólizas que valen ese día: quién está en alguna (por su documento) */
+function vidaCubiertos(regs, dia){
+  var v = {}, n = 0;
+  (regs || []).forEach(function(r){ if(!sctrVigente(r, dia)) return; n++; r.l.forEach(function(x){ if(!v[x.doc]) v[x.doc] = r; }); });
+  return { vida:v, constancias:n };
+}
+/* una persona: 'ok', 'no' o 'sin_doc' */
+function vidaEstado(td, doc, cub){
+  var d = sctrDoc(_sctrTipo(td), doc); if(!d) return 'sin_doc';
+  return cub.vida[d] ? 'ok' : 'no';
+}
+/* el personal activo de la obra contra las pólizas vigentes ese día (lo mismo que sctrRevisar) */
+function vidaRevisar(personal, regs, dia){
+  var cub = vidaCubiertos(regs, dia), out = { ok:[], falta:[], sinDoc:[], activos:0, cub:cub };
+  (personal || []).forEach(function(t){
+    if(!t || String(t.estatus || 'activo') === 'cesado') return;
+    out.activos++;
+    var e = vidaEstado(t.td, t.dni, cub);
+    if(e === 'ok') out.ok.push(t);
+    else if(e === 'sin_doc') out.sinDoc.push(t);
+    else out.falta.push({ t:t, e:e });
+  });
+  out.falta.sort(function(x, y){ return String(x.t.nombre || '').localeCompare(String(y.t.nombre || ''), 'es'); });
+  return out;
 }
 /* <<< SCTR-BASE-FIN >>> */
 
-var SCTRW = { caja:null, regs:null, per:null, n:0, F:null };
+var SCTRW = { caja:null, regs:null, vida:null, per:null, n:0, F:null, seg:'sctr' };   /* 10/11/2026 · vida: las pólizas de Vida Ley; seg: la pestaña */
 /* los títulos con que la aseguradora (o el Excel de la obra) llama a cada dato */
 var SCTR_CAMPOS = [
   { k:'nombre', sin:['apellidos y nombres', 'nombres y apellidos', 'apellidos nombres', 'nombre completo', 'apellidos y nombres del asegurado', 'nombre del asegurado',
@@ -218,14 +266,16 @@ function _sctrwPersonalPorDoc(per){
 function sctrTraer(){
   var emp=_sctrwEmp();
   return Promise.all([
-    sbGet('sst_doc?empresa=eq.'+_enc(emp)+'&hoja=eq.'+SCTR_HOJA+'&select=id,nombre,url,nota,creado&order=creado.desc&limit=300'),
+    sbGet('sst_doc?empresa=eq.'+_enc(emp)+'&hoja=in.('+SCTR_HOJA+','+VIDA_HOJA+')&select=id,hoja,nombre,url,nota,creado&order=creado.desc&limit=400'),
     traerTodo('sst_trabajador', '&select=id,nombre,dni,td,estatus&order=nombre.asc', 6000).catch(function(){ return []; })
-  ]).then(function(r){ SCTRW.regs=sctrOrdenar((r[0]||[]).map(sctrLeer)); SCTRW.per=r[1]||[]; return SCTRW; });
+  ]).then(function(r){ var P=segPartir(r[0]||[]); SCTRW.regs=P.sctr; SCTRW.vida=P.vida; SCTRW.per=r[1]||[]; return SCTRW; });
 }
 
 /* ── la sección ─────────────────────────────────────────────────────────────────────────────────────────── */
 function sctrVista(caja){
   _sctrwCss(); SCTRW.caja=caja;
+  /* 10/11/2026 · la pestaña que se pidió desde otra parte (pendientes, informe): sctrSegIr */
+  if(window.SCTR_SEG){ SCTRW.seg=(window.SCTR_SEG==='vida') ? 'vida' : 'sctr'; window.SCTR_SEG=''; }
   var ac=$('acciones'); if(ac) ac.innerHTML='';
   cargando(caja);
   function pinta(silencio){
@@ -237,43 +287,54 @@ function sctrVista(caja){
 }
 function _sctrwPintar(){
   var caja=SCTRW.caja; if(!caja || !document.body.contains(caja)) return;
+  var vida=SCTRW.seg==='vida', pre=vida ? 'vida' : 'sctr';
   var ac=$('acciones');
-  if(ac){ ac.innerHTML='<button type="button" class="bt" id="sctr-nueva">＋ Subir una constancia</button>'; $('sctr-nueva').onclick=function(){ sctrNuevaHoja(); }; }
-  var hoy=hoyISO(), mes=sctrMes(hoy), R=sctrRevisar(SCTRW.per, SCTRW.regs, hoy), C=R.cub;
-  var h='<div class="aviso" id="sctr-que">🛡️ <b>El SCTR de la obra, mes a mes.</b> Sube la constancia de la aseguradora (PDF, Excel o foto): de ahí sale la lista de asegurados, la revisas y corriges antes de guardar, '+
-    'marcas quién va a obra y quién está en oficina, y cargas a tu personal a los nuevos. Con eso se ve, cada día, quién está en la obra sin SCTR vigente. Son dos coberturas: salud y pensión. '+
-    '<span class="tenue">D.S. 003-98-SA</span></div>';
-  if(!C.conSalud || !C.conPension){
-    var falta=(!C.conSalud && !C.conPension) ? 'salud ni de pensión' : (!C.conSalud ? 'salud' : 'pensión');
-    h+='<div class="aviso ojo" id="sctr-sin">No hay constancia de SCTR de '+falta+' vigente hoy. Sube la de '+esc(mes.n)+'.</div>';
+  if(ac){ ac.innerHTML='<button type="button" class="bt" id="sctr-nueva">'+(vida ? '＋ Subir una póliza de Vida Ley' : '＋ Subir una constancia')+'</button>'; $('sctr-nueva').onclick=function(){ sctrNuevaHoja(); }; }
+  var hoy=hoyISO(), mes=sctrMes(hoy), R=sctrRevisar(SCTRW.per, SCTRW.regs, hoy), C=R.cub, V=vidaRevisar(SCTRW.per, SCTRW.vida, hoy);
+  /* 10/11/2026 · las dos pólizas de la gente, cada una en su pestaña, con cuántos no están cubiertos hoy */
+  var nS=R.activos ? R.falta.length+R.sinDoc.length : 0, nV=V.activos ? V.falta.length+V.sinDoc.length : 0;
+  var pes=function(k, tx, n){ var on=(k==='vida')===vida; return '<button type="button" role="tab" class="tab'+(on ? ' on' : '')+'" aria-selected="'+on+'" id="sctr-tab-'+k+'" data-seg="'+k+'">'+tx+
+    (n ? ' <span class="n cad-n mal" title="'+(k==='vida' ? 'Sin Vida Ley vigente hoy' : 'Sin SCTR completo hoy')+'">'+n+'</span>' : '')+'</button>'; };
+  var h='<div class="tabs" role="tablist" id="sctr-tabs" aria-label="SCTR y Vida Ley">'+pes('sctr', '🛡️ SCTR', nS)+pes('vida', '💙 Vida Ley', nV)+'</div>';
+  if(vida) h+=_vidawHtml(V, mes);
+  else {
+    h+='<div class="aviso" id="sctr-que">🛡️ <b>El SCTR de la obra, mes a mes.</b> Sube la constancia de la aseguradora (PDF, Excel o foto): de ahí sale la lista de asegurados, la revisas y corriges antes de guardar, '+
+      'marcas quién va a obra y quién está en oficina, y cargas a tu personal a los nuevos. Con eso se ve, cada día, quién está en la obra sin SCTR vigente. Son dos coberturas: salud y pensión. '+
+      '<span class="tenue">D.S. 003-98-SA</span></div>';
+    if(!C.conSalud || !C.conPension){
+      var falta0=(!C.conSalud && !C.conPension) ? 'salud ni de pensión' : (!C.conSalud ? 'salud' : 'pensión');
+      h+='<div class="aviso ojo" id="sctr-sin">No hay constancia de SCTR de '+falta0+' vigente hoy. Sube la de '+esc(mes.n)+'.</div>';
+    }
+    h+='<div class="rej" id="sctr-cifras">'+
+      cifra('Cubiertos hoy', R.ok.length, R.activos ? 'de '+R.activos+' activos' : 'sin personal', R.activos && R.ok.length===R.activos ? 'ok' : '')+
+      cifra('Les falta algo', R.falta.length, R.falta.length ? 'sin SCTR o con una sola cobertura' : 'nadie', R.falta.length ? 'mal' : 'ok')+
+      cifra('Constancias vigentes', C.constancias, (C.conSalud ? 'salud ✓' : 'salud ✗')+' · '+(C.conPension ? 'pensión ✓' : 'pensión ✗'), (C.conSalud && C.conPension) ? 'ok' : 'ojo')+
+      cifra('Sin documento', R.sinDoc.length, R.sinDoc.length ? 'en su ficha: no se puede cruzar' : 'todos lo tienen', R.sinDoc.length ? 'ojo' : 'ok')+'</div>';
+    /* 3/11/2026 · Gemini (mejora 3): los que hoy no lo tienen completo, a un toque de cotizarlo con los aliados de su zona */
+    var nPide=R.falta.length;
+    if(nPide && typeof pedirBarraHTML==='function')
+      h+=pedirBarraHTML({ r:'sctr', n:nPide, id:'pedir-sctr',
+        tx:C.constancias ? 'Hay <b>'+nPide+'</b> '+(nPide===1 ? 'trabajador' : 'trabajadores')+' en obra sin SCTR completo hoy (sin SCTR o con una sola cobertura).'
+                         : '¿Todavía no tienes el SCTR de tu gente? Si ya lo tienes, sube su constancia; si no, cotízalo aquí.',
+        bt:nPide===1 ? 'Cotizar el SCTR para esta persona' : 'Cotizar el SCTR para estas '+nPide+' personas',
+        det:'SCTR (salud y pensión) para '+nPide+(nPide===1 ? ' trabajador que hoy no lo tiene completo.' : ' trabajadores que hoy no lo tienen completo.') });
   }
-  h+='<div class="rej" id="sctr-cifras">'+
-    cifra('Cubiertos hoy', R.ok.length, R.activos ? 'de '+R.activos+' activos' : 'sin personal', R.activos && R.ok.length===R.activos ? 'ok' : '')+
-    cifra('Les falta algo', R.falta.length, R.falta.length ? 'sin SCTR o con una sola cobertura' : 'nadie', R.falta.length ? 'mal' : 'ok')+
-    cifra('Constancias vigentes', C.constancias, (C.conSalud ? 'salud ✓' : 'salud ✗')+' · '+(C.conPension ? 'pensión ✓' : 'pensión ✗'), (C.conSalud && C.conPension) ? 'ok' : 'ojo')+
-    cifra('Sin documento', R.sinDoc.length, R.sinDoc.length ? 'en su ficha: no se puede cruzar' : 'todos lo tienen', R.sinDoc.length ? 'ojo' : 'ok')+'</div>';
-  /* 3/11/2026 · Gemini (mejora 3): los que hoy no lo tienen completo, a un toque de cotizarlo con los aliados de su zona */
-  var nPide=R.falta.length;
-  if(nPide && typeof pedirBarraHTML==='function')
-    h+=pedirBarraHTML({ r:'sctr', n:nPide, id:'pedir-sctr',
-      tx:C.constancias ? 'Hay <b>'+nPide+'</b> '+(nPide===1 ? 'trabajador' : 'trabajadores')+' en obra sin SCTR completo hoy (sin SCTR o con una sola cobertura).'
-                       : '¿Todavía no tienes el SCTR de tu gente? Si ya lo tienes, sube su constancia; si no, cotízalo aquí.',
-      bt:nPide===1 ? 'Cotizar el SCTR para esta persona' : 'Cotizar el SCTR para estas '+nPide+' personas',
-      det:'SCTR (salud y pensión) para '+nPide+(nPide===1 ? ' trabajador que hoy no lo tiene completo.' : ' trabajadores que hoy no lo tienen completo.') });
-  h+='<div class="tarj" id="t-sctr-falta"></div><div class="tarj" id="t-sctr-const" style="margin-top:16px"></div>';
-  var e1=$('t-sctr-falta') ? $('t-sctr-falta')._est : null, e2=$('t-sctr-const') ? $('t-sctr-const')._est : null;
-  caja.innerHTML=h; if(e1) $('t-sctr-falta')._est=e1; if(e2) $('t-sctr-const')._est=e2;
-  var falta=R.falta.map(function(x){ return { id:x.t.id, nombre:x.t.nombre, dni:x.t.dni, e:x.e }; }).concat(R.sinDoc.map(function(t){ return { id:t.id, nombre:t.nombre, dni:'', e:'sin_doc' }; }));
-  tabla($('t-sctr-falta'), [
-    { k:'nombre', t:'En obra, sin SCTR completo hoy', h:function(x){ return '<b>'+esc(x.nombre||'')+'</b>'+(x.dni ? '<span class="sub">'+esc(x.dni)+'</span>' : ''); }, v:function(x){ return (x.nombre||'')+' '+(x.dni||''); }, csv:function(x){ return x.nombre; } },
+  h+='<div class="tarj" id="t-'+pre+'-falta"></div><div class="tarj" id="t-'+pre+'-const" style="margin-top:16px"></div>';
+  var e1=$('t-'+pre+'-falta') ? $('t-'+pre+'-falta')._est : null, e2=$('t-'+pre+'-const') ? $('t-'+pre+'-const')._est : null;
+  caja.innerHTML=h; if(e1) $('t-'+pre+'-falta')._est=e1; if(e2) $('t-'+pre+'-const')._est=e2;
+  Array.prototype.forEach.call(caja.querySelectorAll('#sctr-tabs [data-seg]'), function(b){ b.onclick=function(){ var k=b.getAttribute('data-seg'); if((k==='vida')===vida) return; SCTRW.seg=k; _sctrwPintar(); }; });
+  var RR=vida ? V : R, EST=vida ? VIDA_ESTADO_N : SCTR_ESTADO_N;
+  var falta=RR.falta.map(function(x){ return { id:x.t.id, nombre:x.t.nombre, dni:x.t.dni, e:x.e }; }).concat(RR.sinDoc.map(function(t){ return { id:t.id, nombre:t.nombre, dni:'', e:'sin_doc' }; }));
+  tabla($('t-'+pre+'-falta'), [
+    { k:'nombre', t:vida ? 'En obra, sin Vida Ley vigente hoy' : 'En obra, sin SCTR completo hoy', h:function(x){ return '<b>'+esc(x.nombre||'')+'</b>'+(x.dni ? '<span class="sub">'+esc(x.dni)+'</span>' : ''); }, v:function(x){ return (x.nombre||'')+' '+(x.dni||''); }, csv:function(x){ return x.nombre; } },
     { k:'dni', t:docPersonaP(), soloCsv:true },
-    { k:'e', t:'Qué le falta', h:function(x){ return '<span class="pill '+(x.e==='no' ? 'mal' : 'ojo')+'">'+esc(SCTR_ESTADO_N[x.e]||'')+'</span>'; }, v:function(x){ return SCTR_ESTADO_N[x.e]||''; } }
-  ], falta, { unidad:'personas', archivo:'sctr-sin-cobertura-'+nombreArchivo(nombreObraP()||'obra'), vacio:R.activos ? 'Todos cubiertos hoy' : 'Todavía no hay personal',
-              vacioSub:R.activos ? 'Todo el personal activo está en una constancia vigente de salud y en una de pensión.' : 'Carga tu personal en «Personal», o desde la constancia.' });
-  var regs=SCTRW.regs||[];
-  tabla($('t-sctr-const'), [
-    { k:'cob', t:'Constancia', h:function(r){ return '<b>'+esc(r.suelta ? r.nombre : 'SCTR '+sctrCobN(r.cob).toLowerCase())+'</b>'+((r.aseg||r.pol) ? '<span class="sub">'+esc([r.aseg, r.pol ? 'póliza '+r.pol : ''].filter(Boolean).join(' · '))+'</span>' : ''); },
-      v:function(r){ return (r.suelta ? r.nombre : sctrCobN(r.cob))+' '+r.aseg+' '+r.pol; } },
+    { k:'e', t:vida ? 'Estado' : 'Qué le falta', h:function(x){ return '<span class="pill '+(x.e==='no' ? 'mal' : 'ojo')+'">'+esc(EST[x.e]||'')+'</span>'; }, v:function(x){ return EST[x.e]||''; } }
+  ], falta, { unidad:'personas', archivo:(vida ? 'vida-ley-sin-poliza-' : 'sctr-sin-cobertura-')+nombreArchivo(nombreObraP()||'obra'), vacio:RR.activos ? (vida ? 'Todos con Vida Ley hoy' : 'Todos cubiertos hoy') : 'Todavía no hay personal',
+              vacioSub:RR.activos ? (vida ? 'Todo el personal activo está en una póliza de Vida Ley vigente.' : 'Todo el personal activo está en una constancia vigente de salud y en una de pensión.') : 'Carga tu personal en «Personal», o desde la constancia.' });
+  var regs=(vida ? SCTRW.vida : SCTRW.regs)||[];
+  tabla($('t-'+pre+'-const'), [
+    { k:'cob', t:vida ? 'Póliza' : 'Constancia', h:function(r){ return '<b>'+esc(segEtq(r))+'</b>'+((r.aseg||r.pol) ? '<span class="sub">'+esc([r.aseg, r.pol ? 'póliza '+r.pol : ''].filter(Boolean).join(' · '))+'</span>' : ''); },
+      v:function(r){ return segEtq(r)+' '+r.aseg+' '+r.pol; } },
     { k:'a', t:'Vigencia', h:function(r){
         if(!r.de || !r.a) return '<span class="tenue">—</span>';
         var est=sctrVigente(r, hoy) ? '<span class="pill ok">vigente</span>' : (r.a < hoy ? '<span class="pill gris">vencida</span>' : '<span class="pill azul">desde el '+esc(sctrFechaCorta(r.de))+'</span>');
@@ -282,15 +343,30 @@ function _sctrwPintar(){
         return '<b>'+r.l.length+'</b><span class="sub">'+o+' en obra · '+(r.l.length-o)+' en oficina</span>'; }, v:function(r){ return r.l.length; } },
     { k:'_acc', t:'', acc:true, h:function(r){ return (r.url ? '<a class="bt sec chico" target="_blank" rel="noopener" href="'+esc(r.url)+'">Abrir</a> ' : '')+
         (r.conLista ? '<button type="button" class="bt sec chico" data-acc="ver">Ver la lista</button> ' : '')+'<button type="button" class="bt sec chico" data-acc="quitar">Quitar</button>'; } }
-  ], regs, { unidad:'constancias', archivo:'sctr-constancias-'+nombreArchivo(nombreObraP()||'obra'), vacio:'Todavía no hay constancias', vacioSub:'Sube la del mes con «＋ Subir una constancia»: el PDF o el Excel de la aseguradora, o una foto.',
+  ], regs, { unidad:vida ? 'pólizas' : 'constancias', archivo:(vida ? 'vida-ley-polizas-' : 'sctr-constancias-')+nombreArchivo(nombreObraP()||'obra'),
+             vacio:vida ? 'Todavía no hay pólizas de Vida Ley' : 'Todavía no hay constancias',
+             vacioSub:vida ? 'Sube la vigente con «＋ Subir una póliza de Vida Ley»: el PDF o el Excel de la aseguradora, o una foto.' : 'Sube la del mes con «＋ Subir una constancia»: el PDF o el Excel de la aseguradora, o una foto.',
              accion:function(a, r){ if(a==='ver') sctrVerHoja(r); else if(a==='quitar') sctrQuitar(r); } });
 }
-
+/* 10/11/2026 · la pestaña de la Vida Ley: qué es, la póliza vigente y las cifras */
+function _vidawHtml(V, mes){
+  var C=V.cub;
+  var h='<div class="aviso" id="vida-que">💙 <b>La Vida Ley de la obra.</b> Es el seguro de vida que el empleador paga a cada trabajador desde su primer día de trabajo, en cualquier régimen laboral, y va aparte del SCTR. '+
+    'Sube la póliza o la constancia de la aseguradora (PDF, Excel o foto): de ahí sale la lista de asegurados, la revisas y corriges antes de guardar, y se ve cada día quién está en la obra sin Vida Ley vigente. '+
+    '<span class="tenue">'+esc(VIDA_NORMA)+'</span></div>';
+  if(!C.constancias) h+='<div class="aviso ojo" id="vida-sin">No hay póliza de Vida Ley vigente hoy ('+esc(mes.n)+'). Súbela con «＋ Subir una póliza de Vida Ley».</div>';
+  h+='<div class="rej" id="vida-cifras">'+
+    cifra('Con Vida Ley hoy', V.ok.length, V.activos ? 'de '+V.activos+' activos' : 'sin personal', V.activos && V.ok.length===V.activos ? 'ok' : '')+
+    cifra('Sin Vida Ley', V.falta.length, V.falta.length ? 'no están en una póliza vigente' : 'nadie', V.falta.length ? 'mal' : 'ok')+
+    cifra('Pólizas vigentes', C.constancias, C.constancias ? 'hoy' : 'ninguna hoy', C.constancias ? 'ok' : 'ojo')+
+    cifra('Sin documento', V.sinDoc.length, V.sinDoc.length ? 'en su ficha: no se puede cruzar' : 'todos lo tienen', V.sinDoc.length ? 'ojo' : 'ok')+'</div>';
+  return h;
+}
 /* ── subir una constancia: los datos y el archivo ───────────────────────────────────────────────────────── */
 function sctrNuevaHoja(){
   _sctrwCss();
   var m=sctrMes(hoyISO());
-  SCTRW.F={ paso:'datos', cob:'ambas', aseg:'', pol:'', de:m.de, a:m.a, archivo:null, lista:[], leido:'', foto:false, avisoLectura:'' };
+  SCTRW.F={ paso:'datos', seg:SCTRW.seg==='vida' ? 'vida' : 'sctr', cob:SCTRW.seg==='vida' ? 'vida' : 'ambas', aseg:'', pol:'', de:m.de, a:m.a, archivo:null, lista:[], leido:'', foto:false, avisoLectura:'' };
   _sctrwDatos();
 }
 function _sctrwDatos(aviso){
@@ -299,8 +375,8 @@ function _sctrwDatos(aviso){
     '<label class="sctr-zona" id="sctr-zona" tabindex="0"><span aria-hidden="true" style="font-size:22px">⬆</span><b id="sctr-zona-t">'+(F.archivo ? esc(F.archivo.name) : 'Suelta aquí la constancia o tócala para elegirla')+'</b>'+
       '<span class="tenue">'+(F.archivo ? (F.leido ? esc(F.leido) : 'Lista para leer') : 'PDF o Excel de la aseguradora (de ahí sale la lista), o una foto · hasta 25 MB')+'</span>'+
       '<input type="file" id="sctr-file" accept=".pdf,.xlsx,.xlsm,.csv,.txt,image/*,application/pdf"></label>'+
-    '<div class="campo" style="margin-top:14px"><label>Cobertura</label><div class="sctr-cob" role="radiogroup" aria-label="Cobertura">'+
-      SCTR_COB.map(function(c){ return '<button type="button" role="radio" aria-checked="'+(F.cob===c[0])+'" class="'+(F.cob===c[0] ? 'on' : '')+'" data-cob="'+c[0]+'">'+esc(c[1])+'</button>'; }).join('')+'</div></div>'+
+    (F.seg==='vida' ? '' : '<div class="campo" style="margin-top:14px"><label>Cobertura</label><div class="sctr-cob" role="radiogroup" aria-label="Cobertura">'+
+      SCTR_COB.map(function(c){ return '<button type="button" role="radio" aria-checked="'+(F.cob===c[0])+'" class="'+(F.cob===c[0] ? 'on' : '')+'" data-cob="'+c[0]+'">'+esc(c[1])+'</button>'; }).join('')+'</div></div>')+
     '<div class="sctr-dos"><div class="campo"><label for="sctr-aseg">Aseguradora</label><input id="sctr-aseg" maxlength="80" value="'+esc(F.aseg)+'" placeholder="El nombre de la aseguradora"></div>'+
       '<div class="campo"><label for="sctr-pol">N° de póliza</label><input id="sctr-pol" maxlength="40" value="'+esc(F.pol)+'" placeholder="Como sale en la constancia"></div></div>'+
     '<div class="sctr-dos"><div class="campo"><label for="sctr-de">Vigente desde</label><input type="date" id="sctr-de" value="'+esc(F.de)+'"></div>'+
@@ -309,7 +385,7 @@ function _sctrwDatos(aviso){
       '<textarea id="sctr-pega" rows="3" spellcheck="false" placeholder="Una persona por línea: su documento y su nombre, como en la constancia">'+esc(F.pega||'')+'</textarea>'+
       '<p class="ayuda">También puedes armarla en el paso siguiente, marcando a tu personal.</p></div>'+
     '<div class="msg" id="sctr-msg" role="status"></div>';
-  abrirHoja('Subir una constancia de SCTR', 'De la constancia sale la lista: la ves y la corriges antes de guardar', h,
+  abrirHoja(F.seg==='vida' ? 'Subir una póliza de Vida Ley' : 'Subir una constancia de SCTR', 'De la constancia sale la lista: la ves y la corriges antes de guardar', h,
     '<button type="button" class="bt sec" id="sctr-no">Cancelar</button><button type="button" class="bt" id="sctr-sig">Ver la lista ›</button>', {ancha:true, sinFoco:true});
   $('sctr-no').onclick=cerrarHoja;
   var z=$('sctr-zona'), fi=$('sctr-file');
@@ -484,7 +560,7 @@ function _sctrwLista(aviso){
       }).join('')+'</tbody></table></div>';
   }
   h+='<div class="msg" id="sctr-msg" role="status"></div>';
-  abrirHoja('La lista de asegurados', 'SCTR '+sctrCobN(F.cob).toLowerCase()+' · '+sctrFechaCorta(F.de)+' al '+sctrFechaCorta(F.a)+(F.archivo ? ' · '+F.archivo.name : ''), h,
+  abrirHoja('La lista de asegurados', segEtq(F)+' · '+sctrFechaCorta(F.de)+' al '+sctrFechaCorta(F.a)+(F.archivo ? ' · '+F.archivo.name : ''), h,
     '<button type="button" class="bt sec" id="sctr-volver">‹ Volver</button><button type="button" class="bt" id="sctr-guardar">Guardar la constancia</button>', {ancha:true, sinFoco:true});
   $('sctr-volver').onclick=function(){ _sctrwDatos(); };
   $('sctr-guardar').onclick=_sctrwGuardar;
@@ -550,7 +626,7 @@ function _sctrwGuardar(){
   var o={ cob:F.cob, aseg:F.aseg, pol:F.pol, de:F.de, a:F.a, por:_sctrwPor(), l:F.lista };
   (F.archivo ? subirArchivoP('docs', F.archivo) : Promise.resolve(null)).then(function(url){
     m.textContent='Guardando…';
-    return sbPostP('sst_doc', { empresa:_sctrwEmp(), hoja:SCTR_HOJA, nombre:sctrNombreFila(o), url:url, nota:sctrNota(o) });
+    return sbPostP('sst_doc', { empresa:_sctrwEmp(), hoja:F.seg==='vida' ? VIDA_HOJA : SCTR_HOJA, nombre:sctrNombreFila(o), url:url, nota:sctrNota(o) });
   }).then(function(){
     _sctrwListo(o);
     if(VISTA.actual==='sctr' && VISTA.recargar) VISTA.recargar(true);
@@ -591,7 +667,7 @@ function sctrVerHoja(r){
     r.l.map(function(p, i){ var t=P[p.doc];
       return '<tr><td class="tenue">'+(i+1)+'</td><td>'+esc(p.doc)+'</td><td>'+esc(p.n)+'</td><td>'+(p.lugar==='f' ? 'En oficina' : 'En obra')+'</td><td>'+
         (t ? (String(t.estatus||'activo')==='cesado' ? '<span class="pill gris">cesado</span>' : '<span class="pill ok">sí</span>') : '<span class="pill azul">nuevo</span>')+'</td></tr>'; }).join('')+'</tbody></table></div>';
-  abrirHoja(r.suelta ? r.nombre : 'SCTR '+sctrCobN(r.cob).toLowerCase(), r.l.length+' asegurado'+(r.l.length===1 ? '' : 's'), h,
+  abrirHoja(segEtq(r), r.l.length+' asegurado'+(r.l.length===1 ? '' : 's'), h,
     (r.url ? '<a class="bt sec" target="_blank" rel="noopener" href="'+esc(r.url)+'">Abrir el archivo</a>' : '')+
     (nuevos.length ? '<button type="button" class="bt" id="sctr-ver-cargar">Cargar a mi personal ('+nuevos.length+')</button>' : '<button type="button" class="bt" id="sctr-ver-ok">Cerrar</button>'), {ancha:true});
   if($('sctr-ver-ok')) $('sctr-ver-ok').onclick=cerrarHoja;

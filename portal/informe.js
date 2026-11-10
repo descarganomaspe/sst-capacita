@@ -27,7 +27,7 @@
    ambiente y el de salud ocupacional, cada uno en su pestaña (informe · inf-amb · inf-salud) con lo que pide arriba (la
    misma lista de la app, INFB) y dónde se completa; y el registro fotográfico al lado. */
 var INFW = { caja:null, mes:'', para:'gerencia', paraN:'', por:'', secc:null, anexos:[], modelo:null, datos:null, datosT:null, n:0, pdf:null, armando:false,
-             nivel:'intermedio', temas:'desglose', alcance:'obra', pers:false, tipo:'sst', seccA:null, seccS:null };
+             nivel:'intermedio', temas:'desglose', alcance:'obra', pers:false, tipo:'sst', seccA:null, seccS:null, panel:null, panelN:0 };   /* 10/11/2026 · panel: el panel fotográfico del mes */
 var INF_SECC = [
   { k:'portada',      n:'Portada e índice',               d:'La obra, la empresa, el mes, para quién es y lo que trae', fijo:'primero' },
   { k:'resumen',      n:'Resumen del mes',                d:'Personal activo, horas hombre de obreros y staff (trabajadas y de capacitación) del mes y acumuladas en el año, accidentes e incidentes y los índices del año' },
@@ -46,7 +46,7 @@ var INF_SECC = [
   { k:'bird',         n:'Pirámide de Bird',               d:'Los accidentes, los incidentes y las observaciones del mes y del año, en la pirámide' },
   { k:'inspecciones', n:'Inspecciones',                   d:'Las del mes por tipo, y lo que encontraron: actos, condiciones, sugerencias y buenas prácticas', vit:'inspec' },
   { k:'epp',          n:'Entrega y consumo de EPP',       d:'Las entregas del mes y lo que más salió; desde Supervisor SST, el consumo de cada EPP (nuevas, por cambio y por pérdida); desde SSOMA, el uso correcto en campo y lo que costó' },
-  { k:'sctr',         n:'SCTR',                           d:'Las constancias vigentes y quién está en obra sin cobertura completa' },
+  { k:'sctr',         n:'SCTR y Vida Ley',                d:'Las constancias vigentes del SCTR y de la Vida Ley, y quién está en obra sin ellas' },
   /* 17/10/2026 · lote 16 · el acta del mes va sola a los anexos: las de OBRASST, armadas como en la app; las escaneadas, tal cual */
   { k:'comite',       n:'Comité de SST',                  d:'Las reuniones del mes con su quórum y sus acuerdos, lo pendiente y la próxima reunión; el acta del mes va sola en los anexos', vit:'comite' },
   { k:'fotoreg',      n:'Registro fotográfico',           d:'Las fotos del mes tema por tema —charlas, uso de EPP, sistema de emergencia, bienestar…—, del «Registro fotográfico» de la obra' },
@@ -61,7 +61,7 @@ var INF_NIVELES = [
     dT:'Una fila por obra y el total: personal, horas hombre de obreros y staff, accidentes e índices, charlas, ATS y observaciones.',
     secc:['resumen', 'personal', 'charlas', 'ats', 'reportes', 'epp'], todas:['resumen', 'hh', 'personal', 'charlas', 'ats', 'reportes'], temas:'total' },
   { k:'intermedio', n:'Intermedio', pag:'10 a 20 páginas', pagT:'8 a 14 páginas',
-    d:'Lo de cada mes: además, las horas del año mes a mes, el avance de los programas y de los objetivos, los temas uno por uno, la tabla de observaciones con sus fotos, la pirámide de Bird, las inspecciones, el consumo de EPP, el SCTR, el comité y el registro fotográfico.',
+    d:'Lo de cada mes: además, las horas del año mes a mes, el avance de los programas y de los objetivos, los temas uno por uno, la tabla de observaciones con sus fotos, la pirámide de Bird, las inspecciones, el consumo de EPP, el SCTR y la Vida Ley, el comité y el registro fotográfico.',
     dT:'Además, por obra: los temas del mes, las inspecciones, el EPP y el comité.',
     secc:['resumen', 'personal', 'frentes', 'hhanio', 'programas', 'objetivos', 'charlas', 'capacitacion', 'ats', 'reportes', 'obstabla', 'bird', 'inspecciones', 'epp', 'sctr', 'comite', 'fotoreg'],
     todas:['resumen', 'hh', 'personal', 'charlas', 'temas', 'ats', 'reportes', 'inspecciones', 'epp', 'comite'], temas:'desglose' },
@@ -265,6 +265,9 @@ function _infPintar(){
       var on=INFW.temas===o[0];
       return '<button type="button" role="radio" aria-checked="'+on+'" class="inf-tem-op'+(on ? ' on' : '')+'" data-tem="'+o[0]+'"><b>'+o[1]+'</b><small>'+esc(o[2])+'</small></button>';
     }).join('')+'</div></div></div>';
+  /* 10/11/2026 · 4 · el panel fotográfico: corregir, quitar, ordenar y sumar fotos (si va en el informe) */
+  var vaPanel=!todas && S.some(function(x){ return x.k==='fotos' && _infVa(x); });
+  if(vaPanel) h+=_infPanelHTML();
   h+='<div class="inf-armar"><button type="button" class="bt" id="inf-armar2">Armar el informe ›</button>'+
     '<span>'+(todas ? 'Lee cada obra: tarda un poco más.' : 'Sale en PDF con su portada, índice y páginas numeradas; el Excel y el Word salen de lo mismo.')+'</span>'+
     (todas ? '' : '<button type="button" class="bt sec chico" id="inf-modelo">'+(INFW.modelo ? 'Guardar los cambios de «'+esc(INFW.modelo.nombre || 'Modelo de la obra')+'»' : 'Guardar como modelo de la obra')+'</button>')+'</div>'+
@@ -288,7 +291,11 @@ function _infPintar(){
       '</div></div></div></div></div></details>';
   }
   caja.innerHTML=h;
-  $('inf-mes').onchange=function(){ INFW.mes=this.value; INFW.datos=null; INFW.datosT=null; _infPideCargar(); };
+  if(vaPanel){
+    if(INFW.panel && INFW.panel.mes===INFW.mes) _infPanelAl(caja);
+    else _infPanelCargar(INFW.mes).then(function(){ if(VISTA.actual==='informe' && INFW.tipo==='sst' && $('inf-panel') && !$('inf-pf-guardar')) _infPintar(); }, function(){ var l=$('inf-panel-l'); if(l) l.textContent='No se pudieron traer las fotos: revisa tu conexión.'; });
+  }
+  $('inf-mes').onchange=function(){ INFW.mes=this.value; INFW.datos=null; INFW.datosT=null; _infPideCargar(); if(vaPanel && !(INFW.panel && INFW.panel.mes===INFW.mes)) _infPintar(); };
   $('inf-para-n').oninput=function(){ INFW.paraN=this.value; };
   $('inf-por').oninput=function(){ INFW.por=this.value; };
   $('inf-armar2').onclick=infArmar;
@@ -437,7 +444,7 @@ function _infTraer(mes, O, op){
       .catch(function(){ return tr('sst_hht', '&select=fecha,ob_n,ob_h,st_n,st_h&order=fecha.desc', 4000); }),
     tr('sst_kardex', '&select=fecha,epp,cantidad,trabajador,trab_nombre,tipo&order=fecha.desc', 6000).catch(function(){ return tr('sst_kardex', '&select=fecha,epp,cantidad,trabajador,trab_nombre&order=fecha.desc', 6000); }),
     tr('sst_inspeccion', '&select=id,fecha,tipo,observacion,inspector&order=fecha.desc', 3000).catch(function(){ return tr('sst_inspeccion', '&select=fecha,tipo&order=fecha.desc', 3000); }),
-    op.ligero ? Promise.resolve(null) : cargarSctr().then(function(){ return tr('sst_doc', '&hoja=eq.sctr&select=id,nombre,url,nota,creado&order=creado.desc', 100); }),
+    op.ligero ? Promise.resolve(null) : cargarSctr().then(function(){ return tr('sst_doc', '&hoja=in.(sctr,vidaley)&select=id,hoja,nombre,url,nota,creado&order=creado.desc', 200); }),
     /* el comité de la obra (el mismo documento de la app) */
     O.codigo ? _infEst(O, 'comite_emp:'+O.codigo).then(function(v){ return (v && typeof v==='object') ? v : null; }) : Promise.resolve(null),
     /* el EPP de la obra (portal/epp.js): el catálogo con sus precios, los ingresos y las verificaciones */
@@ -513,8 +520,11 @@ function _infTraer(mes, O, op){
     if(Array.isArray(r[7]) && typeof sctrLeer==='function'){
       /* 19/10/2026 · lote 19 · los que estaban en obra al cierre del mes (no los de hoy) */
       var trabDia=trab.filter(function(t){ var ing=String(t.ingreso||'').slice(0, 10); return !(ing && ing>dia) && _infSit(t, dia).e==='activo'; }).map(function(t){ return Object.assign({}, t, { estatus:'activo' }); });
-      var regs=sctrOrdenar(r[7].map(sctrLeer)), R=sctrRevisar(trabDia, regs, dia);
-      D.sctr={ dia:dia, vig:regs.filter(function(x){ return sctrVigente(x, dia); }), R:R };
+      var segW=(typeof segPartir==='function') ? segPartir(r[7]) : { sctr:sctrOrdenar(r[7].map(sctrLeer)), vida:null };
+      var regs=segW.sctr, R=sctrRevisar(trabDia, regs, dia);
+      D.sctr={ dia:dia, vig:regs.filter(function(x){ return sctrVigente(x, dia); }), R:R,
+        /* 10/11/2026 · la Vida Ley, igual */
+        vida:segW.vida ? { vig:segW.vida.filter(function(x){ return sctrVigente(x, dia); }), R:vidaRevisar(trabDia, segW.vida, dia) } : null };
     } else D.sctr=null;
     /* 19/10/2026 · lote 19 · el personal del mes, las horas del año, las observaciones, la pirámide, el registro fotográfico y los programas */
     D.per=_infPersonal(trab, mes, dia, mapa, (typeof empresaDeObraP==='function' && O===YO.obra) ? empresaDeObraP() : '');
@@ -618,6 +628,161 @@ function _infConsumo(km){
   var tot={ N:0, C:0, P:0, und:0 }; L.forEach(function(x){ tot.N+=x.N; tot.C+=x.C; tot.P+=x.P; tot.und+=x.und; });
   return { L:L, tot:tot };
 }
+/* >>> PANEL-FOTOS-INI (lo pone parches/panel-1011.py) <<< */
+/* ══ 10/11/2026 · EL PANEL FOTOGRÁFICO DEL INFORME, A MANO ═══════════════════════════════════════════════════════
+   Marcelo: «Para la elaboración del informe, la parte de panel fotográfico, hazlo más ordenado, dónde se puede agregar más
+   fotos con sus descripciones (editadas por el usuario), y tener la opción de agregar y editar».
+   Las fotos del mes siguen saliendo solas (los reportes, las buenas prácticas y el cierre de los ATS); ahora, antes de
+   armar el informe, cada una se ve con su título y su descripción para corregirlos, se quita la que no va, se ordenan y
+   se suman fotos propias. Lo que se deja se guarda por obra y por mes (sst_doc, hoja «informe-fotos», nombre = el mes):
+   {v:1, mes, items:[{k (la foto), u, t (título), d (descripción), on, propia}]}. En el PDF: «Foto N», de a dos por fila
+   y tres filas por hoja, cada una en su recuadro con su título y su descripción. */
+var INF_PANEL_HOJA = 'informe-fotos', INF_PANEL_MAX = 48;
+/* las fotos que salen solas este mes, en el orden de siempre */
+function _infPanelFuentes(mes){
+  var c0=_enc(new Date(Date.parse(mes+'-01T00:00:00')-40*864e5).toISOString()), ok=function(u){ return /^https:\/\//i.test(String(u||'')); };
+  return Promise.all([
+    traer('sst_reporte', '&creado=gte.'+c0+'&select=id,fecha,creado,clase,descripcion,lugar,estado,foto_url,foto_cierre&order=creado.asc', 1500).catch(function(){ return []; }),
+    traer('sst_buena', '&fecha=gte.'+mes+'-01&fecha=lte.'+_infMesFin(mes)+'&select=id,fecha,titulo,descripcion,lugar,foto_url&order=fecha.asc', 300).catch(function(){ return []; }),
+    traer('sst_doc', '&hoja=eq.ats&creado=gte.'+c0+'&select=id,nombre,nota,creado&order=creado.desc', 3000).catch(function(){ return []; })
+  ]).then(function(r){
+    var L=[];
+    (r[0]||[]).forEach(function(x){
+      if(mesDe(x.fecha||x.creado)!==mes) return;
+      var t=(x.clase==='acto' ? 'Acto inseguro' : (x.clase==='condicion' ? 'Condición insegura' : 'Reporte'))+(x.lugar ? ' · '+x.lugar : ''), f=fechaLarga(String(x.fecha||x.creado).slice(0, 10));
+      if(ok(x.foto_url)) L.push({ k:x.foto_url, u:x.foto_url, t:t+' · así se encontró', d:f+(x.descripcion ? '. '+x.descripcion : ''), ini:ok(x.foto_cierre) ? 1 : 0 });
+      if(ok(x.foto_cierre)) L.push({ k:x.foto_cierre, u:x.foto_cierre, t:t+' · así quedó', d:f+(x.descripcion ? '. '+x.descripcion : ''), fin:ok(x.foto_url) ? 1 : 0 });
+    });
+    (r[1]||[]).forEach(function(x){ if(ok(x.foto_url)) L.push({ k:x.foto_url, u:x.foto_url, t:'Buena práctica · '+(x.titulo||''), d:fechaLarga(String(x.fecha).slice(0, 10))+(x.lugar ? ' · '+x.lugar : '')+(x.descripcion ? '. '+x.descripcion : '') }); });
+    (_infAts(r[2]||[], mes).L||[]).forEach(function(a){ a.fotos.slice(0, 2).forEach(function(u){ L.push({ k:u, u:u, t:'Cierre del ATS · '+a.t, d:fechaLarga(a.f)+(a.lugar ? ' · '+a.lugar : '')+'. Así quedó el área.' }); }); });
+    return L;
+  });
+}
+function _infPanelLimpio(n){
+  var o=(n && typeof n==='object') ? n : {}, visto={};
+  return { v:1, mes:String(o.mes||''), items:(Array.isArray(o.items) ? o.items : []).filter(function(x){ return x && /^https:\/\//i.test(String(x.u||'')) && !visto[x.k||x.u] && (visto[x.k||x.u]=1); }).slice(0, 120).map(function(x){
+    return { k:String(x.k||x.u).slice(0, 600), u:String(x.u).slice(0, 600), t:String(x.t||'').slice(0, 140), d:String(x.d||'').slice(0, 400), on:x.on!==false, propia:!!x.propia }; }) };
+}
+/* lo guardado y lo de este mes, juntos: primero lo guardado (en su orden), después lo nuevo */
+function _infPanelCargar(mes){
+  if(INFW.panel && INFW.panel.mes===mes && INFW.panel.items) return Promise.resolve(INFW.panel);
+  var n=++INFW.panelN;
+  return Promise.all([_infPanelFuentes(mes),
+    sbGet('sst_doc?empresa=eq.'+_enc(YO.obra.id)+'&hoja=eq.'+INF_PANEL_HOJA+'&nombre=eq.'+_enc(mes)+'&select=id,nota,creado&order=creado.desc&limit=1').catch(function(){ return []; })]).then(function(r){
+    var g=(r[1]||[])[0], G=_infPanelLimpio(g ? nota(g.nota) : null), ya={};
+    var auto={}; (r[0]||[]).forEach(function(x){ auto[x.k]=x; });
+    var items=G.items.filter(function(x){ return x.propia || auto[x.k]; }).map(function(x){ ya[x.k]=1; var a=auto[x.k]; return Object.assign({}, x, a ? { ini:a.ini, fin:a.fin } : {}); });
+    (r[0]||[]).forEach(function(x){ if(!ya[x.k]) items.push({ k:x.k, u:x.u, t:x.t, d:x.d, on:true, propia:false, ini:x.ini, fin:x.fin, nueva:!!g }); });
+    var P={ mes:mes, id:g ? g.id : null, items:items, cambio:false };
+    if(n===INFW.panelN) INFW.panel=P;
+    return P;
+  });
+}
+function _infPanelCss(){
+  if(document.getElementById('inf-pf-css')) return;
+  var st=document.createElement('style'); st.id='inf-pf-css';
+  st.textContent='.inf-pf-cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.inf-pf-cab b{flex:1;min-width:180px}'+
+    '.inf-pf-l{display:grid;gap:10px;max-height:70vh;overflow:auto;padding:2px}'+
+    '.inf-pf{display:grid;grid-template-columns:26px 132px minmax(0,1fr) auto;gap:12px;align-items:start;padding:10px;border:1px solid var(--raya);border-radius:12px;background:var(--panel)}'+
+    '.inf-pf.off{opacity:.55}.inf-pf .n{font-weight:700;color:var(--gris);text-align:center;padding-top:6px}'+
+    '.inf-pf-img{display:block;width:132px;height:99px;border-radius:8px;overflow:hidden;background:var(--fondo)}.inf-pf-img img{width:100%;height:100%;object-fit:cover;display:block}'+
+    '.inf-pf-tx{display:grid;gap:6px;min-width:0}.inf-pf-tx input,.inf-pf-tx textarea{width:100%;margin:0;font:inherit;font-size:13.5px}.inf-pf-tx textarea{resize:vertical;min-height:44px}'+
+    '.inf-pf-acc{display:grid;gap:6px;justify-items:center}.inf-pf-acc .check{margin:0;font-size:12.5px}.inf-pf-acc button{width:30px;height:28px;border:1px solid var(--raya);border-radius:8px;background:var(--panel);cursor:pointer;font:inherit}'+
+    '.inf-pf-acc button:disabled{opacity:.35;cursor:default}.inf-pf-pie{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}'+
+    '@media (max-width:640px){.inf-pf{grid-template-columns:22px 96px minmax(0,1fr)}.inf-pf-img{width:96px;height:72px}.inf-pf-acc{grid-column:2/-1;display:flex;justify-content:flex-start}}';
+  document.head.appendChild(st);
+}
+/* una foto propia, más liviana antes de subirla (lado mayor 1600 px, JPEG): las de celular pesan 4 o 5 MB */
+function _infAchicar(f, max){
+  return new Promise(function(ok){
+    if(!/^image\/(jpe?g|png|webp)/i.test(f.type||'')){ ok(f); return; }
+    var u=URL.createObjectURL(f), im=new Image();
+    im.onload=function(){
+      try{ var k=Math.min(1, max/Math.max(im.naturalWidth, im.naturalHeight)), c=document.createElement('canvas'); c.width=Math.round(im.naturalWidth*k); c.height=Math.round(im.naturalHeight*k);
+           var g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+           c.toBlob(function(b){ URL.revokeObjectURL(u); ok(b && b.size<f.size ? new File([b], String(f.name||'foto').replace(/\.[a-z0-9]{2,4}$/i, '')+'.jpg', { type:'image/jpeg' }) : f); }, 'image/jpeg', 0.86); }
+      catch(_c){ URL.revokeObjectURL(u); ok(f); }
+    };
+    im.onerror=function(){ URL.revokeObjectURL(u); ok(f); };
+    im.src=u;
+  });
+}
+function _infPanelHTML(){
+  _infPanelCss();
+  var P=INFW.panel;
+  var h='<div class="tarj inf-paso" id="inf-panel"><div class="tarj-cuerpo"><h3><span class="inf-n">4</span> El panel fotográfico</h3>'+
+    '<p class="ayuda" style="margin:0 0 10px">Las fotos del mes salen solas: los reportes (cómo se encontró y cómo quedó), las buenas prácticas y el cierre de los ATS. Corrige el título y la descripción de cada una, quita las que no van, ordénalas y suma las tuyas. En el PDF van de a dos por fila, numeradas, con su título y su descripción.</p>';
+  if(!P || P.mes!==INFW.mes) return h+'<div class="ayuda" id="inf-panel-l">Buscando las fotos de '+esc(_infMesN(INFW.mes))+'…</div></div></div>';
+  var on=P.items.filter(function(x){ return x.on; }).length;
+  h+='<div class="inf-pf-cab"><b>'+on+' de '+P.items.length+' fotos van al informe</b>'+(on>INF_PANEL_MAX ? '<span class="pill ojo">entran las primeras '+INF_PANEL_MAX+'</span>' : '')+
+     '<label class="bt sec chico" for="inf-pf-arch">＋ Agregar fotos</label><input type="file" id="inf-pf-arch" multiple accept="image/*" class="pi-oculto"></div>';
+  h+=P.items.length ? '<div class="inf-pf-l" id="inf-pf-l">'+P.items.map(function(x, i){
+    return '<div class="inf-pf'+(x.on ? '' : ' off')+'" data-i="'+i+'"><span class="n">'+(i+1)+'</span>'+
+      '<a class="inf-pf-img" href="'+esc(x.u)+'" target="_blank" rel="noopener"><img src="'+esc(x.u)+'" alt="" loading="lazy"></a>'+
+      '<div class="inf-pf-tx"><input data-c="t" maxlength="140" value="'+esc(x.t)+'" aria-label="Título de la foto '+(i+1)+'" placeholder="Título">'+
+      '<textarea data-c="d" rows="2" maxlength="400" aria-label="Descripción de la foto '+(i+1)+'" placeholder="Qué se ve, dónde y qué se hizo">'+esc(x.d)+'</textarea>'+
+      '<small class="tenue">'+(x.propia ? 'Tuya' : (x.nueva ? 'Nueva del mes' : 'Del registro'))+'</small></div>'+
+      '<div class="inf-pf-acc"><label class="check" title="Va al informe"><input type="checkbox" data-on="'+i+'"'+(x.on ? ' checked' : '')+'><span>Va</span></label>'+
+      '<button type="button" data-pfs="'+i+'" aria-label="Subir"'+(i ? '' : ' disabled')+'>↑</button><button type="button" data-pfb="'+i+'" aria-label="Bajar"'+(i<P.items.length-1 ? '' : ' disabled')+'>↓</button>'+
+      (x.propia ? '<button type="button" data-pfx="'+i+'" aria-label="Quitar la foto">×</button>' : '')+'</div></div>';
+  }).join('')+'</div>' : '<div class="vacio"><b>Sin fotos este mes</b>Salen de los reportes, las buenas prácticas y el cierre de los ATS. Puedes sumar las tuyas con «＋ Agregar fotos».</div>';
+  h+='<div class="inf-pf-pie"><button type="button" class="bt'+(P.cambio ? '' : ' sec')+'" id="inf-pf-guardar">Guardar el panel</button><span class="msg" id="inf-pf-msg" role="status">'+(P.cambio ? 'Hay cambios sin guardar: se usan igual al armar el informe.' : '')+'</span></div>';
+  return h+'</div></div>';
+}
+function _infPanelAl(caja){
+  var P=INFW.panel; if(!P || P.mes!==INFW.mes) return;
+  var L=$('inf-pf-l'), marcar=function(){ if(!P.cambio){ P.cambio=true; var g=$('inf-pf-guardar'); if(g) g.className='bt'; var m=$('inf-pf-msg'); if(m){ m.className='msg gris'; m.textContent='Hay cambios sin guardar: se usan igual al armar el informe.'; } } };
+  if(L){
+    L.addEventListener('input', function(ev){ var x=ev.target, f=x.closest('.inf-pf'); if(!f || !x.getAttribute('data-c')) return; var it=P.items[+f.getAttribute('data-i')]; if(!it) return; it[x.getAttribute('data-c')]=x.value; marcar(); });
+    L.addEventListener('change', function(ev){ var x=ev.target; if(!x.hasAttribute('data-on')) return; var it=P.items[+x.getAttribute('data-on')]; if(!it) return; it.on=x.checked; P.cambio=true; _infPintar(); });
+    L.addEventListener('click', function(ev){
+      var b=ev.target.closest('button'); if(!b) return;
+      var A=P.items, i;
+      if(b.hasAttribute('data-pfs')){ i=+b.getAttribute('data-pfs'); if(i>0){ var t=A[i]; A[i]=A[i-1]; A[i-1]=t; } }
+      else if(b.hasAttribute('data-pfb')){ i=+b.getAttribute('data-pfb'); if(i<A.length-1){ var u=A[i]; A[i]=A[i+1]; A[i+1]=u; } }
+      else if(b.hasAttribute('data-pfx')){ A.splice(+b.getAttribute('data-pfx'), 1); }
+      else return;
+      P.cambio=true; _infPintar();
+    });
+  }
+  var ar=$('inf-pf-arch'); if(ar) ar.onchange=function(){ _infPanelSubir(Array.prototype.slice.call(this.files||[])); this.value=''; };
+  var g=$('inf-pf-guardar'); if(g) g.onclick=_infPanelGuardar;
+}
+/* fotos propias: se suben a la obra y entran al final, con su título por escribir */
+function _infPanelSubir(files){
+  var P=INFW.panel, m=$('inf-pf-msg'); if(!P || !files.length) return;
+  files=files.filter(function(f){ return /^image\//i.test(f.type||''); }).slice(0, 24);
+  if(!files.length){ if(m){ m.className='msg mal'; m.textContent='Elige fotos (JPG o PNG).'; } return; }
+  var i=0, hechas=0;
+  function una(){
+    var f=files[i++]; if(!f) return Promise.resolve();
+    if(m){ m.className='msg gris'; m.textContent='Subiendo '+(hechas+1)+' de '+files.length+'…'; }
+    return _infAchicar(f, 1600).then(function(g){ return subirArchivoP('informe', g || f); }).then(function(u){
+      hechas++; P.items.push({ k:u, u:u, t:String(f.name||'').replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[_-]+/g, ' ').trim().slice(0, 140), d:'', on:true, propia:true });
+    }, function(){ return null; }).then(una);
+  }
+  una().then(function(){ P.cambio=true; _infPintar(); var mm=$('inf-pf-msg'); if(mm){ mm.className='msg '+(hechas===files.length ? 'ok' : 'mal'); mm.textContent=hechas===files.length ? (hechas===1 ? 'Foto agregada: escríbele su título y su descripción.' : hechas+' fotos agregadas: escríbeles su título y su descripción.') : 'Se subieron '+hechas+' de '+files.length+'. Revisa tu conexión.'; } });
+}
+function _infPanelGuardar(){
+  var P=INFW.panel, m=$('inf-pf-msg'), b=$('inf-pf-guardar'); if(!P) return;
+  var nt=JSON.stringify({ v:1, mes:P.mes, items:P.items.map(function(x){ return { k:x.k, u:x.u, t:x.t, d:x.d, on:x.on, propia:!!x.propia }; }) });
+  if(b) b.disabled=true; if(m){ m.className='msg gris'; m.textContent='Guardando…'; }
+  var p=P.id ? sbPatch('sst_doc?id=eq.'+_enc(P.id), { nota:nt }).then(function(){ return [{ id:P.id }]; })
+             : sbPostP('sst_doc', { empresa:YO.obra.id, hoja:INF_PANEL_HOJA, nombre:P.mes, nota:nt });
+  p.then(function(rows){ if(Array.isArray(rows) && rows[0] && rows[0].id) P.id=rows[0].id; P.cambio=false; P.items.forEach(function(x){ x.nueva=false; }); _infPintar(); var mm=$('inf-pf-msg'); if(mm){ mm.className='msg ok'; mm.textContent='Guardado: el panel de '+_infMesN(P.mes)+' queda así.'; } },
+    function(e){ if(b) b.disabled=false; if(m){ m.className='msg mal'; m.textContent=(e===401 || e===403) ? 'Tu sesión venció o esta cuenta no puede guardar en esta obra.' : 'No se pudo guardar. Revisa tu conexión e inténtalo otra vez.'; } });
+}
+/* para el PDF y el Word: las fotos del panel (en su orden), ya chicas; o las de siempre si el panel no se abrió */
+function _infPanelParaPdf(D){
+  var P=(INFW.panel && INFW.panel.mes===D.mes) ? INFW.panel : null;
+  return (P ? Promise.resolve(P) : _infPanelCargar(D.mes).catch(function(){ return null; })).then(function(P2){
+    if(!P2) return null;
+    var usar=P2.items.filter(function(x){ return x.on; }), hay=usar.length, L=usar.slice(0, INF_PANEL_MAX).map(function(x, j){ return { u:x.u, tit:x.t || 'Foto '+(j+1), sub:'', d:x.d || '', ini:x.ini, fin:x.fin }; }), i=0;
+    function una(){ var x=L[i++]; if(!x) return Promise.resolve(); return _edMini(x.u, 900, 700).then(function(m){ if(m && m.d) x.img=m; return una(); }); }
+    return Promise.all([una(), una(), una(), una()]).then(function(){ D.fotos={ L:L.filter(function(x){ return !!x.img; }), hay:hay, fallan:L.filter(function(x){ return !x.img; }).length, panel:true }; return D; });
+  });
+}
+/* <<< PANEL-FOTOS-FIN >>> */
 /* el panel fotográfico: las fotos del mes, ya chicas para el PDF (lo que no carga, no entra) */
 var INF_FOTOS_MAX = 36;
 function _infFotosTraer(D){
@@ -732,7 +897,8 @@ function infArmar(){
         return Promise.all([_infTraer(INFW.mes, YO.obra, { prog:vaProg }), cargarEvPDF(), _infLibPdf()]);
       }).then(function(r){
         var vaF=va('fotos');
-        return vaF ? _infFotosTraer(r[0]).then(function(){ return r; }) : r;
+        /* 10/11/2026 · las del panel fotográfico (lo corregido, en su orden); si no se pudo, las de siempre */
+        return vaF ? _infPanelParaPdf(r[0]).then(function(D2){ return D2 ? r : _infFotosTraer(r[0]).then(function(){ return r; }); }, function(){ return _infFotosTraer(r[0]).then(function(){ return r; }); }) : r;
       }).then(function(r){
         /* 19/10/2026 · lote 19 · las fotos de la tabla de observaciones y las del registro fotográfico */
         var D=r[0], esp=[];
@@ -1015,21 +1181,23 @@ function _infPdfBase(D, op){
     }
     if(x.k==='fotos'){
       var Fo=D.fotos||{ L:[], hay:0, fallan:0 };
-      if(!Fo.L.length){ P.nota(Fo.hay ? 'Las fotos del mes no se pudieron cargar.' : 'No hay fotos este mes: salen de los reportes, las buenas prácticas y el cierre de los ATS.'); return; }
-      var gx=12, cw=(W-2*M-gx)/2, ih=168, ch=ih+44, col=0;
+      if(!Fo.L.length){ P.nota(Fo.hay ? 'Las fotos del mes no se pudieron cargar.' : 'No hay fotos este mes: salen de los reportes, las buenas prácticas y el cierre de los ATS, y se suman las tuyas en «El panel fotográfico».'); return; }
+      /* 10/11/2026 · más ordenado: «Foto N», de a dos por fila y tres filas por hoja, cada una en su recuadro con su título y su descripción */
+      var gx=12, gy=12, cw=(W-2*M-gx)/2, ih=158, capH=60, ch=ih+capH, col=0;
       Fo.L.forEach(function(f, j){
-        /* el antes y el después de un reporte van en la misma fila */
-        if(col===1 && f.ini && Fo.L[j+1] && Fo.L[j+1].fin){ col=0; P.y+=ch; }
         if(col===0 && P.y+ch>H-50){ doc.addPage(); P.cab('Panel fotográfico (continúa)'); }
-        var x0=M+col*(cw+gx), im=f.img, k=Math.min(cw/im.w, ih/im.h), iw=im.w*k, ihh=im.h*k;
+        var x0=M+col*(cw+gx), im=f.img, k=Math.min((cw-10)/im.w, (ih-10)/im.h), iw=im.w*k, ihh=im.h*k;
         P.F(C.FONDO); doc.rect(x0, P.y, cw, ih, 'F');
         try{ doc.addImage(im.d, 'JPEG', x0+(cw-iw)/2, P.y+(ih-ihh)/2, iw, ihh); }catch(e){}
-        P.L('bold', 8.5, C.TEXTO); doc.text(P.cortar(f.tit, cw-4), x0, P.y+ih+12);
-        P.L('normal', 7.5, C.GRIS); doc.text(P.cortar(f.sub, cw-4), x0, P.y+ih+23);
-        if(f.d){ P.L('normal', 7.5, C.GRIS); doc.text(P.cortar(f.d, cw-4), x0, P.y+ih+33); }
-        col++; if(col===2){ col=0; P.y+=ch; }
+        doc.setDrawColor(C.RAYA[0], C.RAYA[1], C.RAYA[2]); doc.setLineWidth(0.7); doc.rect(x0, P.y, cw, ch);
+        P.F(C.TINTA); doc.rect(x0, P.y, 44, 15, 'F'); P.L('bold', 7.6, C.BLANCO); doc.text(P.T('Foto '+(j+1)), x0+22, P.y+10.4, {align:'center'});
+        var yT=P.y+ih+13;
+        P.L('bold', 8.6, C.TEXTO); doc.text(P.cortar(f.tit, cw-12), x0+6, yT);
+        var dd=String(f.d || f.sub || '').trim();
+        if(dd){ P.L('normal', 7.6, C.GRIS); doc.text(doc.splitTextToSize(P.T(dd), cw-12).slice(0, 4), x0+6, yT+10.5); }
+        col++; if(col===2){ col=0; P.y+=ch+gy; }
       });
-      if(col) P.y+=ch;
+      if(col) P.y+=ch+gy;
       if(Fo.hay>Fo.L.length) P.nota('Van '+Fo.L.length+' de '+Fo.hay+' fotos del mes'+(Fo.fallan ? ' ('+Fo.fallan+(Fo.fallan===1 ? ' no se pudo cargar)' : ' no se pudieron cargar)') : '')+'.');
     }
     if(x.k==='sctr'){
@@ -1041,6 +1209,19 @@ function _infPdfBase(D, op){
         D.sctr.vig.map(function(v){ return [sctrCobN(v.cob), sctrFechaCorta(v.de)+' al '+sctrFechaCorta(v.a), [v.aseg, v.pol].filter(Boolean).join(' · ') || '—', v.conLista ? v.l.length : '—']; }), [96, 140, W-2*M-316, 80]);
       P.tabla('En obra, sin cobertura completa', ['Trabajador', docPersonaP(), 'Qué le falta'],
         Rs.falta.map(function(f){ return [f.t.nombre||'', f.t.dni||'', SCTR_ESTADO_N[f.e]||'']; }).concat(Rs.sinDoc.map(function(t){ return [t.nombre||'', '—', SCTR_ESTADO_N.sin_doc]; })), [W-2*M-230, 100, 130]);
+      /* 10/11/2026 · la Vida Ley (D. Leg. 688): la póliza vigente y quién está en obra sin ella */
+      var Vv=D.sctr.vida;
+      if(Vv){
+        var Rv=Vv.R;
+        if(typeof P.subtitulo==='function') P.subtitulo('Vida Ley');
+        P.cifras([['Con Vida Ley', Rv.ok.length+' de '+Rv.activos, 'póliza vigente al '+sctrFechaCorta(D.sctr.dia), Rv.activos && Rv.ok.length===Rv.activos ? 'ok' : ''],
+                  ['Sin Vida Ley', Rv.falta.length+Rv.sinDoc.length, 'no están en una póliza vigente', (Rv.falta.length+Rv.sinDoc.length) ? 'mal' : 'ok'], ['Pólizas vigentes', Vv.vig.length, '']]);
+        P.tabla('Pólizas de Vida Ley vigentes', ['Vigencia', 'Aseguradora · póliza', 'Asegurados'],
+          Vv.vig.map(function(v){ return [sctrFechaCorta(v.de)+' al '+sctrFechaCorta(v.a), [v.aseg, v.pol].filter(Boolean).join(' · ') || '—', v.conLista ? v.l.length : '—']; }), [140, W-2*M-220, 80], { vacio:'No hay póliza de Vida Ley vigente al cierre del mes.' });
+        P.tabla('En obra, sin Vida Ley', ['Trabajador', docPersonaP(), 'Estado'],
+          Rv.falta.map(function(f){ return [f.t.nombre||'', f.t.dni||'', VIDA_ESTADO_N[f.e]||'']; }).concat(Rv.sinDoc.map(function(t){ return [t.nombre||'', '—', VIDA_ESTADO_N.sin_doc]; })), [W-2*M-230, 100, 130], { vacio:'Todo el personal en obra tiene Vida Ley vigente.' });
+        P.nota('Vida Ley: '+VIDA_NORMA+'.');
+      }
     }
   });
   return { doc:doc, bytes:doc.output('arraybuffer'), indice:indice };
@@ -2295,6 +2476,16 @@ function _infWordTodo(D){
       cifras([['Cubiertos', Rs.ok.length+' de '+Rs.activos, 'salud y pensión'], ['Les falta algo', Rs.falta.length+Rs.sinDoc.length, 'sin SCTR o con una sola cobertura'], ['Constancias vigentes', D.sctr.vig.length, '']]);
       if(Rs.falta.length+Rs.sinDoc.length) B.push({ t:{ cols:[['Trabajador', 4864, 'izq'], [docPersonaP(), 2000, 'izq'], ['Qué le falta', 3000, 'izq']],
         filas:Rs.falta.map(function(f){ return [f.t.nombre||'', f.t.dni||'', SCTR_ESTADO_N[f.e]||'']; }).concat(Rs.sinDoc.map(function(t){ return [t.nombre||'', '—', SCTR_ESTADO_N.sin_doc]; })) } });
+      /* 10/11/2026 · la Vida Ley */
+      var Vw=D.sctr.vida;
+      if(Vw){
+        var Rw=Vw.R;
+        B.push({ h:'Vida Ley' });
+        cifras([['Con Vida Ley', Rw.ok.length+' de '+Rw.activos, 'póliza vigente'], ['Sin Vida Ley', Rw.falta.length+Rw.sinDoc.length, 'no están en una póliza vigente'], ['Pólizas vigentes', Vw.vig.length, '']]);
+        if(Rw.falta.length+Rw.sinDoc.length) B.push({ t:{ cols:[['Trabajador', 4864, 'izq'], [docPersonaP(), 2000, 'izq'], ['Estado', 3000, 'izq']],
+          filas:Rw.falta.map(function(f){ return [f.t.nombre||'', f.t.dni||'', VIDA_ESTADO_N[f.e]||'']; }).concat(Rw.sinDoc.map(function(t){ return [t.nombre||'', '—', VIDA_ESTADO_N.sin_doc]; })) } });
+        B.push({ p:'Vida Ley: '+VIDA_NORMA+'.', gris:1 });
+      }
       return;
     }
     if(k==='comite'){
@@ -2316,7 +2507,7 @@ function _infWordTodo(D){
         if(G.some(function(g){ return g.k===c.k; })) return;
         var fs=D.freg.del.filter(function(f){ return f.d.cat===c.k && f.img && f.img.u8; }); if(fs.length) G.push({ k:c.k, n:c.n, L:fs.map(function(f){ return { img:f.img, t:f.d.desc || c.n, s:_infFechaC(f.d.fecha)+(f.d.frente ? ' · '+f.d.frente : '') }; }) });
       });
-      if(k==='fotos' && D.fotos) G.push({ k:'p', n:'', L:D.fotos.L.filter(function(f){ return f.img && f.img.u8; }).map(function(f){ return { img:f.img, t:f.tit, s:f.sub }; }) });
+      if(k==='fotos' && D.fotos) G.push({ k:'p', n:'', L:D.fotos.L.filter(function(f){ return f.img && f.img.u8; }).map(function(f, j){ return { img:f.img, t:'Foto '+(j+1)+' · '+f.tit, s:f.d || f.sub || '' }; }) });
       if(!G.length){ B.push({ p:'Sin fotos este mes.', gris:1 }); return; }
       G.forEach(function(g){
         if(g.n) B.push({ h:g.n, nivel:2 });
@@ -2618,7 +2809,7 @@ function _infVer(R){
    que falta, en la app y en la web. Cada lado cuenta lo suyo en el mismo
    resumen S (infbPartes no lee la base):
      S.hh { n, faltan[] } · S.per · S.ch { n, qr } · S.ev · S.ats { n, sin }
-     S.rep { n, abiertos, sinFicha } · S.insp · S.epp · S.acc · S.sctr { vig }
+     S.rep { n, abiertos, sinFicha } · S.insp · S.epp · S.acc · S.sctr { vig } · S.vida { vig }
      S.com { n } | null · S.foto { cu{}, L[] } (los temas, con amb y sal)
      S.amb { res, resSin, agua, comb, combSin, docs, ch, insp, obs, obsAb }
      S.sal { emo { n, vig, por, venc, sin, mes } | null, desc { n, dias },
@@ -2685,7 +2876,10 @@ function infbPartes(tipo, S, P){
     L.push({ k:'acc', ic:'🚑', n:'Accidentes e incidentes', est:'nada', tx:S.acc ? infbN(S.acc, 'registrado', 'registrados') : ['Ninguno registrado'],
       app:{ bt:'Abrir', ir:'p-accidentes' }, web:{ bt:'Abrir', v:'acc' } });
     L.push({ k:'sctr', ic:'🛡️', n:'SCTR', est:(S.sctr && S.sctr.vig) ? 'ok' : 'falta', tx:(S.sctr && S.sctr.vig) ? ['Constancia vigente'] : ['Falta la constancia del mes'],
-      app:{ bt:'Subir', ir:'p-sctr' }, web:{ bt:'Subir', v:'sctr' } });
+      app:{ bt:'Subir', fn:'sctrAbrir', arg:'sctr', ir:'p-sctr' }, web:{ bt:'Subir', fn:'sctrSegIr', arg:'sctr', v:'sctr' } });
+    /* 10/11/2026 · la Vida Ley (D. Leg. 688): su póliza vigente, aparte del SCTR */
+    L.push({ k:'vida', ic:'💙', n:'Vida Ley', est:(S.vida && S.vida.vig) ? 'ok' : 'falta', tx:(S.vida && S.vida.vig) ? ['Póliza vigente'] : ['Falta la póliza vigente'],
+      app:{ bt:'Subir', fn:'sctrAbrir', arg:'vida', ir:'p-sctr' }, web:{ bt:'Subir', fn:'sctrSegIr', arg:'vida', v:'sctr' } });
     if(S.com) L.push({ k:'com', ic:'🏛️', n:'Comité de SST', est:S.com.n ? 'ok' : 'falta', tx:S.com.n ? infbN(S.com.n, 'reunión', 'reuniones') : ['Sin reunión este mes'],
       app:{ bt:'Abrir', ir:'p-comite' }, web:{ bt:'Abrir', v:'comite' } });
     L.push(infbFotoParte('sst', S, 'foto'));
@@ -2795,7 +2989,7 @@ function _infS(D){
     hh:{ n:Object.keys(dias).length, faltan:_infDiasLab(D.mes).filter(function(f){ return !dias[f]; }) }, per:D.per ? D.per.act : D.activos,
     ch:{ n:(D.ch && D.ch.tot) ? D.ch.tot.veces : 0, qr:(D.ch && D.ch.tot) ? D.ch.tot.qr : 0 }, ev:(D.cap || {}).n || 0, ats:{ n:D.ats.n, sin:D.ats.sinCierre },
     rep:{ n:D.rep.n, abiertos:D.rep.n-D.rep.cerrados, sinFicha:obsRep.filter(function(x){ return !x.clas; }).length },
-    insp:D.insp.n, epp:D.epp.entregas, acc:D.acc.mes+D.acc.inc, sctr:{ vig:!!(D.sctr && D.sctr.vig && D.sctr.vig.length) },
+    insp:D.insp.n, epp:D.epp.entregas, acc:D.acc.mes+D.acc.inc, sctr:{ vig:!!(D.sctr && D.sctr.vig && D.sctr.vig.length) }, vida:{ vig:!!(D.sctr && D.sctr.vida && D.sctr.vida.vig.length) },
     com:(D.com && D.com.doc && (D.com.doc.miembros || []).length) ? { n:D.com.actas.length } : null,
     foto:{ cu:fotoCatCuenta((D.freg && D.freg.del) || []), L:(D.freg && D.freg.L) || [] },
     amb:{ res:AR.resN || 0, resSin:resSin, agua:AR.aguaN || 0, comb:AR.combN || 0, combSin:combSin, docs:AR.docs || 0, ch:(A.ch || []).length, insp:(A.insp || []).length,
@@ -2827,7 +3021,7 @@ function _infTx(L){ return (L || []).filter(function(p){ return p!=='' && p!==nu
 function _infPidePintar(){
   var caja=$('inf-pide'); if(!caja || !INF_PIDE.D) return;
   /* el SCTR es del Perú: en una obra de otro país no se pide */
-  var T=infbTipo(INFW.tipo), L=infbPartes(T.k, _infS(INF_PIDE.D), _infPlanOrden()).filter(function(x){ return !(x.k==='sctr' && typeof vistaOcultaPais==='function' && vistaOcultaPais('sctr')); }), K=infbCuenta(L);
+  var T=infbTipo(INFW.tipo), L=infbPartes(T.k, _infS(INF_PIDE.D), _infPlanOrden()).filter(function(x){ return !((x.k==='sctr' || x.k==='vida') && typeof vistaOcultaPais==='function' && vistaOcultaPais('sctr')); }), K=infbCuenta(L);
   var h='<div class="tarj-cuerpo"><div class="inf-pide-cab"><b>'+K.ok+' de '+K.tot+' listos</b><span class="tenue"> · lo de '+esc(_infMesN(INFW.mes))+': lo mismo que ves en la app, en «Informe del mes»</span>'+
     '<button type="button" class="bt sec chico" id="inf-pide-re" title="Volver a revisar">↻</button></div>'+
     '<span class="inf-pide-barra" aria-hidden="true"><i style="width:'+Math.round(100*K.ok/Math.max(1, K.tot))+'%"></i></span><div class="inf-pide-l">';

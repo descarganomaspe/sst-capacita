@@ -31,7 +31,7 @@ var OS_MOTIVO = { sin_sesion:'Tu sesión se cerró. Vuelve a entrar.', no_eres_d
    equipos y apoyo), con sus cargos propios arriba; los de otros sectores, a pedido. Lo que se le exige a un cargo propio y su
    multa los arma el servidor (os_cargo_propio_guardar, con vista previa): aquí solo se pregunta y se muestra. */
 var OS_HAB = { al:'Trabajo en altura', an:'Armado de andamios', iz:'Izaje de cargas', ec:'Espacio confinado', tc:'Trabajo en caliente', el:'Trabajo eléctrico', ex:'Manejo de explosivos', mq:'Operador de maquinaria' };
-var OS_TIPO = [['epp', 'EPP'], ['emo', 'Exámenes médicos'], ['sctr', 'SCTR'], ['capacitacion', 'Capacitaciones'], ['hab', 'Habilitaciones de alto riesgo'], ['permiso', 'Permisos'], ['insp', 'Verificaciones'], ['reg', 'Registros']];
+var OS_TIPO = [['epp', 'EPP'], ['emo', 'Exámenes médicos'], ['sctr', 'SCTR'], ['vida', 'Seguro de Vida Ley'], ['capacitacion', 'Capacitaciones'], ['hab', 'Habilitaciones de alto riesgo'], ['permiso', 'Permisos'], ['insp', 'Verificaciones'], ['reg', 'Registros']];
 var OS_RIESGOS = [['altura', 'Altura (más de 1.80 m o andamio)'], ['caliente', 'En caliente (soldadura o corte)'], ['electrico', 'Eléctrico (bloqueo de energías)'],
   ['confinado', 'Espacio confinado (gases)'], ['izaje', 'Izaje de cargas (grúas)']];
 var OS_GRAV = { grave:'Grave', muy_grave:'Muy grave', leve:'Leve' };
@@ -282,9 +282,12 @@ function _osCargoOpts(cur, sec, propios, conPropios){
   var mas = (sec && !OS.compOtros ? '<option value="__otros">Ver cargos de otros sectores…</option>' : '') + (conPropios ? '<option value="__nuevo">➕ Agregar un cargo propio…</option>' : '');
   return h + (mas ? '<optgroup label="Más">' + mas + '</optgroup>' : '');
 }
+/* 10/11/2026 · la Vida Ley la exige la ley a todo trabajador, sea cual sea su cargo: no viene del catálogo del servidor */
+var OS_VIDA = { tipo:'vida', t:'Seguro de Vida Ley a cargo del empleador, desde el inicio de la relación laboral', norma:'D. Leg. 688, art. 1 (modificado por el D.U. 044-2019)' };
 /* lo que se exige, por tipo (los mismos tipos del catálogo) */
 function _osReqLista(req){
   var gr = {}; (req || []).forEach(function(q){ (gr[q.tipo] = gr[q.tipo] || []).push(q); });
+  if((req || []).length && !gr.vida && !(typeof vistaOcultaPais === 'function' && vistaOcultaPais('sctr'))) gr.vida = [OS_VIDA];
   return OS_TIPO.filter(function(t){ return gr[t[0]]; }).map(function(t){
     return '<b>' + esc(t[1]) + '</b><ul>' + gr[t[0]].map(function(q){
       return '<li>' + esc(q.tipo === 'hab' ? (OS_HAB[q.t] || q.t) : q.t) + (q.norma ? ' <small>· ' + esc(q.norma) + '</small>' : '') + '</li>'; }).join('') + '</ul>'; }).join('');
