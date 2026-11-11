@@ -523,7 +523,7 @@ function _osClic(ev){
     _osRpc('os_necesidad_crear', { rubros:rs, departamento:$('os-dep').value, detalle:det }).then(function(j){
       t.disabled = false;
       if(!j || !j.ok){ m.className = 'msg mal'; m.textContent = _osMsg(j); return; }
-      toast('Listo: OBRASST te conecta con ' + (j.aliados_hoy ? 'los ' + j.aliados_hoy + ' aliados de tu zona.' : 'los aliados de tu zona.')); osPintar();
+      toast('Listo: OBRASST te conecta con ' + (j.aliados_hoy ? 'los ' + j.aliados_hoy + ' aliados de tu zona' : 'los aliados de tu zona') + ' en dos días hábiles.'); osPintar();
     }, function(){ t.disabled = false; m.className = 'msg mal'; m.textContent = _osMsg(null); });
   }
   else if(a === 'aj-guardar'){

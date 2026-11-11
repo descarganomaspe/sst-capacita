@@ -538,6 +538,7 @@ function legPdfDe(D, meta){
   if(on('acc')) seccion(num++, 'Incidentes y accidentes', D.acc, true, 'No estuvo en ningún incidente ni accidente registrado.');
   if(on('ats')){ titulo(num++, 'ATS firmados');
     texto(D.ats.n ? D.ats.n + (D.ats.n === 1 ? ' ATS firmado' : ' ATS firmados') + (D.ats.ult ? ' · el último, el ' + _legF(D.ats.ult) : '') + '.' : (D.srv ? 'Sin ATS firmados registrados en la obra.' : 'Sin ATS firmados en este celular.')); }
+  if(on('sal') && D.sal) seccion(num++, 'Salidas de obra', D.sal, true, 'Sin salidas de obra con permiso.');
   /* el índice, en su hoja */
   doc.setPage(pagIndice); y = 62;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(11, 42, 58); doc.text('Índice', M, y); y += 28; doc.setTextColor(30, 30, 30);

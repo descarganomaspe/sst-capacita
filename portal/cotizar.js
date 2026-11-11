@@ -28,15 +28,15 @@ var COT = (function(){
   var RUBRO_INFO = {
     epp:          { grupo:'proveedor', desde:'', luego:'',
                     hoy:'Te llegan las solicitudes de cotización de EPP de las empresas de tu zona: respondes con tu precio por ítem y ves si ganaste.' },
-    salud:        { grupo:'proveedor', desde:'diciembre de 2026', luego:'Desde diciembre de 2026 te llegan aquí las solicitudes de citas.',
+    salud:        { grupo:'proveedor', desde:'2027', luego:'En 2027 te llegan aquí las solicitudes de citas.',
                     hoy:'Hoy subes los resultados con el código de clínica (CLI-) de cada empresa, con esta misma cuenta, en «Soy un centro médico».' },
-    consultor:    { grupo:'profesional', desde:'diciembre de 2026', luego:'Desde diciembre de 2026 tienes aquí el panel de todas tus empresas y te llegan las empresas que buscan consultor.',
+    consultor:    { grupo:'profesional', desde:'2027', luego:'En 2027 tienes aquí el panel de todas tus empresas y te llegan las empresas que buscan consultor.',
                     hoy:'Hoy trabajas dentro de cada empresa cliente con tu propia cuenta: te invita a su equipo y pasas de una a otra desde el selector de obras.' },
     medico:       { grupo:'medico', desde:'2027', luego:'Desde 2027 te llegan aquí las empresas que necesitan médico ocupacional, y entras a cada una sin ocupar un puesto de su plan.',
                     hoy:'Hoy trabajas dentro de cada empresa que te invita a su equipo, con el plan de esa empresa: tú no pagas plan, ni ahora ni después.' },
-    capacitacion: { grupo:'proveedor', desde:'enero de 2027', luego:'Desde enero de 2027 te llegan aquí las solicitudes de cursos. Mientras, completa tu ficha.', hoy:'' },
-    residuos:     { grupo:'proveedor', desde:'enero de 2027', luego:'Desde enero de 2027 te llegan aquí las solicitudes de recojo. Mientras, completa tu ficha.', hoy:'' },
-    sctr:         { grupo:'proveedor', desde:'enero de 2027', luego:'Desde enero de 2027 te llegan aquí las empresas con el SCTR por vencer. Mientras, completa tu ficha.', hoy:'' },
+    capacitacion: { grupo:'proveedor', desde:'2027', luego:'En 2027 te llegan aquí las solicitudes de cursos. Mientras, completa tu ficha.', hoy:'' },
+    residuos:     { grupo:'proveedor', desde:'2027', luego:'En 2027 te llegan aquí las solicitudes de recojo. Mientras, completa tu ficha.', hoy:'' },
+    sctr:         { grupo:'proveedor', desde:'2027', luego:'En 2027 te llegan aquí las empresas con el SCTR por vencer. Mientras, completa tu ficha.', hoy:'' },
     otro:         { grupo:'proveedor', desde:'', luego:'', hoy:'' }
   };
   function rubroInfo(k){ return RUBRO_INFO[k] || RUBRO_INFO.otro; }

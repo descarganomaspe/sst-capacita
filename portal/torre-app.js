@@ -1218,21 +1218,270 @@ function tcFilas(){
   });
   return f;
 }
+/* 11/11/2026 · Marcelo: «el Excel de la Torre SSOMA / líder no es profesional, necesita un mejor formato». Ya no es un CSV: es un
+   .xlsx de verdad con tres hojas (Resumen, Proyectos, Accidentes), la franja con la empresa (y su logo, si lo tiene), el encabezado
+   fijo, filtros, anchos, números como números y semáforos (rojo lo que falta, ámbar lo que sigue abierto, verde lo que está al día).
+   Se arma aquí mismo, con su propio zip: la web trae este módulo tal cual y no tiene el armador de Excel de la app. */
+function _torX(s){ return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+/* «2026-10-21» → el número de fecha de Excel (días desde el 30/12/1899) */
+function _torFecha(v){ var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v || '')); return m ? Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - Date.UTC(1899, 11, 30)) / 864e5) : null; }
+/* el nombre del sector («construccion» → «Construcción») */
+function _torSector(id){
+  try{ if(typeof SECTORES !== 'undefined') for(var i = 0; i < SECTORES.length; i++) if(SECTORES[i].id === id) return SECTORES[i].nombre; }catch(_s){}
+  id = String(id || ''); return id ? id.charAt(0).toUpperCase() + id.slice(1) : '';
+}
+function _torCol(i){ var s = '', n = i + 1; while(n > 0){ var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+var _TOR_CRC = null;
+function _torCrc(u8){
+  if(!_TOR_CRC){ _TOR_CRC = new Uint32Array(256); for(var n = 0; n < 256; n++){ var c = n; for(var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); _TOR_CRC[n] = c >>> 0; } }
+  var x = 0xFFFFFFFF; for(var i = 0; i < u8.length; i++) x = _TOR_CRC[(x ^ u8[i]) & 0xFF] ^ (x >>> 8);
+  return (x ^ 0xFFFFFFFF) >>> 0;
+}
+/* [{n, d:Uint8Array}] → el .xlsx (zip sin comprimir) */
+function _torZip(arch){
+  var enc = new TextEncoder(), partes = [], centro = [], off = 0;
+  arch.forEach(function(f){
+    var nom = enc.encode(f.n), d = f.d, crc = _torCrc(d), h = new DataView(new ArrayBuffer(30)), c = new DataView(new ArrayBuffer(46));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(12, 0x21, true);
+    h.setUint32(14, crc, true); h.setUint32(18, d.length, true); h.setUint32(22, d.length, true); h.setUint16(26, nom.length, true);
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(14, 0x21, true);
+    c.setUint32(16, crc, true); c.setUint32(20, d.length, true); c.setUint32(24, d.length, true); c.setUint16(28, nom.length, true); c.setUint32(42, off, true);
+    partes.push(new Uint8Array(h.buffer), nom, d); centro.push(new Uint8Array(c.buffer), nom);
+    off += 30 + nom.length + d.length;
+  });
+  var tam = 0; centro.forEach(function(x){ tam += x.length; });
+  var e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, arch.length, true); e.setUint16(10, arch.length, true); e.setUint32(12, tam, true); e.setUint32(16, off, true);
+  return new Blob(partes.concat(centro).concat([new Uint8Array(e.buffer)]), { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+/* los estilos: 1 título · 2 subtítulo · 3 sección · 4 encabezado · 5 texto · 6 número · 7 decimal · 8 rojo · 9 ámbar · 10 verde · 11 rótulo · 12 nota · 13 fecha */
+var _TOR_ESTILOS = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+  '<numFmts count="2"><numFmt numFmtId="164" formatCode="0.00"/><numFmt numFmtId="165" formatCode="dd/mm/yyyy"/></numFmts>' +
+  '<fonts count="7"><font><sz val="10"/><color rgb="FF14191F"/><name val="Calibri"/></font>' +
+  '<font><b/><sz val="16"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><sz val="10"/><color rgb="FFEAF2F6"/><name val="Calibri"/></font>' +
+  '<font><b/><sz val="11"/><color rgb="FF0B2A3A"/><name val="Calibri"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>' +
+  '<font><b/><sz val="10"/><color rgb="FFA8291F"/><name val="Calibri"/></font><font><i/><sz val="9"/><color rgb="FF59646F"/><name val="Calibri"/></font></fonts>' +
+  '<fills count="9"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+  ['FF0B2A3A', 'FFF5B700', 'FF12384C', 'FFFBE3E3', 'FFFCEFD6', 'FFDDF3E6', 'FFF1F4F6'].map(function(c){ return '<fill><patternFill patternType="solid"><fgColor rgb="' + c + '"/><bgColor indexed="64"/></patternFill></fill>'; }).join('') + '</fills>' +
+  '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD8DEE3"/></left><right style="thin"><color rgb="FFD8DEE3"/></right>' +
+  '<top style="thin"><color rgb="FFD8DEE3"/></top><bottom style="thin"><color rgb="FFD8DEE3"/></bottom><diagonal/></border></borders>' +
+  '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="14">' +
+  '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+  '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" indent="1"/></xf>' +
+  '<xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" indent="1"/></xf>' +
+  '<xf numFmtId="0" fontId="3" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" indent="1"/></xf>' +
+  '<xf numFmtId="0" fontId="4" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+  '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>' +
+  '<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+  '<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+  '<xf numFmtId="3" fontId="5" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+  '<xf numFmtId="3" fontId="0" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+  '<xf numFmtId="3" fontId="0" fillId="7" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+  '<xf numFmtId="0" fontId="3" fillId="8" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>' +
+  '<xf numFmtId="0" fontId="6" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>' +
+  '<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+  '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
+  /* los semáforos van como formato condicional: 0 rojo · 1 ámbar · 2 verde */
+  '<dxfs count="3"><dxf><font><b/><color rgb="FFA8291F"/></font><fill><patternFill patternType="solid"><fgColor rgb="FFFBE3E3"/><bgColor rgb="FFFBE3E3"/></patternFill></fill></dxf>' +
+  '<dxf><fill><patternFill patternType="solid"><fgColor rgb="FFFCEFD6"/><bgColor rgb="FFFCEFD6"/></patternFill></fill></dxf>' +
+  '<dxf><fill><patternFill patternType="solid"><fgColor rgb="FFDDF3E6"/><bgColor rgb="FFDDF3E6"/></patternFill></fill></dxf></dxfs></styleSheet>';
+/* una hoja: la franja (título y subtítulo), el encabezado fijo con filtro y las filas; est(fila, col, valor) da el estilo de la celda */
+function _torHoja(o){
+  var nc = o.cols.length, ult = _torCol(nc - 1), filaH = 4, x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+    '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView showGridLines="0"' + (o.primera ? ' tabSelected="1"' : '') + ' workbookViewId="0">' +
+    '<pane ySplit="' + filaH + '" topLeftCell="A' + (filaH + 1) + '" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
+    '<sheetFormatPr defaultRowHeight="16"/><cols>' + o.cols.map(function(c, i){ return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + (c.w || 16) + '" customWidth="1"/>'; }).join('') + '</cols><sheetData>';
+  var celda = function(r, i, v, s){
+    var ref = _torCol(i) + r;
+    if(typeof v === 'number' && isFinite(v)) return '<c r="' + ref + '" s="' + s + '"><v>' + v + '</v></c>';
+    v = (v == null) ? '' : String(v);
+    return v ? '<c r="' + ref + '" s="' + s + '" t="inlineStr"><is><t xml:space="preserve">' + _torX(v) + '</t></is></c>' : '<c r="' + ref + '" s="' + s + '"/>';
+  };
+  var relleno = function(r, s){ var h = ''; for(var i = 1; i < nc; i++) h += '<c r="' + _torCol(i) + r + '" s="' + s + '"/>'; return h; };
+  x += '<row r="1" ht="34" customHeight="1">' + celda(1, 0, o.titulo, 1) + relleno(1, 1) + '</row>';
+  x += '<row r="2" ht="20" customHeight="1">' + celda(2, 0, o.sub, 2) + relleno(2, 2) + '</row>';
+  x += '<row r="3" ht="6" customHeight="1"></row>';
+  x += '<row r="4" ht="' + (o.altoCab || 30) + '" customHeight="1">' + o.cols.map(function(c, i){ return celda(4, i, c.t, 4); }).join('') + '</row>';
+  (o.filas || []).forEach(function(f, fi){
+    var r = filaH + 1 + fi;
+    x += '<row r="' + r + '">' + o.cols.map(function(c, i){
+      var v = f[i], s = (o.est ? o.est(f, i, v) : 0) || (typeof v === 'number' ? (c.dec ? 7 : 6) : (c.rot ? 11 : 5));
+      if(c.fecha && _torFecha(v) !== null){ v = _torFecha(v); s = 13; }
+      return celda(r, i, v, s);
+    }).join('') + '</row>';
+  });
+  if(o.nota){ var rn = filaH + 2 + (o.filas || []).length; x += '<row r="' + rn + '">' + celda(rn, 0, o.nota, 12) + '</row>'; }
+  /* Excel pide este orden: sheetData, autoFilter, mergeCells, pageMargins, pageSetup, drawing */
+  x += '</sheetData>' + (_torFiltro(o) ? '<autoFilter ref="' + _torFiltro(o) + '"/>' : '') +
+    '<mergeCells count="' + (o.nota ? 3 : 2) + '"><mergeCell ref="A1:' + ult + '1"/><mergeCell ref="A2:' + ult + '2"/>' +
+    (o.nota ? '<mergeCell ref="A' + (filaH + 2 + (o.filas || []).length) + ':' + ult + (filaH + 2 + (o.filas || []).length) + '"/>' : '') + '</mergeCells>' +
+    _torCF(o.cf) +
+    '<pageMargins left="0.3" right="0.3" top="0.4" bottom="0.4" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>' +
+    (o.logo ? '<drawing r:id="rId1"/>' : '') + '</worksheet>';
+  return x;
+}
+/* los semáforos: [{ ref:'D5:D9', reglas:[{ f:'D5>0', d:0|1|2 }] }] → formato condicional (la fórmula, desde la primera celda) */
+function _torCF(L){
+  var h = '', p = 1;
+  (L || []).forEach(function(c){
+    if(!c || !c.ref || !(c.reglas || []).length) return;
+    h += '<conditionalFormatting sqref="' + _torX(c.ref) + '">' + c.reglas.map(function(r){
+      return '<cfRule type="expression" dxfId="' + r.d + '" priority="' + (p++) + '"><formula>' + _torX(r.f) + '</formula></cfRule>'; }).join('') + '</conditionalFormatting>';
+  });
+  return h;
+}
+/* los tres semáforos de siempre, para una celda o una columna */
+function _torSemInsp(ref, a, e){   /* inspecciones hechas (a, la primera celda del rango) contra las que exige (e, la de esa fila) */
+  return { ref:ref, reglas:[{ f:'AND(ISNUMBER(' + a + '),ISNUMBER(' + e + '),' + e + '>0,' + a + '>=' + e + ')', d:2 },
+    { f:'AND(ISNUMBER(' + a + '),ISNUMBER(' + e + '),' + e + '>0,' + a + '>0,' + a + '<' + e + ')', d:1 },
+    { f:'AND(ISNUMBER(' + a + '),ISNUMBER(' + e + '),' + e + '>0,' + a + '=0)', d:0 }] };
+}
+function _torSemCero(ref, d){   /* más de cero: d (rojo o ámbar); cero: verde */
+  var a = ref.split(':')[0];
+  return { ref:ref, reglas:[{ f:'AND(ISNUMBER(' + a + '),' + a + '>0)', d:d }].concat(d === 0 || d === 1 ? [{ f:'AND(ISNUMBER(' + a + '),' + a + '=0)', d:2 }] : []) };
+}
+/* el nombre de la hoja de una obra: sin los signos que Excel no acepta, de 31 letras, sin repetirse */
+function _torNombreHoja(n, usados){
+  var b = String(n || '').replace(/[\[\]:*?\/\\]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^'+|'+$/g, '').slice(0, 31).trim() || 'Obra', x = b, i = 2;
+  while(usados[x.toLowerCase()]){ var suf = ' (' + (i++) + ')'; x = b.slice(0, 31 - suf.length).trim() + suf; }
+  usados[x.toLowerCase()] = true;
+  return x;
+}
+/* el rango del filtro (encabezado y filas), si la hoja lo lleva */
+function _torFiltro(o){ var n = (o.filas || []).length; return (o.filtro === false || !n) ? '' : 'A4:' + _torCol(o.cols.length - 1) + (4 + n); }
+/* el libro: las hojas y, si hay, el logo en la franja de la primera */
+function _torLibro(hojas, logo){
+  var enc = new TextEncoder(), A = [], tipos = '', rels = '', lista = '', nombres = '';
+  if(logo && hojas[0]) hojas[0].logo = true;
+  hojas.forEach(function(h, i){
+    var n = i + 1;
+    A.push({ n:'xl/worksheets/sheet' + n + '.xml', d:enc.encode(_torHoja(h)) });
+    tipos += '<Override PartName="/xl/worksheets/sheet' + n + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+    rels += '<Relationship Id="rId' + n + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + n + '.xml"/>';
+    lista += '<sheet name="' + _torX(String(h.hoja).slice(0, 30)) + '" sheetId="' + n + '" r:id="rId' + n + '"/>';
+    /* al imprimir, la franja y el encabezado se repiten en cada hoja; el filtro, con su nombre de Excel */
+    var q = "'" + _torX(String(h.hoja).slice(0, 30)).replace(/'/g, "''") + "'!";
+    if(_torFiltro(h)) nombres += '<definedName name="_xlnm._FilterDatabase" localSheetId="' + i + '" hidden="1">' + q + _torFiltro(h).replace(/([A-Z]+)(\d+)/g, '$$$1$$$2') + '</definedName>';
+    nombres += '<definedName name="_xlnm.Print_Titles" localSheetId="' + i + '">' + q + '$1:$4</definedName>';
+  });
+  if(logo){
+    /* en la fila del título (45 px), a la derecha: no tapa el subtítulo, que es largo */
+    var col = Math.max(0, hojas[0].cols.length - 1), anchoCol = Math.round(((hojas[0].cols[col] || {}).w || 16) * 6.5),
+        alto = 36, ancho = Math.round(alto * logo.ancho / Math.max(1, logo.alto));
+    if(ancho > anchoCol - 16){ ancho = anchoCol - 16; alto = Math.max(12, Math.round(ancho * logo.alto / Math.max(1, logo.ancho))); }
+    var cy = alto * 9525, cx = ancho * 9525, dx = Math.max(0, anchoCol - ancho - 8) * 9525, dy = Math.max(2, Math.round((45 - alto) / 2)) * 9525;
+    A.push({ n:'xl/media/logo.' + logo.ext, d:logo.bytes });
+    A.push({ n:'xl/drawings/drawing1.xml', d:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<xdr:oneCellAnchor><xdr:from><xdr:col>' + col + '</xdr:col><xdr:colOff>' + dx + '</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>' + dy + '</xdr:rowOff></xdr:from><xdr:ext cx="' + cx + '" cy="' + cy + '"/>' +
+      '<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="2" name="Logo"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>' +
+      '<xdr:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>' +
+      '<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + cx + '" cy="' + cy + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>') });
+    A.push({ n:'xl/drawings/_rels/drawing1.xml.rels', d:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/logo.' + logo.ext + '"/></Relationships>') });
+    A.push({ n:'xl/worksheets/_rels/sheet1.xml.rels', d:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>') });
+    tipos += '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>';
+  }
+  rels += '<Relationship Id="rId' + (hojas.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>';
+  A.unshift({ n:'[Content_Types].xml', d:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+      '<Default Extension="png" ContentType="image/png"/><Default Extension="jpeg" ContentType="image/jpeg"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' + tipos + '</Types>') },
+    { n:'_rels/.rels', d:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>') },
+    { n:'xl/workbook.xml', d:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' + lista + '</sheets>' + (nombres ? '<definedNames>' + nombres + '</definedNames>' : '') + '</workbook>') },
+    { n:'xl/_rels/workbook.xml.rels', d:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + rels + '</Relationships>') },
+    { n:'xl/styles.xml', d:enc.encode(_TOR_ESTILOS) });
+  return _torZip(A);
+}
+/* el logo de la empresa (PNG o JPEG), con su tamaño */
+function _torLogo(){
+  var u = '';
+  try{ u = (typeof empleador === 'function' && empleador() && empleador().logo) || ((_torEmp() || {}).logo) || ''; }catch(_e){}
+  var m = /^data:image\/(png|jpe?g);base64,(.+)$/.exec(String(u || ''));
+  if(!m) return Promise.resolve(null);
+  return new Promise(function(ok){
+    var im = new Image();
+    im.onload = function(){ try{ var b = atob(m[2]), u8 = new Uint8Array(b.length); for(var i = 0; i < b.length; i++) u8[i] = b.charCodeAt(i);
+      ok({ bytes:u8, ext:(m[1] === 'png' ? 'png' : 'jpeg'), ancho:im.naturalWidth || 1, alto:im.naturalHeight || 1 }); }catch(_b){ ok(null); } };
+    im.onerror = function(){ ok(null); };
+    im.src = u;
+  });
+}
+/* las tres hojas, con lo mismo que trae tcFilas (los números de la Torre) */
+function tcLibroHojas(){
+  var ps = tcSel(), mes = TC.mes || mesISO(), emp = (_torEmp() || {}).nombre || '', I = tcIndices(ps);
+  var sub = [emp, mesBonito(mes), 'Año ' + TC.anio, 'Generado: ' + fechaLarga(hoyISO())].filter(Boolean).join('   ·   ');
+  var num = function(v, dec){ return (v === null || v === undefined || v === '') ? 'sin dato' : (dec ? Math.round(v * 100) / 100 : v); };
+  var res = [['Horas hombre trabajadas', num(I.hht)], ['Accidentes que cuentan (incapacitantes y mortales)', I.n], ['Días perdidos', I.dias],
+    ['Índice de frecuencia (IF)', num(I.IF, 1)], ['Índice de severidad (IS)', num(I.IS, 1)], ['Índice de accidentabilidad (IA)', num(I.IA, 1)],
+    ['Proyectos en la Torre', TC.proy.length]];
+  var proy = TC.proy.map(function(p){
+    var d = tcD(p.id), e = tcEPP([p], mes), rep = 0, ab = 0, cap = 0;
+    d.rep.forEach(function(r){ if(String(r.fecha || '').slice(0, 7) === mes){ rep++; if(r.estado !== 'atendido') ab++; } });
+    d.cons.forEach(function(c){ if(String(c.fecha || '').slice(0, 7) === mes) cap++; });
+    var ra = tcRachas([p])[0];
+    return [p.nombre, p.codigo || '', _torSector(p.sector), tcInspHechas(p, mes), tcInspToca(p), rep, ab, cap, e.tot, e.P,
+            d.trab.filter(function(w){ return (w.estatus || 'activo') === 'activo'; }).length, (ra && ra.dias !== null) ? ra.dias : 'sin registro'];
+  });
+  var acc = tcAccs(ps).map(function(o){
+    return [o.x.fecha, o.p.nombre, accClase(o.x.clase).n, o.x.t_nombre || '', o.x.lugar || '', parseInt(o.x.dias, 10) || 0, String(o.x.medidas || '').trim() ? 'Escritas' : 'FALTAN'];
+  });
+  return [
+    { hoja:'Resumen', primera:true, filtro:false, titulo:'TORRE DE CONTROL SSOMA', sub:sub, cols:[{ t:'Indicador del año', w:54, rot:true }, { t:'Valor', w:18 }], filas:res,
+      est:function(f, i, v){ if(i !== 1 || typeof v !== 'number') return 0; return f[0].indexOf('Índice') === 0 ? 7 : 6; },
+      cf:[_torSemCero('B6:B7', 0)],
+      nota:'IF = accidentes × 1 000 000 / horas hombre · IS = días perdidos × 1 000 000 / horas hombre · IA = IF × IS / 1 000. Sale de lo registrado en cada obra.' },
+    { hoja:'Proyectos', titulo:'PROYECTO POR PROYECTO · ' + String(mesBonito(mes)).toUpperCase(), sub:sub, altoCab:44,
+      cols:[{ t:'Proyecto', w:30 }, { t:'Código', w:11 }, { t:'Sector', w:16 }, { t:'Inspecciones hechas', w:12 }, { t:'Inspecciones que exige', w:12 },
+            { t:'Reportes del mes', w:11 }, { t:'Reportes abiertos', w:11 }, { t:'Capacitaciones', w:13 }, { t:'EPP entregado', w:11 }, { t:'EPP perdido', w:10 },
+            { t:'Personal activo', w:11 }, { t:'Días sin accidentes', w:12 }], filas:proy,
+      cf:proy.length ? [_torSemInsp('D5:D' + (4 + proy.length), 'D5', 'E5'), _torSemCero('G5:G' + (4 + proy.length), 1), { ref:'J5:J' + (4 + proy.length), reglas:[{ f:'AND(ISNUMBER(J5),J5>0)', d:1 }] }] : [] },
+    { hoja:'Accidentes', titulo:'ACCIDENTES DEL AÑO ' + TC.anio, sub:sub,
+      cols:[{ t:'Fecha', w:12, fecha:true }, { t:'Proyecto', w:28 }, { t:'Clase', w:20 }, { t:'Trabajador', w:26 }, { t:'Lugar', w:24 }, { t:'Días perdidos', w:11 }, { t:'Medidas correctivas', w:16 }],
+      filas:acc.length ? acc : [['Sin accidentes registrados en el año', '', '', '', '', '', '']],
+      cf:acc.length ? [{ ref:'G5:G' + (4 + acc.length), reglas:[{ f:'G5="FALTAN"', d:0 }, { f:'G5="Escritas"', d:2 }] }] : [] }
+  ].concat(tcLibroObras(mes, sub));
+}
+/* una hoja por obra: lo del mes y lo del año, con sus semáforos */
+function tcLibroObras(mes, sub){
+  var usados = { resumen:true, proyectos:true, accidentes:true };
+  return TC.proy.slice(0, 60).map(function(p){
+    var d = tcD(p.id), e = tcEPP([p], mes), I = tcIndices([p]), rep = 0, ab = 0, cap = 0, ra = tcRachas([p])[0];
+    d.rep.forEach(function(r){ if(String(r.fecha || '').slice(0, 7) === mes){ rep++; if(r.estado !== 'atendido') ab++; } });
+    d.cons.forEach(function(c){ if(String(c.fecha || '').slice(0, 7) === mes) cap++; });
+    var dec = function(v){ return (v === null || v === undefined || v === '') ? 'sin dato' : Math.round(v * 100) / 100; };
+    var filas = [['Código', p.codigo || '—'], ['Sector', _torSector(p.sector) || '—'],
+      ['Inspecciones hechas en el mes', tcInspHechas(p, mes)], ['Inspecciones que exige el mes', tcInspToca(p)],
+      ['Reportes del mes', rep], ['Reportes abiertos', ab], ['Capacitaciones del mes', cap],
+      ['EPP entregado en el mes', e.tot], ['EPP perdido en el mes', e.P],
+      ['Personal activo', d.trab.filter(function(w){ return (w.estatus || 'activo') === 'activo'; }).length],
+      ['Días sin accidentes', (ra && ra.dias !== null && ra.dias !== undefined) ? ra.dias : 'sin registro'],
+      ['Horas hombre del año', (I.hht === null || I.hht === undefined) ? 'sin dato' : I.hht], ['Accidentes del año que cuentan', I.n], ['Días perdidos en el año', I.dias],
+      ['Índice de frecuencia (IF)', dec(I.IF)], ['Índice de severidad (IS)', dec(I.IS)], ['Índice de accidentabilidad (IA)', dec(I.IA)]];
+    return { hoja:_torNombreHoja(p.nombre, usados), titulo:'OBRA · ' + String(p.nombre || '').toUpperCase(), sub:sub, filtro:false,
+      cols:[{ t:'Indicador', w:46, rot:true }, { t:'Valor', w:28 }], filas:filas,
+      est:function(f, i, v){ if(i !== 1) return 0; if(typeof v !== 'number') return 5; return f[0].indexOf('Índice') === 0 ? 7 : 6; },
+      cf:[_torSemInsp('B7', 'B7', 'B8'), _torSemCero('B10', 1), { ref:'B13', reglas:[{ f:'AND(ISNUMBER(B13),B13>0)', d:1 }] }, _torSemCero('B17:B18', 0)],
+      nota:'Mes: ' + mesBonito(mes) + '. El año: lo registrado en la obra en ' + TC.anio + '.' };
+  });
+}
 function tcExcel(){
-  var f=tcFilas();
-  var csv=f.map(function(fila){
-    return fila.map(function(c){
-      var t=String(c===undefined||c===null?'':c);
-      return /[";\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t;
-    }).join(';');
-  }).join('\r\n');
-  var b=new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
-  var a=document.createElement('a');
-  a.href=URL.createObjectURL(b);
-  a.download='torre-ssoma-'+(TC.mes||mesISO())+'.csv';
-  document.body.appendChild(a); a.click();
-  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 800);
-  _torAviso('Excel listo','Se descargó el archivo. Ábrelo con Excel: ya viene separado por punto y coma y con los acentos bien.','\uD83D\uDCC4');
+  var hojas; try{ hojas = tcLibroHojas(); }catch(e){ _torAviso('No se pudo', 'No se pudo armar el Excel: ' + ((e && e.message) || e), '⚠️'); return Promise.resolve(null); }
+  return _torLogo().then(function(logo){
+    var b = _torLibro(hojas, logo), nombre = 'Torre SSOMA - ' + (TC.mes || mesISO()) + '.xlsx';
+    try{ window.__TOR_XLSX = b; }catch(_w){}
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = nombre;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 800);
+    _torAviso('Excel listo', 'Está en tus descargas: el resumen, los proyectos, los accidentes y una hoja por obra, con los semáforos y los filtros puestos.', '📄');
+    return b;
+  });
 }
 function tcPDF(){
   /* el PDF sale de la impresion del navegador; la hoja de estilo de

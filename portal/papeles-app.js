@@ -95,6 +95,13 @@ var ATS_PREG = {
       o:[['si','Sí, más de 1.80 m'],['no','No, menos de 1.80 m']], of:{
       si:[ { p:'Trabajo en altura (por encima de 1.80 m)', r:'Caída a distinto nivel', c:'Fracturas, politraumatismos, muerte', m:'Arnés de cuerpo entero con línea de vida anclada a un punto fijo por encima del hombro, permiso de trabajo en altura, equipo inspeccionado' } ],
       no:[ { p:'Trabajo sobre plataformas o desniveles bajos', r:'Caída a distinto nivel', c:'Golpes, esguinces, fracturas', m:'Plataformas firmes y con baranda, escaleras en buen estado; no improvisar con baldes, cilindros ni cajas' } ] } },
+    /* 11/11/2026 · Marcelo: «¿cómo estará en altura? elevador unipersonal, andamio…». Lo que se contesta pide su PETAR y su
+       check list (ATS-DOCS: «Lo que pide este trabajo») */
+    { k:'a_como', t:['alt','and','esc'], d:{ k:'a_niv', v:['altura','ambos'] }, q:'¿Desde dónde trabajarás en altura?',
+      o:[['andamio','Andamio'],['escalera','Escalera'],['plataforma','Plataforma elevadora (unipersonal o tijera)'],['canastilla','Canastilla con grúa'],['estructura','Sobre la estructura o el techo']], of:{
+      plataforma:[ { p:'Uso de plataforma elevadora', r:'Volcadura o atrapamiento contra la estructura', c:'Fracturas, politraumatismos, muerte', m:'Operador capacitado y autorizado; plataforma inspeccionada antes de usarla; terreno firme y nivelado; arnés con eslinga corta anclado a la canasta; no salir de la canasta ni pararse en sus barandas' } ],
+      canastilla:[ { p:'Canastilla izada con grúa', r:'Caída de la canastilla o golpe contra la estructura', c:'Politraumatismos, muerte', m:'Canastilla para personas con su capacidad marcada; plan de izaje y PETAR de izaje; arnés anclado a la canastilla; rigger y señalero; no izar con viento fuerte' } ],
+      estructura:[ { p:'Trabajo sobre estructuras o techos', r:'Caída a distinto nivel', c:'Fracturas, politraumatismos, muerte', m:'Línea de vida horizontal o puntos de anclaje instalados; arnés con doble línea de vida, siempre una enganchada; no pisar calaminas ni tragaluces' } ] } },
     { k:'a_and', t:['alt','and'], q:'¿Estarás en un andamio?', f:[
       { p:'Uso de andamio', r:'Colapso del andamio', c:'Politraumatismos, fracturas, muerte', m:'Andamio inspeccionado con tarjeta verde, nivelado, sobre base firme y arriostrado; con tarjeta roja no se sube; no sobrecargar la plataforma' },
       { p:'Uso de andamio', r:'Caída a distinto nivel desde el andamio', c:'Fracturas, politraumatismos, muerte', m:'Barandas, rodapiés y plataformas completas; arnés de cuerpo entero anclado cuando corresponda; subir por su escalera con tres puntos de apoyo' } ] },
@@ -562,6 +569,22 @@ function _atsDibujar(){
       doc.text('SIN CIERRE — FALTA LA FIRMA DE SALIDA DE LA CUADRILLA O LA FOTO DE CÓMO QUEDÓ EL ÁREA', W/2, 3.85, {align:'center'});
     }
     doc.setTextColor(30,34,40);
+  }
+  /* 11/11/2026 · liberado: la franja verde con la fecha y la hora (Marcelo: «para que sepan que esa hora y día se liberó») */
+  else if(ATS.modo!=='modelo' && ATS.vb && ATS.vb.sst && ATS.vb.sst.t && typeof atsPuedeTrabajar==='function' && atsPuedeTrabajar(ATS)){
+    var _lt = new Date(+ATS.vb.sst.t);
+    if(!isNaN(_lt)){
+      var _lf = 'LIBERADO EL '+('0'+_lt.getDate()).slice(-2)+'/'+('0'+(_lt.getMonth()+1)).slice(-2)+'/'+_lt.getFullYear()+' A LAS '+('0'+_lt.getHours()).slice(-2)+':'+('0'+_lt.getMinutes()).slice(-2)+
+                (ATS.vb.sst.n ? ' — V°B° SSOMA: '+String(ATS.vb.sst.n).toUpperCase().slice(0, 60) : '')+' — NO SE CAMBIA NI SE LE AGREGA NADA';
+      var _np3 = doc.getNumberOfPages();
+      for(var _q3=1; _q3<=_np3; _q3++){
+        doc.setPage(_q3);
+        doc.setFillColor(0,150,69); doc.rect(0, 0.6, W, 4.6, 'F');
+        doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(7.4);
+        doc.text(_lf, W/2, 3.85, {align:'center'});
+      }
+      doc.setTextColor(30,34,40);
+    }
   }
 
   ATS.pdf = { blob: doc.output('blob'),

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verificar un documento · OBRASST</title>
+<meta name="description" content="Comprueba si un PDF de OBRASST es el original: la huella se calcula en tu equipo y el archivo no se sube.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 2/11/2026 · la página pública del QR de un certificado o de un equipo de los aliados de servicios (sin datos de salud; el documento, tapado) */
+:root{ --fondo:#F4F6F8; --panel:#fff; --raya:#E3E8EC; --tinta:#0B2A3A; --texto:#22323D; --gris:#62737F; --casco:#F5B700;
+  --ok:#1E8E5A; --ok-f:#E8F5EE; --ojo:#8A5200; --ojo-f:#FBF3E4; --mal:#C6323A; --mal-f:#FBE9EA; --neu-f:#EEF2F5;
+  --f:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; --mono:'IBM Plex Mono', ui-monospace, Menlo, monospace; }
+*{box-sizing:border-box} body{margin:0; background:var(--fondo); color:var(--texto); font:15px/1.55 var(--f); -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums}
+.barra{background:var(--tinta); color:#fff; padding:14px 16px; display:flex; gap:10px; align-items:center} .barra b{letter-spacing:.05em} .barra i{display:inline-block; width:14px; height:4px; background:var(--casco); border-radius:2px}
+.barra span{color:#9FB6C4}
+main{max-width:760px; margin:0 auto; padding:20px 16px 50px}
+h1{font-size:22px; line-height:1.25; color:var(--tinta); margin:0 0 4px; text-wrap:balance} .gris{color:var(--gris); font-size:13.5px} .mono{font-family:var(--mono)}
+.sello{border-radius:14px; padding:16px; margin:14px 0; border:1px solid; display:flex; gap:14px; align-items:center}
+.sello b{display:block; font-size:22px; letter-spacing:.04em} .sello p{margin:2px 0 0; font-size:14px}
+.sello.ok{background:var(--ok-f); border-color:#BFE3CE; color:var(--ok)} .sello.ojo{background:var(--ojo-f); border-color:#EED9A8; color:var(--ojo)} .sello.mal{background:var(--mal-f); border-color:#F0C9CC; color:var(--mal)}
+.sello.neu{background:var(--neu-f); border-color:var(--raya); color:var(--gris)}
+.sello .ic{flex:none; width:38px; height:38px; border-radius:50%; display:grid; place-items:center; color:#fff; font-weight:700; font-size:20px}
+.sello.ok .ic{background:var(--ok)} .sello.ojo .ic{background:var(--ojo)} .sello.mal .ic{background:var(--mal)} .sello.neu .ic{background:var(--gris)}
+.tarj{background:var(--panel); border:1px solid var(--raya); border-radius:12px; padding:16px; margin:14px 0} .tarj h2{font-size:15.5px; color:var(--tinta); margin:0 0 10px}
+dl{display:grid; grid-template-columns:minmax(120px, max-content) minmax(0,1fr); gap:7px 16px; margin:0} dt{color:var(--gris); font-size:13.5px} dd{margin:0; overflow-wrap:anywhere}
+.pill{display:inline-block; font-size:12px; font-weight:600; padding:2px 8px; border-radius:999px} .pill.ok{background:var(--ok-f); color:var(--ok)} .pill.mal{background:var(--mal-f); color:var(--mal)} .pill.ojo{background:var(--ojo-f); color:var(--ojo)}
+.huella{font-family:var(--mono); font-size:12.5px; word-break:break-all; background:var(--fondo); border-radius:8px; padding:8px 10px; margin:6px 0 0}
+a.bt{display:inline-block; background:var(--tinta); color:#fff; text-decoration:none; padding:9px 13px; border-radius:8px; font-size:14px; font-weight:600}
+@media (max-width:480px){ dl{grid-template-columns:minmax(0,1fr)} dt{margin-top:4px} }
+/* 3/11/2026 · el pie legal, como en todas las páginas */
+.pie{max-width:720px; margin:0 auto; padding:6px 16px 28px; color:var(--gris); font-size:13px}
+.pie a{color:inherit}
+/* 11/11/2026 · OBRASST Verifica: elegir o soltar el PDF */
+.caja{display:block; border:2px dashed var(--raya); border-radius:14px; background:var(--panel); padding:22px 16px; text-align:center; cursor:pointer}
+.caja:hover,.caja.encima{border-color:var(--tinta)} .caja b{display:block; font-size:16px; color:var(--tinta)} .caja input{display:none}
+.caja:focus-within{outline:2px solid var(--tinta); outline-offset:2px}
+/* 12/11 · varios PDF a la vez: una línea por archivo y el resumen para copiar */
+.lote{list-style:none; margin:0; padding:0; display:grid; gap:8px}
+.lote li{background:var(--panel); border:1px solid var(--raya); border-radius:10px; padding:10px 12px; display:grid; gap:3px; justify-items:start}
+.lote li.mal{border-color:#F0C9CC} .lote li b{overflow-wrap:anywhere; color:var(--tinta); font-weight:600} .lote li .gris{font-size:13px}
+.acciones{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:2px 0 12px}
+button.bt{border:0; cursor:pointer; font:inherit; font-size:14px; font-weight:600; background:var(--tinta); color:#fff; padding:9px 13px; border-radius:8px}
+button.bt:focus-visible{outline:2px solid var(--casco); outline-offset:2px}
+textarea.copia{width:100%; min-height:96px; font:13px/1.45 var(--mono); color:var(--texto); border:1px solid var(--raya); border-radius:8px; padding:8px 10px}
+</style>
+</head>
+<body>
+<header class="barra"><i></i><b>OBRASST</b><span>Verificar un documento</span></header>
+<main id="m"><h1>¿Este PDF es el original?</h1><p class="gris">Elige el PDF que te mandaron, o todos los de una carpeta. Su huella se calcula aquí, en tu equipo: los archivos no se suben a ninguna parte.</p><label class="caja" id="caja" for="arch"><b>📄 Elegir el PDF</b><span class="gris">o varios a la vez · también puedes soltarlos aquí</span><input type="file" id="arch" accept="application/pdf,.pdf" multiple></label><div id="res" aria-live="polite"></div></main>
+<footer class="pie">OBRASST · <a href="https://descarganomaspe.github.io/sst-capacita/?legal=terminos" target="_blank" rel="noopener">Términos</a> · <a href="https://descarganomaspe.github.io/sst-capacita/?legal=privacidad" target="_blank" rel="noopener">Privacidad</a> · <a href="index.html#libro">Libro de Reclamaciones</a></footer>
+<script src="verificar.js?v=5e7cfd0788"></script>
+</body>
+</html>

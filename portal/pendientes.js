@@ -238,12 +238,23 @@ function penNuevo(pre){
       b.disabled=false;
       if(!j || !j.ok){ m.textContent=({ no_puede:'Los pedidos los manda el dueño, el líder o quien lleva SST.', tope:'La obra ya tiene 500 pendientes abiertos: cierra los que ya se hicieron.', area:'Elige el área.', titulo:'Escribe qué tiene que hacer o entregar.' })[j && j.motivo] || 'No se pudo mandar el pedido.'; return; }
       cerrarHoja();
+      /* 11/11/2026 · el pedido a producción, también a su celular (AVISOS-OBRA), si la obra tiene los avisos */
+      if(!j.ya && area==='produccion') penAvisarCelular(YO.obra.id, tit, j.id);
       toast(j.ya ? 'Ese pedido ya estaba abierto para '+areaN(area)+'.' : 'Pedido a '+areaN(area)+': le aparece en sus pendientes.');
       if(VISTA.actual==='avisos') _penRecargar(); else areaContar().then(function(){ try{ pintarRail(true); }catch(_r){} });
     }, function(e){ b.disabled=false; m.textContent='No se pudo mandar el pedido. '+porQueFallo(e); });
   };
 }
 
+/* 11/11/2026 · el aviso al celular de producción: a la bandeja (sst_obra_avisar) y se despierta la función que los manda.
+   Sin el SQL de los avisos (404) o sin nadie suscrito, no pasa nada: el pedido ya quedó en sus pendientes. */
+function penAvisarCelular(oid, tit, id){
+  try{
+    sbRpc('sst_obra_avisar', { p_emp:oid, p_para:'produccion', p_titulo:'Pedido de SST', p_cuerpo:String(tit||'').slice(0, 300),
+                               p_ir:'p-pend-area', p_tag:'pend-'+String(id||Date.now()).slice(0, 60) })
+      .then(function(r){ if(r && r.ok && !r.repetido) sbFetch(SB.url+'/functions/v1/aviso-falla', { method:'POST', body:JSON.stringify({ accion:'obra' }) }).catch(function(){}); }, function(){});
+  }catch(_a){}
+}
 /* ══ FASE 2 · BUSCAR PENDIENTES EN LA OBRA ════════════════════════════════════════════════════════════════════════
    Con lo que la obra ya registra, sin inventar nada: cada candidato dice de dónde sale, y su referencia (ref) hace que el
    mismo pedido abierto no se repita. Lo que no se pudo mirar se dice al pie. */
