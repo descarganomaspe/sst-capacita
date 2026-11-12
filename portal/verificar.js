@@ -93,7 +93,7 @@
       return '<li class="' + t[0] + '"><span class="pill ' + t[0] + '">' + esc(t[1]) + '</span><b>' + esc(x.n) + '</b>' + (det ? '<span class="gris">' + det + '</span>' : '') + '</li>';
     }).join('');
     var nombres = function(xs){ return xs.map(function(x){ return x.n; }).join(', '); };
-    var resumen = 'Revisión de ' + n + ' archivos en obrasstapp.com/verificar (' + hora(new Date()) + ', hora de Lima): ' +
+    var resumen = 'Revisión de ' + n + ' archivos en OBRASST Verifica, ' + String(location.host + location.pathname).replace(/\/index\.html$/, '/') + ' (' + hora(new Date()) + ', hora de Lima): ' +
                   buenos.length + (buenos.length === 1 ? ' original' : ' originales') +
                   (malos.length ? '; no registrados: ' + nombres(malos) : '') +
                   (dudas.length ? '; sin revisar: ' + nombres(dudas) : '') + '.';
