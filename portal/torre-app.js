@@ -82,12 +82,13 @@ function traerReportes(empId, cola){
 //  viene de algo que la app de verdad guarda; cuando un dato no
 //  existe se DICE que no existe, no se rellena con un cero bonito.
 // =================================================================
-var TC = { pag:'resumen', sel:'*', anio:(new Date()).getFullYear(), mes:'',
+var TC = { pag:'ger', sel:'*', anio:(new Date()).getFullYear(), mes:'',
            proy:[], dat:{}, cargando:false, callado:false, listo:false,
            cuando:0, fallo:0, avance:'' };
 /* lo que NO se pudo leer, por proyecto. Se dice; no se pinta como cero */
 var TC_FALLO={};
 var TC_PAGS=[
+  {id:'ger',     ic:'\u2605', n:'Para el gerente'},
   {id:'resumen', ic:'\u25A6', n:'Resumen ejecutivo'},
   {id:'acc',     ic:'\u26A0', n:'Accidentabilidad'},
   {id:'cump',    ic:'\u2714', n:'Cumplimiento'},
@@ -529,7 +530,8 @@ function tcPintar(){
   }
   var h = tcChipsHTML() + tcAvisoFallos();
   if(TC.pag==='cfg'){ main.innerHTML = tcPagCfg(); return; }
-  h += (TC.pag==='resumen') ? tcPagResumen()
+  h += (TC.pag==='ger')     ? tcPagGer()
+     : (TC.pag==='resumen') ? tcPagResumen()
      : (TC.pag==='acc')     ? tcPagAcc()
      : (TC.pag==='cump')    ? tcPagCump()
      : (TC.pag==='epp')     ? tcPagEpp()
@@ -649,6 +651,220 @@ function tcChipsHTML(){
     h+='<button class="tc-chip '+(TC.sel===p.id?'on':'')+'" onclick="tcFiltro(\''+escA(p.id)+'\')">'+esc(p.nombre)+'</button>';
   });
   return h+'</div>';
+}
+
+/* ══ 0 · PARA EL GERENTE (11/11/2026) ═════════════════════════════
+   Marcelo: «quiero que la app sea la app o plataforma #1 en seguridad
+   en las empresas, donde el gerente lo use netamente para ver el tema
+   de seguridad y sepa que su personal está seguro, qué pendientes hay,
+   y todo ello». Tres preguntas, en ese orden: ¿mi gente está segura
+   hoy?, ¿qué está pendiente y dónde?, ¿vamos cumpliendo? Sale de lo
+   mismo que el resto de la Torre (lo que la app guarda de verdad) y se
+   dice «por lo registrado»: un tablero no ve lo que no se registra.
+   Una obra sin registros no sale en verde, y la que no se pudo leer
+   tampoco. Las cuentas (tcGerDatos) son unas para la app y para la web
+   (portal/torre.js); cada una las pinta con lo suyo. */
+var TC_GER_LESION = {leve:1, incap:1, mortal:1};
+var TC_GER_ORDEN = {cr:0, av:1, gr:2, ok:3};
+/* la fecha del celular (no la del servidor): un ATS de las 8 p. m. en Lima ya es «mañana» en UTC */
+function tcFechaLocal(ts){
+  if(!ts) return '';
+  var d=new Date(ts); if(isNaN(d.getTime())) return String(ts).slice(0,10);
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+}
+function tcDiasEntre(a, b){ return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00'))/86400000); }
+function tcGerDatos(ps, mes){
+  ps = ps || tcSel(); mes = mes || TC.mes || mesISO();
+  var cfg=tcCfg(), hoy=hoyISO(), esteMes=(mes===mesISO()), lim=cfg.diasRep||7;
+  /* lo que tocaba a esta fecha: en el mes en curso, la parte del mes que ya pasó; en un mes cerrado, todo */
+  var dHoy=parseInt(hoy.slice(8,10),10)||1;
+  var dMes=new Date(parseInt(mes.slice(0,4),10), parseInt(mes.slice(5,7),10), 0).getDate()||30;
+  var G={hoy:hoy, mes:mes, esteMes:esteMes, obras:[], pers:0, conPers:0, acc30:[], mortal30:0, avisos30:0,
+         corta:null, ats:0, atsObras:0, pend:[], cuenta:{ok:0, av:0, cr:0, gr:0}, vacias:0, fallos:0,
+         insp:{hechas:0, tocan:0, esperadas:0}, cap:{n:0, ok:0}, sinMed:0, docs:[], rep:tcReps(ps), I:tcIndices(ps)};
+  ps.forEach(function(p){
+    var d=tcD(p.id), o={p:p, est:'ok', mot:[], pers:0, racha:null, ats:0, acc30:0, ult:null};
+    function anota(n, t, pg, k){ o.mot.push({n:n, t:t, pg:pg}); G.pend.push({n:n, t:t, pg:pg, k:k||'', o:p.nombre, pid:p.id}); }
+    o.pers = d.trab.filter(function(w){ return (w.estatus||'activo')==='activo'; }).length;
+    G.pers += o.pers; if(o.pers) G.conPers++;
+    o.racha = tcRachas([p])[0] || null;
+    if(o.racha && o.racha.dias!==null && (!G.corta || o.racha.dias<G.corta.dias)) G.corta = o.racha;
+    d.docs.forEach(function(x){ if(x.hoja==='ats' && tcFechaLocal(x.creado)===hoy) o.ats++; });
+    G.ats += o.ats; if(o.ats) G.atsObras++;
+    d.cons.forEach(function(c){ if(String(c.fecha||'').slice(0,7)===mes){ G.cap.n++; if(esAprobado(c.resultado)) G.cap.ok++; } });
+    var F=Object.keys(TC_FALLO[p.id]||{});
+    if(F.length){ G.fallos++; anota('gr', 'No se pudo leer: '+F.join(', '), 'resumen', 'fallo'); }
+    /* las inspecciones cuentan en todas las obras (como en el Resumen ejecutivo): la que no registra nada también debía */
+    var t=tcInspToca(p), x=tcInspHechas(p, mes), esp=esteMes ? Math.ceil(t*dHoy/dMes) : t;
+    G.insp.hechas += x; G.insp.tocan += t; G.insp.esperadas += esp;
+    var algo = d.trab.length || d.rep.length || d.insp.length || d.hht.length || d.kdx.length || d.cons.length || d.acc.length || d.docs.length;
+    if(!algo){
+      /* una obra sin nada registrado no está «al día»: no se sabe */
+      G.vacias++;
+      if(!F.length) anota('gr', 'Todavía no registra nada en OBRASST', 'pers', 'vacia');
+    } else {
+      /* los accidentes de los últimos 30 días (hoy incluido) y los avisos que no llegaron a lesión */
+      d.acc.forEach(function(x){
+        var f=String(x.fecha||'').slice(0,10); if(!f || f>hoy || tcDiasEntre(f, hoy)>29) return;
+        if(TC_GER_LESION[x.clase]){
+          o.acc30++; G.acc30.push({p:p, x:x}); if(x.clase==='mortal') G.mortal30++;
+          if(!o.ult || f>String(o.ult.fecha||'')) o.ult = x;
+        } else G.avisos30++;
+      });
+      if(o.acc30) anota('cr', (o.acc30===1 ? '1 accidente' : o.acc30+' accidentes')+' en los últimos 30 días (el último: '+
+        String(accClase(o.ult.clase).n||'').toLowerCase()+', '+(fechaLarga(o.ult.fecha)||o.ult.fecha)+')', 'acc', 'acc30');
+      var sm=d.acc.filter(function(x){ return !String(x.medidas||'').trim(); }).length;
+      G.sinMed += sm;
+      if(sm) anota('cr', sm+' '+(sm===1 ? 'investigación' : 'investigaciones')+' sin medidas correctivas', 'acc', 'medidas');
+      var R=tcReps([p]), enPlazo=Math.max(0, R.abiertos-R.viejos);
+      if(R.viejos) anota('cr', R.viejos+' '+(R.viejos===1 ? 'reporte' : 'reportes')+' sin cerrar hace más de '+lim+' días', 'cump', 'viejos');
+      if(enPlazo) anota('av', enPlazo+' '+(enPlazo===1 ? 'reporte abierto' : 'reportes abiertos')+' dentro de plazo', 'cump', 'abiertos');
+      if(t && x<esp) anota(x*2<esp ? 'cr' : 'av', 'Inspecciones: '+x+' de '+t+' del mes'+
+        ((esteMes && esp<t) ? ' (a esta fecha tocaban '+esp+')' : ''), 'cump', 'insp');
+      if(esteMes && !tcPulso([p]).hht[0]) anota('av', 'Sin horas hombre esta semana', 'acc', 'hht');
+    }
+    o.est = o.mot.some(function(m){ return m.n==='cr'; }) ? 'cr'
+          : o.mot.some(function(m){ return m.n==='gr'; }) ? 'gr'
+          : (o.mot.length ? 'av' : 'ok');
+    G.cuenta[o.est]++;
+    G.obras.push(o);
+  });
+  /* los dos documentos que son de la empresa entera (basta que estén en una de sus obras) */
+  TC_DOC_EMP.forEach(function(x){
+    var m=tcDocEmpBuscar(x.h);
+    G.docs.push({n:x.n, ok:!!m, fecha:m ? tcFechaLocal(m.creado) : ''});
+    if(!m) G.pend.push({n:'cr', t:x.n+' sin cargar', pg:'docs', k:'doc', o:'La empresa', pid:''});
+  });
+  G.obras.sort(function(a, b){ return (TC_GER_ORDEN[a.est]-TC_GER_ORDEN[b.est]) || String(a.p.nombre).localeCompare(String(b.p.nombre)); });
+  G.pend.sort(function(a, b){ return TC_GER_ORDEN[a.n]-TC_GER_ORDEN[b.n]; });
+  /* la respuesta a la primera pregunta, en una línea */
+  var urg=G.pend.filter(function(x){ return x.n==='cr' && x.k!=='acc30'; }).length, V;
+  if(!ps.length) V={n:'gr', t:'Todavía no hay obras', d:''};
+  else if(G.acc30.length){
+    var u=G.acc30.slice().sort(function(a, b){ return String(b.x.fecha).localeCompare(String(a.x.fecha)); })[0];
+    V={n:'cr', t:G.mortal30 ? 'Hubo un accidente mortal en los últimos 30 días'
+                 : (G.acc30.length===1 ? 'Hubo 1 accidente en los últimos 30 días' : 'Hubo '+G.acc30.length+' accidentes en los últimos 30 días'),
+       d:'El último: '+String(accClase(u.x.clase).n||'').toLowerCase()+(ps.length>1 ? ' en '+u.p.nombre : '')+', el '+(fechaLarga(u.x.fecha)||u.x.fecha)+'.'+
+         (urg ? ' Y hay '+urg+' '+(urg===1 ? 'pendiente urgente' : 'pendientes urgentes')+' más.' : '')};
+  }
+  else if(G.vacias===ps.length) V={n:'gr', t:'Todavía no hay registros para responderlo',
+       d:(ps.length>1 ? 'Tus obras no tienen' : 'La obra no tiene')+' personal, reportes, inspecciones ni horas hombre en OBRASST. Sin registros, nadie puede decir que la gente está segura.'};
+  else if(urg) V={n:'av', t:'Sin accidentes en 30 días, pero con '+urg+' '+(urg===1 ? 'pendiente urgente' : 'pendientes urgentes'),
+       d:'Abajo están, obra por obra, con lo que hay que hacer.'};
+  else V={n:'ok', t:'Sin accidentes en 30 días y sin pendientes urgentes',
+       d:G.cuenta.av ? (G.cuenta.av===1 ? 'Una obra tiene algo que atender, sin apuro.' : G.cuenta.av+' obras tienen algo que atender, sin apuro.') : ''};
+  if(G.fallos && V.n!=='cr') V.d = (V.d ? V.d+' ' : '')+'Ojo: parte de los datos no se pudo leer; toca «Actualizar».';
+  G.ver = V;
+  return G;
+}
+/* lo pendiente, para mandárselo al supervisor por WhatsApp: obra y cuántos, sin nombres de nadie */
+function tcGerTexto(G){
+  var L=G.pend.filter(function(x){ return x.n!=='gr'; });
+  var t='Pendientes de seguridad al '+fechaLarga(G.hoy)+' (OBRASST):\n'+
+    (L.length ? L.slice(0,12).map(function(x){ return '· '+x.o+': '+x.t; }).join('\n')+(L.length>12 ? '\n· y '+(L.length-12)+' más' : '')
+              : '· Nada urgente.')+
+    '\nEl detalle está en OBRASST.';
+  return t.slice(0,1500);
+}
+function tcGerEncargar(){
+  try{ window.open('https://wa.me/?text='+encodeURIComponent(tcGerTexto(tcGerDatos())), '_blank'); }catch(e){}
+}
+/* el color de las inspecciones: en el mes en curso, contra lo que tocaba a esta fecha; en un mes cerrado, contra la meta */
+function tcGerInspEst(G, cfg){
+  var x=G.insp.hechas, t=G.insp.tocan, e=G.insp.esperadas;
+  if(!t) return 'gr';
+  if(G.esteMes) return x>=e ? 'ok' : (x*2>=e ? 'av' : 'cr');
+  var pc=Math.round(x*100/t);
+  return pc>=cfg.metaCump ? 'ok' : (pc>=80 ? 'av' : 'cr');
+}
+function tcGerIr(pid, pg){ if(pid) TC.sel=pid; tcVer(pg||'resumen'); }
+function tcPagGer(){
+  var ps=tcSel(), mes=TC.mes||mesISO(), cfg=tcCfg(), G=tcGerDatos(ps, mes), V=G.ver;
+  var COL={ok:'var(--t-ok)', av:'var(--t-aviso)', cr:'var(--t-critico)', gr:'var(--t-mudo)'};
+  var EST={ok:'Al día', av:'Atender', cr:'Urgente', gr:'Sin datos'};
+  var IC={ok:'✓', av:'▲', cr:'●', gr:'○'};
+  var varias=ps.length>1, h='';
+  /* 1 · ¿tu gente está segura hoy? */
+  h+='<div class="tc-card tc-ger-v v-'+V.n+'"><div class="et">¿Tu gente está segura hoy?</div>'+
+     '<div class="t"><span class="ic" aria-hidden="true">'+IC[V.n]+'</span><span>'+esc(V.t)+'</span></div>'+
+     (V.d ? '<p class="sub">'+esc(V.d)+'</p>' : '')+
+     '<p class="sub2">Por lo que '+(varias ? 'tus '+ps.length+' obras registran' : 'la obra registra')+' en OBRASST, hoy '+esc(fechaLarga(G.hoy))+'.</p></div>';
+  var ua = G.acc30.length ? G.acc30.slice().sort(function(a, b){ return String(b.x.fecha).localeCompare(String(a.x.fecha)); })[0] : null;
+  h+='<div class="tc-kpis">'+
+     '<div class="tc-kpi"><div class="et">Personas activas</div><div class="v">'+tcNum(G.pers)+'</div>'+
+       (G.pers ? tcEst('gr', varias ? 'En '+G.conPers+' de '+ps.length+' obras' : 'En la obra') : tcEst('av','Sin personal registrado'))+'</div>'+
+     '<div class="tc-kpi"><div class="et">Días sin accidentes</div><div class="v">'+(G.corta ? tcNum(G.corta.dias) : '—')+'<small>'+(G.corta ? 'días' : '')+'</small></div>'+
+       (G.corta ? (G.corta.origen==='registro' ? tcEst('ok', 'Desde el primer registro'+(varias ? ' de '+G.corta.p.nombre : ''))
+                                              : tcEst(G.corta.dias<30 ? 'cr' : 'ok', varias ? 'La racha más corta: '+G.corta.p.nombre : 'Desde el último accidente'))
+                : tcEst('gr','Sin registros en '+TC.anio))+'</div>'+
+     '<div class="tc-kpi"><div class="et">Accidentes · 30 días</div><div class="v">'+tcNum(G.acc30.length)+'</div>'+
+       (ua ? tcEst('cr', 'El último: '+fechaLarga(ua.x.fecha)+(varias ? ' · '+ua.p.nombre : '')) : tcEst('ok','Ninguno'))+
+       (G.avisos30 ? '<div class="sub2">'+G.avisos30+' casi '+(G.avisos30===1 ? 'accidente, primeros auxilios o daño reportado' : 'accidentes, primeros auxilios o daños reportados')+'</div>' : '')+'</div>'+
+     '<div class="tc-kpi"><div class="et">ATS en la app hoy</div><div class="v">'+tcNum(G.ats)+'</div>'+
+       (G.ats ? tcEst('ok', varias ? 'En '+G.atsObras+' de '+ps.length+' obras' : 'Firmados en la app') : tcEst('gr','Ninguno todavía'))+
+       (G.ats ? '' : '<div class="sub2">Los ATS de papel no salen aquí.</div>')+'</div>'+
+     '</div>';
+  h+='<div class="tc-rej">';
+  /* 2 · obra por obra, en verde, ámbar o rojo */
+  h+='<div class="tc-card ancha"><h3>Obra por obra</h3>'+
+     '<p class="sub">Verde: al día. Ámbar: hay algo que atender. Rojo: urgente. Gris: no hay datos para decirlo.'+(varias ? ' Toca una obra para ver solo esa.' : '')+'</p>'+
+     '<div class="tc-ger-os">';
+  G.obras.forEach(function(o){
+    var r=o.racha, m=[];
+    m.push(o.pers+' '+(o.pers===1 ? 'persona activa' : 'personas activas'));
+    if(r && r.dias!==null) m.push(r.dias+' '+(r.dias===1 ? 'día' : 'días')+' sin accidentes');
+    m.push(o.ats+' ATS hoy');
+    h+=(varias ? '<button type="button" class="tc-ger-o" onclick="tcFiltro(\''+escA(o.p.id)+'\')">' : '<div class="tc-ger-o">')+
+       '<span class="pt" style="background:'+COL[o.est]+'"></span>'+
+       '<span class="tx"><b>'+esc(o.p.nombre)+'</b>'+
+       '<span class="d">'+(o.mot.length ? o.mot.map(function(x){ return esc(x.t); }).join(' · ') : 'Nada pendiente.')+'</span>'+
+       '<span class="m">'+esc(m.join(' · '))+'</span></span>'+
+       tcEst(o.est, EST[o.est])+(varias ? '</button>' : '</div>');
+  });
+  h+='</div></div>';
+  /* 3 · lo pendiente, lo urgente primero */
+  h+='<div class="tc-card"><h3>Lo pendiente</h3>'+
+     '<p class="sub">Lo urgente primero. Toca uno para ver el detalle.</p>';
+  if(!G.pend.length){
+    h+=tcVacio('Nada pendiente en '+(varias ? 'tus obras' : 'la obra')+'. Se mantiene así mientras se siga registrando: reportes, inspecciones y horas hombre.');
+  } else {
+    G.pend.slice(0,12).forEach(function(x){
+      h+='<button type="button" class="tc-al" onclick="tcGerIr(\''+escA(x.pid)+'\',\''+escA(x.pg)+'\')">'+
+         '<span class="pt" style="background:'+COL[x.n]+'"></span>'+
+         '<span><b>'+esc(x.t)+'</b><span class="d">'+esc(x.o)+'</span></span></button>';
+    });
+    if(G.pend.length>12) h+='<p class="sub" style="margin:6px 0 0">Y '+(G.pend.length-12)+' más.</p>';
+    if(G.pend.some(function(x){ return x.n!=='gr'; }))
+      h+='<button type="button" class="tc-ger-bt" onclick="tcGerEncargar()">📲 Encargárselo a mi supervisor</button>'+
+         '<p class="sub" style="margin:8px 0 0">Se abre WhatsApp con la lista (obra y cuántos, sin nombres) para que elijas a quién mandarla.</p>';
+  }
+  h+='</div>';
+  /* 4 · ¿vamos cumpliendo? */
+  var I=G.I, R=G.rep, pi=G.insp.tocan ? Math.round(G.insp.hechas*100/G.insp.tocan) : null;
+  var pc=G.cap.n ? Math.round(G.cap.ok*100/G.cap.n) : null;
+  function tcGerFila(et, det, est){ return '<tr><td><b>'+esc(et)+'</b><br><small>'+esc(det)+'</small></td><td class="n">'+est+'</td></tr>'; }
+  h+='<div class="tc-card"><h3>¿Vamos cumpliendo?</h3>'+
+     '<p class="sub">Lo que pide la ley y lo que se fijó en «Qué medir», en '+esc(mesBonito(mes))+' y en el año '+TC.anio+'.</p>'+
+     '<table class="tc-tab"><tbody>'+
+     tcGerFila('Inspecciones de '+mesBonito(mes),
+          G.insp.tocan ? G.insp.hechas+' de '+G.insp.tocan+' hechas'+((G.esteMes && G.insp.esperadas<G.insp.tocan) ? ' · a esta fecha tocaban '+G.insp.esperadas : '') : 'El sector no pide inspecciones mensuales',
+          pi===null ? tcEst('gr','—') : tcEst(tcGerInspEst(G, cfg), pi+'%'))+
+     tcGerFila('Capacitaciones de '+mesBonito(mes),
+          G.cap.n ? G.cap.n+' '+(G.cap.n===1 ? 'constancia' : 'constancias')+' · '+G.cap.ok+' '+(G.cap.ok===1 ? 'aprobada' : 'aprobadas') : 'Nadie rindió este mes',
+          pc===null ? tcEst('gr','—') : tcEst(pc>=80 ? 'ok' : (pc>=60 ? 'av' : 'cr'), pc+'% aprobó'))+
+     tcGerFila('Reportes de actos y condiciones '+TC.anio,
+          R.tot ? R.cerrados+' de '+R.tot+' cerrados'+(R.viejos ? ' · '+R.viejos+' con más de '+(cfg.diasRep||7)+' días' : '') : 'Ninguno este año: casi siempre quiere decir que no se está reportando',
+          R.tot ? tcEst(R.viejos ? 'cr' : (R.abiertos ? 'av' : 'ok'), R.abiertos ? R.abiertos+(R.abiertos===1 ? ' abierto' : ' abiertos') : 'Todos cerrados') : tcEst('av','0'))+
+     tcGerFila('Índice de frecuencia '+TC.anio,
+          I.IF===null ? 'Faltan las horas hombre del reporte semanal' : I.n+' '+(I.n===1 ? 'accidente' : 'accidentes')+' con incapacidad · meta '+cfg.metaIF,
+          I.IF===null ? tcEst('gr','—') : tcEst(I.IF<=cfg.metaIF ? 'ok' : 'cr', tcNum(I.IF,2)))+
+     tcGerFila('Investigaciones de accidentes', G.sinMed ? 'Les faltan las medidas correctivas' : 'Todas con sus medidas correctivas',
+          G.sinMed ? tcEst('cr', G.sinMed+' sin medidas') : tcEst('ok','Al día'))+
+     G.docs.map(function(x){ return tcGerFila(x.n, x.ok ? 'Cargado el '+fechaLarga(x.fecha) : 'Es de la empresa entera, no de una obra', x.ok ? tcEst('ok','Cargado') : tcEst('cr','Falta')); }).join('')+
+     '</tbody></table></div>';
+  h+='</div>';
+  h+='<p class="sub" style="margin:16px 2px 0;font-size:12px;color:var(--t-mudo)">El detalle de cada número está en las otras páginas del tablero: Resumen ejecutivo, Accidentabilidad, Cumplimiento, EPP, Personas y Documentos.</p>';
+  return h;
 }
 
 /* ══ 1 · RESUMEN EJECUTIVO ══ */
@@ -1570,5 +1786,7 @@ return {
   calc: { pulso:tcPulso, indices:tcIndices, rachas:tcRachas, epp:tcEPP, reps:tcReps, inspToca:tcInspToca, inspHechas:tcInspHechas,
           alertas:tcAlertas, cfg:tcCfg, cfgGuardar:tcCfgGuardar, cfgDef:function(){ return JSON.parse(JSON.stringify(TC_CFG_DEF)); },
           sel:tcSel, d:tcD, accs:tcAccs, accClase:accClase, esAprobado:esAprobado, enAnio:tcEnAnio,
-          fallos:function(){ return TC_FALLO; }, num:tcNum, mesBonito:mesBonito, mesISO:mesISO } };
+          fallos:function(){ return TC_FALLO; }, num:tcNum, mesBonito:mesBonito, mesISO:mesISO,
+          /* 11/11/2026 · «Para el gerente» */
+          ger:tcGerDatos, gerTexto:tcGerTexto } };
 })();

@@ -78,7 +78,26 @@ function _rsEstilos(){
     '@media (min-width:1000px){#rs-rej{grid-template-columns:repeat(4,minmax(0,1fr))}}' +
     '@media (max-width:640px){#rs-rej{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#rs-rej .cifra{padding:12px 12px 11px}' +
     '#rs-rej .cifra .v{font-size:23px}#rs-rej .cifra .et,#rs-rej .cifra .pie{font-size:12px}}' +
-    '#rs-ult table{min-width:540px}';
+    '#rs-ult table{min-width:540px}' +
+    /* 11/11/2026 · «¿Tu gente está segura hoy?», arriba del resumen */
+    '.rs-ger .rs-ger-v{display:flex;gap:12px;align-items:flex-start;margin:16px 18px 4px;padding:12px 14px;border-radius:10px;background:var(--fondo);border-left:4px solid var(--gris2)}' +
+    '.rs-ger .rs-ger-v.ok{background:var(--ok-f);border-left-color:var(--ok)}.rs-ger .rs-ger-v.ojo{background:var(--ojo-f);border-left-color:var(--ojo)}.rs-ger .rs-ger-v.mal{background:var(--mal-f);border-left-color:var(--mal)}' +
+    '.rs-ger .rs-ger-v .ic{font-size:15px;line-height:1.55;color:var(--gris)}.rs-ger .rs-ger-v.ok .ic{color:var(--ok)}.rs-ger .rs-ger-v.ojo .ic{color:#8a5200}.rs-ger .rs-ger-v.mal .ic{color:var(--mal)}' +
+    '.rs-ger .rs-ger-v b{display:block;font-size:17px;font-weight:600;color:var(--tinta);line-height:1.35;text-wrap:balance}' +
+    '.rs-ger .rs-ger-v span{display:block;font-size:13px;color:var(--texto);margin-top:3px}' +
+    '.rs-ger-ns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--raya);border-top:1px solid var(--raya);border-bottom:1px solid var(--raya);margin-top:14px}' +
+    '.rs-ger-n{background:var(--panel);padding:12px 18px;display:flex;flex-direction:column;gap:2px;min-width:0}' +
+    '.rs-ger-n .et{font-size:12px;color:var(--gris)}.rs-ger-n b{font-size:24px;font-weight:600;color:var(--tinta);font-variant-numeric:tabular-nums;line-height:1.15}' +
+    '.rs-ger-n.ok b{color:var(--ok)}.rs-ger-n.ojo b{color:var(--ojo)}.rs-ger-n.mal b{color:var(--mal)}.rs-ger-n .pie{font-size:12px;color:var(--gris)}' +
+    '.rs-ger-os{padding:4px 18px}' +
+    '.rs-ger-o{display:grid;grid-template-columns:10px minmax(0,1fr);gap:12px;align-items:start;padding:11px 0;border-bottom:1px solid var(--raya)}.rs-ger-o:last-child{border-bottom:0}' +
+    '.rs-ger-o .pt{width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--gris2)}.rs-ger-o .pt.ok{background:var(--ok)}.rs-ger-o .pt.ojo{background:var(--ojo)}.rs-ger-o .pt.mal{background:var(--mal)}' +
+    '.rs-ger-o .tx>b,.rs-ger-o .tx>.bt-link{font-weight:600;font-size:14px;color:var(--tinta)}' +
+    '.rs-ger-o .est{display:inline-block;margin-left:8px;font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--fondo);color:var(--gris)}' +
+    '.rs-ger-o .est.ok{background:var(--ok-f);color:var(--ok)}.rs-ger-o .est.ojo{background:var(--ojo-f);color:#8a5200}.rs-ger-o .est.mal{background:var(--mal-f);color:var(--mal)}' +
+    '.rs-ger-o .d{display:block;font-size:13px;color:var(--texto);margin-top:2px}.rs-ger-o .m{display:block;font-size:12px;color:var(--gris);margin-top:2px}' +
+    '.rs-ger-pie{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:12px 18px 16px;border-top:1px solid var(--raya)}.rs-ger-pie .ayuda{flex:1 1 220px;margin:0;font-size:12px;color:var(--gris)}' +
+    '@media (max-width:760px){.rs-ger-ns{grid-template-columns:repeat(2,minmax(0,1fr))}.rs-ger-n{padding:10px 12px}.rs-ger-n b{font-size:21px}.rs-ger .rs-ger-v{margin:14px 12px 4px}.rs-ger-os{padding:4px 12px}.rs-ger-pie{padding:12px}}';
   document.head.appendChild(s); TW.css = true;
 }
 
@@ -120,6 +139,47 @@ function _rsVacio(b, t){ return '<div class="vacio"><b>'+esc(b)+'</b>'+esc(t)+'<
 function _rsHora(){
   var S=_rsS(); if(!S.cuando) return '';
   try{ return new Date(S.cuando).toLocaleTimeString('es-PE', {hour:'2-digit', minute:'2-digit'}); }catch(e){ return ''; }
+}
+
+/* ══ 11/11/2026 · PARA EL GERENTE, arriba del resumen ═════════════════
+   Marcelo: «que el gerente lo use netamente para ver el tema de seguridad y sepa que su personal está seguro, qué pendientes
+   hay». Arriba de las cifras: la respuesta a «¿tu gente está segura hoy?», cuatro números, cada obra en verde, ámbar o rojo
+   con el porqué, y el botón para mandarle lo pendiente al supervisor. Las cuentas son las de la Torre de la app
+   (tcGerDatos, en portal/torre-app.js): las mismas en la web y en el celular. */
+function _rsGer(K, S, ps, mes){
+  var G = K.ger(ps, mes), V = G.ver, varias = ps.length > 1;
+  var IC = {ok:'✓', av:'▲', cr:'●', gr:'○'}, CL = {ok:'ok', av:'ojo', cr:'mal', gr:'gr'}, EST = {ok:'Al día', av:'Atender', cr:'Urgente', gr:'Sin datos'};
+  var ua = G.acc30.length ? G.acc30.slice().sort(function(a, b){ return String(b.x.fecha).localeCompare(String(a.x.fecha)); })[0] : null;
+  var c = G.corta;
+  function mini(et, v, pie, cl){ return '<div class="rs-ger-n'+(cl ? ' '+cl : '')+'"><span class="et">'+esc(et)+'</span><b>'+esc(v)+'</b><span class="pie">'+esc(pie)+'</span></div>'; }
+  var h = '<div class="tarj rs-ger" id="rs-ger"><div class="tarj-cab"><div><h2>¿Tu gente está segura hoy?</h2>'+
+    '<p class="sub">Por lo que '+(varias ? 'tus '+ps.length+' obras registran' : 'la obra registra')+' en OBRASST, hoy '+esc(fechaLarga(G.hoy))+'</p></div></div>'+
+    '<div class="rs-ger-v '+CL[V.n]+'"><span class="ic" aria-hidden="true">'+IC[V.n]+'</span><div><b>'+esc(V.t)+'</b>'+(V.d ? '<span>'+esc(V.d)+'</span>' : '')+'</div></div>'+
+    '<div class="rs-ger-ns">'+
+      mini('Personas activas', _rsN(G.pers), G.pers ? (varias ? 'en '+G.conPers+' de '+ps.length+' obras' : 'en la obra') : 'sin personal registrado', G.pers ? '' : 'ojo')+
+      mini('Días sin accidentes', c ? _rsN(c.dias) : '—', c ? (c.origen === 'registro' ? 'desde el primer registro'+(varias ? ' de '+c.p.nombre : '')
+                                                                    : (varias ? 'la racha más corta: '+c.p.nombre : 'desde el último accidente')) : 'sin registros en '+S.anio,
+           c ? ((c.origen !== 'registro' && c.dias < 30) ? 'mal' : 'ok') : '')+
+      mini('Accidentes · 30 días', _rsN(G.acc30.length), ua ? 'el último: '+fechaLarga(ua.x.fecha)+(varias ? ' · '+ua.p.nombre : '') : 'ninguno', ua ? 'mal' : 'ok')+
+      mini('ATS en la app hoy', _rsN(G.ats), G.ats ? (varias ? 'en '+G.atsObras+' de '+ps.length+' obras' : 'firmados en la app') : 'ninguno todavía · los de papel no salen aquí', '')+
+    '</div>'+
+    '<div class="rs-ger-os">'+G.obras.map(function(o){
+      var r = o.racha, m = [o.pers+' '+_rsPl(o.pers, 'persona activa', 'personas activas')];
+      if(r && r.dias !== null) m.push(r.dias+' '+_rsPl(r.dias, 'día', 'días')+' sin accidentes');
+      m.push(o.ats+' ATS hoy');
+      return '<div class="rs-ger-o"><i class="pt '+CL[o.est]+'" aria-hidden="true"></i><div class="tx">'+
+        (varias ? '<button type="button" class="bt-link" data-obra="'+esc(o.p.id)+'" title="Ver solo esta obra">'+esc(o.p.nombre)+'</button>' : '<b>'+esc(o.p.nombre)+'</b>')+
+        '<span class="est '+CL[o.est]+'">'+EST[o.est]+'</span>'+
+        '<span class="d">'+(o.mot.length ? o.mot.map(function(x){ return esc(x.t); }).join(' · ') : 'Nada pendiente.')+'</span>'+
+        '<span class="m">'+esc(m.join(' · '))+'</span></div></div>';
+    }).join('')+'</div>';
+  var hayQue = G.pend.some(function(x){ return x.n !== 'gr'; });
+  var osOk = false; try{ osOk = typeof vistasDe === 'function' && vistasDe().some(function(v){ return v.id === 'os'; }); }catch(_v){}
+  if(hayQue || osOk) h += '<div class="rs-ger-pie">'+
+    (hayQue ? '<a class="bt chico" id="rs-ger-wa" target="_blank" rel="noopener" href="'+esc('https://wa.me/?text='+encodeURIComponent(K.gerTexto(G)))+'">📲 Encargárselo a mi supervisor</a>' : '')+
+    (osOk ? '<button type="button" class="bt sec chico" id="rs-ger-os">Riesgo de multa en soles ›</button>' : '')+
+    (hayQue ? '<span class="ayuda">WhatsApp se abre con la lista (obra y cuántos, sin nombres) para que elijas a quién mandarla.</span>' : '')+'</div>';
+  return h+'</div>';
 }
 
 /* ══ la sección ══ */
@@ -205,6 +265,9 @@ function rsPintar(nuevoHoy){
        '<select id="rs-mes" aria-label="Mes de cierre">'+me+'</select>'+
        '<span class="pind-nota" id="rs-fresco">'+(S.cargando ? 'Actualizando…' : (sinSenal ? 'Sin señal · datos de las ' : 'Datos de las ')+esc(_rsHora())+(min >= 2 && !S.cargando ? ' · hace '+min+' min' : ''))+'</span>'+
        '<button type="button" class="bt-link" id="rs-act">Actualizar</button></div>';
+
+  /* 11/11/2026 · primero, lo del gerente: ¿su gente está segura hoy?, obra por obra y lo pendiente */
+  h += _rsGer(K, S, ps, mes);
 
   /* ── las cifras: las de la Torre de la app, con sus metas ── */
   var pctOk = P.cap[0] ? Math.round(P.capOk[0]*100/P.cap[0]) : null;
@@ -345,6 +408,7 @@ function rsPintar(nuevoHoy){
 
   var so = $('rs-obra'); if(so) so.onchange = function(){ _rsS().sel = so.value || '*'; rsPintar(false); };
   var sm = $('rs-mes'); if(sm) sm.onchange = function(){ rsMes(sm.value); };
+  var go = $('rs-ger-os'); if(go) go.onclick = function(){ navegar('os'); };
   var ba = $('rs-act'); if(ba) ba.onclick = function(){ if(!_rsS().cargando){ var f = $('rs-fresco'); if(f) f.textContent = 'Actualizando…'; rsCargar(true); } };
   Array.prototype.forEach.call(caja.querySelectorAll('[data-obra]'), function(b){
     b.onclick = function(){ _rsS().sel = b.getAttribute('data-obra'); rsPintar(false); try{ caja.scrollIntoView({block:'start'}); }catch(_s){} };

@@ -400,7 +400,9 @@ var _ATS_PT    = 7;     /* el cuerpo entero */
 /* 17/10/2026 · lote 14 · la letra de la TABLA de peligros: es la misma, salvo que se pida «en una hoja» y no entre
    (entonces baja de a poco, hasta 5.2) */
 var _ATS_PTT   = 7;
-var _ATS_HCHK  = 4.9;   /* renglón de las listas A / NA */
+var _ATS_HCHK  = 4.4;   /* renglón de las listas A / NA (11/11/2026: 4.9 → 4.4, para que entren más pasos) */
+var _ATS_HTIT  = 4.8;   /* título de cada lista (11/11/2026: 5.4 → 4.8) */
+var _ATS_HVAC  = 5;     /* una fila vacía del formato en blanco (11/11/2026: más filas para escribir a mano) */
 var _ATS_HFILA = 5.8;   /* alto mínimo de una fila de peligro */
 var _ATS_HNOTA = 4.2;   /* renglón de las notas del pie */
 
@@ -416,13 +418,14 @@ function _atsHayVPdf(){ var h = false; (ATS.acts||[]).forEach(function(a){ (a.fi
 /* el color de una fila «verificar»: fondo rojo claro o letra roja (lo elige quien arma el ATS) */
 var _ATS_ROJO_F = [252,214,209], _ATS_ROJO_L = [190,22,22];
 /* lo que ocupa el pie (observaciones + notas + la línea de abajo) */
-function _atsPie(){ return 5.4 + ATS_NOTAS.length*_ATS_HNOTA + 3.4; }
+/* 11/11/2026 · las notas pasaron al reverso: en el anverso quedan las observaciones y la línea de abajo */
+function _atsPie(){ return 5.4 + 3.4; }
 /* dónde arranca la tabla de peligros: la cabecera es siempre igual */
 function _atsArranque(M){
   var chk = Math.ceil(ATS_REQ.length/6) + Math.ceil(ATS_EPP.length/6) +
             Math.ceil(ATS_EPC.length/6) + Math.ceil(ATS_PERM.length/6);
   return M + 13 /*cabecera*/ + 6 /*proyecto*/ + 6*4 /*datos*/ +
-         5.4*4 /*títulos de bloque*/ + chk*_ATS_HCHK + 5.4 /*cabecera tabla*/;
+         _ATS_HTIT*4 /*títulos de bloque*/ + chk*_ATS_HCHK + 5.4 /*cabecera tabla*/;
 }
 /* cuánto mide cada fila con la letra nueva */
 function _atsMedir(doc, filas, w, cols){
@@ -512,11 +515,12 @@ function _atsDibujar(){
   var libre = (H - M - _atsPie() - hLey) - _atsArranque(M);
   var libreN = (H - M - 4.6 - hLey) - _atsArranqueN(M);
   var pags = _atsPaginar(filas, libre, libreN), noEntra = false;
-  if(ATS.una && pags.length > 1){
-    /* de a 0.4 puntos hasta 5.2: la primera letra con la que entra en una hoja; si con ninguna entra, la que deja
-       menos hojas (con la letra más grande entre las que empatan) */
+  /* 11/11/2026 · Marcelo: «que no pase el formato de caras». Siempre en una cara (antes, solo si se marcaba «en una sola
+     hoja», y hasta 5.2 puntos): de a 0.4 puntos hasta 4.4, la primera letra con la que entra; si con ninguna entra, la
+     que deja menos hojas, y la app lo dice (noEntra) para pasar lo último a otro ATS */
+  if(pags.length > 1){
     var _mejor = { pt:_ATS_PT, n:pags.length };
-    for(var _pt = _ATS_PT - 0.4; _pt >= 5.19 && pags.length > 1; _pt -= 0.4){
+    for(var _pt = _ATS_PT - 0.4; _pt >= 4.39 && pags.length > 1; _pt -= 0.4){
       _ATS_PTT = Math.round(_pt*10)/10; _atsMedir(doc, filas, wTabla, COLS); pags = _atsPaginar(filas, libre, libreN);
       if(pags.length < _mejor.n) _mejor = { pt:_ATS_PTT, n:pags.length };
     }
@@ -645,7 +649,7 @@ function _atsTablaPdf(doc, x, y, w, filas, libre, cols, hayV){
   /* Lo que sobra de la hoja se reparte entre las filas: así el formato
      sale lleno, como el de papel, y no con media hoja en blanco. */
   var usado = 0; filas.forEach(function(f){ usado += f.h; });
-  var vacias = 0, hVacia = _atsHFilaT();
+  var vacias = 0, hVacia = ATS.blanco ? _ATS_HVAC : _atsHFilaT();   /* 11/11/2026 · en blanco, filas de 5 mm: más para escribir */
   if(usado < libre){
     vacias = Math.floor((libre-usado)/hVacia);
     var sobra = libre - usado - vacias*hVacia;
@@ -819,10 +823,10 @@ function _atsAnverso(doc, W, H, M, emp, obra, logo, filas, pg, nHojas, libre, co
 
   /* ── las listas A/NA ── */
   function bloque(tit, lista, campo, cols){
-    var hT = 5.4;
+    var hT = _ATS_HTIT;
     _atsCaja(doc, x, y, w, hT, _ATS_AZUL);
     doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT); doc.setTextColor(20,24,30);
-    doc.text(tit, x+1.6, y+3.8);
+    doc.text(tit, x+1.6, y+3.4);
     y += hT;
     var filasN = Math.ceil(lista.length/cols), cw2 = w/cols, hF = _ATS_HCHK;
     for(var i=0;i<lista.length;i++){
@@ -856,12 +860,7 @@ function _atsAnverso(doc, W, H, M, emp, obra, logo, filas, pg, nHojas, libre, co
   doc.setFont('helvetica','bold'); doc.setFontSize(_ATS_PT); doc.setTextColor(20,24,30);
   doc.text('OBSERVACIONES / SUGERENCIAS:'+(ATS.obs?'  '+ATS.obs:''), x+1.6, y+3.8, {maxWidth:w-3});
   y += 5.4;
-  ATS_NOTAS.forEach(function(n, i){
-    _atsCaja(doc, x, y, w, _ATS_HNOTA);
-    doc.setFont('helvetica','normal'); doc.setFontSize(_ATS_PT-0.8); doc.setTextColor(50,56,64);
-    doc.text((i+1)+'.- '+n, x+1.4, y+_ATS_HNOTA/2+1, { maxWidth: w-3 });
-    y += _ATS_HNOTA;
-  });
+  /* 11/11/2026 · las notas (1 a 4) van en el reverso, con las demás notas importantes: aquí, más filas para los pasos */
   doc.setFontSize(_ATS_PT-1.4); doc.setTextColor(150,158,166);
   doc.text((nHojas>1 ? 'Hoja '+pg+' de '+nHojas+'  ·  ' : '')+String(emp.razon||'').toUpperCase()+'  ·  OBRASST',
            W/2, Math.max(y+3.2, H-2.6), { align:'center' });
@@ -928,8 +927,14 @@ function _atsReverso(doc, W, H, M, por){
   var firmas = ATS.firmas || {};
   /* 17/10/2026 · lote 14 · el cierre de cada uno (firma de salida con su hora, o el motivo del que no estuvo) */
   var _ci = ATS.cierre || {}, cSal = _ci.f || {}, cAus = _ci.aus || {};
+  /* 11/11/2026 · Marcelo: «en la segunda hasta 10 trabajadores». 10 casilleros (la app no deja pasar de 10); lo guardado
+     antes con más gente sale igual en esta cara, con las filas más bajas. Las notas del anverso vinieron aquí: se miden
+     antes, para que todo quepa en la hoja */
   var nF = Math.max(10, gente.length);
-  var hF = Math.max(6.6, (H - M - 18 - y)/nF);
+  var _NOT = (ATS_NOTAS || []).concat(ATS_NOTAS_REV || []), hNot = 3.2;
+  doc.setFont('helvetica','normal'); doc.setFontSize(_ATS_PT-1);
+  _NOT.forEach(function(n, i){ hNot += doc.splitTextToSize((i+1)+'. '+n, w-27).length*(_ATS_PT-1)*1.13*_MMPT; });
+  var hF = Math.max(4.6, (H - M - 4 - hNot - y)/nF);
   for(var i=0;i<nF;i++){
     var yy2 = y + i*hF;
     _atsCaja(doc, x, yy2, c1, hF);
@@ -964,7 +969,7 @@ function _atsReverso(doc, W, H, M, por){
   doc.text('NOTAS IMPORTANTES:', x, y+2.6);
   doc.setFont('helvetica','normal');
   var yn = y+2.4;
-  ATS_NOTAS_REV.forEach(function(n, i){
+  _NOT.forEach(function(n, i){
     yn += _atsTxt(doc, (i+1)+'. '+n, x+27, yn-2.4, w-27, _ATS_PT-1, false);
   });
 }
@@ -1167,7 +1172,7 @@ function _ipDibujar(){
   return {
     firma: _atsFirmaPDF,
     /* a: el ATS con la forma del celular (gente:[ids], firmas:{id:{tr}}); C: { emp:{razon,logo}, obra, trabs:[{id,nombre}], fmt:{ats:{cod,rev,fecha}}, logo:{du,r}, libre, tx } */
-    ats: function(a, C){ _pon(C); ATS = a; try{ var r = _atsDibujar(); return { blob:ATS.pdf.blob, nombre:ATS.pdf.nombre, hojas:r.n, filas:r.filas }; } finally { ATS = null; } },
+    ats: function(a, C){ _pon(C); ATS = a; try{ var r = _atsDibujar(); return { blob:ATS.pdf.blob, nombre:ATS.pdf.nombre, hojas:r.n, filas:r.filas, noEntra:!!r.noEntra }; } finally { ATS = null; } },
     /* o: el IPERC continuo con la forma del celular (gente:[{nombre,firma}], filas, secuencia, sup) */
     iperc: function(o, C){ _pon(C); IP = o; try{ var doc = _ipDibujar(); return { blob:doc.output('blob'), hojas:doc.getNumberOfPages() }; } finally { IP = null; } }
   };

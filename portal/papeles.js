@@ -1513,7 +1513,7 @@ function _papFmtHTML(pref, tipo, fmt){
     (pref==='papa' ? '<div class="pap-fmt-op" id="papa-fmt-op">'+
        (((PAPA && PAPA.d.acts) || []).some(function(a){ return (a.filas||[]).some(function(f){ return f && f.v===1; }); })
          ? '<span>Las filas «⚑ verificar en el frente» salen</span><label><input type="radio" name="papa-vm" value="fondo"'+(PAPA.d.vm!=='letra' ? ' checked' : '')+'> con fondo rojo</label><label><input type="radio" name="papa-vm" value="letra"'+(PAPA.d.vm==='letra' ? ' checked' : '')+'> con letra roja</label>' : '')+
-       '<label><input type="checkbox" id="papa-una"'+(PAPA.d.una ? ' checked' : '')+'> En el «Clásico», que salga en una sola hoja (la letra de la tabla se achica si hace falta)</label></div>' : '')+
+       '<p class="ayuda" id="papa-dos-caras" style="margin:6px 0 0">El «Clásico» sale siempre en dos caras: el anverso con todos los pasos (si no entran, la letra de la tabla se achica) y el reverso con 10 de la cuadrilla.</p></div>' : '')+
     '<div class="aviso ojo" id="'+pref+'-franja" hidden></div>'+
     '<div class="acciones" style="justify-content:flex-start;margin:0 0 6px"><button type="button" class="bt chico" id="'+pref+'-pdf">Descargar el PDF</button><button type="button" class="bt sec chico" id="'+pref+'-imp">Imprimir</button></div>'+
     '<p class="ayuda" style="margin:0 0 10px">Al descargar o imprimir se guarda primero, para que quede en la lista.</p>'+
