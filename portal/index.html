@@ -4416,6 +4416,14 @@ function vistasDe(){
       return Object.assign({}, v, {g:VISTAS_SUP[0].g}); }), VISTAS_SUP.slice(ie));
   }
   else v = VISTAS_SUP;
+  /* 11/11/2026 · el Tablero del gerente: quien es de Gerencia o Legal en la obra (sst_mi_area) también tiene el «Resumen ejecutivo»,
+     con el plan que lo trae (Gestión SST), aunque no sea el dueño */
+  if(YO.rol!=='lider' && typeof areaGrupoPropio==='function'){
+    var _ag=areaGrupoPropio();
+    if(_ag && _ag.k==='gerencia' && _dcOrdenPlan()>=4 && !v.some(function(x){ return x.id==='resumen'; })){
+      var _vr=VISTAS_LIDER.filter(function(x){ return x.id==='resumen'; })[0]; if(_vr) v=v.concat([_vr]);
+    }
+  }
   /* 28/09/2026 · las fallas, los códigos y los avisos del creador se mudaron a la
      Consola OBRASST (consola/): aquí solo queda lo de la empresa */
   /* 01/10/2026 · afuera del Perú, sin lo que la app esconde en ese país */
@@ -4571,7 +4579,7 @@ var AREAS_TRABAJO = [
 var AREA_GRUPOS = [
   { k:'sst', n:'SST, medio ambiente y calidad', ic:'🦺', menu:null },
   { k:'gerencia', n:'Gerencia y legal', ic:'🏢', menu:[
-    { g:'Gerencia y legal', v:['avisos', 'os', ['resumen','obra'], 'informe', 'aud', 'acc', 'programas'] },
+    { g:'Gerencia y legal', v:['avisos', ['resumen','obra'], 'os', 'informe', 'aud', 'acc', 'programas'] },
     { g:'Documentos', v:['docs', 'util', 'normas'] }] },
   { k:'produccion', n:'Producción y mantenimiento', ic:'🏗️', menu:[
     { g:'Producción y mantenimiento', v:['avisos', ['obra','resumen'], 'ats', 'alto', 'equipos', 'inspeq', 'bloqueos', 'insp', 'parte'] }] },
@@ -18877,8 +18885,8 @@ function gesIr(fn){
    papeles-app.js (lo arma armar.py desde la app: las listas, la base de peligros y el dibujo del ATS «clásico» y del
    IPERC «Anexo 7») y papeles.js (los editores, los otros modelos de formato y la vista previa). Necesitan gestion.js
    (el buscador de personal) y el jsPDF de evaluaciones-pdf.js. */
-var PAPAPP_VER='b0c77598b8';   /* lo pone armar.py: el hash de portal/papeles-app.js */
-var PAPELES_VER='d920d1a68e';   /* lo pone armar.py: el hash de portal/papeles.js */
+var PAPAPP_VER='b79cf84901';   /* lo pone armar.py: el hash de portal/papeles-app.js */
+var PAPELES_VER='2adea30117';   /* lo pone armar.py: el hash de portal/papeles.js */
 var _PAP_CARGA=null;
 /* 07/10/2026 · los programas del año: portal/programas.js llega después de lo de los papeles (usa su dibujo de hojas) */
 var PROGRAMAS_VER='911d5913d0';   /* lo pone armar.py: el hash de portal/programas.js */
@@ -18911,7 +18919,7 @@ function cargarSenales(){
   return _SEN_CARGA;
 }
 /* 9/11/2026 · los formatos en blanco: formatos.js (el motor de la app, sus datos y la pantalla). Se pide con el jsPDF */
-var FORMATOS_VER='5dc1700b2b';   /* lo pone herr/huellas.py: el hash de portal/formatos.js */
+var FORMATOS_VER='a88a6e3671';   /* lo pone herr/huellas.py: el hash de portal/formatos.js */
 var _FMT_CARGA=null;
 function cargarFormatos(){
   if(typeof fmtVista==='function' && typeof FMT==='object') return Promise.resolve(true);
@@ -19159,8 +19167,8 @@ function cargarCampoApp(){
   return _CAMPOAPP_CARGA;
 }
 /* 15/10/2026 · el «Resumen ejecutivo» del líder (portal/torre.js) con las cuentas de la Torre de control de la app (portal/torre-app.js, tal cual) */
-var TORRE_VER='90ba9d0a46';       /* lo pone armar.py: el hash de portal/torre.js */
-var TORREAPP_VER='c284319b3a';    /* lo pone armar.py: el hash de portal/torre-app.js */
+var TORRE_VER='a5eb33fd24';       /* lo pone armar.py: el hash de portal/torre.js */
+var TORREAPP_VER='4bc01ad6e8';    /* lo pone armar.py: el hash de portal/torre-app.js */
 var _TORRE_CARGA=null;
 function cargarTorre(){
   if(typeof torrewResumen==='function' && typeof TORRE_APP==='object') return Promise.resolve(true);
