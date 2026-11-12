@@ -1,4 +1,4 @@
-var CACHE = 'sstc-07cb6d2915-a';
+var CACHE = 'sstc-232d9b4cfa-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -15,7 +15,7 @@ var PDFJS = 'obrasst-pdfjs-1';
    entera se guarda en install, antes de activar.
    28/10/2026 · también el lector de QR (lector-qr.js, jsQR) para los celulares que no traen uno
    (iPhone): «Escanear QR» lee sin señal desde el primer día. */
-var BASE = ['./', './index.html', './temas.js?v=1a67e4b3b9', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=d8e49a12c9', './exige.js?v=35cd514ecd', './idioma-fr.js?v=03016b0590', './procedimientos.js?v=fdf355c008', './idioma-pt.js?v=f59e72b108', './imagenes.js?v=0ab620822d', './figuras.js?v=0e2a13c744', './lector-qr.js?v=7be46afe22', './riesgos.js?v=45d340796a', './manifest.webmanifest', './icono-192.png', './icono-512.png',
+var BASE = ['./', './index.html', './temas.js?v=1a67e4b3b9', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=46c509ddc0', './exige.js?v=35cd514ecd', './idioma-fr.js?v=ab29e66430', './procedimientos.js?v=fdf355c008', './idioma-pt.js?v=9f5b98d35f', './imagenes.js?v=0ab620822d', './figuras.js?v=5d9fdcc169', './lector-qr.js?v=7be46afe22', './riesgos.js?v=45d340796a', './manifest.webmanifest', './icono-192.png', './icono-512.png',
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
             './intro.mp4'];
 self.addEventListener('install', function(e){
