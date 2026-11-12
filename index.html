@@ -7,7 +7,7 @@
      de cualquier https (las pega el usuario). En GitHub Pages no se pueden poner cabeceras: por eso va aquí. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss://gwjjkknuiumgysezeatz.supabase.co data: blob:; worker-src 'self' blob:; frame-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0B2A3A">
+<meta name="theme-color" content="#FFFFFF">
 <title>OBRASST</title>
 <script>
 /* 27/10/2026 · seguridad: OBRASST no se abre dentro de la página de otro (así nadie la tapa con algo encima para que
@@ -1420,11 +1420,12 @@ html.t-alto .mp-t{border:1px solid #000;color:#000;background:#fff}
 .esp-caja.lleno .aviso{background:rgba(229,72,77,.10);border-color:rgba(229,72,77,.38)}
 .esp-pie{margin:10px 0 0;font-size:12.5px}
 .c-fotos{background:#4FB3E8}.c-docs{background:#F5B700}.c-esc{background:#9B8CF2}.c-base{background:#2FBF71}
-.avisof{position:fixed;inset:0;z-index:2400;display:none;align-items:center;
+.avisof{position:fixed;inset:0;z-index:2400;display:none;align-items:flex-start;
   justify-content:center;padding:22px;background:rgba(4,14,20,.72);
+  overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
   -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .avisof.abierto{display:flex}
-.avisof .caja{width:100%;max-width:340px;background:linear-gradient(180deg,#123a4e,#0d2c3c);
+.avisof .caja{width:100%;max-width:340px;margin:auto;background:linear-gradient(180deg,#123a4e,#0d2c3c);
   border:1.5px solid rgba(245,183,0,.45);border-radius:20px;padding:22px 20px 18px;
   box-shadow:0 26px 60px rgba(0,0,0,.6);text-align:center;
   animation:avisoEntra .22s ease}
@@ -6577,6 +6578,8 @@ html.t-claro .proc-i.ambar{background:#FFFBEB;border-color:rgba(180,130,0,.45)}h
 /* apariencia: se aplica antes del primer pixel, sin esperar al resto del JS */
 (function(){try{
   var a=JSON.parse(localStorage.getItem('sstc_apariencia')||'{}')||{}, h=document.documentElement, c=[];
+  /* FONDO-BLANCO-1111 · 11/11/2026 · el fondo blanco es el de fábrica para todos: hasta que cada uno elija (v:2), Papel, sin foto ni textura */
+  if(a.v!==2){ a.tema=(a.tema==='alto') ? 'alto' : 'claro'; a.fondo=0; if(!a.textura || a.textura==='lineas') a.textura='no'; }
   if(a.tema==='claro') c.push('t-claro'); else if(a.tema==='alto') c.push('t-alto');
   if(a.fondo===0 || a.fondo===false || a.fondo==='0') c.push('sin-fondo');
   if(a.letra==='g') c.push('f-g'); else if(a.letra==='xg') c.push('f-xg');
@@ -20666,7 +20669,7 @@ function pintarBienvenida(){
     if(b.hasAttribute('data-sec')){ BV.sector=b.getAttribute('data-sec'); pintarBienvenida(); return; }
     if(b.hasAttribute('data-ap')){
       var ap=apariencia(), campo=b.getAttribute('data-ap'), v=b.getAttribute('data-v');
-      ap[campo] = (campo==='fondo') ? (v==='1'?1:0) : v;
+      ap[campo] = (campo==='fondo') ? (v==='1'?1:0) : v; ap.v=2;
       guardar(LS_APAR, ap); aplicarApariencia(); pintarBienvenida(); return;
     }
     if(b.hasAttribute('data-acc')){ tocaAccesoBienvenida(parseInt(b.getAttribute('data-acc'),10)); return; }
@@ -20742,6 +20745,10 @@ function terminarBienvenida(saltar){
 function apariencia(){
   var a=leer(LS_APAR,null);
   if(!a || typeof a!=='object') a={};
+  /* 11/11/2026 · Marcelo: «el fondo sea blanco predeterminado para todos»: lo guardado sin v:2 (o nada) se lee como Papel,
+     sin la foto y sin textura; «Alto contraste» se respeta. Lo que cada uno elija después se guarda con v:2 y se queda. */
+  if(a.v!==2){ a={ tema:(a.tema==='alto') ? 'alto' : 'claro', fondo:0, letra:a.letra, textura:(!a.textura || a.textura==='lineas') ? 'no' : a.textura,
+                  tipo:a.tipo, diseno:a.diseno }; }
   return { tema:a.tema||'obra', fondo:_apFondo(a.fondo),
            letra:a.letra||'n', textura:a.textura||'lineas', tipo:a.tipo||'sistema',
            diseno:(a.diseno==='tecnico') ? 'tecnico' : 'obra' };
@@ -20793,7 +20800,7 @@ function aplicarApariencia(){
   }catch(_e2){}
 }
 function ponerApariencia(campo, valor){
-  var a=apariencia(); a[campo]=valor; guardar(LS_APAR,a);
+  var a=apariencia(); a[campo]=valor; a.v=2; guardar(LS_APAR,a);
   aplicarApariencia(); pintarApariencia();
 }
 function _apOp(campo, valor, titulo, detalle, actual){
@@ -31962,7 +31969,7 @@ function _vdocHuellaPintar(){
   if(!ok){ e.hidden = true; e.innerHTML = ''; return; }
   e.innerHTML = H.r.pendiente
     ? '🔏 <span>La huella de este PDF se registra apenas haya señal.</span>'
-    : '🔏 <span>Huella registrada: cualquiera puede comprobar que este PDF es el original en</span> <a data-sin-trad href="https://obrasstapp.com/verificar' + (/^[0-9a-f]{64}$/.test(H.r.h || '') ? '?h=' + H.r.h : '') + '" target="_blank" rel="noopener">obrasstapp.com/verificar</a>';
+    : '🔏 <span>Huella registrada: cualquiera puede comprobar que este PDF es el original en</span> <a data-sin-trad href="https://descarganomaspe.github.io/sst-capacita/portal/verificar.html' + (/^[0-9a-f]{64}$/.test(H.r.h || '') ? '?h=' + H.r.h : '') + '" target="_blank" rel="noopener">OBRASST Verifica</a>';
   e.hidden = false;
 }
 /* <<< HUELLA-FIN >>> */
@@ -127267,7 +127274,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='79e52aa86f';
+var SELLO_APP='07cb6d2915';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
