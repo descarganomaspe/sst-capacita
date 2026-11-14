@@ -188,7 +188,9 @@ $('e-olvido').onclick = function(){
   var correo = val('e-correo').toLowerCase();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)){ entrarMsg('Escribe arriba tu correo y vuelve a tocar «¿Olvidaste tu contraseña?».'); $('e-correo').focus(); return; }
   entrarMsg('Mandando el correo…', true);
-  fetch(SB.url + '/auth/v1/recover', { method:'POST', headers:{ apikey:SB.key, 'Content-Type':'application/json' }, body:JSON.stringify({ email:correo, redirect_to:APP_FIJA }) })
+  var _redir = (location.origin + location.pathname).replace(/([a-z-]+\.html)?$/, '') || 'https://obrasstapp.com/';
+  if(_redir.indexOf('http') !== 0) _redir = 'https://obrasstapp.com/';
+  fetch(SB.url + '/auth/v1/recover', { method:'POST', headers:{ apikey:SB.key, 'Content-Type':'application/json' }, body:JSON.stringify({ email:correo, redirect_to:_redir }) })
     .then(function(r){ entrarMsg(r.ok ? 'Listo: revisa tu correo y crea una contraseña nueva. Después vuelve aquí y entra.' : 'No se pudo mandar el correo ahora. Escríbenos a info@obrasstapp.com.', r.ok); },
           function(){ entrarMsg('No hubo conexión. Inténtalo otra vez.'); });
 };

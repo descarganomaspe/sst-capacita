@@ -362,8 +362,10 @@ $('e-olvido').onclick = function(){
   var correo = String($('e-correo').value || '').trim().toLowerCase();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)){ entrarMsg('Escribe arriba tu correo y vuelve a tocar «¿Olvidaste tu contraseña?».'); $('e-correo').focus(); return; }
   entrarMsg('Mandando el correo…', true);
-  /* la contraseña nueva se pone en la app de OBRASST (como en el portal); después se vuelve aquí */
-  fetch(SB.url + '/auth/v1/recover', { method:'POST', headers:{ apikey:SB.key, 'Content-Type':'application/json' }, body:JSON.stringify({ email:correo, redirect_to:APP_FIJA }) })
+  /* la contraseña nueva se pone en obrasstapp.com (o en la app); después se vuelve aquí */
+  var _redir = (location.origin + location.pathname).replace(/([a-z-]+\.html)?$/, '') || 'https://obrasstapp.com/';
+  if(_redir.indexOf('http') !== 0) _redir = 'https://obrasstapp.com/';
+  fetch(SB.url + '/auth/v1/recover', { method:'POST', headers:{ apikey:SB.key, 'Content-Type':'application/json' }, body:JSON.stringify({ email:correo, redirect_to:_redir }) })
     .then(function(r){ entrarMsg(r.ok ? 'Listo: revisa tu correo y crea una contraseña nueva. Después vuelve aquí y entra.' : 'No se pudo mandar el correo ahora. Escríbenos a info@obrasstapp.com.', r.ok); },
           function(){ entrarMsg('No hubo conexión. Inténtalo otra vez.'); });
 };

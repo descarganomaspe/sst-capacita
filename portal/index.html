@@ -2460,6 +2460,24 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
           </form>
         </div>
 
+        <div id="acc-recuperar" role="tabpanel" aria-labelledby="acc-t-recuperar" hidden>
+          <h2 class="acc-h">Pon tu contraseña nueva</h2>
+          <p class="sub">Entraste desde el enlace que te llegó al correo. Escribe la contraseña que vas a usar de ahora en adelante.</p>
+          <form id="f-recuperar" autocomplete="off">
+            <div class="campo">
+              <label for="rec-clave">Contraseña nueva</label>
+              <input id="rec-clave" name="new-password" type="password" autocomplete="new-password" placeholder="8 caracteres o más, con letras y números" required>
+            </div>
+            <div class="campo">
+              <label for="rec-clave2">Repítela</label>
+              <input id="rec-clave2" name="new-password2" type="password" autocomplete="new-password" placeholder="La misma" required>
+            </div>
+            <div id="rec-error" class="error" hidden role="alert"></div>
+            <div id="rec-msg" class="msg" hidden></div>
+            <button class="bt" type="submit" id="rec-bt" style="width:100%;padding:12px;margin-top:12px">Guardar contraseña y entrar</button>
+          </form>
+        </div>
+
         <div class="ent-pie">
           <p class="ent-bts"><a class="bt sec chico" href="../">Abrir la app</a> <a class="bt sec chico" href="#preguntas">¿Dudas? Preguntas frecuentes</a></p>
           <p class="ent-legal">Al entrar aceptas los <a href="../?legal=terminos" target="_blank" rel="noopener">Términos y condiciones</a> y la <a href="../?legal=privacidad" target="_blank" rel="noopener">Política de datos</a>.</p>
@@ -20281,10 +20299,12 @@ function googleVuelta(){
       ? 'Cancelaste el ingreso con Google. Puedes entrar con tu correo y tu contraseña.'
       : 'No se pudo entrar con Google. Entra con tu correo y tu contraseña.'});
   }
-  /* un enlace de «recuperar contraseña» que cayó aquí: la contraseña nueva se pone en la app */
+  /* un enlace de «recuperar contraseña» que cayó aquí: se pone la contraseña nueva en el portal directamente */
   if((d.type||'')==='recovery'){
-    var app=appBase();
-    try{ location.replace(app+h); }catch(_e){}
+    TOK = { access_token:d.access_token, refresh_token:d.refresh_token||'',
+            expira: Date.now() + ((parseInt(d.expires_in, 10)||3600)-60)*1000, correo:'', uid:'' };
+    guardar(LS_TOK, TOK);
+    mostrarRecuperarClave();
     return new Promise(function(){});
   }
   TOK = { access_token:d.access_token, refresh_token:d.refresh_token||'',
@@ -21931,8 +21951,7 @@ function sesionVencida(){
   limpiarSesion();
   mostrarEntrada(dniEntrada('Tu sesión venció. Vuelve a entrar con tu correo o tu DNI: lo que dejaste está guardado.'));
 }
-/* ¿Olvidaste tu contraseña? Mismo camino que la app: el correo trae un
-   enlace que abre la app para poner la nueva, y con ella se entra aquí. */
+/* ¿Olvidaste tu contraseña? Mismo camino que la app: se manda un enlace al correo para poner la nueva */
 function pedirClaveNueva(){
   var m=$('e-olvide-msg'), quien=String($('e-quien').value||'').trim();
   m.hidden=false; m.className='msg mal';
@@ -21946,18 +21965,61 @@ function pedirClaveNueva(){
         return String(j.correo); })
     : Promise.resolve(quien.toLowerCase());
   correoP.then(function(correo){
-    var app = appBase();
+    var redirectUrl = (location.origin + location.pathname).replace(/([a-z-]+\.html)?$/, '');
+    if(redirectUrl.indexOf('http') !== 0) redirectUrl = 'https://obrasstapp.com/';
     return fetch(SB.url+'/auth/v1/recover', {method:'POST', headers:{'apikey':SB.key,'Content-Type':'application/json'},
-      body:JSON.stringify({email:correo, redirect_to:app})}).then(function(r){
+      body:JSON.stringify({email:correo, redirect_to:redirectUrl})}).then(function(r){
         if(!r.ok) return Promise.reject({portal:'No se pudo mandar el correo ahora. Escríbenos a info@obrasstapp.com y te la reiniciamos a mano.'});
         return correo;
       });
   }).then(function(correo){
     m.className='msg ok';
     m.textContent = esDoc
-      ? dniEntrada('Listo. Mandamos un enlace al correo de la cuenta de ese DNI. Ábrelo: se abre la app para poner tu contraseña nueva. Luego entras aquí con ella.')
-      : 'Listo. Mandamos un enlace a '+correo+'. Ábrelo: se abre la app para poner tu contraseña nueva. Luego entras aquí con ella. Si no llega, revisa «Spam».';
+      ? dniEntrada('Listo. Mandamos un enlace al correo de la cuenta de ese DNI. Ábrelo para poner tu contraseña nueva y entrar.')
+      : 'Listo. Mandamos un enlace a '+correo+'. Ábrelo para poner tu contraseña nueva y entrar. Si no llega, revisa «Spam».';
   }).catch(function(e){ m.className='msg mal'; m.textContent=(e&&e.portal)||'No se pudo (¿sin internet?). Inténtalo en un momento.'; });
+}
+function mostrarRecuperarClave(){
+  _soloVer('entrada');
+  var tabs = document.querySelector('.acc-tabs'); if(tabs) tabs.hidden = true;
+  var ae = $('acc-entrar'); if(ae) ae.hidden = true;
+  var ac = $('acc-crear'); if(ac) ac.hidden = true;
+  var ar = $('acc-recuperar'); if(ar) ar.hidden = false;
+  setTimeout(function(){
+    var arEl = $('acc-recuperar');
+    if(arEl) arEl.scrollIntoView({ behavior:'smooth', block:'center' });
+    var rc = $('rec-clave'); if(rc) rc.focus();
+  }, 100);
+}
+function guardarClaveNuevaWeb(ev){
+  if(ev) ev.preventDefault();
+  var a = String(($('rec-clave')||{}).value||'').trim();
+  var b = String(($('rec-clave2')||{}).value||'').trim();
+  var err = $('rec-error'), msg = $('rec-msg'), bt = $('rec-bt');
+  if(err) err.hidden = true; if(msg) msg.hidden = true;
+  if(a.length < 8){ if(err){ err.hidden = false; err.textContent = 'La contraseña necesita 8 caracteres o más.'; } return; }
+  if(!(/[0-9]/.test(a) && /[a-zA-Z]/.test(a))){ if(err){ err.hidden = false; err.textContent = 'La contraseña necesita letras y números.'; } return; }
+  if(a !== b){ if(err){ err.hidden = false; err.textContent = 'Las dos contraseñas no coinciden.'; } return; }
+  if(!TOK || !TOK.access_token){ if(err){ err.hidden = false; err.textContent = 'El enlace ya venció o no es válido. Pide uno nuevo desde «¿Olvidaste tu contraseña?».'; } return; }
+  if(bt){ bt.disabled = true; bt.textContent = 'Guardando…'; }
+  fetch(SB.url + '/auth/v1/user', {
+    method: 'PUT',
+    headers: sbH(),
+    body: JSON.stringify({ password: a })
+  }).then(function(r){ return r.json().then(function(j){ return r.ok ? j : Promise.reject(j); }); })
+  .then(function(u){
+    if(u && u.email && TOK){ TOK.correo = u.email; TOK.uid = u.id || TOK.uid; guardar(LS_TOK, TOK); }
+    if(msg){ msg.hidden = false; msg.className = 'msg ok'; msg.textContent = 'Listo. Tu contraseña quedó cambiada.'; }
+    setTimeout(function(){
+      if(bt){ bt.disabled = false; bt.textContent = 'Entrar'; }
+      cargarEmpresas().then(function(emps){
+        if(emps && emps.length) mostrarPortal(); else mostrarAlta(false);
+      }).catch(function(){ mostrarPortal(); });
+    }, 800);
+  }).catch(function(e){
+    if(bt){ bt.disabled = false; bt.textContent = 'Guardar y entrar'; }
+    if(err){ err.hidden = false; err.textContent = (e && (e.msg || e.error_description || e.message)) || 'No se pudo cambiar la contraseña. Inténtalo de nuevo.'; }
+  });
 }
 /* 01/10/2026 · Contractor Hub™: la obra de ejemplo (portal/?demo=central) y,
    después, las obras con Central. Se carga recién cuando hace falta. */
@@ -22339,6 +22401,7 @@ function arrancarCuenta(soloEntrada){
   $('bt-salir').onclick=function(){ dispositivoLiberar(); limpiarSesion(); mostrarEntrada(); };
   var bcu=$('bt-cuenta'); if(bcu) bcu.onclick=function(){ verMiCuenta(); };
   var eo=$('e-olvide'); if(eo) eo.onclick=pedirClaveNueva;
+  var fr=$('f-recuperar'); if(fr) fr.onsubmit=guardarClaveNuevaWeb;
   var bg=$('bt-guia'); if(bg) bg.onclick=function(){ if(typeof guiaAbrir==='function') guiaAbrir(); };
   if(soloEntrada) return;
   /* 03/10 · la vuelta de «Continuar con Google»: la sesión llega en la dirección */
