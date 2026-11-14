@@ -10307,15 +10307,22 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
 </section>
 
 <!-- cámara propia: se abre dentro de la app, no la del celular -->
-<div class="cam" id="cam">
+<div class="cam" id="cam" data-gira="0">
   <video id="cam-v" playsinline muted autoplay></video>
+  <div class="cam-rejilla" aria-hidden="true"></div>
+  <div class="cam-nivel" id="cam-nivel" aria-hidden="true"><i></i></div>
   <div class="cam-arriba">
     <button type="button" class="cam-x" aria-label="Cerrar la cámara" onclick="cerrarCamara()">✕</button>
     <span id="cam-tit">Tomar foto</span>
-    <button type="button" class="cam-x" aria-label="Voltear la cámara" onclick="voltearCamara()">🔄</button>
+    <span class="cam-der">
+      <button type="button" class="cam-x cam-rej-b" id="cam-rej-b" aria-label="Cuadrícula" aria-pressed="false" onclick="camRejilla()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM9.33 4v16M14.67 4v16M4 9.33h16M4 14.67h16" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></button>
+      <button type="button" class="cam-x" aria-label="Voltear la cámara" onclick="voltearCamara()">🔄</button>
+    </span>
   </div>
   <div class="cam-guia" id="cam-guia"></div>
   <div class="cam-msg" id="cam-msg"></div>
+  <div class="camx-pista" id="cam-pista" hidden></div>
+  <div class="camx-zoom cam-zoom" id="cam-zoom" hidden></div>
   <div class="cam-sello" id="cam-sello"></div>
   <div class="cam-flash" id="cam-flash"></div>
   <div class="cam-abajo">
@@ -32044,6 +32051,961 @@ function _ctEstilos(){
   document.head.appendChild(st);
 }
 /* <<< CARTEL-APP-FIN >>> */
+/* >>> CAMARA-1311-INI <<< */
+/* ══════════════════════════════════════════════════════════════════
+   LA CÁMARA, EL LECTOR DE QR Y EL ESCÁNER, MEJORES (13/11/2026)
+   Marcelo: «Mejora la cámara, tanto para escanear QR, tomar foto (no se
+   puede voltear horizontal), y escanear hojas, que sea demasiado mejor…
+   tanto para los que usan la aplicación y tienen cuenta, como los que no
+   tienen cuenta, pero usan esas herramientas».
+   · Tomar foto (la cámara de la app: reportes, inspecciones, la Cámara
+     con sello…): con el celular echado, la foto sale echada (antes salía
+     de costado) y los íconos se giran; zoom (pellizcar, o 1× 2× 3×: el
+     del lente si el celular lo deja, si no digital); tocar para enfocar
+     (donde el celular lo deja); cuadrícula y nivel (la raya se pone verde
+     cuando está derecho); de tres cuadros se queda con el más nítido; si
+     está oscuro, lo dice y la linterna late. La foto con sello: «↻ Girar»
+     y «Guardar en el celular». El sello de una foto echada ya no tapa un
+     tercio de la foto (se mide por el lado corto).
+   · Leer un QR (todos los lectores de la app): la cámara en HD con
+     enfoque continuo, lee más seguido y de más lejos (prueba también el
+     centro y los QR claros sobre oscuro), linterna y zoom, suena y vibra
+     al leer, y el mismo QR delante no se lee dos veces. En «Escanear QR»
+     y «Leer un QR» (con y sin cuenta): leer de una foto (la captura que
+     llegó por WhatsApp; la asistencia y la puerta, no: esas se marcan
+     frente al QR) y los últimos leídos (solo en este celular). Un QR que
+     no es de OBRASST dice qué es —página web, wifi, teléfono, correo,
+     SMS, ubicación, contacto, pago o texto— y qué se puede hacer: abrir,
+     llamar, copiar la clave, compartir… Nunca se abre solo.
+   · El escáner: enfoque continuo, tocar para enfocar y, si está oscuro,
+     pide la linterna.
+   Lo que depende del celular (el zoom del lente, el enfoque, la
+   linterna) se pregunta antes: si no lo deja, el botón no sale o no hace
+   como que hizo.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── lo que deja hacer la cámara de este celular ─────────────────── */
+function _camxCaps(t){ try{ return (t && typeof t.getCapabilities === 'function') ? (t.getCapabilities() || {}) : {}; }catch(e){ return {}; } }
+function _camxHay(l, v){ return !!(l && typeof l.indexOf === 'function' && l.indexOf(v) > -1); }
+function _camxApoya(k){
+  try{ var s = (navigator.mediaDevices && navigator.mediaDevices.getSupportedConstraints) ? navigator.mediaDevices.getSupportedConstraints() : null; return !!(s && s[k]); }
+  catch(e){ return false; }
+}
+function _camxPedir(t, a){
+  try{
+    var p = t.applyConstraints({ advanced:[a] });
+    return (p && typeof p.then === 'function') ? p.then(function(){ return true; }, function(){ return false; }) : Promise.resolve(true);
+  }catch(e){ return Promise.resolve(false); }
+}
+/* el enfoque, la luz y el color se acomodan solos (donde el celular lo deja) */
+function camxAjustar(t){
+  if(!t) return Promise.resolve(false);
+  var c = _camxCaps(t), a = {}, n = 0;
+  if(_camxHay(c.focusMode, 'continuous')){ a.focusMode = 'continuous'; n++; }
+  if(_camxHay(c.exposureMode, 'continuous')){ a.exposureMode = 'continuous'; n++; }
+  if(_camxHay(c.whiteBalanceMode, 'continuous')){ a.whiteBalanceMode = 'continuous'; n++; }
+  return n ? _camxPedir(t, a) : Promise.resolve(false);
+}
+/* ¿se puede tocar para enfocar? Solo si la cámara dice que enfoca */
+function camxPuedeEnfocar(t){
+  var c = _camxCaps(t);
+  return _camxHay(c.focusMode, 'single-shot') || (_camxHay(c.focusMode, 'continuous') && _camxApoya('pointsOfInterest'));
+}
+/* enfoca en (x, y), de 0 a 1 en el cuadro del video; a los 5 s vuelve al enfoque continuo */
+function camxEnfocar(t, x, y){
+  if(!t || !camxPuedeEnfocar(t)) return Promise.resolve(false);
+  var c = _camxCaps(t), a = {};
+  if(_camxApoya('pointsOfInterest')) a.pointsOfInterest = [{ x:Math.max(0, Math.min(1, x)), y:Math.max(0, Math.min(1, y)) }];
+  a.focusMode = _camxHay(c.focusMode, 'single-shot') ? 'single-shot' : 'continuous';
+  if(a.pointsOfInterest && _camxHay(c.exposureMode, 'continuous')) a.exposureMode = 'continuous';
+  try{ clearTimeout(t.__camxVuelve); }catch(_c){}
+  return _camxPedir(t, a).then(function(ok){
+    if(ok && a.focusMode === 'single-shot'){
+      try{ t.__camxVuelve = setTimeout(function(){ if(t.readyState === 'live') camxAjustar(t); }, 5000); }catch(_t){}
+    }
+    return ok;
+  });
+}
+/* el punto tocado, de 0 a 1 en el cuadro del video (que va «cover» o «contain» y, con zoom digital, agrandado) */
+function camxPuntoVideo(v, cx, cy, zd){
+  var r = v.getBoundingClientRect(), z = zd || 1;
+  var W = r.width/z, H = r.height/z, mx = r.left + r.width/2, my = r.top + r.height/2;
+  var vw = v.videoWidth || 1, vh = v.videoHeight || 1, fit = 'cover';
+  try{ fit = getComputedStyle(v).objectFit || 'cover'; }catch(_f){}
+  var s = (fit === 'contain' ? Math.min(W/vw, H/vh) : Math.max(W/vw, H/vh))*z;
+  return { x:(vw/2 + (cx - mx)/s)/vw, y:(vh/2 + (cy - my)/s)/vh };
+}
+/* el anillo amarillo donde se tocó */
+function camxAnillo(caja, cx, cy){
+  try{
+    var r = caja.getBoundingClientRect(), a = document.createElement('span');
+    a.className = 'camx-foco'; a.style.left = Math.round(cx - r.left) + 'px'; a.style.top = Math.round(cy - r.top) + 'px';
+    caja.appendChild(a);
+    setTimeout(function(){ try{ a.remove(); }catch(_r){} }, 1100);
+  }catch(e){}
+}
+/* cuánto gira la pantalla misma (en el iPhone, o con la rotación prendida, la app se echa con el celular) */
+function camxPantallaGiro(){
+  try{ if(screen.orientation && typeof screen.orientation.angle === 'number') return ((screen.orientation.angle % 360) + 360) % 360; }catch(e){}
+  try{ if(typeof window.orientation === 'number') return ((window.orientation % 360) + 360) % 360; }catch(e){}
+  return 0;
+}
+
+/* ── el zoom: el del lente si el celular lo deja; si no, digital ─── */
+function camxZoomNuevo(){ return { t:null, v:null, el:null, z:1, min:1, max:1, hw:null, ocupado:false, pend:null }; }
+function camxZoomPreparar(Z, t, v, el, maxDig){
+  Z.t = t; Z.v = v; Z.el = el; Z.z = 1; Z.hw = null; Z.min = 1; Z.max = maxDig || 3; Z.pend = null; Z.ocupado = false;
+  var c = _camxCaps(t);
+  if(c.zoom && typeof c.zoom.max === 'number' && c.zoom.max >= 1.5){
+    Z.hw = { step:(c.zoom.step > 0 ? c.zoom.step : 0.1) };
+    Z.min = (c.zoom.min > 0) ? c.zoom.min : 1; Z.max = Math.min(c.zoom.max, 10);
+    try{ var st = t.getSettings ? t.getSettings() : null; if(st && st.zoom > 0) Z.z = st.zoom; }catch(_s){}
+    if(Z.z < Z.min || Z.z > Z.max) Z.z = Math.max(Z.min, Math.min(Z.max, 1));
+  }
+  _camxZoomVer(Z); camxZoomChips(Z);
+}
+function camxZoomDigital(Z){ return (Z && Z.t && !Z.hw && Z.z > 1.001) ? Z.z : 1; }
+function _camxZoomVer(Z){
+  if(!Z || !Z.v) return;
+  var d = camxZoomDigital(Z), tr = d > 1.001 ? 'scale(' + d.toFixed(3) + ')' : '';
+  if(Z.v.style.transform !== tr) Z.v.style.transform = tr;
+}
+function _camxZoomPresets(Z){
+  var p = [];
+  if(Z.min < 0.95) p.push(Math.round(Z.min*10)/10);
+  p.push(1);
+  if(Z.max >= 1.95) p.push(2);
+  if(Z.max >= 2.95) p.push(Z.max >= 4.95 ? 5 : Math.floor(Z.max));
+  return p;
+}
+function _camxZoomTxt(z){
+  var s = String(Math.round(z*10)/10);
+  try{ if(typeof idiomaActual !== 'function' || idiomaActual() !== 'en') s = s.replace('.', ','); }catch(_i){}
+  return s + '×';
+}
+function camxZoomChips(Z){
+  var el = Z && Z.el; if(!el) return;
+  var p = _camxZoomPresets(Z);
+  if(!Z.t || p.length < 2){ el.innerHTML = ''; el.hidden = true; return; }
+  el.innerHTML = p.map(function(z){
+    return '<button type="button" class="camx-chip" data-z="' + z + '"><span data-sin-trad>' + _camxZoomTxt(z) + '</span></button>';
+  }).join('');
+  el.hidden = false;
+  el.onclick = function(e){
+    var b = e.target && e.target.closest ? e.target.closest('.camx-chip') : null;
+    if(b) camxZoomPoner(Z, +b.getAttribute('data-z'));
+  };
+  _camxZoomMarcar(Z);
+}
+/* la ficha del zoom en uso dice el valor de verdad (1,6×) */
+function _camxZoomMarcar(Z){
+  var el = Z && Z.el; if(!el) return;
+  var p = _camxZoomPresets(Z), act = -1, i, bs = el.querySelectorAll('.camx-chip');
+  for(i = 0; i < p.length; i++) if(Z.z >= p[i] - 0.05) act = i;
+  for(i = 0; i < bs.length && i < p.length; i++){
+    var on = (i === act), z = (on && Math.abs(Z.z - p[i]) > 0.05) ? Z.z : p[i];
+    if(bs[i].classList.contains('on') !== on) bs[i].classList.toggle('on', on);
+    var sp = bs[i].firstChild, tx = _camxZoomTxt(z);
+    if(sp && sp.textContent !== tx) sp.textContent = tx;
+  }
+}
+function camxZoomPoner(Z, z){
+  if(!Z || !Z.t) return;
+  z = Math.max(Z.min, Math.min(Z.max, +z || 1)); Z.z = z;
+  if(Z.hw){
+    if(Z.ocupado) Z.pend = z;
+    else {
+      Z.ocupado = true;
+      var zz = Math.round(z/Z.hw.step)*Z.hw.step, t = Z.t;
+      _camxPedir(t, { zoom:+zz.toFixed(3) }).then(function(ok){
+        Z.ocupado = false;
+        if(Z.t !== t) return;
+        /* el lente no quiso: se sigue con el digital, sin pasar de 3× */
+        if(!ok && Z.hw){ Z.hw = null; Z.min = 1; Z.max = 3; Z.z = Math.max(1, Math.min(3, Z.z)); camxZoomChips(Z); }
+        if(Z.pend != null){ var p = Z.pend; Z.pend = null; camxZoomPoner(Z, p); }
+        else _camxZoomVer(Z);
+      });
+    }
+  }
+  _camxZoomVer(Z); _camxZoomMarcar(Z);
+}
+function camxZoomSoltar(Z){
+  if(!Z) return;
+  try{ if(Z.v) Z.v.style.transform = ''; }catch(_v){}
+  Z.t = null; Z.v = null; Z.z = 1; Z.hw = null; Z.pend = null; Z.ocupado = false;
+  if(Z.el){ Z.el.innerHTML = ''; Z.el.hidden = true; }
+}
+/* pellizcar = zoom; un toque = enfocar ahí (los botones no cuentan) */
+function camxGestos(caja, Z, alToque){
+  if(!caja || caja.__camxG) return;
+  caja.__camxG = true;
+  var P = {}, d0 = 0, z0 = 1, mov = false, t0 = 0, x0 = 0, y0 = 0, pellizco = false;
+  var dedos = function(){ return Object.keys(P); };
+  var dist = function(){ var k = dedos(); if(k.length < 2) return 0; var a = P[k[0]], b = P[k[1]]; return Math.sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y)); };
+  caja.addEventListener('pointerdown', function(e){
+    if(e.target && e.target.closest && e.target.closest('button,input,a,label,select,.camx-no')) return;
+    P[e.pointerId] = { x:e.clientX, y:e.clientY };
+    var n = dedos().length;
+    if(n === 1){ mov = false; pellizco = false; t0 = Date.now(); x0 = e.clientX; y0 = e.clientY; }
+    if(n === 2 && Z && Z.t){ pellizco = true; d0 = dist(); z0 = Z.z; }
+  });
+  caja.addEventListener('pointermove', function(e){
+    if(!P[e.pointerId]) return;
+    P[e.pointerId] = { x:e.clientX, y:e.clientY };
+    if(Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) > 14) mov = true;
+    if(pellizco && Z && Z.t && dedos().length >= 2 && d0 > 10) camxZoomPoner(Z, z0*dist()/d0);
+  });
+  var fin = function(e){
+    if(!P[e.pointerId]) return;
+    delete P[e.pointerId];
+    if(e.type === 'pointerup' && !pellizco && !mov && Date.now() - t0 < 450 && alToque){ try{ alToque(e.clientX, e.clientY); }catch(_a){} }
+    if(!dedos().length) pellizco = false;
+  };
+  caja.addEventListener('pointerup', fin);
+  caja.addEventListener('pointercancel', fin);
+}
+
+/* ── ¿está oscuro? (el promedio de la luz de un cuadro chiquito) ── */
+var _CAMX_LZ = null, _CAMX_LZG = null;
+function camxLuz(v){
+  try{
+    if(!v || !v.videoWidth || v.readyState < 2) return -1;
+    if(!_CAMX_LZ){ _CAMX_LZ = document.createElement('canvas'); _CAMX_LZ.width = 24; _CAMX_LZ.height = 24; _CAMX_LZG = _CAMX_LZ.getContext('2d', { willReadFrequently:true }); }
+    _CAMX_LZG.drawImage(v, 0, 0, 24, 24);
+    return camxLuzMedia(_CAMX_LZG.getImageData(0, 0, 24, 24).data, 4);
+  }catch(e){ return -1; }
+}
+function camxLuzMedia(d, paso){
+  var s = 0, n = 0, k = (paso || 4)*4;
+  for(var i = 0; i + 2 < d.length; i += k){ s += d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114; n++; }
+  return n ? s/n : -1;
+}
+/* entra en «oscuro» con dos medidas bajo 42 seguidas, sale sobre 62 (no parpadea) */
+function camxOscuro(S, l){
+  if(l < 0) return !!S.osc;
+  if(l < 42){ S.nOsc = (S.nOsc || 0) + 1; if(S.nOsc >= 2) S.osc = true; }
+  else { S.nOsc = 0; if(l > 62) S.osc = false; }
+  return !!S.osc;
+}
+function _camxPistaPoner(p, t){
+  if(!p) return;
+  if(!t){ if(!p.hidden) p.hidden = true; return; }
+  if(p.getAttribute('data-t') !== t){ p.setAttribute('data-t', t); p.innerHTML = '<span>' + esc(t) + '</span>'; }
+  if(p.hidden) p.hidden = false;
+}
+
+/* ── el «bip» al leer ─────────────────────────────────────────────── */
+var _CAMX_AC = null;
+function camxDespertarSonido(){
+  try{
+    var AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+    if(!_CAMX_AC) _CAMX_AC = new AC();
+    if(_CAMX_AC.state === 'suspended'){ var r = _CAMX_AC.resume(); if(r && r.catch) r.catch(function(){}); }
+  }catch(e){}
+}
+function camxBip(){
+  try{
+    camxDespertarSonido();
+    var c = _CAMX_AC; if(!c) return;
+    var o = c.createOscillator(), g = c.createGain(), t = c.currentTime;
+    o.type = 'sine'; o.frequency.setValueAtTime(1320, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.12, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.12);
+  }catch(e){}
+}
+
+/* ── un cuadro → recortado (zoom digital), girado y a su tamaño ──── */
+function camxRecortarGirar(cv, zd, giro, max){
+  zd = zd > 1 ? zd : 1; giro = ((giro % 360) + 360) % 360;
+  var sw = cv.width/zd, sh = cv.height/zd, sx = (cv.width - sw)/2, sy = (cv.height - sh)/2;
+  var r = Math.min(1, (max || 1600)/Math.max(sw, sh));
+  var w = Math.max(1, Math.round(sw*r)), h = Math.max(1, Math.round(sh*r)), vert = (giro === 90 || giro === 270);
+  var o = document.createElement('canvas'); o.width = vert ? h : w; o.height = vert ? w : h;
+  var g = o.getContext('2d');
+  try{ g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; }catch(_e){}
+  g.translate(o.width/2, o.height/2); g.rotate(giro*Math.PI/180);
+  g.drawImage(cv, sx, sy, sw, sh, -w/2, -h/2, w, h);
+  return o;
+}
+function camxGirarDataURL(du, grados, cal){
+  return new Promise(function(ok){
+    grados = ((grados % 360) + 360) % 360;
+    if(!grados){ ok(du); return; }
+    var im = new Image();
+    im.onload = function(){
+      try{ _lienzoAdataURL(camxRecortarGirar(im, 1, grados, Math.max(im.width, im.height)), cal || 0.92).then(ok, function(){ ok(du); }); }
+      catch(e){ ok(du); }
+    };
+    im.onerror = function(){ ok(du); };
+    im.src = du;
+  });
+}
+
+/* ── los estilos (una vez) ────────────────────────────────────────── */
+function _camxEstilos(){
+  if(document.getElementById('camx-estilos')) return;
+  var st = document.createElement('style'); st.id = 'camx-estilos';
+  var L = function(a){ return 'linear-gradient(' + a + ',transparent calc(33.333% - .5px),rgba(255,255,255,.42) calc(33.333% - .5px),rgba(255,255,255,.42) calc(33.333% + .5px),' +
+    'transparent calc(33.333% + .5px),transparent calc(66.666% - .5px),rgba(255,255,255,.42) calc(66.666% - .5px),rgba(255,255,255,.42) calc(66.666% + .5px),transparent calc(66.666% + .5px))'; };
+  var R = function(g){ return '.cam[data-gira="270"] ' + g + '{transform:rotate(90deg)}.cam[data-gira="90"] ' + g + '{transform:rotate(-90deg)}.cam[data-gira="180"] ' + g + '{transform:rotate(180deg)}'; };
+  st.textContent =
+    /* la cámara de fotos */
+    '.cam{touch-action:none;overflow:hidden}' +
+    '.cam video{transform-origin:50% 50%}' +
+    '.cam-der{display:flex;align-items:center;gap:8px}' +
+    '.cam-rej-b svg{display:block;margin:auto;width:20px;height:20px}' +
+    '.cam-rej-b[aria-pressed="true"]{background:#F5B700;color:#0B2A3A}' +
+    '.cam-rejilla{position:absolute;inset:0;pointer-events:none;display:none;background-image:' + L('to right') + ',' + L('to bottom') + '}' +
+    '.cam.rej .cam-rejilla{display:block}' +
+    '.cam-nivel{position:absolute;left:50%;top:50%;width:min(52vw,280px);height:0;pointer-events:none;display:none;z-index:2;transform:translate(-50%,-50%)}' +
+    '.cam-nivel.ver{display:block}' +
+    '.cam-nivel::before,.cam-nivel::after{content:"";position:absolute;top:-1px;width:14%;height:2px;border-radius:2px;background:rgba(255,255,255,.7);box-shadow:0 0 3px rgba(0,0,0,.55)}' +
+    '.cam-nivel::before{left:-22%}.cam-nivel::after{right:-22%}' +
+    '.cam-nivel i{position:absolute;left:0;right:0;top:-1px;height:2px;border-radius:2px;background:rgba(255,255,255,.92);box-shadow:0 0 3px rgba(0,0,0,.55)}' +
+    '.cam-nivel.ok i,.cam-nivel.ok::before,.cam-nivel.ok::after{background:#34D07F}' +
+    '.cam-zoom{position:absolute;left:0;right:0;bottom:148px;z-index:5}' +
+    '.cam .cam-x,.cam .cam-gal,.cam .cam-luz,.cam .camx-chip{transition:transform .25s ease}' +
+    R('.cam-x') + R('.cam-gal') + R('.cam-luz') + R('.camx-chip') +
+    /* lo común */
+    '.camx-zoom{display:flex;align-items:center;justify-content:center;gap:6px}' +
+    '.camx-zoom[hidden]{display:none}' +
+    '.camx-chip{min-width:44px;height:36px;padding:0 9px;border-radius:999px;border:0;background:rgba(0,0,0,.52);color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums}' +
+    '.camx-chip.on{background:rgba(0,0,0,.74);color:#F5B700;box-shadow:inset 0 0 0 1.5px rgba(245,183,0,.75)}' +
+    '.camx-foco{position:absolute;width:74px;height:74px;margin:-37px 0 0 -37px;border:2px solid #F5B700;border-radius:50%;pointer-events:none;z-index:6;animation:camxFoco 1.05s ease-out forwards}' +
+    '@keyframes camxFoco{0%{transform:scale(1.45);opacity:0}18%{transform:scale(1);opacity:1}75%{opacity:1}100%{opacity:0}}' +
+    '.camx-pista{position:absolute;left:50%;transform:translateX(-50%);top:calc(76px + env(safe-area-inset-top,0px));z-index:6;max-width:86%;padding:8px 14px;border-radius:999px;' +
+      'background:rgba(8,16,22,.8);color:#fff;font-size:13.5px;line-height:1.35;text-align:center;pointer-events:none}' +
+    '.camx-pista[hidden]{display:none}' +
+    '.cam-luz.pide,.lqr-t.pide,.esc2-luz.pide{animation:camxPide 1.4s ease-in-out infinite}' +
+    '@keyframes camxPide{0%,100%{box-shadow:0 0 0 0 rgba(245,183,0,0)}50%{box-shadow:0 0 0 7px rgba(245,183,0,.55)}}' +
+    '.camx-chip:focus-visible,.lqr-t:focus-visible,.lqa-b button:focus-visible,.lqh button:focus-visible{outline:3px solid #F5B700;outline-offset:2px}' +
+    /* el «Instalar la app» del navegador no tapa los botones de la cámara, del lector ni del escáner */
+    'body:has(#cam.abierta) #inst-chip,body:has(#asis-lector:not([hidden])) #inst-chip,body:has(#esc2-cam.abierta) #inst-chip{display:none!important}' +
+    /* el lector de QR: la tarjeta de lo leído no se encoge (antes podía quedar debajo de «Cerrar»); el video toma lo que sobra */
+    '.asis-lec-vid{touch-action:none;flex:1 1 0;min-height:140px}' +
+    '.asis-lec-msg{flex:0 0 auto;max-height:48vh;overflow-y:auto}' +
+    '.asis-lec-vid video{transform-origin:50% 50%}' +
+    '.asis-lec-marco{transition:border-color .2s ease,box-shadow .2s ease}' +
+    '.asis-lec-marco.leido{border-color:#34D07F;box-shadow:0 0 0 999px rgba(0,0,0,.35),inset 0 0 0 5px rgba(52,208,127,.45)}' +
+    '.lqr-herr{position:absolute;left:0;right:0;bottom:12px;z-index:3;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding:0 10px}' +
+    '.lqr-t{width:44px;height:44px;flex:0 0 auto;border-radius:999px;border:0;background:rgba(0,0,0,.56);color:#fff;font-size:19px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}' +
+    '.lqr-t[hidden]{display:none}' +
+    '.lqr-t.on{background:#F5B700;color:#08222F}' +
+    '.lqr-hist-b{margin-left:auto;background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1.2px rgba(255,255,255,.32)}' +
+    '.lqr-pista{top:12px}' +
+    '.lqa{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;max-width:560px;margin:0 auto}' +
+    '.lqa-no{font-size:13px;opacity:.82}' +
+    '.lqa-tipo{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:#F5B700;font-weight:700}' +
+    '.lqa-dato{display:block;font-size:16.5px;font-weight:700;color:#fff;word-break:break-word;line-height:1.3}' +
+    '.lqa-ex{display:block;font-size:12.5px;opacity:.82;word-break:break-all;max-height:4.2em;overflow:hidden;line-height:1.4}' +
+    '.lqa-ex b{opacity:1;font-size:14px}' +
+    '.lqa-ojo{font-size:12.5px;color:#FFC2C2;line-height:1.4}' +
+    '.lqa-nota{font-size:12.5px;opacity:.85;line-height:1.4}' +
+    '.lqa-b{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:6px}' +
+    '.lqa-b button{min-height:42px;padding:8px 14px;border-radius:11px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}' +
+    '.lqa-b button.pri{background:#F5B700;border-color:#F5B700;color:#08222F}' +
+    '.lqh{position:absolute;inset:0;z-index:5;background:#041219;display:flex;flex-direction:column;gap:10px;padding:12px;touch-action:auto}' +
+    '.lqh-cab{color:#fff;font-size:15px;font-weight:700}' +
+    '.lqh-lista{flex:1 1 auto;overflow-y:auto;display:flex;flex-direction:column;gap:6px;touch-action:pan-y;-webkit-overflow-scrolling:touch}' +
+    '.lqh-it{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:10px 12px;border-radius:12px;border:0;background:rgba(255,255,255,.08);color:#fff;font:inherit;cursor:pointer}' +
+    '.lqh-it .ic{flex:0 0 auto;font-size:20px;line-height:1}' +
+    '.lqh-it .tx{flex:1 1 auto;min-width:0}' +
+    '.lqh-it b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.lqh-it small{display:block;font-size:12px;opacity:.75;margin-top:2px}' +
+    '.lqh-vacio{margin:28px 6px;color:#EAF2F6;opacity:.82;font-size:14px;text-align:center;line-height:1.5}' +
+    '.lqh-pie{display:flex;gap:8px}' +
+    '.lqh-pie button{flex:1 1 0;min-height:46px;border-radius:12px;border:0;background:rgba(255,255,255,.13);color:#fff;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer}' +
+    '.lqh-pie button.ojo{background:rgba(255,120,120,.18);box-shadow:inset 0 0 0 1.2px rgba(255,150,150,.55)}' +
+    '@media (prefers-reduced-motion:reduce){.camx-foco{animation:none;opacity:1}' +
+      '.cam-luz.pide,.lqr-t.pide,.esc2-luz.pide{animation:none;box-shadow:0 0 0 3px rgba(245,183,0,.8)}.cam .cam-x,.cam .cam-gal,.cam .cam-luz,.cam .camx-chip{transition:none}}';
+  document.head.appendChild(st);
+}
+
+/* ══ LA CÁMARA DE FOTOS (#cam) ═══════════════════════════════════════ */
+var CAMZ = camxZoomNuevo();
+var CAMO = { oye:false, pidio:false, ux:0, uy:0, fx:0, fy:0, ts:0 };
+var LS_CAM_REJ = 'sstc_cam_rej';
+
+/* cómo está el celular: «arriba», visto en la pantalla (como en el escáner, ESC2_ORI) */
+function _camOriEv(e){
+  /* con la cámara cerrada, el sensor se suelta solo (no gasta batería) */
+  var c = $('cam'); if(!c || !/\babierta\b/.test(c.className)){ _camOriOir(false); return; }
+  if(!e || e.beta == null || e.gamma == null) return;
+  var b = e.beta*Math.PI/180, g = e.gamma*Math.PI/180;
+  var ux = -Math.cos(b)*Math.sin(g), uy = Math.sin(b);
+  /* el nivel va suavizado: el sensor tiembla */
+  CAMO.fx = CAMO.ts ? CAMO.fx*0.65 + ux*0.35 : ux; CAMO.fy = CAMO.ts ? CAMO.fy*0.65 + uy*0.35 : uy;
+  CAMO.ux = ux; CAMO.uy = uy; CAMO.ts = Date.now();
+  _camOriPintar();
+}
+/* {lado: cuánto hay que girar la foto (0, 90, 180, 270) o null si está plano, m: cuánto se inclina} */
+function _camOriAhora(){
+  if(!CAMO.ts || Date.now() - CAMO.ts > 2500) return { lado:null, m:0 };
+  var m = Math.sqrt(CAMO.ux*CAMO.ux + CAMO.uy*CAMO.uy);
+  if(m < 0.12) return { lado:null, m:m };
+  var lado = Math.abs(CAMO.ux) > Math.abs(CAMO.uy) ? (CAMO.ux > 0 ? 270 : 90) : (CAMO.uy > 0 ? 0 : 180);
+  return { lado:(lado + camxPantallaGiro()) % 360, m:m };
+}
+/* los íconos se giran con el celular inclinado; plano (apuntando al piso) se quedan como estaban, como la cámara del celular */
+function _camOriPintar(){
+  var c = $('cam'); if(!c || !/\babierta\b/.test(c.className)) return;
+  var op = CAM.op || {}, cur = +(c.getAttribute('data-gira') || 0), o = _camOriAhora(), r = cur;
+  if(op.retrato) r = 0;
+  else if(o.lado != null && o.m >= (o.lado === cur ? 0.3 : 0.4)) r = o.lado;
+  else if(o.lado != null && o.m >= 0.3 && o.lado !== cur && cur !== 0 && o.lado === 0) r = 0;
+  if(c.getAttribute('data-gira') !== String(r)) c.setAttribute('data-gira', String(r));
+  _camNivel();
+}
+/* el nivel: la raya sigue al horizonte; derecho (±1°), verde. Solo con el celular parado y cerca de derecho */
+function _camNivel(){
+  var n = $('cam-nivel'); if(!n) return;
+  var op = CAM.op || {}, ver = false, k = 0, d = 0;
+  if(!op.doc && !op.retrato && CAMO.ts && Date.now() - CAMO.ts < 1500){
+    var m = Math.sqrt(CAMO.fx*CAMO.fx + CAMO.fy*CAMO.fy);
+    if(m >= 0.55){
+      var phi = Math.atan2(CAMO.fx, CAMO.fy)*180/Math.PI - camxPantallaGiro();
+      k = Math.round(phi/90)*90; d = phi - k;
+      ver = Math.abs(d) <= 12;
+    }
+  }
+  if(n.classList.contains('ver') !== ver) n.classList.toggle('ver', ver);
+  if(!ver){ if(n.classList.contains('ok')) n.classList.remove('ok'); return; }
+  /* se escribe solo si cambió (el sensor llega 60 veces por segundo) */
+  var t1 = 'translate(-50%,-50%) rotate(' + (((k % 360) + 360) % 360) + 'deg)', t2 = 'rotate(' + d.toFixed(1) + 'deg)';
+  if(n.__t1 !== t1){ n.__t1 = t1; n.style.transform = t1; }
+  var i = n.firstElementChild; if(i && i.__t2 !== t2){ i.__t2 = t2; i.style.transform = t2; }
+  var ok = Math.abs(d) < 1;
+  if(n.classList.contains('ok') !== ok) n.classList.toggle('ok', ok);
+}
+function _camOriOir(si){
+  if(si && !CAMO.oye){ try{ window.addEventListener('deviceorientation', _camOriEv); CAMO.oye = true; }catch(e){} }
+  if(!si && CAMO.oye){ try{ window.removeEventListener('deviceorientation', _camOriEv); }catch(e){} CAMO.oye = false; CAMO.ts = 0; }
+}
+/* en el iPhone el sensor pide permiso: una vez, con el toque que abre la cámara */
+function _camOriPermiso(){
+  if(CAMO.pidio) return; CAMO.pidio = true;
+  try{ if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function')
+         DeviceOrientationEvent.requestPermission().catch(function(){}); }catch(e){}
+}
+/* cuánto se gira la foto al disparar. El retrato (la foto del trabajador) va siempre derecho; una hoja, solo si el
+   celular estaba claramente parado (sobre la mesa el sensor no sabe); con la cámara de adelante el giro va al revés */
+function _camGiroFoto(){
+  var op = CAM.op || {}, c = $('cam');
+  if(op.retrato || !c) return 0;
+  var g = +(c.getAttribute('data-gira') || 0);
+  if(op.doc){ var o = _camOriAhora(); g = (o.lado != null && o.m >= 0.4) ? o.lado : 0; }
+  if(CAM.cara === 'user' && (g === 90 || g === 270)) g = 360 - g;
+  return g;
+}
+
+/* al abrir (tomarFoto): todo en su sitio */
+function camAbrirExtras(){
+  _camxEstilos();
+  var c = $('cam'); if(!c) return;
+  c.setAttribute('data-gira', '0');
+  var rej = false; try{ rej = localStorage.getItem(LS_CAM_REJ) === '1'; }catch(_l){}
+  c.classList.toggle('rej', rej);
+  var b = $('cam-rej-b'); if(b) b.setAttribute('aria-pressed', rej ? 'true' : 'false');
+  var n = $('cam-nivel'); if(n){ n.classList.remove('ver'); n.classList.remove('ok'); }
+  CAM.osc = false; CAM.nOsc = 0; CAM.disparando = false;
+  _camxPistaPoner($('cam-pista'), '');
+  _camOriPermiso();
+  _camOriOir(true);
+  camxGestos(c, CAMZ, _camToque);
+}
+/* la cámara prendió: enfoque, zoom, el sensor y la luz */
+function camEncendida(st){
+  var t = null; try{ t = st.getVideoTracks()[0] || null; }catch(_t){}
+  CAM.track = t;
+  camxAjustar(t);
+  camxZoomPreparar(CAMZ, t, $('cam-v'), $('cam-zoom'), 3);
+  _camOriOir(true);
+  clearInterval(CAM.tl); CAM.tl = setInterval(_camLuzVigilar, 800);
+}
+/* se apagó (o se va a prender la otra cámara) */
+function camApagarExtras(){
+  clearInterval(CAM.tl); CAM.tl = 0;
+  camxZoomSoltar(CAMZ);
+  CAM.track = null; CAM.osc = false; CAM.nOsc = 0;
+  _camxPistaPoner($('cam-pista'), '');
+  var b = $('cam-luz'); if(b) b.classList.remove('pide');
+  var n = $('cam-nivel'); if(n){ n.classList.remove('ver'); n.classList.remove('ok'); }
+}
+function _camToque(cx, cy){
+  var t = CAM.track, v = $('cam-v'); if(!t || !v) return;
+  var p = camxPuntoVideo(v, cx, cy, camxZoomDigital(CAMZ));
+  if(p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1) return;
+  camxEnfocar(t, p.x, p.y).then(function(ok){ if(ok) camxAnillo($('cam'), cx, cy); });
+}
+function _camLuzVigilar(){
+  var c = $('cam');
+  if(!c || !/\babierta\b/.test(c.className)){ clearInterval(CAM.tl); CAM.tl = 0; return; }
+  camxOscuro(CAM, camxLuz($('cam-v')));
+  var puede = !!_pistaLuz(), b = $('cam-luz');
+  if(b){ var pide = !!(CAM.osc && !CAM.luz && puede); if(b.classList.contains('pide') !== pide) b.classList.toggle('pide', pide); }
+  _camxPistaPoner($('cam-pista'), (CAM.osc && !CAM.luz) ? (puede ? 'Está oscuro: prende la linterna' : 'Está oscuro: sostén firme el celular') : '');
+}
+function camRejilla(){
+  var c = $('cam'); if(!c) return;
+  var si = !c.classList.contains('rej');
+  c.classList.toggle('rej', si);
+  try{ localStorage.setItem(LS_CAM_REJ, si ? '1' : '0'); }catch(_l){}
+  var b = $('cam-rej-b'); if(b) b.setAttribute('aria-pressed', si ? 'true' : 'false');
+}
+/* el disparo: el más nítido de tres cuadros, con su zoom y derecho */
+function camDispararFoto(v, op){
+  if(CAM.disparando) return;
+  CAM.disparando = true;
+  var max = op.max || 1100, cal = op.calidad || 0.82, giro = _camGiroFoto(), zd = camxZoomDigital(CAMZ);
+  var bd = $('cam-disparo'); if(bd) bd.disabled = true;
+  var listo = function(){ CAM.disparando = false; var b = $('cam-disparo'); if(b) b.disabled = false; };
+  var primero = null;
+  try{
+    primero = document.createElement('canvas'); primero.width = v.videoWidth; primero.height = v.videoHeight;
+    primero.getContext('2d').drawImage(v, 0, 0);
+  }catch(e){ primero = null; }
+  if(!primero){
+    /* como antes, por si este navegador no deja dibujar el video en un lienzo grande */
+    var r = Math.min(1, max/Math.max(v.videoWidth, v.videoHeight));
+    _dibujarYcerrar(v, Math.max(1, Math.round(v.videoWidth*r)), Math.max(1, Math.round(v.videoHeight*r)), cal)
+      .then(function(du){ listo(); _entregarFoto(du); }, function(){ listo(); });
+    return;
+  }
+  var elegir = (max >= 900 && typeof _esc2CuadroNitido === 'function') ? _esc2CuadroNitido(v, primero, 2) : Promise.resolve(primero);
+  elegir.then(function(cv){ return _lienzoAdataURL(camxRecortarGirar(cv, zd, giro, max), cal); })
+    .then(function(du){ listo(); _entregarFoto(du); },
+          function(){ listo(); var m = $('cam-msg'); if(m) m.textContent = 'No se pudo tomar la foto. Prueba otra vez.'; });
+}
+
+/* ── la Cámara con sello: «↻ Girar» (sobre la foto de siempre, sin perder calidad) ── */
+var CAM_GIROF = { base:null, actual:null, g:0 };
+function camGirarFoto(){
+  if(!CAM_CRUDA || CAM_TIPO === 'doc') return;
+  if(CAM_GIROF.actual !== CAM_CRUDA) CAM_GIROF = { base:CAM_CRUDA, actual:CAM_CRUDA, g:0 };
+  var G = CAM_GIROF, g = (G.g + 90) % 360, b = $('cam-girar-f');
+  if(b) b.disabled = true;
+  camxGirarDataURL(G.base, g, 0.92).then(function(nueva){
+    if(CAM_GIROF !== G || CAM_CRUDA !== G.actual) return;
+    G.g = g; G.actual = nueva;
+    CAM_CRUDA = nueva; CAM_SELLADA = null; CAM_LIMPIA = null; CAM_MUESTRA = null;
+    pintarCamaraSello();
+  });
+}
+/* «Guardar en el celular»: elige dónde si el celular deja; si no, a Descargas (y la primera vez se dice dónde quedó) */
+var CAMX_SIN_SELECTOR = false;
+function _camxPuedeElegir(){
+  try{ return typeof window.showSaveFilePicker === 'function' && !CAMX_SIN_SELECTOR && window.isSecureContext !== false; }catch(e){ return false; }
+}
+function _camxT(s){ try{ return (typeof trad === 'function') ? trad(s) : s; }catch(e){ return s; } }
+function _bajarFotoComun(du, nombre, callado){
+  try{
+    var a = document.createElement('a');
+    a.href = du; a.download = nombre; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }catch(e){ return; }
+  if(callado) return;
+  try{ tostada(_camxT('Guardada en Descargas') + ': ' + nombre); }catch(_t){}
+  var visto = false;
+  try{ visto = localStorage.getItem('sstc_cam_desc_visto') === '1'; localStorage.setItem('sstc_cam_desc_visto', '1'); }catch(_v){}
+  if(!visto && typeof aviso === 'function')
+    aviso('Quedó en tu celular', 'La foto está en la carpeta Descargas: ábrela desde la app Archivos (o Mis archivos) o desde la galería. Desde ahí la mandas por WhatsApp o por correo.', '💾');
+}
+
+/* ══ EL LECTOR DE QR: lo que no es de OBRASST, qué es y qué hacer ═════ */
+var LQA = { txt:'', q:null };
+function _lqaWifi(t){
+  var body = String(t).replace(/^WIFI:/i, ''), campos = [], cur = '', esc0 = false, o = {};
+  for(var i = 0; i < body.length; i++){
+    var ch = body.charAt(i);
+    if(esc0){ cur += ch; esc0 = false; continue; }
+    if(ch === '\\'){ esc0 = true; continue; }
+    if(ch === ';'){ campos.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  if(cur) campos.push(cur);
+  campos.forEach(function(c){ var p = c.indexOf(':'); if(p > 0){ var k = c.slice(0, p).toUpperCase(); if(!(k in o)) o[k] = c.slice(p + 1); } });
+  var tipo = String(o.T || '').toUpperCase();
+  return { red:o.S || '', clave:o.P || '', tipo:tipo, abierta:(!o.P || tipo === 'NOPASS') };
+}
+function _lqaContacto(t){
+  var o = { nombre:'', tel:'', mail:'', org:'' };
+  if(/^MECARD:/i.test(t)){
+    String(t).replace(/^MECARD:/i, '').split(/;(?=[A-Za-z-]+:)/).forEach(function(c){
+      var p = c.indexOf(':'); if(p < 1) return;
+      var k = c.slice(0, p).toUpperCase(), v = c.slice(p + 1).replace(/;+$/, '').replace(/\\(.)/g, '$1').trim();
+      if(k === 'N' && !o.nombre) o.nombre = v.split(',').reverse().join(' ').replace(/\s+/g, ' ').trim();
+      else if(k === 'TEL' && !o.tel) o.tel = v;
+      else if(k === 'EMAIL' && !o.mail) o.mail = v;
+      else if(k === 'ORG' && !o.org) o.org = v;
+    });
+  } else {
+    String(t).split(/\r?\n/).forEach(function(l){
+      var m = l.match(/^([A-Za-z-]+)(?:;[^:]*)?:(.*)$/); if(!m) return;
+      var k = m[1].toUpperCase(), v = m[2].replace(/\\([,;\\])/g, '$1').trim();
+      if(!v) return;
+      if(k === 'FN') o.nombre = v;
+      else if(k === 'N' && !o.nombre){ var n = v.split(';'); o.nombre = [n[1], n[2], n[0]].filter(Boolean).join(' '); }
+      else if(k === 'TEL' && !o.tel) o.tel = v;
+      else if(k === 'EMAIL' && !o.mail) o.mail = v;
+      else if(k === 'ORG' && !o.org) o.org = v.replace(/;/g, ' ').trim();
+    });
+  }
+  return o;
+}
+/* un QR de pago (el formato EMV de los bancos y billeteras): «000201…6304XXXX». Su comercio, si lo trae */
+function _lqaPago(t){
+  t = String(t);
+  if(!/^000201/.test(t) || !/6304[0-9A-Fa-f]{4}$/.test(t)) return null;
+  var i = 0, o = {};
+  while(i + 4 <= t.length){
+    var id = t.substr(i, 2), n = parseInt(t.substr(i + 2, 2), 10);
+    if(isNaN(n) || i + 4 + n > t.length) break;
+    o[id] = t.substr(i + 4, n); i += 4 + n;
+  }
+  return { comercio:(o['59'] || '').trim(), ciudad:(o['60'] || '').trim() };
+}
+/* el texto de un QR → qué es: { tipo, ic, nombre, corto (lo que lo nombra en la lista), … } */
+function qrQueEs(txt){
+  var t = String(txt || '').trim(), m;
+  var r = { tipo:'texto', ic:'📝', nombre:'Texto', corto:t.slice(0, 80), t:t };
+  if(/^WIFI:/i.test(t)){
+    var w = _lqaWifi(t);
+    r.tipo = 'wifi'; r.ic = '📶'; r.nombre = 'Red wifi'; r.red = w.red; r.clave = w.clave; r.abierta = w.abierta; r.corto = w.red;
+    return r;
+  }
+  if(/^(BEGIN:VCARD|MECARD:)/i.test(t)){
+    var c = _lqaContacto(t);
+    r.tipo = 'contacto'; r.ic = '👤'; r.nombre = 'Contacto'; r.c = c; r.corto = c.nombre || c.tel || c.mail || '';
+    return r;
+  }
+  if((m = t.match(/^tel:\s*(\+?[\d][\d\s().-]{2,})$/i))){
+    r.tipo = 'tel'; r.ic = '📞'; r.nombre = 'Teléfono'; r.num = m[1].replace(/[^\d+]/g, ''); r.corto = m[1].trim();
+    return r;
+  }
+  if((m = t.match(/^mailto:([^?\s]+)(\?[\s\S]*)?$/i)) || (m = t.match(/^MATMSG:TO:([^;]+);/i))){
+    var mail = m[1]; try{ mail = decodeURIComponent(mail); }catch(_d){}
+    if(/^[^\s@<>"']+@[^\s@<>"']+$/.test(mail)){ r.tipo = 'correo'; r.ic = '✉️'; r.nombre = 'Correo'; r.mail = mail; r.corto = mail; return r; }
+  }
+  if((m = t.match(/^(?:SMSTO|SMS):(\+?[\d][\d\s-]*)(?::([\s\S]*))?$/i))){
+    r.tipo = 'sms'; r.ic = '💬'; r.nombre = 'Mensaje de texto'; r.num = m[1].replace(/[^\d+]/g, ''); r.cuerpo = (m[2] || '').trim(); r.corto = m[1].trim();
+    return r;
+  }
+  if((m = t.match(/^geo:\s*(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)/i))){
+    var la = +m[1], lo = +m[2];
+    if(Math.abs(la) <= 90 && Math.abs(lo) <= 180){ r.tipo = 'geo'; r.ic = '📍'; r.nombre = 'Ubicación'; r.lat = la; r.lon = lo; r.corto = m[1] + ', ' + m[2]; return r; }
+  }
+  if(/^https?:\/\/\S+$/i.test(t) || /^www\.[^\s.\/]+\.[^\s]+$/i.test(t)){
+    var u = /^www\./i.test(t) ? 'https://' + t : t, host = '';
+    try{ host = new URL(u).hostname; }catch(_u){ host = ''; }
+    if(host){ r.tipo = 'web'; r.ic = '🌐'; r.nombre = 'Página web'; r.url = u; r.host = host.replace(/^www\./i, ''); r.http = /^http:/i.test(u); r.corto = r.host; return r; }
+  }
+  var p = _lqaPago(t);
+  if(p){ r.tipo = 'pago'; r.ic = '💳'; r.nombre = 'QR de pago'; r.p = p; r.corto = p.comercio; return r; }
+  return r;
+}
+function _lqaBoton(id, ic, tx, fn, pri){
+  return '<button type="button"' + (id ? ' id="' + id + '"' : '') + (pri ? ' class="pri"' : '') + ' onclick="' + fn + '"><span aria-hidden="true">' + ic + '</span> <span>' + tx + '</span></button>';
+}
+/* la tarjeta de un QR que no es de OBRASST (en el lector, con y sin cuenta). Nada se abre solo */
+function qrTarjetaAjena(txt){
+  var q = qrQueEs(txt), h = '', B = [];
+  LQA.txt = q.t; LQA.q = q;
+  try{ if(typeof QRSC === 'object' && QRSC) QRSC.txt = q.t; }catch(_q){}
+  var dato = function(s){ return s ? '<b class="lqa-dato" data-sin-trad>' + esc(s) + '</b>' : ''; };
+  var ex = function(s){ return s ? '<small class="lqa-ex" data-sin-trad>' + esc(s) + '</small>' : ''; };
+  var cop = _lqaBoton('rh-qr-cop', '📋', 'Copiar', 'lqaCopiar()'), comp = _lqaBoton('rh-qr-comp', '📲', 'Compartir', 'lqaCompartir()');
+  if(q.tipo === 'web'){
+    h += dato(q.host) + ex(q.t.length > 300 ? q.t.slice(0, 300) + '…' : q.t);
+    if(q.http) h += '<span class="lqa-ojo">Sin candado (http): no escribas tus claves ni tus datos ahí.</span>';
+    B.push(_lqaBoton('lqa-abrir', '↗', 'Abrir', 'lqaAbrir()', true), cop, comp);
+  } else if(q.tipo === 'wifi'){
+    h += dato(q.red);
+    h += q.abierta ? '<small class="lqa-ex"><span>Sin clave</span></small>'
+                   : '<small class="lqa-ex"><span>Clave:</span> <b data-sin-trad>' + esc(q.clave) + '</b></small>';
+    h += '<span class="lqa-nota">Abre el wifi de tu celular, elige esa red y pega la clave.</span>';
+    B.push(q.abierta ? cop : _lqaBoton('rh-qr-cop', '📋', 'Copiar la clave', 'lqaCopiar()', true), comp);
+  } else if(q.tipo === 'tel'){
+    h += dato(q.corto);
+    B.push(_lqaBoton('lqa-llamar', '📞', 'Llamar', 'lqaLlamar()', true), cop, comp);
+  } else if(q.tipo === 'correo'){
+    h += dato(q.mail);
+    B.push(_lqaBoton('lqa-correo', '✉️', 'Escribir', 'lqaCorreo()', true), cop, comp);
+  } else if(q.tipo === 'sms'){
+    h += dato(q.corto) + ex(q.cuerpo);
+    B.push(_lqaBoton('lqa-sms', '💬', 'Mandar SMS', 'lqaSms()', true), cop, comp);
+  } else if(q.tipo === 'geo'){
+    h += dato(q.corto);
+    B.push(_lqaBoton('lqa-mapa', '🗺️', 'Ver en el mapa', 'lqaMapa()', true), cop, comp);
+  } else if(q.tipo === 'contacto'){
+    h += dato(q.c.nombre) + ex([q.c.tel, q.c.mail, q.c.org].filter(Boolean).join(' · '));
+    if(q.c.tel) B.push(_lqaBoton('lqa-llamar', '📞', 'Llamar', 'lqaLlamar()', true));
+    B.push(cop, comp);
+  } else if(q.tipo === 'pago'){
+    h += dato(q.p.comercio);
+    h += '<span class="lqa-nota">Es un QR para pagar. Ábrelo con la app de tu banco o de tu billetera digital. OBRASST no hace pagos.</span>';
+  } else {
+    h += '<span class="lqa-dato" data-sin-trad>' + esc(q.t.length > 300 ? q.t.slice(0, 300) + '…' : q.t) + '</span>';
+    B.push(_lqaBoton('rh-qr-cop', '📋', 'Copiar', 'lqaCopiar()', true), comp);
+  }
+  return { html:'<span class="lqa"><span class="lqa-no">Este QR no es de OBRASST.</span>' +
+    '<span class="lqa-tipo"><span aria-hidden="true">' + q.ic + '</span> <span>' + q.nombre + '</span></span>' + h +
+    (B.length ? '<span class="lqa-b">' + B.join('') + '</span>' : '') + '</span>' };
+}
+/* abrir sin que la app se vaya de su sitio (otra pestaña o la app del celular que corresponda) */
+function _lqaIr(u, nueva){
+  try{
+    var a = document.createElement('a'); a.href = u;
+    if(nueva){ a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }catch(e){}
+}
+function lqaAbrir(){ var q = LQA.q; if(q && q.tipo === 'web' && /^https?:\/\//i.test(q.url)) _lqaIr(q.url, true); }
+function lqaLlamar(){ var q = LQA.q; var n = q ? (q.tipo === 'contacto' ? String(q.c.tel || '').replace(/[^\d+]/g, '') : q.num) : ''; if(n) _lqaIr('tel:' + n, false); }
+function lqaCorreo(){ var q = LQA.q; if(q && q.mail) _lqaIr('mailto:' + q.mail, false); }
+function lqaSms(){ var q = LQA.q; if(q && q.num) _lqaIr('sms:' + q.num + (q.cuerpo ? '?body=' + encodeURIComponent(q.cuerpo) : ''), false); }
+function lqaMapa(){ var q = LQA.q; if(q && q.tipo === 'geo') _lqaIr('https://www.google.com/maps/search/?api=1&query=' + q.lat + ',' + q.lon, true); }
+function _lqaParaCopiar(q){
+  switch(q.tipo){
+    case 'wifi': return q.abierta ? q.red : q.clave;
+    case 'tel': case 'sms': return q.num;
+    case 'correo': return q.mail;
+    case 'geo': return q.lat + ', ' + q.lon;
+    case 'contacto': return [q.c.nombre, q.c.tel, q.c.mail, q.c.org].filter(Boolean).join('\n');
+    default: return q.t;
+  }
+}
+function _lqaCopiarTexto(t){
+  if(!t) return;
+  var ok = function(){ try{ tostada('Copiado'); }catch(_t){} };
+  var viejo = function(){
+    try{
+      var a = document.createElement('textarea'); a.value = t; a.setAttribute('readonly', ''); a.style.position = 'fixed'; a.style.opacity = '0';
+      document.body.appendChild(a); a.select(); document.execCommand('copy'); document.body.removeChild(a); ok();
+    }catch(_v){}
+  };
+  try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok, viejo); return; } }catch(_c){}
+  viejo();
+}
+function lqaCopiar(){ var q = LQA.q; if(q) _lqaCopiarTexto(_lqaParaCopiar(q)); }
+function lqaCompartir(){
+  var q = LQA.q; if(!q) return;
+  var t = (q.tipo === 'wifi') ? (q.red + (q.abierta ? '' : '\n' + _camxT('Clave:') + ' ' + q.clave)) : q.t;
+  if(navigator.share){ try{ var p = navigator.share({ text:t }); if(p && p.catch) p.catch(function(){}); return; }catch(_s){} }
+  _lqaCopiarTexto(t);
+}
+
+/* ── los últimos leídos (solo en este celular; solo los que no son de OBRASST) ── */
+var LS_QR_HIST = 'sstc_qr_hist';
+function qrHistLeer(){ var l = (typeof leer === 'function') ? leer(LS_QR_HIST, []) : []; return Array.isArray(l) ? l.filter(function(x){ return x && x.t; }) : []; }
+function qrHistPoner(txt){
+  txt = String(txt || '').trim(); if(!txt) return;
+  try{
+    var l = qrHistLeer().filter(function(x){ return x.t !== txt; });
+    l.unshift({ t:txt.slice(0, 1500), f:Date.now() });
+    localStorage.setItem(LS_QR_HIST, JSON.stringify(l.slice(0, 30)));
+  }catch(e){}
+}
+function _lqrCuando(f){
+  var d = new Date(f), h = new Date(), dd = function(n){ return (n < 10 ? '0' : '') + n; };
+  var hm = dd(d.getHours()) + ':' + dd(d.getMinutes());
+  if(d.toDateString() === h.toDateString()) return '<span>hoy</span><span> </span><span data-sin-trad>' + hm + '</span>';
+  return '<span data-sin-trad>' + dd(d.getDate()) + '/' + dd(d.getMonth() + 1) + ' ' + hm + '</span>';
+}
+function lqrHistorial(){
+  var vid = $('asis-lec-vid'); if(!vid) return;
+  if($('lqh')){ lqrHistCerrar(); return; }
+  ASISL.pausa = true;
+  var p = document.createElement('div'); p.id = 'lqh'; p.className = 'lqh camx-no';
+  vid.appendChild(p);
+  _lqrHistPintar();
+}
+function _lqrHistPintar(){
+  var p = $('lqh'); if(!p) return;
+  var L = qrHistLeer(), h = '<div class="lqh-cab">Los últimos que leíste</div>';
+  if(!L.length) h += '<p class="lqh-vacio">Todavía no leíste ningún QR que no sea de OBRASST.</p>';
+  else {
+    h += '<div class="lqh-lista">';
+    L.forEach(function(x, i){
+      var q = qrQueEs(x.t);
+      h += '<button type="button" class="lqh-it" onclick="lqrHistVer(' + i + ')"><span class="ic" aria-hidden="true">' + q.ic + '</span>' +
+           '<span class="tx">' + (q.corto ? '<b data-sin-trad>' + esc(q.corto) + '</b>' : '<b><span>' + q.nombre + '</span></b>') +
+           '<small><span>' + q.nombre + '</span><span> · </span>' + _lqrCuando(x.f) + '</small></span></button>';
+    });
+    h += '</div>';
+  }
+  h += '<div class="lqh-pie">' + (L.length ? '<button type="button" id="lqh-borrar" onclick="lqrHistBorrar()">Borrar la lista</button>' : '') +
+       '<button type="button" id="lqh-volver" onclick="lqrHistCerrar()">Volver a la cámara</button></div>';
+  p.innerHTML = h;
+}
+function lqrHistVer(i){
+  var x = qrHistLeer()[i];
+  lqrHistCerrar();
+  if(!x) return;
+  var m = $('asis-lec-msg'); if(m) m.innerHTML = qrTarjetaAjena(x.t).html;
+}
+function lqrHistCerrar(){ var p = $('lqh'); if(p && p.parentNode) p.parentNode.removeChild(p); ASISL.pausa = false; }
+function lqrHistBorrar(){
+  var b = $('lqh-borrar'); if(!b) return;
+  if(b.getAttribute('data-seguro') !== '1'){ b.setAttribute('data-seguro', '1'); b.className = 'ojo'; b.textContent = '¿Borrar? Toca otra vez'; return; }
+  try{ localStorage.removeItem(LS_QR_HIST); }catch(e){}
+  _lqrHistPintar();
+}
+
+/* ── el lector: linterna, zoom, sonido, foto ──────────────────────── */
+var ASISZ = camxZoomNuevo();
+var LS_LQR_SON = 'sstc_lqr_son';
+function lqrSuena(){ try{ return localStorage.getItem(LS_LQR_SON) !== '0'; }catch(e){ return true; } }
+function lqrSonido(){
+  var si = !lqrSuena();
+  try{ localStorage.setItem(LS_LQR_SON, si ? '1' : '0'); }catch(e){}
+  var b = $('lqr-son'); if(b){ b.textContent = si ? '🔊' : '🔇'; b.setAttribute('aria-pressed', si ? 'true' : 'false'); }
+  if(si) camxBip();
+}
+function _lqrSenal(){
+  try{ if(navigator.vibrate) navigator.vibrate(35); }catch(_v){}
+  if(lqrSuena()) camxBip();
+  var mc = $('asis-lec-marco');
+  if(mc){
+    mc.classList.remove('leido'); void mc.offsetWidth; mc.classList.add('leido');
+    setTimeout(function(){ try{ mc.classList.remove('leido'); }catch(_m){} }, 700);
+  }
+}
+function _lqrPista(){ try{ return ASISL.st ? (ASISL.st.getVideoTracks()[0] || null) : null; }catch(e){ return null; } }
+function _lqrVerLuz(){
+  var b = $('lqr-luz'); if(!b) return;
+  var puede = !!_camxCaps(_lqrPista()).torch;
+  b.hidden = !puede;
+  b.classList.toggle('on', !!ASISL.luz);
+  b.setAttribute('aria-pressed', ASISL.luz ? 'true' : 'false');
+  var pide = !!(ASISL.osc && !ASISL.luz && puede);
+  if(b.classList.contains('pide') !== pide) b.classList.toggle('pide', pide);
+}
+function lqrLuz(){
+  var t = _lqrPista(); if(!t || !_camxCaps(t).torch) return;
+  ASISL.luz = !ASISL.luz;
+  _camxPedir(t, { torch:ASISL.luz }).then(function(ok){ if(!ok) ASISL.luz = false; _lqrVerLuz(); _lqrPistaPintar(); });
+  _lqrVerLuz(); _lqrPistaPintar();
+}
+function _lqrPistaPintar(){
+  var puede = !!_camxCaps(_lqrPista()).torch;
+  _camxPistaPoner($('lqr-pista'), (ASISL.osc && !ASISL.luz) ? (puede ? 'Está oscuro: prende la linterna' : 'Está oscuro: acerca el QR a la luz') : '');
+}
+function _lqrLuzVigilar(gen){
+  clearInterval(ASISL.tl);
+  ASISL.tl = setInterval(function(){
+    if(gen !== ASISL.gen || !ASISL.vivo){ clearInterval(ASISL.tl); return; }
+    camxOscuro(ASISL, camxLuz($('asis-lec-v')));
+    _lqrVerLuz(); _lqrPistaPintar();
+  }, 800);
+}
+/* con zoom digital, el lector mira solo el centro agrandado */
+function _asisFuente(v){
+  var zd = camxZoomDigital(ASISZ); if(zd <= 1.001 || !v.videoWidth) return v;
+  var w = v.videoWidth, h = v.videoHeight, sw = w/zd, sh = h/zd;
+  if(!ASISL.cv) ASISL.cv = document.createElement('canvas');
+  var c = ASISL.cv, k = Math.min(1, 1280/Math.max(sw, sh));
+  var cw = Math.max(1, Math.round(sw*k)), ch = Math.max(1, Math.round(sh*k));
+  if(c.width !== cw) c.width = cw; if(c.height !== ch) c.height = ch;
+  c.getContext('2d').drawImage(v, (w - sw)/2, (h - sh)/2, sw, sh, 0, 0, cw, ch);
+  return c;
+}
+/* un QR de una foto (la captura que llegó por WhatsApp): el lector del celular y, si no, jsQR de varias maneras */
+function _lqrImagen(f){
+  return new Promise(function(ok){
+    if(window.createImageBitmap){
+      createImageBitmap(f, { imageOrientation:'from-image' }).then(ok, function(){
+        createImageBitmap(f).then(ok, function(){ porImg(); });
+      });
+      return;
+    }
+    porImg();
+    function porImg(){
+      var u = null; try{ u = URL.createObjectURL(f); }catch(_u){}
+      if(!u){ ok(null); return; }
+      var im = new Image();
+      im.onload = function(){ ok(im); setTimeout(function(){ try{ URL.revokeObjectURL(u); }catch(_r){} }, 5000); };
+      im.onerror = function(){ ok(null); };
+      im.src = u;
+    }
+  });
+}
+function lqrLeerImagen(img){
+  var nat = (ASISL.det && !ASISL.det.jsqr) ? ASISL.det : null;
+  var deNativo = nat ? Promise.resolve().then(function(){ return nat.detect(img); }).then(function(l){ return (l && l.length && l[0].rawValue) || ''; }, function(){ return ''; })
+                     : Promise.resolve('');
+  return deNativo.then(function(t){
+    if(t) return t;
+    return _lectorJsqrDetector().then(function(J){
+      var ops = [{ max:1000, inv:'attemptBoth' }, { max:1600 }, { max:1000, recorte:0.6, inv:'attemptBoth' }, { max:640, inv:'attemptBoth' }], i = 0;
+      var sig = function(){
+        if(i >= ops.length) return '';
+        return J.detect(img, ops[i++]).then(function(l){ return (l && l.length && l[0].rawValue) ? String(l[0].rawValue) : sig(); }, function(){ return sig(); });
+      };
+      return sig();
+    }, function(){ return ''; });
+  });
+}
+function lqrDeFoto(){
+  var inp = $('asis-lec-file'); if(!inp) return;
+  inp.value = '';
+  inp.onchange = function(){
+    var f = this.files && this.files[0]; if(!f) return;
+    var gen = ASISL.gen, m = $('asis-lec-msg');
+    if(m) m.innerHTML = '<span>Leyendo la foto…</span>';
+    _lqrImagen(f).then(function(img){ return img ? lqrLeerImagen(img) : ''; }).then(function(txt){
+      if(gen !== ASISL.gen) return;
+      if(txt){ _asisLeido(txt, true); return; }
+      var m2 = $('asis-lec-msg'); if(m2) m2.innerHTML = '<span>No encontré un QR en esa foto. Prueba con una más cerca o más nítida.</span>';
+    });
+  };
+  inp.click();
+}
+/* lo leído, de la cámara o de una foto. Devuelve 'cerrado' si el lector se cerró */
+function _asisLeido(txt, deFoto){
+  var ahora = Date.now();
+  /* el mismo QR, mientras siga delante, se lee una sola vez (se cuenta desde la última vez que se vio) */
+  if(!deFoto && txt === ASISL.ultimo && ahora - ASISL.t < 4000){ ASISL.t = ahora; return ''; }
+  ASISL.ultimo = txt; ASISL.t = ahora;
+  /* la asistencia y la puerta dicen que estuviste ahí: de una foto, no */
+  if(deFoto && ((typeof asisDeTexto === 'function' && asisDeTexto(txt)) || (typeof tcDeTexto === 'function' && tcDeTexto(txt)))){
+    var m0 = $('asis-lec-msg'); if(m0) m0.innerHTML = '<span>La asistencia y la puerta se marcan con la cámara, frente al QR. De una foto, no.</span>';
+    return '';
+  }
+  _lqrSenal();
+  var r = (ASISL.op && ASISL.op.alLeer) ? ASISL.op.alLeer(txt) : null;
+  var m = $('asis-lec-msg');
+  if(m && typeof r === 'string' && ASISL.vivo) m.innerHTML = '<span>' + esc(r) + '</span>';
+  if(m && r && r.html) m.innerHTML = r.html;
+  if(!(ASISL.op && ASISL.op.seguir)){ asisLectorCerrar(); return 'cerrado'; }
+  return ASISL.vivo ? '' : 'cerrado';
+}
+function _asisToque(cx, cy){
+  var t = _lqrPista(), v = $('asis-lec-v'); if(!t || !v) return;
+  var p = camxPuntoVideo(v, cx, cy, camxZoomDigital(ASISZ));
+  if(p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1) return;
+  camxEnfocar(t, p.x, p.y).then(function(ok){ if(ok) camxAnillo($('asis-lec-vid'), cx, cy); });
+}
+
+/* ══ EL ESCÁNER: tocar para enfocar y la luz ═══════════════════════════ */
+function _esc2Toques(){
+  var c = $('esc2-cam'); if(!c || c.__camxG) return;
+  _camxEstilos();
+  camxGestos(c, null, function(cx, cy){
+    var C = ESC2.cam, v = $('esc2-v'); if(!C || !C.track || !v) return;
+    var p = camxPuntoVideo(v, cx, cy, 1);
+    if(p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1) return;
+    camxEnfocar(C.track, p.x, p.y).then(function(ok){ if(ok) camxAnillo(c, cx, cy); });
+  });
+}
+function _esc2LuzMedir(C, d){
+  camxOscuro(C, camxLuzMedia(d, 8));
+  var b = $('esc2-luz');
+  if(b){ var pide = !!(C.osc && !C.luz && !b.disabled); if(b.classList.contains('pide') !== pide) b.classList.toggle('pide', pide); }
+}
+function _esc2LuzPuede(){ var b = $('esc2-luz'); return !!(b && !b.disabled); }
+/* <<< CAMARA-1311-FIN >>> */
 /* >>> LECTOR-QR-INI <<< */
 /* ══════════════════════════════════════════════════════════════════
    «ESCANEAR QR», DENTRO DE OBRASST (28/10/2026)
@@ -32094,15 +33056,21 @@ function _lectorJsqrDetector(){
     var cv = document.createElement('canvas'), g = null;
     try{ g = cv.getContext('2d', { willReadFrequently:true }); }catch(_c){ g = null; }
     if(!g) g = cv.getContext('2d');
-    return { jsqr:true, detect:function(v){
+    return { jsqr:true, detect:function(v, op){
       try{
+        op = op || {};
         var w = v.videoWidth || v.naturalWidth || v.width, h = v.videoHeight || v.naturalHeight || v.height;
         if(!w || !h) return Promise.resolve([]);
-        var k = Math.min(1, 800 / Math.max(w, h));
-        cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k));
-        g.drawImage(v, 0, 0, cv.width, cv.height);
+        /* 13/11/2026 · op.recorte: solo el centro (un QR chico o lejos sale con más puntos); op.max: el lado más largo
+           (800, como antes); op.inv: 'invertFirst' o 'attemptBoth', para los QR claros sobre oscuro ('onlyInvert' no
+           sirve en este jsQR: no arma la imagen invertida y se cae) (CAMARA-1311) */
+        var sx = 0, sy = 0, sw = w, sh = h;
+        if(op.recorte > 0 && op.recorte < 1){ var l = Math.min(w, h) * op.recorte; sx = (w - l) / 2; sy = (h - l) / 2; sw = l; sh = l; }
+        var k = Math.min(1, (op.max || 800) / Math.max(sw, sh));
+        cv.width = Math.max(1, Math.round(sw * k)); cv.height = Math.max(1, Math.round(sh * k));
+        g.drawImage(v, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
         var im = g.getImageData(0, 0, cv.width, cv.height);
-        var r = jsQR(im.data, cv.width, cv.height, { inversionAttempts:'dontInvert' });
+        var r = jsQR(im.data, cv.width, cv.height, { inversionAttempts:(op.inv === 'onlyInvert' ? 'invertFirst' : (op.inv || 'dontInvert')) });
         return Promise.resolve((r && r.data) ? [{ rawValue:String(r.data) }] : []);
       }catch(e){ return Promise.reject(e); }
     } };
@@ -32170,10 +33138,12 @@ function qrLeerTodo(){
     return;
   }
   asisLector({ titulo:'Apunta al QR', pie:'Carteles de la obra, químicos, equipos, la asistencia o la puerta: se abre de frente.', seguir:true,
+    historial:true, galeria:true,   /* 13/11/2026 · los últimos leídos y leer de una foto (CAMARA-1311) */
     sinCamara:'Abre la cámara de tu celular y apunta al QR: después toca el enlace que aparece.',
     alLeer:function(txt){
       var f = qrRuta(txt);
-      if(!f) return 'Ese QR no es de OBRASST. Apunta a un cartel, una etiqueta o un QR de la obra.';
+      /* 13/11/2026 · uno ajeno: qué es y qué se puede hacer (antes, «Ese QR no es de OBRASST. Apunta a…») */
+      if(!f){ qrHistPoner(txt); return qrTarjetaAjena(txt); }
       asisLectorCerrar();
       setTimeout(function(){ try{ f(); }catch(_f){} }, 30);
       return '';
@@ -32259,16 +33229,15 @@ function qrLeerSinCuenta(){
     return;
   }
   _rhEstilos(); QRSC.txt = '';
-  asisLector({ titulo:'Apunta al QR', seguir:true,
+  asisLector({ titulo:'Apunta al QR', seguir:true, historial:true, galeria:true,
     pie:'Los QR de OBRASST se abren de frente. Otro QR: lo ves, lo compartes o lo copias.',
     alLeer:function(txt){
       var f = (typeof qrRuta === 'function') ? qrRuta(txt) : null;
       if(f){ asisLectorCerrar(); setTimeout(function(){ try{ f(); }catch(_f){} }, 30); return ''; }
       QRSC.txt = String(txt || '');
-      return { html:'<span>Este QR no es de OBRASST. Dice:</span>' +
-        '<b class="rh-qr" data-sin-trad>' + esc(QRSC.txt.slice(0, 300)) + (QRSC.txt.length > 300 ? '…' : '') + '</b>' +
-        '<span class="rh-qr-b"><button type="button" id="rh-qr-comp" onclick="qrSinCuentaCompartir()">📲 Compartir</button>' +
-        '<button type="button" id="rh-qr-cop" onclick="qrSinCuentaCopiar()">📋 Copiar</button></span>' };
+      /* 13/11/2026 · qué es (página, wifi, teléfono…) y qué se puede hacer; queda en «los últimos» (CAMARA-1311) */
+      qrHistPoner(txt);
+      return qrTarjetaAjena(txt);
     } });
 }
 function qrSinCuentaCompartir(){
@@ -61910,8 +62879,10 @@ function _asisPapelHTML(){
 /* ═══════════════════ EL TRABAJADOR ═══════════════════ */
 
 /* el lector de QR dentro de la app: BarcodeDetector, que traen los
-   Android. Si el celular no lo tiene, se dice qué hacer en su lugar. */
-var ASISL={ st:null, det:null, vivo:false, op:null, ultimo:'', t:0, gen:0 };
+   Android. Si el celular no lo tiene, se dice qué hacer en su lugar.
+   13/11/2026 · (CAMARA-1311) la cámara en HD y con enfoque continuo, lee más seguido, linterna, zoom, sonido y
+   vibración al leer; en los lectores de todo (op.historial, op.galeria): los últimos leídos y leer de una foto. */
+var ASISL={ st:null, det:null, vivo:false, op:null, ultimo:'', t:0, gen:0, tm:0, tl:0, ciclo:0, luz:false, pausa:false, cv:null, osc:false, nOsc:0 };
 function asisLector(op){
   ASISL.op=op||{};
   /* 28/10/2026 · basta con que haya cámara: si el celular no trae su lector de QR (iPhone, computadora), lee jsQR (LECTOR-QR) */
@@ -61922,51 +62893,84 @@ function asisLector(op){
       ((op && op.sinCamara) || 'Abre la cámara de tu celular y apunta al QR: se abre OBRASST sola y marca tu asistencia.'), '📷');
     return;
   }
+  /* si quedó uno abierto, se cierra bien (su cámara y su linterna) antes de abrir el nuevo */
+  if(ASISL.vivo || ASISL.st) asisLectorCerrar();
+  ASISL.op=op||{};
+  try{ _camxEstilos(); camxDespertarSonido(); }catch(_e){}
   var d=$('asis-lector');
   if(!d){ d=document.createElement('div'); d.id='asis-lector'; d.className='asis-lector'; document.body.appendChild(d); }
+  var hist=!!(op && op.historial), gal=!!(op && op.galeria), son=lqrSuena();
   /* 11/11/2026 · Marcelo: «el escáner de QR no tiene para volver, no hay botón, nada». Había un «Cerrar» chico con
      los colores del tema: en el tema claro salía letra oscura sobre el fondo negro del lector (no se veía). Ahora:
      «‹ Volver» arriba y «Cerrar» grande abajo, blancos siempre, y el atrás del celular también lo cierra. */
   d.innerHTML='<div class="asis-lec-cab">'+
     '<button type="button" class="asis-lec-volver" onclick="asisLectorCerrar()"><span aria-hidden="true">‹</span> <span>Volver</span></button>'+
-    '<b class="asis-lec-tit">'+esc((op&&op.titulo)||'Apunta al QR')+'</b></div>'+
-    '<div class="asis-lec-vid"><video id="asis-lec-v" playsinline muted></video><span class="asis-lec-marco"></span></div>'+
+    '<b class="asis-lec-tit">'+esc((op&&op.titulo)||'Apunta al QR')+'</b>'+
+    (hist?'<button type="button" class="lqr-t lqr-hist-b" id="lqr-hist-b" onclick="lqrHistorial()" aria-label="Los últimos que leíste">🕘</button>':'')+
+    '</div>'+
+    '<div class="asis-lec-vid" id="asis-lec-vid"><video id="asis-lec-v" playsinline muted></video><span class="asis-lec-marco" id="asis-lec-marco"></span>'+
+      '<div class="camx-pista lqr-pista" id="lqr-pista" hidden></div>'+
+      '<div class="lqr-herr">'+
+        '<button type="button" class="lqr-t" id="lqr-luz" onclick="lqrLuz()" aria-label="Linterna" aria-pressed="false" hidden>🔦</button>'+
+        '<span class="camx-zoom lqr-zoom" id="lqr-zoom" hidden></span>'+
+        (gal?'<button type="button" class="lqr-t" id="lqr-foto" onclick="lqrDeFoto()" aria-label="Leer de una foto">🖼️</button>':'')+
+        '<button type="button" class="lqr-t" id="lqr-son" onclick="lqrSonido()" aria-label="Sonido al leer" aria-pressed="'+(son?'true':'false')+'">'+(son?'🔊':'🔇')+'</button>'+
+      '</div>'+
+    '</div>'+
     '<p class="asis-lec-msg" id="asis-lec-msg"><span>'+esc((op&&op.pie)||'')+'</span></p>'+
-    '<button type="button" class="asis-lec-cerrar" onclick="asisLectorCerrar()">Cerrar</button>';
+    '<button type="button" class="asis-lec-cerrar" onclick="asisLectorCerrar()">Cerrar</button>'+
+    (gal?'<input type="file" id="asis-lec-file" accept="image/*" hidden>':'');
   d.hidden=false;
   var gen=++ASISL.gen; ASISL.det=null;
+  ASISL.ultimo=''; ASISL.t=0; ASISL.ciclo=0; ASISL.luz=false; ASISL.pausa=false; ASISL.osc=false; ASISL.nOsc=0;
   _lectorDetector().then(function(det){ if(gen===ASISL.gen) ASISL.det=det; }, function(){
     if(gen!==ASISL.gen) return;
     var m=$('asis-lec-msg'); if(m) m.innerHTML='<span>Para leer el QR aquí, la app necesita señal la primera vez. Mientras tanto, usa la cámara de tu celular.</span>';
   });
-  navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}}}).then(function(st){
+  /* 13/11/2026 · en HD (antes, la que diera: en muchos celulares 640×480, y un QR a dos metros no se leía) */
+  navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}}}).then(function(st){
+    /* se cerró mientras prendía: se apaga, que no quede la cámara prendida */
+    if(gen!==ASISL.gen){ try{ st.getTracks().forEach(function(t){ t.stop(); }); }catch(_s){} return; }
     ASISL.st=st; ASISL.vivo=true;
     var v=$('asis-lec-v'); v.srcObject=st; var p=v.play(); if(p&&p.catch) p.catch(function(){});
+    var t=null; try{ t=st.getVideoTracks()[0]||null; }catch(_t){}
+    try{ camxAjustar(t); }catch(_a){}
+    try{ camxZoomPreparar(ASISZ, t, v, $('lqr-zoom'), 3); }catch(_z){}
+    try{ _lqrVerLuz(); }catch(_l){}
+    try{ camxGestos($('asis-lec-vid'), ASISZ, _asisToque); }catch(_g){}
+    _lqrLuzVigilar(gen);
     _asisLeer();
-  }, function(){ var m=$('asis-lec-msg'); if(m) m.innerHTML='<span>No se pudo abrir la cámara. Revisa el permiso de cámara de la app.</span>'; });
+  }, function(){ if(gen!==ASISL.gen) return; var m=$('asis-lec-msg'); if(m) m.innerHTML='<span>No se pudo abrir la cámara. Revisa el permiso de cámara de la app.</span>'; });
 }
 function _asisLeer(){
   if(!ASISL.vivo) return;
+  clearTimeout(ASISL.tm);
   var v=$('asis-lec-v');
-  if(!v || !ASISL.det || v.readyState<2){ setTimeout(_asisLeer, 250); return; }
-  ASISL.det.detect(v).then(function(l){
+  if(!v || !ASISL.det || v.readyState<2 || ASISL.pausa){ ASISL.tm=setTimeout(_asisLeer, ASISL.pausa?300:150); return; }
+  var gen=ASISL.gen, t0=Date.now(), fuente=v, op={};
+  try{ fuente=_asisFuente(v); }catch(_f){ fuente=v; }
+  /* jsQR (iPhone, computadora): una vuelta todo el cuadro, otra solo el centro (un QR chico o lejos), otra los claros sobre oscuro */
+  if(ASISL.det.jsqr){ var c=(ASISL.ciclo++)%3; op = c===1 ? {recorte:0.6} : (c===2 ? {inv:'invertFirst'} : {}); }
+  var pr;
+  try{ pr=ASISL.det.detect(fuente, op); }catch(e){ pr=Promise.reject(e); }
+  Promise.resolve(pr).then(function(l){
+    if(gen!==ASISL.gen || !ASISL.vivo) return;
     if(l && l.length){
       var txt=l[0].rawValue||'';
-      /* el mismo QR, mientras siga delante, se lee una sola vez */
-      if(txt && !(txt===ASISL.ultimo && Date.now()-ASISL.t<4000)){
-        ASISL.ultimo=txt; ASISL.t=Date.now();
-        var r=ASISL.op && ASISL.op.alLeer ? ASISL.op.alLeer(txt) : null;
-        var m=$('asis-lec-msg');
-        if(m && typeof r==='string') m.innerHTML='<span>'+esc(r)+'</span>';
-        if(m && r && r.html) m.innerHTML=r.html;
-        if(!(ASISL.op && ASISL.op.seguir)){ asisLectorCerrar(); return; }
-      }
+      if(txt && _asisLeido(txt)==='cerrado') return;
     }
-    setTimeout(_asisLeer, 250);
-  }, function(){ setTimeout(_asisLeer, 400); });
+    if(gen!==ASISL.gen || !ASISL.vivo) return;
+    /* 13/11/2026 · una vuelta cada ~110 ms (antes 250) */
+    ASISL.tm=setTimeout(_asisLeer, Math.max(40, 110-(Date.now()-t0)));
+  }, function(){ if(gen===ASISL.gen && ASISL.vivo) ASISL.tm=setTimeout(_asisLeer, 400); });
 }
 function asisLectorCerrar(){
-  ASISL.vivo=false; ASISL.gen++;
+  ASISL.vivo=false; ASISL.gen++; ASISL.pausa=false;
+  clearTimeout(ASISL.tm); clearInterval(ASISL.tl);
+  /* la linterna se apaga antes de soltar la cámara (si no, en algunos celulares el LED queda prendido) */
+  try{ var t0=_lqrPista(); if(t0 && ASISL.luz){ var pa=t0.applyConstraints({advanced:[{torch:false}]}); if(pa && pa.catch) pa.catch(function(){}); } }catch(e0){}
+  ASISL.luz=false;
+  try{ camxZoomSoltar(ASISZ); }catch(_z){}
   try{ if(ASISL.st) ASISL.st.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
   ASISL.st=null;
   var d=$('asis-lector'); if(d){ d.hidden=true; d.innerHTML=''; }
@@ -73154,7 +74158,7 @@ function _selloDibujar(im, lg, c, datos){
 
         /* todo escalado al ancho, para que se vea igual en una foto de
            900 px que en una de 1600 */
-        var u=W/1000;
+        var u=Math.min(W, H)/1000;   /* 13/11/2026 · por el lado corto: en una foto echada tapaba un tercio (CAMARA-1311) */
         var pad=Math.round(18*u);
         var lineas=[];
         if(c.obra && datos.obra)  lineas.push({t:datos.obra, peso:'700', tam:27});
@@ -101374,6 +102378,90 @@ function ESCN_FABRICA(){
     }
   }
 
+  /* ── 1b · el color de ESTA hoja (13/11/2026) ─────────────────────
+     Marcelo: «hojas que no sean color blanco no las capta bien o
+     simplemente no las capta». El detector suponía papel blanco: más
+     claro adentro que afuera, y sin color. Una copia amarilla, rosada o
+     celeste de un talonario, o una hoja de kraft, rompen esa suposición:
+     sobre una mesa clara el borde se veía «al revés», o no se veía.
+     Ahora se mira de qué color es ESTE papel (lo más claro del centro de
+     la imagen, que es adonde apunta el que escanea) y de qué color es lo
+     de alrededor (el marco de la imagen, sin lo que se parece al papel).
+     Si los separa el COLOR, se arma «D»: cuánto se parece cada píxel a
+     ese papel. El canto de la hoja es el paso de «no es papel» a «es
+     papel», sea la hoja más clara o más oscura que la mesa, blanca o de
+     color; la tinta y la mano quedan del lado de «no es papel». Si lo
+     único que los separa es la luz (hoja blanca en mesa gris o negra),
+     todo sigue como antes: ahí el brillo ya lo dice, y D dependería de
+     dónde cayó una sombra. Colores en un espacio sencillo: luz (l),
+     rojo-verde (a) y amarillo-azul (c).                                  */
+  var KLUZ = 0.35;     /* en D la luz pesa la tercera parte: una sombra sobre el papel sigue siendo papel */
+  function coloresHoja(d, w, h){
+    /* el papel: en el centro hay papel y letra, y la letra es más oscura que su papel (en una hoja llena de tablas,
+       como un PETAR, la letra y las rayas se llevan la mitad del centro). Se toma lo más claro del centro —el tercio
+       de arriba en luz— y de eso, la mediana de cada canal */
+    var x0 = Math.floor(w*0.3), x1 = Math.ceil(w*0.7), y0 = Math.floor(h*0.3), y1 = Math.ceil(h*0.7), x, y, j, i;
+    var Hl = tb('chl', Uint32Array, 256), nc = 0;
+    for(i = 0; i < 256; i++) Hl[i] = 0;
+    for(y = y0; y < y1; y++) for(x = x0, j = (y*w + x0)*4; x < x1; x++, j += 4){
+      Hl[(0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2])|0]++; nc++;
+    }
+    if(nc < 50) return { ok:false };
+    var corteL = 255, acu = 0;
+    for(i = 255; i >= 0; i--){ acu += Hl[i]; if(acu >= nc*0.33){ corteL = i; break; } }
+    var HA = tb('cha', Uint32Array, 512), HC = tb('chc', Uint32Array, 512), HL2 = tb('chl2', Uint32Array, 256), np = 0;
+    for(i = 0; i < 512; i++){ HA[i] = 0; HC[i] = 0; }
+    for(i = 0; i < 256; i++) HL2[i] = 0;
+    for(y = y0; y < y1; y++) for(x = x0, j = (y*w + x0)*4; x < x1; x++, j += 4){
+      var r = d[j], g = d[j+1], b = d[j+2], l = 0.299*r + 0.587*g + 0.114*b;
+      if(l < corteL) continue;
+      HL2[l|0]++; HA[(r - g + 256)|0]++; HC[(0.5*(r + g) - b + 256)|0]++; np++;
+    }
+    if(np < 20) return { ok:false };
+    function mediana(H, m, des){ var a2 = 0; for(var k = 0; k < m; k++){ a2 += H[k]; if(a2 >= np/2) return k - des; } return m - 1 - des; }
+    var pl = mediana(HL2, 256, 0), pa = mediana(HA, 512, 256), pc = mediana(HC, 512, 256);
+    /* que sea UN color (papel) y no una mezcla: la mitad de lo claro, cerca de esa mediana */
+    var cerca = 0;
+    for(y = y0; y < y1; y++) for(x = x0, j = (y*w + x0)*4; x < x1; x++, j += 4){
+      var r1 = d[j], g1 = d[j+1], b1 = d[j+2], l1 = 0.299*r1 + 0.587*g1 + 0.114*b1;
+      if(l1 < corteL) continue;
+      var e1 = r1 - g1 - pa, e2 = 0.5*(r1 + g1) - b1 - pc;
+      if(e1*e1 + e2*e2 < 144) cerca++;
+    }
+    if(cerca < np*0.5) return { ok:false };
+    /* lo de alrededor: la franja del marco de la imagen, sin lo que tiene color de papel (la luz pesa la mitad: la
+       parte de la hoja que no cayó en sombra no se vuelve «fondo») */
+    var bw = Math.max(2, Math.round(Math.min(w, h)*0.08)), fl = 0, fa = 0, fc = 0, nf = 0, nr = 0;
+    function tomar(xx, yy){
+      var jj = (yy*w + xx)*4, r3 = d[jj], g3 = d[jj+1], b3 = d[jj+2];
+      var l3 = 0.299*r3 + 0.587*g3 + 0.114*b3, a3 = r3 - g3, c3 = 0.5*(r3 + g3) - b3;
+      var dl = (l3 - pl)*0.5, da = a3 - pa, dc = c3 - pc;
+      nr++;
+      if(dl*dl + da*da + dc*dc > 576){ fl += l3; fa += a3; fc += c3; nf++; }
+    }
+    for(y = 0; y < h; y += 2){
+      if(y < bw || y >= h - bw){ for(x = 0; x < w; x += 2) tomar(x, y); }
+      else { for(x = 0; x < bw; x += 2) tomar(x, y); for(x = w - bw; x < w; x += 2) tomar(x, y); }
+    }
+    if(!nr || nf < nr*0.15) return { ok:false };
+    fl /= nf; fa /= nf; fc /= nf;
+    var el = pl - fl, ea = pa - fa, ec = pc - fc, croma = Math.sqrt(ea*ea + ec*ec);
+    /* 26: con menos, una hoja crema en una mesa beige o una kraft en madera clara (colores parecidos) salían peor que
+       solo con el brillo cuando les caía una sombra (banco de 549 fotos: con 26, ninguna que salía bien sale mal) */
+    if(croma < 26) return { ok:false };
+    return { ok:true, papel:[pl, pa, pc], sep:Math.sqrt(el*el*KLUZ*KLUZ + ea*ea + ec*ec),
+             neutro: Math.sqrt(pa*pa + pc*pc) < 18, claro: pl > fl + 8 };
+  }
+  /* D: cuánto se parece cada píxel al papel de ESTA hoja (128 = el papel mismo; lo demás, más abajo) */
+  function parecido(d, n, papel, D){
+    var pl = papel[0], pa = papel[1], pc = papel[2];
+    for(var i = 0, j = 0; i < n; i++, j += 4){
+      var r = d[j], g = d[j+1], b = d[j+2];
+      var dl = (0.299*r + 0.587*g + 0.114*b - pl)*KLUZ, da = r - g - pa, dc = 0.5*(r + g) - b - pc;
+      D[i] = 128 - Math.sqrt(dl*dl + da*da + dc*dc);
+    }
+  }
+
   /* ── 2 · suavizado gaussiano (separable) ─────────────────────────
      El centro de la imagen va sin preguntar por los bordes; solo las
      columnas y filas de la orilla repiten el último píxel. */
@@ -101665,7 +102753,7 @@ function ESCN_FABRICA(){
       var S = lado(C, q[i], q[(i+1)%4]);
       /* un lado pegado al filo de la foto no tiene «afuera» que medir:
          cuenta su borde y el contraste se toma como neutro */
-      var cN = S.cn > 0.3 ? Math.max(-1, Math.min(1, S.c/35)) : 0;
+      var cN = S.cn > 0.3 ? Math.max(-1, Math.min(1, S.c/(C.cn || 35))) : 0;
       var wv = S.s * (0.6 + 0.4*cN);
       lados.push({ s:S.s, c:S.c, cN:cN, w:wv });
       lg += Math.log(Math.max(wv, 0.02));
@@ -101856,19 +102944,38 @@ function ESCN_FABRICA(){
     var E = tb('E', Float32Array, n), i;
     canales(d, n, L, P);
     var sig = vivo ? 1.1 : Math.max(1.1, 1.5*esc);
+    /* 13/11/2026 · el color de esta hoja (coloresHoja); op.sinColor: como antes (las pruebas lo comparan) */
+    var col = op.sinColor ? { ok:false } : coloresHoja(d, w, h), Ds = null;
     gauss(L, Ls, w, h, sig);
-    gauss(P, Ps, w, h, sig);
     /* dos gradientes: el del brillo y el de «cara de papel». El primero
        es el que separa una hoja de una mesa blanca (el papel, algo más
        claro y algo más cálido); el segundo, el que la separa de una
        mesa beige o de la mano. Se queda, píxel por píxel, el que más
-       diga. */
+       diga. 13/11/2026 · con el color de ESTA hoja a la mano (col.ok),
+       manda D, que dice hacia dónde está el papel sea del color que sea;
+       el brillo (y «cara de papel», si la hoja es blanca y más clara que
+       la mesa) se quedan al 80 %, para lo que D no ve. */
     sobel(Ls, w, h, gx, gy, mag);
-    sobel(Ps, w, h, gx2, gy2, mag2);
-    for(i = 0; i < n; i++) if(mag2[i] > mag[i]){ gx[i] = gx2[i]; gy[i] = gy2[i]; mag[i] = mag2[i]; }
+    var usarP = !col.ok || (col.neutro && col.claro), KL = col.ok ? 0.8 : 1;
+    if(col.ok){
+      for(i = 0; i < n; i++){ gx[i] *= KL; gy[i] *= KL; mag[i] *= KL; }
+      var Dd = tb('D', Float32Array, n); Ds = tb('Ds', Float32Array, n);
+      parecido(d, n, col.papel, Dd);
+      gauss(Dd, Ds, w, h, sig);
+      sobel(Ds, w, h, gx2, gy2, mag2);
+      for(i = 0; i < n; i++) if(mag2[i] > mag[i]){ gx[i] = gx2[i]; gy[i] = gy2[i]; mag[i] = mag2[i]; }
+    }
+    if(usarP){
+      gauss(P, Ps, w, h, sig);
+      sobel(Ps, w, h, gx2, gy2, mag2);
+      for(i = 0; i < n; i++){ var m2 = mag2[i]*KL; if(m2 > mag[i]){ gx[i] = gx2[i]*KL; gy[i] = gy2[i]*KL; mag[i] = m2; } }
+    }
     crestas(gx, gy, mag, w, h, E);
 
-    var med = percentil(mag, n, 0.5, 0.0001);
+    /* 13/11/2026 · la mediana cuenta también los píxeles sin gradiente: en una imagen limpia (sin el ruido de una
+       cámara: una captura, un dibujo) casi todo es cero, y sin ellos la «mediana» salía del borde de la letra y el
+       canto de la hoja no llegaba nunca al umbral. En una foto de verdad no cambia nada (el ruido no deja ceros). */
+    var med = percentil(mag, n, 0.5, -1);
     var tBajo = Math.max(4, 2.2*med);
     /* un borde que pasa con holgura el ruido ya vota entero: si no, en
        una hoja llena de letra (bordes fortísimos) el canto de la hoja
@@ -101879,9 +102986,11 @@ function ESCN_FABRICA(){
     direcciones(E, gx, gy, w, h, tBajo, ANG);
     var rectas = hough(E, ANG, w, h, tBajo, tRef, vivo ? 18 : 30, corto*0.10);
 
-    var C = { px:d, w:w, h:h, E:E, gx:gx, gy:gy, mag:mag, L:Ls, Ps:Ps, tBajo:tBajo, tRef:tRef,
+    /* 13/11/2026 · con D, el «más papel adentro que afuera» de cada lado (y la mancha de papel) se miden en D */
+    var C = { px:d, w:w, h:h, E:E, gx:gx, gy:gy, mag:mag, L:col.ok ? Ds : Ls, Ps:col.ok ? Ds : Ps, tBajo:tBajo, tRef:tRef,
               paso: vivo ? 3 : 2, co: Math.max(3, Math.round(5*esc)), ab: vivo ? 1 : 2,
-              minArea: op.minArea || (vivo ? 0.10 : 0.06) };
+              minArea: op.minArea || (vivo ? 0.10 : 0.06),
+              cn: col.ok ? Math.max(10, Math.min(35, 0.55*col.sep)) : 35 };
     var cx = w/2, cy = h/2, minSep = corto*0.15, j;
 
     /* pares de rectas que se miran (una a cada lado de la hoja) */
@@ -101946,7 +103055,9 @@ function ESCN_FABRICA(){
     }
     var umbral = op.umbral || (vivo ? 0.2 : 0.16);
     if(gan.p < umbral) return null;
-    return { q:gan.q, p:gan.p, w:w, h:h, lados:gan.r.lados.map(function(l){ return +l.w.toFixed(2); }) };
+    /* papel: el color de la hoja, para afinar los lados en la foto grande también en D (esc2DetectarLienzo) */
+    return { q:gan.q, p:gan.p, w:w, h:h, lados:gan.r.lados.map(function(l){ return +l.w.toFixed(2); }),
+             papel: col.ok ? col.papel.slice() : null };
   }
 
   /* ══ AFINAR ══════════════════════════════════════════════════════
@@ -101979,12 +103090,24 @@ function ESCN_FABRICA(){
             for(var z = -1; z <= 1; z++) v += g(px + nx*o + ux*z*1.5, py + ny*o + uy*z*1.5);
             prof.push(v/3);
           }
-          var mejor = 0, pos = null;
+          var mejor = 0, pos = null, cand = [];
           for(o = 2; o < prof.length-2; o++){
             var der = (prof[o+1] + prof[o+2]) - (prof[o-1] + prof[o-2]);
             if(der > mejor){ mejor = der; pos = o; }
+            if(der >= 6) cand.push([der, o]);
           }
           if(pos === null || mejor < 6) continue;
+          /* 13/11/2026 · el canto es el paso de «afuera» a papel; una raya o la letra impresa cerca del canto da un
+             paso más fuerte (tinta → papel), pero AFUERA de ella todavía hay papel. Se toma el paso más fuerte que no
+             tenga papel más afuera; si ninguno cumple, el más fuerte, como antes. */
+          cand.sort(function(a, b){ return b[0] - a[0]; });
+          for(var ci = 0; ci < cand.length && ci < 8; ci++){
+            var oc = cand[ci][1], ins = (prof[oc+1] + prof[oc+2])/2, aff = (prof[oc-1] + prof[oc-2])/2, hh = ins - aff, fuera = -1e9;
+            for(var fo = 0; fo <= oc - 3; fo++) if(prof[fo] > fuera) fuera = prof[fo];
+            if(hh > 0 && oc >= 5 && fuera >= ins - 0.25*hh) continue;
+            pos = oc; mejor = cand[ci][0];
+            break;
+          }
           /* posición subpíxel con una parábola */
           var dm = (prof[pos] + prof[pos+1]) - (prof[pos-2] + prof[pos-1]);
           var dp = (prof[pos+2] + prof[pos+3 < prof.length ? pos+3 : pos+2]) - (prof[pos] + prof[pos-1]);
@@ -102553,7 +103676,7 @@ function ESCN_FABRICA(){
     return pngIdx(r.idx, w, h, 2, [a, a, a, b, b, b, c, c, c, 255, 255, 255], [255, 255, 255, 0]);
   }
 
-  return { detectar:detectar, afinar:afinar, proporcion:proporcion, homografia:homografia,
+  return { detectar:detectar, afinar:afinar, proporcion:proporcion, homografia:homografia, parecido:parecido,
            enderezar:enderezar, tamSalida:tamSalida, filtrar:filtrar, girar:girar,
            ordenar:ordenar, convexo:convexo, area:area, dist:dist, angulo:angulo,
            capas:capas, capasPng:capasPng, pngIdx:pngIdx };
@@ -102600,7 +103723,10 @@ var ESC2 = {
          disparando:false, fallosFoto:0, fotoMs:0, fotoEnCurso:false, raf:0, t:0 },
   rec: null, fil: null,
   cola: Promise.resolve(), pendientes: 0,
-  cargado: false
+  cargado: false,
+  /* 13/11/2026 · ver: sube con cada cambio del documento (el PDF armado de fondo es de UNA versión); sel/ordHist: las
+     hojas elegidas al ordenar y el orden de antes («Deshacer»); hoja: la hoja que subió (Más, el PDF, «A la hoja…») */
+  ver: 0, sel: {}, ordHist: [], hoja: null
 };
 var ESC2_FILTROS = [['original','Original'], ['aclarar','Aclarar'], ['mejorar','Mejorar'],
                     ['sinsombras','Sin sombras'], ['bn','B/N'], ['gris','Gris']];
@@ -102631,6 +103757,7 @@ function _esc2DocNuevo(){ return { nombre:_esc2NombreAuto(), creado:Date.now(), 
    Documentos, lo guardado es la versión de antes */
 function _esc2Cambio(){
   ESC2.pdf = null;
+  ESC2.ver = (ESC2.ver || 0) + 1;      /* 13/11/2026 · el PDF armado de fondo era de la versión de antes */
   if(ESC2.panel === 'pdf') ESC2.panel = null;
   if(!ESC2.pedido && ESC2.doc){ ESC2.doc.guardado = null; ESC2.doc.entregado = 0; ESC2.doc.viejo = false; }
 }
@@ -102909,7 +104036,10 @@ function esc2DetectarLienzo(cv){
     try{ gg.imageSmoothingQuality = 'high'; }catch(e){}
     gg.drawImage(cv, 0, 0, gw, gh);
     var d = gg.getImageData(0, 0, gw, gh).data, G = new Float32Array(gw*gh);
-    for(var i = 0, j = 0; i < G.length; i++, j += 4) G[i] = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2];
+    /* 13/11/2026 · si la hoja se encontró por su color (r.papel), el borde exacto se busca también en «cuánto se parece
+       al papel»: una hoja amarilla en una mesa blanca casi no tiene borde en gris */
+    if(r.papel) ESCN.parecido(d, gw*gh, r.papel, G);
+    else for(var i = 0, j = 0; i < G.length; i++, j += 4) G[i] = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2];
     var fx = gw/ch.width, fy = gh/ch.height;
     var q1 = r.q.map(function(p){ return [p[0]*fx, p[1]*fy]; });
     /* el puntaje viaja pegado al cuadrilátero (q.p): con poca confianza,
@@ -103009,10 +104139,17 @@ function _esc2Estilos(){
     /* el documento, dentro de la app (sigue el tema claro/oscuro) */
     '.e2d-cab{display:flex;align-items:center;gap:10px;margin:2px 0 14px}',
     /* 5/11/2026 · V7.10 · la barra de decisión después de cada hoja: terminar, sumar otra o empezar aparte */
-    '.e2d-decide{background:#0f172a;border:1px solid rgba(56,189,248,.35);border-radius:14px;padding:14px;margin:0 0 14px;display:flex;flex-direction:column;gap:8px}',
-    '.e2d-decide .t{margin:0;font-size:13.5px;font-weight:800;text-align:center;color:#7DD3FC}',
+    /* 13/11/2026 · Marcelo: «mira cómo salen las letras arriba, que no se ven». La tarjeta era azul marino FIJA y sus
+       botones tomaban la letra del tema: en Papel (casi negra) «Guardarlo en el celular» y «Añadir otra hoja» no se
+       leían. Ahora la tarjeta y sus botones salen de los colores del tema (Papel, Obra, Alto contraste). */
+    '.e2d-decide{background:var(--panel);color:var(--tinta);border:1px solid rgba(var(--w),.16);border-radius:14px;padding:14px;margin:0 0 14px;',
+    '  display:flex;flex-direction:column;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)}',
+    '.e2d-decide .t{margin:0;font-size:13.5px;font-weight:800;text-align:center;color:var(--tinta)}',
     '.e2d-decide .btn{margin:0}.e2d-decide .dos{display:grid;grid-template-columns:1fr 1fr;gap:8px}.e2d-decide .dos .btn{font-size:13px;padding:10px 8px}',
-    '.e2d-decide .e2d-otro{border-color:rgba(244,63,94,.55);color:#FECDD3}',
+    '.e2d-decide .btn.sec{color:var(--tinta);background:rgba(var(--w),.05);box-shadow:inset 0 0 0 1.2px rgba(var(--w),.2)}',
+    /* el rojo de «Descartar»: claro sobre los temas oscuros (el --mal de Obra no se lee sobre su panel) y el del tema en Papel */
+    '.e2d-decide .btn.e2d-otro,.e2d-op.mal b{color:#FF9EA1}',
+    'html.t-claro .e2d-decide .btn.e2d-otro,html.t-alto .e2d-decide .btn.e2d-otro,html.t-claro .e2d-op.mal b,html.t-alto .e2d-op.mal b{color:var(--mal)}',
     '.e2d-nom{flex:1;min-width:0;text-align:left;border:0;background:transparent;color:var(--tinta);padding:4px 0;font:inherit;cursor:pointer}',
     '.e2d-nom b{display:block;font-size:19px;line-height:1.25;word-break:break-word}',
     '.e2d-nom small{display:block;color:var(--gris);font-size:13px;margin-top:2px}',
@@ -103024,24 +104161,84 @@ function _esc2Estilos(){
     '.e2d-pag img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}',
     '.e2d-pag .n{position:absolute;left:7px;bottom:7px;background:rgba(8,20,28,.78);color:#fff;font-size:12px;font-weight:800;padding:2px 9px;border-radius:999px;font-variant-numeric:tabular-nums}',
     '.e2d-pag .esc2-giro{width:30px;height:30px;border-width:3px;border-color:rgba(0,0,0,.12);border-top-color:#C89400}',
-    '.e2d-ord{position:absolute;right:6px;top:6px;display:flex;gap:6px}',
-    '.e2d-ord span{width:34px;height:34px;border-radius:999px;background:rgba(8,20,28,.8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800}',
+    /* 13/11/2026 · ordenar: miniaturas más chicas, la elegida con su marca, la que se arrastra y dónde cae */
+    '.e2d-rej.ord{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}',
+    '@media (min-width:520px){.e2d-rej.ord{grid-template-columns:repeat(4,minmax(0,1fr))}}',
+    '@media (min-width:760px){.e2d-rej.ord{grid-template-columns:repeat(6,minmax(0,1fr))}}',
+    '.e2d-rej.ord .e2d-pag{-webkit-touch-callout:none;touch-action:manipulation}',
+    '.e2d-rej.ord .e2d-pag img{-webkit-user-drag:none;pointer-events:none}',
+    '.e2d-pag .ck{position:absolute;right:5px;top:5px;width:26px;height:26px;border-radius:999px;background:rgba(8,20,28,.45);border:2px solid #fff;',
+    '  color:#08222F;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;line-height:1}',
+    '.e2d-pag.sel{box-shadow:0 0 0 3px #F5B700,0 4px 16px rgba(0,0,0,.28)}',
+    '.e2d-pag.sel .ck{background:#F5B700;border-color:#F5B700}',
+    '.e2d-pag.arrastrada{opacity:.3}',
+    '.e2d-pag.antes{box-shadow:inset 6px 0 0 #F5B700,0 4px 16px rgba(0,0,0,.28)}',
+    '.e2d-pag.despues{box-shadow:inset -6px 0 0 #F5B700,0 4px 16px rgba(0,0,0,.28)}',
+    '.e2d-pag.movida{animation:e2dmov 1.6s ease-out}',
+    '@keyframes e2dmov{0%,45%{box-shadow:0 0 0 4px #F5B700,0 4px 16px rgba(0,0,0,.28)}100%{box-shadow:0 4px 16px rgba(0,0,0,.28)}}',
+    '.e2d-pag.e2d-fantasma{position:fixed;left:0;top:0;margin:0;z-index:2260;pointer-events:none;opacity:.95;transform-origin:0 0;',
+    '  box-shadow:0 16px 36px rgba(0,0,0,.45);will-change:transform}',
+    '.e2d-fantasma .cuantas{position:absolute;right:6px;bottom:6px;min-width:26px;height:26px;padding:0 7px;border-radius:999px;background:#F5B700;',
+    '  color:#08222F;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center}',
+    '@media (prefers-reduced-motion:reduce){.e2d-pag.movida{animation:none;box-shadow:0 0 0 4px #F5B700}}',
     '.e2d-mas{border:2px dashed rgba(var(--w),.28);background:transparent;color:var(--tinta);border-radius:10px;aspect-ratio:0.72;width:100%;',
     '  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}',
     '.e2d-mas span:first-child{font-size:30px;line-height:1}',
     '.e2d{display:flex;flex-direction:column;min-height:calc(100vh - 150px);min-height:calc(100dvh - 150px)}',
-    '.e2d-barra{position:sticky;bottom:0;z-index:5;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;',
+    /* 13/11/2026 · seis: Añadir · Editar · Ordenar · Compartir · Guardar · Más */
+    '.e2d-barra{position:sticky;bottom:0;z-index:5;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;',
     '  margin:auto -16px -40px;padding:8px 6px calc(10px + env(safe-area-inset-bottom,0px));background:var(--fondo);border-top:1px solid rgba(var(--w),.12)}',
     '.e2d-sep{height:18px;flex:0 0 auto}',
     '.e2d-barra button{border:0;background:transparent;color:var(--tinta);font:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;',
     '  font-size:21px;line-height:1.1;padding:6px 0;border-radius:12px;cursor:pointer}',
     '.e2d-barra button:active{background:rgba(var(--w),.08)}',
-    '.e2d-barra small{font-size:11.5px;font-weight:700}',
+    '.e2d-barra small{font-size:11px;font-weight:700;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.e2d-barra button.pri small{color:var(--oro)}',
+    '.e2d-barra button:disabled{opacity:.35;cursor:default}',
+    '.e2d-barra.ordbar{grid-template-columns:repeat(4,minmax(0,1fr));align-items:center}',
+    '.e2d-ordinfo{grid-column:1/-1;margin:0;text-align:center;font-size:12.5px;font-weight:700;color:var(--gris);padding:0 4px 2px}',
+    '.e2d-barra .listo{grid-column:span 2;flex-direction:row;gap:8px;background:linear-gradient(180deg,#FFC933,#F5B700);color:#08222F;',
+    '  border-radius:12px;padding:11px 8px;margin:0 4px}',
+    '.e2d-barra .listo small{font-size:15px;font-weight:800;color:#08222F}',
     '.e2d-panel{margin-top:16px}',
     '.e2d-vacio{text-align:center;padding:10px 0 4px}',
     '.e2d-vacio .gr{font-size:54px;line-height:1;margin:6px 0 10px}',
     '.e2d-prog{font-size:13px;color:var(--gris);margin:10px 0 0;min-height:18px}',
+    /* 13/11/2026 · las hojas que suben: Más, el PDF (compartir / guardar en el celular), «A la hoja…» (esta, arriba:
+       abajo la taparía el teclado) */
+    '.e2d-hoja{position:fixed;inset:0;z-index:2250;display:none}',
+    '.e2d-hoja.abierta{display:block}',
+    '.e2d-hoja .velo{position:absolute;inset:0;background:rgba(3,14,20,.55)}',
+    '.e2d-hoja .panel{position:absolute;left:0;right:0;bottom:0;max-height:86vh;max-height:86dvh;overflow-y:auto;max-width:560px;margin:0 auto;',
+    '  padding:10px 16px calc(18px + env(safe-area-inset-bottom,0px));border-radius:22px 22px 0 0;background:var(--panel);color:var(--tinta);',
+    '  box-shadow:0 -14px 44px rgba(0,0,0,.35);animation:e2dsube .2s ease-out;overscroll-behavior:contain}',
+    '.e2d-hoja.arriba .panel{top:calc(12px + env(safe-area-inset-top,0px));bottom:auto;left:12px;right:12px;border-radius:18px;padding:16px;animation:none}',
+    '@keyframes e2dsube{from{transform:translateY(24px);opacity:.5}to{transform:none;opacity:1}}',
+    '@media (prefers-reduced-motion:reduce){.e2d-hoja .panel{animation:none}}',
+    '.e2d-hoja .tirador{width:42px;height:4px;border-radius:3px;background:rgba(var(--w),.28);margin:0 auto 12px}',
+    '.e2d-hoja h3{margin:0 0 4px;font-size:17px;line-height:1.3;word-break:break-word}',
+    '.e2d-hoja .sub{margin:0 0 12px}',
+    '.e2d-hoja .dos{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
+    '.e2d-op{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;color:var(--tinta);font:inherit;text-align:left;',
+    '  padding:10px 8px;border-radius:12px;cursor:pointer}',
+    '.e2d-op:active,.e2d-op:hover{background:rgba(var(--w),.07)}',
+    '.e2d-op:focus-visible{outline:2px solid #F5B700;outline-offset:1px}',
+    '.e2d-op .i{flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:rgba(var(--w),.07);display:flex;align-items:center;justify-content:center;font-size:20px}',
+    '.e2d-op b{display:block;font-size:15px;font-weight:700;line-height:1.3}',
+    '.e2d-op small{display:block;font-size:12.5px;color:var(--gris);margin-top:1px}',
+    '.e2d-hoja .sepa{height:1px;background:rgba(var(--w),.12);margin:6px 0}',
+    '.e2d-pdfest{display:flex;align-items:center;gap:12px;margin:6px 0 12px}',
+    '.e2d-pdfest .esc2-giro{position:static;flex:0 0 auto;margin:0;width:34px;height:34px;border-width:4px;border-color:rgba(var(--w),.15);border-top-color:#C89400}',
+    '.e2d-barrita{height:6px;border-radius:3px;background:rgba(var(--w),.12);overflow:hidden;margin:0 0 14px}',
+    '.e2d-barrita i{display:block;height:100%;width:0;background:#F5B700;transition:width .25s}',
+    '.e2d-mover{display:flex;align-items:center;gap:10px;margin:4px 0 12px}',
+    '.e2d-mover input{flex:1;min-width:0;margin:0;font-size:24px;font-weight:800;text-align:center;padding:10px;border-radius:12px;font-variant-numeric:tabular-nums}',
+    '.e2d-mover button{flex:0 0 auto;width:54px;height:54px;border-radius:12px;border:0;background:rgba(var(--w),.09);color:var(--tinta);font-size:26px;font-weight:800;cursor:pointer}',
+    '.e2d-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}',
+    '.e2d-chips button{border:1.5px solid rgba(var(--w),.24);background:transparent;color:var(--tinta);font:inherit;font-size:14px;font-weight:700;padding:9px 14px;border-radius:999px;cursor:pointer}',
+    /* el botoncito «Instalar la app» (en el navegador) tapaba «Guardar» y «Más», y el «Cerrar» de las hojas: con la barra
+       del escáner a la vista, o con una de sus hojas abierta, se esconde */
+    'body:has(#p-scan.activa .e2d-barra) #inst-chip,body:has(#e2d-hoja.abierta) #inst-chip{display:none!important}',
     /* 7/11/2026 · con el celular echado, los íconos y el aviso de la cámara se leen derechos */
     '.esc2-cam .esc2-lado,.esc2-cam .esc2-x,.esc2-cam .esc2-chip{transition:transform .25s ease}',
     '.esc2-cam[data-gira="270"] .esc2-lado,.esc2-cam[data-gira="270"] .esc2-x,.esc2-cam[data-gira="270"] .esc2-chip{transform:rotate(90deg)}',
@@ -103175,7 +104372,8 @@ function _esc2OriAhora(){
   if(!O.ts || Date.now() - O.ts > 2500) return { lado:null, m:0 };
   var m = Math.sqrt(O.ux*O.ux + O.uy*O.uy);
   if(m < 0.12) return { lado:null, m:m };
-  return { lado:(Math.abs(O.ux) > Math.abs(O.uy) ? (O.ux > 0 ? 270 : 90) : (O.uy > 0 ? 0 : 180)), m:m };
+  /* 13/11/2026 · si la pantalla misma se echó con el celular (iPhone, o la rotación prendida), el video ya viene derecho */
+  return { lado:(((Math.abs(O.ux) > Math.abs(O.uy) ? (O.ux > 0 ? 270 : 90) : (O.uy > 0 ? 0 : 180)) + camxPantallaGiro()) % 360), m:m };
 }
 /* los íconos se giran con el celular inclinado; plano, se quedan como estaban (como la cámara del celular) */
 function _esc2OriPintar(){
@@ -103328,6 +104526,7 @@ function esc2Abrir(modo, op){
   op = op || {};
   try{ _esc2OriPermiso(); }catch(_o){}   /* 7/11/2026 · el sensor (en el iPhone, su permiso va con este toque) */
   _esc2Estilos(); _esc2Dom(); _esc2Pref();
+  _esc2HojaCerrar();                    /* 13/11/2026 */
   setTimeout(function(){ try{ esc2CarpPendSubir(); }catch(_p){} }, 1500);   /* 7/11/2026 · lo que quedó sin subir a su carpeta */
   if(op.pedido){ ESC2.pedido = op.pedido; ESC2.tmp = _esc2DocNuevo(); }
   else ESC2.pedido = null;
@@ -103337,6 +104536,7 @@ function esc2Abrir(modo, op){
   var t = $('esc2-cam-tit'); if(t) t.textContent = (ESC2.pedido && ESC2.pedido.titulo) || 'Escáner';
   $('esc2-modos').style.display = (ESC2.pedido && ESC2.pedido.solo) ? 'none' : '';
   _esc2Mostrar('esc2-cam', true);
+  try{ _esc2Toques(); }catch(_t){}   /* 13/11/2026 · tocar para enfocar (CAMARA-1311) */
   _esc2PintarModos(); _esc2PintarPila(); _esc2PintarAuto();
   _esc2PistaTexto('Encendiendo la cámara…');
   var go = function(){ _esc2Encender(); };
@@ -103376,6 +104576,7 @@ function _esc2Encender(){
       }
     }catch(e){ C.ic = null; }
     _esc2VerLuz();
+    C.osc = false; C.nOsc = 0; try{ camxAjustar(C.track); }catch(_cx){}   /* 13/11/2026 · enfoque continuo (CAMARA-1311) */
     C.corriendo = true; C.vivo = null; C.dibujo = null; C.sinQuad = 0; C.desde = Date.now(); C.estable = 0; C.bloqueo = false;
     _esc2OriOir(true);   /* 7/11/2026 · cómo está el celular */
     $('esc2-disparo').disabled = false;
@@ -103473,13 +104674,15 @@ function _esc2Bucle(){
   if(!C.lz || C.lz.width !== w || C.lz.height !== h){ C.lz = _esc2Lienzo(w, h); C.lzg = C.lz.getContext('2d', { willReadFrequently:true }); }
   try{ C.lzg.drawImage(v, 0, 0, w, h); id = C.lzg.getImageData(0, 0, w, h); }
   catch(e){ C.t = setTimeout(_esc2Bucle, 250); return; }
+  try{ _esc2LuzMedir(C, id.data); }catch(_lz){}   /* 13/11/2026 · ¿está oscuro? (CAMARA-1311) */
   C.ocupado = true;
   var t0 = Date.now();
   esc2Calc({ t:'det', w:w, h:h, buf:id.data.buffer, op:{ vivo:true } }, [id.data.buffer]).then(function(r){
     C.ocupado = false;
     if(!C.corriendo) return;
     _esc2Vivo(r && r.q ? r.q.map(function(p){ return [p[0]/w, p[1]/h]; }) : null);
-    C.t = setTimeout(_esc2Bucle, Math.max(30, 100 - (Date.now() - t0)));
+    /* 13/11/2026 · «se demora en encontrar la hoja»: una vuelta cada ~75 ms (antes 100) */
+    C.t = setTimeout(_esc2Bucle, Math.max(20, 75 - (Date.now() - t0)));
   }, function(){
     C.ocupado = false;
     C.t = setTimeout(_esc2Bucle, 250);
@@ -103496,7 +104699,7 @@ function _esc2Vivo(q){
   var C = ESC2.cam, ahora = Date.now();
   if(!q){
     C.sinQuad++;
-    if(C.sinQuad >= 4){ C.vivo = null; C.estable = 0; C.bloqueo = false; C.cand = null; }
+    if(C.sinQuad >= 4){ if(C.vivo) C.desde = ahora; C.vivo = null; C.estable = 0; C.bloqueo = false; C.cand = null; }
   }else{
     C.sinQuad = 0;
     if(C.vivo && _esc2Dif(C.vivo, q) < 0.07){
@@ -103519,7 +104722,10 @@ function _esc2AreaN(q){ return Math.abs(ESCN.area(q)); }
 function _esc2Pista(ahora){
   var C = ESC2.cam;
   if(!C.vivo){
-    if(ahora - C.desde > 4500) _esc2PistaTexto('No veo el borde: igual puedes tomar la foto y ajustar las esquinas');
+    if(C.osc && !C.luz && _esc2LuzPuede()){ _esc2PistaTexto('Está oscuro: prende la linterna'); return; }   /* 13/11/2026 (CAMARA-1311) */
+    /* 13/11/2026 · si tarda, se dice por qué suele ser (una hoja clara sobre una mesa clara) */
+    if(ahora - C.desde > 6500) _esc2PistaTexto('No veo el borde: igual puedes tomar la foto y ajustar las esquinas');
+    else if(ahora - C.desde > 2500) _esc2PistaTexto('Sobre algo oscuro la encuentro más rápido');
     else _esc2PistaTexto('Buscando la hoja…');
     return;
   }
@@ -104290,6 +105496,10 @@ function esc2Atras(){
   if(_esc2Abierto('esc2-rec')){ _esc2RecVolver(); return true; }
   if(_esc2Abierto('esc2-fil')){ esc2FilListo(); return true; }
   if(_esc2Abierto('esc2-cam')){ esc2CamCerrar(); return true; }
+  /* 13/11/2026 · la hoja que subió (Más, el PDF, «A la hoja…») y el modo de ordenar también se cierran con el atrás */
+  if(_esc2HojaAbierta()){ _esc2HojaCerrar(); return true; }
+  var act = document.querySelector('.pantalla.activa');
+  if(ESC2.ordenar && act && act.id === 'p-scan'){ esc2Ordenar(false); return true; }
   return false;
 }
 
@@ -104382,6 +105592,7 @@ function _esc2Vaciar(){
   if(ESC2.doc) ESC2.doc.pags.forEach(_esc2BorrarBlobs);
   ESC2.doc = null;
   ESC2.panel = null;
+  ESC2.pdf = null; ESC2.ver = (ESC2.ver || 0) + 1; ESC2.ordenar = false; ESC2.sel = {}; ESC2.ordHist = [];   /* 13/11/2026 */
   _esc2Put('meta', 'doc', null);
 }
 /* El nombre del archivo, en letras simples: sin tildes ni «·». Un
@@ -104407,6 +105618,7 @@ function _esc2FechaCorta(t){
 }
 function pintarScan(){
   var c = $('scan-cuerpo'); if(!c) return;
+  if(_E2_ARR && _E2_ARR.activo) return;     /* 13/11/2026 · no se repinta debajo del dedo que arrastra: al soltar se pinta */
   /* la vista se repinta sola cuando termina una hoja: lo que se estaba
      escribiendo en «Guardar» no se puede perder por eso */
   var guardo = null;
@@ -104469,42 +105681,51 @@ function _pintarScan(c){
          (D.entregado && !sinSesion() ? '<br><span>Ya lo compartiste, pero no está guardado en Documentos.</span>' : '') + '</p>' +
          (sinSesion()
            ? '<div class="dos"><button type="button" class="btn" style="margin:0" onclick="esc2Compartir()">📲 Compartir el PDF</button>' +
-             '<button type="button" class="btn sec" style="margin:0" onclick="esc2Descargar()">⬇️ Guardarlo en el celular</button></div>'
+             '<button type="button" class="btn sec" style="margin:0" onclick="esc2Descargar()">💾 Guardarlo en el celular</button></div>'
            : '<button type="button" class="btn" onclick="esc2Panel(\'guardar\')"><span>✅ Terminar y guardar este PDF</span> <span data-sin-trad>(' + n + ')</span></button>') +
          '<div class="dos"><button type="button" class="btn sec" onclick="esc2Añadir()">➕ Añadir otra hoja a este mismo PDF</button>' +
          '<button type="button" class="btn sec e2d-otro" onclick="esc2Aparte()">🔄 Descartar y escanear documento aparte</button></div></div>';
   }
-  if(ESC2.ordenar) h += '<p class="sub" style="margin:-4px 0 12px">Mueve cada hoja con las flechas. Toca «Listo» cuando quede en orden.</p>';
-  h += '<div class="e2d-rej">';
+  /* 13/11/2026 · ORDENAR (ui-orden): se elige y se manda a su lugar, o se arrastra. Sin flechas: con cien hojas no
+     servían. Las miniaturas, más chicas mientras se ordena. */
+  var ord = !!ESC2.ordenar, sel = ESC2.sel || {};
+  if(ord) h += '<p class="sub" style="margin:-4px 0 12px">' + (n > 1
+      ? 'Toca las hojas que quieres mover y elige abajo a dónde van. O mantén una presionada y arrástrala.'
+      : 'Con una sola hoja no hay nada que ordenar.') + '</p>';
+  h += '<div class="e2d-rej' + (ord ? ' ord' : '') + '" id="e2d-rej">';
   D.pags.forEach(function(p, i){
-    var listo = p.out && p.hecho === _esc2Clave(p);
-    h += '<div class="e2d-pag" role="button" tabindex="0" onclick="esc2VerPagina(' + i + ')" aria-label="Página ' + (i+1) + '">' +
-         (p.mini ? '<img src="' + p.mini + '" alt="">' : '') +
+    var listo = p.out && p.hecho === _esc2Clave(p), esSel = ord && !!sel[p.id];
+    h += '<div class="e2d-pag' + (esSel ? ' sel' : '') + '" role="button" tabindex="0" data-i="' + i + '" data-id="' + escA(p.id) + '"' +
+         (ord ? ' aria-pressed="' + esSel + '" onclick="esc2OrdTocar(' + i + ')"' : ' onclick="esc2VerPagina(' + i + ')"') +
+         ' onkeydown="_esc2PagTecla(event,' + i + ')" aria-label="Página ' + (i+1) + '">' +
+         (p.mini ? '<img src="' + p.mini + '" alt="" draggable="false">' : '') +
          (listo ? '' : '<span class="esc2-giro si" aria-hidden="true"></span>') +
          '<span class="n">' + (i+1) + '</span>' +
-         (ESC2.ordenar ? '<span class="e2d-ord">' +
-            (i > 0 ? '<span role="button" aria-label="Antes" onclick="event.stopPropagation();esc2Mover(' + i + ',-1)">‹</span>' : '') +
-            (i < n-1 ? '<span role="button" aria-label="Después" onclick="event.stopPropagation();esc2Mover(' + i + ',1)">›</span>' : '') +
-          '</span>' : '') +
+         (ord ? '<span class="ck" aria-hidden="true">' + (esSel ? '✓' : '') + '</span>' : '') +
          '</div>';
   });
-  h += '<button type="button" class="e2d-mas" onclick="esc2Añadir()"><span aria-hidden="true">＋</span><span>Añadir hojas</span></button>';
+  if(!ord) h += '<button type="button" class="e2d-mas" onclick="esc2Añadir()"><span aria-hidden="true">＋</span><span>Añadir hojas</span></button>';
   h += '</div>';
   h += '<p class="e2d-prog" id="e2d-prog">' + (pend ? ('Preparando ' + pend + (pend === 1 ? ' hoja' : ' hojas') + '…') : '') + '</p>';
   h += '<div class="e2d-panel" id="e2d-panel">' + _esc2PanelHtml() + '</div>';
   h += '<div class="e2d-sep"></div>';
-  h += '<div class="e2d-barra">' +
-       (ESC2.ordenar
-         ? '<button type="button" onclick="esc2Ordenar(false)" style="grid-column:span 5"><span>✓</span><small>Listo, así queda el orden</small></button>'
-         : '<button type="button" onclick="esc2Añadir()"><span>📷</span><small>Añadir</small></button>' +
-           '<button type="button" onclick="esc2VerPagina(0)"><span>✏️</span><small>Editar</small></button>' +
-           '<button type="button" onclick="esc2Compartir()"><span>📲</span><small>Compartir</small></button>' +
-           (sinSesion() ? '<button type="button" class="pri" onclick="esc2Descargar()"><span>⬇️</span><small>Descargar</small></button>'
-                        : '<button type="button" class="pri" onclick="esc2Panel(\'guardar\')"><span>💾</span><small>Guardar</small></button>') +
-           '<button type="button" onclick="esc2Panel(\'mas\')"><span>⋯</span><small>Más</small></button>') +
-       '</div></div>';
+  /* 13/11/2026 · Marcelo: «abajo tendrían que aparecer más opciones, y tener la opción de guardar en el celular»:
+     seis a la vista (Ordenar y Guardar incluidos) y «Más» como hoja que sube, con todo lo demás */
+  h += ord ? _esc2OrdBarraHtml() :
+       '<div class="e2d-barra">' +
+       '<button type="button" onclick="esc2Añadir()"><span>📷</span><small>Añadir</small></button>' +
+       '<button type="button" onclick="esc2VerPagina(0)"><span>✏️</span><small>Editar</small></button>' +
+       '<button type="button" onclick="esc2Ordenar(true)"' + (n > 1 ? '' : ' disabled') + '><span>↕️</span><small>Ordenar</small></button>' +
+       '<button type="button" onclick="esc2Compartir()"><span>📲</span><small>Compartir</small></button>' +
+       (sinSesion() ? '<button type="button" class="pri" onclick="esc2Descargar()"><span>💾</span><small>Guardar</small></button>'
+                    : '<button type="button" class="pri" onclick="esc2Panel(\'guardar\')"><span>💾</span><small>Guardar</small></button>') +
+       '<button type="button" onclick="esc2Mas()"><span>⋯</span><small>Más</small></button>' +
+       '</div>';
+  h += '</div>';
   c.innerHTML = h;
   if(ESC2.panel === 'guardar') _esc2PanelGuardarPrep();
+  _esc2OrdOir(c);
+  if(!pend) _esc2PdfPrevioPoner();     /* 13/11/2026 · el PDF, listo de fondo para «Compartir» */
 }
 /* ══ 7/11/2026 · GUARDAR EN LAS CARPETAS QUE USA LA OBRA ═══════════════
    Marcelo: «cuando escaneo, me indica a qué carpetas, pero son carpetas
@@ -104787,6 +106008,7 @@ function _esc2TemasOpc(){
   return L.slice(0, 200).map(function(x){ return '<option value="' + escA(x) + '"></option>'; }).join('');
 }
 function esc2Panel(cual){
+  if(cual === 'mas'){ esc2Mas(); return; }      /* 13/11/2026 · «Más» sube como hoja, a la vista */
   if(cual === 'guardar' && sinSesion()){ ESC2.panel = null; esc2Descargar(); return; }   /* 11/11/2026 · sin cuenta: al celular */
   ESC2.panel = (ESC2.panel === cual) ? null : cual;
   pintarScan();
@@ -104801,19 +106023,325 @@ function esc2VerPagina(i){
   if(ESC2.ordenar) return;
   esc2Filtros(D.pags.map(function(p){ return p.id; }), Math.max(0, Math.min(D.pags.length-1, i || 0)), { editar:true });
 }
-function esc2Ordenar(v){ ESC2.ordenar = !!v; ESC2.panel = null; pintarScan(); }
+/* ══ 13/11/2026 · ORDENAR LAS HOJAS, TAMBIÉN CUANDO SON CIEN ════════
+   Marcelo: «para ordenar, salen flechas que las puedes mover y está
+   bien, pero ¿qué pasa si escaneo 100 hojas y tengo que moverla hasta
+   la página 2? Mejora eso». Con flechas, la hoja 100 llega a la 2 con
+   98 toques. Ahora, en «Ordenar»:
+     · se toca una hoja (o varias) y abajo se elige a dónde van: «Al
+       inicio», «A la hoja…» (el número que uno quiera) o «Al final».
+       Varias elegidas viajan juntas, en su orden;
+     · o se mantiene una hoja presionada y se arrastra: la pantalla corre
+       sola cuando el dedo se acerca al borde de arriba o al de abajo;
+     · las miniaturas salen más chicas (tres por fila en el celular), y
+       hay «Deshacer» e «Invertir el orden» (para el que escaneó el taco
+       empezando por la última hoja).
+   El orden se guarda en el celular apenas cambia, como siempre.       */
+function esc2Ordenar(v){
+  _esc2ArrCancelar(true);
+  ESC2.ordenar = !!v; ESC2.sel = {}; ESC2.ordHist = []; ESC2.panel = null;
+  _esc2HojaCerrar();
+  pintarScan();
+  if(v){ var r = $('e2d-rej'); if(r) try{ r.scrollIntoView({ block:'start', behavior:'smooth' }); }catch(e){} }
+}
+/* por compatibilidad (las flechas de antes): una hoja, un lugar */
 function esc2Mover(i, d){
   var D = ESC2.doc; if(!D) return;
   var j = i + d; if(j < 0 || j >= D.pags.length) return;
-  var t = D.pags[i]; D.pags[i] = D.pags[j]; D.pags[j] = t;
-  _esc2Cambio();
-  _esc2Guardar(); pintarScan();
+  var p = D.pags[i];
+  _esc2OrdBloque([p.id], j);
+  pintarScan();
+}
+function _esc2OrdElegidas(){
+  var D = ESC2.doc, s = ESC2.sel || {};
+  return D ? D.pags.filter(function(p){ return s[p.id]; }).map(function(p){ return p.id; }) : [];
+}
+/* mueve juntas (en su orden) las hojas «ids», para que la primera quede en la posición «a» de las que no se mueven
+   (0 = la primera del documento). Devuelve si cambió algo. */
+function _esc2OrdBloque(ids, a){
+  var D = ESC2.doc; if(!D || !ids || !ids.length) return false;
+  var esta = {}; ids.forEach(function(id){ esta[id] = 1; });
+  var bloque = D.pags.filter(function(p){ return esta[p.id]; });
+  var resto = D.pags.filter(function(p){ return !esta[p.id]; });
+  if(!bloque.length) return false;
+  a = Math.max(0, Math.min(resto.length, a|0));
+  var nuevo = resto.slice(0, a).concat(bloque, resto.slice(a));
+  if(nuevo.every(function(p, k){ return p === D.pags[k]; })) return false;
+  ESC2.ordHist = ESC2.ordHist || [];
+  ESC2.ordHist.push(D.pags.map(function(p){ return p.id; }));
+  if(ESC2.ordHist.length > 60) ESC2.ordHist.shift();
+  D.pags = nuevo;
+  _esc2Cambio(); _esc2Guardar();
+  return true;
+}
+/* después de mover: se ve dónde quedaron (la primera, al centro de la pantalla, y todas con un brillo) */
+function _esc2OrdHecho(ids, cambio){
+  ESC2.sel = {};
+  pintarScan();
+  var D = ESC2.doc; if(!D) return;
+  var k = -1, i;
+  for(i = 0; i < D.pags.length; i++) if(ids.indexOf(D.pags[i].id) > -1){ k = i; break; }
+  if(k < 0) return;
+  var els = document.querySelectorAll('#e2d-rej .e2d-pag');
+  for(i = 0; i < els.length; i++) if(ids.indexOf(els[i].getAttribute('data-id')) > -1) els[i].classList.add('movida');
+  if(els[k]) try{ els[k].scrollIntoView({ block:'center', behavior:'smooth' }); }catch(e){}
+  if(cambio && typeof tostada === 'function') tostada(_esc2T(ids.length === 1 ? 'Ahora es la hoja' : 'Ahora empiezan en la hoja') + ' ' + (k + 1));
+}
+/* tocar una hoja la elige (o la suelta). Sin repintar todo: con cien miniaturas, eso se notaría */
+function esc2OrdTocar(i){
+  if(Date.now() - (_E2_ARR_FIN || 0) < 450) return;      /* fue un arrastre, no un toque */
+  var D = ESC2.doc; if(!D || !ESC2.ordenar) return;
+  var p = D.pags[i]; if(!p) return;
+  ESC2.sel = ESC2.sel || {};
+  if(ESC2.sel[p.id]) delete ESC2.sel[p.id]; else ESC2.sel[p.id] = 1;
+  var el = document.querySelector('#e2d-rej .e2d-pag[data-i="' + i + '"]');
+  if(!el){ pintarScan(); return; }
+  var si = !!ESC2.sel[p.id];
+  el.classList.toggle('sel', si);
+  el.setAttribute('aria-pressed', String(si));
+  var ck = el.querySelector('.ck'); if(ck) ck.textContent = si ? '✓' : '';
+  _esc2OrdBarraPoner();
+}
+function esc2OrdSoltar(){
+  ESC2.sel = {};
+  var els = document.querySelectorAll('#e2d-rej .e2d-pag.sel');
+  for(var i = 0; i < els.length; i++){ els[i].classList.remove('sel'); els[i].setAttribute('aria-pressed', 'false'); var ck = els[i].querySelector('.ck'); if(ck) ck.textContent = ''; }
+  _esc2OrdBarraPoner();
+}
+function esc2OrdMover(donde){
+  var D = ESC2.doc, ids = _esc2OrdElegidas(); if(!D || !ids.length) return;
+  _esc2OrdHecho(ids, _esc2OrdBloque(ids, donde === 'inicio' ? 0 : D.pags.length));
+}
+function esc2OrdDeshacer(){
+  var D = ESC2.doc, H = ESC2.ordHist || []; if(!D || !H.length) return;
+  var ant = H.pop(), por = {};
+  D.pags.forEach(function(p){ por[p.id] = p; });
+  var nuevo = ant.map(function(id){ return por[id]; }).filter(Boolean);
+  /* lo que no estaba en el orden de antes (no debería pasar) va al final, para no perder ninguna hoja */
+  D.pags.forEach(function(p){ if(nuevo.indexOf(p) < 0) nuevo.push(p); });
+  D.pags = nuevo;
+  ESC2.sel = {};
+  _esc2Cambio(); _esc2Guardar();
+  pintarScan();
+}
+function esc2OrdInvertir(){
+  var D = ESC2.doc; if(!D || D.pags.length < 2) return;
+  ESC2.ordHist = ESC2.ordHist || [];
+  ESC2.ordHist.push(D.pags.map(function(p){ return p.id; }));
+  D.pags = D.pags.slice().reverse();
+  ESC2.sel = {};
+  _esc2Cambio(); _esc2Guardar();
+  pintarScan();
+  if(typeof tostada === 'function') tostada(_esc2T('La última hoja ahora es la primera'));
+}
+/* «A la hoja…»: el número que uno quiera, sin teclear si no hace falta (− y +, «Al inicio», «Al final»). Sale ARRIBA:
+   abajo, el teclado del celular la taparía */
+function esc2OrdMoverA(){
+  var D = ESC2.doc, ids = _esc2OrdElegidas(); if(!D || !ids.length) return;
+  var n = D.pags.length, max = n - ids.length + 1, primera = 0, i;
+  for(i = 0; i < n; i++) if(ids.indexOf(D.pags[i].id) > -1){ primera = i; break; }
+  var tit = ids.length === 1 ? ('<span>Mover la hoja</span> <b data-sin-trad>' + (primera + 1) + '</b>')
+                             : ('<span>Mover</span> <b data-sin-trad>' + ids.length + '</b> <span>hojas</span>');
+  _esc2HojaAbrir('mover',
+    '<h3>' + tit + '</h3>' +
+    '<p class="sub"><span>' + (ids.length === 1 ? '¿Qué número de hoja será?' : '¿Desde qué número de hoja van, en el mismo orden?') + '</span> ' +
+      '<span data-sin-trad>(1–' + max + ')</span></p>' +
+    '<div class="e2d-mover">' +
+      '<button type="button" onclick="_esc2MoverPaso(-1)" aria-label="Uno menos">−</button>' +
+      '<input id="e2d-mover-n" type="number" inputmode="numeric" min="1" max="' + max + '" value="' + Math.min(max, Math.max(1, primera + 1)) + '" onfocus="try{this.select()}catch(e){}" aria-label="Número de hoja">' +
+      '<button type="button" onclick="_esc2MoverPaso(1)" aria-label="Uno más">+</button>' +
+    '</div>' +
+    '<div class="e2d-chips"><button type="button" onclick="_esc2MoverPoner(1)">⤒ Al inicio</button>' +
+      '<button type="button" onclick="_esc2MoverPoner(' + max + ')">⤓ Al final</button></div>' +
+    '<p class="sub" id="e2d-mover-msg" style="min-height:18px;margin:0 0 8px"></p>' +
+    '<div class="dos"><button type="button" class="btn sec" style="margin:0" onclick="_esc2HojaCerrar()">Cancelar</button>' +
+    '<button type="button" class="btn" style="margin:0" onclick="_esc2MoverListo()">Mover</button></div>', true);
+  var inp = $('e2d-mover-n');
+  if(inp) inp.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); _esc2MoverListo(); } });
+}
+function _esc2MoverPaso(d){
+  var i = $('e2d-mover-n'); if(!i) return;
+  var max = +i.max || 1, v = (parseInt(i.value, 10) || 1) + d;
+  i.value = String(Math.max(1, Math.min(max, v)));
+}
+function _esc2MoverPoner(v){ var i = $('e2d-mover-n'); if(i) i.value = String(v); _esc2MoverListo(); }
+function _esc2MoverListo(){
+  var i = $('e2d-mover-n'), ids = _esc2OrdElegidas();
+  if(!i || !ids.length){ _esc2HojaCerrar(); return; }
+  var max = +i.max || 1, v = parseInt(i.value, 10);
+  if(!(v >= 1 && v <= max)){
+    var m = $('e2d-mover-msg');
+    if(m){ m.style.color = 'var(--mal)'; m.textContent = _esc2T('Pon un número del 1 al') + ' ' + max; }
+    return;
+  }
+  _esc2HojaCerrar();
+  _esc2OrdHecho(ids, _esc2OrdBloque(ids, v - 1));
+}
+/* la barra de abajo mientras se ordena */
+function _esc2OrdBarraHtml(){
+  var D = ESC2.doc, n = D ? D.pags.length : 0, nSel = _esc2OrdElegidas().length, H = (ESC2.ordHist || []).length;
+  return '<div class="e2d-barra ordbar" id="e2d-ordbar">' +
+    '<p class="e2d-ordinfo">' + (nSel
+      ? '<b data-sin-trad>' + nSel + '</b> <span>' + (nSel === 1 ? 'hoja elegida' : 'hojas elegidas') + '</span> · <span>¿a dónde van?</span>'
+      : '<span>Toca una hoja para moverla</span>') + '</p>' +
+    (nSel
+      ? '<button type="button" onclick="esc2OrdMover(\'inicio\')"><span>⤒</span><small>Al inicio</small></button>' +
+        '<button type="button" onclick="esc2OrdMoverA()"><span>#</span><small>A la hoja…</small></button>' +
+        '<button type="button" onclick="esc2OrdMover(\'final\')"><span>⤓</span><small>Al final</small></button>' +
+        '<button type="button" onclick="esc2OrdSoltar()"><span>✕</span><small>Soltar</small></button>'
+      : '<button type="button" onclick="esc2OrdDeshacer()"' + (H ? '' : ' disabled') + '><span>↶</span><small>Deshacer</small></button>' +
+        '<button type="button" onclick="esc2OrdInvertir()"' + (n > 1 ? '' : ' disabled') + '><span>⇅</span><small>Invertir</small></button>' +
+        '<button type="button" class="listo" onclick="esc2Ordenar(false)"><span>✓</span><small>Listo</small></button>') +
+    '</div>';
+}
+function _esc2OrdBarraPoner(){
+  var b = $('e2d-ordbar'); if(!b){ pintarScan(); return; }
+  var t = document.createElement('div'); t.innerHTML = _esc2OrdBarraHtml();
+  var nb = t.firstChild; b.parentNode.replaceChild(nb, b);
+  try{ if(typeof idiomaActual === 'function' && idiomaActual() !== 'es' && typeof _tradRama === 'function') _tradRama(nb.parentNode, false); }catch(_t){}
+}
+/* Enter o espacio sobre una miniatura (teclado): lo mismo que tocarla */
+function _esc2PagTecla(e, i){
+  if(!e || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault();
+  if(ESC2.ordenar) esc2OrdTocar(i); else esc2VerPagina(i);
+}
+
+/* ── arrastrar con el dedo (o con el mouse) ───────────────────────── */
+var _E2_ARR = null, _E2_ARR_FIN = 0;
+function _esc2OrdOir(c){
+  if(!c || c._e2Oye) return;
+  c._e2Oye = true;
+  var pag = function(e){ return e.target && e.target.closest ? e.target.closest('.e2d-pag[data-i]') : null; };
+  /* con el dedo: hay que mantenerla presionada un tercio de segundo; si el dedo se mueve antes, es que la pantalla
+     se está desplazando y no se toca nada */
+  c.addEventListener('touchstart', function(e){
+    if(!ESC2.ordenar || e.touches.length !== 1) return;
+    var el = pag(e); if(!el) return;
+    _esc2ArrPreparar(el, e.touches[0].clientX, e.touches[0].clientY, 'toque');
+  }, { passive:true });
+  c.addEventListener('touchmove', function(e){
+    var A = _E2_ARR; if(!A || A.tipo !== 'toque') return;
+    var t = e.touches[0]; if(!t) return;
+    if(!A.activo){
+      if(Math.abs(t.clientX - A.x0) > 10 || Math.abs(t.clientY - A.y0) > 10) _esc2ArrCancelar(true);
+      return;
+    }
+    if(e.cancelable) e.preventDefault();
+    _esc2ArrMover(t.clientX, t.clientY);
+  }, { passive:false });
+  c.addEventListener('touchend', function(e){
+    var A = _E2_ARR; if(!A || A.tipo !== 'toque') return;
+    if(A.activo){ if(e.cancelable) e.preventDefault(); _esc2ArrSoltar(); } else _esc2ArrCancelar(true);
+  }, { passive:false });
+  c.addEventListener('touchcancel', function(){ if(_E2_ARR && _E2_ARR.tipo === 'toque') _esc2ArrCancelar(true); });
+  /* el menú de «guardar imagen» del celular no sale al mantener presionada una miniatura mientras se ordena */
+  c.addEventListener('contextmenu', function(e){ if(ESC2.ordenar && pag(e)) e.preventDefault(); });
+  /* con mouse (computadora): se arrastra apenas se mueve */
+  c.addEventListener('pointerdown', function(e){
+    if(!ESC2.ordenar || e.pointerType !== 'mouse' || e.button !== 0) return;
+    var el = pag(e); if(!el) return;
+    _esc2ArrPreparar(el, e.clientX, e.clientY, 'mouse');
+  });
+  document.addEventListener('pointermove', function(e){
+    var A = _E2_ARR; if(!A || A.tipo !== 'mouse' || e.pointerType !== 'mouse') return;
+    if(!A.activo){
+      if(Math.abs(e.clientX - A.x0) + Math.abs(e.clientY - A.y0) < 6) return;
+      _esc2ArrEmpezar();
+      if(!_E2_ARR) return;
+    }
+    e.preventDefault();
+    _esc2ArrMover(e.clientX, e.clientY);
+  });
+  document.addEventListener('pointerup', function(){
+    var A = _E2_ARR; if(!A || A.tipo !== 'mouse') return;
+    if(A.activo) _esc2ArrSoltar(); else _esc2ArrCancelar(true);
+  });
+  window.addEventListener('blur', function(){ if(_E2_ARR) _esc2ArrCancelar(true); });
+}
+function _esc2ArrPreparar(el, x, y, tipo){
+  _esc2ArrCancelar(true);
+  _E2_ARR = { el:el, id:el.getAttribute('data-id'), x0:x, y0:y, x:x, y:y, tipo:tipo, activo:false, t:0, raf:0, dest:-1, ids:null };
+  if(tipo === 'toque') _E2_ARR.t = setTimeout(_esc2ArrEmpezar, 340);
+}
+function _esc2ArrEmpezar(){
+  var A = _E2_ARR; if(!A || A.activo) return;
+  if(!ESC2.doc || !ESC2.ordenar || !A.el.isConnected){ _esc2ArrCancelar(true); return; }
+  A.activo = true;
+  try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){}
+  /* si la hoja está elegida, viajan todas las elegidas; si no, solo ella */
+  A.ids = (ESC2.sel || {})[A.id] ? _esc2OrdElegidas() : [A.id];
+  var r = A.el.getBoundingClientRect();
+  A.dx = A.x0 - r.left; A.dy = A.y0 - r.top;
+  var f = A.el.cloneNode(true);
+  f.className = 'e2d-pag e2d-fantasma';
+  f.removeAttribute('onclick'); f.removeAttribute('onkeydown'); f.removeAttribute('tabindex'); f.removeAttribute('role');
+  f.setAttribute('aria-hidden', 'true');
+  f.style.width = r.width + 'px'; f.style.height = r.height + 'px';
+  if(A.ids.length > 1){ var b = document.createElement('span'); b.className = 'cuantas'; b.textContent = String(A.ids.length); f.appendChild(b); }
+  document.body.appendChild(f);
+  A.f = f;
+  var els = document.querySelectorAll('#e2d-rej .e2d-pag');
+  for(var k = 0; k < els.length; k++) if(A.ids.indexOf(els[k].getAttribute('data-id')) > -1) els[k].classList.add('arrastrada');
+  _esc2ArrMover(A.x, A.y);
+  A.raf = requestAnimationFrame(_esc2ArrCorrer);
+}
+function _esc2ArrMover(x, y){
+  var A = _E2_ARR; if(!A || !A.activo) return;
+  A.x = x; A.y = y;
+  if(A.f) A.f.style.transform = 'translate(' + Math.round(x - A.dx) + 'px,' + Math.round(y - A.dy) + 'px) scale(1.05)';
+  _esc2ArrDestino();
+}
+/* a dónde cae: cuántas de las hojas que NO se mueven quedan antes del dedo, leyendo la grilla como un libro */
+function _esc2ArrDestino(){
+  var A = _E2_ARR; if(!A || !A.activo) return;
+  var els = document.querySelectorAll('#e2d-rej .e2d-pag'), lista = [], k;
+  for(k = 0; k < els.length; k++) if(A.ids.indexOf(els[k].getAttribute('data-id')) < 0) lista.push(els[k]);
+  var dest = lista.length, marca = null, lado = '';
+  for(k = 0; k < lista.length; k++){
+    var r = lista[k].getBoundingClientRect();
+    if(A.y < r.top || (A.y <= r.bottom && A.x < r.left + r.width/2)){ dest = k; marca = lista[k]; lado = 'antes'; break; }
+  }
+  if(!marca && lista.length){ marca = lista[lista.length - 1]; lado = 'despues'; }
+  if(A.marca && (A.marca !== marca || A.lado !== lado)) A.marca.classList.remove('antes', 'despues');
+  if(marca) marca.classList.add(lado);
+  A.marca = marca; A.lado = lado; A.dest = dest;
+}
+/* cerca del borde de arriba o del de abajo (la barra), la pantalla corre sola: más rápido mientras más cerca */
+function _esc2ArrCorrer(){
+  var A = _E2_ARR; if(!A || !A.activo) return;
+  var H = window.innerHeight || 800, arriba = 96, abajo = 160, v = 0;
+  if(A.y < arriba) v = -Math.ceil(24*Math.min(1, (arriba - A.y)/arriba));
+  else if(A.y > H - abajo) v = Math.ceil(24*Math.min(1, (A.y - (H - abajo))/abajo));
+  if(v){
+    var se = document.scrollingElement || document.documentElement, antes = se.scrollTop;
+    se.scrollTop = antes + v;
+    if(se.scrollTop !== antes) _esc2ArrDestino();
+  }
+  A.raf = requestAnimationFrame(_esc2ArrCorrer);
+}
+function _esc2ArrSoltar(){
+  var A = _E2_ARR; if(!A) return;
+  var ids = A.ids || [A.id], dest = A.dest;
+  _esc2ArrCancelar(true);
+  if(dest < 0) return;
+  _esc2OrdHecho(ids, _esc2OrdBloque(ids, dest));
+}
+function _esc2ArrCancelar(callado){
+  var A = _E2_ARR; if(!A) return;
+  _E2_ARR = null;
+  clearTimeout(A.t); cancelAnimationFrame(A.raf);
+  if(A.f && A.f.parentNode) A.f.parentNode.removeChild(A.f);
+  if(A.marca) A.marca.classList.remove('antes', 'despues');
+  var els = document.querySelectorAll('#e2d-rej .e2d-pag.arrastrada');
+  for(var k = 0; k < els.length; k++) els[k].classList.remove('arrastrada');
+  if(A.activo) _E2_ARR_FIN = Date.now();
 }
 function esc2Renombrar(){
   var D = ESC2.doc; if(!D) return;
   preguntar('Nombre del documento', 'Así se llama el PDF cuando lo mandas.', D.nombre, function(v){
     v = String(v || '').trim(); if(!v) return;
-    D.nombre = v.slice(0, 90); ESC2.pdf = null; if(ESC2.panel === 'pdf') ESC2.panel = null;
+    D.nombre = v.slice(0, 90); ESC2.pdf = null; ESC2.ver = (ESC2.ver || 0) + 1; if(ESC2.panel === 'pdf') ESC2.panel = null;
     _esc2Guardar(); pintarScan();
   }, '✏️');
 }
@@ -104841,6 +106369,8 @@ function esc2Aparte(){
 }
 /* V7.10 · al entrar al escáner: lo ya guardado en Documentos no se queda; el escáner empieza en blanco */
 function _esc2AlEntrar(){
+  _esc2HojaCerrar(); _esc2ArrCancelar(true);     /* 13/11/2026 · se entra al documento, no a una hoja que quedó abierta */
+  if(ESC2.ordenar){ ESC2.ordenar = false; ESC2.sel = {}; ESC2.ordHist = []; }
   if(ESC2.pedido) return;
   if(ESC2.doc && ESC2.doc.guardado) _esc2Vaciar();
 }
@@ -105003,6 +106533,16 @@ function esc2PdfCapas(doc, H, x, y, pw, ph){
 function _esc2PdfPagina(p){
   var cl = _esc2Clave(p) + '|' + ESC2_PDF_V;
   if(p.pdfp && p.pdfp.clave === cl) return Promise.resolve(p.pdfp);
+  /* 13/11/2026 · el armado de fondo y el del toque no hacen dos veces la misma hoja */
+  if(p.pdfpProm && p.pdfpClave === cl) return p.pdfpProm;
+  p.pdfpClave = cl;
+  var pr = _esc2PdfPaginaHacer(p, cl);
+  p.pdfpProm = pr;
+  var fin = function(){ if(p.pdfpProm === pr) p.pdfpProm = null; };
+  pr.then(fin, fin);
+  return pr;
+}
+function _esc2PdfPaginaHacer(p, cl){
   var comoAntes = function(){
     return _esc2Buffer(p.out).then(function(buf){ return { clave:cl, tipo:'JPEG', bytes:new Uint8Array(buf) }; });
   };
@@ -105015,15 +106555,18 @@ function _esc2PdfPagina(p){
 }
 /* cada página del tamaño de su hoja (una A4 sale A4; un recibo sale
    angosto), sin márgenes blancos inventados */
-function esc2Pdf(D){
+function esc2Pdf(D, alAvance){
   D = D || ESC2.doc;
   if(!D || !D.pags.length) return Promise.reject('vacio');
   return _esc2Todo(D).then(function(ps){
     /* de a una: veinte hojas abiertas a la vez en un celular chico son
-       cientos de MB de memoria */
+       cientos de MB de memoria. 13/11/2026 · alAvance(hechas, total): la hoja del PDF muestra cómo va */
     var out = [], cadena = Promise.resolve();
     ps.forEach(function(p, i){
-      cadena = cadena.then(function(){ return _esc2PdfPagina(p); }).then(function(r){ out[i] = r; });
+      cadena = cadena.then(function(){ return _esc2PdfPagina(p); }).then(function(r){
+        out[i] = r;
+        if(alAvance) try{ alAvance(i + 1, ps.length); }catch(_a){}
+      });
     });
     return cadena.then(function(){ return out; });
   }).then(function(hojas){
@@ -105063,19 +106606,128 @@ function _esc2Msg(t, color){
   var m = $('e2d-prog'); if(!m) return;
   m.style.color = color || ''; m.textContent = t ? _esc2T(t) : '';
 }
+/* ══ 13/11/2026 · LAS HOJAS QUE SUBEN (Más, el PDF, «A la hoja…») ══
+   Van fijas encima del documento: se ven siempre, aunque el documento
+   tenga cien hojas y uno esté mirando la última. Se cierran con el
+   velo, con «Cerrar» o con el atrás del celular (esc2Atras).          */
+function _esc2HojaDom(){
+  var h = $('e2d-hoja');
+  if(h) return h;
+  h = document.createElement('div');
+  h.id = 'e2d-hoja'; h.className = 'e2d-hoja trad-capa';
+  h.setAttribute('role', 'dialog'); h.setAttribute('aria-modal', 'true');
+  h.innerHTML = '<div class="velo" onclick="_esc2HojaCerrar()"></div><div class="panel" id="e2d-hoja-p"></div>';
+  document.body.appendChild(h);
+  return h;
+}
+function _esc2HojaAbrir(cual, html, arriba){
+  _esc2Estilos();
+  var h = _esc2HojaDom();
+  ESC2.hoja = cual;
+  h.className = 'e2d-hoja trad-capa abierta' + (arriba ? ' arriba' : '');
+  $('e2d-hoja-p').innerHTML = (arriba ? '' : '<div class="tirador" aria-hidden="true"></div>') + html;
+  try{ if(typeof idiomaActual === 'function' && idiomaActual() !== 'es' && typeof _tradRama === 'function') _tradRama(h, false); }catch(_t){}
+}
+function _esc2HojaCerrar(cual){
+  if(cual && ESC2.hoja !== cual) return;
+  var h = $('e2d-hoja'); if(h) h.className = 'e2d-hoja trad-capa';
+  ESC2.hoja = null; ESC2.pdfAvance = null;
+}
+function _esc2HojaAbierta(){ var h = $('e2d-hoja'); return !!(h && h.className.indexOf('abierta') > -1); }
+
+/* ── «Más»: todo lo que se puede hacer con el documento, a la vista ── */
+function esc2Mas(){
+  var D = ESC2.doc; if(!D || !D.pags.length) return;
+  var n = D.pags.length, sin = sinSesion();
+  var op = function(ic, tit, sub, fn, cl){
+    return '<button type="button" class="e2d-op' + (cl ? ' ' + cl : '') + '" onclick="_esc2HojaCerrar();' + fn + '">' +
+      '<span class="i" aria-hidden="true">' + ic + '</span><span><b>' + tit + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</span></button>';
+  };
+  _esc2HojaAbrir('mas',
+    '<h3><span data-sin-trad>' + esc(D.nombre) + '</span></h3>' +
+    '<p class="sub"><span data-sin-trad>' + n + '</span> <span>' + (n === 1 ? 'página' : 'páginas') + '</span></p>' +
+    op('📲', 'Compartir el PDF', 'WhatsApp, correo, Drive…', 'esc2Compartir()') +
+    op('💾', 'Guardar en el celular', _esc2PuedeElegir() ? 'Eliges la carpeta' : 'Queda en Descargas', 'esc2Descargar()') +
+    (sin ? '' : op('🗂️', 'Guardar en Documentos de la obra', 'Para todo el equipo', 'esc2Panel(\'guardar\')')) +
+    '<div class="sepa"></div>' +
+    (n > 1 ? op('↕️', 'Cambiar el orden de las hojas', 'Elige y mueve, o arrastra', 'esc2Ordenar(true)') : '') +
+    op('✏️', 'Editar las hojas', 'Filtro, giro y recorte', 'esc2VerPagina(0)') +
+    op('✎', 'Cambiar el nombre', '', 'esc2Renombrar()') +
+    op('🖼️', 'Importar fotos de la galería', '', 'esc2Importar()') +
+    '<div class="sepa"></div>' +
+    op('📄', 'Empezar otro documento', '', 'esc2Nuevo()') +
+    op('🗑️', 'Botar este documento', '', 'esc2Botar()', 'mal') +
+    '<button type="button" class="btn sec" style="margin:10px 0 0" onclick="_esc2HojaCerrar()">Cerrar</button>');
+}
+
+/* ══ 13/11/2026 · COMPARTIR Y GUARDAR EN EL CELULAR, QUE FUNCIONEN ═══
+   Marcelo: «la opción compartir no funciona». Con diez hojas, armar el
+   PDF tarda más que los 3,5 s que el celular deja entre el toque y el
+   menú de compartir; la app lo dejaba listo en un panel DEBAJO de las
+   diez hojas —fuera de la pantalla— y el «Armando el PDF…» también:
+   no pasaba nada a la vista. Ahora:
+     · el PDF se arma solo, de fondo, apenas las hojas están listas
+       (_esc2PdfPrevio): al tocar «Compartir» ya está, y el menú de
+       compartir del celular se abre en el acto;
+     · si todavía no está, sube una hoja con el avance y, al terminar,
+       «Compartir» (un toque nuevo, que el celular sí acepta) y «Guardar
+       en el celular»;
+     · «Guardar en el celular»: si el celular deja elegir la carpeta, se
+       elige ahí mismo; si no, queda en Descargas, y se dice dónde;
+     · si el celular no deja compartir archivos desde la app, se dice y
+       se ofrece guardarlo.
+   Un PDF por versión del documento (ESC2.ver, que sube con cada cambio):
+   si algo cambia mientras se arma, ese PDF se bota y se arma el nuevo. */
+var ESC2_PREVIO_MAX = 40;          /* más hojas que esto: de fondo solo se adelanta cada hoja, el PDF se arma al pedirlo */
+function esc2PdfPreparar(alAvance){
+  var D = ESC2.doc;
+  if(!D || !D.pags.length) return Promise.reject('vacio');
+  if(alAvance) ESC2.pdfAvance = alAvance;
+  if(ESC2.pdf) return Promise.resolve(ESC2.pdf);
+  var v = ESC2.ver || 0;
+  if(ESC2.pdfProm && ESC2.pdfPromVer === v) return ESC2.pdfProm;
+  ESC2.pdfPromVer = v;
+  var pr = esc2Pdf(D, function(i, n){ if(ESC2.pdfAvance) try{ ESC2.pdfAvance(i, n); }catch(e){} }).then(function(r){
+    if(ESC2.pdfProm === pr) ESC2.pdfProm = null;
+    if((ESC2.ver || 0) !== v || ESC2.doc !== D) return esc2PdfPreparar();     /* cambió mientras se armaba */
+    ESC2.pdf = r;
+    return r;
+  }, function(e){
+    if(ESC2.pdfProm === pr) ESC2.pdfProm = null;
+    throw e;
+  });
+  ESC2.pdfProm = pr;
+  return pr;
+}
+var _E2_PREVIO_T = null;
+function _esc2PdfPrevioPoner(){
+  clearTimeout(_E2_PREVIO_T);
+  if(!ESC2.doc || !ESC2.doc.pags.length || ESC2.pdf || ESC2.pedido) return;
+  _E2_PREVIO_T = setTimeout(_esc2PdfPrevio, 900);
+}
+function _esc2PdfPrevio(){
+  var D = ESC2.doc;
+  if(!D || !D.pags.length || ESC2.pdf || ESC2.pdfProm || ESC2.pedido || ESC2.ordenar || _E2_ARR) return;
+  var act = document.querySelector('.pantalla.activa');
+  if(!act || act.id !== 'p-scan' || document.hidden) return;
+  if(_esc2Abierto('esc2-cam') || _esc2Abierto('esc2-rec') || _esc2Abierto('esc2-fil')) return;
+  if(D.pags.some(function(p){ return !(p.out && p.hecho === _esc2Clave(p)); })) return;   /* faltan hojas: al terminar se vuelve a pintar */
+  if(D.pags.length > ESC2_PREVIO_MAX){
+    /* un documento largo: se adelanta lo de cada hoja (lo que más tarda); el PDF entero se arma al pedirlo */
+    if(ESC2.partesProm) return;
+    var cad = Promise.resolve();
+    D.pags.forEach(function(p){ cad = cad.then(function(){ if(ESC2.doc !== D || ESC2.ordenar) throw 'otro'; return _esc2PdfPagina(p); }); });
+    ESC2.partesProm = cad.then(function(){ ESC2.partesProm = null; }, function(){ ESC2.partesProm = null; });
+    return;
+  }
+  esc2PdfPreparar().then(function(){ _esc2HojaPdfRefrescar(); }, function(){});
+}
+
 function esc2Compartir(){
   var D = ESC2.doc; if(!D || !D.pags.length) return;
-  var t0 = Date.now();
-  _esc2Msg('Armando el PDF…');
-  esc2Pdf(D).then(function(r){
-    ESC2.pdf = r;
-    try{ huellaRegistrar(r.blob, r.nombre); }catch(_hu){}   /* 11/11/2026 · OBRASST Verifica (con cuenta) */
-    _esc2Msg('');
-    /* compartir necesita que el toque sea reciente: si el PDF tardó, se
-       deja listo con su botón en vez de fallar callado */
-    if(Date.now() - t0 < 3500 && _esc2PuedeCompartir(r)){ esc2CompartirYa(); return; }
-    ESC2.panel = 'pdf'; pintarScan();
-  }).catch(function(){ _esc2Msg('No se pudo armar el PDF. Prueba con menos hojas o con el filtro B/N, que pesa menos.', 'var(--mal)'); });
+  var r = ESC2.pdf;
+  if(r && _esc2PuedeCompartir(r)){ _esc2CompartirAhora(r); return; }
+  _esc2HojaPdf('compartir', '');
 }
 function _esc2PuedeCompartir(r){
   try{
@@ -105083,33 +106735,148 @@ function _esc2PuedeCompartir(r){
     return !!(navigator.share && navigator.canShare && navigator.canShare({ files:[f] }));
   }catch(e){ return false; }
 }
-function esc2CompartirYa(){
-  var r = ESC2.pdf; if(!r) return;
-  if(!_esc2PuedeCompartir(r)){
-    esc2Descargar();
-    aviso('Se descargó el PDF', 'Este celular no deja compartir archivos directamente desde la app. El PDF quedó en tus descargas: ábrelo desde ahí y mándalo por donde quieras.', '⬇️');
-    return;
-  }
-  var f = new File([r.blob], r.nombre, { type:'application/pdf' });
-  navigator.share({ files:[f], title:r.nombre }).then(function(){ if(ESC2.doc && !ESC2.pedido){ ESC2.doc.entregado = Date.now(); _esc2Guardar(); } }, function(e){
-    if(e && e.name === 'NotAllowedError'){ ESC2.panel = 'pdf'; pintarScan(); }
+/* el menú de compartir del celular: se pide primero (con el toque fresco) y después lo demás */
+function _esc2CompartirAhora(r){
+  var pr;
+  try{ pr = navigator.share({ files:[new File([r.blob], r.nombre, { type:'application/pdf' })], title:r.nombre }); }
+  catch(e){ pr = Promise.reject(e); }
+  try{ huellaRegistrar(r.blob, r.nombre); }catch(_hu){}   /* 11/11/2026 · OBRASST Verifica (con cuenta) */
+  Promise.resolve(pr).then(function(){
+    if(ESC2.doc && !ESC2.pedido){ ESC2.doc.entregado = Date.now(); _esc2Guardar(); }
+    _esc2HojaCerrar('pdf');
+  }, function(e){
+    var nm = String(e && e.name || '');
+    if(nm === 'AbortError') return;                       /* cerró el menú: nada que decir */
+    /* el toque «venció» (NotAllowedError) o el celular no pudo: la hoja queda con sus botones */
+    _esc2HojaPdf('compartir', nm === 'NotAllowedError' ? '' : 'error');
   });
 }
+/* el botón «Compartir» de la hoja (y el del panel de antes) */
+function esc2CompartirYa(){
+  var r = ESC2.pdf;
+  if(!r || !_esc2PuedeCompartir(r)){ _esc2HojaPdf('compartir', ''); return; }
+  _esc2CompartirAhora(r);
+}
+/* la hoja del PDF: el avance mientras se arma y, al terminar, Compartir y Guardar en el celular */
+var _E2_PDF_T0 = 0;
+function _esc2HojaPdf(motivo, estado){
+  var D = ESC2.doc; if(!D || !D.pags.length) return;
+  if(motivo) ESC2.hojaMotivo = motivo;
+  ESC2.hojaEstado = estado || '';
+  _esc2HojaAbrir('pdf', _esc2HojaPdfHtml());
+  if(ESC2.pdf) return;
+  _E2_PDF_T0 = Date.now();
+  esc2PdfPreparar(_esc2HojaPdfAvance).then(function(r){
+    if(ESC2.hoja !== 'pdf') return;
+    /* recién armado y el toque todavía vale: se comparte de una */
+    if(ESC2.hojaMotivo === 'compartir' && !ESC2.hojaEstado && Date.now() - _E2_PDF_T0 < 2500 && _esc2PuedeCompartir(r)){
+      _esc2HojaPdfRefrescar(); _esc2CompartirAhora(r); return;
+    }
+    _esc2HojaPdfRefrescar();
+  }, function(){
+    if(ESC2.hoja !== 'pdf') return;
+    ESC2.hojaEstado = 'malPdf'; _esc2HojaPdfRefrescar();
+  });
+}
+function _esc2HojaPdfHtml(){
+  var D = ESC2.doc, r = ESC2.pdf, n = D ? D.pags.length : 0, est = ESC2.hojaEstado || '';
+  var h = '<h3><span data-sin-trad>' + esc(_esc2Archivo(D ? D.nombre : '')) + '</span></h3>';
+  if(!r){
+    if(est === 'malPdf') return h +
+      '<p class="sub" style="color:var(--mal)">No se pudo armar el PDF. Prueba con menos hojas o con el filtro B/N, que pesa menos.</p>' +
+      '<button type="button" class="btn" onclick="_esc2HojaPdf(null, \'\')">Reintentar</button>' +
+      '<button type="button" class="btn sec" style="margin:0" onclick="_esc2HojaCerrar()">Cerrar</button>';
+    return h +
+      '<div class="e2d-pdfest"><span class="esc2-giro si" aria-hidden="true"></span><div><b>Armando el PDF…</b>' +
+      '<p class="sub" style="margin:2px 0 0" id="e2d-pdf-av"><span data-sin-trad>' + n + '</span> <span>' + (n === 1 ? 'hoja' : 'hojas') + '</span></p></div></div>' +
+      '<div class="e2d-barrita"><i id="e2d-pdf-bar"></i></div>' +
+      '<button type="button" class="btn sec" style="margin:0" onclick="_esc2HojaCerrar()">Cerrar</button>';
+  }
+  var puede = _esc2PuedeCompartir(r), enColor = D && D.pags.some(function(p){ return p.filtro !== 'bn'; });
+  h += '<p class="sub">✅ <span data-sin-trad>' + r.n + '</span> <span>' + (r.n === 1 ? 'página' : 'páginas') + '</span> · <span data-sin-trad>' + _esc2Peso(r.blob.size) + '</span></p>';
+  if(est === 'error') h += '<p class="sub" style="color:var(--mal)">No se abrió el menú para compartir. Toca otra vez, o guárdalo en el celular y mándalo desde ahí.</p>';
+  if(!puede) h += '<p class="sub">Este celular no deja compartir archivos desde la app. Guárdalo y mándalo desde Archivos o desde WhatsApp.</p>';
+  if(enColor && r.blob.size > 400*1024) h += '<p class="sub" style="font-size:12.5px">¿Es solo texto y firmas? Con el filtro B/N pesa hasta cinco veces menos.</p>';
+  if(puede) h += '<button type="button" class="btn" onclick="esc2CompartirYa()">📲 Compartir</button>';
+  h += '<button type="button" class="btn' + (puede ? ' sec' : '') + '" onclick="esc2Descargar()">💾 Guardar en el celular</button>';
+  h += '<button type="button" class="btn sec" style="margin:0" onclick="_esc2HojaCerrar()">Cerrar</button>';
+  return h;
+}
+function _esc2HojaPdfRefrescar(){
+  if(ESC2.hoja !== 'pdf') return;
+  var p = $('e2d-hoja-p'); if(!p) return;
+  p.innerHTML = '<div class="tirador" aria-hidden="true"></div>' + _esc2HojaPdfHtml();
+  try{ if(typeof idiomaActual === 'function' && idiomaActual() !== 'es' && typeof _tradRama === 'function') _tradRama($('e2d-hoja'), false); }catch(_t){}
+}
+function _esc2HojaPdfAvance(i, n){
+  var b = $('e2d-pdf-bar'), t = $('e2d-pdf-av');
+  if(b) b.style.width = Math.round(100*i/Math.max(1, n)) + '%';
+  if(t) t.innerHTML = '<span>' + _esc2T('Hojas listas:') + '</span> <span data-sin-trad>' + i + ' / ' + n + '</span>';
+}
+/* el PDF, ya: si no está, con la hoja de avance a la vista */
+function _esc2ConPdf(motivo){
+  if(ESC2.pdf) return Promise.resolve(ESC2.pdf);
+  ESC2.hojaMotivo = motivo; ESC2.hojaEstado = '';
+  _esc2HojaAbrir('pdf', _esc2HojaPdfHtml());
+  return esc2PdfPreparar(_esc2HojaPdfAvance).then(null, function(e){
+    if(ESC2.hoja === 'pdf'){ ESC2.hojaEstado = 'malPdf'; _esc2HojaPdfRefrescar(); }
+    throw e;
+  });
+}
+/* ¿este celular deja elegir dónde guardar? (Chrome reciente, en la computadora y en Android) */
+function _esc2PuedeElegir(){
+  try{ return typeof window.showSaveFilePicker === 'function' && !ESC2.sinSelector && window.isSecureContext !== false; }catch(e){ return false; }
+}
+/* «Guardar en el celular» (antes «Descargar») */
 function esc2Descargar(){
-  var go = function(r){
-    try{ huellaRegistrar(r.blob, r.nombre); }catch(_hu){}   /* 11/11/2026 · OBRASST Verifica (con cuenta) */
+  var D = ESC2.doc; if(!D || !D.pags.length) return;
+  if(_esc2PuedeElegir()){
+    var pr;
+    /* se pregunta dónde con el toque fresco; el PDF se escribe cuando esté (si no está, con su avance a la vista) */
+    try{ pr = window.showSaveFilePicker({ suggestedName:_esc2Archivo(D.nombre), types:[{ description:'PDF', accept:{ 'application/pdf':['.pdf'] } }] }); }
+    catch(e){ pr = Promise.reject(e); }
+    Promise.resolve(pr).then(function(manija){
+      return _esc2ConPdf('guardar').then(function(r){
+        return manija.createWritable().then(function(w){
+          return w.write(r.blob).then(function(){ return w.close(); });
+        }).then(function(){ _esc2Guardado(r, manija.name || r.nombre, 'elegido'); });
+      });
+    }).catch(function(e){
+      if(e && e.name === 'AbortError') return;             /* eligió no guardar */
+      if(e === 'vacio' || (ESC2.hoja === 'pdf' && ESC2.hojaEstado === 'malPdf')) return;   /* el PDF no salió: la hoja ya lo dice */
+      /* el selector no se dejó usar en este celular: a Descargas, como siempre */
+      ESC2.sinSelector = true;
+      _esc2DescargarComun();
+    });
+    return;
+  }
+  _esc2DescargarComun();
+}
+function _esc2DescargarComun(){
+  var yaEstaba = !!ESC2.pdf;
+  _esc2ConPdf('guardar').then(function(r){
+    /* si cerró la hoja mientras se armaba, no se descarga a escondidas */
+    if(!yaEstaba && ESC2.hoja !== 'pdf') return;
     try{
       var u = URL.createObjectURL(r.blob), a = document.createElement('a');
-      a.href = u; a.download = r.nombre;
+      a.href = u; a.download = r.nombre; a.rel = 'noopener';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(function(){ try{ URL.revokeObjectURL(u); }catch(e){} }, 5000);
-      if(typeof tostada === 'function') tostada(_esc2T('Descargado: ' + r.nombre));
-      if(ESC2.doc && !ESC2.pedido){ ESC2.doc.entregado = Date.now(); _esc2Guardar(); }
-    }catch(e){}
-  };
-  if(ESC2.pdf){ go(ESC2.pdf); return; }
-  _esc2Msg('Armando el PDF…');
-  esc2Pdf().then(function(r){ ESC2.pdf = r; _esc2Msg(''); go(r); }, function(){ _esc2Msg('No se pudo armar el PDF.', 'var(--mal)'); });
+      setTimeout(function(){ try{ URL.revokeObjectURL(u); }catch(e){} }, 60000);
+      _esc2Guardado(r, r.nombre, 'descargas');
+    }catch(e){ ESC2.hojaEstado = 'malPdf'; _esc2HojaPdf('guardar', 'malPdf'); }
+  }, function(){});
+}
+function _esc2Guardado(r, nombre, como){
+  try{ huellaRegistrar(r.blob, r.nombre); }catch(_hu){}   /* 11/11/2026 · OBRASST Verifica (con cuenta) */
+  if(ESC2.doc && !ESC2.pedido){ ESC2.doc.entregado = Date.now(); _esc2Guardar(); }
+  _esc2HojaCerrar('pdf');
+  if(typeof tostada === 'function') tostada(_esc2T(como === 'descargas' ? 'Guardado en Descargas' : 'Guardado en tu celular') + ': ' + nombre);
+  if(como !== 'descargas') return;
+  /* la primera vez se dice dónde quedó: en el celular, «Descargas» no se ve desde la app */
+  var visto = false;
+  try{ visto = localStorage.getItem('sstc_esc2_desc_visto') === '1'; localStorage.setItem('sstc_esc2_desc_visto', '1'); }catch(e){}
+  if(!visto && typeof aviso === 'function')
+    aviso('Quedó en tu celular', 'El PDF está en la carpeta Descargas: ábrela desde la app Archivos (o Mis archivos). Desde ahí lo abres o lo mandas por WhatsApp o por correo.', '💾');
 }
 
 /* ── guardarlo en Documentos de la obra ──────────────────────────── */
@@ -105146,8 +106913,7 @@ function esc2GuardarEnObra(){
   try{ localStorage.setItem('sstc_esc2_clase', clase); localStorage.setItem('sstc_esc2_dest', 't:' + clase); }catch(e){}
   if(b) b.disabled = true;
   if(m){ m.style.color = 'var(--gris)'; m.textContent = 'Armando el PDF…'; }
-  esc2Pdf(D).then(function(r){
-    ESC2.pdf = r;
+  esc2PdfPreparar().then(function(r){      /* 13/11/2026 · el mismo PDF que ya se armó de fondo, si está */
     var reg = { id:'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
                 nombre:nom, fecha:fecha, clase:clase, firmas:firmas, img:'', mini:D.pags[0].mini || '',
                 pdf:1, pags:D.pags.length, url:'', sync:0 };
@@ -105419,9 +107185,10 @@ function _camTrabajo(){
     else h += '<p class="sub" style="margin:8px 0 0;font-size:12.5px">Una sola hoja va a Documentos con su nombre. ' +
          'Si el documento tiene varias, se juntan todas en un PDF y se manda entero.</p>';
   } else {
-    h += '<div class="dos" style="margin-top:16px">' +
-         '<button class="btn" style="margin:0" onclick="compartirFotoSello()">📲 Compartir</button>' +
-         '<button class="btn sec" style="margin:0" onclick="bajarFotoSello()">⬇️ Descargar</button></div>';
+    /* 13/11/2026 · si salió de costado, se endereza aquí; «Guardar en el celular» (antes «Descargar») (CAMARA-1311) */
+    h += '<div class="esc-modo" style="display:flex;justify-content:flex-end"><button type="button" class="esc-m" id="cam-girar-f" onclick="camGirarFoto()">↻ Girar</button></div>';
+    h += '<button class="btn" style="margin:14px 0 0" onclick="compartirFotoSello()">📲 Compartir</button>' +
+         '<button class="btn sec" style="margin:9px 0 0" onclick="bajarFotoSello()">💾 Guardar en el celular</button>';
     /* 08/10/2026 · la foto queda en la obra, en «Fotos de obra»: la ve el equipo en la app y, si el líder lo
        autoriza, también en la web */
     if(hayCuenta() && empActiva()){
@@ -105575,19 +107342,33 @@ function compartirFotoSello(){
       return;
     }
   }catch(e){}
-  bajarFotoSello();
+  _bajarFotoComun(du, nombre, true);   /* 13/11/2026 · directo a Descargas, sin preguntar dónde (CAMARA-1311) */
   aviso('Se descargó la foto',
         'Este celular no deja compartir archivos directamente desde la app. La foto quedó en tus descargas: ábrela en WhatsApp desde ahí.',
         '⬇️');
 }
+/* 13/11/2026 · «Guardar en el celular» (antes «Descargar»): elige dónde si el celular deja; si no, a Descargas, y la
+   primera vez se dice dónde quedó (CAMARA-1311) */
 function bajarFotoSello(){
   var du = _camParaSalir(); if(!du) return;
-  try{
-    var a = document.createElement('a');
-    a.href = du; a.download = _nombreFotoSello();
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    try{ tostada('Descargada'); }catch(_t){}
-  }catch(e){}
+  var nombre = _nombreFotoSello();
+  if(_camxPuedeElegir()){
+    var pr;
+    try{ pr = window.showSaveFilePicker({ suggestedName:nombre, types:[{ description:'JPG', accept:{ 'image/jpeg':['.jpg', '.jpeg'] } }] }); }
+    catch(e){ pr = Promise.reject(e); }
+    Promise.resolve(pr).then(function(manija){
+      var f = _dataURLaArchivo(du, nombre);
+      return manija.createWritable().then(function(w){
+        return w.write(f).then(function(){ return w.close(); });
+      }).then(function(){ try{ tostada(_camxT('Guardada en tu celular') + ': ' + (manija.name || nombre)); }catch(_t){} });
+    }).catch(function(e){
+      if(e && e.name === 'AbortError') return;      /* eligió no guardar */
+      CAMX_SIN_SELECTOR = true;                      /* el selector no se dejó usar: a Descargas, como siempre */
+      _bajarFotoComun(du, nombre);
+    });
+    return;
+  }
+  _bajarFotoComun(du, nombre);
 }
 
 /* ══ LA FOTO DE OBRA, A LA OBRA (08/10/2026) ═══════════════════════════
@@ -106238,6 +108019,7 @@ function tomarFoto(op){
     $('cam-tit').textContent = op.titulo || 'Tomar foto';
     $('cam-msg').textContent = 'Encendiendo la cámara…';
     $('cam').className = 'cam abierta' + (op.doc?' doc':'');
+    try{ camAbrirExtras(); }catch(_x){}   /* 13/11/2026 · el sensor, la cuadrícula, los gestos (CAMARA-1311) */
     _pintarSelloCam();
     var bd=$('cam-disparo'); if(bd) bd.disabled=true;
     _encenderCamara();
@@ -106256,6 +108038,7 @@ function _encenderCamara(){
     $('cam-msg').textContent='';
     var bd=$('cam-disparo'); if(bd) bd.disabled=false;
     _verLinterna();
+    try{ camEncendida(st); }catch(_x){}   /* 13/11/2026 · enfoque, zoom, el sensor y la luz (CAMARA-1311) */
   }).catch(function(){
     $('cam-msg').textContent='No se pudo abrir la cámara. Toca 🖼️ para elegir la foto de la galería.';
   });
@@ -106288,6 +108071,7 @@ function camLinterna(){
   _verLinterna();
 }
 function _apagarCamara(){
+  try{ camApagarExtras(); }catch(_x){}   /* 13/11/2026 · el zoom, el sensor y la luz (CAMARA-1311) */
   /* la linterna se apaga ANTES de soltar la pista: si no, en algunos
      celulares el LED se queda prendido hasta que se cierra el navegador */
   try{ var t0=_pistaLuz(); if(t0 && CAM.luz) t0.applyConstraints({advanced:[{torch:false}]}); }catch(e0){}
@@ -106312,10 +108096,8 @@ function dispararCamara(){
     if(fl && !_sinMovimiento()){ fl.className='cam-flash'; void fl.offsetWidth; fl.className='cam-flash dispara'; }
     if(navigator.vibrate) navigator.vibrate(18);
   }catch(_f){}
-  var max=op.max||1100;
-  var r=Math.min(1, max/Math.max(v.videoWidth, v.videoHeight));
-  var w=Math.max(1,Math.round(v.videoWidth*r)), h=Math.max(1,Math.round(v.videoHeight*r));
-  _dibujarYcerrar(v, w, h, op.calidad||0.82).then(function(du){ _entregarFoto(du); });
+  /* 13/11/2026 · el más nítido de tres cuadros, con su zoom, y derecho aunque el celular estuviera echado (CAMARA-1311) */
+  camDispararFoto(v, op);
 }
 function camDesdeGaleria(){
   var inp=$('cam-file'); if(!inp) return;
@@ -113330,11 +115112,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = '9f5b98d35f';
-var IDIOMA_FR_V = 'ab29e66430';
+var IDIOMA_PT_V = 'afcb52b846';
+var IDIOMA_FR_V = 'eaf6f4e8d6';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = '46c509ddc0';
+var IDIOMA_EN_V = '7c51a1ecae';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -128021,7 +129803,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='232d9b4cfa';
+var SELLO_APP='c31e870823';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
