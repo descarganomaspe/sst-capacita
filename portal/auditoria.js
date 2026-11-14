@@ -33,7 +33,7 @@
    LO QUE GUARDA (sst_doc de la obra; ninguna de estas hojas sale en «Documentos»: DC_NO_DOCS)
    · «aud-evid»: la evidencia que se sube a un requisito. url = el archivo; nota = { v:1, k:'<llave del requisito>' }.
    · «aud-int», «aud-acc», «aud-rev» (Gestión): la auditoría interna, los hallazgos y la revisión por la dirección (abajo). */
-var AUD_EVID='aud-evid', AUD_INT='aud-int', AUD_ACC='aud-acc', AUD_REV='aud-rev';
+var AUD_EVID='aud-evid', AUD_INT='aud-int', AUD_ACC='aud-acc', AUD_REV='aud-rev', AUD_SALA='aud-sala', AUD_PED='aud-ped', AUD_MSG='aud-msg', AUD_SIM='aud-sim';
 var AUDW={ obra:null, D:null, t:0, per:'12', sec:'ley', caja:null, n:0, msg:'', msgCl:'', C:null, R:null, cargando:null };
 var AUD_EST={
   ok:   { ic:'✓', n:'Hay', cl:'ok', pdf:'HAY' },
@@ -334,7 +334,7 @@ function _audCss(){
 
 /* ══ LO DE LA OBRA: DE LA NUBE, UNA VEZ (20 s de memoria) ═════════════════════════════════════════════════════════
    Se trae lo de los últimos años (desde el 1 de enero de hace tres años) y cada periodo se corta aquí. */
-var AUD_HOJAS_NOTA=['ges-act', 'ges-prog', 'ges-objetivos', 'sal-reg', 'amb-reg', 'quienes', 'iperc', 'frentes', AUD_EVID, AUD_INT, AUD_ACC, AUD_REV];
+var AUD_HOJAS_NOTA=['ges-act', 'ges-prog', 'ges-objetivos', 'sal-reg', 'amb-reg', 'quienes', 'iperc', 'frentes', AUD_EVID, AUD_INT, AUD_ACC, AUD_REV, AUD_SALA, AUD_PED, AUD_MSG, AUD_SIM];
 function _audDesdeDatos(){ return (+hoyISO().slice(0, 4)-3)+'-01-01'; }
 function audTraer(fresco){
   var O=YO.obra||{}, oid=O.id;
@@ -867,7 +867,9 @@ var AUD_EV={
   }
 };
 function _audR_emoNo(){ return _audRes('subir', 'No se pudo leer el EMO de la obra (tu cuenta no lo ve o el plan no lo trae): adjunta aquí tu registro de exámenes.', [], ['emo']); }
-var AUD_HALL_T={ nc:'No conformidad', obs:'Observación', om:'Oportunidad de mejora' };
+var AUD_HALL_T={ nc_mayor:'NC mayor', nc_menor:'NC menor', nc:'No conformidad', obs:'Observación', om:'Oportunidad de mejora' };
+function _audHallPillCl(t){ return (t==='nc' || t==='nc_mayor' || t==='nc_menor') ? 'mal' : (t==='obs' ? 'ojo' : 'azul'); }
+function _audHallEsNC(t){ return t==='nc' || t==='nc_mayor' || t==='nc_menor'; }
 /* un requisito con su evidencia, y lo que se subió a mano: con eso, lo que faltaba (✗ u ○) pasa a «hay» */
 function audEvaluar(C, r){
   var f=AUD_EV[r.ev] || AUD_EV.subir, R;
@@ -908,12 +910,20 @@ function vistaAud(caja){
   pinta(false);
 }
 /* el periodo elegido, su contexto y la evidencia de cada requisito */
+var _AUD_RES_HASH='';
 function audCalcular(){
   var D=AUDW.D; if(!D) return null;
   var C0=audContexto(D, audPeriodo('12')), ult=_audUltAuditoria(C0), per=audPeriodo(AUDW.per, ult);
   if(AUDW.per==='aud' && per.k!=='aud') AUDW.per='12';
   var C=(per.k==='12') ? C0 : audContexto(D, per);
   AUDW.C=C; AUDW.R=audEvaluarTodo(C); AUDW.ult=ult;
+  var c=audCuentas(AUDW.R, 'ley'), pct=c.n ? Math.round((c.ok+c.info)*100/c.n) : 0;
+  AUDW.resumen={ ok:c.ok, ojo:c.ojo, falta:c.falta, subir:c.subir, info:c.info, n:c.n, pct:pct, fecha:hoyISO(), ts:Date.now() };
+  var rk=(YO.obra&&YO.obra.id)+'|'+pct+'|'+c.ok+'|'+c.ojo+'|'+c.falta;
+  if(rk!==_AUD_RES_HASH && YO && !YO.demo && !YO.central && typeof estadoEscribirP==='function' && typeof hayCuentaP==='function' && hayCuentaP()){
+    _AUD_RES_HASH=rk;
+    try{ estadoEscribirP('aud_resumen', AUDW.resumen).catch(function(){}); }catch(_er){}
+  }
   return C;
 }
 function _audIrV(L){
@@ -1761,8 +1771,8 @@ function _audAccLista(){
   else if(!F.length) h+='<div class="vacio"><b>Nada en este filtro</b></div>';
   else h+='<div class="tarj"><div class="tabla-caja"><table class="aud-tabla"><thead><tr><th>Tipo</th><th>Hallazgo</th><th>Acción correctiva</th><th>Responsable</th><th>Plazo</th><th>Estado</th><th></th></tr></thead><tbody>'+
     F.map(function(x){ var d=x.d;
-      return '<tr><td><span class="pill '+(d.tipo==='nc' ? 'mal' : (d.tipo==='obs' ? 'ojo' : 'azul'))+'">'+esc(AUD_HALL_T[d.tipo]||'Hallazgo')+'</span></td>'+
-        '<td><b>'+esc(d.desc||'—')+'</b><span class="sub">'+esc([_audReqN(d.cl), (AUD_ORIGEN.filter(function(o){ return o[0]===d.origen; })[0]||['', ''])[1]+(d.deN ? ' · '+d.deN : ''), d.fecha ? _audF(d.fecha) : ''].filter(Boolean).join(' · '))+'</span></td>'+
+      return '<tr><td><span class="pill '+_audHallPillCl(d.tipo)+'">'+esc(AUD_HALL_T[d.tipo]||'Hallazgo')+'</span></td>'+
+        '<td><b>'+esc(d.desc||'—')+'</b><span class="sub">'+esc([_audReqN(d.cl), (AUD_ORIGEN.filter(function(o){ return o[0]===d.origen; })[0]||['', ''])[1]+(d.deN ? ' · '+d.deN : ''), d.area ? _audAreaN(d.area) : '', d.fecha ? _audF(d.fecha) : ''].filter(Boolean).join(' · '))+'</span></td>'+
         '<td>'+(d.accion ? esc(d.accion) : '<span class="tenue">Falta definirla</span>')+'</td><td>'+(d.resp ? esc(d.resp) : '<span class="tenue">—</span>')+'</td>'+
         '<td>'+(d.plazo ? esc(_audF(d.plazo)) : '<span class="tenue">—</span>')+'</td>'+
         '<td><span class="pill '+(x.cerrado ? 'ok' : (x.vencido ? 'mal' : 'azul'))+'">'+(x.cerrado ? 'cerrado' : (x.vencido ? 'vencido' : 'abierto'))+'</span>'+(x.cerrado && d.eficacia && d.eficacia.ok!=null ? '<span class="sub">'+(d.eficacia.ok ? 'eficaz' : 'no eficaz')+'</span>' : '')+'</td>'+
@@ -1772,19 +1782,23 @@ function _audAccLista(){
   Array.prototype.forEach.call(caja.querySelectorAll('[data-auda]'), function(b){ b.onclick=function(){ audAccForm(b.getAttribute('data-auda')); }; });
 }
 /* el formulario de un hallazgo (en el cajón): lo encontrado, la acción, y el cierre con su evidencia */
-function audAccForm(id){
+function audAccForm(id, def){
   var x=id ? _audHalls().filter(function(y){ return y.id===id; })[0] : null;
   if(id && !x){ toast('Ese hallazgo ya no está.'); return; }
-  var d=x ? JSON.parse(JSON.stringify(x.d)) : { v:1, tipo:'nc', origen:'ext', de:'', deN:'', cl:'', fecha:hoyISO(), desc:'', causa:'', accion:'', resp:'', plazo:'', estado:'abierta' };
+  var d=x ? JSON.parse(JSON.stringify(x.d)) : Object.assign({ v:1, tipo:'nc_menor', origen:'ext', de:'', deN:'', cl:'', area:'', fecha:hoyISO(), desc:'', causa:'', accion:'', resp:'', plazo:'', estado:'abierta' }, def||{});
   AUDA.f={ id:x ? x.id : null, d:d };
   var cer=(d.estado==='cerrada'), ci=d.cierre||{}, ef=d.eficacia||{};
+  var tipos=[['nc_mayor', 'NC mayor'], ['nc_menor', 'NC menor'], ['obs', 'Observación'], ['om', 'Oportunidad de mejora']];
+  if(d.tipo==='nc') tipos.unshift(['nc', 'No conformidad']);
   var reqs='<option value="">— sin requisito —</option>'+AUD_SECC.map(function(S){ return '<optgroup label="'+esc(S.n)+'">'+_audCatalogo(S.k).map(function(G){ return G.s.map(function(r){ return '<option value="'+esc(r.k)+'"'+(r.k===d.cl ? ' selected' : '')+'>'+esc(r.cl+' '+r.t)+'</option>'; }).join(''); }).join('')+'</optgroup>'; }).join('');
+  var areasOp='<option value="">— sin área —</option>'+AUD_AREAS.map(function(a){ return '<option value="'+a[0]+'"'+(a[0]===d.area ? ' selected' : '')+'>'+esc(a[1])+'</option>'; }).join('');
   var h='<div class="aud-form">'+
-    '<div class="campo ancho"><span class="lbl">Tipo</span><div class="chips" id="auda-tipo" role="radiogroup">'+[['nc', 'No conformidad'], ['obs', 'Observación'], ['om', 'Oportunidad de mejora']].map(function(o){ var on=(o[0]===d.tipo); return '<button type="button" role="radio" class="chip'+(on ? ' on' : '')+'" aria-checked="'+(on ? 'true' : 'false')+'" data-v="'+o[0]+'">'+esc(o[1])+'</button>'; }).join('')+'</div></div>'+
+    '<div class="campo ancho"><span class="lbl">Tipo</span><div class="chips" id="auda-tipo" role="radiogroup">'+tipos.map(function(o){ var on=(o[0]===d.tipo); return '<button type="button" role="radio" class="chip'+(on ? ' on' : '')+'" aria-checked="'+(on ? 'true' : 'false')+'" data-v="'+o[0]+'">'+esc(o[1])+'</button>'; }).join('')+'</div></div>'+
     '<div class="campo"><label for="auda-or">De dónde salió</label><select id="auda-or">'+AUD_ORIGEN.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===d.origen ? ' selected' : '')+'>'+esc(o[1])+'</option>'; }).join('')+'</select></div>'+
     '<div class="campo"><label for="auda-den">Cuál <span class="tenue">· la auditoría, la revisión o la inspección</span></label><input id="auda-den" maxlength="160" value="'+esc(d.deN||'')+'"></div>'+
     '<div class="campo"><label for="auda-f">Fecha en que se encontró</label><input type="date" id="auda-f" value="'+esc(d.fecha||'')+'" max="'+hoyISO()+'"></div>'+
     '<div class="campo"><label for="auda-cl">Requisito</label><select id="auda-cl">'+reqs+'</select></div>'+
+    '<div class="campo"><label for="auda-area">Área asignada <span class="tenue">· lo ve en la app</span></label><select id="auda-area">'+areasOp+'</select></div>'+
     '<div class="campo ancho"><label for="auda-desc">Qué se encontró</label><textarea id="auda-desc" rows="2" maxlength="800">'+esc(d.desc||'')+'</textarea></div>'+
     '<div class="campo ancho"><label for="auda-causa">La causa <span class="tenue">· por qué pasó</span></label><textarea id="auda-causa" rows="2" maxlength="800">'+esc(d.causa||'')+'</textarea></div>'+
     '<div class="campo ancho"><label for="auda-acc">La acción correctiva</label><textarea id="auda-acc" rows="2" maxlength="800">'+esc(d.accion||'')+'</textarea></div>'+
@@ -1805,7 +1819,7 @@ function audAccForm(id){
   if($('auda-quitar')) $('auda-quitar').onclick=function(){
     confirmar('¿Quitar este hallazgo?', 'Se borra con su acción y su cierre.', { si:'Sí, quitarlo', mal:true }).then(function(si){
       if(!si) return;
-      audQuitarFila(AUDA.f.id).then(function(){ cerrarHoja(); toast('Hallazgo quitado.'); return _audRefrescarNotas(); }).then(function(){ if(VISTA.actual==='aud-acc') _audAccLista(); }, function(e){ toast('No se pudo quitar. '+porQueFallo(e)); });
+      audQuitarFila(AUDA.f.id).then(function(){ cerrarHoja(); toast('Hallazgo quitado.'); return _audRefrescarNotas(); }).then(function(){ if(VISTA.actual==='aud-acc') _audAccLista(); else if(VISTA.actual==='aud-sala') _audSalaPintar(); }, function(e){ toast('No se pudo quitar. '+porQueFallo(e)); });
     });
   };
 }
@@ -1830,14 +1844,14 @@ function _audEvid(caja, lista){
 }
 function audAccGuardar(cerrar){
   var F=AUDA.f, d=F.d, m=$('auda-msg'), mal=function(t, foco){ m.className='msg mal'; m.textContent=t; if(foco) try{ $(foco).focus(); }catch(e){} };
-  d.origen=_audVal('auda-or'); d.deN=_audTx(_audVal('auda-den'), 160); d.fecha=_audFecha(_audVal('auda-f')); d.cl=_audVal('auda-cl');
+  d.origen=_audVal('auda-or'); d.deN=_audTx(_audVal('auda-den'), 160); d.fecha=_audFecha(_audVal('auda-f')); d.cl=_audVal('auda-cl'); d.area=_audVal('auda-area')||'';
   d.desc=_audArea(_audVal('auda-desc'), 800); d.causa=_audArea(_audVal('auda-causa'), 800); d.accion=_audArea(_audVal('auda-acc'), 800);
   d.resp=_audTx(_audVal('auda-resp'), 80); d.plazo=_audFecha(_audVal('auda-plazo'));
   var fc=_audFecha(_audVal('auda-fc')), efi=_audVal('auda-efi'), cn=_audArea(_audVal('auda-cn'), 800);
   if(d.desc.length<5) return mal('Escribe qué se encontró.', 'auda-desc');
   if(!d.fecha) return mal('Falta la fecha en que se encontró.', 'auda-f');
   if(cerrar){
-    if(d.tipo==='nc' && d.accion.length<5) return mal('Una no conformidad se cierra con su acción correctiva.', 'auda-acc');
+    if(_audHallEsNC(d.tipo) && d.accion.length<5) return mal('Una no conformidad se cierra con su acción correctiva.', 'auda-acc');
     if(!cn && !AUDA.ev.n()) return mal('Para cerrarlo: escribe qué se hizo o adjunta la evidencia.', 'auda-cn');
   }
   var b1=$('auda-guardar'), b2=$('auda-cerrar'); [b1, b2].forEach(function(b){ if(b) b.disabled=true; });
@@ -1845,10 +1859,11 @@ function audAccGuardar(cerrar){
   AUDA.ev.subir().then(function(ev){
     d.cierre={ fecha:fc || (cerrar ? hoyISO() : ''), nota:cn, ev:ev, quien:(d.cierre && d.cierre.quien) || (cerrar ? _audQuien() : '') };
     d.eficacia={ ok:efi==='si' ? true : (efi==='no' ? false : null), fecha:(efi ? hoyISO() : ''), nota:'' };
-    if(cerrar) d.estado='cerrada';
+    if(cerrar){ d.estado='cerrada'; if(d.sala && d.eficacia.ok==null) d.levantado=true; }
+    else if(d.eficacia.ok===false){ d.estado='abierta'; delete d.levantado; }
     d.por=d.por || _audQuien(); d.t=Date.now();
     return audGuardarFila(AUD_ACC, F.id, (AUD_HALL_T[d.tipo]||'Hallazgo')+' · '+(d.cl ? _audReq(d.cl).cl : d.fecha), d);
-  }).then(function(){ cerrarHoja(); toast(cerrar ? 'Hallazgo cerrado.' : 'Hallazgo guardado.'); return _audRefrescarNotas(); }).then(function(){ if(VISTA.actual==='aud-acc') _audAccLista(); }, function(e){
+  }).then(function(){ cerrarHoja(); toast(cerrar ? 'Hallazgo cerrado.' : 'Hallazgo guardado.'); return _audRefrescarNotas(); }).then(function(){ if(VISTA.actual==='aud-acc') _audAccLista(); else if(VISTA.actual==='aud-sala') _audSalaPintar(); }, function(e){
     [b1, b2].forEach(function(b){ if(b) b.disabled=false; }); m.className='msg mal'; m.textContent='No se pudo guardar. '+porQueFallo(e);
   });
 }
@@ -2036,4 +2051,854 @@ function audRevPdf(d){
   AUD_COM.forEach(function(q){ P.par(q[1]+': '+((d.com||{})[q[0]] ? _audF(d.com[q[0]]) : 'pendiente'), { s:9, tras:0.6 }); });
   P.firmas([{ n:(d.preside||{}).n, rol:'Preside la revisión', cargo:(d.preside||{}).cargo }]);
   return P.fin('Revisión por la dirección · '+(nombreObraP()||'Obra')+' · '+_audF(d.fecha));
+}
+
+
+/* ── «AUDITORÍA Y SALA CON TU CONSULTOR» (11/11/2026 · 10 y 12) ──────────────────────────────────────────────────────── */
+var AUDS={ caja:null, n:0, sel:null, nuevo:false, visitaObra:null, desde:0, modoAuditor:false };
+var AUD_SALA_TIPOS=[
+  ['consultora',    'Consultoría / preparación'],
+  ['interna',       'Auditoría interna'],
+  ['cliente',       'Auditoría de cliente'],
+  ['certificacion', 'Auditoría de certificación']
+];
+var AUD_SALA_SERV=[
+  ['ley',  'Auditoría del SGSST (Ley 29783, art. 43)'],
+  ['insp', 'Preparación para la inspección del trabajo'],
+  ['i45',  'ISO 45001:2018'],
+  ['i14',  'ISO 14001:2015'],
+  ['i9',   'ISO 9001:2015'],
+  ['i37',  'ISO 37001:2016'],
+  ['otro', 'Otro servicio']
+];
+var AUD_SALA_ETAPAS=[
+  ['rev',     'Revisión de documentos'],
+  ['visita',  'Visita en campo'],
+  ['informe', 'Informe'],
+  ['lev',     'Levantamiento'],
+  ['cerrada', 'Cerrada']
+];
+var AUD_SALA_EST=[
+  ['planificada', 'Planificada'],
+  ['en_curso',    'En curso'],
+  ['hallazgos',   'Hallazgos'],
+  ['cerrada',     'Cerrada']
+];
+var AUD_PED_EST={ pedido:['Pedido', 'ojo'], subido:['Subido', 'azul'], observado:['Observado', 'mal'], aprobado:['Aprobado', 'ok'] };
+
+function _audSalaCss(){
+  if(document.getElementById('aud-css3')) return;
+  var st=document.createElement('style'); st.id='aud-css3';
+  st.textContent=[
+    '.auds-banner{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; border:1px solid var(--raya); border-radius:10px; padding:10px 12px; background:var(--panel); margin:0 0 12px; font-size:13px}',
+    '.auds-nuevo{border-left:3px solid var(--azul); background:var(--azul-f)} .auds-nuevo ul{margin:6px 0 0 18px; padding:0; font-size:12.5px; line-height:1.5}',
+    '.auds-solo-bar{border-left:4px solid var(--casco); background:var(--ojo-f)}',
+    'body.aud-solo-modo #rail, body.aud-solo-modo #tabs{display:none !important}',
+    '.auds-etapas{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:0 0 12px}',
+    '.auds-etapa{font:inherit; font-size:12px; font-weight:600; border:1px solid var(--raya2); background:var(--panel); color:var(--gris); border-radius:999px; padding:4px 10px; cursor:pointer}',
+    '.auds-etapa.on{background:var(--azul-f); color:var(--azul); border-color:var(--azul)}',
+    '.auds-etapa.hecha{background:var(--ok-f); color:var(--ok); border-color:var(--ok)}',
+    '.auds-fl{color:var(--gris); font-size:12px}',
+    '.auds-cons{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--raya)}',
+    '.auds-chip{display:inline-flex; align-items:center; gap:6px; background:var(--azul-f); color:var(--azul); border-radius:999px; padding:3px 10px; font-size:12.5px; font-weight:600}',
+    '.auds-chip button{border:0; background:none; color:inherit; font:inherit; cursor:pointer; padding:0 2px; line-height:1}',
+    '.auds-item{border:1px solid var(--raya); border-radius:10px; padding:12px; margin:0 0 10px; background:var(--panel)}',
+    '.auds-item-cab{display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:flex-start}',
+    '.auds-item-meta{font-size:12px; color:var(--gris); margin-top:4px}',
+    '.auds-item-act{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}',
+    '.auds-obs{border-left:3px solid var(--mal); background:var(--mal-f); padding:7px 10px; border-radius:6px; font-size:12.5px; margin-top:8px}',
+    '.auds-arch{list-style:none; margin:8px 0 0; padding:0; display:grid; gap:4px; font-size:12.5px}',
+    '.auds-arch li{display:flex; flex-wrap:wrap; gap:8px; align-items:center}',
+    '.auds-msgs{margin-top:10px; padding-top:8px; border-top:1px dashed var(--raya); font-size:12.5px}',
+    '.auds-msg-l{list-style:none; margin:6px 0 8px; padding:0; display:grid; gap:5px}',
+    '.auds-msg-l li{background:var(--fondo); border-radius:8px; padding:6px 9px; line-height:1.45}',
+    '.auds-msg-f{display:flex; gap:6px; align-items:center}',
+    '.auds-msg-f input{flex:1; min-width:0}',
+    '.auds-prox{border:1px solid var(--raya); border-radius:10px; padding:10px 12px; margin-top:12px; background:var(--fondo)}',
+    '.audc-pad{border:1px solid var(--raya2); border-radius:8px; background:#fff; touch-action:none; max-width:100%; display:block; cursor:crosshair}',
+    '.audsim-reloj{font-family:var(--mono); font-size:18px; font-weight:600; color:var(--tinta); padding:4px 10px; border-radius:8px; background:var(--fondo); border:1px solid var(--raya)}',
+    '.audsim-r{border:1px solid var(--raya); border-radius:10px; padding:10px 12px; margin:0 0 8px; background:var(--panel); display:grid; gap:6px}',
+    '.audsim-ops{display:flex; flex-wrap:wrap; gap:6px}',
+    '.audsim-ops button.on{border-color:var(--tinta); background:var(--tinta); color:#fff}'
+  ].join('\n');
+  document.head.appendChild(st);
+}
+function _audSalaTipoN(k){ return (AUD_SALA_TIPOS.filter(function(x){ return x[0]===k; })[0]||['', 'Consultoría / preparación'])[1]; }
+function _audSalaEstDe(d){
+  if(d && d.estado) return d.estado;
+  var et=(d && d.etapa) || 'rev';
+  if(et==='cerrada') return 'cerrada';
+  if(et==='informe' || et==='lev') return 'hallazgos';
+  if(et==='visita') return 'en_curso';
+  return 'planificada';
+}
+function _audSalaEstN(k){ return (AUD_SALA_EST.filter(function(x){ return x[0]===k; })[0]||['', 'Planificada'])[1]; }
+function _audSalaServN(k){ return (AUD_SALA_SERV.filter(function(x){ return x[0]===k; })[0]||['', k||''])[1]; }
+function _audSalaDefaultAlto(){
+  var s=''; try{ s=(typeof sectorObraP==='function' ? sectorObraP() : ((YO && YO.obra && YO.obra.sector) || '')); }catch(e){}
+  return String(s).toLowerCase()==='construccion';
+}
+function _audSumarAnios(iso, n){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(iso||''))) return '';
+  var y=+iso.slice(0, 4)+(n||0), m=iso.slice(5, 7), dd=+iso.slice(8, 10), maxD=new Date(y, +m, 0).getDate();
+  return y+'-'+m+'-'+dos(Math.min(dd, maxD));
+}
+function _audRowTs(r, d){
+  var rc=Date.parse((r && r.creado) || '') || 0;
+  var dt=Number(d && (d.ts || (typeof d.t==='number' ? d.t : 0))) || 0;
+  return Math.max(rc, dt);
+}
+function _audSalaEsCons(d){
+  var q=_audQuien(); if(!q) return false;
+  return (d && d.cons || []).indexOf(q)>-1;
+}
+function _audSalas(){
+  var L=[]; (AUDW.D && AUDW.D.notas || []).forEach(function(r){ if(r && r.hoja===AUD_SALA){ var d=_audNota(r); if(d) L.push({ id:r.id, creado:r.creado, d:d }); } });
+  return L.sort(function(a, b){ return (_audRowTs(b, b.d)-_audRowTs(a, a.d)); });
+}
+function _audPeds(salaId){
+  var L=[]; (AUDW.D && AUDW.D.notas || []).forEach(function(r){ if(r && r.hoja===AUD_PED){ var d=_audNota(r); if(d && d.sala===salaId) L.push({ id:r.id, creado:r.creado, d:d }); } });
+  return L.sort(function(a, b){ return (_audRowTs(b, b.d)-_audRowTs(a, a.d)); });
+}
+function _audSalaHalls(salaId){
+  return _audHalls().filter(function(x){ return x.d && x.d.sala===salaId; });
+}
+function _audSalaMsgs(salaId){
+  var L=[]; (AUDW.D && AUDW.D.notas || []).forEach(function(r){ if(r && r.hoja===AUD_MSG){ var d=_audNota(r); if(d && d.sala===salaId) L.push({ id:r.id, creado:r.creado, d:d }); } });
+  return L.sort(function(a, b){ return (Number(a.d.t)||Date.parse(a.creado)||0)-(Number(b.d.t)||Date.parse(b.creado)||0); });
+}
+function _audSalaHallEst(d){
+  if(d.eficacia && d.eficacia.ok===true) return 'verificado';
+  if((d.estado==='cerrada' || d.levantado) && (!d.eficacia || d.eficacia.ok==null)) return 'levantado';
+  return 'abierto';
+}
+function _audSalaBorrador(){
+  return { v:1, tipo:'consultora', consultora:'', servicio:'ley', alcance:'', estado:'planificada', inicio:hoyISO(), visita:'', entrega:'', etapa:'rev', cons:[], informe:null, constancia:null, ges:'', altoRiesgo:_audSalaDefaultAlto() };
+}
+function _audSalaActual(salas){
+  if(AUDS.nuevo) return null;
+  var s=AUDS.sel ? salas.filter(function(x){ return x.id===AUDS.sel; })[0] : null;
+  if(!s && salas.length){ s=salas[0]; AUDS.sel=s.id; }
+  return s || null;
+}
+function _audSalaModoAplicar(){
+  try{ document.body.classList.toggle('aud-solo-modo', !!(AUDS.modoAuditor && VISTA.actual==='aud-sala')); }catch(_m){}
+}
+
+function vistaAudSala(caja){
+  _audCss(); _audCssCiclo(); _audSalaCss();
+  AUDS.caja=caja;
+  var oid=(YO.obra||{}).id||'';
+  AUDS.visitaObra=oid;
+  AUDS.desde=+leer('sstp_auds_visita_'+oid, 0) || 0;
+  guardar('sstp_auds_visita_'+oid, Date.now());
+  var ac=$('acciones'); if(ac) ac.innerHTML='';
+  cargando(caja);
+  var n=++AUDS.n;
+  audTraer(false).then(function(){
+    if(n!==AUDS.n || VISTA.actual!=='aud-sala') return;
+    _audSalaPintar();
+  }, function(c){ if(n===AUDS.n && VISTA.actual==='aud-sala') fallo(caja, c); });
+  VISTA.recargar=function(){
+    if(Date.now()-AUDW.t<30000) return;
+    var m=++AUDS.n;
+    _audRefrescarNotas().then(function(){ if(m===AUDS.n && VISTA.actual==='aud-sala') _audSalaPintar(); }, function(){});
+  };
+}
+function _audSalaPintar(){
+  var caja=AUDS.caja; if(!caja || !document.body.contains(caja)) return;
+  _audSalaModoAplicar();
+  var salas=_audSalas(), S=_audSalaActual(salas), ac=$('acciones');
+  if(ac){
+    ac.innerHTML=(AUDS.modoAuditor ? '<button type="button" class="bt sec" id="auds-salir-solo">Salir del modo auditor</button>' : '<button type="button" class="bt sec" id="auds-nueva">＋ Nueva sala</button>');
+    if($('auds-nueva')) $('auds-nueva').onclick=function(){ AUDS.nuevo=true; AUDS.sel=null; _audSalaPintar(); };
+    if($('auds-salir-solo')) $('auds-salir-solo').onclick=function(){ AUDS.modoAuditor=false; _audSalaPintar(); };
+  }
+  var peds=S ? _audPeds(S.id) : [], halls=S ? _audSalaHalls(S.id) : [], msgs=S ? _audSalaMsgs(S.id) : [];
+  var h='<div class="auds-banner"><span><b>🤝 Sala con tu consultor</b> · OBRASST no audita ni certifica: aquí trabajan juntos tu equipo y tu consultor o auditor.</span>'+
+    (S ? '<button type="button" class="bt sec chico" id="auds-solo-btn">'+(AUDS.modoAuditor ? '← Salir de modo auditor' : '🤝 Soy el auditor (ver solo esta auditoría)')+'</button>' : '')+'</div>';
+  if(AUDS.modoAuditor && S){
+    h+='<div class="auds-banner auds-solo-bar" id="auds-solo-bar"><span><b>Modo auditor activo:</b> viendo solo «'+esc(S.d.consultora||'Auditoría')+'» ('+esc(_audSalaEstN(_audSalaEstDe(S.d)))+'). Sin acceso al resto de pestañas hasta salir.</span></div>';
+  }
+  if(S) h+=_audSalaNovedadesHTML(S, peds, halls, msgs);
+  h+=_audSalaCabHTML(S, salas);
+  if(S){
+    h+=_audSalaPedsHTML(S, peds, msgs);
+    h+=_audSalaHallsHTML(S, halls, msgs);
+    h+=_audSalaInfHTML(S, peds, halls);
+  } else {
+    h+='<div class="vacio"><b>Guarda la cabecera para abrir la sala</b>Pon el nombre de la consultora o auditor y la norma arriba: desde ahí pides documentos, llevas los hallazgos y subes el informe final.</div>';
+  }
+  caja.innerHTML=h;
+  _audSalaEnchufar(caja, S, peds, halls);
+}
+function _audSalaNovedadesHTML(S, peds, halls, msgs){
+  var d0=AUDS.desde;
+  if(!d0) return '<div class="auds-banner auds-nuevo" id="auds-nuevo"><span><b>Lo nuevo desde tu última visita:</b> esta es tu primera visita en este navegador; desde ahora verás aquí los cambios recientes.</span></div>';
+  var L=[];
+  peds.forEach(function(p){ if(_audRowTs(p, p.d)>d0) L.push('Documento pedido: '+p.d.t+' ('+(AUD_PED_EST[p.d.estado]||[p.d.estado])[0]+')'); });
+  halls.forEach(function(x){ if(_audRowTs(x, x.d)>d0) L.push('Hallazgo: '+(x.d.desc||'Sin descripción')+' ('+_audSalaHallEst(x.d)+')'); });
+  msgs.forEach(function(m){ if(_audRowTs(m, m.d)>d0) L.push('Comentario de '+(m.d.por||'Alguien')+': «'+_audTx(m.d.tx, 60)+'»'); });
+  if(S.d.informe && Number(S.d.informe.t||0)>d0) L.push('Informe final subido: '+(S.d.informe.n||'PDF'));
+  if(!L.length) return '<div class="auds-banner auds-nuevo" id="auds-nuevo"><span><b>Lo nuevo desde tu última visita:</b> sin cambios desde '+esc(fechaLarga(new Date(d0).toISOString().slice(0, 10)))+'.</span></div>';
+  return '<div class="auds-banner auds-nuevo" id="auds-nuevo" style="flex-direction:column; align-items:flex-start"><b>Lo nuevo desde tu última visita ('+L.length+')</b><ul>'+
+    L.slice(0, 10).map(function(t){ return '<li>'+esc(t)+'</li>'; }).join('')+'</ul></div>';
+}
+function _audSalaCabHTML(S, salas){
+  var d=S ? S.d : _audSalaBorrador(), idx=-1, est=_audSalaEstDe(d);
+  AUD_SALA_ETAPAS.forEach(function(e, i){ if(e[0]===(d.etapa||'rev')) idx=i; });
+  var etapas='<div class="auds-etapas" aria-label="Etapa de la sala">'+AUD_SALA_ETAPAS.map(function(e, i){
+    var cl=(i===idx ? ' on' : (idx>i ? ' hecha' : ''));
+    return (i ? '<span class="auds-fl" aria-hidden="true">→</span>' : '')+
+      '<button type="button" class="auds-etapa'+cl+'" data-auds-et="'+e[0]+'">'+esc(e[1])+'</button>';
+  }).join('')+'</div>';
+  var soy=_audSalaEsCons(d), quien=_audQuien();
+  var cons='<div class="auds-cons"><span class="lbl" style="margin:0; font-size:12.5px; color:var(--gris)">Auditores / consultores en sala:</span>'+
+    ((d.cons||[]).length ? d.cons.map(function(n, i){
+      return '<span class="auds-chip">🤝 '+esc(n)+'<button type="button" data-auds-qcons="'+i+'" title="Quitar" aria-label="'+esc('Quitar a '+n)+'">×</button></span>';
+    }).join('') : '<span class="tenue" style="font-size:12.5px">Ninguno marcado aún</span>')+
+    (quien ? '<button type="button" class="bt sec chico" id="auds-soy-cons"'+(soy ? ' disabled' : '')+'>'+(soy ? '✓ Soy el consultor' : '🤝 Soy el consultor')+'</button>' : '')+'</div>';
+  var sel=(salas.length>1 && !AUDS.modoAuditor) ? '<div class="campo ancho"><label for="auds-sel">Salas de esta obra</label><select id="auds-sel">'+
+    salas.map(function(x){ return '<option value="'+esc(x.id)+'"'+(S && S.id===x.id ? ' selected' : '')+'>'+esc((x.d.consultora||'Auditoría')+' · '+_audSalaTipoN(x.d.tipo||'consultora')+' · '+_audSalaServN(x.d.servicio)+(x.d.inicio ? ' ('+_audF(x.d.inicio)+')' : ''))+'</option>'; }).join('')+'</select></div>' : '';
+  return '<div class="tarj"><div class="tarj-cab"><div><h2>'+(S ? esc(d.consultora||'Sala con tu consultor') : 'Nueva sala / auditoría')+'</h2><p class="sub">'+
+    esc(S ? (_audSalaTipoN(d.tipo||'consultora')+' · '+_audSalaServN(d.servicio)+' · '+_audSalaEstN(est)) : 'Tipo de auditoría, norma, fechas, alcance y auditor o consultor')+'</p></div>'+
+    (AUDS.nuevo && salas.length ? '<div class="acciones"><button type="button" class="bt sec chico" id="auds-cancelar-n">Volver a la sala</button></div>' : '')+'</div>'+
+    '<div class="tarj-cuerpo">'+etapas+'<div class="aud-form">'+sel+
+    '<div class="campo"><label for="auds-tipo">Tipo</label><select id="auds-tipo">'+AUD_SALA_TIPOS.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===(d.tipo||'consultora') ? ' selected' : '')+'>'+esc(o[1])+'</option>'; }).join('')+'</select></div>'+
+    '<div class="campo"><label for="auds-estado">Estado</label><select id="auds-estado">'+AUD_SALA_EST.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===est ? ' selected' : '')+'>'+esc(o[1])+'</option>'; }).join('')+'</select></div>'+
+    '<div class="campo"><label for="auds-cons">Consultora, auditor o entidad</label><input id="auds-cons" maxlength="160" placeholder="Ej. Consultora Ejemplo SAC" value="'+esc(d.consultora||'')+'"></div>'+
+    '<div class="campo"><label for="auds-serv">Norma / servicio</label><select id="auds-serv">'+AUD_SALA_SERV.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===(d.servicio||'ley') ? ' selected' : '')+'>'+esc(o[1])+'</option>'; }).join('')+'</select></div>'+
+    '<div class="campo ancho"><label for="auds-alcance">Alcance <span class="tenue">· frentes, procesos o sedes evaluadas</span></label><input id="auds-alcance" maxlength="300" placeholder="Ej. Obra civil, campamento y almacén principal" value="'+esc(d.alcance||'')+'"></div>'+
+    '<div class="campo"><label for="auds-ini">Inicio</label><input type="date" id="auds-ini" value="'+esc(d.inicio||'')+'"></div>'+
+    '<div class="campo"><label for="auds-vis">Visita en campo</label><input type="date" id="auds-vis" value="'+esc(d.visita||'')+'"></div>'+
+    '<div class="campo"><label for="auds-ent">Entrega del informe</label><input type="date" id="auds-ent" value="'+esc(d.entrega||'')+'"></div>'+
+    '<div class="campo"><label for="auds-etapa">Etapa</label><select id="auds-etapa">'+AUD_SALA_ETAPAS.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===(d.etapa||'rev') ? ' selected' : '')+'>'+esc(o[1])+'</option>'; }).join('')+'</select></div>'+
+    '</div>'+cons+'<div class="acciones" style="margin-top:12px"><button type="button" class="bt" id="auds-guardar">'+(S ? 'Guardar cambios' : 'Abrir sala')+'</button></div></div></div>';
+}
+function _audSalaMsgsHTML(salaId, ref, msgs){
+  var L=msgs.filter(function(m){ return m.d.ref===ref; });
+  return '<div class="auds-msgs"><b>💬 Comentarios ('+L.length+')</b>'+
+    (L.length ? '<ul class="auds-msg-l">'+L.map(function(m){
+      var x=m.d, fh=x.t ? new Date(x.t).toLocaleString('es-PE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+      return '<li><b>'+esc(x.por||'Usuario')+'</b>'+(x.cons ? ' <span class="pill azul" style="font-size:10.5px; padding:1px 6px">Auditor</span>' : '')+
+        (fh ? ' <span class="tenue">· '+esc(fh)+'</span>' : '')+': '+esc(x.tx||'')+'</li>';
+    }).join('')+'</ul>' : '')+
+    '<form class="auds-msg-f" data-msg-ref="'+esc(ref)+'"><input maxlength="500" placeholder="Escribe un comentario (no borra ni edita los de otros)…" aria-label="Nuevo comentario">'+
+    '<button type="submit" class="bt sec chico">Comentar</button></form></div>';
+}
+function _audSalaPedsHTML(S, peds, msgs){
+  var jefe=(typeof areaJefe==='function' && areaJefe());
+  var aprN=peds.filter(function(p){ return p.d.estado==='aprobado'; }).length, entN=peds.filter(function(p){ return p.d.estado==='subido' || p.d.estado==='aprobado'; }).length;
+  var cab='<div class="tarj"><div class="tarj-cab"><div><h2>📄 Documentos pedidos ('+peds.length+')</h2><p class="sub">'+(peds.length ? entN+' de '+peds.length+' entregados · '+aprN+' aprobados' : 'El auditor pide; tu empresa sube o envía al área; el auditor aprueba u observa')+'</p></div>'+
+    '<div class="acciones"><button type="button" class="bt" id="auds-ped-nuevo">＋ Pedir documento</button></div></div><div class="tarj-cuerpo">';
+  if(!peds.length) return cab+'<p class="ayuda" style="margin:0">Todavía no hay documentos pedidos en esta sala.</p></div></div>';
+  return cab+peds.map(function(p){
+    var d=p.d, est=AUD_PED_EST[d.estado]||AUD_PED_EST.pedido, apr=(d.estado==='aprobado');
+    var archs=(d.arch||[]).length ? '<ul class="auds-arch">'+d.arch.map(function(a, i){
+      return '<li>📎 <a href="'+esc(a.u)+'" target="_blank" rel="noopener">'+esc(a.n||'archivo')+'</a>'+
+        (apr ? '' : '<button type="button" class="bt-link" data-ped-qa="'+esc(p.id)+'" data-idx="'+i+'">Quitar</button>')+'</li>';
+    }).join('')+'</ul>' : '';
+    return '<div class="auds-item" data-ped-id="'+esc(p.id)+'"><div class="auds-item-cab"><div><b>'+esc(d.t||'Documento')+'</b>'+
+      '<div class="auds-item-meta">'+esc([_audAreaN(d.area||'sst'), d.plazo ? 'Plazo: '+_audF(d.plazo) : '', d.por ? 'Pedido por '+d.por : ''].filter(Boolean).join(' · '))+'</div>'+
+      (d.det ? '<div class="auds-item-meta">'+esc(d.det)+'</div>' : '')+'</div>'+
+      '<span class="pill '+est[1]+'">'+esc(est[0])+'</span></div>'+
+      (d.estado==='observado' && d.obs ? '<div class="auds-obs"><b>Observación del consultor:</b> '+esc(d.obs)+'</div>' : '')+
+      archs+'<div class="auds-item-act">'+
+      (apr ? '' : '<label class="bt sec chico aud-subir">📎 Subir<input type="file" data-ped-sube="'+esc(p.id)+'" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx" multiple></label>')+
+      (!apr && jefe ? '<button type="button" class="bt sec chico" data-ped-area="'+esc(p.id)+'">📨 Pedir al área</button>' : '')+
+      (apr ? '' : '<button type="button" class="bt ok chico" data-ped-apr="'+esc(p.id)+'">✓ Aprobar</button><button type="button" class="bt sec chico" data-ped-obs="'+esc(p.id)+'">⚠ Observar</button>')+
+      '<button type="button" class="bt-link" data-ped-del="'+esc(p.id)+'">Quitar</button></div>'+
+      _audSalaMsgsHTML(S.id, 'ped:'+p.id, msgs)+'</div>';
+  }).join('')+'</div></div>';
+}
+function _audSalaHallsHTML(S, halls, msgs){
+  var cab='<div class="tarj"><div class="tarj-cab"><div><h2>🛠️ Hallazgos de la sala ('+halls.length+')</h2><p class="sub">Se comparten con «Hallazgos y acciones» (abierto → levantado con evidencia → verificado eficaz o vuelve a abierto)</p></div>'+
+    '<div class="acciones"><button type="button" class="bt" id="auds-hall-nuevo">＋ Nuevo hallazgo</button></div></div><div class="tarj-cuerpo">';
+  if(!halls.length) return cab+'<p class="ayuda" style="margin:0">Sin hallazgos registrados en esta sala aún.</p></div></div>';
+  return cab+halls.map(function(x){
+    var d=x.d, est=_audSalaHallEst(d), ci=d.cierre||{};
+    var pill=est==='verificado' ? ['ok', '✓ Verificado (eficaz)'] : (est==='levantado' ? ['azul', '⏳ Levantado · espera al consultor'] : ['ojo', 'Abierto']);
+    var evs=(ci.ev||[]).length ? '<ul class="auds-arch">'+ci.ev.map(function(a){ return '<li>📎 <a href="'+esc(a.u)+'" target="_blank" rel="noopener">'+esc(a.n||'evidencia')+'</a></li>'; }).join('')+'</ul>' : '';
+    var noef=(est==='abierto' && d.eficacia && d.eficacia.ok===false) ? '<div class="auds-obs"><b>No eficaz (devuelto a abierto):</b> '+esc(d.eficacia.nota||'Requiere nueva acción y evidencia.')+'</div>' : '';
+    return '<div class="auds-item" data-hall-id="'+esc(x.id)+'"><div class="auds-item-cab"><div><span class="pill '+_audHallPillCl(d.tipo)+'" style="margin-right:6px">'+esc(AUD_HALL_T[d.tipo]||'Hallazgo')+'</span><b>'+esc(d.desc||'—')+'</b>'+
+      '<div class="auds-item-meta">'+esc([_audReqN(d.cl), d.area ? _audAreaN(d.area) : '', d.resp ? 'Resp.: '+d.resp : '', d.plazo ? 'Plazo: '+_audF(d.plazo) : ''].filter(Boolean).join(' · '))+'</div></div>'+
+      '<span class="pill '+pill[0]+'">'+esc(pill[1])+'</span></div>'+noef+
+      (ci.nota ? '<p class="ayuda" style="margin:6px 0 0"><b>Levantamiento'+(ci.fecha ? ' ('+_audF(ci.fecha)+')' : '')+':</b> '+esc(ci.nota)+'</p>' : '')+
+      evs+'<div class="auds-item-act">'+
+      (est==='abierto' ? '<button type="button" class="bt sec chico" data-hall-lev="'+esc(x.id)+'">📤 Levantar</button>' : '')+
+      (est==='levantado' ? '<button type="button" class="bt ok chico" data-hall-ver="'+esc(x.id)+'">✓ Verificar eficaz</button><button type="button" class="bt mal chico" data-hall-noef="'+esc(x.id)+'">✗ No eficaz</button>' : '')+
+      '<button type="button" class="bt sec chico" data-hall-ed="'+esc(x.id)+'">Abrir / editar</button></div>'+
+      _audSalaMsgsHTML(S.id, 'acc:'+x.id, msgs)+'</div>';
+  }).join('')+'</div></div>';
+}
+function _audSalaInfHTML(S, peds, halls){
+  var d=S.d, inf=d.informe, c={ nc:0, obsn:0, om:0 };
+  halls.forEach(function(x){ if(_audHallEsNC(x.d.tipo)) c.nc++; else if(x.d.tipo==='obs') c.obsn++; else c.om++; });
+  var h='<div class="tarj"><div class="tarj-cab"><div><h2>📑 Informe final y constancia</h2><p class="sub">El informe PDF va al Registro de auditorías (art. 33 h); la constancia acredita la auditoría en 1 hoja A4 con firma en pantalla y huella QR</p></div></div><div class="tarj-cuerpo">';
+  if(inf && inf.u){
+    h+='<p style="margin:0 0 8px">📄 <a href="'+esc(inf.u)+'" target="_blank" rel="noopener"><b>'+esc(inf.n||'Informe final.pdf')+'</b></a>'+(inf.fecha ? ' · '+esc(_audF(inf.fecha)) : '')+
+      ' · <span class="tenue">'+c.nc+' NC, '+c.obsn+' Obs., '+c.om+' OM</span></p>'+
+      '<div class="acciones"><label class="bt sec chico aud-subir">↻ Cambiar PDF<input type="file" id="auds-inf-file" accept="application/pdf"></label>'+
+      '<button type="button" class="bt" id="auds-inf-paso">'+(d.ges ? '↻ Actualizar en Registro de auditorías' : '📋 Pasar al Registro de auditorías')+'</button>'+
+      '<button type="button" class="bt sec" id="auds-constancia">📜 Constancia de auditoría (PDF)</button>'+
+      (d.ges ? ' <span class="pill ok">✓ En el registro 33 h</span>' : '')+'</div>';
+  } else {
+    h+='<p class="ayuda" style="margin:0 0 8px">Sube aquí el informe final del consultor en PDF, o emite la constancia A4 de la auditoría.</p>'+
+      '<div class="acciones"><label class="bt aud-subir">📤 Subir informe en PDF<input type="file" id="auds-inf-file" accept="application/pdf"></label>'+
+      '<button type="button" class="bt sec" id="auds-constancia">📜 Constancia de auditoría (PDF)</button></div>';
+  }
+  if(d.constancia && d.constancia.sha256){
+    h+='<p class="ayuda" style="margin:8px 0 0">Última constancia ('+esc(_audF(d.constancia.fecha||hoyISO()))+') · huella SHA-256: <code>'+esc(String(d.constancia.sha256).slice(0, 16))+'…</code></p>';
+  }
+  if((d.servicio||'ley')==='ley') h+=_audSalaProxHTML(S);
+  return h+'</div></div>';
+}
+function _audSalaProxHTML(S){
+  var d=S.d, alto=(d.altoRiesgo!=null) ? !!d.altoRiesgo : _audSalaDefaultAlto();
+  var base=d.entrega || (d.informe && d.informe.fecha) || '';
+  var anios=alto ? 2 : 3, prox=base ? _audSumarAnios(base, anios) : '';
+  return '<div class="auds-prox" id="auds-prox"><b>📅 Próxima auditoría del SGSST</b>'+
+    '<p class="ayuda" style="margin:6px 0">Según el MTPE (gob.pe, oct. 2024): cada <b>2 años</b> con actividades de alto riesgo (Anexo 5 del D.S. 009-97-SA, las del SCTR) y cada <b>3 años</b> sin ellas; con 10 trabajadores o menos y sin alto riesgo, solo cuando lo ordena la Inspección. El auditor, del registro del D.S. 014-2013-TR.</p>'+
+    '<label class="chk" style="margin:6px 0"><input type="checkbox" id="auds-alto"'+(alto ? ' checked' : '')+'> <span>Actividades de alto riesgo (Anexo 5 del D.S. 009-97-SA)</span></label>'+
+    '<p id="auds-prox-res" style="margin:6px 0 0; font-weight:600">'+(prox ? 'Próxima auditoría: '+esc(_audF(prox))+' (a los '+anios+' años de la entrega: '+esc(_audF(base))+')' : 'Indica la fecha de entrega del informe para calcular la próxima auditoría (+'+anios+' años).')+'</p></div>';
+}
+
+function _audSalaEnchufar(caja, S, peds, halls){
+  if($('auds-sel')) $('auds-sel').onchange=function(){ AUDS.sel=this.value; AUDS.nuevo=false; _audSalaPintar(); };
+  if($('auds-cancelar-n')) $('auds-cancelar-n').onclick=function(){ AUDS.nuevo=false; _audSalaPintar(); };
+  if($('auds-solo-btn')) $('auds-solo-btn').onclick=function(){ AUDS.modoAuditor=!AUDS.modoAuditor; _audSalaPintar(); };
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-auds-et]'), function(b){
+    b.onclick=function(){ $('auds-etapa').value=b.getAttribute('data-auds-et'); if(S) _audSalaGuardarCab(S); else _audSalaResaltarEtapa(caja, $('auds-etapa').value); };
+  });
+  $('auds-guardar').onclick=function(){ _audSalaGuardarCab(S); };
+  if($('auds-soy-cons')) $('auds-soy-cons').onclick=function(){ _audSalaSoyCons(S); };
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-auds-qcons]'), function(b){
+    b.onclick=function(){ _audSalaQuitarCons(S, +b.getAttribute('data-auds-qcons')); };
+  });
+  if(!S) return;
+  $('auds-ped-nuevo').onclick=function(){ _audSalaPedNuevo(S); };
+  Array.prototype.forEach.call(caja.querySelectorAll('input[data-ped-sube]'), function(inp){
+    inp.onchange=function(){ _audSalaPedSubir(S, inp.getAttribute('data-ped-sube'), inp); };
+  });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-ped-area]'), function(b){
+    b.onclick=function(){ _audSalaPedArea(S, b.getAttribute('data-ped-area')); };
+  });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-ped-apr]'), function(b){
+    b.onclick=function(){ _audSalaPedAprobar(b.getAttribute('data-ped-apr')); };
+  });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-ped-obs]'), function(b){
+    b.onclick=function(){ _audSalaPedObservar(b.getAttribute('data-ped-obs')); };
+  });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-ped-qa]'), function(b){
+    b.onclick=function(){ _audSalaPedQuitarArch(b.getAttribute('data-ped-qa'), +b.getAttribute('data-idx')); };
+  });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-ped-del]'), function(b){
+    b.onclick=function(){ _audSalaPedQuitar(b.getAttribute('data-ped-del')); };
+  });
+  $('auds-hall-nuevo').onclick=function(){
+    audAccForm(null, { origen:'ext', deN:S.d.consultora||_audSalaServN(S.d.servicio), sala:S.id });
+  };
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-hall-ed]'), function(b){
+    b.onclick=function(){ audAccForm(b.getAttribute('data-hall-ed')); };
+  });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-hall-lev]'), function(b){
+    b.onclick=function(){ _audSalaHallLevantar(b.getAttribute('data-hall-lev')); };
+  });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-hall-ver]'), function(b){
+    b.onclick=function(){ _audSalaHallEficacia(b.getAttribute('data-hall-ver'), true); };
+  });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-hall-noef]'), function(b){
+    b.onclick=function(){ _audSalaHallEficacia(b.getAttribute('data-hall-noef'), false); };
+  });
+  if($('auds-inf-file')) $('auds-inf-file').onchange=function(){ _audSalaInfSubir(S, this); };
+  if($('auds-inf-paso')) $('auds-inf-paso').onclick=function(){ _audSalaPasar33h(S, halls); };
+  if($('auds-constancia')) $('auds-constancia').onclick=function(){ _audSalaConstanciaHoja(S, peds, halls); };
+  if($('auds-alto')) $('auds-alto').onchange=function(){
+    S.d.altoRiesgo=this.checked; S.d.t=Date.now();
+    audGuardarFila(AUD_SALA, S.id, S.d.consultora||'Sala con tu consultor', S.d).then(function(){ return _audRefrescarNotas(); }).then(_audSalaPintar, function(e){ toast('No se pudo guardar. '+porQueFallo(e)); });
+  };
+  Array.prototype.forEach.call(caja.querySelectorAll('form[data-msg-ref]'), function(f){
+    f.onsubmit=function(ev){ ev.preventDefault(); _audSalaEnviarMsg(S, f.getAttribute('data-msg-ref'), f.querySelector('input')); };
+  });
+}
+function _audSalaResaltarEtapa(caja, k){
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-auds-et]'), function(b){ b.classList.toggle('on', b.getAttribute('data-auds-et')===k); });
+}
+function _audSalaGuardarCab(S){
+  var d=S ? JSON.parse(JSON.stringify(S.d)) : _audSalaBorrador();
+  d.tipo=_audVal('auds-tipo')||'consultora';
+  d.estado=_audVal('auds-estado')||'planificada';
+  d.consultora=_audTx(_audVal('auds-cons'), 160);
+  d.servicio=_audVal('auds-serv')||'ley';
+  d.alcance=_audTx(_audVal('auds-alcance'), 300);
+  d.inicio=_audFecha(_audVal('auds-ini'));
+  d.visita=_audFecha(_audVal('auds-vis'));
+  d.entrega=_audFecha(_audVal('auds-ent'));
+  d.etapa=_audVal('auds-etapa')||'rev';
+  if($('auds-alto')) d.altoRiesgo=$('auds-alto').checked;
+  if(!d.consultora){ toast('Escribe el nombre de la consultora, auditor o entidad.'); try{ $('auds-cons').focus(); }catch(e){} return Promise.resolve(false); }
+  d.por=d.por||_audQuien(); d.t=Date.now();
+  return audGuardarFila(AUD_SALA, S ? S.id : null, d.consultora+' · '+_audSalaServN(d.servicio), d).then(function(row){
+    AUDS.nuevo=false; if(row && row.id) AUDS.sel=row.id;
+    toast(S ? 'Sala guardada.' : 'Sala abierta.');
+    return _audRefrescarNotas();
+  }).then(function(){ _audSalaPintar(); return true; }, function(e){ toast('No se pudo guardar. '+porQueFallo(e)); return false; });
+}
+function _audSalaSoyCons(S){
+  var q=_audQuien(); if(!q) return;
+  if(!S){ toast('Guarda primero la cabecera de la sala.'); return; }
+  var d=JSON.parse(JSON.stringify(S.d)); d.cons=d.cons||[];
+  if(d.cons.indexOf(q)<0) d.cons.push(q);
+  d.t=Date.now();
+  audGuardarFila(AUD_SALA, S.id, d.consultora||'Sala', d).then(function(){ toast('Quedaste marcado como consultor en esta sala.'); return _audRefrescarNotas(); }).then(_audSalaPintar, function(e){ toast('No se pudo guardar. '+porQueFallo(e)); });
+}
+function _audSalaQuitarCons(S, idx){
+  if(!S) return;
+  var d=JSON.parse(JSON.stringify(S.d)); d.cons=(d.cons||[]).filter(function(_, i){ return i!==idx; }); d.t=Date.now();
+  audGuardarFila(AUD_SALA, S.id, d.consultora||'Sala', d).then(function(){ toast('Consultor quitado.'); return _audRefrescarNotas(); }).then(_audSalaPintar, function(e){ toast('No se pudo quitar. '+porQueFallo(e)); });
+}
+function _audSalaPedNuevo(S){
+  var h='<div class="aud-form">'+
+    '<div class="campo ancho"><label for="audp-t">Documento pedido</label><input id="audp-t" maxlength="160" placeholder="Ej. Registro de capacitaciones del trimestre"></div>'+
+    '<div class="campo ancho"><label for="audp-det">Detalle <span class="tenue">· opcional</span></label><textarea id="audp-det" rows="2" maxlength="400" placeholder="Alcance o formato esperado"></textarea></div>'+
+    '<div class="campo"><label for="audp-area">Área responsable</label><select id="audp-area">'+AUD_AREAS.map(function(a){ return '<option value="'+a[0]+'">'+esc(a[1])+'</option>'; }).join('')+'</select></div>'+
+    '<div class="campo"><label for="audp-plazo">Plazo <span class="tenue">· opcional</span></label><input type="date" id="audp-plazo"></div>'+
+    '</div><div class="msg" id="audp-msg" role="status"></div>';
+  abrirHoja('Pedir un documento', S.d.consultora||'Sala con tu consultor', h, '<button type="button" class="bt" id="audp-guardar">Guardar pedido</button>', { sinFoco:true });
+  $('audp-guardar').onclick=function(){
+    var t=_audTx(_audVal('audp-t'), 160), m=$('audp-msg');
+    if(t.length<3){ m.className='msg mal'; m.textContent='Escribe qué documento se pide.'; return; }
+    var d={ v:1, sala:S.id, t:t, det:_audArea(_audVal('audp-det'), 400), plazo:_audFecha(_audVal('audp-plazo')), area:_audVal('audp-area')||'sst', estado:'pedido', arch:[], obs:'', por:_audQuien(), ts:Date.now() };
+    audGuardarFila(AUD_PED, null, t, d).then(function(){ cerrarHoja(); toast('Pedido guardado.'); return _audRefrescarNotas(); }).then(_audSalaPintar, function(e){ m.className='msg mal'; m.textContent='No se pudo guardar. '+porQueFallo(e); });
+  };
+}
+function _audSalaPedArea(S, id){
+  var p=_audPeds(S.id).filter(function(x){ return x.id===id; })[0]; if(!p) return;
+  if(typeof areaJefe!=='function' || !areaJefe() || typeof penIr!=='function'){ toast('Solo el responsable SST o calidad puede enviar pedidos a un área.'); return; }
+  penIr('penMandarVarios', [{ area:p.d.area||'sst', tipo:'auditoria', titulo:String(p.d.t||'Documento').slice(0, 140), ref:'aud-ped:'+id,
+    cuerpo:((p.d.det || 'Pedido en la sala con el consultor ('+(S.d.consultora||'')+').')+' Súbelo en Auditoría ▸ Sala con tu consultor.').trim() }]).then(function(R){
+    toast(R && R.creados ? 'Enviado a la bandeja de '+_audAreaN(p.d.area||'sst')+'.' : 'Ese pedido ya estaba abierto en esa área.');
+  }, function(e){ toast('No se pudo enviar al área. '+porQueFallo(e)); });
+}
+function _audSalaPedSubir(S, id, inp){
+  var p=_audPeds(S.id).filter(function(x){ return x.id===id; })[0], files=Array.prototype.slice.call(inp.files||[]); inp.value='';
+  if(!p || !files.length) return;
+  if(files.some(function(f){ return (f.size||0)>20*1024*1024; })){ toast('Un archivo pesa más de 20 MB: comprímelo.'); return; }
+  var d=JSON.parse(JSON.stringify(p.d)); d.arch=d.arch||[];
+  var i=0;
+  function sig(){
+    if(i>=files.length) return Promise.resolve();
+    var f=files[i++];
+    return subirArchivoP('auditoria', f).then(function(u){ d.arch.push({ u:u, n:String(f.name||'archivo').slice(0, 120) }); return sig(); });
+  }
+  sig().then(function(){
+    d.estado='subido'; d.obs=''; d.ts=Date.now();
+    return audGuardarFila(AUD_PED, p.id, d.t, d);
+  }).then(function(){
+    var cerrar=Promise.resolve({ ok:true, n:0, skip:true });
+    if(typeof areaActiva==='function' && areaActiva() && typeof penIr==='function'){
+      cerrar=penIr('penCerrarRef', 'aud-ped:'+p.id, 'Documento subido en la sala con el consultor ('+_audN(files.length, 'archivo', 'archivos')+').', true).then(function(r){
+        if(r && typeof r==='object'){
+          if((r.n || r.ya) && typeof areaContar==='function') areaContar().then(function(){ try{ pintarRail(true); }catch(_r){} });
+          return r;
+        }
+        if(typeof r==='number' && r>0){
+          if(typeof areaContar==='function') areaContar().then(function(){ try{ pintarRail(true); }catch(_r){} });
+          return { ok:true, n:r, abiertos:r, ya:0, err:null };
+        }
+        return { ok:false, n:0, abiertos:null, ya:0, err:(r===0 ? { portal:'No se pudo confirmar el cierre en el área.' } : null) };
+      }, function(e){
+        return { ok:false, n:0, abiertos:null, ya:0, err:e };
+      });
+    }
+    return cerrar.then(function(r){
+      if(r && !r.skip && r.ok!==true){
+        var det=(r.err!=null) ? ' '+porQueFallo(r.err) : '';
+        toast('Archivo subido, pero no se pudo cerrar el pendiente del área.'+det);
+      }else{
+        toast('Documento subido.');
+      }
+      return _audRefrescarNotas();
+    });
+  }).then(_audSalaPintar, function(e){ toast('No se pudo subir. '+porQueFallo(e)); });
+}
+function _audSalaPedQuitarArch(id, idx){
+  var r=(AUDW.D && AUDW.D.notas || []).filter(function(x){ return x.id===id; })[0], d=r ? _audNota(r) : null;
+  if(!d) return;
+  d.arch=(d.arch||[]).filter(function(_, i){ return i!==idx; });
+  if(!d.arch.length) d.estado='pedido';
+  d.ts=Date.now();
+  audGuardarFila(AUD_PED, id, d.t, d).then(_audRefrescarNotas).then(_audSalaPintar, function(e){ toast('No se pudo quitar. '+porQueFallo(e)); });
+}
+function _audSalaPedAprobar(id){
+  var r=(AUDW.D && AUDW.D.notas || []).filter(function(x){ return x.id===id; })[0], d=r ? _audNota(r) : null;
+  if(!d) return;
+  d.estado='aprobado'; d.obs=''; d.ts=Date.now();
+  audGuardarFila(AUD_PED, id, d.t, d).then(function(){ toast('Documento aprobado.'); return _audRefrescarNotas(); }).then(_audSalaPintar, function(e){ toast('No se pudo aprobar. '+porQueFallo(e)); });
+}
+function _audSalaPedObservar(id){
+  var r=(AUDW.D && AUDW.D.notas || []).filter(function(x){ return x.id===id; })[0], d=r ? _audNota(r) : null;
+  if(!d) return;
+  abrirHoja('Observar documento', d.t, '<div class="campo"><label for="audp-obs-tx">Qué falta o qué corregir</label><textarea id="audp-obs-tx" rows="3" maxlength="500">'+esc(d.obs||'')+'</textarea></div><div class="msg" id="audp-omsg"></div>',
+    '<button type="button" class="bt mal" id="audp-obs-ok">Dejar observado</button>', { sinFoco:true });
+  $('audp-obs-ok').onclick=function(){
+    var obs=_audArea(_audVal('audp-obs-tx'), 500);
+    if(obs.length<3){ $('audp-omsg').className='msg mal'; $('audp-omsg').textContent='Escribe qué falta o qué corregir.'; return; }
+    d.estado='observado'; d.obs=obs; d.ts=Date.now();
+    audGuardarFila(AUD_PED, id, d.t, d).then(function(){ cerrarHoja(); toast('Documento observado.'); return _audRefrescarNotas(); }).then(_audSalaPintar, function(e){ $('audp-omsg').className='msg mal'; $('audp-omsg').textContent='No se pudo guardar. '+porQueFallo(e); });
+  };
+}
+function _audSalaPedQuitar(id){
+  confirmar('¿Quitar este pedido de documento?', 'Se borra de la sala.', { si:'Sí, quitarlo', mal:true }).then(function(si){
+    if(!si) return;
+    audQuitarFila(id).then(function(){ toast('Pedido quitado.'); return _audRefrescarNotas(); }).then(_audSalaPintar, function(e){ toast('No se pudo quitar. '+porQueFallo(e)); });
+  });
+}
+function _audSalaHallLevantar(id){
+  var x=_audHalls().filter(function(y){ return y.id===id; })[0]; if(!x) return;
+  var d=JSON.parse(JSON.stringify(x.d)), ci=d.cierre||{};
+  abrirHoja('Levantar hallazgo', d.desc, '<div class="campo"><label for="auds-lev-tx">Qué se hizo para levantarlo</label><textarea id="auds-lev-tx" rows="3" maxlength="800">'+esc(ci.nota||'')+'</textarea></div>'+
+    '<div class="campo"><span class="lbl">Evidencia del cierre (PDF o foto)</span><div id="auds-lev-ev"></div></div><div class="msg" id="auds-lmsg"></div>',
+    '<button type="button" class="bt ok" id="auds-lev-ok">Enviar levantamiento</button>', { sinFoco:true });
+  var ev=_audEvid($('auds-lev-ev'), ci.ev||[]);
+  $('auds-lev-ok').onclick=function(){
+    var nota=_audArea(_audVal('auds-lev-tx'), 800), m=$('auds-lmsg');
+    if(!nota && !ev.n()){ m.className='msg mal'; m.textContent='Escribe qué se hizo o adjunta la evidencia.'; return; }
+    $('auds-lev-ok').disabled=true; m.className='msg gris'; m.textContent='Guardando levantamiento…';
+    ev.subir().then(function(list){
+      d.cierre={ fecha:hoyISO(), nota:nota, ev:list, quien:_audQuien() };
+      d.eficacia={ ok:null, fecha:'', nota:'' };
+      d.estado='cerrada'; d.levantado=true; d.t=Date.now();
+      return audGuardarFila(AUD_ACC, x.id, (AUD_HALL_T[d.tipo]||'Hallazgo')+' · '+(d.cl ? _audReq(d.cl).cl : d.fecha), d);
+    }).then(function(){ cerrarHoja(); toast('Levantamiento enviado al consultor.'); return _audRefrescarNotas(); }).then(_audSalaPintar, function(e){
+      $('auds-lev-ok').disabled=false; m.className='msg mal'; m.textContent='No se pudo guardar. '+porQueFallo(e);
+    });
+  };
+}
+function _audSalaHallEficacia(id, ok){
+  var x=_audHalls().filter(function(y){ return y.id===id; })[0]; if(!x) return;
+  var d=JSON.parse(JSON.stringify(x.d));
+  if(ok){
+    d.estado='cerrada'; d.levantado=true; d.eficacia={ ok:true, fecha:hoyISO(), nota:_audQuien() ? 'Verificado por '+_audQuien() : '' }; d.t=Date.now();
+    audGuardarFila(AUD_ACC, x.id, (AUD_HALL_T[d.tipo]||'Hallazgo')+' · '+(d.cl ? _audReq(d.cl).cl : d.fecha), d).then(function(){ toast('Hallazgo verificado como eficaz.'); return _audRefrescarNotas(); }).then(_audSalaPintar, function(e){ toast('No se pudo guardar. '+porQueFallo(e)); });
+    return;
+  }
+  abrirHoja('Marcar como no eficaz', d.desc, '<div class="campo"><label for="auds-noef-tx">Por qué no fue eficaz</label><textarea id="auds-noef-tx" rows="3" maxlength="500"></textarea></div><div class="msg" id="auds-nmsg"></div>',
+    '<button type="button" class="bt mal" id="auds-noef-ok">Devolver a abierto</button>', { sinFoco:true });
+  $('auds-noef-ok').onclick=function(){
+    var nota=_audArea(_audVal('auds-noef-tx'), 500), m=$('auds-nmsg');
+    if(nota.length<3){ m.className='msg mal'; m.textContent='Explica qué falta para cerrarlo.'; return; }
+    d.estado='abierta'; delete d.levantado; d.eficacia={ ok:false, fecha:hoyISO(), nota:nota }; d.t=Date.now();
+    audGuardarFila(AUD_ACC, x.id, (AUD_HALL_T[d.tipo]||'Hallazgo')+' · '+(d.cl ? _audReq(d.cl).cl : d.fecha), d).then(function(){ cerrarHoja(); toast('Hallazgo devuelto a abierto.'); return _audRefrescarNotas(); }).then(_audSalaPintar, function(e){ m.className='msg mal'; m.textContent='No se pudo guardar. '+porQueFallo(e); });
+  };
+}
+function _audSalaInfSubir(S, inp){
+  var f=(inp.files||[])[0]; inp.value=''; if(!f) return;
+  if((f.size||0)>20*1024*1024){ toast('El PDF pesa más de 20 MB.'); return; }
+  subirArchivoP('auditoria', f).then(function(u){
+    var d=JSON.parse(JSON.stringify(S.d)), hoy=hoyISO();
+    d.informe={ u:u, n:String(f.name||'informe.pdf').slice(0, 120), fecha:d.entrega||hoy, t:Date.now() };
+    if(!d.entrega) d.entrega=hoy;
+    d.t=Date.now();
+    return audGuardarFila(AUD_SALA, S.id, d.consultora||'Sala', d);
+  }).then(function(){ toast('Informe final subido.'); return _audRefrescarNotas(); }).then(_audSalaPintar, function(e){ toast('No se pudo subir el informe. '+porQueFallo(e)); });
+}
+function _audSalaPasar33h(S, halls){
+  var d=JSON.parse(JSON.stringify(S.d)), inf=d.informe;
+  if(!inf || !inf.u){ toast('Sube primero el informe en PDF.'); return; }
+  var nc=0, obsn=0, om=0;
+  (halls||[]).forEach(function(x){ if(_audHallEsNC(x.d.tipo)) nc++; else if(x.d.tipo==='obs') obsn++; else om++; });
+  var fecha=d.entrega || inf.fecha || hoyISO(), nom=_audSalaServN(d.servicio);
+  var g={ v:1, k:'aud', estado:'hecho', tipo:'otra', nombre:nom, fecha:fecha, emp:d.consultora||'', nc:nc, obsn:obsn, om:om, ev:[{ u:inf.u, n:inf.n||'Informe final.pdf' }], sala:S.id, por:_audQuien(), t:Date.now() };
+  audGuardarFila('ges-act', d.ges||null, 'Auditoría realizada · '+nom+' · '+fecha, g).then(function(row){
+    if(row && row.id) d.ges=row.id;
+    d.t=Date.now();
+    return audGuardarFila(AUD_SALA, S.id, d.consultora||'Sala', d);
+  }).then(function(){
+    toast('Pasado al Registro de auditorías (art. 33 h).');
+    return _audRefrescarNotas();
+  }).then(_audSalaPintar, function(e){ toast('No se pudo pasar al registro. '+porQueFallo(e)); });
+}
+function _audSalaEnviarMsg(S, ref, inp){
+  var tx=_audTx(inp && inp.value, 500);
+  if(!tx) return;
+  inp.disabled=true;
+  var d={ v:1, sala:S.id, ref:ref, tx:tx, por:_audQuien()||'Usuario', cons:_audSalaEsCons(S.d), t:Date.now() };
+  audGuardarFila(AUD_MSG, null, 'Comentario · '+ref, d).then(function(){
+    inp.value=''; inp.disabled=false;
+    return _audRefrescarNotas();
+  }).then(_audSalaPintar, function(e){ inp.disabled=false; toast('No se pudo comentar. '+porQueFallo(e)); });
+}
+
+/* ── CONSTANCIA DE AUDITORÍA (1 hoja A4 + firma en pantalla + QR y huella SHA-256) ─────────────────────────────── */
+function _audSha256(buf){
+  if(!window.crypto || !crypto.subtle || !crypto.subtle.digest) return Promise.resolve('');
+  return crypto.subtle.digest('SHA-256', buf).then(function(h){
+    var b=new Uint8Array(h), s='';
+    for(var i=0;i<b.length;i++) s+=(b[i]<16?'0':'')+b[i].toString(16);
+    return s;
+  }, function(){ return ''; });
+}
+function _audHuellaRegistrar(blob, tipo){
+  if(!blob || !YO || !YO.obra || !YO.obra.id || YO.demo) return Promise.resolve(null);
+  return blob.arrayBuffer().then(_audSha256).then(function(sha){
+    if(!sha) return null;
+    if(typeof hayCuentaP==='function' && !hayCuentaP()) return { ok:false, h:sha };
+    return sbRpc('sst_huella_registrar', { p_emp:YO.obra.id, p_hash:sha, p_tipo:tipo||'constancia', p_bytes:blob.size||0 })
+      .then(function(r){ return { ok:!!(r && r.ok), h:sha, creado:r && r.creado }; }, function(){ return { ok:false, h:sha }; });
+  });
+}
+function _audSalaConstanciaHoja(S, peds, halls){
+  var d=S.d;
+  var h='<p class="ayuda" style="margin:0 0 10px">Esta constancia acredita que la auditoría se realizó en las fechas indicadas. No es una certificación. OBRASST no audita ni certifica.</p>'+
+    '<div class="aud-form">'+
+    '<div class="campo"><label for="audc-firmante">Auditor / firmante</label><input id="audc-firmante" maxlength="120" value="'+esc(d.consultora||_audQuien()||'')+'"></div>'+
+    '<div class="campo"><label for="audc-cargo">Cargo o registro <span class="tenue">· opcional</span></label><input id="audc-cargo" maxlength="120" placeholder="Ej. Auditor líder / Reg. MTPE"></div>'+
+    '<div class="campo ancho"><label>Firma trazada en pantalla</label><canvas id="audc-firma" class="audc-pad" width="360" height="110"></canvas>'+
+    '<div style="margin-top:6px"><button type="button" class="bt sec chico" id="audc-limpiar">Limpiar trazo</button></div></div>'+
+    '</div><div class="msg" id="audc-msg" role="status"></div>';
+  abrirHoja('Constancia de auditoría', d.consultora||'1 hoja A4', h, '<button type="button" class="bt" id="audc-generar">📜 Generar PDF (1 hoja A4)</button>', { sinFoco:true });
+  var cv=$('audc-firma'), ctx=cv ? cv.getContext('2d') : null, dibujado=false, pintando=false;
+  if(ctx){
+    ctx.strokeStyle='#0B2A3A'; ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round';
+    var pos=function(ev){
+      var r=cv.getBoundingClientRect(), t=(ev.touches && ev.touches[0]) || ev;
+      return { x:(t.clientX-r.left)*(cv.width/r.width), y:(t.clientY-r.top)*(cv.height/r.height) };
+    };
+    var ini=function(ev){ pintando=true; var p=pos(ev); ctx.beginPath(); ctx.moveTo(p.x, p.y); dibujado=true; };
+    var mov=function(ev){ if(!pintando) return; if(ev.preventDefault) ev.preventDefault(); var p=pos(ev); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+    var fin=function(){ pintando=false; };
+    cv.addEventListener('pointerdown', ini); cv.addEventListener('pointermove', mov);
+    window.addEventListener('pointerup', fin);
+    $('audc-limpiar').onclick=function(){ ctx.clearRect(0, 0, cv.width, cv.height); dibujado=false; };
+  }
+  $('audc-generar').onclick=function(){
+    var m=$('audc-msg'), bt=$('audc-generar');
+    var firm=_audTx(_audVal('audc-firmante'), 120) || d.consultora || 'Auditor', cargo=_audTx(_audVal('audc-cargo'), 120);
+    bt.disabled=true; m.className='msg gris'; m.textContent='Armando constancia A4…';
+    Promise.all([cargarEvPDF(), typeof cargarQRLib==='function' ? cargarQRLib().catch(function(){ return null; }) : Promise.resolve(null)]).then(function(){
+      var J=window.jspdf && window.jspdf.jsPDF; if(!J) throw new Error('sin_pdf');
+      var doc=new J({ unit:'mm', format:'a4' }), W=210, M=15, A=W-2*M, y=32;
+      var T=function(s){ return String(s==null ? '' : s).replace(/[✓⚠✗○ℹ]\s?/g, '').replace(/[^\u0000-ÿ–—’“”•€\n]/g, '').replace(/[ \t]+/g, ' ').trim(); };
+      doc.setFillColor(11, 42, 58); doc.rect(0, 0, W, 24, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
+      doc.text(T('CONSTANCIA DE AUDITORÍA REALIZADA'), M, 11);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+      doc.text(T([empresaDeObraP(), nombreObraP()].filter(Boolean).join(' · ')), M, 18);
+      doc.text(T(_audF(hoyISO())), W-M, 18, { align:'right' });
+      var dato=function(k, v){ if(!v) return; doc.setFont('helvetica', 'bold'); doc.setFontSize(9.2); doc.setTextColor(89, 100, 111); doc.text(T(k), M, y);
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(20, 25, 31); var L=doc.splitTextToSize(T(v), A-48); doc.text(L, M+48, y); y+=Math.max(1, L.length)*4.5+1.5; };
+      dato('Tipo', _audSalaTipoN(d.tipo||'consultora'));
+      dato('Norma / criterio', _audSalaServN(d.servicio));
+      dato('Auditor / consultora', d.consultora);
+      dato('Alcance', d.alcance || 'Obra y gestión SST registrada en OBRASST');
+      dato('Inicio / visita / entrega', [_audF(d.inicio), _audF(d.visita), _audF(d.entrega)].filter(Boolean).join(' · ') || _audF(hoyISO()));
+      dato('Estado actual', _audSalaEstN(_audSalaEstDe(d)));
+      var ncm=0, ncn=0, obs=0, om=0;
+      (halls||[]).forEach(function(x){ var t=x.d.tipo; if(t==='nc_mayor') ncm++; else if(t==='nc_menor' || t==='nc') ncn++; else if(t==='obs') obs++; else om++; });
+      var pEnt=(peds||[]).filter(function(p){ return p.d.estado==='subido' || p.d.estado==='aprobado'; }).length;
+      dato('Documentos pedidos', (peds||[]).length ? (pEnt+' de '+peds.length+' entregados') : 'Sin pedidos en sala');
+      dato('Hallazgos', (halls||[]).length ? (ncm+' NC mayor · '+ncn+' NC menor · '+obs+' Obs. · '+om+' OM') : 'Sin hallazgos registrados');
+      y+=6;
+      doc.setFillColor(246, 248, 250); doc.setDrawColor(203, 212, 219); doc.roundedRect(M, y, A, 22, 2, 2, 'FD');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(11, 42, 58);
+      doc.text(doc.splitTextToSize(T('Esta constancia acredita que la auditoría se realizó en las fechas indicadas. No es una certificación.'), A-8), M+4, y+7);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(89, 100, 111);
+      doc.text(T('OBRASST no audita ni certifica.'), M+4, y+18);
+      y+=34;
+      /* firma trazada en pantalla */
+      if(dibujado && cv){
+        try{ doc.addImage(cv.toDataURL('image/png'), 'PNG', M, y, 64, 20); }catch(_img){}
+      }
+      doc.setDrawColor(120, 130, 140); doc.line(M, y+22, M+76, y+22);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.2); doc.setTextColor(20, 25, 31); doc.text(T(firm), M, y+27);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.3); doc.setTextColor(89, 100, 111);
+      doc.text(T(['Firma trazada en pantalla', cargo].filter(Boolean).join(' · ')), M, y+31.5);
+      /* QR de verificación */
+      var codVer='OBRASST|AUD|'+S.id+'|'+hoyISO();
+      if(typeof qrcode==='function'){
+        try{
+          var q=qrcode(0, 'M'); q.addData(codVer); q.make();
+          var qcv=document.createElement('canvas'), nmod=q.getModuleCount(), cell=3, qctx=qcv.getContext('2d');
+          qcv.width=qcv.height=nmod*cell+8; qctx.fillStyle='#fff'; qctx.fillRect(0, 0, qcv.width, qcv.height); qctx.fillStyle='#0B2A3A';
+          for(var r=0;r<nmod;r++) for(var c2=0;c2<nmod;c2++) if(q.isDark(r, c2)) qctx.fillRect(c2*cell+4, r*cell+4, cell, cell);
+          doc.addImage(qcv.toDataURL('image/png'), 'PNG', W-M-28, y+2, 28, 28);
+          doc.setFontSize(7.2); doc.text(T(S.id), W-M-14, y+33, { align:'center' });
+        }catch(_q){}
+      }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(120, 130, 140);
+      doc.text(T('Constancia de auditoría · '+(nombreObraP()||'Obra')+' · 1 / 1'), M, 288);
+      var blob=doc.output('blob');
+      var nom=_audAscii('Constancia auditoria - '+(nombreObraP()||'obra')+' - '+hoyISO())+'.pdf';
+      bajarBlob(blob, nom);
+      return _audHuellaRegistrar(blob, 'constancia').then(function(res){
+        var sha=(res && res.h) || '';
+        d.constancia={ fecha:hoyISO(), sha256:sha, firmante:firm, t:Date.now() };
+        d.t=Date.now();
+        return audGuardarFila(AUD_SALA, S.id, d.consultora||'Sala', d).then(function(){
+          bt.disabled=false; m.className='msg ok';
+          m.textContent='Descargada ('+nom+')'+(sha ? ' · huella SHA-256: '+sha.slice(0, 16)+'…' : '')+'.';
+          _audRefrescarNotas().then(function(){ if(VISTA.actual==='aud-sala') _audSalaPintar(); });
+        }, function(){ bt.disabled=false; m.className='msg ok'; m.textContent='Constancia descargada.'; });
+      });
+    }).catch(function(e){
+      bt.disabled=false; m.className='msg mal'; m.textContent='No se pudo armar la constancia. '+porQueFallo(e);
+    });
+  };
+}
+
+/* ══ «SIMULEMOS UNA AUDITORÍA» (12/11/2026 · 2026-11-11 · 12) ══════════════════════════════════════════════════
+   Simulacro automático (por reglas de carpeta real, nunca «IA») con 15 requisitos y reloj, puntaje /100,
+   generación automática de hallazgos de práctica y envío opcional a «Pendientes por área». SSOMA+. */
+var AUDSIM={ caja:null, n:0, foco:'ley', items:[], resp:{}, inicio:0, segs:0, timer:null, terminado:false, focoSeed:1 };
+function _audSimFocos(){
+  return [
+    ['ley',  'Ley 29783 y su reglamento'],
+    ['i45',  'ISO 45001:2018'],
+    ['i14',  'ISO 14001:2015'],
+    ['insp', 'Me visita la inspección del trabajo']
+  ];
+}
+function _audSimTimerParar(){ if(AUDSIM.timer){ clearInterval(AUDSIM.timer); AUDSIM.timer=null; } }
+function _audSimFmt(seg){
+  var s=Math.max(0, Math.floor(seg||0)), mm=Math.floor(s/60), ss=s%60;
+  return dos(mm)+':'+dos(ss);
+}
+function _audSimElegir(R, foco){
+  var base=[];
+  if(foco==='insp'){
+    base=_audTodos().filter(function(r){ return r.norma==='ley'; });
+  } else {
+    _audCatalogo(foco).forEach(function(G){ G.s.forEach(function(r){ base.push(r); }); });
+  }
+  /* prioridad automática: primero los que faltan / están viejos / sin eventos; luego los que hay, hasta 15 */
+  var peso={ falta:0, ojo:1, subir:2, info:3, ok:4 };
+  var ord=base.slice().sort(function(a, b){
+    var ra=R[a.k]||{ st:'subir' }, rb=R[b.k]||{ st:'subir' };
+    return (peso[ra.st] - peso[rb.st]);
+  });
+  return ord.slice(0, 15);
+}
+function _audSims(){
+  var L=[]; (AUDW.D && AUDW.D.notas || []).forEach(function(r){ if(r && r.hoja===AUD_SIM){ var d=_audNota(r); if(d) L.push({ id:r.id, creado:r.creado, d:d }); } });
+  return L.sort(function(a, b){ return (_audRowTs(b, b.d)-_audRowTs(a, a.d)); });
+}
+function vistaAudSim(caja){
+  _audCss(); _audSalaCss();
+  _audSimTimerParar();
+  AUDSIM.caja=caja;
+  var ac=$('acciones'); if(ac) ac.innerHTML='';
+  cargando(caja);
+  var n=++AUDSIM.n;
+  audTraer(false).then(function(){
+    if(n!==AUDSIM.n || VISTA.actual!=='aud-sim') return;
+    audCalcular();
+    if(!AUDSIM.items.length) _audSimIniciar('ley', false);
+    else _audSimPintar();
+  }, function(c){ if(n===AUDSIM.n && VISTA.actual==='aud-sim') fallo(caja, c); });
+}
+function _audSimIniciar(foco, arrancar){
+  _audSimTimerParar();
+  AUDSIM.foco=foco || AUDSIM.foco || 'ley';
+  var R=AUDW.R || {};
+  AUDSIM.items=_audSimElegir(R, AUDSIM.foco);
+  AUDSIM.resp={};
+  AUDSIM.items.forEach(function(r){
+    var x=R[r.k]||{ st:'subir' };
+    AUDSIM.resp[r.k]=(x.st==='ok' ? 'ok' : (x.st==='ojo' || x.st==='info' ? 'ojo' : 'mal'));
+  });
+  AUDSIM.segs=0; AUDSIM.terminado=false;
+  if(arrancar){
+    AUDSIM.inicio=Date.now();
+    AUDSIM.timer=setInterval(function(){
+      if(VISTA.actual!=='aud-sim' || AUDSIM.terminado){ _audSimTimerParar(); return; }
+      AUDSIM.segs=Math.floor((Date.now()-AUDSIM.inicio)/1000);
+      var el=$('audsim-reloj'); if(el) el.textContent=_audSimFmt(AUDSIM.segs);
+    }, 1000);
+  }
+  _audSimPintar();
+}
+function _audSimNotaCalc(){
+  var it=AUDSIM.items||[], tot=it.length, ok=0, ojo=0, mal=0;
+  it.forEach(function(r){ var v=AUDSIM.resp[r.k]; if(v==='ok') ok++; else if(v==='ojo') ojo++; else mal++; });
+  var nota=tot ? Math.round((ok*100 + ojo*50)/tot) : 0;
+  return { tot:tot, ok:ok, ojo:ojo, mal:mal, nota:nota };
+}
+function _audSimPintar(){
+  var caja=AUDSIM.caja; if(!caja || !document.body.contains(caja)) return;
+  var R=AUDW.R || {}, sims=_audSims(), S=null, res=_audSimNotaCalc();
+  _audSimFocos().forEach(function(x){ if(x[0]===AUDSIM.foco) S=x[1]; });
+  var h='<div class="auds-banner"><span><b>⏱ Simulemos una auditoría</b> · Revisión automática de 15 requisitos con tu carpeta real. OBRASST no audita ni certifica.</span>'+
+    '<span class="audsim-reloj" id="audsim-reloj" aria-live="off">'+esc(_audSimFmt(AUDSIM.segs))+'</span></div>';
+  h+='<div class="tarj"><div class="tarj-cab"><div><h2>Configura y ejecuta el simulacro</h2><p class="sub">Fórmula automática y verificable: Conformes × 1 + Por mejorar × 0.5 sobre los 15 requisitos</p></div></div>'+
+    '<div class="tarj-cuerpo"><div class="aud-form">'+
+    '<div class="campo"><label for="audsim-foco">Norma o foco</label><select id="audsim-foco">'+
+    _audSimFocos().map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===AUDSIM.foco ? ' selected' : '')+'>'+esc(o[1])+'</option>'; }).join('')+'</select></div>'+
+    '<div class="campo" style="justify-content:flex-end"><button type="button" class="bt" id="audsim-iniciar">▶ Empezar con reloj (15 requisitos)</button></div>'+
+    '</div></div></div>';
+  h+='<div class="tarj"><div class="tarj-cab"><div><h2>Los 15 requisitos · '+esc(S||'')+'</h2><p class="sub">Puntaje estimado ahora: <b>'+res.nota+'/100</b> ('+res.ok+' conformes · '+res.ojo+' por mejorar · '+res.mal+' faltantes)</p></div>'+
+    '<div class="acciones"><button type="button" class="bt ok" id="audsim-terminar">✓ Terminar simulacro</button></div></div><div class="tarj-cuerpo">';
+  h+=AUDSIM.items.map(function(r, idx){
+    var x=R[r.k]||{ st:'subir', lin:'' }, E=AUD_EST[x.st]||AUD_EST.subir, resp=AUDSIM.resp[r.k]||'mal';
+    return '<div class="audsim-r" data-sim-k="'+esc(r.k)+'"><div class="auds-item-cab"><div><b>'+(idx+1)+'. '+esc(r.cl+' '+r.t)+'</b>'+
+      '<div class="auds-item-meta"><span class="aud-st '+E.cl+'">'+E.ic+' '+esc(E.n)+'</span> · '+esc(x.lin)+' · Área: '+esc(_audAreaN(_audAreaDe(r)))+'</div></div></div>'+
+      '<div class="audsim-ops" role="group" aria-label="Evaluar requisito '+esc(r.cl)+'">'+
+      [['ok', '✓ Conforme'], ['ojo', '⚠ Por mejorar'], ['mal', '✗ No cumple']].map(function(o){
+        return '<button type="button" class="bt sec chico'+(resp===o[0] ? ' on' : '')+'" data-sim-v="'+o[0]+'">'+esc(o[1])+'</button>';
+      }).join('')+'</div></div>';
+  }).join('');
+  h+='</div></div>';
+  if(AUDSIM.terminado){
+    var halls=AUDSIM.items.filter(function(r){ return AUDSIM.resp[r.k]!=='ok'; });
+    h+='<div class="tarj" id="audsim-res"><div class="tarj-cab"><div><h2>Resultado del simulacro: '+res.nota+' / 100</h2><p class="sub">Tiempo: '+esc(_audSimFmt(AUDSIM.segs))+' · '+res.ok+' conformes · '+res.ojo+' por mejorar · '+res.mal+' faltantes</p></div>'+
+      '<div class="acciones"><button type="button" class="bt" id="audsim-guardar">💾 Guardar resultado</button>'+
+      (halls.length ? '<button type="button" class="bt sec" id="audsim-mandar">📨 Mandar '+halls.length+' a las áreas</button>' : '')+'</div></div><div class="tarj-cuerpo">';
+    if(!halls.length){
+      h+='<p class="ayuda" style="margin:0">Los 15 requisitos evaluados quedaron conformes en este simulacro.</p>';
+    } else {
+      h+='<p class="ayuda" style="margin:0 0 8px">Hallazgos automáticos según lo que falta o está pendiente de mejorar:</p><ul style="margin:0 0 0 18px;font-size:13px;line-height:1.5">';
+      halls.forEach(function(r){
+        var tp=(AUDSIM.resp[r.k]==='mal') ? AUD_HALL_T.nc_menor : AUD_HALL_T.obs;
+        h+='<li><b>'+esc(tp)+'</b> · '+esc(r.cl+' '+r.t)+' ('+esc(_audAreaN(_audAreaDe(r)))+')</li>';
+      });
+      h+='</ul>';
+    }
+    h+='<div class="msg" id="audsim-msg" role="status"></div></div></div>';
+  }
+  if(sims.length){
+    h+='<div class="tarj"><div class="tarj-cab"><div><h2>Historial de simulacros ('+sims.length+')</h2></div></div><div class="tarj-cuerpo"><ul class="aud-det" style="margin:0">';
+    sims.slice(0, 10).forEach(function(x){
+      var d=x.d;
+      h+='<li><span class="f">'+esc(_audF(d.fecha||String(x.creado||'').slice(0, 10)))+'</span><span class="t"><b>'+esc(String(d.nota||0))+'/100</b> · '+esc(d.foco||'')+' · '+esc(_audSimFmt(d.segs||0))+'</span></li>';
+    });
+    h+='</ul></div></div>';
+  }
+  caja.innerHTML=h;
+  $('audsim-foco').onchange=function(){ _audSimIniciar(this.value, false); };
+  $('audsim-iniciar').onclick=function(){ _audSimIniciar($('audsim-foco').value, true); };
+  $('audsim-terminar').onclick=function(){ _audSimTimerParar(); AUDSIM.terminado=true; _audSimPintar(); };
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-sim-k] [data-sim-v]'), function(b){
+    b.onclick=function(){ var k=b.closest('[data-sim-k]').getAttribute('data-sim-k'); AUDSIM.resp[k]=b.getAttribute('data-sim-v'); _audSimPintar(); };
+  });
+  if($('audsim-guardar')) $('audsim-guardar').onclick=function(){
+    var r2=_audSimNotaCalc(), d={ v:1, foco:S||AUDSIM.foco, focoK:AUDSIM.foco, fecha:hoyISO(), segs:AUDSIM.segs, nota:r2.nota, ok:r2.ok, ojo:r2.ojo, mal:r2.mal, total:r2.tot, ts:Date.now() };
+    audGuardarFila(AUD_SIM, null, 'Simulacro · '+r2.nota+'/100 · '+(S||AUDSIM.foco), d).then(function(){
+      toast('Simulacro guardado ('+r2.nota+'/100).');
+      return _audRefrescarNotas();
+    }).then(_audSimPintar, function(e){ var m=$('audsim-msg'); if(m){ m.className='msg mal'; m.textContent='No se pudo guardar. '+porQueFallo(e); } });
+  };
+  if($('audsim-mandar')) $('audsim-mandar').onclick=function(){
+    var m=$('audsim-msg'), falt=AUDSIM.items.filter(function(r){ return AUDSIM.resp[r.k]!=='ok'; });
+    if(!falt.length) return;
+    if(typeof areaJefe!=='function' || !areaJefe() || typeof penIr!=='function'){
+      if(m){ m.className='msg mal'; m.textContent='Solo quien lleva SST o gerencia puede mandar pedidos a las áreas.'; }
+      return;
+    }
+    var items=falt.map(function(r){ return { area:_audAreaDe(r), tipo:'auditoria', titulo:String(r.cl+' '+r.t).slice(0, 140), ref:'aud:'+r.k, cuerpo:'Detectado en simulacro de auditoría ('+(S||AUDSIM.foco)+'). Adjunta la evidencia en la carpeta o en Pendientes por área.' }; });
+    penIr('penMandarVarios', items, $('audsim-mandar')).then(function(R){
+      var txt=R ? (R.creados+' pedidos enviados a las áreas'+(R.ya ? ' ('+R.ya+' ya abiertos).' : '.')) : 'No se pudieron enviar.';
+      if(m){ m.className='msg ok'; m.textContent=txt; }
+      toast(txt);
+    }, function(e){ if(m){ m.className='msg mal'; m.textContent='No se pudieron enviar. '+porQueFallo(e); } });
+  };
 }

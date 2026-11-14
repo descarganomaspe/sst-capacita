@@ -64,7 +64,7 @@ function _norml(t){
 function _selNorm(s){
   s = String(s||'').toLowerCase();
   try{ s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }catch(e){}
-  return s;
+  return s.replace(/\s+/g, ' ').trim();
 }
 function _norm(s){return (s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
 function _normNom(s){

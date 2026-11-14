@@ -839,7 +839,7 @@ function _menEquiposHTML(){
   if(!S.L.length) return '<div class="aviso ojo" id="men-sin"><b>Todavía no hay equipos registrados.</b> La hoja se arma sola con los equipos y herramientas de la obra: regístralos primero (uno por uno, o pegando la lista de tu Excel).'+
     '<div class="acciones"><button type="button" class="bt sec chico" data-que="ir-equipos">Ir a registrar equipos</button></div></div>';
   return '<div class="men-res" id="men-res"></div><div class="men-barra" id="men-barra" aria-hidden="true"></div>'+
-    '<div class="men-herr"><input type="search" id="men-q" autocomplete="off" placeholder="Buscar por código, equipo o responsable" aria-label="Buscar un equipo" value="'+esc(S.q)+'">'+
+    '<div class="men-herr">'+selListaWebHTML('men-q', 'Buscar por código, equipo o responsable', S.q, 'Buscar un equipo')+
     '<div class="seg chico" id="men-ver" role="group" aria-label="Qué equipos ver"></div></div>'+
     '<div class="men-herr"><button type="button" class="bt sec chico" data-que="diarias" id="men-diarias" hidden></button>'+
     '<button type="button" class="bt sec chico" data-que="resto" id="men-resto">Los que faltan, conformes</button></div>'+
@@ -1060,7 +1060,11 @@ function _menAlEscribir(ev){
   }
   if(t.id==='men-cod'){ S.d.cod=t.value; _menSucio('cab'); return; }
   if(t.id==='men-ver'){ S.d.ver=t.value; _menSucio('cab'); return; }
-  if(t.id==='men-q'){ S.q=t.value; _menListaPinta(); return; }
+  if(t.id==='men-q'){
+    S.q=t.value; var qx=$('men-q-x'); if(qx) qx.hidden=!t.value;
+    if(qx && !qx._on){ qx._on=true; qx.onclick=function(){ var qi=$('men-q'); if(qi){ qi.value=''; S.q=''; qx.hidden=true; _menListaPinta(); try{ qi.focus(); }catch(_f){} } }; }
+    _menListaPinta(); return;
+  }
   if(t.hasAttribute && t.hasAttribute('data-o')){
     var f=t.closest('.men-f'), it=f ? _menItem2(f.getAttribute('data-id')) : null; if(!it) return;
     it.o=t.value; it.s=(S.env[it.id]===_menFirmaDe(it)) ? 1 : 0; it.d=0; it.app=0; if(!it.f) it.f=S.dia;

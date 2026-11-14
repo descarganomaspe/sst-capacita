@@ -423,15 +423,27 @@ function penMandarVarios(L, b){
   }
   return sig().then(function(r){ if(b) b.disabled=false; return r; }, function(e){ if(b) b.disabled=false; toast('No se pudieron mandar los pedidos. '+porQueFallo(e)); return null; });
 }
-/* cerrar los abiertos de una referencia (la carpeta de auditoría, al subir la evidencia de un requisito) */
-function penCerrarRef(ref, nota){
-  if(!areaActiva() || !ref) return Promise.resolve(0);
+/* cerrar los abiertos de una referencia (la carpeta de auditoría, al subir la evidencia de un requisito).
+   Con det=true devuelve { ok, n, abiertos, ya, err } para distinguir «sin abiertos / ya cerrados» de error de consulta/RPC. */
+function penCerrarRef(ref, nota, det){
+  var vacio={ ok:true, n:0, abiertos:0, ya:0, err:null };
+  if(!areaActiva() || !ref) return Promise.resolve(det ? vacio : 0);
   return traer('sst_area_pend', '&ref=eq.'+encodeURIComponent(ref)+'&cerrado=is.null&select=id', 20).then(function(L){
-    var n=0;
-    return (L||[]).reduce(function(p, a){
-      return p.then(function(){ return sbRpc('sst_area_pend_cerrar', { p_id:a.id, p_nota:nota || null }).then(function(j){ if(j && j.ok && !j.ya) n++; }, function(){}); });
-    }, Promise.resolve()).then(function(){ return n; });
-  }, function(){ return 0; });
+    var lista=L||[], n=0, ya=0, err=null;
+    return lista.reduce(function(p, a){
+      return p.then(function(){
+        return sbRpc('sst_area_pend_cerrar', { p_id:a.id, p_nota:nota || null }).then(function(j){
+          if(j && j.ok){ if(j.ya) ya++; else n++; }
+          else if(!err) err={ portal:'El servidor no cerró el pendiente del área.' };
+        }, function(e){ if(!err) err=e || true; });
+      });
+    }, Promise.resolve()).then(function(){
+      if(!det) return n;
+      return { ok:!err && (n + ya >= lista.length), n:n, abiertos:lista.length, ya:ya, err:err };
+    });
+  }, function(e){
+    return det ? { ok:false, n:0, abiertos:null, ya:0, err:e || true } : 0;
+  });
 }
 
 function _penCss(){

@@ -256,11 +256,23 @@ function freDistM(lat1, lng1, lat2, lng2){
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 function _freMin(hhmm){ var p = String(hhmm || '').split(':'); return (+p[0] || 0) * 60 + (+p[1] || 0); }
+/* hora y fecha en Perú (America/Lima, UTC−5): aunque el celular tenga otra zona horaria */
+function freAhoraLima(d){
+  d = d || new Date();
+  try{
+    var p = {};
+    new Intl.DateTimeFormat('en-CA', { timeZone:'America/Lima', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(d).forEach(function(x){ p[x.type] = x.value; });
+    var h = +p.hour, m = +p.minute; if(h === 24) h = 0;
+    if(isFinite(h) && isFinite(m) && p.year && p.month && p.day) return { iso:p.year + '-' + p.month + '-' + p.day, hhmm:('0' + h).slice(-2) + ':' + ('0' + m).slice(-2), min:h * 60 + m };
+  }catch(_i){}
+  var u = new Date(d.getTime() - 5 * 3600000), uh = u.getUTCHours(), um = u.getUTCMinutes();
+  return { iso:u.getUTCFullYear() + '-' + ('0' + (u.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + u.getUTCDate()).slice(-2),
+           hhmm:('0' + uh).slice(-2) + ':' + ('0' + um).slice(-2), min:uh * 60 + um };
+}
 /* ¿es horario de trabajo en ese frente? De su ingreso a su salida, sin su refrigerio */
 function freEnHorario(g, d){
   g = freGpsLimpio(g); if(!g) return { si:false, motivo:'sin_gps' };
-  d = d || new Date();
-  var m = d.getHours() * 60 + d.getMinutes(), a = _freMin(g.ini), b = _freMin(g.fin), ai = _freMin(g.ai), af = _freMin(g.af);
+  var m = freAhoraLima(d).min, a = _freMin(g.ini), b = _freMin(g.fin), ai = _freMin(g.ai), af = _freMin(g.af);
   if(m < a) return { si:false, motivo:'antes' };
   if(m >= b) return { si:false, motivo:'salida' };
   if(af > ai && m >= ai && m < af) return { si:false, motivo:'refrigerio' };

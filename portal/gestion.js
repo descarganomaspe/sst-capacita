@@ -2166,10 +2166,10 @@ function gesElegir(caja, op){
   });
   function todos(){ return E.extra.concat(E.gente); }
   function visibles(){
-    var q=nrm(E.q), f=E.f;
+    var f=E.f;
     return todos().filter(function(t){
       if(f){ var v=f.slice(2); if(f.charAt(0)==='p' ? nrm(t.puesto)!==v : nrm(t.area)!==v) return false; }
-      return !q || (nrm(t.nombre)+' '+String(t.dni||'').toLowerCase()+' '+nrm(t.puesto)).indexOf(q)>-1;
+      return selListaWebMatch((t.nombre||'')+' '+(t.dni||'')+' '+(t.puesto||'')+' '+(t.area||''), E.q);
     });
   }
   function nSel(){ return Object.keys(E.sel).length; }
@@ -2190,7 +2190,7 @@ function gesElegir(caja, op){
     var l=$(E.id+'-l'); if(!l) return;
     var v=visibles();
     l.innerHTML=v.length ? v.slice(0, 1500).map(filaHTML).join('')
-      : '<div class="ges-el-vacio">'+(todos().length ? 'Nadie calza con esa búsqueda.' : 'Tu obra todavía no tiene personal cargado. Súbelo en «Personal» o agrega aquí a quien asistió.')+'</div>';
+      : '<div class="ges-el-vacio" role="status" aria-live="polite">'+(todos().length ? 'No hay resultados para «'+esc(E.q||'')+'».' : 'Tu obra todavía no tiene personal cargado. Súbelo en «Personal» o agrega aquí a quien asistió.')+'</div>';
     var bt=$(E.id+'-todos'); if(bt){ bt.textContent='Marcar los '+v.length+' que se ven'; bt.disabled=!v.length; }
     pintaPie();
   }
@@ -2200,11 +2200,11 @@ function gesElegir(caja, op){
   }
   function cambio(){ pintaPie(); try{ E.alCambiar(nSel()); }catch(e){} }
   caja.innerHTML='<div class="ges-el" id="'+E.id+'">'+
-    '<div class="ges-el-barra"><input type="search" id="'+E.id+'-q" placeholder="Buscar por nombre, documento o puesto…" aria-label="Buscar en el personal">'+
+    '<div class="ges-el-barra">'+selListaWebHTML(E.id+'-q', 'Buscar por nombre, documento o puesto…', E.q, 'Buscar en el personal')+
       '<select id="'+E.id+'-f" aria-label="Filtrar por puesto o área" data-sin-pais>'+filtros()+'</select>'+
       '<button type="button" class="bt sec chico" id="'+E.id+'-todos">Marcar los que se ven</button></div>'+
     '<div class="ges-el-lista" id="'+E.id+'-l" role="group" aria-label="Personal de la obra"></div>'+
-    '<div class="ges-el-pie"><b id="'+E.id+'-n"></b><button type="button" class="bt-link" id="'+E.id+'-nada" hidden>Quitar todos</button>'+
+    '<div class="ges-el-pie"><b id="'+E.id+'-n" role="status" aria-live="polite"></b><button type="button" class="bt-link" id="'+E.id+'-nada" hidden>Quitar todos</button>'+
       '<button type="button" class="bt-link" id="'+E.id+'-pega">Pegar una lista</button><button type="button" class="bt-link" id="'+E.id+'-otro">＋ Alguien que no está en tu personal</button></div>'+
     '<div class="ges-el-mas" id="'+E.id+'-mas" hidden></div></div>';
   var L=$(E.id+'-l');
@@ -2220,7 +2220,7 @@ function gesElegir(caja, op){
     }
   });
   L.addEventListener('input', function(ev){ var k=ev.target.getAttribute('data-nk'); if(k && E.sel[k]){ E.sel[k].nota=ev.target.value; try{ E.alCambiar(nSel()); }catch(e){} } });
-  $(E.id+'-q').oninput=function(){ E.q=this.value; pintaLista(); };
+  selListaWebBind(E.id+'-q', function(v){ E.q=v; pintaLista(); });
   $(E.id+'-f').onchange=function(){ E.f=this.value; pintaLista(); };
   $(E.id+'-todos').onclick=function(){ visibles().forEach(function(t){ E.sel[t._k]=E.sel[t._k]||{ nota:'' }; }); pintaLista(); cambio(); };
   $(E.id+'-nada').onclick=function(){ E.sel={}; pintaLista(); cambio(); };

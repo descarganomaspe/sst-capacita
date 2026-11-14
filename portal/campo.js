@@ -1310,12 +1310,13 @@ function _alrwForm(a){
   function pintaGente(){
     var g=$('alrw-g'); if(!g) return;
     if(F.todos){ g.innerHTML=''; return; }
-    var q=String(F.q||'').toLowerCase(), L=gente().filter(function(t){ return !q || String(t.nombre||'').toLowerCase().indexOf(q)>-1; });
-    g.innerHTML='<input id="alrw-q" type="search" placeholder="Buscar por nombre" value="'+esc(F.q)+'" style="margin:6px 0">'+
-      '<div style="max-height:220px;overflow:auto;display:grid;gap:4px">'+L.map(function(t){ var on=F.elegidos.indexOf(String(t.id))>-1;
-        return '<label class="legw-trab" style="margin:0"><input type="checkbox" data-alrw-g="'+esc(t.id)+'"'+(on ? ' checked' : '')+'> '+esc(t.nombre||t.dni||'')+'</label>'; }).join('')+'</div>'+
-      '<p class="ayuda" style="margin:4px 0 0">'+F.elegidos.length+(F.elegidos.length===1 ? ' elegida' : ' elegidas')+'</p>';
-    $('alrw-q').oninput=function(){ F.q=this.value; pintaGente(); var e=$('alrw-q'); if(e){ e.focus(); try{ e.setSelectionRange(F.q.length, F.q.length); }catch(x){} } };
+    var tot=gente(), L=tot.filter(function(t){ return selListaWebMatch((t.nombre||'')+' '+(t.dni||'')+' '+(t.puesto||''), F.q); });
+    g.innerHTML='<div style="margin:6px 0">'+selListaWebHTML('alrw-q', 'Buscar por nombre o documento', F.q, 'Buscar trabajador')+'</div>'+
+      (L.length ? '<div style="max-height:220px;overflow:auto;display:grid;gap:4px">'+L.map(function(t){ var on=F.elegidos.indexOf(String(t.id))>-1;
+        return '<label class="legw-trab" style="margin:0"><input type="checkbox" data-alrw-g="'+esc(t.id)+'"'+(on ? ' checked' : '')+'> '+esc(t.nombre||t.dni||'')+'</label>'; }).join('')+'</div>'
+        : '<div class="vacio" style="padding:14px 10px" role="status" aria-live="polite"><b>'+(tot.length && F.q ? 'No hay resultados para «'+esc(F.q)+'»' : 'No hay personal activo')+'</b></div>')+
+      '<p class="ayuda" role="status" style="margin:4px 0 0">'+F.elegidos.length+(F.elegidos.length===1 ? ' elegida' : ' elegidas')+(L.length!==tot.length ? ' · viendo '+L.length+' de '+tot.length : '')+'</p>';
+    selListaWebBind('alrw-q', function(v){ F.q=v; pintaGente(); var e=$('alrw-q'); if(e){ e.focus(); try{ e.setSelectionRange(F.q.length, F.q.length); }catch(x){} } });
     Array.prototype.forEach.call(g.querySelectorAll('[data-alrw-g]'), function(c){ c.onchange=function(){ var id=c.getAttribute('data-alrw-g'); F.elegidos=F.elegidos.filter(function(x){ return x!==id; }); if(c.checked) F.elegidos.push(id); pintaGente(); }; });
   }
   abrirHoja(a ? 'Cambiar la alarma' : 'Programar una alarma', 'A la hora, el aviso grande de SIMULACRO en el celular de tu gente',

@@ -196,7 +196,7 @@ function _infNivelPoner(k, sinPintar){
 function infVista(caja){
   _infCss(); INFW.caja=caja;
   /* otra obra: su modelo y sus anexos, no los de la anterior */
-  if(INFW.obra!==(YO.obra||{}).id){ INFW.obra=(YO.obra||{}).id; INFW.secc=null; INFW.anexos=[]; INFW.modelo=null; INFW.datos=null; INFW.datosT=null; INFW.paraN=''; INFW.para='gerencia'; INFW.alcance='obra'; INFW.seccA=null; INFW.seccS=null; INF_PIDE.k=''; }
+  if(INFW.obra!==(YO.obra||{}).id){ INFW.obra=(YO.obra||{}).id; INFW.secc=null; INFW.anexos=[]; INFW.modelo=null; INFW.datos=null; INFW.datosT=null; INFW.paraN=''; INFW.para='gerencia'; INFW.alcance='obra'; INFW.seccA=null; INFW.seccS=null; INF_PIDE.k=''; INF_PIDE.solo=false; }
   /* 20/10/2026 · lote 23 · cada informe es su pestaña: la que se abrió dice cuál */
   var tipoV=INF_VISTA_TIPO[VISTA.actual] || 'sst';
   /* lo que pide otra sección al abrir el informe (medio ambiente: «🌱 Informe de medio ambiente» con su mes); si es otro informe, a su pestaña */
@@ -3000,7 +3000,7 @@ function _infS(D){
   };
 }
 /* ── lo que pide el informe, arriba de cada pestaña ── */
-var INF_PIDE = { k:'', D:null, n:0, t:0 };
+var INF_PIDE = { k:'', D:null, n:0, t:0, solo:false };
 function _infPideCargando(){ return '<div class="tarj-cuerpo"><p class="tenue" style="margin:0">Revisando lo de '+esc(_infMesN(INFW.mes))+'…</p></div>'; }
 function _infPideHTML(){
   if(INFW.tipo==='sst' && INFW.alcance==='todas' && _infTodasPuede()) return '';
@@ -3022,10 +3022,17 @@ function _infPidePintar(){
   var caja=$('inf-pide'); if(!caja || !INF_PIDE.D) return;
   /* el SCTR es del Perú: en una obra de otro país no se pide */
   var T=infbTipo(INFW.tipo), L=infbPartes(T.k, _infS(INF_PIDE.D), _infPlanOrden()).filter(function(x){ return !((x.k==='sctr' || x.k==='vida') && typeof vistaOcultaPais==='function' && vistaOcultaPais('sctr')); }), K=infbCuenta(L);
-  var h='<div class="tarj-cuerpo"><div class="inf-pide-cab"><b>'+K.ok+' de '+K.tot+' listos</b><span class="tenue"> · lo de '+esc(_infMesN(INFW.mes))+': lo mismo que ves en la app, en «Informe del mes»</span>'+
+  var falta=Math.max(0, K.tot-K.ok);
+  if(!falta) INF_PIDE.solo=false;
+  var vis = INF_PIDE.solo ? L.filter(function(x){ return x.est!=='ok' && x.est!=='cand'; }) : L;
+  var h='<div class="tarj-cuerpo"><div class="inf-pide-cab"><b>'+K.ok+' de '+K.tot+' listos</b>'+
+    '<span class="pill '+(falta ? 'ojo' : 'ok')+'">'+(falta ? 'Faltan '+falta+' por cerrar' : '✓ Mes listo para emitir')+'</span>'+
+    '<span class="tenue"> · cierre de '+esc(_infMesN(INFW.mes))+'</span>'+
+    (falta ? '<button type="button" class="bt sec chico" id="inf-pide-solo">'+(INF_PIDE.solo ? 'Ver todo ('+L.length+')' : 'Solo pendientes ('+falta+')')+'</button>'
+           : (INFW.tipo==='sst' ? '<button type="button" class="bt chico" id="inf-pide-armar">Armar el informe ›</button>' : ''))+
     '<button type="button" class="bt sec chico" id="inf-pide-re" title="Volver a revisar">↻</button></div>'+
     '<span class="inf-pide-barra" aria-hidden="true"><i style="width:'+Math.round(100*K.ok/Math.max(1, K.tot))+'%"></i></span><div class="inf-pide-l">';
-  L.forEach(function(x){
+  vis.forEach(function(x){
     var w=x.web || {}, bt=(x.est==='cand' || !w.bt) ? '' : '<button type="button" class="bt sec chico" data-pide="'+esc(x.k)+'">'+esc(w.bt)+'</button>';
     h+='<div class="inf-pide-f" data-k="'+esc(x.k)+'" data-est="'+x.est+'"><span class="inf-est '+x.est+'" aria-hidden="true">'+INFB_SIMB[x.est]+'</span>'+
       '<span class="tx"><b>'+esc(x.n)+'</b><small>'+esc(_infTx(x.tx))+'</small>'+(w.app ? '<small class="tenue">'+esc(w.app)+'</small>' : '')+'</span>'+bt+'</div>';
@@ -3034,6 +3041,8 @@ function _infPidePintar(){
   caja.innerHTML=h;
   caja.onclick=function(ev){
     if(ev.target.closest('#inf-pide-re')){ _infPideCargar(true); return; }
+    if(ev.target.closest('#inf-pide-solo')){ INF_PIDE.solo=!INF_PIDE.solo; _infPidePintar(); return; }
+    if(ev.target.closest('#inf-pide-armar')){ infArmar(); return; }
     var b=ev.target.closest('[data-pide]'); if(!b) return;
     var x=L.filter(function(y){ return y.k===b.getAttribute('data-pide'); })[0]; if(x) _infPideIr(x);
   };

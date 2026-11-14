@@ -584,13 +584,16 @@ function _epwTallas(){
     return L.length ? '<span>' + k[1] + ': ' + L.join(' · ') + '</span>' : '';
   }).filter(Boolean);
   if(res.length) h += '<div class="epw-res">' + res.join('') + '</div><p class="epw-sub">Para el pedido: cuántos de cada talla. El requerimiento de reposición sale con las tallas de la gente que usa cada EPP.</p>';
-  h += '<input type="search" class="epw-busca" id="epw-q" placeholder="Buscar por nombre, documento o puesto" autocomplete="off" value="' + esc(EPW.q) + '">';
+  h += selListaWebHTML('epw-q', 'Buscar por nombre, documento o puesto', EPW.q, 'Buscar trabajador por nombre, documento o puesto');
   return h + '<div id="epw-tallas-l">' + _epwTallasTabla() + '</div>';
 }
 function _epwTallasTabla(){
-  var D = EPW.d, q = EPPB.nrm(EPW.q), A = EPPB.activos(EPW.gente);
-  if(q) A = A.filter(function(t){ return EPPB.nrm(t.nombre + ' ' + t.dni + ' ' + t.puesto).indexOf(q) >= 0; });
-  if(!A.length) return '<div class="vacio"><b>Nadie con «' + esc(EPW.q) + '»</b>Prueba con otra parte del nombre o del documento.</div>';
+  var D = EPW.d, A = EPPB.activos(EPW.gente);
+  if(EPW.q) A = A.filter(function(t){ return selListaWebMatch((t.nombre || '') + ' ' + (t.dni || '') + ' ' + (t.puesto || ''), EPW.q); });
+  if(!A.length){
+    if(EPW.q && EPPB.activos(EPW.gente).length) return '<div class="vacio" role="status" aria-live="polite"><b>No hay resultados para «' + esc(EPW.q) + '»</b>Prueba con otro término.<br><button type="button" class="bt sec chico" id="epw-limpiar" style="margin-top:8px" onclick="EPW.q=\'\';var i=$(\'epw-q\');if(i){i.value=\'\';i.dispatchEvent(new Event(\'input\',{bubbles:true}));i.focus();}">Limpiar búsqueda</button></div>';
+    return '<div class="vacio" role="status" aria-live="polite"><b>Todavía no hay personal activo</b>Cuando cargues personal aparecerá aquí.</div>';
+  }
   var sel = function(id, k, v){ return '<select aria-label="' + ({ c:'Calzado', r:'Ropa', g:'Guantes' }[k]) + '" data-ta="' + esc(id) + '" data-k="' + k + '"><option value="">—</option>' + EPPB.TALLAS_OP[k].map(function(o){ return '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>'; };
   return '<div class="tarj"><div class="tabla-caja"><table class="epw-tabla epw-tallas"><thead><tr><th>Trabajador</th><th>Puesto</th><th>Calzado</th><th>Ropa</th><th>Guantes</th></tr></thead><tbody>' + A.slice(0, 400).map(function(t){
     var x = EPPB.tallasDe(D.tallas, t.id) || {};
@@ -682,7 +685,11 @@ function _epwCambio(ev){
 }
 function _epwEscribe(ev){
   var t = ev.target; if(!t) return;
-  if(t.id === 'epw-q'){ EPW.q = t.value; var l = $('epw-tallas-l'); if(l) l.innerHTML = _epwTallasTabla(); }
+  if(t.id === 'epw-q'){
+    EPW.q = t.value;
+    var qx = $('epw-q-x'); if(qx){ qx.hidden = !t.value; if(!qx._on){ qx._on = true; qx.onclick = function(){ var qi = $('epw-q'); if(qi){ qi.value = ''; EPW.q = ''; qx.hidden = true; var l2 = $('epw-tallas-l'); if(l2) l2.innerHTML = _epwTallasTabla(); try{ qi.focus(); }catch(_f){} } }; } }
+    var l = $('epw-tallas-l'); if(l) l.innerHTML = _epwTallasTabla();
+  }
 }
 (function(){ document.addEventListener('keydown', function(ev){ if(ev.key === 'Enter' && ev.target && ev.target.id === 'epw-c-n'){ ev.preventDefault(); epwCatAgregar(); } }); })();
 

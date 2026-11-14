@@ -224,6 +224,21 @@ var RIE = (function(){
     });
     A.escenarios.sort(function(x, y){ return y.pts - x.pts; });
     A.vacio = !D.eventos.length && !D.hoyTrabajo.length;
+    /* 12/11/2026 · Orden 17 #4: lo que viene si sigue la tendencia actual (reglas transparentes, cero «IA») */
+    A.proxima = [];
+    A.cats.forEach(function(c){
+      if(A.proxima.length >= 4) return;
+      if(c.sube || (c.ult >= 2 && c.ult > c.ant)){
+        A.proxima.push({ nivel:(c.grave && (c.abiertas || c.inc || c.acc) ? 'alto' : 'medio'), ic:c.ic,
+          t:c.n + ' subió de ' + c.ant + ' a ' + c.ult + ' en 4 semanas' + (c.abiertas ? ' y deja ' + c.abiertas + ' sin levantar' : '') + ': si sigue así esta semana puede repetirse' + (c.lugares[0] ? ' en ' + c.lugares[0] : '') + '.' });
+      } else if(c.grave && c.vencidas){
+        A.proxima.push({ nivel:'medio', ic:c.ic,
+          t:c.n + ': ' + pl(c.vencidas, 'aviso vencido', 'avisos vencidos') + ' de más de 7 días sin cerrar' + (c.hoy.length ? ' y trabajo activo hoy en el frente' : '') + '.' });
+      }
+    });
+    if(silencio && A.proxima.length < 4){
+      A.proxima.push({ nivel:'medio', ic:'🤐', t:'Dos semanas sin reportes con gente trabajando: conviene reactivar avisos de actos y condiciones esta semana.' });
+    }
     return A;
   }
   function _lugares(evs){
@@ -246,6 +261,11 @@ var RIE = (function(){
     if(A.alertas.length){
       h += '<div class="rie-tit">Lo que está pasando</div><div class="rie-alertas">' + A.alertas.slice(0, 8).map(function(x){
         return '<div class="rie-al ' + x.nivel + '"><span aria-hidden="true">' + x.ic + '</span><span data-sin-trad>' + esc(x.txt) + '</span></div>'; }).join('') + '</div>';
+    }
+    if(A.proxima && A.proxima.length){
+      h += '<div class="rie-tit">Si todo sigue igual · la semana que viene</div><div class="rie-sem" role="region" aria-label="Tendencia para la próxima semana">' +
+        A.proxima.map(function(x){ return '<div class="rie-sem-f ' + x.nivel + '"><span aria-hidden="true">' + x.ic + '</span><span data-sin-trad>' + esc(x.t) + '</span></div>'; }).join('') +
+        '<p class="rie-sub">Sale de comparar las últimas 4 semanas con las 4 anteriores y lo pendiente hoy.</p></div>';
     }
     h += '<div class="rie-tit">Escenarios que se están armando</div>';
     if(!A.escenarios.length) h += '<p class="rie-sub">Ninguno con señales: no hay avisos de riesgos graves que se repitan en las últimas semanas.</p>';
@@ -477,6 +497,7 @@ var RIE = (function(){
       '.rie-tit{margin:20px 0 8px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.8}',
       '.rie-sub{font-size:12.5px;opacity:.78;margin:6px 0 0}',
       '.rie-alertas{display:grid;gap:7px}.rie-al{display:flex;gap:9px;align-items:flex-start;padding:9px 12px;border-radius:12px;background:var(--rie-f);box-shadow:inset 3px 0 0 var(--rie-ambar);font-size:14px}.rie-al.alto{box-shadow:inset 3px 0 0 var(--rie-rojo)}',
+      '.rie-sem{display:grid;gap:7px}.rie-sem-f{display:flex;gap:9px;align-items:flex-start;padding:9px 12px;border-radius:12px;background:var(--rie-f);box-shadow:inset 3px 0 0 #2F7FC1;font-size:14px}.rie-sem-f.alto{box-shadow:inset 3px 0 0 var(--rie-rojo)}',
       '.rie-esc{padding:13px 14px;border-radius:14px;background:var(--rie-f);box-shadow:inset 0 0 0 1px var(--rie-l);margin:0 0 10px}',
       '.rie-esc-c,.rie-sim-cab{display:flex;gap:10px;align-items:center}.rie-esc-c>div,.rie-sim-cab>div{flex:1;min-width:0}.rie-esc-c b,.rie-sim-cab b{display:block;font-size:16px}.rie-esc-c small,.rie-sim-cab small{display:block;font-size:12.5px;opacity:.75}',
       '.rie-esc-ic{font-size:26px;line-height:1}.rie-pasa{margin:8px 0;font-size:14px}',
