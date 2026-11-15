@@ -6866,6 +6866,34 @@ html.t-claro .chat-msj.mio{background:#E0F2FE;border-color:rgba(2,132,199,.35)}
 .chat-inp{flex:1;min-width:0;padding:11px 14px;border-radius:12px;border:1.5px solid rgba(var(--w),.15);background:rgba(var(--w),.05);color:var(--tinta);font:inherit;font-size:14px}
 .chat-inp:focus{border-color:var(--oro);outline:none}
 .chat-bt-send{flex:0 0 42px;width:42px;height:42px;border-radius:12px;border:0;background:var(--oro);color:#0B2A3A;font-size:16px;font-weight:800;cursor:pointer;display:grid;place-items:center}
+/* 14/11/2026 · Academia tanda 1 (ACADEMIA-APP): el acceso discreto al pie de cada inicio y el marco con la Academia
+   (la misma de la web, en claro como en la web: portal/academia.html) */
+.acad-ent-caja{margin:18px auto 6px;text-align:center}
+.acad-ent{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:7px 16px;border-radius:999px;cursor:pointer;
+  font:inherit;font-size:13px;font-weight:600;color:var(--gris);background:rgba(var(--w),.04);border:1px solid rgba(var(--w),.2)}
+.acad-ent:hover{border-color:rgba(245,183,0,.55);color:var(--tinta)}
+.acad-ent span{font-size:15px;line-height:1}
+html.t-alto .acad-ent{color:#000;border:2px solid #000;background:#fff}
+#p-inicio .acad-ent{margin:0}
+.acad-idioma{font-size:13px;margin:0 0 10px}
+.acad-marco-caja{margin:0 0 14px}
+/* 14/11/2026 (noche) · la Academia en «Sin entrar, también puedes» */
+.rh-acad{display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;padding:12px 14px;min-height:64px;border-radius:14px;
+  border:1px solid rgba(var(--w),.20);background:rgba(var(--w),.06);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.rh-acad .ic{font-size:24px;line-height:1;flex:0 0 auto}
+.rh-acad .tx{flex:1;min-width:0}
+.rh-acad .tx b{display:block;font-size:14.5px;line-height:1.25}
+.rh-acad .tx small{display:block;font-size:12.5px;line-height:1.35;color:var(--gris);margin-top:2px}
+.rh-acad .fl{font-size:22px;color:var(--gris);flex:0 0 auto}
+.rh-acad:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.rh-acad .ic.con-i3d{width:44px;height:44px;flex:0 0 44px;border-radius:30%;background:#fff;
+  border:1px solid rgba(11,42,58,.08);box-shadow:inset 0 2px 6px rgba(0,0,0,.04),0 3px 9px rgba(11,42,58,.09)}
+.rh-acad .ic.con-i3d>img{width:28px;height:28px}
+html:not(.t-claro):not(.t-alto) .rh-acad .ic.con-i3d{background:linear-gradient(180deg,#FFFFFF,#E6ECF0);border-color:rgba(255,255,255,.25)}
+html.t-alto .rh-acad .ic.con-i3d{border:1.5px solid #0B2A3A;box-shadow:none}
+html.d-tec .rh-acad .ic.con-i3d>img{filter:grayscale(1) contrast(1.05)}
+#acad-marco{display:block;width:100%;height:560px;border:0;border-radius:16px;background:#F6F8FA;color-scheme:light;
+  box-shadow:0 0 0 1px rgba(var(--w),.08)}
 </style>
 <script>
 /* apariencia: se aplica antes del primer pixel, sin esperar al resto del JS */
@@ -8096,239 +8124,49 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
   </div>
   </div>
   <div style="margin:16px auto 4px;text-align:center">
-    <button type="button" class="btn sec chico" id="b-ini-academia" onclick="irAcademiaApp()" style="font-size:12.5px;color:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.2);padding:6px 15px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.04);cursor:pointer">
-      <span style="font-size:13px" aria-hidden="true">🎓</span> Academia OBRASST
-    </button>
+    <button type="button" class="acad-ent" id="b-ini-academia" onclick="irAcademiaApp()"><span aria-hidden="true">🎓</span> Academia OBRASST</button>
   </div>
   <div class="pie">Herramienta de apoyo. No reemplaza la capacitación dictada por persona competente conforme a la Ley 29783.<br>
     <a onclick="ir('p-legal')" style="color:#f5c542;text-decoration:underline;cursor:pointer">Privacidad y condiciones</a></div>
 </section>
 
-<!-- 13/11/2026 · Orden 32 / 29: Academia OBRASST dentro de la app (acceso discreto en inicio) -->
+<!-- 14/11/2026 · Academia tanda 1 (ACADEMIA-APP): la app abre la MISMA Academia que la web. Antes aquí había otra
+     Academia, de texto fijo: su propio temario, «· Gratis», tres preguntas propias y «Mi constancia» a la vista sin haber
+     dado la prueba. Ahora un marco con portal/academia.html (portal/cursos.js + portal/cursos/curso-01.json); se arma al
+     entrar (acadAppPintar, desde _ir). -->
 <section class="pantalla" id="p-academia">
-  <div class="barra"><button type="button" class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir('p-inicio')">‹ Inicio</button><span style="font-weight:700">Academia OBRASST</span></div>
-
-  <div style="padding:14px 12px;display:grid;gap:12px;max-width:540px;margin:0 auto">
-    <!-- CABECERA -->
-    <div style="display:flex;align-items:center;gap:10px">
-      <div style="width:42px;height:42px;border-radius:12px;background:rgba(245,183,0,.15);border:1px solid rgba(245,183,0,.3);display:grid;place-items:center;font-size:22px">🎓</div>
-      <div>
-        <h2 style="font-size:18px;margin:0;font-weight:700">Escuela de la obra</h2>
-        <small style="color:var(--gris,#8DA0AC);font-size:13px">Aprende lo que vas a hacer hoy, y que tu empresa lo vea.</small>
-      </div>
-    </div>
-
-    <!-- PESTAÑAS ACADEMIA -->
-    <div style="display:flex;gap:6px;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:8px">
-      <button type="button" class="btn sec chico" id="acad-tab-lec" onclick="acadVerTab('lec')" style="font-weight:700;background:rgba(245,183,0,.15);color:#F5B700;border-color:#F5B700">Lección de hoy</button>
-      <button type="button" class="btn sec chico" id="acad-tab-tem" onclick="acadVerTab('tem')" style="color:var(--gris,#8DA0AC)">Temario (8)</button>
-      <button type="button" class="btn sec chico" id="acad-tab-con" onclick="acadVerTab('con')" style="color:var(--gris,#8DA0AC)">Mi constancia</button>
-    </div>
-
-    <!-- VISTA 1: LECCIÓN CON REPRODUCTOR Y PREGUNTAS -->
-    <div id="acad-vista-lec" style="display:grid;gap:12px">
-      <div style="background:#06121A;border:1px solid rgba(255,255,255,.12);border-radius:14px;overflow:hidden">
-        <!-- PANTALLA REPRODUCTOR -->
-        <div style="position:relative;aspect-ratio:16/9;background:#0B2A3A;color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:12px">
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-family:monospace;color:#A9C3D1">
-            <span>MÓDULO 1 · INDUCCIÓN GENERAL</span>
-            <span style="background:#F5B700;color:#0B2A3A;font-weight:700;padding:2px 6px;border-radius:4px">LECCIÓN 1</span>
-          </div>
-
-          <div style="text-align:center;padding:10px 0" id="acad-repro-centro">
-            <div style="font-size:15px;font-weight:700;line-height:1.3;margin-bottom:4px" id="acad-tit-pantalla">Tu primer día en obra, sin improvisar</div>
-            <div style="font-size:12px;color:#A9C3D1" id="acad-sub-pantalla">Voz de Koda · Con pantallas reales de OBRASST</div>
-          </div>
-
-          <!-- AVISO DE PREGUNTA INTERACTIVA (OVERLAY) -->
-          <div id="acad-overlay-preg" style="display:none;position:absolute;inset:0;background:rgba(6,18,26,.92);padding:14px;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px">
-            <span style="font-size:11px;font-weight:700;letter-spacing:.05em;color:#F5B700;text-transform:uppercase">⚠️ Tienes una pregunta</span>
-            <div id="acad-overlay-txt" style="font-size:13px;font-weight:600;line-height:1.35;max-width:320px"></div>
-            <div style="display:flex;gap:8px;margin-top:4px">
-              <button type="button" class="btn sec chico" onclick="acadCerrarPreg(true)" style="font-size:11.5px;padding:5px 10px">↺ Volver a escuchar</button>
-              <button type="button" class="btn chico" onclick="acadCerrarPreg(false)" style="font-size:11.5px;padding:5px 10px;background:#F5B700;color:#0B2A3A;font-weight:700">Seguir con el tema ›</button>
-            </div>
-          </div>
-
-          <!-- CONTROLES VIDEO -->
-          <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-family:monospace">
-            <button type="button" id="acad-btn-play" onclick="acadTogglePlay()" style="background:transparent;border:0;color:#fff;cursor:pointer;font-size:16px;padding:0">▶</button>
-            <input type="range" id="acad-scrub" min="0" max="144" value="0" oninput="acadScrub(this.value)" style="flex:1;accent-color:#F5B700;height:4px">
-            <span id="acad-tiempo" style="font-size:11px;color:#A9C3D1">00:00 / 02:24</span>
-          </div>
-        </div>
-
-        <div style="padding:10px 12px;background:rgba(255,255,255,.02);font-size:12px;color:var(--gris,#8DA0AC);line-height:1.4">
-          <strong style="color:#F5B700">Subtítulo activo:</strong> <span id="acad-subtit">«Bienvenido a la obra. Antes de tocar una herramienta o subir a un andamio, la ley exige que conozcas los peligros del lugar...»</span>
-        </div>
-      </div>
-
-      <!-- PREGUNTAS INTERACTIVAS DEBAJO -->
-      <div style="display:grid;gap:6px">
-        <strong style="font-size:13px">Preguntas de la lección (toca para resolver con Koda):</strong>
-        <button type="button" class="btn sec" onclick="acadDispararPreg(1)" style="text-align:left;font-size:12.5px;padding:9px 12px;border-radius:10px;display:flex;justify-content:space-between;align-items:center">
-          <span>1. ¿Por qué la inducción es antes de pisar el frente de trabajo?</span>
-          <span style="color:#F5B700">›</span>
-        </button>
-        <button type="button" class="btn sec" onclick="acadDispararPreg(2)" style="text-align:left;font-size:12.5px;padding:9px 12px;border-radius:10px;display:flex;justify-content:space-between;align-items:center">
-          <span>2. ¿Qué hago si mi empleador no me entrega el EPP adecuado?</span>
-          <span style="color:#F5B700">›</span>
-        </button>
-        <button type="button" class="btn sec" onclick="acadDispararPreg(3)" style="text-align:left;font-size:12.5px;padding:9px 12px;border-radius:10px;display:flex;justify-content:space-between;align-items:center">
-          <span>3. ¿Quién autoriza y firma el PETAR en trabajos en altura?</span>
-          <span style="color:#F5B700">›</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- VISTA 2: TEMARIO DE 8 MÓDULOS -->
-    <div id="acad-vista-tem" style="display:none;grid-gap:8px">
-      <div style="font-size:13px;color:var(--gris,#8DA0AC);margin-bottom:4px">Ruta práctica para personal de obra y supervisores:</div>
-      <div style="display:grid;gap:6px;font-size:13px">
-        <div style="padding:10px 12px;border-radius:10px;background:rgba(30,142,90,.1);border:1px solid rgba(30,142,90,.3);display:flex;justify-content:space-between;align-items:center">
-          <div><b>1. Inducción — Tu primer día en obra</b><br><small style="color:var(--gris,#8DA0AC)">30 min · Lo obligatorio antes de entrar · Gratis</small></div>
-          <span style="background:#1E8E5A;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px">ACTIVO</span>
-        </div>
-        <div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center">
-          <div><b>2. Peligros, riesgos y el IPERC de hoy</b><br><small style="color:var(--gris,#8DA0AC)">Identificar antes de actuar · Norma G.050</small></div>
-          <span style="color:var(--gris,#8DA0AC);font-size:11px">Módulo 2</span>
-        </div>
-        <div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center">
-          <div><b>3. Trabajos de alto riesgo (altura, caliente, zanjas)</b><br><small style="color:var(--gris,#8DA0AC)">PETAR, líneas de vida y entibados</small></div>
-          <span style="color:var(--gris,#8DA0AC);font-size:11px">Módulo 3</span>
-        </div>
-        <div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center">
-          <div><b>4. Bloqueo, etiquetado y energías peligrosas</b><br><small style="color:var(--gris,#8DA0AC)">Candados de vida y prueba de energía cero</small></div>
-          <span style="color:var(--gris,#8DA0AC);font-size:11px">Módulo 4</span>
-        </div>
-        <div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center">
-          <div><b>5. Productos químicos y hojas MSDS en campo</b><br><small style="color:var(--gris,#8DA0AC)">Pictogramas SGA y tarjetas de emergencia</small></div>
-          <span style="color:var(--gris,#8DA0AC);font-size:11px">Módulo 5</span>
-        </div>
-        <div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center">
-          <div><b>6. Ergonomía y levantamiento seguro</b><br><small style="color:var(--gris,#8DA0AC)">R.M. 375-2008-TR · Límite 25 kg y posturas forzadas</small></div>
-          <span style="color:var(--gris,#8DA0AC);font-size:11px">Módulo 6</span>
-        </div>
-        <div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center">
-          <div><b>7. Respuesta ante emergencias y primeros auxilios</b><br><small style="color:var(--gris,#8DA0AC)">Evacuación, botiquín y llamado a centro médico</small></div>
-          <span style="color:var(--gris,#8DA0AC);font-size:11px">Módulo 7</span>
-        </div>
-        <div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center">
-          <div><b>8. Derechos, obligaciones y comité de SST</b><br><small style="color:var(--gris,#8DA0AC)">Ley 29783 y facultades del delegado SST</small></div>
-          <span style="color:var(--gris,#8DA0AC);font-size:11px">Módulo 8</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- VISTA 3: MI CONSTANCIA -->
-    <div id="acad-vista-con" style="display:none;grid-gap:12px">
-      <div style="background:var(--panel,#12212B);border:1.5px solid rgba(245,183,0,.35);border-radius:14px;padding:16px;display:grid;gap:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:11px;font-weight:700;letter-spacing:.05em;color:#F5B700;text-transform:uppercase">OBRASST · CONSTANCIA REFERENCIAL</span>
-          <span style="font-size:11px;font-family:monospace;color:var(--gris,#8DA0AC)">ACAD-2026-001</span>
-        </div>
-        <h3 style="font-size:16px;margin:2px 0 0">Constancia de Participación Autónoma</h3>
-        <p style="font-size:12.5px;color:var(--gris,#8DA0AC);line-height:1.4;margin:0">
-          Se deja constancia de que el trabajador completó satisfactoriamente el contenido digital del <strong>Módulo 1: Inducción general de obra</strong> en la Obra Ejemplo.
-        </p>
-        <div style="padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.15);font-size:11.5px;font-family:monospace;display:flex;justify-content:space-between">
-          <span>ESTADO: EVALUACIÓN 100% APROBADA</span>
-          <span style="color:#1E8E5A">✓ VÁLIDO</span>
-        </div>
-        <div style="font-size:11px;color:var(--gris,#8DA0AC);line-height:1.35;border-top:1px solid rgba(255,255,255,.1);padding-top:6px">
-          ⚠️ <em>Constancia de autoaprendizaje. No reemplaza la inducción formal en campo impartida por personal competente conforme a la Ley N.° 29783 y la Norma G.050.</em>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div class="barra"><span>Academia OBRASST</span></div>
+  <p class="sub acad-idioma" id="acad-idioma" hidden>Las lecciones de la Academia están en castellano y tratan las normas del Perú.</p>
+  <div id="acad-marco-caja" class="acad-marco-caja" data-sin-trad></div>
 </section>
-
 <script>
-/* 13/11/2026 · Controlador de la Academia OBRASST integrada en la app */
-var _acadPlay = false, _acadTimer = null, _acadSec = 0;
-var ACAD_PREGS = {
-  1: { q: '¿Por qué la inducción es antes de pisar el frente de trabajo?', a: 'Según la Ley 29783 (Art. 49) y la Norma G.050, el empleador debe garantizar que ningún trabajador inicie labores sin conocer los riesgos específicos de su tarea y las medidas preventivas. La inducción es el requisito legal y operativo número 1.' },
-  2: { q: '¿Qué hago si mi empleador no me entrega el EPP adecuado?', a: 'El artículo 60 de la Ley 29783 estipula que el equipo de protección personal es provisto gratuitamente por el empleador y debe cumplir normas técnicas. Tienes el derecho de exigir su entrega inmediata y reportarlo a tu supervisor de SST antes de exponerte al peligro.' },
-  3: { q: '¿Quién autoriza y firma el PETAR en trabajos en altura?', a: 'Conforme al numeral 20 de la Norma G.050 y D.S. 011-2019-TR, el Permiso Escrito para Trabajos de Alto Riesgo (PETAR) debe ser verificado y firmado conjuntamente por el supervisor de la tarea y el responsable de seguridad de la obra antes de iniciar el trabajo.' }
-};
-
-function irAcademiaApp(){
-  ir('p-academia');
-  acadVerTab('lec');
+/* >>> ACADEMIA-APP-INI (14/11/2026 · Academia tanda 1) <<< */
+/* Las huellas las pone herr/huellas.py (el md5 de cada archivo). ACADEMIA_V va en la dirección del marco; las otras dos
+   no las usa la app: están para que el sello (SELLO_APP, sw.js) cambie cuando cambia el motor o el temario, y el celular
+   vuelva a guardar los nuevos para abrirlos sin señal. */
+var ACADEMIA_V = '992c4c1661';
+var ACAD_CURSOS_V = 'd51bc6c967';
+var ACAD_DATOS_V = '0a02c69ca5';
+function irAcademiaApp(){ ir('p-academia'); }
+function acadAppPintar(){
+  var c = document.getElementById('acad-marco-caja'); if(!c) return;
+  var idi = document.getElementById('acad-idioma');
+  /* el temario es de las normas del Perú y está en castellano: se avisa en otro idioma o en una obra de otro país */
+  if(idi){ try{ idi.hidden = (typeof idiomaActual !== 'function' || idiomaActual() === 'es') && (typeof obraEsPeru !== 'function' || obraEsPeru()); }catch(_i){ idi.hidden = true; } }
+  var f = document.getElementById('acad-marco');
+  if(f){ try{ if(f.contentWindow && typeof f.contentWindow.acadVolver === 'function') f.contentWindow.acadVolver(); }catch(_v){} return; }
+  f = document.createElement('iframe');
+  f.id = 'acad-marco'; f.title = 'Academia OBRASST';
+  f.setAttribute('allow', 'fullscreen');
+  f.src = 'portal/academia.html?v=' + ACADEMIA_V;
+  c.appendChild(f);
 }
-
-function acadVerTab(tab){
-  ['lec','tem','con'].forEach(function(t){
-    var b = document.getElementById('acad-tab-' + t);
-    var v = document.getElementById('acad-vista-' + t);
-    if(b && v){
-      if(t === tab){
-        b.style.fontWeight = '700';
-        b.style.background = 'rgba(245,183,0,.15)';
-        b.style.color = '#F5B700';
-        b.style.borderColor = '#F5B700';
-        v.style.display = 'grid';
-      } else {
-        b.style.fontWeight = 'normal';
-        b.style.background = 'transparent';
-        b.style.color = 'var(--gris,#8DA0AC)';
-        b.style.borderColor = 'transparent';
-        v.style.display = 'none';
-      }
-    }
-  });
+/* al dejar la pantalla, la lección se para (si no, seguía corriendo sin que nadie la viera) */
+function acadAppDejar(){
+  var f = document.getElementById('acad-marco');
+  try{ if(f && f.contentWindow && typeof f.contentWindow.acadPausar === 'function') f.contentWindow.acadPausar(); }catch(_p){}
 }
-
-function acadTogglePlay(){
-  _acadPlay = !_acadPlay;
-  var btn = document.getElementById('acad-btn-play');
-  if(btn) btn.innerText = _acadPlay ? '⏸' : '▶';
-  if(_acadPlay){
-    if(_acadTimer) clearInterval(_acadTimer);
-    _acadTimer = setInterval(function(){
-      _acadSec++;
-      if(_acadSec > 144) _acadSec = 0;
-      var scrub = document.getElementById('acad-scrub');
-      if(scrub) scrub.value = _acadSec;
-      var t = document.getElementById('acad-tiempo');
-      if(t){
-        var m = Math.floor(_acadSec / 60), s = _acadSec % 60;
-        t.innerText = (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s) + ' / 02:24';
-      }
-    }, 1000);
-  } else {
-    if(_acadTimer){ clearInterval(_acadTimer); _acadTimer = null; }
-  }
-}
-
-function acadScrub(val){
-  _acadSec = parseInt(val, 10) || 0;
-  var t = document.getElementById('acad-tiempo');
-  if(t){
-    var m = Math.floor(_acadSec / 60), s = _acadSec % 60;
-    t.innerText = (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s) + ' / 02:24';
-  }
-}
-
-function acadDispararPreg(num){
-  var preg = ACAD_PREGS[num];
-  if(!preg) return;
-  var overlay = document.getElementById('acad-overlay-preg');
-  var txt = document.getElementById('acad-overlay-txt');
-  if(overlay && txt){
-    txt.innerHTML = '<strong>' + preg.q + '</strong><br><span style="font-size:12px;font-weight:normal;color:#A9C3D1;margin-top:4px;display:block">' + preg.a + '</span>';
-    overlay.style.display = 'flex';
-  }
-}
-
-function acadCerrarPreg(volverEscuchar){
-  var overlay = document.getElementById('acad-overlay-preg');
-  if(overlay) overlay.style.display = 'none';
-  if(volverEscuchar){
-    acadScrub(Math.max(0, _acadSec - 15));
-    if(!_acadPlay) acadTogglePlay();
-  }
-}
+/* <<< ACADEMIA-APP-FIN >>> */
 </script>
 
 
@@ -10690,6 +10528,8 @@ function acadCerrarPreg(volverEscuchar){
     </div>
   </div>
   </div>
+  <!-- 14/11/2026 · Academia tanda 1: el acceso discreto a la Academia, al pie del inicio (ACADEMIA-APP) -->
+  <div class="acad-ent-caja"><button type="button" class="acad-ent" id="b-emp-academia" onclick="irAcademiaApp()"><span aria-hidden="true">🎓</span> Academia OBRASST</button></div>
   <div class="salir-caja">
     <p class="quien" id="emp-quien"></p>
     <button class="btn sec" onclick="salirDeCuenta()">🚪 Cerrar sesión</button>
@@ -16648,7 +16488,7 @@ function fechaLarga(iso){
 var EV_OK={'p-eval':1,'p-datos':1,'p-juego':1,'p-final':1,'p-firma':1,'p-encuesta':1,'p-listo':1};
 /* al trabajador solo se le abren estas: nada de sectores, temas ni generar.
    Se le suman las de reportar (código de obra + reporte con foto/anónimo). */
-var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos':1,'p-juego':1,'p-apariencia':1,
+var COL_OK={'p-academia':1,'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos':1,'p-juego':1,'p-apariencia':1,
             /* reportar una falla: también el trabajador (26/09/2026) */
             'p-falla':1,
             'p-final':1,'p-firma':1,'p-encuesta':1,'p-almacen':1,'p-listo':1,
@@ -16705,7 +16545,7 @@ var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-
             'p-cartel':1};
 /* la empresa: su inicio ordenado, las carpetas de documentos y las herramientas
    de obra que sí se comparten en la nube (reportes, inspecciones, credenciales, MSDS…) */
-var EMP_OK={'p-ergo':1,'p-pend-area':1,'p-asistente':1,'p-mural':1,'p-doc-ver':1,'p-cartel':1,'p-insp-ajustar':1,'p-insp-propio':1,'p-bienvenida':1,'p-rol':1,'p-consentir':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-datos':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-proy-nuevo':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
+var EMP_OK={'p-academia':1,'p-ergo':1,'p-pend-area':1,'p-asistente':1,'p-mural':1,'p-doc-ver':1,'p-cartel':1,'p-insp-ajustar':1,'p-insp-propio':1,'p-bienvenida':1,'p-rol':1,'p-consentir':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-datos':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-proy-nuevo':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
             'p-reporte':1,'p-reporte-nuevo':1,'p-inspec':1,'p-inspec-nueva':1,
             'p-inspec-hallaz':1,'p-inspec-levant':1,'p-inspec-hechas':1,'p-firma-insp':1,
             'p-equipos':1,'p-equipo':1,'p-equipo-nuevo':1,'p-equipo-etiq':1,'p-eq-quien':1,
@@ -17162,7 +17002,7 @@ function ir(p){
    2) ¿eligió EMPRESA? con cuenta pero sin empresa, va a elegirla.
    El trabajador (ROL 'col') no pasa por ninguna de las dos: entra con
    el código de su obra y solo llega a sus pantallas. */
-var SIN_CUENTA={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-sector':1,'p-apariencia':1,
+var SIN_CUENTA={'p-academia':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-sector':1,'p-apariencia':1,
   /* 29/09: el idioma se cambia desde la primera pantalla, antes de tener
      cuenta. Sin esto, la bandera mandaba a «Entra a tu cuenta». */
   'p-idioma':1,
@@ -17194,7 +17034,7 @@ var SIN_CUENTA={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-sector':1,'p-aparien
 /* la puerta de entrada, antes de aceptar los términos */
 /* 11/11/2026 · también la cámara con sello, el escáner y lo que abre «Leer un QR» sin cuenta (el químico y la
    credencial ya se abrían sin aceptar nada cuando llegaban por enlace) */
-var ZONA_PREVIA={'p-camara':1,'p-scan':1,'p-scan-pdf':1,'p-sello':1,'p-quimico':1,'p-verificar':1,'p-cartel':1,'p-doc-ver':1,'p-falla':1,'p-rol':1,'p-consentir':1,'p-idioma':1,'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,'p-clave-nueva':1};
+var ZONA_PREVIA={'p-academia':1,'p-camara':1,'p-scan':1,'p-scan-pdf':1,'p-sello':1,'p-quimico':1,'p-verificar':1,'p-cartel':1,'p-doc-ver':1,'p-falla':1,'p-rol':1,'p-consentir':1,'p-idioma':1,'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,'p-clave-nueva':1};
 var SIN_EMPRESA={'p-cartel':1,'p-doc-ver':1,'p-bienvenida':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-invitacion':1,'p-verificar':1,'p-quimico':1,'p-compartido':1};
 /* ══ LO DESPLEGADO SE CIERRA AL VOLVER ═════════════════════════════
    Marcelo, 21/09/2026: «despliego algo en la página principal —ajustes
@@ -17496,6 +17336,9 @@ function _ir(p){
   else { try{ carrParar(); document.body.classList.remove('carrete'); }catch(_cp){} }
   if(p==='p-buzon')pintarBuzon();
   if(p==='p-mural' && typeof pintarMural==='function') pintarMural();
+  /* 14/11/2026 · la Academia (ACADEMIA-APP): al llegar se arma o sigue donde quedó; al irse, la lección se para */
+  if(p==='p-academia'){ if(typeof acadAppPintar==='function') acadAppPintar(); }
+  else if(typeof acadAppDejar==='function') acadAppDejar();
   /* 11/11/2026 · las pantallas de los módulos nuevos (PANT-EXTRA) */
   if(typeof PANT_EXTRA==='object' && PANT_EXTRA && PANT_EXTRA[p] && typeof PANT_EXTRA[p].pinta==='function') PANT_EXTRA[p].pinta();
   if(p==='p-doc-ver' && typeof pintarDocVer==='function') pintarDocVer();
@@ -34734,7 +34577,12 @@ function pintarRolHerr(){
       '<button type="button" class="rh-b" id="rh-cam" onclick="herrCamara()"><span class="ic" aria-hidden="true">📷</span><b>Cámara con sello</b></button>' +
       '<button type="button" class="rh-b" id="rh-scan" onclick="ir(\'p-scan\')"><span class="ic" aria-hidden="true">🖨️</span><b>Escáner</b></button>' +
     '</div>' +
-    '<p class="sub rh-nota">Lo que tomes o escanees se comparte o se guarda en tu celular. No queda en ninguna carpeta de la app.</p>';
+    '<p class="sub rh-nota">Lo que tomes o escanees se comparte o se guarda en tu celular. No queda en ninguna carpeta de la app.</p>' +
+    /* 14/11/2026 (noche) · la Academia, para prevencionistas, supervisores y jefes de seguridad que todavía no usan la
+       app (ACADEMIA-APP): sin cuenta; el avance queda en el celular */
+    '<button type="button" class="rh-acad" id="rh-acad" onclick="irAcademiaApp()"><span class="ic" aria-hidden="true">🎓</span>' +
+      '<span class="tx"><b>Academia OBRASST</b><small>Aprende SST para la obra: prevencionistas, supervisores y jefes de seguridad.</small></span>' +
+      '<span class="fl" aria-hidden="true">›</span></button>';
 }
 /* «Cámara con sello» promete el sello: si en este celular nunca se tocó su configuración, se prende (fecha, hora y
    coordenadas). Si alguien lo apagó a propósito, se respeta. */
@@ -117241,11 +117089,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = '4117dcf316';
-var IDIOMA_FR_V = 'a25090e5df';
+var IDIOMA_PT_V = 'df883ea475';
+var IDIOMA_FR_V = '89a2cdacf3';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = 'bd10c3e7c8';
+var IDIOMA_EN_V = '0ab3d708a0';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -132056,7 +131904,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='5d7c030f06';
+var SELLO_APP='986579bfde';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
