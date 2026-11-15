@@ -1,4 +1,4 @@
-var CACHE = 'sstc-f4f64da00c-a';
+var CACHE = 'sstc-50adbac66d-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -19,7 +19,7 @@ var BASE = ['./', './index.html', './temas.js?v=1a67e4b3b9', './ubigeo-pe.js?v=6
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
             './intro.mp4',
             /* 14/11/2026 · la Academia (ACADEMIA-APP): la app la abre en un marco; sin señal también */
-            './portal/academia.html?v=1b098a6fb0', './portal/cursos.js?v=64425e60a1', './portal/cursos/curso-01.json?v=a178983c6a'];
+            './portal/academia.html?v=7b4a8c7133', './portal/cursos.js?v=24f52faf6e', './portal/cursos/curso-01.json?v=3f0c41bd17', './portal/cursos/curso-02.json?v=7556e05ae0'];
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){
     /* uno por uno: si un icono falta, no se cae la instalacion entera */
@@ -109,6 +109,9 @@ self.addEventListener('fetch', function(e){
     }).catch(function(){ return fetch(e.request); }));
     return;
   }
+  /* 15/11/2026 · la voz de Koda y los clips del profesor (portal/cursos/audio y video): el reproductor los pide por
+     tramos (Range) y pesan; no pasan por aquí ni se guardan en la caja de la app: los atiende el navegador. */
+  if (_u && /\/portal\/cursos\/(audio|video)\//.test(_u.pathname)) return;
   var esNav = (e.request.mode === 'navigate');
   /* ── sw.js NO se guarda ──────────────────────────────────
      La app le pregunta a sw.js cada tanto —con ?_=<hora> pegado, para

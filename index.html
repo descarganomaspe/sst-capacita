@@ -8144,9 +8144,10 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
 /* Las huellas las pone herr/huellas.py (el md5 de cada archivo). ACADEMIA_V va en la dirección del marco; las otras dos
    no las usa la app: están para que el sello (SELLO_APP, sw.js) cambie cuando cambia el motor o el temario, y el celular
    vuelva a guardar los nuevos para abrirlos sin señal. */
-var ACADEMIA_V = '1b098a6fb0';
-var ACAD_CURSOS_V = '64425e60a1';
-var ACAD_DATOS_V = 'a178983c6a';
+var ACADEMIA_V = '7b4a8c7133';
+var ACAD_CURSOS_V = '24f52faf6e';
+var ACAD_DATOS_V = '3f0c41bd17';
+var ACAD_DATOS2_V = '7556e05ae0';   /* 15/11/2026 · el 2.º curso (Supervisor SST listo para obra) */
 function irAcademiaApp(){ ir('p-academia'); }
 function acadAppPintar(){
   var c = document.getElementById('acad-marco-caja'); if(!c) return;
@@ -8165,6 +8166,21 @@ function acadAppPintar(){
 function acadAppDejar(){
   var f = document.getElementById('acad-marco');
   try{ if(f && f.contentWindow && typeof f.contentWindow.acadPausar === 'function') f.contentWindow.acadPausar(); }catch(_p){}
+}
+/* 15/11/2026 · el acceso discreto (al pie del inicio, de la obra y de «Sin entrar») dice cuánto lleva: el avance está en
+   este equipo («acad_v2:<cuenta>», lo escribe la Academia del marco). Sin avance, como antes. Nada va al servidor. */
+function acadRotulo(){
+  var uid = 'invitado'; try{ if(window.TOK && TOK.uid) uid = String(TOK.uid); }catch(_u){}
+  var n = 0; try{ var av = JSON.parse(localStorage.getItem('acad_v2:' + uid) || 'null'); if(av && av.lec) for(var k in av.lec){ if(av.lec[k] && av.lec[k].visto) n++; } }catch(_a){}
+  var es = true; try{ es = (typeof idiomaActual !== 'function') || idiomaActual() === 'es'; }catch(_i){}
+  var txt = (n && es) ? 'Academia OBRASST · llevas ' + n + (n === 1 ? ' lección' : ' lecciones') : 'Academia OBRASST';
+  ['b-ini-academia', 'b-emp-academia'].forEach(function(id){
+    var b = document.getElementById(id); if(!b) return;
+    var t = b.querySelector('.acad-ent-tx');
+    if(!t){ t = document.createElement('span'); t.className = 'acad-ent-tx'; Array.prototype.slice.call(b.childNodes).forEach(function(x){ if(x.nodeType === 3) b.removeChild(x); }); b.appendChild(t); }
+    t.textContent = ' ' + txt;
+    if(txt !== 'Academia OBRASST') t.setAttribute('data-sin-trad', ''); else t.removeAttribute('data-sin-trad');
+  });
 }
 /* <<< ACADEMIA-APP-FIN >>> */
 </script>
@@ -17339,6 +17355,8 @@ function _ir(p){
   /* 14/11/2026 · la Academia (ACADEMIA-APP): al llegar se arma o sigue donde quedó; al irse, la lección se para */
   if(p==='p-academia'){ if(typeof acadAppPintar==='function') acadAppPintar(); }
   else if(typeof acadAppDejar==='function') acadAppDejar();
+  /* 15/11/2026 · el acceso a la Academia dice cuánto lleva cada uno (y que tiene la voz de Koda) */
+  if(typeof acadRotulo==='function') acadRotulo();
   /* 11/11/2026 · las pantallas de los módulos nuevos (PANT-EXTRA) */
   if(typeof PANT_EXTRA==='object' && PANT_EXTRA && PANT_EXTRA[p] && typeof PANT_EXTRA[p].pinta==='function') PANT_EXTRA[p].pinta();
   if(p==='p-doc-ver' && typeof pintarDocVer==='function') pintarDocVer();
@@ -131904,7 +131922,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='f4f64da00c';
+var SELLO_APP='50adbac66d';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
