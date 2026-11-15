@@ -29585,18 +29585,142 @@ function pantExtraCaja(id){ return document.getElementById(id + '-c'); }
 var CHAT_ACTIVO_ID = 'c-sst';
 var CHAT_FILTRO_ACTIVO = 'todos';
 
+/* --- CANALES Y CHAT DE OBRA (14/11/2026 - Renovado Integral con Frentes y Miembros) --- */
+var CHAT_ACTIVO_ID = 'c-sst';
+var CHAT_FILTRO_ACTIVO = 'todos';
+
 if(typeof pantExtra === 'function'){
   pantExtra('p-canales', 'Canales de Obra', pintarCanales);
   pantExtra('p-chat-obra', 'Chat de Obra', function(){ pintarChatObra(CHAT_ACTIVO_ID); });
 }
 
+function soyJefeOSupervisor(){
+  try{
+    if(typeof esTrabajador === 'function' && esTrabajador()) return false;
+    if(typeof ROL !== 'undefined' && ROL === 'col') return false;
+    return true;
+  }catch(_e){ return true; }
+}
+
 function canalesBase(){
+  var trabs = (typeof trabsLocal === 'function' && trabsLocal()) || [];
+  var totalT = trabs.length;
+
   return [
-    { id:'c-sst', n:'Grupo SST', t:'sst', ic:'📢', d:'Supervisores SST, prevencionistas y brigadas.', badge:'Coordinación SST', orden:1, creadoPor:'sistema' },
-    { id:'c-prod', n:'Grupo Producción', t:'prod', ic:'🏗️', d:'Supervisores de SST y producción para coordinación de obra.', badge:'Coordinación Obra', orden:2, creadoPor:'sistema' },
-    { id:'c-obra', n:'Grupo Obra', t:'obra', ic:'👷', d:'Supervisores y trabajadores. Acuerdos y avisos oficiales.', badge:'General', orden:3, creadoPor:'sistema' },
-    { id:'c-sub-elec', n:'Subcontrata Eléctrica', t:'sub', ic:'⚡', d:'Coordinación técnica de baja y media tensión.', badge:'Plan Central', orden:4, creadoPor:'sistema' },
-    { id:'c-sub-estruc', n:'Subcontrata Estructuras', t:'sub', ic:'🧱', d:'Encofrado, vaciado y armadura de acero.', badge:'Plan Central', orden:5, creadoPor:'sistema' }
+    {
+      id: 'c-sst',
+      n: 'Grupo SST',
+      t: 'sst',
+      ic: '📢',
+      d: 'Supervisores SST, prevencionistas y brigadas de emergencia. Exclusivo SST.',
+      badge: 'Coordinación SST',
+      orden: 1,
+      creadoPor: 'sistema',
+      miembros: [
+        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
+        { dni: 'prev-01', n: 'Prevencionista SST', r: 'Prevencionista', t: 'sst' }
+      ]
+    },
+    {
+      id: 'c-prod',
+      n: 'Grupo Producción',
+      t: 'prod',
+      ic: '🏗️',
+      d: 'Coordinación conjunta entre supervisión de SST y Jefatura de Producción.',
+      badge: 'Coordinación Obra',
+      orden: 2,
+      creadoPor: 'sistema',
+      miembros: [
+        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
+        { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' }
+      ]
+    },
+    {
+      id: 'c-obra',
+      n: 'Grupo Obra',
+      t: 'obra',
+      ic: '👷',
+      d: 'Supervisores y trabajadores de toda la obra. Acuerdos y avisos oficiales.',
+      badge: totalT + ' trabajadores + supervisores',
+      orden: 3,
+      creadoPor: 'sistema',
+      esGeneral: true,
+      miembros: [
+        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
+        { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' }
+      ]
+    },
+    {
+      id: 'c-fre-1',
+      n: 'Frente 1 - Estructuras',
+      t: 'frente',
+      frenteNombre: 'Frente 1',
+      ic: '🚧',
+      d: 'Cuadrilla de fierro, encofrado y vaciado de Frente 1.',
+      badge: 'Frente de trabajo',
+      orden: 4,
+      creadoPor: 'sistema',
+      miembros: [
+        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
+        { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' }
+      ]
+    },
+    {
+      id: 'c-fre-2',
+      n: 'Frente 2 - Instalaciones',
+      t: 'frente',
+      frenteNombre: 'Frente 2',
+      ic: '🚧',
+      d: 'Cuadrilla eléctrica, sanitarias y redes de Frente 2.',
+      badge: 'Frente de trabajo',
+      orden: 5,
+      creadoPor: 'sistema',
+      miembros: [
+        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
+        { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' }
+      ]
+    },
+    {
+      id: 'c-fre-3',
+      n: 'Frente 3 - Acabados',
+      t: 'frente',
+      frenteNombre: 'Frente 3',
+      ic: '🚧',
+      d: 'Cuadrilla de albañilería, tarrajeo y pintura de Frente 3.',
+      badge: 'Frente de trabajo',
+      orden: 6,
+      creadoPor: 'sistema',
+      miembros: [
+        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
+        { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' }
+      ]
+    },
+    {
+      id: 'c-sub-elec',
+      n: 'Subcontrata Eléctrica',
+      t: 'sub',
+      ic: '⚡',
+      d: 'Coordinación técnica de baja y media tensión.',
+      badge: 'Plan Central',
+      orden: 7,
+      creadoPor: 'sistema',
+      miembros: [
+        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' }
+      ]
+    },
+    {
+      id: 'c-sub-estruc',
+      n: 'Subcontrata Estructuras',
+      t: 'sub',
+      ic: '🧱',
+      d: 'Encofrado, vaciado y armadura de acero.',
+      badge: 'Plan Central',
+      orden: 8,
+      creadoPor: 'sistema',
+      miembros: [
+        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' }
+      ]
+    }
   ];
 }
 
@@ -29609,6 +29733,31 @@ function canalesDeObra(){
   if(!Array.isArray(L) || !L.length){
     L = canalesBase();
     try{ localStorage.setItem(k, JSON.stringify(L)); }catch(_w){}
+  } else {
+    /* Migración segura: asegurar que existan los frentes y miembros si no estaban */
+    var idsExistentes = {};
+    L.forEach(function(c){ idsExistentes[c.id] = true; });
+    var base = canalesBase();
+    var cambio = false;
+    base.forEach(function(b){
+      if(!idsExistentes[b.id]){ L.push(b); cambio = true; }
+    });
+    /* Limpieza estricta: en c-sst NUNCA debe estar supervisor de produccion */
+    for(var i = 0; i < L.length; i++){
+      if(L[i].id === 'c-sst' && Array.isArray(L[i].miembros)){
+        var origLen = L[i].miembros.length;
+        L[i].miembros = L[i].miembros.filter(function(m){ return m.t !== 'prod' && m.r.toLowerCase().indexOf('producc') === -1; });
+        if(L[i].miembros.length !== origLen) cambio = true;
+      }
+      if(!Array.isArray(L[i].miembros)){
+        var defB = base.find(function(x){ return x.id === L[i].id; });
+        L[i].miembros = defB && defB.miembros ? defB.miembros.slice() : [];
+        cambio = true;
+      }
+    }
+    if(cambio){
+      try{ localStorage.setItem(k, JSON.stringify(L)); }catch(_e){}
+    }
   }
   return L;
 }
@@ -29625,6 +29774,31 @@ function canalPorId(id){
   return L[0] || null;
 }
 
+function canalesVisiblesParaMi(){
+  var L = canalesDeObra();
+  /* Jefe SST y Jefe de Producción pueden ver TODOS los chats de todos los frentes */
+  if(soyJefeOSupervisor()) return L;
+
+  /* Trabajador: solo ve el chat general (c-obra) y el chat de su frente correspondiente */
+  var miDni = String((typeof miDniActual === 'function' && miDniActual()) || '').trim();
+  var trab = (typeof trabPorId === 'function' && trabPorId(miDni)) || null;
+  if(!trab && typeof trabsLocal === 'function'){
+    var arr = trabsLocal() || [];
+    trab = arr.find(function(t){ return String(t.dni||'').trim() === miDni; }) || null;
+  }
+  var miFrente = trab ? String(trab.ubicacion || '').toLowerCase() : '';
+
+  return L.filter(function(cn){
+    if(cn.id === 'c-obra' || cn.t === 'obra') return true;
+    if(cn.t === 'frente'){
+      if(!miFrente) return true; /* si no tiene frente asignado, puede ingresar a coordinar */
+      var fn = String(cn.frenteNombre || cn.n || '').toLowerCase();
+      return miFrente.indexOf(fn) > -1 || fn.indexOf(miFrente) > -1;
+    }
+    return false;
+  });
+}
+
 function chatMsjsDe(canalId){
   var e = (typeof empActiva === 'function') ? empActiva() : null;
   if(!e) return [];
@@ -29635,17 +29809,30 @@ function chatMsjsDe(canalId){
     var hoy = (typeof hoyISO === 'function') ? hoyISO() : '2026-11-14';
     if(canalId === 'c-sst'){
       M = [
-        { id:'m1', autor:'Marcelo Lamas', rol:'Supervisor SST', texto:'Buenos días equipo. Hoy inspección de andamios y verificación de líneas de vida en Torre B a las 10:30.', ts:Date.now() - 3600000, fecha:hoy, pendiente:null, acuerdo:true },
-        { id:'m2', autor:'Fredy Rondón', rol:'Supervisor Producción', texto:'Se requiere revisión de permisos para vaciado de losa en Frente 2 antes de las 14:00.', ts:Date.now() - 1800000, fecha:hoy, pendiente:{ asignadoDni:'72050443', asignadoNombre:'Marcelo Lamas', asignadoRol:'Supervisor SST', plazo:'Hoy 14:00', estado:'abierto' }, acuerdo:false }
+        { id:'m1', autor:'Marcelo Lamas', rol:'Supervisor SST', texto:'Buenos días equipo SST. Hoy inspección de andamios y líneas de vida en Torre B a las 10:30.', ts:Date.now() - 3600000, fecha:hoy, pendiente:null, acuerdo:true },
+        { id:'m2', autor:'Prevención SST', rol:'Prevencionista', texto:'Checklist de arneses y botiquines verificado en almacén central. 12 equipos operativos verificados.', ts:Date.now() - 1800000, fecha:hoy, pendiente:{ asignadoDni:'72050443', asignadoNombre:'Marcelo Lamas', asignadoRol:'Supervisor SST', plazo:'Hoy 14:00', estado:'abierto' }, acuerdo:false }
       ];
     } else if(canalId === 'c-prod'){
       M = [
         { id:'m1', autor:'Fredy Rondón', rol:'Supervisor Producción', texto:'Coordinado el ingreso del camión mixer por Puerta 2 a las 11:00 am.', ts:Date.now() - 7200000, fecha:hoy, pendiente:null, acuerdo:true },
         { id:'m2', autor:'Marcelo Lamas', rol:'Supervisor SST', texto:'Por favor señalizar el radio de giro con conos y vigía con paleta reflectiva.', ts:Date.now() - 3600000, fecha:hoy, pendiente:{ asignadoDni:'18323747', asignadoNombre:'Fredy Rondón', asignadoRol:'Supervisor Producción', plazo:'Hoy 11:00', estado:'abierto' }, acuerdo:false }
       ];
+    } else if(canalId === 'c-fre-1'){
+      M = [
+        { id:'m1', autor:'Marcelo Lamas', rol:'Supervisor SST', texto:'Cuadrilla de Frente 1: Verificar el anclaje de líneas de vida antes de subir al encofrado.', ts:Date.now() - 5400000, fecha:hoy, pendiente:null, acuerdo:true },
+        { id:'m2', autor:'Fredy Rondón', rol:'Supervisor Producción', texto:'Fierreros y encofradores listos para liberación de armadura a las 11:30 am.', ts:Date.now() - 2700000, fecha:hoy, pendiente:null, acuerdo:false }
+      ];
+    } else if(canalId === 'c-fre-2'){
+      M = [
+        { id:'m1', autor:'Fredy Rondón', rol:'Supervisor Producción', texto:'Tendido de tuberías eléctricas y sanitarias en pase de losa nivel 4 en marcha.', ts:Date.now() - 4800000, fecha:hoy, pendiente:null, acuerdo:true }
+      ];
+    } else if(canalId === 'c-fre-3'){
+      M = [
+        { id:'m1', autor:'Marcelo Lamas', rol:'Supervisor SST', texto:'Uso obligatorio de mascarilla y lentes herméticos durante preparación de mezcla y tarrajeo.', ts:Date.now() - 6000000, fecha:hoy, pendiente:null, acuerdo:true }
+      ];
     } else {
       M = [
-        { id:'m1', autor:'Jefatura de Obra', rol:'Gerencia', texto:'Bienvenidos al canal general de la obra. Acuerdos y directivas oficiales se publican aquí.', ts:Date.now() - 86400000, fecha:hoy, pendiente:null, acuerdo:true }
+        { id:'m1', autor:'Jefatura de Obra', rol:'Gerencia', texto:'Bienvenidos al canal general de la obra. Acuerdos, charlas diarias y comunicados oficiales vigentes para todo el personal.', ts:Date.now() - 86400000, fecha:hoy, pendiente:null, acuerdo:true }
       ];
     }
     try{ localStorage.setItem(k, JSON.stringify(M)); }catch(_w){}
@@ -29653,114 +29840,181 @@ function chatMsjsDe(canalId){
   return M;
 }
 
-function chatMsjsGuardar(canalId, M){
+function chatMsjsGuardar(canalId, msjs){
   var e = (typeof empActiva === 'function') ? empActiva() : null;
   if(!e) return;
-  try{ localStorage.setItem('sstc_msjs_' + e.id + '_' + canalId, JSON.stringify(M)); }catch(_w){}
+  try{ localStorage.setItem('sstc_msjs_' + e.id + '_' + canalId, JSON.stringify(msjs)); }catch(_e){}
 }
 
 function chatEnviar(canalId){
-  var inp = document.getElementById('chat-txt-inp'); if(!inp) return;
+  var inp = document.getElementById('chat-inp-txt');
+  if(!inp) return;
   var txt = String(inp.value || '').trim();
-  var adjNombre = window._CHAT_TEMP_ADJ_NOM || '';
-  var adjUrl = window._CHAT_TEMP_ADJ_URL || '';
-  var adjCarpeta = window._CHAT_TEMP_CARPETA || '';
-  if(!txt && !adjNombre) return;
+  if(!txt) return;
 
-  var nom = (typeof miNombre === 'function' && miNombre()) || 'Supervisor SST';
-  var rol = (typeof puedeSerLider === 'function' && puedeSerLider() && typeof papelElegido === 'function' && papelElegido()==='lider') ? 'Jefe SST' : 'Supervisor SST';
+  var miNom = (typeof miNombre === 'function' && miNombre()) || 'Supervisor SST';
+  var miRolTxt = (typeof ROL !== 'undefined' && ROL === 'prod') ? 'Supervisor Producción' : (esTrabajador() ? 'Trabajador' : 'Supervisor SST');
   var msjs = chatMsjsDe(canalId);
+  var hoy = (typeof hoyISO === 'function') ? hoyISO() : '2026-11-14';
+
   var nuevo = {
-    id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-    autor: nom,
-    rol: rol,
+    id: 'm_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4),
+    autor: miNom,
+    rol: miRolTxt,
     texto: txt,
     ts: Date.now(),
-    fecha: (typeof hoyISO === 'function') ? hoyISO() : '2026-11-14',
-    adj: adjNombre ? { n: adjNombre, url: adjUrl, carpeta: adjCarpeta } : null,
+    fecha: hoy,
     pendiente: null,
     acuerdo: false
   };
 
-  if(adjNombre && adjCarpeta && typeof tostada === 'function'){
-    tostada('Documento «' + adjNombre + '» archivado en carpeta de obra');
-  }
-
   msjs.push(nuevo);
   chatMsjsGuardar(canalId, msjs);
-
   inp.value = '';
-  window._CHAT_TEMP_ADJ_NOM = '';
-  window._CHAT_TEMP_ADJ_URL = '';
-  window._CHAT_TEMP_CARPETA = '';
-  var prev = document.getElementById('chat-adj-prev'); if(prev) prev.style.display = 'none';
-
   pintarChatObra(canalId);
-  try{ pintarBurbujaPendientes(); }catch(_e){}
+
+  setTimeout(function(){
+    var b = document.getElementById('chat-feed-box');
+    if(b) b.scrollTop = b.scrollHeight;
+  }, 60);
 }
 
-function chatConvertirEnPendienteModal(canalId, msgId){
-  var msjs = chatMsjsDe(canalId), m = null;
-  for(var i = 0; i < msjs.length; i++) if(msjs[i].id === msgId) { m = msjs[i]; break; }
-  if(!m) return;
+function chatAdjuntar(canalId){
+  _chatAdjuntarModal(canalId);
+}
 
-  var trabs = (typeof trabsLocal === 'function') ? trabsLocal() : [];
-  var sups = trabs.filter(function(t){
-    var p = String(t.puesto || '').toLowerCase();
-    return p.indexOf('supervisor') > -1 || p.indexOf('sst') > -1 || p.indexOf('producc') > -1 || p.indexOf('jefe') > -1 || p.indexOf('prevencion') > -1 || p.indexOf('capataz') > -1;
-  });
-  if(!sups.length) sups = trabs.slice(0, 8);
-  if(!sups.length) sups = [{ id:'1', nombre:(typeof miNombre === 'function' && miNombre()) || 'Supervisor SST', dni:'72050443', puesto:'Supervisor SST' }];
-
-  var opts = sups.map(function(s){
-    var escA = (typeof window.escA === 'function') ? window.escA : function(x){ return String(x||'').replace(/"/g, '&quot;'); };
-    var esc = (typeof window.esc === 'function') ? window.esc : function(x){ return String(x||''); };
-    return '<option value="' + escA(s.dni || s.id) + '" data-nom="' + escA(s.nombre) + '" data-puesto="' + escA(s.puesto || 'Supervisor') + '">' + esc(s.nombre) + ' (' + esc(s.puesto || 'Supervisor') + ')</option>';
-  }).join('');
+function _chatAdjuntarModal(canalId){
+  var carpetas = (typeof esc2Carpetas === 'function') ? esc2Carpetas() : [];
+  var esc = (typeof window.esc === 'function') ? window.esc : function(x){ return String(x||''); };
+  var escA = (typeof window.escA === 'function') ? window.escA : function(x){ return String(x||'').replace(/"/g, '&quot;'); };
 
   var modal = document.createElement('div');
-  modal.id = 'modal-asig-pen';
+  modal.id = 'modal-chat-adjuntar';
   modal.className = 'visor-fondo on';
   modal.style.zIndex = '99999';
-  modal.innerHTML = '<div class="tarj" style="max-width:380px;margin:15vh auto;background:#fff;color:#0B2A3A;border-radius:18px;padding:20px;box-shadow:0 12px 36px rgba(0,0,0,.4)">' +
-    '<h3 style="margin:0 0 6px;font-size:18px">📌 Asignar como Pendiente</h3>' +
-    '<p class="sub" style="margin:0 0 12px;font-size:13px;color:#5B7282">Se notificará al responsable y se reflejará en su burbuja de inicio.</p>' +
-    '<div style="background:#F5F8FA;border:1px solid #E1E8ED;border-radius:10px;padding:10px;margin-bottom:12px;font-size:13.5px;font-style:italic">«' + (m.texto.slice(0, 120)) + '»</div>' +
-    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Asignar a supervisor:</label>' +
-    '<select id="pen-sel-sup" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:10px;font:inherit">' + opts + '</select>' +
-    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Plazo / Vencimiento:</label>' +
-    '<select id="pen-sel-plazo" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:16px;font:inherit">' +
-      '<option value="Hoy">Hoy mismo</option>' +
-      '<option value="Mañana" selected>Mañana</option>' +
-      '<option value="En 3 días">En 3 días</option>' +
-      '<option value="En 7 días">En 7 días (1 semana)</option>' +
+  modal.onclick = function(e){ if(e.target === modal) _chatModalCerrar(); };
+
+  var optsCarp = '<option value="">(No archivar en carpeta, solo compartir)</option>';
+  carpetas.forEach(function(c){
+    optsCarp += '<option value="' + escA(c) + '">' + esc(c) + '</option>';
+  });
+
+  modal.innerHTML = '<div class="tarj" style="max-width:380px;margin:12vh auto;background:#fff;color:#0B2A3A;border-radius:18px;padding:20px;box-shadow:0 12px 36px rgba(0,0,0,.4)">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '<h3 style="margin:0;font-size:18px">📎 Subir y archivar documento</h3>' +
+      '<button type="button" onclick="_chatModalCerrar()" style="background:none;border:none;font-size:20px;color:#8A9BA8;cursor:pointer;padding:2px 6px">✕</button>' +
+    '</div>' +
+    '<p class="sub" style="margin:0 0 14px;font-size:13px;color:#5B7282">El documento se enviará al chat y se guardará automáticamente en la carpeta de la obra seleccionada.</p>' +
+    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Nombre o descripción del archivo:</label>' +
+    '<input type="text" id="chat-adj-nom" placeholder="Ej. Permiso de vaciado losa 4, Charla 5 min…" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:12px;font:inherit">' +
+    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">📁 Archivar directamente en carpeta de obra:</label>' +
+    '<select id="chat-adj-carp" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:16px;font:inherit">' +
+      optsCarp +
     '</select>' +
     '<div style="display:flex;gap:8px">' +
-      '<button type="button" class="btn" style="margin:0;flex:1" onclick="_chatConfirmarAsignacion(\'' + canalId + '\',\'' + msgId + '\')">Asignar pendiente</button>' +
-      '<button type="button" class="btn sec" style="margin:0;flex:1" onclick="_chatCerrarModalAsig()">Cancelar</button>' +
+      '<button type="button" class="btn" style="margin:0;flex:1" onclick="_chatConfirmarArchivo(\'' + escA(canalId) + '\')">Subir al chat y archivar</button>' +
+      '<button type="button" class="btn sec" style="margin:0;flex:1" onclick="_chatModalCerrar()">Cancelar</button>' +
     '</div>' +
   '</div>';
   document.body.appendChild(modal);
 }
 
-function _chatCerrarModalAsig(){
-  var m = document.getElementById('modal-asig-pen'); if(m && m.parentNode) m.parentNode.removeChild(m);
+function _chatConfirmarArchivo(canalId){
+  var nom = String((document.getElementById('chat-adj-nom')||{}).value || '').trim();
+  var carp = (document.getElementById('chat-adj-carp')||{}).value || '';
+  if(!nom){ if(typeof aviso === 'function') aviso('Falta el nombre', 'Indica el nombre del documento.', '📎'); return; }
+
+  var miNom = (typeof miNombre === 'function' && miNombre()) || 'Supervisor SST';
+  var miRolTxt = (typeof ROL !== 'undefined' && ROL === 'prod') ? 'Supervisor Producción' : (esTrabajador() ? 'Trabajador' : 'Supervisor SST');
+  var msjs = chatMsjsDe(canalId);
+  var hoy = (typeof hoyISO === 'function') ? hoyISO() : '2026-11-14';
+
+  var nuevo = {
+    id: 'm_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4),
+    autor: miNom,
+    rol: miRolTxt,
+    texto: 'He subido el documento para revisión y archivo.',
+    ts: Date.now(),
+    fecha: hoy,
+    adj: { n: nom, carpeta: carp },
+    pendiente: null,
+    acuerdo: false
+  };
+
+  msjs.push(nuevo);
+  chatMsjsGuardar(canalId, msjs);
+  _chatModalCerrar();
+  pintarChatObra(canalId);
+  if(typeof tostada === 'function') tostada('Documento archivado en ' + (carp || 'el chat'));
 }
 
-function _chatConfirmarAsignacion(canalId, msgId){
-  var sel = document.getElementById('pen-sel-sup'), selPlazo = document.getElementById('pen-sel-plazo');
+function _chatModalCerrar(){
+  var m = document.getElementById('modal-chat-adjuntar');
+  if(m && m.parentNode) m.parentNode.removeChild(m);
+}
+
+function chatConvertirEnPendienteModal(canalId, msjId){
+  var msjs = chatMsjsDe(canalId);
+  var msj = null;
+  for(var i = 0; i < msjs.length; i++) if(msjs[i].id === msjId){ msj = msjs[i]; break; }
+  if(!msj) return;
+
+  var trabs = (typeof trabsLocal === 'function') ? trabsLocal() : [];
+  var esc = (typeof window.esc === 'function') ? window.esc : function(x){ return String(x||''); };
+  var escA = (typeof window.escA === 'function') ? window.escA : function(x){ return String(x||'').replace(/"/g, '&quot;'); };
+
+  var modal = document.createElement('div');
+  modal.id = 'modal-chat-pen';
+  modal.className = 'visor-fondo on';
+  modal.style.zIndex = '99999';
+  modal.onclick = function(e){ if(e.target === modal) _penModalCerrar(); };
+
+  var opts = '<option value="72050443|Marcelo Lamas|Supervisor SST">Marcelo Lamas (Supervisor SST)</option>' +
+             '<option value="18323747|Fredy Rondón|Supervisor Producción">Fredy Rondón (Supervisor Producción)</option>';
+
+  trabs.forEach(function(t){
+    opts += '<option value="' + escA(t.dni) + '|' + escA(t.nombre) + '|' + escA(t.puesto || 'Trabajador') + '">' + esc(t.nombre) + ' (' + esc(t.puesto || 'Personal') + ')</option>';
+  });
+
+  modal.innerHTML = '<div class="tarj" style="max-width:390px;margin:10vh auto;background:#fff;color:#0B2A3A;border-radius:18px;padding:20px;box-shadow:0 12px 36px rgba(0,0,0,.4)">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '<h3 style="margin:0;font-size:18px">📌 Asignar como Pendiente</h3>' +
+      '<button type="button" onclick="_penModalCerrar()" style="background:none;border:none;font-size:20px;color:#8A9BA8;cursor:pointer;padding:2px 6px">✕</button>' +
+    '</div>' +
+    '<p class="sub" style="margin:0 0 10px;font-size:12.5px;color:#5B7282">Mensaje: <i>«' + esc(msj.texto.substring(0, 90)) + (msj.texto.length > 90 ? '…' : '') + '»</i></p>' +
+    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Asignar responsable:</label>' +
+    '<select id="pen-asignado" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:10px;font:inherit">' +
+      opts +
+    '</select>' +
+    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Plazo límite:</label>' +
+    '<select id="pen-plazo" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:16px;font:inherit">' +
+      '<option value="Hoy">Hoy (Prioridad Inmediata)</option>' +
+      '<option value="Mañana">Mañana</option>' +
+      '<option value="3 días">3 días hábiles</option>' +
+      '<option value="7 días">7 días (Semana)</option>' +
+    '</select>' +
+    '<div style="display:flex;gap:8px">' +
+      '<button type="button" class="btn" style="margin:0;flex:1" onclick="_chatConfirmarAsignacion(\'' + escA(canalId) + '\',\'' + escA(msjId) + '\')">Asignar pendiente</button>' +
+      '<button type="button" class="btn sec" style="margin:0;flex:1" onclick="_penModalCerrar()">Cancelar</button>' +
+    '</div>' +
+  '</div>';
+  document.body.appendChild(modal);
+}
+
+function _chatConfirmarAsignacion(canalId, msjId){
+  var sel = document.getElementById('pen-asignado');
+  var plazo = (document.getElementById('pen-plazo')||{}).value || 'Hoy';
   if(!sel) return;
-  var opt = sel.options[sel.selectedIndex];
-  var dni = sel.value, nom = opt.getAttribute('data-nom') || opt.text, puesto = opt.getAttribute('data-puesto') || 'Supervisor';
-  var plazo = selPlazo ? selPlazo.value : 'Mañana';
+  var partes = String(sel.value || '').split('|');
+  var dni = partes[0] || '', nom = partes[1] || '', rol = partes[2] || '';
 
   var msjs = chatMsjsDe(canalId);
   for(var i = 0; i < msjs.length; i++){
-    if(msjs[i].id === msgId){
+    if(msjs[i].id === msjId){
       msjs[i].pendiente = {
         asignadoDni: dni,
         asignadoNombre: nom,
-        asignadoRol: puesto,
+        asignadoRol: rol,
         plazo: plazo,
         estado: 'abierto',
         asignadoEn: Date.now()
@@ -29769,30 +30023,36 @@ function _chatConfirmarAsignacion(canalId, msgId){
     }
   }
   chatMsjsGuardar(canalId, msjs);
-  _chatCerrarModalAsig();
+  _penModalCerrar();
   pintarChatObra(canalId);
-  try{ pintarBurbujaPendientes(); }catch(_e){}
-  if(typeof tostada === 'function') tostada('Pendiente asignado a ' + nom + ' (' + plazo + ')');
+  pintarBurbujaPendientes();
+  if(typeof tostada === 'function') tostada('Pendiente asignado a ' + nom);
 }
 
-function chatResolverPendiente(canalId, msgId){
+function _penModalCerrar(){
+  var m = document.getElementById('modal-chat-pen');
+  if(m && m.parentNode) m.parentNode.removeChild(m);
+}
+
+function chatResolverPendiente(canalId, msjId){
   var msjs = chatMsjsDe(canalId);
   for(var i = 0; i < msjs.length; i++){
-    if(msjs[i].id === msgId && msjs[i].pendiente){
-      msjs[i].pendiente.estado = (msjs[i].pendiente.estado === 'abierto') ? 'cumplido' : 'abierto';
+    if(msjs[i].id === msjId && msjs[i].pendiente){
+      var actual = msjs[i].pendiente.estado;
+      msjs[i].pendiente.estado = (actual === 'cumplido') ? 'abierto' : 'cumplido';
       break;
     }
   }
   chatMsjsGuardar(canalId, msjs);
   pintarChatObra(canalId);
-  try{ pintarBurbujaPendientes(); }catch(_e){}
-  if(typeof tostada === 'function') tostada('Estado de pendiente actualizado');
+  pintarBurbujaPendientes();
+  if(typeof tostada === 'function') tostada('Estado del pendiente actualizado');
 }
 
-function chatFijarAcuerdo(canalId, msgId){
+function chatFijarAcuerdo(canalId, msjId){
   var msjs = chatMsjsDe(canalId);
   for(var i = 0; i < msjs.length; i++){
-    if(msjs[i].id === msgId){
+    if(msjs[i].id === msjId){
       msjs[i].acuerdo = !msjs[i].acuerdo;
       break;
     }
@@ -29803,85 +30063,92 @@ function chatFijarAcuerdo(canalId, msgId){
 }
 
 function cuantosPendientesAsignadosAMi(){
-  var e = (typeof empActiva === 'function') ? empActiva() : null;
-  if(!e) return 0;
-  var canales = canalesDeObra(), total = 0;
+  var canales = canalesDeObra();
   var miNom = String((typeof miNombre === 'function' && miNombre()) || '').toLowerCase();
-  for(var c = 0; c < canales.length; c++){
-    var msjs = chatMsjsDe(canales[c].id);
-    for(var m = 0; m < msjs.length; m++){
-      var p = msjs[m].pendiente;
-      if(p && p.estado === 'abierto'){
-        var asigNom = String(p.asignadoNombre || '').toLowerCase();
-        if(asigNom.indexOf(miNom) > -1 || miNom.indexOf(asigNom) > -1 || !miNom){
-          total++;
-        }
+  var miDni = String((typeof miDniActual === 'function' && miDniActual()) || '').trim();
+  var count = 0;
+
+  canales.forEach(function(cn){
+    var ms = chatMsjsDe(cn.id);
+    ms.forEach(function(m){
+      if(m.pendiente && m.pendiente.estado === 'abierto'){
+        var p = m.pendiente;
+        var coincideNom = miNom && String(p.asignadoNombre || '').toLowerCase().indexOf(miNom) > -1;
+        var coincideDni = miDni && String(p.asignadoDni || '').trim() === miDni;
+        if(coincideNom || coincideDni || (!miNom && !miDni)) count++;
       }
-    }
-  }
-  return total;
+    });
+  });
+  return count;
 }
 
 function pintarBurbujaPendientes(){
-  var caja = document.getElementById('emp-burbuja-caja'); if(!caja) return;
-  var n = cuantosPendientesAsignadosAMi();
-  if(!n){
+  var caja = document.getElementById('emp-burbuja-caja');
+  if(!caja) return;
+  var cant = cuantosPendientesAsignadosAMi();
+  if(cant <= 0){
     caja.innerHTML = '';
+    caja.style.display = 'none';
     return;
   }
-  caja.innerHTML = '<div class="burbuja-pen-wrap">' +
-    '<button type="button" class="burbuja-pen-btn" onclick="ir(\'p-canales\')" title="Tienes ' + n + ' pendientes asignados">' +
-      '<span class="burbuja-pulso"></span>' +
-      '<span class="burbuja-ic">📌</span>' +
-      '<span class="burbuja-tx"><b>' + n + '</b> pendiente' + (n === 1 ? '' : 's') + ' de obra</span>' +
-      '<span class="burbuja-ch">›</span>' +
-    '</button>' +
-  '</div>';
+  caja.style.display = 'inline-flex';
+  caja.innerHTML = '<span class="emp-burbuja-badge" onclick="ir(\'p-canales\')" title="Tienes ' + cant + ' pendientes asignados">' +
+    '🔴 ' + cant +
+  '</span>';
 }
 
-function abrirCanales(){ ir('p-canales'); }
-function abrirChatObra(canalId){ CHAT_ACTIVO_ID = canalId; ir('p-chat-obra'); }
+function abrirChatObra(canalId){
+  CHAT_ACTIVO_ID = canalId;
+  if(typeof ir === 'function') ir('p-chat-obra');
+  else pintarChatObra(canalId);
+}
 
 function pintarCanales(){
   var c = (typeof pantExtraCaja === 'function') ? pantExtraCaja('p-canales') : document.getElementById('p-canales-c');
   if(!c) return;
-  var e = (typeof empActiva === 'function') ? empActiva() : null;
-  if(!e){ c.innerHTML = '<div class="aviso">Entra a tu obra para ver los canales.</div>'; return; }
 
-  var canales = canalesDeObra();
-  var filtro = CHAT_FILTRO_ACTIVO || 'todos';
-
+  var canales = canalesVisiblesParaMi();
   var conPens = {};
   canales.forEach(function(cn){
-    var ms = chatMsjsDe(cn.id), np = 0;
-    ms.forEach(function(m){ if(m.pendiente && m.pendiente.estado === 'abierto') np++; });
-    conPens[cn.id] = np;
+    var ms = chatMsjsDe(cn.id);
+    var p = ms.filter(function(m){ return m.pendiente && m.pendiente.estado === 'abierto'; }).length;
+    if(p) conPens[cn.id] = p;
   });
 
   var filtrados = canales.filter(function(cn){
-    if(filtro === 'base') return cn.t === 'sst' || cn.t === 'prod' || cn.t === 'obra';
-    if(filtro === 'sub') return cn.t === 'sub';
-    if(filtro === 'pen') return conPens[cn.id] > 0;
+    if(CHAT_FILTRO_ACTIVO === 'frentes') return cn.t === 'frente';
+    if(CHAT_FILTRO_ACTIVO === 'coord') return cn.t === 'sst' || cn.t === 'prod';
+    if(CHAT_FILTRO_ACTIVO === 'pen') return (conPens[cn.id] || 0) > 0;
     return true;
   });
 
-  var nomObra = (typeof nombreDeLaObra === 'function') ? nombreDeLaObra() : 'tu obra';
+  var trabs = (typeof trabsLocal === 'function' && trabsLocal()) || [];
+  var totalTrabs = trabs.length;
   var esc = (typeof window.esc === 'function') ? window.esc : function(x){ return String(x||''); };
   var escA = (typeof window.escA === 'function') ? window.escA : function(x){ return String(x||'').replace(/"/g, '&quot;'); };
 
-  var h = '<div class="can-cab">' +
-    '<h2>Canales y Acuerdos de Obra</h2>' +
-    '<p class="sub">Coordinación de campo, acuerdos de jefatura y asignación de pendientes en ' + esc(nomObra) + '.</p>' +
+  var h = '<div class="tar-cab" style="margin-bottom:14px">' +
+    '<div class="tar-cab-ic" style="background:#EBF5FF;color:#0066CC">💬</div>' +
+    '<div class="tar-cab-tx">' +
+      '<h2 style="margin:0;font-size:20px;font-weight:800;color:#0B2A3A">Canales y Acuerdos de Obra</h2>' +
+      '<div style="font-size:12.5px;color:#5B7282">Coordinación en vivo, gestión de frentes y archivo documental.</div>' +
+    '</div>' +
   '</div>';
 
-  h += '<div class="can-filtros">' +
-    '<button type="button" class="' + (filtro === 'todos' ? 'on' : '') + '" onclick="CHAT_FILTRO_ACTIVO=\'todos\';pintarCanales()">⚡ Todos (' + canales.length + ')</button>' +
-    '<button type="button" class="' + (filtro === 'base' ? 'on' : '') + '" onclick="CHAT_FILTRO_ACTIVO=\'base\';pintarCanales()">📢 Grupos Base</button>' +
-    '<button type="button" class="' + (filtro === 'sub' ? 'on' : '') + '" onclick="CHAT_FILTRO_ACTIVO=\'sub\';pintarCanales()">🏢 Subcontratas (Plan Central)</button>' +
-    '<button type="button" class="' + (filtro === 'pen' ? 'on' : '') + '" onclick="CHAT_FILTRO_ACTIVO=\'pen\';pintarCanales()">📌 Con Pendientes</button>' +
+  /* Píldoras de filtro */
+  h += '<div class="can-tabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px">' +
+    '<button type="button" class="can-tab ' + (CHAT_FILTRO_ACTIVO === 'todos' ? 'activo' : '') + '" onclick="CHAT_FILTRO_ACTIVO=\'todos\';pintarCanales()">Todos (' + canales.length + ')</button>' +
+    '<button type="button" class="can-tab ' + (CHAT_FILTRO_ACTIVO === 'frentes' ? 'activo' : '') + '" onclick="CHAT_FILTRO_ACTIVO=\'frentes\';pintarCanales()">🚧 Frentes de trabajo</button>' +
+    '<button type="button" class="can-tab ' + (CHAT_FILTRO_ACTIVO === 'coord' ? 'activo' : '') + '" onclick="CHAT_FILTRO_ACTIVO=\'coord\';pintarCanales()">📢 Coordinación</button>' +
+    '<button type="button" class="can-tab ' + (CHAT_FILTRO_ACTIVO === 'pen' ? 'activo' : '') + '" onclick="CHAT_FILTRO_ACTIVO=\'pen\';pintarCanales()">📌 Con Pendientes</button>' +
   '</div>';
 
-  h += '<button type="button" class="btn" style="margin-bottom:14px;border-radius:12px" onclick="canalNuevoModal()">➕ Crear nuevo canal o grupo</button>';
+  /* Si es jefe o supervisor: botón para crear nuevo canal */
+  if(soyJefeOSupervisor()){
+    h += '<button type="button" class="btn" style="margin-bottom:14px;border-radius:12px;height:48px" onclick="canalNuevoModal()">' +
+      '➕ Crear nuevo canal o grupo' +
+    '</button>';
+  }
 
   h += '<div class="can-lista">';
   filtrados.forEach(function(cn){
@@ -29890,12 +30157,16 @@ function pintarCanales(){
     var ultimo = ms.length ? ms[ms.length - 1] : null;
     var snip = ultimo ? (esc(ultimo.autor.split(' ')[0]) + ': ' + esc(ultimo.texto || 'Archivo adjunto')) : esc(cn.d);
 
+    var badgeTxt = cn.badge;
+    if(cn.id === 'c-obra') badgeTxt = '👷 ' + totalTrabs + ' trabajadores + supervisores';
+    else if(cn.t === 'frente') badgeTxt = '🚧 ' + esc(cn.frenteNombre || 'Frente');
+
     h += '<div class="can-card" onclick="abrirChatObra(\'' + escA(cn.id) + '\')">' +
       '<div class="can-card-ic">' + (cn.ic || '💬') + '</div>' +
       '<div class="can-card-info">' +
         '<div class="can-card-top">' +
           '<span class="can-card-tit">' + esc(cn.n) + '</span>' +
-          '<span class="can-card-badge">' + esc(cn.badge || cn.t) + '</span>' +
+          '<span class="can-card-badge">' + esc(badgeTxt) + '</span>' +
         '</div>' +
         '<div class="can-card-desc">' + snip + '</div>' +
       '</div>' +
@@ -29914,7 +30185,8 @@ function pintarChatObra(canalId){
   var cn = canalPorId(canalId);
   if(!cn) { ir('p-canales'); return; }
 
-  var titEl = document.getElementById('chat-barra-tit'); if(titEl) titEl.textContent = cn.n;
+  var trabs = (typeof trabsLocal === 'function' && trabsLocal()) || [];
+  var totalTrabs = trabs.length;
   var msjs = chatMsjsDe(canalId);
   var acuerdos = msjs.filter(function(m){ return m.acuerdo; });
   var miNom = String((typeof miNombre === 'function' && miNombre()) || '').toLowerCase();
@@ -29922,15 +30194,37 @@ function pintarChatObra(canalId){
   var esc = (typeof window.esc === 'function') ? window.esc : function(x){ return String(x||''); };
   var escA = (typeof window.escA === 'function') ? window.escA : function(x){ return String(x||'').replace(/"/g, '&quot;'); };
 
+  var subtit = esc(cn.badge || 'Obra') + ' · ' + esc(nomObra);
+  if(cn.id === 'c-obra'){
+    subtit = '👷 ' + totalTrabs + ' trabajadores incluidos · Todos los frentes';
+  } else if(cn.t === 'sst'){
+    subtit = '📢 Exclusivo SST · Prevención y Seguridad';
+  } else if(cn.t === 'prod'){
+    subtit = '🏗️ Coordinación conjunta SST y Producción';
+  } else if(cn.t === 'frente'){
+    subtit = '🚧 ' + esc(cn.frenteNombre || 'Frente') + ' · Cuadrilla asignada';
+  }
+
   var h = '<div class="chat-wrap">';
   h += '<div class="chat-head">' +
     '<button type="button" class="btn sec" style="width:auto;margin:0;padding:6px 12px;font-size:13px" onclick="ir(\'p-canales\')">‹ Canales</button>' +
-    '<div class="chat-head-info" style="text-align:center">' +
-      '<h3 class="chat-head-tit">' + (cn.ic || '💬') + ' ' + esc(cn.n) + '</h3>' +
-      '<div class="chat-head-sub">' + esc(cn.badge || 'Obra') + ' · ' + esc(nomObra) + '</div>' +
+    '<div class="chat-head-info" style="text-align:center;flex:1;min-width:0;padding:0 6px">' +
+      '<h3 class="chat-head-tit" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (cn.ic || '💬') + ' ' + esc(cn.n) + '</h3>' +
+      '<div class="chat-head-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + subtit + '</div>' +
     '</div>' +
-    '<button type="button" class="btn sec" style="width:auto;margin:0;padding:6px 10px;font-size:13px" onclick="canalNuevoModal(\'' + escA(canalId) + '\')" title="Ajustes de canal">⚙️</button>' +
+    '<button type="button" class="btn sec" style="width:auto;margin:0;padding:6px 10px;font-size:13px" onclick="canalNuevoModal(\'' + escA(canalId) + '\')" title="Ajustes y miembros del canal">⚙️ Ajustes</button>' +
   '</div>';
+
+  /* Banner informativo del canal general */
+  if(cn.id === 'c-obra'){
+    h += '<div style="background:#F0F7FF;border-left:4px solid #0066CC;padding:8px 12px;margin:8px 14px 4px;border-radius:8px;font-size:12px;color:#0B2A3A">' +
+      '👷 <b>Chat General:</b> Los ' + totalTrabs + ' trabajadores registrados en tu personal están incorporados automáticamente a este chat.' +
+    '</div>';
+  } else if(cn.t === 'frente'){
+    h += '<div style="background:#FFF9EB;border-left:4px solid #F59E0B;padding:8px 12px;margin:8px 14px 4px;border-radius:8px;font-size:12px;color:#78350F">' +
+      '🚧 <b>Frente de trabajo:</b> Los trabajadores asignados a este frente y la supervisión coordinan acuerdos específicos aquí.' +
+    '</div>';
+  }
 
   if(acuerdos.length){
     var uA = acuerdos[acuerdos.length - 1];
@@ -29976,92 +30270,37 @@ function pintarChatObra(canalId){
     }
 
     h += '<div class="chat-msj-bts">' +
-      (!m.pendiente ? '<button type="button" class="chat-msj-bt" onclick="chatConvertirEnPendienteModal(\'' + escA(canalId) + '\',\'' + escA(m.id) + '\')">📌 Asignar pendiente</button>' : '') +
-      '<button type="button" class="chat-msj-bt" onclick="chatFijarAcuerdo(\'' + escA(canalId) + '\',\'' + escA(m.id) + '\')">' + (m.acuerdo ? 'Desfijar' : '⭐ Fijar acuerdo') + '</button>' +
+      '<button type="button" class="chat-msj-act" onclick="chatConvertirEnPendienteModal(\'' + escA(canalId) + '\',\'' + escA(m.id) + '\')">📌 ' + (m.pendiente ? 'Editar pendiente' : 'Asignar pendiente') + '</button>' +
+      '<button type="button" class="chat-msj-act" onclick="chatFijarAcuerdo(\'' + escA(canalId) + '\',\'' + escA(m.id) + '\')">' + (m.acuerdo ? 'Desfijar acuerdo' : '📌 Marcar acuerdo') + '</button>' +
     '</div>';
 
     h += '</div>';
   });
   h += '</div>';
 
-  h += '<div id="chat-adj-prev" style="display:none;padding:6px 10px;background:rgba(245,183,0,.1);border:1px solid rgba(245,183,0,.3);border-radius:10px;margin-bottom:6px;font-size:12px"></div>';
-
-  h += '<div class="chat-input-bar">' +
-    '<button type="button" class="chat-bt-adj" onclick="_chatAdjuntarModal(\'' + escA(canalId) + '\')" title="Adjuntar documento o foto y archivar en carpeta">📎</button>' +
-    '<input type="text" id="chat-txt-inp" class="chat-inp" placeholder="Escribe un mensaje o acuerdo..." onkeydown="if(event.key===\'Enter\') chatEnviar(\'' + escA(canalId) + '\')">' +
-    '<button type="button" class="chat-bt-send" onclick="chatEnviar(\'' + escA(canalId) + '\')">➤</button>' +
+  /* Barra de envío */
+  h += '<div class="chat-bar">' +
+    '<button type="button" class="chat-bar-btn" onclick="chatAdjuntar(\'' + escA(canalId) + '\')" title="Adjuntar documento y derivar a carpeta">📎</button>' +
+    '<input type="text" class="chat-bar-inp" id="chat-inp-txt" placeholder="Escribe un mensaje, acuerdo o tarea…" onkeydown="if(event.key===\'Enter\')chatEnviar(\'' + escA(canalId) + '\')">' +
+    '<button type="button" class="chat-bar-env" onclick="chatEnviar(\'' + escA(canalId) + '\')" title="Enviar">➤</button>' +
   '</div>';
 
   h += '</div>';
   c.innerHTML = h;
 
   setTimeout(function(){
-    var fb = document.getElementById('chat-feed-box');
-    if(fb) fb.scrollTop = fb.scrollHeight;
+    var b = document.getElementById('chat-feed-box');
+    if(b) b.scrollTop = b.scrollHeight;
   }, 50);
 }
 
-function _chatAdjuntarModal(canalId){
-  var carpetasOpc = '<option value="2026 › 11. Noviembre › Charlas">📂 2026 › 11. Noviembre › Charlas</option>' +
-    '<option value="Plan Anual de SST">📂 Plan Anual de SST</option>' +
-    '<option value="Matriz IPERC">📂 Matriz IPERC</option>' +
-    '<option value="Inspecciones y Auditoría">📂 Inspecciones y Auditoría</option>' +
-    '<option value="Comité y Actas">📂 Comité y Actas</option>';
-
-  try{
-    if(typeof esc2Carpetas === 'function'){
-      var C = esc2Carpetas();
-      var extra = (C.usadas || []).concat(C.otras || []);
-      if(extra.length){
-        var escA = (typeof window.escA === 'function') ? window.escA : function(x){ return String(x||'').replace(/"/g, '&quot;'); };
-        var esc = (typeof window.esc === 'function') ? window.esc : function(x){ return String(x||''); };
-        carpetasOpc = extra.map(function(x){
-          return '<option value="' + escA(x.r || x.n) + '">📂 ' + esc(x.r || x.n) + '</option>';
-        }).join('');
-      }
-    }
-  }catch(_e){}
-
-  var modal = document.createElement('div');
-  modal.id = 'modal-chat-adj';
-  modal.className = 'visor-fondo on';
-  modal.style.zIndex = '99999';
-  modal.innerHTML = '<div class="tarj" style="max-width:380px;margin:15vh auto;background:#fff;color:#0B2A3A;border-radius:18px;padding:20px;box-shadow:0 12px 36px rgba(0,0,0,.4)">' +
-    '<h3 style="margin:0 0 6px;font-size:18px">📎 Adjuntar y Archivar en Obra</h3>' +
-    '<p class="sub" style="margin:0 0 12px;font-size:13px;color:#5B7282">El documento se compartirá en el chat y se guardará en la carpeta de la obra seleccionada.</p>' +
-    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Nombre o archivo:</label>' +
-    '<input type="text" id="chat-adj-nom" placeholder="Ej. Acta_Reunion_1411.pdf o Foto_Andamio.jpg" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:10px;font:inherit">' +
-    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">📂 Archivar en carpeta de obra:</label>' +
-    '<select id="chat-adj-carpeta" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:16px;font:inherit">' + carpetasOpc + '</select>' +
-    '<div style="display:flex;gap:8px">' +
-      '<button type="button" class="btn" style="margin:0;flex:1" onclick="_chatConfirmarAdjunto(\'' + canalId + '\')">Adjuntar documento</button>' +
-      '<button type="button" class="btn sec" style="margin:0;flex:1" onclick="_chatCerrarModalAdj()">Cancelar</button>' +
-    '</div>' +
-  '</div>';
-  document.body.appendChild(modal);
-}
-
-function _chatCerrarModalAdj(){
-  var m = document.getElementById('modal-chat-adj'); if(m && m.parentNode) m.parentNode.removeChild(m);
-}
-
-function _chatConfirmarAdjunto(canalId){
-  var nom = String((document.getElementById('chat-adj-nom')||{}).value || '').trim() || 'Documento_Obra.pdf';
-  var carp = (document.getElementById('chat-adj-carpeta')||{}).value || '2026 › 11. Noviembre';
-  window._CHAT_TEMP_ADJ_NOM = nom;
-  window._CHAT_TEMP_ADJ_URL = '#';
-  window._CHAT_TEMP_CARPETA = carp;
-
-  _chatCerrarModalAdj();
-  var prev = document.getElementById('chat-adj-prev');
-  if(prev){
-    var esc = (typeof window.esc === 'function') ? window.esc : function(x){ return String(x||''); };
-    prev.style.display = 'block';
-    prev.innerHTML = '📎 <b>' + esc(nom) + '</b> · 📂 Se archivará en: <i>' + esc(carp) + '</i>';
-  }
-}
-
+/* ══════════════════════════════════════════════════════════════════
+   MODAL DE AJUSTES Y GESTIÓN DE PARTICIPANTES (Cierre 100% garantizado)
+   ══════════════════════════════════════════════════════════════════ */
 function canalNuevoModal(editarId){
+  /* Si ya hay un modal abierto, cerrarlo primero */
+  _canalModalCerrar();
+
   var cn = editarId ? canalPorId(editarId) : null;
   var esEd = !!cn;
   var esc = (typeof window.esc === 'function') ? window.esc : function(x){ return String(x||''); };
@@ -30070,41 +30309,202 @@ function canalNuevoModal(editarId){
   var modal = document.createElement('div');
   modal.id = 'modal-canal-nuevo';
   modal.className = 'visor-fondo on';
-  modal.style.zIndex = '99999';
-  modal.innerHTML = '<div class="tarj" style="max-width:380px;margin:12vh auto;background:#fff;color:#0B2A3A;border-radius:18px;padding:20px;box-shadow:0 12px 36px rgba(0,0,0,.4)">' +
-    '<h3 style="margin:0 0 6px;font-size:18px">' + (esEd ? '⚙️ Ajustes del canal' : '➕ Crear nuevo canal de obra') + '</h3>' +
-    '<p class="sub" style="margin:0 0 12px;font-size:13px;color:#5B7282">Jefatura SST, Producción y Gerencia pueden crear y delegar canales.</p>' +
-    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Nombre del canal:</label>' +
-    '<input type="text" id="cn-nom" value="' + escA(esEd ? cn.n : '') + '" placeholder="Ej. Subcontrata Sanitarias, Frente Excavación…" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:10px;font:inherit">' +
-    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Tipo de canal:</label>' +
-    '<select id="cn-tipo" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:10px;font:inherit">' +
-      '<option value="sst"' + (esEd && cn.t === 'sst' ? ' selected' : '') + '>Coordinación SST</option>' +
-      '<option value="prod"' + (esEd && cn.t === 'prod' ? ' selected' : '') + '>Coordinación de Producción</option>' +
-      '<option value="sub"' + (esEd && cn.t === 'sub' ? ' selected' : '') + '>Subcontrata (Plan Central)</option>' +
-      '<option value="obra"' + (esEd && cn.t === 'obra' ? ' selected' : '') + '>General de Obra</option>' +
-    '</select>' +
-    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Icono:</label>' +
-    '<select id="cn-ic" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:10px;font:inherit">' +
-      '<option value="📢">📢 Anuncios / SST</option>' +
-      '<option value="🏗️">🏗️ Producción / Obra</option>' +
-      '<option value="👷">👷 Cuadrillas</option>' +
-      '<option value="⚡">⚡ Eléctrico</option>' +
-      '<option value="🧱">🧱 Estructuras</option>' +
-      '<option value="🚨">🚨 Emergencias</option>' +
-      '<option value="📋">📋 Acuerdos</option>' +
-    '</select>' +
-    '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Descripción corta:</label>' +
-    '<input type="text" id="cn-desc" value="' + escA(esEd ? cn.d : '') + '" placeholder="Propósito del canal y frentes involucrados" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:16px;font:inherit">' +
-    '<div style="display:flex;gap:8px">' +
-      '<button type="button" class="btn" style="margin:0;flex:1" onclick="_canalGuardarConfirmar(\'' + (esEd ? escA(cn.id) : '') + '\')">' + (esEd ? 'Guardar cambios' : 'Crear canal') + '</button>' +
-      '<button type="button" class="btn sec" style="margin:0;flex:1" onclick="_canalModalCerrar()">Cancelar</button>' +
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;';
+  modal.onclick = function(e){ if(e.target === modal) _canalModalCerrar(); };
+
+  var trabs = (typeof trabsLocal === 'function' && trabsLocal()) || [];
+  var totalTrabs = trabs.length;
+  var miembros = (esEd && Array.isArray(cn.miembros)) ? cn.miembros : [
+    { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' }
+  ];
+
+  /* HTML de miembros */
+  var miembrosHTML = '';
+  if(esEd && cn.id === 'c-obra'){
+    miembrosHTML += '<div style="background:#F0F7FF;border:1px solid #BAE6FD;border-radius:10px;padding:12px;margin-bottom:12px">' +
+      '<div style="font-size:13px;font-weight:700;color:#0B2A3A;margin-bottom:4px">👷 Nómina completa incluida (' + totalTrabs + ' trabajadores)</div>' +
+      '<div style="font-size:12px;color:#5B7282;margin-bottom:8px">Todos los trabajadores registrados tienen acceso directo al chat general.</div>' +
+      '<button type="button" class="btn sec" style="width:100%;padding:6px;font-size:11.5px;margin:0" onclick="_chatToggleListaTrabs()">👁️ ' + (document.getElementById('c-trabs-lista-acc') ? 'Ocultar' : 'Ver lista de trabajadores') + '</button>' +
+      '<div id="c-trabs-lista-acc" style="display:none;max-height:160px;overflow-y:auto;margin-top:8px;border-top:1px dashed #CBD5E1;padding-top:6px">';
+    trabs.forEach(function(t){
+      miembrosHTML += '<div style="font-size:11.5px;padding:3px 0;color:#334155;display:flex;justify-content:space-between">' +
+        '<span><b>' + esc(t.nombre) + '</b> (DNI ' + esc(t.dni) + ')</span>' +
+        '<span style="color:#64748B">' + esc(t.ubicacion || 'Frente general') + '</span>' +
+      '</div>';
+    });
+    miembrosHTML += '</div></div>';
+  }
+
+  miembrosHTML += '<div class="can-miembros-lista" style="max-height:180px;overflow-y:auto;margin-bottom:10px;display:flex;flex-direction:column;gap:6px">';
+  miembros.forEach(function(m){
+    var clBadge = m.t === 'sst' ? 'background:#DCFCE7;color:#166534' : (m.t === 'prod' ? 'background:#FEF3C7;color:#92400E' : 'background:#F1F5F9;color:#475569');
+    miembrosHTML += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px">' +
+      '<div style="display:flex;align-items:center;gap:8px">' +
+        '<span style="width:28px;height:28px;border-radius:50%;background:#E2E8F0;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#334155">' + esc(m.n ? m.n.substring(0, 2).toUpperCase() : '??') + '</span>' +
+        '<div>' +
+          '<div style="font-size:12.5px;font-weight:700;color:#0F172A">' + esc(m.n) + '</div>' +
+          '<div style="font-size:11px;color:#64748B"><span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:10px;' + clBadge + '">' + esc(m.r) + '</span></div>' +
+        '</div>' +
+      '</div>' +
+      (esEd && miembros.length > 1 ? '<button type="button" onclick="_chatQuitarMiembro(\'' + escA(cn.id) + '\',\'' + escA(m.dni) + '\')" style="background:#FEE2E2;color:#DC2626;border:none;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer">✕ Quitar</button>' : '') +
+    '</div>';
+  });
+  miembrosHTML += '</div>';
+
+  if(esEd){
+    miembrosHTML += '<button type="button" class="btn sec" style="width:100%;margin:0 0 14px;padding:8px 12px;font-size:12.5px;border-radius:10px" onclick="_chatAbrirAgregarMiembro(\'' + escA(cn.id) + '\')">' +
+      '➕ Agregar participante a este chat' +
+    '</button>';
+  }
+
+  modal.innerHTML = '<div class="tarj" style="max-width:440px;width:100%;max-height:86vh;display:flex;flex-direction:column;background:#fff;color:#0B2A3A;border-radius:20px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.5);margin:auto">' +
+    /* Cabecera fijada con botón de cierre ✕ */
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #E5E9EC;background:#FAFBFB">' +
+      '<h3 style="margin:0;font-size:17px;font-weight:800;color:#0B2A3A">' + (esEd ? '⚙️ Ajustes del canal' : '➕ Crear nuevo canal de obra') + '</h3>' +
+      '<button type="button" onclick="_canalModalCerrar()" style="background:#F1F5F9;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;color:#64748B;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:1">✕</button>' +
+    '</div>' +
+    /* Cuerpo scrolleable */
+    '<div style="padding:16px 18px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch">' +
+      '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Nombre del canal:</label>' +
+      '<input type="text" id="cn-nom" value="' + escA(esEd ? cn.n : '') + '" placeholder="Ej. Frente 4 - Techado, Subcontrata Sanitarias…" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:10px;font:inherit">' +
+      '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Tipo de canal y propósito:</label>' +
+      '<select id="cn-tipo" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:10px;font:inherit">' +
+        '<option value="frente"' + (esEd && cn.t === 'frente' ? ' selected' : '') + '>🚧 Frente de trabajo (Cuadrillas asignadas)</option>' +
+        '<option value="sst"' + (esEd && cn.t === 'sst' ? ' selected' : '') + '>📢 Exclusivo SST (Supervisores y Prevención)</option>' +
+        '<option value="prod"' + (esEd && cn.t === 'prod' ? ' selected' : '') + '>🏗️ Coordinación de Producción (SST + Producción)</option>' +
+        '<option value="obra"' + (esEd && cn.t === 'obra' ? ' selected' : '') + '>👷 General de Obra (Toda la nómina)</option>' +
+        '<option value="sub"' + (esEd && cn.t === 'sub' ? ' selected' : '') + '>⚡ Subcontrata (Plan Central)</option>' +
+      '</select>' +
+      '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Icono representativo:</label>' +
+      '<select id="cn-ic" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:10px;font:inherit">' +
+        '<option value="🚧">🚧 Frente de trabajo</option>' +
+        '<option value="📢">📢 Anuncios / SST</option>' +
+        '<option value="🏗️">🏗️ Producción / Obra</option>' +
+        '<option value="👷">👷 Cuadrilla / Trabajadores</option>' +
+        '<option value="⚡">⚡ Eléctrico</option>' +
+        '<option value="🧱">🧱 Estructuras</option>' +
+        '<option value="🚨">🚨 Emergencias</option>' +
+        '<option value="📋">📋 Acuerdos</option>' +
+      '</select>' +
+      '<label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#5B7282">Descripción corta:</label>' +
+      '<input type="text" id="cn-desc" value="' + escA(esEd ? cn.d : '') + '" placeholder="Propósito del canal y frentes involucrados" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #E1E8ED;margin-bottom:14px;font:inherit">' +
+      /* Sección de gestión de miembros */
+      '<div style="font-size:13px;font-weight:800;color:#0B2A3A;margin-bottom:6px">👥 Participantes del canal (' + miembros.length + ')</div>' +
+      miembrosHTML +
+    '</div>' +
+    /* Pie fijado con botones de acción */
+    '<div style="display:flex;gap:10px;padding:12px 18px;background:#FAFBFB;border-top:1px solid #E5E9EC">' +
+      '<button type="button" class="btn sec" style="margin:0;flex:1;height:46px;border-radius:12px" onclick="_canalModalCerrar()">✕ Cerrar</button>' +
+      '<button type="button" class="btn" style="margin:0;flex:2;height:46px;border-radius:12px" onclick="_canalGuardarConfirmar(\'' + (esEd ? escA(cn.id) : '') + '\')">' + (esEd ? 'Guardar cambios' : 'Crear canal') + '</button>' +
     '</div>' +
   '</div>';
   document.body.appendChild(modal);
 }
 
 function _canalModalCerrar(){
-  var m = document.getElementById('modal-canal-nuevo'); if(m && m.parentNode) m.parentNode.removeChild(m);
+  var m = document.getElementById('modal-canal-nuevo');
+  if(m && m.parentNode) m.parentNode.removeChild(m);
+  var m2 = document.getElementById('modal-agregar-miembro');
+  if(m2 && m2.parentNode) m2.parentNode.removeChild(m2);
+}
+
+function _chatToggleListaTrabs(){
+  var el = document.getElementById('c-trabs-lista-acc');
+  if(el){
+    el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+  }
+}
+
+function _chatQuitarMiembro(canalId, dni){
+  var canales = canalesDeObra();
+  for(var i = 0; i < canales.length; i++){
+    if(canales[i].id === canalId && Array.isArray(canales[i].miembros)){
+      canales[i].miembros = canales[i].miembros.filter(function(m){ return String(m.dni) !== String(dni); });
+      break;
+    }
+  }
+  canalesGuardar(canales);
+  canalNuevoModal(canalId);
+  if(typeof tostada === 'function') tostada('Participante removido del canal');
+}
+
+function _chatAbrirAgregarMiembro(canalId){
+  var cn = canalPorId(canalId);
+  if(!cn) return;
+
+  var miembrosAct = Array.isArray(cn.miembros) ? cn.miembros : [];
+  var dnisExistentes = {};
+  miembrosAct.forEach(function(m){ dnisExistentes[String(m.dni)] = true; });
+
+  var trabs = (typeof trabsLocal === 'function' && trabsLocal()) || [];
+  var esc = (typeof window.esc === 'function') ? window.esc : function(x){ return String(x||''); };
+  var escA = (typeof window.escA === 'function') ? window.escA : function(x){ return String(x||'').replace(/"/g, '&quot;'); };
+
+  var modal2 = document.createElement('div');
+  modal2.id = 'modal-agregar-miembro';
+  modal2.className = 'visor-fondo on';
+  modal2.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:100000;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;';
+  modal2.onclick = function(e){ if(e.target === modal2) { if(modal2.parentNode) modal2.parentNode.removeChild(modal2); } };
+
+  var personasDisp = [
+    { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
+    { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' },
+    { dni: 'prev-01', n: 'Prevencionista SST', r: 'Prevencionista', t: 'sst' }
+  ];
+
+  /* En c-sst NUNCA sugerir supervisor de produccion */
+  if(cn.id === 'c-sst' || cn.t === 'sst'){
+    personasDisp = personasDisp.filter(function(p){ return p.t !== 'prod'; });
+  }
+
+  trabs.forEach(function(t){
+    personasDisp.push({ dni: t.dni, n: t.nombre, r: t.puesto || 'Trabajador', t: 'col', u: t.ubicacion });
+  });
+
+  var listaHTML = '';
+  personasDisp.forEach(function(p){
+    if(dnisExistentes[String(p.dni)]) return; /* ya está */
+    var clBadge = p.t === 'sst' ? 'background:#DCFCE7;color:#166534' : (p.t === 'prod' ? 'background:#FEF3C7;color:#92400E' : 'background:#F1F5F9;color:#475569');
+    listaHTML += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;margin-bottom:6px">' +
+      '<div>' +
+        '<div style="font-size:13px;font-weight:700;color:#0F172A">' + esc(p.n) + '</div>' +
+        '<div style="font-size:11px;color:#64748B"><span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:10px;' + clBadge + '">' + esc(p.r) + '</span>' + (p.u ? ' · ' + esc(p.u) : '') + '</div>' +
+      '</div>' +
+      '<button type="button" class="btn" style="width:auto;margin:0;padding:6px 12px;font-size:11.5px;height:34px" onclick="_chatConfirmarAgregarPersona(\'' + escA(canalId) + '\',\'' + escA(p.dni) + '\',\'' + escA(p.n) + '\',\'' + escA(p.r) + '\',\'' + escA(p.t) + '\')">+ Agregar</button>' +
+    '</div>';
+  });
+
+  modal2.innerHTML = '<div class="tarj" style="max-width:400px;width:100%;max-height:80vh;display:flex;flex-direction:column;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.5);margin:auto">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #E5E9EC;background:#FAFBFB">' +
+      '<h3 style="margin:0;font-size:16px;font-weight:800;color:#0B2A3A">➕ Agregar a ' + esc(cn.n) + '</h3>' +
+      '<button type="button" onclick="var m=document.getElementById(\'modal-agregar-miembro\');if(m&&m.parentNode)m.parentNode.removeChild(m)" style="background:#F1F5F9;border:none;border-radius:50%;width:30px;height:30px;font-size:16px;color:#64748B;cursor:pointer">✕</button>' +
+    '</div>' +
+    '<div style="padding:14px 18px;overflow-y:auto;flex:1">' +
+      '<div style="font-size:12px;color:#64748B;margin-bottom:10px">Selecciona supervisores o trabajadores para incorporarlos al chat:</div>' +
+      (listaHTML || '<div style="text-align:center;color:#64748B;padding:20px;font-size:13px">Todos los miembros disponibles ya están en este canal.</div>') +
+    '</div>' +
+    '<div style="padding:10px 18px;background:#FAFBFB;border-top:1px solid #E5E9EC">' +
+      '<button type="button" class="btn sec" style="width:100%;margin:0;height:42px" onclick="var m=document.getElementById(\'modal-agregar-miembro\');if(m&&m.parentNode)m.parentNode.removeChild(m)">Cerrar</button>' +
+    '</div>' +
+  '</div>';
+
+  document.body.appendChild(modal2);
+}
+
+function _chatConfirmarAgregarPersona(canalId, dni, nombre, rol, tipo){
+  var canales = canalesDeObra();
+  for(var i = 0; i < canales.length; i++){
+    if(canales[i].id === canalId){
+      if(!Array.isArray(canales[i].miembros)) canales[i].miembros = [];
+      canales[i].miembros.push({ dni: dni, n: nombre, r: rol, t: tipo });
+      break;
+    }
+  }
+  canalesGuardar(canales);
+  var m2 = document.getElementById('modal-agregar-miembro');
+  if(m2 && m2.parentNode) m2.parentNode.removeChild(m2);
+  canalNuevoModal(canalId);
+  if(typeof tostada === 'function') tostada('«' + nombre + '» agregado al chat');
 }
 
 function _canalGuardarConfirmar(editarId){
@@ -30122,6 +30522,7 @@ function _canalGuardarConfirmar(editarId){
         canales[i].t = tipo;
         canales[i].ic = ic;
         canales[i].d = desc;
+        if(tipo === 'frente') canales[i].frenteNombre = nom;
         break;
       }
     }
@@ -30132,9 +30533,13 @@ function _canalGuardarConfirmar(editarId){
       t: tipo,
       ic: ic,
       d: desc,
-      badge: (tipo === 'sub' ? 'Plan Central' : (tipo === 'sst' ? 'Coordinación SST' : 'Coordinación Obra')),
+      frenteNombre: (tipo === 'frente' ? nom : ''),
+      badge: (tipo === 'frente' ? 'Frente de trabajo' : (tipo === 'sub' ? 'Plan Central' : (tipo === 'sst' ? 'Coordinación SST' : 'Coordinación Obra'))),
       orden: canales.length + 1,
-      creadoPor: (typeof miNombre === 'function' && miNombre()) || 'Usuario'
+      creadoPor: (typeof miNombre === 'function' && miNombre()) || 'Usuario',
+      miembros: [
+        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' }
+      ]
     };
     canales.push(nuevo);
   }
@@ -131651,7 +132056,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='b548744025';
+var SELLO_APP='5d7c030f06';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
