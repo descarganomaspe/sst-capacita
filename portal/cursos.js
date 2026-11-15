@@ -14,8 +14,8 @@
    · Abiertos: los módulos con «desbloqueado»; los demás, con el código de acceso al curso completo (tanda 4, 15/11/2026:
      lo vende Marcelo y se activa con la cuenta). Con el curso completo: el examen final (lo califica el servidor) y la
      constancia del curso con folio y QR, que se comprueba en portal/verificar.html. Ver «ACCESO, EXAMEN FINAL…». */
-var CUR_DATOS_VER = 't4-1511';   /* 15/11: el curso se llama «Fundamentos de SST en obra» y trae «acceso» (el código de acceso del servidor) */
-var CURW = { caja:null, data:null, modId:'m1', lecId:{}, cargo:false, error:'' };
+var CUR_DATOS_VER = 'voz-1511';   /* 15/11: las lecciones traen la voz de Koda («audio») y sus tiempos (antes 't5-1511') */   /* 15/11: el curso se llama «Fundamentos de SST en obra» y trae «acceso» (el código de acceso del servidor) */
+var CURW = { caja:null, data:null, modId:'m1', lecId:{}, cargo:false, error:'', curso:'', datos:{} };
 var CURP = null; /* Estado del reproductor (modo Clásico) */
 var CURJ = null; /* Estado de las tarjetas (modo Jugando) */
 var _CUR_MEM = {}, _CUR_ALM;
@@ -41,7 +41,14 @@ function _curCss(){
     '.cur-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}',
     '.cur-precios{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px}',
     '.cur-grid{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:14px;align-items:start}',
-    '@media (max-width:900px){.cur-grid{grid-template-columns:1fr}}',
+    '.cur-head .cur-ver-mods{display:none}',
+    '@media (max-width:900px){.cur-grid{grid-template-columns:1fr}.cur-grid>.cur-col-det{order:1}.cur-grid>.cur-col-mods{order:2}.cur-head .cur-ver-mods{display:inline-flex}}',
+    '.cur-head-der{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center}',
+    '.cur-normas>summary{cursor:pointer;list-style:none;display:flex;gap:6px;align-items:center;min-height:32px}',
+    '.cur-normas>summary::-webkit-details-marker{display:none}',
+    '.cur-normas>summary::after{content:"▾";margin-left:auto;color:var(--gris,#6B7C88)}',
+    '.cur-normas[open]>summary::after{content:"▴"}',
+    '@media (max-width:520px){.cur-cursos button{flex:1 1 140px;font-size:13.5px;line-height:1.25;padding:8px 10px}.cur-aviso{font-size:12.5px}}',
     '.cur-lista{display:grid;gap:7px}',
     '.cur-mod{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--raya);background:var(--tarj,#fff);cursor:pointer;font:inherit;color:inherit;min-height:44px}',
     '.cur-mod.on{border-color:var(--azul,#0B2A3A);box-shadow:inset 3px 0 0 #F5B700;background:var(--fondo,#f7f9fb)}',
@@ -103,6 +110,11 @@ function _curCss(){
     '.cur-subtit{min-height:36px;padding:6px 12px;background:#14394D;color:#fff;font-size:13px;text-align:center;line-height:1.35;border-top:1px solid #1E4E68;display:flex;align-items:center;justify-content:center}',
     '.cur-velo{position:absolute;inset:0;background:rgba(6,18,26,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:16px;gap:10px;z-index:5}',
     '.cur-velo[hidden],.cur-subtit[hidden]{display:none!important}',
+    '.cur-profe{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#06121A;opacity:0;transition:opacity .35s ease;z-index:3;pointer-events:none}',
+    '.cur-profe.on{opacity:1}.cur-profe[hidden]{display:none!important}',
+    '.cur-j-voz{float:right;margin:-2px -2px 8px 10px;border:0;border-radius:999px;background:#0B2A3A;color:#fff;font:inherit;font-size:13px;font-weight:700;padding:8px 14px;min-height:40px;cursor:pointer}',
+    '.cur-j-voz[aria-pressed=true]{background:#F5B700;color:#0B2A3A}',
+    '@media (prefers-reduced-motion: reduce){.cur-profe{transition:none}}',
     '.cur-velo .grande{font-size:18px;font-weight:700;line-height:1.2;color:#fff}',
     '.cur-velo .acc{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px}',
     '.cur-ctrls{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0B2A3A;flex-wrap:wrap;border-top:1px solid #1E4E68}',
@@ -149,7 +161,68 @@ function _curCss(){
     '@media (max-width:420px){.cur-cf dl{grid-template-columns:minmax(0,1fr)}.cur-cf dt{margin-top:4px}}',
     '.cur-folio{font-family:ui-monospace,Consolas,monospace;letter-spacing:.04em}',
     '.cur-cf-acc{display:flex;flex-wrap:wrap;gap:8px}.cur-cf-acc a.bt{display:inline-flex;align-items:center;text-decoration:none}',
-    '.cur-res p{font-size:14px}'
+    '.cur-res p{font-size:14px}',
+    /* 15/11/2026 · tanda 5: la Bolsa de trabajo SST, lado del candidato (clases cub-: no chocan con las bt- de portal/bolsa.js) */
+    '.cur-mod-bolsa .n{background:#1E8E5A;font-size:14px}',
+    '.cub-form{display:grid;gap:10px}',
+    '.cub-campo{display:grid;gap:4px;min-width:0;margin:0}.cub-campo>label,.cub-campo>legend{font-size:14px;font-weight:600}',
+    '.cub-campo input:not([type=checkbox]),.cub-campo select,.cub-campo textarea{min-height:44px;font-size:16px;width:100%;box-sizing:border-box}',
+    '.cub-campo textarea{font-family:inherit;line-height:1.4}',
+    '.cub-form .cur-chk input{width:20px;height:20px;min-height:0;flex:0 0 auto;margin:1px 0 0}',
+    '.cub-fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}',
+    '.cub-secs{border:1px solid var(--raya);border-radius:10px;padding:8px 12px 10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 10px}',
+    '.cub-secs legend{padding:0 4px}.cub-secs .cur-chk{min-height:36px;align-items:center;font-size:14px}.cub-secs .cur-chk input{margin:0}',
+    '.cub-form .cur-chk{color:var(--tinta,#0B2A3A);font-weight:500}',
+    '.cub-permiso{padding:12px;border-radius:10px;border:2px solid #0B2A3A;background:var(--panel,#fff);display:grid;gap:8px}',
+    '.cub-permiso p{margin:0;font-size:14px;line-height:1.45}.cub-permiso .cur-chk{font-size:14px;line-height:1.45}',
+    '.cub-acc{display:flex;flex-wrap:wrap;gap:8px}.cub-acc .bt,.cub-ir .bt,.cub-vac .bt{min-height:44px}',
+    '.cub-cab{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;justify-content:space-between}',
+    '.cub-dl{display:grid;grid-template-columns:minmax(110px,max-content) minmax(0,1fr);gap:6px 14px;margin:0;font-size:14px}',
+    '.cub-dl dt{color:var(--gris,#6B7C88)}.cub-dl dd{margin:0;overflow-wrap:anywhere}',
+    '@media (max-width:420px){.cub-dl{grid-template-columns:minmax(0,1fr)}.cub-dl dt{margin-top:4px}}',
+    '.cub-datos{margin:0;font-size:14px;line-height:1.45}',
+    '.cub-req{margin:0;font-size:13.5px;line-height:1.45;color:var(--gris,#6B7C88);white-space:pre-line}',
+    '.cub-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #0B2A3A;border-radius:12px;overflow:hidden;margin:10px 0}',
+    '.cub-tabs button{border:0;border-left:1px solid #0B2A3A;background:var(--tarj,#fff);color:#0B2A3A;font:inherit;font-size:14px;font-weight:600;padding:6px 8px;min-height:44px;cursor:pointer;line-height:1.2}',
+    '.cub-tabs button:first-child{border-left:0}.cub-tabs button[aria-pressed="true"]{background:#0B2A3A;color:#fff}',
+    '.cub-cuerpo{display:grid;gap:10px}',
+    '.cub-posts{margin:6px 0 0;padding-left:18px;font-size:14px;display:grid;gap:4px}',
+    '.cub-borrar-ok{padding:10px 12px;border-radius:10px;border:1px solid #E7B3B6;background:rgba(180,35,24,.06);display:grid;gap:8px}',
+    '.cub-borrar-ok p{margin:0;font-size:14px}.cub-borrar-ok .bt.mal{background:var(--panel,#fff);color:var(--mal,#B42318);border-color:#E7B3B6;min-height:44px}',
+    '.cub-ir{display:grid;gap:4px;margin-top:6px;padding-top:8px;border-top:1px dashed var(--raya)}',
+    /* 15/11/2026 · los dos cursos, el modo Jugando completo (tanda 2) y lo fácil (tanda 3) */
+    '.cur-cursos{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}',
+    '.cur-cursos button{flex:1 1 200px;min-height:44px;padding:8px 12px;border-radius:12px;border:1px solid var(--raya2,#CBD4DB);background:var(--panel,#fff);color:var(--tinta,#0B2A3A);font:inherit;font-size:15px;font-weight:600;cursor:pointer;text-align:center}',
+    '.cur-cursos button[aria-pressed="true"]{background:#0B2A3A;border-color:#0B2A3A;color:#fff}',
+    '.cur-nivel{padding:10px 12px;border-radius:12px;background:#0B2A3A;color:#fff;display:grid;gap:6px;margin:0 0 12px;font-size:14px}',
+    '.cur-nivel>div:first-child{display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:space-between;align-items:baseline}',
+    '.cur-nivel small{color:#A9C3D1;font-size:12.5px}',
+    '.cur-nivel-barra{height:6px;border-radius:99px;background:#14394D;overflow:hidden}.cur-nivel-barra i{display:block;height:6px;background:#F5B700}',
+    '.cur-insignias{display:flex;flex-wrap:wrap;gap:4px}.cur-insig{font-size:12px;padding:2px 8px;border-radius:99px;background:rgba(245,183,0,.18);color:#FFE7A3}',
+    '.cur-mod-repaso .n{background:#2563A8;font-size:14px}.cur-mod-repaso{border-color:#2563A8}',
+    '.cur-mod-bolsa .n{background:#1E8E5A}',
+    '.cur-retos-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}',
+    '.cur-retos-tabs button{min-height:40px;padding:6px 12px;border-radius:99px;border:1px solid var(--raya2,#CBD4DB);background:var(--panel,#fff);color:var(--tinta,#0B2A3A);font:inherit;font-size:14px;font-weight:600;cursor:pointer}',
+    '.cur-retos-tabs button[aria-pressed="true"]{background:#F5B700;border-color:#F5B700;color:#0B2A3A}',
+    '.cur-reto{display:grid;gap:10px;padding:14px;border-radius:14px;border:2px solid #F5B700;background:rgba(245,183,0,.06)}',
+    '.cur-reto-eti{display:block;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--gris,#6B7C88);font-weight:700;margin-bottom:3px}',
+    '.cur-reto-sit{margin:0;font-size:17px;line-height:1.45;font-weight:600}',
+    '.cur-reto-ops{display:grid;gap:8px}',
+    '.cur-reto-op{min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid var(--raya2,#CBD4DB);background:var(--panel,#fff);color:var(--tinta,#0B2A3A);font:inherit;font-size:16px;text-align:left;cursor:pointer;line-height:1.35}',
+    '.cur-reto-op:hover:not(:disabled){border-color:#0B2A3A}.cur-reto-op:disabled{cursor:default;opacity:.75}',
+    '.cur-reto-op.bien{border-color:#1E8E5A;background:#E8F5EE;opacity:1}.cur-reto-op.mal{border-color:#C0392B;background:#FDECEA;opacity:1}',
+    '.cur-reto-res{padding:10px 12px;border-radius:10px;font-size:16px;line-height:1.45}.cur-reto-res.ok{background:#E8F5EE;border:1px solid #BFE3CE;color:#14532D}.cur-reto-res.mal{background:#FDECEA;border:1px solid #F3B9B2;color:#7A1F14}',
+    '.cur-esc-lienzo{border-radius:12px;overflow:hidden;border:1px solid var(--raya);cursor:crosshair;line-height:0;background:#eaf5fb}',
+    '.cur-esc-lienzo svg{display:block;width:100%;height:auto;max-width:100%}',
+    '.cur-esc-cuenta{margin:0;font-size:15px;font-weight:600}',
+    '.cur-esc-lista{margin:0;padding-left:22px;display:grid;gap:4px;font-size:15px;line-height:1.4}',
+    '.cur-invita{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}',
+    '.cur-rep .cur-reto-sit{font-size:17px}',
+    '#cur-a-jugar{border:1px solid #0B2A3A;background:var(--panel,#fff);color:#0B2A3A;border-radius:999px;padding:6px 12px;min-height:40px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}',
+    /* letra grande en el celular: lo que se lee, de 16 px; los botones, de 44 px */
+    '@media (max-width:520px){.cur-j-voz{min-height:44px}.cur-lam .txt{font-size:16px}.cur-lam .tit{font-size:19px}.cur-subtit{font-size:15px}.cur-ctrls button{min-height:44px}' +
+      '.cur-op{font-size:16px;min-height:44px;align-items:center}.cur-preg>b{font-size:16px}.cur-mod .tx b{font-size:15px}.cur-lec{font-size:15px}' +
+      '.cur-box p,.cur-sec p{font-size:16px}.cur-chk{font-size:16px;min-height:44px;align-items:center}#cur-borrar{min-height:44px}#cur-ir-codigo{min-height:44px}}'
   ].join('\n');
   document.head.appendChild(s);
 }
@@ -194,7 +267,7 @@ function _curDiaMas(iso, n){
 }
 
 function _curAvVacio(){
-  return { v:2, modo:null, lecModo:{}, lec:{}, aprob:{}, resp:{}, player:{}, repaso:{}, racha:{ ult:'', dias:0 }, puntos:0, insignias:[], final:null };
+  return { v:2, modo:null, lecModo:{}, lec:{}, aprob:{}, resp:{}, player:{}, repaso:{}, retos:{}, racha:{ ult:'', dias:0 }, puntos:0, insignias:[], final:null };
 }
 
 /* Lo que quedó del guardado viejo (sessionStorage «curso_sandbox_v1:…» con aprob, resp y player dentro) */
@@ -215,7 +288,7 @@ function _curLeerAv(){
   }
   if(!p || typeof p !== 'object') return av;
   av.modo = (p.modo === 'clasico' || p.modo === 'jugando') ? p.modo : null;
-  ['lecModo', 'lec', 'aprob', 'resp', 'player', 'repaso'].forEach(function(k){ av[k] = _curObj(p[k]); });
+  ['lecModo', 'lec', 'aprob', 'resp', 'player', 'repaso', 'retos'].forEach(function(k){ av[k] = _curObj(p[k]); });
   /* «aprobado» solo vale si salió de la prueba: se descartan las marcas sin puntaje (la falla del «aprobado 100 %») */
   Object.keys(av.aprob).forEach(function(k){
     var a = av.aprob[k];
@@ -274,19 +347,34 @@ function _curTocarRacha(av){
   av.racha.ult = h;
 }
 
+/* 15/11/2026 · el curso elegido (hay dos) y, con poca señal, lo último que bajó: queda en la caja «acad-temario» del
+   navegador (no en localStorage, que la app necesita para lo suyo). Si en 8 s no llega, abre con lo guardado. */
 function _curCargarJson(){
-  if(CURW.data) return Promise.resolve(CURW.data);
-  var url = 'cursos/curso-01.json?v=' + encodeURIComponent(CUR_DATOS_VER || '1');
-  return fetch(url, { cache:'no-cache' }).then(function(r){
+  var id = _curCursoSel(), def = _curCursoDef(id);
+  if(CURW.datos[id]){ CURW.data = CURW.datos[id]; return Promise.resolve(CURW.data); }
+  var url = def.archivo + '?v=' + encodeURIComponent(CUR_DATOS_VER || '1');
+  var usar = function(j){ CURW.datos[id] = j; if(_curCursoSel() === id) CURW.data = j; return j; };
+  var guardado = function(){
+    try{
+      if(!window.caches) return Promise.reject(new Error('sin_caja'));
+      return caches.open('acad-temario').then(function(c){ return c.match(def.archivo, { ignoreSearch:true }); })
+        .then(function(r){ if(!r) throw new Error('sin_copia'); return r.json(); });
+    }catch(e){ return Promise.reject(e); }
+  };
+  var red = fetch(url, { cache:'no-cache' }).then(function(r){
     if(!r.ok) throw new Error('HTTP ' + r.status);
+    try{ if(window.caches){ var c2 = r.clone(); caches.open('acad-temario').then(function(c){ return c.put(def.archivo, c2); }).catch(function(){}); } }catch(e){}
     return r.json();
-  }).then(function(j){ CURW.data = j; return j; });
+  });
+  var tope = new Promise(function(ok, mal){ setTimeout(function(){ guardado().then(ok, function(){ red.then(ok, mal); }); }, 8000); });
+  return Promise.race([red.catch(function(e){ return guardado().catch(function(){ throw e; }); }), tope]).then(usar);
 }
 
 function _curEsAislado(){
   return !!(CURW.data && CURW.data.id && CURW.data.ejemplo_sandbox);
 }
 
+function _curAncho(){ try{ return window.innerWidth || document.documentElement.clientWidth || 1024; }catch(e){ return 1024; } }
 function _curMod(id){
   var L = (CURW.data && CURW.data.modulos) || [];
   for(var i = 0; i < L.length; i++) if(L[i].id === id) return L[i];
@@ -343,6 +431,10 @@ function _curMarcarVista(lecId, modo){
   av.puntos += 10;
   _curTocarRacha(av);
   _curGuardarAv(av);
+  ((CURW.data && CURW.data.modulos) || []).forEach(function(m){
+    var L = _curLecs(m);
+    if(L.some(function(l){ return l.id === lecId; }) && L.every(function(l){ return _curVista(av, l.id); })) _curContar('termina', m.id);
+  });
   _curPintarLista(); _curPintarLecs();
   return true;
 }
@@ -520,6 +612,7 @@ function _curPintarPlayer(){
       var bsi = document.getElementById('cur-b-sig'); if(bsi) bsi.onclick = function(){ _curSiguientePregunta(); };
     }
   }
+  _curVozSync(); _curProfe();
 }
 
 function _curObtenerPreg(id){
@@ -610,7 +703,11 @@ var _curTickTimer = null;
 function _curTick(){
   if(!CURP) return;
   if(CURP.modo === 'leccion' && CURP.jugando){
-    CURP.t = Math.min(CURP.lec.dur, CURP.t + 0.1 * CURP.vel);
+    /* si alguien movió el segundo por su cuenta (un salto), la voz va ahí; si no, manda la voz */
+    if(typeof CURP._tAnt === 'number' && Math.abs(CURP.t - CURP._tAnt) > 0.5 && CURVOZ && _curVozActiva()){ try{ CURVOZ.currentTime = CURP.t; }catch(e){} }
+    var vt = _curVozTiempo();   /* con voz: el segundo de la voz; esperando que cargue: no avanza; sin voz: el reloj */
+    if(vt !== false) CURP.t = Math.min(CURP.lec.dur, (vt !== null && Math.abs(vt - CURP.t) < 1.5) ? vt : (vt !== null ? CURP.t : CURP.t + 0.1 * CURP.vel));
+    CURP._tAnt = CURP.t;
     CURP.vistaMax = Math.max(CURP.vistaMax, CURP.t);
     if(CURP.corte != null && CURP.t >= CURP.corte - 0.001){
       CURP.jugando = false;
@@ -655,6 +752,17 @@ function _curKeyHandler(ev){
 function _curMontarPlayer(interactivo){
   _curDesmontarPlayer();
   CURP = _curPlayerState(interactivo);
+  CURP.voz = !!interactivo.audio && _curVozPref();
+  _curVozBoton();
+  var vozBtn = document.getElementById('cur-b-voz');
+  if(vozBtn){
+    vozBtn.onclick = function(){
+      if(CURP.vozFalla){ CURP.vozFalla = false; _curVozSoltar(); CURP.voz = true; }
+      else CURP.voz = !CURP.voz;
+      _curVozGuardar(CURP.voz);
+      _curVozBoton(); _curVozSync();
+    };
+  }
 
   var playBtn = document.getElementById('cur-b-play');
   if(playBtn){
@@ -703,6 +811,7 @@ function _curMontarPlayer(interactivo){
 }
 
 function _curDesmontarPlayer(){
+  _curVozParar(); _curProfeParar();
   if(_curTickTimer){ clearInterval(_curTickTimer); _curTickTimer = null; }
   document.removeEventListener('keydown', _curKeyHandler);
   if(CURP){ _curGuardarPlayerState(); CURP = null; }
@@ -712,11 +821,13 @@ function _curPlayerHtml(inter){
   var h = '<div class="cur-repro" id="cur-repro-box">' +
        '<div class="cur-pantalla" id="cur-pantalla-marco">' +
        '<div id="cur-lam" class="cur-lam"></div>' +
+       '<video id="cur-profe" class="cur-profe" muted playsinline preload="none" aria-hidden="true" hidden></video>' +
        '<div id="cur-velo" class="cur-velo" hidden></div>' +
        '</div>' +
        '<div id="cur-subtit" class="cur-subtit"></div>' +
        '<div class="cur-ctrls">' +
        '<button type="button" id="cur-b-play" aria-label="Reproducir">▶</button>' +
+       (inter.audio ? '<button type="button" id="cur-b-voz" class="on" aria-pressed="true" aria-label="Voz de Koda" title="Voz de Koda">🔊 Voz</button>' : '') +
        '<span class="tiempo" id="cur-tiempo">0:00 / ' + _curMmss(inter.dur) + '</span>' +
        '<input type="range" id="cur-seek" min="0" max="' + _curEsc(inter.dur) + '" step="0.1" value="0" aria-label="Línea de tiempo">' +
        '<button type="button" id="cur-b-cc" class="on" aria-pressed="true" aria-label="Subtítulos">CC</button>' +
@@ -736,6 +847,197 @@ function _curPlayerHtml(inter){
   }
   return h;
 }
+
+/* ══ LA VOZ DE KODA Y EL PROFESOR (15/11/2026) ═══════════════════════════════════════════════════════════════════
+   Cada lección trae «audio»: la voz de Koda grabada en Google AI Studio (academia/voz), con cada subtítulo y cada
+   lámina en el segundo en que Koda los dice. En Clásico la voz manda el reloj; si no hay señal para la voz, la lección
+   sigue con el reloj y los subtítulos, como antes, y el botón queda en «🔇 Sin señal» (tocarlo lo intenta de nuevo).
+   En Jugando cada tarjeta tiene «🔊 Escuchar» (su tramo de voz); si se usó, las siguientes suenan solas.
+   El profesor (clips de Google Flow, sin sonido; «profe» en el JSON del curso) aparece en la pantalla al empezar la
+   primera lección de cada módulo, al empezar las demás y al cerrar la última. Con «ahorro de datos» o con
+   «reducir movimiento» no aparece. Nada de esto se guarda en el servidor. */
+var CURVOZ = null;            /* la voz que suena (una sola a la vez) */
+var _curVozEspera = 0;      /* ticks esperando que la voz cargue */
+var _curJVozTimer = null;
+function _curBase(){ var d = _curCursoDef(CURW.curso || _curCursoSel()); return String((d && d.archivo) || 'cursos/x.json').replace(/[^\/]*$/, ''); }
+function _curVozPref(){ try { return localStorage.getItem('acad_voz') !== '0'; } catch(e){ return true; } }
+function _curVozGuardar(on){ try { localStorage.setItem('acad_voz', on ? '1' : '0'); } catch(e){} }
+function _curVozJPref(){ try { return localStorage.getItem('acad_vozj') === '1'; } catch(e){ return false; } }
+function _curVozJGuardar(on){ try { localStorage.setItem('acad_vozj', on ? '1' : '0'); } catch(e){} }
+function _curAhorro(){
+  try{ if(navigator.connection && navigator.connection.saveData) return true; }catch(e){}
+  try{ if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true; }catch(e){}
+  return false;
+}
+function _curVozAudio(I){
+  var src = _curBase() + I.audio;
+  if(CURVOZ && CURVOZ._acad === src) return CURVOZ;
+  _curVozSoltar();
+  var a = new Audio();
+  a._acad = src; a.preload = 'auto';
+  a.addEventListener('error', function(){ if(CURVOZ === a) _curVozCaida(); });
+  a.src = src;
+  CURVOZ = a;
+  return a;
+}
+function _curVozSoltar(){
+  if(CURVOZ){ try{ CURVOZ.pause(); CURVOZ.removeAttribute('src'); CURVOZ.load(); }catch(e){} CURVOZ = null; }
+  _curVozEspera = 0;
+}
+function _curVozParar(){
+  if(CURVOZ){ try{ CURVOZ.pause(); }catch(e){} }
+  if(_curJVozTimer){ clearInterval(_curJVozTimer); _curJVozTimer = null; }
+  if(CURJ) CURJ.vozFin = null;
+}
+function _curVozActiva(){ return !!(CURP && CURP.lec && CURP.lec.audio && CURP.voz && !CURP.vozFalla); }
+function _curVozCaida(){
+  var aviso = false;
+  if(CURP && CURP.lec && CURP.lec.audio && CURP.voz && !CURP.vozFalla){ CURP.vozFalla = true; aviso = true; }
+  if(CURJ && CURJ.lec && CURJ.lec.audio && !CURJ.vozFalla){ CURJ.vozFalla = true; aviso = true; }
+  _curVozParar(); _curVozEspera = 0;
+  _curVozBoton(); _curJVozBoton();
+  if(aviso && typeof toast === 'function') toast('Sin señal para la voz: la lección sigue con subtítulos.');
+}
+function _curVozBoton(){
+  var b = document.getElementById('cur-b-voz'); if(!b || !CURP) return;
+  var on = CURP.voz && !CURP.vozFalla;
+  b.className = on ? 'on' : '';
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  b.textContent = CURP.vozFalla ? '🔇 Sin señal' : (on ? '🔊 Voz' : '🔈 Voz');
+  b.title = CURP.vozFalla ? 'Sin señal para la voz: tócalo para intentar de nuevo' : (on ? 'Apagar la voz de Koda' : 'Prender la voz de Koda');
+}
+/* null: sin voz (manda el reloj) · false: la voz está cargando (no avanzar) · número: el segundo de la voz */
+function _curVozTiempo(){
+  if(!_curVozActiva() || !CURVOZ) return null;
+  if(CURVOZ.ended) return CURP.lec.dur;
+  if(CURVOZ.paused || CURVOZ.readyState < 3){
+    if(++_curVozEspera > 120) _curVozCaida();   /* 12 s sin poder sonar: sigue sin voz */
+    return false;
+  }
+  _curVozEspera = 0;
+  return CURVOZ.currentTime;
+}
+function _curVozSync(){
+  if(!CURP) return;
+  if(!_curVozActiva()){ if(CURVOZ && !CURVOZ.paused && !CURJ) CURVOZ.pause(); return; }
+  var debe = CURP.modo === 'leccion' && CURP.jugando && CURP.t < CURP.lec.dur - 0.05;
+  if(!debe){ if(CURVOZ && !CURVOZ.paused) CURVOZ.pause(); return; }
+  var a = _curVozAudio(CURP.lec);
+  if(Math.abs((a.currentTime || 0) - CURP.t) > 0.35){ try{ a.currentTime = CURP.t; }catch(e){} }
+  if(a.playbackRate !== (CURP.vel || 1)) a.playbackRate = CURP.vel || 1;
+  if(a.paused){
+    var pr = null; try{ pr = a.play(); }catch(e){}
+    if(pr && pr.catch) pr.catch(function(err){
+      if(!CURP || CURVOZ !== a) return;
+      var n = err && err.name;
+      if(n === 'NotAllowedError'){ CURP.jugando = false; _curGuardarPlayerState(); _curPintarPlayer(); }
+      else if(n !== 'AbortError') _curVozCaida();
+    });
+  }
+}
+/* el profesor: cada clip viene en WebM (Chrome, Edge, Android, Firefox) y en MP4 (Safari); se usa el que el equipo lee */
+var _curProfeFmt = null;
+function _curProfeSrc(x){
+  if(!x) return '';
+  if(typeof x === 'string') return x;
+  if(_curProfeFmt === null){
+    _curProfeFmt = 'mp4';
+    try{ var v = document.createElement('video'); if(v.canPlayType && v.canPlayType('video/webm; codecs="vp9"')) _curProfeFmt = 'webm'; }catch(e){}
+  }
+  return x[_curProfeFmt] || x.mp4 || x.webm || '';
+}
+/* el profesor: qué clip va ahora (o ninguno) */
+function _curProfeClip(){
+  var P = CURW.data && CURW.data.profe;
+  if(!P || !CURP || !CURP.lec || _curAhorro()) return null;
+  var m = _curMod(CURW.modId), lecs = (m && m.lecciones) || [], idx = -1;
+  for(var i = 0; i < lecs.length; i++) if(lecs[i].interactivo && lecs[i].interactivo.id === CURP.lec.id) idx = i;
+  if(idx < 0) return null;
+  var C = CURP.lec.cues || [], dur = CURP.lec.dur;
+  if(idx === lecs.length - 1 && P.cierre && C.length){
+    var ini = Math.max(C[C.length - 1][0], dur - 7);
+    if(CURP.t >= ini - 0.001) return { src:_curProfeSrc(P.cierre), ini:ini, fin:dur };
+  }
+  var src = _curProfeSrc(idx === 0 ? P.apertura : P.transicion), fin0 = C.length ? Math.min(C[0][1], 6.5) : 5;
+  if(src && CURP.t < fin0) return { src:src, ini:0, fin:fin0 };
+  return null;
+}
+function _curProfeVideo(src){
+  var v = document.getElementById('cur-profe'); if(!v) return null;
+  var u = _curBase() + src;
+  if(v._acad !== u){ v._acad = u; v.preload = 'auto'; v.src = u; try{ v.load(); }catch(e){} }
+  return v;
+}
+function _curProfe(){
+  var v = document.getElementById('cur-profe'); if(!v) return;
+  var c = (CURP && CURP.modo === 'leccion') ? _curProfeClip() : null;
+  if(!c){
+    if(!v.hidden){ v.classList.remove('on'); try{ v.pause(); }catch(e){} v.hidden = true; }
+    /* el cierre se pide un poco antes, para que llegue a tiempo */
+    var P = CURW.data && CURW.data.profe;
+    if(P && P.cierre && CURP && CURP.lec && CURP.t > CURP.lec.dur - 25 && !_curAhorro()){
+      var m = _curMod(CURW.modId), L = (m && m.lecciones) || [];
+      if(L.length && L[L.length - 1].interactivo && L[L.length - 1].interactivo.id === CURP.lec.id) _curProfeVideo(_curProfeSrc(P.cierre));
+    }
+    return;
+  }
+  v = _curProfeVideo(c.src);
+  if(!v || v.readyState < 2) return;
+  var dentro = Math.max(0, CURP.t - c.ini), largo = v.duration || 6;
+  if(Math.abs(v.currentTime - dentro) > 0.6){ try{ v.currentTime = Math.min(dentro, Math.max(0, largo - 0.1)); }catch(e){} }
+  if(CURP.jugando){ if(v.paused){ var pr = null; try{ pr = v.play(); }catch(e){} if(pr && pr.catch) pr.catch(function(){}); } }
+  else if(!v.paused){ try{ v.pause(); }catch(e){} }
+  v.hidden = false; v.classList.add('on');
+}
+function _curProfeParar(){
+  var v = document.getElementById('cur-profe');
+  if(v){ try{ v.pause(); }catch(e){} v.classList.remove('on'); v.hidden = true; }
+}
+/* Jugando: el tramo de voz de la tarjeta */
+function _curJVozBoton(){
+  var b = document.getElementById('cur-j-voz'); if(!b || !CURJ) return;
+  var suena = !!(CURVOZ && !CURVOZ.paused && CURJ.vozFin != null);
+  b.textContent = CURJ.vozFalla ? '🔇 Sin señal' : (suena ? '⏸ Pausar' : '🔊 Escuchar');
+  b.setAttribute('aria-pressed', suena ? 'true' : 'false');
+}
+function _curJVozTocar(){
+  if(!CURJ || CURJ.fase !== 'cartas') return;
+  var I = CURJ.lec, L = I.laminas || [];
+  if(!I.audio || !L[CURJ.i]) return;
+  var ini = L[CURJ.i].desde, fin = L[CURJ.i + 1] ? L[CURJ.i + 1].desde : I.dur;
+  var a = _curVozAudio(I);
+  CURJ.vozFalla = false; CURJ.vozFin = fin;
+  try{ a.currentTime = ini; }catch(e){}
+  a.playbackRate = 1;
+  var pr = null; try{ pr = a.play(); }catch(e){}
+  if(pr && pr.catch) pr.catch(function(err){
+    var n = err && err.name;
+    if(n !== 'AbortError' && n !== 'NotAllowedError') _curVozCaida();
+    if(CURJ){ CURJ.vozFin = null; _curJVozBoton(); }
+  });
+  if(_curJVozTimer) clearInterval(_curJVozTimer);
+  _curJVozTimer = setInterval(function(){
+    if(!CURJ || !CURVOZ || CURJ.vozFin == null){ clearInterval(_curJVozTimer); _curJVozTimer = null; _curJVozBoton(); return; }
+    if(CURVOZ.ended || (!CURVOZ.paused && CURVOZ.currentTime >= CURJ.vozFin - 0.04)){
+      try{ CURVOZ.pause(); }catch(e){}
+      CURJ.vozFin = null; clearInterval(_curJVozTimer); _curJVozTimer = null; _curJVozBoton();
+    }
+  }, 60);
+  _curJVozBoton();
+}
+/* si la pantalla se va (otra pestaña, la app sale de la Academia), todo se pausa */
+function _curPausarTodo(){
+  if(CURP && CURP.jugando){ CURP.jugando = false; _curGuardarPlayerState(); _curPintarPlayer(); }
+  _curVozParar(); _curProfeParar(); _curJVozBoton();
+}
+try{
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState === 'hidden') _curPausarTodo(); });
+  window.addEventListener('message', function(ev){
+    if(!ev || ev.origin !== location.origin) return;
+    var d = ev.data; if(d && d.acad === 'pausa') _curPausarTodo();
+  });
+  window.addEventListener('pagehide', function(){ _curPausarTodo(); });
+}catch(e){}
 
 /* ══ MODO JUGANDO: la misma lección, tarjeta por tarjeta, con un reto rápido al final ═════════════════════════ */
 function _curFrasesDe(inter, k){
@@ -771,7 +1073,9 @@ function _curPintarJuego(){
 
   if(CURJ.fase === 'cartas'){
     var x = L[CURJ.i], fr = _curFrasesDe(I, CURJ.i);
-    h += '<div class="cur-j-carta" id="cur-j-carta"><span class="eti">' + _curEsc(x.eti) + '</span><h4>' + _curEsc(x.tit) + '</h4>' +
+    h += '<div class="cur-j-carta" id="cur-j-carta">' +
+         (I.audio ? '<button type="button" class="cur-j-voz" id="cur-j-voz" aria-pressed="false">🔊 Escuchar</button>' : '') +
+         '<span class="eti">' + _curEsc(x.eti) + '</span><h4>' + _curEsc(x.tit) + '</h4>' +
          (x.txt ? '<p class="txt">' + _curMarcas(x.txt) + '</p>' : '') +
          (x.norma ? '<div class="norma">' + _curMarcas(x.norma) + '</div>' : '') +
          (fr.length ? '<ul>' + fr.map(function(f){ return '<li>' + _curEsc(f) + '</li>'; }).join('') + '</ul>' : '') + '</div>' +
@@ -797,9 +1101,15 @@ function _curPintarJuego(){
          '<div class="cur-j-acc"><button type="button" id="cur-j-rep">Repetir</button>' +
          '<button type="button" class="pri" id="' + b.id + '">' + _curEsc(b.txt) + '</button></div>';
   }
+  _curVozParar();
   box.innerHTML = h;
 
   var on = function(id, fn){ var e = document.getElementById(id); if(e) e.onclick = fn; };
+  on('cur-j-voz', function(){
+    if(CURVOZ && !CURVOZ.paused && CURJ.vozFin != null){ _curVozParar(); _curVozJGuardar(false); _curJVozBoton(); }
+    else { _curVozJGuardar(true); _curJVozTocar(); }
+  });
+  if(CURJ.fase === 'cartas' && I.audio && _curVozJPref() && !CURJ.vozFalla) _curJVozTocar();
   on('cur-j-atras', function(){ if(CURJ.i > 0){ CURJ.i--; _curGuardarCarta(); _curPintarJuego(); } });
   on('cur-j-sig', function(){
     if(CURJ.i < L.length - 1){ CURJ.i++; _curGuardarCarta(); }
@@ -842,6 +1152,7 @@ function _curCambiarModo(lec, modo, soloPreferencia){
     av.player[I.id] = ant;
   }
   /* se suelta el reproductor SIN volver a guardar encima */
+  _curVozParar(); _curProfeParar();
   if(_curTickTimer){ clearInterval(_curTickTimer); _curTickTimer = null; }
   document.removeEventListener('keydown', _curKeyHandler);
   CURP = null; CURJ = null;
@@ -849,6 +1160,295 @@ function _curCambiarModo(lec, modo, soloPreferencia){
   if(lec && !soloPreferencia) av.lecModo[lec.id] = modo;
   _curGuardarAv(av);
   _curPintar();
+}
+
+/* ══ LOS DOS CURSOS (15/11/2026 · 2.º curso) ═══════════════════════════════════════════════════════════════════════
+   La Academia tiene dos cursos, cada uno con su archivo, su código de acceso, su examen final y su constancia:
+   «Fundamentos de SST en obra» (curso-01, Inducción + 8 módulos) y «Supervisor SST listo para obra» (curso-02, 10
+   módulos prácticos). Los ids de módulos y lecciones no se repiten entre cursos («sv…» en el 2.º), así el avance de los
+   dos convive en el mismo guardado. El elegido queda en el equipo («acad_curso_sel»); ?curso=02 en la dirección lo abre. */
+var CUR_CURSOS = [
+  { id:'curso-01', archivo:'cursos/curso-01.json', titulo:'Fundamentos de SST en obra', corto:'Fundamentos de SST en obra' },
+  { id:'curso-02', archivo:'cursos/curso-02.json', titulo:'Supervisor SST listo para obra', corto:'Supervisor SST listo para obra' }
+];
+function _curCursoDef(id){ for(var i = 0; i < CUR_CURSOS.length; i++) if(CUR_CURSOS[i].id === id) return CUR_CURSOS[i]; return CUR_CURSOS[0]; }
+function _curCursoSel(){
+  if(CURW.curso) return CURW.curso;
+  var q = ''; try{ q = (/[?&]curso=(?:curso-)?0?(\d)/.exec(location.search) || [])[1] || ''; }catch(e){}
+  var id = q ? 'curso-0' + q : (_curGet('acad_curso_sel') || 'curso-01');
+  CURW.curso = _curCursoDef(id).id;
+  return CURW.curso;
+}
+function _curCambiarCurso(id){
+  if(id === _curCursoSel()) return;
+  if(CURX && CURX.preguntas){ toast('Termina tu examen final antes de cambiar de curso.'); return; }
+  _curDesmontarPlayer(); CURJ = null; CURR = null; CURRP = null;
+  CURW.curso = _curCursoDef(id).id; _curSet('acad_curso_sel', CURW.curso);
+  CURW.data = CURW.datos[CURW.curso] || null; CURW.modId = ''; CURW.lecId = {};
+  if(CURW.caja) vistaAcademia(CURW.caja);
+}
+function _curCursosHtml(){
+  var sel = _curCursoSel();
+  return '<div class="cur-cursos" role="group" aria-label="Cursos de la Academia">' + CUR_CURSOS.map(function(c){
+    return '<button type="button" data-cur-curso="' + c.id + '" aria-pressed="' + (c.id === sel) + '">' + _curEsc(c.corto) + '</button>';
+  }).join('') + '</div>';
+}
+
+/* ══ MODO JUGANDO COMPLETO (tanda 2 · 15/11/2026) ═════════════════════════════════════════════════════════════════
+   Además de las tarjetas, el reto rápido, los puntos y la racha (tanda 1), cada módulo trae sus retos en el modo
+   Jugando: decisiones con consecuencias, «Encuentra el peligro» (escenas dibujadas para la Academia, con zonas) y una
+   misión en la Obra Ejemplo. La insignia del módulo se gana al aprobar su prueba; los niveles salen de los puntos.
+   Nada de esto cambia la prueba, el examen final ni la constancia (que no dice en qué modo se estudió). */
+var CUR_NIVELES = [[0, 'Recién llegado'], [100, 'Ojo atento'], [250, 'Mano firme'], [450, 'Ejemplo en el frente'], [700, 'Referente de obra']];
+var CURR = null;   /* el reto abierto: { modId, tipo:'dec'|'esc'|'mis', i, eleg, hallados:[], rendido, msg } */
+function _curNivel(p){
+  var n = 0; for(var i = 0; i < CUR_NIVELES.length; i++) if(p >= CUR_NIVELES[i][0]) n = i;
+  return { n:n + 1, nombre:CUR_NIVELES[n][1], desde:CUR_NIVELES[n][0], hasta:CUR_NIVELES[n + 1] ? CUR_NIVELES[n + 1][0] : null };
+}
+function _curNivelHtml(av){
+  var D = CURW.data || {}, N = _curNivel(av.puntos), mods = (D.modulos || []).filter(function(m){ return m.ludico && m.ludico.insignia; });
+  var tengo = mods.filter(function(m){ return av.insignias.indexOf(m.id) > -1; });
+  var pct = N.hasta ? Math.round((av.puntos - N.desde) * 100 / (N.hasta - N.desde)) : 100;
+  return '<div class="cur-nivel" id="cur-nivel"><div><b>Nivel ' + N.n + ' · ' + _curEsc(N.nombre) + '</b><span>⭐ ' + av.puntos + ' puntos · 🔥 ' + (av.racha.dias || 0) +
+    (av.racha.dias === 1 ? ' día' : ' días') + (mods.length ? ' · 🏅 ' + tengo.length + ' de ' + mods.length : '') + '</span></div>' +
+    '<div class="cur-nivel-barra" aria-hidden="true"><i style="width:' + Math.max(0, Math.min(100, pct)) + '%"></i></div>' +
+    (N.hasta ? '<small>' + (N.hasta - av.puntos) + ' puntos para el nivel ' + (N.n + 1) + '</small>' : '<small>Llegaste al último nivel</small>') +
+    (tengo.length ? '<div class="cur-insignias">' + tengo.map(function(m){ return '<span class="cur-insig">🏅 ' + _curEsc(m.ludico.insignia) + '</span>'; }).join('') + '</div>' : '') + '</div>';
+}
+function _curRetoClave(modId, tipo, i){ return modId + ':' + tipo + (tipo === 'dec' ? i : ''); }
+function _curRetoHecho(av, modId, tipo, i){ return !!(av.retos[_curRetoClave(modId, tipo, i)]); }
+function _curRetosLista(m){
+  var J = (m && m.ludico) || {}, L = [];
+  (J.decisiones || []).forEach(function(d, i){ L.push({ tipo:'dec', i:i, nombre:'Decide ' + (i + 1) }); });
+  if(J.escena) L.push({ tipo:'esc', i:0, nombre:'Encuentra el peligro' });
+  if(J.mision) L.push({ tipo:'mis', i:0, nombre:'Misión' });
+  return L;
+}
+function _curRetosHtml(m, av){
+  var L = _curRetosLista(m);
+  if(!L.length) return '';
+  if(!CURR || CURR.modId !== m.id){
+    var primero = L.filter(function(x){ return !_curRetoHecho(av, m.id, x.tipo, x.i); })[0] || L[0];
+    CURR = { modId:m.id, tipo:primero.tipo, i:primero.i, eleg:null, hallados:[], rendido:false, msg:'' };
+  }
+  var hechos = L.filter(function(x){ return _curRetoHecho(av, m.id, x.tipo, x.i); }).length;
+  var h = '<div class="cur-sec" id="cur-retos-sec"><h4 style="margin:0 0 6px">🎯 Retos del módulo <small class="tenue">(' + hechos + ' de ' + L.length + ' hechos)</small></h4>' +
+          '<div class="cur-retos-tabs" role="group" aria-label="Retos del módulo">' + L.map(function(x){
+            var on = CURR.tipo === x.tipo && CURR.i === x.i;
+            return '<button type="button" data-cur-reto="' + x.tipo + ':' + x.i + '" aria-pressed="' + on + '">' + (_curRetoHecho(av, m.id, x.tipo, x.i) ? '✓ ' : '') + _curEsc(x.nombre) + '</button>';
+          }).join('') + '</div><div class="cur-reto" id="cur-reto">' + _curRetoCuerpo(m, av) + '</div></div>';
+  return h;
+}
+function _curOpcionesHtml(ops, eleg){
+  return '<div class="cur-reto-ops">' + ops.map(function(o, j){
+    var cls = eleg === null ? '' : (j === eleg ? (o.ok ? ' bien' : ' mal') : (o.ok && eleg !== null && ops[eleg].ok ? '' : ''));
+    return '<button type="button" class="cur-reto-op' + cls + '" data-cur-op="' + j + '"' + (eleg !== null ? ' disabled' : '') + '>' + _curEsc(o.txt) + '</button>';
+  }).join('') + '</div>';
+}
+function _curRetoCuerpo(m, av){
+  var J = m.ludico || {}, h = '';
+  if(CURR.tipo === 'dec' || CURR.tipo === 'mis'){
+    var R = CURR.tipo === 'dec' ? J.decisiones[CURR.i] : J.mision, ops = R.ops || [];
+    h += '<p class="cur-reto-sit">' + (CURR.tipo === 'mis' ? '<span class="cur-reto-eti">Misión en la Obra Ejemplo</span>' : '<span class="cur-reto-eti">¿Qué haces?</span>') + _curEsc(CURR.tipo === 'dec' ? R.sit : R.obj) + '</p>';
+    h += _curOpcionesHtml(ops, CURR.eleg);
+    if(CURR.eleg !== null){
+      var o = ops[CURR.eleg];
+      h += '<div class="cur-reto-res ' + (o.ok ? 'ok' : 'mal') + '" role="status" id="cur-reto-res">' + (o.ok ? '<b>✅ Bien.</b> ' : '<b>⚠️ Esto puede pasar:</b> ') + _curEsc(o.pasa) + '</div>' +
+           '<div class="cur-j-acc" style="padding:0">' + (o.ok ? '' : '<button type="button" id="cur-reto-otra">Intentar otra vez</button>') +
+           '<button type="button" class="pri" id="cur-reto-sig">' + (_curRetoSiguiente(m) ? 'Siguiente reto →' : 'Listo ✓') + '</button></div>';
+    }
+  } else if(CURR.tipo === 'esc'){
+    var E = J.escena, Z = E.zonas || [], fin = CURR.rendido || CURR.hallados.length === Z.length;
+    var marcas = Z.map(function(z, k){
+      var x = (z.x * 800).toFixed(1), y = (z.y * 480).toFixed(1), r = (z.r * 800).toFixed(1), vis = CURR.hallados.indexOf(k) > -1 || CURR.rendido;
+      return '<circle class="cur-z" data-z="' + k + '" cx="' + x + '" cy="' + y + '" r="' + r + '" fill="transparent" pointer-events="all"/>' +
+        (vis ? '<g pointer-events="none"><circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="none" stroke="' + (CURR.hallados.indexOf(k) > -1 ? '#1E8E5A' : '#d97706') + '" stroke-width="5"/>' +
+          '<circle cx="' + x + '" cy="' + (y - r + 4) + '" r="15" fill="' + (CURR.hallados.indexOf(k) > -1 ? '#1E8E5A' : '#d97706') + '"/>' +
+          '<text x="' + x + '" y="' + (y - r + 9.5) + '" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#fff">' + (k + 1) + '</text></g>' : '');
+    }).join('');
+    h += '<p class="cur-reto-sit"><span class="cur-reto-eti">Encuentra el peligro</span>' + _curEsc(E.titulo) + ': toca cada peligro que veas. Hay ' + Z.length + '.</p>' +
+         '<div class="cur-esc-lienzo" id="cur-esc-lienzo">' + String(E.svg || '').replace('</svg>', marcas + '</svg>') + '</div>' +
+         '<p class="cur-esc-cuenta" role="status" id="cur-esc-msg">' + (CURR.msg ? _curEsc(CURR.msg) + ' · ' : '') + 'Encontraste ' + CURR.hallados.length + ' de ' + Z.length + '.</p>';
+    var lista = Z.map(function(z, k){ return { k:k, z:z }; }).filter(function(x){ return CURR.hallados.indexOf(x.k) > -1 || CURR.rendido; });
+    if(lista.length) h += '<ol class="cur-esc-lista">' + lista.map(function(x){ return '<li value="' + (x.k + 1) + '">' + _curEsc(x.z.txt) + '</li>'; }).join('') + '</ol>';
+    h += '<div class="cur-j-acc" style="padding:0">' + (fin ? '' : '<button type="button" id="cur-esc-ver">No los encuentro: muéstrame</button>') +
+         (fin ? '<button type="button" class="pri" id="cur-reto-sig">' + (_curRetoSiguiente(m) ? 'Siguiente reto →' : 'Listo ✓') + '</button>' : '') + '</div>';
+  }
+  return h;
+}
+function _curRetoSiguiente(m){
+  var L = _curRetosLista(m), av = _curLeerAv(), k = -1;
+  for(var i = 0; i < L.length; i++) if(L[i].tipo === CURR.tipo && L[i].i === CURR.i) k = i;
+  for(var j = 1; j <= L.length; j++){ var x = L[(k + j) % L.length]; if(!_curRetoHecho(av, m.id, x.tipo, x.i) && !(x.tipo === CURR.tipo && x.i === CURR.i)) return x; }
+  return null;
+}
+function _curRetoGanar(m, puntos, tipo, i){
+  var av = _curLeerAv(), k = _curRetoClave(m.id, tipo, i);
+  if(av.retos[k]) return false;
+  av.retos[k] = { fecha:_curHoy() }; av.puntos += puntos; _curTocarRacha(av); _curGuardarAv(av);
+  return true;
+}
+function _curRetoPintar(){
+  var m = _curMod(CURW.modId), box = document.getElementById('cur-retos-sec');
+  if(!box || !m) return;
+  var av = _curLeerAv(), tmp = document.createElement('div');
+  tmp.innerHTML = _curRetosHtml(m, av);
+  box.parentNode.replaceChild(tmp.firstChild, box);
+  _curRetosEnlazar(m);
+  var nv = document.getElementById('cur-nivel'); if(nv){ var t2 = document.createElement('div'); t2.innerHTML = _curNivelHtml(_curLeerAv()); nv.parentNode.replaceChild(t2.firstChild, nv); }
+}
+function _curRetosEnlazar(m){
+  var sec = document.getElementById('cur-retos-sec'); if(!sec) return;
+  Array.prototype.forEach.call(sec.querySelectorAll('[data-cur-reto]'), function(b){
+    b.onclick = function(){ var p = b.getAttribute('data-cur-reto').split(':'); CURR = { modId:m.id, tipo:p[0], i:+p[1], eleg:null, hallados:[], rendido:false, msg:'' }; _curRetoPintar(); };
+  });
+  Array.prototype.forEach.call(sec.querySelectorAll('[data-cur-op]'), function(b){
+    b.onclick = function(){
+      var J = m.ludico, R = CURR.tipo === 'dec' ? J.decisiones[CURR.i] : J.mision, j = +b.getAttribute('data-cur-op');
+      CURR.eleg = j;
+      if(R.ops[j].ok && _curRetoGanar(m, 5, CURR.tipo, CURR.i)) toast('+5 puntos');
+      _curRetoPintar();
+      var res = document.getElementById('cur-reto-res'); if(res && res.scrollIntoView) res.scrollIntoView({ block:'nearest' });
+    };
+  });
+  var otra = document.getElementById('cur-reto-otra'); if(otra) otra.onclick = function(){ CURR.eleg = null; _curRetoPintar(); };
+  var sig = document.getElementById('cur-reto-sig');
+  if(sig) sig.onclick = function(){
+    var x = _curRetoSiguiente(m);
+    if(x){ CURR = { modId:m.id, tipo:x.tipo, i:x.i, eleg:null, hallados:[], rendido:false, msg:'' }; _curRetoPintar(); }
+    else { toast('Retos del módulo completos ✓'); var p = document.getElementById('cur-prac-sec'); if(p && p.scrollIntoView) p.scrollIntoView({ behavior:'smooth', block:'start' }); }
+  };
+  var lz = document.getElementById('cur-esc-lienzo');
+  if(lz) lz.onclick = function(ev){
+    if(CURR.rendido) return;
+    var t = ev.target && ev.target.closest ? ev.target.closest('[data-z]') : null, Z = m.ludico.escena.zonas;
+    if(t){
+      var k = +t.getAttribute('data-z');
+      if(CURR.hallados.indexOf(k) < 0){ CURR.hallados.push(k); CURR.msg = '¡Bien visto!'; }
+      else CURR.msg = 'Ese ya lo encontraste';
+      if(CURR.hallados.length === Z.length && _curRetoGanar(m, 10, 'esc', 0)) toast('¡Encontraste todos! +10 puntos');
+    } else CURR.msg = 'Ahí no hay un peligro; mira otra vez';
+    _curRetoPintar();
+  };
+  var ver = document.getElementById('cur-esc-ver');
+  if(ver) ver.onclick = function(){ CURR.rendido = true; CURR.msg = 'Estos eran'; _curRetoPintar(); };
+}
+
+/* ══ FÁCIL Y CON POCA SEÑAL (tanda 3 · 15/11/2026) ════════════════════════════════════════════════════════════════
+   · «Repaso de hoy»: lo que se falla en la prueba de un módulo (y lo que en el reto rápido se marca «La repaso») vuelve
+     al día siguiente; si sale bien, a los 3 días y después a los 7 (caja 1, 2 y 3). Todo en el equipo (av.repaso).
+   · El temario queda guardado en el equipo («acad_json:…»): si no hay señal, la Academia abre con lo último que bajó.
+   · Contadores SIN nombres (acad_contar): cuántos abren, terminan y aprueban cada módulo, quiénes vuelven al día
+     siguiente y a los 7 días, qué modo eligen y qué pregunta se falla más. Cada equipo cuenta una sola vez cada cosa;
+     no se manda ningún dato de la persona ni de su cuenta. */
+var CURRP = null;  /* el repaso abierto: { cola:[ids], i, eleg, ver, bien, mal } */
+function _curPregsCurso(){
+  var D = CURW.data || {}, M = {};
+  (D.modulos || []).forEach(function(m){
+    _curLecs(m).forEach(function(l){ ((l.interactivo && l.interactivo.preguntas) || []).forEach(function(q){ M[q.id] = { tipo:'video', m:m, q:q }; }); });
+    (m.quiz || []).forEach(function(q, i){ M[m.id + ':q' + i] = { tipo:'quiz', m:m, q:q, i:i }; });
+  });
+  return M;
+}
+function _curRepasoHoy(av){
+  var M = _curPregsCurso(), hoy = _curHoy();
+  return Object.keys(av.repaso || {}).filter(function(k){ var r = av.repaso[k]; return M[k] && r && r.prox && r.prox <= hoy; }).sort();
+}
+function _curRepasoProximo(av){
+  var M = _curPregsCurso(), hoy = _curHoy(), L = Object.keys(av.repaso || {}).filter(function(k){ return M[k] && av.repaso[k].prox > hoy; }).map(function(k){ return av.repaso[k].prox; }).sort();
+  return L[0] || '';
+}
+/* sabía → sube de caja (1, 3 y 7 días); no sabía → caja 1, mañana */
+function _curRepasoAnotar(a, id, sabia){
+  var r = _curObj(a.repaso[id]), caja = sabia ? Math.min(3, (+r.caja || 0) + 1) : 1;
+  a.repaso[id] = { caja:caja, prox:_curDiaMas(_curHoy(), [1, 3, 7][caja - 1]), veces:(+r.veces || 0) + 1 };
+}
+function _curRepasoHtml(){
+  var av = _curLeerAv(), M = _curPregsCurso(), h = '<div class="cur-head"><div><h3>🔁 Repaso de hoy</h3><p class="sub" style="margin:2px 0 0">Lo que fallaste vuelve al día siguiente; si sale bien, a los 3 días y luego a los 7. Así se queda.</p></div></div>';
+  if(!CURRP){ CURRP = { cola:_curRepasoHoy(av), i:0, eleg:null, ver:false, bien:0, mal:0 }; }
+  if(CURRP.i >= CURRP.cola.length){
+    var prox = _curRepasoProximo(_curLeerAv()), sig = _curSigueCurso();
+    return h + '<div class="cur-box" id="cur-rep-fin"><b>✅ Listo por hoy</b><p style="margin:0">' + (CURRP.cola.length ? 'Repasaste ' + CURRP.cola.length + (CURRP.cola.length === 1 ? ' pregunta' : ' preguntas') + ': ' + CURRP.bien + ' bien. ' : 'Hoy no te toca repasar nada. ') +
+      (prox ? 'Tu próximo repaso es el ' + _curEsc(_curFechaLima(prox + 'T12:00:00Z')) + '.' : '') + '</p>' +
+      (sig ? '<div><button type="button" class="bt" id="cur-rep-sigue">' + _curEsc(sig.txt) + '</button></div>' : '') + '</div>';
+  }
+  var id = CURRP.cola[CURRP.i], X = M[id];
+  h += '<div class="cur-box cur-rep" id="cur-rep"><span class="cur-reto-eti">' + (CURRP.i + 1) + ' de ' + CURRP.cola.length + ' · ' + _curEsc(_curNomMod(X.m)) + ' · ' + _curEsc(X.m.titulo) + '</span>';
+  if(X.tipo === 'quiz'){
+    h += '<p class="cur-reto-sit">' + _curEsc(X.q.q) + '</p><div class="cur-reto-ops">' + X.q.ops.map(function(o, j){
+      var cls = CURRP.eleg === null ? '' : (j === X.q.ok ? ' bien' : (j === CURRP.eleg ? ' mal' : ''));
+      return '<button type="button" class="cur-reto-op' + cls + '" data-cur-rop="' + j + '"' + (CURRP.eleg !== null ? ' disabled' : '') + '>' + _curEsc(o) + '</button>';
+    }).join('') + '</div>';
+    if(CURRP.eleg !== null) h += '<div class="cur-reto-res ' + (CURRP.eleg === X.q.ok ? 'ok' : 'mal') + '" role="status">' + (CURRP.eleg === X.q.ok ? '<b>✅ Bien.</b> ' : '<b>Era otra.</b> ') + _curEsc(X.q.sustento || '') + '</div>' +
+      '<div class="cur-j-acc" style="padding:0"><button type="button" class="pri" id="cur-rep-sig">Siguiente →</button></div>';
+  } else {
+    h += '<p class="cur-reto-sit">' + _curEsc(X.q.texto) + '</p>';
+    if(CURRP.ver){
+      h += (X.q.pasos || []).filter(function(p){ return p.t !== 'cierre' && p.txt; }).map(function(p){ return '<div class="cur-j-paso"><b>' + _curEsc(p.tit) + '</b>' + _curEsc(p.txt) + '</div>'; }).join('') +
+           '<div class="cur-j-acc" style="padding:0"><button type="button" id="cur-rep-no">La repaso</button><button type="button" class="pri" id="cur-rep-si">La sabía ✓</button></div>';
+    } else h += '<p class="tenue" style="margin:0">Piénsala un momento y luego mira la respuesta.</p><div class="cur-j-acc" style="padding:0"><button type="button" class="pri" id="cur-rep-ver">Ver la respuesta</button></div>';
+  }
+  return h + '</div>';
+}
+function _curRepasoEnlazar(){
+  var M = _curPregsCurso(), on = function(id, fn){ var e = document.getElementById(id); if(e) e.onclick = fn; };
+  var sigue = function(sabia){
+    var a = _curLeerAv(); _curRepasoAnotar(a, CURRP.cola[CURRP.i], sabia);
+    if(sabia) CURRP.bien++; else CURRP.mal++;
+    if(CURRP.i === CURRP.cola.length - 1){ a.puntos += 5; _curTocarRacha(a); }
+    _curGuardarAv(a);
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('[data-cur-rop]'), function(b){
+    b.onclick = function(){ var X = M[CURRP.cola[CURRP.i]]; CURRP.eleg = +b.getAttribute('data-cur-rop'); sigue(CURRP.eleg === X.q.ok); _curPintar(); };
+  });
+  on('cur-rep-sig', function(){ CURRP.i++; CURRP.eleg = null; CURRP.ver = false; _curPintar(); });
+  on('cur-rep-ver', function(){ CURRP.ver = true; _curPintar(); });
+  on('cur-rep-si', function(){ sigue(true); CURRP.i++; CURRP.ver = false; _curPintar(); });
+  on('cur-rep-no', function(){ sigue(false); CURRP.i++; CURRP.ver = false; _curPintar(); });
+  on('cur-rep-sigue', function(){ var s = _curSigueCurso(); if(s){ CURRP = null; CURW.modId = s.modId; if(s.lec) CURW.lecId[s.modId] = s.lec; _curPintar(); } });
+}
+/* qué sigue en el curso: la primera lección sin ver de un módulo abierto; si no, la primera prueba sin aprobar */
+function _curSigueCurso(){
+  var D = CURW.data || {}, av = _curLeerAv(), mods = (D.modulos || []).filter(function(m){ return _curAbierto(m); });
+  for(var i = 0; i < mods.length; i++){
+    var L = _curLecs(mods[i]);
+    for(var j = 0; j < L.length; j++) if(!_curVista(av, L[j].id)) return { modId:mods[i].id, lec:L[j].id, txt:'Sigue: ' + _curNomMod(mods[i]) + ' · Lección ' + (j + 1) + ' · ' + L[j].titulo };
+  }
+  for(var k = 0; k < mods.length; k++) if(!_curAprobado(av, mods[k].id) && (mods[k].quiz || []).length) return { modId:mods[k].id, lec:null, txt:'Sigue: la prueba de ' + _curNomMod(mods[k]) };
+  return null;
+}
+
+/* ── los contadores sin nombres ── */
+var CUR_CONT = { t:null, mandando:false };
+function _curColaLeer(){ try{ var c = JSON.parse(_curGet('acad_cont_cola') || '[]'); return Array.isArray(c) ? c : []; }catch(e){ return []; } }
+function _curColaGuardar(c){ _curSet('acad_cont_cola', JSON.stringify(c.slice(-200))); }
+/* lo ya contado en este equipo va aparte del avance («acad_cont:<usuario>»): borrar el avance no lo vuelve a contar */
+function _curContLeer(){ try{ var o = JSON.parse(_curGet('acad_cont:' + _curUid()) || '{}'); return _curObj(o); }catch(e){ return {}; } }
+function _curContGuardar(o){ _curSet('acad_cont:' + _curUid(), JSON.stringify(o)); }
+function _curContar(ev, clave){
+  try{
+    var cc = _curContLeer(), k = _curCurso() + '|' + ev + '|' + (clave || '');
+    if(cc[k]) return;
+    cc[k] = _curHoy(); _curContGuardar(cc);
+    var c = _curColaLeer(); c.push({ c:_curCurso(), e:ev, k:String(clave || '') }); _curColaGuardar(c);
+    clearTimeout(CUR_CONT.t); CUR_CONT.t = setTimeout(_curContarMandar, 3000);
+  }catch(e){}
+}
+function _curContarMandar(){
+  var c = _curColaLeer();
+  if(!c.length || CUR_CONT.mandando || typeof sbRpc !== 'function') return;
+  var lote = c.slice(0, 30); CUR_CONT.mandando = true;
+  sbRpc('acad_contar', { p_eventos:lote }).then(function(r){
+    CUR_CONT.mandando = false;
+    if(r && r.ok){ var resto = _curColaLeer().slice(lote.length); _curColaGuardar(resto); if(resto.length){ clearTimeout(CUR_CONT.t); CUR_CONT.t = setTimeout(_curContarMandar, 3000); } }
+  }, function(){ CUR_CONT.mandando = false; });
+}
+/* volver: al día siguiente del primero y a los 7 días o más (una vez cada uno por equipo) */
+function _curContarVuelta(){
+  var cc = _curContLeer(), hoy = _curHoy(), k = 'primer:' + _curCurso();
+  if(!cc[k]){ cc[k] = hoy; _curContGuardar(cc); return; }
+  if(hoy === _curDiaMas(cc[k], 1)) _curContar('vuelve1', '');
+  if(hoy >= _curDiaMas(cc[k], 7)) _curContar('vuelve7', '');
 }
 
 /* ══ ACCESO, EXAMEN FINAL Y CONSTANCIA CON FOLIO (tanda 4 · 14-15/11/2026) ═════════════════════════════════════
@@ -868,7 +1468,7 @@ var ACAD_NOMBRE_RE = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñÀÈÌÒÙàèìòùÇ
 function _curCurso(){ return (CURW.data && CURW.data.acceso) || 'curso-01'; }
 function _curHaySesion(){ return !!(window.TOK && TOK.uid) && typeof sbRpc === 'function'; }
 function _curEstKey(){ return 'acad_estado:' + _curUid(); }
-function _curExKey(){ return 'acad_examen:' + _curUid(); }
+function _curExKey(){ return 'acad_examen:' + _curUid() + (_curCurso() === 'curso-01' ? '' : ':' + _curCurso()); }
 function _curCompleto(){ return !!CURA.acceso[_curCurso()]; }
 function _curAbierto(m){ return !!(m && (m.desbloqueado || _curCompleto())); }
 function _curConstancia(){
@@ -1061,6 +1661,7 @@ function _curExEntregar(porTiempo){
         CURA.constancias = [r.constancia].concat(CURA.constancias || []); _curGuardarEstado();
         CURX = { res:r, recien:true };
         var a2 = _curLeerAv(); a2.final = { ok:true, folio:r.folio, pct:r.pct, fecha:_curHoy() }; a2.puntos += 50; _curTocarRacha(a2); _curGuardarAv(a2);
+        _curContar('final', _curCurso());
       } else CURX = { res:r };
       _curCargarEstado().then(function(){ _curPintar(); });
       _curPintar();
@@ -1093,7 +1694,9 @@ function _curConstanciaHtml(c, recien, r){
        '<a class="bt sec" href="' + _curEsc(ACAD_VERIF_URL + '?f=' + encodeURIComponent(c.folio)) + '" target="_blank" rel="noopener">Comprobarla en línea</a></div>' +
        '<div class="msg" id="cur-cf-msg" role="status" hidden></div>' +
        '<small class="tenue">El QR del PDF abre la página de verificación de OBRASST: ahí cualquiera comprueba el folio, el nombre y la nota. ' +
-       'Si el nombre salió mal, escríbenos a info@obrasstapp.com.</small></div>';
+       'Si el nombre salió mal, escríbenos a info@obrasstapp.com.</small>' +
+       '<div class="cub-ir"><button type="button" class="bt sec" id="cur-cf-bolsa">💼 Ponla en la Bolsa de trabajo</button>' +
+       '<small class="tenue">Las empresas que buscan personal en OBRASST ven que la tienes; el folio, solo la empresa cuya invitación aceptes.</small></div></div>';
   return h;
 }
 function _curFinalHtml(){
@@ -1178,6 +1781,8 @@ function _curFinalEnlazar(){
     _curExEmpezar(n);
   };
   var sg = document.getElementById('cur-ex-seguir'); if(sg) sg.onclick = function(){ _curExEmpezar(''); };
+  var cb = document.getElementById('cur-cf-bolsa');
+  if(cb) cb.onclick = function(){ CURW.modId = 'bolsa'; CURB.tab = CURB.perfil ? 'per' : ''; CURB.editar = false; _curPintar(); };
   var ot = document.getElementById('cur-ex-otra'); if(ot) ot.onclick = function(){ CURX = null; _curPintar(); };
   var f = document.getElementById('cur-ex');
   if(f && CURX && CURX.preguntas){
@@ -1258,11 +1863,228 @@ function cursoConstanciaFinalPDF(c){
   });
 }
 
+/* ══ BOLSA DE TRABAJO SST: EL LADO DEL CANDIDATO (tanda 5 · 15/11/2026) ═════════════════════════════════════════
+   El que aprende en la Academia arma aquí su perfil para las empresas que usan OBRASST (el lado de la empresa está en
+   portal/bolsa.js). Todo por el servidor (sql/2026-11-15-bolsa-real.sql): bt_mi_perfil, bt_perfil_guardar (pide el
+   permiso marcado por la persona, Ley N.° 29733), bt_perfil_visible, bt_perfil_borrar, bt_vacantes_abiertas,
+   bt_postular y bt_invitacion_responder. Marcelo (15/11): antes de aceptar una invitación, la empresa ve solo cargo,
+   años y distrito (y sectores, disponibilidad y si tiene constancia, sin folio); al aceptar, esa empresa ve su nombre y
+   su contacto. */
+var CURB = null;
+function _curBolsaReset(){
+  var g = (CURB && CURB.gen) || 0;
+  CURB = { gen:g + 1, cargado:false, cargando:false, pedida:false, error:'', perfil:null, constancias:[], postulaciones:[], invitaciones:[], vacantes:[], tab:'', editar:false, borrar:false };
+}
+_curBolsaReset();
+var BT_TEXTO = 'bolsa-1511';
+var BT_CARGOS = ['Supervisor SST', 'Prevencionista de riesgos', 'Jefe de seguridad', 'Ingeniero de seguridad', 'Coordinador SSOMA', 'Asistente SSOMA', 'Monitor de seguridad'];
+var BT_SECTORES = ['Construcción', 'Minería', 'Hidrocarburos', 'Industria', 'Energía', 'Pesca', 'Agricultura', 'Transporte y logística', 'Oficinas y servicios'];
+var BT_DEPS = ['Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca', 'Callao', 'Cusco', 'Huancavelica', 'Huánuco', 'Ica', 'Junín', 'La Libertad',
+  'Lambayeque', 'Lima', 'Loreto', 'Madre de Dios', 'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín', 'Tacna', 'Tumbes', 'Ucayali'];
+var BT_DISP = ['Inmediata', 'En 15 días', 'En 30 días', 'Solo por proyecto'];
+
+function _curBolsaCargar(){
+  if(!_curHaySesion() || CURB.cargando) return;
+  CURB.cargando = true; CURB.error = '';
+  var gen = CURB.gen;
+  Promise.all([sbRpc('bt_mi_perfil', {}), sbRpc('bt_vacantes_abiertas', {})]).then(function(x){
+    if(gen !== CURB.gen) return;   /* cambió la cuenta o se volvió a abrir la Academia */
+    CURB.cargando = false; CURB.cargado = true;
+    var a = x[0] || {}, b = x[1] || {};
+    if(!a.ok){ CURB.error = 'No se pudo abrir tu perfil ahora.'; }
+    CURB.perfil = a.perfil || null; CURB.constancias = a.constancias || []; CURB.postulaciones = a.postulaciones || []; CURB.invitaciones = a.invitaciones || [];
+    CURB.vacantes = b.vacantes || [];
+    if(!CURB.tab) CURB.tab = CURB.invitaciones.some(function(i){ return i.estado === 'enviada'; }) ? 'inv' : 'vac';
+    if(CURW.modId === 'bolsa') _curPintar(); else _curPintarLista();
+  }, function(){
+    if(gen !== CURB.gen) return;
+    CURB.cargando = false; CURB.cargado = true; CURB.error = 'La Bolsa necesita señal. Revisa tu conexión y vuelve a intentarlo.';
+    if(CURW.modId === 'bolsa') _curPintar();
+  });
+}
+function _curBolsaPendientes(){ return (CURB.invitaciones || []).filter(function(i){ return i.estado === 'enviada'; }).length; }
+function _curBolsaItemTxt(){
+  if(!_curHaySesion() || !CURB.cargado || CURB.error) return 'Tu perfil para empresas que usan OBRASST';
+  var n = _curBolsaPendientes();
+  if(n) return '<span class="pill ok">' + n + (n === 1 ? ' invitación' : ' invitaciones') + ' por responder</span>';
+  return CURB.perfil ? (CURB.perfil.visible ? 'Tu perfil está a la vista' : 'Tu perfil está oculto') : 'Arma tu perfil para las empresas';
+}
+function _curOpts(L, sel){ return L.map(function(v){ return '<option' + (v === sel ? ' selected' : '') + '>' + _curEsc(v) + '</option>'; }).join(''); }
+function _curBolsaForm(){
+  var p = CURB.perfil || {}, c = (CURB.constancias || [])[0], nuevo = !CURB.perfil;
+  var correo = p.correo || ((window.TOK && TOK.correo) ? TOK.correo : '');
+  var h = '<form id="cub-form" class="cub-form">' +
+    '<div class="cub-campo"><label for="cub-nombre">Nombre y apellidos</label><input id="cub-nombre" maxlength="90" autocomplete="name" value="' + _curEsc(p.nombre || (c && c.nombre) || '') + '">' +
+      '<small class="tenue">Las empresas lo ven solo si aceptas su invitación.</small></div>' +
+    '<div class="cub-campo"><label for="cub-cargo">Cargo que buscas</label><input id="cub-cargo" list="cub-cargos" maxlength="80" value="' + _curEsc(p.cargo || '') + '" placeholder="Supervisor SST">' +
+      '<datalist id="cub-cargos">' + BT_CARGOS.map(function(x){ return '<option value="' + _curEsc(x) + '">'; }).join('') + '</datalist></div>' +
+    '<div class="cub-campo"><label for="cub-anios">Años de experiencia en SST</label><input id="cub-anios" type="number" min="0" max="60" step="0.5" inputmode="decimal" value="' + _curEsc(p.anios != null ? p.anios : '') + '"></div>' +
+    '<fieldset class="cub-campo cub-secs"><legend>Sectores donde trabajaste</legend>' + BT_SECTORES.map(function(sx, i){
+      return '<label class="cur-chk"><input type="checkbox" data-cub-sec="' + i + '"' + ((p.sectores || []).indexOf(sx) > -1 ? ' checked' : '') + '> <span>' + _curEsc(sx) + '</span></label>';
+    }).join('') + '</fieldset>' +
+    '<div class="cub-fila"><div class="cub-campo"><label for="cub-dep">Departamento</label><select id="cub-dep">' + _curOpts(BT_DEPS, p.departamento || 'Lima') + '</select></div>' +
+      '<div class="cub-campo"><label for="cub-dis">Distrito</label><input id="cub-dis" maxlength="60" value="' + _curEsc(p.distrito || '') + '"></div></div>' +
+    '<div class="cub-campo"><label for="cub-disp">Disponibilidad</label><select id="cub-disp">' + _curOpts(BT_DISP, p.disponibilidad || 'Inmediata') + '</select></div>' +
+    '<div class="cub-campo"><label for="cub-res">Resumen de tu experiencia</label><textarea id="cub-res" maxlength="600" rows="4" placeholder="Obras donde trabajaste, lo que manejas (IPERC, PETAR, comité…)">' + _curEsc(p.resumen || '') + '</textarea>' +
+      '<small class="tenue">Sin tu teléfono ni tu correo: esos van abajo y se muestran solo a la empresa cuya invitación aceptes.</small></div>' +
+    '<div class="cub-fila"><div class="cub-campo"><label for="cub-tel">Celular</label><input id="cub-tel" maxlength="30" inputmode="tel" autocomplete="tel" value="' + _curEsc(p.telefono || '') + '"></div>' +
+      '<div class="cub-campo"><label for="cub-cor">Correo</label><input id="cub-cor" maxlength="120" inputmode="email" autocomplete="email" value="' + _curEsc(correo) + '"></div></div>' +
+    '<label class="cur-chk"><input type="checkbox" id="cub-vis"' + (p.visible === false ? '' : ' checked') + '> <span>Que las empresas puedan encontrar mi perfil</span></label>';
+  if(nuevo){
+    h += '<div class="cub-permiso"><b>Antes de crear tu perfil</b>' +
+      '<p>Las empresas que buscan personal en OBRASST ven de ti, antes de que aceptes una invitación, solo: cargo, años de experiencia, departamento y distrito, ' +
+      'sectores, disponibilidad y si tienes la constancia de la Academia (sin su folio). Tu nombre, tu celular, tu correo, tu resumen y el folio de tu ' +
+      'constancia los ve solo la empresa cuya invitación aceptes. Puedes cambiar tus datos, ocultar tu perfil o borrarlo cuando quieras.</p>' +
+      '<label class="cur-chk"><input type="checkbox" id="cub-acepto"> <span>Autorizo a OBRASST a guardar estos datos y a mostrarlos a las empresas como dice arriba ' +
+      '(Ley N.° 29733, de Protección de Datos Personales). <a href="privacidad-academia.html" target="_blank" rel="noopener">Cómo cuidamos tus datos</a></span></label></div>';
+  }
+  h += '<div class="cub-acc"><button type="submit" class="bt" id="cub-guardar">' + (nuevo ? 'Crear mi perfil' : 'Guardar los cambios') + '</button>' +
+       (nuevo ? '' : '<button type="button" class="bt sec" id="cub-cancelar">Cancelar</button>') + '</div>' +
+       '<div class="msg" id="cub-msg" role="status" hidden></div></form>';
+  return h;
+}
+function _curBolsaPerfilHtml(){
+  var p = CURB.perfil, c = CURB.constancias || [];
+  if(CURB.editar) return _curBolsaForm();
+  var h = '<div class="cur-box"><div class="cub-cab"><b>' + _curEsc(p.nombre) + '</b>' + (p.visible ? '<span class="pill ok">A la vista de las empresas</span>' : '<span class="pill gris">Oculto</span>') + '</div>' +
+    '<dl class="cub-dl"><dt>Cargo</dt><dd>' + _curEsc(p.cargo) + '</dd><dt>Experiencia</dt><dd>' + _curEsc(p.anios) + ' años</dd>' +
+    '<dt>Dónde</dt><dd>' + _curEsc([p.distrito, p.departamento].filter(Boolean).join(', ')) + '</dd>' +
+    '<dt>Sectores</dt><dd>' + _curEsc((p.sectores || []).join(', ') || '—') + '</dd><dt>Disponibilidad</dt><dd>' + _curEsc(p.disponibilidad) + '</dd>' +
+    '<dt>Contacto</dt><dd>' + _curEsc([p.telefono, p.correo].filter(Boolean).join(' · ')) + ' <small class="tenue">(solo para la empresa cuya invitación aceptes)</small></dd>' +
+    '<dt>Constancia</dt><dd>' + (c.length ? c.map(function(x){ return _curEsc(x.curso) + ' (' + _curEsc(x.nota) + ' %)'; }).join(', ') : '<span class="tenue">Todavía ninguna: aparece sola al aprobar el examen final</span>') + '</dd></dl>' +
+    '<div class="cub-acc"><button type="button" class="bt" id="cub-editar">Cambiar mis datos</button>' +
+    '<button type="button" class="bt sec" id="cub-vis-bt">' + (p.visible ? 'Ocultar mi perfil' : 'Mostrar mi perfil') + '</button>' +
+    '<button type="button" class="bt sec" id="cub-borrar">Borrar mi perfil</button></div>' +
+    (CURB.borrar ? '<div class="cub-borrar-ok" role="alert"><p>Se borran tu perfil, tus postulaciones y tus invitaciones (tu constancia de la Academia sigue). No se puede deshacer.</p>' +
+       '<button type="button" class="bt mal" id="cub-borrar-si">Sí, borrar mi perfil</button> <button type="button" class="bt sec" id="cub-borrar-no">No</button></div>' : '') +
+    '<div class="msg" id="cub-msg" role="status" hidden></div>' +
+    '<small class="tenue">Permiso dado el ' + _curEsc(_curFechaLima(p.acepto_en)) + '.</small></div>';
+  return h;
+}
+function _curBolsaVacantesHtml(){
+  var L = CURB.vacantes || [];
+  if(!L.length) return '<div class="cur-box"><b>Todavía no hay vacantes abiertas</b><p class="tenue" style="margin:0">Cuando una empresa publique una, aparece aquí. Con tu perfil a la vista, también te pueden invitar directo.</p></div>';
+  return L.map(function(v){
+    return '<div class="cur-box cub-vac"><div class="cub-cab"><b>' + _curEsc(v.cargo) + '</b><span class="tenue">' + _curEsc(v.empresa) + '</span></div>' +
+      '<p class="cub-datos">' + _curEsc([v.sector, (+v.anios_min ? 'desde ' + v.anios_min + ' años' : ''), [v.distrito, v.departamento].filter(Boolean).join(', '), v.modalidad,
+        v.inicio ? 'inicio ' + _curFechaLima(v.inicio + 'T12:00:00Z') : ''].filter(Boolean).join(' · ')) + '</p>' +
+      (v.requisitos ? '<p class="cub-req">' + _curEsc(v.requisitos) + '</p>' : '') +
+      (v.postule ? '<span class="pill ok">Ya postulaste</span>' :
+        (CURB.perfil ? '<button type="button" class="bt" data-cub-post="' + _curEsc(v.id) + '">Postular</button>' : '<span class="tenue">Para postular, primero arma tu perfil.</span>')) + '</div>';
+  }).join('');
+}
+function _curBolsaInvHtml(){
+  var L = CURB.invitaciones || [];
+  if(!L.length) return '<div class="cur-box"><b>Todavía no tienes invitaciones</b><p class="tenue" style="margin:0">Cuando una empresa te invite a una entrevista, aparece aquí y decides si le das tu nombre y tu contacto.</p></div>';
+  return L.map(function(i){
+    var est = i.estado === 'aceptada' ? '<span class="pill ok">Aceptaste</span>' : i.estado === 'rechazada' ? '<span class="pill gris">No aceptaste</span>' : '<span class="pill ojo">Por responder</span>';
+    return '<div class="cur-box cub-inv"><div class="cub-cab"><b>' + _curEsc(i.empresa) + '</b>' + est + '</div>' +
+      '<p class="cub-datos">Entrevista para <b>' + _curEsc(i.cargo) + '</b> · ' + _curEsc(_curFechaLima(i.fecha + 'T12:00:00Z')) + ', ' + _curEsc(i.hora) + ' · ' + _curEsc(i.modalidad) + '</p>' +
+      '<p class="cub-datos">Dónde: ' + _curEsc(i.lugar) + '</p>' + (i.mensaje ? '<p class="cub-req">«' + _curEsc(i.mensaje) + '»</p>' : '') +
+      (i.estado === 'enviada' ? '<p class="tenue" style="margin:0">Si aceptas, esta empresa ve tu nombre, tu celular, tu correo, tu resumen y el folio de tu constancia. Las demás, no.</p>' +
+        '<div class="cub-acc"><button type="button" class="bt" data-cub-si="' + _curEsc(i.id) + '">Aceptar la entrevista</button>' +
+        '<button type="button" class="bt sec" data-cub-no="' + _curEsc(i.id) + '">No, gracias</button></div>' :
+        i.estado === 'aceptada' ? '<p class="tenue" style="margin:0">La empresa ya ve tu nombre y tu contacto para coordinar.</p>' : '') + '</div>';
+  }).join('');
+}
+function _curBolsaHtml(){
+  var h = '<div class="cur-head"><div><h3>💼 Bolsa de trabajo SST</h3><p class="sub" style="margin:2px 0 0">Las empresas que usan OBRASST pueden publicar vacantes aquí e invitarte a entrevistas. ' +
+          'Antes de que aceptes una invitación, solo ven tu cargo, tus años y tu distrito (y tus sectores y tu disponibilidad); tu nombre y tu contacto, solo la empresa cuya invitación aceptes.</p></div></div>';
+  if(!_curHaySesion()){
+    return h + '<div class="cur-box"><b>La Bolsa va con tu cuenta de OBRASST</b><p style="margin:0;font-size:14px">Así tu perfil y tus invitaciones te esperan en cualquier equipo donde entres.</p>' +
+      (typeof window.acadIrCuenta === 'function' ? '<div><button type="button" class="bt" id="cur-cod-cuenta">Entrar o crear mi cuenta</button></div>' : '') +
+      '<div class="msg" id="cur-cod-msg" role="status" hidden></div></div>';
+  }
+  if(!CURB.cargado){ _curBolsaCargar(); return h + '<div class="vacio">Cargando…</div>'; }
+  if(CURB.error) return h + '<div class="cur-box"><p class="msg mal" style="margin:0">' + _curEsc(CURB.error) + '</p><div><button type="button" class="bt" id="cub-otra">Intentar otra vez</button></div></div>';
+  if(!CURB.perfil) return h + '<div class="cur-box"><b>Arma tu perfil</b>' + _curBolsaForm() + '</div>';
+  var n = _curBolsaPendientes();
+  h += '<div class="cub-tabs" role="group" aria-label="Bolsa de trabajo">' +
+       '<button type="button" data-cub-tab="inv" aria-pressed="' + (CURB.tab === 'inv') + '">Invitaciones' + (n ? ' (' + n + ')' : '') + '</button>' +
+       '<button type="button" data-cub-tab="vac" aria-pressed="' + (CURB.tab === 'vac') + '">Vacantes (' + (CURB.vacantes || []).length + ')</button>' +
+       '<button type="button" data-cub-tab="per" aria-pressed="' + (CURB.tab === 'per') + '">Mi perfil</button></div>';
+  h += '<div class="cub-cuerpo">' + (CURB.tab === 'per' ? _curBolsaPerfilHtml() : CURB.tab === 'inv' ? _curBolsaInvHtml() : _curBolsaVacantesHtml()) + '</div>';
+  if((CURB.postulaciones || []).length && CURB.tab === 'vac'){
+    h += '<div class="cur-sec"><b>Tus postulaciones</b><ul class="cub-posts">' + CURB.postulaciones.map(function(s){
+      return '<li>' + _curEsc(s.cargo) + ' · ' + _curEsc(s.empresa) + ' · ' + (s.vacante_estado === 'activa' ? (s.estado === 'nueva' ? 'enviada' : 'la empresa ya la vio') : 'vacante cerrada') + '</li>';
+    }).join('') + '</ul></div>';
+  }
+  return h;
+}
+function _curBolsaMsg(t, clase){ var m = document.getElementById('cub-msg'); if(!m) return; m.hidden = !t; m.className = 'msg ' + (clase || ''); m.textContent = t || ''; }
+function _curBolsaRecargar(tab){ CURB.cargado = false; if(tab) CURB.tab = tab; _curBolsaCargar(); }
+function _curBolsaEnlazar(){
+  var on = function(id, fn){ var e = document.getElementById(id); if(e) e.onclick = fn; };
+  on('cub-otra', function(){ CURB.cargado = false; _curPintar(); });
+  _curEnlazarCodigo();
+  Array.prototype.forEach.call(document.querySelectorAll('[data-cub-tab]'), function(b){
+    b.onclick = function(){ CURB.tab = b.getAttribute('data-cub-tab'); CURB.editar = false; CURB.borrar = false; _curPintar(); };
+  });
+  on('cub-editar', function(){ CURB.editar = true; _curPintar(); });
+  on('cub-cancelar', function(){ CURB.editar = false; _curPintar(); });
+  on('cub-borrar', function(){ CURB.borrar = true; _curPintar(); });
+  on('cub-borrar-no', function(){ CURB.borrar = false; _curPintar(); });
+  on('cub-borrar-si', function(){
+    sbRpc('bt_perfil_borrar', {}).then(function(r){
+      if(r && r.ok){ toast('Tu perfil se borró.'); CURB.borrar = false; CURB.perfil = null; _curBolsaRecargar('vac'); }
+      else _curBolsaMsg('No se pudo borrar. Inténtalo otra vez.', 'mal');
+    }, function(){ _curBolsaMsg('Sin señal: no se borró. Inténtalo otra vez.', 'mal'); });
+  });
+  on('cub-vis-bt', function(){
+    var nuevo = !(CURB.perfil && CURB.perfil.visible);
+    sbRpc('bt_perfil_visible', { p_visible:nuevo }).then(function(r){
+      if(r && r.ok){ toast(nuevo ? 'Tu perfil está a la vista de las empresas.' : 'Tu perfil quedó oculto: las empresas ya no lo ven.'); _curBolsaRecargar('per'); }
+      else _curBolsaMsg('No se pudo cambiar. Inténtalo otra vez.', 'mal');
+    }, function(){ _curBolsaMsg('Sin señal: no se cambió.', 'mal'); });
+  });
+  var f = document.getElementById('cub-form');
+  if(f) f.onsubmit = function(ev){
+    ev.preventDefault();
+    var v = function(id){ var e = document.getElementById(id); return e ? String(e.value || '').replace(/\s+/g, ' ').trim() : ''; };
+    var sec = []; Array.prototype.forEach.call(f.querySelectorAll('[data-cub-sec]'), function(c){ if(c.checked) sec.push(BT_SECTORES[+c.getAttribute('data-cub-sec')]); });
+    var nuevo = !CURB.perfil, ac = document.getElementById('cub-acepto');
+    var p = { nombre:v('cub-nombre'), cargo:v('cub-cargo'), anios:v('cub-anios'), sectores:sec, departamento:v('cub-dep'), distrito:v('cub-dis'),
+              disponibilidad:v('cub-disp'), resumen:(document.getElementById('cub-res') || {}).value || '', telefono:v('cub-tel'), correo:v('cub-cor'),
+              visible:!!(document.getElementById('cub-vis') || {}).checked, acepto:!!(ac && ac.checked), texto:BT_TEXTO };
+    if(!_curNombreOk(p.nombre)){ _curBolsaMsg('Escribe tu nombre y apellido, solo con letras.', 'mal'); return; }
+    if(p.cargo.length < 3){ _curBolsaMsg('Escribe el cargo que buscas.', 'mal'); return; }
+    if(!p.telefono && !p.correo){ _curBolsaMsg('Deja tu celular o tu correo: es como la empresa te contacta si aceptas.', 'mal'); return; }
+    if(nuevo && !p.acepto){ _curBolsaMsg('Para crear tu perfil, marca la autorización (está justo arriba).', 'mal'); if(ac) ac.focus(); return; }
+    var b = document.getElementById('cub-guardar'); if(b) b.disabled = true;
+    sbRpc('bt_perfil_guardar', { p:p }).then(function(r){
+      if(b) b.disabled = false;
+      if(r && r.ok){ toast(r.nuevo ? 'Listo: tu perfil está creado.' : 'Cambios guardados.'); CURB.editar = false; _curBolsaRecargar(r.nuevo ? 'vac' : 'per'); return; }
+      var mo = r && r.motivo;
+      _curBolsaMsg(mo === 'permiso' ? 'Marca la autorización para crear tu perfil.' : mo === 'nombre' ? 'Escribe tu nombre y apellido.' :
+                   mo === 'correo' ? 'Revisa tu correo: parece mal escrito.' : mo === 'contacto' ? 'Deja tu celular o tu correo.' :
+                   mo === 'cargo' ? 'Escribe el cargo que buscas.' : 'No se pudo guardar. Inténtalo otra vez.', 'mal');
+    }, function(){ if(b) b.disabled = false; _curBolsaMsg('Sin señal: no se guardó. Tus datos siguen aquí; inténtalo otra vez.', 'mal'); });
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('[data-cub-post]'), function(b){
+    b.onclick = function(){
+      b.disabled = true;
+      sbRpc('bt_postular', { p_vacante:b.getAttribute('data-cub-post'), p_mensaje:'' }).then(function(r){
+        if(r && r.ok){ toast('Postulaste. La empresa ve tu cargo, tus años y tu distrito; si te invita, decides si le das tu contacto.'); _curBolsaRecargar('vac'); }
+        else { b.disabled = false; toast(r && r.motivo === 'cerrada' ? 'Esa vacante ya se cerró.' : r && r.motivo === 'muchos_intentos' ? 'Ya postulaste a muchas hoy: sigue mañana.' : 'No se pudo postular.'); }
+      }, function(){ b.disabled = false; toast('Sin señal: no se envió.'); });
+    };
+  });
+  var resp = function(id, si){
+    sbRpc('bt_invitacion_responder', { p_id:id, p_acepta:si }).then(function(r){
+      if(r && r.ok){ toast(si ? 'Aceptaste: la empresa ya ve tu nombre y tu contacto para coordinar.' : 'Listo: no aceptaste esa invitación.'); _curBolsaRecargar('inv'); }
+      else toast('Esa invitación ya no está para responder.');
+    }, function(){ toast('Sin señal: no se envió tu respuesta.'); });
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('[data-cub-si]'), function(b){ b.onclick = function(){ resp(b.getAttribute('data-cub-si'), true); }; });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-cub-no]'), function(b){ b.onclick = function(){ resp(b.getAttribute('data-cub-no'), false); }; });
+}
+
 /* ══ VISTA PRINCIPAL DE LA ACADEMIA ══════════════════════════════════════════════════════════ */
 function vistaAcademia(caja){
   _curCss();
   CURW.caja = caja;
-  _curExSoltar(); CURX = null;
+  _curExSoltar(); CURX = null; CURR = null; CURRP = null;
+  _curBolsaReset();
   var ac = $('acciones'); if(ac) ac.innerHTML = '';
   cargando(caja);
   /* 15/11/2026 · lo que dice el servidor de esta cuenta (curso completo, constancia); si tarda, se pinta con lo guardado */
@@ -1270,10 +2092,17 @@ function vistaAcademia(caja){
   var espera = new Promise(function(res){ setTimeout(res, 2500); });
   Promise.all([_curCargarJson(), Promise.race([est, espera])]).then(function(){
     if(CURW.caja !== caja || VISTA.actual !== 'academia') return;
+    var D = CURW.data || {}, mods = D.modulos || [];
+    if(!(CURW.modId && (['final', 'bolsa', 'repaso'].indexOf(CURW.modId) > -1 || mods.some(function(x){ return x.id === CURW.modId; })))) CURW.modId = (mods[0] || {}).id || '';
     _curPintar(); pintado = true; huella = _curHuellaEstado();
+    /* 15/11 · tanda 3: los contadores sin nombres (volver al día siguiente, a los 7 días) y lo que quedó por mandar */
+    _curContarVuelta(); _curContarMandar();
   }).catch(function(){
     if(CURW.caja !== caja) return;
-    caja.innerHTML = '<div class="tarj"><div class="tarj-cuerpo"><p class="msg mal">No se pudo cargar el catálogo de cursos.</p></div></div>';
+    caja.innerHTML = '<div class="tarj"><div class="tarj-cuerpo">' + _curCursosHtml() + '<p class="msg mal">No se pudo cargar este curso. Revisa tu conexión e inténtalo otra vez.</p>' +
+      '<button type="button" class="bt" id="cur-otra-vez">Intentar otra vez</button></div></div>';
+    Array.prototype.forEach.call(caja.querySelectorAll('[data-cur-curso]'), function(b){ b.onclick = function(){ _curCambiarCurso(b.getAttribute('data-cur-curso')); }; });
+    var ov = document.getElementById('cur-otra-vez'); if(ov) ov.onclick = function(){ vistaAcademia(caja); };
   });
   est.then(function(){
     if(pintado && CURW.caja === caja && document.body.contains(caja) && _curHuellaEstado() !== huella && !(CURX && CURX.preguntas)) _curPintar();
@@ -1293,6 +2122,11 @@ function _curPintarLista(){
   var box = document.getElementById('cur-lista'), D = CURW.data;
   if(!box || !D) return;
   var av = _curLeerAv(), h = '';
+  /* 15/11 · tanda 3: el repaso de hoy, arriba de todo */
+  var due = _curRepasoHoy(av);
+  if(due.length) h += '<button type="button" class="cur-mod cur-mod-repaso' + (CURW.modId === 'repaso' ? ' on' : '') + '" id="cur-rep-bt">' +
+    '<span class="n">🔁</span><span class="tx"><b>Repaso de hoy</b><small>' + due.length + (due.length === 1 ? ' pregunta' : ' preguntas') + ' que conviene repasar</small></span></button>';
+  var nvc = document.getElementById('cur-nivel-caja'); if(nvc) nvc.innerHTML = av.modo === 'jugando' ? _curNivelHtml(av) : '';
   D.modulos.forEach(function(x){
     var on = x.id === CURW.modId, L = _curLecs(x), vistas = L.filter(function(l){ return _curVista(av, l.id); }).length;
     var a = av.aprob[x.id], estadoPill;
@@ -1307,6 +2141,9 @@ function _curPintarLista(){
   /* (no lleva data-cur-m: no es un módulo; las pruebas cuentan los módulos con ese atributo) */
   h += '<button type="button" class="cur-mod cur-mod-final' + (CURW.modId === 'final' ? ' on' : '') + (_curCompleto() ? '' : ' cerrado') + '" id="cur-fin-bt" data-cur-fin="1">' +
        '<span class="n">🏁</span><span class="tx"><b>Examen final y constancia</b><small>' + _curEstadoFinalTxt() + '</small></span></button>';
+  /* 15/11/2026 · la Bolsa de trabajo SST (tanda 5): el perfil del alumno para las empresas que usan OBRASST */
+  h += '<button type="button" class="cur-mod cur-mod-bolsa' + (CURW.modId === 'bolsa' ? ' on' : '') + '" id="cur-bolsa-bt" data-cur-bolsa="1">' +
+       '<span class="n">💼</span><span class="tx"><b>Bolsa de trabajo SST</b><small>' + _curBolsaItemTxt() + '</small></span></button>';
   box.innerHTML = h;
   Array.prototype.forEach.call(box.querySelectorAll('[data-cur-m]'), function(b){
     b.onclick = function(){
@@ -1317,6 +2154,15 @@ function _curPintarLista(){
   });
   var fb = document.getElementById('cur-fin-bt');
   if(fb) fb.onclick = function(){ CURW.modId = 'final'; _curPintar(); };
+  var bb = document.getElementById('cur-bolsa-bt');
+  if(bb) bb.onclick = function(){ CURW.modId = 'bolsa'; CURB.editar = false; CURB.borrar = false; _curPintar(); };
+  var rb = document.getElementById('cur-rep-bt');
+  if(rb) rb.onclick = function(){ CURW.modId = 'repaso'; CURRP = null; _curPintar(); };
+  /* con cuenta, se mira una vez si hay invitaciones por responder (para avisarlo en la lista) */
+  if(_curHaySesion() && !CURB.cargado && !CURB.cargando && !CURB.pedida){
+    CURB.pedida = true;
+    setTimeout(function(){ if(!CURB.cargado && document.getElementById('cur-lista')) _curBolsaCargar(); }, 1500);
+  }
 }
 
 /* Las lecciones del módulo abierto */
@@ -1338,14 +2184,15 @@ function _curPintar(){
   var caja = CURW.caja, D = CURW.data;
   if(!caja || !D || !document.body.contains(caja)) return;
   _curDesmontarPlayer(); CURJ = null;
-  var esFinal = CURW.modId === 'final';
-  var av = _curLeerAv(), sb = _curLeerSb(), m = _curMod(esFinal ? null : CURW.modId), EJ = D.ejemplo_sandbox || {};
-  var lecs = _curLecs(m), lec = (!esFinal && _curAbierto(m)) ? _curLecActual(m, av) : null, modo = lec ? _curModoDe(lec, av) : 'clasico';
+  var esFinal = CURW.modId === 'final', esBolsa = CURW.modId === 'bolsa', esRepaso = CURW.modId === 'repaso', esModulo = !esFinal && !esBolsa && !esRepaso;
+  var av = _curLeerAv(), sb = _curLeerSb(), m = _curMod(esModulo ? CURW.modId : null), EJ = D.ejemplo_sandbox || {};
+  var lecs = _curLecs(m), lec = (esModulo && _curAbierto(m)) ? _curLecActual(m, av) : null, modo = lec ? _curModoDe(lec, av) : 'clasico';
+  var jugando = (lec ? modo : (av.modo || 'clasico')) === 'jugando';
   if(lec) CURW.lecId[m.id] = lec.id;
   var abiertos = _curAbiertosTxt(D), completo = _curCompleto();
   var bloq1 = completo ? null : (D.modulos || []).filter(function(x){ return !_curAbierto(x); })[0];
   var h = '<div class="cur-wrap" id="cur-raiz">';
-  h += '<div class="tarj"><div class="tarj-cuerpo"><div class="cur-head"><div><h2>🎓 ' + _curEsc(D.marca) + ' · ' + _curEsc(D.titulo) + '</h2>' +
+  h += '<div class="tarj"><div class="tarj-cuerpo">' + _curCursosHtml() + '<div class="cur-head"><div><h2>🎓 ' + _curEsc(D.marca) + ' · ' + _curEsc(D.titulo) + '</h2>' +
        '<p class="sub" style="margin:2px 0 0">' + _curEsc(D.subtitulo) + '</p></div>' +
        '<div class="cur-precios">' + (abiertos ? '<span class="pill ok">' + _curEsc(abiertos) + '</span>' : '') +
        (completo ? '' : '<span class="pill azul">Lanzamiento S/ ' + _curEsc(D.precio_lanzamiento_pen) + ' · Luego S/ ' + _curEsc(D.precio_regular_pen) + '</span>') +
@@ -1354,22 +2201,27 @@ function _curPintar(){
 
   h += '<div class="cur-grid">';
   /* Columna izquierda: los módulos */
-  h += '<div class="tarj"><div class="tarj-cuerpo"><h3>Módulos del curso (' + D.modulos.length + ')</h3><div class="cur-lista" id="cur-lista"></div></div></div>';
+  h += '<div class="tarj cur-col-mods" id="cur-col-mods"><div class="tarj-cuerpo"><div id="cur-nivel-caja"></div><h3>Módulos del curso (' + D.modulos.length + ')</h3><div class="cur-lista" id="cur-lista"></div></div></div>';
 
   /* Columna derecha: detalle del módulo (o el examen final) */
-  h += '<div class="tarj"><div class="tarj-cuerpo" id="cur-det">';
-  if(esFinal){
+  h += '<div class="tarj cur-col-det"><div class="tarj-cuerpo" id="cur-det">';
+  if(esRepaso){
+    h += _curRepasoHtml();
+  } else if(esBolsa){
+    h += _curBolsaHtml();
+  } else if(esFinal){
     h += _curFinalHtml();
   } else {
   h += '<div class="cur-head"><div><h3>' + _curEsc(_curNomMod(m)) + ' · ' + _curEsc(m.titulo) + '</h3><p class="sub" style="margin:2px 0 0">' + _curEsc(m.resumen) + '</p></div>' +
-       (_curAbierto(m) ? '<span class="pill ok">Módulo abierto</span>' : '<span class="pill gris">🔒 Se abre con el curso completo</span>') + '</div>';
+       '<span class="cur-head-der">' + (_curAbierto(m) ? '<span class="pill ok">Módulo abierto</span>' : '<span class="pill gris">🔒 Se abre con el curso completo</span>') +
+       '<button type="button" class="btn chico sec cur-ver-mods" id="cur-ver-mods">☰ Los módulos</button></span></div>';
 
   /* Normas citadas */
   if(m.normas && m.normas.length){
-    h += '<div class="cur-sec"><b>Normativa verificada del módulo</b><ul>' + m.normas.map(function(nr){
+    h += '<details class="cur-sec cur-normas"' + (_curAncho() > 900 ? ' open' : '') + '><summary><b>Normativa verificada del módulo</b> <span class="tenue">(' + m.normas.length + ')</span></summary><ul>' + m.normas.map(function(nr){
       return '<li><b>' + _curEsc(nr.norma) + '</b> (' + _curEsc(nr.articulo) + ')' +
              (nr.url ? ' — <a href="' + _curEsc(nr.url) + '" target="_blank" rel="noopener">fuente oficial</a>' : '') + '</li>';
-    }).join('') + '</ul></div>';
+    }).join('') + '</ul></details>';
   }
 
   if(!_curAbierto(m)){
@@ -1406,6 +2258,13 @@ function _curPintar(){
            '<p style="margin:0;font-size:13px;color:var(--gris)">Este módulo todavía no tiene lecciones cargadas.</p></div></div>';
     }
 
+    /* 15/11 · tanda 2: los retos del módulo (modo Jugando); en Clásico, la invitación a probarlos */
+    if(_curRetosLista(m).length){
+      if(jugando) h += _curRetosHtml(m, av);
+      else h += '<div class="cur-sec cur-invita" id="cur-retos-inv"><span>🎯 En el modo Jugando este módulo trae retos: ' +
+                _curEsc(_curRetosLista(m).map(function(x){ return x.tipo === 'dec' ? 'decisiones' : x.tipo === 'esc' ? 'encuentra el peligro' : 'una misión'; })
+                  .filter(function(x, i, L){ return L.indexOf(x) === i; }).join(', ')) + '.</span> <button type="button" class="btn chico sec" id="cur-a-jugar">Probar el modo Jugando</button></div>';
+    }
     /* Práctica en la Obra Ejemplo (aislada: no toca datos reales) */
     var P = m.practica || {}, pasos = P.pasos || [], marc = _curObj(sb.prac[m.id]);
     h += '<div class="cur-sec" id="cur-prac-sec"><h4>🧪 Práctica guiada aislada · ' + _curEsc(EJ.obra || 'Obra Ejemplo') + '</h4>' +
@@ -1464,14 +2323,21 @@ function _curPintar(){
     }
   }
   }
-  h += '<div class="cur-sec"><small class="tenue">' + (_curHaySesion() ? 'Tus lecciones y pruebas se guardan en este equipo; el curso completo y tu constancia, en tu cuenta. ' : 'Tu avance se guarda solo en este equipo. ') + '</small>' +
+  if(esModulo || esFinal) h += '<div class="cur-sec"><small class="tenue">' + (_curHaySesion() ? 'Tus lecciones y pruebas se guardan en este equipo; el curso completo y tu constancia, en tu cuenta. ' : 'Tu avance se guarda solo en este equipo. ') + '</small>' +
        '<button type="button" class="btn chico sec" id="cur-borrar">Borrar mi avance de este equipo</button></div>';
   h += '</div></div></div></div>';
   caja.innerHTML = h;
 
   _curPintarLista();
   _curPintarLecs();
-  if(esFinal) _curFinalEnlazar(); else _curEnlazarCodigo();
+  if(esRepaso) _curRepasoEnlazar(); else if(esBolsa) _curBolsaEnlazar(); else if(esFinal) _curFinalEnlazar(); else _curEnlazarCodigo();
+  if(esModulo && jugando && m) _curRetosEnlazar(m);
+  if(esModulo && m && _curAbierto(m)) _curContar('abre', m.id);
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-cur-curso]'), function(b){ b.onclick = function(){ _curCambiarCurso(b.getAttribute('data-cur-curso')); }; });
+  var vm = document.getElementById('cur-ver-mods');
+  if(vm) vm.onclick = function(){ var l = document.getElementById('cur-col-mods'); if(l && l.scrollIntoView) l.scrollIntoView({ behavior:'smooth', block:'start' }); };
+  var aj = document.getElementById('cur-a-jugar');
+  if(aj) aj.onclick = function(){ _curCambiarModo(lec, 'jugando', !lec); var r = document.getElementById('cur-retos-sec'); if(r && r.scrollIntoView) r.scrollIntoView({ behavior:'smooth', block:'start' }); };
   var irc = document.getElementById('cur-ir-codigo');
   if(irc && bloq1) irc.onclick = function(){
     CURX = null; CURW.modId = bloq1.id; _curPintar();
@@ -1480,7 +2346,7 @@ function _curPintar(){
   };
 
   Array.prototype.forEach.call(caja.querySelectorAll('[data-cur-elige]'), function(b){
-    b.onclick = function(){ _curCambiarModo(lec, b.getAttribute('data-cur-elige'), true); };
+    b.onclick = function(){ _curContar('modo', b.getAttribute('data-cur-elige')); _curCambiarModo(lec, b.getAttribute('data-cur-elige'), true); };
   });
   Array.prototype.forEach.call(caja.querySelectorAll('[data-cur-modo]'), function(b){
     b.onclick = function(){
@@ -1520,11 +2386,18 @@ function _curPintar(){
       if(resp[i] === m.quiz[i].ok) bien++;
     }
     var pct = Math.round((bien * 100) / m.quiz.length), ok = pct >= (D.aprobacion_pct_propuesta || 70);
-    var a2 = _curLeerAv(), antes = _curAprobado(a2, m.id);
+    var a2 = _curLeerAv(), antes = _curAprobado(a2, m.id), primera = !a2.aprob[m.id];
     a2.resp[m.id] = resp;
     a2.aprob[m.id] = { ok:ok, bien:bien, tot:m.quiz.length, pct:pct, fecha:_curHoy() };
     if(ok && !antes){ a2.puntos += 20; _curTocarRacha(a2); }
+    /* 15/11 · tanda 3: lo fallado vuelve en «Repaso de hoy»; lo que estaba en repaso y salió bien, sube de caja */
+    m.quiz.forEach(function(q, i){ var k = m.id + ':q' + i; if(resp[i] !== q.ok) _curRepasoAnotar(a2, k, false); else if(a2.repaso[k]) _curRepasoAnotar(a2, k, true); });
+    /* 15/11 · tanda 2: la insignia del módulo, al aprobar su prueba */
+    var gana = ok && !antes && m.ludico && m.ludico.insignia && a2.insignias.indexOf(m.id) < 0;
+    if(gana) a2.insignias.push(m.id);
     _curGuardarAv(a2);
+    if(primera){ _curContar('prueba', m.id); if(ok) _curContar('aprueba1', m.id); m.quiz.forEach(function(q, i){ if(resp[i] !== q.ok) _curContar('falla', m.id + ':q' + i); }); }
+    if(gana) toast('🏅 Ganaste la insignia «' + m.ludico.insignia + '»');
     _curPintar();
   };
 

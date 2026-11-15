@@ -1,577 +1,431 @@
-/* ══ OBRASST · BOLSA DE TRABAJO SST (Orden 30 · 13/11/2026) ═════════════════════════════════════════════
-   · Enlace directo con OBRASST para que supervisores y gerencia encuentren candidatos verificados.
-   · Cumplimiento estricto Ley N.° 29733 (Protección de Datos Personales): contacto oculto hasta que el candidato
-     acepte voluntariamente la invitación a entrevista.
-   · Ley N.° 26772 y Ley N.° 27270: aviso de no discriminación y selección basada en mérito y competencias.
-   · Constancias de la Academia OBRASST verificadas con QR (/verificar); nunca certificados oficiales inventados.
-   · Modo aislado sessionStorage ('bolsa_sandbox_v1') para pruebas locales sin tocar producción. */
-var BOLSA_VER = '30';
+/* ══ OBRASST · BOLSA DE TRABAJO SST · el lado de la empresa (tanda 5 · 15/11/2026) ══════════════════════════════════════
+   Reemplaza a la maqueta de la Orden 30 (13/11), que trabajaba con datos de ejemplo guardados en el navegador. Ahora todo va
+   por el servidor (sql/2026-11-15-bolsa-real.sql), con la obra elegida arriba (YO.obra.id) como la empresa que busca:
+     bt_empresa_panel, bt_candidatos, bt_vacante_guardar, bt_vacante_estado, bt_invitar, bt_invitacion_retirar y
+     bt_postulacion_estado (el servidor revisa que la cuenta sea de esa obra, o dueña de la empresa de la que cuelga).
+   Marcelo (15/11): antes de que el candidato acepte una invitación, la empresa ve solo su cargo, sus años y su distrito (y sus
+   sectores, su disponibilidad y si tiene la constancia de la Academia, sin folio). Al aceptar, ESA empresa ve su nombre, su
+   celular, su correo, su resumen y el folio de su constancia, que cualquiera comprueba en verificar.html.
+   El candidato arma su perfil en la Academia (portal/cursos.js), con su permiso marcado (Ley N.° 29733).
+   Ley N.° 26772, modificada por la Ley N.° 27270: la oferta de empleo no puede tener requisitos que discriminen por raza, sexo,
+   religión, opinión, origen social, condición económica, estado civil, edad o de cualquier índole. Al publicar, se avisa si el
+   texto parece pedir algo así (no se adivina: se le pregunta a quien publica). */
 
-var BTW = {
-  caja: null,
-  modo: 'empresa', /* 'empresa' | 'candidato' */
-  tabEmp: 'candidatos', /* 'candidatos' | 'vacantes' | 'entrevistas' */
-  tabCand: 'vacantes', /* 'vacantes' | 'perfil' | 'invitaciones' */
-  filtroCargo: '',
-  filtroSector: '',
-  invitandoA: null, /* perfil objeto */
-  creandoVacante: false
-};
+var BTE = { caja:null, emp:'', tab:'cand', gen:0, cargado:false, error:'', panel:null, cands:null,
+            filtro:{ cargo:'', sector:'', departamento:'' } };
+var BTE_CARGOS = ['Supervisor SST', 'Prevencionista de riesgos', 'Jefe de seguridad', 'Ingeniero de seguridad', 'Coordinador SSOMA', 'Asistente SSOMA', 'Monitor de seguridad'];
+var BTE_SECTORES = ['Construcción', 'Minería', 'Hidrocarburos', 'Industria', 'Energía', 'Pesca', 'Agricultura', 'Transporte y logística', 'Oficinas y servicios'];
+var BTE_DEPS = ['Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca', 'Callao', 'Cusco', 'Huancavelica', 'Huánuco', 'Ica', 'Junín', 'La Libertad',
+  'Lambayeque', 'Lima', 'Loreto', 'Madre de Dios', 'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín', 'Tacna', 'Tumbes', 'Ucayali'];
+var BTE_MOD_VAC = ['Presencial', 'Mixta', 'Remota'];
+var BTE_MOD_ENT = ['Virtual', 'Presencial', 'Por teléfono'];
 
-function _btEsc(s){
-  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-  });
+function _bteEsc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; });
 }
-
-function _btSbKey(){
-  var emp = (window.YO && YO.obra && YO.obra.id) ? String(YO.obra.id) : 'anon';
-  var uid = (window.TOK && TOK.uid) ? String(TOK.uid) : 'invitado';
-  return 'bolsa_sandbox_v1:' + emp + ':' + uid;
+function _bteOpts(L, sel, vacio){
+  return (vacio ? '<option value="">' + _bteEsc(vacio) + '</option>' : '') +
+    L.map(function(v){ return '<option' + (v === sel ? ' selected' : '') + '>' + _bteEsc(v) + '</option>'; }).join('');
 }
-
-function _btDatosDefecto(){
-  return {
-    vacantes: [
-      {
-        id: 'vac-1',
-        cargo: 'Supervisor SST',
-        sector: 'Construcción',
-        obra: 'Edificio Norte — Obra Ejemplo',
-        experiencia_min: 3,
-        modalidad: 'Presencial',
-        distrito: 'Lima / San Isidro',
-        requisitos: 'Experiencia en edificaciones, trabajo en altura, ATS y PETAR.',
-        fecha_inicio: '2026-11-20',
-        estado: 'activa'
-      },
-      {
-        id: 'vac-2',
-        cargo: 'Prevencionista de Riesgos (PdR)',
-        sector: 'Construcción',
-        obra: 'Condominio El Sol — Obra Ejemplo',
-        experiencia_min: 2,
-        modalidad: 'Presencial',
-        distrito: 'Lima / Miraflores',
-        requisitos: 'Inducciones diarias, inspección de andamios y EPP.',
-        fecha_inicio: '2026-11-25',
-        estado: 'activa'
-      }
-    ],
-    perfiles: [
-      {
-        id: 'perf-1',
-        nombre_completo: 'Carlos Mendoza Ríos (Ejemplo)',
-        cargo_buscado: 'Supervisor SST',
-        sectores: ['Construcción', 'Minería'],
-        experiencia_anios: 4.5,
-        departamento: 'Lima',
-        distrito: 'San Borja',
-        disponibilidad: 'Inmediata',
-        resumen: 'Supervisor SST colegiado con 4.5 años en edificaciones multifamiliares y campamentos. Manejo de IPERC, PETAR y comités paritarios.',
-        telefono: '987 654 321',
-        correo: 'carlos.mendoza.ejemplo@gmail.com',
-        constancias: [
-          { titulo: 'Supervisor SST listo para obra', folio: 'ACAD-01-08421', qr: 'https://obrasstapp.com/verificar?c=ACAD-01-08421' }
-        ],
-        visible: true
-      },
-      {
-        id: 'perf-2',
-        nombre_completo: 'Lucía Paredes Soto (Ejemplo)',
-        cargo_buscado: 'Prevencionista de Riesgos (PdR)',
-        sectores: ['Construcción', 'Industria'],
-        experiencia_anios: 3.0,
-        departamento: 'Lima',
-        distrito: 'Surco',
-        disponibilidad: 'Inmediata',
-        resumen: 'Prevencionista con sólida experiencia en control de trabajos en caliente, espacios confinados y charlas operativas.',
-        telefono: '976 543 210',
-        correo: 'lucia.paredes.ejemplo@outlook.com',
-        constancias: [
-          { titulo: 'Supervisor SST listo para obra', folio: 'ACAD-01-14920', qr: 'https://obrasstapp.com/verificar?c=ACAD-01-14920' }
-        ],
-        visible: true
-      },
-      {
-        id: 'perf-3',
-        nombre_completo: 'Jorge Alarcón Silva (Ejemplo)',
-        cargo_buscado: 'Ingeniero de Seguridad',
-        sectores: ['Hidrocarburos', 'Minería'],
-        experiencia_anios: 6.0,
-        departamento: 'Lima',
-        distrito: 'Los Olivos',
-        disponibilidad: '15 días',
-        resumen: 'Ingeniero especialista en auditorías ISO 45001, planes de contingencia y transporte de materiales peligrosos.',
-        telefono: '991 223 344',
-        correo: 'jorge.alarcon.ejemplo@gmail.com',
-        constancias: [
-          { titulo: 'Supervisor SST listo para obra', folio: 'ACAD-01-33120', qr: 'https://obrasstapp.com/verificar?c=ACAD-01-33120' }
-        ],
-        visible: true
-      }
-    ],
-    invitaciones: [],
-    postulaciones: []
-  };
+/* la fecha de hoy en Lima (las entrevistas no pueden ser antes) */
+function _bteHoy(){
+  try{ return new Date().toLocaleDateString('en-CA', { timeZone:'America/Lima' }); }catch(e){ return (typeof hoyISO === 'function') ? hoyISO() : new Date().toISOString().slice(0, 10); }
 }
-
-function _btLeerDb(){
-  try{
-    var r = sessionStorage.getItem(_btSbKey());
-    if(!r) return _btDatosDefecto();
-    var p = JSON.parse(r);
-    return (p && typeof p === 'object' && p.perfiles) ? p : _btDatosDefecto();
-  }catch(e){ return _btDatosDefecto(); }
+function _bteFecha(iso){
+  if(!iso) return '';
+  var s = String(iso).slice(0, 10).split('-');
+  return s.length === 3 ? s[2] + '/' + s[1] + '/' + s[0] : String(iso);
 }
-
-function _btGuardarDb(db){
-  try{ sessionStorage.setItem(_btSbKey(), JSON.stringify(db)); }catch(e){}
+/* un momento (timestamptz) como fecha de Lima */
+function _bteDia(ts){
+  if(!ts) return '';
+  try{ var d = new Date(ts); if(!isNaN(d)) return d.toLocaleDateString('es-PE', { timeZone:'America/Lima', day:'2-digit', month:'2-digit', year:'numeric' }); }catch(e){}
+  return _bteFecha(ts);
 }
+function _bteNum(n){ var x = Number(n); return isFinite(x) ? (Math.round(x * 10) / 10).toString().replace('.', ',') : '0'; }
+function _bteObra(){ try{ return (typeof nombreObraP === 'function' ? nombreObraP() : '') || (YO.obra && YO.obra.nombre) || ''; }catch(e){ return ''; } }
 
-function _btCss(){
-  if(document.getElementById('bt-css')) return;
-  var s = document.createElement('style'); s.id = 'bt-css';
+function _bteCss(){
+  if(document.getElementById('bte-css')) return;
+  var s = document.createElement('style'); s.id = 'bte-css';
   s.textContent = [
-    '.bt-wrap{display:grid;gap:14px}',
-    '.bt-aviso-disc{padding:10px 14px;border-radius:10px;background:rgba(37,99,168,.09);border:1px solid rgba(37,99,168,.3);font-size:12.5px;line-height:1.45;color:var(--tinta,#0B2A3A)}',
-    '.bt-roles{display:flex;gap:6px;align-items:center;background:var(--fondo,#f6f8fa);padding:4px;border-radius:10px;border:1px solid var(--raya,#E3E8EC);width:max-content;max-width:100%}',
-    '.bt-role-btn{border:0;background:transparent;padding:6px 14px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--gris,#6B7C88);cursor:pointer}',
-    '.bt-role-btn.on{background:var(--tinta,#0B2A3A);color:#fff}',
-    '.bt-tabs{display:flex;gap:8px;border-bottom:1px solid var(--raya,#E3E8EC);overflow-x:auto;padding-bottom:2px}',
-    '.bt-tab-btn{border:0;background:transparent;padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--gris,#6B7C88);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}',
-    '.bt-tab-btn.on{color:var(--tinta,#0B2A3A);border-bottom-color:#F5B700}',
-    '.bt-cand-card{padding:14px 16px;border-radius:12px;border:1px solid var(--raya,#E3E8EC);background:var(--tarj,#fff);display:grid;gap:8px}',
-    '.bt-cand-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}',
-    '.bt-calce-badge{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:#E8F5EE;color:#1E8E5A}',
-    '.bt-qr-tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563A8;background:#E9F0FA;padding:2px 8px;border-radius:6px;text-decoration:none}',
-    '.bt-contacto-box{padding:8px 12px;border-radius:8px;background:var(--fondo,#f6f8fa);border:1px dashed var(--raya,#E3E8EC);font-size:12.5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}',
-    '.bt-contacto-candado{color:var(--ojo,#B7791F);font-weight:600}',
-    '.bt-filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center}',
-    '.bt-filtros select{width:auto;padding:6px 10px;font-size:13px;border-radius:8px;border:1px solid var(--raya2,#CBD4DB)}',
-    '.bt-modal-fondo{position:fixed;inset:0;background:rgba(11,42,58,.65);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}',
-    '.bt-modal-caja{background:#fff;border-radius:14px;max-width:500px;width:100%;padding:18px 20px;display:grid;gap:12px;box-shadow:0 12px 32px rgba(11,42,58,.25)}',
-    '.bt-pill-sec{display:inline-block;padding:2px 7px;font-size:11px;border-radius:4px;background:#F1F4F7;color:#334E68;margin-right:4px}'
+    '.bte-wrap{display:grid;gap:14px}',
+    '.bte-ley{padding:10px 14px;border-radius:10px;background:rgba(37,99,168,.08);border:1px solid rgba(37,99,168,.28);font-size:13px;line-height:1.45;margin-top:10px}',
+    '.bte-tabs{display:flex;gap:4px;border-bottom:1px solid var(--raya,#E3E8EC);overflow-x:auto;margin:0 0 12px}',
+    '.bte-tabs button{border:0;background:transparent;padding:10px 12px;min-height:44px;font:inherit;font-size:14px;font-weight:600;color:var(--gris,#6B7C88);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}',
+    '.bte-tabs button[aria-pressed="true"]{color:var(--tinta,#0B2A3A);border-bottom-color:#F5B700}',
+    '.bte-lista{display:grid;gap:10px}',
+    '.bte-card{padding:12px 14px;border-radius:12px;border:1px solid var(--raya,#E3E8EC);background:var(--tarj,#fff);display:grid;gap:7px}',
+    '.bte-card.apagada,.bte-lista>.apagada{opacity:.72}',
+    '.bte-cab{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;justify-content:space-between}',
+    '.bte-cab b{font-size:15px}',
+    '.bte-datos{margin:0;font-size:13.5px;line-height:1.45}',
+    '.bte-req{margin:0;font-size:13px;line-height:1.45;color:var(--gris,#6B7C88);white-space:pre-line}',
+    '.bte-chips{display:flex;flex-wrap:wrap;gap:4px}',
+    '.bte-chip{display:inline-block;padding:2px 8px;font-size:12px;border-radius:6px;background:var(--fondo,#F1F4F7);border:1px solid var(--raya,#E3E8EC)}',
+    '.bte-cons{margin:0;font-size:13px}',
+    '.bte-contacto{padding:8px 12px;border-radius:8px;background:var(--fondo,#f6f8fa);border:1px dashed var(--raya2,#CBD4DB);font-size:13.5px;line-height:1.45;display:grid;gap:3px}',
+    '.bte-contacto.abierto{border-style:solid;border-color:#BFE3CE;background:rgba(30,142,90,.07)}',
+    '.bte-acc{display:flex;flex-wrap:wrap;gap:8px}.bte-acc .bt{min-height:40px}',
+    '.bte-filtros{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end;margin-bottom:10px}',
+    '.bte-filtros label{font-size:12.5px;color:var(--gris,#6B7C88);display:grid;gap:3px}',
+    '.bte-filtros input,.bte-filtros select{min-height:40px}',
+    '.bte-nota{padding:10px 12px;border-radius:10px;background:var(--ojo-f,#FFF6E0);border:1px solid #EBD7AE;font-size:13.5px}',
+    '.bte-f{display:grid;gap:10px}.bte-f .campo{display:grid;gap:4px}.bte-f label{font-size:13.5px;font-weight:600}',
+    '.bte-f input,.bte-f select,.bte-f textarea{min-height:42px;font-size:15px;width:100%;box-sizing:border-box}',
+    '.bte-fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}',
+    '.bte-aviso{padding:10px 12px;border-radius:10px;border:1px solid #E7B3B6;background:rgba(180,35,24,.06);font-size:13.5px;line-height:1.45}',
+    '.bte-pie{font-size:12.5px;color:var(--gris,#6B7C88);line-height:1.45;margin:12px 0 0}'
   ].join('\n');
   document.head.appendChild(s);
 }
 
+/* ══ entrada (portal/index.html → btIr('vistaBolsaTrabajo', caja)) ══ */
 function vistaBolsaTrabajo(caja){
-  _btCss();
-  BTW.caja = caja;
+  _bteCss();
+  BTE.caja = caja;
   var ac = $('acciones'); if(ac) ac.innerHTML = '';
-  _btPintar();
+  var emp = (window.YO && YO.obra && YO.obra.id) ? String(YO.obra.id) : '';
+  if(emp !== BTE.emp){ BTE.emp = emp; BTE.tab = 'cand'; BTE.filtro = { cargo:'', sector:'', departamento:'' }; }
+  BTE.cargado = false; BTE.error = ''; BTE.panel = null; BTE.cands = null;
+  if(!emp){ _btePintar(); return; }
+  cargando(caja);
+  _bteCargar();
 }
+function _bteCargar(){
+  var gen = ++BTE.gen, emp = BTE.emp;
+  return Promise.all([sbRpc('bt_empresa_panel', { p_emp:emp }), sbRpc('bt_candidatos', { p_emp:emp, p:BTE.filtro })]).then(function(x){
+    if(gen !== BTE.gen || emp !== BTE.emp) return;
+    var a = x[0] || {}, b = x[1] || {};
+    BTE.cargado = true;
+    if(!a.ok){ BTE.error = a.motivo === 'sin_permiso' ? 'sin_permiso' : 'error'; }
+    else { BTE.error = ''; BTE.panel = a; BTE.cands = b.ok ? (b.candidatos || []) : []; }
+    _btePintar();
+  }, function(){
+    if(gen !== BTE.gen) return;
+    BTE.cargado = true; BTE.error = 'red'; _btePintar();
+  });
+}
+function _bteVivas(){ return ((BTE.panel && BTE.panel.vacantes) || []).filter(function(v){ return v.estado === 'activa'; }); }
 
-function _btPintar(){
-  var caja = BTW.caja;
+function _btePintar(){
+  var caja = BTE.caja;
   if(!caja || !document.body.contains(caja)) return;
-  var db = _btLeerDb();
-
-  var h = '<div class="bt-wrap" id="bt-raiz">';
-  /* Cabecera y switch de rol (Empresa / Candidato) */
-  h += '<div class="tarj"><div class="tarj-cuerpo"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">' +
-       '<div><h2>💼 Bolsa de Trabajo SST · OBRASST</h2>' +
-       '<p class="sub" style="margin:2px 0 0">Postulantes y candidatos verificados con la Academia OBRASST, sin discriminación y con privacidad de contacto.</p></div>' +
-       '<div class="bt-roles">' +
-       '<button type="button" class="bt-role-btn' + (BTW.modo === 'empresa' ? ' on' : '') + '" id="bt-b-modo-emp">Modo Empresa</button>' +
-       '<button type="button" class="bt-role-btn' + (BTW.modo === 'candidato' ? ' on' : '') + '" id="bt-b-modo-cand">Modo Candidato (PdR / SST)</button>' +
-       '</div></div>' +
-       '<div class="bt-aviso-disc" style="margin-top:10px" role="note">' +
-       '<b>Aviso de no discriminación (Leyes N.° 26772 y 27270):</b> Esta bolsa prohíbe ofertas y filtros de empleo con requisitos de edad, sexo, raza, religión, opinión, estado civil o apariencia. La selección se basa exclusivamente en idoneidad, experiencia y competencias técnicas verificadas.' +
-       '</div></div></div>';
-
-  if(BTW.modo === 'empresa'){
-    h += _btHtmlEmpresa(db);
+  /* el título y lo que es la Bolsa ya los pone el portal arriba (la cabecera de la vista) */
+  var h = '<div class="bte-wrap" id="bte-raiz"><div class="tarj"><div class="tarj-cuerpo">' +
+    '<p style="margin:0;font-size:14px;line-height:1.45">Alumnos de la Academia OBRASST que buscan trabajo como supervisores, prevencionistas o jefes de seguridad. ' +
+    'Antes de que acepten tu invitación a entrevista, ves su cargo, sus años y su distrito.</p>' +
+    (BTE.emp ? '<p class="tenue" style="margin:6px 0 0;font-size:13px">Publicas e invitas como: <b>' + _bteEsc(_bteObra()) + '</b></p>' : '') +
+    '<div class="bte-ley" role="note" id="bte-ley"><b>Sin discriminación (Ley N.° 26772, modificada por la Ley N.° 27270):</b> una oferta de empleo no puede pedir ' +
+    'requisitos que discriminen por raza, sexo, religión, opinión, origen social, condición económica, estado civil, edad o de cualquier índole. ' +
+    'Pide lo que el puesto necesita: experiencia, cursos, disponibilidad.</div></div></div>';
+  h += '<div class="tarj"><div class="tarj-cuerpo" id="bte-cuerpo">';
+  if(!BTE.emp){
+    h += '<div class="vacio"><b>Elige una obra arriba</b>La Bolsa trabaja con la obra o la empresa que tengas elegida.</div>';
+  } else if(!BTE.cargado){
+    h += '<div class="vacio">Cargando…</div>';
+  } else if(BTE.error === 'sin_permiso'){
+    h += '<div class="vacio"><b>Tu cuenta no está en esta obra</b>Pide a quien la administra que te agregue a su equipo, o elige otra obra arriba.</div>';
+  } else if(BTE.error){
+    h += '<div class="vacio"><b>No se pudo abrir la Bolsa</b>Revisa tu conexión e inténtalo otra vez.<div style="margin-top:10px"><button type="button" class="bt" id="bte-otra">Intentar otra vez</button></div></div>';
   } else {
-    h += _btHtmlCandidato(db);
+    var P = BTE.panel || {}, vivas = _bteVivas();
+    var nPost = (P.postulaciones || []).filter(function(s){ return s.estado === 'nueva'; }).length;
+    var nEnt = (P.invitaciones || []).filter(function(i){ return i.estado === 'enviada' || i.estado === 'aceptada'; }).length;
+    var tabs = [['cand', 'Candidatos'], ['vac', 'Mis vacantes' + (vivas.length ? ' (' + vivas.length + ')' : '')],
+                ['post', 'Postulaciones' + (nPost ? ' (' + nPost + (nPost === 1 ? ' nueva)' : ' nuevas)') : '')], ['ent', 'Entrevistas' + (nEnt ? ' (' + nEnt + ')' : '')]];
+    h += '<div class="bte-tabs" role="group" aria-label="Bolsa de trabajo">' + tabs.map(function(t){
+      return '<button type="button" id="bte-tab-' + t[0] + '" data-bte-tab="' + t[0] + '" aria-pressed="' + (BTE.tab === t[0]) + '">' + _bteEsc(t[1]) + '</button>';
+    }).join('') + '</div>';
+    h += BTE.tab === 'vac' ? _bteVacHtml() : BTE.tab === 'post' ? _btePostHtml() : BTE.tab === 'ent' ? _bteEntHtml() : _bteCandHtml();
+    h += '<p class="bte-pie">Los datos de cada candidato son para este proceso de selección: no los compartas ni los uses para otra cosa ' +
+         '(Ley N.° 29733, de Protección de Datos Personales). El candidato puede ocultar o borrar su perfil cuando quiera.</p>';
   }
-
-  h += '</div>';
-
-  if(BTW.invitandoA){
-    h += _btHtmlModalInvitar(BTW.invitandoA, db);
-  }
-
+  h += '</div></div></div>';
   caja.innerHTML = h;
-  _btEnchufarEventos(db);
+  _bteEnlazar();
 }
 
-function _btHtmlEmpresa(db){
-  var h = '<div class="tarj"><div class="tarj-cuerpo">' +
-          '<div class="bt-tabs">' +
-          '<button type="button" id="bt-tab-cands" class="bt-tab-btn' + (BTW.tabEmp === 'candidatos' ? ' on' : '') + '" data-bt-etab="candidatos">👥 Candidatos que calzan (' + db.perfiles.filter(function(p){ return p.visible; }).length + ')</button>' +
-          '<button type="button" id="bt-tab-vacs-emp" class="bt-tab-btn' + (BTW.tabEmp === 'vacantes' ? ' on' : '') + '" data-bt-etab="vacantes">📋 Mis vacantes activas (' + db.vacantes.filter(function(v){ return v.estado === 'activa'; }).length + ')</button>' +
-          '<button type="button" id="bt-tab-entrs" class="bt-tab-btn' + (BTW.tabEmp === 'entrevistas' ? ' on' : '') + '" data-bt-etab="entrevistas">🗓 Entrevistas e invitaciones (' + db.invitaciones.length + ')</button>' +
-          '</div>';
-
-  if(BTW.tabEmp === 'candidatos'){
-    h += '<div style="margin-top:14px;display:grid;gap:12px" id="bt-cands-lista">' +
-         '<div class="bt-filtros">' +
-         '<label for="bt-filtro-cargo" style="margin:0;font-size:13px">Cargo:</label>' +
-         '<select id="bt-filtro-cargo"><option value="">Todos los cargos</option>' +
-         '<option value="Supervisor SST"' + (BTW.filtroCargo === 'Supervisor SST' ? ' selected' : '') + '>Supervisor SST</option>' +
-         '<option value="Prevencionista de Riesgos (PdR)"' + (BTW.filtroCargo === 'Prevencionista de Riesgos (PdR)' ? ' selected' : '') + '>Prevencionista (PdR)</option>' +
-         '<option value="Ingeniero de Seguridad"' + (BTW.filtroCargo === 'Ingeniero de Seguridad' ? ' selected' : '') + '>Ingeniero de Seguridad</option></select>' +
-         '<label for="bt-filtro-sec" style="margin:0 0 0 8px;font-size:13px">Sector:</label>' +
-         '<select id="bt-filtro-sec"><option value="">Todos los sectores</option>' +
-         '<option value="Construcción"' + (BTW.filtroSector === 'Construcción' ? ' selected' : '') + '>Construcción</option>' +
-         '<option value="Minería"' + (BTW.filtroSector === 'Minería' ? ' selected' : '') + '>Minería</option>' +
-         '<option value="Hidrocarburos"' + (BTW.filtroSector === 'Hidrocarburos' ? ' selected' : '') + '>Hidrocarburos</option></select>' +
-         '</div>';
-
-    var lista = db.perfiles.filter(function(p){
-      if(!p.visible) return false;
-      if(BTW.filtroCargo && p.cargo_buscado !== BTW.filtroCargo) return false;
-      if(BTW.filtroSector && p.sectores.indexOf(BTW.filtroSector) === -1) return false;
-      return true;
-    });
-
-    if(!lista.length){
-      h += '<p class="msg" style="margin-top:8px">No se encontraron candidatos visibles con los filtros seleccionados.</p>';
-    } else {
-      lista.forEach(function(cand){
-        var invAceptada = db.invitaciones.some(function(i){
-          return i.perfil_id === cand.id && i.estado === 'aceptada';
-        });
-        var invEnviada = db.invitaciones.some(function(i){
-          return i.perfil_id === cand.id && i.estado === 'enviada';
-        });
-
-        h += '<div class="bt-cand-card" data-bt-perf-card="' + _btEsc(cand.id) + '">' +
-             '<div class="bt-cand-head"><div>' +
-             '<h3 style="font-size:16px;margin:0">' + _btEsc(cand.nombre_completo) + '</h3>' +
-             '<div style="font-size:13px;color:var(--gris);margin-top:2px">' +
-             '<b>' + _btEsc(cand.cargo_buscado) + '</b> · ' + _btEsc(cand.experiencia_anios) + ' años de exp. · ' + _btEsc(cand.distrito) + ' (' + _btEsc(cand.departamento) + ') · Disp: ' + _btEsc(cand.disponibilidad) +
-             '</div></div>' +
-             '<span class="bt-calce-badge">Calce 95% Obra</span></div>' +
-             '<div style="font-size:13px">' + cand.sectores.map(function(s){ return '<span class="bt-pill-sec">' + _btEsc(s) + '</span>'; }).join('') + '</div>' +
-             '<p style="margin:2px 0 0;font-size:13px;line-height:1.4">' + _btEsc(cand.resumen) + '</p>';
-
-        if(cand.constancias && cand.constancias.length){
-          h += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
-               '<small style="font-weight:600;color:var(--gris)">Academia OBRASST:</small>' +
-               cand.constancias.map(function(c){
-                 return '<a class="bt-qr-tag" href="' + _btEsc(c.qr) + '" target="_blank" rel="noopener">📜 ' + _btEsc(c.titulo) + ' (QR ' + _btEsc(c.folio) + ') ✓</a>';
-               }).join('') + '</div>';
-        }
-
-        /* Privacidad de datos personales (Ley 29733) */
-        h += '<div class="bt-contacto-box">';
-        if(invAceptada){
-          h += '<span style="color:#1E8E5A;font-weight:700">✓ Entrevista aceptada:</span> ' +
-               '<span>📞 <b>' + _btEsc(cand.telefono) + '</b></span> · ' +
-               '<span>✉️ <b>' + _btEsc(cand.correo) + '</b></span>';
-        } else {
-          h += '<span class="bt-contacto-candado">🔒 Contacto protegido (Ley 29733):</span> ' +
-               '<span style="color:var(--gris)">Teléfono y correo ocultos hasta aceptar entrevista formal.</span>';
-        }
-        h += '</div>';
-
-        /* Acciones */
-        h += '<div style="display:flex;gap:8px;align-items:center;margin-top:4px">' +
-             (invAceptada ? '<span class="pill ok">Entrevista confirmada en agenda</span>' :
-              (invEnviada ? '<button type="button" class="bt sec chico" disabled>⏳ Invitación enviada</button>' :
-               '<button type="button" class="bt chico" data-bt-invitar="' + _btEsc(cand.id) + '">✉️ Proponer entrevista</button>')) +
-             '</div></div>';
-      });
-    }
-    h += '</div>';
-  } else if(BTW.tabEmp === 'vacantes'){
-    h += '<div style="margin-top:14px;display:grid;gap:10px" id="bt-vacs-lista">' +
-         '<div style="display:flex;justify-content:space-between;align-items:center">' +
-         '<b>Vacantes publicadas de la empresa</b>' +
-         '<button type="button" class="bt chico" id="bt-b-crear-vac">+ Nueva vacante</button></div>';
-
-    if(BTW.creandoVacante){
-      h += '<form id="bt-form-vacante" style="padding:14px;border:1px solid var(--azul);border-radius:12px;background:var(--fondo);display:grid;gap:10px">' +
-           '<b>Publicar nueva vacante de SST</b>' +
-           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
-           '<div><label for="bt-v-cargo">Cargo solicitado</label><input id="bt-v-cargo" required placeholder="Ej: Supervisor SST"></div>' +
-           '<div><label for="bt-v-sec">Sector de la obra</label><select id="bt-v-sec"><option>Construcción</option><option>Minería</option><option>Hidrocarburos</option><option>Industria</option></select></div>' +
-           '<div><label for="bt-v-exp">Años de experiencia mínima</label><input id="bt-v-exp" type="number" min="0" step="0.5" value="2"></div>' +
-           '<div><label for="bt-v-mod">Modalidad</label><select id="bt-v-mod"><option>Presencial</option><option>Régimen / Campamento</option><option>Híbrido</option></select></div>' +
-           '</div>' +
-           '<div><label for="bt-v-req">Requisitos técnicos objetivos (sin discriminación de edad/sexo)</label>' +
-           '<textarea id="bt-v-req" rows="2" style="width:100%" placeholder="Ej: Colegiado, experiencia en excavaciones y altura."></textarea></div>' +
-           '<div style="display:flex;gap:8px">' +
-           '<button type="submit" class="bt chico">Publicar vacante</button>' +
-           '<button type="button" class="bt sec chico" id="bt-b-canc-vac">Cancelar</button></div></form>';
-    }
-
-    db.vacantes.forEach(function(v){
-      h += '<div class="tarj" style="border:1px solid var(--raya);padding:12px 14px;border-radius:10px">' +
-           '<div style="display:flex;justify-content:space-between;align-items:center">' +
-           '<div><b style="font-size:15px">' + _btEsc(v.cargo) + '</b> <span class="pill ' + (v.estado === 'activa' ? 'ok' : 'gris') + '">' + _btEsc(v.estado) + '</span>' +
-           '<div style="font-size:12.5px;color:var(--gris)">' + _btEsc(v.sector) + ' · Min ' + _btEsc(v.experiencia_min) + ' años · ' + _btEsc(v.modalidad) + ' · ' + _btEsc(v.distrito) + '</div></div>' +
-           '<div style="display:flex;gap:6px">' +
-           (v.estado === 'activa' ? '<button type="button" class="bt sec chico" data-bt-pausar="' + _btEsc(v.id) + '">Pausar</button>' :
-            '<button type="button" class="bt sec chico" data-bt-activar="' + _btEsc(v.id) + '">Reactivar</button>') +
-           '</div></div></div>';
-    });
-    h += '</div>';
-  } else if(BTW.tabEmp === 'entrevistas'){
-    h += '<div style="margin-top:14px;display:grid;gap:10px">' +
-         '<b>Seguimiento de entrevistas coordinadas</b>';
-    if(!db.invitaciones.length){
-      h += '<p class="msg" style="margin-top:6px">Aún no has propuesto entrevistas. Entra a la pestaña «Candidatos» y pulsa «Proponer entrevista».</p>';
-    } else {
-      db.invitaciones.forEach(function(inv){
-        var cand = db.perfiles.find(function(p){ return p.id === inv.perfil_id; }) || {};
-        h += '<div class="tarj" style="padding:12px 14px;border:1px solid var(--raya);border-radius:10px;display:grid;gap:6px">' +
-             '<div style="display:flex;justify-content:space-between;align-items:center">' +
-             '<b>' + _btEsc(cand.nombre_completo || 'Candidato') + '</b>' +
-             '<span class="pill ' + (inv.estado === 'aceptada' ? 'ok' : (inv.estado === 'rechazada' ? 'mal' : 'ojo')) + '">' + _btEsc(inv.estado.toUpperCase()) + '</span></div>' +
-             '<div style="font-size:13px;color:var(--gris)">Fecha: ' + _btEsc(inv.fecha_propuesta) + ' a las ' + _btEsc(inv.hora_propuesta) + ' (' + _btEsc(inv.modalidad_entrevista) + ': ' + _btEsc(inv.lugar_o_enlace) + ')</div>' +
-             (inv.estado === 'aceptada' ?
-              '<div style="font-size:13px;color:#1E8E5A"><b>Contacto confirmado:</b> 📞 ' + _btEsc(cand.telefono) + ' · ✉️ ' + _btEsc(cand.correo) + '</div>' :
-              '<div style="font-size:12px;color:var(--gris)">🔒 Contacto oculto hasta aceptación.</div>') +
-             '</div>';
-      });
-    }
-    h += '</div>';
+/* ── la ficha de un candidato, como la deja ver el servidor ── */
+function _bteFicha(f, acciones, cabExtra){
+  f = f || {};
+  var cons = f.constancias || [];
+  var h = '<div class="bte-card" data-bte-pid="' + _bteEsc(f.pid) + '"><div class="bte-cab"><b>' + _bteEsc(f.cargo) + '</b>' + (cabExtra || '') + '</div>' +
+    '<p class="bte-datos">' + _bteEsc(_bteNum(f.anios)) + ' años de experiencia · ' + _bteEsc([f.distrito, f.departamento].filter(Boolean).join(', ')) +
+    (f.disponibilidad ? ' · Disponibilidad: ' + _bteEsc(f.disponibilidad) : '') + '</p>' +
+    ((f.sectores || []).length ? '<div class="bte-chips">' + f.sectores.map(function(s){ return '<span class="bte-chip">' + _bteEsc(s) + '</span>'; }).join('') + '</div>' : '');
+  if(cons.length){
+    h += '<p class="bte-cons">📜 Constancia de la Academia OBRASST: ' + cons.map(function(c){
+      return _bteEsc(c.curso) + (c.folio ? ' · folio <a href="./verificar.html?f=' + encodeURIComponent(c.folio) + '" target="_blank" rel="noopener">' + _bteEsc(c.folio) + '</a>' +
+        (c.nota != null ? ' (' + _bteEsc(c.nota) + ' %)' : '') : '');
+    }).join('; ') + '</p>';
   }
-
-  h += '</div></div>';
-  return h;
-}
-
-function _btHtmlCandidato(db){
-  var cand = db.perfiles[0]; /* Simula perfil de Carlos Mendoza */
-  var h = '<div class="tarj"><div class="tarj-cuerpo">' +
-          '<div class="bt-tabs">' +
-          '<button type="button" id="bt-tab-vacs" class="bt-tab-btn' + (BTW.tabCand === 'vacantes' ? ' on' : '') + '" data-bt-ctab="vacantes">🔍 Vacantes para mí (' + db.vacantes.length + ')</button>' +
-          '<button type="button" id="bt-tab-invs" class="bt-tab-btn' + (BTW.tabCand === 'invitaciones' ? ' on' : '') + '" data-bt-ctab="invitaciones">📬 Mis invitaciones a entrevista (' + db.invitaciones.filter(function(i){ return i.perfil_id === cand.id; }).length + ')</button>' +
-          '<button type="button" id="bt-tab-perf" class="bt-tab-btn' + (BTW.tabCand === 'perfil' ? ' on' : '') + '" data-bt-ctab="perfil">👤 Mi perfil profesional</button>' +
-          '</div>';
-
-  if(BTW.tabCand === 'vacantes'){
-    h += '<div style="margin-top:14px;display:grid;gap:10px">';
-    db.vacantes.forEach(function(v){
-      var yaPostulo = db.postulaciones.some(function(po){ return po.vacante_id === v.id && po.perfil_id === cand.id; });
-      h += '<div class="tarj" style="border:1px solid var(--raya);padding:14px;border-radius:10px;display:grid;gap:6px">' +
-           '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
-           '<div><h3 style="font-size:16px;margin:0">' + _btEsc(v.cargo) + '</h3>' +
-           '<div style="font-size:13px;color:var(--gris)">' + _btEsc(v.obra) + ' · ' + _btEsc(v.sector) + ' · ' + _btEsc(v.modalidad) + '</div></div>' +
-           '<span class="pill azul">Inicio ' + _btEsc(v.fecha_inicio) + '</span></div>' +
-           '<p style="margin:2px 0;font-size:13px">' + _btEsc(v.requisitos) + '</p>' +
-           '<div style="margin-top:4px">' +
-           (yaPostulo ? '<span class="pill ok">✓ Ya postulaste a esta vacante</span>' :
-            '<button type="button" class="bt chico" data-bt-postular="' + _btEsc(v.id) + '">Postular ahora</button>') +
-           '</div></div>';
-    });
-    h += '</div>';
-  } else if(BTW.tabCand === 'invitaciones'){
-    h += '<div style="margin-top:14px;display:grid;gap:10px">';
-    var misInvs = db.invitaciones.filter(function(i){ return i.perfil_id === cand.id; });
-    if(!misInvs.length){
-      h += '<p class="msg">No tienes invitaciones a entrevista pendientes en este momento.</p>';
-    } else {
-      misInvs.forEach(function(inv){
-        h += '<div class="tarj" style="border:1px solid var(--raya);padding:14px;border-radius:10px;display:grid;gap:8px">' +
-             '<div style="display:flex;justify-content:space-between;align-items:center">' +
-             '<b>Constructora Ejemplo S.A.C. te ha invitado a una entrevista</b>' +
-             '<span class="pill ' + (inv.estado === 'aceptada' ? 'ok' : (inv.estado === 'rechazada' ? 'mal' : 'ojo')) + '">' + _btEsc(inv.estado.toUpperCase()) + '</span></div>' +
-             '<div style="font-size:13.5px"><b>Fecha propuesta:</b> ' + _btEsc(inv.fecha_propuesta) + ' a las ' + _btEsc(inv.hora_propuesta) + '</div>' +
-             '<div style="font-size:13px;color:var(--gris)"><b>Modalidad:</b> ' + _btEsc(inv.modalidad_entrevista) + ' (' + _btEsc(inv.lugar_o_enlace) + ')</div>' +
-             (inv.mensaje ? '<p style="margin:0;font-size:13px;font-style:italic">«' + _btEsc(inv.mensaje) + '»</p>' : '') +
-             (inv.estado === 'enviada' ?
-              '<div style="display:flex;gap:8px;margin-top:4px">' +
-              '<button type="button" class="bt chico" data-bt-resp-inv="' + _btEsc(inv.id) + '" data-val="aceptada">✓ Aceptar entrevista</button>' +
-              '<button type="button" class="bt sec chico" data-bt-resp-inv="' + _btEsc(inv.id) + '" data-val="rechazada">✕ No, gracias</button>' +
-              '</div>' :
-              (inv.estado === 'aceptada' ?
-               '<div class="msg ok" style="margin:0">✓ Aceptaste la entrevista. Tus datos de contacto fueron compartidos con el reclutador para coordinar detalles.</div>' :
-               '<div class="msg" style="margin:0">Declinaste esta invitación. Tu contacto permaneció en reserva.</div>')) +
-             '</div>';
-      });
-    }
-    h += '</div>';
-  } else if(BTW.tabCand === 'perfil'){
-    h += '<div style="margin-top:14px;display:grid;gap:12px">' +
-         '<div class="cur-box" style="display:flex;justify-content:space-between;align-items:center">' +
-         '<div><b>Visibilidad de mi perfil en la bolsa</b>' +
-         '<div style="font-size:12.5px;color:var(--gris)">Si lo ocultas, las empresas no podrán encontrarte en las búsquedas.</div></div>' +
-         '<label style="display:flex;align-items:center;gap:6px;margin:0;font-size:14px;font-weight:700">' +
-         '<input type="checkbox" id="bt-chk-vis" style="width:auto"' + (cand.visible ? ' checked' : '') + '> ' +
-         '<span id="bt-txt-vis">' + (cand.visible ? 'Visible' : 'Oculto') + '</span></label></div>' +
-
-         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
-         '<div><label>Nombre completo</label><input readonly value="' + _btEsc(cand.nombre_completo) + '"></div>' +
-         '<div><label>Cargo buscado</label><input readonly value="' + _btEsc(cand.cargo_buscado) + '"></div>' +
-         '<div><label>Años de experiencia</label><input readonly value="' + _btEsc(cand.experiencia_anios) + ' años"></div>' +
-         '<div><label>Ubicación</label><input readonly value="' + _btEsc(cand.distrito) + ' (' + _btEsc(cand.departamento) + ')"></div>' +
-         '<div><label>Teléfono (solo visible tras aceptar entrevista)</label><input readonly value="' + _btEsc(cand.telefono) + '"></div>' +
-         '<div><label>Correo (solo visible tras aceptar entrevista)</label><input readonly value="' + _btEsc(cand.correo) + '"></div>' +
-         '</div>' +
-
-         '<div><label>Constancias Academia OBRASST verificadas</label>' +
-         cand.constancias.map(function(c){
-           return '<div style="margin-top:4px"><a class="bt-qr-tag" href="' + _btEsc(c.qr) + '" target="_blank" rel="noopener">📜 ' + _btEsc(c.titulo) + ' · Folio ' + _btEsc(c.folio) + ' (QR verificado) ✓</a></div>';
-         }).join('') + '</div>' +
-         '</div>';
+  if(f.acepto){
+    h += '<div class="bte-contacto abierto"><b>' + _bteEsc(f.nombre) + '</b>' +
+      (f.telefono ? '<span>📞 <a href="tel:' + _bteEsc(String(f.telefono).replace(/[^\d+]/g, '')) + '">' + _bteEsc(f.telefono) + '</a></span>' : '') +
+      (f.correo ? '<span>✉️ <a href="mailto:' + _bteEsc(f.correo) + '">' + _bteEsc(f.correo) + '</a></span>' : '') +
+      (f.resumen ? '<span class="bte-req">' + _bteEsc(f.resumen) + '</span>' : '') + '</div>';
+  } else {
+    h += '<div class="bte-contacto">🔒 Nombre y contacto: los ves cuando acepte tu invitación a entrevista.</div>';
   }
-
-  h += '</div></div>';
-  return h;
+  return h + (acciones ? '<div class="bte-acc">' + acciones + '</div>' : '') + '</div>';
+}
+function _bteBotonInvitar(pid, vac){
+  if(!_bteVivas().length) return '';
+  return '<button type="button" class="bt" data-bte-inv="' + _bteEsc(pid) + '"' + (vac ? ' data-bte-vac="' + _bteEsc(vac) + '"' : '') + '>Invitar a entrevista</button>';
 }
 
-function _btHtmlModalInvitar(cand, db){
-  var hoy = new Date().toISOString().slice(0, 10);
-  return '<div class="bt-modal-fondo" id="bt-modal-invitar">' +
-         '<div class="bt-modal-caja">' +
-         '<div style="display:flex;justify-content:space-between;align-items:center">' +
-         '<h3 style="margin:0">Proponer entrevista</h3>' +
-         '<button type="button" class="bt sec chico" id="bt-b-cerrar-modal">✕</button></div>' +
-         '<p style="margin:0;font-size:13px">Invitando a <b>' + _btEsc(cand.nombre_completo) + '</b> (' + _btEsc(cand.cargo_buscado) + '). Sus datos de contacto se revelarán únicamente si acepta la invitación.</p>' +
-         '<form id="bt-form-inv" style="display:grid;gap:10px">' +
-         '<div><label for="bt-i-vac">Vacante asociada</label>' +
-         '<select id="bt-i-vac">' + db.vacantes.map(function(v){ return '<option value="' + _btEsc(v.id) + '">' + _btEsc(v.cargo) + ' (' + _btEsc(v.obra) + ')</option>'; }).join('') + '</select></div>' +
-         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-         '<div><label for="bt-i-fecha">Fecha propuesta</label><input type="date" id="bt-i-fecha" required value="' + hoy + '"></div>' +
-         '<div><label for="bt-i-hora">Hora</label><input type="time" id="bt-i-hora" required value="10:00"></div>' +
-         '</div>' +
-         '<div><label for="bt-i-mod">Modalidad</label><select id="bt-i-mod"><option>Virtual (Google Meet / Zoom)</option><option>Presencial en Obra</option></select></div>' +
-         '<div><label for="bt-i-lugar">Enlace de videollamada o dirección</label><input id="bt-i-lugar" required placeholder="Ej: meet.google.com/abc-defg-hij o Av. Principal 123"></div>' +
-         '<div><label for="bt-i-msg">Mensaje breve para el candidato</label><textarea id="bt-i-msg" rows="2" placeholder="Nos gustó tu perfil verificado en la Academia..."></textarea></div>' +
-         '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">' +
-         '<button type="button" class="bt sec chico" id="bt-b-canc-inv">Cancelar</button>' +
-         '<button type="submit" class="bt chico">Enviar invitación</button></div></form>' +
-         '</div></div>';
+/* ── pestaña Candidatos ── */
+function _bteCandHtml(){
+  var F = BTE.filtro, L = BTE.cands || [];
+  var h = '<form class="bte-filtros" id="bte-filtros">' +
+    '<label>Cargo<input id="bte-f-cargo" list="bte-cargos" maxlength="60" value="' + _bteEsc(F.cargo) + '" placeholder="Supervisor SST"></label>' +
+    '<datalist id="bte-cargos">' + BTE_CARGOS.map(function(x){ return '<option value="' + _bteEsc(x) + '">'; }).join('') + '</datalist>' +
+    '<label>Sector<select id="bte-f-sector">' + _bteOpts(BTE_SECTORES, F.sector, 'Todos') + '</select></label>' +
+    '<label>Departamento<select id="bte-f-dep">' + _bteOpts(BTE_DEPS, F.departamento, 'Todos') + '</select></label>' +
+    '<button type="submit" class="bt" id="bte-buscar">Buscar</button></form>';
+  if(!_bteVivas().length) h += '<p class="bte-nota" id="bte-sin-vac">Para invitar a alguien, primero publica una vacante en «Mis vacantes».</p>';
+  if(!L.length){
+    return h + '<div class="vacio"><b>Todavía no hay candidatos a la vista' + (F.cargo || F.sector || F.departamento ? ' con esos filtros' : '') + '</b>' +
+      'La Bolsa se llena con los alumnos de la Academia OBRASST que deciden mostrar su perfil.</div>';
+  }
+  return h + '<div class="bte-lista" id="bte-cands">' + L.map(function(f){
+    return _bteFicha(f, _bteBotonInvitar(f.pid), f.acepto ? '<span class="pill ok">Aceptó una entrevista contigo</span>' : '');
+  }).join('') + '</div>';
 }
 
-function _btEnchufarEventos(db){
-  var be = document.getElementById('bt-b-modo-emp');
-  if(be) be.onclick = function(){ BTW.modo = 'empresa'; _btPintar(); };
-  var bc = document.getElementById('bt-b-modo-cand');
-  if(bc) bc.onclick = function(){ BTW.modo = 'candidato'; _btPintar(); };
+/* ── pestaña Mis vacantes ── */
+function _bteEstadoPill(e){
+  return e === 'activa' ? '<span class="pill ok">Activa</span>' : e === 'pausada' ? '<span class="pill ojo">Pausada</span>' : '<span class="pill gris">Cerrada</span>';
+}
+function _bteVacHtml(){
+  var L = (BTE.panel && BTE.panel.vacantes) || [];
+  var h = '<div class="bte-acc" style="margin-bottom:10px"><button type="button" class="bt" id="bte-vac-nueva">Publicar una vacante</button></div>';
+  if(!L.length) return h + '<div class="vacio"><b>Todavía no publicaste vacantes</b>Publica una y la ven los alumnos de la Academia que buscan trabajo; ' +
+                           'también puedes invitar directo desde «Candidatos».</div>';
+  return h + '<div class="bte-lista" id="bte-vacs">' + L.map(function(v){
+    var acc = '<button type="button" class="bt sec" data-bte-vac-edit="' + _bteEsc(v.id) + '">Editar</button>';
+    if(v.estado === 'activa') acc += '<button type="button" class="bt sec" data-bte-vac-est="pausada" data-id="' + _bteEsc(v.id) + '">Pausar</button>';
+    if(v.estado === 'pausada') acc += '<button type="button" class="bt sec" data-bte-vac-est="activa" data-id="' + _bteEsc(v.id) + '">Reactivar</button>';
+    if(v.estado !== 'cerrada') acc += '<button type="button" class="bt sec" data-bte-vac-est="cerrada" data-id="' + _bteEsc(v.id) + '">Cerrar</button>';
+    else acc += '<button type="button" class="bt sec" data-bte-vac-est="activa" data-id="' + _bteEsc(v.id) + '">Reabrir</button>';
+    return '<div class="bte-card' + (v.estado === 'activa' ? '' : ' apagada') + '"><div class="bte-cab"><b>' + _bteEsc(v.cargo) + '</b>' + _bteEstadoPill(v.estado) + '</div>' +
+      '<p class="bte-datos">' + _bteEsc([v.sector, (+v.anios_min ? 'desde ' + _bteNum(v.anios_min) + ' años' : ''), [v.distrito, v.departamento].filter(Boolean).join(', '),
+        v.modalidad, v.inicio ? 'inicio ' + _bteFecha(v.inicio) : ''].filter(Boolean).join(' · ')) + '</p>' +
+      (v.requisitos ? '<p class="bte-req">' + _bteEsc(v.requisitos) + '</p>' : '') +
+      '<p class="tenue" style="margin:0;font-size:13px">' + (+v.postulaciones || 0) + ((+v.postulaciones === 1) ? ' postulación' : ' postulaciones') + ' · ' +
+        (+v.invitaciones || 0) + ((+v.invitaciones === 1) ? ' invitación' : ' invitaciones') + ' · publicada el ' + _bteEsc(_bteDia(v.creado)) + '</p>' +
+      '<div class="bte-acc">' + acc + '</div></div>';
+  }).join('') + '</div>';
+}
 
-  Array.prototype.forEach.call(document.querySelectorAll('[data-bt-etab]'), function(b){
-    b.onclick = function(){ BTW.tabEmp = b.getAttribute('data-bt-etab'); _btPintar(); };
+/* ── pestaña Postulaciones ── */
+function _btePostHtml(){
+  var orden = { nueva:0, vista:1, descartada:2 };
+  var L = ((BTE.panel && BTE.panel.postulaciones) || []).slice().sort(function(a, b){ return (orden[a.estado] || 0) - (orden[b.estado] || 0); });
+  if(!L.length) return '<div class="vacio"><b>Todavía no hay postulaciones</b>Cuando alguien postule a una de tus vacantes, aparece aquí.</div>';
+  return '<div class="bte-lista" id="bte-posts">' + L.map(function(s){
+    var pid = s.ficha && s.ficha.pid, acc = '';
+    var viva = _bteVivas().some(function(v){ return v.id === s.vacante; });
+    if(s.estado !== 'descartada'){
+      if(viva) acc += _bteBotonInvitar(pid, s.vacante);
+      acc += '<button type="button" class="bt sec" data-bte-post-est="descartada" data-pid="' + _bteEsc(pid) + '" data-vac="' + _bteEsc(s.vacante) + '">Descartar</button>';
+    } else {
+      acc += '<button type="button" class="bt sec" data-bte-post-est="vista" data-pid="' + _bteEsc(pid) + '" data-vac="' + _bteEsc(s.vacante) + '">Volver a considerar</button>';
+    }
+    var pill = s.estado === 'nueva' ? '<span class="pill azul">Nueva</span>' : s.estado === 'descartada' ? '<span class="pill gris">Descartada</span>' : '<span class="pill gris">Vista</span>';
+    return '<div' + (s.estado === 'descartada' ? ' class="apagada"' : '') + '><p class="tenue" style="margin:0 0 4px;font-size:13px">Postuló a <b>' + _bteEsc(s.cargo_vacante) + '</b> el ' +
+      _bteEsc(_bteDia(s.creado)) + '</p>' + _bteFicha(s.ficha, acc, pill) + '</div>';
+  }).join('') + '</div>';
+}
+
+/* ── pestaña Entrevistas ── */
+function _bteEntHtml(){
+  var orden = { aceptada:0, enviada:1, rechazada:2, retirada:3 };
+  var L = ((BTE.panel && BTE.panel.invitaciones) || []).slice().sort(function(a, b){ return (orden[a.estado] || 0) - (orden[b.estado] || 0); });
+  if(!L.length) return '<div class="vacio"><b>Todavía no invitaste a nadie</b>Invita desde «Candidatos» o desde «Postulaciones».</div>';
+  return '<div class="bte-lista" id="bte-ents">' + L.map(function(i){
+    var pill = i.estado === 'aceptada' ? '<span class="pill ok">Aceptó</span>' : i.estado === 'enviada' ? '<span class="pill ojo">Esperando respuesta</span>' :
+               i.estado === 'rechazada' ? '<span class="pill gris">No aceptó</span>' : '<span class="pill gris">Retirada</span>';
+    var acc = i.estado === 'enviada' ? '<button type="button" class="bt sec" data-bte-retirar="' + _bteEsc(i.id) + '">Retirar la invitación</button>' : '';
+    return '<div' + ((i.estado === 'rechazada' || i.estado === 'retirada') ? ' class="apagada"' : '') + '><p class="tenue" style="margin:0 0 4px;font-size:13px">Entrevista para <b>' +
+      _bteEsc(i.cargo_vacante) + '</b> · ' + _bteEsc(_bteFecha(i.fecha)) + ', ' + _bteEsc(i.hora) + ' · ' + _bteEsc(i.modalidad) + ' · ' + _bteEsc(i.lugar) + '</p>' +
+      _bteFicha(i.ficha, acc, pill) + '</div>';
+  }).join('') + '</div>';
+}
+
+/* ══ formularios (en el cajón del portal) ══ */
+/* lo que una oferta de empleo no puede pedir (Ley N.° 26772): se avisa, no se adivina */
+var BTE_DISCRIM = [
+  [/(^|[^a-záéíóúñü])edad([^a-záéíóúñü]|$)/, 'edad'],
+  [/(^|[^a-záéíóúñü])(menor|mayor)(es)? de \d{2} ?años(?! de experiencia)/, 'un límite de edad'],
+  [/(^|[^a-záéíóúñü])entre \d{2} y \d{2} años(?! de experiencia)/, 'un rango de edad'],
+  [/(^|[^a-záéíóúñü])sexo([^a-záéíóúñü]|$)/, 'sexo'],
+  [/(^|[^a-záéíóúñü])(var[oó]n|varones|masculino|femenino|s[oó]lo hombres|s[oó]lo mujeres)([^a-záéíóúñü]|$)/, 'sexo'],
+  [/(^|[^a-záéíóúñü])estado civil([^a-záéíóúñü]|$)/, 'estado civil'],
+  [/(^|[^a-záéíóúñü])(solter[oa]s?|casad[oa]s?)([^a-záéíóúñü]|$)/, 'estado civil'],
+  [/(^|[^a-záéíóúñü])buena presencia([^a-záéíóúñü]|$)/, '«buena presencia»'],
+  [/(^|[^a-záéíóúñü])(religi[oó]n|cat[oó]lic[oa]s?|evang[eé]lic[oa]s?)([^a-záéíóúñü]|$)/, 'religión'],
+  [/(^|[^a-záéíóúñü])(raza|tez)([^a-záéíóúñü]|$)/, 'raza'],
+  [/(^|[^a-záéíóúñü])(origen social|condici[oó]n econ[oó]mica)([^a-záéíóúñü]|$)/, 'origen social o condición económica']
+];
+function _bteDiscrim(t){
+  var s = ' ' + String(t || '').toLowerCase() + ' ', v = [];
+  BTE_DISCRIM.forEach(function(r){ if(r[0].test(s) && v.indexOf(r[1]) < 0) v.push(r[1]); });
+  return v;
+}
+function _bteHoja(titulo, sub, cuerpo, pie){
+  if(typeof abrirHoja === 'function'){ abrirHoja(titulo, sub, cuerpo, pie, { sinFoco:false }); return; }
+  var d = document.getElementById('bte-cuerpo'); if(d) d.innerHTML = '<h3>' + _bteEsc(titulo) + '</h3>' + cuerpo + '<div class="bte-acc">' + pie + '</div>';
+}
+function _bteCerrarHoja(){ if(typeof cerrarHoja === 'function') cerrarHoja(); else _btePintar(); }
+function _bteMsg(id, t, clase){ var m = document.getElementById(id); if(!m) return; m.hidden = !t; m.className = 'msg ' + (clase || ''); m.textContent = t || ''; }
+
+function _bteVacForm(id){
+  var v = null;
+  ((BTE.panel && BTE.panel.vacantes) || []).forEach(function(x){ if(x.id === id) v = x; });
+  v = v || { cargo:'', sector:'', anios_min:0, departamento:'Lima', distrito:'', modalidad:'Presencial', requisitos:'', inicio:'' };
+  var cuerpo = '<form class="bte-f" id="bte-vf">' +
+    '<div class="campo"><label for="bte-v-cargo">Cargo</label><input id="bte-v-cargo" list="bte-cargos-v" maxlength="80" value="' + _bteEsc(v.cargo) + '" placeholder="Supervisor SST"></div>' +
+    '<datalist id="bte-cargos-v">' + BTE_CARGOS.map(function(x){ return '<option value="' + _bteEsc(x) + '">'; }).join('') + '</datalist>' +
+    '<div class="bte-fila"><div class="campo"><label for="bte-v-sector">Sector</label><select id="bte-v-sector">' + _bteOpts(BTE_SECTORES, v.sector || 'Construcción') + '</select></div>' +
+    '<div class="campo"><label for="bte-v-anios">Años de experiencia (mínimo)</label><input id="bte-v-anios" type="number" min="0" max="40" step="0.5" inputmode="decimal" value="' + _bteEsc(+v.anios_min || 0) + '"></div></div>' +
+    '<div class="bte-fila"><div class="campo"><label for="bte-v-dep">Departamento</label><select id="bte-v-dep">' + _bteOpts(BTE_DEPS, v.departamento || 'Lima') + '</select></div>' +
+    '<div class="campo"><label for="bte-v-dis">Distrito</label><input id="bte-v-dis" maxlength="60" value="' + _bteEsc(v.distrito) + '"></div></div>' +
+    '<div class="bte-fila"><div class="campo"><label for="bte-v-mod">Modalidad</label><select id="bte-v-mod">' + _bteOpts(BTE_MOD_VAC, v.modalidad || 'Presencial') + '</select></div>' +
+    '<div class="campo"><label for="bte-v-ini">Inicio</label><input id="bte-v-ini" type="date" value="' + _bteEsc(v.inicio ? String(v.inicio).slice(0, 10) : '') + '"></div></div>' +
+    '<div class="campo"><label for="bte-v-req">Requisitos y lo que hará</label><textarea id="bte-v-req" maxlength="800" rows="5" placeholder="Experiencia en edificaciones, trabajos en altura, PETAR…">' + _bteEsc(v.requisitos) + '</textarea></div>' +
+    '<div class="bte-aviso" id="bte-v-aviso" role="alert" hidden></div>' +
+    '<p class="tenue" style="margin:0;font-size:12.5px">La ven los alumnos de la Academia OBRASST con cuenta: el cargo, el sector, los años, el lugar, la modalidad, el inicio, los requisitos y el nombre de tu empresa y de la obra.</p>' +
+    '<div class="msg" id="bte-v-msg" role="status" hidden></div></form>';
+  var pie = '<button type="button" class="bt" id="bte-v-ok">' + (id ? 'Guardar los cambios' : 'Publicar') + '</button> <button type="button" class="bt sec" id="bte-v-no">Cancelar</button>';
+  _bteHoja(id ? 'Editar la vacante' : 'Publicar una vacante', _bteObra(), cuerpo, pie);
+  var avisado = false, ok = document.getElementById('bte-v-ok');
+  var reset = function(){ if(avisado){ avisado = false; ok.textContent = id ? 'Guardar los cambios' : 'Publicar'; var a = document.getElementById('bte-v-aviso'); if(a) a.hidden = true; } };
+  ['bte-v-cargo', 'bte-v-req'].forEach(function(k){ var e = document.getElementById(k); if(e) e.addEventListener('input', reset); });
+  document.getElementById('bte-v-no').onclick = _bteCerrarHoja;
+  ok.onclick = function(){
+    var g = function(k){ var e = document.getElementById(k); return e ? String(e.value || '').trim() : ''; };
+    var p = { id:id || '', cargo:g('bte-v-cargo'), sector:g('bte-v-sector'), anios_min:g('bte-v-anios'), departamento:g('bte-v-dep'), distrito:g('bte-v-dis'),
+              modalidad:g('bte-v-mod'), inicio:g('bte-v-ini'), requisitos:(document.getElementById('bte-v-req') || {}).value || '' };
+    if(p.cargo.length < 3){ _bteMsg('bte-v-msg', 'Escribe el cargo.', 'mal'); return; }
+    var malas = _bteDiscrim(p.cargo + ' \n ' + p.requisitos);
+    if(malas.length && !avisado){
+      avisado = true;
+      var a = document.getElementById('bte-v-aviso');
+      a.innerHTML = '<b>Revisa antes de publicar:</b> el texto parece pedir ' + _bteEsc(malas.join(', ')) + '. Una oferta de empleo no puede tener requisitos que discriminen ' +
+        '(Ley N.° 26772, modificada por la Ley N.° 27270). Quítalo; o, si no es un requisito, toca «' + (id ? 'Guardar igual' : 'Publicar igual') + '».';
+      a.hidden = false; ok.textContent = id ? 'Guardar igual' : 'Publicar igual';
+      return;
+    }
+    ok.disabled = true;
+    sbRpc('bt_vacante_guardar', { p_emp:BTE.emp, p:p }).then(function(r){
+      ok.disabled = false;
+      if(r && r.ok){ _bteCerrarHoja(); toast(id ? 'Cambios guardados.' : 'Vacante publicada: ya la ven los alumnos de la Academia.'); BTE.tab = 'vac'; _bteCargar(); return; }
+      _bteMsg('bte-v-msg', r && r.motivo === 'muchos_intentos' ? 'Publicaste muchas vacantes hoy: sigue mañana.' : r && r.motivo === 'sin_permiso' ? 'Tu cuenta no puede publicar en esta obra.' : 'No se pudo guardar. Inténtalo otra vez.', 'mal');
+    }, function(){ ok.disabled = false; _bteMsg('bte-v-msg', 'Sin conexión: no se guardó. Inténtalo otra vez.', 'mal'); });
+  };
+}
+
+function _bteInvForm(pid, vacId){
+  var vivas = _bteVivas();
+  if(!vivas.length){ toast('Primero publica una vacante.'); return; }
+  var ficha = null;
+  (BTE.cands || []).concat(((BTE.panel && BTE.panel.postulaciones) || []).map(function(s){ return s.ficha; })).forEach(function(f){ if(f && f.pid === pid && !ficha) ficha = f; });
+  var cuerpo = '<form class="bte-f" id="bte-if">' +
+    (ficha ? '<p style="margin:0;font-size:14px"><b>' + _bteEsc(ficha.cargo) + '</b> · ' + _bteEsc(_bteNum(ficha.anios)) + ' años · ' + _bteEsc([ficha.distrito, ficha.departamento].filter(Boolean).join(', ')) + '</p>' : '') +
+    '<div class="campo"><label for="bte-i-vac">Vacante</label><select id="bte-i-vac">' + vivas.map(function(v){
+      return '<option value="' + _bteEsc(v.id) + '"' + (v.id === vacId ? ' selected' : '') + '>' + _bteEsc(v.cargo + (v.distrito ? ' · ' + v.distrito : '')) + '</option>';
+    }).join('') + '</select></div>' +
+    '<div class="bte-fila"><div class="campo"><label for="bte-i-fecha">Fecha</label><input id="bte-i-fecha" type="date" min="' + _bteHoy() + '"></div>' +
+    '<div class="campo"><label for="bte-i-hora">Hora</label><input id="bte-i-hora" type="time"></div></div>' +
+    '<div class="campo"><label for="bte-i-mod">Modalidad</label><select id="bte-i-mod">' + _bteOpts(BTE_MOD_ENT, 'Virtual') + '</select></div>' +
+    '<div class="campo"><label for="bte-i-lugar">Dónde</label><input id="bte-i-lugar" maxlength="200" placeholder="El enlace de la reunión, la dirección o el número desde el que llamarás"></div>' +
+    '<div class="campo"><label for="bte-i-msg">Mensaje (opcional)</label><textarea id="bte-i-msg" maxlength="400" rows="3"></textarea></div>' +
+    '<p class="tenue" style="margin:0;font-size:12.5px">El candidato ve el nombre de tu empresa y de la obra, el cargo, la fecha, la hora, la modalidad, el lugar y tu mensaje. ' +
+    'Si acepta, ves su nombre, su celular, su correo, su resumen y el folio de su constancia.</p>' +
+    '<div class="msg" id="bte-i-m" role="status" hidden></div></form>';
+  var pie = '<button type="button" class="bt" id="bte-i-ok">Enviar invitación</button> <button type="button" class="bt sec" id="bte-i-no">Cancelar</button>';
+  _bteHoja('Invitar a entrevista', _bteObra(), cuerpo, pie);
+  document.getElementById('bte-i-no').onclick = _bteCerrarHoja;
+  var ok = document.getElementById('bte-i-ok');
+  ok.onclick = function(){
+    var g = function(k){ var e = document.getElementById(k); return e ? String(e.value || '').trim() : ''; };
+    var p = { fecha:g('bte-i-fecha'), hora:g('bte-i-hora'), modalidad:g('bte-i-mod'), lugar:g('bte-i-lugar'), mensaje:(document.getElementById('bte-i-msg') || {}).value || '' };
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(p.fecha) || p.fecha < _bteHoy()){ _bteMsg('bte-i-m', 'Elige la fecha de la entrevista (desde hoy).', 'mal'); return; }
+    if(!/^([01]?\d|2[0-3]):[0-5]\d$/.test(p.hora)){ _bteMsg('bte-i-m', 'Elige la hora de la entrevista.', 'mal'); return; }
+    if(p.lugar.length < 3){ _bteMsg('bte-i-m', 'Escribe dónde será: el enlace, la dirección o el número.', 'mal'); return; }
+    ok.disabled = true;
+    sbRpc('bt_invitar', { p_emp:BTE.emp, p_vacante:g('bte-i-vac'), p_pid:pid, p:p }).then(function(r){
+      ok.disabled = false;
+      if(r && r.ok){ _bteCerrarHoja(); toast('Invitación enviada. Cuando acepte, ves su nombre y su contacto en «Entrevistas».'); BTE.tab = 'ent'; _bteCargar(); return; }
+      var mo = r && r.motivo;
+      _bteMsg('bte-i-m', mo === 'ya_invitado' ? 'Ya tiene una invitación tuya para esta vacante, esperando respuesta.' :
+                         mo === 'candidato' ? 'Este candidato ocultó o borró su perfil.' : mo === 'vacante' ? 'Esa vacante ya no está activa.' :
+                         mo === 'fecha' ? 'La fecha tiene que ser de hoy en adelante.' : mo === 'hora' ? 'Revisa la hora.' : mo === 'lugar' ? 'Escribe dónde será.' :
+                         mo === 'muchos_intentos' ? 'Enviaste muchas invitaciones hoy: sigue mañana.' : 'No se pudo enviar. Inténtalo otra vez.', 'mal');
+    }, function(){ ok.disabled = false; _bteMsg('bte-i-m', 'Sin conexión: no se envió. Inténtalo otra vez.', 'mal'); });
+  };
+}
+
+function _bteEnlazar(){
+  var caja = BTE.caja; if(!caja) return;
+  var on = function(id, fn){ var e = document.getElementById(id); if(e) e.onclick = fn; };
+  on('bte-otra', function(){ vistaBolsaTrabajo(caja); });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-bte-tab]'), function(b){
+    b.onclick = function(){ BTE.tab = b.getAttribute('data-bte-tab'); _btePintar(); };
   });
-  Array.prototype.forEach.call(document.querySelectorAll('[data-bt-ctab]'), function(b){
-    b.onclick = function(){ BTW.tabCand = b.getAttribute('data-bt-ctab'); _btPintar(); };
-  });
-
-  var fc = document.getElementById('bt-filtro-cargo');
-  if(fc) fc.onchange = function(){ BTW.filtroCargo = fc.value; _btPintar(); };
-  var fs = document.getElementById('bt-filtro-sec');
-  if(fs) fs.onchange = function(){ BTW.filtroSector = fs.value; _btPintar(); };
-
-  Array.prototype.forEach.call(document.querySelectorAll('[data-bt-invitar]'), function(b){
-    b.onclick = function(){
-      var id = b.getAttribute('data-bt-invitar');
-      var cand = db.perfiles.find(function(p){ return p.id === id; });
-      if(cand){ BTW.invitandoA = cand; _btPintar(); }
-    };
-  });
-
-  var cm = document.getElementById('bt-b-cerrar-modal');
-  if(cm) cm.onclick = function(){ BTW.invitandoA = null; _btPintar(); };
-  var cmi = document.getElementById('bt-b-canc-inv');
-  if(cmi) cmi.onclick = function(){ BTW.invitandoA = null; _btPintar(); };
-
-  var fi = document.getElementById('bt-form-inv');
-  if(fi) fi.onsubmit = function(ev){
+  var ff = document.getElementById('bte-filtros');
+  if(ff) ff.onsubmit = function(ev){
     ev.preventDefault();
-    var nuevaInv = {
-      id: 'inv-' + Date.now(),
-      vacante_id: document.getElementById('bt-i-vac').value,
-      perfil_id: BTW.invitandoA.id,
-      fecha_propuesta: document.getElementById('bt-i-fecha').value,
-      hora_propuesta: document.getElementById('bt-i-hora').value,
-      modalidad_entrevista: document.getElementById('bt-i-mod').value,
-      lugar_o_enlace: document.getElementById('bt-i-lugar').value,
-      mensaje: document.getElementById('bt-i-msg').value,
-      estado: 'enviada',
-      creado_en: new Date().toISOString()
-    };
-    db.invitaciones.push(nuevaInv);
-    _btGuardarDb(db);
-    BTW.invitandoA = null;
-    toast('Invitación enviada con éxito. Esperando respuesta del candidato.');
-    _btPintar();
+    BTE.filtro = { cargo:String(($('bte-f-cargo') || {}).value || '').trim(), sector:($('bte-f-sector') || {}).value || '', departamento:($('bte-f-dep') || {}).value || '' };
+    var b = document.getElementById('bte-buscar'); if(b){ b.disabled = true; b.textContent = 'Buscando…'; }
+    _bteCargar();
   };
-
-  /* Responder invitación (candidato) */
-  Array.prototype.forEach.call(document.querySelectorAll('[data-bt-resp-inv]'), function(b){
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-bte-inv]'), function(b){
+    b.onclick = function(){ _bteInvForm(b.getAttribute('data-bte-inv'), b.getAttribute('data-bte-vac') || ''); };
+  });
+  on('bte-vac-nueva', function(){ _bteVacForm(''); });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-bte-vac-edit]'), function(b){
+    b.onclick = function(){ _bteVacForm(b.getAttribute('data-bte-vac-edit')); };
+  });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-bte-vac-est]'), function(b){
     b.onclick = function(){
-      var id = b.getAttribute('data-bt-resp-inv'), val = b.getAttribute('data-val');
-      var inv = db.invitaciones.find(function(i){ return i.id === id; });
-      if(inv){
-        inv.estado = val;
-        inv.respondida_en = new Date().toISOString();
-        _btGuardarDb(db);
-        toast(val === 'aceptada' ? 'Entrevista aceptada. Tus datos de contacto fueron compartidos.' : 'Invitación rechazada.');
-        _btPintar();
-      }
+      var est = b.getAttribute('data-bte-vac-est'), id = b.getAttribute('data-id');
+      var ir = function(){
+        b.disabled = true;
+        sbRpc('bt_vacante_estado', { p_emp:BTE.emp, p_id:id, p_estado:est }).then(function(r){
+          if(r && r.ok){ toast(est === 'pausada' ? 'Vacante pausada: los alumnos ya no la ven.' : est === 'cerrada' ? 'Vacante cerrada.' : 'Vacante activa otra vez.'); _bteCargar(); }
+          else { b.disabled = false; toast('No se pudo cambiar. Inténtalo otra vez.'); }
+        }, function(){ b.disabled = false; toast('Sin conexión: no se cambió.'); });
+      };
+      if(est === 'cerrada' && typeof confirmar === 'function'){
+        confirmar('¿Cerrar esta vacante?', 'Los alumnos ya no la ven ni pueden postular. Las postulaciones y entrevistas que tiene se quedan; puedes reabrirla después.', { si:'Cerrar la vacante' })
+          .then(function(si){ if(si) ir(); });
+      } else ir();
     };
   });
-
-  /* Postular a vacante (candidato) */
-  Array.prototype.forEach.call(document.querySelectorAll('[data-bt-postular]'), function(b){
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-bte-post-est]'), function(b){
     b.onclick = function(){
-      var vid = b.getAttribute('data-bt-postular');
-      db.postulaciones.push({
-        id: 'pos-' + Date.now(),
-        vacante_id: vid,
-        perfil_id: db.perfiles[0].id,
-        estado: 'nueva'
-      });
-      _btGuardarDb(db);
-      toast('Postulación enviada a la empresa.');
-      _btPintar();
+      b.disabled = true;
+      var est = b.getAttribute('data-bte-post-est');
+      sbRpc('bt_postulacion_estado', { p_emp:BTE.emp, p_vacante:b.getAttribute('data-vac'), p_pid:b.getAttribute('data-pid'), p_estado:est }).then(function(r){
+        if(r && r.ok){ toast(est === 'descartada' ? 'Postulación descartada (el candidato solo ve que ya la viste).' : 'Listo: la postulación vuelve a la lista.'); _bteCargar(); }
+        else { b.disabled = false; toast('No se pudo cambiar. Inténtalo otra vez.'); }
+      }, function(){ b.disabled = false; toast('Sin conexión: no se cambió.'); });
     };
   });
-
-  /* Visibilidad de perfil */
-  var chkVis = document.getElementById('bt-chk-vis');
-  if(chkVis) chkVis.onchange = function(){
-    db.perfiles[0].visible = chkVis.checked;
-    _btGuardarDb(db);
-    var txt = document.getElementById('bt-txt-vis');
-    if(txt) txt.textContent = chkVis.checked ? 'Visible' : 'Oculto';
-    toast(chkVis.checked ? 'Tu perfil es visible en búsquedas de empresas.' : 'Tu perfil está oculto en la bolsa.');
-  };
-
-  /* Crear vacante */
-  var bv = document.getElementById('bt-b-crear-vac');
-  if(bv) bv.onclick = function(){ BTW.creandoVacante = true; _btPintar(); };
-  var cbv = document.getElementById('bt-b-canc-vac');
-  if(cbv) cbv.onclick = function(){ BTW.creandoVacante = false; _btPintar(); };
-  var fv = document.getElementById('bt-form-vacante');
-  if(fv) fv.onsubmit = function(ev){
-    ev.preventDefault();
-    var nVac = {
-      id: 'vac-' + Date.now(),
-      cargo: document.getElementById('bt-v-cargo').value,
-      sector: document.getElementById('bt-v-sec').value,
-      obra: (window.YO && YO.obra && YO.obra.nombre) || 'Obra Principal',
-      experiencia_min: +document.getElementById('bt-v-exp').value || 1,
-      modalidad: document.getElementById('bt-v-mod').value,
-      distrito: 'Lima',
-      requisitos: document.getElementById('bt-v-req').value,
-      fecha_inicio: new Date().toISOString().slice(0, 10),
-      estado: 'activa'
-    };
-    db.vacantes.push(nVac);
-    _btGuardarDb(db);
-    BTW.creandoVacante = false;
-    toast('Vacante publicada con éxito.');
-    _btPintar();
-  };
-
-  /* Pausar / Activar vacante */
-  Array.prototype.forEach.call(document.querySelectorAll('[data-bt-pausar]'), function(b){
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-bte-retirar]'), function(b){
     b.onclick = function(){
-      var v = db.vacantes.find(function(x){ return x.id === b.getAttribute('data-bt-pausar'); });
-      if(v){ v.estado = 'pausada'; _btGuardarDb(db); _btPintar(); }
-    };
-  });
-  Array.prototype.forEach.call(document.querySelectorAll('[data-bt-activar]'), function(b){
-    b.onclick = function(){
-      var v = db.vacantes.find(function(x){ return x.id === b.getAttribute('data-bt-activar'); });
-      if(v){ v.estado = 'activa'; _btGuardarDb(db); _btPintar(); }
+      var ir = function(){
+        b.disabled = true;
+        sbRpc('bt_invitacion_retirar', { p_emp:BTE.emp, p_id:b.getAttribute('data-bte-retirar') }).then(function(r){
+          if(r && r.ok){ toast('Invitación retirada: ya no le aparece al candidato.'); _bteCargar(); }
+          else { b.disabled = false; toast('Ya respondió o ya no está para retirar.'); _bteCargar(); }
+        }, function(){ b.disabled = false; toast('Sin conexión: no se retiró.'); });
+      };
+      if(typeof confirmar === 'function') confirmar('¿Retirar la invitación?', 'Ya no le aparece al candidato.', { si:'Retirar' }).then(function(si){ if(si) ir(); });
+      else ir();
     };
   });
 }

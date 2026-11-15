@@ -189,18 +189,19 @@ function _acadLeer(k){
 }
 /* quién aprende y en qué obra (para la práctica, que va aparte por obra) */
 function _acadSesion(){
-  var P = _acadPadre(), uid = '', obra = '';
+  var P = _acadPadre(), uid = '', obra = '', correo = '';
   if(P){
-    try{ if(P.TOK && P.TOK.uid) uid = String(P.TOK.uid); }catch(e){}
+    try{ if(P.TOK && P.TOK.uid){ uid = String(P.TOK.uid); correo = String(P.TOK.correo || ''); } }catch(e){}
     try{ var e = (typeof P.empActiva === 'function') ? P.empActiva() : null; if(e && e.id) obra = String(e.id); }catch(e2){}
   } else {
     var c = _acadLeer('sstp_cuenta'); if(!(c && c.uid)) c = _acadLeer('sstc_cuenta');
-    if(c && c.uid) uid = String(c.uid);
+    if(c && c.uid){ uid = String(c.uid); correo = String(c.correo || ''); }
     var o = _acadLeer('sstp_obra'); if(o && typeof o === 'object') o = o.id;
     if(!o){ var em = _acadLeer('sstc_empresa'); o = em && em.id; }
     if(o) obra = String(o);
   }
-  TOK = uid ? { uid:uid } : null;
+  /* 15/11/2026 · el correo de la cuenta: la Bolsa de trabajo lo propone para el contacto (la persona lo cambia) */
+  TOK = uid ? { uid:uid, correo:correo } : null;
   YO.obra = obra ? { id:obra } : null;
   return uid + '|' + obra;
 }
@@ -304,6 +305,8 @@ function acadArrancar(){
    prueba). Solo si cambió la cuenta o la obra se vuelve a armar. */
 function acadPausar(){
   try{ if(typeof CURP !== 'undefined' && CURP && CURP.lec){ _ACADP.pausa = CURP.lec; _curDesmontarPlayer(); } }catch(e){}
+  /* 15/11/2026 · la voz de Koda (también la de una tarjeta del modo Jugando) se calla al dejar la pantalla */
+  try{ if(typeof _curPausarTodo === 'function') _curPausarTodo(); }catch(e){}
 }
 function acadVolver(){
   try{ _acadCta(); }catch(e){}
@@ -318,7 +321,7 @@ document.addEventListener('visibilitychange', function(){
   else { var f = null; try{ f = window.frameElement; }catch(e){} if(!f || f.offsetParent) acadVolver(); }
 });
 </script>
-<script src="cursos.js?v=64425e60a1" onerror="window.__acadSinMotor = true"></script>
+<script src="cursos.js?v=24f52faf6e" onerror="window.__acadSinMotor = true"></script>
 <script>
 (function(){
   _acadLetra();
