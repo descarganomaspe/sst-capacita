@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Videollamada con traducción · OBRASST</title>
+<meta name="description" content="Cada uno habla en su idioma y lee lo que dice el otro, traducido.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0B2A3A">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* 15/11/2026 · Videollamada con traducción (piloto, sin publicar). Todo el código está en llamada.js: esta página no lleva
+   scripts en línea, así sirve aunque un día se le ponga la política cerrada (script-src 'self'). */
+:root{ --fondo:#F4F6F8; --panel:#fff; --raya:#E3E8EC; --tinta:#0B2A3A; --texto:#22323D; --gris:#62737F; --casco:#F5B700;
+  --ok:#1E8E5A; --ok-f:#E8F5EE; --ojo:#8A5200; --ojo-f:#FBF3E4; --mal:#C6323A; --mal-f:#FBE9EA;
+  --f:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; --mono:'IBM Plex Mono', ui-monospace, Menlo, monospace; }
+*{box-sizing:border-box} [hidden]{display:none!important}
+html,body{margin:0; background:var(--fondo); color:var(--texto); font:15px/1.5 var(--f); -webkit-font-smoothing:antialiased}
+.barra{background:var(--tinta); color:#fff; padding:13px 16px; display:flex; gap:10px; align-items:center}
+.barra b{letter-spacing:.05em} .barra i{display:inline-block; width:14px; height:4px; background:var(--casco); border-radius:2px} .barra span{color:#9FB6C4}
+main{max-width:720px; margin:0 auto; padding:18px 16px 40px}
+h1{font-size:22px; line-height:1.25; color:var(--tinta); margin:0 0 4px; text-wrap:balance}
+h2{font-size:16px; color:var(--tinta); margin:0 0 10px}
+.gris{color:var(--gris); font-size:13.5px}
+.tarj{background:var(--panel); border:1px solid var(--raya); border-radius:12px; padding:16px; margin:14px 0}
+label.campo{display:block; font-size:13.5px; color:var(--gris); margin:0 0 4px}
+input,select{width:100%; min-height:46px; font:16px var(--f); color:var(--texto); background:var(--panel); border:1px solid var(--raya); border-radius:10px; padding:9px 12px}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--casco); outline-offset:2px}
+.fila{display:grid; grid-template-columns:1fr 1fr; gap:12px} @media (max-width:520px){ .fila{grid-template-columns:1fr} }
+.bt{display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:46px; border:0; border-radius:10px; padding:10px 16px;
+  font:600 15px var(--f); cursor:pointer; background:var(--tinta); color:#fff; text-decoration:none}
+.bt.casco{background:var(--casco); color:var(--tinta)} .bt.claro{background:var(--fondo); color:var(--tinta); border:1px solid var(--raya)}
+.bt.rojo{background:var(--mal); color:#fff} .bt:disabled{opacity:.55; cursor:default}
+.unir{display:flex; gap:10px; flex-wrap:wrap} .unir input{flex:1 1 180px; font-family:var(--mono); letter-spacing:.08em; text-transform:uppercase}
+.aviso{border-radius:10px; padding:10px 12px; margin:10px 0; font-size:14px; border:1px solid}
+.aviso.ok{background:var(--ok-f); border-color:#BFE3CE; color:#145C3B} .aviso.ojo{background:var(--ojo-f); border-color:#EED9A8; color:var(--ojo)}
+.aviso.mal{background:var(--mal-f); border-color:#F0C9CC; color:var(--mal)}
+.codigo{font:600 26px/1.2 var(--mono); letter-spacing:.12em; color:var(--tinta); margin:4px 0 10px; overflow-wrap:anywhere}
+.acciones{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.pide{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; border:1px solid var(--casco); background:#FFF8E1; border-radius:10px; padding:10px 12px; margin:10px 0}
+.pide b{color:var(--tinta)}
+.pie{max-width:720px; margin:0 auto; padding:6px 16px 28px; color:var(--gris); font-size:13px} .pie a{color:inherit}
+
+/* ── la sala ── */
+body.en-sala{background:#06141C} body.en-sala .barra,body.en-sala .pie{display:none}
+#sala{position:fixed; inset:0; display:flex; flex-direction:column; background:#06141C; color:#fff}
+.escena{position:relative; flex:1 1 auto; min-height:0; overflow:hidden; background:#0B1F2A}
+#v-otro{width:100%; height:100%; object-fit:cover; background:#0B1F2A}
+#v-yo{position:absolute; top:12px; right:12px; width:min(30vw,170px); aspect-ratio:3/4; object-fit:cover; border-radius:12px; border:2px solid rgba(255,255,255,.35); background:#123; transform:scaleX(-1)}
+.arriba{position:absolute; top:12px; left:12px; right:calc(min(30vw,170px) + 24px); display:flex; flex-wrap:wrap; gap:6px}
+.chip{background:rgba(6,20,28,.72); border:1px solid rgba(255,255,255,.18); border-radius:999px; padding:4px 10px; font-size:12.5px; line-height:1.3}
+.chip.casco{border-color:var(--casco); color:var(--casco)} .chip.mal{border-color:#F08A8F; color:#FFC9CC}
+button.chip{color:inherit; font:inherit; font-size:12.5px; cursor:pointer}
+.sin-video{position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:24px; color:#9FB6C4; font-size:15px}
+.subs{position:absolute; left:0; right:0; bottom:0; padding:12px 14px 14px; display:grid; gap:6px; justify-items:center; pointer-events:none}
+.sub{max-width:min(940px,100%); background:rgba(6,20,28,.82); border-radius:12px; padding:8px 14px; text-align:center}
+#sub-orig{font-size:14px; color:#C9D7E0} #sub-tr{font-size:clamp(20px,4.6vw,30px); font-weight:600; line-height:1.3}
+.prov{opacity:.72} .etq{display:inline-block; font:600 11px/1 var(--mono); color:var(--tinta); background:var(--casco); border-radius:5px; padding:3px 5px; margin-right:7px; vertical-align:middle}
+#mio{background:#0E2633; border-top:1px solid rgba(255,255,255,.08); padding:8px 14px; font-size:13.5px; color:#C9D7E0; min-height:38px}
+#mio b{color:#fff; font-weight:600} #mio .tr{color:var(--casco)}
+.panel{background:#0B1F2A; border-top:1px solid rgba(255,255,255,.08); padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+#estado{font-size:13px; color:#FFD27A; min-height:0; margin:0 0 8px} #estado:empty{display:none} #estado.mal{color:#FFC9CC}
+.mandos{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
+.mando{min-width:64px; min-height:52px; border-radius:12px; border:1px solid rgba(255,255,255,.18); background:#123342; color:#fff; font:600 12.5px var(--f); cursor:pointer; padding:6px 10px; display:grid; place-items:center; gap:2px}
+.mando .ic{font-size:19px; line-height:1} .mando.apagado{background:#3A1E22; border-color:#7A3A40} .mando.colgar{background:var(--mal); border-color:var(--mal)}
+#escribir{display:flex; gap:8px; margin-top:8px} #escribir input{background:#123342; color:#fff; border-color:rgba(255,255,255,.18); min-height:44px}
+#escribir .bt{min-height:44px; background:var(--casco); color:var(--tinta)}
+#registro{position:absolute; inset:0; background:rgba(6,20,28,.96); overflow:auto; padding:14px 14px 80px; z-index:3}
+#registro .ln{border-bottom:1px solid rgba(255,255,255,.08); padding:8px 0} #registro .quien{font-size:12px; color:#9FB6C4}
+#registro .o{font-size:14.5px} #registro .t{font-size:15.5px; color:var(--casco)}
+/* arriba a la izquierda, uno debajo del otro (no se tapan): los rótulos, el aviso y la hoja del código */
+.arriba{flex-direction:column; flex-wrap:nowrap; align-items:stretch; gap:8px; z-index:2} .chips{display:flex; flex-wrap:wrap; gap:6px}
+.hoja{max-width:520px; background:var(--panel); color:var(--texto); border-radius:12px; padding:14px; box-shadow:0 8px 30px rgba(0,0,0,.35)}
+.hoja .codigo{font-size:22px}
+#registro .acciones{position:sticky; top:0; background:rgba(6,20,28,.96); padding:0 0 10px}
+.aviso-sala{max-width:520px; font-size:13.5px; background:rgba(138,82,0,.92); color:#fff; border-radius:10px; padding:8px 12px}
+@media (max-width:600px){
+  #v-yo{width:84px; top:10px; right:10px; border-radius:10px} .arriba{top:10px; left:10px; right:104px}
+  .mandos{flex-wrap:nowrap; gap:6px} .mando{flex:1 1 0; min-width:0; padding:6px 2px; font-size:11.5px}
+  .hoja{padding:12px} .hoja .codigo{font-size:19px} .hoja .bt{padding:10px 12px}
+}
+.aviso-sala button{background:none; border:0; color:#fff; font:600 13px var(--f); text-decoration:underline; cursor:pointer; padding:0 0 0 6px}
+/* 15/11/2026 · la reunión: lo dicho, notas, resumen y acta; compartir pantalla; tu cara al instante */
+.previa{display:block; width:min(100%,320px); aspect-ratio:4/3; object-fit:cover; border-radius:12px; background:#123; margin:12px 0; transform:scaleX(-1)}
+#v-otro.pantalla{object-fit:contain; background:#000}
+#v-yo.pantalla{transform:none; object-fit:contain; background:#000}
+.reu-top{position:sticky; top:-14px; background:#06141C; margin:-14px -14px 10px; padding:12px 14px 10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; z-index:1; border-bottom:1px solid rgba(255,255,255,.1)}
+.tabs{display:flex; gap:4px; background:#123342; border-radius:10px; padding:3px; margin-right:auto}
+.tabs button{border:0; background:none; color:#C9D7E0; font:600 13.5px var(--f); padding:8px 12px; border-radius:8px; cursor:pointer; min-height:38px}
+.tabs button[aria-selected="true"]{background:var(--casco); color:var(--tinta)}
+.reu-top .bt{min-height:38px; padding:6px 12px; font-size:13.5px}
+#registro .ln{display:grid; grid-template-columns:1fr auto; gap:4px 10px} #registro .ln .estrella{grid-row:1/4; grid-column:2; background:none; border:0; font-size:20px; cursor:pointer; color:#9FB6C4; min-width:40px; min-height:40px}
+#registro .ln.clave{background:rgba(245,183,0,.08); border-left:3px solid var(--casco); padding-left:8px}
+#notas{width:100%; min-height:90px; background:#0E2633; color:#fff; border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:10px 12px; font:15px/1.5 var(--f); resize:vertical}
+.res-caja{background:#0E2633; border-radius:10px; padding:12px 14px; margin:10px 0; white-space:pre-wrap; font-size:14.5px}
+.res-caja h3{margin:0 0 6px; font-size:14px; color:var(--casco)} .res-gris{color:#9FB6C4; font-size:13px}
+.reu-fin{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px}
+#registro .bt.claro{background:#123342; color:#fff; border-color:rgba(255,255,255,.18)}
+.ultima pre{white-space:pre-wrap; font:13px/1.45 var(--mono); background:var(--fondo); border-radius:8px; padding:10px; max-height:260px; overflow:auto; margin:10px 0 0}
+#impresion{display:none}
+/* 15/11/2026 (tanda 3) · «Traducir a», la letra de los subtítulos y la grabación */
+#chip-trad{display:inline-flex; align-items:center; gap:6px; padding:2px 4px 2px 10px}
+#chip-trad select{min-height:28px; width:auto; padding:2px 6px; font-size:12.5px; border-radius:999px; background:#123342; color:#fff; border:1px solid rgba(255,255,255,.25)}
+#chip-trad select:disabled{opacity:.85}
+#sala.letra-g #sub-tr{font-size:clamp(26px,6vw,40px)} #sala.letra-g #sub-orig{font-size:17px}
+#sala.letra-xg #sub-tr{font-size:clamp(32px,8vw,54px)} #sala.letra-xg #sub-orig{font-size:20px}
+#sala.fondo-vidrio .sub{background:rgba(255,255,255,.16); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px)}
+#sala.fondo-sin .sub{background:none; text-shadow:0 2px 6px #000, 0 0 2px #000}
+.hoja .cerrar{float:right; background:none; border:0; font-size:20px; line-height:1; color:var(--gris); cursor:pointer; min-width:36px; min-height:36px; margin:-8px -8px 0 0}
+.opciones{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 16px}
+.opciones button{border:1px solid rgba(255,255,255,.2); background:#123342; color:#fff; font:600 14px var(--f); padding:9px 14px; border-radius:10px; cursor:pointer; min-height:42px}
+.opciones button[aria-pressed="true"]{background:var(--casco); color:var(--tinta); border-color:var(--casco)}
+#grabado{position:fixed; left:12px; right:12px; bottom:12px; z-index:20; max-width:560px; margin:0 auto; background:var(--panel); color:var(--texto); border-radius:14px; padding:14px; box-shadow:0 10px 40px rgba(0,0,0,.45)}
+#grabado b{color:var(--tinta)}
+/* 15/11/2026 (tanda 4) · las notas al costado: se apunta sin tapar la llamada (en el celular, debajo del video) */
+.cuerpo{flex:1 1 auto; min-height:0; display:flex}
+.cuerpo > .escena{flex:1 1 auto; min-width:0}
+#lado{flex:0 0 340px; display:flex; flex-direction:column; gap:8px; min-height:0; overflow:auto; background:#0B1F2A; border-left:1px solid rgba(255,255,255,.1); padding:12px}
+.lado-top{display:flex; align-items:center; gap:8px} .lado-top b{color:#fff; font-size:15px} .lado-top .res-gris{margin-right:auto}
+.cerrar-lado{background:none; border:0; color:#9FB6C4; font-size:18px; cursor:pointer; min-width:36px; min-height:36px}
+#lado #notas{flex:1 1 auto; min-height:90px}
+.lado-acciones{display:flex; flex-wrap:wrap; gap:8px} .lado-acciones .bt{min-height:38px; padding:6px 12px; font-size:13.5px; background:#123342; color:#fff; border:1px solid rgba(255,255,255,.18)}
+.mando.activo{background:#1D4A5E; border-color:var(--casco)}
+#aviso-voz{font-size:13px; color:#FFC9CC; margin:0 0 8px}
+#aviso-voz .enlace{background:none; border:0; color:#fff; font:600 13px var(--f); text-decoration:underline; cursor:pointer; padding:0 0 0 4px}
+@media (max-width:760px){
+  /* en el celular, debajo del video: sin montarse sobre «Tú: …» ni los botones; el video nunca baja de 140 px */
+  .cuerpo{flex-direction:column}
+  .cuerpo > .escena{min-height:140px}
+  #lado{flex:0 1 auto; max-height:42%; border-left:0; border-top:1px solid rgba(255,255,255,.1); padding:10px}
+  #lado #notas{min-height:56px}
+  #lado > p[data-t="notas-ayuda"]{display:none}
+}
+@media (max-width:380px){ .mando{font-size:10.5px} }
+@media print{
+  body *{visibility:hidden!important} #impresion,#impresion *{visibility:visible!important}
+  #impresion{display:block!important; position:absolute; left:0; top:0; width:100%; color:#000; background:#fff; font:12pt/1.45 'IBM Plex Sans', system-ui, sans-serif; white-space:pre-wrap}
+  body.en-sala, html{background:#fff!important} #sala{position:static!important}
+}
+</style>
+</head>
+<body>
+<header class="barra"><i></i><b>OBRASST</b><span data-t="titulo">Videollamada con traducción</span></header>
+
+<main id="entrada">
+  <h1 data-t="titulo">Videollamada con traducción</h1>
+  <p class="gris" data-t="lema">Cada uno habla en su idioma y lee lo que dice el otro, traducido. Es para dos personas.</p>
+
+  <section class="tarj" aria-labelledby="t-tu">
+    <h2 id="t-tu" data-t="tus-datos">Tus datos</h2>
+    <div class="fila">
+      <div><label class="campo" for="nombre" data-t="tu-nombre">Tu nombre</label><input id="nombre" maxlength="40" autocomplete="given-name"></div>
+      <div><label class="campo" for="idioma" data-t="hablas">Hablas</label><select id="idioma"></select></div>
+    </div>
+    <div id="aviso-motor" class="aviso" role="status"></div>
+  </section>
+
+  <section class="tarj" aria-labelledby="t-sala">
+    <h2 id="t-sala" data-t="sala">La sala</h2>
+    <div id="invitado" class="aviso ok" hidden></div>
+    <div class="acciones"><button class="bt casco" id="b-crear" type="button" data-t="crear">Crear sala</button></div>
+    <p class="gris" style="margin:14px 0 6px" data-t="o-codigo">¿Te pasaron un código?</p>
+    <form class="unir" id="f-unir">
+      <label for="codigo" class="campo" hidden>Código</label>
+      <input id="codigo" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="14" placeholder="ABCD-EFGH-JK">
+      <button class="bt" type="submit" data-t="unirme">Unirme</button>
+    </form>
+    <div id="msg-entrada" class="aviso" hidden role="alert"></div>
+  </section>
+
+  <section class="tarj ultima" id="ultima" hidden aria-labelledby="t-ultima">
+    <h2 id="t-ultima" data-t="ultima">Tu última reunión</h2>
+    <p class="gris" id="ultima-dato" style="margin:0 0 10px"></p>
+    <div class="acciones">
+      <button class="bt casco" id="u-resumen" type="button" data-t="hacer-resumen">Hacer el resumen</button>
+      <button class="bt" id="u-acta" type="button" data-t="descargar-acta">Descargar el acta</button>
+      <button class="bt claro" id="u-imprimir" type="button" data-t="imprimir">Imprimir o guardar en PDF</button>
+      <button class="bt claro" id="u-borrar" type="button" data-t="borrar">Borrar</button>
+    </div>
+    <div id="ultima-res"></div>
+    <pre id="ultima-acta" hidden></pre>
+  </section>
+
+  <p class="gris" data-t="privacidad">Para pasar tu voz a texto, Chrome manda el audio a Google. El video va directo entre los dos equipos. Los subtítulos pasan por el servidor de OBRASST y no se guardan. Lo traducido siempre sale junto al original.</p>
+</main>
+
+<main id="tocando" hidden>
+  <h1 data-t="tocando">Pidiendo permiso para entrar…</h1>
+  <p class="gris" data-t="tocando-2">Quien creó la sala tiene que dejarte entrar.</p>
+  <video id="v-previa" class="previa" autoplay playsinline muted></video>
+  <div id="msg-tocando" class="aviso" hidden role="alert"></div>
+  <button class="bt claro" id="b-cancelar" type="button" data-t="cancelar">Cancelar</button>
+</main>
+
+<section id="sala" hidden aria-label="Videollamada">
+  <div class="cuerpo">
+  <div class="escena">
+    <video id="v-otro" autoplay playsinline></video>
+    <div class="sin-video" id="sin-video" data-t="sin-video">Esperando el video de la otra persona…</div>
+    <video id="v-yo" autoplay playsinline muted></video>
+    <div class="arriba">
+    <div class="chips">
+      <span class="chip" id="chip-otro"></span>
+      <label class="chip" id="chip-trad"><span data-t="traducir-a">Traducir a</span><select id="traducir-a"></select></label>
+      <button class="chip casco" id="chip-motor" type="button" hidden></button>
+      <span class="chip" id="chip-sala"></span>
+      <span class="chip mal" id="chip-graba" hidden></span>
+    </div>
+    <div class="hoja" id="panel-sala" hidden>
+      <button class="cerrar" id="panel-cerrar" type="button" aria-label="Cerrar">✕</button>
+      <p class="gris" style="margin:0" data-t="comparte">Comparte este código o el enlace con la otra persona:</p>
+      <div class="codigo" id="codigo-sala"></div>
+      <div class="acciones">
+        <button class="bt" id="b-copiar" type="button" data-t="copiar">Copiar el enlace</button>
+        <button class="bt claro" id="b-compartir" type="button" data-t="compartir" hidden>Compartir</button>
+      </div>
+      <div id="pedidos"></div>
+      <p class="gris" id="esperando" style="margin:10px 0 0" data-t="esperando">Esperando que alguien entre…</p>
+      <p class="gris" style="margin:8px 0 0" data-t="solo-ayuda">¿Vas solo? Habla y verás la traducción en pantalla; también puedes compartir tu pantalla y grabarte sin esperar a nadie.</p>
+    </div>
+    <div class="aviso-sala" id="aviso-sala" hidden><span id="aviso-sala-t"></span><button type="button" id="aviso-sala-ok" data-t="entendido">Entendido</button></div>
+    </div>
+    <div class="subs" aria-live="polite">
+      <div class="sub" id="sub-orig" hidden></div>
+      <div class="sub" id="sub-tr" hidden></div>
+    </div>
+    <div id="registro" hidden>
+      <div class="reu-top">
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" data-tab="dicho" aria-selected="true" data-t="tab-dicho">Lo dicho</button>
+          <button type="button" role="tab" data-tab="resumen" aria-selected="false" data-t="tab-resumen">Resumen</button>
+          <button type="button" role="tab" data-tab="letra" aria-selected="false" data-t="tab-letra">Letra</button>
+        </div>
+        <button class="bt claro" id="b-voz" type="button"></button>
+        <button class="bt claro" id="b-cerrar-reg" type="button" data-t="cerrar">Cerrar</button>
+      </div>
+      <div id="tab-dicho"></div>
+      <div id="tab-resumen" hidden>
+        <p class="res-gris" data-t="resumen-ayuda">El resumen se arma con lo dicho, tus notas y lo que marcaste con ⭐. Revísalo antes de mandarlo.</p>
+        <button class="bt casco" id="b-resumen" type="button" data-t="hacer-resumen">Hacer el resumen</button>
+        <div id="res-salida"></div>
+      </div>
+      <div id="tab-letra" hidden>
+        <p class="res-gris" data-t="letra-ayuda">Así salen los subtítulos en pantalla y en lo que grabes.</p>
+        <p class="res-gris" style="margin:12px 0 0" data-t="letra-tam">Tamaño de los subtítulos</p>
+        <div class="opciones"><button type="button" data-letra="n" data-t="tam-n">Normal</button><button type="button" data-letra="g" data-t="tam-g">Grande</button><button type="button" data-letra="xg" data-t="tam-xg">Enorme</button></div>
+        <p class="res-gris" style="margin:0" data-t="letra-fondo">Fondo de los subtítulos</p>
+        <div class="opciones"><button type="button" data-fondo="oscuro" data-t="fondo-oscuro">Oscuro</button><button type="button" data-fondo="vidrio" data-t="fondo-vidrio">Vidrio</button><button type="button" data-fondo="sin" data-t="fondo-sin">Sin fondo</button></div>
+      </div>
+      <div class="reu-fin">
+        <button class="bt" id="b-acta" type="button" data-t="descargar-acta">Descargar el acta</button>
+        <button class="bt claro" id="b-imprimir" type="button" data-t="imprimir">Imprimir o guardar en PDF</button>
+        <button class="bt claro" id="b-copiar-todo" type="button" data-t="copiar-todo">Copiar la conversación</button>
+      </div>
+    </div>
+  </div>
+  <aside id="lado" hidden aria-labelledby="lado-t">
+    <div class="lado-top"><b id="lado-t" data-t="m-notas">Notas</b><span class="res-gris" id="notas-guardado" aria-live="polite"></span><button class="cerrar-lado" id="lado-cerrar" type="button" aria-label="Cerrar las notas">✕</button></div>
+    <p class="res-gris" id="notas-aviso" style="margin:0; color:var(--casco)" hidden></p>
+    <textarea id="notas" spellcheck="true" aria-labelledby="lado-t"></textarea>
+    <div class="lado-acciones"><button class="bt claro" id="n-ultimo" type="button" data-t="n-ultimo">+ Lo último dicho</button><button class="bt claro" id="n-hora" type="button" data-t="n-hora">⏱ Hora</button></div>
+    <p class="res-gris" style="margin:0" data-t="notas-ayuda">Se guardan solas, solo en este equipo, y salen en el acta.</p>
+  </aside>
+  </div>
+  <div id="mio" aria-live="off"></div>
+  <div class="panel">
+    <p id="aviso-voz" role="status" hidden></p>
+    <p id="estado" role="status"></p>
+    <div class="mandos">
+      <button class="mando" id="m-mic" type="button"><span class="ic">🎙️</span><span data-t="m-mic">Micrófono</span></button>
+      <button class="mando" id="m-cam" type="button"><span class="ic">📷</span><span data-t="m-cam">Cámara</span></button>
+      <button class="mando" id="m-pantalla" type="button" hidden><span class="ic">🖥️</span><span data-t="m-pantalla">Pantalla</span></button>
+      <button class="mando" id="m-grabar" type="button" hidden><span class="ic">⏺</span><span data-t="m-grabar">Grabar</span></button>
+      <button class="mando" id="m-marcar" type="button"><span class="ic">⭐</span><span data-t="m-marcar">Marcar</span></button>
+      <button class="mando" id="m-notas" type="button" aria-pressed="false"><span class="ic">📝</span><span data-t="m-notas">Notas</span></button>
+      <button class="mando" id="m-reunion" type="button"><span class="ic">📋</span><span data-t="m-reunion">Reunión</span></button>
+      <button class="mando colgar" id="m-colgar" type="button"><span class="ic">✕</span><span data-t="m-colgar">Colgar</span></button>
+    </div>
+    <form id="escribir"><input id="escribir-t" maxlength="400" autocomplete="off" placeholder="Escribe aquí si no puedes hablar"><button class="bt" type="submit" data-t="enviar">Enviar</button></form>
+  </div>
+</section>
+
+<div id="impresion" aria-hidden="true"></div>
+<section id="grabado" hidden aria-live="polite">
+  <p style="margin:0 0 6px"><b id="grabado-t"></b></p>
+  <p class="gris" style="margin:0 0 10px" data-t="grabado-ayuda">El video ya trae los subtítulos. Los .srt sirven para YouTube y los editores de video. Nada de esto se sube a ningún lado.</p>
+  <div class="acciones">
+    <button class="bt casco" id="g-video" type="button" data-t="bajar-video">Descargar el video</button>
+    <button class="bt claro" id="g-srt-tr" type="button" data-t="srt-tr">Subtítulos traducidos (.srt)</button>
+    <button class="bt claro" id="g-srt-or" type="button" data-t="srt-or">Subtítulos originales (.srt)</button>
+    <button class="bt claro" id="g-cerrar" type="button" data-t="cerrar">Cerrar</button>
+  </div>
+</section>
+<footer class="pie">OBRASST · <a href="https://descarganomaspe.github.io/sst-capacita/?legal=terminos" target="_blank" rel="noopener">Términos</a> · <a href="https://descarganomaspe.github.io/sst-capacita/?legal=privacidad" target="_blank" rel="noopener">Privacidad</a></footer>
+<script src="volver-app.js?v=9030324eae"></script>
+<script src="llamada.js?v=7fa0336d96"></script>
+</body>
+</html>
