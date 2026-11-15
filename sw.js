@@ -1,4 +1,4 @@
-var CACHE = 'sstc-986579bfde-a';
+var CACHE = 'sstc-f4f64da00c-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -19,7 +19,7 @@ var BASE = ['./', './index.html', './temas.js?v=1a67e4b3b9', './ubigeo-pe.js?v=6
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
             './intro.mp4',
             /* 14/11/2026 · la Academia (ACADEMIA-APP): la app la abre en un marco; sin señal también */
-            './portal/academia.html?v=992c4c1661', './portal/cursos.js?v=d51bc6c967', './portal/cursos/curso-01.json?v=0a02c69ca5'];
+            './portal/academia.html?v=1b098a6fb0', './portal/cursos.js?v=64425e60a1', './portal/cursos/curso-01.json?v=a178983c6a'];
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){
     /* uno por uno: si un icono falta, no se cae la instalacion entera */
