@@ -698,7 +698,6 @@ var IC = {
   os:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="7" rx="3.5"/><circle cx="16.5" cy="7.5" r="1.8"/><rect x="3.5" y="13" width="17" height="7" rx="3.5"/><circle cx="7.5" cy="16.5" r="1.8"/></svg>',
   codigos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v1.8a2.2 2.2 0 0 0 0 4.4V16a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-1.8a2.2 2.2 0 0 0 0-4.4z"/><path d="M14.5 7v1.6M14.5 11.2v1.6M14.5 15.4V17"/></svg>',
   comprobantes:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h8l3.5 3.5v13.5h-11.5z"/><path d="M14.5 3.5V7H18"/><path d="M9.5 11h6M9.5 14.5h6M9.5 18h3.5"/></svg>',
-  academia:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4.200c3.300 2.300 7.700 2.300 11 0V11.5"/><path d="M21.5 9.5v5"/></svg>',
   avisos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5v-5a6 6 0 1 1 12 0v5l1.8 2H4.2z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg>',
   reclamos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6c3-1.200 5.500-1.200 8.500.7 3-1.900 5.500-1.900 8.500-.7v12.500c-3-1.200-5.500-1.200-8.500.7-3-1.900-5.500-1.900-8.500-.7z"/><path d="M12 6.7v12.500"/></svg>'
 };
@@ -714,12 +713,11 @@ var VISTAS = [
   {id:'os',       n:'OBRASST OS',        c:'OS',       s:'Los interruptores de cada módulo (lo que no está construido no se enciende), los pedidos del Marketplace SST y el RNP que declara cada aliado'},
   {id:'reuniones', n:'Asistente de plan', c:'Citas', s:'Quién respondió «¿Qué plan te conviene?», qué le salió, y las reuniones de 15 minutos por Google Meet que pidieron'},
   {id:'codigos',  n:'Códigos',           c:'Códigos',  s:'Créalos cuando los vas a dar, anota para quién y busca el de un cliente'},
-  {id:'academia', n:'Academia',          c:'Academia', s:'Los códigos de acceso al curso completo de la Academia OBRASST: créalos cuando ya te pagaron; quién los activó y las constancias con QR que salieron'},
   {id:'avisos',   n:'Avisos',            c:'Avisos',   s:'Que cada falla te llegue al celular y a la PC, al instante'}
 ];
 var VISTA = { actual:null, recargar:null };
 function vistaDe(id){ return VISTAS.filter(function(v){ return v.id===id; })[0]; }
-function pintor(id){ return ({academia:vistaAcadConsola, resumen:vistaResumen, fallas:vistaFallas, reclamos:vistaReclamos, ventas:vistaVentas, comprobantes:vistaComprobantes, empresas:vistaEmpresas, central:vistaCentral, aliados:vistaAliados, os:vistaOs, reuniones:vistaReuniones, codigos:vistaCodigos, avisos:vistaAvisos})[id]; }
+function pintor(id){ return ({resumen:vistaResumen, fallas:vistaFallas, reclamos:vistaReclamos, ventas:vistaVentas, comprobantes:vistaComprobantes, empresas:vistaEmpresas, central:vistaCentral, aliados:vistaAliados, os:vistaOs, reuniones:vistaReuniones, codigos:vistaCodigos, avisos:vistaAvisos})[id]; }
 function navegar(id, desdeHistoria){
   var v = vistaDe(id); if(!v) v = VISTAS[0];
   var antes = VISTA.actual;
@@ -3023,190 +3021,6 @@ function oscRnp(x){
   };
 }
 
-/* ── 15/11/2026 · Academia OBRASST (tanda 4): los códigos de acceso al curso completo (Marcelo cobra por Yape o
-   transferencia y entrega el código), qué cuenta activó cada uno y las constancias con folio que salieron del examen final
-   (las califica el servidor). SQL: 2026-11-14-academia-acceso-examen. ── */
-var ACP = { lista:[], cons:[], nuevos:null, curso:'curso-01', dias:30, temarios:{} };
-/* 15/11/2026 · dos cursos: cada código abre uno (el que se elige al crearlo) */
-var ACP_CURSOS = [{ id:'curso-01', t:'Fundamentos de SST en obra' }, { id:'curso-02', t:'Supervisor SST listo para obra' }];
-function _acpCursoT(id){ for(var i = 0; i < ACP_CURSOS.length; i++) if(ACP_CURSOS[i].id === id) return ACP_CURSOS[i].t; return id || ''; }
-function _acpBonito(c){ c = String(c || ''); return c.length === 11 ? c.slice(0, 3) + '-' + c.slice(3, 7) + '-' + c.slice(7) : c; }
-function _acpMensaje(cods, curso){
-  return 'Tu acceso a la Academia OBRASST (curso completo «' + _acpCursoT(curso || 'curso-01') + '»):\n' + cods.map(_acpBonito).join('\n') +
-    '\n\nCómo activarlo: entra a la Academia con tu cuenta de OBRASST, elige el curso, toca «Activar mi código» y escríbelo. Se activa una sola vez.';
-}
-function vistaAcadConsola(caja){
-  var armado = false;
-  cargando(caja);
-  function pinta(){
-    sbRpc('acad_admin_resumen', {}).then(function(r){
-      if(!r || !r.ok){ armado = false; noAbre(caja, r, null, '2026-11-14-academia-acceso-examen'); return; }
-      marcarActualizado();
-      ACP.lista = r.codigos || []; ACP.cons = r.constancias || [];
-      if(!armado || !$('acp-crear')){ armado = true; caja.innerHTML = _acpArmazon(); _acpCablear(); _acpPintarNuevos(); }
-      var k = r.cuentas || {};
-      $('acp-cifras').innerHTML = '<div class="rej">' +
-        cifra('Libres', num(k.libres || 0), 'creados y sin activar') +
-        cifra('Activados', num(k.usados || 0), 'cuentas con el curso completo', k.usados ? 'ok' : '') +
-        cifra('Exámenes', num(k.examenes_30d || 0), 'en 30 días · ' + num(k.aprobados_30d || 0) + ' aprobados') +
-        cifra('Constancias', num(k.constancias || 0), 'válidas, con QR') + '</div>';
-      _acpTablas();
-      _acpContadores();
-    }, function(cod){
-      if(armado && $('acp-crear')) return;
-      noAbre(caja, null, cod, '2026-11-14-academia-acceso-examen');
-    });
-  }
-  VISTA.recargar = function(silencio){ if(silencio && HOJA.abierta) return; pinta(); }; pinta();
-}
-function _acpArmazon(){
-  return '<div class="aviso">Cada código abre <b>un</b> curso completo de la Academia (sus módulos, el examen final y la constancia con QR) <b>una sola vez</b>, '+
-    'en la cuenta de OBRASST de quien lo escribe en la Academia («Activar mi código»). Créalo cuando ya te pagaron, elige el curso y anota para quién: así sabes cuál se usó. '+
-    'Si esa cuenta ya tenía el curso, el código no se gasta.</div>'+
-    '<div class="tarj"><div class="tarj-cab"><div><h2>Crear códigos de la Academia</h2><p class="sub">Un código abre un curso</p></div></div>'+
-    '<div class="tarj-cuerpo"><div class="cod-form">'+
-      '<div class="campo"><label for="acp-curso">Curso</label><select id="acp-curso">' + ACP_CURSOS.map(function(c){ return '<option value="' + c.id + '">' + esc(c.t) + '</option>'; }).join('') + '</select></div>'+
-      '<div class="campo"><label for="acp-cuantos">Cuántos</label><input id="acp-cuantos" class="cod-cuantos" type="number" min="1" max="50" value="1" inputmode="numeric"></div>'+
-      '<div class="campo"><label for="acp-para">Para quién <span class="gris-t">(opcional)</span></label>'+
-        '<input id="acp-para" maxlength="80" autocomplete="off" placeholder="Ej.: Ing. Rosa Díaz · pagó por Yape"></div>'+
-    '</div><button type="button" class="bt" id="acp-crear">Crear</button><div class="msg" id="acp-msg" aria-live="polite"></div><div id="acp-nuevos"></div></div></div>'+
-    '<div class="tarj"><div class="tarj-cab"><div><h2>Cómo va</h2><p class="sub">Los exámenes y las constancias los califica y los guarda el servidor.</p></div></div>'+
-      '<div class="tarj-cuerpo" id="acp-cifras"></div></div>'+
-    '<div class="tarj" id="t-acad-codigos"></div>'+
-    '<div class="tarj" id="t-acad-const"></div>'+
-    /* 15/11/2026 · tanda 3: los contadores sin nombres (acad_contar / acad_admin_contadores) */
-    '<div class="tarj"><div class="tarj-cab"><div><h2>Cómo se usa la Academia</h2><p class="sub">Conteos sin nombres: cada equipo cuenta una vez cada cosa. No dicen quién es nadie.</p></div>'+
-      '<div class="acciones"><select id="acp-ct-curso" aria-label="Curso">' + ACP_CURSOS.map(function(c){ return '<option value="' + c.id + '">' + esc(c.t) + '</option>'; }).join('') + '</select>'+
-      '<select id="acp-ct-dias" aria-label="Período"><option value="7">7 días</option><option value="30" selected>30 días</option><option value="90">90 días</option><option value="365">Un año</option></select></div></div>'+
-      '<div class="tarj-cuerpo" id="acp-contadores"><div class="vacio">Cargando…</div></div></div>';
-}
-/* el temario de cada curso, para poner nombre a los módulos y a las preguntas (lo publica la web en portal/cursos) */
-function _acpTemario(curso){
-  if(ACP.temarios[curso]) return Promise.resolve(ACP.temarios[curso]);
-  return fetch('../portal/cursos/' + curso + '.json', { cache:'no-cache' }).then(function(r){ if(!r.ok) throw r.status; return r.json(); })
-    .then(function(j){ ACP.temarios[curso] = j; return j; }, function(){ return null; });
-}
-function _acpContadores(){
-  var box = $('acp-contadores'); if(!box) return;
-  var curso = ACP.curso, dias = ACP.dias;
-  Promise.all([sbRpc('acad_admin_contadores', { p_curso:curso, p_dias:dias }), _acpTemario(curso)]).then(function(x){
-    var r = x[0], D = x[1] || { modulos:[] };
-    if(!r || !r.ok){ box.innerHTML = '<p class="msg mal">' + (r && r.motivo === 'no_eres_admin' ? 'Solo para la cuenta de Marcelo.' : 'No se pudo leer (¿falta correr el SQL 2026-11-15-academia-curso-02-y-contadores?).') + '</p>'; return; }
-    var F = {}; (r.filas || []).forEach(function(f){ F[f.evento + '|' + f.clave] = f.n; });
-    var g = function(e, k){ return F[e + '|' + (k || '')] || 0; };
-    var mods = (D.modulos || []);
-    var filas = mods.map(function(m){
-      var ab = g('abre', m.id), te = g('termina', m.id), pr = g('prueba', m.id), a1 = g('aprueba1', m.id);
-      return '<tr><td><b>' + esc(m.n ? 'Módulo ' + m.n : 'Inducción') + '</b><span class="sub">' + esc(m.titulo) + '</span></td><td class="num">' + num(ab) + '</td><td class="num">' + num(te) +
-        (ab ? '<span class="sub">' + Math.round(te * 100 / ab) + ' %</span>' : '') + '</td><td class="num">' + num(pr) + '</td><td class="num">' + num(a1) +
-        (pr ? '<span class="sub">' + Math.round(a1 * 100 / pr) + ' %</span>' : '') + '</td></tr>';
-    }).join('');
-    var fallas = (r.filas || []).filter(function(f){ return f.evento === 'falla'; }).sort(function(a, b){ return b.n - a.n; }).slice(0, 5).map(function(f){
-      var p = f.clave.split(':q'), m = mods.filter(function(x){ return x.id === p[0]; })[0], q = m && m.quiz && m.quiz[+p[1]];
-      return '<li><b>' + num(f.n) + '</b> · ' + esc(m ? (m.n ? 'Módulo ' + m.n : 'Inducción') : p[0]) + ' · ' + esc(q ? q.q : 'pregunta ' + (+p[1] + 1)) + '</li>';
-    }).join('');
-    box.innerHTML = '<div class="rej">' + cifra('Vuelven al día siguiente', num(g('vuelve1')), 'equipos') + cifra('Vuelven a los 7 días', num(g('vuelve7')), 'o más') +
-      cifra('Eligen Clásico', num(g('modo', 'clasico')), 'la primera vez') + cifra('Eligen Jugando', num(g('modo', 'jugando')), 'la primera vez') +
-      cifra('Aprueban el examen final', num(g('final', curso)), 'en el período', g('final', curso) ? 'ok' : '') + '</div>' +
-      '<div class="tabla-caja" style="overflow-x:auto;margin-top:12px"><table class="tabla"><thead><tr><th>Módulo</th><th class="num">Abren</th><th class="num">Terminan</th><th class="num">Dan la prueba</th><th class="num">Aprueban al 1.er intento</th></tr></thead><tbody>' +
-      (filas || '<tr><td colspan="5" class="gris-t">Sin datos todavía</td></tr>') + '</tbody></table></div>' +
-      '<h3 style="margin:14px 0 6px">Las preguntas que más se fallan al primer intento</h3>' + (fallas ? '<ol style="margin:0;padding-left:20px">' + fallas + '</ol>' : '<p class="gris-t" style="margin:0">Todavía ninguna.</p>') +
-      '<p class="sub" style="margin-top:10px">Desde el ' + esc(fechaLima(r.desde + 'T12:00:00Z')) + ' · ' + num(r.dias) + ' días.</p>';
-  }, function(){ box.innerHTML = '<p class="msg mal">No hubo conexión.</p>'; });
-}
-function _acpCablear(){
-  var ctc = $('acp-ct-curso'), ctd = $('acp-ct-dias');
-  if(ctc){ ctc.value = ACP.curso; ctc.onchange = function(){ ACP.curso = ctc.value; _acpContadores(); }; }
-  if(ctd){ ctd.value = String(ACP.dias); ctd.onchange = function(){ ACP.dias = +ctd.value; _acpContadores(); }; }
-  $('acp-crear').onclick = function(){
-    var n = parseInt($('acp-cuantos').value, 10), para = $('acp-para').value.trim(), m = $('acp-msg'), b = $('acp-crear'), curso = ($('acp-curso') || {}).value || 'curso-01';
-    if(!(n >= 1 && n <= 50)){ m.className = 'msg mal'; m.textContent = 'De 1 a 50 por vez.'; $('acp-cuantos').focus(); return; }
-    b.disabled = true; m.className = 'msg gris'; m.textContent = 'Creando…';
-    sbRpc('acad_admin_codigos_crear', { p_cuantos:n, p_para:para || null, p_curso:curso }).then(function(r){
-      b.disabled = false;
-      if(!r || !r.ok){ m.className = 'msg mal'; m.textContent = 'No se pudo' + ((r && r.motivo) ? ' (' + r.motivo + ')' : '') + '.'; return; }
-      m.className = 'msg ok'; m.textContent = r.codigos.length === 1 ? 'Listo: 1 código. Cópialo y mándaselo a quien te pagó.' : 'Listo: ' + r.codigos.length + ' códigos. Cópialos y mándalos a quienes te pagaron.';
-      ACP.nuevos = { codigos:r.codigos, para:r.para, curso:r.curso || curso };
-      $('acp-para').value = '';
-      _acpPintarNuevos();
-      if(typeof VISTA.recargar === 'function') VISTA.recargar(true);
-    }, function(){ b.disabled = false; m.className = 'msg mal'; m.textContent = 'No hubo conexión: inténtalo otra vez.'; });
-  };
-}
-function _acpPintarNuevos(){
-  var c = $('acp-nuevos'); if(!c) return;
-  var N = ACP.nuevos;
-  if(!N || !N.codigos || !N.codigos.length){ c.innerHTML = ''; return; }
-  c.innerHTML = '<div class="cod-nuevos"><h3>' + (N.codigos.length === 1 ? 'Listo, tu código' : 'Listos, ' + N.codigos.length + ' códigos') +
-    ' · ' + esc(_acpCursoT(N.curso)) + (N.para ? ' · para ' + esc(N.para) : '') + '</h3>' +
-    N.codigos.map(function(x){ return '<div class="cod-fila"><span class="cod-c">' + esc(_acpBonito(x)) + '</span>' +
-      '<button type="button" class="bt sec chico" data-acp-c="' + esc(x) + '">Copiar</button>' +
-      '<a class="bt chico" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(_acpMensaje([x], N.curso)) + '">WhatsApp</a></div>'; }).join('') +
-    '<div class="acciones" style="margin-top:10px"><button type="button" class="bt chico" id="acp-msj">Copiar el mensaje para mandar</button>' +
-    '<button type="button" class="bt sec chico" id="acp-listo">Listo, ya los guardé</button></div></div>';
-  [].forEach.call(c.querySelectorAll('[data-acp-c]'), function(b){ b.onclick = function(){ copiar(_acpBonito(b.getAttribute('data-acp-c')), b); }; });
-  $('acp-msj').onclick = function(){ copiar(_acpMensaje(N.codigos, N.curso), $('acp-msj'), 'Mensaje copiado.'); };
-  $('acp-listo').onclick = function(){ ACP.nuevos = null; _acpPintarNuevos(); };
-}
-function _acpTablas(){
-  var cc = $('t-acad-codigos'), ck = $('t-acad-const');
-  if(cc) tabla(cc, [
-    {k:'creado', t:'Creado', h:function(c){ return esc(fechaLima(c.creado)) + '<span class="sub">' + esc(hace(c.creado)) + '</span>'; }},
-    {k:'codigo', t:'Código', h:function(c){ return '<span class="cod-t">' + esc(_acpBonito(c.codigo)) + '</span>'; }, v:function(c){ return _acpBonito(c.codigo) + ' ' + c.codigo; }},
-    {k:'curso', t:'Curso', h:function(c){ return esc(_acpCursoT(c.curso)); }},
-    {k:'para', t:'Para', h:function(c){ return c.para ? esc(c.para) : '<span class="gris-t">Sin anotar</span>'; }},
-    {k:'usado_en', t:'Estado', h:function(c){
-       if(c.usado_en) return '<span class="pill ok">Activado</span><span class="sub">' + esc([c.correo, fechaLima(c.usado_en)].filter(Boolean).join(' · ')) + '</span>';
-       if(c.anulado_en) return '<span class="pill gris">Anulado</span><span class="sub">' + esc(fechaLima(c.anulado_en)) + '</span>';
-       return '<span class="pill azul">Libre</span>'; },
-     v:function(c){ return c.usado_en ? 'Activado ' + (c.correo || '') : (c.anulado_en ? 'Anulado' : 'Libre'); }},
-    {k:'_acc', t:'', acc:true, h:function(c){
-       return '<button type="button" class="bt sec chico" data-acc="copiar">Copiar</button>' +
-              (!c.usado_en && !c.anulado_en ? ' <button type="button" class="bt sec chico" data-acc="anular">Anular</button>' : ''); }}
-  ], ACP.lista, { orden:'creado', asc:false, unidad:'códigos', archivo:'codigos-academia',
-    vacio:'Todavía no creaste códigos de la Academia', vacioSub:'Los que crees arriba aparecen aquí, con su estado.',
-    accion:function(acc, c, b){
-      if(acc === 'copiar') copiar(_acpBonito(c.codigo), b);
-      if(acc === 'anular') confirmar('¿Anular ' + _acpBonito(c.codigo) + '?', 'Deja de servir: si ya se lo mandaste a alguien, al escribirlo le saldrá que no existe.', {si:'Anular', mal:true}).then(function(si){
-        if(!si) return;
-        sbRpc('acad_admin_codigo_anular', { p_codigo:c.codigo }).then(function(r){
-          if(!r || !r.ok){ toast(r && r.motivo === 'ya_usado' ? 'Ya lo activaron: no se puede anular.' : 'No se pudo anular.'); return; }
-          toast(_acpBonito(c.codigo) + ' anulado.'); if(typeof VISTA.recargar === 'function') VISTA.recargar();
-        }, function(){ toast('No hubo conexión: no se anuló.'); });
-      });
-    }});
-  if(ck) tabla(ck, [
-    {k:'emitida', t:'Emitida', h:function(x){ return esc(fechaLima(x.emitida)) + '<span class="sub">' + esc(hace(x.emitida)) + '</span>'; }},
-    {k:'folio', t:'Folio', h:function(x){ return '<span class="cod-t">' + esc(x.folio) + '</span>'; }},
-    {k:'nombre', t:'Nombre', h:function(x){ return '<b>' + esc(x.nombre) + '</b><span class="sub">' + esc(x.correo || '') + '</span>'; }, v:function(x){ return x.nombre + ' ' + (x.correo || ''); }},
-    {k:'nota', t:'Nota', num:true, h:function(x){ return esc(x.nota) + ' %'; }},
-    {k:'anulada_en', t:'Estado', h:function(x){ return x.anulada_en ? '<span class="pill gris">Anulada</span><span class="sub">' + esc(x.motivo || '') + '</span>' : '<span class="pill ok">Válida</span>'; },
-     v:function(x){ return x.anulada_en ? 'Anulada' : 'Válida'; }},
-    {k:'_acc', t:'', acc:true, h:function(x){
-       return '<a class="bt sec chico" target="_blank" rel="noopener" href="' + esc('https://descarganomaspe.github.io/sst-capacita/portal/verificar.html?f=' + encodeURIComponent(x.folio)) + '">Ver</a>' +
-              (x.anulada_en ? '' : ' <button type="button" class="bt sec chico" data-acc="anular">Anular</button>'); }}
-  ], ACP.cons, { orden:'emitida', asc:false, unidad:'constancias', archivo:'constancias-academia',
-    vacio:'Todavía no sale ninguna constancia', vacioSub:'Salen cuando alguien con el curso completo aprueba el examen final.',
-    accion:function(acc, x){
-      if(acc !== 'anular') return;
-      abrirHoja('Anular ' + x.folio, x.nombre + ' · ' + x.nota + ' %',
-        '<p style="margin-top:0">Al anularla, la página de verificación dirá «CONSTANCIA ANULADA» y quien la tenía puede volver a dar el examen ' +
-        '(por ejemplo, para corregir el nombre).</p><label for="acp-motivo">Motivo</label>' +
-        '<textarea id="acp-motivo" maxlength="200" rows="3" placeholder="Ej.: nombre mal escrito" style="width:100%"></textarea><div class="msg" id="acp-am" aria-live="polite"></div>',
-        '<button type="button" class="bt sec" id="acp-am-no">Cancelar</button><button type="button" class="bt mal" id="acp-am-si">Anular</button>');
-      $('acp-am-no').onclick = cerrarHoja;
-      $('acp-am-si').onclick = function(){
-        var mo = $('acp-motivo').value.trim(), m = $('acp-am'), b = $('acp-am-si');
-        if(mo.length < 4){ m.className = 'msg mal'; m.textContent = 'Escribe el motivo (4 letras o más).'; $('acp-motivo').focus(); return; }
-        b.disabled = true;
-        sbRpc('acad_admin_constancia_anular', { p_folio:x.folio, p_motivo:mo }).then(function(r){
-          b.disabled = false;
-          if(!r || !r.ok){ m.className = 'msg mal'; m.textContent = 'No se pudo anular' + ((r && r.motivo) ? ' (' + r.motivo + ')' : '') + '.'; return; }
-          cerrarHoja(); toast(x.folio + ' anulada.'); if(typeof VISTA.recargar === 'function') VISTA.recargar();
-        }, function(){ b.disabled = false; m.className = 'msg mal'; m.textContent = 'No hubo conexión: no se anuló.'; });
-      };
-    }});
-}
 function vistaCodigos(caja){
   var armado=false;
   cargando(caja);
