@@ -11,8 +11,10 @@
    · Un módulo figura «aprobado» SOLO si se dio la prueba y se alcanzó el puntaje (aprob[id].ok === true).
    · Constancia de participación en PDF aparte (cursoConstanciaPDF): sin verificador en línea ni huella de empresa, sin
      DNI, sin responsable/sello inventado y con el aviso legal obligatorio «NO es un certificado oficial».
-   · Abiertos: los módulos con «desbloqueado»; los demás esperan la activación del curso (todavía no hay cobro). */
-var CUR_DATOS_VER = 't1-1411n';   /* 14/11 noche: normas al día (Ley 29783 art. 49, NTP 399.010-1:2016) y erratas */
+   · Abiertos: los módulos con «desbloqueado»; los demás, con el código de acceso al curso completo (tanda 4, 15/11/2026:
+     lo vende Marcelo y se activa con la cuenta). Con el curso completo: el examen final (lo califica el servidor) y la
+     constancia del curso con folio y QR, que se comprueba en portal/verificar.html. Ver «ACCESO, EXAMEN FINAL…». */
+var CUR_DATOS_VER = 't4-1511';   /* 15/11: el curso se llama «Fundamentos de SST en obra» y trae «acceso» (el código de acceso del servidor) */
 var CURW = { caja:null, data:null, modId:'m1', lecId:{}, cargo:false, error:'' };
 var CURP = null; /* Estado del reproductor (modo Clásico) */
 var CURJ = null; /* Estado de las tarjetas (modo Jugando) */
@@ -124,7 +126,30 @@ function _curCss(){
     /* 14/11/2026 (noche) · los botones del velo y «Borrar mi avance» salían con el botón del navegador */
     '.cur-velo .acc .btn{border:0;border-radius:8px;padding:8px 14px;min-height:40px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;background:rgba(255,255,255,.16);color:#fff}',
     '.cur-velo .acc .btn.on{background:#F5B700;color:#0B2A3A}',
-    '#cur-borrar{border:1px solid var(--raya2,#CBD4DB);background:var(--panel,#fff);color:var(--tinta,#0B2A3A);border-radius:8px;padding:7px 11px;min-height:36px;font:inherit;font-size:13px;cursor:pointer;margin-left:6px}'
+    '#cur-borrar{border:1px solid var(--raya2,#CBD4DB);background:var(--panel,#fff);color:var(--tinta,#0B2A3A);border-radius:8px;padding:7px 11px;min-height:36px;font:inherit;font-size:13px;cursor:pointer;margin-left:6px}',
+    /* 15/11/2026 · tanda 4: el código de acceso, el examen final y la constancia del curso */
+    '#cur-ir-codigo{border:1px solid #0B2A3A;background:var(--panel,#fff);color:#0B2A3A;border-radius:999px;padding:6px 12px;min-height:36px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}',
+    '.cur-cod{display:grid;gap:6px;padding:12px;border-radius:10px;border:1px dashed #0B2A3A;background:var(--panel,#fff);margin-top:4px}',
+    '.cur-cod p{margin:0;font-size:14px}.cur-cod label{font-size:14px;line-height:1.4}',
+    '.cur-cod-fila{display:flex;gap:8px;flex-wrap:wrap}.cur-cod-fila input{flex:1 1 170px;min-height:44px;font-family:ui-monospace,Consolas,monospace;font-size:16px;letter-spacing:.06em;text-transform:uppercase}',
+    '.cur-cod .bt,.cur-cf-acc .bt{min-height:44px}',
+    '.cur-compra{margin:2px 0 0;font-size:13.5px;line-height:1.45}',
+    '.cur-mod-final .n{background:#F5B700;color:#0B2A3A;font-size:14px}.cur-mod-final.cerrado{opacity:.8}',
+    '.cur-ex{display:grid;gap:0}.cur-ex fieldset{margin:0 0 8px;min-width:0}.cur-ex legend{padding:0;font-size:15px;line-height:1.4}',
+    '.cur-ex .cur-op{font-size:15px;padding:6px 0;min-height:40px;align-items:center}.cur-ex .cur-op input{width:20px;height:20px;margin:0}',
+    '.cur-ex-barra{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;background:#0B2A3A;color:#fff;font-size:15px;margin-bottom:8px}',
+    '.cur-reloj{font-family:ui-monospace,Consolas,monospace;font-weight:700}.cur-reloj.poco{color:#F5B700}',
+    '.cur-ex-fin{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:6px}.cur-ex-fin .bt{min-height:48px;font-size:16px}',
+    '.cur-ex-fin .cur-reloj{color:var(--tinta,#0B2A3A)}',
+    '.cur-reglas{margin:0;padding-left:20px;display:grid;gap:4px;font-size:14px}',
+    '.cur-repasa{display:flex;flex-wrap:wrap;gap:6px}',
+    '.cur-felicita{padding:12px 14px;border-radius:12px;background:#E8F5EE;border:1px solid #BFE3CE;color:#14532D;font-size:15px;margin-bottom:10px}',
+    '.cur-cf dl{display:grid;grid-template-columns:minmax(110px,max-content) minmax(0,1fr);gap:6px 14px;margin:0;font-size:14px}',
+    '.cur-cf dt{color:var(--gris,#6B7C88)}.cur-cf dd{margin:0;overflow-wrap:anywhere}',
+    '@media (max-width:420px){.cur-cf dl{grid-template-columns:minmax(0,1fr)}.cur-cf dt{margin-top:4px}}',
+    '.cur-folio{font-family:ui-monospace,Consolas,monospace;letter-spacing:.04em}',
+    '.cur-cf-acc{display:flex;flex-wrap:wrap;gap:8px}.cur-cf-acc a.bt{display:inline-flex;align-items:center;text-decoration:none}',
+    '.cur-res p{font-size:14px}'
   ].join('\n');
   document.head.appendChild(s);
 }
@@ -826,22 +851,437 @@ function _curCambiarModo(lec, modo, soloPreferencia){
   _curPintar();
 }
 
+/* ══ ACCESO, EXAMEN FINAL Y CONSTANCIA CON FOLIO (tanda 4 · 14-15/11/2026) ═════════════════════════════════════
+   · El curso completo se abre con un código de acceso (lo vende Marcelo por Yape o transferencia y lo crea en la Consola,
+     «Academia»). Se activa con la cuenta de OBRASST (acad_canjear): vale en cualquier equipo donde se entre con ella.
+     Lo que dice el servidor (acad_mi_estado) queda en el equipo («acad_estado:<usuario>») para abrir sin señal.
+   · El examen final lo arma y lo califica el servidor (acad_examen_iniciar / acad_examen_entregar): preguntas de las
+     pruebas de los módulos, con las opciones mezcladas, el tiempo, el mínimo y los intentos por día del curso. Lo
+     marcado a medio examen queda en el equipo («acad_examen:<usuario>») por si se cierra la página. Con el mínimo sale
+     la constancia con folio; su PDF lleva un QR a portal/verificar.html?f=<folio> (acad_constancia_ver, abierta).
+   · La constancia dice las lecciones y los minutos que este equipo marcó como vistos: nada inventado. */
+var CURA = { listo:false, cuenta:false, acceso:{}, constancias:[], examen:{} };
+var CURX = null;   /* el examen final: { intento, preguntas, resp, nombre, fin (ms del equipo), timer, res, avisoFalta } */
+var ACAD_VERIF_URL = 'https://descarganomaspe.github.io/sst-capacita/portal/verificar.html';
+var ACAD_NOMBRE_RE = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñÀÈÌÒÙàèìòùÇç'. -]+$/;
+
+function _curCurso(){ return (CURW.data && CURW.data.acceso) || 'curso-01'; }
+function _curHaySesion(){ return !!(window.TOK && TOK.uid) && typeof sbRpc === 'function'; }
+function _curEstKey(){ return 'acad_estado:' + _curUid(); }
+function _curExKey(){ return 'acad_examen:' + _curUid(); }
+function _curCompleto(){ return !!CURA.acceso[_curCurso()]; }
+function _curAbierto(m){ return !!(m && (m.desbloqueado || _curCompleto())); }
+function _curConstancia(){
+  var k = _curCurso(), L = CURA.constancias || [];
+  for(var i = 0; i < L.length; i++) if(L[i] && L[i].curso === k && !L[i].anulada) return L[i];
+  return null;
+}
+function _curPonerEstado(r){
+  CURA.cuenta = !!(r && r.cuenta);
+  CURA.acceso = {};
+  ((r && r.acceso) || []).forEach(function(c){ CURA.acceso[c] = true; });
+  CURA.constancias = (r && Array.isArray(r.constancias)) ? r.constancias : [];
+  CURA.examen = _curObj(r && r.examen);
+}
+function _curGuardarEstado(){
+  _curSet(_curEstKey(), JSON.stringify({ cuenta:CURA.cuenta, acceso:Object.keys(CURA.acceso), constancias:CURA.constancias, examen:CURA.examen, t:Date.now() }));
+}
+/* Lo que dice el servidor; sin señal, lo último que dijo en este equipo. Sin sesión: solo lo abierto del temario. */
+function _curCargarEstado(){
+  CURA = { listo:false, cuenta:false, acceso:{}, constancias:[], examen:{} };
+  if(!_curHaySesion()){ CURA.listo = true; return Promise.resolve(CURA); }
+  var g = null; try{ g = JSON.parse(_curGet(_curEstKey()) || 'null'); }catch(e){ g = null; }
+  if(g && typeof g === 'object') _curPonerEstado(g);
+  return Promise.resolve().then(function(){ return sbRpc('acad_mi_estado', {}); }).then(function(r){
+    if(r && r.ok){ _curPonerEstado(r); _curGuardarEstado(); }
+    CURA.listo = true; return CURA;
+  }, function(){ CURA.listo = true; return CURA; });
+}
+function _curHuellaEstado(){
+  return JSON.stringify([Object.keys(CURA.acceso).sort(), (CURA.constancias || []).map(function(c){ return c.folio + (c.anulada ? '-' : ''); })]);
+}
+function _curFechaLima(iso){
+  try{ return new Intl.DateTimeFormat('es-PE', { timeZone:'America/Lima', day:'2-digit', month:'2-digit', year:'numeric' }).format(new Date(iso)); }
+  catch(e){ var p = String(iso || '').slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : String(iso || ''); }
+}
+
+/* ── el código de acceso ── */
+function _curCodigoHtml(){
+  if(_curHaySesion()){
+    return '<div class="cur-cod" id="cur-cod"><label for="cur-cod-in"><b>¿Ya tienes tu código de acceso?</b> Escríbelo y el curso completo queda abierto en tu cuenta.</label>' +
+      '<div class="cur-cod-fila"><input id="cur-cod-in" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="ACA-XXXX-XXXX">' +
+      '<button type="button" class="bt" id="cur-cod-bt">Activar</button></div>' +
+      '<div class="msg" id="cur-cod-msg" role="status" hidden></div></div>';
+  }
+  return '<div class="cur-cod" id="cur-cod"><b>¿Ya tienes tu código de acceso?</b>' +
+    '<p>Se activa con tu cuenta de OBRASST: así el curso queda abierto en cualquier equipo donde entres.</p>' +
+    (typeof window.acadIrCuenta === 'function' ? '<button type="button" class="bt" id="cur-cod-cuenta">Entrar o crear mi cuenta</button>' : '') +
+    '<div class="msg" id="cur-cod-msg" role="status" hidden></div></div>';
+}
+function _curCompraHtml(){
+  var D = CURW.data || {};
+  return '<p class="cur-compra">¿Todavía no lo tienes? El curso completo cuesta <b>S/ ' + _curEsc(D.precio_lanzamiento_pen) + '</b> al lanzamiento (luego S/ ' +
+    _curEsc(D.precio_regular_pen) + '). Escríbenos a <a href="mailto:info@obrasstapp.com?subject=Academia%20OBRASST%20%C2%B7%20curso%20completo">info@obrasstapp.com</a>: ' +
+    'te respondemos con cómo pagar y, con el pago confirmado, te mandamos tu código.</p>';
+}
+function _curMsgCod(t, clase){
+  var m = document.getElementById('cur-cod-msg'); if(!m) return;
+  m.hidden = !t; m.className = 'msg ' + (clase || ''); m.textContent = t || '';
+}
+function _curEnlazarCodigo(){
+  var b = document.getElementById('cur-cod-bt'), i = document.getElementById('cur-cod-in'), cu = document.getElementById('cur-cod-cuenta');
+  if(cu) cu.onclick = function(){
+    try{ var t = window.acadIrCuenta(); if(t) _curMsgCod(t, 'gris'); }catch(e){}
+  };
+  if(!b || !i) return;
+  var ir = function(){
+    var v = String(i.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if(!v){ _curMsgCod('Escribe el código tal como te llegó.', 'mal'); i.focus(); return; }
+    if(!/^ACA[A-Z0-9]{8}$/.test(v)){ _curMsgCod('El código empieza con ACA y lleva 8 letras y números más (por ejemplo ACA-7K2M-Q9XW). Revísalo.', 'mal'); i.focus(); return; }
+    b.disabled = true; _curMsgCod('Activando…', 'gris');
+    sbRpc('acad_canjear', { p_codigo:v }).then(function(r){
+      b.disabled = false;
+      if(r && r.ok){
+        toast(r.ya_tenias ? 'Tu cuenta ya tenía el curso completo: el código no se gastó.' : 'Listo: el curso completo quedó abierto en tu cuenta.');
+        CURA.acceso[r.curso || _curCurso()] = true; _curGuardarEstado();
+        _curCargarEstado().then(function(){ _curPintar(); });
+        return;
+      }
+      var mot = r && r.motivo;
+      _curMsgCod(mot === 'usado' ? 'Ese código ya se activó en otra cuenta. Si es tuyo, escríbenos a info@obrasstapp.com.' :
+                 mot === 'muchos_intentos' ? 'Demasiados intentos seguidos. Espera una hora y vuelve a probar.' :
+                 mot === 'sin_cuenta' ? 'Entra a tu cuenta de OBRASST para activar el código.' :
+                 'Ese código no existe. Revísalo letra por letra: no lleva O ni 0, ni I ni 1.', 'mal');
+    }, function(){ b.disabled = false; _curMsgCod('No se pudo activar ahora (¿sin señal?). Inténtalo otra vez.', 'mal'); });
+  };
+  b.onclick = ir;
+  i.onkeydown = function(ev){ if(ev.key === 'Enter'){ ev.preventDefault(); ir(); } };
+}
+
+/* ── el examen final ── */
+function _curFaltan(){
+  var av = _curLeerAv();
+  return ((CURW.data && CURW.data.modulos) || []).filter(function(x){ return (x.quiz || []).length && !_curAprobado(av, x.id); });
+}
+function _curExCfg(){
+  var e = _curObj(CURA.examen[_curCurso()]), D = CURW.data || {};
+  return { preguntas:+e.preguntas || +D.preguntas_finales_propuestas || 20, minimo:+e.minimo || +D.aprobacion_pct_propuesta || 70,
+           minutos:+e.minutos || 60, max:+e.max || 3, usados:+e.usados || 0, proximo:e.proximo || null, abierto:e.abierto || null };
+}
+function _curEstadoFinalTxt(){
+  var c = _curConstancia();
+  if(c) return '<span class="pill ok">aprobado ' + _curEsc(c.nota) + '%</span> · constancia lista';
+  if(!_curCompleto()) return '<span class="pill gris">🔒 Con el curso completo</span>';
+  var f = _curFaltan().length;
+  if(f) return 'Primero aprueba los módulos (te ' + (f === 1 ? 'falta 1' : 'faltan ' + f) + ')';
+  return _curExCfg().preguntas + ' preguntas · constancia con QR';
+}
+function _curNombreOk(n){ return n.length >= 5 && n.length <= 90 && n.indexOf(' ') > 0 && ACAD_NOMBRE_RE.test(n); }
+function _curLimpioNombre(n){ return String(n || '').replace(/\s+/g, ' ').trim(); }
+function _curExGuardar(){
+  if(!CURX || !CURX.intento) return;
+  _curSet(_curExKey(), JSON.stringify({ intento:CURX.intento, resp:CURX.resp, nombre:CURX.nombre }));
+}
+function _curExSoltar(){
+  if(CURX && CURX.timer){ clearInterval(CURX.timer); CURX.timer = null; }
+}
+function _curExReloj(){
+  if(!CURX || !CURX.preguntas) return;
+  var queda = Math.max(0, Math.round((CURX.fin - Date.now()) / 1000));
+  var txt = '⏱ Quedan ' + _curMmss(queda);
+  ['cur-ex-reloj', 'cur-ex-reloj2'].forEach(function(id){ var e = document.getElementById(id); if(e){ e.textContent = txt; e.classList.toggle('poco', queda <= 300); } });
+  if(queda <= 0 && !CURX.enviando){ _curExEntregar(true); }
+}
+function _curExContar(){
+  if(!CURX || !CURX.preguntas) return 0;
+  var n = 0; for(var i = 0; i < CURX.preguntas.length; i++) if(typeof CURX.resp[i] === 'number') n++;
+  var e = document.getElementById('cur-ex-cuenta'); if(e) e.textContent = n + ' de ' + CURX.preguntas.length + ' respondidas';
+  return n;
+}
+function _curExEmpezar(nombre){
+  var m = document.getElementById('cur-ex-msg'), b = document.getElementById('cur-ex-empezar');
+  if(b) b.disabled = true;
+  if(m){ m.className = 'msg gris'; m.textContent = 'Preparando tu examen…'; m.hidden = false; }
+  sbRpc('acad_examen_iniciar', { p_curso:_curCurso() }).then(function(r){
+    if(b) b.disabled = false;
+    if(r && r.ok){
+      var g = null; try{ g = JSON.parse(_curGet(_curExKey()) || 'null'); }catch(e){ g = null; }
+      var resp = (g && g.intento === r.intento && Array.isArray(g.resp)) ? g.resp : [];
+      var nom = nombre || (g && g.intento === r.intento && g.nombre) || '';
+      var desfase = r.ahora ? (Date.now() - Date.parse(r.ahora)) : 0;
+      _curExSoltar();
+      CURX = { intento:r.intento, preguntas:r.preguntas || [], resp:resp, nombre:nom, fin:Date.parse(r.vence) + desfase, minimo:r.minimo };
+      _curExGuardar();
+      _curPintar();
+      return;
+    }
+    var mot = r && r.motivo, t;
+    if(mot === 'ya_aprobaste'){ _curCargarEstado().then(function(){ _curPintar(); }); return; }
+    t = mot === 'intentos' ? 'Ya diste los ' + _curEsc(r.max) + ' exámenes de las últimas 24 horas. Podrás volver a intentarlo ' + (r.proximo ? 'desde el ' + _curFechaHoraLima(r.proximo) : 'mañana') + '.' :
+        mot === 'sin_acceso' ? 'El examen final se abre con el curso completo (activa tu código).' :
+        mot === 'sin_cuenta' ? 'Entra a tu cuenta de OBRASST para dar el examen.' :
+        'No se pudo preparar el examen. Inténtalo de nuevo en un momento.';
+    if(m){ m.className = 'msg mal'; m.textContent = t; m.hidden = false; }
+  }, function(){
+    if(b) b.disabled = false;
+    if(m){ m.className = 'msg mal'; m.textContent = 'El examen final necesita señal para empezar y para entregarse. Revisa tu conexión.'; m.hidden = false; }
+  });
+}
+function _curFechaHoraLima(iso){
+  try{ return new Intl.DateTimeFormat('es-PE', { timeZone:'America/Lima', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false }).format(new Date(iso)); }
+  catch(e){ return String(iso || ''); }
+}
+function _curExEntregar(porTiempo){
+  if(!CURX || !CURX.preguntas || CURX.enviando) return;
+  var falta = CURX.preguntas.length - _curExContar(), m = document.getElementById('cur-ex-msg2');
+  if(!CURX.nombre){
+    var n2 = _curLimpioNombre((document.getElementById('cur-ex-nombre2') || {}).value);
+    if(!_curNombreOk(n2)){
+      if(m){ m.className = 'msg mal'; m.hidden = false; m.textContent = 'Escribe arriba tu nombre y apellido, solo con letras (como irá en la constancia).'; }
+      var ni = document.getElementById('cur-ex-nombre2'); if(ni && !porTiempo) try{ ni.focus(); }catch(e){}
+      if(!porTiempo) return;
+    } else { CURX.nombre = n2; _curExGuardar(); }
+  }
+  if(falta > 0 && !porTiempo && !CURX.avisoFalta){
+    CURX.avisoFalta = true;
+    if(m){ m.className = 'msg ojo'; m.hidden = false;
+      m.textContent = 'Te ' + (falta === 1 ? 'falta 1 pregunta' : 'faltan ' + falta + ' preguntas') + ' por responder (cuentan como mal). Si ya terminaste, toca otra vez «Entregar».'; }
+    var bt = document.getElementById('cur-ex-entregar'); if(bt) bt.textContent = 'Entregar igual';
+    return;
+  }
+  CURX.enviando = true;
+  var bt2 = document.getElementById('cur-ex-entregar'); if(bt2){ bt2.disabled = true; bt2.textContent = 'Entregando…'; }
+  var av = _curLeerAv(), lecs = Object.keys(av.lec).filter(function(k){ return av.lec[k] && av.lec[k].visto; });
+  var resp = CURX.preguntas.map(function(_, i){ return typeof CURX.resp[i] === 'number' ? CURX.resp[i] : null; });
+  sbRpc('acad_examen_entregar', { p_intento:CURX.intento, p_resp:resp, p_nombre:CURX.nombre, p_lecciones:lecs }).then(function(r){
+    CURX.enviando = false;
+    if(r && r.ok){
+      _curExSoltar(); _curQuitar(_curExKey());
+      if(r.aprobado && r.constancia){
+        CURA.constancias = [r.constancia].concat(CURA.constancias || []); _curGuardarEstado();
+        CURX = { res:r, recien:true };
+        var a2 = _curLeerAv(); a2.final = { ok:true, folio:r.folio, pct:r.pct, fecha:_curHoy() }; a2.puntos += 50; _curTocarRacha(a2); _curGuardarAv(a2);
+      } else CURX = { res:r };
+      _curCargarEstado().then(function(){ _curPintar(); });
+      _curPintar();
+      return;
+    }
+    var mot = r && r.motivo;
+    if(bt2){ bt2.disabled = false; bt2.textContent = 'Entregar'; }
+    if(m){ m.className = 'msg mal'; m.hidden = false;
+      m.textContent = mot === 'nombre' ? 'Revisa tu nombre: nombre y apellido, solo letras.' :
+                      mot === 'no_existe' ? 'Este examen ya no es de esta cuenta. Vuelve a abrir la Academia.' :
+                      'No se pudo entregar. Tus respuestas siguen aquí: vuelve a tocar «Entregar».'; }
+  }, function(){
+    CURX.enviando = false;
+    if(bt2){ bt2.disabled = false; bt2.textContent = 'Entregar'; }
+    if(m){ m.className = 'msg mal'; m.hidden = false; m.textContent = 'Sin señal: no se pudo entregar. Tus respuestas siguen guardadas aquí; con señal, toca «Entregar» (tienes 3 minutos de gracia al acabar el tiempo).'; }
+  });
+}
+function _curConstanciaHtml(c, recien, r){
+  var D = CURW.data || {};
+  var h = '';
+  if(recien) h += '<div class="cur-felicita" role="status">🎉 <b>¡Aprobaste el examen final!</b> ' + _curEsc(c.bien) + ' de ' + _curEsc(c.tot) + ' (' + _curEsc(c.nota) + ' %).</div>';
+  h += '<div class="cur-box cur-cf" id="cur-cf"><b>📜 Tu constancia</b><dl>' +
+       '<dt>Nombre</dt><dd>' + _curEsc(c.nombre) + '</dd>' +
+       '<dt>Curso</dt><dd>' + _curEsc(c.curso_titulo || D.titulo) + '</dd>' +
+       '<dt>Examen final</dt><dd>' + _curEsc(c.nota) + ' % (' + _curEsc(c.bien) + ' de ' + _curEsc(c.tot) + ')</dd>' +
+       '<dt>Lecciones vistas</dt><dd>' + _curEsc(c.lecciones) + ' de ' + _curEsc(c.lecciones_tot) + ' (' + _curEsc(c.minutos) + ' min)</dd>' +
+       '<dt>Emitida</dt><dd>' + _curEsc(_curFechaLima(c.emitida)) + '</dd>' +
+       '<dt>Folio</dt><dd><b class="cur-folio">' + _curEsc(c.folio) + '</b></dd></dl>' +
+       '<div class="cur-cf-acc"><button type="button" class="bt" id="cur-cf-pdf">Descargar constancia (PDF con QR)</button>' +
+       '<a class="bt sec" href="' + _curEsc(ACAD_VERIF_URL + '?f=' + encodeURIComponent(c.folio)) + '" target="_blank" rel="noopener">Comprobarla en línea</a></div>' +
+       '<div class="msg" id="cur-cf-msg" role="status" hidden></div>' +
+       '<small class="tenue">El QR del PDF abre la página de verificación de OBRASST: ahí cualquiera comprueba el folio, el nombre y la nota. ' +
+       'Si el nombre salió mal, escríbenos a info@obrasstapp.com.</small></div>';
+  return h;
+}
+function _curFinalHtml(){
+  var D = CURW.data || {}, c = _curConstancia(), cfg = _curExCfg(), h = '';
+  h += '<div class="cur-head"><div><h3>🏁 Examen final y constancia</h3><p class="sub" style="margin:2px 0 0">' + cfg.preguntas +
+       ' preguntas de las pruebas de los módulos, en ' + cfg.minutos + ' minutos; se aprueba con ' + cfg.minimo +
+       ' %. La nota la pone el servidor y la constancia sale con un folio que cualquiera comprueba con su QR.</p></div></div>';
+  if(c){
+    h += _curConstanciaHtml(c, CURX && CURX.recien);
+  } else if(CURX && CURX.preguntas){
+    h += '<div class="cur-ex-barra"><span id="cur-ex-reloj" class="cur-reloj"></span><span id="cur-ex-cuenta"></span></div>' +
+         (CURX.nombre ? '<p class="tenue" style="margin:0 0 8px">Para la constancia: <b>' + _curEsc(CURX.nombre) + '</b>. Lo que marcas se guarda en este equipo mientras das el examen.</p>'
+           /* lo empezó en otro equipo (o se borró lo guardado): el nombre se pide aquí */
+           : '<div style="margin:0 0 10px"><label for="cur-ex-nombre2">Tu nombre completo, tal como irá en la constancia</label>' +
+             '<input id="cur-ex-nombre2" maxlength="90" autocomplete="name" placeholder="Nombres y apellidos"></div>') +
+         '<form id="cur-ex" class="cur-ex">';
+    CURX.preguntas.forEach(function(p, i){
+      h += '<fieldset class="cur-preg"><legend><b>' + (i + 1) + '. ' + _curEsc(p.q) + '</b></legend><div class="cur-ops">' +
+           (p.ops || []).map(function(op, oi){
+             return '<label class="cur-op"><input type="radio" name="ex' + i + '" value="' + oi + '"' + (CURX.resp[i] === oi ? ' checked' : '') + '> <span>' + _curEsc(op) + '</span></label>';
+           }).join('') + '</div></fieldset>';
+    });
+    h += '<div class="cur-ex-fin"><button type="submit" class="bt" id="cur-ex-entregar">Entregar</button><span id="cur-ex-reloj2" class="cur-reloj"></span></div>' +
+         '<div class="msg" id="cur-ex-msg2" role="status" hidden></div></form>';
+  } else if(CURX && CURX.res){
+    var r = CURX.res, pm = _curObj(r.por_modulo), flojos = [];
+    ((D.modulos) || []).forEach(function(x){ var v = pm[x.id]; if(v && v.tot && v.bien < v.tot) flojos.push({ m:x, v:v }); });
+    h += '<div class="cur-box cur-res"><b>' + (r.motivo === 'vencido' ? '⏱ Se acabó el tiempo' : 'Esta vez no alcanzó') + '</b>' +
+         '<p style="margin:0">Sacaste <b>' + _curEsc(r.bien) + ' de ' + _curEsc(r.tot) + ' (' + _curEsc(r.pct) + ' %)</b>. Para aprobar necesitas ' + _curEsc(r.minimo || cfg.minimo) + ' %.</p>' +
+         (flojos.length ? '<p style="margin:0">Repasa lo que más falló:</p><div class="cur-repasa">' + flojos.map(function(f){
+            return '<button type="button" class="cur-lec" data-cur-ir="' + _curEsc(f.m.id) + '">' + _curEsc(_curNomMod(f.m)) + ' · ' + _curEsc(f.m.titulo) + ' · ' + f.v.bien + ' de ' + f.v.tot + '</button>';
+          }).join('') + '</div>' : '') +
+         '<p class="tenue" style="margin:0">Exámenes en las últimas 24 horas: ' + cfg.usados + ' de ' + cfg.max + '.</p>' +
+         '<div><button type="button" class="bt" id="cur-ex-otra">Volver al examen final</button></div></div>';
+  } else if(!_curCompleto()){
+    h += '<div class="cur-box"><b>El examen final se abre con el curso completo</b>' +
+         '<p style="margin:0;font-size:14px">Con tu código de acceso se abren los 9 módulos, el examen final y la constancia con QR.</p>' +
+         _curCodigoHtml() + _curCompraHtml() + '</div>';
+  } else if(!_curHaySesion()){
+    h += '<div class="cur-box"><b>Entra a tu cuenta para dar el examen</b><p style="margin:0;font-size:14px">El examen final y la constancia van con tu cuenta de OBRASST.</p>' + _curCodigoHtml() + '</div>';
+  } else {
+    var falta = _curFaltan();
+    if(falta.length){
+      h += '<div class="cur-box"><b>Antes del examen final, aprueba la prueba de cada módulo</b>' +
+           '<p style="margin:0;font-size:14px">Te ' + (falta.length === 1 ? 'falta 1' : 'faltan ' + falta.length) + ':</p><div class="cur-repasa">' + falta.map(function(x){
+             return '<button type="button" class="cur-lec" data-cur-ir="' + _curEsc(x.id) + '">' + _curEsc(_curNomMod(x)) + ' · ' + _curEsc(x.titulo) + '</button>';
+           }).join('') + '</div></div>';
+    } else {
+      var g = null; try{ g = JSON.parse(_curGet(_curExKey()) || 'null'); }catch(e){ g = null; }
+      var abierto = cfg.abierto && cfg.abierto.intento;
+      h += '<div class="cur-box"><b>Todo listo para tu examen final</b><ul class="cur-reglas">' +
+           '<li>' + cfg.preguntas + ' preguntas, con las opciones mezcladas. Tienes ' + cfg.minutos + ' minutos; al acabar el tiempo se entrega solo.</li>' +
+           '<li>Se aprueba con ' + cfg.minimo + ' %. Puedes empezar ' + cfg.max + ' exámenes cada 24 horas (llevas ' + cfg.usados + ').</li>' +
+           '<li>Necesitas señal para empezar y para entregar. Lo que marcas se guarda en este equipo.</li></ul>';
+      if(abierto){
+        h += '<p style="margin:0">Tienes un examen empezado: sigue donde lo dejaste (el tiempo corre desde que empezó).</p>' +
+             '<div><button type="button" class="bt" id="cur-ex-seguir">Seguir con mi examen</button></div>';
+      } else {
+        h += '<label for="cur-ex-nombre">Tu nombre completo, tal como irá en la constancia</label>' +
+             '<input id="cur-ex-nombre" maxlength="90" autocomplete="name" value="' + _curEsc((g && g.nombre) || '') + '" placeholder="Nombres y apellidos">' +
+             '<small class="tenue">Revísalo bien: después no se cambia (si sale mal, hay que escribirnos).</small>' +
+             '<div><button type="button" class="bt" id="cur-ex-empezar">Empezar el examen final</button></div>';
+      }
+      h += '<div class="msg" id="cur-ex-msg" role="status" hidden></div></div>';
+    }
+  }
+  h += '<div class="cur-aviso" style="margin-top:12px" role="note"><b>Aviso:</b> ' + _curEsc(D.aviso_legal) + '</div>';
+  return h;
+}
+function _curFinalEnlazar(){
+  _curEnlazarCodigo();
+  Array.prototype.forEach.call(document.querySelectorAll('[data-cur-ir]'), function(b){
+    b.onclick = function(){ CURX = null; CURW.modId = b.getAttribute('data-cur-ir'); _curPintar(); };
+  });
+  var em = document.getElementById('cur-ex-empezar');
+  if(em) em.onclick = function(){
+    var i = document.getElementById('cur-ex-nombre'), n = _curLimpioNombre(i && i.value), m = document.getElementById('cur-ex-msg');
+    if(!_curNombreOk(n)){
+      if(m){ m.className = 'msg mal'; m.hidden = false; m.textContent = 'Escribe tu nombre y apellido, solo con letras (como irá en la constancia).'; }
+      if(i) i.focus(); return;
+    }
+    _curExEmpezar(n);
+  };
+  var sg = document.getElementById('cur-ex-seguir'); if(sg) sg.onclick = function(){ _curExEmpezar(''); };
+  var ot = document.getElementById('cur-ex-otra'); if(ot) ot.onclick = function(){ CURX = null; _curPintar(); };
+  var f = document.getElementById('cur-ex');
+  if(f && CURX && CURX.preguntas){
+    Array.prototype.forEach.call(f.querySelectorAll('input[type=radio]'), function(x){
+      x.onchange = function(){
+        var k = +x.name.slice(2); CURX.resp[k] = +x.value; CURX.avisoFalta = false;
+        var bt = document.getElementById('cur-ex-entregar'); if(bt && !CURX.enviando) bt.textContent = 'Entregar';
+        _curExGuardar(); _curExContar();
+      };
+    });
+    f.onsubmit = function(ev){ ev.preventDefault(); _curExEntregar(false); };
+    _curExContar(); _curExReloj();
+    if(!CURX.timer) CURX.timer = setInterval(function(){ if(!document.getElementById('cur-ex')){ _curExSoltar(); return; } _curExReloj(); }, 1000);
+  }
+  var pdf = document.getElementById('cur-cf-pdf');
+  if(pdf) pdf.onclick = function(){
+    var c = _curConstancia(), m = document.getElementById('cur-cf-msg'); if(!c) return;
+    pdf.disabled = true; pdf.textContent = 'Armando el PDF…';
+    cursoConstanciaFinalPDF(c).then(function(res){
+      pdf.disabled = false; pdf.textContent = 'Descargar constancia (PDF con QR)';
+      if(typeof bajarBlob === 'function') bajarBlob(res.blob, 'Constancia-Academia-OBRASST-' + c.folio + '.pdf');
+      if(m){ m.className = 'msg ok'; m.hidden = false; m.textContent = 'Constancia lista (' + c.folio + '). No es un certificado oficial.'; }
+    }, function(){
+      pdf.disabled = false; pdf.textContent = 'Descargar constancia (PDF con QR)';
+      if(m){ m.className = 'msg mal'; m.hidden = false; m.textContent = 'No se pudo armar el PDF ahora (la primera vez necesita señal). Inténtalo otra vez.'; }
+    });
+  };
+}
+
+/* ── el PDF de la constancia, con su QR (el mismo generador de QR de la app: qrcode-generator, MIT) ── */
+function _curQRLib(){
+  if(typeof window.qrcode === 'function') return Promise.resolve(window.qrcode);
+  if(typeof cargarQRLib === 'function') return cargarQRLib();
+  return Promise.reject('sin_qr');
+}
+function cursoConstanciaFinalPDF(c){
+  return Promise.all([cargarEvPDF(), _curQRLib()]).then(function(x){
+    var J = window.jspdf && window.jspdf.jsPDF; if(!J) throw new Error('sin_jspdf');
+    var QR = (typeof x[1] === 'function') ? x[1] : window.qrcode;
+    var url = ACAD_VERIF_URL + '?f=' + encodeURIComponent(c.folio);
+    var doc = new J({ orientation:'landscape', unit:'mm', format:'a4' });
+    var izq = 24, der = 297 - 24, lado = 44, xq = der - lado, cx = (izq + xq - 10) / 2, ancho = xq - 10 - izq;
+    doc.setFillColor(11, 42, 58); doc.rect(0, 0, 297, 28, 'F');
+    doc.setFillColor(245, 183, 0); doc.rect(0, 28, 297, 3, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+    doc.text('ACADEMIA OBRASST · CONSTANCIA DE PARTICIPACIÓN AUTÓNOMA', 148.5, 17, { align:'center' });
+    doc.setTextColor(20, 32, 42); doc.setFont('helvetica', 'normal'); doc.setFontSize(12);
+    doc.text('Se deja constancia de que', cx, 50, { align:'center' });
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(22);
+    var nom = doc.splitTextToSize(String(c.nombre || '').slice(0, 90), ancho);
+    doc.text(nom, cx, 64, { align:'center' });
+    var y = 64 + (nom.length - 1) * 9;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(12);
+    doc.text('participó en la Academia OBRASST en el curso', cx, y + 12, { align:'center' });
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+    var cur = doc.splitTextToSize(String(c.curso_titulo || ''), ancho);
+    doc.text(cur, cx, y + 23, { align:'center' }); y += 23 + (cur.length - 1) * 7;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(12);
+    doc.text('y aprobó su examen final con ' + c.nota + ' % (' + c.bien + ' de ' + c.tot + ' preguntas, calificado por el servidor de OBRASST).', cx, y + 12, { align:'center', maxWidth:ancho });
+    doc.text('Lecciones vistas en la Academia: ' + c.lecciones + ' de ' + c.lecciones_tot + ' (' + c.minutos + ' minutos de contenido).', cx, y + 20, { align:'center', maxWidth:ancho });
+    doc.text('Emitida el ' + _curFechaLima(c.emitida) + '   ·   Folio: ' + c.folio, cx, y + 30, { align:'center' });
+    /* el QR: cuadritos de verdad (se imprime nítido) */
+    var q = QR(0, 'M'); q.addData(url); q.make();
+    var n = q.getModuleCount(), s = lado / n, yq = 46;
+    doc.setFillColor(11, 42, 58);
+    for(var r = 0; r < n; r++) for(var k = 0; k < n; k++) if(q.isDark(r, k)) doc.rect(xq + k * s, yq + r * s, s + 0.02, s + 0.02, 'F');
+    doc.setFontSize(9); doc.setTextColor(60, 70, 80);
+    doc.text(['Escanéalo para comprobar', 'esta constancia en línea.', 'O entra a la página de', 'verificación de OBRASST', 'y escribe el folio.'], xq + lado / 2, yq + lado + 6, { align:'center' });
+    doc.setDrawColor(210, 216, 222); doc.roundedRect(24, 150, 249, 36, 3, 3);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(140, 45, 25);
+    doc.text('AVISO LEGAL OBLIGATORIO', 148.5, 160, { align:'center' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(60, 70, 80);
+    doc.text('Este documento deja constancia de la participación autónoma en el curso y de la nota de su examen final en la Academia OBRASST.', 148.5, 168, { align:'center' });
+    doc.text('NO es un certificado oficial, NO habilita legalmente para ejercer ni reemplaza las capacitaciones del empleador (Ley N.° 29783).', 148.5, 175, { align:'center' });
+    doc.setFontSize(8.5); doc.setTextColor(120, 130, 140);
+    doc.text(url, 148.5, 194, { align:'center' });
+    return { blob:doc.output('blob'), url:url };
+  });
+}
+
 /* ══ VISTA PRINCIPAL DE LA ACADEMIA ══════════════════════════════════════════════════════════ */
 function vistaAcademia(caja){
   _curCss();
   CURW.caja = caja;
+  _curExSoltar(); CURX = null;
   var ac = $('acciones'); if(ac) ac.innerHTML = '';
   cargando(caja);
-  _curCargarJson().then(function(){
+  /* 15/11/2026 · lo que dice el servidor de esta cuenta (curso completo, constancia); si tarda, se pinta con lo guardado */
+  var est = _curCargarEstado(), pintado = false, huella = '';
+  var espera = new Promise(function(res){ setTimeout(res, 2500); });
+  Promise.all([_curCargarJson(), Promise.race([est, espera])]).then(function(){
     if(CURW.caja !== caja || VISTA.actual !== 'academia') return;
-    _curPintar();
+    _curPintar(); pintado = true; huella = _curHuellaEstado();
   }).catch(function(){
     if(CURW.caja !== caja) return;
     caja.innerHTML = '<div class="tarj"><div class="tarj-cuerpo"><p class="msg mal">No se pudo cargar el catálogo de cursos.</p></div></div>';
   });
+  est.then(function(){
+    if(pintado && CURW.caja === caja && document.body.contains(caja) && _curHuellaEstado() !== huella && !(CURX && CURX.preguntas)) _curPintar();
+  });
 }
 
 function _curAbiertosTxt(D){
+  if(_curCompleto()) return 'Curso completo activado';
   var a = (D.modulos || []).filter(function(x){ return x.desbloqueado; }).map(function(x){ return x.n ? 'módulo ' + x.n : 'Inducción'; });
   if(!a.length) return '';
   var t = a.length > 1 ? a.slice(0, -1).join(', ') + ' y ' + a[a.length - 1] : a[0];
@@ -857,19 +1297,26 @@ function _curPintarLista(){
     var on = x.id === CURW.modId, L = _curLecs(x), vistas = L.filter(function(l){ return _curVista(av, l.id); }).length;
     var a = av.aprob[x.id], estadoPill;
     if(_curAprobado(av, x.id)) estadoPill = '<span class="pill ok">aprobado ' + _curEsc(a.pct) + '%</span>';
-    else if(!x.desbloqueado) estadoPill = '<span class="pill gris">🔒 Requiere acceso</span>';
+    else if(!_curAbierto(x)) estadoPill = '<span class="pill gris">🔒 Requiere acceso</span>';
     else if(a) estadoPill = '<span class="pill ojo">prueba ' + _curEsc(a.pct) + '% · falta aprobar</span>';
     else estadoPill = '<span class="pill ok">Abierto</span>' + (vistas ? ' · ' + vistas + ' de ' + L.length + ' lecciones' : '');
-    h += '<button type="button" class="cur-mod' + (on ? ' on' : '') + (x.desbloqueado ? '' : ' bloq') + '" data-cur-m="' + _curEsc(x.id) + '">' +
+    h += '<button type="button" class="cur-mod' + (on ? ' on' : '') + (_curAbierto(x) ? '' : ' bloq') + '" data-cur-m="' + _curEsc(x.id) + '">' +
          '<span class="n">' + (x.n ? x.n : '★') + '</span><span class="tx"><b>' + _curEsc(x.titulo) + '</b><small>' + (L.length ? L.length + (L.length === 1 ? ' lección · ' : ' lecciones · ') : '') + _curEsc(x.duracion_min) + ' min · ' + estadoPill + '</small></span></button>';
   });
+  /* 15/11/2026 · al final de la lista: el examen final y la constancia (tanda 4) */
+  /* (no lleva data-cur-m: no es un módulo; las pruebas cuentan los módulos con ese atributo) */
+  h += '<button type="button" class="cur-mod cur-mod-final' + (CURW.modId === 'final' ? ' on' : '') + (_curCompleto() ? '' : ' cerrado') + '" id="cur-fin-bt" data-cur-fin="1">' +
+       '<span class="n">🏁</span><span class="tx"><b>Examen final y constancia</b><small>' + _curEstadoFinalTxt() + '</small></span></button>';
   box.innerHTML = h;
   Array.prototype.forEach.call(box.querySelectorAll('[data-cur-m]'), function(b){
     b.onclick = function(){
       CURW.modId = b.getAttribute('data-cur-m');
+      if(!(CURX && CURX.preguntas)) CURX = null;
       _curPintar();
     };
   });
+  var fb = document.getElementById('cur-fin-bt');
+  if(fb) fb.onclick = function(){ CURW.modId = 'final'; _curPintar(); };
 }
 
 /* Las lecciones del módulo abierto */
@@ -891,24 +1338,31 @@ function _curPintar(){
   var caja = CURW.caja, D = CURW.data;
   if(!caja || !D || !document.body.contains(caja)) return;
   _curDesmontarPlayer(); CURJ = null;
-  var av = _curLeerAv(), sb = _curLeerSb(), m = _curMod(CURW.modId), EJ = D.ejemplo_sandbox || {};
-  var lecs = _curLecs(m), lec = m.desbloqueado ? _curLecActual(m, av) : null, modo = lec ? _curModoDe(lec, av) : 'clasico';
+  var esFinal = CURW.modId === 'final';
+  var av = _curLeerAv(), sb = _curLeerSb(), m = _curMod(esFinal ? null : CURW.modId), EJ = D.ejemplo_sandbox || {};
+  var lecs = _curLecs(m), lec = (!esFinal && _curAbierto(m)) ? _curLecActual(m, av) : null, modo = lec ? _curModoDe(lec, av) : 'clasico';
   if(lec) CURW.lecId[m.id] = lec.id;
-  var abiertos = _curAbiertosTxt(D);
+  var abiertos = _curAbiertosTxt(D), completo = _curCompleto();
+  var bloq1 = completo ? null : (D.modulos || []).filter(function(x){ return !_curAbierto(x); })[0];
   var h = '<div class="cur-wrap" id="cur-raiz">';
   h += '<div class="tarj"><div class="tarj-cuerpo"><div class="cur-head"><div><h2>🎓 ' + _curEsc(D.marca) + ' · ' + _curEsc(D.titulo) + '</h2>' +
        '<p class="sub" style="margin:2px 0 0">' + _curEsc(D.subtitulo) + '</p></div>' +
-       '<div class="cur-precios">' + (abiertos ? '<span class="pill ok">' + _curEsc(abiertos) + '</span>' : '') + '<span class="pill azul">Lanzamiento S/ ' + _curEsc(D.precio_lanzamiento_pen) + ' · Luego S/ ' + _curEsc(D.precio_regular_pen) + '</span></div></div>' +
+       '<div class="cur-precios">' + (abiertos ? '<span class="pill ok">' + _curEsc(abiertos) + '</span>' : '') +
+       (completo ? '' : '<span class="pill azul">Lanzamiento S/ ' + _curEsc(D.precio_lanzamiento_pen) + ' · Luego S/ ' + _curEsc(D.precio_regular_pen) + '</span>') +
+       (bloq1 ? '<button type="button" class="btn chico sec" id="cur-ir-codigo">🔑 Activar mi código</button>' : '') + '</div></div>' +
        '<div class="cur-aviso" style="margin-top:10px" role="note"><b>Aviso importante:</b> ' + _curEsc(D.aviso_legal) + '</div></div></div>';
 
   h += '<div class="cur-grid">';
   /* Columna izquierda: los módulos */
   h += '<div class="tarj"><div class="tarj-cuerpo"><h3>Módulos del curso (' + D.modulos.length + ')</h3><div class="cur-lista" id="cur-lista"></div></div></div>';
 
-  /* Columna derecha: detalle del módulo */
+  /* Columna derecha: detalle del módulo (o el examen final) */
   h += '<div class="tarj"><div class="tarj-cuerpo" id="cur-det">';
+  if(esFinal){
+    h += _curFinalHtml();
+  } else {
   h += '<div class="cur-head"><div><h3>' + _curEsc(_curNomMod(m)) + ' · ' + _curEsc(m.titulo) + '</h3><p class="sub" style="margin:2px 0 0">' + _curEsc(m.resumen) + '</p></div>' +
-       (m.desbloqueado ? '<span class="pill ok">Módulo abierto</span>' : '<span class="pill gris">🔒 Módulo bloqueado hasta activación del curso</span>') + '</div>';
+       (_curAbierto(m) ? '<span class="pill ok">Módulo abierto</span>' : '<span class="pill gris">🔒 Se abre con el curso completo</span>') + '</div>';
 
   /* Normas citadas */
   if(m.normas && m.normas.length){
@@ -918,13 +1372,15 @@ function _curPintar(){
     }).join('') + '</ul></div>';
   }
 
-  if(!m.desbloqueado){
+  if(!_curAbierto(m)){
+    /* 15/11/2026 · el código de acceso (tanda 4): Marcelo lo vende y el alumno lo activa aquí, con su cuenta */
     h += '<div class="cur-sec"><div class="cur-box"><b>Acceso al curso completo</b>' +
-         '<p style="margin:0;font-size:13.5px">Por ahora están abiertos: <b>' + _curEsc(abiertos || 'ninguno') + '</b>. Los demás módulos se abren con el acceso al curso completo (<b>S/ ' + _curEsc(D.precio_lanzamiento_pen) + '</b> al lanzamiento · luego <b>S/ ' + _curEsc(D.precio_regular_pen) + '</b>). Todavía no se puede comprar desde aquí.</p>' +
+         '<p style="margin:0;font-size:13.5px">Por ahora están abiertos: <b>' + _curEsc(abiertos || 'ninguno') + '</b>. Con el curso completo se abren los ' + (D.modulos || []).length +
+         ' módulos, el examen final y la constancia con QR que cualquiera puede comprobar.</p>' +
          (lecs.length ? '<b>Lo que trae este módulo</b><ul style="margin:0;padding-left:18px;font-size:13.5px">' + lecs.map(function(l, i){
             return '<li>Lección ' + (i + 1) + ' · ' + _curEsc(l.titulo) + ' (' + _curEsc(l.min) + ' min)</li>';
           }).join('') + '<li>Práctica en la Obra Ejemplo y prueba de ' + ((m.quiz || []).length || D.preguntas_modulo_propuestas || 5) + ' preguntas</li></ul>' : '') +
-         '</div></div>';
+         _curCodigoHtml() + _curCompraHtml() + '</div></div>';
   } else {
     /* Lecciones: la misma lección en modo Clásico o Jugando */
     if(lec){
@@ -1002,17 +1458,26 @@ function _curPintar(){
              '<div class="cur-const"><div style="flex:1 1 220px"><label for="cur-alumno">Nombre completo para la constancia</label>' +
              '<input id="cur-alumno" maxlength="90" placeholder="Tu nombre y apellido (solo para este PDF)"></div>' +
              '<button type="button" class="bt" id="cur-pdf-bt">Descargar constancia PDF</button></div>' +
-             '<div class="msg" id="cur-pdf-msg" role="status"></div></div></div>';
+             '<div class="msg" id="cur-pdf-msg" role="status"></div>' +
+             '<small class="tenue">La constancia del curso completo, con un QR que cualquiera comprueba en línea, sale al aprobar el examen final.</small></div></div>';
       }
     }
   }
-  h += '<div class="cur-sec"><small class="tenue">Tu avance se guarda solo en este equipo. </small>' +
+  }
+  h += '<div class="cur-sec"><small class="tenue">' + (_curHaySesion() ? 'Tus lecciones y pruebas se guardan en este equipo; el curso completo y tu constancia, en tu cuenta. ' : 'Tu avance se guarda solo en este equipo. ') + '</small>' +
        '<button type="button" class="btn chico sec" id="cur-borrar">Borrar mi avance de este equipo</button></div>';
   h += '</div></div></div></div>';
   caja.innerHTML = h;
 
   _curPintarLista();
   _curPintarLecs();
+  if(esFinal) _curFinalEnlazar(); else _curEnlazarCodigo();
+  var irc = document.getElementById('cur-ir-codigo');
+  if(irc && bloq1) irc.onclick = function(){
+    CURX = null; CURW.modId = bloq1.id; _curPintar();
+    var cc = document.getElementById('cur-cod');
+    if(cc){ if(cc.scrollIntoView) cc.scrollIntoView({ behavior:'smooth', block:'center' }); var ci = document.getElementById('cur-cod-in'); if(ci) try{ ci.focus({ preventScroll:true }); }catch(e){} }
+  };
 
   Array.prototype.forEach.call(caja.querySelectorAll('[data-cur-elige]'), function(b){
     b.onclick = function(){ _curCambiarModo(lec, b.getAttribute('data-cur-elige'), true); };

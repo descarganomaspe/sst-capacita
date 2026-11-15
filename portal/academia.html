@@ -6,7 +6,7 @@
 <title>Academia OBRASST</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0B2A3A">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://gwjjkknuiumgysezeatz.supabase.co; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
 <!--
   ══ LA ACADEMIA OBRASST, SOLA (14/11/2026 · Academia tanda 1) ══════════════════════════════════════════════════════════
@@ -58,7 +58,7 @@ input::placeholder{color:var(--gris2)}
 .pill.mal{background:var(--mal-f); color:var(--mal)} .pill.gris{background:var(--fondo); color:var(--gris)}
 .pill.azul{background:var(--azul-f); color:var(--azul)}
 .msg{font-size:13px; min-height:18px; margin:8px 0 0; line-height:1.5}
-.msg.mal{color:var(--mal)} .msg.ok{color:var(--ok)}
+.msg.mal{color:var(--mal)} .msg.ok{color:var(--ok)} .msg.gris{color:var(--gris)} .msg.ojo{color:#8A5200}
 .tenue{color:var(--gris); font-weight:400}
 .vacio{padding:36px 18px; text-align:center; color:var(--gris); font-size:14px}
 /* lo de esta página */
@@ -110,8 +110,73 @@ input::placeholder{color:var(--gris2)}
 <script>
 var EVPDF_VER='4604cbab61';   /* lo pone herr/huellas.py: el md5 de evaluaciones-pdf.js (el PDF, si no la abre la app) */
 var TOK = null, YO = { obra:null }, VISTA = { actual:'academia' };
-var _ACADP = { quien:'', pausa:null, evpdf:null, toastT:0 };
+var _ACADP = { quien:'', pausa:null, evpdf:null, toastT:0, qr:null };
 function $(i){ return document.getElementById(i); }
+/* 15/11/2026 · tanda 4: la Academia habla con el servidor (código de acceso, examen final y constancia con QR).
+   En la app, con la sesión de la app (su sbRpc la renueva sola). Sola, con la sesión de este navegador: la de la web
+   (sstp_cuenta) o la de la app (sstc_cuenta), renovándola igual que la web; sin sesión, como invitado. */
+var SB = { url:'https://gwjjkknuiumgysezeatz.supabase.co', key:'sb_publishable_7fLOMEbxMHW9ButihszpoQ_gkfNKnnx' };
+var QR_VER='7c32457873';   /* lo pone herr/huellas.py: el md5 de qr.js (el generador de QR de la app) */
+function _acadTokLocal(){
+  var ks = ['sstp_cuenta', 'sstc_cuenta'];
+  for(var i = 0; i < ks.length; i++){ var c = _acadLeer(ks[i]); if(c && typeof c === 'object' && c.access_token) return { k:ks[i], t:c }; }
+  return null;
+}
+function _acadRenovar(s){
+  /* otra pestaña (la web, la app) pudo renovarla ya: se usa esa */
+  var o = _acadLeer(s.k);
+  if(o && o.access_token && o.refresh_token && o.refresh_token !== s.t.refresh_token && (!s.t.uid || !o.uid || o.uid === s.t.uid)) return Promise.resolve(o);
+  return fetch(SB.url + '/auth/v1/token?grant_type=refresh_token', { method:'POST', headers:{ apikey:SB.key, 'Content-Type':'application/json' },
+    body:JSON.stringify({ refresh_token:s.t.refresh_token }) })
+    .then(function(r){ return r.json().then(function(j){ return r.ok ? j : Promise.reject(j); }); })
+    .then(function(j){
+      var t = Object.assign({}, s.t, { access_token:j.access_token, refresh_token:j.refresh_token || '', expira:Date.now() + ((j.expires_in || 3600) - 60) * 1000 });
+      if(j.user && j.user.id) t.uid = j.user.id;
+      try{ localStorage.setItem(s.k, JSON.stringify(t)); }catch(e){}
+      return t;
+    });
+}
+function sbRpc(fn, args){
+  var P = _acadPadre();
+  try{ if(P && typeof P.sbRpc === 'function' && P.TOK && P.TOK.access_token) return P.sbRpc(fn, args); }catch(e){}
+  var s = _acadTokLocal();
+  var pedir = function(tok){
+    return fetch(SB.url + '/rest/v1/rpc/' + fn, { method:'POST', body:JSON.stringify(args || {}),
+      headers:{ apikey:SB.key, 'Content-Type':'application/json', Authorization:'Bearer ' + (tok || SB.key) } });
+  };
+  return pedir(s && s.t.access_token).then(function(r){
+    if(r.status === 401 && s && s.t.refresh_token) return _acadRenovar(s).then(function(t2){ return pedir(t2.access_token); }, function(){ return r; });
+    return r;
+  }).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); });
+}
+/* el generador de QR: el de la app si la abrió la app; si no, qr.js (el mismo) */
+function cargarQRLib(){
+  var P = _acadPadre();
+  try{ if(P && typeof P.qrcode === 'function'){ window.qrcode = P.qrcode; return Promise.resolve(P.qrcode); } }catch(e){}
+  if(typeof window.qrcode === 'function') return Promise.resolve(window.qrcode);
+  if(_ACADP.qr) return _ACADP.qr;
+  _ACADP.qr = new Promise(function(res, rej){
+    var s = document.createElement('script'); s.src = 'qr.js?v=' + QR_VER;
+    s.onload = function(){ (typeof window.qrcode === 'function') ? res(window.qrcode) : (_ACADP.qr = null, rej('sin_qr')); };
+    s.onerror = function(){ _ACADP.qr = null; rej('sin_red'); };
+    document.head.appendChild(s);
+  });
+  return _ACADP.qr;
+}
+/* «Entrar o crear mi cuenta»: en la app, su camino; sola, la web en otra pestaña (al volver, la Academia ya te reconoce) */
+function acadIrCuenta(){
+  var P = _acadPadre();
+  if(P){ try{ if(typeof P.elegirRol === 'function'){ P.elegirRol('emp'); return ''; } }catch(e){} }
+  var w = null; try{ w = window.open('./#entrar', '_blank'); if(w) w.opener = null; }catch(e2){}
+  if(!w){ location.href = './#entrar'; return ''; }
+  return 'Entra (o crea tu cuenta) en la pestaña que se abrió. Al volver aquí, la Academia ya te reconoce.';
+}
+window.addEventListener('storage', function(ev){
+  if(!ev || (ev.key !== 'sstp_cuenta' && ev.key !== 'sstc_cuenta')) return;
+  if(_acadPadre()) return;
+  try{ if(typeof CURX !== 'undefined' && CURX && CURX.preguntas) return; }catch(e){}
+  if(_acadSesion() !== _ACADP.quien) acadArrancar();
+});
 /* la app que la abrió (el mismo sitio); si se abrió sola, null */
 function _acadPadre(){
   try{ if(window.parent && window.parent !== window && window.parent.document) return window.parent; }catch(e){}
@@ -223,8 +288,8 @@ function _acadCta(){
     if(cr) cr.onclick = function(ev){ ev.preventDefault(); try{ P.elegirRol('emp'); }catch(e2){} };
   } else {
     if(cab) cab.hidden = false;
-    var c = _acadLeer('sstp_cuenta');
-    cta.hidden = !!(c && c.access_token);
+    /* 15/11/2026 · con sesión de la web o de la app en este navegador: ya usa OBRASST */
+    cta.hidden = !!_acadTokLocal();
   }
 }
 function acadArrancar(){
@@ -253,7 +318,7 @@ document.addEventListener('visibilitychange', function(){
   else { var f = null; try{ f = window.frameElement; }catch(e){} if(!f || f.offsetParent) acadVolver(); }
 });
 </script>
-<script src="cursos.js?v=d51bc6c967" onerror="window.__acadSinMotor = true"></script>
+<script src="cursos.js?v=64425e60a1" onerror="window.__acadSinMotor = true"></script>
 <script>
 (function(){
   _acadLetra();

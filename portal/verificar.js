@@ -125,4 +125,48 @@
   caja.addEventListener('drop', function(e){ elegir(e.dataTransfer && e.dataTransfer.files); });
   var q = (/[?&]h=([0-9a-fA-F]{64})(&|$)/.exec(location.search || '') || [])[1];
   if(q) consultar(q.toLowerCase(), '');
+
+  /* ── 15/11/2026 · la constancia de la Academia OBRASST: su folio (el QR del PDF trae ?f=<folio>). Lo dice el servidor
+     (acad_constancia_ver, abierta a cualquiera): válida, anulada o que no existe. Es de participación autónoma. ── */
+  var aRes = document.getElementById('acad-res'), aForm = document.getElementById('acad-f'), aIn = document.getElementById('acad-folio');
+  var dia = function(t){
+    try{ return new Intl.DateTimeFormat('es-PE', { timeZone:'America/Lima', day:'2-digit', month:'2-digit', year:'numeric' }).format(new Date(t)); }
+    catch(e){ return esc(t); }
+  };
+  function verFolio(f){
+    if(!aRes) return;
+    var n = String(f || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if(!/^ACAD\d{4}[A-Z0-9]{6}$/.test(n)){
+      aRes.innerHTML = sello('ojo', '!', 'Eso no es un folio de la Academia', 'El folio empieza con ACAD, sigue el año y 6 letras o números (por ejemplo ACAD-2026-7K2M9Q). Revísalo en el PDF.');
+      return;
+    }
+    aRes.innerHTML = '<p class="gris">Consultando…</p>';
+    fetch(SB.url + '/rest/v1/rpc/acad_constancia_ver', { method:'POST', headers:{ apikey:SB.key, Authorization:'Bearer ' + SB.key, 'Content-Type':'application/json' },
+      body:JSON.stringify({ p_folio:f }) })
+      .then(function(r){ return r.json().catch(function(){ return null; }); })
+      .then(function(d){
+        if(!d || !d.ok){ aRes.innerHTML = sello('ojo', '!', 'No se pudo consultar', SIN_RED); return; }
+        if(!d.hallada){ aRes.innerHTML = sello('mal', '✕', 'NO EXISTE', 'Ninguna constancia de la Academia OBRASST tiene ese folio. Revisa que esté bien escrito: si lo está, la constancia no es de OBRASST.'); return; }
+        var det = '<div class="tarj"><h2>Lo que dice el registro</h2><dl>' +
+          '<dt>Nombre</dt><dd><b>' + esc(d.nombre) + '</b></dd>' +
+          '<dt>Curso</dt><dd>' + esc(d.curso) + '</dd>' +
+          '<dt>Examen final</dt><dd>' + esc(d.nota) + ' % (' + esc(d.bien) + ' de ' + esc(d.tot) + ' preguntas, calificado por el servidor)</dd>' +
+          '<dt>Lecciones vistas</dt><dd>' + esc(d.lecciones) + ' de ' + esc(d.lecciones_tot) + ' (' + esc(d.minutos) + ' min)</dd>' +
+          '<dt>Emitida</dt><dd>' + dia(d.emitida) + '</dd>' +
+          '<dt>Folio</dt><dd class="mono">' + esc(d.folio) + '</dd></dl>' +
+          '<p class="gris" style="margin:10px 0 0">Es una constancia de participación autónoma en la Academia OBRASST: NO es un certificado oficial, NO habilita para ejercer ni reemplaza las capacitaciones del empleador (Ley N.° 29783).</p></div>';
+        aRes.innerHTML = d.valida
+          ? sello('ok', '✓', 'CONSTANCIA VÁLIDA', 'La emitió la Academia OBRASST el ' + dia(d.emitida) + ' a nombre de ' + esc(d.nombre) + '.') + det
+          : sello('mal', '✕', 'CONSTANCIA ANULADA', 'OBRASST la anuló el ' + dia(d.anulada_en) + ': ya no vale.') + det;
+      }, function(){ aRes.innerHTML = sello('ojo', '!', 'No se pudo consultar', SIN_RED); });
+  }
+  if(aForm) aForm.addEventListener('submit', function(e){ e.preventDefault(); verFolio(aIn && aIn.value); });
+  var fq = (/[?&]f=([A-Za-z0-9-]{6,40})(&|$)/.exec(location.search || '') || [])[1];
+  if(fq){
+    var sec = document.getElementById('acad-sec'), m = document.getElementById('m');
+    try{ if(sec && m) m.insertBefore(sec, m.firstChild); }catch(e){}
+    try{ document.title = 'Verificar una constancia · OBRASST'; }catch(e2){}
+    if(aIn) aIn.value = fq;
+    verFolio(fq);
+  }
 })();
