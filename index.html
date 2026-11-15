@@ -57373,6 +57373,8 @@ var CATALOGO_ACCESOS = [
    icFn:function(){ return (typeof esMina==='function' && esMina()) ? '⛏️' : '📋'; }},
   {k:'boletines', ic:'📰', et:'Boletines<br>de la obra',       ir:'p-boletines',     color:'a-oro',   desde:0, grupo:1},
   {k:'buzon',     ic:'💬', et:'Buzón de<br>sugerencias',      ir:'p-buzon-sup',     color:'a-viol',  desde:0, grupo:2},
+  /* 15/11/2026 · la videollamada con traducción (portal/llamada.html): se abre la copia del portal que vive junto a la app */
+  {k:'llamada',   ic:'📹', et:'Videollamada<br>con traducción', fn:'abrirLlamada',    color:'a-oro',   desde:0, grupo:2},
   /* el canal de denuncia (21/09/2026) va en TODOS los planes: cobrar por
      el canal por donde se avisa de una represalia sería ponerle precio
      a que la empresa se entere */
@@ -59591,7 +59593,7 @@ var ACC_CARPETAS = [
   {k:'f-campo', ic:'🚧', et:'En la obra',    color:'a-rojo',  l:['procesos','riesgos','reporte','ats','inspec','accidente','quienfalta','frentes','auxilios','caida','alto','izaje','buenas','simulacros','senales','cadena','verificar']},
   {k:'f-epp',   ic:'🦺', et:'EPP y almacén', color:'a-azul',  l:['kardex','reqs','msds']},
   {k:'f-gente', ic:'👷', et:'Mi gente',      color:'a-viol',  l:['personal','visitas','tareo','salidaobra','credencial','emo','sctr','amonesta','comite','comcoord','equipo']},
-  {k:'f-com',   ic:'💬', et:'Comunicación',  color:'a-oro',   l:['boletines','buzon','denuncias','pulso']},
+  {k:'f-com',   ic:'💬', et:'Comunicación',  color:'a-oro',   l:['llamada','boletines','buzon','denuncias','pulso']},
   {k:'f-doc',   ic:'📂', et:'Documentos',    color:'a-gris',  l:['asisten','escaner','auditoria','miscarpetas','risst','proced','ipets','normas','semanal','parte']}
 ];
 /* los de fábrica: lo que se hace todos los días al pie de la obra */
@@ -117343,11 +117345,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = '4117dcf316';
-var IDIOMA_FR_V = 'a25090e5df';
+var IDIOMA_PT_V = '75ecec2a35';
+var IDIOMA_FR_V = '1b178a51b3';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = 'bd10c3e7c8';
+var IDIOMA_EN_V = '81a6f811c4';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -120870,6 +120872,15 @@ function abrirAliadoWeb(){
     '<button class="btn" onclick="window.open(\'' + escA(u) + '\',\'_blank\')">Abrir el Portal del proveedor</button>' +
     '<button class="btn sec" onclick="window.open(\'' + escA(q) + '\',\'_blank\')">Quiero ser aliado</button>';
 }
+/* >>> LLAMADA-APP-INI <<< ═══ 15/11/2026 · LA VIDEOLLAMADA CON TRADUCCIÓN, DESDE LA APP ═══
+   Es la página del portal (portal/llamada.html), no código de la app: así la app no crece. Se abre la copia que vive junto a
+   la app (en la app de Google Play se queda dentro de la app), con ?app=1 para su «‹ Volver a la app». */
+function abrirLlamada(){
+  try{ sessionStorage.setItem('sstp_app', '1'); }catch(_s){}
+  var u = portalURL() + 'llamada.html?app=1';
+  try{ var w = window.open(u, '_blank'); if(!w) location.href = u; }catch(_e){ location.href = u; }
+}
+/* <<< LLAMADA-APP-FIN >>> */
 /* >>> PROV-APP-INI <<< ═══ 12/11/2026 · EL PROVEEDOR (ALIADO) EN LA APP ══════════════════════════════════════════════
    Marcelo: «no veo en la app que salga aliados, o proveedores… algo que ellos puedan utilizar la app». La puerta de
    «¿Quién eres?» abre esta pantalla. El aliado entra a su Portal del proveedor DENTRO de la app (la misma web, en esta
@@ -132158,7 +132169,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='dd932b4442';
+var SELLO_APP='b26fdecf70';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';

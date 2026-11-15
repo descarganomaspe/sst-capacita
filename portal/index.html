@@ -4240,7 +4240,7 @@ var AREAS = [
   { id:'a-indic',    n:'Programas e indicadores', ic:'📈', v:['programas', 'objetivos', 'acc', 'hh'] },
   /* 27/10/2026 · la carpeta de auditoría (SSOMA) y el ciclo de auditoría (Gestión SST): portal/auditoria.js */
   { id:'a-audit',    n:'Auditoría',              ic:'🗂', v:['aud', 'aud-sala', 'aud-sim', 'aud-int', 'aud-acc', 'aud-rev'] },
-  { id:'a-empresa',  n:'Empresa',                ic:'🏢', v:['empresa', 'equipo', 'cad-equipo', 'plan', 'cargar'] }
+  { id:'a-empresa',  n:'Empresa',                ic:'🏢', v:['empresa', 'equipo', 'cad-equipo', 'plan', 'cargar', 'llamada'] }
 ];
 var AREA_MAS = { id:'a-mas', n:'Más', ic:'⋯', v:[] };
 var PESTANAS = {
@@ -4255,7 +4255,7 @@ var PESTANAS = {
   comite:'Comité de SST', cargos:'Brigada y carteles', quien:'¿A quién acudo?', frentes:'Frentes de trabajo', simulacros:'Simulacros',
   docs:'Documentos', formatos:'Formatos', escaneos:'Escaneos y fotos', util:'Utilitarios', qr:'Carteles QR', senales:'Señalética', boletines:'Boletines', noticias:'Noticias', normas:'Normas',
   informe:'SST', 'inf-amb':'Medio ambiente', 'inf-salud':'Salud ocupacional', fotoreg:'Registro fotográfico', acc:'Accidentabilidad', hh:'Horas hombre', programas:'Programas del año', objetivos:'Objetivos y metas',
-  empresa:'Datos y logo', equipo:'Obras y equipo', plan:'Mi plan', cargar:'Cargar mi gestión',
+  empresa:'Datos y logo', equipo:'Obras y equipo', plan:'Mi plan', cargar:'Cargar mi gestión', llamada:'Videollamada',
   cad:'Empresas de la obra', 'cad-obs':'Observaciones', 'cad-equipo':'Rangos del equipo',
   'cad-inf':'Informes', 'cad-est':'Estándares y boletines',
   /* 28/10/2026 · las herramientas de los planes de arriba, una pestaña cada una (antes iban dentro de otras pestañas) */
@@ -13041,6 +13041,17 @@ function _nrmEntradas(p){
   });
   return out;
 }
+/* 15/11/2026 · la videollamada con traducción: una tarjeta que explica y abre la página aparte (en otra pestaña) */
+function vistaLlamada(caja){
+  caja.innerHTML = '<div class="tarj" style="max-width:720px"><div class="tarj-cab"><div><h2>📹 Videollamada con traducción</h2>' +
+    '<p class="sub">Cada uno habla en su idioma y lee lo que dice el otro, traducido. Para dos personas: un cliente, un proveedor, tu consultor o la familia.</p></div></div>' +
+    '<div class="tarj-cuerpo"><ul style="margin:0 0 14px; padding-left:20px; line-height:1.6">' +
+    '<li>Subtítulos con el original siempre a la vista (español, inglés, portugués, francés y chino).</li>' +
+    '<li>Compartir pantalla, grabar con los subtítulos y notas al costado sin tapar la llamada.</li>' +
+    '<li>Al final: el resumen, lo que marcaste y el acta para descargar o imprimir.</li></ul>' +
+    '<p class="sub" style="margin:0 0 14px">La traducción la hace el traductor de Chrome en la computadora. En el celular ves lo que dice la otra persona en su idioma; si ella está en una computadora con Chrome, su equipo te manda la traducción.</p>' +
+    '<a class="bt casco" href="llamada.html" target="_blank" rel="noopener">Abrir la videollamada</a></div></div>';
+}
 function vistaNormas(caja){
   cargando(caja);
   if(!NRM.pais) NRM.pais=paisObraP();
@@ -18495,6 +18506,9 @@ var V = {
            pintar:function(caja){ cargando(caja); gesIr('gesVistaPulso', caja); }, tablas:[]},
   /* 01/10/2026 · la biblioteca de normas de la app, del país de la obra */
   normas: {id:'normas', g:'Consulta', ic:'⚖', n:'Normas', s:'Las normas de SST, salud y ambiente del país de la obra: lo que obligan y el texto oficial', pintar:vistaNormas, tablas:[]},
+  /* 15/11/2026 · la videollamada con traducción (portal/llamada.html, publicada el 15/11): aquí solo se presenta y se abre */
+  llamada:{id:'llamada', g:'Empresa', ic:'📹', n:'Videollamada con traducción', s:'Cada uno habla en su idioma y lee lo que dice el otro, traducido; con notas, resumen y acta de la reunión',
+           pintar:vistaLlamada, tablas:[]},
   /* 12/11/2026 · Orden 18 Etapa 1: prototipo interno Peligros del sitio (portal/peligros-sitio.js, sin tocar index.html ni publicar IGN) */
   peligrosSitio:{id:'peligros-sitio', g:'Registros', ic:'🗺️', n:'Peligros del sitio (prototipo)', s:'Prototipo interno Etapa 1: altitud estimada Terrarium y proximidad IGN sin guardar filas IPERC sin confirmación',
                  pintar:function(caja){ cargando(caja); psIr('vistaPeligrosSitio', caja); }, tablas:[]},
@@ -18515,6 +18529,7 @@ var VISTAS_LIDER = [
    tablas:['sst_trabajador','sst_constancia','sst_reporte','sst_accidente','sst_hht','sst_kardex','sst_inspeccion','sst_amonestacion','sst_buena','sst_doc']},
   conGrupo(V.avisos, 'Empresa'),
   V.os,
+  V.llamada,
   {id:'equipo',  g:'Empresa', ic:'⚑', n:'Obras y equipo', s:'Tus obras, tus supervisores, y quién pidió entrar', pintar:vistaEquipo, tablas:[]},
   conGrupo(V.parte, 'Empresa'),
   V.empresa, V.cargar, V.informe, V.infAmb, V.infSal, V.fotoreg, V.programas, V.objetivos,
@@ -18541,6 +18556,7 @@ var VISTAS_SUP = [
   V.avisos,
   {id:'personal', g:'Mi obra', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
   conGrupo(V.os, 'Mi obra'),
+  conGrupo(V.llamada, 'Mi obra'),
   V.parte,
   V.cargos, V.comite, V.quien, V.frentes, V.auxilios, V.tdm,
   conGrupo(V.empresa, 'Mi obra'), conGrupo(V.cargar, 'Mi obra'), conGrupo(V.informe, 'Mi obra'), conGrupo(V.infAmb, 'Mi obra'), conGrupo(V.infSal, 'Mi obra'), conGrupo(V.fotoreg, 'Mi obra'), conGrupo(V.programas, 'Mi obra'), conGrupo(V.objetivos, 'Mi obra'),
