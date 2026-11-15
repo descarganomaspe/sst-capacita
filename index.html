@@ -6864,34 +6864,6 @@ html.t-claro .chat-msj.mio{background:#E0F2FE;border-color:rgba(2,132,199,.35)}
 .chat-inp{flex:1;min-width:0;padding:11px 14px;border-radius:12px;border:1.5px solid rgba(var(--w),.15);background:rgba(var(--w),.05);color:var(--tinta);font:inherit;font-size:14px}
 .chat-inp:focus{border-color:var(--oro);outline:none}
 .chat-bt-send{flex:0 0 42px;width:42px;height:42px;border-radius:12px;border:0;background:var(--oro);color:#0B2A3A;font-size:16px;font-weight:800;cursor:pointer;display:grid;place-items:center}
-/* 14/11/2026 · Academia tanda 1 (ACADEMIA-APP): el acceso discreto al pie de cada inicio y el marco con la Academia
-   (la misma de la web, en claro como en la web: portal/academia.html) */
-.acad-ent-caja{margin:18px auto 6px;text-align:center}
-.acad-ent{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:7px 16px;border-radius:999px;cursor:pointer;
-  font:inherit;font-size:13px;font-weight:600;color:var(--gris);background:rgba(var(--w),.04);border:1px solid rgba(var(--w),.2)}
-.acad-ent:hover{border-color:rgba(245,183,0,.55);color:var(--tinta)}
-.acad-ent span{font-size:15px;line-height:1}
-html.t-alto .acad-ent{color:#000;border:2px solid #000;background:#fff}
-#p-inicio .acad-ent{margin:0}
-.acad-idioma{font-size:13px;margin:0 0 10px}
-.acad-marco-caja{margin:0 0 14px}
-/* 14/11/2026 (noche) · la Academia en «Sin entrar, también puedes» */
-.rh-acad{display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;padding:12px 14px;min-height:64px;border-radius:14px;
-  border:1px solid rgba(var(--w),.20);background:rgba(var(--w),.06);color:inherit;font:inherit;text-align:left;cursor:pointer}
-.rh-acad .ic{font-size:24px;line-height:1;flex:0 0 auto}
-.rh-acad .tx{flex:1;min-width:0}
-.rh-acad .tx b{display:block;font-size:14.5px;line-height:1.25}
-.rh-acad .tx small{display:block;font-size:12.5px;line-height:1.35;color:var(--gris);margin-top:2px}
-.rh-acad .fl{font-size:22px;color:var(--gris);flex:0 0 auto}
-.rh-acad:focus-visible{outline:2px solid currentColor;outline-offset:2px}
-.rh-acad .ic.con-i3d{width:44px;height:44px;flex:0 0 44px;border-radius:30%;background:#fff;
-  border:1px solid rgba(11,42,58,.08);box-shadow:inset 0 2px 6px rgba(0,0,0,.04),0 3px 9px rgba(11,42,58,.09)}
-.rh-acad .ic.con-i3d>img{width:28px;height:28px}
-html:not(.t-claro):not(.t-alto) .rh-acad .ic.con-i3d{background:linear-gradient(180deg,#FFFFFF,#E6ECF0);border-color:rgba(255,255,255,.25)}
-html.t-alto .rh-acad .ic.con-i3d{border:1.5px solid #0B2A3A;box-shadow:none}
-html.d-tec .rh-acad .ic.con-i3d>img{filter:grayscale(1) contrast(1.05)}
-#acad-marco{display:block;width:100%;height:560px;border:0;border-radius:16px;background:#F6F8FA;color-scheme:light;
-  box-shadow:0 0 0 1px rgba(var(--w),.08)}
 
 /* ══════════════════════════════════════════════════════════════════
    REDISEÑO EJECUTIVO UNIFICADO: CHAT HERO, QUÍMICOS Y MURAL
@@ -8215,67 +8187,10 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
     </div>
   </div>
   </div>
-  <div style="margin:16px auto 4px;text-align:center">
-    <button type="button" class="acad-ent" id="b-ini-academia" onclick="irAcademiaApp()"><span aria-hidden="true">🎓</span> Academia OBRASST</button>
-  </div>
   <div class="pie">Herramienta de apoyo. No reemplaza la capacitación dictada por persona competente conforme a la Ley 29783.<br>
     <a onclick="ir('p-legal')" style="color:#f5c542;text-decoration:underline;cursor:pointer">Privacidad y condiciones</a></div>
 </section>
 
-<!-- 14/11/2026 · Academia tanda 1 (ACADEMIA-APP): la app abre la MISMA Academia que la web. Antes aquí había otra
-     Academia, de texto fijo: su propio temario, «· Gratis», tres preguntas propias y «Mi constancia» a la vista sin haber
-     dado la prueba. Ahora un marco con portal/academia.html (portal/cursos.js + portal/cursos/curso-01.json); se arma al
-     entrar (acadAppPintar, desde _ir). -->
-<section class="pantalla" id="p-academia">
-  <div class="barra"><span>Academia OBRASST</span></div>
-  <p class="sub acad-idioma" id="acad-idioma" hidden>Las lecciones de la Academia están en castellano y tratan las normas del Perú.</p>
-  <div id="acad-marco-caja" class="acad-marco-caja" data-sin-trad></div>
-</section>
-<script>
-/* >>> ACADEMIA-APP-INI (14/11/2026 · Academia tanda 1) <<< */
-/* Las huellas las pone herr/huellas.py (el md5 de cada archivo). ACADEMIA_V va en la dirección del marco; las otras dos
-   no las usa la app: están para que el sello (SELLO_APP, sw.js) cambie cuando cambia el motor o el temario, y el celular
-   vuelva a guardar los nuevos para abrirlos sin señal. */
-var ACADEMIA_V = '7b4a8c7133';
-var ACAD_CURSOS_V = '24f52faf6e';
-var ACAD_DATOS_V = '3f0c41bd17';
-var ACAD_DATOS2_V = '7556e05ae0';   /* 15/11/2026 · el 2.º curso (Supervisor SST listo para obra) */
-function irAcademiaApp(){ ir('p-academia'); }
-function acadAppPintar(){
-  var c = document.getElementById('acad-marco-caja'); if(!c) return;
-  var idi = document.getElementById('acad-idioma');
-  /* el temario es de las normas del Perú y está en castellano: se avisa en otro idioma o en una obra de otro país */
-  if(idi){ try{ idi.hidden = (typeof idiomaActual !== 'function' || idiomaActual() === 'es') && (typeof obraEsPeru !== 'function' || obraEsPeru()); }catch(_i){ idi.hidden = true; } }
-  var f = document.getElementById('acad-marco');
-  if(f){ try{ if(f.contentWindow && typeof f.contentWindow.acadVolver === 'function') f.contentWindow.acadVolver(); }catch(_v){} return; }
-  f = document.createElement('iframe');
-  f.id = 'acad-marco'; f.title = 'Academia OBRASST';
-  f.setAttribute('allow', 'fullscreen');
-  f.src = 'portal/academia.html?v=' + ACADEMIA_V;
-  c.appendChild(f);
-}
-/* al dejar la pantalla, la lección se para (si no, seguía corriendo sin que nadie la viera) */
-function acadAppDejar(){
-  var f = document.getElementById('acad-marco');
-  try{ if(f && f.contentWindow && typeof f.contentWindow.acadPausar === 'function') f.contentWindow.acadPausar(); }catch(_p){}
-}
-/* 15/11/2026 · el acceso discreto (al pie del inicio, de la obra y de «Sin entrar») dice cuánto lleva: el avance está en
-   este equipo («acad_v2:<cuenta>», lo escribe la Academia del marco). Sin avance, como antes. Nada va al servidor. */
-function acadRotulo(){
-  var uid = 'invitado'; try{ if(window.TOK && TOK.uid) uid = String(TOK.uid); }catch(_u){}
-  var n = 0; try{ var av = JSON.parse(localStorage.getItem('acad_v2:' + uid) || 'null'); if(av && av.lec) for(var k in av.lec){ if(av.lec[k] && av.lec[k].visto) n++; } }catch(_a){}
-  var es = true; try{ es = (typeof idiomaActual !== 'function') || idiomaActual() === 'es'; }catch(_i){}
-  var txt = (n && es) ? 'Academia OBRASST · llevas ' + n + (n === 1 ? ' lección' : ' lecciones') : 'Academia OBRASST';
-  ['b-ini-academia', 'b-emp-academia'].forEach(function(id){
-    var b = document.getElementById(id); if(!b) return;
-    var t = b.querySelector('.acad-ent-tx');
-    if(!t){ t = document.createElement('span'); t.className = 'acad-ent-tx'; Array.prototype.slice.call(b.childNodes).forEach(function(x){ if(x.nodeType === 3) b.removeChild(x); }); b.appendChild(t); }
-    t.textContent = ' ' + txt;
-    if(txt !== 'Academia OBRASST') t.setAttribute('data-sin-trad', ''); else t.removeAttribute('data-sin-trad');
-  });
-}
-/* <<< ACADEMIA-APP-FIN >>> */
-</script>
 
 
 <section class="pantalla" id="p-temas">
@@ -10650,8 +10565,6 @@ function acadRotulo(){
     </div>
   </div>
   </div>
-  <!-- 14/11/2026 · Academia tanda 1: el acceso discreto a la Academia, al pie del inicio (ACADEMIA-APP) -->
-  <div class="acad-ent-caja"><button type="button" class="acad-ent" id="b-emp-academia" onclick="irAcademiaApp()"><span aria-hidden="true">🎓</span> Academia OBRASST</button></div>
   <div class="salir-caja">
     <p class="quien" id="emp-quien"></p>
     <button class="btn sec" onclick="salirDeCuenta()">🚪 Cerrar sesión</button>
@@ -16610,7 +16523,7 @@ function fechaLarga(iso){
 var EV_OK={'p-eval':1,'p-datos':1,'p-juego':1,'p-final':1,'p-firma':1,'p-encuesta':1,'p-listo':1};
 /* al trabajador solo se le abren estas: nada de sectores, temas ni generar.
    Se le suman las de reportar (código de obra + reporte con foto/anónimo). */
-var COL_OK={'p-academia':1,'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos':1,'p-juego':1,'p-apariencia':1,
+var COL_OK={'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'p-codigo':1,'p-eval':1,'p-datos':1,'p-juego':1,'p-apariencia':1,
             /* reportar una falla: también el trabajador (26/09/2026) */
             'p-falla':1,
             'p-final':1,'p-firma':1,'p-encuesta':1,'p-almacen':1,'p-listo':1,
@@ -16667,7 +16580,7 @@ var COL_OK={'p-academia':1,'p-bienvenida':1,'p-rol':1,'p-cuenta':1,'p-colab':1,'
             'p-cartel':1};
 /* la empresa: su inicio ordenado, las carpetas de documentos y las herramientas
    de obra que sí se comparten en la nube (reportes, inspecciones, credenciales, MSDS…) */
-var EMP_OK={'p-academia':1,'p-ergo':1,'p-pend-area':1,'p-asistente':1,'p-mural':1,'p-doc-ver':1,'p-cartel':1,'p-insp-ajustar':1,'p-insp-propio':1,'p-bienvenida':1,'p-rol':1,'p-consentir':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-datos':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-proy-nuevo':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
+var EMP_OK={'p-ergo':1,'p-pend-area':1,'p-asistente':1,'p-mural':1,'p-doc-ver':1,'p-cartel':1,'p-insp-ajustar':1,'p-insp-propio':1,'p-bienvenida':1,'p-rol':1,'p-consentir':1,'p-cuenta':1,'p-clave-nueva':1,'p-mis-datos':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-proy-nuevo':1,'p-acceso':1,'p-solicitudes':1,'p-sector':1,'p-emp-home':1,'p-doc':1,
             'p-reporte':1,'p-reporte-nuevo':1,'p-inspec':1,'p-inspec-nueva':1,
             'p-inspec-hallaz':1,'p-inspec-levant':1,'p-inspec-hechas':1,'p-firma-insp':1,
             'p-equipos':1,'p-equipo':1,'p-equipo-nuevo':1,'p-equipo-etiq':1,'p-eq-quien':1,
@@ -17124,7 +17037,7 @@ function ir(p){
    2) ¿eligió EMPRESA? con cuenta pero sin empresa, va a elegirla.
    El trabajador (ROL 'col') no pasa por ninguna de las dos: entra con
    el código de su obra y solo llega a sus pantallas. */
-var SIN_CUENTA={'p-academia':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-sector':1,'p-apariencia':1,
+var SIN_CUENTA={'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-sector':1,'p-apariencia':1,
   /* 29/09: el idioma se cambia desde la primera pantalla, antes de tener
      cuenta. Sin esto, la bandera mandaba a «Entra a tu cuenta». */
   'p-idioma':1,
@@ -17156,7 +17069,7 @@ var SIN_CUENTA={'p-academia':1,'p-rol':1,'p-cuenta':1,'p-clave-nueva':1,'p-secto
 /* la puerta de entrada, antes de aceptar los términos */
 /* 11/11/2026 · también la cámara con sello, el escáner y lo que abre «Leer un QR» sin cuenta (el químico y la
    credencial ya se abrían sin aceptar nada cuando llegaban por enlace) */
-var ZONA_PREVIA={'p-academia':1,'p-camara':1,'p-scan':1,'p-scan-pdf':1,'p-sello':1,'p-quimico':1,'p-verificar':1,'p-cartel':1,'p-doc-ver':1,'p-falla':1,'p-rol':1,'p-consentir':1,'p-idioma':1,'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,'p-clave-nueva':1};
+var ZONA_PREVIA={'p-camara':1,'p-scan':1,'p-scan-pdf':1,'p-sello':1,'p-quimico':1,'p-verificar':1,'p-cartel':1,'p-doc-ver':1,'p-falla':1,'p-rol':1,'p-consentir':1,'p-idioma':1,'p-legal':1,'p-privacidad':1,'p-terminos':1,'p-aviso-trab':1,'p-misdatos':1,'p-clave-nueva':1};
 var SIN_EMPRESA={'p-cartel':1,'p-doc-ver':1,'p-bienvenida':1,'p-mis-empresas':1,'p-emp-entrar':1,'p-emp-crear':1,'p-acceso':1,'p-invitacion':1,'p-verificar':1,'p-quimico':1,'p-compartido':1};
 /* ══ LO DESPLEGADO SE CIERRA AL VOLVER ═════════════════════════════
    Marcelo, 21/09/2026: «despliego algo en la página principal —ajustes
@@ -17458,11 +17371,6 @@ function _ir(p){
   else { try{ carrParar(); document.body.classList.remove('carrete'); }catch(_cp){} }
   if(p==='p-buzon')pintarBuzon();
   if(p==='p-mural' && typeof pintarMural==='function') pintarMural();
-  /* 14/11/2026 · la Academia (ACADEMIA-APP): al llegar se arma o sigue donde quedó; al irse, la lección se para */
-  if(p==='p-academia'){ if(typeof acadAppPintar==='function') acadAppPintar(); }
-  else if(typeof acadAppDejar==='function') acadAppDejar();
-  /* 15/11/2026 · el acceso a la Academia dice cuánto lleva cada uno (y que tiene la voz de Koda) */
-  if(typeof acadRotulo==='function') acadRotulo();
   /* 11/11/2026 · las pantallas de los módulos nuevos (PANT-EXTRA) */
   if(typeof PANT_EXTRA==='object' && PANT_EXTRA && PANT_EXTRA[p] && typeof PANT_EXTRA[p].pinta==='function') PANT_EXTRA[p].pinta();
   if(p==='p-doc-ver' && typeof pintarDocVer==='function') pintarDocVer();
@@ -29578,6 +29486,8 @@ function soyJefeOSupervisor(){
   }catch(_e){ return true; }
 }
 
+/* 15/11/2026 · quien usa el celular (en vez de nombres y documentos de personas escritos en el código) */
+function _chatYo(){ return { dni: String((typeof miDniActual === 'function' && miDniActual()) || 'yo'), n: (typeof miNombre === 'function' && miNombre()) || 'Yo', r: 'Supervisor', t: 'sst' }; }
 function canalesBase(){
   var trabs = (typeof trabsLocal === 'function' && trabsLocal()) || [];
   var totalT = trabs.length;
@@ -29592,10 +29502,7 @@ function canalesBase(){
       badge: 'Coordinación SST',
       orden: 1,
       creadoPor: 'sistema',
-      miembros: [
-        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
-        { dni: 'prev-01', n: 'Prevencionista SST', r: 'Prevencionista', t: 'sst' }
-      ]
+      miembros: []
     },
     {
       id: 'c-prod',
@@ -29606,10 +29513,7 @@ function canalesBase(){
       badge: 'Coordinación Obra',
       orden: 2,
       creadoPor: 'sistema',
-      miembros: [
-        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
-        { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' }
-      ]
+      miembros: []
     },
     {
       id: 'c-obra',
@@ -29621,10 +29525,7 @@ function canalesBase(){
       orden: 3,
       creadoPor: 'sistema',
       esGeneral: true,
-      miembros: [
-        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
-        { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' }
-      ]
+      miembros: []
     },
     {
       id: 'c-fre-1',
@@ -29636,10 +29537,7 @@ function canalesBase(){
       badge: 'Frente de trabajo',
       orden: 4,
       creadoPor: 'sistema',
-      miembros: [
-        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
-        { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' }
-      ]
+      miembros: []
     },
     {
       id: 'c-fre-2',
@@ -29651,10 +29549,7 @@ function canalesBase(){
       badge: 'Frente de trabajo',
       orden: 5,
       creadoPor: 'sistema',
-      miembros: [
-        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
-        { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' }
-      ]
+      miembros: []
     },
     {
       id: 'c-fre-3',
@@ -29666,10 +29561,7 @@ function canalesBase(){
       badge: 'Frente de trabajo',
       orden: 6,
       creadoPor: 'sistema',
-      miembros: [
-        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
-        { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' }
-      ]
+      miembros: []
     },
     {
       id: 'c-sub-elec',
@@ -29680,9 +29572,7 @@ function canalesBase(){
       badge: 'Plan Central',
       orden: 7,
       creadoPor: 'sistema',
-      miembros: [
-        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' }
-      ]
+      miembros: []
     },
     {
       id: 'c-sub-estruc',
@@ -29693,9 +29583,7 @@ function canalesBase(){
       badge: 'Plan Central',
       orden: 8,
       creadoPor: 'sistema',
-      miembros: [
-        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' }
-      ]
+      miembros: []
     }
   ];
 }
@@ -29781,38 +29669,10 @@ function chatMsjsDe(canalId){
   var k = 'sstc_msjs_' + e.id + '_' + canalId;
   var M = null;
   try{ M = JSON.parse(localStorage.getItem(k)); }catch(_e){ M = null; }
-  if(!Array.isArray(M) || !M.length){
-    var hoy = (typeof hoyISO === 'function') ? hoyISO() : '2026-11-14';
-    if(canalId === 'c-sst'){
-      M = [
-        { id:'m1', autor:'Marcelo Lamas', rol:'Supervisor SST', texto:'Buenos días equipo SST. Hoy inspección de andamios y líneas de vida en Torre B a las 10:30.', ts:Date.now() - 3600000, fecha:hoy, pendiente:null, acuerdo:true },
-        { id:'m2', autor:'Prevención SST', rol:'Prevencionista', texto:'Checklist de arneses y botiquines verificado en almacén central. 12 equipos operativos verificados.', ts:Date.now() - 1800000, fecha:hoy, pendiente:{ asignadoDni:'72050443', asignadoNombre:'Marcelo Lamas', asignadoRol:'Supervisor SST', plazo:'Hoy 14:00', estado:'abierto' }, acuerdo:false }
-      ];
-    } else if(canalId === 'c-prod'){
-      M = [
-        { id:'m1', autor:'Fredy Rondón', rol:'Supervisor Producción', texto:'Coordinado el ingreso del camión mixer por Puerta 2 a las 11:00 am.', ts:Date.now() - 7200000, fecha:hoy, pendiente:null, acuerdo:true },
-        { id:'m2', autor:'Marcelo Lamas', rol:'Supervisor SST', texto:'Por favor señalizar el radio de giro con conos y vigía con paleta reflectiva.', ts:Date.now() - 3600000, fecha:hoy, pendiente:{ asignadoDni:'18323747', asignadoNombre:'Fredy Rondón', asignadoRol:'Supervisor Producción', plazo:'Hoy 11:00', estado:'abierto' }, acuerdo:false }
-      ];
-    } else if(canalId === 'c-fre-1'){
-      M = [
-        { id:'m1', autor:'Marcelo Lamas', rol:'Supervisor SST', texto:'Cuadrilla de Frente 1: Verificar el anclaje de líneas de vida antes de subir al encofrado.', ts:Date.now() - 5400000, fecha:hoy, pendiente:null, acuerdo:true },
-        { id:'m2', autor:'Fredy Rondón', rol:'Supervisor Producción', texto:'Fierreros y encofradores listos para liberación de armadura a las 11:30 am.', ts:Date.now() - 2700000, fecha:hoy, pendiente:null, acuerdo:false }
-      ];
-    } else if(canalId === 'c-fre-2'){
-      M = [
-        { id:'m1', autor:'Fredy Rondón', rol:'Supervisor Producción', texto:'Tendido de tuberías eléctricas y sanitarias en pase de losa nivel 4 en marcha.', ts:Date.now() - 4800000, fecha:hoy, pendiente:null, acuerdo:true }
-      ];
-    } else if(canalId === 'c-fre-3'){
-      M = [
-        { id:'m1', autor:'Marcelo Lamas', rol:'Supervisor SST', texto:'Uso obligatorio de mascarilla y lentes herméticos durante preparación de mezcla y tarrajeo.', ts:Date.now() - 6000000, fecha:hoy, pendiente:null, acuerdo:true }
-      ];
-    } else {
-      M = [
-        { id:'m1', autor:'Jefatura de Obra', rol:'Gerencia', texto:'Bienvenidos al canal general de la obra. Acuerdos, charlas diarias y comunicados oficiales vigentes para todo el personal.', ts:Date.now() - 86400000, fecha:hoy, pendiente:null, acuerdo:true }
-      ];
-    }
-    try{ localStorage.setItem(k, JSON.stringify(M)); }catch(_w){}
-  }
+  if(!Array.isArray(M)) M = [];
+  /* 15/11/2026 · sin mensajes de ejemplo con nombres de personas: el chat empieza vacío (y se dejan de mostrar los que
+     quedaron guardados en el celular, que tenían id «m1», «m2»…) */
+  M = M.filter(function(x){ return x && !/^m\d+$/.test(String(x.id || '')); });
   return M;
 }
 
@@ -29945,8 +29805,8 @@ function chatConvertirEnPendienteModal(canalId, msjId){
   modal.style.zIndex = '99999';
   modal.onclick = function(e){ if(e.target === modal) _penModalCerrar(); };
 
-  var opts = '<option value="72050443|Marcelo Lamas|Supervisor SST">Marcelo Lamas (Supervisor SST)</option>' +
-             '<option value="18323747|Fredy Rondón|Supervisor Producción">Fredy Rondón (Supervisor Producción)</option>';
+  var _yo = _chatYo();
+  var opts = '<option value="' + escA(_yo.dni) + '|' + escA(_yo.n) + '|Supervisor">' + esc(_yo.n) + ' (yo)</option>';
 
   trabs.forEach(function(t){
     opts += '<option value="' + escA(t.dni) + '|' + escA(t.nombre) + '|' + escA(t.puesto || 'Trabajador') + '">' + esc(t.nombre) + ' (' + esc(t.puesto || 'Personal') + ')</option>';
@@ -30298,9 +30158,7 @@ function canalNuevoModal(editarId){
 
   var trabs = (typeof trabsLocal === 'function' && trabsLocal()) || [];
   var totalTrabs = trabs.length;
-  var miembros = (esEd && Array.isArray(cn.miembros)) ? cn.miembros : [
-    { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' }
-  ];
+  var miembros = (esEd && Array.isArray(cn.miembros)) ? cn.miembros : [ _chatYo() ];
 
   /* HTML de miembros */
   var miembrosHTML = '';
@@ -30430,11 +30288,7 @@ function _chatAbrirAgregarMiembro(canalId){
   modal2.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:100000;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;';
   modal2.onclick = function(e){ if(e.target === modal2) { if(modal2.parentNode) modal2.parentNode.removeChild(modal2); } };
 
-  var personasDisp = [
-    { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' },
-    { dni: '18323747', n: 'Fredy Rondón', r: 'Supervisor Producción', t: 'prod' },
-    { dni: 'prev-01', n: 'Prevencionista SST', r: 'Prevencionista', t: 'sst' }
-  ];
+  var personasDisp = [];
 
   /* En c-sst NUNCA sugerir supervisor de produccion */
   if(cn.id === 'c-sst' || cn.t === 'sst'){
@@ -30521,9 +30375,7 @@ function _canalGuardarConfirmar(editarId){
       badge: (tipo === 'frente' ? 'Frente de trabajo' : (tipo === 'sub' ? 'Plan Central' : (tipo === 'sst' ? 'Coordinación SST' : 'Coordinación Obra'))),
       orden: canales.length + 1,
       creadoPor: (typeof miNombre === 'function' && miNombre()) || 'Usuario',
-      miembros: [
-        { dni: '72050443', n: 'Marcelo Lamas', r: 'Supervisor SST', t: 'sst' }
-      ]
+      miembros: [ _chatYo() ]
     };
     canales.push(nuevo);
   }
@@ -34719,12 +34571,7 @@ function pintarRolHerr(){
       '<button type="button" class="rh-b" id="rh-cam" onclick="herrCamara()"><span class="ic" aria-hidden="true">📷</span><b>Cámara con sello</b></button>' +
       '<button type="button" class="rh-b" id="rh-scan" onclick="ir(\'p-scan\')"><span class="ic" aria-hidden="true">🖨️</span><b>Escáner</b></button>' +
     '</div>' +
-    '<p class="sub rh-nota">Lo que tomes o escanees se comparte o se guarda en tu celular. No queda en ninguna carpeta de la app.</p>' +
-    /* 14/11/2026 (noche) · la Academia, para prevencionistas, supervisores y jefes de seguridad que todavía no usan la
-       app (ACADEMIA-APP): sin cuenta; el avance queda en el celular */
-    '<button type="button" class="rh-acad" id="rh-acad" onclick="irAcademiaApp()"><span class="ic" aria-hidden="true">🎓</span>' +
-      '<span class="tx"><b>Academia OBRASST</b><small>Aprende SST para la obra: prevencionistas, supervisores y jefes de seguridad.</small></span>' +
-      '<span class="fl" aria-hidden="true">›</span></button>';
+    '<p class="sub rh-nota">Lo que tomes o escanees se comparte o se guarda en tu celular. No queda en ninguna carpeta de la app.</p>';
 }
 /* «Cámara con sello» promete el sello: si en este celular nunca se tocó su configuración, se prende (fecha, hora y
    coordenadas). Si alguien lo apagó a propósito, se respeta. */
@@ -59351,7 +59198,7 @@ function ico(n, cls){
    · Lo demás (el ícono suelto de una tarjeta, de una sección, de un aviso, de «¿Quién eres?»): si es un emoji solo y está
      en I3D_EMO, cambia por el 3D (i3dMejorar, y un MutationObserver para lo que se pinta después).
    · Sin iconos.js (no llegó), todo sigue como antes: los dibujos y los emoji. */
-var I3D_ACC = {"accidente":"ambulance","alto":"ladder","ambiente":"seedling","amonesta":"page_facing_up","asisten":"camera_with_flash","ats":"memo","auxilios":"rescue_workers_helmet","boletines":"newspaper","buenas":"glowing_star","buzon":"open_mailbox_with_raised_flag","cadena":"link","caida":"person_climbing","campanas":"megaphone","charlas":"loudspeaker","comite":"classical_building","comcoord":"handshake","constancias":"scroll","credencial":"identification_card","denuncias":"locked_with_key","emo":"stethoscope","equipo":"busts_in_silhouette","escaner":"printer","formatos":"bookmark_tabs","frentes":"construction","induccion":"blue_book","informe":"bar_chart","inspec":"safety_vest","ipets":"orange_book","izaje":"building_construction","kardex":"card_file_box","leerqr":"mobile_phone","miscarpetas":"file_folder","msds":"test_tube","normas":"balance_scale","obra-almacen":"package","obra-legajo":"card_index_dividers","obra-quienes":"sos_button","parte":"clipboard","peligros":"bullseye","personal":"construction_worker","proced":"books","procesos":"high_voltage","pulso":"beating_heart","quienfalta":"sos_button","reporte":"police_car_light","reqs":"receipt","riesgos":"chart_increasing","risst":"pushpin","salidaobra":"door","salud":"hospital","sctr":"shield","semanal":"spiral_calendar","senales":"warning","simulacros":"fire_extinguisher","talleres":"toolbox","tareo":"alarm_clock","temas":"graduation_cap","verificar":"magnifying_glass_tilted_right","visitas":"key","clima":"sun_behind_small_cloud","bolsa":"briefcase","academia":"graduation_cap","auditoria":"card_index_dividers"};
+var I3D_ACC = {"accidente":"ambulance","alto":"ladder","ambiente":"seedling","amonesta":"page_facing_up","asisten":"camera_with_flash","ats":"memo","auxilios":"rescue_workers_helmet","boletines":"newspaper","buenas":"glowing_star","buzon":"open_mailbox_with_raised_flag","cadena":"link","caida":"person_climbing","campanas":"megaphone","charlas":"loudspeaker","comite":"classical_building","comcoord":"handshake","constancias":"scroll","credencial":"identification_card","denuncias":"locked_with_key","emo":"stethoscope","equipo":"busts_in_silhouette","escaner":"printer","formatos":"bookmark_tabs","frentes":"construction","induccion":"blue_book","informe":"bar_chart","inspec":"safety_vest","ipets":"orange_book","izaje":"building_construction","kardex":"card_file_box","leerqr":"mobile_phone","miscarpetas":"file_folder","msds":"test_tube","normas":"balance_scale","obra-almacen":"package","obra-legajo":"card_index_dividers","obra-quienes":"sos_button","parte":"clipboard","peligros":"bullseye","personal":"construction_worker","proced":"books","procesos":"high_voltage","pulso":"beating_heart","quienfalta":"sos_button","reporte":"police_car_light","reqs":"receipt","riesgos":"chart_increasing","risst":"pushpin","salidaobra":"door","salud":"hospital","sctr":"shield","semanal":"spiral_calendar","senales":"warning","simulacros":"fire_extinguisher","talleres":"toolbox","tareo":"alarm_clock","temas":"graduation_cap","verificar":"magnifying_glass_tilted_right","visitas":"key","clima":"sun_behind_small_cloud","bolsa":"briefcase","auditoria":"card_index_dividers"};
 var I3D_CARP = {"f-cap":"graduation_cap","f-campo":"construction","f-epp":"safety_vest","f-gente":"construction_worker","f-com":"speech_balloon","f-doc":"open_file_folder"};
 var I3D_TW = {"obra-almacen":"package","obra-ats":"memo","obra-capacitacion":"graduation_cap","obra-leerqr":"mobile_phone","obra-inspeq":"label","obra-reportar":"police_car_light","obra-pedir":"safety_vest","obra-quienes":"sos_button","obra-auxilios":"rescue_workers_helmet","obra-alto":"ladder","obra-legajo":"file_folder","obra-docs":"books","obra-msds":"test_tube","obra-talleres":"toolbox","obra-peligros":"bullseye","obra-denuncia":"locked_with_key","obra-mural":"rolled_up_newspaper","obra-ergo":"chair","Boletines":"newspaper","Charlas":"loudspeaker","Buzón":"open_mailbox_with_raised_flag","Noticias":"rolled_up_newspaper","Constancias":"scroll"};
 var I3D_RUBRO = {"Distribuidor de EPP":"safety_vest","Centro de salud ocupacional":"hospital","Consultor SSOMA":"briefcase","Médico ocupacional":"stethoscope","Centro de capacitación":"graduation_cap","Gestor de residuos o reciclaje (EO-RS)":"recycling_symbol","Municipalidad":"classical_building","Corredor de seguros (SCTR)":"shield","Alquiler de maquinaria pesada":"building_construction","Inspección de izaje, andamios o extintores":"hook","Laboratorio de monitoreo o calibración":"microscope","Transporte de personal":"bus","Saneamiento ambiental o catering":"broom","Otro":"package"};
@@ -117231,11 +117078,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = 'df883ea475';
-var IDIOMA_FR_V = '89a2cdacf3';
+var IDIOMA_PT_V = '4117dcf316';
+var IDIOMA_FR_V = 'a25090e5df';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = '0ab3d708a0';
+var IDIOMA_EN_V = 'bd10c3e7c8';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -132046,7 +131893,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='cae0d21b7a';
+var SELLO_APP='11799eeab5';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';

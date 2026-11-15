@@ -1,4 +1,4 @@
-var CACHE = 'sstc-cae0d21b7a-a';
+var CACHE = 'sstc-11799eeab5-a';
 /* caja aparte para lo que llega por «Compartir»: NO se borra al activar
    un service worker nuevo, porque el usuario puede estar compartiendo
    justo cuando entra una actualizacion. */
@@ -15,11 +15,9 @@ var PDFJS = 'obrasst-pdfjs-1';
    entera se guarda en install, antes de activar.
    28/10/2026 · también el lector de QR (lector-qr.js, jsQR) para los celulares que no traen uno
    (iPhone): «Escanear QR» lee sin señal desde el primer día. */
-var BASE = ['./', './index.html', './temas.js?v=1a67e4b3b9', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=0ab3d708a0', './exige.js?v=35cd514ecd', './idioma-fr.js?v=89a2cdacf3', './procedimientos.js?v=fdf355c008', './idioma-pt.js?v=df883ea475', './imagenes.js?v=0ab620822d', './iconos.js?v=69245bba1f', './figuras.js?v=5d9fdcc169', './lector-qr.js?v=7be46afe22', './riesgos.js?v=03939d6c90', './manifest.webmanifest', './icono-192.png', './icono-512.png',
+var BASE = ['./', './index.html', './temas.js?v=1a67e4b3b9', './ubigeo-pe.js?v=6d135322d0', './idioma-en.js?v=bd10c3e7c8', './exige.js?v=35cd514ecd', './idioma-fr.js?v=a25090e5df', './procedimientos.js?v=fdf355c008', './idioma-pt.js?v=4117dcf316', './imagenes.js?v=0ab620822d', './iconos.js?v=69245bba1f', './figuras.js?v=5d9fdcc169', './lector-qr.js?v=7be46afe22', './riesgos.js?v=03939d6c90', './manifest.webmanifest', './icono-192.png', './icono-512.png',
             './icono-mask-192.png', './icono-mask-512.png', './apple-touch-icon.png', './fondo.jpg',
-            './intro.mp4',
-            /* 14/11/2026 · la Academia (ACADEMIA-APP): la app la abre en un marco; sin señal también */
-            './portal/academia.html?v=7b4a8c7133', './portal/cursos.js?v=24f52faf6e', './portal/cursos/curso-01.json?v=3f0c41bd17', './portal/cursos/curso-02.json?v=7556e05ae0'];
+            './intro.mp4'];
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){
     /* uno por uno: si un icono falta, no se cae la instalacion entera */
@@ -109,9 +107,6 @@ self.addEventListener('fetch', function(e){
     }).catch(function(){ return fetch(e.request); }));
     return;
   }
-  /* 15/11/2026 · la voz de Koda y los clips del profesor (portal/cursos/audio y video): el reproductor los pide por
-     tramos (Range) y pesan; no pasan por aquí ni se guardan en la caja de la app: los atiende el navegador. */
-  if (_u && /\/portal\/cursos\/(audio|video)\//.test(_u.pathname)) return;
   var esNav = (e.request.mode === 'navigate');
   /* ── sw.js NO se guarda ──────────────────────────────────
      La app le pregunta a sw.js cada tanto —con ?_=<hora> pegado, para
@@ -136,15 +131,12 @@ self.addEventListener('fetch', function(e){
       /* 14/10/2026 · y el buzón (b/): sin señal no se puede mandar nada, y tampoco es la app */
       /* 20/10/2026 · lote 21 · y la cédula de votación (vota/): sin señal no se vota, y tampoco es la app */
       if (esNav && _u && /\/(d|h|b|m|vota)\/(index\.html)?$/.test(_u.pathname)) return sinSenalQR();
-      /* 14/11/2026 · la Academia va en un marco dentro de la app: sin copia, se dice que falta señal (no la app entera
-         dentro del marco) */
-      if (esNav && _u && /\/portal\/academia\.html$/.test(_u.pathname)) return sinSenalQR('academia');
       if (esNav) return caches.match('./index.html');
       return Response.error();
     });
   }));
 });
-function sinSenalQR(que){
+function sinSenalQR(){
   /* en el idioma del celular, como la página del cartel (d/). Los textos van con \u para que no dependan de cómo se lea este archivo */
   var T = {
     es: ['Sin internet', 'Necesitas se\u00f1al para abrirlo la primera vez. Vuelve a escanear el c\u00f3digo QR cuando tengas datos o wifi.'],
@@ -154,13 +146,6 @@ function sinSenalQR(que){
   };
   var l = 'es';
   try{ l = String((self.navigator && (self.navigator.language || (self.navigator.languages || [])[0])) || 'es').slice(0, 2).toLowerCase(); }catch(_l){}
-  /* 14/11/2026 · la Academia: el mismo aviso, con su texto */
-  if (que === 'academia') T = {
-    es: ['Sin internet', 'La Academia necesita se\u00f1al la primera vez. Vuelve a abrirla cuando tengas datos o wifi.'],
-    en: ['No internet', 'The Academy needs a signal the first time. Open it again when you have data or wifi.'],
-    pt: ['Sem internet', 'A Academia precisa de sinal na primeira vez. Abra de novo quando tiver dados ou wi-fi.'],
-    fr: ['Pas d\u2019internet', 'L\u2019Acad\u00e9mie a besoin de r\u00e9seau la premi\u00e8re fois. Rouvrez-la quand vous aurez des donn\u00e9es ou du wifi.']
-  };
   var t = T[l] || T.es;
   var h = '<!doctype html><html lang="' + (T[l] ? l : 'es') + '"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1"><title>' + t[0] + ' \u00b7 OBRASST</title></head>' +
