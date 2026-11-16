@@ -115694,8 +115694,10 @@ function idBuscar(){
       }
       if(j.estado==='no_esta'){ ID.ficha=null; ID.paso='nombre'; ID.msg=''; idPintar(); return; }
       if(j.ya_tiene_cuenta){
-        ID.ficha=j; ID.paso='volver';
-        _idDi('Ya hay una cuenta con ese documento. Entra con tu PIN.', false); return;
+        ID.ficha=j; ID.enlazar=true; ID.paso='volver';
+        _idDi('Ya hay una cuenta con ese documento. Entra con tu PIN (o toca «¿Olvidaste tu PIN?» si no lo recuerdas).', false);
+        try{ var _iq=$('id-quien'); if(_iq) _iq.value=ID.doc||''; }catch(_e){}
+        return;
       }
       ID.ficha=j; ID.paso='confirmar'; ID.msg=''; idPintar();
     })
@@ -115852,10 +115854,11 @@ function _idYaTeniaCuenta(correo, pin){
       _idListo(f);
     })
     .catch(function(){
-      ID.cargando = false; ID.paso = 'volver';
+      ID.cargando = false; ID.paso = 'volver'; ID.enlazar = true;
       _idDi(ID.correo
         ? 'Ya hay una cuenta con ese correo y con otro PIN. Si es tuya, entra con ese PIN y esta obra se suma sola. Si no recuerdas el PIN, toca «¿Olvidaste tu PIN?».'
         : 'Ya tenías una cuenta con este documento, con otro PIN. Entra con ese PIN y esta obra se suma sola. Si no lo recuerdas, toca «¿Olvidaste tu PIN?».', false);
+      try{ var _iq=$('id-quien'); if(_iq) _iq.value=ID.doc||''; }catch(_e){}
     });
 }
 
@@ -115898,6 +115901,10 @@ function idPinNuevo(){
     .then(function(j){
       if(!j || !j.ok || !j.correo) return Promise.reject({ motivo: (j && j.motivo) || 'x' });
       puesto = true;
+      if(j.codigo && j.obra){
+        ID.cod = j.codigo; ID.enlazar = true;
+        try{ guardar(LS_EMP, {codigo: j.codigo, id: j.obra, nombre: ''}); }catch(_e){}
+      }
       return authPost('token?grant_type=password', { email: j.correo, password: _idClave(pin) });
     })
     .then(function(j){ guardarToken(j); return _idTrasEntrar(); })
@@ -115926,12 +115933,19 @@ function idPinNuevo(){
    la de la obra de este celular; si no, una que su supervisor ya confirmó; si no, la que haya. */
 function _idElegirFicha(rows){
   rows = rows || []; if(!rows.length) return null;
+  var act = rows.filter(function(r){ return (r.estatus||'activo') !== 'cesado'; });
+  var lista = act.length ? act : rows;
   var e = null; try{ e = leer(LS_EMP,null); }catch(_e){}
-  return (e && e.id && rows.filter(function(r){ return String(r.duenio)===String(e.id); })[0]) ||
-         rows.filter(function(r){ return r.verificado !== false; })[0] || rows[0];
+  var obraId = (ID.ficha && ID.ficha.obra) || (e && e.id) || null;
+  if(obraId){
+    var deObra = lista.filter(function(r){ return String(r.duenio)===String(obraId); })[0];
+    if(deObra) return deObra;
+  }
+  var verif = lista.filter(function(r){ return r.verificado !== false; });
+  return verif.length ? verif[verif.length - 1] : lista[lista.length - 1];
 }
 function _idMiFicha(){
-  return sbGet('sst_trabajador?select=id,nombre,dni,td,puesto,area,proyecto,verificado,duenio,almacenero&limit=20')
+  return sbGet('sst_trabajador?select=id,nombre,dni,td,puesto,area,proyecto,verificado,duenio,almacenero,estatus&limit=20')
     .then(function(rows){
       var t = _idElegirFicha(rows); if(!t) return null;
       return { ok:true, trab:t.id, nombre:t.nombre, verificado:t.verificado,
@@ -115942,7 +115956,7 @@ function _idMiFicha(){
       /* si la base todavia no tiene la columna, el select entero falla.
          Se vuelve a pedir sin ella antes de dar la ficha por perdida:
          entrar a su obra importa mas que saber si entrega EPP. */
-      return sbGet('sst_trabajador?select=id,nombre,dni,td,puesto,area,proyecto,verificado,duenio&limit=20')
+      return sbGet('sst_trabajador?select=id,nombre,dni,td,puesto,area,proyecto,verificado,duenio,estatus&limit=20')
         .then(function(rows){
           var t = _idElegirFicha(rows); if(!t) return null;
           return { ok:true, trab:t.id, nombre:t.nombre, verificado:t.verificado,
@@ -132907,7 +132921,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='f0f7a65981';
+var SELLO_APP='4af747cc4a';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
