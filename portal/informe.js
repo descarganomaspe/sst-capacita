@@ -2558,6 +2558,105 @@ function _infSeparados(D){
   });
 }
 
+/* ═══ 16/11/2026 · EL INFORME EN 8 CARPETAS ═════════════════════════════════════════════════════════════════════════
+   Marcelo: «esa estructura vamos a tenerla como opción para el supervisor lo elabore» (y para la Central, que la pide a
+   sus subcontratas: ISB_PLANTILLAS.ocho, con los mismos nombres). Un ZIP con las 8 carpetas y sus subcarpetas: lo que
+   OBRASST ya tiene del mes va solo a su lugar (cada parte del informe en su PDF, las actas del comité, el Excel, el Word
+   de los temas y los anexos), y lo que se sube a mano queda en su carpeta vacía, con el índice de lo que falta. */
+var INF8 = [
+  { k:'comite', n:'Comité de SST', items:[['acta', '1. Acta de reunión', 'El acta de la reunión del comité (o de la elección del supervisor de SST), con su código y su número de revisión.'],
+    ['acta_entrega', '2. Entrega del acta', 'El cargo de entrega del acta a los miembros.'], ['com_insp', '3. Inspección', 'La inspección del comité del mes.'],
+    ['trimestral', '4. Reporte trimestral', 'El reporte trimestral al comité, el mes que toca.']] },
+  { k:'estadistica', n:'Estadística', items:[['est_mes', '1. Estadística del mes', 'En el cuadro que te piden: horas hombre, trabajadores, accidentes e índices del mes.'],
+    ['anexo_foto', '2. Anexo fotográfico', 'Fotos con su fecha y su hora.'], ['reg_trab', '3. Registro de trabajadores en obra', ''],
+    ['pal', '4. PAL', 'El registro de cumplimiento del PAL (Excel) y sus evidencias: evaluación de ATS, inspecciones de SST y reuniones.'],
+    ['estatus', '5. Estatus de programas', 'El avance del programa anual de SST y de los de inspecciones, capacitaciones y simulacros; si hubo auditoría, su informe y su registro.']] },
+  { k:'simulacros', n:'Simulacros', items:[['sim_inf', '1. Informe del simulacro', 'De acuerdo a su programa.'], ['sim_asis', '1.1 Registro de asistencia', ''],
+    ['sim_eval', '1.2 Evaluación del simulacro', ''], ['sim_recuento', '1.3 Recuento de personal', ''], ['sim_plan', '1.4 Plan de acción', 'El del simulacro del mes anterior.']] },
+  { k:'registros', n:'Control de registros', items:[['reg_insp', '1. Inspecciones', 'En el formato de la RM 050-2013-TR; un PDF por estación o frente.'],
+    ['checklist', '2. Check list diarios', 'Solo 10 muestras.'], ['petar', '3. PETAR', '10 muestras, cerrados y con todas sus firmas.'],
+    ['reg_ats', '4. ATS', '10 muestras, bien cerrados y con todas sus firmas.'], ['reg_epp', '5. Registro de entrega de EPP', 'Con la ropa de temporada, si toca, y su registro fotográfico.']] },
+  { k:'capacitaciones', n:'Capacitaciones', items:[['ihn', '1. IHN · Inducción del personal nuevo', 'El registro, su material (una vez al año) y la evaluación del personal nuevo.'],
+    ['ce_prog', '2. CE programada', ''], ['ce_noprog', '3. CE no programada', 'Con la capacitación específica del personal nuevo: IPERC, PETS y los riesgos de su puesto.'],
+    ['sensib', '4. Sensibilización', ''], ['taller', '5. Taller', ''], ['entrenam', '6. Entrenamiento', ''], ['parada', '7. Parada de seguridad', ''],
+    ['reunion', '8. Reunión de SST y reunión semanal', ''], ['vial', '9. Seguridad vial', ''], ['difusion', '10. Difusión', ''],
+    ['rij', '11. RIJ · Charla de inicio de jornada', ''], ['cap_esp', '13. Capacitación específica programada', 'Material, registro de cumplimiento por persona, evaluaciones y encuestas.']] },
+  { k:'salud', n:'Salud e higiene ocupacional', items:[['enf_ocup', '1. Registro de enfermedades ocupacionales', ''], ['emo', '2. Registro de entrega de exámenes médicos', ''],
+    ['monitoreos', '3. Monitoreos', 'El informe del monitoreo y su registro, según su programa.'], ['chk_salud', '4. Check list de lineamientos de salud en el trabajo', 'Con el levantamiento de lo que salió «No cumple» el mes anterior.'],
+    ['chk_matpel', '5. Check list del almacén de MATPEL', '']] },
+  { k:'personal_nuevo', n:'Registros del personal nuevo', items:[['lockers', '1. Registro de entrega de casilleros', 'Solo del personal nuevo.'],
+    ['risst', '2. Registro de entrega del RISST', 'Solo del personal nuevo.'],
+    ['instructivo', '3. Registro de entrega del instructivo de riesgos del puesto', 'En la app: Inducción › Recomendaciones de tu puesto › Registro de entrega del mes.']] },
+  { k:'otros', n:'Otros', items:[['reunion_sub', '1. Participación en la reunión de subcontratistas', 'La lista o el acta de la reunión del mes.']] }
+];
+/* cada parte del informe, a qué carpeta (y subcarpeta) va; lo que no calza en ninguna va a «Otros» */
+var INF8_SECC = { comite:['comite', 'acta'], resumen:['estadistica', 'est_mes'], hhanio:['estadistica', 'est_mes'], fotoreg:['estadistica', 'anexo_foto'],
+  fotos:['estadistica', 'anexo_foto'], personal:['estadistica', 'reg_trab'], frentes:['estadistica', 'reg_trab'], programas:['estadistica', 'estatus'],
+  objetivos:['estadistica', 'estatus'], inspecciones:['registros', 'reg_insp'], ats:['registros', 'reg_ats'], epp:['registros', 'reg_epp'],
+  charlas:['capacitaciones', ''], capacitacion:['capacitaciones', 'cap_esp'] };
+function _inf8Dir(ck, ik){
+  var r = ''; INF8.forEach(function(c, ci){ if(c.k !== ck) return; r = dos(ci + 1) + ' ' + c.n; c.items.forEach(function(it){ if(it[0] === ik) r += '/' + it[1]; }); });
+  return r || (dos(INF8.length) + ' Otros');
+}
+function _infOcho(D, R){
+  var PL = window.PDFLib, out = [], lleno = {}, cad = Promise.resolve();
+  var nom = function(s){ return String(s).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80); };
+  var pon = function(ck, ik, n, b){ var d = _inf8Dir(ck, ik); out.push({ n:d + '/' + n, b:b }); lleno[ck + '|' + (ik || '')] = (lleno[ck + '|' + (ik || '')] || 0) + 1; };
+  var base = _infPdfBase(D, { separado:true });
+  return PL.PDFDocument.load(base.bytes).then(function(todo){
+    var n = todo.getPageCount(), cortes = base.indice;
+    cortes.forEach(function(c, i){
+      var desde = c.p, hasta = (i + 1 < cortes.length ? cortes[i + 1].p : n + 1) - 1; if(hasta < desde) return;
+      var k = ''; INF_SECC.forEach(function(x){ if(x.n === c.t) k = x.k; });
+      var dest = INF8_SECC[k] || ['otros', ''];
+      cad = cad.then(function(){
+        return PL.PDFDocument.create().then(function(d){
+          var idx = []; for(var q = desde - 1; q < hasta; q++) idx.push(q);
+          return d.copyPages(todo, idx).then(function(pags){ pags.forEach(function(p){ d.addPage(p); }); return d.save(); });
+        }).then(function(b){ pon(dest[0], dest[1], nom(c.t) + ' - ' + _infMesN(D.mes) + '.pdf', new Uint8Array(b)); });
+      });
+    });
+    /* las actas del comité del mes, tal cual (como en los anexos del informe) */
+    var Cm = INFW.secc.some(function(x){ return x.k === 'comite' && _infVa(x); }) ? D.com : null;
+    var bajar = function(url){ return fetch(url).then(function(r){ if(!r.ok) throw r.status; return r.arrayBuffer(); }); };
+    (Cm ? Cm.actas : []).forEach(function(a){
+      cad = cad.then(function(){
+        var p = a.subida ? (a.url ? bajar(a.url) : Promise.reject('sin_archivo')) : cargarMasApp().then(function(){ return masCtx({ com:Cm.doc }); }).then(function(Cx){ var Q = MAS_APP.usar(Cx).comiteActaPdf(a.id); if(!Q || !Q.blob) throw 'sin_acta'; return Q.blob.arrayBuffer(); });
+        return p.then(function(b){ pon('comite', 'acta', nom('Acta del comité N° ' + (a.n || '—')) + '.pdf', new Uint8Array(b)); }, function(){});
+      });
+    });
+    /* los anexos elegidos, a «Otros» */
+    if(INFW.secc.some(function(x){ return x.k === 'anexos' && x.on; })) INFW.anexos.forEach(function(a){
+      cad = cad.then(function(){ return bajar(a.url).then(function(b){ var u8 = new Uint8Array(b), ext = (u8[0] === 0x25 && u8[1] === 0x50) ? 'pdf' : ((u8[0] === 0x89) ? 'png' : 'jpg');
+        pon('otros', '', 'Anexo - ' + nom(a.nombre).replace(/\.(pdf|jpe?g|png|webp)$/i, '') + '.' + ext, u8); }, function(){}); });
+    });
+    return cad;
+  }).then(function(){
+    var lee = function(bl){ return bl.arrayBuffer().then(function(b){ return new Uint8Array(b); }); };
+    return Promise.all([lee(_infExcel(D)), lee(_infWord(D))]).then(function(x){
+      pon('estadistica', 'est_mes', 'Datos del informe - ' + _infMesN(D.mes) + '.xlsx', x[0]);
+      pon('capacitaciones', '', 'Temas del mes - ' + _infMesN(D.mes) + '.docx', x[1]);
+    });
+  }).then(function(){
+    /* todas las carpetas, también las vacías (lo que se sube a mano), y el índice */
+    var dirs = [], idx = ['Informe mensual en 8 carpetas', (nombreObraP() || '') + ' · ' + _infMesN(D.mes), 'Armado con OBRASST el ' + fechaLarga(hoyISO()), '',
+      '✓ = ya tiene lo de OBRASST · ○ = se agrega a mano', ''];
+    INF8.forEach(function(c, ci){
+      var cd = dos(ci + 1) + ' ' + c.n; dirs.push({ n:cd + '/', x:'' });
+      idx.push(cd.toUpperCase() + (lleno[c.k + '|'] ? '   (' + lleno[c.k + '|'] + ' de OBRASST en la carpeta)' : ''));
+      c.items.forEach(function(it){
+        dirs.push({ n:cd + '/' + it[1] + '/', x:'' });
+        var nn = lleno[c.k + '|' + it[0]] || 0;
+        idx.push('  ' + (nn ? '✓ ' : '○ ') + it[1] + (nn ? '  (' + nn + (nn === 1 ? ' archivo' : ' archivos') + ' de OBRASST)' : (it[2] ? '  — ' + it[2] : '')));
+      });
+      idx.push('');
+    });
+    var raiz = [{ n:'00 Índice y lo que falta.txt', x:'﻿' + idx.join('\r\n') }];
+    if(R && R.bytes) raiz.push({ n:'00 Informe del mes completo - ' + _infMesN(D.mes) + '.pdf', b:new Uint8Array(R.bytes) });
+    return _infZip(raiz.concat(dirs, out), 'application/zip');
+  });
+}
+
 /* ═══ 19/10/2026 · LOTE 20 · EL INFORME DE MEDIO AMBIENTE DEL MES ═══════════════════════════════════════════════════════
    Aparte del de SST: los residuos (con su certificado o su boleta; lo vendido, con su comprobante), el agua en m³, el
    combustible con sus boletas de carga, las charlas de temas ambientales con su HHC, la HHT del mes, las inspecciones y
@@ -2769,7 +2868,7 @@ function _infVer(R){
     (blob.size>1048576 ? (blob.size/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(blob.size/1024))+' KB')+'</p>'+
     (R.malos.length ? '<div class="aviso ojo" id="inf-malos">No se pudieron sumar: '+esc(R.malos.join(', '))+'. Solo entran PDF y fotos (JPG o PNG).</div>' : '')+
     '<div class="inf-formatos"><button type="button" class="bt sec chico" id="inf-xls">📊 Excel con los datos</button>'+(otro ? '' : '<button type="button" class="bt sec chico" id="inf-doc">📝 Word de los temas del mes</button>')+
-      (todas || otro ? '' : '<button type="button" class="bt sec chico" id="inf-word-todo">📄 Todo en un Word</button><button type="button" class="bt sec chico" id="inf-zip">🗂️ Cada parte en su archivo (ZIP)</button>')+'</div>'+
+      (todas || otro ? '' : '<button type="button" class="bt sec chico" id="inf-word-todo">📄 Todo en un Word</button><button type="button" class="bt sec chico" id="inf-zip">🗂️ Cada parte en su archivo (ZIP)</button><button type="button" class="bt sec chico" id="inf-ocho" title="Comité, estadística, simulacros, registros, capacitaciones, salud, personal nuevo y otros">📁 En 8 carpetas (ZIP)</button>')+'</div>'+
     '<iframe class="inf-vista" id="inf-vista" title="El informe" src="'+esc(INFW._url)+'"></iframe><p class="msg" id="inf-msg" role="status"></p>';
   abrirHoja('El informe de '+_infMesN(INFW.mes), todas ? (_infEmpresaN() || 'Todas las obras') : (nombreObraP()||''), h,
     '<button type="button" class="bt sec" id="inf-volver">‹ Volver a cambiar</button>'+(todas ? '' : '<button type="button" class="bt sec" id="inf-guardar">Guardar en el archivo de la obra</button>')+'<button type="button" class="bt" id="inf-bajar">Descargar el PDF</button>', {ancha:true});
@@ -2783,6 +2882,12 @@ function _infVer(R){
   if($('inf-zip')) $('inf-zip').onclick=function(){
     var m=$('inf-msg'), b=this; b.disabled=true; m.className='msg gris'; m.textContent='Armando cada parte en su archivo…';
     _infSeparados(INFW.datos).then(function(z){ b.disabled=false; bajarBlob(z, base+' - por partes.zip'); m.className='msg ok'; m.textContent='Listo: un PDF por parte, los anexos, el Excel y el Word de los temas, en un ZIP.'; },
+      function(e){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo armar: '+((e && e.message) || e); });
+  };
+  /* 16/11/2026 · el informe en 8 carpetas (INF8) */
+  if($('inf-ocho')) $('inf-ocho').onclick=function(){
+    var m=$('inf-msg'), b=this; b.disabled=true; m.className='msg gris'; m.textContent='Armando las 8 carpetas…';
+    _infOcho(INFW.datos, R).then(function(z){ b.disabled=false; bajarBlob(z, base+' - 8 carpetas.zip'); m.className='msg ok'; m.textContent='Listo: las 8 carpetas con lo de OBRASST en su lugar, y el índice con lo que falta agregar.'; },
       function(e){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo armar: '+((e && e.message) || e); });
   };
   $('inf-guardar').onclick=function(){

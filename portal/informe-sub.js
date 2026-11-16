@@ -163,6 +163,57 @@ var ISB_PLANTILLAS = {
       { k:'programado', n:'Lo programado del mes', tipo:'app', fuente:'programa', min:0, papel:true, corta:false,
         ayuda:'Sale solo de su programa anual: cada actividad del mes, cumplida o pendiente. Si la hicieron sin registrarla, suben su evidencia.' },
       { k:'objetivos', n:'Objetivos y metas del año', tipo:'app', fuente:'objetivos', min:1, papel:true, corta:false, ayuda:'Con el avance de su programa.' }] }] },
+  /* 16/11/2026 · el informe mensual en 8 carpetas (la estructura que pasó Marcelo): la Central la elige para sus
+     subcontratas, o la arma cada una. Mismos nombres que «En 8 carpetas» del informe de la web (portal/informe.js). */
+  ocho:{ nombre:'Informe mensual en 8 carpetas', cada:'mes', modo:'cierre', cierre:0, suma:true, carpetas:[
+    { k:'comite', n:'Comité de SST', items:[
+      { k:'acta', n:'1. Acta de reunión', tipo:'archivos', min:1, formatos:['pdf'], ayuda:'El acta de la reunión del comité (o de la elección del supervisor de SST), con su código y su número de revisión.' },
+      { k:'acta_entrega', n:'2. Entrega del acta', tipo:'archivos', min:1, formatos:['pdf'], ayuda:'El cargo de entrega del acta a los miembros.' },
+      { k:'com_insp', n:'3. Inspección', tipo:'archivos', min:1, formatos:['pdf'], ayuda:'La inspección del comité del mes.' },
+      { k:'trimestral', n:'4. Reporte trimestral', tipo:'archivos', min:0, formatos:['pdf'], ayuda:'El reporte trimestral al comité, el mes que toca.' }] },
+    { k:'estadistica', n:'Estadística', items:[
+      { k:'est_mes', n:'1. Estadística del mes', tipo:'archivos', min:1, formatos:['excel', 'pdf'], ayuda:'En el cuadro que te piden: horas hombre, trabajadores, accidentes e índices del mes.' },
+      { k:'anexo_foto', n:'2. Anexo fotográfico', tipo:'fotos', min:4, desc:true, nom:{ p:'AF', r:true, a:true, m:true, d:false, s:'_' }, ayuda:'Fotos con su fecha y su hora.' },
+      { k:'reg_trab', n:'3. Registro de trabajadores en obra', tipo:'archivos', min:1, formatos:['excel', 'pdf'] },
+      { k:'pal', n:'4. PAL', tipo:'archivos', min:1, ayuda:'El registro de cumplimiento del PAL (Excel) y sus evidencias: evaluación de ATS, inspecciones de SST y reuniones. El PAL es de la línea de mando.' },
+      { k:'estatus', n:'5. Estatus de programas', tipo:'archivos', min:1, formatos:['excel', 'pdf'], ayuda:'El avance del programa anual de SST y de los de inspecciones, capacitaciones y simulacros. Si hubo auditoría, su informe y su registro.' }] },
+    { k:'simulacros', n:'Simulacros', items:[
+      { k:'sim_inf', n:'1. Informe del simulacro', tipo:'archivos', min:0, formatos:['pdf'], ayuda:'De acuerdo a su programa.' },
+      { k:'sim_asis', n:'1.1 Registro de asistencia', tipo:'app', fuente:'asis:simulacro', min:0, papel:true },
+      { k:'sim_eval', n:'1.2 Evaluación del simulacro', tipo:'archivos', min:0 },
+      { k:'sim_recuento', n:'1.3 Recuento de personal', tipo:'archivos', min:0 },
+      { k:'sim_plan', n:'1.4 Plan de acción', tipo:'archivos', min:0, ayuda:'El plan de acción del simulacro del mes anterior.' }] },
+    { k:'registros', n:'Control de registros', items:[
+      { k:'reg_insp', n:'1. Inspecciones', tipo:'app', fuente:'inspecciones', min:1, papel:true, ayuda:'El cumplimiento del programa de inspecciones, en el formato de la RM 050-2013-TR. Si trabajan en más de una estación o frente, un PDF por cada uno.' },
+      { k:'checklist', n:'2. Check list diarios', tipo:'archivos', min:10, ayuda:'Solo 10 muestras.' },
+      { k:'petar', n:'3. PETAR', tipo:'archivos', min:10, formatos:['pdf'], ayuda:'10 muestras, cerrados y con todas sus firmas.' },
+      { k:'reg_ats', n:'4. ATS', tipo:'app', fuente:'ats', min:10, papel:true, ayuda:'10 muestras, bien cerrados y con todas sus firmas.' },
+      { k:'reg_epp', n:'5. Registro de entrega de EPP', tipo:'app', fuente:'epp', min:1, papel:true, ayuda:'En el formato establecido. Si toca la ropa de temporada (por ejemplo, el uniforme de invierno), su entrega con registro fotográfico.' }] },
+    { k:'capacitaciones', n:'Capacitaciones', items:[
+      { k:'ihn', n:'1. IHN · Inducción del personal nuevo', tipo:'app', fuente:'asis:induccion', min:0, papel:true, ayuda:'El registro de la inducción. Sube aquí también su material (una vez al año) y la evaluación del personal nuevo.' },
+      { k:'ce_prog', n:'2. CE programada', tipo:'app', fuente:'asis:capacitacion', min:1, papel:true, ayuda:'Según su programa y el del cliente. Tiempo mínimo: 45 minutos, o lo que diga su programa.' },
+      { k:'ce_noprog', n:'3. CE no programada', tipo:'archivos', min:0, ayuda:'Aquí va también la capacitación específica del personal nuevo: la difusión del IPERC, los PETS y los peligros y riesgos de su puesto.' },
+      { k:'sensib', n:'4. Sensibilización', tipo:'app', fuente:'asis:sensibilizacion', min:0, papel:true },
+      { k:'taller', n:'5. Taller', tipo:'app', fuente:'asis:taller', min:0, papel:true },
+      { k:'entrenam', n:'6. Entrenamiento', tipo:'app', fuente:'asis:entrenamiento', min:0, papel:true },
+      { k:'parada', n:'7. Parada de seguridad', tipo:'app', fuente:'asis:parada', min:0, papel:true },
+      { k:'reunion', n:'8. Reunión de SST y reunión semanal', tipo:'app', fuente:'asis:reunion', min:0, papel:true },
+      { k:'vial', n:'9. Seguridad vial', tipo:'archivos', min:0 },
+      { k:'difusion', n:'10. Difusión', tipo:'app', fuente:'asis:difusion', min:0, papel:true },
+      { k:'rij', n:'11. RIJ · Charla de inicio de jornada', tipo:'app', fuente:'asis:charla', min:1, papel:true },
+      { k:'cap_esp', n:'13. Capacitación específica programada', tipo:'archivos', min:0, ayuda:'Su material (PPT), el registro de cumplimiento del programa por persona (Excel del mes), y las evaluaciones y encuestas.' }] },
+    { k:'salud', n:'Salud e higiene ocupacional', items:[
+      { k:'enf_ocup', n:'1. Registro de enfermedades ocupacionales', tipo:'archivos', min:1, formatos:['pdf'] },
+      { k:'emo', n:'2. Registro de entrega de exámenes médicos', tipo:'archivos', min:0, formatos:['pdf'] },
+      { k:'monitoreos', n:'3. Monitoreos', tipo:'archivos', min:0, ayuda:'De acuerdo a su programa: el informe del monitoreo (por ejemplo, de iluminación) y su registro.' },
+      { k:'chk_salud', n:'4. Check list de lineamientos de salud en el trabajo', tipo:'archivos', min:1, ayuda:'Cada mes, con el levantamiento de lo que salió «No cumple» el mes anterior.' },
+      { k:'chk_matpel', n:'5. Check list del almacén de MATPEL', tipo:'archivos', min:1, ayuda:'La inspección del mes del almacén de materiales peligrosos.' }] },
+    { k:'personal_nuevo', n:'Registros del personal nuevo', items:[
+      { k:'lockers', n:'1. Registro de entrega de casilleros', tipo:'archivos', min:0, ayuda:'Solo del personal nuevo.' },
+      { k:'risst', n:'2. Registro de entrega del RISST', tipo:'archivos', min:0, ayuda:'Solo del personal nuevo.' },
+      { k:'instructivo', n:'3. Registro de entrega del instructivo de riesgos del puesto', tipo:'archivos', min:0, formatos:['pdf'], ayuda:'Solo del personal nuevo. OBRASST lo saca con las firmas de la inducción: Inducción › Recomendaciones de tu puesto › Registro de entrega del mes.' }] },
+    { k:'otros', n:'Otros', items:[
+      { k:'reunion_sub', n:'1. Participación en la reunión de subcontratistas', tipo:'archivos', min:1, ayuda:'La lista o el acta de la reunión del mes.' }] }] },
   semanal:{ nombre:'Reporte semanal de horas hombre', cada:'semana', modo:'cierre', cierre:1, suma:true, carpetas:[
     { k:'hh', n:'Horas hombre', items:[{ k:'hht', n:'Horas hombre de la semana', tipo:'dato', dato:'hht', ayuda:'Si llevan el tareo o el reporte semanal en OBRASST, ya salen solas.' },
                                        { k:'trab', n:'Trabajadores en la semana', tipo:'dato', dato:'numero' }] }] },
@@ -427,7 +478,7 @@ function iswPido(c, j){
     return;
   }
   var h = '<div class="tarj"><div class="tarj-cab"><div><h2>Lo que pides a tus subcontratas</h2><p class="sub">Arma las carpetas y lo que va en cada una; publícalo y les sale a sus supervisores y jefes, en la app y en la web. Lo de la app entra solo.</p></div>' +
-    (m && j.puede_pedir ? '<div class="isw-nuevos"><button type="button" class="bt chico" data-nuevo="mensual">+ Informe mensual</button><button type="button" class="bt sec chico" data-nuevo="semanal">+ Reporte semanal</button>' +
+    (m && j.puede_pedir ? '<div class="isw-nuevos"><button type="button" class="bt chico" data-nuevo="mensual">+ Informe mensual</button><button type="button" class="bt sec chico" data-nuevo="ocho" title="La estructura de 8 carpetas: comité, estadística, simulacros, registros, capacitaciones, salud, personal nuevo y otros">+ Informe en 8 carpetas</button><button type="button" class="bt sec chico" data-nuevo="semanal">+ Reporte semanal</button>' +
       '<button type="button" class="bt sec chico" data-nuevo="fecha">+ Pedido con fecha</button><button type="button" class="bt sec chico" id="isw-copiar">Copiar de otra obra</button></div>' : '') + '</div>';
   if(!L.length) h += iswVacio('Todavía no pides nada', m ? 'Empieza con el informe mensual: trae 8 carpetas listas (panel fotográfico, ATS, asistencia, inspecciones, EPP, reportes, indicadores y documentos) y lo cambias a tu gusto.' : 'Lo arma un jefe o un gerente de la obra.');
   else {
