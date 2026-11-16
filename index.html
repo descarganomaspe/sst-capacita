@@ -6904,6 +6904,17 @@ html:not(.t-claro):not(.t-alto) .wa-msg-hora{color:#8696A0}
 .wa-bar-btn-cam{background:none;border:none;color:#54656F;font-size:18px;cursor:pointer;padding:4px}
 .wa-bar-btn-send{flex:0 0 40px;width:40px;height:40px;border-radius:50%;background:#00A884;border:none;color:#FFFFFF;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.15);transition:transform .1s}
 .wa-bar-btn-send:active{transform:scale(.92)}
+/* 16/11/2026 · RP-INSTRUCTIVO */
+.rpi-g{margin:10px 0 4px;padding:10px 12px;border-radius:14px;border:1px solid rgba(var(--w),.12);background:rgba(var(--w),.03)}
+.rpi-g > b{display:block;font-size:15px;margin-bottom:4px}
+.rpi-sub{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--oro);margin:12px 0 4px}
+.rpi-r{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid rgba(var(--w),.08);font-size:14px;line-height:1.35;cursor:pointer}
+.rpi-r input{margin-top:3px;flex:none;width:20px;height:20px}
+.rpi-r small{display:block;color:var(--gris);font-size:12.5px;margin-top:3px}
+.rpi-propio{justify-content:space-between;cursor:default}
+.rpi-tunel{font-style:normal;font-size:11px;padding:1px 7px;border-radius:99px;background:rgba(var(--w),.1);margin-left:4px}
+.rpi-nuevo{margin:10px 0}.rpi-nuevo summary{cursor:pointer;font-weight:700;padding:8px 0}
+
 /* 15/11/2026 · el chat en la nube (Claude): lo que faltaba de la cara de Gemini, en los 3 temas */
 .wa-wrap{height:calc(100vh - 150px);height:calc(100dvh - 150px);min-height:440px;position:relative}
 .wa-feed{min-height:0}
@@ -19887,7 +19898,10 @@ var CATALOGO_FORMATOS = [
   {k:'risst-cargo', n:'Cargo de entrega del RISST', d:'El trabajador recibe el reglamento interno: firma y huella.'},
   {k:'ingreso-salida', n:'Registro de ingreso y salida de trabajadores', d:'Del día: hora de ingreso, de salida y la firma.'},
   {k:'visitas', n:'Registro de visitas', d:'Cada visita con su documento, motivo y horas.'},
-  {k:'recuento', n:'Recuento de personal en una evacuación', d:'Cuántas personas llegaron de cada frente al punto de reunión.'}
+  {k:'recuento', n:'Recuento de personal en una evacuación', d:'Cuántas personas llegaron de cada frente al punto de reunión.'},
+  /* 16/11/2026 · RP-INSTRUCTIVO */
+  {k:'instructivo-puesto', n:'Instructivo de riesgos del puesto', d:'Los peligros, los riesgos y sus controles de cada puesto, con la declaración del trabajador.'},
+  {k:'rp-entrega', n:'Registro de entrega del instructivo del puesto', d:'Las firmas del mes de quienes recibieron el instructivo de su puesto.'}
 ];
 function formatos(){
   var o=leer(LS_FORMATOS,null);
@@ -30089,8 +30103,8 @@ function _chListaHTML(){
   if(CHN.estado === 'guardado' && CHN.ts) h += '<div class="ch-aviso suave">Sin señal: ves lo último guardado en este celular.</div>';
   var nP = CHN.misPend || 0;
   h += '<div class="can-tabs-bar" role="tablist">' +
-    '<button type="button" role="tab" class="can-tab-btn' + (CHAT_FILTRO_ACTIVO !== 'pend' ? ' activo' : '') + '" aria-selected="' + (CHAT_FILTRO_ACTIVO !== 'pend') + '" data-filtro="grupos">Grupos (' + CHN.canales.length + ')</button>' +
-    '<button type="button" role="tab" class="can-tab-btn' + (CHAT_FILTRO_ACTIVO === 'pend' ? ' activo' : '') + '" aria-selected="' + (CHAT_FILTRO_ACTIVO === 'pend') + '" data-filtro="pend">📌 Mis pendientes (' + nP + ')</button></div>';
+    '<button type="button" role="tab" class="can-tab-btn' + (CHAT_FILTRO_ACTIVO !== 'pend' ? ' activo' : '') + '" aria-selected="' + (CHAT_FILTRO_ACTIVO !== 'pend') + '" data-filtro="grupos"><span>Grupos</span> <span data-sin-trad>(' + CHN.canales.length + ')</span></button>' +
+    '<button type="button" role="tab" class="can-tab-btn' + (CHAT_FILTRO_ACTIVO === 'pend' ? ' activo' : '') + '" aria-selected="' + (CHAT_FILTRO_ACTIVO === 'pend') + '" data-filtro="pend">📌 <span>Mis pendientes</span> <span data-sin-trad>(' + nP + ')</span></button></div>';
   if(CHAT_FILTRO_ACTIVO === 'pend') return h + _chPendListaHTML();
   if(CHN.gestiona) h += '<button type="button" class="btn ch-nuevo" data-acc="nuevo">➕ Crear un grupo</button>';
   h += '<div class="can-lista">';
@@ -30719,7 +30733,7 @@ function _chInfo(canalId){
     }
     if(esObra){
       var nT = L.filter(function(x){ return x.quien === 'trab'; }).length;
-      h += '<p class="ch-nota">Aquí está toda la obra: ' + (L.length - nT) + ' supervisores y ' + nT + ' trabajadores con su cuenta. El trabajador entra con su cuenta cuando su ficha está verificada.</p>';
+      h += '<p class="ch-nota"><span>Aquí está toda la obra.</span> <span>Supervisores:</span> <b data-sin-trad>' + (L.length - nT) + '</b> · <span>trabajadores con su cuenta:</span> <b data-sin-trad>' + nT + '</b>. <span>El trabajador entra con su cuenta cuando su ficha está verificada.</span></p>';
       h += '<div class="ch-gente lectura">' + L.map(function(x){ return '<div class="ch-persona"><span class="ch-pers-tx"><b>' + _chE(x.nombre) + (x.yo ? ' (tú)' : '') + '</b><small>' + _chE(CH_QUIEN[x.quien] || '') + '</small></span></div>'; }).join('') + '</div>';
     } else if(admin){
       if(!esGrupo) h += '<p class="ch-nota">' + (conLista ? 'Este grupo tiene lista: lo ven solo los marcados (y el jefe de la obra).' : 'Sin lista, lo ven todos los supervisores de la obra. Si marcas a algunos, lo verán solo ellos (y el jefe de la obra).') + '</p>';
@@ -44703,6 +44717,57 @@ var ISB_PLANTILLAS = {
       { k:'programado', n:'Lo programado del mes', tipo:'app', fuente:'programa', min:0, papel:true, corta:false,
         ayuda:'Sale solo de su programa anual: cada actividad del mes, cumplida o pendiente. Si la hicieron sin registrarla, suben su evidencia.' },
       { k:'objetivos', n:'Objetivos y metas del año', tipo:'app', fuente:'objetivos', min:1, papel:true, corta:false, ayuda:'Con el avance de su programa.' }] }] },
+  /* 16/11/2026 · el informe mensual en 8 carpetas (la estructura que pasó Marcelo): la Central la elige para sus
+     subcontratas, o la arma cada una. Mismos nombres que «En 8 carpetas» del informe de la web (portal/informe.js). */
+  ocho:{ nombre:'Informe mensual en 8 carpetas', cada:'mes', modo:'cierre', cierre:0, suma:true, carpetas:[
+    { k:'comite', n:'Comité de SST', items:[
+      { k:'acta', n:'1. Acta de reunión', tipo:'archivos', min:1, formatos:['pdf'], ayuda:'El acta de la reunión del comité (o de la elección del supervisor de SST), con su código y su número de revisión.' },
+      { k:'acta_entrega', n:'2. Entrega del acta', tipo:'archivos', min:1, formatos:['pdf'], ayuda:'El cargo de entrega del acta a los miembros.' },
+      { k:'com_insp', n:'3. Inspección', tipo:'archivos', min:1, formatos:['pdf'], ayuda:'La inspección del comité del mes.' },
+      { k:'trimestral', n:'4. Reporte trimestral', tipo:'archivos', min:0, formatos:['pdf'], ayuda:'El reporte trimestral al comité, el mes que toca.' }] },
+    { k:'estadistica', n:'Estadística', items:[
+      { k:'est_mes', n:'1. Estadística del mes', tipo:'archivos', min:1, formatos:['excel', 'pdf'], ayuda:'En el cuadro que te piden: horas hombre, trabajadores, accidentes e índices del mes.' },
+      { k:'anexo_foto', n:'2. Anexo fotográfico', tipo:'fotos', min:4, desc:true, nom:{ p:'AF', r:true, a:true, m:true, d:false, s:'_' }, ayuda:'Fotos con su fecha y su hora.' },
+      { k:'reg_trab', n:'3. Registro de trabajadores en obra', tipo:'archivos', min:1, formatos:['excel', 'pdf'] },
+      { k:'pal', n:'4. PAL', tipo:'archivos', min:1, ayuda:'El registro de cumplimiento del PAL (Excel) y sus evidencias: evaluación de ATS, inspecciones de SST y reuniones. El PAL es de la línea de mando.' },
+      { k:'estatus', n:'5. Estatus de programas', tipo:'archivos', min:1, formatos:['excel', 'pdf'], ayuda:'El avance del programa anual de SST y de los de inspecciones, capacitaciones y simulacros. Si hubo auditoría, su informe y su registro.' }] },
+    { k:'simulacros', n:'Simulacros', items:[
+      { k:'sim_inf', n:'1. Informe del simulacro', tipo:'archivos', min:0, formatos:['pdf'], ayuda:'De acuerdo a su programa.' },
+      { k:'sim_asis', n:'1.1 Registro de asistencia', tipo:'app', fuente:'asis:simulacro', min:0, papel:true },
+      { k:'sim_eval', n:'1.2 Evaluación del simulacro', tipo:'archivos', min:0 },
+      { k:'sim_recuento', n:'1.3 Recuento de personal', tipo:'archivos', min:0 },
+      { k:'sim_plan', n:'1.4 Plan de acción', tipo:'archivos', min:0, ayuda:'El plan de acción del simulacro del mes anterior.' }] },
+    { k:'registros', n:'Control de registros', items:[
+      { k:'reg_insp', n:'1. Inspecciones', tipo:'app', fuente:'inspecciones', min:1, papel:true, ayuda:'El cumplimiento del programa de inspecciones, en el formato de la RM 050-2013-TR. Si trabajan en más de una estación o frente, un PDF por cada uno.' },
+      { k:'checklist', n:'2. Check list diarios', tipo:'archivos', min:10, ayuda:'Solo 10 muestras.' },
+      { k:'petar', n:'3. PETAR', tipo:'archivos', min:10, formatos:['pdf'], ayuda:'10 muestras, cerrados y con todas sus firmas.' },
+      { k:'reg_ats', n:'4. ATS', tipo:'app', fuente:'ats', min:10, papel:true, ayuda:'10 muestras, bien cerrados y con todas sus firmas.' },
+      { k:'reg_epp', n:'5. Registro de entrega de EPP', tipo:'app', fuente:'epp', min:1, papel:true, ayuda:'En el formato establecido. Si toca la ropa de temporada (por ejemplo, el uniforme de invierno), su entrega con registro fotográfico.' }] },
+    { k:'capacitaciones', n:'Capacitaciones', items:[
+      { k:'ihn', n:'1. IHN · Inducción del personal nuevo', tipo:'app', fuente:'asis:induccion', min:0, papel:true, ayuda:'El registro de la inducción. Sube aquí también su material (una vez al año) y la evaluación del personal nuevo.' },
+      { k:'ce_prog', n:'2. CE programada', tipo:'app', fuente:'asis:capacitacion', min:1, papel:true, ayuda:'Según su programa y el del cliente. Tiempo mínimo: 45 minutos, o lo que diga su programa.' },
+      { k:'ce_noprog', n:'3. CE no programada', tipo:'archivos', min:0, ayuda:'Aquí va también la capacitación específica del personal nuevo: la difusión del IPERC, los PETS y los peligros y riesgos de su puesto.' },
+      { k:'sensib', n:'4. Sensibilización', tipo:'app', fuente:'asis:sensibilizacion', min:0, papel:true },
+      { k:'taller', n:'5. Taller', tipo:'app', fuente:'asis:taller', min:0, papel:true },
+      { k:'entrenam', n:'6. Entrenamiento', tipo:'app', fuente:'asis:entrenamiento', min:0, papel:true },
+      { k:'parada', n:'7. Parada de seguridad', tipo:'app', fuente:'asis:parada', min:0, papel:true },
+      { k:'reunion', n:'8. Reunión de SST y reunión semanal', tipo:'app', fuente:'asis:reunion', min:0, papel:true },
+      { k:'vial', n:'9. Seguridad vial', tipo:'archivos', min:0 },
+      { k:'difusion', n:'10. Difusión', tipo:'app', fuente:'asis:difusion', min:0, papel:true },
+      { k:'rij', n:'11. RIJ · Charla de inicio de jornada', tipo:'app', fuente:'asis:charla', min:1, papel:true },
+      { k:'cap_esp', n:'13. Capacitación específica programada', tipo:'archivos', min:0, ayuda:'Su material (PPT), el registro de cumplimiento del programa por persona (Excel del mes), y las evaluaciones y encuestas.' }] },
+    { k:'salud', n:'Salud e higiene ocupacional', items:[
+      { k:'enf_ocup', n:'1. Registro de enfermedades ocupacionales', tipo:'archivos', min:1, formatos:['pdf'] },
+      { k:'emo', n:'2. Registro de entrega de exámenes médicos', tipo:'archivos', min:0, formatos:['pdf'] },
+      { k:'monitoreos', n:'3. Monitoreos', tipo:'archivos', min:0, ayuda:'De acuerdo a su programa: el informe del monitoreo (por ejemplo, de iluminación) y su registro.' },
+      { k:'chk_salud', n:'4. Check list de lineamientos de salud en el trabajo', tipo:'archivos', min:1, ayuda:'Cada mes, con el levantamiento de lo que salió «No cumple» el mes anterior.' },
+      { k:'chk_matpel', n:'5. Check list del almacén de MATPEL', tipo:'archivos', min:1, ayuda:'La inspección del mes del almacén de materiales peligrosos.' }] },
+    { k:'personal_nuevo', n:'Registros del personal nuevo', items:[
+      { k:'lockers', n:'1. Registro de entrega de casilleros', tipo:'archivos', min:0, ayuda:'Solo del personal nuevo.' },
+      { k:'risst', n:'2. Registro de entrega del RISST', tipo:'archivos', min:0, ayuda:'Solo del personal nuevo.' },
+      { k:'instructivo', n:'3. Registro de entrega del instructivo de riesgos del puesto', tipo:'archivos', min:0, formatos:['pdf'], ayuda:'Solo del personal nuevo. OBRASST lo saca con las firmas de la inducción: Inducción › Recomendaciones de tu puesto › Registro de entrega del mes.' }] },
+    { k:'otros', n:'Otros', items:[
+      { k:'reunion_sub', n:'1. Participación en la reunión de subcontratistas', tipo:'archivos', min:1, ayuda:'La lista o el acta de la reunión del mes.' }] }] },
   semanal:{ nombre:'Reporte semanal de horas hombre', cada:'semana', modo:'cierre', cierre:1, suma:true, carpetas:[
     { k:'hh', n:'Horas hombre', items:[{ k:'hht', n:'Horas hombre de la semana', tipo:'dato', dato:'hht', ayuda:'Si llevan el tareo o el reporte semanal en OBRASST, ya salen solas.' },
                                        { k:'trab', n:'Trabajadores en la semana', tipo:'dato', dato:'numero' }] }] },
@@ -65837,7 +65902,10 @@ function rpAdminPintar(){
       '<button type="button" class="btn" style="margin:0" id="rp-guardar" onclick="rpAdminGuardar()">Guardar</button></div></div>';
   } else {
     h += '<label class="btn sec" for="rp-archivo" style="display:block;text-align:center;margin-top:10px">＋ Subir el de un puesto</label>' +
-         '<input type="file" id="rp-archivo" accept="application/pdf,image/*" class="inde-archivo" onchange="rpAdminArchivo(this)">';
+         '<input type="file" id="rp-archivo" accept="application/pdf,image/*" class="inde-archivo" onchange="rpAdminArchivo(this)">' +
+         /* 16/11/2026 · RP-INSTRUCTIVO: armarlo aquí, con su peligro, riesgo y control; y el registro de entrega del mes */
+         '<button type="button" class="btn sec" style="margin-top:8px" onclick="rpiAbrir()">🧩 Armarlo aquí: peligro, riesgo y control</button>' +
+         '<button type="button" class="btn sec" style="margin-top:8px" onclick="rpRegAbrir()">📋 Registro de entrega del mes</button>';
   }
   c.innerHTML = h;
 }
@@ -65895,6 +65963,412 @@ function rpAdminQuitar(i){
   }, { si:'Quitar', no:'Dejarlo', icono:'🗑️' });
 }
 /* <<< RIESGO-PUESTO-APP-FIN >>> */
+/* >>> RP-INSTRUCTIVO-INI (16/11/2026) <<< */
+/* ══ 16/11/2026 · EL INSTRUCTIVO DE RIESGOS DEL PUESTO, ARMADO EN LA APP, Y SU REGISTRO DE ENTREGA ═══════════════════
+   Marcelo: «es para que sea parte de los entregables al personal nuevo, donde por ley se le tiene que conocer los
+   peligros y riesgos dentro de su frente de trabajo y actividad». Su instructivo (Rev. 01), mejorado: cada fila con su
+   peligro, su riesgo y sus medidas de control, por grupos (oficina y obra); el EPP básico y el específico; lo que
+   siempre se hace; la emergencia y la declaración de recepción y compromiso.
+   El supervisor marca lo que aplica a cada puesto y lo guarda como el documento de ese puesto (el mismo de
+   RIESGO-PUESTO): al trabajador nuevo le llega en la difusión «Recomendaciones de seguridad de tu puesto» y lo firma en
+   su celular. El registro de entrega junta las firmas del mes: va en la carpeta del personal nuevo del informe del mes.
+   El catálogo es el mismo del Word (parches/instructivo-catalogo.json, lo pone parches/instructivo-1611.py). Lo de
+   túnel (dovelas, inundación de estaciones, bentonita) viene sin marcar. */
+var RPI_CAT = {"v":2,"titulo":"Instructivo de riesgos asociados al puesto de trabajo","para":"Te dice, antes de empezar, los peligros de tu puesto y de tu frente de trabajo, qué te puede pasar y cómo se controla. Léelo con tu supervisor, pregunta lo que no te quede claro y firma la declaración del final.","base":[["Ley N.° 29783, art. 35 c)","Adjuntar al contrato de trabajo la descripción de las recomendaciones de seguridad y salud en el trabajo."],["D.S. N.° 011-2019-TR, art. 6.3","El empleador comunica a los trabajadores los riesgos de seguridad y salud en el trabajo y sus medidas de control, por medios idóneos."],["D.S. N.° 011-2019-TR, art. 13 b)","El trabajador tiene derecho a recibir información clara y suficiente sobre los peligros existentes."]],"grupos":[{"k":"oficina","n":"Trabajo en gabinete (oficina)","sub":[{"n":"Tránsito, mobiliario y orden","riesgos":[{"k":"o1","p":"Pisos resbalosos u obstáculos en los pasadizos (cables, cajas)","r":"Caída al mismo nivel: golpes y torceduras","m":"Transita con atención; no corras. Mantén los pasadizos despejados y los cables canalizados."},{"k":"o2","p":"Escaleras","r":"Caída en la escalera por distracción o por no usar el pasamanos: golpes, fracturas","m":"Usa el pasamanos al subir y al bajar; no te distraigas mientras te desplazas."},{"k":"o3","p":"Archivadores o anaqueles sin fijar a la pared","r":"Caída del mueble sobre la persona: golpes, aplastamiento","m":"Fija archivadores y anaqueles a la pared con anclajes y revisa su estabilidad periódicamente."},{"k":"o4","p":"Mobiliario, cajones abiertos y puertas","r":"Golpes contra objetos","m":"Mantén los cajones cerrados y las zonas de tránsito libres de obstáculos."},{"k":"o5","p":"Papel, bordes de escritorios y útiles punzocortantes","r":"Cortes y pinchazos","m":"Manipula útiles y documentos con cuidado; desecha de inmediato los objetos deteriorados."}]},{"n":"Ergonomía y bienestar","riesgos":[{"k":"o6","p":"Cajas de archivo pesadas","r":"Sobreesfuerzo al levantarlas: lesión lumbar","m":"Aplica la técnica de manejo manual de cargas; pide ayuda o usa medios mecánicos cuando haga falta."},{"k":"o7","p":"Trabajo sentado por mucho tiempo, malas posturas y movimientos repetitivos","r":"Trastornos musculoesqueléticos (cuello, espalda, muñecas)","m":"Usa mobiliario ergonómico. Antes de empezar, ajusta la silla, el monitor y el teclado para una postura neutra. Haz pausas activas de diez minutos cada dos horas."},{"k":"o8","p":"Pantallas con brillo, altura o distancia mal ajustados, por mucho tiempo","r":"Fatiga visual y sequedad ocular","m":"Aplica la regla 20-20-20: cada 20 minutos mira un punto a 6 metros durante 20 segundos, y parpadea conscientemente. Avisa a tu supervisor si la molestia persiste."},{"k":"o9","p":"Doble pantalla sin ajuste de altura y distancia","r":"Posturas forzadas de cuello y espalda","m":"Ajusta la distancia y la altura de ambas pantallas antes de empezar; reporta cualquier molestia a tu supervisor."},{"k":"o10","p":"Carga de trabajo, jornadas largas y doble presencia (trabajo y familia)","r":"Estrés laboral","m":"Organiza con tu jefe la carga, la jornada y la distribución del trabajo; participa en las actividades programadas por el área de SST."}]},{"n":"Electricidad, incendio y ambiente","riesgos":[{"k":"o11","p":"Instalaciones eléctricas deficientes o cables dañados","r":"Contacto eléctrico (electrocución)","m":"Revisa enchufes y cables antes de usarlos; reporta de inmediato cualquier anomalía al área de mantenimiento."},{"k":"o12","p":"Tomacorrientes sobrecargados o equipos encendidos sin uso","r":"Cortocircuito e incendio","m":"No sobrecargues los tomacorrientes y apaga los equipos al terminar la jornada. Conoce dónde está el extintor más cercano, verifica que esté operativo y participa en los simulacros."},{"k":"o13","p":"Módulo metálico al sol (puede pasar de 40 °C en verano)","r":"Calor excesivo: malestar y deshidratación","m":"Asegura la ventilación y controla la temperatura interior en los días de verano; toma agua con frecuencia."},{"k":"o14","p":"Ventilación deficiente en espacios cerrados (acumulación de CO₂)","r":"Somnolencia y menor rendimiento","m":"Renueva el aire periódicamente; instala ventilación cuando haga falta."}]}]},{"k":"obra","n":"Trabajo en campo (ejecución de obra)","sub":[{"n":"Tránsito, caídas y trabajo en altura","riesgos":[{"k":"c1","p":"Pisos irregulares, húmedos u obstruidos; poca luz","r":"Caída al mismo nivel: golpes, torceduras","m":"Transita con atención; no corras. Mantén los pasadizos despejados y los cables canalizados. Usa solo accesos y pasarelas seguros, y lleva linterna en zonas oscuras o dentro del túnel."},{"k":"c2","p":"Bordes de excavaciones, plataformas o taludes","r":"Caída a desnivel","m":"Mantente a 1 metro como mínimo del borde. No traspases ni retires las barreras. Reporta de inmediato cualquier borde sin protección o barrera dañada."},{"k":"c3","p":"Escaleras","r":"Caída en la escalera","m":"Usa el pasamanos; no te distraigas al desplazarte."},{"k":"c4","p":"Trabajo a más de 1,80 m (plataformas, andamios, escaleras, pasarelas)","r":"Caída de altura: lesiones graves o muerte","m":"Usa siempre arnés con doble línea de vida anclada a un punto certificado. Revisa tu arnés antes de cada uso y reporta cualquier daño. Los andamios los arma solo personal certificado (ANSI/SSFI SC100), con inspección diaria y su lista de verificación antes del primer uso."}]},{"n":"Izaje, dovelas y excavaciones","riesgos":[{"k":"c5","p":"Cargas suspendidas y trabajos en niveles superiores","r":"Caída de objetos: golpes, aplastamiento","m":"Respeta la zona de exclusión señalizada bajo el izaje. Identifica la línea de fuego de cada actividad y no te pongas en su trayectoria."},{"k":"c6","t":1,"p":"Manejo y erección de dovelas","r":"Caída de la dovela: aplastamiento","m":"Asegura las dovelas con elementos de sujeción certificados. Cumple el procedimiento de erección; no intervengas el erector sin autorización. No te pongas bajo cargas suspendidas."},{"k":"c7","p":"Excavaciones sin sostenimiento o bermas inestables","r":"Derrumbe: atrapamiento, aplastamiento","m":"Antes de entrar, verifica que la excavación tenga su entibado o sostenimiento aprobado. Pide autorización para entrar a las áreas restringidas."}]},{"n":"Equipos, maquinaria y herramientas","riesgos":[{"k":"c8","p":"Equipos, maquinaria y camiones en la obra o en el túnel","r":"Atropello o choque","m":"Respeta la señalización de tránsito dentro y fuera de la obra. Usa los accesos peatonales y ropa con cintas reflectivas. Velocidad máxima en la obra: 20 km/h."},{"k":"c9","p":"Maquinaria en operación (su radio de acción)","r":"Golpe, atrapamiento o atropello por la interacción persona-equipo","m":"No entres al radio de acción sin la señal del operador. Mantén contacto visual o por radio antes de acercarte. Respeta las zonas de exclusión persona-equipo."},{"k":"c10","p":"Herramientas manuales, eléctricas y de poder","r":"Cortes, golpes, proyección de partículas o contacto eléctrico","m":"Inspecciona cada herramienta antes de usarla. No uses herramientas sin guardas, con cables pelados o mangos rotos: retíralas y repórtalas. No improvises herramientas."}]},{"n":"Iluminación, ruido, vibración y calor","riesgos":[{"k":"c11","p":"Iluminación deficiente (menos de 200 lux en zonas de trabajo y de 50 lux en vías de circulación)","r":"Golpes, caídas y fatiga visual","m":"Verifica que haya como mínimo 200 lux en las zonas de trabajo y 50 lux en las vías de circulación, según la actividad; reporta las zonas oscuras."},{"k":"c12","p":"Ruido elevado (más de 85 dB)","r":"Pérdida de la audición","m":"Usa doble protección auditiva (tapones y orejeras) en las zonas de alto ruido."},{"k":"c13","p":"Vibración de cuerpo completo y mano-brazo (equipos y maquinaria)","r":"Lesiones en manos, brazos y espalda","m":"Haz pausas activas y respeta los tiempos máximos de exposición del procedimiento. Reporta al médico ocupacional el hormigueo, el entumecimiento o el dolor en manos y brazos. Pide rotación si sientes fatiga muscular."},{"k":"c14","p":"Calor y poca ventilación","r":"Deshidratación y golpe de calor","m":"Mantén la ventilación y usa los puntos de hidratación con agua potable. Respeta las jornadas máximas; las horas extra se registran y se rota a quien muestra fatiga."}]},{"n":"Atmósferas, polvo, químicos y emergencias","riesgos":[{"k":"c15","p":"Atmósferas peligrosas: falta de oxígeno y gases tóxicos (CO, H₂S, CH₄)","r":"Asfixia o intoxicación","m":"Monitoreo continuo de gases (O₂, CO, H₂S, CH₄) en el túnel (con equipos o grupos electrógenos en marcha) y en espacios confinados. Lleva tu detector multigás, pruébalo antes de entrar, conoce sus alarmas y evacúa ante cualquier alerta."},{"k":"c16","t":1,"p":"Ingreso de agua a estaciones o pozos","r":"Inundación: atrapamiento o ahogamiento","m":"Conoce el plan de emergencia ante inundación y las rutas de evacuación; ubica las estaciones de emergencia de tu área."},{"k":"c17","p":"Polvo de sílice y de cemento, humos de soldadura y gases de combustión","r":"Irritación y enfermedad respiratoria","m":"Usa siempre el respirador con los filtros adecuados en zonas con polvo, humos o gases; la exposición se monitorea periódicamente."},{"k":"c18","p":"Partículas, chispas y salpicaduras de concreto","r":"Lesiones en los ojos y en la piel","m":"Usa lentes de seguridad, careta facial y guantes adecuados en todo trabajo con proyección de partículas."}]},{"n":"Electricidad, trabajos en caliente e incendio","riesgos":[{"k":"c19","p":"Soldadura y corte (trabajo en caliente), también en espacios confinados","r":"Quemaduras, incendio o explosión","m":"Trabaja solo con el permiso de trabajo en caliente y su autorización. Si no participas, no te acerques al área. Aleja los productos químicos a 15 metros como mínimo y no los almacenes ahí mientras dure el trabajo."},{"k":"c20","p":"Instalaciones y sistemas energizados","r":"Contacto eléctrico: quemaduras, electrocución","m":"Solo electricistas certificados intervienen sistemas energizados. Antes de intervenir un equipo o sistema, aplica el bloqueo y etiquetado, y señaliza."},{"k":"c21","p":"Combustibles, aceites hidráulicos e inflamables","r":"Incendio","m":"Almacénalos en zonas designadas, ventiladas y lejos de fuentes de ignición. Participa en las capacitaciones sobre productos químicos (SGA, rombo NFPA y hojas de datos de seguridad)."},{"k":"c22","t":1,"p":"Bentonita, lechada de mortero y aditivos químicos","r":"Derrame: contaminación y contacto con la piel","m":"Ten a mano el kit antiderrame; contén, neutraliza y gestiona los residuos según el procedimiento ambiental. Las hojas de datos de seguridad (MSDS) de cada producto deben estar disponibles."}]},{"n":"Esfuerzo y fatiga","riesgos":[{"k":"c23","p":"Cargas pesadas y posturas forzadas","r":"Sobreesfuerzo: lesiones musculoesqueléticas","m":"Aplica la técnica de manejo manual de cargas; usa ayuda mecánica para cargas de más de 25 kg."},{"k":"c24","p":"Jornadas prolongadas o trabajo nocturno sin rotación","r":"Fatiga crónica: errores y accidentes","m":"Respeta las jornadas máximas; las horas extra se registran y se rota a quien muestra fatiga crónica."}]}]}],"epp_basico":[{"k":"casco","n":"Casco de seguridad"},{"k":"lentes","n":"Lentes de seguridad"},{"k":"ropa","n":"Ropa de trabajo de manga larga"},{"k":"chaleco","n":"Chaleco o ropa con cintas reflectivas"},{"k":"guantes","n":"Guantes de seguridad (según la tarea)"},{"k":"zapatos","n":"Calzado de seguridad con punta de acero y suela antideslizante"}],"epp_especifico":[{"k":"respirador","n":"Respirador con filtros (P100/OV)","c":"Zonas con polvo, gases o humos de soldadura"},{"k":"auditiva","n":"Tapones auditivos y orejeras","c":"Zonas de alto ruido"},{"k":"barbiquejo","n":"Barbiquejo","c":"Zonas con viento o vibración"},{"k":"arnes","n":"Arnés de seguridad con línea de vida doble","c":"Trabajos a más de 1,80 m"},{"k":"careta","n":"Careta facial","c":"Soldadura, esmerilado o proyección de partículas"},{"k":"tyvek","n":"Traje Tyvek","c":"Sustancias peligrosas o espacios contaminados"},{"k":"scba","n":"Equipo de respiración autónoma (SCBA)","c":"Atmósferas IDLH o hiperbáricas"},{"k":"bloqueador","n":"Bloqueador solar FPS 50 o más","c":"Trabajos al aire libre"},{"k":"rodilleras","n":"Rodilleras ergonómicas","c":"Trabajos de rodillas"}],"reglas":["Antes de empezar la tarea, participa en la charla de inicio de jornada y llena el ATS con tu cuadrilla.","Los trabajos de alto riesgo se hacen solo con su permiso de trabajo (PETAR) aprobado y firmado.","Respeta la señalización, las barreras y las zonas de exclusión: no las retires ni las traspases.","Usa tu EPP completo y en buen estado; si se daña o se pierde, pide el cambio.","Reporta los actos y las condiciones inseguras que veas, y todo incidente o accidente, aunque no haya lesión.","Si ves un peligro grave e inminente, detén la tarea, ponte a salvo y avisa de inmediato a tu supervisor.","No operes equipos ni intervengas instalaciones para los que no estás capacitado y autorizado."],"emergencia":["Da la alarma y avisa a tu supervisor.","Sigue la ruta de evacuación hasta el punto de reunión, sin correr y sin volver por tus cosas.","Sigue las indicaciones de los brigadistas."],"numeros":"Bomberos 116 · SAMU 106 · Policía 105","declaracion":"Declaro haber recibido y estar debidamente informado, en forma verbal y escrita, de los peligros y riesgos a los que estaré expuesto en mi puesto y en mi frente de trabajo, y de sus medidas de control. Me comprometo a cumplir las normas de seguridad y salud en el trabajo que se me han informado, de acuerdo con las actividades propias de mi cargo, incluido el uso correcto del EPP, la participación en las capacitaciones programadas y la comunicación oportuna de las condiciones inseguras."};
+var RPI = { ed:null, guardando:false, mes:'' };
+var RPI_NIVEL = [['alto', 'Alto'], ['medio', 'Medio'], ['bajo', 'Bajo']];
+var RPI_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
+function _rpiMesN(m){ m = String(m || ''); return RPI_MESES[(+m.slice(5, 7) || 1) - 1] + ' de ' + m.slice(0, 4); }
+/* el texto, apto para la letra del PDF: los subíndices (CO₂) con números normales; lo que no entra, fuera */
+function _rpiTx(s){
+  return String(s == null ? '' : s).replace(/[₀-₉]/g, function(c){ return String(c.charCodeAt(0) - 0x2080); })
+    .replace(/≥/g, '>=').replace(/≤/g, '<=').replace(/[^\u0000-ÿ€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]/g, '');
+}
+function _rpiFilas(){ var L = []; RPI_CAT.grupos.forEach(function(g){ g.sub.forEach(function(s){ s.riesgos.forEach(function(r){ L.push({ g:g.k, s:s.n, r:r }); }); }); }); return L; }
+function rpiAbrir(){
+  var marc = {}, eb = {};
+  _rpiFilas().forEach(function(x){ if(!x.r.t) marc[x.r.k] = 1; });
+  RPI_CAT.epp_basico.forEach(function(x){ eb[x.k] = 1; });
+  RPI.ed = { puestos:[], otro:'', nombre:'', nivel:'alto', donde:{ oficina:false, obra:true }, marc:marc, propios:[], eppB:eb, eppE:{} };
+  ir('p-rpi');
+}
+/* lo que está en la pantalla, al estado */
+function rpiLeer(){
+  var E = RPI.ed; if(!E || !$('rpi-nom')) return E;
+  var ps = []; Array.prototype.forEach.call(document.querySelectorAll('#rpi-ps [data-rpi-p]'), function(x){ if(x.checked) ps.push(x.getAttribute('data-rpi-p')); });
+  E.otro = String(($('rpi-otro') || {}).value || '').trim();
+  if(E.otro) E.otro.split(/[,;]+/).forEach(function(p){ if(p.trim()) ps.push(p.trim()); });
+  E.puestos = _rpLimpios(ps);
+  E.nombre = String(($('rpi-nom') || {}).value || '').trim().slice(0, 120);
+  E.nivel = String(($('rpi-nivel') || {}).value || 'alto');
+  ['oficina', 'obra'].forEach(function(k){ var c = $('rpi-d-' + k); if(c) E.donde[k] = !!c.checked; });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-rpi-r]'), function(x){ var k = x.getAttribute('data-rpi-r'); if(x.checked) E.marc[k] = 1; else delete E.marc[k]; });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-rpi-eb]'), function(x){ var k = x.getAttribute('data-rpi-eb'); if(x.checked) E.eppB[k] = 1; else delete E.eppB[k]; });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-rpi-ee]'), function(x){ var k = x.getAttribute('data-rpi-ee'); if(x.checked) E.eppE[k] = 1; else delete E.eppE[k]; });
+  return E;
+}
+/* los riesgos que van, en orden: por grupo y subgrupo, y los propios al final */
+function _rpiVan(E){
+  var G = [];
+  RPI_CAT.grupos.forEach(function(g){
+    if(!E.donde[g.k]) return;
+    var subs = [];
+    g.sub.forEach(function(s){ var R = s.riesgos.filter(function(r){ return E.marc[r.k]; }); if(R.length) subs.push({ n:s.n, riesgos:R }); });
+    if(g.k === 'obra' || (!E.donde.obra && g.k === 'oficina')){ if(E.propios.length) subs.push({ n:'Otros riesgos de este puesto', riesgos:E.propios }); }
+    if(subs.length) G.push({ k:g.k, n:g.n, sub:subs });
+  });
+  if(!G.length && E.propios.length) G.push({ k:'propios', n:'Riesgos de este puesto', sub:[{ n:'Otros riesgos de este puesto', riesgos:E.propios }] });
+  return G;
+}
+function _rpiValida(E){
+  if(!E.puestos.length) return 'Marca al menos un puesto (o escribe uno en «Otro puesto»).';
+  if(!E.donde.oficina && !E.donde.obra && !E.propios.length) return 'Marca dónde trabaja: en la oficina, en la obra o en las dos.';
+  var n = 0; _rpiVan(E).forEach(function(g){ g.sub.forEach(function(s){ n += s.riesgos.length; }); });
+  if(!n) return 'Marca al menos un peligro de la lista.';
+  return '';
+}
+function rpiDonde(){ rpiLeer(); rpiPintar(); }
+function rpiPropio(){
+  rpiLeer();
+  var p = String(($('rpi-np') || {}).value || '').trim(), r = String(($('rpi-nr') || {}).value || '').trim(), m = String(($('rpi-nm') || {}).value || '').trim();
+  var msg = $('rpi-pmsg');
+  if(!p || !r || !m){ if(msg){ msg.style.color = 'var(--mal)'; msg.textContent = 'Escribe el peligro, el riesgo y sus medidas de control.'; } return; }
+  RPI.ed.propios.push({ k:'p' + Date.now().toString(36), p:p.slice(0, 200), r:r.slice(0, 200), m:m.slice(0, 600) });
+  rpiPintar();
+  var y = $('rpi-propios'); if(y) try{ y.scrollIntoView({ block:'center' }); }catch(_s){}
+}
+function rpiQuitarPropio(i){ rpiLeer(); RPI.ed.propios.splice(i, 1); rpiPintar(); }
+function rpiPintar(){
+  var c = pantExtraCaja('p-rpi'); if(!c) return;
+  var E = RPI.ed; if(!E){ ir('p-ind-ed'); return; }
+  var C = _rpCandidatos(), sel = {}; E.puestos.forEach(function(p){ sel[rpNorm(p)] = 1; });
+  var extra = E.puestos.filter(function(p){ return !C.L.some(function(q){ return rpNorm(q) === rpNorm(p); }); });
+  var h = '<h2>🧩 <span>Instructivo de riesgos del puesto</span></h2>' +
+    '<p class="sub">Marca lo que aplica al puesto y guárdalo: al trabajador nuevo de ese puesto le llega en su inducción y lo firma en su celular.</p>';
+  /* 1 · los puestos */
+  h += '<div class="sec-tit" style="margin:16px 0 6px">1 · <span>¿A qué puestos va?</span></div><div class="rp-ps" id="rpi-ps" style="max-height:34vh;overflow:auto">' +
+    extra.concat(C.L).map(function(p){ return '<label class="ind-check" style="margin:0;padding:5px 0"><input type="checkbox" data-rpi-p="' + escA(p) + '"' + (sel[rpNorm(p)] ? ' checked' : '') + '> <span data-sin-trad>' + esc(p) + '</span></label>'; }).join('') + '</div>' +
+    '<label for="rpi-otro">Otro puesto <small>(si no está en la lista)</small></label><input id="rpi-otro" maxlength="80" placeholder="Ej.: Operario de encofrado">' +
+    '<label for="rpi-nom">Cómo se llama</label><input id="rpi-nom" maxlength="120" value="' + escA(E.nombre || '') + '" placeholder="Instructivo de riesgos del operario">' +
+    '<label for="rpi-nivel">Nivel de riesgo del puesto</label><select id="rpi-nivel">' + RPI_NIVEL.map(function(n){ return '<option value="' + n[0] + '"' + (E.nivel === n[0] ? ' selected' : '') + '>' + esc(n[1]) + '</option>'; }).join('') + '</select>' +
+    '<p class="sub ind-ayuda">El que dice tu IPERC para ese puesto.</p>';
+  /* 2 · dónde trabaja */
+  h += '<div class="sec-tit" style="margin:16px 0 6px">2 · <span>¿Dónde trabaja?</span></div>' +
+    '<label class="ind-check"><input type="checkbox" id="rpi-d-oficina"' + (E.donde.oficina ? ' checked' : '') + ' onchange="rpiDonde()"> <span>En la oficina (gabinete)</span></label>' +
+    '<label class="ind-check"><input type="checkbox" id="rpi-d-obra"' + (E.donde.obra ? ' checked' : '') + ' onchange="rpiDonde()"> <span>En la obra (campo)</span></label>';
+  /* 3 · los peligros */
+  h += '<div class="sec-tit" style="margin:16px 0 6px">3 · <span>Sus peligros y riesgos</span></div><p class="sub ind-ayuda">Desmarca lo que no aplica a este puesto. Lo de túnel viene sin marcar.</p>';
+  RPI_CAT.grupos.forEach(function(g){
+    if(!E.donde[g.k]) return;
+    h += '<div class="rpi-g"><b data-sin-trad>' + esc(g.n) + '</b>';
+    g.sub.forEach(function(s){
+      h += '<div class="rpi-sub" data-sin-trad>' + esc(s.n) + '</div>';
+      s.riesgos.forEach(function(r){
+        h += '<label class="rpi-r"><input type="checkbox" data-rpi-r="' + r.k + '"' + (E.marc[r.k] ? ' checked' : '') + '> <span data-sin-trad><b>' + esc(r.p) + '</b> → ' + esc(r.r) + (r.t ? ' <i class="rpi-tunel">túnel</i>' : '') + '<small>' + esc(r.m) + '</small></span></label>';
+      });
+    });
+    h += '</div>';
+  });
+  h += '<div id="rpi-propios">' + (E.propios.length ? '<div class="rpi-sub">Otros riesgos de este puesto</div>' + E.propios.map(function(r, i){
+      return '<div class="rpi-r rpi-propio"><span data-sin-trad><b>' + esc(r.p) + '</b> → ' + esc(r.r) + '<small>' + esc(r.m) + '</small></span>' +
+        '<button type="button" class="btn sec ind-mini" style="margin:0;width:auto" onclick="rpiQuitarPropio(' + i + ')" aria-label="Quitar este riesgo">✕</button></div>';
+    }).join('') : '') + '</div>' +
+    '<details class="rpi-nuevo"><summary>＋ <span>Agregar un riesgo propio de este puesto</span></summary>' +
+      '<label for="rpi-np">Peligro <small>(lo que puede hacer daño)</small></label><input id="rpi-np" maxlength="200" placeholder="Ej.: Encofrado a más de 1,80 m">' +
+      '<label for="rpi-nr">Riesgo <small>(lo que puede pasar)</small></label><input id="rpi-nr" maxlength="200" placeholder="Ej.: Caída de altura">' +
+      '<label for="rpi-nm">Medidas de control</label><textarea id="rpi-nm" rows="3" maxlength="600" placeholder="Ej.: Arnés con doble línea de vida anclada; plataforma con baranda."></textarea>' +
+      '<div id="rpi-pmsg" class="sub" style="min-height:0;margin:6px 0 0"></div>' +
+      '<button type="button" class="btn sec" style="margin-top:8px" onclick="rpiPropio()">Agregarlo</button></details>';
+  /* 4 · el EPP */
+  h += '<div class="sec-tit" style="margin:16px 0 6px">4 · <span>Su EPP</span></div><p class="sub ind-ayuda">El básico va en toda zona operativa; marca el específico que usa este puesto.</p>' +
+    '<div class="rpi-sub">EPP básico</div>' + RPI_CAT.epp_basico.map(function(x){ return '<label class="ind-check" style="margin:0;padding:4px 0"><input type="checkbox" data-rpi-eb="' + x.k + '"' + (E.eppB[x.k] ? ' checked' : '') + '> <span data-sin-trad>' + esc(x.n) + '</span></label>'; }).join('') +
+    '<div class="rpi-sub">EPP específico</div>' + RPI_CAT.epp_especifico.map(function(x){ return '<label class="ind-check" style="margin:0;padding:4px 0"><input type="checkbox" data-rpi-ee="' + x.k + '"' + (E.eppE[x.k] ? ' checked' : '') + '> <span data-sin-trad>' + esc(x.n) + ' <small>· ' + esc(x.c) + '</small></span></label>'; }).join('');
+  h += '<div id="rpi-msg" class="sub" style="min-height:0;margin:12px 0 0"></div>' +
+    '<div class="dos" style="margin-top:8px"><button type="button" class="btn sec" style="margin:0" onclick="rpiVer()">👁️ Ver el PDF</button>' +
+    '<button type="button" class="btn" style="margin:0" id="rpi-guardar" onclick="rpiGuardar()">Guardar para esos puestos</button></div>' +
+    '<button type="button" class="btn sec" style="margin-top:10px" onclick="RPI.ed=null;ir(\'p-ind-ed\')">‹ Volver a la inducción</button>';
+  c.innerHTML = h;
+}
+function _rpiMsg(t, mal){ var m = $('rpi-msg'); if(m){ m.style.color = mal ? 'var(--mal)' : 'var(--gris)'; m.textContent = t; } }
+function _rpiNombre(E){ return E.nombre || ('Instructivo de riesgos - ' + (E.puestos[0] || 'puesto')); }
+function rpiVer(){
+  var E = rpiLeer(); if(!E) return;
+  var v = _rpiValida(E); if(v){ _rpiMsg(v, true); return; }
+  _rpiMsg('');
+  try{ entregarPDF(rpiPDF(E), _nombreSano(_rpiNombre(E)) + '.pdf'); }catch(x){ _rpiMsg('No se pudo armar el PDF.', true); }
+}
+function rpiGuardar(){
+  if(RPI.guardando) return;
+  var E = rpiLeer(), e = indsEmp(), b = $('rpi-guardar'); if(!E) return;
+  var v = _rpiValida(E); if(v){ _rpiMsg(v, true); return; }
+  if(!e || !hayCuenta() || (typeof asisEnLinea === 'function' && !asisEnLinea())){ _rpiMsg('Para guardarlo necesitas internet un momento.', true); return; }
+  var nombre = _rpiNombre(E).slice(0, 120), blob, f;
+  try{ blob = rpiPDF(E).output('blob'); }catch(x){ _rpiMsg('No se pudo armar el PDF.', true); return; }
+  try{ f = new File([blob], _nombreSano(nombre) + '.pdf', { type:'application/pdf' }); }catch(_f){ f = blob; try{ f.name = _nombreSano(nombre) + '.pdf'; }catch(_n){} }
+  RPI.guardando = true; if(b) b.disabled = true; _rpiMsg('Guardando…');
+  subirFoto('induccion', f).then(function(url){
+    return sbPost('sst_doc', { empresa:e.id, hoja:RP_HOJA, nombre:nombre, url:url, nota:rpNota(E.puestos) }).then(function(){
+      /* sin documento general, este queda de general (como al subir uno): la difusión lo pide */
+      var it = (INDS.items || []).filter(function(x){ return x.clave === 'recomendaciones'; })[0];
+      if(it && !it.doc_url && typeof indsLimpio === 'function'){
+        var y = indsLimpio(it); y.doc_url = url; y.doc_nombre = nombre;
+        if(INDS.ed && INDS.ed.id === it.id){ INDS.ed.doc_url = url; INDS.ed.doc_nombre = nombre; }
+        return sbRpc('sst_ind_guardar', { p:{ empresa:e.id, items:[y] } }).then(function(){ INDS.items = null; return indsCargar(); }, function(){ return null; });
+      }
+    });
+  }).then(function(){
+    RPI.guardando = false; RPI.ed = null; RPA.docs = null; RPA.sub = null; RPA.ed = null;
+    tostada('Guardado: le llega al trabajador de ese puesto en su inducción');
+    ir('p-ind-ed');
+  }, function(){ RPI.guardando = false; if(b) b.disabled = false; _rpiMsg('No se pudo guardar. Revisa la señal e inténtalo otra vez.', true); });
+}
+
+/* ── el PDF: A4, la cabecera con el control del documento en cada hoja y el pie legal ── */
+function _rpiDoc(titulo, fmtClave){
+  var doc = new jspdf.jsPDF({ unit:'pt', format:'a4' });
+  var K = { doc:doc, W:595.28, H:841.89, M:34, y:0, AZUL:[31, 78, 121], AZCL:[222, 234, 246], GRIS:[89, 89, 89], LINEA:[166, 166, 166], TINTA:[26, 26, 26], CL:[242, 242, 242] };
+  K.AN = K.W - 2 * K.M;
+  var emp = {}; try{ emp = empleador() || {}; }catch(_e){}
+  var fmt = {}; try{ fmt = formatoDe(fmtClave) || {}; }catch(_f){}
+  var hoy = hoyISO().split('-').reverse().join('/');
+  K.emp = emp; K.ob = (typeof indsEmp === 'function' ? indsEmp() : null) || {};
+  K.obra = ''; try{ K.obra = (typeof nombreDeLaObra === 'function' ? nombreDeLaObra() : '') || K.ob.obra_nombre || K.ob.nombre || ''; }catch(_o){ K.obra = K.ob.nombre || ''; }
+  K.cab = function(){
+    var y0 = 22, hC = 50, wL = 100, wD = 132, M = K.M, W = K.W, AN = K.AN;
+    doc.setDrawColor.apply(doc, K.LINEA); doc.setLineWidth(0.6); doc.rect(M, y0, AN, hC); doc.line(M + wL, y0, M + wL, y0 + hC); doc.line(W - M - wD, y0, W - M - wD, y0 + hC);
+    var hayLogo = false;
+    if(emp.logo){ try{ pdfLogo(doc, M + 6, y0 + 5, wL - 12, hC - 10); hayLogo = true; }catch(_l){} }
+    if(!hayLogo){ doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(150, 150, 150);
+      doc.text(doc.splitTextToSize(_rpiTx(emp.razon || emp.nombre || K.ob.nombre || 'LOGO DE LA EMPRESA'), wL - 12).slice(0, 3), M + wL / 2, y0 + hC / 2 - 2, { align:'center' }); }
+    var cx = M + wL + (AN - wL - wD) / 2;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.4); doc.setTextColor.apply(doc, K.GRIS); doc.text(titulo[0], cx, y0 + 19, { align:'center' });
+    doc.setFontSize(titulo[1].length > 40 ? 9.6 : 11.2); doc.setTextColor.apply(doc, K.AZUL);
+    doc.text(doc.splitTextToSize(titulo[1], AN - wL - wD - 12), cx, y0 + 32, { align:'center' });
+    [['Código', fmt.cod || '—'], ['Revisión', fmt.cod ? (fmt.rev || '—') : '—'], ['Fecha', hoy]].forEach(function(f, k){
+      var yy = y0 + 12 + k * 11.5;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor.apply(doc, K.GRIS); doc.text(f[0] + ':', W - M - wD + 6, yy);
+      doc.setFont('helvetica', 'bold'); doc.setTextColor.apply(doc, K.TINTA); doc.text(_rpiTx(f[1]), W - M - wD + 46, yy);
+    });
+    K.y = y0 + hC + 16;
+  };
+  K.pie = function(texto){
+    var n = doc.getNumberOfPages();
+    for(var i = 1; i <= n; i++){
+      doc.setPage(i);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor.apply(doc, K.GRIS);
+      doc.text('Página:', K.W - K.M - 132 + 6, 22 + 12 + 3 * 11.5);
+      doc.setFont('helvetica', 'bold'); doc.setTextColor.apply(doc, K.TINTA); doc.text(i + ' de ' + n, K.W - K.M - 132 + 46, 22 + 12 + 3 * 11.5);
+      doc.setDrawColor.apply(doc, K.LINEA); doc.setLineWidth(0.4); doc.line(K.M, K.H - 30, K.W - K.M, K.H - 30);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6); doc.setTextColor(120, 120, 120);
+      doc.text(_rpiTx(texto), K.W / 2, K.H - 20, { align:'center' });
+    }
+  };
+  K.nueva = function(){ doc.addPage(); K.cab(); };
+  K.sitio = function(h){ if(K.y + h > K.H - 42){ K.nueva(); return true; } return false; };
+  K.titulo = function(t){ K.sitio(46); doc.setFillColor.apply(doc, K.AZUL); doc.rect(K.M, K.y, K.AN, 15, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.8); doc.setTextColor(255, 255, 255); doc.text(_rpiTx(t.toUpperCase()), K.M + 5, K.y + 10.6); K.y += 21; };
+  K.parrafo = function(t, o){
+    o = o || {}; var sz = o.sz || 8.6, lh = sz * 1.34, x = o.x || K.M;
+    doc.setFont('helvetica', o.b ? 'bold' : (o.i ? 'italic' : 'normal')); doc.setFontSize(sz);
+    if(o.c) doc.setTextColor.apply(doc, o.c); else doc.setTextColor.apply(doc, K.TINTA);
+    var L = doc.splitTextToSize(_rpiTx(t), o.w || (K.AN - (x - K.M)));
+    if(K.y + L.length * lh > K.H - 42){ if(L.length * lh < K.H - 160) K.nueva(); }
+    doc.setFont('helvetica', o.b ? 'bold' : (o.i ? 'italic' : 'normal')); doc.setFontSize(sz);
+    if(o.c) doc.setTextColor.apply(doc, o.c); else doc.setTextColor.apply(doc, K.TINTA);
+    doc.text(L, x, K.y + sz); K.y += L.length * lh + (o.despues == null ? 4 : o.despues);
+  };
+  /* una tabla: cols [{ t, w (fracción), b (negrita), c (al centro) }]; filas: [celdas] o { grupo:'texto' } */
+  K.tabla = function(cols, filas, op){
+    op = op || {}; var ws = cols.map(function(c){ return c.w * K.AN; }), sz = op.sz || 7.5, lh = sz * 1.3, pad = 4;
+    function cabT(){
+      if(op.sinCab) return;
+      var hh = 14; doc.setFillColor.apply(doc, K.AZUL); doc.rect(K.M, K.y, K.AN, hh, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(sz); doc.setTextColor(255, 255, 255);
+      var x = K.M; cols.forEach(function(c, i){ doc.text(_rpiTx(c.t), c.c ? x + ws[i] / 2 : x + pad, K.y + 9.6, c.c ? { align:'center' } : undefined); x += ws[i]; });
+      K.y += hh;
+    }
+    K.sitio(44); cabT();
+    filas.forEach(function(f, fi){
+      if(f && f.grupo){
+        var hg = 13, sig = filas[fi + 1];
+        if(K.y + hg + 30 > K.H - 42){ K.nueva(); cabT(); }
+        doc.setFillColor.apply(doc, K.AZCL); doc.setDrawColor.apply(doc, K.LINEA); doc.setLineWidth(0.5); doc.rect(K.M, K.y, K.AN, hg, 'FD');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(sz); doc.setTextColor.apply(doc, K.AZUL); doc.text(_rpiTx(f.grupo), K.M + pad, K.y + 9); K.y += hg;
+        return;
+      }
+      var Ls = f.map(function(v, i){ doc.setFont('helvetica', cols[i].b ? 'bold' : 'normal'); doc.setFontSize(sz); return doc.splitTextToSize(_rpiTx(v), ws[i] - 2 * pad); });
+      var n = 1; Ls.forEach(function(L){ n = Math.max(n, L.length); });
+      var hf = n * lh + 2 * pad - 1;
+      if(K.y + hf > K.H - 42){ K.nueva(); cabT(); }
+      var x = K.M;
+      ws.forEach(function(w, i){
+        if(op.fill && op.fill[i]){ doc.setFillColor.apply(doc, op.fill[i]); doc.rect(x, K.y, w, hf, 'F'); }
+        doc.setDrawColor.apply(doc, K.LINEA); doc.setLineWidth(0.5); doc.rect(x, K.y, w, hf);
+        doc.setFont('helvetica', cols[i].b ? 'bold' : 'normal'); doc.setFontSize(sz); doc.setTextColor.apply(doc, K.TINTA);
+        doc.text(Ls[i], cols[i].c ? x + w / 2 : x + pad, K.y + pad + sz * 0.92, cols[i].c ? { align:'center' } : undefined);
+        x += w;
+      });
+      K.y += hf;
+    });
+    K.y += op.despues == null ? 9 : op.despues;
+  };
+  K.cab();
+  return K;
+}
+function rpiPDF(E){
+  var K = _rpiDoc(['INSTRUCTIVO', 'RIESGOS ASOCIADOS AL PUESTO DE TRABAJO'], 'instructivo-puesto'), doc = K.doc, emp = K.emp;
+  var nivel = ''; RPI_NIVEL.forEach(function(n){ if(n[0] === E.nivel) nivel = n[1]; });
+  var donde = [E.donde.oficina ? 'en la oficina (gabinete)' : '', E.donde.obra ? 'en la obra (campo)' : ''].filter(Boolean).join(' y ');
+  /* 1 · los datos generales */
+  K.titulo('1. Datos generales');
+  K.tabla([{ t:'', w:0.24, b:true }, { t:'', w:0.76 }], [
+    ['Empresa', (emp.razon || emp.nombre || K.ob.nombre || '—') + (emp.ruc ? '   ·   RUC ' + emp.ruc : '')],
+    ['Obra o proyecto', K.obra || '—'],
+    [E.puestos.length > 1 ? 'Puestos de trabajo' : 'Puesto de trabajo', E.puestos.join(', ')],
+    ['Nivel de riesgo del puesto', (nivel || '—') + '   (según el IPERC del puesto)'],
+    ['Alcance', 'Todo trabajador de ' + (E.puestos.length > 1 ? 'estos puestos' : 'este puesto') + (donde ? ', ' + donde : '') + ', antes de empezar a trabajar y cada vez que cambie de puesto o de frente de trabajo.']
+  ], { sinCab:true, sz:8, fill:[K.CL, null] });
+  /* 2 · para qué es */
+  K.titulo('2. Para qué es este instructivo');
+  K.parrafo(RPI_CAT.para, { sz:8.8, despues:6 });
+  K.tabla([{ t:'Base legal', w:0.27, b:true }, { t:'Qué dice', w:0.73 }], RPI_CAT.base.map(function(b){ return [b[0], b[1]]; }), { sz:7.6 });
+  K.parrafo('Peligro: lo que puede hacerte daño.   Riesgo: lo que te puede pasar si el peligro no se controla.   Medidas de control: lo que haces tú y lo que pone la empresa para que no pase.', { sz:7.6, c:K.AZUL, despues:6 });
+  /* 3 · el EPP */
+  K.titulo('3. Equipo de protección personal (EPP)');
+  var B = RPI_CAT.epp_basico.filter(function(x){ return E.eppB[x.k]; }).map(function(x){ return x.n; });
+  if(B.length) K.parrafo('EPP básico, obligatorio en toda zona operativa: ' + B.join(' · ') + '.', { sz:8.2, despues:6 });
+  var Es = RPI_CAT.epp_especifico.filter(function(x){ return E.eppE[x.k]; });
+  if(Es.length) K.tabla([{ t:'EPP específico de este puesto', w:0.42, b:true }, { t:'Cuándo se usa', w:0.58 }], Es.map(function(x){ return [x.n, x.c]; }), { sz:7.6 });
+  else K.parrafo('EPP específico: el que pida tu tarea, según tu ATS o tu permiso de trabajo.', { sz:8.2 });
+  K.parrafo('Revisa tu EPP antes de usarlo. Si está dañado, vencido o no es de tu talla, no lo uses: pide el cambio.', { sz:8, b:true, despues:6 });
+  /* 4… · los riesgos y sus controles */
+  var n = 4;
+  _rpiVan(E).forEach(function(g){
+    K.titulo(n + '. Riesgos y controles — ' + g.n); n++;
+    var filas = [], k = 0;
+    g.sub.forEach(function(s){ filas.push({ grupo:s.n }); s.riesgos.forEach(function(r){ k++; filas.push([String(k), r.p, r.r, r.m]); }); });
+    K.tabla([{ t:'N.°', w:0.055, c:true, b:true }, { t:'Peligro', w:0.255 }, { t:'Riesgo', w:0.25, b:true }, { t:'Medidas de control', w:0.44 }], filas, { sz:7.4 });
+  });
+  /* lo que siempre se hace y la emergencia */
+  K.titulo(n + '. Lo que siempre debes hacer'); n++;
+  RPI_CAT.reglas.forEach(function(t){ K.parrafo('•  ' + t, { sz:8.2, x:K.M + 6, despues:2 }); });
+  K.y += 6;
+  K.titulo(n + '. En una emergencia'); n++;
+  RPI_CAT.emergencia.forEach(function(t){ K.parrafo('•  ' + t, { sz:8.2, x:K.M + 6, despues:2 }); });
+  K.parrafo('Números de emergencia en el Perú: ' + RPI_CAT.numeros + '.', { sz:8.4, b:true, c:[192, 0, 0], despues:8 });
+  /* la declaración de recepción y compromiso, entera en una hoja */
+  if(K.y + 330 > K.H - 42) K.nueva();
+  K.titulo(n + '. Declaración de recepción y compromiso');
+  K.parrafo(RPI_CAT.declaracion, { sz:8.6, despues:8 });
+  var M = K.M, AN = K.AN, y = K.y;
+  function caja(x, yy, w, h, et, val){
+    doc.setDrawColor.apply(doc, K.LINEA); doc.setLineWidth(0.6); doc.rect(x, yy, w, h);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(6.6); doc.setTextColor.apply(doc, K.GRIS); doc.text(_rpiTx(et).toUpperCase(), x + 5, yy + 9);
+    if(val){ doc.setFont('helvetica', 'normal'); doc.setFontSize(8.4); doc.setTextColor.apply(doc, K.TINTA); doc.text(doc.splitTextToSize(_rpiTx(val), w - 10).slice(0, 2), x + 5, yy + 22); }
+  }
+  caja(M, y, AN * 0.62, 34, 'Nombres y apellidos'); caja(M + AN * 0.62, y, AN * 0.38, 34, 'DNI o carné de extranjería'); y += 34;
+  caja(M, y, AN * 0.62, 34, 'Puesto de trabajo', E.puestos.length === 1 ? E.puestos[0] : ''); caja(M + AN * 0.62, y, AN * 0.38, 34, 'Área o frente de trabajo'); y += 44;
+  caja(M, y, AN / 3, 70, 'Fecha de entrega', '___ / ___ / ______'); caja(M + AN / 3, y, AN / 3, 70, 'Firma del trabajador'); caja(M + 2 * AN / 3, y, AN / 3, 70, 'Huella digital (índice derecho)'); y += 82;
+  var sup = {}; try{ sup = leer(LS_SUP, {}) || {}; }catch(_s){}
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.6); doc.setTextColor.apply(doc, K.AZUL); doc.text('ENTREGADO POR (SUPERVISOR O PREVENCIONISTA DE SST)', M, y + 2); y += 8;
+  caja(M, y, AN / 3, 52, 'Nombres y apellidos', sup.nombre || ''); caja(M + AN / 3, y, AN / 3, 52, 'Cargo', sup.cargo || ''); caja(M + 2 * AN / 3, y, AN / 3, 52, 'Firma'); y += 62;
+  K.y = y;
+  K.parrafo('* Documento de carácter obligatorio: se entrega una copia al trabajador. En OBRASST, el trabajador lo recibe y lo firma en su celular, en su inducción («Recomendaciones de seguridad de tu puesto»); esta hoja es para firmarlo en papel.', { sz:7, i:true, c:K.GRIS });
+  K.pie('Documento de carácter obligatorio: se entrega una copia al trabajador y otra queda en su legajo de SST · Ley N.° 29783, art. 35 c) · OBRASST');
+  return doc;
+}
+
+/* ── el registro de entrega: las firmas del mes de «Recomendaciones de seguridad de tu puesto» ── */
+function rpRegAbrir(){ RPI.mes = RPI.mes || hoyISO().slice(0, 7); ir('p-rp-reg'); }
+function rpRegPintar(){
+  var c = pantExtraCaja('p-rp-reg'); if(!c) return;
+  var d = new Date(), meses = [];
+  for(var i = 0; i < 12; i++){ var x = new Date(d.getFullYear(), d.getMonth() - i, 1); meses.push(x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2)); }
+  if(!RPI.mes) RPI.mes = meses[0];
+  c.innerHTML = '<h2>📋 <span>Registro de entrega del instructivo</span></h2>' +
+    '<p class="sub">Junta en un registro a los que recibieron y firmaron en su celular el instructivo de su puesto en el mes. Va en la carpeta del personal nuevo del informe del mes.</p>' +
+    '<label for="rpr-mes">Mes</label><select id="rpr-mes">' + meses.map(function(m){ return '<option value="' + m + '"' + (m === RPI.mes ? ' selected' : '') + ' data-sin-trad>' + esc(_rpiMesN(m)) + '</option>'; }).join('') + '</select>' +
+    '<div id="rpr-msg" class="sub" style="min-height:0;margin:8px 0 0"></div>' +
+    '<button type="button" class="btn" id="rpr-sacar" onclick="rpRegSacar()">Sacar el registro (PDF)</button>' +
+    '<button type="button" class="btn sec" onclick="ir(\'p-ind-ed\')">‹ Volver a la inducción</button>';
+}
+function rpRegSacar(){
+  var b = $('rpr-sacar'), e = indsEmp(), mes = String((($('rpr-mes') || {}).value) || RPI.mes || hoyISO().slice(0, 7));
+  var msg = function(t, mal){ var m = $('rpr-msg'); if(m){ m.style.color = mal ? 'var(--mal)' : 'var(--gris)'; m.textContent = t; } };
+  RPI.mes = mes;
+  if(!e || !hayCuenta()){ msg('Entra con la cuenta de la obra para sacarlo.', true); return; }
+  if(b) b.disabled = true; msg('Juntando las firmas…');
+  var docs = [];
+  (INDS.items ? Promise.resolve(INDS.items) : indsCargar()).then(function(items){
+    var it = (items || []).filter(function(x){ return x.clave === 'recomendaciones'; })[0];
+    if(!it) throw 'sin_item';
+    /* el documento de cada puesto (RIESGO-PUESTO), para decir cuál recibió cada uno */
+    return (typeof rpAdminTraer === 'function' ? rpAdminTraer().then(function(D){ docs = D || []; }, function(){ docs = []; }) : Promise.resolve()).then(function(){ return it; });
+  }).then(function(it){
+    return sbGet('sst_ind_reg?select=item,version,cuando,firma,datos,trabajador,usuario,nombre,doc&empresa=eq.' + encodeURIComponent(e.id) +
+                 '&item=eq.' + encodeURIComponent(it.id) + '&order=cuando.asc&limit=2000');
+  }).then(function(L){
+    var visto = {}, R = [];
+    (Array.isArray(L) ? L : []).forEach(function(r){
+      var f = ''; try{ f = isoLocal(new Date(r.cuando)); }catch(_d){}
+      if(f.slice(0, 7) !== mes) return;
+      var k = String(r.trabajador || r.usuario || r.doc || r.nombre || '') + '|' + (r.version || '');
+      if(visto[k]) return; visto[k] = 1; r._f = f; R.push(r);
+    });
+    if(b) b.disabled = false;
+    if(!R.length){ msg('Ese mes todavía nadie firmó el instructivo de su puesto.', true); return; }
+    msg('');
+    entregarPDF(rpRegPDF(R, mes, docs), _nombreSano('Registro de entrega del instructivo del puesto - ' + _rpiMesN(mes)) + '.pdf');
+  })['catch'](function(x){
+    if(b) b.disabled = false;
+    msg(x === 'sin_item' ? 'Tu inducción todavía no tiene la difusión «Recomendaciones de seguridad de tu puesto».' : 'No se pudo. Revisa la señal e inténtalo otra vez.', true);
+  });
+}
+function rpRegPDF(R, mes, docs){
+  var K = _rpiDoc(['REGISTRO DE ENTREGA', 'INSTRUCTIVO DE RIESGOS ASOCIADOS AL PUESTO DE TRABAJO'], 'rp-entrega'), doc = K.doc, emp = K.emp;
+  var porDni = {}; try{ (trabsLocal() || []).forEach(function(t){ if(t && t.dni) porDni[String(t.dni).toUpperCase()] = t; }); }catch(_t){}
+  K.tabla([{ t:'', w:0.2, b:true }, { t:'', w:0.8 }], [
+    ['Empresa', (emp.razon || emp.nombre || K.ob.nombre || '—') + (emp.ruc ? '   ·   RUC ' + emp.ruc : '')],
+    ['Obra o proyecto', K.obra || '—'],
+    ['Periodo', _rpiMesN(mes)]
+  ], { sinCab:true, sz:8, fill:[K.CL, null] });
+  K.parrafo('Los trabajadores de esta lista recibieron el instructivo de riesgos asociados a su puesto de trabajo, lo leyeron y lo firmaron en su celular, en su inducción, con su cuenta personal (Ley N.° 29783, art. 35 c).', { sz:8.2, despues:8 });
+  var cols = [{ t:'N.°', w:0.05, c:true, b:true }, { t:'Fecha', w:0.1 }, { t:'Nombres y apellidos', w:0.24, b:true }, { t:'DNI / CE', w:0.1 }, { t:'Puesto', w:0.16 }, { t:'Documento', w:0.15 }, { t:'Firma', w:0.2 }];
+  var ws = cols.map(function(c){ return c.w * K.AN; }), sz = 7.4, hf = 40, pad = 4;
+  function cabT(){ doc.setFillColor.apply(doc, K.AZUL); doc.rect(K.M, K.y, K.AN, 14, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(sz); doc.setTextColor(255, 255, 255);
+    var x = K.M; cols.forEach(function(c, i){ doc.text(_rpiTx(c.t), c.c ? x + ws[i] / 2 : x + pad, K.y + 9.6, c.c ? { align:'center' } : undefined); x += ws[i]; }); K.y += 14; }
+  cabT();
+  R.forEach(function(r, i){
+    if(K.y + hf > K.H - 80){ K.nueva(); cabT(); }
+    var dt = r.datos || {}, t = porDni[String(r.doc || '').toUpperCase()] || null, puesto = (t && t.puesto) || '';
+    var dP = puesto && typeof rpPara === 'function' ? rpPara(docs || [], puesto) : null;
+    var val = [String(i + 1), r._f.split('-').reverse().join('/'), r.nombre || (t && t.nombre) || '—', r.doc || (t && t.dni) || '—', puesto || '—', (dP && dP.nombre) || dt.doc_nombre || 'Instructivo del puesto', ''];
+    var x = K.M;
+    ws.forEach(function(w, k){
+      doc.setDrawColor.apply(doc, K.LINEA); doc.setLineWidth(0.5); doc.rect(x, K.y, w, hf);
+      doc.setFont('helvetica', cols[k].b ? 'bold' : 'normal'); doc.setFontSize(sz); doc.setTextColor.apply(doc, K.TINTA);
+      var L = doc.splitTextToSize(_rpiTx(val[k]), w - 2 * pad).slice(0, 3);
+      doc.text(L, cols[k].c ? x + w / 2 : x + pad, K.y + pad + sz * 0.92, cols[k].c ? { align:'center' } : undefined);
+      x += w;
+    });
+    if(r.firma){ try{ _atsFirmaPDF(doc, r.firma, K.M + K.AN - ws[6] + 3, K.y + 3, ws[6] - 6, hf - 6); }catch(_f){} }
+    K.y += hf;
+  });
+  K.y += 16;
+  var sup = {}; try{ sup = leer(LS_SUP, {}) || {}; }catch(_s){}
+  if(K.y + 60 > K.H - 42) K.nueva();
+  doc.setDrawColor.apply(doc, K.LINEA); doc.setLineWidth(0.6); doc.rect(K.M, K.y, K.AN / 2, 50); doc.rect(K.M + K.AN / 2, K.y, K.AN / 2, 50);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(6.6); doc.setTextColor.apply(doc, K.GRIS);
+  doc.text('RESPONSABLE DEL REGISTRO', K.M + 5, K.y + 9); doc.text('FIRMA', K.M + K.AN / 2 + 5, K.y + 9);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.4); doc.setTextColor.apply(doc, K.TINTA);
+  doc.text(_rpiTx([sup.nombre, sup.cargo].filter(Boolean).join(' · ') || '—'), K.M + 5, K.y + 24);
+  K.y += 60;
+  K.parrafo('Cada firma la hizo el trabajador en su celular, en el momento, con su cuenta personal: es una firma electrónica (Ley 27269, art. 1) y el registro guarda la fecha, la hora y la versión del documento.', { sz:7, i:true, c:K.GRIS });
+  K.pie('Registro de entrega del instructivo de riesgos del puesto · ' + _rpiMesN(mes) + ' · OBRASST');
+  return doc;
+}
+pantExtra('p-rpi', 'Instructivo del puesto', rpiPintar);
+pantExtra('p-rp-reg', 'Registro de entrega', rpRegPintar);
+/* <<< RP-INSTRUCTIVO-FIN >>> */
 function indPintarItem(){
   var c=$('indi-cuerpo'); if(!c) return;
   var x=_indX();
@@ -84661,8 +85135,8 @@ function pintarEncuesta(){
      '<div><b>'+esc(ENC.tema||'—')+'</b></div>'+
      /* etiqueta y dato en elementos distintos: la etiqueta se traduce,
         el nombre del expositor y el de la obra no se tocan nunca */
-     (ENC.expositor ? ('<div><span class="enc-e">Expositor</span>: '+esc(ENC.expositor)+'</div>') : '')+
-     (ENC.lugar ? ('<div><span class="enc-e">Lugar</span>: '+esc(ENC.lugar)+'</div>') : '')+
+     (ENC.expositor ? ('<div><span class="enc-e">Expositor</span>: <span data-sin-trad>'+esc(ENC.expositor)+'</span></div>') : '')+
+     (ENC.lugar ? ('<div><span class="enc-e">Lugar</span>: <span data-sin-trad>'+esc(ENC.lugar)+'</span></div>') : '')+
      '<div><span class="enc-e">Fecha</span>: '+esc(fechaLarga(String(ENC.fecha).slice(0,10))||ENC.fecha||'')+'</div>'+
      '</div></div>';
 
@@ -117520,11 +117994,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = '75ecec2a35';
-var IDIOMA_FR_V = '1b178a51b3';
+var IDIOMA_PT_V = '06ed7100bc';
+var IDIOMA_FR_V = '268e030b13';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = '81a6f811c4';
+var IDIOMA_EN_V = '468b66628f';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -132378,7 +132852,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='d298c91ae1';
+var SELLO_APP='3f36cdac63';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
