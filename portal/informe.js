@@ -27,7 +27,10 @@
    ambiente y el de salud ocupacional, cada uno en su pestaña (informe · inf-amb · inf-salud) con lo que pide arriba (la
    misma lista de la app, INFB) y dónde se completa; y el registro fotográfico al lado. */
 var INFW = { caja:null, mes:'', para:'gerencia', paraN:'', por:'', secc:null, anexos:[], modelo:null, datos:null, datosT:null, n:0, pdf:null, armando:false,
-             nivel:'intermedio', temas:'desglose', alcance:'obra', pers:false, tipo:'sst', seccA:null, seccS:null, panel:null, panelN:0 };   /* 10/11/2026 · panel: el panel fotográfico del mes */
+             nivel:'intermedio', temas:'desglose', alcance:'obra', pers:false, tipo:'sst', seccA:null, seccS:null, panel:null, panelN:0,   /* 10/11/2026 · panel: el panel fotográfico del mes */
+             entrega:'pdf' };   /* 16/11/2026 · cómo se entrega: 'pdf' (un informe) u 'ocho' (las 8 carpetas, INF8) */
+/* 16/11/2026 · el botón dice lo que se va a armar: el informe, o las 8 carpetas (solo el de SST de una obra) */
+function _infArmarTx(){ return (INFW.entrega==='ocho' && INFW.tipo==='sst' && !(INFW.alcance==='todas' && _infTodasPuede())) ? 'Armar las 8 carpetas ›' : 'Armar el informe ›'; }
 var INF_SECC = [
   { k:'portada',      n:'Portada e índice',               d:'La obra, la empresa, el mes, para quién es y lo que trae', fijo:'primero' },
   { k:'resumen',      n:'Resumen del mes',                d:'Personal activo, horas hombre de obreros y staff (trabajadas y de capacitación) del mes y acumuladas en el año, accidentes e incidentes y los índices del año' },
@@ -126,7 +129,9 @@ function _infCss(){
     '.inf-niv-op .inf-bq{color:var(--tinta);font-weight:600;font-size:12.5px}',
     '.inf-temas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}@media (max-width:760px){.inf-temas{grid-template-columns:minmax(0,1fr)}}',
     '.inf-tem-op{display:flex;flex-direction:column;gap:4px;text-align:left;padding:12px 14px;border:1.5px solid var(--raya);border-radius:12px;background:var(--panel);cursor:pointer;font:inherit;color:var(--tinta)}',
+    '.inf-ent-op{display:flex;flex-direction:column;gap:4px;text-align:left;padding:12px 14px;border:1.5px solid var(--raya);border-radius:12px;background:var(--panel);cursor:pointer;font:inherit;color:var(--tinta)}',
     '.inf-tem-op b{font-size:14.5px}.inf-tem-op small{font-size:12.5px;line-height:1.45;color:var(--gris)}.inf-tem-op.on{border-color:var(--tinta);box-shadow:inset 0 0 0 1px var(--tinta);background:var(--fondo)}',
+    '.inf-ent-op b{font-size:14.5px}.inf-ent-op small{font-size:12.5px;line-height:1.45;color:var(--gris)}.inf-ent-op.on{border-color:var(--tinta);box-shadow:inset 0 0 0 1px var(--tinta);background:var(--fondo)}',
     '.inf-armar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:4px 0 18px}.inf-armar .bt{font-size:15px;padding:11px 22px}.inf-armar span{color:var(--gris);font-size:13px;flex:1 1 260px}',
     '.inf-pers{border:1px solid var(--raya);border-radius:12px;background:var(--panel);margin:0 0 14px}.inf-pers>summary{cursor:pointer;padding:13px 15px;font-weight:600;color:var(--tinta);list-style:revert}',
     '.inf-pers[open]>summary{border-bottom:1px solid var(--raya)}.inf-pers .inf-pers-c{padding:14px 15px}',
@@ -182,6 +187,7 @@ function _infModeloAplicar(m){
   INFW.secc=[{ k:'portada', on:true }].concat(orden, [{ k:'anexos', on:true }]);
   if(m && (m.para==='gerencia' || m.para==='cliente')) INFW.para=m.para;
   if(m && typeof m.paraN==='string') INFW.paraN=m.paraN;
+  if(m && (m.entrega==='ocho' || m.entrega==='pdf')) INFW.entrega=m.entrega;   /* 16/11/2026 · el modelo recuerda cómo se entrega */
   /* 19/10/2026 · lote 18 · el nivel y los temas; un modelo de antes es lo que la obra eligió, tal cual («personalizado») */
   if(m && m.v>=2){ INFW.nivel=_infNivelDe(m.nivel) ? m.nivel : 'propio'; INFW.temas=(m.temas==='total') ? 'total' : 'desglose'; }
   else if(m && Array.isArray(m.secc)){ INFW.nivel='propio'; INFW.temas='desglose'; }
@@ -196,7 +202,7 @@ function _infNivelPoner(k, sinPintar){
 function infVista(caja){
   _infCss(); INFW.caja=caja;
   /* otra obra: su modelo y sus anexos, no los de la anterior */
-  if(INFW.obra!==(YO.obra||{}).id){ INFW.obra=(YO.obra||{}).id; INFW.secc=null; INFW.anexos=[]; INFW.modelo=null; INFW.datos=null; INFW.datosT=null; INFW.paraN=''; INFW.para='gerencia'; INFW.alcance='obra'; INFW.seccA=null; INFW.seccS=null; INF_PIDE.k=''; INF_PIDE.solo=false; }
+  if(INFW.obra!==(YO.obra||{}).id){ INFW.obra=(YO.obra||{}).id; INFW.secc=null; INFW.anexos=[]; INFW.modelo=null; INFW.datos=null; INFW.datosT=null; INFW.paraN=''; INFW.para='gerencia'; INFW.entrega='pdf'; INFW.alcance='obra'; INFW.seccA=null; INFW.seccS=null; INF_PIDE.k=''; INF_PIDE.solo=false; }
   /* 20/10/2026 · lote 23 · cada informe es su pestaña: la que se abrió dice cuál */
   var tipoV=INF_VISTA_TIPO[VISTA.actual] || 'sst';
   /* lo que pide otra sección al abrir el informe (medio ambiente: «🌱 Informe de medio ambiente» con su mes); si es otro informe, a su pestaña */
@@ -231,7 +237,7 @@ function _infPintar(){
   var caja=INFW.caja; if(!caja || !document.body.contains(caja)) return;
   var puedeT=_infTodasPuede(), todas=(INFW.alcance==='todas' && puedeT);
   var ac=$('acciones');
-  if(ac){ ac.innerHTML='<button type="button" class="bt" id="inf-armar">Armar el informe ›</button>'; $('inf-armar').onclick=infArmar; }
+  if(ac){ ac.innerHTML='<button type="button" class="bt" id="inf-armar">'+_infArmarTx()+'</button>'; $('inf-armar').onclick=infArmar; }
   if(INFW.tipo==='amb'){ _infPintarAmb(); return; }
   if(INFW.tipo==='sal'){ _infPintarSal(); return; }
   var S=INFW.secc, nOn=S.filter(_infVa).length, h=_infTipoHTML();
@@ -241,7 +247,7 @@ function _infPintar(){
       '<button type="button" role="radio" aria-checked="'+todas+'" class="'+(todas ? 'on' : '')+'" data-alc="todas">Todas mis obras · '+_infObras().length+'</button></div>';
   }
   h+='<p class="inf-intro" id="inf-que">'+(todas ? '📑 <b>El informe de todas tus obras.</b> Una fila por obra y el total, en cada parte. ' : '📑 <b>El informe del mes, para tu gerencia o tu cliente.</b> ')+
-    'Elige el mes, para quién es y qué tan completo: los datos salen solos de lo registrado. Primero lo ves; después lo bajas en PDF, Excel o Word.</p>';
+    'Elige el mes, para quién es y qué tan completo: los datos salen solos de lo registrado. Primero lo ves; después lo bajas en PDF, Excel o Word, o en 8 carpetas.</p>';
   /* 1 · el mes y para quién */
   h+='<div class="tarj inf-paso"><div class="tarj-cuerpo"><h3><span class="inf-n">1</span> El mes y para quién</h3><div class="inf-campos">'+
     '<div class="campo"><label for="inf-mes">Mes</label><select id="inf-mes">'+_infMeses().map(function(m){ return '<option value="'+m+'"'+(m===INFW.mes ? ' selected' : '')+'>'+esc(_infMesMay(m))+'</option>'; }).join('')+'</select></div>'+
@@ -265,11 +271,20 @@ function _infPintar(){
       var on=INFW.temas===o[0];
       return '<button type="button" role="radio" aria-checked="'+on+'" class="inf-tem-op'+(on ? ' on' : '')+'" data-tem="'+o[0]+'"><b>'+o[1]+'</b><small>'+esc(o[2])+'</small></button>';
     }).join('')+'</div></div></div>';
-  /* 10/11/2026 · 4 · el panel fotográfico: corregir, quitar, ordenar y sumar fotos (si va en el informe) */
+  /* 16/11/2026 · 4 · cómo lo entregas: un informe en PDF, o las 8 carpetas (Marcelo: «esa estructura vamos a tenerla como opción
+     para el supervisor»; antes solo salía después de armar, en «📁 En 8 carpetas (ZIP)») */
+  var ocho=!todas && INFW.entrega==='ocho';
+  if(!todas) h+='<div class="tarj inf-paso" id="inf-entrega"><div class="tarj-cuerpo"><h3><span class="inf-n">4</span> Cómo lo entregas</h3><div class="inf-temas" role="radiogroup" aria-label="Cómo lo entregas">'+
+    [['pdf', '📄 Un informe en PDF', 'Con portada, índice y páginas numeradas. El Excel con los datos y el Word de los temas del mes salen de lo mismo.'],
+     ['ocho', '📁 En 8 carpetas (ZIP)', 'Comité de SST, Estadística, Simulacros, Control de registros, Capacitaciones, Salud e higiene, Personal nuevo y Otros: lo de OBRASST en su carpeta, las vacías para lo que se escanea, y el índice con lo que falta agregar.']].map(function(o){
+      var on=(o[0]==='ocho')===ocho;
+      return '<button type="button" role="radio" aria-checked="'+on+'" class="inf-ent-op'+(on ? ' on' : '')+'" data-ent="'+o[0]+'"><b>'+o[1]+'</b><small>'+esc(o[2])+'</small></button>';
+    }).join('')+'</div></div></div>';
+  /* 10/11/2026 · 5 · el panel fotográfico: corregir, quitar, ordenar y sumar fotos (si va en el informe) */
   var vaPanel=!todas && S.some(function(x){ return x.k==='fotos' && _infVa(x); });
   if(vaPanel) h+=_infPanelHTML();
-  h+='<div class="inf-armar"><button type="button" class="bt" id="inf-armar2">Armar el informe ›</button>'+
-    '<span>'+(todas ? 'Lee cada obra: tarda un poco más.' : 'Sale en PDF con su portada, índice y páginas numeradas; el Excel y el Word salen de lo mismo.')+'</span>'+
+  h+='<div class="inf-armar"><button type="button" class="bt" id="inf-armar2">'+_infArmarTx()+'</button>'+
+    '<span>'+(todas ? 'Lee cada obra: tarda un poco más.' : (ocho ? 'Primero lo ves entero; después bajas las 8 carpetas en un ZIP (y el PDF, el Excel o el Word, si los quieres).' : 'Sale en PDF con su portada, índice y páginas numeradas; el Excel y el Word salen de lo mismo.'))+'</span>'+
     (todas ? '' : '<button type="button" class="bt sec chico" id="inf-modelo">'+(INFW.modelo ? 'Guardar los cambios de «'+esc(INFW.modelo.nombre || 'Modelo de la obra')+'»' : 'Guardar como modelo de la obra')+'</button>')+'</div>'+
     (todas ? '' : '<p class="msg" id="inf-modelo-msg" role="status"></p>');
   /* personalizar (solo para esta obra): qué partes van, en qué orden, y los anexos */
@@ -304,6 +319,7 @@ function _infPintar(){
   _infTipoAl(caja);
   Array.prototype.forEach.call(caja.querySelectorAll('[data-niv]'), function(b){ b.onclick=function(){ _infNivelPoner(b.getAttribute('data-niv')); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('[data-tem]'), function(b){ b.onclick=function(){ INFW.temas=b.getAttribute('data-tem'); _infPintar(); }; });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-ent]'), function(b){ b.onclick=function(){ INFW.entrega=b.getAttribute('data-ent'); _infPintar(); }; });
   if(todas) return;
   $('inf-modelo').onclick=_infGuardarModelo;
   _infVersAl();
@@ -326,7 +342,7 @@ function _infPintar(){
     _infPintar();
   };
 }
-function _infModeloNota(nombre){ return { v:2, nombre:String(nombre || 'Modelo de la obra').slice(0, 80), nivel:INFW.nivel, temas:INFW.temas, secc:INFW.secc.map(function(x){ return { k:x.k, on:!!x.on }; }), para:INFW.para, paraN:String(INFW.paraN||'').slice(0, 100) }; }
+function _infModeloNota(nombre){ return { v:2, nombre:String(nombre || 'Modelo de la obra').slice(0, 80), nivel:INFW.nivel, temas:INFW.temas, secc:INFW.secc.map(function(x){ return { k:x.k, on:!!x.on }; }), para:INFW.para, paraN:String(INFW.paraN||'').slice(0, 100), entrega:(INFW.entrega==='ocho' ? 'ocho' : 'pdf') }; }
 function _infGuardarModelo(){
   var m=$('inf-modelo-msg'), b=$('inf-modelo'), nombre=(INFW.modelo && INFW.modelo.nombre) || 'Modelo de la obra';
   var nota=JSON.stringify(_infModeloNota(nombre));
@@ -710,7 +726,7 @@ function _infAchicar(f, max){
 function _infPanelHTML(){
   _infPanelCss();
   var P=INFW.panel;
-  var h='<div class="tarj inf-paso" id="inf-panel"><div class="tarj-cuerpo"><h3><span class="inf-n">4</span> El panel fotográfico</h3>'+
+  var h='<div class="tarj inf-paso" id="inf-panel"><div class="tarj-cuerpo"><h3><span class="inf-n">5</span> El panel fotográfico</h3>'+
     '<p class="ayuda" style="margin:0 0 10px">Las fotos del mes salen solas: los reportes (cómo se encontró y cómo quedó), las buenas prácticas y el cierre de los ATS. Corrige el título y la descripción de cada una, quita las que no van, ordénalas y suma las tuyas. En el PDF van de a dos por fila, numeradas, con su título y su descripción.</p>';
   if(!P || P.mes!==INFW.mes) return h+'<div class="ayuda" id="inf-panel-l">Buscando las fotos de '+esc(_infMesN(INFW.mes))+'…</div></div></div>';
   var on=P.items.filter(function(x){ return x.on; }).length;
@@ -887,7 +903,7 @@ function infArmar(){
   var va=function(k){ return INFW.secc.some(function(x){ return x.k===k && _infVa(x); }); }, vaProg=!todas && (va('programas') || va('objetivos'));
   INFW.armando=true;
   ['inf-armar', 'inf-armar2'].forEach(function(id){ var b=$(id); if(b){ b.disabled=true; b.textContent='Armando…'; } });
-  var fin=function(){ INFW.armando=false; ['inf-armar', 'inf-armar2'].forEach(function(id){ var b=$(id); if(b){ b.disabled=false; b.textContent='Armar el informe ›'; } }); };
+  var fin=function(){ INFW.armando=false; ['inf-armar', 'inf-armar2'].forEach(function(id){ var b=$(id); if(b){ b.disabled=false; b.textContent=_infArmarTx(); } }); };
   var p=todas
     ? Promise.all([_infTraerTodas(INFW.mes, _infObras()), cargarEvPDF(), _infLibPdf()]).then(function(r){
         INFW.datosT=r[0]; INFW.datos=null;
@@ -2845,7 +2861,7 @@ function _infArmarAmb(){
   if(INFW.armando) return;
   INFW.armando=true;
   ['inf-armar', 'inf-armar2'].forEach(function(id){ var b=$(id); if(b){ b.disabled=true; b.textContent='Armando…'; } });
-  var fin=function(){ INFW.armando=false; ['inf-armar', 'inf-armar2'].forEach(function(id){ var b=$(id); if(b){ b.disabled=false; b.textContent='Armar el informe ›'; } }); };
+  var fin=function(){ INFW.armando=false; ['inf-armar', 'inf-armar2'].forEach(function(id){ var b=$(id); if(b){ b.disabled=false; b.textContent=_infArmarTx(); } }); };
   var vaF=INFW.seccA.some(function(x){ return x.k==='afotos' && x.on; });
   Promise.all([_infTraer(INFW.mes, YO.obra, {}), cargarEvPDF(), _infLibPdf()]).then(function(r){
     /* 20/10/2026 · lote 23 · el registro fotográfico ambiental: las fotos de sus temas */
@@ -2870,9 +2886,15 @@ function _infVer(R){
     '<div class="inf-formatos"><button type="button" class="bt sec chico" id="inf-xls">📊 Excel con los datos</button>'+(otro ? '' : '<button type="button" class="bt sec chico" id="inf-doc">📝 Word de los temas del mes</button>')+
       (todas || otro ? '' : '<button type="button" class="bt sec chico" id="inf-word-todo">📄 Todo en un Word</button><button type="button" class="bt sec chico" id="inf-zip">🗂️ Cada parte en su archivo (ZIP)</button><button type="button" class="bt sec chico" id="inf-ocho" title="Comité, estadística, simulacros, registros, capacitaciones, salud, personal nuevo y otros">📁 En 8 carpetas (ZIP)</button>')+'</div>'+
     '<iframe class="inf-vista" id="inf-vista" title="El informe" src="'+esc(INFW._url)+'"></iframe><p class="msg" id="inf-msg" role="status"></p>';
+  /* 16/11/2026 · si se eligió «En 8 carpetas», lo principal es el ZIP (el PDF sigue a la mano) */
+  var ocho=(INFW.entrega==='ocho' && !todas && !otro);
+  if(ocho) h='<p class="aviso" id="inf-ocho-aviso" style="margin:0 0 10px">📁 <b>Las 8 carpetas:</b> Comité de SST, Estadística, Simulacros, Control de registros, Capacitaciones, Salud e higiene, Personal nuevo y Otros. Lo de OBRASST va en su carpeta y el índice dice lo que falta agregar a mano.</p>'+h;
   abrirHoja('El informe de '+_infMesN(INFW.mes), todas ? (_infEmpresaN() || 'Todas las obras') : (nombreObraP()||''), h,
-    '<button type="button" class="bt sec" id="inf-volver">‹ Volver a cambiar</button>'+(todas ? '' : '<button type="button" class="bt sec" id="inf-guardar">Guardar en el archivo de la obra</button>')+'<button type="button" class="bt" id="inf-bajar">Descargar el PDF</button>', {ancha:true});
+    '<button type="button" class="bt sec" id="inf-volver">‹ Volver a cambiar</button>'+(todas ? '' : '<button type="button" class="bt sec" id="inf-guardar">Guardar en el archivo de la obra</button>')+
+    (ocho ? '<button type="button" class="bt sec" id="inf-bajar">Descargar el PDF</button><button type="button" class="bt" id="inf-ocho2">📁 Descargar las 8 carpetas (ZIP)</button>'
+          : '<button type="button" class="bt" id="inf-bajar">Descargar el PDF</button>'), {ancha:true});
   $('inf-volver').onclick=cerrarHoja;
+  if($('inf-ocho2')) $('inf-ocho2').onclick=function(){ var b=$('inf-ocho'); if(b && !b.disabled) b.click(); };
   $('inf-bajar').onclick=function(){ bajarBlob(blob, base+'.pdf'); };
   $('inf-xls').onclick=function(){ try{ bajarBlob(amb ? _ambExcel(INFW.datos) : (sal ? _salExcel(INFW.datos) : (todas ? _infExcelTodas(INFW.datosT) : _infExcel(INFW.datos))), base+'.xlsx'); }catch(e){ var m=$('inf-msg'); m.className='msg mal'; m.textContent='No se pudo armar el Excel: '+((e && e.message) || e); } };
   if($('inf-doc')) $('inf-doc').onclick=function(){ try{ bajarBlob(todas ? _infWordTodas(INFW.datosT) : _infWord(INFW.datos), nombreArchivo('Temas del mes - '+_infMesN(INFW.mes)+' - '+(todas ? 'todas las obras' : (nombreObraP()||'obra')))+'.docx'); }catch(e){ var m=$('inf-msg'); m.className='msg mal'; m.textContent='No se pudo armar el Word: '+((e && e.message) || e); } };
@@ -3449,7 +3471,7 @@ function _infArmarSal(){
   if(INFW.armando) return;
   INFW.armando=true;
   ['inf-armar', 'inf-armar2'].forEach(function(id){ var b=$(id); if(b){ b.disabled=true; b.textContent='Armando…'; } });
-  var fin=function(){ INFW.armando=false; ['inf-armar', 'inf-armar2'].forEach(function(id){ var b=$(id); if(b){ b.disabled=false; b.textContent='Armar el informe ›'; } }); };
+  var fin=function(){ INFW.armando=false; ['inf-armar', 'inf-armar2'].forEach(function(id){ var b=$(id); if(b){ b.disabled=false; b.textContent=_infArmarTx(); } }); };
   var va=function(k){ return (INFW.seccS||[]).some(function(x){ return x.k===k && x.on; }); };
   Promise.all([_infTraer(INFW.mes, YO.obra, {}), cargarEvPDF(), _infLibPdf()]).then(function(r){
     var D=r[0], Dz=va('sfotos') ? _infFotosDe(D, 'sal') : null;

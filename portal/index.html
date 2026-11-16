@@ -3593,6 +3593,8 @@ function elegirObra(id){
   try{ cadAlElegir(); }catch(_cd){}
   /* 4/11/2026 · V7.9c · mi área en esta obra y sus pendientes */
   try{ areaAlElegir(); }catch(_ar){}
+  /* 16/11/2026 · el número del chat de la obra (pendientes para ti, o sin leer) */
+  try{ chwbAlElegir(); }catch(_cw){}
   /* 06/10/2026 · «Mi plan»: si el mes gratis sigue sin activar, y los pagos que quedaron a medias */
   try{ planwAlElegir(); }catch(_pl){}
   /* 15/10/2026 · el asistente de plan (portal/asistente.js): «¿Qué plan te conviene?» arriba, para el dueño */
@@ -4228,8 +4230,11 @@ var AREAS = [
   { id:'a-inicio',   n:'Inicio',                 ic:'▦',  v:['obra', 'resumen', 'avisos', 'os', 'parte'] },
   { id:'a-cadena',   n:'Supervisión',            ic:'🔗', v:['cad', 'cad-obs', 'cad-inf', 'cad-est', 'cad-equipo'] },
   { id:'a-informe',  n:'Informe',                ic:'📑', v:['informe', 'inf-amb', 'inf-salud', 'fotoreg'] },
+  /* 16/11/2026 · el chat de la obra en la web (portal/chat.js) y la videollamada (antes en «Empresa»), juntos y arriba (después
+     del Informe, que va segundo desde el lote 23) */
+  { id:'a-comunic',  n:'Comunicación',           ic:'💬', v:['chat', 'llamada'] },
   { id:'a-personal', n:'Personal',               ic:'☺',  v:['personal', 'personas', 'tareo', 'cred', 'legajo', 'autor', 'emo', 'sctr', 'tdm', 'amon', 'visitas'] },
-  { id:'a-capac',    n:'Capacitación',           ic:'🎓', v:['prog', 'caphechas', 'charlas', 'induccion', 'constancias', 'cump', 'matriz', 'registro', 'encuestas', 'campanas'] },
+  { id:'a-capac',    n:'Capacitación',           ic:'🎓', v:['prog', 'caphechas', 'charlas', 'induccion', 'instructivo', 'constancias', 'cump', 'matriz', 'registro', 'encuestas', 'campanas'] },
   { id:'a-epp',      n:'EPP',                    ic:'⛑',  v:['kardex', 'epp', 'eppobra', 'pedidos', 'reqs'] },
   { id:'a-riesgos',  n:'Riesgos',                ic:'📋', v:['riesgos-obra', 'peligros-sitio', 'ergo-video', 'ats', 'iperc-lb', 'pets', 'caida', 'alto', 'quimicos', 'ergo'] },
   { id:'a-inspec',   n:'Inspecciones y equipos', ic:'🔎', v:['insp', 'equipos', 'inspeq', 'bloqueos'] },
@@ -4240,7 +4245,7 @@ var AREAS = [
   { id:'a-indic',    n:'Programas e indicadores', ic:'📈', v:['programas', 'objetivos', 'acc', 'hh'] },
   /* 27/10/2026 · la carpeta de auditoría (SSOMA) y el ciclo de auditoría (Gestión SST): portal/auditoria.js */
   { id:'a-audit',    n:'Auditoría',              ic:'🗂', v:['aud', 'aud-sala', 'aud-sim', 'aud-int', 'aud-acc', 'aud-rev'] },
-  { id:'a-empresa',  n:'Empresa',                ic:'🏢', v:['empresa', 'equipo', 'cad-equipo', 'plan', 'cargar', 'llamada'] }
+  { id:'a-empresa',  n:'Empresa',                ic:'🏢', v:['empresa', 'equipo', 'cad-equipo', 'plan', 'cargar'] }
 ];
 var AREA_MAS = { id:'a-mas', n:'Más', ic:'⋯', v:[] };
 var PESTANAS = {
@@ -4255,7 +4260,7 @@ var PESTANAS = {
   comite:'Comité de SST', cargos:'Brigada y carteles', quien:'¿A quién acudo?', frentes:'Frentes de trabajo', simulacros:'Simulacros',
   docs:'Documentos', formatos:'Formatos', escaneos:'Escaneos y fotos', util:'Utilitarios', qr:'Carteles QR', senales:'Señalética', boletines:'Boletines', noticias:'Noticias', normas:'Normas',
   informe:'SST', 'inf-amb':'Medio ambiente', 'inf-salud':'Salud ocupacional', fotoreg:'Registro fotográfico', acc:'Accidentabilidad', hh:'Horas hombre', programas:'Programas del año', objetivos:'Objetivos y metas',
-  empresa:'Datos y logo', equipo:'Obras y equipo', plan:'Mi plan', cargar:'Cargar mi gestión', llamada:'Videollamada',
+  empresa:'Datos y logo', equipo:'Obras y equipo', plan:'Mi plan', cargar:'Cargar mi gestión', llamada:'Videollamada', chat:'Chat de la obra', instructivo:'Instructivo del puesto',
   cad:'Empresas de la obra', 'cad-obs':'Observaciones', 'cad-equipo':'Rangos del equipo',
   'cad-inf':'Informes', 'cad-est':'Estándares y boletines',
   /* 28/10/2026 · las herramientas de los planes de arriba, una pestaña cada una (antes iban dentro de otras pestañas) */
@@ -4436,6 +4441,7 @@ function navInsignia(id){
     if(id==='plan') return planwInsignia();
     if(id==='cad-obs' && typeof cadCuenta==='function') return cadCuenta();
     if(id==='avisos') return areaInsignia();
+    if(id==='chat') return chwInsignia();   /* 16/11/2026 · el chat de la obra */
   }catch(e){}
   return '';
 }
@@ -4619,16 +4625,16 @@ var AREA_GRUPOS = [
   { k:'sst', n:'SST, medio ambiente y calidad', ic:'🦺', menu:null },
   { k:'gerencia', n:'Gerencia y legal', ic:'🏢', menu:[
     { g:'Gerencia y legal', v:['avisos', ['resumen','obra'], 'os', 'informe', 'aud', 'acc', 'programas'] },
-    { g:'Documentos', v:['docs', 'util', 'normas'] }] },
+    { g:'Documentos', v:['docs', 'util', 'normas'] }, { g:'Comunicación', v:['chat', 'llamada'] }] },
   { k:'produccion', n:'Producción y mantenimiento', ic:'🏗️', menu:[
-    { g:'Producción y mantenimiento', v:['avisos', ['obra','resumen'], 'ats', 'alto', 'equipos', 'inspeq', 'bloqueos', 'insp', 'parte'] }] },
+    { g:'Producción y mantenimiento', v:['avisos', ['obra','resumen'], 'ats', 'alto', 'equipos', 'inspeq', 'bloqueos', 'insp', 'parte'] }, { g:'Comunicación', v:['chat', 'llamada'] }] },
   { k:'logistica', n:'Logística y almacén', ic:'📦', menu:[
-    { g:'Logística y almacén', v:['avisos', 'eppobra', ['kardex','epp'], 'reqs', 'pedidos', 'quimicos', 'equipos'] }] },
+    { g:'Logística y almacén', v:['avisos', 'eppobra', ['kardex','epp'], 'reqs', 'pedidos', 'quimicos', 'equipos'] }, { g:'Comunicación', v:['chat', 'llamada'] }] },
   { k:'administracion', n:'Administración y RRHH', ic:'🗂️', menu:[
     { g:'Administración y RRHH', v:['avisos', ['personal','personas'], 'sctr', 'tareo', 'hh', 'legajo', 'cred'] },
-    { g:'Documentos', v:['docs', 'util'] }] },
+    { g:'Documentos', v:['docs', 'util'] }, { g:'Comunicación', v:['chat', 'llamada'] }] },
   { k:'salud', n:'Salud ocupacional', ic:'🩺', menu:[
-    { g:'Salud ocupacional', v:['avisos', 'emo', 'inf-salud', 'auxilios', ['personal','personas']] }] }
+    { g:'Salud ocupacional', v:['avisos', 'emo', 'inf-salud', 'auxilios', ['personal','personas']] }, { g:'Comunicación', v:['chat', 'llamada'] }] }
 ];
 /* «Pendientes» va con el plan SSOMA. 4/11 (noche): con el SQL corrido, ya está en la vitrina (INI_VITRINA, web:['avisos']);
    aquí quedan solo las secciones sueltas que no tienen renglón propio (hoy, ninguna) */
@@ -4694,7 +4700,9 @@ var MENU_ESENCIAL = [
   { g:'Hoy en campo', v:[['obra','resumen'], 'avisos', 'ats', 'alto', 'charlas', 'reportes', 'insp', 'equipos', 'tareo'] },
   /* la cadena de supervisión (si la obra está en una): lo que le pide su principal, o sus subcontratas */
   { g:'Supervisión', v:['cad', 'cad-obs', 'cad-inf', 'cad-est'] },
-  { g:'Mi gente', v:[['personal','personas'], 'cred', 'matriz', 'emo', 'sctr'] },
+  /* 16/11/2026 · el chat de la obra y la videollamada */
+  { g:'Comunicación', v:['chat', 'llamada'] },
+  { g:'Mi gente', v:[['personal','personas'], 'cred', 'matriz', 'instructivo', 'emo', 'sctr'] },
   { g:'EPP y almacén', v:[['kardex','epp'], 'eppobra', 'reqs', 'quimicos'] },
   { g:'Cumplimiento e informes', v:['aud', 'os', 'comite', 'acc', 'informe', 'ambiente'] },
   { g:'Contratistas y proveedores', v:[{ id:'os', tab:'cont', n:'Mis contratistas', ic:'🤝' }, { id:'os', tab:'mkt', n:'Pedir lo que me falta', ic:'🛒' }] }
@@ -9349,7 +9357,10 @@ function abrirIndP(it){
     (it.doc_url ? '<label class="check"><input type="checkbox" id="pi-redif"><span>Que la vuelvan a firmar los que ya la hicieron (volver a difundirla a todos)</span></label>' : '')+
     '<div class="msg" id="pi-msg"></div>'+
     /* 10/11/2026 · el riesgo de cada puesto: un documento por puesto (RIESGO-PUESTO) */
-    (it.clave==='recomendaciones' ? '<div class="seccion"><h3>🦺 Por puesto de trabajo</h3><div id="pi-rp"></div></div>' : '');
+    (it.clave==='recomendaciones' ? '<div class="seccion"><h3>🦺 Por puesto de trabajo</h3>'+
+      /* 16/11/2026 · el instructivo armado aquí (peligro, riesgo y control) y su registro de entrega del mes (portal/instructivo.js) */
+      '<div class="acciones" style="justify-content:flex-start;margin:0 0 10px"><button type="button" class="bt sec chico" id="pi-rpi" onclick="rpiwAbrir(\'armar\')">🧩 Armarlo aquí: peligro, riesgo y control</button>'+
+      '<button type="button" class="bt sec chico" id="pi-rpr" onclick="rpiwAbrir(\'reg\')">📋 Registro de entrega del mes</button></div><div id="pi-rp"></div></div>' : '');
   var pie=(it.doc_url && !it.pide_doc ? '<button type="button" class="bt sec" id="pi-quitar">Quitar el documento</button>' : '')+
           '<button type="button" class="bt" id="pi-guardar">Guardar</button>';
   abrirHoja(it.titulo, (PIND_MODO[it.modo]||it.modo)+' · versión '+(it.version||1), cuerpo, pie);
@@ -18507,8 +18518,14 @@ var V = {
   /* 01/10/2026 · la biblioteca de normas de la app, del país de la obra */
   normas: {id:'normas', g:'Consulta', ic:'⚖', n:'Normas', s:'Las normas de SST, salud y ambiente del país de la obra: lo que obligan y el texto oficial', pintar:vistaNormas, tablas:[]},
   /* 15/11/2026 · la videollamada con traducción (portal/llamada.html, publicada el 15/11): aquí solo se presenta y se abre */
-  llamada:{id:'llamada', g:'Empresa', ic:'📹', n:'Videollamada con traducción', s:'Cada uno habla en su idioma y lee lo que dice el otro, traducido; con notas, resumen y acta de la reunión',
+  llamada:{id:'llamada', g:'Comunicación', ic:'📹', n:'Videollamada con traducción', s:'Cada uno habla en su idioma y lee lo que dice el otro, traducido; con notas, resumen y acta de la reunión',
            pintar:vistaLlamada, tablas:[]},
+  /* 16/11/2026 · el chat de la obra en la web (portal/chat.js): el mismo de la app, en la nube y con la cuenta */
+  chat:{id:'chat', g:'Comunicación', ic:'💬', n:'Chat de la obra', s:'Los grupos de la obra, los pendientes que te asignan y los acuerdos: el mismo chat de la app, desde la computadora',
+        pintar:function(caja){ cargando(caja); chwIr('chwVista', caja); }, tablas:[]},
+  /* 16/11/2026 · el instructivo de riesgos del puesto y su registro de entrega (portal/instructivo.js: el PDF de la app, tal cual) */
+  instructivo:{id:'instructivo', g:'Capacitación', ic:'🧩', n:'Instructivo de riesgos del puesto', s:'Los peligros, riesgos y controles de cada puesto, con la declaración del trabajador: le llega en su inducción y lo firma en su celular. Y el registro de entrega del mes, con las firmas',
+               pintar:function(caja){ cargando(caja); rpiwIr('rpiwVista', caja); }, tablas:['sst_ind_reg']},
   /* 12/11/2026 · Orden 18 Etapa 1: prototipo interno Peligros del sitio (portal/peligros-sitio.js, sin tocar index.html ni publicar IGN) */
   peligrosSitio:{id:'peligros-sitio', g:'Registros', ic:'🗺️', n:'Peligros del sitio (prototipo)', s:'Prototipo interno Etapa 1: altitud estimada Terrarium y proximidad IGN sin guardar filas IPERC sin confirmación',
                  pintar:function(caja){ cargando(caja); psIr('vistaPeligrosSitio', caja); }, tablas:[]},
@@ -18529,7 +18546,7 @@ var VISTAS_LIDER = [
    tablas:['sst_trabajador','sst_constancia','sst_reporte','sst_accidente','sst_hht','sst_kardex','sst_inspeccion','sst_amonestacion','sst_buena','sst_doc']},
   conGrupo(V.avisos, 'Empresa'),
   V.os,
-  V.llamada,
+  V.chat, V.llamada,
   {id:'equipo',  g:'Empresa', ic:'⚑', n:'Obras y equipo', s:'Tus obras, tus supervisores, y quién pidió entrar', pintar:vistaEquipo, tablas:[]},
   conGrupo(V.parte, 'Empresa'),
   V.empresa, V.cargar, V.informe, V.infAmb, V.infSal, V.fotoreg, V.programas, V.objetivos,
@@ -18541,7 +18558,7 @@ var VISTAS_LIDER = [
   {id:'cump',    g:'Capacitación', ic:'✔', n:'Constancias', s:'Cada evaluación con su nota y su firma · una por una o todas las de una capacitación', tablas:['sst_constancia'],
    pintar:vistaConstancias},
   V.enc,
-  V.ind,
+  V.ind, V.instructivo,
   {id:'personas', g:'Registros', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
   conGrupo(V.cargos, 'Registros'), conGrupo(V.comite, 'Registros'), conGrupo(V.quien, 'Registros'), conGrupo(V.frentes, 'Registros'), conGrupo(V.auxilios, 'Registros'), conGrupo(V.tdm, 'Registros'),
   V.reqs, V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.rieobra, V.peligrosSitio, V.ergoVideo, V.ats, V.ipercLb, V.pets, V.caida, V.alto, V.ergo, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.docs, V.esc, V.util, V.qr, V.senales, V.formatos,
@@ -18556,7 +18573,7 @@ var VISTAS_SUP = [
   V.avisos,
   {id:'personal', g:'Mi obra', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
   conGrupo(V.os, 'Mi obra'),
-  conGrupo(V.llamada, 'Mi obra'),
+  conGrupo(V.chat, 'Mi obra'), conGrupo(V.llamada, 'Mi obra'),
   V.parte,
   V.cargos, V.comite, V.quien, V.frentes, V.auxilios, V.tdm,
   conGrupo(V.empresa, 'Mi obra'), conGrupo(V.cargar, 'Mi obra'), conGrupo(V.informe, 'Mi obra'), conGrupo(V.infAmb, 'Mi obra'), conGrupo(V.infSal, 'Mi obra'), conGrupo(V.fotoreg, 'Mi obra'), conGrupo(V.programas, 'Mi obra'), conGrupo(V.objetivos, 'Mi obra'),
@@ -18565,7 +18582,7 @@ var VISTAS_SUP = [
   {id:'constancias', g:'Capacitación', ic:'✔', n:'Constancias', s:'Cada evaluación con su nota y su firma · una por una o todas las de una capacitación', tablas:['sst_constancia'],
    pintar:vistaConstancias},
   V.enc,
-  V.ind,
+  V.ind, V.instructivo,
   V.rieobra, V.peligrosSitio, V.ergoVideo, V.ats, V.ipercLb, V.pets, V.caida, V.alto, V.ergo,   /* 11/11/2026 · anticipar, el mapa y el simulador */
   {id:'kardex',  g:'Registros', ic:'⛑', n:'Entrega de EPP', s:'El kardex con la firma de quien recibió, y cuánto sale mes a mes', pintar:vistaEPP, tablas:['sst_kardex']},
   V.pedidos, V.eppobra,
@@ -19128,7 +19145,7 @@ var STK_VER='521cb712ae';                /* lo pone armar.py: el hash de portal/
 var AUT_VER='ac50ae2c0f';                /* lo pone armar.py: el hash de portal/autoriza.js (la autorización del grupo sanguíneo) */
 var _AUT_CARGA=null;
 /* 08/10/2026 · los exámenes médicos ocupacionales (portal/emo.js, con lo común de ../emo-base.js adentro) */
-var INFORME_VER='492f9f984b';                                 /* lo pone armar.py: el hash de portal/informe.js */
+var INFORME_VER='297358fbe8';                                 /* lo pone armar.py: el hash de portal/informe.js */
 /* 19/10/2026 · lote 19 · el registro fotográfico del mes (portal/fotos.js) */
 var FOTOS_VER='9c70ca1fb0';                                               /* lo pone herr/huellas.py: el hash de portal/fotos.js */
 var _FOT_CARGA=null;
@@ -19383,6 +19400,81 @@ function evIr(fn){
   return cargarErgoVideo().then(function(){ return window[fn].apply(null, a); },
                                 function(){ if(a[0] && a[0].nodeType===1) fallo(a[0], 0); else toast('No se pudo abrir esta parte. Revisa tu conexión e inténtalo otra vez.'); });
 }
+/* >>> CHAT-WEB-INI (16/11/2026) <<< */
+/* ══ EL CHAT DE LA OBRA EN LA WEB (portal/chat.js) Y EL INSTRUCTIVO DEL PUESTO (portal/instructivo.js) ══════════════════════
+   Marcelo: «el chat para que chatee también desde la web el supervisor, jefe» y «el registro de instructivo de riesgos del
+   puesto». Cada módulo se carga al abrir su sección. Aquí, además, el número del menú del chat: pendientes para ti (o, si no
+   hay, los mensajes sin leer). Se pregunta al servidor al entrar a la obra y cada 90 s mientras el portal está a la vista
+   (sst_chat_canales, la misma de la app); con el chat abierto, lo lleva él. Si la cuenta no está en el chat de la obra o el
+   servidor no lo tiene, no se vuelve a preguntar en esta visita. */
+var CHATW_VER='f5aea45035';      /* lo pone herr/huellas.py: el hash de chat.js */
+var RPIW_VER='855ca0b98a';       /* lo pone herr/huellas.py: el hash de instructivo.js */
+var _CHW_CARGA=null, _RPIW_CARGA=null;
+function cargarChatW(){
+  if(typeof chwVista==='function') return Promise.resolve(true);
+  if(_CHW_CARGA) return _CHW_CARGA;
+  _CHW_CARGA=_cargarJS('chat.js?v='+(CHATW_VER||'0'), function(){ return typeof chwVista==='function'; });
+  _CHW_CARGA.catch(function(){ _CHW_CARGA=null; });
+  return _CHW_CARGA;
+}
+function chwIr(fn){
+  var a=Array.prototype.slice.call(arguments, 1);
+  return cargarChatW().then(function(){ return window[fn].apply(null, a); },
+                            function(){ if(a[0] && a[0].nodeType===1) fallo(a[0], 0); else toast('No se pudo abrir el chat. Revisa tu conexión e inténtalo otra vez.'); });
+}
+function cargarRpiW(){
+  if(typeof rpiwVista==='function') return Promise.resolve(true);
+  if(_RPIW_CARGA) return _RPIW_CARGA;
+  _RPIW_CARGA=cargarEvPDF().then(function(){ return _cargarJS('instructivo.js?v='+(RPIW_VER||'0'), function(){ return typeof rpiwVista==='function' && typeof RPI_APP==='object'; }); });
+  _RPIW_CARGA.catch(function(){ _RPIW_CARGA=null; });
+  return _RPIW_CARGA;
+}
+function rpiwIr(fn){
+  var a=Array.prototype.slice.call(arguments, 1);
+  return cargarRpiW().then(function(){ return window[fn].apply(null, a); },
+                           function(){ if(a[0] && a[0].nodeType===1) fallo(a[0], 0); else toast('No se pudo abrir esta parte. Revisa tu conexión e inténtalo otra vez.'); });
+}
+/* desde la difusión del puesto (la inducción): al instructivo, en su pestaña */
+function rpiwAbrir(tab){ window.RPIW_TAB=tab||'armar'; try{ cerrarHoja(); }catch(_h){} if(VISTA.actual==='instructivo' && typeof rpiwVista==='function') rpiwVista($('vista')); else navegar('instructivo'); }
+var CHWB={ emp:'', nl:0, pend:0, t:0, off:'', yendo:null };
+function chwbPoner(emp, nl, pend, off){
+  emp=String(emp||''); if(!YO || !YO.obra || String(YO.obra.id)!==emp) return;
+  var antes=CHWB.nl+'|'+CHWB.pend;
+  CHWB.emp=emp; CHWB.nl=+nl||0; CHWB.pend=+pend||0; CHWB.t=Date.now(); if(off) CHWB.off=emp;
+  if(antes!==CHWB.nl+'|'+CHWB.pend) try{ pintarRail(); }catch(_r){}
+}
+function chwbTraer(){
+  if(!TOK || !YO || !YO.obra || YO.central || YO.demo) return Promise.resolve(null);
+  var de=String(YO.obra.id);
+  if(CHWB.yendo) return CHWB.yendo;
+  var p=CHWB.yendo=sbRpc('sst_chat_canales', { p_emp:YO.obra.id }).then(function(j){
+    CHWB.yendo=null; CHWB.t=Date.now();
+    if(!YO.obra || String(YO.obra.id)!==de) return null;
+    if(!j || typeof j!=='object' || Array.isArray(j) || j.ok===false){ CHWB.off=de; chwbPoner(de, 0, 0); return null; }
+    var nl=0; (Array.isArray(j.canales) ? j.canales : []).forEach(function(c){ nl+=(+c.sin_leer||0); });
+    chwbPoner(de, nl, +j.mis_pend||0); return j;
+  }, function(e){ CHWB.yendo=null; CHWB.t=Date.now(); if(e===404 || e===400) CHWB.off=de; return null; });
+  return p;
+}
+function chwbTic(){
+  try{
+    if(!TOK || !YO || !YO.obra || YO.central || YO.demo || document.visibilityState==='hidden') return;
+    var id=String(YO.obra.id);
+    if(CHWB.emp!==id){ CHWB.emp=id; CHWB.nl=0; CHWB.pend=0; CHWB.t=0; }
+    if(CHWB.off===id || CHWB.yendo || VISTA.actual==='chat') return;
+    if(Date.now()-CHWB.t<90000) return;
+    chwbTraer();
+  }catch(_e){}
+}
+function chwbAlElegir(){ setTimeout(chwbTic, 2500); }
+function chwInsignia(){
+  if(!YO || !YO.obra || CHWB.emp!==String(YO.obra.id)) return '';
+  if(CHWB.pend) return '<span class="n cad-n mal" title="'+esc(CHWB.pend===1 ? '1 pendiente del chat para ti' : CHWB.pend+' pendientes del chat para ti')+'">'+(CHWB.pend>99 ? '99+' : CHWB.pend)+'</span>';
+  if(CHWB.nl) return '<span class="n cad-n" title="'+esc(CHWB.nl===1 ? '1 mensaje sin leer' : CHWB.nl+' mensajes sin leer')+'">'+(CHWB.nl>99 ? '99+' : CHWB.nl)+'</span>';
+  return '';
+}
+setInterval(chwbTic, 20000);
+/* <<< CHAT-WEB-FIN >>> */
 function _rieMenosP(iso, n){ var d=new Date(iso+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-n); return d.toISOString().slice(0, 10); }
 function _rieNotaP(t){ if(t && typeof t==='object') return t; try{ return JSON.parse(t||'null'); }catch(_e){ return null; } }
 function vistaRiesgos(caja){
