@@ -7261,7 +7261,7 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
     <span class="ch">›</span>
   </button>
 
-  <!-- 11/11/2026 · el proveedor (aliado): su portal es web -->
+  <!-- 11/11/2026 · el proveedor (aliado) · 16/11/2026: su Portal del proveedor es de la app (PROV-APP) -->
   <button type="button" class="cart-ir" style="border-color:rgba(var(--w),.20)" onclick="ir('p-prov')">
     <span class="ic">🤝</span>
     <span class="tx"><b>Soy proveedor (aliado)</b>
@@ -17181,6 +17181,8 @@ function _hayAlgoAbierto(){
   if(c && c.className.indexOf('abierto')>-1){ cerrarAviso(false); return true; }
   /* el escáner: de los filtros al documento, del recorte a la cámara */
   if(typeof esc2Atras==='function' && esc2Atras()) return true;
+  /* 16/11/2026 · el Portal del proveedor en la app: del detalle a la lista, de una pestaña a Solicitudes (PROV-APP) */
+  try{ if(typeof provAtras==='function' && provAtras()) return true; }catch(_pa){}
   var h=$('hoja-rep');
   if(h && h.className.indexOf('abierta')>-1){ cerrarDetalleReporte(); return true; }
   var j=$('hoja');
@@ -29816,7 +29818,16 @@ var CH_MOTIVO = {
   sin_red:'Sin señal: se intenta solo cuando vuelva.', sin_servidor:'El chat todavía no está activo en el servidor. Avísanos y lo dejamos listo.',
   sin_cuenta:'Tu sesión venció: vuelve a entrar a tu cuenta.', tipo:'Ese tipo de archivo no va por el chat: fotos, PDF, Word o Excel.',
   video:'Los videos no van por el chat porque pesan demasiado. Súbelo a YouTube o a Drive y pega su enlace.',
-  'muy-grande':'Pesa más de 20 MB, que es el tope del chat.'
+  'muy-grande':'Pesa más de 20 MB, que es el tope del chat.',
+  /* 16/11/2026 · Claude · los motivos de los flujos por área (antes salía «No se pudo» con el PIN equivocado) */
+  falta_foto_despues:'Falta la foto del DESPUÉS.', falta_pin_trab:'Falta el documento y el PIN del trabajador.',
+  pin_incorrecto:'Ese PIN no coincide con el documento del trabajador.', sin_cuenta_trab:'Ese trabajador todavía no activó su PIN en la app.',
+  doc_corto:'Escribe el documento completo del trabajador.', pin_formato:'El PIN del trabajador son 6 números.',
+  pin_bloqueado:'Muchos intentos con ese documento. Espera 15 minutos y vuelve a intentarlo.',
+  sin_pendientes:'No hay pendientes abiertos para pasar.', elige_otra_persona:'Elige a otra persona para el relevo.',
+  accion_invalida:'Esa acción no corresponde a este pendiente.', sin_cambio:'No cambió nada.',
+  doble_firma_otra_persona:'El otro V°B° lo da otra persona: Producción y SST firman por separado.',
+  modo_sin_servidor:'Ese tipo de pendiente todavía no está activo en el servidor. Usa «Pendiente general» por ahora.'
 };
 function _chMotivo(err){
   var j = err && err.j;
@@ -29833,7 +29844,20 @@ function _chObra(){ try{ var e = (typeof empDeTrabajo === 'function') ? empDeTra
 function _chSesion(){ try{ return !!(TOK && TOK.access_token); }catch(_e){ return false; } }
 function _chE(x){ return esc(x == null ? '' : String(x)); }
 function _chActiva(id){ var s = document.getElementById(id); return !!(s && s.classList.contains('activa')); }
-function _chRpc(fn, a){ return sbRpc(fn, a || {}).then(function(j){ if(j && j.ok === false) return Promise.reject({ j:j }); return j || {}; }); }
+/* 16/11/2026 · Claude · si el servidor todavía no tiene los flujos por área (404), el pendiente normal se manda como antes */
+var CH_RPC_ANTES = {
+  sst_chat_pend_crear: function(a){ var m = a.p_meta || {}; if((a.p_modo || 'general') !== 'general' || Object.keys(m).length) return null; return { p_msj:a.p_msj, p_asignado:a.p_asignado, p_vence:a.p_vence }; },
+  sst_chat_pend_cumplir: function(a){ var m = a.p_meta || {}; if(a.p_pin || a.p_doc_pin || Object.keys(m).length) return null; return { p_pend:a.p_pend, p_texto:a.p_texto, p_adjunto:a.p_adjunto, p_cid:a.p_cid }; }
+};
+function _chRpc(fn, a){
+  a = a || {};
+  var ok = function(j){ if(j && j.ok === false) return Promise.reject({ j:j }); return j || {}; };
+  return sbRpc(fn, a).then(ok, function(err){
+    var b = (err === 404 && CH_RPC_ANTES[fn]) ? CH_RPC_ANTES[fn](a) : null;
+    if(b) return sbRpc(fn, b).then(ok);
+    return Promise.reject((err === 404 && CH_RPC_ANTES[fn]) ? 'modo_sin_servidor' : err);
+  });
+}
 /* la cuenta del celular, como huella corta: lo guardado de una cuenta no lo ve otra en el mismo celular */
 function _chCta(){
   var s = ''; try{ s = String((TOK && (TOK.correo || TOK.user_id)) || ''); }catch(_t){}
@@ -30754,7 +30778,7 @@ function _chInyectarCssFlujos(){
 var CH_MODOS_POR_AREA = {
   sst:   ['obs_sst', 'visado_ats', 'recambio_epp', 'general'],
   prod:  ['lib_frente', 'frente_det', 'pedido_cancha', 'general'],
-  alm:   ['prestamo_herr', 'recambio_epp', 'guia_puerta', 'stock_critico'],
+  alm:   ['prestamo_herr', 'recambio_epp', 'guia_puerta', 'stock_critico', 'general'],
   admin: ['sctr_alta', 'permiso_med', 'general'],
   obra:  ['obs_sst', 'recambio_epp', 'prestamo_herr', 'general']
 };
@@ -30963,9 +30987,9 @@ function _chatAbrirCumplirModal(canalId, msjId, pendId){
       chatCargarCanales().then(function(){ pintarBurbujaPendientes(); if(_chActiva('p-canales')) _chRepintarLista(); });
     }, function(err){
       b.disabled = false;
-      var mErr = (err && err.motivo === 'pin_incorrecto') ? 'Ese PIN de 6 dígitos no coincide con el documento del trabajador.'
-               : (err && err.motivo === 'sin_cuenta_trab') ? 'Ese trabajador aún no activó su PIN en la app.'
-               : (err && err.motivo === 'falta_foto_despues') ? 'Falta la foto del DESPUÉS.'
+      var mErr = (err && (err.j || {}).motivo === 'pin_incorrecto') ? 'Ese PIN de 6 dígitos no coincide con el documento del trabajador.'
+               : (err && (err.j || {}).motivo === 'sin_cuenta_trab') ? 'Ese trabajador aún no activó su PIN en la app.'
+               : (err && (err.j || {}).motivo === 'falta_foto_despues') ? 'Falta la foto del DESPUÉS.'
                : _chMotivo(err);
       if(msg){ msg.className = 'ch-msg mal'; msg.textContent = mErr; }
     });
@@ -31025,8 +31049,8 @@ function _chAbrirCargoPinModal(canalId, msjId, pendId){
       if(typeof tostada === 'function') tostada('Cargo firmado con PIN');
     }, function(err){
       b.disabled = false;
-      var mErr = (err && err.motivo === 'pin_incorrecto') ? 'PIN incorrecto para ese documento.'
-               : (err && err.motivo === 'sin_cuenta_trab') ? 'Ese trabajador aún no tiene PIN activo en la app.'
+      var mErr = (err && (err.j || {}).motivo === 'pin_incorrecto') ? 'PIN incorrecto para ese documento.'
+               : (err && (err.j || {}).motivo === 'sin_cuenta_trab') ? 'Ese trabajador aún no tiene PIN activo en la app.'
                : _chMotivo(err);
       if(msg){ msg.className = 'ch-msg mal'; msg.textContent = mErr; }
     });
@@ -118416,11 +118440,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = '6c53546fd8';
-var IDIOMA_FR_V = 'bbc0d0d077';
+var IDIOMA_PT_V = '53edc6a50c';
+var IDIOMA_FR_V = '0d245472e7';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = '6e47ac015c';
+var IDIOMA_EN_V = 'd76a541bd5';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -121954,16 +121978,28 @@ function abrirLlamada(){
 /* <<< LLAMADA-APP-FIN >>> */
 /* >>> PROV-APP-INI <<< ═══ 12/11/2026 · EL PROVEEDOR (ALIADO) EN LA APP ══════════════════════════════════════════════
    Marcelo: «no veo en la app que salga aliados, o proveedores… algo que ellos puedan utilizar la app». La puerta de
-   «¿Quién eres?» abre esta pantalla. El aliado entra a su Portal del proveedor DENTRO de la app (la misma web, en esta
-   ventana: portal/portal-aliados.html?app=1, con «‹ Volver a la app»). El que todavía no es aliado deja su solicitud
-   aquí (sst_ali_solicitar: «por verificar», le llega a Marcelo); sin la función en el servidor (404), se abre su correo
-   con los datos, como la web de antes. Los textos del programa son los de /aliados. */
+   «¿Quién eres?» abre esta pantalla. El que todavía no es aliado deja su solicitud aquí (sst_ali_solicitar: «por
+   verificar», le llega a Marcelo); sin la función en el servidor (404), se abre su correo con los datos, como la web de
+   antes. Los textos del programa son los de /aliados.
+   16/11/2026 · Marcelo: «cuando ingreso a la app y soy aliado, me bota para otra plataforma donde no es la app; yo quiero
+   que sea en la misma app que se mantenga, y si entra por la web, que tenga su interfaz propia». El Portal del proveedor
+   ahora es de la app (antes: location.href = portal/portal-aliados.html?app=1). Las mismas funciones del servidor que la
+   web (sst_ali_yo, sst_ali_unirse, sst_ali_bandeja, sst_ali_pedido, sst_ali_responder, sst_ali_declinar,
+   sst_ali_ficha_guardar, sst_ali_rnp, sst_ali_rnp_guardar, sst_ali_programa), la misma cuenta de la app (TOK, entrarCuenta,
+   crearCuenta) y lo común de las cotizaciones de portal/cotizar.js (COT: los estados, la plata, las cuentas del IGV y la
+   revisión de la respuesta), que se carga al entrar. Una sola pantalla (p-prov) con sus vistas: inicio · entrar ·
+   no (la cuenta no es de un aliado: el código de invitación) · error · portal (Solicitudes, Mi ficha, El programa,
+   Mi cuenta). El celular recuerda que entra como aliado (LS_PROV_YO): al abrir la app vuelve solo a su portal
+   (provArranque, en el arranque); «Cambiar de usuario» lo olvida y vuelve a «¿Quién eres?». La web
+   (portal-aliados.html) se queda con su interfaz propia. */
 var LS_PROV = 'sstc_prov_sol';    /* la solicitud que ya mandó este celular: { empresa, t } (ni correo ni nombre) */
+var LS_PROV_YO = 'sstc_prov_yo';  /* este celular entra como aliado: { correo, t } */
 var PROV_RUBROS = ['Distribuidor de EPP', 'Centro de salud ocupacional', 'Consultor SSOMA', 'Médico ocupacional', 'Centro de capacitación',
   'Gestor de residuos o reciclaje (EO-RS)', 'Municipalidad', 'Corredor de seguros (SCTR)', 'Alquiler de maquinaria pesada',
   'Inspección de izaje, andamios o extintores', 'Laboratorio de monitoreo o calibración', 'Transporte de personal',
   'Saneamiento ambiental o catering', 'Otro'];
-var PROV = { otra:false };
+var PROV = { otra:false, v:'inicio', ent:'entrar', msg:'', noMsg:'', yo:null, lista:null, listaMal:'', filtro:'', tab:'sol',
+             pedido:null, ped:null, pedMal:'', prog:null, rnp:null, logo:null, reloj:null, cot:null };
 try{ SIN_CUENTA['p-prov'] = 1; ZONA_PREVIA['p-prov'] = 1; COL_OK['p-prov'] = 1; EMP_OK['p-prov'] = 1; }catch(_pg){}
 /* el dígito verificador del RUC (SUNAT: pesos 5 4 3 2 7 6 5 4 3 2, módulo 11): el mismo cálculo que hace el servidor */
 function provRucOk(r){
@@ -121974,22 +122010,48 @@ function provRucOk(r){
   var d = 11 - (t % 11); if(d === 10) d = 0; else if(d === 11) d = 1;
   return d === parseInt(r.charAt(10), 10);
 }
-function provPortal(){
-  try{ sessionStorage.setItem('sstp_app', '1'); }catch(_s){}
-  location.href = portalURL() + 'portal-aliados.html?app=1';
+/* «Entrar a mi Portal del proveedor»: antes abría la web; ahora el portal es de la app */
+function provPortal(){ provEntrar(); }
+function _provActiva(){ return ((document.querySelector('.pantalla.activa') || {}).id) === 'p-prov'; }
+function _provPintarSi(){ if(_provActiva()) provPintar(); }
+function _provIsoLocal(d){ var z = function(n){ return ('0' + n).slice(-2); }; return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
+function _provBarra(clic, titulo, id){
+  return '<div class="barra"><button type="button" class="btn sec pva-volver"' + (id ? ' id="' + id + '"' : '') + ' onclick="' + clic + '">' +
+    (id === 'pva-cambiar' ? '‹ Cambiar de usuario' : '‹ Volver') + '</button><span>' + titulo + '</span></div>';
 }
+/* el idioma: el aliado no pasa por el arranque de la empresa (que prende al vigía del idioma); lo que se pinta después
+   (la bandeja que llega, los mensajes) también se traduce */
 function provPintar(){
+  _provPintar();
+  try{ if(typeof idiomaActual === 'function' && idiomaActual() !== 'es'){ arrancarVigiaIdioma(); aplicarIdioma(); } }catch(_i){}
+}
+function _provPintar(){
   var c = $('prov-cuerpo'); if(!c) return;
+  if(PROV.v === 'inicio' && provRecordado()){ PROV.v = 'carga'; provCargar(); }
+  var v = PROV.v;
+  if(v === 'carga'){ c.innerHTML = _provBarra('provVolverInicio()', 'Proveedores') + '<div class="marca">◆ OBRASST Aliados</div><p class="sub" id="pva-carga">Abriendo tu Portal del proveedor…</p>'; return; }
+  if(v === 'entrar'){ _provEntrarPintar(c); return; }
+  if(v === 'no'){ _provNoPintar(c); return; }
+  if(v === 'error'){
+    c.innerHTML = _provBarra('provVolverInicio()', 'Proveedores') + '<div class="marca">◆ OBRASST Aliados</div><h1>No se pudo abrir tu portal</h1>' +
+      '<div class="aviso pva-mal" id="pva-err">' + esc(PROV.msg) + '</div>' +
+      '<button type="button" class="btn" id="pva-reint" onclick="provEntrar()">Intentar otra vez</button>';
+    return;
+  }
+  if(v === 'portal' && PROV.yo){ _provPortalPintar(c); return; }
+  PROV.v = 'inicio'; _provInicioPintar(c);
+}
+function _provInicioPintar(c){
   var ya = leer(LS_PROV, null);
   var h = '<div class="barra"><button type="button" class="btn sec" style="width:auto;padding:7px 13px;margin:0" onclick="ir(\'p-rol\')">‹ Volver</button><span>Proveedores</span></div>' +
     '<div class="marca">◆ OBRASST Aliados</div><h1>Para proveedores de SST</h1>' +
     '<p class="sub">Las solicitudes de las empresas que usan OBRASST, en tu celular: EPP, SCTR, exámenes médicos, consultoría y capacitación, residuos, maquinaria, izaje, laboratorio, transporte y saneamiento.</p>' +
     '<div class="caja vidrio prov-caja"><div class="prov-cab">' + _provIco('handshake') + '<b>Ya soy aliado</b></div>' +
     '<p class="sub">Entras con tu correo y tu contraseña. Ahí ves las solicitudes de tu zona, respondes la cotización y cuidas tu ficha.</p>' +
-    '<button type="button" class="btn" id="prov-entrar" onclick="provPortal()">Entrar a mi Portal del proveedor ▸</button></div>';
+    '<button type="button" class="btn" id="prov-entrar" onclick="provEntrar()">Entrar a mi Portal del proveedor ▸</button></div>';
   if(ya && ya.empresa && !PROV.otra){
     h += '<div class="caja vidrio prov-caja" id="prov-ya"><div class="prov-cab">' + _provIco('outbox_tray') + '<b>✓ Ya mandaste tu solicitud</b></div>' +
-      '<p class="sub"><span>Empresa:</span> <b data-sin-trad>' + esc(ya.empresa) + '</b>' + (ya.t ? ' · ' + esc(fechaLarga(isoDe(new Date(ya.t)))) : '') + '. ' +
+      '<p class="sub"><span>Empresa:</span> <b data-sin-trad>' + esc(ya.empresa) + '</b>' + (ya.t ? ' · <span data-sin-trad>' + esc(fechaLarga(_provIsoLocal(new Date(ya.t)))) + '</span>' : '') + '. ' +
       '<span>Te respondemos en dos días hábiles al correo que pusiste, con el acuerdo de una página.</span></p>' +
       '<button type="button" class="btn sec" onclick="PROV.otra=true;provPintar()">Mandar otra solicitud</button></div>';
   } else {
@@ -122050,11 +122112,623 @@ function provEnviar(){
     mal('No se pudo enviar (' + porQue(st) + '). Revisa la señal e inténtalo otra vez.');
   });
 }
+
+/* ── la sesión del aliado: la misma cuenta de la app ── */
+function provRecordado(){
+  var m = leer(LS_PROV_YO, null);
+  return !!(m && TOK && TOK.access_token && ROL !== 'col' && (!m.correo || !TOK.correo || m.correo === TOK.correo));
+}
+/* al abrir la app: el que entró como aliado vuelve solo a su portal (el gancho está en el arranque) */
+function provArranque(){
+  if(!provRecordado()) return false;
+  HIST = []; PROV.v = 'inicio'; _ir('p-prov');
+  return true;
+}
+function _provOlvidar(){
+  try{ localStorage.removeItem(LS_PROV_YO); }catch(_l){}
+  if(PROV.reloj){ clearInterval(PROV.reloj); PROV.reloj = null; }
+  PROV.yo = null; PROV.lista = null; PROV.listaMal = ''; PROV.pedido = null; PROV.ped = null; PROV.prog = null; PROV.rnp = null;
+  PROV.filtro = ''; PROV.tab = 'sol'; PROV.msg = ''; PROV.noMsg = '';
+}
+function provVolverInicio(){ PROV.v = 'inicio'; PROV.msg = ''; if(!PROV.yo) try{ localStorage.removeItem(LS_PROV_YO); }catch(_l){} provPintar(); window.scrollTo(0, 0); }
+/* «Cambiar de usuario»: el celular deja de entrar como aliado y vuelve a «¿Quién eres?» (la sesión no se cierra) */
+function provCambiarUsuario(){ _provOlvidar(); PROV.v = 'inicio'; cambiarUsuario(); }
+/* «Cerrar sesión»: además se cierra la cuenta en este celular */
+function provSalir(){ _provOlvidar(); borrarToken(); PROV.v = 'entrar'; PROV.ent = 'entrar'; provPintar(); window.scrollTo(0, 0); }
+function provEntrar(){
+  PROV.msg = '';
+  if(TOK && TOK.access_token && ROL !== 'col'){ PROV.v = 'carga'; provPintar(); provCargar(); return; }
+  PROV.v = 'entrar'; provPintar(); window.scrollTo(0, 0);
+}
+/* lo común de las cotizaciones (portal/cotizar.js): se carga una vez, al entrar */
+function provCot(){
+  if(typeof COT === 'object' && COT && COT.estadoAliado) return Promise.resolve(COT);
+  if(PROV.cot) return PROV.cot;
+  PROV.cot = new Promise(function(ok, mal){
+    var s = document.createElement('script');
+    s.src = 'portal/cotizar.js?v=' + (typeof SELLO_APP === 'string' ? SELLO_APP : '1');
+    s.onload = function(){ if(typeof COT === 'object' && COT && COT.estadoAliado) ok(COT); else { PROV.cot = null; mal('Failed to fetch'); } };
+    s.onerror = function(){ PROV.cot = null; try{ s.parentNode.removeChild(s); }catch(_r){} mal('Failed to fetch'); };
+    document.head.appendChild(s);
+  });
+  return PROV.cot;
+}
+/* los errores de red y del servidor, en cristiano */
+function provFallo(e){
+  if(e === 404) return 'Esta parte todavía no está lista en el servidor. Avísanos a info@obrasstapp.com.';
+  return porQue(e);
+}
+function provMotivo(m){
+  return ({ no_eres_aliado:'Esta cuenta no es de un aliado de OBRASST.', sin_cuenta:'Tu sesión se cerró. Vuelve a entrar.', no_existe:'Esa solicitud ya no está.',
+    cerrada:'Esta solicitud ya se cerró: la empresa la adjudicó o la anuló.', respuesta:'Revisa tu cotización: los precios, el plazo y la validez.',
+    muy_seguido:'Espera un momento y vuelve a intentarlo.', datos:'No se pudo leer lo enviado. Vuelve a abrir la pantalla.', solo_admin:'La ficha la cambia el administrador de tu empresa.',
+    web:'La web tiene que empezar con https://', telefono:'Revisa el teléfono: solo números, espacios, + y guiones.', logo:'El logo tiene que ser una imagen PNG, JPG o WEBP liviana.',
+    invitacion_no_vale:'Ese enlace de invitación ya se usó o no es válido. Pídenos uno nuevo a info@obrasstapp.com.',
+    invitacion_vencida:'Ese enlace de invitación venció (dura 30 días). Pídenos uno nuevo a info@obrasstapp.com.',
+    ya_eres_de_otro:'Esta cuenta ya está unida a otro aliado. Para aceptar esta invitación, entra con otra cuenta.' })[m] || 'No se pudo guardar. Inténtalo otra vez.';
+}
+function provAuthMsg(e){
+  var t = ((e && (e.error_code || e.error || '')) + ' ' + (e && (e.msg || e.message || e.error_description || ''))).toLowerCase();
+  if(/already|exists|registered/.test(t)) return 'Ese correo ya tiene cuenta. Pasa a «Entrar».';
+  if(/not.?confirmed/.test(t)) return 'Te mandamos un correo para confirmar la cuenta: ábrelo y después entra aquí.';
+  if(/invalid.?login|invalid_credentials|invalid grant|bad_credential/.test(t)) return 'El correo o la contraseña no coinciden.';
+  if(/weak|password/.test(t)) return 'La contraseña necesita 8 caracteres o más, con letras y números.';
+  if(/rate|too many|over_/.test(t)) return 'Muchos intentos seguidos. Espera un minuto y vuelve a probar.';
+  if(/email/.test(t)) return 'Ese correo no parece válido.';
+  return 'No se pudo. Revisa tu conexión e inténtalo otra vez.';
+}
+function _provSesionCerrada(){
+  if(PROV.reloj){ clearInterval(PROV.reloj); PROV.reloj = null; }
+  PROV.v = 'entrar'; PROV.ent = 'entrar'; PROV.msg = 'Tu sesión se cerró. Vuelve a entrar.'; _provPintarSi();
+}
+function _provError(e){
+  if(e === 401 || e === 403){ _provSesionCerrada(); return; }
+  PROV.v = 'error'; PROV.msg = provFallo(e); _provPintarSi();
+}
+/* ¿esta cuenta es de un aliado? */
+function provCargar(){
+  PROV.v = 'carga';
+  provCot().then(function(){ return sbRpc('sst_ali_yo', {}); }).then(function(j){
+    if(j && j.ok){ provDentro(j); return; }
+    try{ localStorage.removeItem(LS_PROV_YO); }catch(_l){}
+    PROV.yo = null; PROV.v = 'no'; PROV.noMsg = (j && j.motivo && j.motivo !== 'no_eres_aliado') ? provMotivo(j.motivo) : ''; _provPintarSi();
+  }, _provError);
+}
+function provDentro(j){
+  PROV.yo = j; PROV.v = 'portal'; PROV.msg = ''; PROV.noMsg = '';
+  if(ROL === 'col'){ ROL = null; try{ localStorage.removeItem(LS_ROL); }catch(_r){} }
+  guardar(LS_PROV_YO, { correo:(TOK && TOK.correo) || '', t:Date.now() });
+  _provPintarSi();
+  provTraer(!!PROV.lista);
+  if(PROV.reloj) clearInterval(PROV.reloj);
+  /* lo nuevo se ve sin tocar nada: un repaso por minuto mientras la bandeja esté a la vista (como la web) */
+  PROV.reloj = setInterval(function(){
+    if(!document.hidden && _provActiva() && PROV.v === 'portal' && PROV.tab === 'sol' && !PROV.pedido) provTraer(true);
+  }, 60000);
+}
+
+/* ── entrar o crear la cuenta, dentro de la app ── */
+function _provEntrarPintar(c){
+  var crear = PROV.ent === 'crear';
+  var h = _provBarra('provVolverInicio()', 'Proveedores') + '<div class="marca">◆ OBRASST Aliados</div><h1>Portal del proveedor</h1>' +
+    '<p class="sub">Con tu cuenta de OBRASST: tu correo y tu contraseña.</p>' +
+    '<div class="pva-pest pva-pest2" role="tablist">' +
+      '<button type="button" role="tab" id="pva-t-entrar" class="' + (crear ? '' : 'on') + '" aria-selected="' + !crear + '" onclick="PROV.ent=\'entrar\';PROV.msg=\'\';provPintar()">Entrar</button>' +
+      '<button type="button" role="tab" id="pva-t-crear" class="' + (crear ? 'on' : '') + '" aria-selected="' + crear + '" onclick="PROV.ent=\'crear\';PROV.msg=\'\';provPintar()">Crear mi cuenta</button></div>';
+  if(!crear){
+    h += '<div class="caja vidrio prov-caja" id="pva-f-entrar">' +
+      '<label for="pva-e-cor">Correo</label><input id="pva-e-cor" type="email" inputmode="email" maxlength="160" autocomplete="email">' +
+      '<label for="pva-e-cla">Contraseña</label><input id="pva-e-cla" type="password" maxlength="72" autocomplete="current-password">' +
+      '<p class="pva-msg mal" id="pva-e-m" role="status">' + esc(PROV.msg) + '</p>' +
+      '<button type="button" class="btn" id="pva-e-bt" onclick="provEntrarCuenta()">Entrar ▸</button>' +
+      '<button type="button" class="pva-lnk" id="pva-e-olv" onclick="provOlvido()">¿Olvidaste tu contraseña?</button></div>';
+  } else {
+    h += '<div class="caja vidrio prov-caja" id="pva-f-crear">' +
+      '<p class="sub">Si te invitamos al programa, crea aquí tu cuenta; después pegas tu enlace de invitación.</p>' +
+      '<label for="pva-c-nom">Tu nombre y apellido</label><input id="pva-c-nom" maxlength="120" autocomplete="name">' +
+      '<label for="pva-c-cor">Correo</label><input id="pva-c-cor" type="email" inputmode="email" maxlength="160" autocomplete="email">' +
+      '<label for="pva-c-cla">Contraseña (8 o más, con letras y números)</label><input id="pva-c-cla" type="password" maxlength="72" autocomplete="new-password">' +
+      '<label class="pva-chk" for="pva-c-l1"><input type="checkbox" id="pva-c-l1"><span>He leído y acepto los <a href="#" onclick="event.preventDefault();ir(\'p-terminos\')">Términos y condiciones</a>.</span></label>' +
+      '<label class="pva-chk" for="pva-c-l2"><input type="checkbox" id="pva-c-l2"><span>Entiendo cómo se tratan los datos. <a href="#" onclick="event.preventDefault();ir(\'p-privacidad\')">Ver la política</a>.</span></label>' +
+      '<p class="pva-msg mal" id="pva-c-m" role="status">' + esc(PROV.msg) + '</p>' +
+      '<button type="button" class="btn" id="pva-c-bt" onclick="provCrearCuenta()">Crear mi cuenta ▸</button></div>';
+  }
+  c.innerHTML = h;
+}
+function _provMsg(id, t, cl){ var m = $(id); if(m){ m.className = 'pva-msg ' + (cl || 'mal'); m.textContent = t || ''; } }
+function _provCorreoOk(c){ return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c); }
+function provEntrarCuenta(){
+  var correo = String(($('pva-e-cor') || {}).value || '').trim().toLowerCase(), clave = ($('pva-e-cla') || {}).value || '';
+  if(!_provCorreoOk(correo)){ _provMsg('pva-e-m', 'Escribe tu correo.'); try{ $('pva-e-cor').focus(); }catch(_f){} return; }
+  if(!clave){ _provMsg('pva-e-m', 'Escribe tu contraseña.'); try{ $('pva-e-cla').focus(); }catch(_f){} return; }
+  var bt = $('pva-e-bt'); bt.disabled = true; _provMsg('pva-e-m', 'Entrando…', 'gris');
+  entrarCuenta(correo, clave).then(function(t){
+    bt.disabled = false;
+    if(!t){ _provMsg('pva-e-m', 'No se pudo. Revisa tu conexión e inténtalo otra vez.'); return; }
+    if(TOK && !TOK.correo){ TOK.correo = correo; try{ localStorage.setItem(LS_TOK, JSON.stringify(TOK)); }catch(_t){} }
+    PROV.msg = ''; PROV.v = 'carga'; provPintar(); provCargar();
+  }, function(e){ bt.disabled = false; _provMsg('pva-e-m', provAuthMsg(e)); });
+}
+function provCrearCuenta(){
+  var g = function(id){ return String(($(id) || {}).value || ''); };
+  var nombre = g('pva-c-nom').replace(/\s+/g, ' ').trim(), correo = g('pva-c-cor').trim().toLowerCase(), clave = g('pva-c-cla');
+  var mal = function(t, id){ _provMsg('pva-c-m', t); try{ $(id).focus(); }catch(_f){} };
+  if(nombre.length < 5 || nombre.split(' ').length < 2) return mal('Escribe tu nombre y apellido.', 'pva-c-nom');
+  if(!_provCorreoOk(correo)) return mal('Escribe un correo válido.', 'pva-c-cor');
+  if(clave.length < 8 || !(/[0-9]/.test(clave) && /[a-zA-Z]/.test(clave))) return mal('La contraseña necesita 8 caracteres o más, con letras y números.', 'pva-c-cla');
+  if(!$('pva-c-l1').checked || !$('pva-c-l2').checked) return mal('Para crear la cuenta hay que marcar las dos casillas.', $('pva-c-l1').checked ? 'pva-c-l2' : 'pva-c-l1');
+  var bt = $('pva-c-bt'); bt.disabled = true; _provMsg('pva-c-m', 'Creando tu cuenta…', 'gris');
+  crearCuenta(correo, clave, { nombre:nombre.split(' ')[0], cap:nombre, reg:new Date().toISOString(), reg_por:'aliados' }).then(function(t){
+    bt.disabled = false;
+    if(!t){ _provMsg('pva-c-m', 'Te mandamos un correo para confirmar la cuenta: ábrelo y después entra aquí.'); return; }
+    if(TOK && !TOK.correo){ TOK.correo = correo; try{ localStorage.setItem(LS_TOK, JSON.stringify(TOK)); }catch(_t){} }
+    /* la constancia de lo aceptado, como en la web */
+    try{ sbPost('sst_consentimiento', { version:LEGAL_VER, aceptado:new Date().toISOString() }).catch(function(){}); }catch(_c){}
+    PROV.msg = ''; PROV.v = 'carga'; provPintar(); provCargar();
+  }, function(e){ bt.disabled = false; _provMsg('pva-c-m', provAuthMsg(e)); });
+}
+function provOlvido(){
+  var correo = String(($('pva-e-cor') || {}).value || '').trim().toLowerCase();
+  if(!_provCorreoOk(correo)){ _provMsg('pva-e-m', 'Escribe arriba tu correo y vuelve a tocar «¿Olvidaste tu contraseña?».'); try{ $('pva-e-cor').focus(); }catch(_f){} return; }
+  _provMsg('pva-e-m', 'Mandando el correo…', 'gris');
+  fetch(SB.url + '/auth/v1/recover', { method:'POST', headers:{ apikey:SB.key, 'Content-Type':'application/json' }, body:JSON.stringify({ email:correo, redirect_to:baseURL() }) })
+    .then(function(r){ _provMsg('pva-e-m', r.ok ? 'Listo: revisa tu correo y pon tu contraseña nueva desde este celular. Después vuelve a «Soy proveedor (aliado)» y entra.' :
+      'No se pudo mandar el correo ahora. Escríbenos a info@obrasstapp.com.', r.ok ? 'ok' : 'mal'); },
+      function(){ _provMsg('pva-e-m', 'Parece que no hay internet. Vuelve a intentarlo cuando tengas señal.'); });
+}
+
+/* ── la cuenta no es de un aliado: el código de invitación o la solicitud ── */
+function _provNoPintar(c){
+  c.innerHTML = _provBarra('provVolverInicio()', 'Proveedores') + '<div class="marca">◆ OBRASST Aliados</div>' +
+    '<h1 id="pva-no-t">' + (PROV.noMsg ? 'No se pudo aceptar la invitación' : 'Esta cuenta no es de un aliado de OBRASST') + '</h1>' +
+    '<p class="sub"><span>Entraste como</span> <b data-sin-trad>' + esc((TOK && TOK.correo) || '') + '</b></p>' +
+    '<div class="aviso" id="pva-no-p">' + esc(PROV.noMsg || 'Para entrar aquí, usa el enlace de invitación que te mandamos al firmar el acuerdo. Si tu empresa ya es aliada, pídele a su administrador que te pida un enlace para ti.') + '</div>' +
+    '<div class="caja vidrio prov-caja" id="pva-inv-caja"><div class="prov-cab">' + _provIco('key') + '<b>Tengo un enlace de invitación</b></div>' +
+      '<label for="pva-inv">Pega aquí el enlace o el código que te llegó</label><input id="pva-inv" maxlength="300" autocomplete="off" spellcheck="false">' +
+      '<p class="pva-msg mal" id="pva-inv-m" role="status"></p>' +
+      '<button type="button" class="btn" id="pva-inv-bt" onclick="provUnirse()">Unirme como aliado ▸</button></div>' +
+    '<div class="caja vidrio prov-caja"><div class="prov-cab">' + _provIco('memo') + '<b>Quiero ser aliado</b></div>' +
+      '<p class="sub">Deja los datos de tu empresa y te respondemos en dos días hábiles.</p>' +
+      '<button type="button" class="btn sec" id="pva-no-sol" onclick="PROV.otra=true;provVolverInicio()">Llenar mi solicitud</button></div>' +
+    '<button type="button" class="btn sec" id="pva-otra" style="margin-top:14px" onclick="PROV.v=\'entrar\';PROV.ent=\'entrar\';PROV.msg=\'\';provPintar()">Entrar con otra cuenta</button>';
+}
+function provUnirse(){
+  var t = String(($('pva-inv') || {}).value || '').trim(), m = /(?:^|[?&=\/])([0-9a-f]{32})(?:$|[&#\s])/i.exec(t) || /^([0-9a-f]{32})$/i.exec(t);
+  if(!m){ _provMsg('pva-inv-m', 'Pega el enlace completo que te llegó por correo (o su código de 32 letras y números).'); try{ $('pva-inv').focus(); }catch(_f){} return; }
+  var bt = $('pva-inv-bt'); bt.disabled = true; _provMsg('pva-inv-m', 'Revisando la invitación…', 'gris');
+  provCot().then(function(){ return sbRpc('sst_ali_unirse', { p_token:m[1].toLowerCase() }); }).then(function(j){
+    bt.disabled = false;
+    if(j && j.ok){ tostada('Listo: ya eres parte de OBRASST Aliados.'); provDentro(j); return; }
+    _provMsg('pva-inv-m', provMotivo(j && j.motivo));
+  }, function(e){ bt.disabled = false; if(e === 401 || e === 403){ _provSesionCerrada(); return; } _provMsg('pva-inv-m', provFallo(e)); });
+}
+
+/* ── el portal ── */
+var PROV_PEST = [['sol', 'Solicitudes'], ['ficha', 'Mi ficha'], ['prog', 'El programa'], ['cuenta', 'Mi cuenta']];
+function _provNuevas(){ return (PROV.lista || []).filter(function(f){ return COT.estadoAliado(f).k === 'nuevo'; }).length; }
+function _provPortalPintar(c){
+  var a = (PROV.yo && PROV.yo.aliado) || {}, n = PROV.lista ? _provNuevas() : 0;
+  var sub = ['<span>' + esc(COT.rubroNombre(a.rubro)) + '</span>'];
+  if(a.zonas && a.zonas.length) sub.push('<span>Atiende</span> <span data-sin-trad>' + esc(COT.zonasTxt(a.zonas)) + '</span>');
+  sub.push('<span>' + (a.estado === 'pausado' ? 'Ficha en pausa' : 'Aliado verificado') + '</span>');
+  c.innerHTML = _provBarra('provCambiarUsuario()', 'Portal del proveedor', 'pva-cambiar') +
+    '<div class="marca">◆ OBRASST Aliados</div><h1 class="pva-razon" id="pva-razon" data-sin-trad>' + esc(a.razon || '') + '</h1>' +
+    '<p class="sub pva-sub">' + sub.join(' · ') + '</p>' +
+    '<div class="pva-pest" role="tablist" aria-label="Secciones del portal">' + PROV_PEST.map(function(p){
+      var on = PROV.tab === p[0];
+      return '<button type="button" role="tab" id="pva-t-' + p[0] + '" class="' + (on ? 'on' : '') + '" aria-selected="' + on + '" onclick="provTab(\'' + p[0] + '\')"><span>' + p[1] + '</span>' +
+        (p[0] === 'sol' ? '<b class="pva-n" id="pva-n" data-sin-trad' + (n ? '' : ' hidden') + '>' + (n || '') + '</b>' : '') + '</button>';
+    }).join('') + '</div><div id="pva-vista"></div>';
+  if(PROV.tab === 'ficha') _provFichaPintar();
+  else if(PROV.tab === 'prog') _provProgPintar();
+  else if(PROV.tab === 'cuenta') _provCuentaPintar();
+  else if(PROV.pedido) _provPedidoPintar();
+  else _provListaPintar();
+}
+function _provContar(){ var b = $('pva-n'); if(!b) return; var n = PROV.lista ? _provNuevas() : 0; b.hidden = !n; b.textContent = n || ''; }
+function provTab(t){ PROV.tab = t; PROV.pedido = null; PROV.ped = null; provPintar(); window.scrollTo(0, 0); if(t === 'sol') provTraer(!!PROV.lista); }
+
+/* ── las solicitudes ── */
+var PROV_FILTROS = [['pend', 'Por responder'], ['resp', 'Respondidas'], ['gan', 'Ganadas'], ['todos', 'Todas']];
+function _provGrupo(f){
+  var k = COT.estadoAliado(f).k;
+  if(k === 'nuevo' || k === 'pendiente' || k === 'vencido') return 'pend';
+  if(k === 'respondido') return 'resp';
+  if(k === 'ganado' || k === 'recibido') return 'gan';
+  return 'otros';
+}
+function provTraer(callado){
+  return sbRpc('sst_ali_bandeja', {}).then(function(j){
+    if(!j || !j.ok){ if(!callado){ PROV.listaMal = provMotivo(j && j.motivo); if(PROV.tab === 'sol' && !PROV.pedido) _provPintarSi(); } return; }
+    var firma = function(L){ return L.map(function(x){ return [x.id, x.estado, x.cot_estado, x.total, x.recibido && x.recibido.k].join('|'); }).join(); };
+    var antes = PROV.lista ? firma(PROV.lista) : null;
+    PROV.lista = j.lista || []; PROV.listaMal = '';
+    if(PROV.v === 'portal' && PROV.tab === 'sol' && !PROV.pedido && (!callado || antes !== firma(PROV.lista))) _provPintarSi();
+    else _provContar();
+  }, function(e){
+    if(e === 401 || e === 403){ _provSesionCerrada(); return; }
+    if(!callado){ PROV.listaMal = provFallo(e); if(PROV.tab === 'sol' && !PROV.pedido) _provPintarSi(); }
+  });
+}
+function provFiltro(f){ PROV.filtro = f; _provListaPintar(); }
+/* cuánto falta para responder, con la fecha que da el servidor («hasta»), contada en el día de aquí */
+function _provDias(iso){
+  var p = String(iso || '').slice(0, 10).split('-'), h = COT.hoy().split('-');
+  if(p.length !== 3) return null;
+  return Math.round((Date.UTC(+p[0], +p[1] - 1, +p[2]) - Date.UTC(+h[0], +h[1] - 1, +h[2])) / 86400000);
+}
+function _provPlazo(f, E){
+  if(!f.hasta || !(E.k === 'nuevo' || E.k === 'pendiente')) return '';
+  var d = _provDias(f.hasta);
+  if(d === null || d < 0) return '';
+  if(d === 0) return '<span class="pva-plazo urge">Vence hoy</span>';
+  if(d === 1) return '<span class="pva-plazo urge">Vence mañana</span>';
+  return '<span class="pva-plazo"><span>Quedan</span> <b data-sin-trad>' + d + '</b> <span>días para responder</span></span>';
+}
+function _provPill(E){ return '<span class="pva-pill ' + esc(E.c) + '">' + esc(E.n) + '</span>'; }
+function _provCodigo(f){
+  return (f.numero ? '<span data-sin-trad>RQ ' + esc(f.numero) + '</span>' : '<span>Solicitud del</span> <span data-sin-trad>' + esc(COT.diaDe(f.creado)) + '</span>') +
+    ' · <span>' + esc(COT.rubroNombre(f.rubro)) + '</span>';
+}
+function _provErpCaja(){
+  return '<div class="caja vidrio prov-caja" id="pva-erp"><div class="prov-cab">' + _provIco('package') + '<b>Tu almacén y tus ventas</b></div>' +
+    '<p class="sub">Tu almacén, tus ventas y tus comprobantes siguen en tu sistema (ERP) de la web, con esta misma cuenta. Las solicitudes las respondes aquí.</p>' +
+    '<button type="button" class="btn sec" id="pva-erp-bt" onclick="provErp()">Abrir mi sistema en el navegador</button></div>';
+}
+function provErp(){
+  var u = 'https://obrasstapp.com/erp.html', w = null;
+  try{ w = window.open(u, '_blank', 'noopener'); }catch(_w){}
+  if(!w) tostada('Ábrelo en el navegador: obrasstapp.com/erp.html');
+}
+function _provListaPintar(){
+  var v = $('pva-vista'); if(!v) return;
+  _provContar();
+  if(!PROV.lista){
+    v.innerHTML = PROV.listaMal ? '<div class="aviso pva-mal" id="pva-l-mal">' + esc(PROV.listaMal) + '</div><button type="button" class="btn sec" onclick="PROV.listaMal=\'\';_provListaPintar();provTraer(false)">Intentar otra vez</button>'
+      : '<p class="sub">Cargando tus solicitudes…</p>';
+    return;
+  }
+  var L = PROV.lista, c = { pend:0, resp:0, gan:0, todos:L.length };
+  L.forEach(function(f){ var g = _provGrupo(f); if(c[g] !== undefined) c[g]++; });
+  if(!PROV.filtro || !c[PROV.filtro]) PROV.filtro = c.pend ? 'pend' : 'todos';
+  var F = L.filter(function(f){ return PROV.filtro === 'todos' || _provGrupo(f) === PROV.filtro; });
+  var rub = (PROV.yo && PROV.yo.aliado && PROV.yo.aliado.rubro) || '', info = COT.rubroInfo(rub), h = '';
+  if(PROV.listaMal) h += '<div class="aviso pva-mal">' + esc(PROV.listaMal) + '</div>';
+  if(rub === 'epp') h += _provErpCaja();
+  else if(rub && COT.rubroAviso(rub)) h += '<div class="aviso" id="pva-rubro">' + esc(COT.rubroAviso(rub)) + '</div>';
+  h += '<div class="pva-fil" role="group" aria-label="Qué solicitudes ver">' + PROV_FILTROS.map(function(x){
+    var on = PROV.filtro === x[0];
+    return '<button type="button" id="pva-f-' + x[0] + '" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '" onclick="provFiltro(\'' + x[0] + '\')"><span>' + x[1] + '</span> <b data-sin-trad>' + c[x[0]] + '</b></button>';
+  }).join('') + '</div>';
+  if(!L.length) h += '<div class="caja vidrio prov-caja" id="pva-vacio"><b>Todavía no te llegó ninguna solicitud</b><p class="sub">' +
+    esc(rub === 'epp' ? 'Cuando una empresa de tu zona pida cotización de EPP, aparece aquí. La empresa puede avisarte también por correo.' :
+      (info.desde ? 'Las de tu rubro empiezan a llegar en ' + info.desde + '.' : 'Cuando una empresa de tu zona pida algo de tu rubro, aparece aquí. La empresa puede avisarte también por correo.')) + '</p></div>';
+  else if(!F.length) h += '<div class="caja vidrio prov-caja"><b>Ninguna aquí</b><p class="sub">Prueba con otro filtro de arriba.</p></div>';
+  else h += '<div class="pva-lista">' + F.map(function(f){
+    var E = COT.estadoAliado(f), lug = COT.lugarTxt(f.lugar), obra = [f.obra, lug].filter(Boolean).join(' · ');
+    return '<button type="button" class="caja vidrio pva-ped' + (E.k === 'nuevo' ? ' nuevo' : '') + '" data-id="' + esc(f.id) + '" onclick="provAbrir(this.getAttribute(\'data-id\'))"><span class="pva-izq">' +
+      '<span class="pva-cod">' + _provCodigo(f) + '</span>' +
+      '<b class="pva-emp" data-sin-trad>' + esc(f.empresa || '') + '</b>' + (obra ? '<span class="pva-det" data-sin-trad>' + esc(obra) + '</span>' : '') +
+      '<span class="pva-det"><b data-sin-trad>' + esc(String(f.lineas || 0)) + '</b> <span>' + (f.lineas === 1 ? 'línea' : 'líneas') + '</span>' +
+        (f.para ? ' · <span>se necesita el</span> <span data-sin-trad>' + esc(COT.dma(f.para)) + '</span>' : '') + '</span>' +
+      _provPlazo(f, E) + '</span><span class="pva-der">' + _provPill(E) + (f.total != null ? '<span class="pva-tot-l" data-sin-trad>' + esc(COT.soles(f.total)) + '</span>' : '') + '</span></button>';
+  }).join('') + '</div>';
+  v.innerHTML = h;
+}
+function provAbrir(id){
+  PROV.pedido = id; PROV.ped = null; PROV.pedMal = '';
+  _provPedidoPintar(); window.scrollTo(0, 0);
+  sbRpc('sst_ali_pedido', { p_id:id }).then(function(j){
+    if(PROV.pedido !== id) return;
+    if(!j || !j.ok){ PROV.pedMal = provMotivo(j && j.motivo); _provPedidoPintar(); return; }
+    PROV.ped = j.pedido; _provPedidoPintar();
+    provTraer(true);
+  }, function(e){
+    if(e === 401 || e === 403){ _provSesionCerrada(); return; }
+    if(PROV.pedido !== id) return;
+    PROV.pedMal = provFallo(e); _provPedidoPintar();
+  });
+}
+function provVolverLista(){ PROV.pedido = null; PROV.ped = null; PROV.pedMal = ''; if(_provActiva()) provPintar(); provTraer(true); window.scrollTo(0, 0); }
+function _provPedidoPintar(){
+  var v = $('pva-vista'); if(!v) return;
+  var atras = '<button type="button" class="btn sec pva-volver" id="pva-d-atras" onclick="provVolverLista()">‹ Solicitudes</button>';
+  if(PROV.pedMal){ v.innerHTML = atras + '<div class="aviso pva-mal" id="pva-d-mal" style="margin-top:12px">' + esc(PROV.pedMal) + '</div>'; return; }
+  var f = PROV.ped;
+  if(!f){ v.innerHTML = atras + '<p class="sub" style="margin-top:12px">Abriendo la solicitud…</p>'; return; }
+  var E = COT.estadoAliado(f), items = f.items || [], abierta = f.cot_estado === 'abierta' && ['ganado', 'no_adjudicado'].indexOf(f.estado) < 0;
+  var dato = function(t, x){ return x ? '<dt>' + t + '</dt><dd data-sin-trad>' + esc(x) + '</dd>' : ''; };
+  var h = atras + '<div class="caja vidrio prov-caja" id="pva-d"><div class="pva-d-cab"><div><b class="pva-d-t">' + (f.rubro === 'epp' ? 'Solicitud de cotización' : 'Solicitud') + '</b>' +
+    (f.numero ? ' <b class="pva-d-t" data-sin-trad>· RQ ' + esc(f.numero) + '</b>' : '') +
+    '<span class="pva-det"><span>' + esc(COT.rubroNombre(f.rubro)) + '</span> · <span>recibido el</span> <span data-sin-trad>' + esc(COT.cuando(f.creado)) + '</span></span></div>' + _provPill(E) + '</div>' +
+    _provPlazo(f, E);
+  if(E.k === 'ganado' || E.k === 'recibido'){
+    h += '<div class="aviso pva-ok" id="pva-gano"><b>🏆 Ganaste.</b>' + (f.oc ? ' <span>Orden de compra:</span> <b data-sin-trad>' + esc(f.oc) + '</b>' : '') +
+      (f.ruc ? ' <span>RUC de la empresa:</span> <span data-sin-trad>' + esc(f.ruc) + '</span>' : '') + (f.adj_nota ? '<br><span>Nota de la empresa:</span> <span data-sin-trad>' + esc(f.adj_nota) + '</span>' : '') +
+      (f.recibido ? '<br><span>' + (f.recibido.k === 'atendido' ? 'Su almacén registró el ingreso de todo' : 'Su almacén registró el ingreso de una parte') + '</span>' + (f.recibido.t ? ' <span data-sin-trad>(' + esc(COT.diaDe(f.recibido.t)) + ')</span>' : '') :
+        '<br><span>Cuando su almacén registre el ingreso, lo verás aquí como «Recibido en almacén».</span>') + '</div>';
+  } else if(E.k === 'no') h += '<div class="aviso">La empresa eligió otra oferta. Gracias por cotizar: la próxima vez puede ser la tuya.</div>';
+  else if(E.k === 'anulado') h += '<div class="aviso">La empresa anuló esta solicitud: ya no se responde.</div>';
+  else if(E.k === 'vencido') h += '<div class="aviso"><span>Ya pasó la fecha para responder:</span> <b data-sin-trad>' + esc(COT.dma(f.hasta)) + '</b><br><span>Todavía puedes mandar tu cotización mientras la empresa no adjudique.</span></div>';
+  h += '<dl class="pva-dl">' + dato('Empresa', f.empresa || '—') + dato('Obra', f.obra || '—') + dato('Lugar', COT.lugarTxt(f.lugar)) + dato('Entrega en', f.entrega) +
+    dato('Se necesita para', f.para ? COT.dma(f.para) : '') + dato('Responder hasta', f.hasta ? COT.dma(f.hasta) : '') + dato('Pidió', f.por_nombre) + '</dl>' +
+    (f.nota ? '<p class="pva-nota"><b>Nota de la empresa:</b> <span data-sin-trad>' + esc(f.nota) + '</span></p>' : '') + '</div>';
+  if(abierta){
+    if(f.estado === 'declinado') h += '<div class="aviso"><span>Marcaste que no cotizas.</span>' + (f.mi_nota ? ' <span data-sin-trad>' + esc(f.mi_nota) + '</span>' : '') + ' <span>Si cambias de idea, manda tu cotización abajo.</span></div>';
+    h += '<div class="caja vidrio prov-caja" id="pva-r"><b>Tu cotización</b><p class="sub">' + (f.estado === 'respondido' ?
+        '<span>Ya la mandaste.</span>' + (f.respondido ? ' <span data-sin-trad>' + esc(COT.cuando(f.respondido)) + '</span>' : '') + ' <span>Puedes cambiarla mientras la empresa no adjudique.</span>' :
+        'Precio unitario de cada línea, en soles. La empresa la ve en su cuadro comparativo, junto a las demás.') + '</p>' +
+      _provRespHTML(items, f.resp) + '<p class="pva-msg" id="pvr-msg" role="status"></p>' +
+      '<button type="button" class="btn" id="pvr-si" onclick="provResponder()">' + (f.estado === 'respondido' ? 'Actualizar mi cotización' : 'Enviar mi cotización') + '</button>' +
+      (f.estado !== 'declinado' ? '<button type="button" class="btn sec" id="pvr-no" onclick="provDeclinarAbrir()">No cotizo</button>' +
+        '<div id="pvr-dec" hidden><label for="pvr-dec-n">¿Por qué no cotizas? (opcional, lo ve la empresa)</label><input id="pvr-dec-n" maxlength="300" placeholder="Por ejemplo: sin stock de esa talla">' +
+        '<button type="button" class="btn sec pva-mal-bt" id="pvr-dec-si" onclick="provDeclinar()">No cotizo esta solicitud</button>' +
+        '<button type="button" class="pva-lnk" id="pvr-dec-no" onclick="$(\'pvr-dec\').hidden=true">Mejor cotizo</button></div>' : '') + '</div>';
+  } else {
+    var r = f.resp, t = r ? COT.totales(r, items) : null;
+    h += '<div class="caja vidrio prov-caja" id="pva-pidieron"><b>' + (r ? 'Tu cotización' : 'Lo que pidieron') + '</b>' +
+      (t ? '<p class="pva-tot" data-sin-trad>' + COT.totTxt(t) + ' · ' + esc(r.dias) + (r.dias === 1 ? ' día' : ' días') + ' · ' + esc(COT.dma(r.validez)) + (r.pago ? ' · ' + esc(r.pago) : '') + '</p>' : '') +
+      items.map(function(it, i){ var l = (r && r.l && r.l[i]) || {};
+        return '<div class="pva-lin"><b data-sin-trad>' + esc(it.d) + '</b>' + (it.e ? '<span class="pva-det" data-sin-trad>' + esc(it.e) + '</span>' : '') +
+          '<span class="pva-det"><span>Cantidad:</span> <span data-sin-trad>' + esc(COT.num(it.c) + ' ' + (it.u || 'und')) + '</span></span>' +
+          (r ? (l.p != null ? '<span class="pva-det"><span>Precio unitario:</span> <span data-sin-trad>' + esc(COT.soles(l.p)) + '</span>' + (r.igv === 'mas' ? ' <span>más IGV</span>' : '') + '</span>' :
+            '<span class="pva-det">No cotizó</span>') + (l.m ? '<span class="pva-det" data-sin-trad>' + esc(l.m) + '</span>' : '') : '') + '</div>';
+      }).join('') + '</div>';
+  }
+  v.innerHTML = h;
+  if(abierta){
+    COT.respVivo('pvr-', items);
+    var caja = $('pva-r'); if(caja) caja.oninput = function(){ _provMsg('pvr-msg', '', ''); };
+  }
+}
+/* el formulario de la cotización, para el celular: cada línea en su tarjeta (los mismos id que lee COT.respLeer) */
+function _provRespHTML(items, resp){
+  resp = resp || {}; var l = resp.l || [], hoy = COT.hoy();
+  return items.map(function(it, i){
+    var x = l[i] || {};
+    return '<div class="pva-lin"><b data-sin-trad>' + esc(it.d) + '</b>' + (it.e ? '<span class="pva-det" data-sin-trad>' + esc(it.e) + '</span>' : '') +
+      '<span class="pva-det"><span>Cantidad:</span> <span data-sin-trad>' + esc(COT.num(it.c) + ' ' + (it.u || 'und')) + '</span></span>' +
+      '<div class="pva-dos"><div><label for="pvr-p' + i + '">Precio unitario (S/)</label><input id="pvr-p' + i + '" inputmode="decimal" autocomplete="off" placeholder="—" value="' + (x.p != null ? esc(String(x.p)) : '') + '"></div>' +
+      '<div><label for="pvr-m' + i + '">Marca o norma</label><input id="pvr-m' + i + '" maxlength="80" autocomplete="off" value="' + esc(x.m || '') + '"></div></div></div>';
+  }).join('') +
+    '<p class="sub pva-ayuda">Deja en blanco el precio de lo que no cotizas.</p>' +
+    '<label for="pvr-igv">Los precios</label><select id="pvr-igv"><option value="mas"' + (resp.igv !== 'incluido' ? ' selected' : '') + '>No incluyen IGV (+ 18 %)</option>' +
+      '<option value="incluido"' + (resp.igv === 'incluido' ? ' selected' : '') + '>Incluyen IGV</option></select>' +
+    '<div class="pva-dos"><div><label for="pvr-dias">Entrega en (días)</label><input id="pvr-dias" inputmode="numeric" maxlength="3" placeholder="Por ejemplo, 3" value="' + (resp.dias != null ? esc(String(resp.dias)) : '') + '"></div>' +
+      '<div><label for="pvr-val">La oferta vale hasta</label><input id="pvr-val" type="date" min="' + hoy + '" max="' + COT.fechaMas(hoy, 180) + '" value="' +
+        esc(resp.validez && resp.validez >= hoy ? resp.validez : COT.fechaMas(hoy, 15)) + '"></div></div>' +
+    '<label for="pvr-pago">Forma de pago</label><input id="pvr-pago" maxlength="60" list="pvr-pagos" placeholder="Por ejemplo, crédito 30 días" value="' + esc(resp.pago || '') + '">' +
+      '<datalist id="pvr-pagos" data-sin-trad>' + COT.PAGOS.map(function(x){ return '<option value="' + esc(x) + '">'; }).join('') + '</datalist>' +
+    '<label for="pvr-nota">Nota (opcional)</label><textarea id="pvr-nota" rows="2" maxlength="500">' + esc(resp.nota || '') + '</textarea>' +
+    '<p class="pva-tot" id="pvr-tot" data-sin-trad aria-live="polite"></p>';
+}
+function provResponder(){
+  var f = PROV.ped; if(!f) return;
+  var items = f.items || [], bt = $('pvr-si'), v = COT.validar(COT.respLeer('pvr-', items), items);
+  if(!v.ok){ _provMsg('pvr-msg', v.msg); var x = $('pvr-' + v.campo.replace(/^validez$/, 'val')); if(x) try{ x.focus(); }catch(_f){} return; }
+  bt.disabled = true; _provMsg('pvr-msg', 'Enviando…', 'gris');
+  sbRpc('sst_ali_responder', { p:{ id:f.id, resp:v.resp } }).then(function(j){
+    bt.disabled = false;
+    if(!j || !j.ok){ _provMsg('pvr-msg', provMotivo(j && j.motivo)); return; }
+    tostada('Cotización enviada: ' + COT.soles(j.total) + ' con IGV. La empresa ya la ve.');
+    if(j.pedido) PROV.ped = j.pedido;
+    _provPedidoPintar(); provTraer(true); window.scrollTo(0, 0);
+  }, function(e){ bt.disabled = false; if(e === 401 || e === 403){ _provSesionCerrada(); return; } _provMsg('pvr-msg', provFallo(e)); });
+}
+function provDeclinarAbrir(){ var d = $('pvr-dec'); if(d){ d.hidden = false; try{ $('pvr-dec-n').focus(); }catch(_f){} } }
+function provDeclinar(){
+  var f = PROV.ped; if(!f) return;
+  var bt = $('pvr-dec-si'); bt.disabled = true;
+  sbRpc('sst_ali_declinar', { p:{ id:f.id, nota:String(($('pvr-dec-n') || {}).value || '') } }).then(function(j){
+    bt.disabled = false;
+    if(!j || !j.ok){ tostada(provMotivo(j && j.motivo)); return; }
+    tostada('Listo: la empresa sabe que no cotizas esta solicitud.');
+    if(j.pedido) PROV.ped = j.pedido;
+    _provPedidoPintar(); provTraer(true);
+  }, function(e){ bt.disabled = false; if(e === 401 || e === 403){ _provSesionCerrada(); return; } tostada(provFallo(e)); });
+}
+
+/* ── mi ficha: lo que ven las empresas al pedir cotización ── */
+function _provIniciales(s){ return String(s || '?').replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9 ]/g, '').split(/\s+/).filter(Boolean).slice(0, 2).map(function(w){ return w.charAt(0).toUpperCase(); }).join('') || '·'; }
+function _provLogoHTML(a){ return PROV.logo ? '<img src="' + esc(PROV.logo) + '" alt="Tu logo">' : esc(_provIniciales(a.razon)); }
+function _provFichaPintar(){
+  var v = $('pva-vista'); if(!v) return;
+  var y = PROV.yo, a = y.aliado || {}, F = a.ficha || {}, admin = y.papel === 'admin', dis = admin ? '' : ' disabled';
+  var adminDe = ((y.usuarios || []).filter(function(u){ return u.papel === 'admin'; })[0] || {}).correo || '';
+  PROV.logo = F.logo || '';
+  var h = '<div class="caja vidrio prov-caja" id="pva-ficha"><b>Mi ficha</b><p class="sub">Es lo que ven las empresas de tu zona cuando piden algo de tu rubro.</p>' +
+    (admin ? '' : '<div class="aviso"><span>La cambia el administrador de tu empresa.</span>' + (adminDe ? ' <span data-sin-trad>' + esc(adminDe) + '</span>' : '') + '</div>') +
+    '<label>Logo</label><div class="pva-logo-fila"><span class="pva-logo" id="pva-logo-v" data-sin-trad>' + _provLogoHTML(a) + '</span>' +
+    (admin ? '<input type="file" id="pva-logo" accept="image/png,image/jpeg,image/webp" hidden onchange="provLogoElegido(this)">' +
+      '<button type="button" class="btn sec pva-chico" id="pva-logo-bt" onclick="$(\'pva-logo\').click()">Subir el logo</button>' +
+      '<button type="button" class="pva-lnk" id="pva-logo-q" onclick="PROV.logo=\'\';_provLogoVer()"' + (PROV.logo ? '' : ' hidden') + '>Quitar</button>' : '') + '</div>' +
+    '<label for="pva-f-vende">Qué vendes</label><textarea id="pva-f-vende" rows="3" maxlength="600"' + dis + ' placeholder="Por ejemplo: cascos, guantes, arneses y líneas de vida certificados">' + esc(F.vende || '') + '</textarea>' +
+    '<label for="pva-f-hor">Horario de atención</label><input id="pva-f-hor" maxlength="160"' + dis + ' value="' + esc(F.horario || '') + '" placeholder="L-V 8:00-18:00, S 8:00-13:00">' +
+    '<label for="pva-f-tel">Teléfono</label><input id="pva-f-tel" inputmode="tel" maxlength="30"' + dis + ' value="' + esc(F.telefono || '') + '">' +
+    '<label for="pva-f-web">Web</label><input id="pva-f-web" inputmode="url" maxlength="160"' + dis + ' value="' + esc(F.web || '') + '" placeholder="https://">' +
+    '<label for="pva-f-con">Contacto</label><input id="pva-f-con" maxlength="120"' + dis + ' value="' + esc(a.contacto || '') + '">' +
+    (admin ? '<p class="pva-msg" id="pva-f-m" role="status"></p><button type="button" class="btn" id="pva-f-si" onclick="provFichaGuardar()">Guardar mi ficha</button>' : '') + '</div>' +
+    '<div class="caja vidrio prov-caja"><b>Lo pone OBRASST, según tu acuerdo</b><dl class="pva-dl"><dt>Razón social</dt><dd data-sin-trad>' + esc(a.razon || '—') + '</dd>' +
+    '<dt>RUC</dt><dd data-sin-trad>' + esc(a.ruc || '—') + '</dd><dt>Rubro</dt><dd>' + esc(COT.rubroNombre(a.rubro)) + '</dd>' +
+    '<dt>Atiende</dt><dd data-sin-trad>' + esc(COT.zonasTxt(a.zonas) || '—') + '</dd></dl>' +
+    '<p class="sub">Para cambiar algo de esto, escríbenos a info@obrasstapp.com.</p></div>' +
+    '<div class="caja vidrio prov-caja" id="pva-rnp"><b>Tu RNP, para las compras del Estado</b><p class="sub" id="pva-rnp-c">Cargando…</p></div>';
+  v.innerHTML = h;
+  _provRnp(admin);
+}
+function _provLogoVer(){ var a = (PROV.yo && PROV.yo.aliado) || {}, v = $('pva-logo-v'), q = $('pva-logo-q'); if(v) v.innerHTML = _provLogoHTML(a); if(q) q.hidden = !PROV.logo; }
+function provLogoElegido(inp){
+  var f = inp.files && inp.files[0]; inp.value = ''; if(!f) return;
+  if(!/^image\/(png|jpeg|webp)$/.test(f.type)){ tostada('El logo tiene que ser PNG, JPG o WEBP.'); return; }
+  _provAchicarLogo(f).then(function(u){ PROV.logo = u; _provLogoVer(); }, function(){ tostada('No se pudo leer esa imagen. Prueba con otra.'); });
+}
+function provFichaGuardar(){
+  var g = function(id){ return String(($(id) || {}).value || ''); }, bt = $('pva-f-si');
+  bt.disabled = true; _provMsg('pva-f-m', 'Guardando…', 'gris');
+  sbRpc('sst_ali_ficha_guardar', { p:{ vende:g('pva-f-vende'), horario:g('pva-f-hor'), telefono:g('pva-f-tel'), web:g('pva-f-web'), contacto:g('pva-f-con'), logo:PROV.logo || '' } }).then(function(j){
+    bt.disabled = false;
+    if(!j || !j.ok){ _provMsg('pva-f-m', provMotivo(j && j.motivo)); return; }
+    PROV.yo = j; _provMsg('pva-f-m', 'Ficha guardada: así la ven las empresas desde ahora.', 'ok');
+  }, function(e){ bt.disabled = false; if(e === 401 || e === 403){ _provSesionCerrada(); return; } _provMsg('pva-f-m', provFallo(e)); });
+}
+/* 2/11/2026 · el RNP del aliado (Plan Estado): lo declara él; OBRASST lo revisa en el registro público y lo marca verificado */
+var PROV_RNP_MAL = { rnp:'Revisa el número: solo letras, números y guiones.', vence:'Pon la fecha hasta la que vale.', solo_admin:'Lo cambia el administrador de tu empresa.' };
+function _provRnp(admin){
+  sbRpc('sst_ali_rnp', { p:{} }).then(function(j){
+    var c = $('pva-rnp'); if(!c) return;
+    if(!j || !j.ok){ $('pva-rnp-c').textContent = 'Todavía no se puede ver aquí.'; return; }
+    var r = j.rnp || {}, dis = admin ? '' : ' disabled';
+    c.innerHTML = '<b>Tu RNP, para las compras del Estado</b><p class="sub">Las entidades ven tu RNP en el cuadro comparativo de sus compras de hasta 8 UIT. Lo declaras tú y OBRASST lo revisa en el registro público.</p>' +
+      (r.numero ? '<p class="pva-rnp-e">' + (r.verificado ? '<span class="pva-pill ok">Verificado por OBRASST</span>' : '<span class="pva-pill med">Declarado · por verificar</span>') + '</p>' : '') +
+      '<label for="pva-rnp-n">Número de tu constancia del RNP</label><input id="pva-rnp-n" maxlength="20" autocomplete="off"' + dis + ' value="' + esc(r.numero || '') + '">' +
+      '<label for="pva-rnp-v">Vale hasta</label><input id="pva-rnp-v" type="date"' + dis + ' value="' + esc(r.vence || '') + '">' +
+      (admin ? '<p class="pva-msg" id="pva-rnp-m" role="status"></p><button type="button" class="btn sec" id="pva-rnp-si" onclick="provRnpGuardar()">Guardar mi RNP</button>' : '');
+  }, function(e){ var c = $('pva-rnp-c'); if(c) c.textContent = provFallo(e); });
+}
+function provRnpGuardar(){
+  var bt = $('pva-rnp-si'); bt.disabled = true; _provMsg('pva-rnp-m', 'Guardando…', 'gris');
+  sbRpc('sst_ali_rnp_guardar', { p:{ numero:String(($('pva-rnp-n') || {}).value || ''), vence:String(($('pva-rnp-v') || {}).value || '') } }).then(function(k){
+    bt.disabled = false;
+    if(!k || !k.ok){ _provMsg('pva-rnp-m', PROV_RNP_MAL[k && k.motivo] || provMotivo(k && k.motivo)); return; }
+    tostada(k.rnp ? 'Guardado: OBRASST lo revisa y lo marca verificado.' : 'Quitado.');
+    _provRnp(true);
+  }, function(e){ bt.disabled = false; if(e === 401 || e === 403){ _provSesionCerrada(); return; } _provMsg('pva-rnp-m', provFallo(e)); });
+}
+/* el logo, chico y liviano (cabe en la ficha): hasta 240 px por lado (como la web) */
+function _provAchicarLogo(f){
+  return new Promise(function(ok, mal){
+    var lec = new FileReader();
+    lec.onerror = mal;
+    lec.onload = function(){
+      var img = new Image();
+      img.onerror = mal;
+      img.onload = function(){
+        var prueba = function(lado, tipo, cal){
+          var k = Math.min(1, lado / Math.max(img.width, img.height)), w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
+          var c = document.createElement('canvas'); c.width = w; c.height = h;
+          var x = c.getContext('2d'); if(tipo === 'image/jpeg'){ x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); } x.drawImage(img, 0, 0, w, h);
+          return c.toDataURL(tipo, cal);
+        };
+        var u = prueba(240, 'image/png');
+        if(u.length > 80000) u = prueba(240, 'image/jpeg', .86);
+        if(u.length > 80000) u = prueba(160, 'image/jpeg', .8);
+        if(u.length > 80000) mal('grande'); else ok(u);
+      };
+      img.src = lec.result;
+    };
+    lec.readAsDataURL(f);
+  });
+}
+
+/* ── el programa: el código, las empresas que llegaron y la comisión ── */
+var PROV_PLAN_N = { lite:'LITE', prevencionista:'Prevencionista de Riesgo', supervisor:'Supervisor SST', ssoma:'SSOMA', gestion:'Gestión SST', central:'Central', corporativo:'Corporativo' };
+function _provProgPintar(){
+  var v = $('pva-vista'); if(!v) return;
+  v.innerHTML = '<p class="sub">Cargando tu programa…</p>';
+  sbRpc('sst_ali_programa', {}).then(function(j){
+    if(PROV.tab !== 'prog' || !$('pva-vista')) return;
+    if(!j || !j.ok){ $('pva-vista').innerHTML = '<div class="aviso pva-mal">' + esc(provMotivo(j && j.motivo)) + '</div>'; return; }
+    PROV.prog = j;
+    var E = j.empresas || [], hoy = COT.hoy(), rub = (PROV.yo && PROV.yo.aliado && PROV.yo.aliado.rubro) || '';
+    var h = '<div class="caja vidrio prov-caja" id="pva-g"><b>Tu código de aliado</b><p class="sub">La empresa que crea su cuenta con tu enlace o con tu código queda como traída por ti.</p>' +
+      '<p class="pva-cod-g" id="pva-g-cod" data-sin-trad>' + esc(j.codigo || '') + '</p>' +
+      '<input id="pva-g-enl" readonly value="' + esc(j.enlace || '') + '" aria-label="Tu enlace">' +
+      '<div class="pva-dos"><button type="button" class="btn sec" id="pva-g-copiar" onclick="provCopiarEnlace()">Copiar el enlace</button>' +
+      '<button type="button" class="btn sec" id="pva-g-comp" onclick="provCompartirEnlace()">Compartir</button></div></div>' +
+      '<div class="caja vidrio prov-caja" id="pva-g-emp"><b><span>Empresas que llegaron contigo</span> <span data-sin-trad>· ' + E.length + '</span></b>' +
+      (E.length ? E.map(function(e){
+        return '<div class="pva-lin"><b data-sin-trad>' + esc(e.nombre || '—') + '</b><span class="pva-det"><span>Plan</span> <span data-sin-trad>' +
+          esc(PROV_PLAN_N[e.plan] || String(e.plan || '—').replace(/^\w/, function(c){ return c.toUpperCase(); })) + '</span>' +
+          (e.plan_vence ? ' · <span>vigente hasta el</span> <span data-sin-trad>' + esc(COT.dma(e.plan_vence)) + '</span>' + (e.plan_vence < hoy ? ' <span class="pva-pill mal">vencido</span>' : '') : '') +
+          (e.desde ? ' · <span>desde el</span> <span data-sin-trad>' + esc(COT.diaDe(e.desde)) + '</span>' : '') + '</span></div>';
+      }).join('') : '<p class="sub">Todavía ninguna. Comparte tu enlace con las empresas a las que les vendes.</p>') + '</div>' +
+      (rub === 'medico' ? '<div class="caja vidrio prov-caja" id="pva-g-plan"><b>Sin plan que pagar</b><p class="sub">' + esc(COT.planesTxt(rub)) + '</p></div>' :
+        '<div class="caja vidrio prov-caja" id="pva-g-plan"><b>Tus 12 meses del programa, sin pagar</b><p class="sub">' +
+        (j.gratis_hasta ? '<span>Hasta el</span> <b data-sin-trad>' + esc(COT.dma(j.gratis_hasta)) + '</b>' : '<span>Empiezan el día que te unes.</span>') + '</p>' +
+        '<p class="sub">' + esc(COT.planesTxt(rub)) + '</p><p class="sub">En el mes 11 te llega tu resumen.</p></div>') +
+      '<div class="caja vidrio prov-caja"><b>Tu comisión</b><p class="sub"><b data-sin-trad>' + esc(String(+j.comision)) + ' %</b> <span>de lo que paga cada empresa que llegó contigo, liquidado cada mes, durante</span> <b data-sin-trad>' +
+        esc(String(j.meses)) + '</b> <span>meses.</span></p>' +
+      '<p class="sub">La empresa prueba OBRASST 30 días gratis; la comisión corre desde que paga. Si no paga, no hay comisión.</p></div>';
+    $('pva-vista').innerHTML = h;
+  }, function(e){
+    if(e === 401 || e === 403){ _provSesionCerrada(); return; }
+    var v2 = $('pva-vista'); if(v2 && PROV.tab === 'prog') v2.innerHTML = '<div class="aviso pva-mal">' + esc(provFallo(e)) + '</div><button type="button" class="btn sec" onclick="_provProgPintar()">Intentar otra vez</button>';
+  });
+}
+function provCopiarEnlace(){
+  var t = (PROV.prog && PROV.prog.enlace) || '', ok = function(){ tostada('Enlace copiado.'); }, no = function(){ try{ $('pva-g-enl').select(); }catch(_s){} tostada('Ya está marcado: mantenlo presionado y elige «Copiar».'); };
+  try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, no); else no(); }catch(_c){ no(); }
+}
+function provCompartirEnlace(){
+  var j = PROV.prog || {};
+  if(navigator.share){ navigator.share({ title:'OBRASST', text:'Crea la cuenta de tu empresa en OBRASST con mi código de aliado: ' + (j.codigo || ''), url:j.enlace || '' }).catch(function(){}); return; }
+  provCopiarEnlace();
+}
+
+/* ── mi cuenta ── */
+function _provCuentaPintar(){
+  var v = $('pva-vista'); if(!v) return;
+  var y = PROV.yo, U = y.usuarios || [], a = y.aliado || {};
+  v.innerHTML = '<div class="caja vidrio prov-caja" id="pva-k"><b>Mi cuenta</b><p class="sub"><span>Entraste como</span> <b data-sin-trad>' +
+      esc((TOK && TOK.correo) || ((U.filter(function(u){ return u.yo; })[0] || {}).correo) || '') + '</b> <span>' + (y.papel === 'admin' ? '(administrador)' : '(usuario)') + '</span></p>' +
+    '<div class="sec-tit"><span>Las cuentas de</span> <span data-sin-trad>' + esc(a.razon || '') + '</span></div>' +
+    U.map(function(u){ return '<div class="pva-lin"><span data-sin-trad>' + esc(u.correo || '—') + '</span>' + (u.yo ? ' <span class="pva-det">(tú)</span>' : '') +
+      '<span class="pva-det">' + (u.papel === 'admin' ? 'Administrador' : 'Usuario') + '</span></div>'; }).join('') +
+    '<p class="sub">Todos ven las solicitudes y pueden responder; la ficha la cambia el administrador. Para sumar a alguien de tu empresa, pídenos otro enlace de invitación a info@obrasstapp.com.</p>' +
+    '<button type="button" class="btn sec" id="pva-k-cambiar" onclick="provCambiarUsuario()">Cambiar de usuario</button>' +
+    '<button type="button" class="btn sec" id="pva-k-salir" onclick="provSalir()">Cerrar sesión</button></div>';
+}
+
+/* el «atrás» del celular dentro del portal: del detalle a la lista, de una pestaña a Solicitudes, de entrar al inicio.
+   En Solicitudes, el que entró como aliado se queda (como el trabajador en su obra): sale con «Cambiar de usuario». */
+function provAtras(){
+  if(!_provActiva()) return false;
+  if(PROV.v === 'portal'){
+    if(PROV.pedido){ provVolverLista(); return true; }
+    if(PROV.tab !== 'sol'){ provTab('sol'); return true; }
+    if(provRecordado()){ HIST = []; return true; }
+    return false;
+  }
+  if(PROV.v === 'entrar' || PROV.v === 'no' || PROV.v === 'error'){ provVolverInicio(); return true; }
+  return false;
+}
 (function(){
   try{
     var st = document.createElement('style'); st.id = 'prov-css';
     st.textContent = '#p-prov .prov-caja{padding:15px;margin-top:14px;display:grid;gap:6px}#p-prov .prov-caja>b{font-size:16px}' +
-      '#p-prov .prov-caja label{margin-top:6px}#p-prov .prov-caja .btn{margin-top:8px}#p-prov .prov-caja .sub{margin:0}';
+      '#p-prov .prov-caja label{margin-top:6px}#p-prov .prov-caja .btn{margin-top:8px}#p-prov .prov-caja .sub{margin:0}' +
+      '#p-prov [hidden]{display:none!important}#p-prov .pva-volver{width:auto;padding:7px 13px;margin:0}' +
+      '#p-prov .pva-razon{font-size:24px;line-height:1.2;margin:0 0 6px;overflow-wrap:anywhere}#p-prov .pva-sub{margin-bottom:12px}' +
+      '#p-prov .pva-pest{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:4px 0 12px}#p-prov .pva-pest2{grid-template-columns:repeat(2,minmax(0,1fr))}' +
+      '#p-prov .pva-pest button{position:relative;padding:10px 4px;border:0;border-radius:12px;background:rgba(var(--w),.05);box-shadow:inset 0 0 0 1.2px rgba(var(--w),.16);color:var(--tinta);font:inherit;font-size:12.5px;font-weight:700;line-height:1.2;cursor:pointer}' +
+      '#p-prov .pva-pest button.on{background:var(--oro);color:#1a1a1a;box-shadow:none}' +
+      '#p-prov .pva-n{display:inline-block;min-width:18px;margin-left:4px;padding:1px 5px;border-radius:999px;background:#DC2626;color:#fff;font-size:11px;line-height:16px}' +
+      '#p-prov .pva-fil{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}' +
+      '#p-prov .pva-fil button{padding:7px 11px;border:0;border-radius:999px;background:rgba(var(--w),.05);box-shadow:inset 0 0 0 1px rgba(var(--w),.16);color:var(--tinta);font:inherit;font-size:12.5px;cursor:pointer}' +
+      '#p-prov .pva-fil button.on{background:rgba(245,183,0,.18);box-shadow:inset 0 0 0 1.5px var(--oro)}' +
+      '#p-prov .pva-ped{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;width:100%;text-align:left;padding:13px;margin:0 0 9px;border:0;border-radius:16px;color:inherit;font:inherit;cursor:pointer}' +
+      '#p-prov .pva-ped.nuevo{box-shadow:inset 0 0 0 1.5px var(--oro)}#p-prov .pva-izq{flex:1 1 auto;min-width:0;display:grid;gap:3px}' +
+      '#p-prov .pva-cod{font-size:12px;color:var(--gris)}#p-prov .pva-emp{font-size:15px;overflow-wrap:anywhere}' +
+      '#p-prov .pva-det{display:block;font-size:12.5px;color:var(--gris);overflow-wrap:anywhere}' +
+      '#p-prov .pva-der{flex:0 0 auto;max-width:42%;display:grid;gap:6px;justify-items:end;text-align:right}#p-prov .pva-tot-l{font-weight:700;font-size:13.5px}' +
+      '#p-prov .pva-pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:11.5px;font-weight:700;background:rgba(var(--w),.08)}' +
+      '#p-prov .pva-pill.ok{background:rgba(22,163,74,.18)}#p-prov .pva-pill.mal{background:rgba(220,38,38,.18)}#p-prov .pva-pill.med{background:rgba(245,183,0,.16)}' +
+      '#p-prov .pva-pill.nuevo{background:var(--oro);color:#1a1a1a}' +
+      '#p-prov .pva-plazo{font-size:12.5px;font-weight:700;color:var(--oro)}#p-prov .pva-plazo.urge{color:var(--mal)}' +
+      '#p-prov .pva-d-cab{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}#p-prov .pva-d-t{font-size:16px}' +
+      '#p-prov .pva-dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:13.5px;margin:8px 0 0}#p-prov .pva-dl dt{color:var(--gris)}#p-prov .pva-dl dd{margin:0;overflow-wrap:anywhere}' +
+      '#p-prov .pva-nota{font-size:13.5px;margin:8px 0 0}#p-prov .pva-lin{display:grid;gap:3px;padding:11px 0 4px;border-top:1px solid rgba(var(--w),.10)}' +
+      '#p-prov .pva-dos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}#p-prov .pva-dos input{margin-bottom:4px}' +
+      '#p-prov .pva-tot{font-size:14px;margin:6px 0 0}#p-prov .pva-msg{min-height:1em;font-size:13.5px;margin:6px 0 0}' +
+      '#p-prov .pva-msg.mal{color:var(--mal)}#p-prov .pva-msg.ok{color:var(--ok)}#p-prov .pva-msg.gris{color:var(--gris)}' +
+      '#p-prov .aviso.pva-mal{background:rgba(220,38,38,.10);border-color:rgba(220,38,38,.35)}#p-prov .aviso.pva-ok{background:rgba(22,163,74,.10);border-color:rgba(22,163,74,.35)}' +
+      '#p-prov .pva-chk{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--tinta)}#p-prov .pva-chk input{width:auto;margin:3px 0 0;flex:0 0 auto}' +
+      '#p-prov .pva-lnk{background:none;border:0;color:var(--oro);text-decoration:underline;font:inherit;font-size:13.5px;cursor:pointer;padding:6px 0;justify-self:start}' +
+      '#p-prov .pva-logo-fila{display:flex;align-items:center;gap:12px}#p-prov .pva-chico{width:auto;padding:9px 14px;margin:0}' +
+      '#p-prov .pva-logo{flex:0 0 52px;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:#fff;color:#0B2A3A;font-weight:800;overflow:hidden}#p-prov .pva-logo img{width:100%;height:100%;object-fit:contain}' +
+      '#p-prov .pva-cod-g{font:700 22px/1.2 ui-monospace,monospace;letter-spacing:.06em;color:var(--oro);margin:4px 0}#p-prov .pva-mal-bt{color:var(--mal)}#p-prov .pva-chk a{color:var(--oro)}' +
+      /* en la pantalla del aliado no hay «Inicio» de empresa ni chat de obra; dentro de su portal, sus propios botones de volver */
+      'body:has(#p-prov.activa) #nav-home,body:has(#p-prov.activa) #nav-chat,body:has(#p-prov.activa #pva-razon) #nav-atras{display:none!important}';
     document.head.appendChild(st);
   }catch(_c){}
 })();
@@ -132706,6 +133380,8 @@ function dispositivoCerrarOtro(disp){
     ir('p-clave-nueva');
     return;
   }
+  /* 16/11/2026 · el aliado que entró en este celular vuelve solo a su Portal del proveedor (PROV-APP) */
+  try{ if(typeof provArranque==='function' && provArranque()) return; }catch(_pa){}
   var _r0=leer(LS_ROL,null);
   if(!_r0 && typeof indHayEnlace==='function' && indHayEnlace()){ _r0='col'; guardar(LS_ROL,'col'); }
   if(!legalAceptado(_r0 || '')){
@@ -133274,7 +133950,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='fa9a5e5865';
+var SELLO_APP='65d76e9ffb';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
