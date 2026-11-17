@@ -352,10 +352,11 @@ function _chwPendListaHTML(){
   if(!L) return '<div class="chw-aviso suave">Cargando tus pendientes…</div>';
   if(!L.length) return '<div class="chw-vacio"><b>No tienes pendientes del chat.</b><span>Cuando alguien te asigne uno, sale aquí y en el número del menú.</span></div>';
   return L.map(function(p){
-    var v = _chwVence(p.vence);
+    var v = _chwVence(p.vence), av = _chwAvance(Object.assign({ estado:'abierto' }, p)), tram = !!(av && av.tram);
     return '<div class="chw-pend' + (v.mal ? ' mal' : '') + '"><div class="chw-pend-cab"><span>' + _chwE(p.canal_nombre) + '</span><span class="chw-pend-v">' + _chwE(v.tx) + '</span></div>' +
       '<div class="chw-pend-tx">' + _chwE(p.texto || '(foto o archivo)') + '</div><div class="chw-pend-de">Te lo asignó: ' + _chwE(p.de) + '</div>' +
-      '<div class="chw-pend-bts"><button type="button" class="bt chico" data-acc="cumplir" data-p="' + _chwE(p.id) + '" data-m="' + _chwE(p.msj) + '" data-c="' + _chwE(p.canal) + '">✓ Cumplir</button>' +
+      (av ? _chwBarraHTML(p, av) : '') + _chwSigueHTML(Object.assign({ estado:'abierto' }, p), av) +
+      '<div class="chw-pend-bts">' + (tram ? '' : '<button type="button" class="bt chico" data-acc="cumplir" data-p="' + _chwE(p.id) + '" data-m="' + _chwE(p.msj) + '" data-c="' + _chwE(p.canal) + '">✓ Cumplir</button>') +
       '<button type="button" class="bt sec chico" data-acc="verchat" data-m="' + _chwE(p.msj) + '" data-c="' + _chwE(p.canal) + '">Ver en el chat</button></div></div>';
   }).join('');
 }
@@ -453,18 +454,66 @@ function _chwAdjHTML(a){
     '<span class="chw-doc-ic" aria-hidden="true">' + ic + '</span><span class="chw-doc-tx"><b>' + _chwE(a.nombre || 'Archivo') + '</b>' +
     '<small>' + _chwE(_chwTam(a.tam)) + (a.carpeta ? ' · Guardado en «' + _chwE(a.carpeta) + '»' : '') + '</small></span></button>';
 }
+/* ── 17/11/2026 · Claude · TANDA 2 · el avance del pendiente, igual que en la app: una barra delgada con su % y, al tocarla,
+   los pasos con quién y cuándo. Lo calcula el servidor (pendiente.avance, sql/2026-11-17-chat-tramites*.sql); si todavía no
+   lo manda, sale con lo que hay: 0 % abierto, 100 % cumplido. Los pasos del trámite (entregar con firma, levantar con la
+   foto del después, el V°B° de SST…) se hacen en la app del celular; aquí se ven. ── */
+var CHW_SIG = { aprobar:'Aprobar el pedido', entregar:'Entregar con firma y foto', req:'Armar el requerimiento', autorizar:'Autorizar (Seguridad)',
+  visar:'Firmar', cotizar:'Pedir cotización a aliados', adjudicar:'Elegir aliado', recibir:'Anotar lo que llegó',
+  levantar:'Levantar con foto del después', vb_obs:'Dar V°B° de SST' };
+function _chwAvance(p){
+  if(!p) return null;
+  var a = p.avance;
+  if(a && !a.error && typeof a.pct === 'number' && Array.isArray(a.pasos)) return a;
+  var c = p.estado === 'cumplido';
+  return { pct:c ? 100 : 0, n:1, hechos:c ? 1 : 0, tram:false, local:true,
+           pasos:[{ k:'cumplido', t:'Cumplido', hecho:c, quien:p.cumplido_por_nombre || '', cuando:p.cumplido_en || '' }] };
+}
+function _chwPasosHTML(av){
+  var sig = false, h = '';
+  if(av.aviso === 'req_rechazado') h += '<p class="chw-avz-aviso">El requerimiento se rechazó: elige otro camino.</p>';
+  if(av.aviso === 'req_anulado') h += '<p class="chw-avz-aviso">El requerimiento se anuló: elige otro camino.</p>';
+  return h + '<ol class="chw-avz-pasos">' + (av.pasos || []).map(function(s){
+    var est = s.hecho ? 'ok' : (s.omitido ? 'omi' : (!sig && !av.fin ? 'sig' : 'falta'));
+    if(est === 'sig') sig = true;
+    var x = '<li class="' + est + '"><span class="chw-avz-ic" aria-hidden="true">' + { ok:'✓', omi:'—', sig:'➜', falta:'○' }[est] + '</span><span class="chw-avz-tx"><b>' +
+      _chwE(/^v_/.test(s.k || '') ? 'Firma · ' + (s.t || '') : (s.t || '')) + '</b>';
+    if(s.det) x += '<small>' + _chwE(s.det) + '</small>';
+    if(s.hecho && (s.quien || s.cuando)) x += '<small>' + _chwE([s.quien || '', s.cuando ? _chwDiaTx(s.cuando) + ' ' + _chwHora(s.cuando) : ''].filter(Boolean).join(' · ')) + '</small>';
+    else if(est === 'sig') x += '<small>Es lo que sigue</small>';
+    else if(est === 'omi') x += '<small>No se hizo</small>';
+    return x + '</span></li>';
+  }).join('') + '</ol>';
+}
+function _chwBarraHTML(p, av){
+  var pct = Math.max(0, Math.min(100, Math.round(+av.pct || 0))), ab = !!(CHW.avAbierto && CHW.avAbierto[p.id]);
+  return '<div class="chw-avz' + ((av.fin === 'rechazado' || av.fin === 'anulado') ? ' mal' : '') + '" data-avz="' + _chwE(p.id) + '">' +
+    '<button type="button" class="chw-avz-bar" data-acc="avance" data-p="' + _chwE(p.id) + '" aria-expanded="' + ab + '" aria-label="Ver los pasos" title="Ver los pasos">' +
+    '<span class="chw-avz-riel" aria-hidden="true"><i style="width:' + pct + '%"></i></span><span class="chw-avz-pct">' + pct + '%</span></button>' +
+    (ab ? _chwPasosHTML(av) : '') + '</div>';
+}
+/* el pendiente que ES un trámite: su paso se hace en la app (aquí no se «cumple» suelto: se saltaría la firma o el V°B°) */
+function _chwSigueHTML(p, av){
+  if(!av || !av.tram || !av.sig || (p.estado && p.estado !== 'abierto')) return '';
+  var t = CHW_SIG[av.sig.k]; if(!t) return '';
+  var donde = (av.sig.k === 'cotizar' || av.sig.k === 'adjudicar') ? 'en «Requerimientos» de esta web' : 'en la app del celular';
+  return '<div class="chw-avz-sigue">Sigue: <b>' + _chwE(t + (av.sig.k === 'visar' && av.sig.t ? ' · ' + av.sig.t : '')) + '</b> (' + donde + ')</div>';
+}
+function _chwEsTram(p){ var av = _chwAvance(p); return !!(av && av.tram); }
 function _chwPenHTML(m){
   var p = m.pendiente; if(!p) return '';
+  var av = _chwAvance(p), avTx = av ? _chwBarraHTML(p, av) : '';
   if(p.estado === 'cumplido'){
     return '<div class="chw-pen cumplido"><div class="chw-pen-tag"><span>✅ PENDIENTE CUMPLIDO</span>' +
       (p.cumplido_en ? '<span>' + _chwE(_chwDiaTx(p.cumplido_en) + ' ' + _chwHora(p.cumplido_en)) + '</span>' : '') + '</div>' +
       '<div class="chw-pen-det">Era para: <b>' + _chwE(p.para_mi ? 'ti' : p.asignado_nombre) + '</b></div>' +
-      (p.sustento_msj ? '<button type="button" class="chw-pen-ver" data-acc="ver" data-id="' + _chwE(p.sustento_msj) + '">Ver el sustento ↓</button>' : '') + '</div>';
+      (p.sustento_msj ? '<button type="button" class="chw-pen-ver" data-acc="ver" data-id="' + _chwE(p.sustento_msj) + '">Ver el sustento ↓</button>' : '') + avTx + '</div>';
   }
-  var v = _chwVence(p.vence), puede = p.para_mi || CHW.quien === 'jefe';
+  var v = _chwVence(p.vence), puede = (p.para_mi || CHW.quien === 'jefe') && !(av && av.tram);
   return '<div class="chw-pen abierto' + (v.mal ? ' vencido' : '') + '"><div class="chw-pen-tag"><span>📌 PENDIENTE</span><span>' + _chwE(v.tx) + '</span></div>' +
     '<div class="chw-pen-det">Para: <b>' + _chwE(p.para_mi ? 'ti' : p.asignado_nombre) + '</b></div>' +
-    (puede ? '<button type="button" class="chw-pen-bt" data-acc="cumplir" data-p="' + _chwE(p.id) + '" data-m="' + _chwE(m.id) + '">✓ Cumplir con foto o texto</button>' : '') + '</div>';
+    (puede ? '<button type="button" class="chw-pen-bt" data-acc="cumplir" data-p="' + _chwE(p.id) + '" data-m="' + _chwE(m.id) + '">✓ Cumplir con foto o texto</button>' : '') +
+    _chwSigueHTML(p, av) + avTx + '</div>';
 }
 function _chwMsjHTML(m){
   var cl = 'chw-m ' + (m.mio ? 'mio' : 'otro') + (m.tipo === 'sustento' ? ' sust' : '') + (m.borrado ? ' borrado' : '') + (m.acuerdo ? ' acu' : '') + (m.pendiente && m.pendiente.estado === 'abierto' ? ' pen' : '');
@@ -539,6 +588,8 @@ function _chwClic(ev){
     if(acc === 'nuevo') _chwGrupoNuevo();
     else if(acc === 'gestores') _chwGestores();
     else if(acc === 'cumplir'){ var cnl = b.getAttribute('data-c') || CHW.activo; _chwCumplir(cnl, b.getAttribute('data-m'), b.getAttribute('data-p')); }
+    else if(acc === 'avance'){ var ap = b.getAttribute('data-p'); CHW.avAbierto = CHW.avAbierto || {}; CHW.avAbierto[ap] = !CHW.avAbierto[ap];
+      if(b.closest('#chw-feed')) _chwPintarFeed(false); else _chwPintarLado(); }
     else if(acc === 'verchat'){ CHW.irA = b.getAttribute('data-m'); CHW.filtro = 'grupos'; _chwAbrir(b.getAttribute('data-c')); }
     else if(acc === 'volver'){ CHW.activo = ''; _chwParar(); _chwListaAgendar(); _chwPintarLado(); _chwPintarConv(); }
     else if(acc === 'enviar') chwEnviar();
@@ -560,8 +611,9 @@ function _chwClic(ev){
     return;
   }
   /* tocar un mensaje (no un botón suyo): sus opciones */
+  if(ev.target.closest('.chw-avz')) return;   /* los pasos del avance se leen: no abren el menú */
   var m = ev.target.closest('.chw-m[data-m]');
-  if(m && !(window.getSelection && String(window.getSelection()).length)) _chwMenu(m.getAttribute('data-m'), ev.clientX, ev.clientY);
+  if(m &&!(window.getSelection && String(window.getSelection()).length)) _chwMenu(m.getAttribute('data-m'), ev.clientX, ev.clientY);
 }
 function _chwTecla(ev){
   if(ev.key === 'Escape' && CHW.menu){ _chwMenuCerrar(); return; }
@@ -651,7 +703,7 @@ function _chwMenu(msjId, x, y){
   var o = '';
   if(!m.borrado) o += '<button type="button" role="menuitem" data-op="resp">↩️ Responder</button>';
   if(m.texto && !m.borrado) o += '<button type="button" role="menuitem" data-op="copiar">📋 Copiar el texto</button>';
-  if(pen && (pen.para_mi || CHW.quien === 'jefe')) o += '<button type="button" role="menuitem" data-op="cumplir">✓ Cumplir el pendiente (foto o texto)</button>';
+  if(pen && (pen.para_mi || CHW.quien === 'jefe') && !_chwEsTram(pen)) o +='<button type="button" role="menuitem" data-op="cumplir">✓ Cumplir el pendiente (foto o texto)</button>';
   if(sup && !m.borrado && m.tipo === 'msj') o += '<button type="button" role="menuitem" data-op="pend">📌 ' + (pen ? 'Cambiar a quién o el plazo' : 'Volverlo pendiente y asignarlo') + '</button>';
   if(sup && pen) o += '<button type="button" role="menuitem" data-op="anular">✕ Anular el pendiente</button>';
   if(sup && !m.borrado) o += '<button type="button" role="menuitem" data-op="acuerdo">🤝 ' + (m.acuerdo ? 'Quitar de los acuerdos' : 'Marcar como acuerdo de obra') + '</button>';
@@ -1055,6 +1107,16 @@ function _chwCss(){
   '.chw-pen.abierto{background:var(--ojo-f);color:#7A4F0E}.chw-pen.vencido{background:var(--mal-f);color:var(--mal)}.chw-pen.cumplido{background:var(--ok-f);color:var(--ok)}' +
   '.chw-pen-tag{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:11.5px;letter-spacing:.03em}' +
   '.chw-pen-det{margin-top:2px}.chw-pen-det b{color:inherit}' +
+  /* 17/11/2026 · la barra de avance del pendiente (igual que en la app) */
+  '.chw-avz{margin-top:6px}.chw-avz-bar{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;padding:4px 0 2px;margin:0;cursor:pointer;color:inherit;font:inherit}' +
+  '.chw-avz-riel{flex:1;height:3px;border-radius:3px;background:rgba(100,116,139,.28);overflow:hidden;display:block}' +
+  '.chw-avz-riel i{display:block;height:100%;background:#16A34A;border-radius:3px;transition:width .4s ease}.chw-avz.mal .chw-avz-riel i{background:#DC2626}' +
+  '.chw-avz-pct{font-size:11px;font-weight:700;min-width:34px;text-align:right;font-variant-numeric:tabular-nums}' +
+  '.chw-avz-pasos{list-style:none;margin:4px 0 2px;padding:0;display:flex;flex-direction:column;gap:5px;font-size:12px;text-align:left}' +
+  '.chw-avz-pasos li{display:flex;gap:7px;align-items:flex-start}.chw-avz-ic{width:16px;flex:none;text-align:center;font-weight:700}' +
+  '.chw-avz-pasos li.ok .chw-avz-ic{color:#16A34A}.chw-avz-pasos li.sig .chw-avz-ic{color:#D97706}.chw-avz-pasos li.falta,.chw-avz-pasos li.omi{opacity:.62}' +
+  '.chw-avz-tx{display:flex;flex-direction:column;gap:1px;min-width:0}.chw-avz-tx small{font-size:11px;opacity:.78}' +
+  '.chw-avz-aviso{font-size:12px;margin:4px 0;color:#B45309}.chw-avz-sigue{font-size:12px;margin-top:6px}' +
   '.chw-pen-bt,.chw-pen-ver{margin-top:6px;border:1px solid currentColor;background:var(--panel);color:inherit;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:12.5px;font-weight:600}' +
   '.chw-abajo{position:absolute;right:22px;bottom:86px;border:1px solid var(--raya);background:var(--panel);color:var(--azul);border-radius:999px;padding:6px 12px;cursor:pointer;box-shadow:var(--sombra);z-index:2}' +
   '.chw-resp{display:flex;align-items:center;gap:10px;margin:0 12px;padding:6px 10px;background:var(--panel);border:1px solid var(--raya);border-left:3px solid var(--azul);border-radius:8px 8px 0 0}' +

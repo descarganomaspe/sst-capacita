@@ -30242,10 +30242,12 @@ function _chPendListaHTML(){
     var rel = mt.relevo_nombre ? '<div class="ch-pend-rel">🔄 Relevo de: <b>' + _chE(mt.relevo_nombre) + '</b>' + (mt.relevo_nota ? ' · «' + _chE(mt.relevo_nota) + '»' : '') + '</div>' : '';
     var det = (mt.item_epp ? '<div class="ch-pend-rel">📦 Ítem: <b>' + _chE(mt.item_epp) + '</b></div>' : '') +
               (mt.estado_sub === 'prestado' ? '<div class="ch-pend-rel">🧰 En préstamo a: <b>' + _chE(mt.cargo_nombre || '') + '</b> (Firmado con PIN)</div>' : '');
+    var av = (typeof chtAvance === 'function') ? chtAvance(p) : null;
+    var paso = (av && (av.tram || (av.sig && av.sig.k === 'entregar' && !av.local))) ? chtBotonesHTML(p, p.msj, p.canal, av, 'btn') : '';
     h += '<div class="ch-pend' + (v.mal ? ' mal' : '') + '"><div class="ch-pend-cab"><span>' + _chE(p.canal_nombre) + ' · <b>' + md.ic + ' ' + _chE(md.tit) + '</b></span><span class="ch-pend-v">' + _chE(v.tx) + '</span></div>' +
       '<div class="ch-pend-tx">' + _chE(p.texto || '(foto o archivo)') + '</div>' + det + rel +
-      '<div class="ch-pend-de">Te lo asignó: ' + _chE(p.de) + '</div>' +
-      '<div class="ch-pend-bts"><button type="button" class="btn" data-acc="cumplir" data-p="' + _chE(p.id) + '" data-m="' + _chE(p.msj) + '" data-c="' + _chE(p.canal) + '">' + _chE(md.btn) + '</button>' +
+      '<div class="ch-pend-de">Te lo asignó: ' + _chE(p.de) + '</div>' + (av ? chtBarraHTML(p, av) : '') +
+      '<div class="ch-pend-bts">' + paso + (av && av.tram ? '' : '<button type="button" class="btn' + (paso ? ' sec' : '') + '" data-acc="cumplir" data-p="' + _chE(p.id) + '" data-m="' + _chE(p.msj) + '" data-c="' + _chE(p.canal) + '">' + _chE(md.btn) + '</button>') +
       '<button type="button" class="btn sec" onclick="_chFlujoClic(event,this)" data-flujo="relevo-uno" data-p="' + _chE(p.id) + '" data-c="' + _chE(p.canal) + '">🔄 Relevo</button>' +
       '<button type="button" class="btn sec" data-acc="verchat" data-m="' + _chE(p.msj) + '" data-c="' + _chE(p.canal) + '">Ver en el chat</button></div></div>';
   });
@@ -30271,6 +30273,8 @@ function _chListaClic(ev){
   else if(acc === 'gestores') _chGestores();
   else if(acc === 'cumplir') _chatAbrirCumplirModal(b.getAttribute('data-c'), b.getAttribute('data-m'), b.getAttribute('data-p'));
   else if(acc === 'verchat'){ CHN.irA = b.getAttribute('data-m'); abrirChatObra(b.getAttribute('data-c')); }
+  else if(acc === 'avance'){ chtAvanceAbrir(b.getAttribute('data-p')); _chRepintarLista(); }
+  else if(acc === 'tram') chtIr(b);
 }
 function pintarCanales(){
   var c = pantExtraCaja('p-canales'); if(!c) return;
@@ -30425,13 +30429,15 @@ function _chPenHTML(m){
   var itemTx = mt.item_epp ? '<div class="wa-pen-det">Ítem: <b>' + _chE(mt.item_epp) + '</b></div>' : '';
   var relTx = mt.relevo_nombre ? '<div class="wa-pen-det">🔄 Relevo de: <b>' + _chE(mt.relevo_nombre) + '</b>' + (mt.relevo_nota ? ' (' + _chE(mt.relevo_nota) + ')' : '') + '</div>' : '';
   var pinTx = mt.firmado_nombre ? '<div class="wa-pen-det">🔑 Firmado con PIN: <b>' + _chE(mt.firmado_nombre) + '</b>' + (mt.firmado_dni ? ' · Doc. ' + _chE(mt.firmado_dni) : '') + '</div>' : '';
+  /* 17/11/2026 · Claude · el avance del trámite (lo calcula el servidor): la barra delgada con su % y, al tocarla, los pasos */
+  var av = (typeof chtAvance === 'function') ? chtAvance(p) : null, avTx = av ? chtBarraHTML(p, av) : '';
   if(p.estado === 'cumplido'){
     return '<div class="wa-pen-box cumplido"><div class="wa-pen-tag cumplido"><span>✅ ' + _chE(md.tit.toUpperCase()) + ' · CUMPLIDO</span>' +
       (p.cumplido_en ? '<span><span>' + _chE(_chDiaTx(p.cumplido_en)) + '</span> <span data-sin-trad>' + _chE(_chHora(p.cumplido_en)) + '</span></span>' : '') + '</div>' +
       '<div class="wa-pen-det">Responsable: <b>' + _chE(p.para_mi ? 'ti' : p.asignado_nombre) + '</b>' +
       (p.cumplido_por_nombre ? ' · Cerrado por: <b>' + _chE(p.cumplido_por_nombre) + '</b>' : '') + '</div>' +
       itemTx + pinTx + relTx + _chAntesDespuesHTML(mt) +
-      (p.sustento_msj ? '<button type="button" class="wa-pen-ver" data-acc="ver" data-id="' + _chE(p.sustento_msj) + '">Ver el sustento ↓</button>' : '') + '</div>';
+      (p.sustento_msj ? '<button type="button" class="wa-pen-ver" data-acc="ver" data-id="' + _chE(p.sustento_msj) + '">Ver el sustento ↓</button>' : '') + avTx + '</div>';
   }
   var v = _chVence(p.vence), puede = p.para_mi || CHN.quien === 'jefe' || CHN.quien === 'miembro';
   var extraHTML = '';
@@ -30454,8 +30460,14 @@ function _chPenHTML(m){
     extraHTML += '<button type="button" class="wa-pen-btn-visar" onclick="_chFlujoClic(event,this)" data-flujo="accion" data-act="' + _chE(md.accion) + '" data-p="' + _chE(p.id) + '" data-c="' + _chE(m.canal) + '">' + _chE(md.btn) + ' en 1 toque</button>';
   }
   var bts = '';
-  if(puede){
-    bts = '<div class="wa-pen-acciones">' +
+  if(puede && av && av.tram){
+    /* el pendiente ES el trámite: el botón del paso que sigue lleva a su pantalla de siempre */
+    bts = '<div class="wa-pen-acciones">' + chtBotonesHTML(p, m.id, m.canal, av) +
+      '<button type="button" class="wa-pen-btn-rel" onclick="_chFlujoClic(event,this)" data-flujo="relevo-uno" data-p="' + _chE(p.id) + '" data-c="' + _chE(m.canal) + '" title="Pasar relevo">🔄 Relevo</button></div>' +
+      chtAltHTML(p, m.id, m.canal, av);
+  } else if(puede){
+    bts = (av && av.sig && av.sig.k === 'entregar' && !av.local && (p.para_mi || CHN.quien === 'jefe')) ? chtBotonesHTML(p, m.id, m.canal, av) : '';
+    bts += '<div class="wa-pen-acciones">' +
       '<button type="button" class="wa-pen-btn-cumplir" data-acc="cumplir" data-p="' + _chE(p.id) + '" data-m="' + _chE(m.id) + '">' +
         _chE(p.modo === 'prestamo_herr' && mt.estado_sub === 'prestado' ? '✓ 2. Registrar devolución' : (md.exigeFoto ? '📸 Subir foto Después y cumplir' : (md.exigePin ? '🔑 Entregar con PIN del trabajador' : '✓ Cumplir con foto o texto'))) +
       '</button>' +
@@ -30464,7 +30476,7 @@ function _chPenHTML(m){
   }
   return '<div class="wa-pen-box abierto' + (v.mal ? ' vencido' : '') + '"><div class="wa-pen-tag abierto"><span>' + md.ic + ' ' + _chE(md.tit.toUpperCase()) + '</span><span>' + _chE(v.tx) + '</span></div>' +
     '<div class="wa-pen-det">Para: <b>' + _chE(p.para_mi ? 'ti' : p.asignado_nombre) + '</b></div>' +
-    itemTx + relTx + extraHTML + bts + '</div>';
+    itemTx + relTx + extraHTML + (av && av.tram && p.modo === 'obs_sst' ? _chAntesDespuesHTML(mt) : '') + bts + avTx + '</div>';
 }
 function _chMsjHTML(m){
   var cl = 'wa-msg ' + (m.mio ? 'mio' : 'otro') + (m.tipo === 'sustento' ? ' sust' : '') + (m.borrado ? ' borrado' : '') + (m.acuerdo ? ' acu' : '') + (m.pendiente && m.pendiente.estado === 'abierto' ? ' pen' : '');
@@ -30540,6 +30552,8 @@ function _chChatClic(ev){
     else if(acc === 'ver') _chIrA(b.getAttribute('data-id'));
     else if(acc === 'doc') _chAbrirArchivo(b.getAttribute('data-ruta'), b.getAttribute('data-nombre'));
     else if(acc === 'cumplir') _chatAbrirCumplirModal(CHAT_ACTIVO_ID, b.getAttribute('data-m'), b.getAttribute('data-p'));
+    else if(acc === 'avance'){ chtAvanceAbrir(b.getAttribute('data-p')); _chPintarFeed(false); }
+    else if(acc === 'tram') chtIr(b);
     else if(acc === 'reintentar') _chColaMenu(b.getAttribute('data-cid'));
     return;
   }
@@ -30871,27 +30885,8 @@ function chatConvertirEnPendienteModal(canalId, msjId){
   });
 }
 
-function _chRegistrarKardexRapido(docTrab, itemNombre, notaExtra){
-  try{
-    if(!docTrab || !itemNombre || typeof trabsLocal !== 'function' || typeof kardexLocal !== 'function' || typeof kardexSet !== 'function') return false;
-    var dNorm = String(docTrab).replace(/[^0-9A-Za-z]/g, '').toUpperCase();
-    var trabs = trabsLocal() || [];
-    var t = trabs.filter(function(x){ return String(x.dni || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase() === dNorm; })[0];
-    if(!t) return false;
-    var lista = kardexLocal() || [];
-    var fHoy = (typeof hoyISO === 'function') ? hoyISO() : new Date().toISOString().slice(0, 10);
-    lista.push({
-      id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-      trabId: t.id, trabNombre: t.nombre || '', dni: t.dni || dNorm, puesto: t.puesto || '',
-      epp: itemNombre, cant: 1, fecha: fHoy,
-      actividad: notaExtra || 'Recambio por Chat de Obra (Firmado con PIN)',
-      lugar: t.proyecto || '', sync: 0
-    });
-    kardexSet(lista);
-    if(typeof asegurarKardex === 'function') asegurarKardex(function(){});
-    return true;
-  }catch(_e){ return false; }
-}
+/* 17/11/2026 · Claude · el atajo _chRegistrarKardexRapido (escribía el kardex por su cuenta, sin la firma con el dedo) se
+   quitó: la entrega de verdad es la del kardex, con su firma y su foto; se abre desde el pendiente (CHAT-TRAMITES) */
 
 function _chatAbrirCumplirModal(canalId, msjId, pendId){
   _chInyectarCssFlujos();
@@ -30918,7 +30913,6 @@ function _chatAbrirCumplirModal(canalId, msjId, pendId){
         '<input type="text" id="cum-doc-pin" class="ch-in" inputmode="numeric" maxlength="15" placeholder="DNI / Doc. del trabajador">' +
         '<input type="password" id="cum-pin-trab" class="ch-in" inputmode="numeric" maxlength="6" placeholder="PIN (6 dígitos)">' +
       '</div>' +
-      (modo === 'recambio_epp' ? '<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-top:6px;cursor:pointer"><input type="checkbox" id="cum-add-kardex" checked> Guardar entrega también en su Kardex de EPP</label>' : '') +
     '</div>'
   ) : '';
 
@@ -30978,11 +30972,9 @@ function _chatAbrirCumplirModal(canalId, msjId, pendId){
     }).then(function(j){
       var L = []; if(j.msj) L.push(j.msj); if(j.sustento) L.push(j.sustento);
       if(L.length){ _chMezclar(canalId, L); _chMsjsGuardar(canalId); }
-      var addK = document.getElementById('cum-add-kardex');
-      var kOk = (exigePin && addK && addK.checked) ? _chRegistrarKardexRapido(docPin, itemEpp || 'EPP (Recambio)', tx) : false;
       _chatModalCerrar(); try{ if(prev) URL.revokeObjectURL(prev); }catch(_r){}
       if(CHAT_ACTIVO_ID === canalId && _chActiva('p-chat-obra')) _chPintarFeed(true);
-      if(typeof tostada === 'function') tostada(kOk ? 'Cumplido con PIN y sumado a su Kardex' : 'Pendiente cumplido, con su sustento');
+      if(typeof tostada === 'function') tostada('Pendiente cumplido, con su sustento');
       CHN.pendLista = (CHN.pendLista || []).filter(function(x){ return x.id !== pendId; });
       chatCargarCanales().then(function(){ pintarBurbujaPendientes(); if(_chActiva('p-canales')) _chRepintarLista(); });
     }, function(err){
@@ -31268,6 +31260,315 @@ try{ if(typeof COL_OK === 'object' && COL_OK){ COL_OK['p-canales'] = 1; COL_OK['
   }catch(_g){}
 })();
 /* <<< CANALES-OBRA-FIN >>> */
+/* >>> CHAT-TRAMITES-INI (17/11/2026) <<< */
+/* ══ EL PENDIENTE DEL CHAT ES EL TRÁMITE (17/11/2026 · Claude · TANDA 1: el EPP completo) ═══════════════════════
+   Marcelo: «que eso no sea una actividad aparte a las funciones que ya se tiene en la app, sino que se conecte y sea uno
+   solo… y en el mensaje se ve el avance de cómo va ese pendiente: una barra súper delgada, que avanza y con un % a su
+   costado»; al tocarla, los pasos con quién firmó y cuándo.
+     · el avance lo calcula el servidor (sql/2026-11-17-chat-tramites.sql: _sst_chat_avance) y llega en
+       pendiente.avance: { pct, pasos, sig, alt, tram }. Si el servidor todavía no lo tiene, la barra sale igual con lo
+       que hay (0 % abierto, 100 % cumplido) y el pendiente funciona como antes;
+     · el botón del paso que sigue abre la pantalla de siempre, ya llenada: aprobar el pedido (Pedidos de EPP), entregar
+       en el kardex (con el trabajador y el EPP puestos, firma con el dedo y foto), armar el requerimiento con el ítem,
+       autorizarlo y firmar la ruta de la obra, anotar lo que llegó. La cotización a aliados se hace en la web
+       (Requerimientos), como siempre: se abre ahí;
+     · al guardar en esa pantalla se enlaza el pendiente con lo que se hizo (sst_chat_pend_enlazar) y se vuelve al
+       chat. El servidor lo cierra solo cuando llega al 100 %. */
+var CHT = { t:null };
+var CHT_PASO = { pedido:'Pedido', aprobado:'Aprobado', no_procede:'No procede', anulado:'Anulado por quien lo pidió', req:'Requerimiento',
+  autorizado:'Autorizado por Seguridad', cot:'Cotización a aliados', aliado:'Aliado elegido', recibido:'Recibido en almacén', cumplido:'Cumplido',
+  /* 17/11/2026 · TANDA 2 · la observación SST */
+  observada:'Observada en obra', levantada:'Levantada', vb_sst:'V°B° de SST' };
+var CHT_SIG = { aprobar:['✓', 'Aprobar el pedido'], entregar:['🦺', 'Entregar con firma y foto'], req:['🧾', 'No hay stock: armar requerimiento'],
+  autorizar:['✅', 'Autorizar (Seguridad)'], visar:['✍️', 'Firmar'], cotizar:['💬', 'Pedir cotización a aliados'], adjudicar:['🤝', 'Elegir aliado'],
+  recibir:['📦', 'Anotar lo que llegó'], levantar:['📸', 'Levantar con foto del después'], vb_obs:['✅', 'Dar V°B° de SST'] };
+var _CHT_CSS = false;
+function _chtCss(){
+  if(_CHT_CSS || document.getElementById('cht-css')) return; _CHT_CSS = true;
+  var st = document.createElement('style'); st.id = 'cht-css';
+  st.textContent =
+    '.cht-av{margin-top:7px;font-family:var(--letra)!important}' +
+    '.cht-av-bar{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;padding:5px 0 3px;margin:0;cursor:pointer;color:inherit;font-family:var(--letra)!important}' +
+    '.cht-av-riel{flex:1;height:3px;border-radius:3px;background:rgba(100,116,139,.28);overflow:hidden;display:block}' +
+    '.cht-av-riel i{display:block;height:100%;background:#16A34A;border-radius:3px;transition:width .4s ease}' +
+    '.cht-av.mal .cht-av-riel i{background:#DC2626}' +
+    '.cht-av-pct{font-size:11px;font-weight:800;min-width:34px;text-align:right;opacity:.85}' +
+    '.cht-av-pasos{list-style:none;margin:4px 0 2px;padding:0;display:flex;flex-direction:column;gap:6px;font-size:12px;text-align:left}' +
+    '.cht-av-pasos li{display:flex;gap:7px;align-items:flex-start}' +
+    '.cht-ic{width:16px;flex-shrink:0;text-align:center;font-weight:800}' +
+    '.cht-av-pasos li.ok .cht-ic{color:#16A34A}.cht-av-pasos li.sig .cht-ic{color:#D97706}' +
+    '.cht-av-pasos li.falta,.cht-av-pasos li.omi{opacity:.62}' +
+    '.cht-tx{display:flex;flex-direction:column;gap:1px;min-width:0}.cht-tx small{font-size:11px;opacity:.75}' +
+    '.cht-av-aviso{font-size:12px;margin:4px 0;color:#B45309}' +
+    '.wa-pen-acciones .cht-btn{flex:1;margin-top:0}.cht-btn{width:100%;margin-top:6px}' +
+    /* 17/11/2026 · TANDA 2 · la observación SST: levantar y el V°B° */
+    '.cht-espera{font-size:12px;margin:6px 0 0;opacity:.8;flex:1}' +
+    '.cht-obs-fotos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 4px}' +
+    '.cht-obs-fotos figure{margin:0;min-width:0}.cht-obs-fotos figcaption{font-size:11px;font-weight:800;letter-spacing:.06em;margin-bottom:3px}' +
+    '.cht-obs-fotos img{width:100%;height:120px;object-fit:cover;border-radius:10px;display:block;background:rgba(100,116,139,.15)}' +
+    '.cht-obs-quien{font-size:12.5px;margin:4px 0}.cht-obs-prev[hidden]{display:none!important}' +
+    '.cht-obs-prev{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12.5px}.cht-obs-prev img{width:56px;height:56px;object-fit:cover;border-radius:8px}' +
+    '.cht-obs-prev button{margin-left:auto;background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;font-family:var(--letra)!important}';
+  document.head.appendChild(st);
+}
+/* el avance del servidor; si no llegó (SQL sin correr), el simple: 0 % abierto, 100 % cumplido */
+function chtAvance(p){
+  if(!p) return null;
+  var a = p.avance;
+  if(a && !a.error && typeof a.pct === 'number' && Array.isArray(a.pasos)) return a;
+  var c = p.estado === 'cumplido', epp = p.modo === 'recambio_epp';
+  return { pct:c ? 100 : 0, n:1, hechos:c ? 1 : 0, tram:false, local:true, sig:null,
+           pasos:[{ k:epp ? 'entregado' : 'cumplido', t:epp ? 'Entregado con firma' : 'Cumplido', hecho:c, quien:p.cumplido_por_nombre || '', cuando:p.cumplido_en || '' }] };
+}
+function chtAvanceAbrir(id){ if(!id) return; CHN.avAbierto = CHN.avAbierto || {}; CHN.avAbierto[id] = !CHN.avAbierto[id]; }
+function _chtPasoTx(s){
+  if(CHT_PASO[s.k]) return '<span>' + _chE(CHT_PASO[s.k]) + '</span>';
+  if(/^v_/.test(s.k || '')) return '<span>Firma</span> <span data-sin-trad>· ' + _chE(s.t || '') + '</span>';
+  return '<span>' + _chE(s.t || '') + '</span>';
+}
+function chtPasosHTML(av){
+  var sig = false, h = '';
+  if(av.aviso === 'req_rechazado') h += '<p class="cht-av-aviso">El requerimiento se rechazó: elige otro camino.</p>';
+  if(av.aviso === 'req_anulado') h += '<p class="cht-av-aviso">El requerimiento se anuló: elige otro camino.</p>';
+  return h + '<ol class="cht-av-pasos">' + (av.pasos || []).map(function(s){
+    var est = s.hecho ? 'ok' : (s.omitido ? 'omi' : (!sig && !av.fin ? 'sig' : 'falta'));
+    if(est === 'sig') sig = true;
+    var ic = { ok:'✓', omi:'—', sig:'➜', falta:'○' }[est];
+    var x = '<li class="' + est + '"><span class="cht-ic" aria-hidden="true">' + ic + '</span><span class="cht-tx"><b>' + _chtPasoTx(s) + '</b>';
+    if(s.det) x += '<small data-sin-trad>' + _chE(s.det) + '</small>';
+    if(s.hecho && (s.quien || s.cuando)) x += '<small>' + (s.quien ? '<span data-sin-trad>' + _chE(s.quien) + '</span>' : '') +
+      (s.cuando ? (s.quien ? '<span data-sin-trad> · </span>' : '') + '<span>' + _chE(_chDiaTx(s.cuando)) + '</span> <span data-sin-trad>' + _chE(_chHora(s.cuando)) + '</span>' : '') + '</small>';
+    else if(est === 'sig') x += '<small>Es lo que sigue</small>';
+    else if(est === 'omi') x += '<small>No se hizo</small>';
+    return x + '</span></li>';
+  }).join('') + '</ol>';
+}
+function chtBarraHTML(p, av){
+  _chtCss();
+  var pct = Math.max(0, Math.min(100, Math.round(+av.pct || 0))), ab = !!(CHN.avAbierto && CHN.avAbierto[p.id]);
+  var cl = 'cht-av' + ((av.fin === 'rechazado' || av.fin === 'anulado') ? ' mal' : '');
+  return '<div class="' + cl + '" data-av="' + _chE(p.id) + '"><button type="button" class="cht-av-bar" data-acc="avance" data-p="' + _chE(p.id) + '" aria-expanded="' + ab + '" aria-label="Ver los pasos">' +
+    '<span class="cht-av-riel" aria-hidden="true"><i style="width:' + pct + '%"></i></span><span class="cht-av-pct" data-sin-trad>' + pct + '%</span></button>' +
+    (ab ? chtPasosHTML(av) : '') + '</div>';
+}
+function _chtBoton(p, msj, canal, s, cl){
+  var B = CHT_SIG[s.k]; if(!B) return '';
+  var at = ' data-acc="tram" data-k="' + _chE(s.k) + '" data-p="' + _chE(p.id) + '" data-m="' + _chE(msj) + '" data-c="' + _chE(canal || '') + '"';
+  ['pedido', 'req', 'paso', 'cot', 'num'].forEach(function(k){ if(s[k]) at += ' data-' + k + '="' + _chE(s[k]) + '"'; });
+  return '<button type="button" class="' + cl + ' cht-btn"' + at + '><span aria-hidden="true">' + B[0] + '</span> <span>' + _chE(B[1]) + '</span>' +
+    (s.k === 'visar' && s.t ? ' <span data-sin-trad>· ' + _chE(s.t) + '</span>' : '') + '</button>';
+}
+/* el botón del paso que sigue (lo dice el servidor) */
+function chtBotonesHTML(p, msj, canal, av, cl){
+  if(!av || !av.sig || (p.estado && p.estado !== 'abierto')) return '';
+  /* 17/11/2026 · el V°B° de SST lo da un supervisor, y no quien la levantó (salvo el jefe de la obra) */
+  if(av.sig.k === 'vb_obs' && !chtPuedeVB(p)) return '<p class="cht-espera">Ahora falta el V°B° de SST: lo da otro supervisor.</p>';
+  return _chtBoton(p, msj, canal, av.sig, cl || 'wa-pen-btn-cumplir');
+}
+function chtPuedeVB(p){
+  if(CHN.quien === 'jefe') return true;
+  if(CHN.quien !== 'miembro') return false;
+  var mt = (p && p.meta) || {};
+  return !(mt.levantado_uid && CHN.yo && mt.levantado_uid === CHN.yo);
+}
+/* el otro camino: sin stock, el requerimiento */
+function chtAltHTML(p, msj, canal, av){
+  if(!av || !Array.isArray(av.alt) || (p.estado && p.estado !== 'abierto')) return '';
+  return av.alt.map(function(s){ return _chtBoton(p, msj, canal, s, 'wa-pen-btn-sec'); }).join('');
+}
+function _chtPendObj(id){
+  var x = null;
+  try{ Object.keys(CHN.msjs || {}).forEach(function(c){ (CHN.msjs[c] || []).forEach(function(m){ if(!x && m.pendiente && m.pendiente.id === id) x = m.pendiente; }); }); }catch(_m){}
+  if(!x) (CHN.pendLista || []).forEach(function(p){ if(!x && p.id === id) x = p; });
+  return x;
+}
+function _chtNoEsta(t, x){ CHT.t = null; if(typeof aviso === 'function') aviso(t, x, '🔎'); }
+/* el botón del paso: a la pantalla de siempre, ya llenada */
+function chtIr(b){
+  var o = { k:b.getAttribute('data-k'), pend:b.getAttribute('data-p'), msj:b.getAttribute('data-m'), canal:b.getAttribute('data-c') || CHAT_ACTIVO_ID,
+            pedido:b.getAttribute('data-pedido') || '', req:b.getAttribute('data-req') || '', paso:b.getAttribute('data-paso') || '', ts:Date.now() };
+  var p = _chtPendObj(o.pend), mt = (p && p.meta) || {};
+  o.item = String(mt.item_epp || '').trim(); o.cant = Math.max(1, parseInt(mt.cantidad, 10) || 1); o.talla = String(mt.talla || '').trim();
+  try{ _chatModalCerrar(); }catch(_c){}
+  /* 17/11/2026 · TANDA 2 · la observación SST se levanta y se visa aquí mismo, en el chat */
+  if(o.k === 'levantar' || o.k === 'vb_obs'){ CHT.t = null; return chtObsHoja(o, p); }
+  CHT.t = o;
+  if(o.k === 'aprobar' || (o.k === 'entregar' && o.pedido)) return _chtPedido(o);
+  if(o.k === 'entregar'){ o.abriendoKardex = true; ir('p-kardex-nuevo'); return; }
+  if(o.k === 'req'){
+    if(typeof rqNuevo !== 'function') return _chtNoEsta('No se pudo abrir', 'Esta versión de la app no tiene los requerimientos.');
+    rqNuevo({ clase:'epp', items:[{ d:o.item || 'EPP', u:'und', c:String(o.cant), e:o.talla ? 'Talla ' + o.talla : '', s:'' }], motivo:'Pedido de EPP desde el chat de la obra' });
+    return;
+  }
+  if(o.k === 'autorizar' || o.k === 'visar' || o.k === 'recibir') return _chtReq(o);
+  if(o.k === 'cotizar' || o.k === 'adjudicar'){
+    CHT.t = null;
+    var u = (typeof portalURL === 'function' ? portalURL() : 'https://obrasstapp.com/portal/') + '#reqs';
+    try{ window.open(u, '_blank'); }catch(_w){}
+    if(typeof aviso === 'function') aviso('Cotización a aliados', o.k === 'cotizar'
+      ? 'Se abre la web de la obra en «Requerimientos». Abre el requerimiento de este pedido y pide la cotización a tus aliados. El avance se actualiza solo.'
+      : 'Se abre la web de la obra en «Requerimientos». Abre el requerimiento de este pedido y elige al aliado que ganó. El avance se actualiza solo.', '🤝');
+  }
+}
+function _chtPedido(o){
+  if(typeof eppPedCargar !== 'function') return _chtNoEsta('No se pudo abrir', 'Esta versión de la app no tiene los pedidos de EPP.');
+  eppPedCargar(true).then(function(){
+    var r = null; (EPPP.lista || []).forEach(function(x){ if(x.id === o.pedido) r = x; });
+    if(!r || CHT.t !== o) return r ? null : _chtNoEsta('No se encontró el pedido', 'Ese pedido de EPP ya no está en la lista de la obra.');
+    if(o.k === 'aprobar'){ EPPP.ver = 'pendiente'; ir('p-epp-pedidos'); eppPedAbrir(o.pedido, 'aprobar'); return; }
+    o.abriendoKardex = true; eppPedEntregar(o.pedido);
+  });
+}
+function _chtReq(o){
+  if(typeof rqCargar !== 'function') return _chtNoEsta('No se pudo abrir', 'Esta versión de la app no tiene los requerimientos.');
+  rqCargar(true).then(function(){
+    var r = rqPorId(o.req);
+    if(!r || CHT.t !== o) return r ? null : _chtNoEsta('No se encontró el requerimiento', 'Ese requerimiento ya no está en la lista de la obra.');
+    RQ.ver = { id:o.req, recien:false }; RQ.recibe = null;
+    if(o.k === 'autorizar'){ if(rqPuedoResolver(r)) rqAutorizar(); else { CHT.t = null; rqVer(o.req); } return; }
+    if(o.k === 'visar'){ if(rqPaso(r, o.paso) && !RQB.visto(r, o.paso)) rqVisar(o.paso); else { CHT.t = null; rqVer(o.req); } return; }
+    rqVer(o.req);
+    setTimeout(function(){ if(document.getElementById('rqv-recibir')) rqRecibir(); }, 350);
+  });
+}
+/* la pantalla de siempre terminó: se enlaza lo hecho y se vuelve al chat */
+function chtTras(k, id){
+  var t = CHT.t; if(!t) return false;
+  if(Date.now() - t.ts > 18e5){ CHT.t = null; return false; }
+  var mio = (k === 'pedido' && t.k === 'aprobar' && t.pedido === id) ||
+            (k === 'entregado' && t.k === 'entregar' && !!t.pedido && t.pedido === id) ||
+            (k === 'kardex' && t.k === 'entregar' && !t.pedido && !!t.enKardex) ||
+            (k === 'req' && t.k === 'req') ||
+            ((k === 'autorizado' || k === 'visto' || k === 'recibido') && t.req === id);
+  if(!mio) return false;
+  CHT.t = null;
+  var enl = (k === 'req' || k === 'kardex') ? k : null;
+  var pr = enl ? _chRpc('sst_chat_pend_enlazar', { p_pend:t.pend, p_tipo:enl, p_id:String(id) }).then(function(j){ return j; }, function(){ return null; }) : Promise.resolve({});
+  pr.then(function(j){
+    if(j && j.msj && t.canal){ try{ _chMezclar(t.canal, [j.msj]); _chMsjsGuardar(t.canal); }catch(_m){} }
+    setTimeout(function(){
+      if(t.canal){ CHN.irA = t.msj; abrirChatObra(t.canal); }
+      if(typeof tostada === 'function') tostada(j ? 'Listo: el avance ya se ve en el chat.' : 'Quedó hecho, pero el chat todavía no muestra su avance.');
+    }, 900);
+  });
+  return true;
+}
+/* la entrega del pedido: primero se enlaza la entrega (con su firma y su foto) y después el pedido queda entregado */
+function chtAntesDeEntregar(kid, pedidoId){
+  var t = CHT.t;
+  if(!t || t.k !== 'entregar' || !t.enKardex || t.pedido !== pedidoId || !kid) return null;
+  return _chRpc('sst_chat_pend_enlazar', { p_pend:t.pend, p_tipo:'kardex', p_id:String(kid) }).then(function(j){ return j; }, function(){ return null; });
+}
+/* el recambio sin pedido (pendiente hecho en el chat): la entrega del kardex lo cierra */
+function chtTrasKardex(kid){ var t = CHT.t; if(t && t.k === 'entregar' && !t.pedido && kid) chtTras('kardex', kid); }
+/* desde el chat, la entrega lleva su foto: así el paso dice «con firma y foto» y es cierto */
+function chtFaltaFoto(){ var t = CHT.t; return !!(t && t.k === 'entregar' && t.enKardex && !K_FOTO); }
+/* prepKardex() lo llama al final: si se vino del chat, el EPP ya va puesto; si se abrió el kardex por otro lado, el trámite se suelta */
+function chtPrefillKardex(){
+  var t = CHT.t; if(!t || t.k !== 'entregar') return;
+  if(!t.abriendoKardex){ CHT.t = null; return; }
+  t.abriendoKardex = false; t.enKardex = true;
+  if(!t.pedido && t.item){
+    K_LOTE = [{ epp:t.item, tipo:'N', cant:t.cant || 1, unidad:(typeof unidadDe === 'function' ? unidadDe(t.item) : 'UND') }];
+    try{ pintarLote(); pintarChipsEpp(); }catch(_l){}
+  }
+  var m = document.getElementById('kardex-msg');
+  if(m){ m.style.color = 'var(--oro)'; m.innerHTML = (t.pedido ? m.innerHTML + ' ' : '') + '<span>Del chat: con la firma y la foto, el pendiente avanza solo.</span>'; }
+}
+
+/* ══ TANDA 2 (17/11/2026 · Claude) · LA OBSERVACIÓN SST ES LA OBSERVACIÓN DE LA OBRA ═══════════════════════════════════
+   Observada (con la foto del antes) → Levantada (la foto del después, el responsable) → V°B° de SST (la cierra). El servidor
+   (sql/2026-11-17-chat-tramites-2.sql) la anota también en el registro de inspecciones de la obra (sst_inspeccion: el de
+   los reportes y de «Inspecciones guardadas»), y la inspección con observaciones de la app abre su pendiente enlazado
+   (chtObsInsp). Sin ese SQL (404) nada de esto aparece: la observación se cumple con «Subir foto Después», como antes. */
+var CHT_MOTIVO = { ya_levantada:'Esa observación ya está levantada.', falta_levantar:'Primero se levanta, con la foto del después.',
+  solo_sst:'El V°B° lo da SST (o el jefe de la obra).', vb_otra_persona:'El V°B° lo da otra persona: no quien la levantó.' };
+try{ Object.keys(CHT_MOTIVO).forEach(function(k){ if(typeof CH_MOTIVO === 'object' && !CH_MOTIVO[k]) CH_MOTIVO[k] = CHT_MOTIVO[k]; }); }catch(_m){}
+function _chtFotoHTML(ruta, rotulo){
+  if(!ruta) return '';
+  var u = CHN.urls[ruta];
+  return '<figure><figcaption>' + _chE(rotulo) + '</figcaption><img data-ruta="' + _chE(ruta) + '" alt="' + _chE(rotulo) + '" src="' + (u || CH_IMG_VACIA) + '"' + (u ? ' data-ok="1"' : '') + '></figure>';
+}
+/* levantar (o dar el V°B°): una hoja del chat, como «cumplir» */
+function chtObsHoja(o, p){
+  _chtCss(); _chInyectarCssFlujos();
+  var mt = (p && p.meta) || {}, vb = o.k === 'vb_obs', foto = null, prev = '', canal = o.canal || CHAT_ACTIVO_ID;
+  var m = null; try{ (CHN.msjs[canal] || []).forEach(function(x){ if(x.id === o.msj) m = x; }); }catch(_x){}
+  var cita = m ? (m.texto || '') : ((p && p.texto) || '');
+  var fotos = (mt.antes_ruta || (vb && mt.despues_ruta)) ? '<div class="cht-obs-fotos">' + _chtFotoHTML(mt.antes_ruta, 'Antes') + (vb ? _chtFotoHTML(mt.despues_ruta, 'Después') : '') + '</div>' : '';
+  var h = '<div class="ch-hoja-tit"><span aria-hidden="true">' + (vb ? '✅' : '📸') + '</span> <span>' + (vb ? 'V°B° de SST' : 'Levantar la observación') + '</span></div>' +
+    (cita ? '<div class="ch-hoja-cita pen" data-sin-trad>' + _chE(String(cita).slice(0, 200)) + '</div>' : '') + fotos;
+  if(vb){
+    h += (mt.levantado_por ? '<p class="cht-obs-quien"><span>Levantada por</span> <b data-sin-trad>' + _chE(mt.levantado_por) + '</b>' +
+           (mt.despues_texto ? '<span data-sin-trad>: «' + _chE(mt.despues_texto) + '»</span>' : '') + '</p>' : '') +
+      '<label class="ch-lab" for="cht-obs-tx">Nota del V°B° (si hace falta)</label><input type="text" id="cht-obs-tx" class="ch-in" maxlength="240" placeholder="Ej.: conforme, se verificó en campo">' +
+      '<p class="ch-msg" id="cht-obs-msg" role="status">Revisa la foto del después. Con tu V°B° la observación se cierra.</p>' +
+      '<div class="ch-ops fila"><button type="button" class="btn sec" data-op="x">Cancelar</button><button type="button" class="btn" data-op="ok">Dar V°B° y cerrar</button></div>';
+  } else {
+    h += '<label class="ch-lab" for="cht-obs-tx">Qué se hizo para levantarla</label><textarea id="cht-obs-tx" class="ch-in" rows="2" maxlength="1000" placeholder="Ej.: se colocó la baranda y el rodapié"></textarea>' +
+      '<div class="ch-lab">Foto del después (obligatoria)</div>' +
+      '<div class="ch-ops fila"><button type="button" class="btn sec" data-op="cam"><span aria-hidden="true">📸</span> <span>Tomar foto</span></button>' +
+      '<button type="button" class="btn sec" data-op="gal"><span aria-hidden="true">🖼️</span> <span>Galería</span></button></div>' +
+      '<input type="file" id="cht-obs-gal" accept="image/*" hidden>' +
+      '<div id="cht-obs-prev" class="cht-obs-prev" hidden></div>' +
+      '<p class="ch-msg" id="cht-obs-msg" role="status">Después, SST da su V°B° y se cierra.</p>' +
+      '<div class="ch-ops fila"><button type="button" class="btn sec" data-op="x">Cancelar</button><button type="button" class="btn" data-op="ok">Levantar</button></div>';
+  }
+  var hoja = _chHoja('ch-cum', h);
+  if(!hoja) return;
+  _chCargarImgs(hoja);
+  function msg(t, mal){ var e = document.getElementById('cht-obs-msg'); if(e){ e.className = 'ch-msg' + (mal ? ' mal' : ''); e.textContent = t; } }
+  function tomar(f){
+    if(!f) return;
+    if(!/^image\//.test(_chTipo(f))){ msg('Elige una foto.', true); return; }
+    foto = f; try{ if(prev) URL.revokeObjectURL(prev); prev = URL.createObjectURL(f); }catch(_u){ prev = ''; }
+    var pv = document.getElementById('cht-obs-prev');
+    if(pv){ pv.hidden = false; pv.innerHTML = (prev ? '<img src="' + prev + '" alt="">' : '') + '<span>Foto del después lista</span><button type="button" data-op="sinfoto">Quitar</button>'; }
+    msg('');
+  }
+  var gal = document.getElementById('cht-obs-gal');
+  if(gal) gal.addEventListener('change', function(){ var f = gal.files && gal.files[0]; try{ gal.value = ''; }catch(_v){} tomar(f); });
+  hoja.addEventListener('click', function(ev){
+    var b = ev.target.closest('[data-op]'); if(!b) return;
+    var op = b.getAttribute('data-op');
+    if(op === 'x'){ _chatModalCerrar(); return; }
+    if(op === 'cam'){ if(typeof tomarFoto === 'function') _chCamara('Foto del después').then(tomar); else if(gal) gal.click(); return; }
+    if(op === 'gal'){ if(gal) gal.click(); return; }
+    if(op === 'sinfoto'){ foto = null; var pv = document.getElementById('cht-obs-prev'); if(pv){ pv.hidden = true; pv.innerHTML = ''; } return; }
+    if(op !== 'ok') return;
+    var tx = String((document.getElementById('cht-obs-tx') || {}).value || '').trim();
+    if(!vb && !foto){ msg('Toma o sube la foto del después: es la prueba de que quedó levantada.', true); return; }
+    b.disabled = true; msg(vb ? 'Guardando el V°B°…' : 'Subiendo la foto…');
+    (vb ? Promise.resolve(null) : _chSubir(canal, foto, 'despues.jpg')).then(function(adj){
+      return _chRpc('sst_chat_obs', { p_pend:o.pend, p_accion:vb ? 'vb' : 'levantar', p_texto:tx || null, p_adjunto:adj, p_cid:vb ? null : _chCid() });
+    }).then(function(j){
+      var L = []; ['msj', 'levanto', 'sustento'].forEach(function(k){ if(j[k]) L.push(j[k]); });
+      if(L.length && canal){ try{ _chMezclar(canal, L); _chMsjsGuardar(canal); }catch(_g){} }
+      _chatModalCerrar(); try{ if(prev) URL.revokeObjectURL(prev); }catch(_r){}
+      if(CHAT_ACTIVO_ID === canal && _chActiva('p-chat-obra')) _chPintarFeed(!vb);
+      if(typeof tostada === 'function') tostada(vb ? 'Observación cerrada con el V°B° de SST.' : 'Observación levantada: falta el V°B° de SST.');
+      if(vb) CHN.pendLista = (CHN.pendLista || []).filter(function(x){ return x.id !== o.pend; });
+      _chCargarPendLista().then(function(){ chatCargarCanales().then(function(){ pintarBurbujaPendientes(); if(_chActiva('p-canales')) _chRepintarLista(); }); });
+    }, function(err){ b.disabled = false; msg(_chMotivo(err), true); });
+  });
+}
+/* la inspección con observaciones (la de siempre) abre su pendiente en el Grupo SST, enlazado; cuando sus observaciones
+   se cierran en la inspección, el pendiente queda «Levantada». Se llama al subirla; el servidor no repite nada. Sin el SQL
+   (404) no pasa nada. Solo el título de cada observación y quién la levantó: ni fotos ni documentos. */
+var CHT_OBS_INSP = {};
+function chtObsInsp(reg){
+  try{
+    if(!reg || !reg.id || !reg.empresa || reg.delEquipo || reg.papel || !Array.isArray(reg.hallazgos) || !reg.hallazgos.length) return;
+    if(!_chSesion()) return;
+    var h = reg.hallazgos.map(function(x){ return { t:String((x && x.t) || '').slice(0, 140), estado:(x && x.estado === 'cerrado') ? 'cerrado' : 'abierto',
+                                                   responsable:String((x && x.responsable) || '').slice(0, 60) }; });
+    var firma = reg.id + '|' + h.map(function(x){ return x.estado; }).join(',');
+    if(CHT_OBS_INSP[firma]) return;
+    CHT_OBS_INSP[firma] = 1;
+    _chRpc('sst_chat_obs_insp', { p_emp:reg.empresa, p_ext:String(reg.id), p_hall:h }).then(function(){}, function(err){ if(_chRed(err)) delete CHT_OBS_INSP[firma]; });
+  }catch(_e){}
+}
+/* <<< CHAT-TRAMITES-FIN >>> */
 
 
 /* >>> RIESGOS-APP-INI (11/11/2026) <<< */
@@ -42180,7 +42481,10 @@ function rqEnviar(){
   rqMsg('Enviando…', false);
   rqSubirUno(x).then(function(r){
     if(bt) bt.disabled = false;
-    if(r.estado === 'ok'){ RQ.F = null; rqCargar(true).then(function(){ rqVer(r.req.id, true); }); return; }
+    if(r.estado === 'ok'){ RQ.F = null;
+      /* 17/11/2026 · armado desde el pendiente del chat: queda enlazado y se vuelve al chat (CHAT-TRAMITES) */
+      if(typeof chtTras === 'function' && chtTras('req', r.req.id)){ rqCargar(true); return; }
+      rqCargar(true).then(function(){ rqVer(r.req.id, true); }); return; }
     if(r.estado === 'final'){ rqQuitarDeCola(x.ext); rqMsg(rqMotivo(r.motivo), true); return; }
     /* sin señal: queda en el celular y sube solo */
     RQ.F = null;
@@ -42411,6 +42715,7 @@ function rqVisarGuardar(){
     if(bt) bt.disabled = false;
     if(!j || !j.ok){ di(rqMotivo(j && j.motivo), true); if(j && (j.motivo === 'ya_firmado' || j.motivo === 'paso')) rqCargar(true); return; }
     RQ.firma = null;
+    if(typeof chtTras === 'function' && chtTras('visto', r.id)){ rqCargar(true); return; }
     rqCargar(true).then(function(){ ir('p-req-ver'); });
   }, function(){ if(bt) bt.disabled = false; di(rqMotivo('sin_red'), true); });
 }
@@ -42487,6 +42792,7 @@ function rqAutorizarGuardar(){
     if(bt) bt.disabled = false;
     if(!j || !j.ok){ di(rqMotivo(j && j.motivo), true); if(j && j.motivo === 'ya_resuelto') rqCargar(true); return; }
     RQ.firma = null;
+    if(typeof chtTras === 'function' && chtTras('autorizado', r.id)){ rqCargar(true); return; }
     rqCargar(true).then(function(){ ir('p-req-ver'); });
   }, function(){ if(bt) bt.disabled = false; di(rqMotivo('sin_red'), true); });
 }
@@ -42529,6 +42835,7 @@ function rqRecibirGuardar(){
     if(bt) bt.disabled = false;
     if(!j || !j.ok){ di(rqMotivo(j && j.motivo), true); return; }
     RQ.recibe = null;
+    if(typeof chtTras === 'function' && chtTras('recibido', r.id)){ rqCargar(true); return; }
     rqCargar(true).then(function(){ if(_pantAct() === 'p-req-ver') rqPintarVer(); });
   }, function(){ if(bt) bt.disabled = false; di(rqMotivo('sin_red'), true); });
 }
@@ -48979,6 +49286,8 @@ function prepKardex(){
   prepararLienzoK();
   /* 12/10/2026 · «Entregarlo ahora» desde un pedido de EPP: la línea y el motivo ya van puestos */
   try{ if(typeof eppPedPrefill==='function') eppPedPrefill(); }catch(_pp){}
+  /* 17/11/2026 · desde el pendiente del chat (CHAT-TRAMITES): el EPP ya va puesto */
+  try{ if(typeof chtPrefillKardex==='function') chtPrefillKardex(); }catch(_cp){}
 }
 /* \u2500\u2500 PARA QUE ACTIVIDAD SE ENTREGO ESE EPP \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
    Lo pidio un cliente que lleva mina, y tiene razon: sin esto el kardex
@@ -49430,6 +49739,8 @@ function guardarKardex(){
   if(!K_HAYFIRMA){ m.textContent='Falta la firma del trabajador (paso 3).';
     var cv=$('k-lienzo'); if(cv){ try{ cv.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_s){} }
     return; }
+  /* 17/11/2026 · la entrega que pide el pendiente del chat lleva su foto (CHAT-TRAMITES) */
+  if(typeof chtFaltaFoto==='function' && chtFaltaFoto()){ m.textContent='Falta la foto de la entrega (la pide el pendiente del chat).'; return; }
   if(frenoLite('kardex', usadosTotal('kardex', kardexLocal().length), 'entregas de EPP', lineas.length - 1)) return;
 
   if(_dobleToque('kardex:'+tid+'|'+lineas.map(function(l){ return l.epp+'x'+l.cant; }).join(','))) return;
@@ -49491,6 +49802,8 @@ function guardarKardex(){
   subirKardex(paraSubir);
   /* 12/10/2026 · si se vino de un pedido de EPP, queda entregado con esta entrega */
   try{ if(typeof eppPedTrasEntrega==='function') eppPedTrasEntrega(paraSubir[0] && paraSubir[0].id); }catch(_pe){}
+  /* 17/11/2026 · el recambio que se pidió en el chat (sin pedido): esta entrega lo cierra */
+  try{ if(typeof chtTrasKardex==='function') chtTrasKardex(paraSubir[0] && paraSubir[0].id); }catch(_ck){}
 
   K_LOTE=[]; K_TIPO='N';
   m.style.color='var(--ok)';
@@ -74946,7 +75259,10 @@ function subirInspeccion(reg){
   }).then(function(){
     var todas=inspecGuardadas();
     for(var i=0;i<todas.length;i++) if(todas[i].id===reg.id){ todas[i]=reg; todas[i].subido=true; }
-    guardarInspecLocal(todas); return true;
+    guardarInspecLocal(todas);
+    /* 17/11/2026 · con observaciones: su pendiente en el chat de la obra, enlazado (CHAT-TRAMITES, tanda 2) */
+    try{ if(typeof chtObsInsp==='function') chtObsInsp(reg); }catch(_co){}
+    return true;
   }).catch(function(){ return false; });
 }
 var INSP_COL_EXT=null, INSP_UPSERT_OK=null, INSP_SINCRO=false;
@@ -83148,7 +83464,9 @@ function atsBajarNube(){
   _ATS_BAJA = Date.now();
   /* lo borrado aquí sin señal: se borra allá ahora */
   var tumbas = _atsTumbas(), antes = tumbas.length ? Promise.all(tumbas.map(function(id){
-      return sbDel('sst_doc?id=eq.'+encodeURIComponent(id)).then(function(){ return id; }, function(){ return null; }); }))
+      /* 17/11/2026 · si el servidor lo rechaza (un código, no la falta de señal), deja de esconderse: sigue en la web y
+         tiene que verse aquí (Marcelo: «un ATS modelo que está en la web no me aparece en la app») */
+      return sbDel('sst_doc?id=eq.'+encodeURIComponent(id)).then(function(){ return id; }, function(err){ return (typeof err === 'number' && err >= 400 && err < 500 && err !== 401) ? id : null; }); }))
     .then(function(r){ var fuera = r.filter(Boolean); if(fuera.length) _atsTumbasSet(_atsTumbas().filter(function(x){ return fuera.indexOf(x) < 0; })); })
     : Promise.resolve();
   return antes.then(function(){
@@ -83171,8 +83489,16 @@ function atsBajarNube(){
         if(!d || !d.id) return;
         enNube[String(r.id)] = 1;
         var modelo = (r.hoja === 'ats-modelo') || !!d.modelo;
-        var i = -1; for(var j=0;j<l.length;j++) if(l[j].id===d.id || (l[j].nubeId != null && String(l[j].nubeId)===String(r.id))) i=j;
+        /* 17/11/2026 · solo con uno del mismo tipo (modelo con modelo, del día con del día): un ATS del día que en este
+           celular quedó con el id interno o la fila de un modelo tapaba a ese modelo y nunca se veía */
+        var i = -1; for(var j=0;j<l.length;j++){ if(((l[j].modo === 'modelo') === modelo) && (l[j].id===d.id || (l[j].nubeId != null && String(l[j].nubeId)===String(r.id)))) i=j; }
         var a = _atsDesdePaquete(d, r.id, modelo), nota = String(r.nota||'');
+        if(i < 0){
+          for(var j2=0;j2<l.length;j2++){
+            if(((l[j2].modo === 'modelo') !== modelo) && l[j2].nubeId != null && String(l[j2].nubeId) === String(r.id)){ l[j2].nubeId = null; l[j2].nubeNota = null; hubo++; }
+            if(((l[j2].modo === 'modelo') !== modelo) && l[j2].id === a.id) a.id = a.id + (modelo ? '-m' : '-d');
+          }
+        }
         a.nubeNota = nota;
         if(i<0){ a.localFirma = _atsFirmaLocal(a); l.push(a); hubo++; return; }
         var L = l[i];
@@ -87720,6 +88046,8 @@ function eppPedResolver(id, estado, kardex){
         eppPedContar(); _eppPedRepintar();
         tostada(estado === 'aprobado' ? 'Aprobado: lo ve en su app.' : (estado === 'rechazado' ? 'Listo: le llega el porqué.' : 'Marcado como entregado.'));
         eppPedCargar(true);
+        /* 17/11/2026 · si se vino del pendiente del chat, se vuelve a él (CHAT-TRAMITES) */
+        try{ if(typeof chtTras === 'function') chtTras('pedido', id); }catch(_ct){}
         return true;
       }
       if(m) m.textContent = ({ cerrado:'Ese pedido ya se cerró.', entrega:'Elige el día de entrega.', sin_nota:'Dile por qué no procede.', no_existe:'Ese pedido ya no está.' })[(j && j.motivo) || ''] || 'No se pudo guardar.';
@@ -87755,8 +88083,12 @@ function eppPedPrefill(){
 function eppPedTrasEntrega(kid){
   var r = K_PEDIDO; K_PEDIDO = null;
   if(!r || !kid) return;
-  sbRpc('sst_epp_pedido_resolver', { p_id:r.id, p_estado:'entregado', p_entrega:null, p_nota:null, p_nombre:_eppMiNombre() || null, p_kardex:kid })
-    .then(function(j){ if(j && j.ok){ r.estado = 'entregado'; r.kardex_ext = kid; r.entregado_en = new Date().toISOString(); eppPedContar(); } }, function(){});
+  /* 17/11/2026 · si la entrega se pidió en el chat: primero se enlaza (con su firma y su foto) y después el pedido queda entregado */
+  var antes = null; try{ if(typeof chtAntesDeEntregar === 'function') antes = chtAntesDeEntregar(kid, r.id); }catch(_ca){}
+  Promise.resolve(antes).then(function(){
+    return sbRpc('sst_epp_pedido_resolver', { p_id:r.id, p_estado:'entregado', p_entrega:null, p_nota:null, p_nombre:_eppMiNombre() || null, p_kardex:kid });
+  }).then(function(j){ if(j && j.ok){ r.estado = 'entregado'; r.kardex_ext = kid; r.entregado_en = new Date().toISOString(); eppPedContar();
+      try{ if(typeof chtTras === 'function') chtTras('entregado', r.id); }catch(_ct){} } }, function(){});
 }
 /* arriba de «Entrega de EPP»: lo que pide la gente. Las tarjetas viven en UNA sola de las dos pantallas a la vez
    (la otra se vacía): así no hay dos con el mismo id, ni dos cuadros de nota */
@@ -118440,11 +118772,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = 'cbe278dda7';
-var IDIOMA_FR_V = 'aad09756d2';
+var IDIOMA_PT_V = '2d236a40f1';
+var IDIOMA_FR_V = '32cd87320a';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = 'bc9921357e';
+var IDIOMA_EN_V = '1a79a86914';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -133950,7 +134282,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='7280597480';
+var SELLO_APP='cb6603439a';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
