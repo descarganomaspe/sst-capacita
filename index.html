@@ -30179,16 +30179,50 @@ function _chListaHTML(){
   if(CHN.quien === 'jefe') h += '<button type="button" class="ch-gestores-btn" data-acc="gestores"><span class="ch-gestores-ic">' + _chIconoHTML('👥') + '</span><span class="ch-gestores-tx">Quién más puede crear y manejar grupos</span><span class="can-item-chev" aria-hidden="true">›</span></button>';
   return h + (est && CHN.estado !== 'guardado' ? est : '');
 }
+var CH_MODOS = {
+  general:       { area:'obra',  ic:'📌', tit:'Pendiente general',         sub:'Se cumple con foto o texto', btn:'✓ Cumplir' },
+  obs_sst:       { area:'sst',   ic:'📸', tit:'Observación SST (Antes/Después)', sub:'Exige foto del DESPUÉS para levantar', btn:'📸 Subir foto Después', exigeFoto:true },
+  visado_ats:    { area:'sst',   ic:'✍️', tit:'Visado ATS / PETAR',        sub:'Revisión y firma directa en el chat', btn:'✍️ Visar / Firmar', accion:'visar' },
+  recambio_epp:  { area:'sst',   ic:'🦺', tit:'Recambio / Entrega EPP',    sub:'El trabajador firma recepción con su PIN', btn:'🔑 Entregar con PIN', exigePin:true },
+  lib_frente:    { area:'prod',  ic:'🏗️', tit:'Liberación de frente',      sub:'Doble check: V°B° Producción + V°B° SST', btn:'✓ Cerrar frente', doble:true },
+  frente_det:    { area:'prod',  ic:'🚧', tit:'Frente detenido',           sub:'Exige evidencia fotográfica de destrabe', btn:'📸 Subir destrabe', exigeFoto:true },
+  pedido_cancha: { area:'prod',  ic:'🚚', tit:'Pedido rápido de cancha',   sub:'Aprobación de Residente hacia Logística', btn:'🚚 Aprobar pedido', accion:'aprobar_cancha' },
+  prestamo_herr: { area:'alm',   ic:'🧰', tit:'Préstamo de herramienta',   sub:'Cargo con PIN del trabajador y devolución', btn:'✓ Registrar devolución', prestamo:true },
+  guia_puerta:   { area:'alm',   ic:'📄', tit:'Conformidad de guía',       sub:'Foto de guía y material en puerta', btn:'📸 Dar conformidad', exigeFoto:true },
+  stock_critico: { area:'alm',   ic:'⚠️', tit:'Alerta de stock crítico',   sub:'Solicitud de reposición a Logística', btn:'✓ Atender reposición' },
+  sctr_alta:     { area:'admin', ic:'🛡️', tit:'Luz verde SCTR / Alta',     sub:'Habilitación para inducción SST', btn:'🛡️ Validar SCTR', accion:'sctr_ok' },
+  permiso_med:   { area:'admin', ic:'🏥', tit:'Permiso / Descanso médico', sub:'Validación de Administración / RRHH', btn:'🏥 Validar permiso', accion:'permiso_ok' }
+};
+function _chModoInfo(modo){ return CH_MODOS[modo] || CH_MODOS.general; }
+function _chAreaDeCanal(c){
+  if(!c) return 'sst';
+  if(c.tipo === 'sst') return 'sst';
+  if(c.tipo === 'prod') return 'prod';
+  var nom = String(c.nombre || '').toLowerCase();
+  if(/almac|log[ií]st|kardex|compra|material|herramient/.test(nom)) return 'alm';
+  if(/admin|rrhh|personal|sctr|planilla|recursos/.test(nom)) return 'admin';
+  if(/prod|avance|campo|frente|ingenier/.test(nom)) return 'prod';
+  if(/sst|seguridad|ssoma|prevenci/.test(nom)) return 'sst';
+  return 'obra';
+}
 function _chPendListaHTML(){
   var L = CHN.pendLista;
   if(!L) return '<div class="ch-aviso suave">Cargando tus pendientes…</div>';
   if(!L.length) return '<div class="ch-vacio"><b>No tienes pendientes del chat.</b><span>Cuando alguien te asigne uno, sale aquí y en el inicio.</span></div>';
-  var h = '<div class="ch-pend-lista">';
+  var h = '<div class="ch-relevo-bar">' +
+    '<span>Tienes <b>' + L.length + '</b> ' + (L.length === 1 ? 'pendiente abierto' : 'pendientes abiertos') + '</span>' +
+    '<button type="button" class="ch-btn-relevo-top" onclick="_chFlujoClic(event,this)" data-flujo="relevo-todos">🔄 Pasar mi relevo</button></div>' +
+    '<div class="ch-pend-lista">';
   L.forEach(function(p){
-    var v = _chVence(p.vence);
-    h += '<div class="ch-pend' + (v.mal ? ' mal' : '') + '"><div class="ch-pend-cab"><span>' + _chE(p.canal_nombre) + '</span><span class="ch-pend-v">' + _chE(v.tx) + '</span></div>' +
-      '<div class="ch-pend-tx">' + _chE(p.texto || '(foto o archivo)') + '</div><div class="ch-pend-de">Te lo asignó: ' + _chE(p.de) + '</div>' +
-      '<div class="ch-pend-bts"><button type="button" class="btn" data-acc="cumplir" data-p="' + _chE(p.id) + '" data-m="' + _chE(p.msj) + '" data-c="' + _chE(p.canal) + '">✓ Cumplir</button>' +
+    var v = _chVence(p.vence), md = _chModoInfo(p.modo), mt = p.meta || {};
+    var rel = mt.relevo_nombre ? '<div class="ch-pend-rel">🔄 Relevo de: <b>' + _chE(mt.relevo_nombre) + '</b>' + (mt.relevo_nota ? ' · «' + _chE(mt.relevo_nota) + '»' : '') + '</div>' : '';
+    var det = (mt.item_epp ? '<div class="ch-pend-rel">📦 Ítem: <b>' + _chE(mt.item_epp) + '</b></div>' : '') +
+              (mt.estado_sub === 'prestado' ? '<div class="ch-pend-rel">🧰 En préstamo a: <b>' + _chE(mt.cargo_nombre || '') + '</b> (Firmado con PIN)</div>' : '');
+    h += '<div class="ch-pend' + (v.mal ? ' mal' : '') + '"><div class="ch-pend-cab"><span>' + _chE(p.canal_nombre) + ' · <b>' + md.ic + ' ' + _chE(md.tit) + '</b></span><span class="ch-pend-v">' + _chE(v.tx) + '</span></div>' +
+      '<div class="ch-pend-tx">' + _chE(p.texto || '(foto o archivo)') + '</div>' + det + rel +
+      '<div class="ch-pend-de">Te lo asignó: ' + _chE(p.de) + '</div>' +
+      '<div class="ch-pend-bts"><button type="button" class="btn" data-acc="cumplir" data-p="' + _chE(p.id) + '" data-m="' + _chE(p.msj) + '" data-c="' + _chE(p.canal) + '">' + _chE(md.btn) + '</button>' +
+      '<button type="button" class="btn sec" onclick="_chFlujoClic(event,this)" data-flujo="relevo-uno" data-p="' + _chE(p.id) + '" data-c="' + _chE(p.canal) + '">🔄 Relevo</button>' +
       '<button type="button" class="btn sec" data-acc="verchat" data-m="' + _chE(p.msj) + '" data-c="' + _chE(p.canal) + '">Ver en el chat</button></div></div>';
   });
   return h + '</div>';
@@ -30350,18 +30384,63 @@ function _chAdjHTML(a){
     '<span class="wa-doc-ic" aria-hidden="true">' + ic + '</span><span class="wa-doc-tx"><b>' + _chE(a.nombre || 'Archivo') + '</b>' +
     '<small>' + _chE(_chTam(a.tam)) + (a.carpeta ? ' · Guardado en «' + _chE(a.carpeta) + '»' : '') + '</small></span></button>';
 }
+function _chAntesDespuesHTML(mt){
+  if(!mt || (!mt.antes_ruta && !mt.despues_ruta)) return '';
+  if(!mt.antes_ruta || !mt.despues_ruta) return '';
+  var uA = CHN.urls[mt.antes_ruta], uD = CHN.urls[mt.despues_ruta];
+  return '<div class="wa-ad-grid">' +
+    '<div class="wa-ad-col"><span class="wa-ad-lbl antes">ANTES</span>' +
+      '<img class="wa-msg-img wa-ad-img" data-ruta="' + _chE(mt.antes_ruta) + '" alt="Antes" src="' + (uA || CH_IMG_VACIA) + '"' + (uA ? ' data-ok="1"' : '') + '></div>' +
+    '<div class="wa-ad-col"><span class="wa-ad-lbl despues">DESPUÉS</span>' +
+      '<img class="wa-msg-img wa-ad-img" data-ruta="' + _chE(mt.despues_ruta) + '" alt="Después" src="' + (uD || CH_IMG_VACIA) + '"' + (uD ? ' data-ok="1"' : '') + '></div>' +
+  '</div>';
+}
 function _chPenHTML(m){
   var p = m.pendiente; if(!p) return '';
+  var md = _chModoInfo(p.modo), mt = p.meta || {};
+  var itemTx = mt.item_epp ? '<div class="wa-pen-det">Ítem: <b>' + _chE(mt.item_epp) + '</b></div>' : '';
+  var relTx = mt.relevo_nombre ? '<div class="wa-pen-det">🔄 Relevo de: <b>' + _chE(mt.relevo_nombre) + '</b>' + (mt.relevo_nota ? ' (' + _chE(mt.relevo_nota) + ')' : '') + '</div>' : '';
+  var pinTx = mt.firmado_nombre ? '<div class="wa-pen-det">🔑 Firmado con PIN: <b>' + _chE(mt.firmado_nombre) + '</b>' + (mt.firmado_dni ? ' · Doc. ' + _chE(mt.firmado_dni) : '') + '</div>' : '';
   if(p.estado === 'cumplido'){
-    return '<div class="wa-pen-box cumplido"><div class="wa-pen-tag cumplido"><span>✅ PENDIENTE CUMPLIDO</span>' +
+    return '<div class="wa-pen-box cumplido"><div class="wa-pen-tag cumplido"><span>✅ ' + _chE(md.tit.toUpperCase()) + ' · CUMPLIDO</span>' +
       (p.cumplido_en ? '<span>' + _chE(_chDiaTx(p.cumplido_en) + ' ' + _chHora(p.cumplido_en)) + '</span>' : '') + '</div>' +
-      '<div class="wa-pen-det">Era para: <b>' + _chE(p.para_mi ? 'ti' : p.asignado_nombre) + '</b></div>' +
+      '<div class="wa-pen-det">Responsable: <b>' + _chE(p.para_mi ? 'ti' : p.asignado_nombre) + '</b>' +
+      (p.cumplido_por_nombre ? ' · Cerrado por: <b>' + _chE(p.cumplido_por_nombre) + '</b>' : '') + '</div>' +
+      itemTx + pinTx + relTx + _chAntesDespuesHTML(mt) +
       (p.sustento_msj ? '<button type="button" class="wa-pen-ver" data-acc="ver" data-id="' + _chE(p.sustento_msj) + '">Ver el sustento ↓</button>' : '') + '</div>';
   }
-  var v = _chVence(p.vence), puede = p.para_mi || CHN.quien === 'jefe';
-  return '<div class="wa-pen-box abierto' + (v.mal ? ' vencido' : '') + '"><div class="wa-pen-tag abierto"><span>📌 PENDIENTE</span><span>' + _chE(v.tx) + '</span></div>' +
+  var v = _chVence(p.vence), puede = p.para_mi || CHN.quien === 'jefe' || CHN.quien === 'miembro';
+  var extraHTML = '';
+  if(p.modo === 'lib_frente'){
+    var okP = mt.vb_prod_por, okS = mt.vb_sst_por;
+    extraHTML += '<div class="wa-vb-box">' +
+      '<div class="wa-vb-row">' + (okP ? '✅ <b>V°B° Prod.:</b> ' + _chE(okP) : '⏳ <b>V°B° Producción:</b> Falta firma') +
+      (!okP && (CHN.quien === 'jefe' || CHN.quien === 'miembro') ? ' <button type="button" class="wa-vb-btn" onclick="_chFlujoClic(event,this)" data-flujo="accion" data-act="vb_prod" data-p="' + _chE(p.id) + '" data-c="' + _chE(m.canal) + '">✍️ Firmar Prod.</button>' : '') + '</div>' +
+      '<div class="wa-vb-row">' + (okS ? '✅ <b>V°B° SST:</b> ' + _chE(okS) : '⏳ <b>V°B° SST:</b> Falta firma') +
+      (!okS && (CHN.quien === 'jefe' || CHN.quien === 'miembro') ? ' <button type="button" class="wa-vb-btn" onclick="_chFlujoClic(event,this)" data-flujo="accion" data-act="vb_sst" data-p="' + _chE(p.id) + '" data-c="' + _chE(m.canal) + '">✍️ Firmar SST</button>' : '') + '</div></div>';
+  }
+  if(p.modo === 'prestamo_herr'){
+    if(mt.estado_sub === 'prestado'){
+      extraHTML += '<div class="wa-vb-box">🧰 <b>En préstamo a:</b> ' + _chE(mt.cargo_nombre || '') + ' (Doc. ' + _chE(mt.cargo_dni || '') + ' · Cargo con PIN)</div>';
+    } else if(puede){
+      extraHTML += '<button type="button" class="wa-pen-btn-sec" onclick="_chFlujoClic(event,this)" data-flujo="cargo-pin" data-p="' + _chE(p.id) + '" data-m="' + _chE(m.id) + '" data-c="' + _chE(m.canal) + '">🔑 1. Entregar herramienta con PIN del trabajador</button>';
+    }
+  }
+  if(md.accion && (CHN.quien === 'jefe' || CHN.quien === 'miembro')){
+    extraHTML += '<button type="button" class="wa-pen-btn-visar" onclick="_chFlujoClic(event,this)" data-flujo="accion" data-act="' + _chE(md.accion) + '" data-p="' + _chE(p.id) + '" data-c="' + _chE(m.canal) + '">' + _chE(md.btn) + ' en 1 toque</button>';
+  }
+  var bts = '';
+  if(puede){
+    bts = '<div class="wa-pen-acciones">' +
+      '<button type="button" class="wa-pen-btn-cumplir" data-acc="cumplir" data-p="' + _chE(p.id) + '" data-m="' + _chE(m.id) + '">' +
+        _chE(p.modo === 'prestamo_herr' && mt.estado_sub === 'prestado' ? '✓ 2. Registrar devolución' : (md.exigeFoto ? '📸 Subir foto Después y cumplir' : (md.exigePin ? '🔑 Entregar con PIN del trabajador' : '✓ Cumplir con foto o texto'))) +
+      '</button>' +
+      '<button type="button" class="wa-pen-btn-rel" onclick="_chFlujoClic(event,this)" data-flujo="relevo-uno" data-p="' + _chE(p.id) + '" data-c="' + _chE(m.canal) + '" title="Pasar relevo">🔄 Relevo</button>' +
+    '</div>';
+  }
+  return '<div class="wa-pen-box abierto' + (v.mal ? ' vencido' : '') + '"><div class="wa-pen-tag abierto"><span>' + md.ic + ' ' + _chE(md.tit.toUpperCase()) + '</span><span>' + _chE(v.tx) + '</span></div>' +
     '<div class="wa-pen-det">Para: <b>' + _chE(p.para_mi ? 'ti' : p.asignado_nombre) + '</b></div>' +
-    (puede ? '<button type="button" class="wa-pen-btn-cumplir" data-acc="cumplir" data-p="' + _chE(p.id) + '" data-m="' + _chE(m.id) + '">✓ Cumplir con foto o texto</button>' : '') + '</div>';
+    itemTx + relTx + extraHTML + bts + '</div>';
 }
 function _chMsjHTML(m){
   var cl = 'wa-msg ' + (m.mio ? 'mio' : 'otro') + (m.tipo === 'sustento' ? ' sust' : '') + (m.borrado ? ' borrado' : '') + (m.acuerdo ? ' acu' : '') + (m.pendiente && m.pendiente.estado === 'abierto' ? ' pen' : '');
@@ -30634,9 +30713,73 @@ function _chPersonas(canal, forzar){
   });
 }
 var CH_QUIEN = { jefe:'Jefe de obra', miembro:'Supervisor', trab:'Trabajador' };
+var _CH_CSS_FLUJOS = false;
+function _chInyectarCssFlujos(){
+  if(_CH_CSS_FLUJOS || document.getElementById('ch-flujos-css')) return;
+  _CH_CSS_FLUJOS = true;
+  var st = document.createElement('style'); st.id = 'ch-flujos-css';
+  st.textContent =
+    '.ch-area-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;margin-bottom:6px;font-family:var(--letra)!important}' +
+    '.ch-area-tab{border:1px solid rgba(11,42,58,.14);background:#F8FAFC;color:#334155;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;font-family:var(--letra)!important}' +
+    '.ch-area-tab.on{background:linear-gradient(135deg,#FFC933,#F5B700);color:#08222F;border-color:#E0A800;box-shadow:0 2px 6px rgba(245,183,0,.28)}' +
+    '.ch-modo-grid{display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:10px;font-family:var(--letra)!important}' +
+    '.ch-modo-card{display:flex;align-items:center;gap:10px;text-align:left;padding:9px 12px;border-radius:12px;border:1.5px solid rgba(11,42,58,.12);background:#fff;cursor:pointer;font-family:var(--letra)!important}' +
+    '.ch-modo-card.on{border-color:#0B2A3A;background:#F0F9FF;box-shadow:0 2px 8px rgba(11,42,58,.08)}' +
+    '.ch-modo-ic{font-size:20px;line-height:1;flex-shrink:0}' +
+    '.ch-modo-tx{display:flex;flex-direction:column;gap:1px;min-width:0}' +
+    '.ch-modo-tx b{font-size:13px;color:#08222F;font-family:var(--letra)!important}' +
+    '.ch-modo-tx small{font-size:11.5px;color:#64748B;font-family:var(--letra)!important}' +
+    '.wa-ad-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;font-family:var(--letra)!important}' +
+    '.wa-ad-col{display:flex;flex-direction:column;gap:4px;background:rgba(255,255,255,.75);padding:6px;border-radius:10px;border:1px solid rgba(11,42,58,.1)}' +
+    '.wa-ad-lbl{font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:2px 6px;border-radius:6px;align-self:flex-start}' +
+    '.wa-ad-lbl.antes{background:#FEE2E2;color:#991B1B}' +
+    '.wa-ad-lbl.despues{background:#DCFCE7;color:#166534}' +
+    '.wa-ad-img{width:100%;height:110px;object-fit:cover;border-radius:8px;cursor:pointer}' +
+    '.wa-vb-box{background:rgba(255,255,255,.85);border:1px solid rgba(11,42,58,.12);border-radius:10px;padding:7px 9px;margin:6px 0;font-size:12px;display:flex;flex-direction:column;gap:5px;font-family:var(--letra)!important}' +
+    '.wa-vb-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}' +
+    '.wa-vb-btn,.wa-pen-btn-visar,.wa-pen-btn-sec{border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--letra)!important}' +
+    '.wa-vb-btn,.wa-pen-btn-visar{background:linear-gradient(135deg,#FFC933,#F5B700);color:#08222F;width:100%;margin-top:4px}' +
+    '.wa-pen-row .wa-vb-btn{width:auto;margin-top:0}' +
+    '.wa-pen-btn-sec{background:#E0F2FE;color:#0369A1;width:100%;margin-top:5px}' +
+    '.wa-pen-acciones{display:flex;gap:6px;align-items:center;margin-top:6px}' +
+    '.wa-pen-acciones .wa-pen-btn-cumplir{flex:1;margin-top:0}' +
+    '.wa-pen-btn-rel{border:1px solid rgba(11,42,58,.18);background:#fff;color:#08222F;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--letra)!important}' +
+    '.ch-relevo-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin-bottom:10px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;font-size:13px;font-family:var(--letra)!important}' +
+    '.ch-btn-relevo-top{border:none;background:#0B2A3A;color:#fff;padding:7px 12px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--letra)!important}' +
+    '.ch-pend-rel{font-size:12px;color:#0369A1;margin:3px 0;font-family:var(--letra)!important}' +
+    '.ch-box-extra[hidden],.ch-cum-prev[hidden],.wa-ad-grid[hidden],.wa-vb-box[hidden]{display:none!important}';
+  document.head.appendChild(st);
+}
+
+var CH_MODOS_POR_AREA = {
+  sst:   ['obs_sst', 'visado_ats', 'recambio_epp', 'general'],
+  prod:  ['lib_frente', 'frente_det', 'pedido_cancha', 'general'],
+  alm:   ['prestamo_herr', 'recambio_epp', 'guia_puerta', 'stock_critico'],
+  admin: ['sctr_alta', 'permiso_med', 'general'],
+  obra:  ['obs_sst', 'recambio_epp', 'prestamo_herr', 'general']
+};
+
 function chatConvertirEnPendienteModal(canalId, msjId){
+  _chInyectarCssFlujos();
   var m = _chMsj(msjId); if(!m) return;
-  var p = _chHoja('ch-pen', '<div class="ch-hoja-tit">📌 Volverlo pendiente</div><div class="ch-hoja-cita">' + _chE((m.texto || (m.adjunto ? '📎 ' + m.adjunto.nombre : '')).slice(0, 160)) + '</div>' +
+  var can = _chCanal(canalId);
+  var areaActiva = _chAreaDeCanal(can);
+  var modoElegido = (m.pendiente && m.pendiente.modo) ? m.pendiente.modo : (CH_MODOS_POR_AREA[areaActiva][0] || 'general');
+  var p = _chHoja('ch-pen',
+    '<div class="ch-hoja-tit">📌 Asignar desde el chat</div>' +
+    '<div class="ch-hoja-cita">' + _chE((m.texto || (m.adjunto ? '📎 ' + m.adjunto.nombre : '')).slice(0, 160)) + '</div>' +
+    '<div class="ch-lab">Área (filtrada por este grupo)</div>' +
+    '<div class="ch-area-tabs" id="ch-pen-areas">' +
+      '<button type="button" class="ch-area-tab" data-area="sst">🦺 SST</button>' +
+      '<button type="button" class="ch-area-tab" data-area="prod">🏗️ Producción</button>' +
+      '<button type="button" class="ch-area-tab" data-area="alm">📦 Almacén / Log.</button>' +
+      '<button type="button" class="ch-area-tab" data-area="admin">📋 Admin.</button>' +
+    '</div>' +
+    '<div class="ch-modo-grid" id="ch-pen-modos" role="radiogroup" aria-label="Tipo de acción"></div>' +
+    '<div id="ch-pen-extra-epp" class="ch-box-extra" hidden>' +
+      '<label class="ch-lab" for="ch-pen-item">¿Qué EPP, herramienta o material?</label>' +
+      '<input type="text" id="ch-pen-item" class="ch-in" maxlength="120" placeholder="Ej.: Casco dieléctrico, Amoladora 4.5, Guantes Badana">' +
+    '</div>' +
     '<label class="ch-lab" for="ch-pen-bus">¿Para quién?</label><input type="search" id="ch-pen-bus" class="ch-in" placeholder="Busca por nombre" autocomplete="off">' +
     '<div class="ch-gente" id="ch-pen-gente" role="radiogroup" aria-label="Para quién"><p class="ch-msg">Cargando a la gente del grupo…</p></div>' +
     '<div class="ch-lab">¿Para cuándo?</div><div class="ch-chips" id="ch-pen-cuando" role="radiogroup" aria-label="Plazo">' +
@@ -30647,7 +30790,27 @@ function chatConvertirEnPendienteModal(canalId, msjId){
     '<label class="ch-lab" for="ch-pen-fecha">u otra fecha</label><input type="date" id="ch-pen-fecha" class="ch-in" min="' + _chMasDias(0) + '">' +
     '<p class="ch-msg" id="ch-pen-msg" role="status"></p>' +
     '<div class="ch-ops fila"><button type="button" class="btn sec" data-op="x">Cancelar</button><button type="button" class="btn" data-op="ok">Asignar</button></div>');
+
   var elegido = m.pendiente ? m.pendiente.asignado : '', cuando = _chMasDias(0), gente = [];
+  function pintarModos(){
+    var tabArea = (areaActiva === 'obra') ? 'sst' : areaActiva;
+    Array.prototype.forEach.call(p.querySelectorAll('.ch-area-tab'), function(t){
+      t.classList.toggle('on', t.getAttribute('data-area') === tabArea);
+    });
+    var lista = CH_MODOS_POR_AREA[tabArea] || CH_MODOS_POR_AREA.sst;
+    if(lista.indexOf(modoElegido) < 0) modoElegido = lista[0];
+    var g = document.getElementById('ch-pen-modos');
+    if(g){
+      g.innerHTML = lista.map(function(k){
+        var md = _chModoInfo(k), on = (k === modoElegido);
+        return '<button type="button" class="ch-modo-card' + (on ? ' on' : '') + '" data-modo="' + _chE(k) + '" role="radio" aria-checked="' + on + '">' +
+          '<span class="ch-modo-ic">' + md.ic + '</span>' +
+          '<span class="ch-modo-tx"><b>' + _chE(md.tit) + '</b><small>' + _chE(md.sub) + '</small></span></button>';
+      }).join('');
+    }
+    var ex = document.getElementById('ch-pen-extra-epp');
+    if(ex) ex.hidden = (modoElegido !== 'recambio_epp' && modoElegido !== 'prestamo_herr' && modoElegido !== 'pedido_cancha' && modoElegido !== 'stock_critico');
+  }
   function pintar(){
     var q = String((document.getElementById('ch-pen-bus') || {}).value || '').toLowerCase().trim(), box = document.getElementById('ch-pen-gente'); if(!box) return;
     var L = gente.filter(function(x){ return !q || String(x.nombre || '').toLowerCase().indexOf(q) > -1; });
@@ -30657,9 +30820,12 @@ function chatConvertirEnPendienteModal(canalId, msjId){
         '<span class="ch-pers-tx"><b>' + _chE(x.nombre) + (x.yo ? ' (tú)' : '') + '</b><small>' + _chE(CH_QUIEN[x.quien] || '') + '</small></span></button>';
     }).join('') : '<p class="ch-msg">Nadie con ese nombre en este grupo.</p>';
   }
+  pintarModos();
   _chPersonas(canalId).then(function(c){ gente = c.lista; pintar(); }, function(err){ var box = document.getElementById('ch-pen-gente'); if(box) box.innerHTML = '<p class="ch-msg mal">' + _chE(_chMotivo(err)) + '</p>'; });
   var bus = document.getElementById('ch-pen-bus'); if(bus) bus.addEventListener('input', pintar);
   p.addEventListener('click', function(ev){
+    var ta = ev.target.closest('[data-area]'); if(ta){ areaActiva = ta.getAttribute('data-area'); pintarModos(); return; }
+    var mc = ev.target.closest('[data-modo]'); if(mc){ modoElegido = mc.getAttribute('data-modo'); pintarModos(); return; }
     var per = ev.target.closest('[data-uid]'); if(per){ elegido = per.getAttribute('data-uid'); pintar(); return; }
     var ch = ev.target.closest('.ch-chip');
     if(ch){ cuando = ch.getAttribute('data-v'); Array.prototype.forEach.call(p.querySelectorAll('.ch-chip'), function(x){ x.classList.toggle('on', x === ch); x.setAttribute('aria-checked', String(x === ch)); }); var fe = document.getElementById('ch-pen-fecha'); if(fe) fe.value = ''; return; }
@@ -30668,36 +30834,94 @@ function chatConvertirEnPendienteModal(canalId, msjId){
     var msg = document.getElementById('ch-pen-msg'), fe2 = document.getElementById('ch-pen-fecha');
     var vence = (fe2 && fe2.value) ? fe2.value : cuando;
     if(!elegido){ if(msg){ msg.className = 'ch-msg mal'; msg.textContent = 'Elige a quién se lo asignas.'; } return; }
+    var itemVal = String((document.getElementById('ch-pen-item') || {}).value || '').trim();
+    var metaObj = {}; if(itemVal) metaObj.item_epp = itemVal;
     b.disabled = true; if(msg){ msg.className = 'ch-msg'; msg.textContent = 'Asignando…'; }
-    _chRpc('sst_chat_pend_crear', { p_msj:m.id, p_asignado:elegido, p_vence:vence || null }).then(function(j){
+    _chRpc('sst_chat_pend_crear', { p_msj:m.id, p_asignado:elegido, p_vence:vence || null, p_modo:modoElegido, p_meta:metaObj }).then(function(j){
       if(j.msj){ _chMezclar(canalId, [j.msj]); _chMsjsGuardar(canalId); }
       _chatModalCerrar(); if(CHAT_ACTIVO_ID === canalId) _chPintarFeed(false);
       var quien = ''; gente.forEach(function(x){ if(x.uid === elegido) quien = x.yo ? 'ti' : x.nombre; });
-      if(typeof tostada === 'function') tostada('Pendiente para ' + (quien || 'esa persona'));
+      if(typeof tostada === 'function') tostada(_chModoInfo(modoElegido).tit + ' para ' + (quien || 'esa persona'));
       chatCargarCanales().then(function(){ pintarBurbujaPendientes(); });
     }, function(err){ b.disabled = false; if(msg){ msg.className = 'ch-msg mal'; msg.textContent = _chMotivo(err); } });
   });
 }
 
-/* ── cumplir un pendiente: texto y/o foto como sustento ── */
+function _chRegistrarKardexRapido(docTrab, itemNombre, notaExtra){
+  try{
+    if(!docTrab || !itemNombre || typeof trabsLocal !== 'function' || typeof kardexLocal !== 'function' || typeof kardexSet !== 'function') return false;
+    var dNorm = String(docTrab).replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+    var trabs = trabsLocal() || [];
+    var t = trabs.filter(function(x){ return String(x.dni || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase() === dNorm; })[0];
+    if(!t) return false;
+    var lista = kardexLocal() || [];
+    var fHoy = (typeof hoyISO === 'function') ? hoyISO() : new Date().toISOString().slice(0, 10);
+    lista.push({
+      id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      trabId: t.id, trabNombre: t.nombre || '', dni: t.dni || dNorm, puesto: t.puesto || '',
+      epp: itemNombre, cant: 1, fecha: fHoy,
+      actividad: notaExtra || 'Recambio por Chat de Obra (Firmado con PIN)',
+      lugar: t.proyecto || '', sync: 0
+    });
+    kardexSet(lista);
+    if(typeof asegurarKardex === 'function') asegurarKardex(function(){});
+    return true;
+  }catch(_e){ return false; }
+}
+
 function _chatAbrirCumplirModal(canalId, msjId, pendId){
+  _chInyectarCssFlujos();
   var m = null; if(canalId === CHAT_ACTIVO_ID) m = _chMsj(msjId);
-  if(!pendId && m && m.pendiente) pendId = m.pendiente.id;
+  var pObj = (m && m.pendiente) ? m.pendiente : null;
+  if(!pObj && CHN.pendLista){
+    pObj = CHN.pendLista.filter(function(x){ return x.id === pendId; })[0] || null;
+  }
+  if(!pendId && pObj) pendId = pObj.id;
   if(!pendId) return;
+  var modo = (pObj && pObj.modo) ? pObj.modo : 'general';
+  var mt = (pObj && pObj.meta) ? pObj.meta : {};
+  var md = _chModoInfo(modo);
+  var exigeFoto = !!(md.exigeFoto || mt.exige_foto);
+  var exigePin  = !!((modo === 'recambio_epp' || mt.exige_pin) && mt.estado_sub !== 'prestado');
   var foto = null, prev = '';
-  var p = _chHoja('ch-cum', '<div class="ch-hoja-tit">✅ Cumplir el pendiente</div>' +
+  var uAntes = (mt.antes_ruta && CHN.urls[mt.antes_ruta]) ? CHN.urls[mt.antes_ruta] : '';
+
+  var htmlPin = exigePin ? (
+    '<div class="ch-box-extra" style="background:#F0F9FF;border:1px solid #BAE6FD;padding:10px;border-radius:12px;margin:8px 0">' +
+      '<div class="ch-lab" style="margin-top:0;color:#0369A1">🔑 Firma digital del trabajador (PIN de 6 dígitos)</div>' +
+      '<input type="text" id="cum-item-epp" class="ch-in" style="margin-bottom:6px" placeholder="EPP o equipo entregado (ej. Casco, Guantes)" value="' + _chE(mt.item_epp || '') + '">' +
+      '<div class="ch-ops fila" style="gap:6px">' +
+        '<input type="text" id="cum-doc-pin" class="ch-in" inputmode="numeric" maxlength="15" placeholder="DNI / Doc. del trabajador">' +
+        '<input type="password" id="cum-pin-trab" class="ch-in" inputmode="numeric" maxlength="6" placeholder="PIN (6 dígitos)">' +
+      '</div>' +
+      (modo === 'recambio_epp' ? '<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-top:6px;cursor:pointer"><input type="checkbox" id="cum-add-kardex" checked> Guardar entrega también en su Kardex de EPP</label>' : '') +
+    '</div>'
+  ) : '';
+
+  var htmlAntes = uAntes ? (
+    '<div style="display:flex;align-items:center;gap:8px;background:#FEF2F2;border:1px solid #FECACA;padding:7px 10px;border-radius:10px;margin-bottom:8px">' +
+      '<img src="' + uAntes + '" alt="Foto Antes" style="width:48px;height:48px;object-fit:cover;border-radius:6px">' +
+      '<span style="font-size:12px;color:#991B1B"><b>Foto ANTES registrada.</b><br>Toma la foto del DESPUÉS para armar el comparativo.</span>' +
+    '</div>'
+  ) : '';
+
+  var p = _chHoja('ch-cum', '<div class="ch-hoja-tit">' + md.ic + ' ' + _chE(md.tit) + '</div>' +
     (m ? '<div class="ch-hoja-cita pen">' + _chE((m.texto || (m.adjunto ? '📎 ' + m.adjunto.nombre : '')).slice(0, 200)) + '</div>' : '') +
-    '<label class="ch-lab" for="cum-txt">¿Cómo lo cumpliste?</label><textarea id="cum-txt" class="ch-in" rows="3" maxlength="4000" placeholder="Ej.: se señalizó con conos y vigía en la Puerta 2"></textarea>' +
-    '<div class="ch-lab">Foto de sustento</div><div class="ch-ops fila"><button type="button" class="btn sec" data-op="cam">📸 Tomar foto</button><button type="button" class="btn sec" data-op="gal">🖼️ Galería</button></div>' +
+    htmlAntes + htmlPin +
+    '<label class="ch-lab" for="cum-txt">Detalle o comentario de cierre</label><textarea id="cum-txt" class="ch-in" rows="2" maxlength="4000" placeholder="Ej.: se subsanó la observación / se entregó recambio conforme"></textarea>' +
+    '<div class="ch-lab">' + (exigeFoto ? '📸 Foto del DESPUÉS (Obligatoria)' : 'Foto de sustento') + '</div>' +
+    '<div class="ch-ops fila"><button type="button" class="btn sec" data-op="cam">📸 Tomar foto</button><button type="button" class="btn sec" data-op="gal">🖼️ Galería</button></div>' +
     '<input type="file" id="cum-foto-cam" accept="image/*" capture="environment" hidden><input type="file" id="cum-foto-gal" accept="image/*" hidden>' +
-    '<div id="cum-foto-preview" class="ch-cum-prev" hidden></div><p class="ch-msg" id="cum-msg" role="status">Basta con el texto, con la foto o con los dos.</p>' +
-    '<div class="ch-ops fila"><button type="button" class="btn sec" data-op="x">Cancelar</button><button type="button" class="btn" data-op="ok">✓ Marcar cumplido</button></div>');
+    '<div id="cum-foto-preview" class="ch-cum-prev" hidden></div>' +
+    '<p class="ch-msg" id="cum-msg" role="status">' + (exigeFoto ? 'Esta acción exige foto del DESPUÉS para cerrar.' : (exigePin ? 'El trabajador firma poniendo su DNI y su PIN de 6 números.' : 'Basta con el texto, con la foto o con los dos.')) + '</p>' +
+    '<div class="ch-ops fila"><button type="button" class="btn sec" data-op="x">Cancelar</button><button type="button" class="btn" data-op="ok">✓ Confirmar y cerrar</button></div>');
+
   function tomar(inp){
     var f = inp.files && inp.files[0]; if(!f) return; try{ if('value' in inp) inp.value = ''; }catch(_v){}
     if(!/^image\//.test(_chTipo(f))){ var ms = document.getElementById('cum-msg'); if(ms){ ms.className = 'ch-msg mal'; ms.textContent = 'Elige una foto.'; } return; }
     foto = f; try{ if(prev) URL.revokeObjectURL(prev); prev = URL.createObjectURL(f); }catch(_u){ prev = ''; }
     var pv = document.getElementById('cum-foto-preview');
-    if(pv){ pv.hidden = false; pv.innerHTML = (prev ? '<img src="' + prev + '" alt="La foto de sustento">' : '') + '<span>✓ Foto lista</span><button type="button" data-op="sinfoto">Quitar</button>'; }
+    if(pv){ pv.hidden = false; pv.innerHTML = (prev ? '<img src="' + prev + '" alt="La foto de sustento">' : '') + '<span>✓ Foto Después lista</span><button type="button" data-op="sinfoto">Quitar</button>'; }
   }
   ['cam', 'gal'].forEach(function(k){ var i = document.getElementById('cum-foto-' + k); if(i) i.addEventListener('change', function(){ tomar(i); }); });
   p.addEventListener('click', function(ev){
@@ -30708,18 +30932,147 @@ function _chatAbrirCumplirModal(canalId, msjId, pendId){
     if(op === 'cam' || op === 'gal'){ var i = document.getElementById('cum-foto-' + op); if(i) i.click(); return; }
     if(op === 'sinfoto'){ foto = null; var pv = document.getElementById('cum-foto-preview'); if(pv){ pv.hidden = true; pv.innerHTML = ''; } return; }
     var tx = String((document.getElementById('cum-txt') || {}).value || '').trim(), msg = document.getElementById('cum-msg');
-    if(!tx && !foto){ if(msg){ msg.className = 'ch-msg mal'; msg.textContent = CH_MOTIVO.falta_sustento; } return; }
-    b.disabled = true; if(msg){ msg.className = 'ch-msg'; msg.textContent = foto ? 'Subiendo la foto…' : 'Guardando…'; }
+    var docPin = String((document.getElementById('cum-doc-pin') || {}).value || '').trim();
+    var pinVal = String((document.getElementById('cum-pin-trab') || {}).value || '').trim();
+    var itemEpp = String((document.getElementById('cum-item-epp') || {}).value || '').trim();
+    if(exigeFoto && !foto){
+      if(msg){ msg.className = 'ch-msg mal'; msg.textContent = 'Toma o sube la foto del DESPUÉS para levantar esta observación.'; }
+      return;
+    }
+    if(exigePin){
+      if(docPin.length < 6){ if(msg){ msg.className = 'ch-msg mal'; msg.textContent = 'Escribe el DNI / documento del trabajador que recibe.'; } return; }
+      if(!/^\d{6}$/.test(pinVal)){ if(msg){ msg.className = 'ch-msg mal'; msg.textContent = 'El PIN del trabajador son 6 números.'; } return; }
+    }
+    if(!tx && !foto && !exigePin){ if(msg){ msg.className = 'ch-msg mal'; msg.textContent = CH_MOTIVO.falta_sustento; } return; }
+    var metaEnv = {}; if(itemEpp) metaEnv.item_epp = itemEpp;
+    b.disabled = true; if(msg){ msg.className = 'ch-msg'; msg.textContent = foto ? 'Subiendo la foto…' : 'Validando y guardando…'; }
     (foto ? _chSubir(canalId, foto, 'sustento.jpg') : Promise.resolve(null)).then(function(adj){
-      return _chRpc('sst_chat_pend_cumplir', { p_pend:pendId, p_texto:tx || null, p_adjunto:adj, p_cid:_chCid() });
+      return _chRpc('sst_chat_pend_cumplir', {
+        p_pend:pendId, p_texto:tx || null, p_adjunto:adj, p_cid:_chCid(),
+        p_meta:metaEnv, p_doc_pin:exigePin ? docPin : null, p_pin:exigePin ? pinVal : null
+      });
     }).then(function(j){
       var L = []; if(j.msj) L.push(j.msj); if(j.sustento) L.push(j.sustento);
       if(L.length){ _chMezclar(canalId, L); _chMsjsGuardar(canalId); }
+      var addK = document.getElementById('cum-add-kardex');
+      var kOk = (exigePin && addK && addK.checked) ? _chRegistrarKardexRapido(docPin, itemEpp || 'EPP (Recambio)', tx) : false;
       _chatModalCerrar(); try{ if(prev) URL.revokeObjectURL(prev); }catch(_r){}
       if(CHAT_ACTIVO_ID === canalId && _chActiva('p-chat-obra')) _chPintarFeed(true);
-      if(typeof tostada === 'function') tostada('Pendiente cumplido, con su sustento');
+      if(typeof tostada === 'function') tostada(kOk ? 'Cumplido con PIN y sumado a su Kardex' : 'Pendiente cumplido, con su sustento');
       CHN.pendLista = (CHN.pendLista || []).filter(function(x){ return x.id !== pendId; });
       chatCargarCanales().then(function(){ pintarBurbujaPendientes(); if(_chActiva('p-canales')) _chRepintarLista(); });
+    }, function(err){
+      b.disabled = false;
+      var mErr = (err && err.motivo === 'pin_incorrecto') ? 'Ese PIN de 6 dígitos no coincide con el documento del trabajador.'
+               : (err && err.motivo === 'sin_cuenta_trab') ? 'Ese trabajador aún no activó su PIN en la app.'
+               : (err && err.motivo === 'falta_foto_despues') ? 'Falta la foto del DESPUÉS.'
+               : _chMotivo(err);
+      if(msg){ msg.className = 'ch-msg mal'; msg.textContent = mErr; }
+    });
+  });
+}
+
+function _chFlujoClic(ev, btn){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  if(!btn) return;
+  _chInyectarCssFlujos();
+  var fl = btn.getAttribute('data-flujo');
+  var pendId = btn.getAttribute('data-p') || '';
+  var canalId = btn.getAttribute('data-c') || CHAT_ACTIVO_ID || '';
+  var msjId = btn.getAttribute('data-m') || '';
+  if(fl === 'relevo-todos') return _chAbrirRelevoModal( '', '' );
+  if(fl === 'relevo-uno')   return _chAbrirRelevoModal( pendId, canalId );
+  if(fl === 'cargo-pin')    return _chAbrirCargoPinModal( canalId, msjId, pendId );
+  if(fl === 'accion'){
+    var act = btn.getAttribute('data-act') || '';
+    btn.disabled = true;
+    _chRpc('sst_chat_pend_accion', { p_pend:pendId, p_accion:act, p_nota:null }).then(function(j){
+      var L = []; if(j.msj) L.push(j.msj); if(j.sustento) L.push(j.sustento);
+      if(L.length && canalId){ _chMezclar(canalId, L); _chMsjsGuardar(canalId); }
+      if(CHAT_ACTIVO_ID === canalId && _chActiva('p-chat-obra')) _chPintarFeed(false);
+      if(typeof tostada === 'function') tostada('Visado registrado en el chat');
+      chatCargarCanales().then(function(){ pintarBurbujaPendientes(); if(_chActiva('p-canales')) _chRepintarLista(); });
+    }, function(err){
+      btn.disabled = false;
+      if(typeof aviso === 'function') aviso('No se pudo visar', _chMotivo(err), '⚠️');
+    });
+  }
+}
+
+function _chAbrirCargoPinModal(canalId, msjId, pendId){
+  var p = _chHoja('ch-cargo',
+    '<div class="ch-hoja-tit">🧰 Entregar herramienta con PIN</div>' +
+    '<p class="ch-msg">El trabajador escribe su documento y su PIN de 6 dígitos para aceptar el cargo de préstamo. El pendiente quedará activo hasta que la devuelva.</p>' +
+    '<label class="ch-lab" for="cg-doc">DNI / Documento del trabajador</label>' +
+    '<input type="text" id="cg-doc" class="ch-in" inputmode="numeric" maxlength="15" placeholder="Ej.: 45678901">' +
+    '<label class="ch-lab" for="cg-pin">PIN del trabajador (6 números)</label>' +
+    '<input type="password" id="cg-pin" class="ch-in" inputmode="numeric" maxlength="6" placeholder="••••••">' +
+    '<p class="ch-msg" id="cg-msg" role="status"></p>' +
+    '<div class="ch-ops fila"><button type="button" class="btn sec" data-op="x">Cancelar</button><button type="button" class="btn" data-op="ok">🔑 Firmar cargo</button></div>');
+  p.addEventListener('click', function(ev){
+    var b = ev.target.closest('[data-op]'); if(!b) return;
+    if(b.getAttribute('data-op') === 'x'){ _chatModalCerrar(); return; }
+    var d = String((document.getElementById('cg-doc') || {}).value || '').trim();
+    var pin = String((document.getElementById('cg-pin') || {}).value || '').trim();
+    var msg = document.getElementById('cg-msg');
+    if(d.length < 6){ if(msg){ msg.className = 'ch-msg mal'; msg.textContent = 'Escribe el documento completo.'; } return; }
+    if(!/^\d{6}$/.test(pin)){ if(msg){ msg.className = 'ch-msg mal'; msg.textContent = 'El PIN son 6 números.'; } return; }
+    b.disabled = true; if(msg){ msg.className = 'ch-msg'; msg.textContent = 'Verificando PIN del trabajador…'; }
+    _chRpc('sst_chat_pend_accion', { p_pend:pendId, p_accion:'cargo_pin', p_doc:d, p_pin:pin }).then(function(j){
+      if(j.msj && canalId){ _chMezclar(canalId, [j.msj]); _chMsjsGuardar(canalId); }
+      _chatModalCerrar();
+      if(CHAT_ACTIVO_ID === canalId && _chActiva('p-chat-obra')) _chPintarFeed(true);
+      if(typeof tostada === 'function') tostada('Cargo firmado con PIN');
+    }, function(err){
+      b.disabled = false;
+      var mErr = (err && err.motivo === 'pin_incorrecto') ? 'PIN incorrecto para ese documento.'
+               : (err && err.motivo === 'sin_cuenta_trab') ? 'Ese trabajador aún no tiene PIN activo en la app.'
+               : _chMotivo(err);
+      if(msg){ msg.className = 'ch-msg mal'; msg.textContent = mErr; }
+    });
+  });
+}
+
+function _chAbrirRelevoModal(pendId, canalId){
+  var e = _chPrep(); if(!e) return;
+  var canRef = canalId || CHAT_ACTIVO_ID || (CHN.lista && CHN.lista[0] && CHN.lista[0].id) || '';
+  var p = _chHoja('ch-rel',
+    '<div class="ch-hoja-tit">🔄 Pasar relevo de ' + (pendId ? 'este pendiente' : 'mis pendientes abiertos') + '</div>' +
+    '<label class="ch-lab" for="rel-bus">¿A quién le pasas la posta?</label>' +
+    '<input type="search" id="rel-bus" class="ch-in" placeholder="Busca compañero del equipo" autocomplete="off">' +
+    '<div class="ch-gente" id="rel-gente" role="radiogroup"><p class="ch-msg">Cargando equipo de la obra…</p></div>' +
+    '<label class="ch-lab" for="rel-nota">Nota de relevo (opcional)</label>' +
+    '<input type="text" id="rel-nota" class="ch-in" maxlength="200" placeholder="Ej.: Salgo de turno, queda pendiente verificar a las 4 pm">' +
+    '<p class="ch-msg" id="rel-msg" role="status"></p>' +
+    '<div class="ch-ops fila"><button type="button" class="btn sec" data-op="x">Cancelar</button><button type="button" class="btn" data-op="ok">🔄 Transferir</button></div>');
+  var elegido = '', gente = [];
+  function pintar(){
+    var q = String((document.getElementById('rel-bus') || {}).value || '').toLowerCase().trim(), box = document.getElementById('rel-gente'); if(!box) return;
+    var L = gente.filter(function(x){ return !x.yo && (!q || String(x.nombre || '').toLowerCase().indexOf(q) > -1); });
+    box.innerHTML = L.length ? L.slice(0, 80).map(function(x){
+      return '<button type="button" class="ch-persona' + (x.uid === elegido ? ' on' : '') + '" role="radio" aria-checked="' + (x.uid === elegido) + '" data-uid="' + _chE(x.uid) + '">' +
+        '<span class="ch-ini">' + _chE(String(x.nombre || '?').trim().split(/\s+/).slice(0, 2).map(function(w){ return w.charAt(0); }).join('').toUpperCase()) + '</span>' +
+        '<span class="ch-pers-tx"><b>' + _chE(x.nombre) + '</b><small>' + _chE(CH_QUIEN[x.quien] || '') + '</small></span></button>';
+    }).join('') : '<p class="ch-msg">No hay otros miembros disponibles para el relevo.</p>';
+  }
+  if(canRef){
+    _chPersonas(canRef).then(function(c){ gente = c.lista || []; pintar(); }, function(err){ var box = document.getElementById('rel-gente'); if(box) box.innerHTML = '<p class="ch-msg mal">' + _chE(_chMotivo(err)) + '</p>'; });
+  }
+  var bus = document.getElementById('rel-bus'); if(bus) bus.addEventListener('input', pintar);
+  p.addEventListener('click', function(ev){
+    var per = ev.target.closest('[data-uid]'); if(per){ elegido = per.getAttribute('data-uid'); pintar(); return; }
+    var b = ev.target.closest('[data-op]'); if(!b) return;
+    if(b.getAttribute('data-op') === 'x'){ _chatModalCerrar(); return; }
+    var msg = document.getElementById('rel-msg'), nota = String((document.getElementById('rel-nota') || {}).value || '').trim();
+    if(!elegido){ if(msg){ msg.className = 'ch-msg mal'; msg.textContent = 'Elige a qué compañero le pasas el relevo.'; } return; }
+    b.disabled = true; if(msg){ msg.className = 'ch-msg'; msg.textContent = 'Transfiriendo pendientes…'; }
+    _chRpc('sst_chat_pend_relevo', { p_emp:e.id, p_hacia:elegido, p_pends:pendId ? [pendId] : null, p_nota:nota || null }).then(function(j){
+      _chatModalCerrar();
+      if(typeof tostada === 'function') tostada('Relevo pasado a ' + (j.hacia_nombre || 'tu compañero') + ' (' + (j.pasados || 1) + ')');
+      if(CHAT_ACTIVO_ID && _chActiva('p-chat-obra')) chatCargarMsjs(CHAT_ACTIVO_ID, false);
+      _chCargarPendLista().then(function(){
+        chatCargarCanales().then(function(){ pintarBurbujaPendientes(); if(_chActiva('p-canales')) _chRepintarLista(); });
+      });
     }, function(err){ b.disabled = false; if(msg){ msg.className = 'ch-msg mal'; msg.textContent = _chMotivo(err); } });
   });
 }
@@ -132921,7 +133274,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='4af747cc4a';
+var SELLO_APP='4d99a2abf6';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
