@@ -19937,6 +19937,7 @@ var CATALOGO_FORMATOS = [
   {k:'ind-constancia', n:'Constancia de inducción', d:'Una por trabajador, con su firma y su huella.'},
   {k:'risst-cargo', n:'Cargo de entrega del RISST', d:'El trabajador recibe el reglamento interno: firma y huella.'},
   {k:'ingreso-salida', n:'Registro de ingreso y salida de trabajadores', d:'Del día: hora de ingreso, de salida y la firma.'},
+  {k:'tareo', n:'Registro de tareo (asistencia y horas hombre)', d:'El tareo del mes: la entrada, la salida y las horas de cada uno.'},
   {k:'visitas', n:'Registro de visitas', d:'Cada visita con su documento, motivo y horas.'},
   {k:'recuento', n:'Recuento de personal en una evacuación', d:'Cuántas personas llegaron de cada frente al punto de reunión.'},
   /* 16/11/2026 · RP-INSTRUCTIVO */
@@ -92643,48 +92644,119 @@ function tareoGuardarAjustes(){
   TAR.ajustes = false; TAR.msg = ''; tarAlDia(); tostada('Ajustes del tareo guardados'); pintarTareo();
 }
 /* ── el tareo del mes, en Excel (CSV): para la planilla ── */
+/* 19/11/2026 · el tareo del mes en un Excel de verdad (antes era un CSV con «;» que el celular abría todo en una
+   columna). Marcelo: «ponlo más profesional, en un cuadro, con su código y versión de formato, el logo de la empresa,
+   título, y los títulos de los campos». Cabecera con el logo, el título y el código/versión/fecha del formato
+   (Ajustes ▸ formatos: «tareo»), los datos del empleador y de la obra, la tabla con sus títulos y bordes, el total de
+   horas hombre, el resumen por persona y por frente, y las firmas de quien elabora y quien revisa. */
+function _tarXlsx(dias, mes){
+  var X = RCAP.xlsx, Cc = X.C, E = new X.Estilos(), Hoja = X.Hoja;
+  var o = _tarTodo(), cfg = tarCfg(), ahora = Date.now(), filas = [], tot = {}, porFr = {}, hhTot = 0;
+  dias.forEach(function(f){
+    var x = o.d[f]; if(!x || !x.p) return;
+    Object.keys(x.p).forEach(function(k){
+      var z = x.p[k], r = tarHorasDe(z, cfg, ahora); if(!r.marcas) return;
+      var obs = [r.adentro ? 'Todavía adentro' : (r.sinSalida ? 'Sin salida: se contó la jornada' : (r.mano ? 'Marcado a mano' : ''))];
+      if(r.aut) obs.push('Entrada autorizada');
+      try{ if(typeof tcObservacion === 'function') obs.push(tcObservacion(f, k)); }catch(_ob){}
+      var frs = tarFrentesDe(z), fr0 = frs[0] || 'Sin frente', h = Math.round(r.h * 100) / 100;
+      filas.push({ f:f, d:z.d || '', n:z.n || '', fr:frs.join(' · '), e:_tarHora(r.e), s:r.adentro ? '' : _tarHora(r.s), h:h, obs:obs.filter(Boolean).join(' · ') });
+      var t = tot[k] || (tot[k] = { d:z.d || '', n:z.n || '', dias:0, h:0 }); t.dias++; t.h += r.h;
+      var tf = porFr[fr0] || (porFr[fr0] = { gente:{}, h:0 }); tf.gente[k] = 1; tf.h += r.h;
+      hhTot += r.h;
+    });
+  });
+  if(!filas.length) return null;
+  filas.sort(function(a, b){ return a.f.localeCompare(b.f) || a.n.localeCompare(b.n, 'es'); });
+  var emp = (typeof empleador === 'function') ? (empleador() || {}) : {}, F = (typeof formatoDe === 'function') ? formatoDe('tareo') : { cod:'', rev:'00', fecha:'' };
+  var MES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'][(+mes.slice(5, 7) || 1) - 1] + ' de ' + mes.slice(0, 4);
+  var obra = (typeof nombreDeLaObra === 'function' && nombreDeLaObra()) || '';
+  var dma = function(i){ var p = String(i || '').split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : ''; };
+  var LINEA = { c:'8C9AA5' };
+  var sTit = E.xf({ b:true, sz:15, c:Cc.petroleo, h:'center', borde:LINEA }), sSub = E.xf({ sz:10, c:Cc.gris, h:'center', borde:LINEA });
+  var sLogo = E.xf({ borde:LINEA }), sFmt = E.xf({ sz:9, c:Cc.tinta, borde:LINEA });
+  var sEt = E.xf({ b:true, sz:8, c:Cc.gris, f:Cc.fondo, borde:LINEA, wrap:true }), sDato = E.xf({ sz:10, c:Cc.tinta, borde:LINEA, wrap:true });
+  var sCab = E.xf({ b:true, sz:9, c:Cc.blanco, f:Cc.petroleo, h:'center', borde:{ c:'3C5A69' }, wrap:true });
+  var sTx = E.xf({ sz:9, c:Cc.tinta, borde:true, wrap:true }), sCen = E.xf({ sz:9, c:Cc.tinta, h:'center', borde:true });
+  var sNum = E.xf({ sz:9, c:Cc.tinta, h:'center', borde:true, fmt:'0.00' }), sNumB = E.xf({ b:true, sz:10, c:Cc.petroleo, h:'center', borde:true, f:Cc.fondo, fmt:'0.00' });
+  var sTot = E.xf({ b:true, sz:10, c:Cc.petroleo, h:'right', borde:true, f:Cc.fondo }), sSec = E.xf({ b:true, sz:10, c:Cc.petroleo });
+  var sNota = E.xf({ sz:8.5, c:Cc.gris, wrap:true }), sFirma = E.xf({ sz:9, c:Cc.tinta, h:'center' }), sRaya = E.xf({ sz:9, c:Cc.grisc, h:'center' });
+  var h = new Hoja('Tareo ' + mes); h.activa = true; h.pie = 'Registro de tareo';
+  [6, 11, 12, 34, 18, 9, 9, 9, 34].forEach(function(w, i){ h.anchos[i] = w; });
+  /* la cabecera: logo | título | código, versión y fecha */
+  h.unir(0, 1, 1, 3, '', sLogo);
+  h.unir(2, 1, 6, 2, 'REGISTRO DE TAREO', sTit);
+  h.unir(2, 3, 6, 3, 'Control de asistencia y horas hombre · ' + MES, sSub);
+  h.unir(7, 1, 8, 1, 'Código: ' + (F.cod || '—'), sFmt);
+  h.unir(7, 2, 8, 2, 'Versión: ' + (F.rev || '00'), sFmt);
+  h.unir(7, 3, 8, 3, 'Fecha: ' + (F.fecha ? dma(String(F.fecha).slice(0, 10)) || F.fecha : dma(hoyISO())), sFmt);
+  h.altos[1] = 24; h.altos[2] = 24; h.altos[3] = 20;
+  var medios = [];
+  try{
+    var L = (emp.logo && typeof logoSinMarcoYa === 'function') ? (logoSinMarcoYa(emp.logo) || { du:emp.logo, r:1 }) : null;
+    var mm = L && /^data:image\/(png|jpe?g);base64,(.+)$/.exec(String(L.du || ''));
+    if(mm){
+      medios.push({ b:_b64aU8(mm[2]), ext:mm[1] === 'png' ? 'png' : 'jpeg' });
+      var bw = 150, bh = 76, r0 = L.r || 1, lw = bw, lh = bw / r0; if(lh > bh){ lh = bh; lw = bh * r0; }
+      h.imagen(0, 1, 0, lw, lh, Math.max(4, (bw - lw) / 2 + 4), Math.max(4, (bh - lh) / 2 + 4));
+    } else h.unir(0, 1, 1, 3, String(emp.razon || '').toUpperCase(), E.xf({ b:true, sz:9, c:Cc.gris, h:'center', borde:LINEA, wrap:true }));
+  }catch(_lg){}
+  /* los datos */
+  var nAct = Object.keys(tot).length;
+  h.unir(0, 5, 2, 5, 'RAZÓN SOCIAL', sEt); h.celda(3, 5, 'RUC', sEt); h.unir(4, 5, 5, 5, 'OBRA / PROYECTO', sEt); h.unir(6, 5, 7, 5, 'PERIODO', sEt); h.celda(8, 5, 'N.° DE TRABAJADORES EN EL MES', sEt);
+  h.unir(0, 6, 2, 6, emp.razon || '', sDato); h.celda(3, 6, emp.ruc || '', sDato); h.unir(4, 6, 5, 6, obra, sDato); h.unir(6, 6, 7, 6, MES, sDato); h.celda(8, 6, nAct, E.xf({ sz:10, c:Cc.tinta, borde:LINEA, h:'center' }));
+  h.altos[6] = 30;
+  /* la tabla */
+  var f0 = 8;
+  ['N.°', 'Fecha', 'Documento', 'Apellidos y nombres', 'Frente', 'Entrada', 'Salida', 'Horas', 'Observación'].forEach(function(t, i){ h.celda(i, f0, t, sCab); });
+  h.altos[f0] = 28;
+  var fila = f0 + 1;
+  filas.forEach(function(r, i){
+    h.celda(0, fila, i + 1, sCen); h.celda(1, fila, dma(r.f), sCen); h.celda(2, fila, r.d, sCen); h.celda(3, fila, r.n, sTx);
+    h.celda(4, fila, r.fr, sTx); h.celda(5, fila, r.e, sCen); h.celda(6, fila, r.s, sCen); h.celda(7, fila, r.h, sNum); h.celda(8, fila, r.obs, sTx);
+    fila++;
+  });
+  h.unir(0, fila, 6, fila, 'TOTAL DE HORAS HOMBRE DEL MES', sTot); h.celda(7, fila, Math.round(hhTot * 100) / 100, sNumB); h.celda(8, fila, '', sTot);
+  h.congelar = { c:0, r:f0 }; h.titulos = "'" + h.nombre + "'!$" + f0 + ':$' + f0;
+  /* por persona */
+  fila += 2;
+  h.unir(0, fila, 8, fila, 'RESUMEN POR TRABAJADOR', sSec); fila++;
+  h.celda(0, fila, 'N.°', sCab); h.unir(1, fila, 2, fila, 'Documento', sCab); h.unir(3, fila, 4, fila, 'Apellidos y nombres', sCab); h.unir(5, fila, 6, fila, 'Días', sCab); h.unir(7, fila, 8, fila, 'Horas hombre', sCab); fila++;
+  Object.keys(tot).map(function(k){ return tot[k]; }).sort(function(a, b){ return a.n.localeCompare(b.n, 'es'); }).forEach(function(t, i){
+    h.celda(0, fila, i + 1, sCen); h.unir(1, fila, 2, fila, t.d, sCen); h.unir(3, fila, 4, fila, t.n, sTx); h.unir(5, fila, 6, fila, t.dias, sCen); h.unir(7, fila, 8, fila, Math.round(t.h * 100) / 100, sNum); fila++;
+  });
+  /* por frente (si hay frentes) */
+  var ks = Object.keys(porFr);
+  if(ks.length > 1 || (ks.length === 1 && ks[0] !== 'Sin frente')){
+    fila++;
+    h.unir(0, fila, 8, fila, 'HORAS HOMBRE POR FRENTE', sSec); fila++;
+    h.unir(0, fila, 4, fila, 'Frente', sCab); h.unir(5, fila, 6, fila, 'Personas', sCab); h.unir(7, fila, 8, fila, 'Horas hombre', sCab); fila++;
+    ks.sort().forEach(function(n){ h.unir(0, fila, 4, fila, n, sTx); h.unir(5, fila, 6, fila, Object.keys(porFr[n].gente).length, sCen); h.unir(7, fila, 8, fila, Math.round(porFr[n].h * 100) / 100, sNum); fila++; });
+  }
+  fila++;
+  h.unir(0, fila, 8, fila, 'Las horas descuentan ' + cfg.refri + ' min de refrigerio a quien estuvo ' + cfg.refriDesde + ' h o más. Al que no marcó salida se le cuenta la jornada de ' + cfg.jor + ' h. ' +
+    'Generado con OBRASST el ' + dma(hoyISO()) + '.', sNota); h.altos[fila] = 26;
+  /* las firmas */
+  fila += 3;
+  var yo = null; try{ yo = (typeof selloDatos === 'function') ? selloDatos() : null; }catch(_s){}
+  h.unir(0, fila, 3, fila, '______________________________', sRaya); h.unir(5, fila, 8, fila, '______________________________', sRaya); fila++;
+  h.unir(0, fila, 3, fila, 'Elaborado por' + (yo && yo.nombre ? ': ' + yo.nombre + (yo.cargo ? ' · ' + yo.cargo : '') : ''), sFirma);
+  h.unir(5, fila, 8, fila, 'Revisado por', sFirma);
+  return X.libro([h], E, 'Registro de tareo', medios);
+}
 function tareoExcel(){
   var dia = TAR.dia || hoyISO(), mes = dia.slice(0, 7), hoy = hoyISO(), dias = [];
   for(var d = 1; d <= 31; d++){ var f = mes + '-' + ('0' + d).slice(-2); if(f > hoy) break; if(isoLocal(new Date(f + 'T12:00:00')) === f) dias.push(f); }
   TAR.msg = 'Armando el archivo…'; pintarTareo();
   tarBajar(dias).then(function(){
-    var o = _tarTodo(), cfg = tarCfg(), ahora = Date.now(), filas = [], tot = {}, porFr = {};
-    dias.forEach(function(f){
-      var x = o.d[f]; if(!x || !x.p) return;
-      Object.keys(x.p).forEach(function(k){
-        var z = x.p[k], r = tarHorasDe(z, cfg, ahora); if(!r.marcas) return;
-        var obs = [r.adentro ? 'Todavía adentro' : (r.sinSalida ? 'Sin salida: se contó la jornada' : (r.mano ? 'Marcado a mano' : ''))];
-        if(r.aut) obs.push('Entrada autorizada');   /* 3/11/2026 · mejora 9: entró con la autorización del residente */
-        try{ if(typeof tcObservacion === 'function') obs.push(tcObservacion(f, k)); }catch(_ob){}
-        var _frs = tarFrentesDe(z), _fr0 = _frs[0] || 'Sin frente';
-        filas.push([f, z.d || '', z.n || '', _frs.join(' · '), _tarHora(r.e), r.adentro ? '' : _tarHora(r.s), String(r.h).replace('.', ','), obs.filter(Boolean).join(' · ')]);
-        var tf = porFr[_fr0] || (porFr[_fr0] = { gente:{}, h:0 }); tf.gente[k] = 1; tf.h += r.h;
-        var t = tot[k] || (tot[k] = { d:z.d || '', n:z.n || '', dias:0, h:0 }); t.dias++; t.h += r.h;
-      });
-    });
-    if(!filas.length){ TAR.msg = 'Ese mes todavía no tiene marcas.'; pintarTareo(); return; }
-    filas.sort(function(a, b){ return a[0].localeCompare(b[0]) || a[2].localeCompare(b[2], 'es'); });
-    function q(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
-    var lin = [['Fecha', 'Documento', 'Apellidos y nombres', 'Frente', 'Entrada', 'Salida', 'Horas', 'Observación'].map(q).join(';')];
-    filas.forEach(function(r){ lin.push(r.map(q).join(';')); });
-    lin.push(''); lin.push(['Total por persona', '', '', '', '', '', ''].map(q).join(';'));
-    lin.push(['Documento', 'Apellidos y nombres', 'Días', 'Horas'].map(q).join(';'));
-    Object.keys(tot).map(function(k){ return tot[k]; }).sort(function(a, b){ return a.n.localeCompare(b.n, 'es'); }).forEach(function(t){
-      lin.push([t.d, t.n, t.dias, String(Math.round(t.h * 100) / 100).replace('.', ',')].map(q).join(';'));
-    });
-    var _ks = Object.keys(porFr);
-    if(_ks.length > 1 || (_ks.length === 1 && _ks[0] !== 'Sin frente')){
-      lin.push(''); lin.push(['Horas hombre por frente', '', ''].map(q).join(';'));
-      lin.push(['Frente', 'Personas', 'Horas hombre'].map(q).join(';'));
-      _ks.sort().forEach(function(n){ lin.push([n, Object.keys(porFr[n].gente).length, String(Math.round(porFr[n].h * 100) / 100).replace('.', ',')].map(q).join(';')); });
-    }
-    lin.push(''); lin.push(q('Refrigerio descontado: ' + cfg.refri + ' min a quien estuvo ' + cfg.refriDesde + ' h o más. Sin salida: jornada de ' + cfg.jor + ' h.'));
-    var blob = new Blob(['﻿' + lin.join('\r\n')], { type:'text/csv;charset=utf-8' });
-    var nom = _nombreSano('Tareo ' + ((typeof nombreDeLaObra === 'function' && nombreDeLaObra()) || 'obra') + ' ' + mes) + '.csv';
+    var blob = null; try{ blob = _tarXlsx(dias, mes); }catch(_x){ blob = null; }
+    if(!blob){ TAR.msg = _x_msg(); pintarTareo(); return; }
+    var nom = _nombreSano('Tareo ' + ((typeof nombreDeLaObra === 'function' && nombreDeLaObra()) || 'obra') + ' ' + mes) + '.xlsx';
     return entregarArchivos([{ nombre:nom, blob:blob }], { via:'otra', texto:'Tareo ' + mes + ' · ' + ((typeof nombreDeLaObra === 'function' && nombreDeLaObra()) || '') }, nom)
       .then(function(r){ TAR.msg = (r && r.modo === 'compartido') ? 'Listo: archivo compartido.' : 'Listo: se bajó el archivo.'; pintarTareo(); },
             function(){ TAR.msg = 'No se pudo armar el archivo.'; pintarTareo(); });
   });
+  function _x_msg(){ var o = _tarTodo(), hay = dias.some(function(f){ return o.d[f] && o.d[f].p && Object.keys(o.d[f].p).length; }); return hay ? 'No se pudo armar el archivo.' : 'Ese mes todavía no tiene marcas.'; }
 }
 /* <<< TAREO-FIN >>> */
 /* >>> TAREO-CEL-INI (lo re-inyecta armar.py, no editar a mano) <<< */
@@ -134763,7 +134835,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='90447fd96f';
+var SELLO_APP='d1bdc44a8b';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
