@@ -283,6 +283,8 @@ function _infPintar(){
   /* 10/11/2026 · 5 · el panel fotográfico: corregir, quitar, ordenar y sumar fotos (si va en el informe) */
   var vaPanel=!todas && S.some(function(x){ return x.k==='fotos' && _infVa(x); });
   if(vaPanel) h+=_infPanelHTML();
+  /* 19/11/2026 · las fotos del registro fotográfico que van (las elige el supervisor) */
+  if(!todas && S.some(function(x){ return x.k==='fotoreg' && _infVa(x); })) h+='<div id="inf-fsel"></div>';
   h+='<div class="inf-armar"><button type="button" class="bt" id="inf-armar2">'+_infArmarTx()+'</button>'+
     '<span>'+(todas ? 'Lee cada obra: tarda un poco más.' : (ocho ? 'Primero lo ves entero; después bajas las 8 carpetas en un ZIP (y el PDF, el Excel o el Word, si los quieres).' : 'Sale en PDF con su portada, índice y páginas numeradas; el Excel y el Word salen de lo mismo.'))+'</span>'+
     (todas ? '' : '<button type="button" class="bt sec chico" id="inf-modelo">'+(INFW.modelo ? 'Guardar los cambios de «'+esc(INFW.modelo.nombre || 'Modelo de la obra')+'»' : 'Guardar como modelo de la obra')+'</button>')+'</div>'+
@@ -305,7 +307,7 @@ function _infPintar(){
         : '<div class="vacio" id="inf-anx-vacio"><b>Sin anexos</b>Elige del archivo de la obra lo que pide tu gerencia o tu cliente: las asistencias escaneadas, los permisos, las fotos…</div>')+
       '</div></div></div></div></div></details>';
   }
-  caja.innerHTML=h;
+  caja.innerHTML=h; _infFselCargar();
   if(vaPanel){
     if(INFW.panel && INFW.panel.mes===INFW.mes) _infPanelAl(caja);
     else _infPanelCargar(INFW.mes).then(function(){ if(VISTA.actual==='informe' && INFW.tipo==='sst' && $('inf-panel') && !$('inf-pf-guardar')) _infPintar(); }, function(){ var l=$('inf-panel-l'); if(l) l.textContent='No se pudieron traer las fotos: revisa tu conexión.'; });
@@ -1946,7 +1948,10 @@ function _infMinis(L, campo, w, h, max){
 function _infFregTraer(D){
   var Fr=D.freg; if(!Fr || !Fr.del.length) return Promise.resolve();
   var tope=(INFW.nivel==='intermedio' || INFW.nivel==='basico') ? 4 : 12, cu={}, L=[];
-  Fr.del.forEach(function(x){ cu[x.d.cat]=(cu[x.d.cat]||0)+1; if(cu[x.d.cat]<=tope && L.length<80) L.push({ u:x.url, x:x }); });
+  /* 19/11/2026 · lo que eligió el supervisor (las demás no van) */
+  var Fs=_infFselDe(_infFselTipo(), INFW.mes), elegidas=null;
+  if(Fs && Fs.ids){ elegidas={}; Fs.ids.forEach(function(id){ elegidas[id]=1; }); Fr.del=Fr.del.filter(function(x){ return elegidas[String(x.id)]; }); }
+  Fr.del.forEach(function(x){ cu[x.d.cat]=(cu[x.d.cat]||0)+1; if((elegidas || cu[x.d.cat]<=tope) && L.length<(elegidas ? 160 : 80)) L.push({ u:x.url, x:x }); });
   return _infMinis(L, 'u', 900, 700, 80).then(function(){
     L.forEach(function(q){ if(q.uImg) q.x.img=q.uImg; });
     Fr.fallan=L.filter(function(q){ return !q.uImg; }).length;
@@ -2683,11 +2688,13 @@ var INF_SECC_AMB = [
   { k:'aresiduos', n:'Residuos',                        d:'Lo que salió de la obra por tipo —generales, papel y cartón, concreto, metal…—, qué se hizo (disposición, reciclaje o venta) y sus papeles' },
   { k:'aagua',     n:'Agua',                            d:'Los m³ del mes y de cada mes del año, con sus recibos o lecturas' },
   { k:'acomb',     n:'Combustible',                     d:'Las cargas del mes por tipo y por equipo, con sus boletas, y los galones de cada mes del año' },
+  /* 19/11/2026 · la huella de carbono: solo la data final (el triángulo de alcances y el cuadro) */
+  { k:'ahuella',   n:'Huella de carbono',               d:'Las toneladas de CO₂ equivalente del mes y del año, por alcance (1, 2 y 3): el triángulo, el cuadro por fuente y mes a mes' },
   { k:'acharlas',  n:'Charlas y capacitaciones ambientales', d:'Los temas de medio ambiente del mes, con sus personas, su duración y su HHC' },
   { k:'ainsp',     n:'Inspecciones de medio ambiente',  d:'Las del mes y lo que encontraron' },
   { k:'aobs',      n:'Observaciones de medio ambiente', d:'Los actos y las condiciones ambientales del mes, con su levantamiento' },
   { k:'adocs',     n:'Certificados y constancias',      d:'Los documentos ambientales del mes' },
-  { k:'afotos',    n:'Registro fotográfico ambiental',  d:'Las fotos del mes de los temas de medio ambiente: segregación y acopio de residuos, control de polvo, kit antiderrames…' },
+  { k:'afotos',    n:'Panel fotográfico ambiental',     d:'Por bloque, el que va: charlas ambientales, batería de residuos (NTP 900.058), almacén de MATPEL, MSDS, rotulado SGA, rombo NFPA 704, equipos de emergencia ambiental y otros' },
   { k:'aanexos',   n:'Anexos: los papeles del mes',     d:'Los certificados, las boletas, los comprobantes y los recibos registrados en el mes, tal cual', fijo:'ultimo' }
 ];
 function _infSeccAmbN(k){ for(var i=0;i<INF_SECC_AMB.length;i++) if(INF_SECC_AMB[i].k===k) return INF_SECC_AMB[i]; return null; }
@@ -2695,7 +2702,7 @@ var INF_INSP_AMB = /(ambient|residu|derrame|aceite|combustib|vertim|acopio|recic
 /* lo ambiental del mes, de lo que ya trajo _infTraer */
 function _infAmb(D, filas, mapa){
   var mes=D.mes, anio=D.anio, mi=+mes.slice(5, 7), L=ambFilas(filas||[]), del=ambDelMes(L, mes);
-  var A={ L:del, R:ambResumen(del), meses:[] };
+  var A={ L:del, R:ambResumen(del), meses:[], todos:L };
   for(var m=1;m<=mi;m++){ var mm=anio+'-'+dos(m), q=ambResumen(ambDelMes(L, mm)), kg=0; Object.keys(q.res).forEach(function(k){ kg+=q.res[k].kg; }); A.meses.push({ m:mm, agua:q.agua, gal:q.combGal, kg:kg }); }
   A.anio={ agua:0, gal:0, kg:0 }; A.meses.forEach(function(q){ A.anio.agua+=q.agua; A.anio.gal+=q.gal; A.anio.kg+=q.kg; });
   var kgM=0, m3M=0; Object.keys(A.R.res).forEach(function(k){ kgM+=A.R.res[k].kg; m3M+=A.R.res[k].m3; }); A.kg=kgM; A.m3=m3M;
@@ -2715,10 +2722,19 @@ function _infAmb(D, filas, mapa){
 function _ambLineaW(d){
   if(d.k==='res') return ambNombre(AMB_RES_TIPOS, d.tipo)+(d.cant!=null ? ' '+_infDec2(d.cant, d.cant%1 ? 2 : 0)+' '+ambNombre(AMB_UNID, d.und) : '');
   if(d.k==='agua') return 'Agua '+(d.m3!=null ? _infDec2(d.m3, d.m3%1 ? 2 : 0)+' m³' : '');
-  if(d.k==='comb') return ambNombre(AMB_COMB, d.tipo)+(d.cant!=null ? ' '+_infDec2(d.cant, d.cant%1 ? 2 : 0)+' '+d.und : '')+(d.equipo ? ' · '+d.equipo : '');
+  if(d.k==='comb') return ambNombre(AMB_COMB, d.tipo)+(d.cant!=null ? ' '+_infDec2(d.cant, d.cant%1 ? 2 : 0)+' '+(AMB_UND_N[d.und] || d.und) : '')+(d.equipo ? ' · '+d.equipo : '');
+  if(d.k==='ener' || d.k==='refr' || d.k==='mat' || d.k==='viaje') return ambLineaHC(d, function(n){ return _infDec2(n, n%1 ? 2 : 0); });
   return ambNombre(AMB_DOC_TIPOS, d.tipo)+(d.nombre ? ' · '+d.nombre : '');
 }
 function _ambPapeles(d, t){ return d.ev.some(function(e){ return e.t===t; }); }
+/* 19/11/2026 · la huella del mes y del año (hasta el mes), con los factores de la obra (D.hcCfg, «hc-cfg») */
+function _infAmbHC(D){
+  if(D._hc) return D._hc;
+  var A=D.amb, cfg=D.hcCfg||null, mes=D.mes, anio=D.anio, mi=+mes.slice(5, 7), meses=[], T=A.todos||[];
+  for(var m=1;m<=mi;m++){ var mm=anio+'-'+dos(m); meses.push({ m:mm, R:hcCalc(hcPeriodo(T, mm), cfg) }); }
+  D._hc={ mes:hcCalc(hcPeriodo(T, mes), cfg), anio:hcCalc(hcPeriodo(T, { anio:anio, hasta:mes }), cfg), meses:meses };
+  return D._hc;
+}
 function _ambPdf(D){
   var A=D.amb, obra=nombreObraP()||'Obra', emp=empresaDeObraP()||'', mesN=_infMesN(D.mes), indice=[], n2=function(n){ return _infDec2(n, (n%1) ? 2 : 0); };
   var P=_infDocNuevo(obra, 'Informe de medio ambiente · '+mesN), doc=P.doc, W=P.W, M=P.M, cap=function(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1); };
@@ -2730,6 +2746,7 @@ function _ambPdf(D){
       P.portada('INFORME DE MEDIO AMBIENTE', obra, emp, [['Para', _infParaTxt()], ['Elaborado por', String(INFW.por||'').trim() || '—'], ['Emitido', fechaLarga(hoyISO())], ['Código de la obra', (YO.obra||{}).codigo||'—']]);
       return;
     }
+    P.minSec=(x.k==='ahuella') ? 560 : null;   /* 19/11/2026 · la huella entera en su hoja */
     P.sec(s.n); indice.push({ t:s.n, p:doc.getNumberOfPages() });
     if(x.k==='aresumen'){
       P.cifras([['Residuos del mes', n2(A.kg)+' kg', A.m3 ? n2(A.m3)+' m³ · '+A.R.resN+' salidas' : A.R.resN+(A.R.resN===1 ? ' salida' : ' salidas')], ['Agua', n2(A.R.agua)+' m³', 'en el mes'],
@@ -2772,6 +2789,39 @@ function _ambPdf(D){
         [62, 80, 70, W-2*M-302, 90], { vacio:'No se registraron cargas en el mes.' });
       return;
     }
+    if(x.k==='ahuella'){
+      var HC=_infAmbHC(D), Rm=HC.mes, Ra=HC.anio, COLS=[null, [180,83,9], [14,116,144], [77,124,15]], C=P.C;
+      if(!Ra.n){ P.nota('No hay registros para la huella de carbono en el año: el combustible, la electricidad, los materiales, el agua, los residuos y los viajes se registran en «Medio ambiente» (la app o la web), o se sube la plantilla en «Huella de carbono» de la web.'); return; }
+      P.cifras([['Huella del mes', hcT(Rm.kg)+' t', 't CO2e'+(Rm.nPend ? ' · parcial' : '')], ['Huella del año', hcT(Ra.kg)+' t', 'hasta '+mesN], ['Por cada 1 000 HHT', D.hh.hht ? hcT(Rm.kg*1000/D.hh.hht) : '—', 't CO2e del mes'], ['Esperan factor oficial', Ra.nPend, 'datos del año', Ra.nPend ? 'mal' : 'ok']]);
+      /* el triángulo: arriba el alcance 1, abajo el 3; las franjas del mismo alto */
+      var alto=150, ancho=210, x0=M, cx=x0+ancho/2, yT=P.y+4;
+      if(P.y+alto+30>P.H-60){ doc.addPage(); P.cab(s.n+' (continúa)'); yT=P.y+4; }
+      for(var i=1;i<=3;i++){
+        var w0=ancho*(i-1)/3, w1=ancho*i/3, y0=yT+alto*(i-1)/3, hh=alto/3-2;
+        P.F(COLS[i]);
+        if(i===1) doc.triangle(cx, y0, cx+w1/2, y0+hh, cx-w1/2, y0+hh, 'F');
+        else doc.lines([[w0, 0], [(w1-w0)/2, hh], [-w1, 0], [(w1-w0)/2, -hh]], cx-w0/2, y0, [1, 1], 'F', true);
+        P.L('bold', i===1 ? 9 : 11, C.BLANCO); doc.text(P.T(i===1 ? 'A1' : 'Alcance '+i), cx, y0+hh/2+(i===1 ? 9 : 4), { align:'center' });
+        var lx=x0+ancho+24, ym=y0+hh/2;
+        doc.setDrawColor(C.RAYA[0], C.RAYA[1], C.RAYA[2]); doc.setLineWidth(0.5); doc.line(cx+(w0+w1)/4+6, ym, lx-6, ym);
+        P.L('bold', 10, C.TINTA); doc.text(P.T(HC_ALC[i-1][1]+' · '+hcT(Ra.s[i])+' t CO2e en el año ('+Math.round(Ra.pct[i]*100)+' %)'), lx, ym-3);
+        P.L('normal', 7.8, C.GRIS); doc.text(P.cortar('Del mes: '+hcT(Rm.s[i])+' t · '+HC_ALC[i-1][2], P.W-M-lx), lx, ym+9);
+      }
+      P.y=yT+alto+18;
+      var fil=[];
+      HC_ALC.forEach(function(a){
+        HC_CAT.filter(function(c){ return c[1]===a[0] && (Ra.cats[c[0]] || Rm.cats[c[0]]); }).forEach(function(c){ var qm=Rm.cats[c[0]], qa=Ra.cats[c[0]]; fil.push([a[1], c[2].replace(/₂/g, '2'), qm ? hcT(qm.kg) : '—', qa ? hcT(qa.kg) : '—', Ra.kg && qa ? Math.round(qa.kg/Ra.kg*100)+' %' : '—']); });
+        fil.push({ v:['Total '+a[1].toLowerCase(), '', hcT(Rm.s[a[0]]), hcT(Ra.s[a[0]]), Math.round(Ra.pct[a[0]]*100)+' %'], t:'sub' });
+      });
+      fil.push({ v:['Total de la huella', '', hcT(Rm.kg), hcT(Ra.kg), '100 %'], t:'tot' });
+      P.tabla('Por alcance y fuente (t CO2e)', ['Alcance', 'Fuente', 'Del mes', 'En el año', '% del año'], fil, [92, W-2*M-302, 70, 76, 64], { num:{ 2:1, 3:1, 4:1 } });
+      if(HC.meses.length>1) P.columnas('Mes a mes (t CO2e)', X, [1, 2, 3].map(function(i){ return { n:'Alcance '+i, v:HC.meses.map(function(q){ return Math.round(q.R.s[i])/1000; }), c:COLS[i] }; }), function(v){ return _infDec2(v, 2); }, { apilar:true, alto:110 });
+      /* 19/11/2026 · v2: lo que espera su factor oficial va con su dato (no se suma) */
+      var Pa=Object.keys(Ra.pend).map(function(k){ return Ra.pend[k]; });
+      if(Pa.length) P.tabla('Datos que esperan su factor oficial (no sumados)', ['Alcance', 'Fuente', 'Cantidad en el año', 'Unidad'], Pa.map(function(p){ return ['Alcance '+p.s, String(p.n).replace(/₂/g, '2'), hcNum(p.cant), p.u]; }), [64, W-2*M-264, 110, 90], { num:{ 2:1 } });
+      P.nota('t CO2e: toneladas de CO2 equivalente (GHG Protocol, NTP ISO 14064-1). Emisión = dato × factor oficial; lo que no tiene factor oficial cargado queda con su dato y no se suma. Factores, ecuaciones y memoria de cálculo: «Huella de carbono» de la web.');
+      return;
+    }
     if(x.k==='acharlas'){
       if(!A.ch.length){ P.nota('Ninguna charla de tema ambiental en el mes. El tema de cada charla se marca al registrarla (en la app: «El tema es de… Medio ambiente») o en «Medio ambiente» de la web.'); return; }
       P.cifras([['Charlas y capacitaciones', A.chTot.veces, 'de medio ambiente'], ['Personas', _infNum(A.chTot.asis), ''], ['Duración', _infMin(A.chTot.min), ''], ['HHC ambientales', _infDec(A.chTot.hhc), D.hh.hht ? _infPct(A.chTot.hhc, D.hh.hht)+' de lo trabajado' : '']]);
@@ -2811,7 +2861,8 @@ function _ambExcel(D){
   H.push(h);
   h=new X.Hoja('Registros'); h.pie='Informe de medio ambiente'; fr=_infXlsCab(h, S, 'Lo registrado en el mes', 8, sub);
   fr=_infXlsTabla(h, S, fr, [['Fecha', 12, 'f'], ['Qué', 14, 'tx'], ['Tipo', 22, 'tx'], ['Cantidad', 12, 'd2'], ['Unidad', 10, 'tx'], ['Qué se hizo / de dónde / equipo', 30, 'tx'], ['Empresa', 26, 'tx'], ['Monto (S/)', 12, 'd2'], ['Papeles', 34, 'tx']],
-    A.L.map(function(r){ var d=r.d, q={ res:'Residuo', agua:'Agua', comb:'Combustible', doc:'Documento' }[d.k];
+    A.L.map(function(r){ var d=r.d, q={ res:'Residuo', agua:'Agua', comb:'Combustible', doc:'Documento', ener:'Electricidad', refr:'Refrigerante', mat:'Material', viaje:'Viaje' }[d.k];
+      if(d.k==='ener' || d.k==='refr' || d.k==='mat' || d.k==='viaje') return [d.fecha, q, _ambLineaW(d), '', '', d.equipo || d.tramo || '', d.emp || '', '', tx(d)];
       if(d.k==='res') return [d.fecha, q, ambNombre(AMB_RES_TIPOS, d.tipo), d.cant==null ? '' : d.cant, ambNombre(AMB_UNID, d.und), ambNombre(AMB_RES_DEST, d.dest), d.emp, d.monto==null ? '' : d.monto, tx(d)];
       if(d.k==='agua') return [d.fecha, q, '', d.m3==null ? '' : d.m3, 'm³', ambNombre(AMB_AGUA, d.fuente), '', '', tx(d)];
       if(d.k==='comb') return [d.fecha, q, ambNombre(AMB_COMB, d.tipo), d.cant==null ? '' : d.cant, d.und, d.equipo, d.emp, '', tx(d)];
@@ -2820,6 +2871,17 @@ function _ambExcel(D){
   h=new X.Hoja('Charlas ambientales'); h.pie='Informe de medio ambiente'; fr=_infXlsCab(h, S, 'Las charlas y capacitaciones de medio ambiente', 5, sub);
   fr=_infXlsTabla(h, S, fr, [['Fecha', 12, 'f'], ['Tipo', 28, 'tx'], ['Tema', 46, 'tx'], ['Personas', 10, 'n'], ['Duración (min)', 14, 'n'], ['HHC', 10, 'd']], A.ch.map(function(c){ return [c.f, c.tipo, c.tema, c.n, c.min, Math.round(c.hhc*100)/100]; })
     .concat(A.ch.length ? [{ v:['', '', 'Total', A.chTot.asis, A.chTot.min, Math.round(A.chTot.hhc*100)/100], t:'tot' }] : []), X);
+  H.push(h);
+  /* 19/11/2026 · la huella de carbono del mes y del año */
+  var HC=_infAmbHC(D), Rm=HC.mes, Ra=HC.anio, tt=function(kg){ return Math.round(kg)/1000; }, fh=[];
+  HC_ALC.forEach(function(a){
+    HC_CAT.filter(function(c){ return c[1]===a[0] && (Ra.cats[c[0]] || Rm.cats[c[0]]); }).forEach(function(c){ fh.push([a[1], c[2], tt((Rm.cats[c[0]] || {}).kg || 0), tt((Ra.cats[c[0]] || {}).kg || 0)]); });
+    fh.push({ v:['Total '+a[1].toLowerCase(), '', tt(Rm.s[a[0]]), tt(Ra.s[a[0]])], t:'sub' });
+  });
+  fh.push({ v:['Total de la huella', '', tt(Rm.kg), tt(Ra.kg)], t:'tot' });
+  h=new X.Hoja('Huella de carbono'); h.pie='Informe de medio ambiente'; fr=_infXlsCab(h, S, 'Huella de carbono · t CO₂e por alcance', 3, sub);
+  fr=_infXlsTabla(h, S, fr, [['Alcance', 14, 'tx'], ['Fuente', 50, 'tx'], ['Del mes', 13, 'd2'], ['En el año', 13, 'd2']], fh, X);
+  h.unir(0, fr, 3, fr, 'GHG Protocol · NTP ISO 14064-1. Emisión = dato × factor oficial; '+(Object.keys(Ra.pend).length ? 'falta el factor oficial de: '+Object.keys(Ra.pend).map(function(k){ return Ra.pend[k].n; }).join(', ')+' (no sumado). ' : '')+'El detalle, en «Huella de carbono» de la web.', S.ley); h.altos[fr]=32;
   H.push(h);
   h=new X.Hoja('Mes a mes'); h.pie='Informe de medio ambiente'; fr=_infXlsCab(h, S, 'Residuos, agua y combustible, mes a mes', 3, sub);
   fr=_infXlsTabla(h, S, fr, [['Mes', 18, 'tx'], ['Residuos (kg)', 14, 'd2'], ['Agua (m³)', 12, 'd2'], ['Combustible (gal)', 16, 'd2']], A.meses.map(function(q){ var s=_infMesN(q.m); return [s.charAt(0).toUpperCase()+s.slice(1), q.kg, q.agua, q.gal]; }), X);
@@ -2846,9 +2908,11 @@ function _infPintarAmb(){
       var s=_infSeccAmbN(x.k), fijo=!!s.fijo;
       return '<label class="inf-sec'+(x.on ? '' : ' off')+'" data-k="'+esc(x.k)+'"><span class="n">'+(i+1)+'</span><input type="checkbox" data-ona="'+i+'"'+(x.on ? ' checked' : '')+(fijo && x.k==='portada' ? ' disabled' : '')+'> <span class="tx"><b>'+esc(s.n)+'</b><small>'+esc(s.d)+'</small></span></label>';
     }).join('')+'</div></div></div>';
+  if((INFW.seccA||[]).some(function(x){ return x.k==='afotos' && x.on; })) h+='<div id="inf-fsel"></div>';   /* 19/11/2026 · las fotos que van y el panel ambiental «Va / No va» */
   h+='<div class="inf-armar"><button type="button" class="bt" id="inf-armar2">Armar el informe ›</button><span>Sale en PDF con su portada, su índice y las páginas numeradas, y con el Excel de lo registrado.</span>'+
     '<button type="button" class="bt sec chico" onclick="navegar(\'ambiente\')">Ir a «Medio ambiente»</button></div>';
   caja.innerHTML=h;
+  _infFselCargar();
   $('inf-mes').onchange=function(){ INFW.mes=this.value; INFW.datos=null; _infPideCargar(); };
   $('inf-para-n').oninput=function(){ INFW.paraN=this.value; };
   $('inf-por').oninput=function(){ INFW.por=this.value; };
@@ -2863,7 +2927,10 @@ function _infArmarAmb(){
   ['inf-armar', 'inf-armar2'].forEach(function(id){ var b=$(id); if(b){ b.disabled=true; b.textContent='Armando…'; } });
   var fin=function(){ INFW.armando=false; ['inf-armar', 'inf-armar2'].forEach(function(id){ var b=$(id); if(b){ b.disabled=false; b.textContent=_infArmarTx(); } }); };
   var vaF=INFW.seccA.some(function(x){ return x.k==='afotos' && x.on; });
-  Promise.all([_infTraer(INFW.mes, YO.obra, {}), cargarEvPDF(), _infLibPdf()]).then(function(r){
+  Promise.all([_infTraer(INFW.mes, YO.obra, {}), cargarEvPDF(), _infLibPdf(),
+               traer('sst_doc', '&select=id,nota&hoja=eq.'+HC_HOJA+'&order=creado.desc', 1).catch(function(){ return []; })]).then(function(r){
+    /* 19/11/2026 · los factores de la huella de carbono de la obra */
+    r[0].hcCfg=hcCfgLimpio(((r[3]||[])[0] && nota(r[3][0].nota)) || null); r[0]._hc=null;
     /* 20/10/2026 · lote 23 · el registro fotográfico ambiental: las fotos de sus temas */
     var Dz=vaF ? _infFotosDe(r[0], 'amb') : null;
     return (Dz ? _infFregTraer(Dz) : Promise.resolve()).then(function(){ r[0]._fregAmb=Dz; return r; });
@@ -3297,7 +3364,10 @@ var SALW_EMO_APT = [['apto', 'Apto'], ['apto_restr', 'Apto con restricciones'], 
 var SALW_EMO_EST = { vencido:'Vencido', por_vencer:'Por vencer', sin:'Sin examen', vigente:'Vigente', sin_proximo:'Sin próximo' };
 /* el registro fotográfico de un informe: solo sus temas */
 function _infFotosDe(D, tipo){
-  var L=infbFotoTemas(tipo, (D.freg && D.freg.L) || []), ks={}; L.forEach(function(c){ ks[c.k]=1; });
+  var L=infbFotoTemas(tipo, (D.freg && D.freg.L) || []), ks={};
+  /* 19/11/2026 · el panel ambiental: los bloques que «no van» se quitan */
+  var Fs=_infFselDe(tipo, D.mes || INFW.mes); if(Fs) L=L.filter(function(c){ return Fs.cats[c.k]!==0; });
+  L.forEach(function(c){ ks[c.k]=1; });
   return Object.assign({}, D, { freg:{ L:L, del:((D.freg && D.freg.del) || []).filter(function(x){ return ks[x.d.cat]; }), fallan:0 } });
 }
 
@@ -3455,8 +3525,10 @@ function _infPintarSal(){
       var s=_infSeccSalN(x.k), fijo=!!s.fijo;
       return '<label class="inf-sec'+(x.on ? '' : ' off')+'" data-k="'+esc(x.k)+'"><span class="n">'+(i+1)+'</span><input type="checkbox" data-ons="'+i+'"'+(x.on ? ' checked' : '')+(fijo && x.k==='portada' ? ' disabled' : '')+'> <span class="tx"><b>'+esc(s.n)+'</b><small>'+esc(s.d)+'</small></span></label>';
     }).join('')+'</div></div></div>';
+  if((INFW.seccS||[]).some(function(x){ return x.k==='sfotos' && x.on; })) h+='<div id="inf-fsel"></div>';   /* 19/11/2026 · las fotos que van */
   h+='<div class="inf-armar"><button type="button" class="bt" id="inf-armar2">Armar el informe ›</button><span>Sale en PDF con su portada, su índice y las páginas numeradas, y con el Excel de lo registrado.</span></div>';
   caja.innerHTML=h;
+  _infFselCargar();
   $('inf-mes').onchange=function(){ INFW.mes=this.value; INFW.datos=null; _infPintarSal(); };
   $('inf-para-n').oninput=function(){ INFW.paraN=this.value; };
   $('inf-por').oninput=function(){ INFW.por=this.value; };
@@ -3567,3 +3639,93 @@ function _salGuardarW(){
     if(VISTA.actual==='inf-salud') _infPintar();
   }).catch(function(e){ SALW.guardando=false; b.disabled=false; mal(e==='muy-grande' ? 'El archivo pesa más de 25 MB.' : 'No se pudo guardar. '+porQueFallo(e)); });
 }
+
+/* ═══ 19/11/2026 · LAS FOTOS QUE VAN EN EL INFORME (las elige el supervisor) ═══════════════════════════════════════════
+   Pedido: «no volcar todas las fotos del mes de golpe: un selector con vista previa donde el supervisor elija qué fotos y
+   cuántas» y, en el de medio ambiente, «un panel fotográfico con interruptores por bloque (Va / No va)». Lo elegido se
+   guarda en la obra por informe y mes (hoja «inf-fsel», nombre «<tipo>|<mes>»: { v:1, tipo, mes, ids:[…] | null, cats:{ k:0 } }).
+   Sin elegir nada, va lo de siempre (las primeras de cada tema, hasta su tope). Las horas hombre no se tocan: las charlas
+   de medio ambiente siguen contando en el informe de SST. */
+var INFF={ key:'', id:null, ids:null, cats:{}, fotos:null, L:null, n:0, t:null };
+function _infFselTipo(){ return INFW.tipo || 'sst'; }
+function _infFselTope(){ return (_infFselTipo()==='sst' && (INFW.nivel==='intermedio' || INFW.nivel==='basico')) ? 4 : 12; }
+function _infFselCargar(){
+  var c=$('inf-fsel'); if(!c) return;
+  var tipo=_infFselTipo(), mes=INFW.mes, key=tipo+'|'+mes, n=++INFF.n;
+  if(INFF.key===key && INFF.fotos){ _infFselPintar(); return; }
+  c.innerHTML='<div class="tarj"><div class="tarj-cuerpo"><p class="sub">📸 Cargando las fotos del mes…</p></div></div>';
+  Promise.all([
+    traer('sst_doc', '&select=id,hoja,nombre,url,nota,creado&hoja=eq.'+FOTO_HOJA+'&order=creado.asc', 3000),
+    traer('sst_doc', '&select=id,nota&hoja=eq.ats-cfg&order=creado.desc', 1).catch(function(){ return []; }),
+    traer('sst_doc', '&select=id,nombre,nota&hoja=eq.inf-fsel&nombre=eq.'+encodeURIComponent(key)+'&order=creado.desc', 1).catch(function(){ return []; })
+  ]).then(function(r){
+    if(n!==INFF.n) return;
+    var cfg=nota((r[1]||[])[0] && r[1][0].nota) || {};
+    INFF.L=infbFotoTemas(tipo, fotoCatLista(cfg.fotoCat));
+    var ks={}; INFF.L.forEach(function(q){ ks[q.k]=1; });
+    INFF.fotos=fotoRegDelMes(fotoRegFilas(r[0]), mes).filter(function(x){ return ks[x.d.cat]; });
+    var f=(r[2]||[])[0], d=f ? nota(f.nota) : null;
+    INFF.key=key; INFF.id=f ? f.id : null; INFF.ids=(d && Array.isArray(d.ids)) ? d.ids.map(String) : null; INFF.cats=(d && d.cats && typeof d.cats==='object') ? d.cats : {};
+    _infFselPintar();
+  }, function(){ if(n===INFF.n){ var c2=$('inf-fsel'); if(c2) c2.innerHTML='<div class="tarj"><div class="tarj-cuerpo"><p class="msg mal">No se pudieron leer las fotos del mes.</p></div></div>'; } });
+}
+/* lo que va sin elegir: las primeras de cada tema, hasta su tope */
+function _infFselDef(){
+  var tope=_infFselTope(), cu={}, out=[];
+  (INFF.fotos||[]).forEach(function(x){ cu[x.d.cat]=(cu[x.d.cat]||0)+1; if(cu[x.d.cat]<=tope) out.push(String(x.id)); });
+  return out;
+}
+function _infFselSel(){ var o={}; (INFF.ids || _infFselDef()).forEach(function(id){ o[id]=1; }); return o; }
+function _infFselCss(){
+  if(document.getElementById('inf-fsel-css')) return;
+  var st=document.createElement('style'); st.id='inf-fsel-css';
+  st.textContent=['.ifs-cat{border-top:1px solid var(--raya); padding:12px 0 4px}.ifs-cat:first-child{border-top:0}',
+    '.ifs-cab{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 8px}.ifs-cab b{flex:1 1 200px}.ifs-cab .tenue{font-size:12.5px}',
+    '.ifs-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:8px}',
+    '.ifs-f{position:relative; padding:0; border:2px solid transparent; border-radius:9px; overflow:hidden; background:var(--fondo); cursor:pointer; aspect-ratio:4/3}',
+    '.ifs-f img{display:block; width:100%; height:100%; object-fit:cover; opacity:.45}.ifs-f.on{border-color:var(--tinta)}.ifs-f.on img{opacity:1}',
+    '.ifs-f i{position:absolute; top:5px; right:5px; width:22px; height:22px; border-radius:50%; background:var(--panel); border:1.5px solid var(--raya2, #c9d1d6); display:grid; place-items:center; font-style:normal; font-size:13px; font-weight:700}',
+    '.ifs-f.on i{background:var(--tinta); color:var(--panel); border-color:var(--tinta)}',
+    '.ifs-off .ifs-grid{opacity:.35; pointer-events:none}'].join('\n');
+  document.head.appendChild(st);
+}
+function _infFselPintar(){
+  var c=$('inf-fsel'); if(!c || !INFF.fotos) return;
+  _infFselCss();
+  var sel=_infFselSel(), tipo=_infFselTipo(), amb=(tipo==='amb'), nSel=0, nTot=0;
+  var h='';
+  INFF.L.forEach(function(cat){
+    var F=INFF.fotos.filter(function(x){ return x.d.cat===cat.k; }), off=amb && INFF.cats[cat.k]===0, k=F.filter(function(x){ return sel[String(x.id)]; }).length;
+    if(!F.length && !amb) return;
+    nTot+=F.length; if(!off) nSel+=k;
+    h+='<div class="ifs-cat'+(off ? ' ifs-off' : '')+'"><div class="ifs-cab"><b>'+esc(cat.n)+' <span class="tenue">· '+(off ? 'no va' : k+' de '+F.length)+'</span></b>'+
+      (amb ? '<div class="chips" role="radiogroup" aria-label="'+esc(cat.n)+'"><button type="button" role="radio" class="chip'+(off ? '' : ' on')+'" aria-checked="'+!off+'" data-ifs-va="'+esc(cat.k)+'" data-v="1">Va</button><button type="button" role="radio" class="chip'+(off ? ' on' : '')+'" aria-checked="'+off+'" data-ifs-va="'+esc(cat.k)+'" data-v="0">No va</button></div>' : '')+
+      (F.length && !off ? '<button type="button" class="bt sec chico" data-ifs-todas="'+esc(cat.k)+'">Todas</button><button type="button" class="bt sec chico" data-ifs-ninguna="'+esc(cat.k)+'">Ninguna</button>' : '')+'</div>'+
+      (F.length ? '<div class="ifs-grid">'+F.map(function(x){ var on=!!sel[String(x.id)];
+        return '<button type="button" class="ifs-f'+(on ? ' on' : '')+'" data-ifs="'+esc(x.id)+'" aria-pressed="'+on+'" title="'+esc((x.d.desc || cat.n)+' · '+fechaLarga(x.d.fecha))+'"><img src="'+esc(x.url)+'" alt="'+esc(x.d.desc || cat.n)+'" loading="lazy"><i aria-hidden="true">'+(on ? '✓' : '')+'</i></button>'; }).join('')+'</div>'
+        : '<p class="tenue" style="margin:0">Sin fotos este mes. Se suben desde la cámara de la app («Al registro fotográfico») o en «Registro fotográfico».</p>')+'</div>';
+  });
+  c.innerHTML='<div class="tarj"><div class="tarj-cab"><div><h2>📸 Las fotos que van'+(nTot ? ' · '+nSel+' de '+nTot : '')+'</h2><p class="sub">Toca para quitar o poner. '+(INFF.ids ? 'Elegidas a mano.' : 'Sin elegir: las primeras '+_infFselTope()+' de cada tema.')+'</p></div>'+
+    '<div class="acciones">'+(INFF.ids ? '<button type="button" class="bt sec chico" data-ifs-auto="1">↺ Automático</button>' : '')+'<button type="button" class="bt sec chico" onclick="navegar(\'fotoreg\')">＋ Subir fotos</button></div></div>'+
+    '<div class="tarj-cuerpo">'+(h || '<p class="tenue">Sin fotos este mes.</p>')+'<p class="msg" id="ifs-msg" role="status"></p></div></div>';
+  c.onclick=function(ev){
+    var b=ev.target.closest('button'); if(!b) return;
+    var g=function(a){ return b.getAttribute(a); }, cur=Object.keys(_infFselSel());
+    var orden=function(set){ return INFF.fotos.map(function(x){ return String(x.id); }).filter(function(id){ return set[id]; }); };
+    if(g('data-ifs')){ var o=_infFselSel(), id=g('data-ifs'); if(o[id]) delete o[id]; else o[id]=1; INFF.ids=orden(o); }
+    else if(g('data-ifs-todas') || g('data-ifs-ninguna')){ var k=g('data-ifs-todas') || g('data-ifs-ninguna'), si=!!g('data-ifs-todas'), o2=_infFselSel();
+      INFF.fotos.forEach(function(x){ if(x.d.cat===k){ if(si) o2[String(x.id)]=1; else delete o2[String(x.id)]; } }); INFF.ids=orden(o2); }
+    else if(g('data-ifs-va')){ INFF.cats[g('data-ifs-va')]=(g('data-v')==='1') ? 1 : 0; if(INFF.cats[g('data-ifs-va')]===1) delete INFF.cats[g('data-ifs-va')]; }
+    else if(g('data-ifs-auto')){ INFF.ids=null; }
+    else return;
+    void cur; _infFselPintar(); _infFselGuardarLuego();
+  };
+}
+function _infFselGuardarLuego(){ clearTimeout(INFF.t); INFF.t=setTimeout(_infFselGuardar, 700); }
+function _infFselGuardar(){
+  var p=INFF.key.split('|'), d={ v:1, tipo:p[0], mes:p[1], ids:INFF.ids, cats:INFF.cats }, fila={ nombre:INFF.key, nota:JSON.stringify(d) };
+  var pr=INFF.id ? sbPatch('sst_doc?id=eq.'+encodeURIComponent(INFF.id), fila) : (fila.empresa=YO.obra.id, fila.hoja='inf-fsel', sbPostP('sst_doc', fila));
+  pr.then(function(rows){ if(!INFF.id && Array.isArray(rows) && rows[0] && rows[0].id) INFF.id=rows[0].id; }, function(e){ var m=$('ifs-msg'); if(m){ m.className='msg mal'; m.textContent='No se pudo guardar lo elegido. '+porQueFallo(e); } });
+}
+/* al armar: lo elegido (o lo de siempre), sin los bloques ambientales que «no van» */
+function _infFselDe(tipo, mes){ return (INFF.key===tipo+'|'+mes) ? INFF : null; }

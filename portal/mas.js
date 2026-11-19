@@ -702,6 +702,8 @@ function _empPintar(){
       '<div class="acciones" style="justify-content:flex-start;margin-top:14px"><button type="button" class="bt" id="emp-ok">Guardar</button></div>'+
     '</div></div>';
   caja.innerHTML=h;
+  /* 19/11/2026 · el proyecto que sale en los documentos: la misma lista que en la app (sst_proyectos) */
+  try{ _empProyTarjeta(caja); }catch(_pr){}
   /* 08/10/2026 · el lugar de la obra (lo arma el portal: ubiwTarjeta) */
   try{ if(typeof ubiwTarjeta==='function') ubiwTarjeta(caja); }catch(_u){}
   function vista(){
@@ -4249,4 +4251,56 @@ function _autwConstancia(t){
       .then(function(im){ if(im){ p.fotoDU=im.du; p.fotoR=im.r; } hacer(); }, hacer);
     hacer();
   }).catch(function(e){ toast('No se pudo armar la constancia. '+porQueFallo(e)); });
+}
+
+/* ══ EL PROYECTO EN LOS DOCUMENTOS (19/11/2026) ══
+   Marcelo: «ahí se agregan los proyectos, no los frentes… que estén sincronizados en la app y en la web, y viceversa;
+   pocas palabras». La misma lista y el mismo «actual» que la app (sst_proyectos / sst_guardar_proyectos). */
+var EMPP={ l:[], act:'', msg:'' };
+function _empProyTarjeta(caja){
+  var t=document.createElement('div'); t.className='tarj'; t.id='emp-proy';
+  t.innerHTML='<div class="tarj-cab"><div><h2>Proyecto en tus documentos</h2><p class="sub">Marca el que sale en tus documentos. Es la misma lista de la app.</p></div></div><div class="tarj-cuerpo" id="emp-proy-c"><p class="sub">Cargando…</p></div>';
+  var f=$('emp-form'); if(f && f.parentNode) f.parentNode.insertBefore(t, f.nextSibling); else caja.appendChild(t);
+  sbRpc('sst_proyectos',{p_emp:YO.obra.id}).then(function(r){
+    if(r && r.ok===true){ EMPP.l=(r.proyectos||[]).map(String); EMPP.act=String(r.actual||''); }
+    EMPP.msg=''; _empProyPintar();
+  }, function(){ EMPP.msg='No se pudo traer la lista. Revisa tu conexión.'; _empProyPintar(); });
+}
+function _empProyPintar(){
+  var c=$('emp-proy-c'); if(!c) return;
+  var h='';
+  if(!EMPP.l.length) h+='<p class="sub" style="margin:0 0 10px">Sin proyectos: sale el nombre de tu obra.</p>';
+  EMPP.l.forEach(function(n,i){
+    var on=(n===EMPP.act);
+    h+='<div class="emp-proy-f'+(on?' on':'')+'"><button type="button" class="emp-proy-el" data-i="'+i+'" aria-pressed="'+on+'"><span class="emp-proy-tic">'+(on?'✓':'')+'</span>'+
+       '<span><b>'+esc(n)+'</b><small>'+(on?'Sale en tus documentos':'Toca para usarlo')+'</small></span></button>'+
+       '<button type="button" class="bt-link emp-proy-x" data-x="'+i+'" aria-label="Quitar '+esc(n)+'">Quitar</button></div>';
+  });
+  h+='<div class="fila-c ya-al" style="margin-top:10px"><div class="campo" style="flex:1"><label for="emp-proy-n">Agregar un proyecto</label>'+
+     '<input id="emp-proy-n" maxlength="140" placeholder="Ej.: Línea 2 y Ramal 4 del Metro de Lima"></div>'+
+     '<div class="acciones" style="align-self:flex-end"><button type="button" class="bt" id="emp-proy-ok">＋ Agregar proyecto</button></div></div>'+
+     '<p class="ayuda" style="margin:6px 0 0">¿Frentes de esta obra? Van en «Frentes de trabajo».</p>'+
+     '<div class="msg" id="emp-proy-m" role="status">'+esc(EMPP.msg)+'</div>';
+  c.innerHTML=h;
+  [].forEach.call(c.querySelectorAll('.emp-proy-el'),function(b){ b.onclick=function(){ var n=EMPP.l[+b.getAttribute('data-i')]; if(n) _empProyGuardar(EMPP.l.slice(), n, 'Ahora sale «'+n+'».'); }; });
+  [].forEach.call(c.querySelectorAll('.emp-proy-x'),function(b){ b.onclick=function(){
+    var i=+b.getAttribute('data-x'), n=EMPP.l[i]; if(!n) return;
+    dialogo({titulo:'¿Quitar «'+n+'»?', texto:'Los documentos ya emitidos no cambian.', si:'Quitar', no:'Cancelar'}).then(function(ok){
+      if(!ok) return; var q=EMPP.l.filter(function(x,j){ return j!==i; }); _empProyGuardar(q, (EMPP.act===n)?(q[0]||''):EMPP.act, 'Quitado.');
+    });
+  }; });
+  var add=function(){ var inp=$('emp-proy-n'), n=String((inp&&inp.value)||'').replace(/\s+/g,' ').trim(); if(!n){ if(inp) inp.focus(); return; }
+    var ya=null; EMPP.l.forEach(function(x){ if(x.toLowerCase()===n.toLowerCase()) ya=x; });
+    if(ya){ _empProyGuardar(EMPP.l.slice(), ya, 'Ya estaba: ahora es el que sale.'); return; }
+    var q=EMPP.l.concat([n]); _empProyGuardar(q, (q.length===1)?n:EMPP.act, 'Proyecto agregado.'); };
+  $('emp-proy-ok').onclick=add;
+  $('emp-proy-n').onkeydown=function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); add(); } };
+}
+function _empProyGuardar(lista, actual, ok){
+  EMPP.msg='Guardando…'; _empProyPintar();
+  sbRpc('sst_guardar_proyectos',{p_emp:YO.obra.id, p_lista:lista, p_actual:String(actual||'')}).then(function(r){
+    if(r && r.ok===true){ EMPP.l=(r.proyectos||[]).map(String); EMPP.act=String(r.actual||''); EMPP.msg=ok+' Igual en la app.'; }
+    else EMPP.msg=(r && r.error==='no_eres_lider') ? 'Esto lo cambia el líder de la empresa.' : 'No se pudo guardar.';
+    _empProyPintar();
+  }, function(e){ EMPP.msg=porQueFallo(e); _empProyPintar(); });
 }

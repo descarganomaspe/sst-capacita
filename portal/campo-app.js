@@ -25,6 +25,11 @@ function _tarUnir(a, b){
         if(!z.m.some(function(w){ return w[0] === +q[0] && w[1] === q[1]; })) z.m.push([+q[0], q[1], String(q[2] || '').slice(0, 10)].concat(q[3] ? [String(q[3]).slice(0, 60)] : []));
       });
       (Array.isArray(y.x) ? y.x : []).forEach(function(t){ t = +t; if(t && z.x.indexOf(t) < 0) z.x.push(t); });
+      /* 19/11/2026 · el frente corregido de una marca: { ms: [frente, cuándo se corrigió] }; gana la corrección más nueva */
+      if(y.frx && typeof y.frx === 'object' && !Array.isArray(y.frx)) Object.keys(y.frx).forEach(function(ms){
+        var v = y.frx[ms]; if(!Array.isArray(v) || !(+ms) || !(+v[1])) return;
+        var w = (z.frx = z.frx || {})[ms]; if(!w || +v[1] > +w[1]) z.frx[ms] = [String(v[0] || '').slice(0, 60), +v[1]];
+      });
       /* 3/11/2026 · mejora 9: las autorizaciones del residente (una por entrada autorizada; la firma, en trazos) */
       (Array.isArray(y.au) ? y.au : []).forEach(function(u){
         if(!u || !(+u.ms) || (z.au || []).some(function(w){ return w.ms === +u.ms; })) return;
@@ -33,10 +38,14 @@ function _tarUnir(a, b){
       });
     });
   });
-  Object.keys(out.p).forEach(function(k){ out.p[k].m.sort(function(p, q){ return p[0] - q[0]; }); });
+  Object.keys(out.p).forEach(function(k){
+    var z = out.p[k]; z.m.sort(function(p, q){ return p[0] - q[0]; });
+    if(z.frx) z.m.forEach(function(q, i){ var v = z.frx[q[0]]; if(v && q[2] !== 'cel') z.m[i] = q.slice(0, 3).concat(v[0] ? [v[0]] : []); });
+  });
   return out;
 }
-function _tarFirma(x){ var n = 0; Object.keys((x && x.p) || {}).forEach(function(k){ var z = x.p[k]; n += ((z.m || []).length * 7) + ((z.x || []).length * 13); }); return n; }
+function _tarFirma(x){ var n = 0; Object.keys((x && x.p) || {}).forEach(function(k){ var z = x.p[k]; n += ((z.m || []).length * 7) + ((z.x || []).length * 13);
+  Object.keys(z.frx || {}).forEach(function(ms){ n += 17 + ((+(z.frx[ms] || [])[1] || 0) % 997); }); }); return n; }
 function _tarMarcas(z){ var x = z.x || []; return (z.m || []).filter(function(q){ return x.indexOf(q[0]) < 0; }); }
 function _tarPares(ms){
   var pares = [], ab = null;

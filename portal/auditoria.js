@@ -50,7 +50,9 @@ var AUD_SECC=[
   { k:'i14', n:'ISO 14001:2015', corto:'ISO 14001' },
   /* 4/11/2026 · revisión de Gemini (bloque 1): antisoborno (con el modelo de prevención de la Ley 30424) y calidad */
   { k:'i37', n:'ISO 37001:2016 y Ley 30424', corto:'Antisoborno' },
-  { k:'i9',  n:'ISO 9001:2015', corto:'ISO 9001' }
+  { k:'i9',  n:'ISO 9001:2015', corto:'ISO 9001' },
+  /* 19/11/2026 · la carpeta de campo, por ejes, como la pide una fiscalización (SUNAFIL, G.050) */
+  { k:'obra', n:'Obra · SUNAFIL y G.050', corto:'Obra' }
 ];
 /* 4/11/2026 · las áreas de la empresa: a cada requisito le toca una (la de la norma, de entrada; la obra la cambia), se le
    pide lo que falta y su evidencia dice de qué área es. Se guarda en la obra (sst_estado «aud_areas»). */
@@ -59,6 +61,150 @@ var AUD_SECC=[
 var AUD_AREAS=(typeof AREAS_TRABAJO!=='undefined') ? AREAS_TRABAJO.map(function(a){ return [a.k, a.n]; }) :
               [['sst', 'SST'], ['calidad', 'Calidad'], ['produccion', 'Producción'], ['logistica', 'Logística'], ['administracion', 'Administración y finanzas'],
                ['rrhh', 'Recursos humanos'], ['legal', 'Legal y cumplimiento'], ['gerencia', 'Gerencia']];
+/* ── 19/11/2026 · LA CARPETA DE CAMPO: 30 puntos por ejes (pedido de la obra para auditorías SUNAFIL, Ley 29783,
+   D.S. 005-2012-TR, Norma G.050, D.S. 011-2019-TR e ISO 45001/14001). Cada punto con su estado (el de OBRASST o el que
+   marque la obra), su fecha de emisión, su periodicidad y su vencimiento. ── */
+var AUD_OBRA=[
+  { g:'Eje A · Gestión legal y documental SST', s:[
+    { k:'obra:a1', cl:'A1', t:'Política de SST y Medio Ambiente firmada, fechada y difundida en obra', ev:'politica', a:'gerencia' },
+    { k:'obra:a2', cl:'A2', t:'IPERC de línea base e IPERC continuo aprobados y difundidos', ev:'iperc' },
+    { k:'obra:a3', cl:'A3', t:'Mapa de riesgos actualizado por niveles o frentes y publicado', ev:'mapa' },
+    { k:'obra:a4', cl:'A4', t:'RISST con los cargos de entrega firmados por cada trabajador', ev:'risst' },
+    { k:'obra:a5', cl:'A5', t:'Acta de instalación y actas ordinarias y extraordinarias del Comité, Subcomité o Supervisor de SST', ev:'subir', pista:'Las actas firmadas: la de instalación y las mensuales.' },
+    { k:'obra:a6', cl:'A6', t:'Plan anual de SST, programa de capacitaciones y programa de inspecciones con su avance', ev:'prog' },
+    { k:'obra:a7', cl:'A7', t:'Inducción general de hombre nuevo firmada antes de entrar a campo', ev:'cap' },
+    { k:'obra:a8', cl:'A8', t:'Constancia de entrega de las recomendaciones de seguridad por puesto (Ley 29783, art. 35)', ev:'subir', pista:'El instructivo de riesgos del puesto firmado (app: «Instructivo del puesto»).' },
+    { k:'obra:a9', cl:'A9', t:'Estadísticas mensuales de SST (frecuencia, severidad, accidentabilidad) y horas hombre trabajadas', ev:'est' },
+    { k:'obra:a10', cl:'A10', t:'Libro de actas de SST foliado y al día', ev:'subir', pista:'Las páginas del libro de actas escaneadas.' } ] },
+  { g:'Eje B · Salud ocupacional y vigilancia médica', s:[
+    { k:'obra:b11', cl:'B11', t:'Certificados de aptitud médico ocupacional (EMO) vigentes, con control de restricciones', ev:'emo', a:'salud' },
+    { k:'obra:b12', cl:'B12', t:'Cargos de entrega del resultado del EMO a cada trabajador', ev:'subir', pista:'El cargo firmado por cada trabajador.', a:'salud' },
+    { k:'obra:b13', cl:'B13', t:'SCTR Salud y Pensión vigentes, con constancias de pago y trama mensual', ev:'subir', pista:'Las pólizas, las constancias de pago y la trama del mes.', a:'rrhh' },
+    { k:'obra:b14', cl:'B14', t:'Informes de monitoreo de agentes ocupacionales (ruido, polvo y sílice, vibración, ergonomía, iluminación)', ev:'mon', a:'salud' },
+    { k:'obra:b15', cl:'B15', t:'Protección contra la radiación UV, hidratación y entrega de bloqueador solar (Ley 30102)', ev:'subir', pista:'El programa y el registro de entrega de bloqueador.', a:'salud' } ] },
+  { g:'Eje C · Control operacional, equipos y alto riesgo', s:[
+    { k:'obra:c16', cl:'C16', t:'PETS aprobados y su difusión por cuadrilla', ev:'subir', pista:'Los PETS firmados y su registro de difusión (app y web: «PETS»).' },
+    { k:'obra:c17', cl:'C17', t:'ATS firmados antes del inicio de cada jornada', ev:'ats' },
+    { k:'obra:c18', cl:'C18', t:'PETAR de alto riesgo (altura, caliente, espacio confinado, excavación, izaje)', ev:'petar' },
+    { k:'obra:c19', cl:'C19', t:'Certificados de operatividad y calibración de equipos críticos (grúas, polipastos, plataformas, detectores de gases)', ev:'subir', pista:'Los certificados vigentes de cada equipo crítico.', a:'mantenimiento' },
+    { k:'obra:c20', cl:'C20', t:'Homologación y autorización de operadores de maquinaria pesada, grúas y riggers', ev:'subir', pista:'Las autorizaciones internas y los certificados de cada operador.', a:'rrhh' },
+    { k:'obra:c21', cl:'C21', t:'Inspección de pre-uso de herramientas manuales y de poder, y la cinta del mes', ev:'preuso' },
+    { k:'obra:c22', cl:'C22', t:'Memorias de cálculo, planos y tarjetas de liberación de andamios y plataformas', ev:'subir', pista:'La tarjeta de liberación de cada andamio y su memoria.' },
+    { k:'obra:c23', cl:'C23', t:'Protocolos de tableros eléctricos provisionales, puesta a tierra e interruptores diferenciales', ev:'subir', pista:'Los protocolos de prueba firmados por el electricista.' } ] },
+  { g:'Eje D · MATPEL, medio ambiente y emergencias', s:[
+    { k:'obra:d24', cl:'D24', t:'Inventario de productos químicos y MATPEL que entraron a la obra', ev:'quiminv', a:'almacen' },
+    { k:'obra:d25', cl:'D25', t:'Difusión a TODO el personal operativo: manejo de químicos, SGA, rombo NFPA y hojas MSDS/FDS', ev:'difquim' },
+    { k:'obra:d26', cl:'D26', t:'Extintores operativos con su recarga vigente e inspección mensual', ev:'equ' },
+    { k:'obra:d27', cl:'D27', t:'Plan de respuesta ante emergencias, brigadas e informes de simulacros', ev:'emerg' },
+    { k:'obra:d28', cl:'D28', t:'Manifiestos de residuos peligrosos y certificados de disposición final con EO-RS', ev:'respel' } ] },
+  { g:'Eje E · Subcontratistas e investigación de incidentes', s:[
+    { k:'obra:e29', cl:'E29', t:'Dossier de homologación SSOMA de cada subcontratista antes de empezar', ev:'subir', pista:'El dossier de cada subcontratista (web: «Empresas de la obra»).', a:'logistica' },
+    { k:'obra:e30', cl:'E30', t:'Investigación de incidentes, incidentes peligrosos y accidentes, con seguimiento de sus medidas', ev:'acc' } ] }
+];
+/* ══ 19/11/2026 · CERTIFICACIONES Y SOSTENIBILIDAD ══════════════════════════════════════════════════════════════════
+   Pedido de Marcelo (documento «Módulo de Certificaciones, Cumplimiento Normativo y Sostenibilidad»): un solo acceso con
+   ISO 45001, ISO 14001, Huella de Carbono Perú, Certificado Azul y LEED / EDGE, punto por punto, sin doble carga.
+   Se arma sobre esta misma carpeta (el mismo motor, la misma evidencia «aud-evid», el mismo estado «aud-ctl» y los mismos
+   pedidos a las áreas): sin tablas nuevas. Cada punto nuevo dice qué pide y cómo lograrlo (pasos que se marcan).
+   Fuentes: Huella de Carbono Perú (D.S. 013-2019-MINAM, voluntaria; niveles de la R.M. 185-2021-MINAM); Certificado Azul
+   (R.J. N.° 023-2020-ANA y su modificación R.J. N.° 390-2023-ANA); LEED v4 BD+C (SSp1, MRp2, MRc5, EQc3, MRc2); EDGE
+   (edgebuildings.com, preguntas frecuentes). Lo que la obra ya registra se cuenta solo; nada se vuelve a digitar. */
+var AUD_HC=[
+  { g:'Nivel 1 · Medición', cita:'Huella de Carbono Perú es voluntaria (D.S. 013-2019-MINAM). Sus niveles, de la R.M. 185-2021-MINAM. Los datos salen de «Medio ambiente» y «Huella de carbono».', s:[
+    { k:'hc:n1', cl:'N1', t:'Inventario del año completo: todos los meses con sus datos', ev:'hcInv', a:'sst',
+      exige:'Medir las emisiones del año (alcances 1, 2 y 3) con todos los meses registrados.',
+      pasos:[['Almacén', 'Cargar cada mes el combustible con su boleta.'], ['Administración', 'Subir el recibo de luz de cada suministro.'], ['SSOMA', 'Revisar que no falte ningún mes.']] },
+    { k:'hc:fac', cl:'N1', t:'Cada dato con su factor de emisión oficial', ev:'hcFac', a:'sst',
+      exige:'Usar el factor oficial de cada fuente: sin promedios ni factores propios.',
+      pasos:[['SSOMA', 'Ver en «Huella de carbono» qué datos esperan su factor oficial.'], ['SSOMA', 'No reemplazarlo por un factor propio: OBRASST lo carga cuando sale publicado.']] },
+    { k:'hc:cal', cl:'N1', t:'Datos revisados: sin boletas repetidas, meses vacíos ni estimados sin revisar', ev:'hcCal', a:'sst',
+      exige:'Datos que un verificador pueda seguir hasta su papel.',
+      pasos:[['SSOMA', 'Abrir «Revisar» en Huella de carbono y resolver cada alerta.'], ['Quien cargó el dato', 'Marcar como revisado cada dato estimado.']] } ] },
+  { g:'Nivel 2 · Verificación', s:[
+    { k:'hc:n2', cl:'N2', t:'Inventario verificado por un organismo acreditado ante INACAL (NTP-ISO 14065)', ev:'hcVerif', a:'gerencia', pista:'El informe o la declaración de verificación del año.',
+      exige:'Que un organismo acreditado ante INACAL verifique el inventario del año.',
+      pasos:[['Gerencia', 'Contratar un organismo acreditado ante INACAL.'], ['SSOMA', 'Entregarle el ZIP para el verificador (Huella de carbono › Exportar).'], ['SSOMA', 'Anotar el organismo y la fecha en «Niveles» y adjuntar el informe.']] } ] },
+  { g:'Nivel 3 · Reducción', s:[
+    { k:'hc:n3', cl:'N3', t:'Iniciativas de reducción y menos emisiones que el año anterior', ev:'hcRed', a:'produccion',
+      exige:'Dos años verificados, iniciativas de reducción y un indicador menor que el del año anterior.',
+      pasos:[['Mantenimiento', 'Mantenimiento preventivo de maquinaria y grupos electrógenos.'], ['Logística', 'Ordenar los viajes de volquetes y proveedores.'], ['SSOMA', 'Registrar cada iniciativa en «Niveles» con su fecha.']] } ] },
+  { g:'Nivel 4 · Neutralización', s:[
+    { k:'hc:n4', cl:'N4', t:'Neutralización de las emisiones que quedan', ev:'hcNeu', a:'gerencia', pista:'El certificado de los créditos de carbono usados.',
+      exige:'Compensar con créditos de carbono certificados las emisiones que quedan.',
+      pasos:[['Gerencia', 'Adquirir créditos de carbono certificados por lo que queda.'], ['SSOMA', 'Anotar las toneladas en «Niveles» y adjuntar el certificado.']] } ] },
+  { g:'Para el reconocimiento', s:[
+    { k:'hc:san', cl:'—', t:'Sin sanciones pendientes de OEFA u OSINFOR ni condena penal', ev:'hcSan', a:'legal' } ] }
+];
+var AUD_AZUL=[
+  { g:'Inscripción', cita:'Programa Huella Hídrica de la ANA (R.J. N.° 023-2020-ANA). El agua de la obra sale de «Medio ambiente».', s:[
+    { k:'azul:ins', cl:'1', t:'Inscripción en el Programa Huella Hídrica de la ANA', ev:'subir', a:'gerencia', pista:'La solicitud de inscripción y su constancia (la inscripción no tiene costo).',
+      exige:'Inscribirse con los documentos de la empresa, el reporte de huella hídrica y los dos proyectos: reducción y valor compartido.',
+      pasos:[['Gerencia', 'Reunir los documentos de la empresa y la vigencia de poder.'], ['SSOMA', 'Presentar la solicitud con el reporte y los dos proyectos.']] },
+    { k:'azul:usu', cl:'2', t:'Al día como usuario de agua', ev:'subir', a:'legal', pista:'La declaración de cumplimiento de las obligaciones como usuario de agua y el papel de cada fuente (recibo de la red pública, guías de cisterna).',
+      exige:'Declarar que la empresa cumple sus obligaciones como usuario de agua.',
+      pasos:[['Legal', 'Firmar la declaración de cumplimiento.'], ['Administración', 'Reunir el sustento de cada fuente de agua de la obra.']] } ] },
+  { g:'Medición', s:[
+    { k:'azul:base', cl:'3', t:'Agua de la obra mes a mes, por fuente', ev:'aguaBase', a:'sst',
+      exige:'Medir el agua que usa la obra, en m³, con su papel.',
+      pasos:[['Almacén', 'Anotar cada cisterna recibida con su guía.'], ['Administración', 'Subir el recibo de agua de la red pública.'], ['SSOMA', 'Registrar los m³ del mes en «Medio ambiente».']] },
+    { k:'azul:rep', cl:'4', t:'Reporte de huella hídrica elaborado o validado por una entidad verificadora', ev:'subir', a:'gerencia', pista:'El reporte de huella hídrica con la validación de la entidad verificadora inscrita en la ANA.',
+      exige:'Un reporte de huella hídrica elaborado o validado por una entidad verificadora.',
+      pasos:[['Gerencia', 'Contratar una entidad verificadora inscrita en la ANA.'], ['SSOMA', 'Entregarle el agua mes a mes por fuente y por uso.']] } ] },
+  { g:'Proyectos', s:[
+    { k:'azul:red', cl:'5', t:'Proyecto de reducción de huella hídrica en marcha', ev:'aguaRed', a:'produccion', pista:'El proyecto y las fotos de lo hecho.',
+      exige:'Ejecutar el proyecto de reducción; la ANA le hace seguimiento.',
+      pasos:[['Producción', 'Recircular el agua de lavado de mixers y herramientas.'], ['Producción', 'Curar con aditivo o membrana donde se pueda.'], ['Almacén', 'Grifería temporizada en lavaderos y servicios.'], ['SSOMA', 'Tomar las fotos del antes y el después.']] },
+    { k:'azul:vc', cl:'6', t:'Proyecto de valor compartido en agua', ev:'subir', a:'gerencia', pista:'El proyecto con la comunidad y sus evidencias.',
+      exige:'Un proyecto en agua con la comunidad: saneamiento, cuidado de la cuenca o capacitación.',
+      pasos:[['Gerencia', 'Elegir el proyecto con la comunidad.'], ['SSOMA', 'Guardar actas, listas y fotos de lo ejecutado.']] } ] },
+  { g:'Certificado', s:[
+    { k:'azul:cert', cl:'7', t:'Certificado Azul vigente y su renovación', ev:'subir', a:'gerencia', pista:'La Resolución Jefatural de la ANA que lo otorga.',
+      exige:'Lo otorga la ANA por Resolución Jefatural, por un año como mínimo; se renueva con nuevos proyectos.',
+      pasos:[['SSOMA', 'Poner la fecha de emisión y la periodicidad «Anual»: avisa antes de vencer.']] } ] }
+];
+var AUD_LEED=[
+  { g:'LEED v4 · BD+C · lo que toca a la obra', cita:'Los residuos salen solos de «Medio ambiente» (cada salida con su destino y su certificado).', s:[
+    { k:'leed:ssp1', cl:'SSp1', t:'Prevención de la contaminación por la construcción: erosión, sedimentos y polvo', ev:'subir', a:'produccion', pista:'El plan de control de erosión y sedimentación y sus inspecciones con fotos.',
+      exige:'Prerrequisito: sin él no hay certificación.',
+      pasos:[['Producción', 'Proteger sumideros y buzones con geotextil.'], ['Producción', 'Lavado de llantas a la salida de la obra.'], ['Almacén', 'Acopio de agregados cubierto.'], ['SSOMA', 'Inspección semanal con fotos.']] },
+    { k:'leed:mrp2', cl:'MRp2', t:'Plan de gestión de residuos de construcción y demolición', ev:'subir', a:'sst', pista:'El plan con los flujos que se van a desviar y la meta.',
+      exige:'Prerrequisito: el plan con los flujos de residuos y su meta de desvío.',
+      pasos:[['SSOMA', 'Escribir el plan: flujos, meta y quién recoge cada uno.'], ['Logística', 'Elegir la EO-RS y los recicladores.']] },
+    { k:'leed:mrc5', cl:'MRc5', t:'Desvío de residuos del relleno: 50 % con 3 flujos o 75 % con 4', ev:'leedRes', a:'logistica',
+      exige:'Desviar del relleno los residuos no peligrosos: 50 % con 3 flujos de materiales da 1 punto; 75 % con 4, 2 puntos. Lo excavado y el desbroce no cuentan.',
+      pasos:[['Almacén', 'Pesar cada salida y registrarla en «Medio ambiente» con su destino.'], ['Logística', 'Pedir el certificado de la EO-RS o del reciclador.'], ['SSOMA', 'Separar al menos 3 flujos: concreto, metal, madera, cartón, plástico.']] },
+    { k:'leed:eqc3', cl:'EQc3', t:'Plan de calidad del aire interior durante la construcción', ev:'subir', a:'produccion', pista:'El plan y sus fotos: ductos sellados, materiales protegidos de la humedad, control de polvo.',
+      exige:'Proteger el aire interior mientras se construye.',
+      pasos:[['Producción', 'Sellar con plástico los ductos guardados e instalados.'], ['Almacén', 'Guardar los materiales absorbentes lejos de la humedad.'], ['SSOMA', 'Fotos de cada medida.']] },
+    { k:'leed:mrc2', cl:'MRc2', t:'Declaraciones ambientales de producto (EPD) de lo que se compra', ev:'subir', a:'logistica', pista:'Las EPD y fichas técnicas de los productos comprados.',
+      exige:'Productos con su declaración ambiental de producto.',
+      pasos:[['Logística', 'Pedir la EPD con cada cotización.'], ['Almacén', 'Guardar la ficha con la guía de ingreso.']] } ] },
+  { g:'EDGE (IFC)', cita:'EDGE pide al menos 20 % de ahorro en energía, en agua y en la energía incorporada en los materiales frente a un edificio convencional.', s:[
+    { k:'edge:fichas', cl:'EDGE', t:'Fichas técnicas de lo instalado que sustenta el ahorro', ev:'subir', a:'logistica', pista:'Las fichas de aparatos sanitarios, luminarias, vidrios y aislamiento instalados, con sus guías.',
+      exige:'Que lo instalado sea lo que se declaró en el diseño.',
+      pasos:[['Logística', 'Comprar lo especificado en el diseño EDGE.'], ['Producción', 'Foto de cada equipo instalado con su placa.']] },
+    { k:'edge:aud', cl:'EDGE', t:'Auditoría en sitio después de la construcción (certificado final)', ev:'subir', a:'gerencia', pista:'El informe del auditor EDGE de su visita a la obra.',
+      exige:'El certificado final pide una auditoría en sitio terminada la obra.',
+      pasos:[['Gerencia', 'Coordinar la visita del auditor EDGE.'], ['SSOMA', 'Tener a mano las fichas y fotos de lo instalado.']] } ] }
+];
+var CERT_SECC=[
+  { k:'hc', n:'Huella de Carbono Perú (MINAM)', corto:'Huella MINAM', ic:'🌍' },
+  { k:'azul', n:'Certificado Azul (ANA)', corto:'Certificado Azul', ic:'💧' },
+  { k:'leed', n:'LEED v4 y EDGE · fase de obra', corto:'LEED / EDGE', ic:'🏢' }
+];
+/* el tablero: las dos ISO de la carpeta y las tres de sostenibilidad */
+var CERT_PROG=[{ k:'i45', n:'ISO 45001:2018', corto:'ISO 45001', ic:'🦺' }, { k:'i14', n:'ISO 14001:2015', corto:'ISO 14001', ic:'🌱' }].concat(CERT_SECC);
+(function(){
+  [['hc', AUD_HC], ['azul', AUD_AZUL], ['leed', AUD_LEED]].forEach(function(x){
+    x[1].forEach(function(G){ G.s.forEach(function(r){ r.norma=x[0]; r.g=G.g; r.z=r.cl+' '+_audAscii(r.t).slice(0, 60); }); });
+  });
+})();
+function _audSeccDe(k){ return AUD_SECC.concat(CERT_SECC).filter(function(x){ return x.k===k; })[0] || null; }
+/* el estado que marca la obra en cada punto y la periodicidad (hoja «aud-ctl»: { v:1, k, est, fe, per }) */
+var AUD_CTL='aud-ctl';
+var AUD_CTL_EST=[['cumple', 'Cumple', 'ok'], ['proceso', 'En proceso', 'ojo'], ['pendiente', 'Pendiente', 'mal'], ['na', 'No aplica', 'gris']];
+var AUD_PER=[['', 'Sin periodicidad'], ['diaria', 'Diaria'], ['semanal', 'Semanal'], ['mensual', 'Mensual'], ['trimestral', 'Trimestral'], ['semestral', 'Semestral'], ['anual', 'Anual']];
+var AUD_PER_D={ diaria:1, semanal:7, mensual:31, trimestral:92, semestral:183, anual:366 };
 /* ── LO QUE PIDE LA LEY (D.S. 005-2012-TR y Ley 29783), con los títulos de la norma ──────────────────────────────── */
 var AUD_LEY=[
   { g:'Documentos del sistema de gestión', cita:'D.S. 005-2012-TR, art. 32', zip:'01 Documentos del sistema (art 32)', s:[
@@ -275,13 +421,16 @@ var AUD_I9=[
 /* cada requisito con su llave ('i45:6.1.2'), su norma y su carpeta del ZIP */
 (function(){
   AUD_LEY.forEach(function(G){ G.s.forEach(function(r){ r.norma='ley'; r.g=G.g; r.gz=G.zip; }); });
+  /* 19/11/2026 · la carpeta de campo: su llave ya viene puesta ('obra:a1') */
+  AUD_OBRA.forEach(function(G){ G.zip='08 Obra SUNAFIL y G050/'+_audAscii(G.g); G.s.forEach(function(r){ r.norma='obra'; r.g=G.g; r.gz=G.zip; r.z=r.cl+' '+_audAscii(r.t).slice(0, 60); }); });
   [['i45', AUD_I45, '04 ISO 45001'], ['i14', AUD_I14, '05 ISO 14001'], ['i37', AUD_I37, '06 ISO 37001 y Ley 30424'], ['i9', AUD_I9, '07 ISO 9001']].forEach(function(x){
     x[1].forEach(function(G){ G.zip=x[2]+'/'+_audAscii(G.g); G.s.forEach(function(r){ r.k=x[0]+':'+r.cl; r.norma=x[0]; r.g=G.g; r.gz=G.zip; r.z=r.cl+' '+_audAscii(r.t).slice(0, 60); }); });
   });
 })();
-function _audCatalogo(k){ return k==='i45' ? AUD_I45 : (k==='i14' ? AUD_I14 : (k==='i37' ? AUD_I37 : (k==='i9' ? AUD_I9 : AUD_LEY))); }
+function _audCatalogo(k){ return k==='i45' ? AUD_I45 : (k==='i14' ? AUD_I14 : (k==='i37' ? AUD_I37 : (k==='i9' ? AUD_I9 : (k==='obra' ? AUD_OBRA : (k==='hc' ? AUD_HC : (k==='azul' ? AUD_AZUL : (k==='leed' ? AUD_LEED : AUD_LEY))))))); }
+function _certTodos(){ var L=[]; CERT_SECC.forEach(function(S){ _audCatalogo(S.k).forEach(function(G){ G.s.forEach(function(r){ L.push(r); }); }); }); return L; }
 function _audTodos(){ var L=[]; AUD_SECC.forEach(function(S){ _audCatalogo(S.k).forEach(function(G){ G.s.forEach(function(r){ L.push(r); }); }); }); return L; }
-function _audReq(k){ var L=_audTodos(); for(var i=0;i<L.length;i++) if(L[i].k===k) return L[i]; return null; }
+function _audReq(k){ var L=_audTodos().concat(_certTodos()); for(var i=0;i<L.length;i++) if(L[i].k===k) return L[i]; return null; }
 function _audAscii(s){ return String(s==null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim(); }
 
 function _audCss(){
@@ -319,6 +468,11 @@ function _audCss(){
     '.aud-nota{font-size:12.5px; color:var(--gris); border-left:3px solid var(--raya2); padding:2px 0 2px 9px; margin:4px 0 0}',
     '.aud-pie{font-size:12.5px; color:var(--gris); margin:4px 0 0}',
     '.aud-prog{display:block; height:6px; border-radius:99px; background:var(--fondo); overflow:hidden} .aud-prog i{display:block; height:100%; background:var(--ok)}',
+    /* 19/11/2026 · el estado de la obra, la fecha y la periodicidad; el % por eje */
+    '.aud-pct{font-weight:700; color:var(--tinta); font-variant-numeric:tabular-nums; font-size:.9em}.aud-prog-g{margin:-2px 0 10px; max-width:320px}',
+    '.aud-ctl{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin:8px 0 0}.aud-ctl .chips{margin:0}.aud-ctl .chip{padding:3px 10px; font-size:12px}',
+    '.aud-ce.ok.on{background:var(--ok); border-color:var(--ok); color:#fff}.aud-ce.ojo.on{background:#b7791f; border-color:#b7791f; color:#fff}.aud-ce.mal.on{background:var(--mal); border-color:var(--mal); color:#fff}.aud-ce.gris.on{background:var(--gris); border-color:var(--gris); color:#fff}',
+    '.aud-ctl-f{display:inline-flex; gap:6px; align-items:center; font-size:12px; color:var(--gris); margin:0}.aud-ctl input[type=date],.aud-ctl select{margin:0; padding:4px 8px; font-size:12.5px; width:auto}',
     '#aud-per{width:auto; max-width:300px; min-width:0}',
     /* 4/11/2026 · las áreas */
     '.aud-area{display:flex; flex-wrap:wrap; align-items:center; gap:6px}',
@@ -327,14 +481,28 @@ function _audCss(){
     '.aud-pedir-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; padding:10px 12px; border:1px dashed var(--raya2); border-radius:10px; font-size:13px; color:var(--gris)}',
     '.aud-pa{border:1px solid var(--raya); border-radius:10px; padding:10px 12px; margin:0 0 10px}',
     '.aud-pa-cab{display:flex; gap:10px; align-items:baseline; flex-wrap:wrap} .aud-pa-cab button{margin-left:auto}',
-    '.aud-pa ul{margin:8px 0 0 18px; padding:0; font-size:13px; line-height:1.55}'
+    '.aud-pa ul{margin:8px 0 0 18px; padding:0; font-size:13px; line-height:1.55}',
+    /* 19/11/2026 · qué pide, los pasos y el tablero de certificaciones */
+    '.aud-pasos{margin:8px 0 0}.aud-pasos summary{cursor:pointer; font-size:12.5px; font-weight:600; color:var(--azul)}.aud-pasos .pill{font-size:11.5px; margin-left:4px}',
+    '.aud-exige{font-size:13px; margin:6px 0; padding:8px 10px; border-radius:8px; background:var(--fondo); color:var(--tinta); line-height:1.45}',
+    '.aud-pl{display:grid; gap:6px; margin:6px 0 0}.aud-paso{display:flex; gap:9px; align-items:flex-start; font-size:13px; border:1px solid var(--raya); border-radius:8px; padding:7px 10px; cursor:pointer; margin:0; line-height:1.4}',
+    '.aud-paso input{margin:2px 0 0; width:auto; flex:none}.aud-paso.on{border-color:var(--ok); background:var(--ok-f)}.aud-paso b{color:var(--gris); font-weight:600; margin-right:4px}',
+    '.cert-g{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:12px 0 0}',
+    '@media (max-width:760px){ .cert-g{grid-template-columns:repeat(2,minmax(0,1fr))} }',
+    '.cert-c{display:flex; flex-direction:column; align-items:center; gap:6px; border:1px solid var(--raya); border-radius:14px; padding:14px 10px 12px; background:var(--panel); cursor:pointer; font:inherit; color:inherit; text-align:center}',
+    '.cert-c:hover{border-color:var(--raya2)} .cert-c.on{border-color:var(--azul); box-shadow:inset 0 0 0 1px var(--azul)}',
+    '.cert-c b{font-size:13.5px; line-height:1.3}.cert-c small{color:var(--gris); font-size:12px}',
+    '.cert-anillo{width:74px; height:74px; position:relative}.cert-anillo svg{width:100%; height:100%; transform:rotate(-90deg)}',
+    '.cert-anillo span{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; font-variant-numeric:tabular-nums}',
+    '.cert-ic{font-size:20px; line-height:1}',
+    '.cert-fil{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 4px}.cert-fil .chips{margin:0}.cert-fil select{width:auto; margin:0; padding:5px 8px; font-size:13px}'
   ].join('\n');
   document.head.appendChild(st);
 }
 
 /* ══ LO DE LA OBRA: DE LA NUBE, UNA VEZ (20 s de memoria) ═════════════════════════════════════════════════════════
    Se trae lo de los últimos años (desde el 1 de enero de hace tres años) y cada periodo se corta aquí. */
-var AUD_HOJAS_NOTA=['ges-act', 'ges-prog', 'ges-objetivos', 'sal-reg', 'amb-reg', 'quienes', 'iperc', 'frentes', AUD_EVID, AUD_INT, AUD_ACC, AUD_REV, AUD_SALA, AUD_PED, AUD_MSG, AUD_SIM];
+var AUD_HOJAS_NOTA=['aud-ctl', 'hc-cfg', 'ges-act', 'ges-prog', 'ges-objetivos', 'sal-reg', 'amb-reg', 'quienes', 'iperc', 'frentes', AUD_EVID, AUD_INT, AUD_ACC, AUD_REV, AUD_SALA, AUD_PED, AUD_MSG, AUD_SIM];
 function _audDesdeDatos(){ return (+hoyISO().slice(0, 4)-3)+'-01-01'; }
 function audTraer(fresco){
   var O=YO.obra||{}, oid=O.id;
@@ -432,7 +600,7 @@ function audContexto(D, per){
     if(typeof dcEsDoc!=='function' || dcEsDoc(r.hoja)){ C.nDocs++; if(en(r.creado)) C.nDocsPer++; }
   });
   /* lo que va en «nota»: lo hecho a mano en la web, los programas, la salud, el ambiente, los frentes y lo de esta sección */
-  C.act={ cap:[], sim:[], camp:[], mon:[], aud:[] }; C.progs=[]; C.objs=[]; C.ipercPap=[]; C.quienes=[]; C.evid={}; C.int=[]; C.hall=[]; C.revs=[];
+  C.act={ cap:[], sim:[], camp:[], mon:[], aud:[] }; C.progs=[]; C.objs=[]; C.ipercPap=[]; C.quienes=[]; C.evid={}; C.int=[]; C.hall=[]; C.revs=[]; C.ctl={};
   var salR=[], ambR=[], freR=[];
   (D.notas||[]).forEach(function(r){
     if(!r) return;
@@ -442,16 +610,20 @@ function audContexto(D, per){
     else if(h==='ges-objetivos'){ d=_audNota(r); if(d && d.k==='obj') C.objs.push({ id:r.id, d:d }); }
     else if(h==='sal-reg') salR.push(r);
     else if(h==='amb-reg') ambR.push(r);
+    else if(h==='hc-cfg'){ if(!C.hcCfgN) C.hcCfgN=_audNota(r) || {}; }
     else if(h==='quienes') C.quienes.push(r);
     else if(h==='frentes') freR.push(r);
     else if(h==='iperc'){ if(!r.url && /^\s*\{/.test(String(r.nota||''))) C.ipercPap.push(r); }
     else if(h===AUD_EVID){ d=_audNota(r); if(d && d.k && r.url) (C.evid[d.k]=C.evid[d.k]||[]).push(r); }
+    else if(h===AUD_CTL){ d=_audNota(r); if(d && d.k && !C.ctl[d.k]) C.ctl[d.k]={ id:r.id, est:d.est || '', fe:_audFecha(d.fe), per:AUD_PER_D[d.per] ? d.per : '', pa:_audPasosLimpios(d.pa) }; }
     else if(h===AUD_INT){ d=_audNota(r); if(d) C.int.push({ id:r.id, creado:r.creado, d:d }); }
     else if(h===AUD_ACC){ d=_audNota(r); if(d) C.hall.push({ id:r.id, creado:r.creado, d:d }); }
     else if(h===AUD_REV){ d=_audNota(r); if(d) C.revs.push({ id:r.id, creado:r.creado, d:d }); }
   });
   C.sal=(typeof salFilas==='function') ? salFilas(salR).filter(function(x){ return en(x.d.fecha); }) : [];
-  C.amb=(typeof ambFilas==='function') ? ambFilas(ambR).filter(function(x){ return en(x.d.fecha); }) : [];
+  C.ambTodo=(typeof ambFilas==='function') ? ambFilas(ambR) : [];
+  C.amb=C.ambTodo.filter(function(x){ return en(x.d.fecha); });
+  C.hcCfg=(typeof hcCfgLimpio==='function') ? hcCfgLimpio(C.hcCfgN || null) : null;
   C.frentes=freR.map(function(r){ var d=_audNota(r) || {}; return { id:d.id || r.id, n:String(d.n || r.nombre || '').trim(), antes:Array.isArray(d.antes) ? d.antes : [] }; }).filter(function(f){ return f.n; });
   C.progsPer=C.progs.filter(function(x){ return C.anios[String(x.d.anio)]; });
   C.objsPer=C.objs.filter(function(x){ return C.anios[String(x.d.anio)]; }).sort(function(a, b){ return String(b.d.anio).localeCompare(String(a.d.anio)); });
@@ -535,6 +707,62 @@ function _audRes(st, lin, det, ir, extra){ var o={ st:st, lin:lin||'', det:det||
 function _audMeses(a, b){ return Math.floor(_audDias(a, b)/30.44); }
 var AUD_EV={
   subir:function(C, r){ return _audRes('subir', r.pista || 'OBRASST no lo registra: adjunta aquí tu evidencia.', []); },
+  /* ── 19/11/2026 · Huella de Carbono Perú: lo de «Huella de carbono», con las mismas cuentas ── */
+  hcInv:function(C){ var H=_certHC(C); if(!H) return _certSinHC();
+    if(!H.R.n) return _audRes('falta', 'No hay datos de '+H.y+' para la huella: combustible, luz, refrigerantes, materiales, agua, residuos o viajes.', [], ['ambiente', 'huella']);
+    var det=[{ t:hcT(H.R.kg)+' t CO₂e en '+H.y+' (alcance 1: '+hcT(H.R.s[1])+' · 2: '+hcT(H.R.s[2])+' · 3: '+hcT(H.R.s[3])+')', ir:'huella' }];
+    if(H.N.n[1]) return _audRes('ok', 'Inventario de '+H.y+' completo: '+_audN(H.R.n, 'dato', 'datos')+'.', det, ['huella']);
+    var q=[]; if(H.N.falta1) q.push(_audN(H.N.falta1, 'mes sin datos', 'meses sin datos')); if(H.R.sinDato) q.push(_audN(H.R.sinDato, 'dato sin cantidad', 'datos sin cantidad'));
+    return _audRes('ojo', H.y+': '+(q.length ? _audY(q) : 'falta completar el año')+'.', det, ['huella']); },
+  hcFac:function(C){ var H=_certHC(C); if(!H) return _certSinHC();
+    if(!H.R.n) return _audRes('info', 'Sin datos de '+H.y+' todavía.', [], ['huella']);
+    if(!H.R.nPend) return _audRes('ok', 'Los '+_audN(H.R.n, 'dato', 'datos')+' de '+H.y+' tienen su factor oficial.', [], ['huella']);
+    var det=Object.keys(H.R.pend).map(function(k){ var p=H.R.pend[k]; return { t:'⏳ '+p.n+' · '+_audN(p.reg, 'registro', 'registros'), mal:true }; });
+    return _audRes('ojo', _audN(H.R.nPend, 'dato espera', 'datos esperan')+' su factor oficial. No se usa un promedio: OBRASST lo carga cuando sale publicado.', det, ['huella']); },
+  hcCal:function(C){ var H=_certHC(C); if(!H) return _certSinHC();
+    if(!H.R.n) return _audRes('info', 'Sin datos de '+H.y+' todavía.', [], ['huella']);
+    var A=(H.rev && H.rev.A) || [];
+    if(!A.length) return _audRes('ok', 'Sin alertas en '+H.y+': ni boletas repetidas, ni meses vacíos, ni estimados sin revisar.', [], ['huella']);
+    return _audRes('ojo', _audN(A.length, 'alerta', 'alertas')+' por resolver en «Revisar».', A.slice(0, 8).map(function(x){ return { t:x.n, mal:x.g==='mal', ir:'huella' }; }), ['huella']); },
+  hcVerif:function(C, r){ var H=_certHC(C); if(!H) return _certSinHC();
+    var V=(H.cfg.verif||{})[H.y];
+    if(V) return _audRes('ok', 'Verificado: '+V.oec+(V.f ? ', el '+_audF(V.f) : '')+'.', V.u ? [{ t:'Informe de verificación', u:V.u, f:V.f }] : [], ['huella']);
+    return _audRes('subir', r.pista+' Se anota en «Huella de carbono › Niveles».', [], ['huella']); },
+  hcRed:function(C){ var H=_certHC(C); if(!H) return _certSinHC();
+    if(H.N.n[3]) return _audRes('ok', H.y+': menos emisiones que '+(+H.y-1)+' y '+_audN(H.N.inic, 'iniciativa', 'iniciativas')+'.', [], ['huella']);
+    var q=[]; if(!H.N.n[2]) q.push('el nivel 2 de '+H.y); if(!(H.cfg.verif||{})[+H.y-1]) q.push('el año '+(+H.y-1)+' verificado'); if(!H.N.inic) q.push('iniciativas de reducción');
+    if(H.N.iy!=null && H.N.ip!=null && !(H.N.iy<H.N.ip)) q.push('que el indicador baje');
+    return _audRes(H.N.inic ? 'ojo' : 'subir', 'Falta '+(_audY(q) || 'completar el nivel')+'.', [], ['huella']); },
+  hcNeu:function(C, r){ var H=_certHC(C); if(!H) return _certSinHC();
+    if(H.N.n[4]) return _audRes('ok', 'Neutralizado'+(H.N.neu ? ': '+hcNum(H.N.neu.t)+' t compensadas' : '')+'.', [], ['huella']);
+    if(H.N.neu) return _audRes('ojo', hcNum(H.N.neu.t)+' t compensadas; falta el nivel 3 o cubrir todo.', [], ['huella']);
+    return _audRes('subir', r.pista+' Se anota en «Huella de carbono › Niveles».', [], ['huella']); },
+  hcSan:function(C){ var H=_certHC(C); if(!H) return _certSinHC();
+    if(H.N.bloqueo) return _audRes('falta', 'Hay una sanción o condena anotada: el reconocimiento no se otorga mientras siga.', [], ['huella']);
+    return _audRes('info', 'No hay sanciones anotadas en «Huella de carbono › Niveles».', [], ['huella']); },
+  /* ── Certificado Azul: el agua de «Medio ambiente» ── */
+  aguaBase:function(C){ var A=_certAgua(C);
+    if(!A.n) return _audRes('falta', 'No hay agua registrada en el periodo: va en «Medio ambiente», en m³ y con su recibo o guía.', [], ['ambiente']);
+    var det=Object.keys(A.fu).map(function(f){ return { t:ambNombre(AMB_AGUA, f)+': '+hcNum(A.fu[f])+' m³' }; });
+    A.meses.forEach(function(m){ det.push({ t:_audMesN(m)+': '+hcNum(A.mes[m] || 0)+' m³'+(C.hhtMes[m] ? ' · '+hcNum((A.mes[m] || 0)*1000/C.hhtMes[m])+' m³ por 1 000 HHT' : ''), mal:!A.mes[m] }); });
+    if(A.sin.length) return _audRes('ojo', hcNum(A.tot)+' m³ en el periodo; '+_audN(A.sin.length, 'mes cerrado sin agua', 'meses cerrados sin agua')+'.', det, ['ambiente']);
+    return _audRes('ok', hcNum(A.tot)+' m³ en '+_audN(A.meses.length, 'mes', 'meses')+', todos con su dato.', det, ['ambiente']); },
+  aguaRed:function(C, r){ var A=_certAgua(C), L=A.meses.filter(function(m){ return A.mes[m] && C.hhtMes[m]; });
+    if(L.length<6) return _audRes('subir', r.pista+' Con 6 meses de agua y horas hombre, OBRASST muestra si el consumo baja.', [], ['ambiente']);
+    var i=function(M){ var a=0, h=0; M.forEach(function(m){ a+=A.mes[m]; h+=C.hhtMes[m]; }); return a*1000/h; };
+    var ant=i(L.slice(-6, -3)), act=i(L.slice(-3)), dif=ant ? Math.round((act-ant)*100/ant) : 0;
+    var det=[{ t:'Los 3 meses anteriores: '+hcNum(ant)+' m³ por 1 000 HHT' }, { t:'Los últimos 3 meses: '+hcNum(act)+' m³ por 1 000 HHT', mal:dif>0 }];
+    return _audRes(dif<0 ? 'ok' : 'ojo', dif<0 ? 'El consumo por hora trabajada bajó '+(-dif)+' %.' : 'El consumo por hora trabajada '+(dif ? 'subió '+dif+' %' : 'no bajó')+'.', det, ['ambiente']); },
+  /* ── LEED MRc5: los residuos de «Medio ambiente», sin los peligrosos ── */
+  leedRes:function(C){ var L=_certResiduos(C);
+    if(!L.n) return _audRes('falta', 'No hay residuos registrados en el periodo: van en «Medio ambiente», con su destino y su certificado.', [], ['ambiente']);
+    if(!L.kg) return _audRes('ojo', 'Los residuos están en m³ o unidades: para el % hace falta su peso (kg o t).', [], ['ambiente']);
+    var det=Object.keys(L.t).map(function(k){ var q=L.t[k]; return { t:ambNombre(AMB_RES_TIPOS, k)+': '+hcNum(q.kg)+' kg, '+hcNum(q.des)+' kg desviados' }; });
+    if(L.sinPeso) det.push({ t:_audN(L.sinPeso, 'registro en m³ o unidades no entra', 'registros en m³ o unidades no entran')+' en el %', mal:true });
+    if(L.sinDoc) det.push({ t:_audN(L.sinDoc, 'salida sin certificado ni boleta', 'salidas sin certificado ni boleta'), mal:true });
+    var pct=Math.round(L.des*1000/L.kg)/10, f=L.flujos, pts=(pct>=75 && f>=4) ? 2 : ((pct>=50 && f>=3) ? 1 : 0);
+    var lin=hcNum(pct)+' % desviado del relleno con '+_audN(f, 'flujo', 'flujos')+' ('+hcNum(L.des)+' de '+hcNum(L.kg)+' kg).';
+    return _audRes(pts && !L.sinDoc ? 'ok' : 'ojo', lin+(pts ? ' Alcanza '+_audN(pts, 'punto', 'puntos')+'.' : ' Pide 50 % con 3 flujos (1 punto) o 75 % con 4 (2 puntos).')+(L.sinDoc ? ' Faltan papeles.' : ''), det, ['ambiente']); },
   /* ── la ley: los documentos del sistema (art. 32) ── */
   polobj:function(C){
     var p=_audDocs(C, ['politicas']), o=_audDocs(C, ['objetivos']), ob=C.objAnio;
@@ -867,25 +1095,86 @@ var AUD_EV={
   }
 };
 function _audR_emoNo(){ return _audRes('subir', 'No se pudo leer el EMO de la obra (tu cuenta no lo ve o el plan no lo trae): adjunta aquí tu registro de exámenes.', [], ['emo']); }
+/* 19/11/2026 · los de la carpeta de campo */
+Object.assign(AUD_EV, {
+  ats:function(C){ return C.ats ? _audRes('ok', _audN(C.ats, 'ATS', 'ATS')+' en el periodo', [], ['ats']) : _audRes('falta', 'Ningún ATS en el periodo', [], ['ats']); },
+  petar:function(C){ return C.petar ? _audRes('ok', _audN(C.petar, 'PETAR', 'PETAR')+' en el periodo', [], ['alto']) : _audRes('info', 'Ningún PETAR en el periodo (si hubo trabajos de alto riesgo, faltan)', [], ['alto']); },
+  preuso:function(C){ var n=(C.eqi||[]).length; return n ? _audRes('ok', _audN(n, 'inspección de pre-uso', 'inspecciones de pre-uso')+' en el periodo', [], ['inspeq']) : _audRes('falta', 'Ninguna inspección de pre-uso en el periodo', [], ['inspeq']); },
+  quiminv:function(C){ var n=(AUDW.D && AUDW.D.msds || []).length; return n ? _audRes('ok', _audN(n, 'producto químico', 'productos químicos')+' en el inventario de la obra', [], ['quimicos']) : _audRes('falta', 'El inventario de productos químicos está vacío', [], ['quimicos']); },
+  difquim:function(C){
+    var re=/(quimic|msds|fds|hds|hoja.{0,8}seguridad|sga|nfpa|rombo|matpel|materiales peligros|sustancias peligros)/i;
+    var L=(C.asis||[]).filter(function(x){ return re.test(String(x.tema||'').normalize('NFD').replace(/[\u0300-\u036f]/g, '')); });
+    var det=L.slice(0, 6).map(function(x){ return { t:(x.tipo ? x.tipo+' · ' : '')+(x.tema||''), f:_audLocal(x.inicio) }; });
+    var pie='Aplica a todo el personal operativo ('+_audN(C.activos||0, 'trabajador activo', 'trabajadores activos')+'), no solo al almacenero';
+    return L.length ? _audRes('ok', _audN(L.length, 'charla o difusión', 'charlas o difusiones')+' de productos químicos en el periodo · '+pie, det, ['charlas'])
+                    : _audRes('falta', 'Ninguna charla ni difusión de productos químicos (SGA, NFPA, MSDS) en el periodo · '+pie, [], ['charlas']);
+  },
+  respel:function(C){
+    var L=(C.amb||[]).filter(function(x){ return x.d.k==='res' && x.d.tipo==='peligrosos'; }), con=L.filter(function(x){ return (x.d.ev||[]).some(function(e){ return e.t==='cert'; }); });
+    if(!L.length) return _audRes('info', 'Sin salidas de residuos peligrosos registradas en el periodo', [], ['ambiente']);
+    return _audRes(con.length===L.length ? 'ok' : 'ojo', _audN(L.length, 'salida de residuos peligrosos', 'salidas de residuos peligrosos')+(con.length===L.length ? ', todas con su certificado' : ' · '+(L.length-con.length)+' sin certificado'), [], ['ambiente']);
+  }
+});
 var AUD_HALL_T={ nc_mayor:'NC mayor', nc_menor:'NC menor', nc:'No conformidad', obs:'Observación', om:'Oportunidad de mejora' };
 function _audHallPillCl(t){ return (t==='nc' || t==='nc_mayor' || t==='nc_menor') ? 'mal' : (t==='obs' ? 'ojo' : 'azul'); }
 function _audHallEsNC(t){ return t==='nc' || t==='nc_mayor' || t==='nc_menor'; }
 /* un requisito con su evidencia, y lo que se subió a mano: con eso, lo que faltaba (✗ u ○) pasa a «hay» */
+/* 19/11/2026 · lo de la huella para la carpeta: el año del periodo, con las mismas funciones de «Huella de carbono» */
+function _certSinHC(){ return _audRes('subir', 'No se pudo leer la huella de carbono en esta vista: ábrela en «Huella de carbono».', [], ['huella']); }
+function _certHC(C){
+  if(C._hc!==undefined) return C._hc;
+  if(typeof hcCalc!=='function' || typeof hcNiveles!=='function' || !C.hcCfg){ C._hc=null; return null; }
+  var y=String(C.per.hasta).slice(0, 4), F=C.ambTodo||[], hoy=hoyISO(), hasta=(y===hoy.slice(0, 4)) ? Math.max(1, +hoy.slice(5, 7)-1) : 12;
+  var R=hcCalc(hcPeriodo(F, y), C.hcCfg), Rp=hcCalc(hcPeriodo(F, String(+y-1)), C.hcCfg), rev=hcRevisar(F, y, hasta);
+  C._hc={ y:y, R:R, Rp:Rp, rev:rev, N:hcNiveles(F, C.hcCfg, y, R, Rp, rev), cfg:C.hcCfg };
+  return C._hc;
+}
+function _certAgua(C){
+  if(C._agua) return C._agua;
+  var A={ n:0, tot:0, fu:{}, mes:{}, meses:(C.cerr||[]).slice(), sin:[] };
+  (C.amb||[]).forEach(function(x){ var d=x.d; if(d.k!=='agua' || d.m3==null) return; A.n++; A.tot+=d.m3; A.fu[d.fuente]=(A.fu[d.fuente]||0)+d.m3; var m=String(d.fecha).slice(0, 7); A.mes[m]=(A.mes[m]||0)+d.m3; });
+  A.sin=A.meses.filter(function(m){ return !A.mes[m]; });
+  return (C._agua=A);
+}
+function _certResiduos(C){
+  var L={ n:0, kg:0, des:0, t:{}, flujos:0, sinPeso:0, sinDoc:0 };
+  (C.amb||[]).forEach(function(x){ var d=x.d; if(d.k!=='res' || d.tipo==='peligrosos') return; L.n++;
+    var kg=(d.und==='t') ? (d.cant||0)*1000 : (d.und==='kg' ? (d.cant||0) : null);
+    if(!(d.ev||[]).some(function(e){ return e.t==='cert' || e.t==='boleta'; })) L.sinDoc++;
+    if(kg==null){ L.sinPeso++; return; }
+    var q=L.t[d.tipo]||(L.t[d.tipo]={ kg:0, des:0 }); q.kg+=kg; L.kg+=kg;
+    if(d.dest==='reciclaje' || d.dest==='venta'){ q.des+=kg; L.des+=kg; } });
+  Object.keys(L.t).forEach(function(k){ if(L.t[k].des>0) L.flujos++; });
+  return L;
+}
 function audEvaluar(C, r){
   var f=AUD_EV[r.ev] || AUD_EV.subir, R;
   try{ R=f(C, r); }catch(e){ R=_audRes('ojo', 'No se pudo revisar esto ('+String((e && e.message) || e).slice(0, 80)+').', []); }
   var ev=(C.evid[r.k]||[]).slice().sort(function(a, b){ return String(b.creado||'').localeCompare(String(a.creado||'')); });
   R.ev=ev.map(function(x){ var d=_audNota(x)||{}; return { id:x.id, t:x.nombre||'Archivo', f:String(x.creado||'').slice(0, 10), u:x.url, a:_audAreaN(d.a) ? d.a : '' }; });
   R.st0=R.st;
+  /* 19/11/2026 · lo que marca la obra y su vencimiento */
+  var K=(C.ctl||{})[r.k]; R.ctl=K || null;
+  if(K && K.fe && K.per){ var v=new Date(Date.parse(K.fe+'T12:00:00')+AUD_PER_D[K.per]*864e5), vi=_audIso(v), dd=_audDias(hoyISO(), vi); R.venc=vi; R.vencSt=dd<0 ? 'mal' : (dd<=7 ? 'ojo' : 'ok'); R.vencD=dd; }
   if(ev.length && (R.st==='subir' || R.st==='falta' || R.st==='info')){ R.st='ok'; R.lin=(R.st0==='info' ? R.lin+' · ' : '')+'Con tu evidencia: '+_audN(ev.length, 'archivo', 'archivos')+' (el último, del '+_audF(ev[0].creado)+')'; }
   else if(ev.length) R.lin+=' · '+_audN(ev.length, 'archivo tuyo', 'archivos tuyos');
   return R;
 }
 function audEvaluarTodo(C){
   var R={};
-  _audTodos().forEach(function(r){ R[r.k]=audEvaluar(C, r); });
+  _audTodos().concat(_certTodos()).forEach(function(r){ R[r.k]=audEvaluar(C, r); });
   return R;
 }
+function _audValor(x){
+  var e=x && x.ctl && x.ctl.est;
+  if(e==='na') return null;
+  if(e==='cumple') return (x.vencSt==='mal') ? 0.5 : 1;
+  if(e==='proceso') return 0.5;
+  if(e==='pendiente') return 0;
+  return (x.st==='ok' || x.st==='info') ? 1 : (x.st==='ojo' ? 0.5 : 0);
+}
+function audPct(R, rs){ var s=0, n=0; rs.forEach(function(r){ var v=_audValor(R[r.k]); if(v==null) return; s+=v; n++; }); return n ? Math.round(s*100/n) : null; }
+function _audReqsDe(k){ var L=[]; _audCatalogo(k).forEach(function(G){ G.s.forEach(function(r){ L.push(r); }); }); return L; }
 function audCuentas(R, k){
   var c={ ok:0, ojo:0, falta:0, subir:0, info:0, n:0 };
   _audCatalogo(k).forEach(function(G){ G.s.forEach(function(r){ var x=R[r.k]; if(!x) return; c[x.st]++; c.n++; }); });
@@ -895,7 +1184,7 @@ function audCuentas(R, k){
 /* ══ LA VISTA «CARPETA DE AUDITORÍA» ══════════════════════════════════════════════════════════════════════════════ */
 function vistaAud(caja){
   _audCss();
-  AUDW.caja=caja; AUDW.msg=''; AUDW.msgCl='';
+  AUDW.caja=caja; AUDW.msg=''; AUDW.msgCl=''; AUDW.modo='aud'; if(!_audSeccDe(AUDW.sec) || AUDW.sec==='hc' || AUDW.sec==='azul' || AUDW.sec==='leed') AUDW.sec='ley';
   var ac=$('acciones'); if(ac) ac.innerHTML='';
   cargando(caja);
   function pinta(fresco){
@@ -935,6 +1224,7 @@ function _audChips(c){
   return ['ok', 'ojo', 'falta', 'subir', 'info'].filter(function(k){ return c[k]; }).map(function(k){ var E=AUD_EST[k]; return '<span class="aud-cuenta '+E.cl+'" title="'+esc(E.n)+'">'+E.ic+' '+c[k]+'</span>'; }).join('');
 }
 function _audPintar(){
+  if(AUDW.modo==='cert') return _certPintar();
   var caja=AUDW.caja; if(!caja || !document.body.contains(caja)) return;
   var C=audCalcular(); if(!C) return;
   var R=AUDW.R, per=C.per, ac=$('acciones'), obra=nombreObraP()||'la obra';
@@ -951,12 +1241,13 @@ function _audPintar(){
     $('aud-zip').onclick=function(){ audExportar('zip', this); };
     $('aud-pdf').onclick=function(){ audExportar('pdf', this); };
   }
-  var h='<div class="tarj"><div class="tarj-cab"><div><h2>🗂️ La carpeta de '+esc(obra)+'</h2><p class="sub">'+esc(per.n)+' · del '+esc(_audF(per.desde))+' al '+esc(_audF(per.hasta))+
+  var pctG=audPct(R, _audTodos());
+  var h='<div class="tarj"><div class="tarj-cab"><div><h2>🗂️ La carpeta de '+esc(obra)+(pctG!=null ? ' · <span class="aud-pct">'+pctG+' % de cumplimiento</span>' : '')+'</h2><p class="sub">'+esc(per.n)+' · del '+esc(_audF(per.desde))+' al '+esc(_audF(per.hasta))+
     ' · se arma sola con lo que la obra registra en OBRASST, en la app y en la web</p></div></div><div class="tarj-cuerpo">'+
     '<div class="aud-res-g" role="tablist" aria-label="Normas">'+AUD_SECC.map(function(S){
-      var c=audCuentas(R, S.k), pct=c.n ? Math.round((c.ok+c.info)*100/c.n) : 0;
+      var c=audCuentas(R, S.k), pct=audPct(R, _audReqsDe(S.k)) || 0;
       return '<button type="button" role="tab" class="aud-res-c'+(AUDW.sec===S.k ? ' on' : '')+'" aria-selected="'+(AUDW.sec===S.k ? 'true' : 'false')+'" data-aud-sec="'+S.k+'"><b>'+esc(S.n)+'</b>'+
-        '<span class="aud-res-n">'+_audChips(c)+'</span><span class="aud-prog" aria-hidden="true"><i style="width:'+pct+'%"></i></span></button>';
+        '<span class="aud-res-n">'+_audChips(c)+' <b class="aud-pct">'+pct+' %</b></span><span class="aud-prog" aria-hidden="true"><i style="width:'+pct+'%"></i></span></button>';
     }).join('')+'</div>'+
     '<p class="ayuda" style="margin:12px 0 0">OBRASST ordena la evidencia que tu obra ya registra; no audita ni certifica. ✓ hay · ⚠ hay, pero está viejo o incompleto · ✗ falta · ○ OBRASST no lo registra: se adjunta aquí. '+
     'La auditoría del art. 43 de la Ley 29783 la hace un auditor independiente.</p>'+
@@ -968,6 +1259,86 @@ function _audPintar(){
   Array.prototype.forEach.call(caja.querySelectorAll('.aud-r'), function(r){ if(abiertos[r.getAttribute('data-k')]){ var d=r.querySelector('details'); if(d) d.open=true; } });
   _audEnchufar(caja);
 }
+/* ══ 19/11/2026 · LA VISTA «CERTIFICACIONES Y SOSTENIBILIDAD» ═══════════════════════════════════════════════════════
+   El tablero (ISO 45001, ISO 14001, Huella MINAM, Certificado Azul, LEED / EDGE) y, abajo, el programa elegido punto por
+   punto, con filtros por estado y por área. Lo mismo de la carpeta: el estado, la fecha, el vencimiento, los pasos, la
+   evidencia y el pedido a cada área (que le llega como pendiente). */
+var CERT_FIL=[['', 'Todos'], ['falta', 'Faltan'], ['ojo', 'En proceso'], ['ok', 'Listos']];
+function vistaCert(caja){
+  _audCss();
+  AUDW.caja=caja; AUDW.msg=''; AUDW.msgCl=''; AUDW.modo='cert';
+  if(!CERT_PROG.some(function(P){ return P.k===AUDW.secC; })) AUDW.secC='i45';
+  AUDW.sec=AUDW.secC; AUDW.cf=AUDW.cf||''; AUDW.ca=AUDW.ca||'';
+  var ac=$('acciones'); if(ac) ac.innerHTML='';
+  cargando(caja);
+  function pinta(fresco){
+    var n=++AUDW.n;
+    audTraer(fresco).then(function(){ if(n!==AUDW.n || VISTA.actual!=='cert') return; _certPintar(); },
+                          function(cod){ if(n===AUDW.n && VISTA.actual==='cert') fallo(caja, cod); });
+  }
+  VISTA.recargar=function(){ if(AUDW.D && Date.now()-AUDW.t<60000) return; pinta(true); };
+  pinta(false);
+}
+function _certFiltro(x){ var v=_audValor(x); return v==null ? 'na' : (v>=1 ? 'ok' : (v>0 ? 'ojo' : 'falta')); }
+function _certSemaforo(p){ return p==null ? ['gris', 'Sin datos'] : (p>=80 ? ['ok', 'Listo'] : (p>=50 ? ['ojo', 'En riesgo'] : ['mal', 'Crítico'])); }
+function _certAnillo(p, cl){
+  var c=2*Math.PI*30, v=Math.max(0, Math.min(100, p||0)), col=cl==='ok' ? 'var(--ok)' : (cl==='ojo' ? '#b7791f' : (cl==='mal' ? 'var(--mal)' : 'var(--gris)'));
+  return '<span class="cert-anillo" aria-hidden="true"><svg viewBox="0 0 74 74"><circle cx="37" cy="37" r="30" fill="none" stroke="var(--raya)" stroke-width="8"/>'+
+    '<circle cx="37" cy="37" r="30" fill="none" stroke="'+col+'" stroke-width="8" stroke-linecap="round" stroke-dasharray="'+(c*v/100).toFixed(1)+' '+c.toFixed(1)+'"/></svg><span>'+(p==null ? '—' : p+'%')+'</span></span>';
+}
+function _certPintar(){
+  var caja=AUDW.caja; if(!caja || !document.body.contains(caja)) return;
+  var C=audCalcular(); if(!C) return;
+  var R=AUDW.R, per=C.per, ac=$('acciones'), obra=nombreObraP()||'la obra', k=AUDW.secC;
+  var abiertos={}; Array.prototype.forEach.call(caja.querySelectorAll('.aud-r details[open]'), function(d){ var r=d.closest('.aud-r'); if(r) abiertos[r.getAttribute('data-k')+'|'+d.className]=1; });
+  if(ac){
+    var ops=[['12', 'Los últimos 12 meses'], ['anio', 'Este año'], ['pasado', 'El año pasado']];
+    if(AUDW.per==='aud') AUDW.per='12';
+    ac.innerHTML='<select id="aud-per" aria-label="Periodo">'+ops.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===AUDW.per ? ' selected' : '')+'>'+esc(o[1])+'</option>'; }).join('')+'</select>'+
+      (_audIrV(['huella']) ? '<button type="button" class="bt sec" data-aud-ir="huella">🌍 Huella de carbono</button>' : '')+
+      (_audIrV(['aud']) ? '<button type="button" class="bt sec" data-aud-ir="aud">🗂️ Carpeta de auditoría</button>' : '');
+    $('aud-per').onchange=function(){ AUDW.per=this.value; _certPintar(); };
+    Array.prototype.forEach.call(ac.querySelectorAll('[data-aud-ir]'), function(b){ b.onclick=function(){ navegar(b.getAttribute('data-aud-ir')); }; });
+  }
+  var h='<div class="tarj"><div class="tarj-cab"><div><h2>🏅 Certificaciones y sostenibilidad · '+esc(obra)+'</h2><p class="sub">'+esc(per.n)+' · del '+esc(_audF(per.desde))+' al '+esc(_audF(per.hasta))+
+    ' · con lo que la obra ya registra, sin volver a cargar nada</p></div></div><div class="tarj-cuerpo">'+
+    '<div class="cert-g" role="tablist" aria-label="Certificaciones">'+CERT_PROG.map(function(P){
+      var rs=_audReqsDe(P.k), p=audPct(R, rs), sm=_certSemaforo(p), ok=0, n=0, ven=0, por=0;
+      rs.forEach(function(r){ var x=R[r.k]; if(!x) return; var f=_certFiltro(x); if(f==='na') return; n++; if(f==='ok') ok++; if(x.vencSt==='mal') ven++; else if(x.vencSt==='ojo') por++; });
+      return '<button type="button" role="tab" class="cert-c'+(k===P.k ? ' on' : '')+'" aria-selected="'+(k===P.k)+'" data-cert-p="'+P.k+'">'+_certAnillo(p, sm[0])+
+        '<b><span class="cert-ic" aria-hidden="true">'+P.ic+'</span> '+esc(P.corto)+'</b><span class="pill '+sm[0]+'">'+esc(sm[1])+'</span>'+
+        '<small>'+ok+' de '+n+' listos'+(ven ? ' · ⛔ '+ven : '')+(por ? ' · ⏳ '+por : '')+'</small></button>';
+    }).join('')+'</div>'+
+    '<p class="ayuda" style="margin:12px 0 0">OBRASST ordena la evidencia; no audita ni certifica. Semáforo de OBRASST: 80 % o más, listo · 50 a 79 %, en riesgo · menos de 50 %, crítico. ⛔ vencidos · ⏳ por vencer.</p>'+
+    '</div></div>';
+  /* el programa elegido, con sus filtros */
+  var cuenta={ '':0, falta:0, ojo:0, ok:0 }, ar={};
+  _audReqsDe(k).forEach(function(r){ var x=R[r.k]; if(!x) return; var f=_certFiltro(x); cuenta['']++; if(cuenta[f]!=null) cuenta[f]++; ar[_audAreaDe(r)]=1; });
+  var P0=CERT_PROG.filter(function(P){ return P.k===k; })[0];
+  h+='<div class="tarj" id="aud-sec" data-sec="'+esc(k)+'"><div class="tarj-cuerpo"><h3 style="margin:0 0 10px">'+esc(P0.ic+' '+P0.n)+'</h3>'+
+    '<div class="cert-fil"><div class="chips" role="radiogroup" aria-label="Filtrar por estado">'+CERT_FIL.map(function(F){ var on=AUDW.cf===F[0];
+      return '<button type="button" role="radio" class="chip'+(on ? ' on' : '')+'" aria-checked="'+on+'" data-cert-f="'+F[0]+'">'+esc(F[1])+' · '+cuenta[F[0]]+'</button>'; }).join('')+'</div>'+
+    '<select id="cert-area" aria-label="Filtrar por área"><option value="">Todas las áreas</option>'+AUD_AREAS.filter(function(A){ return ar[A[0]]; }).map(function(A){ return '<option value="'+A[0]+'"'+(AUDW.ca===A[0] ? ' selected' : '')+'>'+esc(A[1])+'</option>'; }).join('')+'</select></div>';
+  var pend=_audPendientes(k, R).length;
+  if(pend) h+='<div class="aud-pedir-bar" style="margin-top:10px"><span>'+esc(_audN(pend, 'punto', 'puntos'))+' sin evidencia. Pídele a cada área lo suyo: le llega como pendiente.</span><button type="button" class="bt chico" id="aud-pedir-areas">📨 Pedir a las áreas</button></div>';
+  var hay=0;
+  _audCatalogo(k).forEach(function(G){
+    var rs=G.s.filter(function(r){ var x=R[r.k]; if(!x) return false; if(AUDW.cf && _certFiltro(x)!==AUDW.cf) return false; return !AUDW.ca || _audAreaDe(r)===AUDW.ca; });
+    if(!rs.length) return; hay+=rs.length;
+    var pg=audPct(R, G.s);
+    h+='<div class="aud-g"><h3>'+esc(G.g)+(pg!=null ? ' <span class="aud-pct">'+pg+' %</span>' : '')+'</h3>'+(pg!=null ? '<span class="aud-prog aud-prog-g" aria-hidden="true"><i style="width:'+pg+'%"></i></span>' : '')+(G.cita ? '<p class="aud-cita">'+esc(G.cita)+'</p>' : '');
+    rs.forEach(function(r){ h+=_audFilaHTML(r, R[r.k]); });
+    h+='</div>';
+  });
+  if(!hay) h+='<p class="vacio" style="margin:14px 0 0">Nada con este filtro.</p>';
+  h+='</div></div><div class="msg '+esc(AUDW.msgCl)+'" id="aud-msg" role="status">'+esc(AUDW.msg)+'</div>';
+  caja.innerHTML=h;
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-cert-p]'), function(b){ b.onclick=function(){ AUDW.secC=AUDW.sec=b.getAttribute('data-cert-p'); AUDW.ca=''; _certPintar(); }; });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-cert-f]'), function(b){ b.onclick=function(){ AUDW.cf=b.getAttribute('data-cert-f'); _certPintar(); }; });
+  var sa=$('cert-area'); if(sa) sa.onchange=function(){ AUDW.ca=sa.value; _certPintar(); };
+  Array.prototype.forEach.call(caja.querySelectorAll('.aud-r'), function(r){ Array.prototype.forEach.call(r.querySelectorAll('details'), function(d){ if(abiertos[r.getAttribute('data-k')+'|'+d.className]) d.open=true; }); });
+  _audEnchufar(caja);
+}
 function _audEnchufar(caja){
   Array.prototype.forEach.call(caja.querySelectorAll('[data-aud-ir]'), function(b){ b.onclick=function(){ navegar(b.getAttribute('data-aud-ir')); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('input[data-aud-sube]'), function(x){ x.onchange=function(){ audSubir(x, x.getAttribute('data-aud-sube')); }; });
@@ -975,6 +1346,19 @@ function _audEnchufar(caja){
   Array.prototype.forEach.call(caja.querySelectorAll('select[data-aud-area]'), function(x){ x.onchange=function(){ audPonerArea(x.getAttribute('data-aud-area'), x.value); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('[data-aud-pedir]'), function(b){ b.onclick=function(){ audPedir([b.getAttribute('data-aud-pedir')], b); }; });
   var pa=caja.querySelector('#aud-pedir-areas'); if(pa) pa.onclick=function(){ audPedirAreas(); };
+  /* 19/11/2026 · los pasos: marcar uno pone el punto «En proceso» si estaba sin marcar o pendiente */
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-pasos]'), function(c){
+    var k=c.getAttribute('data-pasos');
+    c.onchange=function(ev){ var b=ev.target.closest('[data-paso]'); if(!b) return; var i=+b.getAttribute('data-paso'), on=b.checked;
+      audCtlGuardar(k, function(K){ K.pa=(K.pa||[]).filter(function(j){ return j!==i; }); if(on){ K.pa.push(i); if(!K.est || K.est==='pendiente') K.est='proceso'; } }); };
+  });
+  /* 19/11/2026 · el estado, la fecha y la periodicidad de cada punto */
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-ctl]'), function(c){
+    var k=c.getAttribute('data-ctl');
+    c.onclick=function(ev){ var b=ev.target.closest('[data-ctl-est]'); if(!b) return; var v=b.getAttribute('data-ctl-est'); audCtlGuardar(k, function(K){ K.est=(K.est===v) ? '' : v; if(v==='cumple' && !K.fe) K.fe=hoyISO(); }); };
+    var f=c.querySelector('[data-ctl-fe]'); if(f) f.onchange=function(){ var v=f.value; audCtlGuardar(k, function(K){ K.fe=v; }); };
+    var p2=c.querySelector('[data-ctl-per]'); if(p2) p2.onchange=function(){ var v=p2.value; audCtlGuardar(k, function(K){ K.per=v; }); };
+  });
 }
 function _audSeccionHTML(k, R){
   var pend=_audPendientes(k, R).length;
@@ -982,7 +1366,8 @@ function _audSeccionHTML(k, R){
     (pend ? '<div class="aud-pedir-bar"><span>'+esc(_audN(pend, 'requisito', 'requisitos'))+' sin evidencia. Cada uno tiene su área: pídele a cada área lo suyo.</span>'+
             '<button type="button" class="bt chico" id="aud-pedir-areas">📨 Pedir a las áreas lo que falta</button></div>' : '');
   _audCatalogo(k).forEach(function(G){
-    h+='<div class="aud-g"><h3>'+esc(G.g)+'</h3>'+(G.cita ? '<p class="aud-cita">'+esc(G.cita)+'</p>' : '');
+    var pg=audPct(R, G.s);
+    h+='<div class="aud-g"><h3>'+esc(G.g)+(pg!=null ? ' <span class="aud-pct">'+pg+' %</span>' : '')+'</h3>'+(pg!=null ? '<span class="aud-prog aud-prog-g" aria-hidden="true"><i style="width:'+pg+'%"></i></span>' : '')+(G.cita ? '<p class="aud-cita">'+esc(G.cita)+'</p>' : '');
     var p='';
     G.s.forEach(function(r){
       if(r.p && r.p!==p) h+='<p class="aud-p">'+esc(r.p)+'</p>';
@@ -1003,13 +1388,41 @@ function _audFilaHTML(r, x){
   return '<div class="aud-r" data-k="'+esc(r.k)+'" data-st="'+esc(x.st)+'">'+
     '<span class="aud-st '+E.cl+'">'+E.ic+' '+esc(E.n)+'</span>'+
     '<div class="aud-tx"><b><span class="aud-cl">'+esc(r.cl)+'</span>'+esc(r.t)+'</b>'+(r.sub ? '<small>'+esc(r.sub)+'</small>' : '')+
-      '<small class="aud-lin">'+esc(x.lin)+'</small>'+area+(x.nota ? '<p class="aud-nota">'+esc(x.nota)+'</p>' : '')+
+      '<small class="aud-lin">'+esc(x.lin)+'</small>'+area+(x.nota ? '<p class="aud-nota">'+esc(x.nota)+'</p>' : '')+_audCtlHTML(r, x)+_audPasosHTML(r, x)+
       (n ? '<details><summary>Ver lo que hay ('+n+')</summary><ul class="aud-det">'+x.det.map(function(d){ return _audDetLi(d, false); }).join('')+x.ev.map(function(d){ return _audDetLi(d, true); }).join('')+'</ul></details>' : '')+
     '</div>'+
     '<div class="aud-bt">'+(v ? '<button type="button" class="bt sec chico" data-aud-ir="'+esc(v.id)+'">'+esc('Ir a «'+((typeof PESTANAS==='object' && PESTANAS[v.id]) || v.n)+'»')+'</button>' : '')+
       (pend ? '<button type="button" class="bt sec chico" data-aud-pedir="'+esc(r.k)+'">📨 '+(ped ? 'Pedir otra vez' : 'Pedir')+'</button>' : '')+
       '<label class="bt sec chico aud-subir">＋ Adjuntar<input type="file" data-aud-sube="'+esc(r.k)+'" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx" multiple aria-label="'+esc('Adjuntar evidencia a '+r.cl+' '+r.t)+'"></label></div>'+
   '</div>';
+}
+/* 19/11/2026 · qué pide y cómo lograrlo: los pasos se marcan en la obra (van en «aud-ctl», con el estado) */
+function _audPasosHTML(r, x){
+  if(!r.exige && !(r.pasos && r.pasos.length)) return '';
+  var pa=(x.ctl && x.ctl.pa) || [], n=(r.pasos||[]).length, hechos=pa.filter(function(i){ return i<n; }).length;
+  return '<details class="aud-pasos"><summary>📋 Qué pide y cómo lograrlo'+(n ? ' <span class="pill '+(hechos===n ? 'ok' : (hechos ? 'ojo' : 'gris'))+'">'+hechos+' de '+n+' pasos</span>' : '')+'</summary>'+
+    (r.exige ? '<p class="aud-exige">'+esc(r.exige)+'</p>' : '')+
+    (n ? '<div class="aud-pl" data-pasos="'+esc(r.k)+'">'+r.pasos.map(function(p, i){ var on=pa.indexOf(i)>=0;
+      return '<label class="aud-paso'+(on ? ' on' : '')+'"><input type="checkbox" data-paso="'+i+'"'+(on ? ' checked' : '')+'><span><b>'+esc(p[0])+'</b> '+esc(p[1])+'</span></label>'; }).join('')+'</div>' : '')+
+    '</details>';
+}
+/* 19/11/2026 · el estado que marca la obra (botones), la fecha de emisión, la periodicidad y el vencimiento */
+function _audCtlHTML(r, x){
+  var K=x.ctl || {}, k=esc(r.k);
+  return '<div class="aud-ctl" data-ctl="'+k+'"><div class="chips" role="radiogroup" aria-label="'+esc('Estado de '+r.cl)+'">'+AUD_CTL_EST.map(function(e){ var on=(K.est===e[0]);
+      return '<button type="button" role="radio" class="chip aud-ce '+e[2]+(on ? ' on' : '')+'" aria-checked="'+on+'" data-ctl-est="'+e[0]+'">'+esc(e[1])+'</button>'; }).join('')+'</div>'+
+    '<label class="aud-ctl-f">Emitido <input type="date" data-ctl-fe="1" value="'+esc(K.fe||'')+'" max="'+hoyISO()+'"></label>'+
+    '<select data-ctl-per="1" aria-label="Periodicidad">'+AUD_PER.map(function(p){ return '<option value="'+p[0]+'"'+((K.per||'')===p[0] ? ' selected' : '')+'>'+esc(p[1])+'</option>'; }).join('')+'</select>'+
+    (x.venc ? '<span class="pill '+(x.vencSt==='mal' ? 'mal' : (x.vencSt==='ojo' ? 'ojo' : 'ok'))+'">'+(x.vencSt==='mal' ? '⛔ Venció el ' : (x.vencSt==='ojo' ? '⏳ Vence el ' : '✓ Hasta el '))+esc(_audF(x.venc))+'</span>' : '')+'</div>';
+}
+function _audPasosLimpios(a){ var o=[]; (Array.isArray(a) ? a : []).forEach(function(i){ i=parseInt(i, 10); if(i>=0 && i<20 && o.indexOf(i)<0) o.push(i); }); return o.sort(function(x, y){ return x-y; }); }
+function audCtlGuardar(k, cambio){
+  var C=AUDW.C || {}, K=Object.assign({ est:'', fe:'', per:'', pa:[] }, (C.ctl||{})[k] || {}); K.pa=(K.pa||[]).slice(); cambio(K);
+  var d={ v:1, k:k, est:(AUD_CTL_EST.some(function(e){ return e[0]===K.est; }) ? K.est : ''), fe:_audFecha(K.fe), per:AUD_PER_D[K.per] ? K.per : '' };
+  var pa=_audPasosLimpios(K.pa); if(pa.length) d.pa=pa;
+  var fila={ nombre:k, nota:JSON.stringify(d) }, id=K.id;
+  var pr=id ? sbPatch('sst_doc?id=eq.'+encodeURIComponent(id), fila) : (fila.empresa=YO.obra.id, fila.hoja=AUD_CTL, sbPostP('sst_doc', fila));
+  return pr.then(function(){ return _audRecargar(); }, function(e){ _audMsg('No se pudo guardar. '+porQueFallo(e), 'mal'); });
 }
 function _audDetLi(d, propio){
   var t=d.u ? '<a href="'+esc(d.u)+'" target="_blank" rel="noopener">'+esc(d.t)+'</a>'
@@ -1021,7 +1434,7 @@ function _audMsg(t, cl){ AUDW.msg=t||''; AUDW.msgCl=cl||''; var m=$('aud-msg'); 
 /* después de subir o quitar: se vuelve a traer y se pinta donde estaba (sin saltar arriba) */
 function _audRecargar(){
   var y=window.scrollY||0, n=++AUDW.n;
-  return audTraer(true).then(function(){ if(n!==AUDW.n || VISTA.actual!=='aud') return; _audPintar(); try{ window.scrollTo(0, y); }catch(e){} }, function(e){ _audMsg('No se pudo volver a leer la carpeta. '+porQueFallo(e), 'mal'); });
+  return audTraer(true).then(function(){ if(n!==AUDW.n || VISTA.actual!==(AUDW.modo==='cert' ? 'cert' : 'aud')) return; _audPintar(); try{ window.scrollTo(0, y); }catch(e){} }, function(e){ _audMsg('No se pudo volver a leer la carpeta. '+porQueFallo(e), 'mal'); });
 }
 /* la evidencia que se sube a un requisito: al balde de la obra, y una fila «aud-evid» con la llave del requisito */
 function audSubir(inp, k){
@@ -1093,8 +1506,8 @@ function audPonerArea(k, a){
 }
 /* el pedido a un área: el mensaje, y que se pidió hoy */
 function audTextoPedido(area, L){
-  var S=AUD_SECC.filter(function(x){ return L[0] && x.k===L[0].norma; })[0];
-  return 'Hola, equipo de '+_audAreaN(area)+'. Para la carpeta de auditoría de '+(nombreObraP()||'la obra')+(S ? ' ('+S.n+')' : '')+' necesitamos:\n'+
+  var S=L[0] ? _audSeccDe(L[0].norma) : null;
+  return 'Hola, equipo de '+_audAreaN(area)+'. Para '+(S && S.ic ? 'las certificaciones' : 'la carpeta de auditoría')+' de '+(nombreObraP()||'la obra')+(S ? ' ('+S.n+')' : '')+' necesitamos:\n'+
     L.map(function(r){ return '• '+r.cl+' '+r.t+(r.pista ? ': '+r.pista : ''); }).join('\n')+
     '\nEnvíenlo por favor a quien lleva la carpeta. Gracias.';
 }
@@ -1117,10 +1530,10 @@ function audPedir(ks, b){
    con la referencia del requisito (el mismo pedido abierto no se repite; la evidencia que se sube lo cierra). Cuántos. */
 function audPedirPendientes(L){
   if(typeof areaJefe!=='function' || !areaJefe() || typeof penIr!=='function') return Promise.resolve(0);
-  var S=AUD_SECC.filter(function(x){ return L[0] && x.k===L[0].norma; })[0];
+  var S=L[0] ? _audSeccDe(L[0].norma) : null, donde=(S && S.ic) ? '«Certificaciones y sostenibilidad»' : '«Carpeta de auditoría»';
   var items=L.map(function(r){
     return { area:_audAreaDe(r), tipo:'auditoria', titulo:String(r.cl+' '+r.t).slice(0, 140), ref:'aud:'+r.k,
-             cuerpo:('Para la carpeta de auditoría'+(S ? ' ('+S.n+')' : '')+'. '+(r.pista || '')+' Se sube en «Carpeta de auditoría», en su requisito.').replace(/\s+/g, ' ').trim() };
+             cuerpo:('Para la carpeta de auditoría'+(S ? ' ('+S.n+')' : '')+'. '+(r.pista || '')+' Se sube en '+donde+', en su requisito.').replace(/\s+/g, ' ').trim() };
   });
   return penIr('penMandarVarios', items).then(function(R){ return R ? (R.creados+R.ya) : 0; }, function(){ return 0; });
 }
@@ -1129,7 +1542,7 @@ function audPedirAreas(){
   var R=AUDW.R; if(!R) return;
   var L=_audPendientes(AUDW.sec, R), por={};
   L.forEach(function(r){ var a=_audAreaDe(r); (por[a]=por[a]||[]).push(r); });
-  var S=AUD_SECC.filter(function(x){ return x.k===AUDW.sec; })[0] || { n:'' };
+  var S=_audSeccDe(AUDW.sec) || { n:'' };
   var h='<p class="ayuda" style="margin:0 0 10px">Lo que falta de <b>'+esc(S.n)+'</b>, por área. Copia el pedido de cada una y pégalo en WhatsApp o en un correo: queda anotado que se le pidió.</p>'+
     AUD_AREAS.filter(function(A){ return por[A[0]]; }).map(function(A){
       var l=por[A[0]];
