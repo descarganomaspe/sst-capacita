@@ -25,7 +25,7 @@ function _camCss(){
     '.cam-tabla tr.tot td{font-weight:600;color:var(--tinta);border-top:1px solid var(--raya2)}.cam-tabla td b{font-weight:500;color:var(--tinta)}',
     '.cam-envoltura{overflow-x:auto;border:1px solid var(--raya);border-radius:10px;background:var(--panel)}',
     '.cam-est{display:inline-block;font-size:11.5px;font-weight:600;border-radius:20px;padding:2px 8px;margin:0 4px 2px 0;white-space:nowrap}',
-    '.cam-est.ad{background:#E6F4EA;color:#1E7B3A}.cam-est.ss{background:#FCEDEC;color:#B3261E}.cam-est.mu{background:#FFF4D6;color:#8A5A00}.cam-est.ce{background:#E6F4F1;color:#0E6B5C}.cam-est.we{background:#E8F0FE;color:#1A56B8}.cam-est.ma{background:#F1F3F5;color:#4A5560}',
+    '.cam-est.fr{background:#EEF2F6;color:#33475B}.cam-est.fo{background:#E8F0FE;color:#1A56B8;text-decoration:none}.cam-est.ad{background:#E6F4EA;color:#1E7B3A}.cam-est.ss{background:#FCEDEC;color:#B3261E}.cam-est.mu{background:#FFF4D6;color:#8A5A00}.cam-est.ce{background:#E6F4F1;color:#0E6B5C}.cam-est.we{background:#E8F0FE;color:#1A56B8}.cam-est.ma{background:#F1F3F5;color:#4A5560}',
     '.cam-acc{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}',
     '.cam-marcas{display:grid;gap:6px;margin:6px 0 12px}.cam-marca{display:flex;align-items:center;gap:10px;border:1px solid var(--raya);border-radius:9px;padding:7px 10px;background:var(--panel)}',
     '.cam-marca.anulada{opacity:.55;text-decoration:line-through}.cam-marca b{font-variant-numeric:tabular-nums;min-width:48px}.cam-marca span{flex:1;color:var(--gris);font-size:13px}',
@@ -105,8 +105,10 @@ function _tarwJuntarCel(j){
     var p={};
     porDia[d].forEach(function(m){
       var z=p[m.k] || (p[m.k]={ n:String(m.n||'').slice(0,80), d:String(m.d||''), m:[], x:[] });
-      z.m.push([+m.ms, m.t, 'cel']);
-      (TARW.celf[d]=TARW.celf[d]||{})[m.k+'|'+(+m.ms)]={ lejos:!!m.lejos, sinu:!!m.sinu, sins:!!m.sins, dist:(typeof m.dist==='number') ? m.dist : null };
+      /* 19/11/2026 · como en la app: el frente de la marca (el QR del frente) y su foto con sello */
+      z.m.push([+m.ms, m.t, 'cel'].concat(m.fr ? [String(m.fr).slice(0, 60)] : []));
+      (TARW.celf[d]=TARW.celf[d]||{})[m.k+'|'+(+m.ms)]={ lejos:!!m.lejos, sinu:!!m.sinu, sins:!!m.sins, dist:(typeof m.dist==='number') ? m.dist : null, t:m.t,
+        foto:/^https:\/\/[a-z0-9.-]+\/storage\/v1\/object\/public\//.test(String(m.foto||'')) ? String(m.foto) : '' };
     });
     x.p=A.tarUnir({ p:x.p }, { p:p }).p;
   });
@@ -114,8 +116,9 @@ function _tarwJuntarCel(j){
 function _tarwMetros(m){ m=Math.round(+m||0); return m>=1000 ? String(Math.round(m/100)/10).replace('.', ',')+' km' : m+' m'; }
 /* lo de su celular que hay que mirar: lejos de la puerta, sin ubicación, sin señal (solo de las marcas que valen) */
 function _tarwCelDe(dia, k, z){
-  var f=TARW.celf[dia]||{}, xs=(z && z.x)||[], o={ cel:false, lejos:0, sinu:false, sins:false };
+  var f=TARW.celf[dia]||{}, xs=(z && z.x)||[], o={ cel:false, lejos:0, sinu:false, sins:false, fotos:[] };
   ((z && z.m)||[]).forEach(function(q){ if(q[2]!=='cel' || xs.indexOf(q[0])>-1) return; o.cel=true; var y=f[k+'|'+q[0]]; if(!y) return;
+    if(y.foto) o.fotos.push({ u:y.foto, t:(q[1]==='s' ? 'Salida ' : 'Entrada ')+_camHora(q[0]) });
     if(y.lejos) o.lejos=Math.max(o.lejos, +y.dist||1); if(y.sinu) o.sinu=true; if(y.sins) o.sins=true; });
   return o;
 }
@@ -127,13 +130,22 @@ function _tarwCambiosTraer(mes, fresco){
   return estadoLeerP('tareo_cambios_'+mes).then(function(f){ var l=(f && Array.isArray(f.valor && f.valor.l)) ? f.valor.l : []; TARW.cambios[mes]=l; return l; }, function(){ TARW.cambios[mes]=TARW.cambios[mes]||[]; return TARW.cambios[mes]; });
 }
 /* el día: cada persona con sus horas (la cuenta de la app) */
+/* 19/11/2026 · los frentes de una persona ese día (el de cada marca; sus horas van al primero, como en la app) */
+function _tarwFrentes(z){ var A=_camApp(), L=[]; ((A && A.tarMarcas) ? A.tarMarcas(z) : (z.m||[])).forEach(function(q){ if(q[3] && L.indexOf(q[3])<0) L.push(q[3]); }); return L; }
+function _tarwPorFrente(Rs){ var o={}; Rs.forEach(function(R){ R.L.forEach(function(r){ var f=(r.frs && r.frs[0]) || 'Sin frente', x=o[f] || (o[f]={ n:f, gente:{}, h:0 }); x.gente[r.k]=1; x.h+=r.h; }); });
+  return Object.keys(o).map(function(f){ var x=o[f]; return { n:f, p:Object.keys(x.gente).length, h:Math.round(x.h*100)/100 }; }).sort(function(a, b){ return (a.n==='Sin frente')-(b.n==='Sin frente') || a.n.localeCompare(b.n, 'es'); }); }
+function _tarwFrTabla(F){
+  if(!F.length || (F.length===1 && F[0].n==='Sin frente')) return '';
+  return '<div class="cam-envoltura" style="margin:0 0 14px"><table class="cam-tabla" id="tarw-fr"><thead><tr><th>Frente</th><th style="text-align:right">Personas</th><th style="text-align:right">Horas hombre</th></tr></thead><tbody>'+
+    F.map(function(x){ return '<tr><td>📍 '+esc(x.n)+'</td><td class="n">'+x.p+'</td><td class="n">'+_camH(x.h)+'</td></tr>'; }).join('')+'</tbody></table></div>';
+}
 function tarwResumen(dia){
   var A=_camApp(), x=TARW.dias[dia], cfg=TARW.cfg || _tarwCfg(null), ahora=Date.now(), L=[];
   if(A && x && x.p) Object.keys(x.p).forEach(function(k){
     var z=x.p[k], r=A.tarHorasDe(z, cfg, ahora); if(!r.marcas) return;
     r.k=k; r.n=z.n || z.d || '?'; r.d=z.d || ''; r.z=z;
     r.web=(z.m||[]).some(function(q){ return q[2]==='web'; });
-    r.celx=_tarwCelDe(dia, k, z); r.cel=r.celx.cel;
+    r.celx=_tarwCelDe(dia, k, z); r.cel=r.celx.cel; r.frs=_tarwFrentes(z);
     L.push(r);
   });
   L.sort(function(a, b){ return a.n.localeCompare(b.n, 'es'); });
@@ -230,6 +242,8 @@ function _tarwEst(r, cfg, sem){
   if(r.celx && r.celx.lejos) h+='<span class="cam-est ss">Lejos de la puerta ('+_tarwMetros(r.celx.lejos)+')</span>';
   if(r.celx && r.celx.sinu) h+='<span class="cam-est mu">Sin ubicación</span>';
   if(r.celx && r.celx.sins) h+='<span class="cam-est ma">Sin señal</span>';
+  (r.frs||[]).forEach(function(f){ h+='<span class="cam-est fr">📍 '+esc(f)+'</span>'; });
+  ((r.celx && r.celx.fotos)||[]).forEach(function(x){ h+='<a class="cam-est fo" href="'+esc(x.u)+'" target="_blank" rel="noopener" title="Foto con sello">📷 '+esc(x.t)+'</a>'; });
   return h;
 }
 
@@ -252,6 +266,7 @@ function _tarwDia(silencio){
        '<button type="button" class="bt sec" id="tarw-hh">Pasar el día a las horas hombre</button>'+
        '<button type="button" class="bt sec" id="tarw-xls">Bajar el Excel del mes</button></div>';
     if(TARW.msg) h+='<p class="msg gris" id="tarw-msg">'+esc(TARW.msg)+'</p>';
+    if(R.n) h+=_tarwFrTabla(_tarwPorFrente([R]));
     if(!R.n) h+='<div class="vacio" id="tarw-vacio">Nadie marcó este día.<br><small>Se marca con el fotocheck en el celular de la puerta (app ▸ Tareo). Si alguien trabajó y no marcó, agrégalo con «＋ Agregar a alguien».</small></div>';
     else {
       h+='<div class="cam-envoltura"><table class="cam-tabla" id="tarw-tabla"><thead><tr><th>Apellidos y nombres</th><th>Documento</th><th>Entrada</th><th>Salida</th><th style="text-align:right">Horas</th><th></th><th></th></tr></thead><tbody>';
@@ -416,6 +431,7 @@ function _tarwMes(silencio){
     var h=nav+'<div class="cam-cifras"><div class="cam-cifra"><b>'+filas.length+'</b><span>días con marcas</span></div><div class="cam-cifra"><b>'+tot.n+'</b><span>personas</span></div>'+
       '<div class="cam-cifra"><b>'+_camH(tot.hh)+'</b><span>horas hombre del tareo</span></div><div class="cam-cifra'+(tot.ss ? ' mal' : '')+'"><b>'+tot.ss+'</b><span>salidas sin marcar</span></div></div>';
     h+='<div class="cam-acc"><button type="button" class="bt" id="tarw-xls">Bajar el Excel del mes</button><button type="button" class="bt sec" id="tarw-hh">Pasar el mes a las horas hombre</button></div>';
+    h+=_tarwFrTabla(_tarwPorFrente(filas.map(function(f){ return f.R; })));
     if(!filas.length) h+='<div class="vacio">Ese mes todavía no tiene marcas.</div>';
     else {
       h+='<div class="cam-envoltura"><table class="cam-tabla" id="tarw-mes"><thead><tr><th>Día</th><th style="text-align:right">Personas</th><th style="text-align:right">Horas hombre</th><th style="text-align:right">Sin salida</th><th>En el registro de horas hombre</th></tr></thead><tbody>';
@@ -469,10 +485,10 @@ function tarwExcel(ym, bt){
     var sTx=E.xf({ sz:10, c:C.tinta, borde:true }), sFe=E.xf({ sz:10, c:C.tinta, h:'center', borde:true, fmt:'dd/mm/yyyy' }), sN2=E.xf({ sz:10, c:C.tinta, h:'right', borde:true, fmt:'#,##0.00' }), sN0=E.xf({ sz:10, c:C.tinta, h:'right', borde:true, fmt:'#,##0' });
     var sT2=E.xf({ b:1, sz:10, c:C.petroleo, f:C.pie, h:'right', borde:true, fmt:'#,##0.00' }), sTt=E.xf({ b:1, sz:10, c:C.petroleo, f:C.pie, borde:true }), sHo=E.xf({ sz:10, c:C.tinta, h:'center', borde:true });
     var h1=new X.Hoja('Marcas'), f=5, per={}, porDia=[], hay=0; h1.activa=true; h1.pie='Tareo';
-    h1.unir(0, 1, 6, 1, 'Tareo de la puerta · '+mesN.toLowerCase(), sTit); h1.altos[1]=22;
-    h1.unir(0, 2, 6, 2, obra+' · refrigerio de '+cfg.refri+' min a quien estuvo '+cfg.refriDesde+' h o más · sin salida: jornada de '+cfg.jor+' h', sSub);
-    ['Fecha', 'Documento', 'Apellidos y nombres', 'Entrada', 'Salida', 'Horas', 'Observación'].forEach(function(t, i){ h1.celda(i, 4, t, sCab); });
-    [12, 13, 36, 9, 9, 9, 34].forEach(function(w, i){ h1.anchos[i]=w; }); h1.altos[4]=24;
+    h1.unir(0, 1, 7, 1, 'Tareo de la puerta · '+mesN.toLowerCase(), sTit); h1.altos[1]=22;
+    h1.unir(0, 2, 7, 2, obra+' · refrigerio de '+cfg.refri+' min a quien estuvo '+cfg.refriDesde+' h o más · sin salida: jornada de '+cfg.jor+' h', sSub);
+    ['Fecha', 'Documento', 'Apellidos y nombres', 'Entrada', 'Salida', 'Horas', 'Observación', 'Frente'].forEach(function(t, i){ h1.celda(i, 4, t, sCab); });
+    [12, 13, 36, 9, 9, 9, 34, 22].forEach(function(w, i){ h1.anchos[i]=w; }); h1.altos[4]=24;
     dias.forEach(function(d){
       var R=tarwResumen(d); if(!R.n) return; porDia.push({ d:d, R:R });
       R.L.forEach(function(r){
@@ -481,11 +497,12 @@ function tarwExcel(ym, bt){
         h1.celda(4, f, (r.s && !r.adentro) ? _camHora(r.s) : '', sHo); h1.celda(5, f, r.h, sN2);
         h1.celda(6, f, [r.adentro ? 'Todavía adentro' : (r.sinSalida ? 'Sin salida: se contó la jornada' : (r.web ? 'Corregido en la web' : (r.mano ? 'Marcado a mano' : ''))),
                         r.cel ? ((r.celx && r.celx.lejos) ? 'Con su celular, lejos de la puerta' : 'Con su celular') : ''].filter(Boolean).join(' · '), sTx);
+        h1.celda(7, f, (r.frs||[]).join(' · '), sTx);
         var p=per[r.k] || (per[r.k]={ d:r.d, n:r.n, dias:0, h:0 }); p.dias++; p.h+=r.h; f++;
       });
     });
     if(!hay){ if(bt) bt.disabled=false; toast('Ese mes todavía no tiene marcas.'); return; }
-    h1.celda(0, f, 'Total', sTt); for(var c0=1;c0<5;c0++) h1.celda(c0, f, '', sTt); h1.celda(5, f, 0, sT2, 'SUM(F5:F'+(f-1)+')'); h1.celda(6, f, '', sTt);
+    h1.celda(0, f, 'Total', sTt); for(var c0=1;c0<5;c0++) h1.celda(c0, f, '', sTt); h1.celda(5, f, 0, sT2, 'SUM(F5:F'+(f-1)+')'); h1.celda(6, f, '', sTt); h1.celda(7, f, '', sTt);
     h1.congelar={ c:0, r:4 };
     var h2=new X.Hoja('Por persona'); h2.pie='Tareo';
     h2.unir(0, 1, 3, 1, 'Horas de cada uno · '+mesN.toLowerCase(), sTit); h2.altos[1]=22; h2.unir(0, 2, 3, 2, obra, sSub);
@@ -498,7 +515,16 @@ function tarwExcel(ym, bt){
     ['Fecha', 'Personas', 'Horas hombre', 'Sin salida'].forEach(function(t, i){ h3.celda(i, 4, t, sCab); }); [12, 10, 13, 10].forEach(function(w, i){ h3.anchos[i]=w; });
     var f3=5; porDia.forEach(function(x){ h3.celda(0, f3, X.serial(x.d), sFe); h3.celda(1, f3, x.R.n, sN0); h3.celda(2, f3, x.R.hh, sN2); h3.celda(3, f3, x.R.sinSalida, sN0); f3++; });
     h3.celda(0, f3, 'Total', sTt); h3.celda(1, f3, '', sTt); h3.celda(2, f3, 0, sT2, 'SUM(C5:C'+(f3-1)+')'); h3.celda(3, f3, 0, sT2, 'SUM(D5:D'+(f3-1)+')');
-    bajarBlob(X.libro([h1, h2, h3], E, 'Tareo'), nombreArchivo('Tareo - '+obra+' - '+ym)+'.xlsx');
+    /* 19/11/2026 · por frente (la persona y sus horas van al primer frente que marcó ese día, como en la app) */
+    var hojas=[h1, h2, h3], FR=_tarwPorFrente(porDia.map(function(x){ return x.R; }));
+    if(FR.length && !(FR.length===1 && FR[0].n==='Sin frente')){
+      var h4=new X.Hoja('Por frente'); h4.pie='Tareo';
+      h4.unir(0, 1, 2, 1, 'Horas hombre por frente · '+mesN.toLowerCase(), sTit); h4.altos[1]=22; h4.unir(0, 2, 2, 2, obra, sSub);
+      ['Frente', 'Personas', 'Horas hombre'].forEach(function(t, i){ h4.celda(i, 4, t, sCab); }); [30, 10, 13].forEach(function(w, i){ h4.anchos[i]=w; });
+      var f4=5; FR.forEach(function(x){ h4.celda(0, f4, x.n, sTx); h4.celda(1, f4, x.p, sN0); h4.celda(2, f4, x.h, sN2); f4++; });
+      h4.celda(0, f4, 'Total', sTt); h4.celda(1, f4, '', sTt); h4.celda(2, f4, 0, sT2, 'SUM(C5:C'+(f4-1)+')'); hojas.push(h4);
+    }
+    bajarBlob(X.libro(hojas, E, 'Tareo'), nombreArchivo('Tareo - '+obra+' - '+ym)+'.xlsx');
     if(bt) bt.disabled=false;
   }, function(){ if(bt) bt.disabled=false; toast('No se pudo armar el Excel. Revisa tu conexión.'); });
 }
