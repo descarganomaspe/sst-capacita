@@ -92860,7 +92860,7 @@ function tarAlRiesgo(dia){
   return 'ok';
 }
 /* los días que ya pasaron se cierran con la jornada (el que no marcó salida) */
-function tarAlDia(){ for(var i = 0; i < 8; i++){ try{ tarAlRiesgo(_tarDiaMas(hoyISO(), -i)); }catch(_e){} } }
+function tarAlDia(n){ for(var i = 0; i < (n || 8); i++){ try{ tarAlRiesgo(_tarDiaMas(hoyISO(), -i)); }catch(_e){} } }
 /* para «¿Quién falta?»: los que siguen adentro, y los que ya salieron (con la hora) */
 function tareoParaConteo(){
   var out = { adentro:[], salieron:{} }, hoy = hoyISO();
@@ -92876,6 +92876,18 @@ function tareoParaConteo(){
 function abrirTareo(){ TAR.dia = hoyISO(); TAR.msg = ''; TAR.mano = false; TAR.q = ''; TAR.ajustes = false; TAR._abierto = ''; ir('p-tareo'); }
 /* al abrir la app: lo que quedó sin subir sube, y los días que pasaron se cierran en el Riesgo del mes */
 setTimeout(function(){ try{ var o = leer(_tarLS(), null); if(o && o.d && Object.keys(o.d).length){ tarAlDia(); tarSubir(); } }catch(_e){} }, 5000);
+/* 19/11/2026 · aunque nadie abra «Tareo» en este celular: lo que marcaron en la garita, con el QR del frente o con su
+   celular baja solo (los últimos 14 días, a lo más cada 6 horas) y sus horas hombre van al Riesgo del mes, como si se
+   hubiera abierto. Así las horas hombre, el informe, los indicadores y la carpeta de auditoría no dependen de abrirlo. */
+setTimeout(function(){
+  try{
+    if(typeof hayCuenta !== 'function' || !hayCuenta() || !tarPuede() || _tarEmp() === 'local') return;
+    var lk = 'sstc_tareo_auto_' + _tarEmp(), ult = +leer(lk, 0) || 0; if(Date.now() - ult < 6 * 3600000) return;
+    guardar(lk, Date.now());
+    var dias = []; for(var i = 0; i < 14; i++) dias.push(_tarDiaMas(hoyISO(), -i));
+    tarCfgBajar().then(function(){ return tarBajar(dias); }).then(function(){ tarAlDia(14); }, function(){});
+  }catch(_e){}
+}, 9000);
 function tareoDia(n){ var d = _tarDiaMas(TAR.dia || hoyISO(), n); if(d > hoyISO()) return; TAR.dia = d; TAR.msg = ''; pintarTareo(); }
 function pintarTareo(){
   var c = $('tar-cuerpo'); if(!c) return;
@@ -135441,7 +135453,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='2568ba2b1d';
+var SELLO_APP='a0b7d4eba6';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
