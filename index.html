@@ -989,6 +989,15 @@ button.tf-dif{cursor:pointer}
 .sd-ch-q{flex:0 0 auto;width:34px;height:34px;border-radius:999px;border:1px solid rgba(var(--w),.18);background:none;color:var(--gris);font:inherit;cursor:pointer}
 .kx-seg{display:flex;gap:8px}
 .kx-seg .ke-op{flex:1}
+.kx-pie{margin-top:14px;padding-top:12px;border-top:1px solid rgba(var(--w),.10)}
+.kx-pie-seg .ke-op{font-size:12.5px;padding:8px 6px;line-height:1.2}
+.kx-resp{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:9px;border:1px solid rgba(var(--w),.14);border-radius:12px;margin:0 0 8px}
+.kx-resp.ido{opacity:.72}
+.kx-resp img{width:96px;height:auto;background:#fff;border-radius:6px;flex:none}
+.kx-resp-tx{flex:1;min-width:140px;display:flex;flex-direction:column;gap:2px}
+.kx-resp-tx small{color:var(--gris);font-size:12px}
+.kx-resp-bt{display:flex;gap:6px;flex-wrap:wrap}
+.kx-resp-bt .btn{width:auto;margin:0;padding:7px 11px;font-size:12.5px;min-height:0}
 .kx-fil{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:12px;
         background:var(--vidrio,rgba(255,255,255,.05));border:1px solid var(--borde,rgba(255,255,255,.09));
         margin-bottom:7px}
@@ -4356,6 +4365,7 @@ html.t-claro .sim-hito{background:#fff}
 .legm-l li:first-child{border-top:0}.legm-f{grid-row:span 2;color:var(--gris);font-variant-numeric:tabular-nums;white-space:nowrap}.legm-l b{font-weight:600}.legm-l small{color:var(--gris);font-size:12px}
 /* 13/10/2026 · el tareo de la puerta (rediseño ejecutivo 14/11/2026) */
 .tar-cab{display:flex;gap:14px;align-items:center;margin-top:6px;padding-bottom:12px;border-bottom:1px solid rgba(var(--w),.08)}.tar-ic{flex:0 0 48px;width:48px;height:48px;border-radius:14px;background:rgba(var(--w),.06);border:1px solid rgba(var(--w),.12);display:grid;place-items:center;font-size:26px;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',system-ui,sans-serif}.tar-cab h2{margin:0;font-size:22px;font-weight:800}.tar-cab .sub{margin:3px 0 0;font-size:13.5px}
+.tar-fr{display:flex;flex-direction:column;gap:6px;margin-top:14px;font-size:13.5px;color:var(--gris)}.tar-fr select{margin:0}.tar-celf{font-size:12px;color:var(--gris)}
 .tar-esc{margin-top:14px;min-height:50px!important;border-radius:12px!important;font-weight:800!important;font-size:15px!important}
 .tar-mano{margin-top:10px;padding:12px;border-radius:14px;background:rgba(var(--w),.04);border:1px solid rgba(var(--w),.12)}
 .tar-mano input{margin:0 0 8px}
@@ -8321,9 +8331,12 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
     <div id="kx-resumen"></div>
     <label class="sec-tit" style="margin:12px 0 6px">Trabajador</label>
     <select id="kx-trab" onchange="pintarResumenMesKardex()"><option value="">Todos (un archivo por cada uno)</option></select>
+    <!-- 19/11/2026 · lo que va al pie de cada hoja: nada, a mano o la firma del responsable de esas fechas -->
+    <div id="kx-pie" class="kx-pie"></div>
     <div id="kx-msg" style="font-size:13.5px;margin:9px 0 0"></div>
     <button class="btn" onclick="exportarKardex()" style="margin-top:11px">📊 Descargar en Excel</button>
     <button class="btn sec" onclick="bajarKardexPDF()" style="margin-top:9px">📄 Descargar en PDF</button>
+    <button class="btn sec" onclick="bajarKardexPDF(true)" style="margin-top:9px">🖨️ Todos en un solo PDF (para imprimir)</button>
     <p class="sub" style="margin:9px 0 0;font-size:12.5px">El Excel es el formato oficial para archivar. El PDF es para mandar: llega igual en todos los celulares y no se puede editar. Si son varios trabajadores, van en una carpeta comprimida.</p>
   </div>
   <div class="caja vidrio" style="padding:15px;margin-top:12px">
@@ -26662,9 +26675,10 @@ function tfPinCodigo(id){
              : m==='no_eres_de_la_obra' ? 'Solo alguien del equipo de esta obra puede sacar el código.'
              : m==='no_esta' ? 'Esta ficha todavía no está en la nube. Espera a que se sincronice y vuelve a intentarlo.'
              : m==='muy_seguido' ? 'Muchos códigos seguidos. Espera unos minutos.'
+             : m==='ficha_repetida' ? 'Su cuenta está en otra ficha de esta misma obra (con su mismo documento). Saca el código desde esa ficha.'
              : 'No se pudo sacar el código. ¿Hay señal? Inténtalo otra vez.' });
   }, function(st){
-    fin({ msg: st===404 ? 'Esto todavía no está instalado en el servidor.' : 'No se pudo sacar el código. ¿Hay señal? Inténtalo otra vez.' });
+    fin({ msg: st===404 ? 'Esto todavía no está instalado en el servidor.' : (st===409 || st===400 || st>=500) ? 'El servidor no pudo sacar el código para esta ficha. Inténtalo otra vez; si se repite, avísanos.' : 'No se pudo sacar el código. ¿Hay señal? Inténtalo otra vez.' });
   });
 }
 function pintarFichaTrab(){
@@ -56307,7 +56321,7 @@ function logoSinMarco(du){
    actualizada». Ahora viajan en una fila de sst_doc (hoja «empleador»),
    como los puntos del trabajador del mes: gana la versión más nueva.
    El RUC no va aquí: ese lo manda la cuenta (bajarRucDeLaCuenta). */
-var EMP_NUBE_CAMPOS = ['razon','dom','act','formatoCod','formatoRev','formatoFecha','codKardex','logo'];
+var EMP_NUBE_CAMPOS = ['razon','dom','act','formatoCod','formatoRev','formatoFecha','codKardex','logo','kxPie','respSST'];
 var EMP_NUBE = { pide:false, cuando:{} };
 function _empTieneAlgo(e){ return EMP_NUBE_CAMPOS.some(function(k){ return !!(e && e[k]); }); }
 function empNubeTraer(forzar){
@@ -57413,7 +57427,7 @@ function _anclaFirma(i, rid){
 /* Devuelve {reemplazos, extras} listos para _armarXlsx. Si ninguna
    entrega trae firma, no se toca nada y el archivo sale igual que
    antes: nunca se rompe el formato por una firma que falta. */
-function _firmasDelXlsx(registros){
+function _firmasDelXlsx(registros, pie){
   var enc=new TextEncoder();
   var porImagen={}, extras=[], anclas='', n=0;
   (registros||[]).forEach(function(r, i){
@@ -57432,6 +57446,15 @@ function _firmasDelXlsx(registros){
     }
     anclas += _anclaFirma(i, rid);
   });
+  /* 19/11/2026 · la firma del responsable, en la casilla «Firma:» del pie (K53) */
+  if(pie && pie.png && String(pie.png).indexOf('base64,')>0){
+    try{
+      var _bp=_b64aU8(String(pie.png).split('base64,')[1]);
+      n++; var _rp='rIdF'+n;
+      extras.push({n:'xl/media/firma'+n+'.png', datos:_bp, rid:_rp});
+      anclas += _anclaFirmaResp(_rp, pie.prop||0.38);
+    }catch(_pe){}
+  }
   if(!anclas) return {reemplazos:{}, extras:[]};
   var dib=KX_DIBUJO.replace('</xdr:wsDr>', anclas+'</xdr:wsDr>');
   var rels=KX_DIBUJO_RELS.replace('</Relationships>',
@@ -57445,8 +57468,25 @@ function _firmasDelXlsx(registros){
     extras: extras.map(function(x){ return {n:x.n, datos:x.datos}; })
   };
 }
-function hojaDeTrabajador(t, registros){
+/* la firma del responsable: un dibujo de tamaño fijo, que no se deforme, en la fila 53 (K53:AR53) */
+function _anclaFirmaResp(rid, prop){
+  var cy=1600000, cx=Math.round(cy/(prop||0.38));
+  return '<xdr:oneCellAnchor>'+
+    '<xdr:from><xdr:col>14</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>52</xdr:row><xdr:rowOff>190500</xdr:rowOff></xdr:from>'+
+    '<xdr:ext cx="'+cx+'" cy="'+cy+'"/>'+
+    '<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="190" name="Firma del responsable"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>'+
+    '<xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>'+
+    '<xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></xdr:spPr>'+
+    '</xdr:pic><xdr:clientData/></xdr:oneCellAnchor>';
+}
+function hojaDeTrabajador(t, registros, pie){
   var x=KX_HOJA, emp=empleador();
+  /* 19/11/2026 · el pie: «Responsables del registro» (filas 50 a 52) */
+  if(pie){
+    x=_ponCelda(x,'K50', pie.n + (pie.otro ? ('   (antes: '+pie.otro.n+', hasta el '+_ddmm(pie.otro.hasta)+')') : ''), false);
+    x=_ponCelda(x,'K51', pie.c, false);
+    x=_ponCelda(x,'K52', pie.f, false);
+  }
   /* filas 8 y 9: los datos del empleador, que antes venian fijos */
   if(emp.razon) x=_ponCelda(x,'A8', emp.razon, false);
   if(emp.ruc)   x=_ponCelda(x,'G8', emp.ruc,   false);
@@ -57483,9 +57523,185 @@ function hojaDeTrabajador(t, registros){
    celular y cualquiera lo edita sin querer. Por eso aqui sale el
    mismo contenido en PDF, que llega igual en todos lados y no se
    mueve. Si son varios trabajadores van en un ZIP.                  */
-function _pdfDeKardex(t, regs, mes){
+/* ══════ LA FIRMA DEL RESPONSABLE AL PIE DEL KARDEX (19/11/2026) ══════
+   Lo pidieron en una reunión con un cliente: que al pie de la hoja de
+   cada trabajador salga el nombre, el cargo y la firma del supervisor
+   SST (o del responsable de seguridad de la empresa). Y la pregunta de
+   Marcelo: «¿qué pasa si el supervisor renuncia?».
+   Cómo queda:
+     · La obra elige qué va al pie: nada, el espacio para firmar a mano
+       (como hasta ahora) o la firma del responsable.
+     · Los responsables se anotan una vez, con su firma y desde qué
+       fecha lo son. Cuando uno se va, se registra su SALIDA: no se
+       borra.
+     · Cada hoja la firma quien era el responsable en las fechas de sus
+       entregas. Las hojas de cuando estaba él siguen saliendo con su
+       firma (es lo que pasó); las entregas después de su salida salen
+       con la del nuevo. Nunca se pone la firma de alguien en fechas en
+       que ya no estaba.
+     · Si en esas fechas no había nadie anotado, sale el espacio en
+       blanco para firmar a mano, y la pantalla lo dice.
+   Viaja con la cabecera de la empresa (empleador → sst_doc «empleador»),
+   así que lo ve todo el equipo de la obra.                            */
+function kxPieModo(){ var m=(empleador()||{}).kxPie; return (m==='no'||m==='firma') ? m : 'mano'; }
+function kxResps(){ var l=(empleador()||{}).respSST; return Array.isArray(l) ? l.filter(function(r){ return r && r.n && r.tr; }) : []; }
+function _kxRespGuardar(l, modo){
+  var e=empleador();
+  if(l) e.respSST=l;
+  if(modo) e.kxPie=modo;
+  guardar(LS_EMPLEADOR, e);
+  try{ empMarcarCambio(); }catch(_m){}
+}
+/* quiénes firman unas entregas: los que eran responsables en alguna de
+   sus fechas (a lo más dos: el que se fue y el que entró) */
+function kxRespDe(regs){
+  var fs=(regs||[]).map(function(k){ return String(k.fecha||'').slice(0,10); }).filter(function(f){ return f.length===10; }).sort();
+  if(!fs.length) return [];
+  var ini=fs[0], fin=fs[fs.length-1];
+  var l=kxResps().filter(function(r){
+    var d=String(r.desde||'0000-00-00'), h=String(r.hasta||'9999-12-31');
+    return d<=fin && h>=ini;
+  });
+  l.sort(function(a,b){ return String(a.desde||'').localeCompare(String(b.desde||'')); });
+  return l.slice(-2);
+}
+/* la fecha que lleva la firma: hoy, o el día que se fue si ya no está */
+function kxRespFecha(r){ var h=hoyISO(); return (r && r.hasta && r.hasta<h) ? r.hasta : h; }
+function _kxRespPNG(r){ try{ return atsFirmaImg(r.tr, 360) || ''; }catch(_e){ return ''; } }
+
+function kxPieModoPoner(m){
+  if(m==='firma' && !kxResps().length){ _kxRespGuardar(null, 'firma'); kxPiePintar(); kxRespAgregar(); return; }
+  _kxRespGuardar(null, m); kxPiePintar();
+}
+function kxPiePintar(){
+  var c=$('kx-pie'); if(!c) return;
+  var modo=kxPieModo(), L=kxResps().slice().sort(function(a,b){ return String(b.desde||'').localeCompare(String(a.desde||'')); });
+  var ops=[['no','Nada'],['mano','A mano'],['firma','Con su firma']];
+  var h='<div class="sec-tit" style="margin:0 0 6px">Al pie de cada hoja</div>'+
+    '<div class="kx-seg kx-pie-seg">'+ops.map(function(o){
+      return '<button type="button" class="ke-op'+(modo===o[0]?' on':'')+'" aria-pressed="'+(modo===o[0])+'" onclick="kxPieModoPoner(\''+o[0]+'\')">'+o[1]+'</button>';
+    }).join('')+'</div>';
+  if(modo==='no') h+='<p class="sub" style="margin:9px 0 0;font-size:12.5px">Sin responsable al pie: la hoja sale solo con la firma del trabajador en cada entrega.</p>';
+  else if(modo==='mano') h+='<p class="sub" style="margin:9px 0 0;font-size:12.5px">Sale la línea del responsable en blanco, para firmarla en papel.</p>';
+  else {
+    h+='<p class="sub" style="margin:9px 0 10px;font-size:12.5px">Al pie, el nombre, el cargo y la firma digital del responsable de SST: se firma una vez aquí y sale sola en todas las hojas, de un trabajador o de todo el personal. Cada hoja la firma quien era el responsable en las fechas de esas entregas. '+
+       'Si alguien se va, registra su salida: sus hojas de antes siguen con su firma y las entregas siguientes salen con la del nuevo.</p>';
+    if(!L.length) h+='<p class="sub" style="margin:0 0 8px">Todavía no hay ningún responsable anotado.</p>';
+    L.forEach(function(r){
+      var png=_kxRespPNG(r), activo=!r.hasta || r.hasta>=hoyISO();
+      h+='<div class="kx-resp'+(activo?'':' ido')+'">'+
+        (png?'<img src="'+png+'" alt="Firma de '+escA(r.n)+'">':'')+
+        '<div class="kx-resp-tx"><b>'+esc(r.n)+'</b><small>'+esc(r.c||'')+'</small>'+
+        '<small>'+(activo?'Desde el '+esc(_ddmm(r.desde))+' · <span style="color:var(--ok)">vigente</span>'
+                         :'Del '+esc(_ddmm(r.desde))+' al '+esc(_ddmm(r.hasta)))+'</small></div>'+
+        '<div class="kx-resp-bt">'+(activo?'<button type="button" class="btn sec" onclick="kxRespSalida(\''+escA(r.id)+'\')">Registrar su salida</button>':'')+
+        '<button type="button" class="btn sec" onclick="kxRespQuitar(\''+escA(r.id)+'\')" aria-label="Quitar a '+escA(r.n)+'">Quitar</button></div></div>';
+    });
+    h+='<button type="button" class="btn sec" onclick="kxRespAgregar()" style="margin-top:4px">＋ Anotar un responsable</button>';
+    var P=kardexDelPeriodo(), q=kxRespDe(P.regs);
+    var _et=P.etq ? (' ('+esc(P.etq)+')') : '';
+    if(P.regs.length && !q.length) h+='<p class="sub" style="margin:9px 0 0;color:var(--oro)">⚠️ En las fechas de estas entregas'+_et+' no había ningún responsable anotado: salen con el espacio para firmar a mano.</p>';
+    else if(q.length) h+='<p class="sub" style="margin:9px 0 0;font-size:12.5px">En las fechas de estas entregas'+_et+' firma'+(q.length>1?'n':'')+': <b>'+q.map(function(r){ return esc(r.n); }).join('</b> y <b>')+'</b>.</p>';
+  }
+  c.innerHTML=h;
+}
+function kxRespAgregar(){
+  /* 19/11/2026 · firma digital, una sola vez: se dibuja aquí (el responsable, en su celular o en este) y desde ese día
+     sale sola en todas las hojas del kardex, una o las de todo el personal de una vez. Queda anotado quién la registró y
+     cuándo, y el responsable autoriza su uso; nadie firma 98 hojas a mano. */
+  saloFirmaVentana('Firma del responsable del registro', true, function(o){
+    var hoy=hoyISO(), yoN=_norm(String(_quienFirma()||'')), propia=!!yoN && _norm(o.n)===yoN;
+    kxPedirFecha('¿Desde qué fecha es el responsable?', 'Las entregas desde ese día salen con esta firma. Las de antes siguen con la de quien estaba.', hoy, function(desde){
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(desde||'')) desde=hoy;
+      var L=kxResps();
+      /* el que estaba vigente deja de serlo el día anterior; si empezó ese mismo día o después, no se puede (se diría que
+         dos firmaban a la vez) */
+      var choca=L.filter(function(r){ return (!r.hasta || r.hasta>=desde) && r.desde>=desde; });
+      if(choca.length){ aviso('Esa fecha choca', choca[0].n+' figura como responsable desde el '+_ddmm(choca[0].desde)+'. Elige una fecha después de esa, o quítalo si se anotó por error.', '📅'); return; }
+      var cierra=L.filter(function(r){ return !r.hasta || r.hasta>=desde; });
+      var antes=_kxDiaMenos(desde);
+      var hacer=function(){
+        cierra.forEach(function(r){ r.hasta=antes; });
+        L.push({ id:'r'+Date.now().toString(36), n:o.n, c:o.c, tr:o.tr, desde:desde, hasta:'',
+                 reg:new Date().toISOString(), por:String(_quienFirma()||'').slice(0,80), propia:propia });
+        _kxRespGuardar(L, 'firma'); kxPiePintar();
+        if(typeof tostada==='function') tostada('Listo: '+o.n+' firma el kardex desde el '+_ddmm(desde)+'.');
+      };
+      confirmar('¿'+o.n+' autoriza su firma digital?',
+        'Su firma saldrá sola al pie de los registros de entrega de EPP de esta obra, con las entregas desde el '+_ddmm(desde)+
+        ', hasta que se registre su salida. Queda anotado que la registró '+(String(_quienFirma()||'').trim()||'esta cuenta')+' el '+_ddmm(hoy)+'.'+
+        (cierra.length ? ' '+cierra.map(function(r){ return r.n; }).join(', ')+' deja de firmar desde esa fecha (su último día: '+_ddmm(antes)+'); sus hojas de antes siguen con su firma.' : ''),
+        hacer, { si:'Sí, autoriza', no:'Cancelar', icono:'✍️' });
+    });
+  });
+}
+function _kxDiaMenos(iso){ var d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function kxRespSalida(id){
+  var L=kxResps(), r=null; L.forEach(function(x){ if(String(x.id)===String(id)) r=x; }); if(!r) return;
+  kxPedirFecha('¿Cuál fue su último día?', 'Las hojas con entregas hasta ese día siguen saliendo con la firma de '+r.n+'. Las de después, con la del responsable que anotes.', hoyISO(), function(f){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(f||'')) return;
+    if(f<r.desde){ aviso('Esa fecha no va', 'Su salida no puede ser antes del '+_ddmm(r.desde)+', el día que empezó.', '📅'); return; }
+    r.hasta=f; _kxRespGuardar(L); kxPiePintar();
+  });
+}
+function kxRespQuitar(id){
+  var L=kxResps(), r=null; L.forEach(function(x){ if(String(x.id)===String(id)) r=x; }); if(!r) return;
+  confirmar('¿Quitar a '+r.n+'?', 'Úsalo solo si se anotó por error. Si dejó la empresa, mejor registra su salida: así las hojas de cuando estaba siguen con su firma.', function(){
+    _kxRespGuardar(L.filter(function(x){ return String(x.id)!==String(id); })); kxPiePintar();
+  }, { si:'Sí, quitarlo', no:'Cancelar', icono:'✍️' });
+}
+/* una ventanita con una fecha (el mismo estilo que la de la firma) */
+function kxPedirFecha(titulo, texto, valor, alListo){
+  var d=document.createElement('div');
+  d.innerHTML='<div class="salo-ven" role="dialog" aria-modal="true"><div class="caja vidrio salo-ven-c"><b style="display:block;margin-bottom:6px">'+esc(titulo)+'</b>'+
+    '<p class="sub" style="margin:0 0 10px">'+esc(texto)+'</p><input type="date" id="kx-pf" value="'+escA(valor||'')+'">'+
+    '<div class="dos" style="margin-top:10px"><button type="button" class="btn sec" id="kx-pf-no">Cancelar</button><button type="button" class="btn" id="kx-pf-si">Listo</button></div></div></div>';
+  var el=d.firstChild; document.body.appendChild(el);
+  var cerrar=function(){ try{ el.parentNode.removeChild(el); }catch(_r){} };
+  $('kx-pf-no').onclick=cerrar;
+  $('kx-pf-si').onclick=function(){ var v=($('kx-pf')||{}).value||''; cerrar(); alListo(v); };
+}
+/* el pie en el PDF: hasta dos firmas, cada una con su nombre, su cargo y su periodo */
+function _kxPiePDF(doc, regs, W, M, y){
+  var modo=kxPieModo();
+  if(modo==='no') return;
+  var R=(modo==='firma') ? kxRespDe(regs) : [];
+  if(!R.length){
+    doc.setDrawColor(140,140,140); doc.setLineWidth(.7);
+    doc.line(W-M-218, y, W-M-18, y);
+    doc.setFontSize(8); doc.setTextColor(80,80,80);
+    doc.text('Responsable SSOMA', W-M-218, y+13);
+    if(modo==='mano'){ var selloK=selloDatos(); if(selloK) _pdfSello(doc, W-M-118, y+22, selloK, 200, false); }
+    return;
+  }
+  var ancho=200, gap=24;
+  R.forEach(function(r, i){
+    var x0=W-M-18-ancho-(R.length-1-i)*(ancho+gap);
+    try{ celFirmaPDF(doc, r.tr, x0+20, y-46, ancho-40, 42); }catch(_f){}
+    doc.setDrawColor(140,140,140); doc.setLineWidth(.7); doc.line(x0, y, x0+ancho, y);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(25,25,25);
+    doc.text(doc.splitTextToSize(String(r.n||'').toUpperCase(), ancho)[0], x0+ancho/2, y+12, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(90,90,90);
+    doc.text(doc.splitTextToSize(String(r.c||'Responsable SSOMA'), ancho)[0], x0+ancho/2, y+23, {align:'center'});
+    doc.setFontSize(6.8); doc.setTextColor(130,130,130);
+    doc.text(r.hasta ? ('Responsable del '+_ddmm(r.desde)+' al '+_ddmm(r.hasta)) : ('Responsable desde el '+_ddmm(r.desde)), x0+ancho/2, y+33, {align:'center'});
+    if(r.reg) doc.text('Firma digital registrada el '+_ddmm(String(r.reg).slice(0,10))+' · OBRASST', x0+ancho/2, y+42, {align:'center'});
+  });
+}
+/* el pie en el Excel (filas 50 a 53 del formato): el responsable de las últimas entregas de la hoja */
+function _kxPieXlsx(regs){
+  if(kxPieModo()!=='firma') return null;
+  var R=kxRespDe(regs); if(!R.length) return null;
+  var r=R[R.length-1], png=_kxRespPNG(r);
+  return { n:r.n, c:r.c||'Responsable SSOMA', f:_ddmm(kxRespFecha(r)), png:png, prop:((+(r.tr&&r.tr.h))||380)/1000,
+           otro:(R.length>1) ? R[0] : null };
+}
+function _pdfDeKardex(t, regs, mes, docJunto){
   var emp=empleador();
-  var doc=new jspdf.jsPDF({unit:'pt', format:'a4'});
+  /* 19/11/2026 · docJunto: todos en un solo PDF (para imprimir de una vez): cada trabajador empieza en hoja nueva */
+  var doc=docJunto || new jspdf.jsPDF({unit:'pt', format:'a4'});
+  if(docJunto && docJunto._kxUsado) doc.addPage();
+  if(docJunto) docJunto._kxUsado=true;
   var W=595.28, H=841.89, M=36, y=0;
 
   function cabecera(){
@@ -57657,19 +57873,18 @@ function _pdfDeKardex(t, regs, mes){
   /* decia «P = préstamo» y en toda la app P es PÉRDIDA: el registro
      impreso contradecia al formulario y al tablero. */
   doc.text('Tipo:  N = entrega nueva   ·   C = cambio o reposición   ·   P = reposición por pérdida', M, y);
-  /* la firma va abajo, donde se firma en papel */
-  y = Math.max(y+52, H-118);
-  doc.setDrawColor(140,140,140); doc.setLineWidth(.7);
-  doc.line(W-M-218, y, W-M-18, y);
-  doc.setFontSize(8); doc.setTextColor(80,80,80);
-  doc.text('Responsable SSOMA', W-M-218, y+13);
-  var selloK=selloDatos(); if(selloK) _pdfSello(doc, W-M-118, y+22, selloK, 200, false);
-  doc.setFontSize(7.5); doc.setTextColor(120,120,120);
-  doc.text('Cada línea lleva la firma del trabajador en el momento de la entrega.', M+18, y+13);
+  y+=11; doc.text('Cada línea lleva la firma del trabajador en el momento de la entrega.', M, y);
+  /* la firma va abajo, donde se firma en papel. 19/11/2026: lo que va
+     al pie lo elige la obra (kxPieModo) y, con firma, la del responsable
+     de esas fechas (kxRespDe). Si no entra, va en una hoja más. */
+  var yPie = y+50;
+  if(kxPieModo()!=='no' && yPie+36 > H-52){ doc.addPage(); cabecera(); yPie = 170; }
+  y = Math.max(yPie, H-100);
+  _kxPiePDF(doc, regs, W, M, y);
   doc.setFontSize(7); doc.setTextColor(155,155,155);
   doc.text('El trabajador declara haber recibido los equipos detallados y conocer su uso, cuidado y reposición.', M, H-46);
   doc.text('Generado con OBRASST el '+fechaLarga(hoyISO()), M, H-32);
-  return doc.output('blob');
+  return docJunto ? null : doc.output('blob');
 }
 /* el boton de la pantalla del kardex */
 /* \u2550\u2550 LAS FIRMAS DEL RESTO DEL EQUIPO \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
@@ -57680,7 +57895,8 @@ function _pdfDeKardex(t, regs, mes){
    blanco mientras el pie dec\u00eda \u00abcada l\u00ednea lleva la firma del
    trabajador\u00bb. Se entregaba a la fiscalizaci\u00f3n sin las firmas que la
    ley pide, y sin un solo aviso. */
-function bajarKardexPDF(){
+function bajarKardexPDF(junto){
+  KX_JUNTO=!!junto;
   if(soloConCodigo('Generar el registro de EPP en PDF','kardex_export')) return;
   var m=$('kx-msg');
   var _P=kardexDelPeriodo(); var mes=_P.mes||'';
@@ -57723,6 +57939,7 @@ function bajarKardexPDF(){
     armar();
   });
 }
+var KX_JUNTO=false;
 function _pdfKardexAhora(){
   var tid=$('kx-trab').value, m=$('kx-msg');
   var P=kardexDelPeriodo();
@@ -57736,6 +57953,17 @@ function _pdfKardexAhora(){
     return;
   }
   var archivos=[], fallaron=[];
+  /* 19/11/2026 · todos en un solo PDF: cada trabajador en hojas suyas, uno tras otro (para mandar a imprimir de una) */
+  if(KX_JUNTO){
+    var dj=new jspdf.jsPDF({unit:'pt', format:'a4'}), hechos=0;
+    grupos.forEach(function(g){ try{ _pdfDeKardex(g.t, g.regs, P.etq, dj); hechos++; }catch(e){ fallaron.push(g.t.nombre||'sin nombre'); } });
+    if(!hechos){ m.textContent='No se pudo armar el PDF.'; return; }
+    m.style.color='var(--gris)';
+    m.textContent=hechos+' trabajador'+(hechos===1?'':'es')+' en un solo PDF'+(fallaron.length?(' · no salió: '+fallaron.join(', ')):'')+'.';
+    var nomJ=_nombreSano('Entrega EPP - '+(nombreDeLaObra()||'obra')+' - '+P.archivo+' - todos')+'.pdf';
+    pedirEnvio([{nombre:nomJ, blob:dj.output('blob')}], 'Registro de entrega de EPP · '+P.etq+' · '+(nombreDeLaObra()||''), nomJ, '¿Qué hago con el registro de EPP?');
+    return;
+  }
   grupos.forEach(function(g){
     try{
       archivos.push({nombre:_nombreSano('Entrega EPP - '+(g.t.nombre||'trabajador')+' - '+P.archivo)+'.pdf',
@@ -57930,6 +58158,7 @@ function pintarKardexExport(){
    elegido. Asi el «no hay» —si aparece— ya no lo sorprende, y sobre
    todo ve de una que la entrega que acaba de registrar SI esta. */
 function pintarResumenMesKardex(){
+  try{ kxPiePintar(); }catch(_kp){}
   var c=$('kx-resumen'); if(!c) return;
   var P=kardexDelPeriodo();
   var mes=($('kx-mes')||{}).value||'';
@@ -57988,14 +58217,15 @@ function _armarLegajo(grupos, etqArchivo, alAvanzar){
         for(var j=0;j<hojas.length;j++){
           var parte=hojas[j];
           var suf=(hojas.length>1)?(' ('+(j+1)+' de '+hojas.length+')'):'';
-          var F=_firmasDelXlsx(parte);
+          var _pie=_kxPieXlsx(parte);
+          var F=_firmasDelXlsx(parte, _pie);
           sinFirma += parte.filter(function(r){ return !r.firma; }).length;
           var repl={};
           for(var k in F.reemplazos) if(Object.prototype.hasOwnProperty.call(F.reemplazos,k)) repl[k]=F.reemplazos[k];
           if(logo) repl['xl/media/image2.jpeg']=logo;
           archivos.push({
             nombre:_nombreSano('Entrega EPP - '+(g.t.nombre||'trabajador')+' - '+etqArchivo)+suf+'.xlsx',
-            blob:_armarXlsx(hojaDeTrabajador(g.t, parte), repl, F.extras),
+            blob:_armarXlsx(hojaDeTrabajador(g.t, parte, _pie), repl, F.extras),
             quien:g.t.nombre, suelto:g.suelto, n:parte.length, suf:suf});
         }
       }
@@ -77200,9 +77430,12 @@ function _dondeEstoy(){
 
 /* Junta lo que se va a imprimir. Se llama ANTES de disparar para que la
    foto no espere por el GPS. */
-function reunirSello(){
-  var c=selloCfg();
-  var base={ cfg:c, fecha:new Date(), obra:_dondeEstoy(), quien:_quienFirma(),
+/* 19/11/2026 · fijo: el sello que pone una función (la foto de la marca del tareo), prendido aunque en Ajustes
+   esté apagado, con su obra y su «quién» { cfg, obra, quien } */
+function _selloFijoCfg(){ var c = JSON.parse(JSON.stringify(selloCfg())); c.on = true; c.fecha = true; c.coord = true; c.obra = true; return c; }
+function reunirSello(fijo){
+  var c=(fijo && fijo.cfg) || selloCfg();
+  var base={ cfg:c, fecha:new Date(), obra:(fijo && fijo.obra) || _dondeEstoy(), quien:(fijo && fijo.quien) || _quienFirma(),
              gps:null, dir:'', mapa:null };
   if(!c.on) return Promise.resolve(base);
   if(!c.coord && !c.mapa) return Promise.resolve(base);
@@ -91951,7 +92184,7 @@ function _tarUnir(a, b){
       if(!z.n && y.n) z.n = String(y.n).slice(0, 80); if(!z.d && y.d) z.d = String(y.d).slice(0, 20);
       (Array.isArray(y.m) ? y.m : []).forEach(function(q){
         if(!Array.isArray(q) || !(+q[0]) || (q[1] !== 'e' && q[1] !== 's')) return;
-        if(!z.m.some(function(w){ return w[0] === +q[0] && w[1] === q[1]; })) z.m.push([+q[0], q[1], String(q[2] || '').slice(0, 10)]);
+        if(!z.m.some(function(w){ return w[0] === +q[0] && w[1] === q[1]; })) z.m.push([+q[0], q[1], String(q[2] || '').slice(0, 10)].concat(q[3] ? [String(q[3]).slice(0, 60)] : []));
       });
       (Array.isArray(y.x) ? y.x : []).forEach(function(t){ t = +t; if(t && z.x.indexOf(t) < 0) z.x.push(t); });
       /* 3/11/2026 · mejora 9: las autorizaciones del residente (una por entrada autorizada; la firma, en trazos) */
@@ -92013,6 +92246,32 @@ function tarSemana(hasta){
   return por;
 }
 /* ── marcar ── */
+/* ══ 19/11/2026 · EL FRENTE DE ESTA PUERTA ══
+   Pedido de un cliente: la garita, producción o el supervisor escanean el fotocheck del trabajador; con varios
+   frentes, cada marca tiene que decir en qué frente fue. Cada celular que escanea elige su frente una vez (queda
+   guardado en ese celular, por obra): sus marcas lo llevan como cuarto dato ([ms, 'e'|'s', de, frente]). Los frentes
+   son los de la obra («Frentes de trabajo») y los del tareo con celular. Las horas hombre siguen saliendo solas; en el
+   Excel salen por frente. */
+function _tarLSfr(){ return 'sstc_tareo_fr_' + _tarEmp(); }
+function tarFrente(){ var v = ''; try{ v = leer(_tarLSfr(), '') || ''; }catch(_e){} return String(v || '').slice(0, 60); }
+function tarFrentePoner(v){ try{ guardar(_tarLSfr(), String(v || '').slice(0, 60)); }catch(_e){} TAR.msg = v ? 'Listo: lo que escanees en este celular queda en «' + v + '».' : 'Listo: lo que escanees en este celular queda para toda la obra.'; pintarTareo(); }
+function tarFrentes(){
+  var L = [], ya = {};
+  function pon(n){ n = String(n || '').trim().slice(0, 60); var k = _tarNorm(n); if(n && !ya[k]){ ya[k] = 1; L.push(n); } }
+  try{ if(typeof freLista === 'function') freLista().forEach(function(f){ pon(f && f.n); }); }catch(_f){}
+  try{ var g = (typeof tcPuerta === 'function') ? tcPuerta() : null; ((g && g.frentes) || []).forEach(function(f){ pon(f && f.n); }); }catch(_t){}
+  var a = tarFrente(); if(a) pon(a);
+  return L;
+}
+/* los frentes de las marcas de una persona en el día (sin las anuladas) */
+function tarFrentesDe(z){ var L = []; _tarMarcas(z || {}).forEach(function(q){ if(q[3] && L.indexOf(q[3]) < 0) L.push(q[3]); }); return L; }
+function _tarFrSelHtml(){
+  var L = tarFrentes(), a = tarFrente();
+  if(!L.length) return '';
+  return '<label class="tar-fr" for="tar-fr"><span>📍 Este celular marca en</span><select id="tar-fr" onchange="tarFrentePoner(this.value)">' +
+    '<option value="">Toda la obra</option>' + L.map(function(n){ return '<option value="' + escA(n) + '"' + (n === a ? ' selected' : '') + ' data-sin-trad>' + esc(n) + '</option>'; }).join('') +
+    '</select></label>';
+}
 function tareoMarcar(doc, nombre, de, cuando, k0){
   var o = _tarTodo(), ahora = cuando || Date.now(), hoy = isoLocal(new Date(ahora)), ayer = _tarDiaMas(hoy, -1);
   var k = k0 || _tarK(doc, '', nombre);
@@ -92025,11 +92284,12 @@ function tareoMarcar(doc, nombre, de, cuando, k0){
   var ms = _tarMarcas(z), ult = ms.slice(-1)[0];
   if(ult && ahora - ult[0] < 90000 && ahora >= ult[0]) return { repetida:true, n:z.n, t:ult[1], ms:ult[0] };
   var pp = _tarPares(ms), tipo = (pp.ab !== null) ? 's' : 'e';
-  z.m.push([ahora, tipo, de || 'qr']); z.m.sort(function(p, q){ return p[0] - q[0]; });
+  var _fr = tarFrente();
+  z.m.push([ahora, tipo, de || 'qr'].concat(_fr ? [_fr] : [])); z.m.sort(function(p, q){ return p[0] - q[0]; });
   x.pend = 1; _tarGuardarTodo(o);
   _tarSubirLuego(); tarAlRiesgo(dia);
   var r = tarHorasDe(z), sem = tarSemana(hoy)[k] || 0, cfg = tarCfg();
-  return { n:z.n, t:tipo, ms:ahora, dia:dia, k:k, h:r.h, sem:sem, mucho:(r.h > cfg.maxDia || sem > cfg.maxSem) };
+  return { n:z.n, t:tipo, ms:ahora, dia:dia, k:k, h:r.h, sem:sem, mucho:(r.h > cfg.maxDia || sem > cfg.maxSem), fr:_fr };
 }
 function tareoDeshacer(dia, k, ms){
   var o = _tarTodo(), x = o.d[dia], z = x && x.p && x.p[k]; if(!z) return;
@@ -92042,14 +92302,15 @@ function tareoDeshacer(dia, k, ms){
 function _tarMsgLector(r){
   if(r.repetida) return { html:'<span>⏳</span> <b data-sin-trad>' + esc(r.n) + '</b> <span>ya marcó hace un momento.</span>' };
   return { html:'<span class="tar-lm ' + (r.t === 'e' ? 'en' : 'sa') + '">' + (r.t === 'e' ? '<span>ENTRADA</span>' : '<span>SALIDA</span>') + '</span> ' +
-                '<b data-sin-trad>' + esc(r.n) + '</b> <span data-sin-trad>' + _tarHora(r.ms) + '</span>' +
+                '<b data-sin-trad>' + esc(r.n) + '</b> <span data-sin-trad>' + _tarHora(r.ms) + (r.fr ? ' · ' + esc(r.fr) : '') + '</span>' +
                 (r.t === 's' ? ' <span data-sin-trad>· ' + _tarH(r.h) + ' h</span>' : '') +
                 (r.mucho ? ' <span class="tar-lm-mucho">⚠️ <span>Muchas horas</span></span>' : '') +
                 ' <button type="button" class="lnk" onclick="tareoDeshacer(\'' + r.dia + '\',\'' + escA(r.k) + '\',' + r.ms + ')">Deshacer</button>' };
 }
 function tareoEscanear(){
   if(!tarPuede()) return;
-  asisLector({ titulo:'Apunta al fotocheck', pie:'Uno tras otro: la primera vez del día es la entrada; la siguiente, la salida.',
+  var _frT = tarFrente();
+  asisLector({ titulo:_frT ? ('Apunta al fotocheck · ' + _frT) : 'Apunta al fotocheck', pie:'Uno tras otro: la primera vez del día es la entrada; la siguiente, la salida.',
     alLeer:function(txt){
       var c = asisDeCarne(txt); if(c.mal) return c.mal;
       /* 3/11/2026 · Gemini (mejora 9): cómo está hoy (lo que registra la obra), en grande; si la obra frena, quien no cumple
@@ -92279,6 +92540,7 @@ function pintarTareo(){
   if(puede && esHoy && !TAR.aut) tarCumTraer();
   if(!puede) h += '<div class="aviso" style="margin-top:12px"><b>🔒 Desde el plan Gestión SST</b><p class="sub" style="margin:5px 0 0">Con él la puerta marca entradas y salidas, y las horas hombre van solas al Riesgo del mes. Lo que ya se marcó se sigue viendo.</p></div>';
   if(puede && esHoy){
+    h += _tarFrSelHtml();
     h += '<button type="button" class="btn tar-esc" onclick="tareoEscanear()">📷 Escanear fotochecks en la puerta</button>' +
          '<button type="button" class="btn sec" style="margin-top:8px" onclick="TAR.mano=!TAR.mano;TAR.q=\'\';pintarTareo()">' + (TAR.mano ? 'Cerrar «Marcar a mano»' : '✋ Marcar a mano (sin fotocheck)') + '</button>';
     if(TAR.mano) h += _tarManoHtml(R);
@@ -92329,7 +92591,14 @@ function pintarTareo(){
   if(TAR.aut && $('tar-aut-f')) setTimeout(function(){ TAR.autPad = iqPad('tar-aut-f', 150); }, 60);   /* 3/11/2026 · la firma de quien autoriza */
 }
 /* 14/10/2026 · 📱 y lo que hay que mirar de lo que marcó con su celular (tareo-cel.js) */
-function _tarCelDe(dia, k){ try{ return (typeof tcBadges === 'function') ? tcBadges(dia, k) : ''; }catch(_c){ return ''; } }
+function _tarCelDe(dia, k){
+  var h = ''; try{ h = (typeof tcBadges === 'function') ? tcBadges(dia, k) : ''; }catch(_c){ h = ''; }
+  /* 19/11/2026 · el frente de lo que marcó la puerta (lo del celular ya lo dice tcBadges) */
+  try{ var o = _tarTodo(), z = o.d[dia] && o.d[dia].p && o.d[dia].p[k];
+    var L = []; _tarMarcas(z || {}).forEach(function(q){ if(q[2] !== 'cel' && q[3] && L.indexOf(q[3]) < 0) L.push(q[3]); });
+    if(L.length) h += ' <span class="tar-celf" data-sin-trad>📍 ' + esc(L.join(' · ')) + '</span>'; }catch(_f){}
+  return h;
+}
 function _tarCifra(n, et, cl){ return '<div class="tar-c' + (cl ? ' ' + cl : '') + '"><b data-sin-trad>' + n + '</b><span>' + et + '</span></div>'; }
 function _tarFechaLarga(dia){ try{ var s = new Date(dia + 'T12:00:00').toLocaleDateString((document.documentElement.lang || 'es').slice(0, 2), { weekday:'short', day:'numeric', month:'short' }); return s.charAt(0).toUpperCase() + s.slice(1); }catch(_e){ return dia; } }
 function _tarManoHtml(R){
@@ -92379,7 +92648,7 @@ function tareoExcel(){
   for(var d = 1; d <= 31; d++){ var f = mes + '-' + ('0' + d).slice(-2); if(f > hoy) break; if(isoLocal(new Date(f + 'T12:00:00')) === f) dias.push(f); }
   TAR.msg = 'Armando el archivo…'; pintarTareo();
   tarBajar(dias).then(function(){
-    var o = _tarTodo(), cfg = tarCfg(), ahora = Date.now(), filas = [], tot = {};
+    var o = _tarTodo(), cfg = tarCfg(), ahora = Date.now(), filas = [], tot = {}, porFr = {};
     dias.forEach(function(f){
       var x = o.d[f]; if(!x || !x.p) return;
       Object.keys(x.p).forEach(function(k){
@@ -92387,20 +92656,28 @@ function tareoExcel(){
         var obs = [r.adentro ? 'Todavía adentro' : (r.sinSalida ? 'Sin salida: se contó la jornada' : (r.mano ? 'Marcado a mano' : ''))];
         if(r.aut) obs.push('Entrada autorizada');   /* 3/11/2026 · mejora 9: entró con la autorización del residente */
         try{ if(typeof tcObservacion === 'function') obs.push(tcObservacion(f, k)); }catch(_ob){}
-        filas.push([f, z.d || '', z.n || '', _tarHora(r.e), r.adentro ? '' : _tarHora(r.s), String(r.h).replace('.', ','), obs.filter(Boolean).join(' · ')]);
+        var _frs = tarFrentesDe(z), _fr0 = _frs[0] || 'Sin frente';
+        filas.push([f, z.d || '', z.n || '', _frs.join(' · '), _tarHora(r.e), r.adentro ? '' : _tarHora(r.s), String(r.h).replace('.', ','), obs.filter(Boolean).join(' · ')]);
+        var tf = porFr[_fr0] || (porFr[_fr0] = { gente:{}, h:0 }); tf.gente[k] = 1; tf.h += r.h;
         var t = tot[k] || (tot[k] = { d:z.d || '', n:z.n || '', dias:0, h:0 }); t.dias++; t.h += r.h;
       });
     });
     if(!filas.length){ TAR.msg = 'Ese mes todavía no tiene marcas.'; pintarTareo(); return; }
     filas.sort(function(a, b){ return a[0].localeCompare(b[0]) || a[2].localeCompare(b[2], 'es'); });
     function q(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
-    var lin = [['Fecha', 'Documento', 'Apellidos y nombres', 'Entrada', 'Salida', 'Horas', 'Observación'].map(q).join(';')];
+    var lin = [['Fecha', 'Documento', 'Apellidos y nombres', 'Frente', 'Entrada', 'Salida', 'Horas', 'Observación'].map(q).join(';')];
     filas.forEach(function(r){ lin.push(r.map(q).join(';')); });
     lin.push(''); lin.push(['Total por persona', '', '', '', '', '', ''].map(q).join(';'));
     lin.push(['Documento', 'Apellidos y nombres', 'Días', 'Horas'].map(q).join(';'));
     Object.keys(tot).map(function(k){ return tot[k]; }).sort(function(a, b){ return a.n.localeCompare(b.n, 'es'); }).forEach(function(t){
       lin.push([t.d, t.n, t.dias, String(Math.round(t.h * 100) / 100).replace('.', ',')].map(q).join(';'));
     });
+    var _ks = Object.keys(porFr);
+    if(_ks.length > 1 || (_ks.length === 1 && _ks[0] !== 'Sin frente')){
+      lin.push(''); lin.push(['Horas hombre por frente', '', ''].map(q).join(';'));
+      lin.push(['Frente', 'Personas', 'Horas hombre'].map(q).join(';'));
+      _ks.sort().forEach(function(n){ lin.push([n, Object.keys(porFr[n].gente).length, String(Math.round(porFr[n].h * 100) / 100).replace('.', ',')].map(q).join(';')); });
+    }
     lin.push(''); lin.push(q('Refrigerio descontado: ' + cfg.refri + ' min a quien estuvo ' + cfg.refriDesde + ' h o más. Sin salida: jornada de ' + cfg.jor + ' h.'));
     var blob = new Blob(['﻿' + lin.join('\r\n')], { type:'text/csv;charset=utf-8' });
     var nom = _nombreSano('Tareo ' + ((typeof nombreDeLaObra === 'function' && nombreDeLaObra()) || 'obra') + ' ' + mes) + '.csv';
@@ -92487,9 +92764,11 @@ function _tcMotivoEquipo(err){
   return 'No se pudo: no hay señal. Inténtalo otra vez cuando tengas internet.';
 }
 /* que el celular de cada trabajador sepa si su obra marca con el celular (va en la configuración de la obra) */
-function _tcAvisarObra(modo){
+function _tcAvisarObra(modo, ubic){
   var v = (modo === 'cartel' || modo === 'pantalla') ? modo : false;
   try{ if(typeof cfgObra === 'function' && typeof cfgObraPoner === 'function' && cfgObra('tareoCel', false) !== v) cfgObraPoner('tareoCel', v); }catch(_c){}
+  /* 19/11/2026 · si la obra no pide la ubicación, el celular del trabajador ni la pregunta */
+  if(typeof ubic === 'boolean'){ try{ if(typeof cfgObra === 'function' && typeof cfgObraPoner === 'function' && cfgObra('tareoUbic', true) !== ubic) cfgObraPoner('tareoUbic', ubic); }catch(_u){} }
 }
 function tcPuertaTraer(){
   var e = _tcEmp();
@@ -92500,9 +92779,11 @@ function tcPuertaTraer(){
     if(!j || !j.ok || !j.token) return Promise.reject({ motivo:(j && j.motivo) || 'no' });
     if(_tcEmp() !== e) return Promise.reject({ motivo:'otra_obra' });
     var g = { token:j.token, llave:j.llave, modo:j.modo || 'off', lat:(typeof j.lat === 'number') ? j.lat : null, lng:(typeof j.lng === 'number') ? j.lng : null,
-              radio:+j.radio || 200, escaneos:+j.escaneos || 0, ultimo:j.ultimo || null, nivel:j.nivel };
+              radio:+j.radio || 200, escaneos:+j.escaneos || 0, ultimo:j.ultimo || null, nivel:j.nivel,
+              /* 19/11/2026 · por frentes y con la ubicación opcional (sql/2026-11-19-tareo-frentes.sql; sin él, como antes) */
+              pide_ubic:(j.pide_ubic !== false), frentes:Array.isArray(j.frentes) ? j.frentes : [], conFrentes:Array.isArray(j.frentes) };
     _tcGuardarP(g); TCEL.err = '';
-    _tcAvisarObra(g.modo);
+    _tcAvisarObra(g.modo, g.pide_ubic);
     return g;
   }, function(err){ TCEL.pide = null; return Promise.reject(typeof err === 'number' ? { status:err } : err); });
   return TCEL.pide;
@@ -92532,7 +92813,16 @@ function tcSeccionHtml(){
     return '<button type="button" role="radio" aria-checked="' + (modo === o[0]) + '" class="tc-op' + (modo === o[0] ? ' on' : '') + '" data-modo="' + o[0] + '" onclick="tcModo(\'' + o[0] + '\')">' +
            '<span class="tc-op-ic" aria-hidden="true">' + o[1] + '</span><span class="tc-op-tx"><b>' + o[2] + '</b><small>' + o[3] + '</small></span></button>';
   }).join('') + '</div>';
-  if(modo === 'cartel'){
+  if(modo === 'cartel' && g.conFrentes){
+    h += '<label class="tc-ubic"><input type="checkbox" id="tc-ubic"' + (g.pide_ubic !== false ? ' checked' : '') + ' onchange="tcUbicPoner(this.checked)"> ' +
+         '<span><b>Pedir la ubicación al marcar</b><small>' + (g.pide_ubic !== false
+           ? 'Su celular dice a cuántos metros del cartel está; se guarda solo eso, nunca dónde estaba.'
+           : 'No se pide. Vale el QR del cartel de cada frente. Para que nadie marque con una foto del cartel, usa la pantalla o cambia el QR cuando haga falta.') +
+         '</small></span></label>';
+  }
+  if(modo === 'cartel' && g.pide_ubic === false){
+    h += '<button type="button" class="btn" id="tc-cartel-b" onclick="tcCartel()">🖨️ El cartel de la puerta principal</button><div id="tc-cartel"></div>';
+  } else if(modo === 'cartel'){
     h += '<div class="tc-puerta">' +
          (g.lat !== null && g.lat !== undefined
            ? '<p>📍 <span>La puerta está guardada. Cuenta como «en la puerta» hasta:</span> <b data-sin-trad>' + (+g.radio || 200) + ' m</b></p>'
@@ -92548,7 +92838,8 @@ function tcSeccionHtml(){
   }
   if(modo === 'cartel' || modo === 'pantalla'){
     h += '<p class="sub tc-como"><span>Cada uno marca desde su app, en su inicio: «Marcar entrada o salida».</span> <span>Lo que marcan llega aquí con 📱.</span></p>' +
-         '<button type="button" class="btn sec" onclick="tcNuevo()">🔄 Cambiar el QR</button>';
+         '<button type="button" class="btn sec" onclick="tcNuevo()">🔄 Cambiar el QR' + ((g.frentes || []).length ? ' de la puerta principal' : '') + '</button>';
+    if(g.conFrentes) h += tcFrentesHtml(g, modo);
   }
   if(TCEL.msg) h += '<p class="sub tc-msg" id="tc-msg">' + esc(TCEL.msg) + '</p>';
   return h + '</div>';
@@ -92600,19 +92891,22 @@ function tcNuevo(){
   }, { si:'Sí, cambiarlo', no:'Cancelar', icono:'🕘' });
 }
 /* el cartel para la puerta (con el diseño de los carteles de la obra) */
-function tcCartelDatos(){
+function tcCartelDatos(fr){
   var g = tcPuerta(), emp = (typeof empleador === 'function') ? (empleador() || {}) : {}, e = (typeof empActiva === 'function') ? (empActiva() || {}) : {};
   var tr = (typeof trad === 'function') ? trad : null, tit = 'Marca tu entrada y tu salida';
   try{ if(tr) tit = tr(tit); }catch(_t){}
+  /* 19/11/2026 · el cartel de un frente lleva SU ficha y su nombre */
   return { diseno:(typeof cartelDisenoGuardado === 'function') ? cartelDisenoGuardado() : 'clasico', hoja:'tareo', titulo:tit, largo:(CARTEL_LARGO.tareo || ''),
-           enlace:tcEnlace(g), empresa:emp.razon || '', obra:e.nombre || '', logo:emp.logo || null, tx:tr };
+           enlace:fr ? (BASE_TAREO + '#tareo=' + fr.token) : tcEnlace(g), empresa:emp.razon || '', obra:(e.nombre || '') + (fr ? ' · ' + fr.n : ''), logo:emp.logo || null, tx:tr };
 }
-function tcCartel(){
+function tcCartel(fid){
   var g = tcPuerta(); if(!g || !g.token) return;
-  var c = $('tc-cartel'); if(c) c.innerHTML = '<p class="sub">Armando el cartel…</p>';
-  cartelDibujar(tcCartelDatos()).then(function(r){
-    TCEL.cartel = r;
-    var c2 = $('tc-cartel'); if(!c2) return;
+  var fr = fid ? _tcFrente(fid) : null; if(fid && !fr) return;
+  var cid = fr ? ('tc-cartel-' + fr.id) : 'tc-cartel';
+  var c = $(cid); if(c) c.innerHTML = '<p class="sub">Armando el cartel…</p>';
+  cartelDibujar(tcCartelDatos(fr)).then(function(r){
+    TCEL.cartel = r; TCEL.cartelNom = fr ? ('cartel-tareo-' + _nombreSano(fr.n)) : 'cartel-tareo';
+    var c2 = $(cid); if(!c2) return;
     c2.innerHTML = '<figure class="tc-fig"><img src="' + r.png + '" alt="El cartel del tareo"></figure>' +
       '<div class="tc-bts"><button type="button" class="btn sec" onclick="tcCartelBajar()">⬇️ Descargar</button><button type="button" class="btn sec" onclick="tcCartelCompartir()">📤 Compartir</button></div>' +
       '<p class="sub"><span>Imprímelo en A4 y pégalo en la puerta, a la altura de los ojos.</span> <span>El QR no lleva el código de tu obra.</span></p>';
@@ -92622,7 +92916,7 @@ function tcCartelBajar(){
   var r = TCEL.cartel; if(!r || !r.canvas) return;
   r.canvas.toBlob(function(bl){
     var u = URL.createObjectURL(bl), a = document.createElement('a');
-    a.href = u; a.download = 'cartel-tareo.png'; document.body.appendChild(a); a.click();
+    a.href = u; a.download = (TCEL.cartelNom || 'cartel-tareo') + '.png'; document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); }, 1200);
   }, 'image/png');
 }
@@ -92630,23 +92924,147 @@ function tcCartelCompartir(){
   var r = TCEL.cartel; if(!r || !r.canvas) return;
   r.canvas.toBlob(function(bl){
     var f = null, puede = false;
-    try{ f = new File([bl], 'cartel-tareo.png', { type:'image/png' }); }catch(_f){}
+    try{ f = new File([bl], (TCEL.cartelNom || 'cartel-tareo') + '.png', { type:'image/png' }); }catch(_f){}
     try{ puede = !!(f && navigator.canShare && navigator.canShare({ files:[f] })); }catch(_c){}
     if(puede){ navigator.share({ files:[f], title:'Cartel del tareo' }).catch(function(){}); return; }
     tcCartelBajar();
   }, 'image/png');
 }
 
+/* ══ LOS FRENTES, CADA UNO CON SU QR (19/11/2026) ══
+   Pedido de un cliente: obras con frentes en sitios distintos, y cada
+   frente con su propio QR, aparte del de los otros. Cada frente tiene su
+   ficha y su llave (sql/2026-11-19-tareo-frentes.sql): su cartel, su
+   pantalla y su «Cambiar el QR» son solo suyos, y cada marca dice de qué
+   frente es. La ubicación es opcional (tcUbicPoner): sin ella, el QR del
+   frente dice dónde marcó; con la pantalla, además, el QR cambia cada 20 s
+   y una foto no sirve para marcar desde la casa. */
+function _tcFrente(id){ var g = tcPuerta(), r = null; ((g && g.frentes) || []).forEach(function(f){ if(String(f.id) === String(id)) r = f; }); return r; }
+function _tcMotivoFrente(err){
+  var m = err && err.motivo;
+  if(m === 'sin_nombre') return 'Escribe el nombre del frente.';
+  if(m === 'nombre_repetido') return 'Ya hay un frente con ese nombre.';
+  if(m === 'muchos_frentes') return 'Son 12 frentes como máximo por obra.';
+  if(m === 'no_existe') return 'Ese frente ya no está. Vuelve a abrir «Tareo».';
+  return _tcMotivoEquipo(err && err.motivo ? err : (typeof err === 'number' ? { status:err } : err));
+}
+function tcFrentesHtml(g, modo){
+  var L = g.frentes || [], ubic = (g.pide_ubic !== false);
+  var h = '<div class="tc-frs" id="tc-frs"><b>Frentes con su propio QR</b>' +
+          '<p class="sub" style="margin:3px 0 0">Si la obra trabaja en varios sitios, cada frente tiene su ' + (modo === 'pantalla' ? 'pantalla' : 'cartel') +
+          '. La marca dice de qué frente es, y cambiar el QR de un frente no toca a los otros.</p>';
+  L.forEach(function(f){
+    var tieneLugar = (f.lat !== null && f.lat !== undefined);
+    h += '<div class="tc-fr"><div class="tc-fr-cab"><b data-sin-trad>' + esc(f.n) + '</b><small><span>Marcas:</span> <span data-sin-trad>' + (+f.escaneos || 0) + '</span></small>' +
+         (modo === 'cartel' && ubic ? '<small>' + (tieneLugar ? '📍 <span>Lugar guardado</span> · <span data-sin-trad>' + (+f.radio || 200) + ' m</span>' : '📍 <span>Sin lugar: sus marcas no dicen a cuántos metros</span>') + '</small>' : '') +
+         '</div><div class="tc-bts">' +
+         (modo === 'pantalla'
+           ? '<button type="button" class="btn" onclick="tcPantalla(\'' + escA(f.id) + '\')">📺 Abrir su pantalla</button>'
+           : '<button type="button" class="btn" onclick="tcCartel(\'' + escA(f.id) + '\')">🖨️ Su cartel</button>' +
+             (ubic ? '<button type="button" class="btn sec" onclick="tcFrenteLugar(\'' + escA(f.id) + '\')">📍 ' + (tieneLugar ? 'Volver a guardar su lugar' : 'Estoy ahí: guardar su lugar') + '</button>' : '')) +
+         '<button type="button" class="btn sec" onclick="tcFrenteNuevo(\'' + escA(f.id) + '\')">🔄 Cambiar su QR</button>' +
+         '<button type="button" class="btn sec" onclick="tcFrenteQuitar(\'' + escA(f.id) + '\')">Quitar</button></div>' +
+         '<div id="tc-cartel-' + escA(f.id) + '"></div></div>';
+  });
+  /* 19/11/2026 · los frentes que la obra ya creó en «Frentes de trabajo», de un toque (con su lugar y su radio si lo tienen) */
+  var ya = {}; L.forEach(function(f){ ya[String(f.n || '').toLowerCase()] = 1; });
+  var obraFr = []; try{ if(typeof freLista === 'function') obraFr = freLista().filter(function(f){ return f && f.n && !ya[String(f.n).toLowerCase()]; }); }catch(_f){}
+  if(obraFr.length) h += '<p class="sub" style="margin:10px 0 4px">De tus frentes de trabajo:</p><div class="tc-bts">' + obraFr.slice(0, 12).map(function(f){
+    return '<button type="button" class="btn sec" onclick="tcFrenteDeObra(\'' + escA(f.id) + '\')">＋ <span data-sin-trad>' + esc(f.n) + '</span>' + (f.gps ? ' 📍' : '') + '</button>'; }).join('') + '</div>';
+  h += '<div class="tc-fr-nuevo"><input id="tc-fr-n" maxlength="60" placeholder="Frente Norte · Torre B" aria-label="Nombre del frente" onkeydown="if(event.key===\'Enter\'){event.preventDefault();tcFrenteAgregar();}">' +
+       '<button type="button" class="btn sec" onclick="tcFrenteAgregar()">＋ Agregar frente</button></div></div>';
+  return h;
+}
+function _tcFrenteRpc(p){
+  var e = _tcEmp(); if(!e) return Promise.reject({ motivo:'sin_cuenta' });
+  return sbRpc('sst_tareo_frente_poner', { p_emp:e, p:p }).then(function(j){
+    if(!j || !j.ok) return Promise.reject({ motivo:(j && j.motivo) || 'no' });
+    return j;
+  }, function(err){ return Promise.reject(typeof err === 'number' ? { status:err } : err); });
+}
+function _tcFrenteGuardar(fr){
+  var g = tcPuerta(); if(!g) return;
+  var L = (g.frentes || []).filter(function(f){ return String(f.id) !== String(fr.id); });
+  if(!fr.quitado) L.push(fr);
+  L.sort(function(a, b){ return (+a.id) - (+b.id); });
+  g.frentes = L; _tcGuardarP(g);
+}
+function tcFrenteAgregar(){
+  var i = $('tc-fr-n'), n = String((i && i.value) || '').replace(/\s+/g, ' ').trim();
+  if(n.length < 2){ TCEL.msg = 'Escribe el nombre del frente.'; _tcRepinta(); return; }
+  TCEL.msg = 'Guardando…'; _tcRepinta();
+  _tcFrenteRpc({ n:n }).then(function(j){ _tcFrenteGuardar(j.frente); TCEL.msg = 'Listo: «' + j.frente.n + '» ya tiene su QR.'; _tcRepinta(); },
+    function(err){ TCEL.msg = _tcMotivoFrente(err); _tcRepinta(); });
+}
+function tcFrenteDeObra(fid){
+  var f = null; try{ freLista().forEach(function(x){ if(String(x.id) === String(fid)) f = x; }); }catch(_e){}
+  if(!f) return;
+  TCEL.msg = 'Guardando…'; _tcRepinta();
+  _tcFrenteRpc({ n:f.n }).then(function(j){
+    _tcFrenteGuardar(j.frente);
+    if(!f.gps) return j.frente;
+    return _tcFrenteRpc({ id:j.frente.id, lat:f.gps.lat, lng:f.gps.lng, radio:Math.max(50, +f.gps.r || 200) }).then(function(j2){ _tcFrenteGuardar(j2.frente); return j2.frente; }, function(){ return j.frente; });
+  }).then(function(fr){ TCEL.msg = 'Listo: «' + fr.n + '» ya tiene su QR' + (fr.lat !== null && fr.lat !== undefined ? ', con el lugar del frente.' : '. Guarda su lugar estando ahí.'); _tcRepinta(); },
+    function(err){ TCEL.msg = _tcMotivoFrente(err); _tcRepinta(); });
+}
+function tcFrenteQuitar(id){
+  var f = _tcFrente(id); if(!f) return;
+  confirmar('¿Quitar «' + f.n + '»?', 'Su cartel y su pantalla dejan de servir. Las marcas que ya se hicieron ahí se quedan en el tareo.', function(){
+    _tcFrenteRpc({ id:f.id, activo:false }).then(function(){ _tcFrenteGuardar({ id:f.id, quitado:true }); TCEL.msg = 'Listo: se quitó el frente.'; _tcRepinta(); },
+      function(err){ aviso('No se pudo quitar', _tcMotivoFrente(err), '🕘'); });
+  }, { si:'Sí, quitarlo', no:'Cancelar', icono:'🕘' });
+}
+function tcFrenteNuevo(id){
+  var f = _tcFrente(id), e = _tcEmp(); if(!f || !e) return;
+  confirmar('¿Cambiar el QR de «' + f.n + '»?', 'Su cartel o su pantalla de antes dejan de servir. Los otros frentes siguen igual.', function(){
+    sbRpc('sst_tareo_frente_nueva', { p_emp:e, p_id:+f.id }).then(function(j){
+      if(!j || !j.ok) return Promise.reject({ motivo:(j && j.motivo) || 'no' });
+      f.token = j.token; f.llave = j.llave; f.escaneos = 0; f.ultimo = null; _tcFrenteGuardar(f); TCEL.cartel = null; _tcRepinta();
+      if(typeof tostada === 'function') tostada('Listo: imprime el cartel nuevo de «' + f.n + '» o vuelve a abrir su pantalla.');
+    }).catch(function(err){ aviso('No se pudo cambiar', _tcMotivoFrente(typeof err === 'number' ? { status:err } : err), '🕘'); });
+  }, { si:'Sí, cambiarlo', no:'Cancelar', icono:'🕘' });
+}
+function tcFrenteLugar(id){
+  var f = _tcFrente(id); if(!f) return;
+  if(!(navigator.geolocation && navigator.geolocation.getCurrentPosition)){ TCEL.msg = 'Este celular no da su ubicación.'; _tcRepinta(); return; }
+  TCEL.msg = 'Buscando dónde estás…'; _tcRepinta();
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var c = pos.coords, acc = Math.round(c.accuracy || 0);
+    _tcFrenteRpc({ id:f.id, lat:c.latitude, lng:c.longitude }).then(function(j){
+      _tcFrenteGuardar(j.frente);
+      TCEL.msg = acc > 60 ? 'Guardado, pero con poca precisión. Si puedes, vuelve a guardarlo al aire libre.' : 'Listo: quedó guardado el lugar de «' + f.n + '».';
+      _tcRepinta();
+    }, function(err){ TCEL.msg = _tcMotivoFrente(err); _tcRepinta(); });
+  }, function(er){
+    TCEL.msg = (er && er.code === 1) ? 'La app no tiene permiso para ver tu ubicación. Dáselo en los ajustes del celular.' : 'No se pudo saber dónde estás. Inténtalo al aire libre.';
+    _tcRepinta();
+  }, { enableHighAccuracy:true, timeout:20000, maximumAge:0 });
+}
+function tcUbicPoner(v){
+  var g = tcPuerta(), e = _tcEmp(); if(!g || !e) return;
+  TCEL.msg = 'Guardando…'; _tcRepinta();
+  sbRpc('sst_tareo_puerta_poner', { p_emp:e, p:{ pide_ubic:!!v } }).then(function(j){
+    if(!j || !j.ok) return Promise.reject({ motivo:(j && j.motivo) || 'no' });
+    g.pide_ubic = (j.pide_ubic !== false); _tcGuardarP(g); _tcAvisarObra(g.modo, g.pide_ubic);
+    TCEL.msg = g.pide_ubic ? 'Listo: al marcar con el cartel se pide la ubicación.' : 'Listo: ya no se pide la ubicación. Vale el QR de cada frente.';
+    _tcRepinta();
+  }).catch(function(err){ TCEL.msg = _tcMotivoEquipo(err && err.motivo ? err : (typeof err === 'number' ? { status:err } : err)); _tcRepinta(); });
+}
+
 /* ══ LA PANTALLA DE LA PUERTA (el QR que cambia cada 20 s) ══ */
-function tcPantalla(){ ir('p-tareo-puerta'); }
+function tcPantalla(fid){ TCEL.frPant = fid ? String(fid) : ''; ir('p-tareo-puerta'); }
+/* lo que muestra la pantalla: la puerta principal o un frente (su ficha y su llave) */
+function _tcQrDe(){ var g = tcPuerta(); if(!g) return null; var fr = TCEL.frPant ? _tcFrente(TCEL.frPant) : null;
+  return fr ? { token:fr.token, llave:fr.llave, n:fr.n } : { token:g.token, llave:g.llave, n:'' }; }
 function pintarTareoPuerta(){
   var c = $('tcp-cuerpo'); if(!c) return;
   _tcEstilos();
   var g = tcPuerta();
   if(!g || !g.llave){ c.innerHTML = '<div class="aviso">Primero abre «Tareo» con señal: así este celular trae la puerta de tu obra.</div>'; tcPantallaParar(); return; }
   if(g.modo !== 'pantalla'){ c.innerHTML = '<div class="aviso">Esta obra no marca con la pantalla. Cámbialo en «Tareo», en «Con el celular de cada uno».</div>'; tcPantallaParar(); return; }
-  var e = (typeof empActiva === 'function') ? (empActiva() || {}) : {};
-  c.innerHTML = '<div class="tcp"><p class="tcp-obra" data-sin-trad>' + esc(e.nombre || '') + '</p><div class="tcp-hora" id="tcp-hora" data-sin-trad></div>' +
+  var e = (typeof empActiva === 'function') ? (empActiva() || {}) : {}, Q = _tcQrDe();
+  if(TCEL.frPant && (!Q || !Q.n)){ c.innerHTML = '<div class="aviso">Ese frente ya no está. Ábrela otra vez desde «Tareo».</div>'; tcPantallaParar(); return; }
+  c.innerHTML = '<div class="tcp"><p class="tcp-obra" data-sin-trad>' + esc(e.nombre || '') + '</p>' + (Q.n ? '<p class="tcp-frente" data-sin-trad>' + esc(Q.n) + '</p>' : '') + '<div class="tcp-hora" id="tcp-hora" data-sin-trad></div>' +
     '<div class="tcp-qr" id="tcp-qr"></div><p class="tcp-seg"><span>Cambia en</span> <b id="tcp-seg" data-sin-trad></b></p>' +
     '<p class="tcp-como"><b>Marca tu entrada o tu salida</b><span>Abre OBRASST, toca «Marcar entrada o salida» y apunta aquí.</span></p>' +
     '<p class="tcp-senal" id="tcp-senal"></p>' +
@@ -92662,9 +93080,10 @@ function _tcTick(){
   var sn = $('tcp-senal'); if(sn) sn.innerHTML = (navigator.onLine === false) ? '📵 <span>Sin señal: igual sirve. Las marcas llegan cuando vuelva la señal.</span>' : '';
   if(t === TCEL.slot) return;
   TCEL.slot = t;
-  asisCodigo(g.llave, g.token, t).then(function(cod){
+  var Q = _tcQrDe(); if(!Q){ tcPantallaParar(); return; }
+  asisCodigo(Q.llave, Q.token, t).then(function(cod){
     if(TCEL.slot !== t) return;
-    var url = BASE_TAREO + '#tareo=' + g.token + '.' + t + '.' + cod, q = $('tcp-qr'); if(!q) return;
+    var url = BASE_TAREO + '#tareo=' + Q.token + '.' + t + '.' + cod, q = $('tcp-qr'); if(!q) return;
     var qr = qrcode(0, 'M'); qr.addData(url); qr.make();
     TCEL.qrUrl = url;
     q.innerHTML = '<img alt="QR del tareo, cambia cada 20 segundos" src="' + qr.createDataURL(10, 2) + '">';
@@ -92697,8 +93116,9 @@ function tcCelBajar(dias){
       var p = {};
       porDia[d].forEach(function(m){
         var z = p[m.k] || (p[m.k] = { n:String(m.n || '').slice(0, 80), d:_tarDoc(m.d || '').slice(0, 20), m:[], x:[] });
-        z.m.push([+m.ms, m.t, 'cel']);
-        (TCEL.celf[d] = TCEL.celf[d] || {})[m.k + '|' + (+m.ms)] = { lejos:!!m.lejos, sinu:!!m.sinu, sins:!!m.sins, dist:(typeof m.dist === 'number') ? m.dist : null, modo:m.modo || '' };
+        z.m.push([+m.ms, m.t, 'cel'].concat(m.fr ? [String(m.fr).slice(0, 60)] : []));
+        (TCEL.celf[d] = TCEL.celf[d] || {})[m.k + '|' + (+m.ms)] = { lejos:!!m.lejos, sinu:!!m.sinu, sins:!!m.sins, dist:(typeof m.dist === 'number') ? m.dist : null, modo:m.modo || '', fr:String(m.fr || '').slice(0, 60),
+          foto:/^https:\/\/[a-z0-9.-]+\/storage\/v1\/object\/public\//.test(String(m.foto || '')) ? String(m.foto) : '' };
       });
       var cur = _tarDiaDe(o, d), antes = _tarFirma(cur), junto = _tarUnir(cur, { p:p }), pend = cur.pend;
       o.d[d] = { p:junto.p, t:cur.t || Date.now() }; if(pend) o.d[d].pend = 1;
@@ -92713,14 +93133,17 @@ function _tcMetros(m){ m = Math.round(+m || 0); return m >= 1000 ? String(Math.r
 function tcBadges(dia, k){
   var z = null; try{ var o = _tarTodo(); z = o.d[dia] && o.d[dia].p && o.d[dia].p[k]; }catch(_z){}
   if(!z) return '';
-  var x = z.x || [], f = TCEL.celf[dia] || {}, cel = false, lejos = 0, sinu = false, sins = false;
+  var x = z.x || [], f = TCEL.celf[dia] || {}, cel = false, lejos = 0, sinu = false, sins = false, frs = [], fotos = [];
   (z.m || []).forEach(function(q){
     if(q[2] !== 'cel' || x.indexOf(q[0]) > -1) return;
     cel = true; var y = f[k + '|' + q[0]]; if(!y) return;
     if(y.lejos) lejos = Math.max(lejos, +y.dist || 1); if(y.sinu) sinu = true; if(y.sins) sins = true;
+    if(y.fr && frs.indexOf(y.fr) < 0) frs.push(y.fr);
+    if(y.foto) fotos.push(y.foto);
   });
   if(!cel) return '';
-  return ' <span class="tar-cel" aria-label="Con su celular">📱</span>' +
+  return ' <span class="tar-cel" aria-label="Con su celular">📱</span>' + (frs.length ? ' <span class="tar-celf" data-sin-trad>' + esc(frs.join(' · ')) + '</span>' : '') +
+         fotos.map(function(u){ return ' <a class="tar-celf" href="' + escA(u) + '" target="_blank" rel="noopener" aria-label="Ver su foto con sello">📷</a>'; }).join('') +
          (lejos ? ' <span class="tar-celx">⚠️ <span>lejos de la puerta</span> <span data-sin-trad>(' + _tcMetros(lejos) + ')</span></span>' : '') +
          (sinu ? ' <span class="tar-celx"><span>sin ubicación</span></span>' : '') + (sins ? ' <span class="tar-celx"><span>sin señal</span></span>' : '');
 }
@@ -92728,9 +93151,9 @@ function tcBadges(dia, k){
 function tcObservacion(dia, k){
   var z = null; try{ var o = _tarTodo(); z = o.d[dia] && o.d[dia].p && o.d[dia].p[k]; }catch(_z){}
   if(!z || !(z.m || []).some(function(q){ return q[2] === 'cel'; })) return '';
-  var f = TCEL.celf[dia] || {}, lejos = false;
-  (z.m || []).forEach(function(q){ var y = f[k + '|' + q[0]]; if(y && y.lejos) lejos = true; });
-  return lejos ? 'Con su celular, lejos de la puerta' : 'Con su celular';
+  var f = TCEL.celf[dia] || {}, lejos = false, frs = [];
+  (z.m || []).forEach(function(q){ var y = f[k + '|' + q[0]]; if(y && y.lejos) lejos = true; if(y && y.fr && frs.indexOf(y.fr) < 0) frs.push(y.fr); });
+  return (lejos ? 'Con su celular, lejos de la puerta' : 'Con su celular') + (frs.length ? ' (' + frs.join(', ') + ')' : '');
 }
 
 /* ══ EL TRABAJADOR: «MARCAR ENTRADA O SALIDA» ══ */
@@ -92800,6 +93223,9 @@ function tcProcesar(q){
   if(_tcModoObra() === 'pantalla' || !(navigator.geolocation && navigator.geolocation.getCurrentPosition)){
     TCEL.sinUbic = 'no_hay'; _tcIrYo('mandando'); tcMandar({ t:q.t }); return;
   }
+  /* 19/11/2026 · la obra eligió no pedir la ubicación: ni se pregunta */
+  var _pu = true; try{ _pu = (typeof cfgObra === 'function') ? (cfgObra('tareoUbic', true) !== false) : true; }catch(_c){}
+  if(!_pu){ TCEL.sinUbic = 'no_pide'; _tcIrYo('mandando'); tcMandar({ t:q.t }); return; }
   _tcIrYo('ubicando');
   var listo = false;
   /* el que no contesta el permiso de ubicación no se queda esperando: a los 25 s se marca sin ella */
@@ -92833,6 +93259,28 @@ function tcMandar(pay){
     aCola();
   });
 }
+/* 19/11/2026 · la foto de la marca: con la cámara de la app y el sello ya puesto (la obra, el frente, quién, la marca,
+   la fecha, la hora y la ubicación), sin poder apagarlo. Se sube y se pega a la marca (sst_tareo_foto): el supervisor
+   la ve en el tareo con 📷. Es opcional: la marca ya vale sin ella. */
+function tcFoto(){
+  var r = TCEL.r; if(!r || !r.id || typeof tomarFoto !== 'function') return;
+  var m = function(t, mal){ var e = $('tcy-foto-msg'); if(e){ e.textContent = t; e.style.color = mal ? 'var(--mal)' : ''; } };
+  var ms = Date.parse(r.cuando) || Date.now();
+  var quien = String(r.nombre || '') + ' · ' + (r.tipo === 's' ? 'SALIDA' : 'ENTRADA') + ' ' + _tarHora(ms);
+  var obra = String(r.obra || '') + (r.frente ? ' · ' + r.frente : '');
+  tomarFoto({ max:1300, calidad:0.8, titulo:'Foto de tu marca', selloFijo:{ obra:obra, quien:quien } }).then(function(du){
+    if(!du) return;
+    if(navigator.onLine === false){ m('No hay señal: la foto no se pudo mandar. Vuelve a intentarlo cuando tengas internet.', true); return; }
+    m('Mandando la foto…');
+    var nom = (r.emp || 'x') + '/tareo/' + Date.now() + '-marca.jpg';
+    return sbSubir(nom, _dataURLaArchivo(du, 'marca.jpg')).then(function(url){
+      return sbRpc('sst_tareo_foto', { p_id:+r.id, p_url:url });
+    }).then(function(j){
+      if(j && j.ok){ TCEL.fotoOk = r.id; _tcRepintaYo(); if(typeof tostada === 'function') tostada('Listo: tu foto llegó a tu supervisor.'); }
+      else m('No se pudo pegar la foto a tu marca. Vuelve a intentarlo.', true);
+    }, function(){ m('No se pudo mandar la foto. Vuelve a intentarlo.', true); });
+  });
+}
 /* lo que quedó sin señal, cuando vuelve (lo que el servidor rechaza no se reintenta) */
 function tcVaciarCola(){
   var c = _tcCola();
@@ -92864,10 +93312,14 @@ function _tcResHtml(r){
   var ms = Date.parse(r.cuando) || Date.now(), sa = r.tipo === 's';
   return '<div class="tcy-res ok ' + (sa ? 'sa' : 'en') + '">' + (r.repetida ? '<p class="sub">Ya estaba marcada:</p>' : '') +
     '<b class="tcy-tipo">' + (sa ? '<span>SALIDA</span>' : '<span>ENTRADA</span>') + '</b><b class="tcy-hora" data-sin-trad>' + _tarHora(ms) + '</b>' +
-    (r.obra ? '<p class="tcy-obra" data-sin-trad>' + esc(r.obra) + '</p>' : '') +
+    (r.obra ? '<p class="tcy-obra" data-sin-trad>' + esc(r.obra) + (r.frente ? ' · ' + esc(r.frente) : '') + '</p>' : '') +
     (sa && r.desde ? '<p class="sub"><span>Entraste a las</span> <b data-sin-trad>' + _tarHora(Date.parse(r.desde)) + '</b></p>' : '') +
     (r.lejos ? '<p class="tcy-ojo">⚠️ <span>Marcaste lejos de la puerta:</span> <b data-sin-trad>' + _tcMetros(r.dist) + '</b> <span>Tu supervisor lo verá así.</span></p>' : '') +
     (r.sin_ubic ? '<p class="tcy-ojo">📍 <span>Sin tu ubicación: tu supervisor lo verá así.</span>' + (TCEL.sinUbic === 'permiso' ? ' <span>Dale permiso de ubicación a la app.</span>' : '') + '</p>' : '') +
+    /* 19/11/2026 · la foto con sello, opcional: llega a su supervisor pegada a esta marca */
+    (r.id ? (TCEL.fotoOk === r.id ? '<p class="tcy-ojo">📷 <span>Tu foto llegó a tu supervisor.</span></p>'
+             : '<button type="button" class="btn sec tcy-foto" id="tcy-foto" onclick="tcFoto()">📷 <span>Mandar una foto con sello (opcional)</span></button>' +
+               '<p class="sub tcy-foto-msg" id="tcy-foto-msg"></p>') : '') +
     '</div>';
 }
 function _tcMiasHtml(){
@@ -92915,7 +93367,11 @@ function _tcEstilos(){
     '.tc-puerta p{margin:6px 0;font-size:14px}.tc-falta{color:var(--mal,#d2564f)}.tc-lab{display:block;font-size:13px;margin:10px 0 4px;color:var(--gris)}' +
     '.tc-fig{margin:10px 0 6px;text-align:center}.tc-fig img{max-width:100%;width:260px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.25);background:#fff}' +
     '.tc-bts{display:flex;gap:8px;flex-wrap:wrap}.tc-bts .btn{width:auto;margin:0;padding:9px 14px}.tc-msg{margin-top:8px}.tc-estado{margin:10px 0 0;font-size:13.5px;color:var(--gris)}' +
-    '.tar-cel{font-size:13px}.tar-celx{font-size:12px;color:var(--mal,#d2564f);white-space:nowrap}' +
+    '.tar-cel{font-size:13px}.tar-celx{font-size:12px;color:var(--mal,#d2564f);white-space:nowrap}.tar-celf{font-size:12px;color:var(--gris)}' +
+    '.tc-ubic{display:flex;gap:10px;align-items:flex-start;margin:4px 0 12px;font-size:14px;cursor:pointer}.tc-ubic input{width:20px;height:20px;margin:2px 0 0;flex:none}.tc-ubic small{display:block;color:var(--gris);font-size:12.5px;line-height:1.35;margin-top:2px}' +
+    '.tc-frs{margin-top:16px;padding-top:12px;border-top:1px solid rgba(var(--w),.12)}.tc-fr{padding:10px;border:1px solid rgba(var(--w),.14);border-radius:12px;margin:8px 0}' +
+    '.tc-fr-cab{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.tc-fr-cab b{font-size:14.5px}.tc-fr-cab small{color:var(--gris);font-size:12px}.tc-fr .tc-bts{margin-top:8px}.tc-fr .tc-bts .btn{font-size:13px;padding:8px 11px}' +
+    '.tc-fr-nuevo{display:flex;gap:8px;margin-top:8px}.tc-fr-nuevo input{flex:1;margin:0}.tc-fr-nuevo .btn{width:auto;margin:0;padding:0 14px}.tcp-frente{font-size:22px;font-weight:800;margin:2px 0 0}' +
     '.tcp{text-align:center;padding:6px 0 20px}.tcp-obra{font-size:15px;color:var(--gris);margin:0}.tcp-hora{font-size:54px;font-weight:800;letter-spacing:.02em;font-variant-numeric:tabular-nums;margin:2px 0 8px}' +
     '.tcp-qr{background:#fff;border-radius:16px;padding:14px;display:inline-block;max-width:100%}.tcp-qr img{display:block;width:min(78vw,380px);height:auto;image-rendering:pixelated}' +
     '.tcp-seg{color:var(--gris);font-size:14px;margin:8px 0 0}.tcp-como{margin:16px auto 0;max-width:420px;font-size:15px}.tcp-como b{display:block;font-size:18px;margin-bottom:4px}.tcp-como span{color:var(--gris)}' +
@@ -92925,6 +93381,7 @@ function _tcEstilos(){
     '.tcy-res.ok.en{background:rgba(46,160,90,.14);border-color:rgba(46,160,90,.5)}.tcy-res.ok.sa{background:rgba(52,120,220,.14);border-color:rgba(52,120,220,.5)}' +
     '.tcy-res.mal{border-color:rgba(210,86,79,.55)}.tcy-res.cola{border-color:rgba(245,183,0,.55)}' +
     '.tcy-tipo{display:block;font-size:26px;letter-spacing:.06em}.tcy-hora{display:block;font-size:44px;font-variant-numeric:tabular-nums;line-height:1.1}' +
+    '.tcy-foto{margin-top:12px}.tcy-foto-msg{margin:6px 0 0}.cam-sello button.fijo{cursor:default}' +
     '.tcy-obra{margin:4px 0 0;color:var(--gris)}.tcy-ojo{margin:8px 0 0;font-size:13.5px}.tcy-esc{margin-top:14px}.tcy-cola{margin-top:8px}' +
     '.tcy-m{display:flex;gap:10px;align-items:center;padding:9px 2px;border-bottom:1px solid rgba(var(--w),.1)}.tcy-m b{font-variant-numeric:tabular-nums}.tcy-t{font-size:12.5px;font-weight:700;letter-spacing:.05em;min-width:70px}.tcy-cel{margin-left:auto}';
   document.head.appendChild(st);
@@ -111613,12 +112070,13 @@ function tomarFoto(op){
   /* «crudo» es de la camara suelta: todavia no sabemos si lo que hay
      delante es una hoja o es obra, asi que no se sella aqui. El GPS SI
      se pide, para que al decidir el sello salga al instante. */
-  CAM.sello = (op.doc || op.crudo || op.retrato) ? false : selloActivo();
+  CAM.selloFijo = op.selloFijo ? Object.assign({ cfg:_selloFijoCfg() }, op.selloFijo) : null;
+  CAM.sello = CAM.selloFijo ? true : ((op.doc || op.crudo || op.retrato) ? false : selloActivo());
   CAM.selloDatos = null;
   if(CAM.sello || (op.crudo && selloActivo())){
     /* se pide el GPS al ABRIR, no al disparar: cuando la persona
        termina de encuadrar, el satelite ya engancho */
-    try{ reunirSello().then(function(d){ CAM.selloDatos=d; _pintarSelloCam(); }); }catch(_s){}
+    try{ reunirSello(CAM.selloFijo).then(function(d){ CAM.selloDatos=d; _pintarSelloCam(); }); }catch(_s){}
   }
   return new Promise(function(ok){
     CAM.resolver=ok; CAM.op=op;
@@ -111732,9 +112190,10 @@ function _entregarFoto(du){
   if(!f) return;
   if(!du || !CAM.sello){ try{ f(du); }catch(e){} return; }
   var msg=$('cam-msg'); if(msg) msg.textContent='Sellando la foto…';
+  var _fj=CAM.selloFijo;
   var poner=function(d){
-    sellarFoto(du, d || {cfg:selloCfg(), fecha:new Date(),
-                         obra:_dondeEstoy(), quien:_quienFirma(), gps:null, dir:'', mapa:null})
+    sellarFoto(du, d || {cfg:(_fj && _fj.cfg) || selloCfg(), fecha:new Date(),
+                         obra:(_fj && _fj.obra) || _dondeEstoy(), quien:(_fj && _fj.quien) || _quienFirma(), gps:null, dir:'', mapa:null})
       .then(function(x){ try{ f(x); }catch(e){} },
             function(){ try{ f(du); }catch(e){} });
   };
@@ -111744,7 +112203,7 @@ function _entregarFoto(du){
   else {
     var listo=false;
     var t=setTimeout(function(){ if(!listo){ listo=true; poner(null); } }, 3000);
-    try{ reunirSello().then(function(d){ if(!listo){ listo=true; clearTimeout(t); poner(d); } }); }
+    try{ reunirSello(_fj).then(function(d){ if(!listo){ listo=true; clearTimeout(t); poner(d); } }); }
     catch(_e){ if(!listo){ listo=true; clearTimeout(t); poner(null); } }
   }
 }
@@ -111752,8 +112211,14 @@ function _entregarFoto(du){
 function _pintarSelloCam(){
   var c=$('cam-sello'); if(!c) return;
   var op=CAM.op||{};
-  if(op.doc || !selloCfg().on){ c.innerHTML=''; return; }
   var d=CAM.selloDatos;
+  /* 19/11/2026 · el sello fijo se ve en la cámara, con lo que va a decir, y no se apaga */
+  if(CAM.selloFijo){
+    var fj=CAM.selloFijo, gp=(d && d.gps) ? ('GPS ±'+d.gps.prec+' m') : (d ? 'sin GPS · va fecha y obra' : 'buscando GPS…');
+    c.innerHTML='<button type="button" class="on fijo" aria-disabled="true">📍 <span>'+esc(fj.quien||'Sello')+'<small>'+esc((fj.obra||'')+' · '+gp)+'</small></span></button>';
+    return;
+  }
+  if(op.doc || !selloCfg().on){ c.innerHTML=''; return; }
   var sub = !CAM.sello ? 'sin sello'
           : (d && d.gps) ? ('GPS ±'+d.gps.prec+' m')
           : (d ? 'sin GPS · va fecha y obra' : 'buscando GPS…');
@@ -118772,11 +119237,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = '2d236a40f1';
-var IDIOMA_FR_V = '32cd87320a';
+var IDIOMA_PT_V = '27a7d5f8d6';
+var IDIOMA_FR_V = '0a9e7753d6';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = '1a79a86914';
+var IDIOMA_EN_V = 'f11a61fe2a';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -122189,6 +122654,15 @@ function quizaQuisoDecir(correo){
   var d=(correo.split('@')[1]||'').toLowerCase();
   return DOMINIOS_TIPICOS[d] ? correo.split('@')[0]+'@'+DOMINIOS_TIPICOS[d] : null;
 }
+/* 18/11/2026 · «ERROR DE ACCESO» (cliente): el servidor dice «listo» al pedir el enlace aunque el correo no tenga cuenta, y
+   al entrar solo dice «incorrecto». sst_cuenta_existe dice cuál de las dos pasa. null = no se pudo saber (sigue igual). */
+function cuentaExiste(correo){
+  return fetch(SB.url+'/rest/v1/rpc/sst_cuenta_existe', {method:'POST', headers:{'apikey':SB.key,'Authorization':'Bearer '+SB.key,'Content-Type':'application/json'},
+    body:JSON.stringify({p_correo:String(correo||'').trim().toLowerCase()})})
+   .then(function(r){ return r.ok ? r.json() : null; }).then(function(j){ return (j && j.ok) ? !!j.existe : null; }, function(){ return null; });
+}
+var NO_HAY_CUENTA = 'No hay ninguna cuenta con ese correo. Revisa cómo está escrito (es el correo con el que creaste tu cuenta) o crea una nueva.';
+var CLAVE_NO = 'La contraseña no coincide con la de esa cuenta. Revisa mayúsculas y números, o toca «¿Olvidaste tu contraseña?» y te mandamos un enlace.';
 function cuentaEnviar(){
   var correo=($('cu-correo').value||'').trim().toLowerCase();
   var clave=$('cu-clave').value||'';
@@ -122227,7 +122701,11 @@ function cuentaEnviar(){
     m.style.color='var(--ok)'; m.textContent='Listo.';
     ROL='emp'; guardar(LS_ROL,'emp'); HIST=[];
     cargarMisEmpresas(true);
-  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent=mensajeAuth(err); });
+  }).catch(function(err){ m.style.color='var(--mal)'; m.textContent=mensajeAuth(err);
+    var t=((err && (err.error_code||err.error||''))+' '+(err && (err.msg||err.message||err.error_description||''))).toLowerCase();
+    if(CU_MODO!=='crear' && /invalid.?login|invalid_credentials|invalid grant|bad_credential/.test(t))
+      cuentaExiste(correo).then(function(x){ if(x===false) m.textContent=NO_HAY_CUENTA; else if(x===true) m.textContent=CLAVE_NO; });
+  });
 }
 /* «Olvidé mi contraseña». No hace falta Google ni ningún servicio de pago:
    la nube manda el correo con su propio servidor. Es de a pocos por hora, que
@@ -122239,6 +122717,8 @@ function pedirRecuperacion(){
     m.textContent='Escribe arriba el correo de tu cuenta y vuelve a tocar aquí.'; return;
   }
   m.style.color='var(--gris)'; m.textContent='Mandando el correo…';
+  cuentaExiste(correo).then(function(x){
+  if(x===false){ m.style.color='var(--mal)'; m.textContent=NO_HAY_CUENTA; return; }
   /* SIN «redirect_to» el servidor usa la direccion general del proyecto,
      que es la web de descargas: el que pedia recuperar su contraseña
      terminaba en la pagina de instalar la app, sin campo donde escribir
@@ -122254,6 +122734,7 @@ function pedirRecuperacion(){
    })
    .catch(function(){ m.style.color='var(--mal)';
      m.textContent='No se pudo (¿sin internet?). Escríbenos a '+SOPORTE+' y te la reiniciamos a mano.'; });
+  });
 }
 function guardarClaveNueva(){
   var a=$('cn-clave').value||'', b=$('cn-clave2').value||'';
@@ -134282,7 +134763,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='cb6603439a';
+var SELLO_APP='90447fd96f';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';

@@ -144,10 +144,15 @@ input::placeholder{color:var(--gris2)}
 .obra-sel{
   display:flex; align-items:center; gap:10px; margin-left:8px;
   padding:6px 10px 6px 12px; border:1px solid var(--raya); border-radius:8px; background:var(--fondo);
-  max-width:360px;
+  max-width:480px;
 }
 .obra-sel select{border:0; background:transparent; padding:0; font-weight:500; color:var(--tinta); width:auto; max-width:260px}
 .obra-sel select:focus{box-shadow:none}
+.obra-sel #bt-obras{margin-left:6px;white-space:nowrap}
+.oplan-g{margin:0 0 18px}.oplan-gt{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+.oplan-o{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--raya2,#e3e6ea);border-radius:10px;margin:0 0 6px}
+.oplan-o.on{border-color:var(--oro,#F5B700);box-shadow:0 0 0 1px var(--oro,#F5B700) inset}
+.oplan-o input{width:18px;height:18px;flex:none}.oplan-tx{flex:1;display:flex;flex-direction:column;gap:2px}.oplan-tx .sub{font-size:12.5px}
 .papel{
   font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase;
   padding:4px 9px; border-radius:999px; background:var(--azul-f); color:var(--azul);
@@ -607,6 +612,7 @@ table.mat tbody tr:hover td.mat-p{background:#FAFBFC}
   .barra .marca b{display:none}
   .obra-sel{max-width:200px}
   .obra-sel select{max-width:150px}
+  .obra-sel #bt-obras{display:none}
   .cuenta b{display:none}
   .barra-bts .bt{padding:6px 9px}
   #bt-inspeccion .bt-ins-tx{display:none}   /* 3/11/2026 · en el celular, solo 📋 */
@@ -2822,6 +2828,7 @@ if(!(g&&g.k==='app'&&g.h>h))document.documentElement.className+=' app-barra-on';
     <div class="obra-sel" id="obra-sel" hidden>
       <span style="font-size:12px;color:var(--gris)">Obra</span>
       <select id="sel-obra" aria-label="Obra"></select>
+      <button type="button" class="bt sec chico" id="bt-obras" hidden onclick="obrasPanel()" title="Todas tus obras: elige de cuál ver los datos">Tus obras</button>
     </div>
     <button type="button" class="pais-chip" id="pais-chip" data-sin-pais hidden></button>
     <span class="papel" id="papel">—</span>
@@ -3012,6 +3019,11 @@ function sbFetch(url, opt, reintento){
      reintento tiene que salir con el nuevo. Lo extra (Prefer, el tipo
      de una foto) viaja en opt.extra y se suma encima. */
   opt=opt||{}; opt.headers=Object.assign(sbH(), opt.extra||{});
+  /* 19/11/2026 · en una obra de solo consulta no se escribe (se lee y se descarga) */
+  if(!reintento && obraFuera() && /^(POST|PATCH|PUT|DELETE)$/i.test(String(opt.method||'')) && /\/(rest\/v1\/(?!rpc\/)|storage\/v1\/object\/)/.test(String(url))){
+    try{ toast(OPLAN_NO); }catch(_t){}
+    return Promise.reject({portal:OPLAN_NO});
+  }
   return fetch(url, opt).then(function(r){
     if(r.status===401 && !reintento && TOK && TOK.refresh_token){
       return refrescarToken().then(function(){ return sbFetch(url, opt, true); }, function(){
@@ -3552,6 +3564,81 @@ function _obraNombresMezclar(){
     if(YO.obra && !YO.obra.padre_id && m[YO.obra.id]) YO.obra.obra_nombre=m[YO.obra.id];
   }, function(){ return null; });
 }
+/* ══ LAS OBRAS DEL PLAN Y LAS DE «SOLO CONSULTA» (19/11/2026) ═══════════════════════════════════════════════════════
+   Pregunta de un cliente: «si tengo 20 proyectos cargados y se me vence el plan, o me quedo con uno de 4 obras, ¿esos
+   datos siguen?». Siguen: nada se borra. Lo que cambia es cuántas obras se TRABAJAN (sql/2026-11-19-obras-del-plan.sql):
+   · las que entran en el plan, como siempre; las demás quedan «solo consulta»: se eligen arriba, se ven y se descargan,
+     pero aquí no se registra nada nuevo en ellas;
+   · «Tus obras» (arriba, al lado de la obra) las muestra todas, cada una con su estado, para cambiar de una a otra; y el
+     dueño elige cuáles trabaja, hasta el tope de su plan.
+   Sin el SQL todavía, nada cambia: todas como antes. */
+var OPLAN = { porRaiz:{}, sinSql:false };
+function _oplanRaiz(e){ return String((e && (e.padre_id || e.id)) || ''); }
+function obrasPlanTraer(){
+  var una = {};
+  (YO.empresas || []).forEach(function(e){ var r = _oplanRaiz(e); if(r && !una[r]) una[r] = e.id; });
+  return Promise.all(Object.keys(una).map(function(r){
+    return sbRpc('sst_obras_del_plan', { p_emp:una[r] }).then(function(j){ if(j && j.ok) OPLAN.porRaiz[r] = j; }, function(e){ if(e === 404) OPLAN.sinSql = true; });
+  })).then(obrasPlanMarcar, obrasPlanMarcar);
+}
+function obrasPlanMarcar(){
+  (YO.empresas || []).forEach(function(e){
+    var j = OPLAN.porRaiz[_oplanRaiz(e)]; e.fuera = false;
+    if(j) (j.obras || []).forEach(function(o){ if(String(o.id) === String(e.id)) e.fuera = !o.en_plan; });
+    if(YO.obra && String(YO.obra.id) === String(e.id)) YO.obra.fuera = e.fuera;
+  });
+}
+function obraFuera(){ return !!(YO && YO.obra && YO.obra.fuera); }
+var OPLAN_NO = 'Esta obra está fuera de tu plan: sus datos se ven y se descargan, pero aquí no se registra nada nuevo. Para trabajarla, ponla entre las obras de tu plan en «Tus obras».';
+/* el aviso arriba de cada sección de una obra de solo consulta */
+function obrasFueraAviso(){
+  var c = $('obra-fuera-aviso'); if(!c) return;
+  if(!obraFuera()){ c.hidden = true; c.innerHTML = ''; return; }
+  var j = OPLAN.porRaiz[_oplanRaiz(YO.obra)] || {};
+  c.hidden = false;
+  c.innerHTML = '<div class="aviso ojo"><b>🔒 Solo consulta · esta obra está fuera de tu plan.</b> Sus datos siguen aquí: se ven y se descargan. ' +
+    'Tu plan trabaja ' + (j.tope === 1 ? '1 obra' : (j.tope || '') + ' obras') + ' y tienes ' + (j.total || '') + '. ' +
+    'Para registrar en esta, cámbiala por otra' + (j.dueno ? '' : ' (lo hace el dueño de la empresa)') + ' o suma obras en «Mi plan».' +
+    '<div class="acciones"><button type="button" class="bt chico" onclick="obrasPanel()">Tus obras</button></div></div>';
+}
+/* el panel: todas las obras con su estado, para ir a una; y el dueño elige cuáles trabaja */
+function obrasPanel(){
+  var L = YO.empresas || [], porR = {};
+  L.forEach(function(e){ var r = _oplanRaiz(e); (porR[r] = porR[r] || []).push(e); });
+  var h = '';
+  Object.keys(porR).forEach(function(r){
+    var j = OPLAN.porRaiz[r], hay = porR[r].some(function(e){ return e.fuera; });
+    var madre = porR[r].filter(function(e){ return String(e.id) === r; })[0] || porR[r][0];
+    h += '<div class="oplan-g"><div class="oplan-gt"><b>' + esc((madre && (madre.padre_nombre || madre.nombre)) || '') + '</b>' +
+         (j ? '<span class="sub">Tu plan trabaja ' + (j.tope === 1 ? '1 obra' : j.tope + ' obras') + ' · tienes ' + j.total + '</span>' : '') + '</div>';
+    porR[r].forEach(function(e){
+      var on = YO.obra && String(YO.obra.id) === String(e.id);
+      h += '<div class="oplan-o' + (on ? ' on' : '') + '">' +
+           (j && j.dueno && hay ? '<input type="checkbox" class="oplan-ck" data-r="' + esc(r) + '" value="' + esc(e.id) + '"' + (e.fuera ? '' : ' checked') + ' aria-label="Trabajar ' + esc(nombreObraP(e)) + '">' : '') +
+           '<div class="oplan-tx"><b>' + esc(nombreObraP(e)) + '</b><span class="sub">' + (e.codigo ? esc(e.codigo) + ' · ' : '') +
+           (e.fuera ? '🔒 Solo consulta' : '✅ En tu plan') + (on ? ' · la que estás viendo' : '') + '</span></div>' +
+           (on ? '' : '<button type="button" class="bt sec chico" onclick="cerrarHoja();elegirObra(\'' + esc(e.id) + '\')">Ver sus datos</button>') + '</div>';
+    });
+    if(j && j.dueno && hay) h += '<div class="acciones" style="margin-top:8px"><button type="button" class="bt chico" onclick="obrasPlanGuardar(\'' + esc(r) + '\')">Trabajar las marcadas</button>' +
+                              '<span class="msg" id="oplan-msg-' + esc(r) + '"></span></div>';
+    h += '</div>';
+  });
+  if(OPLAN.sinSql) h += '<p class="sub">El servidor todavía no separa las obras de solo consulta: por ahora todas se trabajan como antes.</p>';
+  abrirHoja('Tus obras', 'Elige de cuál ver los datos. Las que están fuera de tu plan se ven y se descargan; no se borra nada.', h, '', {});
+}
+function obrasPlanGuardar(r){
+  var j = OPLAN.porRaiz[r]; if(!j) return;
+  var ids = [].slice.call(document.querySelectorAll('.oplan-ck[data-r="' + r + '"]')).filter(function(x){ return x.checked; }).map(function(x){ return x.value; });
+  var m = $('oplan-msg-' + r);
+  if(!ids.length){ if(m){ m.className = 'msg mal'; m.textContent = 'Marca al menos una.'; } return; }
+  if(ids.length > j.tope){ if(m){ m.className = 'msg mal'; m.textContent = 'Tu plan trabaja ' + j.tope + (j.tope === 1 ? ' obra' : ' obras') + ': desmarca ' + (ids.length - j.tope) + '.'; } return; }
+  if(m){ m.className = 'msg'; m.textContent = 'Guardando…'; }
+  sbRpc('sst_obras_del_plan_elegir', { p_emp:r, p_ids:ids }).then(function(x){
+    if(!x || !x.ok){ if(m){ m.className = 'msg mal'; m.textContent = x && x.motivo === 'no_eres_dueno' ? 'Eso lo elige el dueño de la empresa.' : 'No se pudo guardar.'; } return; }
+    OPLAN.porRaiz[r] = x; obrasPlanMarcar(); pintarBarra(); obrasFueraAviso(); obrasPanel();
+    toast('Listo: ya trabajas las obras que marcaste. Las demás quedan para consultar.');
+  }, function(e){ if(m){ m.className = 'msg mal'; m.textContent = porQueFallo(e); } });
+}
 function cargarEmpresas(){
   return sbRpc('sst_mis_empresas',{}).then(function(rows){
     YO.empresas = Array.isArray(rows) ? rows : [];
@@ -3561,7 +3648,9 @@ function cargarEmpresas(){
        ve nada suyo aquí: solo la puerta a su Consola, arriba. Sin el SQL del
        02/10, un 404: no. */
     return Promise.all([sbRpc('sst_soy_admin',{}).then(function(a){ YO.admin = (a === true); }, function(){ YO.admin = false; }),
-                        _obraNombresMezclar().catch(function(){ return null; })])
+                        _obraNombresMezclar().catch(function(){ return null; }),
+                        /* 19/11/2026 · cuáles obras entran en el plan y cuáles quedan de solo consulta */
+                        obrasPlanTraer().catch(function(){ return null; })])
       .then(function(){ return YO.empresas; });
   });
 }
@@ -3579,6 +3668,7 @@ function elegirObra(id){
   var o=null; YO.empresas.forEach(function(e){ if(String(e.id)===String(id)) o=e; });
   if(!o) o=YO.empresas[0]; if(!o) return;
   YO.obra=o; YO.rol = esLiderDe(o) ? 'lider' : 'sup'; YO.dueno = (o.rol==='dueno');
+  try{ obrasPlanMarcar(); }catch(_om){}
   guardar('sstp_obra', o.id);
   /* 01/10/2026 · el país de la obra: lo guardado aquí ya, el del servidor enseguida */
   try{ paisDesdeCache(o); }catch(_pc){}
@@ -4502,7 +4592,7 @@ function navegar(id, desdeHistoria){
   /* 06/10/2026 · arriba de cada sección, el aviso del plan cuando toca: vence en días, venció, o el mes gratis sin activar */
   /* 07/10/2026 · arriba, las pestañas del área de esta sección (si el área tiene más de una) */
   var _th=tabsHTML(v);
-  main.innerHTML = '<div id="plan-aviso" data-sin-pais hidden></div>'+_th+'<div class="cab"><div><h1>'+esc(v.n)+'</h1><p class="sub">'+esc(v.s||'')+'</p></div>'+
+  main.innerHTML = '<div id="plan-aviso" data-sin-pais hidden></div><div id="obra-fuera-aviso" hidden></div>'+_th+'<div class="cab"><div><h1>'+esc(v.n)+'</h1><p class="sub">'+esc(v.s||'')+'</p></div>'+
     '<div class="acciones" id="acciones"></div></div><div id="vista"></div>';
   main._tabsH=_th;
   tabsEnchufar();
@@ -4510,6 +4600,7 @@ function navegar(id, desdeHistoria){
   /* otra sección empieza arriba: si no, al tocar un área con la página bajada las pestañas quedarían fuera de la vista */
   if(antes && antes!==id){ try{ window.scrollTo({ top:0, left:0, behavior:'instant' }); }catch(_s){ try{ window.scrollTo(0, 0); }catch(_s2){} } }
   try{ planwAvisoPintar(); }catch(_pa){}
+  try{ obrasFueraAviso(); }catch(_of){}
   /* 05/10/2026 · la sección que el plan de la obra no trae: su candado (v.mira: la sección se encarga sola) */
   var falta = v.mira ? null : planWebFalta(id);
   if(falta){ planWebCandado($('vista'), falta); try{ wmVista(); }catch(_wm){} return; }
@@ -4827,11 +4918,18 @@ function pintarBarra(){
   var sel=$('sel-obra'), caja=$('obra-sel');
   if(YO.empresas.length>1){
     caja.hidden=false;
-    sel.innerHTML = YO.empresas.map(function(e){
+    var _op=function(e){
       var fl=banderaDeObra(e), de=empresaDeObraP(e);
-      return '<option value="'+esc(e.id)+'"'+(YO.obra&&String(e.id)===String(YO.obra.id)?' selected':'')+'>'+(fl?fl+' ':'')+esc(nombreObraP(e))+(de?' — '+esc(de):'')+(e.codigo?' · '+esc(e.codigo):'')+'</option>';
-    }).join('');
+      return '<option value="'+esc(e.id)+'"'+(YO.obra&&String(e.id)===String(YO.obra.id)?' selected':'')+'>'+(e.fuera?'🔒 ':'')+(fl?fl+' ':'')+esc(nombreObraP(e))+(de?' — '+esc(de):'')+(e.codigo?' · '+esc(e.codigo):'')+'</option>';
+    };
+    /* 19/11/2026 · las de solo consulta, aparte (siguen eligiéndose: sus datos se ven) */
+    var _fu=YO.empresas.filter(function(e){ return e.fuera; });
+    sel.innerHTML = _fu.length
+      ? '<optgroup label="En tu plan">'+YO.empresas.filter(function(e){ return !e.fuera; }).map(_op).join('')+'</optgroup>'+
+        '<optgroup label="Solo consulta (fuera de tu plan)">'+_fu.map(_op).join('')+'</optgroup>'
+      : YO.empresas.map(_op).join('');
     sel.onchange=function(){ elegirObra(sel.value); };
+    var _bo=$('bt-obras'); if(_bo){ _bo.hidden=false; _bo.textContent='Tus obras ('+YO.empresas.length+')'; }
   } else if(YO.obra){
     var fl1=banderaDeObra(YO.obra);
     caja.hidden=false; sel.innerHTML='<option>'+(fl1?fl1+' ':'')+esc(nombreObraP())+(YO.obra.codigo?' · '+esc(YO.obra.codigo):'')+'</option>';
@@ -6502,7 +6600,8 @@ function _edBajar(que, bt){
         toast('Listo: el Excel con '+_edN(D.lista.length)+' '+unidadN(D.lista.length,'entregas')+(D.per ? ' de '+D.per.nombre : ' a '+_edN(D.S.p)+' '+unidadN(D.S.p,'personas'))+conF+'.');
         fin(); return;
       }
-      return (D.per ? _edFirmas(D.lista) : Promise.resolve({})).then(function(F){
+      return (D.per ? Promise.all([_edFirmas(D.lista), _edRespTraer(D)]) : Promise.resolve([{}])).then(function(FF){
+        var F=FF[0];
         bajarBlob(_edPDF(D, F, FT), _edNombreArch(D, 'pdf'));
         toast((D.per ? 'Listo: el kardex de '+D.per.nombre+', con sus firmas' : 'Listo: el PDF del consumo de EPP')+conF+'.');
         fin();
@@ -6512,6 +6611,34 @@ function _edBajar(que, bt){
       toast(e==='sin_red' ? 'No se pudo cargar lo que arma el archivo. Revisa tu conexión y vuelve a tocar.' : 'No se pudo armar el archivo: '+((e && e.message) || e));
     });
   });
+}
+/* 19/11/2026 · quién firma al pie del kardex de una persona: el responsable de SST de las fechas de sus entregas (lo que la obra
+   anotó en la app, en la cabecera de la empresa). Si eligió «nada» o «a mano», o no había nadie en esas fechas, no va. */
+function _edRespTraer(D){
+  D.resp=[];
+  return traer('sst_doc', '&select=nota&hoja=eq.empleador&order=creado.desc', 1).then(function(r){
+    var x=r && r[0] && r[0].nota, em={};
+    try{ em=(typeof x==='string' ? JSON.parse(x) : x) || {}; }catch(e){ em={}; }
+    if(em.kxPie!=='firma' || !Array.isArray(em.respSST)) return;
+    var fs=D.lista.map(function(k){ return String(k.fecha||k._f||'').slice(0,10); }).filter(function(f){ return f.length===10; }).sort();
+    if(!fs.length) return;
+    var ini=fs[0], fin=fs[fs.length-1];
+    D.resp=em.respSST.filter(function(q){ return q && q.n && q.tr && String(q.desde||'0000-00-00')<=fin && String(q.hasta||'9999-12-31')>=ini; })
+      .sort(function(a,b){ return String(a.desde||'').localeCompare(String(b.desde||'')); }).slice(-2);
+  }, function(){});
+}
+function _edTrazoPDF(doc, tr, x, y, w, h){
+  if(!tr || !Array.isArray(tr.p) || !tr.p.length) return;
+  var prop=(+tr.h || 380)/1000, k=Math.min(w/1000, h/(1000*prop)), aw=1000*k, ah=1000*prop*k, ox=x+(w-aw)/2, oy=y+(h-ah)/2;
+  doc.setDrawColor(16, 24, 32); doc.setLineWidth(Math.max(0.16, aw/260));
+  try{ doc.setLineCap('round'); doc.setLineJoin('round'); }catch(_c){}
+  tr.p.forEach(function(s){
+    if(!Array.isArray(s) || s.length<4) return;
+    var pasos=[], px=s[0]*k, py=s[1]*k;
+    for(var i=2; i+1<s.length; i+=2){ var nx=s[i]*k, ny=s[i+1]*k; if(isFinite(nx) && isFinite(ny)){ pasos.push([nx-px, ny-py]); px=nx; py=ny; } }
+    if(pasos.length && isFinite(s[0]) && isFinite(s[1])){ try{ doc.lines(pasos, ox+s[0]*k, oy+s[1]*k); }catch(_l){} }
+  });
+  doc.setLineWidth(0.2); try{ doc.setLineCap('butt'); doc.setLineJoin('miter'); }catch(_c){}
 }
 function _edFirmas(lista){
   var exts=lista.map(function(k){ return k.ext; }).filter(function(e){ return e!=null && e!==''; }).slice(0,400), out={};
@@ -6908,6 +7035,21 @@ function _edPDF(D, firmas, FT){
       L('normal', 6.8, GRIS); doc.text(cortar(g.filas.map(function(k){ return (k.epp||'')+(k._n>1 ? ' ('+k._n+')' : ''); }).join(', '), cw), x0, y+ph+20);
     });
     y+=ch;
+  }
+  /* 19/11/2026 · al pie, el responsable de SST de esas fechas, si la obra lo eligió (como en la app: kxPie / respSST) */
+  if(D.per && D.resp && D.resp.length){
+    y=hayLugar(y+24, 92)+50;
+    var anR=190, gapR=24;
+    D.resp.forEach(function(r, i){
+      var x0=W-M-anR-(D.resp.length-1-i)*(anR+gapR);
+      _edTrazoPDF(doc, r.tr, x0+20, y-46, anR-40, 42);
+      R([140,140,140]); doc.setLineWidth(.7); doc.line(x0, y, x0+anR, y);
+      L('bold', 8.5, TEXTO); doc.text(cortar(String(r.n||'').toUpperCase(), anR), x0+anR/2, y+12, {align:'center'});
+      L('normal', 7.5, GRIS); doc.text(cortar(String(r.c||'Responsable SSOMA'), anR), x0+anR/2, y+23, {align:'center'});
+      L('normal', 6.8, GRIS); doc.text(r.hasta ? ('Responsable del '+dma(r.desde)+' al '+dma(r.hasta)) : ('Responsable desde el '+dma(r.desde)), x0+anR/2, y+33, {align:'center'});
+      if(r.reg) doc.text('Firma digital registrada el '+dma(String(r.reg).slice(0,10))+' · OBRASST', x0+anR/2, y+42, {align:'center'});
+    });
+    y+=40;
   }
   /* el pie de cada página */
   var np=doc.getNumberOfPages();
@@ -19292,7 +19434,7 @@ function cargarMasApp(){
 /* 14/10/2026 · «LO DE CAMPO, TAMBIÉN EN LA WEB» (portal/campo.js): el tareo (y lo que viene: el parte, los primeros
    auxilios, la caída libre y el legajo). campo-app.js lo arma armar.py DESDE LA APP: las cuentas de cada cosa, tal cual. */
 var CAMPO_VER='6e25390c7b';      /* lo pone armar.py: el hash de portal/campo.js */
-var CAMPOAPP_VER='7959c45e9a';   /* lo pone armar.py: el hash de portal/campo-app.js */
+var CAMPOAPP_VER='6549a1c51e';   /* lo pone armar.py: el hash de portal/campo-app.js */
 var _CAMPO_CARGA=null, _CAMPOAPP_CARGA=null;
 function cargarCampo(){
   if(typeof tarwVista==='function') return Promise.resolve(true);
@@ -22020,6 +22162,15 @@ function sesionVencida(){
   mostrarEntrada(dniEntrada('Tu sesión venció. Vuelve a entrar con tu correo o tu DNI: lo que dejaste está guardado.'));
 }
 /* ¿Olvidaste tu contraseña? Mismo camino que la app: se manda un enlace al correo para poner la nueva */
+/* 18/11/2026 · «ERROR DE ACCESO» (cliente): el servidor dice «listo» al pedir el enlace aunque el correo no tenga cuenta, y
+   al entrar solo dice «incorrecto». sst_cuenta_existe dice cuál de las dos pasa. null = no se pudo saber (sigue igual). */
+function cuentaExiste(correo){
+  return fetch(SB.url+'/rest/v1/rpc/sst_cuenta_existe', {method:'POST', headers:{'apikey':SB.key,'Authorization':'Bearer '+SB.key,'Content-Type':'application/json'},
+    body:JSON.stringify({p_correo:String(correo||'').trim().toLowerCase()})})
+   .then(function(r){ return r.ok ? r.json() : null; }).then(function(j){ return (j && j.ok) ? !!j.existe : null; }, function(){ return null; });
+}
+var NO_HAY_CUENTA = 'No hay ninguna cuenta con ese correo. Revisa cómo está escrito (es el correo con el que creaste tu cuenta) o crea una nueva.';
+var CLAVE_NO = 'La contraseña no coincide con la de esa cuenta. Revisa mayúsculas y números, o toca «¿Olvidaste tu contraseña?» y te mandamos un enlace.';
 function pedirClaveNueva(){
   var m=$('e-olvide-msg'), quien=String($('e-quien').value||'').trim();
   m.hidden=false; m.className='msg mal';
@@ -22031,7 +22182,7 @@ function pedirClaveNueva(){
     ? sbRpc('sst_alias_correo', {p_alias: quien.toLowerCase().replace(/[^0-9a-z]/g,'')}).then(function(j){
         if(!j || !j.ok || !j.correo) return Promise.reject({portal:dniEntrada('Ese DNI no está vinculado a ninguna cuenta. Escribe el correo con el que la creaste.')});
         return String(j.correo); })
-    : Promise.resolve(quien.toLowerCase());
+    : cuentaExiste(quien).then(function(x){ if(x===false) return Promise.reject({portal:NO_HAY_CUENTA}); return quien.toLowerCase(); });
   correoP.then(function(correo){
     var redirectUrl = (location.origin + location.pathname).replace(/([a-z-]+\.html)?$/, '');
     if(redirectUrl.indexOf('http') !== 0) redirectUrl = 'https://obrasstapp.com/';
@@ -22464,6 +22615,9 @@ function arrancarCuenta(soloEntrada){
       bt.disabled=false; bt.textContent='Entrar';
       var m = (e && e.portal) || ((e && (e.error_code==='invalid_credentials' || /invalid/i.test(e.msg||e.error_description||''))) ? 'Ese correo o esa contraseña no coinciden.' : 'No se pudo entrar. Revisa tu conexión.');
       mostrarEntrada(m);
+      var q=String($('e-quien').value||'').trim();
+      if(!(e && e.portal) && q.indexOf('@')>0 && e && (e.error_code==='invalid_credentials' || /invalid/i.test(e.msg||e.error_description||'')))
+        cuentaExiste(q).then(function(x){ if(x===false) mostrarEntrada(NO_HAY_CUENTA); else if(x===true) mostrarEntrada(CLAVE_NO); });
     });
   };
   $('bt-salir').onclick=function(){ dispositivoLiberar(); limpiarSesion(); mostrarEntrada(); };

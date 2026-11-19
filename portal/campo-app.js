@@ -22,7 +22,7 @@ function _tarUnir(a, b){
       if(!z.n && y.n) z.n = String(y.n).slice(0, 80); if(!z.d && y.d) z.d = String(y.d).slice(0, 20);
       (Array.isArray(y.m) ? y.m : []).forEach(function(q){
         if(!Array.isArray(q) || !(+q[0]) || (q[1] !== 'e' && q[1] !== 's')) return;
-        if(!z.m.some(function(w){ return w[0] === +q[0] && w[1] === q[1]; })) z.m.push([+q[0], q[1], String(q[2] || '').slice(0, 10)]);
+        if(!z.m.some(function(w){ return w[0] === +q[0] && w[1] === q[1]; })) z.m.push([+q[0], q[1], String(q[2] || '').slice(0, 10)].concat(q[3] ? [String(q[3]).slice(0, 60)] : []));
       });
       (Array.isArray(y.x) ? y.x : []).forEach(function(t){ t = +t; if(t && z.x.indexOf(t) < 0) z.x.push(t); });
       /* 3/11/2026 · mejora 9: las autorizaciones del residente (una por entrada autorizada; la firma, en trazos) */
