@@ -460,12 +460,23 @@ function _chwAdjHTML(a){
    foto del después, el V°B° de SST…) se hacen en la app del celular; aquí se ven. ── */
 var CHW_SIG = { aprobar:'Aprobar el pedido', entregar:'Entregar con firma y foto', req:'Armar el requerimiento', autorizar:'Autorizar (Seguridad)',
   visar:'Firmar', cotizar:'Pedir cotización a aliados', adjudicar:'Elegir aliado', recibir:'Anotar lo que llegó',
-  levantar:'Levantar con foto del después', vb_obs:'Dar V°B° de SST' };
+  levantar:'Levantar con foto del después', vb_obs:'Dar V°B° de SST',
+  herr_entregar:'Entregar con PIN del trabajador', herr_devolver:'Registrar devolución a almacén' };
 function _chwAvance(p){
   if(!p) return null;
   var a = p.avance;
   if(a && !a.error && typeof a.pct === 'number' && Array.isArray(a.pasos)) return a;
   var c = p.estado === 'cumplido';
+  if(p.modo === 'prestamo_herr'){
+    var mt = (p && p.meta) || {}, prestado = mt.estado_sub === 'prestado' || c;
+    var pasosH = [
+      { k:'herr_solicitud', t:'Solicitud de herramienta', hecho:true, quien:p.asignado_por_nombre || '', cuando:p.creado || '' },
+      { k:'herr_cargo', t:'Entregada con PIN', hecho:prestado, quien:mt.cargo_nombre || '', cuando:mt.cargo_en || '', det:mt.cargo_dni ? ('Doc. ' + mt.cargo_dni) : '' },
+      { k:'herr_devolucion', t:'Devuelta a almacén', hecho:c, quien:p.cumplido_por_nombre || '', cuando:p.cumplido_en || '', det:mt.despues_texto || '' }
+    ];
+    return { pct:c ? 100 : (prestado ? 66 : 33), n:3, hechos:pasosH.filter(function(x){ return x.hecho; }).length, tram:true, local:!a,
+             sig:c ? null : (prestado ? { k:'herr_devolver' } : { k:'herr_entregar' }), pasos:pasosH, rama:'prestamo_herr', fin:c ? 'devuelto' : null };
+  }
   return { pct:c ? 100 : 0, n:1, hechos:c ? 1 : 0, tram:false, local:true,
            pasos:[{ k:'cumplido', t:'Cumplido', hecho:c, quien:p.cumplido_por_nombre || '', cuando:p.cumplido_en || '' }] };
 }
@@ -510,8 +521,12 @@ function _chwPenHTML(m){
       (p.sustento_msj ? '<button type="button" class="chw-pen-ver" data-acc="ver" data-id="' + _chwE(p.sustento_msj) + '">Ver el sustento ↓</button>' : '') + avTx + '</div>';
   }
   var v = _chwVence(p.vence), puede = (p.para_mi || CHW.quien === 'jefe') && !(av && av.tram);
+  var herrBox = '';
+  if(p.modo === 'prestamo_herr' && p.meta && p.meta.estado_sub === 'prestado'){
+    herrBox = '<div class="chw-pen-det">🧰 En préstamo a: <b>' + _chwE(p.meta.cargo_nombre || '') + '</b>' + (p.meta.cargo_dni ? ' (Doc. ' + _chwE(p.meta.cargo_dni) + ')' : '') + '</div>';
+  }
   return '<div class="chw-pen abierto' + (v.mal ? ' vencido' : '') + '"><div class="chw-pen-tag"><span>📌 PENDIENTE</span><span>' + _chwE(v.tx) + '</span></div>' +
-    '<div class="chw-pen-det">Para: <b>' + _chwE(p.para_mi ? 'ti' : p.asignado_nombre) + '</b></div>' +
+    '<div class="chw-pen-det">Para: <b>' + _chwE(p.para_mi ? 'ti' : p.asignado_nombre) + '</b></div>' + herrBox +
     (puede ? '<button type="button" class="chw-pen-bt" data-acc="cumplir" data-p="' + _chwE(p.id) + '" data-m="' + _chwE(m.id) + '">✓ Cumplir con foto o texto</button>' : '') +
     _chwSigueHTML(p, av) + avTx + '</div>';
 }
