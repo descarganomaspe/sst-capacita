@@ -307,6 +307,8 @@ function arcInfo(f){
     I.editable=true;
   } else if(h==='fotos'){
     I.k='foto'; I.key='fotos'; I.t='Fotos de obra'; I.g='Fotos de obra'; I.mini=(I.tipo==='img' ? f.url : ''); I.editable=true;
+  } else if(h.indexOf('inf8:')===0 && _arcInfoInf(f, I)){
+    /* 23/11/2026 · el informe mensual (año › mes › sus 8 carpetas) */
   } else {
     var d=dcCarpetaDe(h);
     if(d.c){
@@ -411,35 +413,50 @@ function _arcOrdenItem(I){
 function _arcArbol(vis){
   var G={}, L=[], existe={};
   vis.forEach(function(f){
-    var I=arcInfo(f);
-    if(!G[I.g]){ G[I.g]={ g:I.g, o:_arcOrdenGrupo(I), items:[], por:{}, n:0 }; L.push(G[I.g]); existe['g:'+I.g]=1; }
-    var g=G[I.g]; g.n++;
-    if(!g.por[I.key]){ g.por[I.key]={ key:I.key, t:I.t, n:0, o:_arcOrdenItem(I), nivel:_arcNivelDe(I.key) }; g.items.push(g.por[I.key]); existe[I.key]=1; }
+    var I=arcInfo(f), gg=_arcG(I);
+    if(!G[gg]){ G[gg]={ g:gg, o:_arcGOrden(gg, I), items:[], por:{}, n:0 }; L.push(G[gg]); existe['g:'+gg]=1; }
+    var g=G[gg]; g.n++;
+    if(I.k==='inf' && !_arcModoEsc()) return;   /* sus años y sus meses se arman abajo */
+    if(!g.por[I.key]){ g.por[I.key]={ key:I.key, t:_arcItemT(I), n:0, o:_arcOrdenCat(I), nivel:_arcNivelDe(I.key) }; g.items.push(g.por[I.key]); existe[I.key]=1; }
     g.por[I.key].n++;
   });
+  /* 23/11/2026 · el informe mensual: cada año y, adentro, sus meses (este y el anterior salen siempre) */
+  if(!_arcModoEsc()){
+    var gI=G[ARC_INF_G];
+    if(!gI){ gI=G[ARC_INF_G]={ g:ARC_INF_G, o:8, items:[], por:{}, n:0, vacia:true }; L.push(gI); existe['g:'+ARC_INF_G]=1; }
+    var porMes={}; vis.forEach(function(f){ var P=(arcInfo(f).k==='inf') ? arcInfo(f).inf : null; if(P) porMes[P.ym]=(porMes[P.ym]||0)+1; });
+    var anios={};
+    _arcInfMeses(vis).forEach(function(ym){
+      var a=ym.slice(0, 4);
+      if(!anios[a]){ anios[a]={ key:'inf:'+a, t:a, n:0, o:-(+a)*100, nivel:1 }; gI.items.push(anios[a]); existe['inf:'+a]=1; }
+      anios[a].n+=porMes[ym]||0;
+      gI.items.push({ key:'inf:'+ym, t:ARC_MESES[(+ym.slice(5, 7) || 1)-1], n:porMes[ym]||0, o:-(+a)*100+(13-(+ym.slice(5, 7))), nivel:2 }); existe['inf:'+ym]=1;
+    });
+  }
   /* 09/10/2026 · «Escaneos de la app» (y «Fotos de obra», si el líder las deja ver) salen aunque todavía no tengan nada:
      así se sabe dónde caen y, al abrirlas, cómo se llenan */
-  if(ARC.cfg.escaneos && !G['Escaneos de la app']){ G['Escaneos de la app']={ g:'Escaneos de la app', o:0, items:[], por:{}, n:0, vacia:true }; L.push(G['Escaneos de la app']); existe['g:Escaneos de la app']=1; }
-  if(ARC.cfg.fotos && !G['Fotos de obra']){ G['Fotos de obra']={ g:'Fotos de obra', o:1, items:[{ key:'fotos', t:'Fotos de obra', n:0, o:0 }], por:{}, n:0, vacia:true }; L.push(G['Fotos de obra']); existe['fotos']=1; existe['g:Fotos de obra']=1; }
+  if(_arcModoEsc() && ARC.cfg.escaneos && !G['Escaneos de la app']){ G['Escaneos de la app']={ g:'Escaneos de la app', o:0, items:[], por:{}, n:0, vacia:true }; L.push(G['Escaneos de la app']); existe['g:Escaneos de la app']=1; }
+  if(_arcModoEsc() && ARC.cfg.fotos && !G['Fotos de obra']){ G['Fotos de obra']={ g:'Fotos de obra', o:1, items:[{ key:'fotos', t:'Fotos de obra', n:0, o:0 }], por:{}, n:0, vacia:true }; L.push(G['Fotos de obra']); existe['fotos']=1; existe['g:Fotos de obra']=1; }
   /* 13/10/2026 · «Mis carpetas»: todas, aunque estén vacías (se crean para llenarlas); y el grupo sale aunque todavía no
      haya ninguna, si el plan deja crearlas */
   if(!_arcModoEsc() && typeof dcMias==='function'){
     var M=dcMias();
     if(M.length || dcMiasPuede()){
       var gM=G[DC_MIAS_G];
-      if(!gM){ gM=G[DC_MIAS_G]={ g:DC_MIAS_G, o:5, items:[], por:{}, n:0, vacia:true, mias:true }; L.push(gM); existe['g:'+DC_MIAS_G]=1; }
+      if(!gM){ gM=G[DC_MIAS_G]={ g:DC_MIAS_G, o:(_arcModoEsc() ? 5 : 9), items:[], por:{}, n:0, vacia:true, mias:true }; L.push(gM); existe['g:'+DC_MIAS_G]=1; }
       gM.mias=true;
     }
     /* 28/10/2026 · también las subcarpetas y las de las secciones del menú (en el grupo de su sección), aunque estén vacías */
     M.forEach(function(c){
-      var gx=G[c.g];
+      var Ic={ k:'doc', key:c.h, g:c.g }, gl=_arcG(Ic), gx=G[gl];
       if(!gx){
-        if(c.g===DC_MIAS_G && !gM) return;
-        gx=G[c.g]={ g:c.g, o:(c.g===DC_MIAS_G ? 5 : _arcOrdenDeGrupo(c.g)), items:[], por:{}, n:0, vacia:true }; L.push(gx); existe['g:'+c.g]=1;
+        if(gl===DC_MIAS_G && !gM) return;
+        gx=G[gl]={ g:gl, o:(gl===DC_MIAS_G ? _arcGOrden(gl, Ic) : _arcGOrden(gl, Ic)), items:[], por:{}, n:0, vacia:true }; L.push(gx); existe['g:'+gl]=1;
       }
-      if(c.g===DC_MIAS_G) gx.mias=true; else gx.secc=true;
-      if(!gx.por[c.h]){ gx.por[c.h]={ key:c.h, t:c.t, n:0, o:c.o, nivel:c.nivel||1 }; gx.items.push(gx.por[c.h]); existe[c.h]=1; }
-      else { gx.por[c.h].o=c.o; gx.por[c.h].nivel=c.nivel||1; }
+      if(gl===DC_MIAS_G) gx.mias=true; else gx.secc=true;
+      var oc=(gl===DC_MIAS_G || _arcModoEsc()) ? c.o : 600+(+c.o||0);
+      if(!gx.por[c.h]){ gx.por[c.h]={ key:c.h, t:c.t, n:0, o:oc, nivel:c.nivel||1 }; gx.items.push(gx.por[c.h]); existe[c.h]=1; }
+      else { gx.por[c.h].o=oc; gx.por[c.h].nivel=c.nivel||1; }
     });
   }
   L.sort(function(a, b){ return a.o-b.o || a.g.localeCompare(b.g, 'es'); });
@@ -462,7 +479,11 @@ function _arcFranjaWeb(){
     '<span class="arc-chip '+(c.fotos ? 'si' : 'no')+'">'+(c.fotos ? '✓' : '✕')+' Fotos de obra</span>'+
     (j ? '<button type="button" class="bt sec chico" id="arc-web-b">Cambiar</button>' : '<span class="arc-web-q">Lo decide el líder de la obra</span>')+'</div>';
 }
-function _arcDeCarpeta(f){ var I=arcInfo(f); return ARC.carpeta==='*' || I.key===ARC.carpeta || ('g:'+I.g)===ARC.carpeta; }
+function _arcDeCarpeta(f){
+  var I=arcInfo(f);
+  if(String(ARC.carpeta).indexOf('inf:')===0) return _arcInfCalza(f);
+  return ARC.carpeta==='*' || I.key===ARC.carpeta || ('g:'+_arcG(I))===ARC.carpeta;
+}
 function _arcCalza(f){
   var q=_dcNorm(ARC.buscar); if(!q) return true;
   var I=arcInfo(f), t=_dcNorm([f.nombre, I.t, I.det, I.g, ARC_TIPO_ET[I.tipo], _arcNotaCorta(f)].join(' '));
@@ -495,6 +516,8 @@ function arcPintar(){
   var ae=document.activeElement, busca=(ae && ae.id==='arc-buscar') ? [ae.selectionStart, ae.selectionEnd] : null;
   var mEsc=_arcModoEsc(), todas=(DC.filas||[]).filter(function(f){ return !mEsc || _arcDeLaApp(f); }), vis=todas.filter(arcVisible), ocE=0, ocF=0;
   todas.forEach(function(f){ if(arcVisible(f)) return; if(arcInfo(f).k==='esc') ocE++; else ocF++; });
+  /* 23/11/2026 · «Informe mensual» abre el año en curso */
+  if(ARC.carpeta==='g:'+ARC_INF_G && !mEsc){ ARC.carpeta='inf:'+new Date().getFullYear(); ARC.infRuta=[]; }
   var A=_arcArbol(vis); ARC._A=A;
   if(ARC.carpeta!=='*' && !A.existe[ARC.carpeta]) ARC.carpeta='*';
   var ids={}; vis.forEach(function(f){ ids[String(f.id)]=1; });
@@ -502,7 +525,8 @@ function arcPintar(){
   var nE=vis.filter(function(f){ return arcInfo(f).k==='esc'; }).length, nF=vis.filter(function(f){ return arcInfo(f).k==='foto'; }).length;
   var sub=vis.length+' '+(vis.length===1 ? 'archivo' : 'archivos')+(nE ? ' · '+nE+' '+(nE===1?'escaneo':'escaneos') : '')+(nF ? ' · '+nF+' '+(nF===1?'foto':'fotos')+' de obra' : '');
   var h='<div class="arc-cab"><div><h2>'+(mEsc ? 'Escaneos y fotos de la app' : 'Archivo de la obra')+'</h2><p class="sub" id="arc-cuantos">'+esc(sub)+'</p></div>'+
-        '<div class="arc-cab-acc"><button type="button" class="btn sec chico" onclick="abrirEstudioPdf()">🛠️ Herramientas PDF / Imágenes</button>'+
+        '<div class="arc-cab-acc">'+(mEsc ? '' : '<button type="button" class="bt sec chico" id="arc-orden5" title="En cuál de las 5 carpetas de seguridad va cada carpeta">🗂️ Ordenar carpetas</button>')+
+        '<button type="button" class="bt sec chico" onclick="abrirEstudioPdf()">🛠️ Herramientas PDF / Imágenes</button>'+
         '<button type="button" class="bt chico" id="arc-unir" title="Une PDF y fotos en un solo PDF, en el orden que elijas">⧉ Unir en un PDF</button>'+
         (_arcJefe() ? '<button type="button" class="bt sec chico" id="arc-cfg">⚙ Qué se ve en la web</button>' : '')+'</div></div>';
   h+=_arcFranjaWeb();
@@ -545,6 +569,7 @@ function arcPintar(){
        '<div id="arc-sel"></div><div id="arc-filas"></div><div class="arc-pie" id="arc-pie" hidden></div></div></div>';
   t.innerHTML=h;
   if($('arc-cfg')) $('arc-cfg').onclick=arcCfgAbrir;
+  if($('arc-orden5')) $('arc-orden5').onclick=arcOrdenAbrir;
   if($('arc-oculto-b')) $('arc-oculto-b').onclick=arcCfgAbrir;
   if($('arc-web-b')) $('arc-web-b').onclick=arcCfgAbrir;
   /* «Unir» con lo marcado (PDF y fotos); sin nada marcado, se eligen dentro */
@@ -553,9 +578,9 @@ function arcPintar(){
     arcUnirAbrir(ids, { elegir:!ids.length });
   };
   Array.prototype.forEach.call(t.querySelectorAll('#arc-arbol [data-k]'), function(b){
-    b.onclick=function(){ var k=b.getAttribute('data-k'); ARC.carpeta=k; arcPintar(); try{ $('arc-arbol').querySelector('[data-k="'+k.replace(/"/g, '\\"')+'"]').focus(); }catch(_f){} };
+    b.onclick=function(){ var k=b.getAttribute('data-k'); ARC.carpeta=k; ARC.infRuta=[]; arcPintar(); try{ $('arc-arbol').querySelector('[data-k="'+k.replace(/"/g, '\\"')+'"]').focus(); }catch(_f){} };
   });
-  $('arc-carpeta-m').onchange=function(){ ARC.carpeta=this.value; arcPintar(); };
+  $('arc-carpeta-m').onchange=function(){ ARC.carpeta=this.value; ARC.infRuta=[]; arcPintar(); };
   var tB=null;
   $('arc-buscar').oninput=function(){ var v=this.value; if(tB) clearTimeout(tB); tB=setTimeout(function(){ ARC.buscar=v; _arcPintarLista(); }, 140); };
   $('arc-orden').onchange=function(){ ARC.orden=this.value; _arcPintarLista(); };
@@ -581,6 +606,7 @@ function arcPintar(){
   });
   _arcPintarLista();
   _arcMiasBarra();
+  if(_arcEnInf()) _arcInfExplorador();
   if(busca){ var bi=$('arc-buscar'); try{ bi.focus(); bi.setSelectionRange(busca[0], busca[1]); }catch(_b){} }
 }
 /* 5/11/2026 · V7.10 · Módulo 6 (Marcelo): «muestra una barra de ruta arriba (📁 Documentos raíz › 📂 02. Seguridad › 📂 Charlas
@@ -590,6 +616,8 @@ function _arcMigas(X, S, F){
   var cad=[], x=X, n=0;
   while(x && n++<10){ cad.unshift(x); x=(x.p && x.p.indexOf('s:')!==0) ? dcMiasDe(x.p) : null; }
   var S2=X ? (X.sec ? _dcSecc(X.sec) : null) : S, g=S2 ? S2.g : DC_MIAS_G;
+  /* 23/11/2026 · la ruta pasa por su carpeta de seguridad (la de más arriba de la cadena) */
+  if(!_arcModoEsc()){ var x0=cad.length ? cad[0] : null; g=x0 ? _arcG({ k:'doc', key:'mia-'+x0.id, g:x0.g }) : (F ? _arcG({ k:'doc', key:F.h, g:F.g }) : g); }
   var P=[['*', '📁 Documentos'], ['g:'+g, '📂 '+g]];
   if(F && !X) P.push([F.h, '📂 '+F.t]);
   cad.forEach(function(c2){ P.push(['mia-'+c2.id, '📂 '+c2.t]); });
@@ -659,6 +687,24 @@ function _arcMiasBarra(){
   /* una carpeta de siempre de una de esas secciones (por ejemplo «Difusiones»): también se le agrega una al lado */
   var F=null;
   if(!S && !X && k.indexOf(':')<0 && typeof _dcCarpeta==='function' && typeof _dcSeccDeGrupo==='function'){ var cc=_dcCarpeta(k); if(cc && !cc.mia){ S=_dcSeccDeGrupo(_dcGrupo(cc)); if(S) F=cc; } }
+  /* 23/11/2026 · una de las 5 carpetas de seguridad abierta: «＋ Nueva carpeta» aquí mismo (queda en esta) */
+  var C=null;
+  if(!S && !X && !enMias && k.indexOf('g:')===0 && !_arcModoEsc()) ARC_CATS.forEach(function(x){ if(arcCatEt(x.k)===k.slice(2)) C=x; });
+  if(C){
+    if(typeof dcMiasPuede!=='function' || !dcMiasPuede()){ c.innerHTML=''; c.hidden=true; return; }
+    c.hidden=false;
+    /* sus carpetas propias de primer nivel, como en Windows: cada una con su ⋮ */
+    var propias=dcMias().filter(function(x){ return x.nivel===1 && _arcCatClave({ k:'doc', key:x.h, g:x.g })===C.k; });
+    c.innerHTML='<div class="arc-mias"><button type="button" class="bt chico" id="arc-cat-nueva">＋ Nueva carpeta en «'+esc(arcCatEt(C.k))+'»</button>'+
+      '<span class="arc-mias-t">Sale también en la app, en «Mis carpetas». Si después quieres que se vea en otra, «🗂️ Ordenar carpetas».</span></div>'+_arcSubsHTML(propias);
+    c.onclick=function(ev){
+      var b=ev.target.closest ? ev.target.closest('[data-k],[data-mia-m]') : null; if(!b || !c.contains(b)) return;
+      if(b.hasAttribute('data-mia-m')){ _arcMiaMenu(b, b.getAttribute('data-mia-m')); return; }
+      ARC.carpeta=b.getAttribute('data-k'); arcPintar();
+    };
+    $('arc-cat-nueva').onclick=function(){ arcMiasNueva('', C.k); };
+    return;
+  }
   if(_arcModoEsc() || !(enMias || S || X)){ c.innerHTML=''; c.hidden=true; return; }
   c.hidden=false;
   /* V7.10 · la ruta (📁 Documentos › 📂 la sección › 📂 la carpeta…) y, adentro, primero sus subcarpetas (cada una con su ⋮) */
@@ -714,7 +760,7 @@ function _arcMiasBarra(){
   });
 }
 /* «Nueva carpeta»: su nombre y dónde va (Mis carpetas, dentro de otra, o una sección del menú del supervisor) */
-function arcMiasNueva(pDef){
+function arcMiasNueva(pDef, cat){
   pDef=String(pDef||'');
   var M=dcMias(), ops=[['', 'Mis carpetas']];
   M.forEach(function(c){ if(c.nivel<DC_MIAS_NIVELES) ops.push([c.id, (c.sec ? (_dcSecc(c.sec)||{}).g+' › ' : 'Mis carpetas › ')+c.tr]); });
@@ -734,8 +780,15 @@ function arcMiasNueva(pDef){
     if(n.length<2){ m.className='msg mal'; m.textContent='Escribe el nombre de la carpeta.'; $('arcmn-n').focus(); return; }
     b.disabled=true; m.className='msg gris'; m.textContent='Creando…';
     dcMiasNueva(n, p).then(function(nid){
-      cerrarHoja(); ARC.carpeta='mia-'+nid; arcPintar();
-      toast('Carpeta «'+n+'» creada. Lo que subas ahora va a ella.');
+      /* 23/11/2026 · creada desde una de las 5 (y no dentro de otra ni de una sección): queda en esa */
+      var fija=(cat && !p && _arcCatDe(cat)) ? arcOrdenTraer().then(function(v){
+        var w={ v:1, m:JSON.parse(JSON.stringify(v.m||{})), n:JSON.parse(JSON.stringify(v.n||{})) }; w.m['mia-'+nid]=cat;
+        return estadoEscribirP(ARC_ORDEN_CLAVE, w).then(function(){ ARC.orden5=w; }, function(){});
+      }) : Promise.resolve();
+      return fija.then(function(){
+        cerrarHoja(); ARC.carpeta='mia-'+nid; arcPintar();
+        toast('Carpeta «'+n+'» creada. Lo que subas ahora va a ella.');
+      });
     }, function(e){ b.disabled=false; m.className='msg mal'; m.textContent=(typeof e==='string' && e!=='nada') ? e : 'No se pudo crear. Revisa tu conexión.'; });
   };
 }
@@ -757,6 +810,8 @@ function _arcPintarLista(){
     else if(enEsc || (mEsc && nada)) x='<b>Todavía no hay escaneos'+(enEsc && ARC.carpeta!=='g:Escaneos de la app' ? ' de este tipo' : '')+'</b>'+
       'Se hacen en la app: <b>Escanear</b> → la hoja firmada (charla, ATS, permiso, inducción…) se guarda en su tipo y sale aquí sola. '+
       'También puedes subir aquí arriba los que escaneaste en la computadora.';
+    else if(_arcEnInf()) x=(ARC.infRuta[0] ? '<b>Esta carpeta está vacía</b>Toca «⬆ Subir aquí» y elige los archivos: quedan en esta carpeta del informe.' :
+      '<b>Abre una carpeta</b>Arriba están las carpetas del informe: entra a una para ver y subir sus archivos.');
     else if(enFot) x='<b>Todavía no hay fotos de obra</b>Se toman en la app, con la cámara con sello: fecha, hora y ubicación. Al guardarlas «en la obra», salen aquí.';
     else x=nada ? '<b>Todavía no hay documentos</b>Arrástralos aquí arriba, o súbelos desde la app en su carpeta: salen en los dos lados.' : '<b>Nada en esta carpeta</b>';
     F.innerHTML='<div class="arc-vacio">'+x+'</div>';
@@ -769,7 +824,7 @@ function _arcPintarLista(){
         '<button type="button" class="arc-mini" data-acc="ver" tabindex="-1" aria-hidden="true">'+_arcIcono(f)+'</button>'+
         '<div class="arc-nom"><button type="button" class="arc-tit" data-acc="ver" title="'+esc(n)+'">'+esc(n)+'</button><small>'+esc(_arcSub(f))+'</small></div>'+
         '<div class="arc-acc">'+
-          (/\.pdf/i.test(f.url || f.nombre || '') ? '<button type="button" class="btn sec chico" onclick="abrirEstudioPdf({url:\''+escA(f.url||'')+'\', nombre:\''+escA(f.nombre||'')+'\', hoja:\''+escA(f.hoja||'')+'\'})">✂️ Editar / Dividir</button>' : '')+
+          (/\.pdf/i.test(f.url || f.nombre || '') ? '<button type="button" class="bt sec chico" onclick="abrirEstudioPdf({url:\''+escA(f.url||'')+'\', nombre:\''+escA(f.nombre||'')+'\', hoja:\''+escA(f.hoja||'')+'\'})">✂️ Editar / Dividir</button>' : '')+
           '<button type="button" class="bt sec chico" data-acc="ver">Ver</button>'+
           '<button type="button" class="arc-mas" data-acc="menu" aria-haspopup="menu" aria-label="Más acciones para «'+esc(n)+'»">⋯</button></div></li>';
     }).join('')+'</ul>';
@@ -933,6 +988,14 @@ function _arcSelDestino(id, val, op){
   var h='<select id="'+id+'" aria-label="Carpeta">'+(op.descargar ? '<option value="">Solo descargarlo (no se guarda en la obra)</option>' : '<option value="">— ¿a qué carpeta? —</option>');
   if(ARC.cfg.escaneos) h+='<optgroup label="Escaneos de la app">'+ARC_CLASES.map(function(c){
     return '<option value="esc:'+c[0]+'"'+(val==='esc:'+c[0]?' selected':'')+'>Escaneos · '+esc(c[1])+'</option>'; }).join('')+'</optgroup>';
+  /* 23/11/2026 · las carpetas del informe del mes abierto (o del mes en curso) */
+  if(!op.descargar && _arcInf8().length){
+    var ymD=(_arcEnInf() && String(ARC.carpeta).length===11) ? String(ARC.carpeta).slice(4) : (new Date().getFullYear()+'-'+('0'+(new Date().getMonth()+1)).slice(-2));
+    h+='<optgroup label="'+esc(ARC_INF_G+' · '+_arcMesEt(ymD))+'">'+_arcInf8().map(function(c, i){
+      var v=ARC_INF_PRE+ymD+':'+c.k;
+      return '<option value="'+esc(v)+'"'+(val===v?' selected':'')+'>'+esc((i+1)+'. '+c.n)+'</option>'+c.items.map(function(it){
+        var v2=v+':'+it[0]; return '<option value="'+esc(v2)+'"'+(val===v2?' selected':'')+'>\u00a0\u00a0└ '+esc(it[1])+'</option>'; }).join(''); }).join('')+'</optgroup>';
+  }
   var grupos=[], por={};
   _dcCarpetas().forEach(function(c){ if(op.sinFotos && c.h==='fotos') return; var g=_dcGrupo(c); if(!por[g]){ por[g]=[]; grupos.push(g); } por[g].push(c); });
   h+=grupos.map(function(g){ return '<optgroup label="'+esc(g)+'">'+por[g].map(function(c){
@@ -949,6 +1012,10 @@ function _arcNotaHumana(f){
 /* qué le cambia a una fila ir a «dest»: {cambio}, {igual} o {salta: por qué no} */
 function _arcMoverUna(f, dest, r){
   var I=arcInfo(f), tipo=I.tipo;
+  if(dest.indexOf('inf8:')===0){
+    if(String(f.hoja)===dest) return {igual:1};
+    return {cambio: I.k==='esc' ? {hoja:dest, nota:_arcNotaHumana(f)} : {hoja:dest}};
+  }
   if(dest.indexOf('esc:')===0){
     var k=dest.slice(4);
     if(I.k==='esc'){ if(I.esc.clase===k) return {igual:1}; var n={}; for(var q in I.esc) n[q]=I.esc[q]; n.clase=k; return {cambio:{nota:_arcNotaEscTexto(n)}}; }
@@ -989,10 +1056,10 @@ function arcMover(ids){
   $('arcmv-si').onclick=function(){
     var b=this, m=$('arcmv-msg'), dest=String(st.h||''), r={h:''};
     if(!dest){ m.className='msg mal'; m.textContent='Elige la carpeta.'; return; }
-    if(dest.indexOf('esc:')!==0 && dest!=='fotos'){ r=_dcHoja(st); if(r.err){ m.className='msg mal'; m.textContent=r.err; return; } }
+    if(dest.indexOf('esc:')!==0 && dest!=='fotos' && dest.indexOf('inf8:')!==0){ r=_dcHoja(st); if(r.err){ m.className='msg mal'; m.textContent=r.err; return; } }
     var plan=L.map(function(f){ return {f:f, x:_arcMoverUna(f, dest, r)}; });
     var van=plan.filter(function(p){ return p.x.cambio; }), saltan=plan.filter(function(p){ return p.x.salta; });
-    var etq=dest.indexOf('esc:')===0 ? 'Escaneos · '+_arcClaseEt(dest.slice(4)) : (dest==='fotos' ? 'Fotos de obra' : dcCarpetaDe(r.h).t);
+    var etq=dest.indexOf('esc:')===0 ? 'Escaneos · '+_arcClaseEt(dest.slice(4)) : (dest==='fotos' ? 'Fotos de obra' : (dest.indexOf('inf8:')===0 ? _arcInfRutaT(dest) : dcCarpetaDe(r.h).t));
     if(!van.length){ m.className='msg mal'; m.textContent=saltan.length ? 'No se movió nada: '+saltan[0].x.salta+'.' : 'Ya '+(uno?'está':'están')+' en «'+etq+'».'; return; }
     b.disabled=true; m.className='msg gris'; m.textContent='Moviendo…';
     var movidos={};
@@ -1771,4 +1838,265 @@ function arcSubirEscaneos(files){
       $('arc-se-no').disabled=false; $('arc-se-no').textContent='Cerrar';
     });
   };
+}
+
+/* ═══ 23/11/2026 · LAS 5 CARPETAS DE SEGURIDAD Y EL INFORME MENSUAL, EN EL ARCHIVO ═══════════════════════════════════
+   Marcelo: «el orden de las demás carpetas, quiero que sea más simple… las 5 carpetas de seguridad (S&I, MA, SI, RAE…),
+   y ya tú sabes donde iría cada archivo, y también el usuario podría modificar o elegir el flujo de donde va cada archivo…
+   sin alterar el flujo que se tiene» y «esa estructura quiero para el tema del informe… que aparezca en documentos para que
+   el usuario pueda editar, como las carpetas de Windows», por año y por mes, sin el PAL.
+   · Nada se mueve de lugar: cada archivo sigue en su hoja (la app la lee igual). Lo que cambia es CÓMO se agrupan aquí, a
+     la izquierda: las carpetas de siempre, los escaneos de la app y las carpetas de las secciones caen cada una en una de
+     las 5 (ARC_CATS); «Mis carpetas», el informe mensual y lo que no tiene carpeta van aparte.
+   · «🗂️ Ordenar carpetas»: a qué carpeta de seguridad va cada una, y el nombre de las 5 (sst_estado «docs_orden»:
+     { v:1, m:{ <carpeta>:<k> }, n:{ <k>:<nombre> } }). Lo de fábrica no se guarda: solo lo que se cambió.
+   · El informe mensual: Informe mensual › año › mes › las 8 carpetas del informe (INF8, portal/informe.js) y sus
+     subcarpetas. Cada archivo subido ahí es una fila de sst_doc con hoja «inf8:<AAAA-MM>:<carpeta>[:<subcarpeta>]»;
+     se renombra, se mueve, se descarga y se quita como cualquier otro, y el ZIP del informe en 8 carpetas lo lleva. */
+var ARC_CATS=[
+  {k:'sig', s:'S&I', t:'Sistema Integrado'},
+  {k:'seg', s:'SI', t:'Seguridad Industrial'},
+  {k:'so', s:'SO', t:'Salud Ocupacional'},
+  {k:'ma', s:'MA', t:'Medio Ambiente'},
+  {k:'rae', s:'RAE', t:'Respuesta ante Emergencias'}
+];
+var ARC_ORDEN_CLAVE='docs_orden', ARC_INF_G='Informe mensual', ARC_INF_PRE='inf8:';
+ARC.orden5=ARC.orden5 || { v:1, m:{}, n:{} };
+function _arcCatDe(k){ var r=null; ARC_CATS.forEach(function(c){ if(c.k===k) r=c; }); return r; }
+function arcCatEt(k){ var c=_arcCatDe(k); if(!c) return ''; var n=String((ARC.orden5.n||{})[k]||'').trim(); return c.s+' · '+(n || c.t); }
+/* dónde va cada carpeta de fábrica (lo que no está aquí: por su grupo de siempre) */
+var ARC_CAT_ESC={ charla:'sig', difusion:'sig', capacitacion:'sig', induccion:'sig', liderazgo:'sig', reunion:'sig', acta:'sig', otro:'sig',
+  inspeccion:'seg', permiso:'seg', ats:'seg', epp:'seg', simulacro:'rae' };
+var ARC_CAT_GRUPO={ 'Sistema Integrado':'sig', 'Certificados':'seg', 'Medio Ambiente':'ma', 'Salud Ocupacional':'so', 'Respuesta ante emergencias':'rae',
+  'Charlas · menú del supervisor':'sig', 'Informe SSOMA · menú del supervisor':'sig', 'Comité o Subcomité · menú del supervisor':'sig', 'Registros de obra':'seg' };
+var ARC_CAT_HOJA={ 'insp-antes-despues':'seg', fotos:'seg', sctr:'seg', vidaley:'seg', 'informe-mes':'sig', 'registro-evaluaciones':'sig', difusiones:'sig' };
+var ARC_CAT_SECC={ charlas:'sig', informe:'sig', comite:'sig', registros:'seg' };
+/* la de fábrica de una carpeta (su clave en el árbol), o '' si va aparte */
+function _arcCatFabrica(I){
+  if(I.k==='esc') return ARC_CAT_ESC[(I.esc||{}).clase] || 'sig';
+  if(I.k==='foto') return 'seg';
+  if(I.k==='propio') return 'sig';
+  if(I.k==='doc'){
+    if(/^mia-/.test(I.key)){
+      var X=(typeof dcMiasDe==='function') ? dcMiasDe(I.key.slice(4)) : null;
+      if(!X) return '';
+      if(X.sec) return ARC_CAT_SECC[X.sec] || '';
+      /* una subcarpeta va donde va la de arriba */
+      if(X.p && String(X.p).indexOf('s:')!==0) return _arcCatClave({ k:'doc', key:'mia-'+X.p, g:'' });
+      return '';
+    }
+    /* por su grupo de siempre (no el que se ve: sin Gestión SST salen bajo «Carteles QR» o «Carpetas anteriores») */
+    var cc=(typeof _dcCarpeta==='function') ? _dcCarpeta(I.key) : null;
+    return ARC_CAT_HOJA[I.key] || (cc && ARC_CAT_GRUPO[cc.g]) || ARC_CAT_GRUPO[I.g] || '';
+  }
+  if(I.k==='otro' && /asistencia/i.test(I.key)) return 'sig';
+  return '';
+}
+function _arcCatClave(I){
+  var m=ARC.orden5.m||{}, v=m[I.key];
+  if(v==='aparte') return '';
+  if(v && _arcCatDe(v)) return v;
+  return _arcCatFabrica(I);
+}
+/* el grupo de la izquierda: en «Escaneos y fotos», el de siempre; aquí, su carpeta de seguridad */
+function _arcG(I){
+  if(_arcModoEsc()) return I.g;
+  if(I.k==='inf') return ARC_INF_G;
+  var k=_arcCatClave(I);
+  return k ? arcCatEt(k) : I.g;
+}
+function _arcGOrden(g, I){
+  if(_arcModoEsc()) return _arcOrdenGrupo(I);
+  for(var i=0;i<ARC_CATS.length;i++) if(arcCatEt(ARC_CATS[i].k)===g) return 1+i;
+  if(g===ARC_INF_G) return 8;
+  if(typeof DC_MIAS_G!=='undefined' && g===DC_MIAS_G) return 9;
+  return _arcOrdenGrupo(I)+20;
+}
+/* el orden dentro de una carpeta de seguridad: primero los escaneos, después las de siempre, después las propias */
+function _arcOrdenCat(I){
+  if(_arcModoEsc()) return _arcOrdenItem(I);
+  if(I.k==='esc') return _arcOrdenItem(I);
+  if(I.k==='foto') return 50;
+  if(I.k==='doc') return (/^mia-/.test(I.key) ? 600 : 100)+_arcOrdenItem(I);
+  return 900;
+}
+function _arcItemT(I){ return (!_arcModoEsc() && I.k==='esc') ? 'Escaneos · '+I.t : I.t; }
+function arcOrdenTraer(){
+  if(typeof estadoLeerP!=='function') return Promise.resolve(ARC.orden5);
+  return estadoLeerP(ARC_ORDEN_CLAVE).then(function(f){
+    var v=f && f.valor; ARC.orden5=(v && typeof v==='object' && !Array.isArray(v)) ? { v:1, m:(v.m && typeof v.m==='object') ? v.m : {}, n:(v.n && typeof v.n==='object') ? v.n : {} } : { v:1, m:{}, n:{} };
+    return ARC.orden5;
+  }, function(){ return ARC.orden5; });
+}
+
+/* ── el informe mensual: año › mes › las 8 carpetas ─────────────────────────────────────────────────────────────── */
+var ARC_MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
+function _arcInfPartes(h){
+  var p=String(h||'').slice(ARC_INF_PRE.length).split(':');
+  return /^\d{4}-\d{2}$/.test(p[0]||'') ? { ym:p[0], c:p[1]||'', i:p[2]||'' } : null;
+}
+function _arcInf8(){ return (typeof INF8!=='undefined' && Array.isArray(INF8)) ? INF8 : []; }
+function _arcInfCarp(ck){ var r=null, n=0; _arcInf8().forEach(function(c, i){ if(c.k===ck){ r=c; n=i+1; } }); return r ? { c:r, n:n } : null; }
+function _arcInfCarpT(ck){ var x=_arcInfCarp(ck); return x ? x.n+'. '+x.c.n : (ck || ''); }
+function _arcInfSubT(ck, ik){ var x=_arcInfCarp(ck), t=ik; if(x) x.c.items.forEach(function(it){ if(it[0]===ik) t=it[1]; }); return t; }
+function _arcMesEt(ym){ return ARC_MESES[(+String(ym).slice(5, 7) || 1)-1]+' '+String(ym).slice(0, 4); }
+function _arcInfoInf(f, I){
+  if(!_arcInf8().length && typeof cargarInforme==='function') ARC.infFalta=true;
+  var P=_arcInfPartes(f.hoja); if(!P) return false;
+  I.k='inf'; I.key='inf:'+P.ym; I.t=_arcMesEt(P.ym); I.g=ARC_INF_G; I.editable=true; I.inf=P;
+  I.tr=ARC_INF_G+' › '+P.ym.slice(0, 4)+' › '+ARC_MESES[(+P.ym.slice(5, 7) || 1)-1]+(P.c ? ' › '+_arcInfCarpT(P.c) : '')+(P.i ? ' › '+_arcInfSubT(P.c, P.i) : '');
+  if(I.tipo==='img') I.mini=f.url;
+  return true;
+}
+/* los meses que salen siempre (este y el anterior) y los que tienen algo */
+function _arcInfMeses(vis){
+  var d=new Date(), ym=function(x){ return x.getFullYear()+'-'+('0'+(x.getMonth()+1)).slice(-2); }, s={};
+  s[ym(d)]=1; var a=new Date(d.getFullYear(), d.getMonth()-1, 1); s[ym(a)]=1;
+  vis.forEach(function(f){ var P=_arcInfPartes(f.hoja); if(P) s[P.ym]=1; });
+  return Object.keys(s).sort().reverse();
+}
+/* dónde se está dentro del mes abierto: [carpeta, subcarpeta] */
+ARC.infRuta=ARC.infRuta || [];
+function _arcEnInf(){ return /^inf:\d{4}(-\d{2})?$/.test(String(ARC.carpeta||'')); }
+function _arcInfHoja(ym, ruta){ return ARC_INF_PRE+ym+(ruta[0] ? ':'+ruta[0] : '')+(ruta[1] ? ':'+ruta[1] : ''); }
+/* ¿este archivo está en lo abierto (el año, el mes y la carpeta)? */
+function _arcInfCalza(f){
+  var P=_arcInfPartes(f.hoja); if(!P) return false;
+  var k=String(ARC.carpeta).slice(4);
+  if(k.length===4) return P.ym.slice(0, 4)===k;
+  if(P.ym!==k) return false;
+  var r=ARC.infRuta;
+  if(!r[0]) return true;
+  if(P.c!==r[0]) return false;
+  return !r[1] || P.i===r[1];
+}
+/* el explorador: la ruta, las carpetas de adentro (como en Windows) y «Subir aquí» */
+function _arcInfExplorador(){
+  var c=$('arc-mias'); if(!c || !_arcEnInf()) return;
+  /* los nombres de las carpetas llegaron después de leer los archivos: se vuelven a leer con sus nombres */
+  if(ARC.infFalta && _arcInf8().length){ ARC.infFalta=false; (DC.filas||[]).forEach(function(f){ if(String(f.hoja||'').indexOf(ARC_INF_PRE)===0) delete f._arc; }); arcPintar(); return; }
+  var k=String(ARC.carpeta).slice(4), ym=k.length===7 ? k : '', r=ARC.infRuta, L=_arcInf8();
+  c.hidden=false;
+  if(ym && !L.length && typeof cargarInforme==='function'){
+    c.innerHTML='<p class="ayuda">Abriendo las carpetas del informe…</p>';
+    cargarInforme().then(function(){ (DC.filas||[]).forEach(function(f){ if(String(f.hoja||'').indexOf(ARC_INF_PRE)===0) delete f._arc; }); if(_arcEnInf()) arcPintar(); }, function(){ c.innerHTML='<p class="ayuda">No se pudieron abrir las carpetas del informe. Revisa tu conexión.</p>'; });
+    return;
+  }
+  var cuenta=function(pre){ return (DC.filas||[]).filter(function(f){ return String(f.hoja||'')===pre || String(f.hoja||'').indexOf(pre+':')===0; }).length; };
+  var P=[['g:'+ARC_INF_G, '📁 '+ARC_INF_G], ['inf:'+k.slice(0, 4), '📂 '+k.slice(0, 4)]];
+  if(ym) P.push(['inf:'+ym, '📂 '+ARC_MESES[(+ym.slice(5, 7) || 1)-1], []]);
+  if(ym && r[0]) P.push(['inf:'+ym, '📂 '+_arcInfCarpT(r[0]), [r[0]]]);
+  if(ym && r[1]) P.push(['inf:'+ym, '📂 '+_arcInfSubT(r[0], r[1]), [r[0], r[1]]]);
+  var h='<nav class="arc-migas" aria-label="Dónde estás">'+P.map(function(q, i){
+    return (i ? '<span aria-hidden="true">›</span>' : '')+(i===P.length-1 ? '<b aria-current="page">'+esc(q[1])+'</b>' :
+      '<button type="button" data-ik="'+esc(q[0])+'" data-ir="'+esc(JSON.stringify(q[2]||[]))+'">'+esc(q[1])+'</button>'); }).join('')+'</nav>';
+  var hijas=[];
+  if(!ym){
+    _arcInfMeses(DC.filas||[]).filter(function(m){ return m.slice(0, 4)===k; }).forEach(function(m){ hijas.push({ t:ARC_MESES[(+m.slice(5, 7) || 1)-1], n:cuenta(ARC_INF_PRE+m), ik:'inf:'+m, ir:[] }); });
+  } else if(!r[0]){
+    L.forEach(function(x, i){ hijas.push({ t:(i+1)+'. '+x.n, n:cuenta(ARC_INF_PRE+ym+':'+x.k), ik:'inf:'+ym, ir:[x.k] }); });
+  } else if(!r[1]){
+    var X=_arcInfCarp(r[0]); if(X) X.c.items.forEach(function(it){ hijas.push({ t:it[1], n:cuenta(ARC_INF_PRE+ym+':'+r[0]+':'+it[0]), ik:'inf:'+ym, ir:[r[0], it[0]], ayuda:it[2] }); });
+  }
+  if(hijas.length) h+='<div class="arc-subs">'+hijas.map(function(x){
+    return '<div class="arc-sub-c"><button type="button" class="arc-sub-a" data-ik="'+esc(x.ik)+'" data-ir="'+esc(JSON.stringify(x.ir))+'"'+(x.ayuda ? ' title="'+esc(x.ayuda)+'"' : '')+'><span>📂 '+esc(x.t)+'</span>'+
+      '<small>'+(x.n ? x.n+' '+(x.n===1 ? 'archivo' : 'archivos') : 'vacía')+'</small></button></div>'; }).join('')+'</div>';
+  var ayuda='';
+  if(ym && r[1]){ var X2=_arcInfCarp(r[0]); if(X2) X2.c.items.forEach(function(it){ if(it[0]===r[1] && it[2]) ayuda=it[2]; }); }
+  h+='<div class="arc-mias">'+
+    (ym && r[0] ? '<button type="button" class="bt chico" id="arc-inf-sube">⬆ Subir aquí</button><input type="file" id="arc-inf-arch" multiple class="pi-oculto">' : '')+
+    (ym ? '<button type="button" class="bt sec chico" id="arc-inf-zip">⬇ Bajar '+esc(_arcMesEt(ym))+' en ZIP</button>' : '')+
+    '<span class="arc-mias-t">'+esc(ayuda || (ym ? (r[0] ? 'Lo que subas aquí queda en esta carpeta. Para cambiarle el nombre, moverlo o quitarlo: «⋯» en cada archivo.' :
+      'Las 8 carpetas del informe. Lo que OBRASST ya tiene del mes (cada parte del informe, las actas, el Excel) lo pone solo el ZIP de «Informe › En 8 carpetas».') :
+      'Cada mes con sus 8 carpetas.'))+'</span></div>';
+  c.innerHTML=h;
+  c.onclick=function(ev){
+    var b=ev.target.closest ? ev.target.closest('[data-ik]') : null; if(!b || !c.contains(b)) return;
+    var ik=b.getAttribute('data-ik'), ir=[]; try{ ir=JSON.parse(b.getAttribute('data-ir')||'[]'); }catch(_j){}
+    ARC.carpeta=ik; ARC.infRuta=Array.isArray(ir) ? ir : []; ARC.sel=[]; arcPintar();
+  };
+  var bs=$('arc-inf-sube'), inp=$('arc-inf-arch');
+  if(bs && inp){ bs.onclick=function(){ inp.click(); }; inp.onchange=function(){ var l=Array.prototype.slice.call(this.files||[]); this.value=''; arcInfSubir(l, _arcInfHoja(ym, r)); }; }
+  if($('arc-inf-zip')) $('arc-inf-zip').onclick=function(){ arcInfZip(ym, this); };
+}
+function arcInfSubir(files, hoja){
+  if(!files.length) return;
+  var malos=files.filter(function(f){ return f.size>DC_TOPE || /^video\//i.test(f.type||''); });
+  var L=files.filter(function(f){ return malos.indexOf(f)<0; });
+  if(malos.length) toast(malos.length===1 ? '«'+malos[0].name+'» pesa más de 25 MB o es un video: no sube.' : malos.length+' archivos pesan más de 25 MB o son videos: no suben.');
+  if(!L.length) return;
+  var ok=0; toast('Subiendo '+L.length+' '+(L.length===1 ? 'archivo' : 'archivos')+'…');
+  _arcDeAPocos(L, 2, function(f){
+    return subirArchivoP('docs', f).then(function(url){
+      return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:hoja, nombre:String(f.name||'Documento').replace(/\s+/g, ' ').trim().slice(0, 120), url:url, nota:null });
+    }).then(function(rows){ if(Array.isArray(rows) && !rows.length) return Promise.reject('sin_fila'); ok++; });
+  }).then(function(){
+    var mal=L.length-ok;
+    toast(mal ? (ok ? ok+' subidos; '+mal+' no: revisa tu conexión o tu permiso en esta obra.' : 'No subió ninguno: revisa tu conexión o tu permiso en esta obra.') :
+      (ok===1 ? 'Subido a «'+_arcInfRutaT(hoja)+'».' : ok+' archivos subidos a «'+_arcInfRutaT(hoja)+'».'));
+    if(VISTA.recargar) VISTA.recargar(true);
+  });
+}
+function _arcInfRutaT(hoja){ var P=_arcInfPartes(hoja); if(!P) return ARC_INF_G; return (P.i ? _arcInfSubT(P.c, P.i) : _arcInfCarpT(P.c)); }
+/* el mes en un ZIP: las 8 carpetas con sus subcarpetas (también las vacías) y lo subido en su lugar */
+function arcInfZip(ym, boton){
+  var L=_arcInf8(); if(!L.length) return;
+  var filas=(DC.filas||[]).filter(function(f){ var P=_arcInfPartes(f.hoja); return P && P.ym===ym && f.url && arcInfo(f).tipo!=='enlace'; });
+  var dos=function(n){ return (n<10 ? '0' : '')+n; }, dn=function(t){ return String(t).replace(/[\\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim(); }, raiz='Informe '+_arcMesEt(ym)+'/';
+  var dirs=[], dirDe=function(P){ var i=0, x=null; L.forEach(function(c, j){ if(c.k===P.c){ x=c; i=j+1; } }); if(!x) return raiz+'Otros/';
+    var d=raiz+dos(i)+' '+dn(x.n)+'/'; if(P.i) x.items.forEach(function(it){ if(it[0]===P.i) d+=dn(it[1])+'/'; }); return d; };
+  L.forEach(function(c, j){ var d=raiz+dos(j+1)+' '+dn(c.n)+'/'; dirs.push({ n:d, b:new Uint8Array(0) }); c.items.forEach(function(it){ dirs.push({ n:d+dn(it[1])+'/', b:new Uint8Array(0) }); }); });
+  if(boton) boton.disabled=true;
+  var usados={};
+  _arcDeAPocos(filas, 3, function(f){
+    return _arcBlob(f).then(function(b){ return b.arrayBuffer(); }).then(function(ab){
+      var d=dirDe(_arcInfPartes(f.hoja)), n=_arcNombreBajar(f), k=d+n, q=1;
+      while(usados[k]){ q++; k=d+n.replace(/(\.[^.]+)?$/, ' ('+q+')$1'); } usados[k]=1;
+      return { n:k, b:new Uint8Array(ab) };
+    });
+  }).then(function(res){
+    var arch=dirs.concat(res.filter(function(x){ return x.ok; }).map(function(x){ return x.v; })), mal=res.filter(function(x){ return !x.ok; }).length;
+    var z=_arcZip(arch);
+    if(boton) boton.disabled=false;
+    bajarBlob(z, 'Informe '+_arcMesEt(ym)+' - 8 carpetas.zip');
+    toast(mal ? 'Listo, pero '+mal+' no se pudieron bajar: revisa tu conexión.' : 'Listo: las 8 carpetas de '+_arcMesEt(ym)+' con lo subido.');
+  }, function(){ if(boton) boton.disabled=false; toast('No se pudo armar el ZIP. Revisa tu conexión.'); });
+}
+
+/* ── «🗂️ Ordenar carpetas»: a cuál de las 5 va cada una, y sus nombres ─────────────────────────────────────────── */
+function arcOrdenAbrir(){
+  var A=ARC._A || { grupos:[] }, filas=[], vistos={};
+  (DC.filas||[]).forEach(function(f){
+    var I=arcInfo(f); if(I.k==='inf' || vistos[I.key]) return; vistos[I.key]=1;
+    filas.push({ key:I.key, t:_arcItemT(I), fab:_arcCatFabrica(I), cat:_arcCatClave(I) });
+  });
+  if(typeof dcMias==='function') dcMias().forEach(function(c){ if(vistos[c.h]) return; vistos[c.h]=1;
+    var I={ k:'doc', key:c.h, g:c.g }; filas.push({ key:c.h, t:c.tr||c.t, fab:_arcCatFabrica(I), cat:_arcCatClave(I) }); });
+  filas.sort(function(a, b){ return String(a.t).localeCompare(String(b.t), 'es', {sensitivity:'base'}); });
+  var opts=function(sel, fab){ return ARC_CATS.map(function(c){ return '<option value="'+c.k+'"'+(sel===c.k ? ' selected' : '')+'>'+esc(arcCatEt(c.k))+(fab===c.k ? ' (de fábrica)' : '')+'</option>'; }).join('')+
+    '<option value="aparte"'+(!sel ? ' selected' : '')+'>Aparte (fuera de las 5)'+(!fab ? ' (de fábrica)' : '')+'</option>'; };
+  var cuerpo='<p class="ayuda" style="margin:0 0 12px">Nada cambia de lugar: los archivos siguen en su carpeta (también en la app). Aquí eliges en cuál de las 5 carpetas de seguridad se ve cada una.</p>'+
+    '<div class="seccion"><h3>Los nombres de las 5</h3>'+ARC_CATS.map(function(c){
+      return '<div class="campo"><label for="arco-n-'+c.k+'">'+esc(c.s)+'</label><input id="arco-n-'+c.k+'" maxlength="40" value="'+esc(String((ARC.orden5.n||{})[c.k]||c.t))+'"></div>'; }).join('')+'</div>'+
+    '<div class="seccion"><h3>Dónde va cada carpeta</h3>'+(filas.length ? filas.map(function(x, i){
+      return '<div class="campo"><label for="arco-c-'+i+'">'+esc(x.t)+'</label><select id="arco-c-'+i+'" data-key="'+esc(x.key)+'" data-fab="'+esc(x.fab)+'">'+opts(x.cat, x.fab)+'</select></div>'; }).join('') :
+      '<p class="ayuda">Todavía no hay carpetas con archivos.</p>')+'</div>'+
+    '<div class="msg" id="arco-msg"></div>';
+  abrirHoja('Ordenar carpetas', 'Las 5 carpetas de seguridad', cuerpo,
+    '<button type="button" class="bt sec" id="arco-fab">Volver a lo de fábrica</button><button type="button" class="bt" id="arco-si">Guardar</button>', {sinFoco:true});
+  var guarda=function(v, b){
+    var m=$('arco-msg'); b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
+    estadoEscribirP(ARC_ORDEN_CLAVE, v).then(function(){ ARC.orden5=v; cerrarHoja(); toast('Listo: así se ordenan las carpetas para todo el equipo.'); ARC.carpeta='*'; arcPintar(); },
+      function(e){ b.disabled=false; m.className='msg mal'; m.textContent=(e===401 || e===403) ? 'Tu cuenta no puede cambiar el orden en esta obra.' : 'No se pudo guardar. Revisa tu conexión e inténtalo otra vez.'; });
+  };
+  $('arco-si').onclick=function(){
+    var v={ v:1, m:{}, n:{} };
+    ARC_CATS.forEach(function(c){ var t=String(($('arco-n-'+c.k)||{}).value||'').replace(/\s+/g, ' ').trim(); if(t && t!==c.t) v.n[c.k]=t.slice(0, 40); });
+    Array.prototype.forEach.call(document.querySelectorAll('[id^="arco-c-"]'), function(s){
+      var key=s.getAttribute('data-key'), fab=s.getAttribute('data-fab')||'', val=s.value;
+      if((val==='aparte' ? '' : val)!==fab) v.m[key]=val;
+    });
+    guarda(v, this);
+  };
+  $('arco-fab').onclick=function(){ guarda({ v:1, m:{}, n:{} }, this); };
 }

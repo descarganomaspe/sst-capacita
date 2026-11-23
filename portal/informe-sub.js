@@ -175,8 +175,7 @@ var ISB_PLANTILLAS = {
       { k:'est_mes', n:'1. Estadística del mes', tipo:'archivos', min:1, formatos:['excel', 'pdf'], ayuda:'En el cuadro que te piden: horas hombre, trabajadores, accidentes e índices del mes.' },
       { k:'anexo_foto', n:'2. Anexo fotográfico', tipo:'fotos', min:4, desc:true, nom:{ p:'AF', r:true, a:true, m:true, d:false, s:'_' }, ayuda:'Fotos con su fecha y su hora.' },
       { k:'reg_trab', n:'3. Registro de trabajadores en obra', tipo:'archivos', min:1, formatos:['excel', 'pdf'] },
-      { k:'pal', n:'4. PAL', tipo:'archivos', min:1, ayuda:'El registro de cumplimiento del PAL (Excel) y sus evidencias: evaluación de ATS, inspecciones de SST y reuniones. El PAL es de la línea de mando.' },
-      { k:'estatus', n:'5. Estatus de programas', tipo:'archivos', min:1, formatos:['excel', 'pdf'], ayuda:'El avance del programa anual de SST y de los de inspecciones, capacitaciones y simulacros. Si hubo auditoría, su informe y su registro.' }] },
+      { k:'estatus', n:'4. Estatus de programas', tipo:'archivos', min:1, formatos:['excel', 'pdf'], ayuda:'El avance del programa anual de SST y de los de inspecciones, capacitaciones y simulacros. Si hubo auditoría, su informe y su registro.' }] },
     { k:'simulacros', n:'Simulacros', items:[
       { k:'sim_inf', n:'1. Informe del simulacro', tipo:'archivos', min:0, formatos:['pdf'], ayuda:'De acuerdo a su programa.' },
       { k:'sim_asis', n:'1.1 Registro de asistencia', tipo:'app', fuente:'asis:simulacro', min:0, papel:true },

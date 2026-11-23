@@ -2590,8 +2590,7 @@ var INF8 = [
     ['trimestral', '4. Reporte trimestral', 'El reporte trimestral al comité, el mes que toca.']] },
   { k:'estadistica', n:'Estadística', items:[['est_mes', '1. Estadística del mes', 'En el cuadro que te piden: horas hombre, trabajadores, accidentes e índices del mes.'],
     ['anexo_foto', '2. Anexo fotográfico', 'Fotos con su fecha y su hora.'], ['reg_trab', '3. Registro de trabajadores en obra', ''],
-    ['pal', '4. PAL', 'El registro de cumplimiento del PAL (Excel) y sus evidencias: evaluación de ATS, inspecciones de SST y reuniones.'],
-    ['estatus', '5. Estatus de programas', 'El avance del programa anual de SST y de los de inspecciones, capacitaciones y simulacros; si hubo auditoría, su informe y su registro.']] },
+    ['estatus', '4. Estatus de programas', 'El avance del programa anual de SST y de los de inspecciones, capacitaciones y simulacros; si hubo auditoría, su informe y su registro.']] },
   { k:'simulacros', n:'Simulacros', items:[['sim_inf', '1. Informe del simulacro', 'De acuerdo a su programa.'], ['sim_asis', '1.1 Registro de asistencia', ''],
     ['sim_eval', '1.2 Evaluación del simulacro', ''], ['sim_recuento', '1.3 Recuento de personal', ''], ['sim_plan', '1.4 Plan de acción', 'El del simulacro del mes anterior.']] },
   { k:'registros', n:'Control de registros', items:[['reg_insp', '1. Inspecciones', 'En el formato de la RM 050-2013-TR; un PDF por estación o frente.'],
@@ -2750,6 +2749,26 @@ function _infOcho(D, R){
       );
     }
     return Promise.all(promesas);
+  }).then(function(){
+    /* 23/11/2026 · lo que se subió en Documentos › Informe mensual › <año> › <mes>, cada archivo en su carpeta */
+    var ym = String(D.mes || '').slice(0, 7);
+    if(!/^\d{4}-\d{2}$/.test(ym) || typeof sbGet !== 'function') return;
+    return sbGet('sst_doc?empresa=eq.' + _enc(YO.obra.id) + '&hoja=like.' + _enc('inf8:' + ym + '*') + '&select=id,hoja,nombre,url&limit=500').then(function(rows){
+      var usados = {};
+      return (rows || []).filter(function(f){ return f && f.url && !/^data:/i.test(f.url); }).reduce(function(cad, f){
+        return cad.then(function(){
+          var p = String(f.hoja).slice(5 + ym.length + 1).split(':'), ck = p[0] || 'otros', ik = p[1] || '';
+          return fetch(f.url, { credentials:'omit' }).then(function(r){ return r.ok ? r.arrayBuffer() : null; }).then(function(ab){
+            if(!ab) return;
+            var ext = (String(f.url).split(/[?#]/)[0].match(/\.([a-z0-9]{2,5})$/i) || [])[1] || '';
+            var n = String(f.nombre || 'documento').replace(/[\\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100) || 'documento';
+            if(ext && !new RegExp('\\.' + ext + '$', 'i').test(n)) n += '.' + ext;
+            var k = _inf8Dir(ck, ik) + '/' + n, q = 1; while(usados[k]){ q++; k = _inf8Dir(ck, ik) + '/' + n.replace(/(\.[^.]+)?$/, ' (' + q + ')$1'); } usados[k] = 1;
+            out.push({ n:k, b:new Uint8Array(ab) }); lleno[ck + '|' + ik] = (lleno[ck + '|' + ik] || 0) + 1; if(ik) lleno[ck + '|'] = lleno[ck + '|'] || 0;
+          }, function(){});
+        });
+      }, Promise.resolve());
+    }, function(){});
   }).then(function(){
     /* todas las carpetas, también las vacías (lo que se sube a mano), y el índice */
     var dirs = [], idx = ['Informe mensual en 8 carpetas', (nombreObraP() || '') + ' · ' + _infMesN(D.mes), 'Armado con OBRASST el ' + fechaLarga(hoyISO()), '',

@@ -72,15 +72,9 @@
     function pedirUnaVez(intento){
       var vencido = false;
       var timer = setTimeout(function(){ vencido = true; }, 10000);
-      var prom = (typeof sbRpc === 'function')
-        ? sbRpc('sst_docs_listar_rapido', { p_emp: empId, p_lim: 400 }).then(function(r){
-            if(r && r.ok && Array.isArray(r.docs)) return r.docs;
-            throw new Error((r && r.motivo) || 'fallback');
-          }).catch(function(){
-            return (typeof sbGet === 'function')
-              ? sbGet('sst_doc?empresa=eq.' + encodeURIComponent(empId) + '&select=id,hoja,nombre,url,nota&order=id.desc&limit=400')
-              : Promise.reject(new Error('Sin cliente Supabase'));
-          })
+      /* 23/11/2026 · directo a sst_doc (la función sst_docs_listar_rapido no está en el servidor: cada carga pedía en vano) */
+      var prom = (typeof sbGet === 'function')
+        ? sbGet('sst_doc?empresa=eq.' + encodeURIComponent(empId) + '&select=id,hoja,nombre,url,nota,creado&order=creado.desc&limit=3000')
         : Promise.reject(new Error('Sin cliente Supabase'));
 
       return Promise.race([
@@ -90,7 +84,7 @@
         clearTimeout(timer);
         if(vencido && huboCache) return [];
         lista = Array.isArray(lista) ? lista : [];
-        try{ localStorage.setItem(cacheKey, JSON.stringify(lista.slice(0, 400))); }catch(_s){}
+        try{ localStorage.setItem(cacheKey, JSON.stringify(lista.slice(0, 3000))); }catch(_s){}
         if(onDatos) onDatos(lista, false);
         return lista;
       }).catch(function(err){
