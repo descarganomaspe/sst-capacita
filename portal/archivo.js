@@ -39,7 +39,7 @@
    ═════════════════════════════════════════════════════════════════════════════════════════════════════════ */
 
 /* los tipos de escaneo de la app (ESC_CLASE_ET): armar.py comprueba que sean los mismos y en el mismo orden */
-var ARC_CLASES=[['charla','Charla de 5 min'], ['difusion','Difusión'], ['capacitacion','Capacitación'], ['induccion','Inducción'], ['liderazgo','Reporte de liderazgo'],
+var ARC_CLASES=[['charla','Reunión de inicio de jornada'], ['difusion','Difusión'], ['capacitacion','Capacitación'], ['induccion','Inducción'], ['liderazgo','Reporte de liderazgo'],
   ['inspeccion','Inspección'], ['permiso','Permiso de trabajo'], ['ats','ATS'], ['epp','Entrega de EPP'], ['simulacro','Simulacro'],
   ['reunion','Reunión'], ['acta','Acta'], ['otro','Otro']];
 var ARC_CLAVE='docs_web';

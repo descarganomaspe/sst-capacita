@@ -2654,10 +2654,102 @@ function _infOcho(D, R){
     return cad;
   }).then(function(){
     var lee = function(bl){ return bl.arrayBuffer().then(function(b){ return new Uint8Array(b); }); };
-    return Promise.all([lee(_infExcel(D)), lee(_infWord(D))]).then(function(x){
-      pon('estadistica', 'est_mes', 'Datos del informe - ' + _infMesN(D.mes) + '.xlsx', x[0]);
-      pon('capacitaciones', '', 'Temas del mes - ' + _infMesN(D.mes) + '.docx', x[1]);
-    });
+    var promesas = [
+      lee(_infExcel(D)).then(function(u8){ pon('estadistica', 'est_mes', 'Datos del informe - ' + _infMesN(D.mes) + '.xlsx', u8); }),
+      lee(_infWord(D)).then(function(u8){ pon('capacitaciones', '', 'Temas del mes - ' + _infMesN(D.mes) + '.docx', u8); })
+    ];
+    if(window.OBRASST_FORMATOS_INFORME){
+      var mPartes = String(D.mes || '').split('-');
+      var anioVal = mPartes[0] || String(new Date().getFullYear());
+      var mesNum = parseInt(mPartes[1], 10) || (new Date().getMonth() + 1);
+      var mesNombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      var mesNom = mesNombres[mesNum - 1] || 'Mes';
+
+      var nomEmp = (typeof empresaDeObraP === 'function' ? empresaDeObraP() : '') || (D.obra && D.obra.nombre) || '';
+      var rucEmp = (D.obra && (D.obra.ruc || D.obra.rnc || D.obra.doc)) || '';
+      var nomObra = (typeof nombreObraP === 'function' ? nombreObraP() : '') || (D.obra && D.obra.nombre) || '';
+      var dirObra = (D.obra && D.obra.direccion) || '';
+      var respNom = (typeof YO !== 'undefined' && YO.nombre) || '';
+
+      var datosEst = {
+        empresa: { nombre: nomEmp, ruc: rucEmp, obra: nomObra, direccion: dirObra, actividad: 'CONSTRUCCIÓN Y GESTIÓN DE OBRAS' },
+        anio: anioVal,
+        mesIdx: mesNum - 1,
+        charlasMes: (D.ch && D.ch.L) ? D.ch.L.map(function(c){
+          return {
+            fecha: c.f || c.fecha,
+            tema: c.t || c.tema,
+            minutos: c.min || 10,
+            asistentes: c.n || c.asis || 0,
+            expositor: c.exp || c.expositor || '',
+            cargo: c.cargo || '',
+            frente: c.fre || c.frente || 'GENERAL',
+            tipo: c.tipo || '',
+            esStaff: c.cat === 'Staff'
+          };
+        }) : [],
+        observaciones: (D.obs && D.obs.L) ? D.obs.L.map(function(o){
+          return {
+            fecha: o.fecha || o.f,
+            reportante: o.empresa || '',
+            observada: o.contrata || '',
+            frente: o.frente || 'GENERAL',
+            descripcion: o.desc || o.descripcion || '',
+            origen: o.fuente || 'Inspección Interna',
+            tipo: o.clase === 'acto' ? 'Acto Subestándar' : 'Condición Subestándar',
+            planAccion: o.accion || '',
+            fechaCumplimiento: o.fCierre || '',
+            autor: o.autor || ''
+          };
+        }) : [],
+        responsable: respNom,
+        cargoResponsable: 'SUPERVISOR SSOMA'
+      };
+
+      var fotosList = (D.fotos && D.fotos.L) ? D.fotos.L.map(function(f){
+        return {
+          url: f.url || (f.img && f.img.url) || '',
+          titulo: f.titulo || f.t || f.nombre || 'Registro fotográfico SST',
+          pie: f.pie || f.d || f.leyenda || '',
+          bloque: f.bloque || 'charlas'
+        };
+      }) : [];
+      var datosFotos = {
+        empresa: datosEst.empresa,
+        anio: anioVal,
+        mesIdx: mesNum - 1,
+        fotos: fotosList,
+        responsable: respNom
+      };
+
+      var trabList = (D._trab && Array.isArray(D._trab)) ? D._trab : ((D.per && D.per.L) ? D.per.L.map(function(p){
+        return { nombre: p.n, dni: p.doc, puesto: p.puesto, area: p.emp, estatus: p.e };
+      }) : []);
+      var datosPers = {
+        empresa: datosEst.empresa,
+        anio: anioVal,
+        mesIdx: mesNum - 1,
+        trabajadores: trabList,
+        responsable: respNom
+      };
+
+      promesas.push(
+        OBRASST_FORMATOS_INFORME.generarEstadisticaSSTXlsx(datosEst).then(lee).then(function(u8){
+          pon('estadistica', 'est_mes', 'Estadistica_Mensual_SST_' + mesNom + '_' + anioVal + '.xlsx', u8);
+        }).catch(function(e){ console.error('Error EstadisticaSSTXlsx:', e); })
+      );
+      promesas.push(
+        OBRASST_FORMATOS_INFORME.generarPanelFotograficoXlsx(datosFotos).then(lee).then(function(u8){
+          pon('estadistica', 'anexo_foto', 'Panel_Fotografico_SST_' + mesNom + '_' + anioVal + '.xlsx', u8);
+        }).catch(function(e){ console.error('Error PanelFotograficoXlsx:', e); })
+      );
+      promesas.push(
+        OBRASST_FORMATOS_INFORME.generarRegistroTrabajadoresXlsx(datosPers).then(lee).then(function(u8){
+          pon('estadistica', 'reg_trab', 'Registro_de_Trabajadores_en_Obra_' + mesNom + '_' + anioVal + '.xlsx', u8);
+        }).catch(function(e){ console.error('Error RegistroTrabajadoresXlsx:', e); })
+      );
+    }
+    return Promise.all(promesas);
   }).then(function(){
     /* todas las carpetas, también las vacías (lo que se sube a mano), y el índice */
     var dirs = [], idx = ['Informe mensual en 8 carpetas', (nombreObraP() || '') + ' · ' + _infMesN(D.mes), 'Armado con OBRASST el ' + fechaLarga(hoyISO()), '',

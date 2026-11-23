@@ -612,7 +612,7 @@ function _parwDatos(dia){
       /* 15/10/2026 · lote 12 · de cada una: cuántos marcaron, cuántos estaban en la obra según el tareo (y cuántos de ellos
          faltaron) y lo que dijeron los que anotaron a mano o con su fotocheck (sql/2026-11-19-asistencia-confirma.sql) */
       var por={}; (marcas||[]).forEach(function(m){ (por[m.sesion]=por[m.sesion]||[]).push(m); });
-      var TIP={ charla:'Charla de 5 minutos', reunion:'Reunión', difusion:'Difusión', capacitacion:'Capacitación', induccion:'Inducción', simulacro:'Simulacro', otra:'Asistencia' };
+      var TIP={ charla:'Reunión de inicio de jornada', reunion:'Reunión', difusion:'Difusión', capacitacion:'Capacitación', induccion:'Inducción', simulacro:'Simulacro', otra:'Asistencia' };
       ses.forEach(function(s){
         var L=por[s.id] || [], T=_parwCobertura(s, R, L), cf={ si:0, no:0, falta:0 };
         L.forEach(function(m){ if(m.metodo!=='fotocheck' && m.metodo!=='mano') return; if(m.confirma==='si') cf.si++; else if(m.confirma==='no') cf.no++; else if(!PARW.sinConf) cf.falta++; });

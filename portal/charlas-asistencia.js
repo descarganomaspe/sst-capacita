@@ -11,13 +11,18 @@
   var CARPETA_ASISTENCIA = 'Registros de asistencia';
   var TIPOS_ACTIVIDAD = [
     'Reunión de inicio de jornada',
-    'Capacitación',
+    'Inducción Hombre Nuevo',
+    'Inducción de proveedor / visitas',
+    'Capacitaciones específicas programadas',
+    'Capacitaciones específicas no programadas',
+    'Sensibilización / Retroalimentación',
+    'Talleres',
+    'Entrenamiento',
+    'Paradas de seguridad',
+    'Reunión SST / Comité Técnico SST',
+    'Reunión de Seguridad Vial',
     'Difusión',
-    'Retroalimentación',
-    'Sensibilización',
-    'Inducción',
-    'Charla de 5 minutos',
-    'Entrenamiento / Simulacro'
+    'Pausas activas y dinámicas'
   ];
 
   var CA = {

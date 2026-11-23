@@ -5382,8 +5382,10 @@ function wmCuenta(raiz){
   });
 }
 function fallo(caja, cod){
+  var _btnR = '<div style="margin-top:10px"><button type="button" class="btn pri chico" onclick="if(typeof VISTA!==\'undefined\'&&VISTA.recargar) VISTA.recargar();">Reintentar ahora</button></div>';
   caja.innerHTML='<div class="vacio"><b>No se pudo cargar</b>'+
-    (cod===403||cod===401 ? 'Esta cuenta no tiene permiso sobre esta obra.' : 'Revisa tu conexión. Se reintenta solo.')+'</div>';
+    (cod===403||cod===401 ? 'Esta cuenta no tiene permiso sobre esta obra.' : 'Revisa tu conexión. Se reintenta solo.')+
+    _btnR + '</div>';
 }
 
 
@@ -10371,6 +10373,7 @@ function vistaDocs(caja, modo){
       '<label class="bt sec chico" for="dc-archivos">Elegir archivos</label>'+
       '<input type="file" id="dc-archivos" multiple class="pi-oculto"></div>')+
     '<div id="dc-cola"></div>'+
+    '<div id="dc-arbol"></div>'+
     '<div class="tarj" id="t-docs"></div>';
   var subeEsc=function(files){ var l=Array.prototype.slice.call(files||[]); cargarArchivo().then(function(){ arcSubirEscaneos(l); }, function(){ toast('No se pudo cargar esta parte. Revisa tu conexión.'); }); };
   _pindZona($('dc-zona'), function(files){ if(DC.modo) subeEsc(files); else _dcEncolar(files); });
@@ -10384,31 +10387,53 @@ function vistaDocs(caja, modo){
   function pinta(silencio){
     var t=$('t-docs'); if(!t) return;
     if(!DC.filas.length && !silencio) cargando(t);
-    /* 08/10/2026 · junto con las filas, el archivo de la web (archivo.js) y lo que el líder deja ver en ella: sin eso
-       no se pinta nada, para que lo que el líder ocultó no se asome ni un segundo */
-    Promise.all([dcMiasTraer(), traer('sst_doc', '&select=id,hoja,nombre,url,nota,creado&order=creado.desc'+
-      '&hoja=not.in.(ats,ats-cfg,ats-modelo,temas,temas-hist,empleador,tdm-cfg,quienes,subcarpetas,ges-act,ges-prog,iperc-c,ges-inspm,informe-modelo,iperc-lb,pets-ob)', 1000),
-      cargarArchivo().then(function(){ return arcCfgTraer(); }).catch(function(){ return null; })])
-      .then(function(r){
-        var filas=r[1];
-        DC.filas=(Array.isArray(filas)?filas:[]).filter(function(f){
+    var empId = (YO && YO.obra && YO.obra.id) || null;
+    var pDocs = (window.OBRASST_DOCS_ORDEN && typeof window.OBRASST_DOCS_ORDEN.cargarDocsBlindado === 'function')
+      ? window.OBRASST_DOCS_ORDEN.cargarDocsBlindado(empId, function(docs, esCache){
+          if(docs && docs.length){
+            DC.filas = docs.filter(function(f){
+              return f && !DC_NO_DOCS[f.hoja] && !_dcEsPapel(f) && !((f.hoja==='sctr' || f.hoja==='vidaley') && !f.url) && (dcEsDoc(f.hoja) || !!f.url);
+            });
+            VISTA.cache.sst_doc = DC.filas;
+            var arbolEl = $('dc-arbol');
+            if(arbolEl && window.OBRASST_DOCS_ORDEN) arbolEl.innerHTML = window.OBRASST_DOCS_ORDEN.renderArbolCharlasHTML(DC.filas);
+            _dcRepintar(); _dcPintarCola();
+          }
+        }, function(msg){
+          if(!silencio){
+            t.innerHTML = '<div class="vacio"><b>No se pudo cargar</b>' + esc(msg || 'Revisa tu conexión.') +
+              '<div style="margin-top:10px"><button type="button" class="btn pri chico" onclick="if(typeof VISTA!==\'undefined\'&&VISTA.recargar) VISTA.recargar();">Reintentar ahora</button></div></div>';
+          }
+        })
+      : traer('sst_doc', '&select=id,hoja,nombre,url,nota,creado&order=creado.desc&hoja=not.in.(ats,ats-cfg,ats-modelo,temas,temas-hist,empleador,tdm-cfg,quienes,subcarpetas,ges-act,ges-prog,iperc-c,ges-inspm,informe-modelo,iperc-lb,pets-ob)', 1000);
+
+    Promise.all([
+      dcMiasTraer(),
+      pDocs,
+      cargarArchivo().then(function(){ return arcCfgTraer(); }).catch(function(){ return null; })
+    ]).then(function(r){
+      var filas = r[1];
+      if(Array.isArray(filas) && filas.length){
+        DC.filas = filas.filter(function(f){
           return f && !DC_NO_DOCS[f.hoja] && !_dcEsPapel(f) && !((f.hoja==='sctr' || f.hoja==='vidaley') && !f.url) && (dcEsDoc(f.hoja) || !!f.url);
         });
-        VISTA.cache.sst_doc=DC.filas;
+        VISTA.cache.sst_doc = DC.filas;
+        var arbolEl = $('dc-arbol');
+        if(arbolEl && window.OBRASST_DOCS_ORDEN) arbolEl.innerHTML = window.OBRASST_DOCS_ORDEN.renderArbolCharlasHTML(DC.filas);
         _dcRepintar(); _dcPintarCola();
-        /* si hay documentos de carteles propios, se trae el título de cada cartel para nombrar su carpeta */
-        if(DC.filas.some(function(f){ return /^qr-p-/.test(String(f.hoja||'')); })){
-          sbGet('sst_hoja_qr?empresa_id=eq.'+_enc(YO.obra.id)+'&hoja=like.p-*&select=hoja,titulo').then(function(rs){
-            if(_qrpTitPon(rs) && VISTA.actual==='docs') _dcRepintar();
-          }, function(){});
-        }
-      }).catch(function(cod){ if(!silencio) fallo(t, cod); });
+      }
+      if(DC.filas.some(function(f){ return /^qr-p-/.test(String(f.hoja||'')); })){
+        sbGet('sst_hoja_qr?empresa_id=eq.'+_enc(YO.obra.id)+'&hoja=like.p-*&select=hoja,titulo').then(function(rs){
+          if(_qrpTitPon(rs) && VISTA.actual==='docs') _dcRepintar();
+        }, function(){});
+      }
+    }).catch(function(cod){ if(!silencio) fallo(t, cod); });
   }
   VISTA.recargar=pinta; pinta();
 }
 /* 08/10/2026 · el archivo de la obra (archivo.js): carpetas, vista previa, cambiar el nombre, mover, descargar, quitar y
    unir en un PDF. Si no carga (sin conexión), la tabla de siempre. */
-var ARCHIVO_VER='33f70d44a2';                         /* lo pone armar.py: el hash de portal/archivo.js */
+var ARCHIVO_VER='0a17fea123';                         /* lo pone armar.py: el hash de portal/archivo.js */
 var _ARC_CARGA=null;
 function cargarArchivo(){
   if(typeof arcPintar==='function') return Promise.resolve(true);
@@ -11156,7 +11181,7 @@ function abrirSeguimientoP(f){
 
 /* ═══ 2 · EL PROGRAMA DE CHARLAS DEL MES ═══════════════════════════ */
 var CH_TIPOS={
-  charla:       { ic:'🗣️', et:'Charla de 5 min' },
+  charla:       { ic:'🗣️', et:'Reunión de inicio de jornada' },
   capacitacion: { ic:'🎓', et:'Capacitación' },
   difusion:     { ic:'📢', et:'Difusión' },
   simulacro:    { ic:'🧯', et:'Simulacro' },
@@ -11366,7 +11391,7 @@ function chPintar(caja){
   var resto=(7-((off+ndias)%7))%7;
   for(var k=0;k<resto;k++) h+='<div class="cal-d otro" aria-hidden="true"></div>';
   h+='</div>';
-  if(!K.act) h+='<p class="ayuda" style="margin-top:12px">Toca un día para programar una charla de 5 minutos, una capacitación, una difusión o un simulacro, o usa «Llenar el mes». Lo que guardes aquí lo ven los supervisores en la app, en «Programa del mes», y tu gente en «Charlas».</p>';
+  if(!K.act) h+='<p class="ayuda" style="margin-top:12px">Toca un día para programar una reunión de inicio de jornada, una capacitación, una difusión o un simulacro, o usa «Llenar el mes». Lo que guardes aquí lo ven los supervisores en la app, en «Programa del mes», y tu gente en «Charlas».</p>';
   else h+='<p class="ayuda ch-ley" style="margin-top:10px">🗣️ charla · 🎓 capacitación · 📢 difusión · 🧯 simulacro · ✍️ tema propio · 📝 capacitación con evaluación («Programar capacitación») · <b class="cal-ok">✓</b> dictada · <b class="cal-sin">✗</b> sin dictar: pasó el día y nadie la marcó como dictada en la app.</p>';
   caja.innerHTML=h;
   $('ch-ant').onclick=function(){ CHM.ym=_mesMas(CHM.ym, -1); chPintar(caja); };
@@ -11519,7 +11544,7 @@ function abrirGuion(n, iso, act){
     if(!c){ $('hoja-cuerpo').innerHTML='<div class="aviso ojo">Esta charla no tiene guion en esta versión del portal. Ábrela en la app.</div>'; return; }
     var dato=act ? '<p class="gu-dato">'+esc([iso ? fechaLarga(iso) : '', act.hora||'', act.resp ? 'Dicta: '+act.resp : '', nombreObraP()||''].filter(Boolean).join(' · '))+'</p>' : '';
     var html=guionHTML(c, dato);
-    abrirHoja(c.titulo, 'Charla de 5 minutos · para leerla o imprimirla', html,
+    abrirHoja(c.titulo, 'Reunión de inicio de jornada · para leerla o imprimirla', html,
       (iso ? '<button type="button" class="bt sec" id="gu-volver">Volver al día</button>' : '')+'<button type="button" class="bt" id="gu-imp">🖨 Imprimir el guion</button>', {sinFoco:true});
     $('gu-imp').onclick=function(){ imprimirHTML(html, 'imp-guion'); };
     if($('gu-volver')) $('gu-volver').onclick=function(){ abrirDiaCh(iso); };
@@ -19493,7 +19518,7 @@ function cargarSenales(){
   return _SEN_CARGA;
 }
 /* 9/11/2026 · los formatos en blanco: formatos.js (el motor de la app, sus datos y la pantalla). Se pide con el jsPDF */
-var FORMATOS_VER='131a737ae6';   /* lo pone herr/huellas.py: el hash de portal/formatos.js */
+var FORMATOS_VER='b488dbd55a';   /* lo pone herr/huellas.py: el hash de portal/formatos.js */
 var _FMT_CARGA=null;
 function cargarFormatos(){
   if(typeof fmtVista==='function' && typeof FMT==='object') return Promise.resolve(true);
@@ -19569,7 +19594,7 @@ function menIr(fn){
      las reglas y las actas del comité y el ranking y el diploma del trabajador del mes. Así lo que sale de la web es lo
      mismo que sale del celular, y si la app cambia, la web cambia con ella. Se pide recién cuando hace falta. */
 var MAS_VER='8cb4b2393a';      /* lo pone armar.py: el hash de portal/mas.js */
-var MASAPP_VER='01869cb827';   /* lo pone armar.py: el hash de portal/mas-app.js */
+var MASAPP_VER='dfed498b2e';   /* lo pone armar.py: el hash de portal/mas-app.js */
 var MASWORD_VER='fef088f3e5';             /* lo pone armar.py: el hash de portal/mas-word.js (la papeleta en Word) */
 var _MAS_CARGA=null, _MASAPP_CARGA=null, _MASWORD_CARGA=null;
 /* 08/10/2026 · los stickers del casco (portal/stickers.js: los diseños, la vista previa y el PDF, los de la app) */
@@ -19577,7 +19602,7 @@ var STK_VER='521cb712ae';                /* lo pone armar.py: el hash de portal/
 var AUT_VER='ac50ae2c0f';                /* lo pone armar.py: el hash de portal/autoriza.js (la autorización del grupo sanguíneo) */
 var _AUT_CARGA=null;
 /* 08/10/2026 · los exámenes médicos ocupacionales (portal/emo.js, con lo común de ../emo-base.js adentro) */
-var INFORME_VER='8b58386429';                                 /* lo pone armar.py: el hash de portal/informe.js */
+var INFORME_VER='cc839c41a2';                                 /* lo pone armar.py: el hash de portal/informe.js */
 /* 19/10/2026 · lote 19 · el registro fotográfico del mes (portal/fotos.js) */
 var FOTOS_VER='9c70ca1fb0';                                               /* lo pone herr/huellas.py: el hash de portal/fotos.js */
 var _FOT_CARGA=null;
@@ -19723,7 +19748,7 @@ function cargarMasApp(){
 }
 /* 14/10/2026 · «LO DE CAMPO, TAMBIÉN EN LA WEB» (portal/campo.js): el tareo (y lo que viene: el parte, los primeros
    auxilios, la caída libre y el legajo). campo-app.js lo arma armar.py DESDE LA APP: las cuentas de cada cosa, tal cual. */
-var CAMPO_VER='a0335ff77e';      /* lo pone armar.py: el hash de portal/campo.js */
+var CAMPO_VER='aaa342efdd';      /* lo pone armar.py: el hash de portal/campo.js */
 var CAMPOAPP_VER='59e96557fa';   /* lo pone armar.py: el hash de portal/campo-app.js */
 var _CAMPO_CARGA=null, _CAMPOAPP_CARGA=null;
 function cargarCampo(){
@@ -24644,6 +24669,8 @@ try{ cargarPais(); }catch(_cp){}
 <script src="pdf-estudio.js"></script>
 <script src="charlas-asistencia.js"></script>
 <script src="equipo.js"></script>
+<script src="informe-formatos.js"></script>
+<script src="docs-orden.js"></script>
 <script src="volver-app.js?v=9030324eae"></script>
 </body>
 </html>

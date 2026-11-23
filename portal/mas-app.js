@@ -1352,10 +1352,10 @@ function comiteLibroPDF(anio0){
 /* ── de la app · el trabajador del mes ── */
 function ptNombreATS(){
   var sec=(empActiva()||{}).sector || leer(LS.sec,'') || 'construccion';
-  if(sec==='mineria')       return 'Participó en el IPERC continuo o la charla de 5 minutos';
-  if(sec==='hidrocarburos') return 'Participó en el ATS / permiso de trabajo o la charla de 5 minutos';
-  if(sec==='industria')     return 'Participó en el ATS / análisis de la tarea o la charla de 5 minutos';
-  return 'Participó en el ATS o la charla de 5 minutos';
+  if(sec==='mineria')       return 'Participó en el IPERC continuo o la reunión de inicio de jornada';
+  if(sec==='hidrocarburos') return 'Participó en el ATS / permiso de trabajo o la reunión de inicio de jornada';
+  if(sec==='industria')     return 'Participó en el ATS / análisis de la tarea o la reunión de inicio de jornada';
+  return 'Participó en el ATS o la reunión de inicio de jornada';
 }
 function ptCortoATS(){
   var sec=(empActiva()||{}).sector || leer(LS.sec,'') || 'construccion';

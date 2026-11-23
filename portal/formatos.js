@@ -332,7 +332,7 @@ var FMT = (function(){
       { t:'tabla', tit:'Análisis de la tarea', cols:[['N.º', 0.04], ['Pasos de la tarea', 0.22], ['Peligros', 0.22], ['Riesgos', 0.22], ['Medidas de control', 0.30]], filas:7, alto:13 },
       { t:'tabla', tit:'La cuadrilla: conocemos los peligros y los controles de esta tarea', cols:[['N.º', 0.04], ['Apellidos y nombres', 0.38], ['DNI', 0.14], ['Cargo', 0.2], ['Firma', 0.24]], filas:8, alto:8 },
       { t:'firmas', l:['Supervisor responsable', 'Supervisor de SST'] }] },
-    { k:'asistencia', g:'reg', n:'Registro de asistencia', ic:'🧾', d:'Capacitación, charla de 5 minutos, sensibilización, taller, entrenamiento, simulacro, parada de seguridad, difusión o reunión: el tema, el expositor y la firma de cada participante. Con 10, 15 o 20 filas, siempre en una hoja.', s1:[1.08, 0.6], s2:[1.0, 0.8], filasOp:[10, 15, 20], partes:[
+    { k:'asistencia', g:'reg', n:'Registro de asistencia', ic:'🧾', d:'Capacitación, reunión de inicio de jornada, sensibilización, taller, entrenamiento, simulacro, parada de seguridad, difusión o reunión: el tema, el expositor y la firma de cada participante. Con 10, 15 o 20 filas, siempre en una hoja.', s1:[1.08, 0.6], s2:[1.0, 0.8], filasOp:[10, 15, 20], partes:[
       { t:'datos', linea:1, filas:EMPLEADOR },
       { t:'tipo', izq:[[['Lugar', 2, '{obra}'], ['Fecha', 1]], [['Desde', 1], ['Hasta', 1], ['Asistentes', 1]], [['Duración (en minutos)', 3]]],
         ops:['Capacitación específica', 'Sensibilización', 'Talleres', 'Entrenamiento / simulacro', 'Parada de seguridad', 'Retroalimentación', 'Difusión', 'Reunión de inicio de jornada', 'Charla de 5 minutos', 'Reunión semanal', 'Otros: ____________'] },
