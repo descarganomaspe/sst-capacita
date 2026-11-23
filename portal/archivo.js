@@ -502,7 +502,8 @@ function arcPintar(){
   var nE=vis.filter(function(f){ return arcInfo(f).k==='esc'; }).length, nF=vis.filter(function(f){ return arcInfo(f).k==='foto'; }).length;
   var sub=vis.length+' '+(vis.length===1 ? 'archivo' : 'archivos')+(nE ? ' · '+nE+' '+(nE===1?'escaneo':'escaneos') : '')+(nF ? ' · '+nF+' '+(nF===1?'foto':'fotos')+' de obra' : '');
   var h='<div class="arc-cab"><div><h2>'+(mEsc ? 'Escaneos y fotos de la app' : 'Archivo de la obra')+'</h2><p class="sub" id="arc-cuantos">'+esc(sub)+'</p></div>'+
-        '<div class="arc-cab-acc"><button type="button" class="bt chico" id="arc-unir" title="Une PDF y fotos en un solo PDF, en el orden que elijas">⧉ Unir en un PDF</button>'+
+        '<div class="arc-cab-acc"><button type="button" class="btn sec chico" onclick="abrirEstudioPdf()">🛠️ Herramientas PDF / Imágenes</button>'+
+        '<button type="button" class="bt chico" id="arc-unir" title="Une PDF y fotos en un solo PDF, en el orden que elijas">⧉ Unir en un PDF</button>'+
         (_arcJefe() ? '<button type="button" class="bt sec chico" id="arc-cfg">⚙ Qué se ve en la web</button>' : '')+'</div></div>';
   h+=_arcFranjaWeb();
   if(_arcJefe() && (ocE || ocF)){
@@ -767,7 +768,9 @@ function _arcPintarLista(){
         '<input type="checkbox" class="arc-ck" data-ck="'+esc(id)+'"'+(s?' checked':'')+' aria-label="Elegir «'+esc(n)+'»">'+
         '<button type="button" class="arc-mini" data-acc="ver" tabindex="-1" aria-hidden="true">'+_arcIcono(f)+'</button>'+
         '<div class="arc-nom"><button type="button" class="arc-tit" data-acc="ver" title="'+esc(n)+'">'+esc(n)+'</button><small>'+esc(_arcSub(f))+'</small></div>'+
-        '<div class="arc-acc"><button type="button" class="bt sec chico" data-acc="ver">Ver</button>'+
+        '<div class="arc-acc">'+
+          (/\.pdf/i.test(f.url || f.nombre || '') ? '<button type="button" class="btn sec chico" onclick="abrirEstudioPdf({url:\''+escA(f.url||'')+'\', nombre:\''+escA(f.nombre||'')+'\', hoja:\''+escA(f.hoja||'')+'\'})">✂️ Editar / Dividir</button>' : '')+
+          '<button type="button" class="bt sec chico" data-acc="ver">Ver</button>'+
           '<button type="button" class="arc-mas" data-acc="menu" aria-haspopup="menu" aria-label="Más acciones para «'+esc(n)+'»">⋯</button></div></li>';
     }).join('')+'</ul>';
   }

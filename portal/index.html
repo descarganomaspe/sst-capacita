@@ -4588,7 +4588,7 @@ var AREAS = [
   /* 16/11/2026 · el chat de la obra en la web (portal/chat.js) y la videollamada (antes en «Empresa»), juntos y arriba (después
      del Informe, que va segundo desde el lote 23) */
   { id:'a-comunic',  n:'Comunicación',           ic:'💬', v:['chat', 'llamada'] },
-  { id:'a-personal', n:'Personal',               ic:'☺',  v:['personal', 'personas', 'tareo', 'cred', 'legajo', 'autor', 'emo', 'sctr', 'tdm', 'amon', 'visitas'] },
+  { id:'a-personal', n:'Personal',               ic:'☺',  v:['personal', 'personas', 'sec-equipo', 'tareo', 'cred', 'legajo', 'autor', 'emo', 'sctr', 'tdm', 'amon', 'visitas'] },
   { id:'a-capac',    n:'Capacitación',           ic:'🎓', v:['prog', 'caphechas', 'charlas', 'induccion', 'instructivo', 'constancias', 'cump', 'matriz', 'registro', 'encuestas', 'campanas'] },
   { id:'a-epp',      n:'EPP',                    ic:'⛑',  v:['kardex', 'epp', 'eppobra', 'pedidos', 'reqs'] },
   { id:'a-riesgos',  n:'Riesgos',                ic:'📋', v:['riesgos-obra', 'peligros-sitio', 'ergo-video', 'ats', 'iperc-lb', 'pets', 'caida', 'alto', 'quimicos', 'ergo'] },
@@ -4604,7 +4604,7 @@ var AREAS = [
 ];
 var AREA_MAS = { id:'a-mas', n:'Más', ic:'⋯', v:[] };
 var PESTANAS = {
-  avisos:'Pendientes', personal:'Personal', personas:'Personal', cred:'Credenciales', autor:'Autorizaciones', emo:'Salud (EMO)', sctr:'SCTR', tdm:'Trabajador del mes', amon:'Amonestaciones', visitas:'Visitas', tareo:'Tareo', parte:'Parte del día', auxilios:'Primeros auxilios', caida:'Caída libre', alto:'Alto riesgo', legajo:'Legajo SST', obra:'Hoy en la obra', resumen:'Resumen',
+  avisos:'Pendientes', personal:'Personal', personas:'Personal', cred:'Credenciales', autor:'Autorizaciones', emo:'Salud (EMO)', sctr:'SCTR', tdm:'Trabajador del mes', amon:'Amonestaciones', visitas:'Visitas', tareo:'Tareo', 'sec-equipo':'Equipo y Supervisores', parte:'Parte del día', auxilios:'Primeros auxilios', caida:'Caída libre', alto:'Alto riesgo', legajo:'Legajo SST', obra:'Hoy en la obra', resumen:'Resumen',
   prog:'Programar', charlas:'Charlas del mes', induccion:'Inducción', caphechas:'Realizadas', constancias:'Constancias', cump:'Constancias',
   matriz:'Matriz', registro:'Seguimiento', encuestas:'Encuestas', campanas:'Campañas',
   os:'Para Gerencia', kardex:'Entrega de EPP', epp:'Entrega de EPP', eppobra:'EPP de la obra', pedidos:'Pedidos de la gente', reqs:'Requerimientos',
@@ -5280,6 +5280,7 @@ function tabla(caja, cols, filas, op){
     h+='</tbody></table></div>';
   }
   caja.innerHTML=h;
+  if(window.OBRASST_CHARLAS_ASIST) try{ window.OBRASST_CHARLAS_ASIST.pintarPanel('charlas-asist-panel'); }catch(_ca){}
   selListaWebBind(caja.id+'-q', function(v, qi){
     est.q=v; var pos=qi.selectionStart; tabla(caja, cols, filas, op); var q2=$(caja.id+'-q'); if(q2){ q2.focus(); try{ q2.setSelectionRange(pos,pos); }catch(e){} }
   });
@@ -10352,8 +10353,9 @@ function vistaEscaneos(caja){ vistaDocs(caja, 'esc'); }
 function vistaDocs(caja, modo){
   DC.cola=[]; DC.filtro=''; DC.subc=null; DC.filas=[]; DC.modo=(modo==='esc') ? 'esc' : '';
   var ac=$('acciones');
-  if(ac) ac.innerHTML=DC.modo ? '<button type="button" class="bt sec" id="dc-todo">☰ Todos los documentos</button>'
-    : '<button type="button" class="bt sec" id="dc-qr">▣ Carteles QR</button><button type="button" class="bt sec" id="dc-enlace">🔗 Agregar un enlace</button>';
+  if(ac) ac.innerHTML=(DC.modo ? '<button type="button" class="bt sec" id="dc-todo">☰ Todos los documentos</button>'
+    : '<button type="button" class="bt sec" id="dc-qr">▣ Carteles QR</button><button type="button" class="bt sec" id="dc-enlace">🔗 Agregar un enlace</button>')+
+    '<button type="button" class="btn sec" onclick="abrirEstudioPdf()">🛠️ Herramientas PDF / Imágenes</button>';
   caja.innerHTML=(DC.modo ?
     '<div class="pi-zona" id="dc-zona" tabindex="0" role="button" aria-label="Arrastra aquí los PDF o las fotos escaneados, o toca para elegirlos">'+
       '<b>⬆ Arrastra aquí los PDF o las fotos de hojas escaneadas</b>'+
@@ -10406,7 +10408,7 @@ function vistaDocs(caja, modo){
 }
 /* 08/10/2026 · el archivo de la obra (archivo.js): carpetas, vista previa, cambiar el nombre, mover, descargar, quitar y
    unir en un PDF. Si no carga (sin conexión), la tabla de siempre. */
-var ARCHIVO_VER='90ee7562b5';                         /* lo pone armar.py: el hash de portal/archivo.js */
+var ARCHIVO_VER='33f70d44a2';                         /* lo pone armar.py: el hash de portal/archivo.js */
 var _ARC_CARGA=null;
 function cargarArchivo(){
   if(typeof arcPintar==='function') return Promise.resolve(true);
@@ -10431,8 +10433,9 @@ function _dcTabla(){
     {k:'nombre', t:'Documento', h:function(f){ return '<b>'+esc(f.nombre||'Documento')+'</b>'+(f.nota && dcEsDoc(f.hoja) && String(f.nota).length<300 ? '<span class="sub">'+esc(f.nota)+'</span>' : ''); }},
     {k:'url', t:'Archivo', v:function(f){ return /^data:/i.test(f.url||'') ? 'foto' : (f.url||''); }, h:function(f){
        if(!f.url) return '<span class="pill gris">sin archivo</span>';
-       if(/^data:/i.test(f.url)) return '<button type="button" class="enlace dc-abrir" data-acc="ver">abrir</button>';
-       return '<a href="'+esc(f.url)+'" target="_blank" rel="noopener">abrir</a>'; }},
+       var _bEdit = (/\.pdf/i.test(f.url||f.nombre||'')) ? ' <button type="button" class="btn sec chico" onclick="abrirEstudioPdf({url:\''+escA(f.url)+'\', nombre:\''+escA(f.nombre)+'\', hoja:\''+escA(f.hoja)+'\'})">✂️ Editar / Dividir</button>' : '';
+       if(/^data:/i.test(f.url)) return '<button type="button" class="enlace dc-abrir" data-acc="ver">abrir</button>' + _bEdit;
+       return '<a href="'+esc(f.url)+'" target="_blank" rel="noopener">abrir</a>' + _bEdit; }},
     {k:'_acc', t:'', acc:true, h:function(f){ return (dcEsDoc(f.hoja) || dcCarpetaDe(f.hoja).propio) ? '<button type="button" class="bt sec chico" data-acc="quitar">Quitar</button>' : ''; }}
   ];
   var h='';
@@ -11322,6 +11325,7 @@ function chPintar(caja){
     '</div><div class="ch-herr"><button type="button" class="bt sec chico" id="ch-imprimir">Imprimir</button>'+
     '<button type="button" class="bt sec chico" id="ch-excel">Exportar a Excel</button>'+
     '<button type="button" class="bt sec chico" id="ch-ics" title="Un archivo .ics que se abre en Google Calendar, Outlook o el calendario del celular">📅 A mi calendario</button></div></div>';
+  h+='<div id="charlas-asist-panel"></div>';
   var K=_chCuentas(ym);
   h+='<div class="ch-cifras" id="ch-cifras">'+(K.act
     ? '<b>'+K.act+'</b> '+(K.act===1?'actividad':'actividades')+' · <b>'+K.ch+'</b> '+(K.ch===1?'charla':'charlas')+' · <b>'+K.dic+'</b> '+(K.dic===1?'dictada':'dictadas')+
@@ -11681,11 +11685,15 @@ function abrirDiaCh(iso, que, aviso){
     h+='<div class="seccion" style="margin-top:0"><h3>Lo programado</h3>';
     acts.forEach(function(x){
       var a=x.d, t=chTipo(a), dic=a.dictada;
+      var _bdg = (window.OBRASST_CHARLAS_ASIST && typeof window.OBRASST_CHARLAS_ASIST.badgesTema === 'function') ? window.OBRASST_CHARLAS_ASIST.badgesTema(chNombre(a)) : '';
       h+='<div class="act"><span class="ic" aria-hidden="true">'+CH_TIPOS[t].ic+'</span><div><b>'+esc(chNombre(a))+'</b>'+
+         (_bdg ? '<div>'+_bdg+'</div>' : '')+
          '<small>'+esc([CH_TIPOS[t].et, a.hora||'', a.resp ? 'Resp.: '+a.resp : ''].filter(Boolean).join(' · '))+'</small>'+
          (dic ? '<small style="color:var(--ok)">✓ Dictada'+(dic.asist ? ' · '+esc(dic.asist)+' asistentes' : '')+'</small>'
               : (iso<hoy ? '<small class="ch-mal">No se marcó como dictada en la app</small>' : ''))+
-         '</div><span class="acc">'+((t==='charla' && a.tema) || (chIaVa(t) && String(a.detalle||'').trim()) ? '<button type="button" class="bt sec chico" data-gu="'+x.i+'">Guion</button>' : '')+
+         '</div><span class="acc">'+
+         '<button type="button" class="btn sec chico" onclick="abrirModalAsistenciaCharla(\''+escA(chNombre(a))+'\')">📋 Subir asistencia</button>'+
+         ((t==='charla' && a.tema) || (chIaVa(t) && String(a.detalle||'').trim()) ? '<button type="button" class="bt sec chico" data-gu="'+x.i+'">Guion</button>' : '')+
          '<button type="button" class="bt sec chico" data-ed="'+x.i+'">Cambiar</button>'+
          '<button type="button" class="bt mal chico" data-qu="'+x.i+'">Quitar</button></span></div>';
     });
@@ -11694,8 +11702,12 @@ function abrirDiaCh(iso, que, aviso){
   if(evs.length){
     h+='<div class="seccion"'+(acts.length?'':' style="margin-top:0"')+'><h3>Capacitación con evaluación ese día</h3>';
     evs.forEach(function(e, i){
-      h+='<div class="act"><span class="ic" aria-hidden="true">📝</span><div><b>'+esc(e.tema)+'</b><small>'+esc(paraTexto(e.o.para)+(e.o.ev ? ' · evalúa '+e.o.ev : ''))+'</small></div>'+
-         '<span class="acc"><button type="button" class="bt sec chico" data-ev="'+i+'">'+(iso<=hoy ? 'Quién la rindió' : 'Ver')+'</button></span></div>';
+      var _bdgEv = (window.OBRASST_CHARLAS_ASIST && typeof window.OBRASST_CHARLAS_ASIST.badgesTema === 'function') ? window.OBRASST_CHARLAS_ASIST.badgesTema(e.tema) : '';
+      h+='<div class="act"><span class="ic" aria-hidden="true">📝</span><div><b>'+esc(e.tema)+'</b>'+
+         (_bdgEv ? '<div>'+_bdgEv+'</div>' : '')+
+         '<small>'+esc(paraTexto(e.o.para)+(e.o.ev ? ' · evalúa '+e.o.ev : ''))+'</small></div>'+
+         '<span class="acc"><button type="button" class="btn sec chico" onclick="abrirModalAsistenciaCharla(\''+escA(e.tema)+'\')">📋 Subir asistencia</button>'+
+         '<button type="button" class="bt sec chico" data-ev="'+i+'">'+(iso<=hoy ? 'Quién la rindió' : 'Ver')+'</button></span></div>';
     });
     h+='</div>';
   }
@@ -18748,7 +18760,12 @@ function pcgPDF(){
   });
 }
 
+function vistaEquipoPortal(caja){
+  caja.innerHTML = '<section id="sec-equipo"><div id="eqp-portal-host"></div></section>';
+  if(typeof abrirEquipoPortal === 'function') abrirEquipoPortal('eqp-portal-host');
+}
 var V = {
+  equipoSup: {id:'sec-equipo', g:'Personal', tab:'Equipo y Supervisores', ic:'👥', n:'Equipo y Supervisores', s:'Supervisores nombrados, códigos de invitación y permisos de gestión', pintar:vistaEquipoPortal, tablas:[]},
   matriz: {id:'matriz', g:'Capacitación', ic:'▤', n:'Matriz', s:'Quién está al día en qué, contra lo que exige su puesto', pintar:vistaMatriz, tablas:['sst_trabajador','sst_constancia','sst_doc']},
   reg:    {id:'registro', g:'Capacitación', ic:'▦', n:'Registro de seguimiento', s:'El Excel de control: cada trabajador con sus notas y fechas, y quién no rindió lo que le tocaba', pintar:vistaRegistro, tablas:['sst_trabajador','sst_constancia','sst_doc']},
   prog:   {id:'prog', g:'Capacitación', ic:'🗓', n:'Programar capacitación', s:'El tema, el día y para quiénes: ese día les sale «Iniciar capacitación» en su app · aquí o en la app, es la misma lista', pintar:vistaProgramadas, tablas:['sst_doc','sst_constancia']},
@@ -18973,6 +18990,7 @@ var VISTAS_LIDER = [
   V.enc,
   V.ind, V.instructivo,
   {id:'personas', g:'Registros', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
+  conGrupo(V.equipoSup, 'Registros'),
   conGrupo(V.cargos, 'Registros'), conGrupo(V.comite, 'Registros'), conGrupo(V.quien, 'Registros'), conGrupo(V.frentes, 'Registros'), conGrupo(V.auxilios, 'Registros'), conGrupo(V.tdm, 'Registros'),
   V.reqs, V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.rieobra, V.peligrosSitio, V.ergoVideo, V.ats, V.ipercLb, V.pets, V.caida, V.alto, V.ergo, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.huella, V.docs, V.esc, V.util, V.qr, V.senales, V.formatos,
   conGrupo(V.visitas, 'Registros'), conGrupo(V.tareo, 'Registros'),
@@ -18985,6 +19003,7 @@ var VISTAS_SUP = [
    tablas:['sst_trabajador','sst_reporte','sst_kardex','sst_constancia','sst_doc']},
   V.avisos,
   {id:'personal', g:'Mi obra', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
+  conGrupo(V.equipoSup, 'Mi obra'),
   conGrupo(V.os, 'Mi obra'),
   conGrupo(V.chat, 'Mi obra'), conGrupo(V.llamada, 'Mi obra'),
   V.parte,
@@ -22019,7 +22038,7 @@ function altaInvitacion(){
         q==='codigo_vencido'   ? 'Ese código venció. Pídele a tu líder que te genere uno nuevo.' :
         q==='otro_correo'      ? 'Esa invitación es para otro correo. Entra con el correo al que te la mandaron, o pídele a tu líder que la haga con este.' :
         q==='doc_no_coincide'  ? 'El documento no coincide con el que puso tu líder. Escríbelo igual, sin puntos ni guiones.' :
-        q==='ruc_cambio'       ? 'La empresa cambió de RUC después de la invitación. Pídele una nueva a tu líder.' :
+        q==='ruc_cambio'       ? 'La empresa cambió su identificación fiscal después de la invitación. Pídele una nueva a tu líder.' :
         q==='tope_gestores'    ? 'Esa empresa ya tiene todos sus puestos de gestión ocupados. Tu líder puede sumar un puesto por '+_plata(INI_EXTRA.puesto)+' al mes.' :
         q==='sin_sesion'       ? 'Tu sesión venció: vuelve a entrar.' : 'No se pudo entrar.');
       return;
@@ -24622,6 +24641,9 @@ function video45Abrir(k){
    documento del país del reloj, y la obra de afuera no espera por él */
 try{ cargarPais(); }catch(_cp){}
 </script>
+<script src="pdf-estudio.js"></script>
+<script src="charlas-asistencia.js"></script>
+<script src="equipo.js"></script>
 <script src="volver-app.js?v=9030324eae"></script>
 </body>
 </html>

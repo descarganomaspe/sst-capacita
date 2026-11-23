@@ -7280,12 +7280,20 @@ html:not(.t-claro):not(.t-alto) .cl-charla{background:rgba(245,183,0,.07);border
 .cl-fuente{font-family:var(--letra);font-size:11.5px;color:var(--gris);margin-top:12px}
 
 /* 3. FORMATOS Y AJUSTES DE OBRA */
-#p-empresa{font-family:var(--letra)}
-#p-empresa .sec-tit{font-family:var(--letra)!important;font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);margin:18px 2px 7px}
-#p-empresa .sub{font-family:var(--letra);line-height:1.45;color:var(--gris)}
-#p-empresa input, #p-empresa select{font-family:var(--letra);border-radius:12px;padding:12px 14px;font-size:14px;border:1.2px solid rgba(16,26,34,.14);background:#FFFFFF;transition:border-color .15s}
-#p-empresa input:focus{border-color:var(--oro);outline:none;box-shadow:0 0 0 3px rgba(245,183,0,.18)}
-#p-empresa .btn{font-family:var(--letra);font-weight:700}
+#p-empleador, #p-empresa{font-family:var(--letra)}
+#p-empleador h2, #p-empresa h2{font-family:var(--letra)!important;font-weight:800;color:var(--tinta)}
+#p-empleador .sec-tit, #p-empresa .sec-tit{font-family:var(--letra)!important;font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);margin:18px 2px 7px}
+#p-empleador .sub, #p-empresa .sub{font-family:var(--letra);line-height:1.45;color:var(--gris)}
+#p-empleador input, #p-empleador select, #p-empresa input, #p-empresa select{font-family:var(--letra);border-radius:12px;padding:12px 14px;font-size:14px;border:1.2px solid rgba(16,26,34,.14);background:#FFFFFF;transition:border-color .15s;width:100%;box-sizing:border-box}
+html:not(.t-claro):not(.t-alto) #p-empleador input, html:not(.t-claro):not(.t-alto) #p-empleador select,
+html:not(.t-claro):not(.t-alto) #p-empresa input, html:not(.t-claro):not(.t-alto) #p-empresa select{background:rgba(var(--w),.04);border-color:rgba(var(--w),.14);color:var(--tinta)}
+#p-empleador input:focus, #p-empresa input:focus{border-color:var(--oro);outline:none;box-shadow:0 0 0 3px rgba(245,183,0,.18)}
+#p-empleador .btn, #p-empresa .btn{font-family:var(--letra);font-weight:700;border-radius:12px}
+#p-empleador .caja, #p-empresa .caja{border-radius:16px;font-family:var(--letra)}
+html.t-claro #p-empleador .caja, html.t-claro #p-empresa .caja{background:#FFFFFF;border:1px solid rgba(16,26,34,.10);box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.pry-fila.on .pry-tic.con-img{background:transparent;box-shadow:none}
+.nrm-vista button .nrm-v-ic{display:inline-flex;align-items:center;justify-content:center}
+.nrm-vista button .nrm-v-ic img{width:20px;height:20px;display:block;object-fit:contain}
 
 .pry-fila{display:flex;align-items:stretch;gap:8px;margin:0 0 8px;font-family:var(--letra)}
 .pry-el{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left;background:rgba(var(--w),.05);border:1px solid rgba(var(--w),.12);border-radius:14px;padding:12px 14px;color:inherit;font-family:var(--letra);cursor:pointer;transition:all .15s ease}
@@ -8390,7 +8398,7 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
     <label class="sec-tit" style="margin:0 0 6px">RUC</label>
     <input id="em-ruc" inputmode="numeric" maxlength="11" placeholder="20123456789">
     <div id="em-ruc-nota"></div>
-    <button type="button" class="btn sec" id="em-sunat" style="margin:9px 0 0" onclick="traerDeSunat()">🔎 Traer los datos de SUNAT</button>
+    <button type="button" class="btn sec cl-btn-lugar" id="em-sunat" style="margin:9px 0 0" onclick="traerDeSunat()"><span class="emo" aria-hidden="true">🔎</span> <span>Traer los datos de SUNAT</span></button>
     <div id="em-sunat-msg" style="font-size:13px;margin:8px 0 0;min-height:18px"></div>
     <label class="sec-tit" style="margin:16px 0 6px">Razón social o denominación social</label>
     <input id="em-razon" placeholder="Constructora Los Andes S.A.C." autocomplete="organization">
@@ -125690,7 +125698,7 @@ function generarInvitacion(){
   var dias  =parseInt($('inv-dias').value,10)||15;
   if(correo.indexOf('@')<1 || correo.lastIndexOf('.')<correo.indexOf('@')){
     m.textContent='Escribe el correo con el que esa persona va a entrar. Tiene que ser el mismo, letra por letra.'; return; }
-  if(_norm(doc).length<6){ m.textContent='Falta su documento: DNI de 8 dígitos, o carné de extranjería.'; return; }
+  if(_norm(doc).length<6){ m.textContent='Falta su documento de identidad (mínimo 6 caracteres, sin puntos ni guiones).'; return; }
   /* ══════ EL NOMBRE DEJÓ DE SER OPCIONAL (12/09/2026) ══════
      Antes se podía nombrar a un supervisor sin poner su nombre. Ahora esa
      misma persona entra a la lista de trabajadores, y un trabajador sin
@@ -125709,9 +125717,9 @@ function generarInvitacion(){
       var q=(j&&j.error)||'';
       m.innerHTML =
         q==='no_eres_dueno' ? 'Solo quien activó el plan puede nombrar supervisores.' :
-        q==='ruc_invalido'  ? 'Tu empresa no tiene un RUC de 11 dígitos registrado, y el código va amarrado a él. Créala de nuevo con su RUC o escríbenos para corregirlo.' :
+        q==='ruc_invalido'  ? 'Tu empresa no tiene un identificador fiscal válido (RUC, RNC, RUT, NIT, etc.) registrado, y el código va amarrado a él. Revísalo o escríbenos para corregirlo.' :
         q==='correo_invalido' ? 'Ese correo no se ve bien escrito. Revísalo.' :
-        q==='doc_invalido'  ? 'El documento es muy corto. El DNI son 8 dígitos.' :
+        q==='doc_invalido'  ? 'El documento de identidad es muy corto (mínimo 6 caracteres).' :
         q==='ya_invitado'   ? 'Ya le mandaste una invitación a ese correo y sigue sin usarse. Búscala abajo: puedes volver a pasársela o revocarla y hacer una nueva.' :
         q==='tope_gestores' ? ('Tienes ocupados tus <b>'+(j.tope||1)+'</b> puestos de gestión. Puedes sumar puestos sueltos por S/ '+PUESTO_EXTRA+' al mes cada uno, sin cambiar de plan.') :
         q==='sin_sesion'    ? 'Entra a tu cuenta primero.' :
@@ -125910,7 +125918,7 @@ function canjearInvitacion(){
         q==='codigo_vencido'   ? 'Ese código venció. Pídele a tu líder que te genere uno nuevo.' :
         q==='otro_correo'      ? 'Esa invitación es para otro correo. Entra con el correo al que te la mandaron, o pídele a tu líder que la haga con este.' :
         q==='doc_no_coincide'  ? 'El documento no coincide con el que puso tu líder. Escríbelo igual, sin puntos ni guiones.' :
-        q==='ruc_cambio'       ? 'La empresa cambió de RUC después de la invitación. Pídele una nueva a tu líder.' :
+        q==='ruc_cambio'       ? 'La empresa cambió su identificación fiscal después de la invitación. Pídele una nueva a tu líder.' :
         q==='tope_gestores'    ? 'Esa empresa ya tiene todos sus puestos de gestión ocupados. Tu líder puede sumar un puesto por S/ '+PUESTO_EXTRA+' al mes.' :
         q==='sin_sesion'       ? 'Entra a tu cuenta primero.' :
         'No se pudo entrar.';
@@ -135595,7 +135603,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='574eb0b55a';
+var SELLO_APP='e060a695ca';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
