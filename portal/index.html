@@ -5382,7 +5382,7 @@ function wmCuenta(raiz){
   });
 }
 function fallo(caja, cod){
-  var _btnR = '<div style="margin-top:10px"><button type="button" class="btn pri chico" onclick="if(typeof VISTA!==\'undefined\'&&VISTA.recargar) VISTA.recargar();">Reintentar ahora</button></div>';
+  var _btnR = '<div style="margin-top:10px"><button type="button" class="bt chico" onclick="if(typeof VISTA!==\'undefined\'&&VISTA.recargar) VISTA.recargar();">Reintentar ahora</button></div>';
   caja.innerHTML='<div class="vacio"><b>No se pudo cargar</b>'+
     (cod===403||cod===401 ? 'Esta cuenta no tiene permiso sobre esta obra.' : 'Revisa tu conexión. Se reintenta solo.')+
     _btnR + '</div>';
@@ -5829,6 +5829,187 @@ function inspPorFormatoAl(){
     q.value=on ? b.getAttribute('data-tipo') : ''; q.dispatchEvent(new Event('input', { bubbles:true }));
     try{ q.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(e){}
   };
+}
+
+/* >>> USO-TIEMPO (20/11/2026) <<<
+   Marcelo: «saber en la consola qué tanto tiempo el usuario pasa en la app y en la web, y qué tanto entra». Se cuentan los
+   minutos con la pantalla a la vista y con alguien usándola (tocó, escribió o se movió en los últimos 5 minutos), y las
+   entradas (abrir, o volver después de 30 minutos). Nada de lo que hizo ni de lo que vio. Lo pendiente queda en este
+   equipo y sube cada 5 minutos (sst_uso_latido); sin señal, espera. Solo lo lee la consola (sst_admin_uso). */
+(function(){
+  var CANAL = 'web', LK = 'sst_uso_pend_v1', toque = Date.now(), oculto = 0, enviando = false;
+  function emp(){ try{ return (YO && YO.obra && YO.obra.id && !YO.demo && !YO.central) ? String(YO.obra.id) : ''; }catch(_e){ return ''; } }
+  function cuenta(){ try{ return !!(TOK && TOK.access_token) && !(YO && YO.demo); }catch(_e){ return false; } }
+  function dia(){ var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function leerP(){ try{ var o = JSON.parse(localStorage.getItem(LK) || '{}'); return (o && typeof o === 'object') ? o : {}; }catch(e){ return {}; } }
+  function guardarP(o){ try{ localStorage.setItem(LK, JSON.stringify(o)); }catch(e){} }
+  function sumar(min, ent){
+    var e = emp(); if(!e || !cuenta()) return;
+    var o = leerP(), k = e + '|' + dia(), x = o[k] || (o[k] = { m:0, e:0 });
+    x.m += min; x.e += ent; guardarP(o);
+  }
+  function enviar(){
+    if(enviando || !cuenta() || navigator.onLine === false || typeof sbRpc !== 'function') return;
+    var o = leerP(), ks = Object.keys(o); if(!ks.length) return;
+    enviando = true;
+    var cad = Promise.resolve();
+    ks.forEach(function(k){
+      var p = k.split('|'), x = o[k]; if(!x || (!x.m && !x.e)){ return; }
+      var m = x.m, n = x.e;
+      cad = cad.then(function(){
+        return sbRpc('sst_uso_latido', { p_emp:p[0], p_canal:CANAL, p_dia:p[1], p_min:m, p_ent:n }).then(function(r){
+          var o2 = leerP(), y = o2[k];
+          if(r && r.ok === false && r.motivo !== 'sin_sesion'){ delete o2[k]; guardarP(o2); return; }   /* un día viejo u otra obra: se descarta */
+          if(y){ y.m = Math.max(0, y.m - m); y.e = Math.max(0, y.e - n); if(!y.m && !y.e) delete o2[k]; guardarP(o2); }
+        }, function(){});
+      });
+    });
+    cad.then(function(){ enviando = false; }, function(){ enviando = false; });
+  }
+  ['pointerdown', 'keydown', 'touchstart', 'scroll', 'wheel'].forEach(function(ev){ try{ window.addEventListener(ev, function(){ toque = Date.now(); }, { passive:true, capture:true }); }catch(e){} });
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'hidden'){ oculto = Date.now(); enviar(); }
+    else { if(oculto && Date.now() - oculto > 30 * 60000) sumar(0, 1); oculto = 0; toque = Date.now(); }
+  });
+  setTimeout(function(){ sumar(0, 1); }, 4000);
+  setInterval(function(){ if(document.visibilityState === 'visible' && Date.now() - toque < 5 * 60000) sumar(1, 0); }, 60000);
+  setInterval(enviar, 5 * 60000);
+  setTimeout(enviar, 20000);
+})();
+/* <<< USO-TIEMPO >>> */
+/* ══ LAS INSPECCIONES, ORDENADAS (20/11/2026) ══════════════════════════════════════════════════════════════════════
+   Por proyecto (esta obra o todas las que ve la cuenta) y, dentro, por frente: el frente sale del «Área» que se llena en
+   la app o aquí («Area: …» en Hallazgos) y se junta con los frentes de la obra (hoja «frentes»). Filtros: el mes, el
+   formato y el frente. Cada frente con su tabla; al tocar una fila se abre como siempre. */
+/* 20/11/2026 · los frentes de la obra (hoja «frentes») y el frente de un equipo («Frente · detalle» en su ubicación) */
+var _FRO={ obra:null, L:null, t:0 };
+function frentesObraP(){
+  var oid=(YO.obra||{}).id;
+  if(_FRO.obra===oid && _FRO.L && Date.now()-_FRO.t<60000) return Promise.resolve(_FRO.L);
+  return traer('sst_doc', '&hoja=eq.frentes&select=nombre,nota&order=creado.asc', 60).then(function(rows){
+    var L=[]; (rows||[]).forEach(function(d){ var o=null; try{ o=typeof d.nota==='string' ? JSON.parse(d.nota) : d.nota; }catch(e){} var n=String((o && o.n) || d.nombre || '').trim(); if(n && L.indexOf(n)<0) L.push(n); });
+    _FRO={ obra:oid, L:L, t:Date.now() }; return L;
+  }, function(){ return []; });
+}
+function eqUbicPartesP(u){ var t=String(u||'').trim(), i=t.indexOf(' · '); return i<0 ? { fr:t, det:'' } : { fr:t.slice(0, i).trim(), det:t.slice(i+3).trim() }; }
+function eqUbicJuntaP(fr, det){ fr=String(fr||'').replace(/\s+/g, ' ').trim().slice(0, 60); det=String(det||'').replace(/\s+/g, ' ').replace(/ · /g, ', ').trim().slice(0, 58); return fr+(det ? ' · '+det : ''); }
+var INSW={ alc:'obra', mes:'', fmt:'', fr:'', q:'', filas:[], frentes:{}, n:0 };
+function _inswArea(obs){ var m=/(?:^|\n)\s*[ÁA]rea:\s*([^\n]+)/i.exec(String(obs||'')); return m ? String(m[1]).trim().slice(0, 80) : ''; }
+function _inswFrente(f){
+  var a=_inswArea(f.observacion); if(!a) return '';
+  var L=INSW.frentes[f.empresa]||[], k=nrm(a);
+  for(var i=0;i<L.length;i++){ var n=nrm(L[i]); if(n===k || (n.length>2 && k.indexOf(n)>-1)) return L[i]; }
+  return a.charAt(0).toUpperCase()+a.slice(1);
+}
+function _inswObras(){ var raiz=(YO.obra||{}).padre_id || (YO.obra||{}).id; return (YO.empresas||[]).filter(function(e){ return e && (e.id===raiz || e.padre_id===raiz); }); }
+function _inswObraN(id){ var o=(YO.empresas||[]).filter(function(e){ return e.id===id; })[0]; return o ? nombreObraP(o) : 'Obra'; }
+function _inswObs(f){ return /no conform|nc|observ/i.test(String(f.resultado||'')); }
+function vistaInspOrden(caja){
+  var ac=$('acciones');
+  if(ac){ ac.innerHTML='<button type="button" class="bt" id="insp-nueva">＋ Registrar una inspección</button><button type="button" class="bt sec" id="insp-mes">🗓 Inspección del mes por tipo</button>';
+    $('insp-nueva').onclick=function(){ gesIr('gesInspForm', null); };
+    $('insp-mes').onclick=function(){ if(typeof menIr==='function') menIr('menAbrir', MES); }; }
+  if(typeof frentesObraP==='function') frentesObraP();
+  if(INSW.obra!==(YO.obra||{}).id){ INSW={ alc:'obra', mes:'', fmt:'', fr:'', q:'', filas:[], frentes:{}, n:0, obra:(YO.obra||{}).id }; }
+  caja.innerHTML='<div id="insw-arriba"></div><div class="tarj" id="insw"><div class="tarj-cuerpo"><div class="vacio">Cargando las inspecciones…</div></div></div>';
+  _inswCss();
+  function pinta(silencio){
+    var n=++INSW.n, obras=(INSW.alc==='todas') ? _inswObras() : [YO.obra], ids=obras.map(function(o){ return o.id; });
+    var q=(INSW.alc==='todas' && ids.length>1) ? sbGet('sst_inspeccion?empresa=in.('+ids.map(_enc).join(',')+')&order=fecha.desc&limit=4000') : traer('sst_inspeccion', '&order=fecha.desc', 4000);
+    var fr=sbGet('sst_doc?empresa=in.('+ids.map(_enc).join(',')+')&hoja=eq.frentes&select=empresa,nombre,nota&limit=600').catch(function(){ return []; });
+    Promise.all([q, fr]).then(function(r){
+      if(n!==INSW.n || VISTA.actual!=='insp') return;
+      INSW.filas=r[0]||[]; VISTA.cache.sst_inspeccion=INSW.filas; INSW.frentes={};
+      (r[1]||[]).forEach(function(d){ var o=null; try{ o=typeof d.nota==='string' ? JSON.parse(d.nota) : d.nota; }catch(e){} var nm=String((o && o.n) || d.nombre || '').trim(); if(!nm) return;
+        var L=INSW.frentes[d.empresa]||(INSW.frentes[d.empresa]=[]); if(L.indexOf(nm)<0) L.push(nm); });
+      INSW.filas.forEach(function(f){ f._fr=_inswFrente(f); f._obra=f.empresa; });
+      _inswPintar();
+    }).catch(function(cod){ if(!silencio && $('insw')) fallo($('insw'), cod); });
+  }
+  VISTA.recargar=pinta; INSW.pinta=pinta; pinta();
+}
+function _inswCss(){
+  if($('insw-css')) return;
+  var st=document.createElement('style'); st.id='insw-css';
+  st.textContent=[
+    '.insw-fil{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 6px}.insw-fil select{width:auto;margin:0;padding:6px 10px}.insw-fil .seg{margin:0}',
+    '.insw-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}.insw-chips .chip{font-size:13px}',
+    '.insw-l{font-size:12px;font-weight:600;color:var(--gris);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 0}',
+    '.insw-obra{margin:22px 0 0;padding:10px 14px;border-radius:10px;background:var(--fondo);display:flex;justify-content:space-between;gap:10px;align-items:center}.insw-obra h3{margin:0;font-size:16px}',
+    '.insw-g{margin:16px 0 0;border:1px solid var(--raya);border-radius:12px;overflow:hidden;background:var(--panel)}',
+    '.insw-gc{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:var(--fondo);border-bottom:1px solid var(--raya)}',
+    '.insw-gc b{font-size:15px}.insw-gc small{color:var(--gris);font-size:12.5px}',
+    '.insw-g table{width:100%;border-collapse:collapse;font-size:13.5px}.insw-g th{text-align:left;font-size:12px;color:var(--gris);font-weight:600;padding:7px 10px;border-bottom:1px solid var(--raya)}',
+    '.insw-g td{padding:8px 10px;border-bottom:1px solid var(--raya);vertical-align:top}.insw-g tr:last-child td{border-bottom:0}.insw-g tbody tr{cursor:pointer}.insw-g tbody tr:hover td{background:var(--fondo)}',
+    '.insw-g td.f{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--gris)}.insw-g td.h{color:var(--gris);font-size:12.5px;max-width:420px}',
+    '.insw-caja{overflow-x:auto}'
+  ].join('\n');
+  document.head.appendChild(st);
+}
+function _inswHall(f){
+  var P=String(f.observacion||'').split(/\r?\n/).filter(function(l){ return /observaci[oó]n\(es\)|sin observaciones|^en papel|inspecci[oó]n en papel/i.test(l); })[0] || '';
+  return P.replace(/^\d+\s+observaci[oó]n\(es\):\s*/i, '').slice(0, 200);
+}
+function _inswPintar(){
+  var caja=$('insw'), arriba=$('insw-arriba'); if(!caja) return;
+  var F=INSW.filas, obras=_inswObras(), varias=obras.length>1;
+  /* los filtros (con lo que hay) */
+  var meses={}, fmts={}, frs={};
+  F.forEach(function(f){ var m=String(f.fecha||'').slice(0, 7); if(m) meses[m]=1; });
+  var base=F.filter(function(f){ return !INSW.mes || String(f.fecha||'').slice(0, 7)===INSW.mes; });
+  base.forEach(function(f){ if(f.tipo) fmts[f.tipo]=(fmts[f.tipo]||0)+1; frs[f._fr||'']=(frs[f._fr||'']||0)+1; });
+  var L=base.filter(function(f){ return (!INSW.fmt || f.tipo===INSW.fmt) && (INSW.fr===null || INSW.fr==='' ? true : (f._fr||'·')===INSW.fr); });
+  var qq=nrm(INSW.q); if(qq) L=L.filter(function(f){ return nrm([f.tipo, f.inspector, f.resultado, f.observacion, f._fr].join(' ')).indexOf(qq)>-1; });
+  /* lo de arriba */
+  var mesA=F.filter(function(f){ return String(f.fecha||'').slice(0, 7)===MES; }), obsA=mesA.filter(_inswObs).length, frA={}; mesA.forEach(function(f){ frA[f._fr||'·']=1; });
+  if(arriba) arriba.innerHTML='<div class="rej">'+cifra('Inspecciones este mes', mesA.length, F.length+' en total', mesA.length ? 'ok' : '')+
+    cifra('Con observaciones', obsA, 'de las de este mes', obsA ? 'ojo' : (mesA.length ? 'ok' : ''))+
+    cifra('Frentes inspeccionados', Object.keys(frA).filter(function(k){ return k!=='·'; }).length, 'este mes', '')+'</div>';
+  var mk=Object.keys(meses).sort().reverse();
+  var h='<div class="tarj-cuerpo"><div class="insw-fil">'+
+    (varias ? '<div class="seg" role="tablist" aria-label="Qué proyectos"><button type="button" data-alc="obra"'+(INSW.alc==='obra' ? ' class="on"' : '')+'>Esta obra</button><button type="button" data-alc="todas"'+(INSW.alc==='todas' ? ' class="on"' : '')+'>Todos mis proyectos ('+obras.length+')</button></div>' : '')+
+    '<select id="insw-mes" aria-label="Mes"><option value="">Todos los meses</option>'+mk.map(function(m){ return '<option value="'+m+'"'+(INSW.mes===m ? ' selected' : '')+'>'+esc(DC_MESES[+m.slice(5, 7)-1]+' '+m.slice(0, 4))+'</option>'; }).join('')+'</select>'+
+    '<input id="insw-q" type="search" placeholder="Buscar: formato, inspector, hallazgo…" value="'+esc(INSW.q)+'" style="flex:1;min-width:200px;margin:0">'+
+    '<button type="button" class="bt sec chico" id="insw-csv">Exportar CSV</button></div>';
+  var fk=Object.keys(fmts).sort(function(a, b){ return fmts[b]-fmts[a]; });
+  if(fk.length) h+='<p class="insw-l">Formato</p><div class="insw-chips" role="group" aria-label="Formato"><button type="button" class="chip'+(!INSW.fmt ? ' on' : '')+'" data-fmt="">Todos · '+base.length+'</button>'+
+    fk.slice(0, 30).map(function(k){ return '<button type="button" class="chip'+(INSW.fmt===k ? ' on' : '')+'" data-fmt="'+esc(k)+'">'+esc(k)+' · '+fmts[k]+'</button>'; }).join('')+'</div>';
+  var frk=Object.keys(frs).sort(function(a, b){ return (a==='')-(b==='') || a.localeCompare(b, 'es'); });
+  if(frk.length>1 || (frk.length===1 && frk[0])) h+='<p class="insw-l">Frente</p><div class="insw-chips" role="group" aria-label="Frente"><button type="button" class="chip'+(!INSW.fr ? ' on' : '')+'" data-fr="">Todos</button>'+
+    frk.map(function(k){ var v=k || '·'; return '<button type="button" class="chip'+(INSW.fr===v ? ' on' : '')+'" data-fr="'+esc(v)+'">📍 '+esc(k || 'Sin frente')+' · '+frs[k]+'</button>'; }).join('')+'</div>';
+  if(!L.length) h+='<div class="vacio" style="margin-top:16px"><b>'+(F.length ? 'Nada con estos filtros' : 'Ninguna inspección todavía')+'</b>'+(F.length ? 'Cambia el mes, el formato o el frente.' : 'Se llenan en la app, en «Inspecciones». La que ya se hizo en papel se registra aquí, con «＋ Registrar una inspección».')+'</div>';
+  /* por proyecto y por frente */
+  var porObra={}, ordenO=[];
+  L.forEach(function(f){ var o=f._obra||''; if(!porObra[o]){ porObra[o]=[]; ordenO.push(o); } porObra[o].push(f); });
+  ordenO.sort(function(a, b){ return (a!==(YO.obra||{}).id)-(b!==(YO.obra||{}).id) || _inswObraN(a).localeCompare(_inswObraN(b), 'es'); });
+  var vis=[];
+  ordenO.forEach(function(o){
+    var LO=porObra[o];
+    if(INSW.alc==='todas' && varias) h+='<div class="insw-obra"><h3>🏗️ '+esc(_inswObraN(o))+'</h3><small>'+LO.length+' '+(LO.length===1 ? 'inspección' : 'inspecciones')+'</small></div>';
+    var porFr={}, ordenF=[];
+    LO.forEach(function(f){ var k=f._fr||''; if(!porFr[k]){ porFr[k]=[]; ordenF.push(k); } porFr[k].push(f); });
+    ordenF.sort(function(a, b){ return (a==='')-(b==='') || a.localeCompare(b, 'es'); });
+    ordenF.forEach(function(k){
+      var G=porFr[k], ob=G.filter(_inswObs).length;
+      h+='<div class="insw-g"><div class="insw-gc"><b>📍 '+esc(k || 'Sin frente indicado')+'</b><small>'+G.length+' '+(G.length===1 ? 'inspección' : 'inspecciones')+(ob ? ' · <span class="pill ojo">'+ob+' con observaciones</span>' : '')+'</small></div>'+
+        '<div class="insw-caja"><table><thead><tr><th>Fecha</th><th>Formato</th><th>Inspector</th><th>Resultado</th><th>Hallazgos</th><th></th></tr></thead><tbody>'+
+        G.map(function(f){ var i=vis.length; vis.push(f); var r=String(f.resultado||''), cl=_inswObs(f) ? 'ojo' : (r ? 'ok' : 'gris');
+          return '<tr data-iw="'+i+'"><td class="f">'+esc(fechaCorta(f.fecha)+'/'+String(f.fecha||'').slice(2, 4))+'</td><td><b>'+esc(f.tipo||'')+'</b></td><td>'+esc(f.inspector||'')+'</td>'+
+            '<td>'+(r ? '<span class="pill '+cl+'">'+esc(r)+'</span>' : '')+'</td><td class="h">'+esc(_inswHall(f))+'</td>'+
+            '<td>'+(f.foto_url ? '<a href="'+esc(f.foto_url)+'" target="_blank" rel="noopener">ver</a>' : '')+'</td></tr>'; }).join('')+
+        '</tbody></table></div></div>';
+    });
+  });
+  h+='</div>';
+  caja.innerHTML=h; INSW.vis=vis; INSW.L=L;
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-alc]'), function(b){ b.onclick=function(){ INSW.alc=b.getAttribute('data-alc'); INSW.fr=''; INSW.pinta(); }; });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-fmt]'), function(b){ b.onclick=function(){ INSW.fmt=b.getAttribute('data-fmt'); _inswPintar(); }; });
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-fr]'), function(b){ b.onclick=function(){ INSW.fr=b.getAttribute('data-fr'); _inswPintar(); }; });
+  $('insw-mes').onchange=function(){ INSW.mes=this.value; INSW.fmt=''; INSW.fr=''; _inswPintar(); };
+  var qi=$('insw-q'); qi.oninput=function(){ INSW.q=qi.value; clearTimeout(INSW.t); INSW.t=setTimeout(function(){ var p=qi.selectionStart; _inswPintar(); var q2=$('insw-q'); if(q2){ q2.focus(); try{ q2.setSelectionRange(p, p); }catch(e){} } }, 250); };
+  $('insw-csv').onclick=function(){ csv([{k:'_obra', t:'Proyecto', v:function(f){ return _inswObraN(f.empresa); }}, {k:'_fr', t:'Frente', v:function(f){ return f._fr||''; }}].concat(COL.inspecciones), INSW.L, 'inspecciones'); };
+  Array.prototype.forEach.call(caja.querySelectorAll('tr[data-iw]'), function(tr){ tr.onclick=function(ev){ if(ev.target.closest('a,button')) return; var f=INSW.vis[+tr.getAttribute('data-iw')];
+    if(!f) return; if(f.empresa && f.empresa!==(YO.obra||{}).id){ toast('Es de '+_inswObraN(f.empresa)+': ábrela desde esa obra.'); return; } gesIr('gesInspForm', f); }; });
 }
 function gesPluralP(n, uno, varios){ return n+' '+(n===1 ? uno : varios); }
 function hoyMenosDias(n){ var d=new Date(HOY+'T12:00:00'); d.setDate(d.getDate()-n); return d.toISOString().slice(0, 10); }
@@ -10357,7 +10538,7 @@ function vistaDocs(caja, modo){
   var ac=$('acciones');
   if(ac) ac.innerHTML=(DC.modo ? '<button type="button" class="bt sec" id="dc-todo">☰ Todos los documentos</button>'
     : '<button type="button" class="bt sec" id="dc-qr">▣ Carteles QR</button><button type="button" class="bt sec" id="dc-enlace">🔗 Agregar un enlace</button>')+
-    '<button type="button" class="btn sec" onclick="abrirEstudioPdf()">🛠️ Herramientas PDF / Imágenes</button>';
+    '<button type="button" class="bt sec" onclick="abrirEstudioPdf()">🛠️ Herramientas PDF / Imágenes</button>';
   caja.innerHTML=(DC.modo ?
     '<div class="pi-zona" id="dc-zona" tabindex="0" role="button" aria-label="Arrastra aquí los PDF o las fotos escaneados, o toca para elegirlos">'+
       '<b>⬆ Arrastra aquí los PDF o las fotos de hojas escaneadas</b>'+
@@ -10402,7 +10583,7 @@ function vistaDocs(caja, modo){
         }, function(msg){
           if(!silencio){
             t.innerHTML = '<div class="vacio"><b>No se pudo cargar</b>' + esc(msg || 'Revisa tu conexión.') +
-              '<div style="margin-top:10px"><button type="button" class="btn pri chico" onclick="if(typeof VISTA!==\'undefined\'&&VISTA.recargar) VISTA.recargar();">Reintentar ahora</button></div></div>';
+              '<div style="margin-top:10px"><button type="button" class="bt chico" onclick="if(typeof VISTA!==\'undefined\'&&VISTA.recargar) VISTA.recargar();">Reintentar ahora</button></div></div>';
           }
         })
       : traer('sst_doc', '&select=id,hoja,nombre,url,nota,creado&order=creado.desc&hoja=not.in.(ats,ats-cfg,ats-modelo,temas,temas-hist,empleador,tdm-cfg,quienes,subcarpetas,ges-act,ges-prog,iperc-c,ges-inspm,informe-modelo,iperc-lb,pets-ob)', 1000);
@@ -10458,7 +10639,7 @@ function _dcTabla(){
     {k:'nombre', t:'Documento', h:function(f){ return '<b>'+esc(f.nombre||'Documento')+'</b>'+(f.nota && dcEsDoc(f.hoja) && String(f.nota).length<300 ? '<span class="sub">'+esc(f.nota)+'</span>' : ''); }},
     {k:'url', t:'Archivo', v:function(f){ return /^data:/i.test(f.url||'') ? 'foto' : (f.url||''); }, h:function(f){
        if(!f.url) return '<span class="pill gris">sin archivo</span>';
-       var _bEdit = (/\.pdf/i.test(f.url||f.nombre||'')) ? ' <button type="button" class="btn sec chico" onclick="abrirEstudioPdf({url:\''+escA(f.url)+'\', nombre:\''+escA(f.nombre)+'\', hoja:\''+escA(f.hoja)+'\'})">✂️ Editar / Dividir</button>' : '';
+       var _bEdit = (/\.pdf/i.test(f.url||f.nombre||'')) ? ' <button type="button" class="bt sec chico" onclick="abrirEstudioPdf({url:\''+escA(f.url)+'\', nombre:\''+escA(f.nombre)+'\', hoja:\''+escA(f.hoja)+'\'})">✂️ Editar / Dividir</button>' : '';
        if(/^data:/i.test(f.url)) return '<button type="button" class="enlace dc-abrir" data-acc="ver">abrir</button>' + _bEdit;
        return '<a href="'+esc(f.url)+'" target="_blank" rel="noopener">abrir</a>' + _bEdit; }},
     {k:'_acc', t:'', acc:true, h:function(f){ return (dcEsDoc(f.hoja) || dcCarpetaDe(f.hoja).propio) ? '<button type="button" class="bt sec chico" data-acc="quitar">Quitar</button>' : ''; }}
@@ -11717,7 +11898,7 @@ function abrirDiaCh(iso, que, aviso){
          (dic ? '<small style="color:var(--ok)">✓ Dictada'+(dic.asist ? ' · '+esc(dic.asist)+' asistentes' : '')+'</small>'
               : (iso<hoy ? '<small class="ch-mal">No se marcó como dictada en la app</small>' : ''))+
          '</div><span class="acc">'+
-         '<button type="button" class="btn sec chico" onclick="abrirModalAsistenciaCharla(\''+escA(chNombre(a))+'\')">📋 Subir asistencia</button>'+
+         '<button type="button" class="bt sec chico" onclick="abrirModalAsistenciaCharla(\''+escA(chNombre(a))+'\')">📋 Subir asistencia</button>'+
          ((t==='charla' && a.tema) || (chIaVa(t) && String(a.detalle||'').trim()) ? '<button type="button" class="bt sec chico" data-gu="'+x.i+'">Guion</button>' : '')+
          '<button type="button" class="bt sec chico" data-ed="'+x.i+'">Cambiar</button>'+
          '<button type="button" class="bt mal chico" data-qu="'+x.i+'">Quitar</button></span></div>';
@@ -11731,7 +11912,7 @@ function abrirDiaCh(iso, que, aviso){
       h+='<div class="act"><span class="ic" aria-hidden="true">📝</span><div><b>'+esc(e.tema)+'</b>'+
          (_bdgEv ? '<div>'+_bdgEv+'</div>' : '')+
          '<small>'+esc(paraTexto(e.o.para)+(e.o.ev ? ' · evalúa '+e.o.ev : ''))+'</small></div>'+
-         '<span class="acc"><button type="button" class="btn sec chico" onclick="abrirModalAsistenciaCharla(\''+escA(e.tema)+'\')">📋 Subir asistencia</button>'+
+         '<span class="acc"><button type="button" class="bt sec chico" onclick="abrirModalAsistenciaCharla(\''+escA(e.tema)+'\')">📋 Subir asistencia</button>'+
          '<button type="button" class="bt sec chico" data-ev="'+i+'">'+(iso<=hoy ? 'Quién la rindió' : 'Ver')+'</button></span></div>';
     });
     h+='</div>';
@@ -13794,7 +13975,8 @@ function peqPintar(caja){
     {k:'marca', t:'Marca', soloCsv:true}, {k:'modelo', t:'Modelo', soloCsv:true}, {k:'serie', t:'N.° de serie', soloCsv:true},
     {k:'detalle', t:'Detalle', soloCsv:true},
     {k:'responsable', t:'Responsable'},
-    {k:'ubicacion', t:'Ubicación'},   /* 4/11/2026 · V7.9j */
+    /* 20/11/2026 · el frente, primero y obligatorio («Frente · detalle» en la ubicación) */
+    {k:'ubicacion', t:'Frente', v:function(x){ return x.ubicacion||''; }, h:function(x){ var u=eqUbicPartesP(x.ubicacion); return u.fr ? '📍 <b>'+esc(u.fr)+'</b>'+(u.det ? '<small class="peq-obs">'+esc(u.det)+'</small>' : '') : '<span class="pill ojo">Sin frente</span>'; }},
     {k:'etiqueta', t:'Etiqueta', v:function(x){ return (EQ_ETIQ[x.etiqueta]||{}).n || x.etiqueta || ''; },
      csv:function(x){ return ((EQ_ETIQ[x.etiqueta]||{}).n || x.etiqueta || '')+' · '+peqDisenoTxt(x); }},
     {k:'ult_fecha', t:'Última revisión', v:function(x){
@@ -14475,7 +14657,12 @@ function peqFormPintar(){
      '<div class="campo"><label for="peq-modelo">Modelo <span class="gris-t">(si quieres)</span></label><input id="peq-modelo" maxlength="60" value="'+esc(E0.modelo)+'" placeholder="GWS 850"></div>'+
      '<div class="campo"><label for="peq-serie">N.° de serie <span class="gris-t">(si quieres)</span></label><input id="peq-serie" maxlength="60" autocapitalize="characters" value="'+esc(E0.serie)+'" placeholder="El que trae en su placa"></div></div>');
   /* 4/11/2026 · V7.9j · dónde está: sale en su ficha al escanear su QR */
-  h+='<div class="campo"><label for="peq-ubic">Ubicación <span class="gris-t">(si quieres)</span></label><input id="peq-ubic" maxlength="120" value="'+esc(E0.ubicacion||'')+'" placeholder="Almacén, junto a la puerta · Torre B, piso 3">'+
+  /* 20/11/2026 · el frente, obligatorio (en «ubicacion»: «Frente · detalle») */
+  if(E0.frente==null){ var _u0=eqUbicPartesP(E0.ubicacion); E0.frente=_u0.fr; E0.ubicDet=_u0.det; }
+  h+='<div class="peq-3"><div class="campo"><label for="peq-fr">Frente <span class="gris-t">(obligatorio)</span></label><input id="peq-fr" list="peq-fr-l" maxlength="60" value="'+esc(E0.frente||'')+'" placeholder="Torre A, almacén, sótano…">'+
+     '<datalist id="peq-fr-l">'+(PEQ.frentes||[]).map(function(n){ return '<option value="'+esc(n)+'">'; }).join('')+'</datalist></div>'+
+     '<div class="campo" style="grid-column:span 2"><label for="peq-ubic2">Ubicación exacta <span class="gris-t">(si quieres)</span></label><input id="peq-ubic2" maxlength="58" value="'+esc(E0.ubicDet||'')+'" placeholder="Junto a la puerta, piso 3"></div></div>';
+  if(0) h+='<div class="campo"><label for="peq-ubic">Ubicación <span class="gris-t">(si quieres)</span></label><input id="peq-ubic" maxlength="120" value="'+esc(E0.ubicacion||'')+'" placeholder="Almacén, junto a la puerta · Torre B, piso 3">'+
      '<p class="ayuda">Dónde está: sale en su ficha al escanear su QR.</p></div>';
   if(E0.id && E0.detalle && !E0.teniaMMS)
     h+='<p class="ayuda" id="peq-antes" style="margin:-8px 0 14px">Antes tenía anotado: <b>'+esc(E0.detalle)+'</b>. Repártelo en los tres casilleros; si los dejas vacíos, se queda como está.</p>';
@@ -14494,6 +14681,9 @@ function peqFormPintar(){
   c.innerHTML=h;
   $('peq-chk').oninput=function(){ E0.checklist=this.value.split(/\n/); };
   if($('peq-ubic')) $('peq-ubic').oninput=function(){ E0.ubicacion=this.value; };   /* V7.9j */
+  if($('peq-fr')) $('peq-fr').oninput=function(){ E0.frente=this.value; };
+  if($('peq-ubic2')) $('peq-ubic2').oninput=function(){ E0.ubicDet=this.value; };
+  frentesObraP().then(function(L){ PEQ.frentes=L; var dl=$('peq-fr-l'); if(dl) dl.innerHTML=L.map(function(n){ return '<option value="'+esc(n)+'">'; }).join(''); });
   if(!E0.uso) E0.uso={p:'', a:'', kg:'', r:''};
   [['peq-uso-p', 'p'], ['peq-uso-a', 'a'], ['peq-uso-kg', 'kg'], ['peq-uso-r', 'r'], ['peq-uso-m', 'm'], ['peq-uso-h', 'h']].forEach(function(z){ var el=$(z[0]); if(el){ el.oninput=el.onchange=function(){ E0.uso[z[1]]=this.value; }; } });
   $('peq-tipo').onchange=function(){
@@ -14619,6 +14809,9 @@ function peqGuardar(){
   if(conFrec) fila.frecuencias=FR;
   /* 4/11/2026 · V7.9j · la ubicación: viaja solo si hay algo que guardar (o que quitar); la base sin
      sql/2026-11-04-v79j-inspecciones.sql sigue registrando equipos igual que antes */
+  if(E0.frente!=null){ var _fr=String(E0.frente||'').replace(/\s+/g, ' ').trim().slice(0, 60);
+    if(!_fr){ m.className='msg mal'; m.textContent='Elige en qué frente está.'; try{ $('peq-fr').focus(); }catch(_ff){} return; }
+    E0.ubicacion=eqUbicJuntaP(_fr, E0.ubicDet); }
   var ubic=String(E0.ubicacion||'').trim().replace(/\s+/g, ' ').slice(0,120), conUbic=!!(ubic || E0.teniaUbic), sinUbic=false;
   if(conUbic) fila.ubicacion=ubic||null;
   m.className='msg gris'; m.textContent='Guardando…'; bt.disabled=true;
@@ -14730,8 +14923,12 @@ function peqPegar(){
     '<p class="ayuda" style="margin:0 0 10px">Si copias también la fila de títulos (Marca, Modelo, Serie, Responsable…), cada columna va sola a su casillero, en el orden que tenga tu Excel. '+
     'Y si tu lista solo trae cuatro columnas, se lee como siempre: qué es · código · marca o modelo · responsable.</p>'+
     '<div class="campo"><label for="peq-pega">Lo que copiaste</label><textarea id="peq-pega" rows="8" placeholder="Amoladora&#9;AMO-001&#9;Bosch&#9;GWS 700&#9;3601C77000&#9;Juan Pérez&#10;Taladro&#10;Arnés&#9;&#9;&#9;Talla M&#10;Caja de herramientas"></textarea></div>'+
+    /* 20/11/2026 · el frente de estos equipos, sí o sí */
+    '<div class="campo"><label for="peq-pega-fr">Frente de estos equipos <span class="gris-t">(obligatorio)</span></label><input id="peq-pega-fr" list="peq-pega-frl" maxlength="60" placeholder="Torre A, almacén, sótano…"><datalist id="peq-pega-frl"></datalist>'+
+    '<p class="ayuda">Si están en frentes distintos, pega una lista por frente. Después se cambia en la ficha de cada uno.</p></div>'+
     '<div id="peq-pega-v"></div>',
     '<button type="button" class="bt sec" id="peq-pega-no">Cancelar</button><button type="button" class="bt" id="peq-pega-si" disabled>Registrar</button>', {sinFoco:true, ancha:true});
+  frentesObraP().then(function(L){ var dl=$('peq-pega-frl'); if(dl) dl.innerHTML=L.map(function(n){ return '<option value="'+esc(n)+'">'; }).join(''); });
   var ta=$('peq-pega');
   var ver=function(){
     var r=peqLeerPegado(ta.value), v=$('peq-pega-v'), bt=$('peq-pega-si');
@@ -14754,18 +14951,24 @@ function peqPegar(){
   $('peq-pega-no').onclick=cerrarHoja;
   $('peq-pega-si').onclick=function(){
     var bt=this, buenos=(PEQ.pega||[]).filter(function(f){ return !f.problema; }); if(!buenos.length) return;
+    var frP=String(($('peq-pega-fr')||{}).value||'').replace(/\s+/g, ' ').trim().slice(0, 60);
+    if(!frP){ var m0=$('peq-pega-m'); if(m0){ m0.className='msg mal'; m0.textContent='Elige el frente de estos equipos.'; } try{ $('peq-pega-fr').focus(); }catch(_f){} return; }
     /* marca, modelo y serie viajan solo si alguna fila los trae (y entonces en todas, para que las filas sean parejas) */
     var conMMS=buenos.some(function(f){ return f.marca || f.modelo || f.serie; });
     var filas=buenos.map(function(f){
       var o={id:eqNuevoId(), empresa:YO.obra.id, token:eqNuevaFicha(), codigo:f.codigo, tipo:String(f.tipo).slice(0,60),
              detalle:f.detalle, responsable:f.responsable, etiqueta:f.etiqueta, contenido:[], actualizado:new Date().toISOString()};
       if(conMMS){ o.marca=f.marca||null; o.modelo=f.modelo||null; o.serie=f.serie||null; }
+      o.ubicacion=frP;
       return o;
     });
     bt.disabled=true; var m=$('peq-pega-m'); if(m){ m.className='msg gris'; m.textContent='Registrando '+filas.length+'…'; }
     sbPostP('sst_equipo_qr', filas).catch(function(e){
       /* la base sin el SQL del 05/10: se registran igual, con la marca, el modelo y la serie juntos en «detalle» */
       if(e===400 && conMMS){ filas.forEach(function(o){ delete o.marca; delete o.modelo; delete o.serie; }); return sbPostP('sst_equipo_qr', filas); }
+      return Promise.reject(e);
+    }).catch(function(e){
+      if(e===400 && eqCulpaEs(PEQ_400, 'ubicacion')){ filas.forEach(function(o){ delete o.ubicacion; }); return sbPostP('sst_equipo_qr', filas); }
       return Promise.reject(e);
     }).then(function(){
       toast(filas.length+' '+(filas.length===1?'equipo registrado':'equipos registrados')+'. Sus etiquetas están listas para imprimir.');
@@ -18856,11 +19059,10 @@ var V = {
            pintar:function(caja){ cargando(caja); senIr('senVista', caja); }, tablas:[]},
   enc:    {id:'encuestas', g:'Capacitación', ic:'★', n:'Encuestas', s:'Cómo calificaron tus capacitaciones', tablas:['sst_encuesta'],
            pintar:vistaTabla('sst_encuesta', COL.encuestas, {ordenSb:'creado', ordenPor:'fecha', unidad:'encuestas', vacio:'Ninguna encuesta', vacioSub:'Salen solas después de cada evaluación y cada taller.', archivo:'encuestas'})},
-  insp:   {id:'insp', g:'Registros', ic:'🔎', n:'Inspecciones', s:'Las del celular y las de papel registradas aquí, con sus hallazgos', tablas:['sst_inspeccion'],
-           pintar:vistaTabla('sst_inspeccion', COL.inspecciones, {ordenSb:'fecha', ordenPor:'fecha', unidad:'inspecciones', vacio:'Ninguna inspección todavía', vacioSub:'Se llenan en la app, en «Inspecciones». La que ya se hizo en papel se registra aquí, con «＋ Registrar una inspección».', archivo:'inspecciones',
-             /* 07/10/2026 · la que ya se hizo en papel (la mensual, la del programa) se registra aquí: portal/gestion.js */
-             acciones:function(ac){ ac.innerHTML='<button type="button" class="bt" id="insp-nueva">＋ Registrar una inspección</button>'; $('insp-nueva').onclick=function(){ gesIr('gesInspForm', null); }; },
-             alClic:function(f){ gesIr('gesInspForm', f); }, arriba:inspArribaP, alPintarArriba:inspPorFormatoAl})},
+  /* 20/11/2026 · Marcelo: «las inspecciones se juntan, no se dividen por frentes de obra ni por proyecto… hazlo ordenado».
+     Ahora van por proyecto (si la cuenta ve varias obras) y, dentro, por frente; con filtros por mes, formato y frente */
+  insp:   {id:'insp', g:'Registros', ic:'🔎', n:'Inspecciones', s:'Las del celular y las de papel registradas aquí, ordenadas por proyecto y por frente, con sus hallazgos', tablas:['sst_inspeccion'],
+           pintar:function(caja){ vistaInspOrden(caja); }},
   /* 01/10/2026 · el QR de cada equipo y herramienta, como en la app */
   equipos:{id:'equipos', g:'Registros', ic:'🏷', n:'Equipos y herramientas', s:'El QR de cada uno: quién está al día este mes, la cinta del mes y las etiquetas para imprimir', pintar:vistaEquipos, tablas:['sst_equipo_qr']},
   /* 03/10/2026 · la inspección diaria que hace quien usa el equipo, con su QR */
@@ -19465,7 +19667,7 @@ function gesCapComoCons(soloFecha){
 function consMasHechas(p, soloFecha){
   return Promise.all([p, gesCapComoCons(soloFecha)]).then(function(r){ return (r[0]||[]).concat(r[1]||[]); });
 }
-var GESTION_VER='8ca216cd8e';   /* lo pone armar.py: el hash de portal/gestion.js */
+var GESTION_VER='cac35f4434';   /* lo pone armar.py: el hash de portal/gestion.js */
 var _GES_CARGA=null;
 function cargarGestion(){
   if(typeof gesPersonalSubir==='function') return Promise.resolve(true);
@@ -19570,7 +19772,7 @@ function epwIr(fn){
 }
 /* 07/10/2026 · la inspección mensual de equipos (portal/mensual.js): la hoja del mes con todos los equipos de la obra.
    Usa el dibujante de los papeles (papeles.js), el buscador de gestion.js y los tipos y colores de equipos.js */
-var MENSUAL_VER='36fd2ec57c';   /* lo pone armar.py: el hash de portal/mensual.js */
+var MENSUAL_VER='91d7380edc';   /* lo pone armar.py: el hash de portal/mensual.js */
 var _MEN_CARGA=null;
 function cargarMensual(){
   if(typeof menAbrir==='function') return Promise.resolve(true);
@@ -23470,6 +23672,9 @@ function pintarFichaP(){
     '<div class="campo"><label for="fp-emer-quien">Contacto de emergencia</label><input id="fp-emer-quien" maxlength="60" placeholder="A quién llamar" value="'+esc(f.emer_quien||'')+'"></div></div>'+
     '<label class="chk"><input type="checkbox" id="fp-alm"'+(f.almacenero?' checked':'')+'> <span>Entrega EPP del almacén <small class="tenue">· registra entregas desde su celular</small></span></label>'+
     (f.nuevo ? '' : '<p class="ayuda" style="margin-top:14px">El cese, el traslado a otra obra y el descanso se cambian con su fecha desde la app, en su ficha: «Cambiar su situación».</p>')+
+    /* 21/11/2026 · su experiencia en obra: la escribe él en «Mi perfil» (sst_persona). Nombre, foto y contacto de emergencia
+       son uno solo: lo que se corrige aquí queda igual en su perfil */
+    (!f.nuevo && f.usuario ? '<div class="seccion" id="fp-exp"><h3>Su experiencia en obra</h3><p class="ayuda">Trayendo…</p></div>' : '')+
     '<div class="msg" id="fp-msg" role="status"></div>';
   var pie='<button type="button" class="bt sec" id="fp-no">'+(f.nuevo?'Cancelar':'Cerrar')+'</button><button type="button" class="bt" id="fp-ok">'+(f.nuevo?'Agregar trabajador':'Guardar cambios')+'</button>';
   if(f.nuevo) abrirHoja('Nuevo trabajador', 'Su ficha · la app la recibe sola', h, pie, {});
@@ -23493,6 +23698,23 @@ function pintarFichaP(){
     caja.innerHTML=_fpUbicCampo(el.value); _fpUbicEnchufar(u0);
   }, function(){ var n=$('fp-ubic-nota'); if(n && FP.f===f){ n.textContent='No se pudieron traer los frentes de la obra. Revisa tu conexión.'; n.hidden=false; } });
   $('fp-sangre').onchange=function(){ $('fp-sangre-ok-caja').hidden = !this.value || this.value===(f.sangre||''); };
+  if($('fp-exp')) _fpExperiencia(f);
+}
+function _fpExperiencia(f){
+  var caja=$('fp-exp'); if(!caja) return;
+  var pinta=function(cuerpo){ var c=$('fp-exp'); if(c && FP.f===f) c.innerHTML='<h3>Su experiencia en obra</h3>'+cuerpo+
+    '<p class="ayuda">La escribe él en su app, en «Mi perfil». Su nombre, su foto y su contacto de emergencia son uno solo: si los corriges aquí, quedan así en su perfil.</p>'; };
+  sbRpc('sst_trab_perfil', {p_emp:(YO.obra||{}).id, p_ext:String(f.ext||'')}).then(function(r){
+    var x=(r && r.ok && r.cuenta && r.experiencia) || {}, tr=Array.isArray(x.trabajos) ? x.trabajos : [];
+    if(x.anios==null && !(x.oficios||[]).length && !x.resumen && !tr.length){ pinta('<p class="tenue">Todavía no la escribió.</p>'); return; }
+    var h='';
+    if(x.anios!=null) h+='<p style="margin:0"><b>'+esc(x.anios)+'</b> '+(+x.anios===1 ? 'año en obra' : 'años en obra')+'</p>';
+    if((x.oficios||[]).length) h+='<p style="margin:6px 0 0">'+x.oficios.map(function(o){ return '<span class="pill gris">'+esc(o)+'</span>'; }).join(' ')+'</p>';
+    if(x.resumen) h+='<p class="tenue" style="margin:8px 0 0">'+esc(x.resumen)+'</p>';
+    if(tr.length) h+='<table class="mat" style="margin-top:8px"><thead><tr><th>Dónde</th><th>Cargo</th><th>Años</th></tr></thead><tbody>'+tr.map(function(w){
+      return '<tr><td>'+esc(w.donde||'')+'</td><td>'+esc(w.cargo||'—')+'</td><td>'+esc((w.desde||'')+(w.hasta ? '–'+w.hasta : (w.desde ? '–' : '')))+'</td></tr>'; }).join('')+'</tbody></table>';
+    pinta(h);
+  }, function(){ pinta('<p class="tenue">No se pudo traer. Revisa tu conexión.</p>'); });
 }
 /* la ficha nueva: la misma fila que sube la app («ext» como el id de la app).
    Si la base no tiene todavía alguna columna nueva (400), se guarda sin
@@ -24666,6 +24888,7 @@ function video45Abrir(k){
    documento del país del reloj, y la obra de afuera no espera por él */
 try{ cargarPais(); }catch(_cp){}
 </script>
+<script src="zip-mini.js"></script>
 <script src="pdf-estudio.js"></script>
 <script src="charlas-asistencia.js"></script>
 <script src="equipo.js"></script>

@@ -3011,7 +3011,7 @@ function gesInspForm(f){
       '<div class="fila-c ya-al"><div class="campo"><label for="insf-fecha">Día en que se hizo</label><input type="date" id="insf-fecha" max="'+hoy+'" value="'+esc(f ? String(f.fecha||'').slice(0, 10) : hoy)+'"></div>'+
         '<div class="campo"><label id="insf-pl-t">¿Estaba en el programa?</label><div class="chips" id="insf-pl" role="radiogroup" aria-labelledby="insf-pl-t">'+
           [['si', 'Planeada'], ['no', 'No planeada']].map(function(x){ var on=((P.planeada||'si')===x[0]); return '<button type="button" role="radio" class="chip'+(on ? ' on' : '')+'" aria-checked="'+(on ? 'true' : 'false')+'" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join('')+'</div></div></div>'+
-      '<div class="fila-c ya-al"><div class="campo"><label for="insf-area">Área o frente</label><input id="insf-area" maxlength="100" value="'+esc(P.area)+'"></div>'+
+      '<div class="fila-c ya-al"><div class="campo"><label for="insf-area">Frente <span class="tenue">· obligatorio</span></label><input id="insf-area" list="insf-areas" maxlength="100" value="'+esc(P.area)+'"><datalist id="insf-areas">'+((typeof _FRO==='object' && _FRO.obra===(YO.obra||{}).id && _FRO.L) || ((typeof INSW==='object' && INSW.frentes && INSW.frentes[(YO.obra||{}).id]) || [])).map(function(n){ return '<option value="'+esc(n)+'">'; }).join('')+'</datalist></div>'+
         '<div class="campo"><label for="insf-ubica">Ubicación exacta <span class="tenue">· opcional</span></label><input id="insf-ubica" maxlength="100" value="'+esc(P.ubica)+'"></div></div>'+
       '<div class="fila-c ya-al"><div class="campo"><label for="insf-insp">Quién la hizo</label><input id="insf-insp" maxlength="100" autocomplete="off" value="'+esc(f ? f.inspector||'' : '')+'"></div>'+
         '<div class="campo"><label for="insf-cargo">Su cargo <span class="tenue">· opcional</span></label><input id="insf-cargo" maxlength="80" value="'+esc(P.cargo)+'"></div></div>'+
@@ -3041,6 +3041,8 @@ function _insfGuardar(){
   if(!fe) return mal('Falta el día en que se hizo.', 'insf-fecha');
   if(!gesFechaPasada(fe)) return mal('Ese día todavía no llega: aquí va la inspección que ya se hizo.', 'insf-fecha');
   if(insp.length<3) return mal('Falta quién la hizo.', 'insf-insp');
+  /* 20/11/2026 · el frente donde se hizo, sí o sí */
+  if(gesTxt($('insf-area').value).length<2) return mal('Elige el frente donde se hizo.', 'insf-area');
   var obs=INSF.ren.leer(), pl=(document.querySelector('#insf-pl .chip.on')||{ getAttribute:function(){ return 'si'; } }).getAttribute('data-v');
   var L=[], area=_inspLimpio($('insf-area').value, 100), ubica=_inspLimpio($('insf-ubica').value, 100), cargo=_inspLimpio($('insf-cargo').value, 80), concl=_inspLimpio($('insf-concl').value, 500);
   if(area) L.push('Area: '+area);

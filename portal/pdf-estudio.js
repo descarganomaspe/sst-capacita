@@ -16,12 +16,8 @@
 
   var MAX_PDF_BYTES = 50 * 1024 * 1024;  /* 50 MB */
   var MAX_IMG_BYTES = 15 * 1024 * 1024;  /* 15 MB */
-  var LIB_URLS = {
-    pdfLib:  'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
-    pdfJs:   'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
-    pdfWrk:  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
-    jsZip:   'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'
-  };
+  /* 23/11/2026 · las librerías son las del propio sitio (portal/pdflib, portal/pdfjs y zip-mini.js): nada de un CDN de
+     afuera, y la política de seguridad (netlify.toml) queda cerrada a 'self' */
 
   var ST = {
     abierto: false,
@@ -114,15 +110,17 @@
   }
 
   function _asegurarLibs(){
-    return _cargarScript(LIB_URLS.pdfLib, function(){ return !!window.PDFLib; })
-      .then(function(){ return _cargarScript(LIB_URLS.pdfJs, function(){ return !!window.pdfjsLib; }); })
-      .then(function(){
-        if(window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions && !window.pdfjsLib.GlobalWorkerOptions.workerSrc){
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = LIB_URLS.pdfWrk;
-        }
-        return _cargarScript(LIB_URLS.jsZip, function(){ return !!window.JSZip; });
-      });
+    var lib = (typeof window.cargarPdfLib === 'function') ? window.cargarPdfLib()
+            : _cargarScript('pdflib/pdf-lib.min.js?v=1.17.1', function(){ return !!window.PDFLib; });
+    return lib.then(function(){
+      if(typeof window.pdfjsP !== 'function') return Promise.reject(new Error('El visor de PDF no está disponible.'));
+      return window.pdfjsP();
+    }).then(function(m){
+      window.pdfjsLib = m;
+      if(typeof window.JSZip !== 'function') return Promise.reject(new Error('Falta zip-mini.js.'));
+    });
   }
+
 
   function _guardarSnapshot(){
     var snap = ST.paginas.map(function(p){

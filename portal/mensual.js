@@ -422,6 +422,7 @@ var MEN_NOM = { datos:'El mes', equipos:'Los equipos', firmas:'Las firmas', hoja
 var MEN = null;
 
 function _menCss(){
+  if(!$('men-css2')){ var s2=document.createElement('style'); s2.id='men-css2'; s2.textContent='.men-tipos{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 14px;padding:10px 12px;border:1px solid var(--raya);border-radius:10px;background:var(--fondo)}.men-tipos .chips{margin:0}.men-tipos-t{font-size:12.5px;font-weight:600;color:var(--gris)}.men-tipos .chip b{font-weight:600;color:var(--gris);font-variant-numeric:tabular-nums;margin-left:4px}'; document.head.appendChild(s2); }
   if($('men-css')) return;
   var st=document.createElement('style'); st.id='men-css';
   st.textContent=[
@@ -521,7 +522,7 @@ function _menItem(x, listas){
   p.sort(function(a, b){ return a-b; });
   return { id:String(x.id), cod:gesTxt(x.cod).slice(0, 30), tipo:gesTxt(x.tipo).slice(0, 60), det:gesTxt(x.det).slice(0, 200), resp:gesTxt(x.resp).slice(0, 80),
            g:gesTxt(x.g).slice(0, 60), fk:gesTxt(x.fk).slice(0, 60), ck:ck, r:x.r, p:(x.r==='o') ? p : [], o:(x.r==='c') ? '' : gesTxt(x.o).slice(0, 300),
-           f:/^\d{4}-\d{2}-\d{2}$/.test(String(x.f||'')) ? x.f : '', d:x.d ? 1 : 0, app:x.app ? 1 : 0, s:x.s ? 1 : 0 };
+           f:/^\d{4}-\d{2}-\d{2}$/.test(String(x.f||'')) ? x.f : '', d:x.d ? 1 : 0, app:x.app ? 1 : 0, s:x.s ? 1 : 0, fr:gesTxt(x.fr).slice(0, 60) };
 }
 function menLimpio(o){
   o=(o && typeof o==='object') ? o : {};
@@ -604,6 +605,8 @@ function _menFirmaDe(it){ return it.r ? it.r+'|'+(it.ck||'')+'|'+(it.p||[]).join
    app entra hecho (y si la app lo revisó DESPUÉS de lo que dice la hoja, vale lo de la app). Cada equipo lleva su
    check list: «lista» (con el que está marcado, o el de hoy) y «lista0» (el de hoy: el que toma si se vuelve a marcar).
    El check list que la hoja ya guardó manda sobre el del catálogo: en un mismo mes, todos los de un tipo van igual */
+/* 20/11/2026 · el frente del equipo: lo primero de su ubicación («Torre A · junto a la puerta») */
+function menFrenteDe(u){ var t=String(u||'').trim(), i=t.indexOf(' · '); return gesTxt(i<0 ? t : t.slice(0, i)).slice(0, 60); }
 function menArmar(d, eqs){
   var por={}, L=[], LS={};
   Object.keys(d.listas||{}).forEach(function(k){ LS[k]={ k:k, n:d.listas[k].n, p:d.listas[k].p }; });
@@ -617,7 +620,7 @@ function menArmar(d, eqs){
     /* 15/10/2026 · lote 12 · la obra eligió sus inspecciones y la del mes no está */
     if(!it && typeof eqTieneMensual==='function' && !eqTieneMensual(x)) return;
     var G=menGrupoDe(x), Lh=deHoy(x);
-    var f={ id:String(x.id), cod:String(x.codigo||''), tipo:String(x.tipo||''), det:menDetalle(x), resp:gesTxt(x.responsable), g:G.g, fk:G.f, estado:x.estado||'operativo',
+    var f={ id:String(x.id), cod:String(x.codigo||''), tipo:String(x.tipo||''), det:menDetalle(x), resp:gesTxt(x.responsable), g:G.g, fk:G.f, estado:x.estado||'operativo', fr:menFrenteDe(x.ubicacion),
             ck:Lh.k, lista:Lh, ck0:Lh.k, lista0:Lh, r:'', p:[], o:'', f:'', d:0, app:0, s:0 };
     var uf=String(x.ult_fecha||'').slice(0, 10), ur=MEN_SRV[x.ult_resultado];
     if(it){ var Lg=guardada(it); f.ck=Lg.k; f.lista=Lg; f.r=it.r; f.p=it.p.slice(); f.o=it.o; f.f=it.f; f.d=it.d; f.app=it.app; f.s=it.s; }
@@ -626,11 +629,12 @@ function menArmar(d, eqs){
   });
   /* lo que la hoja guardó de un equipo que ya no está en la lista */
   Object.keys(por).forEach(function(id){ var it=por[id], Lg=guardada(it);
-    L.push({ id:it.id, cod:it.cod, tipo:it.tipo, det:it.det, resp:it.resp, g:it.g||'Otros equipos', fk:it.fk, estado:'baja', ck:Lg.k, lista:Lg, ck0:Lg.k, lista0:Lg,
+    L.push({ id:it.id, cod:it.cod, tipo:it.tipo, det:it.det, resp:it.resp, g:it.g||'Otros equipos', fk:it.fk, estado:'baja', fr:it.fr||'', ck:Lg.k, lista:Lg, ck0:Lg.k, lista0:Lg,
              r:it.r, p:it.p.slice(), o:it.o, f:it.f, d:it.d, app:it.app, s:it.s }); });
   L.sort(function(a, b){
     var la=_menOrdenLista(a.ck), lb=_menOrdenLista(b.ck); if(la!==lb) return la-lb;
     if(a.ck!==b.ck) return a.ck<b.ck ? -1 : 1;
+    if((a.fr||'')!==(b.fr||'')) return (!a.fr)-(!b.fr) || String(a.fr).localeCompare(String(b.fr), 'es');
     var ga=_menOrdenG(a.g), gb=_menOrdenG(b.g); if(ga!==gb) return ga-gb;
     if(a.g!==b.g) return a.g<b.g ? -1 : 1;
     return String(a.cod).localeCompare(String(b.cod), 'es', { numeric:true });
@@ -672,7 +676,7 @@ function menAbrir(mes, paso){
     { ancha:true, clase:'men-h', sinFoco:true });
   $('men-cerrar').onclick=function(){ _menCerrar(); };
   var nada=function(){ return null; };
-  Promise.all([menTraer(), menEquipos(), estadoLeerP('color_herramientas').then(null, nada), papCtx().then(null, nada), gesCat().then(null, nada)]).then(function(r){
+  Promise.all([menTraer(), menEquipos(), estadoLeerP('color_herramientas').then(null, nada), papCtx().then(null, nada), gesCat().then(null, nada), estadoLeerP('formatos').then(null, nada)]).then(function(r){
     if(!$('men-carga') || (YO.obra||{}).id!==obra) return;
     var filas=r[0]||[], fila=filas.filter(function(f){ return f.d.mes===mes; })[0]||null;
     var d=menLimpio(fila ? fila.d : { mes:mes });
@@ -695,6 +699,8 @@ function menAbrir(mes, paso){
           /* el día que queda en lo que se marque ahora: hoy, si la hoja es del mes en curso (aunque se haya empezado otro día) */
           dia:(function(){ if(mes===MES) return HOY; var x=d.fecha, mn=menFechaMin(); if(x<mn) x=mn; if(x.slice(0, 7)!==mes) x=menUltDia(mes); return x; })() };
     _menBorradorPoner(MEN);
+    MEN.fm=(r[5] && r[5].valor && typeof r[5].valor==='object') ? r[5].valor : {};
+    MEN.tipo=(function(){ var T=_menTipos(); return T.length>1 ? T[0].k : ''; })();
     _menMontar();
   }, function(cod){
     var c=$('men-carga'); if(!c) return;
@@ -756,7 +762,7 @@ function _menBorradorPoner(S){
 function _menMontar(){
   var S=MEN;
   $('hoja-cuerpo').innerHTML=(S.sucio ? '<div class="aviso" id="men-recu">Recuperamos lo que marcaste la vez pasada y no llegaste a guardar'+(S.recu>0 ? ' ('+S.recu+' '+(S.recu===1 ? 'equipo' : 'equipos')+')' : '')+'. '+
-    '<button type="button" class="bt-link" id="men-recu-no">Descartarlo y empezar de lo guardado</button></div>' : '')+'<ol class="pap-pasos" id="men-pasos"></ol><div id="men-cuerpo"></div>';
+    '<button type="button" class="bt-link" id="men-recu-no">Descartarlo y empezar de lo guardado</button></div>' : '')+'<ol class="pap-pasos" id="men-pasos"></ol><div id="men-tipos-c"></div><div id="men-cuerpo"></div>';
   if(S.sucio) _menMsg('Sin guardar', 'gris');
   if($('men-recu-no')) $('men-recu-no').onclick=function(){ _menBorradorQuitar(S); menAbrir(S.mes, S.paso); };
   var s=$('hoja-s'); if(s) s.textContent=menMesTxt(S.mes).charAt(0).toUpperCase()+menMesTxt(S.mes).slice(1)+(S.lee ? ' · para verla e imprimirla' : ' · la revisión del mes de cada equipo, con su cinta');
@@ -790,7 +796,7 @@ function _menIr(k){
 }
 function _menPinta(){
   var S=MEN, C=$('men-cuerpo'); if(!S || !C) return;
-  _menPintaPasos();
+  _menPintaPasos(); _menTiposPon();
   var enHoja=(S.paso==='hoja');
   $('men-pdf').hidden=!enHoja; $('men-imp').hidden=!enHoja; $('men-sig').hidden=S.lee || enHoja;
   if(S.paso==='datos') C.innerHTML=_menDatosHTML();
@@ -845,9 +851,51 @@ function _menEquiposHTML(){
     '<button type="button" class="bt sec chico" data-que="resto" id="men-resto">Los que faltan, conformes</button></div>'+
     '<div id="men-lista"></div>';
 }
+/* 20/11/2026 · Marcelo: «debería de salir por tipo: inspección de extintores mensual, un solo formato, el mismo formato
+   de la sección de formatos; igual lavaojo, botiquín, arnés… cada uno con su formato». Cada tipo (cada check list) es su
+   propia hoja: su título, su código de formato (el que la obra puso en «Formatos»), sus equipos y sus firmas. El tipo se
+   elige arriba; «Todos juntos» deja la hoja de siempre. */
+function _menTipos(){
+  var S=MEN, o={}, L=[];
+  S.L.forEach(function(it){ var k=it.ck||''; if(!o[k]){ o[k]={ k:k, n:(it.lista||_menGeneral()).n, c:0, h:0 }; L.push(o[k]); } o[k].c++; if(it.r) o[k].h++; });
+  return L;
+}
+function _menDelTipo(){ var S=MEN; return S.tipo ? S.L.filter(function(it){ return (it.ck||'')===S.tipo; }) : S.L; }
+function _menPl1(w){
+  var b=String(w||'').toLowerCase();
+  var m=/^(.*)([áéíó])([nsl])$/.exec(w); if(m) return m[1]+{ 'á':'a', 'é':'e', 'í':'i', 'ó':'o' }[m[2]]+m[3]+'es';
+  if(!b || /[sx]$/.test(b)) return w;
+  if(/z$/.test(b)) return w.slice(0, -1)+'ces';
+  if(/[aeiouáéó]$/.test(b)) return w+'s';
+  return w+'es';
+}
+function menPlural(n){
+  var p=String(n||'').split(' '), corta=false;
+  return p.map(function(w, i){ if(corta || /^(de|del|en|y|con|para)$/i.test(w)){ corta=true; return w; }
+    if(i && !/(ic[oa]|al|il|ar|en[oa]|ad[oa]|id[oa]|iv[oa]|or[oa]?)$/i.test(w)) return w; return _menPl1(w); }).join(' ');
+}
+/* el código del formato de ese tipo, el que la obra puso en «Formatos» (estado «formatos»: insp[<llave>]) */
+var MEN_FMT_K={ extintor:'extintores', botiquin:'botiquin', tablero:'tableros-electricos', andamio:'andamios', escalera:'escaleras-portatiles' };
+function menFmtDeTipo(k, fm){
+  var o=(fm && fm.insp) || {}, ks=[MEN_FMT_K[k], 'chk-'+k, k].filter(Boolean);
+  for(var i=0;i<ks.length;i++){ var x=o[ks[i]]; if(x && x.cod) return { cod:String(x.cod), rev:String(x.rev||'00') }; }
+  return null;
+}
+function _menTiposHTML(){
+  var S=MEN, T=_menTipos(); if(T.length<2 && !S.tipo) return '';
+  return '<div class="men-tipos"><span class="men-tipos-t">Formato:</span><div class="chips" role="radiogroup" aria-label="Qué tipo de equipo">'+T.map(function(t){ var on=(S.tipo===t.k);
+      return '<button type="button" role="radio" class="chip'+(on ? ' on' : '')+'" aria-checked="'+on+'" data-tipo="'+esc(t.k)+'">'+esc(menPlural(t.n))+' <b>'+t.h+'/'+t.c+'</b></button>'; }).join('')+
+    '<button type="button" role="radio" class="chip'+(!S.tipo ? ' on' : '')+'" aria-checked="'+(!S.tipo)+'" data-tipo="*">Todos juntos</button></div></div>';
+}
+function _menTiposPon(){
+  var S=MEN, c=$('men-tipos-c'); if(!S || !c) return;
+  c.innerHTML=(S.paso==='equipos' || S.paso==='hoja') ? _menTiposHTML() : '';
+  Array.prototype.forEach.call(c.querySelectorAll('[data-tipo]'), function(b){ b.onclick=function(){ var v=b.getAttribute('data-tipo'); S.tipo=(v==='*') ? '' : v; _menPinta(); }; });
+}
 function _menFiltrados(){
   var S=MEN, q=nrm(S.q), ps=q ? q.split(' ') : [];
   return S.L.filter(function(it){
+    if(S.tipo && (it.ck||'')!==S.tipo) return false;
     if(S.ver==='faltan' && it.r) return false;
     if(S.ver==='ojo' && it.r!=='o' && it.r!=='f') return false;
     if(!ps.length) return true;
@@ -866,7 +914,7 @@ function _menOrigen(it){
 function _menFilaHTML(it){
   var S=MEN, og=_menOrigen(it), h='', Lz=it.lista || _menGeneral();
   h+='<div class="men-f '+(it.r||'')+'" data-id="'+esc(it.id)+'"><div class="men-q"><span class="peq-cod">'+esc(it.cod)+'</span><b>'+esc(it.tipo)+'</b>'+
-     ((it.det || it.resp) ? '<small>'+esc([it.det, it.resp ? 'Resp.: '+it.resp : ''].filter(Boolean).join(' · '))+'</small>' : '')+
+     '<small>'+(it.fr ? '📍 '+esc(it.fr) : '<span class="ojo">📍 Sin frente: ponlo en «Equipos y herramientas»</span>')+((it.det || it.resp) ? ' · '+esc([it.det, it.resp ? 'Resp.: '+it.resp : ''].filter(Boolean).join(' · ')) : '')+'</small>'+
      (og ? '<small class="ya">'+esc(og)+'</small>' : '')+'</div>'+
      '<div class="men-r" role="group" aria-label="Resultado de '+esc(it.cod)+'">'+['c', 'o', 'f'].map(function(k){
        var on=(it.r===k);
@@ -882,7 +930,7 @@ function _menFilaHTML(it){
   return h+'</div>';
 }
 function _menResPinta(){
-  var S=MEN, c=menCuenta(S.L), r=$('men-res'), b=$('men-barra'), v=$('men-ver'), bt=$('men-resto'); if(!r) return;
+  var S=MEN, c=menCuenta(_menDelTipo()), r=$('men-res'), b=$('men-barra'), v=$('men-ver'), bt=$('men-resto'); if(!r) return;
   r.innerHTML='<span><b>'+c.hechos+' de '+c.n+'</b> '+(c.n===1 ? 'equipo' : 'equipos')+' con resultado</span>'+(c.hechos ? '<span>'+esc(menCuentaTxt(c))+'</span>' : '')+
     (c.faltan ? '<span class="pill ojo">'+(c.faltan===1 ? 'falta 1' : 'faltan '+c.faltan)+'</span>' : '<span class="pill ok">completa</span>');
   if(b) b.innerHTML=['c', 'o', 'f'].map(function(k){ return c[k] ? '<i class="'+k+'" style="width:'+(100*c[k]/Math.max(1, c.n)).toFixed(2)+'%"></i>' : ''; }).join('');
@@ -1020,8 +1068,8 @@ function _menHojaHTML(){
     '<div class="pdfv" id="men-prev" aria-label="Vista previa de la hoja"></div>';
 }
 function _menDatosPdf(){
-  var S=MEN;
-  return { d:S.d, L:S.L, C:S.C, cat:S.cat };
+  var S=MEN, T=S.tipo ? _menTipos().filter(function(t){ return t.k===S.tipo; })[0] : null;
+  return { d:S.d, L:_menDelTipo(), C:S.C, cat:S.cat, op:T ? { tipo:T.k, tipoN:T.n, fmt:menFmtDeTipo(T.k, S.fm) } : {} };
 }
 function _menHojaPinta(){
   var S=MEN, caja=$('men-prev'); if(!S || !caja) return;
@@ -1032,7 +1080,7 @@ function _menHojaPinta(){
                                                 : 'Cada equipo con su resultado, el punto que no cumple y la observación; al pie, las firmas de Producción y de Seguridad.';
   caja.innerHTML='<div class="pdfv-msg">Armando la hoja…</div>';
   var D=_menDatosPdf();
-  menPdf(D.d, D.L, D.C, { blanco:S.modo==='blanco' }).then(function(R){
+  menPdf(D.d, D.L, D.C, Object.assign({ blanco:S.modo==='blanco' }, D.op)).then(function(R){
     if(MEN!==S || n!==S.hojaN || !$('men-prev')) return;
     S.hoja=R; pdfVistaP($('men-prev'), R.blob);
     ['men-pdf', 'men-imp'].forEach(function(k){ var b=$(k); if(b) b.disabled=false; });
@@ -1042,7 +1090,7 @@ function _menEntregar(como, bt){
   var S=MEN; if(!S) return;
   var D=_menDatosPdf();
   if(bt) bt.disabled=true;
-  menPdf(D.d, D.L, D.C, { blanco:S.modo==='blanco' }).then(function(R){
+  menPdf(D.d, D.L, D.C, Object.assign({ blanco:S.modo==='blanco' }, D.op)).then(function(R){
     if(bt) bt.disabled=false;
     if(como==='imp') papImprimir(R); else papBajar(R);
   }, function(){ if(bt) bt.disabled=false; toast('No se pudo armar el PDF. Revisa tu conexión.'); });
@@ -1185,10 +1233,11 @@ function _menObsSrv(it, listas){
   var p=(it.r==='o') ? it.p.map(function(i){ return (Lz.p[i]||[])[0]||''; }).filter(Boolean).join(', ') : '';
   return [p, gesTxt(it.o)].filter(Boolean).join(': ').slice(0, 300);
 }
-function _menResumenFila(items, d, fkNombre, quien){
+function _menResumenFila(items, d, fkNombre, quien, fr){
   var c={ c:0, o:0, f:0 }, obs=[], fe='';
   items.forEach(function(it){ c[it.r]++; if(it.f>fe) fe=it.f; if(it.r!=='c') obs.push(_inspLimpio(it.cod+' '+it.tipo+': '+(_menObsSrv(it, d.listas) || MEN_R[it.r].n)+(it.r==='f' ? ' (fuera de servicio)' : ''), 300)+' [abierta]'); });
   var n=items.length, cinta=eqCinta(d.color), L=[];
+  if(fr) L.push('Area: '+_inspLimpio(fr, 100));
   L.push('Tipo: Planeada');
   L.push(obs.length ? obs.length+' observacion(es): '+obs.slice(0, 30).join(' | ') : 'Sin observaciones.');
   L.push('Conclusiones: '+_inspLimpio('Revisión mensual de equipos'+(cinta ? ' con la '+cinta : '')+' · '+n+' '+(n===1 ? 'equipo' : 'equipos')+': '+menCuentaTxt({ c:c.c, o:c.o, f:c.f })+'.', 500));
@@ -1202,14 +1251,21 @@ function _menResumenFila(items, d, fkNombre, quien){
 /* un renglón por formato en «Inspecciones», como los de la app: se actualiza el del mes, no se suma otro */
 function _menResumenes(paquete, cat){
   var mes=paquete.mes, pre='wm'+mes.replace('-', '')+'-', porF={}, quien=gesQuien();
-  paquete.items.forEach(function(it){ var k=it.fk||''; (porF[k]=porF[k]||[]).push(it); });
+  /* 20/11/2026 · uno por formato Y por frente: así «Inspecciones» las ordena por frente */
+  var frDe={}; ((MEN && MEN.L) || []).forEach(function(x){ frDe[x.id]=x.fr||''; });
+  paquete.items.forEach(function(it){ var k=(it.fk||'')+'|'+(it.fr || frDe[it.id] || ''); (porF[k]=porF[k]||[]).push(it); });
   var claves=Object.keys(porF); if(!claves.length) return Promise.resolve(0);
   return sbGet('sst_inspeccion?'+filtroObra('sst_inspeccion')+'&ext=like.'+encodeURIComponent(pre+'*')+'&select=id,ext&limit=200').then(function(rows){
     var ya={}; (rows||[]).forEach(function(x){ if(x && String(x.ext||'').indexOf(pre)===0) ya[x.ext]=x.id; });
     var n=0, cadena=Promise.resolve();
-    claves.forEach(function(k){
-      var ext=pre+(k || 'general'), fila=_menResumenFila(porF[k], paquete, menFormatoNombre(k, cat), quien);
+    var viejo={};
+    claves.forEach(function(kk){
+      var p2=kk.split('|'), k=p2[0], fr=p2.slice(1).join('|'), base=pre+(k || 'general');
+      var ext=base+(fr ? '-'+nrm(fr).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) : ''), fila=_menResumenFila(porF[kk], paquete, menFormatoNombre(k, cat), quien, fr);
+      /* el renglón de antes (sin frente) se reusa para el primer frente: no queda contado dos veces */
+      var reusa=(!ya[ext] && ya[base] && !viejo[base] && ext!==base) ? ya[base] : null; if(reusa){ viejo[base]=1; fila.ext=ext; }
       cadena=cadena.then(function(){
+        if(reusa) return sbPatch('sst_inspeccion?id=eq.'+encodeURIComponent(reusa), fila);
         if(ya[ext]) return sbPatch('sst_inspeccion?id=eq.'+encodeURIComponent(ya[ext]), fila);
         fila.empresa=YO.obra.id; fila.ext=ext;
         return sbPostP('sst_inspeccion', fila);
@@ -1363,8 +1419,9 @@ function menPdf(d, L, C, op){
   op=op||{}; C=C||{};
   return cargarEvPDF().then(function(){
     var blanco=!!op.blanco, obra=String(nombreObraP()||'');
-    var P=_ppDoc('h', { emp:C.emp||{}, logo:C.logo||null, obra:obra, rotulo:obra, tx:C.tx, fmt:{ inspm:{ cod:d.cod, rev:d.ver, fecha:blanco ? '' : d.fecha } } },
-                 'INSPECCIÓN MENSUAL DE EQUIPOS Y HERRAMIENTAS', menMesTxt(d.mes).toUpperCase()+(blanco ? ' · hoja para llevar al campo' : ''), 'inspm');
+    var F0=op.fmt || { cod:d.cod, rev:d.ver }, TIT=op.tipo!=null && op.tipoN ? 'INSPECCIÓN MENSUAL DE '+menPlural(op.tipoN).toUpperCase() : 'INSPECCIÓN MENSUAL DE EQUIPOS Y HERRAMIENTAS';
+    var P=_ppDoc('h', { emp:C.emp||{}, logo:C.logo||null, obra:obra, rotulo:obra, tx:C.tx, fmt:{ inspm:{ cod:F0.cod, rev:F0.rev, fecha:blanco ? '' : d.fecha } } },
+                 TIT, menMesTxt(d.mes).toUpperCase()+(blanco ? ' · hoja para llevar al campo' : ''), 'inspm');
     var doc=P.doc, M=P.M, W=P.w, hF=6.2, col=eqColor(d.color);
     P.cabecera();
     /* los datos */
@@ -1411,7 +1468,7 @@ function menPdf(d, L, C, op){
       cab();
       S0.items.forEach(function(it){
         var r=blanco ? '' : it.r;
-        var nombre=[it.tipo, it.det].filter(Boolean).join(' · ');
+        var nombre=[it.tipo, it.det].filter(Boolean).join(' · ')+'\nFrente: '+(it.fr || 'sin frente');
         var deOtro=(r && (it.app || it.d)) ? (it.app ? 'Anotado en la app' : 'De su inspección diaria') : '';
         var nc=(!conCol && r==='o' && it.p.length) ? 'No cumple: '+it.p.map(function(i){ return i+1; }).join(', ')+'.' : '';
         var obs=blanco ? '' : [nc, it.r==='c' ? '' : it.o, (!conCol && it.d && !/inspecci[oó]n diaria/i.test(it.o||'')) ? '(de su inspección diaria)' : ''].filter(Boolean).join(' ');
@@ -1463,7 +1520,7 @@ function menPdf(d, L, C, op){
     });
     P.y+=hS;
     var R=P.listo();
-    R.nombre=_papNombre('Inspeccion mensual de equipos - '+d.mes+' - '+obra+(blanco ? ' (en blanco)' : ''))+'.pdf';
+    R.nombre=_papNombre('Inspeccion mensual de '+(op.tipoN ? menPlural(op.tipoN).toLowerCase() : 'equipos')+' - '+d.mes+' - '+obra+(blanco ? ' (en blanco)' : ''))+'.pdf';
     return R;
   });
 }
