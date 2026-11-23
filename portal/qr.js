@@ -2300,6 +2300,251 @@ var qrcode = function() {
     return qrcode;
 }));
 ;
+/* >>> QR-ESTILOS-INI · 23/11/2026 · el dibujo del código QR, igual en la app y en la web (portal/qr-estilos.js) <<<
+   Marcelo (requerimiento «Motor de estilos de código QR de alta lectura»): varios estilos del propio código, sin tocar los
+   enlaces (/d/, /h/…): lo que ya está impreso sigue funcionando. Reglas que se cumplen siempre:
+     · zona de silencio de 4 módulos (5 en «Alta lectura»), también en «Clásico» (Marcelo: «Sí, en todos»);
+     · solo negro o azul petróleo sobre blanco puro; los tres ojos, enteros (nunca puntos sueltos);
+     · logo solo con corrección H, en una placa blanca de un 10 % de la matriz (tope 18 %), lejos de los ojos;
+     · si con H el código sale muy denso (más de QRE_MAX módulos), baja a Q y luego a M, y entonces va sin logo;
+     · en imagen, módulos de pixeles enteros y sin suavizado (nítido al imprimir).
+   El estilo lo elige la obra (sst_estado «qr_estilo» = { k, logo }); «Clásico» es el de siempre. */
+var QRE_ESTILOS = [
+  { k:'clasico',    n:'Clásico',             d:'El de siempre: cuadrados negros nítidos.', ecc:'', margen:4 },
+  { k:'micro',      n:'Alta lectura',        d:'Para stickers chicos, cascos y fotochecks: módulos más grandes, sin logo y más margen.', ecc:'M', margen:5 },
+  { k:'logo',       n:'Con logo',            d:'El logo de la empresa al centro, en una placa blanca. Corrección alta.', ecc:'H', margen:4, logo:1 },
+  { k:'circulos',   n:'Puntos',              d:'Puntos redondos y esquinas redondeadas enteras. Logo opcional.', ecc:'H', margen:4, logo:1, forma:'c' },
+  { k:'fluido',     n:'Fluido',              d:'Módulos unidos con bordes suaves, en azul petróleo. Logo opcional.', ecc:'H', margen:4, logo:1, forma:'f', color:'#0B2A3A' },
+  { k:'industrial', n:'Industrial',          d:'Cuadrados sólidos con corrección alta: aguanta polvo, raspones y manchas. Con marco.', ecc:'H', margen:4, marco:1 }
+];
+var QRE_MAX = 53;
+var QRE = { k:'clasico', logo:true, img:null, du:'', emp:null, ts:0 };
+function qreDef(k){ for(var i = 0; i < QRE_ESTILOS.length; i++) if(QRE_ESTILOS[i].k === k) return QRE_ESTILOS[i]; return QRE_ESTILOS[0]; }
+function qrePoner(cfg){ cfg = (cfg && typeof cfg === 'object') ? cfg : {}; QRE.k = qreDef(cfg.k).k; QRE.logo = cfg.logo !== false; }
+function qrePonerLogo(du){
+  du = String(du || '');
+  if(!/^data:image\/|^https:\/\//.test(du)){ QRE.img = null; QRE.du = ''; return; }
+  if(du === QRE.du) return;
+  QRE.du = du;
+  try{ var im = new Image(); if(/^https:/.test(du)) im.crossOrigin = 'anonymous'; im.src = du; QRE.img = im; }catch(_i){ QRE.img = null; }
+}
+function qreLogoListo(){ return !!(QRE.img && QRE.img.complete && QRE.img.naturalWidth > 0); }
+/* la corrección que se usa: la del estilo (H o M) o, en «Clásico», la que pidió quien dibuja */
+function qreEcc(pedida, E){ E = E || qreDef(QRE.k); return E.ecc || pedida || 'M'; }
+/* envuelve la librería: el mismo qrcode(0, 'M') de siempre, con la corrección del estilo y su dibujo */
+function qreEnvolver(base){
+  if(typeof base !== 'function' || base._qre) return base;
+  var f = function(tipo, ecc){
+    try{ if(typeof window !== 'undefined' && typeof window.QRE_SYNC === 'function') window.QRE_SYNC(); }catch(_s){}
+    var E = qreDef(QRE.k), e = qreEcc(ecc, E), datos = [], q = base(tipo, e), add = q.addData, mk = q.make;
+    q.addData = function(d, m){ datos.push([d, m]); return add.apply(q, arguments); };
+    q.make = function(){
+      mk.call(q);
+      if(e === 'H' && q.getModuleCount() > QRE_MAX){
+        var otras = ['Q', 'M'];
+        for(var i = 0; i < otras.length; i++){
+          var q2 = base(tipo, otras[i]); datos.forEach(function(x){ q2.addData(x[0], x[1]); }); q2.make();
+          if(q2.getModuleCount() <= QRE_MAX || i === otras.length - 1){
+            for(var k in q2) if(typeof q2[k] === 'function' && k !== 'addData' && k !== 'make') q[k] = q2[k];
+            e = otras[i]; break;
+          }
+        }
+      }
+      q._qreE = E; q._qreEcc = e;
+      q.createDataURL = function(celda, margen){ return qreDataURL(q, celda, margen); };
+    };
+    return q;
+  };
+  for(var k in base) if(Object.prototype.hasOwnProperty.call(base, k)) f[k] = base[k];
+  f._qre = true; f._base = base;
+  return f;
+}
+/* las formas del código en módulos (0 a n + 2M): lo dibujan el lienzo, el SVG y el PDF */
+function qreFormas(q, E){
+  E = E || q._qreE || qreDef(QRE.k);
+  var n = q.getModuleCount(), M = E.margen || 4, T = n + 2 * M, F = { n:n, M:M, T:T, color:E.color || '#000000', rects:[], circ:[], fl:[], ojos:[], logo:null, marco:!!E.marco };
+  var ojo = function(r, c){ return (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7); };
+  var conLogo = !!(E.logo && QRE.logo && q._qreEcc === 'H' && qreLogoListo());
+  var L0 = -1, L1 = -1;
+  if(conLogo){ var s = Math.floor(n * 0.3); if((n - s) % 2) s--; L0 = (n - s) / 2; L1 = L0 + s; F.logo = { x:M + L0, y:M + L0, s:s }; }
+  var tapa = function(r, c){ return conLogo && r >= L0 - 0.5 && r < L1 + 0.5 && c >= L0 - 0.5 && c < L1 + 0.5; };
+  var osc = function(r, c){ return r >= 0 && c >= 0 && r < n && c < n && q.isDark(r, c) && !ojo(r, c) && !tapa(r, c); };
+  var redondo = (E.forma === 'c' || E.forma === 'f');
+  if(redondo) [[0, 0], [0, n - 7], [n - 7, 0]].forEach(function(o){ F.ojos.push({ x:M + o[1], y:M + o[0] }); });
+  for(var r = 0; r < n; r++){
+    var c = 0;
+    while(c < n){
+      var dark = q.isDark(r, c) && !tapa(r, c) && !(redondo && ojo(r, c));
+      if(!dark){ c++; continue; }
+      if(E.forma === 'c'){ F.circ.push([M + c + 0.5, M + r + 0.5, 0.44]); c++; continue; }
+      if(E.forma === 'f'){
+        F.fl.push([M + c, M + r, !osc(r - 1, c) && !osc(r, c - 1), !osc(r - 1, c) && !osc(r, c + 1), !osc(r + 1, c) && !osc(r, c + 1), !osc(r + 1, c) && !osc(r, c - 1)]);
+        c++; continue;
+      }
+      var c0 = c; while(c < n && q.isDark(r, c) && !tapa(r, c)) c++;
+      F.rects.push([M + c0, M + r, c - c0, 1]);
+    }
+  }
+  return F;
+}
+/* un rectángulo con cada esquina redondeada o no (r en las mismas unidades) */
+function qreRR(g, x, y, w, h, r, esq){
+  esq = esq || [1, 1, 1, 1];
+  var a = esq[0] ? r : 0, b = esq[1] ? r : 0, c = esq[2] ? r : 0, d = esq[3] ? r : 0;
+  g.moveTo(x + a, y); g.lineTo(x + w - b, y); if(b) g.arcTo(x + w, y, x + w, y + b, b); else g.lineTo(x + w, y);
+  g.lineTo(x + w, y + h - c); if(c) g.arcTo(x + w, y + h, x + w - c, y + h, c); else g.lineTo(x + w, y + h);
+  g.lineTo(x + d, y + h); if(d) g.arcTo(x, y + h, x, y + h - d, d); else g.lineTo(x, y + h);
+  g.lineTo(x, y + a); if(a) g.arcTo(x, y, x + a, y, a); else g.lineTo(x, y);
+  g.closePath();
+}
+/* en un lienzo: el cuadrado (x, y, lado) completo, con su zona de silencio. op.entero: módulos de pixeles enteros, centrado */
+function qrePintar(g, q, x, y, lado, op){
+  op = op || {};
+  var F = qreFormas(q), m = lado / F.T, x0 = x, y0 = y;
+  if(op.entero){ m = Math.max(1, Math.floor(lado / F.T)); var u = m * F.T; x0 = Math.round(x + (lado - u) / 2); y0 = Math.round(y + (lado - u) / 2); }
+  var X = function(v){ return x0 + v * m; }, Y = function(v){ return y0 + v * m; };
+  try{ g.imageSmoothingEnabled = false; }catch(_s){}
+  g.fillStyle = '#ffffff'; g.fillRect(x0, y0, F.T * m, F.T * m);
+  g.fillStyle = F.color;
+  F.rects.forEach(function(r){ g.fillRect(X(r[0]), Y(r[1]), r[2] * m, r[3] * m); });
+  if(F.circ.length){ g.beginPath(); F.circ.forEach(function(c){ g.moveTo(X(c[0]) + c[2] * m, Y(c[1])); g.arc(X(c[0]), Y(c[1]), c[2] * m, 0, Math.PI * 2); }); g.fill(); }
+  if(F.fl.length){ g.beginPath(); F.fl.forEach(function(f){ qreRR(g, X(f[0]), Y(f[1]), m, m, m * 0.5, [f[2], f[3], f[4], f[5]]); }); g.fill(); }
+  F.ojos.forEach(function(o){
+    g.fillStyle = F.color; g.beginPath(); qreRR(g, X(o.x), Y(o.y), 7 * m, 7 * m, 1.4 * m); g.fill();
+    g.fillStyle = '#ffffff'; g.beginPath(); qreRR(g, X(o.x + 1), Y(o.y + 1), 5 * m, 5 * m, 0.9 * m); g.fill();
+    g.fillStyle = F.color; g.beginPath(); qreRR(g, X(o.x + 2), Y(o.y + 2), 3 * m, 3 * m, 0.6 * m); g.fill();
+  });
+  if(F.logo){
+    var Lg = F.logo, pad = 0.4 * m;
+    g.fillStyle = '#ffffff'; g.beginPath(); qreRR(g, X(Lg.x) - pad, Y(Lg.y) - pad, Lg.s * m + 2 * pad, Lg.s * m + 2 * pad, m); g.fill();
+    var im = QRE.img, iw = im.naturalWidth, ih = im.naturalHeight, caja = Lg.s * m * 0.86, k = Math.min(caja / iw, caja / ih), w = iw * k, h = ih * k;
+    try{ g.imageSmoothingEnabled = true; g.drawImage(im, X(Lg.x) + (Lg.s * m - w) / 2, Y(Lg.y) + (Lg.s * m - h) / 2, w, h); }catch(_d){}
+  }
+  if(F.marco){ g.strokeStyle = F.color; g.lineWidth = Math.max(1, 0.3 * m); g.strokeRect(x0 + 0.5 * m, y0 + 0.5 * m, (F.T - 1) * m, (F.T - 1) * m); }
+  return { x:x0, y:y0, lado:F.T * m, modulo:m };
+}
+/* una imagen PNG: celda = pixeles por módulo; margen (pixeles) se respeta si es mayor que la zona de silencio */
+function qreDataURL(q, celda, margen){
+  var E = q._qreE || qreDef(QRE.k), n = q.getModuleCount(), cel = Math.max(1, Math.round(celda || 2)), M = Math.max(E.margen || 4, Math.ceil((margen || 0) / cel));
+  var E2 = {}; for(var k in E) E2[k] = E[k]; E2.margen = M; var g0 = q._qreE; q._qreE = E2;
+  var cv = document.createElement('canvas'), lado = (n + 2 * M) * cel; cv.width = lado; cv.height = lado;
+  try{ qrePintar(cv.getContext('2d'), q, 0, 0, lado, { entero:true }); }finally{ q._qreE = g0; }
+  return cv.toDataURL('image/png');
+}
+/* en SVG (x, y, lado en las unidades del dibujo) */
+function qreSVG(q, x, y, lado){
+  var F = qreFormas(q), m = lado / F.T, f = function(v){ return (Math.round(v * 100) / 100).toString(); };
+  var X = function(v){ return x + v * m; }, Y = function(v){ return y + v * m; }, s = '';
+  s += '<rect x="' + f(x) + '" y="' + f(y) + '" width="' + f(lado) + '" height="' + f(lado) + '" fill="#fff"/>';
+  var d = ''; F.rects.forEach(function(r){ d += 'M' + f(X(r[0])) + ' ' + f(Y(r[1])) + 'h' + f(r[2] * m) + 'v' + f(m) + 'h' + f(-r[2] * m) + 'z'; });
+  if(d) s += '<path d="' + d + '" fill="' + F.color + '" shape-rendering="crispEdges"/>';
+  F.circ.forEach(function(c){ s += '<circle cx="' + f(X(c[0])) + '" cy="' + f(Y(c[1])) + '" r="' + f(c[2] * m) + '" fill="' + F.color + '"/>'; });
+  if(F.fl.length){
+    var p = '', h = m * 0.5;
+    F.fl.forEach(function(e){
+      var a = e[2] ? h : 0, b = e[3] ? h : 0, c = e[4] ? h : 0, dd = e[5] ? h : 0, x0 = X(e[0]), y0 = Y(e[1]);
+      p += 'M' + f(x0 + a) + ' ' + f(y0) + 'H' + f(x0 + m - b) + (b ? 'A' + f(b) + ' ' + f(b) + ' 0 0 1 ' + f(x0 + m) + ' ' + f(y0 + b) : '') +
+           'V' + f(y0 + m - c) + (c ? 'A' + f(c) + ' ' + f(c) + ' 0 0 1 ' + f(x0 + m - c) + ' ' + f(y0 + m) : '') +
+           'H' + f(x0 + dd) + (dd ? 'A' + f(dd) + ' ' + f(dd) + ' 0 0 1 ' + f(x0) + ' ' + f(y0 + m - dd) : '') +
+           'V' + f(y0 + a) + (a ? 'A' + f(a) + ' ' + f(a) + ' 0 0 1 ' + f(x0 + a) + ' ' + f(y0) : '') + 'Z';
+    });
+    s += '<path d="' + p + '" fill="' + F.color + '"/>';
+  }
+  F.ojos.forEach(function(o){
+    s += '<rect x="' + f(X(o.x)) + '" y="' + f(Y(o.y)) + '" width="' + f(7 * m) + '" height="' + f(7 * m) + '" rx="' + f(1.4 * m) + '" fill="' + F.color + '"/>' +
+         '<rect x="' + f(X(o.x + 1)) + '" y="' + f(Y(o.y + 1)) + '" width="' + f(5 * m) + '" height="' + f(5 * m) + '" rx="' + f(0.9 * m) + '" fill="#fff"/>' +
+         '<rect x="' + f(X(o.x + 2)) + '" y="' + f(Y(o.y + 2)) + '" width="' + f(3 * m) + '" height="' + f(3 * m) + '" rx="' + f(0.6 * m) + '" fill="' + F.color + '"/>';
+  });
+  if(F.logo){
+    var Lg = F.logo, pad = 0.4 * m, im = QRE.img, iw = im.naturalWidth, ih = im.naturalHeight, caja = Lg.s * m * 0.86, k = Math.min(caja / iw, caja / ih);
+    s += '<rect x="' + f(X(Lg.x) - pad) + '" y="' + f(Y(Lg.y) - pad) + '" width="' + f(Lg.s * m + 2 * pad) + '" height="' + f(Lg.s * m + 2 * pad) + '" rx="' + f(m) + '" fill="#fff"/>' +
+         '<image href="' + QRE.du + '" x="' + f(X(Lg.x) + (Lg.s * m - iw * k) / 2) + '" y="' + f(Y(Lg.y) + (Lg.s * m - ih * k) / 2) + '" width="' + f(iw * k) + '" height="' + f(ih * k) + '"/>';
+  }
+  if(F.marco) s += '<rect x="' + f(x + 0.5 * m) + '" y="' + f(y + 0.5 * m) + '" width="' + f((F.T - 1) * m) + '" height="' + f((F.T - 1) * m) + '" fill="none" stroke="' + F.color + '" stroke-width="' + f(0.3 * m) + '"/>';
+  return s;
+}
+/* en un PDF de jsPDF (x, y, lado en las unidades del documento): cuadrados en vector; puntos, fluido o logo, en imagen nítida */
+function qrePDF(doc, q, x, y, lado){
+  var F = qreFormas(q);
+  if(F.circ.length || F.fl.length || F.ojos.length || F.logo){
+    try{ doc.addImage(qreDataURL(q, 12, 0), 'PNG', x, y, lado, lado, undefined, 'FAST'); return; }catch(_i){}
+  }
+  var m = lado / F.T, sol = m * 0.06, rgb = F.color === '#0B2A3A' ? [11, 42, 58] : [0, 0, 0];
+  doc.setFillColor(255, 255, 255); doc.rect(x, y, lado, lado, 'F');
+  doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+  F.rects.forEach(function(r){ doc.rect(x + r[0] * m, y + r[1] * m, r[2] * m + sol, r[3] * m + sol, 'F'); });
+  if(F.marco){ doc.setDrawColor(rgb[0], rgb[1], rgb[2]); doc.setLineWidth(0.3 * m); doc.rect(x + 0.5 * m, y + 0.5 * m, (F.T - 1) * m, (F.T - 1) * m, 'S'); }
+}
+/* para elegir: qué estilo conviene a un tamaño impreso (cm del lado del QR) */
+function qreRecomienda(cm){ cm = +cm || 0; return cm && cm < 3 ? 'micro' : (cm && cm <= 6 ? 'logo' : 'circulos'); }
+/* <<< QR-ESTILOS-FIN >>> */
+qrcode = qreEnvolver(qrcode);
+/* >>> QR-ESTILOS-UI-INI · el selector del estilo (el mismo en la app y en la web; guardar lo pone cada una) <<< */
+var QRE_UI = { tam:'', abierto:false };
+function _qreMuestra(k, lado){
+  var cv = document.createElement('canvas'); cv.width = lado; cv.height = lado;
+  var antes = QRE.k; QRE.k = k;
+  try{ var q = qrcode(0, 'M'); q.addData('https://obrasstapp.com/d/EJEMPLO01'); q.make(); qrePintar(cv.getContext('2d'), q, 0, 0, lado, { entero:true }); }catch(_e){}
+  QRE.k = antes;
+  return cv;
+}
+function qreSelectorHTML(){
+  var E = qreDef(QRE.k), T = QRE_UI.tam, rec = T ? qreRecomienda(T === 'chico' ? 2 : (T === 'mediano' ? 5 : 10)) : '';
+  var h = '<details class="qre-caja" id="qre-caja"' + (QRE_UI.abierto ? ' open' : '') + '><summary><span class="qre-sq" aria-hidden="true">🔳</span><span><b>Estilo de los códigos QR</b>' +
+    '<small>Ahora: <span data-sin-trad>' + E.n + '</span>' + (E.logo && QRE.logo ? ' · <span>con logo</span>' : '') + ' · <span>credenciales, equipos y carteles salen así</span></small></span></summary><div class="qre-cu">' +
+    '<p class="qre-ayuda">Cambia solo el dibujo: los QR ya impresos siguen abriendo lo mismo. Todos llevan su margen blanco de 4 módulos, para que el celular enfoque bien sobre cascos, metal o plástico.</p>' +
+    '<div class="qre-tam" role="radiogroup" aria-label="Tamaño impreso">' + [['chico', 'Chico (menos de 3 cm)'], ['mediano', 'Mediano (4 a 6 cm)'], ['grande', 'Grande (más de 8 cm)']].map(function(t){
+      return '<button type="button" role="radio" aria-checked="' + (T === t[0]) + '" class="' + (T === t[0] ? 'on' : '') + '" data-qre-tam="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div>' +
+    (rec ? '<p class="qre-rec">' + (T === 'chico' ? '⚠️ <span>Para stickers chicos, cascos y fotochecks conviene «Alta lectura»: módulos más grandes y sin logo.</span>' : '💡 <span>Para este tamaño van bien «Con logo», «Puntos» o «Fluido».</span>') + '</p>' : '') +
+    '<div class="qre-grid">' + QRE_ESTILOS.map(function(x){
+      return '<button type="button" class="qre-op' + (x.k === E.k ? ' on' : '') + (x.k === rec ? ' rec' : '') + '" data-qre="' + x.k + '" aria-pressed="' + (x.k === E.k) + '"><span class="qre-m" data-qre-m="' + x.k + '"></span>' +
+        '<b>' + x.n + (x.k === rec ? ' · <span>sugerido</span>' : '') + '</b><small>' + x.d + '</small></button>'; }).join('') + '</div>' +
+    ((E.logo) ? '<label class="qre-chk"><input type="checkbox" id="qre-logo"' + (QRE.logo ? ' checked' : '') + '> <span>Con el logo de la empresa al centro</span>' + (qreLogoListo() ? '' : ' <small>(<span>la obra todavía no tiene logo: sale sin él</span>)</small>') + '</label>' : '') +
+    (T === 'chico' && E.logo && QRE.logo ? '<p class="qre-rec mal">⚠️ <span>Con logo y en tamaño chico cuesta enfocar: mejor «Alta lectura».</span></p>' : '') +
+    '<p class="qre-msg" id="qre-msg" role="status"></p></div></details>';
+  return h;
+}
+/* caja: donde está el selector · guardar(cfg) → Promise (lo guarda la app o la web para toda la obra) */
+function qreSelectorActivar(caja, guardar){
+  if(!caja) return;
+  caja.innerHTML = qreSelectorHTML();
+  Array.prototype.forEach.call(caja.querySelectorAll('[data-qre-m]'), function(s){ s.appendChild(_qreMuestra(s.getAttribute('data-qre-m'), 96)); });
+  var d = caja.querySelector('#qre-caja'); if(d) d.addEventListener('toggle', function(){ QRE_UI.abierto = d.open; });
+  var guarda = function(cfg){
+    var m = caja.querySelector('#qre-msg'); if(m){ m.className = 'qre-msg'; m.textContent = 'Guardando…'; }
+    Promise.resolve(guardar(cfg)).then(function(ok){
+      if(ok === false) throw 0;
+      qrePoner(cfg); QRE_UI.abierto = true; qreSelectorActivar(caja, guardar);
+      var m2 = caja.querySelector('#qre-msg'); if(m2){ m2.className = 'qre-msg ok'; m2.textContent = 'Listo: los QR de la obra salen ahora en «' + qreDef(cfg.k).n + '», en la app y en la web.'; }
+    }).catch(function(){ var m3 = caja.querySelector('#qre-msg'); if(m3){ m3.className = 'qre-msg mal'; m3.textContent = 'No se pudo guardar: revisa tu conexión o tu permiso en esta obra.'; } });
+  };
+  caja.onclick = function(ev){
+    var b = ev.target.closest ? ev.target.closest('[data-qre],[data-qre-tam]') : null; if(!b) return;
+    if(b.hasAttribute('data-qre-tam')){ QRE_UI.tam = b.getAttribute('data-qre-tam'); QRE_UI.abierto = true; qreSelectorActivar(caja, guardar); return; }
+    guarda({ k:b.getAttribute('data-qre'), logo:QRE.logo });
+  };
+  var lg = caja.querySelector('#qre-logo'); if(lg) lg.onchange = function(){ guarda({ k:QRE.k, logo:!!lg.checked }); };
+}
+function qreEstilos(){
+  if(document.getElementById('qre-css')) return;
+  var st = document.createElement('style'); st.id = 'qre-css';
+  st.textContent = '.qre-caja{margin:0 0 16px;border:1px solid rgba(11,42,58,.12);border-radius:14px;background:#fff;font-family:var(--letra,"Plus Jakarta Sans",sans-serif)}' +
+    '.qre-caja summary{display:flex;gap:10px;align-items:center;padding:12px 14px;cursor:pointer;list-style:none}.qre-caja summary::-webkit-details-marker{display:none}' +
+    '.qre-caja summary small{display:block;color:#5B6B76;font-size:12.5px;margin-top:2px}' +
+    '.qre-sq{width:38px;height:38px;border-radius:30%;background:#fff;border:1px solid rgba(11,42,58,.1);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}' +
+    '.qre-cu{padding:0 14px 14px}.qre-ayuda{font-size:13px;color:#3C4A54;margin:0 0 10px}' +
+    '.qre-tam{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}.qre-tam button{border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;color:#08222F}' +
+    '.qre-tam button.on{background:#0B2A3A;color:#fff;border-color:#0B2A3A}' +
+    '.qre-rec{font-size:13px;margin:0 0 10px;color:#7A5A00}.qre-rec.mal{color:#B42318}' +
+    '.qre-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}' +
+    '.qre-op{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;border:2px solid #E2E8F0;border-radius:12px;background:#fff;padding:10px;font:inherit;color:#08222F;cursor:pointer}' +
+    '.qre-op.on{border-color:#F5B700;box-shadow:0 0 0 3px rgba(245,183,0,.25)}.qre-op.rec:not(.on){border-style:dashed;border-color:#F5B700}' +
+    '.qre-op small{font-size:11.5px;color:#5B6B76;line-height:1.35}.qre-m canvas{width:96px;height:96px;image-rendering:pixelated;display:block}' +
+    '.qre-chk{display:flex;gap:8px;align-items:center;margin:12px 0 0;font-size:13.5px}.qre-msg{font-size:13px;margin:8px 0 0}.qre-msg.ok{color:#17683B}.qre-msg.mal{color:#B42318}' +
+    '.qre-caja[hidden]{display:none!important}';
+  document.head.appendChild(st);
+}
+/* <<< QR-ESTILOS-UI-FIN >>> */
 /* ══════════════════════════════════════════════════════════════════
    LOS CARTELES QR DE LOS DOCUMENTOS · EL DIBUJO (01/10/2026)
    Marcelo: «mejora el diseño de dichos QR de documentos… que salga el
@@ -2435,11 +2680,9 @@ function _cqFuente(s, peso){ return (peso||'700')+' '+s+'px system-ui,-apple-sys
 /* el QR, módulo por módulo (nítido a cualquier tamaño), con su margen blanco */
 function _cqQR(g, enlace, cx, top, lado){
   var qr=qrcode(0, 'M'); qr.addData(enlace); qr.make();
-  var n=qr.getModuleCount(), m=Math.floor(lado/(n+8)), q=m*(n+8), x0=Math.round(cx-q/2), y0=top+Math.round((lado-q)/2);
-  g.fillStyle='#ffffff'; g.fillRect(x0, y0, q, q);
-  g.fillStyle='#000000';
-  for(var r=0;r<n;r++) for(var c=0;c<n;c++) if(qr.isDark(r, c)) g.fillRect(x0+(c+4)*m, y0+(r+4)*m, m, m);
-  return {x:x0, y:y0, lado:q};
+  /* 23/11/2026 · con el estilo de QR de la obra (QR-ESTILOS): módulos de pixeles enteros, centrado, con su zona de silencio */
+  var r=qrePintar(g, qr, Math.round(cx-lado/2), top, lado, {entero:true});
+  return {x:r.x, y:r.y, lado:r.lado};
 }
 /* las esquinas que enmarcan el QR */
 function _cqEsquinas(g, x, y, w, h, largo, grueso, color){

@@ -4595,7 +4595,7 @@ var AREAS = [
   { id:'a-personal', n:'Personal',               ic:'☺',  v:['personal', 'personas', 'sec-equipo', 'tareo', 'cred', 'legajo', 'autor', 'emo', 'sctr', 'tdm', 'amon', 'visitas'] },
   { id:'a-capac',    n:'Capacitación',           ic:'🎓', v:['prog', 'caphechas', 'charlas', 'induccion', 'instructivo', 'constancias', 'cump', 'matriz', 'registro', 'encuestas', 'campanas'] },
   { id:'a-epp',      n:'EPP',                    ic:'⛑',  v:['kardex', 'epp', 'eppobra', 'pedidos', 'reqs'] },
-  { id:'a-riesgos',  n:'Riesgos',                ic:'📋', v:['riesgos-obra', 'peligros-sitio', 'ergo-video', 'ats', 'iperc-lb', 'pets', 'caida', 'alto', 'quimicos', 'ergo'] },
+  { id:'a-riesgos',  n:'Riesgos',                ic:'📋', v:['mapas', 'riesgos-obra', 'peligros-sitio', 'ergo-video', 'ats', 'iperc-lb', 'pets', 'caida', 'alto', 'quimicos', 'ergo'] },
   { id:'a-inspec',   n:'Inspecciones y equipos', ic:'🔎', v:['insp', 'equipos', 'inspeq', 'bloqueos'] },
   { id:'a-reportes', n:'Reportes',               ic:'🚨', v:['reportes', 'buenas', 'denuncias', 'pulso'] },
   { id:'a-comite',   n:'Comité y emergencias',   ic:'🏛', v:['comite', 'cargos', 'quien', 'frentes', 'auxilios', 'simulacros'] },
@@ -4612,7 +4612,7 @@ var PESTANAS = {
   prog:'Programar', charlas:'Charlas del mes', induccion:'Inducción', caphechas:'Realizadas', constancias:'Constancias', cump:'Constancias',
   matriz:'Matriz', registro:'Seguimiento', encuestas:'Encuestas', campanas:'Campañas',
   os:'Para Gerencia', kardex:'Entrega de EPP', epp:'Entrega de EPP', eppobra:'EPP de la obra', pedidos:'Pedidos de la gente', reqs:'Requerimientos',
-  'riesgos-obra':'Anticipar, mapa y simulador', 'peligros-sitio':'Peligros del sitio (prototipo)', 'ergo-video':'Ergonomía por video (REBA)', ats:'ATS e IPERC', 'iperc-lb':'IPERC de línea base', pets:'PETS', quimicos:'Productos químicos', ergo:'Ergonomía',
+  mapas:'Mapas de obra', 'riesgos-obra':'Anticipar, mapa y simulador', 'peligros-sitio':'Peligros del sitio (prototipo)', 'ergo-video':'Ergonomía por video (REBA)', ats:'ATS e IPERC', 'iperc-lb':'IPERC de línea base', pets:'PETS', quimicos:'Productos químicos', ergo:'Ergonomía',
   insp:'Inspecciones', equipos:'Equipos y herramientas', inspeq:'Inspección diaria', bloqueos:'Bloqueo y etiquetado',
   reportes:'Actos y condiciones', buenas:'Buenas prácticas', denuncias:'Denuncias', pulso:'Pulso de seguridad', ambiente:'Medio ambiente', huella:'Huella de carbono',
   aud:'Carpeta de auditoría', cert:'Certificaciones', 'aud-sala':'Sala con tu consultor', 'aud-sim':'Simulemos una auditoría', 'aud-int':'Auditoría interna', 'aud-acc':'Hallazgos y acciones', 'aud-rev':'Revisión por la dirección',
@@ -6153,18 +6153,19 @@ function vistaEquipo(caja){
           h+='<p class="ayuda" style="margin:-12px 0 20px"><button type="button" class="enlace" id="eq-nombrar">Cambiar el nombre de la obra principal</button></p>';
       }
       h+='<div class="dos"><div class="tarj"><div class="tarj-cab"><div><h2>Equipo</h2><p class="sub">Quiénes gestionan esta obra</p></div></div>';
-      if(!eq.length) h+='<div class="vacio"><b>Solo tú</b>Nombra supervisores desde la app: «Nombrar supervisores».</div>';
+      if(!eq.length) h+='<div class="vacio"><b>Solo tú</b>Nombra a tu primer supervisor aquí abajo (o en la app: «Nombrar supervisores»).</div>';
       else h+='<div class="tabla-caja"><table><thead><tr><th>Correo</th><th>Papel</th>'+(conArea ? '<th>Área</th>' : '')+'<th>Estado</th></tr></thead><tbody>'+eq.map(function(m, i){
         return '<tr><td>'+esc(m.correo||'')+(m.soy_yo?' <span class="pill azul">tú</span>':'')+'</td><td>'+esc(m.rol==='dueno'?'Líder':'Supervisor')+'</td>'+
                (conArea ? '<td>'+areaSelectHtml(m, i)+'</td>' : '')+
                '<td>'+(m.estado==='activo'?'<span class="pill ok">activo</span>':'<span class="pill gris">'+esc(m.estado||'')+'</span>')+'</td></tr>'; }).join('')+'</tbody></table></div>';
       if(conArea && eq.length) h+='<p class="ayuda eq-area-ayuda">El área de cada uno decide qué <b>pendientes</b> ve y su «Lo esencial». Sin área, ve todo y manda pedidos, como hoy (es SST). Gerencia y legal ven lo mismo; producción y mantenimiento, logística y almacén, administración y RRHH, también. Los informes médicos siguen como hoy: solo salud y el trabajador.</p>';
-      h+='</div><div class="tarj"><div class="tarj-cab"><div><h2>Solicitudes de acceso</h2><p class="sub">Gente que pidió entrar a la obra</p></div></div>';
-      if(!sol.length) h+='<div class="vacio"><b>Ninguna pendiente</b>Se atienden desde la app.</div>';
-      else h+='<div class="tabla-caja"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Cargo</th></tr></thead><tbody>'+sol.map(function(s){
-        return '<tr><td>'+esc(s.nombre||'')+(s.mensaje?'<span class="sub">'+esc(s.mensaje)+'</span>':'')+'</td><td>'+esc(s.correo||'')+'</td><td>'+esc(s.cargo||'')+'</td></tr>'; }).join('')+'</tbody></table></div>';
+      /* 23/11/2026 · nombrar supervisores también aquí (portal/equipo.js: lo mismo que la app) */
+      h+='<div id="eq-nombrar-sup" style="padding:0 18px 16px"></div>';
+      h+='</div><div class="tarj"><div class="tarj-cab"><div><h2>Solicitudes de acceso</h2><p class="sub">Gente que pidió entrar a la obra · se aceptan aquí o en la app</p></div></div>';
+      h+='<div id="eq-solicitudes" style="padding:0 18px 16px">'+(sol.length ? '' : '<div class="vacio"><b>Ninguna pendiente</b>Quien pida entrar con el código de la obra aparece aquí y en la app.</div>')+'</div>';
       h+='</div></div>';
       caja.innerHTML=h;
+      if(window.EQW) EQW.pintarEn($('eq-nombrar-sup'), { solicitudes:$('eq-solicitudes'), alCambiar:function(){ setTimeout(pinta, 600); } });
       var bp=$('eq-pais'); if(bp) bp.onclick=abrirPaisObra;
       var bn=$('eq-nueva-obra'); if(bn) bn.onclick=function(){ obrasNuevaAbrir(raiz); };
       var bnm=$('eq-nombrar'); if(bnm) bnm.onclick=function(){ obraNombreEditarP(raiz); };
@@ -10052,6 +10053,7 @@ var DC_CARPETAS=[
   {h:'estandares', t:'Estándares del cliente', g:'Sistema Integrado', gs:1},
   {h:'campanas', t:'Campañas', g:'Sistema Integrado', gs:1},
   {h:'mapa-riesgos', t:'Mapa de Riesgos', g:'Sistema Integrado', gs:1, qr:'qr_risst'},
+  {h:'mapa-protecciones', t:'Mapa de Protecciones Colectivas', g:'Sistema Integrado', gs:1},
   {h:'cert-andamiero', t:'Certificados de andamieros', g:'Certificados', gs:1},
   {h:'cert-rigger', t:'Certificado de Rigger', g:'Certificados', gs:1},
   {h:'cert-operador', t:'Certificado de Operador', g:'Certificados', gs:1},
@@ -10581,7 +10583,7 @@ function vistaDocs(caja, modo){
             });
             VISTA.cache.sst_doc = DC.filas;
             var arbolEl = $('dc-arbol');
-            if(arbolEl && window.OBRASST_DOCS_ORDEN) arbolEl.innerHTML = window.OBRASST_DOCS_ORDEN.renderArbolCharlasHTML(DC.filas);
+            /* 23/11/2026 · Marcelo: «archivos que pueden ir en dos lugares»: el árbol aparte de charlas repetía lo del archivo de la obra (cada asistencia ya está en su carpeta, en «1. S&I»): ya no se muestra */ if(arbolEl) arbolEl.innerHTML = '';
             _dcRepintar(); _dcPintarCola();
           }
         }, function(msg){
@@ -10604,7 +10606,7 @@ function vistaDocs(caja, modo){
         });
         VISTA.cache.sst_doc = DC.filas;
         var arbolEl = $('dc-arbol');
-        if(arbolEl && window.OBRASST_DOCS_ORDEN) arbolEl.innerHTML = window.OBRASST_DOCS_ORDEN.renderArbolCharlasHTML(DC.filas);
+        /* 23/11/2026 · Marcelo: «archivos que pueden ir en dos lugares»: el árbol aparte de charlas repetía lo del archivo de la obra (cada asistencia ya está en su carpeta, en «1. S&I»): ya no se muestra */ if(arbolEl) arbolEl.innerHTML = '';
         _dcRepintar(); _dcPintarCola();
       }
       if(DC.filas.some(function(f){ return /^qr-p-/.test(String(f.hoja||'')); })){
@@ -10618,7 +10620,7 @@ function vistaDocs(caja, modo){
 }
 /* 08/10/2026 · el archivo de la obra (archivo.js): carpetas, vista previa, cambiar el nombre, mover, descargar, quitar y
    unir en un PDF. Si no carga (sin conexión), la tabla de siempre. */
-var ARCHIVO_VER='760f3b3e91';                         /* lo pone armar.py: el hash de portal/archivo.js */
+var ARCHIVO_VER='44c5ee90f6';                         /* lo pone armar.py: el hash de portal/archivo.js */
 var _ARC_CARGA=null;
 function cargarArchivo(){
   if(typeof arcPintar==='function') return Promise.resolve(true);
@@ -12510,7 +12512,7 @@ function quitarNoticiaP(f){
    escanearon, y el cartel para imprimir: el mismo diseño de la app, con
    la ficha del cartel (sst_qr_cartel) y nunca el código de la obra. La
    impresora de la oficina hace lo que el celular no. */
-var QR_VER='7c32457873';   /* lo pone armar.py: el hash de qr.js */
+var QR_VER='8cbea9a26f';   /* lo pone armar.py: el hash de qr.js */
 var _QR_CARGA=null;
 function cargarQRLib(){
   if(typeof qrcode === 'function' && typeof BASE_QR_APP === 'string' && typeof cartelDibujar === 'function') return Promise.resolve(qrcode);
@@ -12537,7 +12539,15 @@ var QRP_HOJAS=[
   {k:'organigrama', t:'Organigrama',               ic:'🏢', llave:'qr_risst', c:'organigrama'},
   {k:'comite',     t:'Comité de SST',              ic:'👷', llave:'qr_risst', c:'comite'},
   {k:'brigadistas', t:'Brigadistas',               ic:'🧯', llave:'qr_risst', c:'brigadistas'},
-  {k:'contactos',  t:'Contactos de emergencia',    ic:'📞', llave:'qr_risst', c:'contactos-emergencia'}
+  {k:'contactos',  t:'Contactos de emergencia',    ic:'📞', llave:'qr_risst', c:'contactos-emergencia'},
+  /* 23/11/2026 · Marcelo (enrutamiento): los programas de capacitación y de inspecciones del año, y los indicadores del mes
+     (la hoja que se publica desde el informe de la web). Necesitan sql/2026-11-23-qr-nuevos.sql. */
+  {k:'progcap',    t:'Programa de capacitación del año', ic:'🎓', llave:'qr_risst', c:'prog-capacitacion'},
+  {k:'proginsp',   t:'Programa de inspecciones del año', ic:'🔍', llave:'qr_risst', c:'prog-inspeccion'},
+  {k:'indicadores', t:'Indicadores del mes',       ic:'📊', llave:'qr_risst', c:'qr-indicadores'},
+  /* 23/11/2026 · las láminas de los Mapas de obra */
+  {k:'evacuacion', t:'Mapa de evacuación',        ic:'🧭', llave:'qr_risst', c:'mapa-evacuacion'},
+  {k:'protecciones', t:'Mapa de protecciones colectivas', ic:'🦺', llave:'qr_risst', c:'mapa-protecciones'}
 ];
 var QRP_PLAN={1:'Prevencionista de Riesgo', 2:'Supervisor SST', 3:'SSOMA'};
 var QRP={ filas:[], docs:{}, n:0 };
@@ -12900,10 +12910,28 @@ function qrpMuralGuardar(){
     var m2=$('qrm-msg'); if(m2){ m2.className='msg mal'; m2.textContent=tx; } else toast(tx);
   });
 }
+/* 23/11/2026 · el estilo de los QR de la obra en la web (sst_estado «qr_estilo»), con el logo del empleador */
+var QREW={ obra:null, ts:0 };
+function qreSyncWeb(fresco){
+  if(typeof qrePoner!=='function' || !YO || !YO.obra) return Promise.resolve();
+  var id=YO.obra.id;
+  if(QREW.obra!==id){ QREW.obra=id; QREW.ts=0; var c=null; try{ c=JSON.parse(localStorage.getItem('sstp_qr_estilo_'+id)||'null'); }catch(_l){} qrePoner(c); }
+  try{ empleadorP().then(function(em){ if(QREW.obra===id) qrePonerLogo((em && em.logo) || ''); }, function(){}); }catch(_e){}
+  if(!fresco && Date.now()-QREW.ts<1800000) return Promise.resolve();
+  QREW.ts=Date.now();
+  return estadoLeerP('qr_estilo').then(function(f){ if(QREW.obra!==id) return; var v=(f && f.valor && typeof f.valor==='object') ? f.valor : null; qrePoner(v); try{ localStorage.setItem('sstp_qr_estilo_'+id, JSON.stringify(v)); }catch(_s){} }, function(){ QREW.ts=0; });
+}
+function qreGuardarWeb(cfg){
+  var v={ k:cfg.k, logo:cfg.logo!==false };
+  return estadoEscribirP('qr_estilo', v).then(function(){ try{ localStorage.setItem('sstp_qr_estilo_'+YO.obra.id, JSON.stringify(v)); }catch(_s){} return true; });
+}
+window.QRE_SYNC=function(){ try{ qreSyncWeb(false); }catch(_q){} };
 function qrpPintar(caja){
   var h='<div class="aviso" style="margin:0 0 16px">Cada cartel abre lo que está en su carpeta —subido aquí, en «Documentos», o en la app— o el enlace que se pegó en la app. Imprímelo y pégalo en la caseta, el comedor o la puerta: cuando subas la versión nueva, el mismo cartel abre la nueva. El QR no lleva el código de tu obra.</div><div class="qrp">';
   h+=_qrpBuzonTarjeta()+_qrpMuralTarjeta()+QRP_HOJAS.map(_qrpTarjeta).join('')+'</div>'+_qrpPropiosHTML();
-  caja.innerHTML=h;
+  caja.innerHTML='<div id="qre-sel"></div>'+h;
+  /* 23/11/2026 · el estilo de los códigos QR de la obra (portal/qr.js · QR-ESTILOS): el mismo de la app */
+  if(typeof qreSelectorActivar==='function'){ qreEstilos(); qreSyncWeb(true).then(function(){ if(VISTA.actual==='qr' && $('qre-sel')) qreSelectorActivar($('qre-sel'), qreGuardarWeb); }); qreSelectorActivar($('qre-sel'), qreGuardarWeb); }
   if($('qrp-mural-ed')) $('qrp-mural-ed').onclick=qrpMuralEditar;
   Array.prototype.forEach.call(caja.querySelectorAll('[data-imp]'), function(b){
     b.onclick=function(){ var H=_qrpH(b.getAttribute('data-imp')); if(H) qrpImprimir([H], b); };
@@ -15692,7 +15720,7 @@ function piqExcel(){
    Planes SSOMA y Gestión SST, como en la app; si la obra bajó de plan,
    lo cargado se ve (y su cartel se imprime), pero no se cambia.
    ══════════════════════════════════════════════════════════════════ */
-var QUIM_VER='5614da0fdb';   /* lo pone armar.py: el hash de portal/quimicos.js */
+var QUIM_VER='27d8c7015c';   /* lo pone armar.py: el hash de portal/quimicos.js */
 var _QUIM_CARGA=null;
 function cargarQuim(){
   if(typeof quimTarjetaSVG==='function' && typeof quimLeerTexto==='function' && typeof qrcode==='function') return Promise.resolve(true);
@@ -19091,6 +19119,7 @@ var V = {
            pintar:vistaEscaneos},
   den:    {id:'denuncias', g:'Canal de denuncia', ic:'🛡', n:'Denuncias', s:'Lo que la gente denunció sin nombre · se responde desde aquí', pintar:vistaDenuncias, tablas:[]},
   /* 11/11/2026 · los riesgos de la obra (../riesgos.js, el mismo de la app): anticipar, el mapa georreferenciado y el simulador */
+  mapas:{id:'mapas', g:'Registros', ic:'🗺', n:'Mapas de obra', s:'Riesgos, evacuación y protecciones colectivas: un plano por nivel, sus capas, la leyenda sola y la lámina con su código, revisión y firmas', pintar:vistaMapas, tablas:['sst_doc']},
   rieobra:{id:'riesgos-obra', g:'Indicadores', ic:'📈', n:'Anticipar, mapa y simulador', s:'Las tendencias de tu obra y los escenarios que se están armando, con su porqué y qué hacer hoy; el mapa de riesgos con las coordenadas de cada punto; y el simulador de accidentes. Con tus registros: cada alerta dice de dónde sale',
            pintar:function(caja){ cargando(caja); rieIr('vistaRiesgos', caja); }, tablas:['sst_reporte','sst_accidente','sst_doc']},
   acc:    {id:'acc', g:'Indicadores', ic:'⚠', n:'Accidentabilidad', s:'Índices del año con las horas hombre reales', pintar:vistaAccidentes, tablas:['sst_accidente','sst_hht']},
@@ -19223,7 +19252,7 @@ var VISTAS_LIDER = [
   {id:'personas', g:'Registros', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
   conGrupo(V.equipoSup, 'Registros'),
   conGrupo(V.cargos, 'Registros'), conGrupo(V.comite, 'Registros'), conGrupo(V.quien, 'Registros'), conGrupo(V.frentes, 'Registros'), conGrupo(V.auxilios, 'Registros'), conGrupo(V.tdm, 'Registros'),
-  V.reqs, V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.rieobra, V.peligrosSitio, V.ergoVideo, V.ats, V.ipercLb, V.pets, V.caida, V.alto, V.ergo, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.huella, V.docs, V.esc, V.util, V.qr, V.senales, V.formatos,
+  V.reqs, V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.mapas, V.rieobra, V.peligrosSitio, V.ergoVideo, V.ats, V.ipercLb, V.pets, V.caida, V.alto, V.ergo, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.huella, V.docs, V.esc, V.util, V.qr, V.senales, V.formatos,
   conGrupo(V.visitas, 'Registros'), conGrupo(V.tareo, 'Registros'),
   V.bol, V.noti,
   V.den, conGrupo(V.pulso, 'Registros'),
@@ -19246,7 +19275,7 @@ var VISTAS_SUP = [
    pintar:vistaConstancias},
   V.enc,
   V.ind, V.instructivo,
-  V.rieobra, V.peligrosSitio, V.ergoVideo, V.ats, V.ipercLb, V.pets, V.caida, V.alto, V.ergo,   /* 11/11/2026 · anticipar, el mapa y el simulador */
+  V.mapas, V.rieobra, V.peligrosSitio, V.ergoVideo, V.ats, V.ipercLb, V.pets, V.caida, V.alto, V.ergo,   /* 11/11/2026 · anticipar, el mapa y el simulador */
   {id:'kardex',  g:'Registros', ic:'⛑', n:'Entrega de EPP', s:'El kardex con la firma de quien recibió, y cuánto sale mes a mes', pintar:vistaEPP, tablas:['sst_kardex']},
   V.pedidos, V.eppobra,
   V.reqs,
@@ -19711,7 +19740,7 @@ function progIr(fn){
 /* 07/10/2026 · la señalética: senales-app.js (lo arma armar.py desde la app: las 171 señales de la NTP y el dibujo de
    cada hoja) y senales.js (las pantallas). El catálogo pesa: se pide a la vez que el jsPDF, y solo al abrir la sección */
 var SENAPP_VER='0f8223187f';   /* lo pone armar.py: el hash de portal/senales-app.js */
-var SENALES_VER='9d878f4e0c';   /* lo pone armar.py: el hash de portal/senales.js */
+var SENALES_VER='e9a4197515';   /* lo pone armar.py: el hash de portal/senales.js */
 var _SEN_CARGA=null;
 function cargarSenales(){
   if(typeof senVista==='function' && typeof SEN_APP==='object') return Promise.resolve(true);
@@ -19800,15 +19829,15 @@ function menIr(fn){
      las reglas y las actas del comité y el ranking y el diploma del trabajador del mes. Así lo que sale de la web es lo
      mismo que sale del celular, y si la app cambia, la web cambia con ella. Se pide recién cuando hace falta. */
 var MAS_VER='8cb4b2393a';      /* lo pone armar.py: el hash de portal/mas.js */
-var MASAPP_VER='dfed498b2e';   /* lo pone armar.py: el hash de portal/mas-app.js */
+var MASAPP_VER='2f294f61f8';   /* lo pone armar.py: el hash de portal/mas-app.js */
 var MASWORD_VER='fef088f3e5';             /* lo pone armar.py: el hash de portal/mas-word.js (la papeleta en Word) */
 var _MAS_CARGA=null, _MASAPP_CARGA=null, _MASWORD_CARGA=null;
 /* 08/10/2026 · los stickers del casco (portal/stickers.js: los diseños, la vista previa y el PDF, los de la app) */
-var STK_VER='521cb712ae';                /* lo pone armar.py: el hash de portal/stickers.js */
+var STK_VER='bde6889181';                /* lo pone armar.py: el hash de portal/stickers.js */
 var AUT_VER='ac50ae2c0f';                /* lo pone armar.py: el hash de portal/autoriza.js (la autorización del grupo sanguíneo) */
 var _AUT_CARGA=null;
 /* 08/10/2026 · los exámenes médicos ocupacionales (portal/emo.js, con lo común de ../emo-base.js adentro) */
-var INFORME_VER='560c1455fb';                                 /* lo pone armar.py: el hash de portal/informe.js */
+var INFORME_VER='2fd7b02479';                                 /* lo pone armar.py: el hash de portal/informe.js */
 /* 19/10/2026 · lote 19 · el registro fotográfico del mes (portal/fotos.js) */
 var FOTOS_VER='9c70ca1fb0';                                               /* lo pone herr/huellas.py: el hash de portal/fotos.js */
 var _FOT_CARGA=null;
@@ -19954,7 +19983,18 @@ function cargarMasApp(){
 }
 /* 14/10/2026 · «LO DE CAMPO, TAMBIÉN EN LA WEB» (portal/campo.js): el tareo (y lo que viene: el parte, los primeros
    auxilios, la caída libre y el legajo). campo-app.js lo arma armar.py DESDE LA APP: las cuentas de cada cosa, tal cual. */
-var CAMPO_VER='aaa342efdd';      /* lo pone armar.py: el hash de portal/campo.js */
+var CAMPO_VER='b462bf82b2';      /* lo pone armar.py: el hash de portal/campo.js */
+/* 23/11/2026 · los Mapas de obra (portal/mapas-obra.js): riesgos, evacuación y protecciones colectivas, por nivel */
+var MAPAS_VER='1d798ac7e6';   /* lo pone herr/huellas.py: el hash de portal/mapas-obra.js */
+var _MAPAS_CARGA=null;
+function cargarMapas(){
+  if(typeof vistaMapasObra==='function') return Promise.resolve(true);
+  if(_MAPAS_CARGA) return _MAPAS_CARGA;
+  _MAPAS_CARGA=_cargarJS('mapas-obra.js?v='+(MAPAS_VER||'0'), function(){ return typeof vistaMapasObra==='function'; });
+  _MAPAS_CARGA.catch(function(){ _MAPAS_CARGA=null; });
+  return _MAPAS_CARGA;
+}
+function vistaMapas(caja){ cargando(caja); cargarMapas().then(function(){ vistaMapasObra(caja); }, function(){ fallo(caja, 0); }); }
 var CAMPOAPP_VER='59e96557fa';   /* lo pone armar.py: el hash de portal/campo-app.js */
 var _CAMPO_CARGA=null, _CAMPOAPP_CARGA=null;
 function cargarCampo(){
@@ -19989,7 +20029,7 @@ function torreIr(fn){
                             function(){ if(a[0] && a[0].nodeType===1) fallo(a[0], 0); else toast('No se pudo abrir esta parte. Revisa tu conexión e inténtalo otra vez.'); });
 }
 /* 27/10/2026 · la carpeta de auditoría (portal/auditoria.js), recién cuando alguien abre el área «Auditoría» */
-var AUDITORIA_VER='462dd6003b';   /* lo pone herr/huellas.py: el md5 de portal/auditoria.js */
+var AUDITORIA_VER='663a62450b';   /* lo pone herr/huellas.py: el md5 de portal/auditoria.js */
 var _AUD_CARGA=null;
 function cargarAuditoria(){
   if(typeof vistaAud==='function') return Promise.resolve(true);
@@ -20004,7 +20044,7 @@ function audIr(fn){
                                function(){ if(a[0] && a[0].nodeType===1) fallo(a[0], 0); else toast('No se pudo abrir esta parte. Revisa tu conexión e inténtalo otra vez.'); });
 }
 /* 4/11/2026 · V7.8f · los utilitarios de PDF y fotos (portal/utilitarios.js), recién cuando alguien abre su sección */
-var UTIL_VER='014475096d';   /* lo pone herr/huellas.py: el md5 de portal/utilitarios.js */
+var UTIL_VER='4e4308666b';   /* lo pone herr/huellas.py: el md5 de portal/utilitarios.js */
 var _UTIL_CARGA=null;
 function cargarUtil(){
   if(typeof vistaUtil==='function') return Promise.resolve(true);

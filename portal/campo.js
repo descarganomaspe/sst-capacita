@@ -407,6 +407,20 @@ function _tarwSemana(silencio){
   }).catch(function(cod){ if(n!==TARW.n || !$('tarw-cuerpo')) return; c.innerHTML=_tarwNav('tarw-f')+'<div class="vacio mal">No se pudo traer el tareo ('+esc(String(cod))+').</div>'; _tarwNavOn('tarw-f', 7); });
 }
 
+/* 23/11/2026 · Marcelo (enrutamiento): «el Tareo debe volcar automáticamente las HHT y la cantidad de personal hacia la
+   Estadística». El mes del tareo, persona por persona y día por día ({ 'YYYY-MM-DD':[{d, n, h}] }), para que el informe
+   separe obreros y staff por su puesto (catPuesto, como la app) y use esas horas en los días que tienen tareo. */
+function tarwMesPersonas(ym){
+  if(!YO || !YO.obra) return Promise.resolve(null);
+  if(TARW.obra!==YO.obra.id){ TARW.obra=YO.obra.id; TARW.dia=hoyISO(); TARW.tab='dia'; TARW.dias={}; TARW.hht={}; TARW.cambios={}; TARW.cfg=null; }
+  var a=+ym.slice(0,4), m=+ym.slice(5,7), hoy=hoyISO(), dias=[];
+  for(var d=1; d<=new Date(a, m, 0).getDate(); d++){ var f=ym+'-'+dos(d); if(f<=hoy) dias.push(f); }
+  if(!dias.length) return Promise.resolve({});
+  return (TARW.cfg ? Promise.resolve(TARW.cfg) : _tarwCfgTraer()).then(function(){ return _tarwTraer(dias, true); }).then(function(){
+    var o={}; dias.forEach(function(f){ var R=tarwResumen(f); if(R.n) o[f]=R.L.map(function(r){ return { d:r.d, n:r.n, h:Math.round((+r.h||0)*100)/100 }; }); });
+    return o;
+  });
+}
 /* ── el mes: día por día, contra lo que tiene el registro de horas hombre ── */
 function _tarwHHTraer(dias){
   if(!dias.length) return Promise.resolve({});
@@ -475,11 +489,12 @@ function _tarwAlHH(dias, bt){
   }, function(){ toast('No se pudo leer el registro de horas hombre. Revisa tu conexión.'); });
 }
 /* ── el Excel del mes: las marcas, cada persona y cada día ── */
-function tarwExcel(ym, bt){
+/* 23/11/2026 · comoBlob: devuelve el Excel (para el respaldo del tareo en «02 › 3. Registro de trabajadores» del informe) */
+function tarwExcel(ym, bt, comoBlob){
   var dias=_tarwMesDe(ym+'-01');
   if(ym<hoyISO().slice(0,7)){ var a=+ym.slice(0,4), m=+ym.slice(5,7); dias=[]; for(var d=1; d<=new Date(a, m, 0).getDate(); d++) dias.push(ym+'-'+dos(d)); }
   if(bt) bt.disabled=true;
-  Promise.all([_tarwTraer(dias, true), cargarEvPDF()]).then(function(){
+  return Promise.all([_tarwTraer(dias, true), cargarEvPDF()]).then(function(){
     var X=RCAP.xlsx, E=new X.Estilos(), C=X.C, obra=String(nombreObraP()||''), cfg=TARW.cfg, mesN=DC_MESES[+ym.slice(5,7)-1]+' '+ym.slice(0,4);
     var sTit=E.xf({ b:1, sz:14, c:C.petroleo }), sSub=E.xf({ sz:10, c:C.gris }), sCab=E.xf({ b:1, sz:9, c:C.blanco, f:C.petroleo, h:'center', v:'center', wrap:1, borde:true });
     var sTx=E.xf({ sz:10, c:C.tinta, borde:true }), sFe=E.xf({ sz:10, c:C.tinta, h:'center', borde:true, fmt:'dd/mm/yyyy' }), sN2=E.xf({ sz:10, c:C.tinta, h:'right', borde:true, fmt:'#,##0.00' }), sN0=E.xf({ sz:10, c:C.tinta, h:'right', borde:true, fmt:'#,##0' });
@@ -524,9 +539,11 @@ function tarwExcel(ym, bt){
       var f4=5; FR.forEach(function(x){ h4.celda(0, f4, x.n, sTx); h4.celda(1, f4, x.p, sN0); h4.celda(2, f4, x.h, sN2); f4++; });
       h4.celda(0, f4, 'Total', sTt); h4.celda(1, f4, '', sTt); h4.celda(2, f4, 0, sT2, 'SUM(C5:C'+(f4-1)+')'); hojas.push(h4);
     }
-    bajarBlob(X.libro(hojas, E, 'Tareo'), nombreArchivo('Tareo - '+obra+' - '+ym)+'.xlsx');
+    var libro=X.libro(hojas, E, 'Tareo');
     if(bt) bt.disabled=false;
-  }, function(){ if(bt) bt.disabled=false; toast('No se pudo armar el Excel. Revisa tu conexión.'); });
+    if(comoBlob) return libro;
+    bajarBlob(libro, nombreArchivo('Tareo - '+obra+' - '+ym)+'.xlsx');
+  }, function(){ if(bt) bt.disabled=false; if(comoBlob) return null; toast('No se pudo armar el Excel. Revisa tu conexión.'); });
 }
 /* ── los ajustes (los mismos de la app: sst_estado «tareo_cfg») ── */
 function _tarwAjustes(){

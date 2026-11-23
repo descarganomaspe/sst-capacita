@@ -280,6 +280,11 @@ function _infPintar(){
       var on=(o[0]==='ocho')===ocho;
       return '<button type="button" role="radio" aria-checked="'+on+'" class="inf-ent-op'+(on ? ' on' : '')+'" data-ent="'+o[0]+'"><b>'+o[1]+'</b><small>'+esc(o[2])+'</small></button>';
     }).join('')+'</div></div></div>';
+  /* 23/11/2026 · la estadística del mes: lo automático (tareo, registros, escaneos) y el ajuste a mano */
+  if(!todas) h+='<div class="tarj inf-paso" id="inf-est"><div class="tarj-cuerpo"><h3><span class="inf-n">5</span> La estadística del mes</h3>'+
+    '<p class="ayuda" style="margin:0 0 10px">Se llena sola: el tareo (horas hombre y personal), las charlas, los ATS y PETAR (digitales y en papel), las inspecciones, los reportes y el EPP. '+
+    'Si algo no calza (un cierre, un subcontratista, un mes de antes), lo corriges a mano: queda marcado «ajuste manual» y puedes volver al dato de la obra.</p>'+
+    '<button type="button" class="bt sec chico" id="inf-est-abrir">📊 Revisar y ajustar la estadística de '+esc(_infMesN(INFW.mes))+'</button></div></div>';
   /* 10/11/2026 · 5 · el panel fotográfico: corregir, quitar, ordenar y sumar fotos (si va en el informe) */
   var vaPanel=!todas && S.some(function(x){ return x.k==='fotos' && _infVa(x); });
   if(vaPanel) h+=_infPanelHTML();
@@ -316,6 +321,7 @@ function _infPintar(){
   $('inf-para-n').oninput=function(){ INFW.paraN=this.value; };
   $('inf-por').oninput=function(){ INFW.por=this.value; };
   $('inf-armar2').onclick=infArmar;
+  if($('inf-est-abrir')) $('inf-est-abrir').onclick=infEstAbrir;
   Array.prototype.forEach.call(caja.querySelectorAll('[data-para]'), function(b){ b.onclick=function(){ INFW.para=b.getAttribute('data-para'); _infPintar(); }; });
   Array.prototype.forEach.call(caja.querySelectorAll('[data-alc]'), function(b){ b.onclick=function(){ INFW.alcance=b.getAttribute('data-alc'); _infPintar(); }; });
   _infTipoAl(caja);
@@ -407,6 +413,60 @@ function _infVerQuitar(){
     }, function(e){ toast('No se pudo quitar. '+porQueFallo(e)); });
   });
 }
+/* 23/11/2026 · los indicadores del mes al cartel QR: las páginas de «Resumen del mes» del informe, en un PDF aparte */
+function infIndicadoresQR(D, b){
+  var m=$('inf-msg'), PL=window.PDFLib;
+  if(!D || !PL){ m.className='msg mal'; m.textContent='Arma el informe primero.'; return; }
+  if(!INFW.secc.some(function(x){ return x.k==='resumen' && _infVa(x); })){ m.className='msg mal'; m.textContent='El informe no lleva «Resumen del mes»: márcalo en la lista de lo que va y ármalo otra vez.'; return; }
+  b.disabled=true; m.className='msg gris'; m.textContent='Preparando la hoja de indicadores…';
+  var nomR=''; INF_SECC.forEach(function(x){ if(x.k==='resumen') nomR=x.n; });
+  var base=_infPdfBase(D, { separado:true });
+  PL.PDFDocument.load(base.bytes).then(function(todo){
+    var n=todo.getPageCount(), cortes=base.indice, desde=0, hasta=0;
+    cortes.forEach(function(c, i){ if(c.t===nomR){ desde=c.p; hasta=(i+1<cortes.length ? cortes[i+1].p : n+1)-1; } });
+    if(!desde || hasta<desde) return Promise.reject({ portal:'No se encontró el resumen del mes en el informe.' });
+    return PL.PDFDocument.create().then(function(d){ var idx=[]; for(var q=desde-1; q<hasta; q++) idx.push(q);
+      return d.copyPages(todo, idx).then(function(pags){ pags.forEach(function(p){ d.addPage(p); }); return d.save(); }); });
+  }).then(function(bytes){
+    var nom='Indicadores de '+_infMesN(D.mes), f;
+    try{ f=new File([bytes], nombreArchivo(nom)+'.pdf', { type:'application/pdf' }); }catch(e){ f=new Blob([bytes], { type:'application/pdf' }); f.name=nombreArchivo(nom)+'.pdf'; }
+    return subirArchivoP('docs', f).then(function(url){ return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'qr-indicadores', nombre:nom, url:url, nota:null }); });
+  }).then(function(){ b.disabled=false; m.className='msg ok'; m.textContent='Listo: el cartel QR «Indicadores del mes» ya muestra los de '+_infMesN(D.mes)+'. El cartel se imprime desde «Carteles QR».'; },
+    function(e){ b.disabled=false; m.className='msg mal'; m.textContent=(e && e.portal) || 'No se pudo publicar: revisa tu conexión.'; });
+}
+/* 23/11/2026 · «Revisar y ajustar la estadística»: cada indicador con lo automático y lo que se usa; «↺» vuelve al automático */
+function infEstAbrir(){
+  var mes=INFW.mes;
+  abrirHoja('La estadística de '+_infMesN(mes), 'Lo automático sale de la obra; escribe otro valor solo donde haga falta', '<p class="ayuda">Leyendo lo del mes…</p>', '<button type="button" class="bt sec" id="inf-est-no">Cerrar</button>', { ancha:true, sinFoco:true });
+  $('inf-est-no').onclick=cerrarHoja;
+  Promise.all([_infTraer(mes, YO.obra, { sinAjustes:true }), _infEst(YO.obra, 'est_ajuste_'+mes)]).then(function(r){
+    var D=r[0], aj=(r[1] && r[1].c && typeof r[1].c==='object') ? r[1].c : {}, auto=D.auto || _infEstLeer(D);
+    var num=function(v){ return Math.round((+v||0)*100)/100; };
+    var h='<div class="tabla-caja"><table class="inf-est-t"><thead><tr><th>Indicador</th><th style="text-align:right">De la obra</th><th>Valor que va en el informe</th><th></th></tr></thead><tbody>'+
+      INF_EST_CAMPOS.map(function(c){
+        var a=aj[c.k], hay=(a!==undefined && a!==null && a!=='');
+        return '<tr data-k="'+c.k+'"><td>'+esc(c.n)+(hay ? ' <span class="pill ojo">ajuste manual</span>' : '')+'</td><td class="n">'+_infNum(num(auto[c.k]))+'</td>'+
+          '<td><input type="number" step="any" min="0" inputmode="decimal" id="inf-est-'+c.k+'" value="'+(hay ? esc(String(a)) : '')+'" placeholder="'+esc(String(num(auto[c.k])))+'" aria-label="'+esc(c.n)+'" style="width:130px"></td>'+
+          '<td>'+(hay ? '<button type="button" class="bt sec chico" data-recalc="'+c.k+'" title="Quitar el ajuste y volver a lo de la obra">↺ Recalcular desde obra</button>' : '')+'</td></tr>';
+      }).join('')+'</tbody></table></div>'+
+      (D.hh.tareo ? '<p class="ayuda">Las horas hombre de '+D.hh.tareo+(D.hh.tareo===1 ? ' día salen' : ' días salen')+' del tareo (obreros y staff por su puesto); los días sin tareo, del registro de horas hombre.</p>' : '<p class="ayuda">Este mes el tareo no tiene marcas: las horas hombre salen del registro de horas hombre.</p>')+
+      '<p class="msg" id="inf-est-msg" role="status"></p>';
+    var pie='<button type="button" class="bt sec" id="inf-est-no">Cerrar</button><button type="button" class="bt sec" id="inf-est-todo">↺ Todo desde obra</button><button type="button" class="bt" id="inf-est-si">Guardar los ajustes</button>';
+    abrirHoja('La estadística de '+_infMesN(mes), 'Deja en blanco lo que va automático; escribe un valor solo donde haga falta', h, pie, { ancha:true, sinFoco:true });
+    $('inf-est-no').onclick=cerrarHoja;
+    var guardarC=function(c, msg){
+      return estadoEscribirP('est_ajuste_'+mes, { v:1, c:c, por:String((YO && YO.nombre) || (TOK && TOK.correo) || '').slice(0, 80), ts:new Date().toISOString() }).then(function(){
+        toast(msg); cerrarHoja(); INFW.pdf=null; if(VISTA.recargar) VISTA.recargar(true);
+      }, function(){ var m=$('inf-est-msg'); if(m){ m.className='msg mal'; m.textContent='No se pudo guardar: revisa tu conexión.'; } });
+    };
+    $('inf-est-si').onclick=function(){
+      var c={}; INF_EST_CAMPOS.forEach(function(x){ var el=$('inf-est-'+x.k), v=el ? String(el.value).trim().replace(',', '.') : ''; if(v!=='' && isFinite(+v) && +v>=0) c[x.k]=+v; });
+      guardarC(c, Object.keys(c).length ? 'Ajustes guardados: '+Object.keys(c).length+' en «ajuste manual».' : 'Todo va automático, desde la obra.');
+    };
+    $('inf-est-todo').onclick=function(){ guardarC({}, 'Todo vuelve a lo de la obra.'); };
+    Array.prototype.forEach.call(document.querySelectorAll('[data-recalc]'), function(b){ b.onclick=function(){ var k=b.getAttribute('data-recalc'), c={}; Object.keys(aj).forEach(function(q){ if(q!==k) c[q]=aj[q]; }); guardarC(c, 'Vuelve el dato de la obra.'); }; });
+  }, function(){ toast('No se pudo leer lo del mes. Revisa tu conexión.'); cerrarHoja(); });
+}
 /* elegir anexos del archivo de la obra (lo que tiene archivo: PDF o foto) */
 function _infElegirAnexos(){
   var h='<div class="campo"><label for="inf-anx-q">Buscar</label><input id="inf-anx-q" type="search" placeholder="Nombre o carpeta"></div><div id="inf-anx-lista" style="max-height:52vh;overflow:auto;border:1px solid var(--raya);border-radius:10px"><div class="vacio">Cargando…</div></div>';
@@ -490,7 +550,14 @@ function _infTraer(mes, O, op){
       return Promise.all([tr('sst_doc', '&hoja=eq.frentes&select=id,hoja,nombre,nota,creado&order=creado.asc', 40),
                           tr('sst_doc', '&hoja=in.('+FRE_DOCS.map(function(t){ return t.h; }).join(',')+')&select=id,hoja,nombre,url,nota,creado&order=creado.desc', 600)]);
     /* 30/10/2026 · todo lo de esas carpetas: lo que no dice de qué frente es, es de toda la obra (freDocsObra) */
-    }).then(function(x){ var L=freDeFilas(x[0]||[]); return L.length ? { L:L, docs:(x[1]||[]).filter(function(d){ return d && d.url; }) } : null; })
+    }).then(function(x){ var L=freDeFilas(x[0]||[]); return L.length ? { L:L, docs:(x[1]||[]).filter(function(d){ return d && d.url; }) } : null; }),
+    /* 23/11/2026 · lo llenado en papel y escaneado con la app (sst_doc «asistencia», nota «fecha|tipo|…») y los PETAR digitales */
+    tr('sst_doc', '&or=(hoja.eq.asistencia,hoja.like.inf8:'+mes+'*)&creado=gte.'+_enc(new Date(Date.parse(mes+'-01T00:00:00')-40*864e5).toISOString())+'&select=id,nombre,url,nota,creado&order=creado.desc', 3000),
+    tr('sst_doc', '&hoja=eq.petar&creado=gte.'+_enc(new Date(Date.parse(mes+'-01T00:00:00')-20*864e5).toISOString())+'&select=id,nombre,nota,creado&order=creado.desc', 3000),
+    /* 23/11/2026 · el tareo del mes (manda en las horas hombre de los días que tiene) y los ajustes a mano de la estadística */
+    (op.ligero || op.sinTareo || !YO.obra || String(O.id)!==String(YO.obra.id) || typeof cargarCampoApp!=='function') ? Promise.resolve(null)
+      : cargarCampoApp().then(function(){ return (typeof tarwMesPersonas==='function') ? tarwMesPersonas(mes) : null; }),
+    op.sinAjustes ? Promise.resolve(null) : _infEst(O, 'est_ajuste_'+mes)
   ];
   return Promise.all(P.map(function(p){ return Promise.resolve(p).catch(function(){ return null; }); })).then(function(r){
     var trab=r[0]||[], cons=r[1]||[], reps=r[2]||[], accs=r[3]||[], hht=r[4]||[], kar=r[5]||[], insp=r[6]||[], mapa=(r[13] && r[13].cat) || {}, cfgN=(r[13] && r[13].n) || {};
@@ -510,7 +577,8 @@ function _infTraer(mes, O, op){
             abiertosHoy:reps.filter(function(x){ return !reporteCerrado(x); }).length };
     /* las horas hombre: un día = una fila (si hubiera dos del mismo día, vale la más nueva) */
     var vistoD={}, hh=hht.filter(function(x){ var f=String(x.fecha||'').slice(0, 10); if(!f || vistoD[f]) return false; vistoD[f]=1; return true; });
-    D.hh=_infHH(hh, mes);
+    D.hhTar=_infHHTareo(hh, r[25], catDe, mes);
+    D.hh=_infHH(hh, mes); D.hh.tareo=D.hhTar.dias;
     /* 19/10/2026 · lote 18 · accidentes (leve, incapacitante, mortal) e incidentes (casi accidente, primeros auxilios, daño), aparte */
     var esAcc=function(a){ return INF_ACC[a.clase]===1; }, esInc=function(a){ return INF_ACC[a.clase]===2; };
     var am=accs.filter(function(a){ return mesDe(a.fecha)===mes; }), aa=accs.filter(function(a){ return anioDe(a.fecha)===anio && String(a.fecha).slice(0, 10)<=fin; });
@@ -535,6 +603,12 @@ function _infTraer(mes, O, op){
     }
     var im=insp.filter(function(i){ return mesDe(i.fecha)===mes; });
     D.insp={ n:im.length, tipos:_infTop(im, function(i){ return i.tipo||'Inspección'; }, 1, 10) };
+    /* 23/11/2026 · digital + papel: lo escaneado cuenta igual (una hoja escaneada = un registro) y va a su carpeta del informe */
+    D.fis=inf8Papel(r[23], mes);
+    D.ats.dig=D.ats.n; D.ats.fis=D.fis.c.ats||0; D.ats.n+=D.ats.fis;
+    D.insp.dig=D.insp.n; D.insp.fis=D.fis.c.inspeccion||0; D.insp.n+=D.insp.fis;
+    D.epp.fis=D.fis.c.epp||0;
+    D.ptr=_infPetar(r[24], mes); D.ptr.fis=D.fis.c.permiso||0; D.ptr.n=D.ptr.dig+D.ptr.fis;
     if(Array.isArray(r[7]) && typeof sctrLeer==='function'){
       /* 19/10/2026 · lote 19 · los que estaban en obra al cierre del mes (no los de hoy) */
       var trabDia=trab.filter(function(t){ var ing=String(t.ingreso||'').slice(0, 10); return !(ing && ing>dia) && _infSit(t, dia).e==='activo'; }).map(function(t){ return Object.assign({}, t, { estatus:'activo' }); });
@@ -560,8 +634,55 @@ function _infTraer(mes, O, op){
     /* 20/10/2026 · lote 23 · para el informe de salud ocupacional: las actividades, el personal con su historia, los accidentes y los temas */
     D.temasSal=(cfgN.temasSal && typeof cfgN.temasSal==='object' && !Array.isArray(cfgN.temasSal)) ? cfgN.temasSal : {};
     if(!op.ligero){ D._act=r[11] || []; D._trab=trab; D._accs=accs; D._ambRows=r[19]; D._salRows=r[20]; D._emoL=r[21]; }
-    return _infMarcas(O, ses).then(function(marcas){ D.ch=_infCharlas(ses, marcas, r[11], mes, catDe); D.amb=_infAmb(D, r[19], D.temasAmb); D.sal=op.ligero ? null : _infSal(D, r[20], r[21]); return D; });
+    return _infMarcas(O, ses).then(function(marcas){ D.ch=_infCharlas(ses, marcas, r[11], mes, catDe); D.amb=_infAmb(D, r[19], D.temasAmb); D.sal=op.ligero ? null : _infSal(D, r[20], r[21]);
+      /* 23/11/2026 · los ajustes a mano de la estadística, encima de lo automático (D.auto guarda lo que salió solo) */
+      D.auto=_infEstLeer(D); D.aj=_infEstAplicar(D, r[26]); return D; });
   });
+}
+/* 23/11/2026 · «Tareo manda + respaldo» (Marcelo): en cada día con marcas en el tareo, los obreros y sus horas (y el staff,
+   si marcó) salen del tareo; lo demás de ese día (la HHC, el staff que no marca) se queda como estaba. Los días sin tareo
+   siguen con el registro de horas hombre (el reporte semanal). Cambia la lista hh en su lugar. */
+function _infHHTareo(hh, T, catDe, mes){
+  var o={ dias:0, L:[] }; if(!T || typeof T!=='object') return o;
+  Object.keys(T).sort().forEach(function(f){
+    if(mesDe(f)!==mes) return; var P=T[f]||[]; if(!P.length) return;
+    var ob=[], st=[]; P.forEach(function(x){ (catDe(x.d, x.n)==='staff' ? st : ob).push(x); });
+    var suma=function(l){ return l.reduce(function(s, x){ return s+(+x.h||0); }, 0); };
+    var i=-1; hh.forEach(function(x, j){ if(String(x.fecha||'').slice(0, 10)===f) i=j; });
+    var base=i>-1 ? hh[i] : { fecha:f, hhc:0 }, fila=Object.assign({}, base, { fecha:f, ob_n:ob.length, ob_h:ob.length ? Math.round(suma(ob)/ob.length*100)/100 : 0 });
+    if(st.length){ fila.st_n=st.length; fila.st_h=Math.round(suma(st)/st.length*100)/100; }
+    if(i>-1) hh[i]=fila; else hh.push(fila);
+    o.dias++; o.L.push({ f:f, ob:ob.length, st:st.length, h:Math.round((suma(ob)+suma(st))*100)/100 });
+  });
+  return o;
+}
+/* 23/11/2026 · la estadística del mes, automática y editable a mano (sst_estado «est_ajuste_YYYY-MM» = { v:1, c:{ clave:valor },
+   por, ts }). Cada celda ajustada se marca «ajuste manual»; «Recalcular desde obra» la quita y vuelve el dato automático. */
+var INF_EST_CAMPOS=[
+  { k:'activos', n:'Personal en obra (al cierre)', g:function(D){ return D.activos; }, s:function(D, v){ D.activos=v; } },
+  { k:'obN', n:'Obreros', g:function(D){ return D.cat.o; }, s:function(D, v){ D.cat.o=v; } },
+  { k:'stN', n:'Staff (empleados)', g:function(D){ return D.cat.s; }, s:function(D, v){ D.cat.s=v; } },
+  { k:'obHHT', n:'Horas hombre trabajadas · obreros', g:function(D){ return D.hh.obHHT; }, s:function(D, v){ D.hh.obHHT=v; }, h:1 },
+  { k:'stHHT', n:'Horas hombre trabajadas · staff', g:function(D){ return D.hh.stHHT; }, s:function(D, v){ D.hh.stHHT=v; }, h:1 },
+  { k:'hhc', n:'Horas hombre de capacitación (HHC)', g:function(D){ return D.hh.hhc; }, s:function(D, v){ D.hh.hhc=v; if(D.ch && D.ch.tot) D.ch.tot.hhc=v; } },
+  { k:'acc', n:'Accidentes del mes', g:function(D){ return D.acc.mes; }, s:function(D, v){ D.acc.mes=v; } },
+  { k:'inc', n:'Incidentes del mes', g:function(D){ return D.acc.inc; }, s:function(D, v){ D.acc.inc=v; } },
+  { k:'ch', n:'Charlas y capacitaciones', g:function(D){ return D.ch && D.ch.tot ? D.ch.tot.veces : 0; }, s:function(D, v){ if(D.ch && D.ch.tot) D.ch.tot.veces=v; } },
+  { k:'ats', n:'ATS', g:function(D){ return D.ats.n; }, s:function(D, v){ D.ats.n=v; } },
+  { k:'ptr', n:'PETAR', g:function(D){ return D.ptr ? D.ptr.n : 0; }, s:function(D, v){ if(D.ptr) D.ptr.n=v; } },
+  { k:'insp', n:'Inspecciones', g:function(D){ return D.insp.n; }, s:function(D, v){ D.insp.n=v; } },
+  { k:'epp', n:'EPP entregado (unidades)', g:function(D){ return D.epp.und; }, s:function(D, v){ D.epp.und=v; } }
+];
+function _infEstLeer(D){ var o={}; INF_EST_CAMPOS.forEach(function(c){ try{ o[c.k]=+c.g(D)||0; }catch(_e){ o[c.k]=0; } }); return o; }
+function _infEstAplicar(D, aj){
+  var c=(aj && aj.c && typeof aj.c==='object') ? aj.c : {}, hechos={};
+  INF_EST_CAMPOS.forEach(function(x){ var v=c[x.k]; if(v===undefined || v===null || v==='' || !isFinite(+v)) return; try{ x.s(D, +v); hechos[x.k]=+v; }catch(_e){} });
+  if(hechos.obHHT!==undefined || hechos.stHHT!==undefined){
+    var antes=D.hh.hht; D.hh.hht=(+D.hh.obHHT||0)+(+D.hh.stHHT||0);
+    if(D.acc){ D.acc.hMes=D.hh.hht; D.acc.hAnio=Math.max(0, (+D.acc.hAnio||0)+(D.hh.hht-antes));
+      D.acc.IF=D.acc.hAnio ? D.acc.nIF*1e6/D.acc.hAnio : null; D.acc.IS=D.acc.hAnio ? D.acc.dias*1e6/D.acc.hAnio : null; }
+  }
+  return { c:hechos, n:Object.keys(hechos).length, por:(aj && aj.por) || '', ts:(aj && aj.ts) || '' };
 }
 /* las horas hombre del mes, de obreros y de staff (los días de antes del lote 18 traen la HHC sin separar) */
 function _infHH(filas, mes){
@@ -619,6 +740,45 @@ function _infCharlas(ses, marcas, act, mes, catDe){
   return { L:L, S:S, tot:tot, marcas:marcas!==null };
 }
 /* los ATS del mes (el último guardado de cada uno), con su estado y las fotos del cierre */
+/* 23/11/2026 · Marcelo (enrutamiento): lo que se llena en papel —ATS, PETAR, kardex de EPP, inspecciones, actas— y se escanea
+   con la app va a la MISMA carpeta del informe que su par digital (juntos, con la etiqueta «📄 papel») y cuenta igual en la
+   estadística. No se copia nada: el escaneo sigue en su lugar y la carpeta del mes lo muestra y lo lleva en el ZIP. */
+var INF8_PAPEL = { ats:['registros', 'reg_ats'], permiso:['registros', 'petar'], epp:['registros', 'reg_epp'], inspeccion:['registros', 'reg_insp'],
+  acta:['comite', 'acta'], inspcomite:['comite', 'com_insp'], reporte:['estadistica', 'est_mes'], simulacro:['simulacros', 'sim_asis'],
+  charla:['capacitaciones', 'rij'], difusion:['capacitaciones', 'difusion'], capacitacion:['capacitaciones', 'ce_prog'], induccion:['capacitaciones', 'ihn'],
+  reunion:['capacitaciones', 'reunion'], liderazgo:['otros', ''] };
+/* un escaneo: { ym, ck, ik, clase } o null (los sin tipo no van solos a ninguna carpeta) */
+var INF8_PAPEL_CUENTA = { ats:1, permiso:1, epp:1, inspeccion:1, acta:1, inspcomite:1 };
+function inf8PapelDe(f){
+  if(!f) return null;
+  /* lo subido a mano a una carpeta de registros del mes (04 › 4. ATS…) también es papel y cuenta */
+  var m=String(f.hoja||'').match(/^inf8:(\d{4}-\d{2}):([a-z_]+):([a-z_]+)$/);
+  if(m){ var cl=''; Object.keys(INF8_PAPEL_CUENTA).forEach(function(k){ var R=INF8_PAPEL[k]; if(R[0]===m[2] && R[1]===m[3]) cl=k; }); return cl ? { ym:m[1], ck:m[2], ik:m[3], clase:cl, subido:true } : null; }
+  if(f.hoja && f.hoja!=='asistencia') return null;
+  var p=String(f.nota||'').split('|'), k=p[1]||'otro', R=INF8_PAPEL[k]; if(!R) return null;
+  var ym=/^\d{4}-\d{2}/.test(p[0]||'') ? p[0].slice(0, 7) : String(f.creado||'').slice(0, 7);
+  return /^\d{4}-\d{2}$/.test(ym) ? { ym:ym, ck:R[0], ik:R[1], clase:k } : null;
+}
+/* los escaneos de un mes: { c:{tipo:cuántos}, L:[{fila, ck, ik, clase}] } */
+function inf8Papel(rows, mes){
+  var c={}, L=[], visto={};
+  (rows||[]).forEach(function(f){
+    var r=inf8PapelDe(f); if(!r || r.ym!==mes || !f.url || visto[f.url]) return; visto[f.url]=1;
+    c[r.clase]=(c[r.clase]||0)+1; L.push({ f:f, ck:r.ck, ik:r.ik, clase:r.clase });
+  });
+  return { c:c, L:L };
+}
+function _infPapelTx(n, uno){ return n ? ' · '+n+(uno==='hoja' ? (n===1 ? ' hoja' : ' hojas') : '')+' en papel' : ''; }
+/* los PETAR digitales del mes (sst_doc «petar», el permiso en su nota) */
+function _infPetar(rows, mes){
+  var vistos={}, n=0, cerr=0;
+  (rows||[]).forEach(function(f){
+    var x=nota(f.nota); if(!x || String(x.fecha||'').slice(0, 7)!==mes) return;
+    var k=String(x.id||x.folio||f.id); if(vistos[k]) return; vistos[k]=1; n++;
+    if(x.cierre && (x.cierre.f || x.cierre.firma || x.cierre.ts) || x.estado==='cerrado') cerr++;
+  });
+  return { dig:n, cerrados:cerr };
+}
 function _infAts(rows, mes){
   var vistos={}, L=[];
   (rows||[]).forEach(function(f){
@@ -728,7 +888,7 @@ function _infAchicar(f, max){
 function _infPanelHTML(){
   _infPanelCss();
   var P=INFW.panel;
-  var h='<div class="tarj inf-paso" id="inf-panel"><div class="tarj-cuerpo"><h3><span class="inf-n">5</span> El panel fotográfico</h3>'+
+  var h='<div class="tarj inf-paso" id="inf-panel"><div class="tarj-cuerpo"><h3><span class="inf-n">6</span> El panel fotográfico</h3>'+
     '<p class="ayuda" style="margin:0 0 10px">Las fotos del mes salen solas: los reportes (cómo se encontró y cómo quedó), las buenas prácticas y el cierre de los ATS. Corrige el título y la descripción de cada una, quita las que no van, ordénalas y suma las tuyas. En el PDF van de a dos por fila, numeradas, con su título y su descripción.</p>';
   if(!P || P.mes!==INFW.mes) return h+'<div class="ayuda" id="inf-panel-l">Buscando las fotos de '+esc(_infMesN(INFW.mes))+'…</div></div></div>';
   var on=P.items.filter(function(x){ return x.on; }).length;
@@ -1097,6 +1257,9 @@ function _infPdfBase(D, op){
       P.cifras([['Personal activo', D.activos, D.cat.o+' obreros · '+D.cat.s+' staff'], ['Horas hombre trabajadas', _infNum(Hh.hht), Hh.dias ? Hh.dias+(Hh.dias===1 ? ' día registrado' : ' días registrados') : 'sin registrar'],
                 ['Horas hombre de capacitación', _infDec(Hh.hhc), Hh.hht ? _infPct(Hh.hhc, Hh.hht)+' de lo trabajado' : ''], ['Accidentes del mes', D.acc.mes, _infAccSub(D.acc), D.acc.mes ? 'mal' : 'ok']]);
       _infTablaHH(P, Hh, null, D.hhA && D.hhA.acum);
+      /* 23/11/2026 · de dónde salen: el tareo (los días que tiene) y los ajustes a mano */
+      if(Hh.tareo) P.nota('Las horas hombre de '+Hh.tareo+(Hh.tareo===1 ? ' día salen' : ' días salen')+' del tareo de la obra (obreros y staff según su puesto); los demás días, del registro de horas hombre.');
+      if(D.aj && D.aj.n) P.nota('Ajuste manual del supervisor: '+INF_EST_CAMPOS.filter(function(c){ return D.aj.c[c.k]!==undefined; }).map(function(c){ return c.n.toLowerCase()+' '+_infNum(D.aj.c[c.k])+' (automático: '+_infNum(D.auto[c.k])+')'; }).join(' · ')+'.');
       P.tabla('Índices del año (hasta fin de mes)', ['Indicador', 'Valor', 'Cómo se calcula'], [
         ['Horas hombre del año', _infNum(D.acc.hAnio), 'suma de las horas registradas'],
         ['Accidentes que cuentan', D.acc.nIF, 'con incapacidad o mortales'],
@@ -1263,11 +1426,12 @@ function _infPdfTodas(TD){
         _infTablaHH(P, D.hh, null, D.hhA && D.hhA.acum);
         P.tabla('Lo del mes', ['', 'Del mes', 'Cómo va'], [
           ['Charlas y capacitaciones', D.ch.tot.veces, _infNum(D.ch.tot.asis)+' personas · '+_infDec(D.ch.tot.hhc)+' HHC'],
-          ['ATS', D.ats.n, D.ats.cerrados+' cerrados · '+D.ats.sinCierre+' sin cierre'],
+          ['ATS', D.ats.n, D.ats.cerrados+' cerrados · '+D.ats.sinCierre+' sin cierre'+_infPapelTx(D.ats.fis)],
+          ['PETAR', D.ptr.n, D.ptr.cerrados+' cerrados'+_infPapelTx(D.ptr.fis)],
           ['Actos y condiciones', D.obs.tot.acto+D.obs.tot.condicion, _infActCondTx(D.obs.tot.acto, D.obs.tot.condicion)+' · '+(D.obs.lev.pct==null ? 'nada que levantar' : D.obs.lev.pct+' % levantadas')],
           ['Sugerencias y buenas prácticas', D.obs.tot.sug+D.obs.tot.buena, D.obs.tot.sug+' sugerencias · '+D.obs.tot.buena+' buenas prácticas'],
-          ['Inspecciones', D.insp.n, D.insp.tipos.length+' tipos'],
-          ['EPP entregado (unidades)', D.epp.und, D.epp.entregas+' entregas']
+          ['Inspecciones', D.insp.n, D.insp.tipos.length+' tipos'+_infPapelTx(D.insp.fis)],
+          ['EPP entregado (unidades)', D.epp.und, D.epp.entregas+' entregas'+_infPapelTx(D.epp.fis, 'hoja')]
         ], [200, 80, wO-280], { num:{ 1:1 } });
       });
       return;
@@ -1488,12 +1652,13 @@ function _infExcel(D){
     { v:['Índice de frecuencia del año', D.acc.IF===null ? '—' : Math.round(D.acc.IF*100)/100, 'accidentes × 1 000 000 / horas hombre'], tipos:['tx', 'd2', 'tx'] },
     { v:['Índice de severidad del año', D.acc.IS===null ? '—' : Math.round(D.acc.IS*10)/10, 'días perdidos × 1 000 000 / horas hombre'], tipos:['tx', 'd', 'tx'] },
     ['Charlas y capacitaciones', D.ch.tot.veces, _infNum(D.ch.tot.asis)+' personas · '+_infDec(D.ch.tot.hhc)+' HHC'],
-    ['ATS del mes', D.ats.n, D.ats.cerrados+' cerrados · '+D.ats.sinCierre+' sin cierre'],
+    ['ATS del mes', D.ats.n, D.ats.cerrados+' cerrados · '+D.ats.sinCierre+' sin cierre'+_infPapelTx(D.ats.fis)],
+    ['PETAR del mes', D.ptr.n, D.ptr.cerrados+' cerrados'+_infPapelTx(D.ptr.fis)],
     ['Actos y condiciones del mes', D.obs.tot.acto+D.obs.tot.condicion, _infActCondTx(D.obs.tot.acto, D.obs.tot.condicion)+(D.obs.lev.pct==null ? '' : ' · '+D.obs.lev.pct+' % levantadas')],
     ['Sugerencias y buenas prácticas', D.obs.tot.sug+D.obs.tot.buena, D.obs.tot.sug+' sugerencias · '+D.obs.tot.buena+' buenas prácticas'],
     ['Reportes abiertos hoy', D.rep.abiertosHoy, 'de todos los meses'],
-    ['Inspecciones', D.insp.n, D.insp.tipos.length+' tipos'],
-    ['EPP entregado (unidades)', D.epp.und, D.epp.entregas+' entregas']
+    ['Inspecciones', D.insp.n, D.insp.tipos.length+' tipos'+_infPapelTx(D.insp.fis)],
+    ['EPP entregado (unidades)', D.epp.und, D.epp.entregas+' entregas'+_infPapelTx(D.epp.fis, 'hoja')]
   ].concat(D.prog && D.prog.hay ? [{ v:['Programas del año: cumplimiento al mes', D.prog.tot.p ? D.prog.tot.e/D.prog.tot.p : '—', D.prog.tot.e+' de '+D.prog.tot.p+' actividades'], tipos:['tx', 'p', 'tx'] }] : []), X);
   H.push(h);
   /* 2 · las horas hombre */
@@ -2645,6 +2810,11 @@ function _infOcho(D, R){
         return p.then(function(b){ pon('comite', 'acta', nom('Acta del comité N° ' + (a.n || '—')) + '.pdf', new Uint8Array(b)); }, function(){});
       });
     });
+    /* 23/11/2026 · lo escaneado en papel del mes, a su carpeta (juntos con lo digital, con «papel» en el nombre) */
+    ((D.fis && D.fis.L) || []).filter(function(x){ return x.f.hoja==='asistencia'; }).forEach(function(x){
+      cad = cad.then(function(){ return bajar(x.f.url).then(function(b){ var u8=new Uint8Array(b), ext=(u8[0]===0x25 && u8[1]===0x50) ? 'pdf' : ((u8[0]===0x89) ? 'png' : 'jpg');
+        pon(x.ck, x.ik, nom((x.f.nombre||'Escaneo').replace(/\.(pdf|jpe?g|png|webp)$/i, ''))+' (papel).'+ext, u8); }, function(){}); });
+    });
     /* los anexos elegidos, a «Otros» */
     if(INFW.secc.some(function(x){ return x.k === 'anexos' && x.on; })) INFW.anexos.forEach(function(a){
       cad = cad.then(function(){ return bajar(a.url).then(function(b){ var u8 = new Uint8Array(b), ext = (u8[0] === 0x25 && u8[1] === 0x50) ? 'pdf' : ((u8[0] === 0x89) ? 'png' : 'jpg');
@@ -2657,6 +2827,9 @@ function _infOcho(D, R){
       lee(_infExcel(D)).then(function(u8){ pon('estadistica', 'est_mes', 'Datos del informe - ' + _infMesN(D.mes) + '.xlsx', u8); }),
       lee(_infWord(D)).then(function(u8){ pon('capacitaciones', '', 'Temas del mes - ' + _infMesN(D.mes) + '.docx', u8); })
     ];
+    /* 23/11/2026 · «Tareo manda + respaldo»: el tareo del mes (marcas, personas, días y frentes) en 02 › 3. Registro de trabajadores */
+    if(D.hh && D.hh.tareo && typeof tarwExcel === 'function') promesas.push(Promise.resolve(tarwExcel(D.mes, null, true)).then(function(bl){
+      if(bl) return lee(bl).then(function(u8){ pon('estadistica', 'reg_trab', 'Tareo del mes - ' + _infMesN(D.mes) + '.xlsx', u8); }); }, function(){}));
     if(window.OBRASST_FORMATOS_INFORME){
       var mPartes = String(D.mes || '').split('-');
       var anioVal = mPartes[0] || String(new Date().getFullYear());
@@ -2753,9 +2926,10 @@ function _infOcho(D, R){
     /* 23/11/2026 · lo que se subió en Documentos › Informe mensual › <año> › <mes>, cada archivo en su carpeta */
     var ym = String(D.mes || '').slice(0, 7);
     if(!/^\d{4}-\d{2}$/.test(ym) || typeof sbGet !== 'function') return;
-    return sbGet('sst_doc?empresa=eq.' + _enc(YO.obra.id) + '&hoja=like.' + _enc('inf8:' + ym + '*') + '&select=id,hoja,nombre,url&limit=500').then(function(rows){
+    return sbGet('sst_doc?empresa=eq.' + _enc(YO.obra.id) + '&hoja=like.' + _enc('inf8:' + ym + '*') + '&select=id,hoja,nombre,url,nota&limit=500').then(function(rows){
       var usados = {};
-      return (rows || []).filter(function(f){ return f && f.url && !/^data:/i.test(f.url); }).reduce(function(cad, f){
+      /* el informe guardado del mes («00 Informe…», arriba de las 8 carpetas) no va: este ZIP ya lleva el informe recién armado */
+      return (rows || []).filter(function(f){ return f && f.url && !/^data:/i.test(f.url) && !/^informe:/.test(String(f.nota || '')) && String(f.hoja).split(':').length > 2; }).reduce(function(cad, f){
         return cad.then(function(){
           var p = String(f.hoja).slice(5 + ym.length + 1).split(':'), ck = p[0] || 'otros', ik = p[1] || '';
           return fetch(f.url, { credentials:'omit' }).then(function(r){ return r.ok ? r.arrayBuffer() : null; }).then(function(ab){
@@ -3062,13 +3236,13 @@ function _infVer(R){
     (blob.size>1048576 ? (blob.size/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(blob.size/1024))+' KB')+'</p>'+
     (R.malos.length ? '<div class="aviso ojo" id="inf-malos">No se pudieron sumar: '+esc(R.malos.join(', '))+'. Solo entran PDF y fotos (JPG o PNG).</div>' : '')+
     '<div class="inf-formatos"><button type="button" class="bt sec chico" id="inf-xls">📊 Excel con los datos</button>'+(otro ? '' : '<button type="button" class="bt sec chico" id="inf-doc">📝 Word de los temas del mes</button>')+
-      (todas || otro ? '' : '<button type="button" class="bt sec chico" id="inf-word-todo">📄 Todo en un Word</button><button type="button" class="bt sec chico" id="inf-zip">🗂️ Cada parte en su archivo (ZIP)</button><button type="button" class="bt sec chico" id="inf-ocho" title="Comité, estadística, simulacros, registros, capacitaciones, salud, personal nuevo y otros">📁 En 8 carpetas (ZIP)</button>')+'</div>'+
+      (todas || otro ? '' : '<button type="button" class="bt sec chico" id="inf-word-todo">📄 Todo en un Word</button><button type="button" class="bt sec chico" id="inf-zip">🗂️ Cada parte en su archivo (ZIP)</button><button type="button" class="bt sec chico" id="inf-qr-ind" title="La hoja del resumen del mes, en el cartel QR «Indicadores del mes»">📢 Al cartel QR de indicadores</button><button type="button" class="bt sec chico" id="inf-ocho" title="Comité, estadística, simulacros, registros, capacitaciones, salud, personal nuevo y otros">📁 En 8 carpetas (ZIP)</button>')+'</div>'+
     '<iframe class="inf-vista" id="inf-vista" title="El informe" src="'+esc(INFW._url)+'"></iframe><p class="msg" id="inf-msg" role="status"></p>';
   /* 16/11/2026 · si se eligió «En 8 carpetas», lo principal es el ZIP (el PDF sigue a la mano) */
   var ocho=(INFW.entrega==='ocho' && !todas && !otro);
   if(ocho) h='<p class="aviso" id="inf-ocho-aviso" style="margin:0 0 10px">📁 <b>Las 8 carpetas:</b> Comité de SST, Estadística, Simulacros, Control de registros, Capacitaciones, Salud e higiene, Personal nuevo y Otros. Lo de OBRASST va en su carpeta y el índice dice lo que falta agregar a mano.</p>'+h;
   abrirHoja('El informe de '+_infMesN(INFW.mes), todas ? (_infEmpresaN() || 'Todas las obras') : (nombreObraP()||''), h,
-    '<button type="button" class="bt sec" id="inf-volver">‹ Volver a cambiar</button>'+(todas ? '' : '<button type="button" class="bt sec" id="inf-guardar">Guardar en el archivo de la obra</button>')+
+    '<button type="button" class="bt sec" id="inf-volver">‹ Volver a cambiar</button>'+(todas ? '' : '<button type="button" class="bt sec" id="inf-guardar">Guardar en Documentos (su mes)</button>')+
     (ocho ? '<button type="button" class="bt sec" id="inf-bajar">Descargar el PDF</button><button type="button" class="bt" id="inf-ocho2">📁 Descargar las 8 carpetas (ZIP)</button>'
           : '<button type="button" class="bt" id="inf-bajar">Descargar el PDF</button>'), {ancha:true});
   $('inf-volver').onclick=cerrarHoja;
@@ -3084,21 +3258,47 @@ function _infVer(R){
     _infSeparados(INFW.datos).then(function(z){ b.disabled=false; bajarBlob(z, base+' - por partes.zip'); m.className='msg ok'; m.textContent='Listo: un PDF por parte, los anexos, el Excel y el Word de los temas, en un ZIP.'; },
       function(e){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo armar: '+((e && e.message) || e); });
   };
+  /* 23/11/2026 · el resumen del mes (sus páginas del informe), al cartel QR «Indicadores del mes» (sst_doc «qr-indicadores») */
+  if($('inf-qr-ind')) $('inf-qr-ind').onclick=function(){ infIndicadoresQR(INFW.datos, this); };
   /* 16/11/2026 · el informe en 8 carpetas (INF8) */
   if($('inf-ocho')) $('inf-ocho').onclick=function(){
     var m=$('inf-msg'), b=this; b.disabled=true; m.className='msg gris'; m.textContent='Armando las 8 carpetas…';
     _infOcho(INFW.datos, R).then(function(z){ b.disabled=false; bajarBlob(z, base+' - 8 carpetas.zip'); m.className='msg ok'; m.textContent='Listo: las 8 carpetas con lo de OBRASST en su lugar, y el índice con lo que falta agregar.'; },
       function(e){ b.disabled=false; m.className='msg mal'; m.textContent='No se pudo armar: '+((e && e.message) || e); });
   };
+  /* 23/11/2026 · Marcelo (opción A): «un solo lugar por mes». El informe guardado va a Documentos › Informe mensual › año ›
+     mes, arriba de las 8 carpetas, como «00 Informe … – <Mes año>». Uno por mes y por tipo (SST, medio ambiente, salud):
+     guardarlo otra vez lo reemplaza (la misma fila, con el archivo nuevo; el viejo se borra del balde). Lo que OBRASST
+     arma de sus datos no se guarda aparte: sale solo al bajar el informe o las 8 carpetas. */
   $('inf-guardar').onclick=function(){
-    var m=$('inf-msg'), b=this, nom=base+'.pdf';
+    var m=$('inf-msg'), b=this, ym=String(INFW.mes||'').slice(0, 7), tipo=amb ? 'amb' : (sal ? 'sal' : 'sst');
+    var tit=(amb ? 'Informe de medio ambiente' : (sal ? 'Informe de salud ocupacional' : 'Informe SST'))+' – '+_infMesMay(ym);
+    var hoja='inf8:'+ym, nota='informe:'+tipo, nom='00 '+tit;
+    if(!/^\d{4}-\d{2}$/.test(ym)){ m.className='msg mal'; m.textContent='Elige el mes del informe.'; return; }
     if(blob.size>25*1024*1024){ m.className='msg mal'; m.textContent='Pesa más de 25 MB (el tope por archivo de la obra): descárgalo, o quita algún anexo pesado.'; return; }
     b.disabled=true; m.className='msg gris'; m.textContent='Guardando…';
-    var f; try{ f=new File([blob], nom, { type:'application/pdf' }); }catch(e){ f=blob; f.name=nom; }
-    subirArchivoP('docs', f).then(function(url){
-      return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:'informe-mes', nombre:(amb ? 'Informe de medio ambiente · ' : (sal ? 'Informe de salud ocupacional · ' : 'Informe SST · '))+_infMesN(INFW.mes), url:url, nota:INFW.mes });
-    }).then(function(){ m.className='msg ok'; m.textContent='Guardado en «Documentos», carpeta «Informes del mes».'; }, function(e){ b.disabled=false; m.className='msg mal'; m.textContent=(e===401 || e===403) ? 'Esta cuenta no puede guardar en esta obra.' : 'No se pudo guardar. Revisa tu conexión.'; });
+    var f; try{ f=new File([blob], nombreArchivo(nom)+'.pdf', { type:'application/pdf' }); }catch(e){ f=blob; f.name=nombreArchivo(nom)+'.pdf'; }
+    var viejo=null;
+    sbGet('sst_doc?empresa=eq.'+_enc(YO.obra.id)+'&hoja=eq.'+_enc(hoja)+'&nota=eq.'+_enc(nota)+'&select=id,url&order=creado.desc&limit=5').then(function(rows){
+      viejo=(Array.isArray(rows) && rows[0]) ? rows[0] : null;
+      return subirArchivoP('docs', f);
+    }).then(function(url){
+      if(viejo) return sbPatch('sst_doc?id=eq.'+_enc(viejo.id), { nombre:nom, url:url, creado:new Date().toISOString() }).then(function(rows){
+        if(Array.isArray(rows) && !rows.length) return Promise.reject('sin_fila');
+        /* el archivo de antes, fuera del balde (si ninguna otra fila lo usa) */
+        if(viejo.url && viejo.url!==url && typeof cargarArchivo==='function') cargarArchivo().then(function(){ if(typeof _arcLiberar==='function') _arcLiberar([{ id:viejo.id, url:viejo.url }]); }).catch(function(){});
+        return 'reemplazo';
+      });
+      return sbPostP('sst_doc', { empresa:YO.obra.id, hoja:hoja, nombre:nom, url:url, nota:nota }).then(function(rows){ if(Array.isArray(rows) && !rows.length) return Promise.reject('sin_fila'); return 'nuevo'; });
+    }).then(function(que){
+      m.className='msg ok';
+      m.innerHTML=esc((que==='reemplazo' ? 'Reemplazado' : 'Guardado')+' en Documentos › Informe mensual › '+ym.slice(0, 4)+' › '+_infMesMay(ym).replace(/ \d{4}$/, '')+'.')+
+        ' <button type="button" class="enlace" id="inf-ir-doc">Abrir la carpeta</button>';
+      var ir=$('inf-ir-doc'); if(ir) ir.onclick=function(){ cerrarHoja(); window.ARC_IR='inf:'+ym; navegar('docs'); };
+      b.disabled=false;
+    }, function(e){ b.disabled=false; m.className='msg mal'; m.textContent=(e===401 || e===403 || e==='sin_fila') ? 'Esta cuenta no puede guardar documentos en esta obra.' : 'No se pudo guardar. Revisa tu conexión e inténtalo otra vez.'; });
   };
+
 }
 
 /* >>> INFB-INI (lote 23 · se edita aquí; su copia va en portal/informe.js, herr/copias.py la revisa) <<< */

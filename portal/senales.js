@@ -1563,9 +1563,7 @@ function snkNombresDe(C, gente){
 /* el QR en el PDF, con rectángulos (nítido a cualquier tamaño) */
 function _snkQR(doc, txt, x, y, lado){
   var qr=qrcode(0, 'M'); qr.addData(txt); qr.make();
-  var n=qr.getModuleCount(), t=lado/(n+4);
-  doc.setFillColor(255, 255, 255); doc.rect(x, y, lado, lado, 'F'); doc.setFillColor(0, 0, 0);
-  for(var r=0;r<n;r++){ var c=0; while(c<n){ if(!qr.isDark(r, c)){ c++; continue; } var c0=c; while(c<n && qr.isDark(r, c)) c++; doc.rect(x+(c0+2)*t, y+(r+2)*t, (c-c0)*t+0.02, t+0.02, 'F'); } }
+  qrePDF(doc, qr, x, y, lado);   /* 23/11/2026 · el estilo de QR de la obra, con su zona de silencio */
 }
 /* la letra más grande que entra en «ancho» (mm) */
 function _snkAjusta(doc, txt, max, min, ancho){

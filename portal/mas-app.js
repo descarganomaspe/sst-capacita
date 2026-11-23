@@ -2087,9 +2087,7 @@ function celFirmaPDF(doc, tr, x, y, w, h){
 /* el QR, en cuadritos negros (con el generador de la app: qrcode) */
 function _celQR(doc, txt, x, y, lado){
   var q = qrcode(0, 'M'); q.addData(txt); q.make();
-  var n = q.getModuleCount(), t = lado / (n + 4);
-  doc.setFillColor(255, 255, 255); doc.rect(x, y, lado, lado, 'F'); doc.setFillColor(0, 0, 0);
-  for(var r = 0; r < n; r++){ var c = 0; while(c < n){ if(!q.isDark(r, c)){ c++; continue; } var c0 = c; while(c < n && q.isDark(r, c)) c++; doc.rect(x + (c0 + 2) * t, y + (r + 2) * t, (c - c0) * t, t, 'F'); } }
+  qrePDF(doc, q, x, y, lado);   /* 23/11/2026 · el estilo de QR de la obra, con 4 módulos de zona de silencio */
 }
 /* el acta de la votación (el sustento): la participación, el resultado, el padrón con la hora y la firma de cada uno, las
    cédulas sin nombre (en su orden al azar) y el código de integridad. op = { firmas:{k: trazos}, doc:true (devuelve el

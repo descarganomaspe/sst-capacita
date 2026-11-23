@@ -3132,10 +3132,7 @@ function _audSalaConstanciaHoja(S, peds, halls){
       if(typeof qrcode==='function'){
         try{
           var q=qrcode(0, 'M'); q.addData(codVer); q.make();
-          var qcv=document.createElement('canvas'), nmod=q.getModuleCount(), cell=3, qctx=qcv.getContext('2d');
-          qcv.width=qcv.height=nmod*cell+8; qctx.fillStyle='#fff'; qctx.fillRect(0, 0, qcv.width, qcv.height); qctx.fillStyle='#0B2A3A';
-          for(var r=0;r<nmod;r++) for(var c2=0;c2<nmod;c2++) if(q.isDark(r, c2)) qctx.fillRect(c2*cell+4, r*cell+4, cell, cell);
-          doc.addImage(qcv.toDataURL('image/png'), 'PNG', W-M-28, y+2, 28, 28);
+          doc.addImage(typeof qreDataURL==='function' ? qreDataURL(q, 6, 0) : q.createDataURL(6, 24), 'PNG', W-M-28, y+2, 28, 28);   /* 23/11/2026 · con zona de silencio */
           doc.setFontSize(7.2); doc.text(T(S.id), W-M-14, y+33, { align:'center' });
         }catch(_q){}
       }

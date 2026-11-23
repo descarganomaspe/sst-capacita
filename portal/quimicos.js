@@ -646,18 +646,8 @@ function _qtQRTexto(q, mm){
 function _qtQR(txt, x, y, lado, ecc){
   var qr = qrcode(0, ecc || 'M'); qr.addData(txt); qr.make();
   if(_QT_QR_LOG) _QT_QR_LOG.push({txt:txt, x:x, y:y, lado:lado, ecc:ecc || 'M'});
-  var n = qr.getModuleCount(), t = lado / (n + 4), d = '';
-  for(var r = 0; r < n; r++){
-    var c = 0;
-    while(c < n){
-      if(!qr.isDark(r, c)){ c++; continue; }
-      var c0 = c; while(c < n && qr.isDark(r, c)) c++;
-      d += 'M' + (x + (c0 + 2) * t).toFixed(2) + ' ' + (y + (r + 2) * t).toFixed(2) +
-           'h' + ((c - c0) * t).toFixed(2) + 'v' + t.toFixed(2) + 'h' + (-(c - c0) * t).toFixed(2) + 'z';
-    }
-  }
-  return '<rect x="' + x + '" y="' + y + '" width="' + lado + '" height="' + lado + '" fill="#fff"/>' +
-         '<path d="' + d + '" fill="#000" shape-rendering="crispEdges"/>';
+  /* 23/11/2026 · el dibujo del estilo de QR de la obra, con su zona de silencio de 4 módulos (QR-ESTILOS) */
+  return qreSVG(qr, x, y, lado);
 }
 /* el EPP que entra: primero lo que protege de lo peor */
 /* lo de no hacer fuego va antes que los lentes: con 3 lugares, en la
@@ -2029,21 +2019,11 @@ function _qlJPG(svg){
   });
 }
 function _qlQRVector(doc, L){
-  var k = 210 / QL_A4.W, sol = 0.02;
+  var k = 210 / QL_A4.W;
   (L || []).forEach(function(z){
     try{
       var qr = qrcode(0, z.ecc || 'M'); qr.addData(z.txt); qr.make();
-      var n = qr.getModuleCount(), t = z.lado / (n + 4);
-      doc.setFillColor(255, 255, 255); doc.rect(z.x * k, z.y * k, z.lado * k, z.lado * k, 'F');
-      doc.setFillColor(0, 0, 0);
-      for(var r = 0; r < n; r++){
-        var c = 0;
-        while(c < n){
-          if(!qr.isDark(r, c)){ c++; continue; }
-          var c0 = c; while(c < n && qr.isDark(r, c)) c++;
-          doc.rect((z.x + (c0 + 2) * t) * k, (z.y + (r + 2) * t) * k, (c - c0) * t * k + sol, t * k + sol, 'F');
-        }
-      }
+      qrePDF(doc, qr, z.x * k, z.y * k, z.lado * k);   /* 23/11/2026 · el estilo de QR de la obra (QR-ESTILOS) */
     }catch(_e){}
   });
 }

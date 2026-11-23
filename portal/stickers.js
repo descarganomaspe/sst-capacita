@@ -852,9 +852,10 @@ function _stkSVGops(ops, n, u, defs){
     } else if(p.t==='q'){
       var Q=null; try{ Q=stkQR(p.tx); }catch(e){ Q=null; }
       if(!Q){ h+='<rect x="'+n(p.x)+'" y="'+n(p.y)+'" width="'+n(p.s)+'" height="'+n(p.s)+'" fill="rgb(238,241,244)"/>'; return; }
-      var m=p.s/Q.n, d='';
-      Q.filas.forEach(function(tr, r){ tr.forEach(function(c){ d+='M'+n(p.x+c[0]*m)+' '+n(p.y+r*m)+'h'+n(c[1]*m)+'v'+n(m)+'h-'+n(c[1]*m)+'z'; }); });
-      h+='<path d="'+d+'" fill="'+_stkRGB(p.c)+'" shape-rendering="crispEdges"/>';
+      /* 23/11/2026 · con su zona de silencio blanca de 4 módulos (QR-ESTILOS): sin ella, sobre el color del casco no enfoca */
+      var m=p.s/(Q.n+8), d='', ox=p.x+4*m, oy=p.y+4*m;
+      Q.filas.forEach(function(tr, r){ tr.forEach(function(c){ d+='M'+n(ox+c[0]*m)+' '+n(oy+r*m)+'h'+n(c[1]*m)+'v'+n(m)+'h-'+n(c[1]*m)+'z'; }); });
+      h+='<rect x="'+n(p.x)+'" y="'+n(p.y)+'" width="'+n(p.s)+'" height="'+n(p.s)+'" fill="#fff"/><path d="'+d+'" fill="'+_stkRGB(p.c)+'" shape-rendering="crispEdges"/>';
     } else if(p.t==='i'){
       var clip=p.circ ? '<ellipse cx="'+n(p.x+p.w/2)+'" cy="'+n(p.y+p.h/2)+'" rx="'+n(p.w/2)+'" ry="'+n(p.h/2)+'"/>'
                       : '<rect x="'+n(p.x)+'" y="'+n(p.y)+'" width="'+n(p.w)+'" height="'+n(p.h)+'" rx="'+n(p.rr)+'"/>';
@@ -922,9 +923,10 @@ function _stkPDFops(doc, ops, dx, dy, imgs){
       if(p.t==='tr' && p.rot) doc.text(p.tx, dx+p.x, dy+p.y, { angle:-p.rot });
       else doc.text(p.tx, dx+p.x, dy+p.y, p.al==='c' ? { align:'center' } : (p.al==='r' ? { align:'right' } : undefined));
     } else if(p.t==='q'){
-      var Q=stkQR(p.tx), m=p.s/Q.n;
+      var Q=stkQR(p.tx), m=p.s/(Q.n+8), ox=dx+p.x+4*m, oy=dy+p.y+4*m;   /* 23/11/2026 · con su zona de silencio blanca de 4 módulos */
+      doc.setFillColor(255, 255, 255); doc.rect(dx+p.x, dy+p.y, p.s, p.s, 'F');
       doc.setFillColor(p.c[0], p.c[1], p.c[2]);
-      Q.filas.forEach(function(tr, r){ tr.forEach(function(c){ doc.rect(dx+p.x+c[0]*m, dy+p.y+r*m, c[1]*m, m+0.02, null); }); });
+      Q.filas.forEach(function(tr, r){ tr.forEach(function(c){ doc.rect(ox+c[0]*m, oy+r*m, c[1]*m, m+0.02, null); }); });
       doc.fill();
     } else if(p.t==='i'){
       var I=p.src && imgs ? imgs[p.src] : null, x=dx+p.x, y=dy+p.y, puesta=false;

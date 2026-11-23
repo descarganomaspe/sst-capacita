@@ -1041,9 +1041,7 @@ function utQrGeo(Q, conPie){
 }
 function _utQrHacer(t){ var q=qrcode(0, 'M'); q.addData(_utUtf8(t)); q.make(); return q; }
 function _utQrDib(doc, qr, x, y, lado){
-  var n=qr.getModuleCount(), t=lado/(n+4);
-  doc.setFillColor(255, 255, 255); doc.rect(x, y, lado, lado, 'F'); doc.setFillColor(0, 0, 0);
-  for(var r=0;r<n;r++){ var c=0; while(c<n){ if(!qr.isDark(r, c)){ c++; continue; } var c0=c; while(c<n && qr.isDark(r, c)) c++; doc.rect(x+(c0+2)*t, y+(r+2)*t, (c-c0)*t+0.02, t+0.02, 'F'); } }
+  qrePDF(doc, qr, x, y, lado);   /* 23/11/2026 · el estilo de QR de la obra, con su zona de silencio */
 }
 function _utCorta(doc, t, ancho){ if(doc.getTextWidth(t)<=ancho) return t; while(t.length>1 && doc.getTextWidth(t+'...')>ancho) t=t.slice(0, -1); return t+'...'; }
 function utQrPDF(Q){
@@ -1078,8 +1076,8 @@ function utQrPng(Q){
   var q; try{ q=_utQrHacer(t); }catch(_e){ return Promise.reject('largo'); }
   var n=q.getModuleCount(), mz=4, px=Math.max(6, Math.floor(1024/(n+mz*2))), lado=px*(n+mz*2), pie=String(Q.pie||'').trim(), pieH=pie ? Math.round(lado*0.14) : 0;
   var cv=document.createElement('canvas'); cv.width=lado; cv.height=lado+pieH;
-  var cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.fillStyle='#000';
-  for(var r=0;r<n;r++) for(var c=0;c<n;c++) if(q.isDark(r, c)) cx.fillRect((c+mz)*px, (r+mz)*px, px, px);
+  var cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+  qrePintar(cx, q, 0, 0, lado, {entero:true});   /* 23/11/2026 · el estilo de QR de la obra */
   if(pie){
     var fs=Math.round(pieH*0.46); cx.fillStyle='#0B2A3A'; cx.textAlign='center'; cx.textBaseline='middle';
     do{ cx.font='600 '+fs+'px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'; fs-=2; }while(fs>10 && cx.measureText(pie).width>lado*0.92);
