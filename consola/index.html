@@ -696,6 +696,7 @@ var IC = {
   reuniones:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M8 13.5h3M8 16.5h6"/></svg>',
   aliados:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><path d="M14.6 14.6c.6-.2 1.2-.3 1.9-.3 2.2 0 3.9 1.5 4.4 4.2"/></svg>',
   os:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="7" rx="3.5"/><circle cx="16.5" cy="7.5" r="1.8"/><rect x="3.5" y="13" width="17" height="7" rx="3.5"/><circle cx="7.5" cy="16.5" r="1.8"/></svg>',
+  uso:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
   codigos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v1.8a2.2 2.2 0 0 0 0 4.4V16a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-1.8a2.2 2.2 0 0 0 0-4.4z"/><path d="M14.5 7v1.6M14.5 11.2v1.6M14.5 15.4V17"/></svg>',
   comprobantes:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h8l3.5 3.5v13.5h-11.5z"/><path d="M14.5 3.5V7H18"/><path d="M9.5 11h6M9.5 14.5h6M9.5 18h3.5"/></svg>',
   avisos:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5v-5a6 6 0 1 1 12 0v5l1.8 2H4.2z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg>',
@@ -707,6 +708,7 @@ var VISTAS = [
   {id:'reclamos', n:'Reclamos',          c:'Reclamos', s:'El Libro de Reclamaciones: cada hoja con su plazo de quince días hábiles, tu respuesta y la copia que se le manda al consumidor'},
   {id:'ventas',   n:'Ventas',            c:'Ventas',   s:'Los pagos de OBRASST: la web, la tienda online y Google Play'},
   {id:'comprobantes', n:'Boletas y facturas', c:'Boletas', s:'La boleta o la factura de cada venta: lo que pidió el cliente, lista para emitir en SUNAT, y su número y su PDF cuando ya salió'},
+  {id:'uso',      n:'Uso de la app',     c:'Uso',      s:'Cuánto tiempo pasa cada persona en la app y en la web, cuántos días entra y cuántos lleva sin entrar'},
   {id:'empresas', n:'Empresas y planes', c:'Empresas', s:'Cada empresa, con el plan que tiene hoy, sus obras y su gente'},
   {id:'central',  n:'Contractor Hub',    c:'Contractor Hub', s:'Contractor Hub™ se activa por obra: con su código, hasta cuándo y para cuántas subcontratas. Y quién pidió una demo o un piloto'},
   {id:'aliados',  n:'Aliados',           c:'Aliados',  s:'Los proveedores que firmaron el acuerdo: su alta, su enlace de invitación, lo que les llega y las empresas que traen'},
@@ -717,7 +719,7 @@ var VISTAS = [
 ];
 var VISTA = { actual:null, recargar:null };
 function vistaDe(id){ return VISTAS.filter(function(v){ return v.id===id; })[0]; }
-function pintor(id){ return ({resumen:vistaResumen, fallas:vistaFallas, reclamos:vistaReclamos, ventas:vistaVentas, comprobantes:vistaComprobantes, empresas:vistaEmpresas, central:vistaCentral, aliados:vistaAliados, os:vistaOs, reuniones:vistaReuniones, codigos:vistaCodigos, avisos:vistaAvisos})[id]; }
+function pintor(id){ return ({resumen:vistaResumen, fallas:vistaFallas, reclamos:vistaReclamos, ventas:vistaVentas, comprobantes:vistaComprobantes, empresas:vistaEmpresas, central:vistaCentral, aliados:vistaAliados, os:vistaOs, reuniones:vistaReuniones, codigos:vistaCodigos, avisos:vistaAvisos, uso:vistaUso})[id]; }
 function navegar(id, desdeHistoria){
   var v = vistaDe(id); if(!v) v = VISTAS[0];
   var antes = VISTA.actual;
@@ -897,6 +899,54 @@ function g30Cablear(id){
   });
 }
 
+
+/* ══ EL USO DE LA APP Y LA WEB (20/11/2026) ══════════════════════════════════════════════════════════════════════
+   Marcelo: «saber en la consola qué tanto tiempo el usuario pasa en la app y en la web, qué tanto entra, y la cantidad de
+   días que no entra». De sst_admin_uso: por persona y obra, los minutos (app y web), los días activos, las entradas y la
+   última vez. Solo tiempo con la pantalla a la vista: nada de lo que hizo. */
+var USO = { dias:30, q:'', orden:'sin', r:null, abierto:'' };
+function _usoH(m){ m=Math.round(+m||0); if(m<60) return m+' min'; var h=Math.floor(m/60), r=m%60; return h+' h'+(r ? ' '+r+' min' : ''); }
+function _usoSin(iso, hoy){ if(!iso) return null; var a=Date.parse(String(iso)); if(!a) return null; return Math.max(0, Math.floor((Date.parse(hoy+'T23:59:59-05:00')-a)/864e5)); }
+function _usoSem(n){ return n==null ? ['gris', 'Sin datos'] : (n<=3 ? ['ok', n===0 ? 'Hoy' : (n===1 ? 'Ayer' : 'Hace '+n+' días')] : (n<=7 ? ['ojo', 'Hace '+n+' días'] : ['mal', 'Hace '+n+' días'])); }
+function vistaUso(caja){
+  cargando(caja);
+  var ac=$('acciones'); if(ac) ac.innerHTML='<select id="uso-dias" aria-label="Periodo"><option value="7">7 días</option><option value="30" selected>30 días</option><option value="90">90 días</option></select>';
+  if($('uso-dias')){ $('uso-dias').value=String(USO.dias); $('uso-dias').onchange=function(){ USO.dias=+this.value; vistaUso(caja); }; }
+  sbRpc('sst_admin_uso', { p_dias:USO.dias }).then(function(r){
+    if(!r || r.ok===false){ noAbre(caja, r, 0, '2026-11-20-uso-tiempo'); return; }
+    USO.r=r; _usoPintar(caja);
+  }, function(cod){ noAbre(caja, null, cod, '2026-11-20-uso-tiempo'); });
+  VISTA.recargar=function(){ vistaUso(caja); };
+}
+function _usoPintar(caja){
+  var r=USO.r, hoy=r.hoy, F=(r.filas||[]).map(function(x){ x._sin=_usoSin(x.ultimo, hoy); x._min=(+x.min_app||0)+(+x.min_web||0); return x; });
+  var q=String(USO.q||'').toLowerCase();
+  var L=F.filter(function(x){ return !q || [x.nombre, x.correo, x.obra].join(' ').toLowerCase().indexOf(q)>-1; });
+  var ord={ sin:function(a, b){ return (a._sin==null)-(b._sin==null) || (b._sin||0)-(a._sin||0); }, tiempo:function(a, b){ return b._min-a._min; }, dias:function(a, b){ return (+b.dias||0)-(+a.dias||0); } }[USO.orden];
+  L.sort(ord);
+  var act7=F.filter(function(x){ return x._sin!=null && x._sin<=7; }).length, frias=F.filter(function(x){ return x._sin!=null && x._sin>7; }).length;
+  var tot={ app:0, web:0 }; F.forEach(function(x){ tot.app+=+x.min_app||0; tot.web+=+x.min_web||0; });
+  /* la serie de todos: minutos por día */
+  var serie=[]; for(var i=USO.dias-1;i>=0;i--){ var d=new Date(Date.parse(hoy+'T12:00:00-05:00')-i*864e5), k=d.toISOString().slice(0, 10), m=0, n=0;
+    F.forEach(function(x){ var a=+(x.serie||{})[k+'|app']||0, w=+(x.serie||{})[k+'|web']||0; if(a+w){ m+=a+w; n++; } }); serie.push({ d:k, m:m, n:n }); }
+  var h='<div class="rej">'+cifra('Activos', num(act7), 'entraron en los últimos 7 días', act7 ? 'ok' : '')+
+    cifra('Se enfrían', num(frias), 'más de 7 días sin entrar', frias ? 'mal' : '')+
+    cifra('Tiempo en la app', _usoH(tot.app), 'en '+USO.dias+' días', '')+cifra('Tiempo en la web', _usoH(tot.web), 'en '+USO.dias+' días', '')+'</div>';
+  h+='<div class="tarj" style="margin-top:14px"><div class="tarj-cuerpo">'+g30('uso-g', 'Minutos de uso por día', serie, 'm', function(v, x){ return _usoH(v)+' · '+x.n+' '+(x.n===1 ? 'persona' : 'personas'); }, '')+'</div></div>';
+  h+='<div class="tarj" style="margin-top:14px"><div class="tarj-cab"><div class="herr" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="uso-q" type="search" placeholder="Buscar persona, correo u obra" value="'+esc(USO.q)+'" style="min-width:240px">'+
+    '<div class="seg" role="group" aria-label="Ordenar">'+[['sin', 'Más días sin entrar'], ['tiempo', 'Más tiempo'], ['dias', 'Más días activos']].map(function(o){ return '<button type="button" data-ord="'+o[0]+'"'+(USO.orden===o[0] ? ' class="on"' : '')+'>'+o[1]+'</button>'; }).join('')+'</div></div>'+
+    '<span class="sub">'+L.length+' '+(L.length===1 ? 'persona' : 'personas')+'</span></div>';
+  if(!L.length) h+='<div class="vacio"><b>Todavía no hay datos</b>Se llenan solos desde que la app y la web se actualizan: cada minuto con la pantalla a la vista.</div>';
+  else h+='<div class="tabla-caja"><table><thead><tr><th>Persona</th><th>Obra</th><th>Último ingreso</th><th class="num">Días activos</th><th class="num">App</th><th class="num">Web</th><th class="num">Por día activo</th><th class="num">Entradas</th></tr></thead><tbody>'+
+    L.slice(0, 600).map(function(x){ var S=_usoSem(x._sin), dA=+x.dias||0;
+      return '<tr><td><b>'+esc(x.nombre || x.correo || 'Sin nombre')+'</b>'+(x.nombre && x.correo ? '<br><span class="sub">'+esc(x.correo)+'</span>' : '')+'</td><td>'+esc(x.obra||'')+'</td>'+
+        '<td><span class="pill '+S[0]+'">'+esc(S[1])+'</span></td><td class="num">'+dA+' de '+USO.dias+'</td><td class="num">'+esc(_usoH(x.min_app))+'</td><td class="num">'+esc(_usoH(x.min_web))+'</td>'+
+        '<td class="num">'+(dA ? esc(_usoH(x._min/dA)) : '—')+'</td><td class="num">'+((+x.ent_app||0)+(+x.ent_web||0))+'</td></tr>'; }).join('')+'</tbody></table></div>';
+  h+='</div><p class="sub" style="margin-top:10px">Se cuenta el tiempo con la pantalla a la vista y alguien usándola (en los últimos 5 minutos), y cada entrada (abrir, o volver después de 30 minutos). No se guarda lo que hizo ni lo que vio. Semáforo: hasta 3 días, verde · de 4 a 7, ámbar · más de 7, rojo.</p>';
+  caja.innerHTML=h; g30Cablear('uso-g');
+  var qi=$('uso-q'); qi.oninput=function(){ USO.q=qi.value; clearTimeout(USO.t); USO.t=setTimeout(function(){ var p=qi.selectionStart; _usoPintar(caja); var q2=$('uso-q'); if(q2){ q2.focus(); try{ q2.setSelectionRange(p, p); }catch(e){} } }, 250); };
+  [].forEach.call(caja.querySelectorAll('[data-ord]'), function(b){ b.onclick=function(){ USO.orden=b.getAttribute('data-ord'); _usoPintar(caja); }; });
+}
 /* ══ EL DIÁLOGO (sin los cuadros del navegador) ══════════════════════ */
 var DIALOGO = { foco:null };
 function dialogo(op){
