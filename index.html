@@ -4360,6 +4360,13 @@ html.t-claro .sim-hito{background:#fff}
 .alr-estado b{display:block;font-size:15px}.alr-estado small{display:block;color:var(--gris);font-size:12.5px;margin-top:3px}
 .alr-aviso{margin-top:10px;padding:12px 13px;border-radius:var(--r2);background:#B3001B;color:#fff}.alr-aviso b{display:block;font-size:17px;letter-spacing:.02em}.alr-aviso p{margin:5px 0 0;font-size:13.5px}
 .alr-gente{display:grid;gap:6px;margin-top:8px;max-height:280px;overflow:auto;padding:4px}.alr-g{display:flex;gap:9px;align-items:center;font-size:14px}.alr-g input{width:auto;margin:0}
+/* 21/11/2026 · Mi perfil (el trabajador) y su experiencia en la ficha */
+.perf-sec{display:block;margin-top:10px}.perf-sec>b{display:block;font-size:14.5px;margin-bottom:6px}
+.perf-fila{display:grid;grid-template-columns:1fr 1fr;gap:8px}.perf-tr{display:grid;grid-template-columns:2fr 1.4fr .8fr .8fr auto;gap:6px;align-items:end;margin-top:6px}
+.perf-tr input{margin:0}.perf-x{background:none;border:0;font-size:18px;min-width:36px;min-height:36px;cursor:pointer;color:var(--gris)}
+.perf-obra{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid rgba(var(--w),.08);font-size:13.5px}.perf-obra:first-child{border-top:0}
+.perf-chip{display:inline-block;margin:2px 4px 2px 0;padding:3px 9px;border-radius:999px;background:rgba(var(--w),.07);font-size:12.5px}
+@media (max-width:520px){.perf-tr{grid-template-columns:1fr 1fr}.perf-tr .perf-x{justify-self:end}}
 /* 14/10/2026 · Mi legajo (el trabajador) */
 .legm-sec{display:block;margin-top:10px}.legm-sec>b{display:block;font-size:14.5px;margin-bottom:4px}
 .legm-l{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}.legm-l li{display:grid;grid-template-columns:auto 1fr;column-gap:10px;font-size:13px;padding:6px 0;border-top:1px solid rgba(var(--w),.08)}
@@ -9703,7 +9710,7 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
 
   <div class="sec-tit">Datos generales</div>
   <div class="dos">
-    <div><label>Área</label><input id="i-area" placeholder="Frente, taller, almacén"></div>
+    <div><label>Frente <small>(obligatorio)</small></label><input id="i-area" list="i-area-l" placeholder="Elige el frente: Torre A, almacén…"><datalist id="i-area-l"></datalist></div>
     <div><label>Actividad</label><input id="i-activ" placeholder="Qué se hace ahí"></div>
   </div>
   <label>Ubicación exacta</label><input id="i-ubica" placeholder="Nivel 3, eje C-4, sector norte">
@@ -10465,6 +10472,10 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
 <section class="pantalla" id="p-alarma">
   <div class="barra"><span>Alarma de simulacro</span></div>
   <div id="alr-cuerpo"></div>
+</section>
+<section class="pantalla" id="p-mi-perfil">
+  <div class="barra"><span>Mi perfil</span></div>
+  <div id="perf-cuerpo"></div>
 </section>
 <section class="pantalla" id="p-mi-legajo">
   <div class="barra"><span>Mi legajo</span></div>
@@ -25317,6 +25328,8 @@ function _sincronizarTrabajadores(d){
         /* el tipo de documento va solo si se sabe: un «td:null» borraría
            arriba el que eligió el propio trabajador al registrarse */
         if(t.td) o.td = t.td;
+        /* 21/11/2026 · la ficha que ya está en la nube: lo de la persona va solo si se cambió aquí (persSube) */
+        if(t.enNube && !t.persSube){ delete o.nombre; delete o.emergencia; delete o.emer_quien; }
         /* la foto: su dirección si la tiene; null solo si la quitaron acá */
         if(t.fotoUrl) o.foto_url = t.fotoUrl;
         else if(t.fotoQuita) o.foto_url = null;
@@ -25353,6 +25366,7 @@ function _sincronizarTrabajadores(d){
         vivo.forEach(function(t){
           if(!ids[t.id] || enviado[t.id]!==firmaSub(t)) return;
           if(!t.sync){ t.sync=1; if(t.fotoQuita) delete t.fotoQuita; toco=true; }
+          if(!t.enNube || t.persSube){ t.enNube=1; delete t.persSube; toco=true; }
           if(t.indSube && sinInd!==true){ delete t.indSube; toco=true; }
           if(t.histSube && !SIN_HIST_ULT && TRAB_COL_HIST!==false){ delete t.histSube; toco=true; }
           if(t.ubicSube && TRAB_COL_UBI===true){ delete t.ubicSube; toco=true; }
@@ -25450,6 +25464,7 @@ function _sincronizarTrabajadores(d){
         /* los campos que el servidor no devolvio (base sin esas columnas)
            no se tocan: antes se ponian en '' y se perdian del celular */
         var traeExtras = ('sangre' in r) || ('emergencia' in r) || ('emer_quien' in r);
+        if(!y.enNube){ y.enNube=1; cambio=true; }
         /* ⚠ La marca de almacenero SOLO se copia si el servidor la
            mando. Si la base todavia no tiene la columna, «almacenero»
            no viene en la fila y aqui valdria false: el segundo celular
@@ -25518,7 +25533,7 @@ function _sincronizarTrabajadores(d){
       var nuevo={id:r.ext, nombre:r.nombre, dni:r.dni||'', puesto:r.puesto||'', area:r.area||'',
               estatus:r.estatus||'activo', sangre:r.sangre||'', emergencia:r.emergencia||'',
               emerQuien:r.emer_quien||'', almacenero:(r.almacenero===true), contrata:r.contrata||'',
-              td:r.td||'', fotoUrl:r.foto_url||'', sync:1};
+              td:r.td||'', fotoUrl:r.foto_url||'', sync:1, enNube:1};
       if(typeof r.ind_previa==='boolean') nuevo.indPrevia=r.ind_previa;
       if(r.ingreso) nuevo.ingreso=r.ingreso;
       if(Array.isArray(r.historial) && r.historial.length){ nuevo.hist=r.historial; nuevo.estatusDesde=r.estatus_desde||''; }
@@ -26781,7 +26796,8 @@ function _tfCuentaHTML(t){
   if(vivo){
     h += '<p class="sub" style="margin:0">Muéstrale este código. En su celular: «Entra a tu cuenta» › «¿Olvidaste tu PIN?», su documento, este código y su PIN nuevo.</p>'+
          '<div class="tf-pincod" data-sin-trad>'+esc(c.codigo)+'</div>'+
-         '<p class="sub" style="margin:0;text-align:center"><span>Vale una hora, hasta las</span> <b data-sin-trad>'+esc(c.hora)+'</b>. <span>Se usa una sola vez.</span></p>';
+         '<p class="sub" style="margin:0;text-align:center"><span>Vale una hora, hasta las</span> <b data-sin-trad>'+esc(c.hora)+'</b>. <span>Se usa una sola vez.</span></p>'+
+         (c.otra ? '<p class="sub" style="margin:8px 0 0">Su cuenta venía de otra obra: con el PIN nuevo entra a esta y a las suyas. Esta obra no ve nada de la otra.</p>' : '');
   }else if(c && c.msg){
     h += '<p class="sub" style="margin:0">'+esc(c.msg)+'</p>';
   }else{
@@ -26799,7 +26815,7 @@ function tfPinCodigo(id){
   sbRpc('sst_trab_pin_codigo', { p_emp: duenioId(), p_ext: String(id) }).then(function(j){
     if(j && j.ok && j.codigo){
       var v = new Date(j.vence || (Date.now() + 3600e3)); if(isNaN(v.getTime())) v = new Date(Date.now() + 3600e3);
-      fin({ codigo: j.codigo, hasta: v.getTime(), hora: ('0'+v.getHours()).slice(-2)+':'+('0'+v.getMinutes()).slice(-2) });
+      fin({ codigo: j.codigo, hasta: v.getTime(), hora: ('0'+v.getHours()).slice(-2)+':'+('0'+v.getMinutes()).slice(-2), otra: !!j.otra_obra });
       return;
     }
     var m = j && j.motivo;
@@ -26946,6 +26962,8 @@ function pintarFichaTrab(){
   try{ h+=_tfIndHTML(t); }catch(_ih){}
   /* 11/11/2026 · su cuenta en la app: el código para que ponga un PIN nuevo */
   try{ h+=_tfCuentaHTML(t); }catch(_tc){}
+  /* 21/11/2026 · su experiencia en obra (la escribe él en «Mi perfil») */
+  try{ if(typeof perfFichaHTML==='function') h+=perfFichaHTML(t); }catch(_pp){}
 
   /* ── amonestaciones ── */
   /* guardarAmonestacion escribe tNombre / tDni / desc / medida. Esto
@@ -27190,6 +27208,9 @@ function guardarTrabajador(){
     sumarUso('trabajador');
     t={id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}; a.push(t);
   }
+  /* 21/11/2026 · lo de la PERSONA (nombre, emergencia): una sola verdad en todas sus obras (sst_persona). Solo sube si
+     se cambió aquí: una copia vieja de este celular no pisa lo que él corrigió en «Mi perfil» */
+  var _pers0=[t.nombre||'', t.emergencia||'', t.emerQuien||''].join('|');
   t.nombre=nombre; t.dni=_doc; t.td=_td; t.puesto=($('t-puesto').value||'').trim();
   /* la marca de que tiene foto sí va en la ficha (pesa 4 bytes); la
      foto misma va a IndexedDB, que no tiene el techo de 5 MB */
@@ -27235,6 +27256,7 @@ function guardarTrabajador(){
   }catch(_ap){}
   t.emergencia=($('t-emergencia').value||'').trim();
   t.emerQuien=($('t-emer-quien').value||'').trim();
+  if([t.nombre||'', t.emergencia||'', t.emerQuien||''].join('|')!==_pers0) t.persSube=1;
   /* la inducción: solo se toca lo que se dijo; «indSube» la marca para
      subir aunque la base todavía no tenga esas columnas */
   try{
@@ -38362,8 +38384,12 @@ function eqPintarForm(){
      '<div><label for="eqn-modelo">Modelo <small>(si quieres)</small></label><input id="eqn-modelo" maxlength="60" placeholder="GWS 850" value="'+escA(E0.modelo||'')+'" oninput="eqFormDato(\'modelo\',this.value)"></div></div>'+
      '<label for="eqn-serie">N.° de serie <small>(si quieres)</small></label><input id="eqn-serie" maxlength="60" autocapitalize="characters" placeholder="El que trae en su placa" value="'+escA(E0.serie||'')+'" oninput="eqFormDato(\'serie\',this.value)">';
   /* 4/11/2026 · V7.9j · dónde está: sale en su ficha al escanear su QR */
-  h+='<label for="eqn-ubic">Ubicación <small>(si quieres)</small></label><input id="eqn-ubic" maxlength="120" placeholder="Almacén, junto a la puerta · Torre B, piso 3" value="'+escA(E0.ubicacion||'')+'" oninput="EQ.edit.ubicacion=this.value">'+
-     '<p class="sub" style="margin:4px 0 12px;font-size:12.5px">Dónde está: sale en su ficha al escanear su QR.</p>';
+  /* 20/11/2026 · Marcelo: «tiene que determinarse el frente de dónde está el equipo, sí o sí». En «ubicacion» va «Frente · detalle» */
+  if(E0.frente==null){ var _u0=eqUbicPartes(E0.ubicacion); E0.frente=_u0.fr; E0.ubicDet=_u0.det; }
+  h+='<label for="eqn-fr">Frente <small>(obligatorio)</small></label><input id="eqn-fr" list="eqn-fr-l" maxlength="60" placeholder="Torre A, almacén, sótano…" value="'+escA(E0.frente||'')+'" oninput="EQ.edit.frente=this.value">'+
+     '<datalist id="eqn-fr-l">'+((typeof tarFrentes==='function') ? tarFrentes() : []).map(function(n){ return '<option value="'+escA(n)+'">'; }).join('')+'</datalist>'+
+     '<label for="eqn-ubic">Ubicación exacta <small>(si quieres)</small></label><input id="eqn-ubic" maxlength="60" placeholder="Junto a la puerta, piso 3" value="'+escA(E0.ubicDet||'')+'" oninput="EQ.edit.ubicDet=this.value">'+
+     '<p class="sub" style="margin:4px 0 12px;font-size:12.5px">Dónde está: sale en su ficha al escanear su QR y ordena sus inspecciones por frente.</p>';
   if(E0.id && E0.detalle && !E0._teniaMMS)
     h+='<p class="sub" id="eqn-antes" style="margin:4px 0 0;font-size:12.5px"><span>Antes tenía anotado:</span> <b data-sin-trad>'+esc(E0.detalle)+'</b>. <span>Repártelo en los tres casilleros; si los dejas vacíos, se queda como está.</span></p>';
   h+='<label for="eqn-resp">Responsable <small>(si quieres)</small></label><input id="eqn-resp" maxlength="80" placeholder="Quién lo tiene a cargo" value="'+escA(E0.responsable)+'" oninput="EQ.edit.responsable=this.value">';
@@ -38472,6 +38498,9 @@ function eqMandaFila(ruta, fila, nuevo){
     return r.text().then(function(t){ EQ_400=String(t||'').slice(0, 600); }, function(){}).then(function(){ return Promise.reject(r.status); });
   });
 }
+/* 20/11/2026 · el frente del equipo va primero en su ubicación: «Torre A · junto a la puerta» */
+function eqUbicPartes(u){ var t=String(u||'').trim(), i=t.indexOf(' · '); return i<0 ? { fr:t, det:'' } : { fr:t.slice(0, i).trim(), det:t.slice(i+3).trim() }; }
+function eqUbicJunta(fr, det){ fr=String(fr||'').replace(/\s+/g, ' ').trim().slice(0, 60); det=String(det||'').replace(/\s+/g, ' ').replace(/ · /g, ', ').trim().slice(0, 58); return fr+(det ? ' · '+det : ''); }
 function eqGuardarForm(){
   var E0=EQ.edit, m=$('eqn-msg'), e=empActiva(); if(!E0 || !m) return;
   m.style.color='var(--mal)';
@@ -38479,6 +38508,9 @@ function eqGuardarForm(){
   if(!tipo){ m.textContent='Elige qué es.'; return; }
   if(!cod){ m.textContent='Ponle un código.'; return; }
   if(cod.length>30){ m.textContent='El código es muy largo: máximo 30 letras y números.'; return; }
+  if(E0.frente!=null){ var _fr=String(E0.frente||'').replace(/\s+/g, ' ').trim().slice(0, 60);
+    if(!_fr){ m.textContent='Elige en qué frente está.'; try{ $('eqn-fr').focus(); }catch(_ff){} return; }
+    E0.ubicacion=eqUbicJunta(_fr, E0.ubicDet); }
   var T=eqTipoDe(tipo), et=E0.etiqueta || (T ? T.e : 'placa');
   var cont=(et==='caja') ? (E0.contenido||[]).map(function(s){ return String(s||'').trim().slice(0,120); }).filter(Boolean).slice(0,80) : [];
   var repetido=(EQ.lista||[]).some(function(x){ return x.id!==E0.id && x.estado!=='baja' && String(x.codigo).toLowerCase()===cod.toLowerCase(); });
@@ -75415,6 +75447,8 @@ function abrirInspec(k, secForzado){
        ' <a href="#" style="opacity:.75" onclick="pedirCodigoFormato(\''+escA(k)+'\',\''+escA(t.n)+'\',function(){abrirInspec(\''+escA(k)+'\');});return false;">cambiar</a>')
     : ('<a href="#" onclick="pedirCodigoFormato(\''+escA(k)+'\',\''+escA(t.n)+'\',function(){abrirInspec(\''+escA(k)+'\');});return false;">🏷️ Ponerle el código de tu formato</a>');
   $('i-area').value=''; $('i-ubica').value=''; $('i-activ').value='';
+  /* 20/11/2026 · los frentes de la obra, para elegir: así la web ordena las inspecciones por frente con el mismo nombre */
+  try{ var _dl=$('i-area-l'); if(_dl && typeof tarFrentes==='function') _dl.innerHTML=tarFrentes().map(function(n){ return '<option value="'+escA(n)+'">'; }).join(''); }catch(_fl){}
   $('i-obj').value=''; $('i-causa').value=''; $('i-concl').value='';
   $('i-planeada').value='planeada';
   $('i-inspector').value=(leer(LS_SUP,{}).nombre||'');
@@ -75752,6 +75786,8 @@ function guardarInspeccion(exportar){
   var e=reqEmpresa(); if(!e) return;
   var t=INSP.t, modo=modoDe(t), msg=$('i-msg'), E=escalaDe(t);
   if(!($('i-inspector').value||'').trim()){ msg.style.color='var(--mal)'; msg.textContent='Pon tu nombre como inspector.'; return; }
+  /* 20/11/2026 · Marcelo: «tiene que determinarse el frente donde se realiza la inspección, sí o sí» */
+  if(!($('i-area').value||'').trim()){ msg.style.color='var(--mal)'; msg.textContent='Elige el frente donde haces la inspección.'; try{ $('i-area').focus(); }catch(_fa){} return; }
   /* La firma del inspector no es opcional: es lo que convierte esto en un
      registro. La del responsable del area si puede faltar — a veces no esta
      en el momento — pero entonces el PDF lo dice, en vez de disimularlo. */
@@ -92553,6 +92589,52 @@ function _cdlPintarTrab(c){
   c.innerHTML = h;
 }
 /* <<< CAIDA-LIBRE-FIN >>> */
+/* >>> USO-TIEMPO (20/11/2026) <<<
+   Marcelo: «saber en la consola qué tanto tiempo el usuario pasa en la app y en la web, y qué tanto entra». Se cuentan los
+   minutos con la pantalla a la vista y con alguien usándola (tocó, escribió o se movió en los últimos 5 minutos), y las
+   entradas (abrir, o volver después de 30 minutos). Nada de lo que hizo ni de lo que vio. Lo pendiente queda en este
+   equipo y sube cada 5 minutos (sst_uso_latido); sin señal, espera. Solo lo lee la consola (sst_admin_uso). */
+(function(){
+  var CANAL = 'app', LK = 'sst_uso_pend_v1', toque = Date.now(), oculto = 0, enviando = false;
+  function emp(){ try{ var e = (typeof empActiva === 'function') ? empActiva() : null; return (e && e.id && String(e.id) !== 'local') ? String(e.id) : ''; }catch(_e){ return ''; } }
+  function cuenta(){ try{ return (typeof hayCuentaTrab === 'function') && hayCuentaTrab() && !(typeof sinSesion === 'function' && sinSesion()); }catch(_e){ return false; } }
+  function dia(){ var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function leerP(){ try{ var o = JSON.parse(localStorage.getItem(LK) || '{}'); return (o && typeof o === 'object') ? o : {}; }catch(e){ return {}; } }
+  function guardarP(o){ try{ localStorage.setItem(LK, JSON.stringify(o)); }catch(e){} }
+  function sumar(min, ent){
+    var e = emp(); if(!e || !cuenta()) return;
+    var o = leerP(), k = e + '|' + dia(), x = o[k] || (o[k] = { m:0, e:0 });
+    x.m += min; x.e += ent; guardarP(o);
+  }
+  function enviar(){
+    if(enviando || !cuenta() || navigator.onLine === false || typeof sbRpc !== 'function') return;
+    var o = leerP(), ks = Object.keys(o); if(!ks.length) return;
+    enviando = true;
+    var cad = Promise.resolve();
+    ks.forEach(function(k){
+      var p = k.split('|'), x = o[k]; if(!x || (!x.m && !x.e)){ return; }
+      var m = x.m, n = x.e;
+      cad = cad.then(function(){
+        return sbRpc('sst_uso_latido', { p_emp:p[0], p_canal:CANAL, p_dia:p[1], p_min:m, p_ent:n }).then(function(r){
+          var o2 = leerP(), y = o2[k];
+          if(r && r.ok === false && r.motivo !== 'sin_sesion'){ delete o2[k]; guardarP(o2); return; }   /* un día viejo u otra obra: se descarta */
+          if(y){ y.m = Math.max(0, y.m - m); y.e = Math.max(0, y.e - n); if(!y.m && !y.e) delete o2[k]; guardarP(o2); }
+        }, function(){});
+      });
+    });
+    cad.then(function(){ enviando = false; }, function(){ enviando = false; });
+  }
+  ['pointerdown', 'keydown', 'touchstart', 'scroll', 'wheel'].forEach(function(ev){ try{ window.addEventListener(ev, function(){ toque = Date.now(); }, { passive:true, capture:true }); }catch(e){} });
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'hidden'){ oculto = Date.now(); enviar(); }
+    else { if(oculto && Date.now() - oculto > 30 * 60000) sumar(0, 1); oculto = 0; toque = Date.now(); }
+  });
+  setTimeout(function(){ sumar(0, 1); }, 4000);
+  setInterval(function(){ if(document.visibilityState === 'visible' && Date.now() - toque < 5 * 60000) sumar(1, 0); }, 60000);
+  setInterval(enviar, 5 * 60000);
+  setTimeout(enviar, 20000);
+})();
+/* <<< USO-TIEMPO >>> */
 /* >>> TAREO-INI (lo re-inyecta armar.py, no editar a mano) <<< */
 /* ══════════════════════════════════════════════════════════════════
    TAREO DE LA PUERTA (13/10/2026)
@@ -94412,6 +94494,140 @@ function parteVigilar(){
 setInterval(parteVigilar, 5 * 60000);
 setTimeout(parteVigilar, 8000);
 /* <<< PARTE-FIN >>> */
+/* ── 21/11/2026 · MI PERFIL: la persona es una sola ────────────────────────────────────────────────────────────
+   Marcelo: «Mi perfil, igual que su ficha… que no haya dos datos diferentes». Lo de la PERSONA vive una vez (sst_persona,
+   sql/2026-11-21-persona.sql) y su ficha de la obra donde está queda igual a eso: nombre y foto (los corrige el
+   supervisor), contacto de emergencia (él o el supervisor) y su experiencia en obra (él). El grupo sanguíneo NO: cada
+   empresa lo trata con su autorización. Lo que cada obra registró (EPP, exámenes, papeletas…) no sale de esa obra. */
+var PERF = { estado:'', j:null, guardando:false, msg:'' };
+function abrirMiPerfil(){
+  PERF.estado = 'cargando'; PERF.msg = '';
+  ir('p-mi-perfil');
+  if(typeof hayCuentaTrab !== 'function' || !hayCuentaTrab() || typeof sbRpc !== 'function'){ PERF.estado = 'sin_cuenta'; pintarMiPerfil(); return; }
+  sbRpc('sst_mi_perfil', {}).then(function(r){
+    if(r && r.ok){ PERF.estado = 'ok'; PERF.j = r; }
+    else PERF.estado = (r && r.motivo === 'sin_ficha') ? 'sin_ficha' : 'error';
+    pintarMiPerfil();
+  }, function(err){ PERF.estado = (err === 404) ? 'sin_sql' : 'sin_red'; pintarMiPerfil(); });
+  pintarMiPerfil();
+}
+function _perfTrabHTML(x, i){
+  x = x || {};
+  return '<div class="perf-tr" data-i="' + i + '">' +
+    '<div><label>Empresa u obra</label><input class="perf-donde" maxlength="120" value="' + escA(x.donde || '') + '" placeholder="Ej.: Edificio Los Pinos"></div>' +
+    '<div><label>Cargo</label><input class="perf-cargo" maxlength="80" value="' + escA(x.cargo || '') + '" placeholder="Ej.: Operario"></div>' +
+    '<div><label>Desde</label><input class="perf-desde" inputmode="numeric" maxlength="4" value="' + escA(x.desde || '') + '" placeholder="2019"></div>' +
+    '<div><label>Hasta</label><input class="perf-hasta" inputmode="numeric" maxlength="4" value="' + escA(x.hasta || '') + '" placeholder="2023"></div>' +
+    '<button type="button" class="perf-x" aria-label="Quitar" onclick="this.parentNode.remove()">✕</button></div>';
+}
+function perfAgregarTrabajo(){
+  var c = $('perf-trabs'); if(!c) return;
+  var d = document.createElement('div'); d.innerHTML = _perfTrabHTML({}, c.children.length);
+  c.appendChild(d.firstChild);
+}
+function pintarMiPerfil(){
+  var c = $('perf-cuerpo'); if(!c) return;
+  var h = '<div class="pa-cab"><span class="pa-ic" aria-hidden="true">🪪</span><div><h2>Mi perfil</h2><p class="sub">Tus datos y tu experiencia. Son los mismos en tu ficha de la obra: no hay dos versiones.</p></div></div>';
+  var est = PERF.estado, j = PERF.j;
+  if(est === 'sin_cuenta'){ c.innerHTML = h + '<div class="aviso" style="margin-top:12px">Para ver tu perfil, entra con tu cuenta: tu documento y tu PIN.</div>'; return; }
+  if(est === 'sin_ficha'){ c.innerHTML = h + '<div class="aviso" style="margin-top:12px">Tu cuenta todavía no está unida a tu ficha de la obra. Pídeselo a tu supervisor.</div>'; return; }
+  if(est === 'sin_sql'){ c.innerHTML = h + '<div class="aviso" style="margin-top:12px">Tu perfil todavía no está disponible. Inténtalo más tarde.</div>'; return; }
+  if(!j){ c.innerHTML = h + (est === 'cargando' ? '<p class="sub" style="margin-top:12px">Cargando…</p>' : '<div class="aviso" style="margin-top:12px">No se pudo traer tu perfil. Revisa tu señal e inténtalo otra vez.</div>'); return; }
+  var x = j.experiencia || {};
+  h += '<div class="tarj vidrio perf-sec"><b>Tus datos</b><p class="sub" style="margin:0"><span data-sin-trad>' + esc(j.nombre || '—') + '</span></p>' +
+       '<p class="sub" style="margin:6px 0 0;font-size:12.5px">Tu nombre y tu foto los corrige tu supervisor en tu ficha, con tu documento a la vista.</p></div>';
+  h += '<div class="tarj vidrio perf-sec"><b>En una emergencia, avisar a</b><div class="perf-fila">' +
+       '<div><label for="perf-eq">Quién</label><input id="perf-eq" maxlength="80" value="' + escA(j.emer_quien || '') + '" placeholder="Ej.: Mi esposa, Rosa"></div>' +
+       '<div><label for="perf-em">Su celular</label><input id="perf-em" inputmode="tel" maxlength="40" value="' + escA(j.emergencia || '') + '" placeholder="999 999 999"></div></div></div>';
+  h += '<div class="tarj vidrio perf-sec"><b>Tu experiencia en obra</b>' +
+       '<div class="perf-fila" style="grid-template-columns:.7fr 1.6fr"><div><label for="perf-anios">Años en obra</label><input id="perf-anios" inputmode="numeric" maxlength="2" value="' + escA(x.anios != null ? x.anios : '') + '" placeholder="Ej.: 8"></div>' +
+       '<div><label for="perf-of">Oficios (separados por coma)</label><input id="perf-of" maxlength="300" value="' + escA((x.oficios || []).join(', ')) + '" placeholder="Ej.: Fierrero, encofrador"></div></div>' +
+       '<label for="perf-res" style="margin-top:8px">En pocas palabras</label><textarea id="perf-res" maxlength="600" rows="3" placeholder="Ej.: Estructuras de concreto, trabajo en altura con certificado vigente.">' + esc(x.resumen || '') + '</textarea>' +
+       '<div style="margin-top:10px;font-weight:600;font-size:13.5px">Dónde trabajaste</div><div id="perf-trabs">' +
+       (x.trabajos || []).map(_perfTrabHTML).join('') + '</div>' +
+       '<button type="button" class="btn sec" style="margin-top:8px" onclick="perfAgregarTrabajo()">＋ Agregar un trabajo</button></div>';
+  h += '<p class="sub" id="perf-msg" role="status" style="margin-top:10px;color:' + (PERF.msg && PERF.msg.ok ? 'var(--ok)' : 'var(--mal)') + '">' + (PERF.msg ? esc(PERF.msg.t) : '') + '</p>';
+  h += '<button type="button" class="btn" id="perf-guardar" style="margin-top:12px" onclick="miPerfilGuardar()"' + (PERF.guardando ? ' disabled' : '') + '>' + (PERF.guardando ? 'Guardando…' : 'Guardar mi perfil') + '</button>';
+  var ob = Array.isArray(j.obras) ? j.obras : [];
+  if(ob.length){
+    h += '<div class="tarj vidrio perf-sec"><b>Tus obras con OBRASST</b>' + ob.map(function(o){
+      return '<div class="perf-obra"><span><b data-sin-trad>' + esc(o.obra || '—') + '</b>' + (o.puesto ? '<small class="sub" data-sin-trad> · ' + esc(o.puesto) + '</small>' : '') + '</span>' +
+             '<span class="sub">' + (o.actual ? 'Ahora' : (o.estatus === 'cesado' ? 'Terminó' : 'Antes')) + '</span></div>';
+    }).join('') + '</div>';
+  }
+  h += '<p class="pa-pie">Quién ve esto: tu supervisor ve tu experiencia y tu contacto en tu ficha. Lo que otra obra registró de ti (EPP, exámenes, papeletas) no pasa a esta, y tu grupo sanguíneo lo autoriza cada empresa por separado.</p>';
+  c.innerHTML = h;
+}
+/* el aviso sin repintar: lo que escribió se queda en la pantalla */
+function _perfAviso(t, ok){
+  var m = $('perf-msg'); if(!m) return;
+  m.style.color = ok ? 'var(--ok)' : 'var(--mal)'; m.textContent = t;
+  try{ if(typeof trad === 'function') m.textContent = trad(t); }catch(_t){}
+}
+function miPerfilGuardar(){
+  if(PERF.guardando) return;
+  var v = function(id){ return String((($(id) || {}).value) || '').trim(); };
+  var anios = v('perf-anios');
+  if(anios && !/^\d{1,2}$/.test(anios)){ _perfAviso('Los años en obra van en número, por ejemplo 8.'); return; }
+  var trabs = [], mal = '';
+  Array.prototype.forEach.call(document.querySelectorAll('#perf-trabs .perf-tr'), function(f){
+    var g = function(cl){ return String(((f.querySelector('.' + cl) || {}).value) || '').trim(); };
+    var t = { donde:g('perf-donde'), cargo:g('perf-cargo'), desde:g('perf-desde'), hasta:g('perf-hasta') };
+    if(!t.donde && !t.cargo && !t.desde && !t.hasta) return;
+    if(!t.donde){ mal = 'Escribe la empresa u obra de cada trabajo (o quita la fila).'; return; }
+    if((t.desde && !/^(19|20)\d\d$/.test(t.desde)) || (t.hasta && !/^(19|20)\d\d$/.test(t.hasta))){ mal = 'Los años van con cuatro números, por ejemplo 2019.'; return; }
+    if(t.desde && t.hasta && +t.hasta < +t.desde){ mal = '«Hasta» no puede ser antes que «Desde».'; return; }
+    trabs.push(t);
+  });
+  if(mal){ _perfAviso(mal); return; }
+  var cuerpo = { emergencia:v('perf-em'), emer_quien:v('perf-eq'), experiencia:{
+    anios:anios, oficios:v('perf-of').split(',').map(function(s){ return s.trim(); }).filter(Boolean).slice(0, 12),
+    resumen:v('perf-res'), trabajos:trabs.slice(0, 20) } };
+  PERF.guardando = true; PERF.msg = '';
+  var _bt = $('perf-guardar'); if(_bt){ _bt.disabled = true; _bt.textContent = 'Guardando…'; }
+  var _suelta = function(t){ PERF.guardando = false; if(_bt){ _bt.disabled = false; _bt.textContent = 'Guardar mi perfil'; } _perfAviso(t); };
+  sbRpc('sst_mi_perfil_guardar', { p:cuerpo }).then(function(r){
+    if(r && r.ok){
+      PERF.guardando = false;
+      PERF.j.emergencia = cuerpo.emergencia; PERF.j.emer_quien = cuerpo.emer_quien;
+      PERF.j.experiencia = { anios:anios ? +anios : null, oficios:cuerpo.experiencia.oficios, resumen:cuerpo.experiencia.resumen,
+        trabajos:trabs.map(function(t){ return { donde:t.donde, cargo:t.cargo, desde:t.desde ? +t.desde : null, hasta:t.hasta ? +t.hasta : null }; }) };
+      PERF.msg = { ok:true, t:'Guardado. Tu ficha de la obra ya tiene lo mismo.' };
+      pintarMiPerfil();
+    } else _suelta((r && r.motivo === 'muy_seguido') ? 'Muchos cambios seguidos. Espera unos minutos.' : 'No se pudo guardar. Inténtalo otra vez.');
+  }, function(){ _suelta('No hubo señal. Tu perfil no se guardó: inténtalo otra vez.'); });
+}
+/* en la ficha (supervisor): su experiencia, tal como él la escribió */
+var PERF_FICHA = {};
+function perfFichaHTML(t){
+  if(ROL === 'col' || !t || !t.id || typeof hayCuenta !== 'function' || !hayCuenta() || typeof sbRpc !== 'function') return '';
+  var e = PERF_FICHA[t.id];
+  if(e === undefined){
+    PERF_FICHA[t.id] = null;
+    sbRpc('sst_trab_perfil', { p_emp:duenioId(), p_ext:String(t.id) }).then(function(r){
+      PERF_FICHA[t.id] = (r && r.ok) ? r : { ok:false };
+      if(TF_ID === t.id) pintarFichaTrab();
+    }, function(){ PERF_FICHA[t.id] = { ok:false }; });
+    return '';
+  }
+  if(!e || !e.ok || !e.cuenta) return '';
+  var x = e.experiencia || {}, tr = Array.isArray(x.trabajos) ? x.trabajos : [];
+  var h = '<div class="sec-tit" style="margin-top:20px">🧱 Su experiencia en obra</div><div class="caja vidrio">';
+  if(x.anios == null && !(x.oficios || []).length && !x.resumen && !tr.length){
+    h += '<p class="sub" style="margin:0">Todavía no la escribió. La llena él en su app: «Mi perfil».</p>';
+  } else {
+    if(x.anios != null) h += '<p style="margin:0"><b data-sin-trad>' + esc(x.anios) + '</b> <span>' + (+x.anios === 1 ? 'año en obra' : 'años en obra') + '</span></p>';
+    if((x.oficios || []).length) h += '<div style="margin-top:6px">' + x.oficios.map(function(o){ return '<span class="perf-chip" data-sin-trad>' + esc(o) + '</span>'; }).join('') + '</div>';
+    if(x.resumen) h += '<p class="sub" style="margin:8px 0 0" data-sin-trad>' + esc(x.resumen) + '</p>';
+    if(tr.length) h += '<div style="margin-top:8px">' + tr.map(function(w){
+      return '<div class="perf-obra"><span><b data-sin-trad>' + esc(w.donde) + '</b>' + (w.cargo ? '<small class="sub" data-sin-trad> · ' + esc(w.cargo) + '</small>' : '') + '</span>' +
+             '<span class="sub" data-sin-trad>' + esc((w.desde || '') + (w.hasta ? '–' + w.hasta : (w.desde ? '–' : ''))) + '</span></div>';
+    }).join('') + '</div>';
+  }
+  h += '<p class="sub" style="margin:8px 0 0;font-size:12.5px">La escribe él en «Mi perfil». Su nombre, su foto y su contacto de emergencia son uno solo: si los corriges aquí, quedan así en su perfil.</p>';
+  return h + '</div>';
+}
+/* ── fin MI PERFIL ── */
 /* >>> LEGAJO-INI (lo re-inyecta armar.py, no editar a mano) <<< */
 /* ══════════════════════════════════════════════════════════════════
    EL LEGAJO SST DEL TRABAJADOR, EN UN PDF (13/10/2026)
@@ -117645,7 +117861,7 @@ function idBuscar(){
       if(j.estado==='no_esta'){ ID.ficha=null; ID.paso='nombre'; ID.msg=''; idPintar(); return; }
       if(j.ya_tiene_cuenta){
         ID.ficha=j; ID.enlazar=true; ID.paso='volver';
-        _idDi('Ya hay una cuenta con ese documento. Entra con tu PIN (o toca «¿Olvidaste tu PIN?» si no lo recuerdas).', false);
+        _idDi('Ya tienes una cuenta con ese documento (de esta u otra obra). Entra con tu PIN de siempre. Si no lo recuerdas, toca «¿Olvidaste tu PIN?»: el código te lo da el supervisor de esta obra.', false);
         try{ var _iq=$('id-quien'); if(_iq) _iq.value=ID.doc||''; }catch(_e){}
         return;
       }
@@ -118811,6 +119027,8 @@ function pintarObra(){
   /* 14/10/2026 · los espacios de caída que su obra compartió (caida-libre.js). 29/10/2026 · ya no van sueltos: están en su
      «Alto riesgo» (Trabajo en altura → «Caída libre: los espacios de tu obra») */
   /* 14/10/2026 · su legajo SST (legajo.js): lo que la obra registró de él, si la obra lo comparte */
+  /* 21/11/2026 · Mi perfil: sus datos de persona y su experiencia, los mismos en todas sus obras (sst_persona) */
+  if(typeof abrirMiPerfil==='function') tiles.push({ic:'🪪', t:'Mi perfil', s:'Tu experiencia y tu contacto de emergencia', f:"abrirMiPerfil()", id:'obra-perfil'});
   if(typeof abrirMiLegajo==='function') tiles.push({ic:'📁', t:'Mi legajo', s:'Lo que la obra registró de ti', f:"abrirMiLegajo()", id:'obra-legajo'});
   /* 14/10/2026 · el periódico mural de su obra (mural.js): sale cuando ya lo abrió una vez con su cartel QR */
   try{ if(typeof muralTileTrab==='function'){ var _mt = muralTileTrab(); if(_mt) tiles.push(_mt); } }catch(_mu){}
@@ -120013,11 +120231,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = 'f59d4610f0';
-var IDIOMA_FR_V = '4beb31a326';
+var IDIOMA_PT_V = 'ab883bdcac';
+var IDIOMA_FR_V = '4f995b04dd';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = 'bcc2dec3fd';
+var IDIOMA_EN_V = '2f687eb614';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -135603,7 +135821,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='65ab057eef';
+var SELLO_APP='e788e9d676';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
