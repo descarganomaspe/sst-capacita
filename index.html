@@ -10890,6 +10890,7 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
       <button class="btn sec" id="aj-formatos" onclick="ir('p-formatos')">Códigos de formato</button>
       <button class="btn sec" id="aj-config" onclick="ir('p-config')">Envío de resultados</button>
       <button class="btn sec" id="aj-carpetas" onclick="verCarpetasGestion()">📁 Carpetas de gestión</button>
+      <button class="btn sec" id="aj-panel-foto" onclick="abrirPanelFotograficoApp()">📸 Panel Fotográfico del Informe</button>
     </div>
   </div>
   <div class="grupo" id="aj-g3">
@@ -10908,6 +10909,7 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
       <button class="btn sec aj-guias" onclick="alternarGuiasAuto()">🧭 Guías de cada pantalla</button>
       <button class="btn sec" id="aj-portal" onclick="abrirPortalWeb()">💻 El portal en la PC</button>
       <button class="btn sec" id="aj-informe" onclick="abrirInformeWeb()">📑 El informe del mes, en la web</button>
+      <button class="btn sec" id="aj-panel-foto-g4" onclick="abrirPanelFotograficoApp()">📸 Panel Fotográfico del Informe</button>
       <!-- 28/09/2026 · solo la cuenta del creador (lo dice el servidor): la puerta a su consola, aparte -->
       <button class="btn sec" id="aj-consola" data-sin-trad style="display:none" onclick="abrirConsola()">🛠️ Consola OBRASST · solo tú</button>
       <div class="pwa-banda"></div>
@@ -34283,7 +34285,8 @@ function pintarDocVer(){
   var puedeComp = false; try{ puedeComp = !!(navigator.share && navigator.canShare); }catch(_p){}
   c.innerHTML = '<div class="vd-cab"><b class="vd-tit" data-sin-trad>' + esc(VDOC.nombre) + '</b></div>' +
     '<div class="vd-acc">' + (puedeComp ? '<button type="button" class="vd-comp" id="vdoc-comp" hidden onclick="vdocCompartir()">📤 <span>Compartir</span></button>' : '') +
-    '<a class="vd-baja" id="vdoc-baja" hidden>⬇️ <span>Descargar</span></a></div>' +
+    '<a class="vd-baja" id="vdoc-baja" hidden>⬇️ <span>Descargar</span></a>' +
+    '<button type="button" class="btn sec" id="vdoc-panel-foto" style="margin:4px 0 0;font-size:12px;padding:6px 10px" onclick="appEnviarAPanelFoto({ url: VDOC.url, titulo: VDOC.nombre })">📸 Enviar al Panel del Informe</button></div>' +
     '<p class="sub vd-huella" id="vdoc-huella" style="margin:8px 0 0;font-size:12.5px" hidden></p>' +
     '<p class="sub vd-est" id="vdoc-est">' + (dir ? (VDOC.sub ? '<span data-sin-trad>' + esc(VDOC.sub) + '</span>' : '') : (vdocGuardado(url) ? '<span>Guardado en este celular.</span>' : '<span>Trayendo el documento…</span>')) + '</p>' +
     '<div class="vd-pags" id="vdoc-pags"></div>';
@@ -51222,6 +51225,10 @@ function salLimpio(d){
   f.ev = (Array.isArray(d.ev) ? d.ev : []).filter(function(x){ return x && /^https?:\/\//i.test(String(x.u || '')); }).slice(0, 6)
     .map(function(x){ return { u:String(x.u), n:t(x.n, 120) || 'archivo', t:SAL_EV_N[x.t] ? x.t : 'foto' }; });
   if(d.por) f.por = t(d.por, 60);
+  if(d.secc) f.secc = t(d.secc, 40);
+  if(d.panel) f.panel = !!d.panel;
+  if(d.periodo) f.periodo = t(d.periodo, 10);
+  if(d.pie) f.pie = t(d.pie, 200);
   f.t = +d.t || Date.now();
   return f;
 }
@@ -57363,7 +57370,7 @@ function pintarProyectos(){
     h+='<div class="pry-fila'+(on?' on':'')+'">'+
        '<button type="button" class="pry-el" onclick="elegirProyecto('+i+')" '+
          (on?'aria-pressed="true"':'aria-pressed="false"')+'>'+
-         '<span class="pry-tic">'+ticImg+'</span>'+
+         '<span class="pry-tic'+(ticImg && on ? ' con-img' : '')+'">'+ticImg+'</span>'+
          '<span class="pry-n">'+esc(n)+(on?'<small>el actual · es el que sale en los documentos</small>':'<small>Toca para usarlo</small>')+'</span>'+
        '</button>'+
        '<button type="button" class="pry-x" onclick="quitarProyecto('+i+')" aria-label="Quitar '+escA(n)+'">✕</button>'+
@@ -90092,7 +90099,8 @@ function _clRepintar(){
 }
 function _clTile(icName, v, et){
   var im = i3dImg(icName, 'cl-tl-i3d');
-  return '<div class="cl-tl"><span class="cl-tl-ic" aria-hidden="true">' + (im || icName) + '</span><b>' + v + '</b><small>' + et + '</small></div>';
+  var emoFallback = (icName === 'thermometer' ? '🌡️' : (icName === 'hot_face' ? '🥵' : (icName === 'sun' ? '☀️' : (icName === 'dashing_away' ? '💨' : (icName === 'cloud_with_rain' ? '🌧️' : '')))));
+  return '<div class="cl-tl"><span class="cl-tl-ic emo" aria-hidden="true">' + (im || emoFallback) + '</span><b>' + v + '</b><small>' + et + '</small></div>';
 }
 /* la hoja: lo de hoy, las alertas con su medida, la charla del día y (al equipo) el lugar y el límite de viento */
 function climaAbrir(repinta){
@@ -113368,7 +113376,7 @@ function _camTrabajo(){
            (yaObra ? '✓ Guardada en «Fotos de obra»' : '🗂️ Guardar en la obra · Fotos de obra') + '</button>';
       /* 19/10/2026 · lote 19 · al registro fotográfico del mes, con su tema: lo anexa el informe */
       var yaReg = !!(FREG.guardada && FREG.guardada.indexOf(_camParaSalir() + '|') === 0);
-      h += '<button class="btn sec" id="cam-freg-bt" style="margin-top:9px" onclick="fotoAlRegistro()">' + (yaReg ? '✓ En el registro fotográfico' : '📸 Al registro fotográfico del mes') + '</button>';
+      h += '<button class="btn sec" id="cam-freg-bt" style="margin-top:9px" onclick="fotoAlRegistro()">' + (yaReg ? '✓ En el Panel Fotográfico' : '📸 Enviar al Panel Fotográfico del Informe') + '</button>';
     }
     if(!sinSesion()){
     h += '<div class="sec-tit" style="margin-top:20px">¿Merece quedar registrada?</div>';
@@ -113602,26 +113610,59 @@ function fotoAlRegistro(){
   var du = FREG.du || _camParaSalir(); if(!du) return;
   var e = empActiva();
   if(!e || !hayCuenta()){ aviso('Entra con tu cuenta', 'Para guardar la foto en el registro de la obra hace falta entrar con tu cuenta.', '🔐'); return; }
-  var L = fotoCatApp();
-  if(!L.some(function(c){ return c.k === FREG.cat; })) FREG.cat = '';
+
+  var secList = [
+    { k:'capacitacion', n:'a. Capacitación', d:'Reunión de inicio de jornada, capacitaciones, pausas activas/dinámicas' },
+    { k:'control', n:'b. Control Operacional', d:'Inspecciones, señalización, delimitación, equipos' },
+    { k:'emergencia', n:'c. Preparación y Respuesta a Emergencias', d:'Estaciones de emergencia, extintores, botiquín, simulacros' },
+    { k:'epp', n:'d. EPP y EPC', d:'Uso de EPP por puesto y protecciones colectivas' },
+    { k:'bienestar', n:'e. Bienestar, Salud Ocupacional y Difusión', d:'Periódico mural, boletines, comedor, orden' },
+    { k:'ambiente', n:'f. Medio Ambiente', d:'Batería de residuos NTP 900.058, almacén MATPEL, MSDS, SGA, NFPA, kit antiderrame' }
+  ];
+
+  if(!FREG.secc) FREG.secc = 'capacitacion';
+  if(!FREG.cat) FREG.cat = 'charlas';
+
+  var ymHoy = hoyISO().slice(0, 7);
+  var mesesOpc = '';
+  for(var mi = 0; mi < 12; mi++){
+    var dObj = new Date(); dObj.setMonth(dObj.getMonth() - mi);
+    var ymi = dObj.toISOString().slice(0, 7);
+    var nomMes = (typeof infmMesN === 'function') ? infmMesN(ymi) : ymi;
+    mesesOpc += '<option value="' + ymi + '"' + ((FREG.mes || ymHoy) === ymi ? ' selected' : '') + '>' + esc(nomMes) + '</option>';
+  }
+
   $('freg-cuerpo').innerHTML = '<img src="' + du + '" alt="La foto" class="freg-img">' +
-    '<label>¿De qué es?</label><div class="obs-cats" id="freg-cats">' + L.map(function(c){
-      return '<button type="button" class="obs-cat' + (FREG.cat === c.k ? ' on' : '') + '" data-k="' + escA(c.k) + '"><span data-sin-trad>' + esc(c.n) + '</span></button>'; }).join('') + '</div>' +
-    '<p class="sub" id="freg-ej" style="margin:-4px 0 12px"></p>' +
-    '<label for="freg-desc">Lo que se ve</label><input id="freg-desc" maxlength="200" placeholder="Reunión de inicio de jornada sobre trabajos en altura" value="' + escA(FREG.desc || '') + '">' +
-    '<label for="freg-frente">Frente <span class="sub">· opcional</span></label><input id="freg-frente" maxlength="80" placeholder="Torre A, frente 2…">' +
-    /* 20/10/2026 · lote 22 · del informe de un mes que ya pasó: la fecha de la foto, dentro de ese mes */
-    (FREG.mes ? '<label for="freg-fecha"><span>Fecha de la foto</span> <span class="sub">· <span>va al informe de</span> <span>' + esc(infmMesN(FREG.mes)) + '</span></span></label>' +
-      '<input id="freg-fecha" type="date" min="' + FREG.mes + '-01" max="' + infmFin(FREG.mes) + '" value="' + infmFin(FREG.mes) + '">' : '') +
+    '<label>1. Sección del Panel Fotográfico (alineada al Excel)</label>' +
+    '<div class="obs-cats" id="freg-seccs" style="margin-bottom:8px">' + secList.map(function(s){
+      return '<button type="button" class="obs-cat' + (FREG.secc === s.k ? ' on' : '') + '" data-sk="' + escA(s.k) + '"><span data-sin-trad>' + esc(s.n) + '</span></button>';
+    }).join('') + '</div>' +
+    '<p class="sub" id="freg-sec-desc" style="margin:-2px 0 12px;font-size:12.5px;color:var(--gris)"></p>' +
+    '<label for="freg-desc">2. Descripción / Pie de foto</label>' +
+    '<input id="freg-desc" maxlength="200" placeholder="ej. Reunión de inicio de jornada · Frente Torre A" value="' + escA(FREG.desc || '') + '">' +
+    '<label for="freg-periodo">3. Periodo (Mes / Año)</label>' +
+    '<select id="freg-periodo" style="width:100%;margin-bottom:8px">' + mesesOpc + '</select>' +
+    '<label for="freg-frente">Frente <span class="sub">· opcional</span></label>' +
+    '<input id="freg-frente" maxlength="80" placeholder="Torre A, frente 2…">' +
     '<div id="freg-mes" class="sub" style="margin-top:2px"></div>';
-  $('freg-acc').innerHTML = '<button class="btn" id="freg-ok" style="margin:0" onclick="fotoRegGuardar()">Guardar en el registro</button><p class="sub" id="freg-msg" style="margin-top:8px"></p>';
-  $('freg-cats').onclick = function(ev){
+
+  $('freg-acc').innerHTML = '<button class="btn" id="freg-ok" style="margin:0" onclick="fotoRegGuardar()">Guardar en el Panel Fotográfico</button><p class="sub" id="freg-msg" style="margin-top:8px"></p>';
+
+  function _fregActDesc(){
+    var p = $('freg-sec-desc'); if(!p) return;
+    var cur = secList.filter(function(s){ return s.k === FREG.secc; })[0];
+    p.textContent = cur ? cur.d : '';
+  }
+
+  $('freg-seccs').onclick = function(ev){
     var b = ev.target.closest('.obs-cat'); if(!b) return;
-    FREG.cat = b.getAttribute('data-k');
+    FREG.secc = b.getAttribute('data-sk');
+    FREG.cat = FREG.secc === 'capacitacion' ? 'charlas' : (FREG.secc === 'control' ? 'inspecciones' : FREG.secc);
     [].forEach.call(this.querySelectorAll('.obs-cat'), function(x){ x.classList.toggle('on', x === b); });
-    _fregEj();
+    _fregActDesc();
   };
-  _fregEj(); _fregMes();
+
+  _fregActDesc(); _fregMes();
   $('hoja-freg').classList.add('abierta');
 }
 function _fregEj(){
@@ -113652,15 +113693,30 @@ function fotoRegGuardar(){
   var f;
   try{ f = _dataURLaFile(du, _nombreFotoSello()); }catch(err){ m.style.color = 'var(--mal)'; m.textContent = 'No se pudo preparar la foto. Tómala otra vez.'; return; }
   var L = fotoCatApp();
-  var d = fotoRegLimpia({ cat:FREG.cat, fecha:fe, desc:$('freg-desc').value, frente:$('freg-frente').value, de:FREG.de || 'sub', por:(typeof miNombre === 'function' ? miNombre() : '') || '', t:Date.now() });
+  var periodoVal = ($('freg-periodo') && $('freg-periodo').value) || hoyISO().slice(0, 7);
+  var descVal = ($('freg-desc') && $('freg-desc').value.trim()) || 'Registro fotográfico SST';
+  var d = fotoRegLimpia({
+    cat: FREG.cat || 'charlas',
+    secc: FREG.secc || 'capacitacion',
+    panel: true,
+    periodo: periodoVal,
+    pie: descVal,
+    fecha: fe,
+    desc: descVal,
+    frente: $('freg-frente').value,
+    de: FREG.de || 'sub',
+    por: (typeof miNombre === 'function' ? miNombre() : '') || '',
+    t: Date.now()
+  });
   b.disabled = true; m.style.color = 'var(--gris)'; m.textContent = 'Subiendo la foto…';
   subirFoto('fotoreg', f).then(function(url){
     m.textContent = 'Guardando…';
-    return sbPost('sst_doc', { empresa:e.id, hoja:FOTO_HOJA, nombre:String(d.desc || fotoCatDe(L, d.cat).n).slice(0, 180), url:url, nota:JSON.stringify(d) });
+    try{ sbRpc('sst_inf_foto_guardar', { p_emp: e.id, p_sec: d.secc || 'capacitacion', p_url: url, p_desc: String(d.desc || 'Registro fotográfico SST').slice(0, 220), p_per: periodoVal, p_orden: 0 }).catch(function(){}); }catch(_pf){}
+    return sbPost('sst_doc', { empresa:e.id, hoja:FOTO_HOJA, nombre:String(d.desc).slice(0, 180), url:url, nota:JSON.stringify(d) });
   }).then(function(){
     FREG.guardada = du + '|' + FREG.cat; b.disabled = false;
-    cerrarFotoReg(); tostada('En el registro fotográfico: ' + fotoCatDe(L, d.cat).n);
-    var bb = $('cam-freg-bt'); if(bb) bb.textContent = '✓ En el registro fotográfico';
+    cerrarFotoReg(); tostada('Guardada en el Panel Fotográfico: ' + (d.secc || 'Capacitación'));
+    var bb = $('cam-freg-bt'); if(bb) bb.textContent = '✓ En el Panel Fotográfico';
     try{ if(typeof infmTrasFoto === 'function') infmTrasFoto(); }catch(_if){}
   }, function(err){
     b.disabled = false; m.style.color = 'var(--mal)';
@@ -123212,7 +123268,7 @@ var SEC_I3D = {construccion:'building_construction', mineria:'pick', industria:'
 function secIcoHtml(id){
   var k = SEC_I3D[id];
   var im = k ? i3dImg(k, 'ch-chip-i3d') : '';
-  return im || (SEC_ICONO[id] || '');
+  return '<span class="ch-chip-ic emo" aria-hidden="true">' + (im || (SEC_ICONO[id] || '')) + '</span>';
 }
 function metaNorma(t){
   var m=NORMA_META[t];
@@ -126049,7 +126105,8 @@ function infmPintar(fresco){
     '<p class="infm-solo"><span>⚙️</span> <b>Sale solo:</b> <span>' + esc(INFB_SOLO[T.k]) + '</span>' +
     (T.k === 'sst' && D.panel ? ' (' + infmH([D.panel, 'este mes']) + ')' : '') + '.</p>' +
     (T.k === 'sal' ? '<p class="sub infm-conf">🔒 <span>Nada de diagnósticos: el informe cuenta exámenes, aptitudes, días y personas.</span></p>' : '') +
-    '<button class="btn" onclick="abrirInformeWeb(INFM.tipo)">📑 Armar el informe en la web</button>' +
+    '<button class="btn" onclick="abrirInformeWeb(INFM.tipo)">📑 Armar el informe en la web</button> +
+    '<button class="btn sec" style="margin-top:6px" onclick="abrirPanelFotograficoApp()">📸 Panel Fotográfico del Informe</button>'' +
     '<button class="btn sec" onclick="infmPintar(true)">↻ Actualizar</button>';
   c.innerHTML = h;
   INFM.L = L;
@@ -137005,7 +137062,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='461c95e3ed';
+var SELLO_APP='ba6727ad00';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
@@ -137396,6 +137453,224 @@ function instalarSi(){
     ofrecerInstalar();
   }, espera);
 })();
+
+/* >>> PANEL-FOTO-APP-INI (23/11/2026) <<< */
+var PFAPP = {
+  periodo: '',
+  fotos: [],
+  enVuelo: false
+};
+
+var PFAPP_SECS = [
+  { key:'capacitacion', lbl:'a. Capacitación (Inicio de jornada / Pausas)' },
+  { key:'control',      lbl:'b. Control Operacional' },
+  { key:'emergencia',   lbl:'c. Emergencias' },
+  { key:'epp',          lbl:'d. EPP y EPC' },
+  { key:'bienestar',    lbl:'e. Bienestar y Difusión' },
+  { key:'ambiente',     lbl:'f. Medio Ambiente (MATPEL / Residuos)' }
+];
+
+function _pfAppEsc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function _pfAppPerDef(){
+  try{
+    var d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2);
+  }catch(_e){ return new Date().toISOString().slice(0, 7); }
+}
+
+function _pfAppCss(){
+  if(document.getElementById('pfapp-css')) return;
+  var st = document.createElement('style');
+  st.id = 'pfapp-css';
+  st.textContent =
+    '#pfapp-ov,#pfapp-ov *,#pfapp-env-ov,#pfapp-env-ov *{box-sizing:border-box;font-family:var(--letra,"Plus Jakarta Sans",sans-serif)!important}' +
+    '#pfapp-ov,#pfapp-env-ov{position:fixed;inset:0;z-index:9955;background:rgba(8,34,47,.74);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}' +
+    '#pfapp-ov[hidden],#pfapp-env-ov[hidden]{display:none!important}' +
+    '.pfa-hoja{background:#F8FAFC;color:#08222F;width:min(640px,100vw);max-height:92vh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden}' +
+    '.pfa-cab{background:#fff;padding:14px 16px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between;gap:8px}' +
+    '.pfa-body{flex:1;overflow:auto;padding:14px}' +
+    '.pfa-in{width:100%;padding:10px 12px;border:1.5px solid #CBD5E1;border-radius:11px;font-size:14px;background:#fff;color:#08222F;margin-bottom:10px}' +
+    '.pfa-btn{border:1px solid rgba(11,42,58,.15);background:#fff;color:#08222F;padding:9px 13px;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer}' +
+    '.pfa-btn.pri{background:linear-gradient(135deg,#FFC933,#F5B700);border-color:#E0A800;color:#08222F}' +
+    '.pfa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}' +
+    '.pfa-card{background:#fff;border:1px solid #E2E8F0;border-radius:11px;overflow:hidden}' +
+    '.pfa-card img{width:100%;height:115px;object-fit:contain;background:#F1F5F9;display:block}';
+  document.head.appendChild(st);
+}
+
+/* Modal rápido en App para tomar foto en campo o enviar una foto ya subida directo al Panel Fotográfico */
+function appEnviarAPanelFoto(opts){
+  opts = opts || {};
+  _pfAppCss();
+  var emp = (typeof empActiva === 'function') ? empActiva() : null;
+  if(!emp || !emp.id){ if(typeof aviso === 'function') aviso('Sin obra activa', 'Selecciona una obra primero.', '⚠️'); return; }
+
+  var ov = document.getElementById('pfapp-env-ov');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'pfapp-env-ov';
+    document.body.appendChild(ov);
+  }
+  ov.hidden = false;
+  var perDef = opts.periodo || PFAPP.periodo || _pfAppPerDef();
+
+  ov.innerHTML =
+    '<div class="pfa-hoja">' +
+      '<div class="pfa-cab"><b style="font-size:15.5px">📸 Enviar al Panel Fotográfico</b><button type="button" class="pfa-btn" data-pfae="cerrar">✕</button></div>' +
+      '<div class="pfa-body">' +
+        (opts.url
+          ? '<div style="height:150px;background:#E2E8F0;border-radius:11px;overflow:hidden;margin-bottom:10px;display:flex;align-items:center;justify-content:center"><img src="' + _pfAppEsc(opts.url) + '" style="max-width:100%;max-height:150px;object-fit:contain"></div>'
+          : '<label style="display:block;font-size:12px;font-weight:800;margin-bottom:4px">Tomar o elegir fotografía</label><input type="file" id="pfae-file" class="pfa-in" accept="image/*" capture="environment">') +
+        '<label style="display:block;font-size:12px;font-weight:800;margin-bottom:4px">Sección del Informe (Excel y PDF)</label>' +
+        '<select id="pfae-sec" class="pfa-in">' +
+          PFAPP_SECS.map(function(s){
+            return '<option value="' + s.key + '"' + (opts.seccion === s.key ? ' selected' : '') + '>' + _pfAppEsc(s.lbl) + '</option>';
+          }).join('') +
+        '</select>' +
+        '<label style="display:block;font-size:12px;font-weight:800;margin-bottom:4px">Descripción / Pie de foto</label>' +
+        '<input type="text" id="pfae-tit" class="pfa-in" maxlength="220" placeholder="Ej: Reunión de inicio de jornada · Frente Torre A" value="' + _pfAppEsc(opts.titulo || '') + '">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<div><label style="display:block;font-size:12px;font-weight:800;margin-bottom:4px">Mes / Año</label><input type="month" id="pfae-per" class="pfa-in" value="' + _pfAppEsc(perDef) + '"></div>' +
+          '<div><label style="display:block;font-size:12px;font-weight:800;margin-bottom:4px">Frente</label><input type="text" id="pfae-fr" class="pfa-in" maxlength="80" placeholder="Opcional" value="' + _pfAppEsc(opts.frente || '') + '"></div>' +
+        '</div>' +
+        '<div id="pfae-msg" style="font-size:12.5px;font-weight:700;margin-bottom:8px"></div>' +
+        '<button type="button" class="pfa-btn pri" style="width:100%;padding:12px" data-pfae="guardar">☁️ Guardar en Panel Fotográfico</button>' +
+      '</div>' +
+    '</div>';
+
+  ov.onclick = function(ev){
+    var b = ev.target.closest('[data-pfae]'); if(!b) return;
+    var a = b.getAttribute('data-pfae');
+    if(a === 'cerrar'){ ov.hidden = true; return; }
+    if(a === 'guardar'){
+      if(PFAPP.enVuelo) return;
+      var sec = (document.getElementById('pfae-sec') || {}).value || 'capacitacion';
+      var tit = String((document.getElementById('pfae-tit') || {}).value || '').trim();
+      var per = (document.getElementById('pfae-per') || {}).value || _pfAppPerDef();
+      var fr  = String((document.getElementById('pfae-fr') || {}).value || '').trim();
+      var msg = document.getElementById('pfae-msg');
+      var inp = document.getElementById('pfae-file');
+      var file = (inp && inp.files && inp.files[0]) || null;
+      if(!opts.url && !file){ msg.style.color = '#B91C1C'; msg.textContent = 'Toma o elige una fotografía.'; return; }
+
+      PFAPP.enVuelo = true; b.disabled = true;
+      msg.style.color = '#0B2A3A'; msg.textContent = 'Subiendo al Panel Fotográfico…';
+
+      var subProm = opts.url
+        ? Promise.resolve(opts.url)
+        : (typeof subirFoto === 'function' ? subirFoto('fotos', file) : Promise.reject(new Error('Sin módulo de carga de fotos')));
+
+      subProm.then(function(u){
+        return sbRpc('sst_inf_foto_guardar', {
+          p_emp: emp.id, p_id: null, p_periodo: per, p_seccion: sec,
+          p_titulo: tit || 'Evidencia de obra', p_url: u, p_frente: fr
+        });
+      }).then(function(r){
+        PFAPP.enVuelo = false;
+        if(!r || !r.ok){ b.disabled = false; msg.style.color = '#B91C1C'; msg.textContent = 'No se pudo guardar.'; return; }
+        ov.hidden = true;
+        if(typeof tostada === 'function') tostada('Foto guardada en Panel Fotográfico (' + per + ').');
+        if(typeof opts.onListo === 'function') opts.onListo();
+      }).catch(function(err){
+        PFAPP.enVuelo = false; b.disabled = false;
+        msg.style.color = '#B91C1C'; msg.textContent = 'Error: ' + (err && err.message ? err.message : err);
+      });
+    }
+  };
+}
+
+/* Tablero sincronizado en la App Móvil para revisar o agregar fotos del mes */
+function abrirPanelFotograficoApp(){
+  _pfAppCss();
+  var emp = (typeof empActiva === 'function') ? empActiva() : null;
+  if(!emp || !emp.id){ if(typeof aviso === 'function') aviso('Sin obra activa', 'Selecciona una obra primero.', '⚠️'); return; }
+  PFAPP.periodo = PFAPP.periodo || _pfAppPerDef();
+
+  var ov = document.getElementById('pfapp-ov');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'pfapp-ov';
+    document.body.appendChild(ov);
+  }
+  ov.hidden = false;
+
+  function pintar(){
+    var h =
+      '<div class="pfa-hoja">' +
+        '<div class="pfa-cab">' +
+          '<b style="font-size:15.5px">📸 Panel Fotográfico (' + PFAPP.fotos.length + ')</b>' +
+          '<button type="button" class="pfa-btn" data-pfa="cerrar">✕</button>' +
+        '</div>' +
+        '<div style="background:#fff;padding:10px 14px;border-bottom:1px solid #E2E8F0;display:flex;gap:8px;align-items:center">' +
+          '<input type="month" id="pfa-mes" class="pfa-in" style="margin:0;flex:1" value="' + _pfAppEsc(PFAPP.periodo) + '">' +
+          '<button type="button" class="pfa-btn pri" data-pfa="nueva">+ Foto</button>' +
+        '</div>' +
+        '<div class="pfa-body">';
+
+    PFAPP_SECS.forEach(function(sec){
+      var lista = PFAPP.fotos.filter(function(f){ return f.seccion === sec.key; });
+      h += '<div style="margin-bottom:14px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+          '<b style="font-size:13.5px;color:#0B2A3A">' + _pfAppEsc(sec.lbl) + ' (' + lista.length + ')</b>' +
+          '<button type="button" class="pfa-btn" style="padding:4px 9px;font-size:11.5px" data-pfa="nueva-sec" data-sec="' + sec.key + '">+ Aquí</button>' +
+        '</div>';
+      if(lista.length){
+        h += '<div class="pfa-grid">';
+        lista.forEach(function(f, idx){
+          h += '<div class="pfa-card">' +
+            '<img src="' + _pfAppEsc(f.url) + '" alt="Foto">' +
+            '<div style="padding:7px;font-size:11.5px"><b>Foto ' + (idx + 1) + ':</b> ' + _pfAppEsc(f.titulo) +
+            '<div style="margin-top:5px"><button type="button" class="pfa-btn" style="padding:3px 7px;font-size:11px;color:#B91C1C" data-pfa="borrar" data-id="' + _pfAppEsc(f.id) + '">Quitar</button></div></div>' +
+          '</div>';
+        });
+        h += '</div>';
+      } else {
+        h += '<div style="font-size:12px;color:#64748B;margin-top:4px">Sin fotos aún.</div>';
+      }
+      h += '</div>';
+    });
+
+    h += '</div></div>';
+    ov.innerHTML = h;
+    var ms = document.getElementById('pfa-mes');
+    if(ms){
+      ms.onchange = function(){
+        PFAPP.periodo = ms.value || _pfAppPerDef();
+        cargar();
+      };
+    }
+  }
+
+  function cargar(){
+    sbRpc('sst_inf_foto_listar', { p_emp: emp.id, p_periodo: PFAPP.periodo }).then(function(r){
+      PFAPP.fotos = (r && r.ok && Array.isArray(r.fotos)) ? r.fotos : [];
+      pintar();
+    }).catch(function(){ pintar(); });
+  }
+
+  ov.onclick = function(ev){
+    var b = ev.target.closest('[data-pfa]'); if(!b) return;
+    var a = b.getAttribute('data-pfa');
+    if(a === 'cerrar'){ ov.hidden = true; return; }
+    if(a === 'nueva' || a === 'nueva-sec'){
+      appEnviarAPanelFoto({ seccion: b.getAttribute('data-sec') || 'capacitacion', periodo: PFAPP.periodo, onListo: cargar });
+      return;
+    }
+    if(a === 'borrar'){
+      if(!confirm('¿Quitar esta foto del Panel Fotográfico?')) return;
+      sbRpc('sst_inf_foto_eliminar', { p_emp: emp.id, p_id: b.getAttribute('data-id') }).then(cargar);
+    }
+  };
+
+  ov.innerHTML = '<div class="pfa-hoja"><div class="pfa-body">Cargando Panel Fotográfico…</div></div>';
+  cargar();
+}
+/* <<< PANEL-FOTO-APP-FIN >>> */
 
 </script>
 

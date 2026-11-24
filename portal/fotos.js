@@ -88,7 +88,7 @@ function vistaFotoReg(caja){
   if(!FRW.mes) FRW.mes=MES;
   var ac=$('acciones');
   if(ac){
-    ac.innerHTML='<button type="button" class="bt sec" id="fr-temas-b">Temas del registro</button><button type="button" class="bt sec" id="fr-de-b">Sumar de tus registros</button>'+
+    ac.innerHTML='<button type="button" class="bt sec" id="fr-temas-b">Temas del registro</button><button type="button" class="bt sec" id="fr-de-b">Sumar de tus registros</button><button type="button" class="bt sec" id="fr-panel-b" onclick="if(window.OBRASST_PANEL_FOTO) OBRASST_PANEL_FOTO.pintarTablero(\'pf-portal-host\')">📸 Panel Fotográfico del Informe</button>'+
       '<button type="button" class="bt" id="fr-subir-b">＋ Subir fotos</button><input type="file" id="fr-file" accept="image/*" multiple hidden>';
     $('fr-temas-b').onclick=fotTemasHoja;
     $('fr-de-b').onclick=function(){ fotDeRegistrosHoja(FRW.mes); };
@@ -134,7 +134,7 @@ function _fotFig(x){
   var d=x.d, de=/^rep:/.test(d.de) ? 'De un reporte' : (/^buena:/.test(d.de) ? 'De una buena práctica' : (/^fotos:/.test(d.de) ? 'De fotos de obra' : (/^insp:/.test(d.de) ? 'De una inspección' : '')));
   return '<figure class="fr-f"><button type="button" class="fr-img" data-ver="'+esc(x.id)+'" aria-label="Ver la foto"><img loading="lazy" src="'+esc(x.url)+'" alt="'+esc(d.desc || 'Foto del registro')+'"></button>'+
     '<figcaption><b>'+esc(_fotFecha(d.fecha))+(d.frente ? ' · '+esc(d.frente) : '')+'</b>'+(d.desc ? '<span>'+esc(d.desc)+'</span>' : '<small>Sin descripción</small>')+(de ? '<small>'+de+'</small>' : '')+
-    '<button type="button" class="bt sec chico fr-ed" data-ed="'+esc(x.id)+'">Editar</button></figcaption></figure>';
+    '<div style="display:flex;gap:4px;margin-top:4px"><button type="button" class="bt sec chico fr-ed" data-ed="'+esc(x.id)+'">Editar</button><button type="button" class="bt sec chico" onclick="if(window.abrirEnviarAPanelFoto) abrirEnviarAPanelFoto({url:\''+escA(x.url||'')+'\', titulo:\''+escA(d.desc||'')+'\'})">📸 Al Informe</button></div></figcaption></figure>';
 }
 
 /* ═══ SUBIR: una fila por foto, con su tema, su fecha y lo que se ve ═══ */

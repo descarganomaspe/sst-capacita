@@ -859,18 +859,25 @@ function _infPanelCargar(mes){
 function _infPanelCss(){
   if(document.getElementById('inf-pf-css')) return;
   var st=document.createElement('style'); st.id='inf-pf-css';
-  st.textContent='.inf-pf-cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.inf-pf-cab b{flex:1;min-width:180px}'+
-    '.inf-pf-l{display:grid;gap:10px;max-height:70vh;overflow:auto;padding:2px}'+
-    '.inf-pf{display:grid;grid-template-columns:26px 132px minmax(0,1fr) auto;gap:12px;align-items:start;padding:10px;border:1px solid var(--raya);border-radius:12px;background:var(--panel)}'+
-    '.inf-pf.off{opacity:.55}.inf-pf .n{font-weight:700;color:var(--gris);text-align:center;padding-top:6px}'+
-    '.inf-pf-img{display:block;width:132px;height:99px;border-radius:8px;overflow:hidden;background:var(--fondo)}.inf-pf-img img{width:100%;height:100%;object-fit:cover;display:block}'+
-    '.inf-pf-tx{display:grid;gap:6px;min-width:0}.inf-pf-tx input,.inf-pf-tx textarea{width:100%;margin:0;font:inherit;font-size:13.5px}.inf-pf-tx textarea{resize:vertical;min-height:44px}'+
-    '.inf-pf-acc{display:grid;gap:6px;justify-items:center}.inf-pf-acc .check{margin:0;font-size:12.5px}.inf-pf-acc button{width:30px;height:28px;border:1px solid var(--raya);border-radius:8px;background:var(--panel);cursor:pointer;font:inherit}'+
-    '.inf-pf-acc button:disabled{opacity:.35;cursor:default}.inf-pf-pie{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}'+
-    '@media (max-width:640px){.inf-pf{grid-template-columns:22px 96px minmax(0,1fr)}.inf-pf-img{width:96px;height:72px}.inf-pf-acc{grid-column:2/-1;display:flex;justify-content:flex-start}}';
+  st.textContent='.inf-pf-cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}.inf-pf-cab b{flex:1;min-width:180px}'+
+    '.inf-pf-sec-hdr{font-size:12px;font-weight:700;color:var(--tinta);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px;padding:6px 10px;background:var(--fondo);border-radius:8px;border-left:4px solid var(--tinta)}'+
+    '.inf-pf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}'+
+    '@media(max-width:640px){.inf-pf-grid{grid-template-columns:1fr}}'+
+    '.inf-pf-card{display:flex;flex-direction:column;border:1px solid var(--raya);border-radius:12px;background:var(--panel);overflow:hidden}'+
+    '.inf-pf-card.off{opacity:.5}'+
+    '.inf-pf-thumb{position:relative;width:100%;aspect-ratio:4/3;background:#18181B;display:flex;align-items:center;justify-content:center;overflow:hidden}'+
+    '.inf-pf-thumb img{width:100%;height:100%;object-fit:contain;display:block}'+
+    '.inf-pf-badge{position:absolute;top:8px;left:8px;background:var(--tinta);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;z-index:2}'+
+    '.inf-pf-body{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex:1}'+
+    '.inf-pf-body input,.inf-pf-body select,.inf-pf-body textarea{width:100%;margin:0;font:inherit;font-size:13px;border:1px solid var(--raya);border-radius:6px;padding:5px 8px}'+
+    '.inf-pf-body textarea{resize:vertical;min-height:38px}'+
+    '.inf-pf-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto;padding-top:4px}'+
+    '.inf-pf-acc-btns{display:flex;gap:4px}'+
+    '.inf-pf-acc-btns button{width:28px;height:26px;border:1px solid var(--raya);border-radius:6px;background:var(--panel);cursor:pointer;font-size:12px}'+
+    '.inf-pf-acc-btns button:disabled{opacity:.35;cursor:default}'+
+    '.inf-pf-pie{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}';
   document.head.appendChild(st);
-}
-/* una foto propia, más liviana antes de subirla (lado mayor 1600 px, JPEG): las de celular pesan 4 o 5 MB */
+}/* una foto propia, más liviana antes de subirla (lado mayor 1600 px, JPEG): las de celular pesan 4 o 5 MB */
 function _infAchicar(f, max){
   return new Promise(function(ok){
     if(!/^image\/(jpe?g|png|webp)/i.test(f.type||'')){ ok(f); return; }
@@ -889,31 +896,103 @@ function _infPanelHTML(){
   _infPanelCss();
   var P=INFW.panel;
   var h='<div class="tarj inf-paso" id="inf-panel"><div class="tarj-cuerpo"><h3><span class="inf-n">6</span> El panel fotográfico</h3>'+
-    '<p class="ayuda" style="margin:0 0 10px">Las fotos del mes salen solas: los reportes (cómo se encontró y cómo quedó), las buenas prácticas y el cierre de los ATS. Corrige el título y la descripción de cada una, quita las que no van, ordénalas y suma las tuyas. En el PDF van de a dos por fila, numeradas, con su título y su descripción.</p>';
+    '<p class="ayuda" style="margin:0 0 10px">Tablero visual de 2 columnas organizado en 6 secciones oficiales (espejo del Excel). Corrige el título, la descripción o la sección de cada foto, reordena y suma las tuyas. En el PDF van en bloques ordenados de a dos por fila, sin cortes entre páginas.</p>';
   if(!P || P.mes!==INFW.mes) return h+'<div class="ayuda" id="inf-panel-l">Buscando las fotos de '+esc(_infMesN(INFW.mes))+'…</div></div></div>';
   var on=P.items.filter(function(x){ return x.on; }).length;
   h+='<div class="inf-pf-cab"><b>'+on+' de '+P.items.length+' fotos van al informe</b>'+(on>INF_PANEL_MAX ? '<span class="pill ojo">entran las primeras '+INF_PANEL_MAX+'</span>' : '')+
      '<label class="bt sec chico" for="inf-pf-arch">＋ Agregar fotos</label><input type="file" id="inf-pf-arch" multiple accept="image/*" class="pi-oculto"></div>';
-  h+=P.items.length ? '<div class="inf-pf-l" id="inf-pf-l">'+P.items.map(function(x, i){
-    return '<div class="inf-pf'+(x.on ? '' : ' off')+'" data-i="'+i+'"><span class="n">'+(i+1)+'</span>'+
-      '<a class="inf-pf-img" href="'+esc(x.u)+'" target="_blank" rel="noopener"><img src="'+esc(x.u)+'" alt="" loading="lazy"></a>'+
-      '<div class="inf-pf-tx"><input data-c="t" maxlength="140" value="'+esc(x.t)+'" aria-label="Título de la foto '+(i+1)+'" placeholder="Título">'+
-      '<textarea data-c="d" rows="2" maxlength="400" aria-label="Descripción de la foto '+(i+1)+'" placeholder="Qué se ve, dónde y qué se hizo">'+esc(x.d)+'</textarea>'+
-      '<small class="tenue">'+(x.propia ? 'Tuya' : (x.nueva ? 'Nueva del mes' : 'Del registro'))+'</small></div>'+
-      '<div class="inf-pf-acc"><label class="check" title="Va al informe"><input type="checkbox" data-on="'+i+'"'+(x.on ? ' checked' : '')+'><span>Va</span></label>'+
-      '<button type="button" data-pfs="'+i+'" aria-label="Subir"'+(i ? '' : ' disabled')+'>↑</button><button type="button" data-pfb="'+i+'" aria-label="Bajar"'+(i<P.items.length-1 ? '' : ' disabled')+'>↓</button>'+
-      (x.propia ? '<button type="button" data-pfx="'+i+'" aria-label="Quitar la foto">×</button>' : '')+'</div></div>';
-  }).join('')+'</div>' : '<div class="vacio"><b>Sin fotos este mes</b>Salen de los reportes, las buenas prácticas y el cierre de los ATS. Puedes sumar las tuyas con «＋ Agregar fotos».</div>';
+
+  if(!P.items.length){
+    h+='<div class="vacio"><b>Sin fotos este mes</b>Salen de los reportes, las buenas prácticas y el cierre de los ATS. Puedes sumar las tuyas con «＋ Agregar fotos».</div>';
+  } else {
+    var secList = [
+      { key: 'capacitacion', t: 'a. Capacitación (Reuniones de inicio de jornada, capacitaciones y dinámicas)' },
+      { key: 'control',      t: 'b. Control Operacional (Inspecciones, señalización y equipos)' },
+      { key: 'emergencia',   t: 'c. Preparación y Respuesta a Emergencias' },
+      { key: 'epp',          t: 'd. EPP y EPC' },
+      { key: 'bienestar',    t: 'e. Bienestar, Salud Ocupacional y Difusión' },
+      { key: 'ambiente',     t: 'f. Medio Ambiente' }
+    ];
+
+    secList.forEach(function(sDef){
+      var itemsSec = P.items.map(function(x, idx){ x._origIdx = idx; return x; }).filter(function(x){
+        var sk = String(x.secc || x.bloque || x.cat || '').toLowerCase();
+        if(!sk && sDef.key === 'capacitacion') return true;
+        if(/capacita|charla|induc|dinam/i.test(sk) || sk === 'a') return sDef.key === 'capacitacion';
+        if(/inspec|control|sen|delimi|equip/i.test(sk) || sk === 'b') return sDef.key === 'control';
+        if(/emerg|extin|botiq|simul/i.test(sk) || sk === 'c') return sDef.key === 'emergencia';
+        if(/epp|epc|protec/i.test(sk) || sk === 'd') return sDef.key === 'epp';
+        if(/bienest|salud|difus|mural|bolet|comed|orden/i.test(sk) || sk === 'e') return sDef.key === 'bienestar';
+        if(/ambien|resid|matpel|msds|sga|nfpa|derrame/i.test(sk) || sk === 'f') return sDef.key === 'ambiente';
+        return sDef.key === 'capacitacion';
+      });
+
+      h+='<div class="inf-pf-sec-hdr">'+esc(sDef.t)+' · '+itemsSec.length+' foto'+(itemsSec.length===1?'':'s')+'</div>';
+      if(!itemsSec.length){
+        h+='<p class="tenue" style="margin:4px 0 14px;font-size:12.5px">Sin fotos asignadas en esta sección.</p>';
+      } else {
+        h+='<div class="inf-pf-grid">';
+        itemsSec.forEach(function(x, numSec){
+          var i = x._origIdx;
+          h+='<div class="inf-pf-card'+(x.on ? '' : ' off')+'" data-i="'+i+'">'+
+            '<div class="inf-pf-thumb">'+
+              '<span class="inf-pf-badge">Foto '+(numSec+1)+'</span>'+
+              '<img src="'+esc(x.u)+'" alt="" loading="lazy">'+
+            '</div>'+
+            '<div class="inf-pf-body">'+
+              '<select data-c="secc" aria-label="Sección de la foto">'+
+                '<option value="capacitacion"'+(sDef.key==='capacitacion'?' selected':'')+'>a. Capacitación</option>'+
+                '<option value="control"'+(sDef.key==='control'?' selected':'')+'>b. Control Operacional</option>'+
+                '<option value="emergencia"'+(sDef.key==='emergencia'?' selected':'')+'>c. Emergencias</option>'+
+                '<option value="epp"'+(sDef.key==='epp'?' selected':'')+'>d. EPP y EPC</option>'+
+                '<option value="bienestar"'+(sDef.key==='bienestar'?' selected':'')+'>e. Bienestar y Difusión</option>'+
+                '<option value="ambiente"'+(sDef.key==='ambiente'?' selected':'')+'>f. Medio Ambiente</option>'+
+              '</select>'+
+              '<input data-c="t" maxlength="140" value="'+esc(x.t)+'" placeholder="Título o descripción principal">'+
+              '<textarea data-c="d" rows="2" maxlength="400" placeholder="Pie de foto / detalle">'+esc(x.d)+'</textarea>'+
+              '<div class="inf-pf-foot">'+
+                '<label class="check"><input type="checkbox" data-on="'+i+'"'+(x.on ? ' checked' : '')+'><span>Va</span></label>'+
+                '<div class="inf-pf-acc-btns">'+
+                  '<button type="button" data-pfs="'+i+'" aria-label="Subir"'+(i ? '' : ' disabled')+'>↑</button>'+
+                  '<button type="button" data-pfb="'+i+'" aria-label="Bajar"'+(i<P.items.length-1 ? '' : ' disabled')+'>↓</button>'+
+                  (x.propia ? '<button type="button" data-pfx="'+i+'" aria-label="Quitar">×</button>' : '')+
+                '</div>'+
+              '</div>'+
+            '</div>'+
+          '</div>';
+        });
+        h+='</div>';
+      }
+    });
+  }
+
   h+='<div class="inf-pf-pie"><button type="button" class="bt'+(P.cambio ? '' : ' sec')+'" id="inf-pf-guardar">Guardar el panel</button><span class="msg" id="inf-pf-msg" role="status">'+(P.cambio ? 'Hay cambios sin guardar: se usan igual al armar el informe.' : '')+'</span></div>';
   return h+'</div></div>';
 }
 function _infPanelAl(caja){
   var P=INFW.panel; if(!P || P.mes!==INFW.mes) return;
-  var L=$('inf-pf-l'), marcar=function(){ if(!P.cambio){ P.cambio=true; var g=$('inf-pf-guardar'); if(g) g.className='bt'; var m=$('inf-pf-msg'); if(m){ m.className='msg gris'; m.textContent='Hay cambios sin guardar: se usan igual al armar el informe.'; } } };
-  if(L){
-    L.addEventListener('input', function(ev){ var x=ev.target, f=x.closest('.inf-pf'); if(!f || !x.getAttribute('data-c')) return; var it=P.items[+f.getAttribute('data-i')]; if(!it) return; it[x.getAttribute('data-c')]=x.value; marcar(); });
-    L.addEventListener('change', function(ev){ var x=ev.target; if(!x.hasAttribute('data-on')) return; var it=P.items[+x.getAttribute('data-on')]; if(!it) return; it.on=x.checked; P.cambio=true; _infPintar(); });
-    L.addEventListener('click', function(ev){
+  var marcar=function(){ if(!P.cambio){ P.cambio=true; var g=$('inf-pf-guardar'); if(g) g.className='bt'; var m=$('inf-pf-msg'); if(m){ m.className='msg gris'; m.textContent='Hay cambios sin guardar: se usan igual al armar el informe.'; } } };
+  var panBox=$('inf-panel');
+  if(panBox){
+    panBox.addEventListener('input', function(ev){
+      var x=ev.target, f=x.closest('.inf-pf-card'); if(!f || !x.getAttribute('data-c')) return;
+      var it=P.items[+f.getAttribute('data-i')]; if(!it) return;
+      it[x.getAttribute('data-c')]=x.value; marcar();
+    });
+    panBox.addEventListener('change', function(ev){
+      var x=ev.target;
+      if(x.getAttribute('data-c')==='secc'){
+        var f=x.closest('.inf-pf-card'); if(!f) return;
+        var it=P.items[+f.getAttribute('data-i')]; if(!it) return;
+        it.secc=x.value; P.cambio=true; _infPintar();
+        return;
+      }
+      if(x.hasAttribute('data-on')){
+        var it=P.items[+x.getAttribute('data-on')]; if(!it) return;
+        it.on=x.checked; P.cambio=true; _infPintar();
+      }
+    });
+    panBox.addEventListener('click', function(ev){
       var b=ev.target.closest('button'); if(!b) return;
       var A=P.items, i;
       if(b.hasAttribute('data-pfs')){ i=+b.getAttribute('data-pfs'); if(i>0){ var t=A[i]; A[i]=A[i-1]; A[i-1]=t; } }
@@ -926,7 +1005,6 @@ function _infPanelAl(caja){
   var ar=$('inf-pf-arch'); if(ar) ar.onchange=function(){ _infPanelSubir(Array.prototype.slice.call(this.files||[])); this.value=''; };
   var g=$('inf-pf-guardar'); if(g) g.onclick=_infPanelGuardar;
 }
-/* fotos propias: se suben a la obra y entran al final, con su título por escribir */
 function _infPanelSubir(files){
   var P=INFW.panel, m=$('inf-pf-msg'); if(!P || !files.length) return;
   files=files.filter(function(f){ return /^image\//i.test(f.type||''); }).slice(0, 24);
@@ -1363,23 +1441,85 @@ function _infPdfBase(D, op){
     if(x.k==='fotos'){
       var Fo=D.fotos||{ L:[], hay:0, fallan:0 };
       if(!Fo.L.length){ P.nota(Fo.hay ? 'Las fotos del mes no se pudieron cargar.' : 'No hay fotos este mes: salen de los reportes, las buenas prácticas y el cierre de los ATS, y se suman las tuyas en «El panel fotográfico».'); return; }
-      /* 10/11/2026 · más ordenado: «Foto N», de a dos por fila y tres filas por hoja, cada una en su recuadro con su título y su descripción */
-      var gx=12, gy=12, cw=(W-2*M-gx)/2, ih=158, capH=60, ch=ih+capH, col=0;
-      Fo.L.forEach(function(f, j){
-        if(col===0 && P.y+ch>H-50){ doc.addPage(); P.cab('Panel fotográfico (continúa)'); }
-        var x0=M+col*(cw+gx), im=f.img, k=Math.min((cw-10)/im.w, (ih-10)/im.h), iw=im.w*k, ihh=im.h*k;
-        P.F(C.FONDO); doc.rect(x0, P.y, cw, ih, 'F');
-        try{ doc.addImage(im.d, 'JPEG', x0+(cw-iw)/2, P.y+(ih-ihh)/2, iw, ihh); }catch(e){}
-        doc.setDrawColor(C.RAYA[0], C.RAYA[1], C.RAYA[2]); doc.setLineWidth(0.7); doc.rect(x0, P.y, cw, ch);
-        P.F(C.TINTA); doc.rect(x0, P.y, 44, 15, 'F'); P.L('bold', 7.6, C.BLANCO); doc.text(P.T('Foto '+(j+1)), x0+22, P.y+10.4, {align:'center'});
-        var yT=P.y+ih+13;
-        P.L('bold', 8.6, C.TEXTO); doc.text(P.cortar(f.tit, cw-12), x0+6, yT);
-        var dd=String(f.d || f.sub || '').trim();
-        if(dd){ P.L('normal', 7.6, C.GRIS); doc.text(doc.splitTextToSize(P.T(dd), cw-12).slice(0, 4), x0+6, yT+10.5); }
-        col++; if(col===2){ col=0; P.y+=ch+gy; }
+
+      var secDef = [
+        { key:'capacitacion', t:'a. Capacitación (Reunión de inicio de jornada, capacitaciones y dinámicas)' },
+        { key:'control',      t:'b. Control Operacional (Inspecciones, señalización y equipos)' },
+        { key:'emergencia',   t:'c. Preparación y Respuesta a Emergencias (Estaciones, extintores, simulacros)' },
+        { key:'epp',          t:'d. EPP y EPC (Uso de EPP y protecciones colectivas)' },
+        { key:'bienestar',    t:'e. Bienestar, Salud Ocupacional y Difusión (Periódico mural, orden y difusión)' },
+        { key:'ambiente',     t:'f. Medio Ambiente (Batería de residuos NTP 900.058, MATPEL, MSDS, kit antiderrame)' }
+      ];
+
+      var porSec = {};
+      secDef.forEach(function(s){ porSec[s.key] = []; });
+
+      Fo.L.forEach(function(f){
+        var sk = String(f.secc || f.bloque || f.cat || '').toLowerCase();
+        var kDest = 'capacitacion';
+        if(/capacita|charla|induc|dinam/i.test(sk) || sk === 'a') kDest = 'capacitacion';
+        else if(/inspec|control|sen|delimi|equip/i.test(sk) || sk === 'b') kDest = 'control';
+        else if(/emerg|extin|botiq|simul/i.test(sk) || sk === 'c') kDest = 'emergencia';
+        else if(/epp|epc|protec/i.test(sk) || sk === 'd') kDest = 'epp';
+        else if(/bienest|salud|difus|mural|bolet|comed|orden/i.test(sk) || sk === 'e') kDest = 'bienestar';
+        else if(/ambien|resid|matpel|msds|sga|nfpa|derrame/i.test(sk) || sk === 'f') kDest = 'ambiente';
+        porSec[kDest].push(f);
       });
-      if(col) P.y+=ch+gy;
-      if(Fo.hay>Fo.L.length) P.nota('Van '+Fo.L.length+' de '+Fo.hay+' fotos del mes'+(Fo.fallan ? ' ('+Fo.fallan+(Fo.fallan===1 ? ' no se pudo cargar)' : ' no se pudieron cargar)') : '')+'.');
+
+      var gx = 12, gy = 12, cw = (W - 2 * M - gx) / 2, ih = 155, capH = 48, ch = ih + capH;
+      var numGlobal = 0;
+
+      secDef.forEach(function(sDef){
+        var fotosSec = porSec[sDef.key];
+        if(!fotosSec || !fotosSec.length) return;
+
+        if(P.y + 28 > H - 50){ doc.addPage(); P.cab('Panel fotográfico (continúa)'); }
+        P.F(C.FONDO); doc.rect(M, P.y, W - 2 * M, 22, 'F');
+        doc.setDrawColor(C.RAYA[0], C.RAYA[1], C.RAYA[2]); doc.setLineWidth(0.6); doc.rect(M, P.y, W - 2 * M, 22);
+        P.L('bold', 8.5, C.TINTA); doc.text(P.T(sDef.t), M + 8, P.y + 14.5);
+        P.y += 28;
+
+        for(var i = 0; i < fotosSec.length; i += 2){
+          if(P.y + ch > H - 45){ doc.addPage(); P.cab('Panel fotográfico · ' + P.cortar(sDef.t, 45) + ' (continúa)'); }
+
+          var fA = fotosSec[i], fB = fotosSec[i + 1];
+          var filaPar = [fA]; if(fB) filaPar.push(fB);
+
+          filaPar.forEach(function(f, colIdx){
+            numGlobal++;
+            var x0 = M + colIdx * (cw + gx);
+            var im = f.img || {};
+
+            P.F(C.FONDO); doc.rect(x0, P.y, cw, ih, 'F');
+
+            if(im && im.d && im.w && im.h){
+              var k = Math.min((cw - 10) / im.w, (ih - 10) / im.h);
+              var iw = im.w * k, ihh = im.h * k;
+              try{ doc.addImage(im.d, 'JPEG', x0 + (cw - iw) / 2, P.y + (ih - ihh) / 2, iw, ihh); }catch(_e){}
+            }
+
+            doc.setDrawColor(C.RAYA[0], C.RAYA[1], C.RAYA[2]); doc.setLineWidth(0.7); doc.rect(x0, P.y, cw, ch);
+
+            P.F(C.TINTA); doc.rect(x0, P.y, 44, 15, 'F');
+            P.L('bold', 7.5, C.BLANCO); doc.text(P.T('Foto ' + numGlobal), x0 + 22, P.y + 10.4, { align: 'center' });
+
+            var yT = P.y + ih + 12;
+            var titu = f.tit || f.titulo || f.pie || 'Registro fotográfico';
+            P.L('bold', 8.2, C.TEXTO); doc.text(P.cortar(titu, cw - 12), x0 + 6, yT);
+
+            var dd = String(f.d || f.sub || f.pie || '').trim();
+            if(dd && dd !== titu){
+              P.L('normal', 7.3, C.GRIS);
+              doc.text(doc.splitTextToSize(P.T(dd), cw - 12).slice(0, 3), x0 + 6, yT + 9.5);
+            }
+          });
+
+          P.y += ch + gy;
+        }
+        P.y += 6;
+      });
+
+      if(Fo.hay > Fo.L.length) P.nota('Van ' + Fo.L.length + ' de ' + Fo.hay + ' fotos del mes' + (Fo.fallan ? ' (' + Fo.fallan + (Fo.fallan === 1 ? ' no se pudo cargar)' : ' no se pudieron cargar)') : '') + '.');
     }
     if(x.k==='sctr'){
       if(!D.sctr){ P.nota('No se pudo leer el SCTR de la obra.'); return; }
@@ -2878,14 +3018,36 @@ function _infOcho(D, R){
         cargoResponsable: 'SUPERVISOR SSOMA'
       };
 
-      var fotosList = (D.fotos && D.fotos.L) ? D.fotos.L.map(function(f){
-        return {
-          url: f.url || (f.img && f.img.url) || '',
-          titulo: f.titulo || f.t || f.nombre || 'Registro fotográfico SST',
-          pie: f.pie || f.d || f.leyenda || '',
-          bloque: f.bloque || 'charlas'
-        };
-      }) : [];
+      var fotosList = [];
+      if(D.fotos && Array.isArray(D.fotos.L)){
+        D.fotos.L.forEach(function(f){
+          var nMeta = {}; try{ if(f.nota && /^\s*\{/.test(f.nota)) nMeta = JSON.parse(f.nota); }catch(_e){}
+          fotosList.push({
+            url: f.url || (f.img && f.img.url) || '',
+            titulo: nMeta.pie || f.titulo || f.t || f.nombre || 'Registro fotográfico SST',
+            pie: nMeta.pie || f.pie || f.d || f.leyenda || '',
+            secc: nMeta.secc || f.secc || f.bloque || 'capacitacion'
+          });
+        });
+      }
+      if(D.freg && Array.isArray(D.freg.del)){
+        D.freg.del.forEach(function(f){
+          var cKey = f.d ? f.d.cat : '';
+          var sDestino = 'capacitacion';
+          if(/charla|capacita|dinam/i.test(cKey)) sDestino = 'capacitacion';
+          else if(/inspec|control|sen/i.test(cKey)) sDestino = 'control';
+          else if(/emerg|simul|extin/i.test(cKey)) sDestino = 'emergencia';
+          else if(/epp|epc/i.test(cKey)) sDestino = 'epp';
+          else if(/bienest|salud|mural|difus/i.test(cKey)) sDestino = 'bienestar';
+          else if(/ambien|resid|matpel/i.test(cKey)) sDestino = 'ambiente';
+          fotosList.push({
+            url: f.url || (f.img && f.img.url) || '',
+            titulo: (f.d && f.d.desc) ? f.d.desc : 'Registro de obra',
+            pie: (f.d && f.d.desc) ? f.d.desc : '',
+            secc: sDestino
+          });
+        });
+      }
       var datosFotos = {
         empresa: datosEst.empresa,
         anio: anioVal,
@@ -2911,7 +3073,16 @@ function _infOcho(D, R){
         }).catch(function(e){ console.error('Error EstadisticaSSTXlsx:', e); })
       );
       promesas.push(
-        OBRASST_FORMATOS_INFORME.generarPanelFotograficoXlsx(datosFotos).then(lee).then(function(u8){
+        ((window.OBRASST_PANEL_FOTO && typeof window.OBRASST_PANEL_FOTO.obtenerFotosParaInforme === 'function' && YO && YO.obra && YO.obra.id)
+          ? window.OBRASST_PANEL_FOTO.obtenerFotosParaInforme(YO.obra.id, String(D.mes || '').slice(0, 7)).then(function(mapaFotos){
+              if(mapaFotos && typeof mapaFotos === 'object'){
+                var hayAlguna = Object.keys(mapaFotos).some(function(k){ return Array.isArray(mapaFotos[k]) && mapaFotos[k].length > 0; });
+                if(hayAlguna) datosFotos.fotos = mapaFotos;
+              }
+              return OBRASST_FORMATOS_INFORME.generarPanelFotograficoXlsx(datosFotos);
+            }).catch(function(){ return OBRASST_FORMATOS_INFORME.generarPanelFotograficoXlsx(datosFotos); })
+          : OBRASST_FORMATOS_INFORME.generarPanelFotograficoXlsx(datosFotos)
+        ).then(lee).then(function(u8){
           pon('estadistica', 'anexo_foto', 'Panel_Fotografico_SST_' + mesNom + '_' + anioVal + '.xlsx', u8);
         }).catch(function(e){ console.error('Error PanelFotograficoXlsx:', e); })
       );

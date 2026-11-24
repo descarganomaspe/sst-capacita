@@ -635,18 +635,41 @@
     var emp = datos.empresa || {};
     var area = datos.area || datos.frente || 'OBRA GENERAL';
     var secciones = [
-      { key: 'capacitacion',     hoja: 'a. Capacitación',         titulo: 'a. Capacitación (Reuniones de inicio de jornada, capacitaciones y dinámicas)' },
-      { key: 'control',          hoja: 'b. Control Operacional',  titulo: 'b. Controles Operacionales (Inspecciones, señalización y equipos)' },
-      { key: 'emergencia',       hoja: 'c. Emergencia',           titulo: 'c. Preparación y Respuesta a Emergencias' },
-      { key: 'epp',              hoja: 'd. EPP y EPC',            titulo: 'd. EPP y EPC' },
-      { key: 'bienestar',        hoja: 'e. Bienestar y Difusión', titulo: 'e. Bienestar, Salud Ocupacional y Difusión' }
+      { key: 'capacitacion',     hoja: 'a. Capacitación',         titulo: 'a. Capacitación (Reunión de inicio de jornada, capacitaciones, pausas activas/dinámicas)' },
+      { key: 'control',          hoja: 'b. Control Operacional',  titulo: 'b. Control Operacional (Inspecciones, señalización, delimitación, equipos)' },
+      { key: 'emergencia',       hoja: 'c. Emergencia',           titulo: 'c. Preparación y Respuesta a Emergencias (Estaciones de emergencia, extintores, botiquín, simulacros)' },
+      { key: 'epp',              hoja: 'd. EPP y EPC',            titulo: 'd. EPP y EPC (Uso de EPP por puesto y protecciones colectivas)' },
+      { key: 'bienestar',        hoja: 'e. Bienestar y Difusión', titulo: 'e. Bienestar, Salud Ocupacional y Difusión (Periódico mural, boletines, comedor, orden)' },
+      { key: 'ambiente',         hoja: 'f. Medio Ambiente',       titulo: 'f. Medio Ambiente (Batería de residuos NTP 900.058, almacén MATPEL, MSDS, SGA, NFPA, kit antiderrame)' }
     ];
-    var fotosPorSeccion = datos.fotos || {};
-    var libro = _crearLibroXlsx();
 
+    var fotosPorSeccion = {};
+    secciones.forEach(function(s){ fotosPorSeccion[s.key] = []; });
+
+    if(datos.fotos && !Array.isArray(datos.fotos) && typeof datos.fotos === 'object'){
+      secciones.forEach(function(s){
+        if(Array.isArray(datos.fotos[s.key])) fotosPorSeccion[s.key] = datos.fotos[s.key];
+      });
+    } else if(Array.isArray(datos.fotos)){
+      datos.fotos.forEach(function(f){
+        if(!f) return;
+        var sk = String(f.secc || f.sec || f.bloque || f.cat || '').toLowerCase();
+        var destino = 'capacitacion';
+        if(/capacita|charla|induc|dinam/i.test(sk) || sk === 'a') destino = 'capacitacion';
+        else if(/inspec|control|sen|delimi|equip/i.test(sk) || sk === 'b') destino = 'control';
+        else if(/emerg|extin|botiq|simul/i.test(sk) || sk === 'c') destino = 'emergencia';
+        else if(/epp|epc|protec/i.test(sk) || sk === 'd') destino = 'epp';
+        else if(/bienest|salud|difus|mural|bolet|comed|orden/i.test(sk) || sk === 'e') destino = 'bienestar';
+        else if(/ambien|resid|matpel|msds|sga|nfpa|derrame/i.test(sk) || sk === 'f') destino = 'ambiente';
+        fotosPorSeccion[destino].push(f);
+      });
+    }
+
+    var libro = _crearLibroXlsx();
     var tareas = [];
+
     secciones.forEach(function(sec){
-      var lista = Array.isArray(fotosPorSeccion[sec.key]) ? fotosPorSeccion[sec.key] : [];
+      var lista = fotosPorSeccion[sec.key] || [];
       var h = _nuevaHoja(libro, sec.hoja);
       h.anchos = { 1:18, 2:18, 3:18, 4:4, 5:18, 6:18, 7:18 };
       h.altos[1] = 24; h.altos[3] = 22; h.altos[5] = 20;
@@ -654,7 +677,7 @@
       _setCelda(h, 3, 1, sec.titulo, 7); _merge(h, 3, 1, 3, 7);
       _setCelda(h, 5, 1, 'Área / Frente: ' + area, 4); _merge(h, 5, 1, 5, 7);
 
-      var totalSlots = Math.max(4, lista.length + (lista.length % 2));
+      var totalSlots = lista.length > 0 ? (lista.length + (lista.length % 2)) : 2;
       for(var i = 0; i < totalSlots; i += 2){
         var rowImg = 6 + (i / 2) * 2;
         var rowCap = rowImg + 1;
@@ -668,8 +691,13 @@
           var item = lista[idxFoto];
           _merge(h, rowImg, cIni, rowImg, cFin);
           _merge(h, rowCap, cIni, rowCap, cFin);
-          _setCelda(h, rowImg, cIni, item ? '' : '(Sin foto asignada)', 5);
-          _setCelda(h, rowCap, cIni, 'Foto ' + (idxFoto + 1) + ': ' + (item && item.titulo ? item.titulo : ''), 3);
+          _setCelda(h, rowImg, cIni, item ? '' : '(Sin foto asignada en esta posición)', 5);
+
+          var pieTexto = '';
+          if(item){
+            pieTexto = String(item.pie || item.titulo || item.desc || item.t || '').trim();
+          }
+          _setCelda(h, rowCap, cIni, 'Foto ' + (idxFoto + 1) + (pieTexto ? ': ' + pieTexto : ''), 3);
 
           if(item && item.url){
             tareas.push((function(hojaRef, rImg0, c0, cEnd0, urlFoto){
