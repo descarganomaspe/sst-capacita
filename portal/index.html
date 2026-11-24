@@ -13961,6 +13961,7 @@ function vistaEquipos(caja){
       '<button type="button" class="bt sec" id="peq-pegar">📋 Pegar una lista</button>'+
       '<button type="button" class="bt sec" id="peq-nuevo">＋ Registrar</button>'+
       '<button type="button" class="bt" id="peq-etq">🖨 Etiquetas</button>'+
+      '<button type="button" class="bt sec" id="peq-ct">🪪 Cartillas doble cara</button>'+
       /* 5/11/2026 · V7.10 · Módulo 5: su guía de cinco burbujas (y su video de 45 s, cuando lo tenga) */
       '<button type="button" class="bt sec" id="peq-guia">💡 Guía paso a paso</button>'+video45Boton('equipos');
     $('peq-guia').onclick=function(){ guiaSeccion('equipos'); };
@@ -13970,6 +13971,7 @@ function vistaEquipos(caja){
     $('peq-pegar').onclick=function(){ peqListo(peqPegar); };
     $('peq-nuevo').onclick=function(){ peqListo(function(){ peqForm(null); }); };
     $('peq-etq').onclick=function(){ peqListo(function(){ peqEtiquetas(null); }); };
+    $('peq-ct').onclick=function(){ peqListo(peqCartillasLote); };
   }
   function pinta(silencio){
     var n=++PEQ.n;
@@ -13978,8 +13980,10 @@ function vistaEquipos(caja){
       traer('sst_equipo_qr', '&select=*&order=codigo.asc', 5000),
       estadoLeerP('color_herramientas').catch(function(){ return null; }),
       peqFrecTraer(),
-      estadoLeerP('equipo_quien').catch(function(){ return null; })   /* 4/11/2026 · V7.9j · quién inspecciona */
+      estadoLeerP('equipo_quien').catch(function(){ return null; }),   /* 4/11/2026 · V7.9j · quién inspecciona */
+      estadoLeerP('cartillas_eq').catch(function(){ return null; })   /* 25/11/2026 · las modulaciones de andamio de la obra */
     ]).then(function(r){
+      var vc=r[5] && r[5].valor; PEQ.mods=(vc && Array.isArray(vc.mod)) ? vc.mod : []; PEQ.modE=(vc && vc.e && typeof vc.e==='object') ? vc.e : {};
       if(n!==PEQ.n || VISTA.actual!=='equipos') return;
       PEQ.sinSQL=false; PEQ.filas=Array.isArray(r[1]) ? r[1] : []; PEQ.frec=r[3] || {};
       var vq=r[4] && r[4].valor; PEQ.quien=(vq && typeof vq==='object' && !Array.isArray(vq)) ? vq : {};
@@ -14366,6 +14370,7 @@ function peqFicha(id){
         (x.estado!=='fuera' ? '<button type="button" class="bt sec" id="peq-fuera">⛔ Fuera de servicio</button>' : '')+
         '<button type="button" class="bt sec" id="peq-editar">Editar</button>'+
         '<button type="button" class="bt sec" id="peq-cartel">🪧 Su cartel</button>'+
+        '<button type="button" class="bt sec" id="peq-cartilla">🪪 Cartilla doble cara</button>'+
         '<button type="button" class="bt sec" id="peq-papel">📄 Subir una en papel</button>'+
         '<button type="button" class="bt" id="peq-imp">🖨 Su etiqueta</button>';
   }
@@ -14380,6 +14385,7 @@ function peqFicha(id){
   $('peq-editar').onclick=function(){ peqForm(x); };
   $('peq-imp').onclick=function(){ peqEtiquetas([x.id]); };
   if($('peq-cartel')) $('peq-cartel').onclick=function(){ peqCartel(x, this); };
+  if($('peq-cartilla')) $('peq-cartilla').onclick=function(){ peqCartilla(x); };
   if($('peq-uso-ed')) $('peq-uso-ed').onclick=function(){ peqForm(x); };
   if($('peq-fuera')) $('peq-fuera').onclick=function(){ peqFuera(x); };
   $('peq-baja').onclick=function(){ peqBaja(x); };
@@ -14749,12 +14755,20 @@ function peqFormPintar(){
   h+='<div id="peq-frecs-zona"></div>';
   /* 14/10/2026 · cómo se usa: lo ve cualquiera que escanee su QR y sale en su cartel; del extintor, de qué es y su recarga */
   if(E0.tipo) h+=peqUsoForm(E0);
+  /* 25/11/2026 · el andamio: su modulación (de las que subió la obra), que sale a toda la cara B de su cartilla */
+  if(String(E0.tipo||'')==='Andamio'){
+    if(E0.mod==null) E0.mod=String(((PEQ.modE||{})[E0.id]||{}).mod||'');
+    h+='<div class="campo"><label for="peq-mod">Su modulación <span class="gris-t">(sale atrás, en toda la cara de su cartilla)</span></label><select id="peq-mod"><option value="">'+((PEQ.mods||[]).length ? 'Todavía ninguna' : 'La obra aún no subió modulaciones')+'</option>'+
+       (PEQ.mods||[]).map(function(m){ return '<option value="'+esc(m.id)+'"'+(E0.mod===m.id ? ' selected' : '')+'>'+esc(m.n)+'</option>'; }).join('')+'</select>'+
+       '<p class="ayuda">Las modulaciones se suben una vez, con su nombre, en «🪪 Cartillas doble cara» › «Modulaciones de andamio».</p></div>';
+  }
   h+='<p class="msg" id="peq-f-m"></p></div><aside class="peq-lado" id="peq-lado" aria-label="Así queda su etiqueta"></aside></div>';
   c.innerHTML=h;
   $('peq-chk').oninput=function(){ E0.checklist=this.value.split(/\n/); };
   if($('peq-ubic')) $('peq-ubic').oninput=function(){ E0.ubicacion=this.value; };   /* V7.9j */
   if($('peq-fr')) $('peq-fr').oninput=function(){ E0.frente=this.value; };
   if($('peq-ubic2')) $('peq-ubic2').oninput=function(){ E0.ubicDet=this.value; };
+  if($('peq-mod')) $('peq-mod').onchange=function(){ E0.mod=this.value; E0.modCambio=true; };
   frentesObraP().then(function(L){ PEQ.frentes=L; var dl=$('peq-fr-l'); if(dl) dl.innerHTML=L.map(function(n){ return '<option value="'+esc(n)+'">'; }).join(''); });
   if(!E0.uso) E0.uso={p:'', a:'', kg:'', r:''};
   [['peq-uso-p', 'p'], ['peq-uso-a', 'a'], ['peq-uso-kg', 'kg'], ['peq-uso-r', 'r'], ['peq-uso-m', 'm'], ['peq-uso-h', 'h']].forEach(function(z){ var el=$(z[0]); if(el){ el.oninput=el.onchange=function(){ E0.uso[z[1]]=this.value; }; } });
@@ -14923,7 +14937,9 @@ function peqGuardar(){
           : (sinChk && chk) ? cod+' se guardó, pero sin su checklist propio: falta actualizar el servidor. Avísanos y lo dejamos listo.'
           : (sinExtra && dis) ? cod+' se guardó con la etiqueta clásica: para el diseño y el tamaño falta actualizar el servidor. Avísanos y lo dejamos listo.'
           : (E0.id ? 'Guardado: '+cod : cod+' registrado. Ya sale en la app y su etiqueta está lista para imprimir.'));
-    PEQ.edit=null; return peqRecargar(id);
+    /* 25/11/2026 · la modulación del andamio va en la obra (cartillas_eq), no en el equipo */
+    var vaMod=(tipo==='Andamio' && E0.modCambio) ? peqModPoner(id, E0.mod).catch(function(){ toast(cod+' se guardó, pero no su modulación: revisa tu conexión y elígela en su cartilla.'); }) : Promise.resolve();
+    PEQ.edit=null; return vaMod.then(function(){ return peqRecargar(id); });
   }).catch(function(e){
     bt.disabled=false; m.className='msg mal';
     m.textContent = e===409 ? 'Ya hay un equipo con el código '+cod+' en esta obra. Usa otro.'
@@ -20048,6 +20064,28 @@ function cargarAntesDespues(){
   return _ANTDES_CARGA;
 }
 function vistaAD(caja){ cargando(caja); cargarAntesDespues().then(function(){ vistaAntesDespues(caja); }, function(){ fallo(caja, 0); }); }
+/* 24/11/2026 · las cartillas doble cara de los equipos (portal/cartillas-equipos.js) */
+var CARTEQ_VER='ba3c9644e6';   /* lo pone herr/huellas.py: el hash de portal/cartillas-equipos.js */
+var _CARTEQ_CARGA=null;
+function cargarCartillasEq(){
+  if(typeof pctAbrir==='function') return Promise.resolve(true);
+  if(_CARTEQ_CARGA) return _CARTEQ_CARGA;
+  _CARTEQ_CARGA=_cargarJS('cartillas-equipos.js?v='+(CARTEQ_VER||'0'), function(){ return typeof pctAbrir==='function'; });
+  _CARTEQ_CARGA.catch(function(){ _CARTEQ_CARGA=null; });
+  return _CARTEQ_CARGA;
+}
+/* la modulación de un andamio, sobre lo que el servidor tiene en ese momento */
+function peqModPoner(id, mod){
+  return estadoLeerP('cartillas_eq').then(function(f){
+    var v=(f && f.valor && typeof f.valor==='object' && !Array.isArray(f.valor)) ? f.valor : { v:1, e:{} };
+    if(!v.e || typeof v.e!=='object' || Array.isArray(v.e)) v.e={};
+    var e=v.e[String(id)] || { f:'andamio', t:'a5' };
+    e.mod=mod || undefined; if(mod) e.r=['modulacion']; e.ts=Date.now(); v.v=1; v.e[String(id)]=e;
+    return estadoEscribirP('cartillas_eq', v).then(function(){ PEQ.modE=v.e; if(typeof PCT==='object' && PCT) PCT.e=v.e; });
+  });
+}
+function peqCartilla(x){ cargarCartillasEq().then(function(){ pctAbrir(x); }, function(){ toast('No se pudo abrir la cartilla. Revisa tu conexión e inténtalo otra vez.'); }); }
+function peqCartillasLote(){ cargarCartillasEq().then(function(){ pctLote(); }, function(){ toast('No se pudo abrir las cartillas. Revisa tu conexión e inténtalo otra vez.'); }); }
 var CAMPOAPP_VER='59e96557fa';   /* lo pone armar.py: el hash de portal/campo-app.js */
 var _CAMPO_CARGA=null, _CAMPOAPP_CARGA=null;
 function cargarCampo(){
