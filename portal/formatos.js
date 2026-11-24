@@ -1375,6 +1375,18 @@ function fmtWebBajar(k, bt){
   var it=_fmtwItem(k); if(!it) return Promise.resolve(null);
   if(bt) bt.disabled=true;
   var suelta=function(){ if(bt) bt.disabled=false; };
+  /* 24/11/2026 · la de antes y después en blanco: la hoja apaisada nueva (portal/antes-despues.js), con 3 filas para llenar a mano */
+  if(k==='antes-y-despues' && typeof cargarAntesDespues==='function'){
+    return Promise.all([cargarEvPDF(), cargarAntesDespues(), FMTW.emp ? FMTW.emp : empleadorP().then(function(e){ FMTW.emp=e || {}; return FMTW.emp; }, function(){ return {}; }),
+                        FMTW.fm ? FMTW.fm : estadoLeerP('formatos').then(function(r){ FMTW.fm=(r && r.valor) || {}; return FMTW.fm; }, function(){ return {}; })]).then(function(){
+      var E=FMTW.emp||{}, cod=_fmtwCodigo(it);
+      return adPdf({ empresa:E.razon || '', obra:String(nombreObraP()||''), cod:cod.cod || '', rev:cod.cod ? cod.rev : '00', fecha:'', logo:E.logo || '', vacias:3 }, []);
+    }).then(function(b){
+      suelta(); var n='formato-inspeccion-antes-y-despues.pdf';
+      if(!docVerW(b, n, { titulo:it.n, sub:'1 hoja A4 horizontal · imprímela al 100 %' })) bajarBlob(b, n);
+      return true;
+    }, function(){ suelta(); toast('No se pudo armar el PDF. Revisa tu conexión e inténtalo otra vez.'); return null; });
+  }
   var esAts=!!(it.f && it.f.motor==='ats');
   return Promise.all([cargarEvPDF(), esAts && typeof cargarPapeles==='function' ? cargarPapeles().then(null, function(){ return null; }) : null,
                       FMTW.fm ? FMTW.fm : estadoLeerP('formatos').then(function(r){ FMTW.fm=(r && r.valor) || {}; return FMTW.fm; }, function(){ return {}; }),

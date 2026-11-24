@@ -599,6 +599,7 @@ function arcPintar(){
        '<div id="arc-mias" hidden></div>'+
        '<div class="arc-barra"><label class="arc-todos" for="arc-todos"><input type="checkbox" id="arc-todos"> Todos</label>'+
          '<button type="button" class="bt sec chico" id="arc-btn-todos" style="margin-left:2px">Seleccionar todo</button>'+
+         (!mEsc && !/^mia-/.test(ARC.carpeta) && _arcCarpetaMovible(ARC.carpeta) ? '<button type="button" class="bt sec chico" id="arc-mv-carpeta" title="Llevar esta carpeta, con sus documentos, a otro sector o dentro de otra carpeta">📂 Mover carpeta</button>' : '')+
          '<input type="search" id="arc-buscar" placeholder="Buscar por nombre o carpeta" aria-label="Buscar en el archivo" value="'+esc(ARC.buscar)+'">'+
          '<select id="arc-orden" aria-label="Ordenar">'+[['nuevo','Más nuevos primero'], ['viejo','Más antiguos primero'], ['nombre','Por nombre (A-Z)'], ['carpeta','Por carpeta']].map(function(o){
            return '<option value="'+o[0]+'"'+(ARC.orden===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></div>'+
@@ -606,6 +607,7 @@ function arcPintar(){
   t.innerHTML=h;
   if($('arc-cfg')) $('arc-cfg').onclick=arcCfgAbrir;
   if($('arc-orden5')) $('arc-orden5').onclick=arcOrdenAbrir;
+  if($('arc-mv-carpeta')) $('arc-mv-carpeta').onclick=function(){ arcMoverCarpeta(ARC.carpeta); };
   if($('arc-oculto-b')) $('arc-oculto-b').onclick=arcCfgAbrir;
   if($('arc-web-b')) $('arc-web-b').onclick=arcCfgAbrir;
   /* «Unir» con lo marcado (PDF y fotos); sin nada marcado, se eligen dentro */
@@ -683,7 +685,7 @@ function _arcSubsHTML(L){
     var col=dcMiasColorHex(x.col||''), n=dcMiasDocs(x.id), hs=dcMiasHijas(x.id).length;
     return '<div class="arc-sub-c"'+(col ? ' style="--arc-col:'+col+'"' : '')+'><button type="button" class="arc-sub-a" data-k="mia-'+esc(x.id)+'"><span>📂 '+esc(x.t)+'</span>'+
       '<small>'+n+' '+(n===1 ? 'documento' : 'documentos')+(hs ? ' · '+hs+' '+(hs===1 ? 'subcarpeta' : 'subcarpetas') : '')+'</small></button>'+
-      (dcMiasPuede() ? '<button type="button" class="bt sec chico arc-sub-mv" data-mia-mv="'+esc(x.id)+'" title="Mover carpeta completa con sus subcarpetas y documentos">📂 Mover carpeta</button><button type="button" class="arc-sub-m" data-mia-m="'+esc(x.id)+'" aria-label="Opciones de «'+esc(x.t)+'»" aria-haspopup="menu">⋮</button>' : '')+'</div>';
+      (dcMiasPuede() ? '<button type="button" class="arc-sub-m" data-mia-m="'+esc(x.id)+'" aria-label="Opciones de «'+esc(x.t)+'»" aria-haspopup="menu">⋮</button>' : '')+'</div>';
   }).join('')+'</div>';
 }
 function _arcMiaMenu(b, id){
@@ -1091,320 +1093,260 @@ function _arcDeAPocos(L, n, fn){
   var w=[]; for(var j=0;j<Math.min(n, L.length);j++) w.push(uno());
   return Promise.all(w).then(function(){ return res; });
 }
-/* ══ SELECTOR UNIVERSAL DE DESTINO (TODOS LOS SECTORES Y CARPETAS) ═════════════════════════════════════════════════ */
-function arcDestinosArbol(excluirId){
-  var L = [];
-  excluirId = String(excluirId || '');
-  var v = (typeof _dcMiasValor === 'function' && typeof DC === 'object' && DC.mias) ? _dcMiasValor(DC.mias) : { c:{} };
-
-  /* 1 · Las 5 carpetas de seguridad principales de la obra */
-  if(Array.isArray(window.ARC_CATS)){
-    ARC_CATS.forEach(function(c){
-      L.push({
-        id: 'g:' + arcCatEt(c.k),
-        h: 'g:' + arcCatEt(c.k),
-        t: arcCatEt(c.k),
-        ruta: 'Documentos de Seguridad › ' + arcCatEt(c.k),
-        sec: 'Seguridad',
-        nivel: 1,
-        esPropia: false,
-        puedeCrear: true,
-        secClave: c.k
-      });
-    });
-  }
-
-  /* 2 · Secciones del menú del supervisor (DC_SUP_SECC) */
-  if(Array.isArray(window.DC_SUP_SECC)){
-    DC_SUP_SECC.forEach(function(S){
-      L.push({
-        id: 's:' + S.k,
-        h: 's:' + S.k,
-        t: S.g,
-        ruta: 'Secciones › ' + S.g,
-        sec: S.n || 'Sección',
-        nivel: 1,
-        esPropia: false,
-        puedeCrear: true,
-        secClave: S.k
-      });
-    });
-  }
-
-  /* 3 · Carpetas predefinidas del sistema */
-  if(typeof _dcCarpetas === 'function'){
-    _dcCarpetas().forEach(function(c){
-      if(!c || c.h === 'fotos') return;
-      L.push({
-        id: c.h,
-        h: c.h,
-        t: c.t,
-        ruta: (c.g ? c.g + ' › ' : '') + c.t,
-        sec: c.g || 'General',
-        nivel: 2,
-        esPropia: false,
-        puedeCrear: false
-      });
-    });
-  }
-
-  /* 4 · Escaneos de la app */
-  if(Array.isArray(window.ARC_CLASES)){
-    ARC_CLASES.forEach(function(c){
-      L.push({
-        id: 'esc:' + c[0],
-        h: 'esc:' + c[0],
-        t: 'Escaneos · ' + c[1],
-        ruta: 'Escaneos de la App › ' + c[1],
-        sec: 'Escaneos',
-        nivel: 2,
-        esPropia: false,
-        puedeCrear: false
-      });
-    });
-  }
-
-  /* 5 · Carpetas del informe mensual (8 carpetas) */
-  if(typeof _arcInf8 === 'function'){
-    _arcInf8().forEach(function(c, i){
-      var vKey = ARC_INF_PRE + '@:' + c.k;
-      L.push({
-        id: vKey,
-        h: vKey,
-        t: (i + 1) + '. ' + c.n,
-        ruta: 'Informe Mensual › ' + (i + 1) + '. ' + c.n,
-        sec: 'Informe',
-        nivel: 1,
-        esPropia: false,
-        puedeCrear: false
-      });
-      (c.items || []).forEach(function(it){
-        L.push({
-          id: vKey + ':' + it[0],
-          h: vKey + ':' + it[0],
-          t: it[1],
-          ruta: 'Informe Mensual › ' + c.n + ' › ' + it[1],
-          sec: 'Informe',
-          nivel: 2,
-          esPropia: false,
-          puedeCrear: false
-        });
-      });
-    });
-  }
-
-  /* 6 · Carpetas Propias / Personalizadas (dcMias) */
-  if(typeof dcMias === 'function'){
-    dcMias().forEach(function(x){
-      if(excluirId && x.id === excluirId) return;
-      if(excluirId && typeof _dcMiasDentroDe === 'function' && _dcMiasDentroDe(v, excluirId, x.id)) return;
-
-      var secNombre = x.sec ? ((typeof _dcSecc === 'function' && _dcSecc(x.sec)) || {}).n || x.sec : 'Mis carpetas';
-      L.push({
-        id: 'mia-' + x.id,
-        miaId: x.id,
-        h: 'mia-' + x.id,
-        t: x.t,
-        ruta: 'Carpetas Propias › ' + (secNombre ? secNombre + ' › ' : '') + (x.tr || x.t),
-        sec: secNombre,
-        nivel: Math.min(3, Math.max(1, (x.nivel || 1) + 1)),
-        esPropia: true,
-        puedeCrear: (x.nivel || 1) < (window.DC_MIAS_NIVELES || 3),
-        padreId: x.p
-      });
-    });
-  }
-
+/* ══ 24/11/2026 · MOVER A… (DOCUMENTOS, WEB): UN SOLO SELECTOR CON TODOS LOS SECTORES ═══════════════════════════════
+   Marcelo (requerimiento, punto 3): mover varios archivos o una carpeta completa a cualquier carpeta de cualquier sector,
+   con un buscador de carpetas por su ruta («Medio Ambiente › 2026 › Noviembre»), «＋ Nueva subcarpeta aquí» y sin poder
+   meter una carpeta dentro de sí misma. Los sectores son las 5 carpetas de seguridad (y aparte el informe mensual y «Mis
+   carpetas»). Nada se copia ni cambia de modelo: un archivo cambia de carpeta (su hoja); una carpeta propia cambia de
+   lugar en el árbol (mis_carpetas) y cualquier carpeta puede cambiar de sector (docs_orden), como «🗂️ Ordenar carpetas».
+   En el servidor va de una sola vez (sst_docs_mover_lote, sst_carpeta_mover; sql/2026-11-24-docs-mover.sql); sin ese
+   SQL, como antes: archivo por archivo y con lo de siempre. */
+/* todos los lugares a los que se puede llevar algo: [{ id, t, ruta, sec (clave del sector o ''), tipo, nivel, ... }] */
+function arcDestinos(){
+  var L=[], porCat={}, M=(typeof dcMias==='function') ? dcMias() : [];
+  ARC_CATS.forEach(function(c){ porCat[c.k]=[]; });
+  var otros=[], mias=[];
+  var pon=function(cat, x){ if(cat && porCat[cat]) porCat[cat].push(x); else otros.push(x); };
+  /* las carpetas de siempre (las que no piden más datos y las que sí: mes, simulacro, certificado) */
+  _dcCarpetas().forEach(function(c){
+    if(c.mia) return;
+    var I={ k:'doc', key:c.h, g:c.g };
+    pon(_arcCatClave(I), { id:c.h, t:String(((ARC.orden5 && ARC.orden5.a) || {})[c.h] || '').trim() || c.t, tipo:'doc', c:c, nivel:1, mueve:true });
+  });
+  /* los escaneos de la app, por su tipo */
+  if(ARC.cfg && ARC.cfg.escaneos) ARC_CLASES.forEach(function(x){
+    var key='esc:'+x[0]; pon(_arcCatClave({ k:'esc', key:key, esc:{ clase:x[0] } }), { id:key, t:'Escaneos · '+x[1], tipo:'esc', nivel:1, mueve:true });
+  });
+  /* las propias, en su árbol (la de arriba decide el sector) */
+  /* las secciones del menú del supervisor (Charlas, Comité…): solo para llevar ahí una carpeta propia */
+  if(typeof DC_SUP_SECC!=='undefined') DC_SUP_SECC.forEach(function(S){
+    var cat=(typeof ARC_CAT_SECC!=='undefined' && ARC_CAT_SECC[S.k]) || '';
+    pon(cat, { id:'s:'+S.k, t:S.n+' (sección)', tipo:'secc', nivel:1 });
+  });
+  M.forEach(function(x){
+    var cat=_arcCatClave({ k:'doc', key:'mia-'+x.id, g:x.g });
+    var S=x.sec && _dcSecc(x.sec);
+    var d={ id:'mia-'+x.id, mia:x.id, t:x.t, tipo:'mia', nivel:x.nivel || 1, p:x.p, tr:(S ? S.n+' › ' : '')+(x.tr || x.t), mueve:true };
+    if(cat) pon(cat, d); else mias.push(d);
+  });
+  var orden=function(a, b){ return String(a.t).localeCompare(String(b.t), 'es', { sensitivity:'base' }); };
+  ARC_CATS.forEach(function(c){
+    var et=arcCatEt(c.k);
+    L.push({ id:'cat:'+c.k, t:et, ruta:et, tipo:'sector', cat:c.k, nivel:0 });
+    var hijos=porCat[c.k].filter(function(x){ return x.tipo!=='mia'; }).sort(orden);
+    var pm=porCat[c.k].filter(function(x){ return x.tipo==='mia'; });
+    hijos.forEach(function(x){ x.ruta=et+' › '+x.t; x.sec=c.k; L.push(x); });
+    pm.forEach(function(x){ x.ruta=et+' › '+x.tr; x.sec=c.k; L.push(x); });
+  });
+  /* el informe mensual: el mes se elige aparte */
+  L.push({ id:'inf', t:ARC_INF_G, ruta:ARC_INF_G, tipo:'infg', nivel:0 });
+  _arcInf8().forEach(function(c, i){
+    L.push({ id:ARC_INF_PRE+'@:'+c.k, t:(i+1)+'. '+c.n, ruta:ARC_INF_G+' › '+(i+1)+'. '+c.n, tipo:'inf', nivel:1 });
+    (c.items || []).forEach(function(it){ L.push({ id:ARC_INF_PRE+'@:'+c.k+':'+it[0], t:it[1], ruta:ARC_INF_G+' › '+(i+1)+'. '+c.n+' › '+it[1], tipo:'inf', nivel:2 }); });
+  });
+  /* «Mis carpetas» (las propias sin sector) */
+  L.push({ id:'mias', t:DC_MIAS_G, ruta:DC_MIAS_G, tipo:'raiz', nivel:0 });
+  mias.forEach(function(x){ x.ruta=DC_MIAS_G+' › '+(x.tr || x.t); L.push(x); });
+  L.push({ id:'aparte', t:'Aparte (fuera de las 5)', ruta:'Aparte', tipo:'aparte', nivel:0 });
+  otros.sort(orden).forEach(function(x){ x.ruta='Aparte › '+x.t; L.push(x); });
   return L;
 }
-
-function arcDestinosUniversalModal(opts){
-  opts = opts || {};
-  var titulo = opts.titulo || 'Mover a…';
-  var subtitulo = opts.subtitulo || 'Elige la carpeta o sector de destino de la obra';
-  var excluirId = opts.excluirId || '';
-  var alElegir = opts.alElegir || function(){};
-
-  var destinos = arcDestinosArbol(excluirId);
-  var selActual = null;
-
-  function renderTree(filtro){
-    filtro = _dcNorm(String(filtro || '').trim());
-    var filtrados = destinos.filter(function(d){
-      if(!filtro) return true;
-      return _dcNorm(d.ruta).indexOf(filtro) > -1 || _dcNorm(d.t).indexOf(filtro) > -1 || _dcNorm(d.sec).indexOf(filtro) > -1;
-    });
-
-    if(!filtrados.length){
-      return '<div class="vacio" style="padding:18px"><b>No se encontraron carpetas con ese nombre</b>Intenta con otra palabra o crea una nueva subcarpeta.</div>';
-    }
-
-    var porSec = {}, secs = [];
-    filtrados.forEach(function(d){
-      var s = d.sec || 'General';
-      if(!porSec[s]){ porSec[s] = []; secs.push(s); }
-      porSec[s].push(d);
-    });
-
-    return secs.map(function(s){
-      var items = porSec[s];
-      return '<div class="arc-univ-sec">📂 ' + esc(s) + '</div>' + items.map(function(d){
-        var isSel = selActual && selActual.id === d.id;
-        var pad = (d.nivel > 1 ? (d.nivel - 1) * 16 : 0);
-        return '<div class="arc-univ-item' + (isSel ? ' sel' : '') + '" data-univ-id="' + escA(d.id) + '" style="padding-left:' + (10 + pad) + 'px">' +
-          '<span>' + (d.nivel > 1 ? '└ ' : '') + esc(d.t) + '</span>' +
-          '<small>' + esc(d.ruta) + '</small>' +
-          '</div>';
-      }).join('');
+/* el selector: op = { titulo, sub, modo:'archivos'|'carpeta', clave (la carpeta que se mueve), alElegir(dest, extra, boton, msg) } */
+function arcElegirDestino(op){
+  op=op||{};
+  var D=arcDestinos(), sel=null, q='', st=_dcEstado(''), modoC=op.modo==='carpeta', clave=String(op.clave||'');
+  var miaId=/^mia-/.test(clave) ? clave.slice(4) : '';
+  var v=(typeof _dcMiasValor==='function') ? _dcMiasValor(DC.mias) : { c:{} };
+  /* qué se puede elegir: archivos → cualquier carpeta; una carpeta → un sector, «Mis carpetas» o (si es propia) otra propia */
+  var vale=function(d){
+    if(!modoC) return d.tipo!=='sector' && d.tipo!=='infg' && d.tipo!=='raiz' && d.tipo!=='aparte' && d.tipo!=='secc';
+    if(d.tipo==='sector' || d.tipo==='aparte') return true;
+    if(!miaId) return false;
+    if(d.tipo==='raiz' || d.tipo==='secc') return true;
+    if(d.tipo!=='mia' || d.mia===miaId) return false;
+    if(_dcMiasDentroDe(v, miaId, d.mia)) return false;
+    return (d.nivel || 1) + _dcMiasAltura(v, miaId) <= DC_MIAS_NIVELES;
+  };
+  var bloqueada=function(d){ return modoC && miaId && d.tipo==='mia' && (d.mia===miaId || _dcMiasDentroDe(v, miaId, d.mia)); };
+  function lista(){
+    var nq=_dcNorm(q);
+    var vis=D.filter(function(d){ return !nq || _dcNorm(d.ruta).indexOf(nq)>-1; });
+    if(!vis.length) return '<div class="vacio" style="padding:16px"><b>Ninguna carpeta con «'+esc(q)+'»</b>Prueba con otra palabra, o elige un sector y crea ahí la carpeta.</div>';
+    return vis.map(function(d){
+      var ok=vale(d), bl=bloqueada(d), cab=d.nivel===0, on=sel && sel.id===d.id, aqui=op.aqui && op.aqui===d.id;
+      return '<button type="button" class="arcu-i'+(cab ? ' cab' : '')+(on ? ' on' : '')+(bl ? ' bl' : '')+'" data-u="'+esc(d.id)+'"'+(ok ? '' : ' aria-disabled="true"')+
+        ' style="padding-left:'+(10+Math.min(3, d.nivel||0)*16)+'px">'+(cab ? '📁 ' : (d.nivel>1 ? '└ ' : ''))+'<span>'+esc(d.t)+'</span>'+
+        (nq && !cab ? '<small>'+esc(d.ruta)+'</small>' : '')+(bl ? '<small>la que se mueve</small>' : (aqui ? '<small>ahora está aquí</small>' : ''))+'</button>';
     }).join('');
   }
-
-  var cuerpo = '<div class="campo">' +
-    '<label for="arc-univ-q">Buscar carpeta o sector</label>' +
-    '<input type="search" id="arc-univ-q" class="campo" placeholder="🔍 Escribe nombre o sector (ej. Medio Ambiente › Noviembre)…" autocomplete="off">' +
-    '</div>' +
-    '<div class="arc-univ-bar">' +
-      '<span id="arc-univ-txt" class="ayuda">Ninguna carpeta seleccionada</span>' +
-      '<button type="button" class="bt sec chico" id="arc-univ-nueva" style="display:none">＋ Nueva subcarpeta aquí</button>' +
-    '</div>' +
-    '<div class="arc-univ-wrap" id="arc-univ-lista">' + renderTree('') + '</div>' +
-    '<div class="msg" id="arc-univ-msg"></div>';
-
-  abrirHoja(titulo, subtitulo, cuerpo,
-    '<button type="button" class="bt" id="arc-univ-ok" disabled>📂 Mover aquí</button>' +
-    '<button type="button" class="bt sec" id="arc-univ-cancel">✕ Cancelar</button>',
-    { sinFoco: true }
-  );
-
-  var qInput = $('arc-univ-q');
-  var listaDom = $('arc-univ-lista');
-  var okBtn = $('arc-univ-ok');
-  var nuevaBtn = $('arc-univ-nueva');
-  var txtDom = $('arc-univ-txt');
-  var msgDom = $('arc-univ-msg');
-
-  if(qInput) setTimeout(function(){ try{ qInput.focus(); }catch(_e){} }, 40);
-
-  function actualizarSeleccion(d){
-    selActual = d;
-    if(okBtn) okBtn.disabled = !d;
-    if(txtDom) txtDom.innerHTML = d ? '<b>Destino:</b> ' + esc(d.ruta) : 'Ninguna carpeta seleccionada';
-    if(nuevaBtn) nuevaBtn.style.display = (d && d.puedeCrear) ? 'inline-block' : 'none';
-    if(listaDom){
-      Array.prototype.forEach.call(listaDom.querySelectorAll('.arc-univ-item'), function(el){
-        el.classList.toggle('sel', d && el.getAttribute('data-univ-id') === d.id);
-      });
-    }
-  }
-
-  if(qInput){
-    qInput.oninput = function(){
-      if(listaDom) listaDom.innerHTML = renderTree(this.value);
-      actualizarSeleccion(selActual);
-    };
-  }
-
-  if(listaDom){
-    listaDom.onclick = function(ev){
-      var row = ev.target.closest('.arc-univ-item');
-      if(!row) return;
-      var uid = row.getAttribute('data-univ-id');
-      var match = null;
-      destinos.forEach(function(d){ if(d.id === uid) match = d; });
-      if(match) actualizarSeleccion(match);
-    };
-  }
-
-  if(nuevaBtn){
-    nuevaBtn.onclick = function(){
-      if(!selActual || !selActual.puedeCrear) return;
-      var padreRef = selActual.miaId || (selActual.secClave ? 's:' + selActual.secClave : '');
-      preguntar('Nueva subcarpeta en «' + selActual.t + '»', 'Se crea aquí y en la app móvil.', { etiqueta:'Nombre de la subcarpeta', maximo:60, minimo:2 }).then(function(nom){
-        if(!nom) return;
-        dcMiasNueva(nom, padreRef).then(function(res){
-          toast('Listo: Subcarpeta «' + String(nom).trim() + '» creada.');
-          destinos = arcDestinosArbol(excluirId);
-          if(listaDom) listaDom.innerHTML = renderTree(qInput ? qInput.value : '');
-          var nuevoMatch = null;
-          destinos.forEach(function(d){ if(d.t === String(nom).trim()) nuevoMatch = d; });
-          if(nuevoMatch) actualizarSeleccion(nuevoMatch);
-        }).catch(function(err){
-          toast(typeof err === 'string' && err !== 'nada' ? err : 'No se pudo crear la subcarpeta.');
+  var cuerpo='<div class="campo"><label for="arcu-q">Buscar una carpeta en cualquier sector</label><input type="search" id="arcu-q" autocomplete="off" placeholder="Ej.: Medio Ambiente › Noviembre, RISST, Permisos…"></div>'+
+    '<div class="arcu-l" id="arcu-l" role="listbox" aria-label="Carpetas de destino">'+lista()+'</div>'+
+    '<div class="arcu-pie"><span id="arcu-dest" class="ayuda">'+(modoC ? 'Elige el sector o la carpeta a la que va.' : 'Elige la carpeta a la que van.')+'</span>'+
+      '<button type="button" class="bt sec chico" id="arcu-nueva" hidden>＋ Nueva subcarpeta aquí</button></div>'+
+    '<div class="dc-extra campo" id="arcu-ex" hidden></div>'+
+    '<div class="campo" id="arcu-mes-c" hidden><label for="arcu-imes">Mes del informe</label><select id="arcu-imes">'+_arcMesesOpc()+'</select></div>'+
+    (modoC ? '' : '<p class="arc-mv-nota">A los escaneos van PDF y fotos; a «Fotos de obra», solo fotos.</p>')+'<div class="msg" id="arcu-msg"></div>';
+  abrirHoja(op.titulo || 'Mover a…', op.sub || 'A cualquier carpeta de la obra', cuerpo, '<button type="button" class="bt" id="arcu-ok" disabled>📂 Mover aquí</button>', { sinFoco:true, ancha:true });
+  _arcuCss();
+  var L=$('arcu-l');
+  var pinta=function(){ L.innerHTML=lista(); };
+  /* las carpetas del informe mensual llegan con informe.js (se trae una vez) */
+  if(!modoC && !_arcInf8().length && typeof cargarInforme==='function') cargarInforme().then(function(){
+    if(!$('arcu-l') || !_arcInf8().length) return; D=arcDestinos(); if(sel) D.forEach(function(x){ if(x.id===sel.id) sel=x; }); pinta(); }, function(){});
+  /* dónde se puede crear una subcarpeta: un sector, «Mis carpetas», una sección o una propia (hasta 3 niveles) */
+  var ctx=null;
+  var creaEn=function(d){ return !!d && dcMiasPuede() && (d.tipo==='sector' || d.tipo==='raiz' || d.tipo==='secc' || (d.tipo==='mia' && (d.nivel||1)<DC_MIAS_NIVELES && !bloqueada(d))); };
+  var nueva=function(d){ ctx=creaEn(d) ? d : null; var b=$('arcu-nueva'); b.hidden=!ctx; if(ctx) b.textContent='＋ Nueva subcarpeta en «'+ctx.t+'»'; };
+  var elige=function(d){
+    sel=d; pinta();
+    $('arcu-ok').disabled=!d;
+    $('arcu-dest').innerHTML=d ? '<b>Destino:</b> '+esc(d.ruta) : '';
+    nueva(d);
+    var ex=$('arcu-ex'), c=d && d.c;
+    st=_dcEstado(c ? c.h : '');
+    if(ex){ var eh=(!modoC && c && c.tipo) ? _dcExtra('arcu', st) : ''; ex.innerHTML=eh; ex.hidden=!eh; if(eh) _dcCablearExtra('arcu', st); }
+    $('arcu-mes-c').hidden=!(d && d.tipo==='inf');
+    var m=$('arcu-msg'); m.className='msg'; m.textContent='';
+  };
+  $('arcu-q').oninput=function(){ q=this.value; pinta(); };
+  setTimeout(function(){ try{ $('arcu-q').focus(); }catch(_f){} }, 40);
+  L.onclick=function(ev){
+    var b=ev.target.closest('[data-u]'); if(!b) return;
+    var id=b.getAttribute('data-u'), d=null; D.forEach(function(x){ if(x.id===id) d=x; });
+    if(!d) return;
+    if(!vale(d)){ var m=$('arcu-msg'); m.className='msg mal'; nueva(d);
+      m.textContent=bloqueada(d) ? 'No se puede mover una carpeta dentro de sí misma ni de una de las suyas.' : (modoC ? (miaId ? 'Ahí no: así quedarían más de '+DC_MIAS_NIVELES+' niveles de carpetas, o no es una carpeta propia.' : 'Esta carpeta es de las de siempre: se cambia de sector, no se mete dentro de otra.') : 'Elige una carpeta de adentro'+(ctx ? ', o crea una aquí.' : '.'));
+      return; }
+    elige(d);
+  };
+  $('arcu-nueva').onclick=function(){
+    var c0=ctx; if(!c0) return;
+    var p=c0.tipo==='mia' ? c0.mia : (c0.tipo==='secc' ? c0.id : ''), cat=c0.tipo==='sector' ? c0.cat : '';
+    preguntar('Nueva carpeta en «'+c0.t+'»', 'Sale también en la app, en «Mis carpetas».', { etiqueta:'Nombre', maximo:60, minimo:2, corto:'Escribe el nombre de la carpeta.' }).then(function(n){
+      if(!n) return;
+      dcMiasNueva(n, p).then(function(nid){
+        return (cat ? arcSectorPoner('mia-'+nid, cat) : Promise.resolve()).then(function(){
+          D=arcDestinos(); v=_dcMiasValor(DC.mias); var d=null; D.forEach(function(x){ if(x.id==='mia-'+nid) d=x; });
+          q=''; $('arcu-q').value=''; if(d && vale(d)) elige(d); else pinta();
+          toast('Carpeta «'+String(n).trim()+'» creada.');
         });
-      });
-    };
-  }
-
-  if($('arc-univ-cancel')) $('arc-univ-cancel').onclick = cerrarHoja;
-
-  if(okBtn){
-    okBtn.onclick = function(){
-      if(!selActual) return;
-      alElegir(selActual, okBtn, msgDom);
-    };
-  }
+      }, function(e){ toast(typeof e==='string' && e!=='nada' ? e : 'No se pudo crear la carpeta. Revisa tu conexión.'); });
+    });
+  };
+  $('arcu-ok').onclick=function(){
+    if(!sel) return;
+    var ex={ st:st };
+    if(sel.tipo==='inf') ex.mes=String(($('arcu-imes') || {}).value || '');
+    op.alElegir(sel, ex, this, $('arcu-msg'));
+  };
 }
-
-function arcMoverCarpeta(carpetaId){
-  /* 24/11/2026 · arreglo: «Mover carpeta» vuelve a la hoja que funciona (con sus documentos y subcarpetas) */
-  var X = typeof dcMiasDe === 'function' ? dcMiasDe(carpetaId) : null;
-  if(!X){ toast('No se encontró la carpeta.'); return; }
-  var D=dcMiasDestinos(X.id);
-  abrirHoja('Mover · '+X.t, 'Con sus documentos y sus subcarpetas (hasta '+DC_MIAS_NIVELES+' niveles)', '<div class="campo"><label for="arc-mover-a">A dónde</label><select id="arc-mover-a">'+
-    D.map(function(d){ return '<option value="'+esc(d.p)+'"'+(d.p===(X.p || '') ? ' selected' : '')+'>'+esc(d.t)+'</option>'; }).join('')+'</select></div>',
-    '<button type="button" class="bt" id="arc-mover-ok">Mover aquí</button>', {sinFoco:true});
-  $('arc-mover-ok').onclick=function(){ dcMiasReubicar(X.id, $('arc-mover-a').value).then(function(){ cerrarHoja(); arcPintar(); toast('Listo: «'+X.t+'» se movió.'); },
-    function(e){ if(e==='nada'){ cerrarHoja(); return; } toast(typeof e==='string' ? e : 'No se pudo mover. Revisa tu conexión.'); }); };
+function _arcuCss(){
+  if(document.getElementById('arcu-css')) return;
+  var s=document.createElement('style'); s.id='arcu-css';
+  s.textContent='.arcu-l{max-height:46vh; overflow:auto; border:1px solid var(--raya); border-radius:10px; padding:4px; background:var(--panel)}'+
+    '.arcu-i{display:flex; align-items:baseline; justify-content:flex-start; gap:8px; min-height:0; line-height:1.35; width:100%; text-align:left; border:0; background:none; font:inherit; font-size:13.5px; color:var(--texto); padding:7px 10px; border-radius:8px; cursor:pointer}'+
+    '.arcu-l .arcu-i{margin:0}.arcu-i:hover{background:var(--fondo)}.arcu-l .arcu-i.cab{font-weight:700; margin-top:6px}.arcu-l .arcu-i.cab:first-child{margin-top:0}.arcu-i.on{background:var(--azul-f); color:var(--azul); font-weight:600}'+
+    '.arcu-i[aria-disabled="true"]{color:var(--gris)}.arcu-i.cab[aria-disabled="true"]{color:var(--texto)}.arcu-i.bl{opacity:.5}.arcu-i>span{flex:0 1 auto; text-align:left}.arcu-i small{margin-left:auto; color:var(--gris); font-size:11.5px; font-weight:400; text-align:right}'+
+    '.arcu-pie{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin:10px 0 4px}';
+  document.head.appendChild(s);
 }
-
+/* el sector de una carpeta (docs_orden): 'sig'|'ma'|'rae'|'so'|'seg', 'aparte' o '' (la de fábrica) */
+function arcSectorPoner(key, cat){
+  return arcOrdenTraer().then(function(o5){
+    var w={ v:1, m:JSON.parse(JSON.stringify(o5.m||{})), n:JSON.parse(JSON.stringify(o5.n||{})), a:JSON.parse(JSON.stringify(o5.a||{})), o:JSON.parse(JSON.stringify(o5.o||{})) };
+    if(cat) w.m[key]=cat; else delete w.m[key];
+    delete w.o[key];
+    return estadoEscribirP(ARC_ORDEN_CLAVE, w).then(function(){ ARC.orden5=w; });
+  });
+}
+/* «Mover a…» de los archivos elegidos */
 function arcMover(ids){
   var L=ids.map(arcFila).filter(function(f){ return f && arcInfo(f).editable; });
   if(!L.length){ toast('Eso no se puede mover desde aquí.'); return; }
-  var st=_dcEstado(''), uno=(L.length===1);
-  var cuerpo=(uno ? '<p class="ayuda" style="margin:0 0 12px">Ahora está en «'+esc(arcInfo(L[0]).t)+'». Se mueve aquí y en la app de todo el equipo.</p>'
-                  : '<p class="ayuda" style="margin:0 0 12px">'+L.length+' archivos. Se mueven aquí y en la app de todo el equipo.</p>')+
-    '<div class="campo"><label for="arcmv-c">Carpeta</label>'+_arcSelDestino('arcmv-c', '')+'</div>'+
-    '<div class="dc-extra campo" id="arcmv-ex" hidden></div>'+
-    '<div class="campo" id="arcmv-mes-c" hidden><label for="arcmv-mes">Mes del informe</label><select id="arcmv-mes">'+_arcMesesOpc()+'</select></div>'+
-    '<p class="arc-mv-nota">A los escaneos van PDF y fotos; a «Fotos de obra», solo fotos.</p>'+
-    '<div class="msg" id="arcmv-msg"></div>';
-  abrirHoja(uno ? 'Mover «'+(L[0].nombre||'documento')+'»' : 'Mover '+L.length+' archivos', 'A otra carpeta', cuerpo, '<button type="button" class="bt" id="arcmv-si">Mover</button>', {sinFoco:true});
-  var go=function(){ _dcCablear('arcmv', st, function(){ var m=$('arcmv-msg'); if(m){ m.className='msg'; m.textContent=''; }
-    var mc=$('arcmv-mes-c'); if(mc) mc.hidden=String(st.h||'').indexOf(ARC_INF_PRE+'@')!==0; }); };
+  var uno=(L.length===1);
+  var go=function(){ arcElegirDestino({ titulo:uno ? 'Mover «'+(L[0].nombre||'documento')+'»' : 'Mover '+L.length+' archivos', sub:uno ? 'Ahora está en «'+arcInfo(L[0]).t+'». Se mueve aquí y en la app de todo el equipo.' : 'Se mueven aquí y en la app de todo el equipo.',
+    alElegir:function(d, ex, b, m){
+      var dest=d.id, r={ h:'' };
+      if(d.tipo==='inf'){ if(!/^\d{4}-\d{2}$/.test(ex.mes||'')){ m.className='msg mal'; m.textContent='Elige el mes del informe.'; return; } dest=ARC_INF_PRE+ex.mes+dest.slice(ARC_INF_PRE.length+1); }
+      else if(d.tipo==='mia') r={ h:dest };
+      else if(d.tipo==='doc' && d.id!=='fotos'){ ex.st.h=d.c.h; r=_dcHoja(ex.st); if(r.err){ m.className='msg mal'; m.textContent=r.err; return; } dest=r.h; }
+      var plan=L.map(function(f){ return { f:f, x:_arcMoverUna(f, dest, r) }; });
+      var van=plan.filter(function(p){ return p.x.cambio; }), saltan=plan.filter(function(p){ return p.x.salta; });
+      var etq=d.ruta;
+      if(!van.length){ m.className='msg mal'; m.textContent=saltan.length ? 'No se movió nada: '+saltan[0].x.salta+'.' : 'Ya '+(uno?'está':'están')+' en «'+etq+'».'; return; }
+      b.disabled=true; m.className='msg gris'; m.textContent='Moviendo…';
+      _arcMoverLote(van).then(function(R){
+        ARC.sel=ARC.sel.filter(function(id){ return !R.movidos[id]; });
+        return (R.ok && r.nuevo ? dcSubcAgregar([r.nuevo]).catch(function(){ return false; }) : Promise.resolve()).then(function(){
+          if(R.ok) toast(R.ok===1 ? 'Movido a «'+etq+'»' : R.ok+' archivos movidos a «'+etq+'»');
+          var qx=[];
+          if(saltan.length) qx.push(saltan.length+' no '+(saltan.length===1?'va':'van')+' ahí ('+saltan[0].x.salta+')');
+          if(R.mal) qx.push(R.mal+' no se '+(R.mal===1?'pudo':'pudieron')+' mover: revisa tu conexión o tu permiso en esta obra');
+          if(qx.length){ b.disabled=false; b.textContent='Cerrar'; b.onclick=cerrarHoja; m.className='msg mal'; m.textContent=(R.ok ? 'Se movieron '+R.ok+'. ' : '')+qx.join('. ')+'.'; }
+          else cerrarHoja();
+          if(R.ok){ arcPintar(); if(VISTA.recargar) VISTA.recargar(true); }
+        });
+      });
+    } }); };
   if(DC.subc) go(); else dcSubcTraer().then(go, go);
-  setTimeout(function(){ try{ $('arcmv-c').focus(); }catch(_f){} }, 30);
-  $('arcmv-si').onclick=function(){
-    var b=this, m=$('arcmv-msg'), dest=String(st.h||''), r={h:''};
-    if(dest.indexOf(ARC_INF_PRE+'@')===0) dest=ARC_INF_PRE+String(($('arcmv-mes')||{}).value||'')+dest.slice(ARC_INF_PRE.length+1);
-    if(!dest){ m.className='msg mal'; m.textContent='Elige la carpeta.'; return; }
-    if(dest.indexOf('esc:')!==0 && dest!=='fotos' && dest.indexOf('inf8:')!==0){ r=_dcHoja(st); if(r.err){ m.className='msg mal'; m.textContent=r.err; return; } }
-    var plan=L.map(function(f){ return {f:f, x:_arcMoverUna(f, dest, r)}; });
-    var van=plan.filter(function(p){ return p.x.cambio; }), saltan=plan.filter(function(p){ return p.x.salta; });
-    var etq=dest.indexOf('esc:')===0 ? 'Escaneos · '+_arcClaseEt(dest.slice(4)) : (dest==='fotos' ? 'Fotos de obra' : (dest.indexOf('inf8:')===0 ? _arcInfRutaT(dest) : dcCarpetaDe(r.h).t));
-    if(!van.length){ m.className='msg mal'; m.textContent=saltan.length ? 'No se movió nada: '+saltan[0].x.salta+'.' : 'Ya '+(uno?'está':'están')+' en «'+etq+'».'; return; }
-    b.disabled=true; m.className='msg gris'; m.textContent='Moviendo…';
+}
+/* de una sola vez en el servidor (todo o nada); sin el SQL, archivo por archivo como antes */
+function _arcMoverLote(van){
+  var aplica=function(p){ for(var k in p.x.cambio) p.f[k]=p.x.cambio[k]; delete p.f._arc; };
+  var uno=function(){
     var movidos={};
-    _arcDeAPocos(van, 4, function(p){
+    return _arcDeAPocos(van, 4, function(p){
       return sbPatch('sst_doc?id=eq.'+_enc(p.f.id), p.x.cambio).then(function(rows){
         if(Array.isArray(rows) && !rows.length) return Promise.reject('sin_fila');
-        for(var k in p.x.cambio) p.f[k]=p.x.cambio[k]; delete p.f._arc;
-        movidos[String(p.f.id)]=1;
+        aplica(p); movidos[String(p.f.id)]=1;
       });
-    }).then(function(res){
-      var ok=res.filter(function(x){ return x.ok; }).length, mal=res.length-ok;
-      /* lo que se movió deja de estar elegido (ya no está donde se lo eligió) */
-      ARC.sel=ARC.sel.filter(function(id){ return !movidos[id]; });
-      return (ok && r.nuevo ? dcSubcAgregar([r.nuevo]).catch(function(){ return false; }) : Promise.resolve()).then(function(){
-        if(ok) toast(ok===1 ? 'Movido a «'+etq+'»' : ok+' archivos movidos a «'+etq+'»');
-        var q=[];
-        if(saltan.length) q.push(saltan.length+' no '+(saltan.length===1?'va':'van')+' ahí ('+saltan[0].x.salta+')');
-        if(mal) q.push(mal+' no se '+(mal===1?'pudo':'pudieron')+' mover: revisa tu conexión o tu permiso en esta obra');
-        if(q.length){ b.disabled=false; b.textContent='Cerrar'; b.onclick=cerrarHoja; m.className='msg mal'; m.textContent=(ok ? 'Se movieron '+ok+'. ' : '')+q.join('. ')+'.'; }
-        else cerrarHoja();
-        if(ok){ arcPintar(); if(VISTA.recargar) VISTA.recargar(true); }
-      });
-    });
+    }).then(function(res){ var ok=res.filter(function(x){ return x.ok; }).length; return { ok:ok, mal:res.length-ok, movidos:movidos }; });
   };
+  if(van.length>500 || typeof sbRpc!=='function') return uno();
+  var cambios=van.map(function(p){ var c={ id:String(p.f.id), hoja:p.x.cambio.hoja || p.f.hoja }; if('nota' in p.x.cambio) c.nota=p.x.cambio.nota; return c; });
+  return sbRpc('sst_docs_mover_lote', { p_emp:YO.obra.id, p_cambios:cambios }).then(function(j){
+    if(j && j.ok){ var mv={}; van.forEach(function(p){ aplica(p); mv[String(p.f.id)]=1; }); return { ok:van.length, mal:0, movidos:mv }; }
+    if(j && j.motivo) return { ok:0, mal:van.length, movidos:{} };
+    return uno();
+  }, function(e){ return (e===404 || e===400) ? uno() : { ok:0, mal:van.length, movidos:{} }; });
+}
+/* qué carpeta abierta se puede mover: las propias, los escaneos por tipo y las de siempre (no el informe ni «Todo») */
+function _arcCarpetaMovible(k){
+  k=String(k||'');
+  if(/^mia-/.test(k)) return dcMiasPuede() && !!dcMiasDe(k.slice(4));
+  if(/^esc:/.test(k)) return true;
+  if(!k || k==='*' || /^(g:|inf:|inf8:)/.test(k)) return false;
+  return _dcCarpetas().some(function(c){ return c.h===k && !c.mia; });
+}
+/* «📂 Mover carpeta»: una propia (con sus documentos y sus subcarpetas) o cualquiera a otro sector */
+function arcMoverCarpeta(clave){
+  clave=String(clave||''); if(!/^mia-|^esc:|:/.test(clave) && typeof dcMiasDe==='function' && dcMiasDe(clave)) clave='mia-'+clave;
+  var X=/^mia-/.test(clave) ? dcMiasDe(clave.slice(4)) : null;
+  var nom=X ? X.t : _arcNombreCarpeta(clave, ARC._A || { grupos:[] });
+  if(/^mia-/.test(clave) && !X){ toast('No se encontró la carpeta.'); return; }
+  var m5=(ARC.orden5 && ARC.orden5.m) || {}, aqui=m5[clave] ? (m5[clave]==='aparte' ? 'aparte' : 'cat:'+m5[clave]) : (X ? (X.p ? (String(X.p).indexOf('s:')===0 ? X.p : 'mia-'+X.p) : 'mias') : '');
+  if(!X && !aqui){ var cf=_arcCatClave(/^esc:/.test(clave) ? { k:'esc', key:clave, esc:{ clase:clave.slice(4) } } : { k:'doc', key:clave, g:(_dcCarpeta(clave)||{}).g }); aqui=cf ? 'cat:'+cf : 'aparte'; }
+  arcElegirDestino({ modo:'carpeta', clave:clave, aqui:aqui, titulo:'Mover carpeta «'+nom+'»', sub:X ? 'Con sus documentos y sus subcarpetas, aquí y en la app' : 'A otro sector: sus documentos van con ella',
+    alElegir:function(d, ex, b, m){
+      var padre=null, sector=null;
+      if(d.tipo==='sector'){ sector=d.cat; if(X) padre=''; }
+      else if(d.tipo==='aparte'){ sector='aparte'; if(X) padre=''; }
+      else if(d.tipo==='raiz'){ padre=''; sector=''; }
+      else if(d.tipo==='secc'){ padre=d.id; sector=''; }
+      else if(d.tipo==='mia'){ padre=d.mia; sector=''; }
+      b.disabled=true; m.className='msg gris'; m.textContent='Moviendo…';
+      var listo=function(){ cerrarHoja(); arcPintar(); if(VISTA.recargar) VISTA.recargar(true); toast('Listo: «'+nom+'» se movió a «'+d.ruta+'».'); };
+      var falla=function(e){ b.disabled=false; m.className='msg mal'; m.textContent=typeof e==='string' && e!=='nada' ? e : 'No se pudo mover. Revisa tu conexión o tu permiso en esta obra.'; };
+      var MOT={ dentro_de_si_misma:'No se puede mover una carpeta dentro de sí misma ni de una de las suyas.', niveles:'Así quedarían más de '+DC_MIAS_NIVELES+' niveles de carpetas.',
+        nombre_repetido:'Ahí ya hay una carpeta con ese nombre.', no_esta:'Esa carpeta ya no está.' };
+      /* sin el SQL: lo de siempre (el árbol de las propias y el orden de las 5) */
+      var antes=function(){ return (X && padre!==null ? dcMiasReubicar(X.id, padre).catch(function(e){ if(e==='nada') return; throw e; }) : Promise.resolve()).then(function(){ return sector!==null ? arcSectorPoner(clave, sector) : null; }); };
+      sbRpc('sst_carpeta_mover', { p_emp:YO.obra.id, p_clave:clave, p_padre:padre, p_sector:sector }).then(function(j){
+        if(j && j.ok) return Promise.all([dcMiasTraer(), arcOrdenTraer()]).then(listo);
+        if(j && j.motivo) return falla(MOT[j.motivo] || '');
+        return antes().then(listo, falla);
+      }, function(e){ if(e===404 || e===400) antes().then(listo, falla); else falla(''); });
+    } });
 }
 
 /* ══ ENVIAR AL PANEL FOTOGRÁFICO DEL INFORME ═══════════════════════════════════════════════════════════════════ */

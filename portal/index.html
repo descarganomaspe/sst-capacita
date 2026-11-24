@@ -4278,6 +4278,10 @@ function fotoRegLimpia(d){
   f.de = t(d.de, 60) || 'sub';
   if(d.por) f.por = t(d.por, 60);
   f.t = +d.t || Date.now();
+  /* 24/11/2026 · PANEL-FOTOS · la sección del panel fotográfico del informe (a-f), su orden dentro de ella y si se quitó del panel */
+  if(/^[a-f]$/.test(String(d.sec || ''))) f.sec = String(d.sec);
+  if(+d.o > 0) f.o = +d.o;
+  if(d.off) f.off = 1;
   return f;
 }
 /* las filas de sst_doc → [{ id, url, d }], las más viejas primero (el orden en que pasaron) */
@@ -4293,7 +4297,43 @@ function fotoRegFilas(rows){
   });
   return out.sort(function(a, b){ return (a.d.fecha + a.d.t).localeCompare(b.d.fecha + b.d.t); });
 }
-function fotoRegDelMes(filas, mes){ return (filas || []).filter(function(x){ return String(x.d.fecha).slice(0, 7) === mes; }); }
+function fotoRegDelMes(filas, mes){ return (filas || []).filter(function(x){ return String(x.d.fecha).slice(0, 7) === mes && !x.d.off; }); }
+/* ══ 24/11/2026 · PANEL-FOTOS · EL PANEL FOTOGRÁFICO DEL INFORME, POR SECCIONES (las del formato Excel) ══════════════
+   Marcelo (requerimiento «Registro fotográfico para informe»): cada foto va a una sección del panel —a. Capacitación,
+   b. Control operacional, c. Emergencias, d. EPP y EPC, e. Bienestar, salud y difusión, f. Medio ambiente (el panel
+   ambiental, en su propio Excel)—, con su descripción y su mes. Es la misma foto del registro fotográfico (sst_doc,
+   hoja «foto-reg»): la sección va en su nota (sec); sin ella, sale de su tema. Su orden dentro de la sección (o) y si
+   se quitó del panel (off) también. Nada se copia: la foto es la misma. */
+var PF_SECC = [
+  { k: 'a', n: 'a. Capacitación', d: 'Reunión de inicio de jornada, capacitaciones, pausas activas y dinámicas' },
+  { k: 'b', n: 'b. Control Operacional', d: 'Inspecciones, señalización, delimitación y equipos' },
+  { k: 'c', n: 'c. Preparación y Respuesta a Emergencias', d: 'Estaciones de emergencia, extintores, botiquín y simulacros' },
+  { k: 'd', n: 'd. EPP y EPC', d: 'Uso de EPP por puesto y protecciones colectivas' },
+  { k: 'e', n: 'e. Bienestar, Salud Ocupacional y Difusión', d: 'Periódico mural, boletines, comedor y orden' },
+  { k: 'f', n: 'f. Medio Ambiente', d: 'Batería de residuos (NTP 900.058), almacén MATPEL, MSDS, SGA, NFPA y kit antiderrame', amb: 1 }
+];
+var PF_CAT_SEC = { charlas: 'a', pausas: 'a', senal: 'b', riesgo: 'b', equipos: 'b', otros: 'b', emergencia: 'c', simulacro: 'c', epp: 'd', bienestar: 'e', salud: 'e', orden: 'e', ambiente: 'f' };
+/* el tema que toma una foto que se manda solo con su sección (para el registro y los informes de salud y ambiente) */
+var PF_SEC_CAT = { a: 'charlas', b: 'senal', c: 'emergencia', d: 'epp', e: 'bienestar', f: 'ambiente' };
+function pfSecc(k){ for(var i = 0; i < PF_SECC.length; i++) if(PF_SECC[i].k === k) return PF_SECC[i]; return PF_SECC[1]; }
+/* la sección de una foto del registro: la que se le puso; si no, la de su tema */
+function pfSecDe(d, L){
+  d = d || {};
+  if(/^[a-f]$/.test(String(d.sec || ''))) return d.sec;
+  var k = String(d.cat || '');
+  if(/^amb_/.test(k)) return 'f';
+  if(PF_CAT_SEC[k]) return PF_CAT_SEC[k];
+  var c = fotoCatDe(L || [], k);
+  return c.amb ? 'f' : (c.sal ? 'e' : 'b');
+}
+/* el orden dentro de la sección: el que se le dio (o) o el de cuando entró */
+function pfOrdenDe(x){ return (x && x.d && (+x.d.o || +x.d.t)) || 0; }
+/* las fotos del mes, sección por sección (todas las secciones, aunque estén vacías) */
+function pfPanel(del, L){
+  return PF_SECC.map(function(s){
+    return { s: s, fotos: (del || []).filter(function(x){ return pfSecDe(x.d, L) === s.k; }).sort(function(a, b){ return pfOrdenDe(a) - pfOrdenDe(b); }) };
+  });
+}
 /* cuántas por tema: { clave: n } */
 function fotoCatCuenta(filas){ var c = {}; (filas || []).forEach(function(x){ c[x.d.cat] = (c[x.d.cat] || 0) + 1; }); return c; }
 /* <<< FOTO-REG-FIN >>> */
@@ -4596,7 +4636,7 @@ var AREAS = [
   { id:'a-capac',    n:'Capacitación',           ic:'🎓', v:['prog', 'caphechas', 'charlas', 'induccion', 'instructivo', 'constancias', 'cump', 'matriz', 'registro', 'encuestas', 'campanas'] },
   { id:'a-epp',      n:'EPP',                    ic:'⛑',  v:['kardex', 'epp', 'eppobra', 'pedidos', 'reqs'] },
   { id:'a-riesgos',  n:'Riesgos',                ic:'📋', v:['mapas', 'riesgos-obra', 'peligros-sitio', 'ergo-video', 'ats', 'iperc-lb', 'pets', 'caida', 'alto', 'quimicos', 'ergo'] },
-  { id:'a-inspec',   n:'Inspecciones y equipos', ic:'🔎', v:['insp', 'equipos', 'inspeq', 'bloqueos'] },
+  { id:'a-inspec',   n:'Inspecciones y equipos', ic:'🔎', v:['insp', 'antesdespues', 'equipos', 'inspeq', 'bloqueos'] },
   { id:'a-reportes', n:'Reportes',               ic:'🚨', v:['reportes', 'buenas', 'denuncias', 'pulso'] },
   { id:'a-comite',   n:'Comité y emergencias',   ic:'🏛', v:['comite', 'cargos', 'quien', 'frentes', 'auxilios', 'simulacros'] },
   { id:'a-ambiente', n:'Medio ambiente',         ic:'🌱', v:['ambiente', 'huella'] },
@@ -4613,7 +4653,7 @@ var PESTANAS = {
   matriz:'Matriz', registro:'Seguimiento', encuestas:'Encuestas', campanas:'Campañas',
   os:'Para Gerencia', kardex:'Entrega de EPP', epp:'Entrega de EPP', eppobra:'EPP de la obra', pedidos:'Pedidos de la gente', reqs:'Requerimientos',
   mapas:'Mapas de obra', 'riesgos-obra':'Anticipar, mapa y simulador', 'peligros-sitio':'Peligros del sitio (prototipo)', 'ergo-video':'Ergonomía por video (REBA)', ats:'ATS e IPERC', 'iperc-lb':'IPERC de línea base', pets:'PETS', quimicos:'Productos químicos', ergo:'Ergonomía',
-  insp:'Inspecciones', equipos:'Equipos y herramientas', inspeq:'Inspección diaria', bloqueos:'Bloqueo y etiquetado',
+  insp:'Inspecciones', antesdespues:'Antes y Después', equipos:'Equipos y herramientas', inspeq:'Inspección diaria', bloqueos:'Bloqueo y etiquetado',
   reportes:'Actos y condiciones', buenas:'Buenas prácticas', denuncias:'Denuncias', pulso:'Pulso de seguridad', ambiente:'Medio ambiente', huella:'Huella de carbono',
   aud:'Carpeta de auditoría', cert:'Certificaciones', 'aud-sala':'Sala con tu consultor', 'aud-sim':'Simulemos una auditoría', 'aud-int':'Auditoría interna', 'aud-acc':'Hallazgos y acciones', 'aud-rev':'Revisión por la dirección',
   comite:'Comité de SST', cargos:'Brigada y carteles', quien:'¿A quién acudo?', frentes:'Frentes de trabajo', simulacros:'Simulacros',
@@ -10620,7 +10660,7 @@ function vistaDocs(caja, modo){
 }
 /* 08/10/2026 · el archivo de la obra (archivo.js): carpetas, vista previa, cambiar el nombre, mover, descargar, quitar y
    unir en un PDF. Si no carga (sin conexión), la tabla de siempre. */
-var ARCHIVO_VER='bafd38ea50';                         /* lo pone armar.py: el hash de portal/archivo.js */
+var ARCHIVO_VER='1bee7187e3';                         /* lo pone armar.py: el hash de portal/archivo.js */
 var _ARC_CARGA=null;
 function cargarArchivo(){
   if(typeof arcPintar==='function') return Promise.resolve(true);
@@ -19119,6 +19159,8 @@ var V = {
            pintar:vistaEscaneos},
   den:    {id:'denuncias', g:'Canal de denuncia', ic:'🛡', n:'Denuncias', s:'Lo que la gente denunció sin nombre · se responde desde aquí', pintar:vistaDenuncias, tablas:[]},
   /* 11/11/2026 · los riesgos de la obra (../riesgos.js, el mismo de la app): anticipar, el mapa georreferenciado y el simulador */
+  /* 24/11/2026 · el registro de antes y después (portal/antes-despues.js): chat + reportes + inspecciones, en horizontal */
+  antesdespues:{id:'antesdespues', g:'Registros', ic:'📸', n:'Antes y Después', s:'Las observaciones del chat, los reportes y las inspecciones, con su foto de antes y de después: se eligen y salen en el registro horizontal (PDF o Excel)', pintar:vistaAD, tablas:['sst_reporte','sst_inspeccion']},
   mapas:{id:'mapas', g:'Registros', ic:'🗺', n:'Mapas de obra', s:'Riesgos, evacuación y protecciones colectivas: un plano por nivel, sus capas, la leyenda sola y la lámina con su código, revisión y firmas', pintar:vistaMapas, tablas:['sst_doc']},
   rieobra:{id:'riesgos-obra', g:'Indicadores', ic:'📈', n:'Anticipar, mapa y simulador', s:'Las tendencias de tu obra y los escenarios que se están armando, con su porqué y qué hacer hoy; el mapa de riesgos con las coordenadas de cada punto; y el simulador de accidentes. Con tus registros: cada alerta dice de dónde sale',
            pintar:function(caja){ cargando(caja); rieIr('vistaRiesgos', caja); }, tablas:['sst_reporte','sst_accidente','sst_doc']},
@@ -19252,7 +19294,7 @@ var VISTAS_LIDER = [
   {id:'personas', g:'Registros', ic:'☺', n:'Personal', s:'La gente de la obra, las fichas por confirmar y el estado de cada una', tablas:['sst_trabajador'], pintar:vistaPersonal},
   conGrupo(V.equipoSup, 'Registros'),
   conGrupo(V.cargos, 'Registros'), conGrupo(V.comite, 'Registros'), conGrupo(V.quien, 'Registros'), conGrupo(V.frentes, 'Registros'), conGrupo(V.auxilios, 'Registros'), conGrupo(V.tdm, 'Registros'),
-  V.reqs, V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.mapas, V.rieobra, V.peligrosSitio, V.ergoVideo, V.ats, V.ipercLb, V.pets, V.caida, V.alto, V.ergo, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.huella, V.docs, V.esc, V.util, V.qr, V.senales, V.formatos,
+  V.reqs, V.reportes, V.insp, V.antesdespues, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.mapas, V.rieobra, V.peligrosSitio, V.ergoVideo, V.ats, V.ipercLb, V.pets, V.caida, V.alto, V.ergo, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.huella, V.docs, V.esc, V.util, V.qr, V.senales, V.formatos,
   conGrupo(V.visitas, 'Registros'), conGrupo(V.tareo, 'Registros'),
   V.bol, V.noti,
   V.den, conGrupo(V.pulso, 'Registros'),
@@ -19279,7 +19321,7 @@ var VISTAS_SUP = [
   {id:'kardex',  g:'Registros', ic:'⛑', n:'Entrega de EPP', s:'El kardex con la firma de quien recibió, y cuánto sale mes a mes', pintar:vistaEPP, tablas:['sst_kardex']},
   V.pedidos, V.eppobra,
   V.reqs,
-  V.reportes, V.insp, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.huella, V.docs, V.esc, V.util, V.qr, V.senales, V.formatos,
+  V.reportes, V.insp, V.antesdespues, V.simulacros, V.campanas, V.equipos, V.inspeq, V.bloqueos, V.quim, V.cred, V.legajo, V.autor, V.emo, V.sctr, V.amon, V.buenas, V.ambiente, V.huella, V.docs, V.esc, V.util, V.qr, V.senales, V.formatos,
   V.visitas, V.tareo,
   V.bol, V.noti,
   V.acc, V.hh,
@@ -19753,7 +19795,7 @@ function cargarSenales(){
   return _SEN_CARGA;
 }
 /* 9/11/2026 · los formatos en blanco: formatos.js (el motor de la app, sus datos y la pantalla). Se pide con el jsPDF */
-var FORMATOS_VER='b488dbd55a';   /* lo pone herr/huellas.py: el hash de portal/formatos.js */
+var FORMATOS_VER='56ff74b197';   /* lo pone herr/huellas.py: el hash de portal/formatos.js */
 var _FMT_CARGA=null;
 function cargarFormatos(){
   if(typeof fmtVista==='function' && typeof FMT==='object') return Promise.resolve(true);
@@ -19837,9 +19879,9 @@ var STK_VER='bde6889181';                /* lo pone armar.py: el hash de portal/
 var AUT_VER='ac50ae2c0f';                /* lo pone armar.py: el hash de portal/autoriza.js (la autorización del grupo sanguíneo) */
 var _AUT_CARGA=null;
 /* 08/10/2026 · los exámenes médicos ocupacionales (portal/emo.js, con lo común de ../emo-base.js adentro) */
-var INFORME_VER='3fef0fdec2';                                 /* lo pone armar.py: el hash de portal/informe.js */
+var INFORME_VER='2b4ad0857a';                                 /* lo pone armar.py: el hash de portal/informe.js */
 /* 19/10/2026 · lote 19 · el registro fotográfico del mes (portal/fotos.js) */
-var FOTOS_VER='9c70ca1fb0';                                               /* lo pone herr/huellas.py: el hash de portal/fotos.js */
+var FOTOS_VER='712df09f06';                                               /* lo pone herr/huellas.py: el hash de portal/fotos.js */
 var _FOT_CARGA=null;
 function cargarFotoRegP(){
   if(typeof vistaFotoReg==='function') return Promise.resolve(true);
@@ -19995,6 +20037,17 @@ function cargarMapas(){
   return _MAPAS_CARGA;
 }
 function vistaMapas(caja){ cargando(caja); cargarMapas().then(function(){ vistaMapasObra(caja); }, function(){ fallo(caja, 0); }); }
+/* 24/11/2026 · Antes y Después (portal/antes-despues.js) */
+var ANTDES_VER='800661659c';   /* lo pone herr/huellas.py: el hash de portal/antes-despues.js */
+var _ANTDES_CARGA=null;
+function cargarAntesDespues(){
+  if(typeof vistaAntesDespues==='function') return Promise.resolve(true);
+  if(_ANTDES_CARGA) return _ANTDES_CARGA;
+  _ANTDES_CARGA=_cargarJS('antes-despues.js?v='+(ANTDES_VER||'0'), function(){ return typeof vistaAntesDespues==='function'; });
+  _ANTDES_CARGA.catch(function(){ _ANTDES_CARGA=null; });
+  return _ANTDES_CARGA;
+}
+function vistaAD(caja){ cargando(caja); cargarAntesDespues().then(function(){ vistaAntesDespues(caja); }, function(){ fallo(caja, 0); }); }
 var CAMPOAPP_VER='59e96557fa';   /* lo pone armar.py: el hash de portal/campo-app.js */
 var _CAMPO_CARGA=null, _CAMPOAPP_CARGA=null;
 function cargarCampo(){

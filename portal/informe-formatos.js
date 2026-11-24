@@ -215,6 +215,15 @@
           var imObj = libro.imagenes[imRef.imgIdx];
           var relId = 'rId' + (j + 1);
           dRels += '<Relationship Id="' + relId + '" Target="../media/image' + (imRef.imgIdx + 1) + '.' + imObj.ext + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"/>';
+          /* 24/11/2026 · PANEL-FOTOS · con su tamaño (cx, cy en EMU): encajada y centrada en su cuadro, sin deformarse */
+          if(imRef.cx && imRef.cy){
+            anchors += '<xdr:oneCellAnchor><xdr:from><xdr:col>' + imRef.c1 + '</xdr:col><xdr:colOff>' + (imRef.dx || 0) + '</xdr:colOff><xdr:row>' + imRef.r1 + '</xdr:row><xdr:rowOff>' + (imRef.dy || 0) + '</xdr:rowOff></xdr:from>' +
+              '<xdr:ext cx="' + imRef.cx + '" cy="' + imRef.cy + '"/>' +
+              '<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="' + (j + 2) + '" name="Foto ' + (j + 1) + '"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>' +
+              '<xdr:blipFill><a:blip r:embed="' + relId + '"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>' +
+              '<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + imRef.cx + '" cy="' + imRef.cy + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>';
+            return;
+          }
           anchors += '<xdr:twoCellAnchor>' +
             '<xdr:from><xdr:col>' + imRef.c1 + '</xdr:col><xdr:colOff>38100</xdr:colOff><xdr:row>' + imRef.r1 + '</xdr:row><xdr:rowOff>38100</xdr:rowOff></xdr:from>' +
             '<xdr:to><xdr:col>' + imRef.c2 + '</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>' + imRef.r2 + '</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>' +
@@ -234,7 +243,11 @@
       zip.file('xl/worksheets/sheet' + sNum + '.xml',
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
         '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
-        colsXml + '<sheetData>' + sheetData + '</sheetData>' + mergesXml + drawingTag + '</worksheet>');
+        /* 24/11/2026 · PANEL-FOTOS · la hoja que se imprime en una página de ancho (h.ajustar) */
+        (h.ajustar ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' : '') +
+        colsXml + '<sheetData>' + sheetData + '</sheetData>' + mergesXml +
+        (h.ajustar ? '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>' : '') +
+        drawingTag + '</worksheet>');
     });
 
     ct += '</Types>';
@@ -260,6 +273,28 @@
   }
 
   /* Convierte cualquier imagen descargada (incluyendo WebP) a JPG/PNG compatible con Excel */
+  /* 24/11/2026 · PANEL-FOTOS · la foto como JPEG de lado mayor «max», con su ancho y su alto (para encajarla sin deformar) */
+  function _fotoConMedidas(url, max){
+    if(!url) return Promise.resolve(null);
+    return fetch(url).then(function(r){ return r.ok ? r.blob() : null; }).then(function(bl){
+      if(!bl) return null;
+      return new Promise(function(res){
+        var im = new Image(), u = URL.createObjectURL(bl);
+        im.onload = function(){
+          try{
+            var k = Math.min(1, (max || 1100) / Math.max(im.naturalWidth || 1, im.naturalHeight || 1)), cv = document.createElement('canvas');
+            cv.width = Math.max(1, Math.round((im.naturalWidth || 1) * k)); cv.height = Math.max(1, Math.round((im.naturalHeight || 1) * k));
+            var g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(im, 0, 0, cv.width, cv.height);
+            cv.toBlob(function(jb){ URL.revokeObjectURL(u); if(!jb){ res(null); return; }
+              jb.arrayBuffer().then(function(ab){ res({ bytes: new Uint8Array(ab), ext: 'jpg', w: cv.width, h: cv.height }); }, function(){ res(null); }); }, 'image/jpeg', 0.85);
+          }catch(_e){ URL.revokeObjectURL(u); res(null); }
+        };
+        im.onerror = function(){ URL.revokeObjectURL(u); res(null); };
+        im.src = u;
+      });
+    }).catch(function(){ return null; });
+  }
+
   function _descargarImagenBytes(url){
     if(!url) return Promise.resolve(null);
     return fetch(url).then(function(r){
@@ -630,89 +665,68 @@
   /* ═══════════════════════════════════════════════════════════════════════════
      FORMATO 2 · PANEL FOTOGRÁFICO SST (5 HOJAS CON FOTOS REALES INCRUSTADAS)
      ═══════════════════════════════════════════════════════════════════════════ */
+  /* 24/11/2026 · PANEL-FOTOS · Marcelo (4.2): «las fotos enviadas a cada sección llenan automáticamente las pestañas y cuadros
+     con las imágenes reales incrustadas y su pie de foto numerado (Foto 1: …), sin desbordes ni cuadros vacíos innecesarios».
+     datos.fotos: [{ url, titulo, pie, seccion:'a'…'f' }] (o el formato de antes, { capacitacion:[…], … }); datos.secciones:
+     las claves que van (a-e en el de SST, f en el de medio ambiente). Una pestaña por sección, de a dos fotos por fila, cada
+     una encajada en su cuadro (no se estira), con su número y su pie; una sección sin fotos dice que no tiene, en una fila. */
+  var PF_HOJAS = [
+    { key: 'a', viejo: 'capacitacion', hoja: 'a. Capacitación',         titulo: 'a. Capacitación (Reuniones de inicio de jornada, capacitaciones, pausas activas y dinámicas)' },
+    { key: 'b', viejo: 'control',      hoja: 'b. Control Operacional',  titulo: 'b. Control Operacional (Inspecciones, señalización, delimitación y equipos)' },
+    { key: 'c', viejo: 'emergencia',   hoja: 'c. Emergencia',           titulo: 'c. Preparación y Respuesta a Emergencias (Estaciones de emergencia, extintores, botiquín y simulacros)' },
+    { key: 'd', viejo: 'epp',          hoja: 'd. EPP y EPC',            titulo: 'd. EPP y EPC (Uso de EPP por puesto y protecciones colectivas)' },
+    { key: 'e', viejo: 'bienestar',    hoja: 'e. Bienestar y Difusión', titulo: 'e. Bienestar, Salud Ocupacional y Difusión (Periódico mural, boletines, comedor y orden)' },
+    { key: 'f', viejo: 'ambiente',     hoja: 'f. Medio Ambiente',       titulo: 'f. Medio Ambiente (Batería de residuos NTP 900.058, almacén MATPEL, MSDS, SGA, NFPA y kit antiderrame)' }
+  ];
   function generarPanelFotograficoXlsx(datos){
     datos = datos || {};
     var emp = datos.empresa || {};
     var area = datos.area || datos.frente || 'OBRA GENERAL';
-    var secciones = [
-      { key: 'capacitacion',     hoja: 'a. Capacitación',         titulo: 'a. Capacitación (Reunión de inicio de jornada, capacitaciones, pausas activas/dinámicas)' },
-      { key: 'control',          hoja: 'b. Control Operacional',  titulo: 'b. Control Operacional (Inspecciones, señalización, delimitación, equipos)' },
-      { key: 'emergencia',       hoja: 'c. Emergencia',           titulo: 'c. Preparación y Respuesta a Emergencias (Estaciones de emergencia, extintores, botiquín, simulacros)' },
-      { key: 'epp',              hoja: 'd. EPP y EPC',            titulo: 'd. EPP y EPC (Uso de EPP por puesto y protecciones colectivas)' },
-      { key: 'bienestar',        hoja: 'e. Bienestar y Difusión', titulo: 'e. Bienestar, Salud Ocupacional y Difusión (Periódico mural, boletines, comedor, orden)' },
-      { key: 'ambiente',         hoja: 'f. Medio Ambiente',       titulo: 'f. Medio Ambiente (Batería de residuos NTP 900.058, almacén MATPEL, MSDS, SGA, NFPA, kit antiderrame)' }
-    ];
-
-    var fotosPorSeccion = {};
-    secciones.forEach(function(s){ fotosPorSeccion[s.key] = []; });
-
-    if(datos.fotos && !Array.isArray(datos.fotos) && typeof datos.fotos === 'object'){
-      secciones.forEach(function(s){
-        if(Array.isArray(datos.fotos[s.key])) fotosPorSeccion[s.key] = datos.fotos[s.key];
-      });
-    } else if(Array.isArray(datos.fotos)){
-      datos.fotos.forEach(function(f){
-        if(!f) return;
-        var sk = String(f.secc || f.sec || f.bloque || f.cat || '').toLowerCase();
-        var destino = 'capacitacion';
-        if(/capacita|charla|induc|dinam/i.test(sk) || sk === 'a') destino = 'capacitacion';
-        else if(/inspec|control|sen|delimi|equip/i.test(sk) || sk === 'b') destino = 'control';
-        else if(/emerg|extin|botiq|simul/i.test(sk) || sk === 'c') destino = 'emergencia';
-        else if(/epp|epc|protec/i.test(sk) || sk === 'd') destino = 'epp';
-        else if(/bienest|salud|difus|mural|bolet|comed|orden/i.test(sk) || sk === 'e') destino = 'bienestar';
-        else if(/ambien|resid|matpel|msds|sga|nfpa|derrame/i.test(sk) || sk === 'f') destino = 'ambiente';
-        fotosPorSeccion[destino].push(f);
-      });
-    }
-
-    var libro = _crearLibroXlsx();
-    var tareas = [];
-
-    secciones.forEach(function(sec){
-      var lista = fotosPorSeccion[sec.key] || [];
-      var h = _nuevaHoja(libro, sec.hoja);
-      h.anchos = { 1:18, 2:18, 3:18, 4:4, 5:18, 6:18, 7:18 };
-      h.altos[1] = 24; h.altos[3] = 22; h.altos[5] = 20;
-      _setCelda(h, 1, 1, 'EMPRESA: ' + String(emp.nombre || 'EMPRESA').toUpperCase(), 1); _merge(h, 1, 1, 1, 7);
+    var claves = Array.isArray(datos.secciones) && datos.secciones.length ? datos.secciones : ['a', 'b', 'c', 'd', 'e'];
+    var periodo = (datos.mesIdx != null && datos.anio) ? (MESES_ES[Math.max(0, Math.min(11, +datos.mesIdx))] + ' ' + datos.anio) : '';
+    var F = datos.fotos || [], porSec = {};
+    if(Array.isArray(F)) F.forEach(function(f){ var k = /^[a-f]$/.test(f && f.seccion || '') ? f.seccion : 'b'; (porSec[k] = porSec[k] || []).push(f); });
+    else PF_HOJAS.forEach(function(x){ porSec[x.key] = Array.isArray(F[x.viejo]) ? F[x.viejo] : (Array.isArray(F[x.key]) ? F[x.key] : []); });
+    var libro = _crearLibroXlsx(), tareas = [], nro = 0;
+    var ANCHO = 18, ALTO_PT = 175;
+    var wpx = Math.round(ANCHO * 3 * 7 + 15), hpx = Math.round(ALTO_PT * 96 / 72);   /* el cuadro de cada foto: 3 columnas y una fila */
+    PF_HOJAS.filter(function(x){ return claves.indexOf(x.key) > -1; }).forEach(function(sec){
+      var lista = (porSec[sec.key] || []).filter(function(f){ return f && f.url; });
+      var h = _nuevaHoja(libro, sec.hoja); h.ajustar = true;
+      h.anchos = { 1:ANCHO, 2:ANCHO, 3:ANCHO, 4:3, 5:ANCHO, 6:ANCHO, 7:ANCHO };
+      h.altos[1] = 24; h.altos[3] = 30; h.altos[5] = 20;
+      _setCelda(h, 1, 1, 'EMPRESA: ' + String(emp.nombre || 'EMPRESA').toUpperCase() + (periodo ? '   ·   ' + periodo.toUpperCase() : ''), 1); _merge(h, 1, 1, 1, 7);
       _setCelda(h, 3, 1, sec.titulo, 7); _merge(h, 3, 1, 3, 7);
       _setCelda(h, 5, 1, 'Área / Frente: ' + area, 4); _merge(h, 5, 1, 5, 7);
-
-      var totalSlots = lista.length > 0 ? (lista.length + (lista.length % 2)) : 2;
-      for(var i = 0; i < totalSlots; i += 2){
-        var rowImg = 6 + (i / 2) * 2;
-        var rowCap = rowImg + 1;
-        h.altos[rowImg] = 175;
-        h.altos[rowCap] = 24;
-
+      if(!lista.length){
+        h.altos[7] = 26; _setCelda(h, 7, 1, 'Sin fotos registradas en esta sección este mes.', 5); _merge(h, 7, 1, 7, 7);
+        return;
+      }
+      for(var i = 0; i < lista.length; i += 2){
+        var rowImg = 7 + (i / 2) * 2, rowCap = rowImg + 1;
+        h.altos[rowImg] = ALTO_PT; h.altos[rowCap] = 34;
         [0, 1].forEach(function(lado){
-          var idxFoto = i + lado;
-          var cIni = lado === 0 ? 1 : 5;
-          var cFin = lado === 0 ? 3 : 7;
-          var item = lista[idxFoto];
-          _merge(h, rowImg, cIni, rowImg, cFin);
-          _merge(h, rowCap, cIni, rowCap, cFin);
-          _setCelda(h, rowImg, cIni, item ? '' : '(Sin foto asignada en esta posición)', 5);
-
-          var pieTexto = '';
-          if(item){
-            pieTexto = String(item.pie || item.titulo || item.desc || item.t || '').trim();
-          }
-          _setCelda(h, rowCap, cIni, 'Foto ' + (idxFoto + 1) + (pieTexto ? ': ' + pieTexto : ''), 3);
-
-          if(item && item.url){
-            tareas.push((function(hojaRef, rImg0, c0, cEnd0, urlFoto){
-              return _descargarImagenBytes(urlFoto).then(function(bin){
-                if(!bin) return;
-                var imgIdx = libro.imagenes.length;
-                libro.imagenes.push(bin);
-                hojaRef.imgs.push({ imgIdx: imgIdx, c1: c0, r1: rImg0, c2: cEnd0, r2: rImg0 + 1 });
-              });
-            })(h, rowImg - 1, cIni - 1, cFin, item.url));
-          }
+          var item = lista[i + lado], cIni = lado === 0 ? 1 : 5, cFin = lado === 0 ? 3 : 7;
+          if(!item) return;   /* la última fila con una sola foto: el otro cuadro no se dibuja */
+          nro++;
+          _merge(h, rowImg, cIni, rowImg, cFin); _merge(h, rowCap, cIni, rowCap, cFin);
+          _setCelda(h, rowImg, cIni, '', 5);
+          var cap = 'Foto ' + nro + ': ' + String(item.titulo || '').trim() + (item.pie && item.pie !== item.titulo ? ' — ' + String(item.pie).trim() : '');
+          _setCelda(h, rowCap, cIni, cap.slice(0, 300), 4);
+          tareas.push((function(hojaRef, r0, c0, url){
+            return _fotoConMedidas(url, 1100).then(function(bin){
+              if(!bin) return;
+              var k = Math.min((wpx - 16) / bin.w, (hpx - 12) / bin.h) * 0.95, w = bin.w * k, hh = bin.h * k;
+              var imgIdx = libro.imagenes.length; libro.imagenes.push(bin);
+              /* el desplazamiento cae en la columna que le toca (Excel no acepta un desplazamiento más ancho que su columna) */
+              var colPx = ANCHO * 7 + 5, x0 = (wpx - w) / 2, sal = Math.min(2, Math.floor(x0 / colPx));
+              hojaRef.imgs.push({ imgIdx: imgIdx, c1: c0 + sal, r1: r0, c2: c0 + 3, r2: r0 + 1,
+                cx: Math.round(w * 9525), cy: Math.round(hh * 9525), dx: Math.round((x0 - sal * colPx) * 9525), dy: Math.round((hpx - hh) / 2 * 9525) });
+            });
+          })(h, rowImg - 1, cIni - 1, item.url));
         });
       }
     });
-
     return Promise.all(tareas).then(function(){ return _compilarXlsxBlob(libro); });
   }
 
