@@ -869,7 +869,7 @@ function _arcPintarLista(){
     F.innerHTML='<ul class="arc-ul" aria-label="Archivos">'+L.map(function(f){
       var id=String(f.id), s=ARC.sel.indexOf(id)>-1, n=f.nombre||'Documento';
       return '<li class="arc-f'+(s?' sel':'')+'" data-id="'+esc(id)+'">'+
-        '<input type="checkbox" class="arc-ck" data-ck="'+esc(id)+'" data-ms-doc-chk'+(s?' checked':'')+' aria-label="Elegir «'+esc(n)+'»" onchange="if(window.OBRASST_MOVER_SECTORES) OBRASST_MOVER_SECTORES.alternarArchivo(\''+escA(id)+'\',\''+escA(n)+'\',\''+escA(f.hoja||'')+'\',this.checked)">'+
+        '<input type="checkbox" class="arc-ck" data-ck="'+esc(id)+'" data-ms-doc-chk'+(s?' checked':'')+' aria-label="Elegir «'+esc(n)+'»">'+
         '<button type="button" class="arc-mini" data-acc="ver" tabindex="-1" aria-hidden="true">'+_arcIcono(f)+'</button>'+
         '<div class="arc-nom"><button type="button" class="arc-tit" data-acc="ver" title="'+esc(n)+'">'+esc(n)+'</button><small>'+esc(_arcSub(f))+'</small></div>'+
         '<div class="arc-acc">'+
@@ -926,9 +926,6 @@ function _arcMenuAbrir(boton, id){
   if(I.editable){ it.push(['nombre', 'Cambiar el nombre']); it.push(['mover', 'Mover a otra carpeta']); }
   if(f.url) it.push(I.tipo==='enlace' ? ['abrir', 'Abrir el enlace ↗'] : ['bajar', 'Descargar']);
   if(_arcSeUne(f)) it.push(['unir', 'Unir en un PDF…']);
-  if(I.tipo==='img' || /\.(jpe?g|png|webp)$/i.test(f.url||f.nombre||'')){
-    it.push(['panel-foto', '📸 Enviar al Panel Fotográfico']);
-  }
   if(I.editable){ it.push(['-']); it.push(['quitar', 'Quitar', 'mal']); }
   var m=document.createElement('div'); m.className='arc-menu'; m.id='arc-menu'; m.setAttribute('role', 'menu');
   m.innerHTML=it.map(function(x){ return x[0]==='-' ? '<hr>' : '<button type="button" role="menuitem" data-m="'+x[0]+'"'+(x[2]?' class="'+x[2]+'"':'')+'>'+esc(x[1])+'</button>'; }).join('');
@@ -992,7 +989,7 @@ function arcVer(id){
           '<button type="button" class="bt sec chico" id="arc-ver-sig"'+(i>-1 && i<ARC.vista.length-1?'':' disabled')+' aria-label="El siguiente">›</button></div>'+
     (I.editable ? '<button type="button" class="bt sec chico" id="arc-ver-nom">Cambiar el nombre</button><button type="button" class="bt sec chico" id="arc-ver-mov">Mover</button>' : '')+
     (u && I.tipo!=='enlace' ? '<button type="button" class="bt sec chico" id="arc-ver-bajar">Descargar</button>' : '')+
-    (I.tipo==='img' || /\.(jpe?g|png|webp)$/i.test(u||f.nombre||'') ? '<button type="button" class="bt sec chico" id="arc-ver-panel">📸 Al Panel Fotográfico</button>' : '')+
+
     (I.editable ? '<button type="button" class="bt sec chico" id="arc-ver-quitar" style="color:var(--mal)">Quitar</button>' : '');
   abrirHoja(f.nombre||'Documento', _arcSub(f)+(i>-1 ? ' · '+(i+1)+' de '+ARC.vista.length : ''), cuerpo, pie, {clase:'pdf', sinFoco:true});
   var ir=function(d){ var j=ARC.vista.indexOf(sid)+d; if(j>=0 && j<ARC.vista.length) arcVer(ARC.vista[j]); };
@@ -1349,102 +1346,65 @@ function arcDestinosUniversalModal(opts){
 }
 
 function arcMoverCarpeta(carpetaId){
+  /* 24/11/2026 · arreglo: «Mover carpeta» vuelve a la hoja que funciona (con sus documentos y subcarpetas) */
   var X = typeof dcMiasDe === 'function' ? dcMiasDe(carpetaId) : null;
   if(!X){ toast('No se encontró la carpeta.'); return; }
-  if(window.OBRASST_MOVER_SECTORES && typeof window.OBRASST_MOVER_SECTORES.abrirMoverCarpeta === 'function'){ window.OBRASST_MOVER_SECTORES.abrirMoverCarpeta(X); return; }
-
-  arcDestinosUniversalModal({
-    titulo: 'Mover carpeta «' + X.t + '»',
-    subtitulo: 'Se traslada completa con todas sus subcarpetas y documentos',
-    excluirId: X.id,
-    alElegir: function(dest, btn, msg){
-      btn.disabled = true;
-      if(msg){ msg.className = 'msg gris'; msg.textContent = 'Moviendo carpeta…'; }
-
-      var destinoPadre = dest.esPropia ? dest.miaId : (dest.secClave ? 's:' + dest.secClave : '');
-      var nuevoSector = dest.secClave || '';
-
-      dcMiasReubicar(X.id, destinoPadre).then(function(){
-        if(typeof sbRpc === 'function' && typeof YO === 'object' && YO.obra && YO.obra.id){
-          sbRpc('sst_carpeta_mover', { p_emp: YO.obra.id, p_carpeta_id: X.id, p_nuevo_padre: destinoPadre, p_nuevo_sector: nuevoSector }).catch(function(){});
-        }
-        cerrarHoja();
-        arcPintar();
-        toast('Listo: La carpeta «' + X.t + '» y su contenido se trasladaron a «' + dest.t + '».');
-      }).catch(function(err){
-        btn.disabled = false;
-        if(msg){ msg.className = 'msg mal'; msg.textContent = typeof err === 'string' && err !== 'nada' ? err : 'No se pudo mover la carpeta.'; }
-      });
-    }
-  });
+  var D=dcMiasDestinos(X.id);
+  abrirHoja('Mover · '+X.t, 'Con sus documentos y sus subcarpetas (hasta '+DC_MIAS_NIVELES+' niveles)', '<div class="campo"><label for="arc-mover-a">A dónde</label><select id="arc-mover-a">'+
+    D.map(function(d){ return '<option value="'+esc(d.p)+'"'+(d.p===(X.p || '') ? ' selected' : '')+'>'+esc(d.t)+'</option>'; }).join('')+'</select></div>',
+    '<button type="button" class="bt" id="arc-mover-ok">Mover aquí</button>', {sinFoco:true});
+  $('arc-mover-ok').onclick=function(){ dcMiasReubicar(X.id, $('arc-mover-a').value).then(function(){ cerrarHoja(); arcPintar(); toast('Listo: «'+X.t+'» se movió.'); },
+    function(e){ if(e==='nada'){ cerrarHoja(); return; } toast(typeof e==='string' ? e : 'No se pudo mover. Revisa tu conexión.'); }); };
 }
 
 function arcMover(ids){
-  var L = ids.map(arcFila).filter(function(f){ return f && arcInfo(f).editable; });
-  if(window.OBRASST_MOVER_SECTORES && typeof window.OBRASST_MOVER_SECTORES.abrirMoverLote === 'function'){ window.OBRASST_MOVER_SECTORES.abrirMoverLote(L); return; }
+  var L=ids.map(arcFila).filter(function(f){ return f && arcInfo(f).editable; });
   if(!L.length){ toast('Eso no se puede mover desde aquí.'); return; }
-  var uno = (L.length === 1);
-
-  arcDestinosUniversalModal({
-    titulo: uno ? 'Mover «' + (L[0].nombre || 'documento') + '»' : 'Mover ' + L.length + ' archivos seleccionados',
-    subtitulo: 'A otra carpeta o sector de la obra',
-    alElegir: function(dest, btn, msg){
-      btn.disabled = true;
-      if(msg){ msg.className = 'msg gris'; msg.textContent = 'Moviendo archivos…'; }
-
-      var destHoja = dest.h;
-      var plan = L.map(function(f){ return { f: f, x: _arcMoverUna(f, destHoja, { h: destHoja }) }; });
-      var van = plan.filter(function(p){ return p.x.cambio; });
-      var saltan = plan.filter(function(p){ return p.x.salta; });
-
-      if(!van.length){
-        if(msg){ msg.className = 'msg mal'; msg.textContent = saltan.length ? 'No se movió nada: ' + saltan[0].x.salta + '.' : 'Ya están en «' + dest.t + '».'; }
-        btn.disabled = false;
-        return;
-      }
-
-      var docIds = van.map(function(p){ return p.f.id; });
-      var notaNueva = (van.length === 1 && van[0].x.cambio && van[0].x.cambio.nota) ? van[0].x.cambio.nota : null;
-
-      var callRpc = (typeof sbRpc === 'function' && typeof YO === 'object' && YO.obra && YO.obra.id)
-        ? sbRpc('sst_docs_mover_lote', { p_emp: YO.obra.id, p_docs: docIds, p_hoja: destHoja, p_nota: notaNueva })
-        : Promise.reject('sin_rpc');
-
-      callRpc.then(function(res){
-        if(res && res.ok){
-          van.forEach(function(p){
-            p.f.hoja = destHoja;
-            if(p.x.cambio && p.x.cambio.nota) p.f.nota = p.x.cambio.nota;
-            delete p.f._arc;
-          });
-          ARC.sel = ARC.sel.filter(function(id){ return docIds.indexOf(id) < 0; });
-          toast(van.length === 1 ? 'Movido a «' + dest.t + '»' : van.length + ' archivos movidos a «' + dest.t + '»');
-          cerrarHoja();
-          arcPintar();
-          if(VISTA && VISTA.recargar) VISTA.recargar(true);
-        } else {
-          throw new Error('rpc_fallo');
-        }
-      }).catch(function(){
-        var movidos = {};
-        _arcDeAPocos(van, 4, function(p){
-          return sbPatch('sst_doc?id=eq.' + _enc(p.f.id), p.x.cambio).then(function(rows){
-            if(Array.isArray(rows) && !rows.length) return Promise.reject('sin_fila');
-            for(var k in p.x.cambio) p.f[k] = p.x.cambio[k];
-            delete p.f._arc;
-            movidos[String(p.f.id)] = 1;
-          });
-        }).then(function(res){
-          var ok = res.filter(function(x){ return x.ok; }).length;
-          ARC.sel = ARC.sel.filter(function(id){ return !movidos[id]; });
-          if(ok) toast(ok === 1 ? 'Movido a «' + dest.t + '»' : ok + ' archivos movidos a «' + dest.t + '»');
-          cerrarHoja();
-          arcPintar();
-          if(VISTA && VISTA.recargar) VISTA.recargar(true);
-        });
+  var st=_dcEstado(''), uno=(L.length===1);
+  var cuerpo=(uno ? '<p class="ayuda" style="margin:0 0 12px">Ahora está en «'+esc(arcInfo(L[0]).t)+'». Se mueve aquí y en la app de todo el equipo.</p>'
+                  : '<p class="ayuda" style="margin:0 0 12px">'+L.length+' archivos. Se mueven aquí y en la app de todo el equipo.</p>')+
+    '<div class="campo"><label for="arcmv-c">Carpeta</label>'+_arcSelDestino('arcmv-c', '')+'</div>'+
+    '<div class="dc-extra campo" id="arcmv-ex" hidden></div>'+
+    '<div class="campo" id="arcmv-mes-c" hidden><label for="arcmv-mes">Mes del informe</label><select id="arcmv-mes">'+_arcMesesOpc()+'</select></div>'+
+    '<p class="arc-mv-nota">A los escaneos van PDF y fotos; a «Fotos de obra», solo fotos.</p>'+
+    '<div class="msg" id="arcmv-msg"></div>';
+  abrirHoja(uno ? 'Mover «'+(L[0].nombre||'documento')+'»' : 'Mover '+L.length+' archivos', 'A otra carpeta', cuerpo, '<button type="button" class="bt" id="arcmv-si">Mover</button>', {sinFoco:true});
+  var go=function(){ _dcCablear('arcmv', st, function(){ var m=$('arcmv-msg'); if(m){ m.className='msg'; m.textContent=''; }
+    var mc=$('arcmv-mes-c'); if(mc) mc.hidden=String(st.h||'').indexOf(ARC_INF_PRE+'@')!==0; }); };
+  if(DC.subc) go(); else dcSubcTraer().then(go, go);
+  setTimeout(function(){ try{ $('arcmv-c').focus(); }catch(_f){} }, 30);
+  $('arcmv-si').onclick=function(){
+    var b=this, m=$('arcmv-msg'), dest=String(st.h||''), r={h:''};
+    if(dest.indexOf(ARC_INF_PRE+'@')===0) dest=ARC_INF_PRE+String(($('arcmv-mes')||{}).value||'')+dest.slice(ARC_INF_PRE.length+1);
+    if(!dest){ m.className='msg mal'; m.textContent='Elige la carpeta.'; return; }
+    if(dest.indexOf('esc:')!==0 && dest!=='fotos' && dest.indexOf('inf8:')!==0){ r=_dcHoja(st); if(r.err){ m.className='msg mal'; m.textContent=r.err; return; } }
+    var plan=L.map(function(f){ return {f:f, x:_arcMoverUna(f, dest, r)}; });
+    var van=plan.filter(function(p){ return p.x.cambio; }), saltan=plan.filter(function(p){ return p.x.salta; });
+    var etq=dest.indexOf('esc:')===0 ? 'Escaneos · '+_arcClaseEt(dest.slice(4)) : (dest==='fotos' ? 'Fotos de obra' : (dest.indexOf('inf8:')===0 ? _arcInfRutaT(dest) : dcCarpetaDe(r.h).t));
+    if(!van.length){ m.className='msg mal'; m.textContent=saltan.length ? 'No se movió nada: '+saltan[0].x.salta+'.' : 'Ya '+(uno?'está':'están')+' en «'+etq+'».'; return; }
+    b.disabled=true; m.className='msg gris'; m.textContent='Moviendo…';
+    var movidos={};
+    _arcDeAPocos(van, 4, function(p){
+      return sbPatch('sst_doc?id=eq.'+_enc(p.f.id), p.x.cambio).then(function(rows){
+        if(Array.isArray(rows) && !rows.length) return Promise.reject('sin_fila');
+        for(var k in p.x.cambio) p.f[k]=p.x.cambio[k]; delete p.f._arc;
+        movidos[String(p.f.id)]=1;
       });
-    }
-  });
+    }).then(function(res){
+      var ok=res.filter(function(x){ return x.ok; }).length, mal=res.length-ok;
+      /* lo que se movió deja de estar elegido (ya no está donde se lo eligió) */
+      ARC.sel=ARC.sel.filter(function(id){ return !movidos[id]; });
+      return (ok && r.nuevo ? dcSubcAgregar([r.nuevo]).catch(function(){ return false; }) : Promise.resolve()).then(function(){
+        if(ok) toast(ok===1 ? 'Movido a «'+etq+'»' : ok+' archivos movidos a «'+etq+'»');
+        var q=[];
+        if(saltan.length) q.push(saltan.length+' no '+(saltan.length===1?'va':'van')+' ahí ('+saltan[0].x.salta+')');
+        if(mal) q.push(mal+' no se '+(mal===1?'pudo':'pudieron')+' mover: revisa tu conexión o tu permiso en esta obra');
+        if(q.length){ b.disabled=false; b.textContent='Cerrar'; b.onclick=cerrarHoja; m.className='msg mal'; m.textContent=(ok ? 'Se movieron '+ok+'. ' : '')+q.join('. ')+'.'; }
+        else cerrarHoja();
+        if(ok){ arcPintar(); if(VISTA.recargar) VISTA.recargar(true); }
+      });
+    });
+  };
 }
 
 /* ══ ENVIAR AL PANEL FOTOGRÁFICO DEL INFORME ═══════════════════════════════════════════════════════════════════ */
