@@ -38619,7 +38619,10 @@ function eqPintarFicha(){
        '<button class="btn sec" style="margin:0" onclick="eqEtiquetas([\''+escA(x.id)+'\'])">🖨️ Imprimir su etiqueta</button></div>'+
        /* 14/10/2026 · el cartel que va sobre el equipo (el porta extintor): su señal, cómo usarlo y su QR */
        '<button class="btn sec" style="margin:8px 0 0" id="eqd-cartel-b" onclick="eqCartel(\''+escA(x.id)+'\')">🪧 <span>Cartel con su QR</span></button>'+
-       '<div id="eqd-cartel"></div>';
+       '<div id="eqd-cartel"></div>'+
+       /* 24/11/2026 · la cartilla doble cara (CARTILLAS-EQ-MOTOR) */
+       '<button class="btn sec" style="margin:8px 0 0" id="eqd-cartilla-b" onclick="eqCartilla(\''+escA(x.id)+'\')">🪪 <span>Cartilla doble cara</span></button>'+
+       '<div id="eqd-cartilla"></div>';
     h+=eqUsoFicha(x);
   }
   /* 15/10/2026 · lote 12 · las que le tocan, cómo va cada una y «Ya hice una inspección en papel» */
@@ -39023,6 +39026,910 @@ function eqCartelDatos(x){
   var tr=function(z){ try{ return (typeof trad==='function') ? trad(z) : z; }catch(_t){ return z; } };
   var emp=(typeof empleador==='function') ? (empleador() || {}) : {}, e=(typeof empActiva==='function') ? (empActiva() || {}) : {};
   return eqCartelDatosDe(x, { tx:tr, obra:e.nombre || '', empresa:emp.razon || '', logo:emp.logo || null, mes:eqMes() });
+}
+/* >>> CARTILLAS-EQ-MOTOR-INI (24/11/2026 · lo mismo en la app y en portal/cartillas-equipos.js; copias.py revisa que no se separen) <<< */
+/* ══════════════════════════════════════════════════════════════════
+   CARTILLAS DOBLE CARA CON QR (24/11/2026)
+   Marcelo (prompt «Cartillas doble cara con QR para equipos, andamios,
+   maquinaria y herramientas»): la cara A identifica el equipo (logo,
+   código, peligros, EPP, uso seguro y su QR /h/); la cara B la elige el
+   supervisor entre bloques útiles en obra, sin checklists diarios (el
+   antes de usar se registra escaneando el QR; los 12 meses, solo donde la
+   revisión es mensual). Tres tamaños reales: media hoja A4 (2 por hoja),
+   tag de 95 × 135 mm (4) y mini-tag de 65 × 95 mm (8), en un PDF a doble
+   cara: el reverso va con las columnas al revés para que cada cara B
+   calce detrás de su cara A al cortar.
+   Datos técnicos (corregidos del prompt, «nada que no sea cierto»): las
+   clases de carga de andamios son las de la EN 12811-1; las distancias a
+   líneas eléctricas, las de la tabla A de OSHA 1926.1408; las señales,
+   las de ASME B30.5; la distancia libre de una línea con absorbedor va
+   con valores típicos y dice que mandan los del fabricante.
+   Cada cara se dibuja en un lienzo a 10 px por mm (con las letras y el QR
+   de los carteles: _cqAjustar, qrePintar) y el PDF las pone a su medida.
+   Lo que elige el supervisor para cada equipo vive en la obra, sin tocar
+   la tabla de equipos: sst_estado «cartillas_eq» = { v:1, e:{ <id del
+   equipo>:{ f, t, r:[…], img, alt, carga, anc, cap, mod } }, mod:[{ id,
+   n, url }] } (mod: las modulaciones de andamio que sube la obra; cada
+   andamio elige la suya y sale a toda la cara B).
+   25/11/2026 · Marcelo: «más imagen y menos letras, pero entendible… igual
+   que el de extintores y mejor»: la cara A va como su cartel (cabecera
+   con la señal, el código grande, el QR en su marco y la franja de la
+   obra), con las señales de la NTP para los peligros y el EPP y las
+   reglas en baldosas numeradas.
+   ══════════════════════════════════════════════════════════════════ */
+var CEQ_K = 10;   /* px por mm */
+var CEQ_CLAVE = 'cartillas_eq';
+/* w, h: la cartilla (mm); en la hoja A4 (apaisada o vertical) van cols × filas */
+var CEQ_FMT = {
+  a5:  { k:'a5', n:'Media hoja A4', d:'14 × 19,8 cm · 2 por hoja A4', w:140, h:198, cols:2, filas:1, apaisada:true, micro:false, rev:2 },
+  tag: { k:'tag', n:'Tag de herramienta', d:'9,5 × 13,5 cm · 4 por hoja A4', w:95, h:135, cols:2, filas:2, apaisada:false, micro:true, rev:1 },
+  mini:{ k:'mini', n:'Mini-tag', d:'6,5 × 9,5 cm · 8 por hoja A4', w:65, h:95, cols:4, filas:2, apaisada:true, micro:true, rev:1 }
+};
+/* los bloques del reverso: t (título), y lo que lleva: li (lista), ol (pasos), tabla [[cab…], [fila…]…], img (la imagen que
+   sube el supervisor), meses (los 12 casilleros), estado (verde y roja grandes), lineas (para llenar a mano), sino [sí, no], nota */
+var CEQ_REV = {
+  modulacion:{ n:'La modulación del andamio (toda la cara)', t:'MODULACIÓN', mod:1, sola:1 },
+  caida:{ n:'Protección contra caídas: retráctil o línea con absorbedor', t:'¿RETRÁCTIL O LÍNEA CON ABSORBEDOR?', caida:1 },
+  armado:{ n:'Armado seguro y cuándo se rechaza', t:'ARMADO SEGURO Y RECHAZO', ol:[
+    'Piso firme y nivelado; placas base y husillos, con tacos de reparto si el suelo es blando.',
+    'Diagonales y arriostres completos; amarrado a la estructura donde lo pida el fabricante.',
+    'Plataformas completas, sin huecos ni tablones sueltos.',
+    'Barandas superior e intermedia y rodapié en todo el contorno; acceso por su escalera interior.',
+    'Lo revisa la persona competente y le pone la tarjeta antes del primer uso y después de cada cambio.'],
+    nota:'Tarjeta roja ya: tubos doblados o rajados, pasadores que faltan, tablones partidos, bases en el aire o piezas retiradas.' },
+  cargas:{ n:'Clases de carga de la plataforma (EN 12811-1)', t:'CARGA POR CLASE DE ANDAMIO · EN 12811-1', tabla:[
+    ['Clase', 'Carga repartida', 'Uso de referencia'], ['2', '150 kg/m²', 'Inspección, pintura, trabajos livianos'], ['3', '200 kg/m²', 'Acabados, instalaciones'],
+    ['4', '300 kg/m²', 'Albañilería'], ['5', '450 kg/m²', 'Material pesado'], ['6', '600 kg/m²', 'Material muy pesado']],
+    nota:'Manda la clase que dice el fabricante o la memoria de cálculo de este andamio. Personas, herramientas y material suman.' },
+  liberaciones:{ n:'Registro de armado y cambios (no diario)', t:'LIBERACIONES Y CAMBIOS · SOLO AL ARMAR, MODIFICAR O TRASLADAR', lineas:['Fecha', 'Altura', 'Estado', 'Armó', 'V°B° SST'], filas:6 },
+  estado:{ n:'Tarjeta de estado grande (verde / roja)', t:'ESTADO', estado:1 },
+  tabla_carga:{ n:'Tabla de carga o diagrama de alcance (imagen que subes)', t:'TABLA DE CARGA Y ALCANCE', img:1 },
+  senales:{ n:'Señales del rigger (ASME B30.5)', t:'SEÑALES DEL RIGGER · ASME B30.5', tabla:[
+    ['Maniobra', 'Señal'], ['Subir', 'Antebrazo vertical, índice arriba, círculos chicos'], ['Bajar', 'Brazo abajo, índice abajo, círculos chicos'],
+    ['Girar', 'Brazo extendido, el índice señala hacia dónde gira'], ['Parar', 'Brazo extendido, palma abajo, de lado a lado'],
+    ['Parada de emergencia', 'Los dos brazos extendidos, palmas abajo, de lado a lado rápido'], ['Asegurar todo', 'Manos juntas a la altura de la cintura']],
+    nota:'Una sola persona da las señales; la parada de emergencia la puede dar cualquiera.' },
+  distancias:{ n:'Distancias a líneas eléctricas y viento', t:'LÍNEAS ELÉCTRICAS Y VIENTO', tabla:[
+    ['Tensión de la línea', 'Distancia mínima'], ['Hasta 50 kV', '3,05 m'], ['Más de 50 hasta 200 kV', '4,60 m'], ['Más de 200 hasta 350 kV', '6,10 m']],
+    nota:'Tabla A de OSHA 1926.1408; si la norma del lugar o el dueño de la línea piden más, manda la mayor. Viento: se para cuando pasa el límite que da el fabricante de la grúa, y con tormenta eléctrica.' },
+  preuso:{ n:'Puntos que revisa el operador (guía, sin casillas)', t:'ANTES DE USARLA · SE REGISTRA EN EL QR', li:[
+    'Cables sin hilos rotos, aplastamientos, cocas ni corrosión.', 'Gancho con su pestillo que cierra solo; sin deformación.',
+    'Frenos, limitadores, bocina, circulina y alarma de retroceso que funcionan.', 'Sin fugas de aceite ni combustible; llantas u orugas en buen estado.',
+    'Estabilizadores y terreno firmes; extintor vigente en la cabina.'] },
+  emergencia:{ n:'Qué hacer en una emergencia con la máquina', t:'EMERGENCIA CON LA MÁQUINA', li:[
+    'Contacto con una línea eléctrica: quédate en la cabina, que nadie se acerque y que corten la energía.',
+    'Si tienes que salir (fuego), salta con los pies juntos sin tocar a la vez la máquina y el suelo, y aléjate a saltos cortos.',
+    'Derrame: apaga el motor, contén con el kit antiderrame y avisa a SST.', 'Falla de frenos o de la carga: avisa, despeja la zona y no la vuelvas a usar.'],
+    lineas:['Teléfonos de emergencia de la obra'], filas:2 },
+  unifilar:{ n:'Diagrama unifilar o directorio de circuitos (imagen que subes)', t:'CIRCUITOS DEL TABLERO', img:1 },
+  mensual:{ n:'Checklist mensual (los 12 meses)', t:'CHECKLIST MENSUAL', chk:'m' },
+  diario:{ n:'Checklist diario (una hoja por mes)', t:'CHECKLIST DIARIO', chk:'d' },
+  ficha:{ n:'Datos y seguridad (capacidad, recomendaciones)', t:'DATOS Y SEGURIDAD', ficha:1 },
+  loto:{ n:'Bloqueo y etiquetado (5 pasos)', t:'BLOQUEO Y ETIQUETADO', ol:[
+    'Avisa a los que trabajan ahí y apaga el equipo.', 'Corta la energía en su fuente.', 'Pon tu candado y tu tarjeta con tu nombre.',
+    'Libera la energía que queda (condensadores, presión, resortes).', 'Prueba que no arranca y que no hay tensión antes de tocar.'],
+    nota:'Solo quien puso el candado lo saca, al terminar.' },
+  cinta:{ n:'Cinta del mes (los 12 colores)', t:'CINTA DEL MES', cinta:1 },
+  sino:{ n:'Uso correcto (sí) y prohibido (no)', t:'SÍ Y NO', sino:1 },
+  almacen:{ n:'Almacén, mantenimiento y tarjeta roja', t:'ALMACÉN Y MANTENIMIENTO', li:[
+    'Se entrega revisada y con la cinta del mes; vuelve limpia al almacén.', 'Mantenimiento según el fabricante: escobillas, cable, guardas y gatillo.',
+    'Tarjeta roja: cable o enchufe dañado, guarda rota o que falta, gatillo que no corta, carcasa rajada o chispas anormales.'],
+    lineas:['Responsable', 'Último mantenimiento'], filas:1 },
+  descarte:{ n:'¿La uso o la separo? (tarjeta roja)', t:'¿LA USO O LA SEPARO?', descarte:1 },
+  custodia:{ n:'Responsable, cuadrilla y almacén', t:'A CARGO DE', lineas:['Responsable', 'Frente o cuadrilla', 'Entregada el'], filas:1 },
+  uso:{ n:'Cómo se usa (sus pasos)', t:'CÓMO SE USA', uso:1 }
+};
+/* las familias. Las señales son las del Anexo B de la NTP 399.010-1 (el catálogo de la app, trazado del PDF de la norma),
+   cada una con su nombre de la norma (corto): peligros en triángulo, EPP y obligaciones en círculo azul, prohibiciones en rojo.
+   ic: la de la cabecera; reglas: [lo grande, una línea chica]; datos: [clave, qué es, unidad] (los escribe el supervisor);
+   chk: lo que se revisa (en el checklist mensual o diario); consejos: [señal o '', texto] (en «Datos y seguridad»);
+   bien / mal: ¿la uso o la separo? */
+var CEQ_FAM = {
+  andamio:{ k:'andamio', n:'Andamios', fmt:'a5', color:'#0B4A6F', tipos:['Andamio'], ic:'atencion-peligro-de-caidas',
+    peligros:[['atencion-peligro-de-caidas', 'Peligro de caídas'], ['cuidado-caida-de-objetos', 'Caída de objetos']],
+    epp:[['uso-obligatorio-de-casco-de-seguridad', 'Casco'], ['uso-obligatorio-de-arnes-de-seguridad', 'Arnés'], ['uso-obligatorio-de-botas-de-seguridad', 'Botas'], ['uso-obligatorio-de-guantes-de-seguridad', 'Guantes']],
+    reglas:[['Tarjeta verde', 'Sin ella, no subas'], ['Barandas completas', 'Superior, intermedia y rodapié'], ['Sube por dentro', 'Por su escalera, nunca por fuera'], ['No le quites nada', 'Ni lo muevas con gente arriba']],
+    datos:[],
+    chk:['Base, husillos y tacos firmes', 'Diagonales y arriostres completos', 'Plataformas completas y trabadas', 'Barandas y rodapiés', 'Escalera de acceso', 'Tarjeta vigente'],
+    consejos:[['atencion-peligro-de-caidas', 'Desde 1,80 m, con arnés y siempre anclado'], ['cuidado-caida-de-objetos', 'Rodapié puesto y herramientas amarradas'], ['', 'Nadie arriba cuando se mueve o se modifica']],
+    rev:['modulacion', 'caida', 'armado', 'cargas', 'liberaciones', 'mensual', 'diario', 'estado'] },
+  grua:{ k:'grua', n:'Grúas y maquinaria', fmt:'a5', color:'#9A3412', tipos:['Grúa torre', 'Grúa móvil', 'Camión grúa', 'Puente grúa', 'Otra grúa', 'Montacargas'], ic:'cuidado-gruas-trabajando',
+    icTipo:{ 'Montacargas':'cuidado-transito-de-montacargas' },
+    peligros:[['carga-suspendida-en-altura', 'Carga suspendida'], ['cuidado-riesgo-de-ser-aplastado', 'Riesgo de ser aplastado'], ['atencion-riesgo-electrico-o-peligro-de-muerte-alto-volta', 'Riesgo eléctrico']],
+    peligrosTipo:{ 'Montacargas':[['cuidado-transito-de-montacargas', 'Tránsito de montacargas'], ['cuidado-riesgo-de-ser-aplastado', 'Riesgo de ser aplastado'], ['cuidado-caida-de-objetos', 'Caída de objetos']] },
+    epp:[['uso-obligatorio-de-casco-de-seguridad', 'Casco'], ['uso-obligatorio-de-botas-de-seguridad', 'Botas'], ['uso-obligatorio-de-proteccion-auditiva', 'Protección auditiva'], ['uso-obligatorio-de-guantes-de-seguridad', 'Guantes']],
+    reglas:[['Operador autorizado', 'Con rigger o vigía'], ['Nadie bajo la carga', 'Zona de giro cerrada'], ['Base firme', 'Estabilizadores al 100 %'], ['Viento fuerte: para', 'Según el fabricante']],
+    datos:[['cap', 'Capacidad máxima', 't'], ['alc', 'Alcance máximo', 'm'], ['vto', 'Viento máximo', 'km/h']],
+    chk:['Cables sin hilos rotos ni cocas', 'Gancho con pestillo', 'Frenos y limitadores', 'Sin fugas de aceite', 'Estabilizadores y terreno', 'Alarma, bocina y luces'],
+    consejos:[['carga-suspendida-en-altura', 'Nunca pases ni te quedes bajo la carga'], ['cuidado-gruas-trabajando', 'Radio de giro cerrado y señalizado'], ['', 'La carga, siempre por debajo de la tabla de carga para ese radio']],
+    rev:['ficha', 'tabla_carga', 'senales', 'distancias', 'preuso', 'mensual', 'diario', 'emergencia', 'estado'] },
+  izaje:{ k:'izaje', n:'Accesorios de izaje', fmt:'mini', color:'#7C2D12', tipos:['Eslinga', 'Estrobo', 'Grillete', 'Tecle'], ic:'carga-suspendida-en-altura',
+    peligros:[['carga-suspendida-en-altura', 'Carga suspendida'], ['cuidado-caida-de-objetos', 'Caída de objetos'], ['cuidado-con-sus-manos', 'Cuidado con sus manos']],
+    epp:[['uso-obligatorio-de-casco-de-seguridad', 'Casco'], ['uso-obligatorio-de-guantes-de-seguridad', 'Guantes'], ['uso-obligatorio-de-botas-de-seguridad', 'Botas']],
+    reglas:[['Mira su WLL', 'Nunca más carga que eso'], ['Nadie bajo la carga', 'Ni las manos en los pellizcos'], ['Dañado, se retira', 'Tarjeta roja']],
+    datos:[['wll', 'Carga de trabajo (WLL)', 't'], ['med', 'Medida', ''], ['larg', 'Largo', 'm']],
+    chk:['Etiqueta o marca de WLL legible', 'Sin cortes, hilos rotos ni aplastamientos', 'Sin deformación ni desgaste', 'Pasador o seguro completo', 'Sin corrosión ni soldaduras'],
+    consejos:[['carga-suspendida-en-altura', 'Nunca bajo la carga'], ['cuidado-con-sus-manos', 'Manos fuera de los puntos de pellizco'], ['', 'Grillete: pasador completo y apretado; carga en el eje, no de lado']],
+    bien:['Etiqueta de WLL legible', 'Sin cortes ni deformación', 'Pasador o seguro completo'],
+    mal:['Hilos o alambres rotos, cortes o quemaduras', 'Deformado, estirado o con fisuras', 'Sin etiqueta o reparado con soldadura'],
+    rev:['ficha', 'descarte', 'cinta', 'mensual', 'diario'] },
+  electrico:{ k:'electrico', n:'Equipos eléctricos', fmt:'a5', color:'#B45309', tipos:['Tablero eléctrico', 'Grupo electrógeno', 'Compresora'], ic:'riesgo-de-descargas-electricas',
+    peligros:[['riesgo-de-descargas-electricas', 'Descargas eléctricas'], ['atencion-riesgo-electrico-o-peligro-de-muerte-alto-volta', 'Alto voltaje'], ['sustancias-o-materias-inflamables-o-peligro-inflamable', 'Peligro inflamable']],
+    epp:[['uso-obligatorio-de-guantes-aislantes', 'Guantes aislantes'], ['uso-obligatorio-de-botas-aislantes', 'Botas aislantes'], ['uso-obligatorio-de-proteccion-ocular', 'Protección ocular'], ['uso-obligatorio-de-proteccion-auditiva', 'Protección auditiva']],
+    reglas:[['Cerrado y señalizado', 'Nada delante ni encima'], ['Diferencial 30 mA', 'Y puesta a tierra, probados'], ['Cables sanos', 'Sin empalmes ni partes a la vista'], ['Solo el electricista', 'Con bloqueo y etiquetado']],
+    datos:[['ten', 'Tensión', 'V'], ['pot', 'Potencia', 'kW'], ['dif', 'Diferencial', 'mA']],
+    chk:['Cerrado, seco y señalizado', 'Diferencial probado con su botón', 'Puesta a tierra conectada', 'Cables sin empalmes', 'Enchufes y tomas sanos'],
+    consejos:[['prohibido-reparar-sin-autorizacion', 'Prohibido reparar sin autorización'], ['prohibido-conectar-sin-autorizacion', 'Prohibido conectar sin autorización'], ['', 'Si salta el diferencial, no lo fuerces: avisa al electricista']],
+    rev:['ficha', 'unifilar', 'mensual', 'diario', 'loto', 'estado'] },
+  poder:{ k:'poder', n:'Herramientas de poder', fmt:'tag', color:'#1E3A8A', ic:'cuidado-con-sus-manos',
+    tipos:['Amoladora', 'Taladro', 'Rotomartillo', 'Sierra circular', 'Esmeril', 'Pulidora', 'Soldadora', 'Otra herramienta eléctrica', 'Vibradora'],
+    peligros:[['cuidado-con-sus-manos', 'Cuidado con sus manos'], ['riesgo-de-descargas-electricas', 'Descargas eléctricas'], ['cuidado-superficie-caliente', 'Superficie caliente']],
+    epp:[['uso-obligatorio-de-protector-facial', 'Protector facial'], ['uso-obligatorio-de-proteccion-ocular', 'Protección ocular'], ['uso-obligatorio-de-proteccion-auditiva', 'Protección auditiva'], ['uso-obligatorio-de-guantes-de-seguridad', 'Guantes']],
+    eppTipo:{ 'Soldadora':[['uso-obligatorio-de-mascara-de-soldar', 'Máscara de soldar'], ['uso-obligatorio-de-guantes-de-seguridad', 'Guantes'], ['uso-obligatorio-de-mandil', 'Mandil'], ['uso-obligatorio-de-botas-de-seguridad', 'Botas']] },
+    reglas:[['Guarda puesta', 'Nunca la saques'], ['Disco correcto', 'Apto para sus RPM'], ['Desconecta', 'Para cambiar disco o broca'], ['Cinta del mes', 'Sin ella, no se usa']],
+    datos:[['disco', 'Disco o broca', 'mm'], ['rpm', 'RPM máximas', 'rpm'], ['ali', 'Alimentación', '']],
+    chk:['Cable y enchufe sin cortes ni empalmes', 'Guarda completa y firme', 'Gatillo que corta al soltar', 'Carcasa sin rajaduras', 'Disco o broca sin fisuras'],
+    consejos:[['es-obligatorio-desconectar-despues-de-utilizar', 'Desconéctala al terminar y para cambiar el disco'], ['uso-obligatorio-de-protector-facial', 'Careta y lentes, siempre'],
+      ['', 'No le quites la guarda: te protege si el disco se rompe'], ['', 'El disco: con RPM igual o mayor que las de la herramienta']],
+    si:['Guarda puesta', 'Disco apto para sus RPM', 'Pieza bien sujeta', 'Desconectada al cambiar el accesorio'],
+    no:['Sacarle la guarda', 'Desbastar con disco de corte', 'Trabar el gatillo', 'Usar cables pelados o empalmados'],
+    rev:['ficha', 'cinta', 'mensual', 'diario', 'sino', 'almacen'] },
+  manual:{ k:'manual', n:'Herramientas manuales', fmt:'mini', color:'#0F766E', ic:'atencion-con-sus-manos',
+    tipos:['Martillo', 'Comba', 'Llave', 'Alicate', 'Destornillador', 'Cincel', 'Serrucho', 'Barreta', 'Pala', 'Otra herramienta manual', 'Caja de herramientas', 'Maletín de herramientas', 'Tablero de herramientas'],
+    peligros:[['atencion-con-sus-manos', 'Atención con sus manos']],
+    epp:[['uso-obligatorio-de-proteccion-ocular', 'Protección ocular'], ['uso-obligatorio-de-guantes-de-seguridad', 'Guantes'], ['uso-obligatorio-de-botas-de-seguridad', 'Botas']],
+    reglas:[['Mango firme', 'Sin rajaduras ni juego'], ['Solo para lo suyo', 'Nada de palancas'], ['Dañada, se retira', 'Tarjeta roja']],
+    datos:[['peso', 'Peso', 'kg'], ['ais', 'Aislamiento', 'V']],
+    chk:['Mango firme, sin rajaduras', 'Cabeza sin rebabas', 'Sin juego entre mango y cabeza', 'Sin reparaciones hechizas'],
+    consejos:[['uso-obligatorio-de-proteccion-ocular', 'Lentes al golpear o cortar'], ['', 'Agárrala del extremo del mango'], ['', 'Guárdala limpia, en su caja o cinturón']],
+    bien:['Mango firme, sin rajaduras', 'Cabeza bien encajada, sin juego', 'Cara de golpe lisa, sin rebabas'],
+    mal:['Mango rajado, astillado o con cinta', 'Cabeza floja o con rebaba (hongo)', 'Reparada con alambre o soldadura'],
+    rev:['descarte', 'ficha', 'cinta', 'mensual', 'diario', 'custodia'] },
+  emergencia:{ k:'emergencia', n:'Extintores y botiquines', fmt:'a5', color:'#C8102E', tipos:['Extintor', 'Botiquín'], ic:'extintor',
+    icTipo:{ 'Botiquín':'primeros-auxilios' }, colorTipo:{ 'Botiquín':'#1B7F3B' },
+    peligros:[], epp:[], reglas:[], datos:[], consejos:[], chk:[], rev:['mensual', 'diario', 'uso', 'estado'] }
+};
+/* los colores que se pueden elegir para la franja (o el de su familia) */
+var CEQ_COLORES = [['', 'El de su tipo'], ['rojo', 'Rojo', '#C8102E'], ['azul', 'Azul', '#1D4ED8'], ['verde', 'Verde oscuro', '#14532D'], ['amarillo', 'Amarillo', '#F5B700']];
+/* lo que se revisa cada mes en el extintor y el botiquín (los de su cartel A4: EQ_REVERSO_ITEMS, si está) */
+var CEQ_MES_ITEMS = {
+  'Extintor':['Visible, accesible y señalizado', 'Manómetro en la zona verde', 'Precinto y pasador intactos', 'Manguera y boquilla sin grietas', 'Cilindro sin golpes ni corrosión', 'Recarga vigente'],
+  'Botiquín':['Limpio, seco y señalizado', 'Gasas, vendas y esparadrapo completos', 'Antisépticos vigentes', 'Guantes descartables', 'Nada vencido', 'Teléfonos de emergencia visibles']
+};
+var CEQ_MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SET', 'OCT', 'NOV', 'DIC'];
+function ceqFamDe(tipo){
+  var t = String(tipo || ''), r = '';
+  for(var k in CEQ_FAM) if(CEQ_FAM[k].tipos.indexOf(t) > -1) r = k;
+  return r;
+}
+/* lo guardado para un equipo, limpio y con lo de su familia cuando falta */
+function ceqCfg(x, g){
+  g = (g && typeof g === 'object') ? g : {};
+  var f = CEQ_FAM[g.f] ? g.f : ceqFamDe(x && x.tipo);
+  var F = CEQ_FAM[f] || null, t = CEQ_FMT[g.t] ? g.t : (F ? F.fmt : 'a5');
+  var r = Array.isArray(g.r) ? g.r.filter(function(k, i, a){ return F && F.rev.indexOf(k) > -1 && a.indexOf(k) === i; }) : [];
+  if(!r.length && F) r = [F.rev[0]];
+  /* la modulación ocupa toda la cara B */
+  if(r.some(function(k){ return CEQ_REV[k] && CEQ_REV[k].sola; })) r = r.filter(function(k){ return CEQ_REV[k] && CEQ_REV[k].sola; }).slice(0, 1);
+  var alt = parseFloat(String(g.alt || '').replace(',', '.'));
+  return { f:f, t:t, r:r.slice(0, 2), img:/^https:\/\/[^\s"<>]+$/.test(String(g.img || '')) ? String(g.img) : '',
+           alt:(alt > 0 && alt < 200) ? Math.round(alt * 100) / 100 : 0, carga:String(g.carga || '').slice(0, 40),
+           anc:['retractil', 'absorbedor', 'restriccion'].indexOf(g.anc) > -1 ? g.anc : '', cap:String(g.cap || '').slice(0, 40),
+           mod:/^[a-z0-9]{4,20}$/.test(String(g.mod || '')) ? String(g.mod) : '',
+           col:['rojo', 'azul', 'verde', 'amarillo'].indexOf(g.col) > -1 ? g.col : '', d:_ceqDatos(F, g) };
+}
+/* los datos del equipo que escribe el supervisor (capacidad, WLL, RPM…): solo los de su familia, cortos */
+function _ceqDatos(F, g){
+  var d = (g.d && typeof g.d === 'object' && !Array.isArray(g.d)) ? g.d : {}, r = {};
+  ((F && F.datos) || []).forEach(function(D){ var v = String(d[D[0]] == null ? '' : d[D[0]]).replace(/\s+/g, ' ').trim().slice(0, 20); if(v) r[D[0]] = v; });
+  if(!r.cap && g.cap && F && F.k === 'grua') r.cap = String(g.cap).slice(0, 20);
+  return r;
+}
+/* el andamio: qué protección contra caídas, según la altura de su plataforma (m) o lo que eligió el supervisor */
+function ceqCaida(alt, anc){
+  var h = +alt || 0;
+  if(anc === 'restriccion') return { k:'restriccion', t:'Restricción: no deja llegar al borde', corta:'Barandas completas o anclaje que no deja alcanzar el borde.',
+    d:'Con barandas completas o un anclaje que no deja alcanzar el borde, la caída no ocurre.' };
+  if(anc === 'retractil' || (!anc && h > 0 && h < 5.5)) return { k:'retractil', t:'Bloque retráctil', corta:'Con poca altura, la línea con absorbedor no alcanza a frenar.',
+    d:'Con poca altura, una línea de 1,80 m con absorbedor no alcanza a frenar antes del piso; el retráctil frena en poca distancia (la que dice su fabricante).' };
+  if(anc === 'absorbedor' || h >= 5.5) return { k:'absorbedor', t:'Línea doble con absorbedor', corta:'Siempre una conectada, anclada a la altura del hombro o más arriba.',
+    d:'Con 100 % de anclaje (una conectada siempre) y el anclaje a la altura del hombro o más arriba, si la distancia libre alcanza.' };
+  return { k:'', t:'Según la altura de la plataforma', corta:'Menos de 5,50 m: retráctil. Desde 5,50 m: línea con absorbedor.', d:'Menos de 5,50 m: bloque retráctil. Desde 5,50 m: línea doble con absorbedor, si la distancia libre alcanza.' };
+}
+/* ── el dibujo ── */
+function _ceqLienzo(F){ var c = document.createElement('canvas'); c.width = Math.round(F.w * CEQ_K); c.height = Math.round(F.h * CEQ_K); return c; }
+function _ceqPt(pt){ return pt * 0.3528 * CEQ_K; }
+function _ceqFuente(px, peso){ return (peso || '700') + ' ' + Math.round(px) + 'px system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif'; }
+/* un párrafo en un ancho: devuelve las líneas y su alto */
+function _ceqParrafo(g, txt, w, px, peso){ g.font = _ceqFuente(px, peso); var L = _cqLineas(g, txt, w); return { l:L, h:L.length * px * 1.22 }; }
+/* una caja con título y una lista (viñeta o número): mide (pinta=false) o pinta; devuelve el alto */
+function _ceqLista(g, o, pinta){
+  var px = o.px, pad = px * 0.55, tit = o.t ? px * 1.05 : 0, y = o.y + pad + (o.t ? tit : 0), sang = px * 1.1;
+  if(pinta){
+    if(o.fondo){ g.fillStyle = o.fondo; _cqCaja(g, o.x, o.y, o.w, o.alto, px * 0.5); g.fill(); }
+    if(o.borde){ g.strokeStyle = o.borde; g.lineWidth = Math.max(2, px * 0.09); _cqCaja(g, o.x, o.y, o.w, o.alto, px * 0.5); g.stroke(); }
+    if(o.t){ g.font = _ceqFuente(px * 0.86, '900'); g.fillStyle = o.ct || '#0B2A3A'; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillText(o.t, o.x + pad, o.y + pad + px * 0.8); }
+  }
+  (o.items || []).forEach(function(it, i){
+    if(o.sinV) sang = 0;
+    var P = _ceqParrafo(g, it, o.w - pad * 2 - sang, px, o.peso || '600');
+    if(pinta){
+      g.fillStyle = o.color || '#0B2A3A'; g.font = _ceqFuente(px, '800'); g.textAlign = 'left';
+      if(!o.sinV) g.fillText(o.num ? (i + 1) + '.' : '•', o.x + pad, y + px * 0.95);
+      g.font = _ceqFuente(px, o.peso || '600');
+      P.l.forEach(function(l, j){ g.fillText(l, o.x + pad + sang, y + px * 0.95 + j * px * 1.22); });
+    }
+    y += P.h + px * 0.18;
+  });
+  if(o.nota){
+    var N = _ceqParrafo(g, o.nota, o.w - pad * 2, px * 0.9, '700');
+    if(pinta){ g.fillStyle = o.cn || '#B91C1C'; g.font = _ceqFuente(px * 0.9, '700'); N.l.forEach(function(l, j){ g.fillText(l, o.x + pad, y + px * 0.9 + j * px * 0.9 * 1.22); }); }
+    y += N.h + px * 0.1;
+  }
+  return y + pad - o.y;
+}
+/* un paso de «cómo se usa»: «Hala el seguro. Rompe el precinto…» */
+function _ceqPaso(p){ var a = String(p[0] || '').replace(/[.:]\s*$/, ''); return p[1] ? a + '. ' + p[1] : a; }
+/* el QR: el de la obra (con su estilo) en la media hoja; en los tags, negro puro sobre blanco y sin logo, para cámaras simples */
+function _ceqQR(g, enlace, x, y, lado, micro){
+  var q = qrcode(0, 'M'); q.addData(enlace); q.make();
+  if(!micro && typeof qrePintar === 'function'){ qrePintar(g, q, x, y, lado, { entero:true }); return; }
+  var n = q.getModuleCount(), T = n + 8, m = Math.max(1, Math.floor(lado / T)), u = m * T, x0 = Math.round(x + (lado - u) / 2), y0 = Math.round(y + (lado - u) / 2);
+  g.fillStyle = '#FFFFFF'; g.fillRect(x0, y0, u, u); g.fillStyle = '#000000';
+  for(var r = 0; r < n; r++) for(var c = 0; c < n; c++) if(q.isDark(r, c)) g.fillRect(x0 + (c + 4) * m, y0 + (r + 4) * m, m, m);
+}
+/* ── las imágenes: las señales de la NTP (en la app, del catálogo NTP_SENALES; en la web, CEQ_SENAL_SVG con solo las que se usan) ── */
+function _ceqSvg(k){
+  try{ if(typeof CEQ_SENAL_SVG === 'object' && CEQ_SENAL_SVG && CEQ_SENAL_SVG[k]) return CEQ_SENAL_SVG[k]; }catch(_a){}
+  try{ if(typeof NTP_SENALES !== 'undefined') for(var i = 0; i < NTP_SENALES.length; i++) if(NTP_SENALES[i].k === k) return NTP_SENALES[i].s; }catch(_b){}
+  return '';
+}
+/* las señales que lleva la cartilla de un equipo */
+function ceqSenales(x, c){
+  var FA = CEQ_FAM[c.f] || {}, L = [ceqIcono(x, c)];
+  ceqPeligros(x, c).concat(ceqEpp(x, c)).concat(FA.consejos || []).forEach(function(p){ if(p[0] && L.indexOf(p[0]) < 0) L.push(p[0]); });
+  if(c.f === 'andamio') L.push('uso-obligatorio-de-arnes-de-seguridad');
+  return L;
+}
+function ceqIcono(x, c){ var FA = CEQ_FAM[c.f] || {}; return (FA.icTipo && FA.icTipo[x && x.tipo]) || FA.ic || ''; }
+function ceqEpp(x, c){ var FA = CEQ_FAM[c.f] || {}; return (FA.eppTipo && FA.eppTipo[x && x.tipo]) || FA.epp || []; }
+function ceqColor(x, c){
+  var FA = CEQ_FAM[c.f] || {}, e = null; CEQ_COLORES.forEach(function(k){ if(k[0] && k[0] === c.col) e = k[2]; });
+  return e || (FA.colorTipo && FA.colorTipo[x && x.tipo]) || FA.color || '#0B2A3A';
+}
+/* sobre la franja amarilla, letra oscura; y en blanco, el amarillo se oscurece para que se lea */
+function ceqSobre(x, c){ return c.col === 'amarillo' ? '#0B2A3A' : '#FFFFFF'; }
+function ceqTinta(x, c){ return c.col === 'amarillo' ? '#8A5A00' : ceqColor(x, c); }
+function ceqPeligros(x, c){ var FA = CEQ_FAM[c.f] || {}; return (FA.peligrosTipo && FA.peligrosTipo[x && x.tipo]) || FA.peligros || []; }
+/* las dos caras, con sus imágenes cargadas. o: { x, c, enlace, empresa, obra, L (logo), img (Image de la cara B), uso, cintas, nombreMod } */
+function ceqCaras(o){
+  var ks = ceqSenales(o.x || {}, o.c);
+  return Promise.all(ks.map(function(k){ return _cqImgSvg(_ceqSvg(k), 400); })).then(function(R){
+    o.pic = {}; ks.forEach(function(k, i){ o.pic[k] = R[i]; });
+    return { a:ceqCaraA(o), b:ceqCaraB(o) };
+  });
+}
+/* medidas de la cara A por tamaño (mm): cabecera, franja de abajo, zona del QR, señales de peligro y de EPP, títulos */
+var CEQ_LAY = {
+  a5:  { cab:31, pie:8.5, qr:40, ico:21, epp:16.5, sec:3.6, cap:3.1, m:5, tiles:2 },
+  tag: { cab:23, pie:6.5, qr:31, ico:15.5, epp:12.5, sec:3, cap:2.5, m:3.6, tiles:1 },
+  mini:{ cab:16.5, pie:5, qr:27, ico:14, epp:12, sec:2.4, cap:2.3, m:2.4, tiles:0 }
+};
+function _ceqMono(px){ return '800 ' + Math.round(px) + 'px ui-monospace,"SF Mono",Menlo,Consolas,"Roboto Mono",monospace'; }
+/* el título de una parte: la barrita de color y el texto en mayúsculas */
+function _ceqSec(g, x, y, txt, color, px){
+  g.fillStyle = color; g.fillRect(x, y - px * 0.82, Math.max(3, px * 0.28), px * 0.98);
+  g.font = _ceqFuente(px, '900'); g.fillStyle = color; g.textAlign = 'left';
+  try{ g.letterSpacing = Math.round(px * 0.08) + 'px'; }catch(_l){}
+  g.fillText(String(txt).toUpperCase(), x + px * 0.6, y);
+  try{ g.letterSpacing = '0px'; }catch(_l2){}
+}
+/* una fila de señales con su nombre debajo, repartidas en el ancho */
+function _ceqFilaSenales(g, L, pic, x, y, w, lado, capPx, color){
+  var n = L.length || 1, paso = w / n, capMax = 0;
+  L.forEach(function(p, i){
+    var cx = x + paso * i + paso / 2, im = pic[p[0]];
+    if(im) g.drawImage(im, cx - lado / 2, y, lado, lado);
+    else { g.fillStyle = '#E2E8F0'; _cqCaja(g, cx - lado / 2, y, lado, lado, lado * 0.12); g.fill(); }
+    var f = _cqAjustar(g, p[1], paso * 0.96, 2, capPx, capPx * 0.72, '800');
+    g.font = _cqFuente(f.s, '800'); _cqTexto(g, f.l, cx, y + lado + f.s * 1.05, f.s, f.s * 1.08, color || '#0B2A3A');
+    capMax = Math.max(capMax, f.l.length * f.s * 1.08);
+  });
+  return lado + capMax + capPx * 0.3;
+}
+/* las reglas en baldosas: el número en un círculo de color, lo grande y una línea chica (en los tags, solo lo grande) */
+function _ceqBaldosas(g, L, x, y, w, h, cols, color, conDet){
+  var filas = Math.ceil(L.length / cols), sep = Math.max(6, w * 0.02), bw = (w - sep * (cols - 1)) / cols, bh = (h - sep * (filas - 1)) / filas;
+  var pxT = Math.min(bh * (conDet ? 0.27 : 0.36), bw * 0.1), r = Math.min(bh * 0.3, pxT * 1.1);
+  L.forEach(function(p, i){
+    var bx = x + (i % cols) * (bw + sep), by = y + Math.floor(i / cols) * (bh + sep);
+    g.fillStyle = '#F1F5F9'; _cqCaja(g, bx, by, bw, bh, Math.min(bh, bw) * 0.14); g.fill();
+    var cx = bx + r * 1.35, cy = by + bh / 2;
+    g.fillStyle = color; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+    g.font = _ceqFuente(r * 1.15, '900'); g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.fillText(String(i + 1), cx, cy + r * 0.4);
+    var tx = cx + r * 1.45, tw = bx + bw - tx - r * 0.5;
+    var ft = _cqAjustar(g, p[0], tw, 2, pxT, pxT * 0.6, '900'), fd = conDet ? _cqAjustar(g, p[1], tw, 2, pxT * 0.66, pxT * 0.46, '600') : { l:[], s:0 };
+    var bloque = ft.l.length * ft.s * 1.08 + (fd.l.length ? fd.s * 0.3 + fd.l.length * fd.s * 1.15 : 0), ty = by + (bh - bloque) / 2 + ft.s * 0.85;
+    g.font = _cqFuente(ft.s, '900'); ty = _cqTextoIzq(g, ft.l, tx, ty, ft.s * 1.08, '#0B2A3A');
+    if(fd.l.length){ g.font = _cqFuente(fd.s, '600'); _cqTextoIzq(g, fd.l, tx, ty + fd.s * 1.3, fd.s * 1.15, '#475569'); }
+  });
+}
+/* cara A. o: { x (el equipo), c (su ceqCfg), enlace, empresa, obra, L (logo de cartelLogo), pic (las señales), uso (eqUsoDe) } */
+function ceqCaraA(o){
+  var F = CEQ_FMT[o.c.t] || CEQ_FMT.a5, Y = CEQ_LAY[F.k], FA = CEQ_FAM[o.c.f] || CEQ_FAM.poder, cv = _ceqLienzo(F), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  var x = o.x || {}, K = CEQ_K, M = Y.m * K, col = ceqColor(x, o.c), sob = ceqSobre(x, o.c), tin = ceqTinta(x, o.c), pic = o.pic || {}, OSC = '#0B2A3A', emerg = o.c.f === 'emergencia';
+  g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, W, H);
+  /* ── 1 · la cabecera: la señal, qué es (grande), su código y dónde está ── */
+  var cab = Y.cab * K, pad = cab * 0.12, lado = cab - pad * 2;
+  g.fillStyle = col; g.fillRect(0, 0, W, cab);
+  g.fillStyle = '#FFFFFF'; _cqCaja(g, pad, pad, lado, lado, lado * 0.1); g.fill();
+  var ic = pic[ceqIcono(x, o.c)]; if(ic) g.drawImage(ic, pad + lado * 0.07, pad + lado * 0.07, lado * 0.86, lado * 0.86);
+  /* el logo de la empresa, arriba a la derecha, en un marco negro */
+  var lgW = 0;
+  if(o.L && o.L.im){
+    var lh = lado * (F.k === 'mini' ? 0.62 : 0.74), rr = o.L.sw / o.L.sh, lw = Math.min(lh * rr * 1.08 + lh * 0.2, W * 0.26), lx = W - pad - lw, ly = (cab - lh) / 2;
+    g.fillStyle = '#FFFFFF'; _cqCaja(g, lx, ly, lw, lh, lh * 0.08); g.fill();
+    g.strokeStyle = '#000000'; g.lineWidth = Math.max(3, K * 0.55); _cqCaja(g, lx, ly, lw, lh, lh * 0.08); g.stroke();
+    var ih = lh * 0.78, iw = ih * rr; if(iw > lw * 0.86){ iw = lw * 0.86; ih = iw / rr; }
+    g.drawImage(o.L.im, o.L.sx, o.L.sy, o.L.sw, o.L.sh, lx + (lw - iw) / 2, ly + (lh - ih) / 2, iw, ih);
+    lgW = lw + pad;
+  }
+  var tx = pad * 2 + lado, tw = W - tx - pad - lgW;
+  var fn = _cqAjustar(g, String(x.tipo || FA.n).toUpperCase(), tw, 2, cab * 0.3, cab * 0.17, '900');
+  var cod = String(x.codigo || ''), pc = Math.min(cab * 0.2, fn.s * 0.85);
+  var sub = F.k === 'mini' ? '' : _ceqSub(x, o.c, o.uso), fs = sub ? _cqAjustar(g, sub, tw, 1, cab * 0.12, cab * 0.08, '700') : null;
+  /* si no entra en una línea, solo lo primero (sin cortarlo a la mitad) */
+  if(fs && fs.l.length > 1){ sub = sub.split(' · ')[0]; fs = _cqAjustar(g, sub, tw, 1, cab * 0.12, cab * 0.08, '700'); if(fs.l.length > 1) fs = null; }
+  var bloque = fn.l.length * fn.s * 1.02 + pc * 1.3 + (fs ? fs.s * 1.4 : 0), ty = (cab - bloque) / 2 + fn.s * 0.86;
+  g.font = _cqFuente(fn.s, '900'); ty = _cqTextoIzq(g, fn.l, tx, ty, fn.s * 1.02, sob);
+  g.font = _ceqMono(pc); g.fillStyle = sob; g.fillText(cod, tx, ty + pc * 1.3); ty += pc * 1.3;
+  if(fs){ g.font = _cqFuente(fs.s, '700'); g.fillStyle = sob; g.globalAlpha = 0.9; g.fillText(fs.l[0] || '', tx, ty + fs.s * 1.4); g.globalAlpha = 1; }
+  /* ── 4 · la franja de abajo: la obra ── */
+  var pie = Y.pie * K, pieY = H - pie;
+  g.fillStyle = col; g.fillRect(0, pieY, W, pie);
+  var fo = _cqAjustar(g, String(o.obra || o.empresa || ''), W - M * 2, 1, pie * 0.38, pie * 0.26, '800');
+  g.font = _cqFuente(fo.s, '800'); _cqTexto(g, fo.l, W / 2, pieY + pie * 0.47, fo.s, 0, sob);
+  g.font = _ceqFuente(pie * 0.24, '800'); g.fillStyle = sob; g.globalAlpha = 0.85; g.textAlign = 'center'; g.fillText('◆ OBRASST', W / 2, pieY + pie * 0.86); g.textAlign = 'left'; g.globalAlpha = 1;
+  /* ── 3 · el QR, en su marco del color ── */
+  var zq = Y.qr * K, qy = pieY - zq - M * 0.35, qlado = zq - M * 0.2;
+  if(F.k === 'mini'){
+    var qx = (W - qlado) / 2;
+    g.strokeStyle = col; g.lineWidth = K * 0.7; _cqCaja(g, qx, qy, qlado, qlado, K * 1.4); g.stroke();
+    _ceqQR(g, o.enlace, qx + K * 0.9, qy + K * 0.9, qlado - K * 1.8, true);
+  } else {
+    var qx2 = W - M - qlado;
+    g.strokeStyle = col; g.lineWidth = K * (F.k === 'a5' ? 0.9 : 0.7); _cqCaja(g, qx2, qy, qlado, qlado, K * 2); g.stroke();
+    _ceqQR(g, o.enlace, qx2 + K * 1.2, qy + K * 1.2, qlado - K * 2.4, F.micro);
+    var lw = qx2 - M - M * 0.6;
+    var e1 = _cqAjustar(g, 'ESCANÉAME', lw, 1, zq * 0.24, zq * 0.12, '900'), e2 = _cqAjustar(g, emerg ? 'Cómo usarlo, si está al día y su inspección.' : 'Revísalo antes de usarlo: su estado, su inspección y sus certificados.', lw, 3, zq * 0.1, zq * 0.07, '700');
+    var hayL = !!(o.L && o.L.im) || !!o.empresa, hL = hayL ? zq * 0.22 : 0;
+    var bl = e1.s * 0.9 + e2.l.length * e2.s * 1.2 + e2.s * 0.6 + (hayL ? hL + e2.s : 0), yy = qy + (qlado - bl) / 2 + e1.s * 0.85;
+    g.font = _cqFuente(e1.s, '900'); g.fillStyle = tin; g.textAlign = 'left'; g.fillText(e1.l[0], M, yy);
+    g.font = _cqFuente(e2.s, '700'); yy = _cqTextoIzq(g, e2.l, M, yy + e2.s * 1.5, e2.s * 1.2, OSC);
+    if(hayL && !(o.L && o.L.im)){ g.textAlign = 'center'; _cqLogo(g, null, M + Math.min(lw, W * 0.4) / 2, yy + e2.s, Math.min(lw, W * 0.4), hL, o.empresa, OSC); g.textAlign = 'left'; }
+  }
+  /* ── 2 · el medio: señales de peligro, EPP y lo que hay que hacer ── */
+  var y = cab + M * 0.9, fin = qy - M * 0.7, w = W - M * 2, secPx = Y.sec * K, capPx = Y.cap * K;
+  if(emerg) return _ceqMedioEmerg(g, o, x, M, y, w, fin, secPx, tin, F), cv;
+  /* sin baldosas (el mini-tag), las señales crecen hasta llenar */
+  if(!Y.tiles){ var nec = secPx * 3 + Y.ico * K + Y.epp * K + capPx * 6 + M * 0.6, k2 = Math.min(1.3, Math.max(1, (fin - y) / nec)); Y = { ico:Y.ico * k2, epp:Y.epp * k2, cap:Y.cap, tiles:0 }; }
+  _ceqSec(g, M, y + secPx * 0.8, 'Peligros', '#B91C1C', secPx); y += secPx * 1.5;
+  y += _ceqFilaSenales(g, ceqPeligros(x, o.c).slice(0, F.k === 'mini' ? 2 : 3), pic, M, y, w, Y.ico * K, capPx, OSC) + M * 0.3;
+  var epp = ceqEpp(x, o.c).slice(0, F.k === 'mini' ? 3 : 4);
+  _ceqSec(g, M, y + secPx * 0.8, 'Usa siempre', '#1D4ED8', secPx); y += secPx * 1.5;
+  y += _ceqFilaSenales(g, epp, pic, M, y, w, Y.epp * K, capPx, OSC) + M * 0.3;
+  if(o.c.f === 'andamio' && F.k !== 'mini'){
+    var P = ceqCaida(o.c.alt, o.c.anc), hc = Math.min((fin - y) * 0.42, (F.k === 'a5' ? 24 : 17) * K);
+    g.fillStyle = '#FFF4D6'; _cqCaja(g, M, y, w, hc, K * 1.6); g.fill(); g.strokeStyle = '#F5B700'; g.lineWidth = K * 0.4; _cqCaja(g, M, y, w, hc, K * 1.6); g.stroke();
+    var la = hc * 0.78, imA = pic['uso-obligatorio-de-arnes-de-seguridad']; if(imA) g.drawImage(imA, M + hc * 0.11, y + hc * 0.11, la, la);
+    var cx2 = M + hc * 0.11 + la + M * 0.5, cw2 = M + w - cx2 - M * 0.4;
+    var c1 = _cqAjustar(g, 'Contra caídas' + (o.c.alt ? ' · plataforma de ' + String(o.c.alt).replace('.', ',') + ' m' : ''), cw2, 1, hc * 0.16, hc * 0.11, '800');
+    var c2 = _cqAjustar(g, P.t, cw2, 1, hc * 0.3, hc * 0.16, '900'), c3 = _cqAjustar(g, P.corta, cw2, 2, hc * 0.14, hc * 0.1, '700');
+    var b2 = c1.s * 1.25 + c2.s * 1.1 + c3.l.length * c3.s * 1.2, y2 = y + (hc - b2) / 2 + c1.s * 0.85;
+    g.textAlign = 'left'; g.font = _cqFuente(c1.s, '800'); g.fillStyle = '#92400E'; g.fillText(c1.l[0], cx2, y2);
+    g.font = _cqFuente(c2.s, '900'); g.fillStyle = OSC; g.fillText(c2.l[0], cx2, y2 + c2.s * 1.15);
+    g.font = _cqFuente(c3.s, '700'); _cqTextoIzq(g, c3.l, cx2, y2 + c2.s * 1.15 + c3.s * 1.35, c3.s * 1.2, '#475569');
+    y += hc + M * 0.5;
+  }
+  if(Y.tiles && fin - y > K * 9){
+    var R = FA.reglas.slice(0, 4), cols = 2;
+    _ceqSec(g, M, y + secPx * 0.8, 'Así se usa', OSC, secPx); y += secPx * 1.5;
+    _ceqBaldosas(g, R, M, y, w, Math.min(fin - y, (F.k === 'a5' ? 22 : 15) * K * Math.ceil(R.length / cols)), cols, tin, Y.tiles > 1);
+  }
+  return cv;
+}
+/* lo de abajo del nombre: dónde está, y del equipo lo que sirve (capacidad, marca y modelo, el agente del extintor) */
+function _ceqSub(x, c, U){
+  var L = [];
+  if(c.f === 'emergencia' && U && U.ext){ if(U.agente) L.push(U.agente.n + (U.kg ? ' · ' + U.kg + ' kg' : '')); }
+  else if(c.f === 'andamio' && c.carga) L.push('Carga máx. ' + c.carga);
+  else { var FD = (CEQ_FAM[c.f] || {}).datos || []; for(var i = 0; i < FD.length; i++) if(c.d && c.d[FD[i][0]]){ L.push(FD[i][1] + ' ' + c.d[FD[i][0]] + (FD[i][2] && !/[a-z]$/i.test(c.d[FD[i][0]]) ? ' ' + FD[i][2] : '')); break; } }
+  if(!L.length){ var mm = [x.marca, x.modelo].filter(Boolean).join(' '); if(mm) L.push(mm); }
+  if(x.ubicacion) L.push(x.ubicacion);
+  return L.join(' · ');
+}
+/* el extintor y el botiquín: como su cartel A4, más chico: los pasos en baldosas, para qué fuegos sirve y su recarga */
+function _ceqMedioEmerg(g, o, x, M, y, w, fin, secPx, col, F){
+  var U = o.uso || { pasos:[] }, K = CEQ_K, OSC = '#0B2A3A', pasos = U.pasos.slice(0, 4).map(function(p){ return [p[0], p[1] || '']; });
+  var clases = (U.ext && U.agente) ? U.agente.c.split('') : [], hCl = clases.length && F.k !== 'mini' ? secPx * 1.5 + clases.length * secPx * 1.75 : 0;
+  var hFe = (U.ext && U.r && F.k !== 'mini') ? secPx * 3.4 : 0;
+  _ceqSec(g, M, y + secPx * 0.8, 'Cómo usarlo', col, secPx); y += secPx * 1.5;
+  var hp = fin - y - hCl - hFe - (hCl ? K * 2 : 0);
+  if(pasos.length) _ceqBaldosas(g, pasos, M, y, w, hp, F.k === 'mini' ? 1 : 2, col, F.k === 'a5');
+  y += hp + K * 1.5;
+  if(hCl){
+    _ceqSec(g, M, y + secPx * 0.8, 'Sirve para', col, secPx); y += secPx * 1.5;
+    clases.forEach(function(cl){
+      var t = (typeof EQ_CLASES_FUEGO === 'object' && EQ_CLASES_FUEGO[cl]) || '';
+      g.fillStyle = col; _cqCaja(g, M, y, secPx * 1.4, secPx * 1.4, secPx * 0.2); g.fill();
+      g.font = _ceqFuente(secPx * 1.05, '900'); g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.fillText(cl, M + secPx * 0.7, y + secPx * 1.08); g.textAlign = 'left';
+      var f = _cqAjustar(g, t, w - secPx * 2, 1, secPx * 0.95, secPx * 0.7, '700'); g.font = _cqFuente(f.s, '700'); g.fillStyle = OSC; g.fillText(f.l[0] || '', M + secPx * 2, y + secPx * 1.0);
+      y += secPx * 1.75;
+    });
+  }
+  if(hFe){
+    y += K;
+    g.fillStyle = '#F1F5F9'; _cqCaja(g, M, y, w, secPx * 2.6, K); g.fill();
+    g.font = _ceqFuente(secPx * 0.85, '800'); g.fillStyle = '#475569'; g.fillText('Vence su recarga', M + K * 1.5, y + secPx * 1.05);
+    g.font = _ceqMono(secPx * 1.15); g.fillStyle = OSC; g.fillText(eqRecargaTxt(U.r), M + K * 1.5, y + secPx * 2.2);
+  }
+}
+/* las cajas una debajo de otra (las de dos, lado a lado), con la letra que entra; el aire que sobra, repartido */
+function _ceqPintaCajas(g, cajas, y0, alto, px0, pxMin, sep){
+  var medir = cajas.map(function(c){
+    if(!c.dos) return c;
+    var w2 = (c.w - sep) / 2, A = c.a, B = c.b; A.x = c.x; A.w = w2; B.x = c.x + w2 + sep; B.w = w2;
+    return { _dos:c, x:c.x, w:c.w, items:[], t:'', k:1, A:A, B:B };
+  });
+  var alturas = function(px){
+    return medir.map(function(c){
+      if(c._dos){ c.A.px = px; c.B.px = px; c.A.y = 0; c.B.y = 0; return Math.max(_ceqLista(g, c.A, false), _ceqLista(g, c.B, false)); }
+      c.px = px * (c.k || 1); c.y = 0; return _ceqLista(g, c, false);
+    });
+  };
+  /* la letra más grande que entra (hasta un 60 % más que la de partida, para que no sobre aire) */
+  var suma = function(a){ var t = 0; a.forEach(function(v){ t += v; }); return t + sep * (a.length - 1); };
+  var lo = pxMin, hi = px0 * 1.6;
+  if(suma(alturas(lo)) > alto) hi = lo;
+  else for(var it = 0; it < 9; it++){ var mid = (lo + hi) / 2; if(suma(alturas(mid)) <= alto) lo = mid; else hi = mid; }
+  var px = lo, hs = alturas(px);
+  var extra = Math.max(0, (alto - suma(hs)) / Math.max(1, medir.length)), y = y0;
+  medir.forEach(function(c, i){
+    var h = hs[i] + extra * (c.meta ? 0 : 1);
+    if(c._dos){ c.A.y = y; c.B.y = y; c.A.alto = h; c.B.alto = h; _ceqLista(g, c.A, true); _ceqLista(g, c.B, true); }
+    else { c.y = y; c.alto = h; _ceqLista(g, c, true); }
+    y += h + sep;
+  });
+}
+/* cara B: los bloques que eligió el supervisor (en la media hoja, hasta 2; en los tags, 1). o: como ceqCaraA, más img (Image) y cintas ({'01':'rojo'…}) */
+function ceqCaraB(o){
+  var F = CEQ_FMT[o.c.t] || CEQ_FMT.a5, FA = CEQ_FAM[o.c.f] || CEQ_FAM.poder, cv = _ceqLienzo(F), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  var x = o.x || {}, mini = F.k === 'mini', M = (mini ? 2.2 : 3.5) * CEQ_K;
+  g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, W, H);
+  if(o.c.r[0] && CEQ_REV[o.c.r[0]] && CEQ_REV[o.c.r[0]].mod) return _ceqModulacion(g, o, W, H, F), cv;
+  var cab = (mini ? 9 : 11) * CEQ_K;
+  g.fillStyle = ceqColor(x, o.c); g.fillRect(0, 0, W, cab);
+  var sobB = ceqSobre(x, o.c);
+  var fn = _cqAjustar(g, String(x.tipo || FA.n), W * 0.62, 1, cab * 0.42, cab * 0.26, '900');
+  g.font = _cqFuente(fn.s, '900'); g.fillStyle = sobB; g.textAlign = 'left'; g.fillText(fn.l[0] || '', M, cab / 2 + fn.s * 0.36);
+  g.font = _ceqMono(cab * 0.34); g.fillStyle = sobB; g.textAlign = 'right'; g.fillText(String(x.codigo || ''), W - M, cab / 2 + cab * 0.11); g.textAlign = 'left';
+  var lista = o.c.r.slice(0, F.rev), y = cab + M * 0.6, alto = H - y - M * 1.1, n = lista.length || 1;
+  var hb = (alto - M * 0.5 * (n - 1)) / n;
+  lista.forEach(function(k, i){ _ceqBloque(g, k, o, M, y + i * (hb + M * 0.5), W - M * 2, hb, F); });
+  /* la marca de cómo se imprime: chica, abajo */
+  g.font = _ceqFuente(_ceqPt(mini ? 4.6 : 5.5), '700'); g.fillStyle = '#94A3B8'; g.textAlign = 'center';
+  g.fillText('OBRASST · reverso de ' + String(x.codigo || ''), W / 2, H - M * 0.25); g.textAlign = 'left';
+  return cv;
+}
+/* la modulación del andamio: la imagen elegida, a toda la cara; arriba, una franja con su código y el nombre de la modulación */
+function _ceqModulacion(g, o, W, H, F){
+  var K = CEQ_K, x = o.x || {}, fr = (F.k === 'a5' ? 9 : 7) * K, col = ceqColor(x, o.c), m = K * 2;
+  g.fillStyle = col; g.fillRect(0, 0, W, fr);
+  var t = 'MODULACIÓN' + (o.nombreMod ? ' · ' + o.nombreMod : '');
+  var ft = _cqAjustar(g, t, W * 0.68, 1, fr * 0.42, fr * 0.26, '900'); g.font = _cqFuente(ft.s, '900'); g.fillStyle = ceqSobre(x, o.c); g.textAlign = 'left'; g.fillText(ft.l[0] || '', m, fr / 2 + ft.s * 0.36);
+  g.font = _ceqMono(fr * 0.4); g.textAlign = 'right'; g.fillText(String(x.codigo || ''), W - m, fr / 2 + fr * 0.14); g.textAlign = 'left';
+  var im = o.img, y = fr + m * 0.6, h = H - y - m * 0.6, w = W - m * 1.2, X = m * 0.6;
+  if(im && im.naturalWidth){
+    var r = Math.min(w / im.naturalWidth, h / im.naturalHeight), iw = im.naturalWidth * r, ih = im.naturalHeight * r;
+    g.drawImage(im, X + (w - iw) / 2, y + (h - ih) / 2, iw, ih);
+  } else {
+    g.setLineDash([K * 1.5, K]); g.strokeStyle = '#94A3B8'; g.lineWidth = K * 0.3; g.strokeRect(X, y, w, h); g.setLineDash([]);
+    var f = _cqAjustar(g, 'Elige su modulación (las que subió la obra) y sale aquí, a toda la cara.', w * 0.8, 3, K * 4.5, K * 2.6, '800');
+    g.font = _cqFuente(f.s, '800'); _cqTexto(g, f.l, W / 2, y + h / 2 - f.l.length * f.s * 0.5, f.s, f.s * 1.2, '#64748B');
+  }
+}
+/* ── la cara B, más visual (25/11/2026 · Marcelo: «más llamativo e interactivo», el checklist también en lo mensual) ── */
+function ceqChkItems(x, c){ return c.f === 'emergencia' ? (CEQ_MES_ITEMS[String((x || {}).tipo)] || []) : ((CEQ_FAM[c.f] || {}).chk || []); }
+/* un visto o una equis en un círculo */
+function _ceqMarca(g, cx, cy, r, ok){
+  g.fillStyle = ok ? '#15803D' : '#B91C1C'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#FFFFFF'; g.lineWidth = r * 0.28; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath();
+  if(ok){ g.moveTo(cx - r * 0.45, cy + r * 0.02); g.lineTo(cx - r * 0.1, cy + r * 0.38); g.lineTo(cx + r * 0.48, cy - r * 0.35); }
+  else { g.moveTo(cx - r * 0.38, cy - r * 0.38); g.lineTo(cx + r * 0.38, cy + r * 0.38); g.moveTo(cx + r * 0.38, cy - r * 0.38); g.lineTo(cx - r * 0.38, cy + r * 0.38); }
+  g.stroke(); g.lineCap = 'butt';
+}
+/* el checklist: lo que se revisa en filas y los casilleros (12 meses, o los días: 1-16 y 17-31 en la media hoja; una semana en los tags) */
+function _ceqChecklist(g, tipo, o, x, y, w, h, F, px0, pxMin){
+  var y0 = y, h0 = h, it = ceqChkItems(o.x, o.c).slice(0, F.k === 'mini' ? 4 : 6), tin = ceqTinta(o.x || {}, o.c), K = CEQ_K, OSC = '#0B2A3A';
+  var px = px0 * 0.9, ley = (tipo === 'm' ? 'Una vez al mes. ' : '') + 'Marca:';
+  /* la leyenda: ✓ conforme · ✗ observado */
+  g.font = _ceqFuente(px * 0.85, '800'); g.fillStyle = '#475569'; g.textAlign = 'left'; g.fillText(ley, x, y + px * 0.85);
+  var lx = x + g.measureText(ley).width + px * 0.9, r = px * 0.48;
+  _ceqMarca(g, lx, y + px * 0.55, r, true); g.fillStyle = OSC; g.font = _ceqFuente(px * 0.85, '700'); g.fillText('conforme', lx + r * 1.6, y + px * 0.85);
+  lx += r * 1.6 + g.measureText('conforme').width + px * 1.2; _ceqMarca(g, lx, y + px * 0.55, r, false); g.fillStyle = OSC; g.fillText('observado', lx + r * 1.6, y + px * 0.85);
+  y += px * 1.7; h -= px * 1.7;
+  var grupos = [];
+  if(tipo === 'm') grupos.push(CEQ_MESES);
+  else if(F.k === 'a5'){ var a = [], b = []; for(var d = 1; d <= 31; d++) (d <= 16 ? a : b).push(String(d)); grupos.push(a, b); }
+  else grupos.push(['L', 'M', 'M', 'J', 'V', 'S', 'D']);
+  var pie = tipo === 'm' ? 0 : px * 2.2, hg = (h - pie - px * 0.6 * (grupos.length - 1)) / grupos.length;
+  grupos.forEach(function(cols, gi){
+    var gy = y + gi * (hg + px * 0.6), filas = it.length + 2, fh = Math.min(hg / filas, px * (F.k === 'a5' ? 3.2 : 3.8)), iw = w * (F.k === 'mini' ? 0.4 : (tipo === 'm' ? 0.36 : 0.32)), cw = (w - iw) / cols.length;
+    /* la cabecera */
+    g.fillStyle = tin; g.fillRect(x, gy, w, fh);
+    var fc = Math.min(fh * 0.5, cw * 0.62); g.font = _ceqFuente(fc, '900'); while(fc > 4 && cols.some(function(cn){ return g.measureText(cn).width > cw * 0.9; })){ fc -= 1; g.font = _ceqFuente(fc, '900'); }
+    g.fillStyle = ceqSobre(o.x || {}, o.c); g.textAlign = 'center';
+    cols.forEach(function(cn, j){ g.fillText(cn, x + iw + cw * j + cw / 2, gy + fh * 0.66); });
+    g.textAlign = 'left'; g.font = _ceqFuente(fh * 0.42, '900'); g.fillText(tipo === 'm' ? 'SE REVISA' : (F.k === 'a5' ? (gi ? 'DÍAS 17 AL 31' : 'DÍAS 1 AL 16') : 'SEMANA'), x + px * 0.4, gy + fh * 0.64);
+    /* las filas */
+    it.concat([tipo === 'm' ? 'V°B° (iniciales)' : 'Revisó (iniciales)']).forEach(function(t, i){
+      var ry = gy + fh * (i + 1);
+      g.fillStyle = i % 2 ? '#F8FAFC' : '#FFFFFF'; g.fillRect(x, ry, w, fh);
+      var f = _cqAjustar(g, t, iw - px * 0.6, 2, Math.min(fh * 0.4, px * 0.95), pxMin * 0.8, i === it.length ? '900' : '700');
+      g.font = _cqFuente(f.s, i === it.length ? '900' : '700'); g.fillStyle = OSC; g.textAlign = 'left';
+      var by = ry + fh / 2 - (f.l.length - 1) * f.s * 0.55 + f.s * 0.35; f.l.forEach(function(l, k){ g.fillText(l, x + px * 0.4, by + k * f.s * 1.1); });
+      var lado = Math.min(cw, fh) * 0.62;
+      cols.forEach(function(_c, j){ var cx = x + iw + cw * j + (cw - lado) / 2, cy = ry + (fh - lado) / 2;
+        g.strokeStyle = '#64748B'; g.lineWidth = Math.max(2, K * 0.18); if(i < it.length) g.strokeRect(cx, cy, lado, lado); });
+    });
+    g.strokeStyle = '#94A3B8'; g.lineWidth = Math.max(2, K * 0.18); g.strokeRect(x, gy, w, fh * (it.length + 2));
+    for(var j = 0; j <= cols.length; j++){ g.beginPath(); g.moveTo(x + iw + cw * j, gy); g.lineTo(x + iw + cw * j, gy + fh * (it.length + 2)); g.stroke(); }
+    var gyF = gy + fh * (it.length + 2); if(gi === grupos.length - 1) y = gyF;
+  });
+  if(pie){
+    g.font = _ceqFuente(px * 0.95, '800'); g.fillStyle = OSC; g.textAlign = 'left';
+    var t1 = F.k === 'a5' ? 'Mes: ______________   Año: ________' : 'Semana del ____ / ____ al ____ / ____';
+    g.fillText(t1, x, y + px * 1.5); y += px * 1.5;
+  }
+  /* si algo sale observado */
+  var fo = _cqAjustar(g, 'Con un ✗: no se usa. Tarjeta roja y avísalo por el QR.', w, 2, px * 0.95, pxMin, '800');
+  if(y + fo.l.length * fo.s * 1.2 + px < y0 + h0){ g.font = _cqFuente(fo.s, '800'); _cqTextoIzq(g, fo.l, x, y + px * 0.6 + fo.s * 1.4, fo.s * 1.2, '#B91C1C'); }
+}
+/* la cinta del mes: las 12 cintas de colores (las de la obra) y la de este mes, grande */
+function _ceqCintas(g, o, x, y, w, h, F, px0){
+  var K = CEQ_K, OSC = '#0B2A3A', cols = F.k === 'a5' ? 6 : (F.k === 'tag' ? 4 : 3), filas = 12 / cols;
+  var hoy = new Date(), mh = ('0' + (hoy.getMonth() + 1)).slice(-2), C0 = (o.cintas && o.cintas[mh] && typeof eqColor === 'function') ? eqColor(o.cintas[mh]) : null;
+  /* arriba: «sin la cinta del mes, no se usa» */
+  var hb = Math.min(h * 0.22, px0 * 4.2);
+  g.fillStyle = '#0B2A3A'; _cqCaja(g, x, y, w, hb, px0 * 0.5); g.fill();
+  var sw = hb * 0.62; g.fillStyle = C0 ? C0.h : '#FFFFFF'; _ceqCinta(g, x + hb * 0.25, y + (hb - sw * 0.6) / 2, sw * 1.6, sw * 0.6); g.fill();
+  if(!C0){ g.strokeStyle = '#94A3B8'; g.setLineDash([K, K * 0.6]); _ceqCinta(g, x + hb * 0.25, y + (hb - sw * 0.6) / 2, sw * 1.6, sw * 0.6); g.stroke(); g.setLineDash([]); }
+  var tx = x + hb * 0.25 + sw * 1.6 + px0, f1 = _cqAjustar(g, 'Sin la cinta del mes, NO se usa', x + w - tx - px0 * 0.6, 2, hb * 0.3, hb * 0.16, '900');
+  g.font = _cqFuente(f1.s, '900'); _cqTextoIzq(g, f1.l, tx, y + (hb - f1.l.length * f1.s * 1.1) / 2 + f1.s * 0.85, f1.s * 1.1, '#FFFFFF');
+  y += hb + px0 * 0.8; h -= hb + px0 * 0.8;
+  var nota = px0 * 2.6, ch = (h - nota) / filas, cw = w / cols;
+  for(var i = 0; i < 12; i++){
+    var cx = x + (i % cols) * cw, cy = y + Math.floor(i / cols) * ch, k = ('0' + (i + 1)).slice(-2);
+    var C = (o.cintas && o.cintas[k] && typeof eqColor === 'function') ? eqColor(o.cintas[k]) : null, cin = Math.min(ch * 0.5, cw * 0.42);
+    var rx = cx + cw * 0.1, ry = cy + ch * 0.1, rw = cw * 0.8;
+    g.fillStyle = C ? C.h : '#FFFFFF'; _ceqCinta(g, rx, ry, rw, cin); g.fill();
+    g.strokeStyle = C && C.k !== 'blanco' ? 'rgba(0,0,0,.25)' : '#94A3B8'; g.lineWidth = Math.max(2, K * 0.2); if(!C) g.setLineDash([K, K * 0.6]); _ceqCinta(g, rx, ry, rw, cin); g.stroke(); g.setLineDash([]);
+    g.font = _ceqFuente(Math.min(cin * 0.55, cw * 0.2), '900'); g.fillStyle = (C && ['amarillo', 'blanco'].indexOf(C.k) < 0) ? '#FFFFFF' : OSC; g.textAlign = 'center';
+    g.fillText(CEQ_MESES[i], rx + rw / 2, ry + cin * 0.68);
+    var f = _cqAjustar(g, C ? C.n : 'Color: ______', cw * 0.9, 1, Math.min(ch * 0.2, px0 * 0.9), px0 * 0.5, '700'); g.font = _cqFuente(f.s, '700'); g.fillStyle = '#475569';
+    g.fillText(f.l[0] || '', cx + cw / 2, ry + cin + f.s * 1.3); g.textAlign = 'left';
+  }
+  var fn = _cqAjustar(g, 'Se pone al revisarla cada mes. La revisión de antes de usarla se registra en el QR.', w, 2, px0 * 0.85, px0 * 0.6, '700');
+  g.font = _cqFuente(fn.s, '700'); _cqTextoIzq(g, fn.l, x, y + filas * ch + fn.s * 1.1, fn.s * 1.2, '#475569');
+}
+/* una cinta: un rectángulo con los extremos en V */
+function _ceqCinta(g, x, y, w, h){ var n = h * 0.32; g.beginPath(); g.moveTo(x, y); g.lineTo(x + w, y); g.lineTo(x + w - n, y + h / 2); g.lineTo(x + w, y + h); g.lineTo(x, y + h); g.lineTo(x + n, y + h / 2); g.closePath(); }
+/* datos y seguridad: los datos del equipo en grande (los que escribió el supervisor; si falta, para llenar) y las recomendaciones con su señal */
+function _ceqFicha(g, o, x, y, w, h, F, px0, pxMin){
+  var FA = CEQ_FAM[o.c.f] || {}, D = (FA.datos || []).slice(0, F.k === 'mini' ? 2 : 3), tin = ceqTinta(o.x || {}, o.c), OSC = '#0B2A3A', K = CEQ_K, pic = o.pic || {};
+  if(D.length){
+    var hd = Math.min(h * 0.34, px0 * 6.2), sep = px0 * 0.5, dw = (w - sep * (D.length - 1)) / D.length;
+    D.forEach(function(d, i){
+      var dx = x + i * (dw + sep), v = (o.c.d && o.c.d[d[0]]) || '';
+      g.fillStyle = '#F1F5F9'; _cqCaja(g, dx, y, dw, hd, px0 * 0.6); g.fill(); g.fillStyle = tin; g.fillRect(dx, y, Math.max(4, K * 0.6), hd);
+      var fl = _cqAjustar(g, d[1].toUpperCase(), dw - px0, 2, hd * 0.16, hd * 0.1, '800');
+      g.font = _cqFuente(fl.s, '800'); g.fillStyle = '#475569'; g.textAlign = 'left'; fl.l.forEach(function(l, k){ g.fillText(l, dx + px0 * 0.7, y + hd * 0.12 + fl.s * (0.9 + k * 1.1)); });
+      var vt = v ? v + (d[2] && !/[a-z%]$/i.test(v) ? ' ' + d[2] : '') : '____' + (d[2] ? ' ' + d[2] : '');
+      var fv = _cqAjustar(g, vt, dw - px0 * 1.2, 1, hd * 0.42, hd * 0.2, '900'); g.font = _cqFuente(fv.s, '900'); g.fillStyle = v ? OSC : '#94A3B8';
+      g.fillText(fv.l[0] || '', dx + px0 * 0.7, y + hd - hd * 0.18);
+    });
+    y += hd + px0 * 0.8; h -= hd + px0 * 0.8;
+  }
+  var C = (FA.consejos || []).slice(0, F.k === 'mini' ? 3 : 4), n = C.length || 1, rh = Math.min(h / n, px0 * 5.4), lado = rh * 0.8;
+  C.forEach(function(c, i){
+    var ry = y + i * rh, im = c[0] ? pic[c[0]] : null;
+    if(im) g.drawImage(im, x, ry + (rh - lado) / 2, lado, lado);
+    else { g.fillStyle = tin; g.beginPath(); g.arc(x + lado / 2, ry + rh / 2, lado * 0.42, 0, Math.PI * 2); g.fill(); g.font = _ceqFuente(lado * 0.55, '900'); g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.fillText('!', x + lado / 2, ry + rh / 2 + lado * 0.2); g.textAlign = 'left'; }
+    var f = _cqAjustar(g, c[1], w - lado - px0, 3, Math.min(rh * 0.3, px0 * 1.25), pxMin, '800');
+    g.font = _cqFuente(f.s, '800'); _cqTextoIzq(g, f.l, x + lado + px0 * 0.8, ry + (rh - f.l.length * f.s * 1.15) / 2 + f.s * 0.85, f.s * 1.15, OSC);
+  });
+}
+/* ¿la uso o la separo?: en verde lo que se mira antes de usarla (con su casillero para marcar) y en rojo cuándo va con tarjeta roja */
+function _ceqDescarte(g, o, x, y, w, h, F, px0, pxMin){
+  var FA = CEQ_FAM[o.c.f] || {}, K = CEQ_K, OSC = '#0B2A3A', sep = px0 * 0.7, pie = px0 * 2.4, hh = (h - sep - pie) / 2;
+  [[true, 'ÚSALA SI…', FA.bien || [], '#EAF4EE', '#15803D'], [false, 'SEPÁRALA SI… · TARJETA ROJA', FA.mal || [], '#FDECEC', '#B91C1C']].forEach(function(P, pi){
+    var py = y + pi * (hh + sep), cab = Math.min(hh * 0.26, px0 * 2.6);
+    g.fillStyle = P[3]; _cqCaja(g, x, py, w, hh, px0 * 0.7); g.fill();
+    g.fillStyle = P[4]; _cqCaja(g, x, py, w, cab, px0 * 0.7); g.fill(); g.fillRect(x, py + cab * 0.5, w, cab * 0.5);
+    _ceqMarca(g, x + cab * 0.6, py + cab / 2, cab * 0.34, P[0]); g.strokeStyle = '#FFFFFF'; g.lineWidth = Math.max(2, K * 0.2); g.beginPath(); g.arc(x + cab * 0.6, py + cab / 2, cab * 0.34, 0, Math.PI * 2); g.stroke();
+    var ft = _cqAjustar(g, P[1], w - cab * 1.4, 1, cab * 0.5, cab * 0.3, '900'); g.font = _cqFuente(ft.s, '900'); g.fillStyle = '#FFFFFF'; g.textAlign = 'left'; g.fillText(ft.l[0], x + cab * 1.15, py + cab / 2 + ft.s * 0.36);
+    var L = P[2].slice(0, 3), rh = (hh - cab - px0 * 0.4) / (L.length || 1), r = Math.min(rh * 0.3, px0 * 1.1);
+    L.forEach(function(t, i){
+      var ry = py + cab + px0 * 0.2 + i * rh, cy = ry + rh / 2;
+      if(P[0]){ g.fillStyle = '#FFFFFF'; g.fillRect(x + px0 * 0.6, cy - r, r * 2, r * 2); g.strokeStyle = '#15803D'; g.lineWidth = Math.max(3, K * 0.3); g.strokeRect(x + px0 * 0.6, cy - r, r * 2, r * 2); }
+      else _ceqMarca(g, x + px0 * 0.6 + r, cy, r, false);
+      var f = _cqAjustar(g, t, w - r * 2 - px0 * 1.8, 2, Math.min(rh * 0.34, px0 * 1.2), pxMin, '800');
+      g.font = _cqFuente(f.s, '800'); _cqTextoIzq(g, f.l, x + px0 * 1.2 + r * 2, cy - (f.l.length - 1) * f.s * 0.57 + f.s * 0.35, f.s * 1.15, P[0] ? OSC : '#7F1D1D');
+    });
+  });
+  g.font = _ceqFuente(px0 * 0.9, '800'); g.fillStyle = OSC; g.textAlign = 'left';
+  g.fillText('Revisó: ____________  Fecha: ___/___', x, y + h - pie * 0.25);
+}
+function _ceqBloque(g, k, o, X, Y, Wb, Hb, F){
+  var R = CEQ_REV[k] || {}, FA = CEQ_FAM[o.c.f] || {}, mini = F.k === 'mini', px0 = _ceqPt(F.k === 'a5' ? 10 : (mini ? 6.6 : 8.4)), pxMin = _ceqPt(mini ? 4.8 : 5.6);
+  var tpx = _ceqPt(F.k === 'a5' ? 10.5 : (mini ? 6.4 : 8)), pad = tpx * 0.6;
+  g.strokeStyle = '#CBD5E1'; g.lineWidth = Math.max(2, CEQ_K * 0.25); _cqCaja(g, X, Y, Wb, Hb, tpx * 0.5); g.stroke();
+  var ft = _cqAjustar(g, R.t || '', Wb - pad * 2.6, 2, tpx, tpx * 0.7, '900'), colB = ceqTinta(o.x || {}, o.c);
+  ft.l.forEach(function(l, i){ _ceqSec(g, X + pad, Y + pad + ft.s * (0.9 + i * 1.1), l, colB, ft.s); });
+  var y = Y + pad + ft.s * (ft.l.length * 1.1) + pad * 0.6, x = X + pad, w = Wb - pad * 2, h = Y + Hb - pad - y;
+  if(R.img){
+    var im = o.img;
+    if(im && im.naturalWidth){ var r = Math.min(w / im.naturalWidth, h / im.naturalHeight), iw = im.naturalWidth * r, ih = im.naturalHeight * r; g.drawImage(im, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); }
+    else { g.setLineDash([CEQ_K * 1.2, CEQ_K]); g.strokeStyle = '#94A3B8'; g.strokeRect(x, y, w, h); g.setLineDash([]);
+      var fv = _cqAjustar(g, 'Sube la imagen en la cartilla del equipo y sale aquí.', w * 0.8, 3, px0, pxMin, '700'); g.font = _cqFuente(fv.s, '700'); _cqTexto(g, fv.l, x + w / 2, y + h / 2, fv.s, fv.s * 1.2, '#64748B'); }
+    return;
+  }
+  if(R.estado){
+    var hh = (h - pad) / 2;
+    [['#15803D', 'OPERATIVO · APTO', 'Revisado y liberado para usar'], ['#B91C1C', 'NO USAR · TARJETA ROJA', 'Observado, en armado o en reparación: mira el QR']].forEach(function(e, i){
+      var yy = y + i * (hh + pad); g.fillStyle = e[0]; _cqCaja(g, x, yy, w, hh, pad); g.fill();
+      var f1 = _cqAjustar(g, e[1], w * 0.9, 2, hh * 0.24, hh * 0.1, '900'), f2 = _cqAjustar(g, e[2], w * 0.9, 2, hh * 0.11, hh * 0.07, '700');
+      var bl = f1.l.length * f1.s * 1.1 + f2.l.length * f2.s * 1.2, ty = yy + (hh - bl) / 2 + f1.s * 0.9;
+      g.font = _cqFuente(f1.s, '900'); _cqTexto(g, f1.l, x + w / 2, ty, f1.s, f1.s * 1.1, '#FFFFFF');
+      g.font = _cqFuente(f2.s, '700'); _cqTexto(g, f2.l, x + w / 2, ty + f1.l.length * f1.s * 1.1 + f2.s * 0.3, f2.s, f2.s * 1.2, '#FFFFFF');
+    });
+    return;
+  }
+  if(R.caida){
+    var P = ceqCaida(o.c.alt, o.c.anc), filas = [['Altura de la plataforma', 'Sistema', 'Por qué'],
+      ['Menos de 5,50 m', 'Bloque retráctil (o restricción)', 'Frena en poca distancia; con línea de 1,80 m no alcanza'],
+      ['5,50 m o más', 'Línea doble con absorbedor', 'Si la distancia libre alcanza (abajo)'],
+      ['Con barandas completas', 'Restricción', 'No deja llegar al borde']];
+    var y2 = _ceqTabla(g, filas, x, y, w, px0 * 0.92, pxMin, h * 0.62, P.k === 'retractil' ? 1 : (P.k === 'absorbedor' ? 2 : (P.k === 'restriccion' ? 3 : 0)));
+    _ceqLista(g, { x:x - pad, y:y2, w:w + pad * 2, px:px0 * 0.86, peso:'700', items:[
+      'Distancia libre de una línea de 1,80 m con absorbedor, medida desde el anclaje: 1,80 (línea) + 1,20 (absorbedor abierto) + 1,50 (del anillo a los pies) + 1,00 (margen) = 5,50 m.',
+      'Son valores típicos: usa los de la etiqueta de tu equipo.'] }, true);
+    return;
+  }
+  if(R.tabla){ var y3 = _ceqTabla(g, R.tabla, x, y, w, px0, pxMin, h - (R.nota ? px0 * 3.4 : 0), -1); if(R.nota) _ceqLista(g, { x:x - pad, y:y3, w:w + pad * 2, px:px0 * 0.85, items:[], nota:R.nota, cn:'#475569' }, true); return; }
+  if(R.chk){ _ceqChecklist(g, R.chk, o, x, y, w, h, F, px0, pxMin); return; }
+  if(R.cinta){ _ceqCintas(g, o, x, y, w, h, F, px0); return; }
+  if(R.ficha){ _ceqFicha(g, o, x, y, w, h, F, px0, pxMin); return; }
+  if(R.descarte){ _ceqDescarte(g, o, x, y, w, h, F, px0, pxMin); return; }
+  if(R.sino){
+    var hs = (h - pad) / 2;
+    _ceqLista(g, { x:x, y:y, w:w, alto:hs, px:px0, t:'SÍ', ct:'#15803D', items:FA.si || [], fondo:'#EAF4EE', borde:'#A9D3B8' }, true);
+    _ceqLista(g, { x:x, y:y + hs + pad, w:w, alto:hs, px:px0, t:'NO', ct:'#B91C1C', items:FA.no || [], fondo:'#FDECEC', borde:'#F3B4B4', color:'#7F1D1D' }, true);
+    return;
+  }
+  if(R.uso){
+    var U = o.uso || { pasos:[] };
+    _ceqPintaCajas(g, [{ x:x - pad, w:w + pad * 2, items:U.pasos.map(_ceqPaso), num:1 }].concat(U.luego ? [{ x:x - pad, w:w + pad * 2, items:[U.luego], peso:'700', sinV:1 }] : []), y, h, px0, pxMin, pad);
+    return;
+  }
+  /* lista o pasos, y las líneas para llenar */
+  var lin = R.lineas ? (R.lineas.length > 2 && R.filas > 1 ? 0 : 1) : 0, hl = R.lineas ? (lin ? R.lineas.length * R.filas * px0 * 2.6 : (R.filas + 1) * px0 * 2.2) : 0;
+  var cajas = [];
+  if(R.li || R.ol) cajas.push({ x:x - pad, w:w + pad * 2, items:R.li || R.ol, num:!!R.ol, nota:R.nota });
+  if(cajas.length) _ceqPintaCajas(g, cajas, y, h - hl, px0, pxMin, pad);
+  if(R.lineas){
+    var yl = Y + Hb - pad - hl;
+    if(lin){ g.font = _ceqFuente(px0 * 0.95, '700'); g.fillStyle = '#0B2A3A'; g.strokeStyle = '#64748B'; g.lineWidth = Math.max(2, CEQ_K * 0.18);
+      R.lineas.forEach(function(et, i){ for(var f = 0; f < R.filas; f++){ var yy = yl + (i * R.filas + f + 1) * px0 * 2.6 - px0 * 0.6;
+        if(f === 0){ g.fillText(et + ':', x, yy); } g.beginPath(); g.moveTo(x + (f === 0 ? g.measureText(et + ':').width + px0 * 0.4 : 0), yy + px0 * 0.25); g.lineTo(x + w, yy + px0 * 0.25); g.stroke(); } }); }
+    else { var tab = [R.lineas]; for(var r = 0; r < R.filas; r++) tab.push(R.lineas.map(function(){ return ''; })); _ceqTabla(g, tab, x, yl, w, px0 * 0.9, pxMin, hl, -1, true); }
+  }
+}
+/* una tabla con cabecera; marca: la fila resaltada; altas: filas para llenar (todas del mismo alto). Devuelve dónde termina */
+function _ceqTabla(g, T, x, y, w, px0, pxMin, hMax, marca, altas){
+  var nc = T[0].length, cw = [];
+  if(nc === 2) cw = [w * 0.42, w * 0.58]; else if(nc === 3) cw = [w * 0.3, w * 0.33, w * 0.37]; else for(var c = 0; c < nc; c++) cw.push(w / nc);
+  var px = px0, alturas;
+  var medir = function(){
+    alturas = T.map(function(f, i){
+      var m = 0; f.forEach(function(cel, j){ var P = _ceqParrafo(g, cel, cw[j] - px * 0.8, px * (i ? 1 : 0.9), i ? '600' : '900'); m = Math.max(m, P.h); });
+      return Math.max(m + px * 0.7, altas && i ? px * 2.1 : 0);
+    });
+    var t = 0; alturas.forEach(function(v){ t += v; }); return t;
+  };
+  while(medir() > hMax && px > pxMin) px -= Math.max(1, px0 * 0.05);
+  var yy = y;
+  T.forEach(function(f, i){
+    var xx = x;
+    if(i === 0 || i === marca){ g.fillStyle = i === 0 ? '#E2E8F0' : '#FFF4D6'; g.fillRect(x, yy, w, alturas[i]); }
+    f.forEach(function(cel, j){
+      var P = _ceqParrafo(g, cel, cw[j] - px * 0.8, px * (i ? 1 : 0.9), (i && j) ? '600' : '800');
+      g.fillStyle = '#0B2A3A'; g.textAlign = 'left';
+      P.l.forEach(function(l, k){ g.fillText(l, xx + px * 0.4, yy + px * 0.35 + px * (i ? 1 : 0.9) * (0.95 + k * 1.22)); });
+      g.strokeStyle = '#94A3B8'; g.lineWidth = Math.max(1, CEQ_K * 0.15); g.strokeRect(xx, yy, cw[j], alturas[i]);
+      xx += cw[j];
+    });
+    yy += alturas[i];
+  });
+  return yy + px * 0.4;
+}
+/* ── el PDF: hojas A4 a doble cara, el reverso con las columnas al revés; marcas de corte en las dos caras ── */
+function ceqPDF(caras, t){
+  var F = CEQ_FMT[t] || CEQ_FMT.a5, J = window.jspdf.jsPDF, n = F.cols * F.filas;
+  var PW = F.apaisada ? 297 : 210, PH = F.apaisada ? 210 : 297;
+  var gx = (PW - F.cols * F.w) / (F.cols + 1), gy = (PH - F.filas * F.h) / (F.filas + 1);
+  var d = new J({ unit:'mm', format:'a4', orientation:F.apaisada ? 'landscape' : 'portrait', compress:true });
+  var sitio = function(j){ var c = j % F.cols, f = Math.floor(j / F.cols); return { x:gx + c * (F.w + gx), y:gy + f * (F.h + gy) }; };
+  var marcas = function(p){
+    d.setDrawColor(150, 160, 170); d.setLineWidth(0.15); var L = Math.min(4, gx * 0.8, gy * 0.8);
+    [[p.x, p.y, -1, -1], [p.x + F.w, p.y, 1, -1], [p.x, p.y + F.h, -1, 1], [p.x + F.w, p.y + F.h, 1, 1]].forEach(function(e){
+      d.line(e[0] + e[2] * 1, e[1], e[0] + e[2] * (1 + L), e[1]); d.line(e[0], e[1] + e[3] * 1, e[0], e[1] + e[3] * (1 + L)); });
+  };
+  for(var i = 0; i < caras.length; i += n){
+    var lote = caras.slice(i, i + n);
+    if(i) d.addPage('a4', F.apaisada ? 'landscape' : 'portrait');
+    lote.forEach(function(c, j){ var p = sitio(j); d.addImage(c.a, 'PNG', p.x, p.y, F.w, F.h, undefined, 'FAST'); marcas(p); });
+    d.addPage('a4', F.apaisada ? 'landscape' : 'portrait');
+    lote.forEach(function(c, j){
+      var col = j % F.cols, fil = Math.floor(j / F.cols), p = sitio(fil * F.cols + (F.cols - 1 - col));
+      d.addImage(c.b, 'PNG', p.x, p.y, F.w, F.h, undefined, 'FAST'); marcas(p);
+    });
+  }
+  return d;
+}
+/* cómo se imprime, en palabras (la hoja vertical se voltea por el borde largo; la apaisada, por el corto) */
+function ceqComoImprimir(t){
+  var F = CEQ_FMT[t] || CEQ_FMT.a5;
+  return 'A doble cara, al 100 % (sin «ajustar a la página»), volteando por el borde ' + (F.apaisada ? 'corto' : 'largo') + '. Prueba primero con una hoja: la cara B tiene que quedar detrás de su cara A. Corta por las marcas y enmica.';
+}
+/* <<< CARTILLAS-EQ-MOTOR-FIN >>> */
+/* ══ CARTILLAS DOBLE CARA EN LA APP (24/11/2026) ════════════════════════════════════════════════════════════════════
+   En la ficha del equipo, debajo de su cartel: «🪪 Cartilla doble cara». Lo mismo que en la web (CARTILLAS-EQ-MOTOR):
+   familia, tamaño, qué va atrás, la imagen (modulación, tabla de carga o circuitos) y, del andamio, su altura. Sale un PDF
+   a doble cara para descargar o compartir. Lo elegido se guarda en la obra (sst_estado «cartillas_eq»), igual que en la web. */
+var EQCT = { e:null, mod:[], id:null, c:null, img:{}, n:0 };
+function eqctTraer(){
+  if(EQCT.e) return Promise.resolve(EQCT.e);
+  return estadoBajar(CEQ_CLAVE).then(function(v){ EQCT.e = (v && v.e && typeof v.e === 'object' && !Array.isArray(v.e)) ? v.e : {}; EQCT.mod = (v && Array.isArray(v.mod)) ? v.mod : []; return EQCT.e; });
+}
+function eqctGuardar(id, c){
+  return estadoBajarEstricto(CEQ_CLAVE).then(function(v){
+    v = (v && typeof v === 'object' && !Array.isArray(v)) ? v : { v:1, e:{} };
+    if(!v.e || typeof v.e !== 'object' || Array.isArray(v.e)) v.e = {};
+    v.v = 1; v.e[String(id)] = { f:c.f, t:c.t, r:c.r, img:c.img || undefined, alt:c.alt || undefined, carga:c.carga || undefined, anc:c.anc || undefined, cap:c.cap || undefined, mod:c.mod || undefined, col:c.col || undefined, d:(c.d && Object.keys(c.d).length) ? c.d : undefined, ts:Date.now() };
+    return estadoSubir(CEQ_CLAVE, v).then(function(ok){ if(!ok) return Promise.reject('sin_red'); EQCT.e = v.e; EQCT.mod = Array.isArray(v.mod) ? v.mod : []; return true; });
+  });
+}
+function _eqctImg(url){
+  if(!url) return Promise.resolve(null);
+  if(EQCT.img[url]) return EQCT.img[url];
+  EQCT.img[url] = new Promise(function(ok){
+    var im = new Image(), listo = false, fin = function(v){ if(!listo){ listo = true; ok(v); } };
+    im.crossOrigin = 'anonymous'; im.onload = function(){ fin(im); }; im.onerror = function(){ EQCT.img[url] = null; fin(null); };
+    setTimeout(function(){ fin(null); }, 12000); im.src = url;
+  });
+  return EQCT.img[url];
+}
+function eqctCaras(x, c){
+  var emp = (typeof empleador === 'function') ? (empleador() || {}) : {}, e = (typeof empActiva === 'function') ? (empActiva() || {}) : {};
+  var md = null; if(c.r[0] === 'modulacion') (EQCT.mod || []).forEach(function(m){ if(m.id === c.mod) md = m; });
+  return Promise.all([cartelLogo(emp.logo || null), _eqctImg(md ? md.url : (c.r[0] === 'modulacion' ? '' : c.img))]).then(function(R){
+    var a = String(eqMes()).slice(0, 4), cintas = {};
+    for(var m = 1; m <= 12; m++){ var k = ('0' + m).slice(-2); if(EQ.colores && EQ.colores[a + '-' + k]) cintas[k] = EQ.colores[a + '-' + k]; }
+    var o = { x:x, c:c, enlace:eqEnlace(x), empresa:emp.razon || '', obra:e.nombre || '', L:R[0], img:R[1], uso:eqUsoDe(x), cintas:cintas, nombreMod:md ? md.n : '' };
+    return ceqCaras(o).then(function(C){ return { a:C.a.toDataURL('image/png'), b:C.b.toDataURL('image/png') }; });
+  });
+}
+function eqCartilla(id){
+  var x = eqPorId(id), c = $('eqd-cartilla'); if(!x || !c) return;
+  if(EQCT.id === id && c.innerHTML){ c.innerHTML = ''; EQCT.id = null; return; }
+  c.innerHTML = '<p class="sub" style="margin:10px 0 0">Abriendo la cartilla…</p>';
+  eqctTraer().then(function(){ EQCT.id = id; EQCT.c = ceqCfg(x, EQCT.e[id]); eqctPintar(); },
+    function(){ var c2 = $('eqd-cartilla'); if(c2) c2.innerHTML = '<p class="sub">No se pudo abrir: revisa tu conexión.</p>'; });
+}
+function eqctPintar(){
+  var x = eqPorId(EQCT.id), k = $('eqd-cartilla'); if(!x || !k) return;
+  _eqctCss();
+  var c = EQCT.c, F = CEQ_FAM[c.f], Fm = CEQ_FMT[c.t], fam0 = ceqFamDe(x.tipo), h = '<div class="caja vidrio eqct">';
+  if(!fam0) h += '<label class="eqct-l" for="eqct-fam">Familia</label><select id="eqct-fam" onchange="eqctCambia(\'f\', this.value)"><option value="">— elige —</option>' +
+    ['andamio', 'grua', 'electrico', 'poder', 'manual'].map(function(f){ return '<option value="' + f + '"' + (c.f === f ? ' selected' : '') + '>' + esc(CEQ_FAM[f].n) + '</option>'; }).join('') + '</select>' +
+    '<p class="sub" style="font-size:12.5px;margin:4px 0 10px">Este tipo no es de ninguna familia: elige la que más se le parece.</p>';
+  if(F){
+    h += '<span class="eqct-l">Tamaño</span><div class="eqct-seg">' + ['a5', 'tag', 'mini'].map(function(t){
+      return '<button type="button" class="' + (c.t === t ? 'on' : '') + '" onclick="eqctCambia(\'t\', \'' + t + '\')">' + esc(CEQ_FMT[t].n) + '</button>'; }).join('') + '</div>' +
+      '<p class="sub" style="font-size:12.5px;margin:4px 0 10px">' + esc(Fm.d) + '</p>' +
+      '<span class="eqct-l">Color de la franja</span><div class="eqct-seg">' + CEQ_COLORES.map(function(k){
+        return '<button type="button" class="' + (c.col === k[0] ? 'on' : '') + '" onclick="eqctCambia(\'col\', \'' + k[0] + '\')">' + (k[2] ? '<i class="eqct-pt" style="background:' + k[2] + '"></i>' : '') + '<span>' + esc(k[1]) + '</span></button>'; }).join('') + '</div>' +
+      '<span class="eqct-l"><span>Qué va atrás</span> <small>' + (Fm.rev > 1 ? '(hasta 2)' : '(1 en este tamaño)') + '</small></span><div class="eqct-rev">' + F.rev.map(function(r){
+        return '<label><input type="checkbox"' + (c.r.indexOf(r) > -1 ? ' checked' : '') + ' onchange="eqctRev(\'' + r + '\', this.checked)"><span>' + esc(CEQ_REV[r].n) + '</span></label>'; }).join('') + '</div>';
+    if(c.r[0] === 'modulacion') h += '<label class="eqct-l" for="eqct-mod">Su modulación</label><select id="eqct-mod" onchange="eqctCambia(\'mod\', this.value)"><option value="">' + (EQCT.mod.length ? '— elige —' : 'La obra aún no subió modulaciones') + '</option>' +
+      EQCT.mod.map(function(m){ return '<option value="' + esc(m.id) + '"' + (c.mod === m.id ? ' selected' : '') + '>' + esc(m.n) + '</option>'; }).join('') + '</select>' +
+      '<p class="sub" style="font-size:12.5px;margin:4px 0 0">Las modulaciones se suben en la web, en «Cartillas doble cara».</p>';
+    if(c.r.some(function(r){ return CEQ_REV[r] && CEQ_REV[r].img; })) h += '<label class="eqct-l" for="eqct-img"><span>La imagen</span>' + (c.img ? ' · <span>subida</span>' : '') + '</label><input type="file" id="eqct-img" accept="image/png,image/jpeg,image/webp" onchange="eqctImagen(this)">';
+    if(c.f === 'andamio') h += '<div class="eqct-2"><div><label class="eqct-l" for="eqct-alt">Altura de la plataforma (m)</label><input id="eqct-alt" inputmode="decimal" maxlength="6" placeholder="4,20" value="' + (c.alt ? String(c.alt).replace('.', ',') : '') + '" onchange="eqctCambia(\'alt\', this.value)"></div>' +
+      '<div><label class="eqct-l" for="eqct-carga">Carga máxima</label><input id="eqct-carga" maxlength="40" placeholder="Clase 3 · 200 kg/m²" value="' + esc(c.carga) + '" onchange="eqctCambia(\'carga\', this.value)"></div></div>' +
+      '<label class="eqct-l" for="eqct-anc">Protección contra caídas</label><select id="eqct-anc" onchange="eqctCambia(\'anc\', this.value)">' + [['', 'Según la altura'], ['retractil', 'Bloque retráctil'], ['absorbedor', 'Línea doble con absorbedor'], ['restriccion', 'Restricción']].map(function(o){
+        return '<option value="' + o[0] + '"' + (c.anc === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select><p class="sub" style="font-size:12.5px;margin:4px 0 0">' + esc(ceqCaida(c.alt, c.anc).t) + '</p>';
+    if(F.datos && F.datos.length) h += '<span class="eqct-l">Sus datos</span><div class="eqct-2">' + F.datos.map(function(D){
+      return '<div><label class="eqct-l" for="eqct-d-' + D[0] + '"><span>' + esc(D[1]) + '</span>' + (D[2] ? ' <small data-sin-trad>(' + esc(D[2]) + ')</small>' : '') + '</label><input id="eqct-d-' + D[0] + '" maxlength="20" value="' + esc((c.d || {})[D[0]] || '') + '" onchange="eqctDato(\'' + D[0] + '\', this.value)"></div>'; }).join('') + '</div>';
+    h += '<div class="eqct-ver" id="eqct-ver"><p class="sub">Armando…</p></div>' +
+      '<p class="sub" style="font-size:12.5px;margin:8px 0 0">' + esc(ceqComoImprimir(c.t)) + '</p>' +
+      '<div class="esc-acc" style="margin-top:10px"><button type="button" class="btn" style="margin:0" onclick="eqctPDF(false)">⬇️ <span>Descargar el PDF</span></button>' +
+      '<button type="button" class="btn sec" style="margin:0" onclick="eqctPDF(true)">📲 <span>Compartirlo</span></button></div>';
+  }
+  k.innerHTML = h + '</div>';
+  if(F) eqctVista();
+}
+function eqctCambia(q, v){
+  var x = eqPorId(EQCT.id); if(!x) return;
+  var c = EQCT.c;
+  if(q === 'f'){ EQCT.c = ceqCfg(x, { f:v }); eqctPintar(); return; }
+  if(q === 't'){ c.t = v; c.r = c.r.slice(0, CEQ_FMT[v].rev); }
+  else if(q === 'alt'){ var a = parseFloat(String(v).replace(',', '.')); c.alt = (a > 0 && a < 200) ? Math.round(a * 100) / 100 : 0; }
+  else c[q] = String(v || '').slice(0, 40);
+  eqctPintar();
+}
+function eqctDato(k, v){ var c = EQCT.c; c.d = c.d || {}; c.d[k] = String(v || '').slice(0, 20); eqctPintar(); }
+function eqctRev(r, si){
+  var c = EQCT.c, n = CEQ_FMT[c.t].rev;
+  c.r = c.r.filter(function(z){ return z !== r; });
+  if(si){ c.r.push(r); if(c.r.length > n) c.r = c.r.slice(-n); if(CEQ_REV[r].sola) c.r = [r]; else c.r = c.r.filter(function(z){ return !CEQ_REV[z].sola; }); }
+  if(!c.r.length) c.r = [CEQ_FAM[c.f].rev[0]];
+  eqctPintar();
+}
+function eqctImagen(inp){
+  var f = inp.files && inp.files[0], e = (typeof empActiva === 'function') ? (empActiva() || {}) : {}; if(!f || !e.id) return;
+  if(!/^image\/(png|jpeg|webp)$/.test(f.type || '')){ tostada('Tiene que ser una imagen PNG, JPG o WEBP.'); return; }
+  if((f.size || 0) > 8 * 1024 * 1024){ tostada('La imagen pesa más de 8 MB: achícala y vuelve a subirla.'); return; }
+  inp.disabled = true; tostada('Subiendo la imagen…');
+  sbSubir(e.id + '/cartillas/' + Date.now() + '-' + String(f.name || 'imagen').replace(/[^A-Za-z0-9.\-_]/g, '_'), f).then(function(url){ EQCT.c.img = url; eqctPintar(); tostada('Imagen subida.'); },
+    function(){ inp.disabled = false; tostada('No se pudo subir la imagen. Revisa tu conexión.'); });
+}
+function eqctVista(){
+  var x = eqPorId(EQCT.id), n = ++EQCT.n; if(!x) return;
+  eqctCaras(x, ceqCfg(x, EQCT.c)).then(function(C){
+    var v = $('eqd-cartilla') && $('eqct-ver'); if(!v || n !== EQCT.n) return;
+    v.innerHTML = '<figure><figcaption>Cara A</figcaption><img src="' + C.a + '" alt="Cara A"></figure><figure><figcaption>Cara B</figcaption><img src="' + C.b + '" alt="Cara B"></figure>';
+  }, function(){ var v2 = $('eqct-ver'); if(v2) v2.innerHTML = '<p class="sub">No se pudo armar la vista.</p>'; });
+}
+function eqctPDF(compartir){
+  var x = eqPorId(EQCT.id); if(!x || !CEQ_FAM[EQCT.c.f]) return;
+  var c = ceqCfg(x, EQCT.c), nombre = 'cartilla-' + (String(x.codigo || 'equipo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'equipo') + '.pdf';
+  eqctGuardar(x.id, c).catch(function(){ return false; });
+  eqctCaras(x, c).then(function(C){
+    var b = ceqPDF([C], c.t).output('blob'), f = null, puede = false;
+    if(compartir){
+      try{ f = new File([b], nombre, { type:'application/pdf' }); }catch(_f){}
+      try{ puede = !!(f && navigator.canShare && navigator.canShare({ files:[f] })); }catch(_c){}
+      if(puede){ navigator.share({ files:[f], title:'Cartilla ' + x.codigo }).catch(function(){}); return; }
+    }
+    bajarBlob(b, nombre); tostada('Listo: la cartilla a doble cara.');
+  }, function(){ tostada('No se pudo armar el PDF.'); });
+}
+function _eqctCss(){
+  if(document.getElementById('eqct-css')) return;
+  var s = document.createElement('style'); s.id = 'eqct-css';
+  s.textContent = '.eqct{margin-top:10px;padding:14px}.eqct-l{display:block;font-size:12.5px;font-weight:700;margin:10px 0 4px}.eqct-l small{font-weight:500}' +
+    '.eqct select,.eqct input:not([type=checkbox]){width:100%;box-sizing:border-box;font:inherit;padding:9px 10px;border-radius:10px;border:1px solid rgba(11,42,58,.2);background:#fff}' +
+    '.eqct-seg{display:flex;gap:6px;flex-wrap:wrap}.eqct-seg button{font:inherit;font-size:13px;font-weight:700;padding:8px 10px;border-radius:999px;border:1px solid rgba(11,42,58,.2);background:#fff;color:#0B2A3A}' +
+    '.eqct-seg button.on{background:#0B2A3A;color:#fff;border-color:#0B2A3A}.eqct-rev{display:flex;flex-direction:column;gap:6px}' +
+    '.eqct .eqct-rev label{display:flex;gap:8px;align-items:flex-start;justify-content:flex-start;font-size:13.5px;text-align:left;margin:0;padding:0}' +
+    '.eqct .eqct-rev input{flex:0 0 auto;width:18px;height:18px;min-width:0;margin:2px 0 0;padding:0}.eqct .eqct-rev span{flex:1;text-align:left}.eqct{text-align:left}' +
+    '.eqct-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.eqct-ver{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.eqct-ver figure{margin:0}' +
+    '.eqct-ver figcaption{font-size:11.5px;font-weight:700;opacity:.7;margin:0 0 3px}.eqct-ver img{display:block;width:100%;height:auto;border:1px solid rgba(11,42,58,.15);border-radius:6px;background:#fff}' +
+    '.eqct-pt{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}' +
+    '.eqct[hidden],.eqct-ver[hidden]{display:none !important}';
+  document.head.appendChild(s);
 }
 function eqCartel(id){
   var x=eqPorId(id), c=$('eqd-cartel'); if(!x || !c) return;
@@ -122318,11 +123225,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = '04dc63be38';
-var IDIOMA_FR_V = 'e46feca44b';
+var IDIOMA_PT_V = 'a16cd3e767';
+var IDIOMA_FR_V = '6b30c7b171';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = '7b8ab07c58';
+var IDIOMA_EN_V = '2b79ad74f1';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -137910,7 +138817,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='33eedbb0ae';
+var SELLO_APP='de4f6d8bd8';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
