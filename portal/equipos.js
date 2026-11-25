@@ -318,7 +318,11 @@ function eqCartelDatosDe(x, op){
   op=op||{};
   var tr=op.tx || function(z){ return z; }, u=eqUsoDe(x), S=EQ_SENAL[x.tipo] || null, A=u.agente;
   var det=u.ext ? [A ? tr(A.n) : '', u.kg ? u.kg+' kg' : ''].filter(Boolean).join(' · ') : String(x.detalle || '');
-  return { codigo:x.codigo, tipo:tr(x.tipo), detalle:det, enlace:eqEnlace(x), color:S ? S[1] : '#0B2A3A', picto:eqSenalSvg(x.tipo),
+  /* 25/11/2026 · sin pasos de uso, el cartel no queda vacío: sus peligros, su EPP (señales de la NTP) y cuatro reglas (ceqSenCartel, de las cartillas) */
+  var SN=(!u.pasos.length && !u.ext && typeof ceqSenCartel==='function') ? ceqSenCartel(x) : null;
+  var sen=SN ? { peligros:SN.peligros.map(function(p){ return [p[0], tr(p[1])]; }), epp:SN.epp.map(function(p){ return [p[0], tr(p[1])]; }),
+                 reglas:SN.reglas.map(function(p){ return [tr(p[0]), tr(p[1])]; }), svg:SN.svg } : null;
+  return { codigo:x.codigo, tipo:tr(x.tipo), detalle:det, enlace:eqEnlace(x), color:S ? S[1] : '#0B2A3A', picto:eqSenalSvg(x.tipo) || (SN && SN.svg[SN.ic]) || '', sen:sen,
            pasos:u.pasos.map(function(p){ return u.propios ? p : [tr(p[0]), tr(p[1])]; }), propios:u.propios,
            antes:u.antes ? tr(u.antes) : '', luego:u.luego ? tr(u.luego) : '',
            clases:A ? A.c.split('').map(function(c){ return [c, tr(EQ_CLASES_FUEGO[c])]; }) : [], nousar:(A && A.no) ? tr(A.no) : '',

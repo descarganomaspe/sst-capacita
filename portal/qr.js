@@ -3054,11 +3054,46 @@ function _cqImgSvg(cuerpo, px){
     im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="'+px+'" height="'+px+'">'+cuerpo+'</svg>');
   });
 }
+/* 25/11/2026 · el cartel de un equipo sin pasos de uso: sus peligros y su EPP con las señales de la NTP 399.010-1 y cuatro reglas
+   en baldosas, para que nunca quede vacío (o.sen, de eqCartelDatosDe). Devuelve dónde termina. */
+function _cqSenales(g, S, im, X, y, AN, fin, C, tx){
+  var OSC='#0B2A3A', GRIS='#4A5A66', libre=fin-y, rot=30, capS=27;
+  var sp=Math.max(120, Math.min(250, (libre-330)*0.32)), se=Math.max(104, Math.min(210, (libre-330)*0.27));
+  function _cqSenFila(L, lado){
+    var n=L.length||1, paso=AN/n, cap=0;
+    L.forEach(function(p, i){
+      var cx=X+paso*i+paso/2, I=im[p[0]];
+      if(I) g.drawImage(I, cx-lado/2, y, lado, lado);
+      var f=_cqAjustar(g, p[1], paso*0.94, 2, capS, 20, '800'); g.font=_cqFuente(f.s, '800');
+      _cqTexto(g, f.l, cx, y+lado+f.s*1.15, f.s, f.s*1.1, OSC); cap=Math.max(cap, f.l.length*f.s*1.1);
+    });
+    g.textAlign='left'; y+=lado+cap+26;
+  }
+  if(S.peligros.length){ _cqRotulo(g, X, y+rot*0.8, tx('Peligros'), '#B42318', rot); y+=rot+22; _cqSenFila(S.peligros, sp); }
+  if(S.epp.length){ _cqRotulo(g, X, y+rot*0.8, tx('Usa siempre'), '#1D4ED8', rot); y+=rot+22; _cqSenFila(S.epp, se); }
+  var R=S.reglas.slice(0, 4), hT=fin-y-rot-22;
+  if(R.length && hT>120){
+    _cqRotulo(g, X, y+rot*0.8, tx('Así se usa'), C, rot); y+=rot+22;
+    var cols=2, filas=Math.ceil(R.length/cols), sep=18, bw=(AN-sep)/cols, bh=Math.min(200, (hT-sep*(filas-1))/filas);
+    R.forEach(function(p, i){
+      var bx=X+(i%cols)*(bw+sep), by=y+Math.floor(i/cols)*(bh+sep);
+      g.fillStyle='#F2F5F8'; _cqCaja(g, bx, by, bw, bh, 18); g.fill();
+      _cqNum(g, bx+46, by+bh/2, 30, i+1, C);
+      var tw=bw-110, fa=_cqAjustar(g, p[0], tw, 2, Math.min(40, bh*0.26), 22, '800'), fb=p[1] ? _cqAjustar(g, p[1], tw, 2, Math.min(28, bh*0.17), 18, '500') : { l:[], s:0 };
+      var bl=fa.l.length*fa.s*1.1+(fb.l.length ? 10+fb.l.length*fb.s*1.2 : 0), ty=by+(bh-bl)/2+fa.s*0.85;
+      g.font=_cqFuente(fa.s, '800'); ty=_cqTextoIzq(g, fa.l, bx+92, ty, fa.s*1.1, OSC);
+      if(fb.l.length){ g.font=_cqFuente(fb.s, '500'); _cqTextoIzq(g, fb.l, bx+92, ty+10+fb.s*1.05, fb.s*1.2, GRIS); }
+    });
+    y+=filas*bh+sep*(filas-1)+30;
+  }
+  return y;
+}
 function cartelEquipo(o){
   o=o||{};
   var tx=o.tx||function(z){ return z; };
-  return Promise.all([cartelLogo(o.logo), _cqImgSvg(o.picto, 600)]).then(function(r){
-    var L=r[0], P=r[1], W=CARTEL_W, H=CARTEL_H, X=70, AN=W-2*X;
+  var SEN=(o.sen && !(o.pasos||[]).some(function(p){ return p && p[0]; })) ? o.sen : null, SK=SEN ? Object.keys(SEN.svg||{}) : [];
+  return Promise.all([cartelLogo(o.logo), _cqImgSvg(o.picto, 600)].concat(SK.map(function(k){ return _cqImgSvg(SEN.svg[k], 400); }))).then(function(r){
+    var L=r[0], P=r[1], W=CARTEL_W, H=CARTEL_H, X=70, AN=W-2*X, SIM={}; SK.forEach(function(k, i){ SIM[k]=r[i+2]; });
     var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
     var g=cv.getContext('2d'), C=o.color||'#0B2A3A', OSC='#0B2A3A', GRIS='#4A5A66', ROJO='#B42318';
     var MONO='ui-monospace,Menlo,Consolas,"Courier New",monospace';
@@ -3126,6 +3161,7 @@ function cartelEquipo(o){
     for(k=0; k<=4 && !M; k++){ var Mc=medir(1-k*0.06, pasos.length); if(Mc.alto<=libre || k===4) M=Mc; }
     for(var n=pasos.length-1; n>=1 && M.alto>libre; n--) M=medir(M.e, n);
     y=y0;
+    if(SEN) y=_cqSenales(g, SEN, SIM, X, y, AN, pieY-30-(440+2*pad+12), C, tx);
     if(M.n){
       _cqRotulo(g, X, y+M.rot*0.8, tx('Cómo usarlo'), C, M.rot); y+=M.rot+20;
       if(M.fa){ g.font=_cqFuente(M.fa.s, '600'); y=_cqTextoIzq(g, M.fa.l, X, y+M.fa.s*0.9, M.fa.s*1.24, OSC)+18; }
