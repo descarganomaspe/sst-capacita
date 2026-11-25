@@ -9806,7 +9806,7 @@ setTimeout(function(){ try{ quitarArranque(true); }catch(_q){ var a=document.get
   <div id="eqq-cuerpo"></div>
 </section>
 <section class="pantalla" id="p-equipo-etiq">
-  <div class="barra"><span>Etiquetas</span></div>
+  <div class="barra"><span>Carteles</span></div>
   <div id="eqe-cuerpo"></div>
 </section>
 <!-- ===== LA INSPECCIÓN DIARIA DE CADA EQUIPO, CON SU QR (03/10/2026) ===== -->
@@ -17937,7 +17937,7 @@ function _ir(p){
   if(p==='p-reporte-levantar') prepLevantarMio();
   if(p==='p-actividades')pintarActividades();
   if(p==='p-inspec')pintarInspec(); if(p==='p-petar')pintarPetar(); if(p==='p-petar-nuevo')pintarPetarNuevo(); if(p==='p-frentes')pintarFrentes(); if(p==='p-frente')pintarFrente();
-  if(p==='p-equipos')eqPintar(); if(p==='p-equipo')eqPintarFicha(); if(p==='p-equipo-nuevo')eqPintarForm(); if(p==='p-equipo-etiq')eqPintarEtiq();
+  if(p==='p-equipos')eqPintar(); if(p==='p-equipo')eqPintarFicha(); if(p==='p-equipo-nuevo')eqPintarForm(); if(p==='p-equipo-etiq')eqctLotePintar();
   if(p==='p-iq')iqPintar(); if(p==='p-iq-firma')iqFirmaPintar(); if(p==='p-iq-lista')iqListaPintar(); if(p==='p-iq-ver')iqVerPintar();
   if(p==='p-req')rqPintar(); if(p==='p-req-nuevo')rqPintarForm(); if(p==='p-req-ver')rqPintarVer(); if(p==='p-req-firma')rqPintarFirma();
   if(p==='p-cum-emp' && typeof cumPintarEmp==='function')cumPintarEmp();
@@ -18627,7 +18627,7 @@ var PLAN_VITRINA = [
   { k:'buenas',      g:'dia',   ic:'🌟', n:'Buenas prácticas',                   d:'Lo que se hizo bien, con foto, para reconocerlo y repetirlo.', desde:0 },
   { k:'semanal',     g:'dia',   ic:'📈', n:'Reporte semanal de horas hombre',    d:'Las horas trabajadas y las de capacitación de la semana, en PDF y en Excel.', desde:1, llave:'semanal', tope:'semana' },
   { k:'inspec',      g:'dia',   ic:'✅', n:'Inspecciones de obra',               d:'Las listas de verificación de tu sector, llenadas en el celular con sus fotos.', desde:2, llave:'inspecciones', web:['insp'] },
-  { k:'equipos',     g:'dia',   ic:'🏷️', n:'Equipos y herramientas con QR',      d:'Cada equipo con su etiqueta. El trabajador escanea el QR y hace su inspección diaria antes de usarlo.', desde:3, llave:'equipos', web:['equipos', 'inspeq'], nuevo:1 },
+  { k:'equipos',     g:'dia',   ic:'🏷️', n:'Equipos y herramientas con QR',      d:'Cada equipo con su cartel y su QR. El trabajador escanea el QR y hace su inspección diaria antes de usarlo.', desde:3, llave:'equipos', web:['equipos', 'inspeq'], nuevo:1 },
   { k:'msds',        g:'dia',   ic:'🧪', n:'Productos químicos',                 d:'Cada producto con su hoja MSDS, su etiqueta y su rombo. El cartel con QR va en el almacén.', desde:3, llave:'msds', web:['quimicos'] },
   { k:'ambiente',    g:'dia',   ic:'🌱', n:'Medio ambiente',                     d:'Los residuos con su certificado o su boleta (y lo que se vende, con su comprobante), el agua en m³, el combustible con sus boletas de carga y las charlas ambientales; y el informe de medio ambiente del mes.', desde:3, web:['ambiente'], nuevo:1 },
   { k:'campanas',    g:'dia',   ic:'📣', n:'Campañas',                           d:'Campañas de una semana ya armadas, día por día, con su evidencia en PDF.', desde:3, llave:'campanas' },
@@ -29214,11 +29214,46 @@ function _cqImgSvg(cuerpo, px){
     im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="'+px+'" height="'+px+'">'+cuerpo+'</svg>');
   });
 }
+/* 25/11/2026 · el cartel de un equipo sin pasos de uso: sus peligros y su EPP con las señales de la NTP 399.010-1 y cuatro reglas
+   en baldosas, para que nunca quede vacío (o.sen, de eqCartelDatosDe). Devuelve dónde termina. */
+function _cqSenales(g, S, im, X, y, AN, fin, C, tx){
+  var OSC='#0B2A3A', GRIS='#4A5A66', libre=fin-y, rot=30, capS=27;
+  var sp=Math.max(120, Math.min(250, (libre-330)*0.32)), se=Math.max(104, Math.min(210, (libre-330)*0.27));
+  function _cqSenFila(L, lado){
+    var n=L.length||1, paso=AN/n, cap=0;
+    L.forEach(function(p, i){
+      var cx=X+paso*i+paso/2, I=im[p[0]];
+      if(I) g.drawImage(I, cx-lado/2, y, lado, lado);
+      var f=_cqAjustar(g, p[1], paso*0.94, 2, capS, 20, '800'); g.font=_cqFuente(f.s, '800');
+      _cqTexto(g, f.l, cx, y+lado+f.s*1.15, f.s, f.s*1.1, OSC); cap=Math.max(cap, f.l.length*f.s*1.1);
+    });
+    g.textAlign='left'; y+=lado+cap+26;
+  }
+  if(S.peligros.length){ _cqRotulo(g, X, y+rot*0.8, tx('Peligros'), '#B42318', rot); y+=rot+22; _cqSenFila(S.peligros, sp); }
+  if(S.epp.length){ _cqRotulo(g, X, y+rot*0.8, tx('Usa siempre'), '#1D4ED8', rot); y+=rot+22; _cqSenFila(S.epp, se); }
+  var R=S.reglas.slice(0, 4), hT=fin-y-rot-22;
+  if(R.length && hT>120){
+    _cqRotulo(g, X, y+rot*0.8, tx('Así se usa'), C, rot); y+=rot+22;
+    var cols=2, filas=Math.ceil(R.length/cols), sep=18, bw=(AN-sep)/cols, bh=Math.min(200, (hT-sep*(filas-1))/filas);
+    R.forEach(function(p, i){
+      var bx=X+(i%cols)*(bw+sep), by=y+Math.floor(i/cols)*(bh+sep);
+      g.fillStyle='#F2F5F8'; _cqCaja(g, bx, by, bw, bh, 18); g.fill();
+      _cqNum(g, bx+46, by+bh/2, 30, i+1, C);
+      var tw=bw-110, fa=_cqAjustar(g, p[0], tw, 2, Math.min(40, bh*0.26), 22, '800'), fb=p[1] ? _cqAjustar(g, p[1], tw, 2, Math.min(28, bh*0.17), 18, '500') : { l:[], s:0 };
+      var bl=fa.l.length*fa.s*1.1+(fb.l.length ? 10+fb.l.length*fb.s*1.2 : 0), ty=by+(bh-bl)/2+fa.s*0.85;
+      g.font=_cqFuente(fa.s, '800'); ty=_cqTextoIzq(g, fa.l, bx+92, ty, fa.s*1.1, OSC);
+      if(fb.l.length){ g.font=_cqFuente(fb.s, '500'); _cqTextoIzq(g, fb.l, bx+92, ty+10+fb.s*1.05, fb.s*1.2, GRIS); }
+    });
+    y+=filas*bh+sep*(filas-1)+30;
+  }
+  return y;
+}
 function cartelEquipo(o){
   o=o||{};
   var tx=o.tx||function(z){ return z; };
-  return Promise.all([cartelLogo(o.logo), _cqImgSvg(o.picto, 600)]).then(function(r){
-    var L=r[0], P=r[1], W=CARTEL_W, H=CARTEL_H, X=70, AN=W-2*X;
+  var SEN=(o.sen && !(o.pasos||[]).some(function(p){ return p && p[0]; })) ? o.sen : null, SK=SEN ? Object.keys(SEN.svg||{}) : [];
+  return Promise.all([cartelLogo(o.logo), _cqImgSvg(o.picto, 600)].concat(SK.map(function(k){ return _cqImgSvg(SEN.svg[k], 400); }))).then(function(r){
+    var L=r[0], P=r[1], W=CARTEL_W, H=CARTEL_H, X=70, AN=W-2*X, SIM={}; SK.forEach(function(k, i){ SIM[k]=r[i+2]; });
     var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
     var g=cv.getContext('2d'), C=o.color||'#0B2A3A', OSC='#0B2A3A', GRIS='#4A5A66', ROJO='#B42318';
     var MONO='ui-monospace,Menlo,Consolas,"Courier New",monospace';
@@ -29286,6 +29321,7 @@ function cartelEquipo(o){
     for(k=0; k<=4 && !M; k++){ var Mc=medir(1-k*0.06, pasos.length); if(Mc.alto<=libre || k===4) M=Mc; }
     for(var n=pasos.length-1; n>=1 && M.alto>libre; n--) M=medir(M.e, n);
     y=y0;
+    if(SEN) y=_cqSenales(g, SEN, SIM, X, y, AN, pieY-30-(440+2*pad+12), C, tx);
     if(M.n){
       _cqRotulo(g, X, y+M.rot*0.8, tx('Cómo usarlo'), C, M.rot); y+=M.rot+20;
       if(M.fa){ g.font=_cqFuente(M.fa.s, '600'); y=_cqTextoIzq(g, M.fa.l, X, y+M.fa.s*0.9, M.fa.s*1.24, OSC)+18; }
@@ -37229,7 +37265,11 @@ function eqCartelDatosDe(x, op){
   op=op||{};
   var tr=op.tx || function(z){ return z; }, u=eqUsoDe(x), S=EQ_SENAL[x.tipo] || null, A=u.agente;
   var det=u.ext ? [A ? tr(A.n) : '', u.kg ? u.kg+' kg' : ''].filter(Boolean).join(' · ') : String(x.detalle || '');
-  return { codigo:x.codigo, tipo:tr(x.tipo), detalle:det, enlace:eqEnlace(x), color:S ? S[1] : '#0B2A3A', picto:eqSenalSvg(x.tipo),
+  /* 25/11/2026 · sin pasos de uso, el cartel no queda vacío: sus peligros, su EPP (señales de la NTP) y cuatro reglas (ceqSenCartel, de las cartillas) */
+  var SN=(!u.pasos.length && !u.ext && typeof ceqSenCartel==='function') ? ceqSenCartel(x) : null;
+  var sen=SN ? { peligros:SN.peligros.map(function(p){ return [p[0], tr(p[1])]; }), epp:SN.epp.map(function(p){ return [p[0], tr(p[1])]; }),
+                 reglas:SN.reglas.map(function(p){ return [tr(p[0]), tr(p[1])]; }), svg:SN.svg } : null;
+  return { codigo:x.codigo, tipo:tr(x.tipo), detalle:det, enlace:eqEnlace(x), color:S ? S[1] : '#0B2A3A', picto:eqSenalSvg(x.tipo) || (SN && SN.svg[SN.ic]) || '', sen:sen,
            pasos:u.pasos.map(function(p){ return u.propios ? p : [tr(p[0]), tr(p[1])]; }), propios:u.propios,
            antes:u.antes ? tr(u.antes) : '', luego:u.luego ? tr(u.luego) : '',
            clases:A ? A.c.split('').map(function(c){ return [c, tr(EQ_CLASES_FUEGO[c])]; }) : [], nousar:(A && A.no) ? tr(A.no) : '',
@@ -38207,7 +38247,8 @@ function eqPintar(){
   if(activos && typeof iqBloqueEquipos==='function') h+=iqBloqueEquipos();
   h+='<div class="esc-acc" style="margin:12px 0 0">'+
      '<button class="btn sec" style="margin:0" onclick="eqNuevo()">➕ Registrar</button>'+
-     (activos?'<button class="btn sec" style="margin:0" onclick="eqEtiquetas()">🖨️ Etiquetas</button>':'')+'</div>'+
+     /* 25/11/2026 · «Ahora sección de carteles» (Marcelo): en vez de las etiquetas */
+     (activos?'<button class="btn sec" style="margin:0" onclick="eqctLote()">🪧 <span>Carteles</span></button>':'')+'</div>'+
      /* 4/11/2026 · V7.9j · quién puede inspeccionar cada clase (la emergencia, sin elegir: solo el equipo de SST) */
      '<button type="button" class="eq-link" id="eq-quien-b" style="margin-top:10px" onclick="eqQuienAbrir()">👥 <span>Quién inspecciona cada equipo</span> ▸</button>';
   if(!L.length){
@@ -38616,22 +38657,13 @@ function eqPintarFicha(){
   if(x.estado!=='baja'){
     h+='<div class="esc-acc" style="margin:14px 0 0">'+
        '<button class="btn" style="margin:0" onclick="eqRevisar([\''+escA(x.id)+'\'])">'+(x.estado==='fuera' ? '✅ Revisar para volver a servicio' : '✅ Revisar ahora')+'</button>'+
-       '<button class="btn sec" style="margin:0" onclick="eqEtiquetas([\''+escA(x.id)+'\'])">🖨️ Imprimir su etiqueta</button></div>'+
-       /* 14/10/2026 · el cartel que va sobre el equipo (el porta extintor): su señal, cómo usarlo y su QR */
-       '<button class="btn sec" style="margin:8px 0 0" id="eqd-cartel-b" onclick="eqCartel(\''+escA(x.id)+'\')">🪧 <span>Cartel con su QR</span></button>'+
-       '<div id="eqd-cartel"></div>'+
-       /* 24/11/2026 · la cartilla doble cara (CARTILLAS-EQ-MOTOR) */
-       '<button class="btn sec" style="margin:8px 0 0" id="eqd-cartilla-b" onclick="eqCartilla(\''+escA(x.id)+'\')">🪪 <span>Cartilla doble cara</span></button>'+
+       /* 25/11/2026 · sus carteles (CARTILLAS-EQ-MOTOR), en vez de su etiqueta, su cartel y su cartilla: A4, A4 doble cara, A5, A5 doble cara, tag y mini-tag */
+       '<button class="btn sec" style="margin:0" id="eqd-cartilla-b" onclick="eqCartilla(\''+escA(x.id)+'\')">🪧 <span>Sus carteles</span></button></div>'+
        '<div id="eqd-cartilla"></div>';
     h+=eqUsoFicha(x);
   }
   /* 15/10/2026 · lote 12 · las que le tocan, cómo va cada una y «Ya hice una inspección en papel» */
   if(typeof eqFrecFicha==='function') h+=eqFrecFicha(x);
-  var DX=eqDis(x);
-  h+='<div class="sec-tit" style="margin-top:20px"><span>'+ET.ic+' <span>Su etiqueta:</span> <span>'+esc(ET.n)+'</span></span></div>';
-  h+='<div class="eq-prev" id="eqd-etq" data-sin-trad>'+eqEtiquetaHTML(x)+'</div>'+
-     '<p class="sub" id="eqd-etq-tx" style="margin:8px 0 0"><span>Diseño:</span> <b>'+esc(eqDisenoDe(DX.d).n)+'</b> · <span>'+(DX.g ? 'Grande' : 'Normal')+'</span> · '+eqMedidaTxt(x.etiqueta, DX.g)+'</p>'+
-     '<p class="sub" style="margin:4px 0 0">'+esc(ET.d)+'</p>';
   var dat=(x.marca || x.modelo || x.serie) ? [['Tipo', x.tipo], ['Marca', x.marca], ['Modelo', x.modelo], ['N.° de serie', x.serie], ['Ubicación', x.ubicacion], ['Responsable', x.responsable]]
                                            : [['Tipo', x.tipo], ['Marca, modelo o serie', x.detalle], ['Ubicación', x.ubicacion], ['Responsable', x.responsable]];   /* V7.9j · la ubicación */
   h+='<div class="sec-tit" style="margin-top:20px">Datos</div><div class="caja vidrio" style="padding:12px 14px">'+
@@ -38746,7 +38778,7 @@ function eqPintarForm(){
   /* 14/10/2026 · cómo se usa (lo ve cualquiera que escanee su QR) y, del extintor, de qué es y su recarga */
   if(E0.tipo) h+=eqUsoForm(E0);
   var et=E0.etiqueta || (T ? T.e : 'placa');
-  h+='<div id="eqn-etq-zona">'+eqFormEtiqHTML()+'</div>';
+  /* 25/11/2026 · sin la etiqueta: sus carteles se eligen en su ficha */
   if(et==='caja'){
     h+='<label for="eqn-cont">Lo que tiene la caja <small>(una cosa por línea)</small></label>'+
        '<textarea id="eqn-cont" rows="5" placeholder="3 destornilladores planos&#10;2 alicates de corte&#10;1 martillo" oninput="EQ.edit.contenido=this.value.split(/\\n/)">'+esc((E0.contenido||[]).join('\n'))+'</textarea>';
@@ -39061,10 +39093,29 @@ var CEQ_K = 10;   /* px por mm */
 var CEQ_CLAVE = 'cartillas_eq';
 /* w, h: la cartilla (mm); en la hoja A4 (apaisada o vertical) van cols × filas */
 var CEQ_FMT = {
-  a5:  { k:'a5', n:'Media hoja A4', d:'14 × 19,8 cm · 2 por hoja A4', w:140, h:198, cols:2, filas:1, apaisada:true, micro:false, rev:2 },
+  /* 25/11/2026 · el cartel A4 (una por hoja): su cara A es el cartel del equipo; su cara B, la de la cartilla a escala */
+  a4:  { k:'a4', n:'A4', d:'21 × 29,7 cm · 1 por hoja', w:210, h:297, cols:1, filas:1, apaisada:false, micro:false, rev:2 },
+  a5:  { k:'a5', n:'A5', d:'14 × 19,8 cm · 2 por hoja A4', w:140, h:198, cols:2, filas:1, apaisada:true, micro:false, rev:2 },
   tag: { k:'tag', n:'Tag de herramienta', d:'9,5 × 13,5 cm · 4 por hoja A4', w:95, h:135, cols:2, filas:2, apaisada:false, micro:true, rev:1 },
   mini:{ k:'mini', n:'Mini-tag', d:'6,5 × 9,5 cm · 8 por hoja A4', w:65, h:95, cols:4, filas:2, apaisada:true, micro:true, rev:1 }
 };
+/* 25/11/2026 · «Ahora sección de carteles» (Marcelo): los seis carteles que se imprimen, en vez de las etiquetas.
+   [clave, nombre, medida, formato, doble cara] */
+var CEQ_MODOS = [
+  ['a4', 'Cartel A4', '21 × 29,7 cm · 1 por hoja · una cara', 'a4', false],
+  ['a4d', 'Cartel A4 doble cara', '21 × 29,7 cm · 1 por hoja · atrás, su checklist o lo que elijas', 'a4', true],
+  ['a5', 'Cartel A5', '14 × 19,8 cm · 2 por hoja A4 · una cara', 'a5', false],
+  ['a5d', 'Cartel A5 doble cara', '14 × 19,8 cm · 2 por hoja A4 · a doble cara', 'a5', true],
+  ['tag', 'Tag de herramienta', '9,5 × 13,5 cm · 4 por hoja A4 · a doble cara', 'tag', true],
+  ['mini', 'Mini-tag', '6,5 × 9,5 cm · 8 por hoja A4 · a doble cara', 'mini', true]
+];
+function ceqModoDef(k){ var r = CEQ_MODOS[0]; CEQ_MODOS.forEach(function(m){ if(m[0] === k) r = m; }); return { k:r[0], n:r[1], d:r[2], t:r[3], dc:r[4] }; }
+/* el modo de lo elegido (formato y doble cara) */
+function ceqModo(c){ c = c || {}; if(c.t === 'a4') return c.dc ? 'a4d' : 'a4'; if(c.t === 'a5') return c.dc === false ? 'a5' : 'a5d'; return CEQ_FMT[c.t] ? c.t : 'a4'; }
+/* el extintor y el botiquín: su A4 doble cara lleva atrás el cuadro de los 12 meses (cartelReversoEquipo) */
+function ceqConRev(x){ return typeof eqConReverso === 'function' && !!eqConReverso(x && x.tipo); }
+/* si ese equipo puede salir en ese cartel: el A4 de una cara, todos; los demás, con su familia */
+function ceqPuede(x, c, m){ var M = ceqModoDef(m); if(M.t === 'a4' && (!M.dc || ceqConRev(x))) return true; return !!CEQ_FAM[c && c.f]; }
 /* los bloques del reverso: t (título), y lo que lleva: li (lista), ol (pasos), tabla [[cab…], [fila…]…], img (la imagen que
    sube el supervisor), meses (los 12 casilleros), estado (verde y roja grandes), lineas (para llenar a mano), sino [sí, no], nota */
 var CEQ_REV = {
@@ -39189,6 +39240,40 @@ var CEQ_FAM = {
     icTipo:{ 'Botiquín':'primeros-auxilios' }, colorTipo:{ 'Botiquín':'#1B7F3B' },
     peligros:[], epp:[], reglas:[], datos:[], consejos:[], chk:[], rev:['mensual', 'diario', 'uso', 'estado'] }
 };
+/* 25/11/2026 · Marcelo (foto del cartel de una grúa móvil, vacío en el medio): «todos los carteles que estén así, añádele
+   información… nunca deben de estar vacíos, agrégale imágenes o señaléticas». Para el cartel A4 de un equipo sin pasos de uso:
+   sus peligros y su EPP con las señales de la NTP 399.010-1, y cómo se usa en cuatro reglas. Los que no son de ninguna familia,
+   con lo suyo (o lo general). */
+var CEQ_SEN_OTRO = {
+  'Tambor retráctil':{ ic:'atencion-peligro-de-caidas', peligros:[['atencion-peligro-de-caidas', 'Peligro de caídas'], ['cuidado-caida-de-objetos', 'Caída de objetos']],
+    epp:[['uso-obligatorio-de-arnes-de-seguridad', 'Arnés'], ['uso-obligatorio-de-casco-de-seguridad', 'Casco'], ['uso-obligatorio-de-guantes-de-seguridad', 'Guantes'], ['uso-obligatorio-de-botas-de-seguridad', 'Botas']],
+    reglas:[['Revísalo antes', 'Al jalarlo fuerte, frena en seco'], ['Anclaje arriba', 'Sobre tu cabeza, en un punto firme'], ['Si detuvo una caída', 'No se usa más: sepáralo'], ['Indicador sin marca roja', 'Si la tiene, avisa']] },
+  'Arnés':{ ic:'atencion-peligro-de-caidas', peligros:[['atencion-peligro-de-caidas', 'Peligro de caídas']],
+    epp:[['uso-obligatorio-de-arnes-de-seguridad', 'Arnés'], ['uso-obligatorio-de-casco-de-seguridad', 'Casco'], ['uso-obligatorio-de-botas-de-seguridad', 'Botas']],
+    reglas:[['Revísalo antes', 'Sin cortes ni quemaduras'], ['Bien ajustado', 'Que entre la mano plana'], ['Anclado siempre', 'Desde 1,80 m de altura'], ['Si detuvo una caída', 'No se usa más']] },
+  'Línea de vida':{ ic:'atencion-peligro-de-caidas', peligros:[['atencion-peligro-de-caidas', 'Peligro de caídas']],
+    epp:[['uso-obligatorio-de-arnes-de-seguridad', 'Arnés'], ['uso-obligatorio-de-casco-de-seguridad', 'Casco'], ['uso-obligatorio-de-guantes-de-seguridad', 'Guantes']],
+    reglas:[['Revísala antes', 'Sin hilos rotos; anclajes firmes'], ['Solo para personas', 'Nada de cargas colgadas'], ['Mosquetón cerrado', 'Con su seguro'], ['Si detuvo una caída', 'No se usa más']] },
+  'Escalera':{ ic:'atencion-peligro-de-caidas', peligros:[['atencion-peligro-de-caidas', 'Peligro de caídas'], ['cuidado-caida-de-objetos', 'Caída de objetos']],
+    epp:[['uso-obligatorio-de-casco-de-seguridad', 'Casco'], ['uso-obligatorio-de-botas-de-seguridad', 'Botas'], ['uso-obligatorio-de-guantes-de-seguridad', 'Guantes']],
+    reglas:[['Revísala antes', 'Peldaños completos y limpios'], ['Bien apoyada', '1 m de base por cada 4 m'], ['Tres puntos de apoyo', 'Sube de frente'], ['Una persona a la vez', 'Lejos de cables con corriente']] },
+  'Mezcladora':{ ic:'cuidado-con-sus-manos', peligros:[['cuidado-con-sus-manos', 'Cuidado con sus manos'], ['riesgo-de-descargas-electricas', 'Descargas eléctricas']],
+    epp:[['uso-obligatorio-de-casco-de-seguridad', 'Casco'], ['uso-obligatorio-de-proteccion-ocular', 'Protección ocular'], ['uso-obligatorio-de-guantes-de-seguridad', 'Guantes'], ['uso-obligatorio-de-mascarilla', 'Mascarilla']],
+    reglas:[['Base firme y nivelada', 'Con sus trabas puestas'], ['Manos fuera del tambor', 'Nunca con el motor andando'], ['Apágala para limpiar', 'Y desconéctala'], ['Guardas puestas', 'Sobre correas y engranajes']] },
+  '*':{ ic:'atencion-riesgo-de-accidentes', peligros:[['atencion-riesgo-de-accidentes', 'Riesgo de accidentes']],
+    epp:[['uso-obligatorio-de-casco-de-seguridad', 'Casco'], ['uso-obligatorio-de-proteccion-ocular', 'Protección ocular'], ['uso-obligatorio-de-guantes-de-seguridad', 'Guantes'], ['uso-obligatorio-de-botas-de-seguridad', 'Botas']],
+    reglas:[['Revísalo antes de usarlo', 'Si está dañado, no lo uses'], ['Escanea su QR', 'Su estado y su inspección'], ['Solo personal autorizado', 'Y capacitado para usarlo'], ['Avisa cualquier falla', 'A tu supervisor']] }
+};
+/* lo que lleva el cartel A4 de un equipo (sus señales con el dibujo de cada una); el extintor y el botiquín ya tienen lo suyo */
+function ceqSenCartel(x){
+  var tipo = String((x && x.tipo) || ''), f = ceqFamDe(tipo), c = { f:f }, FA = CEQ_FAM[f], S;
+  if(f === 'emergencia') return null;
+  if(FA) S = { ic:ceqIcono(x, c), peligros:ceqPeligros(x, c).slice(0, 3), epp:ceqEpp(x, c).slice(0, 4), reglas:(FA.reglas || []).slice(0, 4) };
+  else { var O = CEQ_SEN_OTRO[tipo] || CEQ_SEN_OTRO['*']; S = { ic:O.ic, peligros:O.peligros.slice(0, 3), epp:O.epp.slice(0, 4), reglas:O.reglas.slice(0, 4) }; }
+  S.svg = {};
+  [S.ic].concat(S.peligros.map(function(p){ return p[0]; }), S.epp.map(function(p){ return p[0]; })).forEach(function(k){ var b = _ceqSvg(k); if(b) S.svg[k] = b; });
+  return S;
+}
 /* los colores que se pueden elegir para la franja (o el de su familia) */
 var CEQ_COLORES = [['', 'El de su tipo'], ['rojo', 'Rojo', '#C8102E'], ['azul', 'Azul', '#1D4ED8'], ['verde', 'Verde oscuro', '#14532D'], ['amarillo', 'Amarillo', '#F5B700']];
 /* lo que se revisa cada mes en el extintor y el botiquín (los de su cartel A4: EQ_REVERSO_ITEMS, si está) */
@@ -39206,7 +39291,7 @@ function ceqFamDe(tipo){
 function ceqCfg(x, g){
   g = (g && typeof g === 'object') ? g : {};
   var f = CEQ_FAM[g.f] ? g.f : ceqFamDe(x && x.tipo);
-  var F = CEQ_FAM[f] || null, t = CEQ_FMT[g.t] ? g.t : (F ? F.fmt : 'a5');
+  var F = CEQ_FAM[f] || null, t = CEQ_FMT[g.t] ? g.t : (F ? F.fmt : 'a4');
   var r = Array.isArray(g.r) ? g.r.filter(function(k, i, a){ return F && F.rev.indexOf(k) > -1 && a.indexOf(k) === i; }) : [];
   if(!r.length && F) r = [F.rev[0]];
   /* la modulación ocupa toda la cara B */
@@ -39216,7 +39301,9 @@ function ceqCfg(x, g){
            alt:(alt > 0 && alt < 200) ? Math.round(alt * 100) / 100 : 0, carga:String(g.carga || '').slice(0, 40),
            anc:['retractil', 'absorbedor', 'restriccion'].indexOf(g.anc) > -1 ? g.anc : '', cap:String(g.cap || '').slice(0, 40),
            mod:/^[a-z0-9]{4,20}$/.test(String(g.mod || '')) ? String(g.mod) : '',
-           col:['rojo', 'azul', 'verde', 'amarillo'].indexOf(g.col) > -1 ? g.col : '', d:_ceqDatos(F, g) };
+           col:['rojo', 'azul', 'verde', 'amarillo'].indexOf(g.col) > -1 ? g.col : '', d:_ceqDatos(F, g),
+           /* doble cara: el tag y el mini-tag siempre; el A5, salvo que se elija una cara; el A4, solo si se elige */
+           dc:(t === 'tag' || t === 'mini') ? true : (t === 'a4' ? g.dc === true : g.dc !== false) };
 }
 /* los datos del equipo que escribe el supervisor (capacidad, WLL, RPM…): solo los de su familia, cortos */
 function _ceqDatos(F, g){
@@ -39303,6 +39390,8 @@ function ceqTinta(x, c){ return c.col === 'amarillo' ? '#8A5A00' : ceqColor(x, c
 function ceqPeligros(x, c){ var FA = CEQ_FAM[c.f] || {}; return (FA.peligrosTipo && FA.peligrosTipo[x && x.tipo]) || FA.peligros || []; }
 /* las dos caras, con sus imágenes cargadas. o: { x, c, enlace, empresa, obra, L (logo), img (Image de la cara B), uso, cintas, nombreMod } */
 function ceqCaras(o){
+  /* el A4 se dibuja como el A5 (la misma proporción) y se imprime a escala */
+  if(o.c && !CEQ_LAY[o.c.t]){ var c5 = {}; Object.keys(o.c).forEach(function(k){ c5[k] = o.c[k]; }); c5.t = 'a5'; o.c = c5; }
   var ks = ceqSenales(o.x || {}, o.c);
   return Promise.all(ks.map(function(k){ return _cqImgSvg(_ceqSvg(k), 400); })).then(function(R){
     o.pic = {}; ks.forEach(function(k, i){ o.pic[k] = R[i]; });
@@ -39764,13 +39853,14 @@ function _ceqTabla(g, T, x, y, w, px0, pxMin, hMax, marca, altas){
   return yy + px * 0.4;
 }
 /* ── el PDF: hojas A4 a doble cara, el reverso con las columnas al revés; marcas de corte en las dos caras ── */
-function ceqPDF(caras, t){
+function ceqPDF(caras, t, dc){
   var F = CEQ_FMT[t] || CEQ_FMT.a5, J = window.jspdf.jsPDF, n = F.cols * F.filas;
   var PW = F.apaisada ? 297 : 210, PH = F.apaisada ? 210 : 297;
   var gx = (PW - F.cols * F.w) / (F.cols + 1), gy = (PH - F.filas * F.h) / (F.filas + 1);
   var d = new J({ unit:'mm', format:'a4', orientation:F.apaisada ? 'landscape' : 'portrait', compress:true });
   var sitio = function(j){ var c = j % F.cols, f = Math.floor(j / F.cols); return { x:gx + c * (F.w + gx), y:gy + f * (F.h + gy) }; };
   var marcas = function(p){
+    if(gx < 2 || gy < 2) return;
     d.setDrawColor(150, 160, 170); d.setLineWidth(0.15); var L = Math.min(4, gx * 0.8, gy * 0.8);
     [[p.x, p.y, -1, -1], [p.x + F.w, p.y, 1, -1], [p.x, p.y + F.h, -1, 1], [p.x + F.w, p.y + F.h, 1, 1]].forEach(function(e){
       d.line(e[0] + e[2] * 1, e[1], e[0] + e[2] * (1 + L), e[1]); d.line(e[0], e[1] + e[3] * 1, e[0], e[1] + e[3] * (1 + L)); });
@@ -39779,23 +39869,26 @@ function ceqPDF(caras, t){
     var lote = caras.slice(i, i + n);
     if(i) d.addPage('a4', F.apaisada ? 'landscape' : 'portrait');
     lote.forEach(function(c, j){ var p = sitio(j); d.addImage(c.a, 'PNG', p.x, p.y, F.w, F.h, undefined, 'FAST'); marcas(p); });
+    if(dc === false) continue;
     d.addPage('a4', F.apaisada ? 'landscape' : 'portrait');
     lote.forEach(function(c, j){
       var col = j % F.cols, fil = Math.floor(j / F.cols), p = sitio(fil * F.cols + (F.cols - 1 - col));
-      d.addImage(c.b, 'PNG', p.x, p.y, F.w, F.h, undefined, 'FAST'); marcas(p);
+      if(c.b) d.addImage(c.b, 'PNG', p.x, p.y, F.w, F.h, undefined, 'FAST'); marcas(p);
     });
   }
   return d;
 }
 /* cómo se imprime, en palabras (la hoja vertical se voltea por el borde largo; la apaisada, por el corto) */
-function ceqComoImprimir(t){
+function ceqComoImprimir(t, dc){
   var F = CEQ_FMT[t] || CEQ_FMT.a5;
+  if(dc === false) return 'Al 100 % (sin «ajustar a la página»), a una cara.' + (F.cols * F.filas > 1 ? ' Corta por las marcas' : '') + (t === 'a4' ? ' Pégalo junto al equipo, a la vista; si queda a la intemperie, enmícalo.' : ' y enmica.');
+  if(t === 'a4') return 'A doble cara, al 100 % (sin «ajustar a la página»), volteando por el borde largo. Pégalo o cuélgalo junto al equipo; si queda a la intemperie, enmícalo.';
   return 'A doble cara, al 100 % (sin «ajustar a la página»), volteando por el borde ' + (F.apaisada ? 'corto' : 'largo') + '. Prueba primero con una hoja: la cara B tiene que quedar detrás de su cara A. Corta por las marcas y enmica.';
 }
 /* <<< CARTILLAS-EQ-MOTOR-FIN >>> */
-/* ══ CARTILLAS DOBLE CARA EN LA APP (24/11/2026) ════════════════════════════════════════════════════════════════════
-   En la ficha del equipo, debajo de su cartel: «🪪 Cartilla doble cara». Lo mismo que en la web (CARTILLAS-EQ-MOTOR):
-   familia, tamaño, qué va atrás, la imagen (modulación, tabla de carga o circuitos) y, del andamio, su altura. Sale un PDF
+/* ══ CARTELES EN LA APP (24/11/2026; desde el 25/11, en vez de las etiquetas) ═══════════════════════════════════════
+   En la ficha del equipo: «🪧 Sus carteles»; en la lista: «🪧 Carteles», los de varios. Lo mismo que en la web
+   (CARTILLAS-EQ-MOTOR): cuál de los seis (A4, A4 doble cara, A5, A5 doble cara, tag, mini-tag), familia, qué va atrás, la imagen (modulación, tabla de carga o circuitos) y, del andamio, su altura. Sale un PDF
    a doble cara para descargar o compartir. Lo elegido se guarda en la obra (sst_estado «cartillas_eq»), igual que en la web. */
 var EQCT = { e:null, mod:[], id:null, c:null, img:{}, n:0 };
 function eqctTraer(){
@@ -39806,7 +39899,7 @@ function eqctGuardar(id, c){
   return estadoBajarEstricto(CEQ_CLAVE).then(function(v){
     v = (v && typeof v === 'object' && !Array.isArray(v)) ? v : { v:1, e:{} };
     if(!v.e || typeof v.e !== 'object' || Array.isArray(v.e)) v.e = {};
-    v.v = 1; v.e[String(id)] = { f:c.f, t:c.t, r:c.r, img:c.img || undefined, alt:c.alt || undefined, carga:c.carga || undefined, anc:c.anc || undefined, cap:c.cap || undefined, mod:c.mod || undefined, col:c.col || undefined, d:(c.d && Object.keys(c.d).length) ? c.d : undefined, ts:Date.now() };
+    v.v = 1; v.e[String(id)] = { f:c.f, t:c.t, dc:c.dc, r:c.r, img:c.img || undefined, alt:c.alt || undefined, carga:c.carga || undefined, anc:c.anc || undefined, cap:c.cap || undefined, mod:c.mod || undefined, col:c.col || undefined, d:(c.d && Object.keys(c.d).length) ? c.d : undefined, ts:Date.now() };
     return estadoSubir(CEQ_CLAVE, v).then(function(ok){ if(!ok) return Promise.reject('sin_red'); EQCT.e = v.e; EQCT.mod = Array.isArray(v.mod) ? v.mod : []; return true; });
   });
 }
@@ -39820,7 +39913,7 @@ function _eqctImg(url){
   });
   return EQCT.img[url];
 }
-function eqctCaras(x, c){
+function _eqctMotor(x, c){
   var emp = (typeof empleador === 'function') ? (empleador() || {}) : {}, e = (typeof empActiva === 'function') ? (empActiva() || {}) : {};
   var md = null; if(c.r[0] === 'modulacion') (EQCT.mod || []).forEach(function(m){ if(m.id === c.mod) md = m; });
   return Promise.all([cartelLogo(emp.logo || null), _eqctImg(md ? md.url : (c.r[0] === 'modulacion' ? '' : c.img))]).then(function(R){
@@ -39830,50 +39923,69 @@ function eqctCaras(x, c){
     return ceqCaras(o).then(function(C){ return { a:C.a.toDataURL('image/png'), b:C.b.toDataURL('image/png') }; });
   });
 }
+/* 25/11/2026 · el cartel A4: su cara A es el cartel del equipo; atrás, los 12 meses (extintor, botiquín) o la cara B a escala */
+function eqctCaras(x, c){
+  if(c.t !== 'a4') return _eqctMotor(x, c);
+  return cartelEquipo(eqCartelDatos(x)).then(function(rA){
+    if(!c.dc) return { a:rA.png, b:null };
+    if(ceqConRev(x)) return cartelReversoEquipo(eqReversoDatos(x)).then(function(rB){ return { a:rA.png, b:rB.png }; });
+    if(!CEQ_FAM[c.f]) return { a:rA.png, b:null };
+    return _eqctMotor(x, c).then(function(C){ return { a:rA.png, b:C.b }; });
+  });
+}
 function eqCartilla(id){
   var x = eqPorId(id), c = $('eqd-cartilla'); if(!x || !c) return;
   if(EQCT.id === id && c.innerHTML){ c.innerHTML = ''; EQCT.id = null; return; }
-  c.innerHTML = '<p class="sub" style="margin:10px 0 0">Abriendo la cartilla…</p>';
-  eqctTraer().then(function(){ EQCT.id = id; EQCT.c = ceqCfg(x, EQCT.e[id]); eqctPintar(); },
+  c.innerHTML = '<p class="sub" style="margin:10px 0 0">Abriendo sus carteles…</p>';
+  eqctTraer().then(function(){ EQCT.id = id; EQCT.c = ceqCfg(x, EQCT.e[id]); if(!ceqPuede(x, EQCT.c, ceqModo(EQCT.c))){ EQCT.c.t = 'a4'; EQCT.c.dc = false; } eqctPintar(); },
     function(){ var c2 = $('eqd-cartilla'); if(c2) c2.innerHTML = '<p class="sub">No se pudo abrir: revisa tu conexión.</p>'; });
 }
 function eqctPintar(){
   var x = eqPorId(EQCT.id), k = $('eqd-cartilla'); if(!x || !k) return;
   _eqctCss();
-  var c = EQCT.c, F = CEQ_FAM[c.f], Fm = CEQ_FMT[c.t], fam0 = ceqFamDe(x.tipo), h = '<div class="caja vidrio eqct">';
+  var c = EQCT.c, F = CEQ_FAM[c.f], Fm = CEQ_FMT[c.t], fam0 = ceqFamDe(x.tipo), m = ceqModo(c), M = ceqModoDef(m), h = '<div class="caja vidrio eqct">';
+  var motor = !!F && (c.t !== 'a4' || (c.dc && !ceqConRev(x)));
+  h += '<span class="eqct-l">Qué cartel</span>' + eqctModosSeg(m, function(q){ return ceqPuede(x, c, q); }, 'eqctModo') +
+    '<p class="sub" style="font-size:12.5px;margin:4px 0 10px">' + esc(M.d) + '</p>';
   if(!fam0) h += '<label class="eqct-l" for="eqct-fam">Familia</label><select id="eqct-fam" onchange="eqctCambia(\'f\', this.value)"><option value="">— elige —</option>' +
     ['andamio', 'grua', 'electrico', 'poder', 'manual'].map(function(f){ return '<option value="' + f + '"' + (c.f === f ? ' selected' : '') + '>' + esc(CEQ_FAM[f].n) + '</option>'; }).join('') + '</select>' +
-    '<p class="sub" style="font-size:12.5px;margin:4px 0 10px">Este tipo no es de ninguna familia: elige la que más se le parece.</p>';
-  if(F){
-    h += '<span class="eqct-l">Tamaño</span><div class="eqct-seg">' + ['a5', 'tag', 'mini'].map(function(t){
-      return '<button type="button" class="' + (c.t === t ? 'on' : '') + '" onclick="eqctCambia(\'t\', \'' + t + '\')">' + esc(CEQ_FMT[t].n) + '</button>'; }).join('') + '</div>' +
-      '<p class="sub" style="font-size:12.5px;margin:4px 0 10px">' + esc(Fm.d) + '</p>' +
-      '<span class="eqct-l">Color de la franja</span><div class="eqct-seg">' + CEQ_COLORES.map(function(k){
-        return '<button type="button" class="' + (c.col === k[0] ? 'on' : '') + '" onclick="eqctCambia(\'col\', \'' + k[0] + '\')">' + (k[2] ? '<i class="eqct-pt" style="background:' + k[2] + '"></i>' : '') + '<span>' + esc(k[1]) + '</span></button>'; }).join('') + '</div>' +
-      '<span class="eqct-l"><span>Qué va atrás</span> <small>' + (Fm.rev > 1 ? '(hasta 2)' : '(1 en este tamaño)') + '</small></span><div class="eqct-rev">' + F.rev.map(function(r){
+    '<p class="sub" style="font-size:12.5px;margin:4px 0 10px">Este tipo no es de ninguna familia. El cartel A4 sale igual; para los demás, elige la que más se le parece.</p>';
+  if(c.t === 'a4' && c.dc && ceqConRev(x)) h += '<p class="sub" style="font-size:12.5px;margin:0 0 10px">Atrás: el check list de los 12 meses, con casilleros para marcar con plumón.</p>';
+  if(motor){
+    h += '<span class="eqct-l">Color de la franja</span><div class="eqct-seg">' + CEQ_COLORES.map(function(q){
+        return '<button type="button" class="' + (c.col === q[0] ? 'on' : '') + '" onclick="eqctCambia(\'col\', \'' + q[0] + '\')">' + (q[2] ? '<i class="eqct-pt" style="background:' + q[2] + '"></i>' : '') + '<span>' + esc(q[1]) + '</span></button>'; }).join('') + '</div>';
+    if(c.dc) h += '<span class="eqct-l"><span>Qué va atrás</span> <small>' + (Fm.rev > 1 ? '(hasta 2)' : '(1 en este tamaño)') + '</small></span><div class="eqct-rev">' + F.rev.map(function(r){
         return '<label><input type="checkbox"' + (c.r.indexOf(r) > -1 ? ' checked' : '') + ' onchange="eqctRev(\'' + r + '\', this.checked)"><span>' + esc(CEQ_REV[r].n) + '</span></label>'; }).join('') + '</div>';
-    if(c.r[0] === 'modulacion') h += '<label class="eqct-l" for="eqct-mod">Su modulación</label><select id="eqct-mod" onchange="eqctCambia(\'mod\', this.value)"><option value="">' + (EQCT.mod.length ? '— elige —' : 'La obra aún no subió modulaciones') + '</option>' +
-      EQCT.mod.map(function(m){ return '<option value="' + esc(m.id) + '"' + (c.mod === m.id ? ' selected' : '') + '>' + esc(m.n) + '</option>'; }).join('') + '</select>' +
-      '<p class="sub" style="font-size:12.5px;margin:4px 0 0">Las modulaciones se suben en la web, en «Cartillas doble cara».</p>';
-    if(c.r.some(function(r){ return CEQ_REV[r] && CEQ_REV[r].img; })) h += '<label class="eqct-l" for="eqct-img"><span>La imagen</span>' + (c.img ? ' · <span>subida</span>' : '') + '</label><input type="file" id="eqct-img" accept="image/png,image/jpeg,image/webp" onchange="eqctImagen(this)">';
+    if(c.dc && c.r[0] === 'modulacion') h += '<label class="eqct-l" for="eqct-mod">Su modulación</label><select id="eqct-mod" onchange="eqctCambia(\'mod\', this.value)"><option value="">' + (EQCT.mod.length ? '— elige —' : 'La obra aún no subió modulaciones') + '</option>' +
+      EQCT.mod.map(function(q){ return '<option value="' + esc(q.id) + '"' + (c.mod === q.id ? ' selected' : '') + '>' + esc(q.n) + '</option>'; }).join('') + '</select>' +
+      '<p class="sub" style="font-size:12.5px;margin:4px 0 0">Las modulaciones se suben en la web, en «Carteles».</p>';
+    if(c.dc && c.r.some(function(r){ return CEQ_REV[r] && CEQ_REV[r].img; })) h += '<label class="eqct-l" for="eqct-img"><span>La imagen</span>' + (c.img ? ' · <span>subida</span>' : '') + '</label><input type="file" id="eqct-img" accept="image/png,image/jpeg,image/webp" onchange="eqctImagen(this)">';
     if(c.f === 'andamio') h += '<div class="eqct-2"><div><label class="eqct-l" for="eqct-alt">Altura de la plataforma (m)</label><input id="eqct-alt" inputmode="decimal" maxlength="6" placeholder="4,20" value="' + (c.alt ? String(c.alt).replace('.', ',') : '') + '" onchange="eqctCambia(\'alt\', this.value)"></div>' +
       '<div><label class="eqct-l" for="eqct-carga">Carga máxima</label><input id="eqct-carga" maxlength="40" placeholder="Clase 3 · 200 kg/m²" value="' + esc(c.carga) + '" onchange="eqctCambia(\'carga\', this.value)"></div></div>' +
       '<label class="eqct-l" for="eqct-anc">Protección contra caídas</label><select id="eqct-anc" onchange="eqctCambia(\'anc\', this.value)">' + [['', 'Según la altura'], ['retractil', 'Bloque retráctil'], ['absorbedor', 'Línea doble con absorbedor'], ['restriccion', 'Restricción']].map(function(o){
         return '<option value="' + o[0] + '"' + (c.anc === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select><p class="sub" style="font-size:12.5px;margin:4px 0 0">' + esc(ceqCaida(c.alt, c.anc).t) + '</p>';
     if(F.datos && F.datos.length) h += '<span class="eqct-l">Sus datos</span><div class="eqct-2">' + F.datos.map(function(D){
       return '<div><label class="eqct-l" for="eqct-d-' + D[0] + '"><span>' + esc(D[1]) + '</span>' + (D[2] ? ' <small data-sin-trad>(' + esc(D[2]) + ')</small>' : '') + '</label><input id="eqct-d-' + D[0] + '" maxlength="20" value="' + esc((c.d || {})[D[0]] || '') + '" onchange="eqctDato(\'' + D[0] + '\', this.value)"></div>'; }).join('') + '</div>';
-    h += '<div class="eqct-ver" id="eqct-ver"><p class="sub">Armando…</p></div>' +
-      '<p class="sub" style="font-size:12.5px;margin:8px 0 0">' + esc(ceqComoImprimir(c.t)) + '</p>' +
-      '<div class="esc-acc" style="margin-top:10px"><button type="button" class="btn" style="margin:0" onclick="eqctPDF(false)">⬇️ <span>Descargar el PDF</span></button>' +
-      '<button type="button" class="btn sec" style="margin:0" onclick="eqctPDF(true)">📲 <span>Compartirlo</span></button></div>';
   }
+  var ok = ceqPuede(x, c, m);
+  h += '<div class="eqct-ver" id="eqct-ver">' + (ok ? '<p class="sub">Armando…</p>' : '<p class="sub">Elige la familia.</p>') + '</div>' +
+    '<p class="sub" style="font-size:12.5px;margin:8px 0 0">' + esc(ceqComoImprimir(c.t, c.dc)) + '</p>' +
+    (ok ? '<div class="esc-acc" style="margin-top:10px"><button type="button" class="btn" style="margin:0" onclick="eqctPDF(false)">⬇️ <span>Descargar el PDF</span></button>' +
+    '<button type="button" class="btn sec" style="margin:0" onclick="eqctPDF(true)">📲 <span>Compartirlo</span></button></div>' : '');
   k.innerHTML = h + '</div>';
-  if(F) eqctVista();
+  if(ok) eqctVista();
 }
+/* los seis carteles, en botones (los que no puede, apagados) */
+function eqctModosSeg(m, puede, fn, cuenta){
+  return '<div class="eqct-seg eqct-modos">' + CEQ_MODOS.map(function(q){
+    var si = puede(q[0]);
+    return '<button type="button" class="' + (m === q[0] ? 'on' : '') + '"' + (si ? '' : ' disabled') + ' onclick="' + fn + '(\'' + q[0] + '\')"><span>' + esc(q[1]) + '</span>' + (cuenta ? ' <span data-sin-trad>(' + cuenta(q[0]) + ')</span>' : '') + '</button>'; }).join('') + '</div>';
+}
+function eqctModo(k){ var M = ceqModoDef(k), c = EQCT.c; if(!c) return; c.t = M.t; c.dc = M.dc; c.r = c.r.slice(0, CEQ_FMT[M.t].rev); eqctPintar(); }
 function eqctCambia(q, v){
   var x = eqPorId(EQCT.id); if(!x) return;
   var c = EQCT.c;
-  if(q === 'f'){ EQCT.c = ceqCfg(x, { f:v }); eqctPintar(); return; }
+  if(q === 'f'){ EQCT.c = ceqCfg(x, { f:v, t:c.t, dc:c.dc }); if(!ceqPuede(x, EQCT.c, ceqModo(EQCT.c))){ EQCT.c.t = 'a4'; EQCT.c.dc = false; } eqctPintar(); return; }
   if(q === 't'){ c.t = v; c.r = c.r.slice(0, CEQ_FMT[v].rev); }
   else if(q === 'alt'){ var a = parseFloat(String(v).replace(',', '.')); c.alt = (a > 0 && a < 200) ? Math.round(a * 100) / 100 : 0; }
   else c[q] = String(v || '').slice(0, 40);
@@ -39899,22 +40011,87 @@ function eqctVista(){
   var x = eqPorId(EQCT.id), n = ++EQCT.n; if(!x) return;
   eqctCaras(x, ceqCfg(x, EQCT.c)).then(function(C){
     var v = $('eqd-cartilla') && $('eqct-ver'); if(!v || n !== EQCT.n) return;
-    v.innerHTML = '<figure><figcaption>Cara A</figcaption><img src="' + C.a + '" alt="Cara A"></figure><figure><figcaption>Cara B</figcaption><img src="' + C.b + '" alt="Cara B"></figure>';
+    v.innerHTML = '<figure><figcaption>Cara A</figcaption><img src="' + C.a + '" alt="Cara A"></figure>' + (C.b ? '<figure><figcaption>Cara B</figcaption><img src="' + C.b + '" alt="Cara B"></figure>' : '');
   }, function(){ var v2 = $('eqct-ver'); if(v2) v2.innerHTML = '<p class="sub">No se pudo armar la vista.</p>'; });
 }
 function eqctPDF(compartir){
-  var x = eqPorId(EQCT.id); if(!x || !CEQ_FAM[EQCT.c.f]) return;
-  var c = ceqCfg(x, EQCT.c), nombre = 'cartilla-' + (String(x.codigo || 'equipo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'equipo') + '.pdf';
+  var x = eqPorId(EQCT.id); if(!x || !ceqPuede(x, EQCT.c, ceqModo(EQCT.c))) return;
+  var c = ceqCfg(x, EQCT.c), nombre = ceqModo(c).replace('d', '-2-caras').replace(/^/, 'cartel-') + '-' + (String(x.codigo || 'equipo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'equipo') + '.pdf';
   eqctGuardar(x.id, c).catch(function(){ return false; });
   eqctCaras(x, c).then(function(C){
-    var b = ceqPDF([C], c.t).output('blob'), f = null, puede = false;
+    var b = ceqPDF([C], c.t, c.dc).output('blob'), f = null, puede = false;
     if(compartir){
       try{ f = new File([b], nombre, { type:'application/pdf' }); }catch(_f){}
       try{ puede = !!(f && navigator.canShare && navigator.canShare({ files:[f] })); }catch(_c){}
-      if(puede){ navigator.share({ files:[f], title:'Cartilla ' + x.codigo }).catch(function(){}); return; }
+      if(puede){ navigator.share({ files:[f], title:'Cartel ' + x.codigo }).catch(function(){}); return; }
     }
-    bajarBlob(b, nombre); tostada('Listo: la cartilla a doble cara.');
+    bajarBlob(b, nombre); tostada(c.dc ? 'Listo: el cartel a doble cara.' : 'Listo: el cartel.');
   }, function(){ tostada('No se pudo armar el PDF.'); });
+}
+/* ── «Carteles» (en vez de las etiquetas): los de varios equipos, del cartel que se elija ── */
+function eqctLote(ids){
+  var act = (EQ.lista || []).filter(function(x){ return x.estado !== 'baja'; });
+  if(!act.length){ aviso('Sin equipos', 'Registra primero los equipos, y aquí salen sus carteles.', '🪧'); return; }
+  EQCT.lote = { m:'a4', sel:{}, ids:(ids && ids.length) ? ids.map(String) : null, listo:false };
+  ir('p-equipo-etiq');
+  eqctTraer().then(function(){
+    var L = EQCT.lote, cuenta = {}; if(!L) return;
+    act.forEach(function(x){ if(EQCT.e[x.id] && (!L.ids || L.ids.indexOf(String(x.id)) > -1)){ var k = ceqModo(ceqCfg(x, EQCT.e[x.id])); cuenta[k] = (cuenta[k] || 0) + 1; } });
+    Object.keys(cuenta).forEach(function(k){ if(!cuenta[L.m] || cuenta[k] > cuenta[L.m]) L.m = k; });
+    L.listo = true; eqctLoteMarcar(); eqctLotePintar();
+  }, function(){ var c = $('eqe-cuerpo'); if(c) c.innerHTML = '<p class="sub">No se pudo abrir: revisa tu conexión.</p>'; });
+}
+function _eqctAct(){ return (EQ.lista || []).filter(function(x){ return x.estado !== 'baja'; }); }
+function _eqctCfg(x){ return ceqCfg(x, (EQCT.e || {})[x.id]); }
+function _eqctDeM(m){ return _eqctAct().filter(function(x){ return ceqPuede(x, _eqctCfg(x), m); }); }
+function eqctLoteMarcar(){
+  var L = EQCT.lote, D = _eqctDeM(L.m); L.sel = {};
+  if(L.ids) D.forEach(function(x){ if(L.ids.indexOf(String(x.id)) > -1) L.sel[x.id] = 1; });
+  else { D.forEach(function(x){ if((EQCT.e || {})[x.id] && ceqModo(_eqctCfg(x)) === L.m) L.sel[x.id] = 1; }); if(!Object.keys(L.sel).length) D.forEach(function(x){ L.sel[x.id] = 1; }); }
+}
+function eqctLotePintar(){
+  var c = $('eqe-cuerpo'); if(!c) return;
+  _eqctCss();
+  var L = EQCT.lote;
+  if(!L || !L.listo){ c.innerHTML = '<h2>🪧 Carteles</h2><p class="sub">Abriendo…</p>'; return; }
+  var D = _eqctDeM(L.m), M = ceqModoDef(L.m), F = CEQ_FMT[M.t], n = D.filter(function(x){ return L.sel[x.id]; }).length, hojas = Math.ceil(n / (F.cols * F.filas));
+  var h = '<h2>🪧 Carteles</h2><p class="sub">Los de los equipos, en hojas A4. Cada uno sale con lo que se eligió en «Sus carteles» de su ficha (color, qué va atrás, sus datos).</p>' +
+    '<div class="caja vidrio eqct"><span class="eqct-l">Qué cartel</span>' + eqctModosSeg(L.m, function(q){ return _eqctDeM(q).length > 0; }, 'eqctLoteModo', function(q){ return _eqctDeM(q).length; }) +
+    '<p class="sub" style="font-size:12.5px;margin:4px 0 0">' + esc(M.d) + '</p>' +
+    (D.length < _eqctAct().length ? '<p class="sub" style="font-size:12.5px;margin:4px 0 0">Los que no son de ninguna familia salen solo en el cartel A4: elígele una en su ficha.</p>' : '') + '</div>';
+  h += '<div class="sec-tit" style="margin-top:16px"><span>' + esc(M.n) + '</span> · <span data-sin-trad>' + n + '</span> <span>de</span> <span data-sin-trad>' + D.length + '</span>' + (n ? ' · <span data-sin-trad>' + hojas + '</span> <span>' + (hojas === 1 ? 'hoja' : 'hojas') + '</span>' : '') + '</div>';
+  D.forEach(function(x){
+    h += '<button type="button" class="eq-fila' + (L.sel[x.id] ? ' sel' : '') + '" onclick="eqctLoteAlternar(\'' + escA(x.id) + '\')"><span class="eq-chk">' + (L.sel[x.id] ? '☑' : '☐') + '</span>' +
+      '<span class="eq-cod">' + esc(x.codigo) + '</span><span class="eq-tx"><b>' + esc(x.tipo) + '</b>' + (x.ubicacion ? '<small data-sin-trad>' + esc(x.ubicacion) + '</small>' : '') + '</span></button>';
+  });
+  h += '<p class="sub" style="font-size:12.5px;margin:12px 0 0">' + esc(ceqComoImprimir(M.t, M.dc)) + '</p>' +
+    '<div class="esc-acc" style="margin-top:12px"><button class="btn" style="margin:0" id="eqe-pdf" onclick="eqctLotePDF(false)"' + (n ? '' : ' disabled') + '>⬇️ <span>Armar el PDF</span></button>' +
+    '<button class="btn sec" style="margin:0" onclick="eqctLotePDF(true)"' + (n ? '' : ' disabled') + '>📲 <span>Compartirlo</span></button>' +
+    '<button class="btn sec" style="margin:0" onclick="eqctLoteTodos()"><span>Marcar todos</span></button></div><p class="sub" id="eqe-msg" style="margin-top:10px"></p>';
+  c.innerHTML = h;
+}
+function eqctLoteModo(k){ var L = EQCT.lote; if(!L) return; L.m = ceqModoDef(k).k; eqctLoteMarcar(); eqctLotePintar(); }
+function eqctLoteAlternar(id){ var L = EQCT.lote; if(!L) return; if(L.sel[id]) delete L.sel[id]; else L.sel[id] = 1; eqctLotePintar(); }
+function eqctLoteTodos(){ var L = EQCT.lote; if(!L) return; _eqctDeM(L.m).forEach(function(x){ L.sel[x.id] = 1; }); eqctLotePintar(); }
+function eqctLotePDF(compartir){
+  var L = EQCT.lote; if(!L) return;
+  var M = ceqModoDef(L.m), sel = _eqctDeM(L.m).filter(function(x){ return L.sel[x.id]; }), out = [], b0 = $('eqe-pdf'), m = $('eqe-msg');
+  if(!sel.length) return;
+  if(!window.jspdf || !window.jspdf.jsPDF){ aviso('No se pudo armar el PDF', 'Vuelve a abrir la app e inténtalo otra vez.', '📄'); return; }
+  if(b0) b0.disabled = true; if(m){ m.style.color = ''; m.textContent = 'Armando ' + sel.length + ' ' + (sel.length === 1 ? 'cartel' : 'carteles') + '…'; }
+  sel.reduce(function(p, x){
+    return p.then(function(){ var c = _eqctCfg(x); c.t = M.t; c.dc = M.dc; c.r = c.r.slice(0, CEQ_FMT[M.t].rev); return eqctCaras(x, c).then(function(C){ out.push(C); }); });
+  }, Promise.resolve()).then(function(){
+    var b = ceqPDF(out, M.t, M.dc).output('blob'), nombre = 'carteles-' + M.k + '.pdf', f = null, puede = false;
+    if(b0) b0.disabled = false;
+    if(m){ m.style.color = 'var(--ok)'; m.textContent = 'Listo: ' + sel.length + ' ' + (sel.length === 1 ? 'cartel' : 'carteles') + '. Imprímelos al 100 %.'; }
+    if(compartir){
+      try{ f = new File([b], nombre, { type:'application/pdf' }); }catch(_f){}
+      try{ puede = !!(f && navigator.canShare && navigator.canShare({ files:[f] })); }catch(_c){}
+      if(puede){ navigator.share({ files:[f], title:M.n }).catch(function(){}); return; }
+    }
+    bajarBlob(b, nombre);
+  }, function(){ if(b0) b0.disabled = false; if(m){ m.style.color = 'var(--mal)'; m.textContent = 'No se pudo armar el PDF.'; } });
 }
 function _eqctCss(){
   if(document.getElementById('eqct-css')) return;
@@ -39928,6 +40105,7 @@ function _eqctCss(){
     '.eqct-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.eqct-ver{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.eqct-ver figure{margin:0}' +
     '.eqct-ver figcaption{font-size:11.5px;font-weight:700;opacity:.7;margin:0 0 3px}.eqct-ver img{display:block;width:100%;height:auto;border:1px solid rgba(11,42,58,.15);border-radius:6px;background:#fff}' +
     '.eqct-pt{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}' +
+    '.eqct-seg button[disabled]{opacity:.45}.eqct-l2{margin:6px 0 0;font-size:13px}' +
     '.eqct[hidden],.eqct-ver[hidden]{display:none !important}';
   document.head.appendChild(s);
 }
@@ -40024,81 +40202,8 @@ function _eqUsoEstilos(){
   document.head.appendChild(st);
 }
 
-/* ══ LAS ETIQUETAS: hoja A4 adhesiva, a tamaño real ══ */
-/* la etiqueta de un equipo, como sale impresa (el mismo dibujo del PDF: equipos-base.js) */
-function eqEtiquetaHTML(x){ return eqSVG(x, {tx:eqTx, px:3}); }
-function eqEtiquetas(ids){
-  var act=(EQ.lista||[]).filter(function(x){ return x.estado!=='baja'; });
-  if(!act.length){ aviso('Sin equipos','Registra primero los equipos, y aquí salen sus etiquetas.','🏷️'); return; }
-  EQ.etiqSel={}; EQ.etiqDis='*'; EQ.etiqTam='*'; EQ.etiqForma='*';
-  if(ids && ids.length) ids.forEach(function(id){ EQ.etiqSel[id]=1; });
-  else {
-    var ya=leer(LS_EQ_IMPRESAS, {})||{};
-    act.forEach(function(x){ if(!ya[x.id]) EQ.etiqSel[x.id]=1; });
-    if(!Object.keys(EQ.etiqSel).length) act.forEach(function(x){ EQ.etiqSel[x.id]=1; });
-  }
-  ir('p-equipo-etiq');
-}
-/* para esta impresión: el diseño y el tamaño de cada equipo, o uno solo para todas */
-function eqEtiqOp(){ var o={tx:eqTx}; if(EQ.etiqDis && EQ.etiqDis!=='*') o.dis=(EQ.etiqDis==='c' ? '' : EQ.etiqDis); if(EQ.etiqTam==='n' || EQ.etiqTam==='g') o.tam=EQ.etiqTam; if(EQ.etiqForma==='tarjeta') o.forma='tarjeta'; return o; }
-function eqEtiqSel(){ var S=EQ.etiqSel||{}; return (EQ.lista||[]).filter(function(x){ return S[x.id] && x.estado!=='baja'; }); }
-function eqPintarEtiq(){
-  var c=$('eqe-cuerpo'); if(!c) return;
-  var act=(EQ.lista||[]).filter(function(x){ return x.estado!=='baja'; });
-  var S=EQ.etiqSel||{}, ya=leer(LS_EQ_IMPRESAS, {})||{}, op=eqEtiqOp();
-  /* 4/11/2026 · V7.8g · la tarjeta doble cara (EQ_ETIQ.tarjeta), solo «para esta impresión» */
-  var tarj=(EQ.etiqForma==='tarjeta');
-  var h='<h2>🖨️ Etiquetas</h2>'+(tarj ? '<p class="sub">Salen a tamaño real en hoja A4. Imprime al 100&nbsp;% (sin «ajustar a la página»), en cartulina o papel grueso. Cada tarjeta se corta, se dobla por la línea del medio y se enmica.</p>'
-                                  : '<p class="sub">Salen a tamaño real en hoja A4. Imprime al 100&nbsp;% (sin «ajustar a la página»), en papel adhesivo vinil, y fórralas con cinta transparente para que aguanten la obra.</p>');
-  var total=0;
-  EQ_ORDEN_ETIQ.forEach(function(k){
-    var l=act.filter(function(x){ return (x.etiqueta||'placa')===k; }); if(!l.length) return;
-    var X=EQ_ETIQ[k], sel=l.filter(function(x){ return S[x.id]; }), n=sel.length, hojas=eqHojas(sel, '', op).length;
-    total+=n;
-    h+='<div class="sec-tit" style="margin-top:18px">'+X.ic+' '+esc(X.n)+' · '+n+' de '+l.length+(n ? ' · '+hojas+' '+(hojas===1?'hoja':'hojas') : '')+'</div>'+
-       '<p class="sub" style="margin:-4px 0 8px;font-size:12.5px">'+esc(X.imp)+'</p>';
-    l.forEach(function(x){
-      var D=eqDis(x, op);
-      h+='<button type="button" class="eq-fila'+(S[x.id]?' sel':'')+'" onclick="eqEtiqAlternar(\''+escA(x.id)+'\')"><span class="eq-chk">'+(S[x.id]?'☑':'☐')+'</span>'+
-         '<span class="eq-cod">'+esc(x.codigo)+'</span><span class="eq-tx"><b>'+esc(x.tipo)+'</b><small><span>'+esc(eqDisenoDe(D.d).n)+'</span> · <span>'+(D.g ? 'Grande' : 'Normal')+'</span> · '+
-         (ya[x.id] ? 'Ya se imprimió el '+esc(eqFecha(ya[x.id])) : 'Sin imprimir todavía')+'</small></span></button>';
-    });
-  });
-  /* 05/10/2026 · el diseño y el tamaño «para esta impresión», y la hoja a la vista antes de armar el PDF */
-  var seg=function(id, ops, val, fn){ return '<div class="ke-seg eq-tams" id="'+id+'">'+ops.map(function(o){
-    return '<button type="button" class="ke-op'+(val===o[0]?' on':'')+'" data-v="'+o[0]+'" onclick="'+fn+'(\''+o[0]+'\')">'+esc(o[1])+'</button>'; }).join('')+'</div>'; };
-  h+='<div class="caja vidrio" style="padding:12px 14px;margin-top:18px" id="eqe-ops"><b>Para esta impresión</b>'+
-     '<label style="margin-top:8px">Forma</label>'+seg('eqe-forma', [['*', 'La de cada uno'], ['tarjeta', '🪪 Tarjeta doble cara']], tarj ? 'tarjeta' : '*', 'eqEtiqForma')+
-     (tarj ? '<p class="sub" style="margin:2px 0 8px;font-size:12.5px">El QR de un lado y la revisión antes de usar, con los doce meses, del otro: para el arnés, la línea de vida o la eslinga.</p>' : '')+
-     '<label>Diseño</label>'+seg('eqe-dis', [['*', 'El de cada uno'], ['c', 'Clásica'], ['datos', 'Con datos'], ['franja', 'Con franja']], EQ.etiqDis||'*', 'eqEtiqDis')+
-     (tarj ? '' : '<label>Tamaño</label>'+seg('eqe-tam', [['*', 'El de cada uno'], ['n', 'Normal'], ['g', 'Grande']], EQ.etiqTam||'*', 'eqEtiqTam'))+
-     '<p class="sub" style="margin:6px 0 0;font-size:12.5px">No cambia lo guardado en cada equipo: es solo para este PDF.</p></div>';
-  if(total){
-    var HS=eqHojasSVG(eqEtiqSel(), (empActiva()||{}).nombre||'', Object.assign({max:2}, op));
-    h+='<div class="sec-tit" style="margin-top:18px"><span>Así sale</span> · <span data-sin-trad>'+HS.total+'</span> <span>'+(HS.total===1?'hoja':'hojas')+'</span></div>'+
-       '<div class="eq-hojas" id="eqe-hojas" data-sin-trad>'+HS.svg.map(function(v){ return '<div class="eq-hoja-v">'+v+'</div>'; }).join('')+'</div>'+
-       (HS.total>HS.svg.length ? '<p class="sub" style="margin:6px 0 0;font-size:12.5px"><span>…y</span> <span data-sin-trad>'+(HS.total-HS.svg.length)+'</span> <span>'+(HS.total-HS.svg.length===1?'hoja más':'hojas más')+'.</span></p>' : '');
-  }
-  h+='<div class="esc-acc" style="margin-top:16px"><button class="btn" style="margin:0" id="eqe-pdf" onclick="eqEtiquetasPDF()"'+(total?'':' disabled')+'>🖨️ Armar el PDF de '+total+' '+(total===1?'etiqueta':'etiquetas')+'</button>'+
-     '<button class="btn sec" style="margin:0" onclick="eqEtiqTodas()">Marcar todas</button></div>'+
-     '<p class="sub" id="eqe-msg" style="margin-top:10px"></p>';
-  c.innerHTML=h;
-}
-function eqEtiqDis(v){ EQ.etiqDis=v; eqPintarEtiq(); }
-function eqEtiqTam(v){ EQ.etiqTam=v; eqPintarEtiq(); }
-function eqEtiqForma(v){ EQ.etiqForma=(v==='tarjeta') ? 'tarjeta' : '*'; eqPintarEtiq(); }
-function eqEtiqAlternar(id){ EQ.etiqSel=EQ.etiqSel||{}; if(EQ.etiqSel[id]) delete EQ.etiqSel[id]; else EQ.etiqSel[id]=1; eqPintarEtiq(); }
-function eqEtiqTodas(){ EQ.etiqSel={}; (EQ.lista||[]).forEach(function(x){ if(x.estado!=='baja') EQ.etiqSel[x.id]=1; }); eqPintarEtiq(); }
-function eqEtiquetasPDF(){
-  var ids=Object.keys(EQ.etiqSel||{}), sel=(EQ.lista||[]).filter(function(x){ return ids.indexOf(x.id)>-1 && x.estado!=='baja'; });
-  if(!sel.length) return;
-  if(typeof jspdf==='undefined' || !jspdf.jsPDF){ aviso('No se pudo armar el PDF','Vuelve a abrir la app e inténtalo otra vez.','📄'); return; }
-  var obra=(empActiva()||{}).nombre||'', doc=eqArmarPDF(sel, obra, eqTx, eqEtiqOp());
-  var ya=leer(LS_EQ_IMPRESAS, {})||{}, hoy=hoyISO();
-  sel.forEach(function(x){ ya[x.id]=hoy; }); guardar(LS_EQ_IMPRESAS, ya);
-  entregarPDF(doc, eqNombrePDF(obra));
-  var m=$('eqe-msg'); if(m){ m.style.color='var(--ok)'; m.textContent='Listo: '+sel.length+' '+(sel.length===1?'etiqueta':'etiquetas')+'. Imprímelas al 100\u00a0%.'; }
-}
+/* ══ LAS ETIQUETAS: desde el 25/11/2026, «Carteles» (eqctLote, CARTILLAS-EQ-MOTOR) ══ */
+function eqEtiquetas(ids){ eqctLote(ids); }
 
 /* ══ EL QR ESCANEADO CON LA CÁMARA DEL CELULAR ══
    /h/ tiene «Inspeccionarlo en OBRASST» → la app abre con ?equipo=<ficha>:
@@ -123225,11 +123330,11 @@ function diccionario(){
    con cualquier texto que no tiene traducción, nunca una llave ni un
    hueco. IDIOMA_PT_V e IDIOMA_FR_V los pone armar.py: cambian cuando
    cambia el archivo, y ningún cache viejo lo tapa. */
-var IDIOMA_PT_V = 'a16cd3e767';
-var IDIOMA_FR_V = '6b30c7b171';
+var IDIOMA_PT_V = '1fd78ab870';
+var IDIOMA_FR_V = 'c376373e13';
 /* 08/10/2026 · el inglés, igual: pesaba 760 KB dentro del index (que tiene tope de 10 MiB para subirlo) y solo lo usa
    quien eligió el inglés. Va en idioma-en.js, al lado del index; el service worker lo guarda al instalar. */
-var IDIOMA_EN_V = '2b79ad74f1';
+var IDIOMA_EN_V = 'c114bb9dfe';
 var _IDIOMA_APARTE = {
   en: { archivo:'idioma-en.js', v:function(){ return IDIOMA_EN_V; },
         dic:function(){ return (typeof TRAD_EN === 'object') ? TRAD_EN : null; } },
@@ -138817,7 +138922,7 @@ window.addEventListener('load', function(){ try{ pintarInstalar(); }catch(e){} }
    18/09/2026 al publicar el arreglo de las notificaciones.
    Los dos se cambian juntos, y `armar.py` lo verifica antes de dejar
    publicar. No se toca uno solo. */
-var SELLO_APP='de4f6d8bd8';
+var SELLO_APP='11417b9bf1';
 var ACT_CADA=6*60*1000;
 var _ACT_LISTA=false, _ACT_PEDIDO=0, _ACT_SELLO_NUEVO='';
 var LS_ACT_RECARGA='sstc_recargada';
