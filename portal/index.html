@@ -5950,9 +5950,12 @@ function _inswObraN(id){ var o=(YO.empresas||[]).filter(function(e){ return e.id
 function _inswObs(f){ return /no conform|nc|observ/i.test(String(f.resultado||'')); }
 function vistaInspOrden(caja){
   var ac=$('acciones');
-  if(ac){ ac.innerHTML='<button type="button" class="bt" id="insp-nueva">＋ Registrar una inspección</button><button type="button" class="bt sec" id="insp-mes">🗓 Inspección del mes por tipo</button>';
+  if(ac){ ac.innerHTML='<button type="button" class="bt" id="insp-nueva">＋ Registrar una inspección</button><button type="button" class="bt sec" id="insp-mes">🗓 Inspección del mes por tipo</button>'+
+    /* 26/11/2026 · la mensual armada con las inspecciones diarias del mes (IMD-MOTOR, portal/mensual.js) */
+    '<button type="button" class="bt sec" id="insp-imd">🗓 Mensual con las diarias</button>';
     $('insp-nueva').onclick=function(){ gesIr('gesInspForm', null); };
-    $('insp-mes').onclick=function(){ if(typeof menIr==='function') menIr('menAbrir', MES); }; }
+    $('insp-mes').onclick=function(){ if(typeof menIr==='function') menIr('menAbrir', MES); };
+    $('insp-imd').onclick=function(){ if(typeof menIr==='function') menIr('imdwAbrir'); }; }
   if(typeof frentesObraP==='function') frentesObraP();
   if(INSW.obra!==(YO.obra||{}).id){ INSW={ alc:'obra', mes:'', fmt:'', fr:'', q:'', filas:[], frentes:{}, n:0, obra:(YO.obra||{}).id }; }
   caja.innerHTML='<div id="insw-arriba"></div><div class="tarj" id="insw"><div class="tarj-cuerpo"><div class="vacio">Cargando las inspecciones…</div></div></div>';
@@ -19749,7 +19752,7 @@ function gesCapComoCons(soloFecha){
 function consMasHechas(p, soloFecha){
   return Promise.all([p, gesCapComoCons(soloFecha)]).then(function(r){ return (r[0]||[]).concat(r[1]||[]); });
 }
-var GESTION_VER='cac35f4434';   /* lo pone armar.py: el hash de portal/gestion.js */
+var GESTION_VER='e042c3af4c';   /* lo pone armar.py: el hash de portal/gestion.js */
 var _GES_CARGA=null;
 function cargarGestion(){
   if(typeof gesPersonalSubir==='function') return Promise.resolve(true);
@@ -19854,7 +19857,7 @@ function epwIr(fn){
 }
 /* 07/10/2026 · la inspección mensual de equipos (portal/mensual.js): la hoja del mes con todos los equipos de la obra.
    Usa el dibujante de los papeles (papeles.js), el buscador de gestion.js y los tipos y colores de equipos.js */
-var MENSUAL_VER='91d7380edc';   /* lo pone armar.py: el hash de portal/mensual.js */
+var MENSUAL_VER='8dc04cbfc5';   /* lo pone armar.py: el hash de portal/mensual.js */
 var _MEN_CARGA=null;
 function cargarMensual(){
   if(typeof menAbrir==='function') return Promise.resolve(true);

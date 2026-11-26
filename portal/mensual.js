@@ -1524,3 +1524,220 @@ function menPdf(d, L, C, op){
     return R;
   });
 }
+/* >>> IMD-MOTOR (26/11/2026) · el mismo en la app (index.html) y en la web (portal/mensual.js) <<<
+   ══ EL CHECK LIST MENSUAL ARMADO CON LAS INSPECCIONES DIARIAS ════════════════════════════════════════════════════════
+   Marcelo: «hago las inspecciones diarias, pero me piden en el informe la inspección mensual de las herramientas, y para no
+   copiar herramienta por herramienta (120 quizás), quiero jalar las inspecciones de cada herramienta que se han hecho en el
+   mes —martillo 1, martillo 2, cizalla 1, amoladora 3—, y tenerlo en un formato con sus checks ya colocados, mencionando que
+   se realizó durante el mes, que se juntó la de un trabajador con la de otro… No se mezclen herramientas con escaleras, con
+   grúas, con extintores, con botiquín, con estación de emergencia».
+   · Una hoja por check list (el formato con que se hizo la diaria): así nunca se mezclan tipos de equipo.
+   · Cada equipo (por su código; si no tiene, por cómo se anotó la unidad) junta TODAS sus inspecciones del mes: en cada punto,
+     «NC» si en alguna no cumplió (con el día, qué se encontró y quién), «C» si cumplió en las que se revisó, «NA» si no aplicó.
+   · Dice con cuántas inspecciones se armó, de qué días y quiénes las hicieron; y lleva las firmas de quien la elabora y de
+     Producción, en blanco, para firmarla impresa.
+   Entra: filas de obra { tipo, fecha, inspector, items:[{ b, t, e, u, c, obs }] } (sst_inspeccion o el celular) y del QR
+   { fecha, op_nombre, formato_n, puntos:[{ b, t, e, o }], codigo, tipo } (sst_equipo_insp). */
+var IMD_PESO = { NC:4, M:4, R:3, C:2, B:2, NA:1 };
+function _imdN(s){ s = String(s || '').toLowerCase(); try{ s = s.normalize('NFD').replace(/[̀-ͯ]/g, ''); }catch(e){} return s.replace(/\s+/g, ' ').trim(); }
+function imdDMA(iso){ var p = String(iso || '').slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : ''; }
+function imdArmar(filas, qr){
+  var H = {}, orden = [];
+  function imdHo(k, n, origen){ if(!H[k]){ H[k] = { k:k, n:n, origen:origen, puntos:[], pk:{}, filas:[], fk:{}, dias:{}, quien:{}, ins:0, desde:'', hasta:'', brm:false }; orden.push(k); } return H[k]; }
+  function imdPu(h, b, t){ var k = _imdN(b) + '\u0001' + _imdN(t); if(h.pk[k] === undefined){ h.pk[k] = h.puntos.length; h.puntos.push({ b:String(b || ''), t:String(t || '') }); } return h.pk[k]; }
+  function imdFi(h, k, n){ if(!h.fk[k]){ h.fk[k] = { k:k, n:n, v:{}, dias:{}, quien:{}, nc:[] }; h.filas.push(h.fk[k]); } return h.fk[k]; }
+  function imdAn(h, F, i, e, fecha, por, obs){
+    e = String(e || '').toUpperCase(); if(!IMD_PESO[e]) return;
+    if(e === 'B' || e === 'R' || e === 'M') h.brm = true;
+    if(!F.v[i] || IMD_PESO[e] > IMD_PESO[F.v[i]]) F.v[i] = e;
+    if(e === 'NC' || e === 'M') F.nc.push({ i:i, f:fecha, o:String(obs || '').trim(), por:por || '' });
+  }
+  function imdFe(h, F, fecha, por){
+    F.dias[fecha] = 1; h.dias[fecha] = 1; if(por){ F.quien[por] = 1; h.quien[por] = 1; }
+    if(!h.desde || fecha < h.desde) h.desde = fecha; if(!h.hasta || fecha > h.hasta) h.hasta = fecha;
+  }
+  (filas || []).forEach(function(r){
+    var it = Array.isArray(r && r.items) ? r.items : [];
+    var conU = it.filter(function(p){ return p && (p.c || p.u); }); if(!conU.length) return;
+    var n = String(r.tipo || r.nombre || 'Inspección'), h = imdHo('o:' + _imdN(n), n, 'obra'), fecha = String(r.fecha || '').slice(0, 10), por = String(r.inspector || '').trim(), vistas = {};
+    h.ins++;
+    conU.forEach(function(p){
+      var c = String(p.c || '').trim(), u = String(p.u || '').trim(), k = c ? 'c:' + _imdN(c) : 'u:' + _imdN(u);
+      var F = imdFi(h, k, c ? (u && _imdN(u).indexOf(_imdN(c)) === 0 ? u : (c + (u ? ' · ' + u : ''))) : u);
+      if(!vistas[k]){ vistas[k] = 1; imdFe(h, F, fecha, por); }
+      imdAn(h, F, imdPu(h, p.b, p.t), p.e, fecha, por, p.obs);
+    });
+  });
+  (qr || []).forEach(function(r){
+    var P = Array.isArray(r && r.puntos) ? r.puntos : []; if(!P.length || !r.codigo) return;
+    var n = String(r.formato_n || ('Inspección de ' + String(r.tipo || 'equipo').toLowerCase()));
+    var h = imdHo('q:' + _imdN(n), n + ' (con el QR)', 'qr'), fecha = String(r.fecha || '').slice(0, 10), por = String(r.op_nombre || '').trim();
+    var F = imdFi(h, 'c:' + _imdN(r.codigo), r.codigo + (r.tipo ? ' · ' + r.tipo : ''));
+    h.ins++; imdFe(h, F, fecha, por);
+    P.forEach(function(p){ imdAn(h, F, imdPu(h, p.b, p.t), p.e, fecha, por, p.o); });
+  });
+  return orden.map(function(k){
+    var h = H[k];
+    h.filas.sort(function(a, b){ return a.n.localeCompare(b.n, 'es', { numeric:true }); });
+    h.filas.forEach(function(F){ F.nc.sort(function(a, b){ return a.f.localeCompare(b.f); }); F.mal = F.nc.length > 0; });
+    delete h.pk; delete h.fk;
+    return h;
+  }).sort(function(a, b){ return a.n.localeCompare(b.n, 'es'); });
+}
+function imdCuenta(h){ return { eq:h.filas.length, mal:h.filas.filter(function(F){ return F.mal; }).length, dias:Object.keys(h.dias).length, quien:Object.keys(h.quien) }; }
+/* el PDF: A4 echada, una hoja (o más) por check list. op: { obra, empresa, mesTxt, cod } */
+function imdPDF(hojas, op){
+  op = op || {};
+  var J = window.jspdf.jsPDF, d = new J({ unit:'mm', format:'a4', orientation:'landscape', compress:true });
+  var W = 297, Hh = 210, M = 10, prim = true;
+  function imdPie(){ d.setFont('helvetica', 'normal'); d.setFontSize(7); d.setTextColor(150, 150, 150); d.text('Generado con OBRASST · armado con las inspecciones diarias registradas en el mes', M, Hh - 5); }
+  function imdCab(h, cont){
+    d.setFillColor(11, 42, 58); d.rect(0, 0, W, 22, 'F');
+    d.setTextColor(245, 183, 0); d.setFont('helvetica', 'bold'); d.setFontSize(8); d.text('CHECK LIST MENSUAL · ARMADO CON LAS INSPECCIONES DIARIAS', M, 7);
+    if(op.cod){ d.setTextColor(190, 205, 215); d.setFont('helvetica', 'normal'); d.text(String(op.cod), W - M, 7, { align:'right' }); }
+    d.setTextColor(255, 255, 255); d.setFont('helvetica', 'bold'); d.setFontSize(13);
+    d.text(d.splitTextToSize(h.n + (cont ? ' (continuación)' : ''), W - 2 * M - 70)[0], M, 15);
+    d.setFont('helvetica', 'normal'); d.setFontSize(8.5); d.setTextColor(200, 215, 225);
+    d.text([op.obra, op.empresa].filter(Boolean).join('  ·  '), M, 20);
+    d.setFont('helvetica', 'bold'); d.setFontSize(11); d.setTextColor(245, 183, 0); d.text(String(op.mesTxt || '').toUpperCase(), W - M, 16, { align:'right' });
+  }
+  hojas.forEach(function(h){
+    if(!prim) d.addPage('a4', 'landscape'); prim = false;
+    var C = imdCuenta(h), np = h.puntos.length, y = 28;
+    imdCab(h, false);
+    /* cómo se armó */
+    d.setFillColor(244, 247, 249); d.rect(M, y - 4, W - 2 * M, 13, 'F');
+    d.setFont('helvetica', 'normal'); d.setFontSize(8); d.setTextColor(40, 50, 60);
+    var txt = 'Se armó con ' + h.ins + (h.ins === 1 ? ' inspección diaria' : ' inspecciones diarias') + ' hechas durante el mes (' + C.dias + (C.dias === 1 ? ' día' : ' días') +
+      (h.desde ? ', del ' + imdDMA(h.desde) + ' al ' + imdDMA(h.hasta) : '') + '), juntando las de cada inspector: ' + (C.quien.length ? C.quien.join(', ') : '—') + '. ' +
+      'En cada equipo y punto: ' + (h.brm ? 'B, R o M (el peor del mes)' : 'C si cumplió en todas las que se revisó, NC si no cumplió en alguna (ver observaciones), NA si no aplicó') + '.';
+    d.text(d.splitTextToSize(txt, W - 2 * M - 4), M + 2, y); y += 13;
+    /* la tabla */
+    var wN = 7, wE = 46, wD = 11, wR = 19, ancho = W - 2 * M - wN - wE - wD - wR, wP = np ? Math.max(4.2, Math.min(14, ancho / np)) : 10;
+    if(np && wP * np > ancho) wP = ancho / np;
+    var xs = [M, M + wN, M + wN + wE, M + wN + wE + wD], x0 = xs[3], xR = x0 + wP * np, fh = 6.2;
+    function imdCabT(){
+      d.setFillColor(11, 42, 58); d.rect(M, y, W - 2 * M, 7, 'F');
+      d.setFont('helvetica', 'bold'); d.setFontSize(7); d.setTextColor(255, 255, 255);
+      d.text('N°', xs[0] + wN / 2, y + 4.7, { align:'center' }); d.text('EQUIPO', xs[1] + 1.5, y + 4.7); d.text('DÍAS', xs[2] + wD / 2, y + 4.7, { align:'center' });
+      for(var i = 0; i < np; i++) d.text(String(i + 1), x0 + wP * i + wP / 2, y + 4.7, { align:'center' });
+      d.text('RESULTADO', xR + wR / 2, y + 4.7, { align:'center' });
+      y += 7;
+    }
+    imdCabT();
+    h.filas.forEach(function(F, fi){
+      if(y + fh > Hh - 14){ imdPie(); d.addPage('a4', 'landscape'); imdCab(h, true); y = 28; imdCabT(); }
+      if(fi % 2){ d.setFillColor(248, 250, 251); d.rect(M, y, W - 2 * M, fh, 'F'); }
+      d.setDrawColor(225, 230, 234); d.setLineWidth(0.15); d.line(M, y + fh, W - M, y + fh);
+      d.setFont('helvetica', 'normal'); d.setFontSize(7.2); d.setTextColor(40, 40, 40);
+      d.text(String(fi + 1), xs[0] + wN / 2, y + 4.2, { align:'center' });
+      d.text(d.splitTextToSize(F.n, wE - 2)[0], xs[1] + 1.5, y + 4.2);
+      d.text(String(Object.keys(F.dias).length), xs[2] + wD / 2, y + 4.2, { align:'center' });
+      for(var i = 0; i < np; i++){
+        var v = F.v[i] || '', cx = x0 + wP * i + wP / 2;
+        if(!v){ d.setTextColor(190, 190, 190); d.text('–', cx, y + 4.2, { align:'center' }); continue; }
+        if(v === 'NC' || v === 'M'){ d.setFillColor(253, 226, 226); d.rect(x0 + wP * i + 0.3, y + 0.5, wP - 0.6, fh - 1, 'F'); d.setTextColor(183, 47, 43); d.setFont('helvetica', 'bold'); }
+        else if(v === 'R'){ d.setTextColor(180, 120, 20); d.setFont('helvetica', 'bold'); }
+        else if(v === 'NA'){ d.setTextColor(140, 140, 140); d.setFont('helvetica', 'normal'); }
+        else { d.setTextColor(18, 122, 71); d.setFont('helvetica', 'bold'); }
+        d.setFontSize(wP < 6 ? 5.6 : 6.8); d.text(v, cx, y + 4.2, { align:'center' });
+        d.setFont('helvetica', 'normal'); d.setFontSize(7.2);
+      }
+      d.setFont('helvetica', 'bold'); d.setFontSize(7);
+      if(F.mal){ d.setTextColor(183, 47, 43); d.text('OBSERVADO', xR + wR / 2, y + 4.2, { align:'center' }); }
+      else { d.setTextColor(18, 122, 71); d.text('CONFORME', xR + wR / 2, y + 4.2, { align:'center' }); }
+      y += fh;
+    });
+    /* los puntos (el número es su columna) */
+    var imdNueva = function(alto){ if(y + alto > Hh - 12){ imdPie(); d.addPage('a4', 'landscape'); imdCab(h, true); y = 30; } };
+    y += 5; imdNueva(14);
+    d.setFont('helvetica', 'bold'); d.setFontSize(8.5); d.setTextColor(11, 42, 58); d.text('LOS PUNTOS DEL CHECK LIST', M, y); y += 4;
+    var colW = (W - 2 * M - 8) / 2, yc = [y, y], col = 0, bl = null;
+    d.setFontSize(7);
+    h.puntos.forEach(function(p, i){
+      var lin = d.splitTextToSize((i + 1) + '. ' + p.t, colW - 2), alto = lin.length * 3.2 + (p.b && p.b !== bl ? 4 : 0);
+      if(yc[col] + alto > Hh - 12){ if(col === 0){ col = 1; } else { imdPie(); d.addPage('a4', 'landscape'); imdCab(h, true); yc = [30, 30]; col = 0; } }
+      if(p.b && p.b !== bl){ bl = p.b; yc[col] += 1.5; d.setFont('helvetica', 'bold'); d.setTextColor(90, 100, 110); d.text(String(p.b).toUpperCase().slice(0, 70), M + col * (colW + 8), yc[col] + 3); yc[col] += 4; }
+      d.setFont('helvetica', 'normal'); d.setTextColor(40, 40, 40); d.text(lin, M + col * (colW + 8), yc[col] + 3); yc[col] += lin.length * 3.2;
+    });
+    y = Math.max(yc[0], yc[1]) + 5;
+    /* lo que no cumplió: el equipo, el punto, el día, qué se encontró y quién */
+    var obs = []; h.filas.forEach(function(F){ F.nc.forEach(function(o){ obs.push({ F:F, o:o }); }); });
+    if(obs.length){
+      imdNueva(16);
+      d.setFont('helvetica', 'bold'); d.setFontSize(8.5); d.setTextColor(183, 47, 43); d.text('OBSERVACIONES DEL MES (' + obs.length + ')', M, y); y += 4;
+      obs.forEach(function(x){
+        var t2 = x.F.n + ' · punto ' + (x.o.i + 1) + ' (' + (h.puntos[x.o.i] || {}).t + ') · ' + imdDMA(x.o.f) + (x.o.por ? ' · ' + x.o.por : '') + (x.o.o ? ': ' + x.o.o : '');
+        var lin = d.splitTextToSize('• ' + t2, W - 2 * M); imdNueva(lin.length * 3.3 + 1);
+        d.setFont('helvetica', 'normal'); d.setFontSize(7.2); d.setTextColor(60, 60, 60); d.text(lin, M, y + 3); y += lin.length * 3.3 + 0.6;
+      });
+      y += 3;
+    }
+    /* las firmas, en blanco */
+    imdNueva(26);
+    var fw = (W - 2 * M - 20) / 3;
+    [['ELABORÓ (SST)', ''], ['REVISÓ (PRODUCCIÓN)', ''], ['V°B° JEFE DE OBRA', '']].forEach(function(f, i){
+      var x = M + i * (fw + 10);
+      d.setDrawColor(150, 160, 170); d.setLineWidth(0.25); d.line(x, y + 16, x + fw, y + 16);
+      d.setFont('helvetica', 'bold'); d.setFontSize(7.5); d.setTextColor(110, 110, 110); d.text(f[0], x, y + 20);
+      d.setFont('helvetica', 'normal'); d.text('Nombre, firma y fecha', x, y + 24);
+    });
+    imdPie();
+  });
+  return d;
+}
+/* <<< IMD-MOTOR-FIN >>> */
+/* ── la mensual armada con las diarias, en la web: «Inspecciones» › «🗓 Mensual con las diarias» (el mismo IMD-MOTOR) ── */
+var IMDW = { mes:'', hojas:null, n:0 };
+function _imdwMeses(){ var a=[], y=+String(MES).slice(0, 4), m=+String(MES).slice(5, 7); for(var i=0;i<4;i++){ a.push(y+'-'+dos(m)); m--; if(m<1){ m=12; y--; } } return a; }
+function imdwAbrir(){
+  if(!IMDW.mes) IMDW.mes=MES;
+  abrirHoja('Check list mensual con las diarias', 'Una hoja por tipo de equipo, con las inspecciones diarias del mes', '<div id="imdw-c"></div>',
+    '<button type="button" class="bt" id="imdw-todo" disabled>⬇ Todas en un PDF</button>', { sinFoco:true });
+  _imdwPinta(); _imdwTraer();
+  $('imdw-todo').onclick=function(){ imdwBajar(-1, this); };
+}
+function _imdwTraer(){
+  var mes=IMDW.mes, n=++IMDW.n, d0=mes+'-01', d1=menUltDia(mes);
+  IMDW.hojas=null; _imdwPinta();
+  Promise.all([
+    traerTodo('sst_inspeccion', '&fecha=gte.'+d0+'&fecha=lte.'+d1+'&select=tipo,fecha,inspector,items&order=fecha.asc', 20000),
+    traerTodo('sst_equipo_insp', '&fecha=gte.'+d0+'&fecha=lte.'+d1+'&select=equipo,fecha,op_nombre,formato_n,puntos&order=fecha.asc', 20000).catch(function(){ return []; }),
+    menEquipos().catch(function(){ return []; })
+  ]).then(function(R){
+    if(n!==IMDW.n) return;
+    var eq={}; (R[2]||[]).forEach(function(x){ eq[x.id]=x; });
+    var qr=(R[1]||[]).map(function(i){ var x=eq[i.equipo]; return { fecha:i.fecha, op_nombre:i.op_nombre, formato_n:i.formato_n, puntos:i.puntos, codigo:x ? x.codigo : '', tipo:x ? x.tipo : '' }; });
+    IMDW.hojas=imdArmar(R[0]||[], qr); _imdwPinta();
+  }, function(){ if(n!==IMDW.n) return; IMDW.hojas=[]; IMDW.err=true; _imdwPinta(); });
+}
+function _imdwPinta(){
+  var c=$('imdw-c'); if(!c) return;
+  var h='<p class="ayuda" style="margin:0 0 10px">Junta las inspecciones diarias de cada equipo —de todos los que inspeccionaron, en la app o con su QR— en una hoja por tipo, con sus checks ya puestos y lo que no cumplió (día, qué y quién). No mezcla tipos: herramientas, escaleras, grúas y extintores van cada uno en su hoja.</p>'+
+    '<div class="seg" id="imdw-mes" role="group" aria-label="Mes" style="margin:0 0 12px">'+_imdwMeses().map(function(m){
+      return '<button type="button" data-v="'+m+'" class="'+(m===IMDW.mes ? 'on' : '')+'" aria-pressed="'+(m===IMDW.mes)+'">'+esc(menMesTxt(m))+'</button>'; }).join('')+'</div>';
+  var bt=$('imdw-todo');
+  if(!IMDW.hojas){ c.innerHTML=h+'<p class="ayuda">Juntando las inspecciones del mes…</p>'; if(bt) bt.disabled=true; }
+  else if(!IMDW.hojas.length){ c.innerHTML=h+'<div class="vacio">'+(IMDW.err ? 'No se pudieron traer. Revisa tu conexión.' : 'Este mes no hay inspecciones diarias de equipos o herramientas (con sus unidades) para juntar.')+'</div>'; if(bt) bt.disabled=true; IMDW.err=false; }
+  else {
+    h+='<div class="imdw-l">'+IMDW.hojas.map(function(H, i){ var C=imdCuenta(H);
+      return '<div class="imdw-f"><div><b>'+esc(H.n)+'</b><small>'+C.eq+' '+(C.eq===1 ? 'equipo' : 'equipos')+' · '+H.ins+' '+(H.ins===1 ? 'inspección' : 'inspecciones')+' · '+C.dias+' '+(C.dias===1 ? 'día' : 'días')+
+        (C.mal ? ' · ⚠️ '+C.mal+' '+(C.mal===1 ? 'observado' : 'observados') : ' · ✅ todo conforme')+'</small></div><button type="button" class="bt sec" data-i="'+i+'">⬇ PDF</button></div>'; }).join('')+'</div>';
+    c.innerHTML=h; if(bt) bt.disabled=IMDW.hojas.length<2;
+    [].slice.call(c.querySelectorAll('.imdw-f [data-i]')).forEach(function(b){ b.onclick=function(){ imdwBajar(+b.getAttribute('data-i'), b); }; });
+  }
+  if(!$('imdw-css')){ var s=document.createElement('style'); s.id='imdw-css';
+    s.textContent='.imdw-l{display:flex;flex-direction:column;gap:6px}.imdw-f{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--raya);border-radius:10px}'+
+      '.imdw-f>div{flex:1;min-width:0}.imdw-f b{display:block;font-size:14px}.imdw-f small{display:block;color:var(--gris);font-size:12.5px;margin-top:2px}.imdw-f .bt{margin:0}.imdw-l[hidden]{display:none !important}';
+    document.head.appendChild(s); }
+  var sg=$('imdw-mes'); if(sg) sg.onclick=function(ev){ var b=ev.target.closest('[data-v]'); if(!b) return; IMDW.mes=b.getAttribute('data-v'); _imdwTraer(); };
+}
+function imdwBajar(i, boton){
+  var L=i<0 ? (IMDW.hojas||[]) : [(IMDW.hojas||[])[i]]; if(!L[0]) return;
+  if(boton) boton.disabled=true;
+  Promise.all([cargarEvPDF(), empleadorP().catch(function(){ return {}; })]).then(function(r){
+    var d=imdPDF(L, { obra:nombreObraP() || '', empresa:(r[1] && r[1].razon) || '', mesTxt:menMesTxt(IMDW.mes) });
+    bajarBlob(d.output('blob'), nombreArchivo('Check list mensual - '+(i<0 ? 'equipos' : L[0].n)+' - '+IMDW.mes)+'.pdf');
+    if(boton) boton.disabled=false;
+  }, function(){ if(boton) boton.disabled=false; toast('No se pudo armar el PDF. Revisa tu conexión e inténtalo otra vez.'); });
+}

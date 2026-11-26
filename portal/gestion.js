@@ -3081,6 +3081,17 @@ function gesInspQuitar(f){
   });
 }
 /* la que subió un celular: se lee, no se corrige */
+/* 26/11/2026 · las fotos de evidencia de la app (en sus puntos: «fe», el primer punto de cada unidad) */
+function _gesInspFe(f){
+  var L=[]; (Array.isArray(f && f.items) ? f.items : []).forEach(function(p){ if(p && Array.isArray(p.fe)) p.fe.forEach(function(u){ if(/^https:\/\//.test(String(u))) L.push({ u:String(u), n:p.u||'' }); }); });
+  return L;
+}
+function _gesInspFeHtml(f){
+  var L=_gesInspFe(f); if(!L.length) return '';
+  return '<div class="seccion"><h3>Fotos de la inspección · '+L.length+'</h3><div class="ges-fe" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">'+
+    L.map(function(x){ return '<a href="'+esc(x.u)+'" target="_blank" rel="noopener" style="display:block;border:1px solid var(--raya);border-radius:8px;overflow:hidden;text-decoration:none">'+
+      '<img src="'+esc(x.u)+'" alt="" loading="lazy" style="display:block;width:100%;height:110px;object-fit:cover">'+(x.n ? '<small style="display:block;padding:4px 6px;font-size:11.5px;color:var(--gris)">'+esc(x.n)+'</small>' : '')+'</a>'; }).join('')+'</div></div>';
+}
 function gesInspVer(f){
   var P=gesInspPartes(f.observacion), R=String(f.resultado||'');
   var h='<dl class="datos"><dt>Fecha</dt><dd>'+esc(fechaLarga(f.fecha))+'</dd><dt>Quién la hizo</dt><dd>'+esc(f.inspector||'—')+'</dd>'+
@@ -3090,8 +3101,9 @@ function gesInspVer(f){
     (P.obs.length ? '<div class="seccion"><h3>Observaciones · '+P.obs.length+'</h3><ul class="ges-lista-chica">'+P.obs.map(function(o){ return '<li>'+esc(o.t)+'</li>'; }).join('')+'</ul></div>' : '')+
     (P.otras.length ? '<div class="seccion"><h3>Lo demás del resumen</h3><p style="margin:0;white-space:pre-line;font-size:13.5px">'+esc(P.otras.join('\n'))+'</p></div>' : '')+
     (P.concl ? '<div class="seccion"><h3>Conclusiones</h3><p style="margin:0">'+esc(P.concl)+'</p></div>' : '')+
-    (f.foto_url ? '<div class="seccion"><h3>Adjunto</h3><p style="margin:0"><a href="'+esc(f.foto_url)+'" target="_blank" rel="noopener">Abrir la foto o el archivo</a></p></div>' : '')+
-    '<div class="aviso" style="margin:18px 0 0">Esta inspección se llenó en un celular. Aquí está su resumen; el formato completo, con cada punto, las fotos y las firmas, sale en PDF del teléfono que la levantó.</div>';
+    (f.foto_url && !_gesInspFe(f).length ? '<div class="seccion"><h3>Adjunto</h3><p style="margin:0"><a href="'+esc(f.foto_url)+'" target="_blank" rel="noopener">Abrir la foto o el archivo</a></p></div>' : '')+
+    _gesInspFeHtml(f)+
+    '<div class="aviso" style="margin:18px 0 0">Esta inspección se llenó en un celular. Aquí está su resumen; el formato completo, con cada punto y las firmas, sale en PDF del teléfono que la levantó.</div>';
   abrirHoja(f.tipo||'Inspección', 'Llenada en la app · '+fechaLarga(f.fecha), h, '<button type="button" class="bt" id="insv-ok">Cerrar</button>', {sinFoco:true});
   $('insv-ok').onclick=cerrarHoja;
 }
